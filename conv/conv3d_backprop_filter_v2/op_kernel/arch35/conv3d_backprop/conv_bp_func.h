@@ -18,7 +18,7 @@
 
 #include "conv_bp_config_base.h"
 #include "conv_bp_util.h"
-#include "kernel_operator.h"
+#include "basic_api/kernel_basic_intf.h"
 #include "../conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_data.h"
 #include "impl/dav_v310/conv_bp_sub_func.h"
 #include "impl/dav_v310/conv_bp_sub_func_deterministic_calculate.h"
@@ -29,6 +29,7 @@ DECLARE_CHECK_IMPL(Init);
 DECLARE_CHECK_IMPL(SetFmap);
 DECLARE_CHECK_IMPL(SetOutBackprop);
 DECLARE_CHECK_IMPL(SetSingleShape);
+DECLARE_CHECK_IMPL(SetSingleShapeK);
 DECLARE_CHECK_IMPL(SetStartIdx);
 DECLARE_CHECK_IMPL(SetDeterministicCoreInfo);
 DECLARE_CHECK_SYNC_IMPL(DeterministicReduceKInUb);
@@ -540,6 +541,16 @@ struct SetOutBackprop {
     }
 };
 
+template<class Intf>
+struct SetSingleShapeK {
+    DECLARE_DEFAULT_OVERLOADING_FUN(Intf, ConvolutionBackpropFunc);
+
+    static __aicore__ inline void call(Intf *self, uint64_t singleShapeK) {
+        self->ctx.singleShapeHo_ = singleShapeK / self->ctx.tiling_->wo;
+        InitStepKParams<Intf>(self);
+    }
+};
+
 template <class Intf>
 struct SetSingleShape {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, ConvolutionBackpropFunc);
@@ -558,9 +569,8 @@ struct SetSingleShape {
             self->ctx.singleShapeCin_ = singleShapeCin;
         }
 
-        self->ctx.singleShapeHo_ = singleShapeK / self->ctx.tiling_->wo;
         InitStepMParams<Intf>(self);
-        InitStepKParams<Intf>(self);
+        self->SetSingleShapeK(singleShapeK);
         InitStepNParams<Intf>(self);
         // 是否stepN上包含dk， 未包含cinhkwk
         self->ctx.enableStepNIncludeDkNocinhwk_ = (self->ctx.tiling_->stepN != 1) && (self->ctx.tiling_->stepN >
@@ -835,5 +845,6 @@ struct DeterministicReduceKInUb {
         DeterministicAddFunc<Intf>(self, output, userGm);
     }
 };
+
 }  // namespace ConvolutionBackpropFunc
 #endif

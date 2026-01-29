@@ -35,15 +35,14 @@ bool Conv3DDXV2FullLoadTiling::IsCapable()
         !IsSocVersionFuse(context_)) {
         return false;
     }
-
-    // 暂不支持group卷积以及fp16/bfp16以外类型
-    if (runInfo_.groups != 1 || tilingRunInfo_.tilingHkWkMode != 0) {
+    // 暂不支持fp16/bfp16以外类型
+ 	if (tilingRunInfo_.tilingHkWkMode != 0) {
         return false;
     }
     // 8bit时只在filter_format=NDHWC放开基本块tiling，否则理论建模对8bit容易失效。
     const auto filter_desc = context_->GetInputDesc(FILTER_INDEX);
     auto filter_format = static_cast<ge::Format>(ge::GetPrimaryFormat(filter_desc->GetStorageFormat()));
-    bool is8bit = static_cast<int32_t>(dtypeByte_) == ge::GetSizeByDataType(ge::DT_HIFLOAT8);
+    bool is8bit = static_cast<int32_t>(dtypeByteL0b_) == ge::GetSizeByDataType(ge::DT_HIFLOAT8);
     if (is8bit && filter_format != ge::FORMAT_NDHWC) {
         return false;
     }
@@ -67,7 +66,8 @@ bool Conv3DDXV2FullLoadTiling::IsCapable()
     uint64_t bestBaseN =
         runInfo_.kernel_d * runInfo_.kernel_h * runInfo_.kernel_w > 1 ? BASIC_BLOCK_SIZE_128 : BASIC_BLOCK_SIZE_256;
     bestBaseN = std::min(bestBaseN, tilingRunInfo_.nValue);
-    if (tilingRunInfo_.kValue * bestBaseN * dtypeByte_ * TWO <= static_cast<uint64_t>(platformInfo_.l1_size)) {
+    if (tilingRunInfo_.kValue * bestBaseN * dtypeByteL0b_ * TWO <= static_cast<uint64_t>(platformInfo_.l1_size)) {
+        tilingRunInfo_.enableFullLoadTiling = true;
         return true;
     }
     return false;
@@ -117,30 +117,30 @@ void Conv3DDXV2FullLoadTiling::InitBaseMNK(L0TilingParams& l0Params)
     // 选取原则二: K小N大是FIXP Bound，L0C开PingPong; K小N小根据两边数量关系决定是否开pingpong
     uint32_t bestBaseM = BASIC_BLOCK_SIZE_256;
     uint32_t bestBaseN = BASIC_BLOCK_SIZE_256;
-    uint32_t bestBaseK = BASIC_BLOCK_SIZE_128 / dtypeByte_;
+    uint32_t bestBaseK = BASIC_BLOCK_SIZE_128 / dtypeByteL0b_;
     if (IsSocVersionFuse(context_)) {
         CloseL0PingPong(l0Params); // 耦合架构scalar bound严重，pingpong性能无收益，关闭pingpong可以掩盖scalar时间
     }
     if (tilingRunInfo_.kValue > MAX_BASE_MN) {
-        bestBaseN = (BASIC_BLOCK_SIZE_64 * TWO_U32) / dtypeByte_;
+        bestBaseN = (BASIC_BLOCK_SIZE_64 * TWO_U32) / dtypeByteL0b_;
     } else if (tilingRunInfo_.kValue > BASIC_BLOCK_SIZE_512) {
-        bestBaseN = (BASIC_BLOCK_SIZE_128 * TWO_U32) / dtypeByte_;
+        bestBaseN = (BASIC_BLOCK_SIZE_128 * TWO_U32) / dtypeByteL0b_;
     } else if (tilingRunInfo_.kValue > BASIC_BLOCK_SIZE_256) {
-        bestBaseN = (BASIC_BLOCK_SIZE_256 * TWO_U32) / dtypeByte_;
+        bestBaseN = (BASIC_BLOCK_SIZE_256 * TWO_U32) / dtypeByteL0b_;
     } else if (tilingRunInfo_.kValue > BASIC_BLOCK_SIZE_128) {
-        bestBaseN = (BASIC_BLOCK_SIZE_512 * TWO_U32) / dtypeByte_;
+        bestBaseN = (BASIC_BLOCK_SIZE_512 * TWO_U32) / dtypeByteL0b_;
     } else {
         // 下方的判定条件为经验值，k很小同时n也很小时，可能混有MTE2、MTE1、scalar bound，此时c0 DB不一定有收益
         if (tilingRunInfo_.nValue >= tilingRunInfo_.kValue * TWO ||
             tilingRunInfo_.nValue >= static_cast<uint64_t>(BASIC_BLOCK_SIZE_128)) {
             l0Params.cl0Pbuffer = DB_ON;
         }
-        bestBaseN = (BASIC_BLOCK_SIZE_512 * TWO_U32) / dtypeByte_;
+        bestBaseN = (BASIC_BLOCK_SIZE_512 * TWO_U32) / dtypeByteL0b_;
     }
     bestBaseM = platformInfo_.l0_c_size / (bestBaseN * FOUR_U32 * l0Params.cl0Pbuffer); // 4: size of float
-    uint32_t maxL0ABaseM = platformInfo_.l0_ab_size / (tilingRunInfo_.k0 * l0Params.al0Pbuffer * dtypeByte_);
+    uint32_t maxL0ABaseM = platformInfo_.l0_ab_size / (tilingRunInfo_.k0 * l0Params.al0Pbuffer * dtypeByteL0a_);
     bestBaseM = std::min(bestBaseM, maxL0ABaseM); // L0A_SIZE的上界保护
-    bestBaseK = platformInfo_.l0_ab_size / (bestBaseN * dtypeByte_ * l0Params.bl0Pbuffer);
+    bestBaseK = platformInfo_.l0_ab_size / (bestBaseN * dtypeByteL0b_ * l0Params.bl0Pbuffer);
     l0Params.baseM = bestBaseM;
     l0Params.baseN = bestBaseN;
     l0Params.baseK = bestBaseK;
@@ -157,6 +157,33 @@ void Conv3DDXV2FullLoadTiling::CalStepK(L1TilingParams& l1Params, const L0Tiling
     Conv3DDXV2InnerProductTiling::LadderMatchStepKWithFullLoad(l1Params, l0Params);
 }
 
+void Conv3DDXV2FullLoadTiling::AdjustSingleCoreInfo(CoreTilingParams& coreParams, uint64_t& batchDepthCnt, uint64_t& nCnt) {
+    coreParams.singleCoreDin = ONE_U32;
+
+    uint64_t hwI = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w;
+    uint64_t maxMCnt = Ops::Base::CeilDiv(hwI, coreParams.singleCoreM);
+    uint64_t bestTotalCnt = Ops::Base::CeilAlign(batchDepthCnt * maxMCnt * nCnt, static_cast<uint64_t>(coreNum_));
+    // 从最大切块往小找，直到找到符合负载均衡的分核
+    for (uint64_t i = 1; i <= maxMCnt; ++i) {
+        uint64_t tmpSingleCoreHWI = Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.dedx_h), i) * runInfo_.dedx_w;
+        uint64_t tmpMCnt = Ops::Base::CeilDiv(hwI, tmpSingleCoreHWI);
+        uint64_t tmpTotalCnt = batchDepthCnt * tmpMCnt * nCnt;
+        uint64_t realTotalCnt = Ops::Base::CeilAlign(tmpTotalCnt, static_cast<uint64_t>(coreNum_));
+        // 核间任务伦次拖尾影响不超过1.25倍，防止出现极端不均衡的分核，比如17*2=34轮任务分给32核
+        if (tmpTotalCnt * static_cast<uint32_t>(5) < realTotalCnt * static_cast<uint32_t>(4)) {
+            continue;
+        }
+
+        // 找到底线解后，在总等效任务伦次不增加的情况下，找更均衡的解法，比如17*9比17*8更均衡，总任务量都为32*5
+        if (realTotalCnt <= bestTotalCnt) {
+            bestTotalCnt = realTotalCnt;
+            coreParams.singleCoreM = tmpSingleCoreHWI;
+        } else {
+            break;
+        }
+    }
+}
+
 void Conv3DDXV2FullLoadTiling::SetSingleCoreInfo(CoreTilingParams& coreParams, L0TilingParams& l0Params)
 {
     // stepM和stepN暂时只支持固定为1
@@ -171,7 +198,6 @@ void Conv3DDXV2FullLoadTiling::SetSingleCoreInfo(CoreTilingParams& coreParams, L
     coreParams.singleCoreCin = l0Params.baseN;
 
     uint64_t batchDepthCnt = static_cast<uint64_t>(runInfo_.batch_n) * runInfo_.dedx_d;
-    uint64_t hwI = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w;
     coreParams.singleCoreM = l0Params.baseM;
 
     if (batchDepthCnt * nCnt * runInfo_.dedx_h % coreNum_ == 0U) {
@@ -181,28 +207,8 @@ void Conv3DDXV2FullLoadTiling::SetSingleCoreInfo(CoreTilingParams& coreParams, L
         coreParams.singleCoreM = static_cast<uint64_t>(runInfo_.dedx_h) * depthFactor / remainFactor * runInfo_.dedx_w;
         batchDepthCnt = static_cast<uint64_t>(runInfo_.batch_n) * runInfo_.dedx_d / coreParams.singleCoreDin;
     } else {
-        coreParams.singleCoreDin = ONE_U32;
-        uint64_t maxMCnt = Ops::Base::CeilDiv(hwI, coreParams.singleCoreM);
-        uint64_t bestTotalCnt = Ops::Base::CeilAlign(batchDepthCnt * maxMCnt * nCnt, static_cast<uint64_t>(coreNum_));
-        // 从最大切块往小找，直到找到符合负载均衡的分核
-        for (uint64_t i = 1; i <= maxMCnt; ++i) {
-            uint64_t tmpSingleCoreHWI = Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.dedx_h), i) * runInfo_.dedx_w;
-            uint64_t tmpMCnt = Ops::Base::CeilDiv(hwI, tmpSingleCoreHWI);
-            uint64_t tmpTotalCnt = batchDepthCnt * tmpMCnt * nCnt;
-            uint64_t realTotalCnt = Ops::Base::CeilAlign(tmpTotalCnt, static_cast<uint64_t>(coreNum_));
-            // 核间任务伦次拖尾影响不超过1.25倍，防止出现极端不均衡的分核，比如17*2=34轮任务分给32核
-            if (tmpTotalCnt * static_cast<uint32_t>(5) < realTotalCnt * static_cast<uint32_t>(4)) {
-                continue;
-            }
-
-            // 找到底线解后，在总等效任务伦次不增加的情况下，找更均衡的解法，比如17*9比17*8更均衡，总任务量都为32*5
-            if (realTotalCnt <= bestTotalCnt) {
-                bestTotalCnt = realTotalCnt;
-                coreParams.singleCoreM = tmpSingleCoreHWI;
-            } else {
-                break;
-            }
-        }
+        // 无法均匀分核时仍然采取batch为1的策略
+        AdjustSingleCoreInfo(coreParams, batchDepthCnt, nCnt);
     }
     if (coreParams.singleCoreM < l0Params.baseM) {
         l0Params.baseM = Ops::Base::CeilAlign(coreParams.singleCoreM, static_cast<uint64_t>(tilingRunInfo_.m0));

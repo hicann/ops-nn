@@ -90,10 +90,18 @@ struct Conv3dBpInputV2RunInfo {
     int32_t c_dtype_bytes = 2;
     int32_t initOutputFlag = 0;
     uint8_t enRelu = 0;
+    uint8_t quantMode = 0;
 
     ge::Format outBackpropFormat = ge::FORMAT_NCDHW;
     ge::Format filterFormat = ge::FORMAT_NCDHW;
     ge::Format yFormat = ge::FORMAT_NCDHW;
+};
+
+enum class QuantMode : std::uint8_t {
+    NO_QUANT = 0,
+    SCALAR_QUANT,   // perTensor量化模式，Scale shape为(1)
+    VECTOR_QUANT,   // perChannel量化模式，Scale shape和结果的channel一致
+    UNDEFINED
 };
 
 bool SetRunInfoToV2(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, optiling::OpTypeV2 opType);

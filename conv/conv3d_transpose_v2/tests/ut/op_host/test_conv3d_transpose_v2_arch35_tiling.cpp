@@ -31,8 +31,6 @@
 
 #define SUCCESS 0
 
-#ifdef USE_LEGACY_COMMON
-
 using namespace std;
 using namespace ge;
 
@@ -289,7 +287,7 @@ Conv3DTransposeV2TilingTestParam cases_params_910_95_case[] = {
      true,
      5,
      50331648,
-     "1 1 1 1 1 1 5 0 2 2 2 2 2 1 16 4 1 0 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 2 16 1 32 16 16 1 1 1 1 5 0 1 0 30 0 0 0 0 0 "},
+     "1 1 1 1 1 1 5 0 2 2 2 2 2 1 16 4 4 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 2 16 1 32 16 16 1 1 1 1 5 0 1 0 30 0 0 0 0 0 "},
     {"conv3d_transpose_2_group",
      "Ascend910_95",
      "Ascend910_95",
@@ -317,9 +315,9 @@ Conv3DTransposeV2TilingTestParam cases_params_910_95_case[] = {
      "VALID",
      true,
      true,
-     10,
-     65538,
-     "1 1 2 1 1 5 10 0 2 2 1 1 2 1 16 4 16 0 0 0 0 1 16 16 16 16 1 1 1 1 1 4 4 5 5 5 5 2 2 1 16 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 16 16 1 16 64 16 1 1 1 1 5 0 1 0 15 0 0 0 0 0 "},
+     5,
+     16842754,
+     "1 1 1 1 1 1 5 0 2 2 2 2 2 1 16 4 4 16 0 0 0 1 16 16 16 16 1 1 1 1 1 4 4 5 5 5 5 2 2 1 16 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 16 16 1 32 64 16 1 1 1 1 5 0 1 0 30 0 0 0 0 0 "},
     {"conv3d_transpose_3_general_group",
      "Ascend910_95",
      "Ascend910_95",
@@ -347,9 +345,9 @@ Conv3DTransposeV2TilingTestParam cases_params_910_95_case[] = {
      "VALID",
      true,
      true,
-     2,
-     65538,
-     "1 1 2 1 1 1 2 0 2 2 1 2 2 1 16 4 4 0 0 0 0 1 64 64 16 16 4 4 1 1 1 4 4 5 5 5 5 2 2 4 16 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 4 16 16 5 16 64 16 1 1 1 1 5 0 1 0 15 0 0 0 0 0 "},
+     20,
+     16842754,
+     "1 1 1 1 1 1 20 0 2 2 2 2 2 1 16 4 4 4 0 0 0 1 64 64 16 16 4 4 1 1 1 4 4 5 5 5 5 2 2 4 16 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 16 16 1 32 64 16 1 1 1 1 5 0 1 0 30 0 0 0 0 0 "},
     {"conv3d_transpose_4_general_group1_ncdhw_dhwcn",
      "Ascend910_95",
      "Ascend910_95",
@@ -379,7 +377,7 @@ Conv3DTransposeV2TilingTestParam cases_params_910_95_case[] = {
      true,
      5,
      16777218,
-     "1 1 1 1 1 1 5 0 2 2 2 2 2 1 16 4 1 0 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 2 16 1 32 64 16 1 1 1 1 5 0 1 0 30 0 0 0 0 0 "},
+     "1 1 1 1 1 1 5 0 2 2 2 2 2 1 16 4 4 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 2 16 1 32 64 16 1 1 1 1 5 0 1 0 30 0 0 0 0 0 "},
     {"conv3d_transpose_5_general_group1_ndhwc_dhwcn",
      "Ascend910_95",
      "Ascend910_95",
@@ -409,7 +407,7 @@ Conv3DTransposeV2TilingTestParam cases_params_910_95_case[] = {
      true,
      5,
      16777218,
-     "1 1 1 1 1 1 5 0 2 2 2 2 2 1 16 4 1 0 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 2 16 1 32 64 16 1 1 1 1 5 0 1 0 30 0 0 0 0 0 "},
+     "1 1 1 1 1 1 5 0 2 2 2 2 2 1 16 4 4 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 2 16 1 32 64 16 1 1 1 1 5 0 1 0 30 0 0 0 0 0 "},
 };
 
 static void ThreadFunc(
@@ -447,5 +445,3 @@ INSTANTIATE_TEST_CASE_P(
     Conv3DTranpose910_95_case, Conv3DTransposeV2TilingRunTime3, testing::ValuesIn(cases_params_910_95_case));
 
 } // namespace
-
-#endif

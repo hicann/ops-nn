@@ -92,6 +92,37 @@ TEST_F(convolution_backward_test, test_Conv2DBackward_Fp16_keep_dtype) {
   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
+// TEST_F(convolution_backward_test, test_Conv2DBackward_Fp16_keep_dtype_pad4dim) {
+//   auto input_tensor_desc = TensorDesc({512, 512, 7, 7}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto weight_tensor_desc = TensorDesc({2048, 512, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto grad_output_tensor_desc = TensorDesc({512, 2048, 6, 6}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+
+//   auto bias_sizes_desc = IntArrayDesc(vector<int64_t>{1});
+//   auto stride_desc = IntArrayDesc(vector<int64_t>{1, 1});
+//   auto padding_desc = IntArrayDesc(vector<int64_t>{0, 1, 0, 1});
+//   auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1});
+//   bool transposed = false;
+//   auto output_padding_desc = IntArrayDesc(vector<int64_t>{0, 0, 0, 0});
+//   int groups = 1;
+//   auto output_mask = BoolArrayDesc(vector<bool>{true, true, true});
+//   auto gradInput = TensorDesc({512, 512, 7, 7}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto gradWeight = TensorDesc({2048, 512, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto gradBias = TensorDesc({2048}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+//   int8_t cubeMathType = 0;
+
+//   auto ut =
+//       OP_API_UT(aclnnConvolutionBackward,
+//                 INPUT(grad_output_tensor_desc, input_tensor_desc, weight_tensor_desc, bias_sizes_desc, stride_desc,
+//                       padding_desc, dilation_desc, transposed, output_padding_desc, groups, output_mask, cubeMathType),
+//                 OUTPUT(gradInput, gradWeight, gradBias));
+
+//   // SAMPLE: only test GetWorkspaceSize
+//   uint64_t workspace_size = 0;
+//   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+// }
+
 TEST_F(convolution_backward_test, test_Conv2DBackward_Fp32_allow_fp32_down_precision) {
   auto input_tensor_desc = TensorDesc({512, 512, 7, 7}, ACL_FLOAT, ACL_FORMAT_NCHW);
   auto weight_tensor_desc = TensorDesc({2048, 512, 1, 1}, ACL_FLOAT, ACL_FORMAT_NCHW);
@@ -279,6 +310,162 @@ TEST_F(convolution_backward_test, ascend910B2_test_Conv2DBackward_Fp32_use_hf32)
   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
+// // test dilation
+// TEST_F(convolution_backward_test, ascend910B2_test_ConvBackward_pre_dilation_FP16) {
+//   auto input_tensor_desc = TensorDesc({512, 512, 77, 77}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto weight_tensor_desc = TensorDesc({2048, 512, 3, 3}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto grad_output_tensor_desc = TensorDesc({512, 2048, 21, 21}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+
+//   auto bias_sizes_desc = IntArrayDesc(vector<int64_t>{2048});
+//   auto stride_desc = IntArrayDesc(vector<int64_t>{4, 4});
+//   auto padding_desc = IntArrayDesc(vector<int64_t>{4, 4});
+//   auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1});
+//   bool transposed = false;
+//   auto output_padding_desc = IntArrayDesc(vector<int64_t>{0, 0});
+//   int groups = 1;
+//   auto output_mask = BoolArrayDesc(vector<bool>{true, true, true});
+//   auto gradInput = TensorDesc({512, 512, 77, 77}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto gradWeight = TensorDesc({2048, 512, 3, 3}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto gradBias = TensorDesc({2048}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+//   int8_t cubeMathType = 0;
+
+//   auto ut =
+//       OP_API_UT(aclnnConvolutionBackward,
+//                 INPUT(grad_output_tensor_desc, input_tensor_desc, weight_tensor_desc, bias_sizes_desc, stride_desc,
+//                       padding_desc, dilation_desc, transposed, output_padding_desc, groups, output_mask, cubeMathType),
+//                 OUTPUT(gradInput, gradWeight, gradBias));
+
+//   // SAMPLE: only test GetWorkspaceSize
+//   uint64_t workspace_size = 0;
+//   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+// }
+
+// TEST_F(convolution_backward_test, ascend910B2_test_ConvBackward_pre_dilation_FP32) {
+//   auto input_tensor_desc = TensorDesc({512, 512, 77, 77}, ACL_FLOAT, ACL_FORMAT_NCHW);
+//   auto weight_tensor_desc = TensorDesc({2048, 512, 3, 3}, ACL_FLOAT, ACL_FORMAT_NCHW);
+//   auto grad_output_tensor_desc = TensorDesc({512, 2048, 21, 21}, ACL_FLOAT, ACL_FORMAT_NCHW);
+
+//   auto bias_sizes_desc = IntArrayDesc(vector<int64_t>{2048});
+//   auto stride_desc = IntArrayDesc(vector<int64_t>{4, 4});
+//   auto padding_desc = IntArrayDesc(vector<int64_t>{4, 4});
+//   auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1});
+//   bool transposed = false;
+//   auto output_padding_desc = IntArrayDesc(vector<int64_t>{0, 0});
+//   int groups = 1;
+//   auto output_mask = BoolArrayDesc(vector<bool>{true, true, true});
+//   auto gradInput = TensorDesc({512, 512, 77, 77}, ACL_FLOAT, ACL_FORMAT_NCHW);
+//   auto gradWeight = TensorDesc({2048, 512, 3, 3}, ACL_FLOAT, ACL_FORMAT_NCHW);
+//   auto gradBias = TensorDesc({2048}, ACL_FLOAT, ACL_FORMAT_ND);
+
+//   int8_t cubeMathType = 0;
+
+//   auto ut =
+//       OP_API_UT(aclnnConvolutionBackward,
+//                 INPUT(grad_output_tensor_desc, input_tensor_desc, weight_tensor_desc, bias_sizes_desc, stride_desc,
+//                       padding_desc, dilation_desc, transposed, output_padding_desc, groups, output_mask, cubeMathType),
+//                 OUTPUT(gradInput, gradWeight, gradBias));
+
+//   // SAMPLE: only test GetWorkspaceSize
+//   uint64_t workspace_size = 0;
+//   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+// }
+
+// TEST_F(convolution_backward_test, ascend910B2_test_ConvBackward_post_dilation_FP16) {
+//   auto input_tensor_desc = TensorDesc({512, 512, 4, 4}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto weight_tensor_desc = TensorDesc({2048, 512, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto grad_output_tensor_desc = TensorDesc({512, 2048, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+
+//   auto bias_sizes_desc = IntArrayDesc(vector<int64_t>{2048});
+//   auto stride_desc = IntArrayDesc(vector<int64_t>{3, 3});
+//   auto padding_desc = IntArrayDesc(vector<int64_t>{1, 1});
+//   auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1});
+//   bool transposed = false;
+//   auto output_padding_desc = IntArrayDesc(vector<int64_t>{0, 0});
+//   int groups = 1;
+//   auto output_mask = BoolArrayDesc(vector<bool>{true, true, true});
+//   auto gradInput = TensorDesc({512, 512, 4, 4}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto gradWeight = TensorDesc({2048, 512, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto gradBias = TensorDesc({2048}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+//   int8_t cubeMathType = 0;
+
+//   auto ut =
+//       OP_API_UT(aclnnConvolutionBackward,
+//                 INPUT(grad_output_tensor_desc, input_tensor_desc, weight_tensor_desc, bias_sizes_desc, stride_desc,
+//                       padding_desc, dilation_desc, transposed, output_padding_desc, groups, output_mask, cubeMathType),
+//                 OUTPUT(gradInput, gradWeight, gradBias));
+
+//   // SAMPLE: only test GetWorkspaceSize
+//   uint64_t workspace_size = 0;
+//   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+// }
+
+// TEST_F(convolution_backward_test, ascend910B2_test_ConvBackward_pre_dilation_hout1_wout1_FP16) {
+//   auto input_tensor_desc = TensorDesc({512, 512, 4, 4}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto weight_tensor_desc = TensorDesc({2048, 512, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto grad_output_tensor_desc = TensorDesc({512, 2048, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+
+//   auto bias_sizes_desc = IntArrayDesc(vector<int64_t>{2048});
+//   auto stride_desc = IntArrayDesc(vector<int64_t>{6, 6});
+//   auto padding_desc = IntArrayDesc(vector<int64_t>{0, 0});
+//   auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1});
+//   bool transposed = false;
+//   auto output_padding_desc = IntArrayDesc(vector<int64_t>{0, 0});
+//   int groups = 1;
+//   auto output_mask = BoolArrayDesc(vector<bool>{true, true, true});
+//   auto gradInput = TensorDesc({512, 512, 4, 4}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto gradWeight = TensorDesc({2048, 512, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto gradBias = TensorDesc({2048}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+//   int8_t cubeMathType = 0;
+
+//   auto ut =
+//       OP_API_UT(aclnnConvolutionBackward,
+//                 INPUT(grad_output_tensor_desc, input_tensor_desc, weight_tensor_desc, bias_sizes_desc, stride_desc,
+//                       padding_desc, dilation_desc, transposed, output_padding_desc, groups, output_mask, cubeMathType),
+//                 OUTPUT(gradInput, gradWeight, gradBias));
+
+//   // SAMPLE: only test GetWorkspaceSize
+//   uint64_t workspace_size = 0;
+//   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+// }
+
+// TEST_F(convolution_backward_test, ascend910B2_test_ConvBackward_post_dilation_hout1_wout1_FP16) {
+//   auto input_tensor_desc = TensorDesc({512, 512, 4, 4}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto weight_tensor_desc = TensorDesc({2048, 512, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto grad_output_tensor_desc = TensorDesc({512, 2048, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+
+//   auto bias_sizes_desc = IntArrayDesc(vector<int64_t>{2048});
+//   auto stride_desc = IntArrayDesc(vector<int64_t>{6, 6});
+//   auto padding_desc = IntArrayDesc(vector<int64_t>{0, 0});
+//   auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1});
+//   bool transposed = false;
+//   auto output_padding_desc = IntArrayDesc(vector<int64_t>{0, 0});
+//   int groups = 1;
+//   auto output_mask = BoolArrayDesc(vector<bool>{true, true, true});
+//   auto gradInput = TensorDesc({512, 512, 4, 4}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto gradWeight = TensorDesc({2048, 512, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto gradBias = TensorDesc({2048}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+//   int8_t cubeMathType = 0;
+
+//   auto ut =
+//       OP_API_UT(aclnnConvolutionBackward,
+//                 INPUT(grad_output_tensor_desc, input_tensor_desc, weight_tensor_desc, bias_sizes_desc, stride_desc,
+//                       padding_desc, dilation_desc, transposed, output_padding_desc, groups, output_mask, cubeMathType),
+//                 OUTPUT(gradInput, gradWeight, gradBias));
+
+//   // SAMPLE: only test GetWorkspaceSize
+//   uint64_t workspace_size = 0;
+//   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+// }
+
 TEST_F(convolution_backward_test, ascend910B2_test_ConvBackward_post_dilation_FP32) {
   auto input_tensor_desc = TensorDesc({512, 512, 4, 4}, ACL_FLOAT, ACL_FORMAT_NCHW);
   auto weight_tensor_desc = TensorDesc({2048, 512, 1, 1}, ACL_FLOAT, ACL_FORMAT_NCHW);
@@ -309,6 +496,35 @@ TEST_F(convolution_backward_test, ascend910B2_test_ConvBackward_post_dilation_FP
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
+
+// // 覆盖gradOutput、input、weight dtype不一致的情况
+// TEST_F(convolution_backward_test, ascend910B2_test_ConvBackward_dtype_inconsistent) {
+//   // FP32 + FP16 + FP16
+//   test_run({512, 512, 4, 4}, ACL_FLOAT, ACL_FORMAT_NCHW, {2048, 512, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCHW,
+//            {512, 2048, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCHW, {512, 512, 4, 4}, ACL_FLOAT, ACL_FORMAT_NCHW,
+//            {2048, 512, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCHW, {2048}, ACL_FLOAT16, ACL_FORMAT_ND);
+//   // FP16 + FP32 + FP16
+//   test_run({512, 512, 4, 4}, ACL_FLOAT16, ACL_FORMAT_NCHW, {2048, 512, 1, 1}, ACL_FLOAT, ACL_FORMAT_NCHW,
+//            {512, 2048, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCHW, {512, 512, 4, 4}, ACL_FLOAT16, ACL_FORMAT_NCHW,
+//            {2048, 512, 1, 1}, ACL_FLOAT, ACL_FORMAT_NCHW, {2048}, ACL_FLOAT16, ACL_FORMAT_ND);
+//   // FP16 + FP16 + FP32
+//   test_run({512, 512, 4, 4}, ACL_FLOAT16, ACL_FORMAT_NCHW, {2048, 512, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCHW,
+//            {512, 2048, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW, {512, 512, 4, 4}, ACL_FLOAT16, ACL_FORMAT_NCHW,
+//            {2048, 512, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCHW, {2048}, ACL_FLOAT, ACL_FORMAT_ND);
+
+//   // FP32 + FP32 + FP16
+//   test_run({512, 512, 4, 4}, ACL_FLOAT, ACL_FORMAT_NCHW, {2048, 512, 1, 1}, ACL_FLOAT, ACL_FORMAT_NCHW,
+//            {512, 2048, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCHW, {512, 512, 4, 4}, ACL_FLOAT, ACL_FORMAT_NCHW,
+//            {2048, 512, 1, 1}, ACL_FLOAT, ACL_FORMAT_NCHW, {2048}, ACL_FLOAT16, ACL_FORMAT_ND);
+//   // FP16 + FP32 + FP32
+//   test_run({512, 512, 4, 4}, ACL_FLOAT16, ACL_FORMAT_NCHW, {2048, 512, 1, 1}, ACL_FLOAT, ACL_FORMAT_NCHW,
+//            {512, 2048, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW, {512, 512, 4, 4}, ACL_FLOAT16, ACL_FORMAT_NCHW,
+//            {2048, 512, 1, 1}, ACL_FLOAT, ACL_FORMAT_NCHW, {2048}, ACL_FLOAT, ACL_FORMAT_ND);
+//   // FP32 + FP16 + FP32
+//   test_run({512, 512, 4, 4}, ACL_FLOAT, ACL_FORMAT_NCHW, {2048, 512, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCHW,
+//            {512, 2048, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW, {512, 512, 4, 4}, ACL_FLOAT, ACL_FORMAT_NCHW,
+//            {2048, 512, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCHW, {2048}, ACL_FLOAT, ACL_FORMAT_ND);
+// }
 
 // test Conv2DBackward BF16
 TEST_F(convolution_backward_test, ascend910B2_test_Conv2DBackward_Bf16) {
@@ -1149,6 +1365,37 @@ TEST_F(convolution_backward_test, ascend910B2_test_Conv3DBackward_Fp16_USE_HF32)
   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
+// TEST_F(convolution_backward_test, ascend910_95_test_Conv2DBackward_Fp16_keep_dtype_pad4dim) {
+//   auto input_tensor_desc = TensorDesc({512, 512, 7, 7}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto weight_tensor_desc = TensorDesc({2048, 512, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto grad_output_tensor_desc = TensorDesc({512, 2048, 6, 6}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+
+//   auto bias_sizes_desc = IntArrayDesc(vector<int64_t>{1});
+//   auto stride_desc = IntArrayDesc(vector<int64_t>{1, 1});
+//   auto padding_desc = IntArrayDesc(vector<int64_t>{0, 1, 0, 1});
+//   auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1});
+//   bool transposed = false;
+//   auto output_padding_desc = IntArrayDesc(vector<int64_t>{0, 0, 0, 0});
+//   int groups = 1;
+//   auto output_mask = BoolArrayDesc(vector<bool>{true, true, true});
+//   auto gradInput = TensorDesc({512, 512, 7, 7}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto gradWeight = TensorDesc({2048, 512, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto gradBias = TensorDesc({2048}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+//   int8_t cubeMathType = 0;
+
+//   auto ut =
+//       OP_API_UT(aclnnConvolutionBackward,
+//                 INPUT(grad_output_tensor_desc, input_tensor_desc, weight_tensor_desc, bias_sizes_desc, stride_desc,
+//                       padding_desc, dilation_desc, transposed, output_padding_desc, groups, output_mask, cubeMathType),
+//                 OUTPUT(gradInput, gradWeight, gradBias));
+
+//   // SAMPLE: only test GetWorkspaceSize
+//   uint64_t workspace_size = 0;
+//   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+// }
+
 TEST_F(convolution_backward_test, ascend910_95_test_Conv1DBackward_Fp16_keep_dtype) {
   auto input_tensor_desc = TensorDesc({16, 16, 16}, ACL_FLOAT16, ACL_FORMAT_NCL);
   auto weight_tensor_desc = TensorDesc({8, 16, 3}, ACL_FLOAT16, ACL_FORMAT_NCL);
@@ -1398,6 +1645,37 @@ TEST_F(convolution_backward_test, ascend910_95_test_ConvBackward_transposed_empt
   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
+// TEST_F(convolution_backward_test, ascend910_95_test_Conv2DBackwardInput_FP16_Conv2Matmul_Stride_Eq_Kernel) {
+//   auto input_tensor_desc = TensorDesc({1, 128, 225, 225}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto weight_tensor_desc = TensorDesc({256, 128, 3, 3}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto grad_output_tensor_desc = TensorDesc({1, 256, 75, 75}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+
+//   auto bias_sizes_desc = IntArrayDesc(vector<int64_t>{256});
+//   auto stride_desc = IntArrayDesc(vector<int64_t>{3, 3});
+//   auto padding_desc = IntArrayDesc(vector<int64_t>{0, 0});
+//   auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1});
+//   bool transposed = false;
+//   auto output_padding_desc = IntArrayDesc(vector<int64_t>{0, 0});
+//   int groups = 1;
+//   auto output_mask = BoolArrayDesc(vector<bool>{true, false, false});
+//   auto gradInput = TensorDesc({1, 128, 225, 225}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto gradWeight = TensorDesc({256, 128, 3, 3}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//   auto gradBias = TensorDesc({256}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+//   int8_t cubeMathType = 0;
+
+//   auto ut =
+//       OP_API_UT(aclnnConvolutionBackward,
+//                 INPUT(grad_output_tensor_desc, input_tensor_desc, weight_tensor_desc, bias_sizes_desc, stride_desc,
+//                       padding_desc, dilation_desc, transposed, output_padding_desc, groups, output_mask, cubeMathType),
+//                 OUTPUT(gradInput, gradWeight, gradBias));
+
+//   // SAMPLE: only test GetWorkspaceSize
+//   uint64_t workspace_size = 0;
+//   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+// }
+
 TEST_F(convolution_backward_test, ascend910_95_test_Conv3DBackward_DwStrideEqualKernelTransToKernel1x1x1) {
   auto input_tensor_desc = TensorDesc({1, 3, 16, 224, 224}, ACL_BF16, ACL_FORMAT_NCDHW);
   auto weight_tensor_desc = TensorDesc({768, 3, 2, 16, 16}, ACL_BF16, ACL_FORMAT_NCDHW);
@@ -1486,6 +1764,68 @@ TEST_F(convolution_backward_test, ascend910_95_test_ConvBackward_transpose_empty
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
+
+// TEST_F(convolution_backward_test, ascend910_95_test_Conv1DBackpropFilter_fp16_matmul)
+// {
+//     auto input_tensor_desc = TensorDesc({4, 128,73}, ACL_FLOAT16, ACL_FORMAT_NCL);
+//     auto weight_tensor_desc = TensorDesc({272, 128, 73}, ACL_FLOAT16, ACL_FORMAT_NCL);
+//     auto grad_output_tensor_desc = TensorDesc({4, 272, 1}, ACL_FLOAT16, ACL_FORMAT_NCL);
+
+//     auto bias_sizes_desc = IntArrayDesc(vector<int64_t>{272});
+//     auto stride_desc = IntArrayDesc(vector<int64_t>{8});
+//     auto padding_desc = IntArrayDesc(vector<int64_t>{0});
+//     auto dilation_desc = IntArrayDesc(vector<int64_t>{1});
+//     bool transposed = false;
+//     auto output_padding_desc = IntArrayDesc(vector<int64_t>{0});
+//     int groups = 1;
+//     auto output_mask = BoolArrayDesc(vector<bool>{false, true, false});
+//     auto gradInput = TensorDesc({4, 128, 73}, ACL_FLOAT16, ACL_FORMAT_NCL);
+//     auto gradWeight = TensorDesc({272, 128, 73}, ACL_FLOAT16, ACL_FORMAT_NCL);
+//     auto gradBias = TensorDesc({272}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+//     int8_t cubeMathType = 0;
+//     auto ut = OP_API_UT(
+//         aclnnConvolutionBackward,
+//         INPUT(
+//             grad_output_tensor_desc, input_tensor_desc, weight_tensor_desc, bias_sizes_desc, stride_desc, padding_desc,
+//             dilation_desc, transposed, output_padding_desc, groups, output_mask, cubeMathType),
+//         OUTPUT(gradInput, gradWeight, gradBias));
+
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+// }
+
+// TEST_F(convolution_backward_test, ascend910_95_test_Conv1DBackpropInput_fp16_matmul)
+// {
+//     auto input_tensor_desc = TensorDesc({4, 128, 73}, ACL_FLOAT16, ACL_FORMAT_NCL);
+//     auto weight_tensor_desc = TensorDesc({272, 128, 73}, ACL_FLOAT16, ACL_FORMAT_NCL);
+//     auto grad_output_tensor_desc = TensorDesc({4, 272, 1}, ACL_FLOAT16, ACL_FORMAT_NCL);
+
+//     auto bias_sizes_desc = IntArrayDesc(vector<int64_t>{272});
+//     auto stride_desc = IntArrayDesc(vector<int64_t>{8});
+//     auto padding_desc = IntArrayDesc(vector<int64_t>{0});
+//     auto dilation_desc = IntArrayDesc(vector<int64_t>{1});
+//     bool transposed = false;
+//     auto output_padding_desc = IntArrayDesc(vector<int64_t>{0});
+//     int groups = 1;
+//     auto output_mask = BoolArrayDesc(vector<bool>{true, false, false});
+//     auto gradInput = TensorDesc({4, 128, 73}, ACL_FLOAT16, ACL_FORMAT_NCL);
+//     auto gradWeight = TensorDesc({272, 128, 73}, ACL_FLOAT16, ACL_FORMAT_NCL);
+//     auto gradBias = TensorDesc({272}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+//     int8_t cubeMathType = 0;
+//     auto ut = OP_API_UT(
+//         aclnnConvolutionBackward,
+//         INPUT(
+//             grad_output_tensor_desc, input_tensor_desc, weight_tensor_desc, bias_sizes_desc, stride_desc, padding_desc,
+//             dilation_desc, transposed, output_padding_desc, groups, output_mask, cubeMathType),
+//         OUTPUT(gradInput, gradWeight, gradBias));
+
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+// }
 
 TEST_F(convolution_backward_test, ascend910_95_test_Conv1DBackpropFilter_fp32_group)
 {

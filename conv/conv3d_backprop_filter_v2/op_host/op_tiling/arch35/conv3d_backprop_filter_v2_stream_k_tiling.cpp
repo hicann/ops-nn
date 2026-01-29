@@ -13,29 +13,29 @@
  * \brief
  */
 
- #include "conv3d_backprop_filter_v2_stream_k_tiling.h"
+#include "conv3d_backprop_filter_v2_stream_k_tiling.h"
 
- #include <map>
- #include <numeric>
- #include <util/math_util.h>
- #include <log/log.h>
- #include <graph/utils/type_utils.h>
- #include "tiling_base/tiling_templates_registry.h"
+#include <map>
+#include <numeric>
+#include <util/math_util.h>
+#include <log/log.h>
+#include <graph/utils/type_utils.h>
+#include "tiling_base/tiling_templates_registry.h"
 
 namespace Ops {
 namespace NN {
 namespace Conv {
 constexpr uint64_t CONST_ZERO = 0;
-constexpr int32_t KERNEL_SIZE_4 = 4;
 constexpr uint32_t STREAM_K = 1;
 constexpr uint32_t MN_STREAM_K = 2;
 constexpr const uint32_t NO_STREAMK_CALC = 0;
 constexpr const uint32_t STREAMK_BATCHDOUT = 1;
 constexpr const uint32_t STREAMK_HWOUT = 2;
 constexpr const uint64_t ONE_DIM = 1;
-constexpr uint32_t L0C_DTYPE_BYTE = 4;  //注意，修改此处值需要联动修改其它cc文件中同名的定义，后续优化，一份定义
+constexpr uint32_t L0C_DTYPE_BYTE = 4; //注意，修改此处值需要联动修改其它cc文件中同名的定义，后续优化，一份定义
 
-bool Conv3DBackpropFilterV2StreamKTiling::IsCapable() {
+bool Conv3DBackpropFilterV2StreamKTiling::IsCapable()
+{
     if (!IsSocVersion91095()) {
         return false;
     }
@@ -49,23 +49,24 @@ bool Conv3DBackpropFilterV2StreamKTiling::IsCapable() {
     return true;
 }
 
-void Conv3DBackpropFilterV2StreamKTiling::InitSplitWOI() {
+void Conv3DBackpropFilterV2StreamKTiling::InitSplitWOI()
+{
     if (enableSplitW) {
-         if (runInfo_.wo <= SPLIT_WO_THRESHOLD) {
-             blockTiling_.splitWo = runInfo_.wo;
-             blockTiling_.splitWi = runInfo_.wi;
-         } else {
-             blockTiling_.splitWo = SPLIT_WO_SIZE;
-             blockTiling_.splitWi = GetWiCal(blockTiling_.splitWo, blockTiling_.isSplitKernelHW);
-             blockTiling_.tailWo = runInfo_.wo % blockTiling_.splitWo;
-             blockTiling_.tailWi = GetWiCal(blockTiling_.tailWo, blockTiling_.isSplitKernelHW);
-         }
+        if (runInfo_.wo <= SPLIT_WO_THRESHOLD) {
+            blockTiling_.splitWo = runInfo_.wo;
+            blockTiling_.splitWi = runInfo_.wi;
+        } else {
+            blockTiling_.splitWo = SPLIT_WO_SIZE;
+            blockTiling_.splitWi = GetWiCal(blockTiling_.splitWo, blockTiling_.isSplitKernelHW);
+            blockTiling_.tailWo = runInfo_.wo % blockTiling_.splitWo;
+            blockTiling_.tailWi = GetWiCal(blockTiling_.tailWo, blockTiling_.isSplitKernelHW);
+        }
     } else {
         blockTiling_.splitWo = runInfo_.wo;
         blockTiling_.splitWi = runInfo_.wi;
     }
 
-    return ;
+    return;
 }
 
 ge::graphStatus Conv3DBackpropFilterV2StreamKTiling::DoOpTiling()
@@ -84,7 +85,8 @@ ge::graphStatus Conv3DBackpropFilterV2StreamKTiling::DoOpTiling()
     }
     AdjustSmallCaseBaseBlock();
     DoStreamKTiling();
-    OP_LOGD(opName_, "Finish doing basic block stream k tiling, total blockCnt[%ld], coreStreamK[%d].",
+    OP_LOGD(
+        opName_, "Finish doing basic block stream k tiling, total blockCnt[%ld], coreStreamK[%d].",
         blockTiling_.totalCnt, blockTiling_.coreStreamK);
     return ge::GRAPH_SUCCESS;
 }
@@ -99,35 +101,35 @@ void Conv3DBackpropFilterV2StreamKTiling::AdjustSmallCaseBaseBlock()
     uint64_t nBlockCnt = Ops::Base::CeilDiv(mmInfo_.nValue, static_cast<uint64_t>(blockTiling_.singleCoreN));
     uint64_t totalCnt = mBlockCnt * nBlockCnt * runInfo_.kd * runInfo_.real_g;
     // 若基本块数量能够做一轮计算，则不调整基本块大小，保持最优基本块
-    if ((totalCnt >= coreNum_)) {
+    if ((totalCnt >= platformInfo_.core_num)) {
         return;
     }
     // 若HWout和BatchDout不满足StreamK的分核，则不调整基本块
-    uint64_t splitCoreNum = coreNum_ / totalCnt;
-    if ((coreNum_ % totalCnt == 0) && ((static_cast<uint64_t>(runInfo_.batch * runInfo_.dout) >= splitCoreNum) ||
+    uint64_t splitCoreNum = platformInfo_.core_num / totalCnt;
+    if ((platformInfo_.core_num % totalCnt == 0) && ((static_cast<uint64_t>(runInfo_.batch * runInfo_.dout) >= splitCoreNum) ||
         (static_cast<uint64_t>(runInfo_.ho) >= splitCoreNum))) {
         return;
     }
     int64_t mCntMax = std::min(Ops::Base::CeilDiv(mmInfo_.mValue, static_cast<uint64_t>(BLOCK_CUBE)),
-        static_cast<uint64_t>(coreNum_)) / runInfo_.kd / runInfo_.real_g / nBlockCnt;
+        static_cast<uint64_t>(platformInfo_.core_num)) / runInfo_.kd / runInfo_.real_g / nBlockCnt;
     for (int64_t mCnt = mCntMax; mCnt >= 1; mCnt--) {
         // 在基本块配置时，singleShapeM最大为256，此时根据L0大小重新配置singleShapeM，使在StreamK下能分满核
         uint64_t singleShapeM = Ops::Base::CeilAlign(Ops::Base::CeilDiv(mmInfo_.mValue, static_cast<uint64_t>(mCnt)),
             static_cast<uint64_t>(BLOCK_CUBE));
         uint64_t mCntFixed = Ops::Base::CeilDiv(mmInfo_.mValue, singleShapeM);
         uint64_t blockTotalCnt = mCntFixed * nBlockCnt * runInfo_.kd * runInfo_.real_g;
-        if ((coreNum_ % blockTotalCnt != 0) || (blockTotalCnt > coreNum_)) {
+        if ((platformInfo_.core_num % blockTotalCnt != 0) || (blockTotalCnt > platformInfo_.core_num)) {
             continue;
         }
 
         uint64_t blockBaseK = GetBaseK(singleShapeM, blockTiling_.blockBaseN);
-        uint64_t streamkCoreDim = coreNum_ / blockTotalCnt;
+        uint64_t streamkCoreDim = platformInfo_.core_num / blockTotalCnt;
         if ((runInfo_.batch * runInfo_.dout < static_cast<int32_t>(streamkCoreDim)) &&
             (blockBaseK < streamkCoreDim * runInfo_.wo)) {
             continue;
         }
 
-        if (singleShapeM * blockTiling_.blockBaseN * L0C_DTYPE_BYTE > L0C_SIZE) {
+        if (singleShapeM * blockTiling_.blockBaseN * L0C_DTYPE_BYTE > platformInfo_.l0c_size) {
             OP_LOGD(opName_, "base block after adjust exceed loC size,stop adjust block baseM");
             break;
         }
@@ -136,7 +138,7 @@ void Conv3DBackpropFilterV2StreamKTiling::AdjustSmallCaseBaseBlock()
         blockTiling_.blockBaseK = blockBaseK;
         blockTiling_.blockBaseM = singleShapeM;
 
-        if (blockTiling_.blockBaseM * blockTiling_.blockBaseN * DB_ON * L0C_DTYPE_BYTE <= L0C_SIZE) {
+        if (blockTiling_.blockBaseM * blockTiling_.blockBaseN * DB_ON * L0C_DTYPE_BYTE <= platformInfo_.l0c_size) {
             blockTiling_.dbL0C = DB_ON;
         } else {
             blockTiling_.dbL0C = DB_OFF;
@@ -151,8 +153,9 @@ void Conv3DBackpropFilterV2StreamKTiling::AdjustSmallCaseBaseBlock()
 
 uint64_t Conv3DBackpropFilterV2StreamKTiling::GetSingleShapeKByStreamK()
 {
-    uint64_t singleShapeK = Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.ho),
-        static_cast<uint64_t>(blockTiling_.coreStreamK)) * runInfo_.wo;
+    uint64_t singleShapeK = Ops::Base::CeilDiv(
+                                static_cast<uint64_t>(runInfo_.ho),
+                                static_cast<uint64_t>(blockTiling_.coreStreamK)) * runInfo_.wo;
     singleShapeK = Ops::Base::CeilAlign(singleShapeK, static_cast<uint64_t>(runInfo_.wo));
     return singleShapeK;
 }
@@ -160,9 +163,11 @@ uint64_t Conv3DBackpropFilterV2StreamKTiling::GetSingleShapeKByStreamK()
 bool Conv3DBackpropFilterV2StreamKTiling::IsSplitBatchDoutBetter()
 {
     uint64_t singleCoreBatchDout = static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout;
-    uint64_t singleShapeBatchDout = Ops::Base::CeilDiv(singleCoreBatchDout, static_cast<uint64_t>(blockTiling_.coreStreamK));
+    uint64_t singleShapeBatchDout = Ops::Base::CeilDiv(
+        singleCoreBatchDout, static_cast<uint64_t>(blockTiling_.coreStreamK));
     uint64_t batchDoutTail = singleCoreBatchDout % singleShapeBatchDout;
-    uint64_t streamkBatchDim = Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout, singleShapeBatchDout);
+    uint64_t streamkBatchDim = Ops::Base::CeilDiv(
+        static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout, singleShapeBatchDout);
     uint64_t singleShapeK = GetSingleShapeKByStreamK();
 
     // 优先选择切BatchDout或者HWout 分核数多者
@@ -184,9 +189,11 @@ bool Conv3DBackpropFilterV2StreamKTiling::IsSplitBatchDoutBetter()
 
 void Conv3DBackpropFilterV2StreamKTiling::DoStreamkByBatchDout()
 {
-    blockTiling_.singleCoreBatchDout = Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout,
+    blockTiling_.singleCoreBatchDout = Ops::Base::CeilDiv(
+        static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout,
         static_cast<uint64_t>(blockTiling_.coreStreamK));
-    uint64_t streamkBatchDim = Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout,
+    uint64_t streamkBatchDim = Ops::Base::CeilDiv(
+        static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout,
         blockTiling_.singleCoreBatchDout);
     if (streamkBatchDim == ONE_DIM) {
         blockTiling_.streamkType = NO_STREAMK_CALC;
@@ -230,21 +237,23 @@ void Conv3DBackpropFilterV2StreamKTiling::DoStreamKTiling()
     uint64_t mCnt = Ops::Base::CeilDiv(mmInfo_.mValue, static_cast<uint64_t>(blockTiling_.singleCoreM));
     uint64_t nCnt = Ops::Base::CeilDiv(mmInfo_.nValue, static_cast<uint64_t>(blockTiling_.singleCoreN));
     blockTiling_.totalCnt = mCnt * nCnt * runInfo_.kd * runInfo_.real_g;
-    blockTiling_.coreBindDirection = blockTiling_.totalCnt < coreNum_ ? STREAM_K : MN_STREAM_K;
+    blockTiling_.coreBindDirection = blockTiling_.totalCnt < platformInfo_.core_num ? STREAM_K : MN_STREAM_K;
     blockTiling_.singleCoreBatchDout = static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout;
-    blockTiling_.usedCoreNum = coreNum_;
-    uint64_t streamkCnt = blockTiling_.totalCnt % coreNum_;
-    if (streamkCnt == CONST_ZERO) { // 没有尾轮基本块
+    blockTiling_.usedCoreNum = platformInfo_.core_num;
+    uint64_t streamkCnt = blockTiling_.totalCnt % platformInfo_.core_num;
+    if (streamkCnt == CONST_ZERO) {
+        // 没有尾轮基本块
         blockTiling_.streamkType = NO_STREAMK_CALC;
         OP_LOGD(opName_, "The basic block streamk template does not need to process the tail block.");
-    } else if (streamkCnt > (coreNum_ >> 1)) { // 尾轮的基本块超过一半的核，不做streamk
+    } else if (streamkCnt > (platformInfo_.core_num >> 1)) {
+        // 尾轮的基本块超过一半的核，不做streamk
         blockTiling_.streamkType = NO_STREAMK_CALC;
         OP_LOGD(opName_, "The basic block streamk template does not process the tail block.");
     } else if (deterNotSupportFormat_) {
         blockTiling_.streamkType = NO_STREAMK_CALC;
         OP_LOGD(opName_, "The basic block streamk template only process the format of NCDHW.");
     } else {
-        blockTiling_.coreStreamK = coreNum_ / streamkCnt;
+        blockTiling_.coreStreamK = platformInfo_.core_num / streamkCnt;
 
         /*
             StreamK可选择切BatchDout或者HWout，此时优先级为：
@@ -269,12 +278,12 @@ void Conv3DBackpropFilterV2StreamKTiling::DoStreamKTiling()
 ge::graphStatus Conv3DBackpropFilterV2StreamKTiling::GetWorkspaceSize()
 {
     constexpr uint64_t WORKSPACE = 16777216; // 16777216 : 16 * 1024 * 1024 libapiworkspace
-    size_t *workspaces = context_->GetWorkspaceSizes(1);
+    size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     size_t userWorkSpaceSize = 0;
     if (blockTiling_.streamkType != NO_STREAMK_CALC) {
         constexpr uint64_t WORKSPACE_PIECE_NUM = 2; // 2: 1 space for Cube and 1 space for Vector
-        userWorkSpaceSize = WORKSPACE_PIECE_NUM * blockTiling_.usedCoreNum * L0C_SIZE;
+        userWorkSpaceSize = WORKSPACE_PIECE_NUM * blockTiling_.usedCoreNum * platformInfo_.l0c_size;
     }
     workspaces[0] = WORKSPACE + userWorkSpaceSize;
     return ge::GRAPH_SUCCESS;

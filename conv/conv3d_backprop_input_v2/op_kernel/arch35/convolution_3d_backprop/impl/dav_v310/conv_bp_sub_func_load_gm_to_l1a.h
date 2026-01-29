@@ -141,7 +141,7 @@ static __aicore__ inline void CalcLoadToA1Dn2NzParams4KernelSplit(Intf *self, ui
         dn2NzParams.srcDValue = self->ctx.doHoWo_;
         dn2NzParams.dstNzC0Stride = curHoSize * realWo;
         dn2NzParams.dstNzNStride = 1;
-        dn2NzParams.dstNzMatrixStride = realWo << self->ctx.tiling_->c0Bits;
+        dn2NzParams.dstNzMatrixStride = realWo << self->ctx.tiling_->c0BitsA;
     } else {
         dn2NzParams.dnNum = 1;
         dn2NzParams.nValue = curHoSize * realWo;   // A1全载，howo连续
@@ -187,7 +187,7 @@ static __aicore__ inline void CalcOutToA1DstAddr(Intf *self, const uint32_t stri
     if constexpr (Intf::conv3dConfig.enableC04Flag) {
         out2A1DstAddrOffset = static_cast<uint64_t>(hDstDataSkipLine) * woExpand * C04_COUT_SIZE;
     } else {
-        out2A1DstAddrOffset = static_cast<uint64_t>(hDstDataSkipLine) * woExpand << self->ctx.tiling_->c0Bits;
+        out2A1DstAddrOffset = static_cast<uint64_t>(hDstDataSkipLine) * woExpand << self->ctx.tiling_->c0BitsA;
     }
 
     if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
@@ -211,9 +211,9 @@ static __aicore__ inline void CalcOutToA1DstAddr(Intf *self, const uint32_t stri
         }
 
         if (hDstDataSkipLine > 0 && woExpand < allWoExpand) {   // h方向最开始补0时地址需要去除跳过Wo的部分
-            out2A1DstAddrOffset -= (hDstDataSkipLine * (allWoExpand - woExpand)) << self->ctx.tiling_->c0Bits;
+            out2A1DstAddrOffset -= (hDstDataSkipLine * (allWoExpand - woExpand)) << self->ctx.tiling_->c0BitsA;
         }
-        out2A1DstAddrOffset += wDstDataSkipPoint << self->ctx.tiling_->c0Bits;
+        out2A1DstAddrOffset += wDstDataSkipPoint << self->ctx.tiling_->c0BitsA;
     }
 }
 
@@ -233,7 +233,7 @@ static __aicore__ inline void CalcLoadToA1Dn2NzParams(Intf *self, Dn2NzParams &d
     uint32_t woExpand = ((self->ctx.tiling_->wo - 1) * self->ctx.tiling_->strideW) + 1;
     CalcOutToA1DstAddr(self, strideH, curHoSize, loadToA1HLoop, out2A1DstAddrOffset, woExpand);
 
-    if (unlikely(self->ctx.tiling_->strideW * strideH > 1) || self->ctx.realWoSize_ != self->ctx.tiling_->wo) {
+    if (unlikely(self->ctx.tiling_->strideW * strideH > 1 || self->ctx.realWoSize_ != self->ctx.tiling_->wo)) {
         dn2NzParams.dnNum = loadToA1HLoop;
         dn2NzParams.nValue = self->ctx.realWoSize_;
         dn2NzParams.dValue = curCoutSize;
@@ -241,7 +241,7 @@ static __aicore__ inline void CalcLoadToA1Dn2NzParams(Intf *self, Dn2NzParams &d
         dn2NzParams.srcDValue = self->ctx.doHoWo_;
         dn2NzParams.dstNzC0Stride = curHoSize * woExpand;
         dn2NzParams.dstNzNStride = self->ctx.tiling_->strideW;
-        dn2NzParams.dstNzMatrixStride = strideH * woExpand << self->ctx.tiling_->c0Bits;
+        dn2NzParams.dstNzMatrixStride = strideH * woExpand << self->ctx.tiling_->c0BitsA;
     } else {
         dn2NzParams.dnNum = 1;
         dn2NzParams.nValue = loadToA1HLoop * self->ctx.tiling_->wo;
@@ -271,15 +271,15 @@ static __aicore__ inline void CalcLoadToA1Nd2NzParams(Intf *self, Nd2NzParams &n
     uint32_t woExpand = ((self->ctx.tiling_->wo - 1) * self->ctx.tiling_->strideW) + 1;
     CalcOutToA1DstAddr(self, strideH, curHoSize, loadToA1HLoop, out2A1DstAddrOffset, woExpand);
 
-    if (unlikely(self->ctx.tiling_->strideW * strideH > 1)) {
+    if (unlikely(self->ctx.tiling_->strideW * strideH > 1 || self->ctx.realWoSize_ != self->ctx.tiling_->wo)) {
         nd2NzParams.ndNum = loadToA1HLoop;
-        nd2NzParams.nValue = self->ctx.tiling_->wo;
+        nd2NzParams.nValue = self->ctx.realWoSize_;
         nd2NzParams.dValue = curCoutSize;
         nd2NzParams.srcNdMatrixStride = self->ctx.tiling_->wo * self->ctx.tiling_->cout;
         nd2NzParams.srcDValue = self->ctx.tiling_->cout;
         nd2NzParams.dstNzC0Stride = curHoSize * woExpand;
         nd2NzParams.dstNzNStride = self->ctx.tiling_->strideW;
-        nd2NzParams.dstNzMatrixStride = strideH * woExpand << self->ctx.tiling_->c0Bits;
+        nd2NzParams.dstNzMatrixStride = strideH * woExpand << self->ctx.tiling_->c0BitsA;
     } else {
         nd2NzParams.ndNum = 1;
         nd2NzParams.nValue = loadToA1HLoop * self->ctx.tiling_->wo;

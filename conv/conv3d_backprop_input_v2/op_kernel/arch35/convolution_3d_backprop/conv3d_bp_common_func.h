@@ -17,7 +17,7 @@
 #define CONV3D_BP_COMMON_FUNC_ADVANCE_H
 
 #include "conv3d_bp_util.h"
-#include "kernel_operator.h"
+#include "basic_api/kernel_basic_intf.h"
 #include "../conv3d_backprop_input_v2/conv3d_backprop_input_v2_tiling_data.h"
 #include "../../conv3d_backprop_input_v2_arch35_tiling_key.h"
 

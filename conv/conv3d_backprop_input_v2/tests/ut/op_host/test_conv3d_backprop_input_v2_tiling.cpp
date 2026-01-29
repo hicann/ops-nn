@@ -31,8 +31,6 @@
 
 #define SUCCESS 0
 
-#ifdef USE_LEGACY_COMMON
-
 using namespace std;
 using namespace ge;
 
@@ -1042,4 +1040,3 @@ INSTANTIATE_TEST_CASE_P(
     MilanBinary2, Conv3DBackpropInputV2TilingRunTime2, testing::ValuesIn(general_24_core_num_cases_params));
 
 } // namespace
-#endif

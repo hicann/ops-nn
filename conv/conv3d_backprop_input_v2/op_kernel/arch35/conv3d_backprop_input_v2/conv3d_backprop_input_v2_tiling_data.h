@@ -24,12 +24,15 @@ struct TConv3DInputV2Tiling {
     uint8_t bl1Pbuffer = 1;
     uint8_t iterateOrder = 1;
     uint8_t c0 = 1;
-    uint8_t c0Bits = 1;
+    uint8_t c0BitsA = 1;
+    uint8_t c0BitsB = 1;
     uint8_t enlarge = 1;
     uint8_t hf32Flag = 1;
     uint8_t initOutputFlag = 1;
     uint8_t isBiasFullLoad = 1;
     uint8_t enableVecTrans = 1;
+    uint8_t enableFullLoad = 0;
+    uint8_t quantMode = 0;
     uint32_t batch = 1;
     uint32_t cin = 1;
     uint32_t cout = 1;

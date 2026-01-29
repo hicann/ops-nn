@@ -15,10 +15,9 @@
 #ifndef CONV3D_BACKPROP_FILTER_BASIC_BLOCK_H
 #define CONV3D_BACKPROP_FILTER_BASIC_BLOCK_H
 
-#include "kernel_operator.h"
-#include "kernel_operator_intf.h"
+#include "basic_api/kernel_basic_intf.h"
+#include "utils/std/algorithm.h"
 #include "conv3d_bp_filter.h"
-#include "kernel_type.h"
 #include "kernel_type.h"
 #include "conv3d_backprop_filter_v2.h"
 
@@ -30,14 +29,19 @@ constexpr uint64_t SINGLE_BLOCK_ADD_THRESHHOLD = 65536;
 
 namespace AscendC {
 using Conv3ddwConfig = typename ConvolutionBackprop::Conv3ddwConfig;
+
 template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
-uint32_t l0cCondition = TPL_STREAM_DFL>
+    uint32_t l0cCondition = TPL_STREAM_DFL>
 class Conv3dDwBasicBlock : public Conv3dDw<xType, xFormat, dedyType, dedyFormat, yType, yFormat, l0cCondition> {
 public:
-    __aicore__ inline Conv3dDwBasicBlock() {};
+    __aicore__ inline Conv3dDwBasicBlock()
+    {
+    };
 
-    __aicore__ void InitCommonTilingData(const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData) {
-        Conv3dDw<xType, xFormat, dedyType, dedyFormat, yType, yFormat, l0cCondition>::InitTilingData(tilingData, isSeperateDk_, true);
+    __aicore__ void InitCommonTilingData(const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
+    {
+        Conv3dDw<xType, xFormat, dedyType, dedyFormat, yType, yFormat, l0cCondition>::InitTilingData(
+            tilingData, isSeperateDk_, true);
         this->usedCoreNum_ = tilingData->basicBlockTiling.usedCoreNum;
         this->streamkType_ = tilingData->basicBlockTiling.streamkType;
         dkCnt_ = this->dk_;
@@ -56,13 +60,13 @@ protected:
     uint64_t nCoreTail_ = 0;
     uint64_t ciCoreTail_ = 0;
     uint64_t batchDoutNcnt_ = 0;
-    uint64_t totalCnt_= 0;
+    uint64_t totalCnt_ = 0;
     uint64_t tailCnt_ = 0;
     uint64_t calRound_ = 0;
     uint64_t singleCoreBatch_ = 1; // 在基本块场景，singleCoreBatch用于表示单核batch
-    uint64_t singleShapeBatchOri_ = 1;
 
-    __aicore__ inline void CalBasicBlockCnt() {
+    __aicore__ inline void CalBasicBlockCnt()
+    {
         this->mCnt_ = Ceil(this->m_, this->singleShapeM_);
         this->mCoreTail_ = this->m_ - (this->mCnt_ - 1) * this->singleShapeM_;
         this->nCnt_ = Ceil(this->n_, this->singleShapeN_);
@@ -85,10 +89,14 @@ protected:
 template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat>
 class Conv3dDwBasicBlockMNStreamK : public Conv3dDwBasicBlock<xType, xFormat, dedyType, dedyFormat, yType, yFormat> {
 public:
-    __aicore__ inline Conv3dDwBasicBlockMNStreamK() {};
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR dedy,
-                                GM_ADDR y, GM_ADDR workSpace,
-                                const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData) {
+    __aicore__ inline Conv3dDwBasicBlockMNStreamK()
+    {
+    };
+    __aicore__ inline void Init(
+        GM_ADDR x, GM_ADDR dedy,
+        GM_ADDR y, GM_ADDR workSpace,
+        const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
+    {
         this->InitCommonTilingData(tilingData);
         InitSplitTilingData(tilingData);
         // init global buffer
@@ -97,23 +105,28 @@ public:
         this->yGm_.SetGlobalBuffer((__gm__ yType*)y);
         this->dw_.Init(&(tilingData->dwTiling));
         // streamk场景，由于需要从l0c搬入GM，在从GM搬入UB,所以需要申请额外GM空间
-        if (this->streamkType_ != NO_STREAMK_CALC){
+        if (this->streamkType_ != NO_STREAMK_CALC) {
             this->workspaceGm_.SetGlobalBuffer((__gm__ float*)workSpace);
         }
     }
-    __aicore__ inline void Process() {
-        if (block_idx >= this->usedCoreNum_) { // vector GetBlockIdx() 与 Cube不同，此处注意使用全局变量准确
+
+    __aicore__ inline void Process()
+    {
+        if (block_idx >= this->usedCoreNum_) {
+            // vector GetBlockIdx() 与 Cube不同，此处注意使用全局变量准确
             return;
         }
         CalBasicBlock();
         this->dw_.End();
     }
+
 protected:
     static constexpr uint64_t L0C_SIZE_BY_ELEMENT_IN_FLOAT = AscendC::TOTAL_L0C_SIZE >> 2;
     static constexpr uint64_t DOUBLE_BUFFER = 2;
     uint32_t deterAddCoreNum_ = 0;
 
-    __aicore__ inline void InitSplitTilingData(const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData) {
+    __aicore__ inline void InitSplitTilingData(const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
+    {
         this->singleShapeM_ = tilingData->basicBlockTiling.singleCoreM;
         this->singleShapeK_ = tilingData->basicBlockTiling.singleCoreK;
         this->singleShapeN_ = tilingData->basicBlockTiling.singleCoreN;
@@ -131,7 +144,8 @@ protected:
         this->dw_.SetDeterministicCoreInfo(deterAddCoreNum_, deterAddCoreInx, addCoreStartInx, isNoDeter);
     }
 
-    __aicore__ inline void CalcStreamK(uint64_t basicBlockIdx) {
+    __aicore__ inline void CalcStreamK(uint64_t basicBlockIdx)
+    {
         if (this->tailCnt_ == 0) { return; }
         // 获取基本块的位置
         uint64_t batchDoutCnt = Ceil(static_cast<uint64_t>(this->batch_) * this->dout_, this->singleCoreBatch_);
@@ -148,21 +162,20 @@ protected:
             batchIdx = batchDoutIdx / this->dout_;
             doutIdx = batchDoutIdx - batchIdx * this->dout_;
         }
-        uint64_t tailBlockIdx = basicBlockIdx / this->usedCoreNum_ * this->usedCoreNum_ + basicBlockIdx % this->usedCoreNum_ / deterAddCoreNum_;
+        uint64_t tailBlockIdx = basicBlockIdx / this->usedCoreNum_ * this->usedCoreNum_ + basicBlockIdx % this->
+                                usedCoreNum_ / deterAddCoreNum_;
         uint32_t groupIdx = tailBlockIdx % this->groupCnt_;
         uint32_t dkIdx = (tailBlockIdx / this->groupCnt_) % this->dkCnt_;
         this->nCoreIndx_ = (tailBlockIdx / this->groupCnt_ / this->dkCnt_) % this->nCnt_;
         this->mCoreIndx_ = (tailBlockIdx) / this->batchDoutNcnt_;
         this->cinCoreIndx_ = this->nCoreIndx_;
         // singleShapeBatch用于表示基本块的batch
-        uint64_t batchDoutTail = static_cast<uint64_t>(this->batch_) * this->dout_ - (batchDoutCnt - 1) * this->singleCoreBatch_;
+        uint64_t batchDoutTail = static_cast<uint64_t>(this->batch_) * this->dout_ - (batchDoutCnt - 1) * this->
+                                 singleCoreBatch_;
         uint64_t batchdoutCurrentCore = ((batchDoutIdx / this->singleCoreBatch_) == (batchDoutCnt - 1)) ?
-            batchDoutTail : this->singleCoreBatch_;
+                                            batchDoutTail :
+                                            this->singleCoreBatch_;
 
-        this->singleShapeBatchOri_ = Ceil(SINGLE_BLOCK_ADD_THRESHHOLD,this->singleShapeK_);
-        if(this->singleShapeBatchOri_ > batchdoutCurrentCore){
-            this->singleShapeBatchOri_ = batchdoutCurrentCore;
-        }
         this->singleShapeBatch_ = batchdoutCurrentCore;
 
         this->CalcOffset(batchIdx, doutIdx, groupIdx, dkIdx);
@@ -175,12 +188,11 @@ protected:
             isCompute = false;
         } else {
             this->dw_.SetOutBackprop(this->dedyGm_[this->offsetA_]);
-            this->hoStartIdx_ = this->kCoreIndx_ * this->singleCoreHo_;
-            this->dw_.SetStartIdx(batchDoutIdx, this->hoStartIdx_, dkIdx);
+            this->dw_.SetStartIdx(batchDoutIdx, this->kCoreIndx_ * this->singleCoreHo_, dkIdx);
             this->dw_.SetFmap(this->xGm_[this->offsetB_]);
         }
         CalcSingleShape(kCnt, isCompute);
-        CalcIterate(batchDoutIdx, batchdoutCurrentCore, groupIdx, dkIdx,isCompute, isNoDeter);
+        CalcIterate(batchDoutIdx, batchdoutCurrentCore, groupIdx, dkIdx, isCompute, isNoDeter, kCnt);
     }
 
     __aicore__ inline void CalcSingleShape(uint64_t kCnt, bool isCompute)
@@ -201,13 +213,18 @@ protected:
         this->dw_.SetSingleShape(mCoreUse, nCoreUse, kCoreUse, ciCoreUse, this->singleShapeBatch_);
     }
 
-    __aicore__ inline void CalcIterate(uint64_t batchDoutIdx, uint64_t batchdoutCurrentCore, uint32_t groupIdx, uint32_t dkIdx, bool isCompute, bool isNoDeter) {
+    __aicore__ inline void CalcIterate(
+        uint64_t batchDoutIdx, uint64_t batchdoutCurrentCore, uint32_t groupIdx,
+        uint32_t dkIdx, bool isCompute, bool isNoDeter, uint64_t kCnt)
+    {
         // 做STREAM K，有确定性计算
         SetDeterAddCore4StreamK(batchDoutIdx, isNoDeter);
         this->dw_.ctx.l0cPingPongFlag_ = 1;
         // 对于singleShape大于基本块场景，会有多轮计算
-        uint64_t nCoreTailAlign = Ceil(this->ciCoreTail_, this->dw_.ctx.tiling_->n0) * this->dw_.ctx.tiling_->n0 * this->hk_ * this->wk_;
-        uint64_t maxMIter = Ceil(this->mCnt_ > 1 ? this->singleShapeM_ : this->mCoreTail_, this->dw_.ctx.tiling_->baseM);
+        uint64_t nCoreTailAlign = Ceil(this->ciCoreTail_, this->dw_.ctx.tiling_->n0) * this->dw_.ctx.tiling_->n0 * this
+                                  ->hk_ * this->wk_;
+        uint64_t maxMIter = Ceil(
+            this->mCnt_ > 1 ? this->singleShapeM_ : this->mCoreTail_, this->dw_.ctx.tiling_->baseM);
         uint64_t maxNIter = Ceil(this->nCnt_ > 1 ? this->singleShapeN_ : nCoreTailAlign, this->dw_.ctx.tiling_->baseN);
         for (uint64_t i = 0; i < maxMIter; i++) {
             for (uint64_t j = 0; j < maxNIter; j++) {
@@ -215,7 +232,7 @@ protected:
                 if ASCEND_IS_AIC {
                     this->CubeWaitVector();
                     if (isCompute && isCurIter) {
-                        CalcIterateCube(batchDoutIdx, batchdoutCurrentCore, groupIdx, dkIdx);
+                        CalcIterateCube(batchDoutIdx, batchdoutCurrentCore, groupIdx, dkIdx, kCnt);
                     } else if (this->dw_.ctx.tiling_->cl0Pbuffer > 1) {
                         this->dw_.ctx.l0cPingPongFlag_ = !this->dw_.ctx.l0cPingPongFlag_;
                     }
@@ -237,10 +254,20 @@ protected:
         }
     }
 
-    __aicore__ inline void CalcIterateCube(uint64_t batchDoutIdx, uint64_t batchdoutCurrentCore, uint32_t groupIdx, uint32_t dkIdx)
-    {
-        // 二叉树模板对单个singleShape进行batchdout核间切分，因此，batchdout循环只需更新一次M,N index
-        this->singleShapeBatch_ = this->singleShapeBatchOri_;
+    __aicore__ inline void CalcIterateCube(uint64_t batchDoutIdx, uint64_t batchdoutCurrentCore, uint32_t groupIdx,
+                                           uint32_t dkIdx, uint64_t kCnt) {
+        uint64_t kCoreTail = this->k_ - (kCnt - 1) * this->singleShapeK_;
+        uint64_t kCoreUse = this->kCoreIndx_ == (kCnt - 1) ? kCoreTail : this->singleShapeK_;
+        uint64_t hoCoreUse = kCoreUse / this->wo_;
+
+        uint64_t reduceSegmentsH = 0;
+        uint64_t reduceSegmentsND = 0;
+
+        CalcReduceSegments(batchdoutCurrentCore, hoCoreUse, this->wo_,
+                           reduceSegmentsH,
+                           reduceSegmentsND);
+
+        this->singleShapeBatch_ = reduceSegmentsND;
         this->dw_.ctx.singleShapeBatch_ = this->singleShapeBatch_;
         ConvolutionBackpropFunc::Out2L1ScalarParams out2L1Params;
         ConvolutionBackpropFunc::Out2L1ScalarParams out2L1ParamsFollow;
@@ -248,45 +275,55 @@ protected:
         out2L1ParamsFollow.isFreeAL1 = true;
         out2L1ParamsFollow.isLoad2L1B = true;
         out2L1ParamsFollow.isFreeBL1 = true;
-        if(!this->dw_.UpdateMNIdx(out2L1Params)){
+        if (!this->dw_.UpdateMNIdx(out2L1Params)) {
             return;
         }
-        for (uint64_t batchdout = 0; batchdout < batchdoutCurrentCore; batchdout += this->singleShapeBatchOri_) {
+
+        uint64_t hoStartIdx = this->kCoreIndx_ * this->singleCoreHo_;
+
+        for (uint64_t batchdout = 0; batchdout < batchdoutCurrentCore; batchdout += reduceSegmentsND) {
             uint64_t curbatchDoutIdx = batchDoutIdx + batchdout;
             uint64_t batchIdx = curbatchDoutIdx / this->dout_;
             uint64_t doutIdx = curbatchDoutIdx - batchIdx * this->dout_;
-            if (batchdout + this->singleShapeBatchOri_ > batchdoutCurrentCore) {
+            if (batchdout + reduceSegmentsND > batchdoutCurrentCore) {
                 this->singleShapeBatch_ = batchdoutCurrentCore - batchdout;
                 this->dw_.ctx.singleShapeBatch_ = this->singleShapeBatch_;
             }
-            this->CalcOffset(batchIdx, doutIdx, groupIdx, dkIdx);
-            this->ReCalDkCinSingleCoreShape(doutIdx, groupIdx, dkIdx);
-            // isCompute计算了singleShape的整个dout是否在pad内不需要计算
-            // isComputeInner 计算了当前dout是否在pad内不需要计算
-            bool isComputeInner = true;
-            if (this->singleShapeNInCurrentHo_ == 0 || this->singleShapeMInCurrentHo_ == 0) {
-                isComputeInner = false;
-            } else {
-                // 每次batchIdx，doutIdx改变，都需要重新计算offsetA，offsetB，但不会影响offsetC
-                this->dw_.SetOutBackprop(this->dedyGm_[this->offsetA_]);
-                this->dw_.SetStartIdx(curbatchDoutIdx, this->hoStartIdx_, dkIdx);
-                this->dw_.SetFmap(this->xGm_[this->offsetB_]);
+
+            for (uint64_t hoOffset = 0; hoOffset < hoCoreUse; hoOffset += reduceSegmentsH) {
+                uint64_t hoIdx = hoStartIdx + hoOffset;
+
+                this->CalcOffset(batchIdx, doutIdx, groupIdx, dkIdx, hoIdx);
+                this->ReCalDkCinSingleCoreShape(doutIdx, groupIdx, dkIdx);
+                // isCompute计算了singleShape的整个dout是否在pad内不需要计算
+                // isComputeInner 计算了当前dout是否在pad内不需要计算
+                bool isComputeInner = true;
+                if (this->singleShapeNInCurrentHo_ == 0 || this->singleShapeMInCurrentHo_ == 0) {
+                    isComputeInner = false;
+                } else {
+                    // 每次batchIdx，doutIdx改变，都需要重新计算offsetA，offsetB，但不会影响offsetC
+                    this->dw_.SetOutBackprop(this->dedyGm_[this->offsetA_]);
+                    this->dw_.SetStartIdx(curbatchDoutIdx, hoIdx, dkIdx);
+                    this->dw_.SetFmap(this->xGm_[this->offsetB_]);
+                    this->dw_.SetSingleShapeK(AscendC::Std::min(hoCoreUse - hoOffset, reduceSegmentsH) * this->wo_);
+                }
+                if (isComputeInner) {
+                    this->dw_.Compute(out2L1Params);
+                    // 1: enable atomic add; true: enable sequential write
+                    this->dw_.GetTensorC(this->workspaceGm_[this->offsetCubeWorkSpaceC_], 1, true);
+                }
+                // K方向循环时，L1不驻留，每次都要重新搬入，M,N位置均不变，直接开始计算
+                out2L1Params = out2L1ParamsFollow;
             }
-            if (isComputeInner) {
-                this->dw_.Compute(out2L1Params);
-                // 1: enable atomic add; true: enable sequential write
-                this->dw_.GetTensorC(this->workspaceGm_[this->offsetCubeWorkSpaceC_], 1, true);
-            }
-            // K方向循环时，L1不驻留，每次都要重新搬入，M,N位置均不变，直接开始计算
-            out2L1Params = out2L1ParamsFollow;
         }
     }
 
-    __aicore__ inline void CalBasicBlock() {
+    __aicore__ inline void CalBasicBlock()
+    {
         uint64_t basicBlockIdx = block_idx;
         // 主轮的基本块为完整的singleShapeM、singleShapeN、singleShapeK， BatchDout内移，在L0C内累加
         for (uint64_t j = 0; j < this->calRound_; ++j) {
-            if(basicBlockIdx >= this->totalCnt_){
+            if (basicBlockIdx >= this->totalCnt_) {
                 return;
             }
             uint32_t dkIdx = (basicBlockIdx / this->groupCnt_) % this->dkCnt_;
@@ -294,25 +331,40 @@ protected:
             this->mCoreIndx_ = basicBlockIdx / this->batchDoutNcnt_;
             this->cinCoreIndx_ = this->nCoreIndx_;
             uint32_t groupIdx = basicBlockIdx % this->groupCnt_;
-            
-            uint64_t mCoreUse = (this->mCoreIndx_ == (this->mCnt_ - 1)) ? this->mCoreTail_ : this->singleShapeM_;
-            uint64_t nCoreUse = (this->nCoreIndx_ == (this->nCnt_ - 1)) ? this->nCoreTail_ : this->singleShapeN_;
-            uint64_t ciCoreUse = (this->nCoreIndx_ == (this->nCnt_ - 1)) ? this->ciCoreTail_ : this->singleCoreCin_;
 
-            uint64_t totalBatchdout = static_cast<uint64_t>(this->batch_) * this->dout_;
-            // 由于浮点数累加存在精度丢失，针对累加轴超大场景，对batch*dout做切分，在核内分单次计算singleShapeBatchOri_,完成后fixpip搬出到GM累加，通过多次搬出以降低累加轴
-            this->singleShapeBatchOri_ = Ceil(SINGLE_BLOCK_ADD_THRESHHOLD, static_cast<uint64_t>(this->ho_) * this->wo_);
-            if (this->singleShapeBatchOri_ > this->batch_ * this->dout_) {
-                this->singleShapeBatchOri_ = this->batch_ * this->dout_;
-            }
-            this->singleShapeBatch_ = this->singleShapeBatchOri_;
-            for (uint64_t batchDoutIdx = 0; batchDoutIdx < totalBatchdout; batchDoutIdx += this->singleShapeBatchOri_) {
-                uint64_t batchIdx = batchDoutIdx / this->dout_;
-                uint64_t doutIdx = batchDoutIdx - batchIdx * this->dout_;
-                if (batchDoutIdx + this->singleShapeBatchOri_ > totalBatchdout) {
-                    this->singleShapeBatch_ = totalBatchdout - batchDoutIdx;
-                }
-                this->CalcOffset(batchIdx, doutIdx, groupIdx, dkIdx);
+            CalSingleBasicBlock(dkIdx, groupIdx);
+
+            basicBlockIdx += this->usedCoreNum_;
+        }
+        // streamkType != 0时，才有尾轮的确定性计算
+        if (this->streamkType_ != NO_STREAMK_CALC) {
+            CalcStreamK(basicBlockIdx);
+        }
+    }
+
+    __aicore__ inline void CalSingleBasicBlock(int32_t dkIdx, uint32_t groupIdx)
+    {
+        uint64_t mCoreUse = (this->mCoreIndx_ == (this->mCnt_ - 1)) ? this->mCoreTail_ : this->singleShapeM_;
+        uint64_t nCoreUse = (this->nCoreIndx_ == (this->nCnt_ - 1)) ? this->nCoreTail_ : this->singleShapeN_;
+        uint64_t ciCoreUse = (this->nCoreIndx_ == (this->nCnt_ - 1)) ? this->ciCoreTail_ : this->singleCoreCin_;
+
+        uint64_t totalBatchdout = static_cast<uint64_t>(this->batch_) * this->dout_;
+        // 由于浮点数累加存在精度丢失，针对累加轴超大场景，对batch*dout做切分，在核内分单次计算singleShapeBatch_,完成后fixpip搬出到GM累加，通过多次搬出以降低累加轴
+
+        uint64_t reduceSegmentsH = 0;
+        uint64_t reduceSegmentsND = 0;
+        CalcReduceSegments(
+            totalBatchdout, this->ho_, this->wo_,
+            reduceSegmentsH,
+            reduceSegmentsND);
+
+        for (uint64_t batchDoutIdx = 0; batchDoutIdx < totalBatchdout; batchDoutIdx += reduceSegmentsND) {
+            uint64_t batchIdx = batchDoutIdx / this->dout_;
+            uint64_t doutIdx = batchDoutIdx - batchIdx * this->dout_;
+            this->singleShapeBatch_ = AscendC::Std::min(totalBatchdout - batchDoutIdx, reduceSegmentsND);
+
+            for (uint64_t hoIdx = 0; hoIdx < this->ho_; hoIdx += reduceSegmentsH) {
+                this->CalcOffset(batchIdx, doutIdx, groupIdx, dkIdx, hoIdx);
                 this->ReCalDkCinSingleCoreShape(doutIdx, groupIdx, dkIdx);
 
                 // AIV无需后续的计算，只需同步基本块basicBlockIdx
@@ -339,28 +391,40 @@ protected:
                 }
 
                 this->dw_.SetOutBackprop(this->dedyGm_[this->offsetA_]);
-                this->dw_.SetSingleShape(mCoreUse, nCoreUse, this->k_, ciCoreUse, batchCoreUse);
-                this->dw_.SetStartIdx(batchDoutIdx, this->hoStartIdx_, dkIdx);
+                uint64_t singleShapeK = AscendC::Std::min(this->ho_ - hoIdx, reduceSegmentsH) * this->wo_;
+                this->dw_.SetSingleShape(mCoreUse, nCoreUse, singleShapeK, ciCoreUse, batchCoreUse);
+                this->dw_.SetStartIdx(batchDoutIdx, hoIdx, dkIdx);
                 this->dw_.SetFmap(this->xGm_[this->offsetB_]);
                 this->dw_.IterateAll(this->yGm_[this->offsetC_], 1);
             }
+        }
+    }
 
-            basicBlockIdx += this->usedCoreNum_;
-        }
-        // streamkType != 0时，才有尾轮的确定性计算
-        if (this->streamkType_ != NO_STREAMK_CALC) {
-            CalcStreamK(basicBlockIdx);
-        }
+    __aicore__ static inline void CalcReduceSegments(
+        uint64_t nd,
+        uint64_t ho,
+        uint64_t wo,
+        uint64_t& segmentsH,
+        uint64_t& segmentsND)
+    {
+        uint64_t segmentsNDH = Ceil(SINGLE_BLOCK_ADD_THRESHHOLD, wo);
+        segmentsH = AscendC::Std::min(segmentsNDH, ho);
+        segmentsND = AscendC::Std::min(Ceil(segmentsNDH, segmentsH), nd);
     }
 };
 
 template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat>
-class Conv3dDwBasicBlockStreamK : public Conv3dDwBasicBlockMNStreamK<xType, xFormat, dedyType, dedyFormat, yType, yFormat> {
+class Conv3dDwBasicBlockStreamK : public Conv3dDwBasicBlockMNStreamK<xType, xFormat, dedyType, dedyFormat, yType,
+        yFormat> {
 public:
-    __aicore__ inline Conv3dDwBasicBlockStreamK() {};
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR dedy,
-                                GM_ADDR y, GM_ADDR workSpace,
-                                const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData) {
+    __aicore__ inline Conv3dDwBasicBlockStreamK()
+    {
+    };
+    __aicore__ inline void Init(
+        GM_ADDR x, GM_ADDR dedy,
+        GM_ADDR y, GM_ADDR workSpace,
+        const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
+    {
         this->InitCommonTilingData(tilingData);
         this->InitSplitTilingData(tilingData);
         // init global buffer
@@ -369,12 +433,13 @@ public:
         this->yGm_.SetGlobalBuffer((__gm__ yType*)y);
         this->dw_.Init(&(tilingData->dwTiling));
         // streamk场景，由于需要从l0c搬入GM，在从GM搬入UB,所以需要申请额外GM空间
-        if (this->streamkType_ != NO_STREAMK_CALC){
+        if (this->streamkType_ != NO_STREAMK_CALC) {
             this->workspaceGm_.SetGlobalBuffer((__gm__ float*)workSpace);
         }
     }
 
-    __aicore__ inline void Process() {
+    __aicore__ inline void Process()
+    {
         if (block_idx >= this->usedCoreNum_) {
             this->dw_.End();
             return;

@@ -27,8 +27,6 @@
 #include "test_cube_util.h"
 #include "../../../../common/op_host/op_tiling/platform_util.h"
 
-#ifdef USE_LEGACY_COMMON
-
 using namespace std;
 using namespace ge;
 
@@ -397,5 +395,3 @@ TEST_F(Conv3DBackpropFilterV2TilingRunTime2, milan_binary_multi_thread)
 
 INSTANTIATE_TEST_CASE_P(MilanBinary, Conv3DBackpropFilterV2TilingRunTime2, testing::ValuesIn(milan_binary_params));
 }
-
-#endif

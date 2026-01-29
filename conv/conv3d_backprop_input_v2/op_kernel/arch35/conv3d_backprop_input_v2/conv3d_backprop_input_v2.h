@@ -16,8 +16,7 @@
 #define CONV3D_BACKPROP_INPUT_V2_ADVANCE_H
 
 #include "conv3d_bp_input.h"
-#include "kernel_operator.h"
-#include "kernel_operator_intf.h"
+#include "basic_api/kernel_basic_intf.h"
 #include "kernel_type.h"
 #include "lib/matmul_intf.h"
 #include "conv3d_backprop_input_v2_tiling_data.h"
@@ -119,6 +118,7 @@ public:
             for (uint32_t batchIdx = 0; batchIdx < singleShapeBatch_; ++batchIdx) {
                 dedx_.SetOutBackprop(dedyGm_[offsetA_]);
                 dedx_.SetWeight(filterGm_[offsetB_]);
+                dedx_.SetFullLoadFlag(this->tiling_->enableFullLoad);
 #if defined(__DAV_310R6__)
                 if constexpr (biasFormat != FORMAT_MAX) {
                     dedx_.SetBias(biasGm_[offsetBias_]);
@@ -147,6 +147,7 @@ public:
                 }
                 dedx_.SetOutBackprop(dedyGm_[offsetA_]);
                 dedx_.SetWeight(filterGm_[offsetB_]);
+                dedx_.SetFullLoadFlag(this->tiling_->enableFullLoad);
 #if defined(__DAV_310R6__)
                 if constexpr (biasFormat != FORMAT_MAX) {
                     offsetBias_ = nCoreIdx_ * tiling_->singleCoreCin + groupIdx * tiling_->cinG;

@@ -1,0 +1,567 @@
+[
+  {
+      "id": 0,
+      "name": "torch.nn.ConvTbcBackward",
+      "aclnn_name": "ConvTbcBackward",
+      "version": "v2.1",
+      "expected_error_msg": null,
+      "api": "pytorch",
+      "api_type": "golden_convtbc_backward",
+      "aclnn_api_type": "aclnn_function",
+      "backward": false,
+      "standard": {
+          "acc": "default",
+          "perf": "not_key"
+      },
+      "outputs": null,
+      "inputs": [
+          {
+              "name": "self",
+              "type": "tensor",
+              "required": true,
+              "dtype": "fp32",
+              "shape": [
+                  5,
+                  1,
+                  2
+              ],
+              "range_values": [
+                  -1,
+                  1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "input",
+              "type": "tensor",
+              "required": true,
+              "dtype": "fp32",
+              "shape": [
+                  5,
+                  1,
+                  2
+              ],
+              "range_values": [
+                  -1,
+                  1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "weight",
+              "type": "tensor",
+              "required": true,
+              "dtype": "fp32",
+              "shape": [
+                  1,
+                  2,
+                  2
+              ],
+              "range_values": [
+                  -1,
+                  1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "bias",
+              "type": "tensor",
+              "required": true,
+              "dtype": "fp32",
+              "shape": [
+                  2
+              ],
+              "range_values": [
+                  -1,
+                  1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "pad",
+              "type": "attr",
+              "required": true,
+              "dtype": "int",
+              "shape": null,
+              "range_values": 0,
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "cubeMathType",
+              "type": "attr",
+              "required": true,
+              "dtype": "int8",
+              "shape": null,
+              "range_values": 1,
+              "backward": false,
+              "align_32B": null
+          }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "tensor_input": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+  },
+  {
+      "id": 1,
+      "name": "torch.nn.ConvTbcBackward",
+      "aclnn_name": "ConvTbcBackward",
+      "version": "v2.1",
+      "expected_error_msg": null,
+      "api": "pytorch",
+      "api_type": "golden_convtbc_backward",
+      "aclnn_api_type": "aclnn_function",
+      "backward": false,
+      "standard": {
+          "acc": "default",
+          "perf": "not_key"
+      },
+      "outputs": null,
+      "inputs": [
+          {
+              "name": "self",
+              "type": "tensor",
+              "required": true,
+              "dtype": "fp32",
+              "shape": [
+                  653,
+                  10,
+                  129
+              ],
+              "range_values": [
+                  -1,
+                  1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "input",
+              "type": "tensor",
+              "required": true,
+              "dtype": "fp32",
+              "shape": [
+                  642,
+                  10,
+                  21
+              ],
+              "range_values": [
+                  -1,
+                  1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "weight",
+              "type": "tensor",
+              "required": true,
+              "dtype": "fp32",
+              "shape": [
+                  48,
+                  21,
+                  129
+              ],
+              "range_values": [
+                  -1,
+                  1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "bias",
+              "type": "tensor",
+              "required": true,
+              "dtype": "fp32",
+              "shape": [
+                  129
+              ],
+              "range_values": [
+                  -1,
+                  1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "pad",
+              "type": "attr",
+              "required": true,
+              "dtype": "int",
+              "shape": null,
+              "range_values": 29,
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "cubeMathType",
+              "type": "attr",
+              "required": true,
+              "dtype": "int8",
+              "shape": null,
+              "range_values": 0,
+              "backward": false,
+              "align_32B": null
+          }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "tensor_input": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+  },
+  {
+      "id": 2,
+      "name": "torch.nn.ConvTbcBackward",
+      "aclnn_name": "ConvTbcBackward",
+      "version": "v2.1",
+      "expected_error_msg": null,
+      "api": "pytorch",
+      "api_type": "golden_convtbc_backward",
+      "aclnn_api_type": "aclnn_function",
+      "backward": false,
+      "standard": {
+          "acc": "default",
+          "perf": "not_key"
+      },
+      "outputs": null,
+      "inputs": [
+          {
+              "name": "self",
+              "type": "tensor",
+              "required": true,
+              "dtype": "bf16",
+              "shape": [
+                  1,
+                  156,
+                  2
+              ],
+              "range_values": [
+                  -1,
+                  1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "input",
+              "type": "tensor",
+              "required": true,
+              "dtype": "bf16",
+              "shape": [
+                  4,
+                  156,
+                  97
+              ],
+              "range_values": [
+                  0.001,
+                  0.01
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "weight",
+              "type": "tensor",
+              "required": true,
+              "dtype": "bf16",
+              "shape": [
+                  4,
+                  97,
+                  2
+              ],
+              "range_values": [
+                  -0.001,
+                  0
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "bias",
+              "type": "tensor",
+              "required": true,
+              "dtype": "bf16",
+              "shape": [
+                  2
+              ],
+              "range_values": [
+                  -1,
+                  1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "pad",
+              "type": "attr",
+              "required": true,
+              "dtype": "int",
+              "shape": null,
+              "range_values": 0,
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "cubeMathType",
+              "type": "attr",
+              "required": true,
+              "dtype": "int8",
+              "shape": null,
+              "range_values": 0,
+              "backward": false,
+              "align_32B": null
+          }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "tensor_input": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+  },
+  {
+      "id": 3,
+      "name": "torch.nn.ConvTbcBackward",
+      "aclnn_name": "ConvTbcBackward",
+      "version": "v2.1",
+      "expected_error_msg": null,
+      "api": "pytorch",
+      "api_type": "golden_convtbc_backward",
+      "aclnn_api_type": "aclnn_function",
+      "backward": false,
+      "standard": {
+          "acc": "default",
+          "perf": "not_key"
+      },
+      "outputs": null,
+      "inputs": [
+          {
+              "name": "self",
+              "type": "tensor",
+              "required": true,
+              "dtype": "fp32",
+              "shape": [
+                  1,
+                  156,
+                  2
+              ],
+              "range_values": [
+                  -1,
+                  1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "input",
+              "type": "tensor",
+              "required": true,
+              "dtype": "fp32",
+              "shape": [
+                  4,
+                  156,
+                  97
+              ],
+              "range_values": [
+                  0.001,
+                  0.01
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "weight",
+              "type": "tensor",
+              "required": true,
+              "dtype": "fp32",
+              "shape": [
+                  4,
+                  97,
+                  2
+              ],
+              "range_values": [
+                  -0.001,
+                  0
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "bias",
+              "type": "tensor",
+              "required": true,
+              "dtype": "fp32",
+              "shape": [
+                  2
+              ],
+              "range_values": [
+                  -1,
+                  1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "pad",
+              "type": "attr",
+              "required": true,
+              "dtype": "int",
+              "shape": null,
+              "range_values": 0,
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "cubeMathType",
+              "type": "attr",
+              "required": true,
+              "dtype": "int8",
+              "shape": null,
+              "range_values": 0,
+              "backward": false,
+              "align_32B": null
+          }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "tensor_input": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+  },
+  {
+      "id": 4,
+      "name": "torch.nn.ConvTbcBackward",
+      "aclnn_name": "ConvTbcBackward",
+      "version": "v2.1",
+      "expected_error_msg": null,
+      "api": "pytorch",
+      "api_type": "golden_convtbc_backward",
+      "aclnn_api_type": "aclnn_function",
+      "backward": false,
+      "standard": {
+          "acc": "default",
+          "perf": "not_key"
+      },
+      "outputs": null,
+      "inputs": [
+          {
+              "name": "self",
+              "type": "tensor",
+              "required": true,
+              "dtype": "bf16",
+              "shape": [
+                  1,
+                  1,
+                  1
+              ],
+              "range_values": [
+                  -10,
+                  -2
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "input",
+              "type": "tensor",
+              "required": true,
+              "dtype": "bf16",
+              "shape": [
+                  1,
+                  1,
+                  1
+              ],
+              "range_values": [
+                  -1,
+                  1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "weight",
+              "type": "tensor",
+              "required": true,
+              "dtype": "bf16",
+              "shape": [
+                  1,
+                  1,
+                  1
+              ],
+              "range_values": [
+                  10,
+                  1000
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "bias",
+              "type": "tensor",
+              "required": true,
+              "dtype": "bf16",
+              "shape": [
+                  1
+              ],
+              "range_values": [
+                  -1,
+                  1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "pad",
+              "type": "attr",
+              "required": true,
+              "dtype": "int",
+              "shape": null,
+              "range_values": 0,
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "cubeMathType",
+              "type": "attr",
+              "required": true,
+              "dtype": "int8",
+              "shape": null,
+              "range_values": 0,
+              "backward": false,
+              "align_32B": null
+          }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "tensor_input": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+  }
+]

@@ -15,10 +15,6 @@
 #ifndef CONV3D_BACKPROP_FILTER_V2_TILING_DATA_H
 #define CONV3D_BACKPROP_FILTER_V2_TILING_DATA_H
 
-#include <cstdint>
-#include <string>
-#include <sstream>
-
 namespace AscendC {
 namespace conv_bp_v2_kernel {
 struct TConv3DDwTiling {
@@ -78,28 +74,6 @@ struct TConv3DDwTiling {
     uint32_t isSplitKernelHW = 0;
     uint64_t singleCoreBatch = 1;
     uint64_t singleCoreCin = 1;
-
-    std::string ToString() const
-    {
-        std::stringstream ss;
-        ss << "batch: " << batch << " cin: " << cin << " cout: " << cout << " cin1G: " << cin1G << " cout1G: " << cout1G
-           << " dout: " << dout << " ho: " << ho << " wo: " << wo << " di: " << di << " hi: " << hi << " wi: " << wi
-           << " dk: " << dk << " hk: " << hk << " wk: " << wk << " group: " << group << " realGroup: " << realGroup
-           << " strideD: " << strideD << " strideH: " << strideH << " strideW: " << strideW << " padFront: " << padFront
-           << " padBack: " << padBack << " padUp: " << padUp << " padDown: " << padDown << " padLeft: " << padLeft
-           << " padRight: " << padRight << " dilationD: " << dilationD << " dilationH: " << dilationH
-           << " dilationW: " << dilationW << " channelSize: " << channelSize << " al0Pbuffer: " << al0Pbuffer
-           << " bl0Pbuffer: " << bl0Pbuffer << " cl0Pbuffer: " << cl0Pbuffer << " al1Pbuffer: " << al1Pbuffer
-           << " bl1Pbuffer: " << bl1Pbuffer << " baseM: " << baseM << " baseK: " << baseK << " baseN: " << baseN
-           << " m0: " << m0 << " k0: " << k0 << " n0: " << n0 << " stepM: " << stepM << " stepN: " << stepN
-           << " stepKa: " << stepKa << " stepKb: " << stepKb << " iterateOrder: " << iterateOrder
-           << " al1Bound: " << al1Bound << " bl1Bound: " << bl1Bound << " hf32Flag: " << hf32Flag
-           << " singleCoreDk: " << singleCoreDk << " singleCoreGroup: " << singleCoreGroup
-           << " singleCoreCout: " << singleCoreCout << " singleCoreHo: " << singleCoreHo << " splitWoSize: " << splitWo
-           << " isSplitKernelHW: " << isSplitKernelHW << " singleCoreBatch: " << singleCoreBatch
-           << " singleCoreCin: " << singleCoreCin;
-        return ss.str();
-    }
 };
 
 struct Conv3DBackpropFilterV2Params {
@@ -120,15 +94,6 @@ struct TConv3DDwBasicBlockTiling {
     uint32_t singleCoreN = 1;
     uint32_t singleCoreK = 1;
     uint32_t reserve0 = 0; // 占位字段，为了8位字节对齐，否则 memcpy_s tilingData时候会出现补位导致数据异常
-
-    std::string ToString() const
-    {
-        std::stringstream ss;
-        ss << " singleCoreBatchDout: " << singleCoreBatchDout << " streamkType: " << streamkType
-           << " usedCoreNum: " << usedCoreNum << " singleCoreM: " << singleCoreM << " singleCoreN: " << singleCoreN
-           << " singleCoreK: " << singleCoreK;
-        return ss.str();
-    }
 };
 
 struct Conv3DBackpropFilterV2TilingData {

@@ -66,10 +66,10 @@ ACLNN_API aclnnStatus aclnnConvolutionBackwardGetWorkspaceSize(
  *
  * @param [in] self: npu，卷积输出梯度
  * device侧的aclTensor，数据类型浮点类型FLOAT16，FLOAT32
- * 支持非连续的Tensor，数据格式支持ND、NCHW
+ * 支持非连续的Tensor，数据格式支持ND、NCL
  * @param [in] input: npu，卷积输入
  * device侧的aclTensor，数据类型浮点类型FLOAT16，FLOAT32
- * 支持非连续的Tensor，数据格式支持ND、NCHW
+ * 支持非连续的Tensor，数据格式支持ND、NCL
  * @param [in] weight: npu, 卷积权重
  * device侧的aclTensor，数据类型与input一致
  * 支持非连续的Tensor，数据格式与input一致
@@ -77,8 +77,6 @@ ACLNN_API aclnnStatus aclnnConvolutionBackwardGetWorkspaceSize(
  * device侧的aclTensor，数据类型与input一致
  * @param [in] pad: 补边
  * int64_t,（也等于kernel size -1），例：2D卷积的padding数组的有效长度是2位
- * @param [in] dilation: kernel中元素的间隔，>1代表空洞卷积
- * aclIntArray，数组长度需等于input的维度-2（也等于kernel size -1），例：2D卷积的dilation数组的有效长度是2位
  * @param [out] grad_input: 卷积输入梯度在npu device侧的aclTensor
  * @param [out] grad_input: 卷积权重梯度在npu device侧的aclTensor
  * @param [out] grad_bias: 卷积偏置梯度在npu device侧的aclTensor
@@ -111,7 +109,7 @@ ACLNN_API aclnnStatus aclnnConvolutionBackward(void* workspace, uint64_t workspa
  *
  * 算子功能：完成卷积反向计算
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnConvTbcbackwardGetWorkspaceSize获取。
+ * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnConvTbcBackwardGetWorkspaceSize获取。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。

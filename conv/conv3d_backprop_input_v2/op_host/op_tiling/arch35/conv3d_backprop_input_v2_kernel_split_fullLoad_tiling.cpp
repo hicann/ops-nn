@@ -91,7 +91,7 @@ void Conv3DDXV2KernelSplitFullLoadTiling::InitBaseMNK(L0TilingParams& l0Params)
 
     l0Params.baseM = BASIC_BLOCK_SIZE_256;
     l0Params.baseN = BASIC_BLOCK_SIZE_256;
-    l0Params.baseK = BASIC_BLOCK_SIZE_128 / dtypeByte_;
+    l0Params.baseK = BASIC_BLOCK_SIZE_128 / dtypeByteL0b_;
 
     AdjustBaseMNK(l0Params, tilingRunInfo_);
 }
@@ -102,7 +102,7 @@ void Conv3DDXV2KernelSplitFullLoadTiling::AdjustBaseMNK(L0TilingParams& l0Params
     uint32_t baseN = l0Params.baseN;
     uint32_t baseK = l0Params.baseK;
     // only support al0Pbuffer = bl0Pbuffer = 2
-    uint32_t l0abMaxNum = platformInfo_.l0_ab_size / l0Params.al0Pbuffer / dtypeByte_;
+    uint32_t l0abMaxNum = platformInfo_.l0_ab_size / l0Params.al0Pbuffer / dtypeByteL0a_;
     uint32_t l0cMaxNum = platformInfo_.l0_c_size / l0Params.cl0Pbuffer / ge::GetSizeByDataType(ge::DT_FLOAT);
     uint64_t alingedMValue = Ops::Base::CeilAlign(tilingRunInfo.mValue, static_cast<uint64_t>(tilingRunInfo_.m0));
 

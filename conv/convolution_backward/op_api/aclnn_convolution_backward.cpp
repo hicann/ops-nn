@@ -37,6 +37,7 @@
 #include "opdev/platform.h"
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
+#include "op_api/aclnn_util.h"
 #include "runtime/context.h"
 #include "convolution_backward_checker.h"
 #include "convtbc_backward_checker.h"
@@ -54,10 +55,10 @@ const std::vector<DataType> REDUCESUM_SUPPORTED_DTYPES = {
 };
 static bool IsInputSupportFp32Local() {
   // 判断当前SOC版本是否支持Fp32输入
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-    socVersion == SocVersion::ASCEND910_95) {
-    OP_LOGD("The soc version is Ascend910B or ASCEND910_93 or ASCEND910_95, ConvolutionBackward support input tensor with Fp32");
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (curArch == NpuArch::DAV_2201 ||
+    Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    OP_LOGD("The soc version is Ascend910B or ASCEND910_93 or ASCEND950, ConvolutionBackward support input tensor with Fp32");
     return true;
   }
   return false;
@@ -66,8 +67,8 @@ static bool IsInputSupportFp32Local() {
 
 static bool IsInputSupportInsertDilation() {
   // 判断当前SOC版本是否支持前后插Dilation
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (curArch == NpuArch::DAV_2201) {
     OP_LOGD("The soc version is Ascend910B or ASCEND910_93, ConvolutionBackward supports dilation");
     return true;
   }
@@ -279,10 +280,10 @@ static aclIntArray *ViewPad4dAs6d(const aclIntArray *intArray, int64_t expendVal
 
 static aclnnStatus AttrPreProcess(ConvolutionBackwardParams &params, aclOpExecutor *executor)
 {
-  if (!params.transposed || GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+  if (!params.transposed || !(Ops::NN::AclnnUtil::IsRegbase())) {
     return ACLNN_SUCCESS;
   }
-  // ASCEND910_95: Conv2DBP场景下，需要把input tensor维度升到3D，同理attr属性同样要升到3D
+  // ASCEND950: Conv2DBP场景下，需要把input tensor维度升到3D，同理attr属性同样要升到3D
   if (params.stride->Size() == CONV2D_ATTR_DIM) {
     params.stride = View2dAs3d(params.stride, 1, executor);
   }
@@ -314,7 +315,7 @@ static aclnnStatus InputPreProcess(const aclTensor *&inputTensor, const string &
   bool useFp16Input =
       (params.cubeMathType == USE_FP16 || (!IsInputSupportFp32Local() && params.cubeMathType == ALLOW_FP32_DOWN_PRECISION));
   if (useFp16Input) {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95 &&
+    if (Ops::NN::AclnnUtil::IsRegbase() &&
         (promoteDtype == DataType::DT_HIFLOAT8 || promoteDtype == DataType::DT_FLOAT8_E4M3FN)) {
       OP_LOGW("Cube cannot support dtype: %s when cubeMathType is USE_FP16.",
               op::ToString(inputTensor->GetDataType()).GetString());
@@ -330,7 +331,7 @@ static aclnnStatus InputPreProcess(const aclTensor *&inputTensor, const string &
              " %s with Cast return nullptr.", tensorName.c_str()), return ACLNN_ERR_INNER_NULLPTR);
   }
   auto inputDim = inputTensor->GetViewShape().GetDimNum();
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
       return ACLNN_SUCCESS;
   }
   if (inputDim == CONV3DINPUTDIM) {
@@ -427,6 +428,22 @@ static aclnnStatus OutputPostProcess(const aclTensor *&outputTensor, const aclTe
 static aclnnStatus OutputPostProcessWithoutTransdata(const aclTensor *&outputTensor, const aclTensor *&l0ResultTensor,
                                      const string &tensorName, aclOpExecutor *executor) {
   OP_LOGD("Output process without transdata.");
+
+  auto storageFormat = const_cast<aclTensor*>(l0ResultTensor)->GetStorageFormat();
+  auto viewFormat = const_cast<aclTensor*>(l0ResultTensor)->GetViewFormat();
+  // enable N2H optimize
+  if (storageFormat == op::Format::FORMAT_NDHWC && viewFormat == op::Format::FORMAT_NCDHW) {
+      // HDNWC -> NCDHW
+      FVector<int64_t> n2hDims = {2, 4, 1, 0, 3};
+      auto permN2H = executor->AllocIntArray(n2hDims.data(), n2hDims.size());
+      CHECK_RET(permN2H != nullptr, ACLNN_ERR_INNER_NULLPTR);
+      l0ResultTensor = l0op::Transpose(l0ResultTensor, permN2H, executor);
+      CHECK_RET(l0ResultTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+      // change output format
+      const_cast<aclTensor*>(l0ResultTensor)->SetOriginalFormat(Format::FORMAT_NCDHW);
+      const_cast<aclTensor*>(l0ResultTensor)->SetStorageFormat(Format::FORMAT_NCDHW);
+      const_cast<aclTensor*>(l0ResultTensor)->SetViewFormat(Format::FORMAT_NCDHW);
+  }
   OP_LOGD("%s l0ResultTensor is: %s", tensorName.c_str(), l0ResultTensor->ToString().GetString());
   outputTensor = l0op::Cast(l0ResultTensor, outputTensor->GetDataType(), executor);
   OP_CHECK(outputTensor != nullptr,
@@ -713,8 +730,7 @@ static const aclTensor *PerformConv2DBackpropInput(ConvolutionBackwardInputTenso
                                             ConvolutionBackwardParams &params, aclOpExecutor *executor) {
   const aclTensor *gradInputNC1HWC0 = nullptr;
   bool useHf32 = ConvBackGoHf32(inputTensor, params.cubeMathType);
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND910_95) {
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
       gradInputNC1HWC0 =
         l0op::Conv2DBackpropInput(inputTensor.input, inputTensor.weight, inputTensor.gradOutput, params.stride,
                                   params.padding, params.dilation, params.groups, executor,
@@ -803,11 +819,11 @@ static const aclTensor *CalculateConv2DBackpropInput(ConvolutionBackwardInputTen
 static aclnnStatus CalculateBiasGrad(ConvolutionBackwardInputTensor &inputTensor,
                                      ConvolutionBackwardResult &outputTensor, ConvolutionBackwardParams &params,
                                      aclOpExecutor *executor) {
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
   // Index 为 2：进行bias grad运算
   if ((*params.outputMask)[2]) {
     OP_LOGD("Enter bias grad Calculate");
-    SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         bool biasSupport = std::find(REDUCESUM_SUPPORTED_DTYPES.begin(), REDUCESUM_SUPPORTED_DTYPES.end(),
                                     outputTensor.gradBias->GetDataType()) != REDUCESUM_SUPPORTED_DTYPES.end();
         OP_CHECK(biasSupport,
@@ -821,7 +837,7 @@ static aclnnStatus CalculateBiasGrad(ConvolutionBackwardInputTensor &inputTensor
     op::Format gradOutputFormat = inputTensor.gradOutput->GetStorageFormat();
     int64_t reshapeListVal0 = inputTensor.gradOutput->GetViewShape().GetDim(1);
     int64_t reshapeListVal1 = -1;
-    if ((socVersion == SocVersion::ASCEND910_95) &&
+    if ((Ops::NN::AclnnUtil::IsRegbase(curArch)) &&
        (gradOutputFormat == op::Format::FORMAT_NHWC || gradOutputFormat == op::Format::FORMAT_NDHWC)) {
       reshapeListVal0 = -1;
       auto c_idx = inputTensor.gradOutput->GetViewShape().GetDimNum() - 1;
@@ -843,7 +859,7 @@ static aclnnStatus CalculateBiasGrad(ConvolutionBackwardInputTensor &inputTensor
            return ACLNN_ERR_INNER_NULLPTR);
     OP_LOGD("gradReshapeND: %s", gradReshapeND->ToString().GetString());
     int64_t reduceAxis = 2; // 2 : reduce_sum的axis参数， 表示在第2维进行reduce求和
-    if ((socVersion == SocVersion::ASCEND910_95) &&
+    if (Ops::NN::AclnnUtil::IsRegbase(curArch) &&
         (gradOutputFormat == op::Format::FORMAT_NHWC || gradOutputFormat == op::Format::FORMAT_NDHWC)) {
         reduceAxis = 1;
     }
@@ -1032,12 +1048,12 @@ static aclnnStatus Conv2DBackpropFilterBy1x1DwReshapeResult(ConvolutionBackwardI
 
 static bool isConv2dToCastFloat(const ConvolutionBackwardInputTensor &inputTensor,
                          const ConvolutionBackwardParams &params) {
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
   auto inputDim = inputTensor.input->GetViewShape().GetDimNum();
   if (inputDim != CONV2DINPUTDIM) {
     return false;
   }
-  if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
+  if (curArch == NpuArch::DAV_2201) {
     l0op::ConvBackpropParams conv2DBackpropParams = {inputTensor.input, inputTensor.weight, inputTensor.gradOutput,
       params.stride, params.padding, params.dilation, params.groups};
     bool gradInputWhiteListCase = l0op::IsConv2DBackpropInputToCastCase(conv2DBackpropParams);
@@ -1051,16 +1067,16 @@ static bool isConv2dToCastFloat(const ConvolutionBackwardInputTensor &inputTenso
 static aclnnStatus CalculateConv2DBackward(ConvolutionBackwardInputTensor &inputTensor,
                                            ConvolutionBackwardResult &outputTensor, ConvolutionBackwardParams &params,
                                            aclOpExecutor *executor) {
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  // 910_95：无2D原型，直接抛错
-  OP_CHECK(socVersion != SocVersion::ASCEND910_95,
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  // 950：无2D原型，直接抛错
+  OP_CHECK(!(Ops::NN::AclnnUtil::IsRegbase(curArch)),
            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "No kernel for Conv2DBackwardFiler"),
            return ACLNN_ERR_INNER_NULLPTR);
   // Index 为 2：进行bias grad运算
   aclnnStatus ret = CalculateBiasGrad(inputTensor, outputTensor, params, executor);
   CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
   vector<bool> conv2DBp2MatmulMask {false, false};
-  if((socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) && (*params.outputMask)[1] && !conv2DBp2MatmulMask[1]) {
+  if((curArch == NpuArch::DAV_2201) && (*params.outputMask)[1] && !conv2DBp2MatmulMask[1]) {
     bool transTo1x1DwFlag = false;
     const aclTensor *gradWeightFZ = nullptr;
     transTo1x1DwFlag = Check2DTransTo1x1DwFlag(inputTensor, params);
@@ -1188,8 +1204,8 @@ static aclnnStatus CalcConv2DBackTransposeInputGrad(ConvolutionBackwardInputTens
 static aclnnStatus CalculateConv2DTransposeBackward(ConvolutionBackwardInputTensor &inputTensor,
                                                     ConvolutionBackwardResult &outputTensor,
                                                     ConvolutionBackwardParams &params, aclOpExecutor *executor) {
-  // 910_95：无2D原型，直接抛错
-  OP_CHECK(GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95,
+  // 950：无2D原型，直接抛错
+  OP_CHECK(!(Ops::NN::AclnnUtil::IsRegbase()),
            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "No kernel for Conv2DBackwardFiler"),
            return ACLNN_ERR_INNER_NULLPTR);
   // Index 为 2：进行bias grad运算
@@ -1251,8 +1267,8 @@ static aclnnStatus CalculateConv2DTransposeBackward(ConvolutionBackwardInputTens
 namespace {
 static bool SupportConv1DBp2Matmul(const ConvolutionBackwardInputTensor& inputTensor, ConvolutionBackwardParams& params)
 {
-    // SocVersion must be ASCEND910_95
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+    // SocVersion must be ASCEND950
+    if (!(Ops::NN::AclnnUtil::IsRegbase())) {
         return false;
     }
     // input format must be NCL
@@ -1502,7 +1518,7 @@ static bool IsConv2DBp2MmMode(const ConvolutionBackwardInputTensor &inputTensor,
     auto dtype = tensor->GetDataType();
     return dtype == DataType::DT_HIFLOAT8 || dtype == DataType::DT_FLOAT8_E4M3FN;
   };
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95 &&
+  if (Ops::NN::AclnnUtil::IsRegbase() &&
       (is8bit(inputTensor.input) || is8bit(inputTensor.weight) || is8bit(inputTensor.gradOutput))) {
     return false;
   }
@@ -1538,7 +1554,7 @@ static Conv3DBp2MmMode GetConv3DBp2MmMode(ConvolutionBackwardInputTensor &inputT
     auto dtype = tensor->GetDataType();
     return dtype == DataType::DT_HIFLOAT8 || dtype == DataType::DT_FLOAT8_E4M3FN;
   };
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95 &&
+  if (Ops::NN::AclnnUtil::IsRegbase() &&
       (is8bit(inputTensor.input) || is8bit(inputTensor.weight) || is8bit(inputTensor.gradOutput))) {
     return Conv3DBp2MmMode::CONV3D_BP_NO_MM;
   }
@@ -1573,7 +1589,7 @@ static Conv3DBp2MmMode GetConv3DBp2MmMode(ConvolutionBackwardInputTensor &inputT
   }
   // kernel=1*1或2*2走拆分性能略好于matmul
   bool notKernelSplit = (*params.stride)[1] != (*params.stride)[2] || (*params.stride)[1] > 2;
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95 && isStrideEqKernel && notKernelSplit) {
+  if (Ops::NN::AclnnUtil::IsRegbase() && isStrideEqKernel && notKernelSplit) {
     return Conv3DBp2MmMode::CONV3D_BP_MM_STRIDE_EQ_KERNEL;
   }
   return Conv3DBp2MmMode::CONV3D_BP_NO_MM;
@@ -1748,12 +1764,39 @@ static aclnnStatus CalculateConv3DBackwardDwByMmMode(ConvolutionBackwardInputTen
   return ACLNN_SUCCESS;
 }
 
+static bool IsGreaterL2Cache(const ConvolutionBackwardInputTensor &inputTensor,
+                             const ConvolutionBackwardParams &params)
+{
+  op::Shape inputShape = params.transposed ? inputTensor.gradOutput->GetViewShape() : inputTensor.input->GetViewShape();
+  op::Shape weightShape = inputTensor.weight->GetViewShape();
+  int64_t cOutDim = weightShape.GetDim(NCDHW_N_DIM);
+  int64_t cInDim = weightShape.GetDim(NCDHW_C_DIM);
+  int64_t dInDim = inputShape.GetDim(NCDHW_D_DIM);
+  int64_t hInDim = inputShape.GetDim(NCDHW_H_DIM);
+  int64_t wInDim = inputShape.GetDim(NCDHW_W_DIM);
+  int64_t m = cOutDim;
+  int64_t k = cInDim;
+  int64_t n = dInDim * hInDim * wInDim;
+  int64_t typeSize = ge::GetSizeByDataType(inputTensor.input->GetDataType());
+  // 类型错误
+  if (typeSize == -1) {
+    return false;
+  }
+  const int64_t l2CacheSize = 128 * 1024 * 1024;
+  // 是否是超大shape, 超过l2cache(128MB)进行拦截
+  if ((m * k + k * n + n * m) * typeSize > l2CacheSize) {
+    OP_LOGD("Original ConvBackpropInput can not convert to Matmul, m = %ld, k = %ld, n = %ld", m, k, n);
+    return true;
+  }
+  return false;
+}
+
 static bool IsW1B1FmNDxTransToMm(const ConvolutionBackwardInputTensor &inputTensor,
                       const ConvolutionBackwardParams &params)
 {
   OP_LOGD("Enter IsW1B1FmNDxTransToMm");
-  // only support  ASCEND910_95
-  if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+  // only support  ASCEND950
+  if (!(Ops::NN::AclnnUtil::IsRegbase())) {
     return false;
   }
   // do not support 8bit
@@ -1801,6 +1844,10 @@ static bool IsW1B1FmNDxTransToMm(const ConvolutionBackwardInputTensor &inputTens
   // Din, Hin, Win不能同时为1
   if (inputShape.GetDim(NCDHW_D_DIM) == 1 && inputShape.GetDim(NCDHW_H_DIM) == 1 &&
       inputShape.GetDim(NCDHW_W_DIM) == 1) {
+      return false;
+  }
+  //是否是超大shape,超过l2cache(128MB)进行拦截
+  if (IsGreaterL2Cache(inputTensor, params)) {
       return false;
   }
   OP_LOGD("Original ConvBackpropInput can convert to Matmul, "
@@ -2097,7 +2144,7 @@ static aclnnStatus CalculateConv3DBackward(ConvolutionBackwardInputTensor &input
   CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
   bool useV2Flag = false;
   bool inputTransDataFlag = false;
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
   vector<bool> conv3DBp2MatmulMask {false, false};
   l0op::ConvBackpropParams conv3DBackpropPrarams = {inputTensor.input, inputTensor.weight,
                                                     inputTensor.gradOutput, params.stride,
@@ -2109,7 +2156,7 @@ static aclnnStatus CalculateConv3DBackward(ConvolutionBackwardInputTensor &input
     return ACLNN_SUCCESS;
   }
 
-  if (socVersion != SocVersion::ASCEND910_95) {
+  if (!(Ops::NN::AclnnUtil::IsRegbase(curArch))) {
     useV2Flag = l0op::IsConv3DBackpropInputV2(conv3DBackpropPrarams);
     inputTransDataFlag = !((*params.outputMask)[1] && l0op::IsConv3DBackpropFilterV2(conv3DBackpropPrarams) && l0op::IsInputTransdataWhiteListCase(conv3DBackpropPrarams)); // dw、v2、白名单同时满足，输入x融合transdata;
     OP_LOGD("Input trans data flag is %d", static_cast<int>(inputTransDataFlag));
@@ -2131,13 +2178,13 @@ static aclnnStatus CalculateConv3DBackward(ConvolutionBackwardInputTensor &input
 
   bool useHf32 = ConvBackGoHf32(inputTensor, params.cubeMathType);
   bool outputTransdataFlag = true;
-  if (socVersion == SocVersion::ASCEND910_95) {
+  if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
     outputTransdataFlag = false;
   }
   if ((*params.outputMask)[0] && !conv3DBp2MatmulMask[0]) {
     OP_LOGD("Enter dx Calculate");
     const aclTensor *gradInputNDC1HWC0 = nullptr;
-    if (socVersion == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
       useV2Flag = true;
       gradInputNDC1HWC0 = l0op::Conv3DBackpropInput(inputTensor, params, executor, useHf32);
     } else {
@@ -2158,7 +2205,7 @@ static aclnnStatus CalculateConv3DBackward(ConvolutionBackwardInputTensor &input
 
   if ((*params.outputMask)[1] && !conv3DBp2MatmulMask[1]) {
     OP_LOGD("Enter dw Calculate");
-    if (socVersion == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
       bool transTo1x1DwFlag = IsTransTo1x1Dw(inputTensor, params);
       const aclTensor *gradWeightND = nullptr;
       if (transTo1x1DwFlag) {
@@ -2198,8 +2245,8 @@ static aclnnStatus CalcConv3DBackTransposeInputGrad(ConvolutionBackwardInputTens
   OP_LOGD("Enter dx Calculate");
   const aclTensor *gradInputTmp = nullptr;
   aclnnStatus outputPostProcessRet = ACLNN_SUCCESS;
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND910_95) {
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
     if (useHf32) {
       gradInputTmp = l0op::Conv3dv2NCDHWFp32(inputTensor.gradOutput, inputTensor.weight, nullptr, params.stride,
                                               params.padding, params.dilation, params.groups, true, executor);
@@ -2264,7 +2311,7 @@ static aclnnStatus CalculateConv3DTransposeBackward(ConvolutionBackwardInputTens
               ACLNN_ERR_INNER_NULLPTR);
     useHf32 = ConvBackGoHf32(inputTensor, params.cubeMathType);
   } else if ((*params.outputMask)[0]) {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         promoteType = CalcPromoteTypeTransposed(inputTensor);
 	} else {
         promoteType = CalcPromoteType(inputTensor);
@@ -2275,7 +2322,7 @@ static aclnnStatus CalculateConv3DTransposeBackward(ConvolutionBackwardInputTens
               ACLNN_ERR_INNER_NULLPTR);
     useHf32 = ConvBackGoHf32(inputTensor, params.cubeMathType);
   }
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
     CHECK_RET(AttrPreProcess(params, executor) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
   }
 
@@ -2313,7 +2360,7 @@ static aclnnStatus CalculateConv3DTransposeBackward(ConvolutionBackwardInputTens
              OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
                      "The calculation with empty tensor failed, Conv2dBackpropFilter return nullptr."),
              return ACLNN_ERR_INNER_NULLPTR);
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
       CHECK_RET(OutputPostProcessWithoutTransdata(outputTensor.gradWeight, gradWeightFZ3D, "gradWeight", executor) ==
                 ACLNN_SUCCESS,
                 ACLNN_ERR_INNER_NULLPTR);
@@ -2343,7 +2390,7 @@ static aclnnStatus CheckCubeMathTypeFor3D(ConvolutionBackwardInputTensor &inputT
     OP_LOGW("When promoteDtype is float16, the cubeMathType can not be USE_HF32.");
     return ACLNN_SUCCESS;
   }
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
     if (cubeMathType == ALLOW_FP32_DOWN_PRECISION &&
       (promoteDtype == DataType::DT_FLOAT8_E4M3FN || promoteDtype == DataType::DT_HIFLOAT8)) {
       OP_LOGW("When promoteDtype(%s) is hifloat8/float8_e4m3fn, the cubeMathType can not be ALLOW_FP32_DOWN_PRECISION.",
@@ -2368,20 +2415,21 @@ static aclnnStatus CheckCubeMathTypeFor3D(ConvolutionBackwardInputTensor &inputT
 
 static bool isConv2dTo3d(const ConvolutionBackwardInputTensor &inputTensor,
                          const ConvolutionBackwardParams &params) {
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
   auto inputDim = inputTensor.input->GetViewShape().GetDimNum();
   if (inputDim != CONV2DINPUTDIM) {
     return false;
   }
 
-  // 910_95: 2D->3D
-  if (socVersion == SocVersion::ASCEND910_95) {
+  // 950: 2D->3D
+  if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
     return true;
   }
-  if (IsConv2DBp2MmMode(inputTensor, params)) {
+  if (IsConv2DBp2MmMode(inputTensor, params))
+  {
     return true;
   }
-  if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
+  if (curArch == NpuArch::DAV_2201) {
     // 满足白名单时2D->3D
     l0op::ConvBackpropParams conv2DBackpropParams = {inputTensor.input, inputTensor.weight, inputTensor.gradOutput,
       params.stride, params.padding, params.dilation, params.groups};
@@ -2398,14 +2446,13 @@ static aclnnStatus CalculateConv3DBp(ConvolutionBackwardInputTensor &inputTensor
                                      ConvolutionBackwardParams &params,
                                      aclOpExecutor *executor)
 {
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  OP_CHECK(socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-           socVersion == SocVersion::ASCEND910_95,
-           OP_LOGE(ACLNN_ERR_PARAM_INVALID, "not implemented for %s", op::ToString(socVersion).GetString()),
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  OP_CHECK(curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch),
+           OP_LOGE(ACLNN_ERR_PARAM_INVALID, "not implemented for %u", static_cast<uint32_t>(curArch)),
            return ACLNN_ERR_PARAM_INVALID);
   auto ret = CheckCubeMathTypeFor3D(inputTensor, params);
   CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
-  if (socVersion != SocVersion::ASCEND910_95) {
+  if (!(Ops::NN::AclnnUtil::IsRegbase(curArch))) {
     CHECK_RET(CheckSupportedForConv3dBackpropFilter(inputTensor, outputTensor, params), ACLNN_ERR_PARAM_INVALID);
   }
   if (!params.transposed) {
@@ -2485,11 +2532,10 @@ static aclnnStatus CalculateConvolutionBackward(ConvolutionBackwardInputTensor &
                                                 ConvolutionBackwardParams &params, aclOpExecutor *executor) {
   ConvolutionBackwardResult resultTensor = {outputTensor.gradInput, outputTensor.gradWeight, outputTensor.gradBias};
   auto inputDim = inputTensor.input->GetViewShape().GetDimNum();
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
 
   // inputDim 为 3 时，进行1D卷积反向
   if (inputDim == CONV1DINPUTDIM) {
-    if (socVersion == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
       auto ret = CheckCubeMathTypeFor3D(inputTensor, params);
       CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
     }
@@ -2502,7 +2548,7 @@ static aclnnStatus CalculateConvolutionBackward(ConvolutionBackwardInputTensor &
       auto ret = CalculateConv1DTransposeBackward(inputTensor, resultTensor, params, executor);
       CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
     }
-    // inputDim 为 4 时，非ASCEND910_95平台进行2D卷积反向
+    // inputDim 为 4 时，非ASCEND950平台进行2D卷积反向
   } else if (inputDim == CONV2DINPUTDIM) {
     auto ret = CalculateConv2DBp(inputTensor, resultTensor, params, executor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -2640,20 +2686,21 @@ aclnnStatus aclnnConvolutionBackwardGetWorkspaceSize(
                                         outputPadding, groups, outputMask, cubeMathType};
 
     // 固定写法，参数检查
-    const SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
     Ops::NN::Conv::ConvolutionBackwardChecker convolutionBackwardChecker(inputTensor, outputTensor, params, socVersion);
     auto ret = convolutionBackwardChecker.CheckParams();
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 检查conv3ddw确定性计算
     if ((*outputMask)[1] && (input->GetViewShape().GetDimNum() == CONV3DINPUTDIM ||
-      (input->GetViewShape().GetDimNum() == CONV2DINPUTDIM && socVersion == SocVersion::ASCEND910_95))) {
+      (input->GetViewShape().GetDimNum() == CONV2DINPUTDIM && Ops::NN::AclnnUtil::IsRegbase(curArch)))) {
       int64_t deterministicValue = 0;
       rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
       if (retRts != RT_ERROR_NONE) {
         deterministicValue = 0;
       }
-      if (socVersion != SocVersion::ASCEND910_95 && socVersion != SocVersion::ASCEND910B && socVersion != SocVersion::ASCEND910_93) {
+      if (!(Ops::NN::AclnnUtil::IsRegbase(curArch)) && curArch != NpuArch::DAV_2201) {
         CHECK_RET(CheckDeterministic(deterministicValue, groups), ACLNN_ERR_PARAM_INVALID);
       }
     }
@@ -2805,7 +2852,7 @@ aclnnStatus aclnnConvTbcBackwardGetWorkspaceSize(const aclTensor *self, const ac
     Ops::NN::Conv::ConvTbcBackwardOutput outputTensor = {gradInput, gradWeight, gradBias};
     Ops::NN::Conv::ConvTbcBackwardParams tbcparams = {pad, cubeMathType};
     // 固定写法，参数检查
-    const SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
     Ops::NN::Conv::ConvTbcBackwardChecker convTbcBackwardChecker(inputTensor, outputTensor, tbcparams, socVersion);
     auto ret = convTbcBackwardChecker.CheckTbcParams();
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -2831,7 +2878,7 @@ aclnnStatus aclnnConvTbcBackwardGetWorkspaceSize(const aclTensor *self, const ac
         OP_LOGD("Entering CalculateConvolutionTbcBackwardWithEmpty");
         ret = CalculateConvolutionTbcBackwardWithEmpty(gradInput, gradWeight, gradBias, pad, uniqueExecutor.get());
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    } else if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    } else if (Ops::NN::AclnnUtil::IsRegbase()) {
          ConvolutionBackwardInputTensor inputTensorTbc = {self, input, weight};
          OP_LOGD("Entering CalculateConvolutionTbcBackwardBy3D");
          ret = CalculateConvolutionTbcBackwardBy3D(inputTensorTbc, finalTensor, params, uniqueExecutor.get());

@@ -27,8 +27,6 @@
 #include "test_cube_util.h"
 #include "../../../../common/op_host/op_tiling/platform_util.h"
 
-#ifdef USE_LEGACY_COMMON
-
 using namespace std;
 using namespace ge;
 namespace {
@@ -263,7 +261,7 @@ Conv3DBpFilterV2TilingTestParam cases_params_910_95[] = {
     {1, 4, 15, 4, 539}, {1, 4, 15, 4, 539}, {2, 4, 12, 3, 3}, {2, 4, 12, 3, 3}, {1, 2, 5, 4, 539}, {1, 2, 5, 4, 539},
     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_BF16,
     {1, 1, 3, 1, 1}, {4, 5, 6, 6, 6, 6}, {1, 1, 1, 6, 6}, 1, "NCDHW", "VALID", 1,
-    true, true, 32, 1, "1 0 1 1 1 1 1 524288 1 4 2 4 2 5 4 539 15 4 539 12 3 3 1 1 3 1 1 4 5 6 6 6 6 1 6 6 16 2 2 2 2 2 16 112 144 16 16 16 1 1 8 8 0 42560 15120 0 1 1 16 4 128 0 1 0 16 0 3 0 1 32 16 144 2156 0 "},
+    true, true, 32, 1, "1 0 1 1 1 1 1 524288 1 4 2 4 2 5 4 539 15 4 539 12 3 3 1 1 3 1 1 4 5 6 6 6 6 1 6 6 16 2 2 2 2 2 16 112 144 16 16 16 1 1 8 8 0 42560 15360 0 1 1 16 4 128 0 1 0 16 0 3 0 1 32 16 144 2156 0 "},
 
     // NDHWC key=1
     {"3DDW_bfloat16_NDHWC_1_deterministic", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
@@ -308,46 +306,89 @@ Conv3DBpFilterV2TilingTestParam cases_params_910_95[] = {
      true, true, 32, 2, "1 0 1 1 1 1 1 524288 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 16 16 16 16 16 16 1 1 1 1 0 256 256 0 1 1 16 1 1 0 1 0 16 0 1 0 0 32 16 16 1 0 "},
 
     {"aclnnConvolutionBackward_3DDW_DilationMin", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
-    {1, 1, 1, 11, 11}, {1, 1, 1, 11, 11}, {1, 1, 1, 2, 2}, {1, 1, 1, 2, 2}, {1, 1, 1, 12, 12}, {1, 1, 1, 12, 12},
+    {1, 1, 1, 12, 12}, {1, 1, 1, 12, 12}, {1, 1, 1, 2, 2}, {1, 1, 1, 2, 2}, {1, 1, 1, 11, 11}, {1, 1, 1, 11, 11},
     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_BF16,
     {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
-    true, true, 32, 1, "1 0 1 1 1 1 1 524288 1 1 1 1 1 1 12 12 1 11 11 1 2 2 1 1 1 1 1 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 16 16 64 16 16 16 1 1 1 1 0 704 256 0 1 1 16 1 12 0 1 0 16 0 1 0 2 32 16 64 12 0 "},
+    true, true, 32, 1, "1 0 1 1 1 1 1 524288 1 1 1 1 1 1 11 11 1 12 12 1 2 2 1 1 1 1 1 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 16 16 64 16 16 16 1 1 1 1 0 768 256 0 1 1 16 1 11 0 1 0 16 0 1 0 2 32 16 64 11 0 "},
 
     {"aclnnConvolutionBackward_3DDW_DilationMax", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
-    {1, 1, 1, 11, 11}, {1, 1, 1, 11, 11}, {1, 1, 1, 2, 2}, {1, 1, 1, 2, 2}, {1, 1, 1, 12, 12}, {1, 1, 1, 12, 12},
+    {1, 1, 1, 12, 12}, {1, 1, 1, 12, 12}, {1, 1, 1, 2, 2}, {1, 1, 1, 2, 2}, {1, 1, 1, 11, 11}, {1, 1, 1, 11, 11},
     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_BF16,
     {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 2147483646, 1, 1}, 1, "NCDHW", "VALID", 1,
-    true, true, 32, 1, "1 0 1 1 1 1 1 524288 1 1 1 1 1 1 12 12 1 11 11 1 2 2 1 1 1 1 1 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 16 16 64 16 16 16 1 1 1 1 0 704 256 0 1 1 16 1 12 0 1 0 16 0 1 0 2 32 16 64 12 0 "},
+    true, true, 32, 1, "1 0 1 1 1 1 1 524288 1 1 1 1 1 1 11 11 1 12 12 1 2 2 1 1 1 1 1 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 16 16 64 16 16 16 1 1 1 1 0 768 256 0 1 1 16 1 11 0 1 0 16 0 1 0 2 32 16 64 11 0 "},
 
     {"aclnnConvolutionBackward_3DDW_DilationOver", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
-    {1, 1, 1, 11, 11}, {1, 1, 1, 11, 11}, {1, 1, 1, 2, 2}, {1, 1, 1, 2, 2}, {1, 1, 1, 12, 12}, {1, 1, 1, 12, 12},
+    {1, 1, 1, 12, 12}, {1, 1, 1, 12, 12}, {1, 1, 1, 2, 2}, {1, 1, 1, 2, 2}, {1, 1, 1, 11, 11}, {1, 1, 1, 11, 11},
     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_BF16,
     {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 2147483647, 1, 1}, 1, "NCDHW", "VALID", 1,
     true, false, 32, 1, ""},
 
     {"aclnnConvolutionBackward_3DDW_StrideMin", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
-    {1, 1, 1, 300, 300}, {1, 1, 1, 300, 300}, {1, 1, 1, 2, 2}, {1, 1, 1, 2, 2}, {1, 1, 1, 2, 301}, {1, 1, 1, 2, 301},
+    {1, 1, 1, 3, 301}, {1, 1, 1, 3, 301}, {1, 1, 1, 2, 2}, {1, 1, 1, 2, 2}, {1, 1, 1, 2, 300}, {1, 1, 1, 2, 300},
     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_BF16,
     {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
-    true, true, 32, 1, "1 0 1 1 1 1 1 524288 1 1 1 1 1 1 2 301 1 300 300 1 2 2 1 1 1 1 1 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 16 256 64 16 16 16 1 1 2 2 0 19200 8192 0 1 1 16 1 301 0 1 0 16 0 1 0 2 32 16 64 301 0 "},
+    true, true, 32, 1, "1 0 1 1 1 1 1 524288 1 1 1 1 1 1 2 300 1 3 301 1 2 2 1 1 1 1 1 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 16 256 64 16 16 16 1 1 2 2 0 19264 8192 0 1 1 16 1 300 0 1 0 16 0 1 0 2 32 16 64 300 0 "},
 
-    {"aclnnConvolutionBackward_3DDW_StrideMax", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
-    {1, 1, 1, 300, 300}, {1, 1, 1, 300, 300}, {1, 1, 1, 2, 2}, {1, 1, 1, 2, 2}, {1, 1, 1, 301, 301}, {1, 1, 1, 301, 301},
-    ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_BF16,
-    {1, 1, 1, 63, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
-    true, true, 32, 1, "1 0 1 1 1 1 1 524288 1 1 1 1 1 1 301 301 1 300 300 1 2 2 1 1 1 63 1 0 0 0 0 0 0 1 1 1 16 2 2 2 1 1 16 128 64 16 16 16 1 1 1 1 0 140576 2880 0 1 1 16 10 128 0 1 0 16 0 1 0 2 32 16 64 3010 0 "},
+ 	 {"aclnnConvolutionBackward_3DDW_StrideHMax", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
+ 	 {1, 1, 1, 2147483646, 1}, {1, 1, 1, 2147483646, 1}, {1, 1, 1, 1, 1}, {1, 1, 1, 1, 1}, {1, 1, 1, 1, 1}, {1, 1, 1, 1, 1},
+ 	 ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_BF16,
+ 	 {1, 1, 1, 2147483646, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
+ 	 true, true, 32, 2, "1 0 1 1 1 1 1 524288 1 1 1 1 1 1 1 1 1 2147483646 1 1 1 1 1 1 1 2147483646 1 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 16 16 16 16 16 16 1 1 1 1 0 256 256 0 1 1 16 1 1 1 1 0 16 0 1 0 0 32 16 16 1 0 "},
 
-    {"aclnnConvolutionBackward_3DDW_StrideOver", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
-    {1, 1, 1, 300, 300}, {1, 1, 1, 300, 300}, {1, 1, 1, 2, 2}, {1, 1, 1, 2, 2}, {1, 1, 1, 2, 301}, {1, 1, 1, 2, 301},
-    ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_BF16,
-    {1, 1, 1, 64, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
-    true, false, 32, 1, ""},
+ 	 {"aclnnConvolutionBackward_3DDW_StrideWMax", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
+ 	 {1, 1, 1, 1, 2147483646}, {1, 1, 1, 1, 2147483646}, {1, 1, 1, 1, 1}, {1, 1, 1, 1, 1}, {1, 1, 1, 1, 1}, {1, 1, 1, 1, 1},
+ 	 ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_BF16,
+ 	 {1, 1, 1, 1, 2147483646}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
+ 	 true, true, 32, 2, "1 0 1 1 1 1 1 524288 1 1 1 1 1 1 1 1 1 1 2147483646 1 1 1 1 1 1 1 2147483646 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 16 16 16 16 16 16 1 1 1 1 0 256 256 0 1 1 16 1 1 1 1 0 16 0 1 0 0 32 16 16 1 0 "},
+
+ 	 {"aclnnConvolutionBackward_3DDW_StrideWMax_NDHWC", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
+ 	 {1, 1, 1, 2147483646, 1}, {1, 1, 1, 2147483646, 1}, {1, 1, 1, 1, 1}, {1, 1, 1, 1, 1}, {1, 1, 1, 1, 1}, {1, 1, 1, 1, 1},
+ 	 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::DT_BF16,
+ 	 {1, 1, 1, 2147483646, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NDHWC", "VALID", 1,
+ 	 true, true, 32, 2, "1 0 1 1 1 1 1 524288 1 1 1 1 1 1 1 1 1 1 2147483646 1 1 1 1 1 1 1 2147483646 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 16 16 16 16 16 16 1 1 1 1 0 256 256 0 1 1 16 1 1 1 1 0 16 0 1 0 0 32 16 16 1 0 "},
+
+ 	 {"aclnnConvolutionBackward_3DDW_SplitW0", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
+ 	 {16, 1, 1, 962, 32770}, {16, 1, 1, 962, 32770}, {1, 1, 1, 2, 2}, {1, 1, 1, 2, 2}, {16, 1, 1, 16, 513}, {16, 1, 1, 16, 513},
+ 	 ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_BF16,
+ 	 {1, 1, 1, 64, 64}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
+ 	 true, true, 32, 1, "1 0 1 1 1 1 1 524288 16 1 1 1 1 1 16 513 1 962 32770 1 2 2 1 1 1 64 64 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 16 256 64 16 16 16 1 1 8 8 0 32768 32768 0 1 1 16 16 128 1 1 0 16 0 1 0 1 32 16 64 8208 0 "},
+
+ 	 {"aclnnConvolutionBackward_3DDW_ShrinkBaseBlock", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
+ 	 {1, 3, 1, 54, 142}, {1, 3, 1, 54, 142}, {1, 3, 1, 1, 40}, {1, 3, 1, 1, 40}, {1, 3, 1, 1, 3}, {1, 3, 1, 1, 3},
+ 	 ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_BF16,
+ 	 {1, 1, 1, 61, 57}, {0, 0, 0, 0, 25, 26}, {1, 1, 1, 8, 2}, 1, "NCDHW", "VALID", 1,
+ 	 true, true, 32, 2, "1 0 1 1 1 1 1 524288 1 3 3 3 3 1 1 3 1 54 142 1 1 40 1 1 1 61 57 0 0 0 0 25 26 1 1 2 16 2 2 2 2 2 16 16 224 16 16 16 1 1 1 1 0 336 512 0 1 1 16 1 16 1 1 0 16 0 1 0 0 32 16 640 3 0 "},
+
+    {"aclnnConvolutionBackward_3DDW_CheckHoShapeErr", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95_36_CORE,
+    {32, 16, 1, 1, 1}, {32, 16, 1, 1, 1}, {16, 16, 1, 1, 3}, {16, 16, 1, 1, 3}, {32, 16, 1, 1, 751},{32, 16, 1, 1, 751},
+    ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,ge::DT_FLOAT,
+    {1, 1, 1, 1, 2}, {0, 0, 0, 0, 1, 1}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
+    true, false, 36, 1, ""},
+
+    {"aclnnConvolutionBackward_3DDW_CheckWoShapeErr", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95_36_CORE,
+    {32, 16, 1, 3, 1}, {32, 16, 1, 3, 1}, {16, 16, 1, 1, 3}, {16, 16, 1, 1, 3}, {32, 16, 1, 1, 1},{32, 16, 1, 1, 1},
+    ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,ge::DT_FLOAT,
+    {1, 1, 1, 1, 2}, {0, 0, 0, 0, 1, 1}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
+    true, false, 36, 1, ""},
+
+    {"aclnnConvolutionBackward_3DDW_CheckDoShapeErr", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95_36_CORE,
+    {32, 16, 3, 1, 1}, {32, 16, 3, 1, 1}, {16, 16, 1, 1, 3}, {16, 16, 1, 1, 3}, {32, 16, 1, 1, 1},{32, 16, 1, 1, 1},
+    ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,ge::DT_FLOAT,
+    {1, 1, 1, 1, 2}, {0, 0, 0, 0, 1, 1}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
+    true, false, 36, 1, ""},
 
     {"aclnnConvolutionBackward_3DDW_AdjustSmallBlock", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95_36_CORE,
     {32, 1024, 1, 14, 14}, {32, 1024, 1, 14, 14}, {1024, 1024, 1, 1, 1}, {1024, 1024, 1, 1, 1}, {32, 1024, 1, 14, 14},{32, 1024, 1, 14, 14},
     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,ge::DT_FLOAT,
     {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
     true, true, 36, 1, "1 0 1 1 1 1 1 524288 32 1024 1024 1024 1024 1 14 14 1 14 14 1 1 1 1 1 1 1 1 0 0 0 0 0 0 1 1 1 8 2 2 1 2 2 256 32 256 16 8 16 1 1 3 3 0 28672 24576 0 1 1 256 14 14 0 1 0 256 0 16 0 1 36 256 256 196 0 "},
+
+    {"aclnnConvolutionBackward_2DDW_SplitKernelOnKStartPtExceedLimit", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
+    {1, 1, 1, 625, 1}, {1, 1, 1, 625, 1}, {1, 1, 1, 172, 142}, {1, 1, 1, 172, 142}, {1, 1, 1, 192, 43},{1, 1, 1, 192, 43},
+ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,ge::DT_FLOAT,
+{1, 1, 1, 3, 3}, {0, 0, 60, 60, 134, 134}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
+true, true, 32, 1, "1 0 1 1 1 1 1 524288 1 1 1 1 1 1 192 43 1 625 1 1 172 142 1 1 1 3 3 0 0 60 60 134 134 1 1 1 8 2 2 2 2 2 16 32 256 16 8 16 1 1 8 8 0 4816 4096 0 1 1 16 6 43 1 1 0 16 0 1 0 2 32 16 390784 258 0 "},
+
 };
 
 static void ThreadFunc(const Conv3DBpFilterV2TilingTestParam *params, size_t testcase_num, size_t thread_idx,
@@ -377,5 +418,3 @@ TEST_F(Conv3DBackpropFilterV2TilingRunTime3, cases_params_910_95_thread)
 
 INSTANTIATE_TEST_CASE_P(CONV3DDW910_95, Conv3DBackpropFilterV2TilingRunTime3, testing::ValuesIn(cases_params_910_95));
 }
-
-#endif

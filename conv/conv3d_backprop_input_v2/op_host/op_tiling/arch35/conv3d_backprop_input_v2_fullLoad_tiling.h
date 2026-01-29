@@ -42,6 +42,8 @@ protected:
     void InitBaseMNK(L0TilingParams& l0Params) override;
     void CalStepK(L1TilingParams& l1Params, const L0TilingParams& l0Params) override;
     void SetSingleCoreInfo(CoreTilingParams& coreParams, L0TilingParams& l0Params) override;
+
+    void AdjustSingleCoreInfo(CoreTilingParams& coreParams, uint64_t& batchDepthCnt, uint64_t& nCnt);
 };
 
 } // namespace Conv

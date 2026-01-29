@@ -122,6 +122,14 @@ public:
         }
     }
 
+    __aicore__ inline void SetFullLoadFlag(bool enableFullLoad)
+    {
+        using Local = typename Ext::SetFullLoadFlag;
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, enableFullLoad)) {
+            Local::call(this, enableFullLoad);
+        }
+    }
+
     __aicore__ inline void FreeB1Tensor()
     {
         using Local = typename Ext::FreeB1Tensor;

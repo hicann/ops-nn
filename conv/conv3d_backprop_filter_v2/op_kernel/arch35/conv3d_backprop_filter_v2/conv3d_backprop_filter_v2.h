@@ -15,8 +15,7 @@
 #ifndef CONV3D_BACKPROP_FILTER_H
 #define CONV3D_BACKPROP_FILTER_H
 
-#include "kernel_operator.h"
-#include "kernel_operator_intf.h"
+#include "basic_api/kernel_basic_intf.h"
 #include "conv3d_bp_filter.h"
 #include "kernel_type.h"
 #include "lib/matmul_intf.h"
@@ -37,13 +36,17 @@ __aicore__ inline constexpr ConvolutionBackprop::CubeFormat GetFormat(int format
 }
 
 template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
-uint32_t l0cCondition>
+    uint32_t l0cCondition>
 class Conv3dDw {
 public:
-    __aicore__ inline Conv3dDw(){};
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR dedy,
-                                GM_ADDR y, GM_ADDR workSpace,
-                                const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData) {
+    __aicore__ inline Conv3dDw()
+    {
+    };
+    __aicore__ inline void Init(
+        GM_ADDR x, GM_ADDR dedy,
+        GM_ADDR y, GM_ADDR workSpace,
+        const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
+    {
         InitTilingData(tilingData);
         // init global buffer
         xGm_.SetGlobalBuffer((__gm__ xType*)x);
@@ -57,22 +60,23 @@ public:
 
     /** main logical function
     */
-    __aicore__ inline void Process() {
-if ASCEND_IS_AIV {
-    if constexpr (conv3ddwConfig.l0cCondition == TPL_STREAM_DFL) {
-        return;
-    }
-    if (GetSubBlockIdx() > 0) {
-        dw_.End();
-        return;
-    }
-}
-if ASCEND_IS_AIC {
-        if (GetBlockIdx() >= GetBlockNum()) {
-            dw_.End();
-            return;
+    __aicore__ inline void Process()
+    {
+        if ASCEND_IS_AIV {
+            if constexpr (conv3ddwConfig.l0cCondition == TPL_STREAM_DFL) {
+                return;
+            }
+            if (GetSubBlockIdx() > 0) {
+                dw_.End();
+                return;
+            }
         }
-}
+        if ASCEND_IS_AIC {
+            if (GetBlockIdx() >= GetBlockNum()) {
+                dw_.End();
+                return;
+            }
+        }
         CalSingleCoreShape();
         for (uint32_t i = 0; i < singleShapeGroup_; ++i) {
             uint32_t groupIdx = groupCoreIndx_ * singleCoreGroup_ + i;
@@ -91,7 +95,8 @@ if ASCEND_IS_AIC {
                     dw_.SetOutBackprop(dedyGm_[offsetA_]);
                     // cin和dk分轴，当cin有尾块且d轴有padding，将singleShapeNInCurrentHo作为参数传递，无法计算出正确的cin和dk
                     // 因此需传递一个singleShapeCin，以便获取singleShapeCin和singleShapeDk
-                    dw_.SetSingleShape(singleShapeMInCurrentHo_, singleShapeNInCurrentHo_,
+                    dw_.SetSingleShape(
+                        singleShapeMInCurrentHo_, singleShapeNInCurrentHo_,
                         singleShapeK_, singleShapeCin_, ONE_BATCH);
                     dw_.SetStartIdx(batchDoutIdx, hoStartIdx_, dkIdx);
                     dw_.IterateAll(yGm_[offsetC_], 1); // 1 means atomic add
@@ -101,7 +106,8 @@ if ASCEND_IS_AIC {
         dw_.End();
     }
 
-    __aicore__ inline void ProcessWithDeterministic() {
+    __aicore__ inline void ProcessWithDeterministic()
+    {
         if constexpr (conv3ddwConfig.l0cCondition != TPL_MN_STREAM_K) {
             return;
         }
@@ -128,11 +134,12 @@ if ASCEND_IS_AIC {
                     CalcOffset(0, 0, groupIdx, dkIdx);
                     dw_.SetSingleShape(singleShapeM_, singleShapeN_, singleShapeK_, singleShapeCin_, singleShapeBatch_);
                 } else {
-                /* 当且仅当当前核有有效数据进行计算时，需要计算Gm地址中的offset并进行设置 */
+                    /* 当且仅当当前核有有效数据进行计算时，需要计算Gm地址中的offset并进行设置 */
                     CalcOffset(batchIdx, doutIdx, groupIdx, dkIdx);
                     dw_.SetFmap(xGm_[offsetB_]);
                     dw_.SetOutBackprop(dedyGm_[offsetA_]);
-                    dw_.SetSingleShape(singleShapeMInCurrentHo_, singleShapeNInCurrentHo_,
+                    dw_.SetSingleShape(
+                        singleShapeMInCurrentHo_, singleShapeNInCurrentHo_,
                         singleShapeK_, singleShapeCin_, singleShapeBatch_);
                 }
                 dw_.SetStartIdx(batchDoutIdx, hoStartIdx_, dkIdx);
@@ -147,12 +154,12 @@ protected:
     static constexpr ConvolutionBackprop::CubeFormat dedyCubeFormat = GetFormat(dedyFormat);
     static constexpr ConvolutionBackprop::CubeFormat yCubeFormat = GetFormat(yFormat);
     static constexpr uint32_t ONE_BATCH = 1;
-    using xDwType = ConvolutionBackprop::ConvType <TPosition::GM, xCubeFormat, xType>;
+    using xDwType = ConvolutionBackprop::ConvType<TPosition::GM, xCubeFormat, xType>;
     using filterSizeDwType = ConvolutionBackprop::ConvType<TPosition::GM, ConvolutionBackprop::CubeFormat::ND, int32_t>;
     using dedyDwType = ConvolutionBackprop::ConvType<TPosition::GM, dedyCubeFormat, dedyType>;
-    using yDwType = ConvolutionBackprop::ConvType <TPosition::GM, yCubeFormat, yType>;
+    using yDwType = ConvolutionBackprop::ConvType<TPosition::GM, yCubeFormat, yType>;
     static constexpr Conv3ddwConfig conv3ddwConfig = {l0cCondition};
-    ConvolutionBackprop::Conv3DBackpropFilter <xDwType, filterSizeDwType, dedyDwType, yDwType, conv3ddwConfig> dw_;
+    ConvolutionBackprop::Conv3DBackpropFilter<xDwType, filterSizeDwType, dedyDwType, yDwType, conv3ddwConfig> dw_;
     GlobalTensor<xType> xGm_;
     GlobalTensor<xType> dedyGm_;
     GlobalTensor<yType> yGm_;
@@ -203,7 +210,6 @@ protected:
     uint64_t singleShapeK_ = 0;
     uint64_t coutG_ = 0;
     uint64_t cinG_ = 0;
-    uint64_t hoCal_ = 0;
     uint32_t dkDim_ = 0;
     uint32_t singleShapeCin_ = 0;
     uint32_t groupCoreIndx_ = 0;
@@ -220,7 +226,7 @@ protected:
     uint32_t realGroup_ = 0;
     bool groupFlag_ = 0;
     bool seperateDk_ = 0;
-    bool basicBlockFlag_ = 0;  // 后续默认基本块后，此标识和相关改动可以删除
+    bool basicBlockFlag_ = 0; // 后续默认基本块后，此标识和相关改动可以删除
     uint64_t offsetCubeWorkSpaceC_ = 0;
     static constexpr uint64_t SYNC_MODE0 = 0;
     static constexpr uint64_t SYNC_MODE2 = 2;
@@ -229,8 +235,10 @@ protected:
     static constexpr uint16_t SYNC_AIC_AIV_DET_FLAG = 8;
     static constexpr uint64_t CUBE_WORKSPACE = AscendC::TOTAL_L0C_SIZE >> 2;
 
-    __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData,
-        bool isSeperateDk = false, bool isBasicBlock = false) {
+    __aicore__ inline void InitTilingData(
+        const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData,
+        bool isSeperateDk = false, bool isBasicBlock = false)
+    {
         batchDim_ = tilingData->params.batchDim;
         mDim_ = tilingData->params.mDim;
         nDim_ = tilingData->params.nDim;
@@ -280,9 +288,10 @@ protected:
         InitTilingData_diff_1971_1982(tilingData);
     }
 
-    __aicore__ inline void InitTilingData_diff_1971_1982(const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
+    __aicore__ inline void InitTilingData_diff_1971_1982(
+        const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
     {
-    #if defined(__DAV_C310__)
+#if defined(__DAV_C310__)
         coutG_ = static_cast<uint64_t>(tilingData->dwTiling.cout1G);
         cinG_ = static_cast<uint64_t>(tilingData->dwTiling.cin1G);
         // 判断条件为是否为分组卷积，而不是是否cin和dk分轴
@@ -299,11 +308,11 @@ protected:
                 n_ *= dk_;
             }
         }
-    #endif
+#endif
     }
 
 #if defined(__DAV_C310__)
-    __aicore__ inline void CalcBlockOffsetA(uint64_t batchIdx, uint64_t doutIdx, uint32_t groupIdx)
+    __aicore__ inline void CalcBlockOffsetA(uint64_t batchIdx, uint64_t doutIdx, uint32_t groupIdx, uint64_t hoCal)
     {
         uint64_t groupOffsetA = 0;
         uint64_t hoOffset = 0;
@@ -313,18 +322,19 @@ protected:
         if constexpr (dedyCubeFormat == ConvolutionBackprop::CubeFormat::NCDHW) {
             if (groupFlag_) {
                 // group将cin和cout分为多个组，每轮处理一组cin和cout，因此，每轮group的偏移计算仅算分组扩维后的cinG或coutG
-                groupOffsetA =  static_cast<uint64_t>(groupIdx) * coutG_ * dout_ * ho_ * wo_;
+                groupOffsetA = static_cast<uint64_t>(groupIdx) * coutG_ * dout_ * ho_ * wo_;
             }
-            hoOffset = hoCal_ * wo_;
+            hoOffset = hoCal * wo_;
             doOffset = static_cast<uint64_t>(doutIdx) * ho_ * wo_;
             coutOffset = static_cast<uint64_t>(mCoreIndx_) * singleCoreCout_ * dout_ * ho_ * wo_;
             batchOffsetA = static_cast<uint64_t>(batchIdx) * cout_ * dout_ * ho_ * wo_;
-        } else {    // ndhwc, cout is last axis
+        } else {
+            // ndhwc, cout is last axis
             if (groupFlag_) {
                 // group将cin和cout分为多个组，每轮处理一组cin和cout，因此，每轮group的偏移计算仅算分组扩维后的cinG或coutG
                 groupOffsetA = static_cast<uint64_t>(groupIdx) * coutG_;
             }
-            hoOffset = hoCal_ * wo_ * cout_;
+            hoOffset = hoCal * wo_ * cout_;
             doOffset = static_cast<uint64_t>(doutIdx) * ho_ * wo_ * cout_;
             coutOffset = static_cast<uint64_t>(mCoreIndx_) * singleCoreCout_;
             batchOffsetA = static_cast<uint64_t>(batchIdx) * dout_ * ho_ * wo_ * cout_;
@@ -332,8 +342,9 @@ protected:
         offsetA_ = batchOffsetA + groupOffsetA + coutOffset + doOffset + hoOffset;
     }
 
-    __aicore__ inline void CalcBlockOffsetB(uint64_t batchIdx, uint64_t doutIdx,
-            uint32_t groupIdx, uint32_t dkIdx, uint64_t &dinCurIdx)
+    __aicore__ inline void CalcBlockOffsetB(
+        uint64_t batchIdx, uint64_t doutIdx,
+        uint32_t groupIdx, uint32_t dkIdx, uint64_t hoCal, uint64_t& dinCurIdx)
     {
         uint64_t groupOffsetB = 0;
         dinCurIdx = static_cast<uint64_t>(doutIdx) * strideD_;
@@ -349,8 +360,8 @@ protected:
         }
 
         uint64_t hiIdx = 0;
-        if (hoCal_ * strideH_ > padUp_) {
-            hiIdx = hoCal_ * strideH_ - padUp_;
+        if (hoCal * strideH_ > padUp_) {
+            hiIdx = hoCal * strideH_ - padUp_;
         }
 
         uint64_t hiOffset = 0;
@@ -379,7 +390,8 @@ protected:
         offsetB_ = batchOffsetB + groupOffsetB + cinOffset + dinDkOffset + hiOffset;
     }
 
-    __aicore__ inline void CalcBlockOffsetC(uint64_t doutIdx, uint32_t groupIdx, uint32_t dkIdx,
+    __aicore__ inline void CalcBlockOffsetC(
+        uint64_t doutIdx, uint32_t groupIdx, uint32_t dkIdx,
         uint64_t dinCurIdx)
     {
         uint64_t groupOffsetC = 0;
@@ -420,7 +432,8 @@ protected:
             if (dinCurIdx < padFront_ && !seperateDk_) {
                 offsetC_ += static_cast<uint64_t>(padFront_ - dinCurIdx) * hk_ * wk_ * cinG_;
             }
-        } else { // DHWCN
+        } else {
+            // DHWCN
             uint64_t cinDkOffset = cinCoreIndx_ * singleCoreCin_ * cout_ + dkIdx * hk_ * wk_ * (cin_ / group_) * cout_;
             offsetC_ = groupOffsetC + cinDkOffset + coutOffsetC;
             if (dinCurIdx < padFront_ && !seperateDk_) {
@@ -431,14 +444,22 @@ protected:
 
     __aicore__ inline void CalcOffset(uint64_t batchIdx, uint64_t doutIdx, uint32_t groupIdx, uint32_t dkIdx)
     {
-        hoCal_ = basicBlockFlag_ ? (kCoreIndx_ * singleShapeK_) / wo_ : kCoreIndx_ * singleCoreHo_;
-        CalcBlockOffsetA(batchIdx, doutIdx, groupIdx);
+        //该函数当前仅为模板0保留
+        uint64_t hoCal = basicBlockFlag_ ? (kCoreIndx_ * singleShapeK_) / wo_ : kCoreIndx_ * singleCoreHo_;
+        CalcOffset(batchIdx, doutIdx, groupIdx, dkIdx, hoCal);
+    }
+
+    __aicore__ inline void CalcOffset(
+        uint64_t batchIdx, uint64_t doutIdx, uint32_t groupIdx, uint32_t dkIdx,
+        uint64_t hoCal)
+    {
+        CalcBlockOffsetA(batchIdx, doutIdx, groupIdx, hoCal);
         uint64_t dinCurIdx = 0;
-        CalcBlockOffsetB(batchIdx, doutIdx, groupIdx, dkIdx, dinCurIdx);
+        CalcBlockOffsetB(batchIdx, doutIdx, groupIdx, dkIdx, hoCal, dinCurIdx);
         CalcBlockOffsetC(doutIdx, groupIdx, dkIdx, dinCurIdx);
     }
 
-    __aicore__ inline void ReCalcSingleCoreBatchDout(uint64_t doutIdx, uint32_t dkIdx, bool &invalidDIndex)
+    __aicore__ inline void ReCalcSingleCoreBatchDout(uint64_t doutIdx, uint32_t dkIdx, bool& invalidDIndex)
     {
         uint64_t doutStartIdx = doutIdx;
         // 非基本块+group场景目前不支持batchDout内移，因此使用ONE_BATCH作为singleShapeBatch
@@ -453,7 +474,8 @@ protected:
         }
     }
 
-    __aicore__ inline void ReCalDkCinSingleCoreShape(uint64_t doutIdx, uint32_t groupIdx,
+    __aicore__ inline void ReCalDkCinSingleCoreShape(
+        uint64_t doutIdx, uint32_t groupIdx,
         uint32_t dkIdx)
     {
         singleShapeNInCurrentHo_ = singleShapeN_;
@@ -547,8 +569,9 @@ protected:
             uint64_t totalDim = static_cast<uint64_t>(batchDim_) * kDim_ * nDim_ * mDim_;
             dkCoreIndx_ = (block_idx / totalDim) % dkDim_;
             // dk外循环
-            singleShapeDk_ = (dk_ - dkCoreIndx_ * singleCoreDk_) > singleCoreDk_ ? singleCoreDk_ :
-                (dk_ - dkCoreIndx_ * singleCoreDk_);
+            singleShapeDk_ = (dk_ - dkCoreIndx_ * singleCoreDk_) > singleCoreDk_ ?
+                                 singleCoreDk_ :
+                                 (dk_ - dkCoreIndx_ * singleCoreDk_);
             if (groupFlag_) {
                 groupCoreIndx_ = (block_idx / (totalDim * dkDim_)) % groupDim_;
                 uint32_t groupRamin = realGroup_ - groupCoreIndx_ * singleCoreGroup_;
@@ -558,20 +581,22 @@ protected:
             // 普通卷积，group循环初始化为1，index初始化为0；
             groupCoreIndx_ = 0;
             singleShapeGroup_ = 1;
-        #if defined(__DAV_C310__)
-        // 310 普通卷积分支
+#if defined(__DAV_C310__)
+            // 310 普通卷积分支
             // 普通卷积 cin和dk分轴，且nCoreIndx_为cinIndx和dkIndx，各自求取Index
             // 在D轴有padding时，如果dkIndx取余得到（先dk后cin），那么逻辑与计算padding逻辑相反，具体参考上面注释
             dkCoreIndx_ = (singleCoreDk_ != dk_) ? (nCoreIndx_ / DivCeil(cin_, singleCoreCin_)) : 0;
             cinCoreIndx_ = (singleCoreDk_ != dk_) ? (nCoreIndx_ % DivCeil(cin_, singleCoreCin_)) : nCoreIndx_;
-            singleShapeCin_ = (cin_ - cinCoreIndx_ * singleCoreCin_) > singleCoreCin_ ? singleCoreCin_ :
-                (cin_ - cinCoreIndx_ * singleCoreCin_);
-            singleShapeDk_ = (dk_ - dkCoreIndx_ * singleCoreDk_) > singleCoreDk_ ? singleCoreDk_ :
-                (dk_ - dkCoreIndx_ * singleCoreDk_);
+            singleShapeCin_ = (cin_ - cinCoreIndx_ * singleCoreCin_) > singleCoreCin_ ?
+                                  singleCoreCin_ :
+                                  (cin_ - cinCoreIndx_ * singleCoreCin_);
+            singleShapeDk_ = (dk_ - dkCoreIndx_ * singleCoreDk_) > singleCoreDk_ ?
+                                 singleCoreDk_ :
+                                 (dk_ - dkCoreIndx_ * singleCoreDk_);
             // 310时，singleShapeN_为传递每个核上dk的大小，singleShapeCin_为传递每个核上cin的大小
             singleShapeN_ = singleShapeCin_ * singleShapeDk_ * hk_ * wk_;
             singleShapeDk_ = 1; // dk在内部循环
-        #endif
+#endif
         }
     }
 
@@ -610,11 +635,12 @@ protected:
 
     __aicore__ inline void ClearL0C()
     {
-        constexpr uint32_t FRACTAL_LEN_BITS = 9;    // 512 = 2^9
+        constexpr uint32_t FRACTAL_LEN_BITS = 9; // 512 = 2^9
         LocalTensor<half> l0a = dw_.ctx.l0aBuf_.template Get<half>();
         LocalTensor<half> l0b = dw_.ctx.l0bBuf_.template Get<half>();
-        LocalTensor<float> l0c = dw_.ctx.l0cPingPongFlag_ ? dw_.ctx.l0cPing_.template AllocTensor<float>() :
-            dw_.ctx.l0cPong_.template AllocTensor<float>();
+        LocalTensor<float> l0c = dw_.ctx.l0cPingPongFlag_ ?
+                                     dw_.ctx.l0cPing_.template AllocTensor<float>() :
+                                     dw_.ctx.l0cPong_.template AllocTensor<float>();
 
         PipeBarrier<PIPE_MTE1>();
         InitConstValue(l0a, {1, static_cast<uint16_t>(TOTAL_L0A_SIZE >> FRACTAL_LEN_BITS), 0, 0U});
@@ -643,10 +669,11 @@ protected:
         }
     }
 
-    __aicore__ inline void LoadL0CToWorkspace(const GlobalTensor<float> &output)
+    __aicore__ inline void LoadL0CToWorkspace(const GlobalTensor<float>& output)
     {
-        LocalTensor<float> l0c = dw_.ctx.l0cPingPongFlag_ ? dw_.ctx.l0cPing_.template DeQue<float>() :
-            dw_.ctx.l0cPong_.template DeQue<float>();
+        LocalTensor<float> l0c = dw_.ctx.l0cPingPongFlag_ ?
+                                     dw_.ctx.l0cPing_.template DeQue<float>() :
+                                     dw_.ctx.l0cPong_.template DeQue<float>();
         FixpipeParamsC310<CO2Layout::NZ> fixPipeParams;
         fixPipeParams.mSize = dw_.ctx.tiling_->baseM;
         fixPipeParams.nSize = dw_.ctx.tiling_->baseN;
@@ -665,7 +692,7 @@ protected:
         }
     }
 
-    __aicore__ inline void ClearWorkspace(const GlobalTensor<float> &workspace)
+    __aicore__ inline void ClearWorkspace(const GlobalTensor<float>& workspace)
     {
         event_t eventIdMte3ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
         SetFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
@@ -691,7 +718,7 @@ protected:
     __aicore__ inline void GetDeterAddCore()
     {
         uint32_t addCoreStartInx = (nCoreIndx_ + (mCoreIndx_ + (dkCoreIndx_ + groupCoreIndx_ * dkCoreIndx_ * dkDim_) *
-            mDim_) * nDim_) * kDim_ * batchDim_;
+                                                  mDim_) * nDim_) * kDim_ * batchDim_;
         offsetCubeWorkSpaceC_ = (kCoreIndx_ + batchCoreIndx_ * kDim_ + addCoreStartInx) * CUBE_WORKSPACE;
         dw_.SetDeterministicCoreInfo(batchDim_ * kDim_, kCoreIndx_ + batchCoreIndx_ * kDim_, addCoreStartInx, false);
     }
@@ -729,7 +756,7 @@ protected:
     }
 
     __aicore__ inline void CubeNotifyVector()
-	{
+    {
 #ifndef __CCE_KT_TEST__
         CrossCoreSetFlag<SYNC_MODE0, PIPE_FIX>(SYNC_AIC_ONLY_ALL_DET_FLAG);
         CrossCoreWaitFlag(SYNC_AIC_ONLY_ALL_DET_FLAG);
@@ -738,21 +765,21 @@ protected:
     }
 
     __aicore__ inline void VecWaitCube()
-	{
+    {
 #ifndef __CCE_KT_TEST__
         CrossCoreWaitFlag<SYNC_MODE2, PIPE_MTE2>(SYNC_AIC_AIV_DET_FLAG);
 #endif
     }
 
     __aicore__ inline void CubeWaitVector()
-	{
+    {
 #ifndef __CCE_KT_TEST__
         CrossCoreWaitFlag<SYNC_MODE2, PIPE_M>(ConvolutionBackpropFunc::SYNC_AIV_AIC_DET_FLAG);
 #endif
     }
 
     static __aicore__ inline void VecNotifyCube()
-	{
+    {
 #ifndef __CCE_KT_TEST__
         static constexpr uint16_t SYNC_AIV_ONLY_ALL_DET_FLAG = 2;
         CrossCoreSetFlag<SYNC_MODE0, PIPE_MTE3>(SYNC_AIV_ONLY_ALL_DET_FLAG);

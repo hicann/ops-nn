@@ -76,6 +76,7 @@ struct TilingRunInfo {
     uint64_t nValue = 0;
     uint64_t lenHkWkC0 = 0;
     bool enableC04Flag = false;
+    bool enableFullLoadTiling = false;
     uint32_t m0 = 16;
     uint32_t n0 = 16;
     uint32_t k0 = 16;

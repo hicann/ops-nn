@@ -63,7 +63,7 @@ ge::graphStatus Conv3DDXV2KernelSplitTiling::GetShapeAttrsInfo()
     tilingRunInfo_.lenHkWkC0 =
         static_cast<uint64_t>(kernelSplitPara_.maxSplitKh) * kernelSplitPara_.maxSplitKw * tilingRunInfo_.k0;
     uint64_t vecUseSize =
-        tilingRunInfo_.n0 * runInfo_.kernel_d * runInfo_.kernel_h * runInfo_.kernel_w * dtypeByte_ * TWO;
+        tilingRunInfo_.n0 * runInfo_.kernel_d * runInfo_.kernel_h * runInfo_.kernel_w * dtypeByteL0b_ * TWO;
     tilingRunInfo_.enableVecTransFlag =
         runInfo_.filterFormat == ge::FORMAT_NCDHW && !kSCoutFullLoad_ && (vecUseSize <= platformInfo_.ub_size);
 
@@ -144,7 +144,7 @@ bool Conv3DDXV2KernelSplitTiling::IsBaseShapeFitKernelSplitHW(const uint32_t bes
 {
     uint32_t curBaseM = kernelSplitPara_.splitHiWi > bestBaseMN ? bestBaseMN : kernelSplitPara_.splitHiWi;
     int32_t curHo = CalFmapHForKernelSplit(curBaseM);
-    uint64_t a1Size = static_cast<uint64_t>(dtypeByte_) * curHo * runInfo_.dedy_w * blockSize_;
+    uint64_t a1Size = static_cast<uint64_t>(dtypeByteL0a_) * curHo * runInfo_.dedy_w * blockSize_;
     uint64_t cout1A1 = std::max(static_cast<uint64_t>(1), platformInfo_.l1_size / BUFFER_NUM_DB / a1Size);
     uint64_t cout1 = static_cast<uint64_t>(runInfo_.dedy_cout1_g);
     cout1A1 = cout1A1 >= cout1 ? cout1 : cout1A1;
@@ -152,7 +152,7 @@ bool Conv3DDXV2KernelSplitTiling::IsBaseShapeFitKernelSplitHW(const uint32_t bes
     kSCoutFullLoad_ = false;
     uint64_t nValue = static_cast<uint64_t>(runInfo_.dedx_cin1_g) * BLOCK_CUBE;
     uint32_t curBaseN = nValue > bestBaseMN ? bestBaseMN : nValue;
-    uint64_t b1Size = static_cast<uint64_t>(dtypeByte_) * curBaseN * kernelSplitPara_.splitHkWkC0;
+    uint64_t b1Size = static_cast<uint64_t>(dtypeByteL0b_) * curBaseN * kernelSplitPara_.splitHkWkC0;
     uint64_t cout1B1 = (platformInfo_.l1_size - cout1A1 * a1Size) / b1Size;
     uint64_t bestBlockCnt =
         static_cast<uint64_t>(kernelSplitPara_.splitHiWi / BASIC_BLOCK_SIZE_512) * runInfo_.dedx_d * runInfo_.batch_n;
@@ -206,8 +206,8 @@ bool Conv3DDXV2KernelSplitTiling::IsBaseShapeFitKernelSplitH(const uint32_t best
     uint32_t curBaseM = kernelSplitPara_.splitHiWi > bestBaseMN ? bestBaseMN : kernelSplitPara_.splitHiWi;
     int32_t curHo = CalFmapHForKernelSplit(curBaseM, true);
     uint64_t minA1Size =
-        static_cast<uint64_t>(dtypeByte_) * curHo * runInfo_.dedy_w * kernelSplitPara_.curStrideW * blockSize_;
-    uint64_t minB1Size = static_cast<uint64_t>(dtypeByte_) * kernelSplitPara_.splitHkWkC0 * BLOCK_CUBE;
+        static_cast<uint64_t>(dtypeByteL0a_) * curHo * runInfo_.dedy_w * kernelSplitPara_.curStrideW * blockSize_;
+    uint64_t minB1Size = static_cast<uint64_t>(dtypeByteL0b_) * kernelSplitPara_.splitHkWkC0 * BLOCK_CUBE;
     if ((minA1Size + minB1Size) > platformInfo_.l1_size) {
         return false; // coutA1 coutB1都为1时，需要的L1 Size 大于 L1 Buffer Size, 不走kernel拆分
     }
@@ -391,7 +391,7 @@ ge::graphStatus Conv3DDXV2KernelSplitTiling::GetWorkspaceSize()
         size_t usrSpaceSizeForVecTrans =
             static_cast<size_t>(runInfo_.dedy_cout) * runInfo_.kernel_d * runInfo_.kernel_h * runInfo_.kernel_w *
             Ops::Base::CeilAlign(static_cast<size_t>(runInfo_.dedx_cin), static_cast<size_t>(tilingRunInfo_.n0)) *
-            dtypeByte_; // n0即Cin0
+            dtypeByteL0b_; // n0即Cin0
         workspaces[0] += usrSpaceSizeForVecTrans;
         OP_LOGD(
             opName_, "Enable vector transpose weight matrix before cube, usrSpaceSize = %ld", usrSpaceSizeForVecTrans);
@@ -415,12 +415,12 @@ void Conv3DDXV2KernelSplitTiling::InitBaseMNK(L0TilingParams& l0Params)
     // Kernel为1时带宽需求高使用计算访存比最高的256*256基本块
     uint32_t bestBaseM = BASIC_BLOCK_SIZE_256;
     uint32_t bestBaseN = BASIC_BLOCK_SIZE_256;
-    uint32_t bestBaseK = BASIC_BLOCK_SIZE_128 / dtypeByte_;
+    uint32_t bestBaseK = BASIC_BLOCK_SIZE_128 / dtypeByteL0b_;
 
     if (runInfo_.kernel_d * kernelSplitPara_.maxSplitKh * kernelSplitPara_.maxSplitKw > 1) {
         bestBaseM = BASIC_BLOCK_SIZE_512;
         bestBaseN = BASIC_BLOCK_SIZE_128;
-        bestBaseK = BASIC_BLOCK_SIZE_64 / dtypeByte_;
+        bestBaseK = BASIC_BLOCK_SIZE_64 / dtypeByteL0b_;
     }
     l0Params.baseM = bestBaseM;
     l0Params.baseN = bestBaseN;
@@ -436,7 +436,7 @@ void Conv3DDXV2KernelSplitTiling::EqualL1MatchStepMNK(L1TilingParams& l1Params, 
 {
     uint32_t hoCal = CalFmapHForKernelSplit(l0Params.baseM, kernelSplitPara_.isKernelSplitOnlyH); // 此处默认stepM=1
     uint64_t curHiWiSize =
-        static_cast<uint64_t>(dtypeByte_) * hoCal * runInfo_.dedy_w * kernelSplitPara_.curStrideW * tilingRunInfo_.m0;
+        static_cast<uint64_t>(dtypeByteL0a_) * hoCal * runInfo_.dedy_w * kernelSplitPara_.curStrideW * tilingRunInfo_.m0;
     bool isNeedShrinkStepKa = !kernelSplitPara_.isKernelSplitOnlyH && runInfo_.kernel_h == 3; // 3 : 子kernel不一致
     Conv3DDXV2InnerProductTiling::EqualL1MatchStepMNKCore(l1Params, l0Params, curHiWiSize, isNeedShrinkStepKa);
 }
@@ -469,7 +469,7 @@ bool Conv3DDXV2KernelSplitTiling::IsL1ParamsValid(const L1TilingParams& l1Params
     uint64_t a1PixelNum = static_cast<uint64_t>(CalFmapHForKernelSplit(
                               l1Params.stepM * l0Params.baseM, kernelSplitPara_.isKernelSplitOnlyH)) *
                           runInfo_.dedy_w * kernelSplitPara_.curStrideW * coutNum;
-    uint64_t aL1Size = a1PixelNum * dtypeByte_ * l1Params.al1Pbuffer;
+    uint64_t aL1Size = a1PixelNum * dtypeByteL0a_ * l1Params.al1Pbuffer;
 
     if (IsSocVersionFuse(context_)) {
         uint64_t biasSize = 0;
@@ -479,7 +479,7 @@ bool Conv3DDXV2KernelSplitTiling::IsL1ParamsValid(const L1TilingParams& l1Params
     ge::GetSizeByDataType(ge::DT_INT32) : ge::GetSizeByDataType(ge::DT_FLOAT16);
             biasSize = dtypeByteBtBuffer * runInfo_.dedx_cin;
         }
-        if (hasScaleFlag_) {
+        if (hasScaleFlag_ && runInfo_.quantMode == static_cast<uint8_t>(QuantMode::VECTOR_QUANT)) {
             scaleSize = ge::GetSizeByDataType(ge::DT_INT64) * runInfo_.dedx_cin;
         }
         return aL1Size + bL1Size + biasSize + scaleSize <= platformInfo_.l1_size;
@@ -495,9 +495,9 @@ bool Conv3DDXV2KernelSplitTiling::ShrinkBaseMN(L1TilingParams& l1Params, L0Tilin
     uint32_t baseNStart = l0Params.baseN;
     uint32_t minBaseM =
         std::max(static_cast<uint32_t>(kernelSplitPara_.curWi), static_cast<uint32_t>(tilingRunInfo_.m0));
-    uint64_t baseBL1Size = tilingRunInfo_.lenHkWkC0 * dtypeByte_;
+    uint64_t baseBL1Size = tilingRunInfo_.lenHkWkC0 * dtypeByteL0b_;
     uint64_t minBL1Size = baseBL1Size * l1Params.stepN * l0Params.baseN;
-    uint64_t baseAL1Size = runInfo_.dedy_w * kernelSplitPara_.curStrideW * tilingRunInfo_.k0 * dtypeByte_;
+    uint64_t baseAL1Size = runInfo_.dedy_w * kernelSplitPara_.curStrideW * tilingRunInfo_.k0 * dtypeByteL0a_;
     uint32_t hoSize = 1;
     bool isNstep = (minBL1Size >= platformInfo_.l1_size || baseBL1Size > baseAL1Size); // 此时L1B所需空间更大，需要先减少L1B大小
     while (baseMStart > minBaseM || baseNStart > static_cast<uint32_t>(tilingRunInfo_.m0)) {
@@ -557,7 +557,7 @@ void Conv3DDXV2KernelSplitTiling::UpdateBaseKParams(
     }
     AlignCout1(coutA1, coutB1, false);
 
-    uint32_t l0MaxKNum = platformInfo_.l0_ab_size / l0Params.al0Pbuffer / dtypeByte_ / std::max(l0Params.baseM, l0Params.baseN);
+    uint32_t l0MaxKNum = platformInfo_.l0_ab_size / l0Params.al0Pbuffer / dtypeByteL0a_ / std::max(l0Params.baseM, l0Params.baseN);
     l0Params.baseK = std::min(
         static_cast<uint64_t>(std::max(l0MaxKNum / tilingRunInfo_.k0, ONE_U32) * tilingRunInfo_.k0),
         tilingRunInfo_.kValue);
@@ -609,10 +609,10 @@ void Conv3DDXV2KernelSplitTiling::LegalProtection(L1TilingParams& l1Params, L0Ti
      * coutB1） 5.入口条件处已保证kenrel拆分一定可以满足L1合法条件，因此上述3个条件执行万一定可以找到使得L1 Size合法
      */
     uint64_t baseAl1Size =
-        static_cast<uint64_t>(runInfo_.dedy_w) * kernelSplitPara_.curStrideW * tilingRunInfo_.k0 * dtypeByte_;
+        static_cast<uint64_t>(runInfo_.dedy_w) * kernelSplitPara_.curStrideW * tilingRunInfo_.k0 * dtypeByteL0a_;
     uint64_t minAl1Size =
         baseAl1Size * CalFmapHForKernelSplit(l1Params.stepM * l0Params.baseM, kernelSplitPara_.isKernelSplitOnlyH);
-    uint64_t baseBl1Size = tilingRunInfo_.lenHkWkC0 * dtypeByte_ * l1Params.stepN;
+    uint64_t baseBl1Size = tilingRunInfo_.lenHkWkC0 * dtypeByteL0b_ * l1Params.stepN;
     uint64_t minBl1Size = baseBl1Size * l0Params.baseN;
     if (minAl1Size + minBl1Size > platformInfo_.l1_size) {
         // 当cout1最小时仍不满足要求，先减小baseM baseN，使cout1为1时L1Size合法

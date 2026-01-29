@@ -322,7 +322,6 @@ ge::graphStatus Conv3DBackpropInputV2Tiling::PostTiling()
         return ge::GRAPH_FAILED);
     context_->SetBlockDim(tilingData_.params.coreNum);
     context_->GetRawTilingData()->SetDataSize(tilingDataSize);
-
     return ge::GRAPH_SUCCESS;
 }
 

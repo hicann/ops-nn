@@ -38,9 +38,11 @@ public:
 
 public:
     __aicore__ inline ConvBpIntf()
-    {}
+    {
+    }
 
-    __aicore__ inline void Init(const AscendC::conv_bp_v2_kernel::TConv3DDwTiling *__restrict tiling, bool seperateDk = true)
+    __aicore__ inline void Init(
+        const AscendC::conv_bp_v2_kernel::TConv3DDwTiling* __restrict tiling, bool seperateDk = true)
     {
         using Local = typename Ext::Init;
         // CheckFun检查impl是否实现了Init的call函数
@@ -49,7 +51,7 @@ public:
         }
     }
 
-    __aicore__ inline void SetFmap(const GlobalTensor<SrcT> &fmap)
+    __aicore__ inline void SetFmap(const GlobalTensor<SrcT>& fmap)
     {
         using Local = typename Ext::SetFmap;
         if constexpr (CHECK_FUN(Local, ConvolutionBackpropFunc, this, fmap)) {
@@ -57,7 +59,7 @@ public:
         }
     }
 
-    __aicore__ inline void SetOutBackprop(const GlobalTensor<SrcT> &outBackprop)
+    __aicore__ inline void SetOutBackprop(const GlobalTensor<SrcT>& outBackprop)
     {
         using Local = typename Ext::SetOutBackprop;
         if constexpr (CHECK_FUN(Local, ConvolutionBackpropFunc, this, outBackprop)) {
@@ -65,13 +67,23 @@ public:
         }
     }
 
-    __aicore__ inline void SetSingleShape(uint64_t singleCoreM, uint64_t singleCoreN, uint64_t singleCoreK,
-                                          uint32_t singleShapeCin, uint32_t singleShapeBatch)
+    __aicore__ inline void SetSingleShape(
+        uint64_t singleCoreM, uint64_t singleCoreN, uint64_t singleCoreK,
+        uint32_t singleShapeCin, uint32_t singleShapeBatch)
     {
         using Local = typename Ext::SetSingleShape;
-        if constexpr (CHECK_FUN(Local, ConvolutionBackpropFunc, this, singleCoreM, singleCoreN, singleCoreK,
-                                                                      singleShapeCin, singleShapeBatch)) {
+        if constexpr (CHECK_FUN(
+            Local, ConvolutionBackpropFunc, this, singleCoreM, singleCoreN, singleCoreK,
+            singleShapeCin, singleShapeBatch)) {
             Local::call(this, singleCoreM, singleCoreN, singleCoreK, singleShapeCin, singleShapeBatch);
+        }
+    }
+
+    __aicore__ inline void SetSingleShapeK(uint64_t singleCoreK)
+    {
+        using Local = typename Ext::SetSingleShapeK;
+        if constexpr (CHECK_FUN(Local, ConvolutionBackpropFunc, this, singleCoreK)) {
+            Local::call(this, singleCoreK);
         }
     }
 
@@ -111,7 +123,7 @@ public:
     }
 
     template <bool sync = true>
-    __aicore__ inline void IterateAll(const GlobalTensor<DstT> &output, uint8_t enAtomic = 0)
+    __aicore__ inline void IterateAll(const GlobalTensor<DstT>& output, uint8_t enAtomic = 0)
     {
         using Local = typename Ext::template IterateAll<sync>;
         if constexpr (CHECK_FUN(Local, ConvolutionBackpropFunc, this, output, enAtomic)) {
@@ -121,7 +133,7 @@ public:
 
     template <bool sync = true>
     __aicore__ inline void GetTensorC(
-        const GlobalTensor<DstT> &output, uint8_t enAtomic = 0, bool enSequentialWrite = false)
+        const GlobalTensor<DstT>& output, uint8_t enAtomic = 0, bool enSequentialWrite = false)
     {
         using Local = typename Ext::template GetTensorC<sync>;
         if constexpr (CHECK_FUN(Local, ConvolutionBackpropFunc, this, output, enAtomic, enSequentialWrite)) {
@@ -131,7 +143,7 @@ public:
 
     template <bool sync = true>
     __aicore__ inline void VecPostProcess(
-        const GlobalTensor<DstT> &output, uint8_t enAtomic = 0)
+        const GlobalTensor<DstT>& output, uint8_t enAtomic = 0)
     {
         using Local = typename Ext::template VecPostProcess<sync>;
         if constexpr (CHECK_FUN(Local, ConvolutionBackpropFunc, this, output, enAtomic)) {
@@ -140,8 +152,9 @@ public:
     }
 
     template <bool sync = true>
-    __aicore__ inline void DeterministicReduceKInUb(const GlobalTensor<DstT> &output,
-        const GlobalTensor<DstT> &vecGm)
+    __aicore__ inline void DeterministicReduceKInUb(
+        const GlobalTensor<DstT>& output,
+        const GlobalTensor<DstT>& vecGm)
     {
         using Local = typename Ext::template DeterministicReduceKInUb<sync>;
         if constexpr (CHECK_FUN(Local, ConvolutionBackpropFunc, this, output, vecGm)) {
@@ -149,11 +162,13 @@ public:
         }
     }
 
-    __aicore__ inline void SetDeterministicCoreInfo(uint32_t addCoreNum, uint32_t addCoreIndex,
+    __aicore__ inline void SetDeterministicCoreInfo(
+        uint32_t addCoreNum, uint32_t addCoreIndex,
         uint32_t relatedCoreIndexTotal, bool isNoDeter)
     {
         using Local = typename Ext::SetDeterministicCoreInfo;
-        if constexpr (CHECK_FUN(Local, ConvolutionBackpropFunc, this, addCoreNum, addCoreIndex,
+        if constexpr (CHECK_FUN(
+            Local, ConvolutionBackpropFunc, this, addCoreNum, addCoreIndex,
             relatedCoreIndexTotal, isNoDeter)) {
             Local::call(this, addCoreNum, addCoreIndex, relatedCoreIndexTotal, isNoDeter);
         }
@@ -167,7 +182,6 @@ public:
         }
     }
 };
-
-}  // namespace ConvolutionBackprop
+} // namespace ConvolutionBackprop
 
 #endif

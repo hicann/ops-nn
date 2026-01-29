@@ -12,7 +12,7 @@
  * \file conv3d_backprop_input_v2_tiling.cpp
  * \brief
  */
-
+ 
 #include "arch32/conv3d_backprop_input_v2_base_tiling.h"
 
 #include <map>
@@ -23,6 +23,7 @@
 #include "conv/common/op_host/op_tiling/platform_util.h"
 #include "conv/common/op_host/op_tiling/math_util.h"
 #include "error_util.h"
+
 
 namespace Ops {
 namespace NN {
@@ -43,7 +44,6 @@ static ge::graphStatus TilingParseForConv3DBackpropInputV2(gert::TilingParseCont
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     auto compileInfoPtr = context->GetCompiledInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>();
     OP_LOGE_IF(compileInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "compileInfo is null");
-
     PlatformUtil::ParseRuntimePlatformInfo(*compileInfoPtr, context->GetNodeName(), *platformInfoPtr);
 
     compileInfoPtr->core_num = ascendcPlatform.GetCoreNumAic();

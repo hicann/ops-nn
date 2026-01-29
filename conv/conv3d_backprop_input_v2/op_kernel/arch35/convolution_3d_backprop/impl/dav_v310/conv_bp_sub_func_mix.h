@@ -17,7 +17,6 @@
 #define CONV3D_BP_INPUT_SUB_FUNC_MIX_ADVANCE_H
 
 #include "../../../../../inc/platform.h"
-#include "kernel_operator.h"
 #include "../../../../conv3d_backprop_input_v2_arch35_tiling_key.h"
 
 using AscendC::DivCeil;
@@ -77,13 +76,13 @@ static __aicore__ inline uint32_t AlignUpByDtype(uint32_t a, uint32_t dtypeBit)
 template <class Intf>
 static __aicore__ inline uint32_t DivCeilC0(Intf *self, const uint32_t a)
 {
-    return (a + self->ctx.tiling_->c0 - 1) >> self->ctx.tiling_->c0Bits;
+    return (a + self->ctx.tiling_->c0 - 1) >> self->ctx.tiling_->c0BitsB;
 }
 
 template <class Intf>
 static __aicore__ inline uint32_t AlignUpC0(Intf *self, const uint32_t a)
 {
-    return ((a + self->ctx.tiling_->c0 - 1) >> self->ctx.tiling_->c0Bits) << self->ctx.tiling_->c0Bits;
+    return ((a + self->ctx.tiling_->c0 - 1) >> self->ctx.tiling_->c0BitsB) << self->ctx.tiling_->c0BitsB;
 }
 
 template <class Intf>
@@ -704,7 +703,7 @@ static __aicore__ inline void InitUbZero4Group(Intf *self)
     // size is cout1G * hk * wk * cinG * BLOCK_CUBE * c0
     self->ctx.ndVecTensor_ = self->ctx.ndVecBuf_.template Get<typename Intf::SrcT>();
     uint32_t groupHalfUbSize = self->ctx.tiling_->cout1G * self->ctx.hkWk_ * self->ctx.tiling_->cin1G *
-        BLOCK_CUBE * sizeof(typename Intf::SrcT) << self->ctx.tiling_->c0Bits;
+        BLOCK_CUBE * sizeof(typename Intf::SrcT) << self->ctx.tiling_->c0BitsB;
     Duplicate<typename Intf::SrcT>(self->ctx.ndVecTensor_, 0, groupHalfUbSize / sizeof(typename Intf::SrcT));
 }
 
@@ -822,7 +821,7 @@ static __aicore__ inline void SetGatherIdxDn2Nz(Intf *self)
 
     auto idxAddr = (__ubuf__ typename Intf::IndexT *)self->ctx.idxVecTensor_.GetPhyAddr();
     uint16_t repeatTimes = static_cast<uint16_t>(
-        AscendC::VECTOR_REG_WIDTH / (sizeof(typename Intf::IndexT) << self->ctx.tiling_->c0Bits) - 1);
+        AscendC::VECTOR_REG_WIDTH / (sizeof(typename Intf::IndexT) << self->ctx.tiling_->c0BitsB) - 1);
     uint16_t numPerRepeat = self->ctx.tiling_->c0;
     uint16_t dstOffset = self->ctx.tiling_->c0;
     uint32_t mask = self->ctx.tiling_->c0;
@@ -853,13 +852,13 @@ static __aicore__ inline void Dn2Nz4Group(Intf *self)
         PipeBarrier<PIPE_V>();
     }
 
-    uint32_t C0PerReg = AscendC::VECTOR_REG_WIDTH / (sizeof(typename Intf::IndexT) << self->ctx.tiling_->c0Bits);
+    uint32_t C0PerReg = AscendC::VECTOR_REG_WIDTH / (sizeof(typename Intf::IndexT) << self->ctx.tiling_->c0BitsB);
     uint16_t C0LoopTimes = BLOCK_CUBE / C0PerReg;
-    uint32_t srcCout1GStride = (BLOCK_CUBE * self->ctx.curEnlargeCin1_ * self->ctx.hkWk_) << self->ctx.tiling_->c0Bits;
+    uint32_t srcCout1GStride = (BLOCK_CUBE * self->ctx.curEnlargeCin1_ * self->ctx.hkWk_) << self->ctx.tiling_->c0BitsB;
     uint32_t srcCin1GStride = C0PerReg * self->ctx.hkWk_;
-    uint32_t dstCout1GStride = (self->ctx.hkWk_ * self->ctx.curEnlargeCin1_ << self->ctx.tiling_->c0Bits) << SHIFT_BIT_4;
-    uint32_t dstKStride = (self->ctx.curEnlargeCin1_ << self->ctx.tiling_->c0Bits) << SHIFT_BIT_4;
-    uint32_t dstCin1GStride = C0PerReg << self->ctx.tiling_->c0Bits;
+    uint32_t dstCout1GStride = (self->ctx.hkWk_ * self->ctx.curEnlargeCin1_ << self->ctx.tiling_->c0BitsB) << SHIFT_BIT_4;
+    uint32_t dstKStride = (self->ctx.curEnlargeCin1_ << self->ctx.tiling_->c0BitsB) << SHIFT_BIT_4;
+    uint32_t dstCin1GStride = C0PerReg << self->ctx.tiling_->c0BitsB;
 
     self->ctx.nzVecTensor_ = self->ctx.nzVecBuf_.template Get<typename Intf::SrcT>();
 
@@ -978,7 +977,7 @@ __aicore__ inline void GroupTransdataWeight(Intf *self, uint32_t kIdx, uint32_t 
     CalcCoutIndexAndSizeB1(self, kIdx, curCoutIdx, curCoutSize);
 
     uint32_t curCin1Idx = (self->ctx.curCinStartIdx_ + curCinIdx) >> SHIFT_BIT_4;
-    uint32_t curCout1Idx = (self->ctx.curCoutStartIdx_ + curCoutIdx) >> self->ctx.tiling_->c0Bits;
+    uint32_t curCout1Idx = (self->ctx.curCoutStartIdx_ + curCoutIdx) >> self->ctx.tiling_->c0BitsB;
 
     uint64_t srcGmOffset = 0;
     if constexpr (Intf::Config::xType::format == Convolution3DBackprop::CubeFormat::NCDHW) {
@@ -990,7 +989,7 @@ __aicore__ inline void GroupTransdataWeight(Intf *self, uint32_t kIdx, uint32_t 
             self->ctx.tiling_->cout;
     }
     uint32_t srcUbOffset = (curCout1Idx * self->ctx.hkWk_ * self->ctx.curEnlargeCin1_ +
-        curCin1Idx) << self->ctx.tiling_->c0Bits << SHIFT_BIT_4;
+        curCin1Idx) << self->ctx.tiling_->c0BitsB << SHIFT_BIT_4;
     // 调用指令不支持hif8，暂时隔离开，否则编译不通过
     if constexpr(!std::is_same<typename Intf::SrcT, hifloat8_t>::value &&
         !std::is_same<typename Intf::SrcT, fp8_e4m3fn_t>::value) {
@@ -1064,7 +1063,7 @@ static __aicore__ inline void SetGatherIdx4C04(Intf *self)
 
     auto idxAddr = (__ubuf__ typename Intf::IndexT *)self->ctx.idxVecTensor_.GetPhyAddr();
     uint16_t repeatTimes = static_cast<uint16_t>(
-        DivDtypeByte<typename Intf::IndexT>(AscendC::VECTOR_REG_WIDTH) >> self->ctx.tiling_->c0Bits) - 1;
+        DivDtypeByte<typename Intf::IndexT>(AscendC::VECTOR_REG_WIDTH) >> self->ctx.tiling_->c0BitsB) - 1;
     uint32_t mask = self->ctx.tiling_->c0;
     uint16_t dstOffset = self->ctx.tiling_->c0;
     auto cinStride = static_cast<typename Intf::IndexT>(self->ctx.dkHkWk_);
@@ -1103,7 +1102,7 @@ static __aicore__ inline void SetGatherTailMask4C04(Intf *self)
         }
     }
     uint8_t repeatTimes = static_cast<uint8_t>(
-        DivDtypeByte<typename Intf::IndexT>(AscendC::VECTOR_REG_WIDTH) >> self->ctx.tiling_->c0Bits);
+        DivDtypeByte<typename Intf::IndexT>(AscendC::VECTOR_REG_WIDTH) >> self->ctx.tiling_->c0BitsB);
     for (uint8_t idx = 0; idx < repeatTimes; ++idx) {
         self->ctx.maskVecTensor_.SetValue(idx, maskVal);
     }
@@ -1130,7 +1129,7 @@ static __aicore__ inline void Dn2Nz4C04(Intf *self, uint32_t cinBlockSize, uint3
 {
     SetIdxAndMask4C04<Intf>(self, loopIdx);
 
-    uint32_t C0PerReg = DivDtypeByte<typename Intf::IndexT>(AscendC::VECTOR_REG_WIDTH) >> self->ctx.tiling_->c0Bits;
+    uint32_t C0PerReg = DivDtypeByte<typename Intf::IndexT>(AscendC::VECTOR_REG_WIDTH) >> self->ctx.tiling_->c0BitsB;
     uint16_t C0LoopTimes = BLOCK_CUBE / C0PerReg;
     uint32_t kernelNumInC0 = self->ctx.tiling_->c0 >> C04_SHIFT_SIZE;
     uint16_t k1 = static_cast<uint16_t>(DivCeil(self->ctx.hkWk_, kernelNumInC0));
@@ -1138,8 +1137,8 @@ static __aicore__ inline void Dn2Nz4C04(Intf *self, uint32_t cinBlockSize, uint3
     uint16_t n1IterMax = n1 * C0LoopTimes;
     uint32_t srcN1Stride = C0PerReg * self->ctx.dkHkWk_;
     uint32_t srcK1Stride = kernelNumInC0;
-    uint32_t dstN1Stride = C0PerReg << self->ctx.tiling_->c0Bits;
-    uint32_t dstK1Stride = AlignUp16(cinBlockSize) << self->ctx.tiling_->c0Bits;
+    uint32_t dstN1Stride = C0PerReg << self->ctx.tiling_->c0BitsB;
+    uint32_t dstK1Stride = AlignUp16(cinBlockSize) << self->ctx.tiling_->c0BitsB;
 
     self->ctx.nzVecTensor_ = self->ctx.nzVecBuf_.template Get<typename Intf::SrcT>();
 
@@ -1240,7 +1239,7 @@ static __aicore__ inline void C04TransdataWeightCore(Intf *self, uint32_t b1CinS
         WaitFlag<HardEvent::V_MTE3>(eventId);
         // MOV_UB_TO_L1 (MTE3)
         CopyUb2L14C04<Intf>(self, cinBlockSize, b1CinSize, useB1Buf, dstB1Offset);
-        dstB1Offset += (AlignUp16(cinBlockSize) << self->ctx.tiling_->c0Bits);
+        dstB1Offset += (AlignUp16(cinBlockSize) << self->ctx.tiling_->c0BitsB);
 
         cinRemain -= cinBlockSize;
         cinBlockSize = (cinRemain < self->ctx.vecBlockN_) ? cinRemain : self->ctx.vecBlockN_;

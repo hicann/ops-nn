@@ -270,7 +270,8 @@ protected:
     uint32_t singleIterateDk_ = 1;
 
     int32_t blockSize_ = 16;
-    uint32_t dtypeByte_ = 2;
+    uint32_t dtypeByteL0a_ = 2;
+    uint32_t dtypeByteL0b_ = 2;
     uint32_t dtypeByteL0c_ = 4;
     const char* opName_ = "";
     uint64_t usrSpaceSizeForSplitDk_ = 0;
@@ -284,7 +285,7 @@ private:
     TilingBestBaseBlock GetBestBaseBlock(uint32_t baseBlockId);
     bool AnalyzeFuseDtype(const bool f16flag, const ge::DataType outputBackpropDtype,
         const ge::DataType filterDtype, const ge::DataType yDtype) const;
-    bool CheckL0Size(uint32_t baseM, uint32_t baseN, uint32_t baseK, uint32_t byteSize, uint32_t l0Pbuffer = DB_ON);
+    bool CheckL0Size(uint32_t baseM, uint32_t baseN, uint32_t baseK, uint32_t l0Pbuffer = DB_ON);
 };
 
 } // namespace Conv

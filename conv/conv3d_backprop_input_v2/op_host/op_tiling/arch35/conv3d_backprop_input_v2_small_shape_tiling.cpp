@@ -35,14 +35,14 @@ bool Conv3DDXV2SmallShapeTiling::IsCapable()
         return false;
     }
 
-    // 暂不支持group卷积以及fp16/bfp16以外类型
-    if (runInfo_.groups != 1 || tilingRunInfo_.tilingHkWkMode != 0) {
+    // 暂不支持fp16/bfp16以外类型
+    if (tilingRunInfo_.tilingHkWkMode != 0) {
         return false;
     }
     // 8bit时只在filter_format=NDHWC放开基本块tiling，否则理论建模对8bit容易失效。
     const auto filter_desc = context_->GetInputDesc(FILTER_INDEX);
     auto filter_format = static_cast<ge::Format>(ge::GetPrimaryFormat(filter_desc->GetStorageFormat()));
-    bool is8bit = static_cast<int32_t>(dtypeByte_) == ge::GetSizeByDataType(ge::DT_HIFLOAT8);
+    bool is8bit = static_cast<int32_t>(dtypeByteL0b_) == ge::GetSizeByDataType(ge::DT_HIFLOAT8);
     if (is8bit && filter_format != ge::FORMAT_NDHWC) {
         return false;
     }
@@ -104,7 +104,7 @@ void Conv3DDXV2SmallShapeTiling::AdjustSingleCoreAndL0Info(CoreTilingParams& cor
     uint64_t minTotalCnt = batchDepth * Ops::Base::CeilDiv(hwI, static_cast<uint64_t>(l0Params.baseM)) *
                            Ops::Base::CeilDiv(tilingRunInfo_.nValue, static_cast<uint64_t>(l0Params.baseN));
     uint64_t maxTotalCnt = Ops::Base::CeilAlign(minTotalCnt, static_cast<uint64_t>(coreNum_));
-    uint64_t minL1LoadSize = dtypeByte_ * (l0Params.baseN * kernelHW * runInfo_.dedy_cout +
+    uint64_t minL1LoadSize = dtypeByteL0b_ * (l0Params.baseN * kernelHW * runInfo_.dedy_cout +
                                            static_cast<uint64_t>(CalFmapH(l0Params.baseM)) * runInfo_.dedy_w *
                                                runInfo_.stride_w * runInfo_.dedy_cout);
     // 基本块小于64进入MTE1和scalar bound的区间，暂不从这个区间寻找负载均衡收益
@@ -139,7 +139,7 @@ void Conv3DDXV2SmallShapeTiling::AdjustSingleCoreAndL0Info(CoreTilingParams& cor
             }
             // 1.少计算一轮为更好策略
             // 1.同样计算轮次的，载入量更均衡的为更好策略
-            uint64_t tmpL1LoadSize = dtypeByte_ * (tmpBaseN * kernelHW * runInfo_.dedy_cout +
+            uint64_t tmpL1LoadSize = dtypeByteL0a_ * (tmpBaseN * kernelHW * runInfo_.dedy_cout +
                                                    static_cast<uint64_t>(CalFmapH(tmpSingleCoreM)) * runInfo_.dedy_w *
                                                        runInfo_.stride_w * runInfo_.dedy_cout);
             if (tmpMaxTotalCnt < maxTotalCnt || (tmpTotalCnt >= minTotalCnt && tmpL1LoadSize <= minL1LoadSize)) {

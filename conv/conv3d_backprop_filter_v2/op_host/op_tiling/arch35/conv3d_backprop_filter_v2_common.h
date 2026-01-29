@@ -25,11 +25,6 @@ constexpr uint32_t C04_COUT_SIZE = 4;
 
 constexpr uint32_t DB_ON = 2;
 constexpr uint32_t DB_OFF = 1;
-constexpr uint64_t L0A_SIZE = 65536;
-constexpr uint64_t L0B_SIZE = 65536;
-constexpr int32_t L0C_SIZE = 256 * 1024;
-constexpr int32_t L1_SIZE = 512 * 1024;
-constexpr int32_t UB_SIZE = 248 * 1024;
 constexpr int32_t VECTOR_REG_WIDTH = 256;
 constexpr int32_t ONE_BLOCK_SIZE = 32;
 constexpr uint32_t BASIC_BLOCK_SIZE_512 = 512;
@@ -50,6 +45,16 @@ constexpr uint32_t OUT_ALIGN_BYTE = 8;
 
 constexpr int32_t SPLIT_WO_THRESHOLD = 512;
 constexpr int32_t SPLIT_WO_SIZE = 128;
+
+struct PlatformCompileInfo {
+    platform_ascendc::SocVersion socVersion;
+    uint32_t core_num = 1;
+    uint64_t l0a_size = 0;
+    uint64_t l0b_size = 0;
+    uint64_t l0c_size = 0;
+    uint64_t l1_size  = 0;
+    uint64_t ub_size  = 0;
+};
 }
 }
 }

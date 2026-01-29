@@ -28,6 +28,7 @@ DECLARE_CHECK_IMPL(SetBias);
 #endif
 DECLARE_CHECK_IMPL(SetSingleShape);
 DECLARE_CHECK_IMPL(SetStartIdx);
+DECLARE_CHECK_IMPL(SetFullLoadFlag);
 DECLARE_CHECK_SYNC_IMPL(Iterate);
 DECLARE_CHECK_SYNC_IMPL(IterateAll);
 DECLARE_CHECK_SYNC_IMPL(GetTensorC);
@@ -604,6 +605,7 @@ static __aicore__ inline void UpdateFullLoadL1Status(Intf *self)
     bool isLastDIter = (self->ctx.tiling_->dk == 1 && self->ctx.curDinIdx_ ==
         self->ctx.curDinStartIdx_ + self->ctx.singleShapeDin_ - 1) ||
         self->ctx.tiling_->dk > 1;
+
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
         self->ctx.isFreeB1_ = isLastMNIter && self->ctx.tiling_->dk > 1;
         bool isLastRearrangeHWIter = (self->ctx.rearrangeWIndex_ == self->ctx.tiling_->strideW - 1) &&
@@ -611,6 +613,12 @@ static __aicore__ inline void UpdateFullLoadL1Status(Intf *self)
         self->ctx.isFreeA1_ = isLastRearrangeHWIter;
         self->ctx.isFreeB1_ = self->ctx.isFreeB1_ && isLastRearrangeHWIter;
     } else {
+        if (self->ctx.isB1FullLoadFlag_ && self->ctx.tiling_->dk == 1) {
+            // c04场景和group>1（包括enlarge>1）场景不支持calRound间不释放B矩阵
+            if (self->ctx.enableFullLoad_ && !Intf::conv3dConfig.enableC04Flag && self->ctx.tiling_->group == 1) {
+                isLastDIter = false;
+            }
+        }
         self->ctx.isFreeB1_ = isLastMNIter && isLastDIter;
     }
 }
@@ -620,6 +628,18 @@ static __aicore__ inline void UpdateL1ComputeInfo(Intf *self)
 {
     self->ctx.baseUseM_ =
         (self->ctx.curML0Idx_ + 1 == self->ctx.mIter_) ? self->ctx.tailM_ : self->ctx.tiling_->baseM;
+    if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_NO_SPLIT_KERNEL) {
+        uint32_t Hd = (self->ctx.tiling_->hk - 1) * self->ctx.tiling_->dilationH + 1;
+        uint32_t Wd = (self->ctx.tiling_->wk - 1) * self->ctx.tiling_->dilationW + 1;
+        // load3d指令的padList[3]固定为255
+        uint32_t Hp = self->ctx.hoExpand_ + self->ctx.tiling_->backpropPadUp + 255;
+        uint32_t Wp = (self->ctx.tiling_->wo - 1) * self->ctx.tiling_->strideW + 1 
+            + self->ctx.tiling_->backpropPadLeft + self->ctx.tiling_->backpropPadRight;
+        uint64_t M = (Hp - Hd + 1) * (Wp - Wd + 1);
+        if (unlikely(M < self->ctx.baseUseM_) && self->ctx.mIter_ == 1) {
+            self->ctx.baseUseM_ = M;
+        }
+    }
     self->ctx.baseUseN_ =
         (self->ctx.curNL0Idx_ + 1 == self->ctx.nIter_) ? self->ctx.tailN_ : self->ctx.tiling_->baseN;
     self->ctx.needComputeFlag_ = true;
@@ -736,6 +756,16 @@ struct SetStartIdx {
     }
 };
 
+template <class Intf>
+struct SetFullLoadFlag {
+    DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
+    static __aicore__ inline void call(Intf *self, bool enableFullLoad)
+    {
+        // 设置全载模板标志位
+        self->ctx.enableFullLoad_ = enableFullLoad;
+    }
+};
+
 template <class Intf, bool sync>
 struct Iterate {
     // 一次iterate计算(baseM, baseN, baseD)，当前baseD=1
@@ -794,8 +824,11 @@ struct Iterate {
                     self->ctx.isFreeB1_ = false;
                 }
             } else {
-                self->ctx.isLoadB1_ = true;
-                self->ctx.isFreeB1_ = false;
+                if (!self->ctx.isB1FullLoadFlag_ || self->ctx.tiling_->dk > 1 ||
+                Intf::conv3dConfig.enableC04Flag || !self->ctx.enableFullLoad_ || self->ctx.tiling_->group != 1) {
+                    self->ctx.isLoadB1_ = true;
+                    self->ctx.isFreeB1_ = false;
+                }
             }
         } else if (likely(self->ctx.tiling_->iterateOrder == static_cast<int>(IterateOrder::ORDER_N))) {
             if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {

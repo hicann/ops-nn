@@ -42,6 +42,9 @@ static __aicore__ inline bool ComputeForWkLoop(Intf *self, uint32_t kwDilation,
     uint32_t skipRightWoSize = self->ctx.curWoRightIdx_ < 0 ? abs(self->ctx.curWoRightIdx_) : 0;
     self->ctx.realWoSize_ = self->ctx.tiling_->wo -  DivCeil(skipLeftWoSize, self->ctx.tiling_->strideW) -
         DivCeil(skipRightWoSize, self->ctx.tiling_->strideW);
+    if (self->ctx.realWoSize_ <= 0){
+        return false;
+    }
     return true;
 }
 
@@ -73,6 +76,10 @@ static __aicore__ inline void ComputeForTilingHkWk(Intf *self, LocalTensor<typen
                 uint32_t realStartHo = self->ctx.curHoIdx_ < 0 ? 0 : self->ctx.curHoIdx_;
                 uint32_t realEndHoIdx = endHoIdx > self->ctx.hoExpand_ ? self->ctx.hoExpand_ : endHoIdx;
                 self->ctx.curHoSize_ = realEndHoIdx - realStartHo;
+                if (realStartHo % self->ctx.tiling_->strideH != 0 && (realStartHo % self->ctx.tiling_->strideH + self->ctx.curHoSize_ - 1 < self->ctx.tiling_->strideH)) {
+                    self->ctx.curHoIdx_ -= self->ctx.tiling_->dilationH; // 前放大补零部分不计算，需更新curHoIdx，且需要跳过空洞部分
+                    continue;
+                }
             } else {
                 self->ctx.curHoIdx_ -= self->ctx.tiling_->dilationH; // 不计算时仍需更新curHoIdx，且需要跳过空洞部分
                 continue;

@@ -25,23 +25,34 @@ namespace NN {
 namespace Conv {
 class Conv3DBackpropFilterV2StreamKTiling : public Conv3DDWV2BasicBlockTilingArch35 {
 public:
-    explicit Conv3DBackpropFilterV2StreamKTiling(gert::TilingContext *context) : Conv3DDWV2BasicBlockTilingArch35(context) {
+    explicit Conv3DBackpropFilterV2StreamKTiling(gert::TilingContext* context) : Conv3DDWV2BasicBlockTilingArch35(
+        context)
+    {
         Reset();
     }
+
     ~Conv3DBackpropFilterV2StreamKTiling() override = default;
 
 protected:
     bool IsCapable() override;
+
     ge::graphStatus DoOpTiling() override;
+
     ge::graphStatus GetWorkspaceSize() override;
 
 private:
     void InitSplitWOI();
+
     void AdjustSmallCaseBaseBlock();
+
     uint64_t GetSingleShapeKByStreamK();
+
     bool IsSplitBatchDoutBetter();
+
     void DoStreamKTiling();
+
     void DoStreamkByBatchDout();
+
     void DoStreamkByHWout();
 };
 }

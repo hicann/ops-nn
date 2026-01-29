@@ -12,14 +12,15 @@
 using namespace op;
 using namespace l0op;
 using namespace Ops::NN;
+#include "op_api/aclnn_util.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 // 工具方法----------------------------------------------------------------------------------------------------------
 bool CheckDtypeValid(const aclTensor *inputTensor, bool transposed) {
-  const SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
   // 检查输入aclTensor的数据类型是否在ConvolutionBackward支持列表内
-  if (socVersion == SocVersion::ASCEND910_95) {
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
     auto dtypeSupportList = GetDtypeSupportListBySocVersion4ConvBackward(transposed);
     OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor, dtypeSupportList, return false);
   } else {
@@ -234,7 +235,7 @@ namespace NN {
 namespace Conv {
 
 bool ConvolutionBackwardChecker::CheckDataTypeValidForGradInput() {
-  if (socVersion_ != SocVersion::ASCEND910_95) {
+  if (!Ops::NN::AclnnUtil::IsRegbase()) {
       return true;
   }
   OP_CHECK(outputTensor_.gradInput->GetDataType() == inputTensor_.input->GetDataType(),
@@ -245,7 +246,7 @@ bool ConvolutionBackwardChecker::CheckDataTypeValidForGradInput() {
 }
 
 bool ConvolutionBackwardChecker::CheckDataTypeValidForGradWeight() {
-  if (socVersion_ != SocVersion::ASCEND910_95) {
+  if (!Ops::NN::AclnnUtil::IsRegbase()) {
       return true;
   }
   if (inputTensor_.weight->GetDataType() == DataType::DT_HIFLOAT8 ||
@@ -261,7 +262,7 @@ bool ConvolutionBackwardChecker::CheckDataTypeValidForGradWeight() {
 }
 
 bool ConvolutionBackwardChecker::CheckDataTypeValidForGradBias() {
-  if (socVersion_ != SocVersion::ASCEND910_95) {
+  if (!Ops::NN::AclnnUtil::IsRegbase()) {
       return true;
   }
   OP_CHECK(outputTensor_.gradBias->GetDataType() == inputTensor_.gradOutput->GetDataType(),
@@ -462,7 +463,7 @@ bool ConvolutionBackwardChecker::CheckConvParams(size_t inputDim) {
 
     // group >= 1
     OP_CHECK(params_.groups >= 1,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The group[%ld] must be greater than or equal to 1.", params_.groups),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The group[%d] must be greater than or equal to 1.", params_.groups),
              return false);
     return true;
 }
@@ -571,7 +572,7 @@ bool ConvolutionBackwardChecker::CheckConvChannelAndGroup() {
     int64_t gradOutputChannelIdx = 1;
     int64_t weightCoutIdx = 0; // NCDHW & NDHWC
     int64_t weightCinIdx = 1;
-    if (socVersion_ == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
       op::Format inputFormat = inputTensor_.input->GetStorageFormat();
       GetChannleIndex(inputShape, inputFormat, inputChannelIdx);
       op::Format gradOutputFormat = inputTensor_.gradOutput->GetStorageFormat();
@@ -598,7 +599,7 @@ bool ConvolutionBackwardChecker::CheckConvChannelAndGroup() {
         inputShape.GetDim(inputChannelIdx), weightShape.GetDim(weightCinIdx), params_.groups),
         return false);
 
-    if (inputShape.GetDim(inputChannelIdx) == params_.groups && socVersion_ != SocVersion::ASCEND910_95){
+    if (inputShape.GetDim(inputChannelIdx) == params_.groups && (!Ops::NN::AclnnUtil::IsRegbase())){
       auto outChannel = gradOutShape.GetDim(inputChannelIdx);
       OP_CHECK(outChannel >= params_.groups,
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "when input_channel(%ld) == groups(%ld), output_channel(%ld) need bigger groups",
@@ -625,7 +626,7 @@ bool ConvolutionBackwardChecker::CheckConvShapePlus() {
     struct ExpectValue expectValue = {};
     int64_t gradOutputCout = 0;
     if (inputDim == CONV3DINPUTDIM) {
-        if (socVersion_ != SocVersion::ASCEND910_95) {
+        if (!Ops::NN::AclnnUtil::IsRegbase()) {
           int64_t depthIdx = 2; // NCDHW
           int64_t heightIdx = 3; // NCDHW
           int64_t widthIdx = 4; // NCDHW
@@ -694,12 +695,12 @@ inline bool ConvolutionBackwardChecker::CheckNotNull() {
 
 aclnnStatus ConvolutionBackwardChecker::CheckParamsFor8Bit()
 {
-    if ((*params_.outputMask)[0] && socVersion_ == SocVersion::ASCEND910_95) {
+    if ((*params_.outputMask)[0] && Ops::NN::AclnnUtil::IsRegbase()) {
         CHECK_RET(InterceptConvFor8bit(), ACLNN_ERR_PARAM_INVALID);
         CHECK_RET(CheckDtypeValidFor8bit(DataType::DT_HIFLOAT8), ACLNN_ERR_PARAM_INVALID);
         CHECK_RET(CheckDtypeValidFor8bit(DataType::DT_FLOAT8_E4M3FN), ACLNN_ERR_PARAM_INVALID);
     }
-    if ((*params_.outputMask)[1] && socVersion_ == SocVersion::ASCEND910_95) {
+    if ((*params_.outputMask)[1] && Ops::NN::AclnnUtil::IsRegbase()) {
         CHECK_RET(InterceptConvFor8bit(), ACLNN_ERR_PARAM_INVALID);
         CHECK_RET(CheckDtypeValidForBpFilter8bit(DataType::DT_HIFLOAT8), ACLNN_ERR_PARAM_INVALID);
         CHECK_RET(CheckParamsValidForBpFilter8bit(), ACLNN_ERR_PARAM_INVALID);
@@ -741,9 +742,9 @@ aclnnStatus ConvolutionBackwardChecker::CheckParams() {
     if (outputTensor_.gradWeight != nullptr) {
         CHECK_RET(CheckFormatValid(outputTensor_.gradWeight, "gradWeight"), ACLNN_ERR_PARAM_INVALID);
     }
-
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (!params_.transposed && outputTensor_.gradBias != nullptr) {
-      if (socVersion_ == SocVersion::ASCEND910B || socVersion_ == SocVersion::ASCEND910_93 || socVersion_ == SocVersion::ASCEND910_95) {
+      if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         OP_CHECK(outputTensor_.gradBias->GetStorageFormat() == op::Format::FORMAT_ND,
           OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "gradBias format only support ND, but get [%s].",
             op::ToString(outputTensor_.gradBias->GetStorageFormat()).GetString()), return ACLNN_ERR_PARAM_INVALID);
@@ -753,7 +754,7 @@ aclnnStatus ConvolutionBackwardChecker::CheckParams() {
     // 4. 检查输入参数的合法性
     CHECK_RET(CheckConvParams(inputTensor_.input->GetViewShape().GetDimNum()), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckCubeMathTypeConvBackward(), ACLNN_ERR_PARAM_INVALID);
-    if ((inputTensor_.input->Size() == 0 || inputTensor_.weight->Size() == 0) && (socVersion_ == SocVersion::ASCEND910_95 || socVersion_ == SocVersion::ASCEND910B || socVersion_ == SocVersion::ASCEND910_93)) {
+    if ((inputTensor_.input->Size() == 0 || inputTensor_.weight->Size() == 0) && (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch))) {
       return ACLNN_SUCCESS;
     }
     CHECK_RET(CheckConvShape(), ACLNN_ERR_PARAM_INVALID);
@@ -886,12 +887,12 @@ bool ConvolutionBackwardChecker::CheckEmptyTensor() {
 
       OP_CHECK(inputShape[0] == 0 || inputShape[1] == 0,
               OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "ConvolutionBackward only support zero batch or zero channel with input, but got input shape is %s",
+                     "When the input tensors contain an empty tensor, aclnnConvolutionBackward only support zero batch or zero channel with input, but got input shape is %s",
                       op::ToString(inputShape).GetString()),
               return false);
     }
-
-    if (socVersion_ == SocVersion::ASCEND910_95 || socVersion_ == SocVersion::ASCEND910B || socVersion_ == SocVersion::ASCEND910_93) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return CheckShapeEmpty();
     }
     return true;

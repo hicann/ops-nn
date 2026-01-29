@@ -31,8 +31,7 @@ namespace Conv {
 using namespace Ops::NN::Optiling;
 using namespace AscendC;
 
-struct TilingValueDwArch35
-{
+struct TilingValueDwArch35 {
     uint64_t batchDim;
     uint32_t groupDim;
     uint32_t dkDim;
@@ -62,8 +61,7 @@ struct TilingValueDwArch35
     uint32_t al1Bound;
 };
 
-struct BasicBlockTilingParamsArch35
-{
+struct BasicBlockTilingParamsArch35 {
     uint32_t usedCoreNum = 0;
     uint64_t totalCnt = 0;
     uint32_t blockBaseM = 128;
@@ -94,8 +92,7 @@ struct BasicBlockTilingParamsArch35
     uint32_t isSplitKernelHW = 0;
 };
 
-struct MatMulInfoArch35
-{
+struct MatMulInfoArch35 {
     uint64_t mValue = 0;
     uint64_t kValue = 0;
     uint64_t nValue = 0;
@@ -103,13 +100,14 @@ struct MatMulInfoArch35
 
 class Conv3DDWV2BasicBlockTilingArch35 : public TilingBaseClass {
 public:
-    explicit Conv3DDWV2BasicBlockTilingArch35(gert::TilingContext *context) : TilingBaseClass(context)
+    explicit Conv3DDWV2BasicBlockTilingArch35(gert::TilingContext* context) : TilingBaseClass(context)
     {
         Reset();
     }
+
     ~Conv3DDWV2BasicBlockTilingArch35() override = default;
 
-    void Reset(gert::TilingContext *context) override
+    void Reset(gert::TilingContext* context) override
     {
         TilingBaseClass::Reset(context);
         Reset();
@@ -117,74 +115,125 @@ public:
 
 protected:
     bool IsCapable() override;
+
     // 1、获取平台信息比如CoreNum、UB/L1/L0C资源大小
     ge::graphStatus GetPlatformInfo() override;
+
     // 2、获取INPUT/OUTPUT/ATTR信息
     ge::graphStatus GetShapeAttrsInfo() override;
+
     // 3、计算数据切分TilingData
     ge::graphStatus DoOpTiling() override;
+
     // 4、计算高阶API的TilingData
     ge::graphStatus DoLibApiTiling() override;
+
     // 5、计算TilingKey
     uint64_t GetTilingKey() const override;
+
     // 6、计算Workspace 大小
     ge::graphStatus GetWorkspaceSize() override;
+
     // 7、保存Tiling数据
     ge::graphStatus PostTiling() override;
 
     // Conv3DBackpropFilterV2Tiling orginial methods
     void Reset();
+
     bool IsSocVersion91095();
+
+    ge::graphStatus SetPlatformCompileInfo();
+
     bool CheckAttrs();
+
     bool CheckFormat();
+
+    bool CheckKernelSize();
+
     bool GetTbeTilingDavid();
+
     void PrintTilingData();
-    void SetShapeTiling(conv_bp_v2_kernel::TConv3DDwTiling &dwt);
-    void SetAttrTiling(conv_bp_v2_kernel::TConv3DDwTiling &dwt);
+
+    void SetShapeTiling(conv_bp_v2_kernel::TConv3DDwTiling& dwt);
+
+    void SetAttrTiling(conv_bp_v2_kernel::TConv3DDwTiling& dwt);
+
     void InitTilingValue(TilingValueDwArch35& tilingParams);
+
     void InitCalTilingValue(TilingValueDwArch35& tilingParams);
+
     void SetTilingValue(conv_bp_v2_kernel::TConv3DDwTiling& dwt, const TilingValueDwArch35& tilingParams);
 
     // Basic Block methods
     void CalcRealGroup();
+
     void disableGroupEnlarge();
+
     void InitBaseMNK();
+
     void InitBaseBlock910D();
+
     void UpdateStepMNK();
+
     virtual void UpdateSingleCoreInfo();
+
     bool ShrinkSplitWOIAndTryTiling(int32_t shrinkSplitWoStart);
+
     bool trySplitKernelHW();
+
     bool trySplitWo();
+
     bool tryNormalTiling();
+
     bool trySplitKernelAndWo();
+
     bool MultiCoreSplitMN();
+
     bool checkLargeSpecs();
-    int32_t GetHiCal(const BasicBlockTilingParamsArch35 &blockTiling, int32_t currentSplitWo, bool isSplitKernelHW);
+
+    int32_t GetHiCal(const BasicBlockTilingParamsArch35& blockTiling, int32_t currentSplitWo, bool isSplitKernelHW);
+
     int32_t GetWiCal(int32_t splitWo, bool isSplitKernelHW);
+
     void PrintBasickBlockTilingData();
+
     void SetBasicBlockAttrsTiling();
+
     void ShrinkBaseBlock();
+
     void ShrinkBlockBaseMN();
+
     bool ShrinkBlockBaseK();
+
     uint32_t CalculateBl1Cin1CopyLen(uint32_t newBaseN);
+
     uint64_t CalculateL1SizeGap();
+
     uint64_t IsCurBlockL1Invalid();
-    uint64_t IsCurBlockL1Invalid(const BasicBlockTilingParamsArch35 &blockTiling);
-    uint64_t CalBL1Bound(const BasicBlockTilingParamsArch35 &blockTiling);
-    uint64_t CalAL1Bound(const BasicBlockTilingParamsArch35 &blockTiling);
-    uint64_t CalBL1BoundSplitWo(const BasicBlockTilingParamsArch35 &blockTiling, int32_t currentSplitWo, int32_t currentSplitWi);
-    uint64_t CalAL1BoundSplitWo(const BasicBlockTilingParamsArch35 &blockTiling, int32_t currentSplitWo);
+
+    uint64_t IsCurBlockL1Invalid(const BasicBlockTilingParamsArch35& blockTiling);
+
+    uint64_t CalBL1Bound(const BasicBlockTilingParamsArch35& blockTiling);
+
+    uint64_t CalAL1Bound(const BasicBlockTilingParamsArch35& blockTiling);
+
+    uint64_t CalBL1BoundSplitWo(
+        const BasicBlockTilingParamsArch35& blockTiling, int32_t currentSplitWo, int32_t currentSplitWi);
+
+    uint64_t CalAL1BoundSplitWo(const BasicBlockTilingParamsArch35& blockTiling, int32_t currentSplitWo);
+
     void SetStepK4SplitMN();
+
     uint64_t GetBaseK(uint64_t baseM, uint64_t baseN);
 
     BasicBlockTilingParamsArch35 blockTiling_;
     MatMulInfoArch35 mmInfo_;
+    PlatformCompileInfo platformInfo_;
     uint32_t channelVal_ = 0;
     uint32_t libApiWorkSpaceSize_ = 0;
-    uint32_t coreNum_ = 1;
     bool isHiF8Flag_ = false;
     int32_t dtypeByte_ = 2;
-    const char *opName_ = "";
+    const char* opName_ = "";
     uint8_t l0cCondition_ = 0;
     conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData tilingData_;
     Conv3dBpFilterV2RunInfo runInfo_;

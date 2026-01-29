@@ -19,7 +19,7 @@
 #include "conv3d_bp_config_base.h"
 #include "conv3d_bp_func.h"
 #include "conv3d_bp_util.h"
-#include "kernel_operator.h"
+#include "basic_api/kernel_basic_intf.h"
 #include "kernel_utils.h"
 #include "../conv3d_backprop_input_v2/conv3d_backprop_input_v2_tiling_data.h"
 
@@ -54,6 +54,7 @@ public:
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetSingleShapeParams, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetSingleShape, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetStartIdx, Intf);
+    DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetFullLoadFlag, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, FreeB1Tensor, Intf);
     DECLARE_SYNC_IMPL(Config_, Convolution3DBackpropFunc, Iterate, Intf);
     DECLARE_SYNC_IMPL(Config_, Convolution3DBackpropFunc, IterateAll, Intf);
@@ -145,6 +146,7 @@ public:
         DEFINE_STUCT_FIELD(bool, enableSplitDk_);
         DEFINE_STUCT_FIELD(bool, isLastDk_);
         DEFINE_STUCT_FIELD(bool, needComputeFlag_);
+        DEFINE_STUCT_FIELD(bool, enableFullLoad_);
         DEFINE_STUCT_FIELD(uint8_t, isFirstIter_);
         DEFINE_STUCT_FIELD(uint8_t, l0PingPongFlag_);
         DEFINE_STUCT_FIELD(uint8_t, enableL0PingPong_);

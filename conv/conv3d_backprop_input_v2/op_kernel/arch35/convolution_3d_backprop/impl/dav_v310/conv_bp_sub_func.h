@@ -222,7 +222,7 @@ template <class Intf>
 static __aicore__ inline void UpdateLoadToB2ParamsK(Intf *self, uint32_t kPos)
 {
     if constexpr (Intf::conv3dConfig.loadB2Condition != TPL_REVERSE_ONLY) {
-        self->ctx.load2dv2_.srcStride = self->ctx.curLoadKbl1_ >> self->ctx.tiling_->c0Bits;
+        self->ctx.load2dv2_.srcStride = self->ctx.curLoadKbl1_ >> self->ctx.tiling_->c0BitsB;
     }
 }
 
@@ -262,8 +262,8 @@ static __aicore__ inline void LoadToB2ReverseOnlyCommon(Intf *self, const LocalT
     if constexpr (Intf::conv3dConfig.kernelSplitMode != TPL_NO_SPLIT_KERNEL) {
         curHkWkSize = self->ctx.splitHkWkList_[self->ctx.splitIndex_];
     }
-    uint32_t kStartPos = kPos * (self->ctx.tiling_->baseK >> self->ctx.tiling_->c0Bits);
-    uint32_t kEndPos = kStartPos + ((self->ctx.baseUseK_ + self->ctx.tiling_->c0 -1) >> self->ctx.tiling_->c0Bits);
+    uint32_t kStartPos = kPos * (self->ctx.tiling_->baseK >> self->ctx.tiling_->c0BitsB);
+    uint32_t kEndPos = kStartPos + ((self->ctx.baseUseK_ + self->ctx.tiling_->c0 -1) >> self->ctx.tiling_->c0BitsB);
     uint32_t hwKStartIdx = DivHkWk<Intf>(self, kStartPos);
     uint32_t hwKEndIdx = DivCeilHkWk<Intf>(self, kEndPos);
     uint32_t curKRepeat = hwKEndIdx - hwKStartIdx;
@@ -285,7 +285,7 @@ static __aicore__ inline void LoadToB2ForKernelSplitB1FullLoad(Intf *self, const
     uint32_t blockSize, uint32_t srcB1Offset, uint32_t dstB2Offset, LocalTensor<typename Intf::SrcT> &l0b)
 {
     if (self->ctx.tiling_->strideH == self->ctx.tiling_->hk) {
-        uint32_t kRepeat = self->ctx.baseUseK_ >> self->ctx.tiling_->c0Bits;
+        uint32_t kRepeat = self->ctx.baseUseK_ >> self->ctx.tiling_->c0BitsB;
         for (uint32_t i = 0; i < kRepeat; i++) {
             self->ctx.load2dv2_.kStartPosition = self->ctx.startAddrOffset_ + i * self->ctx.hkWk_;
             LoadData(l0b[dstB2Offset], l1B1Matrix[srcB1Offset], self->ctx.load2dv2_);
@@ -338,8 +338,8 @@ static __aicore__ inline void LoadToB2(Intf *self, const LocalTensor<typename In
     uint32_t srcB1Offset = 0;
     uint32_t dstB2Offset = 0;
     if constexpr (Intf::conv3dConfig.loadB2Condition == TPL_TRANSPOSE_ONLY) {
-        uint32_t kBlockC0Num = kPos * self->ctx.tiling_->baseK >> self->ctx.tiling_->c0Bits;   // 转置逆序
-        uint32_t curKRepeat = self->ctx.baseUseK_ >> self->ctx.tiling_->c0Bits;
+        uint32_t kBlockC0Num = kPos * self->ctx.tiling_->baseK >> self->ctx.tiling_->c0BitsB;   // 转置逆序
+        uint32_t curKRepeat = self->ctx.baseUseK_ >> self->ctx.tiling_->c0BitsB;
         for (uint32_t i = 0; i < curKRepeat; i++) {
             uint32_t idxC1out = kBlockC0Num + i;
             dstB2Offset = i * self->ctx.blockBaseN_ * blockSize;
@@ -351,9 +351,9 @@ static __aicore__ inline void LoadToB2(Intf *self, const LocalTensor<typename In
     } else if constexpr (Intf::conv3dConfig.loadB2Condition == TPL_NO_TRANSPOSE_NO_REVERSE) {
         LoadToB2NoTransposeNoReverse(self, l1B1Matrix, srcB1Offset, kPos, l0b);
     } else {
-        uint32_t kBlockC0Num = kPos * self->ctx.tiling_->baseK >> self->ctx.tiling_->c0Bits;
-        uint32_t curL1Cout = DivHkWk<Intf>(self, self->ctx.curLoadKbl1_) << self->ctx.tiling_->c0Bits;
-        uint32_t curKRepeat = self->ctx.baseUseK_ >> self->ctx.tiling_->c0Bits;
+        uint32_t kBlockC0Num = kPos * self->ctx.tiling_->baseK >> self->ctx.tiling_->c0BitsB;
+        uint32_t curL1Cout = DivHkWk<Intf>(self, self->ctx.curLoadKbl1_) << self->ctx.tiling_->c0BitsB;
+        uint32_t curKRepeat = self->ctx.baseUseK_ >> self->ctx.tiling_->c0BitsB;
         for (uint32_t i = 0; i < curKRepeat; i++) {
             uint32_t iRev = kBlockC0Num + i;
             uint32_t idxC1out = DivHkWk<Intf>(self, iRev);
@@ -434,20 +434,20 @@ static __aicore__ inline void LoadL0c2GmForNz2Nd(Intf *self, const GlobalTensor<
     LocalTensor<typename Intf::L0cT> &useC1Buf)
 {
     uint64_t dstOffset = static_cast<uint64_t>(self->ctx.curNL0Idx_) * self->ctx.tiling_->baseN + // cin offset
-                    static_cast<uint64_t>(self->ctx.curDinIdx_) * self->ctx.hiWi_ * self->ctx.tiling_->cinG + // di offset, remove useless data
-                    static_cast<uint64_t>(self->ctx.curML0Idx_) * self->ctx.tiling_->baseM * self->ctx.tiling_->cinG; // hi&wi offset
+                    static_cast<uint64_t>(self->ctx.curDinIdx_) * self->ctx.hiWi_ * self->ctx.tiling_->cin + // di offset, remove useless data
+                    static_cast<uint64_t>(self->ctx.curML0Idx_) * self->ctx.tiling_->baseM * self->ctx.tiling_->cin; // hi&wi offset
 
-    // NZ (1, cin1, hi, wi, cin0) -> DN (n, cin, di, hi, wi)
+    // NZ (1, cin1, hi, wi, cin0) -> ND (n, di, hi, wi, cin)
     //
     FixpipeParamsC310<CO2Layout::ROW_MAJOR> fixPipeParams;
     fixPipeParams.params.ndNum = 1; // not use
     fixPipeParams.mSize = self->ctx.baseUseM_; // M: hi&wi
     fixPipeParams.nSize = self->ctx.baseUseN_; // N: cin
 
-    // loop1_src_stride, c0_size, cin1
+    // loop1_src_stride, c0_size,cin1
     fixPipeParams.srcStride = AlignUp16(self->ctx.baseUseM_); // src N stride, loop1_src_stride (unit: 32B)
     // loop2_dst_stride, element, c
-    fixPipeParams.dstStride = self->ctx.tiling_->cinG; // dst N stride, loop2_dst_stride (unit: element)
+    fixPipeParams.dstStride = self->ctx.tiling_->cin; // dst N stride, loop2_dst_stride (unit: element)
 
     if constexpr(std::is_same<typename Intf::DstT, bfloat16_t>::value) {
         fixPipeParams.quantPre = QuantMode_t::F322BF16;
@@ -468,6 +468,9 @@ static __aicore__ inline void CalcCutInWIndexForOnlyH(Intf *self)
     uint32_t mSize = self->ctx.curML0Idx_ * self->ctx.tiling_->baseM + self->ctx.curMStartIdx_;
     uint32_t curWiPos = self->ctx.tiling_->wi - (mSize % self->ctx.tiling_->wi);
     self->ctx.headWi_ = (curWiPos == self->ctx.tiling_->wi) ? 0 : curWiPos;
+    if (self->ctx.headWi_ > self->ctx.baseUseM_) {
+        self->ctx.headWi_ = self->ctx.baseUseM_;
+    }
     int32_t leftBaseUseM = self->ctx.baseUseM_ - self->ctx.headWi_;
     if (leftBaseUseM < 0) {
         leftBaseUseM = 0;

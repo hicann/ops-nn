@@ -10,13 +10,16 @@
 
 #include "convolutionbackward.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "aclnn_kernels/transpose.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/op_def.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
+#include "op_api/aclnn_util.h"
 #include "runtime/context.h"
+#include "aclnn_kernels/transpose.h"
 
 using namespace op;
 
@@ -28,9 +31,13 @@ const int64_t DIM_1 = 1;
 const int64_t DIM_2 = 2;
 const int64_t DIM_3 = 3;
 const size_t CONV3D_BACKPROP_WHITE_LIST_CASE_SIZE = 26;
+const int64_t N_DIM_NCDHW_INDEX = 0;
+const int64_t C_DIM_NCDHW_INDEX = 1;
 const int64_t D_DIM_NCDHW_INDEX = 2;
 const int64_t H_DIM_NCDHW_INDEX = 3;
 const int64_t W_DIM_NCDHW_INDEX = 4;
+const FVector<int64_t> OUTPUT_BACKPROP_N2H_SHAPE_DIMS = {3, 2, 0, 4, 1};
+const FVector<int64_t> WEIGHT_N2H_SHAPE_DIMS = {0, 2, 3, 4, 1};
 constexpr int64_t C1_DIM_NDC1HWC0_INDEX = 2;
 constexpr int64_t C0_DIM_NDC1HWC0_INDEX = 5;
 constexpr uint32_t BASIC_BLOCK_SIZE_128 = 128;
@@ -41,6 +48,8 @@ constexpr int32_t FORMAT_6HD_DIM = 6;
 constexpr uint64_t DETERMINISTIC_FILTER_V2_STRIDE_MAX_VALUE = 7;
 constexpr uint64_t DETERMINISTIC_PADDING_COEF = 2;
 constexpr uint64_t DETERMINISTIC_CHANNEL_16 = 16;
+constexpr int64_t WEIGHT_TRANSPOSE_N_LIMIT = 64;
+constexpr int64_t WEIGHT_TRANSPOSE_C_LIMIT = 128;
 
 const vector<vector<int64_t>> CONV2D_BACKPROP_INPUT_CAST_WHITE_LIST =
 {
@@ -1124,8 +1133,7 @@ static bool CheckV2Kernel(const ConvBackpropParams &params)
 
 static bool CheckV1Functionality()
 {
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND910_95) {
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
     return false;
   }
 
@@ -1197,8 +1205,7 @@ static bool CheckV2Perf(const ConvBackpropParams &params)
 
 static bool IsConv3DBackpropInputUseV2(const ConvBackpropParams &params)
 {
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND910_95) {
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
     return true;
   }
   // 1. 以下检查为V1功能上不支持的场景或规格，走V2
@@ -1223,8 +1230,7 @@ static bool IsConv3DBackpropInputUseV2(const ConvBackpropParams &params)
 bool IsConv2DBackpropInputTo3DCase(const ConvBackpropParams &params) {
   vector<int64_t> caseInfo;
   ConstructCaseInfo(params, caseInfo);
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND910_95) {
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
     return true;
   }
   return IsConv2DV2WhiteListCase(caseInfo, CONV2D_BACKPROP_INPUT_V2_WHITE_LIST);
@@ -1233,8 +1239,7 @@ bool IsConv2DBackpropInputTo3DCase(const ConvBackpropParams &params) {
 bool IsConv2DBackpropInputToCastCase(const ConvBackpropParams &params) {
   vector<int64_t> caseInfo;
   ConstructCaseInfo(params, caseInfo);
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND910_95) {
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
     return false;
   }
   return IsConv2DV2WhiteListCase(caseInfo, CONV2D_BACKPROP_INPUT_CAST_WHITE_LIST);
@@ -1496,7 +1501,7 @@ static void GetConv3DBackpropAdapterParam(const aclTensor *input, const aclIntAr
   if (stride->Size() == DIM_3) {
     FVector<int64_t> newStrides {1, 1, 1, 1, 1};
     FVector<int64_t> newDilation {1, 1, 1, 1, 1};
-    if (input->GetStorageFormat() == op::Format::FORMAT_NCDHW || socVersion != SocVersion::ASCEND910_95) {
+    if (input->GetStorageFormat() == op::Format::FORMAT_NCDHW || (!Ops::NN::AclnnUtil::IsRegbase())) {
       newStrides = {1, 1, (*stride)[0], (*stride)[1], (*stride)[2]};
       newDilation = {1, 1, (*dilation)[0], (*dilation)[1], (*dilation)[2]};
     } else {
@@ -1595,8 +1600,7 @@ static bool IsConv3DBackpropFilterToV2WithDeterministic(const ConvBackpropParams
 }
 
 bool IsConv3DBackpropFilterV2(const ConvBackpropParams &params) {
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND910_95) {
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
     return true;
   }
   if (params.input->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
@@ -1633,13 +1637,98 @@ bool IsConv3DBackpropFilterV2(const ConvBackpropParams &params) {
 }
 
 bool IsInputTransdataWhiteListCase(const ConvBackpropParams &params) {
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND910_95) {
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
     return false;
   }
   vector<int64_t> caseInfo;
   ConstructCaseInfo(params, caseInfo);
   return IsConv3DV2WhiteListCase(caseInfo, CONV3D_BACKPROP_FILTER_V2_TRANSDATA_MERGE_WHITE_LIST);
+}
+
+static bool CheckPreNHTransposeEnable(const aclTensor *input, const aclTensor *outBackprop,const aclIntArray *stride5,
+ 	                                                 const aclIntArray *pad6, const aclIntArray *dilation5, int groups){
+  OP_LOGD("enter CheckPreNHTransposeEnable");
+  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
+  if (socVersion != SocVersion::ASCEND910_95) {
+    OP_LOGD("unsupported soc, NH transpose disable.");
+    return false;
+  }
+
+  if (groups > 1 || input->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
+    OP_LOGD("groups > 1 or unsupported format , NH transpose disable.");
+    return false;
+  }
+
+  auto xDataType = input->GetDataType();
+  auto dedyDataType = outBackprop->GetDataType();
+  if (xDataType != op::DataType::DT_FLOAT) {
+    OP_LOGD("unsupported dataType , NH transpose disable.");
+    return false;
+  }
+
+  auto inputShape = input->GetOriginalShape();
+  auto dedyShape = outBackprop->GetOriginalShape();
+  uint64_t inputN = inputShape[N_DIM_NCDHW_INDEX];
+  uint64_t inputC = inputShape[C_DIM_NCDHW_INDEX];
+  uint64_t inputD = inputShape[D_DIM_NCDHW_INDEX];
+  uint64_t inputH = inputShape[H_DIM_NCDHW_INDEX];
+  uint64_t inputW = inputShape[W_DIM_NCDHW_INDEX];
+  uint64_t dedyW = dedyShape[W_DIM_NCDHW_INDEX];
+  uint64_t dedyC = dedyShape[C_DIM_NCDHW_INDEX];
+
+  if (dedyW == 0) {
+    OP_LOGD("unsupported dataType , NH transpose disable.");
+    return false;
+  }
+
+  // check input
+  if (inputD != 1 || inputH != 1) {
+    OP_LOGD("inputD or inputH is 1, NH transpose disable.");
+    return false;
+  }
+
+  // check stride,dilation,padding
+  if (stride5->Size() == CONV3D_DIM) {
+    auto strideData = stride5->GetData();
+    auto strideD = strideData[D_DIM_NCDHW_INDEX];
+    auto strideH = strideData[H_DIM_NCDHW_INDEX];
+    auto strideW = strideData[W_DIM_NCDHW_INDEX];
+    if (strideD != 1 || strideH != 1 || strideW >63) {
+      OP_LOGD("strideD=%d, strideH=%d, strideW=%d (max=63), NH transpose disable.", strideD, strideH, strideW);
+      return false;
+    }
+  }
+
+  if (dilation5->Size() == CONV3D_DIM) {
+    auto dilationData = dilation5->GetData();
+    auto dilationD = dilationData[D_DIM_NCDHW_INDEX];
+    auto dilationH = dilationData[H_DIM_NCDHW_INDEX];
+    auto dilationW = dilationData[W_DIM_NCDHW_INDEX];
+    if (dilationD != 1 || dilationH != 1 || dilationW >255) {
+      OP_LOGD("dilationD=%d, dilationH=%d, dilationW=%d (max=255), NH transpose disable.", dilationD, dilationH, dilationW);
+      return false;
+    }
+  }
+
+  auto padData = pad6->GetData();
+  for (int64_t i=0; i < pad6->Size(); i++) {
+    if (padData[i] != 0){
+      OP_LOGD("pad[%d]=[%d] (must equal to 0), NH transpose disable.", i, padData[i]);
+      return false;
+    }
+  }
+
+  // check input and output, prevent Transpose cost excessive time
+  if (inputN < 1500 || inputN > 4096 || dedyC > 128 || inputW > 128 || inputC > 128 || (inputW*inputC)>2000 || (inputN/dedyW < 65)) {
+    OP_LOGD(
+    "inputN=%d (max=4096,min=1500), dedyC=%d (max=128), inputW=%d (max=128), inputC=%d (max=128), inputW*inputC=%d (min=2000), "
+    "inputN/dedyW=%d (max=65), NH transpose disable.",
+    inputN, dedyC, inputW, inputC, inputW*inputC, inputN/dedyW);
+    return false;
+  }
+  OP_LOGD("NH transpose enable.");
+  return true;
 }
 
 static aclnnStatus Conv3DBackpropFilterWithFlag(const aclTensor *input, const aclTensor *weight,
@@ -1666,6 +1755,43 @@ static aclnnStatus Conv3DBackpropFilterWithFlag(const aclTensor *input, const ac
     return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
   }
 
+  // check and permute(0, 2, 3, 4, 1) then permute(3, 2, 0, 4, 1)
+  if (CheckPreNHTransposeEnable(input,outBackprop,stride5,pad6,dilation5,groups)) {
+      FVector<int64_t> newShapeDims = {3, 2, 0, 4, 1};
+      auto permAfter = executor->AllocIntArray(newShapeDims.data(), newShapeDims.size());
+      OP_CHECK(permAfter != nullptr,  OP_LOGD("permAfter alloc failed."), return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
+  
+      // change input format
+      input = l0op::Transpose(input, permAfter, executor);
+      OP_CHECK(input != nullptr,  OP_LOGD("input transpose return null."), return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
+      const_cast<aclTensor*>(input)->SetOriginalFormat(Format::FORMAT_NDHWC);
+      const_cast<aclTensor*>(input)->SetStorageFormat(Format::FORMAT_NDHWC);
+      const_cast<aclTensor*>(input)->SetViewFormat(Format::FORMAT_NDHWC);
+  
+      // change output format
+      outBackprop = l0op::Transpose(outBackprop, permAfter, executor);
+      OP_CHECK(outBackprop != nullptr,  OP_LOGD("outBackprop transpose return null."), return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
+      const_cast<aclTensor*>(outBackprop)->SetOriginalFormat(Format::FORMAT_NDHWC);
+      const_cast<aclTensor*>(outBackprop)->SetStorageFormat(Format::FORMAT_NDHWC);
+      const_cast<aclTensor*>(outBackprop)->SetViewFormat(Format::FORMAT_NDHWC);
+  
+      // change stride
+      if (stride5->Size() == CONV3D_DIM) {
+        auto oriStrideData = stride5->GetData();
+        FVector<int64_t> newStrides = {oriStrideData[H_DIM_NCDHW_INDEX],oriStrideData[D_DIM_NCDHW_INDEX],
+        oriStrideData[N_DIM_NCDHW_INDEX],oriStrideData[W_DIM_NCDHW_INDEX],oriStrideData[C_DIM_NCDHW_INDEX]};
+        stride5 = executor->AllocIntArray(newStrides.data(),CONV3D_DIM);
+      }
+  
+      // change dilation
+      if (dilation5->Size() == CONV3D_DIM) {
+        auto oriDilationData = dilation5->GetData();
+        FVector<int64_t> newDilations = {oriDilationData[H_DIM_NCDHW_INDEX],oriDilationData[D_DIM_NCDHW_INDEX],
+        oriDilationData[N_DIM_NCDHW_INDEX],oriDilationData[W_DIM_NCDHW_INDEX],oriDilationData[C_DIM_NCDHW_INDEX]};
+        dilation5 = executor->AllocIntArray(newDilations.data(),CONV3D_DIM);
+      }
+    }
+
   ConvBackpropParams params = {input, weight, outBackprop, stride, padding, dilation, groups};
   bool useV2Flag = IsConv3DBackpropFilterV2(params);
   // useHf32Flag的值为0x40 : 表示HF32
@@ -1686,6 +1812,7 @@ static aclnnStatus Conv3DBackpropFilterWithFlag(const aclTensor *input, const ac
   }
   return ACLNN_SUCCESS;
 }
+
 // fp16输入fp32输出
 const aclTensor *Conv3DBackpropFilterFp162Fp32(const aclTensor *input, const aclTensor *weight,
                                                const aclTensor *outBackprop, const aclIntArray *stride,
@@ -1755,7 +1882,7 @@ const aclTensor *Conv3DBackpropFilterBf162Fp32(const aclTensor *input, const acl
 }
 
 // 1971: 6HD->FZ
-// 910_95: 5HD->FZ
+// arch 3510: 5HD->FZ
 const aclTensor *Conv3DBackpropFilter(ConvolutionBackwardInputTensor &inputTensor, ConvolutionBackwardParams &params,
                                     aclOpExecutor *executor, bool hf32Flag)
 {
@@ -1777,6 +1904,123 @@ const aclTensor *Conv3DBackpropFilter(ConvolutionBackwardInputTensor &inputTenso
 OP_TYPE_REGISTER(Conv3DBackpropInput);
 OP_TYPE_REGISTER(Conv3DBackpropInputV2);
 
+static bool CheckN2HAttrAvailable(aclIntArray *stride5, aclIntArray *dilation5, aclIntArray *pad6) {
+    if (stride5->Size() == CONV3D_DIM) {
+        auto strideData = stride5->GetData();
+        auto strideD = strideData[D_DIM_NCDHW_INDEX];
+        auto strideH = strideData[H_DIM_NCDHW_INDEX];
+        auto strideW = strideData[W_DIM_NCDHW_INDEX];
+        if (strideD != 1 || strideH != 1 || strideW < 1 || strideW > 63) {
+            return false;
+        }
+    }
+    auto padData = pad6->GetData();
+    for (int64_t i = 0; i < pad6->Size(); i++) {
+        if (padData[i] != 0) {
+            return false;
+        }
+    }
+    auto dilationData = dilation5->GetData();
+    for (int64_t i = 0; i < dilation5->Size(); i++) {
+        if (dilationData[i] != 1) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool CheckN2HEnable(const aclTensor *weight, aclTensor *&output,
+                           aclIntArray *stride5, aclIntArray *dilation5, aclIntArray *pad6, int groups) {
+    OP_LOGD("Check N2H attribute.");
+    if (groups != 1) {
+        return false;
+    }
+    if (!CheckN2HAttrAvailable(stride5, dilation5, pad6)) {
+        return false;
+    }
+    auto outputShape = output->GetStorageShape();
+    auto batch = outputShape[N_DIM_NCDHW_INDEX];
+    // batch足够大才有效
+    if (batch < 1500 || batch > 4096) {
+        return false;
+    }
+
+    auto hi = outputShape[H_DIM_NCDHW_INDEX];
+    auto wi = outputShape[W_DIM_NCDHW_INDEX];
+    auto di = outputShape[D_DIM_NCDHW_INDEX];
+    auto weightShape = weight->GetStorageShape();
+    auto hk = weightShape[H_DIM_NCDHW_INDEX];
+    auto wk = weightShape[W_DIM_NCDHW_INDEX];
+    auto dk = weightShape[D_DIM_NCDHW_INDEX];
+    // 实际转换需要为一维卷积形式
+    if (di != 1 || dk != 1 || hi != 1 || hk != 1 || wi < 1 || wi > 64 || wk < 1 || wk > 10) {
+        return false;
+    }
+
+    auto cout = weightShape[N_DIM_NCDHW_INDEX];
+    auto cin = weightShape[C_DIM_NCDHW_INDEX];
+    if (cout < 1 || cout > 128 || cin < 1 || cin > 128) {
+        return false;
+    }
+    if (wi >= 60 && ((wi > cin && wi < 2 * cin) || (wi < cin && cin < 1.5f * wi))) {
+        return false;
+    }
+    if (wi >= 40 && wi < 60 && wi > cin && (wi < 2 * cin || wi >= 3.5f * cin)) {
+        return false;
+    }
+    return true;
+}
+
+static aclnnStatus N2HOptimize(const aclTensor *&weight, const aclTensor *&outBackprop,
+                               aclTensor *&output, aclIntArray *&stride5, aclOpExecutor *executor) {
+    OP_LOGD("Enable N2H optimize.");
+    auto permOutputBackprop = executor->AllocIntArray(OUTPUT_BACKPROP_N2H_SHAPE_DIMS.data(), OUTPUT_BACKPROP_N2H_SHAPE_DIMS.size());
+    CHECK_RET(permOutputBackprop != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    outBackprop = l0op::Transpose(outBackprop, permOutputBackprop, executor);
+    // change outBackprop format
+    CHECK_RET(outBackprop != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const_cast<aclTensor*>(outBackprop)->SetOriginalFormat(Format::FORMAT_NDHWC);
+    const_cast<aclTensor*>(outBackprop)->SetStorageFormat(Format::FORMAT_NDHWC);
+    const_cast<aclTensor*>(outBackprop)->SetViewFormat(Format::FORMAT_NDHWC);
+    // change weight format
+    auto weightShape = weight->GetStorageShape();
+    if (weightShape[N_DIM_NCDHW_INDEX] >= WEIGHT_TRANSPOSE_N_LIMIT && weightShape[C_DIM_NCDHW_INDEX] >= WEIGHT_TRANSPOSE_C_LIMIT) {
+        auto permWeight = executor->AllocIntArray(WEIGHT_N2H_SHAPE_DIMS.data(), WEIGHT_N2H_SHAPE_DIMS.size());
+        CHECK_RET(permWeight != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        weight = l0op::Transpose(weight, permWeight, executor);
+        // change outBackprop format
+        CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        const_cast<aclTensor*>(weight)->SetOriginalFormat(Format::FORMAT_NDHWC);
+        const_cast<aclTensor*>(weight)->SetStorageFormat(Format::FORMAT_NDHWC);
+        const_cast<aclTensor*>(weight)->SetViewFormat(Format::FORMAT_NDHWC);
+    }
+    // change stride pos
+    if (stride5->Size() == CONV3D_DIM) {
+        auto oriStrideData = stride5->GetData();
+        FVector<int64_t> newStrides = {oriStrideData[H_DIM_NCDHW_INDEX], oriStrideData[D_DIM_NCDHW_INDEX],
+                                       oriStrideData[N_DIM_NCDHW_INDEX], oriStrideData[W_DIM_NCDHW_INDEX],
+                                       oriStrideData[C_DIM_NCDHW_INDEX]};
+        stride5 = executor->AllocIntArray(newStrides.data(), CONV3D_DIM);
+    }
+    // change output shape and format
+    auto oriShape = output->GetStorageShape();
+    auto outShape = output->GetStorageShape();
+    outShape[N_DIM_NCDHW_INDEX] = oriShape[H_DIM_NCDHW_INDEX];
+    outShape[C_DIM_NCDHW_INDEX] = oriShape[D_DIM_NCDHW_INDEX];
+    outShape[D_DIM_NCDHW_INDEX] = oriShape[N_DIM_NCDHW_INDEX];
+    outShape[H_DIM_NCDHW_INDEX] = oriShape[W_DIM_NCDHW_INDEX];
+    outShape[W_DIM_NCDHW_INDEX] = oriShape[C_DIM_NCDHW_INDEX];
+    output->SetStorageShape(outShape);
+    output->SetOriginalShape(outShape);
+    output->SetOriginalFormat(Format::FORMAT_NDHWC);
+    output->SetStorageFormat(Format::FORMAT_NDHWC);
+    // ViewFormat does not affect downstream operations; it serves as a flag to check if N2H optimization was applied.
+    // Note: Format consistency must be maintained prior to using ViewCopy.
+    output->SetViewFormat(Format::FORMAT_NCDHW);
+
+    return ACLNN_SUCCESS;
+}
+
 static aclnnStatus Conv3DBackpropInputWithFlag(const aclTensor *input, const aclTensor *weight,
                                               const aclTensor *outBackprop, const aclIntArray *stride,
                                               const aclIntArray *padding, const aclIntArray *dilation, int groups,
@@ -1792,9 +2036,8 @@ static aclnnStatus Conv3DBackpropInputWithFlag(const aclTensor *input, const acl
   const char *paddingString = "";
 
   ConvBackpropParams params = {input, weight, outBackprop, stride, padding, dilation, groups};
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
   bool useV2Flag = IsConv3DBackpropInputV2(params);
-  if (useV2Flag && !useHf32Flag && weight->GetDataType() != DataType::DT_FLOAT && socVersion != SocVersion::ASCEND910_95) {
+  if (useV2Flag && !useHf32Flag && weight->GetDataType() != DataType::DT_FLOAT && (!Ops::NN::AclnnUtil::IsRegbase())) {
     output->SetStorageFormat(op::Format::FORMAT_NCDHW);
   }
   auto inputSize = GetOutputSize(input, executor);
@@ -1807,8 +2050,17 @@ static aclnnStatus Conv3DBackpropInputWithFlag(const aclTensor *input, const acl
     output = nullptr;
     return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
   }
-    // useHf32Flag的值为0x40 : 表示HF32
-    uint32_t execMode = useHf32Flag == 0x40 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
+  // useHf32Flag的值为0x40 : 表示HF32
+  uint32_t execMode = useHf32Flag == 0x40 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
+
+  if (Ops::NN::AclnnUtil::IsRegbase() && CheckN2HEnable(weight, output, stride5, dilation5, pad6, groups)) {
+      ret = N2HOptimize(weight, outBackprop, output, stride5, executor);
+      if (ret != ACLNN_SUCCESS) {
+          OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3DBackpropInput N2HOptimize failed.");
+          output = nullptr;
+          return ACLNN_ERR_INNER_NULLPTR;
+      }
+  }
   if (useV2Flag) {
     ret = ADD_TO_LAUNCHER_LIST_AICORE(
       Conv3DBackpropInputV2, OP_INPUT(inputSize, weight, outBackprop), OP_OUTPUT(output),

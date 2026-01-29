@@ -20,7 +20,7 @@
 #include "conv_bp_func.h"
 #include "conv_bp_util.h"
 #include "kernel_utils.h"
-#include "kernel_operator.h"
+#include "basic_api/kernel_basic_intf.h"
 #include "../conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_data.h"
 
 namespace ConvolutionBackprop {
@@ -31,12 +31,14 @@ public:
 
 public:
     __aicore__ inline ConvBpImpl()
-    {}
+    {
+    }
 
     DECLARE_IMPL(Config_, ConvolutionBackpropFunc, Init, Intf);
     DECLARE_IMPL(Config_, ConvolutionBackpropFunc, SetFmap, Intf);
     DECLARE_IMPL(Config_, ConvolutionBackpropFunc, SetOutBackprop, Intf);
     DECLARE_IMPL(Config_, ConvolutionBackpropFunc, SetSingleShape, Intf);
+    DECLARE_IMPL(Config_, ConvolutionBackpropFunc, SetSingleShapeK, Intf);
     DECLARE_IMPL(Config_, ConvolutionBackpropFunc, SetStartIdx, Intf);
     DECLARE_IMPL(Config_, ConvolutionBackpropFunc, SetDeterministicCoreInfo, Intf);
     DECLARE_SYNC_IMPL(Config_, ConvolutionBackpropFunc, DeterministicReduceKInUb, Intf);
@@ -47,8 +49,11 @@ public:
     DECLARE_SYNC_IMPL(Config_, ConvolutionBackpropFunc, GetTensorC, Intf);
     DECLARE_SYNC_IMPL(Config_, ConvolutionBackpropFunc, VecPostProcess, Intf);
     DECLARE_IMPL(Config_, ConvolutionBackpropFunc, End, Intf);
+
     struct ContextData : public Config::ContextData {
-        __aicore__ inline ContextData(){};
+        __aicore__ inline ContextData()
+        {
+        };
         DEFINE_STUCT_FIELD(TPipe, pipe_);
         DEFINE_STUCT_FIELD(const AscendC::conv_bp_v2_kernel::TConv3DDwTiling *__restrict, tiling_);
         DEFINE_STUCT_TEMPLATE_FIELD(TQue, l0cPing_, TPosition::CO1, 1);
@@ -158,7 +163,6 @@ public:
         DEFINE_STUCT_FIELD(bool, isNoDeterministic_);
     };
 };
-
-}  // namespace ConvolutionBackprop
+} // namespace ConvolutionBackprop
 
 #endif

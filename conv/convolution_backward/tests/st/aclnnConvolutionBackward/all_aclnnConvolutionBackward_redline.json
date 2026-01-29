@@ -1,0 +1,1439 @@
+[
+  {
+      "id": 0,
+      "name": "torch.nn.ConvolutionBackward",
+      "aclnn_name": "ConvolutionBackward",
+      "version": "v2.1",
+      "expected_error_msg": null,
+      "api": "pytorch",
+      "api_type": "golden_conv_backward",
+      "aclnn_api_type": "aclnn_conv_backward",
+      "backward": false,
+      "standard": {
+          "acc": "default",
+          "perf": "not_key"
+      },
+      "outputs": null,
+      "inputs": [
+          {
+              "name": "gradOutput",
+              "type": "tensor",
+              "required": true,
+              "dtype": "fp32",
+              "shape": [
+                  2,
+                  2,
+                  7,
+                  7
+              ],
+              "range_values": [
+                  -0.1,
+                  0.1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "input",
+              "type": "tensor",
+              "required": true,
+              "dtype": "fp32",
+              "shape": [
+                  2,
+                  2,
+                  7,
+                  7
+              ],
+              "range_values": [
+                  -0.1,
+                  0.1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "weight",
+              "type": "tensor",
+              "required": true,
+              "dtype": "fp32",
+              "shape": [
+                  2,
+                  2,
+                  1,
+                  1
+              ],
+              "range_values": [
+                  -0.1,
+                  0.1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          [
+              {
+                  "name": "biasSizes",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 2,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          [
+              {
+                  "name": "stride",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "stride",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          [
+              {
+                  "name": "padding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "padding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          [
+              {
+                  "name": "dilation",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "dilation",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          {
+              "name": "transposed",
+              "type": "attr",
+              "required": true,
+              "dtype": "bool",
+              "shape": null,
+              "range_values": false,
+              "backward": false,
+              "align_32B": null
+          },
+          [
+              {
+                  "name": "outputPadding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "outputPadding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          {
+              "name": "groups",
+              "type": "attr",
+              "required": true,
+              "dtype": "int",
+              "shape": null,
+              "range_values": 1,
+              "backward": false,
+              "align_32B": null
+          },
+          [
+              {
+                  "name": "outputMask",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "bool",
+                  "shape": null,
+                  "range_values": true,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "outputMask",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "bool",
+                  "shape": null,
+                  "range_values": true,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "outputMask",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "bool",
+                  "shape": null,
+                  "range_values": true,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          {
+              "name": "cubeMathType",
+              "type": "attr",
+              "required": true,
+              "dtype": "int",
+              "shape": null,
+              "range_values": 1,
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "format",
+              "type": "attr",
+              "required": false,
+              "dtype": "non_param",
+              "shape": null,
+              "range_values": "NCHW",
+              "backward": false,
+              "align_32B": null
+          }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "tensor_input": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+  },
+  {
+      "id": 1,
+      "name": "torch.nn.ConvolutionBackward",
+      "aclnn_name": "ConvolutionBackward",
+      "version": "v2.1",
+      "expected_error_msg": null,
+      "api": "pytorch",
+      "api_type": "golden_conv_backward",
+      "aclnn_api_type": "aclnn_conv_backward",
+      "backward": false,
+      "standard": {
+          "acc": "default",
+          "perf": "not_key"
+      },
+      "outputs": null,
+      "inputs": [
+          {
+              "name": "gradOutput",
+              "type": "tensor",
+              "required": true,
+              "dtype": "bf16",
+              "shape": [
+                  1,
+                  3,
+                  16,
+                  256,
+                  256
+              ],
+              "range_values": [
+                  -0.1,
+                  0.1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "input",
+              "type": "tensor",
+              "required": true,
+              "dtype": "bf16",
+              "shape": [
+                  1,
+                  256,
+                  10,
+                  130,
+                  130
+              ],
+              "range_values": [
+                  -0.1,
+                  0.1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "weight",
+              "type": "tensor",
+              "required": true,
+              "dtype": "bf16",
+              "shape": [
+                  256,
+                  3,
+                  4,
+                  4,
+                  4
+              ],
+              "range_values": [
+                  -0.1,
+                  0.1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          [
+              {
+                  "name": "biasSizes",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 3,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          [
+              {
+                  "name": "stride",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 2,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "stride",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 2,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "stride",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 2,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          [
+              {
+                  "name": "padding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 3,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "padding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 3,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "padding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 3,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          [
+              {
+                  "name": "dilation",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "dilation",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "dilation",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          {
+              "name": "transposed",
+              "type": "attr",
+              "required": true,
+              "dtype": "bool",
+              "shape": null,
+              "range_values": true,
+              "backward": false,
+              "align_32B": null
+          },
+          [
+              {
+                  "name": "outputPadding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "outputPadding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "outputPadding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          {
+              "name": "groups",
+              "type": "attr",
+              "required": true,
+              "dtype": "int",
+              "shape": null,
+              "range_values": 1,
+              "backward": false,
+              "align_32B": null
+          },
+          [
+              {
+                  "name": "outputMask",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "bool",
+                  "shape": null,
+                  "range_values": true,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "outputMask",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "bool",
+                  "shape": null,
+                  "range_values": true,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "outputMask",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "bool",
+                  "shape": null,
+                  "range_values": true,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          {
+              "name": "cubeMathType",
+              "type": "attr",
+              "required": true,
+              "dtype": "int",
+              "shape": null,
+              "range_values": 0,
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "format",
+              "type": "attr",
+              "required": false,
+              "dtype": "non_param",
+              "shape": null,
+              "range_values": "NCDHW",
+              "backward": false,
+              "align_32B": null
+          }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "tensor_input": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+  },
+  {
+      "id": 2,
+      "name": "torch.nn.ConvolutionBackward",
+      "aclnn_name": "ConvolutionBackward",
+      "version": "v2.1",
+      "expected_error_msg": null,
+      "api": "pytorch",
+      "api_type": "golden_conv_backward",
+      "aclnn_api_type": "aclnn_conv_backward",
+      "backward": false,
+      "standard": {
+          "acc": "default",
+          "perf": "not_key"
+      },
+      "outputs": null,
+      "inputs": [
+          {
+              "name": "gradOutput",
+              "type": "tensor",
+              "required": true,
+              "dtype": "bf16",
+              "shape": [
+                  1,
+                  3,
+                  16,
+                  256,
+                  256
+              ],
+              "range_values": [
+                  -0.1,
+                  0.1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "input",
+              "type": "tensor",
+              "required": true,
+              "dtype": "bf16",
+              "shape": [
+                  1,
+                  256,
+                  10,
+                  130,
+                  130
+              ],
+              "range_values": [
+                  -0.1,
+                  0.1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "weight",
+              "type": "tensor",
+              "required": true,
+              "dtype": "bf16",
+              "shape": [
+                  256,
+                  3,
+                  4,
+                  4,
+                  4
+              ],
+              "range_values": [
+                  -0.1,
+                  0.1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          [
+              {
+                  "name": "biasSizes",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 3,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          [
+              {
+                  "name": "stride",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 2,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "stride",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 2,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "stride",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 2,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          [
+              {
+                  "name": "padding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 3,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "padding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 3,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "padding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 3,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          [
+              {
+                  "name": "dilation",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "dilation",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "dilation",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          {
+              "name": "transposed",
+              "type": "attr",
+              "required": true,
+              "dtype": "bool",
+              "shape": null,
+              "range_values": true,
+              "backward": false,
+              "align_32B": null
+          },
+          [
+              {
+                  "name": "outputPadding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "outputPadding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "outputPadding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          {
+              "name": "groups",
+              "type": "attr",
+              "required": true,
+              "dtype": "int",
+              "shape": null,
+              "range_values": 1,
+              "backward": false,
+              "align_32B": null
+          },
+          [
+              {
+                  "name": "outputMask",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "bool",
+                  "shape": null,
+                  "range_values": true,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "outputMask",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "bool",
+                  "shape": null,
+                  "range_values": true,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "outputMask",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "bool",
+                  "shape": null,
+                  "range_values": true,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          {
+              "name": "cubeMathType",
+              "type": "attr",
+              "required": true,
+              "dtype": "int",
+              "shape": null,
+              "range_values": 0,
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "format",
+              "type": "attr",
+              "required": false,
+              "dtype": "non_param",
+              "shape": null,
+              "range_values": "NCDHW",
+              "backward": false,
+              "align_32B": null
+          }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "tensor_input": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+  },
+  {
+      "id": 3,
+      "name": "torch.nn.ConvolutionBackward",
+      "aclnn_name": "ConvolutionBackward",
+      "version": "v2.1",
+      "expected_error_msg": null,
+      "api": "pytorch",
+      "api_type": "golden_conv_backward",
+      "aclnn_api_type": "aclnn_conv_backward",
+      "backward": false,
+      "standard": {
+          "acc": "default",
+          "perf": "not_key"
+      },
+      "outputs": null,
+      "inputs": [
+          {
+              "name": "gradOutput",
+              "type": "tensor",
+              "required": true,
+              "dtype": "bf16",
+              "shape": [
+                  1,
+                  4,
+                  4,
+                  64,
+                  64
+              ],
+              "range_values": [
+                  -0.1,
+                  0.1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "input",
+              "type": "tensor",
+              "required": true,
+              "dtype": "bf16",
+              "shape": [
+                  1,
+                  256,
+                  4,
+                  64,
+                  64
+              ],
+              "range_values": [
+                  -0.1,
+                  0.1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "weight",
+              "type": "tensor",
+              "required": true,
+              "dtype": "bf16",
+              "shape": [
+                  4,
+                  256,
+                  1,
+                  1,
+                  1
+              ],
+              "range_values": [
+                  -0.1,
+                  0.1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          [
+              {
+                  "name": "biasSizes",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 4,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          [
+              {
+                  "name": "stride",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "stride",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "stride",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          [
+              {
+                  "name": "padding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "padding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "padding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          [
+              {
+                  "name": "dilation",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "dilation",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "dilation",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          {
+              "name": "transposed",
+              "type": "attr",
+              "required": true,
+              "dtype": "bool",
+              "shape": null,
+              "range_values": false,
+              "backward": false,
+              "align_32B": null
+          },
+          [
+              {
+                  "name": "outputPadding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "outputPadding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "outputPadding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          {
+              "name": "groups",
+              "type": "attr",
+              "required": true,
+              "dtype": "int",
+              "shape": null,
+              "range_values": 1,
+              "backward": false,
+              "align_32B": null
+          },
+          [
+              {
+                  "name": "outputMask",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "bool",
+                  "shape": null,
+                  "range_values": true,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "outputMask",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "bool",
+                  "shape": null,
+                  "range_values": true,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "outputMask",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "bool",
+                  "shape": null,
+                  "range_values": true,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          {
+              "name": "cubeMathType",
+              "type": "attr",
+              "required": true,
+              "dtype": "int",
+              "shape": null,
+              "range_values": 0,
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "format",
+              "type": "attr",
+              "required": false,
+              "dtype": "non_param",
+              "shape": null,
+              "range_values": "NCDHW",
+              "backward": false,
+              "align_32B": null
+          }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "tensor_input": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+  },
+  {
+      "id": 4,
+      "name": "torch.nn.ConvolutionBackward",
+      "aclnn_name": "ConvolutionBackward",
+      "version": "v2.1",
+      "expected_error_msg": null,
+      "api": "pytorch",
+      "api_type": "golden_conv_backward",
+      "aclnn_api_type": "aclnn_conv_backward",
+      "backward": false,
+      "standard": {
+          "acc": "default",
+          "perf": "not_key"
+      },
+      "outputs": null,
+      "inputs": [
+          {
+              "name": "gradOutput",
+              "type": "tensor",
+              "required": true,
+              "dtype": "fp32",
+              "shape": [
+                  1,
+                  4,
+                  1,
+                  32,
+                  32
+              ],
+              "range_values": [
+                  -0.1,
+                  0.1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "input",
+              "type": "tensor",
+              "required": true,
+              "dtype": "fp32",
+              "shape": [
+                  1,
+                  4,
+                  1,
+                  32,
+                  32
+              ],
+              "range_values": [
+                  -0.1,
+                  0.1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "weight",
+              "type": "tensor",
+              "required": true,
+              "dtype": "fp32",
+              "shape": [
+                  4,
+                  4,
+                  1,
+                  1,
+                  1
+              ],
+              "range_values": [
+                  -0.1,
+                  0.1
+              ],
+              "backward": false,
+              "align_32B": null
+          },
+          [
+              {
+                  "name": "biasSizes",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 4,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          [
+              {
+                  "name": "stride",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "stride",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "stride",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          [
+              {
+                  "name": "padding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "padding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "padding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          [
+              {
+                  "name": "dilation",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "dilation",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "dilation",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 1,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          {
+              "name": "transposed",
+              "type": "attr",
+              "required": true,
+              "dtype": "bool",
+              "shape": null,
+              "range_values": false,
+              "backward": false,
+              "align_32B": null
+          },
+          [
+              {
+                  "name": "outputPadding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "outputPadding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "outputPadding",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "int",
+                  "shape": null,
+                  "range_values": 0,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          {
+              "name": "groups",
+              "type": "attr",
+              "required": true,
+              "dtype": "int",
+              "shape": null,
+              "range_values": 1,
+              "backward": false,
+              "align_32B": null
+          },
+          [
+              {
+                  "name": "outputMask",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "bool",
+                  "shape": null,
+                  "range_values": true,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "outputMask",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "bool",
+                  "shape": null,
+                  "range_values": true,
+                  "backward": false,
+                  "align_32B": null
+              },
+              {
+                  "name": "outputMask",
+                  "type": "attrs",
+                  "required": true,
+                  "dtype": "bool",
+                  "shape": null,
+                  "range_values": true,
+                  "backward": false,
+                  "align_32B": null
+              }
+          ],
+          {
+              "name": "cubeMathType",
+              "type": "attr",
+              "required": true,
+              "dtype": "int",
+              "shape": null,
+              "range_values": 3,
+              "backward": false,
+              "align_32B": null
+          },
+          {
+              "name": "format",
+              "type": "attr",
+              "required": false,
+              "dtype": "non_param",
+              "shape": null,
+              "range_values": "NCDHW",
+              "backward": false,
+              "align_32B": null
+          }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "tensor_input": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+  }
+]

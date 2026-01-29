@@ -53,12 +53,10 @@ __global__ __aicore__ void conv3d_backprop_filter_v2_arch35(GM_ADDR x, GM_ADDR f
         op.Init(x, out_backprop, y, user1, &tilingData);
         op.Process();
     } else if (conv3DDWTemplateId == TPL_STREAM_K) {
-        KERNEL_TASK_TYPE(1, KERNEL_TYPE_MIX_AIC_1_2);  // cube: 1 vector: 2
         Conv3dDwBasicBlockStreamK<DTYPE_X, FORMAT_X, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y> op;
         op.Init(x, out_backprop, y, user1, &tilingData);
         op.Process();
     } else if (conv3DDWTemplateId == TPL_MN_STREAM_K) {
-        KERNEL_TASK_TYPE(2, KERNEL_TYPE_MIX_AIC_1_2);  // cube: 1 vector: 2
         Conv3dDwBasicBlockMNStreamK<DTYPE_X, FORMAT_X, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y> op;
         op.Init(x, out_backprop, y, user1, &tilingData);
         op.Process();

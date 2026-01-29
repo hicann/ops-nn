@@ -32,23 +32,15 @@
 using Ops::NN::Optiling::RecursiveSum;
 
 namespace {
-constexpr size_t OUTPUT_PADDING_DIM = 5;
-constexpr int32_t BYTE_BLOCK = 32;
 constexpr uint32_t F8_C0_BITS = 5;
 constexpr uint32_t F16_C0_BITS = 4;
 constexpr uint32_t F32_C0_BITS = 3;
 constexpr uint32_t BIT8_DATA_SIZE = 1; // for hif8 and fp8
 constexpr int64_t USER_WORKSIZE_LIMIT = static_cast<int64_t>(140 * 1024 * 1024);
 constexpr uint64_t L1_BIAS_SIZE = static_cast<uint64_t>(4 * 1024);
-constexpr int32_t DIM_FACTOR = 2;
 constexpr int32_t BUFFER_NUM_L1 = 4;
 constexpr float CORE_USED_THRESHOLD = 0.6f;
 constexpr uint64_t MAX_UINT16 = 65535;
-const int32_t DIM_LOW = 1;
-const int32_t STRIDES_DIM_HW_UP = 63;
-const int32_t STRIDES_DIM_DEPTH_UP = 255;
-const int32_t GROUPS_LOW = 1;
-const int32_t GROUPS_UP = 65535;
 const int32_t FP32_FIXPIPE_BOUND_K_LIMIT = 528; // 理论值,输出fp32时,当 K >= 528 时才能不fixpipe bound
 
 // 0: best base block; 1: threshold base block
@@ -74,18 +66,10 @@ namespace Ops {
 namespace NN {
 namespace Conv {
 
-static inline bool CheckRange(int32_t value, int32_t valueLow, int32_t valueUp)
+bool Conv3DBackpropInputV2TilingArch35::CheckL0Size(uint32_t baseM, uint32_t baseN, uint32_t baseK, uint32_t l0Pbuffer)
 {
-    if (value < valueLow || value > valueUp) {
-        return false;
-    }
-    return true;
-}
-
-bool Conv3DBackpropInputV2TilingArch35::CheckL0Size(uint32_t baseM, uint32_t baseN, uint32_t baseK, uint32_t byteSize, uint32_t l0Pbuffer)
-{
-    uint64_t l0aSize = static_cast<uint64_t>(baseM) * baseK * byteSize * l0Pbuffer;
-    uint64_t l0bSize = static_cast<uint64_t>(baseN) * baseK * byteSize * l0Pbuffer;
+    uint64_t l0aSize = static_cast<uint64_t>(baseM) * baseK * dtypeByteL0a_ * l0Pbuffer;
+    uint64_t l0bSize = static_cast<uint64_t>(baseN) * baseK * dtypeByteL0b_ * l0Pbuffer;
     return l0aSize <= platformInfo_.l0_ab_size && l0bSize <= platformInfo_.l0_ab_size;
 }
 
@@ -214,8 +198,17 @@ ge::graphStatus Conv3DBackpropInputV2TilingArch35::DoOpTiling()
     auto scaleShape = context_->GetOptionalInputShape(SCALE_INDEX);
     hasBiasFlag_ = biasShape != nullptr && biasShape->GetStorageShape().GetShapeSize() != 0;
     hasScaleFlag_ = scaleShape != nullptr && scaleShape->GetStorageShape().GetShapeSize() != 0;
-    blockSize_ = BYTE_BLOCK / runInfo_.a_dtype_bytes;
-    dtypeByte_ = runInfo_.a_dtype_bytes;
+    if (hasScaleFlag_) {
+        if (scaleShape->GetStorageShape().GetDim(0) == 1) {
+            runInfo_.quantMode = static_cast<uint8_t>(QuantMode::SCALAR_QUANT);
+        } else {
+            runInfo_.quantMode = static_cast<uint8_t>(QuantMode::VECTOR_QUANT);
+        }
+    }
+
+    blockSize_ = BYTE_BLOCK / runInfo_.b_dtype_bytes;
+    dtypeByteL0a_ = runInfo_.a_dtype_bytes;
+    dtypeByteL0b_ = runInfo_.b_dtype_bytes;
     dtypeByteL0c_ = runInfo_.c_dtype_bytes;
 
     return ge::GRAPH_SUCCESS;
@@ -307,9 +300,11 @@ bool Conv3DBackpropInputV2TilingArch35::AnalyzeFuseDtype(const bool f16flag, con
     }
     bool int8flag = outputBackpropDtype == ge::DT_INT8 && filterDtype == ge::DT_INT8 &&
         (yDtype == ge::DT_INT8 || yDtype == ge::DT_FLOAT16);
+    bool fp16int8flag = outputBackpropDtype == ge::DT_FLOAT16 && filterDtype == ge::DT_INT8 &&
+        (yDtype == ge::DT_INT8 || yDtype == ge::DT_FLOAT16);
 
     OP_TILING_CHECK(
-        !f16flag && !int8flag,
+        !f16flag && !int8flag && !fp16int8flag,
         CUBE_INNER_ERR_REPORT(
             opName_,
             "the fuse dtype of outputBackprop, filter, y only support DT_FLOAT16/DT_INT8"
@@ -501,7 +496,7 @@ void Conv3DBackpropInputV2TilingArch35::SetTilingParamByDimInfo(
     tilingParams.singleCoreHo = 1;
 
     // for enlarge > 1, need slice cin1 when mov_ub_to_l1
-    if (runInfo_.outBackpropFormat == ge::FORMAT_NCDHW && runInfo_.enlarge == 1) {
+    if (runInfo_.enlarge == 1) {
         tilingParams.singleCoreCin = Ops::Base::CeilDiv(static_cast<int32_t>(runInfo_.dedx_cin_g), coreDim.nDim);
     } else {
         tilingParams.singleCoreCin =
@@ -552,7 +547,7 @@ void Conv3DBackpropInputV2TilingArch35::UpdateBaseBlock(
 
     uint64_t singleC0BaseK = static_cast<uint64_t>(runInfo_.kernel_w) * runInfo_.kernel_h * blockSize_;
     if (baseK % singleC0BaseK == 0U) {
-        baseK = baseBlock.baseK / dtypeByte_;
+        baseK = baseBlock.baseK / dtypeByteL0a_;
     } else if (singleC0BaseK < baseK) {
         baseK = runInfo_.kernel_h * runInfo_.kernel_w * blockSize_;
     } else if (singleC0BaseK > baseK) {
@@ -593,10 +588,10 @@ void Conv3DBackpropInputV2TilingArch35::UpdateBaseStep(
     uint32_t cout1A1 = std::max(
         static_cast<uint64_t>(1),
         platformInfo_.l1_size / BUFFER_NUM_L1 /
-            static_cast<uint64_t>(dtypeByte_ * hoCal * runInfo_.dedy_w * runInfo_.stride_w * blockSize_));
+            static_cast<uint64_t>(dtypeByteL0a_ * hoCal * runInfo_.dedy_w * runInfo_.stride_w * blockSize_));
     uint32_t cout1B1 = Ops::Base::CeilDiv(
         platformInfo_.l1_size,
-        static_cast<uint64_t>(dtypeByte_ * tilingParams.baseN * runInfo_.kernel_h * runInfo_.kernel_w * blockSize_) *
+        static_cast<uint64_t>(dtypeByteL0b_ * tilingParams.baseN * runInfo_.kernel_h * runInfo_.kernel_w * blockSize_) *
             BUFFER_NUM_DB);
     if (cout1A1 >= tilingParams.singleCoreCout1) {
         cout1A1 = tilingParams.singleCoreCout1;
@@ -643,7 +638,7 @@ void Conv3DBackpropInputV2TilingArch35::UpdateBaseStep(
 
 bool Conv3DBackpropInputV2TilingArch35::CheckBaseBlockTiling(TilingValueDavid& tilingParams)
 {
-    if (!CheckL0Size(tilingParams.baseM, tilingParams.baseN, tilingParams.baseK, dtypeByte_)) {
+    if (!CheckL0Size(tilingParams.baseM, tilingParams.baseN, tilingParams.baseK)) {
         OP_LOGD(opName_, "Check L0 size fail.");
         return false;
     }
@@ -657,10 +652,10 @@ bool Conv3DBackpropInputV2TilingArch35::CheckBaseBlockTiling(TilingValueDavid& t
     uint64_t biasFullLoadSize = tilingParams.singleCoreCin * dtypeByteL0c_;
     while (tilingParams.stepKa > 0 && tilingParams.stepKb > 0) {
         // 为保证A和B矩阵使能double buffer，两者加和要小于L1 size的一半
-        uint64_t l1UsedSize = static_cast<uint64_t>(tilingParams.al1Pbuffer) * dtypeByte_ *
+        uint64_t l1UsedSize = static_cast<uint64_t>(tilingParams.al1Pbuffer) * dtypeByteL0a_ *
                                   CalFmapH(tilingParams.baseM) * runInfo_.dedy_w * runInfo_.stride_w *
                                   tilingParams.stepKa * tilingParams.baseK / (runInfo_.kernel_h * runInfo_.kernel_w) +
-                              static_cast<uint64_t>(tilingParams.bl1Pbuffer) * dtypeByte_ * tilingParams.stepKb *
+                              static_cast<uint64_t>(tilingParams.bl1Pbuffer) * dtypeByteL0b_ * tilingParams.stepKb *
                                   tilingParams.baseN * tilingParams.baseK;
         if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2) {
             isBiasFullLoad_ = biasFullLoadSize <= L1_BIAS_SIZE && (biasFullLoadSize + l1UsedSize <= platformInfo_.l1_size);
@@ -716,7 +711,7 @@ bool Conv3DBackpropInputV2TilingArch35::CalBaseBlockTiling(
 
     // 默认采用最优基本块tiling
     uint32_t baseM = baseBlock.baseM;
-    uint32_t baseK = baseBlock.baseK / dtypeByte_;
+    uint32_t baseK = baseBlock.baseK / dtypeByteL0a_;
     uint32_t baseN = baseBlock.baseN;
     uint32_t stepKa = 1;
     uint32_t stepKb = 1;
@@ -751,13 +746,13 @@ void Conv3DBackpropInputV2TilingArch35::CalTbeBlockTiling(TilingValueDavid& tili
     uint32_t baseN = tbeTiling_.n_l0 * BLOCK_CUBE;
     uint32_t tmpBaseKMax = std::max(runInfo_.kernel_h * blockSize_, runInfo_.kernel_w * blockSize_);
     uint32_t tmpBaseKMin = std::min(runInfo_.kernel_h * blockSize_, runInfo_.kernel_w * blockSize_);
-    if (CheckL0Size(baseM, baseN, runInfo_.kernel_h * runInfo_.kernel_w * blockSize_, dtypeByte_)) {
+    if (CheckL0Size(baseM, baseN, runInfo_.kernel_h * runInfo_.kernel_w * blockSize_)) {
         baseK = runInfo_.kernel_h * runInfo_.kernel_w * blockSize_;
-    } else if (dtypeByte_ == FP32_DATA_SIZE) {
+    } else if (dtypeByteL0a_ == FP32_DATA_SIZE) {
         baseK = blockSize_;
-    } else if (CheckL0Size(baseM, baseN, tmpBaseKMax, dtypeByte_)) {
+    } else if (CheckL0Size(baseM, baseN, tmpBaseKMax)) {
         baseK = tmpBaseKMax;
-    } else if (CheckL0Size(baseM, baseN, tmpBaseKMin, dtypeByte_)) {
+    } else if (CheckL0Size(baseM, baseN, tmpBaseKMin)) {
         baseK = tmpBaseKMin;
     } else {
         baseK = blockSize_;
@@ -789,10 +784,10 @@ void Conv3DBackpropInputV2TilingArch35::CalTbeBlockTiling(TilingValueDavid& tili
     tilingParams.iterateOrder = static_cast<uint32_t>(IterateOrder::ORDER_N);
     if (hasBiasFlag_) {
         uint64_t biasFullLoadSize = runInfo_.dedx_cin * dtypeByteL0c_;
-        uint64_t l1UsedSize = static_cast<uint64_t>(tilingParams.al1Pbuffer) * dtypeByte_ *
+        uint64_t l1UsedSize = static_cast<uint64_t>(tilingParams.al1Pbuffer) * dtypeByteL0a_ *
                                   CalFmapH(tilingParams.baseM) * runInfo_.dedy_w * runInfo_.stride_w *
                                   tilingParams.stepKa * tilingParams.baseK / (runInfo_.kernel_h * runInfo_.kernel_w) +
-                              static_cast<uint64_t>(tilingParams.bl1Pbuffer) * dtypeByte_ * tilingParams.stepKb *
+                              static_cast<uint64_t>(tilingParams.bl1Pbuffer) * dtypeByteL0b_ * tilingParams.stepKb *
                                   tilingParams.baseN * tilingParams.baseK;
         isBiasFullLoad_ = biasFullLoadSize <= L1_BIAS_SIZE && (biasFullLoadSize + l1UsedSize <= platformInfo_.l1_size);
     }
@@ -947,12 +942,20 @@ void Conv3DBackpropInputV2TilingArch35::SetRunBaseShapeInfoTiling(conv_bp_v2_ker
     dxt.cout1G = runInfo_.dedy_cout1_g;
     dxt.c0 = blockSize_;
 
-    if (dtypeByte_ == BIT8_DATA_SIZE) {
-        dxt.c0Bits = F8_C0_BITS;
-    } else if (dtypeByte_ == FP32_DATA_SIZE) {
-        dxt.c0Bits = F32_C0_BITS;
+    if (dtypeByteL0a_ == BIT8_DATA_SIZE) {
+        dxt.c0BitsA = F8_C0_BITS;
+    } else if (dtypeByteL0a_ == FP32_DATA_SIZE) {
+        dxt.c0BitsA = F32_C0_BITS;
     } else {
-        dxt.c0Bits = F16_C0_BITS;
+        dxt.c0BitsA = F16_C0_BITS;
+    }
+
+    if (dtypeByteL0b_ == BIT8_DATA_SIZE) {
+        dxt.c0BitsB = F8_C0_BITS;
+    } else if (dtypeByteL0b_ == FP32_DATA_SIZE) {
+        dxt.c0BitsB = F32_C0_BITS;
+    } else {
+        dxt.c0BitsB = F16_C0_BITS;
     }
 
     dxt.ho = runInfo_.dedy_h;
@@ -992,6 +995,7 @@ void Conv3DBackpropInputV2TilingArch35::SetRunInfoTiling(conv_bp_v2_kernel::TCon
     dxt.isBiasFullLoad = isBiasFullLoad_;
     dxt.singleIterateDk = singleIterateDk_;
     dxt.enRelu = runInfo_.enRelu;
+    dxt.quantMode = runInfo_.quantMode;
 }
 
 void Conv3DBackpropInputV2TilingArch35::SetDxTilingFromTbeTiling()
@@ -1034,7 +1038,8 @@ void Conv3DBackpropInputV2TilingArch35::PrintTilingData()
        << " al1Pbuffer: " << static_cast<uint32_t>(tiling.al1Pbuffer)
        << " bl1Pbuffer: " << static_cast<uint32_t>(tiling.bl1Pbuffer)
        << " iterateOrder: " << static_cast<uint32_t>(tiling.iterateOrder)
-       << " c0: " << static_cast<uint32_t>(tiling.c0) << " c0Bits: " << static_cast<uint32_t>(tiling.c0Bits)
+       << " c0: " << static_cast<uint32_t>(tiling.c0) << " c0BitsA: " << static_cast<uint32_t>(tiling.c0BitsA)
+       << " c0BitsB: " << static_cast<uint32_t>(tiling.c0BitsB)
        << " enlarge: " << static_cast<uint32_t>(tiling.enlarge)
        << " hf32Flag: " << static_cast<uint32_t>(tiling.hf32Flag)
        << " initOutputFlag: " << static_cast<uint32_t>(tiling.initOutputFlag)

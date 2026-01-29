@@ -171,6 +171,7 @@ static bool GetConv3DStridesAndDilations(const InferShapeContext* context, Forma
 
     OP_LOGE_IF(
         attrs.strd == 0 || attrs.strh == 0 || attrs.strw == 0, false, context->GetNodeName(), "get zero strides");
+
     return true;
 }
 

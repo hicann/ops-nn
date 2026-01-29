@@ -16,8 +16,7 @@
 #define CONV3D_BACKPROP_INPUT_KERNEL_SPLIT_BLOCK_H
 
 #include "conv3d_bp_input.h"
-#include "kernel_operator.h"
-#include "kernel_operator_intf.h"
+#include "basic_api/kernel_basic_intf.h"
 #include "kernel_type.h"
 #include "conv3d_dx_rowc_block.h"
 #include "../../conv3d_backprop_input_v2_arch35_tiling_key.h"
@@ -220,8 +219,10 @@ protected:
         if (this->enableVecTrans_) {
             kernelSplitStrideB_ = this->tiling_->wk *
                 (((this->tiling_->cin + BLOCK_CUBE - 1) >> 4) << 4); // 4 : 2的4次方
-        } else {
+        } else if (this->filterCubeFormat == Convolution3DBackprop::CubeFormat::NDHWC) {
             kernelSplitStrideB_ = this->tiling_->wk * this->tiling_->cin;
+        } else {
+            kernelSplitStrideB_ = this->tiling_->wk;
         }
     }
 
@@ -283,7 +284,7 @@ protected:
                 mCoreUse = (this->mCoreIdx_ == (this->mCnt_ - 1)) ? this->mCoreTail_ : this->singleShapeM_;
             }
             this->SetIterateParams(mCoreUse, splitBaseHk, baseHkIter, splitTailHk, kernelIdx);
-
+            this->dedx_.SetFullLoadFlag(this->tiling_->enableFullLoad);
             this->dedx_.IterateAll(this->yGm_[this->offsetC_], 0);  // 1 means atomic add
         }
     }
