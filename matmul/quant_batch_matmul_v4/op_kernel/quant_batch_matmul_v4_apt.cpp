@@ -15,11 +15,30 @@
 
 #define K_MAX_SHAPE_DIM 0
 #include "kernel_basic_intf.h"
-// if run with ttk without bias, can't get DTYPE_BIAS macro
-#ifndef DTYPE_BIAS
-#define DTYPE_BIAS DTYPE_Y
+#if (defined(ORIG_DTYPE_X1) && defined(DT_INT8) && (ORIG_DTYPE_X1 == DT_INT8)) &&               \
+    (defined(ORIG_DTYPE_X2) && defined(DT_INT8) && (ORIG_DTYPE_X2 == DT_INT8)) &&               \
+    (defined(ORIG_DTYPE_X1_SCALE) && defined(DT_FLOAT) && (ORIG_DTYPE_X1_SCALE == DT_FLOAT)) && \
+    (defined(ORIG_DTYPE_X2_SCALE) && defined(DT_FLOAT) && (ORIG_DTYPE_X2_SCALE == DT_FLOAT)) && \
+    (defined(ORIG_DTYPE_Y) && defined(DT_BF16) && (ORIG_DTYPE_Y == DT_BF16))
+#define CMCT_PRETILE_INT8_INT8_BF16 1
+#else
+#define CMCT_PRETILE_INT8_INT8_BF16 0
 #endif
 
+// if run with ttk without bias, can't get DTYPE_BIAS macro
+#ifndef DTYPE_BIAS
+#if CMCT_PRETILE_INT8_INT8_BF16
+#define DTYPE_BIAS float
+#else
+#define DTYPE_BIAS DTYPE_Y
+#endif
+#endif
+
+#if defined(ORIG_DTYPE_X1) && defined(DT_INT8) && ORIG_DTYPE_X1 == DT_INT8
+#define DTYPE_LOC_LOCAL int32_t
+#else
+#define DTYPE_LOC_LOCAL float
+#endif
 // "kernel_operator.h" should before defined(DT_FLOAT)
 #if defined(ORIG_DTYPE_X2) && defined(DT_FLOAT) && ORIG_DTYPE_X2 == DT_FLOAT
 #undef DTYPE_X2
@@ -33,13 +52,13 @@
 #include "arch35/cmct_convertor.h"
 #include "arch35/quant_batch_matmul_v4_constant.h"
 #include "arch35/quant_batch_matmul_v4_perchannel.h"
+#include "../quant_batch_matmul_v3/arch35/qbmm_mix_pertile_cmct.h"
 #else
 #include "../quant_batch_matmul_v3/quant_batch_matmul_v3_base.h"
 #include "../quant_batch_matmul_v3/arch35/qbmm_cube_on_the_fly.h"
 #include "../quant_batch_matmul_v3/arch35/qbmm_cube_on_the_fly_al1_full_load.h"
 using namespace AscendC;
 #endif
-
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
 using namespace QuantBatchMatmulV4;
 namespace QuantBatchMatmulV4 {
@@ -66,12 +85,38 @@ __aicore__ inline void InvokeWeightQuantBmmOpImpl(GM_ADDR x1, GM_ADDR x2, GM_ADD
 }  // namespace QuantBatchMatmulV4
 #endif
 
+#define QBMM_QUANT_GB_IMPL_CLASS(xLayout, wLayout, yLayout)                                                     \
+    do {                                                                                                        \
+        TPipe tPipe;                                                                                            \
+        GM_ADDR userWS = AscendC::GetUserWorkspace(workspace);                                                  \
+        GET_TILING_DATA(tilingData, tiling);                                                                    \
+        QbmmCmctPertileKernel<                                                                                  \
+            DTYPE_X1, DTYPE_X2, DTYPE_BIAS, float, float, DTYPE_Y, xLayout, wLayout, yLayout, DTYPE_LOC_LOCAL>( \
+            x1, x2, bias, x2_scale, x1_scale, y, userWS, &tilingData, &tPipe);                                  \
+    } while (0)
+
 template <int TRANS, int QUANT_TYPE, int OPTION_ATTRS, int WEIGHTNZ, int KERNEL_TEMPLATE_TYPE>
 __global__ __aicore__ void quant_batch_matmul_v4(
     GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2_scale, GM_ADDR y_scale, GM_ADDR x1_offset,
     GM_ADDR x2_offset, GM_ADDR y_offset, GM_ADDR x2_table, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if CMCT_PRETILE_INT8_INT8_BF16
+    REGISTER_TILING_DEFAULT(qbmmv4_tiling::QuantBatchMatmulV3TilingDataParams);
+    if constexpr (TRANS == QBMMV4_NOT_TRANS) {
+        QBMM_QUANT_GB_IMPL_CLASS(
+            Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajorAlign);
+    } else if constexpr (TRANS == QBMMV4_ALL_TRANS) {
+        QBMM_QUANT_GB_IMPL_CLASS(
+            Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajorAlign);
+    } else if constexpr (TRANS == QBMMV4_A_TRANS) {
+        QBMM_QUANT_GB_IMPL_CLASS(
+            Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajorAlign);
+    } else if constexpr (TRANS == QBMMV4_B_TRANS) {
+        QBMM_QUANT_GB_IMPL_CLASS(
+            Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajorAlign);
+    }
+#else
     REGISTER_TILING_DEFAULT(qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams);
     if (QUANT_TYPE == QBMMV4_PER_GROUP) {
         constexpr bool isTransA = TRANS == QBMMV4_A_TRANS || TRANS == QBMMV4_ALL_TRANS;
@@ -83,6 +128,8 @@ __global__ __aicore__ void quant_batch_matmul_v4(
     } else if (QUANT_TYPE == QBMMV4_MX) {
         QuantBatchMatmulV4::InvokeKernel<WEIGHTNZ>(KERNEL_PARAMS);
     }
+#endif
+
 #else
     GM_ADDR userWS = AscendC::GetUserWorkspace(workspace);
     if (userWS == nullptr) {

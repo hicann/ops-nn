@@ -65,7 +65,7 @@ constexpr size_t VALID_BIAS_MAX_DIM = 2;
 constexpr uint64_t VEC_INNER_AXIS_ALIGN_UINT = 128UL;
 constexpr uint64_t MAX_SHAPE_DIM = 0x7fffffffUL;
 constexpr uint64_t MIN_GROUP_SIZE = 32UL;
-constexpr int32_t BASIS_PRIORITY = 0;
+constexpr int32_t BASIC_PRIORITY = 1;
 constexpr uint64_t INT4_DTYPE_PARAM = 2;
 constexpr uint32_t WORKSPACE_SIZE = 16777216; // 16 * 1024 * 1024
 constexpr int32_t DB_BUFFER = 2;
@@ -98,7 +98,8 @@ enum class QuantType : uint32_t {
     PER_TENSOR = 1,
     PER_CHANNEL = 2,
     PER_GROUP = 3,
-    MX = 4
+    MX = 4,
+    PER_TILE = 5
 };
 
 enum class KernelTemplateType : uint32_t {

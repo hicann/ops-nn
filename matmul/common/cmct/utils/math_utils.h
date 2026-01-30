@@ -9,9 +9,10 @@
  */
 #ifndef UTILS_MATH_UTILS_H
 #define UTILS_MATH_UTILS_H
-
 #include "device_utils.h"
 #include "kernel_basic_intf.h"
+
+using namespace AscendC;
 
 namespace Cmct {
 template <typename T>

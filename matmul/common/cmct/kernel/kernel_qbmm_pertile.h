@@ -90,13 +90,16 @@ public:
         uint32_t kaL1;
         uint32_t kbL1;
         uint8_t nBufferNum;
+        uint32_t biasThreeDim;
+        int32_t isBias;
 
         __aicore__ QBMMTiling()
         {}
         __aicore__ QBMMTiling(
             uint32_t batchA1_, uint32_t batchA2_, uint32_t batchA3_, uint32_t batchA4_, uint32_t batchB1_,
             uint32_t batchB2_, uint32_t batchB3_, uint32_t batchB4_, uint32_t batchC1_, uint32_t batchC2_,
-            uint32_t batchC3_, uint32_t batchC4_, uint32_t kaL1_, uint32_t kbL1_, uint8_t nBufferNum_)
+            uint32_t batchC3_, uint32_t batchC4_, uint32_t kaL1_, uint32_t kbL1_, uint8_t nBufferNum_,
+            uint32_t biasThreeDim_, int32_t isBias_)
             : batchA1(batchA1_),
               batchA2(batchA2_),
               batchA3(batchA3_),
@@ -111,7 +114,9 @@ public:
               batchC4(batchC4_),
               kaL1(kaL1_),
               kbL1(kbL1_),
-              nBufferNum(nBufferNum_)
+              nBufferNum(nBufferNum_),
+              biasThreeDim(biasThreeDim_),
+              isBias(isBias_)
         {}
     };
 
@@ -156,6 +161,8 @@ private:
     GM_ADDR xTensorPtr_;
     GM_ADDR wTensorPtr_;
     GM_ADDR yTensorPtr_;
+    bool isBias_{false};
+    bool isBiasThreeDim_{false};
     bool isPertile_;
     bool needUpdateTail_{false};
 };
@@ -198,7 +205,12 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
     Get<MNK_M>(problemShape_) = params.problemShape.m;
     Get<MNK_N>(problemShape_) = params.problemShape.n;
     Get<MNK_K>(problemShape_) = params.problemShape.k;
-
+    if (params.qbmmParams.isBias == 1) {
+        isBias_ = true;
+        if (params.qbmmParams.biasThreeDim == 1) {
+            isBiasThreeDim_ = true;
+        }
+    }
     if ASCEND_IS_AIC {
         mmadOp_.UpdateParamsForNextProblem(problemShape_);
     }
@@ -225,6 +237,9 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
 
     Get<QuantBatchMatmul::IDX_X2SCALE_OFFSET>(baseOffset_) = batchB4Offset * CeilDiv(Get<MNK_K>(problemShape_), PER_BLOCK_SIZE) *
                                            CeilDiv(Get<MNK_N>(problemShape_), PER_BLOCK_SIZE);
+    if (isBiasThreeDim_) {
+        Get<QuantBatchMatmul::IDX_BIAS_OFFSET>(baseOffset_) = batchC4Offset * Get<MNK_N>(problemShape_);
+    }
 }
 
 QBMM_PERTILE_KERNEL_CLASS_TEM_PARAMS
@@ -357,7 +372,9 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
         AscendC::Std::tuple<int64_t, int64_t, int64_t, int64_t> blockCoord{
             static_cast<int64_t>(Get<QuantBatchMatmul::IDX_C_OFFSET>(blockOffset_)),
             static_cast<int64_t>(Get<QuantBatchMatmul::IDX_X2SCALE_OFFSET>(blockOffset_)),
-            static_cast<int64_t>(Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(blockOffset_)), 0L};
+            static_cast<int64_t>(Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(blockOffset_)),
+            static_cast<int64_t>(Get<QuantBatchMatmul::IDX_BIAS_OFFSET>(blockOffset_)),
+        };
         epilogueOp_(blockShape, blockCoord);
     }
 }
@@ -374,7 +391,8 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
         AscendC::Std::tuple<int64_t, int64_t, int64_t, int64_t> baseOffset{
             static_cast<int64_t>(Get<QuantBatchMatmul::IDX_C_OFFSET>(baseOffset_)),
             static_cast<int64_t>(Get<QuantBatchMatmul::IDX_X2SCALE_OFFSET>(baseOffset_)),
-            static_cast<int64_t>(Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(baseOffset_)), 0L};
+            static_cast<int64_t>(Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(baseOffset_)),
+            static_cast<int64_t>(Get<QuantBatchMatmul::IDX_BIAS_OFFSET>(baseOffset_))};
         epilogueOp_.UpdateGlobalAddr(baseOffset);
     }
 }

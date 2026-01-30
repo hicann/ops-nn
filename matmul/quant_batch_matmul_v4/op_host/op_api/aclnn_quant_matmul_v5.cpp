@@ -122,7 +122,8 @@ static inline bool IsA8W8Perblock(const aclTensor *x1, const aclTensor *x2, cons
     }
     return (IsA8W8Int(x1, x2) && x1Scale->GetDataType() == op::DataType::DT_FLOAT &&
             x2Scale->GetDataType() == op::DataType::DT_FLOAT &&
-            x1Scale->GetViewShape().GetDimNum() > 1 && x2Scale->GetViewShape().GetDimNum() > 1);
+            x1Scale->GetViewShape().GetDimNum() == x1->GetViewShape().GetDimNum() &&
+            x2Scale->GetViewShape().GetDimNum() == x2->GetViewShape().GetDimNum());
 }
 
 static inline bool CheckInputAttrExistence(const TupleAttr &boolsTrans, int64_t groupSize, const aclTensor *x2,

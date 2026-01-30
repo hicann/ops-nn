@@ -128,7 +128,7 @@ ge::graphStatus QuantBatchMatmulV3TilingBase::GetShapeAttrsInfo()
 
     OP_TILING_CHECK(!AnalyzeAttrs() || !AnalyzeDtype() || !AnalyzeInputs(),
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "Fail to analyze context info."),
-                    return ge::GRAPH_FAILED);
+                    return ge::GRAPH_PARAM_INVALID);
     auto transA_str = inputParams_.transA ? "true" : "false";
     auto transB_str = inputParams_.transB ? "true" : "false";
     auto hasBias_str = inputParams_.hasBias ? "true" : "false";

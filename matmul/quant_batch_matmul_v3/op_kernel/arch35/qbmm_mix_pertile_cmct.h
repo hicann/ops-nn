@@ -78,16 +78,18 @@ __aicore__ inline void QbmmCmctPertileKernel(
 
         matmulTiling.stepKa * matmulTiling.baseK,
         matmulTiling.stepKb * matmulTiling.baseK,
-        matmulTiling.nBufferNum
+        matmulTiling.nBufferNum,
+        dataParams.biasThreeDim,
+        matmulTiling.isBias
     };
 
     Params params = {
         {matmulTiling.m, matmulTiling.n, matmulTiling.k, dataParams.batchC},
         {x, weight, y, bias},
-        {y, scale, perTokenScale, nullptr, matmulTiling.baseM, matmulTiling.baseN, matmulTiling.baseK,
-         dataParams.groupSizeM, dataParams.groupSizeN, dataParams.groupSizeK},
+        {y, scale, perTokenScale, bias, matmulTiling.baseM, matmulTiling.baseN, matmulTiling.baseK,
+         dataParams.groupSizeM, dataParams.groupSizeN, dataParams.groupSizeK, matmulTiling.isBias},
         {matmulTiling.baseM, matmulTiling.baseN, slidingWindowParams.mTailTile, slidingWindowParams.nTailTile,
-         slidingWindowParams.mBaseTailSplitCnt, 1, slidingWindowParams.mTailMain, 0},
+         slidingWindowParams.mBaseTailSplitCnt, 1, slidingWindowParams.mTailMain, matmulTiling.isBias},
         qbmmParams};
     QbmmKernel qbmm;
     qbmm(params);

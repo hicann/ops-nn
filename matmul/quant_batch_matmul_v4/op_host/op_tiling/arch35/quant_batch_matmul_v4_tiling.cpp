@@ -38,6 +38,7 @@ using namespace Ops::NN;
 
 namespace optiling {
 constexpr uint64_t B4_IN_B32_NUMS = 8UL;
+constexpr uint64_t GROUP_MKN_BIT_SIZE = 0xFFFF;
 using namespace matmul_v4;
 
 inline bool IsNotEmptyShape(const gert::StorageShape* storageShape)
@@ -810,6 +811,6 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::InstantiateTilingData()
     return ge::GRAPH_SUCCESS;
 }
 
-REGISTER_TILING_TEMPLATE("QuantBatchMatmulV4", QuantBatchMatmulV4RegBase, BASIS_PRIORITY);
+REGISTER_TILING_TEMPLATE("QuantBatchMatmulV4", QuantBatchMatmulV4RegBase, BASIC_PRIORITY);
 
 }  // namespace optiling

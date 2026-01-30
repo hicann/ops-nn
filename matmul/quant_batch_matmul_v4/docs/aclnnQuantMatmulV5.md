@@ -644,6 +644,7 @@ aclnnStatus aclnnQuantMatmulV5(
       | ------------------------- | ------------------------- | ----------- | ----------- |   -------- | -------| ------- | -------------------------------------- |
       | FLOAT8_E4M3FN/ FLOAT8_E5M2 | FLOAT8_E4M3FN/ FLOAT8_E5M2 | FLOAT32     |   FLOAT32           | null     | null     | null | FLOAT16/BFLOAT16/  FLOAT32               |
       | HIFLOAT8                  | HIFLOAT8                  | FLOAT32     |   FLOAT32           | null     | null     | null | FLOAT16/BFLOAT16/  FLOAT32               |
+      | INT8                      |INT8                       | FLOAT32     |   FLOAT32           | null     | FLOAT32     | null |BFLOAT16       |
     - x1、x2、x1Scale、x2Scale和groupSize的取值关系：
       |量化类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|yScale shape|[gsM，gsN，gsK]|groupSize|
       |-------|--------|--------|-------------|-------------|------------|---|---|
@@ -651,7 +652,8 @@ aclnnStatus aclnnQuantMatmulV5(
       |G-B量化|<li>非转置：(batch, m, k)</li><li>转置：(batch, k, m)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(batch, m, ceil(k / 128))</li><li>转置：(batch, ceil(k / 128), m)</li>|<li>非转置：(batch, ceil(k / 128), ceil(n / 128))</li><li>转置：(batch, ceil(n / 128), ceil(k / 128))</li>|null|[1, 128, 128]|4303356032|
     - 注：上表中gsM、gsK和gsN分别表示groupSizeM、groupSizeK和groupSizeN。
     - G-B量化和B-B量化场景下，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致。
-    - G-B量化和B-B量化场景下，不支持bias。
+    - G-B量化下，INT8 量化场景支持可选bias，其余场景不支持。
+    - B-B量化场景下，不支持bias。
   - **mx量化场景约束：**
   <a id="mx量化"></a>
     - 输入和输出支持以下数据类型组合：
