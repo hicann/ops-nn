@@ -122,14 +122,12 @@
   第一段接口完成入参校验，出现以下场景时报错：
   返回161001 (ACLNN_ERR_PARAM_NULLPTR): 1. 传入的selfRef、index、value是空指针。
   返回161002 (ACLNN_ERR_PARAM_INVALID): 1. selfRef、index、value的数据类型不在支持范围内
-                                        2. selfRef、out的数据类型不一样。
-                                        3. selfRef、index的维度数不一致
-                                        4. selfRef和out的shape不一致。
-                                        5. selfRef、index的shape不符合以下限制：
+                                        2. selfRef、index的维度数不一致
+                                        3. selfRef、index的shape不符合以下限制：
                                          对于每一个维度d，如果d != dim, 有index.size(d) <= selfRef.size(d)的限制
-                                        6. dim的值不在[-selfRef的维度数量， selfRef的维度数量-1]之间
-                                        7. selfRef的维度数超过8
-                                        8. value为COMPLEX时，selfRef的数据类型不为COMPLEX
+                                        4. dim的值不在[-selfRef的维度数量， selfRef的维度数量-1]之间
+                                        5. selfRef的维度数超过8
+                                        6. value为COMPLEX时，selfRef的数据类型不为COMPLEX
   ```
 
 ## aclnnInplaceScatterValue
