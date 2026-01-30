@@ -21,7 +21,7 @@
 #include "aclnn_kernels/contiguous.h"
 #include "level0/dot.h"
 #include "level0/fill.h"
-#include "matmul/mat_mul_v3/op_host/op_api/matmul.h"
+#include "matmul/common/op_host/op_api/matmul.h"
 #include "aclnn_kernels/reshape.h"
 #include "aclnn_kernels/transdata.h"
 #include "level0/unsqueeze.h"

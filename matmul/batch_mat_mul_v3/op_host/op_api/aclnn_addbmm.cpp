@@ -22,7 +22,7 @@
 
 #include "level0/add.h"
 #include "level0/axpy.h"
-#include "batch_matmul.h"
+#include "matmul/common/op_host/op_api/batch_matmul.h"
 #include "level0/broadcast_to.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"

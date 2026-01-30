@@ -14,7 +14,7 @@
 #include "level0/broadcast_to.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
-#include "matmul/mat_mul_v3/op_host/op_api/matmul.h"
+#include "matmul/common/op_host/op_api/matmul.h"
 #include "matmul/common/op_host/op_api/cube_util.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
 #include "level0/muls.h"
