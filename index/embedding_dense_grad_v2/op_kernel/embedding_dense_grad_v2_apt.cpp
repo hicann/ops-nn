@@ -34,6 +34,7 @@ extern "C" __global__ __aicore__ void embedding_dense_grad_v2(GM_ADDR grad, GM_A
 
     AscendC::TPipe tpipe;
     GET_TILING_DATA(tilingData, tiling);
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
     if (TILING_KEY_IS(EMBEDDING_NO_SCALE_NO_SPLIT)) {
         EmbeddingDenseGradV2::EmbeddingDenseGradV2Kernel<DTYPE_GRAD, float, DTYPE_SORT_INDICES, false, false, 1> obj(tpipe, tilingData);
         obj.Init(grad, sortIndices, posIdx, gradWeight, userWS);
