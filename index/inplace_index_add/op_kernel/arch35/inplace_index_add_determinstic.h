@@ -652,10 +652,15 @@ __aicore__ void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::CopyInverseQuantizedV
     for (uint64_t i = 0; i < uniqueSumIdNum_; i++) {
         int64_t sumIdx = sumIdxLocal(i);                            
         int64_t rowOfset = sumIdx * tilingData_.afterAxis;      
-        event_t eventIdSToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
-        SetFlag<HardEvent::S_MTE2>(eventIdSToMte2);
-        WaitFlag<HardEvent::S_MTE2>(eventIdSToMte2);
         Muls(inverseQuantData[i * afterAxisAlignSize_], inverseQuantData[i * afterAxisAlignSize_], alphaValue_, colLen);
+
+        event_t eventIdSToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
+        SetFlag<HardEvent::S_MTE3>(eventIdSToMte3);
+        WaitFlag<HardEvent::S_MTE3>(eventIdSToMte3);
+        event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+        SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+        WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+
         CopyOut<VAR_T>(var_[rowOfset], inverseQuantData[i * afterAxisAlignSize_], colLen);
     }
     SetAtomicNone();

@@ -45,7 +45,7 @@ public:
     __aicore__ inline void Process();
 
 private:
-    static __aicore__ inline void SimtCompute(COMP_T varInAxis, COMP_T afterAxis, COMP_T updatesStride0,
+    static __simt_vf__ __aicore__ inline void SimtCompute(COMP_T varInAxis, COMP_T afterAxis, COMP_T updatesStride0,
                                               COMP_T updatesAxis, COMP_T m0, COMP_T shift0, COMP_T m1, COMP_T shift1,
                                               __gm__ VAR_T* var, __gm__ IDX_T* indices, __gm__ VAR_T* updates,
                                               __gm__ VAR_T* alpha, __gm__ CAST_T* varWorkspaceGm, COMP_T blockIdx,

@@ -76,11 +76,11 @@ public:
     __aicore__ inline void Process();
 
 private:
-    static __aicore__ inline void SimtCompute(COMP_T varInAxis, uint32_t afterAxis, uint32_t uniqueIdNum, uint32_t updatesPreNum, uint32_t updatesStride,
+    static __simt_vf__ __aicore__ inline void SimtCompute(COMP_T varInAxis, uint32_t afterAxis, uint32_t uniqueIdNum, uint32_t updatesPreNum, uint32_t updatesStride,
                                            int64_t preIdx, __local_mem__ IDX_T* sortedAddr, __local_mem__ uint32_t* updatesOriginIdxAddr,
                                            __local_mem__ int32_t* uniqueIdCountAddr, __local_mem__ VAR_T* updatesLocalAddr, __gm__ VAR_T* varAddr, 
                                            __gm__ VAR_T* alpha, uint32_t m0, uint32_t shift0);
-    static __aicore__ inline void SimtComputeNoSort(COMP_T varInAxis, uint32_t afterAxis, COMP_T preAxis, COMP_T updatesInAxis, COMP_T indicesOffset,
+    static __simt_vf__ __aicore__ inline void SimtComputeNoSort(COMP_T varInAxis, uint32_t afterAxis, COMP_T preAxis, COMP_T updatesInAxis, COMP_T indicesOffset,
                                            uint32_t indicesCount, __local_mem__ IDX_T* indicesLocalAddr, __gm__ VAR_T* varAddr,
                                            __gm__ VAR_T* updatesAddr, __gm__ VAR_T* alpha, uint32_t m1, uint32_t shift1);
 
