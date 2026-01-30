@@ -102,10 +102,10 @@ aclnnStatus aclnnDequantSwigluQuantV2(
   <col style="width: 201px">
   <col style="width: 115px">
   <col style="width: 200px">
-  <col style="width: 300px">
+  <col style="width: 400px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>

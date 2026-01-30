@@ -174,7 +174,9 @@ aclnnStatus aclnnInplaceElu(
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -348,7 +350,9 @@ aclnnStatus aclnnInplaceElu(
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+  
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">

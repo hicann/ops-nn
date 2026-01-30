@@ -12,7 +12,6 @@
 | <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
 | <term>Atlas 推理系列产品 </term>    |     √    |
 | <term>Atlas 训练系列产品</term>    |     √    |
-| <term>Atlas 200/300/500 推理产品</term>       |     √    |
 
 ## 功能说明
 
@@ -118,7 +117,9 @@ aclnnStatus aclnnGelu(
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+  
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
