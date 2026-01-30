@@ -16,12 +16,15 @@
 - 算子功能：根据传入的分组索引的起始值（group_list）对各个group以基本块的粒度进行量化，量化为（FP8/HiFP8），并输出量化参数scale（FP32）。
 
 - 计算公式：
+
   $$
     input\_max = block\_reduce\_max(abs(input))
   $$
+
   $$
-    scale = min(input\_max/FP8\_MAX(HiF8\_MAX, 1/min\_scale))
+    scale = min(input\_max/FP8\_MAX(HiF8\_MAX), 1/min\_scale)
   $$
+
   $$
     y = cast\_to\_[HiF8/FP8](input/scale)
   $$
@@ -63,7 +66,7 @@
       <td>min_scale</td>
       <td>输入</td>
       <td>表示参与scale计算的最小scale值，对应公式中的min_scale。</td>
-      <td>FLOAT32</td>
+      <td>DOUBLE</td>
       <td>-</td>
     </tr>
     <tr>
@@ -77,28 +80,28 @@
       <td>dst_type</td>
       <td>输入</td>
       <td>表示数据转换后y的数据类型。</td>
-      <td>INT</td>
+      <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>row_block_size</td>
       <td>输入</td>
       <td>表示指定M轴上的量化粒度。</td>
-      <td>INT</td>
+      <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>col_block_size</td>
       <td>输入</td>
       <td>表示指定N轴上的量化粒度。</td>
-      <td>INT</td>
+      <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>group_list_type</td>
       <td>输入</td>
       <td>表示group_list的功能类型。</td>
-      <td>INT</td>
+      <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>

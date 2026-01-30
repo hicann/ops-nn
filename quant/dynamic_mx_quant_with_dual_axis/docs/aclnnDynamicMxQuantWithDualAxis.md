@@ -1,5 +1,7 @@
 # aclnnDynamicMxQuantWithDualAxis
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/quant/dynamic_mx_quant_with_dual_axis)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -89,8 +91,8 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
   | ----- | ----- |----- |----- |----- |----- |----- |----- |
   | x (aclTensor\*) | 输入 | 表示输入x，对应公式中$V_i$。 | 目的类型为FLOAT4_E2M1、FLOAT4_E1M2时，x的最后一维必须是偶数。 | FLOAT16、BFLOAT16 | ND | 2-7 | √ |
   | roundModeOptional (char\*)  | 输入 | 表示数据转换的模式，对应公式中的round_mode。 | 当dstType为40/41，对应输出y1Out和y2Out的数据类型为FLOAT4_E2M1/FLOAT4_E1M2时，支持{"rint", "floor", "round"}；<br> 当dstType为35/36，对应输出y1Out和y2Out数据类型为FLOAT8_E5M2/FLOAT8_E4M3FN时，仅支持{"rint"}；<br> 传入空指针时，采用"rint"模式。 | STRING | - | - | - |
-  | dstType (int64_t) | 输入 | 表示指定数据转换后y1Out和y2Out的类型，对应公式中的DType。 | 输入范围为{35, 36, 40, 41}，分别对应输出y1Out和y2Out的数据类型为{35:FLOAT8_E5M2, 36:FLOAT8_E4M3FN, 40:FLOAT4_E2M1, 41:FLOAT4_E1M2} | INT64 | - | - | - |
-  | scaleAlg (int64_t) | 输入 | 表示mxscale1Out和mxscale2Out的计算方法。 | 当前仅支持取值0。后续支持取值0/1，0代表OCP实现，1代表cuBLAS实现。 | INT64 | - | - | - |
+  | dstType (int64_t) | 输入 | 表示指定数据转换后y1Out和y2Out的类型。 | 输入范围为{35, 36, 40, 41}，分别对应输出y1Out和y2Out的数据类型为{35:FLOAT8_E5M2, 36:FLOAT8_E4M3FN, 40:FLOAT4_E2M1, 41:FLOAT4_E1M2} | INT64 | - | - | - |
+  | scaleAlg (int64_t) | 输入 | 表示mxscale1Out和mxscale2Out的计算方法。 | 当前仅支持取值0，代表OCP实现。 | INT64 | - | - | - |
   | y1Out (aclTensor\*) | 输出 | 表示输入x量化-1轴后的对应结果，对应公式中的$P_i$。 | shape和输入x一致。 | FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2 | ND | 2-7 | √ |
   | mxscale1Out (aclTensor*) | 输出 | 表示-1轴每个分组对应的量化尺度，对应公式中的mxscale1。 | shape为x的-1轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0。 | FLOAT8_E8M0 | ND | 2-8 | √ |
   | y2Out (aclTensor\*) | 输出 | 表示输入x量化-2轴后的对应结果，对应公式中的$P_j$。 | shape和输入x一致。 | FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2 | ND | 2-7 | √ |

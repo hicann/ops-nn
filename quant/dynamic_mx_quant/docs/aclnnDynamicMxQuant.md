@@ -134,7 +134,7 @@ aclnnStatus aclnnDynamicMxQuant(
       <td>输入</td>
       <td>表示数据转换的模式，对应公式中的round_mode。</td>
       <td><ul><li>当dstType为40/41时，支持{"rint", "floor", "round"}。</li><li>当dstType为36/35时，仅支持{"rint"}。</li><li>传入空指针时，采用"rint"模式。</li></ul></td>
-      <td>INT64</td>
+      <td>STRING</td>
       <td>ND</td>
       <td>-</td>
       <td>-</td>

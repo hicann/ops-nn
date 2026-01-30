@@ -1,5 +1,7 @@
 # aclnnGroupedDynamicBlockQuant
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/quant/grouped_dynamic_block_quant)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -16,12 +18,15 @@
 - 接口功能：根据传入的分组索引的起始值（groupList）对各个group以基本块的粒度进行量化，量化为（FP8/HiFP8），并输出量化参数scale（FP32）。
 
 - 计算公式：
+
   $$
    input\_max = block\_reduce\_max(abs(input))
   $$
+
   $$
-   scale = min(input\_max/FP8\_MAX(HiF8\_MAX, 1/min\_scale))
+   scale = min(input\_max/FP8\_MAX(HiF8\_MAX), 1/min\_scale)
   $$
+
   $$
    y = cast\_to\_[HiF8/FP8](input/scale)
   $$
@@ -57,15 +62,15 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
 ## aclnnGroupedDynamicBlockQuantGetWorkspaceSize
 
 - **参数说明：**
-  <table style="undefined;table-layout: fixed; width: 1401px"><colgroup>
-  <col style="width: 149px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 180px">
   <col style="width: 120px">
-  <col style="width: 266px">
   <col style="width: 280px">
-  <col style="width: 200px">
-  <col style="width: 100px">
-  <col style="width: 105px">
-  <col style="width: 145px">
+  <col style="width: 320px">
+  <col style="width: 250px">
+  <col style="width: 120px">
+  <col style="width: 140px">
+  <col style="width: 140px">
   </colgroup>
   <thead>
     <tr>
@@ -80,7 +85,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x</td>
+      <td>x (aclTensor*)</td>
       <td>输入</td>
       <td>表示算子输入的Tensor。对应公式中的input。</td>
       <td>支持空Tensor。</td>
@@ -90,7 +95,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>groupList</td>
+      <td>groupList (aclTensor*)</td>
       <td>输入</td>
       <td>表示在M轴上每个group的偏移（cumsum模式）。</td>
       <td>表示量化分组的起始索引，要求大于等于0，且非递减，并且最后一个数需要与x的-2轴大小相等。</td>
@@ -100,17 +105,17 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>minScale</td>
+      <td>minScale (double)</td>
       <td>输入</td>
       <td>表示参与scaleOut计算的最小scale值。对应公式中的min_scale。</td>
       <td>要求该值大于等于0。</td>
-      <td>FLOAT32</td>
+      <td>DOUBLE</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>roundModeOptional</td>
+      <td>roundModeOptional (char*)</td>
       <td>输入</td>
       <td>表示最后由高bit数据cast到目标数据类型的近似模式。</td>
       <td>当dstType为35/36时，对应输出yOut数据类型为FLOAT8_E5M2/FLOAT8_E4M3FN时，仅支持{"rint"}；<br>当dstType为34时，对应输出yOut数据类型为HIFLOAT8时，支持{"round"、"hybrid"}；<br>传入空指针时，采用"rint"模式。</td>
@@ -120,7 +125,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>-</td>
     </tr>
     <tr>
-      <td>dstType</td>
+      <td>dstType (int64_t)</td>
       <td>输入</td>
       <td>表示数据转换后yOut的数据类型。</td>
       <td>输入范围为{34, 35, 36}，分别对应输出y的数据类型为{34:HIFLOAT8, 35: FLOAT8_E5M2, 36: FLOAT8_E4M3FN}。</td>
@@ -130,7 +135,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>-</td>
     </tr>
     <tr>
-      <td>rowBlockSize</td>
+      <td>rowBlockSize (int64_t)</td>
       <td>输入</td>
       <td>表示指定M轴上的量化粒度。</td>
       <td>当前支持取值为1/128/256/512。</td>
@@ -140,7 +145,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>-</td>
     </tr>
     <tr>
-      <td>colBlockSize</td>
+      <td>colBlockSize (int64_t)</td>
       <td>输入</td>
       <td>表示指定N轴上的量化粒度。</td>
       <td>当前支持取值64/128/192/256。</td>
@@ -150,7 +155,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>-</td>
     </tr>
     <tr>
-      <td>groupListType</td>
+      <td>groupListType (int64_t)</td>
       <td>输入</td>
       <td>表示group_list的功能类型。</td>
       <td>当前支持取值为0，对应cumsum模式。</td>
@@ -160,7 +165,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>-</td>
     </tr>
     <tr>
-      <td>yOut</td>
+      <td>yOut (aclTensor*)</td>
       <td>输出</td>
       <td>表示量化后的输出Tensor。对应公式中的y。</td>
       <td>支持空Tensor。<br>shape的维度与x保持一致。</td>
@@ -170,7 +175,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>scaleOut</td>
+      <td>scaleOut (aclTensor*)</td>
       <td>输出</td>
       <td>表示每个分组对应的量化尺度，对应公式中的scale。</td>
       <td>支持空Tensor。<br>如果输入x的shape为[M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[(M//rowBlockSize+g), (N/colBlockSize)]。</br>如果输入x的shape为[B, M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[B, (M//rowBlockSize+g), (N/colBlockSize)]。 </td>

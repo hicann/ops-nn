@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 算子功能：在给定的轴axis上，根据每blocksize个数，计算出这组数对应的量化尺度mxscale作为输出mxscaleOut的对应部分，然后对这组数每一个除以mxscale，根据round_mode转换到对应的dstType，得到量化结果y作为输出yOut的对应部分。在dstType为FLOAT8_E4M3FN、FLOAT8_E5M2时，根据scaleAlg的取值来指定计算mxscale的不同算法。
+- 算子功能：在给定的轴axis上，根据每blocksize个数，计算出这组数对应的量化尺度mxscale，然后对这组数每一个除以mxscale，根据round_mode转换到对应的dst_type，得到量化结果y。在dst_type为FLOAT8_E4M3FN、FLOAT8_E5M2时，根据scale_alg的取值来指定计算mxscale的不同算法。
 
 ## 参数说明
 
@@ -42,35 +42,35 @@
     </tr>
     <tr>
       <td>axis</td>
-      <td>输入属性</td>
+      <td>输入</td>
       <td>量化发生的轴</td>
       <td>INT64</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>round_mode</td>
-      <td>输入属性</td>
+      <td>可选属性</td>
       <td>数据转换的模式</td>
-      <td>INT64</td>
+      <td>STRING</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>dst_type</td>
-      <td>输入属性</td>
-      <td>指定数据转换后yOut的类型</td>
+      <td>输入</td>
+      <td>指定数据转换后y的类型</td>
       <td>INT64</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>blocksize</td>
-      <td>输入属性</td>
+      <td>输入</td>
       <td>每次量化的元素个数</td>
       <td>INT64</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>scale_alg</td>
-      <td>输入属性</td>
+      <td>输入</td>
       <td>mxscale的计算方法</td>
       <td>INT64</td>
       <td>ND</td>
@@ -93,7 +93,12 @@
 
 ## 约束说明
 
-无
+- 关于x、mxscale的shape约束说明如下：
+  - rank(mxscale) = rank(x) + 1。
+  - axis_change = axis if axis >= 0 else axis + rank(x)。
+  - mxscale.shape[axis_change] = (ceil(x.shape[axis] / blocksize) + 2 - 1) / 2。
+  - mxscale.shape[-1] = 2。
+  - 其他维度与输入x一致。
 
 ## 调用说明
 
