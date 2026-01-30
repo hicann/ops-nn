@@ -85,7 +85,7 @@ __aicore__ inline DataType ProcessTgBatchOffsets(__ubuf__ DataType *tensor, int6
 
 template <typename T, typename DataType, typename ThreadType>
 __aicore__ __attribute__((always_inline)) inline void CalcLogAlpha(int32_t batchSize, int32_t laInputStride, ThreadType laBatchStride, 
-    ThreadType lpBatchStride, int32_t maxInputLength, int32_t lpInputStride, int32_t targetsDim, int32_t tgBatchStride, int32_t blank,
+    ThreadType lpBatchStride, int32_t maxInputLength, ThreadType lpInputStride, int32_t targetsDim, int32_t tgBatchStride, int32_t blank,
     int32_t tgTargetStride, __gm__ T *logProbsGm, __gm__ DataType *targetsGm, __gm__ DataType *inputLengthsGm,
     __gm__ DataType *targetLengthsGm, __gm__ T *negLogLikelihoodGm, __gm__ T *logAlphaGm, __ubuf__ DataType *tensor)
 {
@@ -176,7 +176,7 @@ __aicore__ __attribute__((always_inline)) inline void CalcLogAlpha(int32_t batch
 template <typename T, typename DataType, typename ThreadType>
 __simt_vf__ LAUNCH_BOUND(THREAD_NUM_1024)__aicore__ 
     void SimtComputeINT32 (int32_t batchSize, int32_t laInputStride, ThreadType laBatchStride, ThreadType lpBatchStride, 
-    int32_t maxInputLength, int32_t lpInputStride, int32_t targetsDim, int32_t tgBatchStride, int32_t blank,
+    int32_t maxInputLength, ThreadType lpInputStride, int32_t targetsDim, int32_t tgBatchStride, int32_t blank,
     int32_t tgTargetStride, __gm__ T *logProbsGm, __gm__ DataType *targetsGm, __gm__ DataType *inputLengthsGm,
     __gm__ DataType *targetLengthsGm, __gm__ T *negLogLikelihoodGm, __gm__ T *logAlphaGm, __ubuf__ DataType *tensor)
     {
@@ -187,7 +187,7 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM_1024)__aicore__
 template <typename T, typename DataType, typename ThreadType>
 __simt_vf__ LAUNCH_BOUND(THREAD_NUM_512)__aicore__ 
     void SimtCompute (int32_t batchSize, int32_t laInputStride, ThreadType laBatchStride, ThreadType lpBatchStride, 
-    int32_t maxInputLength, int32_t lpInputStride, int32_t targetsDim, int32_t tgBatchStride, int32_t blank,
+    int32_t maxInputLength, ThreadType lpInputStride, int32_t targetsDim, int32_t tgBatchStride, int32_t blank,
     int32_t tgTargetStride, __gm__ T *logProbsGm, __gm__ DataType *targetsGm, __gm__ DataType *inputLengthsGm,
     __gm__ DataType *targetLengthsGm, __gm__ T *negLogLikelihoodGm, __gm__ T *logAlphaGm, __ubuf__ DataType *tensor)
     {
@@ -199,7 +199,7 @@ template <typename T, typename DataType, typename ThreadType> __aicore__ inline 
 {
     int32_t maxInputLength = this->tdPtr->maxInputLength;
     int32_t maxTargetLength = this->tdPtr->maxTargetLength;
-    int32_t lpInputStride = this->tdPtr->lpInputStride;
+    ThreadType lpInputStride = this->tdPtr->lpInputStride;
     ThreadType lpBatchStride = this->tdPtr->lpBatchStride;
     ThreadType laBatchStride = this->tdPtr->laBatchStride;
     int32_t laInputStride = this->tdPtr->laInputStride;
