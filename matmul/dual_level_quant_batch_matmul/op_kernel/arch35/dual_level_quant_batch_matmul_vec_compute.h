@@ -265,6 +265,23 @@ __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::CopyUbToGm(
     uint64_t mUbSize = Ops::Base::CeilDiv<uint64_t>(realML0Size, 2);
     uint64_t mOutSize = GetSubBlockIdx() == 0 ? mUbSize : realML0Size - mUbSize;
 
+    if (realML0Size <= 0 || realNL0Size <= 0) {
+        return;
+    }
+    constexpr uint64_t vec0MaxMSize = 64; // VEC0核最大值可取64，小于64则取其本身
+    // 128:以下情况尾块的情况，需要单独进行参数设置
+    if (realML0Size < 128 && l0Params.mL1Size > 128) {
+        if (GetSubBlockIdx() == 0) {
+            mOutSize = DualLevelQuantBatchMatmul::Arch35::Min<uint64_t>(vec0MaxMSize, realML0Size);
+        } else {
+            if (realML0Size <= vec0MaxMSize) {
+                return;
+            }
+            mUbSize = vec0MaxMSize;
+            mOutSize = realML0Size - mUbSize;
+        }
+    }
+
     // yGm_ M轴方向的偏移：GM上的偏移 + 基本块内的偏移量mL1Offset + 不同VEC所产生的偏移
     // yGm_ N轴方向的偏移：GM上的偏移 + 基本块内的偏移量nL1Offset
     // cFp32Ub_ 的偏移,以(256,256)基本快为例：cFp32BufId索引确定左侧还是右侧块，mL1Offset确定M方向的偏移量
