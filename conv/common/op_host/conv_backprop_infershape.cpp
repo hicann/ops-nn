@@ -35,6 +35,7 @@ namespace Conv {
     constexpr size_t IDX_1 = 1;
     constexpr size_t IDX_2 = 2;
     constexpr size_t kConv2dDimSizeLimit = 4;
+    constexpr size_t kConv3dDimSizeLimit = 5;
     constexpr int32_t extendDimSizeLimit = 5;
     constexpr int32_t UNKNOWN_SHAPE_DIM = -1;
 
@@ -158,6 +159,25 @@ namespace Conv {
 
         return true;
     }
+    // Conv2DTransposeV2 使用
+    bool CheckOutputAllZeroFrom2D(const gert::InferShapeContext* context, const gert::Shape* shape, int32_t d_index)
+    {
+        size_t dim_num = shape->GetDimNum();
+        OP_CHECK_IF(
+            dim_num != kConv3dDimSizeLimit, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "shape dim is not 5"),
+            return false);
+        if (shape->GetDim(d_index) != 1) {
+            return false;
+        }
+        for (size_t idx = 0; idx < dim_num; ++idx) {
+            if (idx != d_index && shape->GetDim(idx) != 0) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     // Conv2DTransposeV2 和 Conv3DTransposeV2 共用
     ge::graphStatus InferDataTypeForConvTransposeV2(gert::InferDataTypeContext* context)
     {
@@ -202,7 +222,7 @@ namespace Conv {
         OP_CHECK_IF(y_desc == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "y desc is null"), return ge::GRAPH_FAILED);
         const auto y_format = y_desc->GetOriginFormat();
         int32_t d_index = GetConvBackpropIndex(y_format);
-        OP_CHECK_IF(d_index == -1, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "y format is not support"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(d_index == -1, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "y format does not support"), return ge::GRAPH_FAILED);
         auto dtype = const_tensor->GetDataType();
         if (dtype == ge::DT_INT32) {
             auto tensor_data = const_tensor->GetData<int32_t>();

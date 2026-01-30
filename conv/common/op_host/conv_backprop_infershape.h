@@ -36,6 +36,7 @@ namespace Conv {
     ge::graphStatus InferDataTypeForConvBackpropInputV2(gert::InferDataTypeContext* context);
     // Conv2DTransposeV2 和 Conv3DTransposeV2 共用
     bool CheckOutputAllZero(const gert::Shape* shape);
+    bool CheckOutputAllZeroFrom2D(const gert::InferShapeContext* context, const gert::Shape* shape, int32_t d_index);
     // Conv2DTransposeV2 和 Conv3DTransposeV2 共用
     ge::graphStatus InferDataTypeForConvTransposeV2(gert::InferDataTypeContext* context);
     ge::graphStatus InferShapeForConvBackpropExtend3D(

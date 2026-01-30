@@ -38,8 +38,8 @@ namespace Conv {
 
 ge::graphStatus Conv3DDXV2KernelSplitTiling::GetShapeAttrsInfo()
 {
-    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->shortSocVersion !=
-        platform_ascendc::SocVersion::ASCEND950 && !IsSocVersionFuse(context_)) {
+    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch !=
+        NpuArch::DAV_3510 && !IsSocVersionFuse(context_)) {
         return ge::GRAPH_SUCCESS;
     }
 
@@ -72,8 +72,8 @@ ge::graphStatus Conv3DDXV2KernelSplitTiling::GetShapeAttrsInfo()
 
 bool Conv3DDXV2KernelSplitTiling::IsCapable()
 {
-    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->shortSocVersion !=
-        platform_ascendc::SocVersion::ASCEND950 &&
+    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch !=
+        NpuArch::DAV_3510 &&
         !IsSocVersionFuse(context_)) {
         return false;
     }

@@ -159,8 +159,8 @@ static bool IsC04WhiteListCase(const ConvolutionBackwardInputTensor &inputTensor
       return false;
     }
   }
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  return (socVersion == SocVersion::ASCEND910B &&
+  NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  return (npuArch == NpuArch::DAV_2201 &&
           (inputTensor.input->GetDataType() == DataType::DT_FLOAT16 ||
            inputTensor.input->GetDataType() == DataType::DT_BF16) &&
           inputTensor.input->GetViewShape().GetDim(0) == 1024 && inputTensor.input->GetViewShape().GetDim(1) == 3 &&
@@ -2686,21 +2686,20 @@ aclnnStatus aclnnConvolutionBackwardGetWorkspaceSize(
                                         outputPadding, groups, outputMask, cubeMathType};
 
     // 固定写法，参数检查
-    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    Ops::NN::Conv::ConvolutionBackwardChecker convolutionBackwardChecker(inputTensor, outputTensor, params, socVersion);
+    const NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    Ops::NN::Conv::ConvolutionBackwardChecker convolutionBackwardChecker(inputTensor, outputTensor, params, npuArch);
     auto ret = convolutionBackwardChecker.CheckParams();
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 检查conv3ddw确定性计算
     if ((*outputMask)[1] && (input->GetViewShape().GetDimNum() == CONV3DINPUTDIM ||
-      (input->GetViewShape().GetDimNum() == CONV2DINPUTDIM && Ops::NN::AclnnUtil::IsRegbase(curArch)))) {
+      (input->GetViewShape().GetDimNum() == CONV2DINPUTDIM && npuArch == NpuArch::DAV_3510))) {
       int64_t deterministicValue = 0;
       rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
       if (retRts != RT_ERROR_NONE) {
         deterministicValue = 0;
       }
-      if (!(Ops::NN::AclnnUtil::IsRegbase(curArch)) && curArch != NpuArch::DAV_2201) {
+      if (npuArch != NpuArch::DAV_3510 && npuArch != NpuArch::DAV_2201) {
         CHECK_RET(CheckDeterministic(deterministicValue, groups), ACLNN_ERR_PARAM_INVALID);
       }
     }
@@ -2852,8 +2851,8 @@ aclnnStatus aclnnConvTbcBackwardGetWorkspaceSize(const aclTensor *self, const ac
     Ops::NN::Conv::ConvTbcBackwardOutput outputTensor = {gradInput, gradWeight, gradBias};
     Ops::NN::Conv::ConvTbcBackwardParams tbcparams = {pad, cubeMathType};
     // 固定写法，参数检查
-    SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    Ops::NN::Conv::ConvTbcBackwardChecker convTbcBackwardChecker(inputTensor, outputTensor, tbcparams, socVersion);
+    NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    Ops::NN::Conv::ConvTbcBackwardChecker convTbcBackwardChecker(inputTensor, outputTensor, tbcparams, npuArch);
     auto ret = convTbcBackwardChecker.CheckTbcParams();
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 

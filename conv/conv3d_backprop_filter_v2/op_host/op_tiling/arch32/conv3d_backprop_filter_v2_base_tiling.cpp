@@ -20,6 +20,7 @@
 #include <platform/platform_infos_def.h>
 #include <graph/utils/type_utils.h>
 #include <log/log.h>
+#include <platform/soc_spec.h>
 
 #include "../common/conv_backprop_filter_context_utils.h"
 #include "../../../op_kernel/arch32/conv3d_backprop_filter_v2_tiling_data.h"
@@ -99,8 +100,8 @@ namespace NN {
 namespace Conv {
 bool Conv3DBackpropFilterV2Tiling::IsSocVersion91095() const
 {
-    return context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->shortSocVersion
-        == platform_ascendc::SocVersion::ASCEND950;
+    return context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch
+        == NpuArch::DAV_3510;
 }
 
 void Conv3DBackpropFilterV2Tiling::Reset()
@@ -122,6 +123,7 @@ ge::graphStatus Conv3DBackpropFilterV2Tiling::GetShapeAttrsInfo()
 
 bool Conv3DBackpropFilterV2Tiling::IsCapable()
 {
+    // 当芯片型号为950时需要拦截，主要原因是共用tilingFunc和TilingParse
     // 当芯片型号为950时需要拦截，主要原因是共用tilingFunc和TilingParse
     if (IsSocVersion91095()) {
         return false;

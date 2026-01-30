@@ -229,10 +229,8 @@ ge::graphStatus Conv3DBackpropInputV2Tiling::GetPlatformInfo()
 
 ge::graphStatus Conv3DBackpropInputV2Tiling::GetShapeAttrsInfo()
 {
-    if (context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->shortSocVersion ==
-            platform_ascendc::SocVersion::ASCEND950 ||
-        context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->shortSocVersion ==
-            platform_ascendc::SocVersion::ASCEND910_55) {
+    if (context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch ==
+            NpuArch::DAV_3510) {
         return ge::GRAPH_SUCCESS;
     }
     opName_ = context_->GetNodeName();
@@ -243,10 +241,8 @@ ge::graphStatus Conv3DBackpropInputV2Tiling::GetShapeAttrsInfo()
 
 bool Conv3DBackpropInputV2Tiling::IsCapable()
 {
-    if (context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->shortSocVersion ==
-            platform_ascendc::SocVersion::ASCEND950 ||
-        context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->shortSocVersion ==
-            platform_ascendc::SocVersion::ASCEND910_55) {
+    if (context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch ==
+            NpuArch::DAV_3510) {
         return false;
     }
     return true;

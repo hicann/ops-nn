@@ -48,6 +48,7 @@ constexpr int32_t SPLIT_WO_SIZE = 128;
 
 struct PlatformCompileInfo {
     platform_ascendc::SocVersion socVersion;
+	NpuArch npuArch;
     uint32_t core_num = 1;
     uint64_t l0a_size = 0;
     uint64_t l0b_size = 0;

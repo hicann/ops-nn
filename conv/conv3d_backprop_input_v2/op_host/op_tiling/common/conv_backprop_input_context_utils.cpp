@@ -176,8 +176,8 @@ bool CheckRangeInt64(int64_t value, int32_t value_low, int32_t value_up) {
 }
 
 static bool IsArchAfter35(const gert::TilingContext *context) {
-  return context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->shortSocVersion ==
-            platform_ascendc::SocVersion::ASCEND950;
+  return context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch ==
+            NpuArch::DAV_3510;
 }
 
 bool ValidateConvBackpropContext(const gert::TilingContext *context) {

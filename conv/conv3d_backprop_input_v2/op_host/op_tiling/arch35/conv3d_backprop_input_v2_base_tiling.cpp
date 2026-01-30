@@ -57,8 +57,8 @@ const std::vector<Ops::NN::Conv::TilingBestBaseBlock> TILING_BEST_BASE_BLOCK_D1{
     {256, 128, 128},
 };
 
-const std::map<platform_ascendc::SocVersion, std::vector<Ops::NN::Conv::TilingBestBaseBlock>> TILING_BEST_BASE{
-    {platform_ascendc::SocVersion::ASCEND950, TILING_BEST_BASE_BLOCK_D1},
+const std::map<NpuArch, std::vector<Ops::NN::Conv::TilingBestBaseBlock>> TILING_BEST_BASE{
+    {NpuArch::DAV_3510, TILING_BEST_BASE_BLOCK_D1},
 };
 } // namespace
 
@@ -113,10 +113,10 @@ ge::graphStatus Conv3DBackpropInputV2TilingArch35::SetCoreMemSizeInfo()
 TilingBestBaseBlock Conv3DBackpropInputV2TilingArch35::GetBestBaseBlock(uint32_t baseBlockId)
 {
     if (IsSocVersionFuse(context_)) {
-        return TILING_BEST_BASE.at(platform_ascendc::SocVersion::ASCEND950).at(baseBlockId);
+        return TILING_BEST_BASE.at(NpuArch::DAV_3510).at(baseBlockId);
     }
 
-    return TILING_BEST_BASE.at(shortSocVersion_).at(baseBlockId);
+    return TILING_BEST_BASE.at(npuArch_).at(baseBlockId);
 }
 
 bool Conv3DBackpropInputV2TilingArch35::GetShapeFormatInfo()
@@ -146,8 +146,8 @@ bool Conv3DBackpropInputV2TilingArch35::GetShapeFormatInfo()
 
 ge::graphStatus Conv3DBackpropInputV2TilingArch35::GetShapeAttrsInfo()
 {
-    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->shortSocVersion !=
-        platform_ascendc::SocVersion::ASCEND950 && !IsSocVersionFuse(context_)) {
+    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch !=
+        NpuArch::DAV_3510 && !IsSocVersionFuse(context_)) {
         return ge::GRAPH_SUCCESS;
     }
     if (SetCoreMemSizeInfo() != ge::GRAPH_SUCCESS) {
@@ -163,8 +163,8 @@ ge::graphStatus Conv3DBackpropInputV2TilingArch35::GetShapeAttrsInfo()
 
 bool Conv3DBackpropInputV2TilingArch35::IsCapable()
 {
-    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->shortSocVersion !=
-        platform_ascendc::SocVersion::ASCEND950 &&
+    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch !=
+        NpuArch::DAV_3510 &&
         !IsSocVersionFuse(context_)) {
         return false;
     }
@@ -177,8 +177,8 @@ ge::graphStatus Conv3DBackpropInputV2TilingArch35::DoOpTiling()
     OP_TILING_CHECK(
         compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT("Conv3DBackpropInputV2", "compile_info is null"),
         return false);
-    shortSocVersion_ = compileInfoPtr->shortSocVersion;
-    if (TILING_BEST_BASE.find(shortSocVersion_) == TILING_BEST_BASE.end() &&
+    npuArch_ = compileInfoPtr->npuArch;
+    if (TILING_BEST_BASE.find(npuArch_) == TILING_BEST_BASE.end() &&
         !IsSocVersionFuse(context_)) {
         OP_LOGE(context_, "soc version is invalid");
         return false;

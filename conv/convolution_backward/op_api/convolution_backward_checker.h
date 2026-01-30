@@ -165,11 +165,11 @@ namespace Conv {
 class ConvolutionBackwardChecker {
 public:
 ConvolutionBackwardChecker(const l0op::ConvolutionBackwardInputTensor &inputTensor, const ConvolutionBackwardOutput &outputTensor,
-                           const l0op::ConvolutionBackwardParams &params, const op::SocVersion socVersion):
+                           const l0op::ConvolutionBackwardParams &params, const NpuArch npuArch):
                            inputTensor_(inputTensor),
                            outputTensor_(outputTensor),
                            params_(params),
-                           socVersion_(socVersion){}
+                           npuArch_(npuArch){}
 
 public:
 
@@ -223,7 +223,7 @@ private:
 const l0op::ConvolutionBackwardInputTensor inputTensor_;
 const ConvolutionBackwardOutput outputTensor_;
 const l0op::ConvolutionBackwardParams params_;
-const op::SocVersion socVersion_;
+const NpuArch npuArch_;
 };
 } // namespace Conv
 } // namespace NN

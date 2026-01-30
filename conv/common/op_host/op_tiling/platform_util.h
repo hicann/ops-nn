@@ -26,6 +26,7 @@ namespace Conv {
 struct Conv3DBackpropV2CompileInfo {
   std::string soc_version = "";
   platform_ascendc::SocVersion shortSocVersion = platform_ascendc::SocVersion::ASCEND910B;
+  NpuArch npuArch = NpuArch::DAV_2201;
 
   uint32_t core_num = 0;
   uint64_t ub_size = 0;

@@ -18,6 +18,7 @@
 #include <numeric>
 #include <util/math_util.h>
 #include <graph/utils/type_utils.h>
+#include <platform/soc_spec.h>
 #include "error_util.h"
 #include "tiling_base/tiling_templates_registry.h"
 #include "common/op_host/op_tiling/platform_util.h"
@@ -38,7 +39,7 @@ namespace NN {
 namespace Conv {
 bool Conv3DDWV2BasicBlockTilingArch35::IsSocVersion91095()
 {
-    return platformInfo_.socVersion == platform_ascendc::SocVersion::ASCEND950;
+    return platformInfo_.npuArch == NpuArch::DAV_3510;
 }
 
 void Conv3DDWV2BasicBlockTilingArch35::Reset()
@@ -81,6 +82,7 @@ ge::graphStatus Conv3DDWV2BasicBlockTilingArch35::SetPlatformCompileInfo()
     platformInfo_.l0c_size = compileInfoPtr->l0c_size;
     platformInfo_.l1_size = compileInfoPtr->l1_size;
     platformInfo_.ub_size = compileInfoPtr->ub_size;
+    platformInfo_.npuArch = compileInfoPtr->npuArch;
     OP_LOGD(
         opName_,
         "get platform info success: core_num:%u, l0a_size:%lu, l0b_size:%lu, l0c_size:%lu, l1_size:%lu, ub_size:%lu",

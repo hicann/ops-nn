@@ -55,11 +55,11 @@ struct ConvTbcBackwardParams {
 class ConvTbcBackwardChecker {
 public:
 ConvTbcBackwardChecker(const ConvTbcBackwardInput &inputTensor, const ConvTbcBackwardOutput &outputTensor,
-                       const ConvTbcBackwardParams &params, const op::SocVersion socVersion):
+                       const ConvTbcBackwardParams &params, const NpuArch npuArch):
                        inputTensor_(inputTensor),
                        outputTensor_(outputTensor),
                        params_(params),
-                       socVersion_(socVersion){}
+                       npuArch_(npuArch){}
 public:
 /**
  * @brief [self, input, weight, gradInput, gradWeight, gradBias] nullptr 约束
@@ -145,7 +145,7 @@ private:
 const ConvTbcBackwardInput inputTensor_;
 const ConvTbcBackwardOutput outputTensor_;
 const ConvTbcBackwardParams params_;
-const op::SocVersion socVersion_;
+const NpuArch npuArch_;
 };
 } // namespace Conv
 } // namespace NN

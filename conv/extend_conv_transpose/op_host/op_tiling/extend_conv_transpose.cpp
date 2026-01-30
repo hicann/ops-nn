@@ -53,6 +53,8 @@ static ge::graphStatus TilingParseForExtendConvTranspose(gert::TilingParseContex
     PlatformUtil::ParseRuntimePlatformInfo(*compileInfoPtr, context->GetNodeName(), *platformInfoPtr);
     compileInfoPtr->core_num = ascendcPlatform.GetCoreNumAic();
     compileInfoPtr->shortSocVersion = ascendcPlatform.GetSocVersion();
+	compileInfoPtr->npuArch = ascendcPlatform.GetCurNpuArch();
+    OP_LOGD(context->GetNodeName(), "compileInfoPtr npuarch: %d", compileInfoPtr->npuArch);
     return ge::GRAPH_SUCCESS;
 }
 

@@ -153,7 +153,7 @@ bool SetDilationsAttr(const gert::TilingContext *context, Conv3dBpFilterV2RunInf
         OP_LOGE(op_name, "dilation_d is invalid, current is %ld, dilation_d support range [%d, %d]",
         normalized_dilations[NCDHW_D_INDEX], DILATION_LOWWER, SHAPE_UPPER), return false);
     int32_t dilation_limit =
-        context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->shortSocVersion == platform_ascendc::SocVersion::ASCEND950 ? SHAPE_UPPER : DILATION_UPPER;
+        context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510 ? SHAPE_UPPER : DILATION_UPPER;
     OP_CHECK_IF(!CheckRange(normalized_dilations[NCDHW_H_INDEX], DILATION_LOWWER, dilation_limit),
         OP_LOGE(op_name, "dilation_h is invalid, current is %ld, dilation_h support range [%d, %d]",
         normalized_dilations[NCDHW_H_INDEX], DILATION_LOWWER, dilation_limit), return false);

@@ -161,7 +161,7 @@ static void TestOneParamCase(const Conv3DTransposeV2TilingTestParam& param)
     map<string, string> intrinsics;
     string compileInfoPtr = COMPILE_INFO_STR_910B;
 
-    if (param.soc_version.compare("Ascend950") == 0) {
+    if (param.soc_version.compare("3510") == 0) {
         compileInfoPtr = COMPILE_INFO_STR_950;
     }
     GetPlatFormInfos(compileInfoPtr.c_str(), soc_infos, aicore_spec, intrinsics);
@@ -178,7 +178,7 @@ static void TestOneParamCase(const Conv3DTransposeV2TilingTestParam& param)
             .Build();
 
     map<string, string> soc_version_infos = {
-        {"SoC_version", param.soc_version}, {"Short_SoC_version", param.short_soc_version}};
+        {"SoC_version", param.soc_version}, {"Short_SoC_version", param.soc_version},{"NpuArch", param.short_soc_version}};
 
     std::string op_type("Conv3DTransposeV2");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -259,8 +259,8 @@ static void TestOneParamCase(const Conv3DTransposeV2TilingTestParam& param)
 
 Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
     {"conv3d_transpose_1",
-     "Ascend950",
-     "Ascend950",
+     "3510",
+     "3510",
      {1, 2, 1, 4, 4},
      {1, 2, 1, 4, 4},
      {1, 2, 1, 4, 4},
@@ -289,8 +289,8 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      50331648,
      "1 1 1 1 1 1 5 0 2 2 2 2 2 1 16 4 4 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 2 16 1 32 16 16 1 1 1 1 5 0 1 0 30 0 0 0 0 0 "},
     {"conv3d_transpose_2_group",
-     "Ascend950",
-     "Ascend950",
+     "Ascend910_95",
+     "3510",
      {1, 16, 1, 4, 4},
      {1, 16, 1, 4, 4},
      {1, 16, 1, 4, 4},
@@ -319,8 +319,8 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      16842754,
      "1 1 1 1 1 1 5 0 2 2 2 2 2 1 16 4 4 16 0 0 0 1 16 16 16 16 1 1 1 1 1 4 4 5 5 5 5 2 2 1 16 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 16 16 1 32 64 16 1 1 1 1 5 0 1 0 30 0 0 0 0 0 "},
     {"conv3d_transpose_3_general_group",
-     "Ascend950",
-     "Ascend950",
+     "Ascend910_95",
+     "3510",
      {1, 64, 1, 4, 4},
      {1, 64, 1, 4, 4},
      {1, 64, 1, 4, 4},
@@ -349,8 +349,8 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      16842754,
      "1 1 1 1 1 1 20 0 2 2 2 2 2 1 16 4 4 4 0 0 0 1 64 64 16 16 4 4 1 1 1 4 4 5 5 5 5 2 2 4 16 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 16 16 1 32 64 16 1 1 1 1 5 0 1 0 30 0 0 0 0 0 "},
     {"conv3d_transpose_4_general_group1_ncdhw_dhwcn",
-     "Ascend950",
-     "Ascend950",
+     "3510",
+     "3510",
      {1, 2, 1, 4, 4},
      {1, 2, 1, 4, 4},
      {1, 2, 1, 4, 4},
@@ -379,8 +379,8 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      16777218,
      "1 1 1 1 1 1 5 0 2 2 2 2 2 1 16 4 4 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 2 16 1 32 64 16 1 1 1 1 5 0 1 0 30 0 0 0 0 0 "},
     {"conv3d_transpose_5_general_group1_ndhwc_dhwcn",
-     "Ascend950",
-     "Ascend950",
+     "3510",
+     "3510",
      {1, 1, 4, 4, 2},
      {1, 1, 4, 4, 2},
      {1, 1, 4, 4, 2},

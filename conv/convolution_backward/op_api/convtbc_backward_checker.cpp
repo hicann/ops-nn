@@ -29,7 +29,7 @@ inline bool ConvTbcBackwardChecker::CheckTbcNotNull() {
 
 bool ConvTbcBackwardChecker::CheckTbcDtypeValid(const aclTensor *inputTensor) const {
   // 检查输入aclTensor的数据类型是否在ConvolutionBackward支持列表内
-  if (socVersion_ == SocVersion::ASCEND950) {
+  if (npuArch_ == NpuArch::DAV_3510) {
     auto dtypeSupportList = {DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
     OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor, dtypeSupportList, return false);
   } else {
@@ -164,7 +164,7 @@ aclnnStatus ConvTbcBackwardChecker::CheckTbcParams() {
     // 6. 检查cubeMathType
     CHECK_RET(CheckTbcCubeMathType(), ACLNN_ERR_PARAM_INVALID);
 
-    if (socVersion_ == SocVersion::ASCEND950) {
+    if (npuArch_ == NpuArch::DAV_3510) {
        // 检查pad是否在[0, 255]之间
       OP_CHECK(params_.pad >= 0 && params_.pad <= 255, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "pad value [%ld] is invalid, support range [0, 255].", params_.pad),
                return ACLNN_ERR_PARAM_INVALID);

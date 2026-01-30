@@ -265,6 +265,7 @@ protected:
     uint8_t loadB1Condition_ = 0;
     uint8_t groupConvMode_ = TILING_GROUP_MODE_ORIGIN;
     platform_ascendc::SocVersion shortSocVersion_;
+	NpuArch npuArch_;
     int32_t coreNum_ = 1;
     int32_t isBiasFullLoad_ = 0;
     uint32_t singleIterateDk_ = 1;

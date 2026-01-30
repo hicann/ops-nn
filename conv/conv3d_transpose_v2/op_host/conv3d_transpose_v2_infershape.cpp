@@ -44,6 +44,8 @@ constexpr size_t kConv3DDilationsIdx = 2;
 constexpr size_t kConv2DStridesIdx = 0;
 constexpr size_t kConv2DDilationsIdx = 2;
 
+constexpr int32_t UNKNOWN_SHAPE_DIM = -1;
+
 }  // namespace
 
 namespace Ops {
@@ -246,6 +248,7 @@ static bool GetConvGroups(const gert::InferShapeContext* context, size_t groups_
 
 constexpr size_t kConv3dDimSizeLimit = 5;
 constexpr size_t kConv2dDimSizeLimit = 4;
+constexpr size_t kConv3DTransposeXIdx = 1;
 constexpr size_t kConv3DTransposeFilterIdx = 2;
 constexpr size_t kConv3DTransposePadsIdx = 1;
 constexpr size_t kConv3DTransposeGroupsIdx = 3;
@@ -306,9 +309,16 @@ static ge::graphStatus InferShapeForConv3DTranspose(gert::InferShapeContext* con
     auto y_shape = context->GetOutputShape(0);
     OP_CHECK_IF(
         y_shape == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "y shape is null"), return ge::GRAPH_FAILED);
+    const auto y_desc = context->GetOutputDesc(0);
+    OP_CHECK_IF(
+        y_desc == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "y desc is null"), return ge::GRAPH_FAILED);
+    const auto y_format = y_desc->GetOriginFormat();
+    int32_t d_index = GetConvBackpropIndex(y_format);
+    OP_CHECK_IF(d_index == UNKNOWN_SHAPE_DIM, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "y format does not support"), return ge::GRAPH_FAILED);
 
-    if (CheckOutputAllZero(y_shape)) {
-        const auto x_desc = context->GetInputDesc(0);
+    bool from_2D = const_tensor_dim_num == kConv2dDimSizeLimit;
+    if (CheckOutputAllZero(y_shape) || (from_2D && CheckOutputAllZeroFrom2D(context, y_shape, d_index))) {
+        const auto x_desc = context->GetInputDesc(kConv3DTransposeXIdx);
         OP_CHECK_IF(
             x_desc == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "x desc is null"),
             return ge::GRAPH_FAILED);

@@ -44,6 +44,8 @@ static ge::graphStatus TilingParseForConv3DBackpropFilterV2(gert::TilingParseCon
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfoPtr->core_num = ascendcPlatform.GetCoreNumAic();
     compileInfoPtr->shortSocVersion = ascendcPlatform.GetSocVersion();
+	compileInfoPtr->npuArch = ascendcPlatform.GetCurNpuArch();
+    OP_LOGD(context->GetNodeName(), "compileInfoPtr npuarch: %d", compileInfoPtr->npuArch);
     return ge::GRAPH_SUCCESS;
 }
 
