@@ -113,7 +113,7 @@
 
 ## 约束说明
 
-- 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2、x3的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"、"add"、"mul"时, x1、x2、x3的数据类型必须为BFLOAT16、FLOAT16、FLOAT32。
+- 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2、x3的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"、"add"、"mul"时, x1、x2、x3的数据类型必须为FLOAT32(仅支持使能HFLOAT32场景)、BFLOAT16、FLOAT16。
 ## 调用说明
 
 <table style="undefined;table-layout: fixed; width: 900px"><colgroup>
