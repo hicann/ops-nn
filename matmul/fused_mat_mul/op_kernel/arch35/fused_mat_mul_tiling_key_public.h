@@ -31,4 +31,7 @@
 #define F_OPTYPE_GELU_ERF 3
 #define F_OPTYPE_GELU_TANH 4
 #define F_OPTYPE_RELU 5
+
+#define MAT_MUL_FOR_BATCH 0
+#define MAT_MUL_ITER_BATCH_SINGLE_BIAS 1
 #endif

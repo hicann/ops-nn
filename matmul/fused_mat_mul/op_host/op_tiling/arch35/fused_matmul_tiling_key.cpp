@@ -21,8 +21,8 @@ uint64_t FusedMatmulTilingKey::GetTilingKey() const
 {
     return GET_TPL_TILING_KEY(
         static_cast<uint64_t>(apiLevel_), static_cast<uint64_t>(atrans_) + (static_cast<uint64_t>(btrans_) << 1),
-        static_cast<uint64_t>(MatMulV3BatchModel::BATCH_MODEL), static_cast<uint64_t>(model_),
-        static_cast<uint64_t>(fullLoad_), static_cast<uint64_t>(out_), static_cast<uint64_t>(fusedOpType_));
+        static_cast<uint64_t>(batchModel_), static_cast<uint64_t>(model_), static_cast<uint64_t>(fullLoad_),
+        static_cast<uint64_t>(out_), static_cast<uint64_t>(fusedOpType_));
 }
 
 } // namespace fused_matmul

@@ -33,6 +33,7 @@ constexpr uint32_t UB_SUB_BANK_LEN = 256U; // SUB0: 256, SUB1: 256B
 constexpr uint32_t UB_TWO_BANK_ELEMS_B32 = 128U;
 constexpr uint32_t UB_SUB_BANK_ELEMS_B32 = 64U; // SUB0: 64, SUB1: 64
 constexpr uint32_t UB_SUB_BANK_NUM = 2U;
+constexpr uint16_t AIC_SYNC_AIV_MODE_4 = 4U;
 constexpr int MNK_M = 0;
 constexpr int MNK_N = 1;
 constexpr int MNK_K = 2;

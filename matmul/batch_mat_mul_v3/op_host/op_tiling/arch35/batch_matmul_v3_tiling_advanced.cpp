@@ -122,7 +122,7 @@ ge::graphStatus BatchMatMulV3Tiling::GetBatchInfo(const gert::TilingContext &con
     bool batch1Invalid = batchInfo.batchA1 != batchInfo.batchB1 && batchInfo.batchA1 != 1UL && batchInfo.batchB1 != 1UL;
     bool batch0Invalid = batchInfo.batchA0 != batchInfo.batchB0 && batchInfo.batchA0 != 1UL && batchInfo.batchB0 != 1UL;
     if (batch3Invalid || batch2Invalid || batch1Invalid || batch0Invalid) {
-        OP_LOGE("[BatchMatMulV3]", "Is M broadcast to N situation, do not support!");
+        OP_LOGE(args.opName, "Is M broadcast to N situation, do not support!");
         return ge::GRAPH_FAILED;
     }
     OP_TILING_CHECK((GetBmmBiasInfo(context, args, batchInfo) != ge::GRAPH_SUCCESS),
@@ -135,7 +135,7 @@ void BatchMatMulV3Tiling::MergeBatchAndMAxis(MatMulV3Args& args, MatMulV3BatchIn
     if (batchInfo.batchB != 1UL || args.isATrans){
         return;
     }
-    OP_LOGD("[BatchMatMulV3]", "Merge Batch and M axis");
+    OP_LOGD(args.opName, "Merge Batch and M axis");
     // when BatchB == 1, adjust M = batchA * M, batchA = 1
     args.mValue = batchInfo.batchA * args.mValue;
     batchInfo.batchA3 = 1UL;

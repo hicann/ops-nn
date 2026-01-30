@@ -44,6 +44,8 @@ protected:
     bool IsMat2TransposeNonContiguous(const gert::Shape& viewShape) const;
 
     bool IsContiguousStride(StrideIndexPairs& strideIndexPairs) const;
+    
+    MatMulV3L0C2Out l0C2Out_{MatMulV3L0C2Out::ON_THE_FLY};
 
 private:
     uint64_t c0Size_{16};
@@ -55,7 +57,6 @@ private:
     uint64_t iterBatchL0C_{0};
     uint64_t iterBatchL1_{0};
     bool l0CanLoadBatch_{false};
-    MatMulV3L0C2Out l0C2Out_{MatMulV3L0C2Out::ON_THE_FLY};
 };
 }
 }

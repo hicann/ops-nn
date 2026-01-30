@@ -19,8 +19,10 @@
 #include "cmct/kernel/kernel_matmul_mix_without_que.h"
 #include "cmct/kernel/kernel_matmul_mix.h"
 #include "cmct/kernel/kernel_matmul.h"
+#include "cmct/kernel/kernel_matmul_iterbatch.h"
 #include "../mat_mul_v3/arch35/mat_mul_tiling_data.h"
 #include "../batch_mat_mul_v3/arch35/batch_mat_mul_v3_asw_kernel_advanced.h"
+#include "../batch_mat_mul_v3/arch35/batch_mat_mul_v3_iterbatch_basicapi_cmct.h"
 #include "../mat_mul_v3/arch35/mat_mul_pingpong_basic_cmct.h"
 #include "../mat_mul_v3/arch35/mat_mul_streamk_basic_cmct.h"
 #include "../mat_mul_v3/arch35/mat_mul_mix_basic_cmct.h"
@@ -178,10 +180,11 @@ __aicore__ void inline FusedGeluMatMul(
     KernelFunc<MatmulKernel, MmadArgs, EpilogueArgs>(tilingData, mmadArgs, epilogueArgs, workspaceGM);
 }
 #endif
-template <int8_t API_LEVEL, int8_t TRANS_MODEL, int8_t BATCH_ITER_MODEL, int8_t MODEL, int8_t FULL_LOAD,
-          int8_t L0C2OUT_MODEL, int8_t OPTYPE>
-__global__ __aicore__ void fused_mat_mul(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR biasGM, GM_ADDR x3GM, GM_ADDR yGM,
-                                         GM_ADDR workspaceGM, GM_ADDR tilingGM)
+template <
+    int8_t API_LEVEL, int8_t TRANS_MODEL, int8_t BATCH_ITER_MODEL, int8_t MODEL, int8_t FULL_LOAD, int8_t L0C2OUT_MODEL,
+    int8_t OPTYPE>
+__global__ __aicore__ void fused_mat_mul(
+    GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR biasGM, GM_ADDR x3GM, GM_ADDR yGM, GM_ADDR workspaceGM, GM_ADDR tilingGM)
 {
     __gm__ uint8_t* user = AscendC::GetUserWorkspace(workspaceGM);
 
@@ -194,7 +197,21 @@ __global__ __aicore__ void fused_mat_mul(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR bia
 
     if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL) { // 基础API
         if constexpr (OPTYPE == F_OPTYPE_NONE) {
-            if constexpr (MODEL == MAT_MUL_BASIC) {
+            if constexpr (BATCH_ITER_MODEL == MAT_MUL_ITER_BATCH_SINGLE_BIAS) {
+                if constexpr (L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
+                    GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3IterBatchBasicTilingData, tilingData, tilingGM);
+                    BatchMatMulActIterBatchKernel<
+                        DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor>(
+                        x1GM, x2GM, biasGM, yGM, workspaceGM, tilingData);
+                } else if constexpr (L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
+                    GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3IterBatchBasicTilingData, tilingData, tilingGM);
+                    BatchMatMulActIterBatchKernel<
+                        DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
+                        MatMulL0C2Out::ND_FIXPIPE_1_2>(x1GM, x2GM, biasGM, yGM, workspaceGM, tilingData);
+                } else {
+                    static_assert(AscendC::Std::always_false_v<decltype(L0C2OUT_MODEL)>, "not support yet");
+                }
+            } else if constexpr (MODEL == MAT_MUL_BASIC) {
                 GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
                 MatmulV3Advanced::MatMulActKernel<
                     DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor, FULL_LOAD,
@@ -240,7 +257,16 @@ __global__ __aicore__ void fused_mat_mul(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR bia
                 static_assert(AscendC::Std::always_false_v<decltype(MODEL)>, "not support yet");
             }
         } else if constexpr (OPTYPE == F_OPTYPE_ADD) {
-            if constexpr (MODEL == MAT_MUL_BASIC) {
+            if constexpr (BATCH_ITER_MODEL == MAT_MUL_ITER_BATCH_SINGLE_BIAS) {
+                if constexpr (L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
+                    GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3IterBatchBasicTilingData, tilingData, tilingGM);
+                    BatchMatMulActIterBatchKernel<
+                        DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
+                        MatMulL0C2Out::ND_FIXPIPE_1_2, F_OPTYPE_ADD>(x1GM, x2GM, biasGM, yGM, x3GM, tilingData);
+                } else {
+                    static_assert(AscendC::Std::always_false_v<decltype(L0C2OUT_MODEL)>, "not support yet");
+                }
+            } else if constexpr (MODEL == MAT_MUL_BASIC) {
                 if constexpr (L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) { // tilingKey保持loc2Out切换基础API后不变
                     GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
                     // Add当前仅支持ASWT模板

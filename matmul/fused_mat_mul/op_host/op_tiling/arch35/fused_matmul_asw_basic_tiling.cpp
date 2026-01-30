@@ -24,6 +24,9 @@ MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulAswBasicApiTiling, ASCEND950
 
 bool FusedMatMulAswBasicApiTiling::IsCapable()
 {
+    if (args_.batchInfo->batchC > 1) {
+        return false;
+    }
     if (args_.bFormat != ge::FORMAT_ND || args_.aFormat != ge::FORMAT_ND) {
         OP_LOGD(args_.opName, "ND is the only supported format for basic api");
         return false;

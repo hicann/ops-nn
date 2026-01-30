@@ -25,6 +25,9 @@ MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulStreamKTiling, ASCEND950, BA
 
 bool FusedMatMulStreamKTiling::IsCapable()
 {
+    if (args_.batchInfo->batchC > 1) {
+        return false;
+    }
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);

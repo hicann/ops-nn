@@ -403,6 +403,8 @@ protected:
         iterbatchTilingBasicData.baseN = runInfo_.baseN;
         iterbatchTilingBasicData.baseK = runInfo_.baseK;
         iterbatchTilingBasicData.innerBatch = runInfo_.innerBatch;
+        iterbatchTilingBasicData.batchX3 = args_.batchX3;
+        iterbatchTilingBasicData.needNdDma = runInfo_.needNdDma;
         iterbatchTilingBasicData.l2CacheDisable =
             SetDisableL2cache(args_.mValue, args_.kValue, args_.kValue, args_.nValue);
         return ge::GRAPH_SUCCESS;

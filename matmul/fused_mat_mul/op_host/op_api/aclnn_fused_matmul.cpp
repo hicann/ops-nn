@@ -33,7 +33,8 @@ const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
     op::DataType::DT_BF16, op::DataType::DT_FLOAT16};
 const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_BUILT_IN = {
     op::DataType::DT_BF16, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
-static constexpr size_t DIM_LEN = 2;
+static constexpr size_t DIM_LEN_MIN = 2;
+static constexpr size_t DIM_LEN_MAX = 3;
 
 bool IsBuiltInScene(const char* fusedOpType)
 {
@@ -139,19 +140,49 @@ static bool CheckDtypeValid(
 
 static inline bool CheckShape(const aclTensor* x, const aclTensor* x2, const aclTensor* x3, const aclTensor* y)
 {
-    // check x dims number is 2
-    OP_CHECK_WRONG_DIMENSION(x, DIM_LEN, return false);
+    // check x dims number is 2 or 3(bmm)
+    OP_CHECK_MAX_DIM(x, DIM_LEN_MAX, return false);
+    OP_CHECK_MIN_DIM(x, DIM_LEN_MIN, return false);
 
-    // Check x2 dims number is 2
-    OP_CHECK_WRONG_DIMENSION(x2, DIM_LEN, return false);
+    // check x2 dims number is 2 or 3(bmm)
+    OP_CHECK_MAX_DIM(x2, DIM_LEN_MAX, return false);
+    OP_CHECK_MIN_DIM(x2, DIM_LEN_MIN, return false);
+
+    // check dimensions of x and x2 must be same
+    if (x2->GetViewShape().GetDimNum() != x->GetViewShape().GetDimNum()) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "x dimension and x2 dimension should be the same, but x dimension is %d, x2 dimension is %d.",
+            x3->GetViewShape().GetDimNum(), y->GetViewShape().GetDimNum());
+    }
+
+    // check dimensions of x and y must be same
+    if (y->GetViewShape().GetDimNum() != x->GetViewShape().GetDimNum()) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "x dimension and x2 dimension should be the same, but x dimension is %d, y dimension is %d.",
+            x3->GetViewShape().GetDimNum(), y->GetViewShape().GetDimNum());
+    }
 
     if (x3 != nullptr) {
-        // check x3 dims number is 2
-        OP_CHECK_WRONG_DIMENSION(x3, DIM_LEN, return false);
-        if (x3->GetViewShape() != y->GetViewShape()) {
+        // check x3 dims number is 2 or 3(bmm)
+        OP_CHECK_MAX_DIM(x3, DIM_LEN_MAX, return false);
+        OP_CHECK_MIN_DIM(x3, DIM_LEN_MIN, return false);
+
+        // mm or bmm
+        if (y->GetViewShape().GetDimNum() == DIM_LEN_MIN && x3->GetViewShape() != y->GetViewShape()) {
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID, "Shape of x3 and y should be the same, but x3shape is %s, yshape is %s.",
                 op::ToString(x3->GetViewShape()).GetString(), op::ToString(y->GetViewShape()).GetString());
+            return false;
+        }
+
+        if (x3->GetViewShape().GetDimNum() == DIM_LEN_MAX && x3->GetViewShape()[0] != 1 &&
+            x3->GetViewShape()[0] != y->GetViewShape()[0]) {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "Batch of x3 must be 1 or same as batch of y, but x3batch is %ld, ybatch is %ld.",
+                x3->GetViewShape()[0], y->GetViewShape()[0]);
             return false;
         }
     }
@@ -166,7 +197,7 @@ static aclnnStatus CheckParams(
     CHECK_RET(CheckFusedOpType(fusedOpType), ACLNN_ERR_PARAM_INVALID);
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(x, x2, bias, x3, fusedOpType, y), ACLNN_ERR_PARAM_NULLPTR);
-
+    
     // 2. 检查A和B是否为2维，且是否满足matmul shape MN 与传入的x3 shape Mn相同
     CHECK_RET(CheckShape(x, x2, x3, y), ACLNN_ERR_PARAM_INVALID);
 

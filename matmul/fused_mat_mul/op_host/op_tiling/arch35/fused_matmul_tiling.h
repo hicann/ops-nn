@@ -24,6 +24,7 @@
 #include "exe_graph/runtime/storage_shape.h"
 #include "exe_graph/runtime/tiling_context.h"
 #include "exe_graph/runtime/tiling_parse_context.h"
+#include "matmul/batch_mat_mul_v3/op_host/op_tiling/batch_mat_mul_v3_base_tiling.h"
 
 namespace optiling {
 namespace fused_matmul {

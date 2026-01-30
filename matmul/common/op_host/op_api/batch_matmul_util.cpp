@@ -34,6 +34,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/make_op_executor.h"
 #include "matmul/common/op_host/math_util.h"
+#include "matmul/fused_mat_mul/op_host/op_api/fusedmatmul.h"
 
 using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
@@ -46,6 +47,7 @@ namespace {
 static const int32_t PENULTIMATE_DIM = 2;
 static const int32_t LAST_DIM = 1;
 static const uint64_t NUM_TWO = 2UL;
+static const uint64_t NUM_THREE = 3UL;
 static const int64_t BLOCK_BYTE_SIZE = 32L;
 static const uint64_t BLOCK_SIZE_256 = 256UL;
 static const uint64_t BLOCK_CUBE = 16UL;
@@ -1083,6 +1085,104 @@ const aclTensor* ExecBmmOpV2(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor, bool isBaddbmm)
 {
     return ExecBmmOpWithBiasV2(self, mat2, nullptr, out, cubeMathType, executor, isBaddbmm);
+}
+
+const bool checkFusedmm(
+    const aclTensor* bias, const aclTensor* self, const aclTensor* mat2, const aclScalar* alpha, const aclScalar* beta,
+    int8_t cubeMathType, bool& isNeedSwapInnerTwoDim)
+{
+    // 都需要存在
+    if (bias == nullptr || self == nullptr || mat2 == nullptr) {
+        return false;
+    }
+    // alpha=1 beta=1
+    if (std::abs(alpha->ToFloat() - 1.0f) > std::numeric_limits<float>::epsilon() ||
+        std::abs(beta->ToFloat() - 1.0f) > std::numeric_limits<float>::epsilon()) {
+        return false;
+    }
+    // 仅支持hf32
+    if (bias->GetDataType() != op::DataType::DT_FLOAT || self->GetDataType() != op::DataType::DT_FLOAT ||
+        mat2->GetDataType() != op::DataType::DT_FLOAT || cubeMathType != USE_HF32) {
+        return false;
+    }
+    // 仅支持mat1 mat2三维
+    if (self->GetViewShape().GetDimNum() != NUM_THREE || mat2->GetViewShape().GetDimNum() != NUM_THREE) {
+        return false;
+    }
+    // 仅支持二维或三维x3
+    if (bias->GetViewShape().GetDimNum() != NUM_TWO && bias->GetViewShape().GetDimNum() != NUM_THREE) {
+        return false;
+    }
+    // 不支持NZ
+    if (mat2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ ||
+        self->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
+        return false;
+    }
+    // 对shape校验，只支持多batch载入模板
+    if (!CheckTransNonContiguousShapeSupport(self, mat2, nullptr)) {
+        return false;
+    }
+    // 仅支持(n,b,k) (k,b,n)两种形式的mat2
+    if (!Ops::NN::IsTransposeNonContiguous(mat2, isNeedSwapInnerTwoDim)) {
+        return false;
+    }
+    OP_LOGI("Check fusedmm success.");
+    return true;
+}
+
+const aclTensor* ExecFusedmmOp(
+    const aclTensor* bias, const aclTensor* self, const aclTensor* mat2, int8_t cubeMathType,
+    const bool isNeedSwapInnerTwoDim, aclOpExecutor* executor)
+{
+    // 处理mat2
+    auto contiguousMat2 = mat2;
+    auto transposeMat2 = false;
+    if (isNeedSwapInnerTwoDim) {
+        // Swap inner two axis (dim 1 & dim2) b1 b2 n k b1 b2 k n
+        contiguousMat2 = executor->CreateView(
+            mat2, SwapLastTwoDimValue(mat2->GetViewShape(), LAST_DIM, PENULTIMATE_DIM), mat2->GetViewOffset());
+        op::Strides strides = mat2->GetViewStrides();
+        const size_t size = strides.size();
+        std::swap(strides[size - LAST_DIM], strides[size - NUM_TWO]);
+        const_cast<aclTensor*>(contiguousMat2)->SetViewStrides(strides);
+        transposeMat2 = true;
+    }
+    // 刷新oriShape
+    auto mat2Cast = contiguousMat2;
+    mat2Cast = executor->CreateView(
+        contiguousMat2, contiguousMat2->GetViewShape(), contiguousMat2->GetStorageShape(),
+        contiguousMat2->GetViewStrides(), contiguousMat2->GetViewOffset());
+    mat2Cast = SetTensorToNDFormat(mat2Cast);
+
+    // 处理self
+    auto transposeSelf = Ops::NN::IsTransposeLastTwoDims(self);
+    auto reformatSelf = self;
+    reformatSelf = l0op::ReFormat(self, op::Format::FORMAT_ND);
+    CHECK_RET(reformatSelf != nullptr, nullptr);
+    auto contiguousSelf = reformatSelf;
+    if (transposeSelf) {
+        contiguousSelf = executor->CreateView(self, SwapLastTwoDimValue(self->GetViewShape()), self->GetViewOffset());
+    } else {
+        contiguousSelf = l0op::Contiguous(self, executor);
+    }
+    CHECK_RET(contiguousSelf != nullptr, nullptr);
+
+    // 处理bias
+    auto reformatBias = bias;
+    reformatBias = l0op::ReFormat(bias, op::Format::FORMAT_ND);
+    auto contiguousBias = reformatBias;
+    if (contiguousBias != nullptr) {
+        bool biasCastRes = ContiguousAndCastBias(bias, contiguousBias, DataType::DT_FLOAT, executor);
+        CHECK_RET(biasCastRes, nullptr);
+    }
+
+    // 执行fusedmm l0接口
+    OP_LOGI("Entering l0op::FusedMatMulNd.");
+    const char* fusedOpType = "add";
+    const aclTensor* bmmOpOut = l0op::FusedMatMulNd(
+        contiguousSelf, mat2Cast, nullptr, contiguousBias, transposeSelf, transposeMat2, cubeMathType, fusedOpType,
+        executor);
+    return bmmOpOut;
 }
 }  // namespace Ops
 }  // namespace NN

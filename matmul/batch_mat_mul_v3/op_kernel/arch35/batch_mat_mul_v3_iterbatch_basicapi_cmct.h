@@ -24,19 +24,24 @@ using namespace Cmct;
 using namespace Cmct::Gemm;
 
 // 用于偏特化选择BlockEpilogue类型
-template <MatMulL0C2Out L0C2OutType, class OutType>
+template <MatMulL0C2Out L0C2OutType, class OutType, class InType, uint64_t OpType>
 struct BlockEpilogueSelector {
     using type = Block::BlockEpilogueEmpty;
 };
 
-template <class OutType>
-struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType> {
-    using type = Block::BlockEpilogueIterbatch<OutType>;
+template <class OutType, class InType>
+struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType, InType, OP_TYPE_EMPTY> {
+    using type = Block::BlockEpilogueIterbatch<OutType, InType, Block::DefaultFusion<OutType, InType>>;
+};
+
+template <class OutType, class InType>
+struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType, InType, OP_TYPE_ADD> {
+    using type = Block::BlockEpilogueIterbatch<OutType, InType, Block::FusionAdd<OutType, InType>>;
 };
 
 template <
     class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
-    MatMulL0C2Out FIXPIPE_OPT = MatMulL0C2Out::ON_THE_FLY>
+    MatMulL0C2Out FIXPIPE_OPT = MatMulL0C2Out::ON_THE_FLY, uint64_t FUSED_OPTYPE = 0>
 __aicore__ inline void BatchMatMulActIterBatchKernel(
     GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM, GM_ADDR workspaceGM,
     const BatchMatMulV3IterBatchBasicTilingData& tilingData)
@@ -63,7 +68,7 @@ __aicore__ inline void BatchMatMulActIterBatchKernel(
             L1TileShape, L0TileShape, BlockScheduler, MatmulIterBatch<FIXPIPE_OPT>>;
 
     // 定义BlockEpilogue类型
-    using BlockEpilogue = typename BlockEpilogueSelector<FIXPIPE_OPT, OutType>::type;
+    using BlockEpilogue = typename BlockEpilogueSelector<FIXPIPE_OPT, OutType, OutType, FUSED_OPTYPE>::type;
     
     // 定义shape的形状，tuple保存 m n k batch
     using ProblemShape = MatmulShape;
@@ -79,7 +84,11 @@ __aicore__ inline void BatchMatMulActIterBatchKernel(
         {&tilingData}
     };
     if constexpr (FIXPIPE_OPT == MatMulL0C2Out::ND_FIXPIPE_1_2) {
-        params.epilogueParams = {cGM};
+        if constexpr (FUSED_OPTYPE == OP_TYPE_ADD) {
+            params.epilogueParams = {cGM, {workspaceGM}};
+        } else {
+            params.epilogueParams = {cGM};
+        }
     }
     AscendC::TPipe tPipe;
     MatmulKernel mm;

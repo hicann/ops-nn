@@ -19,6 +19,7 @@
 #include "fused_matmul_builtin_tiling_strategy.h"
 #include "fused_matmul_tiling_key.h"
 #include "matmul/batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_tiling_strategy.h"
+#include "matmul/batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_tiling_advanced.h"
 #include "matmul/batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_common_advanced.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_compile_info_advanced.h"
@@ -31,17 +32,17 @@ using namespace optiling;
 using namespace optiling::fused_matmul;
 
 static const std::vector<std::vector<ge::DataType>> DTYPE_SUPPORT_LIST_RESERVED = {
-    // x1,              x2,             y,              bias
-    {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16},
+    // x1,              x2,             y,              bias            x3
+    {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16},
 };
 
 static const std::vector<std::vector<ge::DataType>> DTYPE_SUPPORT_LIST_91095 = {
-    // x1,              x2,             y,               bias
-    {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16},
-    {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT},
-    {ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16},
-    {ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT},
-    {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT}};
+    // x1,              x2,             y,               bias            x3
+    {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16},
+    {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16},
+    {ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16},
+    {ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16},
+    {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT}};
 
 inline void GetDtype(const gert::TilingContext& context, MatMulV3Args& args, platform_ascendc::SocVersion socVersion)
 {
@@ -49,7 +50,10 @@ inline void GetDtype(const gert::TilingContext& context, MatMulV3Args& args, pla
     args.bType = context.GetInputDesc(1)->GetDataType();
     args.cType = context.GetOutputDesc(0)->GetDataType();
     if (args.hasBias) {
-        args.biasType = context.GetInputDesc(INPUT_BIAS_IDX)->GetDataType();
+        args.biasType = context.GetOptionalInputDesc(INPUT_BIAS_IDX)->GetDataType();
+    }
+    if (args.hasX3Input) {
+        args.x3Type = context.GetOptionalInputDesc(INPUT_X3_IDX)->GetDataType();
     }
     // op_impl_mode_enum: 0x1: default 0x2: high_performance 0x4: high_precision 0x8: super_performance
     // 0x10: support_of_bound_index 0x20: enable_float_32_execution 0x40: enable_hi_float_32_execution
@@ -68,6 +72,10 @@ ge::graphStatus IsValidDtype(const MatMulV3Args& args, platform_ascendc::SocVers
         dtype.push_back(args.biasType);
     }
 
+    if (args.hasX3Input) {
+        dtype.push_back(args.x3Type);
+    }
+
     // check dtype
     auto supportList = socVersion == platform_ascendc::SocVersion::ASCEND950 ? DTYPE_SUPPORT_LIST_91095 :
                                                                                   DTYPE_SUPPORT_LIST_RESERVED;
@@ -77,23 +85,56 @@ ge::graphStatus IsValidDtype(const MatMulV3Args& args, platform_ascendc::SocVers
         }
     }
 
-    if (args.hasBias) {
+    if (args.hasBias && args.hasX3Input) {
+        OP_LOGE(
+            args.opName, "Unsupported data type: x1[%s], x2[%s], y[%s], bias[%s], x3[%s]",
+            std::to_string(args.aType).c_str(), std::to_string(args.bType).c_str(), std::to_string(args.cType).c_str(),
+            std::to_string(args.biasType).c_str(), std::to_string(args.x3Type).c_str());
+        return ge::GRAPH_FAILED;
+    } else if (args.hasBias) {
         OP_LOGE(
             args.opName, "Unsupported data type: x1[%s], x2[%s], y[%s], bias[%s]", std::to_string(args.aType).c_str(),
-            std::to_string(args.bType).c_str(), std::to_string(args.cType).c_str(),
-            std::to_string(args.biasType).c_str());
+            std::to_string(args.bType).c_str(), std::to_string(args.cType).c_str());
+
         return ge::GRAPH_FAILED;
     } else {
         OP_LOGE(
             args.opName, "Unsupported data type: x1[%s], x2[%s], y[%s]", std::to_string(args.aType).c_str(),
-            std::to_string(args.bType).c_str(), std::to_string(args.cType).c_str());
+            std::to_string(args.bType).c_str(), std::to_string(args.cType).c_str(),
+            std::to_string(args.biasType).c_str());
         return ge::GRAPH_FAILED;
     }
 }
 
 ge::graphStatus OpSpecificCheck(
-    const gert::TilingContext& context, const MatMulV3Args& args, platform_ascendc::SocVersion socVersion)
+    const gert::TilingContext& context, MatMulV3Args& args, platform_ascendc::SocVersion socVersion)
 {
+    // check x3 shape
+    if (args.hasX3Input) {
+        const gert::Shape& x3Shape = context.GetOptionalInputShape(INPUT_X3_IDX)->GetOriginShape();
+        const size_t x3DimNum = x3Shape.GetDimNum();
+        if (x3DimNum < NUM_TWO || x3DimNum > NUM_THREE) {
+            OP_LOGE(args.opName, "illegal value: output dim num (%zu)", x3DimNum);
+            return ge::GRAPH_FAILED;
+        }
+        if (x3Shape[x3DimNum - NUM_TWO] != args.mValue || x3Shape[x3DimNum - 1] != args.nValue) {
+            OP_LOGE(
+                args.opName, "illegal value: shape x3Shape[-2]:%ld, x3Shape[-1]:%ld, m:%ld, n%ld",
+                x3Shape[x3DimNum - NUM_TWO], x3Shape[x3DimNum - 1], args.mValue, args.nValue);
+            return ge::GRAPH_FAILED;
+        }
+        // 仅支持x3的batch 1D
+        if (x3DimNum == NUM_THREE) {
+            OP_TILING_CHECK(
+                x3Shape[0] != 1 && x3Shape[0] != static_cast<int>(args.batchInfo->batchC),
+                CUBE_INNER_ERR_REPORT(
+                    args.opName, "illegal value: batchX3 %ld cannot broadcast to batchC %ld", x3Shape[0],
+                    args.batchInfo->batchC),
+                return ge::GRAPH_FAILED);
+            args.batchX3 = x3Shape[0];
+        }
+    }
+
     // check bias
     if (args.hasBias) {
         const gert::Shape& biasShape = context.GetInputShape(INPUT_BIAS_IDX)->GetOriginShape();
@@ -124,30 +165,26 @@ ge::graphStatus FusedMatMulBuiltInTiling::GetBmmBiasInfo(const gert::TilingConte
     if (!hasBias) {
         return ge::GRAPH_SUCCESS;
     }
-    auto biasShape = context.GetOptionalInputShape(2)->GetOriginShape(); // bias == 2
+    auto biasShape = context.GetOptionalInputShape(NUM_TWO)->GetOriginShape(); // bias == 2
     auto outputShape = context.GetOutputShape(0)->GetOriginShape();
     size_t biasDims = biasShape.GetDimNum();
     size_t cDims = outputShape.GetDimNum();
-    uint64_t batchBias3 = 1UL;
-    uint64_t batchBias2 = 1UL;
-    uint64_t batchBias1 = 1UL;
-    uint64_t batchBias0 = 1UL;
-    // 先校验bias的尾值是否与output尾值相等
-    if (biasShape[biasDims - FINAL_SHAPE_DIM] != outputShape[cDims - FINAL_SHAPE_DIM]) {
-        OP_LOGE(args.opName, "Last dim of bias is not equal to last dim of output.");
-        return ge::GRAPH_FAILED;
-    }
     // 不支持batchbias
     if (biasDims > NUM_TWO) {
         OP_LOGE(args.opName, "Bias dim of fusedMatmul must be lower than 3.");
+        return ge::GRAPH_FAILED;
+    }
+    // 先校验bias的尾值是否与output尾值相等
+    if (biasShape[biasDims - FINAL_SHAPE_DIM] != outputShape[cDims - FINAL_SHAPE_DIM]) {
+        OP_LOGE(args.opName, "Last dim of bias is not equal to last dim of output.");
         return ge::GRAPH_FAILED;
     }
     if (biasDims == NUM_TWO && biasShape[0] != 1) { // BIAS[0]必须为1
         OP_LOGE(args.opName, "M of bias must be 1.");
         return ge::GRAPH_FAILED;
     }
-    batchInfo.batchBias = batchBias3 * batchBias2 * batchBias1 * batchBias0;
-    OP_LOGI(args.opName, "Check bias success.");
+    batchInfo.batchBias = 1;
+    OP_LOGI(args.opName, "Check FusedMatmul with bias success.");
     return ge::GRAPH_SUCCESS;
 }
 
@@ -210,15 +247,16 @@ ge::graphStatus FusedMatMulBuiltInTiling::GetBatchInfo(
 
 ge::graphStatus FusedMatMulBuiltInTiling::DoTiling()
 {
-    if (GetShapeAttrsInfo() != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
     // 重写BMM校验Batch和bias
     MatMulV3BatchInfo tempBatchInfo;
     OP_TILING_CHECK(
         (GetBatchInfo(*context_, args_, tempBatchInfo) != ge::GRAPH_SUCCESS),
         CUBE_INNER_ERR_REPORT(args_.opName, "GetBatchInfo failed"), return ge::GRAPH_FAILED);
     args_.batchInfo = &tempBatchInfo;
+    // 需要先获取batchInfo再做shape校验
+    if (GetShapeAttrsInfo() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     FusedMatmulTilingKey fusedMatmulTilingKey;
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
@@ -255,12 +293,17 @@ ge::graphStatus FusedMatMulBuiltInTiling::CheckArgs()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputShape(idx));
     idx++;
 
-    if (context_->GetInputDesc(idx) != nullptr) {
+    if (context_->GetOptionalInputDesc(INPUT_BIAS_IDX) != nullptr &&
+        context_->GetOptionalInputShape(INPUT_BIAS_IDX)->GetOriginShape().GetDimNum() > 0) {
         args_.hasBias = true;
     }
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<bool>(ATTR_ENABLE_HF32_IDX));
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<bool>(ATTR_OP_TYPE_IDX));
-
+    std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
+    if (opType == "mul" || opType == "add") {
+        args_.hasX3Input = true;
+        OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOptionalInputDesc(INPUT_X3_IDX));
+    }
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputDesc(0));
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputShape(0));
     return ge::GRAPH_SUCCESS;
@@ -271,7 +314,7 @@ ge::graphStatus FusedMatMulBuiltInTiling::GetShapeAttrsInfo()
     OP_TILING_CHECK(
         GetSocVersion(context_, socVersion_) == ge::GRAPH_FAILED,
         CUBE_INNER_ERR_REPORT("FusedMatMul", "fail to get soc version"), return ge::GRAPH_FAILED);
-    return MatMulV3Tiling::GetShapeAttrsInfo();
+    return BatchMatMulV3Tiling::GetShapeAttrsInfo();
 }
 } // namespace fused_matmul
 } // namespace optiling

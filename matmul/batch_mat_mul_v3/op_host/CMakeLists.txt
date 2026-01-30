@@ -7,4 +7,4 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 #/
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE batch_mat_mul_v3 ACLNNTYPE aclnn_exclude DEPENDENCIES mat_mul_v3)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE batch_mat_mul_v3 ACLNNTYPE aclnn_exclude DEPENDENCIES mat_mul_v3 fused_mat_mul)

@@ -42,6 +42,8 @@ public:
     int64_t baseK_{16};
     int64_t isHf32_{0};
     int64_t innerBatch_{0};
+    int64_t batchX3_{1};
+    bool needNdDma_{false};
     L2CacheMode l2CacheDisable_{L2CacheMode::L2_CACHE_DEFAULT};
 
     using BlockShape = Shape<int64_t, int64_t, int64_t, int64_t>;
@@ -68,6 +70,8 @@ public:
         isHf32_ = params.tilingData->isHf32;
         innerBatch_ = params.tilingData->innerBatch;
         l2CacheDisable_ = params.tilingData->l2CacheDisable;
+        needNdDma_ = params.tilingData->needNdDma;
+        batchX3_ = params.tilingData->batchX3;
     }
 
     __aicore__ inline int64_t GetTileNum()
@@ -126,6 +130,16 @@ public:
     {
         return (l2CacheDisable_ == L2CacheMode::ALL_L2_CACHE_DISABLE ||
                 l2CacheDisable_ == L2CacheMode::B_L2_CACHE_DISABLE);
+    }
+
+    __aicore__ inline bool GetNeedNdDma()
+    {
+        return needNdDma_;
+    }
+
+    __aicore__ inline int64_t GetBatchX3()
+    {
+        return batchX3_;
     }
 };
 

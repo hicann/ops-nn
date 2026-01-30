@@ -1005,3 +1005,39 @@ TEST_F(l2_baddbmm_test, baddbmm_inplace_310_FP32_FP16_FP16FP32_KEEP_DTYPE)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
+
+TEST_F(l2_baddbmm_test, ascend910_95_test_bmm_transpose_add1)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto self = TensorDesc({512, 150, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto batch1 = TensorDesc({512, 150, 150}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    // 原始shape排布k b n 转换后 b k n
+    auto batch2 = TensorDesc({512, 150, 8}, ACL_FLOAT, ACL_FORMAT_ND, {8, 4096, 1}, 0, {2457600}).ValueRange(0, 2);
+    auto out = TensorDesc({512, 150, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2).Precision(0.0001, 0.0001);
+    auto beta = ScalarDesc(1.0f);
+    auto alpha = ScalarDesc(1.0f);
+    int8_t math_type = 3;
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = 0;
+    auto ut_false_false = OP_API_UT(aclnnBaddbmm, INPUT(self, batch1, batch2, beta, alpha), OUTPUT(out), math_type);
+    aclRet = ut_false_false.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_baddbmm_test, ascend910_95_test_bmm_transpose_add2)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto self = TensorDesc({512, 150, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto batch1 = TensorDesc({512, 150, 150}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
+    // 原始shape排布n b k [8 512 150] 转换后 b k n [512 150 8]
+    auto batch2 = TensorDesc({512, 150, 8}, ACL_BF16, ACL_FORMAT_ND, {150, 1, 76800}, 0, {2457600}).ValueRange(0, 2);
+    auto out = TensorDesc({512, 150, 8}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2).Precision(0.0001, 0.0001);
+    auto beta = ScalarDesc(1.0f);
+    auto alpha = ScalarDesc(1.0f);
+    int8_t math_type = 3;
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = 0;
+    auto ut_false_false = OP_API_UT(aclnnBaddbmm, INPUT(self, batch1, batch2, beta, alpha), OUTPUT(out), math_type);
+    aclRet = ut_false_false.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}

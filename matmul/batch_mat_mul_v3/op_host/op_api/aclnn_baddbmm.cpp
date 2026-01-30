@@ -258,6 +258,14 @@ public:
     };
 
     aclnnStatus Impl() override{
+        // check iterBatch with add -> fusedMatmul
+        bool isNeedSwapInnerTwoDim = false;
+        if (checkFusedmm(bias, matA, matB, alpha, beta, cubeMathType, isNeedSwapInnerTwoDim)) {
+            const aclTensor* bmmOut = ExecFusedmmOp(bias, matA, matB, cubeMathType, isNeedSwapInnerTwoDim, executor);
+            CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            convOut = bmmOut;
+            return ACLNN_SUCCESS;
+        }
         // self(bias) * beta
         const aclTensor* selfContiguous = l0op::Contiguous(bias, executor);
         CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);

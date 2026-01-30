@@ -81,6 +81,7 @@ struct MatMulV3Args {
     ge::DataType aType = ge::DT_FLOAT16;
     ge::DataType bType = ge::DT_FLOAT16;
     ge::DataType cType = ge::DT_FLOAT16;
+    ge::DataType x3Type = ge::DT_FLOAT16;
     ge::DataType biasType = ge::DT_FLOAT16;
     ge::Format aFormat = ge::FORMAT_ND;
     ge::Format bFormat = ge::FORMAT_ND;
@@ -93,6 +94,8 @@ struct MatMulV3Args {
     uint64_t aDtypeSize = 1UL;
     uint64_t bDtypeSize = 1UL;
     uint64_t fusedOpType = 0UL;
+    uint64_t batchX3 = 1UL;
+    bool hasX3Input = false;
     MatMulV3BatchInfo *batchInfo = nullptr;
 };
 
@@ -146,6 +149,7 @@ struct MatMulV3RunInfo {
     double defaultBalance = 0.0;    // 默认负载均衡率
     double redundantData = 0.0;    // 默认重复搬运量
     uint64_t totalDataAmount = 1UL;
+    bool needNdDma = false;
     MatMulV3TailInfo tailInfo;
     BatchMatMulV3RunInfo bmmRunInfo;
     MatMulV3MixInfo mixInfo;

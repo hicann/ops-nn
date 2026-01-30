@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -37,6 +37,14 @@ namespace Cmct {
 namespace Gemm {
 namespace Kernel {
 
+__aicore__ inline uint64_t GetCurrentBlockIdx()
+{
+    if ASCEND_IS_AIV {
+        return AscendC::GetBlockIdx() / AscendC::GetTaskRation();
+    }
+    return AscendC::GetBlockIdx();
+}
+
 template <
     class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_, typename Enable_ = void>
 class KernelMatMulIterBatch {
@@ -50,10 +58,21 @@ class KernelMatMulIterBatch<
         (AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueEmpty> &&
          AscendC::Std::is_same_v<
              MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY>, typename BlockMmadBuilder_::BlockMatmulPolicy>) ||
-        ((AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueIterbatch<float>> ||
-          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueIterbatch<half>> ||
-          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueIterbatch<bfloat16_t>>)&&AscendC::Std::
-             is_same_v<
+        ((AscendC::Std::is_base_of_v<
+              BlockEpilogue_, Block::BlockEpilogueIterbatch<float, float, Block::FusionAdd<float, float>>> ||
+          AscendC::Std::is_base_of_v<
+              BlockEpilogue_, Block::BlockEpilogueIterbatch<float, float, Block::DefaultFusion<float, float>>> ||
+          AscendC::Std::is_base_of_v<
+              BlockEpilogue_, Block::BlockEpilogueIterbatch<half, half, Block::FusionAdd<half, half>>> ||
+          AscendC::Std::is_base_of_v<
+              BlockEpilogue_, Block::BlockEpilogueIterbatch<half, half, Block::DefaultFusion<half, half>>> ||
+          AscendC::Std::is_base_of_v<
+              BlockEpilogue_,
+              Block::BlockEpilogueIterbatch<bfloat16_t, bfloat16_t, Block::FusionAdd<bfloat16_t, bfloat16_t>>> ||
+          AscendC::Std::is_base_of_v<
+              BlockEpilogue_, Block::BlockEpilogueIterbatch<
+                                  bfloat16_t, bfloat16_t, Block::DefaultFusion<bfloat16_t, bfloat16_t>>>)&&AscendC::
+             Std::is_same_v<
                  MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2>, typename BlockMmadBuilder_::BlockMatmulPolicy>)>> {
 public:
     __aicore__ inline KernelMatMulIterBatch() {}
@@ -83,9 +102,9 @@ public:
     using BType = typename BlockMmadBuilder::BType;
     using CType = typename BlockMmadBuilder::CType;
     using BiasType = typename BlockMmadBuilder::BiasType;
-    using TupleShape = Shape<int64_t, int64_t, int64_t, int64_t>;
-    using BlockShape = Shape<int64_t, int64_t, int64_t, int64_t>;
-    using BlockCoord = Coord<int64_t, int64_t, int64_t, int64_t>;
+    using TupleShape = AscendC::Shape<int64_t, int64_t, int64_t, int64_t>;
+    using BlockShape = AscendC::Shape<int64_t, int64_t, int64_t, int64_t>;
+    using BlockCoord = AscendC::Coord<int64_t, int64_t, int64_t, int64_t>;
 
     // ND layout
     using NDLayout = AscendC::Layout<AscendC::Shape<int64_t, int64_t>, AscendC::Stride<int64_t, int64_t>>;
@@ -236,8 +255,10 @@ public:
             return;
         }
         AscendC::LocalTensor<CType> cLocal;
+        int64_t needNdDma = bs.GetNeedNdDma();
+        int64_t batchX3 = bs.GetBatchX3();
         if constexpr (!AscendC::Std::is_same_v<BlockEpilogue, Block::BlockEpilogueEmpty>) {
-            epilogueOp.Init(params.epilogueParams, problemShape_);
+            epilogueOp.Init(params.epilogueParams, problemShape_, mainIterBatchL0, baseM, baseN, batchX3, needNdDma);
             cLocal = epilogueOp.GetTensor();
         }
         blockMmadOp.Init(problemShape_, bs.GetInnerBatch(), mainIterBatchL1, isBias_);

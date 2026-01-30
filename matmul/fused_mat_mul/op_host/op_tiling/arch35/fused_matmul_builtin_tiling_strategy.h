@@ -25,11 +25,13 @@
 namespace optiling {
 namespace fused_matmul {
 namespace strategy {
+constexpr int32_t ITER_BATCH_BASICAPI = 0;
 constexpr int32_t BASE = 999;
 
 const static std::map<platform_ascendc::SocVersion, std::vector<int32_t>> FusedMatMulPrioritiesMap = {
     {platform_ascendc::SocVersion::ASCEND950,
-     {matmul_v3_advanced::strategy::BASIC_STREAM_K, matmul_v3_advanced::strategy::BASIC_ASWT}},
+     {strategy::ITER_BATCH_BASICAPI, matmul_v3_advanced::strategy::BASIC_STREAM_K,
+      matmul_v3_advanced::strategy::BASIC_ASWT}},
     {platform_ascendc::SocVersion::RESERVED_VERSION, {strategy::BASE}}, // supportMmadS8S4平台
 };
 
