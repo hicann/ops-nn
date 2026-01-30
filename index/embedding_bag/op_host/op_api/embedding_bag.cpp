@@ -11,14 +11,18 @@
  * \file aclnn_embedding_bag.cpp
  * \brief
  */
-
+ 
+#include "opdev/aicpu/aicpu_task.h"
+#include "aclnn_kernels/common/op_error_check.h"
 #include "embedding_bag.h"
 #include "opdev/format_utils.h"
 #include "opdev/op_dfx.h"
+#include "opdev/platform.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/data_type_utils.h"
-#include "opdev/platform.h"
 #include "opdev/shape_utils.h"
+#include "opdev/op_def.h"
+#include "op_api/aclnn_util.h"
 
 namespace l0op {
 
@@ -54,52 +58,88 @@ static op::Shape GetOutPutShape(
     return outputShape;
 }
 
+static aclTensor* AllocTensorForEmbeddingBag(
+    const op::Shape& shape910,
+    op::DataType dtype910,
+    const op::Shape& shapeOther,
+    op::DataType dtypeOther,
+    op::SocVersion socVersion,
+    aclOpExecutor* executor)
+{
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return executor->AllocTensor(shape910, dtype910, op::Format::FORMAT_ND);
+    } else {
+        return executor->AllocTensor(shapeOther, dtypeOther, op::Format::FORMAT_ND);
+    }
+}
+
+static std::pair<op::Shape, op::Shape> GetMaxIndicesShapes(
+    const std::string& modeStr,
+    bool includeLastOffset,
+    const op::Shape& offsetsShape,
+    const op::Shape& outputShape)
+{
+    op::Shape shape910;
+    op::Shape shapeOther;
+
+    if (modeStr == "max") {
+        shape910 = outputShape;
+        shapeOther = outputShape;
+    } else {
+        shape910.AppendDim(0);
+        if (includeLastOffset) {
+            shapeOther.AppendDim(offsetsShape.GetDim(0) - 1);
+        } else {
+            shapeOther = offsetsShape;
+        }
+    }
+    return std::make_pair(shape910, shapeOther);
+}
+
+static std::tuple<aclTensor*, aclTensor*, aclTensor*, aclTensor*> MakeNullEmbeddingBagResult() {
+    return std::make_tuple(
+        static_cast<aclTensor*>(nullptr),
+        static_cast<aclTensor*>(nullptr),
+        static_cast<aclTensor*>(nullptr),
+        static_cast<aclTensor*>(nullptr));
+}
+
 const std::tuple<aclTensor*, aclTensor*, aclTensor*, aclTensor*> EmbeddingBag(
     const aclTensor* weight, const aclTensor* indices, const aclTensor* offsets, bool scaleGradByFreq,
     const std::string& modeStr, bool sparse, const aclTensor* perSampleWeights, bool includeLastOffset,
     int64_t paddingIdx, aclOpExecutor* executor)
 {
     if (!IsAiCoreSupport(weight, indices, offsets, perSampleWeights)) {
-        return std::tuple<aclTensor*, aclTensor*, aclTensor*, aclTensor*>(
-            static_cast<aclTensor*>(nullptr), static_cast<aclTensor*>(nullptr),
-            static_cast<aclTensor*>(nullptr), static_cast<aclTensor*>(nullptr));
+        return MakeNullEmbeddingBagResult();
     }
+    auto socVersion = op::GetCurrentPlatformInfo().GetSocVersion();
+    op::DataType indicesDtype = indices->GetDataType();
+    op::DataType offsetsDtype = offsets->GetDataType();
+    op::DataType indexPromoteDtype = (indicesDtype == offsetsDtype) ? indicesDtype : op::DataType::DT_INT64;
     //申请output_tensor的Tensor
     auto outputShape = GetOutPutShape(weight, offsets, includeLastOffset);
     auto outputTensor = executor->AllocTensor(outputShape, weight->GetDataType());
-
+    aclTensor* offset2bag = nullptr;
     // 申请offset2bag的Tensor
-    op::Shape offset2bagShape;
-    offset2bagShape.AppendDim(indices->GetViewShape().GetDim(0));
-    auto offset2bag = executor->AllocTensor(offset2bagShape, indices->GetDataType(), op::Format::FORMAT_ND);
-
-    // 申请bagSize的Tensor
-    auto bagSize = executor->AllocTensor(offsets->GetViewShape(), offsets->GetDataType(), op::Format::FORMAT_ND);
+    op::Shape offset2bagShape910, offset2bagShapeOther;
+    offset2bagShape910.AppendDim(indices->GetViewShape().GetShapeSize());
+    offset2bagShapeOther.AppendDim(indices->GetViewShape().GetShapeSize());
+    offset2bag = AllocTensorForEmbeddingBag(offset2bagShape910, indexPromoteDtype, offset2bagShapeOther, indicesDtype, socVersion, executor);
+    aclTensor* bagSize = nullptr;
+    op::Shape bagSizeShape910, bagSizeShapeOther;
+    bagSizeShape910.AppendDim(offsets->GetViewShape().GetDim(0));  
     if (includeLastOffset) {
-        op::Shape bagSizeShape;
-        bagSizeShape.AppendDim(offsets->GetViewShape().GetDim(0) - 1);
-        bagSize = executor->AllocTensor(bagSizeShape, offsets->GetDataType(), op::Format::FORMAT_ND);
-    }
-
-    // 申请maxIndices的Tensor
-    aclTensor* maxIndices;
-    if (modeStr == "max") {
-        auto maxIndicesShape = GetOutPutShape(weight, offsets, includeLastOffset);
-        maxIndices = executor->AllocTensor(maxIndicesShape, offsets->GetDataType(), op::Format::FORMAT_ND);
+        bagSizeShapeOther.AppendDim(offsets->GetViewShape().GetDim(0) - 1);
     } else {
-        maxIndices = executor->AllocTensor(offsets->GetViewShape(), offsets->GetDataType(), op::Format::FORMAT_ND);
-        if (includeLastOffset) {
-            op::Shape maxIndicesShape;
-            maxIndicesShape.AppendDim(offsets->GetViewShape().GetDim(0) - 1);
-            maxIndices = executor->AllocTensor(maxIndicesShape, offsets->GetDataType(), op::Format::FORMAT_ND);
-        }
+        bagSizeShapeOther = offsets->GetViewShape();
     }
+    bagSize = AllocTensorForEmbeddingBag(bagSizeShape910, indexPromoteDtype, bagSizeShapeOther, offsetsDtype, socVersion, executor);
+    aclTensor* maxIndices = nullptr;
+    auto maxIndicesShapes = GetMaxIndicesShapes(modeStr, includeLastOffset, offsets->GetViewShape(), outputShape);
+    maxIndices = AllocTensorForEmbeddingBag(maxIndicesShapes.first, indexPromoteDtype, maxIndicesShapes.second, offsetsDtype, socVersion, executor);
     if (outputTensor == nullptr || offset2bag == nullptr || bagSize == nullptr || maxIndices == nullptr) {
-        return std::tuple<aclTensor*, aclTensor*, aclTensor*, aclTensor*>(
-            static_cast<aclTensor*>(nullptr), static_cast<aclTensor*>(nullptr),
-            static_cast<aclTensor*>(nullptr), static_cast<aclTensor*>(nullptr));
+        return MakeNullEmbeddingBagResult();
     }
-
     L0_DFX(
         EmbeddingBag, weight, indices, offsets, scaleGradByFreq, modeStr, sparse, perSampleWeights, includeLastOffset);
 
@@ -109,7 +149,7 @@ const std::tuple<aclTensor*, aclTensor*, aclTensor*, aclTensor*> EmbeddingBag(
         OP_ATTR(modeStr, scaleGradByFreq, sparse, includeLastOffset, paddingIdx));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "EmbeddingBagAiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
-        return std::tuple<aclTensor*, aclTensor*, aclTensor*, aclTensor*>(nullptr, nullptr, nullptr, nullptr);
+        return MakeNullEmbeddingBagResult();
     }
     return std::tuple<aclTensor*, aclTensor*, aclTensor*, aclTensor*>(outputTensor, offset2bag, bagSize, maxIndices);
 }

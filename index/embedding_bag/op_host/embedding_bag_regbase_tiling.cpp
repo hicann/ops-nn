@@ -144,9 +144,13 @@ ge::graphStatus EmbeddingBagRegBaseTiling::GetShapeAttrsInfo()
         isNeedSampleWeight_ = 0;
     }
     
-    inclueLastOfst_ = *(attrs->GetAttrPointer<bool>)(ATTR_INCLUDE_LAST_OFFSET);
-    paddingIdx_ = *(attrs->GetAttrPointer<int64_t>)(ATTR_PADD_INDEX);
-    paddingIdx_ = paddingIdx_ < 0 ? paddingIdx_ + numEmbeddings_ : paddingIdx_;
+    auto inclueLastOfstPtr = attrs->GetAttrPointer<bool>(ATTR_INCLUDE_LAST_OFFSET);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, inclueLastOfstPtr);
+    inclueLastOfst_ = *inclueLastOfstPtr;
+
+    auto paddingIdxPtr = attrs->GetAttrPointer<bool>(ATTR_INCLUDE_LAST_OFFSET);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, paddingIdxPtr);
+    paddingIdx_ = *paddingIdxPtr;
 
     if (embeddingDim_ * weightTypeSize_ <= MAX_SIMT_EMBDDING_BYTES) {
         usedCoreNum_ = totalCoreNum_;
@@ -278,7 +282,7 @@ int64_t EmbeddingBagRegBaseTiling::GetWeightAlignSize1D(int64_t weightRowFactor,
 
 void EmbeddingBagRegBaseTiling::Compute1DFactor()
 {
-    auto halfUbSize = ubSize_ / DOUBLE_BUF - UB_RESERVED_BUFF;
+    auto halfUbSize = ubSize_ - UB_RESERVED_BUFF;
     int64_t ubBlock = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
 
     /* indices 分配4K */
@@ -446,7 +450,7 @@ void EmbeddingBagRegBaseTiling::SetTilingData()
     tilingData_.set_indicesNumel(indicesNumel_);
     tilingData_.set_indicesLimit(indicesLimit_);
     tilingData_.set_sampleWeightNum(sampleWeightNum_);
-
+    tilingData_.set_inclueLastOfst(static_cast<int64_t>(inclueLastOfst_));
     TilingDataPrint();
 }
 

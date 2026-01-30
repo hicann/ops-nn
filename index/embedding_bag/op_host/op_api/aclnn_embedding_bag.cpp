@@ -27,6 +27,8 @@
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
+#include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -46,8 +48,9 @@ static const std::initializer_list<op::DataType> WEIGHT_DTYPE_SUPPORT_LIST_910 =
 
 static inline const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2002 ||
+        curArch == NpuArch::DAV_1001) {
         return WEIGHT_DTYPE_SUPPORT_LIST_910;
     } else {
         return WEIGHT_DTYPE_SUPPORT_LIST_910B;
@@ -145,7 +148,11 @@ static bool CheckDims(
     }
 
     if (indices != nullptr) {
-        OP_CHECK_MAX_DIM(indices, MIN_SUPPORT_DIM, return false);
+        if (Ops::NN::AclnnUtil::IsRegbase()) {
+            OP_CHECK_MAX_DIM(indices, MAX_SUPPORT_DIM, return false);
+        } else {
+            OP_CHECK_MAX_DIM(indices, MIN_SUPPORT_DIM, return false);
+        }
     }
 
     if (offsets != nullptr) {
@@ -153,8 +160,13 @@ static bool CheckDims(
     }
 
     if (perSampleWeights != nullptr) {
-        OP_CHECK_MAX_DIM(perSampleWeights, MIN_SUPPORT_DIM, return false);
-        OP_CHECK_MIN_DIM(perSampleWeights, MIN_SUPPORT_DIM, return false);
+        if (Ops::NN::AclnnUtil::IsRegbase()){
+            OP_CHECK_MAX_DIM(perSampleWeights, MAX_SUPPORT_DIM, return false);
+            OP_CHECK_MIN_DIM(perSampleWeights, MIN_SUPPORT_DIM, return false);
+        } else {
+            OP_CHECK_MAX_DIM(perSampleWeights, MIN_SUPPORT_DIM, return false);
+            OP_CHECK_MIN_DIM(perSampleWeights, MIN_SUPPORT_DIM, return false);
+        }
     }
 
     if (output != nullptr) {
@@ -171,11 +183,15 @@ static bool CheckDims(
     }
 
     if (maxIndices != nullptr) {
-        if (modeStr == "max") {
+        if (Ops::NN::AclnnUtil::IsRegbase()){
             OP_CHECK_MAX_DIM(maxIndices, MAX_SUPPORT_DIM, return false);
-            OP_CHECK_MIN_DIM(maxIndices, MAX_SUPPORT_DIM, return false);
         } else {
-            OP_CHECK_MAX_DIM(maxIndices, MIN_SUPPORT_DIM, return false);
+            if (modeStr == "max") {
+                OP_CHECK_MAX_DIM(maxIndices, MAX_SUPPORT_DIM, return false);
+                OP_CHECK_MIN_DIM(maxIndices, MAX_SUPPORT_DIM, return false);
+            } else {
+                OP_CHECK_MAX_DIM(maxIndices, MIN_SUPPORT_DIM, return false);
+            }
         }
     }
     return true;
@@ -198,12 +214,14 @@ static bool CheckShape(
     const aclTensor* weight, const aclTensor* indices, const aclTensor* offsets, const aclTensor* perSampleWeights,
     const std::string& modeStr, bool includeLastOffset, const aclTensor* output, const aclTensor* offset2bag,
     const aclTensor* bagSize, const aclTensor* maxIndices)
-{
-    if (modeStr != "sum" && perSampleWeights != nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "per_sample_weights only supported with mode='sum'");
-        return false;
+{   
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
+        if (modeStr != "sum" && perSampleWeights != nullptr) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "per_sample_weights only supported with mode='sum'");
+            return false;
+        }
     }
-
+    
     if (perSampleWeights != nullptr &&
         indices->GetViewShape().GetShapeSize() != perSampleWeights->GetViewShape().GetShapeSize()) {
         OP_LOGE(
@@ -217,50 +235,51 @@ static bool CheckShape(
     OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(output, outputShape, return false);
 
     if (offset2bag->GetViewShape().GetShapeSize() != 0 &&
-        offset2bag->GetViewShape().GetShapeSize() != indices->GetViewShape().GetDim(0)) {
+        offset2bag->GetViewShape().GetShapeSize() != indices->GetViewShape().GetShapeSize()) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "offset2bag shape size should be %ld,but got %ld.",
-            indices->GetViewShape().GetDim(0), offset2bag->GetViewShape().GetShapeSize());
+            indices->GetViewShape().GetShapeSize(), offset2bag->GetViewShape().GetShapeSize());
         return false;
-    }
+    }   
 
-    if (includeLastOffset) {
-        if (bagSize->GetViewShape().GetShapeSize() != offsets->GetViewShape().GetDim(0) - 1) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "bagSize shape size should be %ld,but got %ld.",
-                offsets->GetViewShape().GetShapeSize() - 1, bagSize->GetViewShape().GetShapeSize());
-            return false;
-        }
-    } else {
+    if (Ops::NN::AclnnUtil::IsRegbase()){
         if (bagSize->GetViewShape().GetShapeSize() != offsets->GetViewShape().GetDim(0)) {
             OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "bagSize shape size should be %ld, but got %ld.",
+                ACLNN_ERR_PARAM_INVALID, "bagSize shape size should be %ld,but got %ld.",
                 offsets->GetViewShape().GetShapeSize(), bagSize->GetViewShape().GetShapeSize());
             return false;
+        }  
+    } else {
+        if (includeLastOffset) {
+            if (bagSize->GetViewShape().GetShapeSize() != offsets->GetViewShape().GetDim(0) - 1) {
+                OP_LOGE(
+                    ACLNN_ERR_PARAM_INVALID, "bagSize shape size should be %ld,but got %ld.",
+                    offsets->GetViewShape().GetShapeSize() - 1, bagSize->GetViewShape().GetShapeSize());
+                return false;
+            }
+        } else {
+            if (bagSize->GetViewShape().GetShapeSize() != offsets->GetViewShape().GetDim(0)) {
+                OP_LOGE(
+                    ACLNN_ERR_PARAM_INVALID, "bagSize shape size should be %ld, but got %ld.",
+                    offsets->GetViewShape().GetShapeSize(), bagSize->GetViewShape().GetShapeSize());
+                return false;
+            }
         }
     }
-
+    
     if (modeStr == "max") {
         auto maxIndicesShape = GetOutPutShape(weight, offsets, includeLastOffset);
         OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(maxIndices, maxIndicesShape, return false);
     } else {
-        if (includeLastOffset) {
-            if (maxIndices->GetViewShape().GetShapeSize() != offsets->GetViewShape().GetDim(0) - 1) {
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID, "maxIndices shape size should be %ld, but got %ld.",
-                    offsets->GetViewShape().GetShapeSize() - 1, maxIndices->GetViewShape().GetShapeSize());
-                return false;
-            }
-        } else {
-            if (maxIndices->GetViewShape().GetShapeSize() != offsets->GetViewShape().GetDim(0)) {
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID, "maxIndices shape size should be %ld,but got %ld.",
-                    offsets->GetViewShape().GetShapeSize(), maxIndices->GetViewShape().GetShapeSize());
+        if (!Ops::NN::AclnnUtil::IsRegbase()) {
+            int64_t expectedSize = includeLastOffset ? offsets->GetViewShape().GetDim(0) - 1 : offsets->GetViewShape().GetDim(0);
+            if (maxIndices->GetViewShape().GetShapeSize() != expectedSize) {
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "maxIndices shape size should be %ld, but got %ld.",expectedSize,
+                maxIndices->GetViewShape().GetShapeSize());
                 return false;
             }
         }
     }
-
     return true;
 }
 
@@ -374,15 +393,17 @@ aclnnStatus aclnnEmbeddingBagGetWorkspaceSize(
     auto bagSizeL0Cast = l0op::Cast(std::get<2>(result), bagSize->GetDataType(), uniqueExecutor.get());
     CHECK_RET(bagSizeL0Cast != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto viewCopyBagSizeL0CastResult = l0op::ViewCopy(bagSizeL0Cast, bagSize, uniqueExecutor.get());
-
-    auto maxIndicesL0Cast = l0op::Cast(std::get<3>(result), maxIndices->GetDataType(), uniqueExecutor.get());
-    CHECK_RET(maxIndicesL0Cast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto viewCopyMaxIndicesL0CastResult = l0op::ViewCopy(maxIndicesL0Cast, maxIndices, uniqueExecutor.get());
-    CHECK_RET(
-        viewCopyOutputResult != nullptr && viewCopyMaxIndicesL0CastResult != nullptr &&
-            viewCopyBagSizeL0CastResult != nullptr,
-        ACLNN_ERR_INNER_NULLPTR);
-
+    auto maxIndicesShapeSize = std::get<3>(result)->GetViewShape().GetShapeSize();
+    if (maxIndicesShapeSize != 0){
+        auto maxIndicesL0Cast = l0op::Cast(std::get<3>(result), maxIndices->GetDataType(), uniqueExecutor.get());
+        CHECK_RET(maxIndicesL0Cast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto viewCopyMaxIndicesL0CastResult = l0op::ViewCopy(maxIndicesL0Cast, maxIndices, uniqueExecutor.get());
+        CHECK_RET(
+            viewCopyOutputResult != nullptr && viewCopyMaxIndicesL0CastResult != nullptr &&
+                viewCopyBagSizeL0CastResult != nullptr,
+            ACLNN_ERR_INNER_NULLPTR);
+    }
+    
     // 固定写法，获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor); // 需要把 uniqueExecutor持有executor转移给executor

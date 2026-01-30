@@ -45,6 +45,10 @@ public:
         if (GetBlockIdx() >= tiling_.usedCoreNum) {
             return;
         }
+        if (GetBlockIdx() == 0){
+            InitGlobalMemory(this->yGm_, tiling_.embeddingDim * tiling_.nBags, (T)(0));
+        }
+        
         this->weightCoreOfset_ = (GetBlockIdx() % tiling_.colTileNum) * tiling_.colNormalNum;
         this->offsetStart_ = GetBlockIdx() / tiling_.colTileNum * tiling_.rowNormalNum;
         this->curCoreBag_ =
@@ -64,7 +68,8 @@ public:
         pipe_.InitBuffer(this->inQueueIndices_, 1, tiling_.indicesFactor * sizeof(U));
         pipe_.InitBuffer(this->outQueueY_, 1, tiling_.weightDimFactor * sizeof(T));
         pipe_.InitBuffer(this->outQueueBagSize_, 1, (tiling_.offsetsFactor + 1) * sizeof(I));
-        pipe_.InitBuffer(this->outQueueOffset2bag_, 1, tiling_.weightRowFactor * sizeof(I));
+        pipe_.InitBuffer(this->outQueueOffset2bag_, tiling_.weightRowFactor * sizeof(I));
+        SyncAll();
     }
 
     __aicore__ inline void HandleBigBagSumNoPerSample(
@@ -78,7 +83,6 @@ public:
         int32_t eventIDMTE2ToS1 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
         SetFlag<HardEvent::MTE2_S>(eventIDMTE2ToS1);
         WaitFlag<HardEvent::MTE2_S>(eventIDMTE2ToS1);
-        LocalTensor<U> indicesLocal_ = this->inQueueIndices_.template DeQue<U>();
         for (uint64_t weightLoopIdx = 0; weightLoopIdx < this->weightLoop_; ++weightLoopIdx) {
             int32_t eventIDMTE3ToV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
             SetFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
@@ -87,7 +91,6 @@ public:
             SetFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
             WaitFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
             int64_t indiceStart = bagIndiceStart;
-            int64_t validIndicesFactorNumber = curBagIndiceNumber;
             int64_t curWeightNumber =
                 weightLoopIdx == this->weightLoop_ - 1 ? this->tailLoopWeightNmber_ : tiling_.weightDimFactor;
             LocalTensor<T> outYLocal_ = this->outQueueY_.template AllocTensor<T>();
@@ -118,7 +121,6 @@ public:
                         U weightIndex = indicesLocal_(indiceLocalIdx);
                         if (weightIndex == tiling_.paddingIdx) {
                             paddingCount = weightLoopIdx == 0 ? paddingCount + 1 : paddingCount;
-                            validIndicesFactorNumber = validIndicesFactorNumber - 1;
                             validCopyIndices = validCopyIndices - 1;
                             continue;
                         }
@@ -167,30 +169,30 @@ public:
             int32_t eventIDMTE3ToS = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_S));
             SetFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
             WaitFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
-            int64_t validIndicesFactorNumber = curBagIndiceNumber;
             int64_t indiceStart = bagIndiceStart;
             for (uint64_t indicesLoopIdx = 0; indicesLoopIdx < indicesLoop; ++indicesLoopIdx) {
                 int64_t curIndicesNumber =
-                    indicesLoopIdx == indicesLoop - 1 ? tailLoopIndicesNumber : tiling_.indicesFactor;
+                    indicesLoopIdx == indicesLoop - 1 ? tailLoopIndicesNumber : tiling_.weightRowFactor;
                 // Offset2bagweight
                 if (weightLoopIdx == 0) {
                     this->CopyOffset2bagToGm(indiceStart, curIndicesNumber, curOffsetStart);
                 }
                 int64_t weightLocalOffset = 0;
+                int64_t validRowNumber = curIndicesNumber;
                 LocalTensor<T> weightLocal_ = this->inQueueWeight_.template AllocTensor<T>();
                 for (uint64_t indicesIdx = 0; indicesIdx < curIndicesNumber; ++indicesIdx) {
                     int64_t indiceLocalIdx = indiceStart + indicesIdx - this->copyIndicesStart_;
                     U weightIndex = indicesLocal_(indiceLocalIdx);
                     if (weightIndex == tiling_.paddingIdx) {
                         paddingCount = weightLoopIdx == 0 ? paddingCount + 1 : paddingCount;
-                        validIndicesFactorNumber = validIndicesFactorNumber - 1;
+                        validRowNumber = validRowNumber - 1;
                         continue;
                     }
                     int64_t weightOffset = weightIndex * tiling_.embeddingDim + weightOfset;
                     this->CopyWeightNoPerSampleFromGm(weightOffset, curWeightNumber, weightLocal_[weightLocalOffset]);
                     weightLocalOffset = weightLocalOffset + tiling_.weightDimFactor;
                 }
-                this->ComputeAdd(curWeightNumber, (uint16_t)validIndicesFactorNumber, outYLocal_, weightLocal_);
+                this->ComputeAdd(curWeightNumber, (uint16_t)validRowNumber, outYLocal_, weightLocal_);
                 this->inQueueWeight_.template FreeTensor(weightLocal_);
                 indiceStart = indiceStart + curIndicesNumber;
             }
@@ -203,6 +205,7 @@ public:
             weightOfset = weightOfset + curWeightNumber;
         }
         bagSizeLocal(bagIdx) = bagSizeLocal(bagIdx) - paddingCount;
+        this->inQueueIndices_.template EnQue(indicesLocal_);
     }
 
     __aicore__ inline void ProcessNoPerSample()
@@ -233,10 +236,6 @@ public:
             for (uint64_t bagIdx = 0; bagIdx < curLoopOffsetsNumber; ++bagIdx) {
                 int64_t curBagIndiceNumber = (int64_t)bagSizeLocal(bagIdx);
                 if (curBagIndiceNumber == 0) {
-                    uint64_t dimNumber = (uint64_t)this->curCoreEmbedDim_;
-                    int64_t outYofset = curOffsetStart * tiling_.embeddingDim + this->weightCoreOfset_;
-                    GlobalTensor<T> yOutGm_ = this->yGm_[outYofset];
-                    InitGlobalMemory(yOutGm_, dimNumber, (T)(-1));
                     curOffsetStart = curOffsetStart + 1;
                     continue;
                 }
@@ -288,18 +287,18 @@ public:
                 weightLoopIdx == this->weightLoop_ - 1 ? this->tailLoopWeightNmber_ : tiling_.weightDimFactor;
             LocalTensor<T> outYLocal_ = this->outQueueY_.template AllocTensor<T>();
             Duplicate(outYLocal_, static_cast<T>(0), static_cast<int32_t>(tiling_.weightDimFactor));
-            int64_t validIndicesFactorNumber = curBagIndiceNumber;
             int64_t indiceStart = bagIndiceStart;
             int32_t eventIDMTE3ToS = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_S));
             SetFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
             WaitFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
             for (uint64_t indicesLoopIdx = 0; indicesLoopIdx < indicesLoop; ++indicesLoopIdx) {
                 int64_t curIndicesNumber =
-                    indicesLoopIdx == indicesLoop - 1 ? tailLoopIndicesNumber : tiling_.indicesFactor;
+                    indicesLoopIdx == indicesLoop - 1 ? tailLoopIndicesNumber : tiling_.weightRowFactor;
                 // Offset2bagweight
                 if (weightLoopIdx == 0) {
                     this->CopyOffset2bagToGm(indiceStart, curIndicesNumber, curOffsetStart);
                 }
+                int64_t validRowNumber = curIndicesNumber;
                 int64_t indicesIndex = 0;
                 int64_t weightLocalOffset = 0;
                 LocalTensor<T> weightLocal_ = this->inQueueWeight_.template AllocTensor<T>();
@@ -309,7 +308,7 @@ public:
                     U weightIndex = indicesLocal_(indiceLocalIdx);
                     if (weightIndex == tiling_.paddingIdx) {
                         paddingCount = weightLoopIdx == 0 ? paddingCount + 1 : paddingCount;
-                        validIndicesFactorNumber = validIndicesFactorNumber - 1;
+                        validRowNumber = validRowNumber - 1;
                         continue;
                     }
                     if (indiceStart + indicesIdx <= tiling_.sampleWeightNum - 1) {
@@ -330,7 +329,7 @@ public:
                     weightLocalOffset = weightLocalOffset + tiling_.weightDimFactor;
                 }
                 this->ComputeAddPerSample(
-                    curWeightNumber, (uint16_t)validIndicesFactorNumber, outYLocal_, weightLocal_,
+                    curWeightNumber, (uint16_t)validRowNumber, outYLocal_, weightLocal_,
                     perSampleWeightCountLocal);
                 this->inQueueWeight_.template FreeTensor(weightLocal_);
                 indiceStart = indiceStart + curIndicesNumber;
@@ -344,6 +343,7 @@ public:
             this->outQueueY_.template FreeTensor(outYLocal_);
         }
         bagSizeLocal(bagIdx) = bagSizeLocal(bagIdx) - paddingCount;
+        this->inQueueIndices_.template EnQue(indicesLocal_);
     }
 
     __aicore__ inline void HandleBigBagSumPerSample(
@@ -361,7 +361,6 @@ public:
             int64_t curWeightNumber =
                 weightLoopIdx == this->weightLoop_ - 1 ? this->tailLoopWeightNmber_ : tiling_.weightDimFactor;
             int64_t indiceStart = bagIndiceStart;
-            int64_t validIndicesFactorNumber = curBagIndiceNumber;
             int32_t eventIDMTE3ToV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
             SetFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
             WaitFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
@@ -400,7 +399,6 @@ public:
                         int64_t indiceLocalIdx = indiceStart + indicesIdx - this->copyIndicesStart_;
                         U weightIndex = indicesLocal_(indiceLocalIdx);
                         if (weightIndex == tiling_.paddingIdx) {
-                            validIndicesFactorNumber = validIndicesFactorNumber - 1;
                             paddingCount = weightLoopIdx == 0 ? paddingCount + 1 : paddingCount;
                             validCopyIndices = validCopyIndices - 1;
                             continue;
@@ -478,10 +476,6 @@ public:
                 int64_t curBagIndiceNumber = (int64_t)bagSizeLocal(bagIdx);
                 /* bag size is 0 */
                 if (curBagIndiceNumber == 0) {
-                    int64_t outYofset = curOffsetStart * tiling_.embeddingDim + this->weightCoreOfset_;
-                    uint64_t dimNumbers = (uint64_t)this->curCoreEmbedDim_;
-                    GlobalTensor<T> yOutGm_ = this->yGm_[outYofset];
-                    InitGlobalMemory(yOutGm_, dimNumbers, (T)(-1));
                     curOffsetStart = curOffsetStart + 1;
                     continue;
                 }
@@ -529,6 +523,7 @@ public:
         } else {
             ProcessNoPerSample();
         }
+        this->DisposalBagSize(this->bagSizeGm_[tiling_.nBags], tiling_.inclueLastOfst);
     }
 
 private:

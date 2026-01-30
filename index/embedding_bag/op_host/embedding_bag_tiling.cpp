@@ -18,6 +18,7 @@
 #include "log/log.h"
 #include "platform/platform_info.h"
 #include "platform/platform_infos_def.h"
+#include "tiling_base/tiling_util.h"
 #include "embedding_bag_tiling.h"
 #include "embedding_bag_regbase_tiling.h"
 #include "tiling/platform/platform_ascendc.h"
@@ -248,25 +249,9 @@ void EmbeddingBagTiling::TilingDataPrint() const
     OP_LOGD(tilingContext_, "tilingKey_:             %ld", tilingKey_);
 }
 
-static bool IsRegbaseSocVersion4EmBeddingBag(platform_ascendc::SocVersion version)
-{
-    const static std::set<platform_ascendc::SocVersion> regbaseSocVersions = {
-        platform_ascendc::SocVersion::ASCEND950
-    };
-
-    return regbaseSocVersions.find(version) != regbaseSocVersions.end();
-}
-
-bool IsRegbaseSocVersion4EmBeddingBag(const gert::TilingContext* context)
-{
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    auto socVersion = ascendcPlatform.GetSocVersion();
-    return IsRegbaseSocVersion4EmBeddingBag(socVersion);
-}
-
 ge::graphStatus TilingEmbeddingBag(gert::TilingContext* context)
 {
-    if (IsRegbaseSocVersion4EmBeddingBag(context)) {
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
         return EmbeddingBagTilingForRegBase(context);
     }
     EmbeddingBagTiling tilingObject(context);

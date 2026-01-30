@@ -1142,7 +1142,7 @@
         ]
     },
     {
-        "bin_filename": "EmbeddingBag_fp16_case3",
+        "bin_filename": "EmbeddingBag_fp16_case4",
         "inputs": [
             {
                 "name": "weight",
@@ -1256,7 +1256,7 @@
         ]
     },
     {
-        "bin_filename": "EmbeddingBag_fp32_case3",
+        "bin_filename": "EmbeddingBag_fp32_case4",
         "inputs": [
             {
                 "name": "weight",

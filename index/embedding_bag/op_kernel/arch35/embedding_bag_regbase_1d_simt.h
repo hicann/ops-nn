@@ -233,7 +233,7 @@ __aicore__ inline void EmbeddingBagRegBaseSimt1D<W, I, O, P, COMP_T>::Process()
     COMP_T shift = 0;
     COMP_T chunkPerBag = ops::CeilDiv(embeddingDimSize, static_cast<COMP_T>(BLOCK_DIM_0));
     GetUintDivMagicAndShift(magic, shift, chunkPerBag);
-
+    
     if (mode == MODE_MAX) {
         Simt::VF_CALL<SimtComputeMax1D<W, I, O, P, COMP_T>>(Simt::Dim3{BLOCK_DIM_0, BLOCK_DIM_1}, 
                 (__gm__ W*)(weightGm_.GetPhyAddr()), 
@@ -276,6 +276,9 @@ __aicore__ inline void EmbeddingBagRegBaseSimt1D<W, I, O, P, COMP_T>::Process()
                 (__gm__ P*)(bagSizeGm_.GetPhyAddr()),
                 numBags, numIndices, chunkPerBag, magic, shift,
                 embeddingDimSize, paddingIdx);
+    }
+    if (tilingData_.inclueLastOfst == 1) {
+        bagSizeGm_(numBags) = 0;
     }
 }
 }
