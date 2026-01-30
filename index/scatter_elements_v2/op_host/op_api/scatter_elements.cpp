@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
- * CANN Open Software License Agreement Version 2.0 (the "License").
+ * CANN Open Software License Agreement Version 2.0 (the "License")
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -17,6 +17,7 @@
 #include "opdev/make_op_executor.h"
 #include "opdev/op_dfx.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -56,7 +57,7 @@ static const std::initializer_list<op::DataType> AICORE_310P_DTYPE_SUPPORT_LIST 
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_INT8,
     op::DataType::DT_UINT8};
 
-static const map<string, std::initializer_list<op::DataType>> AICORE_91095_DTYPE_SUPPORT_LIST = {
+static const map<string, std::initializer_list<op::DataType>> REGBASE_DTYPE_SUPPORT_LIST = {
     {"none",
      {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_DOUBLE, op::DataType::DT_UINT8,
       op::DataType::DT_INT8, op::DataType::DT_INT16, op::DataType::DT_INT32, op::DataType::DT_INT64,
@@ -245,8 +246,8 @@ bool UseScatterElementsV2(
     const std::string& reduction)
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion == SocVersion::ASCEND950) {
-        return CheckType(data->GetDataType(), AICORE_91095_DTYPE_SUPPORT_LIST.at(reduction));
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return CheckType(data->GetDataType(), REGBASE_DTYPE_SUPPORT_LIST.at(reduction));
     }
 
     OP_CHECK(socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
@@ -285,12 +286,12 @@ bool UseScatterElements(
     // Ascend310P无二进制，统一走acipu, ScatterElements目前仅在910A上使用
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     OP_CHECK(
-        socVersion == SocVersion::ASCEND910 || socVersion == SocVersion::ASCEND950,
-        OP_LOGD("ScatterElements only support Aicore for ASCEND910 and Ascend950"), return false);
+        socVersion == SocVersion::ASCEND910 || Ops::NN::AclnnUtil::IsRegbase(),
+        OP_LOGD("ScatterElements only support Aicore for ASCEND910 and arch3510"), return false);
 
-    if (socVersion == SocVersion::ASCEND950) {
-        if (AICORE_91095_DTYPE_SUPPORT_LIST.count(reduction) == 0 ||
-            !CheckType(data->GetDataType(), AICORE_91095_DTYPE_SUPPORT_LIST.at(reduction))) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        if (REGBASE_DTYPE_SUPPORT_LIST.count(reduction) == 0 ||
+            !CheckType(data->GetDataType(), REGBASE_DTYPE_SUPPORT_LIST.at(reduction))) {
             return false;
         }
         return true;

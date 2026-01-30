@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
- * CANN Open Software License Agreement Version 2.0 (the "License").
+ * CANN Open Software License Agreement Version 2.0 (the "License")
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -25,6 +25,7 @@
 #include "level0/arange.h"
 #include "level0/tensor_move.h"
 #include "index/scatter_update/op_host/op_api/scatter_update.h"
+#include "../../../tf_scatter_add/op_host/op_api/tf_scatter_add.h"
 #include "../../../scatter_add_with_sorted/op_host/op_api/scatter_add_with_sorted.h"
 #include "../../../linear_index/op_host//op_api//linear_index.h"
 #include "aclnn_kernels/cast.h"
@@ -38,6 +39,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 #include "opdev/tensor_view_utils.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -68,11 +70,14 @@ static const std::initializer_list<op::DataType> AICORE_910B_DTYPE_FLOAT_LIST = 
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_INDICES = {
     op::DataType::DT_INT64, op::DataType::DT_INT32};
 
+static const std::initializer_list<op::DataType> SCATTER_ADD_AICORE_REGBASE_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16, 
+    op::DataType::DT_INT32, op::DataType::DT_INT8, op::DataType::DT_UINT8};
+
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910_DTYPE_SUPPORT_LIST;
@@ -107,9 +112,7 @@ static const std::string& GetReduceStr(int64_t reduce)
         OP_LOGW("Minimum mode is experimental!");
         return REDUCTION_MIN;
     }
-    if (reduce != 0) {
-        OP_LOGW("reduce not in {1,2,3,4}, will use reduce=0 (none).");
-    }
+    OP_LOGW("reduce not in [0, 4], will use reduce=0.");
     return REDUCTION_NONE;
 }
 
@@ -161,6 +164,21 @@ static bool CheckTensorDim(const aclTensor* self, const aclTensor* index, const 
     auto selfDimSize = self->GetViewShape().GetDimNum();
     auto indexDimSize = index->GetViewShape().GetDimNum();
     auto srcDimSize = src->GetViewShape().GetDimNum();
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    OP_LOGD("aclnnScatter CheckTensorDim curArch =%u, selfDimSize:%ld, indexDimSize:%ld, srcDimSize:%ld.", curArch, selfDimSize, indexDimSize, srcDimSize);
+    if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+        if (selfDimSize == 0) {
+            selfDimSize = 1;
+        }
+        if (indexDimSize == 0) {
+            indexDimSize = 1;
+        }
+        if (srcDimSize == 0) {
+            srcDimSize = 1;
+        }
+        OP_LOGD("aclnnScatter CheckTensorDim selfDimSize:%ld, indexDimSize:%ld, srcDimSize:%ld.", selfDimSize, indexDimSize, srcDimSize);
+    }
+    
     if (selfDimSize != indexDimSize || selfDimSize != srcDimSize) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expect self, index, src have same number of dimensions.");
         return false;
@@ -318,7 +336,7 @@ static const aclTensor* DoSliceIndex(const aclTensor* index, aclOpExecutor* exec
     aclIntArray* sizeArray = executor->AllocIntArray(sizeVector.data(), sizeVector.size());
     CHECK_RET(sizeArray != nullptr, nullptr);
 
-    if (indexViewShape.GetDimNum() == 2) { // 2 is 2维度
+    if (indexViewShape.GetDimNum() == 2) { // 2 is 2维
         auto res = const_cast<aclTensor*>(index);
         op::Shape expandShape;
         expandShape.AppendDim(indexViewShape.GetDim(0));
@@ -421,12 +439,13 @@ static bool IsMeetUpdateShape(const op::Shape &selfShape, const op::Shape &index
 {
     int64_t varDimNum = static_cast<int64_t>(selfShape.GetDimNum());
     // scatterElement要求输入3个shape维度相等，scatterUpdate要求update.shape = indicesShape + varShape[1:]
-    if ((static_cast<int64_t>(boardCastIdx) != 0) || (static_cast<int32_t>(updatesShape.GetDim(0)) != static_cast<int32_t>(indexShape.GetDim(0)))) {
+    if ((static_cast<int64_t>(boardCastIdx) != 0) || (static_cast<int64_t>(updatesShape.GetDim(0)) != static_cast<int64_t>(indexShape.GetDim(0)))) {
         return false;
     }
 
     for (int64_t i = 1; i < varDimNum; i++) {
-        if (static_cast<int32_t>(updatesShape.GetDim(i)) != static_cast<int32_t>(selfShape.GetDim(i))) {
+        if (static_cast<int64_t>(updatesShape.GetDim(i)) != static_cast<int64_t>(selfShape.GetDim(i)) ||
+        static_cast<int64_t>(updatesShape.GetDim(i)) != static_cast<int64_t>(indexShape.GetDim(i))) {
             return false;
         }
     }
@@ -457,6 +476,23 @@ static bool IsRouteToUpdate(const aclTensor *x, const op::Shape &selfShape, cons
     return true;
 }
 
+static bool IsMeetScatterAddShape(const op::Shape &selfShape, const op::Shape &indexShape, const op::Shape &updatesShape, int64_t dim)
+{
+    int64_t varDimNums = static_cast<int64_t>(selfShape.GetDimNum());
+    // scatterElement要求输入3个shape维度相等，scatterAdd要求update.shape = indicesShape + varShape[1:]
+    if (dim != 0 || (static_cast<int32_t>(updatesShape.GetDim(0)) != static_cast<int32_t>(indexShape.GetDim(0)))) {
+        return false;
+    }
+
+    for (int64_t i = 1; i < varDimNums; i++) {
+        if (static_cast<int64_t>(updatesShape.GetDim(i)) != static_cast<int64_t>(selfShape.GetDim(i)) ||
+            static_cast<int64_t>(updatesShape.GetDim(i)) != static_cast<int64_t>(indexShape.GetDim(i))) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static aclnnStatus ExecScatterBase(
     const aclTensor* self, int64_t dim, const aclTensor* index, const aclTensor* src, int64_t reduce, aclTensor* out,
     aclOpExecutor* executor)
@@ -484,16 +520,17 @@ static aclnnStatus ExecScatterBase(
     ret = CheckParams2(self, index, src, out, dim);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     bool aicoreSupport = true;
+    bool scatterAddRegbaseSupport = false;
     bool flag910b = false;
-    bool flag950 = false;
+    bool flagRebase = false;
     auto selfType = selfContiguous->GetDataType();
-    if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-        socVersion == SocVersion::ASCEND950) {
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         aicoreSupport = CheckType(selfType, AICORE_910B_DTYPE_SUPPORT_LIST);
-        flag910b = socVersion != SocVersion::ASCEND950;
-        flag950 = socVersion == SocVersion::ASCEND950;
+        scatterAddRegbaseSupport = CheckType(selfType, SCATTER_ADD_AICORE_REGBASE_DTYPE_SUPPORT_LIST);
+        flag910b = !(Ops::NN::AclnnUtil::IsRegbase(curArch));
+        flagRebase = Ops::NN::AclnnUtil::IsRegbase(curArch);
     } else {
         // 转换BF16数据类型为FP32，因算子暂不支持BF16
         if (selfType == op::DataType::DT_BF16 || srcContiguous->GetDataType() == op::DataType::DT_BF16) {
@@ -505,7 +542,8 @@ static aclnnStatus ExecScatterBase(
         aicoreSupport = CheckType(selfContiguous->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
     }
 
-    aicoreSupport = aicoreSupport && (reduction != REDUCTION_MUL) && (socVersion != SocVersion::ASCEND310P);
+    aicoreSupport = aicoreSupport && (reduction != REDUCTION_MUL) && (curArch != NpuArch::DAV_2002);
+    scatterAddRegbaseSupport = scatterAddRegbaseSupport && (reduction == REDUCTION_ADD) && flagRebase;
 
     int64_t selfDimNum = static_cast<int64_t>(selfContiguous->GetViewShape().GetDimNum());
     int64_t dimFinal = GetFinalDim(dim, selfDimNum);
@@ -536,11 +574,38 @@ static aclnnStatus ExecScatterBase(
         CHECK_COND(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR, "DoScatterAddWithSorted failed!");
         return ACLNN_SUCCESS;
     }
+    
+    bool expandFlagRegbase = scatterAddRegbaseSupport && selfDimNum == TWO_DIM && dimFinal != 1 &&
+        strides[selfDimNum + NEG_TWO] == 1 && strides[selfDimNum + NEG_ONE] == 0 && shape.GetDimNum() == 1;
+    if (expandFlagRegbase && IsMeetScatterAddShape(selfContiguous->GetViewShape(), indexShape, srcContiguous->GetViewShape(), dimFinal)) {
+        OP_LOGD("Use AICORE for ScatterAdd.");
+        op::Shape newViewShape;
+        newViewShape.SetDimNum(dimFinal + 1);
+        newViewShape[0] = indexShape[0];
+        auto indexTmp = executor->CreateView(index, newViewShape, index->GetViewOffset());
+        CHECK_RET(indexTmp != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        indexTmp->SetDataType(index->GetDataType());
+        
+        const aclTensor *scatterRes = l0op::ScatterAdd(selfContiguous, indexTmp, srcContiguous, false, executor);
+        CHECK_RET(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        scatterRes = needUnsqueeze ? l0op::SqueezeNd(scatterRes, squeezeDim, executor) : scatterRes;
+        CHECK_COND(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR, "squeeze output failed!");
+
+        // 转换scatter数据类型和out保持一致
+        scatterRes = l0op::Cast(scatterRes, out->GetDataType(), executor);
+        CHECK_COND(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR, "cast output failed!");
+
+        auto viewCopyResult = l0op::ViewCopy(scatterRes, out, executor);
+        CHECK_COND(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR, "viewCopy output failed!");
+
+        return ACLNN_SUCCESS;
+    }
 
     bool idxNeedBoardCast = false;
     size_t boardCastIdx = strides.size() - 1;
     idxNeedBoardCast = IsRouteToUpdate(index, selfContiguous->GetViewShape(), srcContiguous->GetViewShape(), boardCastIdx);
-    if (idxNeedBoardCast && aicoreSupport && socVersion == SocVersion::ASCEND950 && dim == 0 && reduction == REDUCTION_NONE) {
+    if (idxNeedBoardCast && aicoreSupport && Ops::NN::AclnnUtil::IsRegbase(curArch) && dim == 0 && reduction == REDUCTION_NONE) {
         op::Shape newViewShape;
         newViewShape.SetDimNum(boardCastIdx + 1);
         newViewShape[0] = indexShape[0];
@@ -577,7 +642,7 @@ static aclnnStatus ExecScatterBase(
 
     int64_t dimInput = dimFinal;
     // 310P统一走aicpu,无需Transpose
-    bool needTranspose = (dimFinal != (selfDimNum - 1)) && aicoreSupport && socVersion != SocVersion::ASCEND950;
+    bool needTranspose = (dimFinal != (selfDimNum - 1)) && aicoreSupport && (!Ops::NN::AclnnUtil::IsRegbase(curArch));
     if (needTranspose) {
         selfContiguous = l0op::Transpose(selfContiguous, valuePerm, executor);
         CHECK_COND(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "transpose self failed!");
@@ -594,7 +659,7 @@ static aclnnStatus ExecScatterBase(
         CHECK_COND(indexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "LinearIndex failed!");
     }
 
-    bool isCopy = (flag950 || aicore910b) && self->GetData() != out->GetData();
+    bool isCopy = (flagRebase || aicore910b) && self->GetData() != out->GetData();
     const aclTensor* scatterRes =
         DoScatterElements(selfContiguous, indexContiguous, srcContiguous, dimInput, isCopy, reduction, executor);
     CHECK_COND(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR, "DoScatterElements failed!");
@@ -655,6 +720,19 @@ static aclnnStatus ExecScatterValueGetWorkspaceSize(
     CHECK_COND(
         isTensorComplex(self) || !isScalarComplex(value), ACLNN_ERR_PARAM_INVALID,
         "When value is COMPLEX, the data type of self must be COMPLEX.");
+
+    if (index->IsEmpty()) {
+        auto selfContiguous = InitializeTensor(self, uniqueExecutor.get());
+        CHECK_COND(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "InitializeTensor self failed!");
+        
+        auto viewCopyResult = l0op::ViewCopy(selfContiguous, out, uniqueExecutor.get());
+        CHECK_COND(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR, "viewCopy self failed!");
+
+        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
+
     auto src = uniqueExecutor.get()->ConvertToTensor(value, self->GetDataType());
     if (self->GetViewShape().GetDimNum() != 0) {
         auto indexShape = GetTensorShape(index, uniqueExecutor.get());

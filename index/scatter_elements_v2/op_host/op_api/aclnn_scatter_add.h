@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
- * CANN Open Software License Agreement Version 2.0 (the "License").
+ * CANN Open Software License Agreement Version 2.0 (the "License")
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -29,15 +29,15 @@ extern "C" {
  *
  * 算子功能： 将源tensor中的值按指定的轴方向和index tensor中的位置关系逐个填入输出tensor中，
  * 若有多于一个src值被填入到self的同一位置，那么这些值将会在这一位置上进行累加
- * @param [in] self: npu device侧的aclTensor, 数据类型支持FLOAT16, FLOAT32, INT32, INT8, UINT8,
- * 支持非连续的Tensor，数据格式支持ND,
+ * @param [in] self: npu device侧的aclTensor, 数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
+ * Atlas 训练系列产品数据类型不支持BFLOAT16, 支持非连续的Tensor，数据格式支持ND,
  * @param [in] dim: host侧的num, 数据类型支持INT64。
  * @param [in] index: npu device侧的aclTensor，数据类型支持INT32, int64类型，dim反向的维度数量需要与src相同。
  * 支持非连续的Tensor，数据格式支持ND。
- * @param [in] src: npu device侧的aclTensor，数据类型支持FLOAT16, FLOAT32, INT32, INT8,
- * UINT8类型，dim反向的维度数量需要与src相同。 支持非连续的Tensor，数据格式支持ND，且数据类型与self保持一致。
- * @param [in] out: npu device侧的aclTensor, 数据类型支持FLOAT16, FLOAT32, INT32, INT8, UINT8,
- * 数据类型,数据格式,tensor shape需要与self保持一致
+ * @param [in] src: npu device侧的aclTensor，数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
+ * Atlas 训练系列产品数据类型不支持BFLOAT16，dim反向的维度数量需要与src相同。 支持非连续的Tensor，数据格式支持ND，且数据类型与self保持一致。
+ * @param [in] out: npu device侧的aclTensor, 数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
+ * Atlas 训练系列产品数据类型不支持BFLOAT16,数据格式,tensor shape需要与self保持一致
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码

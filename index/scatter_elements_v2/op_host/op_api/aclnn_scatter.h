@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
- * CANN Open Software License Agreement Version 2.0 (the "License").
+ * CANN Open Software License Agreement Version 2.0 (the "License")
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -24,15 +24,15 @@ extern "C" {
  *
  * 算子功能： 对输入Tensor完成scatter操作
  * @param [in] self: npu device侧的aclTensor,
- * 数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、
- * COMPLEX64、COMPLEX128类型。self的维度数量需要与index、src相同。self的数据类型需要与src一致。支持空tensor, 支持
+ * 数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
+ * Atlas 训练系列产品数据类型不支持BFLOAT16。self的维度数量需要与index、src相同。self的数据类型需要与src一致。支持空tensor, 支持
  * 非连续的tensor。数据格式支持ND。
  * @param [in] dim: 用来scatter的维度，数据类型为INT64。范围为[-self的维度数量, self的维度数量-1]。
  * @param [in] index: npu device侧的aclTensor。数据类型支持INT32,
  * INT64。index的维度数量需要与self、src相同。支持空tensor， 支持非连续的tensor。数据格式支持ND。
  * @param [in] src: npu
- * device侧的aclTensor，数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、
- * COMPLEX64、COMPLEX128类型。src的维度数量需要与self、index相同。src的数据类型需要与self一致。支持空tensor，
+ * device侧的aclTensor，数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
+ * Atlas 训练系列产品数据类型不支持BFLOAT16。src的维度数量需要与self、index相同。src的数据类型需要与self一致。支持空tensor，
  * 支持非连续的 tensor。数据格式支持ND。
  * @param [in] reduce: 选择应用的reduction操作。可选的操作选项以及对应的int值为 (add, 1), (mul, 2)，(none, 0)。
  * 具体操作含义如下：
@@ -40,8 +40,8 @@ extern "C" {
  * 1：表示累加操作，将src中的对应位置的值按照index累加到out中的对应位置
  * 2：表示累乘操作，将src中的对应位置的值按照index累乘到out中的对应位置
  * @param [in] out: npu
- * device侧的aclTensor，数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、
- * COMPLEX64、COMPLEX128类型。数据格式、数据类型、shape需要与self一致。
+ * device侧的aclTensor，数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
+ * Atlas 训练系列产品数据类型不支持BFLOAT16。数据格式、数据类型、shape需要与self一致。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码
@@ -69,23 +69,21 @@ aclnnScatter(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, c
  *
  * 算子功能： 对输入Tensor完成scatter操作
  * @param [in] self: npu device侧的aclTensor,
- * 数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、
- * COMPLEX64、COMPLEX128类型。self的维度数量需要与index、src相同。self的数据类型需要与src一致。支持空tensor, 支持
+ * 数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
+ * Atlas 训练系列产品数据类型不支持BFLOAT16。self的维度数量需要与index、src相同。self的数据类型需要与src一致。支持空tensor, 支持
  * 非连续的tensor。数据格式支持ND。
  * @param [in] dim: 用来scatter的维度，数据类型为INT64。范围为[-self的维度数量, self的维度数量-1]。
  * @param [in] index: npu device侧的aclTensor。数据类型支持INT32,
  * INT64。index的维度数量需要与self、src相同。支持空tensor， 支持非连续的tensor。数据格式支持ND。
- * @param [in] value: host侧的aclScalar,
- * 数据类型支持UINT8、INT8、INT16、INT32、INT64、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、
- * COMPLEX128。当value为COMPLEX时，self也必须为COMPLEX tensor。
+ * @param [in] value: host侧的aclScalar。当value为COMPLEX时，self也必须为COMPLEX tensor, 无其他数据类型限制。
  * @param [in] reduce: 选择应用的reduction操作。可选的操作选项以及对应的int值为 (add, 1), (mul, 2)，(none, 0)。
  * 具体操作含义如下：
  * 0：表示替换操作，将src中的对应位置的值按照index替换到out中的对应位置
  * 1：表示累加操作，将src中的对应位置的值按照index累加到out中的对应位置
  * 2：表示累乘操作，将src中的对应位置的值按照index累乘到out中的对应位置
  * @param [in] out: npu
- * device侧的aclTensor，数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、
- * COMPLEX64、COMPLEX128类型。数据格式、数据类型、shape需要与self一致。
+ * device侧的aclTensor，数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
+ * Atlas 训练系列产品数据类型不支持BFLOAT16。数据格式、数据类型、shape需要与self一致。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码
@@ -113,15 +111,16 @@ aclnnScatterValue(void* workspace, uint64_t workspaceSize, aclOpExecutor* execut
  *
  * 算子功能： 对输入Tensor完成scatter操作
  * @param [in] selfRef:
- * 数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128类型。
+ * 数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
+ * Atlas 训练系列产品数据类型不支持BFLOAT16。
  * selfRef的维度数量需要与index、src相同。selfRef的数据类型需要与src一致。支持空tensor，
  * 支持非连续的tensor。数据格式支持ND。
  * @param [in] dim: 用来scatter的维度，数据类型为INT64。范围为[-selfRef的维度数量, selfRef的维度数量-1]。
  * @param [in] index: npu device侧的aclTensor。数据类型支持INT32,
  * INT64。index的维度数量需要与selfRef、src相同。支持空tensor， 支持非连续的tensor。数据格式支持ND。
  * @param [in] src: npu
- * device侧的aclTensor，数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、
- * COMPLEX64、COMPLEX128类型。src的维度数量需要与selfRef、index相同。src的数据类型需要与selfRef一致。支持空tensor，
+ * device侧的aclTensor，数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
+ * Atlas 训练系列产品数据类型不支持BFLOAT16。src的维度数量需要与selfRef、index相同。src的数据类型需要与selfRef一致。支持空tensor，
  * 支持非连续的 tensor。数据格式支持ND。
  * @param [in] reduce: 选择应用的reduction操作。可选的操作选项以及对应的int值为 (add, 1), (mul, 2)，(none, 0)。
  * 具体操作含义如下：
@@ -154,23 +153,21 @@ aclnnInplaceScatter(void* workspace, uint64_t workspaceSize, aclOpExecutor* exec
  * @domain aclnn_ops_infer
  *
  * 算子功能： 对输入Tensor完成scatter操作
- * @param [in] selfRef: npu device侧的aclTensor, 数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、
- * DOUBLE、COMPLEX64、COMPLEX128类型。selfRef的维度数量需要与index、src相同。selfRef的数据类型需要与src一致。支持空tensor,
+ * @param [in] selfRef: npu device侧的aclTensor, 数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
+ * Atlas 训练系列产品数据类型不支持BFLOAT16。selfRef的维度数量需要与index、src相同。selfRef的数据类型需要与src一致。支持空tensor,
  * 支持 非连续的tensor。数据格式支持ND。
  * @param [in] dim: 用来scatter的维度，数据类型为INT64。范围为[-selfRef的维度数量, selfRef的维度数量-1]。
  * @param [in] index: npu device侧的aclTensor。数据类型支持INT32,
  * INT64。index的维度数量需要与selfRef、src相同。支持空tensor， 支持非连续的tensor。数据格式支持ND。
- * @param [in] value: host侧的aclScalar,
- * 数据类型支持UINT8、INT8、INT16、INT32、INT64、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、
- * COMPLEX128。当value为COMPLEX时，selfRef也必须为COMPLEX tensor。
+ * @param [in] value: host侧的aclScalar, 当value为COMPLEX时，selfRef也必须为COMPLEX tensor, 无其他数据类型限制。
  * @param [in] reduce: 选择应用的reduction操作。可选的操作选项以及对应的int值为 (add, 1), (mul, 2)，(none, 0)。
  * 具体操作含义如下：
  * 0：表示替换操作，将src中的对应位置的值按照index替换到out中的对应位置
  * 1：表示累加操作，将src中的对应位置的值按照index累加到out中的对应位置
  * 2：表示累乘操作，将src中的对应位置的值按照index累乘到out中的对应位置
  * @param [in] out: npu
- * device侧的aclTensor，数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、
- * COMPLEX64、COMPLEX128类型。数据格式、数据类型、shape需要与selfRef一致。
+ * device侧的aclTensor，数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
+ * Atlas 训练系列产品数据类型不支持BFLOAT16。数据格式、数据类型、shape需要与selfRef一致。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码

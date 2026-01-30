@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
- * CANN Open Software License Agreement Version 2.0 (the "License").
+ * CANN Open Software License Agreement Version 2.0 (the "License")
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -17,6 +17,7 @@
 #include "log/log.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_info.h"
+#include "tiling_base/tiling_util.h"
 #include "scatter_elements_v2_asc_tiling.h"
 #include "scatter_elements_v2_tiling.h"
 
@@ -62,28 +63,8 @@ const int VAR_GROUPS = 64;
 } // namespace
 
 namespace optiling {
-static bool IsRegbaseSocVersion4Scatter(platform_ascendc::SocVersion version)
-{
-    const static std::set<platform_ascendc::SocVersion> regbaseSocVersions = {
-        platform_ascendc::SocVersion::ASCEND950
-    };
+using namespace Ops::NN::OpTiling;
 
-    return regbaseSocVersions.find(version) != regbaseSocVersions.end();
-}
-
-bool IsRegbaseSocVersion4Scatter(const gert::TilingParseContext* context)
-{
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    auto socVersion = ascendcPlatform.GetSocVersion();
-    return IsRegbaseSocVersion4Scatter(socVersion);
-}
-
-bool IsRegbaseSocVersion4Scatter(const gert::TilingContext* context)
-{
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    auto socVersion = ascendcPlatform.GetSocVersion();
-    return IsRegbaseSocVersion4Scatter(socVersion);
-}
 struct TilingDataStructScatterElementsV2310P{
   uint64_t M = 0;
   uint64_t varN = 0;
@@ -409,6 +390,8 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
         return ge::GRAPH_FAILED;
     }
 
+    uint32_t isDeterministicKey = tilingContext->GetDeterministic() == 1 ? 1 : 0;
+
     if (ge::DT_INT64 == indicesDtype) {
         indicesSize += SIZE_OF_INT32;
     }
@@ -621,7 +604,7 @@ ge::graphStatus TilingPrepareForScatterElementsV2(gert::TilingParseContext* cont
     OP_LOGD(context, "ub_size_platform is %lu.", compileInfo->ubSizePlatForm);
     uint64_t totalUbSize = 0;
     platformInfo->GetLocalMemSize(fe::LocalMemType::UB, totalUbSize);
-    compileInfo->is_regbase = IsRegbaseSocVersion4Scatter(context);
+    compileInfo->is_regbase = IsRegbaseSocVersion(context);
     OP_LOGD(context, "total_ub_size is %lu.", totalUbSize);
     OP_LOGD(context, "TilingPrepareForScatterElementsV2 end.");
     return ge::GRAPH_SUCCESS;
