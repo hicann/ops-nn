@@ -1666,6 +1666,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/top_k_top_p_sample_v2/README.md">top_k_top_p_sample</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>根据输入词频logits、topK/topP/minP采样参数、随机采样权重分布q，进行topK-topP-minP-sample采样计算。当输入isNeedSampleResult为false时，输出每个batch的最大词频logitsSelectIdx，以及topK-topP-minP采样后的词频分布logitsTopKPSelect；当输入isNeedSampleResult为true时，输出topK-topP-minP采样后的中间计算结果logitsIdx和logitsSortMasked，其中logitsSortMasked为词频logits经过topK-topP-minP采样计算后的中间结果，logitsIdx为logitsSortMasked在logits中对应的索引。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/unique_consecutive/README.md">unique_consecutive</a></td>
     <td>✓</td>
     <td>✓</td>
