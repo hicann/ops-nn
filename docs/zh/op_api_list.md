@@ -340,6 +340,7 @@
 | [aclnnThreshold&aclnnInplaceThreshold](../../activation/threshold/docs/aclnnThreshold&aclnnInplaceThreshold.md) |对输入x进行阈值操作。当x中的elements大于threshold时，返回elements；否则，返回value。|默认确定性实现|
 | [aclnnThresholdBackward](../../activation/threshold_grad_v2_d/docs/aclnnThresholdBackward.md) |完成aclnnThreshold的反向。|默认确定性实现|
 | [aclnnTransposeBatchMatMul](../../matmul/transpose_batch_mat_mul/docs/aclnnTransposeBatchMatMul.md) |完成张量x1与张量x2的矩阵乘计算。|默认确定性实现|
+| [aclnnTransposeQuantBatchMatMul](../../matmul/transpose_quant_batch_mat_mul/docs/aclnnTransposeQuantBatchMatMul.md) |完成张量x1与张量x2量化的矩阵乘计算。|默认确定性实现|
 | [aclnnTransQuantParam](../../quant/trans_quant_param/docs/aclnnTransQuantParam.md)|将输入scale数据从FLOAT32类型转换为硬件需要的UINT64类型，并存储到quantParam中。|默认确定性实现|
 | [aclnnTransQuantParamV2](../../quant/trans_quant_param_v2/docs/aclnnTransQuantParamV2.md)|完成量化计算参数scale数据类型的转换，将FLOAT32的数据类型转换为硬件需要的UINT64，INT64类型。|默认确定性实现|
 | [aclnnTransQuantParamV3](../../quant/trans_quant_param_v2/docs/aclnnTransQuantParamV3.md)|完成量化计算参数scale数据类型的转换，将Float32的数据类型转换为硬件需要的UINT64，INT64类型。|默认确定性实现|

@@ -558,6 +558,7 @@
     {"name":"GetPaddingOffset", "compute_units": ["ascend910b", "ascend910_93", "ascend310p"], "auto_sync": true},
     {"name":"GemmV3", "compute_units": ["ascend950", "ascend910b", "ascend910_93"], "auto_sync" : false},
     {"name":"TransposeBatchMatMul", "compute_units": ["ascend910b", "ascend910_93", "ascend950", "kirinx90"], "auto_sync": false, "compile_options": {"ascend950":["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
+    {"name":"TransposeQuantBatchMatMul", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950":["-mllvm -cce-aicore-dcci-before-kernel-end=false", "-DENABLE_CV_COMM_VIA_SSBUF=true"]}},
     {"name":"FusedMatMul", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950":["-mllvm -cce-aicore-dcci-before-kernel-end=false", "-DENABLE_CV_COMM_VIA_SSBUF=true"]}},
     {"name": "FusedLinearOnlineMaxSum", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync": true},
     {"name":"MoeDistributeDispatch", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync": false, "compile_options": {"ascend910_93":["-DAICORE_EXCEPTION_RESTART"]}},

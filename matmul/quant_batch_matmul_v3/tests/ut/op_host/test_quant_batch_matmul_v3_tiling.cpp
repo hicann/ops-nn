@@ -760,7 +760,7 @@ static void ThreadFunc(const QuantBatchMatmulV3TilingTestParam *params, size_t t
     }
 }
 
-mutex compileMutex;
+static mutex compileMutex;
 
 static void ThreadFuncPrepare(const QuantBatchMatmulV3TilingTestParam *params, size_t testcaseNum, size_t threadIdx,
                        size_t threadNum, map<size_t, QuantBatchMatmulV3CompileInfo> &compileInfos)

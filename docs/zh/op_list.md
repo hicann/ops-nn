@@ -2106,6 +2106,16 @@
   </tr>
   <tr>
     <td>matmul</td>
+    <td><a href="../../matmul/transpose_quant_batch_mat_mul/README.md">transpose_quant_batch_mat_mul</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>完成张量x1与张量x2量化的矩阵乘计算。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的序列进行变更。permX1代表张量x1的转置序列，permX2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。</td>
+  </tr>
+  <tr>
+    <td>matmul</td>
     <td><a href="../../matmul/weight_quant_batch_matmul_v2/README.md">weight_quant_batch_matmul_v2</a></td>
     <td>✓</td>
     <td>✓</td>

@@ -1,0 +1,1590 @@
+{
+  "op_type": "TransposeQuantBatchMatMul",
+  "optional_input_mode": "gen_placeholder",
+  "op_list": [
+    {
+      "bin_filename": "TransposeQuantBatchMatMul_nd_nd_float8_e5m2_float8_e5m2_and_bias_fp16_and_out_fp16",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x1_scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 1
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    },
+        {
+      "bin_filename": "TransposeQuantBatchMatMul_nd_nd_float8_e5m2_float8_e5m2_and_bias_bf16_and_out_bf16",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x1_scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 27
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "bin_filename": "TransposeQuantBatchMatMul_nd_nd_float8_e5m2_float8_e5m2_and_bias_fp32_and_out_fp16",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x1_scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 1
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "bin_filename": "TransposeQuantBatchMatMul_nd_nd_float8_e5m2_float8_e5m2_and_bias_fp32_and_out_bf16",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x1_scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 27
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "bin_filename": "TransposeQuantBatchMatMul_nd_nd_float8_e4m3fn_float8_e4m3fn_and_bias_fp16_and_out_fp16",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x1_scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 1
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "bin_filename": "TransposeQuantBatchMatMul_nd_nd_float8_e4m3fn_float8_e4m3fn_and_bias_bf16_and_out_bf16",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x1_scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 27
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "bin_filename": "TransposeQuantBatchMatMul_nd_nd_float8_e4m3fn_float8_e4m3fn_and_bias_fp32_and_out_fp16",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x1_scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 1
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "bin_filename": "TransposeQuantBatchMatMul_nd_nd_float8_e4m3fn_float8_e4m3fn_and_bias_fp32_and_out_bf16",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x1_scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 27
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "bin_filename": "TransposeQuantBatchMatMul_nd_nd_float8_e4m3fn_float8_e5m2_and_bias_fp16_and_out_fp16",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x1_scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 1
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    },
+        {
+      "bin_filename": "TransposeQuantBatchMatMul_nd_nd_float8_e4m3fn_float8_e5m2_and_bias_bf16_and_out_bf16",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x1_scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 27
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "bin_filename": "TransposeQuantBatchMatMul_nd_nd_float8_e4m3fn_float8_e5m2_and_bias_fp32_and_out_fp16",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x1_scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 1
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "bin_filename": "TransposeQuantBatchMatMul_nd_nd_float8_e4m3fn_float8_e5m2_and_bias_fp32_and_out_bf16",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x1_scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 27
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "bin_filename": "TransposeQuantBatchMatMul_nd_nd_float8_e5m2_float8_e4m3fn_and_bias_fp16_and_out_fp16",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x1_scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 1
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "bin_filename": "TransposeQuantBatchMatMul_nd_nd_float8_e5m2_float8_e4m3fn_and_bias_bf16_and_out_bf16",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x1_scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 27
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "bin_filename": "TransposeQuantBatchMatMul_nd_nd_float8_e5m2_float8_e4m3fn_and_bias_fp32_and_out_fp16",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x1_scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 1
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "bin_filename": "TransposeQuantBatchMatMul_nd_nd_float8_e5m2_float8_e4m3fn_and_bias_fp32_and_out_bf16",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x1_scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 27
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    }  
+  ]
+}
