@@ -742,7 +742,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
             ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "not supported yet"); });
         } else {
             // 目前仅考虑 per-group 且 B 矩阵非转置场景
-            vecWeightInSize_ = tiling_->nBubSize * tiling_->kBubSize;
+            vecWeightInSize_ = CeilAlign(tiling_->nBubSize, BLOCK_CUBE) * CeilAlign(tiling_->kBubSize, BLOCK_CUBE);
             vecWeightOutSize_ = vecWeightInSize_;
             pipe_->InitBuffer(vecQueWeightOut_, bubpingpong_ * vecWeightOutSize_ * sizeof(xType));
             pipe_->InitBuffer(vecQueWeight_, bubpingpong_ * vecWeightInSize_ >> INT4_DTYPE_PARAM);
