@@ -1,4 +1,5 @@
 #!/bin/bash
+# ============================================================================
 # Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
 # This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
@@ -75,14 +76,14 @@ detect_os() {
 }
 
 install_gawk() {
-    echo -e "\n==== Checking Gawk ===="
+    echo -e "\n==== Checking gawk ===="
 
     if command -v gawk &> /dev/null; then
-        echo "Gawk has been installed"
+        echo "gawk has been installed"
         return
     fi
 
-    echo "Installing Gawk..."
+    echo "Installing gawk..."
     case "$OS" in
         debian)
             run_command sudo $PKG_MANAGER update
@@ -97,9 +98,9 @@ install_gawk() {
     esac
 
     if command -v gawk &> /dev/null; then
-        echo "Gawk installed successfully"
+        echo "gawk installed successfully"
     else
-        echo "Gawk installation failed"
+        echo "gawk installation failed"
         exit 1
     fi
 }
@@ -348,6 +349,96 @@ install_dos2unix() {
     fi
 }
 
+check_dependencies_silent() {
+    local args=("$@")
+    local check_pkgz="false"
+    local check_dos2unix="false"
+
+    for arg in "${args[@]}"; do
+        case "$arg" in
+            --pkg)
+                check_pkgz="true"
+                check_dos2unix="true"
+                ;;
+            --opkernel)
+                check_dos2unix="true"
+                ;;
+        esac
+    done
+
+    local missing_deps=()
+    declare -A req_versions
+    req_versions["gawk"]=""
+    req_versions["Python"]="3.7.0"
+    req_versions["GCC"]="7.3.0"
+    req_versions["CMake"]="3.16.0"
+    req_versions["pigz"]="2.4"
+    req_versions["dos2unix"]=""
+
+    check_deps() {
+        local name="$1"
+        local cmd="$2"
+        local req_ver="$3"
+
+        if ! command -v "$cmd" &> /dev/null; then
+            missing_deps+=("$name")
+            return
+        fi
+
+        if [[ -n "$req_ver" ]]; then
+            local curr_ver=""
+            case "$cmd" in
+                python3)
+                    curr_ver=$(python3 --version 2>&1 | awk '{print $2}')
+                    ;;
+                gcc|g++)
+                    curr_ver=$(gcc --version | awk '/^gcc/ {print $NF}') 
+                    ;;
+                cmake)
+                    curr_ver=$(cmake --version | awk '/^cmake/ {print $3}') 
+                    ;;
+                pigz)
+                    curr_ver=$(pigz --version 2>&1 | awk '{print $2}') 
+                    ;;
+            esac
+        
+            if [[ -z "$curr_ver" ]] || ! version_ge "$curr_ver" "$req_ver"; then
+                missing_deps+=("$name")
+            fi
+        fi
+    }
+
+    check_deps "gawk" "gawk" "${req_versions["gawk"]}"
+    check_deps "Python" "python3" "${req_versions["Python"]}"
+    check_deps "GCC" "gcc" "${req_versions["GCC"]}"
+    check_deps "CMake" "cmake" "${req_versions["CMake"]}"
+    if [[ "$check_dos2unix" == "true" ]]; then
+        check_deps "dos2unix" "dos2unix" "${req_versions["dos2unix"]}"
+    fi
+    if [[ "$check_pkgz" == "true" ]]; then
+        check_deps "pigz" "pigz" "${req_versions["pigz"]}"
+    fi
+
+    if [[ ${#missing_deps[@]} -eq 0 ]]; then
+        return 0
+    else
+        echo -e "\n Missing dependencies:"
+        for dep in "${missing_deps[@]}"; do
+            local req_ver="${req_versions[$dep]}"
+            if [[ -n "$req_ver" ]]; then
+                echo " - $dep (required: >= $req_ver)"
+            else
+                echo " - $dep"
+            fi
+        done
+        echo -e "\n Please run:"
+        echo -e "\n    bash install_deps.sh\n"
+        echo -e "    to install all missing dependencies."
+        echo -e "    After installation, re-run this script.\n"
+        return 1
+    fi
+}
+
 main() {
     echo "===================================================="
     echo "Starting project dependency installation"
@@ -366,4 +457,6 @@ main() {
     echo "===================================================="
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi

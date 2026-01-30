@@ -24,6 +24,13 @@ SUPPORTED_LONG_OPTS=(
   "ophost" "opgraph" "opapi" "run_example" "example_name=" "genop=" "genop_aicpu=" "experimental" "cann_3rd_lib_path=" "oom" "onnxplugin"
 )
 
+source "./install_deps.sh"
+
+set +u
+if ! check_dependencies_silent "$@"; then
+  exit 1
+fi
+
 in_array() {
   local needle="$1"
   shift
