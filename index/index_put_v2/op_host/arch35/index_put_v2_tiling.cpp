@@ -19,13 +19,12 @@
 #include "tiling/platform/platform_ascendc.h"
 #include "log/log.h"
 
+constexpr size_t INDEX_MASK = 2;
 namespace optiling {
 using namespace Ops::Base;
 
 static ge::graphStatus Tiling4IndexPutV2(gert::TilingContext* context) {
   OP_LOGD("indexputv2", "Tilingt2.0 start");
-  auto param = context->GetTilingData<IndexPutV2Params>();
-  OP_CHECK_NULL_WITH_CONTEXT(context, param);
   auto compile_info = reinterpret_cast<const IndexPutV2CompileInfo*>(context->GetCompileInfo());
   OP_LOGD(context->GetNodeName(), "Tiling4IndexPut dsl compile_info is Null, running Simt tiling.");
   IndexSimtTiling tilingObj(context);
@@ -58,5 +57,6 @@ static ge::graphStatus TilingPrepare4IndexPutV2(gert::TilingParseContext* contex
 // register tiling interface of the IndexPutV2 op.
 IMPL_OP_OPTILING(IndexPutV2)
     .Tiling(Tiling4IndexPutV2)
+    .TilingInputsDataDependency({INDEX_MASK})
     .TilingParse<IndexPutV2CompileInfo>(TilingPrepare4IndexPutV2);
 }  // namespace optiling
