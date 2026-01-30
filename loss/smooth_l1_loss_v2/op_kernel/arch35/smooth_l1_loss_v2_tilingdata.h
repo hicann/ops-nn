@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file smooth_l1_loss_v2_tiling_struct.h
+ * \file smooth_l1_loss_v2_tilingdata.h
  * \brief
  */
 #ifndef SMOOTH_L1_LOSS_V2_TILINGDATA_H

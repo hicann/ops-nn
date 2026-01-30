@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file test_lp_loss_infershape.cpp
+ * \file test_smooth_l1_loss_v2_infershape.cpp
  * \brief
  */
 

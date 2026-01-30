@@ -123,28 +123,6 @@ ge::graphStatus LpLossTiling::TilingEle()
     return ge::GRAPH_SUCCESS;
 }
 
-void ConvertReduceOpTilingData(ReduceOpTilingData* dst, const ReduceOpTilingData* src)
-{
-    dst->factorACntPerCore = src->factorACntPerCore;
-    dst->factorATotalCnt = src->factorATotalCnt;
-    dst->ubFactorA = src->ubFactorA;
-    dst->factorRCntPerCore = src->factorRCntPerCore;
-    dst->factorRTotalCnt = src->factorRTotalCnt;
-    dst->ubFactorR = src->ubFactorR;
-    dst->groupR = src->groupR;
-    dst->outSize = src->outSize;
-    dst->basicBlock = src->basicBlock;
-    dst->resultBlock = src->resultBlock;
-    dst->coreNum = src->coreNum;
-    dst->useNddma = src->useNddma;
-    dst->meanVar = src->meanVar;
-    for (int32_t i = 0; i < Ops::Base::ReduceOpTmpl::MAX_DIM; i++) {
-        dst->shape[i] = src->shape[i];
-        dst->stride[i] = src->stride[i];
-        dst->dstStride[i] = src->dstStride[i];
-    }
-}
-
 ge::graphStatus LpLossTiling::TilingReduce(const ReduceOpCompileInfo* compileInfo)
 {
     ReduceOpInputParam opInput;
@@ -156,33 +134,31 @@ ge::graphStatus LpLossTiling::TilingReduce(const ReduceOpCompileInfo* compileInf
     for (size_t i = 0; i < opInput.shape.size(); i++) {
         opInput.axes[i] = i;
     }
-    ReduceOpTilingData optiling;
     if (this->outputDtype == ge::DT_FLOAT16 || this->outputDtype == ge::DT_BF16) {
         if (static_cast<int32_t>(this->reduction) == 1) {
             OP_CHECK_IF((Tiling4ReduceOp<LpLoss::LpLossSumDag<half, float>::OpDag>(
-                                 tilingContext, opInput, key.ReduceTiling, compileInfo, &optiling) == ge::GRAPH_FAILED),
+                                 tilingContext, opInput, key.ReduceTiling, compileInfo, &(tiling->reduceTiling)) == ge::GRAPH_FAILED),
                             OP_LOGE(tilingContext->GetNodeName(), "LpLoss Tiling failed"),
                             return ge::GRAPH_FAILED);
         } else {
             OP_CHECK_IF((Tiling4ReduceOp<LpLoss::LpLossMeanDag<half, float>::OpDag>(
-                                 tilingContext, opInput, key.ReduceTiling, compileInfo, &optiling) == ge::GRAPH_FAILED),
+                                 tilingContext, opInput, key.ReduceTiling, compileInfo, &(tiling->reduceTiling)) == ge::GRAPH_FAILED),
                             OP_LOGE(tilingContext->GetNodeName(), "LpLoss Tiling failed"),
                             return ge::GRAPH_FAILED);
         }
     } else {
         if (static_cast<int32_t>(this->reduction) == 1) {
             OP_CHECK_IF((Tiling4ReduceOp<LpLoss::LpLossSumDag<float, float>::OpDag>(
-                                 tilingContext, opInput, key.ReduceTiling, compileInfo, &optiling) == ge::GRAPH_FAILED),
+                                 tilingContext, opInput, key.ReduceTiling, compileInfo, &(tiling->reduceTiling)) == ge::GRAPH_FAILED),
                             OP_LOGE(tilingContext->GetNodeName(), "LpLoss Tiling failed"),
                             return ge::GRAPH_FAILED);
         } else {
             OP_CHECK_IF((Tiling4ReduceOp<LpLoss::LpLossMeanDag<float, float>::OpDag>(
-                                 tilingContext, opInput, key.ReduceTiling, compileInfo, &optiling) == ge::GRAPH_FAILED),
+                                 tilingContext, opInput, key.ReduceTiling, compileInfo, &(tiling->reduceTiling)) == ge::GRAPH_FAILED),
                             OP_LOGE(tilingContext->GetNodeName(), "LpLoss Tiling failed"),
                             return ge::GRAPH_FAILED);
         }
     }
-    ConvertReduceOpTilingData(&tiling->reduceTiling, &optiling);
     return ge::GRAPH_SUCCESS;
 }
 

@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file smooth_l1_loss_v2_tiling.h
+ * \file smooth_l1_loss_v2_tiling_arch35.h
  * \brief
  */
 #ifndef OPS_BUILT_IN_OP_TILING_RUNTIME_SMOOTH_L1_LOSS_V2_TILING_H_
@@ -49,7 +49,6 @@ protected:
     ge::graphStatus CheckShape();
     ge::graphStatus TilingEle();
     ge::graphStatus TilingReduce(const SmoothL1LossV2CompileInfo *compileInfo);
-    void ConvertReduceOpTilingData(Ops::Base::ReduceOpTilingData* dst, const Ops::Base::ReduceOpTilingData* src);
 private:
     ge::DataType outputDtype;
     gert::TilingContext *tilingContext;
