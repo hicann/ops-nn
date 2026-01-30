@@ -6,7 +6,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
@@ -178,11 +178,6 @@ aclnnStatus aclnnAscendQuant(
     - 出参`y`的数据类型仅支持INT8，INT32，INT4。
     - 入参`roundMode`：支持取值round，ceil，trunc，floor。
     - 入参`dstType`支持取值2、3、29，分别表示INT8、INT32、INT4。
-
-
-  - <term>Ascend 950PR/Ascend 950DT</term>：
-    - 入参`roundMode`：`dstType`表示FLOAT8_E5M2或FLOAT8_E4M3FN时，只支持round。`dstType`表示HIFLOAT8时，支持round和hybrid。`dstType`表示其他类型时，支持round，ceil，trunc和floor。
-
 
   - <term>Atlas 推理系列产品</term>：
     - 入参`x`、`scale`、`offset`的数据类型不支持BFLOAT16。
