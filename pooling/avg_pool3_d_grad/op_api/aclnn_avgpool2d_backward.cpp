@@ -35,8 +35,10 @@
 #include "aclnn_kernels/transdata.h"
 #include "level0/unsqueeze.h"
 #include "avgpool3d_backward.h"
+#include "avgpool2d_backward.h"
 #include "aclnn_kernels/transpose.h"
 #include "aclnn_kernels/reshape.h"
+#include "op_api/aclnn_util.h"
 
 #include "matmul/common/op_host/op_api/matmul_util.h"
 #include "op_api/op_api_def.h"
@@ -64,10 +66,12 @@ static aclnnStatus CheckArrayDataAvgPoolBackWard(
         }
     }
 
-    if (kernelSize->Size() != padding->Size()) {
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
+        if (kernelSize->Size() != padding->Size()) {
         return ACLNN_ERR_PARAM_INVALID;
+        }
     }
-
+    
     for (uint64_t i = 0; i < kernelSize->Size(); i++) {
         auto halfKsize = (*kernelSize)[i] / 2;
         auto padSize = (*padding)[i];
@@ -267,6 +271,9 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
+        return DTYPE_SUPPORT_LIST_WITH_BF16;
+    } 
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         return DTYPE_SUPPORT_LIST_WITH_BF16;
     }
     return DTYPE_SUPPORT_LIST;
@@ -1087,7 +1094,6 @@ static aclnnStatus BuildAvgPool2dBackwardGraph(
     aclTensor* gradInput, aclOpExecutor* executor)
 {
     const aclIntArray* kernelSizeNCHW = CalculateKernelSizeNCHW(gradOutput, kernelSize, executor);
-
     // global avg pool走div算子，提高性能
     bool globalAvgPool = IsGlobalAvgPool(gradOutput, self, divisorOverride, kernelSizeNCHW);
     if (globalAvgPool) {
@@ -1167,6 +1173,60 @@ aclnnStatus aclnnAvgPool2dBackwardGetWorkspaceSize(
     // 处理输入输出为空tensor
     if (gradOutput->IsEmpty() || self->IsEmpty() || gradInput->IsEmpty()) {
         *workspaceSize = 0UL;
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
+
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        // 先将tensor转为连续性
+        auto gradOutputContiguous = l0op::Contiguous(gradOutput, uniqueExecutor.get());
+        CHECK_RET(gradOutputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
+        CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        // 将NCL转化为NCHW
+        const aclTensor* gradOutput4d = gradOutputContiguous;
+        if (gradOutput->GetViewShape().GetDimNum() == kNCLDIM) {
+            gradOutput4d = View3Das4D(gradOutputContiguous, uniqueExecutor.get());
+        }
+        CHECK_RET(gradOutput4d != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        const aclTensor* self4d = selfContiguous;
+        if (self4d->GetViewShape().GetDimNum() == kNCLDIM) {
+            self4d = View3Das4D(self4d, uniqueExecutor.get());
+        }
+        CHECK_RET(self4d != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        // 将self转为orig_input_shape
+        const aclTensor* shapeOrigInput = CopyShape2OneDim(self4d, uniqueExecutor.get());
+
+        // global pooling走原有分支
+        const aclIntArray* kernelSizeNCHW = CalculateKernelSizeNCHW(gradOutput, kernelSize, uniqueExecutor.get());
+        // global avg pool走div算子，提高性能
+        bool globalAvgPool = IsGlobalAvgPool(gradOutput, self, divisorOverride, kernelSizeNCHW);
+        if (globalAvgPool) {
+            auto result = BuildGlobalAvgPoolGraph(gradOutput, kernelSize, gradInput, cubeMathType, uniqueExecutor.get());
+            CHECK_RET(result == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+            *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+            uniqueExecutor.ReleaseTo(executor);
+            return ACLNN_SUCCESS;
+        }
+    
+        // 校验输入ksize、stride、pad
+        auto arrayRet = CheckArrayDataAvgPoolBackWard(kernelSize, stride, padding);
+        CHECK_RET(arrayRet == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
+        // 调用l0op
+        static const std::string dataFormats = "NCHW";
+        static const std::string paddingMode = "CALCULATED";
+        const bool globalPooling = false;
+        auto avgPool2dBackwardResult = l0op::AvgPoolV2Grad(
+            self4d, shapeOrigInput, gradOutput4d, kernelSize, stride, paddingMode, padding, dataFormats, 
+            globalPooling, ceilMode, !countIncludePad, divisorOverride, uniqueExecutor.get());
+        CHECK_RET(avgPool2dBackwardResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // 类型转换NCHW->NCL
+        auto arrayTransOutRet = HandleGradInput(gradInput, avgPool2dBackwardResult, uniqueExecutor.get());
+        CHECK_RET(arrayTransOutRet == ACLNN_SUCCESS, ACLNN_ERR_INNER);
+        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
