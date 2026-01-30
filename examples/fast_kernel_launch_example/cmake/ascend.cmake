@@ -60,4 +60,11 @@ set(ASCEND_INCLUDE_DIRS
     ${ASCEND_DIR}/pkg_inc/op_common
     ${ASCEND_DIR}/pkg_inc/base
     ${ASCEND_DIR}/pkg_inc
+    ${ASCEND_DIR}/opp/built-in/op_impl/ai_core/tbe/impl/ops_nn/ascendc/conv3d_v2
+    ${ASCEND_DIR}/opp/built-in/op_impl/ai_core/tbe/impl/ops_nn/ascendc/conv3d_v2/arch35
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../conv/common/op_host/op_tiling/arch35
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../conv/conv3d_v2/op_host/op_tiling/arch35
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../conv
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../common/inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/build/third_party/json/include
 )

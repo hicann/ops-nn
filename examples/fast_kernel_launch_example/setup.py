@@ -29,13 +29,13 @@ class CleanCommand(Command):
     """
     description = "Clean build artifacts from the source tree"
     user_options = []
-    
+
     def initialize_options(self):
         pass
-    
+
     def finalize_options(self):
         pass
-    
+
     def run(self):
         folders_to_remove = ['build', 'dist', f'{PACKAGE_NAME}.egg-info']
         for folder in folders_to_remove:

@@ -23,6 +23,16 @@ python3 -m build --wheel --no-isolation
 python3 -m pip install dist/*.whl --force-reinstall --no-deps
 
 # Run tests
+if [ -z "$NPU_ARCH" ]; then
+    echo "Error: NPU_ARCH environment variable is not set"
+    echo "Please set NPU_ARCH to 'Ascend950' or another architecture"
+    exit 1
+fi
+echo "Running tests for NPU architecture: ${NPU_ARCH}"
 echo "Running tests..."
-pytest tests/ -v
+if [ "$NPU_ARCH" = "Ascend950" ]; then
+    pytest tests/conv3d_custom/ascend950 -v -s
+else
+    pytest tests/conv3d_custom/ascend910b -v -s
+fi
 echo "execute samples success"

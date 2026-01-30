@@ -1,0 +1,2 @@
+case_name,op_type,in_dtype,format,fmap_shape,weight_shape,pads,strides,dilations,bias,groups
+case1,conv3d,bfloat16,NCDHW,"[1,4,120,16,16]","[1152,4,1,2,2]","[0,0,0]","[1,2,2]","[1,1,1]",1,1
