@@ -14,11 +14,11 @@
 
 ## 功能说明
 
-- 算子功能：[LayerNorm](../layer_norm/README.md)的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。 
+- 算子功能：LayerNorm的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。 
 - 计算公式：
   
   $$
-  rstd = 1/(variance + epsilon)
+  rstd = \frac{1}{\sqrt{variance + epsilon}}
   $$
 
   $$
@@ -62,7 +62,7 @@
   <thead>
     <tr>
       <th>参数名</th>
-      <th>输入/输出/属性</th>
+      <th>输入/输出</th>
       <th>描述</th>
       <th>数据类型</th>
       <th>数据格式</th>
@@ -71,63 +71,56 @@
     <tr>
       <td>dy</td>
       <td>输入</td>
-      <td>反向计算的梯度张量，对应计算公式中的`gradOut`。与输入x的数据类型相同。shape与x的shape相等，为[A1,...,Ai,R1,...,Rj]。</td>
+      <td><ul><li>不支持空Tensor。<li>表示反向计算的梯度张量，对应计算公式中的`gradOut`。<li>与输入`x`的数据类型相同。<li>shape与`x`的shape相等，为[A1,...,Ai,R1,...,Rj]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>正向计算的首个输入，对应计算公式中的`input`。与输入`dy`的数据类型相同。shape与`dy`的shape相等，为[A1,...,Ai,R1,...,Rj]。</td>
+      <td><ul><li>不支持空Tensor。<li>正向计算的首个输入，对应计算公式中的`input`。<li>与输入`dy`的数据类型相同。<li>shape与`dy`的shape相等，为[A1,...,Ai,R1,...,Rj]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>variance</td>
       <td>输入</td>
-      <td>正向计算的第三个输出，表示`x`的方差，对应计算公式中的`variance`。与输入mean的数据类型相同且位宽不低于输入`x`的数据类型位宽。shape与`mean`的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</td>
+      <td><ul><li>不支持空Tensor。<li>正向计算的第三个输出，表示`x`的方差，对应计算公式中的`variance`。<li>与输入mean的数据类型相同且位宽不低于输入`x`的数据类型位宽。<li>shape与`mean`的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mean</td>
       <td>输入</td>
-      <td>正向计算的第二个输出，表示`x`的均值，对应计算公式中的`mean`。与输入`variance`的数据类型相同且位宽不低于输入`x`的数据类型位宽。shape与`variance`的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</td>
+      <td><ul><li>不支持空Tensor。<li>正向计算的第二个输出，表示`x`的均值，对应计算公式中的`mean`。<li>与输入`variance`的数据类型相同且位宽不低于输入`x`的数据类型位宽。<li>shape与`variance`的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>gamma</td>
       <td>输入</td>
-      <td>表示权重张量，对应公式中的`weight`。</td>
+      <td><ul><li>不支持空Tensor。<li>表示权重张量，对应公式中的`weight`。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>output_mask</td>
-      <td>可选属性</td>
-      <td><ul><li>表示输出的掩码，长度固定为3，取值为true时表示对应位置的输出非空。</li><li>默认值为{true, true, true}。</li></ul></td>
-      <td>LISTBOOL</td>
-      <td>-</td>
-    </tr>
-    <tr>
       <td>pd_x</td>
       <td>输出</td>
-      <td>表示反向传播的输出梯度，由`output_mask`的第0个元素控制是否输出，对应计算公式中的`gradInputOut`。`output_mask`第0个元素为true时会进行输出，与输入x的数据类型相同，shape与`x`的shape相等，</td>
+      <td><ul><li>不支持空Tensor。<li>表示反向传播的输出梯度，对应计算公式中的`gradInputOut`。<li>与输入`x`的数据类型相同，shape与`x`的shape相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>pd_gamma</td>
       <td>输出</td>
-      <td>表示反向传播权重的梯度，由`output_mask`的第1个元素控制是否输出，对应计算公式中的`gradWeightOut`。`output_mask`第1个元素为true时会进行输出，与输入`gamma`的数据类型相同，shape与`pd_beta`的shape相等。</td>
+      <td><ul><li>不支持空Tensor。<li>表示反向传播权重的梯度，对应计算公式中的`gradWeightOut`。<li>与输入`gamma`的数据类型相同，shape与`pd_beta`的shape相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>pd_beta</td>
       <td>输出</td>
-      <td>表示反向传播偏置的梯度，由`output_mask`的第2个元素控制是否输出，对应计算公式中的`gradBiasOut`。`output_mask`第2个元素为true时会进行输出，与输入`gamma`的数据类型相同。shape与`pd_gamma`的shape相等。</td>
+      <td><ul><li>不支持空Tensor。<li>表示反向传播偏置的梯度，对应计算公式中的`gradBiasOut`。<li>与输入`gamma`的数据类型相同，shape与`pd_gamma`的shape相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
