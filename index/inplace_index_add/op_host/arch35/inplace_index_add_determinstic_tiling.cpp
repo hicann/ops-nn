@@ -139,7 +139,7 @@ void InplaceIndexAddDeterminsticTiling::DoOpTilingForDeterminstic()
 
     /* 优先分pre和after */
     int64_t splitCoreNumThresh = totalCoreNum_ / SIZE_TWO;
-    if ((preAxis_ > splitCoreNumThresh) || (afterAxis_ > splitCoreNumThresh) || (indicesAxis_ < splitCoreNumThresh)) {
+    if ((preAxis_ > splitCoreNumThresh) || (afterAxis_ > splitCoreNumThresh) || (indicesAxis_ <= splitCoreNumThresh)) {
         if (afterAxis_ >= preAxis_) {
             DoOpTilingForDeterminsticSplitAfter();
         } else {
