@@ -444,7 +444,11 @@ private:
             for (int64_t j = 0; j < dxLoopTimes_; j++) {
                 int64_t offset = baseOffset + j * dxLoopFactor_ * tilingData_->aDim;
                 int64_t rLength = (j == dxLoopTimes_ - 1) ? dxLoopTail_ : dxLoopFactor_;
-                CalDxVF(offset, rLength, aLength, dbeta, dgamma, gamma);
+                if (aLength <= EIGHT) {
+                    CalDxVFSmallA(offset, rLength, aLength, dbeta, dgamma, gamma);
+                } else {
+                    CalDxVF(offset, rLength, aLength, dbeta, dgamma, gamma);
+                }
                 StoreDxToGM(offset, rLength, aLength, tilingData_->aDim, aFactorAlign_);
             }
             dbetaWsInQue_.FreeTensor(dbeta);
@@ -503,6 +507,61 @@ private:
                     MicroAPI::Mul<float, MicroAPI::MaskMergeMode::ZEROING>(dxReg, dxReg, gammaReg, pMask);
                     StoreOneTensor<DY_TYPE>(dxAddr, dxReg, pMask, offset);
                 }
+            }
+        }
+        dyInQue_.FreeTensor(dyTensor);
+        xInQue_.FreeTensor(xTensor);
+        dxOutQue_.EnQue(dxTensor);
+    }
+
+    __aicore__ inline void CalDxVFSmallA(const int64_t gmOffset, const uint16_t rLength, const uint16_t aLength,
+        const LocalTensor<float>& dbetaTensor, const LocalTensor<float>& dgammaTensor,
+        const LocalTensor<WEIGHT_TYPE>& gammaTensor)
+    {
+        LoadDyXToUb(gmOffset, rLength, aLength, aFactorAlign_, tilingData_->aDim);
+        LocalTensor<DY_TYPE> dyTensor = dyInQue_.DeQue<DY_TYPE>();
+        LocalTensor<DY_TYPE> xTensor = xInQue_.DeQue<DY_TYPE>();
+        LocalTensor<DY_TYPE> dxTensor = dxOutQue_.template AllocTensor<DY_TYPE>();
+        
+        // 基于aFactorAlign计算 R轴合并搬入的数量
+        uint16_t mergeNum = VL_FP32 / aFactorAlign_;
+        uint16_t loopTimes = CeilDiv(rLength, mergeNum);
+        uint16_t loopStride = aFactorAlign_ * mergeNum;
+        float reciprocal = reciprocal_;
+        uint32_t meanOffset = 0;
+        uint32_t rCount = rLength * aFactorAlign_;
+
+        __VEC_SCOPE__
+        {
+            __local_mem__ DY_TYPE *dyAddr = (__local_mem__ DY_TYPE *)dyTensor.GetPhyAddr();
+            __local_mem__ DY_TYPE *xAddr = (__local_mem__ DY_TYPE *)xTensor.GetPhyAddr();
+            __local_mem__ float *meanAddr = (__local_mem__ float *)meanTensor_.GetPhyAddr();
+            __local_mem__ float *rstdAddr = (__local_mem__ float *)rstdTensor_.GetPhyAddr();
+            __local_mem__ WEIGHT_TYPE *gammaAddr = (__local_mem__ WEIGHT_TYPE *)gammaTensor.GetPhyAddr();
+            __local_mem__ DY_TYPE *dxAddr = (__local_mem__ DY_TYPE *)dxTensor.GetPhyAddr();
+            __local_mem__ float *dbetaAddr = (__local_mem__ float *)dbetaTensor.GetPhyAddr();
+            __local_mem__ float *dgammaAddr = (__local_mem__ float *)dgammaTensor.GetPhyAddr();
+            MicroAPI::MaskReg pMask;
+            MicroAPI::RegTensor<float> dyReg, xReg, meanReg, rstdReg, gammaReg, dxReg, dbetaReg, dgammaReg;
+            LoadOneTensorBrcVL(meanAddr, meanReg, meanOffset);
+            LoadOneTensorBrcVL(rstdAddr, rstdReg, meanOffset);
+            LoadOneTensorBrcVL(gammaAddr, gammaReg, meanOffset);
+            LoadOneTensorBrcVL(dbetaAddr, dbetaReg, meanOffset);
+            LoadOneTensorBrcVL(dgammaAddr, dgammaReg, meanOffset);
+            for (uint16_t i = 0; i < loopTimes; ++i) {
+                uint32_t offset = i * loopStride;
+                pMask = MicroAPI::UpdateMask<float>(rCount);
+                LoadOneTensor<DY_TYPE>(dyAddr, dyReg, pMask, offset);
+                LoadOneTensor<DY_TYPE>(xAddr, xReg, pMask, offset);
+                MicroAPI::Sub<float, MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
+                MicroAPI::Mul<float, MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
+                MicroAPI::Mul<float, MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, dgammaReg, pMask);
+                MicroAPI::Add<float, MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, dbetaReg, pMask);
+                MicroAPI::Muls<float, float, MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, reciprocal, pMask);
+                MicroAPI::Sub<float, MicroAPI::MaskMergeMode::ZEROING>(dyReg, dyReg, xReg, pMask);
+                MicroAPI::Mul<float, MicroAPI::MaskMergeMode::ZEROING>(dxReg, rstdReg, dyReg, pMask);
+                MicroAPI::Mul<float, MicroAPI::MaskMergeMode::ZEROING>(dxReg, dxReg, gammaReg, pMask);
+                StoreOneTensor<DY_TYPE>(dxAddr, dxReg, pMask, offset);
             }
         }
         dyInQue_.FreeTensor(dyTensor);
@@ -601,6 +660,7 @@ private:
     static constexpr int64_t ULONG_BIT_LEN = 64;
     static constexpr int32_t BUFFER_NUM = 2;
     static constexpr uint32_t BLOCK_SIZE = platform::GetUbBlockSize();
+    static constexpr int64_t EIGHT = 8;
 
     uint32_t resultCacheId_{0};
     int64_t blockIdx_{0};

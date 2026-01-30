@@ -258,7 +258,10 @@ ge::graphStatus BatchNormGradTilingBase::GetShapesAndCheckValid()
         aDim = dyStorageShape.GetDim(INDEX_4);
         r0Dim = 1;
     }
-
+    if (r1Dim != 1 && aDim == 1 && r0Dim == 1) {
+        r0Dim = r1Dim;
+        r1Dim = 1;
+    }
     // 小shape 校验
     OP_CHECK_IF(CheckSmallShapesValid() != ge::GRAPH_SUCCESS,
         OP_LOGE(context_, "Input small shapes are invalid."), return ge::GRAPH_FAILED);

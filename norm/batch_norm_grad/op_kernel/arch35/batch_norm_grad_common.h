@@ -97,6 +97,11 @@ __aicore__ inline void LoadOneTensor(const __local_mem__ void *input, MicroAPI::
     }
 }
 
+__aicore__ inline void LoadOneTensorBrcVL(const __local_mem__ void *input, MicroAPI::RegTensor<float> &dst, uint32_t offset)
+{
+    DataCopy<float, MicroAPI::LoadDist::DIST_BLK>(dst, (__local_mem__ float *)(input) + offset);
+}
+
 template <typename T>
 __aicore__ inline void LoadsTensorForDtypeT(const __local_mem__ void* src, MicroAPI::RegTensor<float>& dst,
                                             MicroAPI::MaskReg& preg, uint32_t offset)

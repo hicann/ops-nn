@@ -284,6 +284,54 @@ struct BatchNormGradRARSplitCoreR1TilingData {
     int64_t lastCoreBinAddMainFoldCount;
     int64_t lastCoreBinAddResultCacheID;
 };
+
+struct BatchNormGradRARSplitCoreR0TilingData {
+    BatchNormGradBaseTilingData baseTilingData;
+    int64_t r1Dim;
+    int64_t aDim;
+    int64_t aDimAligned;
+    int64_t r0Dim;
+    int64_t usedCoreNums;
+    int64_t r0Inner;
+    int64_t r0Tail;
+    int64_t r0InnerInnerStg0;
+    int64_t r0InnerOuterStg0;
+    int64_t r0InnerTailStg0;
+    int64_t r0TailOuterStg0;
+    int64_t r0TailTailStg0;
+    int64_t r0TailTailAlignedStg0;
+    int64_t r1InnerStg0;
+    int64_t r1OuterStg0;
+    int64_t r1TailStg0;
+    int64_t aInnerStg0;
+    int64_t aInnerAlignedStg0;
+    int64_t aOuterStg0;
+    int64_t aTailStg0;
+    int64_t aInnerStg1;
+    int64_t aOuterStg1;
+    int64_t aTailStg1;
+    int64_t r1InnerStg2;
+    int64_t r1OuterStg2;
+    int64_t r1TailStg2;
+    int64_t r0InnerInnerStg2;
+    int64_t r0InnerOuterStg2;
+    int64_t r0InnerTailStg2;
+    int64_t r0TailOuterStg2;
+    int64_t r0TailTailStg2;
+    int64_t r0TailTailAlignedStg2;
+    int64_t aInnerStg2;
+    int64_t aInnerAlignedStg2;
+    int64_t aOuterStg2;
+    int64_t aTailStg2;
+    int64_t binAddBasicBlockLoop;
+    int64_t binAddMainFoldCount;
+    int64_t binAddCacheBufferCount;
+    int64_t binAddResultCacheID;
+    int64_t lastCoreBinAddBasicBlockLoop;
+    int64_t lastCoreBinAddMainFoldCount;
+    int64_t lastCoreBinAddResultCacheID;
+};
+
 #pragma pack()
 
 template <typename T>

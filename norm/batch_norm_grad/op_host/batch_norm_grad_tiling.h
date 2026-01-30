@@ -338,6 +338,55 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(BatchNormGrad_1000, BatchNormGradRARSplitCoreR1TilingData);
 
+BEGIN_TILING_DATA_DEF(BatchNormGradRARSplitCoreR0TilingData)
+TILING_DATA_FIELD_DEF_STRUCT(BatchNormGradBaseTilingData, baseTilingData);
+TILING_DATA_FIELD_DEF(int64_t, r1Dim);
+TILING_DATA_FIELD_DEF(int64_t, aDim);
+TILING_DATA_FIELD_DEF(int64_t, aDimAligned);
+TILING_DATA_FIELD_DEF(int64_t, r0Dim);
+TILING_DATA_FIELD_DEF(int64_t, usedCoreNums);
+TILING_DATA_FIELD_DEF(int64_t, r0Inner);
+TILING_DATA_FIELD_DEF(int64_t, r0Tail);
+TILING_DATA_FIELD_DEF(int64_t, r0InnerInnerStg0);
+TILING_DATA_FIELD_DEF(int64_t, r0InnerOuterStg0);
+TILING_DATA_FIELD_DEF(int64_t, r0InnerTailStg0);
+TILING_DATA_FIELD_DEF(int64_t, r0TailOuterStg0);
+TILING_DATA_FIELD_DEF(int64_t, r0TailTailStg0);
+TILING_DATA_FIELD_DEF(int64_t, r0TailTailAlignedStg0);
+TILING_DATA_FIELD_DEF(int64_t, r1InnerStg0);
+TILING_DATA_FIELD_DEF(int64_t, r1OuterStg0);
+TILING_DATA_FIELD_DEF(int64_t, r1TailStg0);
+TILING_DATA_FIELD_DEF(int64_t, aInnerStg0);
+TILING_DATA_FIELD_DEF(int64_t, aInnerAlignedStg0);
+TILING_DATA_FIELD_DEF(int64_t, aOuterStg0);
+TILING_DATA_FIELD_DEF(int64_t, aTailStg0);
+TILING_DATA_FIELD_DEF(int64_t, aInnerStg1);
+TILING_DATA_FIELD_DEF(int64_t, aOuterStg1);
+TILING_DATA_FIELD_DEF(int64_t, aTailStg1);
+TILING_DATA_FIELD_DEF(int64_t, r1InnerStg2);
+TILING_DATA_FIELD_DEF(int64_t, r1OuterStg2);
+TILING_DATA_FIELD_DEF(int64_t, r1TailStg2);
+TILING_DATA_FIELD_DEF(int64_t, r0InnerInnerStg2);
+TILING_DATA_FIELD_DEF(int64_t, r0InnerOuterStg2);
+TILING_DATA_FIELD_DEF(int64_t, r0InnerTailStg2);
+TILING_DATA_FIELD_DEF(int64_t, r0TailOuterStg2);
+TILING_DATA_FIELD_DEF(int64_t, r0TailTailStg2);
+TILING_DATA_FIELD_DEF(int64_t, r0TailTailAlignedStg2);
+TILING_DATA_FIELD_DEF(int64_t, aInnerStg2);
+TILING_DATA_FIELD_DEF(int64_t, aInnerAlignedStg2);
+TILING_DATA_FIELD_DEF(int64_t, aOuterStg2);
+TILING_DATA_FIELD_DEF(int64_t, aTailStg2);
+TILING_DATA_FIELD_DEF(int64_t, binAddBasicBlockLoop);
+TILING_DATA_FIELD_DEF(int64_t, binAddMainFoldCount);
+TILING_DATA_FIELD_DEF(int64_t, binAddCacheBufferCount);
+TILING_DATA_FIELD_DEF(int64_t, binAddResultCacheID);
+TILING_DATA_FIELD_DEF(int64_t, lastCoreBinAddBasicBlockLoop);
+TILING_DATA_FIELD_DEF(int64_t, lastCoreBinAddMainFoldCount);
+TILING_DATA_FIELD_DEF(int64_t, lastCoreBinAddResultCacheID);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(BatchNormGrad_1100, BatchNormGradRARSplitCoreR0TilingData);
+
 struct BatchNormGradCompileInfo {
     int32_t coreNum;
     int64_t ubSize;

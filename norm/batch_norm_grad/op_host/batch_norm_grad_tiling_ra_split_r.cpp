@@ -35,16 +35,20 @@ constexpr uint64_t BNG_RA_SPLIT_R_TK_BASE = 11000000;
 constexpr uint64_t BNG_RA_SPLIT_R_TILING_KEY = 50000000;
 constexpr size_t BNG_WORKSPACE_RESERVED = 16 * 1024 * 1024;
 constexpr int64_t CONST_ONE = 1;
+constexpr int64_t CONST_FUOR = 4;
+constexpr int64_t RECOMPUTE_OR_SPLITR_SHAPE = 1024;
 
 bool BatchNormGradTilingRASplitR::IsCapable()
 {
     if (r0Dim != 1 || r1Dim < R_LOOP_FACTOR || r1Dim < aDim) {
         return false;
     }
-    // r1Dim大于8192,并且aDim小于1024范围时，调度到切R轴模版
-    if ((r1Dim > R_LOOP_FACTOR * coreNum * 2) && (aDim < coreNum * LIMIT_ADIM_FACTOR)) {
+    
+    // 当r1Dim大于1024且aDim小于1024，且r1Dim大于aDim的4倍时，使能此模板。
+    if (r1Dim > RECOMPUTE_OR_SPLITR_SHAPE && aDim < RECOMPUTE_OR_SPLITR_SHAPE && r1Dim > aDim * CONST_FUOR) {
         return true;
     }
+
     return false;
 }
 

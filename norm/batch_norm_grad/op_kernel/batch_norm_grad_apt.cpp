@@ -22,6 +22,7 @@
 #include "arch35/batch_norm_grad_infer_channel_last.h"
 #include "arch35/batch_norm_grad_infer.h"
 #include "arch35/batch_norm_grad_rar_split_core_r1.h"
+#include "arch35/batch_norm_grad_rar_split_core_r0.h"
 
 using namespace BatchNormGrad;
 using namespace BNGRARRecomputeSplitR0;
@@ -34,6 +35,7 @@ using namespace BNGRARRecomputeSplitR0;
 
 #define BATCH_NORM_GRAD_RA_SPLIT_R_TILING_KEY 50000000UL
 #define BATCH_NORM_GRAD_RAR_SPLIT_CORE_R1 1000UL
+#define BATCH_NORM_GRAD_RAR_SPLIT_CORE_R0 1100UL
 
 #define BATCH_NORM_GRAD_INFER_CHANNEL_LAST 900000UL
 #define BATCH_NORM_GRAD_INFER_SPLIT_R1 910001UL
@@ -88,6 +90,11 @@ extern "C" __global__ __aicore__ void batch_norm_grad(GM_ADDR y_backprop, GM_ADD
     } else if (TILING_KEY_IS(BATCH_NORM_GRAD_RAR_SPLIT_CORE_R1)) {
         GET_TILING_DATA_WITH_STRUCT(BatchNormGradRARSplitCoreR1TilingData, tiling_data_in, tiling);
         BatchNormGradRARSplitCoreR1<DTYPE_Y_BACKPROP, DTYPE_SCALE> op(&pipe, &tiling_data_in);
+        op.Init(y_backprop, x, reserve_space_1, reserve_space_2, scale, x_backprop, scale_backprop, offset_backprop, usrWorkspace);
+        op.Process();
+    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_RAR_SPLIT_CORE_R0)) {
+        GET_TILING_DATA_WITH_STRUCT(BatchNormGradRARSplitCoreR0TilingData, tiling_data_in, tiling);
+        BatchNormGradRARSplitCoreR0<DTYPE_Y_BACKPROP, DTYPE_SCALE> op(&pipe, &tiling_data_in);
         op.Init(y_backprop, x, reserve_space_1, reserve_space_2, scale, x_backprop, scale_backprop, offset_backprop, usrWorkspace);
         op.Process();
     } else if (TILING_KEY_IS(BATCH_NORM_GRAD_RA_SPLIT_R_TILING_KEY)) {
