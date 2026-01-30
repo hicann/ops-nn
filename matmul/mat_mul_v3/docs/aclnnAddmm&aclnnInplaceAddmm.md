@@ -93,41 +93,43 @@ aclnnStatus aclnnInplaceAddmm(
     </tr></thead>
   <tbody>
     <tr>
-      <td>self</td>
-      <td>输入</td>
-      <td>表示bias矩阵，公式中的self。</td>
-      <td><ul><li>数据类型需要与mat1@mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
-      <li>需要与mat1@mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> <li> 在mat1不转置的情况下各个维度表示：（m，k）。</li><li>在mat1转置的情况下各个维度表示：（k，m）。</li> </ul></td>
-      <td>BFLOAT16、FLOAT16、FLOAT32</td>
-      <td>ND</td>
-      <td>2</td>
-      <td>√</td>
+      <td rowspan="2">self</td>
+      <td rowspan="2">输入</td>
+      <td rowspan="2">表示bias矩阵，公式中的self。</td>
+      <td>数据类型需要与mat1@mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
+      <td rowspan="2">BFLOAT16、FLOAT16、FLOAT32</td>
+      <td rowspan="2">ND</td>
+      <td rowspan="2">1~2</td>
+      <td rowspan="2">√</td>
     </tr>
+    <tr><td>需要与mat1@mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</td></tr>
     <tr>
-      <td>mat1</td>
-      <td>输入</td>
-      <td>表示矩阵乘的第一个矩阵，公式中的mat1。</td>
-      <td><ul><li>数据类型需要与mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
-      <li>需要与self、mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> </li><li> 在mat1不转置的情况下各个维度表示：（m，k）。</li><li>在mat1转置的情况下各个维度表示：（k，m）。</li></td>
-      <td>BFLOAT16、FLOAT16、FLOAT32</td>
-      <td>ND</td>
-      <td>2</td>
-      <td>√</td>
+      <td rowspan="4">mat1</td>
+      <td rowspan="4">输入</td>
+      <td rowspan="4">表示矩阵乘的第一个矩阵，公式中的mat1。</td>
+      <td>数据类型需要与mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
+      <td rowspan="4">BFLOAT16、FLOAT16、FLOAT32</td>
+      <td rowspan="4">ND</td>
+      <td rowspan="4">2</td>
+      <td rowspan="4">√</td>
     </tr>
+      <tr><td>需要与self、mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</td></tr>
+      <tr><td>在mat1不转置的情况下各个维度表示：（m，k）。</td></tr>
+      <tr><td>在mat1转置的情况下各个维度表示：（k，m）。</td></tr>
     <tr>
-      <td>mat2</td>
-      <td>输入</td>
-      <td>表示矩阵乘的第二个矩阵，公式中的mat2。</td>
-      <td><ul><li>数据类型需要与mat1满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat2的Reduce维度需要与mat1的Reduce维度大小相等。</li><li>需要与self、mat1满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> </ul>
-      <li>当mat2矩阵不转置时，NZ格式各个维度表示：（n1，k1，k0，n0），其中k0 = 16， n0为16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n， n0) = n1。</li> 
-      <li>当mat2矩阵转置时，NZ格式各个维度表示：（k1，n1，n0，k0），其中n0 = 16， k0 = 16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n， n0) = n1。</li> 
-      </td>
-      <td>BFLOAT16、FLOAT16、FLOAT32</td>
-      <td>ND</td>
-      <td>2</td>
-      <td>√</td>
+      <td rowspan="5">mat2</td>
+      <td rowspan="5">输入</td>
+      <td rowspan="5">表示矩阵乘的第二个矩阵，公式中的mat2。</td>
+      <td>数据类型需要与mat1满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
+      <td rowspan="5">BFLOAT16、FLOAT16、FLOAT32</td>
+      <td rowspan="5">ND</td>
+      <td rowspan="5">2</td>
+      <td rowspan="5">√</td>
     </tr>
-    <tr>
+      <tr><td>mat2的Reduce维度需要与mat1的Reduce维度大小相等。</td></tr>
+      <tr><td>需要与self、mat1满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</td></tr>
+      <tr><td>在mat2不转置的情况下各个维度表示：（k，n）。</td></tr>
+      <tr><td>在mat2转置的情况下各个维度表示：（n，k）。</td></tr>
     <tr>
       <td>beta(β)</td>
       <td>输入</td>

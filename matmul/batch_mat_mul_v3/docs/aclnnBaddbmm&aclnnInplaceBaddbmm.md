@@ -122,7 +122,7 @@ aclnnStatus aclnnInplaceBaddbmm(
       <td>batch2</td>
       <td>输入</td>
       <td>公式中的输入batch2。</td>
-      <td><ul><li>数据类型与self、batch1的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>shape需要与batch1满足bmm输入约束关系。</li>。<li>支持空Tensor。</li></ul></td>
+      <td><ul><li>数据类型与self、batch1的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>shape需要与batch1满足bmm输入约束关系。</li><li>支持空Tensor。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>
@@ -327,11 +327,11 @@ aclnnStatus aclnnInplaceBaddbmm(
       <td>输入|输出</td>
       <td>输入输出tensor，即公式中的输入self与out。</td>
       <td><ul>
-      <li>数据类型与batch1@batch2的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。<li>shape需要与batch1@batch2的后两维的shape一致。</li>
+      <li>数据类型与batch1@batch2的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。<li>shape后两维需要与batch1@batch2后两维一致。</li>
       <li>支持空Tensor。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
-      <td>2</td>
+      <td>2~3</td>
       <td>√</td>
     </tr>
     <tr>
@@ -348,7 +348,7 @@ aclnnStatus aclnnInplaceBaddbmm(
       <td>batch2</td>
       <td>输入</td>
       <td>公式中的输入batch2。</td>
-      <td><ul><li>数据类型与self、batch1的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>shape需要与batch1满足bmm输入约束关系。</li>。<li>支持空Tensor。</li></ul></td>
+      <td><ul><li>数据类型与self、batch1的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>shape需要与batch1满足bmm输入约束关系。</li><li>支持空Tensor。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>

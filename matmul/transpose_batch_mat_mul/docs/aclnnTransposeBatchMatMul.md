@@ -212,9 +212,11 @@ aclnnStatus aclnnTransposeBatchMatMul(
           <li> 当scale有值时，输出shape为(M, 1, B * N)。</li>
         </ul>
         <ul>
-          当batchSplitFactor大于1时，out的输出shape为(batchSplitFactor, M, B * N / batchSplitFactor)。
-          <li> 示例一: M, K, N, B = 32, 512, 128, 16；batchSplitFactor = 2时，out的输出shape大小为(2, 32, 1024)。</li>
-          <li> 示例二: M, K, N, B = 32, 512, 128, 16；batchSplitFactor = 4时，out的输出shape大小为(4, 32, 512)。</li></ul>
+          <li>当batchSplitFactor大于1时，out的输出shape为(batchSplitFactor, M, B * N / batchSplitFactor)。</li>
+          <ul>
+            <li> 示例一: M, K, N, B = 32, 512, 128, 16；batchSplitFactor = 2时，out的输出shape大小为(2, 32, 1024)。</li>
+            <li> 示例二: M, K, N, B = 32, 512, 128, 16；batchSplitFactor = 4时，out的输出shape大小为(4, 32, 512)。</li>
+          </ul>
         </ul>
         </td>
         <td>BFLOAT16、FLOAT16、FLOAT32、INT8</td>

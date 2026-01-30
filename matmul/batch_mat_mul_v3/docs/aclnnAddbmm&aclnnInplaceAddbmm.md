@@ -120,7 +120,7 @@ aclnnStatus aclnnInplaceAddbmm(
       <td>batch2</td>
       <td>输入</td>
       <td>公式中的输入batch2。</td>
-      <td><ul><li>数据类型与self、batch1的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>shape仅支持三维且第一个维度batch需要与batch1的batch维度满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a></li>。<li>支持空Tensor。</li></ul></td>
+      <td><ul><li>数据类型与self、batch1的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>shape仅支持三维且第一个维度batch需要与batch1的batch维度满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li><li>支持空Tensor。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>
