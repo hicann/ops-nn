@@ -157,6 +157,6 @@ TEST_F(IndexPutV2Tiling, IndexPutV2_AC_tiling_fp16_continue_0) {
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 102);
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
-    std::string expect_tiling = "4096 0 6400 0 0 0 0 0 0 0 0 0 0 0 0 0 26214400 0 4096 0 4096 0 2 1 2 1 ";
+    std::string expect_tiling = "26214400 0 4096 0 4096 0 2 1 2 1 4096 0 6400 0 0 0 0 0 0 0 0 0 0 0 0 0 ";
     ASSERT_EQ(expect_tiling, tiling_data_result);
 }

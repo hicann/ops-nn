@@ -51,6 +51,22 @@ static constexpr int64_t IN_X_IDX = 0;
 static constexpr int64_t IN_INDEXSIZE_IDX = 1;
 static constexpr int64_t IN_INDEX_IDX = 3;
 static constexpr int64_t OUT_Y_IDX = 0;
+static constexpr int64_t INDEXPUT_VALUE_IDX = 1;
+static constexpr int64_t INDEXPUT_INDEXSIZE_IDX = 2;
+static constexpr int64_t INDEXPUT_INDEX_IDX = 4;
+
+constexpr uint64_t DTYPE_BOOL = 11;
+constexpr uint64_t DTYPE_INT8 = 1;
+constexpr uint64_t DTYPE_F16 = 2;
+constexpr uint64_t DTYPE_BF16 = 3;
+constexpr uint64_t DTYPE_INT32 = 4;
+constexpr uint64_t DTYPE_F32 = 5;
+constexpr uint64_t DTYPE_INT64 = 8;
+constexpr uint64_t DTYPE_UINT8 = 0;
+std::map<ge::DataType, uint64_t> typeMap =  {{ge::DT_INT64, DTYPE_INT64}, {ge::DT_INT32, DTYPE_INT32}, 
+                                            {ge::DT_FLOAT, DTYPE_F32}, {ge::DT_FLOAT16, DTYPE_F16}, 
+                                            {ge::DT_BF16, DTYPE_BF16}, {ge::DT_INT8, DTYPE_INT8},
+                                            {ge::DT_BOOL, DTYPE_BOOL}, {ge::DT_UINT8, DTYPE_UINT8}};
 
 uint64_t IndexNonContinuousTiling::GetDataTypeInByte(gert::TilingContext *context) {  
   auto paramsDesc = context->GetInputDesc(0);
@@ -82,7 +98,12 @@ bool IndexNonContinuousTiling::IsCapable()
         if (!IsContinuous(xShape_, xStride_)) {
             return true;
         }
+
+        if (isIndexPut_ == true && !IsContinuous(valueShape_, valueStride_)) {
+            return true;
+        }
     }
+
     return false;
 }
 
@@ -159,14 +180,14 @@ void IndexNonContinuousTiling::GetIndexStrideInfo(gert::Shape &shape, gert::Stri
 {
     bool isView = context_->InputIsView(idx);
     if (isView) {
-        auto* inputStride = context_->GetDynamicInputStride(INDICES_IDX, i);
+        auto* inputStride = context_->GetDynamicInputStride(paramIndicesIdx_, i);
         if (inputStride == nullptr || inputStride->GetDimNum() == 0) {  
            GetContinuousStrideInfo(shape, stride);
         } else {
             stride = *inputStride;
         }
     } else {
-           GetContinuousStrideInfo(shape, stride);
+        GetContinuousStrideInfo(shape, stride);
     }
 }
 
@@ -276,11 +297,13 @@ void IndexNonContinuousTiling::SetTilingData()
 {
     int64_t xShape[ARRAY_LEN_FOUR] = {0, 0, 0, 0};
     int64_t indexShape[ARRAY_LEN_FOUR] = {0, 0, 0, 0};
+    int64_t valueShape[ARRAY_LEN_EIGHT] = {0, 0, 0, 0};
     int64_t xStride[ARRAY_LEN_FOUR] = {0, 0, 0, 0};
     int64_t indexStride1[ARRAY_LEN_FOUR] = {0, 0, 0, 0};
     int64_t indexStride2[ARRAY_LEN_FOUR] = {0, 0, 0, 0};
     int64_t indexStride3[ARRAY_LEN_FOUR] = {0, 0, 0, 0};
     int64_t indexStride4[ARRAY_LEN_FOUR] = {0, 0, 0, 0};
+    int64_t valueStride[ARRAY_LEN_EIGHT] = {0, 0, 0, 0};
     int64_t yStride[ARRAY_LEN_FOUR] = {0, 0, 0, 0};
     indexedDimNum_ = static_cast<int64_t>(indexShape_.GetDimNum());
 
@@ -300,19 +323,26 @@ void IndexNonContinuousTiling::SetTilingData()
 
     if (isCoalesced_) {
         for (int64_t i = 0; i < indexedDimNum_; i++) {
-            indexStride2[i] = indexStride1[i]; 
+            indexStride2[i] = indexStride1[i];
             indexStride3[i] = indexStride1[i];
             indexStride4[i] = indexStride1[i];
         }
     }
+
+    for (int64_t i = 0; i < valueDimNum_; i++) {
+        valueStride[i] = valueStride_[i]; 
+        valueShape[i] = valueShape_[i]; 
+    }
     
     m_tilingData_.set_xShape(xShape);
     m_tilingData_.set_indexShape(indexShape);
+    m_tilingData_.set_valueShape(valueShape);
     m_tilingData_.set_xStride(xStride);
     m_tilingData_.set_indexStride1(indexStride1);
     m_tilingData_.set_indexStride2(indexStride2);
     m_tilingData_.set_indexStride3(indexStride3);
     m_tilingData_.set_indexStride4(indexStride4);
+    m_tilingData_.set_valueStride(valueStride);
     m_tilingData_.set_yStride(yStride);
 
     m_tilingData_.set_indexSize(tensorNum_);
@@ -321,38 +351,46 @@ void IndexNonContinuousTiling::SetTilingData()
     m_tilingData_.set_inputDimNum(inputDimNum_);
     m_tilingData_.set_inputLength(inputLength_);
     m_tilingData_.set_outputLength(outputLength_);
+    m_tilingData_.set_valueDimNum(valueDimNum_);
 }
 
 void IndexNonContinuousTiling::PrintTilingData()
 {
     OP_LOGI(opName_, 
         "indexSize = %ld, indexedDimNum = %ld, indexedSizesNum = %ld, "
-        "inputDimNum = %ld, inputLength = %ld, outputLength = %ld",
+        "inputDimNum = %ld, inputLength = %ld, outputLength = %ld, "
+        "accumulateMode = %ld, valueDimNum=%ld",
         m_tilingData_.get_indexSize(),
         m_tilingData_.get_indexedDimNum(),
         m_tilingData_.get_indexedSizesNum(),
         m_tilingData_.get_inputDimNum(),
         m_tilingData_.get_inputLength(),
-        m_tilingData_.get_outputLength());
+        m_tilingData_.get_outputLength(),
+        m_tilingData_.get_accumulateMode(),
+        m_tilingData_.get_valueDimNum());
 
     for (int64_t i = 0; i < ARRAY_LEN_FOUR; i++) {
         OP_LOGI(opName_, 
-            "index%ld: xShape[%ld] = %ld, indexShape[%ld] = %ld, xStride[%ld] = %ld, "
+            "index%ld: xShape[%ld] = %ld, indexShape[%ld] = %ld, valueShape[%ld] = %ld, xStride[%ld] = %ld, "
             "indexStride1[%ld] = %ld, indexStride2[%ld] = %ld, indexStride3[%ld] = %ld, "
-            "indexStride4[%ld] = %ld, yStride[%ld] = %ld",
+            "indexStride4[%ld] = %ld, valueStride[%ld] = %ld, yStride[%ld] = %ld",
             i,
             i, m_tilingData_.get_xShape()[i],
             i, m_tilingData_.get_indexShape()[i],
+            i, m_tilingData_.get_valueShape()[i],
             i, m_tilingData_.get_xStride()[i],
             i, m_tilingData_.get_indexStride1()[i],
             i, m_tilingData_.get_indexStride2()[i],
             i, m_tilingData_.get_indexStride3()[i],
             i, m_tilingData_.get_indexStride4()[i],
+            i, m_tilingData_.get_valueStride()[i],
             i, m_tilingData_.get_yStride()[i]);
     }
 }
 
 ge::graphStatus IndexNonContinuousTiling::GetShapeAttrsInfo() {
+    paramIndexedSizesIdx_ = isIndexPut_ ? INDEXPUT_INDEXSIZE_IDX : IN_INDEXSIZE_IDX;
+    paramIndicesIdx_ = isIndexPut_ ? INDEXPUT_INDEX_IDX : IN_INDEX_IDX;
     auto xDesc = context_->GetRequiredInputDesc(IN_X_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
     xDtype_ = xDesc->GetDataType();
@@ -362,12 +400,12 @@ ge::graphStatus IndexNonContinuousTiling::GetShapeAttrsInfo() {
     const std::set<ge::DataType> supportedIndexDtypes = {ge::DT_INT32, ge::DT_INT64};
     auto computeNodeInfo = context_->GetComputeNodeInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, computeNodeInfo);
-    auto indiceInstanceInfo = computeNodeInfo->GetInputInstanceInfo(IN_INDEX_IDX);
+    auto indiceInstanceInfo = computeNodeInfo->GetInputInstanceInfo(paramIndicesIdx_);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indiceInstanceInfo);
     tensorNum_ = indiceInstanceInfo->GetInstanceNum();
     OP_LOGI("IndexNonContinuous", "tensor Num: %u", tensorNum_);
     for (int64_t i = 0; i < tensorNum_ && i < MAX_SUPPORT_DIM_NUM; ++i) { 
-        auto indexDesc = context_->GetDynamicInputDesc(IN_INDEX_IDX, i);
+        auto indexDesc = context_->GetDynamicInputDesc(paramIndicesIdx_, i);
         OP_CHECK_NULL_WITH_CONTEXT(context_, indexDesc);
         ge::DataType curIndexDtype = indexDesc->GetDataType();
         OP_CHECK_IF(
@@ -385,34 +423,61 @@ ge::graphStatus IndexNonContinuousTiling::GetShapeAttrsInfo() {
 
     GetTensorInfo(xShape_, xStride_, IN_X_IDX, false);
     inputDimNum_ = xShape_.GetDimNum();
-    OP_LOGI("IndexNonContinuous", "inpuput dim Num: %u", inputDimNum_);
+    OP_LOGI("IndexNonContinuous", "input dim Num: %u", inputDimNum_);
     auto const inShape = context_->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inShape);
-    auto const inShapeVal = inShape->GetStorageShape();
+    auto const inShapeVal = inShape->GetShape();
     inputLength_ = inShapeVal.GetShapeSize();
-    auto const indexedSizes = context_->GetInputShape(IN_INDEXSIZE_IDX);
+    OP_LOGI("IndexNonContinuous", "input length: %ld", inputLength_);
+    auto const indexedSizes = context_->GetInputShape(paramIndexedSizesIdx_);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indexedSizes);
-    auto const indexedSizesShape = indexedSizes->GetStorageShape();
+    auto const indexedSizesShape = indexedSizes->GetShape();
     indexedSizesNum_ = indexedSizesShape.GetDim(0);
     OP_LOGI("IndexNonContinuous", "index Size Num: %ld", indexedSizesNum_);
-    auto const indexShape = context_->GetInputShape(IN_INDEX_IDX);
+    auto const indexShape = context_->GetInputShape(paramIndicesIdx_);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indexShape);
     indexShape_ = indexShape->GetShape();   
-    GetIndexStrideInfo(indexShape_, indexStride1_, IN_INDEX_IDX, DIM_0);
-    GetIndexStrideInfo(indexShape_, indexStride2_, IN_INDEX_IDX, DIM_1);
-    GetIndexStrideInfo(indexShape_, indexStride3_, IN_INDEX_IDX, DIM_2);
-    GetIndexStrideInfo(indexShape_, indexStride4_, IN_INDEX_IDX, DIM_3);
+    GetIndexStrideInfo(indexShape_, indexStride1_, paramIndicesIdx_, DIM_0);
+    GetIndexStrideInfo(indexShape_, indexStride2_, paramIndicesIdx_, DIM_1);
+    GetIndexStrideInfo(indexShape_, indexStride3_, paramIndicesIdx_, DIM_2);
+    GetIndexStrideInfo(indexShape_, indexStride4_, paramIndicesIdx_, DIM_3);
     indexstrideList.push_back(indexStride1_);
     indexstrideList.push_back(indexStride2_);
     indexstrideList.push_back(indexStride3_);
     indexstrideList.push_back(indexStride4_);
-    GetTensorInfo(yShape_, yStride_, OUT_Y_IDX, true);
-    auto const outputSize = context_->GetOutputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, outputSize);
-    auto const outputSizeSal = outputSize->GetStorageShape();
-    outputLength_ = outputSizeSal.GetShapeSize();
+
+    if (isIndexPut_ == false) {
+        accumulateMode_ = false;
+        m_tilingData_.set_accumulateMode(0);
+        GetTensorInfo(yShape_, yStride_, OUT_Y_IDX, true);
+        auto yDimNum = yShape_.GetDimNum();
+        OP_LOGI("IndexNonContinuous", "y dim Num: %u", yDimNum);
+        auto const outputSize = context_->GetOutputShape(0);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, outputSize);
+        auto const outputSizeSal = outputSize->GetStorageShape();
+        outputLength_ = outputSizeSal.GetShapeSize();
+    } else {
+        // attr
+        auto const attrs = context_->GetAttrs();
+        auto* accumuMode = attrs->GetAttrPointer<bool>(0);
+        if (*accumuMode) {
+            m_tilingData_.set_accumulateMode(1);
+            accumulateMode_ = true;
+            OP_LOGD("IndexPutV2", "accumulate mode enabled.");
+        } else {
+            accumulateMode_ = false;
+            m_tilingData_.set_accumulateMode(0);
+            OP_LOGD("IndexPutV2", "accumulate mode disable.");
+        }
+        GetTensorInfo(valueShape_, valueStride_, INDEXPUT_VALUE_IDX, false);
+        valueDimNum_ = valueShape_.GetDimNum();
+        OP_LOGI("IndexNonContinuous", "value dim Num: %u", valueDimNum_);
+        auto const valueShape = context_->GetInputShape(INDEXPUT_VALUE_IDX);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, valueShape);
+        auto const valueShapeVal = valueShape->GetShape();
+        outputLength_ = valueShapeVal.GetShapeSize();   
+    }
     OP_LOGI("IndexNonContinuous", "outputLength_: %lu", outputLength_);
-    
     return ge::GRAPH_SUCCESS;
 }
 
@@ -428,14 +493,14 @@ ge::graphStatus IndexNonContinuousTiling::DoLibApiTiling() {
   return ge::GRAPH_SUCCESS;
 }
 
-void IndexNonContinuousTiling::GenNonContinuousTilingKey() {
+void IndexNonContinuousTiling::GenIndexTilingKey() {
     uint64_t contigKey = 0;
     auto firstInput = context_->GetInputDesc(0);
     auto paramsDtype = firstInput->GetDataType();
     int32_t dtypeSize = ge::GetSizeByDataType(paramsDtype);
     contigKey = static_cast<uint64_t>(dtypeSize);
 
-    auto idxInput = context_->GetInputDesc(INDICES_IDX);
+    auto idxInput = context_->GetInputDesc(paramIndicesIdx_);
     auto idxDtype = idxInput->GetDataType();
     if (idxDtype == ge::DT_INT64) {
         contigKey += IDX_TYPE_TILING_KEY_WEIGHT; // +100
@@ -446,7 +511,30 @@ void IndexNonContinuousTiling::GenNonContinuousTilingKey() {
     }
 
     tilingKey_ = contigKey + NON_CONTIG_OFFSET; // 生成非连续Key（原生Key + 20000偏移）
-    OP_LOGI("IndexNonContinuous", "Non-Continuous tiling key: %lu", tilingKey_);
+    OP_LOGI("IndexNonContinuous", "Non-Continuous tiling key: %lu", tilingKey_);   
+}
+
+void IndexNonContinuousTiling::GenNonContinuousTilingKey() {
+    if (isIndexPut_ == false) {
+        return GenIndexTilingKey();
+    }
+    auto firstInput = context_->GetInputDesc(0);
+    auto paramsDtype = firstInput->GetDataType();
+    uint64_t tilingKey;
+
+    if (typeMap.find(paramsDtype) != typeMap.end()) {
+        tilingKey = typeMap[paramsDtype];
+    } else {
+        OP_LOGE("IndexPutV2Simt", "input x dtype error!");
+    }
+
+    auto idxInput = context_->GetInputDesc(paramIndicesIdx_);
+    auto idxDtype = idxInput->GetDataType();
+    if (idxDtype == ge::DT_INT64) {
+        tilingKey += IDX_TYPE_TILING_KEY_WEIGHT;
+    }
+    tilingKey_ = tilingKey + NON_CONTIG_OFFSET;
+    OP_LOGI("IndexPutV2NonContinuous", "Non-Continuous tiling key: %lu", tilingKey_);
 }
 
 uint64_t IndexNonContinuousTiling::GetTilingKey() const {

@@ -30,7 +30,6 @@ TILING_DATA_FIELD_DEF(uint64_t, inputLength);
 END_TILING_DATA_DEF;
 
 BEGIN_TILING_DATA_DEF(IndexSimtTilingData)
-TILING_DATA_FIELD_DEF_ARR(uint64_t, 8, inputShape);
 TILING_DATA_FIELD_DEF(uint64_t, inputLength);
 TILING_DATA_FIELD_DEF(uint64_t, outputLength);
 TILING_DATA_FIELD_DEF(uint64_t, indexSize);
@@ -38,6 +37,7 @@ TILING_DATA_FIELD_DEF(uint32_t, inputDimNum);
 TILING_DATA_FIELD_DEF(uint32_t, indexedDimNum);
 TILING_DATA_FIELD_DEF(uint32_t, indexedSizesNum);
 TILING_DATA_FIELD_DEF(uint32_t, accumulateMode);
+TILING_DATA_FIELD_DEF_ARR(uint64_t, 8, inputShape);
 END_TILING_DATA_DEF;
 
 BEGIN_TILING_DATA_DEF(IndexPerfSimtTilingData)

@@ -18,6 +18,7 @@
 #include "register/op_impl_registry.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "log/log.h"
+#include "index/index/op_host/arch35/index_tiling_no_continuous.h"
 
 constexpr size_t INDEX_MASK = 2;
 namespace optiling {
@@ -27,11 +28,23 @@ static ge::graphStatus Tiling4IndexPutV2(gert::TilingContext* context) {
   OP_LOGD("indexputv2", "Tilingt2.0 start");
   auto compile_info = reinterpret_cast<const IndexPutV2CompileInfo*>(context->GetCompileInfo());
   OP_LOGD(context->GetNodeName(), "Tiling4IndexPut dsl compile_info is Null, running Simt tiling.");
-  IndexSimtTiling tilingObj(context);
+
+  IndexNonContinuousTiling tilingObj(context);
   tilingObj.isIndexPut_ = true;
   tilingObj.coreNum_ = compile_info->core_num;
-  tilingObj.ubSize_ = compile_info->ub_max_size;
-  return tilingObj.DoTiling();
+  tilingObj.ubSize_ = compile_info->ub_max_size;  
+  ge::graphStatus status = tilingObj.DoTiling();
+  if (status != ge::GRAPH_PARAM_INVALID) {  
+    OP_LOGD(context->GetNodeName(), "IndexPutV2 NoContinuous");
+    return status;
+  } else {
+    IndexSimtTiling tilingObj(context);
+    tilingObj.isIndexPut_ = true;
+    tilingObj.coreNum_ = compile_info->core_num;
+    tilingObj.ubSize_ = compile_info->ub_max_size;
+    OP_LOGD(context->GetNodeName(), "IndexPutV2 Continuous");
+    return tilingObj.DoTiling();
+  }
 }
 
 static ge::graphStatus TilingPrepare4IndexPutV2(gert::TilingParseContext* context){
