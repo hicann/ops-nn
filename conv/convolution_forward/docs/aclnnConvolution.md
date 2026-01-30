@@ -85,17 +85,17 @@ aclnnStatus aclnnConvolution(
   <th style="width:145px">非连续 Tensor</th>
   </tr>
   <tr>
-  <td>input</td>
+  <td>input（const aclTensor*）</td>
   <td>输入</td>
   <td>公式中的 input，表示卷积输入。</td>
-  <td><ul><li>支持空 Tensor。</li><li>数据类型需要与 weight 满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>N≥0，C≥1，其他维度≥0。</li></ul></td>
+  <td><ul><li>支持空 Tensor。</li><li>数据类型需要与 weight 满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li></ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN</td>
   <td>NCL、NCHW、NCDHW</td>
   <td>3-5</td>
   <td style="text-align:center">√</td>
   </tr>
   <tr>
-  <td>weight</td>
+  <td>weight（const aclTensor*）</td>
   <td>输入</td>
   <td>公式中的 weight，表示卷积权重。</td>
   <td><ul><li>支持空 Tensor。</li><li>数据类型需要与 input 满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li></ul></td>
@@ -105,17 +105,17 @@ aclnnStatus aclnnConvolution(
   <td style="text-align:center">√</td>
   </tr>
   <tr>
-  <td>bias</td>
+  <td>bias（const aclTensor*）</td>
   <td>输入</td>
   <td>公式中的 bias，表示卷积偏置。</td>
-  <td><ul><li>无 bias 场景，可传入 nullptr。</li><li>当 transposed=false 时为一维且数值与 weight 第一维相等；当 transposed=true 时为一维且数值与 weight.shape[1] * groups 相等。</li></ul></td>
+  <td><ul><li>无 bias 场景，可传入 nullptr。</li><li>当 transposed=false 时为一维且数值与 weight 第一维相等；当 transposed=true 时为一维且数值与 weight.shape[1] * groups 相等，format仅支持ND格式。</li></ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16</td>
-  <td>ND</td>
+  <td>ND、NCL、NCHW、NCDHW</td>
   <td>1-5</td>
   <td style="text-align:center">√</td>
   </tr>
   <tr>
-  <td>stride</td>
+  <td>stride（const aclIntArray*）</td>
   <td>输入</td>
   <td>卷积扫描步长。</td>
   <td>数组长度需等于 input 的维度减 2，值应该大于 0。</td>
@@ -125,7 +125,7 @@ aclnnStatus aclnnConvolution(
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>padding</td>
+  <td>padding（const aclIntArray*）</td>
   <td>输入</td>
   <td>对 input 的填充。</td>
   <td>数组长度：conv1d 非转置为 1 或 2；conv1d转置为1；conv2d 为 2 或 4；conv3d 为 3。值应该大于等于 0。</td>
@@ -135,7 +135,7 @@ aclnnStatus aclnnConvolution(
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>dilation</td>
+  <td>dilation（const aclIntArray*）</td>
   <td>输入</td>
   <td>卷积核中元素的间隔。</td>
   <td>数组长度需等于 input 的维度减 2，值应该大于 0。</td>
@@ -145,7 +145,7 @@ aclnnStatus aclnnConvolution(
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>transposed</td>
+  <td>transposed（bool）</td>
   <td>输入</td>
   <td>是否为转置卷积。</td>
   <td>-</td>
@@ -155,7 +155,7 @@ aclnnStatus aclnnConvolution(
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>outputPadding</td>
+  <td>outputPadding（const aclIntArray*）</td>
   <td>输入</td>
   <td>转置卷积情况下，对输出所有边的填充。</td>
   <td>非转置卷积情况下忽略该配置。数组长度需等于input的维度减2。值应大于等于0，且小于 stride 或 dilation 对应维度的值。</td>
@@ -165,7 +165,7 @@ aclnnStatus aclnnConvolution(
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>groups</td>
+  <td>groups（const int64_t）</td>
   <td>输入</td>
   <td>表示从输入通道到输出通道的块链接个数。</td>
   <td>数值需要在[1,65535]的范围内，且满足 groups*weight 的 C 维度=input 的 C 维度。</td>
@@ -175,27 +175,27 @@ aclnnStatus aclnnConvolution(
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>output</td>
+  <td>output（aclTensor*）</td>
   <td>输出</td>
   <td>公式中的 out，表示卷积输出。</td>
-  <td><ul><li>数据类型需要与 input 与 weight 推导之后的数据类型保持一致。</li><li>支持空 Tensor。</li><li>通道数等于 weight 第一维，其他维度≥0。</li></ul></td>
+  <td><ul><li>支持空 Tensor。</li><li>数据类型需要与 input 与 weight 推导之后的数据类型保持一致。</li><li>通道数等于 weight 第一维，其他维度≥0。</li></ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN</td>
   <td>NCL、NCHW、NCDHW</td>
   <td>3-5</td>
   <td style="text-align:center">√</td>
   </tr>
   <tr>
-  <td>cubeMathType</td>
+  <td>cubeMathType（int8_t）</td>
   <td>输入</td>
   <td>用于判断 Cube 单元应该使用哪种计算逻辑进行运算。</td>
-  <td><ul><li>如果输入的数据类型存在<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>，该参数默认对互推导后的数据类型进行处理。</li><li>支持的枚举值如下：</li><ul><li> 0 (KEEP_DTYPE): 保持输入数据类型进行计算。</li></ul><ul><li> 1 (ALLOW_FP32_DOWN_PRECISION): 允许 FLOAT 降低精度计算，提升性能。</li></ul><ul><li> 2 (USE_FP16): 使用 FLOAT16 精度进行计算。</li></ul><ul><li> 3 (USE_HF32): 使用 HIFLOAT32（混合精度）进行计算。</li></ul></td>
+  <td><ul><li>如果输入的数据类型存在<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>，该参数默认对互推导后的数据类型进行处理。</li><li>支持的枚举值如下：</li><ul><li> 0（KEEP_DTYPE）：保持输入数据类型进行计算。</li></ul><ul><li> 1（ALLOW_FP32_DOWN_PRECISION）：允许 FLOAT 降低精度计算，提升性能。</li></ul><ul><li> 2（USE_FP16）：使用 FLOAT16 精度进行计算。</li></ul><ul><li> 3（USE_HF32）：使用 HIFLOAT32（混合精度）进行计算。</li></ul></td>
   <td>INT8</td>
   <td>-</td>
   <td>-</td>
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>workspaceSize</td>
+  <td>workspaceSize（uint64_t*）</td>
   <td>输出</td>
   <td>返回需要在 Device 侧申请的 workspace 大小。</td>
   <td>-</td>
@@ -205,7 +205,7 @@ aclnnStatus aclnnConvolution(
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>executor</td>
+  <td>executor（aclOpExecutor**）</td>
   <td>输出</td>
   <td>返回 op 执行器，包含算子计算流程。</td>
   <td>-</td>
@@ -238,13 +238,13 @@ aclnnStatus aclnnConvolution(
   <td rowspan="11" align="left">161002</td>
   <td align="left">input、weight、bias、output数据类型和数据格式不在支持的范围之内。</td>
   </tr>
-  <tr><td align="left">stride、padding、dilation、outputPadding输入shape不对。</td></tr>
   <tr><td align="left">input和output数据类型不一致；transposed=false时，支持input和output数据类型不一致，不会触发该类型报错。</td></tr>
+  <tr><td align="left">stride、padding、dilation、outputPadding输入shape不对。</td></tr>
   <tr><td align="left">groups 输入不对的情况。</td></tr>
   <tr><td align="left">output的shape不满足infershape结果。</td></tr>
   <tr><td align="left">outputPadding值不满足要求。</td></tr>
   <tr><td align="left">input、weight、bias、output传入的空 Tensor中部分维度为零的不满足要求。</td></tr>
-  <tr><td align="left">input空间尺度在padding操作后小于weight(经过dilation扩张（如存在dilation>1的情况）)的空间尺度（非transpose模式下）。</td></tr>
+  <tr><td align="left">input空间尺度在padding操作后小于weight（经过dilation扩张（如存在dilation>1的情况））的空间尺度（非transpose模式下）。</td></tr>
   <tr><td align="left">transpose模式下bias的shape不为1。</td></tr>
   <tr><td align="left">stride、dilation小于0情况下不满足要求。</td></tr>
   <tr><td align="left">当前处理器不支持卷积。</td></tr>
@@ -329,7 +329,7 @@ aclnnStatus aclnnConvolution(
            input、weight 数据类型支持 FLOAT、FLOAT16、BFLOAT16、HIFLOAT8。
            <ul>
               <li>transposed=true 时：input 数据类型额外支持 FLOAT8_E4M3FN，当input数据类型为HIFLOAT8或FLOAT8_E4M3FN时，output和weight的数据类型必须与input一致。支持 N 维度大于等于0，其他各个维度的大小应该大于等于1。weight数据类型额外支持 FLOAT8_E4M3FN，所有维度的大小应该大于等于0（当D、H 或 W 维度为0时，要求推导出的output对应维度也为0）。</li>
-              <li>transposed=false 时：当 input 数据类型为 HIFLOAT8 时，weight 的数据类型必须与 input 一致。支持 N 维度大于等于0，支持 D、H、W 维度大于等于0（等于0的场景仅在 output 推导的 D、H、W 维度也等于0时支持），支持 C 维度大于等于0（等于0的场景仅在 output 推导的 N、C、D、H、W 其中某一维度等于0时支持）。weight的H、W的大小应该在[1,255]的范围内。N维度大小应该大于等于0（等于0的场景仅在bias、output的N维度也等于0时支持）。C维度大小的支持情况与input的C维度一致。</li>
+              <li>transposed=false 时：当 input 数据类型为 HIFLOAT8 时，weight 的数据类型必须与 input 一致。支持 N 维度大于等于0，支持 D、H、W 维度大于等于0（等于0的场景仅在 output 推导的 D、H、W 维度也等于0时支持），支持 C 维度大于等于0（等于0的场景仅在 output 推导的 N、C、D、H、W 其中某一维度等于0时支持）。weight的H、W的大小应该在[1,511]的范围内。N维度大小应该大于等于0（等于0的场景仅在bias、output的N维度也等于0时支持）。C维度大小的支持情况与input的C维度一致。</li>
             </ul>
         </ul>
      </td>
@@ -395,17 +395,17 @@ aclnnStatus aclnnConvolution(
      <th scope="row">cubeMathType</th>
      <td>
         <ul>
-          <li>为 0(KEEP_DTYPE) 时，当输入是 FLOAT 暂不支持。</li>
-          <li>为 1(ALLOW_FP32_DOWN_PRECISION) 时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。</li>
-          <li>为 2(USE_FP16) 时，当输入是 BFLOAT16 不支持该选项。</li>
-          <li>为 3(USE_HF32) 时，当输入是 FLOAT 转换为 HFLOAT32 计算。</li>
+          <li>为 0（KEEP_DTYPE）时，当输入是 FLOAT 暂不支持。</li>
+          <li>为 1（ALLOW_FP32_DOWN_PRECISION）时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。</li>
+          <li>为 2（USE_FP16）时，当输入是 BFLOAT16 不支持该选项。</li>
+          <li>为 3（USE_HF32）时，当输入是 FLOAT 转换为 HFLOAT32 计算。</li>
         <ul>
      </td>
      <td>
         <ul>
-          <li>为 1(ALLOW_FP32_DOWN_PRECISION) 时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。</li>
-          <li>为 2(USE_FP16) 时，当输入是 BFLOAT16 不支持该选项。</li>
-          <li>为 3(USE_HF32) 时，当输入是 FLOAT 转换为 HFLOAT32 计算。</li>
+          <li>为 1（ALLOW_FP32_DOWN_PRECISION）时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。</li>
+          <li>为 2（USE_FP16）时，当输入是 BFLOAT16 不支持该选项。</li>
+          <li>为 3（USE_HF32）时，当输入是 FLOAT 转换为 HFLOAT32 计算。</li>
         </ul>
      </td>
    </tr>

@@ -60,37 +60,37 @@ aclnnStatus aclnnConvTbc(
   <th style="width:145px">非连续 Tensor</th>
   </tr>
   <tr>
-  <td>self</td>
+  <td>self（const aclTensor*）</td>
   <td>输入</td>
   <td>公式中的 self，表示卷积输入。</td>
-  <td><ul><li>shape 为 (N,C<sub>in</sub>,H<sub>in</sub>)。</li><li>支持空 Tensor。</li><li>数据类型与 weight 的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li><li>N≥0，C≥1，H≥0。</li></ul></td>
+  <td><ul></li><li>支持空 Tensor。</li><li>数据类型与 weight 的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。<li>shape 为（N,C<sub>in</sub>,H<sub>in</sub>）。</li></li><li>N≥0，C≥1，H≥0。</li></ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8</td>
   <td>ND、NCL</td>
   <td>3</td>
   <td style="text-align:center">√</td>
   </tr>
   <tr>
-  <td>weight</td>
+  <td>weight（const aclTensor*）</td>
   <td>输入</td>
   <td>公式中的 weight，表示卷积权重。</td>
-  <td><ul><li>shape 为 (C<sub>out</sub>,C<sub>in</sub>,K)。</li><li>支持空 Tensor。</li><li>数据类型与 self 的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li><li>所有维度≥1。</li></ul></td>
+  <td><ul><li>支持空 Tensor。</li><li>数据类型与 self 的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li><li>shape 为（C<sub>out</sub>,C<sub>in</sub>,K）。</li><li>所有维度≥1。</li></ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8</td>
   <td>ND、NCL</td>
   <td>3</td>
   <td style="text-align:center">√</td>
   </tr>
   <tr>
-  <td>bias</td>
+  <td>bias（const aclTensor*）</td>
   <td>输入</td>
   <td>公式中的 bias，表示卷积偏置。</td>
-  <td><ul><li>一维且与 weight 第一维相等，不允许传入空指针。</li><li>数据类型与 self、weight 一致。</li></ul></td>
+  <td><ul><li>数据类型与 self、weight 一致。</li><li>一维且与 weight 第一维相等，不允许传入空指针。</li></ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16</td>
   <td>ND</td>
   <td>1</td>
   <td style="text-align:center">√</td>
   </tr>
   <tr>
-  <td>pad</td>
+  <td>pad（int64_t）</td>
   <td>输入</td>
   <td>表示 H 维度上左右的填充个数。</td>
   <td>大小应在 [0,255] 的范围内。</td>
@@ -100,27 +100,27 @@ aclnnStatus aclnnConvTbc(
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>out</td>
+  <td>out（aclTensor*）</td>
   <td>输出</td>
   <td>公式中的 out，表示卷积输出。</td>
-  <td><ul><li>shape 为 (N,C<sub>out</sub>,H<sub>out</sub>)。</li><li>数据类型与 self 一致。</li><li>支持空 Tensor。</li><li>通道数等于 weight 第一维，其他维度≥0。</li></ul></td>
+  <td><ul><li>支持空 Tensor。</li><li>数据类型与 self 一致。</li><li>shape 为（N,C<sub>out</sub>,H<sub>out</sub>）。</li><li>通道数等于 weight 第一维，其他维度≥0。</li></ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8</td>
   <td>ND、NCL</td>
   <td>3</td>
   <td style="text-align:center">√</td>
   </tr>
   <tr>
-  <td>cubeMathType</td>
+  <td>cubeMathType（int8_t）</td>
   <td>输入</td>
   <td>用于判断 Cube 单元应该使用哪种计算逻辑进行运算。</td>
-  <td><ul><li> 0 (KEEP_DTYPE): 保持输入数据类型进行计算。</li></ul><ul><li> 1 (ALLOW_FP32_DOWN_PRECISION): 允许 FLOAT 降低精度计算，提升性能。</li></ul><ul><li> 2 (USE_FP16): 使用 FLOAT16 精度进行计算。</li></ul><ul><li> 3 (USE_HF32): 使用 HIFLOAT32（混合精度）进行计算。</li></ul></td>
+  <td><ul><li> 0（KEEP_DTYPE）：保持输入数据类型进行计算。</li></ul><ul><li> 1（ALLOW_FP32_DOWN_PRECISION）：允许 FLOAT 降低精度计算，提升性能。</li></ul><ul><li> 2（USE_FP16）：使用 FLOAT16 精度进行计算。</li></ul><ul><li> 3（USE_HF32）：使用 HIFLOAT32（混合精度）进行计算。</li></ul></td>
   <td>INT8</td>
   <td>-</td>
   <td>-</td>
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>workspaceSize</td>
+  <td>workspaceSize（uint64_t*）</td>
   <td>输出</td>
   <td>返回需要在 Device 侧申请的 workspace 大小。</td>
   <td>-</td>
@@ -130,7 +130,7 @@ aclnnStatus aclnnConvTbc(
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>executor</td>
+  <td>executor（aclOpExecutor**）</td>
   <td>输出</td>
   <td>返回 op 执行器，包含算子计算流程。</td>
   <td>-</td>
@@ -281,17 +281,17 @@ aclnnStatus aclnnConvTbc(
      <th scope="row">cubeMathType</th>
      <td>
         <ul>
-          <li>为 0(KEEP_DTYPE) 时，当输入是 FLOAT 暂不支持。</li>
-          <li>为 1(ALLOW_FP32_DOWN_PRECISION) 时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。</li>
-          <li>为 2(USE_FP16) 时，当输入是 BFLOAT16 不支持该选项。</li>
-          <li>为 3(USE_HF32) 时，当输入是 FLOAT 转换为 HFLOAT32 计算。</li>
+          <li>为 0（KEEP_DTYPE）时，当输入是 FLOAT 暂不支持。</li>
+          <li>为 1（ALLOW_FP32_DOWN_PRECISION）时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。</li>
+          <li>为 2（USE_FP16）时，当输入是 BFLOAT16 不支持该选项。</li>
+          <li>为 3（USE_HF32）时，当输入是 FLOAT 转换为 HFLOAT32 计算。</li>
         <ul>
      </td>
      <td>
         <ul>
-          <li>为 1(ALLOW_FP32_DOWN_PRECISION) 时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。</li>
-          <li>为 2(USE_FP16) 时，当输入是 BFLOAT16 不支持该选项。</li>
-          <li>为 3(USE_HF32) 时，当输入是 FLOAT 转换为 HFLOAT32 计算。</li>
+          <li>为 1（ALLOW_FP32_DOWN_PRECISION）时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。</li>
+          <li>为 2（USE_FP16）时，当输入是 BFLOAT16 不支持该选项。</li>
+          <li>为 3（USE_HF32）时，当输入是 FLOAT 转换为 HFLOAT32 计算。</li>
         </ul>
      </td>
    </tr>
