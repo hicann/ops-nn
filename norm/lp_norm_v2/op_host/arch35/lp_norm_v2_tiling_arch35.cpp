@@ -45,6 +45,8 @@ static const float P0 = 0.0f;
 constexpr float FLT_EPSILON = 1e-6f;
 static const int64_t EMPTY_SHAPE_DIM_NUM_ONE = 1;
 
+static const int32_t REDUCE_AXIS_ONE = 1;
+
 // 实现与 Python math_isclose_impl 类似功能的函数
 static bool Isclose(float a, float b, float rel_tol = FLT_EPSILON, float abs_tol = 0.0f)
 {
@@ -242,6 +244,20 @@ ge::graphStatus LpNormV2Tiling::HandlePOther(const ReduceOpCompileInfo* compileI
     return ge::GRAPH_SUCCESS;
 }
 
+bool LpNormV2Tiling::ChechReduceAxisIsOne()
+{
+    auto xShape = tilingContext_->GetInputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, xShape);
+    auto xStorageShape = Ops::NN::OpTiling::EnsureNotScalar(xShape->GetStorageShape());
+
+    for (auto index : reduceAxis_) {
+        if (xStorageShape.GetDim(index) != REDUCE_AXIS_ONE) {
+            return false;
+        }
+    }
+    return true;
+}
+
 ge::graphStatus LpNormV2Tiling::TilingReduce(const ReduceOpCompileInfo* compileInfo)
 {
     ReduceOpInputParam opInput;
@@ -254,7 +270,7 @@ ge::graphStatus LpNormV2Tiling::TilingReduce(const ReduceOpCompileInfo* compileI
     ge::graphStatus ret = ge::GRAPH_SUCCESS;
     if (Isclose(p_, P0)) {
         ret = HandleP0(compileInfo, opInput, tilingData_->reduceTiling);
-    } else if (Isclose(p_, P1)) {
+    } else if (Isclose(p_, P1) || ChechReduceAxisIsOne()) {
         ret = HandleP1(compileInfo, opInput, tilingData_->reduceTiling);
     } else if (Isclose(p_, P2)) {
         ret = HandleP2(compileInfo, opInput, tilingData_->reduceTiling);

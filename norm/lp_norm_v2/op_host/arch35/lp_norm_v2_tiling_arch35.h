@@ -54,6 +54,7 @@ private:
                                ReduceOpTilingData& reduceTiling);
     ge::graphStatus HandlePOther(const ReduceOpCompileInfo* compileInfo, ReduceOpInputParam& opInput,
                                  ReduceOpTilingData& reduceTiling);
+    bool ChechReduceAxisIsOne();
 
 private:
     ge::DataType xDtype_;
