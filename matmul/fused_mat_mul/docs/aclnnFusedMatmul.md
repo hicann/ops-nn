@@ -254,7 +254,7 @@ aclnnStatus aclnnFusedMatmul(
         <td>x1和x2的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>
-        <td>表x1、x2或y的数据格式不在支持的范围内。</td>
+        <td>x1、x2或y的数据格式不在支持的范围内。</td>
       </tr>
       <tr>
         <td>x1和x2的维度不是二维。</td>
