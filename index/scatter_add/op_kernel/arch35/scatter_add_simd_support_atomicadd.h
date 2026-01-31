@@ -22,7 +22,7 @@ namespace ScatterAdd {
 using namespace AscendC;
 using namespace ScatterAddCommon;
 
-template<typename T, typename U, bool updatesIsScalar>
+template<typename T, typename U, bool updatesIsScalar, uint32_t scatterOp>
 class ScatterAddSIMDSupportAtomicAdd {
 public:
     __aicore__ inline ScatterAddSIMDSupportAtomicAdd(const ScatterAddTilingData& tilingData, TPipe& pipe) :
@@ -43,8 +43,8 @@ private:
     const ScatterAddTilingData& tilingData_;
 };
 
-template<typename T, typename U, bool updatesIsScalar>
-__aicore__ inline void ScatterAddSIMDSupportAtomicAdd<T, U, updatesIsScalar>::Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
+template<typename T, typename U, bool updatesIsScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSIMDSupportAtomicAdd<T, U, updatesIsScalar, scatterOp>::Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
     GM_ADDR varRef, GM_ADDR workspace)
 {
     if (GetBlockIdx() >= GetBlockNum()) {
@@ -61,14 +61,15 @@ __aicore__ inline void ScatterAddSIMDSupportAtomicAdd<T, U, updatesIsScalar>::In
     }
 }
 
-template<typename T, typename U, bool updatesIsScalar>
-__aicore__ inline void ScatterAddSIMDSupportAtomicAdd<T, U, updatesIsScalar>::ProcessAtomicAdd()
+template<typename T, typename U, bool updatesIsScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSIMDSupportAtomicAdd<T, U, updatesIsScalar, scatterOp>::ProcessAtomicAdd()
 {
-    if (GetBlockIdx() >= tilingData_.atomicAddCoreNum) {
-        return;
+    if constexpr (updatesIsScalar) {
+        LocalTensor<T> updatesLocal = updatesQueue_.AllocTensor<T>();
+        BroadcastUpdatesScalar<T, scatterOp>(updatesLocal, updatesGm_, static_cast<int32_t>(tilingData_.ubFactorCol));
+        updatesQueue_.EnQue(updatesLocal);
     }
 
-    BroadcastUpdatesScalar<T, DOUBLE_BUFFER, updatesIsScalar>(updatesQueue_, updatesGm_, static_cast<int32_t>(tilingData_.ubFactorCol));
     uint64_t rowIdx = GetBlockIdx() / tilingData_.colTileNum;   // 当前block在第几个分块行
     uint64_t colIdx = GetBlockIdx() % tilingData_.colTileNum;   // 当前block在第几个分块列
     uint64_t curCoreRows = rowIdx != (tilingData_.rowTileNum - 1) ? tilingData_.normBlockRow : tilingData_.tailBlockRow;  // 当前分块行数
@@ -103,7 +104,7 @@ __aicore__ inline void ScatterAddSIMDSupportAtomicAdd<T, U, updatesIsScalar>::Pr
                     CopyOut(varRefGm_, updatesLocal, dstOffset, 1, cols);
                 }
                 SetAtomicNone();
-                updatesQueue_.FreeTensor(updatesLocal);
+                updatesQueue_.EnQue<T>(updatesLocal);
             } else {
                 LocalTensor<T> updatesLocal = updatesQueue_.AllocTensor<T>();
                 uint64_t offset = blockOffsetUpdate + rowLoop * tilingData_.ubFactorRow * tilingData_.varShape[1] + colLoop * tilingData_.ubFactorCol;
@@ -114,6 +115,13 @@ __aicore__ inline void ScatterAddSIMDSupportAtomicAdd<T, U, updatesIsScalar>::Pr
                 event_t eventIDMTE2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
                 SetFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
                 WaitFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
+
+                if constexpr (scatterOp == SUB) {
+ 	  	            NegateUpdate<T>(updatesLocal, static_cast<uint32_t>(rows * colsAlign));
+                    auto MTE3WaitVEventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+                    SetFlag<HardEvent::V_MTE3>(MTE3WaitVEventID);
+                    WaitFlag<HardEvent::V_MTE3>(MTE3WaitVEventID);
+ 	  	        }
 
                 SetAtomicAdd<T>();
                 for (uint64_t i = 0; i < rows; i++) {
@@ -130,12 +138,17 @@ __aicore__ inline void ScatterAddSIMDSupportAtomicAdd<T, U, updatesIsScalar>::Pr
         }
         indicesQueue_.FreeTensor(indicesLocal);
     }
+
+    if constexpr (updatesIsScalar) {
+        LocalTensor<T> updatesLocal = updatesQueue_.DeQue<T>();
+        updatesQueue_.FreeTensor<T>(updatesLocal);
+    }
 }
 
-template<typename T, typename U, bool updatesIsScalar>
-__aicore__ inline void ScatterAddSIMDSupportAtomicAdd<T, U, updatesIsScalar>::Process()
+template<typename T, typename U, bool updatesIsScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSIMDSupportAtomicAdd<T, U, updatesIsScalar, scatterOp>::Process()
 {
-    if (GetBlockIdx() >= GetBlockNum()) {
+    if (GetBlockIdx() >= GetBlockNum() || GetBlockIdx() >= tilingData_.atomicAddCoreNum) {
         return;
     }
 

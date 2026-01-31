@@ -58,7 +58,6 @@ TILING_DATA_FIELD_DEF(uint64_t, isDeterministic);
 TILING_DATA_FIELD_DEF(uint64_t, tailCoreHandleCol);
 TILING_DATA_FIELD_DEF(uint64_t, tailCoreColsLoopSize);
 TILING_DATA_FIELD_DEF(uint64_t, tailCoreColsTailUbFactor);
-TILING_DATA_FIELD_DEF(uint64_t, ubSize);
 TILING_DATA_FIELD_DEF(uint64_t, perCoreHandleRows); //反量化按var[0]分核或indices分核
 TILING_DATA_FIELD_DEF(uint64_t, tailCoreHandleRows);
 TILING_DATA_FIELD_DEF(uint64_t, rowsInUb);
@@ -83,9 +82,11 @@ TILING_DATA_FIELD_DEF(uint64_t, normBlockCol);  // 整核分块列数
 TILING_DATA_FIELD_DEF(uint64_t, tailBlockCol);  // 列尾核分块列数
 TILING_DATA_FIELD_DEF(uint64_t, ubFactorRow);   // UB每次循环搬运的行数
 TILING_DATA_FIELD_DEF(uint64_t, ubFactorCol);   // UB每次循环搬运的列数
+TILING_DATA_FIELD_DEF(uint64_t, indicesCastMode);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(ScatterAdd, ScatterAddTilingData)
+REGISTER_TILING_DATA_CLASS(ScatterSub, ScatterAddTilingData)
 
 ge::graphStatus ScatterAddTilingForAscendC(gert::TilingContext* context);
 

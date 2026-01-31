@@ -34,7 +34,7 @@ struct UpdatesDstPosSelector { constexpr static TPosition pos = TPosition::VECIN
 template<> struct UpdatesDstPosSelector<true, false> { constexpr static TPosition pos = TPosition::VECOUT; }; // 支持atomic_add且updates不是标量,直接搬入搬出
 template<> struct UpdatesDstPosSelector<true, true> { constexpr static TPosition pos = TPosition::GM; }; // 支持atomic_add且updates是标量,duplicate后搬出
 
-template<typename T, typename U, bool updatesIsScalar>
+template<typename T, typename U, bool updatesIsScalar, uint32_t scatterOp>
 class ScatterAddSIMDImpl {
 public:
     __aicore__ inline ScatterAddSIMDImpl(const ScatterAddTilingData& tilingData, TPipe& pipe) :
@@ -74,8 +74,8 @@ private:
     const ScatterAddTilingData& tilingData_;
 };
 
-template<typename T, typename U, bool updatesIsScalar>
-__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
+template<typename T, typename U, bool updatesIsScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar, scatterOp>::Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
     GM_ADDR varRef, GM_ADDR workspace)
 {
     if (GetBlockIdx() >= GetBlockNum()) {
@@ -106,8 +106,8 @@ __aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::Init(GM_ADDR v
     }
 }
 
-template<typename T, typename U, bool updatesIsScalar>
-__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::CopyInUpdates(int64_t offset, int64_t dataLen)
+template<typename T, typename U, bool updatesIsScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar, scatterOp>::CopyInUpdates(int64_t offset, int64_t dataLen)
 {
     DataCopyExtParams inParams = { 1, static_cast<uint32_t>(dataLen * sizeof(T)), 0, 0, 0 };
     DataCopyPadExtParams<T> padParams = { false, 0, 0, 0 };
@@ -116,8 +116,8 @@ __aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::CopyInUpdates(
     updatesQueue_.EnQue(updatesLocal);
 }
 
-template<typename T, typename U, bool updatesIsScalar>
-__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::CopyOutUpdates(int64_t offset, int64_t dataLen)
+template<typename T, typename U, bool updatesIsScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar, scatterOp>::CopyOutUpdates(int64_t offset, int64_t dataLen)
 {
     DataCopyExtParams outParams = { 1, static_cast<uint32_t>(dataLen * sizeof(T)), 0, 0, 0 };
     LocalTensor<T> updatesLocal = updatesQueue_.template DeQue<T>();
@@ -131,8 +131,8 @@ __aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::CopyOutUpdates
     }
 }
 
-template<typename T, typename U, bool updatesIsScalar>
-__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::CopyInVar(int64_t offset, int64_t dataLen)
+template<typename T, typename U, bool updatesIsScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar, scatterOp>::CopyInVar(int64_t offset, int64_t dataLen)
 {
     DataCopyExtParams inParams = { 1, static_cast<uint32_t>(dataLen * sizeof(T)), 0, 0, 0 };
     DataCopyPadExtParams<T> padParams = { false, 0, 0, 0 };
@@ -141,8 +141,8 @@ __aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::CopyInVar(int6
     varInQueue_.EnQue(varLocal);
 }
 
-template<typename T, typename U, bool updatesIsScalar>
-__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::CopyOutVarToWS(int64_t offset, int64_t dataLen)
+template<typename T, typename U, bool updatesIsScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar, scatterOp>::CopyOutVarToWS(int64_t offset, int64_t dataLen)
 {
     DataCopyExtParams outParams = { 1, static_cast<uint32_t>(dataLen * sizeof(int32_t)), 0, 0, 0 };
     LocalTensor<int32_t> varCastLocal = varCastOutQueue_.DeQue<int32_t>();
@@ -150,11 +150,17 @@ __aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::CopyOutVarToWS
     varCastOutQueue_.FreeTensor(varCastLocal);
 }
 
-template<typename T, typename U, bool updatesIsScalar>
-__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::CopyOutUpdatesToWS(int64_t offset, int64_t dataLen)
+template<typename T, typename U, bool updatesIsScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar, scatterOp>::CopyOutUpdatesToWS(int64_t offset, int64_t dataLen)
 {
     DataCopyExtParams outParams = { 1, static_cast<uint32_t>(dataLen * sizeof(int32_t)), 0, 0, 0 };
     LocalTensor<int32_t> updatesCastLocal = updatesCastQueue_.DeQue<int32_t>();
+    if constexpr (scatterOp == SUB && !updatesIsScalar) {
+        NegateUpdate<int32_t>(updatesCastLocal, static_cast<uint32_t>(dataLen));
+        auto MTE3WaitVEventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+        SetFlag<HardEvent::V_MTE3>(MTE3WaitVEventID);
+        WaitFlag<HardEvent::V_MTE3>(MTE3WaitVEventID);
+    }
     SetAtomicAdd<int32_t>();
     DataCopyPad(varCastAtomicAddGm_[offset], updatesCastLocal, outParams);
     SetAtomicNone();
@@ -165,8 +171,8 @@ __aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::CopyOutUpdates
     }
 }
 
-template<typename T, typename U, bool updatesIsScalar>
-__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::CopyInVarFromWS(int64_t offset, int64_t dataLen)
+template<typename T, typename U, bool updatesIsScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar, scatterOp>::CopyInVarFromWS(int64_t offset, int64_t dataLen)
 {
     DataCopyExtParams inParams = { 1, static_cast<uint32_t>(dataLen * sizeof(int32_t)), 0, 0, 0 };
     DataCopyPadExtParams<int32_t> padParams = { false, 0, 0, 0 };
@@ -175,8 +181,8 @@ __aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::CopyInVarFromW
     varCastInQueue_.EnQue(varCastLocal);
 }
 
-template<typename T, typename U, bool updatesIsScalar>
-__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::CopyOutVar(int64_t offset, int64_t dataLen)
+template<typename T, typename U, bool updatesIsScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar, scatterOp>::CopyOutVar(int64_t offset, int64_t dataLen)
 {
     DataCopyExtParams outParams = { 1, static_cast<uint32_t>(dataLen * sizeof(T)), 0, 0, 0 };
     LocalTensor<T> varLocal = varOutQueue_.DeQue<T>();
@@ -184,8 +190,8 @@ __aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::CopyOutVar(int
     varOutQueue_.FreeTensor(varLocal);
 }
 
-template<typename T, typename U, bool updatesIsScalar>
-__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::ExcuteAtomicAdd(int64_t varRefOffset,
+template<typename T, typename U, bool updatesIsScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar, scatterOp>::ExcuteAtomicAdd(int64_t varRefOffset,
     int64_t dataLen)
 {
     if constexpr (platform::IsSupportAtomicAddTypeSIMD<T>()) {
@@ -202,8 +208,8 @@ __aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::ExcuteAtomicAd
     }
 }
 
-template<typename T, typename U, bool updatesIsScalar>
-__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::ProcessSingleLoopIndices(int64_t indicesOffset,
+template<typename T, typename U, bool updatesIsScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar, scatterOp>::ProcessSingleLoopIndices(int64_t indicesOffset,
     int64_t indicesLen)
 {
     DataCopyExtParams inParams = { 1, static_cast<uint32_t>(indicesLen * sizeof(U)), 0, 0, 0 };
@@ -235,8 +241,8 @@ __aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::ProcessSingleL
     }
 }
 
-template<typename T, typename U, bool updatesIsScalar>
-__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::ProcessAtomicAdd()
+template<typename T, typename U, bool updatesIsScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar, scatterOp>::ProcessAtomicAdd()
 {
     if (GetBlockIdx() >= tilingData_.atomicAddCoreNum) {
         return;
@@ -248,11 +254,21 @@ __aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::ProcessAtomicA
         WaitFlag<HardEvent::S_V>(vWaitSEventID);
         if constexpr (platform::IsSupportAtomicAddTypeSIMD<T>()) {
             LocalTensor<T> updatesLocal = updatesQueue_.template AllocTensor<T>();
-            Duplicate(updatesLocal, updatesValue, tilingData_.updatesUbFactor);
+            if constexpr (scatterOp == ADD) {
+                Duplicate(updatesLocal, updatesValue, tilingData_.updatesUbFactor);
+            } else if constexpr (scatterOp == SUB) {
+                updatesValue = -updatesValue;
+                Duplicate(updatesLocal, updatesValue, tilingData_.updatesUbFactor);
+            }
             updatesQueue_.EnQue(updatesLocal);
         } else {
             LocalTensor<int32_t> updatesCastLocal = updatesCastQueue_.AllocTensor<int32_t>();
-            Duplicate(updatesCastLocal, static_cast<int32_t>(updatesValue), tilingData_.updatesUbFactor);
+            if constexpr (scatterOp == ADD) {
+                Duplicate(updatesCastLocal, static_cast<int32_t>(updatesValue), tilingData_.updatesUbFactor);
+            } else if constexpr (scatterOp == SUB) {
+                int32_t updatesValueInt32 = -static_cast<int32_t>(updatesValue);
+                Duplicate(updatesCastLocal, updatesValueInt32, tilingData_.updatesUbFactor);
+            }
             updatesCastQueue_.EnQue(updatesCastLocal);
         }
     }
@@ -280,8 +296,8 @@ __aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::ProcessAtomicA
     }
 }
 
-template<typename T, typename U, bool updatesIsScalar>
-__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::ProcessVarToWS()
+template<typename T, typename U, bool updatesIsScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar, scatterOp>::ProcessVarToWS()
 {
     if (GetBlockIdx() >= tilingData_.copyCoreNum) {
         return;
@@ -313,8 +329,8 @@ __aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::ProcessVarToWS
     CopyOutVarToWS(varOffset, tailUbFactor);
 }
 
-template<typename T, typename U, bool updatesIsScalar>
-__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::ProcessVarFromWS()
+template<typename T, typename U, bool updatesIsScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar, scatterOp>::ProcessVarFromWS()
 {
     if (GetBlockIdx() >= tilingData_.copyCoreNum) {
         return;
@@ -346,8 +362,8 @@ __aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::ProcessVarFrom
     CopyOutVar(varOffset, tailUbFactor);
 }
 
-template<typename T, typename U, bool updatesIsScalar>
-__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar>::Process()
+template<typename T, typename U, bool updatesIsScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSIMDImpl<T, U, updatesIsScalar, scatterOp>::Process()
 {
     if (GetBlockIdx() >= GetBlockNum()) {
         return;

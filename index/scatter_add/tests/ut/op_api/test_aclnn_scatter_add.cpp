@@ -32,6 +32,25 @@ public:
   }
 };
 
+TEST_F(l2_scatter_add_test, case_1)
+{
+    auto self_desc = TensorDesc({3, 3}, ACL_DOUBLE, ACL_FORMAT_ND)
+        .Value(vector<double>{1.111131123123, 1, 1, 1, 1, 1, 1, 1, 1})
+        .Precision(0.0001, 0.0001);
+    int64_t dim = 0;
+    auto index_desc = TensorDesc({1,3}, ACL_INT64, ACL_FORMAT_ND)
+        .Value(vector<int>{0, 1, 2});
+    auto src_desc = TensorDesc({3, 4}, ACL_DOUBLE, ACL_FORMAT_ND)
+        .Value(vector<double>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
+    auto ut = OP_API_UT(aclnnScatterAdd, INPUT(self_desc, dim, index_desc, src_desc), OUTPUT(self_desc));
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    // SAMPLE: precision simulate
+    ut.TestPrecision();
+}
+
 // 空tensor
 TEST_F(l2_scatter_add_test, case_2)
 {
@@ -171,4 +190,30 @@ TEST_F(l2_scatter_add_test, ascend910B2_case_fp16)
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_scatter_add_test, ascend910B2_case_expand) {
+  auto selfTensor = CreateAclTensor({4096, 6144}, {6144, 1}, 0, {4096, 6144});
+  auto indexTensor = CreateAclTensor({2076, 6144}, {1, 0}, 0, {2076,}, ACL_INT64);
+  auto srcTensor = CreateAclTensor({2076, 6144}, {6144, 1}, 0, {2076, 6144});
+  auto outTensor = CreateAclTensor({4096, 6144}, {6144, 1}, 0, {4096, 6144});
+
+  uint64_t workspaceSize = 0U;
+  aclOpExecutor* exe = nullptr;
+  auto aclRet = aclnnScatterAddGetWorkspaceSize(selfTensor, 0, indexTensor, srcTensor, outTensor, &workspaceSize, &exe);
+  EXPECT_EQ(aclRet, ACL_SUCCESS);
+  EXPECT_NE(exe, nullptr);
+}
+
+TEST_F(l2_scatter_add_test, ascend910B2_case_expand_same) {
+  auto selfTensor = CreateAclTensor({4096, 6144}, {6144, 1}, 0, {4096, 6144});
+  auto indexTensor = CreateAclTensor({4096, 6144}, {1, 0}, 0, {4096,}, ACL_INT64);
+  auto srcTensor = CreateAclTensor({4096, 6144}, {6144, 1}, 0, {4096, 6144});
+  auto outTensor = CreateAclTensor({4096, 6144}, {6144, 1}, 0, {4096, 6144});
+
+  uint64_t workspaceSize = 0U;
+  aclOpExecutor* exe = nullptr;
+  auto aclRet = aclnnScatterAddGetWorkspaceSize(selfTensor, 0, indexTensor, srcTensor, outTensor, &workspaceSize, &exe);
+  EXPECT_EQ(aclRet, ACL_SUCCESS);
+  EXPECT_NE(exe, nullptr);
 }

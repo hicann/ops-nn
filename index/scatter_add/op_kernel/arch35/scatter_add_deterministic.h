@@ -19,9 +19,11 @@
 #include "kernel_operator.h"
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
+#include "scatter_add_common.h"
 
 namespace ScatterAdd {
 using namespace AscendC;
+using namespace ScatterAddCommon;
 
 constexpr uint64_t DOUBLE_BUF = 2;
 constexpr uint64_t BLOCK_SIZE = 32;
@@ -48,7 +50,7 @@ AscendC::RoundMode::UNKNOWN,
 
 static constexpr SortConfig sortConfig{SortType::RADIX_SORT, false};
 
-template<typename T, typename U>
+template<typename T, typename U, uint32_t scatterOp>
 class ScatterAddDeterministicImpl {
 public:
     __aicore__ inline ScatterAddDeterministicImpl(const ScatterAddTilingData& tilingData, TPipe& pipe) :
@@ -115,8 +117,8 @@ private:
     uint64_t postVarAlignSizeFp32_{0};
 };
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
     GM_ADDR varRef, GM_ADDR workspace)
 {
     isDeterministic = tilingData_.isDeterministic == 1 ? true : false;
@@ -162,8 +164,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::Init(GM_ADDR var, GM_
     }
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::InitWspZero()
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::InitWspZero()
 {
     InitGlobalMemory(workspaceCoreLogicCoreSumId_, tilingData_.perCoreHandleIndices, (U)(-1));
     InitGlobalMemory(workspaceLogicCoreSumValue_, tilingData_.perCoreHandleIndices * postVarAlignSizeFp32_, (float)(0));
@@ -172,8 +174,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::InitWspZero()
     InitGlobalMemory(workspaceInt32Res_, tilingData_.varShape[1] * tilingData_.varShape[0], (int)(0));
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::CopyInUpdates(int64_t offset, int64_t dataLen)
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::CopyInUpdates(int64_t offset, int64_t dataLen)
 {
     DataCopyExtParams inParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(dataLen * sizeof(T)), 0, 0, 0 };
     DataCopyPadExtParams<T> padParams = { false, 0, 0, 0 };
@@ -182,8 +184,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::CopyInUpdates(int64_t
     dataQueue_.EnQue(updatesLocal);
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::CopyOutUpdates(int64_t offset, int64_t dataLen)
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::CopyOutUpdates(int64_t offset, int64_t dataLen)
 {
     DataCopyExtParams outParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(dataLen * sizeof(T)), 0, 0, 0 };
     LocalTensor<T> updatesLocal = dataQueue_.DeQue<T>();
@@ -193,8 +195,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::CopyOutUpdates(int64_
     dataQueue_.FreeTensor(updatesLocal);
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::ProcessSingleLoopIndices(int64_t indicesOffset,
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::ProcessSingleLoopIndices(int64_t indicesOffset,
     int64_t indicesLen)
 {
     DataCopyExtParams inParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(indicesLen * sizeof(U)), 0, 0, 0 };
@@ -228,8 +230,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::ProcessSingleLoopIndi
     }
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::ProcessAtomicAdd()
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::ProcessAtomicAdd()
 {
     if (GetBlockIdx() >= tilingData_.logicCoreNum) {
         return;
@@ -246,8 +248,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::ProcessAtomicAdd()
     ProcessSingleLoopIndices(indicesOffset, indicesTailUbFactor);
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>:: CopyInIndicesAndUpdates(uint64_t loopIdNum, uint64_t rowNums)
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>:: CopyInIndicesAndUpdates(uint64_t loopIdNum, uint64_t rowNums)
 {
     uint64_t updatesOffset = loopIdNum * tilingData_.indicesUbFactor * tilingData_.varShape[1];
     LocalTensor<T> updatesLocal = updatesQueue_.template AllocTensor<T>();
@@ -265,8 +267,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>:: CopyInIndicesAndUpda
     indicesQue_.EnQue(indicesLocal);
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::ComputeUniqueIdNum(LocalTensor<U>& sortedIndicesLocal, 
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::ComputeUniqueIdNum(LocalTensor<U>& sortedIndicesLocal, 
     LocalTensor<U>& uniqueIdCountLocalU, uint32_t dataLen)
 {
     LocalTensor<U> updateSumIdxLocal =  updateSumIdxQueue_.AllocTensor<U>();
@@ -330,8 +332,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::ComputeUniqueIdNum(Lo
     updateSumIdxQueue_.EnQue(updateSumIdxLocal);
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::ComputeUinqueIdTimes(LocalTensor<U>& uniqueIdCountLocalU, uint32_t uniqueIdNum)
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::ComputeUinqueIdTimes(LocalTensor<U>& uniqueIdCountLocalU, uint32_t uniqueIdNum)
 {
     LocalTensor<int32_t> uniqueIdCountLocal = uniqueIdCountLocalU.template ReinterpretCast<int32_t>();
     __local_mem__ int32_t* uniqueIdCountsAddr = (__local_mem__ int32_t*)uniqueIdCountLocal.GetPhyAddr();
@@ -361,8 +363,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::ComputeUinqueIdTimes(
     }
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::ComputeSum(LocalTensor<U>& uniqueIdCountLocalU, LocalTensor<uint32_t>& updatesOriginIdexLocal,
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::ComputeSum(LocalTensor<U>& uniqueIdCountLocalU, LocalTensor<uint32_t>& updatesOriginIdexLocal,
     uint32_t uniqueIdNum, uint32_t dataLen)
 {
     LocalTensor<uint32_t> uniqueIdCountLocal = uniqueIdCountLocalU.template ReinterpretCast<uint32_t>();
@@ -423,8 +425,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::ComputeSum(LocalTenso
     updatesQueue_.FreeTensor(updatesLocal);
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::ProcessSortAndSum(uint64_t loopIdx, uint32_t dataLen)
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::ProcessSortAndSum(uint64_t loopIdx, uint32_t dataLen)
 {
     LocalTensor<U> indicesLocal = indicesQue_.DeQue<U>();
     LocalTensor<U> sortedIndicesLocal = sortedIndicesQue_.Get<U>();   
@@ -446,8 +448,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::ProcessSortAndSum(uin
     indicesQue_.FreeTensor(indicesLocal);
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::CopySumOutToWs(uint64_t loopIdx, uint64_t dataLen)
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::CopySumOutToWs(uint64_t loopIdx, uint64_t dataLen)
 {
     // updatesSum和updatesSumId整块搬出去
     uint32_t updatesWspOffset = loopIdx * tilingData_.indicesUbFactor * postVarAlignSizeFp32_;
@@ -481,8 +483,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::CopySumOutToWs(uint64
     updateSumIdxQueue_.FreeTensor(updateSumIdxLocal);
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::CopySumAndIdxIn(uint64_t loopIdx, uint64_t dataCount)
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::CopySumAndIdxIn(uint64_t loopIdx, uint64_t dataCount)
 {
     LocalTensor<float> updateSumLocal = updateSumInQue_.AllocTensor<float>();
     LocalTensor<U> updateSumIdxLocal = updateSumIdxQueue_.AllocTensor<U>();
@@ -502,8 +504,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::CopySumAndIdxIn(uint6
     updateSumIdxQueue_.EnQue(updateSumIdxLocal);
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::ComputeRValueAndQuantize(uint64_t loopIdx, uint64_t dataCount) 
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::ComputeRValueAndQuantize(uint64_t loopIdx, uint64_t dataCount) 
 {
     LocalTensor<float> updateSumLocal = updateSumInQue_.DeQue<float>();
     LocalTensor<U> updateSumIdxLocal = updateSumIdxQueue_.DeQue<U>();
@@ -537,8 +539,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::ComputeRValueAndQuant
     updateSumIdxQueue_.FreeTensor(updateSumIdxLocal);
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::QuantizeForSum(uint64_t curRowIdx, uint32_t RCountsValue,
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::QuantizeForSum(uint64_t curRowIdx, uint32_t RCountsValue,
     __local_mem__ float* updateSumAddr)
 {
     LocalTensor<float> updateRValueLocal = RValueQue_.DeQue<float>();
@@ -581,8 +583,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::QuantizeForSum(uint64
     updateSumQue_.EnQue(updateSumIntLocal);
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::CopyQuantizedSumOutToIntWs(uint64_t RValueOffset)
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::CopyQuantizedSumOutToIntWs(uint64_t RValueOffset)
 {
     LocalTensor<int> updateSumIntLocal = updateSumQue_.DeQue<int>();
     DataCopyExtParams outParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(tilingData_.varShape[1] * sizeof(int)), 0, 0, 0 };
@@ -592,8 +594,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::CopyQuantizedSumOutTo
     updateSumQue_.FreeTensor(updateSumIntLocal);
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::CopyIntSumIn(uint64_t loopIdx, uint64_t dataCount)
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::CopyIntSumIn(uint64_t loopIdx, uint64_t dataCount)
 {
     LocalTensor<int> updateIntSumLocal = updateSumInQue_.AllocTensor<int>();
 
@@ -605,8 +607,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::CopyIntSumIn(uint64_t
     updateSumInQue_.EnQue(updateIntSumLocal);
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::ComputeRValueAndDeQuantize(uint64_t loopIdx, uint64_t dataLen)
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::ComputeRValueAndDeQuantize(uint64_t loopIdx, uint64_t dataLen)
 {
     LocalTensor<int> updateSumIntLocal = updateSumInQue_.DeQue<int>();
     __local_mem__ int32_t * updateSumIntAddr = (__local_mem__ int32_t*)updateSumIntLocal.GetPhyAddr();
@@ -631,8 +633,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::ComputeRValueAndDeQua
     updateSumInQue_.FreeTensor(updateSumIntLocal);
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::DeQuantizeForSum(uint64_t curRowIdx, uint32_t RCountsValue, __local_mem__ int32_t* updateSumIntAddr)
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::DeQuantizeForSum(uint64_t curRowIdx, uint32_t RCountsValue, __local_mem__ int32_t* updateSumIntAddr)
 {
     LocalTensor<float> updateRValueLocal = RValueQue_.DeQue<float>();
     LocalTensor<T> updateSumLocal = updateSumQue_.AllocTensor<T>();
@@ -685,8 +687,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::DeQuantizeForSum(uint
     RValueQue_.FreeTensor(updateRValueLocal);
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::CopyOutDeQuantizedSum(uint64_t varOffset)
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::CopyOutDeQuantizedSum(uint64_t varOffset)
 {
     LocalTensor<T> invQuantDataLoacl = updateSumQue_.DeQue<T>();
     DataCopyExtParams dataTCopyParam{static_cast<uint16_t>(1), static_cast<uint32_t>(tilingData_.varShape[1] * sizeof(T)), 0, 0, 0};
@@ -696,8 +698,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::CopyOutDeQuantizedSum
     updateSumQue_.FreeTensor(invQuantDataLoacl);
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::CopyIdxIn(uint64_t loopIdx, uint64_t dataCount)
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::CopyIdxIn(uint64_t loopIdx, uint64_t dataCount)
 {
     LocalTensor<U> updateSumIdxLocal = updateSumIdxQueue_.AllocTensor<U>();
     
@@ -708,8 +710,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::CopyIdxIn(uint64_t lo
     updateSumIdxQueue_.EnQue(updateSumIdxLocal);
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::ComputeRValueAndDeQuantizePro(uint64_t loopIdx, uint64_t dataLen)
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::ComputeRValueAndDeQuantizePro(uint64_t loopIdx, uint64_t dataLen)
 {
     LocalTensor<U> updateSumIdxLocal = updateSumIdxQueue_.DeQue<U>();
     DataCopyExtParams dataCopyParam1{static_cast<uint16_t>(1), static_cast<uint32_t>(sizeof(float) * tilingData_.varShape[1]), 0, 0, 0};
@@ -753,8 +755,8 @@ __aicore__ inline void ScatterAddDeterministicImpl<T,  U>::ComputeRValueAndDeQua
     updateSumIdxQueue_.FreeTensor(updateSumIdxLocal);
 }
 
-template<typename T, typename U>
-__aicore__ inline void ScatterAddDeterministicImpl<T,  U>::Process()
+template<typename T, typename U, uint32_t scatterOp>
+__aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::Process()
 {
     if ((GetBlockIdx() >= tilingData_.logicCoreNum) && !isDeterministic) {
         return;

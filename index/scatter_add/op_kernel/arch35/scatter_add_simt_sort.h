@@ -18,6 +18,7 @@
 #include "kernel_operator.h"
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
+#include "scatter_add_common.h"
 
 namespace ScatterAdd
 {
@@ -31,7 +32,7 @@ constexpr uint32_t THREAD_NUM_SORT = 256;
 constexpr uint32_t THREAD_NUM_SORT = 1024;
 #endif
 
-template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t castType>
+template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t castType, uint32_t scatterOp>
 class ScatterAddSimtSort
 {
 public:
@@ -51,7 +52,6 @@ private:
     TQue<QuePosition::VECIN, 1> indicesInQueue_;
     TQue<QuePosition::VECIN, 1> updatesInQueue_;
     TBuf<QuePosition::VECCALC> castIndicesQue_;
-    TBuf<QuePosition::VECCALC> castTmpIndicesQue_;
     TBuf<QuePosition::VECCALC> sortIndicesQue_;
     TBuf<QuePosition::VECCALC> updatesOriginIdexQue_;
     TBuf<QuePosition::VECCALC> uniqueIdCountQue_;
@@ -65,8 +65,8 @@ private:
     static constexpr uint32_t shiftOffset_ = platform::GetUbBlockSize() / sizeof(CAST_T);
 };
 
-template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t castType>
-__aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, castType>::ParseTilingData()
+template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t castType, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, castType, scatterOp>::ParseTilingData()
 {
     if (blockIdx_ == td_.sortCoreNum - 1) {
         currLoopCount_ = td_.tailBlockLoop;
@@ -77,8 +77,8 @@ __aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdate
     }
 }
 
-template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t castType>
-__aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, castType>::Init(
+template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t castType, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, castType, scatterOp>::Init(
                                   GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR workspace)
 {
     blockIdx_ = GetBlockIdx();
@@ -94,17 +94,13 @@ __aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdate
     pipe_.InitBuffer(uniqueIdCountQue_, ops::CeilAlign(td_.indicesFactor * sizeof(int32_t), UB_AGLIN_VALUE) + SORT_PAD_NUM * UB_AGLIN_VALUE);
     if constexpr (castType == CAST_0) {
         pipe_.InitBuffer(sortIndicesQue_, ops::CeilAlign(td_.indicesFactor * sizeof(IDX_T), UB_AGLIN_VALUE) + SORT_PAD_NUM * UB_AGLIN_VALUE);
-    } else if constexpr (castType == CAST_3) {
-        pipe_.InitBuffer(sortIndicesQue_, ops::CeilAlign(td_.indicesFactor * sizeof(CAST_T), UB_AGLIN_VALUE) + SORT_PAD_NUM * UB_AGLIN_VALUE);
-        pipe_.InitBuffer(castIndicesQue_, ops::CeilAlign(td_.indicesFactor * sizeof(CAST_T), UB_AGLIN_VALUE));
-        pipe_.InitBuffer(castTmpIndicesQue_, ops::CeilAlign(td_.indicesFactor * sizeof(int32_t), UB_AGLIN_VALUE));
     } else {
         pipe_.InitBuffer(sortIndicesQue_, ops::CeilAlign(td_.indicesFactor * sizeof(CAST_T), UB_AGLIN_VALUE) + SORT_PAD_NUM * UB_AGLIN_VALUE);
         pipe_.InitBuffer(castIndicesQue_, ops::CeilAlign(td_.indicesFactor * sizeof(CAST_T), UB_AGLIN_VALUE));
     }
 }
 
-template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar>
+template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t scatterOp>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_SORT) inline void ScatterAddSimtSortCompute(
     ADDR_T outputOuterDimSize, __gm__ VAR_T* outputAddr, __local_mem__ VAR_T* inputAddr,
     __local_mem__ CAST_T* sortedAddr, __local_mem__ uint32_t* sortedOriginIndexAddr, __local_mem__ int32_t* cumSumAddr,
@@ -120,15 +116,24 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_SORT) inline void ScatterAddSimtS
         VAR_T result = 0;
         for (int32_t tid = 0; tid < cumSumAddr[i + 1] - cumSumAddr[i]; tid++) {
             int32_t srcOffset = sortedOriginIndexAddr[cumSumAddr[i] + tid] * lastDim + innerOffset;
-            result += inputAddr[srcOffset];
+            if constexpr (isUpdateScalar) {
+                result += updateScalarValue;
+            } else {
+                result += inputAddr[srcOffset];
+            }
         }
         int64_t gmDstOffset = sortedAddr[cumSumAddr[i]] * lastDim + innerOffset;
-        Simt::AtomicAdd(outputAddr + gmDstOffset, result);
+        if constexpr (scatterOp == ADD) {
+            Simt::AtomicAdd(outputAddr + gmDstOffset, result);
+        } else if constexpr (scatterOp == SUB) {
+            result = -result;
+            Simt::AtomicAdd(outputAddr + gmDstOffset, result);
+        }
     }
 }
 
-template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t castType>
-__aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, castType>::CopyInIndicesUpdates(
+template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t castType, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, castType, scatterOp>::CopyInIndicesUpdates(
                                                                          uint32_t loopIdx, uint32_t indicesCount)
 {
     LocalTensor<IDX_T> indicesLocal = indicesInQueue_.AllocTensor<IDX_T>();
@@ -138,16 +143,19 @@ __aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdate
     DataCopyPadExtParams<IDX_T> indicesPadParams { false, 0, 0, 0 };
     DataCopyPad(indicesLocal, indices_[blockIdx_ * td_.normBlockIndices + loopIdx * td_.indicesFactor],
                                                                     indicesCopyParams, indicesPadParams);
-    DataCopyExtParams updatesCopyParams { 1, (uint32_t)(indicesCount * td_.varShape[1] * sizeof(VAR_T)), 0, 0, 0 };
-    DataCopyPadExtParams<VAR_T> updatesPadParams { false, 0, 0, 0 };
-    DataCopyPad(updatesLocal, updates_[(blockIdx_ * td_.normBlockIndices + loopIdx * td_.indicesFactor) * td_.varShape[1]],
-                                                                    updatesCopyParams, updatesPadParams);
+    
+    if constexpr (!isUpdateScalar) {
+        DataCopyExtParams updatesCopyParams { 1, (uint32_t)(indicesCount * td_.varShape[1] * sizeof(VAR_T)), 0, 0, 0 };
+        DataCopyPadExtParams<VAR_T> updatesPadParams { false, 0, 0, 0 };
+        DataCopyPad(updatesLocal, updates_[(blockIdx_ * td_.normBlockIndices + loopIdx * td_.indicesFactor) * td_.varShape[1]],
+                                                                        updatesCopyParams, updatesPadParams);
+    }
     indicesInQueue_.EnQue<IDX_T>(indicesLocal);
     updatesInQueue_.EnQue<VAR_T>(updatesLocal);
 }
 
-template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t castType>
-__aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, castType>::Compute(
+template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t castType, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, castType, scatterOp>::Compute(
                                     uint32_t loopIdx, uint32_t indicesCount, VAR_T updateScalarValue)
 {
     ADDR_T totalCol = static_cast<ADDR_T>(td_.varShape[1]);
@@ -166,16 +174,9 @@ __aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdate
     if constexpr (castType == CAST_0) {
         uniqueIdNum = SortAndComputeUniqueIdx<IDX_T>(
             indicesCount, indicesLocal, indicesSortedLocal, uniqueIdCountLocal, updatesOriginIdxLocal);
-    } else if constexpr (castType == CAST_3) {
-        LocalTensor<CAST_T> indicesCastLocal = castIndicesQue_.Get<CAST_T>();
-        LocalTensor<int32_t> indicesCastTmpLocal = castTmpIndicesQue_.Get<int32_t>();
-        Cast<int32_t, IDX_T>(indicesCastTmpLocal, indicesLocal, RoundMode::CAST_NONE, indicesCount);
-        Cast<CAST_T, int32_t>(indicesCastLocal, indicesCastTmpLocal, RoundMode::CAST_NONE, indicesCount);
-        uniqueIdNum = SortAndComputeUniqueIdx<CAST_T>(
-            indicesCount, indicesCastLocal, indicesSortedLocal, uniqueIdCountLocal, updatesOriginIdxLocal);
     } else {
         LocalTensor<CAST_T> indicesCastLocal = castIndicesQue_.Get<CAST_T>();
-        Cast<CAST_T, IDX_T>(indicesCastLocal, indicesLocal, RoundMode::CAST_NONE, indicesCount);
+        IndicesSortCast<IDX_T, CAST_T, castType>(indicesLocal, indicesCastLocal, uniqueIdCountLocal, indicesCount);
         uniqueIdNum = SortAndComputeUniqueIdx<CAST_T>(
             indicesCount, indicesCastLocal, indicesSortedLocal, uniqueIdCountLocal, updatesOriginIdxLocal);
     }
@@ -186,7 +187,7 @@ __aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdate
     int32_t threadBlock = currentMaxThread / totalCol;
     threadBlock = threadBlock < uniqueIdNum ? threadBlock : uniqueIdNum;
 
-    Simt::VF_CALL<ScatterAddSimtSortCompute<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar>>(
+    Simt::VF_CALL<ScatterAddSimtSortCompute<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, scatterOp>>(
         Simt::Dim3({static_cast<uint32_t>(totalCol), static_cast<uint32_t>(threadBlock)}),
         varFirstDimSize, (__gm__ VAR_T*)(var_.GetPhyAddr()), updatesLocalPtr, indicesSortedPtr,
         (__local_mem__ uint32_t*)(updatesOriginIdxLocal.GetPhyAddr()),
@@ -196,8 +197,8 @@ __aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdate
     updatesInQueue_.FreeTensor(updatesLocal);
 }
 
-template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t castType>
-__aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, castType>::Process()
+template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t castType, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, castType, scatterOp>::Process()
 {
     uint32_t indicesCount = 0;
     VAR_T updateScalarValue = ((__gm__ VAR_T*)(updates_.GetPhyAddr()))[0];

@@ -18,10 +18,12 @@
 #include "kernel_operator.h"
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
+#include "scatter_add_common.h"
 
 namespace ScatterAdd
 {
 using namespace AscendC;
+using namespace ScatterAddCommon;
 
 constexpr uint32_t VECTOR_LENGTH = platform::GetVRegSize();
 constexpr uint32_t VL_B32 = VECTOR_LENGTH / sizeof(uint32_t);
@@ -38,7 +40,7 @@ constexpr uint32_t THREAD_NUM_LAUNCH_BOUND = 1024;
 static constexpr MicroAPI::CastTrait castTraitB8B162B32 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
                                                            MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
-template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar>
+template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t scatterOp>
 class ScatterAddSimt
 {
 public:
@@ -72,8 +74,8 @@ private:
     uint64_t tailLoopLength_{0};
 };
 
-template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar>
-__aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar>::Init(GM_ADDR var, GM_ADDR indices,
+template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, scatterOp>::Init(GM_ADDR var, GM_ADDR indices,
                                                                                           GM_ADDR updates,
                                                                                           GM_ADDR workspace)
 {
@@ -98,8 +100,8 @@ __aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScal
     }
 }
 
-template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar>
-__aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar>::CopyInputGmToWs(
+template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, scatterOp>::CopyInputGmToWs(
     GlobalTensor<VAR_T>& inGm, GlobalTensor<CAST_T>& outGm, int64_t offset, int64_t dataLen)
 {
     DataCopyExtParams copyParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(dataLen * sizeof(VAR_T)),
@@ -130,8 +132,8 @@ __aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScal
     varCastQue_.FreeTensor(dstLocal);
 }
 
-template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar>
-__aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar>::CopyWsToOutputGm(int64_t offset,
+template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, scatterOp>::CopyWsToOutputGm(int64_t offset,
                                                                                                       int64_t dataLen)
 {
     DataCopyExtParams copyParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(dataLen * sizeof(CAST_T)),
@@ -162,8 +164,8 @@ __aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScal
     varQue_.FreeTensor(dstLocal);
 }
 
-template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar>
-__aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar>::CastToInt32(
+template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, scatterOp>::CastToInt32(
     LocalTensor<CAST_T>& dstLocal, LocalTensor<VAR_T>& srcLocal, uint32_t dataLen)
 {
     __local_mem__ VAR_T* srcAddr = (__local_mem__ VAR_T*)srcLocal.GetPhyAddr();
@@ -186,8 +188,8 @@ __aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScal
     }
 }
 
-template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar>
-__aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar>::CastToOrigin(
+template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, scatterOp>::CastToOrigin(
     LocalTensor<VAR_T>& dstLocal, LocalTensor<CAST_T>& srcLocal, uint32_t dataLen)
 {
     __local_mem__ CAST_T* srcAddr = (__local_mem__ CAST_T*)srcLocal.GetPhyAddr();
@@ -209,8 +211,8 @@ __aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScal
     }
 }
 
-template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar>
-__aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar>::CopyVarToWs()
+template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, scatterOp>::CopyVarToWs()
 {
     uint64_t offset = 0;
     for (uint64_t idx = 0; idx < static_cast<uint64_t>(curLoopNum_ - 1); idx++) {
@@ -224,8 +226,8 @@ __aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScal
     }
 }
 
-template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar>
-__aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar>::CopyWsToVar()
+template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, scatterOp>::CopyWsToVar()
 {
     uint64_t offset = 0;
     for (uint64_t idx = 0; idx < static_cast<uint64_t>(curLoopNum_ - 1); idx++) {
@@ -239,7 +241,7 @@ __aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScal
     }
 }
 
-template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar>
+template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t scatterOp>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ScatterAddSimtCompute(
     ADDR_T totalCol, ADDR_T indicesSize, ADDR_T varFirstDimSize, ADDR_T magic, ADDR_T shift, __gm__ VAR_T* var,
     __gm__ IDX_T* indices, __gm__ VAR_T* updates, __gm__ CAST_T* varWorkspaceGm, ADDR_T blockIdx, ADDR_T blockNum)
@@ -255,24 +257,40 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ScatterAddSimtComput
 
         ADDR_T tailRowIdx = i - indiceRow * totalCol;
         ADDR_T varDataIdx = varRow * totalCol + tailRowIdx;
-        if constexpr (IsSameType<VAR_T, int8_t>::value || IsSameType<VAR_T, uint8_t>::value) {
-            if constexpr (isUpdateScalar) {
-                Simt::AtomicAdd(varWorkspaceGm + varDataIdx, static_cast<CAST_T>(updates[0]));
+        if constexpr (scatterOp == ADD) {
+            if constexpr (IsSameType<VAR_T, int8_t>::value || IsSameType<VAR_T, uint8_t>::value) {
+                if constexpr (isUpdateScalar) {
+                    Simt::AtomicAdd(varWorkspaceGm + varDataIdx, static_cast<CAST_T>(updates[0]));
+                } else {
+                    Simt::AtomicAdd(varWorkspaceGm + varDataIdx, static_cast<CAST_T>(updates[i]));
+                }
             } else {
-                Simt::AtomicAdd(varWorkspaceGm + varDataIdx, static_cast<CAST_T>(updates[i]));
+                if constexpr (isUpdateScalar) {
+                    Simt::AtomicAdd(var + varDataIdx, static_cast<VAR_T>(updates[0]));
+                } else {
+                    Simt::AtomicAdd(var + varDataIdx, static_cast<VAR_T>(updates[i]));
+                }
             }
-        } else {
-            if constexpr (isUpdateScalar) {
-                Simt::AtomicAdd(var + varDataIdx, static_cast<VAR_T>(updates[0]));
+        } else if constexpr (scatterOp == SUB) {
+            if constexpr (IsSameType<VAR_T, int8_t>::value || IsSameType<VAR_T, uint8_t>::value) {
+                if constexpr (isUpdateScalar) {
+                    Simt::AtomicAdd(varWorkspaceGm + varDataIdx, static_cast<CAST_T>(-updates[0]));
+                } else {
+                    Simt::AtomicAdd(varWorkspaceGm + varDataIdx, static_cast<CAST_T>(-updates[i]));
+                }
             } else {
-                Simt::AtomicAdd(var + varDataIdx, static_cast<VAR_T>(updates[i]));
+                if constexpr (isUpdateScalar) {
+                    Simt::AtomicAdd(var + varDataIdx, static_cast<VAR_T>(-updates[0]));
+                } else {
+                    Simt::AtomicAdd(var + varDataIdx, static_cast<VAR_T>(-updates[i]));
+                }
             }
         }
     }
 }
 
-template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar>
-__aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar>::Process()
+template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, scatterOp>::Process()
 {
     if constexpr (IsSameType<VAR_T, int8_t>::value || IsSameType<VAR_T, uint8_t>::value) {
         if (blockIdx_ < usedCoreNum_) {
@@ -288,7 +306,7 @@ __aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScal
     ADDR_T shift = 0;
     GetUintDivMagicAndShift(magic, shift, totalCol);
 
-    Simt::VF_CALL<ScatterAddSimtCompute<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar>>(Simt::Dim3(THREAD_NUM), 
+    Simt::VF_CALL<ScatterAddSimtCompute<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, scatterOp>>(Simt::Dim3(THREAD_NUM), 
             totalCol, indicesSize, varFirstDimSize, magic, shift, (__gm__ VAR_T*)(var_.GetPhyAddr()),
             (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ VAR_T*)(updates_.GetPhyAddr()),
             (__gm__ CAST_T*)(varWorkspaceGm_.GetPhyAddr()), blockIdx_, blockNum_);

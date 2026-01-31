@@ -58,13 +58,16 @@ static constexpr uint64_t BASE_A_SIZE = 512;
 static constexpr uint64_t BASE_BLOCK_SIZE = 1024;
 static constexpr uint64_t COL_LIMIT_SIZE = 1024;
 static constexpr uint32_t SORT_STAT_PADDING = 64;
-static constexpr uint64_t CASTMODE1 = 1;
-static constexpr uint64_t CASTMODE2 = 2;
-static constexpr uint64_t CASTMODE3 = 3;
+static constexpr uint64_t CASTMODE1 = 1;   // int32 Cast int16
+static constexpr uint64_t CASTMODE2 = 2;   // int64 Cast int32
+static constexpr uint64_t CASTMODE3 = 3;   // int64 Cast int16
+static constexpr uint64_t CASTMODE4 = 4;   // int32 Cast uint8
+static constexpr uint64_t CASTMODE5 = 5;   // int64 Cast uint8
 static constexpr uint64_t DETERMIN_THRESHOLD_MID = 128;
 static constexpr uint64_t DETERMIN_THRESHOLD_BOT = 16;
 static constexpr float SCALE_FACOTR = 0.8;
 static constexpr uint64_t INDICES_THRESHOLD = 4096;
+static constexpr uint64_t VAR_LASTDIM_10W = 100000;
 
 static const std::unordered_map<ge::DataType, uint64_t> INDICE_DATA_TYPE_TO_INT{{ge::DataType::DT_INT32, 1},
                                                                                 {ge::DataType::DT_INT64, 2}};
@@ -197,8 +200,8 @@ ge::graphStatus ScatterAddTiling::GetShapeAttrsInfo()
                 : SIMD_ATOMIC_ADD_NOT_SUPPORT_DTYPE.find(varDtype_) == SIMD_ATOMIC_ADD_NOT_SUPPORT_DTYPE.end();
     if (supportAtomicAdd) {
         isSort_ = indicesNum_ > varShape_[0] * TEN ? 1 : 0;
-        if (indicesNum_ <= MIN_SIZE_SORT_INDICES_128 && indicesNum_ < varShape_[0] * TEN) {
-            isSort_ = 0;
+        if (varShape_[1] >= VAR_LASTDIM_10W && indicesNum_ > MIN_SIZE_SORT_INDICES_128) {
+            isSort_ = indicesNum_ > varShape_[0] * THREE ? 1 : 0;
         }
     }
 
@@ -415,9 +418,6 @@ uint64_t ScatterAddTiling::CalBestBaseSize(uint64_t baseXoStart, uint64_t baseXo
                            SORT_STAT_PADDING + SORT_STAT_PADDING +                                                   // sort padding
                            Ops::Base::CeilAlign(baseXoMid * indicesDtypeSize_, ubBlock) * BUFFER_NUM_SIMD_SORT +           // Cast前的indices
                            Ops::Base::CeilAlign(sortNeedTmpSize, ubBlock); // sort shared buf size
-            if (indicesCastMode_ == CASTMODE3) {  // int64 Cast int16，需先Cast int32
-                tmpTotalSize += Ops::Base::CeilAlign(baseXoMid * sizeof(int32_t), ubBlock) * BUFFER_NUM_SIMD_SORT;
-            }
         }
 
         if (tmpTotalSize <= ubSize_) {
@@ -447,7 +447,7 @@ ge::graphStatus ScatterAddTiling::TilingSimdSupportAtomicAddSortCompute()
     uint64_t maxBaseRow = (ubSize_ - BUFFER_NUM_SIMD_SORT * ubBlock) / BUFFER_NUM_SIMD_SORT /            // 在列长确定时，计算UB最多容纳多少行，此时还未考虑排序空间
                           (baseCol * updatesDtypeSize_ + indicesDtypeSize_ + indicesCastDtypeSize_);
     uint64_t baseRow = maxBaseRow;
-    if (coreMaxRow < baseRow) {    // 在单循环行数超过block行数时，将单循环行数缩小至block行数，病重新计算单循环列数
+    if (coreMaxRow < baseRow) {    // 在单循环行数超过block行数时，将单循环行数缩小至block行数，并重新计算单循环列数
         baseRow = coreMaxRow;
         baseCol = (ubSize_ - BUFFER_NUM_SIMD_SORT * (ubBlock + baseRow * (indicesDtypeSize_ + indicesCastDtypeSize_))) /
                   BUFFER_NUM_SIMD_SORT / (baseRow * updatesDtypeSize_);
@@ -473,9 +473,6 @@ ge::graphStatus ScatterAddTiling::TilingSimdSupportAtomicAddSortCompute()
                                   Ops::Base::CeilAlign(ubFactorRow_ * indicesCastDtypeSize_, ubBlock) -
                                   Ops::Base::CeilAlign(ubFactorRow_ * sizeof(uint32_t), ubBlock) * indicesSortBufCnt -
                                   Ops::Base::CeilAlign(sortNeedTmpSize, ubBlock) - SORT_STAT_PADDING - SORT_STAT_PADDING;
-        }
-        if (indicesCastMode_ == CASTMODE3) {  // int64 Cast int16，需先Cast int32
-            remainSize -= Ops::Base::CeilAlign(ubFactorRow_ * sizeof(int32_t), ubBlock);
         }
 
         ubFactorCol_ =
@@ -713,9 +710,6 @@ ge::graphStatus ScatterAddTiling::TilingSimtSort()
                              Ops::Base::CeilAlign(mid * static_cast<int64_t>(sizeof(int32_t)), ubBlock) + ubBlock * DOUBLE;
             sortTmpSize = static_cast<int64_t>(GetSortTmpSize(indicesCastDtype_, mid, false));
         }
-        if (indicesCastMode_ == CASTMODE3) {  // int64 Cast int16，需先Cast int32
-            totalIndexSize += Ops::Base::CeilAlign(mid * static_cast<int64_t>(sizeof(int32_t)), ubBlock);
-        }
 
         sortTmpSize = Ops::Base::CeilAlign(sortTmpSize, ubBlock);
         int64_t updateSize = Ops::Base::CeilAlign(static_cast<int64_t>(mid * varShape_[1] * updatesDtypeSize_), ubBlock);
@@ -774,7 +768,6 @@ void ScatterAddTiling::SetTilingData()
     tilingData_.set_tailCoreHandleCol(tailCoreHandleCol_);
     tilingData_.set_tailCoreColsLoopSize(tailCoreColsLoopSize_);
     tilingData_.set_tailCoreColsTailUbFactor(tailCoreColsTailUbFactor_);
-    tilingData_.set_ubSize(ubSize_);
     tilingData_.set_perCoreHandleRows(perCoreHandleRows_);
     tilingData_.set_tailCoreHandleRows(tailCoreHandleRows_);
     tilingData_.set_rowsInUb(rowsInUb_);
@@ -795,6 +788,7 @@ void ScatterAddTiling::SetTilingData()
     tilingData_.set_tailBlockCol(tailBlockCol_);
     tilingData_.set_ubFactorRow(ubFactorRow_);
     tilingData_.set_ubFactorCol(ubFactorCol_);
+    tilingData_.set_indicesCastMode(indicesCastMode_);
 }
 
 ge::graphStatus ScatterAddTiling::GetCastType()
@@ -802,16 +796,22 @@ ge::graphStatus ScatterAddTiling::GetCastType()
     indicesCastDtype_ = indicesDtype_;
 
     if (indicesDtype_ == ge::DT_INT32) {
-        if (varShape_[0] < INT16_MAX) {
+        if (varShape_[0] < UINT8_MAX) {
+            indicesCastMode_ = CASTMODE4;          // int32 Cast uint8
+            indicesCastDtype_ = ge::DT_UINT8;
+        } else if (varShape_[0] < INT16_MAX) {
             indicesCastMode_ = CASTMODE1;          // int32 Cast int16
             indicesCastDtype_ = ge::DT_INT16;
         }
     } else {
-        if (varShape_[0] < INT16_MAX) {
-            indicesCastMode_ = CASTMODE3;          // int64 Cast int32
+        if (varShape_[0] < UINT8_MAX) {
+            indicesCastMode_ = CASTMODE5;          // int64 Cast uint8
+            indicesCastDtype_ = ge::DT_UINT8;
+        } else if (varShape_[0] < INT16_MAX) {
+            indicesCastMode_ = CASTMODE3;          // int64 Cast int16
             indicesCastDtype_ = ge::DT_INT16;
         } else if (varShape_[0] < INT32_MAX) {
-            indicesCastMode_ = CASTMODE2;          // int64 Cast int16
+            indicesCastMode_ = CASTMODE2;          // int64 Cast int32
             indicesCastDtype_ = ge::DT_INT32;
         }
     }
@@ -847,7 +847,7 @@ ge::graphStatus ScatterAddTiling::DoOpTiling()
 
     if (!isSimt_) {
         templateKey_ = UPDATES_IN_SIMD;
-        if (!supportAtomicAdd || isUpdateScalar_) {  // simd UpdateScalar场景，走else分支两个模板有问题，先走老模板
+        if (!supportAtomicAdd) {
             isSort_ = 0;
             OP_CHECK_IF(TilingSimdNotSupportAtomicAddCompute(supportAtomicAdd) != ge::GRAPH_SUCCESS,
                             OP_LOGE(opName, "TilingSimdNotSupportAtomicAddCompute fail."),
@@ -885,14 +885,14 @@ uint64_t ScatterAddTiling::GetTilingKey() const
     if (varShape_[0] * varShape_[1] * indicesNum_ == 0) {
         return 0;
     }
-    uint32_t sizeAddrType = (varShape_[1] * indicesNum_ > INT32_MAX) ? 1 : 0;
+    uint32_t sizeAddrType = ((varShape_[1] * indicesNum_ > INT32_MAX) || (varSize_ > INT32_MAX)) ? 1 : 0;
     if (!isSimt_) {
         sizeAddrType = 0;
     }
 
     uint64_t tilingKey = 0;
     tilingKey =
-        Ops::NN::Optiling::GET_TILINGKEY(isSort_, templateKey_, sizeAddrType, isUpdateScalar_, indicesCastMode_, TILING_KEY_PLACE_HOLD,
+        Ops::NN::Optiling::GET_TILINGKEY(isSort_, templateKey_, sizeAddrType, isUpdateScalar_, TILING_KEY_PLACE_HOLD,
                     TILING_KEY_PLACE_HOLD, TILING_KEY_PLACE_HOLD, TILING_KEY_PLACE_HOLD, TILING_KEY_PLACE_HOLD);
 
     OP_LOGD("ScatterAddTiling", "tilingKey is %lu", tilingKey);
@@ -973,7 +973,6 @@ void ScatterAddTiling::DumpTilingInfo()
     info << "tailCoreHandleCol: " << tilingData_.get_tailCoreHandleCol() << std::endl;
     info << "tailCoreColsLoopSize: " << tilingData_.get_tailCoreColsLoopSize() << std::endl;
     info << "tailCoreColsTailUbFactor: " << tilingData_.get_tailCoreColsTailUbFactor() << std::endl;
-    info << "ubSize: " << tilingData_.get_ubSize() << std::endl;
     info << "perCoreHandleRows: " << tilingData_.get_perCoreHandleRows() << std::endl;
     info << "tailCoreHandleRows: " << tilingData_.get_tailCoreHandleRows() << std::endl;
     info << "rowsInUb: " << tilingData_.get_rowsInUb() << std::endl;
@@ -994,6 +993,7 @@ void ScatterAddTiling::DumpTilingInfo()
     info << "tailBlockCol:" << tilingData_.get_tailBlockCol() << std::endl;
     info << "ubFactorRow:" << tilingData_.get_ubFactorRow() << std::endl;
     info << "ubFactorCol:" << tilingData_.get_ubFactorCol() << std::endl;
+    info << "indicesCastMode: " << tilingData_.get_indicesCastMode() << std::endl;
     OP_LOGI(opName, "Tiling inf is: %s", info.str().c_str());
 }
 
