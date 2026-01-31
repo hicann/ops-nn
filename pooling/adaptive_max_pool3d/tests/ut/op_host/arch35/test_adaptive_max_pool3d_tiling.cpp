@@ -20,6 +20,7 @@
 #include "ut_op_util.h"
 #include "ut_op_common.h"
 #include "platform/platform_infos_def.h"
+#include "pooling/adaptive_pool3d_common/op_host/arch35/adaptive_pool3d_tiling.h"
 
 using namespace std;
 using namespace ge;
@@ -43,6 +44,7 @@ struct AdaptiveMaxPool3dCompileInfo {
     uint64_t coreNum = 0;
     uint64_t ubSizePlatForm = 0;
 };
+
 } // namespace optiling
 
 class AdaptiveMaxPool3dTilingTest : public testing::TestWithParam<AdaptiveMaxPool3dTilingTestParam> {
@@ -210,5 +212,4 @@ static AdaptiveMaxPool3dTilingTestParam cases[] = {
      312000UL,
      "1 1 32 32 32 1 1 1 40 1 1 0 1 "},
 };
-
 INSTANTIATE_TEST_CASE_P(AdaptiveMaxPool3d, AdaptiveMaxPool3dTilingTest, testing::ValuesIn(cases));

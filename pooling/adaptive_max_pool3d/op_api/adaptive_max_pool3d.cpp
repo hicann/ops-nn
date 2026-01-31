@@ -15,6 +15,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 namespace l0op {
@@ -27,6 +28,9 @@ static constexpr size_t DIM_W = 4;
 static constexpr size_t DIM_ZERO = 0;
 static constexpr size_t DIM_ONE = 1;
 static constexpr size_t DIM_TWO = 2;
+static const int32_t DTYPE_INT32 = 3;
+static const int32_t DTYPE_INT64 = 9;
+static const int32_t DHW_DIMS = 3;
 
 static const std::tuple<aclTensor*, aclTensor*> AdaptiveMaxPool3dAiCore(
     const aclTensor* self, const aclIntArray* outputSize, aclTensor* outputOut, aclTensor* indicesOut,
@@ -34,13 +38,20 @@ static const std::tuple<aclTensor*, aclTensor*> AdaptiveMaxPool3dAiCore(
 {
     L0_DFX(AdaptiveMaxPool3dAiCore, self, outputSize, outputOut, indicesOut);
 
-    ADD_TO_LAUNCHER_LIST_AICORE(
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        int32_t indicesDtype = (indicesOut->GetDataType() == op::DataType::DT_INT64) ? DTYPE_INT64 : DTYPE_INT32;
+        ADD_TO_LAUNCHER_LIST_AICORE(
+        AdaptiveMaxPool3d, OP_INPUT(self), OP_OUTPUT(outputOut, indicesOut), OP_ATTR(outputSize, indicesDtype));
+    } else {
+        ADD_TO_LAUNCHER_LIST_AICORE(
         AdaptiveMaxPool3d, OP_INPUT(self), OP_OUTPUT(outputOut, indicesOut), OP_ATTR(outputSize));
+    }
+
     return std::tuple<aclTensor*, aclTensor*>(outputOut, indicesOut);
 }
 
 const std::tuple<const aclTensor*, const aclTensor*> AdaptiveMaxPool3d(
-    const aclTensor* self, const aclIntArray* outputSize, aclOpExecutor* executor)
+    const aclTensor* self, const aclIntArray* outputSize, aclOpExecutor* executor, op::DataType indicesDtype)
 {
     L0_DFX(AdaptiveMaxPool3d, self, outputSize);
 
@@ -50,12 +61,13 @@ const std::tuple<const aclTensor*, const aclTensor*> AdaptiveMaxPool3d(
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Input dim num is not supported.");
         return std::tuple<aclTensor*, aclTensor*>(nullptr, nullptr);
     }
+
     outShape.SetDim(DIM_D, (*outputSize)[DIM_ZERO]);
     outShape.SetDim(DIM_H, (*outputSize)[DIM_ONE]);
     outShape.SetDim(DIM_W, (*outputSize)[DIM_TWO]);
 
     auto outputOut = executor->AllocTensor(outShape, self->GetDataType(), self->GetStorageFormat());
-    auto indicesOut = executor->AllocTensor(outShape, op::DataType::DT_INT32, self->GetStorageFormat());
+    auto indicesOut = executor->AllocTensor(outShape, indicesDtype, self->GetStorageFormat());
     if (outputOut == nullptr || indicesOut == nullptr) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "outputOut or indicesOut is nullptr.");
         return std::tuple<aclTensor*, aclTensor*>(nullptr, nullptr);

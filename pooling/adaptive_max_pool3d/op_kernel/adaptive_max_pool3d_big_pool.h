@@ -15,6 +15,14 @@
 #ifndef ADAPTIVE_MAX_POOL3D_BIG_POOL_H_
 #define ADAPTIVE_MAX_POOL3D_BIG_POOL_H_
 
+#ifdef __CCE_KT_TEST__
+using __bf16 = bfloat16_t;
+#endif
+
+#ifdef __CCE_KT_TEST__
+using __bf16 = bfloat16_t;
+#endif
+
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 

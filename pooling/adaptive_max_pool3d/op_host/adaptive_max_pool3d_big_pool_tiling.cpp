@@ -89,5 +89,5 @@ ge::graphStatus AdaptiveMaxPool3dBigPoolTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-REGISTER_TILING_TEMPLATE("AdaptiveMaxPool3d", AdaptiveMaxPool3dBigPoolTiling, 3);
+REGISTER_TILING_TEMPLATE("AdaptiveMaxPool3d", AdaptiveMaxPool3dBigPoolTiling, 4);
 } // namespace optiling

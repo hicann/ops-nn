@@ -12,7 +12,8 @@
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode":"FormatAgnostic"
         }
       ],
       "outputs": [
@@ -24,7 +25,8 @@
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode":"FormatAgnostic"
         },
         {
             "name": "indices",
@@ -34,7 +36,8 @@
             "paramType": "required",
             "shape": [
               -2
-            ]
+            ],
+            "format_match_mode":"FormatAgnostic"
         }
       ],
       "attrs": [
@@ -42,6 +45,11 @@
           "name": "output_size",
           "dtype": "list_int",
           "value": null
+        },
+        {
+          "name": "indices_dtype",
+          "dtype": "int",
+          "value": 3
         }
       ]
     },
@@ -56,7 +64,8 @@
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode":"FormatAgnostic"
         }
       ],
       "outputs": [
@@ -68,7 +77,8 @@
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode":"FormatAgnostic"
         },
         {
             "name": "indices",
@@ -78,7 +88,8 @@
             "paramType": "required",
             "shape": [
               -2
-            ]
+            ],
+            "format_match_mode":"FormatAgnostic"
         }
       ],
       "attrs": [
@@ -86,6 +97,11 @@
           "name": "output_size",
           "dtype": "list_int",
           "value": null
+        },
+        {
+          "name": "indices_dtype",
+          "dtype": "int",
+          "value": 3
         }
       ]
     },
@@ -100,7 +116,8 @@
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode":"FormatAgnostic"
         }
       ],
       "outputs": [
@@ -112,7 +129,8 @@
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode":"FormatAgnostic"
         },
         {
             "name": "indices",
@@ -122,7 +140,8 @@
             "paramType": "required",
             "shape": [
               -2
-            ]
+            ],
+            "format_match_mode":"FormatAgnostic"
         }
       ],
       "attrs": [
@@ -130,6 +149,167 @@
           "name": "output_size",
           "dtype": "list_int",
           "value": null
+        },
+        {
+          "name": "indices_dtype",
+          "dtype": "int",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "bin_filename": "AdaptiveMaxPool3d_299cf4d7f9ef0f745d89d88c666b45a3",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode":"FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode":"FormatAgnostic"
+        },
+        {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "output_size",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "indices_dtype",
+          "dtype": "int",
+          "value": 9
+        }
+      ]
+    },
+    {
+      "bin_filename": "AdaptiveMaxPool3d_a8d63cbe8795eef99c620173d4757e52",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode":"FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode":"FormatAgnostic"
+        },
+        {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "output_size",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "indices_dtype",
+          "dtype": "int",
+          "value": 9
+        }
+      ]
+    },
+    {
+      "bin_filename": "AdaptiveMaxPool3d_291664ae3e88b38b8b46c2efbbea27c2",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode":"FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode":"FormatAgnostic"
+        },
+        {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "output_size",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "indices_dtype",
+          "dtype": "int",
+          "value": 9
         }
       ]
     }

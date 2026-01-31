@@ -14,7 +14,7 @@
 
 namespace l0op {
 const std::tuple<const aclTensor*, const aclTensor*> AdaptiveMaxPool3d(
-    const aclTensor* self, const aclIntArray* outputSize, aclOpExecutor* executor);
+    const aclTensor* self, const aclIntArray* outputSize, aclOpExecutor* executor, op::DataType indicesDtype = op::DataType::DT_INT32);
 } // namespace l0op
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_ADAPTIVE_MAX_POOL3D_OP_H_
