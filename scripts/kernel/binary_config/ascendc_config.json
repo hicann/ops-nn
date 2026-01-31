@@ -8,7 +8,7 @@
     {"name":"AddLora", "compute_units": ["ascend310p", "ascend910b"], "auto_sync":true},
     {"name":"AddExample", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync":true, "impl_mode" : ""},
     {"name":"AvgPool3DGrad", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync" : true},
-    {"name":"AvgPoolV2Grad", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend910_95":["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
+    {"name":"AvgPoolV2Grad", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950":["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"ForeachNonFiniteCheckAndUnscale", "compute_units": ["ascend310p", "ascend910b", "ascend910_93", "ascend950", "kirinx90"], "auto_sync": false, "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"AdamApplyOne", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"AdamApplyOneWithDecayAssign", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
