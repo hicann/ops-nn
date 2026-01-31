@@ -95,7 +95,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>-</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
      <tr>
       <td>weightScaleOptional</td>
@@ -105,7 +105,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>FLOAT</td>
       <td>ND</td>
       <td>1或2</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
       <td>activationScaleOptional</td>
       <td>输入</td>
@@ -114,7 +114,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>FLOAT</td>
       <td>ND</td>
       <td>1</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
       <tr>
       <td>biasOptional</td>
@@ -124,7 +124,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>FLOAT、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>1</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
        <tr>
       <td>quantScaleOptional</td>
@@ -134,7 +134,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
       <td>1或2</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
        <tr>
       <td>quantOffsetOptional</td>
@@ -144,7 +144,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
       <tr>
       <td>groupIndexOptional</td>
@@ -154,7 +154,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>INT32、INT64</td>
       <td>ND</td>
       <td>1</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
       <tr>
       <td>activateLeft</td>
@@ -184,7 +184,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>INT8</td>
       <td>ND</td>
       <td>-</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
     <tr>
       <td>scaleOut</td>
@@ -194,7 +194,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
        <tr>
       <td>workspaceSize</td>
