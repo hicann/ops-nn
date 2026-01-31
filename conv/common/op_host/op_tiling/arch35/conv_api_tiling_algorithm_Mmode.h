@@ -107,6 +107,7 @@ private:
     bool CheckMinL1Tiling();
     int64_t PreProcessingL1Tiling();
     bool CheckL1Buffer();
+    int64_t InitCalcL1FullLoadParams();
     int64_t InitCalcL1Params();
     void GetL1TilingRange();
     void InitL1TiLing();

@@ -310,11 +310,15 @@ uint32_t Conv2dBaseTiling::CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv2DV2Tun
     }
 
     if (convRepoTiling->mMode == 1) {
-        uint64_t mL1Max = convRepoTiling->hoL1 < convRepoTiling->singleCoreHo ? convRepoTiling->hoL1 : convRepoTiling->singleCoreHo;
-        uint64_t hoL1Max = std::min(mL1Max / convRepoTiling->orgWo + 2, convRepoTiling->orgHo);
-        uint64_t hiAL1Max = ConvInferHiL1(hoL1Max, convRepoTiling->orgHi, convRepoTiling->kernelH, convRepoTiling->dilationH,
-            convRepoTiling->strideH);
-        aL1SpaceSize = tilingData_.conv2dApiTiling.get_cinAInCore() * hiAL1Max * convRepoTiling->orgWi;
+        if (static_cast<bool>(convRepoTiling->isC04Flag) && convRepoTiling->innerBatch > 1) {
+            aL1SpaceSize = C04_CIN_SIZE * convRepoTiling->orgHi * convRepoTiling->orgWi;
+        } else {
+            uint64_t mL1Max = convRepoTiling->hoL1 < convRepoTiling->singleCoreHo ? convRepoTiling->hoL1 : convRepoTiling->singleCoreHo;
+            uint64_t hoL1Max = std::min(mL1Max / convRepoTiling->orgWo + 2, convRepoTiling->orgHo);
+            uint64_t hiAL1Max = ConvInferHiL1(hoL1Max, convRepoTiling->orgHi, convRepoTiling->kernelH, convRepoTiling->dilationH,
+                convRepoTiling->strideH);
+            aL1SpaceSize = tilingData_.conv2dApiTiling.get_cinAInCore() * hiAL1Max * convRepoTiling->orgWi;
+        }
     } else {
         uint64_t hiAL1Max = ConvInferHiL1(convRepoTiling->hoL1, convRepoTiling->orgHi, convRepoTiling->kernelH, convRepoTiling->dilationH,
             convRepoTiling->strideH);
@@ -328,7 +332,7 @@ uint32_t Conv2dBaseTiling::CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv2DV2Tun
             aL1SpaceSize = tilingData_.conv2dApiTiling.get_cinAInCore() * hiAL1Max * wiAL1Max;
         }
     }
-    aL1SpaceSize = ConvAlignB(aL1SpaceSize * fmapSize * convRepoTiling->innerBatch, C0_SIZE);
+    aL1SpaceSize = ConvAlignB(aL1SpaceSize * fmapSize , C0_SIZE) * convRepoTiling->innerBatch;
 
     return static_cast<uint32_t>(aL1SpaceSize);
 }

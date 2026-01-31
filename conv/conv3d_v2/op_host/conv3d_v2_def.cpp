@@ -226,11 +226,7 @@ private:
         if (strcmp(dst_version, "default") != 0) {
             this->AICore().AddConfig(dst_version, aicoreConfig);
         } else {
-            std::string tmpVersion(version);
-            if (strcmp(version, "ascend950") == 0) {
-                tmpVersion = "ascend910_95";
-            }
-            this->AICore().AddConfig(tmpVersion.c_str(), aicoreConfig);
+            this->AICore().AddConfig(version, aicoreConfig);
         }
     }
 };

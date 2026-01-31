@@ -224,8 +224,8 @@ bool ConvTilingBase::CheckLoad3DLimits()
                          shapeInfo.orgkH, shapeInfo.orgkW, LOAD3D_MAX_FILTER_H_W);
         return false;
     }
-    uint64_t tmpkHWSize = static_cast<uint64_t>(shapeInfo.orgkH) * static_cast<uint64_t>(shapeInfo.orgkW) *
-                          cubeInfo.k0;
+    auto k0 = CUBE_MKN_TAB.GetMKN(descInfo.weightType.dtype, MKN_K_INDEX);
+    uint64_t tmpkHWSize = static_cast<uint64_t>(shapeInfo.orgkH) * static_cast<uint64_t>(shapeInfo.orgkW) * k0;
     if (tmpkHWSize > LOAD3D_MAX_DDR2L1_SIZE) {
         TILING_LOG_DEBUG("Weight shape not satisfying load3d's limits: kH*kW*k0=%lu, which must <= %u.",
                          tmpkHWSize, LOAD3D_MAX_DDR2L1_SIZE);

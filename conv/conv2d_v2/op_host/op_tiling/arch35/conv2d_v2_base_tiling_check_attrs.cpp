@@ -16,40 +16,6 @@
  
 namespace optiling {
 namespace conv_ops_tiling {
-ge::graphStatus Conv2dBaseTiling::CheckPadLegal()
-{
-    uint32_t attrPadIndex = flagInfo_.quantFlag ? ATTR_QUANT_PAD_INDEX : ATTR_PAD_INDEX;
-    attrPadIndex = flagInfo_.extendConvFlag ? EXTENDCONV_ATTR_PADS_INDEX : attrPadIndex;
-    auto padPtr = context_->GetAttrs()->GetListInt(attrPadIndex);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, padPtr);
-    if (padPtr->GetSize() != CONV2D_DIM_SIZE_LIMIT) {
-        OP_LOGE(context_->GetNodeName(), "%s AscendC: input attr pad dim: %zu != %u.", paramInfo_.nodeType.c_str(),
-                padPtr->GetSize(), CONV2D_DIM_SIZE_LIMIT);
-        return ge::GRAPH_FAILED;
-    }
-    oriShapeAttrInfo_.oriPadTop = padPtr->GetData()[PAD_TOP_INDEX];
-    oriShapeAttrInfo_.oriPadBottom = padPtr->GetData()[PAD_BOTTOM_INDEX];
-    oriShapeAttrInfo_.oriPadLeft = padPtr->GetData()[PAD_LEFT_INDEX];
-    oriShapeAttrInfo_.oriPadRight = padPtr->GetData()[PAD_RIGHT_INDEX];
-
-    OP_LOGE_IF(!UpdateOriPadFromPadMode(), ge::GRAPH_FAILED,  context_->GetNodeName(),
-        "%s AscendC: UpdateOriPadFromPadMode Failed.", paramInfo_.nodeType.c_str());
-
-    if (oriShapeAttrInfo_.oriPadTop < 0 || oriShapeAttrInfo_.oriPadBottom < 0 ||
-        oriShapeAttrInfo_.oriPadLeft < 0 || oriShapeAttrInfo_.oriPadRight < 0 ||
-        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadTop) > MAX_ATTRS_SHAPE ||
-        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadBottom) > MAX_ATTRS_SHAPE ||
-        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadLeft) > MAX_ATTRS_SHAPE ||
-        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadRight) > MAX_ATTRS_SHAPE) {
-        OP_LOGE(context_->GetNodeName(),
-            "%s AscendC: pad (top: %ld, bottom: %ld, left: %ld, right: %ld) is out of range[0, %lu].",
-                paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriPadTop, oriShapeAttrInfo_.oriPadBottom,
-                oriShapeAttrInfo_.oriPadLeft, oriShapeAttrInfo_.oriPadRight,
-                MAX_ATTRS_SHAPE);
-        return ge::GRAPH_FAILED;
-    }
-    return ge::GRAPH_SUCCESS;
-}
 
 ge::graphStatus Conv2dBaseTiling::CheckStrideLegal()
 {
@@ -111,6 +77,41 @@ ge::graphStatus Conv2dBaseTiling::CheckDilationLegal()
     if (oriShapeAttrInfo_.oriDilationN != 1 || oriShapeAttrInfo_.oriDilationC != 1) {
         OP_LOGE(context_->GetNodeName(), "%s AscendC: dilation (N: %ld, C: %ld) should be 1.",
                 paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriDilationN, oriShapeAttrInfo_.oriDilationC);
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus Conv2dBaseTiling::CheckPadLegal()
+{
+    uint32_t attrPadIndex = flagInfo_.quantFlag ? ATTR_QUANT_PAD_INDEX : ATTR_PAD_INDEX;
+    attrPadIndex = flagInfo_.extendConvFlag ? EXTENDCONV_ATTR_PADS_INDEX : attrPadIndex;
+    auto padPtr = context_->GetAttrs()->GetListInt(attrPadIndex);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, padPtr);
+    if (padPtr->GetSize() != CONV2D_DIM_SIZE_LIMIT) {
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: input attr pad dim: %zu != %u.", paramInfo_.nodeType.c_str(),
+                padPtr->GetSize(), CONV2D_DIM_SIZE_LIMIT);
+        return ge::GRAPH_FAILED;
+    }
+    oriShapeAttrInfo_.oriPadTop = padPtr->GetData()[PAD_TOP_INDEX];
+    oriShapeAttrInfo_.oriPadBottom = padPtr->GetData()[PAD_BOTTOM_INDEX];
+    oriShapeAttrInfo_.oriPadLeft = padPtr->GetData()[PAD_LEFT_INDEX];
+    oriShapeAttrInfo_.oriPadRight = padPtr->GetData()[PAD_RIGHT_INDEX];
+
+    OP_LOGE_IF(!UpdateOriPadFromPadMode(), ge::GRAPH_FAILED,  context_->GetNodeName(),
+        "%s AscendC: UpdateOriPadFromPadMode Failed.", paramInfo_.nodeType.c_str());
+
+    if (oriShapeAttrInfo_.oriPadTop < 0 || oriShapeAttrInfo_.oriPadBottom < 0 ||
+        oriShapeAttrInfo_.oriPadLeft < 0 || oriShapeAttrInfo_.oriPadRight < 0 ||
+        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadTop) > MAX_ATTRS_SHAPE ||
+        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadBottom) > MAX_ATTRS_SHAPE ||
+        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadLeft) > MAX_ATTRS_SHAPE ||
+        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadRight) > MAX_ATTRS_SHAPE) {
+        OP_LOGE(context_->GetNodeName(),
+            "%s AscendC: pad (top: %ld, bottom: %ld, left: %ld, right: %ld) is out of range[0, %lu].",
+                paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriPadTop, oriShapeAttrInfo_.oriPadBottom,
+                oriShapeAttrInfo_.oriPadLeft, oriShapeAttrInfo_.oriPadRight,
+                MAX_ATTRS_SHAPE);
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;

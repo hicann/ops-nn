@@ -15,13 +15,14 @@
  
 #ifndef CONV3D_V2_TEMPLATE_H
 #define CONV3D_V2_TEMPLATE_H
- 
+#if defined(__NPU_ARCH__) &&((__NPU_ARCH__ == 3101) || (__NPU_ARCH__ == 5102))
 #include "arch35/conv3d_v2.h"
+#endif
 #include "kernel_operator.h"
 #include "conv3d_v2_tiling_data.h"
- 
+#include "../common/arch35/conv_config.h"
 using namespace AscendC;
- 
+using namespace conv;
 constexpr ConvFormat fmapFormat = ConvFormat::NCDHW;
 constexpr ConvFormat filterFormat = ConvFormat::NCDHW;
 constexpr ConvFormat outputFormat = ConvFormat::NCDHW;
@@ -39,9 +40,9 @@ __global__ __aicore__ void conv3dv2_template(GM_ADDR x, GM_ADDR filter, GM_ADDR 
     using weightType = ConvType<TPosition::GM, filterFormat, filterT>;
     using outputType = ConvType<TPosition::GM, outputFormat, outputT>;
     using biasType = ConvType<TPosition::GM, biasFormat, biasT>;
-    using scaleType= ConvType<TPosition::GM, scaleFormat, scaleT>;
+    using scaleType = ConvType<TPosition::GM, scaleFormat, scaleT>;
  
-    Conv3dV2Base<fmapType, weightType, outputType, biasType, Conv3DV2Param<FmapTiling, WeightTiling, L1PingPong,
+    Conv3dV2Base<fmapType, weightType, outputType, biasType, scaleType, Conv3DV2Param<FmapTiling, WeightTiling, L1PingPong,
         L0PingPong, OutputOrder, IterOrder, 0>> baseConv3d;
         baseConv3d.RunConv3dV2Kernel(x, filter, bias, y, tiling);
     return;

@@ -13,7 +13,7 @@
  * \brief
  */
 #include "conv2d_v2_base_tiling.h"
- 
+
 namespace optiling {
 namespace conv_ops_tiling {
 void Conv2dBaseTiling::PrintOpTilingData()
@@ -46,7 +46,7 @@ void Conv2dBaseTiling::PrintOpTilingData()
     OP_LOGD(context_->GetNodeName(), "%s AscendC: ops tilingdata: %s", paramInfo_.nodeType.c_str(), ss.str().c_str());
 }
 
-void Conv2dBaseTiling::PrintTilingInfo()
+void Conv2dBaseTiling::PrintTilingInfo() const
 {
     OP_LOGD(context_->GetNodeName(), "%s AscendC: tiling running mode: %s.",
             paramInfo_.nodeType.c_str(), FeatureFlagEnumToString(featureFlagInfo_));

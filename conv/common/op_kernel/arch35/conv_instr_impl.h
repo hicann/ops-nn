@@ -192,7 +192,11 @@ private:
     __aicore__ inline void SetMmadParams(MmadParams &mmadParams)
     {
         if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
-            mmadParams.m = self_->ctx.innerBatch * currentML0_;
+            if constexpr (Intf::formatOutput == ConvFormat::NCHW && Intf::c04Flag) {
+                mmadParams.m = self_->ctx.innerBatch * AlignB(C04_CIN_SIZE * currentML0_, Intf::k0) / C04_CIN_SIZE;
+            } else {
+                mmadParams.m = self_->ctx.innerBatch * currentML0_;
+            }            
         } else {
             mmadParams.m = currentML0_;
         }

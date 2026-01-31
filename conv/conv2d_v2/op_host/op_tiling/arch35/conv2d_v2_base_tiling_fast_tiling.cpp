@@ -43,26 +43,6 @@ ge::graphStatus Conv2dBaseTiling::PrepareTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Conv2dBaseTiling::Conv2DInfoInitAndCheck()
-{
-    convBase_.ConvBaseInitAttrInfo(attrInfo_);
-    convBase_.ConvBaseInitOpInfo(opInfo_);
-    convBase_.updatePlatformInfoFromOpInfo();
-    convBase_.ConvBaseInitFixpipeInfo(fixpipeInfo_);
-    convBase_.InitblockDimConstParas();
-    convBase_.GetConvBaseCoreInfo(convOpsConstParams_);
-    convBase_.ConvBaseInitNodeInfo(context_->GetNodeName(), paramInfo_.nodeType.c_str());
-    // check if enable c04 mode
-    flagInfo_.enableC04Flag = IsEnableC04();
-
-    convBase_.ConvBaseInitFeatureFlag(featureFlagInfo_);
-
-    if (GetTilingSplitMode() != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return ge::GRAPH_SUCCESS;
-}
-
 ge::graphStatus Conv2dBaseTiling::GetTilingFromFastTiling()
 {
     Conv2dOpTilingSetShape();
@@ -98,6 +78,26 @@ ge::graphStatus Conv2dBaseTiling::GetTilingFromFastTiling()
             blockDimRes.nDim, blockDimRes.groupDim, blockDimRes.minCost);
     }
     if (GetConv2dOpsTiling() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus Conv2dBaseTiling::Conv2DInfoInitAndCheck()
+{
+    convBase_.ConvBaseInitAttrInfo(attrInfo_);
+    convBase_.ConvBaseInitOpInfo(opInfo_);
+    convBase_.updatePlatformInfoFromOpInfo();
+    convBase_.ConvBaseInitFixpipeInfo(fixpipeInfo_);
+    convBase_.InitblockDimConstParas();
+    convBase_.GetConvBaseCoreInfo(convOpsConstParams_);
+    convBase_.ConvBaseInitNodeInfo(context_->GetNodeName(), paramInfo_.nodeType.c_str());
+    // check if enable c04 mode
+    flagInfo_.enableC04Flag = IsEnableC04();
+
+    convBase_.ConvBaseInitFeatureFlag(featureFlagInfo_);
+
+    if (GetTilingSplitMode() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -195,25 +195,6 @@ void Conv2dBaseTiling::SelectMModeAlgorithm()
     return;
 }
 
-ge::graphStatus Conv2dBaseTiling::GetConv2dApiTiling()
-{
-    Conv2dApiTilingSetShape();
-
-    if (flagInfo_.mBasicBlockFlag) {
-        if (!conv2dApiTiling_.GetTiling(conv2dBasicBlockInfo_, tilingData_.conv2dApiTiling)) {
-            OP_LOGE(context_->GetNodeName(), "%s AscendC: get api tiling wrong", paramInfo_.nodeType.c_str());
-            return ge::GRAPH_FAILED;
-        }
-    } else {
-        if (conv2dApiTiling_.GetTiling(tilingData_.conv2dApiTiling) == -1) {
-            OP_LOGE(context_->GetNodeName(), "%s AscendC: get api tiling wrong", paramInfo_.nodeType.c_str());
-            return ge::GRAPH_FAILED;
-        }
-    }
-
-    return ge::GRAPH_SUCCESS;
-}
-
 void Conv2dBaseTiling::Conv2dApiTilingSetShape()
 {
     uint64_t curCo = flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV ?
@@ -252,6 +233,25 @@ void Conv2dBaseTiling::Conv2dApiTilingSetShape()
        << ", singleHo: " << singleCoreHo << ", singleWo: " << shapeInfo_.wo << ", singleM: " << singleCoreM
        << ", singleGroups: " << singleGroups << ", singleGroupOpt: " << singleGroupOpt << ", enlarge: " << enlarge;
     OP_LOGD(context_->GetNodeName(), "%s AscendC: api got: %s", paramInfo_.nodeType.c_str(), ss.str().c_str());
+}
+
+ge::graphStatus Conv2dBaseTiling::GetConv2dApiTiling()
+{
+    Conv2dApiTilingSetShape();
+
+    if (flagInfo_.mBasicBlockFlag) {
+        if (!conv2dApiTiling_.GetTiling(conv2dBasicBlockInfo_, tilingData_.conv2dApiTiling)) {
+            OP_LOGE(context_->GetNodeName(), "%s AscendC: get api tiling wrong", paramInfo_.nodeType.c_str());
+            return ge::GRAPH_FAILED;
+        }
+    } else {
+        if (conv2dApiTiling_.GetTiling(tilingData_.conv2dApiTiling) == -1) {
+            OP_LOGE(context_->GetNodeName(), "%s AscendC: get api tiling wrong", paramInfo_.nodeType.c_str());
+            return ge::GRAPH_FAILED;
+        }
+    }
+
+    return ge::GRAPH_SUCCESS;
 }
 
 void Conv2dBaseTiling::Conv2dOpTilingSetShape()

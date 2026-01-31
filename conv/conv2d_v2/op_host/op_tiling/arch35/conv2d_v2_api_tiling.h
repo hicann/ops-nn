@@ -98,7 +98,7 @@ public:
     void SetOffsetx(int8_t offsetx);
     void SetC04Flag(bool isC04Enable);
     void SetRoundMode(int8_t roundMode);
-    void SetDisContinuousFlag(bool disContinuousFlag);
+    void SetDisContinuousFlag(bool disContinuous);
     void SetOutputOrder(int8_t outOrder);
     void SetTilingAlgorithmType(int8_t tilingAlgorithmType);
     bool GetCoreBindingDecisionFactor(Conv2DBasicBlockInfo& conv2DBasicBlockInfo);

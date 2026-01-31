@@ -106,7 +106,11 @@ public:
     __aicore__ inline void LoadAL1(uint64_t kAL1Iter, uint64_t mAL1Iter, uint64_t batchIter)
     {
         if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
-            Load3DSetFMatrixCal(self_->ctx.innerBatch * hiLoadL1, self_->ctx.convTiling->orgWi, padList);
+            if constexpr (Intf::formatOutput == ConvFormat::NCHW && Intf::c04Flag) {
+                Load3DSetFMatrixCal(self_->ctx.innerBatch, AlignB(C04_CIN_SIZE * self_->ctx.convTiling->orgHixWi, Intf::k0) / C04_CIN_SIZE, padList);
+            } else {
+                Load3DSetFMatrixCal(self_->ctx.innerBatch * hiLoadL1, self_->ctx.convTiling->orgWi, padList);
+            }
         }
 
         if constexpr (Intf::disContinuousFlag) {
@@ -116,15 +120,25 @@ public:
                                    kAL1Iter * self_->ctx.convTiling->cinOffsetBlockInGM;
 
             Dn2NzParams intriParams;
-            SetDn2NzIntriParams(intriParams, kAL1Iter);
-            DataCopy<typename Intf::FmapT>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
+            if constexpr (Intf::c04Flag) {
+                SetDn2NzIntriParamsC04(intriParams);
+                DataCopy<typename Intf::FmapT, true>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
+            } else {
+                SetDn2NzIntriParams(intriParams, kAL1Iter);
+                DataCopy<typename Intf::FmapT>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
+            }
         } else if constexpr (Intf::formatOutput == ConvFormat::NHWC) {
             uint64_t aL1GmOffset = batchIter * self_->ctx.convTiling->innerBatch * self_->ctx.fmapOneBatchSize +
                                    kAL1Iter * self_->ctx.convTiling->cinAInCore;
 
             Nd2NzParams intriParams;
-            SetNd2NzIntriParams(intriParams, kAL1Iter);
-            DataCopy<typename Intf::FmapT>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
+            if constexpr (Intf::c04Flag) {
+                SetNd2NzIntriParamsC04(intriParams);
+                DataCopy<typename Intf::FmapT, true>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
+            } else {
+                SetNd2NzIntriParams(intriParams, kAL1Iter);
+                DataCopy<typename Intf::FmapT>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
+            }
         }
     }
 
@@ -139,6 +153,17 @@ public:
     }
 
 private:
+    __aicore__ inline void SetDn2NzIntriParamsC04(Dn2NzParams &intriParams)
+    {
+        intriParams.dnNum = self_->ctx.innerBatch;
+        intriParams.nValue = self_->ctx.convTiling->orgHixWi;
+        intriParams.dValue = self_->ctx.convTiling->orgCi;
+        intriParams.srcDValue = self_->ctx.convTiling->orgHixWi;
+        intriParams.srcDnMatrixStride = self_->ctx.convTiling->orgCi * self_->ctx.convTiling->orgHixWi;
+        intriParams.dstNzNStride = 1;
+        intriParams.dstNzMatrixStride = AlignB(C04_CIN_SIZE * self_->ctx.convTiling->orgHixWi, Intf::k0);
+    }
+ 
     __aicore__ inline void SetDn2NzIntriParams(Dn2NzParams &intriParams, uint64_t kAL1Iter)
     {
         uint32_t al1Ci = IsKAL1Tail(kAL1Iter) ?
@@ -157,6 +182,22 @@ private:
             intriParams.dstNzC0Stride = realHixWi;
             intriParams.dstNzMatrixStride = AlignB(al1Ci, Intf::k0) * realHixWi;
         }
+    }
+
+    __aicore__ inline void SetNd2NzIntriParamsC04(Nd2NzParams &intriParams)
+    {
+        if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
+            intriParams.ndNum = 1;
+            intriParams.nValue = self_->ctx.innerBatch * self_->ctx.convTiling->orgHixWi;
+        } else {
+            intriParams.ndNum = self_->ctx.innerBatch;
+            intriParams.nValue = self_->ctx.convTiling->orgHixWi;
+            intriParams.srcNdMatrixStride = self_->ctx.convTiling->orgCi * self_->ctx.convTiling->orgHixWi;
+            intriParams.dstNzNStride = 1;
+            intriParams.dstNzMatrixStride = AlignB(C04_CIN_SIZE * self_->ctx.convTiling->orgHixWi, Intf::k0);
+        }  
+        intriParams.dValue = self_->ctx.convTiling->orgCi;
+        intriParams.srcDValue = self_->ctx.convTiling->orgCi;
     }
 
     __aicore__ inline void SetNd2NzIntriParams(Nd2NzParams &intriParams, uint64_t kAL1Iter)

@@ -81,53 +81,6 @@ ge::graphStatus Conv2dBaseTiling::GetDisContinuousFlag()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Conv2dBaseTiling::ParseWeightShape()
-{
-    auto weightShapePtr = context_->GetInputShape(INPUT_WEIGHT_INDEX);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, weightShapePtr);
-    auto weightShape = GetWeightShape(weightShapePtr);
-    if (weightShape.GetDimNum() != CONV2D_DIM_SIZE_LIMIT) {
-        OP_LOGE(context_->GetNodeName(), "%s AscendC: input weight shape dim num: %zu != %u.",
-                paramInfo_.nodeType.c_str(), weightShape.GetDimNum(), CONV2D_DIM_SIZE_LIMIT);
-        return ge::GRAPH_FAILED;
-    }
-
-    oriShapeAttrInfo_.oriWeightN =
-        weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_N_IDX]);
-    oriShapeAttrInfo_.oriWeightC =
-        weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_C_IDX]);
-    oriShapeAttrInfo_.oriWeightH =
-        weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_H_IDX]);
-    oriShapeAttrInfo_.oriWeightW =
-        weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_W_IDX]);
-
-    return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus Conv2dBaseTiling::CheckWeightShape()
-{
-    uint64_t cOutMaxSize = shapeBoundTab.at("Co").GetUpperBound(descInfo_.weightDtype);
-    uint64_t kHMaxSize = shapeBoundTab.at("kH").GetUpperBound(descInfo_.weightDtype);
-    uint64_t kWMaxSize = shapeBoundTab.at("kW").GetUpperBound(descInfo_.weightDtype);
-    OP_LOGE_IF(!CheckDim(oriShapeAttrInfo_.oriWeightN, cOutMaxSize), ge::GRAPH_FAILED, context_->GetNodeName(),
-               "%s AscendC: Cout (%ld) is out of range[1, %lu].",
-               paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriWeightN, cOutMaxSize);
-    OP_LOGE_IF(!CheckDim(oriShapeAttrInfo_.oriWeightH, kHMaxSize), ge::GRAPH_FAILED, context_->GetNodeName(),
-               "%s AscendC: kH (%ld) is out of range[1, %lu].",
-               paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriWeightH, kHMaxSize);
-    OP_LOGE_IF(!CheckDim(oriShapeAttrInfo_.oriWeightW, kWMaxSize), ge::GRAPH_FAILED, context_->GetNodeName(),
-               "%s AscendC: kW (%ld) is out of range[1, %lu].",
-               paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriWeightW, kWMaxSize);
-
-    auto k0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.weightDtype), MKN_K_IDX);
-    if (k0 == 0) {
-        OP_LOGE(context_->GetNodeName(), "%s AscendC: Get k0 = 0", paramInfo_.nodeType.c_str());
-        return ge::GRAPH_FAILED;
-    }
-
-    return ge::GRAPH_SUCCESS;
-}
-
 ge::graphStatus Conv2dBaseTiling::ParseFmapShape()
 {
     auto fMapShapePtr = context_->GetInputShape(INPUT_FMAP_INDEX);
@@ -174,6 +127,53 @@ ge::graphStatus Conv2dBaseTiling::CheckFmapShape()
     OP_LOGE_IF(!CheckDim(oriShapeAttrInfo_.oriFmapW, wInMaxSize), ge::GRAPH_FAILED, context_->GetNodeName(),
         "%s AscendC: Win (%ld) is out of range[1, %lu].",
         paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriFmapW, wInMaxSize);
+
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus Conv2dBaseTiling::ParseWeightShape()
+{
+    auto weightShapePtr = context_->GetInputShape(INPUT_WEIGHT_INDEX);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, weightShapePtr);
+    auto weightShape = GetWeightShape(weightShapePtr);
+    if (weightShape.GetDimNum() != CONV2D_DIM_SIZE_LIMIT) {
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: input weight shape dim num: %zu != %u.",
+                paramInfo_.nodeType.c_str(), weightShape.GetDimNum(), CONV2D_DIM_SIZE_LIMIT);
+        return ge::GRAPH_FAILED;
+    }
+
+    oriShapeAttrInfo_.oriWeightN =
+        weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_N_IDX]);
+    oriShapeAttrInfo_.oriWeightC =
+        weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_C_IDX]);
+    oriShapeAttrInfo_.oriWeightH =
+        weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_H_IDX]);
+    oriShapeAttrInfo_.oriWeightW =
+        weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_W_IDX]);
+
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus Conv2dBaseTiling::CheckWeightShape()
+{
+    uint64_t cOutMaxSize = shapeBoundTab.at("Co").GetUpperBound(descInfo_.weightDtype);
+    uint64_t kHMaxSize = shapeBoundTab.at("kH").GetUpperBound(descInfo_.weightDtype);
+    uint64_t kWMaxSize = shapeBoundTab.at("kW").GetUpperBound(descInfo_.weightDtype);
+    OP_LOGE_IF(!CheckDim(oriShapeAttrInfo_.oriWeightN, cOutMaxSize), ge::GRAPH_FAILED, context_->GetNodeName(),
+               "%s AscendC: Cout (%ld) is out of range[1, %lu].",
+               paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriWeightN, cOutMaxSize);
+    OP_LOGE_IF(!CheckDim(oriShapeAttrInfo_.oriWeightH, kHMaxSize), ge::GRAPH_FAILED, context_->GetNodeName(),
+               "%s AscendC: kH (%ld) is out of range[1, %lu].",
+               paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriWeightH, kHMaxSize);
+    OP_LOGE_IF(!CheckDim(oriShapeAttrInfo_.oriWeightW, kWMaxSize), ge::GRAPH_FAILED, context_->GetNodeName(),
+               "%s AscendC: kW (%ld) is out of range[1, %lu].",
+               paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriWeightW, kWMaxSize);
+
+    auto k0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.weightDtype), MKN_K_IDX);
+    if (k0 == 0) {
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: Get k0 = 0", paramInfo_.nodeType.c_str());
+        return ge::GRAPH_FAILED;
+    }
 
     return ge::GRAPH_SUCCESS;
 }

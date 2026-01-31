@@ -449,7 +449,7 @@ void Conv2dBaseTiling::EnableInnerBatchBasicBlock(int64_t availableL1Size) {
     conv2dApiTiling_.innerBatch = innerBatch;
     return;
 }
- 
+
 bool Conv2dBaseTiling::CmpFirstAdjustMnTile(int64_t availableL1Size, int64_t& mTile, int64_t& nTile,
     uint64_t basicBlockM, uint64_t basicBlockN)
 {

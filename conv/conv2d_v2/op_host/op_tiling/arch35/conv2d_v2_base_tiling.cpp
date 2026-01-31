@@ -80,17 +80,6 @@ ge::graphStatus Conv2dBaseTiling::GetPlatformInfoInner()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Conv2dBaseTiling::InitConv2dApiTiling()
-{
-    if (GetPlatformInfoInner() != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    this->conv2dApiTiling_ = conv_tiling::Conv2dTiling(apiInputPlatformInfo);
-    this->conv2dApiTiling_.SetExtendConvFlag(flagInfo_.extendConvFlag);
-    this->conv2dApiTiling_.SetQuantConvFlag(flagInfo_.quantFlag);
-    return ge::GRAPH_SUCCESS;
-}
-
 void Conv2dBaseTiling::SetApiInputPlatformInfo()
 {
     apiInputPlatformInfo.npuArch = opInfo_->npuArch;
@@ -106,6 +95,17 @@ void Conv2dBaseTiling::SetApiInputPlatformInfo()
         "btSize: %ld, fbSize: %ld, socName: %s.", paramInfo_.nodeType.c_str(), opInfo_->l1Size, opInfo_->l0cSize,
         opInfo_->l0aSize, opInfo_->l0bSize, opInfo_->ubSize, opInfo_->btSize,
         opInfo_->fbSize, socNameTab.at(opInfo_->npuArch).c_str());
+}
+
+ge::graphStatus Conv2dBaseTiling::InitConv2dApiTiling()
+{
+    if (GetPlatformInfoInner() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    this->conv2dApiTiling_ = conv_tiling::Conv2dTiling(apiInputPlatformInfo);
+    this->conv2dApiTiling_.SetExtendConvFlag(flagInfo_.extendConvFlag);
+    this->conv2dApiTiling_.SetQuantConvFlag(flagInfo_.quantFlag);
+    return ge::GRAPH_SUCCESS;
 }
 
 bool Conv2dBaseTiling::CheckDim(int64_t dimValue, uint64_t maxDimValue) const
@@ -144,29 +144,6 @@ void Conv2dBaseTiling::GetShapeInfo()
     shapeInfo_.wo = static_cast<uint64_t>(oriShapeAttrInfo_.oriOutputW);
 }
 
-void Conv2dBaseTiling::GetAttrsInfo()
-{
-    attrInfo_.strideH = static_cast<uint32_t>(oriShapeAttrInfo_.oriStrideH);
-    attrInfo_.strideW = static_cast<uint32_t>(oriShapeAttrInfo_.oriStrideW);
-    attrInfo_.padTop = static_cast<uint32_t>(oriShapeAttrInfo_.oriPadTop);
-    attrInfo_.padBottom = static_cast<uint32_t>(oriShapeAttrInfo_.oriPadBottom);
-    attrInfo_.padLeft = static_cast<uint32_t>(oriShapeAttrInfo_.oriPadLeft);
-    attrInfo_.padRight = static_cast<uint32_t>(oriShapeAttrInfo_.oriPadRight);
-    attrInfo_.dilationH = static_cast<uint32_t>(oriShapeAttrInfo_.oriDilationH);
-    attrInfo_.dilationW = static_cast<uint32_t>(oriShapeAttrInfo_.oriDilationW);
-    if (flagInfo_.quantFlag || flagInfo_.extendConvFlag) {
-        attrInfo_.offsetx = static_cast<int32_t>(oriShapeAttrInfo_.oriOffsetX);
-        uint32_t roundModeIndex = ATTR_QUANT_ROUNDMODE_INDEX;
-        roundModeIndex = flagInfo_.extendConvFlag ? EXTENDCONV_ATTR_ROUND_MODE_INDEX : roundModeIndex;
-        auto roundModePtr = context_->GetAttrs()->GetStr(roundModeIndex);
-        string roundModeStr(roundModePtr);
-        if (STR_TO_ROUNDMODE.find(roundModeStr) != STR_TO_ROUNDMODE.end()) {
-            attrInfo_.roundMode = STR_TO_ROUNDMODE.at(roundModeStr);
-        }
-    }
-    GetGroupsInfo();
-}
-
 void Conv2dBaseTiling::GetGroupsInfo()
 {
     attrInfo_.groups = static_cast<uint32_t>(oriShapeAttrInfo_.oriGroups);
@@ -190,6 +167,29 @@ void Conv2dBaseTiling::GetGroupsInfo()
         flagInfo_.convGroupType = ConvGroupType::ORI_GROUP_CONV;
         OP_LOGD(context_->GetNodeName(), "%s AscendC: group type: Ori Group.", paramInfo_.nodeType.c_str());
     }
+}
+
+void Conv2dBaseTiling::GetAttrsInfo()
+{
+    attrInfo_.strideH = static_cast<uint32_t>(oriShapeAttrInfo_.oriStrideH);
+    attrInfo_.strideW = static_cast<uint32_t>(oriShapeAttrInfo_.oriStrideW);
+    attrInfo_.padTop = static_cast<uint32_t>(oriShapeAttrInfo_.oriPadTop);
+    attrInfo_.padBottom = static_cast<uint32_t>(oriShapeAttrInfo_.oriPadBottom);
+    attrInfo_.padLeft = static_cast<uint32_t>(oriShapeAttrInfo_.oriPadLeft);
+    attrInfo_.padRight = static_cast<uint32_t>(oriShapeAttrInfo_.oriPadRight);
+    attrInfo_.dilationH = static_cast<uint32_t>(oriShapeAttrInfo_.oriDilationH);
+    attrInfo_.dilationW = static_cast<uint32_t>(oriShapeAttrInfo_.oriDilationW);
+    if (flagInfo_.quantFlag || flagInfo_.extendConvFlag) {
+        attrInfo_.offsetx = static_cast<int32_t>(oriShapeAttrInfo_.oriOffsetX);
+        uint32_t roundModeIndex = ATTR_QUANT_ROUNDMODE_INDEX;
+        roundModeIndex = flagInfo_.extendConvFlag ? EXTENDCONV_ATTR_ROUND_MODE_INDEX : roundModeIndex;
+        auto roundModePtr = context_->GetAttrs()->GetStr(roundModeIndex);
+        string roundModeStr(roundModePtr);
+        if (STR_TO_ROUNDMODE.find(roundModeStr) != STR_TO_ROUNDMODE.end()) {
+            attrInfo_.roundMode = STR_TO_ROUNDMODE.at(roundModeStr);
+        }
+    }
+    GetGroupsInfo();
 }
 
 gert::Shape Conv2dBaseTiling::GetWeightShape(const gert::StorageShape* weightShapePtr) const

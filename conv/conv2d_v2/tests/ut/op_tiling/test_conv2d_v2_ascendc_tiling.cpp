@@ -2619,3 +2619,9 @@ TEST_F(Conv2dv2Tiling, run_conv2d_case_NCHW_dma_groups_7) {
 TEST_F(Conv2dv2Tiling, run_conv2d_case_NCHW_dma_groups_8) {
    Conv2DTestCase({4,35,224,224}, {765,32,79}, {3,3,3,3}, {32,32}, {1,1}, ge::DT_BF16, 1, 0, false, 5, "SPECIFIC", false, "NCHW");
 }
+TEST_F(Conv2dv2Tiling, run_conv2d_case_NCHW_MMode_groups) {
+ 	Conv2DTestCase({1,6,142,132}, {6,3,3}, {0,0,0,0}, {56,56}, {1,1}, ge::DT_HIFLOAT8, 0, 0, false, 6, "SPECIFIC", false, "NCHW");
+} 	 
+TEST_F(Conv2dv2Tiling, run_conv2d_case_NCHW_opt_groups) {
+ 	Conv2DTestCase({1,40,29,595}, {80,11,11}, {4,4,5,5}, {43,15}, {1,44}, ge::DT_BF16, 0, 0, false, 2, "SPECIFIC", false, "NCHW");
+}

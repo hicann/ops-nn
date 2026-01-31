@@ -70,21 +70,21 @@ uint64_t Conv2dBaseTiling::GetWeightTilingVal()
     if (tilingData_.conv2dApiTiling.get_kBL1() == weightKSize) {
         kBL1FullloadFlag = true;
     }
- 
+
     if (tilingData_.conv2dApiTiling.get_nBL1() == singleCoreNSize) {
         nBL1FullloadFlag = true;
     }
- 
+
     if (kBL1FullloadFlag && nBL1FullloadFlag) {
         return FULLLOAD_BL1;
     }
- 
+
     if (!kBL1FullloadFlag && tilingData_.conv2dApiTiling.get_nL0() == singleCoreNSize) {
         return ONLY_N_FULLLOAD_BL1_BL0;
     }
     return WEIGHT_OTHER;
 }
- 
+
 uint64_t Conv2dBaseTiling::GetOutputOrderVal()
 {
     if (flagInfo_.mSplitModeFlag) {
@@ -112,7 +112,7 @@ uint64_t Conv2dBaseTiling::GetFmpTilingValForHWSplit(bool kAL1FullloadFlag)
     }
     return FMP_OTHER;
 }
- 
+
 uint64_t Conv2dBaseTiling::GetL1PingPongVal()
 {
     uint64_t l1PingPong = static_cast<uint64_t>(tilingData_.conv2dApiTiling.get_pBufferFlag() &
@@ -155,7 +155,7 @@ uint64_t Conv2dBaseTiling::GetFmapCopyMode()
     if (tilingData_.conv2dApiTiling.get_khUb() > 0 && tilingData_.conv2dApiTiling.get_kwUb() > 0) {
         return FMAP_DMA_MODE;
     }
- 
+
     return FMAP_LOAD3D_MODE;
 }
 
@@ -169,7 +169,7 @@ void Conv2dBaseTiling::ReSetTilingKeyPara()
     if (weightTilingResetFlag) {
         tilingKeyPara_.weightTiling = WEIGHT_OTHER;
     }
- 
+
     bool fmpTilingResetFlag = tilingKeyPara_.fmpTiling == 1 &&
                               !(tilingKeyPara_.weightTiling == 1 && tilingKeyPara_.outputOrder == 1);
     if (fmpTilingResetFlag) {

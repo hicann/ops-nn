@@ -64,7 +64,7 @@ namespace optiling {
     END_TILING_DATA_DEF;
 
     REGISTER_TILING_DATA_CLASS(Conv2DV2, Conv2DTilingData)
-    REGISTER_TILING_DATA_CLASS(QuantConv2D, Conv2DTilingData) 
+    REGISTER_TILING_DATA_CLASS(QuantConv2D, Conv2DTilingData)
     REGISTER_TILING_DATA_CLASS(ExtendConv2D, Conv2DTilingData)
 }
 #endif // OPS_BUILT_IN_OP_TILING_RUNTIME_CONV2D_V2_TILING_H

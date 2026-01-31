@@ -59,8 +59,13 @@ public:
     __aicore__ inline void SetM(uint64_t m, uint64_t mNotAlign)
     {
         if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
-            currentML0Align_ = AlignB(self_->ctx.innerBatch * mNotAlign, BLOCK_L0_M);
-            currentML0_ = self_->ctx.innerBatch * mNotAlign;
+            if constexpr (Intf::formatOutput == ConvFormat::NCHW && Intf::c04Flag) {
+                currentML0_ = self_->ctx.innerBatch * AlignB(C04_CIN_SIZE * mNotAlign, Intf::k0) / C04_CIN_SIZE;
+                currentML0Align_ = AlignB(currentML0_, BLOCK_L0_M);
+            } else {
+                currentML0Align_ = AlignB(self_->ctx.innerBatch * mNotAlign, BLOCK_L0_M);
+                currentML0_ = self_->ctx.innerBatch * mNotAlign;
+            }
         } else {
             currentML0Align_ = m;
             currentML0_ = mNotAlign;
@@ -104,8 +109,13 @@ public:
         if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::MULTI_BATCH)) {
             uint32_t srcOffset = 0;
             uint32_t dstOffset = 0;
-            uint32_t srcBatchStride = ((self_->ctx.kIter / self_->ctx.multiKAL1) != self_->ctx.maxKAL1Iter ?
-                self_->ctx.convTiling->cinAInCore : alignCinATailInCore_) * realHixWi;
+            uint32_t srcBatchStride = 0;
+            if constexpr (Intf::c04Flag) {
+                srcBatchStride = AlignB(C04_CIN_SIZE * self_->ctx.convTiling->orgHixWi, Intf::k0);
+            } else {
+                srcBatchStride = ((self_->ctx.kIter / self_->ctx.multiKAL1) != self_->ctx.maxKAL1Iter ?
+                                    self_->ctx.convTiling->cinAInCore : alignCinATailInCore_) * realHixWi;
+            }           
             uint32_t dstBatchStride = currentML0Align_ * self_->ctx.convTiling->kL0;
             for (uint16_t batchIter = 0; batchIter < self_->ctx.innerBatch; batchIter++) {
                 LoadData<TPosition::A2, TPosition::A1, typename Intf::FmapT>(self_->ctx.al0[dstOffset],
@@ -233,8 +243,13 @@ private:
         intriParams.nSize = currentNL0_;
         intriParams.params.dnNum = self_->ctx.innerBatch;
         if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
-            intriParams.srcStride = AlignB(self_->ctx.innerBatch * currentML0_, BLOCK_L0_M);
-            intriParams.params.srcNzMatrixStride = currentML0_;
+            if constexpr (Intf::formatOutput == ConvFormat::NCHW && Intf::c04Flag) {
+                intriParams.srcStride = AlignB(self_->ctx.innerBatch * AlignB(C04_CIN_SIZE * currentML0_, Intf::k0) / C04_CIN_SIZE, BLOCK_L0_M);
+                intriParams.params.srcNzMatrixStride = AlignB(C04_CIN_SIZE * currentML0_, Intf::k0) / C04_CIN_SIZE;
+            } else {
+                intriParams.srcStride = AlignB(self_->ctx.innerBatch * currentML0_, BLOCK_L0_M);
+                intriParams.params.srcNzMatrixStride = currentML0_;
+            }       
         } else {
             intriParams.srcStride = self_->ctx.currentML0Align;
             intriParams.params.srcNzMatrixStride = self_->ctx.currentML0Align * CeilDiv(currentNL0_ , BLOCK_L0_N);

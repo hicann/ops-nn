@@ -22,7 +22,7 @@ bool Conv2dBaseTiling::CheckSupportCacheTiling()
         return false;
     }
 
-    return true;    
+    return true;
 }
 
 bool Conv2dBaseTiling::GetTilingFromCache()

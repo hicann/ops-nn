@@ -4077,7 +4077,7 @@ TEST_F(convolution_test, ascend310B_test_conv2D_NCHW) {
   }
 }
 
-TEST_F(convolution_test, ascend910_9589_test_conv2D_HWNC) {
+TEST_F(convolution_test, ascend950_test_conv2D_HWNC) {
   vector<aclDataType> ValidList = {ACL_FLOAT16, ACL_FLOAT, ACL_BF16};
   int length = ValidList.size();
 
@@ -4120,7 +4120,7 @@ TEST_F(convolution_test, ascend910_9589_test_conv2D_HWNC) {
   }
 }
 
-TEST_F(convolution_test, ascend910_9589_test_conv1D_LNC) {
+TEST_F(convolution_test, ascend950_test_conv1D_LNC) {
   vector<aclDataType> ValidList = {ACL_FLOAT16, ACL_FLOAT, ACL_BF16};
   int length = ValidList.size();
 

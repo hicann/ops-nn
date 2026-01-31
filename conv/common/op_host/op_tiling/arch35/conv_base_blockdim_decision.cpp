@@ -102,6 +102,7 @@ ge::graphStatus ConvBaseDeci::GetBlockDimInfo(ConvAscendcTilingInfo& tilingInfo)
     ConvBaseInitPlatformInfo(tilingInfo.platformInfo);
     ConvBaseInitNodeInfo(tilingInfo.nodeInfo.nodeName, tilingInfo.nodeInfo.nodeType);
     InitblockDimConstParas();
+    GetConvBaseCoreInfo(tilingInfo.convOpsConstParams);
     if (BlockDimDecision(tilingInfo.blockDimRes) != 0) {
         return ge::GRAPH_FAILED;
     }
@@ -335,7 +336,8 @@ uint64_t ConvBaseDeci::CalcMinUsedL1SizeInHWsplitMode(uint64_t kAL1min, uint64_t
     uint64_t weightUsedL1Size = ConvAlignB(kBL1min * nBL1min * weightDtypeSize, C0_SIZE);
 
     uint64_t fmapUsedL1Size = 0;
-    uint64_t hoAL1min = shapeInfo_.wo < convOpsConstParams_.m0 ? ConvCeilDiv(convOpsConstParams_.m0, shapeInfo_.wo) : 1;
+    uint64_t hoAL1min = std::min(shapeInfo_.wo < convOpsConstParams_.m0 ?
+                                 ConvCeilDiv(convOpsConstParams_.m0, shapeInfo_.wo) : 1, shapeInfo_.ho);
     uint64_t hiAL1min = ConvInferHiL1(hoAL1min, shapeInfo_.hi, shapeInfo_.kh, attrInfo_.dilationH, attrInfo_.strideH);
     fmapUsedL1Size = ConvAlignB(hiAL1min * wiAL1min * kAL1min * fMapDtypeSize, C0_SIZE);
 

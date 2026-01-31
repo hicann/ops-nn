@@ -343,11 +343,7 @@ private:
             .Format(extendConv2dFmapAndOutputFormat.find(version)->second)
             .UnknownShapeFormat(extendConv2dFmapAndOutputFormat.find(version)->second);
 
-        std::string tmpVersion(version);
-        if (strcmp(version, "ascend950") == 0) {
-            tmpVersion = "ascend910_95";
-        }
-        this->AICore().AddConfig(tmpVersion.c_str(), aicoreConfig);
+        this->AICore().AddConfig(version, aicoreConfig);
     }
 };
 

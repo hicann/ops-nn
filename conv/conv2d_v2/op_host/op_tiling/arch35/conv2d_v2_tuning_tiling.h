@@ -216,7 +216,7 @@ void GetBiasInfo(const gert::TilingContext *context, std::shared_ptr<Conv2DV2Inp
                  size_t biasInputIndex);
 void GetFilterInfo(const gert::TilingContext *context, std::shared_ptr<Conv2DV2InputArgs> &conv2dArgs,
                   size_t filterInputIndex);
-std::string DisplayInfoDict(std::shared_ptr<void> &input_args, size_t size, std::string opType);
+std::string DisplayInfoDict(std::shared_ptr<void> &inputArgs, size_t size, std::string opType);
 bool TilingForConv2DV2Input(const gert::TilingContext *context, std::shared_ptr<void> &inputArgs, size_t &size);
 }  // namespace tuningtiling
 
