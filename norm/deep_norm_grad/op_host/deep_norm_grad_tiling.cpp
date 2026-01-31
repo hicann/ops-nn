@@ -56,6 +56,7 @@ constexpr uint32_t CONST_16 = 16;
 constexpr uint32_t CONST_17 = 17;
 constexpr uint32_t CONST_25 = 25;
 constexpr uint32_t CONST_4 = 4;
+constexpr uint8_t BATCH_MODE = 1;
 
 inline void SetBaseConfig(gert::TilingContext* context, DeepNormGradTilingData& tiling, uint32_t& dDimNum)
 {
@@ -483,6 +484,7 @@ ge::graphStatus SetWorkspace(gert::TilingContext* context)
 ge::graphStatus Tiling4DeepNormGradCompileInfo(gert::TilingContext* context)
 {
     OP_LOGD(context->GetNodeName(), "[DeepNormGrad] TilingFunc begin");
+    context->SetScheduleMode(BATCH_MODE);
     DeepNormGradTilingData tiling;
     OP_TILING_CHECK(
         ge::GRAPH_SUCCESS != CheckInputOutputShapeNull(context),
