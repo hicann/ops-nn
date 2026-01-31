@@ -161,7 +161,7 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_float32)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 122);
+    ASSERT_EQ(tiling_key, 2);
 }
 
 TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_float32_few)
@@ -249,7 +249,7 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_float32_few)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 122);
+    ASSERT_EQ(tiling_key, 2);
 }
 
 TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_float16)
@@ -337,7 +337,7 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_float16)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 211);
+    ASSERT_EQ(tiling_key, 1);
 }
 
 TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_bfloat16)
@@ -425,7 +425,7 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_bfloat16)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 622);
+    ASSERT_EQ(tiling_key, 2);
 }
 
 TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_mul_error)

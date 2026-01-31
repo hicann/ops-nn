@@ -306,6 +306,42 @@ static const aclTensor* InitializeTensor(const aclTensor* x, aclOpExecutor* exec
     return xContiguous;
 }
 
+static aclnnStatus ExecScatterNoTranspose(
+    const aclTensor* self, int64_t dim, const aclTensor* index, const aclTensor* src, int64_t reduce, aclTensor* out,
+    aclOpExecutor* executor) {
+    auto ret = CheckParams(self, index, src, out);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    auto selfContiguous = l0op::Contiguous(self, executor);
+    CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto indexContiguous = l0op::Contiguous(index, executor);
+    CHECK_RET(indexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    // linear index，转换负数索引并输出int32索引
+    indexContiguous = l0op::LinearIndex(indexContiguous, selfContiguous, -1, false, executor);
+    CHECK_COND(indexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "LinearIndex failed!");
+    
+    auto srcContiguous = l0op::Contiguous(src, executor);
+    CHECK_RET(srcContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto reduction = GetReduceStr(reduce);
+    auto isCopy = self->GetData() != out->GetData();
+    if (isCopy) {
+        auto selfCopy = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
+        CHECK_RET(selfCopy != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto copyResult = l0op::TensorMove(selfContiguous, selfCopy, executor);
+        CHECK_RET(copyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto scatterRes = l0op::ScatterElementsNoTranspose(selfCopy, indexContiguous, srcContiguous, dim, reduction, executor);
+        CHECK_RET(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto viewCopyResult = l0op::ViewCopy(scatterRes, out, executor);
+        CHECK_COND(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR, "viewCopy output failed!");
+        return ACLNN_SUCCESS;
+    }
+    auto scatterRes = l0op::ScatterElementsNoTranspose(selfContiguous, indexContiguous, srcContiguous, dim, reduction, executor);
+    CHECK_RET(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto viewCopyResult = l0op::ViewCopy(scatterRes, out, executor);
+    CHECK_COND(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR, "viewCopy output failed!");
+    return ACLNN_SUCCESS;
+}
+
 static void ViewDataType(const aclTensor* input, const op::DataType dtype)
 {
     auto tmpTensor = const_cast<aclTensor*>(input);
@@ -696,12 +732,15 @@ static aclnnStatus ExecScatterGetWorkspaceSize(
 {
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_COND(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR, "CREATE_EXECUTOR failed!");
-
-    auto ret = ExecScatterBase(self, dim, index, src, reduce, out, uniqueExecutor.get());
-
+    bool supportNoTranspose = l0op::SupportNoTranspose(self, index, src, dim, GetReduceStr(reduce));
+    aclnnStatus ret;
+    if (supportNoTranspose) {
+        ret = ExecScatterNoTranspose(self, dim, index, src, reduce, out, uniqueExecutor.get());
+    } else {
+        ret = ExecScatterBase(self, dim, index, src, reduce, out, uniqueExecutor.get());
+    }
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
-
     return ret;
 }
 
@@ -734,18 +773,23 @@ static aclnnStatus ExecScatterValueGetWorkspaceSize(
     }
 
     auto src = uniqueExecutor.get()->ConvertToTensor(value, self->GetDataType());
-    if (self->GetViewShape().GetDimNum() != 0) {
+    bool supportNoTranspose = l0op::SupportNoTranspose(self, index, src, dim, GetReduceStr(reduce));
+    if (self->GetViewShape().GetDimNum() != 0 && !supportNoTranspose) {
         auto indexShape = GetTensorShape(index, uniqueExecutor.get());
         CHECK_COND(indexShape != nullptr, ACLNN_ERR_INNER_NULLPTR, "get indexShape failed!");
         src = l0op::BroadcastTo(src, indexShape, uniqueExecutor.get());
         CHECK_COND(src != nullptr, ACLNN_ERR_INNER_NULLPTR, "value broadcast failed!");
     }
 
-    auto ret = ExecScatterBase(self, dim, index, src, reduce, out, uniqueExecutor.get());
-
+    aclnnStatus res;
+    if (supportNoTranspose) {
+        res = ExecScatterNoTranspose(self, dim, index, src, reduce, out, uniqueExecutor.get());
+    } else {
+        res = ExecScatterBase(self, dim, index, src, reduce, out, uniqueExecutor.get());
+    }
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
-    return ret;
+    return res;
 }
 
 // 非inplace

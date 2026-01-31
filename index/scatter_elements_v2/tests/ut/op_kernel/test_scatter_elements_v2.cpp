@@ -79,19 +79,19 @@ TEST_F(scatter_elements_v2_test, test_case_fp32)
 
     ScatterElementsV2TilingData* tilingDatafromBin = reinterpret_cast<ScatterElementsV2TilingData*>(tiling);
 
-    ICPU_SET_TILING_KEY(111);
+    ICPU_SET_TILING_KEY(1);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
 
-    ICPU_SET_TILING_KEY(112);
+    ICPU_SET_TILING_KEY(2);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
 
-    ICPU_SET_TILING_KEY(121);
+    ICPU_SET_TILING_KEY(1);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
 
-    ICPU_SET_TILING_KEY(122);
+    ICPU_SET_TILING_KEY(2);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
 

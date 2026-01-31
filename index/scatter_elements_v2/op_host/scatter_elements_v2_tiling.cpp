@@ -25,8 +25,6 @@ using namespace std;
 using Ops::NN::Optiling::TilingRegistry;
 
 namespace {
-const int INPUT_TYPE = 100;
-const int INDIC_TYPE = 10;
 const int OPERATOR_TYPE = 1;
 
 const int SIZE_OF_FP16 = 2;
@@ -36,15 +34,6 @@ const int SIZE_OF_INT64 = 8;
 const int SIZE_OF_UINT8 = 1;
 const int SIZE_OF_INT8 = 1;
 const int SIZE_OF_BF16 = 2;
-
-const int DT_FLOAT32_TYPE = 1;
-const int DT_FLOAT16_TYPE = 2;
-const int DT_INT32_TYPE = 3;
-const int DT_UINT8_TYPE = 4;
-const int DT_INT8_TYPE = 5;
-const int DT_BF16_TYPE = 6;
-const int DT_INT32_INDEX_TYPE = 1;
-const int DT_INT64_INDEX_TYPE = 2;
 
 const int NONE = 1;
 const int ADD = 2;
@@ -60,6 +49,10 @@ const int WORK_SPACE_SIZE = 1024 * 1024 * 16;
 const int SMALL_MODE = 1;
 const int VAR_LIMIT = 128;
 const int VAR_GROUPS = 64;
+
+const size_t TWO_DIM = 2;
+const size_t NO_TRANSPOSE_DIM_MAX = 256;
+const size_t NO_TRANSPOSE_TASKS_MIN = 768;
 } // namespace
 
 namespace optiling {
@@ -225,10 +218,23 @@ public:
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
     void TilingDataPrint() const;
+    bool CacheOpSupport() const;
+    bool CacheOpShapeCheck(size_t realDim, size_t inputDimNum) const;
+    ge::graphStatus RunCacheOpTiling();
+    ge::graphStatus SetCacheOpTiling();
 
 private:
     ScatterElementsV2TilingData tilingData;
     gert::TilingContext* tilingContext = nullptr;
+    int32_t needTranspose = 1;
+    int32_t mode = 0;
+    int32_t updatesIsScalar = 0;
+    uint64_t xDim0 = 1;
+    uint64_t xDim1 = 1;
+    uint64_t indicesDim0 = 1;
+    uint64_t indicesDim1 = 1;
+    uint64_t updatesDim0 = 1;
+    uint64_t updatesDim1 = 1;
     uint32_t tilingKey = 0;
     uint64_t usedCoreNum = 0;
     uint64_t eachNum = 1;
@@ -289,22 +295,16 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
     auto inputDtype = tilingContext->GetInputDesc(INPUT_0)->GetDataType();
     uint32_t inputSize = 0;
     if (ge::DT_FLOAT == inputDtype) {
-        tilingKey += INPUT_TYPE * DT_FLOAT32_TYPE;
         inputSize = SIZE_OF_FP32;
     } else if (ge::DT_FLOAT16 == inputDtype) {
-        tilingKey += INPUT_TYPE * DT_FLOAT16_TYPE;
         inputSize = SIZE_OF_FP16;
     } else if (ge::DT_INT32 == inputDtype) {
-        tilingKey += INPUT_TYPE * DT_INT32_TYPE;
         inputSize = SIZE_OF_INT32;
     } else if (ge::DT_UINT8 == inputDtype) {
-        tilingKey += INPUT_TYPE * DT_UINT8_TYPE;
         inputSize = SIZE_OF_UINT8;
     } else if (ge::DT_INT8 == inputDtype) {
-        tilingKey += INPUT_TYPE * DT_INT8_TYPE;
         inputSize = SIZE_OF_INT8;
     } else if (ge::DT_BF16 == inputDtype) {
-        tilingKey += INPUT_TYPE * DT_BF16_TYPE;
         inputSize = SIZE_OF_BF16;
     } else {
         OP_LOGE(tilingContext, "var only support float, float16, int32, uint8, int8, bf16.");
@@ -313,10 +313,8 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
     uint32_t indicesSize = 0;
     auto indicesDtype = tilingContext->GetInputDesc(1)->GetDataType();
     if (ge::DT_INT32 == indicesDtype) {
-        tilingKey += INDIC_TYPE * DT_INT32_INDEX_TYPE;
         indicesSize = SIZE_OF_INT32;
     } else if (ge::DT_INT64 == indicesDtype) {
-        tilingKey += INDIC_TYPE * DT_INT64_INDEX_TYPE;
         indicesSize = SIZE_OF_INT64;
     } else {
         OP_LOGE(tilingContext, "indices only support int64, int32.");
@@ -563,6 +561,197 @@ void ScatterElementsV2Tiling::TilingDataPrint() const
     OP_LOGD(tilingContext, "max_ub: %lu.", max_ub);
 }
 
+bool ScatterElementsV2Tiling::CacheOpShapeCheck(size_t realDim, size_t inputDimNum) const {
+    auto inputShape = tilingContext->GetInputShape(INPUT_0)->GetStorageShape();
+    auto indicesShape = tilingContext->GetInputShape(INPUT_1)->GetStorageShape();
+    auto updatesShape = tilingContext->GetInputShape(INPUT_2)->GetStorageShape();
+    if ((updatesShape.GetDimNum() == 1 && updatesShape.GetDim(0) == 1) || updatesShape.GetDimNum() == 0) {
+        OP_LOGD("ScatterElementsV2", "updates is scalar Tensor.");
+        updatesShape = indicesShape;
+    }
+
+    size_t tasks = 1;
+    // 二维首轴
+    if (realDim == 0 && inputDimNum == TWO_DIM) {
+        tasks *= indicesShape.GetDim(1);
+    }
+    // 多维首轴 要求后面维度完全相同
+    if (realDim == 0 && inputDimNum != TWO_DIM) {
+        for (size_t i = 1; i < inputDimNum; i++) {
+            auto varDimValue = inputShape.GetDim(i);
+            auto indicesDimValue = indicesShape.GetDim(i);
+            auto updatesDimValue = updatesShape.GetDim(i);
+            if (!(varDimValue == indicesDimValue && varDimValue == updatesDimValue)) {
+                OP_LOGD("ScatterElementsV2", "Low memory when realDim = 0, only support var、indices、updates dim equal.");
+                return false;
+            }
+            tasks *= indicesDimValue;
+        }
+    }
+    // 尾轴 要求前面维度除了第一维度外完全相同
+    if (realDim == inputDimNum - 1) {
+        tasks *= indicesShape.GetDim(0);
+        for (size_t i = 1; i < inputDimNum - 1; i++) {
+            auto varDimValue = inputShape.GetDim(i);
+            auto indicesDimValue = indicesShape.GetDim(i);
+            auto updatesDimValue = updatesShape.GetDim(i);
+            if (!(varDimValue == indicesDimValue && varDimValue == updatesDimValue)) {
+                OP_LOGD("ScatterElementsV2", "Low memory when realDim = -1, only support var、indices、updates dim equal.");
+                return false;
+            }
+            tasks *= indicesDimValue;
+        }
+    }
+    if (inputShape.GetDim(realDim) > NO_TRANSPOSE_DIM_MAX) {
+        OP_LOGD("ScatterElementsV2", "Low memory only support var dim value in axis <= 256.");
+        return false;
+    }
+
+    if (tasks < NO_TRANSPOSE_TASKS_MIN) {
+        OP_LOGD("ScatterElementsV2", "Low memory only support var tasks >= 768.");
+        return false;
+    }
+    if (indicesShape.GetDim(realDim) != updatesShape.GetDim(realDim)) {
+        OP_LOGD("ScatterElementsV2", "Low memory only support indices and updates dim value equal in axis");
+        return false;
+    }
+    return true;
+}
+
+bool ScatterElementsV2Tiling::CacheOpSupport() const {
+    if (tilingContext == nullptr) {
+        OP_LOGD("ScatterElementsV2", "tilingContext is nullptr.");
+        return false;
+    }
+
+    auto attrs = tilingContext->GetAttrs();
+    auto inputDtype = tilingContext->GetInputDesc(INPUT_0)->GetDataType();
+    if (inputDtype != ge::DT_FLOAT && inputDtype != ge::DT_BOOL) {
+        OP_LOGD("ScatterElementsV2", "Low memory only support var float or bool.");
+        return false;
+    }
+
+    const int* dim = (attrs->GetAttrPointer<int>(0));
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, dim);
+    const char* reduce = attrs->GetAttrPointer<char>(1);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, reduce);
+    auto inputShape = tilingContext->GetInputShape(INPUT_0)->GetStorageShape();
+    auto indicesShape = tilingContext->GetInputShape(INPUT_1)->GetStorageShape();
+    auto updatesShape = tilingContext->GetInputShape(INPUT_2)->GetStorageShape();
+    auto inputDimNum = inputShape.GetDimNum();
+    uint32_t realDim = (*dim < 0 ? *dim + inputDimNum : *dim);
+    if (updatesShape.GetDimNum() == indicesShape.GetDimNum() && strcmp(reduce, "none") == 0 && 
+        realDim == inputDimNum - 1 && inputDtype == ge::DT_FLOAT) {
+        OP_LOGD("ScatterElementsV2 when reduce=none, axis=-1 and fp32 will use original.");
+        return false;
+    }
+
+    if ((updatesShape.GetDimNum() == 1 && updatesShape.GetDim(0) == 1) || updatesShape.GetDimNum() == 0) {
+        OP_LOGD("ScatterElementsV2", "updates is scalar Tensor.");
+        updatesShape = indicesShape;
+    }
+    if (inputDimNum < TWO_DIM) {
+        OP_LOGD("ScatterElementsV2", "Low memory only support var dims >= 2.");
+        return false;
+    }
+    if (strcmp(reduce, "mul") == 0) {
+        OP_LOGD("ScatterElementsV2", "Low memory not reduce=mul.");
+        return false;
+    }
+    if (realDim != 0 && realDim != inputDimNum - 1) {
+        OP_LOGD("ScatterElementsV2", "Low memory only support axis in first dim or last dim.");
+        return false;
+    }
+    return CacheOpShapeCheck(realDim, inputDimNum);
+}
+
+ge::graphStatus ScatterElementsV2Tiling::SetCacheOpTiling() {
+    ScatterElementsV2TilingData tiling;
+    tiling.set_needTranspose(needTranspose);
+    tiling.set_mode(mode);
+    tiling.set_coreNums(usedCoreNum);
+    tiling.set_updatesIsScalar(updatesIsScalar);
+    tiling.set_xDim0(xDim0);
+    tiling.set_xDim1(xDim1);
+    tiling.set_indicesDim0(indicesDim0);
+    tiling.set_indicesDim1(indicesDim1);
+    tiling.set_updatesDim0(updatesDim0);
+    tiling.set_updatesDim1(updatesDim1);
+    OP_LOGD(tilingContext, "needTranspose: %d.", needTranspose);
+    OP_LOGD(tilingContext, "mode: %d.", mode);
+    OP_LOGD(tilingContext, "coreNums: %d.", usedCoreNum);
+    OP_LOGD(tilingContext, "updatesIsScalar: %d.", updatesIsScalar);
+    OP_LOGD(tilingContext, "xDim0: %lu.", xDim0);
+    OP_LOGD(tilingContext, "xDim1: %lu.", xDim1);
+    OP_LOGD(tilingContext, "indicesDim0: %lu.", indicesDim0);
+    OP_LOGD(tilingContext, "indicesDim1: %lu.", indicesDim1);
+    OP_LOGD(tilingContext, "updatesDim0: %lu.", updatesDim0);
+    OP_LOGD(tilingContext, "updatesDim1: %lu.", updatesDim1);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(tilingContext->GetPlatformInfo());
+    size_t workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
+    size_t *currentWorkSpace = tilingContext->GetWorkspaceSizes(1);
+    currentWorkSpace[0] = workspaceSize;
+    tilingContext->SetBlockDim(usedCoreNum);
+    tilingContext->SetTilingKey(0);
+    tiling.SaveToBuffer(tilingContext->GetRawTilingData()->GetData(), tilingContext->GetRawTilingData()->GetCapacity());
+    tilingContext->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
+
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus ScatterElementsV2Tiling::RunCacheOpTiling() {
+    auto attrs = tilingContext->GetAttrs();
+    const int* dim = (attrs->GetAttrPointer<int>(0));
+    const char* reduce = attrs->GetAttrPointer<char>(1);
+    if (strcmp(reduce, "none") == 0) {
+        mode = 0;
+    } else {
+        mode = 1;
+    }
+
+    auto inputShape = tilingContext->GetInputShape(INPUT_0)->GetStorageShape();
+    auto indicesShape = tilingContext->GetInputShape(INPUT_1)->GetStorageShape();
+    auto updatesShape = tilingContext->GetInputShape(INPUT_2)->GetStorageShape();
+    if ((updatesShape.GetDimNum() == 1 && updatesShape.GetDim(0) == 1) || updatesShape.GetDimNum() == 0) {
+        updatesIsScalar = 1;
+        updatesShape = indicesShape;
+    } else {
+        updatesIsScalar = 0;
+    }
+    auto inputDimNum = inputShape.GetDimNum();
+    uint32_t realDim = (*dim < 0 ? *dim + inputDimNum : *dim);
+    if (realDim == 0) {
+        needTranspose = 1;
+    } else {
+        needTranspose = 0;
+    }
+
+    if (realDim == 0) {
+        xDim0 = inputShape.GetDim(0);
+        indicesDim0 = indicesShape.GetDim(0);
+        updatesDim0 = updatesShape.GetDim(0);
+        for (size_t i = 1; i < inputDimNum; i++) {
+            xDim1 *= inputShape.GetDim(i);
+            indicesDim1 *= indicesShape.GetDim(i);
+            updatesDim1 *= updatesShape.GetDim(i);
+        }
+    } else {
+        xDim1 = inputShape.GetDim(inputDimNum - 1);
+        indicesDim1 = indicesShape.GetDim(inputDimNum - 1);
+        updatesDim1 = updatesShape.GetDim(inputDimNum - 1);
+        for (size_t i = 0; i < inputDimNum - 1; i++) {
+            xDim0 *= inputShape.GetDim(i);
+            indicesDim0 *= indicesShape.GetDim(i);
+            updatesDim0 *= updatesShape.GetDim(i);
+        }
+    }
+
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(tilingContext->GetPlatformInfo());
+    usedCoreNum = ascendcPlatform.GetCoreNumAiv();
+    OP_LOGD(tilingContext, "ascendcPlatform CoreNum is: %d.", usedCoreNum);
+    return SetCacheOpTiling();
+}
+
 ge::graphStatus TilingScatterElementsV2(gert::TilingContext* context)
 {
     auto compile_info = reinterpret_cast<const ScatterElementsV2CompileInfo*>(context->GetCompileInfo());
@@ -577,12 +766,16 @@ ge::graphStatus TilingScatterElementsV2(gert::TilingContext* context)
     if (socVersion == platform_ascendc::SocVersion::ASCEND310P) {
         ScatterElementsV2Tiling310P tilingObject(context);
         return tilingObject.Init();
-    } else {
+    }  else {
         ScatterElementsV2Tiling tilingObject(context);
-        if (tilingObject.Init() != ge::GRAPH_SUCCESS) {
-            return ge::GRAPH_FAILED;
+        if (tilingObject.CacheOpSupport()) {
+            return tilingObject.RunCacheOpTiling();
+        } else {
+            if (tilingObject.Init() != ge::GRAPH_SUCCESS) {
+                return ge::GRAPH_FAILED;
+            }
+            return tilingObject.RunKernelTiling();
         }
-        return tilingObject.RunKernelTiling();
     }
 }
 

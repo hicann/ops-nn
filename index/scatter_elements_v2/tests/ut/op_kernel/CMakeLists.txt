@@ -9,5 +9,5 @@
 
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCase(scatter_elements_v2 "ascend910B1" "")
+    AddOpTestCase(scatter_elements_v2 "ascend910B1" "-DDTYPE_VAR=float -DDTYPE_INDICES=int32_t")
 endif()

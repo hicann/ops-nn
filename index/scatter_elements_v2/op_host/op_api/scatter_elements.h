@@ -27,6 +27,11 @@ bool UseScatterElementsV2(
 bool UseScatterElements(
     const aclTensor* data, const aclTensor* indices, const aclTensor* updates, int64_t axis,
     const std::string& reduction);
+bool SupportNoTranspose(const aclTensor* data, const aclTensor* indices, const aclTensor* updates,
+                        int64_t axis, const std::string& reduction);
+const aclTensor* ScatterElementsNoTranspose(
+    const aclTensor* data, const aclTensor* indices, const aclTensor* updates, int64_t axis,
+    const std::string& reduction, aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_SCATTER_ELEMENTS_OP_H_

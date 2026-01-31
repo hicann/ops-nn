@@ -41,6 +41,13 @@ static const int32_t UBSIZE_910BC = 192 * 1024;  // ASCEND910B 和 ASCEND910_93�
 static const int32_t UBSIZE_NORMAL = 256 * 1024; // 其余芯片的UB size
 static const int32_t VAR_TAIL_LENGTH = 48000; // 310P走aicore的尾轴上限
 
+static const int64_t TWO_DIM = 2;
+static const int64_t THREE_DIM = 3;
+static const int64_t MAX_EXACT_FLOAT = 16777216;
+static const int64_t NO_TRANSPOSE_DIM_MAX = 256;
+static const uint64_t NO_TRANSPOSE_TASKS_MIN = 768;
+static const uint32_t SPCIAL_TASKS_MIN = 6144;
+
 static map<const op::DataType, const int32_t> DATA_BLOCK_LEN = {
     {op::DataType::DT_INT8, BLOCK_8},   {op::DataType::DT_UINT8, BLOCK_8},  {op::DataType::DT_FLOAT16, BLOCK_16},
     {op::DataType::DT_FLOAT, BLOCK_32}, {op::DataType::DT_INT32, BLOCK_32}, {op::DataType::DT_BF16, BLOCK_16}};
@@ -335,6 +342,175 @@ bool UseScatterElements(
     }
 }
 
+static bool CheckTaskNums(const aclTensor* data, uint64_t axis, size_t tasks) {
+    auto dataShape = data->GetViewShape();
+    if (dataShape.GetDim(axis) > NO_TRANSPOSE_DIM_MAX) {
+        OP_LOGD("ScatterElementsV2 No Transpose only support var dim value in axis <= 256.");
+        return false;
+    }
+
+    if (tasks < NO_TRANSPOSE_TASKS_MIN) {
+        OP_LOGD("ScatterElementsV2 Transpose performance is better than no Transpose.");
+        return false;
+    }
+    // fp32替换模式，首轴场景，dim 16，task 128 * 48
+    if (data->GetDataType() == op::DataType::DT_FLOAT && axis == 0 &&
+        (static_cast<int32_t>(dataShape.GetDim(axis)) > BLOCK_16 || tasks < SPCIAL_TASKS_MIN)) {
+        OP_LOGD("ScatterElementsV2 no transpose need small dim and big tasks when fp32 and axis=0");
+        return false;
+    }
+    return true;
+}
+
+static bool NoTransposeShapeCheck(const aclTensor* data, const aclTensor* indices,
+                                  const aclTensor* updates, uint64_t axis) {
+    auto dataShape = data->GetViewShape();
+    auto indicesShape = indices->GetViewShape();
+    auto updatesShape = updates->GetViewShape();
+    auto dataDimNum = dataShape.GetDimNum();
+    if ((updatesShape.GetDimNum() == 1 && updatesShape.GetDim(0) == 1) || updatesShape.GetDimNum() == 0) {
+        OP_LOGD("ScatterElementsV2 updates is scalar Tensor.");
+        updatesShape = indicesShape;
+    }
+    // 维度相同且小于8
+    if (dataDimNum > AXIS_LIMIT || (dataDimNum != indicesShape.GetDimNum()) || dataDimNum != updatesShape.GetDimNum()) {
+        OP_LOGD("ScatterElementsV2 No Transpose only support var、indices、updates dimNums equal.");
+        return false;
+    }
+
+    size_t tasks = 1;
+    // 二维首轴
+    if (axis == 0 && static_cast<int64_t>(dataDimNum) == TWO_DIM) {
+        tasks *= indicesShape.GetDim(1);
+    }
+    // 多维首轴 要求后面维度完全相同
+    if (axis == 0 && static_cast<int64_t>(dataDimNum) != TWO_DIM) {
+        for (size_t i = 1; i < dataDimNum; i++) {
+            auto dataDimValue = dataShape.GetDim(i);
+            auto indicesDimValue = indicesShape.GetDim(i);
+            auto updatesDimValue = updatesShape.GetDim(i);
+            if (!(dataDimValue == indicesDimValue && dataDimValue == updatesDimValue)) {
+                OP_LOGD("ScatterElementsV2 No Transpose when realDim = 0, only support var、indices、updates dim equal.");
+                return false;
+            }
+            tasks *= indicesDimValue;
+        }
+    }
+
+    // 尾轴 要求前面维度除了第一维度外完全相同
+    if (axis == dataDimNum - 1) {
+        tasks *= indicesShape.GetDim(0);
+        for (size_t i = 1; i < dataDimNum - 1; i++) {
+            auto dataDimValue = dataShape.GetDim(i);
+            auto indicesDimValue = indicesShape.GetDim(i);
+            auto updatesDimValue = updatesShape.GetDim(i);
+            if (!(dataDimValue == indicesDimValue && dataDimValue == updatesDimValue)) {
+                OP_LOGD("ScatterElementsV2 No Transpose when realDim = -1, only support var、indices、updates dim equal.");
+                return false;
+            }
+            tasks *= indicesDimValue;
+        }
+    }
+
+    if (!CheckTaskNums(data, axis, tasks)) {
+        return false;
+    }
+    return true;
+}
+
+static bool MoeIndicesExpandCheck(const aclTensor* indices, int64_t axis, int64_t dataDimNum) {
+    auto strides = indices->GetViewStrides();
+    auto indexShape = indices->GetViewShape();
+    auto shape = indices->GetStorageShape();
+    bool expandFlag = ((dataDimNum == TWO_DIM && axis != 1) ||
+         (dataDimNum == THREE_DIM && indexShape[0] * indexShape[1] < MAX_EXACT_FLOAT && axis != TWO_DIM)) &&
+        strides[dataDimNum - TWO_DIM] == 1 && strides[dataDimNum - 1] == 0 && shape.GetDimNum() == 1;
+    if (dataDimNum == THREE_DIM) {
+        expandFlag = expandFlag && (strides[0] != 0);
+    }
+    if (expandFlag) {
+        OP_LOGD("Should use ScatterAddWithSorted.");
+        return false;
+    }
+    return true;
+}
+
+static bool CheckDimNum(int64_t dataDimNum, int64_t axis) {
+    if (dataDimNum < TWO_DIM) {
+        OP_LOGD("ScatterElementsV2 No Transpose only support for var dims >= 2.");
+        return false;
+    }
+    if (axis != 0 && axis != dataDimNum - 1) {
+        OP_LOGD("ScatterElementsV2 No Transpose only support for axis in first dim or last dim.");
+        return false;
+    }
+    return true;
+}
+
+static bool BaseCheck(const aclTensor* data, const aclTensor* indices, const aclTensor* updates,
+                      const std::string& reduction) {
+    if (data == nullptr || indices == nullptr || updates == nullptr) {
+        OP_LOGD("ScatterElementsV2 No Transpose not support nullptr");
+        return false;
+    }
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch != NpuArch::DAV_2201) {
+        OP_LOGD("ScatterElementsV2 No Transpose only support for DAV_2201");
+        return false;
+    }
+    if (reduction != "none" && reduction != "add") {
+        OP_LOGD("ScatterElementsV2 No Transpose only support for none and add");
+        return false;
+    }
+
+    if (data->IsEmpty() || indices->IsEmpty() || updates->IsEmpty()) {
+        OP_LOGD("ScatterElementsV2 No Transpose not support Empty Tensor");
+        return false;
+    }
+    return true;
+}
+
+bool SupportNoTranspose(const aclTensor* data, const aclTensor* indices, const aclTensor* updates,
+                        int64_t axis, const std::string& reduction) {
+    if (!BaseCheck(data, indices, updates, reduction)) {
+        return false;
+    }
+    auto inputDtype = data->GetDataType();
+    if (inputDtype != op::DataType::DT_FLOAT && inputDtype != op::DataType::DT_BOOL) {
+        OP_LOGD("ScatterElementsV2 No Transpose only support for var float or bool.");
+        return false;
+    }
+
+    auto dataShape = data->GetViewShape();
+    auto indicesShape = indices->GetViewShape();
+    auto updatesShape = updates->GetViewShape();
+    int64_t dataDimNum = static_cast<int64_t>(dataShape.GetDimNum());
+    axis = axis >= 0 ? axis : axis + dataDimNum;
+    if (updatesShape.GetDimNum() == indicesShape.GetDimNum() && reduction == "none" && 
+        axis == dataDimNum - 1 && inputDtype == op::DataType::DT_FLOAT) {
+        OP_LOGD("ScatterElementsV2 when reduce=none, axis=-1 and fp32 will use original.");
+        return false;
+    }
+
+    if ((updatesShape.GetDimNum() == 1 && updatesShape.GetDim(0) == 1) || updatesShape.GetDimNum() == 0) {
+        OP_LOGD("ScatterElementsV2 updates is scalar Tensor.");
+        updatesShape = indicesShape;
+    }
+
+    if (!CheckDimNum(dataDimNum, axis)) {
+        return false;
+    }
+    if (indicesShape.GetDim(axis) != updatesShape.GetDim(axis)) {
+        OP_LOGD("ScatterElementsV2 No Transpose only support indices and updates dim value equal in axis");
+        return false;
+    }
+    if (!NoTransposeShapeCheck(data, indices, updates, static_cast<uint64_t>(axis))) {
+        return false;
+    }
+
+    return MoeIndicesExpandCheck(indices, axis, dataDimNum);
+}
+
 const aclTensor* ScatterElements(
     const aclTensor* data, const aclTensor* indices, const aclTensor* updates, int64_t axis,
     const std::string& reduction, aclOpExecutor* executor)
@@ -381,5 +557,21 @@ const aclTensor* ScatterElements(
     }
 
     return out;
+}
+
+const aclTensor* ScatterElementsNoTranspose(
+    const aclTensor* data, const aclTensor* indices, const aclTensor* updates, int64_t axis,
+    const std::string& reduction, aclOpExecutor* executor)
+{
+    OP_LOGD("Use AICORE for ScatterElementsV2 with No Transpose.");
+    L0_DFX(ScatterElementsNoTranspose, data, indices, updates, axis, reduction);
+    auto selfOut = const_cast<aclTensor*>(data);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
+        ScatterElementsV2, OP_INPUT(data, indices, updates), OP_OUTPUT(selfOut), OP_ATTR(axis, reduction));
+    OP_CHECK(
+        ret == ACLNN_SUCCESS,
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ScatterElementsV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+        return nullptr);
+    return selfOut;
 }
 } // namespace l0op
