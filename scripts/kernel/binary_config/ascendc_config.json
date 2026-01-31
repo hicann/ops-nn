@@ -219,6 +219,7 @@
     {"name":"ForeachSin", "compute_units": ["ascend910b", "ascend950", "kirinx90"], "auto_sync" : false},
     {"name":"ForeachSinh", "compute_units": ["ascend910b", "ascend950", "kirinx90"], "auto_sync" : false},
     {"name":"UnsortedSegmentSum", "compute_units": ["ascend950"], "auto_sync" : false},
+    {"name":"UnsortedSegmentMin", "compute_units": ["ascend950"], "auto_sync" : false},
     {"name":"ForeachMaximumScalar", "compute_units": ["ascend910b", "ascend950", "kirinx90"], "auto_sync" : false},
     {"name":"ForeachMaximumScalarList", "compute_units": ["ascend910b", "ascend950", "kirinx90"], "auto_sync" : false},
     {"name":"ForeachMinimumScalar", "compute_units": ["ascend910b", "ascend950", "kirinx90"], "auto_sync" : false},
