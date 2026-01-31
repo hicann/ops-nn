@@ -32,7 +32,7 @@ namespace ge {
 * @li group_index: Mean group index. An optional tensor. Type is int32/int64. Shape is (1,). \n
 
 * @par Outputs:
-* @li y: A tensor. Type is int8/fp8_e5m2/fp8_e4m3fn/fp4x2_e2m1/fp4x2_e1m2.
+* @li y: A tensor. Type is int8/fp8_e5m2/fp8_e4m3fn/fp4x2_e2m1/fp4x2_e1m2/hifloat8.
 * @li scale: A tensor. Type is float32.
 
 * @par Attributes:
@@ -54,6 +54,7 @@ namespace ge {
 * @li When the type of x is float16, bfloat16, weight_scale, activation_scale and bias must be None.
 * @li When dst_type is int8, fp8_e5m2, fp8_e4m3fn, round_mode only supports 'rint'.
 * @li When dst_type is fp4x2_e2m1 or fp4x2_e1m2, round_mode supports 'rint', 'round, 'floor', 'ceil' and 'trunc'.
+* @li When dst_type is hifloat8, round_mode supports 'round'.
 * @li The shape of activate_dim corresponding to x must be divisible by 2.
 * @li When activate_dim is not the last dimension of x, group_index must be None.
 * @li The input quant_offset is not supported in Ascend 950 AI Processors only.
@@ -78,7 +79,7 @@ REG_OP(DequantSwigluQuant)
     .OPTIONAL_INPUT(quant_scale, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
     .OPTIONAL_INPUT(quant_offset, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
     .OPTIONAL_INPUT(group_index, TensorType({DT_INT32, DT_INT64}))
-    .OUTPUT(y, TensorType({DT_INT8, DT_FP8_E4M3FN, DT_FP8_E5M2, DT_FP4X2_E2M1, DT_FP4X2_E1M2}))
+    .OUTPUT(y, TensorType({DT_INT8, DT_FP8_E4M3FN, DT_FP8_E5M2, DT_FP4X2_E2M1, DT_FP4X2_E1M2, DT_HIFLOAT8}))
     .OUTPUT(scale, TensorType({DT_FLOAT}))
     .ATTR(activate_left, Bool, false)
     .ATTR(quant_mode, String, "static")

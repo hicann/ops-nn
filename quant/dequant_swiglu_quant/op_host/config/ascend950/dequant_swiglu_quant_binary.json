@@ -2295,6 +2295,3219 @@
           "value": 1.0
         }
       ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Int32_Hifloat8",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "hifloat8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Float16_Hifloat8",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "hifloat8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Bfloat16_Hifloat8",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "hifloat8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Int32_GroupIndex_Int32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Int32_Float8e5m2_GroupIndex_Int32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Int32_Float8e4m3_GroupIndex_Int32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Int32_Float4e2m1_GroupIndex_Int32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float4_e2m1",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Int32_Float4e1m2_GroupIndex_Int32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float4_e1m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Float16_Int8_GroupIndex_Int32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Float16_Float8e5m2_GroupIndex_Int32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Float16_Float8e4m3_GroupIndex_Int32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Float16_Float4e2m1_GroupIndex_Int32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float4_e2m1",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Float16_Float4e1m2_GroupIndex_Int32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float4_e1m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Bfloat16_Int8_GroupIndex_Int32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Bfloat16_Float8e5m2_GroupIndex_Int32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Bfloat16_Float8e4m3_GroupIndex_Int32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Bfloat16_Float4e2m1_GroupIndex_Int32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float4_e2m1",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Bfloat16_Float4e1m2_GroupIndex_Int32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float4_e1m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Int32_Hifloat8_GroupIndex_Int32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "hifloat8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Float16_Hifloat8_GroupIndex_Int32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "hifloat8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "DequantSwigluQuant_Bfloat16_Hifloat8_GroupIndex_Int32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "weight_scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "activation_scale",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "group_index",
+          "index": 6,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "hifloat8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "activate_left",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "quant_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "activate_dim",
+          "dtype": "int32",
+          "value": null
+        },
+        {
+          "name": "swiglu_mode",
+          "dtype": "int32",
+          "value": 0
+        },
+        {
+          "name": "clamp_limit",
+          "dtype": "float32",
+          "value": 7.0
+        },
+        {
+          "name": "glu_alpha",
+          "dtype": "float32",
+          "value": 1.702
+        },
+        {
+          "name": "glu_bias",
+          "dtype": "float32",
+          "value": 1.0
+        }
+      ]
     }
   ]
 }

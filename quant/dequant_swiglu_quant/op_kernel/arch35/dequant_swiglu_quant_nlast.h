@@ -55,6 +55,8 @@ class DequantSwigluQuantNlast {
   static constexpr bool ifYFloat4e2m1Index_ = IsSameType<TYtype, fp4x2_e2m1_t>::value;
   // y数据类型为float4_e1m2标记
   static constexpr bool ifYFloat4e1m2Index_ = IsSameType<TYtype, fp4x2_e1m2_t>::value;
+  // y数据类型为hifloat8标记
+  static constexpr bool ifYHiFloat8Index_ = IsSameType<TYtype, hifloat8_t>::value;
 
   __aicore__ inline DequantSwigluQuantNlast(TPipe* pipe) {
     pipe_ = pipe;
@@ -152,6 +154,9 @@ __aicore__ inline void DequantSwigluQuantNlast<TActScale, TQuantScale, TGroup, T
   }
   if constexpr (ifYFloat4e1m2Index_) {
     scalarMaxNum_ = 1.75;
+  }
+  if constexpr (ifYHiFloat8Index_) {
+    scalarMaxNum_ = 32768.0;
   }
 
   xGm_.SetGlobalBuffer((__gm__ TXtype*)x);
@@ -541,6 +546,7 @@ __aicore__ inline void DequantSwigluQuantNlast<TActScale, TQuantScale, TGroup, T
     AscendC::MicroAPI::RegTensor<bfloat16_t> vreg14, vreg15;
     AscendC::MicroAPI::RegTensor<fp4x2_e2m1_t> vreg16;
     AscendC::MicroAPI::RegTensor<fp4x2_e1m2_t> vreg17;
+    AscendC::MicroAPI::RegTensor<hifloat8_t> vreg18;
 
     AscendC::MicroAPI::MaskReg mask;
     AscendC::MicroAPI::MaskReg maskFP4;
@@ -614,6 +620,10 @@ __aicore__ inline void DequantSwigluQuantNlast<TActScale, TQuantScale, TGroup, T
           AscendC::MicroAPI::Cast<int8_t, half, CAST_FP16_TO_INT8>(vreg11, vreg10, mask);
 
           AscendC::MicroAPI::DataCopy<int8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yAddr, vreg11, mask);
+        } else if constexpr (ifYHiFloat8Index_) {
+          // float32 -> hifloat8
+          AscendC::MicroAPI::Cast<hifloat8_t, float, CAST_FP32_TO_HI8>(vreg18, vreg8, mask);
+          AscendC::MicroAPI::DataCopy<hifloat8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yAddr, vreg18, mask);
         }
       }
     }

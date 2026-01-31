@@ -28,7 +28,7 @@ constexpr int64_t INDEX_ATTR_DST_TYPE = 2;
 constexpr int64_t INDEX_ATTR_ACTIVATE_DIM = 4;
 static const std::initializer_list<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2,
                                                                         ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2,
-                                                                        ge::DT_INT8};
+                                                                        ge::DT_INT8, ge::DT_HIFLOAT8};
 
 graphStatus InferShape4DequantSwigluQuant(gert::InferShapeContext* context) {
   OP_LOGD(context, "Begin to do InferShape4DequantSwigluQuant.");
@@ -76,7 +76,7 @@ graphStatus InferDtype4DequantSwigluQuant(gert::InferDataTypeContext* context) {
 
   ge::DataType outDtype = static_cast<ge::DataType>(dstDtypeNum);
   OP_CHECK_IF(std::find(Y_SUPPORT_DTYPE_SET.begin(), Y_SUPPORT_DTYPE_SET.end(), outDtype) == Y_SUPPORT_DTYPE_SET.end(),
-           OP_LOGE(context, "dst_type is illegal, only supports 2(INT8) 40(FLOAT4_E2M1), 41(FLOAT4_E1M2)"),
+           OP_LOGE(context, "dst_type is illegal, only supports 2(INT8) 40(FLOAT4_E2M1), 41(FLOAT4_E1M2), 35(FLOAT8E5M2), 36(FLOAT8E4M3), 34(HiFloat8)"),
            return ge::GRAPH_FAILED);
 
   context->SetOutputDataType(OUTPUT_IDX_Y, outDtype);

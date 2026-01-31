@@ -15,6 +15,9 @@
 #include "kernel_operator.h"
 #include "arch35/dequant_swiglu_quant.h"
 #include "arch35/dequant_swiglu_quant_nlast.h"
+#include "arch35/dequant_swiglu_quant_static.h"
+#include "arch35/dequant_swiglu_quant_dynamic_not_full.h"
+#include "arch35/dequant_swiglu_quant_static_not_full.h"
 
 #define ACT_TRUE_QUANT_TRUE_GROUPINDEX_TRUE     111
 #define ACT_TRUE_QUANT_TRUE_GROUPINDEX_FALSE    110
@@ -76,6 +79,121 @@
 #define ACTDIM_TRUE_X_FALSE_BIAS_FP32_ACT_FALSE_QUANT_FALSE_GROUPINDEX_FALSE  102000 // bias = float32
 #define ACTDIM_TRUE_X_FALSE_BIAS_FP16_ACT_FALSE_QUANT_FALSE_GROUPINDEX_FALSE  103000 // bias = float16
 #define ACTDIM_TRUE_X_FALSE_BIAS_BF16_ACT_FALSE_QUANT_FALSE_GROUPINDEX_FALSE  104000 // bias = bfloat16
+#define QUANTMODE_FALSE_BIAS_FALSE_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE  1000000
+#define QUANTMODE_FALSE_BIAS_FALSE_ACT_FALSE_QUANT_FALSE_OFFSET_TRUE_GROUP_FALSE  1000010
+#define QUANTMODE_FALSE_BIAS_FALSE_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE  1000100
+#define QUANTMODE_FALSE_BIAS_FALSE_ACT_FALSE_QUANT_TRUE_OFFSET_TRUE_GROUP_FALSE  1000110
+#define QUANTMODE_FALSE_BIAS_FALSE_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE  1001000
+#define QUANTMODE_FALSE_BIAS_FALSE_ACT_TRUE_QUANT_FALSE_OFFSET_TRUE_GROUP_FALSE  1001010
+#define QUANTMODE_FALSE_BIAS_FALSE_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE  1001100
+#define QUANTMODE_FALSE_BIAS_FALSE_ACT_TRUE_QUANT_TRUE_OFFSET_TRUE_GROUP_FALSE  1001110
+#define QUANTMODE_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE  1010000
+#define QUANTMODE_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_FALSE_OFFSET_TRUE_GROUP_FALSE  1010010
+#define QUANTMODE_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE  1010100
+#define QUANTMODE_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_TRUE_OFFSET_TRUE_GROUP_FALSE  1010110
+#define QUANTMODE_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE  1011000
+#define QUANTMODE_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_FALSE_OFFSET_TRUE_GROUP_FALSE  1011010
+#define QUANTMODE_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE  1011100
+#define QUANTMODE_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_TRUE_OFFSET_TRUE_GROUP_FALSE  1011110
+#define QUANTMODE_FALSE_BIAS_FALSE_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE  1000001
+#define QUANTMODE_FALSE_BIAS_FALSE_ACT_FALSE_QUANT_FALSE_OFFSET_TRUE_GROUP_TRUE  1000011
+#define QUANTMODE_FALSE_BIAS_FALSE_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE  1000101
+#define QUANTMODE_FALSE_BIAS_FALSE_ACT_FALSE_QUANT_TRUE_OFFSET_TRUE_GROUP_TRUE  1000111
+#define QUANTMODE_FALSE_BIAS_FALSE_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE  1001001
+#define QUANTMODE_FALSE_BIAS_FALSE_ACT_TRUE_QUANT_FALSE_OFFSET_TRUE_GROUP_TRUE  1001011
+#define QUANTMODE_FALSE_BIAS_FALSE_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE  1001101
+#define QUANTMODE_FALSE_BIAS_FALSE_ACT_TRUE_QUANT_TRUE_OFFSET_TRUE_GROUP_TRUE  1001111
+#define QUANTMODE_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE  1010001
+#define QUANTMODE_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_FALSE_OFFSET_TRUE_GROUP_TRUE  1010011
+#define QUANTMODE_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE  1010101
+#define QUANTMODE_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_TRUE_OFFSET_TRUE_GROUP_TRUE  1010111
+#define QUANTMODE_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE  1011001
+#define QUANTMODE_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_FALSE_OFFSET_TRUE_GROUP_TRUE  1011011
+#define QUANTMODE_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE  1011101
+#define QUANTMODE_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_TRUE_OFFSET_TRUE_GROUP_TRUE  1011111
+
+#define ACT_TRUE_QUANT_TRUE_GROUPINDEX_TRUE_STATIC     10111
+#define ACT_TRUE_QUANT_TRUE_GROUPINDEX_FALSE_STATIC     10110
+#define ACT_TRUE_QUANT_FALSE_GROUPINDEX_TRUE_STATIC    10101
+#define ACT_TRUE_QUANT_FALSE_GROUPINDEX_FALSE_STATIC    10100
+#define ACT_FALSE_QUANT_TRUE_GROUPINDEX_TRUE_STATIC     10011
+#define ACT_FALSE_QUANT_TRUE_GROUPINDEX_FALSE_STATIC    10010
+#define ACT_FALSE_QUANT_FALSE_GROUPINDEX_TRUE_STATIC    10001
+#define ACT_FALSE_QUANT_FALSE_GROUPINDEX_FALSE_STATIC   10000
+#define ACTDIM_FALSE_X_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_TRUE_GROUPINDEX_TRUE_STATIC   11111 // bias = int32
+#define ACTDIM_FALSE_X_FALSE_BIAS_FP32_ACT_TRUE_QUANT_TRUE_GROUPINDEX_TRUE_STATIC   12111 // bias = float32
+#define ACTDIM_FALSE_X_FALSE_BIAS_FP16_ACT_TRUE_QUANT_TRUE_GROUPINDEX_TRUE_STATIC   13111 // bias = float16
+#define ACTDIM_FALSE_X_FALSE_BIAS_BF16_ACT_TRUE_QUANT_TRUE_GROUPINDEX_TRUE_STATIC   14111 // bias = bfloat16
+#define ACTDIM_FALSE_X_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_TRUE_GROUPINDEX_FALSE_STATIC   11110 // bias = int32
+#define ACTDIM_FALSE_X_FALSE_BIAS_FP32_ACT_TRUE_QUANT_TRUE_GROUPINDEX_FALSE_STATIC   12110 // bias = float32
+#define ACTDIM_FALSE_X_FALSE_BIAS_FP16_ACT_TRUE_QUANT_TRUE_GROUPINDEX_FALSE_STATIC   13110 // bias = float16
+#define ACTDIM_FALSE_X_FALSE_BIAS_BF16_ACT_TRUE_QUANT_TRUE_GROUPINDEX_FALSE_STATIC   14110 // bias = bfloat16
+#define ACTDIM_FALSE_X_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_FALSE_GROUPINDEX_TRUE_STATIC   11101 // bias = int32
+#define ACTDIM_FALSE_X_FALSE_BIAS_FP32_ACT_TRUE_QUANT_FALSE_GROUPINDEX_TRUE_STATIC   12101 // bias = float32
+#define ACTDIM_FALSE_X_FALSE_BIAS_FP16_ACT_TRUE_QUANT_FALSE_GROUPINDEX_TRUE_STATIC   13101 // bias = float16
+#define ACTDIM_FALSE_X_FALSE_BIAS_BF16_ACT_TRUE_QUANT_FALSE_GROUPINDEX_TRUE_STATIC   14101 // bias = bfloat16
+#define ACTDIM_FALSE_X_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_FALSE_GROUPINDEX_FALSE_STATIC   11100 // bias = int32
+#define ACTDIM_FALSE_X_FALSE_BIAS_FP32_ACT_TRUE_QUANT_FALSE_GROUPINDEX_FALSE_STATIC   12100 // bias = float32
+#define ACTDIM_FALSE_X_FALSE_BIAS_FP16_ACT_TRUE_QUANT_FALSE_GROUPINDEX_FALSE_STATIC   13100 // bias = float16
+#define ACTDIM_FALSE_X_FALSE_BIAS_BF16_ACT_TRUE_QUANT_FALSE_GROUPINDEX_FALSE_STATIC   14100 // bias = bfloat16
+#define ACTDIM_FALSE_X_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_TRUE_GROUPINDEX_TRUE_STATIC   11011 // bias = int32
+#define ACTDIM_FALSE_X_FALSE_BIAS_FP32_ACT_FALSE_QUANT_TRUE_GROUPINDEX_TRUE_STATIC   12011 // bias = float32
+#define ACTDIM_FALSE_X_FALSE_BIAS_FP16_ACT_FALSE_QUANT_TRUE_GROUPINDEX_TRUE_STATIC   13011 // bias = float16
+#define ACTDIM_FALSE_X_FALSE_BIAS_BF16_ACT_FALSE_QUANT_TRUE_GROUPINDEX_TRUE_STATIC   14011 // bias = bfloat16
+#define ACTDIM_FALSE_X_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_TRUE_GROUPINDEX_FALSE_STATIC   11010 // bias = int32
+#define ACTDIM_FALSE_X_FALSE_BIAS_FP32_ACT_FALSE_QUANT_TRUE_GROUPINDEX_FALSE_STATIC   12010 // bias = float32
+#define ACTDIM_FALSE_X_FALSE_BIAS_FP16_ACT_FALSE_QUANT_TRUE_GROUPINDEX_FALSE_STATIC   13010 // bias = float16
+#define ACTDIM_FALSE_X_FALSE_BIAS_BF16_ACT_FALSE_QUANT_TRUE_GROUPINDEX_FALSE_STATIC   14010 // bias = bfloat16
+#define ACTDIM_FALSE_X_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_FALSE_GROUPINDEX_TRUE_STATIC   11001 // bias = int32
+#define ACTDIM_FALSE_X_FALSE_BIAS_FP32_ACT_FALSE_QUANT_FALSE_GROUPINDEX_TRUE_STATIC   12001 // bias = float32
+#define ACTDIM_FALSE_X_FALSE_BIAS_FP16_ACT_FALSE_QUANT_FALSE_GROUPINDEX_TRUE_STATIC   13001 // bias = float16
+#define ACTDIM_FALSE_X_FALSE_BIAS_BF16_ACT_FALSE_QUANT_FALSE_GROUPINDEX_TRUE_STATIC   14001 // bias = bfloat16
+#define ACTDIM_FALSE_X_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_FALSE_GROUPINDEX_FALSE_STATIC   11000 // bias = int32
+#define ACTDIM_FALSE_X_FALSE_BIAS_FP32_ACT_FALSE_QUANT_FALSE_GROUPINDEX_FALSE_STATIC   12000 // bias = float32
+#define ACTDIM_FALSE_X_FALSE_BIAS_FP16_ACT_FALSE_QUANT_FALSE_GROUPINDEX_FALSE_STATIC   13000 // bias = float16
+#define ACTDIM_FALSE_X_FALSE_BIAS_BF16_ACT_FALSE_QUANT_FALSE_GROUPINDEX_FALSE_STATIC   14000 // bias = bfloat16
+// ##Dynamic Not Full Load
+#define QUANTMODE_DYNAMIC_BIAS_FALSE_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE 1100000
+#define QUANTMODE_DYNAMIC_BIAS_FALSE_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE  1100001
+#define QUANTMODE_DYNAMIC_BIAS_FALSE_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE  1100100
+#define QUANTMODE_DYNAMIC_BIAS_FALSE_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE   1100101
+#define QUANTMODE_DYNAMIC_BIAS_FALSE_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE  1101000
+#define QUANTMODE_DYNAMIC_BIAS_FALSE_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE   1101001
+#define QUANTMODE_DYNAMIC_BIAS_FALSE_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE   1101100
+#define QUANTMODE_DYNAMIC_BIAS_FALSE_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE    1101101
+#define QUANTMODE_DYNAMIC_BIAS_INT32_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE 1110000
+#define QUANTMODE_DYNAMIC_BIAS_INT32_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE  1110001
+#define QUANTMODE_DYNAMIC_BIAS_INT32_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE  1110100
+#define QUANTMODE_DYNAMIC_BIAS_INT32_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE   1110101
+#define QUANTMODE_DYNAMIC_BIAS_INT32_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE  1111000
+#define QUANTMODE_DYNAMIC_BIAS_INT32_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE   1111001
+#define QUANTMODE_DYNAMIC_BIAS_INT32_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE   1111100
+#define QUANTMODE_DYNAMIC_BIAS_INT32_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE    1111101
+#define QUANTMODE_DYNAMIC_BIAS_FP32_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE  1120000
+#define QUANTMODE_DYNAMIC_BIAS_FP32_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE   1120001
+#define QUANTMODE_DYNAMIC_BIAS_FP32_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE   1120100
+#define QUANTMODE_DYNAMIC_BIAS_FP32_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE    1120101
+#define QUANTMODE_DYNAMIC_BIAS_FP32_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE   1121000
+#define QUANTMODE_DYNAMIC_BIAS_FP32_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE    1121001
+#define QUANTMODE_DYNAMIC_BIAS_FP32_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE    1121100
+#define QUANTMODE_DYNAMIC_BIAS_FP32_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE     1121101
+#define QUANTMODE_DYNAMIC_BIAS_FP16_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE  1130000
+#define QUANTMODE_DYNAMIC_BIAS_FP16_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE   1130001
+#define QUANTMODE_DYNAMIC_BIAS_FP16_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE   1130100
+#define QUANTMODE_DYNAMIC_BIAS_FP16_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE    1130101
+#define QUANTMODE_DYNAMIC_BIAS_FP16_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE   1131000
+#define QUANTMODE_DYNAMIC_BIAS_FP16_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE    1131001
+#define QUANTMODE_DYNAMIC_BIAS_FP16_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE    1131100
+#define QUANTMODE_DYNAMIC_BIAS_FP16_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE     1131101
+#define QUANTMODE_DYNAMIC_BIAS_BF16_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE  1140000
+#define QUANTMODE_DYNAMIC_BIAS_BF16_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE   1140001
+#define QUANTMODE_DYNAMIC_BIAS_BF16_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE   1140100
+#define QUANTMODE_DYNAMIC_BIAS_BF16_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE    1140101
+#define QUANTMODE_DYNAMIC_BIAS_BF16_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE   1141000
+#define QUANTMODE_DYNAMIC_BIAS_BF16_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE    1141001
+#define QUANTMODE_DYNAMIC_BIAS_BF16_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE    1141100
+#define QUANTMODE_DYNAMIC_BIAS_BF16_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE     1141101
+
 
 using namespace AscendC;
 
@@ -87,6 +205,7 @@ extern "C" __global__ __aicore__ void dequant_swiglu_quant(GM_ADDR x, GM_ADDR we
     return;
   }
 
+  GM_ADDR globalWorkGm = GetUserWorkspace(workspace);
   TPipe pipe;
   if (TILING_KEY_IS(ACT_TRUE_QUANT_TRUE_GROUPINDEX_TRUE)) {
     // activate_dim=-1, x=int32/fp16/bf6, bias无值, activate_scale有值, quant_scale有值, group_index有值, 000111
@@ -508,5 +627,749 @@ extern "C" __global__ __aicore__ void dequant_swiglu_quant(GM_ADDR x, GM_ADDR we
     DequantSwigluQuantV35Ops::DequantSwigluQuantNlast<float, float, bool, bool, DTYPE_X, DTYPE_Y> op(&pipe);
     op.Init(x, weightScale, activationScale, nullptr, quantScale, nullptr, groupIndex, y, scale, tilingData);
     op.Process();
-  }
+  } else if (TILING_KEY_IS(ACT_TRUE_QUANT_TRUE_GROUPINDEX_TRUE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias无值, activate_scale有值, quant_scale有值, group_index有值, 000111
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<float, float, int64_t, bool, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, nullptr, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACT_TRUE_QUANT_TRUE_GROUPINDEX_FALSE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias无值, activate_scale有值, quant_scale有值, group_index无值, 000110
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<float, float, bool, bool, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, nullptr, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACT_TRUE_QUANT_FALSE_GROUPINDEX_TRUE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias无值, activate_scale有值, quant_scale无值, group_index有值, 000101
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<float, bool, int64_t, bool, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, nullptr, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACT_TRUE_QUANT_FALSE_GROUPINDEX_FALSE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias无值, activate_scale有值, quant_scale无值, group_index无值, 000100
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<float, bool, bool, bool, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, nullptr, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACT_FALSE_QUANT_TRUE_GROUPINDEX_TRUE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias无值, activate_scale无值, quant_scale有值, group_index有值, 000011
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<bool, float, int64_t, bool, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, nullptr, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACT_FALSE_QUANT_TRUE_GROUPINDEX_FALSE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias无值, activate_scale无值, quant_scale有值, group_index无值, 000010
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<bool, float, bool, bool, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, nullptr, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACT_FALSE_QUANT_FALSE_GROUPINDEX_TRUE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias无值, activate_scale无值, quant_scale无值, group_index有值, 000001
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<bool, bool, int64_t, bool, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, nullptr, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACT_FALSE_QUANT_FALSE_GROUPINDEX_FALSE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias无值, activate_scale无值, quant_scale无值, group_index无值, 000000
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<bool, bool, bool, bool, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, nullptr, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_TRUE_GROUPINDEX_TRUE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=int32, activate_scale有值, quant_scale有值, group_index有值, 001111
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<float, float, int64_t, int32_t, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_FP32_ACT_TRUE_QUANT_TRUE_GROUPINDEX_TRUE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=float32, activate_scale有值, quant_scale有值, group_index有值, 002111
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<float, float, int64_t, float, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_FP16_ACT_TRUE_QUANT_TRUE_GROUPINDEX_TRUE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=float16, activate_scale有值, quant_scale有值, group_index有值, 003111
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<float, float, int64_t, half, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_BF16_ACT_TRUE_QUANT_TRUE_GROUPINDEX_TRUE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=bfloat16, activate_scale有值, quant_scale有值, group_index有值, 004111
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<float, float, int64_t, bfloat16_t, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_TRUE_GROUPINDEX_FALSE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=int32, activate_scale有值, quant_scale有值, group_index无值, 001110
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<float, float, bool, int32_t, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_FP32_ACT_TRUE_QUANT_TRUE_GROUPINDEX_FALSE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=float32, activate_scale有值, quant_scale有值, group_index无值, 002110
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<float, float, bool, float, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_FP16_ACT_TRUE_QUANT_TRUE_GROUPINDEX_FALSE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=float16, activate_scale有值, quant_scale有值, group_index无值, 003110
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<float, float, bool, half, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_BF16_ACT_TRUE_QUANT_TRUE_GROUPINDEX_FALSE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=bfloat16, activate_scale有值, quant_scale有值, group_index无值, 004110
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<float, float, bool, bfloat16_t, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_FALSE_GROUPINDEX_TRUE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=int32, activate_scale有值, quant_scale无值, group_index有值, 001101
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<float, bool, int64_t, int32_t, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_FP32_ACT_TRUE_QUANT_FALSE_GROUPINDEX_TRUE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=float32, activate_scale有值, quant_scale无值, group_index有值, 002101
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<float, bool, int64_t, float, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_FP16_ACT_TRUE_QUANT_FALSE_GROUPINDEX_TRUE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=float16, activate_scale有值, quant_scale无值, group_index有值, 003101
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<float, bool, int64_t, half, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_BF16_ACT_TRUE_QUANT_FALSE_GROUPINDEX_TRUE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=bfloat16, activate_scale有值, quant_scale无值, group_index有值, 004101
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<float, bool, int64_t, bfloat16_t, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_FALSE_GROUPINDEX_FALSE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=int32, activate_scale有值, quant_scale无值, group_index无值, 001100
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<float, bool, bool, int32_t, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_FP32_ACT_TRUE_QUANT_FALSE_GROUPINDEX_FALSE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=float32, activate_scale有值, quant_scale无值, group_index无值, 002100
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<float, bool, bool, float, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_FP16_ACT_TRUE_QUANT_FALSE_GROUPINDEX_FALSE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=float16, activate_scale有值, quant_scale无值, group_index无值, 003100
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<float, bool, bool, half, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_BF16_ACT_TRUE_QUANT_FALSE_GROUPINDEX_FALSE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=bfloat16, activate_scale有值, quant_scale无值, group_index无值, 004100
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<float, bool, bool, bfloat16_t, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_TRUE_GROUPINDEX_TRUE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=int32, activate_scale无值, quant_scale有值, group_index有值, 001011
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<bool, float, int64_t, int32_t, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_FP32_ACT_FALSE_QUANT_TRUE_GROUPINDEX_TRUE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=float32, activate_scale无值, quant_scale有值, group_index有值, 002011
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<bool, float, int64_t, float, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_FP16_ACT_FALSE_QUANT_TRUE_GROUPINDEX_TRUE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=float16, activate_scale无值, quant_scale有值, group_index有值, 003011
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<bool, float, int64_t, half, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_BF16_ACT_FALSE_QUANT_TRUE_GROUPINDEX_TRUE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=bfloat16, activate_scale无值, quant_scale有值, group_index有值, 004011
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<bool, float, int64_t, bfloat16_t, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_TRUE_GROUPINDEX_FALSE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=int32, activate_scale无值, quant_scale有值, group_index无值, 001010
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<bool, float, bool, int32_t, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_FP32_ACT_FALSE_QUANT_TRUE_GROUPINDEX_FALSE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=float32, activate_scale无值, quant_scale有值, group_index无值, 002010
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<bool, float, bool, float, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_FP16_ACT_FALSE_QUANT_TRUE_GROUPINDEX_FALSE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=float16, activate_scale无值, quant_scale有值, group_index无值, 003010
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<bool, float, bool, half, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_BF16_ACT_FALSE_QUANT_TRUE_GROUPINDEX_FALSE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=bfloat16, activate_scale无值, quant_scale有值, group_index无值, 004010
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<bool, float, bool, bfloat16_t, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_FALSE_GROUPINDEX_TRUE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=int32, activate_scale无值, quant_scale无值, group_index有值, 001001
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<bool, bool, int64_t, int32_t, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_FP32_ACT_FALSE_QUANT_FALSE_GROUPINDEX_TRUE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=float32, activate_scale无值, quant_scale无值, group_index有值, 002001
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<bool, bool, int64_t, float, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_FP16_ACT_FALSE_QUANT_FALSE_GROUPINDEX_TRUE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=float16, activate_scale无值, quant_scale无值, group_index有值, 003001
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<bool, bool, int64_t, half, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_BF16_ACT_FALSE_QUANT_FALSE_GROUPINDEX_TRUE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=bfloat16, activate_scale无值, quant_scale无值, group_index有值, 004001
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<bool, bool, int64_t, bfloat16_t, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_FALSE_GROUPINDEX_FALSE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=int32, activate_scale无值, quant_scale无值, group_index无值, 001000
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<bool, bool, bool, int32_t, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_FP32_ACT_FALSE_QUANT_FALSE_GROUPINDEX_FALSE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=float32, activate_scale无值, quant_scale无值, group_index无值, 002000
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<bool, bool, bool, float, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_FP16_ACT_FALSE_QUANT_FALSE_GROUPINDEX_FALSE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=float16, activate_scale无值, quant_scale无值, group_index无值, 003000
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<bool, bool, bool, half, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(ACTDIM_FALSE_X_FALSE_BIAS_BF16_ACT_FALSE_QUANT_FALSE_GROUPINDEX_FALSE_STATIC)) {
+    // activate_dim=-1, x=int32/fp16/bf6, bias=bfloat16, activate_scale无值, quant_scale无值, group_index无值, 004000
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantBaseStatic<bool, bool, bool, bfloat16_t, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+   } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FALSE_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE)) {
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<bool, bool, bool, bool, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FALSE_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE)) {
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<bool, bool, int32_t, bool, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FALSE_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE)) {
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<bool, float, bool, bool, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FALSE_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE)) {
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<bool, float, int32_t, bool, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FALSE_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE)) {
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<float, bool, bool, bool, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FALSE_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE)) { 
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<float, bool, int32_t, bool, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FALSE_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE)) {
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<float, float, bool, bool, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FALSE_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE)) {
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<float, float, int32_t, bool, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_INT32_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE)) {
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<bool, bool, bool, int32_t, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_INT32_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE)) {
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<bool, bool, int32_t, int32_t, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_INT32_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE)) {
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<bool, float, bool, int32_t, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_INT32_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE)) {
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<bool, float, int32_t, int32_t, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_INT32_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE)) {
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<float, bool, bool, int32_t, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_INT32_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE)) {
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<float, bool, int32_t, int32_t, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_INT32_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE)) {
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<float, float, bool, int32_t, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_INT32_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE)) {
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<float, float, int32_t, int32_t, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FP32_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE)) {
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<bool, bool, bool, float, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+    op.Process();
+ } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FP32_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE)) {
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<bool, bool, int32_t, float, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+    op.Process();
+ } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FP32_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE)) {
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<bool, float, bool, float, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+    op.Process();
+ } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FP32_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE)) {
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<bool, float, int32_t, float, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+    op.Process();
+ } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FP32_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE)) {
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<float, bool, bool, float, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+    op.Process();
+ } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FP32_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE)) {
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<float, bool, int32_t, float, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+    op.Process();
+ } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FP32_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE)) {
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<float, float, bool, float, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+    op.Process();
+ } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FP32_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE)) {
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<float, float, int32_t, float, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+    op.Process();
+} else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FP16_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE)) {
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<bool, bool, bool, half, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+    op.Process();
+ } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FP16_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE)) {
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<bool, bool, int32_t, half, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+    op.Process();
+ } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FP16_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE)) {
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<bool, float, bool, half, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+    op.Process();
+ } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FP16_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE)) {
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<bool, float, int32_t, half, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+    op.Process();
+ } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FP16_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE)) {
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<float, bool, bool, half, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+    op.Process();
+ } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FP16_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE)) {
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<float, bool, int32_t, half, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+    op.Process();
+ } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FP16_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE)) {
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<float, float, bool, half, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+    op.Process();
+ } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_FP16_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE)) {
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<float, float, int32_t, half, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+    op.Process(); 
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_BF16_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE)) {
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<bool, bool, bool, bfloat16_t, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_BF16_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE)) {
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<bool, bool, int32_t, bfloat16_t, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_BF16_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE)) {
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<bool, float, bool, bfloat16_t, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_BF16_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE)) {
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<bool, float, int32_t, bfloat16_t, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_BF16_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE)) {
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<float, bool, bool, bfloat16_t, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_BF16_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE)) {
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<float, bool, int32_t, bfloat16_t, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_BF16_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE)) {
+      GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+      const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+      DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<float, float, bool, bfloat16_t, DTYPE_X, DTYPE_Y> op(&pipe);
+      op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+      op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_BF16_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE)) {
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantDynamicNotFull<float, float, int32_t, bfloat16_t, DTYPE_X, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, globalWorkGm, tilingData);
+    op.Process(); 
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_FALSE_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE)) {
+    // 静态量化, bias无值, activate_scale无值, quant_scale无值, quant_offset无值, 无group, 1000000
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, bool, bool, bool, bool, bool, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, nullptr, nullptr, nullptr, nullptr, nullptr, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_FALSE_ACT_FALSE_QUANT_FALSE_OFFSET_TRUE_GROUP_FALSE)) {
+    // 静态量化, bias无值, activate_scale无值, quant_scale无值, quant_offset有值, 无group, 1000010
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, bool, bool, bool, float, bool, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, nullptr, nullptr, nullptr, quantOffset, nullptr, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_FALSE_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE)) {
+    // 静态量化, bias无值, activate_scale无值, quant_scale有值, quant_offset无值, 无group, 1000100
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, bool, bool, float, bool, bool, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, nullptr, nullptr, quantScale, nullptr, nullptr, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_FALSE_ACT_FALSE_QUANT_TRUE_OFFSET_TRUE_GROUP_FALSE)) {
+    // 静态量化, bias无值, activate_scale无值, quant_scale有值, quant_offset有值, 无group, 1000110
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, bool, bool, float, float, bool, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, nullptr, nullptr, quantScale, quantOffset, nullptr, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_FALSE_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE)) {
+    // 静态量化, bias无值, activate_scale有值, quant_scale无值, quant_offset无值, 无group, 1001000
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, float, bool, bool, bool, bool, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, nullptr, nullptr, nullptr, nullptr, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_FALSE_ACT_TRUE_QUANT_FALSE_OFFSET_TRUE_GROUP_FALSE)) {
+    // 静态量化, bias无值, activate_scale有值, quant_scale无值, quant_offset有值, 无group, 1001010
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, float, bool, bool, float, bool, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, nullptr, nullptr, quantOffset, nullptr, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_FALSE_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE)) {
+    // 静态量化, bias无值, activate_scale有值, quant_scale有值, quant_offset无值, 无group, 1001100
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, float, bool, float, bool, bool, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, nullptr, quantScale, nullptr, nullptr, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_FALSE_ACT_TRUE_QUANT_TRUE_OFFSET_TRUE_GROUP_FALSE)) {
+    // 静态量化, bias无值, activate_scale有值, quant_scale有值, quant_offset有值, 无group, 1001110
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, float, bool, float, float, bool, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, nullptr, quantScale, quantOffset, nullptr, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE)) {
+    // 静态量化, bias有值, activate_scale无值, quant_scale无值, quant_offset无值, 无group, 1010000
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, bool, float, bool, bool, bool, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, nullptr, bias, nullptr, nullptr, nullptr, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_FALSE_OFFSET_TRUE_GROUP_FALSE)) {
+    // 静态量化, bias有值, activate_scale无值, quant_scale无值, quant_offset有值, 无group, 1010010
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, bool, float, bool, float, bool, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, nullptr, bias, nullptr, quantOffset, nullptr, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE)) {
+    // 静态量化, bias有值, activate_scale无值, quant_scale有值, quant_offset无值, 无group, 1010100
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, bool, float, float, bool, bool, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, nullptr, bias, quantScale, nullptr, nullptr, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_TRUE_OFFSET_TRUE_GROUP_FALSE)) {
+    // 静态量化, bias有值, activate_scale无值, quant_scale有值, quant_offset有值, 无group, 1010110
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, bool, float, float, float, bool, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, nullptr, bias, quantScale, quantOffset, nullptr, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_FALSE)) {
+    // 静态量化, bias有值, activate_scale有值, quant_scale无值, quant_offset无值, 无group, 1011000
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, float, float, bool, bool, bool, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, nullptr, nullptr, nullptr, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_FALSE_OFFSET_TRUE_GROUP_FALSE)) {
+    // 静态量化, bias有值, activate_scale有值, quant_scale无值, quant_offset有值, 无group, 1011010
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, float, float, bool, float, bool, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, nullptr, quantOffset, nullptr, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE)) {
+    // 静态量化, bias有值, activate_scale有值, quant_scale有值, quant_offset无值, 无group, 1011100
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, float, float, float, bool, bool, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, nullptr, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_TRUE_OFFSET_TRUE_GROUP_FALSE)) {
+    // 静态量化, bias有值, activate_scale有值, quant_scale有值, quant_offset有值, 无group, 1011110
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, float, float, float, float, bool, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, nullptr, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_FALSE_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE)) {
+    // 静态量化, bias无值, activate_scale无值, quant_scale无值, quant_offset无值, 有group, 1000001
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, bool, bool, bool, bool, int32_t, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, nullptr, nullptr, nullptr, nullptr, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_FALSE_ACT_FALSE_QUANT_FALSE_OFFSET_TRUE_GROUP_TRUE)) {
+    // 静态量化, bias无值, activate_scale无值, quant_scale无值, quant_offset有值, 有group, 1000011
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, bool, bool, bool, float, int32_t, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, nullptr, nullptr, nullptr, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_FALSE_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE)) {
+    // 静态量化, bias无值, activate_scale无值, quant_scale有值, quant_offset无值, 有group, 1000101
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, bool, bool, float, bool, int32_t, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, nullptr, nullptr, quantScale, nullptr, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_FALSE_ACT_FALSE_QUANT_TRUE_OFFSET_TRUE_GROUP_TRUE)) {
+    // 静态量化, bias无值, activate_scale无值, quant_scale有值, quant_offset有值, 有group, 1000111
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, bool, bool, float, float, int32_t, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, nullptr, nullptr, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_FALSE_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE)) {
+    // 静态量化, bias无值, activate_scale有值, quant_scale无值, quant_offset无值, 有group, 1001001
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, float, bool, bool, bool, int32_t, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, nullptr, nullptr, nullptr, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_FALSE_ACT_TRUE_QUANT_FALSE_OFFSET_TRUE_GROUP_TRUE)) {
+    // 静态量化, bias无值, activate_scale有值, quant_scale无值, quant_offset有值, 有group, 1001011
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, float, bool, bool, float, int32_t, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, nullptr, nullptr, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_FALSE_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE)) {
+    // 静态量化, bias无值, activate_scale有值, quant_scale有值, quant_offset无值, 有group, 1001101
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, float, bool, float, bool, int32_t, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, nullptr, quantScale, nullptr, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_FALSE_ACT_TRUE_QUANT_TRUE_OFFSET_TRUE_GROUP_TRUE)) {
+    // 静态量化, bias无值, activate_scale有值, quant_scale有值, quant_offset有值, 有group, 1001111
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, float, bool, float, float, int32_t, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, nullptr, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE)) {
+    // 静态量化, bias有值, activate_scale无值, quant_scale无值, quant_offset无值, 有group, 1010001
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, bool, float, bool, bool, int32_t, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, nullptr, bias, nullptr, nullptr, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_FALSE_OFFSET_TRUE_GROUP_TRUE)) {
+    // 静态量化, bias有值, activate_scale无值, quant_scale无值, quant_offset有值, 有group, 1010011
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, bool, float, bool, float, int32_t, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, nullptr, bias, nullptr, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE)) {
+    // 静态量化, bias有值, activate_scale无值, quant_scale有值, quant_offset无值, 有group, 1010101
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, bool, float, float, bool, int32_t, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, nullptr, bias, quantScale, nullptr, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_TRUE_ACT_FALSE_QUANT_TRUE_OFFSET_TRUE_GROUP_TRUE)) {
+    // 静态量化, bias有值, activate_scale无值, quant_scale有值, quant_offset有值, 有group, 1010111
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, bool, float, float, float, int32_t, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, nullptr, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE)) {
+    // 静态量化, bias有值, activate_scale有值, quant_scale无值, quant_offset无值, 有group, 1011001
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, float, float, bool, bool, int32_t, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, nullptr, nullptr, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_FALSE_OFFSET_TRUE_GROUP_TRUE)) {
+    // 静态量化, bias有值, activate_scale有值, quant_scale无值, quant_offset有值, 有group, 1011011
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, float, float, bool, float, int32_t, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, nullptr, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE)) {
+    // 静态量化, bias有值, activate_scale有值, quant_scale有值, quant_offset无值, 有group, 1011101
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, float, float, float, bool, int32_t, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex, y, scale, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(QUANTMODE_FALSE_BIAS_TRUE_ACT_TRUE_QUANT_TRUE_OFFSET_TRUE_GROUP_TRUE)) {
+    // 静态量化, bias有值, activate_scale有值, quant_scale有值, quant_offset有值, 有group, 1011111
+    GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
+    const DequantSwigluQuantV35BaseTilingData* __restrict tilingData = &tilingDataIn;
+    DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, float, float, float, float, int32_t, DTYPE_Y> op(&pipe);
+    op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
+    op.Process();
+  } 
 }

@@ -28,7 +28,7 @@ class DequantSwigluQuantBase {
  public:
   static constexpr bool hasActScale_ = IsSameType<TActScale, float>::value;
   static constexpr bool hasQuantScale_ = IsSameType<TQuantScale, float>::value;
-  static constexpr bool hasGroupIndex_ = IsSameType<TGroup, int64_t>::value;
+  static constexpr bool hasGroupIndex_ = IsSameType<TGroup, int64_t>::value || IsSameType<TGroup, int32_t>::value;
   // bias标记 bias可支持float，float16，bf16，int32
   static constexpr bool hasBiasIndex_ = IsSameType<TBias, float>::value || IsSameType<TBias, half>::value || IsSameType<TBias, bfloat16_t>::value || IsSameType<TBias, int32_t>::value;
   // bias数据类型为int32标记
@@ -55,6 +55,8 @@ class DequantSwigluQuantBase {
   static constexpr bool ifYFloat4e2m1Index_ = IsSameType<TYtype, fp4x2_e2m1_t>::value;
   // y数据类型为float4_e1m2标记
   static constexpr bool ifYFloat4e1m2Index_ = IsSameType<TYtype, fp4x2_e1m2_t>::value;
+  // y数据类型为hifloat8标记
+  static constexpr bool ifYHiFloat8Index_ = IsSameType<TYtype, hifloat8_t>::value;
 
   __aicore__ inline DequantSwigluQuantBase(TPipe* pipe) {
     pipe_ = pipe;
@@ -68,7 +70,8 @@ class DequantSwigluQuantBase {
 
  private:
   __aicore__ inline void ComputeReduceMax(const LocalTensor<float>& tempRes, int32_t calCount, float& maxValue);
-  __aicore__ inline void ProcessSingleGroup(int64_t groupIndex);
+  __aicore__ inline void ProcessSingleGroup(int64_t groupIndex, int64_t realDimx, int64_t groupOffset);
+  __aicore__ inline void ProcessSingleGroupPerCore(int64_t groupIdx, int64_t xDimPerCore, int64_t coreDimxOffset);
 
  protected:
   /* global memory address */
@@ -79,7 +82,7 @@ class DequantSwigluQuantBase {
   GlobalTensor<TBias> biasGm_;  // 当前模板支持 float，float16，bf16，int32， 用模板参数去承载bias的类型
   GlobalTensor<TQuantScale> quantScaleGm_;
   GlobalTensor<float> quantOffsetGm_; // 本次不支持
-  GlobalTensor<TGroup> groupIndexGm_;
+  GlobalTensor<int32_t> groupIndexGm_;
 
   // output global mem
   GlobalTensor<TYtype> yGm_;
@@ -111,7 +114,9 @@ class DequantSwigluQuantBase {
   int64_t realDimx_ = 0;
   int64_t groupOffset_ = 0;
   uint32_t xUbAlignB32_ = 0; // 根据4Byte计算的32B对齐，用于float32类型
+  uint32_t xUbAlignB32FullRow_ = 0; // 根据4Byte计算的整行32B对齐，用于float32类型
   uint32_t xTypeUbAlignB32_ = 0; // 根据x的输入类型不同计算的32B对齐
+  uint32_t xTypeUbAlignB32FullRow_ = 0; // 根据x的输入类型不同计算的整行32B对齐
   uint32_t yUbAlignB8_ = 0;
   uint32_t yUbAlignB4_ = 0;
   uint32_t aScaleUbAlignB32_ = 0;
@@ -133,12 +138,15 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
   if constexpr (ifXBf16Index_ || ifXFloat16Index_) {
     uint32_t BLOCK_ELEM_B32_BF = BLOCK_SIZE / sizeof(TXtype);
     xTypeUbAlignB32_ = CeilDivision(tl_->UbFactorDimy, BLOCK_ELEM_B32_BF) * BLOCK_ELEM_B32_BF;
+    xTypeUbAlignB32FullRow_ = CeilDivision(tl_->UbFactorDimy * 2, BLOCK_ELEM_B32_BF) * BLOCK_ELEM_B32_BF;
   } else {
     xTypeUbAlignB32_ = CeilDivision(tl_->UbFactorDimy, BLOCK_ELEM_B32) * BLOCK_ELEM_B32;
+    xTypeUbAlignB32FullRow_ = CeilDivision(tl_->UbFactorDimy * 2, BLOCK_ELEM_B32) * BLOCK_ELEM_B32;
   }
 
   // 4B的数据类型对应的32B对齐点
   xUbAlignB32_ = CeilDivision(tl_->UbFactorDimy, BLOCK_ELEM_B32) * BLOCK_ELEM_B32;
+  xUbAlignB32FullRow_ = CeilDivision(tl_->UbFactorDimy * 2, BLOCK_ELEM_B32) * BLOCK_ELEM_B32;
 
   // 兼容int8和fp8类型，两种类型都是1B
   yUbAlignB8_ = CeilDivision(tl_->UbFactorDimy, BLOCK_ELEM_B8) * BLOCK_ELEM_B8;
@@ -166,25 +174,42 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
   if constexpr (ifYFloat4e1m2Index_) {
     scalarMaxNum_ = 1.75;
   }
+  if constexpr (ifYHiFloat8Index_) {
+    scalarMaxNum_ = 32768.0;
+  }
 
   xGm_.SetGlobalBuffer((__gm__ TXtype*)x);
   weightScaleGm_.SetGlobalBuffer((__gm__ float*)weightScale);
   activationScaleGm_.SetGlobalBuffer((__gm__ TActScale*)activationScale);
   quantScaleGm_.SetGlobalBuffer((__gm__ TQuantScale*)quantScale);
   if constexpr (hasGroupIndex_) {
-    groupIndexGm_.SetGlobalBuffer((__gm__ TGroup*)groupIndex);
+    groupIndexGm_.SetGlobalBuffer((__gm__ int32_t*)groupIndex);
   }
 
   // yGm
   yGm_.SetGlobalBuffer((__gm__ TYtype*)y);
   scaleGm_.SetGlobalBuffer((__gm__ float*)scale);
 
+  uint32_t tailSupply = CeilDivision(tl_->inDimy, BLOCK_SIZE * 4) * BLOCK_SIZE * 4 -  tl_->inDimy;
   // x + activation_scale
-  pipe_->InitBuffer(xActQueue_, DOUBLE_BUFFER,
-                    (tl_->UbFactorDimx * xTypeUbAlignB32_ * 2) * sizeof(TXtype) +
-                    (tl_->UbFactorDimx * aScaleUbAlignB32_) * sizeof(float));
+  if (tl_->swiGluMode == 0) {
+    pipe_->InitBuffer(xActQueue_, DOUBLE_BUFFER,
+                  (tl_->UbFactorDimx * xTypeUbAlignB32_ * 2) * sizeof(TXtype) +
+                  (tl_->UbFactorDimx * aScaleUbAlignB32_) * sizeof(float));
+  } else {
+    pipe_->InitBuffer(xActQueue_, DOUBLE_BUFFER,
+                  (tl_->UbFactorDimx * xTypeUbAlignB32_ * 2) * sizeof(TXtype) +
+                  tailSupply * sizeof(TXtype) +
+                  (tl_->UbFactorDimx * aScaleUbAlignB32_) * sizeof(float));
+  }
+
   // weight_scale + quant_scale
-  pipe_->InitBuffer(inScaleQueue_, 1, (xUbAlignB32_ * 2 + xUbAlignB32_) * sizeof(float));
+  if (tl_->swiGluMode == 0) {
+    pipe_->InitBuffer(inScaleQueue_, 1, (xUbAlignB32_ * 2 + xUbAlignB32_) * sizeof(float));
+  } else {
+    pipe_->InitBuffer(inScaleQueue_, 1, (xUbAlignB32_ * 2 + xUbAlignB32_ + tailSupply) * sizeof(float));
+  }
+  
 
   // y
   pipe_->InitBuffer(yQueue_, DOUBLE_BUFFER, tl_->UbFactorDimx * yUbAlignB8_ * sizeof(TYtype));
@@ -196,8 +221,14 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
   // 如果有bias入参，则给bias进行地址申请
   if constexpr (hasBiasIndex_) {
     biasGm_.SetGlobalBuffer((__gm__ TBias*)bias);
-    // bias (1 * 2H) 申请
-    pipe_->InitBuffer(biasQueue_, 1, (biasUbAlign_ * 2) * sizeof(TBias));
+    if (tl_->swiGluMode == 0) {
+      // bias (1 * 2H) 申请
+      pipe_->InitBuffer(biasQueue_, 1, (biasUbAlign_ * 2) * sizeof(TBias));
+    } else {
+      uint32_t biasTailSupply = CeilDivision(tl_->inDimy, BLOCK_SIZE * 4) * BLOCK_SIZE * 4 -  tl_->inDimy;
+      pipe_->InitBuffer(biasQueue_, 1, (biasUbAlign_ * 2) * sizeof(TBias) + biasTailSupply * sizeof(TBias));
+    }
+    
   }
 }
 
@@ -210,35 +241,79 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
       realDimx_ = 0;
     }
 
-    ProcessSingleGroup(0);
+    ProcessSingleGroup(0, realDimx_, 0);
     return;
   }
 
   groupOffset_ = 0;
-  for (int64_t groupIndex = 0; groupIndex < tl_->inGroupNum; groupIndex++) {
-    realDimx_ = static_cast<int64_t>(groupIndexGm_(groupIndex));
-    if (realDimx_ < 0) {
-      realDimx_ = 0;
-    }
+  if (tl_->isSpecialCoreCut == 0) {
+    for (int64_t groupIndex = 0; groupIndex < tl_->inGroupNum; groupIndex++) {
+      int64_t realGroupIndex = 0;
+      if (tl_->speGroupType == 1) {
+        if (tl_->groupIndexMode == 1) {//int64/int32
+          realDimx_ = static_cast<int64_t>(groupIndexGm_(groupIndex*2+1));
+          realGroupIndex = static_cast<int64_t>(groupIndexGm_(groupIndex*2));
+        } else {
+          realDimx_ = groupIndexGm_.template ReinterpretCast<int64_t>()(groupIndex*2+1);
+          realGroupIndex = groupIndexGm_.template ReinterpretCast<int64_t>()(groupIndex*2);
+        }
+      } else {
+        realGroupIndex = groupIndex;
+        if (tl_->groupIndexMode == 1) {//int64/int32
+          realDimx_ = static_cast<int64_t>(groupIndexGm_(groupIndex));
+        } else {
+          realDimx_ = groupIndexGm_.template ReinterpretCast<int64_t>()(groupIndex);
+        }
+      }
 
-    // inDimx x的元素总数 / x的-1维shape，也即按照-1维的循环次数，也即总行数（按照二维理解）
-    if (realDimx_ > 0 && groupOffset_ < tl_->inDimx) {
-      ProcessSingleGroup(groupIndex);
+      if (realDimx_ <= 0) {
+        continue;
+      }
+      // inDimx x的元素总数 / x的-1维shape，也即按照-1维的循环次数，也即总行数（按照二维理解）
+      if (groupOffset_ < tl_->inDimx) {
+        ProcessSingleGroup(realGroupIndex, realDimx_, groupOffset_);
+        groupOffset_ += realDimx_;
+      }
+    }
+    return;
+  } else {
+    int64_t cuGroupIdx = blockIdx_;
+    for (int64_t groupIndex = 0; groupIndex < tl_->inGroupNum; groupIndex++) {
+      int64_t realGroupIndex = 0;
+      if (tl_->speGroupType == 1) {
+        if (tl_->groupIndexMode == 1) {//int64/int32
+          realDimx_ = static_cast<int64_t>(groupIndexGm_(groupIndex*2+1));
+          realGroupIndex = static_cast<int64_t>(groupIndexGm_(groupIndex*2));
+        } else {
+          realDimx_ = groupIndexGm_.template ReinterpretCast<int64_t>()(groupIndex*2+1);
+          realGroupIndex = groupIndexGm_.template ReinterpretCast<int64_t>()(groupIndex*2);
+        }
+      } else {
+        realGroupIndex = groupIndex;
+        if (tl_->groupIndexMode == 1) {//int64/int32
+          realDimx_ = static_cast<int64_t>(groupIndexGm_(groupIndex));
+        } else {
+          realDimx_ = groupIndexGm_.template ReinterpretCast<int64_t>()(groupIndex);
+        }
+      }
+
+      if (realDimx_ <= 0) {
+        continue;
+      }
+      // inDimx x的元素总数 / x的-1维shape，也即按照-1维的循环次数，也即总行数（按照二维理解）
+      if (groupIndex == cuGroupIdx) {
+        ProcessSingleGroupPerCore(realGroupIndex, realDimx_, groupOffset_);
+        cuGroupIdx += tl_->maxCoreNum;
+      }
       groupOffset_ += realDimx_;
     }
+    return;
   }
+
 }
-
 template <typename TActScale, typename TQuantScale, typename TGroup, typename TBias, typename TXtype, typename TYtype>
-__aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TBias, TXtype, TYtype>::ProcessSingleGroup(int64_t groupIdx)
+__aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TBias, TXtype, TYtype>::ProcessSingleGroupPerCore(int64_t groupIdx, int64_t xDimPerCore, int64_t coreDimxOffset)
 {
-  // 计算处理当前的数据时，每个核可以处理几行数据
-  int64_t blockDimxFactor = (realDimx_ + tl_->maxCoreNum - 1) / tl_->maxCoreNum;
-  // 在上一步计算每个核可以处理的行数据的前提下，计算处理数据，实际需要多少个核
-  realCoreDim_ = (realDimx_ + blockDimxFactor - 1) / blockDimxFactor;
-
-  // 如果当前核id超过了我实际需要的核数，则说明处理完成了
-  if (blockIdx_ < realCoreDim_) {
     DataCopyPadParams padParams{false, 0, 0, 0};
 
     // 激活左/右部分偏移，actRight是表示是否激活右半部分
@@ -248,16 +323,26 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
     // weight_scale搬入
     LocalTensor<float> inScaleLocal = inScaleQueue_.AllocTensor<float>();
     if constexpr (ifXIntIndex_) {
-      // copy_in: weight_scale(G, H) 激活部分
-      DataCopyParams dataCopyWeightScaleParams;
-      dataCopyWeightScaleParams.blockCount = 1;
-      dataCopyWeightScaleParams.blockLen = tl_->UbFactorDimy * sizeof(float);
-      dataCopyWeightScaleParams.srcStride = 0;
-      dataCopyWeightScaleParams.dstStride = 0;
-      DataCopyPad(inScaleLocal[0], weightScaleGm_[groupIdx * tl_->inDimy + actOffset], dataCopyWeightScaleParams, padParams);
+      if (tl_->swiGluMode == 0) {
+        // copy_in: weight_scale(G, H) 激活部分
+        DataCopyParams dataCopyWeightScaleParams;
+        dataCopyWeightScaleParams.blockCount = 1;
+        dataCopyWeightScaleParams.blockLen = tl_->UbFactorDimy * sizeof(float);
+        dataCopyWeightScaleParams.srcStride = 0;
+        dataCopyWeightScaleParams.dstStride = 0;
+        DataCopyPad(inScaleLocal[0], weightScaleGm_[groupIdx * tl_->inDimy + actOffset], dataCopyWeightScaleParams, padParams);
 
-      // copy_in: weight_scale(G, H) 门控部分
-      DataCopyPad(inScaleLocal[xUbAlignB32_], weightScaleGm_[groupIdx * tl_->inDimy + gateOffset], dataCopyWeightScaleParams, padParams);
+        // copy_in: weight_scale(G, H) 门控部分
+        DataCopyPad(inScaleLocal[xUbAlignB32_], weightScaleGm_[groupIdx * tl_->inDimy + gateOffset], dataCopyWeightScaleParams, padParams);
+      } else {
+        DataCopyParams dataCopyWeightScaleParams;
+        dataCopyWeightScaleParams.blockCount = 1;
+        dataCopyWeightScaleParams.blockLen = tl_->UbFactorDimy * 2 * sizeof(float);
+        dataCopyWeightScaleParams.srcStride = 0;
+        dataCopyWeightScaleParams.dstStride = 0;
+        DataCopyPad(inScaleLocal[0], weightScaleGm_[groupIdx * tl_->inDimy], dataCopyWeightScaleParams, padParams);
+      }
+      
     }
 
     // copy_in: quant_scale(G, H)
@@ -274,34 +359,40 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
 
     // copy_in: bias(1, 2H)->(1, H), (1, H)
     if constexpr (hasBiasIndex_) {
-      biasLocal = biasQueue_.AllocTensor<TBias>();
-      DataCopyParams dataCopyBiasParams;
-      dataCopyBiasParams.blockCount = 1;
-      dataCopyBiasParams.blockLen = tl_->UbFactorDimy * sizeof(TBias);
-      dataCopyBiasParams.srcStride = 0;
-      dataCopyBiasParams.dstStride = 0;
-      DataCopyPad(biasLocal[0], biasGm_[actOffset], dataCopyBiasParams, padParams);
-      DataCopyPad(biasLocal[biasUbAlign_], biasGm_[gateOffset], dataCopyBiasParams, padParams);
+      if (tl_->swiGluMode == 0) {
+        biasLocal = biasQueue_.AllocTensor<TBias>();
+        DataCopyParams dataCopyBiasParams;
+        dataCopyBiasParams.blockCount = 1;
+        dataCopyBiasParams.blockLen = tl_->UbFactorDimy * sizeof(TBias);
+        dataCopyBiasParams.srcStride = 0;
+        dataCopyBiasParams.dstStride = 0;
+        // [G, 2H]
+        DataCopyPad(biasLocal[0], biasGm_[groupIdx * tl_->inDimy + actOffset], dataCopyBiasParams, padParams);
+        DataCopyPad(biasLocal[biasUbAlign_], biasGm_[groupIdx * tl_->inDimy + gateOffset], dataCopyBiasParams, padParams);
+      } else {
+        biasLocal = biasQueue_.AllocTensor<TBias>();
+        DataCopyParams dataCopyBiasParams;
+        dataCopyBiasParams.blockCount = 1;
+        dataCopyBiasParams.blockLen = tl_->UbFactorDimy * 2 * sizeof(TBias);
+        dataCopyBiasParams.srcStride = 0;
+        dataCopyBiasParams.dstStride = 0;
+        // [G, 2H]
+        DataCopyPad(biasLocal[0], biasGm_[groupIdx * tl_->inDimy], dataCopyBiasParams, padParams);
+      }
+      
       biasQueue_.EnQue(biasLocal);
       biasLocal = biasQueue_.DeQue<TBias>();
     }
 
-    // 核间tiling：实际核数计算
-    int64_t blockDimxTailFactor = realDimx_ - blockDimxFactor * (realCoreDim_ - 1); // 最后一个核需要处理的行数
-    int64_t xDimPerCore = blockDimxFactor; //blockDimxFactor：每个核上需要处理几行数据
-    // 判断是否需要最后一个核处理尾行
-    if (blockIdx_ == (realCoreDim_ - 1)) {
-        xDimPerCore = blockDimxTailFactor;
-    }
+    
     // UbFactorDimX：ub每次能处理的行数，ubDimxLoop: 每个核上需要处理几行数据，然后在单个核上，ub处理这几行数据需要几次循环
     int64_t ubDimxLoop = (xDimPerCore + tl_->UbFactorDimx - 1) / tl_->UbFactorDimx;
     int64_t ubDimxTailFactor = xDimPerCore - tl_->UbFactorDimx * (ubDimxLoop - 1);
-    int64_t xDimOffsetCore = blockDimxFactor * blockIdx_; // blockIdx_:当前核的idx，从0开始；xDimOffsetCore：当前核要从第几行开始处理
 
     // 核内循环
     for (uint64_t i = 0; i < ubDimxLoop; i++) {
       // 核内循环每次计算时的起始地址：当前核计算时的起始地址 + 第i次核内循环要处理的起始地址 + 已处理过的行偏移(历史已处理过的总行数)
-      int64_t xDimOffsetPerLoop = xDimOffsetCore + i * tl_->UbFactorDimx + groupOffset_;
+      int64_t xDimOffsetPerLoop = coreDimxOffset + i * tl_->UbFactorDimx;
       int64_t xDimPerLoop = tl_->UbFactorDimx;
       if (i == ubDimxLoop - 1) {
         xDimPerLoop = ubDimxTailFactor;
@@ -309,15 +400,25 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
 
       // copy_in: x(xDimPerLoop, H) 激活部分
       LocalTensor<TXtype> xActLocal = xActQueue_.AllocTensor<TXtype>();
-      DataCopyParams dataCopyXParams;
-      dataCopyXParams.blockCount = xDimPerLoop;
-      dataCopyXParams.blockLen = tl_->UbFactorDimy * sizeof(TXtype);
-      dataCopyXParams.srcStride = tl_->UbFactorDimy * sizeof(TXtype);
-      dataCopyXParams.dstStride = 0;
-      DataCopyPad(xActLocal[0], xGm_[xDimOffsetPerLoop * tl_->inDimy + actOffset], dataCopyXParams, padParams);
+      if (tl_->swiGluMode == 0) {
+        DataCopyParams dataCopyXParams;
+        dataCopyXParams.blockCount = xDimPerLoop;
+        dataCopyXParams.blockLen = tl_->UbFactorDimy * sizeof(TXtype);
+        dataCopyXParams.srcStride = tl_->UbFactorDimy * sizeof(TXtype);
+        dataCopyXParams.dstStride = 0;
+        DataCopyPad(xActLocal[0], xGm_[xDimOffsetPerLoop * tl_->inDimy + actOffset], dataCopyXParams, padParams);
 
-      // copy_in: x(xDimPerLoop, H) 门控部分
-      DataCopyPad(xActLocal[xTypeUbAlignB32_ * xDimPerLoop], xGm_[xDimOffsetPerLoop * tl_->inDimy + gateOffset], dataCopyXParams, padParams);
+        // copy_in: x(xDimPerLoop, H) 门控部分
+        DataCopyPad(xActLocal[xTypeUbAlignB32_ * xDimPerLoop], xGm_[xDimOffsetPerLoop * tl_->inDimy + gateOffset], dataCopyXParams, padParams);
+      } else {
+        DataCopyParams dataCopyXParams;
+        dataCopyXParams.blockCount = xDimPerLoop;
+        dataCopyXParams.blockLen = tl_->UbFactorDimy * 2 * sizeof(TXtype);
+        dataCopyXParams.srcStride = 0;
+        dataCopyXParams.dstStride = 0;
+        DataCopyPad(xActLocal[0], xGm_[xDimOffsetPerLoop * tl_->inDimy], dataCopyXParams, padParams);
+      }
+      
 
       // copy_in: activation_scale(BS,)
       LocalTensor<float> xActLocalFp32 = xActLocal.template ReinterpretCast<float>();
@@ -354,141 +455,153 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
         wScale2Ptr = (__local_mem__ float*)inScaleLocal.GetPhyAddr(xUbAlignB32_);
       }
 
-      // 增加bias的地址，使用时需要判断biasPtr是否为空指针
+      // 增加bias的地址
       if constexpr (hasBiasIndex_) {
         bias1Ptr = (__local_mem__ TBias*)biasLocal.GetPhyAddr(0);
         bias2Ptr = (__local_mem__ TBias*)biasLocal.GetPhyAddr(biasUbAlign_);
       }
+      
+      if (tl_->swiGluMode == 0) {
+        __VEC_SCOPE__
+        {
+          AscendC::MicroAPI::RegTensor<TXtype> vreg0, vreg10;
+          AscendC::MicroAPI::RegTensor<float> vreg1, vreg2, vreg3, vreg4, vreg5, vreg6;
+          AscendC::MicroAPI::RegTensor<float> vreg7, vreg8, vreg9, vreg11, vreg12;
+          AscendC::MicroAPI::RegTensor<float> vreg13, vreg14, vreg15;
+          AscendC::MicroAPI::RegTensor<int32_t> vreg16, vreg17, verg18, vreg19;
+          AscendC::MicroAPI::RegTensor<float> vreg20, vreg21;
+          AscendC::MicroAPI::RegTensor<half> vreg24, vreg25;
+          AscendC::MicroAPI::RegTensor<bfloat16_t> vreg26, vreg27;
+          AscendC::MicroAPI::MaskReg mask;
 
-      __VEC_SCOPE__
-      {
-        AscendC::MicroAPI::RegTensor<TXtype> vreg0, vreg10;
-        AscendC::MicroAPI::RegTensor<float> vreg1, vreg2, vreg3, vreg4, vreg5, vreg6;
-        AscendC::MicroAPI::RegTensor<float> vreg7, vreg8, vreg9, vreg11, vreg12;
-        AscendC::MicroAPI::RegTensor<float> vreg13, vreg14, vreg15;
-        AscendC::MicroAPI::RegTensor<int32_t> vreg16, vreg17, verg18, vreg19;
-        AscendC::MicroAPI::RegTensor<float> vreg20, vreg21;
-        AscendC::MicroAPI::RegTensor<half> vreg24, vreg25;
-        AscendC::MicroAPI::RegTensor<bfloat16_t> vreg26, vreg27;
-        AscendC::MicroAPI::MaskReg mask;
+          // int32： 256B / 4B = 64次 ，bf16 or float16：256B / 2B = 128次
+          constexpr uint16_t sizePerRepeat = AscendC::GetVecLen() / sizeof(float);
+          uint32_t width = tl_->UbFactorDimy; // 输出y的-1轴对应的shape大小，也即H
+          uint16_t repeatTimes = CeilDivision(tl_->UbFactorDimy, sizePerRepeat); // 向上取整
+          const float scalarOne = 1.0;
 
-        // int32： 256B / 4B = 64次 ，bf16 or float16：256B / 2B = 128次
-        constexpr uint16_t sizePerRepeat = AscendC::GetVecLen() / sizeof(float);
-        uint32_t width = tl_->UbFactorDimy; // 输出y的-1轴对应的shape大小，也即H
-        uint16_t repeatTimes = CeilDivision(tl_->UbFactorDimy, sizePerRepeat); // 向上取整
-        const float scalarOne = 1.0;
+          // 每次可以处理256B的数据，256B / 4B = 64 可以处理多少个float元素，repeatTimes：处理H个float元素需要的循环次数
+          for (uint16_t j = 0; j < repeatTimes; j++) {
+              mask = AscendC::MicroAPI::UpdateMask<uint32_t>(width);
 
-        // 每次可以处理256B的数据，256B / 4B = 64 可以处理多少个float元素，repeatTimes：处理H个float元素需要的循环次数
-        for (uint16_t j = 0; j < repeatTimes; j++) {
-            mask = AscendC::MicroAPI::UpdateMask<uint32_t>(width);
+              // 计算，当x=int32时，weight_scale才参与计算
+              if constexpr (ifXIntIndex_) {
+                wScale1Addr = wScale1Ptr + j * sizePerRepeat;
+                wScale2Addr = wScale2Ptr + j * sizePerRepeat;
 
-            // 计算，当x=int32时，weight_scale才参与计算
-            if constexpr (ifXIntIndex_) {
-              wScale1Addr = wScale1Ptr + j * sizePerRepeat;
-              wScale2Addr = wScale2Ptr + j * sizePerRepeat;
+                AscendC::MicroAPI::DataCopy(vreg2, wScale1Addr);
+                AscendC::MicroAPI::DataCopy(vreg12, wScale2Addr);
+              }
 
-              AscendC::MicroAPI::DataCopy(vreg2, wScale1Addr);
-              AscendC::MicroAPI::DataCopy(vreg12, wScale2Addr);
-            }
+              // ub的循环次数，也即ub每次可以处理多少行数据
+              for (uint16_t i = 0; i < static_cast<uint16_t>(xDimPerLoop); i++) {
+                  // x的数据类型变换之后，对齐点变化了，应该用xTypeUb参数
+                  auto x1Addr = x1Ptr + i * xTypeUbAlignB32_ + j * sizePerRepeat;
+                  auto x2Addr = x2Ptr + i * xTypeUbAlignB32_ + j * sizePerRepeat;
+                  auto dstAddr = tmpXPtr + i * xTypeUbAlignB32_ + j * sizePerRepeat;
 
-            // ub的循环次数，也即ub每次可以处理多少行数据
-            for (uint16_t i = 0; i < static_cast<uint16_t>(xDimPerLoop); i++) {
-                // x的数据类型变换之后，对齐点变化了，应该用xTypeUb参数
-                auto x1Addr = x1Ptr + i * xTypeUbAlignB32_ + j * sizePerRepeat;
-                auto x2Addr = x2Ptr + i * xTypeUbAlignB32_ + j * sizePerRepeat;
-                auto dstAddr = tmpXPtr + i * xTypeUbAlignB32_ + j * sizePerRepeat;
+                  // vreg0 -> x1, vreg10 -> x2
+                  if constexpr (ifXFloat16Index_) {
+                    AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
+                    AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
+                  }
+                  if constexpr (ifXBf16Index_) {
+                    AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
+                    AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
+                  }
+                  if constexpr (ifXIntIndex_) {
+                    AscendC::MicroAPI::DataCopy(vreg0, x1Addr);
+                    AscendC::MicroAPI::DataCopy(vreg10, x2Addr);
+                  }
 
-                // vreg0 -> x1, vreg10 -> x2
-                // bf16和float16场景下需要修改，新增搬运模板参数DIST_UNPACK_B16
-                if constexpr (ifXFloat16Index_) {
-                  AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
-                  AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
-                }
-                if constexpr (ifXBf16Index_) {
-                  AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
-                  AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
-                }
-                if constexpr (ifXIntIndex_) {
-                  AscendC::MicroAPI::DataCopy(vreg0, x1Addr);
-                  AscendC::MicroAPI::DataCopy(vreg10, x2Addr);
-                }
+                  // 如果bias有值，且x=int32，bias=int32，则先将x+bias
+                  if constexpr (hasBiasIndex_) {
+                    if constexpr (ifXIntIndex_ && ifBiasIntIndex_) {
+                      auto bias1Addr = bias1Ptr + j * sizePerRepeat;
+                      auto bias2Addr = bias2Ptr + j * sizePerRepeat;
+                      AscendC::MicroAPI::DataCopy(vreg16, bias1Addr);
+                      AscendC::MicroAPI::DataCopy(vreg17, bias2Addr);
+                      //x + bias
+                      AscendC::MicroAPI::Add(vreg0, vreg0, vreg16, mask);
+                      AscendC::MicroAPI::Add(vreg10, vreg10, vreg17, mask);
+                    }
+                  }
 
-                // 如果bias有值，且x=int32，bias=int32，则先将x+bias
-                if constexpr (hasBiasIndex_) {
-                  // 使用bias的地址指针时，做判空处理
-                  if constexpr (ifXIntIndex_ && ifBiasIntIndex_) {
+                  // x:int32->float32
+                  if constexpr (ifXIntIndex_) {
+                    AscendC::MicroAPI::Cast<float, TXtype, CAST_INT32_TO_FP32>(vreg1, vreg0, mask);
+                    AscendC::MicroAPI::Cast<float, TXtype, CAST_INT32_TO_FP32>(vreg11, vreg10, mask);
+                    // x * weight
+                    AscendC::MicroAPI::Mul(vreg3, vreg1, vreg2, mask);
+                    AscendC::MicroAPI::Mul(vreg13, vreg11, vreg12, mask);
+                  }
+                  // x:float16, bfloat16 -> float32, 不进行x * weight
+                  if constexpr (ifXBf16Index_ || ifXFloat16Index_) {
+                    AscendC::MicroAPI::Cast<float, TXtype, CAST_BF16_FP16_TO_FP32>(vreg3, vreg0, mask);
+                    AscendC::MicroAPI::Cast<float, TXtype, CAST_BF16_FP16_TO_FP32>(vreg13, vreg10, mask);
+                  }
+
+                  // x * activation_scale
+                  if constexpr (hasActScale_) {
+                    auto aScaleAddr = aScalePtr + i * aScaleUbAlignB32_;
+                    AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg4, aScaleAddr);
+                    AscendC::MicroAPI::Mul(vreg3, vreg3, vreg4, mask);
+                    AscendC::MicroAPI::Mul(vreg13, vreg13, vreg4, mask);
+                  }
+
+                  // 如果bias有值，且x!=int32 && bias!=int32，则先将dequant后的结果加上bias
+                  if constexpr (ifBiasFloatIndex_ || ifBiasFloat16Index_ || ifBiasBfloat16Index_) {
+                    // 确认bias的计算地址
                     auto bias1Addr = bias1Ptr + j * sizePerRepeat;
                     auto bias2Addr = bias2Ptr + j * sizePerRepeat;
-                    AscendC::MicroAPI::DataCopy(vreg16, bias1Addr);
-                    AscendC::MicroAPI::DataCopy(vreg17, bias2Addr);
-                    //x + bias
-                    AscendC::MicroAPI::Add(vreg0, vreg0, vreg16, mask);
-                    AscendC::MicroAPI::Add(vreg10, vreg10, vreg17, mask);
+                    if constexpr (ifBiasFloatIndex_) {
+                      AscendC::MicroAPI::DataCopy(vreg20, bias1Addr);
+                      AscendC::MicroAPI::DataCopy(vreg21, bias2Addr);
+                    }
+                    if constexpr (ifBiasFloat16Index_) {
+                      AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg24, bias1Addr);
+                      AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg25, bias2Addr);
+                      AscendC::MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg20, vreg24, mask);
+                      AscendC::MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg21, vreg25, mask);
+                    }
+                    if constexpr (ifBiasBfloat16Index_) {
+                      AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg26, bias1Addr);
+                      AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg27, bias2Addr);
+                      AscendC::MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg20, vreg26, mask);
+                      AscendC::MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg21, vreg27, mask);
+                    }
+                    // 将dequant后的结果加上bias
+                    AscendC::MicroAPI::Add(vreg3, vreg3, vreg20, mask);
+                    AscendC::MicroAPI::Add(vreg13, vreg13, vreg21, mask);
                   }
-                }
 
-                // x:int32->float32
-                if constexpr (ifXIntIndex_) {
-                  AscendC::MicroAPI::Cast<float, TXtype, CAST_INT32_TO_FP32>(vreg1, vreg0, mask);
-                  AscendC::MicroAPI::Cast<float, TXtype, CAST_INT32_TO_FP32>(vreg11, vreg10, mask);
-                  // x * weight
-                  AscendC::MicroAPI::Mul(vreg3, vreg1, vreg2, mask);
-                  AscendC::MicroAPI::Mul(vreg13, vreg11, vreg12, mask);
-                }
-                // x:float16, bfloat16 -> float32, 不进行x * weight
-                if constexpr (ifXBf16Index_ || ifXFloat16Index_) {
-                  AscendC::MicroAPI::Cast<float, TXtype, CAST_BF16_FP16_TO_FP32>(vreg3, vreg0, mask);
-                  AscendC::MicroAPI::Cast<float, TXtype, CAST_BF16_FP16_TO_FP32>(vreg13, vreg10, mask);
-                }
+                  // Swish
+                  AscendC::MicroAPI::Muls(vreg6, vreg3, -(scalarOne), mask);
+                  AscendC::MicroAPI::Exp(vreg7, vreg6, mask);
+                  AscendC::MicroAPI::Adds(vreg8, vreg7, scalarOne, mask);
+                  AscendC::MicroAPI::Div<float, &DIV_MODE>(vreg9, vreg3, vreg8, mask);
 
-                // x * activation_scale
-                if constexpr (hasActScale_) {
-                  auto aScaleAddr = aScalePtr + i * aScaleUbAlignB32_;
-                  AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg4, aScaleAddr);
-                  AscendC::MicroAPI::Mul(vreg3, vreg3, vreg4, mask);
-                  AscendC::MicroAPI::Mul(vreg13, vreg13, vreg4, mask);
-                }
+                  // glu
+                  AscendC::MicroAPI::Mul(vreg15, vreg9, vreg13, mask);
 
-                // 如果bias有值，且x!=int32 && bias!=int32，则先将dequant后的结果加上bias
-                if constexpr (ifBiasFloatIndex_ || ifBiasFloat16Index_ || ifBiasBfloat16Index_) {
-                  // 确认bias的计算地址
-                  auto bias1Addr = bias1Ptr + j * sizePerRepeat;
-                  auto bias2Addr = bias2Ptr + j * sizePerRepeat;
-                  if constexpr (ifBiasFloatIndex_) {
-                    AscendC::MicroAPI::DataCopy(vreg20, bias1Addr);
-                    AscendC::MicroAPI::DataCopy(vreg21, bias2Addr);
-                  }
-                  if constexpr (ifBiasFloat16Index_) {
-                    AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg24, bias1Addr);
-                    AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg25, bias2Addr);
-                    AscendC::MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg20, vreg24, mask);
-                    AscendC::MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg21, vreg25, mask);
-                  }
-                  if constexpr (ifBiasBfloat16Index_) {
-                    AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg26, bias1Addr);
-                    AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg27, bias2Addr);
-                    AscendC::MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg20, vreg26, mask);
-                    AscendC::MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg21, vreg27, mask);
-                  }
-                  // 将dequant后的结果加上bias
-                  AscendC::MicroAPI::Add(vreg3, vreg3, vreg20, mask);
-                  AscendC::MicroAPI::Add(vreg13, vreg13, vreg21, mask);
-                }
+                  // store: reg->ub
+                  AscendC::MicroAPI::DataCopy(dstAddr, vreg15, mask);
+              }
+          }
+        } // __VEC_SCOPE__
+      } else {
+        constexpr uint16_t sizePerRepeat = AscendC::GetVecLen() / sizeof(float);
+        uint32_t width = tl_->UbFactorDimy; // 输出y的-1轴对应的shape大小，也即H
+        uint32_t widthFullRow = tl_->UbFactorDimy * 2; // 输出x的-1轴对应的shape大小，也即2H
+        uint16_t repeatTimes = CeilDivision(tl_->UbFactorDimy , sizePerRepeat); // 向上取整
+        uint16_t repeatTimesFullRow = CeilDivision(widthFullRow , sizePerRepeat); // 向上取整
 
-                // Swish
-                AscendC::MicroAPI::Muls(vreg6, vreg3, -(scalarOne), mask);
-                AscendC::MicroAPI::Exp(vreg7, vreg6, mask);
-                AscendC::MicroAPI::Adds(vreg8, vreg7, scalarOne, mask);
-                AscendC::MicroAPI::Div<float, &DIV_MODE>(vreg9, vreg3, vreg8, mask);
-
-                // glu
-                AscendC::MicroAPI::Mul(vreg15, vreg9, vreg13, mask);
-
-                // store: reg->ub
-                AscendC::MicroAPI::DataCopy(dstAddr, vreg15, mask);
-            }
-        }
-      } // __VEC_SCOPE__
+        VF_CALL<DequantSwigluV2<TXtype, TBias, ifXIntIndex_, ifXFloat16Index_, ifXBf16Index_, hasBiasIndex_, hasActScale_, ifBiasIntIndex_, ifBiasFloatIndex_, ifBiasFloat16Index_, ifBiasBfloat16Index_>>(x1Ptr, tmpXPtr, wScale1Ptr, aScalePtr, bias1Ptr,
+                                                                          xDimPerLoop, widthFullRow, repeatTimesFullRow, sizePerRepeat,
+                                                                          xTypeUbAlignB32FullRow_, xTypeUbAlignB32_, xTypeUbAlignB32_, aScaleUbAlignB32_, 0,
+                                                                          tl_->clampLimit, tl_->gluAlpha, tl_->gluBias);
+      }
+      
       xActQueue_.FreeTensor(xActLocal);
       // biasLocal是否为空的判断
       if constexpr (hasBiasIndex_) {
@@ -596,6 +709,7 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
         AscendC::MicroAPI::RegTensor<bfloat16_t> vreg14, vreg15;
         AscendC::MicroAPI::RegTensor<fp4x2_e2m1_t> vreg16;
         AscendC::MicroAPI::RegTensor<fp4x2_e1m2_t> vreg17;
+        AscendC::MicroAPI::RegTensor<hifloat8_t> vreg18;
         AscendC::MicroAPI::RegTensor<uint16_t> yRegTensor;
         AscendC::MicroAPI::RegTensor<uint8_t> out;
 
@@ -665,6 +779,9 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
               }
               // 搬出
               AscendC::MicroAPI::DataCopy<uint8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yFp4Addr, (AscendC::MicroAPI::RegTensor<uint8_t>&)vreg17, maskFull8);
+            } else if constexpr (ifYHiFloat8Index_) {
+              AscendC::MicroAPI::Cast<hifloat8_t, float, CAST_FP32_TO_HI8>(vreg18, vreg8, mask);
+              AscendC::MicroAPI::DataCopy<hifloat8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yAddr, vreg18, mask);
             } else {
               // float32 -> int8
               AscendC::MicroAPI::Cast<int16_t, float, CAST_FP32_TO_INT16>(vreg9, vreg8, mask);
@@ -701,6 +818,26 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
         yQueue_.FreeTensor(yLocal);
       }
     }
+}
+template <typename TActScale, typename TQuantScale, typename TGroup, typename TBias, typename TXtype, typename TYtype>
+__aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TBias, TXtype, TYtype>::ProcessSingleGroup(int64_t groupIdx, int64_t realDimx, int64_t groupOffset)
+{
+  // 计算处理当前的数据时，每个核可以处理几行数据
+  int64_t blockDimxFactor = (realDimx + tl_->maxCoreNum - 1) / tl_->maxCoreNum;
+  // 在上一步计算每个核可以处理的行数据的前提下，计算处理数据，实际需要多少个核
+  realCoreDim_ = (realDimx + blockDimxFactor - 1) / blockDimxFactor;
+
+  // 如果当前核id超过了我实际需要的核数，则说明处理完成了
+  if (blockIdx_ < realCoreDim_) {
+    // 核间tiling：实际核数计算
+    int64_t blockDimxTailFactor = realDimx - blockDimxFactor * (realCoreDim_ - 1); // 最后一个核需要处理的行数
+    int64_t xDimPerCore = blockDimxFactor; //blockDimxFactor：每个核上需要处理几行数据
+    // 判断是否需要最后一个核处理尾行
+    if (blockIdx_ == (realCoreDim_ - 1)) {
+        xDimPerCore = blockDimxTailFactor;
+    }
+    int64_t coreDimxOffset = blockDimxFactor * blockIdx_ + groupOffset;
+    ProcessSingleGroupPerCore(groupIdx, xDimPerCore, coreDimxOffset);
   }
 }
 
