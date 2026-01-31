@@ -25,6 +25,7 @@ __global__ __aicore__ void quant_batch_matmul_inplace_add(
     GM_ADDR x1, GM_ADDR x2, GM_ADDR x2_scale, GM_ADDR yIn, GM_ADDR x1_scale, GM_ADDR y, GM_ADDR workspace,
     GM_ADDR tiling)
 {
+    TPipe tPipe;
     REGISTER_TILING_DEFAULT(QMMIA::QuantBatchMatmulInplaceAddTilingData);
     GET_TILING_DATA(tilingData, tiling);
     if constexpr (TPL_KERNEL_TYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) {

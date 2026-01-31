@@ -14,9 +14,9 @@
  */
 #ifndef QBMMIA_MX_BAISC_API_CMCT_H
 #define QBMMIA_MX_BAISC_API_CMCT_H
+#include "cmct/block/block_mmad_mx.h"
 #include "cmct/block/block_scheduler_policy.h"
 #include "cmct/block/block_scheduler_utils.h"
-#include "cmct/block/block_mmad_mx.h"
 #include "cmct/epilogue/block_epilogue_empty.h"
 #include "cmct/kernel/kernel_qbmm_mx.h"
 using namespace Cmct;
@@ -50,39 +50,39 @@ __aicore__ inline void QbmmiaMxBasicApiKernel(
     using BlockMmad = Block::BlockMmadMx<
         DispatchPolicy, L1TileShape, L0TileShape, AType, aLayout, BType, bLayout, OutType, cLayout, BiasType, cLayout,
         void>;
+
     // 定义Kernel类型
     using MatmulKernel =
-        Cmct::Gemm::Kernel::QuantMmBatchMX<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
+        Cmct::Gemm::Kernel::QuantMmBatchMX<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler, true>;
     using Params = typename MatmulKernel::Params;
-    const QMMIA::QuantBatchMatmulInplaceAddTilingData* quantBmmTilingData_;
-    quantBmmTilingData_ = static_cast<const QMMIA::QuantBatchMatmulInplaceAddTilingData*>(tilingData);
-    QMMIA::BasicAPICubeTiling matmulTiling = quantBmmTilingData_->matmulTiling;
-    QMMIA::SlidingWindowParams slidingWindowParams = quantBmmTilingData_->adaptiveSlidingWin;
+    const QMMIA::QuantBatchMatmulInplaceAddTilingData* quantBmmInplaceAddTilingData_;
+    quantBmmInplaceAddTilingData_ = static_cast<const QMMIA::QuantBatchMatmulInplaceAddTilingData*>(tilingData);
+    QMMIA::BasicAPICubeTiling matmulTiling = quantBmmInplaceAddTilingData_->matmulTiling;
+    QMMIA::SlidingWindowParams slidingWindowParams = quantBmmInplaceAddTilingData_->adaptiveSlidingWin;
     using QBMMTiling = typename MatmulKernel::QBMMTiling;
-    QBMMTiling qbmmParams{
-        quantBmmTilingData_->params.batchA1,
-        quantBmmTilingData_->params.batchA2,
-        quantBmmTilingData_->params.batchA3,
-        quantBmmTilingData_->params.batchA4,
-        quantBmmTilingData_->params.batchB1,
-        quantBmmTilingData_->params.batchB2,
-        quantBmmTilingData_->params.batchB3,
-        quantBmmTilingData_->params.batchB4,
-        quantBmmTilingData_->params.batchC1,
-        quantBmmTilingData_->params.batchC2,
-        quantBmmTilingData_->params.batchC3,
-        quantBmmTilingData_->params.batchC4,
-        matmulTiling.baseM,
-        matmulTiling.baseN,
-        matmulTiling.baseK,
-        static_cast<uint32_t>(matmulTiling.isBias)};
+    QBMMTiling qbmmParams{quantBmmInplaceAddTilingData_->params.batchA1,
+                          quantBmmInplaceAddTilingData_->params.batchA2,
+                          quantBmmInplaceAddTilingData_->params.batchA3,
+                          quantBmmInplaceAddTilingData_->params.batchA4,
+                          quantBmmInplaceAddTilingData_->params.batchB1,
+                          quantBmmInplaceAddTilingData_->params.batchB2,
+                          quantBmmInplaceAddTilingData_->params.batchB3,
+                          quantBmmInplaceAddTilingData_->params.batchB4,
+                          quantBmmInplaceAddTilingData_->params.batchC1,
+                          quantBmmInplaceAddTilingData_->params.batchC2,
+                          quantBmmInplaceAddTilingData_->params.batchC3,
+                          quantBmmInplaceAddTilingData_->params.batchC4,
+                          quantBmmInplaceAddTilingData_->params.biasThreeDim,
+                          matmulTiling.baseM, matmulTiling.baseN, matmulTiling.baseK,
+                          static_cast<uint32_t>(matmulTiling.isBias),
+                          static_cast<uint32_t>(matmulTiling.dbL0C)};
     Params params = {
-        {matmulTiling.m, matmulTiling.n, matmulTiling.k, quantBmmTilingData_->params.batchC},
-        {aGM, bGM, cGM, nullptr, perTokenScale, scale},
-        {matmulTiling.kL1, matmulTiling.scaleKL1, matmulTiling.nBufferNum},
-        {matmulTiling.usedCoreNum, matmulTiling.baseM, matmulTiling.baseN, matmulTiling.dbL0C,
-         slidingWindowParams.mTailTile, slidingWindowParams.nTailTile, slidingWindowParams.mBaseTailSplitCnt,
-         slidingWindowParams.nBaseTailSplitCnt, slidingWindowParams.mTailMain, slidingWindowParams.nTailMain},
+        {matmulTiling.m, matmulTiling.n, matmulTiling.k, quantBmmInplaceAddTilingData_->params.batchC},
+        {aGM, bGM, cGM, nullptr, perTokenScale, scale}, // gm addr
+        {matmulTiling.stepKb * matmulTiling.baseK, matmulTiling.scaleKL1, matmulTiling.nBufferNum},
+        {matmulTiling.baseM, matmulTiling.baseN, slidingWindowParams.mTailTile, slidingWindowParams.nTailTile,
+         slidingWindowParams.mBaseTailSplitCnt, slidingWindowParams.nBaseTailSplitCnt, slidingWindowParams.mTailMain,
+         slidingWindowParams.nTailMain},
         qbmmParams};
     MatmulKernel qbmm;
     qbmm(params);

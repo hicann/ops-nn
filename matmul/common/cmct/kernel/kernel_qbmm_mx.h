@@ -29,8 +29,8 @@ namespace Cmct {
 namespace Gemm {
 namespace Kernel {
 #define QBMM_MX_KERNEL_CLASS_TEM_PARAMS \
-    template <class ProblemShape, class BlockMmad, class BlockEpilogue, class BlockScheduler>
-#define QBMM_MX_KERNEL_FUN_TEM_PARAMS ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler
+    template <class ProblemShape, class BlockMmad, class BlockEpilogue, class BlockScheduler, bool isAtomicAdd>
+#define QBMM_MX_KERNEL_FUN_TEM_PARAMS ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler, isAtomicAdd
 
 using namespace Cmct;
 using namespace Cmct::Gemm;
@@ -136,6 +136,9 @@ private:
 QBMM_MX_KERNEL_CLASS_TEM_PARAMS
 __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::Run(const Params& params)
 {
+    if constexpr (isAtomicAdd) {
+        AscendC::SetAtomicAdd<float>();
+    }
     Init(params);
     BlockSchedulerOp bs(params.problemShape, params.schParams);
     problemShape_ = ToShapeTuple(params.problemShape);
@@ -150,6 +153,9 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::Run(const 
     }
 
     ProcessWithBatch(params, bs);
+    if constexpr (isAtomicAdd) {
+        AscendC::SetAtomicNone();
+    }
 }
 
 QBMM_MX_KERNEL_CLASS_TEM_PARAMS
@@ -170,6 +176,9 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::Init(const
     }
     x1scaleGlobal_.SetGlobalBuffer((__gm__ fp8_e8m0_t*)params.mmadParams.pertokenScaleGmAddr);
     x2scaleGlobal_.SetGlobalBuffer((__gm__ fp8_e8m0_t*)params.mmadParams.scaleGmAddr);
+    if constexpr (isAtomicAdd) {
+        cGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
+    }
 }
 
 QBMM_MX_KERNEL_CLASS_TEM_PARAMS
@@ -260,19 +269,23 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessSin
             Get<QuantBatchMatmul::IDX_M_TAIL_SPLIT_TILEIDX>(singleShape),
             Get<QuantBatchMatmul::IDX_N_TAIL_SPLIT_TILEIDX>(singleShape), loadBalanceInfo);
 
-        Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_) += batchAOffset_ * params.problemShape.m * params.problemShape.k;
-        Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_) += batchBOffset_ * params.problemShape.n * params.problemShape.k;
-        Get<QuantBatchMatmul::IDX_C_OFFSET>(blockOffset_) += batchCOffset_ * params.problemShape.m * params.problemShape.n;
+        Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_) +=
+            batchAOffset_ * params.problemShape.m * params.problemShape.k;
+        Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_) +=
+            batchBOffset_ * params.problemShape.n * params.problemShape.k;
+        Get<QuantBatchMatmul::IDX_C_OFFSET>(blockOffset_) +=
+            batchCOffset_ * params.problemShape.m * params.problemShape.n;
         if (isBiasThreeDim_) {
             Get<QuantBatchMatmul::IDX_BIAS_OFFSET>(blockOffset_) += batchCOffset_ * params.problemShape.n;
         }
 
-        mmadOp_(aGlobal_[Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_)],
-                bGlobal_[Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_)],
-                x1scaleGlobal_[Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(blockOffset_)],
-                x2scaleGlobal_[Get<QuantBatchMatmul::IDX_X2SCALE_OFFSET>(blockOffset_)],
-                biasGlobal_[Get<QuantBatchMatmul::IDX_BIAS_OFFSET>(blockOffset_)],
-                cGlobal_[Get<QuantBatchMatmul::IDX_C_OFFSET>(blockOffset_)], singleShape);
+        mmadOp_(
+            aGlobal_[Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_)],
+            bGlobal_[Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_)],
+            x1scaleGlobal_[Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(blockOffset_)],
+            x2scaleGlobal_[Get<QuantBatchMatmul::IDX_X2SCALE_OFFSET>(blockOffset_)],
+            biasGlobal_[Get<QuantBatchMatmul::IDX_BIAS_OFFSET>(blockOffset_)],
+            cGlobal_[Get<QuantBatchMatmul::IDX_C_OFFSET>(blockOffset_)], singleShape);
     }
     bs.UpdateNextBatchBlockRoundParams();
 }

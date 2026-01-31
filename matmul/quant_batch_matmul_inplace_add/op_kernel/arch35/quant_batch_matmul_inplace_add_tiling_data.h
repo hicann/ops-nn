@@ -56,12 +56,12 @@ struct BasicAPICubeTiling {
     uint32_t baseN = 0;
     uint32_t baseK = 0;
     uint32_t scaleKL1 = 0;
-    uint32_t kL1 = 0;
-    uint16_t usedCoreNum = 0;
-    uint8_t scaleFactorA = 0;
-    uint8_t scaleFactorB = 0;
-    uint8_t isBias = 0;
+    uint16_t stepKa = 0;
+    uint16_t stepKb = 0;
+    uint16_t scaleFactorA = 0;
+    uint16_t scaleFactorB = 0;
     uint8_t nBufferNum = 0;
+    uint8_t isBias = 0;
     uint8_t dbL0C = 0;
     uint8_t reserved = 0;
 };
@@ -85,5 +85,5 @@ struct QuantBatchMatmulInplaceAddTilingData {
     SlidingWindowParams adaptiveSlidingWin;
 };
 #pragma pack(pop)
-} // QBMMIA
-#endif  // QUANT_BATCH_MATMUL_INPLACE_ADD_TILING_DATA_H
+} // namespace QMMIA
+#endif // QUANT_BATCH_MATMUL_INPLACE_ADD_TILING_DATA_H
