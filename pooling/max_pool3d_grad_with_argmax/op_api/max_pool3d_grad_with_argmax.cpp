@@ -35,6 +35,7 @@ static const inline std::initializer_list<op::DataType> GetDtypeSupportListBySoc
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     switch (socVersion) {
         case SocVersion::ASCEND910_93:
+        case SocVersion::ASCEND950:
         case SocVersion::ASCEND910B: {
             return GRAD_DTYPE_SUPPORT_LIST;
         }
@@ -68,9 +69,15 @@ const inline aclTensor* MaxPool3DGradWithArgmaxAiCore(
     L0_DFX(
         MaxPool3DGradWithArgmaxAiCore, gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode,
         gradInput);
-    ADD_TO_LAUNCHER_LIST_AICORE(
-        MaxPool3DGradWithArgmax, OP_INPUT(self, gradOutput, indices), OP_OUTPUT(gradInput),
-        OP_ATTR(kernelSize, stride, padding, dilation, ceilMode));
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+        ADD_TO_LAUNCHER_LIST_AICORE(
+            MaxPool3DGradWithArgmax, OP_INPUT(self, gradOutput, indices), OP_OUTPUT(gradInput),
+            OP_ATTR(kernelSize, stride, padding, dilation, ceilMode, "NCDHW"));
+    } else {
+        ADD_TO_LAUNCHER_LIST_AICORE(
+            MaxPool3DGradWithArgmax, OP_INPUT(self, gradOutput, indices), OP_OUTPUT(gradInput),
+            OP_ATTR(kernelSize, stride, padding, dilation, ceilMode));
+    }
     return gradInput;
 }
 

@@ -6,20 +6,18 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>昇腾910_95 AI处理器</term>                             |    ×     |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品 </term>                             |    ×     |
+| <term>Atlas 推理系列产品</term>                             |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    ×     |
-| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 正向最大池化[aclnnMaxPool3dWithArgmax](../../max_pool3d_with_argmax_v2/docs/aclnnMaxPool3dWithArgmax.md)的反向传播，将梯度回填到每个窗口最大值的坐标处，相同坐标处累加。
 
 ## 函数原型
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMaxPool3dWithArgmaxBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMaxPool3dWithArgmaxBackward”接口执行计算。
-
 
 ```Cpp
 aclnnStatus aclnnMaxPool3dWithArgmaxBackwardGetWorkspaceSize(
@@ -35,6 +33,7 @@ aclnnStatus aclnnMaxPool3dWithArgmaxBackwardGetWorkspaceSize(
   uint64_t          *workspaceSize,
   aclOpExecutor     **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnMaxPool3dWithArgmaxBackward(
   void          *workspace,
@@ -82,7 +81,7 @@ aclnnStatus aclnnMaxPool3dWithArgmaxBackward(
     <td>输入</td>
     <td>正向的输入数据。</td>
     <td>-</td>
-    <td>FLOAT、FLOAT16、BFLOAT16</td>
+    <td>FLOAT32、FLOAT16、BFLOAT16</td>
     <td>ND</td>
     <td>4-5</td>
     <td>√</td>
@@ -92,7 +91,7 @@ aclnnStatus aclnnMaxPool3dWithArgmaxBackward(
     <td>输入</td>
     <td>正向输入中最大元素的索引位置。</td>
     <td>-</td>
-    <td>INT32</td>
+    <td>INT32、INT64</td>
     <td>ND</td>
     <td>4-5</td>
     <td>√</td>
@@ -178,6 +177,8 @@ aclnnStatus aclnnMaxPool3dWithArgmaxBackward(
     <td>-</td>
   </tr>
   </tbody></table>
+
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`indices` 数据类型不支持INT64。depth * height * width 不支持大于 max int32。
   
 - **返回值：**
 
@@ -236,9 +237,6 @@ aclnnStatus aclnnMaxPool3dWithArgmaxBackward(
     <tr>
       <td>平台不支持。</td>
     </tr>
-    <tr>
-      <td>depth * height * width > max int32，超出了indices的表示范围。</td>
-    </tr>
   </tbody>
   </table>
 
@@ -286,10 +284,6 @@ aclnnStatus aclnnMaxPool3dWithArgmaxBackward(
 ## 约束说明
 - 确定性计算：
   - aclnnMaxPool3dWithArgmaxBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
-
-- 功能维度：
-  - 数据类型支持：indices支持INT32。
-  - 数据格式支持：ND。
 
 - 未支持类型说明：
   - DOUBLE：指令不支持DOUBLE。

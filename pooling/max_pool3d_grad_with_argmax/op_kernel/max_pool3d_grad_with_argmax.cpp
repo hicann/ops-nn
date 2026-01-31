@@ -12,7 +12,10 @@
  * \file max_pool3d_grad_with_argmax.cpp
  * \brief
  */
-
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
+#include "arch35/max_pool3d_grad_with_argmax_simt.h"
+#include "arch35/max_pool3d_grad_with_argmax_simd_impl.h"
+#else
 #include "max_pool3d_grad_with_argmax_normal.h"
 #include "max_pool3d_grad_with_argmax_scatter.h"
 #include "max_pool3d_grad_with_argmax_scatter_overlap.h"
@@ -37,7 +40,57 @@ using namespace MaxPool3DGradWithArgmax;
         op.Init(x, grad, argmax, y, workspace, &tilingData); \
         op.ProcessCutNc();                                   \
     } while (0)
+#endif
 
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
+using namespace MaxPool3DGradWithArgmaxOp;
+template <uint64_t INDEX_DTYPE = TPL_INT32, uint64_t IS_SIMT = 0, uint64_t IS_CHANNEL_LAST = 0, uint64_t IS_CHECK_RANGE = 0>
+__global__ __aicore__ void max_pool3d_grad_with_argmax(
+    GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+{
+    if (workspace == nullptr || GetUserWorkspace(workspace) == nullptr || g_coreType == AIC) {
+        return;
+    }
+    TPipe pipe;
+    if constexpr (INDEX_DTYPE == TPL_INT32 && IS_SIMT == 1) {
+        REGISTER_TILING_DEFAULT(MaxPool3DGradWithArgmaxTilingDataV35);
+        GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxTilingDataV35, tilingData, tiling);
+        MaxPool3DGradWithArgmaxSimt<DTYPE_X, DTYPE_ARGMAX, int32_t, IS_CHANNEL_LAST> op(&pipe, &tilingData);
+        op.Init(x, grad, argmax, y);
+        op.Process();
+    } else if constexpr (INDEX_DTYPE == TPL_INT64 && IS_SIMT == 1) {
+        REGISTER_TILING_DEFAULT(MaxPool3DGradWithArgmaxTilingDataV35);
+        GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxTilingDataV35, tilingData, tiling);
+        MaxPool3DGradWithArgmaxSimt<DTYPE_X, DTYPE_ARGMAX, int64_t, IS_CHANNEL_LAST> op(&pipe, &tilingData);
+        op.Init(x, grad, argmax, y);
+        op.Process();
+    } else if constexpr (INDEX_DTYPE == TPL_INT32 && IS_SIMT == 0 && IS_CHECK_RANGE == 0) {
+        REGISTER_TILING_FOR_TILINGKEY("INDEX_DTYPE == TPL_INT32 && IS_SIMT == 0 && IS_CHECK_RANGE == 0", MaxPool3DGradWithArgmaxNCDHWTilingData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxNCDHWTilingData, tilingData, tiling);
+        MaxPool3DGradWithArgmaxNCDHWNameSpace::MaxPool3DGradWithArgmaxNCDHWKernel<DTYPE_X, DTYPE_ARGMAX, int32_t, false> op;
+        op.Init(x, grad, argmax, y, pipe, tilingData);
+        op.Process();
+    } else if constexpr (INDEX_DTYPE == TPL_INT32 && IS_SIMT == 0 && IS_CHECK_RANGE == 1) {
+        REGISTER_TILING_FOR_TILINGKEY("INDEX_DTYPE == TPL_INT32 && IS_SIMT == 0 && IS_CHECK_RANGE == 1", MaxPool3DGradWithArgmaxNCDHWTilingData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxNCDHWTilingData, tilingData, tiling);
+        MaxPool3DGradWithArgmaxNCDHWNameSpace::MaxPool3DGradWithArgmaxNCDHWKernel<DTYPE_X, DTYPE_ARGMAX, int32_t, true> op;
+        op.Init(x, grad, argmax, y, pipe, tilingData);
+        op.Process();
+    } else if constexpr (INDEX_DTYPE == TPL_INT64 && IS_SIMT == 0 && IS_CHECK_RANGE == 0) {
+        REGISTER_TILING_FOR_TILINGKEY("INDEX_DTYPE == TPL_INT64 && IS_SIMT == 0 && IS_CHECK_RANGE == 0", MaxPool3DGradWithArgmaxNCDHWTilingData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxNCDHWTilingData, tilingData, tiling);
+        MaxPool3DGradWithArgmaxNCDHWNameSpace::MaxPool3DGradWithArgmaxNCDHWKernel<DTYPE_X, DTYPE_ARGMAX, int64_t, false> op;
+        op.Init(x, grad, argmax, y, pipe, tilingData);
+        op.Process();
+    } else if constexpr (INDEX_DTYPE == TPL_INT64 && IS_SIMT == 0 && IS_CHECK_RANGE == 1) {
+        REGISTER_TILING_FOR_TILINGKEY("INDEX_DTYPE == TPL_INT64 && IS_SIMT == 0 && IS_CHECK_RANGE == 1", MaxPool3DGradWithArgmaxNCDHWTilingData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxNCDHWTilingData, tilingData, tiling);
+        MaxPool3DGradWithArgmaxNCDHWNameSpace::MaxPool3DGradWithArgmaxNCDHWKernel<DTYPE_X, DTYPE_ARGMAX, int64_t, true> op;
+        op.Init(x, grad, argmax, y, pipe, tilingData);
+        op.Process();
+    }
+}
+#else
 extern "C" __global__ __aicore__ void max_pool3d_grad_with_argmax(
     GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -86,3 +139,4 @@ extern "C" __global__ __aicore__ void max_pool3d_grad_with_argmax(
     }
     return;
 }
+#endif

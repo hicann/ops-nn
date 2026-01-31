@@ -80,6 +80,11 @@
                     "name": "ceil_mode",
                     "dtype": "bool",
                     "value": null
+                },
+                {
+                    "name": "data_format",
+                    "dtype": "string",
+                    "value": "NCDHW"
                 }
             ]
         },
@@ -162,6 +167,11 @@
                     "name": "ceil_mode",
                     "dtype": "bool",
                     "value": null
+                },
+                {
+                    "name": "data_format",
+                    "dtype": "string",
+                    "value": "NCDHW"
                 }
             ]
         },
@@ -244,6 +254,11 @@
                     "name": "ceil_mode",
                     "dtype": "bool",
                     "value": null
+                },
+                {
+                    "name": "data_format",
+                    "dtype": "string",
+                    "value": "NCDHW"
                 }
             ]
         }

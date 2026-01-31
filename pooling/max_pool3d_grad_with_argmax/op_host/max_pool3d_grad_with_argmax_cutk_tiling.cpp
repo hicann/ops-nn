@@ -290,5 +290,5 @@ ge::graphStatus MaxPool3DGradWithArgmaxCutKTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-REGISTER_TILING_TEMPLATE("MaxPool3DGradWithArgmax", MaxPool3DGradWithArgmaxCutKTiling, 0);
+REGISTER_TILING_TEMPLATE("MaxPool3DGradWithArgmax", MaxPool3DGradWithArgmaxCutKTiling, 10);
 } // namespace optiling

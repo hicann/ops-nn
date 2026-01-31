@@ -81,6 +81,6 @@ ge::graphStatus MaxPool3DGradWithArgmaxScatterTiling::DoOpTiling()
 }
 
 REGISTER_TILING_TEMPLATE("MaxPool3DGradWithArgmax", 
-                         MaxPool3DGradWithArgmaxScatterTiling, 6);
+                         MaxPool3DGradWithArgmaxScatterTiling, 16);
 
 } // namespace optiling

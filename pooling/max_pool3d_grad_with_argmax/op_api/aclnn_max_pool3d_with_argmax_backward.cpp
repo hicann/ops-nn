@@ -33,6 +33,8 @@ static const std::initializer_list<DataType> NULL_DTYPE_SUPPORT_LIST = {};
 static const std::initializer_list<DataType> GRAD_DTYPE_SUPPORT_LIST = {
     DataType::DT_BF16, DataType::DT_FLOAT16, DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT32};
+static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_LIST_950 = {
+    op::DataType::DT_INT32, op::DataType::DT_INT64};
 
 static const size_t CDHW_DIMS = 4;
 static const size_t NCDHW_DIMS = 5;
@@ -64,6 +66,7 @@ static const std::initializer_list<op::DataType> GetDtypeSupportListBySocVersion
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     switch (socVersion) {
         case SocVersion::ASCEND910B:
+        case SocVersion::ASCEND950:
         case SocVersion::ASCEND910_93: {
             return GRAD_DTYPE_SUPPORT_LIST;
         }
@@ -81,7 +84,11 @@ static bool CheckDtypeValid(
 {
     auto dtypeSupportList = GetDtypeSupportListBySocVersion();
     OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeSupportList, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(indices, INDICES_DTYPE_SUPPORT_LIST, return false);
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(indices, INDICES_DTYPE_SUPPORT_LIST_950, return false);
+    } else {
+        OP_CHECK_DTYPE_NOT_SUPPORT(indices, INDICES_DTYPE_SUPPORT_LIST, return false);
+    }
     OP_CHECK_DTYPE_NOT_SAME(self, gradOutput, return false);
     OP_CHECK_DTYPE_NOT_SAME(self, gradInput, return false);
     return true;
@@ -228,12 +235,16 @@ static bool CheckSelfShapeSupport(const aclTensor* self)
     const auto& selfDimD = selfShape.GetDim(selfDimNum + D_DIM);
 
     const int64_t selfSize = selfDimW * selfDimH * selfDimD;
-    OP_CHECK(
-        (selfSize <= MAX_INT32),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "The size of self should be less than or equal to 2^32 - 1, but got selfSize:%ld",
-            selfSize),
-        return false);
+
+    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
+        OP_CHECK(
+            (selfSize <= MAX_INT32),
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "The size of self should be less than or equal to 2^32 - 1, but got selfSize:%ld", selfSize),
+            return false);
+    }
+
     return true;
 }
 
@@ -330,14 +341,12 @@ aclnnStatus aclnnMaxPool3dWithArgmaxBackwardGetWorkspaceSize(
                                      l0op::ReFormat(selfContiguous, op::Format::FORMAT_NCDHW, uniqueExecutor.get());
     CHECK_RET(selfUnsqueezed != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto gradOutputUnsqueezed =
-        isSelf4D ? View4Das5D(gradOutputContiguous, uniqueExecutor.get()) :
-                   l0op::ReFormat(gradOutputContiguous, op::Format::FORMAT_NCDHW, uniqueExecutor.get());
+    auto gradOutputUnsqueezed = isSelf4D ? View4Das5D(gradOutputContiguous, uniqueExecutor.get()) :
+                                           l0op::ReFormat(gradOutputContiguous, op::Format::FORMAT_NCDHW, uniqueExecutor.get());
     CHECK_RET(gradOutputUnsqueezed != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto indicesUnsqueezed = isSelf4D ?
-                                 View4Das5D(indicesContiguous, uniqueExecutor.get()) :
-                                 l0op::ReFormat(indicesContiguous, op::Format::FORMAT_NCDHW, uniqueExecutor.get());
+    auto indicesUnsqueezed = isSelf4D ? View4Das5D(indicesContiguous, uniqueExecutor.get()) :
+                                        l0op::ReFormat(indicesContiguous, op::Format::FORMAT_NCDHW, uniqueExecutor.get());
     CHECK_RET(indicesUnsqueezed != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto gradInputResult = l0op::MaxPool3DGradWithArgmax(
