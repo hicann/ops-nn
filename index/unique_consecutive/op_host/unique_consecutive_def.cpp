@@ -40,6 +40,25 @@ static const std::vector<ge::DataType> DataTypeCount = {ge::DT_INT32, ge::DT_INT
                                                         ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
                                                         ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
                                                         ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
+                                                        
+static ge::graphStatus CheckSupport(const ge::Operator& op, ge::AscendString& result) {
+    bool attr_idx = false;
+    std::string resultJsonStr;
+    ge::graphStatus retStatus = op.GetAttr("return_idx", attr_idx);
+    if (retStatus != ge::GRAPH_SUCCESS) {
+        resultJsonStr = R"({"isSupported": "False", "dynamicCompileStatic": "True", "reason": "GetAttr return_idx error"})";
+        result = ge::AscendString(resultJsonStr.c_str());
+        return ge::GRAPH_FAILED;
+    }
+    if (attr_idx) {
+        resultJsonStr = R"({"isSupported": "False", "dynamicCompileStatic": "True", "reason": "Aicore not support 'return_idx = true'"})";
+        result = ge::AscendString(resultJsonStr.c_str());
+        return ge::GRAPH_FAILED;
+    }
+    resultJsonStr = R"({"isSupported": "True", "dynamicCompileStatic": "True", "reason": "CheckSupported success."})";
+    result = ge::AscendString(resultJsonStr.c_str());
+    return ge::GRAPH_SUCCESS;
+}
 
 class UniqueConsecutive : public OpDef
 {
@@ -69,13 +88,14 @@ public:
         this->Attr("return_counts").AttrType(OPTIONAL).Bool(false);
         this->Attr("axis").AttrType(OPTIONAL).Int(1000);               // always 1000
         this->Attr("out_idx").AttrType(OPTIONAL).Int(ge::DT_INT64);  // default INT64
+        this->AICore().SetCheckSupport(CheckSupport);
 
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
-            .NeedCheckSupportFlag(false)
+            .NeedCheckSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "unique_consecutive_apt");
         this->AICore().AddConfig("ascend950", aicoreConfig);
     }

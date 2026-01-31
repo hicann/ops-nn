@@ -119,7 +119,7 @@ bool UniqueConsecutiveTilingHelper::GetAttrs()
     this->debugOnlyMaxSingleCoreBytes_ = axis;
     OP_LOGI("GetAttrsDebugOptional", "axis(debugOnlyMaxSingleCoreBytes_)=%ld", this->debugOnlyMaxSingleCoreBytes_);
 
-    OP_CHECK_IF(returnInvIdx, OP_LOGE(context_->GetNodeName(), "UniqueConsecutive Aicore not support return inverse_idx."),
+    OP_CHECK_IF(returnInvIdx, OP_LOGE(context_->GetNodeName(), "UniqueConsecutive Aicore not support 'return_idx = true'."),
                 return false);
     OP_CHECK_IF((ge::DataType::DT_INT32 != outIdxDtype_) && (ge::DataType::DT_INT64 != outIdxDtype_),
                 OP_LOGE(context_->GetNodeName(), "UniqueConsecutive Aicore only support return int32 or int64 idx/counts."),
