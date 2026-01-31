@@ -3099,6 +3099,10 @@ static bool IsSupportConvTranspose1DToBmm(ConvEngine engine)
     if (engine.meta.padding[0] != 0 || engine.meta.outputPadding[0] != 0 || engine.meta.dilation[0] != 1) {
         return false;
     }
+    if (engine.meta.weight.shape[L_DIM_NCL_INDEX] != 1 && engine.params.bias != nullptr) {
+        OP_LOGD("L_DIM of weight is not 1");
+        return false;
+    }
     return true;
 }
 
