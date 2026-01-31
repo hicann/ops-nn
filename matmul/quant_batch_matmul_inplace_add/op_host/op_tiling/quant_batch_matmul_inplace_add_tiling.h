@@ -45,7 +45,9 @@ private:
     bool AnalyzeDtype() override;
     bool AnalyzeInputs() override;
     bool CheckDtype();
-    bool IsFp8Dtype(const ge::DataType dtype);
+    bool IsFp8Dtype(const ge::DataType dtype) const;
+    bool CheckParamsForMxQuant(const gert::Shape &x1ScaleShape, const gert::Shape &x2ScaleShape) const;
+    bool CheckShapeVaild(const gert::Shape &x1Shape, const gert::Shape &x2Shape) const;
     QMMIA::QuantBatchMatmulInplaceAddTilingData tilingDataSelf_;
     QMMIA::QuantBatchMatmulInplaceAddTilingData& tilingData_;
 };

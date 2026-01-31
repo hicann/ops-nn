@@ -27,6 +27,7 @@ using namespace QMMIA;
 using namespace QuantBatchMatmulInplaceAddArch35TilingKey;
 using Ops::NN::GenTiling;
 using Ops::NN::TilingPrepareForOpCache;
+using Ops::Base::CeilDiv;
 using Ops::NN::Optiling::TilingRegistry;
 
 namespace optiling{
@@ -73,10 +74,17 @@ bool QuantBatchMatmulInplaceAddTiling::AnalyzeAttrs()
                 return false);
     const int64_t* groupSizePtr = attrs->GetAttrPointer<int64_t>(ATTR_INDEX_GROUP_SIZE);
     OP_CHECK_IF(groupSizePtr == nullptr, OP_LOGE(context_->GetNodeName(), "Attr groupSize is nullptr"), return false);
-
     inputParams_.groupSize = *groupSizePtr;
     inputParams_.transA = *transposeXPtr;
     inputParams_.transB = *transposeWeightPtr;
+    OP_CHECK_IF(inputParams_.transA != true || inputParams_.transB != false, 
+        OP_LOGE(context_->GetNodeName(), "Only support when transpose of x1 is true and transpose of x2 is false, but actually is %s and %s.",
+        inputParams_.transA ? "true" : "false", inputParams_.transB ? "true" : "false"), return false);
+    if (inputParams_.groupSize != 0ULL) {
+        inputParams_.groupSizeK = inputParams_.groupSize & GROUP_MKN_BIT_SIZE;
+        inputParams_.groupSizeN = (inputParams_.groupSize >> 16U) & GROUP_MKN_BIT_SIZE; // 16 is the bit size of MKN group size
+        inputParams_.groupSizeM = (inputParams_.groupSize >> 32U) & GROUP_MKN_BIT_SIZE; // groupSizeM start at 32 bit of groupSize
+    }
 
     return true;
 }
@@ -101,13 +109,19 @@ bool QuantBatchMatmulInplaceAddTiling::AnalyzeDtype()
     return CheckDtype();
 }
 
-bool QuantBatchMatmulInplaceAddTiling::IsFp8Dtype(const ge::DataType dtype)
+bool QuantBatchMatmulInplaceAddTiling::IsFp8Dtype(const ge::DataType dtype) const
 {
     return (dtype == ge::DT_FLOAT8_E4M3FN || dtype == ge::DT_FLOAT8_E5M2);
 }
 
 bool QuantBatchMatmulInplaceAddTiling::CheckDtype()
 {
+    OP_CHECK_IF(inputParams_.cDtype != ge::DT_FLOAT,
+            OP_LOGE(context_->GetNodeName(),
+                "With DT_FLOAT8_E4M3FN/DT_FLOAT8_E5M2 inputs, the expected dtype of output dtype should \
+be DT_FLOAT8, but actual dtype is %s.",
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
+            return false);
     bool isFp8 = IsFp8Dtype(inputParams_.aDtype) && IsFp8Dtype(inputParams_.bDtype);
     if (isFp8) {
         OP_CHECK_IF(
@@ -129,12 +143,86 @@ should be DT_FLOAT8_E8M0, but actual dtype is %s, %s.",
     return true;
 }
 
+bool QuantBatchMatmulInplaceAddTiling::CheckShapeVaild(const gert::Shape &x1Shape, const gert::Shape &x2Shape) const
+{
+    auto x1ShapeLength = x1Shape.GetDimNum();
+    auto x2ShapeLength = x2Shape.GetDimNum();
+    OP_CHECK_IF(x1ShapeLength != X1_MINIMUM_DIMENSION_LENGTH || x2ShapeLength != X2_MINIMUM_DIMENSION_LENGTH,
+                OP_LOGE(
+                    context_->GetNodeName(), "The dim num of x1 and x2 should be 2, but acutlly is %zu, %zu.",
+                    x1ShapeLength, x2ShapeLength),
+                return false);
+    auto x2NDimValue =
+        static_cast<uint64_t>(inputParams_.transB ? x2Shape.GetDim(0) :
+                                                    x2Shape.GetDim(1)); // 1 is index for the second dim
+    auto x2KDimValue =
+        static_cast<uint64_t>(inputParams_.transB ? x2Shape.GetDim(1) : // 1 is index for the second dim
+                                                    x2Shape.GetDim(0));
+    auto x1MDimValue =
+        static_cast<uint64_t>(inputParams_.transA ? x1Shape.GetDim(1) :
+                                                    x1Shape.GetDim(0));
+    auto x1KDimValue =
+        static_cast<uint64_t>(inputParams_.transA ? x1Shape.GetDim(0) :
+                                                    x1Shape.GetDim(1));
+    OP_CHECK_IF(x1KDimValue != x2KDimValue,
+                OP_LOGE(
+                    context_->GetNodeName(),
+                    "The size of k dimension of x1[%lu] is not equal to the size of k dimension of x2[%lu]",
+                    x1KDimValue, x2KDimValue),
+                return false);
+    return true;
+}
+
+bool QuantBatchMatmulInplaceAddTiling::CheckParamsForMxQuant(const gert::Shape &x1ScaleShape, const gert::Shape &x2ScaleShape) const
+{
+    auto x1ScaleDimNum = x1ScaleShape.GetDimNum();
+    auto x2ScaleDimNum = x2ScaleShape.GetDimNum();
+    OP_CHECK_IF(x1ScaleDimNum != MX_X1_SCALE_DIM,
+               OP_LOGE(inputParams_.opName,
+                                         "The dim num of x1 scale should be 3 in mx quant mode, but actual \
+is %zu", x1ScaleDimNum), return false);
+    OP_CHECK_IF(x2ScaleDimNum != MX_X2_SCALE_DIM,
+               OP_LOGE(inputParams_.opName, 
+                                         "The dim num of x2 Scale should be 3 in mx quant mode, but actual \
+is %zu", x2ScaleDimNum), return false);
+    auto x2ScaleNDim =
+        static_cast<uint64_t>(inputParams_.transB ? x2ScaleShape.GetDim(0) :
+                                                    x2ScaleShape.GetDim(1)); // 1 is index for the second dim
+    auto x2ScaleKDim =
+        static_cast<uint64_t>(inputParams_.transB ? x2ScaleShape.GetDim(1) : // 1 is index for the second dim
+                                                    x2ScaleShape.GetDim(0));
+    auto x1ScaleMDim =
+        static_cast<uint64_t>(inputParams_.transA ? x1ScaleShape.GetDim(1) :
+                                                    x1ScaleShape.GetDim(0));
+    auto x1ScaleKDim =
+        static_cast<uint64_t>(inputParams_.transA ? x1ScaleShape.GetDim(0) :
+                                                    x1ScaleShape.GetDim(1));
+    auto x1ScaleLastDim = static_cast<uint64_t>(x1ScaleShape.GetDim(MX_X1_SCALE_DIM - 1));
+    auto x2ScaleLastDim = static_cast<uint64_t>(x2ScaleShape.GetDim(MX_X2_SCALE_DIM - 1));
+    auto expectedKDimValue = CeilDiv(inputParams_.kSize, MXFP_BASEK_FACTOR);
+    OP_CHECK_IF(x2ScaleKDim != expectedKDimValue || x2ScaleNDim != inputParams_.nSize || x2ScaleLastDim != MXFP_MULTI_BASE_SIZE,
+               OP_LOGE(
+                   inputParams_.opName,
+                   "In mx quant mode, the expected shape of x2 scale is (%lu, %lu, 2), but the actual \
+is (%lu, %lu, %lu).",
+                   expectedKDimValue, inputParams_.nSize, x2ScaleKDim, x2ScaleNDim, x2ScaleLastDim), return false);
+    OP_CHECK_IF(x1ScaleMDim != inputParams_.mSize || x1ScaleKDim != expectedKDimValue ||
+                   x1ScaleLastDim != MXFP_MULTI_BASE_SIZE,
+               OP_LOGE(
+                   inputParams_.opName,
+                   "In mx quant mode, the expected shape of x1 scale is (%lu, %lu, 2), but the actual \
+is (%lu,%lu,%lu).", expectedKDimValue, inputParams_.mSize, x1ScaleKDim, x1ScaleMDim, x1ScaleLastDim), return false);
+    return true;
+}
+
 bool QuantBatchMatmulInplaceAddTiling::AnalyzeInputs()
 {
     auto x1Shape = GetX1Shape(X1_INDEX);
     auto x2Shape = GetX2Shape(X2_INDEX);
     auto scaleShape = GetScaleShape(X2_SCALE_INDEX);
     auto pertokenShape = GetPertokenShape(X1_SCALE_INDEX);
+    OP_CHECK_IF(pertokenShape == nullptr, OP_LOGE(inputParams_.opName, "pertokenShape is nullptr."), return false);
+    auto& x1ScaleShape = pertokenShape->GetStorageShape();
     inputParams_.isPertoken = pertokenShape != nullptr;
 
     inputParams_.hasBias = 0;   // qbmmia has no bias
@@ -165,6 +253,12 @@ bool QuantBatchMatmulInplaceAddTiling::AnalyzeInputs()
     OP_TILING_CHECK(!InferOutBatchDim(x1Shape, x2Shape),
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "Batch dimension can not be broadcasted."), return false);
     if (!SetQuantMode(scaleShape, pertokenShape)) {
+        return false;
+    }
+    if (!CheckParamsForMxQuant(x1ScaleShape, scaleShape)){
+        return false;
+    }
+    if (!CheckShapeVaild(x1Shape, x2Shape)){
         return false;
     }
     OP_LOGD(
@@ -199,7 +293,7 @@ static ge::graphStatus QuantBatchMatmulInplaceAddTilingFunc(gert::TilingContext*
         OP_LOGD("QuantBatchMatmulInplaceAddTilingFunc", "Using the tiling strategy in the mx quant.");
         return TilingRegistry::GetInstance().DoTilingImpl(context, registerList);
     } else {
-        OP_LOGD("QuantBatchMatmulInplaceAddTilingFunc", "Do op tiling failed, now only support Ascend 950PR/Ascend 950DT.");
+        OP_LOGD("QuantBatchMatmulInplaceAddTilingFunc", "Do op tiling failed, now only support 91095.");
         return ge::GRAPH_FAILED;
     }
 }

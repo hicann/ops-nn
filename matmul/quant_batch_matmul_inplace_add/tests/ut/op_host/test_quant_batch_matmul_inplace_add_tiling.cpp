@@ -18,17 +18,16 @@
 
 #include "log/log.h"
 
-#include "register/op_impl_registry.h"
-#include "tiling_base/tiling_templates_registry.h"
-#include "ut_op_util.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "exe_graph/runtime/tiling_parse_context.h"
 #include "kernel_run_context_facker.h"
-#include "test_cube_util.h"
-#include "../../../op_host/op_tiling/quant_batch_matmul_inplace_add_tiling.h"
-//#include "../../../op_host/op_tiling/arch35/quant_batch_matmul_v4_tiling.h"
 #include "platform/platform_infos_def.h"
+#include "register/op_impl_registry.h"
+#include "tiling_base/tiling_templates_registry.h"
+#include "test_cube_util.h"
+#include "ut_op_util.h"
+#include "../../../op_host/op_tiling/quant_batch_matmul_inplace_add_tiling.h"
 #include "../../../../common/op_host/math_util.h"
 
 using namespace std;
@@ -240,8 +239,10 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &pa
         } 
     }
     yScaleShape.MutableStorageShape() = gert::Shape({1, n});
-
-    x2ScaleShape.MutableOriginShape() = x2ScaleShape.MutableStorageShape();
+    x1ScaleShape.MutableOriginShape() = gert::Shape({k1, m, 2});
+    x1ScaleShape.MutableStorageShape() = gert::Shape({k1, m, 2});
+    x2ScaleShape.MutableOriginShape() = gert::Shape({k1, n, 2});
+    x2ScaleShape.MutableStorageShape() = gert::Shape({k1, n, 2});
 
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
@@ -331,9 +332,9 @@ TEST_P(QuantBatchMatmulInplaceAddTiling, generalTest)
 static QuantBatchMatmulInplaceAddTilingTestParam casesParams[] = {
 
     // MX ND
-    {"mx-test1_Ascend910-95_128_512_128_0_0_32_ND_ND_FP8-E4M3_FP8-E5M2_FP8-E8M0_FP8-E8M0_UINT64_NULL_FP32_32_64", 30, ge::GRAPH_SUCCESS, 0UL},
+    {"mx-test1_Ascend910-95_128_512_128_1_0_32_ND_ND_FP8-E4M3_FP8-E5M2_FP8-E8M0_FP8-E8M0_UINT64_NULL_FP32_32_64", 30, ge::GRAPH_SUCCESS, 1UL},
     {"mx-2_Ascend910-95_1024_512_1024_1_0_32_ND_ND_FP8-E5M2_FP8-E5M2_FP8-E8M0_FP8-E8M0_UINT64_NULL_FP32_32_64", 32, ge::GRAPH_SUCCESS, 1UL},
-    {"mx-3_Ascend910-95_128_512_128_0_0_32_ND_ND_FP8-E5M2_FP8-E5M2_FP8-E8M0_FP8-E8M0_UINT64_NULL_FP32_32_64", 30, ge::GRAPH_SUCCESS, 0UL},
+    {"mx-3_Ascend910-95_128_512_128_1_0_32_ND_ND_FP8-E5M2_FP8-E5M2_FP8-E8M0_FP8-E8M0_UINT64_NULL_FP32_32_64", 30, ge::GRAPH_SUCCESS, 1UL},
     {"mx-4_Ascend910-95_1024_512_1024_1_0_32_ND_ND_FP8-E4M3_FP8-E4M3_FP8-E8M0_FP8-E8M0_UINT64_NULL_FP32_32_64", 32, ge::GRAPH_SUCCESS, 1UL},
 
  };
