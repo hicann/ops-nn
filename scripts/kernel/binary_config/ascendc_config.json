@@ -220,6 +220,7 @@
     {"name":"ForeachSinh", "compute_units": ["ascend910b", "ascend950", "kirinx90"], "auto_sync" : false},
     {"name":"UnsortedSegmentSum", "compute_units": ["ascend950"], "auto_sync" : false},
     {"name":"UnsortedSegmentMin", "compute_units": ["ascend950"], "auto_sync" : false},
+    {"name":"SegmentSum", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"ForeachMaximumScalar", "compute_units": ["ascend910b", "ascend950", "kirinx90"], "auto_sync" : false},
     {"name":"ForeachMaximumScalarList", "compute_units": ["ascend910b", "ascend950", "kirinx90"], "auto_sync" : false},
     {"name":"ForeachMinimumScalar", "compute_units": ["ascend910b", "ascend950", "kirinx90"], "auto_sync" : false},
