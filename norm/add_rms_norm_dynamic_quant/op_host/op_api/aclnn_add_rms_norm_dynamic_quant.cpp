@@ -175,7 +175,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantGetWorkspaceSize(
     bool hasEmptyTensor = x1->IsEmpty() || gamma->IsEmpty() || y2Out->IsEmpty();
     bool hasReduceEmptyTensor = gamma->IsEmpty();
     // 非reduce轴为0处理
-    if (hasEmptyTensor && (!Ops::NN::AclnnUtil::IsRegbase() || !hasReduceEmptyTensor)) {
+    if (hasEmptyTensor) {
         OP_LOGW("Got empty tensor in aclnnAddRmsNormQuant!");
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);

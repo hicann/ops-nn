@@ -42,6 +42,9 @@ constexpr uint64_t B32_BLOCK_NUM = 8;
 constexpr uint64_t B8_BLOCK_NUM = 32;
 constexpr int32_t CONST_FACTOR_2 = 2;
 constexpr uint32_t SUM_COUNT = 2;
+constexpr uint32_t DOUBLE_BUFFER = 2;
+constexpr uint32_t NUM_TWO = 2;
+constexpr uint32_t NUM_ONE = 1;
 
 constexpr int32_t VL_SIZE = GetVRegSize();
 constexpr int32_t V_LENGTH = (VL_SIZE / static_cast<int32_t>(sizeof(float)));
@@ -134,9 +137,9 @@ __aicore__ inline void CopyOutScale(
 
 template <typename T_X, typename T_GAMMA, typename T_SMOOTH_SCALE = float, bool HAS_SMOOTH_SCALE = true, typename T_Y>
 __aicore__ inline void ComputeYScale(
-    LocalTensor<T_Y>& yLocal, LocalTensor<float>& scaleLocal, LocalTensor<T_X>& xLocal,
-    LocalTensor<float>& rstdLocal, LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<T_SMOOTH_SCALE>& smoothScaleLocal,
-    LocalTensor<float>& yTmpLocal, uint32_t rstdScaleOffset, uint32_t calCount)
+    LocalTensor<T_Y>& yLocal, LocalTensor<float>& scaleLocal, LocalTensor<T_X>& xLocal, LocalTensor<float>& rstdLocal,
+    LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<T_SMOOTH_SCALE>& smoothScaleLocal, LocalTensor<float>& yTmpLocal,
+    uint32_t rstdScaleOffset, uint32_t calCount)
 {
     uint16_t repeatTimes = (uint16_t)CeilDivision(calCount, V_LENGTH);
 
@@ -215,11 +218,9 @@ __aicore__ inline void ComputeYScale(
                 Truncate<float, RoundMode::CAST_RINT>(yRegFp32Tmp, yRegFp32, maskReg);
                 Cast<half, float, castTraitFp322Fp16>(yRegFp16, yRegFp32Tmp, maskReg);
                 Cast<T_Y, half, castTraitFp162Int8>(yReg, yRegFp16, maskReg);
-            } else if constexpr (
-                IsSameType<T_Y, fp8_e4m3fn_t>::value || IsSameType<T_Y, fp8_e5m2_t>::value) {
+            } else if constexpr (IsSameType<T_Y, fp8_e4m3fn_t>::value || IsSameType<T_Y, fp8_e5m2_t>::value) {
                 Cast<T_Y, float, castTraitFp322Fp8>(yReg, yRegFp32, maskReg);
-            } else if constexpr (
-                IsSameType<T_Y, hifloat8_t>::value) {
+            } else if constexpr (IsSameType<T_Y, hifloat8_t>::value) {
                 Cast<T_Y, float, castTraitFp322Hifp8>(yReg, yRegFp32, maskReg);
             }
             DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + idx * V_LENGTH, yReg, maskReg);
@@ -334,11 +335,9 @@ __aicore__ inline void ComputeY(
                 Truncate<float, RoundMode::CAST_RINT>(yRegFp32Tmp, yRegFp32, maskReg);
                 Cast<half, float, castTraitFp322Fp16>(yRegFp16, yRegFp32Tmp, maskReg);
                 Cast<T_Y, half, castTraitFp162Int8>(yReg, yRegFp16, maskReg);
-            } else if constexpr (
-                IsSameType<T_Y, fp8_e4m3fn_t>::value || IsSameType<T_Y, fp8_e5m2_t>::value) {
+            } else if constexpr (IsSameType<T_Y, fp8_e4m3fn_t>::value || IsSameType<T_Y, fp8_e5m2_t>::value) {
                 Cast<T_Y, float, castTraitFp322Fp8>(yReg, yRegFp32, maskReg);
-            } else if constexpr (
-                IsSameType<T_Y, hifloat8_t>::value) {
+            } else if constexpr (IsSameType<T_Y, hifloat8_t>::value) {
                 Cast<T_Y, float, castTraitFp322Hifp8>(yReg, yRegFp32, maskReg);
             }
             DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + idx * V_LENGTH, yReg, maskReg);

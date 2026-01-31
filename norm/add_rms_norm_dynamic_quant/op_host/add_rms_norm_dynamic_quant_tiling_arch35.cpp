@@ -45,9 +45,13 @@ constexpr uint32_t DEFAULT_SYS_WORKSPACE = 16 * 1024 * 1024;
 constexpr uint32_t LEVEL_BUFFER_CNT = 3;
 constexpr uint32_t MULTI_FACTOR_2 = 2;
 constexpr uint32_t SMOOTH_SCALE1_BIN_OFFSET = 1;
+constexpr uint32_t FULL_LOAD_R_MAX = 16384;
+constexpr uint32_t ALIGN_SPACE = 1 * 1024;
+constexpr uint32_t DOUBLE_BUFFER = 2;
 
-ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::CheckDtypeVaild(
-    ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList, string srcName)
+    ge::graphStatus
+    AddRmsNormDynamicQuantRegbaseTiling::CheckDtypeVaild(
+        ge::DataType & srcDtype, std::vector<ge::DataType>& supportDtypeList, string srcName)
 {
     for (const auto& supportedDtype : supportDtypeList) {
         if (supportedDtype == srcDtype) {
@@ -150,16 +154,18 @@ bool AddRmsNormDynamicQuantRegbaseTiling::CheckInputShapeValue()
     return true;
 }
 
-bool AddRmsNormDynamicQuantRegbaseTiling::CheckOutputDtype() {
+bool AddRmsNormDynamicQuantRegbaseTiling::CheckOutputDtype()
+{
     OP_LOGD(nodeName.c_str(), "Enter AddRmsNormDynamicQuantRegbaseTiling CheckOutputDtype.");
-    std::vector<ge::DataType> supportedYDtypes = {ge::DataType::DT_INT8, ge::DataType::DT_HIFLOAT8,
-                                                  ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E5M2};
+    std::vector<ge::DataType> supportedYDtypes = {
+        ge::DataType::DT_INT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E5M2};
     auto y1DataType = context_->GetOutputDesc(Y1_INDEX)->GetDataType();
     auto y2DataType = context_->GetOutputDesc(Y2_INDEX)->GetDataType();
-    if ((ge::GRAPH_SUCCESS != CheckDtypeVaild(y1DataType, supportedYDtypes, "AddRmsNormDynamicQuant")) || 
-        (ge::GRAPH_SUCCESS != CheckDtypeVaild(y2DataType, supportedYDtypes, "AddRmsNormDynamicQuant")) || 
+    if ((ge::GRAPH_SUCCESS != CheckDtypeVaild(y1DataType, supportedYDtypes, "AddRmsNormDynamicQuant")) ||
+        (ge::GRAPH_SUCCESS != CheckDtypeVaild(y2DataType, supportedYDtypes, "AddRmsNormDynamicQuant")) ||
         (y1DataType != y2DataType)) {
-        OP_LOGE(nodeName.c_str(), "Output dtype should be int8 fp8e4m3 fp8e5m2 hifp8 and y1DataType y2DataType need same.");
+        OP_LOGE(
+            nodeName.c_str(), "Output dtype should be int8 fp8e4m3 fp8e5m2 hifp8 and y1DataType y2DataType need same.");
         return false;
     }
     return true;
@@ -250,7 +256,8 @@ ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::GetShapeAttrsInfo()
         !CheckInputShapeValue(), OP_LOGE(nodeName.c_str(), "The input shape relationship is invalid."),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(!CheckInputDtype(), OP_LOGE(nodeName.c_str(), "The input dtype is invalid."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckOutputDtype(), OP_LOGE(nodeName.c_str(), "The output dtype is invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        !CheckOutputDtype(), OP_LOGE(nodeName.c_str(), "The output dtype is invalid."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         ge::GRAPH_SUCCESS != SetInputParams(), OP_LOGE(nodeName.c_str(), "Set input shape failed."),
         return ge::GRAPH_FAILED);
@@ -325,22 +332,86 @@ uint64_t AddRmsNormDynamicQuantRegbaseTiling::CalUBTotalSize(
     return totalSize;
 }
 
+int64_t AddRmsNormDynamicQuantRegbaseTiling::CalFullLoadBaseM(uint64_t baseN, int64_t& tmpPower)
+{
+    uint64_t baseNB8Align = Ops::Base::CeilAlign(baseN, static_cast<uint64_t>(BLOCK_SIZE));
+    uint64_t baseNB32Align = Ops::Base::CeilAlign(baseN, static_cast<uint64_t>(B32_BLOCK_NUM));
+    uint64_t baseNDtypeAlign = Ops::Base::CeilAlign(baseN, tilingParams.xDtypeAlignNum);
+    tmpPower = std::floor(std::log(baseNDtypeAlign - 1) / std::log(LOG_2));
+    tmpPower = std::pow(LOG_2, tmpPower);
+    int64_t blockSize = Ops::Base::GetUbBlockSize(context_);
+    int64_t vectorLength = Ops::Base::GetVRegSize(context_) / sizeof(float);
+    int64_t firstVcaddLength = Ops::Base::CeilDiv(Ops::Base::CeilDiv(tmpPower, vectorLength), blockSize) * blockSize;
+    int64_t LastUbSize =
+        tilingParams.maxUbSize - baseNDtypeAlign * tilingParams.xDtypeSize -   // gamma
+        tilingParams.quantBufCnt * baseNDtypeAlign * tilingParams.xDtypeSize - // smoothScale1/smoothScale2
+        ALIGN_SPACE;                                                           // Scale1/rstd/xReduceTmp align space
+
+    int64_t mutilBaseM = 3 * baseNDtypeAlign * tilingParams.xDtypeSize + // x1/x2/xout
+                         baseNDtypeAlign * sizeof(float) +               // xoutTmp
+                         DOUBLE_BUFFER * baseNB8Align * sizeof(int8_t) + // y1 * double
+                         baseNB32Align * sizeof(float) +                 // y1Tmp
+                         2 * sizeof(float) +                             // rstd/xReduceTmp
+                         DOUBLE_BUFFER * sizeof(float) +                 // Scale1 * double
+                         firstVcaddLength * sizeof(float);               // xTmp
+
+    if (tilingParams.hasY2Scale2) {
+        mutilBaseM += DOUBLE_BUFFER * baseNB8Align * sizeof(int8_t) + // y2 * double
+                      baseNB32Align * sizeof(float) +                 // y2Tmp
+                      DOUBLE_BUFFER * sizeof(float);                  // Scale2 * double
+    }
+    int64_t fullLoadBaseM = LastUbSize / mutilBaseM;
+    uint64_t usedUbSize =
+        CalUsedSize(fullLoadBaseM, baseNB8Align, baseNB32Align, baseNDtypeAlign, tmpPower, firstVcaddLength);
+    while (usedUbSize > tilingParams.maxUbSize && fullLoadBaseM > 0) {
+        fullLoadBaseM--;
+        usedUbSize =
+            CalUsedSize(fullLoadBaseM, baseNB8Align, baseNB32Align, baseNDtypeAlign, tmpPower, firstVcaddLength);
+    }
+    return fullLoadBaseM;
+}
+
+uint64_t AddRmsNormDynamicQuantRegbaseTiling::CalUsedSize(
+    uint64_t baseM, uint64_t baseNB8Align, uint64_t baseNB32Align, uint64_t baseNDtypeAlign, int64_t tmpPower,
+    int64_t firstVcaddLength)
+{
+    uint64_t ubFactorRstd = Ops::Base::CeilAlign(baseM, static_cast<uint64_t>(B32_BLOCK_NUM));
+    uint64_t totalSize = 0;
+    totalSize += baseNDtypeAlign * tilingParams.xDtypeSize +
+                 tilingParams.quantBufCnt * baseNDtypeAlign * tilingParams.xDtypeSize + ALIGN_SPACE;
+    totalSize +=
+        baseM * (3 * baseNDtypeAlign * tilingParams.xDtypeSize + baseNDtypeAlign * sizeof(float)); // x1/x2/xout + xTmp
+    totalSize += baseM * (baseNB8Align * sizeof(int8_t) * DOUBLE_BUFFER +                          // y1 * double
+                          baseNB32Align * sizeof(float));                                          // y1Tmp
+    totalSize += 2 * ubFactorRstd * sizeof(float);                                                 // rstd/xReduceTmp
+    totalSize += DOUBLE_BUFFER * ubFactorRstd * sizeof(float);                                     // Scale1 * double
+    totalSize += baseM * firstVcaddLength * sizeof(float);                                         // xTmp
+    if (tilingParams.hasY2Scale2) {
+        totalSize += baseM * (baseNB8Align * sizeof(int8_t) * DOUBLE_BUFFER + // y2 * double
+                              baseNB32Align * sizeof(float));                 // y2Tmp
+        totalSize += DOUBLE_BUFFER * ubFactorRstd * sizeof(float);            // Scale2 * double
+    }
+    return totalSize;
+}
+
 ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::SetTilingParams()
 {
     OP_LOGD(nodeName.c_str(), "Enter AddRmsNormDynamicQuantRegbaseTiling SetTilingParams.");
     uint64_t tmpUBSize;
     tilingParams.powerLoop = 1;
 
-    // 1. No cut
-    tmpUBSize = CalUBTotalSize(tilingParams.numM, tilingParams.numN);
-    if (tmpUBSize < tilingParams.maxUbSize) {
-        tilingParams.baseM = tilingParams.numM;
+    // 1. 全载模版切分修改 全载选择条件修改为新UB buffer分配方式 perf
+    int64_t tmpPower = 0;
+    int64_t fullLoadBaseM = CalFullLoadBaseM(tilingParams.numN, tmpPower);
+    if (fullLoadBaseM >= 1 && tilingParams.numN <= FULL_LOAD_R_MAX) {
         tilingParams.baseN = tilingParams.numN;
-        tilingParams.tilingType = TILING_TYPE_NORMAL;
+        tilingParams.baseM = std::min(fullLoadBaseM, static_cast<int64_t>(tilingParams.mPerCore));
+        tilingParams.powerSplit = tmpPower;
+        tilingParams.tilingType = TILING_TYPE_PERF;
         return ge::GRAPH_SUCCESS;
     }
 
-    // 2. Cut m
+    // 2.全载性能模版未覆盖到的部分走原来的模版
     tmpUBSize = CalUBTotalSize(1, tilingParams.numN);
     if (tmpUBSize <= tilingParams.maxUbSize) {
         tilingParams.baseN = tilingParams.numN;

@@ -66,6 +66,9 @@ REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_130, AddRmsNormDynamicQuantReg
 REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_101, AddRmsNormDynamicQuantRegbaseTilingData)
 REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_121, AddRmsNormDynamicQuantRegbaseTilingData)
 REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_131, AddRmsNormDynamicQuantRegbaseTilingData)
+REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_102, AddRmsNormDynamicQuantRegbaseTilingData)
+REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_122, AddRmsNormDynamicQuantRegbaseTilingData)
+REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_132, AddRmsNormDynamicQuantRegbaseTilingData)
 REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_199, AddRmsNormDynamicQuantRegbaseTilingData)
 
 BEGIN_TILING_DATA_DEF(AddRmsNormDynamicQuantEmptyTilingData)
@@ -86,6 +89,7 @@ REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_500, AddRmsNormDynamicQuantEmp
 
 constexpr uint32_t TILING_TYPE_NORMAL = 0;
 constexpr uint32_t TILING_TYPE_SPILT = 1;
+constexpr uint32_t TILING_TYPE_PERF = 2;
 constexpr uint32_t TILING_OFFSET_HAS_QUANT = 10;
 constexpr uint32_t TILING_OFFSET_REGBASE = 100;
 constexpr uint64_t TILING_KEY_UNRUN = 199;
@@ -228,6 +232,10 @@ public:
     bool CheckOutputDtype();
     ge::graphStatus SetInputParams();
     uint64_t CalUBTotalSize(uint64_t baseM, uint64_t baseN, const uint32_t tilingType);
+    int64_t CalFullLoadBaseM(uint64_t baseN, int64_t& tmpPower);
+    uint64_t CalUsedSize(
+        uint64_t baseM, uint64_t baseNB8Align, uint64_t baseNB32Align, uint64_t baseNDtypeAlign, int64_t tmpPower,
+        int64_t firstVcaddLength);
     ge::graphStatus SetTilingParams();
     void SetTilingData();
     void PrintTilingData();

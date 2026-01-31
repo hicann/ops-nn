@@ -7,13 +7,13 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-
 /*!
  * \file add_rms_norm_dynamic_quant_apt.cpp
  * \brief
  */
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
 #include "arch35/add_rms_norm_dynamic_quant_regbase.h"
+#include "arch35/add_rms_norm_dynamic_quant_regbase_perf.h"
 #include "arch35/add_rms_norm_dynamic_quant_regbase_split_reduce.h"
 #include "arch35/add_rms_norm_dynamic_quant_empty.h"
 #else
@@ -88,6 +88,15 @@ extern "C" __global__ __aicore__ void add_rms_norm_dynamic_quant(
         } else if (TILING_KEY_IS(131)) {
             KernelAddRmsNormDynamicQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, 131> op(&pipe);
             INIT_AND_PROCESS_WORKSPACE;
+        } else if (TILING_KEY_IS(102)) {
+            KernelAddRmsNormDynamicQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, 102> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(122)) {
+            KernelAddRmsNormDynamicQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, 122> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(132)) {
+            KernelAddRmsNormDynamicQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, 132> op(&pipe);
+            INIT_AND_PROCESS;
         } else if (TILING_KEY_IS(TILING_KEY_UNRUN)) {
             // Do nothing
         }
