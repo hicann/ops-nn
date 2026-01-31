@@ -128,18 +128,17 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>2-8</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
      <tr>
       <td>weightScaleOptional</td>
       <td>输入</td>
       <td>weight的反量化scale。</td>
       <td><ul><li>shape支持1维或2维，shape表示为[2H]或[groupNum, 2H]，且取值2H和x最后一维保持一致。</li><li>可选参数，支持传空指针。当groupIndexOptional为空指针时，shape为[2H]；当groupIndexOptional不为空指针时，shape为[groupNum, 2H]。</li></ul></td>
-      <td>-</td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>1或2</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
       <td>activationScaleOptional</td>
       <td>输入</td>
@@ -148,7 +147,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>FLOAT</td>
       <td>ND</td>
       <td>1-7</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
       <tr>
       <td>biasOptional</td>
@@ -158,7 +157,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>FLOAT、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>1</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
        <tr>
       <td>quantScaleOptional</td>
@@ -168,7 +167,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
       <td>-</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
        <tr>
       <td>quantOffsetOptional</td>
@@ -178,7 +177,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
       <tr>
       <td>groupIndexOptional</td>
@@ -188,7 +187,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
       <tr>
       <td>activateLeft</td>
@@ -288,7 +287,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>INT8、FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2</td>
       <td>ND</td>
       <td>2-8</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
     <tr>
       <td>scaleOut</td>
@@ -298,7 +297,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>FLOAT</td>
       <td>ND</td>
       <td>1-7</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
        <tr>
       <td>workspaceSize</td>
