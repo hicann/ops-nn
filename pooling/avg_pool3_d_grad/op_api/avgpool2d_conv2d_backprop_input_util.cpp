@@ -31,6 +31,7 @@
 #include "opdev/platform.h"
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
+#include "op_api/aclnn_util.h"
 #include "runtime/context.h"
 
 using namespace op;
@@ -87,8 +88,8 @@ static bool IsPreInsertDilation(const ConvolutionBackwardInputTensorForAvgPool2d
 
 static bool IsInputSupportInsertDilation() {
   // 判断当前SOC版本是否支持前后插Dilation
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (curArch == NpuArch::DAV_2201) {
     OP_LOGD("The soc version is Ascend910B or ASCEND910_93, ConvolutionBackward supports dilation");
     return true;
   }
@@ -149,9 +150,9 @@ static const aclTensor *PreDilation(ConvolutionBackwardInputTensorForAvgPool2d &
 }
 
 inline bool IsCubeSupportHf32() {
-    if (op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND910B &&
-        op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND910_93 &&
-        op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND950) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch != NpuArch::DAV_2201 &&
+        (!Ops::NN::AclnnUtil::IsRegbase(curArch))) {
         return false;
     }
     return true;
@@ -190,8 +191,7 @@ static const aclTensor *PerformConv2DBackpropInput(ConvolutionBackwardInputTenso
                                             ConvolutionBackwardParamsForAvgPool2d &params, aclOpExecutor *executor) {
   const aclTensor *gradInputNC1HWC0 = nullptr;
   bool useHf32 = ConvBackGoHf32(inputTensor, params.cubeMathType);
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND950) {
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
       gradInputNC1HWC0 =
         l0op::Conv2DBackpropInput(inputTensor.input, inputTensor.weight, inputTensor.gradOutput, params.stride,
                                   params.padding, params.dilation, params.groups, executor,

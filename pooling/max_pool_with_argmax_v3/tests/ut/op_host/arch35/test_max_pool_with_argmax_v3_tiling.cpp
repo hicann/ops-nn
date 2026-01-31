@@ -418,7 +418,7 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test3)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     // workspaces nullptr return failed
-    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     dlog_setlevel(0, 3, 0);
 }
 

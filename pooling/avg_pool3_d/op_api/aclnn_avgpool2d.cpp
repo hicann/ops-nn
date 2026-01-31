@@ -321,8 +321,8 @@ static bool CheckFormat(const aclTensor *self, const aclTensor *out)
 }
 
 static bool IfSupport2dTo3d() {
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (curArch == NpuArch::DAV_2201) {
     return true;
   }
   return false;
@@ -921,7 +921,7 @@ aclnnStatus aclnnAvgPool2dGetWorkspaceSize(
     static const std::string paddingMode = "CALCULATED";
     static const std::string dataFormat = FORMAT_NCHW_STR;
     const bool globalPooling = false;
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         auto avgPoolingOut = l0op::AvgPoolV2(self4d, kernel4, stride4, paddingMode, paddings4, dataFormat,
                     globalPooling, ceilMode, !countIncludePad, divisorOverride, uniqueExecutor.get());
         CHECK_RET(ACLNN_SUCCESS == HandleOut(out, avgPoolingOut, uniqueExecutor), ACLNN_ERR_INNER);

@@ -227,7 +227,7 @@ __aicore__ inline void MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::Init
     maxGm.SetGlobalBuffer((__gm__ T1*)y);
     indicesGm.SetGlobalBuffer((__gm__ TINDEX*)indices);
     maxValueWorkspaceGm.SetGlobalBuffer((__gm__ T2*)workspace);
-    maxValueIndexWorkspaceGm.SetGlobalBuffer(reinterpret_cast<__gm__ TINDEX*>(workspace[VALUE_WORKSPACE_SIZE]));
+    maxValueIndexWorkspaceGm.SetGlobalBuffer((__gm__ TINDEX*)(workspace + VALUE_WORKSPACE_SIZE));
 
     pipe->InitBuffer(
         inputQue, BUFFER_NUM,
@@ -536,8 +536,7 @@ __aicore__ inline int64_t MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::R
 {
     int64_t realIndex = 0;
     if (tilingData->splitW == 0) {
-        int64_t alignBlockLen = CeilValue(curkW, BLOCK_NUM_T1);
-        realIndex = curOriginIndex + index / alignBlockLen * tilingData->wInDim + index % alignBlockLen;
+        realIndex = curOriginIndex + index / curkW * tilingData->wInDim + index % curkW;
     } else {
         realIndex = curOriginIndex + index;
     }

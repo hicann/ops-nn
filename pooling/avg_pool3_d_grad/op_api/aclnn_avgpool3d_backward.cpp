@@ -20,6 +20,7 @@
 #include "opdev/framework_op.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 #include "runtime/context.h"
 
 #include "aclnn_kernels/contiguous.h"
@@ -128,7 +129,7 @@ static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, 
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     bool is910SocVersion =
         (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-         socVersion == SocVersion::ASCEND950);
+         Ops::NN::AclnnUtil::IsRegbase());
 
     const std::initializer_list<DataType> gradDtypeSupportList =
         is910SocVersion ? GRAD_DTYPE_SUPPORT_LIST_ASCEND910BC : GRAD_DTYPE_SUPPORT_LIST;

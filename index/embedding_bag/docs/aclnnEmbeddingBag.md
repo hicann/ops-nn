@@ -4,8 +4,12 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品</term>                             |    √     |
+| <term>Atlas 训练系列产品</term>                              |    √     |
 
 ## 功能说明
 
@@ -120,7 +124,7 @@ aclnnStatus aclnnEmbeddingBag(
         <td>-</td>
         <td>INT32、INT64</td>
         <td>ND</td>
-        <td>0-1</td>
+        <td>0-2</td>
         <td>√</td>
       </tr>
       <tr>
@@ -170,7 +174,7 @@ aclnnStatus aclnnEmbeddingBag(
         <td>仅在sum模式下，可以不是nullptr，其他模式必须为nullptr。</td>
         <td>FLOAT、FLOAT16、BFLOAT16</td>
         <td>-</td>
-        <td>1</td>
+        <td>0-2</td>
         <td>-</td>
       </tr>
       <tr>
@@ -254,6 +258,8 @@ aclnnStatus aclnnEmbeddingBag(
         <td>-</td>
       </tr>
     </tbody></table>
+
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> indices仅支持0-1维, perSampleWeights仅支持1维 。
 
 - **返回值**
 

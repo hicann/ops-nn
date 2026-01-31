@@ -119,9 +119,9 @@ private:
     ge::graphStatus InitBaseParams(gert::Shape& gradShape, ge::DataType& dtype);
     void CalcShapeVars(const gert::Shape& gradShape, int64_t& ncShape, int64_t& ndhwShape, int64_t& cShape);
     void SetWorkspace(ge::DataType dtype, int64_t ncShape);
-    void CalcCoreNumAndDetermineFlag(const AvgPool3DGradCubeCompileInfo* compileInfo, 
+    void CalcCoreNumAndDetermineFlag(const AvgPool3DGradCubeCompileInfo* compileInfo,
                                                       int64_t ncShape, int64_t ndhwShape, int64_t gradDim0);
-    void DispatchTilingStrategy(uint64_t ubSizePlatform, ge::DataType dtype, 
+    void DispatchTilingStrategy(uint64_t ubSizePlatform, ge::DataType dtype,
                                                  int64_t cShape, int64_t ndhwShape);
 private:
     gert::TilingContext* tilingContext_ = nullptr;
@@ -549,13 +549,13 @@ ge::graphStatus AvgPool3dGradTiling::Init()
 {
     OP_LOGD(tilingContext_->GetNodeName(), "Tiling initing");
     auto compileInfo = static_cast<const AvgPool3DGradCubeCompileInfo*>(tilingContext_->GetCompileInfo());
-    OP_CHECK_IF(compileInfo == nullptr, 
+    OP_CHECK_IF(compileInfo == nullptr,
                 OP_LOGE(tilingContext_->GetNodeName(), "compile info is nullptr"),
                 return ge::GRAPH_FAILED);
-    
+
     gert::Shape gradShape;
     ge::DataType dtype;
-    OP_CHECK_IF(InitBaseParams(gradShape, dtype) != ge::GRAPH_SUCCESS, 
+    OP_CHECK_IF(InitBaseParams(gradShape, dtype) != ge::GRAPH_SUCCESS,
                 OP_LOGE(tilingContext_->GetNodeName(), "InitBaseParams failed"),
                 return ge::GRAPH_FAILED);
 
@@ -572,7 +572,7 @@ ge::graphStatus AvgPool3dGradTiling::Init()
     SetWorkspace(dtype, ncShape);
     CalcCoreNumAndDetermineFlag(compileInfo, ncShape, ndhwShape, gradShape.GetDim(0));
 
-    OP_CHECK_IF(coreNum_ == 0UL, 
+    OP_CHECK_IF(coreNum_ == 0UL,
                 OP_LOGE(tilingContext_->GetNodeName(), "CoreNum is zero, error."),
                 return ge::GRAPH_FAILED);
     uint64_t ubSizePlatform = compileInfo->ub_size;
@@ -591,7 +591,7 @@ ge::graphStatus AvgPool3dGradTiling::InitBaseParams(gert::Shape& gradShape, ge::
     gradShape = tilingContext_->GetInputShape(1)->GetStorageShape();
     dtype = tilingContext_->GetInputDesc(1)->GetDataType();
     auto attrs = tilingContext_->GetAttrs();
-    
+
     countIncludePad_ = static_cast<uint64_t>(*attrs->GetAttrPointer<bool>(COUNT_IDX));
     divisorOverride_ = static_cast<int64_t>(*attrs->GetAttrPointer<int>(DIVISOR_IDX));
     dataFormat_ = attrs->GetStr(FORMAT_IDX);
@@ -627,9 +627,9 @@ void AvgPool3dGradTiling::CalcShapeVars(const gert::Shape& gradShape, int64_t& n
 
 void AvgPool3dGradTiling::SetWorkspace(ge::DataType dtype, int64_t ncShape)
 {
-    size_t sysWorkspaceSize = 16UL * 1024UL * 1024UL;
+    size_t sysWorkspaceSize = 16 * 1024 * 1024;
     size_t castWorkspaceSize = 0;
-    
+
     if (dtype == ge::DT_BF16 || dtype == ge::DT_FLOAT16) {
         size_t totalElements = static_cast<size_t>(inDHW_.d) * static_cast<size_t>(inDHW_.h) *
                                static_cast<size_t>(inDHW_.w) * static_cast<size_t>(ncShape);
@@ -640,7 +640,7 @@ void AvgPool3dGradTiling::SetWorkspace(ge::DataType dtype, int64_t ncShape)
     currentWorkSpace[0] = sysWorkspaceSize + castWorkspaceSize;
 }
 
-void AvgPool3dGradTiling::CalcCoreNumAndDetermineFlag(const AvgPool3DGradCubeCompileInfo* compileInfo, 
+void AvgPool3dGradTiling::CalcCoreNumAndDetermineFlag(const AvgPool3DGradCubeCompileInfo* compileInfo,
                                                       int64_t ncShape, int64_t ndhwShape, int64_t gradDim0)
 {
     if (dataFormat_ == "NDHWC") {
@@ -670,7 +670,7 @@ void AvgPool3dGradTiling::CalcCoreNumAndDetermineFlag(const AvgPool3DGradCubeCom
     }
 }
 
-void AvgPool3dGradTiling::DispatchTilingStrategy(uint64_t ubSizePlatform, ge::DataType dtype, 
+void AvgPool3dGradTiling::DispatchTilingStrategy(uint64_t ubSizePlatform, ge::DataType dtype,
                                                  int64_t cShape, int64_t ndhwShape)
 {
     if (dataFormat_ == "NCDHW") {

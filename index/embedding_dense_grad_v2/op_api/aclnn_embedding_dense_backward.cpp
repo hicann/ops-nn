@@ -22,7 +22,6 @@
 #include "opdev/op_dfx.h"
 #include "opdev/op_log.h"
 #include "aclnn_kernels/common/op_error_check.h"
-#include "opdev/platform.h"
 #include "runtime/context.h"
 #include "aclnn_embedding_dense_backward.h"
 
@@ -45,18 +44,21 @@ static const int64_t GRAD_ROW_LIMIT = 512;
 static const int64_t SCALE_LIMIT_RATIO = 2;
 static const int64_t MEMORY_THRESHOLD = 100 * 1024 * 1024; // 100MB
 static const int64_t SIZE_OF_HALF = 2;
+static const int64_t FIR_DIM_POS = 0;
+static const int64_t SEC_DIM_POS = 1;
 
-static const std::initializer_list<DataType> GRAD_DTYPE_SUPPORT_LIST_910 = {
+static const std::initializer_list<DataType> GRAD_DTYPE_SUPPORT_LIST_F32_F16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
-static const std::initializer_list<DataType> GRAD_DTYPE_SUPPORT_LIST_910B = {
+static const std::initializer_list<DataType> GRAD_DTYPE_SUPPORT_LIST_WITH_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 static const std::initializer_list<DataType> INDICES_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_DOUBLE,
     op::DataType::DT_INT8,    op::DataType::DT_UINT8, op::DataType::DT_INT16,
     op::DataType::DT_INT32,   op::DataType::DT_INT64, op::DataType::DT_BOOL};
 
-static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST_910 = {DataType::DT_FLOAT, DataType::DT_FLOAT16};
-static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST_910B = {
+static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST_F32_F16 = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST_WITH_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
 static bool CheckNotNull(const aclTensor* grad, const aclTensor* indices, const aclTensor* out)
@@ -70,13 +72,11 @@ static bool CheckNotNull(const aclTensor* grad, const aclTensor* indices, const 
 static bool CheckDtypeValid(const aclTensor* grad, const aclTensor* indices, const aclTensor* out)
 {
     bool is910BSocVersion =
-        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950);
+        (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase());
     const std::initializer_list<DataType> GRAD_DTYPE_SUPPORT_LIST =
-        is910BSocVersion ? GRAD_DTYPE_SUPPORT_LIST_910B : GRAD_DTYPE_SUPPORT_LIST_910;
+        is910BSocVersion ? GRAD_DTYPE_SUPPORT_LIST_WITH_BF16 : GRAD_DTYPE_SUPPORT_LIST_F32_F16;
     const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST =
-        is910BSocVersion ? OUT_DTYPE_SUPPORT_LIST_910B : OUT_DTYPE_SUPPORT_LIST_910;
+        is910BSocVersion ? OUT_DTYPE_SUPPORT_LIST_WITH_BF16 : OUT_DTYPE_SUPPORT_LIST_F32_F16;
 
     // 检查grad的数据类型是否在支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(grad, GRAD_DTYPE_SUPPORT_LIST, return false);
@@ -192,10 +192,8 @@ static bool CheckIsSmallDimMode(const aclTensor* grad, const uint64_t embeddingD
 static bool IsComputeByV2(const aclTensor* grad, const uint64_t numWeights, const bool scaleGradByFreq)
 {
     bool is910BSocVersion =
-        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
-    bool is91095SocVersion = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950);
-    if (!is910BSocVersion && !is91095SocVersion) {
+        (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201);
+    if (!is910BSocVersion && !Ops::NN::AclnnUtil::IsRegbase()) {
         return false;
     }
     int64_t gradRow = 1;
@@ -210,10 +208,10 @@ static bool IsComputeByV2(const aclTensor* grad, const uint64_t numWeights, cons
 
     int64_t gradRowLimit = (grad->GetDataType() == ge::DT_FLOAT) ? \
                             GRAD_ROW_LIMIT : (GRAD_ROW_LIMIT + GRAD_ROW_LIMIT);
-    
+
     return (gradRow <= static_cast<int64_t>(INT32_MAX_LIMIT)) &&
            ((gradRow > embeddingDim && gradRow > gradRowLimit) ||
-            ((numWeights > embeddingDim * MULTIPLES || 
+            ((numWeights > embeddingDim * MULTIPLES ||
             (embeddingDim / numWeights < SCALE_LIMIT_RATIO && scaleGradByFreq)) && embeddingDim > LIMIT_EMBEDDING_DIM_SIZE));
 }
 
@@ -264,9 +262,9 @@ static std::pair<const aclTensor*, const aclTensor*> PorcessIndices(
         return {nullptr, nullptr};
     }
 
-    bool is910D = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
+    bool is950 = Ops::NN::AclnnUtil::IsRegbase();
     // 修改读取的数据类型
-    if (!is910D && gradRow < static_cast<int64_t>(INT32_INF)) {
+    if (!is950 && gradRow < static_cast<int64_t>(INT32_INF)) {
         ViewDataType(indiceViewFloat, op::DataType::DT_FLOAT);
         OP_LOGD("aclnnEmbeddingDenseGradV2: indice sort by aicore");
     }
@@ -283,7 +281,7 @@ static std::pair<const aclTensor*, const aclTensor*> PorcessIndices(
     }
 
     aclTensor* sortIndice = sortIdxOut;
-    if (!is910D) {
+    if (!is950) {
         sortIndice = executor->CreateView(sortIdxOut, {gradRow}, sortIdxOut->GetViewOffset());
         if (sortIndice == nullptr) {
             return {nullptr, nullptr};
@@ -332,13 +330,12 @@ aclnnStatus aclnnEmbeddingDenseBackwardGetWorkspaceSize(
     CHECK_RET(gradContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto gradCasted = gradContiguous;
-    bool is910D = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
+    bool is950 = Ops::NN::AclnnUtil::IsRegbase();
     bool needCast = IsNeedCast(grad, out, scaleGradByFreq);
     bool is910BSocVersion =
-        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
+        (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201);
     needCast = (is910BSocVersion && needCast) || !is910BSocVersion;
-    if (!is910D && needCast) {
+    if (!is950 && needCast) {
         // grad如果是float16/bfloat16，需要cast为float32
         gradCasted = l0op::Cast(gradContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
         CHECK_RET(gradCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -348,7 +345,7 @@ aclnnStatus aclnnEmbeddingDenseBackwardGetWorkspaceSize(
     auto indicesContiguous = l0op::Contiguous(indices, uniqueExecutor.get());
     CHECK_RET(indicesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    if (is910D) {
+    if (is950) {
         // indices如果非int32,int64类型，需要强转
         auto castDtype = indicesContiguous->GetDataType();
         if (castDtype == op::DataType::DT_DOUBLE) {
@@ -356,7 +353,6 @@ aclnnStatus aclnnEmbeddingDenseBackwardGetWorkspaceSize(
         } else if (castDtype != op::DataType::DT_INT32 && castDtype != op::DataType::DT_INT64) {
             indicesContiguous = l0op::Cast(indicesContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
         }
-
         CHECK_RET(indicesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
@@ -364,28 +360,42 @@ aclnnStatus aclnnEmbeddingDenseBackwardGetWorkspaceSize(
     auto castDtype = indicesContiguous->GetDataType();
     // 判断是走V1还是V2， 芯片为910或者embeddingDim过大时就走V1，否则走V2
     if (IsComputeByV2(gradCasted, numWeights, scaleGradByFreq)) {
-        if (!is910D && castDtype != op::DataType::DT_INT32) {
+        if (!is950 && castDtype != op::DataType::DT_INT32) {
             // v2只支持int32的数据类型
             indicesContiguous = l0op::Cast(indicesContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
         }
         CHECK_RET(indicesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto gradShape = gradCasted->GetViewShape();
         auto embeddingDim = gradShape.GetDim(gradShape.GetDimNum() - 1);
-        if (is910D || !CheckIsSmallDimMode(grad, embeddingDim, numWeights)) {
+
+        // shape推导
+        int64_t outShapeLen = OUT_SHAPE;
+        op::Shape outShape;
+        outShape.SetDimNum(outShapeLen);
+        outShape.SetDim(FIR_DIM_POS, numWeights);
+        outShape.SetDim(SEC_DIM_POS, embeddingDim);
+
+        // 创建输出Tensor
+        auto outs = uniqueExecutor->AllocTensor(outShape, gradCasted->GetDataType());
+        CHECK_RET(outs != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        if (is950 || !CheckIsSmallDimMode(grad, embeddingDim, numWeights)) {
             auto result = PorcessIndices(indicesContiguous, gradCasted, uniqueExecutor.get());
             auto sortIndice = result.first;
             auto posIdx = result.second;
             CHECK_RET(sortIndice != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            auto outZero = l0op::ZerosLike(outs, uniqueExecutor.get());
+            CHECK_RET(outZero != nullptr, ACLNN_ERR_INNER_NULLPTR);
             embeddingDenseBackwardResult = l0op::EmbeddingDenseGradV2(
-                gradCasted, sortIndice, posIdx, numWeights, paddingIdx, scaleGradByFreq, uniqueExecutor.get());
+                gradCasted, sortIndice, posIdx, outZero, numWeights, paddingIdx, scaleGradByFreq, uniqueExecutor.get());
         } else {
             embeddingDenseBackwardResult = l0op::EmbeddingDenseGradV2(
-                gradCasted, indicesContiguous, indicesContiguous, numWeights, paddingIdx, scaleGradByFreq,
+                gradCasted, indicesContiguous, indicesContiguous, outs, numWeights, paddingIdx, scaleGradByFreq,
                 uniqueExecutor.get());
         }
     } else {
         if (castDtype != op::DataType::DT_INT32 && castDtype != op::DataType::DT_INT64) {
-            // 非950, indices如果非int32,int64类型，需要强转
+            // 非arch3510, indices如果非int32,int64类型，需要强转
             indicesContiguous = l0op::Cast(indicesContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
             CHECK_RET(indicesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }

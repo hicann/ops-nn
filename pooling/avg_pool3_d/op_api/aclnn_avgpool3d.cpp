@@ -11,14 +11,15 @@
 #include "aclnn_avgpool3d.h"
 
 #include "opdev/common_types.h"
+#include "opdev/framework_op.h"
 #include "opdev/data_type_utils.h"
-#include "opdev/format_utils.h"
+#include "opdev/shape_utils.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
-#include "opdev/op_log.h"
-#include "opdev/shape_utils.h"
+#include "opdev/format_utils.h"
 #include "opdev/tensor_view_utils.h"
-#include "opdev/framework_op.h"
+#include "opdev/op_log.h"
+
 #include "aclnn_kernels/common/op_error_check.h"
 
 #include "avgpool3d.h"
@@ -70,8 +71,8 @@ static const std::initializer_list<op::DataType> ASCEND310P_DTYPE_SUPPORT_LIST =
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<DataType>& GetDtypeSupportListV2(const std::initializer_list<op::DataType>& l1, const std::initializer_list<op::DataType>& l2) {
-  if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-      GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
     return l1;
   } else {
     return l2;
@@ -257,8 +258,8 @@ static bool CheckGlobalPool(const aclIntArray *kernelSize, const aclIntArray *pa
         return false;
     }
     auto avgpoolInShape = avgpoolIn->GetViewShape();
-    if ((avgpoolInShape.GetDim(DIM2) == (*kernelSize)[DIM0]) && 
-        (avgpoolInShape.GetDim(DIM3) == (*kernelSize)[DIM1]) && 
+    if ((avgpoolInShape.GetDim(DIM2) == (*kernelSize)[DIM0]) &&
+        (avgpoolInShape.GetDim(DIM3) == (*kernelSize)[DIM1]) &&
         (avgpoolInShape.GetDim(DIM4) == (*kernelSize)[DIM2])) {
         return true;
     }
@@ -272,7 +273,7 @@ static bool CheckBigKernel(const aclIntArray *kernelSize, const aclIntArray *pad
     }
 
     int64_t sumK = (*kernelSize)[DIM0] * (*kernelSize)[DIM1] * (*kernelSize)[DIM2];
-    bool bigKernel = ((*kernelSize)[DIM0] > BIG_KERNEL_SINGLE_LIMIT || (*kernelSize)[DIM1] > BIG_KERNEL_SINGLE_LIMIT || 
+    bool bigKernel = ((*kernelSize)[DIM0] > BIG_KERNEL_SINGLE_LIMIT || (*kernelSize)[DIM1] > BIG_KERNEL_SINGLE_LIMIT ||
                         (*kernelSize)[DIM2] > BIG_KERNEL_SINGLE_LIMIT) && sumK > BIG_KERNEL_SUM_LIMIT;
 
     auto avgpoolInShape = avgpoolIn->GetViewShape();
@@ -308,9 +309,9 @@ static bool IsEnableNCDHW(
     auto avgpoolInShape = avgpoolIn->GetViewShape();
     auto avgpoolInShapeNC = avgpoolInShape.GetDim(0) * avgpoolInShape.GetDim(1);
     auto enableNC = (avgpoolInShapeNC > 256) && (avgpoolInShapeNC < 960);
-    bool is950 = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
+    bool isRegbase = Ops::NN::AclnnUtil::IsRegbase();
     bool isBigKernelFlag = CheckBigKernel(kernelSize, pad, avgpoolIn, out);
-    return (isCapable && isSamePoolSize && enableNC) || isBigKernelFlag || is950;
+    return (isCapable && isSamePoolSize && enableNC) || isBigKernelFlag || isRegbase;
 }
 
 // 构建averagepool3d计算图, 通过Vector实现
@@ -339,7 +340,8 @@ static aclnnStatus BuildAvgPool3dGraph(
         CHECK_RET(avgpoolIn != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
-    bool is310pFlag = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P;
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    bool is310pFlag = curArch == NpuArch::DAV_2002;
 
     auto isEnableNCDHW = IsEnableNCDHW(kernelSize, divisorOverride, pad, countIncludePad, ceilMode, avgpoolIn, out);
     if ((!isDimDDownsamping && !isEnableNCDHW) or is310pFlag) {

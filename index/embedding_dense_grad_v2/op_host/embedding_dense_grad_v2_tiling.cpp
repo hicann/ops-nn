@@ -18,10 +18,12 @@
 #include "platform/platform_infos_def.h"
 #include "log/log.h"
 #include "tiling/platform/platform_ascendc.h"
+#include "tiling_base/tiling_util.h"
 #include "embedding_dense_grad_v2_regbase_tiling.h"
 #include "embedding_dense_grad_v2_tiling.h"
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
 constexpr uint64_t VEC_PROCESS_SIZE = 256;
 constexpr uint64_t SIZE_OF_FP32 = 4;
 constexpr uint64_t BLOCK_SIZE = 32;
@@ -35,6 +37,8 @@ constexpr uint64_t SMALL_DIM_THRESHOLD = 512;
 constexpr uint64_t CAST_MAX_NUM = 16777216;
 constexpr uint64_t ALIGN_32_NUM_SPCAE = 300;
 constexpr uint64_t UB_SORT_PART = 10;
+constexpr uint64_t TILING_KEY_NORNAL = 0;
+constexpr uint64_t TILING_KEY_SMALL_DIM = 100;
 constexpr size_t EMBEDDING_DENSE_GRAD_ATTR_NUM_WEIGHTS = 0;
 constexpr size_t EMBEDDING_DENSE_GRAD_ATTR_PADDING_IDX = 1;
 constexpr size_t EMBEDDING_DENSE_GRAD_ATTR_SCALE_GRAD_BY_FREQ = 2;
@@ -48,7 +52,7 @@ public:
     void TilingDataPrint() const;
 
 private:
-    inline void SetTilingKeyMode() const;
+    inline void SetTilingKeyMode();
     inline void SetDtypeSize();
     inline void BaseTiling(const int64_t gradRow);
     inline void Tiling4Scale();
@@ -67,6 +71,7 @@ private:
     uint64_t ubSize_ = 0;
     uint64_t dataTypeSize_ = 0;
     bool scaleGrad_ = false;
+    uint64_t tilingKey_ = 0;
 
 private:
     uint64_t formerRow_ = 0;
@@ -128,11 +133,11 @@ private:
     uint64_t maxFormerNum = 0; // max formerEmbeddingDim_ that ub can calculate
 };
 
-inline void EmbeddingDenseGradV2Tiling::SetTilingKeyMode() const
+inline void EmbeddingDenseGradV2Tiling::SetTilingKeyMode()
 {
     bool isSmallDim = CheckIsSmallDim(embeddingDim_);
-    uint64_t tilingKey = Ops::NN::Optiling::RecursiveSum(scaleGrad_, isDeterministMode_, isSmallDim);
-    tilingContext_->SetTilingKey(tilingKey);
+    tilingKey_ = Ops::NN::Optiling::RecursiveSum(scaleGrad_, isDeterministMode_, isSmallDim);
+    tilingContext_->SetTilingKey(tilingKey_);
 }
 
 inline void EmbeddingDenseGradV2Tiling::Tiling4Scale()
@@ -345,6 +350,9 @@ bool EmbeddingDenseGradV2Tiling::CheckIsSmallDim(const uint64_t gradLastDim) con
 ge::graphStatus EmbeddingDenseGradV2Tiling::SetKernelTiling()
 {
     tilingContext_->SetBlockDim(coreNum_);
+    if (tilingKey_ == TILING_KEY_NORNAL || tilingKey_ == TILING_KEY_SMALL_DIM) {
+        tilingContext_->SetScheduleMode(1);
+    }
     tilingData_.params.set_coreNum(coreNum_);
     tilingData_.params.set_tailRowNum(tailRow_);
     tilingData_.params.set_formerRowNum(formerRow_);

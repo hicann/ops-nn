@@ -35,6 +35,7 @@ static constexpr int64_t TRIPPLE = 3;
 static constexpr int64_t UB_CONST = 65;
 static constexpr int64_t ALIGN_VALUE = 64;
 static constexpr uint32_t WS_SYS_SIZE = 16 * 1024 * 1024;
+static constexpr uint32_t BATCH_MODE = 1;
 using namespace AscendC;
 
 namespace optiling
@@ -141,6 +142,7 @@ ge::graphStatus MaxPoolWithArgmaxV3BigKernelMulCoreTiling::DoOpTiling()
 {
     DoUBTiling();
     SetTilingData();
+    context_->SetScheduleMode(BATCH_MODE);
     return ge::GRAPH_SUCCESS;
 }
 ge::graphStatus MaxPoolWithArgmaxV3BigKernelMulCoreTiling::GetWorkspaceSize()

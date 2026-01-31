@@ -17,6 +17,7 @@
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 namespace l0op {
@@ -34,24 +35,24 @@ static const std::initializer_list<DataType> AICORE_910B_DTYPE_SUPPORT_LIST = {D
 static const std::initializer_list<DataType> AICORE_310P_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
                                                                                 DataType::DT_FLOAT16};
 
-static const std::initializer_list<DataType> AICORE_950_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
+static const std::initializer_list<DataType> REGBASE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
                                                                                  DataType::DT_FLOAT16,
                                                                                  DataType::DT_BF16};
 
 // 根据芯片类型、dtype判断算子是否支持走aicore
 static inline bool IsAiCoreSupport(DataType inputDtype)
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201) {
         return CheckType(inputDtype, AICORE_910B_DTYPE_SUPPORT_LIST);
     }
 
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P) {
+    if (curArch == NpuArch::DAV_2002) {
         return CheckType(inputDtype, AICORE_310P_DTYPE_SUPPORT_LIST);
     }
 
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
-        return CheckType(inputDtype, AICORE_950_DTYPE_SUPPORT_LIST);
+    if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+        return CheckType(inputDtype, REGBASE_DTYPE_SUPPORT_LIST);
     }
 
     return false;
@@ -66,7 +67,8 @@ static inline const aclTensor* AvgPool3DAiCore(
     L0_DFX(AvgPool3DAiCore, input, output, kernelSize, stride, pad, ceilMode,
         countIncludePad, divisorOverride, dataFormat);
 
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2002) {
         // 使用框架宏ADD_TO_LAUNCHER_LIST_AICORE，将AiCore AvgPool3D算子加入任务队列
         auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AvgPool3DV2, OP_INPUT(input), OP_OUTPUT(output),
         OP_ATTR(kernelSize, stride, pad, ceilMode, countIncludePad,

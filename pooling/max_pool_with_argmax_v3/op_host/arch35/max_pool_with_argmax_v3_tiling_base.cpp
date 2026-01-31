@@ -26,6 +26,7 @@ namespace optiling {
 
 const int INPUT_IDX_X = 0;
 const int NCHW_DIMS = 4;
+const int CHW_DIMS = 3;
 const int KERNEL_POS = 0;
 const int STRIDE_POS = 1;
 const int PADDING_POS = 2;
@@ -72,9 +73,9 @@ ge::graphStatus MaxPoolWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
     auto inputShape = Ops::Base::EnsureNotScalar(inputX->GetStorageShape());
 
     OP_CHECK_IF(
-        inputShape.GetDimNum() != NCHW_DIMS,
+        !(inputShape.GetDimNum() == NCHW_DIMS || inputShape.GetDimNum() == CHW_DIMS),
         OP_LOGE(
-            context_->GetNodeName(), "MaxPoolWithArgmaxV3: input shape dim = %zu, should be equal 4",
+            context_->GetNodeName(), "MaxPoolWithArgmaxV3: input shape dim = %zu, should be equal 3 or 4",
             inputShape.GetDimNum()),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
@@ -109,6 +110,13 @@ ge::graphStatus MaxPoolWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
     if (inputFormat != nullptr) {
         inputFormatStr = inputFormat;
     }
+    if (inputShape.GetDimNum() == CHW_DIMS) {
+        if (inputFormatStr == "NCHW") {
+            inputFormatStr = "CHW";
+        } else {
+            inputFormatStr = "HWC";
+        }
+    }
     int h_dim = MP_MAX_2D_DIM_TWO, w_dim = MP_MAX_2D_DIM_THREE;
     if (inputFormatStr == "NCHW") {
         inputData.inputFormat = ge::Format::FORMAT_NCHW;
@@ -122,6 +130,20 @@ ge::graphStatus MaxPoolWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
         inputData.batches = inputShape.GetDim(MP_MAX_2D_DIM_ZERO) * inputShape.GetDim(MP_MAX_2D_DIM_THREE);
         inputData.nInput = inputShape.GetDim(MP_MAX_2D_DIM_ZERO);
         inputData.cInput = inputShape.GetDim(MP_MAX_2D_DIM_THREE);
+    } else if (inputFormatStr == "CHW") {
+        inputData.inputFormat = ge::Format::FORMAT_NCHW;
+        h_dim -= 1;
+        w_dim -= 1;
+        inputData.batches = 1 * inputShape.GetDim(MP_MAX_2D_DIM_ZERO);
+        inputData.nInput = 1;
+        inputData.cInput = inputShape.GetDim(MP_MAX_2D_DIM_ZERO);
+    } else if (inputFormatStr == "HWC") {
+        inputData.inputFormat = ge::Format::FORMAT_NHWC;
+        h_dim = MP_MAX_2D_DIM_ONE - 1;
+        w_dim = MP_MAX_2D_DIM_TWO - 1;
+        inputData.batches = 1 * inputShape.GetDim(MP_MAX_2D_DIM_TWO);
+        inputData.nInput = 1;
+        inputData.cInput = inputShape.GetDim(MP_MAX_2D_DIM_TWO);
     } else {
         OP_LOGE(context_->GetNodeName(), "MaxPoolWithArgmaxV3: not support format %s", inputFormatStr.c_str());
         return ge::GRAPH_FAILED;

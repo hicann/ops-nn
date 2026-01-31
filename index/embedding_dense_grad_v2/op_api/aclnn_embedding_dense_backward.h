@@ -42,15 +42,15 @@ extern "C" {
  *
  * @param [in] grad: npu
  * device侧的aclTensor，梯度Tensor，和正向的输出shape一致，npu
- * device侧的aclTensor，数据类型支持float、float16、bfloat16类型， 数据格式支持ND，比indices的维度多一。
+ * device侧的aclTensor，数据类型支持BFLOAT16、FLOAT16、FLOAT类型，数据格式支持ND，比indices的维度多一。
  * @param [in] indices: npu
- * device侧的aclTensor，正向中需要映射到向量空间的索引张量，数据类型支持int32，支持非连续的Tensor，数据格式支持ND。
+ * device侧的aclTensor，正向中需要映射到向量空间的索引张量，数据类型支持FLOAT、FLOAT16、DOUBLE、INT32、INT64、INT16、INT8、UINT8、BOOL，支持非连续的Tensor，数据格式支持ND。
  * @param [in] numWeights: 向量空间的大小。
  * @param [in] paddingIdx:
  * 填充ID，默认为None，如果指定的话，将指定位置处的向量元素全部置为0，且paddingIdx对应的参数不会对梯度产生影响。
  * @param [in] scaleGradByFreq: 根据单词出现的频率，对梯度进行放缩，默认为False。
  * @param [out] out: npu
- * 反向输出Tensor，数据类型支持float32类型，数据格式仅支持2D。
+ * 反向输出Tensor，数据类型与grad支持数据类型相同，数据格式仅支持2D。
  * @param [out] workspace_size: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。

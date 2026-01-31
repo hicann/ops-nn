@@ -1,9 +1,9 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
 */
@@ -37,7 +37,7 @@ static const std::initializer_list<op::DataType> SELF_OUT_DTYPE_NULL_LIST = {};
 // 输入为ND场景下，1980不支持任何数据类型
 static const std::initializer_list<op::DataType> SELF_OUT_DTYPE_SUPPORT_910_LIST = {};
 static const std::initializer_list<op::DataType> SELF_OUT_DTYPE_SUPPORT_910B_LIST = {op::DataType::DT_FLOAT};
-static const std::initializer_list<op::DataType> SELF_OUT_DTYPE_SUPPORT_950_LIST = {
+static const std::initializer_list<op::DataType> SELF_OUT_DTYPE_SUPPORT_REGBASE_LIST = {
     op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16};
 // 输入为5HD场景下
 static const std::initializer_list<op::DataType> MASK_SELF_OUT_DTYPE_SUPPORT_910_LIST = {
@@ -48,7 +48,7 @@ static const std::initializer_list<op::DataType> MASK_SELF_OUT_DTYPE_SUPPORT_910
 static const std::initializer_list<op::DataType> MASK_INDICES_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT8};
 static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_INT8};
-static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_950_LIST = {
+static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_REGBASE_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_INT64};
 
 static const int DIMENTION_3 = 3;
@@ -75,19 +75,18 @@ static const int KERNEL_SIZE_64 = 64;
 static const inline std::initializer_list<op::DataType> GetDtypeSupportListBySocVersion(
     const bool isMask, const bool isMask2ND)
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910_93:
-        case SocVersion::ASCEND910B: {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (curArch) {
+        case NpuArch::DAV_2201: {
             return (
                 isMask    ? MASK_SELF_OUT_DTYPE_SUPPORT_910B_LIST :
                 isMask2ND ? MASK_SELF_OUT_DTYPE_SUPPORT_910B_LIST :
                             SELF_OUT_DTYPE_SUPPORT_910B_LIST);
         }
-        case SocVersion::ASCEND950: {
-            return SELF_OUT_DTYPE_SUPPORT_950_LIST;
+        case NpuArch::DAV_3510: {
+            return SELF_OUT_DTYPE_SUPPORT_REGBASE_LIST;
         }
-        case SocVersion::ASCEND910: {
+        case NpuArch::DAV_1001: {
             return (isMask ? MASK_SELF_OUT_DTYPE_SUPPORT_910_LIST : SELF_OUT_DTYPE_SUPPORT_910_LIST);
         }
         default: {
@@ -98,13 +97,12 @@ static const inline std::initializer_list<op::DataType> GetDtypeSupportListBySoc
 
 static const inline std::initializer_list<op::DataType> GetIndicesDtypeSupportListBySocVersion(const bool isMask)
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND950:
-            return INDICES_DTYPE_SUPPORT_950_LIST;
-        case SocVersion::ASCEND910_93:
-        case SocVersion::ASCEND910B:
-        case SocVersion::ASCEND910:
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (curArch) {
+        case NpuArch::DAV_3510:
+            return INDICES_DTYPE_SUPPORT_REGBASE_LIST;
+        case NpuArch::DAV_2201:
+        case NpuArch::DAV_1001:
         default: {
             return (isMask ? MASK_INDICES_DTYPE_SUPPORT_LIST : INDICES_DTYPE_SUPPORT_LIST);
         }
@@ -149,7 +147,7 @@ static bool CheckDtypeValid(
 static bool CheckFormat(
     const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclTensor* gradInput)
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if ((self->GetStorageFormat() != gradOutput->GetStorageFormat()) ||
         (self->GetStorageFormat() != gradInput->GetStorageFormat())) {
         OP_LOGE(
@@ -164,7 +162,7 @@ static bool CheckFormat(
     // 如果输入格式是私有格式，记录日志，直接报错
     if (op::IsPrivateFormat(self->GetStorageFormat()) || op::IsPrivateFormat(gradInput->GetStorageFormat()) ||
         op::IsPrivateFormat(gradOutput->GetStorageFormat()) || op::IsPrivateFormat(indices->GetStorageFormat())) {
-        if (socVersion == SocVersion::ASCEND950) {
+        if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND, NCHW or NHWC");
         } else {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support NCHW");
@@ -369,7 +367,7 @@ static bool CheckShape(
     const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation, bool ceilMode,
     aclTensor* gradInput, const bool isMask, bool isMask2ND)
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     OP_CHECK(
         CheckAttrSize1Or2(kernelSize),
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The size of kernelSize must be one or two, but got %zu.", kernelSize->Size()),
@@ -422,7 +420,7 @@ static bool CheckShape(
     const aclIntArray& dilationRef = *dilation;
     const int64_t dilationH = dilationRef[0];
     const int64_t dilationW = (dilationRef.Size() == 1) ? dilationH : dilationRef[1];
-    if (socVersion == SocVersion::ASCEND950) {
+    if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         OP_CHECK(
             ((dilationH > 0) && (dilationW > 0)),
             OP_LOGE(
@@ -565,9 +563,9 @@ static op::DataType GetCastDtypeForMask(const aclTensor* self, bool isMask2ND)
     bf16转fp32场景：l0op::MaxPoolGradWithArgmaxV1不支持bf16，910B或910_93通过转fp32方式支持bf16
     其他场景：GetCastDtypeForMask返回为输入原数据类型，调l0op::Cast不会做cast
     */
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     auto selfType = self->GetDataType();
-    if ((socVersion == SocVersion::ASCEND910) && (selfType == op::DataType::DT_FLOAT)) {
+    if ((curArch == NpuArch::DAV_1001) && (selfType == op::DataType::DT_FLOAT)) {
         return op::DataType::DT_FLOAT16;
     }
     if (selfType == op::DataType::DT_BF16) {
@@ -981,9 +979,9 @@ aclnnStatus aclnnMaxPool2dWithMaskBackwardGetWorkspaceSize(
     const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation, bool ceilMode,
     aclTensor* gradInput, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     OP_CHECK(
-        socVersion != SocVersion::ASCEND950,
+        !(Ops::NN::AclnnUtil::IsRegbase(curArch)),
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Please use aclnnMaxPool2dWithIndicesBackward."),
         return ACLNN_ERR_PARAM_INVALID);
     // 如果kernelSize符合切ND要求，在这里把isMask设置为false
@@ -1001,8 +999,7 @@ aclnnStatus aclnnMaxPool2dWithMaskBackwardGetWorkspaceSize(
     const aclIntArray& kernelRef = *kernelSize;
     const int64_t kH = kernelRef[0];
     const int64_t kW = (kernelRef.Size() == 1) ? kH : kernelRef[1];
-    if (!(kH == 1 && kW == 1) && (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-                                  GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93)) {
+    if (!(kH == 1 && kW == 1) && (curArch == NpuArch::DAV_2201)) {
         L2_DFX_PHASE_1(
             aclnnMaxPool2dWithMaskBackward,
             DFX_IN(gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode), DFX_OUT(gradInput));
@@ -1033,12 +1030,12 @@ aclnnStatus aclnnMaxPool2dWithIndicesBackwardGetWorkspaceSize(
     aclTensor* gradInput, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     aclnnStatus ret;
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     L2_DFX_PHASE_1(
         aclnnMaxPool2dWithIndicesBackward,
         DFX_IN(gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode), DFX_OUT(gradInput));
 
-    if (socVersion == SocVersion::ASCEND950) {
+    if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         ret = ExecMaxPool2dWithIndicesBackwardGetWorkspaceSizeV3(
             gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode, gradInput, workspaceSize,
             executor);
