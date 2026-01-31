@@ -39,6 +39,7 @@ constexpr uint32_t THREAD_DIM = 512;
 constexpr uint32_t ASCENDC_TOOLS_WORKSPACE = 16 * 1024 * 1024;
 constexpr int64_t SIMT_TILINGKEY = 0;
 constexpr int64_t SIMD_TILINGKEY = 1;
+constexpr int64_t SCHID_EMPTY = 2;
 constexpr uint32_t REDUCTION_MEAN = 1;
 constexpr uint32_t REDUCTION_SUM = 2;
 constexpr uint32_t REDUCTION_NONE = 0;
@@ -234,8 +235,8 @@ static ge::graphStatus Tiling4NLLLossAC(gert::TilingContext* context, uint32_t m
         auto wsize = xShape.GetDim(NUMBER_THREE);
 
         OP_CHECK_IF(
-            (xShape.GetShapeSize() <= 0),
-            OP_LOGE(context->GetNodeName(), "Input x shape size should be greater than 0!"), return ge::GRAPH_FAILED);
+            (xShape.GetShapeSize() < 0),
+            OP_LOGE(context->GetNodeName(), "Input x shape size should no less than 0!"), return ge::GRAPH_FAILED);
         OP_CHECK_IF(
             (targetShape.GetDim(0) < nsize),
             OP_LOGE(context->GetNodeName(), "The target dim0 size should be equal to N!"), return ge::GRAPH_FAILED);
@@ -314,12 +315,17 @@ static ge::graphStatus Tiling4NLLLossAC(gert::TilingContext* context, uint32_t m
     OP_CHECK_NULL_WITH_CONTEXT(context, ignoreIndex);
     tilingParams.ignoreIndex = *ignoreIndex;
 
-    if ((tilingParams.xDims == 1) || (tilingParams.reduction == 0) ||
-        ((tilingParams.xDimN < MIX_MODE_THRESHOD) && (tilingParams.xDims == INPUT_TWO_DIM)) ||
-        (tilingParams.xDims == INPUT_FOUR_DIM)) {
-        Tiling4NLLLossSimt(context, tilingParams);
+    if (xShape.GetShapeSize() == 0) {
+        tilingParams.coreNum = 1;
+        tilingParams.tilingKey = SCHID_EMPTY;
     } else {
-        Tiling4NLLLossSimd(context, tilingParams);
+        if ((tilingParams.xDims == 1) || (tilingParams.reduction == 0) ||
+            ((tilingParams.xDimN < MIX_MODE_THRESHOD) && (tilingParams.xDims == INPUT_TWO_DIM)) ||
+            (tilingParams.xDims == INPUT_FOUR_DIM)) {
+            Tiling4NLLLossSimt(context, tilingParams);
+        } else {
+            Tiling4NLLLossSimd(context, tilingParams);
+        }
     }
 
     SetTilingData(tiling, tilingParams);

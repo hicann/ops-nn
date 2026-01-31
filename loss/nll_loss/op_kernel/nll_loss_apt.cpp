@@ -15,6 +15,7 @@
 
 #include "arch35/nll_loss_simt.h"
 #include "arch35/nll_loss_mix.h"
+#include "arch35/nll_loss_empty.h"
 #include "arch35/nll_loss_tiling_key.h"
 using namespace AscendC;
 
@@ -30,6 +31,10 @@ __global__ __aicore__ void nll_loss(
         op.Process();
     } else if constexpr (schId == 1) {
         KernelNLLLossSimd<DTYPE_X, DTYPE_TARGET> op;
+        op.Init(x, target, weight, y, totalWeight, workspace, tilingData);
+        op.Process();
+    } else if constexpr (schId == 2) {
+        KernelNLLLossEmpty<DTYPE_X, reduction> op;
         op.Init(x, target, weight, y, totalWeight, workspace, tilingData);
         op.Process();
     }

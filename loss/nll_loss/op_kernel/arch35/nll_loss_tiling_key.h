@@ -26,6 +26,7 @@
 
 #define TPL_SCH_ID_SIMT 0
 #define TPL_SCH_ID_MIX 1
+#define TPL_SCH_ID_EMPTY 2
 
 #define TPL_XDIM_1 1 // 输入为1维
 #define TPL_XDIM_2 2 // 输入为2维
@@ -36,12 +37,12 @@
 #define TPL_REDUCTION_SUM 2     // reduce模式为sum
 
 #define NLL_LOSS_TPL_KEY_DECL()                                                                                                       \
-    ASCENDC_TPL_UINT_DECL(schId, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, TPL_SCH_ID_SIMT, TPL_SCH_ID_MIX),                             \
+    ASCENDC_TPL_UINT_DECL(schId, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, TPL_SCH_ID_SIMT, TPL_SCH_ID_MIX, TPL_SCH_ID_EMPTY),                             \
     ASCENDC_TPL_UINT_DECL(xDims, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, TPL_XDIM_1, TPL_XDIM_2, TPL_XDIM_4),                          \
     ASCENDC_TPL_UINT_DECL(reduction, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, TPL_REDUCTION_NONE, TPL_REDUCTION_MEAN, TPL_REDUCTION_SUM)
 
 #define NLL_LOSS_TPL_KEY_SEL()                                                                                                   \
-    ASCENDC_TPL_UINT_SEL(schId, ASCENDC_TPL_UI_LIST, TPL_SCH_ID_SIMT, TPL_SCH_ID_MIX),                                                                \
+    ASCENDC_TPL_UINT_SEL(schId, ASCENDC_TPL_UI_LIST, TPL_SCH_ID_SIMT, TPL_SCH_ID_MIX, TPL_SCH_ID_EMPTY),                                                                \
     ASCENDC_TPL_UINT_SEL(xDims, ASCENDC_TPL_UI_LIST, TPL_XDIM_1, TPL_XDIM_2, TPL_XDIM_4),                                             \
     ASCENDC_TPL_UINT_SEL(reduction, ASCENDC_TPL_UI_LIST, TPL_REDUCTION_NONE, TPL_REDUCTION_MEAN, TPL_REDUCTION_SUM)
 
