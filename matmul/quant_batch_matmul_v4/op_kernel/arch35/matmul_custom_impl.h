@@ -54,15 +54,11 @@ private:
     __aicore__ inline void CopyBMatrixL1ToL0B(LocalTensor<bL0DataType> bL0Tensor, int32_t kL0Idx, int32_t baseK);
     __aicore__ inline void CopyBiasL1ToBT(LocalTensor<float> biasBtTensor);
     __aicore__ inline void PostUpdateParams();
-    TBuf<TPosition::A2> a2TBuf_;
-    TBuf<TPosition::B2> b2TBuf_;
-    TBuf<TPosition::CO1> co1TBuf_;
-    TBuf<TPosition::C2> biasTableTBuf_;
 
-    LocalTensor<float> cL0Tensor_;
-    LocalTensor<aL0DataType> aL0Tensor_;
-    LocalTensor<bL0DataType> bL0Tensor_;
-    LocalTensor<float> biasBtTensor_;
+    LocalTensor<float> cL0Tensor_{TPosition::CO1, 0, L0C_BUFFER_SIZE / sizeof(float)};
+    LocalTensor<aL0DataType> aL0Tensor_{TPosition::A2, 0, L0A_BUFFER_SIZE / sizeof(aL0DataType)};
+    LocalTensor<bL0DataType> bL0Tensor_{TPosition::B2, 0, L0B_BUFFER_SIZE / sizeof(bL0DataType)};
+    LocalTensor<float> biasBtTensor_{TPosition::C2, 0, BIAS_TABLE_SIZE / sizeof(float)};
 
     LocalTensor<xType> aL1Tensor_;
     LocalTensor<bL1DataType> bL1Tensor_;
@@ -130,16 +126,6 @@ __aicore__ inline void MatmulCustomImpl<xType, wType, biasType, yType, scaleType
     const TCubeTiling* __restrict matmulTiling, AscendC::TPipe* tpipe)
 {
     matmulTiling_ = matmulTiling;
-
-    tpipe->InitBuffer(co1TBuf_, L0C_BUFFER_SIZE);
-    tpipe->InitBuffer(a2TBuf_, L0A_BUFFER_SIZE);
-    tpipe->InitBuffer(b2TBuf_, L0B_BUFFER_SIZE);
-    tpipe->InitBuffer(biasTableTBuf_, BIAS_TABLE_SIZE);
-
-    cL0Tensor_ = co1TBuf_.template Get<float>();
-    aL0Tensor_ = a2TBuf_.template Get<aL0DataType>();
-    bL0Tensor_ = b2TBuf_.template Get<bL0DataType>();
-    biasBtTensor_ = biasTableTBuf_.template Get<float>();
 
     eventIdsMToMte1_[0] = GetTPipePtr()->AllocEventID<HardEvent::M_MTE1>();
     eventIdsMToMte1_[1] = GetTPipePtr()->AllocEventID<HardEvent::M_MTE1>();

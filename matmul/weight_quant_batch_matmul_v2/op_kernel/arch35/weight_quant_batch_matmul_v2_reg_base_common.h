@@ -166,7 +166,6 @@ public:
     __aicore__ inline void InitBiasL1Buffer(uint64_t offsetPing, uint64_t offsetPong);
     __aicore__ inline void InitL1Buffer();
     __aicore__ inline void InitUbBuffer();
-    __aicore__ inline void InitScaleOffsetBuffer(int8_t bufNum, int32_t elemSize);
     __aicore__ inline void InitTilingData();
     __aicore__ inline void InitL1Params();
     __aicore__ inline bool IterMatmulOutKNotFullloadNoReuse();
@@ -457,12 +456,6 @@ protected:
     static constexpr bool L1_4BUFFER = Is4BitWeight<wType>() && weightNz;
     static constexpr int8_t ONE_BLK_X_NUM = ElemsInBlock<xType>();
     static constexpr int8_t ONE_BLK_W_NUM = ElemsInBlock<wType>();
-
-    TBuf<QuePosition::TSCM> l1Tbuf_;
-    TBuf<QuePosition::VECIN> vecQueWeight_;
-    TBuf<QuePosition::VECIN> vecQueScale_;
-    TBuf<QuePosition::VECIN> vecQueOffset_;
-    TBuf<QuePosition::VECOUT> vecQueWeightOut_;
 };
 
 enum class IterateOrder
@@ -600,9 +593,9 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
     weightNz>::InitBiasL1Buffer(uint64_t offsetPing, uint64_t offsetPong)
 {
     if (tiling_->matmulTiling.isBias) {
-        biasL1LocalBuf0_ = l1Tbuf_.template GetWithOffset<biasType>(biasL1DataSize_, offsetPing);
+        biasL1LocalBuf0_ = LocalTensor<biasType>(TPosition::TSCM, offsetPing, biasL1DataSize_);
         if (biasPingPong_ > 1) {
-            biasL1LocalBuf1_ = l1Tbuf_.template GetWithOffset<biasType>(biasL1DataSize_, offsetPong);
+            biasL1LocalBuf1_ = LocalTensor<biasType>(TPosition::TSCM, offsetPong, biasL1DataSize_);
         }
     }
 }
@@ -612,9 +605,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
     xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType, weightNz>::InitL1Buffer()
 {
     // 申请 L1 Buffer 以及 B 矩阵在 UB 上的输入与输出 buffer 空间
-    pipe_->InitBuffer(
-        l1Tbuf_, L1_BUFFER_SIZE - tiling_->matmulTiling.isBias * tiling_->matmulTiling.baseN * sizeof(biasType));
-    l1Local_ = l1Tbuf_.template Get<xType>();
+    l1Local_ = LocalTensor<xType>(TPosition::TSCM, 0, (L1_BUFFER_SIZE - tiling_->matmulTiling.isBias * tiling_->matmulTiling.baseN * sizeof(biasType)) / sizeof(xType));
 
     if ASCEND_IS_NOT_AIC {
         return;
@@ -636,44 +627,36 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
             //    L1 (0~512KB):   BL1_P0 | BL1_P2 | AL1_P0 | BL1_P1 | BL1_P3 | BIAS_P0 | BIAS_P1
             int32_t bL1DataSizeTotal = DOUBLE_BUFFER * bL1DataSize_ * sizeof(xType);
             if (al1pingpong_ == QUADRUPLE_BUFFER) {
-                bL1LocalBuf0_ = l1Tbuf_.template GetWithOffset<xType>(bL1DataSize_, 0);
-                bL1LocalBuf2_ = l1Tbuf_.template GetWithOffset<xType>(bL1DataSize_, bL1DataSize_ * sizeof(xType));
-                aL1LocalBuf0_ =
-                    l1Tbuf_.template GetWithOffset<xType>(aL1DataSize_, L1_BUFFER_HALF_SIZE + bL1DataSizeTotal);
-                aL1LocalBuf2_ = l1Tbuf_.template GetWithOffset<xType>(
-                    aL1DataSize_, L1_BUFFER_HALF_SIZE + bL1DataSizeTotal + aL1DataSize_ * sizeof(xType));
-                aL1LocalBuf1_ = l1Tbuf_.template GetWithOffset<xType>(aL1DataSize_, bL1DataSizeTotal);
-                aL1LocalBuf3_ = l1Tbuf_.template GetWithOffset<xType>(
-                    aL1DataSize_, bL1DataSizeTotal + aL1DataSize_ * sizeof(xType));
+                bL1LocalBuf0_ = LocalTensor<xType>(TPosition::TSCM, 0, bL1DataSize_);
+                bL1LocalBuf2_ = LocalTensor<xType>(TPosition::TSCM, bL1DataSize_ * sizeof(xType), bL1DataSize_);
+                aL1LocalBuf0_ = LocalTensor<xType>(TPosition::TSCM, L1_BUFFER_HALF_SIZE + bL1DataSizeTotal, aL1DataSize_);
+                aL1LocalBuf2_ = LocalTensor<xType>(TPosition::TSCM, L1_BUFFER_HALF_SIZE + bL1DataSizeTotal + aL1DataSize_ * sizeof(xType), aL1DataSize_);
+                aL1LocalBuf1_ = LocalTensor<xType>(TPosition::TSCM, bL1DataSizeTotal, aL1DataSize_);
+                aL1LocalBuf3_ = LocalTensor<xType>(TPosition::TSCM, bL1DataSizeTotal + aL1DataSize_ * sizeof(xType), aL1DataSize_);
 
-                bL1LocalBuf1_ = l1Tbuf_.template GetWithOffset<xType>(bL1DataSize_, L1_BUFFER_HALF_SIZE);
-                bL1LocalBuf3_ = l1Tbuf_.template GetWithOffset<xType>(
-                    bL1DataSize_, L1_BUFFER_HALF_SIZE + bL1DataSize_ * sizeof(xType));
+                bL1LocalBuf1_ = LocalTensor<xType>(TPosition::TSCM, L1_BUFFER_HALF_SIZE, bL1DataSize_);
+                bL1LocalBuf3_ = LocalTensor<xType>(TPosition::TSCM, L1_BUFFER_HALF_SIZE + bL1DataSize_ * sizeof(xType), bL1DataSize_);
                 InitBiasL1Buffer(
                     L1_BUFFER_HALF_SIZE + bL1DataSizeTotal + DOUBLE_BUFFER * aL1DataSize_ * sizeof(xType),
                     bL1DataSizeTotal + DOUBLE_BUFFER * aL1DataSize_ * sizeof(xType));
             } else if (al1pingpong_ == 2) {
-                bL1LocalBuf0_ = l1Tbuf_.template GetWithOffset<xType>(bL1DataSize_, 0);
-                bL1LocalBuf2_ = l1Tbuf_.template GetWithOffset<xType>(bL1DataSize_, bL1DataSize_ * sizeof(xType));
-                aL1LocalBuf0_ =
-                    l1Tbuf_.template GetWithOffset<xType>(aL1DataSize_, L1_BUFFER_HALF_SIZE + bL1DataSizeTotal);
-                aL1LocalBuf1_ = l1Tbuf_.template GetWithOffset<xType>(aL1DataSize_, bL1DataSizeTotal);
+                bL1LocalBuf0_ = LocalTensor<xType>(TPosition::TSCM, 0, bL1DataSize_);
+                bL1LocalBuf2_ = LocalTensor<xType>(TPosition::TSCM, bL1DataSize_ * sizeof(xType), bL1DataSize_);
+                aL1LocalBuf0_ = LocalTensor<xType>(TPosition::TSCM, L1_BUFFER_HALF_SIZE + bL1DataSizeTotal, aL1DataSize_);
+                aL1LocalBuf1_ = LocalTensor<xType>(TPosition::TSCM, bL1DataSizeTotal, aL1DataSize_);
 
-                bL1LocalBuf1_ = l1Tbuf_.template GetWithOffset<xType>(bL1DataSize_, L1_BUFFER_HALF_SIZE);
-                bL1LocalBuf3_ = l1Tbuf_.template GetWithOffset<xType>(
-                    bL1DataSize_, L1_BUFFER_HALF_SIZE + bL1DataSize_ * sizeof(xType));
+                bL1LocalBuf1_ = LocalTensor<xType>(TPosition::TSCM, L1_BUFFER_HALF_SIZE, bL1DataSize_);
+                bL1LocalBuf3_ = LocalTensor<xType>(TPosition::TSCM, L1_BUFFER_HALF_SIZE + bL1DataSize_ * sizeof(xType), bL1DataSize_);
                 InitBiasL1Buffer(
                     L1_BUFFER_HALF_SIZE + bL1DataSizeTotal + aL1DataSize_ * sizeof(xType),
                     bL1DataSizeTotal + aL1DataSize_ * sizeof(xType));
             } else { // al1pingpong_ == 1
-                bL1LocalBuf0_ = l1Tbuf_.template GetWithOffset<xType>(bL1DataSize_, 0);
-                bL1LocalBuf2_ = l1Tbuf_.template GetWithOffset<xType>(bL1DataSize_, bL1DataSize_ * sizeof(xType));
-                aL1LocalBuf0_ = l1Tbuf_.template GetWithOffset<xType>(aL1DataSize_, bL1DataSizeTotal);
-                bL1LocalBuf1_ = l1Tbuf_.template GetWithOffset<xType>(
-                    bL1DataSize_, Max(L1_BUFFER_HALF_SIZE, bL1DataSizeTotal + aL1DataSize_ * sizeof(xType)));
-                bL1LocalBuf3_ = l1Tbuf_.template GetWithOffset<xType>(
-                    bL1DataSize_, Max(L1_BUFFER_HALF_SIZE, bL1DataSizeTotal + aL1DataSize_ * sizeof(xType)) +
-                                      bL1DataSize_ * sizeof(xType));
+                bL1LocalBuf0_ = LocalTensor<xType>(TPosition::TSCM, 0, bL1DataSize_);
+                bL1LocalBuf2_ = LocalTensor<xType>(TPosition::TSCM, bL1DataSize_ * sizeof(xType), bL1DataSize_);
+                aL1LocalBuf0_ = LocalTensor<xType>(TPosition::TSCM, bL1DataSizeTotal, aL1DataSize_);
+                bL1LocalBuf1_ = LocalTensor<xType>(TPosition::TSCM, Max(L1_BUFFER_HALF_SIZE, bL1DataSizeTotal + aL1DataSize_ * sizeof(xType)), bL1DataSize_);
+                bL1LocalBuf3_ = LocalTensor<xType>(TPosition::TSCM, Max(L1_BUFFER_HALF_SIZE, bL1DataSizeTotal + aL1DataSize_ * sizeof(xType)) +
+                    bL1DataSize_ * sizeof(xType), bL1DataSize_);
                 InitBiasL1Buffer(
                     Max(L1_BUFFER_HALF_SIZE, bL1DataSizeTotal + aL1DataSize_ * sizeof(xType)) + bL1DataSizeTotal,
                     Max(L1_BUFFER_HALF_SIZE, bL1DataSizeTotal + aL1DataSize_ * sizeof(xType)) + bL1DataSizeTotal +
@@ -681,23 +664,18 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
             }
         } else {
             // BL1 为 single buffer 或 double buffer (未考虑 L1 bank 冲突)
-            bL1LocalBuf0_ = l1Tbuf_.template GetWithOffset<xType>(bL1DataSize_, 0);
+            bL1LocalBuf0_ = LocalTensor<xType>(TPosition::TSCM, 0, bL1DataSize_);
             if (bl1pingpong_ != 1) {
-                bL1LocalBuf1_ = l1Tbuf_.template GetWithOffset<xType>(bL1DataSize_, bL1DataSize_ * sizeof(xType));
+                bL1LocalBuf1_ = LocalTensor<xType>(TPosition::TSCM, bL1DataSize_ * sizeof(xType), bL1DataSize_);
             }
 
-            aL1LocalBuf0_ =
-                l1Tbuf_.template GetWithOffset<xType>(aL1DataSize_, bl1pingpong_ * bL1DataSize_ * sizeof(xType));
+            aL1LocalBuf0_ = LocalTensor<xType>(TPosition::TSCM, bl1pingpong_ * bL1DataSize_ * sizeof(xType), aL1DataSize_);
             if (al1pingpong_ == 4) {
-                aL1LocalBuf1_ = l1Tbuf_.template GetWithOffset<xType>(
-                    aL1DataSize_, (aL1DataSize_ + bl1pingpong_ * bL1DataSize_) * sizeof(xType));
-                aL1LocalBuf2_ = l1Tbuf_.template GetWithOffset<xType>(
-                    aL1DataSize_, (aL1DataSize_ * 2 + bl1pingpong_ * bL1DataSize_) * sizeof(xType));
-                aL1LocalBuf3_ = l1Tbuf_.template GetWithOffset<xType>(
-                    aL1DataSize_, (aL1DataSize_ * 3 + bl1pingpong_ * bL1DataSize_) * sizeof(xType));
+                aL1LocalBuf1_ = LocalTensor<xType>(TPosition::TSCM, (aL1DataSize_ + bl1pingpong_ * bL1DataSize_) * sizeof(xType), aL1DataSize_);
+                aL1LocalBuf2_ = LocalTensor<xType>(TPosition::TSCM, (aL1DataSize_ * 2 + bl1pingpong_ * bL1DataSize_) * sizeof(xType), aL1DataSize_);
+                aL1LocalBuf3_ = LocalTensor<xType>(TPosition::TSCM, (aL1DataSize_ * 3 + bl1pingpong_ * bL1DataSize_) * sizeof(xType), aL1DataSize_);
             } else if (al1pingpong_ == 2) {
-                aL1LocalBuf1_ = l1Tbuf_.template GetWithOffset<xType>(
-                    aL1DataSize_, (aL1DataSize_ + bl1pingpong_ * bL1DataSize_) * sizeof(xType));
+                aL1LocalBuf1_ = LocalTensor<xType>(TPosition::TSCM, (aL1DataSize_ + bl1pingpong_ * bL1DataSize_) * sizeof(xType), aL1DataSize_);
             }
             InitBiasL1Buffer(
                 (al1pingpong_ * aL1DataSize_ + bl1pingpong_ * bL1DataSize_) * sizeof(xType),
@@ -709,16 +687,14 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
         //   BL1Pingpong 1 2
         //   AL1Pingpong 1 2
         // BL1 为 single buffer 或 double buffer (未考虑 L1 bank 冲突)
-        bL1LocalBuf0_ = l1Tbuf_.template GetWithOffset<xType>(bL1DataSize_, 0);
+        bL1LocalBuf0_ = LocalTensor<xType>(TPosition::TSCM, 0, bL1DataSize_);
         if (bl1pingpong_ != 1) {
-            bL1LocalBuf1_ = l1Tbuf_.template GetWithOffset<xType>(bL1DataSize_, bL1DataSize_ * sizeof(xType));
+            bL1LocalBuf1_ = LocalTensor<xType>(TPosition::TSCM, bL1DataSize_ * sizeof(xType), bL1DataSize_);
         }
 
-        aL1LocalBuf0_ =
-            l1Tbuf_.template GetWithOffset<xType>(aL1DataSize_, bl1pingpong_ * bL1DataSize_ * sizeof(xType));
+        aL1LocalBuf0_ = LocalTensor<xType>(TPosition::TSCM, bl1pingpong_ * bL1DataSize_ * sizeof(xType), aL1DataSize_);
         if (al1pingpong_ != 1) {
-            aL1LocalBuf1_ = l1Tbuf_.template GetWithOffset<xType>(
-                aL1DataSize_, (aL1DataSize_ + bl1pingpong_ * bL1DataSize_) * sizeof(xType));
+            aL1LocalBuf1_ = LocalTensor<xType>(TPosition::TSCM, (aL1DataSize_ + bl1pingpong_ * bL1DataSize_) * sizeof(xType), aL1DataSize_);
         }
         InitBiasL1Buffer(
             (al1pingpong_ * aL1DataSize_ + bl1pingpong_ * bL1DataSize_) * sizeof(xType),
@@ -737,6 +713,8 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
         return;
     }
 
+    uint64_t offset = 0;
+
     if constexpr (IS_4BIT_WEIGHT && weightNz) {
         if constexpr (bTrans) {
             ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "not supported yet"); });
@@ -744,8 +722,9 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
             // 目前仅考虑 per-group 且 B 矩阵非转置场景
             vecWeightInSize_ = CeilAlign(tiling_->nBubSize, BLOCK_CUBE) * CeilAlign(tiling_->kBubSize, BLOCK_CUBE);
             vecWeightOutSize_ = vecWeightInSize_;
-            pipe_->InitBuffer(vecQueWeightOut_, bubpingpong_ * vecWeightOutSize_ * sizeof(xType));
-            pipe_->InitBuffer(vecQueWeight_, bubpingpong_ * vecWeightInSize_ >> INT4_DTYPE_PARAM);
+            weightOutUb_ = LocalTensor<xType>(TPosition::VECOUT, 0, bubpingpong_ * vecWeightOutSize_);
+            weightInUb_ = LocalTensor<wType>(TPosition::VECIN, bubpingpong_ * vecWeightOutSize_ * sizeof(xType), bubpingpong_ * vecWeightInSize_);
+            offset += bubpingpong_ * vecWeightOutSize_ * sizeof(xType) + (bubpingpong_ * vecWeightInSize_ >> INT4_DTYPE_PARAM);
         }
     } else if constexpr (IsSameType<wType, int4b_t>::value && !weightNz) {
         if constexpr (bTrans) {
@@ -755,8 +734,9 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
             vecWeightInSize_ = tiling_->kBubSize * tiling_->nBubSize;
             vecWeightOutSize_ = (CeilAlign(tiling_->kBubSize, BLOCK_CUBE) + 1) * tiling_->nBubSize;
         }
-        pipe_->InitBuffer(vecQueWeightOut_, bl1pingpong_ * vecWeightOutSize_ * sizeof(xType));
-        pipe_->InitBuffer(vecQueWeight_, bubpingpong_ * vecWeightInSize_ >> INT4_DTYPE_PARAM);
+        weightOutUb_ = LocalTensor<xType>(TPosition::VECOUT, 0, bl1pingpong_ * vecWeightOutSize_);
+        weightInUb_ = LocalTensor<wType>(TPosition::VECIN, bl1pingpong_ * vecWeightOutSize_ * sizeof(xType), bubpingpong_ * vecWeightInSize_);
+        offset += bl1pingpong_ * vecWeightOutSize_ * sizeof(xType) + (bubpingpong_ * vecWeightInSize_ >> INT4_DTYPE_PARAM);
     } else if constexpr (IsSameType<wType, int8_t>::value && !weightNz && antiQuantType == QuantType::PER_GROUP) {
         vecWeightInSize_ = tiling_->kBubSize * tiling_->nBubSize;
         if constexpr (bTrans) {
@@ -764,8 +744,9 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
         } else {
             vecWeightOutSize_ = (CeilAlign(tiling_->kBubSize, BLOCK_CUBE) + 1) * tiling_->nBubSize;
         }
-        pipe_->InitBuffer(vecQueWeightOut_, bl1pingpong_ * vecWeightOutSize_ * sizeof(xType));
-        pipe_->InitBuffer(vecQueWeight_, bubpingpong_ * vecWeightInSize_);
+        weightOutUb_ = LocalTensor<xType>(TPosition::VECOUT, 0, bl1pingpong_ * vecWeightOutSize_);
+        weightInUb_ = LocalTensor<wType>(TPosition::VECIN, bl1pingpong_ * vecWeightOutSize_ * sizeof(xType), bubpingpong_ * vecWeightInSize_);
+        offset += bl1pingpong_ * vecWeightOutSize_ * sizeof(xType) + bubpingpong_ * vecWeightInSize_;
     } else { // A16W8
         if constexpr (bTrans) {
             // (k1, n1, n0, k0)
@@ -775,15 +756,17 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
             vecWeightInSize_ = tiling_->nBubSize * CeilAlign(tiling_->kBubSize, ONE_BLK_W_NUM);
             vecWeightOutSize_ =
                 (CeilAlign(tiling_->nBubSize, BLOCK_CUBE) + 1) * CeilAlign(tiling_->kBubSize, ONE_BLK_X_NUM);
-            pipe_->InitBuffer(vecQueWeightOut_, vecPingpong_ * vecWeightOutSize_ * sizeof(xType));
-            pipe_->InitBuffer(vecQueWeight_, vecPingpong_ * vecWeightInSize_ * sizeof(wType));
+            weightOutUb_ = LocalTensor<xType>(TPosition::VECOUT, 0, vecPingpong_ * vecWeightOutSize_);
+            weightInUb_ = LocalTensor<wType>(TPosition::VECIN, vecPingpong_ * vecWeightOutSize_ * sizeof(xType),  vecPingpong_ * vecWeightInSize_);
+            offset += vecPingpong_ * vecWeightOutSize_ * sizeof(xType) + vecPingpong_ * vecWeightInSize_ * sizeof(wType);
         } else {
             vecWeightInSize_ = tiling_->kBubSize * CeilAlign(tiling_->nBubSize, ONE_BLK_W_NUM);
             // (n1, k1, k0, n0) 由于vsstb指令每次处理32B数据，为了保证下一个32B不在同一个bank,需要多移动一个32B
             vecWeightOutSize_ =
                 (CeilAlign(tiling_->kBubSize, BLOCK_CUBE) + 1) * CeilAlign(tiling_->nBubSize, ONE_BLK_X_NUM);
-            pipe_->InitBuffer(vecQueWeightOut_, bubpingpong_ * vecWeightOutSize_ * sizeof(xType));
-            pipe_->InitBuffer(vecQueWeight_, bubpingpong_ * vecWeightInSize_ * sizeof(wType));
+            weightOutUb_ = LocalTensor<xType>(TPosition::VECOUT, 0, bubpingpong_ * vecWeightOutSize_);
+            weightInUb_ = LocalTensor<wType>(TPosition::VECIN, bubpingpong_ * vecWeightOutSize_ * sizeof(xType), bubpingpong_ * vecWeightInSize_);
+            offset += bubpingpong_ * vecWeightOutSize_ * sizeof(xType) + bubpingpong_ * vecWeightInSize_ * sizeof(wType);
         }
     }
 
@@ -797,27 +780,11 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
             // 申请 bL1BufNum * groupNumBub * nBubSize 大小的空间
             vecScaleOffsetSize_ = CeilDiv(tiling_->kBubSize, tiling_->groupSize) * tiling_->nBubSize;
         }
-        InitScaleOffsetBuffer(bubpingpong_, vecScaleOffsetSize_);
-    }
-
-    weightInUb_ = vecQueWeight_.template Get<wType>();
-    weightOutUb_ = vecQueWeightOut_.template Get<xType>();
-    if constexpr (antiQuantType != QuantType::PER_TENSOR) {
-        scaleInUb_ = vecQueScale_.template Get<xType>();
+        scaleInUb_ = LocalTensor<xType>(TPosition::VECIN, offset, bubpingpong_ * vecScaleOffsetSize_);
+        offset += bubpingpong_ * vecScaleOffsetSize_ * sizeof(xType);
         if constexpr (hasAntiQuantOffset) {
-            offsetInUb_ = vecQueOffset_.template Get<xType>();
+            offsetInUb_ = LocalTensor<xType>(TPosition::VECIN, offset, bubpingpong_ * vecScaleOffsetSize_);
         }
-    }
-}
-
-TEMPLATE_CLASS_PARAMS
-__aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
-    xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType,
-    weightNz>::InitScaleOffsetBuffer(int8_t bufNum, int32_t elemSize)
-{
-    pipe_->InitBuffer(vecQueScale_, bufNum * elemSize * sizeof(xType));
-    if constexpr (hasAntiQuantOffset) {
-        pipe_->InitBuffer(vecQueOffset_, bufNum * elemSize * sizeof(xType));
     }
 }
 

@@ -48,7 +48,7 @@ public:
     __aicore__ inline void UpdateGlobalAddr(
         __gm__ xType* x, __gm__ yType* y, __gm__ biasType* bias, __gm__ uint64_t* quantScale, const bool isBias);
     __aicore__ inline void Init(
-        TBuf<TPosition::TSCM>& l1Tbuf, uint64_t weightL1Space, uint64_t aPreloadSize,
+        uint64_t totalSize, uint64_t weightL1Space, uint64_t aPreloadSize,
         const TCubeTiling* __restrict matmulTiling, AscendC::TPipe* tPipe);
     __aicore__ inline void LaunchMatmul(
         const LocalTensor<xType>& weightF16L1, int64_t kbOffset, uint64_t kbL1RealSize,
@@ -346,13 +346,15 @@ __aicore__ inline void WQBMM_CUBE_COMPUTE_CLASS::PreloadA(
 // 场景2： gm地址变化需要实时获取场景，必须先init再更新地址
 WQBMM_CUBE_COMPUTE_TEMPLATE_PARAM
 __aicore__ inline void WQBMM_CUBE_COMPUTE_CLASS::Init(
-    TBuf<TPosition::TSCM>& l1Tbuf, uint64_t weightL1Space, uint64_t aPreloadSize,
+    uint64_t totalSize, uint64_t weightL1Space, uint64_t aPreloadSize,
     const TCubeTiling* __restrict matmulTiling, AscendC::TPipe* tPipe)
 {
     // (1) y 数据类型为 int8 时，quantScale需要预留一份空间
     //  ① 有bias
     //  L1 (0~512KB): WeightL1_P0(128KB) | Bias_P0(4KB) | AL1_P0(120KB) | AL1_P1(120KB) | Bias_P1(4KB) |
-    //  WeightL1_P1(128KB) | quantScale(8KB) ② 无bias L1 (0~512KB): WeightL1_P0(128KB) | AL1_P0(124KB) | AL1_P1(124KB) |
+    //  WeightL1_P1(128KB) | quantScale(8KB) 
+    //  ② 无bias 
+    //  L1 (0~512KB): WeightL1_P0(128KB) | AL1_P0(124KB) | AL1_P1(124KB) |
     //  WeightL1_P1(128KB) | quantScale(8KB)
     // (2) L1 上有bias时:
     //  L1 (0~512KB): WeightL1_P0(128KB) | Bias_P0(4KB) | AL1_P0(124KB) | AL1_P1(124KB) | Bias_P1(4KB) |
@@ -369,16 +371,16 @@ __aicore__ inline void WQBMM_CUBE_COMPUTE_CLASS::Init(
         uint64_t aF16L1Space = L1_SIZE * KB_UNIT - DOUBLE_BUFFER_NUM * aF16L1Offset; // L1上A可占据剩余空间
         aF16L1DbOffset_ = aF16L1Space >> 1;
         if constexpr (IsSameType<biasType, float>::value) {
-            biasL1_ = l1Tbuf.Get<biasType>()[weightL1Space >> 1];
+            biasL1_ = LocalTensor<biasType>(TPosition::TSCM, (weightL1Space >> 1) * sizeof(biasType), totalSize / sizeof(biasType) - (weightL1Space >> 1));
             biasL1DbOffset_ = (aF16L1Space + biasL1Space) >> 1;
         } else {
-            biasL1_ = l1Tbuf.Get<biasType>()[weightL1Space];
+            biasL1_ = LocalTensor<biasType>(TPosition::TSCM, weightL1Space * sizeof(biasType), totalSize / sizeof(biasType) - weightL1Space);
             biasL1DbOffset_ = aF16L1Space + biasL1Space;
         }
     } else {
         aF16L1DbOffset_ = 256 * KB_UNIT - weightL1Space;
     }
-    aF16L1_ = l1Tbuf.Get<xType>()[aF16L1Offset];
+    aF16L1_ = LocalTensor<xType>(TPosition::TSCM, aF16L1Offset * sizeof(xType), totalSize / sizeof(xType) - aF16L1Offset);
     aL1Count_ = matmulTiling->Ka / (matmulTiling->baseK * matmulTiling->stepKb);
     aL1MaxHalfCount_ = CeilDiv(aL1Count_, static_cast<uint64_t>(DOUBLE_BUFFER_NUM));
 

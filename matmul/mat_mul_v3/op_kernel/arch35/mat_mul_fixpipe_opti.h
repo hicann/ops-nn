@@ -50,7 +50,6 @@ protected:
     GlobalTensor<C_T> cGlobal_;
     GlobalTensor<BiasT> biasGlobal_;
     TPipe *pipe_;
-    TBuf<> ubBuf_;
 };
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG>
@@ -59,7 +58,6 @@ MatmulFixpipeOptiKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::
     GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR workspaceGM, const void *tilingData, TPipe *pipe)
 {
     pipe_ = pipe;
-    pipe_->InitBuffer(ubBuf_, TOTAL_UB_SIZE);
     block_.template Init<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE>(tilingData);
     aGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ A_T *>(aGM),
         static_cast<uint64_t>(block_.matmulTilingData_->tCubeTiling.M) * block_.matmulTilingData_->tCubeTiling.Ka);
@@ -81,7 +79,7 @@ __aicore__ inline void MatmulFixpipeOptiKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE
         if (subIdx == 1) {
             return;
         }
-        LocalTensor<C_T> ubTensor = ubBuf_.template Get<C_T>();
+        LocalTensor<C_T> ubTensor(TPosition::LCM, 0, TOTAL_UB_SIZE / sizeof(C_T));
         uint16_t vecM = static_cast<uint16_t>(block_.params_.singleCoreM);
         uint32_t blockLen = static_cast<uint32_t>(block_.params_.singleCoreN * sizeof(C_T));
         uint32_t dstStride = static_cast<uint32_t>((block_.matmulTilingData_->tCubeTiling.N -
@@ -112,7 +110,7 @@ __aicore__ inline void MatmulFixpipeOptiKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE
         if (aicNeedWaitAiv) {
             CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG);
         }
-        LocalTensor<C_T> ubTensor = ubBuf_.template Get<C_T>();
+        LocalTensor<C_T> ubTensor(TPosition::LCM, 0, TOTAL_UB_SIZE / sizeof(C_T));
         // localTensor, enAtomic, enSequentialWrite
         mm_.GetTensorC(ubTensor, 0UL, true);
         CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG);
@@ -173,7 +171,6 @@ protected:
     GlobalTensor<C_T> cGlobal_;
     GlobalTensor<BiasT> biasGlobal_;
     TPipe *pipe_;
-    TBuf<> ubBuf_;
 };
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG>
@@ -182,7 +179,6 @@ MatmulFixpipeOptiDualDstKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM
     GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR workspaceGM, const void *tilingData, TPipe *pipe)
 {
     pipe_ = pipe;
-    pipe_->InitBuffer(ubBuf_, TOTAL_UB_SIZE);
     block_.template Init<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE>(tilingData);
     aGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ A_T *>(aGM),
         static_cast<uint64_t>(block_.matmulTilingData_->tCubeTiling.M) * block_.matmulTilingData_->tCubeTiling.Ka);
@@ -200,7 +196,7 @@ __aicore__ inline void MatmulFixpipeOptiDualDstKernel<A_TYPE, B_TYPE, C_TYPE, BI
     AivProcess(uint64_t roundIdx)
 {
     if ASCEND_IS_AIV {
-        LocalTensor<C_T> ubTensor = ubBuf_.template Get<C_T>();
+        LocalTensor<C_T> ubTensor(TPosition::LCM, 0, TOTAL_UB_SIZE / sizeof(C_T));
         uint16_t vecM = MMV3DivCeil(static_cast<uint16_t>(block_.params_.singleCoreM), NUM_TWO);
         uint16_t vecMReal = ((block_.params_.singleCoreM & 1UL) > 0) ? vecM - GetSubBlockIdx() : vecM;
         uint32_t blockLen = static_cast<uint32_t>(block_.params_.singleCoreN * sizeof(C_T));
@@ -236,7 +232,7 @@ __aicore__ inline void MatmulFixpipeOptiDualDstKernel<A_TYPE, B_TYPE, C_TYPE, BI
             CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + VEC0_FLAG_ID_OFFSET);
             CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + VEC1_FLAG_ID_OFFSET);
         }
-        LocalTensor<C_T> ubTensor = ubBuf_.template Get<C_T>();
+        LocalTensor<C_T> ubTensor(TPosition::LCM, 0, TOTAL_UB_SIZE / sizeof(C_T));
         // localTensor, enAtomic, enSequentialWrite
         mm_.GetTensorC(ubTensor, 0UL, true);
         CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG + VEC0_FLAG_ID_OFFSET);

@@ -75,18 +75,18 @@ __aicore__ inline void
 WeightQuantMatmulBasicBlock<xType, wType, antiQuantScaleType, biasType, yType, wqmmConfig, vecConfig>::Init(
     uint64_t aPreloadSize, const TCubeTiling* __restrict matmulTiling, TPipe* tPipe)
 {
-    TBuf<TPosition::TSCM> l1Tbuf;
     uint64_t weightL1Space = matmulTiling->baseN * matmulTiling->stepKb * matmulTiling->baseK; // weight单块大小
+    uint64_t totalSize = 0;
     if constexpr (IsSameType<yType, int8_t>::value) {
-        tPipe->InitBuffer(l1Tbuf, 504 * 1024); // 除去quantScale, 共使用504KB
+        totalSize = 504 * 1024;  // 除去quantScale, 共使用504KB
         weightF16L1DbOffset_ = 504 * GetKBUnit<half>() - weightL1Space;
     } else {
-        tPipe->InitBuffer(l1Tbuf, 512 * 1024);
+        totalSize = 512 * 1024;
         weightF16L1DbOffset_ = 512 * GetKBUnit<half>() - weightL1Space;
     }
-    weightF16L1_ = l1Tbuf.Get<xType>();
+    weightF16L1_ = LocalTensor<xType>(TPosition::TSCM, 0, totalSize / sizeof(xType)); 
     if ASCEND_IS_AIC {
-        cubeCompute_.Init(l1Tbuf, weightL1Space, aPreloadSize, matmulTiling, tPipe);
+        cubeCompute_.Init(totalSize, weightL1Space, aPreloadSize, matmulTiling, tPipe);
     } else {
         vectorCompute_.Init(tPipe);
     }

@@ -63,7 +63,8 @@ template <class aType, class bType, class scaleType, class biasType, class ptSca
           class blockType = QuantBmmAswBlock, const MatmulConfig &mmCfg = MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG>
 class QuantBmmPertokenRegbaseKernel {
 public:
-    __aicore__ inline QuantBmmPertokenRegbaseKernel() {}
+    __aicore__ inline QuantBmmPertokenRegbaseKernel();
+    __aicore__ inline ~QuantBmmPertokenRegbaseKernel();
     __aicore__ inline void Init(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale, GM_ADDR offset, GM_ADDR bias, GM_ADDR ptScale,
                                 GM_ADDR cGM, GM_ADDR workSpace, const void *tilingData, TPipe *pipe);
     __aicore__ inline void UpdateGlobalAddr(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale, GM_ADDR bias, GM_ADDR ptScale,
@@ -113,7 +114,7 @@ protected:
     template <class BiasDtype>
     __aicore__ inline void CopyBiasFromGm2Ub(LocalTensor<BiasDtype> &dst);
     __aicore__ inline void CopyDequantResFromUb2Gm(uint64_t blockCount, uint64_t offset, LocalTensor<cType> &src);
-    __aicore__ inline void FreeUbTensor();
+    __aicore__ inline void UbSetFlag();
 
 protected:
     uint32_t blockIdx_;
@@ -133,20 +134,45 @@ protected:
     LocalTensor<ptScaleType> ptScaleUb_;
     LocalTensor<bfloat16_t> biasUbB16_;
     LocalTensor<float> biasUbFloat_;
+    LocalTensor<cType> dequantOutInUBPing_;
+    LocalTensor<cType> dequantOutInUBPong_;
     float scaleScalar_;
     float pertokenScaleScalar_;
 
-    // define the que
-    TQue<QuePosition::VECIN, 1> vecQueMMRes_;
-    TQue<QuePosition::VECIN, 1> vecQueScale_;
-    TQue<QuePosition::VECIN, 1> vecQuePertokenScale_;
-    TQue<QuePosition::VECIN, 1> vecQueBias_;
-    TQue<QuePosition::VECOUT, 1> vecQueOut_;
-
     const DequantBmm::QuantBatchMatmulV3TilingDataParams *tilingData_;
     uint32_t biasDtype_;
+    uint32_t dequantOutInUBPingPongID_ = 0;
     bool isBiasEpilogue_ = false;
+    constexpr static uint16_t INPUT_BUFFER_FLAG_0 = 0;
+    constexpr static uint16_t INPUT_BUFFER_FLAG_1 = 1;
+    constexpr static uint16_t INPUT_BUFFER_FLAG_2 = 2;
+    constexpr static uint16_t OUTPUT_BUFFER_FLAG_0 = 0;
+    constexpr static uint16_t OUTPUT_BUFFER_FLAG_1 = 1;
 };
+
+LOCAL_TEMPLATE_CLASS_MIX_PARAMS
+__aicore__ inline QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::QuantBmmPertokenRegbaseKernel()
+{
+    if ASCEND_IS_AIV {
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(INPUT_BUFFER_FLAG_0);
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(INPUT_BUFFER_FLAG_1);
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(INPUT_BUFFER_FLAG_2);
+        AscendC::SetFlag<AscendC::HardEvent::MTE3_V>(OUTPUT_BUFFER_FLAG_0);
+        AscendC::SetFlag<AscendC::HardEvent::MTE3_V>(OUTPUT_BUFFER_FLAG_1);
+    }
+}
+
+LOCAL_TEMPLATE_CLASS_MIX_PARAMS
+__aicore__ inline QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::~QuantBmmPertokenRegbaseKernel()
+{
+    if ASCEND_IS_AIV {
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(INPUT_BUFFER_FLAG_0);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(INPUT_BUFFER_FLAG_1);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(INPUT_BUFFER_FLAG_2);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(OUTPUT_BUFFER_FLAG_0);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(OUTPUT_BUFFER_FLAG_1);
+    }
+}
 
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::Init(
@@ -169,28 +195,33 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
         mm.Init(&tilingData_->matmulTiling, pipe);
     }
     uint32_t mForSingleVec = DequantBmm::CeilDiv(tilingData_->matmulTiling.baseM, CV_RATIO);
-    pipe_->InitBuffer(vecQueMMRes_, 1, mForSingleVec * tilingData_->matmulTiling.baseN * sizeof(l0cDtype));
-    l0cOutUb_ = vecQueMMRes_.AllocTensor<l0cDtype>();
+    uint64_t ubOffset = 0;
+    l0cOutUb_ = LocalTensor<l0cDtype>(TPosition::VECIN, 0, mForSingleVec * tilingData_->matmulTiling.baseN);
+    ubOffset += mForSingleVec * tilingData_->matmulTiling.baseN * sizeof(l0cDtype);
     // 仅AIV相关的buffer
     if ASCEND_IS_AIV {
         if (!static_cast<bool>(tilingData_->params.isPerTensor)) {
-            pipe_->InitBuffer(vecQueScale_, 1, tilingData_->matmulTiling.baseN * sizeof(scaleType));
+            scaleUb_ = LocalTensor<scaleType>(TPosition::VECIN, ubOffset, tilingData_->matmulTiling.baseN);
+            ubOffset += tilingData_->matmulTiling.baseN * sizeof(scaleType);
         }
         if (static_cast<bool>(tilingData_->params.isPertoken)) {
-            pipe_->InitBuffer(vecQuePertokenScale_, 1, DequantBmm::Align(mForSingleVec * sizeof(ptScaleType),
-                                                                         static_cast<uint64_t>(DATA_BLOCK)));
+            ptScaleUb_ = LocalTensor<ptScaleType>(TPosition::VECIN, ubOffset, DequantBmm::Align(mForSingleVec * sizeof(ptScaleType), 
+                                                                                     static_cast<uint64_t>(DATA_BLOCK)) / sizeof(ptScaleType));
+            ubOffset += DequantBmm::Align(mForSingleVec * sizeof(ptScaleType), static_cast<uint64_t>(DATA_BLOCK));
         }
         if (isBiasEpilogue_) {
             if (biasDtype_ == DT_FLOAT) {
-                pipe_->InitBuffer(vecQueBias_, 1, tilingData_->matmulTiling.baseN * sizeof(float));
+                biasUbFloat_ = LocalTensor<float>(TPosition::VECIN, ubOffset, tilingData_->matmulTiling.baseN);
+                ubOffset += tilingData_->matmulTiling.baseN * sizeof(float);
             } else {
-                pipe_->InitBuffer(vecQueBias_, 1, tilingData_->matmulTiling.baseN * sizeof(bfloat16_t));
+                biasUbB16_ = LocalTensor<bfloat16_t>(TPosition::VECIN, ubOffset, tilingData_->matmulTiling.baseN);
+                ubOffset += tilingData_->matmulTiling.baseN * sizeof(bfloat16_t);
             }
         }
         // fp16/bf16分两次输出，fp32分四次输出
-        pipe_->InitBuffer(
-            vecQueOut_, BUFFER_NUM,
-            DequantBmm::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * tilingData_->matmulTiling.baseN * sizeof(cType));
+        dequantOutInUBPing_ = LocalTensor<cType>(TPosition::VECOUT, ubOffset, DequantBmm::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * tilingData_->matmulTiling.baseN);
+        ubOffset += DequantBmm::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * tilingData_->matmulTiling.baseN * sizeof(cType);
+        dequantOutInUBPong_ = LocalTensor<cType>(TPosition::VECOUT, ubOffset, DequantBmm::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * tilingData_->matmulTiling.baseN);
     }
 }
 
@@ -361,8 +392,8 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
             break;
         }
         auto mSize = singleMInVec - i * mSizeForOnce >= mSizeForOnce ? mSizeForOnce : singleMInVec - i * mSizeForOnce;
-        LocalTensor<cType> dequantOutInUB = vecQueOut_.AllocTensor<cType>();
-
+        LocalTensor<cType>& dequantOutInUB = (dequantOutInUBPingPongID_ == 0) ? dequantOutInUBPing_ : dequantOutInUBPong_;
+        AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(dequantOutInUBPingPongID_);
         __ubuf__ cType *dequantOutInUbAddr = (__ubuf__ cType *)dequantOutInUB.GetPhyAddr();
         __ubuf__ l0cDtype *l0cOutUbAddr = (__ubuf__ l0cDtype *)l0cOutUb_.GetPhyAddr();
         l0cOutUbAddr = l0cOutUbAddr + offsetL0c;
@@ -375,13 +406,14 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
         } else {
             VFDoDequantWithoutPertokenScale(dequantOutInUbAddr, l0cOutUbAddr, mSize);
         }
-        vecQueOut_.EnQue<cType>(dequantOutInUB);
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(dequantOutInUBPingPongID_);
         // mmDequant result: UB -> GM
-        dequantOutInUB = vecQueOut_.DeQue<cType>();
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(dequantOutInUBPingPongID_);
         CopyDequantResFromUb2Gm(mSize, (mOffset + i * mSizeForOnce) * tilingData_->matmulTiling.N, dequantOutInUB);
-        vecQueOut_.FreeTensor(dequantOutInUB);
+        AscendC::SetFlag<AscendC::HardEvent::MTE3_V>(dequantOutInUBPingPongID_);
+        dequantOutInUBPingPongID_ ^= 1;
     }
-    FreeUbTensor();
+    UbSetFlag();
 }
 
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
@@ -391,32 +423,32 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
     auto singleMInVec = subBlockIdx_ == 1 ? block_.params_.singleCoreM - halfSingleM : halfSingleM;
     // scale: GM -> UB
     if (!static_cast<bool>(tilingData_->params.isPerTensor)) {
-        scaleUb_ = vecQueScale_.AllocTensor<scaleType>();
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(INPUT_BUFFER_FLAG_0);
         CopyX2ScaleFromGm2Ub(scaleUb_);
-        vecQueScale_.EnQue<scaleType>(scaleUb_);
-        scaleUb_ = vecQueScale_.DeQue<scaleType>();
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(INPUT_BUFFER_FLAG_0);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(INPUT_BUFFER_FLAG_0);
     }
 
     uint64_t mOffset = subBlockIdx_ * halfSingleM;
     // perTokenScale: GM -> UB
     if (static_cast<bool>(tilingData_->params.isPertoken)) {
-        ptScaleUb_ = vecQuePertokenScale_.AllocTensor<ptScaleType>();
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(INPUT_BUFFER_FLAG_1);
         CopyX1ScaleFromGm2Ub(ptScaleUb_, singleMInVec * sizeof(ptScaleType),
                              block_.offset_.offsetPerTokenScale + mOffset);
-        vecQuePertokenScale_.EnQue<ptScaleType>(ptScaleUb_);
-        ptScaleUb_ = vecQuePertokenScale_.DeQue<ptScaleType>();
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(INPUT_BUFFER_FLAG_1);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(INPUT_BUFFER_FLAG_1);
     }
     if (isBiasEpilogue_) {
         if (biasDtype_ == DT_FLOAT) {
-            biasUbFloat_ = vecQueBias_.AllocTensor<float>();
+            AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(INPUT_BUFFER_FLAG_2);
             CopyBiasFromGm2Ub<float>(biasUbFloat_);
-            vecQueBias_.EnQue<float>(biasUbFloat_);
-            biasUbFloat_ = vecQueBias_.DeQue<float>();
+            AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(INPUT_BUFFER_FLAG_2);
+            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(INPUT_BUFFER_FLAG_2);
         } else {
-            biasUbB16_ = vecQueBias_.AllocTensor<bfloat16_t>();
+            AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(INPUT_BUFFER_FLAG_2);
             CopyBiasFromGm2Ub<bfloat16_t>(biasUbB16_);
-            vecQueBias_.EnQue<bfloat16_t>(biasUbB16_);
-            biasUbB16_ = vecQueBias_.DeQue<bfloat16_t>();
+            AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(INPUT_BUFFER_FLAG_2);
+            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(INPUT_BUFFER_FLAG_2);
         }
     }
 }
@@ -469,21 +501,21 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
 }
 
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
-__aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::FreeUbTensor()
+__aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::UbSetFlag()
 {
     if (!static_cast<bool>(tilingData_->params.isPerTensor)) {
-        vecQueScale_.FreeTensor(scaleUb_);
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(INPUT_BUFFER_FLAG_0);
     }
 
     if (static_cast<bool>(tilingData_->params.isPertoken)) {
-        vecQuePertokenScale_.FreeTensor(ptScaleUb_);
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(INPUT_BUFFER_FLAG_1);
     }
 
     if (isBiasEpilogue_) {
         if (biasDtype_ == DT_FLOAT) {
-            vecQueBias_.FreeTensor(biasUbFloat_);
+            AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(INPUT_BUFFER_FLAG_2);
         } else {
-            vecQueBias_.FreeTensor(biasUbB16_);
+            AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(INPUT_BUFFER_FLAG_2);
         }
     }
 }

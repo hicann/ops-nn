@@ -84,30 +84,33 @@ __aicore__ inline void QuantBmmPertokenAL1FullLoad<LOCAL_TEMPLATE_FUNC_MIX_PARAM
         mm.Init(&this->block_.tilingData_->matmulTiling, this->pipe_);
     }
     uint32_t mForSingleVec = DequantBmm::CeilDiv(this->tilingData_->matmulTiling.baseM, CV_RATIO);
-    this->pipe_->InitBuffer(this->vecQueMMRes_, 1,
-                            mForSingleVec * this->tilingData_->matmulTiling.baseN * sizeof(l0cDtype));
-    this->l0cOutUb_ = this->vecQueMMRes_.template AllocTensor<l0cDtype>();
+    uint64_t ubOffset = 0;
+    this->l0cOutUb_ = LocalTensor<l0cDtype>(TPosition::VECIN, 0, mForSingleVec * this->tilingData_->matmulTiling.baseN);
+    ubOffset += mForSingleVec * this->tilingData_->matmulTiling.baseN * sizeof(l0cDtype);
+    // 仅AIV相关的buffer
     if ASCEND_IS_AIV {
         if (!static_cast<bool>(this->tilingData_->params.isPerTensor)) {
-            this->pipe_->InitBuffer(this->vecQueScale_, 1, this->tilingData_->matmulTiling.baseN * sizeof(scaleType));
+            this->scaleUb_ = LocalTensor<scaleType>(TPosition::VECIN, ubOffset, this->tilingData_->matmulTiling.baseN);
+            ubOffset += this->tilingData_->matmulTiling.baseN * sizeof(scaleType);
         }
         if (static_cast<bool>(this->tilingData_->params.isPertoken)) {
-            this->pipe_->InitBuffer(
-                this->vecQuePertokenScale_, 1,
-                DequantBmm::Align(mForSingleVec * sizeof(ptScaleType), static_cast<uint64_t>(DATA_BLOCK)));
+            this->ptScaleUb_ = LocalTensor<ptScaleType>(TPosition::VECIN, ubOffset, DequantBmm::Align(mForSingleVec * sizeof(ptScaleType), 
+                                                                                     static_cast<uint64_t>(DATA_BLOCK)) / sizeof(ptScaleType));
+            ubOffset += DequantBmm::Align(mForSingleVec * sizeof(ptScaleType), static_cast<uint64_t>(DATA_BLOCK));
         }
         if (this->isBiasEpilogue_) {
             if (this->biasDtype_ == DT_FLOAT) {
-                this->pipe_->InitBuffer(this->vecQueBias_, 1,
-                                        this->tilingData_->matmulTiling.baseN * sizeof(float));
+                this->biasUbFloat_ = LocalTensor<float>(TPosition::VECIN, ubOffset, this->tilingData_->matmulTiling.baseN);
+                ubOffset += this->tilingData_->matmulTiling.baseN * sizeof(float);
             } else {
-                this->pipe_->InitBuffer(this->vecQueBias_, 1,
-                                        this->tilingData_->matmulTiling.baseN * sizeof(bfloat16_t));
+                this->biasUbB16_ = LocalTensor<bfloat16_t>(TPosition::VECIN, ubOffset, this->tilingData_->matmulTiling.baseN);
+                ubOffset += this->tilingData_->matmulTiling.baseN * sizeof(bfloat16_t);
             }
         }
         // fp16/bf16分两次输出，fp32分四次输出
-        this->pipe_->InitBuffer(this->vecQueOut_, BUFFER_NUM, DequantBmm::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) *
-                                this->tilingData_->matmulTiling.baseN * sizeof(cType));
+        this->dequantOutInUBPing_ = LocalTensor<cType>(TPosition::VECOUT, ubOffset, DequantBmm::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * this->tilingData_->matmulTiling.baseN);
+        ubOffset += DequantBmm::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * this->tilingData_->matmulTiling.baseN * sizeof(cType);
+        this->dequantOutInUBPong_ = LocalTensor<cType>(TPosition::VECOUT, ubOffset, DequantBmm::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * this->tilingData_->matmulTiling.baseN);
     }
 }
 

@@ -219,11 +219,7 @@ __aicore__ inline void MatmulStreamKKernel
         block_.UpdateAivParams(index, roundIdx);
         // DP+SK场景，需要降低AIV带宽，所以进行同步保证串行
         if (block_.params_.round >= 2) { TPipeSetWaitFlag<HardEvent::MTE3_MTE2>();}
-        TBuf<TPosition::VECIN> ubAddBuf;
-        pipe_->InitBuffer(ubAddBuf,
-                          block_.aivParams_.copyGm2UbBurstLen * block_.aivParams_.copyGm2UbKCnt * sizeof(float));
-        LocalTensor<float> ubAddTensor =
-            ubAddBuf.Get<float>(block_.aivParams_.copyGm2UbBurstLen * block_.aivParams_.copyGm2UbKCnt);
+        LocalTensor<float> ubAddTensor(TPosition::VECIN, 0, block_.aivParams_.copyGm2UbBurstLen * block_.aivParams_.copyGm2UbKCnt);
         DataCopyExtParams dataCopyExtParams{static_cast<uint16_t>(block_.aivParams_.copyGm2UbKCnt),
                                             static_cast<uint32_t>(block_.aivParams_.copyGm2UbBurstLen * sizeof(float)),
                                             static_cast<uint32_t>(block_.aivParams_.copyGm2UbSrcGap * sizeof(float)),
@@ -276,9 +272,7 @@ __aicore__ inline void MatmulStreamKKernel
                                            BLOCK_BASE_M * BLOCK_BASE_N +
                                            block_.aicParams_.alignSingleCoreN - BLOCK_SIZE;
             uint64_t calCount = block_.params_.singleCoreM * BLOCK_SIZE;
-            TBuf<TPosition::VECOUT> ubZeroBuf;
-            pipe_->InitBuffer(ubZeroBuf, calCount * sizeof(float));
-            LocalTensor<float> ubZeroTensor = ubZeroBuf.Get<float>(calCount);
+            LocalTensor<float> ubZeroTensor(TPosition::VECOUT, 0, calCount);
             Duplicate(ubZeroTensor, (float)0, calCount);
             DataCopyExtParams clearWorkspaceExtParams{static_cast<uint16_t>(block_.params_.singleCoreM),
                 static_cast<uint32_t>(BLOCK_SIZE * sizeof(float)),

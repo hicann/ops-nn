@@ -88,80 +88,52 @@ __aicore__ inline void QuantBatchMatmulV4PerChannelKernel<
             //    L1 (0~512KB):   BL1_P0 | BL1_P2 | AL1_P0 | BL1_P1 | BL1_P3
             int32_t bL1DataSizeTotal = this->DOUBLE_BUFFER * this->bL1DataSize_ * sizeof(xType);
             if (this->tiling_->AL1Pingpong == this->QUADRUPLE_BUFFER) {
-                this->bL1LocalBuf0_ = this->l1Tbuf_.template GetWithOffset<xType>(this->bL1DataSize_, 0);
-                this->bL1LocalBuf2_ =
-                    this->l1Tbuf_.template GetWithOffset<xType>(this->bL1DataSize_, this->bL1DataSize_ * sizeof(xType));
-                this->aL1LocalBuf0_ = this->l1Tbuf_.template GetWithOffset<xType>(
-                    this->aL1DataSize_, this->L1_BUFFER_HALF_SIZE + bL1DataSizeTotal);
-                this->aL1LocalBuf2_ = this->l1Tbuf_.template GetWithOffset<xType>(
-                    this->aL1DataSize_, this->L1_BUFFER_HALF_SIZE + bL1DataSizeTotal + this->aL1DataSize_ * sizeof(xType));
-                this->aL1LocalBuf1_ = this->l1Tbuf_.template GetWithOffset<xType>(this->aL1DataSize_, bL1DataSizeTotal);
-                this->aL1LocalBuf3_ = this->l1Tbuf_.template GetWithOffset<xType>(
-                    this->aL1DataSize_, bL1DataSizeTotal + this->aL1DataSize_ * sizeof(xType));
-
-                this->bL1LocalBuf1_ =
-                    this->l1Tbuf_.template GetWithOffset<xType>(this->bL1DataSize_, this->L1_BUFFER_HALF_SIZE);
-                this->bL1LocalBuf3_ = this->l1Tbuf_.template GetWithOffset<xType>(
-                    this->bL1DataSize_, this->L1_BUFFER_HALF_SIZE + this->bL1DataSize_ * sizeof(xType));
+                this->bL1LocalBuf0_ = AscendC::LocalTensor<xType>(TPosition::TSCM, 0, this->bL1DataSize_);
+                this->bL1LocalBuf2_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->bL1DataSize_ * sizeof(xType), this->bL1DataSize_);
+                this->aL1LocalBuf0_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->L1_BUFFER_HALF_SIZE + bL1DataSizeTotal, this->aL1DataSize_);
+                this->aL1LocalBuf2_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->L1_BUFFER_HALF_SIZE + bL1DataSizeTotal + this->aL1DataSize_ * sizeof(xType), this->aL1DataSize_);
+                this->aL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, bL1DataSizeTotal, this->aL1DataSize_);
+                this->aL1LocalBuf3_ = AscendC::LocalTensor<xType>(TPosition::TSCM, bL1DataSizeTotal + this->aL1DataSize_ * sizeof(xType), this->aL1DataSize_);
+                this->bL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->L1_BUFFER_HALF_SIZE, this->bL1DataSize_);
+                this->bL1LocalBuf3_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->L1_BUFFER_HALF_SIZE + this->bL1DataSize_ * sizeof(xType), this->bL1DataSize_);
             } else if (this->tiling_->AL1Pingpong == this->DOUBLE_BUFFER) {
-                this->bL1LocalBuf0_ = this->l1Tbuf_.template GetWithOffset<xType>(this->bL1DataSize_, 0);
-                this->bL1LocalBuf2_ =
-                    this->l1Tbuf_.template GetWithOffset<xType>(this->bL1DataSize_, this->bL1DataSize_ * sizeof(xType));
-                this->aL1LocalBuf0_ = this->l1Tbuf_.template GetWithOffset<xType>(
-                    this->aL1DataSize_, this->L1_BUFFER_HALF_SIZE + bL1DataSizeTotal);
-                this->aL1LocalBuf1_ = this->l1Tbuf_.template GetWithOffset<xType>(this->aL1DataSize_, bL1DataSizeTotal);
-
-                this->bL1LocalBuf1_ =
-                    this->l1Tbuf_.template GetWithOffset<xType>(this->bL1DataSize_, this->L1_BUFFER_HALF_SIZE);
-                this->bL1LocalBuf3_ = this->l1Tbuf_.template GetWithOffset<xType>(
-                    this->bL1DataSize_, this->L1_BUFFER_HALF_SIZE + this->bL1DataSize_ * sizeof(xType));
+                this->bL1LocalBuf0_ = AscendC::LocalTensor<xType>(TPosition::TSCM, 0, this->bL1DataSize_);
+                this->bL1LocalBuf2_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->bL1DataSize_ * sizeof(xType), this->bL1DataSize_);
+                this->aL1LocalBuf0_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->L1_BUFFER_HALF_SIZE + bL1DataSizeTotal, this->aL1DataSize_);
+                this->aL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, bL1DataSizeTotal, this->aL1DataSize_);
+                this->bL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->L1_BUFFER_HALF_SIZE, this->bL1DataSize_);
+                this->bL1LocalBuf3_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->L1_BUFFER_HALF_SIZE + this->bL1DataSize_ * sizeof(xType), this->bL1DataSize_);
             } else {  // this->tiling_->AL1Pingpong == 1
-                this->bL1LocalBuf0_ = this->l1Tbuf_.template GetWithOffset<xType>(this->bL1DataSize_, 0);
-                this->bL1LocalBuf2_ =
-                    this->l1Tbuf_.template GetWithOffset<xType>(this->bL1DataSize_, this->bL1DataSize_ * sizeof(xType));
-                this->aL1LocalBuf0_ = this->l1Tbuf_.template GetWithOffset<xType>(this->aL1DataSize_, bL1DataSizeTotal);
-                this->bL1LocalBuf1_ = this->l1Tbuf_.template GetWithOffset<xType>(
-                    this->bL1DataSize_,
-                    this->Max(this->L1_BUFFER_HALF_SIZE, bL1DataSizeTotal + this->aL1DataSize_ * sizeof(xType)));
-                this->bL1LocalBuf3_ = this->l1Tbuf_.template GetWithOffset<xType>(
-                    this->bL1DataSize_,
-                    this->Max(this->L1_BUFFER_HALF_SIZE, bL1DataSizeTotal + this->aL1DataSize_ * sizeof(xType)) +
-                        this->bL1DataSize_ * sizeof(xType));
+                this->bL1LocalBuf0_ = AscendC::LocalTensor<xType>(TPosition::TSCM, 0, this->bL1DataSize_);
+                this->bL1LocalBuf2_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->bL1DataSize_ * sizeof(xType), this->bL1DataSize_);
+                this->aL1LocalBuf0_ = AscendC::LocalTensor<xType>(TPosition::TSCM, bL1DataSizeTotal, this->aL1DataSize_);
+                this->bL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->Max(this->L1_BUFFER_HALF_SIZE, bL1DataSizeTotal + this->aL1DataSize_ * sizeof(xType)), this->bL1DataSize_);
+                this->bL1LocalBuf3_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->Max(this->L1_BUFFER_HALF_SIZE, bL1DataSizeTotal + this->aL1DataSize_ * sizeof(xType)) + this->bL1DataSize_ * sizeof(xType), this->bL1DataSize_);
             }
         } else {
             // BL1 为 single buffer 或 double buffer (未考虑 L1 bank 冲突)
-            this->bL1LocalBuf0_ = this->l1Tbuf_.template GetWithOffset<xType>(this->bL1DataSize_, 0);
+            this->bL1LocalBuf0_ = AscendC::LocalTensor<xType>(TPosition::TSCM, 0, this->bL1DataSize_);
             if (this->tiling_->BL1Pingpong == this->DOUBLE_BUFFER) {
-                this->bL1LocalBuf1_ =
-                    this->l1Tbuf_.template GetWithOffset<xType>(this->bL1DataSize_, this->bL1DataSize_ * sizeof(xType));
+                this->bL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->bL1DataSize_ * sizeof(xType), this->bL1DataSize_);
             }
-            this->aL1LocalBuf0_ = this->l1Tbuf_.template GetWithOffset<xType>(
-                this->aL1DataSize_, this->vecPingpong_ * this->bL1DataSize_ * sizeof(xType));
+            this->aL1LocalBuf0_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->vecPingpong_ * this->bL1DataSize_ * sizeof(xType), this->aL1DataSize_);
             if (this->tiling_->AL1Pingpong == this->QUADRUPLE_BUFFER) {
-                this->aL1LocalBuf1_ = this->l1Tbuf_.template GetWithOffset<xType>(
-                    this->aL1DataSize_,
-                    (this->aL1DataSize_ + this->tiling_->BL1Pingpong * this->bL1DataSize_) * sizeof(xType));
-                this->aL1LocalBuf2_ = this->l1Tbuf_.template GetWithOffset<xType>(
-                    this->aL1DataSize_,
-                    (this->aL1DataSize_ * IDX_2 + this->tiling_->BL1Pingpong * this->bL1DataSize_) * sizeof(xType));
-                this->aL1LocalBuf3_ = this->l1Tbuf_.template GetWithOffset<xType>(
-                    this->aL1DataSize_,
-                    (this->aL1DataSize_ * IDX_3 + this->tiling_->BL1Pingpong * this->bL1DataSize_) * sizeof(xType));
+                this->aL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, (this->aL1DataSize_ + this->tiling_->BL1Pingpong * this->bL1DataSize_) * sizeof(xType), this->aL1DataSize_);
+                this->aL1LocalBuf2_ = AscendC::LocalTensor<xType>(TPosition::TSCM, (this->aL1DataSize_ * IDX_2 + this->tiling_->BL1Pingpong * this->bL1DataSize_) * sizeof(xType), this->aL1DataSize_);
+                this->aL1LocalBuf3_ = AscendC::LocalTensor<xType>(TPosition::TSCM, (this->aL1DataSize_ * IDX_3 + this->tiling_->BL1Pingpong * this->bL1DataSize_) * sizeof(xType), this->aL1DataSize_);
             } else if (this->tiling_->AL1Pingpong == this->DOUBLE_BUFFER) {
-                this->aL1LocalBuf1_ = this->l1Tbuf_.template GetWithOffset<xType>(
-                    this->aL1DataSize_,
-                    (this->aL1DataSize_ + this->tiling_->BL1Pingpong * this->bL1DataSize_) * sizeof(xType));
+                this->aL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, (this->aL1DataSize_ + this->tiling_->BL1Pingpong * this->bL1DataSize_) * sizeof(xType), this->aL1DataSize_);
             }
         }
         mmObj_.SetSubBlockIdx(0);
         mmObj_.Init(&this->tiling_->matmulTiling, tPipe);
     } else {
-        this->weightInUb_ = this->vecQueWeight_.template Get<wType>();
-        this->scaleInUb_ = this->vecQueScale_.template Get<scaleType>();
-        this->weightOutUb_ = this->vecQueWeightOut_.template Get<xType>();
-        this->scaleMaskUb_ = this->vecQueScaleMask_.template Get<uint64_t>();
+        this->weightInUb_ = AscendC::LocalTensor<wType>(TPosition::VECIN, 0, this->vecWeightInLen_ << this->INT4_DTYPE_PARAM );
+        this->scaleInUb_ = AscendC::LocalTensor<scaleType>(TPosition::VECIN, this->vecWeightInLen_, this->vecScaleOffsetLen_ / sizeof(scaleType));
+        this->weightOutUb_ = AscendC::LocalTensor<xType>(TPosition::VECOUT, this->vecWeightInLen_ + this->vecScaleOffsetLen_, this->vecWeightOutLen_ / sizeof(xType));
+        this->scaleMaskUb_ = AscendC::LocalTensor<uint64_t>(TPosition::VECIN, this->vecWeightInLen_ + this->vecScaleOffsetLen_ + this->vecWeightOutLen_, PERGROUP_NZ_MASK_REG / sizeof(uint64_t));
         if constexpr (hasAntiQuantOffset) {
-            this->offsetInUb_ = this->vecQueOffset_.template Get<xType>();
+            this->offsetInUb_ = AscendC::LocalTensor<xType>(TPosition::VECIN, this->vecWeightInLen_ + this->vecScaleOffsetLen_ + this->vecWeightOutLen_ + PERGROUP_NZ_MASK_REG, this->vecScaleOffsetLen_ / sizeof(xType));
         }
         this->scaleMaskUb_.SetValue(0, 0x00000000ffffffff);
         this->scaleMaskUb_.SetValue(1, 0x00000000ffffffff);

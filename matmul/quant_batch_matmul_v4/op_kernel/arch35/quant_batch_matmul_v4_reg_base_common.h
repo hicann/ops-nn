@@ -357,11 +357,6 @@ protected:
     static constexpr int32_t BLOCK_NUM_REG = VECTOR_REG_WIDTH / ONE_BLK_SIZE;
 
     TBuf<QuePosition::TSCM> l1Tbuf_;
-    TBuf<QuePosition::VECIN> vecQueWeight_;
-    TBuf<QuePosition::VECIN> vecQueScale_;
-    TBuf<QuePosition::VECIN> vecQueOffset_;
-    TBuf<QuePosition::VECOUT> vecQueWeightOut_;
-    TBuf<QuePosition::VECIN> vecQueScaleMask_;
 
      AscendC::TEventID eventIdsScaleAMte1ToMte2_[DOUBLE_BUFFER];
      AscendC::TEventID eventIdsScaleBMte1ToMte2_[DOUBLE_BUFFER];
@@ -465,8 +460,6 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
             }
         }
     }
-    pipe_->InitBuffer(vecQueWeightOut_, vecWeightOutLen_);
-    pipe_->InitBuffer(vecQueWeight_, vecWeightInLen_);
 
     // 申请 scale 和 offset 在 UB 上的 buffer 空间
     if constexpr (antiQuantType == QuantType::PER_TENSOR) {
@@ -476,12 +469,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
         }
     } else {
         vecScaleOffsetLen_ = GetVecScaleLen(vecPingpong_);
-        pipe_->InitBuffer(vecQueScale_, vecScaleOffsetLen_);
-        if constexpr (hasAntiQuantOffset) {
-            pipe_->InitBuffer(vecQueOffset_, vecScaleOffsetLen_);
-        }
     }
-    pipe_->InitBuffer(vecQueScaleMask_, PERGROUP_NZ_MASK_REG); // 32: 一个maskReg的大小
 }
 
 template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,

@@ -110,20 +110,16 @@ __aicore__ inline void WeightQuantVcvMatmulBasicBlock<xType, wType, biasType, yT
 {
     uint64_t weightL1Space = matmulTiling->baseN * matmulTiling->stepKb * matmulTiling->baseK; // weight单块大小
 
-    TBuf<TPosition::TSCM> l1Tbuf;
-    tPipe->InitBuffer(l1Tbuf, 512 * 1024);
     weightS8L1DbOffset_ = 512 * GetKBUnit<int8_t>() - weightL1Space;
-    weightS8L1_ = l1Tbuf.Get<xType>();
+    weightS8L1_ = LocalTensor<xType>(TPosition::TSCM, 0, 512 * 1024 / sizeof(xType));
 
-    TBuf<> ubBuffer;
-    tPipe->InitBuffer(ubBuffer, 248 * 1024);
-    ubOutputS32Buffer_ = ubBuffer.Get<int32_t>();
+    ubOutputS32Buffer_ = LocalTensor<int32_t>(TPosition::LCM, 0, 248 * 1024 / sizeof(int32_t));
 
     if ASCEND_IS_AIC {
-        cubeCompute_.Init(l1Tbuf, weightL1Space, aPreloadSize, matmulTiling, tPipe);
+        cubeCompute_.Init(512 * 1024, weightL1Space, aPreloadSize, matmulTiling, tPipe);
     } else {
         LocalTensor<xType> ubWeightS8Buffer = ubOutputS32Buffer_.template ReinterpretCast<xType>();
-        vecCompute_.InitKCG(antiQuantGroupSize, hasBias, ubBuffer, ubWeightS8Buffer, 128 * 1024);
+        vecCompute_.InitKCG(antiQuantGroupSize, hasBias, ubWeightS8Buffer, 128 * 1024);
     }
     cvLoopIdx_ = 0;
 }

@@ -63,11 +63,10 @@ public:
     using InTrait = AscendC::TensorTrait<DataTypeIn, AscendC::TPosition::VECIN, NDLayout>;
     AscendC::LocalTensor<InTrait> cLocal_;
     AscendC::LocalTensor<DataTypeIn> inLocal_;
-    AscendC::LocalTensor<DataTypeIn> ubLocal_;
+    AscendC::LocalTensor<DataTypeIn> ubLocal_{AscendC::TPosition::LCM, 0, AscendC::TOTAL_UB_SIZE / sizeof(DataTypeIn)};
     AscendC::LocalTensor<DataTypeIn> outputLocalTmp_;
     AscendC::LocalTensor<DataTypeOut> outputLocal_;
     AscendC::GlobalTensor<DataTypeOut> outputGlobal_;
-    AscendC::TBuf<> tBuf_;
     int64_t stageSize_ = 0;
     // attribute
     FusionOp fusionOp_;
@@ -76,8 +75,6 @@ public:
     __aicore__ inline void Init(Params const& params, int64_t l1M, int64_t l1N, ProblemShape& problemShape)
     {
         int64_t l1NAlign = AlignBlock<half>(l1N);
-        GetTPipePtr()->InitBuffer(tBuf_, AscendC::TOTAL_UB_SIZE);
-        ubLocal_ = tBuf_.template Get<DataTypeIn>();
         cLocal_.address_ = ubLocal_[0].address_;
         inLocal_ = ubLocal_[0];
         int64_t ubOffset = l1M * l1NAlign;
