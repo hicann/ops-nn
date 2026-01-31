@@ -226,6 +226,9 @@ protected:
         uint64_t maxMIter = Ceil(
             this->mCnt_ > 1 ? this->singleShapeM_ : this->mCoreTail_, this->dw_.ctx.tiling_->baseM);
         uint64_t maxNIter = Ceil(this->nCnt_ > 1 ? this->singleShapeN_ : nCoreTailAlign, this->dw_.ctx.tiling_->baseN);
+
+        uint8_t barrierTriggerCnt = 0;
+        constexpr uint8_t barrierThreshold = 14;
         for (uint64_t i = 0; i < maxMIter; i++) {
             for (uint64_t j = 0; j < maxNIter; j++) {
                 bool isCurIter = (i < this->dw_.ctx.mIter_) && (j < this->dw_.ctx.nIter_);
@@ -236,6 +239,15 @@ protected:
                     } else if (this->dw_.ctx.tiling_->cl0Pbuffer > 1) {
                         this->dw_.ctx.l0cPingPongFlag_ = !this->dw_.ctx.l0cPingPongFlag_;
                     }
+                    if (!isCompute && ((++barrierTriggerCnt) % barrierThreshold == 0)) {
+                        //如果全是跳过,那么cube核没有实际逻辑,导致cube核CrossCoreSetFlag过快,
+                        //vector核来不及消费Flag，使得CrossCoreSetFlag内部的计数器溢出导致异常
+                        //根据文档,CrossCoreSetFlag的计数器最多设置15次,所以每隔14次触发一次Barrier
+                        //强制cube等待vector的notify,让两边同步
+                        PipeBarrier<PIPE_ALL>();
+                        barrierTriggerCnt = 0;
+                    }
+
                     this->CubeNotifyVector();
                 }
                 if ASCEND_IS_AIV {
