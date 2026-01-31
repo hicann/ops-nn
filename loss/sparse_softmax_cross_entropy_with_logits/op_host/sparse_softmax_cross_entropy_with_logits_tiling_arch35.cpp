@@ -376,6 +376,7 @@ ge::graphStatus SparseSoftmaxCrossEntropyWithLogitsTiling::DoTiling()
     PrintTilingData();
     context_->SetBlockDim(tilingData_->realCoreNum);
     context_->SetScheduleMode(1);
+    context_->SetLocalMemorySize(ubSize);
     size_t *workspaces = context_->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = WORKSPACE_SIZE;
