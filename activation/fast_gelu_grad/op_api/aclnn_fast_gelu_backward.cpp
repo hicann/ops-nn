@@ -49,9 +49,10 @@ static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, con
 
 static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput)
 {
-    // 检查gradOutput和self的dtype是否与gradInput的一致
+    // 检查gradOutput和self的dtype是否一致
+    OP_CHECK_DTYPE_NOT_SAME(self, gradOutput, return false);
+    // 检查gradOutput和gradInput的dtype是否一致
     OP_CHECK_DTYPE_NOT_SAME(gradOutput, gradInput, return false);
-    OP_CHECK_DTYPE_NOT_SAME(self, gradInput, return false);
 
     // 检查gradInput的数据类型是否在支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(gradInput, GetDtypeSupportList(), return false);
@@ -60,9 +61,10 @@ static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, 
 
 static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput)
 {
-    // 校验gradOutput、self和gradInput的shape是否一致
+    // 校验gradOutput和self的shape是否一致
+    OP_CHECK_SHAPE_NOT_EQUAL(self, gradOutput, return false);
+    // 校验gradOutput和gradInput的shape是否一致
     OP_CHECK_SHAPE_NOT_EQUAL(gradOutput, gradInput, return false);
-    OP_CHECK_SHAPE_NOT_EQUAL(self, gradInput, return false);
     // 校验self shape维度是否小于8维
     OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
     return true;
