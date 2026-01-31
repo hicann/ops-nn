@@ -6,7 +6,7 @@
 
 | 产品 | 是否支持 |
 | :---------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                                                |    ×    |
+| <term>Ascend 950PR/Ascend 950DT</term>                                                |    √    |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>                        |    √    |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √    |
 | <term>Atlas 200I/500 A2 推理产品</term>                                         |    √    |
@@ -81,7 +81,7 @@ aclnnStatus aclnnRmsNormQuant(
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x`。</td>
       <td><ul><li>不支持空Tensor。</li></ul></td>
-      <td>FLOAT16、BFLOAT16</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -91,7 +91,7 @@ aclnnStatus aclnnRmsNormQuant(
       <td>输入</td>
       <td>表示标准化过程中的权重张量。对应公式中的`gamma`。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型需要与`x`保持一致。</li><li>如果shape为1维，shape需要与`x`最后一维的维度保持一致。</li><li>如果shape为2维，则第一维必须为1，第二维需要与`x`最后一维的维度保持一致。</li></ul></td>
-      <td>FLOAT16、BFLOAT16</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-2</td>
       <td>√</td>
@@ -101,7 +101,7 @@ aclnnStatus aclnnRmsNormQuant(
       <td>输入</td>
       <td>表示标准化过程中的偏移张量。对应公式中的`beta`。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型需要与`x`保持一致。</li><li>如果shape为1维，shape需要与`x`最后一维的维度保持一致。</li><li>如果shape为2维，则第一维必须为1，第二维需要与`x`最后一维的维度保持一致。</li></ul></td>
-      <td>FLOAT16、BFLOAT16</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-2</td>
       <td>√</td>
@@ -111,7 +111,7 @@ aclnnStatus aclnnRmsNormQuant(
       <td>输入</td>
       <td>表示量化过程中得到y进行的scale张量，对应公式中的`scale`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape为1，维度为1。</li><li>该参数的值不能为0。</li></ul></td>
-      <td>FLOAT16、BFLOAT16</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
       <td>√</td>
@@ -121,7 +121,7 @@ aclnnStatus aclnnRmsNormQuant(
       <td>输入</td>
       <td>表示量化过程中得到y进行的offset张量，对应公式中的`offset`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape需要与`scale`保持一致。</li></ul></td>
-      <td>INT8</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT8</td>
       <td>ND</td>
       <td>1</td>
       <td>√</td>
@@ -141,7 +141,7 @@ aclnnStatus aclnnRmsNormQuant(
       <td>输出</td>
       <td>表示最终量化输出Tensor，对应公式中的`y`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape需要与输入`x`一致。</li></ul></td>
-      <td>INT8、INT4</td>
+      <td>INT32、INT8、INT4、FLOAT8、HIF8</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -253,6 +253,9 @@ aclnnStatus aclnnRmsNormQuant(
 ## 约束说明
 
 - <term>Atlas 推理系列产品</term>：x、y的尾轴长度，以及gamma的尾轴长度必须大于等于32Bytes。
+- <term>Ascend 950PR/Ascend 950DT</term>：当`x`的数据类型为FLOAT32时，`scale`和`offset`的数据类型只能为FLOAT32；当`x`的数据类型为FLOAT16或者BFLOAT16，并且`scale`的数据类型为FLOAT32时，`offset`的数据类型只能是FLOAT32或者INT32，否则`scale`的数据类型需要与`x`的数据类型保持一致同为FLOAT16或者BFLOAT16，`offset`的数据类型也需要与`x`的数据类型保持一致或者为INT8。
+- <term>Ascend 950PR/Ascend 950DT</term>：当`y`的数据类型为INT4时，`x`的最后一维、`gamma`以及`beta`的维度必须为偶数。
+
 - 各产品型号支持数据类型说明：
   
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
@@ -270,6 +273,59 @@ aclnnStatus aclnnRmsNormQuant(
     | --------- | ------------- | ------------- | ------------- | -------------- | --------- |--------- |
     | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |INT8      |
     | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |INT4      |
+  - <term>Ascend 950PR/Ascend 950DT</term>：
+
+    | x数据类型 | gamma数据类型 | beta数据类型 | scale数据类型 | offset数据类型 | epsilon数据类型 | y数据类型 |
+    | --------- | ------------- | ------------- | ------------- | -------------- | --------- |--------- |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |INT8      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |INT4      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |FLOAT8_E4M3FN      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |FLOAT8_E5M2      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |HIFLOAT8      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16       | INT8           | DOUBLE      |INT8      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16       | INT8           | DOUBLE      |INT4      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16       | INT8           | DOUBLE      |FLOAT8_E4M3FN      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16       | INT8           | DOUBLE      |FLOAT8_E5M2      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16       | INT8           | DOUBLE      |HIFLOAT8      |
+    | FLOAT32   | FLOAT32       | FLOAT32       | FLOAT32       | INT8           | DOUBLE      |INT8      |
+    | FLOAT32   | FLOAT32       | FLOAT32       | FLOAT32       | INT8           | DOUBLE      |INT4      |
+    | FLOAT32   | FLOAT32       | FLOAT32       | FLOAT32       | INT8           | DOUBLE      |FLOAT8_E4M3FN      |
+    | FLOAT32   | FLOAT32       | FLOAT32       | FLOAT32       | INT8           | DOUBLE      |FLOAT8_E5M2      |
+    | FLOAT32   | FLOAT32       | FLOAT32       | FLOAT32       | INT8           | DOUBLE      |HIFLOAT8      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT32       | INT8           | DOUBLE      |INT8      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT32       | INT8           | DOUBLE      |INT4      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT32       | INT8           | DOUBLE      |FLOAT8_E4M3FN      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT32       | INT8           | DOUBLE      |FLOAT8_E5M2      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT32       | INT8           | DOUBLE      |HIFLOAT8      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | FLOAT32      | INT8           | DOUBLE      |INT8      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | FLOAT32       | INT8           | DOUBLE      |INT4      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | FLOAT32       | INT8           | DOUBLE      |FLOAT8_E4M3FN      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | FLOAT32       | INT8           | DOUBLE      |FLOAT8_E5M2      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | FLOAT32       | INT8           | DOUBLE      |HIFLOAT8      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | FLOAT16           | DOUBLE      |INT8      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | FLOAT16           | DOUBLE      |INT4      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | FLOAT16           | DOUBLE      |FLOAT8_E4M3FN      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | FLOAT16           | DOUBLE      |FLOAT8_E5M2      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | FLOAT16           | DOUBLE      |HIFLOAT8      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16       | BFLOAT16           | DOUBLE      |INT8      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16       | BFLOAT16           | DOUBLE      |INT4      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16       | BFLOAT16           | DOUBLE      |FLOAT8_E4M3FN      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16       | BFLOAT16           | DOUBLE      |FLOAT8_E5M2      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16       | BFLOAT16           | DOUBLE      |HIFLOAT8      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT32       | FLOAT32           | DOUBLE      |INT8      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT32       | FLOAT32           | DOUBLE      |INT4      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT32       | FLOAT32           | DOUBLE      |FLOAT8_E4M3FN      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT32       | FLOAT32           | DOUBLE      |FLOAT8_E5M2      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT32       | FLOAT32           | DOUBLE      |HIFLOAT8      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | FLOAT32       | FLOAT32           | DOUBLE      |INT8      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | FLOAT32       | FLOAT32           | DOUBLE      |INT4      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | FLOAT32       | FLOAT32           | DOUBLE      |FLOAT8_E4M3FN      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | FLOAT32       | FLOAT32           | DOUBLE      |FLOAT8_E5M2      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | FLOAT32       | FLOAT32           | DOUBLE      |HIFLOAT8      |
+
+
+
+
 
 - 确定性计算：
   - aclnnRmsNormQuant默认确定性实现。

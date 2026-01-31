@@ -29,6 +29,7 @@ using namespace op;
 
 namespace l0op {
 OP_TYPE_REGISTER(RmsNormQuant);
+OP_TYPE_REGISTER(RmsNormQuantV2);
 
 const aclTensor* RmsNormQuant(
     const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* scale, const aclTensor* offset,
@@ -46,5 +47,30 @@ const aclTensor* RmsNormQuant(
         return nullptr;
     }
     return y;
+}
+
+const std::array<aclTensor*, 2> RmsNormQuantV2(
+    const aclTensor* x, const aclTensor* gamma, const aclTensor* scales1, const aclTensor* scales2Optional,
+    const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional, const aclTensor* betaOptional,
+    double epsilon, bool divMode, int32_t dstType, aclOpExecutor* executor)
+{
+    L0_DFX(
+        RmsNormQuantV2, x, gamma, scales1, scales2Optional, zeroPoints1Optional, zeroPoints2Optional, betaOptional,
+        epsilon, divMode, dstType);
+
+    aclTensor* y1 = executor->AllocTensor(x->GetViewShape(), op::DataType(dstType), x->GetViewFormat());
+    aclTensor* y2 = y1;
+    if (scales2Optional != nullptr) {
+        y2 = executor->AllocTensor(x->GetViewShape(), op::DataType(dstType), x->GetViewFormat());
+    }
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
+        RmsNormQuantV2,
+        OP_INPUT(x, gamma, scales1, scales2Optional, zeroPoints1Optional, zeroPoints2Optional, betaOptional),
+        OP_OUTPUT(y1, y2), OP_ATTR(static_cast<float>(epsilon), divMode, dstType));
+    if (ret != ACL_SUCCESS) {
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "RmsNormQuantV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
+        return std::array<aclTensor*, 2>{nullptr, nullptr};
+    }
+    return {y1, y2};
 }
 } // namespace l0op
