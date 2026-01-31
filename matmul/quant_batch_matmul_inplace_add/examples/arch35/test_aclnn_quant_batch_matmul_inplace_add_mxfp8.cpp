@@ -87,7 +87,7 @@ int CreateAclTensor(
 }
 
 template <typename T1, typename T2>
-auto Ceil(T1 a, T2 b) -> T1
+auto CeilDiv(T1 a, T2 b) -> T1
 {
     if (b == 0) {
         return a;
@@ -102,19 +102,6 @@ void Finalize(int32_t deviceId, aclrtStream stream)
     aclFinalize();
 }
 
-// 将bloat16的uint16_t表示转换为float表示
-float Bf16ToFloat(uint16_t h)
-{
-    uint32_t sign = (h & 0x8000U) ? 0x80000000U : 0x00000000U; // sign bit
-    uint32_t exponent = (h >> 7) & 0x00FFU;                    // exponent bits
-    uint32_t mantissa = h & 0x007FU;                           // mantissa bits
-    // 指数偏移不变
-    // mantissa 左移 23 - 7 ，其余补0
-    uint32_t fBits = sign | (exponent << 23) | (mantissa << (23 - 7));
-    // 强转float
-    return *reinterpret_cast<float*>(&fBits);
-}
-
 int AclnnQuantBatchMatmulInplaceAddTest(int32_t deviceId, aclrtStream& stream)
 {
     auto ret = Init(deviceId, &stream);
@@ -127,9 +114,9 @@ int AclnnQuantBatchMatmulInplaceAddTest(int32_t deviceId, aclrtStream& stream)
 
     std::vector<int64_t> x1Shape = {K, M};
     std::vector<int64_t> x2Shape = {K, N};
-    std::vector<int64_t> x2ScaleShape = {Ceil(K, 64), N, 2};
+    std::vector<int64_t> x2ScaleShape = {CeilDiv(K, 64), N, 2};
     std::vector<int64_t> yInputShape = {M, N};
-    std::vector<int64_t> x1ScaleShape = {Ceil(K, 64), M, 2};
+    std::vector<int64_t> x1ScaleShape = {CeilDiv(K, 64), M, 2};
     std::vector<int64_t> yOutShape = {M, N};
 
     void* x1DeviceAddr = nullptr;
@@ -148,9 +135,9 @@ int AclnnQuantBatchMatmulInplaceAddTest(int32_t deviceId, aclrtStream& stream)
 
     std::vector<uint8_t> x1HostData(M * K, 1);                 // 0b00111000 为 fp8_e4m3fn的1.0
     std::vector<uint8_t> x2HostData(N * K, 1); // 0b0010为fp4_e2m1的1.0，这里用uint8代表2个fp4
-    std::vector<uint8_t> x2ScaleHostData(Ceil(K, 64) * N * 2, 1); 
+    std::vector<uint8_t> x2ScaleHostData(CeilDiv(K, 64) * N * 2, 1); 
     std::vector<float> yInputHostData(M * N, 1);                        // fp32的1.0
-    std::vector<uint8_t> x1ScaleHostData(M * Ceil(K, 64) * 2, 1);
+    std::vector<uint8_t> x1ScaleHostData(M * CeilDiv(K, 64) * 2, 1);
     std::vector<float> yOutputHostData(M * N, 1); 
 
     // 创建x1 aclTensor
