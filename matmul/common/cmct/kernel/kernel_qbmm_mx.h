@@ -113,6 +113,7 @@ private:
     {
         return {problemShape.m, problemShape.n, problemShape.k};
     }
+    __aicore__ inline void AddBatchOffset(const Params &params);
 
 private:
     BlockMmad mmadOp_;
@@ -241,6 +242,30 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessWit
 }
 
 QBMM_MX_KERNEL_CLASS_TEM_PARAMS
+__aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::AddBatchOffset(const Params &params)
+{
+    Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_) += batchAOffset_ * params.problemShape.m * params.problemShape.k;
+    if constexpr (FormatB == CubeFormat::NZ) {
+        if constexpr (transB) {
+            Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_) +=
+                batchBOffset_ * Cmct::Gemm::CeilDiv(params.problemShape.k, C0_SIZE_B8) *
+                Cmct::Gemm::CeilDiv(params.problemShape.n, AscendC::BLOCK_CUBE) * AscendC::BLOCK_CUBE * C0_SIZE_B8;
+        } else {
+            Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_) +=
+                batchBOffset_ * Cmct::Gemm::CeilDiv(params.problemShape.n, C0_SIZE_B8) *
+                Cmct::Gemm::CeilDiv(params.problemShape.k, AscendC::BLOCK_CUBE) * AscendC::BLOCK_CUBE * C0_SIZE_B8;
+        }
+    } else {
+        Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_) +=
+            batchBOffset_ * params.problemShape.n * params.problemShape.k;
+    }
+    Get<QuantBatchMatmul::IDX_C_OFFSET>(blockOffset_) += batchCOffset_ * params.problemShape.m * params.problemShape.n;
+    if (isBiasThreeDim_) {
+        Get<QuantBatchMatmul::IDX_BIAS_OFFSET>(blockOffset_) += batchCOffset_ * params.problemShape.n;
+    }
+}
+
+QBMM_MX_KERNEL_CLASS_TEM_PARAMS
 __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessSingleBatch(
     const Params& params, BlockSchedulerOp& bs, uint64_t restBatch, bool isTailRound)
 {
@@ -258,8 +283,9 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessSin
         bs.UpdateTailTile(mTailTile, nTailTile);
     }
     while (bs.GetTileIdx(blockIdx)) {
-        BlockShape singleShape = bs.template GetBlockShape<
-            QuantBatchMatmul::QuantMode::MX_PERGROUP_MODE, QuantBatchMatmul::QuantMode::MX_PERGROUP_MODE>(blockIdx);
+        BlockShape singleShape =
+            bs.template GetBlockShape<QuantBatchMatmul::QuantMode::MX_PERGROUP_MODE,
+                                      QuantBatchMatmul::QuantMode::MX_PERGROUP_MODE, FormatB>(blockIdx);
         if (Get<MNK_M>(singleShape) <= 0 || Get<MNK_N>(singleShape) <= 0) {
             return;
         }
@@ -269,16 +295,7 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessSin
             Get<QuantBatchMatmul::IDX_M_TAIL_SPLIT_TILEIDX>(singleShape),
             Get<QuantBatchMatmul::IDX_N_TAIL_SPLIT_TILEIDX>(singleShape), loadBalanceInfo);
 
-        Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_) +=
-            batchAOffset_ * params.problemShape.m * params.problemShape.k;
-        Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_) +=
-            batchBOffset_ * params.problemShape.n * params.problemShape.k;
-        Get<QuantBatchMatmul::IDX_C_OFFSET>(blockOffset_) +=
-            batchCOffset_ * params.problemShape.m * params.problemShape.n;
-        if (isBiasThreeDim_) {
-            Get<QuantBatchMatmul::IDX_BIAS_OFFSET>(blockOffset_) += batchCOffset_ * params.problemShape.n;
-        }
-
+        AddBatchOffset(params);
         mmadOp_(
             aGlobal_[Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_)],
             bGlobal_[Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_)],

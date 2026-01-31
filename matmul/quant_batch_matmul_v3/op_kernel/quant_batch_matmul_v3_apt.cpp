@@ -77,12 +77,11 @@ using namespace matmul;
 #endif
 
 #if (defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_SCALE) && defined(FORMAT_X2))
-#define IS_MXFP8_ND                                                                                                \
-    ((ORIG_DTYPE_X1 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X1 == DT_FLOAT8_E5M2) &&                                       \
-     (ORIG_DTYPE_X2 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X2 == DT_FLOAT8_E5M2) && ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0 && \
-     FORMAT_X2 == FORMAT_ND)
+#define IS_MXFP8                                                               \
+    ((ORIG_DTYPE_X1 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X1 == DT_FLOAT8_E5M2) && \
+     (ORIG_DTYPE_X2 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X2 == DT_FLOAT8_E5M2) && ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0)
 #else
-#define IS_MXFP8_ND false
+#define IS_MXFP8 false
 #endif
 
 #if defined(ORIG_DTYPE_SCALE)
@@ -95,7 +94,7 @@ using namespace matmul;
 #endif
 
 #if defined(FORMAT_X1) && FORMAT_X1 == FORMAT_FRACTAL_NZ
-constexpr CubeFormat format_x1 = CubeFormat::NZ;
+    constexpr CubeFormat format_x1 = CubeFormat::NZ;
 #else
 constexpr CubeFormat format_x1 = CubeFormat::ND;
 #endif
@@ -187,8 +186,40 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
         }
     }
 #endif
+
     if constexpr (DequantBmm::IsMxType<DTYPE_SCALE>()) {
-#if IS_MXFP8_ND
+#if IS_MXFP8
+#if defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
+        if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) {
+            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Nz,
+                                               Cmct::Gemm::layout::RowMajorAlign, 0);
+            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Zn,
+                                               Cmct::Gemm::layout::RowMajorAlign, 0);
+            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Nz,
+                                               Cmct::Gemm::layout::RowMajorAlign, 0);
+            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Zn,
+                                               Cmct::Gemm::layout::RowMajorAlign, 0);
+            }
+        } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) {
+            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Nz,
+                                               Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
+            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Zn,
+                                               Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
+            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Nz,
+                                               Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
+            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Zn,
+                                               Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
+            }
+        }
+#else
         if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) {
             if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
                 QUANT_BMMV3_MX_CMCT_IMPL_CLASS(
@@ -225,6 +256,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
                     Cmct::Gemm::A_FULL_LOAD_MODE);
             }
         }
+#endif
 #else
         if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE) {            // Bias Mode = 0;
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 0;

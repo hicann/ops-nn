@@ -525,7 +525,9 @@ void AdaptiveSlidingWindowTiling::AdjustBasicBlock()
             adaptiveWin_.baseN = tempBaseN;
             kValueMax = ops::FloorAlign(kValueMax, baseKAlignNum);
             adaptiveWin_.baseK = std::min(kValueAlign, kValueMax);
-            adaptiveWin_.baseK = adaptiveWin_.baseK > BASEK_LIMIT ? adaptiveWin_.baseK / NUM_HALF : adaptiveWin_.baseK;
+            adaptiveWin_.baseK = adaptiveWin_.baseK > BASEK_LIMIT
+                                     ? ops::CeilAlign(adaptiveWin_.baseK / NUM_HALF, baseKAlignNum)
+                                     : adaptiveWin_.baseK;
             adaptiveWin_.useTailWinLogic = false;
         }
     }

@@ -88,9 +88,10 @@ bool AdaptiveSlidingWindowBasicAPITiling::IsCapable()
     bool isCubePerChannel =
         inputParams_.isPerChannel && (inputParams_.scaleDtype == ge::DT_UINT64 ||
                                       inputParams_.scaleDtype == ge::DT_INT64 || inputParams_.cDtype == ge::DT_INT32);
-    return (isMxfp8 || (inputParams_.isDoubleScale && !inputParams_.isPerChannel) || isCubePerTensor ||
-            isCubePerChannel || inputParams_.isPerBlock) &&
-           inputParams_.bFormat == ge::FORMAT_ND;
+    return (((inputParams_.isDoubleScale && !inputParams_.isPerChannel) || isCubePerTensor || isCubePerChannel ||
+             inputParams_.isPerBlock) &&
+            inputParams_.bFormat == ge::FORMAT_ND) ||
+           isMxfp8;
 }
 
 uint64_t AdaptiveSlidingWindowBasicAPITiling::GetBatchCoreCnt() const

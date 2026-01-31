@@ -81,6 +81,7 @@ public:
     uint64_t baseN_{16};
     uint64_t baseK_{16};
     bool isBias_{false};
+    static constexpr CubeFormat formatB = TagToFormat<LayoutB>::format;
     static constexpr bool transA = TagToTrans<LayoutA>::value;
     static constexpr bool transB = TagToTrans<LayoutB>::value;
     constexpr static uint64_t HALF_L0_SIZE = L0A_SIZE / DOUBLE_BUFFER_COUNT / sizeof(AType);
@@ -238,6 +239,32 @@ public:
         AscendC::DataCopy(bl1Local, bGlobal, nd2nzParams);
     }
 
+    __aicore__ inline void CopyInB1WeightNz(const AscendC::GlobalTensor<BType> &bGlobal,
+                                            const AscendC::LocalTensor<BType> &bl1Local,
+                                            const TileL1L0Param &tileL1L0Param)
+    {
+        AscendC::GlobalTensor<uint8_t> bGlobalUInt8;
+        bGlobalUInt8.SetGlobalBuffer((__gm__ uint8_t *)bGlobal.GetPhyAddr());
+        auto bl1LocalUint8 = bl1Local.template ReinterpretCast<uint8_t>();
+
+        AscendC::DataCopyExtParams dataCopyParams;
+        AscendC::DataCopyPadExtParams<uint8_t> padParams;
+        if constexpr (transB) {
+            dataCopyParams.blockCount = Cmct::Gemm::CeilDiv(tileL1L0Param.curGmBKL1, C0_SIZE);
+            dataCopyParams.blockLen = tileL1L0Param.curAlignN * C0_SIZE;
+            dataCopyParams.srcStride =
+                (Cmct::Gemm::CeilAlign(n_, AscendC::BLOCK_CUBE) - tileL1L0Param.curAlignN) * C0_SIZE;
+            dataCopyParams.dstStride = 0;
+        } else {
+            int64_t curGmBKL1NZ = Cmct::Gemm::CeilAlign(tileL1L0Param.curGmBKL1, AscendC::BLOCK_CUBE);
+            dataCopyParams.blockCount = tileL1L0Param.curAlignN / C0_SIZE;
+            dataCopyParams.blockLen = curGmBKL1NZ * C0_SIZE;
+            dataCopyParams.srcStride = (Cmct::Gemm::CeilAlign(k_, AscendC::BLOCK_CUBE) - curGmBKL1NZ) * C0_SIZE;
+            dataCopyParams.dstStride = tileL1L0Param.curPadBKL1 - curGmBKL1NZ;
+        }
+        AscendC::DataCopyPad(bl1LocalUint8, bGlobalUInt8, dataCopyParams, padParams);
+    }
+
     __aicore__ inline void InitA1(const AscendC::LocalTensor<AType> &al1Local, TileL1L0Param &tileL1L0Param)
     {
         AscendC::LocalTensor<half> al1LocalHalf = al1Local.template ReinterpretCast<half>();
@@ -288,9 +315,16 @@ public:
             uint64_t kAlign = Cmct::Gemm::CeilDiv(tileL1L0Param.curGmBKL1, C0_SIZE) * AscendC::BLOCK_CUBE;
             offset = tileL1L0Param.curAlignN * kAlign;
         } else {
-            if (tileL1L0Param.curPadBKL1 == tileL1L0Param.curGmBKL1) {
-                return;
+            if constexpr (formatB == CubeFormat::NZ) {
+                if (tileL1L0Param.curPadBKL1 == Cmct::Gemm::CeilAlign(tileL1L0Param.curGmBKL1, AscendC::BLOCK_CUBE)) {
+                    return;
+                }
+            } else {
+                if (tileL1L0Param.curPadBKL1 == tileL1L0Param.curGmBKL1) {
+                    return;
+                }
             }
+            // when format of B is NZ, we reuse code for ND even though we initialize unnecessary extra space
             uint64_t n1 = Cmct::Gemm::CeilDiv(tileL1L0Param.curAlignN, C0_SIZE);
             offset = tileL1L0Param.curGmBKL1 * AscendC::BLOCK_CUBE;
             initConstValueParams.repeatTimes = n1;
@@ -612,9 +646,15 @@ public:
     __aicore__ inline void CopyBInL1(AscendC::GlobalTensor<BType> bGlobal, TileL1L0Param tileL1L0Param, uint64_t l1BufId,
                                      uint64_t l1Iter)
     {
-        uint64_t offsetB = transB ? l1Iter * kL1_ : l1Iter * kL1_ * n_;
         InitB1(bL1Local_[l1BufferBOffset_[l1BufId]], tileL1L0Param);
-        CopyInB1(bGlobal[offsetB], bL1Local_[l1BufferBOffset_[l1BufId]], tileL1L0Param);
+        if constexpr (formatB == CubeFormat::NZ) {
+            uint64_t offsetB =
+                transB ? l1Iter * kL1_ * Cmct::Gemm::CeilAlign(n_, AscendC::BLOCK_CUBE) : l1Iter * kL1_ * C0_SIZE;
+            CopyInB1WeightNz(bGlobal[offsetB], bL1Local_[l1BufferBOffset_[l1BufId]], tileL1L0Param);
+        } else {
+            uint64_t offsetB = transB ? l1Iter * kL1_ : l1Iter * kL1_ * n_;
+            CopyInB1(bGlobal[offsetB], bL1Local_[l1BufferBOffset_[l1BufId]], tileL1L0Param);
+        }
     }
 
     __aicore__ inline void Iterate(TileL1L0Param &tileL1L0Param, MmadParams &mmadParams, uint64_t l1Iter, uint64_t l1BufId,

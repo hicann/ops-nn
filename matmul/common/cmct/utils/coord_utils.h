@@ -310,6 +310,24 @@ public:
         }
     }
 
+    __aicore__ inline void CalOffset4Weight(
+        int64_t nOffset, AscendC::Std::tuple<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t> &offset)
+    {
+        if constexpr (layoutB == CubeFormat::NZ) {
+            if constexpr (isTransB) {
+                Get<1>(offset) = nOffset * C0_SIZE_B8;
+            } else {
+                Get<1>(offset) = nOffset * CeilDiv(k, AscendC::BLOCK_CUBE) * AscendC::BLOCK_CUBE;
+            }
+        } else {
+            if constexpr (isTransB) {
+                Get<1>(offset) = nOffset * k;
+            } else {
+                Get<1>(offset) = nOffset;
+            }
+        }
+    }
+
     template <QuantBatchMatmul::QuantMode aQuantMode, bool enableLoadBalance = false>
     __aicore__ inline AscendC::Std::tuple<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t> GetQuantOffset(
         int64_t mTileIdx, int64_t nTileIdx, int64_t mSplitOffset = 0, int64_t nSplitOffset = 0,
@@ -337,11 +355,8 @@ public:
         } else {
             Get<0>(offset) = mOffset * k;
         }
-        if constexpr (isTransB) {
-            Get<1>(offset) = nOffset * k;
-        } else {
-            Get<1>(offset) = nOffset;
-        }
+        CalOffset4Weight(nOffset, offset);
+        
         Get<5>(offset) = mOffset * n + nOffset; // 5: idx of y
         if constexpr (
             aQuantMode == QuantBatchMatmul::QuantMode::PERGROUP_MODE ||

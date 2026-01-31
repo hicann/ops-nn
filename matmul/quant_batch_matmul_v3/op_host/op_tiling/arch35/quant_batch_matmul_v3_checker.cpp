@@ -313,12 +313,37 @@ bool QuantBatchMatmulV3Checker::CheckDtypesInRange() const
     return true;
 }
 
+bool QuantBatchMatmulV3Checker::CheckDtype4WeightNz() const
+{
+    OP_TILING_CHECK(
+        !(inputParams_.aDtype == ge::DT_INT8 ||
+          (inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN && inputParams_.bDtype == ge::DT_FLOAT8_E4M3FN)),
+        CUBE_INNER_ERR_REPORT(
+            inputParams_.opName,
+            "When format of x2 is FRACTAL_NZ, input dtype must be INT8/FLOAT8_E4M3FN, actual x1 is %s, x2 is %s.",
+            ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
+            ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
+        return false);
+    OP_TILING_CHECK(
+        (inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN && inputParams_.bDtype == ge::DT_FLOAT8_E4M3FN) &&
+            !(inputParams_.scaleDtype == ge::DT_FLOAT8_E8M0 && inputParams_.perTokenScaleDtype == ge::DT_FLOAT8_E8M0),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                              "When format of x2 is FRACTAL_NZ and input dtype is FLOAT8_E4M3FN, scale and \
+pertokenScale are FLOAT8_E8M0, actual scale is %s, pertokenScale is %s.",
+                              ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str(),
+                              ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str()),
+        return false);
+}
+
 bool QuantBatchMatmulV3Checker::CheckDtype() const
 {
     if (!CheckDtypesInRange()) {
         return false;
     }
     if (!CheckABDtypes()) {
+        return false;
+    }
+    if (inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && !CheckDtype4WeightNz()) {
         return false;
     }
     if (!CheckScalesDtype()) {
@@ -588,13 +613,12 @@ but pertoken is null.");
 number when input type is FLOAT4.",
                                           dimValueOfMKN[0], dimValueOfMKN[2]), return false);
     // To determine if x2 k dim ceil div 32 is an even number, divide it by 2 in mxfp4 case
-    OP_TILING_CHECK(
-        (inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ || isFp4Input) &&
-            ops::CeilDiv(inputParams_.kSize, MX_GROUP_SIZE) % 2 != 0,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "In weight nz case or FLOAT4 case, when scale dtype is FLOAT8_E8M0, x2 k dimension size \
+    OP_TILING_CHECK(isFp4Input && ops::CeilDiv(inputParams_.kSize, MX_GROUP_SIZE) % 2 != 0,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                          "When scale dtype is FLOAT8_E8M0 and inputs are FLOAT4, x2 k dimension size \
 ceil div 32 must be even, actual is %lu.",
-                              ops::CeilDiv(inputParams_.kSize, MX_GROUP_SIZE)), return false);
+                                          ops::CeilDiv(inputParams_.kSize, MX_GROUP_SIZE)),
+                    return false);
     return true;
 }
 
@@ -713,13 +737,13 @@ bool QuantBatchMatmulV3Checker::ExtraInputCheck() const
                          inputParams_.aDtype == ge::DT_FLOAT8_E5M2);
     bool isFp4Input = (inputParams_.aDtype == ge::DT_FLOAT4_E2M1 || inputParams_.aDtype == ge::DT_FLOAT4_E1M2);
     OP_TILING_CHECK(
-        inputParams_.isMxPerGroup && (isFp4Input || inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ) &&
-        (inputParams_.transA || !inputParams_.transB),
+        inputParams_.isMxPerGroup && isFp4Input && (inputParams_.transA || !inputParams_.transB),
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "When scale is FLOAT8_E8M0 and inputs are FLOAT4 or weight format is NZ, only support \
-trans_a false and trans_b true, actual [%s, %s].",
+                              "When scale is FLOAT8_E8M0 and inputs are FLOAT4, only support trans_a false and trans_b \
+true, actual [%s, %s].",
                               inputParams_.transA ? "true" : "false", inputParams_.transB ? "true" : "false"),
         return false);
+
     OP_TILING_CHECK(!isInt8Input && context_->GetOptionalInputShape(GetOffsetIdx()) != nullptr,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "Not support offset with input dtype(%s) yet.",
                                           ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str()),

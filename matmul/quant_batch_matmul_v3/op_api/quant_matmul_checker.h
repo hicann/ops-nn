@@ -36,9 +36,11 @@ public:
     void Init();
     aclnnStatus CheckParams() const;
     bool IsA4W4PergroupNonSymmetric(const uint64_t groupSizeK) const;
+    bool InferGroupSize(int64_t &groupSize);
 
 private:
     void GetX1X2DimValue();
+    bool CheckDtype4WeightNz() const;
     aclnnStatus CheckDtype() const;
     aclnnStatus CheckDtypeL0c2outOrL0c2ub() const;
     bool CheckDoubleScaleAndFp8Hif8PertokenPerblock() const;
@@ -72,6 +74,7 @@ private:
     std::string GetX1ScaleName() const;
     std::string GetX2ScaleName() const;
     std::string GetX2OffsetName() const;
+    bool ReCalcGroupSize(uint64_t inputSize, uint64_t scaleSize, uint64_t &groupSize, const char *dimensionName);
 
 public:
     const TupleInput inputTensors_;
@@ -92,7 +95,7 @@ private:
     bool transposeX1_ = false;
     bool transposeX2_ = false;
     bool isA4W4_ = false;
-    uint64_t groupSize_ = 0;
+    mutable uint64_t groupSize_ = 0;
     int64_t interfaceType_ = 5;
     DataType outType_;
     DataType x2ScaleType_;

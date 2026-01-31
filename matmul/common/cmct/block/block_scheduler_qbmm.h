@@ -183,7 +183,8 @@ public:
         }
     }
 
-    template <QuantBatchMatmul::QuantMode aQuantMode, QuantBatchMatmul::QuantMode bQuantMode>
+    template <QuantBatchMatmul::QuantMode aQuantMode, QuantBatchMatmul::QuantMode bQuantMode,
+              CubeFormat formatB = CubeFormat::ND>
     __aicore__ inline BlockShape GetBlockShape(BlockCoord blockCoord)
     {
         int64_t singleCoreM = baseM_;
@@ -211,6 +212,15 @@ public:
                 CeilPowerOfTwo(singleCoreNSplit);
             }
         }
+
+        if constexpr (formatB == CubeFormat::NZ) {
+            if constexpr (!TransB_) { 
+                singleCoreNSplit = Cmct::Gemm::CeilAlign(singleCoreNSplit, C0_SIZE_B8);
+            } else {
+                singleCoreNSplit = Cmct::Gemm::CeilAlign(singleCoreNSplit, AscendC::BLOCK_CUBE);
+            }
+        }
+
         int64_t mSplitIdx = (blockIdx_ % totalTailTile_) % mTailTile_;
         int64_t nSplitIdx = (blockIdx_ % totalTailTile_) / mTailTile_;
         mSplitAddrOffset_ = mSplitIdx * singleCoreMSplit;

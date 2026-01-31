@@ -373,9 +373,10 @@ The k-dimension of x1 and x2 should both be even number, actual they are %ld and
         }
     }
     if (CeilDiv(x1KDim_, PERGROUP_GROUP_SIZE) % MICRO_SCALING_ALIGN_NUM != 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In mx quantification, when x1 and x2 are FLOAT4 or x2's format is NZ, \
-matrix multiplication is  (batchX1, m, k) @ transpose(batchX2, n, k) = (batch, m, n). \
-The k-dimension should satisfy that ceil(k, 32) is an even number. Actual k-dimension is %ld and ceil(k, 32) = %ld.",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "In mx quantification, when x1 and x2 are FLOAT4, matrix multiplication is  (batchX1, m, k) @ \
+transpose(batchX2, n, k) = (batch, m, n). The k-dimension should satisfy that ceil(k, 32) is an even \
+number. Actual k-dimension is %ld and ceil(k, 32) = %ld.",
                 x1KDim_, CeilDiv(x1KDim_, PERGROUP_GROUP_SIZE));
         return false;
     }
@@ -418,7 +419,7 @@ actual last dimension of %s is %ld, actual last dimension of %s is %ld.",
                 GetX2ScaleName().c_str(), x2Scale_->GetViewShape().GetDim(MX_SCALE_DIM - 1));
         return false;
     }
-    if (IsFp4Input(x1_, x2_) || ge::GetPrimaryFormat(x2_->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ) {
+    if (IsFp4Input(x1_, x2_)) {
         CHECK_RET(CheckKDimValueFp4Fp8WeightNZMicroScaling(), false);
     }
     return true;
@@ -469,6 +470,84 @@ x2 need to satisfy the relationship: ceil(k_x2, 128) == k_x2Scale, actual k_x2 i
                x2Shape.GetDim(x2KDimNum), x2ScaShape.GetDim(x2KDimNum));
         return false;
     }
+    return true;
+}
+
+bool QuantMatmulChecker::ReCalcGroupSize(uint64_t inputSize, uint64_t scaleSize, uint64_t &groupSize,
+                                         const char *dimensionName)
+{
+    if (scaleSize == 0ULL) {
+        std::string scaleName = strcmp(dimensionName, "n") == 0 ? "x2Scale(scale)" : "x1Scale(pertokenScale)";
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The %s dimension of %s is 0, invalid shape!", dimensionName, scaleName.c_str());
+        return false;
+    }
+    if (groupSize == 0ULL) {
+        if (inputSize % scaleSize != 0UL) {
+            std::string scaleName = "x1Scale(pertokenScale)";
+            std::string inputName = "x1";
+            if (strcmp(dimensionName, "n") == 0) {
+                scaleName = "x2Scale(scale)";
+                inputName = "x2";
+            }
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "The groupSize in %s dimension is 0 and the %s dimension of %s [%lu] is not divisible by \
+the %s dimension of %s [%lu], the real groupSize in %s dimension can not be inferred.",
+                    dimensionName, dimensionName, inputName.c_str(), inputSize, dimensionName, scaleName.c_str(), scaleSize, dimensionName);
+            return false;
+        }
+        groupSize = inputSize / scaleSize;
+    }
+    return true;
+}
+
+bool QuantMatmulChecker::InferGroupSize(int64_t &groupSize)
+{
+    auto &x1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(inputTensors_);
+    auto &x2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(inputTensors_);
+    auto &x1Scale = std::get<INDEX_X1_SCALE_IN_QUANT_TUPLE>(quantTensors_);
+    auto &x2Scale = std::get<INDEX_X2_SCALE_IN_QUANT_TUPLE>(quantTensors_);
+    // when x1Scale and x2Scale dim num is less than 2, groupsize not used
+    if (x1Scale == nullptr || x1Scale->GetViewShape().GetDimNum() < 2 || x2Scale->GetViewShape().GetDimNum() < 2) {
+        return true;
+    }
+    auto x1DimNum = x1->GetViewShape().GetDimNum();
+    auto x2DimNum = x2->GetViewShape().GetDimNum();
+    auto x1ScaleDimNum = x1Scale->GetViewShape().GetDimNum();
+    auto x2ScaleDimNum = x2Scale->GetViewShape().GetDimNum();
+    auto transX1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(boolsTrans_);
+    auto transX2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(boolsTrans_);
+    uint64_t groupSizeK = static_cast<uint64_t>(groupSize) & GROUP_MNK_BIT_SIZE;
+    uint64_t groupSizeN = (static_cast<uint64_t>(groupSize) >> GROUP_N_OFFSET) & GROUP_MNK_BIT_SIZE;
+    uint64_t groupSizeM = (static_cast<uint64_t>(groupSize) >> GROUP_M_OFFSET) & GROUP_MNK_BIT_SIZE;
+    auto inputSizeM = transX1 ? x1->GetViewShape().GetDim(x1DimNum - 1) : x1->GetViewShape().GetDim(x1DimNum - PENULTIMATE_DIM);
+    auto scaleSizeM = 0;
+    if (IsMicroScaling(x1Scale, x2Scale)) {
+        scaleSizeM = x1Scale->GetViewShape().GetDim(transX1 ? 1 : 0);
+    } else {
+        scaleSizeM = transX1 ? x1Scale->GetViewShape().GetDim(x1ScaleDimNum - 1)
+                             : x1Scale->GetViewShape().GetDim(x1ScaleDimNum - PENULTIMATE_DIM);
+    }
+    CHECK_RET(ReCalcGroupSize(inputSizeM, scaleSizeM, groupSizeM, "m"), false);
+    auto inputSizeK = transX1 ? x1->GetViewShape().GetDim(x1DimNum - PENULTIMATE_DIM) : x1->GetViewShape().GetDim(x1DimNum - 1);
+    auto scaleSizeK = 0;
+    if (IsMicroScaling(x1Scale, x2Scale)) {
+        scaleSizeK = x1Scale->GetViewShape().GetDim(transX1 ? 0 : 1) * 2; //when scale type is e8m0, scalex1 shape is [m, k/2, 2] or [k/2, m, 2]
+    } else {
+        scaleSizeK = transX1 ? x1Scale->GetViewShape().GetDim(x1ScaleDimNum - PENULTIMATE_DIM)
+                             : x1Scale->GetViewShape().GetDim(x1ScaleDimNum - 1);
+    }
+    CHECK_RET(ReCalcGroupSize(inputSizeK, scaleSizeK, groupSizeK, "k"), false);
+    auto inputSizeN = transX2 ? x2->GetViewShape().GetDim(x2DimNum - PENULTIMATE_DIM) : x2->GetViewShape().GetDim(x2DimNum - 1);
+    auto scaleSizeN = 0;
+    if (IsMicroScaling(x1Scale, x2Scale)) {
+        scaleSizeN = x2Scale->GetViewShape().GetDim(transX2 ? 0 : 1);
+    } else {
+        scaleSizeN = transX2 ? x2Scale->GetViewShape().GetDim(x2ScaleDimNum - PENULTIMATE_DIM)
+                             : x2Scale->GetViewShape().GetDim(x2ScaleDimNum - 1);
+    }
+    CHECK_RET(ReCalcGroupSize(inputSizeN, scaleSizeN, groupSizeN, "n"), false);
+    OP_LOGD("Infered groupSize: groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.", groupSizeM, groupSizeN, groupSizeK);
+    groupSize = static_cast<int64_t>((groupSizeM << GROUP_M_OFFSET) | (groupSizeN << GROUP_N_OFFSET) | groupSizeK);
     return true;
 }
 
@@ -883,14 +962,35 @@ bool QuantMatmulChecker::CheckFormatInt4() const
     return true;
 }
 
+bool QuantMatmulChecker::CheckDtype4WeightNz() const
+{
+    if (!(x1_->GetDataType() == op::DataType::DT_INT8 || (x1_->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN &&
+                                                          x2_->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN))) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "When format of x2 is FRACTAL_NZ, input dtype must be INT8/FLOAT8_E4M3FN, actual x1 is %s, x2 is %s.",
+                op::ToString(x1_->GetDataType()).GetString(), op::ToString(x2_->GetDataType()).GetString());
+        return false;
+    }
+
+    if ((x1_->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN &&
+         x2_->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN) &&
+        !(x1Scale_->GetDataType() == op::DataType::DT_FLOAT8_E8M0 &&
+          x2Scale_->GetDataType() == op::DataType::DT_FLOAT8_E8M0)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "When format of x2 is FRACTAL_NZ and input dtype is FLOAT8_E4M3FN, x1Scale and x2Scale are \
+FLOAT8_E8M0, actual x1Scale is %s, x2Scale is %s.",
+                op::ToString(x1Scale_->GetDataType()).GetString(), op::ToString(x2Scale_->GetDataType()).GetString());
+        return false;
+    }
+    return true;
+}
+
 bool QuantMatmulChecker::CheckFormat() const
 {
     auto x2StorageFormat = ge::GetPrimaryFormat(x2_->GetStorageFormat());
     CHECK_RET(x1_->GetStorageFormat() == op::Format::FORMAT_ND, false);
     if (socVersion_ == SocVersion::ASCEND310P) {
         CHECK_RET(x2_->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ, false);
-    } else if (socVersion_ == SocVersion::ASCEND950 && x1_->GetDataType() != op::DataType::DT_INT8) {
-        CHECK_RET(x2_->GetStorageFormat() == op::Format::FORMAT_ND, false);
     } else {
         CHECK_RET(x2StorageFormat == op::Format::FORMAT_ND || x2StorageFormat == op::Format::FORMAT_FRACTAL_NZ, false);
     }
@@ -1162,11 +1262,10 @@ FLOAT8. Actual x1 dtype: %s, x2 dtype: %s.",
                 GetX2OffsetName().c_str());
         return false;
     }
-    if ((IsFp4Input(x1_, x2_) || ge::GetPrimaryFormat(x2_->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ) &&
-        (transposeX1_ || !transposeX2_)) {
+    if (IsFp4Input(x1_, x2_) && (transposeX1_ || !transposeX2_)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Unsupported transpose. When %s and %s are FLOAT8_E8M0 and x1 and x2 are FLOAT4 or x2 format is NZ, \
-transposeX1 should be false and transposeX2 should be true. Actual transposeX1: %d, transposeX2: %d.",
+                "Unsupported transpose. When %s and %s are FLOAT8_E8M0 and x1 and x2 are FLOAT4, transposeX1 should be \
+false and transposeX2 should be true. Actual transposeX1: %d, transposeX2: %d.",
                 GetX1ScaleName().c_str(), GetX2ScaleName().c_str(), transposeX1_, transposeX2_);
         return false;
     }
@@ -1237,6 +1336,9 @@ bool QuantMatmulChecker::CheckDoubleScaleAndFp8Hif8PertokenPerblock() const
 
 aclnnStatus QuantMatmulChecker::CheckDtypeL0c2outOrL0c2ub() const
 {
+    if (ge::GetPrimaryFormat(x2_->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ && !CheckDtype4WeightNz()) {
+        return ACLNN_ERR_PARAM_INVALID;
+    }
     if (isA4W4_) {
         OP_LOGE(ACLNN_ERR_RUNTIME_ERROR,
                 "QuantBatchMatmul support for %s is not implemented in a4w4 senario.",

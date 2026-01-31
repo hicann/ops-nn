@@ -83,6 +83,7 @@ static const size_t MAX_DIM_VALUE = 2;
 static const uint64_t GROUP_M_OFFSET = 32;
 static const uint64_t GROUP_N_OFFSET = 16;
 static const uint64_t GROUP_MNK_BIT_SIZE = 0xFFFF;
+static const size_t MX_SCALE_DIM_NUM = 3;
 
 static const std::initializer_list<op::DataType> IN_TYPE_SUPPORT_LIST = {op::DataType::DT_INT4,
                                                                          op::DataType::DT_INT8};
@@ -104,6 +105,12 @@ static inline bool isA8W4Float(const aclTensor* x1, const aclTensor* x2)
 {
     return x1->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN &&
            (x2->GetDataType() == op::DataType::DT_FLOAT || x2->GetDataType() == op::DataType::DT_FLOAT4_E2M1);
+}
+
+static inline bool isMxfp8Nz(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale)
+{
+    return x1->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN && x2->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN
+     && scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0;
 }
 
 static inline bool CheckNotNull(TupleTensor mandatoryTensors, const aclTensor *out) {
@@ -396,7 +403,8 @@ static inline bool CheckDimRange(const aclTensor *x1, const aclTensor *x2, const
     OP_CHECK_MIN_DIM(out, MIN_DIM_NUM_ND, return false);
     OP_CHECK_MAX_DIM(x1, MAX_DIM_NUM_ND, return false);
     OP_CHECK_MAX_DIM(out, MAX_DIM_NUM_ND, return false);
-    OP_CHECK_WRONG_DIMENSION(scale, 1, return false);
+    int64_t expectScaleDim = isMxfp8Nz(x1, x2, scale) ? MX_SCALE_DIM_NUM : 1;
+    OP_CHECK_WRONG_DIMENSION(scale, expectScaleDim, return false);
     OP_LOGD("QuantMatmul check dim-num range success");
     return true;
 }
@@ -885,14 +893,28 @@ static aclnnStatus CheckParams950(TupleTensor mandatoryTensors, TupleOptional op
     const TupleInput inputTensors = std::tie(std::get<0>(mandatoryTensors), std::get<1>(mandatoryTensors));
     const aclTensor *yScale = nullptr;
     const aclTensor *x1Offset = nullptr;
-    const int64_t groupSize = 0;
-    // 4 represents the aclnnQuantMatmulV4 interface
-    const int64_t interfaceType = 4;
+    const int64_t groupSize = std::get<INDEX_GROUP_SIZE_IN_OPTIONAL_TUPLE>(optionalTensors);
+    // 5 represents the aclnnQuantMatmulV5 interface
+    const int64_t interfaceType = 5;
     const TupleQuant quantTensors =
         std::tie(std::get<1>(optionalTensors), std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors), yScale,
                     x1Offset, std::get<0>(optionalTensors), x1Offset,
                     std::get<INDEX_BIAS_IN_OPTIONAL_TUPLE>(optionalTensors), groupSize, interfaceType);
-    QuantMatmulChecker qmmV3Checker(inputTensors, quantTensors, boolsTrans, out);
+
+    int64_t groupSizeReal = groupSize;
+    auto& scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    if (isMxfp8Nz(x1, x2, scale)) {
+        QuantMatmulChecker qmmV3Checker(inputTensors, quantTensors, boolsTrans, out);
+        qmmV3Checker.Init();
+        CHECK_RET(qmmV3Checker.InferGroupSize(groupSizeReal), ACLNN_ERR_PARAM_INVALID);
+        OP_LOGD("Infer groupSize success. groupSize: %ld.", groupSizeReal);
+    }
+    const TupleQuant quantTuples =
+        std::tie(std::get<1>(optionalTensors), std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors), yScale,
+                    x1Offset, std::get<0>(optionalTensors), x1Offset,
+                    std::get<INDEX_BIAS_IN_OPTIONAL_TUPLE>(optionalTensors), groupSizeReal, interfaceType);
+
+    QuantMatmulChecker qmmV3Checker(inputTensors, quantTuples, boolsTrans, out);
     qmmV3Checker.Init();
     return qmmV3Checker.CheckParams();
 }
@@ -937,11 +959,15 @@ static aclnnStatus CheckWeightNzParams950(const aclTensor *x1, const aclTensor *
         return ACLNN_ERR_PARAM_INVALID;
     }
 
-    if (x1->GetDataType() != op::DataType::DT_INT8 || x2->GetDataType() != op::DataType::DT_INT8) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Data type of x1 and x2 must be int8, actual is %s and %s.",
-                op::ToString(x1->GetDataType()).GetString(), op::ToString(x2->GetDataType()).GetString());
+    // 对于torch的场景，NZ情况两维某一维度为1的场景无法正确判断是否转置，资料呈现不支持此种输入
+    int64_t dim1 = x2->GetViewShape().GetDimNum() - 1;
+    int64_t dim2 = x2->GetViewShape().GetDimNum() - PENULTIMATE_DIM;
+    if (x2->GetViewShape().GetDim(dim2) == 1 || x2->GetViewShape().GetDim(dim1) == 1) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of x2 must be FRACTAL_NZ, actual is %s.",
+                op::ToString(x2->GetStorageFormat()).GetString());
         return ACLNN_ERR_PARAM_INVALID;
     }
+
     OP_LOGD("QuantMatmulWeightNz check params success.");
     return ACLNN_SUCCESS;
 }
@@ -981,11 +1007,6 @@ static bool CheckSpecialCase(const aclTensor* tensor, int64_t firstLastDim, int6
 static bool GetTransposeAttrValue(const aclTensor *tensor, bool transpose, bool checkSpecialCase = true) {
     int64_t dim1 = tensor->GetViewShape().GetDimNum() - 1;
     int64_t dim2 = tensor->GetViewShape().GetDimNum() - PENULTIMATE_DIM;
-    // 对于torch的场景，NZ情况两维某一维度为1的场景无法正确判断是否转置，资料呈现不支持非连续，代码默认连续
-    if (static_cast<ge::Format>(ge::GetPrimaryFormat(tensor->GetStorageFormat())) == op::Format::FORMAT_FRACTAL_NZ &&
-        (tensor->GetViewShape().GetDim(dim2) == 1 || tensor->GetViewShape().GetDim(dim1) == 1)) {
-        return transpose;
-    }
     // check if tensor is contiguous layout
     if (tensor->GetViewStrides()[dim2] == 1 && (tensor->GetViewStrides()[dim1] == tensor->GetViewShape().GetDim(dim2))) {
         OP_LOGD("QuantMatmul GetTransposeAttrValue, find tensor is not contiguous.");
@@ -1625,6 +1646,7 @@ bool checkNotSupportParam(
 {
     auto& x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
     auto& x2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    auto& scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
 
     if (x1Offset != nullptr && x1Offset->GetViewShape().GetShapeSize() != 0) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Current version do not support x1Offset.");
@@ -1636,7 +1658,7 @@ bool checkNotSupportParam(
         return false;
     }
 
-    if (!isA8W4Float(x1, x2)) {
+    if (!(isA8W4Float(x1, x2) || isMxfp8Nz(x1, x2, scale))) {
         if (yScale != nullptr && yScale->GetViewShape().GetShapeSize() != 0) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Current version do not support yScale.");
             return false;

@@ -47,6 +47,7 @@ constexpr static uint64_t NONE_FULL_LOAD_MODE = 0UL;
 constexpr static int64_t PER_BLOCK_SIZE = 128LL;
 constexpr int32_t MXFP_DIVISOR_SIZE = 64;
 constexpr int32_t MXFP_MULTI_BASE_SIZE = 2;
+constexpr uint32_t C0_SIZE_B8 = 32UL;
 // FusedMatMul OpType
 constexpr static uint64_t OP_TYPE_EMPTY = 0UL;
 constexpr static uint64_t OP_TYPE_ADD = 1UL;

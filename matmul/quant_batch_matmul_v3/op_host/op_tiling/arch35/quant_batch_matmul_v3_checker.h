@@ -37,6 +37,7 @@ protected:
     bool CheckBiasDtype() const;
     bool CheckOutputDtype() const;
     bool CheckDtypesInRange() const;
+    bool CheckDtype4WeightNz() const;
     bool MxPertokenScaleShapeCheck(const gert::StorageShape *pertokenShape) const;
     bool MxScaleShapeCheck(const gert::Shape &scaleShape) const;
     bool CheckInputValidInPerblockMode(const gert::Shape& scaleShape, const gert::StorageShape *pertokenShape,

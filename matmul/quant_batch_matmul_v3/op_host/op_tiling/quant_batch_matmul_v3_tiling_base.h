@@ -181,6 +181,8 @@ protected:
     void AnalyzeBatchInfo(const gert::Shape &oriShapeA, const gert::Shape &oriShapeB);
     void DoBatchFusion(uint64_t fusedDimValue);
     bool CheckShapeInRangeForMandtoryInputs(size_t x1ShapeLen, size_t x2ShapeLen) const;
+    bool CheckShape4WeightNz() const;
+    bool CheckStorageShape4WeightNz(const gert::Shape &x2StorageShape, size_t &x2StorageDim) const;
     void SetTransAttr(QuantBatchMatmulV3Trans &trans) const;
     virtual bool SetPlatformInfoForTiling();
 
@@ -230,6 +232,14 @@ protected:
     static constexpr uint32_t ROW_FIRST = 1;
     static constexpr uint32_t COL_FIRST = 2;
     static constexpr uint64_t NUM_DB = 2;
+    static constexpr size_t LAST_FIRST_DIM_INDEX = 1;
+    static constexpr size_t LAST_SECOND_DIM_INDEX = 2;
+    static constexpr size_t LAST_THIRD_DIM_INDEX = 3;
+    static constexpr size_t LAST_FOURTH_DIM_INDEX = 4;
+    static constexpr size_t WEIGHTNZ_STORAGE_MIN_DIM = 4;
+    static constexpr size_t WEIGHTNZ_STORAGE_MAX_DIM = 8;
+    static constexpr uint64_t WEIGHTNZ_STORAGE_LAST_DIM = 32UL;
+    static constexpr uint64_t WEIGHTNZ_STORAGE_PENULTIMATE_DIM = 16UL;
 
     // 新增数据成员请注意：如果是在GetShapeAttrsInfo函数过程中获取的，请放到QuantBatchMatmulInfo结构体中，或者保证在DoOpTiling赋值
     QuantBatchMatmulInfo &inputParams_;

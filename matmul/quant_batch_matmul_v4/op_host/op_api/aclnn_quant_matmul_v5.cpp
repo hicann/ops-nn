@@ -727,31 +727,6 @@ static void A8W4ProcessYScaleTensor(const aclTensor *x1Scale, const aclTensor *y
     }
 }
 
-bool ReCalcGroupSize(uint64_t inputSize, uint64_t scaleSize, uint64_t &groupSize, const char *dimensionName) {
-    if (scaleSize == 0ULL) {
-        std::string scaleName = strcmp(dimensionName, "n") == 0 ? "x2Scale(scale)" : "x1Scale(pertokenScale)";
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The %s dimension of %s is 0, invalid shape!", dimensionName, scaleName.c_str());
-        return false;
-    }
-    if (groupSize == 0ULL) {
-        if (inputSize % scaleSize != 0UL) {
-            std::string scaleName = "x1Scale(pertokenScale)";
-            std::string inputName = "x1";
-            if (strcmp(dimensionName, "n") == 0) {
-                scaleName = "x2Scale(scale)";
-                inputName = "x2";
-            }
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "The groupSize in %s dimension is 0 and the %s dimension of %s [%lu] is not divisible by \
-the %s dimension of %s [%lu], the real groupSize in %s dimension can not be inferred.",
-                    dimensionName, dimensionName, inputName.c_str(), inputSize, dimensionName, scaleName.c_str(), scaleSize, dimensionName);
-            return false;
-        }
-        groupSize = inputSize / scaleSize;
-    }
-    return true;
-}
-
 static inline bool validGroupSize(uint64_t groupSizeM, uint64_t groupSizeN) {
     return (groupSizeM == 0 && groupSizeN == 0) || (groupSizeM == 1 && groupSizeN == 1);
 }
@@ -772,57 +747,6 @@ static inline bool A8W4InferGroupSize(int64_t& groupSize) {
         "A8W4 Infered groupSize: groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.", groupSizeM, groupSizeN,
         groupSizeK);
     groupSize = groupSizeK;
-    return true;
-}
-
-static inline bool InferGroupSize(TupleInput &inputTensors, TupleQuant &quantTensors, int64_t &groupSize, const TupleAttr &boolsTrans)
-{
-    auto &x1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(inputTensors);
-    auto &x2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(inputTensors);
-    auto &x1Scale = std::get<INDEX_X1_SCALE_IN_QUANT_TUPLE>(quantTensors);
-    auto &x2Scale = std::get<INDEX_X2_SCALE_IN_QUANT_TUPLE>(quantTensors);
-    // when x1Scale and x2Scale dim num is less than 2, groupsize not used
-    if (x1Scale == nullptr || x1Scale->GetViewShape().GetDimNum() < 2 || x2Scale->GetViewShape().GetDimNum() < 2) {
-        return true;
-    }
-    auto x1DimNum = x1->GetViewShape().GetDimNum();
-    auto x2DimNum = x2->GetViewShape().GetDimNum();
-    auto x1ScaleDimNum = x1Scale->GetViewShape().GetDimNum();
-    auto x2ScaleDimNum = x2Scale->GetViewShape().GetDimNum();
-    auto transX1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(boolsTrans);
-    auto transX2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(boolsTrans);
-    uint64_t groupSizeK = static_cast<uint64_t>(groupSize) & GROUP_MNK_BIT_SIZE;
-    uint64_t groupSizeN = (static_cast<uint64_t>(groupSize) >> GROUP_N_OFFSET) & GROUP_MNK_BIT_SIZE;
-    uint64_t groupSizeM = (static_cast<uint64_t>(groupSize) >> GROUP_M_OFFSET) & GROUP_MNK_BIT_SIZE;
-    auto inputSizeM = transX1 ? x1->GetViewShape().GetDim(x1DimNum - 1) : x1->GetViewShape().GetDim(x1DimNum - PENULTIMATE_DIM);
-    auto scaleSizeM = 0;
-    if (IsMicroScaling(x1Scale, x2Scale)) {
-        scaleSizeM = x1Scale->GetViewShape().GetDim(transX1 ? 1 : 0);
-    } else {
-        scaleSizeM = transX1 ? x1Scale->GetViewShape().GetDim(x1ScaleDimNum - 1)
-                             : x1Scale->GetViewShape().GetDim(x1ScaleDimNum - PENULTIMATE_DIM);
-    }
-    CHECK_RET(ReCalcGroupSize(inputSizeM, scaleSizeM, groupSizeM, "m"), false);
-    auto inputSizeK = transX1 ? x1->GetViewShape().GetDim(x1DimNum - PENULTIMATE_DIM) : x1->GetViewShape().GetDim(x1DimNum - 1);
-    auto scaleSizeK = 0;
-    if (IsMicroScaling(x1Scale, x2Scale)) {
-        scaleSizeK = x1Scale->GetViewShape().GetDim(transX1 ? 0 : 1) * 2; //when scale type is e8m0, scalex1 shape is [m, k/2, 2] or [k/2, m, 2]
-    } else {
-        scaleSizeK = transX1 ? x1Scale->GetViewShape().GetDim(x1ScaleDimNum - PENULTIMATE_DIM)
-                             : x1Scale->GetViewShape().GetDim(x1ScaleDimNum - 1);
-    }
-    CHECK_RET(ReCalcGroupSize(inputSizeK, scaleSizeK, groupSizeK, "k"), false);
-    auto inputSizeN = transX2 ? x2->GetViewShape().GetDim(x2DimNum - PENULTIMATE_DIM) : x2->GetViewShape().GetDim(x2DimNum - 1);
-    auto scaleSizeN = 0;
-    if (IsMicroScaling(x1Scale, x2Scale)) {
-        scaleSizeN = x2Scale->GetViewShape().GetDim(transX2 ? 0 : 1);
-    } else {
-        scaleSizeN = transX2 ? x2Scale->GetViewShape().GetDim(x2ScaleDimNum - PENULTIMATE_DIM)
-                             : x2Scale->GetViewShape().GetDim(x2ScaleDimNum - 1);
-    }
-    CHECK_RET(ReCalcGroupSize(inputSizeN, scaleSizeN, groupSizeN, "n"), false);
-    OP_LOGD("Infered groupSize: groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.", groupSizeM, groupSizeN, groupSizeK);
-    groupSize = static_cast<int64_t>((groupSizeM << GROUP_M_OFFSET) | (groupSizeN << GROUP_N_OFFSET) | groupSizeK);
     return true;
 }
 
@@ -882,7 +806,9 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput &inp
     }
     int64_t groupSizeReal = groupSize;
     if (!isA8W4) {
-        CHECK_RET(InferGroupSize(inputTensors, quantTensors, groupSizeReal, boolsTrans), ACLNN_ERR_PARAM_INVALID);
+        QuantMatmulChecker qmmV3Checker(inputTensors, quantTensors, boolsTrans, out);
+        qmmV3Checker.Init();
+        CHECK_RET(qmmV3Checker.InferGroupSize(groupSizeReal), ACLNN_ERR_PARAM_INVALID);
         OP_LOGD("Infer groupSize success. groupSize: %ld.",
                 groupSizeReal);
     } else {
