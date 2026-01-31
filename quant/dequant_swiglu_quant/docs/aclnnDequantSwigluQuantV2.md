@@ -153,10 +153,10 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>biasOptional</td>
       <td>输入</td>
       <td>Matmul的bias，公式中的biasOptional。</td>
-      <td><ul><li>shape支持1维，shape表示为[2H]，且取值2H和x最后一维保持一致。</li><li>可选参数，支持传空指针。</li></ul></td>
+      <td><ul><li>shape支持1维或2维，shape表示为[2H]或[groupNum, 2H]，且取值2H和x最后一维保持一致。</li><li>可选参数，支持传空指针。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
-      <td>1</td>
+      <td>1或2</td>
       <td>x</td>
     </tr>
        <tr>
@@ -183,10 +183,10 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>groupIndexOptional</td>
       <td>输入</td>
       <td>MoE分组需要的group_index。</td>
-      <td><ul><li>shape支持1维Tensor，shape为[groupNum]，groupNum大于等于1。</li><li>可选参数，支持传空指针。</li></ul></td>
+      <td><ul><li>shape支持1维或2维的Tensor，shape为[groupNum]或[groupIds, 2]，groupNum大于等于1，groupIds ≤ groupNum。</li><li>可选参数，支持传空指针。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
-      <td>1</td>
+      <td>1或2</td>
       <td>x</td>
     </tr>
       <tr>
@@ -202,8 +202,8 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <tr>
       <td>quantModeOptional</td>
       <td>输入</td>
-      <td>表示使用动态量化。</td>
-      <td><ul><li>仅支持“dynamic”。</li><li>支持传入空指针，传入空指针时，则默认使用“static”。</li></ul></td>
+      <td>表示使用动态量化或静态量化。</td>
+      <td><ul><li>支持“dynamic”和“static”。</li><li>支持传入空指针，传入空指针时，则默认使用“static”。</li></ul></td>
       <td>STRING</td>
       <td>-</td>
       <td>-</td>
@@ -213,7 +213,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>dstType</td>
       <td>输入</td>
       <td>表示指定输出y的数据类型。</td>
-      <td><ul><li>dstType的取值范围是:[2, 35, 36, 40, 41]，分别对应INT8、FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2。</td>
+      <td><ul><li>dstType的取值范围是:[2, 34,35, 36, 40, 41]，分别对应INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2。</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -223,7 +223,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>roundModeOptional</td>
       <td>输入</td>
       <td>表示对输出y结果的舍入模式。</td>
-      <td><ul><li>取值范围是：["rint", "round", "floor", "ceil", "trunc"]。</li><li>当输出y的数据类型为INT8、FLOAT8_E5M2、FLOAT8_E4M3FN时，仅支持"rint"模式。支持传入空指针，传入空指针时，则默认使用“rint”。</li></ul></td>
+      <td><ul><li>取值范围是：["rint", "round", "floor", "ceil", "trunc"]。</li><li>当输出y的数据类型为INT8、FLOAT8_E5M2、FLOAT8_E4M3FN时，仅支持"rint"模式。<li>当输出y的数据类型为HIFLOAT8时，仅支持"round"模式。<li>支持传入空指针，传入空指针时，则默认使用“rint”。</li></ul></td>
       <td>STRING</td>
       <td>-</td>
       <td>-</td>
@@ -233,7 +233,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>activateDim</td>
       <td>输入</td>
       <td>表示进行swish计算时，选择的指定切分轴。</td>
-      <td><ul><li>activateDim的取值范围是：[-xDim, xDim - 1]（其中xDim指输入x的维度）。</li><li>当activateDim对应的不是x的尾轴时，不允许输入groupIndexOptional。</li></ul></td>
+      <td><ul><li>activateDim的取值范围是：[-xDim, xDim - 1]（其中xDim指输入x的维度）。</li><li>当activateDim对应的不是x的尾轴时，不允许输入groupIndexOptional。</li><li>当activateDim对应的不是x的尾轴时，quantModeOptional仅支持static。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -283,8 +283,8 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>yOut</td>
       <td>输出</td>
       <td>-</td>
-      <td><ul><li>当activateDim对应的x的尾轴时，shape为[X1,X2,...Xn,H]。</li><li>当activateDim对应的不是x的尾轴时，shape为[X1,X2,...,XactivateDim / 2,...,2H]。</li><li>当yOut的数据类型为FLOAT4_E2M1、FLOAT4_E1M2时，yOut的最后一维需要是2的倍数。</li><li>yOut的尾轴需要小于5120。</li></ul></td>
-      <td>INT8、FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2</td>
+      <td><ul><li>当activateDim对应的x的尾轴时，shape为[X1,X2,...Xn,H]。</li><li>当activateDim对应的不是x的尾轴时，shape为[X1,X2,...,XactivateDim / 2,...,2H]。</li><li>当yOut的数据类型为FLOAT4_E2M1、FLOAT4_E1M2时，yOut的最后一维需要是2的倍数。</li><li>当activateDim对应的不是x的尾轴时，yOut的尾轴需要小于5120。</li></ul></td>
+      <td>INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2</td>
       <td>ND</td>
       <td>2-8</td>
       <td>x</td>
@@ -293,7 +293,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>scaleOut</td>
       <td>输出</td>
       <td>-</td>
-      <td><ul><li>当activateDim对应的x的尾轴时，shape为[X1,X2,...,Xn]。</li><li>当activateDim对应的不是x的尾轴时，shape为[X1,X2,...,XactivateDim / 2,...,Xn]。</li></ul></td>
+      <td><ul><li>当activateDim对应的x的尾轴时，shape为[X1,X2,...,Xn]。</li><li>当activateDim对应的不是x的尾轴时，shape为[X1,X2,...,XactivateDim / 2,...,Xn]。</li><li>当quantModeOptional为static时，不计算scaleOut。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>1-7</td>
@@ -344,7 +344,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td><ul><li>传入的x、yOut或scaleOut是空指针。</li><li>当x的数据类型为int32时，weightScaleOptional是空指针。</li></ul></td>
+      <td><ul><li>传入的x、yOut或scaleOut是空指针。</li><li>当x的数据类型为int32时，weightScaleOptional是空指针。</li><li>当quantModeOptional为static时，quantScaleOptional是空指针。</li></ul></td>
     </tr>
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
@@ -424,7 +424,9 @@ aclnnStatus aclnnDequantSwigluQuantV2(
 - 当输入x的数据类型不为INT32时，activationScaleOptional不允许输入，传入空指针。
 - 当输入x的数据类型不为INT32时，biasOptional不允许输入，传入空指针。
 - 当输出yOut的数据类型为FLOAT4_E2M1、FLOAT4_E1M2时，yOut的最后一维需要是2的倍数。
-- 输出yOut的尾轴不超过5120.
+- 当activateDim对应的维度不是x的尾轴时，输出yOut的尾轴不超过5120。
+- groupIndexOptional所有元素之和不能大于输入x除尾轴之外的剩余轴的乘积。
+- 输出yOut和scaleOut超出groupIndexOptional所有元素之和的部分未进行清理处理，该部分内存为垃圾数据。
 
 ## 调用示例
 
