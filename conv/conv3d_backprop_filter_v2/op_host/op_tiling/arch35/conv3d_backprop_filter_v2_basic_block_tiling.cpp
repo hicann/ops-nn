@@ -682,25 +682,20 @@ void Conv3DDWV2BasicBlockTilingArch35::ShrinkBaseBlock()
     uint64_t bL0Max = platformInfo_.l0b_size / dtypeByte_ / DB_ON;
 
     uint64_t alignedKValue = Ops::Base::CeilAlign(mmInfo_.kValue, fractalSize0);
-    if (alignedKValue < blockTiling_.blockBaseK) {
-        blockTiling_.blockBaseK = alignedKValue;
-    } else {
-        // 根据调小后的BaseM和BaseN调大BaseK
-        uint64_t newBaseKa = std::max(
-                                 aL0Max / blockTiling_.blockBaseM / fractalSize0,
-                                 static_cast<uint64_t>(1)) * fractalSize0;
-        uint64_t newBaseKb = std::max(
-                                 bL0Max / blockTiling_.blockBaseN / fractalSize0,
-                                 static_cast<uint64_t>(1)) * fractalSize0;
-        uint64_t newBaseK = std::min(std::min(newBaseKa, newBaseKb), alignedKValue);
-        blockTiling_.blockBaseK = std::min(newBaseK, static_cast<uint64_t>(blockTiling_.blockBaseK));
-
-        // K在不超过L0约束情况下，优先满足搬运对齐
-        if (static_cast<uint32_t>(blockTiling_.splitWo) < blockTiling_.blockBaseK
-            && static_cast<uint64_t>(blockTiling_.splitWo) % fractalSize0 == static_cast<uint64_t>(0)) {
-            blockTiling_.blockBaseK = blockTiling_.blockBaseK / static_cast<uint32_t>(blockTiling_.splitWo) *
-                                      static_cast<uint32_t>(blockTiling_.splitWo);
-        }
+    // 根据调小后的BaseM和BaseN调大BaseK
+    uint64_t newBaseKa = std::max(
+                             aL0Max / blockTiling_.blockBaseM / fractalSize0,
+                             static_cast<uint64_t>(1)) * fractalSize0;
+    uint64_t newBaseKb = std::max(
+                             bL0Max / blockTiling_.blockBaseN / fractalSize0,
+                             static_cast<uint64_t>(1)) * fractalSize0;
+    uint64_t newBaseK = std::min(std::min(newBaseKa, newBaseKb), alignedKValue);
+    blockTiling_.blockBaseK = std::min(newBaseK, static_cast<uint64_t>(blockTiling_.blockBaseK));
+    // K在不超过L0约束情况下，优先满足搬运对齐
+    if (static_cast<uint32_t>(blockTiling_.splitWo) < blockTiling_.blockBaseK
+        && static_cast<uint64_t>(blockTiling_.splitWo) % fractalSize0 == static_cast<uint64_t>(0)) {
+        blockTiling_.blockBaseK = blockTiling_.blockBaseK / static_cast<uint32_t>(blockTiling_.splitWo) *
+                                  static_cast<uint32_t>(blockTiling_.splitWo);
     }
 }
 
