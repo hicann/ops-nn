@@ -60,6 +60,7 @@ public:
         for (int32_t processRowCount = 0; processRowCount < this->rtCoreRowNum; processRowCount++) {
             uint32_t rowId = processRowCount;
             int32_t kCount = 0;
+            float oriMaxValue = 0.0f;
             LocalTensor<T> topPtempLocal = buf2.Get<T>();
             LocalTensor<T> minPtempLocal = buf4.Get<T>();
             LocalTensor<int32_t> topKtempLocal = buf5.Get<int32_t>();
@@ -113,6 +114,7 @@ public:
                 WaitFlag<HardEvent::V_S>(EVENT_ID0);
                 maxValue = localValueRs.GetValue(static_cast<uint32_t>(0));
                 maxIndex = localIndexRs.GetValue(static_cast<uint32_t>(0));
+                oriMaxValue = maxValue;
                 SetFlag<HardEvent::S_V>(EVENT_ID0);
                 WaitFlag<HardEvent::S_V>(EVENT_ID0);
                 isInLocalTensor = true;
@@ -127,6 +129,7 @@ public:
                     float rowMax{0};
                     float reduceSumMax{0};
                     GetRowMax(rowId, &rowMax, logitsGlobal); // 将cast后未做排序的logits存入logitsGlobalUser，更新rowMax
+                    oriMaxValue = rowMax;
                     SoftMaxFstCompute(rowId, rowMax, &reduceSumMax, true); // 将exp(x - max)结果存储到logitsGlobalUser里，更新reduceSumMax
                     SoftMaxFullCompute(rowId, reduceSumMax); // 将softmax结果存储到logitsGlobalUser里
                 } else {
@@ -158,6 +161,7 @@ public:
                     WaitFlag<HardEvent::V_S>(EVENT_ID0);
                     if (this->inputIsLogits) {
                         maxValue = localValueRs.GetValue(0);
+                        oriMaxValue = maxValue;
                         SetFlag<HardEvent::S_V>(EVENT_ID0);
                         WaitFlag<HardEvent::S_V>(EVENT_ID0);
 
@@ -172,6 +176,7 @@ public:
                     } else {
                         TopPCompute(localValueRs, kCount, fp32P);
                         maxValue = localValueRs.GetValue(0);
+                        oriMaxValue = maxValue;
                         DataCopy(sampleLogitsLocal, localValueRs, this->k_pad);
                         PipeBarrier<PIPE_V>();
                     }
@@ -189,6 +194,7 @@ public:
                     float rowMax{0};
                     float reduceSumMax{0};
                     GetRowMax(rowId, &rowMax, logitsGlobal); // 将cast后未做排序的logits存入logitsGlobalUser，更新rowMax
+                    oriMaxValue = rowMax;
                     SoftMaxFstCompute(rowId, rowMax, &reduceSumMax, false); // 将exp(x - max)结果存储到logitsGlobalUser里，更新reduceSumMax
                     params.inputIsLogits = this->inputIsLogits;
                     params.reduceSumMax = reduceSumMax;
@@ -207,13 +213,17 @@ public:
                 // 生成下标，存放到srcIndexGlobalUser
                 isInLocalTensor = false;
                 this->topPNum = rowLen;
-                GetRowMaxandIndex(rowId, &maxValue, maxIndex); 
+                GetRowMaxandIndex(rowId, &maxValue, maxIndex);
+                if (!this->inputIsLogits) {
+                    oriMaxValue = maxValue;
+                }
             }
 
             while (hasMinP) {
                 float minPThd = fp32MinP * maxValue;
                 if (fp32MinP >= 1.0f) {
                     localIndexRs.SetValue(0, maxIndex);
+                    localValueRs.SetValue(0, oriMaxValue);
                     sampleLogitsLocal.SetValue(0, maxValue);
                     this->topPNum = 1;
                     isInLocalTensor = true;
@@ -437,7 +447,6 @@ private:
         uint32_t countLen = SOFTMAX_PER_LEN;
         uint32_t startIndex = rowId * this->rowLen;
         uint32_t indexOffset = 0;
-        LocalTensor<T> valueLocal = buf0.Get<T>();
         LocalTensor<uint32_t> localIndex = buf1.Get<uint32_t>();
         LocalTensor<float> valueLocalCast = buf2.Get<float>();
         LocalTensor<float> reduceMaxMiddle = buf4.Get<float>();
