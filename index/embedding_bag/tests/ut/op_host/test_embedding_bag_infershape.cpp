@@ -13,6 +13,8 @@
 #include "../../../op_graph/embedding_bag_proto.h"
 #include "infershape_test_util.h"
 #include "ut_op_common.h"
+#include "platform/platform_infos_def.h"
+#include "platform/platform_info.h"
 
 
 using namespace ge;
@@ -33,6 +35,14 @@ protected:
 
 TEST_F(EmbeddingBagProtoTest, infer_shape_test)
 {
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950PR_9589";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+    
     ge::op::EmbeddingBag op;
     op.UpdateInputDesc("weight", create_desc({1024, 4096}, ge::DT_FLOAT));
     op.UpdateInputDesc("indices", create_desc({1024}, ge::DT_INT32));
@@ -52,6 +62,14 @@ TEST_F(EmbeddingBagProtoTest, infer_shape_test)
 
 TEST_F(EmbeddingBagProtoTest, infer_dtype_test)
 {
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950PR_9589";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("EmbeddingBag"), nullptr);
     auto dataTypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EmbeddingBag")->infer_datatype;
 
