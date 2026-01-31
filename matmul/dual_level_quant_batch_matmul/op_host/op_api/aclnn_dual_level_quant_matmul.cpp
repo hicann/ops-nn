@@ -137,18 +137,6 @@ static bool CheckNotNull(
     return true;
 }
 
-static inline bool CreateTransposedView(const aclTensor*& contiguousTensor, aclOpExecutor* executor)
-{
-    // 创建一个连续的Tensor，其ViewShape是输入Tensor ViewShape后两维度的转置
-    if (contiguousTensor == nullptr || contiguousTensor->GetViewShape().GetDimNum() == 1) {
-        return true;
-    }
-    contiguousTensor = executor->CreateView(
-        contiguousTensor, SwapLastTwoDimValue(contiguousTensor->GetViewShape()), contiguousTensor->GetViewOffset());
-    CHECK_RET(contiguousTensor != nullptr, false);
-    return true;
-}
-
 bool IsTransLastTwoDims(const aclTensor* tensor)
 {
     // 相对于公共仓接口区别于，输入shape仅支持2维，在tensor输入shape为（1, 1）时返回true
@@ -471,6 +459,31 @@ static aclnnStatus CheckAttrs(
     return ACLNN_SUCCESS;
 }
 
+static inline bool CreateContiguous(const aclTensor*& contiguousTensor, aclOpExecutor* executor)
+{
+    // 根据输入Tensor的ViewShape，创建一个连续的Tensor
+    if (contiguousTensor == nullptr) {
+        return true;
+    }
+    contiguousTensor = l0op::Contiguous(contiguousTensor, executor);
+    CHECK_RET(contiguousTensor != nullptr, false);
+    return true;
+}
+
+aclnnStatus EnableContiguous(
+    const aclTensor*& x1, const aclTensor*& x1Level0Scale, const aclTensor*& x2Level0Scale,
+    const aclTensor*& x1Level1Scale, const aclTensor*& x2Level1Scale, const aclTensor*& bias, aclOpExecutor* executor)
+{
+    CHECK_RET(CreateContiguous(x1, executor), ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(CreateContiguous(x1Level0Scale, executor), ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(CreateContiguous(x2Level0Scale, executor), ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(CreateContiguous(x1Level1Scale, executor), ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(CreateContiguous(x2Level1Scale, executor), ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(CreateContiguous(bias, executor), ACLNN_ERR_INNER_NULLPTR);
+
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus AclnnDualLevelQuantMatmulGetWorkspaceSizeProcess(
     TupleRequiredTensor mandatoryTensors, TupleOptionalTensor optionalTensors, TupleAttr attrs, aclOpExecutor* executor)
 {
@@ -513,6 +526,9 @@ aclnnStatus AclnnDualLevelQuantMatmulGetWorkspaceSizeProcess(
     res = CheckInputOutputShape(x1, x2Ref, bias, y);
     CHECK_RET(res == ACLNN_SUCCESS, res);
     res = CheckAttrs(transposeX1Attr, transposeX2Attr, level0GroupSize, level1GroupSize);
+    CHECK_RET(res == ACLNN_SUCCESS, res);
+
+    res = EnableContiguous(x1, x1Level0Scale, x2Level0Scale, x1Level1Scale, x2Level1Scale, bias, executor);
     CHECK_RET(res == ACLNN_SUCCESS, res);
 
     return ACLNN_SUCCESS;
