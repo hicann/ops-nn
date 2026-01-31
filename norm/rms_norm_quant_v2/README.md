@@ -6,14 +6,14 @@
 |:-------------------------|:----------:|
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     ×    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     ×    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
 |  <term>Atlas 推理系列产品 </term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
-- 算子功能：RmsNorm是大模型常用的标准化操作，相比LayerNorm，其去掉了减去均值的部分。RmsNormQuantV2算子将RmsNorm算子以及RmsNorm归一化的输出给到1个或2个Quantize算子融合起来，减少搬入搬出操作。RmsNormQuantV2算子相较于AddRmsNormQuant在RmsNorm计算过程中增加了可选偏置项bias参数，即计算公式中的`bias`。
+- 算子功能：RmsNorm算子是大模型常用的标准化操作，相比LayerNorm算子，其去掉了减去均值的部分。RmsNormQuantV2算子将RmsNorm算子以及RmsNorm归一化的输出给到1个或2个Quantize算子融合起来，减少搬入搬出操作。
 
 - 计算公式：
 
@@ -141,12 +141,12 @@
 ## 约束说明
 
 <term>Ascend 950PR/Ascend 950DT</term>：
-- 当`x`的数据类型为FLOAT32时，`scale`和`offset`的数据类型只能为FLOAT32；当`x`的数据类型为FLOAT16或者BFLOAT16，并且`scale`的数据类型为FLOAT32时，`offset`的数据类型只能是FLOAT32或者INT32，否则`scale`的数据类型需要与`x`的数据类型保持一致同为FLOAT16或者BFLOAT16，`offset`的数据类型也需要与`x`的数据类型保持一致或者为INT8。
-- 当`y`的数据类型为INT4时，`x`的最后一维、`gamma`以及`beta`的维度必须为偶数。
+- 当`x`的数据类型为FLOAT32时，`scales1`、`scales2`和`zero_points1`、`zero_points2`的数据类型只能为FLOAT32；当`x`的数据类型为FLOAT16或者BFLOAT16，并且`scales1`、`scales2`的数据类型为FLOAT32时，`zero_points1`、`zero_points2`的数据类型只能是FLOAT32或者INT32，否则`scales1`、`scales2`的数据类型需要与`x`的数据类型保持一致同为FLOAT16或者BFLOAT16，`zero_points1`、`zero_points2`的数据类型也需要与`x`的数据类型保持一致或者为INT8。
+- 当`y`的数据类型为INT4时，`x`、`gamma`以及`beta`的最后一维必须为偶数。
 
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_rms_norm_quant](examples/test_aclnn_rms_norm_quant.cpp) | 通过[aclnnRmsNormQuant](docs/aclnnRmsNormQuant.md)接口方式调用RmsNormQuantV2算子。 |
+| aclnn接口  | [test_aclnn_rms_norm_quant](../rms_norm_quant/examples/test_aclnn_rms_norm_quant.cpp) | 通过[aclnnRmsNormQuant](../rms_norm_quant/docs/aclnnRmsNormQuant.md)接口方式调用RmsNormQuantV2算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/rms_norm_quant_v2_proto.h)构图方式调用RmsNormQuantV2算子。         |
