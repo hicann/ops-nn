@@ -318,7 +318,7 @@ aclnnStatus aclnnRmsNormQuantGetWorkspaceSize(
         aclTensor* resultTensor = std::get<IDX_0>(addRmsNormQuantOuts);
         CHECK_RET(resultTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
         const aclTensor* outTensor = resultTensor;
-        if (yType == op::DataType::DT_INT4) {
+        if (yType == op::DataType::DT_INT4 && y->GetDataType() == op::DataType::DT_INT32) {
             ret = Int42Int32PackedTensor(resultTensor, outTensor, yType, uniqueExecutor.get());
             auto viewCopyY = l0op::ViewCopy(outTensor, y, uniqueExecutor.get());
             CHECK_RET(viewCopyY != nullptr, ACLNN_ERR_INNER_NULLPTR);
