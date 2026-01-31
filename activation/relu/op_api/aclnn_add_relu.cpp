@@ -88,6 +88,18 @@ static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySo
   }
 }
 
+static void CheckFormat(const aclTensor* self, const aclTensor* other, const aclTensor* out) {
+  OP_CHECK_NO_RETURN(self->GetStorageFormat() != Format::FORMAT_FRACTAL_NZ,
+            OP_LOGW("Format of self gets [%s], this format mat lead to precision failure",
+                    op::ToString(Format::FORMAT_FRACTAL_NZ).GetString()));
+  OP_CHECK_NO_RETURN(other->GetStorageFormat() != Format::FORMAT_FRACTAL_NZ,
+            OP_LOGW("Format of other gets [%s], this format mat lead to precision failure",
+                    op::ToString(Format::FORMAT_FRACTAL_NZ).GetString()));
+  OP_CHECK_NO_RETURN(out->GetStorageFormat() != Format::FORMAT_FRACTAL_NZ,
+            OP_LOGW("Format of out gets [%s], this format mat lead to precision failure",
+                    op::ToString(Format::FORMAT_FRACTAL_NZ).GetString()));
+}
+
 static bool CheckPromoteType(const op::DataType selfDtype, const op::DataType otherDtype, const aclScalar* alpha,
                              const op::DataType outDtype, op::DataType promoteType) {
   // 检查self和other能否做数据类型推导
@@ -152,10 +164,13 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* other, co
   // 4. 检查双输入是否能broadcast
   CHECK_RET(CheckShape(self, other, y), ACLNN_ERR_PARAM_INVALID);
 
+  // 5. 检查format
+  CheckFormat(self, other, y);
+
   return ACLNN_SUCCESS;
 }
 
-static bool IsSupportAxpy(const DataType promoteType, const aclScalar* alpha) {
+static bool IsSupportAxpy(const DataType promoteType) {
   return CheckType(promoteType, AXPY_DTYPE_SUPPORT_LIST);
 }
 
@@ -220,7 +235,7 @@ aclnnStatus aclnnAddReluGetWorkspaceSize(const aclTensor* self, const aclTensor*
     // 进行非混合输入类型的Add计算分支判断
     if (!(alpha->ToFloat() > 1 || alpha->ToFloat() < 1)) {
       addOpOut = l0op::Add(selfCasted, otherCasted, uniqueExecutor.get());
-    } else if (IsSupportAxpy(promoteType, alpha)) {
+    } else if (IsSupportAxpy(promoteType)) {
       addOpOut = l0op::Axpy(selfCasted, otherCasted, alpha->ToFloat(), uniqueExecutor.get());
     } else {
       const auto alphaTensor = uniqueExecutor.get()->ConvertToTensor(alpha, promoteType);
