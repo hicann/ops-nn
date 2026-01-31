@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -28,6 +28,7 @@
 #include "opdev/small_vector.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/op_api_def.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -35,28 +36,27 @@ extern "C" {
 #endif
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> ASCEND910A_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_INT32, op::DataType::DT_INT64, op::DataType::DT_FLOAT16,
     op::DataType::DT_INT16, op::DataType::DT_INT8,  op::DataType::DT_UINT8};
 
-static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITH_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_INT32, op::DataType::DT_INT64, op::DataType::DT_FLOAT16,
     op::DataType::DT_INT16, op::DataType::DT_INT8,  op::DataType::DT_UINT8, op::DataType::DT_BF16};
 
 // 910D Sort的self/value支持的dtype
-static const std::initializer_list<op::DataType> ASCEND950_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITH_BF16_AND_UINT = {
   op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT,  op::DataType::DT_BF16, op::DataType::DT_UINT8,
   op::DataType::DT_INT8,    op::DataType::DT_INT16,  op::DataType::DT_INT32, op::DataType::DT_INT64,
   op::DataType::DT_UINT16,  op::DataType::DT_UINT32, op::DataType::DT_UINT64};
 
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
-    return ASCEND910B_DTYPE_SUPPORT_LIST;
-  }else if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
-    return ASCEND950_DTYPE_SUPPORT_LIST;
+  if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
+    return DTYPE_SUPPORT_LIST_WITH_BF16;
+  }else if (Ops::NN::AclnnUtil::IsRegbase()) {
+    return DTYPE_SUPPORT_LIST_WITH_BF16_AND_UINT;
   }
-  return ASCEND910A_DTYPE_SUPPORT_LIST;
+  return DTYPE_SUPPORT_LIST;
 }
 
 static bool CheckNotNull(const aclTensor *self, const aclTensor *values, const aclTensor *indices) {
@@ -118,6 +118,18 @@ static bool CheckDtypeValid(const aclTensor *self, const aclTensor *values, cons
 static bool CheckShape(const aclTensor *self) {
   OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
   return true;
+}
+
+static DataType GetSortIndicesType(const aclTensor *self) {
+  if (!Ops::NN::AclnnUtil::IsRegbase()) {
+    // arch3510之前仅支持DT_INT32
+    return op::DataType::DT_INT32;
+  }
+  int64_t int32Max = static_cast<int64_t>(std::numeric_limits<int32_t>::max());
+  auto sortShape = self->GetViewShape();
+  auto dimSize = static_cast<int64_t>(sortShape.GetDimNum());
+  auto lastDimSize = sortShape[dimSize - 1];
+  return lastDimSize > int32Max ? op::DataType::DT_INT64 : op::DataType::DT_INT32;
 }
 
 static aclnnStatus CheckParams(const aclTensor *self, int64_t k, int64_t dim,
@@ -216,10 +228,10 @@ aclnnStatus aclnnKthvalueGetWorkspaceSize(const aclTensor *self, int64_t k, int6
     CHECK_RET(selfTranspose != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 进行sort计算
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
       lastDim = -1;
     }
-    auto sortOut = l0op::Sort(selfTranspose, lastDim, descending, stable, op::DataType::DT_INT32, uniqueExecutor.get());
+    auto sortOut = l0op::Sort(selfTranspose, lastDim, descending, stable, GetSortIndicesType(selfTranspose), uniqueExecutor.get());
     auto valuesSortOutNoTrans = std::get<0>(sortOut);
     auto indicesSortOutNoTrans = std::get<1>(sortOut);
     CHECK_RET(valuesSortOutNoTrans != nullptr && indicesSortOutNoTrans != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -232,10 +244,10 @@ aclnnStatus aclnnKthvalueGetWorkspaceSize(const aclTensor *self, int64_t k, int6
     indicesSortOut = const_cast<aclTensor *>(l0op::Transpose(indicesSortOutNoTrans, axes, uniqueExecutor.get()));
     CHECK_RET(indicesSortOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
   } else {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
       positiveDim = -1;
     }
-    auto sortOut = l0op::Sort(selfReshape, positiveDim, descending, stable, op::DataType::DT_INT32, uniqueExecutor.get());
+    auto sortOut = l0op::Sort(selfReshape, positiveDim, descending, stable, GetSortIndicesType(selfReshape), uniqueExecutor.get());
     valuesSortOut = std::get<0>(sortOut);
     indicesSortOut = std::get<1>(sortOut);
     CHECK_RET(valuesSortOut != nullptr && indicesSortOut!= nullptr, ACLNN_ERR_INNER_NULLPTR);

@@ -23,6 +23,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -50,17 +51,17 @@ extern "C" {
 static constexpr int64_t MAX_DIM_LEN = 8;
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_910 = {
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {
   DataType::DT_FLOAT, DataType::DT_INT32, DataType::DT_INT64, DataType::DT_FLOAT16, DataType::DT_INT16,
   DataType::DT_INT8, DataType::DT_UINT8, DataType::DT_BOOL, DataType::DT_DOUBLE, DataType::DT_COMPLEX64,
   DataType::DT_COMPLEX128};
 
-static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_910B = {
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_WITH_BF16 = {
   DataType::DT_FLOAT, DataType::DT_INT32, DataType::DT_INT64, DataType::DT_FLOAT16, DataType::DT_INT16,
   DataType::DT_INT8, DataType::DT_UINT8, DataType::DT_BOOL, DataType::DT_DOUBLE, DataType::DT_COMPLEX64,
   DataType::DT_COMPLEX128, DataType::DT_BF16};
 
-static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_950 = {
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_WITH_BF16_AND_UINT = {
     DataType::DT_FLOAT,  DataType::DT_INT32,     DataType::DT_INT64,      DataType::DT_FLOAT16, DataType::DT_BF16,
     DataType::DT_INT16,  DataType::DT_UINT16,    DataType::DT_INT8,       DataType::DT_UINT8,   DataType::DT_BOOL,
     DataType::DT_DOUBLE, DataType::DT_COMPLEX64, DataType::DT_COMPLEX128, DataType::DT_BF16};
@@ -79,23 +80,20 @@ static inline bool CheckNotNull(const aclTensor *self, const aclTensor *index, c
   return true;
 }
 
-static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySocVersion() {
-  auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  switch (socVersion) {
-    case SocVersion::ASCEND910B: {
-      return DTYPE_SUPPORT_LIST_910B;
+static inline const std::initializer_list<op::DataType>& GetDtypeSupportListByNpuArch() {
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
+    return DTYPE_SUPPORT_LIST_WITH_BF16_AND_UINT;
+  }
+  auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  switch (npuArch) {
+    case NpuArch::DAV_2201: {
+      return DTYPE_SUPPORT_LIST_WITH_BF16;
     }
-    case SocVersion::ASCEND910_93:{
-      return DTYPE_SUPPORT_LIST_910B;
-    }
-    case SocVersion::ASCEND950: {
-      return DTYPE_SUPPORT_LIST_950;
-    }
-    case SocVersion::ASCEND910: {
-      return DTYPE_SUPPORT_LIST_910;
+    case NpuArch::DAV_1001: {
+      return DTYPE_SUPPORT_LIST;
     }
     default: {
-      return DTYPE_SUPPORT_LIST_910;
+      return DTYPE_SUPPORT_LIST;
     }
   }
 }
@@ -104,8 +102,8 @@ static inline bool CheckDtypeValid(const aclTensor *self, const aclTensor *index
   // self和out数据类型必须一样
   OP_CHECK_DTYPE_NOT_SAME(self, out, return false);
 
-  // 获取芯片类型,判断是1971还是1980
-  const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_CURRENT = GetDtypeSupportListBySocVersion();
+  // 获取芯片类型
+  const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_CURRENT = GetDtypeSupportListByNpuArch();
 
   // 检查self的数据类型是否在支持列表内
   OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST_CURRENT, return false);

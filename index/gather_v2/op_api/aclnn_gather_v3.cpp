@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -23,6 +23,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -74,7 +75,8 @@ static inline bool CheckDtypeValid(const aclTensor *self, const aclTensor *index
 static inline bool CheckOutShape(const aclTensor *self, int64_t dim, const aclTensor *index, int64_t batchDims, const aclTensor *out) {
   // 根据算子语义，推导算子输出shape
   Shape outShape;
-  if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND950 && GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
     if (self->GetViewShape().GetDimNum() == 0) {
       outShape = self->GetViewShape();
     } else {
@@ -184,7 +186,7 @@ static aclnnStatus CheckParams(const aclTensor *self, int64_t dim, const aclTens
   // 3. 检查shape是否满足约束
   CHECK_RET(CheckShape(self, dim, index, batchDims, out), ACLNN_ERR_PARAM_INVALID);
 
-  if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND950 && GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
     CHECK_RET(CheckDimAndBatchdims(self, dim, index, batchDims), ACLNN_ERR_PARAM_INVALID);
   } else {
     if (dim != 0 || batchDims !=0 || mode != 1) {
@@ -201,7 +203,7 @@ static aclnnStatus CheckParams(const aclTensor *self, int64_t dim, const aclTens
 
   auto indexSize = ge::GetSizeByDataType(index->GetDataType());
   auto indexDimNum = index->GetViewShape().GetDimNum();
-  for (int i = 0; i < static_cast<int>(indexDimNum) ; i++) {
+  for (int i = 0; i < indexDimNum ; i++) {
     indexSize *= index->GetViewShape().GetDim(i);
   }
 
@@ -245,7 +247,7 @@ aclnnStatus aclnnGatherV3GetWorkspaceSize(const aclTensor* self, int64_t dim, co
     CHECK_RET(indexParam != nullptr, ACLNN_ERR_INNER_NULLPTR);
   }
 
-  if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND950 && GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
     auto gatherV2Result = l0op::GatherV2(selfContiguous, dim, indexContiguous, uniqueExecutor.get(), batchDims);
     CHECK_RET(gatherV2Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
 

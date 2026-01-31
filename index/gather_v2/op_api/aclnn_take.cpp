@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -20,6 +20,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/platform.h"
 #include "opdev/make_op_executor.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
 
 using namespace op;
@@ -58,9 +59,8 @@ static bool CheckDtypeValid(const aclTensor *self, const aclTensor *index, const
 
   // 仅910B支持BF16
   if (self->GetDataType() == DataType::DT_BF16) {
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93 &&
-        GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_2201 &&
+        !Ops::NN::AclnnUtil::IsRegbase()) {
       OP_LOGE(ACLNN_ERR_PARAM_INVALID, "take operator doesn't support [%s], except on ASCEND910B or ASCEND950 chip",
               op::ToString(self->GetDataType()).GetString());
       return false;

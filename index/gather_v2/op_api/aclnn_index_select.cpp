@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -29,6 +29,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/op_dfx.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -79,11 +80,11 @@ static bool CheckDtypeValid(const aclTensor *self, const aclTensor *index, const
   // 检查self的数据类型是否在支持列表内
   OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
 
-  auto ver = GetCurrentPlatformInfo().GetSocVersion();
-  if (self->GetDataType() == op::DataType::DT_BF16 && ver != SocVersion::ASCEND910B &&
-    ver != SocVersion::ASCEND910_93 && ver != SocVersion::ASCEND950) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "socVersion %s does not support BF16.",
-            op::ToString(ver).GetString());
+  auto ver = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (self->GetDataType() == op::DataType::DT_BF16 && ver != NpuArch::DAV_2201 &&
+    !Ops::NN::AclnnUtil::IsRegbase(ver)) {
+    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "NpuArch %u does not support BF16.",
+            static_cast<uint32_t>(ver));
     return false;
   }
 
@@ -205,7 +206,7 @@ aclnnStatus aclnnIndexSelectGetWorkspaceSize(const aclTensor *self, int64_t dim,
 
   // 调用l0算子IndexSelect进行计算
   const aclTensor* selectResult = nullptr;
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
     selectResult = l0op::GatherV2(selfContiguous, dim, indexParam, uniqueExecutor.get());
   } else {
     selectResult = l0op::GatherV3(selfContiguous, dim, indexParam, uniqueExecutor.get());

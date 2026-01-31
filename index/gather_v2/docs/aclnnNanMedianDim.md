@@ -1,5 +1,7 @@
 # aclnnNanMedianDim
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/gather_v2)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -7,10 +9,14 @@
 | <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品 </term>                             |    ×     |
+| <term>Atlas 训练系列产品</term>                              |    √     |
+| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
-  - 算子功能：忽略NAN后，返回Tensor指定维度求中位数及所在位置。
+  - 接口功能：忽略NAN后，返回Tensor指定维度求中位数及所在位置。
 
   - 示例：
     - 示例1：
@@ -276,12 +282,9 @@
 
 ## 约束说明
 
-- 确定性计算：
-  - aclnnNanMedianDim默认确定性实现。
-
--  self的数据类型不为FLOAT、FLOAT16、BFLOAT16时，tensor size过大可能会导致算子执行超时（aicpu error类型报错，报错 reason=[aicpu timeout]）具体类型最大size(与机器具体剩余内存强相关) 限制如下：
-  - INT64 类型：150000000
-  - UINT8、INT8、INT16、INT32 类型：725000000
+  - self的数据类型不为FLOAT、FLOAT16、BFLOAT16时，tensor size过大可能会导致算子执行超时（aicpu error类型报错，报错 reason=[aicpu timeout]）具体类型最大size(与机器具体剩余内存强相关) 限制如下：
+    - INT64 类型：150000000
+    - UINT8、INT8、INT16、INT32 类型：725000000
 
 ## 调用示例
 

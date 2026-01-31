@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -26,6 +26,7 @@
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -44,12 +45,17 @@ static const int64_t SIMT_THRES = 2048;
 static const int64_t RATIO_THRES = 32;
 static const int64_t WEIGHT_DIM_NUM = 2;
 static const size_t NO_CONTIGUOUS_SUPPORT_DIM = 2;
+static const int64_t THREAD_NUM = 2048;
+static const int64_t DAVID_USE_UB_SIZE = 248 * 1024;
+static const int64_t SIMT_CACHE_SIZE = 128 * 1024;
+static const int64_t HANDLE_THERSHOLD = 128;
+static const int64_t HANDLE_SIZE = 8 * 1024;
 
-static const std::initializer_list<DataType> WEIGHT_DTYPE_SUPPORT_LIST_910 = {
+static const std::initializer_list<DataType> WEIGHT_DTYPE_SUPPORT_LIST_WITH_COMPLEX = {
     op::DataType::DT_DOUBLE, op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT64,
     op::DataType::DT_INT32, op::DataType::DT_INT16, op::DataType::DT_INT8, op::DataType::DT_UINT8,
     op::DataType::DT_BOOL, op::DataType::DT_COMPLEX128, op::DataType::DT_COMPLEX64};
-static const std::initializer_list<DataType> WEIGHT_DTYPE_SUPPORT_LIST_910B = {
+static const std::initializer_list<DataType> WEIGHT_DTYPE_SUPPORT_LIST_WITH_COMPLEX_AND_BF16 = {
     op::DataType::DT_DOUBLE, op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT64,
     op::DataType::DT_INT32, op::DataType::DT_INT16, op::DataType::DT_INT8, op::DataType::DT_UINT8,
     op::DataType::DT_BOOL, op::DataType::DT_COMPLEX128, op::DataType::DT_COMPLEX64, op::DataType::DT_BF16};
@@ -69,11 +75,10 @@ static bool CheckNotNull(const aclTensor *weight, const aclTensor *indices, cons
 }
 
 static bool CheckDtypeValid(const aclTensor *weight, const aclTensor *indices, const aclTensor *out) {
-  bool is910BSocVersion = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-                           GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-                           GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950);
+  bool is910BSocVersion = (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 ||
+                           Ops::NN::AclnnUtil::IsRegbase());
   const std::initializer_list<DataType> WEIGHT_DTYPE_SUPPORT_LIST =
-    is910BSocVersion ? WEIGHT_DTYPE_SUPPORT_LIST_910B : WEIGHT_DTYPE_SUPPORT_LIST_910;
+    is910BSocVersion ? WEIGHT_DTYPE_SUPPORT_LIST_WITH_COMPLEX_AND_BF16 : WEIGHT_DTYPE_SUPPORT_LIST_WITH_COMPLEX;
 
   // 检查weight的数据类型是否在支持列表内
   OP_CHECK_DTYPE_NOT_SUPPORT(weight, WEIGHT_DTYPE_SUPPORT_LIST, return false);
@@ -130,8 +135,7 @@ static aclnnStatus CheckParams(const aclTensor *weight, const aclTensor *indices
 }
 
 static bool CheckHighperf(const aclTensor *weight, const aclTensor *indices) {
-  bool is910BSocVersion = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-                           GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
+  bool is910BSocVersion = (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201);
   const int64_t indicesSize = indices->GetViewShape().GetShapeSize();
   const op::Shape weightShape = weight->GetViewShape();
   const int64_t weightSize = weightShape.GetShapeSize();
@@ -151,7 +155,7 @@ static bool CheckHighperf(const aclTensor *weight, const aclTensor *indices) {
 }
 
 static bool CheckEmbeddingKernel(const aclTensor *weight, const aclTensor *indices) {
-  bool checkResult = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950);
+  bool checkResult = (Ops::NN::AclnnUtil::IsRegbase());
   if (!checkResult) {
     return false;
   }
@@ -179,17 +183,51 @@ static bool CheckEmbeddingKernel(const aclTensor *weight, const aclTensor *indic
 
 static bool IsUseNoContiguous(const aclTensor* weight, const aclTensor* indices, const aclTensor* out)
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
         return false;
     }
     bool checkResult = CheckType(weight->GetDataType(), EMBEDDING_AICORE_DTYPE_SUPPORT_LIST);
     if (!checkResult) {
         return false;
     }
-    auto selfDimNum = weight->GetViewShape().GetDimNum();
-    auto indexDimNum = indices->GetViewShape().GetDimNum();
+    auto weightShape = weight->GetViewShape();
+    auto selfDimNum = weightShape.GetDimNum();
+    auto indicesShape = indices->GetViewShape();
+    auto indexDimNum = indicesShape.GetDimNum();
+    int64_t totalCoreNum = GetCurrentPlatformInfo().GetVectorCoreNum();
     if (selfDimNum != indexDimNum || indexDimNum != NO_CONTIGUOUS_SUPPORT_DIM) {
         return false;
+    }
+    auto weightStrides = weight->GetViewStrides();
+    auto indicesStrides = indices->GetViewStrides();
+    int64_t innerSize = weightShape.GetDim(1);
+    int64_t ySize = indicesShape.GetShapeSize() * innerSize;
+    int64_t weightTypeSize = op::TypeSize(weight->GetDataType());
+    /* last轴最大连续长度 */
+    int64_t lastDimSize = 1 * weightTypeSize;
+    if (weightStrides[1] == 1) {
+        lastDimSize = weightShape.GetDim(1) * weightTypeSize;
+    }
+
+    if (indicesStrides[0] == 0 || indicesStrides[1] == 0) {
+        return false;
+    }
+    if (!(lastDimSize >= HANDLE_THERSHOLD || (ySize * weightTypeSize) < totalCoreNum * HANDLE_SIZE)) {
+        return false;
+    }
+
+    if (!IsContiguous(indices)) {
+        if (totalCoreNum == 0 || innerSize == 0) {
+            return false;
+        }
+        int64_t perCoreElements = (ySize + totalCoreNum - 1) / totalCoreNum;
+        perCoreElements = (perCoreElements + THREAD_NUM - 1) / THREAD_NUM * THREAD_NUM;
+        int64_t perCoreIndices = (perCoreElements + innerSize - 1) / innerSize + 1;
+        int64_t ubSizeAvaliable = DAVID_USE_UB_SIZE - SIMT_CACHE_SIZE;
+        int64_t indicesNeedSize = perCoreIndices * op::TypeSize(indices->GetDataType());
+        if (ubSizeAvaliable < indicesNeedSize) {
+            return false;
+        }
     }
     if ((!IsContiguous(weight) || !IsContiguous(indices)) && IsContiguous(out)) {
         return true;

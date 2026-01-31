@@ -1,5 +1,7 @@
 # aclnnNanMedian
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/gather_v2)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -7,10 +9,14 @@
 | <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品 </term>                             |    ×     |
+| <term>Atlas 训练系列产品</term>                              |    √     |
+| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
-- 算子功能：忽略NAN后，返回所有元素的中位数。
+- 接口功能：忽略NAN后，返回所有元素的中位数。
 
 - 示例：
 
@@ -32,10 +38,12 @@ tensor(2.)
 - **参数说明：**
 
   + self(aclTensor*, 计算输入)：Device侧的aclTensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16、UINT8、INT8、INT16、INT32、INT64, 当self的数据类型为BFLOAT16时，self.shape[-1]不能等于1。
+    - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16、UINT8、INT8、INT16、INT32、INT64, 当self的数据类型为BFLOAT16时，self.shape[-1]不能等于1。
 
   + out(aclTensor*, 计算输出)：Device侧的aclTensor，数据类型与self相同，out为一维Tensor，shape为(1,)。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16、UINT8、INT8、INT16、INT32、INT64。
+    - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16、UINT8、INT8、INT16、INT32、INT64。
 
   + workspaceSize(uint64_t*, 出参)：返回需要在Device侧申请的workspace大小。
 
@@ -77,8 +85,8 @@ tensor(2.)
   - aclnnNanMedian默认确定性实现。
 
 -  self的数据类型不为FLOAT、FLOAT16、BFLOAT16时，tensor size过大可能会导致算子执行超时（aicpu error类型报错，报错 reason=[aicpu timeout]）具体类型最大size(与机器具体剩余内存强相关) 限制如下：
-  - INT64 类型：150000000
-  - UINT8、INT8、INT16、INT32 类型：725000000
+   - INT64 类型：150000000
+   - UINT8、INT8、INT16、INT32 类型：725000000
 
 ## 调用示例
 

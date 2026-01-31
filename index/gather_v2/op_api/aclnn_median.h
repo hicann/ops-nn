@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -21,9 +21,9 @@ extern "C" {
 /**
  * @brief aclnnMedian的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_math
- * @param [in] self: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64，
+ * @param [in] self: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64，BFLOAT16,
  * 且数据类型与valuesOut相同。支持[非连续的Tensor](#非连续Tensor说明)，数据格式支持ND（[参考](#参考)）。
- * @param [in] valuesOut: device侧的aclTensor，数据类型支持FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64，
+ * @param [in] valuesOut: device侧的aclTensor，数据类型支持FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64，BFLOAT16,
  * 且数据类型与self相同，valuesOut为一维Tensor，shape为(1,)。支持[非连续的Tensor](#非连续Tensor说明)，数据格式支持ND（[参考](#参考)）。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
@@ -45,11 +45,11 @@ ACLNN_API aclnnStatus aclnnMedian(void* workspace, uint64_t workspaceSize, aclOp
 /**
  * @brief aclnnMedianDim的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_math
- * @param [in] self: self：npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64。
+ * @param [in] self: self：npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64、 BFLOAT16。
  * 支持[非连续的Tensor](#非连续Tensor说明)，数据格式支持ND。
  * @param [in] dim：指定的维度，数据类型支持INT64
  * @param [in] keepDim：reduce轴的维度是否保留，数据类型支持BOOL
- * @param [in] valuesOut: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64。
+ * @param [in] valuesOut: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64、 BFLOAT16。
  * 支持[非连续的Tensor](#非连续Tensor说明)，数据格式支持ND。
  * @param [in] indicesOut：npu
  * device侧的aclTensor，数据类型支持INT64。支持[非连续的Tensor](#非连续Tensor说明)，数据格式支持ND。
@@ -75,9 +75,9 @@ ACLNN_API aclnnStatus aclnnMedianDim(void* workspace, uint64_t workspaceSize, ac
 /**
  * @brief aclnnNanMedian的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_math
- * @param [in] self: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64，
+ * @param [in] self: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64，BFLOAT16,
  * 且数据类型与valuesOut相同。支持[非连续的Tensor](#非连续Tensor说明)，数据格式支持ND（[参考](#参考)）。
- * @param [in] out: device侧的aclTensor，数据类型支持FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64，
+ * @param [in] out: device侧的aclTensor，数据类型支持FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64，BFLOAT16,
  * 且数据类型与self相同，out为一维Tensor，shape为(1,)。支持[非连续的Tensor](#非连续Tensor说明)，数据格式支持ND（[参考](#参考)）。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
@@ -100,11 +100,11 @@ ACLNN_API aclnnStatus aclnnNanMedian(void* workspace, uint64_t workspaceSize, ac
 /**
  * @brief aclnnNanMedianDim的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_math
- * @param [in] self: self：npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64。
+ * @param [in] self: self：npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64、 BFLOAT16。
  * 支持[非连续的Tensor](#非连续Tensor说明)，数据格式支持ND。
  * @param [in] dim：指定的维度，数据类型支持INT64
  * @param [in] keepDim：reduce轴的维度是否保留，数据类型支持BOOL
- * @param [in] valuesOut: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64。
+ * @param [in] valuesOut: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64、 BFLOAT16。
  * 支持[非连续的Tensor](#非连续Tensor说明)，数据格式支持ND。
  * @param [in] indicesOut：npu
  * device侧的aclTensor，数据类型支持INT64。支持[非连续的Tensor](#非连续Tensor说明)，数据格式支持ND。

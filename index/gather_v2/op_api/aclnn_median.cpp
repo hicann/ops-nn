@@ -33,6 +33,7 @@
 #include "opdev/common_types.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/op_api_def.h"
+#include "op_api/aclnn_util.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
 #include "opdev/make_op_executor.h"
@@ -48,18 +49,20 @@ extern "C" {
 #endif
 
 static const int32_t MAX_INT32 = 2147483647;
+static const int32_t MIN_INT32 = -2147483648;
+static const int64_t MIN_INT64 = -9223372036854775807LL - 1;
 static const int32_t MAX_CONVERT_NUM = 16777216;
 static constexpr size_t DIM_ZERO = 0;
 static const int64_t SMALLSORTLIMIT = 16;
 
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_910B = {
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITH_INT_AND_BF16 = {
   op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_UINT8,
   op::DataType::DT_INT8, op::DataType::DT_INT16, op::DataType::DT_INT32, op::DataType::DT_INT64};
 
 static const std::initializer_list<op::DataType> FLOAT_DTYPE_LIST_910B = {
   op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_910 = {
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITH_INT = {
   op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_UINT8, op::DataType::DT_INT8,
   op::DataType::DT_INT16, op::DataType::DT_INT32, op::DataType::DT_INT64};
 
@@ -67,16 +70,16 @@ static const std::initializer_list<op::DataType> FLOAT_DTYPE_LIST_910 = {
   op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
 
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportList() {
-  if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-      GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
-    return DTYPE_SUPPORT_LIST_910B;
+  if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 ||
+      Ops::NN::AclnnUtil::IsRegbase()) {
+    return DTYPE_SUPPORT_LIST_WITH_INT_AND_BF16;
   }
-  return DTYPE_SUPPORT_LIST_910;
+  return DTYPE_SUPPORT_LIST_WITH_INT;
 }
 
 static inline const std::initializer_list<op::DataType>& GetFloatList() {
-  if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-      GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+  if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 ||
+      Ops::NN::AclnnUtil::IsRegbase()) {
     return FLOAT_DTYPE_LIST_910B;
   }
   return FLOAT_DTYPE_LIST_910;
@@ -416,6 +419,32 @@ static std::tuple<const aclTensor*, const aclTensor*> GetMedianSortResult(const 
   return std::tie(lastValueResult, lastIndicesResult);
 }
 
+static aclnnStatus DealMedianEmptyTensor(const aclTensor *self, aclTensor *out, aclOpExecutor *executor) {
+  OP_LOGI("start DealMedianEmptyTensor.");
+  auto outShape = out->GetViewShape();
+  op::FVector<int64_t, op::MAX_DIM_NUM> fillDims = op::ToShapeVector(outShape);
+  auto shapes = executor->AllocIntArray(fillDims.data(), outShape.GetDimNum());
+  const aclTensor *dimTensor = executor->ConvertToTensor(shapes, op::DataType::DT_INT64);
+
+  const aclScalar *valueScalar;
+  if (self->GetDataType() == op::DataType::DT_INT64) {
+    valueScalar = executor->AllocScalar(MIN_INT64);
+  } else if (self->GetDataType() == op::DataType::DT_INT32) {
+    valueScalar = executor->AllocScalar(MIN_INT32);
+  } else if (self->GetDataType() == op::DataType::DT_FLOAT || self->GetDataType() == op::DataType::DT_FLOAT16 || self->GetDataType() == op::DataType::DT_BF16) {
+    valueScalar = executor->AllocScalar(NAN);
+  } else {
+    valueScalar = executor->AllocScalar(0);
+  }
+  
+  const aclTensor *valueTensor = executor->ConvertToTensor(valueScalar, out->GetDataType());
+  auto fillTensor = l0op::Fill(dimTensor, valueTensor, shapes, executor);
+  CHECK_RET(fillTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  auto dstCopyResult = l0op::ViewCopy(fillTensor, out, executor);
+  CHECK_RET(dstCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnMedianGetWorkspaceSize(const aclTensor *self, aclTensor *valuesOut, uint64_t *workspaceSize,
                                         aclOpExecutor **executor) {
   OP_CHECK_COMM_INPUT(workspaceSize, executor);
@@ -431,8 +460,15 @@ aclnnStatus aclnnMedianGetWorkspaceSize(const aclTensor *self, aclTensor *values
   CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
   // 空Tensor处理
-  if (self->IsEmpty() || valuesOut->IsEmpty()) {
+  if (valuesOut->IsEmpty()) {
     *workspaceSize = 0;
+    uniqueExecutor.ReleaseTo(executor);
+    return ACLNN_SUCCESS;
+  }
+  if (self->IsEmpty()) {
+    ret = DealMedianEmptyTensor(self, valuesOut, uniqueExecutor.get());
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
   }
@@ -530,7 +566,7 @@ aclnnStatus aclnnMedianDimGetWorkspaceSize(const aclTensor *self, int64_t dim, b
   int64_t sortDimSize = self->GetViewShape().GetDim(static_cast<size_t>(realDim));
   const aclTensor *lastValueResult = nullptr;
   const aclTensor *lastIndicesResult = nullptr;
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P && dimSize > 1 &&
+  if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2002 && dimSize > 1 &&
       self->GetDataType() == op::DataType::DT_FLOAT && sortDimSize <= SMALLSORTLIMIT) {
     // small rank dim
     // Transpose

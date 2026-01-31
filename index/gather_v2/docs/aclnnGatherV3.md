@@ -1,5 +1,7 @@
 # aclnnGatherV3
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/gather_v2)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -7,6 +9,9 @@
 | <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品 </term>                             |    ×     |
+| <term>Atlas 训练系列产品</term>                              |    ×     |
 
 ## 功能说明 
 
@@ -92,7 +97,7 @@ aclnnStatus aclnnGatherV3(
         <td>dim</td>
         <td>输入</td>
         <td>待收集轴。</td>
-        <td>取值范围在[-self.dim(), self.dim()-1]内，当前只支持0。</td>
+        <td>取值范围在[-self.dim(), self.dim()-1]内。</td>
         <td>INT64</td>
         <td>-</td>
         <td>-</td>
@@ -102,7 +107,7 @@ aclnnStatus aclnnGatherV3(
         <td>index</td>
         <td>输入</td>
         <td>收集数据的索引。</td>
-        <td>取值范围在0 ~ self.shape[dim]内（包含0，不包含self.shape[dim]）。</td>
+        <td>取值范围在0 ~ self.shape[dim]内（包含0，不包含self.shape[dim]）。batchDims = N, N != 0 时，index前N维与self一致</td>
         <td>INT64、INT32</td>
         <td>ND</td>
         <td>1-8</td>
@@ -112,7 +117,7 @@ aclnnStatus aclnnGatherV3(
         <td>batchDims</td>
         <td>输入</td>
         <td>运算批次。</td>
-        <td>取值范围在[0, dim]内，当前只支持0。</td>
+        <td>取值范围在[0, dim]内，并且小于等于rank(index)。</td>
         <td>INT64</td>
         <td>-</td>
         <td>-</td>
@@ -132,7 +137,7 @@ aclnnStatus aclnnGatherV3(
         <td>out</td>
         <td>输出</td>
         <td>输出aclTensor。</td>
-        <td>维数等于self维数与index维数之和减一，除dim维扩展为跟index的shape一样外，其他维长度与self相应维一致。</td>
+        <td>batchdim = N，N == 0时，维数等于self维数与index维数之和减一，除dim维扩展为跟index的shape一样外，其他维长度与self相应维一致; <br> N != 0时，output的维度为self[:dim]+index[N+1:]+self[dim+1:]</td>
         <td>与self一致</td>
         <td>ND</td>
         <td>1-8</td>
@@ -159,6 +164,8 @@ aclnnStatus aclnnGatherV3(
         <td>-</td>
       </tr>
     </tbody></table>
+
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品、 Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>: dim当前仅支持0，batchDims当前仅支持0。
 
 - **返回值**
 

@@ -1,5 +1,7 @@
 # aclnnMedian
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/gather_v2)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -7,10 +9,14 @@
 | <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品 </term>                             |    √     |
+| <term>Atlas 训练系列产品</term>                              |    √     |
+| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
-算子功能：返回所有元素的中位数（若总元素个数为size，则中位数对应排序后的下标为`(size - 1) // 2`）。
+接口功能：返回所有元素的中位数（若总元素个数为size，则中位数对应排序后的下标为`(size - 1) // 2`）。
 
 ## 函数原型
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMedianGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMedian”接口执行计算。
@@ -185,8 +191,9 @@ aclnnStatus aclnnMedian(
   - aclnnMedian默认确定性实现。
 
 -  self的数据类型不为FLOAT、FLOAT16、BFLOAT16时，tensor size过大可能会导致算子执行超时（aicpu error类型报错，报错 reason=[aicpu timeout]）具体类型最大size(与机器具体剩余内存强相关) 限制如下：
-  - INT64 类型：150000000
-  - UINT8、INT8、INT16、INT32 类型：725000000
+   - INT64 类型：150000000
+   - UINT8、INT8、INT16、INT32 类型：725000000
+- 当self为BFLOAT16数据类型时，不支持尾轴为1。
 
 ## 调用示例
 

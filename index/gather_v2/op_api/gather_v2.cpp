@@ -15,6 +15,7 @@
 #include "opdev/op_def.h"
 #include "opdev/op_dfx.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
 
 using namespace op;
@@ -30,7 +31,7 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_SELF 
     op::DataType::DT_UINT8, op::DataType::DT_INT64, op::DataType::DT_INT16, op::DataType::DT_UINT16,
     op::DataType::DT_UINT32, op::DataType::DT_UINT64, op::DataType::DT_BOOL};
 
-static const std::initializer_list<op::DataType> ASCEND950_AICORE_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_WITH_BF16 = {
     DataType::DT_FLOAT,  DataType::DT_INT32,     DataType::DT_INT64,      DataType::DT_FLOAT16, DataType::DT_BF16,
     DataType::DT_INT16,  DataType::DT_UINT16,    DataType::DT_INT8,       DataType::DT_UINT8,   DataType::DT_BOOL,
     DataType::DT_DOUBLE, DataType::DT_COMPLEX64, DataType::DT_BF16};
@@ -44,8 +45,8 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_AXIS 
 static bool IsAiCoreSupport(const aclTensor *self,
                             const aclTensor *indices,
                             const aclTensor *axis) {
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
-    auto checkSelfTypeD = CheckType(self->GetDataType(), ASCEND950_AICORE_DTYPE_SUPPORT_LIST);
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
+    auto checkSelfTypeD = CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_WITH_BF16);
     auto checkIndicesTypeD = CheckType(indices->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_INDICES);
     auto checkAxisTypeD = CheckType(axis->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_AXIS);
     return (checkSelfTypeD && checkIndicesTypeD && checkAxisTypeD);
@@ -54,8 +55,7 @@ static bool IsAiCoreSupport(const aclTensor *self,
   auto checkIndicesType = CheckType(indices->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_INDICES);
   auto checkAxisType = CheckType(axis->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_AXIS);
   bool supportBF16 = self->GetDataType() == op::DataType::DT_BF16
-                     && (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-                         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
+                     && (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201);
   return ((checkSelfType || supportBF16) && checkIndicesType && checkAxisType);
 }
 

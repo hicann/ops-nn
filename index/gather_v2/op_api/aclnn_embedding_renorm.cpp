@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -67,10 +67,10 @@ static bool HasEmptyTensor(const aclTensor *self, const aclTensor *indices) {
 }
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> DTYPE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
 
-static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> DTYPE_DTYPE_SUPPORT_LIST_WITH_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_INDICES = {
@@ -104,11 +104,10 @@ static bool CheckNotNull(const aclTensor *self, const aclTensor *indices) {
 }
 
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
-    return ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST;
+  if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
+    return DTYPE_DTYPE_SUPPORT_LIST_WITH_BF16;
   } else {
-    return ASCEND910_DTYPE_DTYPE_SUPPORT_LIST;
+    return DTYPE_DTYPE_SUPPORT_LIST;
   }
 }
 
@@ -127,11 +126,12 @@ static bool CheckFormatValid(const aclTensor *self, const aclTensor *indices) {
   if (self->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ || indices->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
     OP_LOGE(
     ACLNN_ERR_PARAM_INVALID,
-    "Input and output format do not support [NZ]. Actual: self:[%s], indices:[%s].",
+    "Input and output format only support [ND]. Actual: self:[%s], indices:[%s].",
     op::ToString(self->GetStorageFormat()).GetString(), op::ToString(indices->GetStorageFormat()).GetString());
   return false;
+  } else {
+    return true;
   }
-  return true;
 }
 
 static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *indices) {

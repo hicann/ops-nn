@@ -170,6 +170,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "gather_v2_apt");
         this->AICore().AddConfig("ascend950", aicoreConfig);
+        this->AICore().AddConfig("mc62cm12a", aicoreConfig);
     }
 };
 

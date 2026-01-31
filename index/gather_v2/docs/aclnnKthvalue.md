@@ -1,5 +1,7 @@
 # aclnnKthvalue
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/gather_v2)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -7,10 +9,14 @@
 | <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品 </term>                             |    √     |
+| <term>Atlas 训练系列产品</term>                              |    √     |
+| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
-算子功能：返回输入Tensor在指定维度上的第k个最小值及索引。
+接口功能：返回输入Tensor在指定维度上的第k个最小值及索引。
 
 ## 函数原型
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnKthvalueGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnKthvalue”接口执行计算。
@@ -23,12 +29,16 @@
 - **参数说明：**
 
   - self（aclTensor\*, 计算输入）：Device侧的aclTensor。shape支持1-8维度，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
+    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32、INT8、INT16、INT32、INT64、UINT8。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32、INT8、INT16、INT32、INT64、UINT8。
+    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64。
   - k（int64_t, 计算输入）：Host侧的整型。表示取指定维度上第k个最小值。取值范围为[0, self.size(dim)]。
   - dim（int64_t, 计算输入）：Host侧的整型。表示取输入张量的指定维度。取值范围为[-self.dim(), self.dim())。
   - keepdim（bool, 计算输入）：bool类型数据，表示输出张量是否保留了dim。True表示valuesOut和indicesOut张量的大小都与self相同，False表示dim将被压缩，得到的张量维数比input少1。
   - valuesOut（aclTensor\*, 计算输出）：Device侧的aclTensor，数据类型与self保持一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。shape排序轴为1，非排序轴与self一致。
+    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32、INT8、INT16、INT32、INT64、UINT8。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32、INT8、INT16、INT32、INT64、UINT8。
+    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64。
   - indicesOut（aclTensor\*, 计算输出）：Device侧的aclTensor，数据类型支持INT64。表示原始输入张量中沿dim维的第k个最小值的下标。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。shape排序轴为1，非排序轴与self一致。
   - workspaceSize（uint64_t\*, 出参）：返回需要在Device侧申请的workspace大小。
   - executor（aclOpExecutor\**, 出参）：返回op执行器，包含了算子计算流程。
