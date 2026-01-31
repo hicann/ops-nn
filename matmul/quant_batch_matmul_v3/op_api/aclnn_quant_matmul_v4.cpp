@@ -83,6 +83,7 @@ static const size_t MAX_DIM_VALUE = 2;
 static const uint64_t GROUP_M_OFFSET = 32;
 static const uint64_t GROUP_N_OFFSET = 16;
 static const uint64_t GROUP_MNK_BIT_SIZE = 0xFFFF;
+static const size_t MX_SCALE_MAX_DIM = 3;
 static const size_t MX_SCALE_DIM_NUM = 3;
 
 static const std::initializer_list<op::DataType> IN_TYPE_SUPPORT_LIST = {op::DataType::DT_INT4,
@@ -1314,17 +1315,63 @@ static inline bool CheckDimRangeA8W4(const TupleTensor& mandatoryTensors, const 
     return true;
 }
 
+static inline bool MxScaleContiguousProcess(const aclTensor*& mxScaleTensor, aclOpExecutor* executor)
+{
+    if (mxScaleTensor == nullptr || mxScaleTensor->GetViewShape().GetDimNum() < MX_SCALE_MAX_DIM) {
+        OP_LOGD("MX scale no need to do contiguous process.");
+        return true;
+    }
+    auto transposeFlag = false;
+    int64_t dimNum = mxScaleTensor->GetViewShape().GetDimNum();
+    int64_t lastDim = mxScaleTensor->GetViewShape().GetDim(dimNum - 1);
+    int64_t lastSecondDim = mxScaleTensor->GetViewShape().GetDim(dimNum - PENULTIMATE_DIM);
+    int64_t lastThirdDim = mxScaleTensor->GetViewShape().GetDim(dimNum - 3); // 3: 倒数第3维
+    if (mxScaleTensor->GetViewStrides()[dimNum - 3] == lastDim &&            // 3： 倒数第3维
+        mxScaleTensor->GetViewStrides()[dimNum - PENULTIMATE_DIM] == lastDim * lastThirdDim) {
+        int64_t tmpNxD = lastDim * lastSecondDim * lastThirdDim;
+        transposeFlag = true;
+        // 4：batch维度从倒数第4维起
+        for (int64_t batchDim = dimNum - 4; batchDim >= 0; batchDim--) {
+            if (mxScaleTensor->GetViewStrides()[batchDim] != tmpNxD) {
+                transposeFlag = false;
+                break;
+            }
+            tmpNxD *= mxScaleTensor->GetViewShape().GetDim(batchDim);
+        }
+        if (lastSecondDim == 1 && lastThirdDim == 1) {
+            transposeFlag = false;
+        }
+    }
+    if (transposeFlag) {
+        op::Shape swapedShape = mxScaleTensor->GetViewShape();
+        swapedShape.SetDim(dimNum - PENULTIMATE_DIM, lastThirdDim);
+        swapedShape.SetDim(dimNum - 3, lastSecondDim); // 3： 倒数第3维
+        mxScaleTensor = executor->CreateView(mxScaleTensor, swapedShape, mxScaleTensor->GetViewOffset());
+    } else {
+        mxScaleTensor = l0op::Contiguous(mxScaleTensor, executor);
+    }
+    CHECK_RET(mxScaleTensor != nullptr, false);
+    return true;
+}
+
 static aclnnStatus PreMatmulCalcProcess(TupleTensor &mandatoryTensors, TupleOptional &optionalTensors,
                                         TupleAttr &boolsTrans, bool &isA4W4, const aclTensor *out,
                                         aclOpExecutor *executor) {
     auto &x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
     auto &x2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(mandatoryTensors);
     auto &scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    auto &perTokenScale = std::get<INDEX_PERTOKEN_IN_OPTIONAL_TUPLE>(optionalTensors);
     bool &transposeX1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(boolsTrans);
     bool &transposeX2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(boolsTrans);
     CHECK_RET(executor != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     CHECK_RET(CheckNotNull(std::tie(x1, x2, scale), out), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(TensorContiguousProcess(x1, transposeX1, executor), ACLNN_ERR_INNER_NULLPTR);
+    if (perTokenScale != nullptr) {
+ 	    if (IsMicroScaling(perTokenScale, scale)) {
+ 	        CHECK_RET(MxScaleContiguousProcess(scale, executor), ACLNN_ERR_INNER_NULLPTR);
+ 	        CHECK_RET(MxScaleContiguousProcess(perTokenScale, executor), ACLNN_ERR_INNER_NULLPTR);
+ 	    }
+ 	}
     auto ret = WeightNZCaseProcess(x2, transposeX2, executor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     if (isA8W4Float(x1, x2)) {
@@ -1516,15 +1563,16 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor man
     ret = SetReformtedX2(reformatedX1, reformatedX2, transposeX1, transposeX2, executor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
+    const aclTensor* reformatedScale = GetNDFormat(scale);
     const aclTensor* reformatedpertokenScaleOptional = GetNDFormat(pertokenScaleOptional);
     const aclTensor* reformatedBias = GetNDFormat(bias);
     const aclTensor* reformatedYScale = GetNDFormat(yScale);
 
-    ret = CheckParams(std::tie(reformatedX1, reformatedX2, scale),
+    ret = CheckParams(std::tie(reformatedX1, reformatedX2, reformatedScale),
                       std::tie(offset, reformatedpertokenScaleOptional, reformatedBias, reformatedYScale, groupSize),
                       std::tie(transposeX1, transposeX2), isA4W4, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    auto castedScale = ProcessScaleTensor(scale);
+    auto castedScale = ProcessScaleTensor(reformatedScale);
     int64_t dtype = 0;
     GetDtypeAndTranspose(std::tie(reformatedX1, reformatedX2, out), dtype, transposeX1, transposeX2);
     bool isX1TransdataFlag = IsX1Transdata(reformatedX1, reformatedX2, dtype, transposeX1, transposeX2);
