@@ -38,7 +38,7 @@ public:
 
 private:
     __aicore__ inline void SetDefaultValue();
-    static __aicore__ inline void SparseToDenseSimtCompute(
+    static __simt_vf__ __aicore__ inline void SparseToDenseSimtCompute(
         COMP_T numValues, COMP_T numDims, COMP_T sparseUsedCoreNum, COMP_T sparseBlockOffset, COMP_T sparseDataNum,
         __gm__ IDX_T* indices, __gm__ IDX_T* outputShape, __gm__ Y_T* values, __gm__ Y_T* y);
 

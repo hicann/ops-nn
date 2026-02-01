@@ -87,7 +87,7 @@ ge::graphStatus SparseToDenseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, indicesShapePtr);
     auto indicesShape = indicesShapePtr->GetStorageShape();
     indicesDimNum_ = static_cast<int64_t>(indicesShape.GetDimNum());
-    indicesFirstDim_ = indicesShape.GetDim(0);
+    indicesFirstDim_ = indicesDimNum_ == 0 ? 1 : indicesShape.GetDim(0);
     indicesLastDim_ = indicesDimNum_ > 1 ? indicesShape.GetDim(1) : 1;
     OP_CHECK_IF((indicesDimNum_ > DIM_NUM_2), OP_LOGE(opName_, "indicesDimNum cannnot be greater than 2"),
                     return ge::GRAPH_FAILED);
