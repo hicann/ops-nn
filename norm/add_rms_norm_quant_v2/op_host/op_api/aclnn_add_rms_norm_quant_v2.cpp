@@ -574,7 +574,8 @@ aclnnStatus SelfPreDealData(
     AddRmsNormQuantV2InputTensor& inputTensor, AddRmsNormQuantV2OutputTensor& outputTensor, int64_t& mode,
     aclOpExecutor* executor)
 {
-    CheckParamsV2(inputTensor, outputTensor, mode);
+    auto ret = CheckParamsV2(inputTensor, outputTensor, mode);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
     if (inputTensor.gamma->GetViewShape().GetDimNum() == DIM_TWO) {
         auto gammaReshape = l0op::Reshape(inputTensor.gamma, {inputTensor.gamma->GetViewShape()[1]}, executor);
         inputTensor.gamma = gammaReshape;
@@ -590,7 +591,8 @@ aclnnStatus ComputeAddRmsNormQuantV2(AddRmsNormQuantV2InputTensor& inputTensor, 
                 ParamStruct& paramStruct, aclOpExecutor* executor)
 {
     int64_t mode = 0;   // 0为postRmsNormQuant，1为preRmsNormQuant
-    SelfPreDealData(inputTensor, outputTensor, mode, executor);
+    auto ret = SelfPreDealData(inputTensor, outputTensor, mode, executor);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
     aclTensor* y1ComputeOut = nullptr;
     aclTensor* resComputeOut = nullptr;
     aclTensor* xComputeOut = nullptr;

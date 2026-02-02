@@ -208,7 +208,10 @@ static bool CheckShape(
         OP_CHECK_WRONG_DIMENSION(weightOptional, normalizedShape->Size(), return false);
     }
     // 4.检查input维度是否不小于normalizedShape的长度
-    OP_CHECK_MIN_DIM(input, normalizedShape->Size(), return false);
+    if (input->GetViewShape().GetDimNum() < static_cast<size_t>(normalizedShape->Size())) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The input tensor's dimensions must not be smaller than normalizedShape's size.");
+        return false;
+    }
     // 5.校验bias存在时与normalizedShape长度是否相同
     if (biasOptional) {
         OP_CHECK_WRONG_DIMENSION(biasOptional, normalizedShape->Size(), return false);

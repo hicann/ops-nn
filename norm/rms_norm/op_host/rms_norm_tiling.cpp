@@ -33,6 +33,7 @@ constexpr uint32_t GAMMA_INDEX = 1;
 constexpr uint32_t B16_BYTE_SIZE = 2;
 constexpr uint32_t BLOCK_SIZE = 32;
 constexpr uint32_t UB_USED = 1024;
+constexpr uint32_t BRCB_RESERVED_UB_USED = 8 * 1024;
 constexpr uint32_t UB_COUNTS = 3;
 constexpr uint32_t FLOAT_UB_COUNTS = 2;
 constexpr uint32_t UB_COUNTS_X_SQX = 2;
@@ -404,7 +405,6 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
         blockFactor *= tileNum;
         uint32_t useCoreNum = CeilDiv(numRow, blockFactor);
 
-        context->SetBlockDim(useCoreNum);
         latsBlockFactor = numRow - blockFactor * (useCoreNum - 1);
 
         rowFactor = FLOAT_PER_REAPEAT;
@@ -413,7 +413,7 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
             modeKey = MODE_SPLIT_D;
         }
 
-        if (numColAlign <= SMALL_REDUCE_NUM && curSocVersion == platform_ascendc::SocVersion::ASCEND910B) {
+        if ((numColAlign <= SMALL_REDUCE_NUM && curSocVersion == platform_ascendc::SocVersion::ASCEND910B) || (xDtypeKey == DTYPE_KEY_FP16 && numCol == 128 && curSocVersion == platform_ascendc::SocVersion::ASCEND310P)) {
             modeKey = MODE_MERGE_N;
         }
 
@@ -430,11 +430,18 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
             }
         }
         if (modeKey == MODE_MERGE_N) {
+            if (curSocVersion == platform_ascendc::SocVersion::ASCEND310P) {
+                ubSize = ubSize - BRCB_RESERVED_UB_USED;
+            }
             tiling.set_normal_flag(PERFORMANC_DIM_ZERO);
             uint64_t numColAlignWeight = 16UL;
             rowFactor = ubSize / (numColAlign * numColAlignWeight + 260UL);
             if (curSocVersion == platform_ascendc::SocVersion::ASCEND310P) {
                 rowFactor = rowFactor / FLOAT_BLOCK_ALIGN_NUM * FLOAT_BLOCK_ALIGN_NUM; // BroadCast need 32B Align
+                blockFactor = (blockFactor + FLOAT_BLOCK_ALIGN_NUM - 1) / FLOAT_BLOCK_ALIGN_NUM * FLOAT_BLOCK_ALIGN_NUM;
+                useCoreNum = CeilDiv(numRow, blockFactor);
+                latsBlockFactor = numRow - blockFactor * (useCoreNum - 1);
+                isPerformance = 1;
             }
             ubFactor = rowFactor * numColAlign;
             OP_TILING_CHECK(
@@ -442,6 +449,7 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
                 OPS_REPORT_VECTOR_INNER_ERR(context, "Tiling split last dim failed, please check."),
                 return ge::GRAPH_FAILED);
         }
+        context->SetBlockDim(useCoreNum);
     }
     rowLoop = CeilDiv(blockFactor, rowFactor);
     lastBlockRowLoop = CeilDiv(latsBlockFactor, rowFactor);
