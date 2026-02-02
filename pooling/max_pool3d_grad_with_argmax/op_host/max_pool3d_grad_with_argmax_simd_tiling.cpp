@@ -77,7 +77,7 @@ bool MaxPool3DGradWithArgmaxNCDHWTiling::IsCapable()
     {
         return false;
     }
-    if (baseData.hProBatchSize >= inputData.hGrad && baseData.wProBatchSize >= inputData.wGrad && baseData.wProBatchSize >= inputData.wGrad) {
+    if (baseData.hProBatchSize >= inputData.hGrad && baseData.wProBatchSize >= inputData.wGrad && baseData.dProBatchSize >= inputData.dGrad) {
         return false;
     }
     if(inputData.dDilation != 1 || inputData.hDilation != 1 || inputData.wDilation != 1) {

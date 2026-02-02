@@ -260,9 +260,9 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
 
     OP_CHECK_IF(
         (!Ops::Base::IsUnknownRank(*gradShape) && !Ops::Base::IsUnknownShape(*gradShape)) &&
-            ((doExpected <= 0) || (static_cast<uint64_t>(doExpected) != gradShape->GetDim(input_d_dim)) ||
-             (hoExpected <= 0) || (static_cast<uint64_t>(hoExpected) != gradShape->GetDim(input_h_dim)) ||
-             (woExpected <= 0) || (static_cast<uint64_t>(woExpected) != gradShape->GetDim(input_w_dim))),
+            ((doExpected <= 0) || (doExpected != static_cast<int64_t>(gradShape->GetDim(input_d_dim))) ||
+             (hoExpected <= 0) || (hoExpected != static_cast<int64_t>(gradShape->GetDim(input_h_dim))) ||
+             (woExpected <= 0) || (woExpected != static_cast<int64_t>(gradShape->GetDim(input_w_dim)))),
         OP_LOGE(
             context->GetNodeName(), "GradShape D / H / W size invalid, expected d: %ld, h: %ld, w: %ld.", doExpected,
             hoExpected, woExpected),
@@ -270,9 +270,9 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
 
     OP_CHECK_IF(
         (!Ops::Base::IsUnknownRank(*argmaxShape) && !Ops::Base::IsUnknownShape(*argmaxShape)) &&
-            ((doExpected <= 0) || (static_cast<uint64_t>(doExpected) != argmaxShape->GetDim(input_d_dim)) ||
-             (hoExpected <= 0) || (static_cast<uint64_t>(hoExpected) != argmaxShape->GetDim(input_h_dim)) ||
-             (woExpected <= 0) || (static_cast<uint64_t>(woExpected) != argmaxShape->GetDim(input_w_dim))),
+            ((doExpected <= 0) || (doExpected != static_cast<int64_t>(argmaxShape->GetDim(input_d_dim))) ||
+             (hoExpected <= 0) || (hoExpected != static_cast<int64_t>(argmaxShape->GetDim(input_h_dim))) ||
+             (woExpected <= 0) || (woExpected != static_cast<int64_t>(argmaxShape->GetDim(input_w_dim)))),
         OP_LOGE(
             context->GetNodeName(), "ArgmaxShape D / H / W size invalid, expected d: %ld, h: %ld, w: %ld.", doExpected,
             hoExpected, woExpected),
