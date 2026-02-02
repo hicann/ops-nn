@@ -20,7 +20,7 @@ __all__ = ["conv3d_custom",]
 
 def conv3d_custom(input: Tensor, weight: Tensor, strides: list, pads: list, dilations: list,
                   bias: Tensor = None, enable_hf32: bool = False) -> Tensor:
-    if torch_npu.npu.get_device_name() == "Ascend910_9589":
+    if torch_npu.npu.get_device_name() == "Ascend950PR_9589":
         print(torch.ops.ascend_ops.conv3d_v2_custom)
         assert hasattr(torch.ops.ascend_ops, "conv3d_v2_custom"), "The 'conv3d_v2_custom' operator is not registered in the 'torch.ops.ascend_ops' namespace."
         origin_input_shape = list(input.shape)
