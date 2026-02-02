@@ -46,18 +46,6 @@
             -2
           ]
         }
-      ],
-      "attrs": [
-          {
-            "name": "is_preprocessed",
-            "dtype": "bool",
-            "value": false
-          },
-          {
-            "name": "check_ids",
-            "dtype": "bool",
-            "value": false
-          }
       ]
     },
     {
