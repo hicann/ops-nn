@@ -28,7 +28,10 @@ public:
     uint64_t GetTilingKey() const override;
 
 protected:
-
+    bool CheckPerTileShape(
+        const gert::Shape& x1Shape, const gert::Shape& x2Shape, const gert::Shape& pertokenShape,
+        const gert::Shape& scaleShape);
+    bool CheckPertileDtype();
     uint32_t GetX1Idx() const override
     {
         return X1_INDEX_V4;
@@ -63,14 +66,14 @@ protected:
     ge::graphStatus CheckContext() override;
     bool AnalyzeDtype() override;
     bool AnalyzeInputs() override;
-    bool CheckInputValidInPerblockMode(const gert::Shape& scaleShape, const gert::StorageShape *pertokenShape,
+    bool CheckInputValidInPertileMode(const gert::Shape& scaleShape, const gert::Shape& pertokenShape,
                                        const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
-    bool CheckDimValidInPerblockMode(size_t x1ShapeLen, size_t x2ShapeLen,
+    bool CheckDimValidInPertileMode(size_t x1ShapeLen, size_t x2ShapeLen,
                                      size_t pertokenShapeLen, size_t scaleShapeLen) const;
-    bool CheckBatchValidInPerblockMode(const gert::Shape& scaleShape, const gert::Shape& pertoken,
+    bool CheckBatchValidInPertileMode(const gert::Shape& scaleShape, const gert::Shape& pertoken,
                                        const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
-    bool CheckGroupValidInPerblockMode() const;
-    bool CheckShapeValidInPerblockMode(const gert::Shape& scaleShape,
+    bool CheckGroupValidInPertileMode() const;
+    bool CheckShapeValidInPertileMode(const gert::Shape& scaleShape,
                                        const gert::Shape& pertoken, const gert::Shape& x1Shape,
                                        const gert::Shape& x2Shape) const;
     bool SetPlatformInfoForTiling() override;

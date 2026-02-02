@@ -42,138 +42,14 @@ constexpr size_t DIM_NUM_TWO = 2;
 
 namespace optiling {
 
-bool AdaptiveSlidingWindowBasicTilingV4::IsCapable()
+bool AdaptiveSlidingWindowBasicTilingV4::CheckPerTileShape(
+    const gert::Shape& x1Shape, const gert::Shape& x2Shape, const gert::Shape& pertokenShape,
+    const gert::Shape& scaleShape)
 {
-    if (context_ == nullptr) {
-        OP_LOGE(inputParams_.opName, "context_ is nullptr.");
-        return false;
-    }
-    platform_ascendc::SocVersion socVersion;
-    auto* platformInfoPtr = context_->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfoPtr);
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
-    
-    bool isDavid = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_3510;
-    bool isA8W8GBDtype = inputParams_.aDtype == ge::DT_INT8 && inputParams_.bDtype == ge::DT_INT8 &&
-                    inputParams_.perTokenScaleDtype == ge::DT_FLOAT && 
-                    inputParams_.scaleDtype == ge::DT_FLOAT && inputParams_.cDtype == ge::DT_BF16 && 
-                    ((inputParams_.hasBias && inputParams_.biasDtype == ge::DT_FLOAT) || !inputParams_.hasBias);
-
-    auto x1Shape = context_->GetInputShape(GetX1Idx());
-    auto x2Shape = context_->GetInputShape(GetX2Idx());
-    auto x1ScaleShape = context_->GetOptionalInputShape(GetPertokenIdx());
-    auto x2ScaleShape = context_->GetOptionalInputShape(GetScaleIdx());
-    if (x1Shape == nullptr || x2Shape == nullptr || x1ScaleShape == nullptr || x2ScaleShape == nullptr) {
-        OP_LOGE(inputParams_.opName, "In G-B quantification, x1Shape, x2Shape, x1ScaleShape and "
-        "x2ScaleShape can not be nullptr.");
-        return false;
-    }
-    auto x1OriginShape = x1Shape->GetOriginShape();
-    auto x2OriginShape = x2Shape->GetOriginShape();
-    auto x1ScaleOriginShape = x1ScaleShape->GetOriginShape();
-    auto x2ScaleOriginShape = x2ScaleShape->GetOriginShape();
-
-    bool isA8W8GBDim = x1OriginShape.GetDimNum() == x1ScaleOriginShape.GetDimNum() &&
-                    x2OriginShape.GetDimNum() == x2ScaleOriginShape.GetDimNum();
-
-    return isDavid && isA8W8GBDtype && isA8W8GBDim;
-}
-
-bool AdaptiveSlidingWindowBasicTilingV4::CheckDtype() const
-{
-    OP_TILING_CHECK(inputParams_.aDtype != ge::DT_INT8 || inputParams_.bDtype != ge::DT_INT8,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-            "Expected dtype of X1 and X2 to be DT_INT8, but actual X1 dtype is %s and X1 dtype is %s.",
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
-        return false);
-    OP_TILING_CHECK(inputParams_.perTokenScaleDtype != ge::DT_FLOAT || inputParams_.scaleDtype != ge::DT_FLOAT,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-            "Expected dtype of X1Scale and X2Scale to be DT_FLOAT, but actual X1Scale dtype is %s "
-            "and X2Scale dtype is %s.",
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()),
-        return false);
-        auto biasDesc = context_->GetOptionalInputDesc(GetBiasIdx());
-    OP_TILING_CHECK(biasDesc != nullptr && inputParams_.biasDtype != ge::DT_FLOAT,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-            "Expected dtype of bias to be DT_FLOAT, but actual is %s.",
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.biasDtype).c_str()),
-        return false);
-    OP_TILING_CHECK(inputParams_.cDtype != ge::DT_BF16,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-            "Expected dtype of output to be DT_BF16, but actual is %s.",
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
-        return false);
-    return true;
-}
-
-ge::graphStatus AdaptiveSlidingWindowBasicTilingV4::CheckContext()
-{
-    auto x1Shape = context_->GetInputShape(GetX1Idx());
-    auto x1Desc = context_->GetInputDesc(GetX1Idx());
-    auto x2Shape = context_->GetInputShape(GetX2Idx());
-    auto x2Desc = context_->GetInputDesc(GetX2Idx());
-    auto outputShape = context_->GetOutputShape(0);
-    auto outputDesc = context_->GetOutputDesc(0);
-    auto attrs = context_->GetAttrs();
-    OP_TILING_CHECK(attrs == nullptr,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Function context_->GetAttrs() failed!"),
-                    return ge::GRAPH_FAILED);
-    auto dtypeAttr = attrs->GetAttrPointer<int64_t>(0);
-
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, x1Shape);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, x1Desc);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, x2Shape);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, x2Desc);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, outputShape);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, dtypeAttr);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData()->GetData());
-    OP_TILING_CHECK(
-        context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "context tiling data capacity %zu < actual tiling data size %zu.",
-                              context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
-        return ge::GRAPH_FAILED);
-    return ge::GRAPH_SUCCESS;
-}
-
-bool AdaptiveSlidingWindowBasicTilingV4::AnalyzeDtype()
-{
-    inputParams_.aDtype = context_->GetInputDesc(GetX1Idx())->GetDataType();
-    auto x2Desc = context_->GetInputDesc(GetX2Idx());
-    inputParams_.bDtype = x2Desc->GetDataType();
-    auto scaleDesc = context_->GetOptionalInputDesc(GetScaleIdx());
-    auto pertokenScaleDesc = context_->GetOptionalInputDesc(GetPertokenIdx());
-    OP_TILING_CHECK(pertokenScaleDesc == nullptr || scaleDesc == nullptr,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "In G-B quantification, "
-                    "X1Scale and X2Scale can not be nullptr."),
-                    return false);
-    inputParams_.scaleDtype = scaleDesc->GetDataType();
-    inputParams_.perTokenScaleDtype = pertokenScaleDesc->GetDataType();
-    auto biasDesc = context_->GetOptionalInputDesc(GetBiasIdx());
-    inputParams_.biasDtype = biasDesc != nullptr ? biasDesc->GetDataType() : ge::DT_INT32;
-    auto x2TableDesc = context_->GetOptionalInputDesc(GetX2TableIdx());
-    inputParams_.x2TableDtype = x2TableDesc != nullptr ? x2TableDesc->GetDataType() : inputParams_.x2TableDtype;
-    auto outputDesc = context_->GetOutputDesc(0);
-    inputParams_.cDtype = outputDesc != nullptr ? outputDesc->GetDataType() : ge::DT_BF16;
-
-    OP_TILING_CHECK(!CheckDtype(), CUBE_INNER_ERR_REPORT(inputParams_.opName, "CheckDtype failed!"), return false);
-    return true;
-}
-
-bool AdaptiveSlidingWindowBasicTilingV4::AnalyzeInputs()
-{
-    auto x1Shape = context_->GetInputShape(GetX1Idx())->GetOriginShape();
-    auto x2Shape = context_->GetInputShape(GetX2Idx())->GetOriginShape();
-    const gert::Shape& scaleShape = context_->GetOptionalInputShape(GetScaleIdx())->GetStorageShape();
-    auto pertokenShape = context_->GetOptionalInputShape(GetPertokenIdx());
-    inputParams_.isPertoken = pertokenShape != nullptr;
     auto biasShape = context_->GetOptionalInputShape(GetBiasIdx());
     inputParams_.hasBias = biasShape != nullptr;
+
     inputParams_.batchBias = inputParams_.hasBias ? GetBatchSize(biasShape->GetStorageShape()) : 1;
-    auto x2TableShape = context_->GetOptionalInputShape(GetX2TableIdx());
     auto x1ShapeLen = x1Shape.GetDimNum();
     auto x2ShapeLen = x2Shape.GetDimNum();
 
@@ -189,49 +65,161 @@ bool AdaptiveSlidingWindowBasicTilingV4::AnalyzeInputs()
     inputParams_.batchA = GetBatchSize(x1Shape);
     inputParams_.batchB = GetBatchSize(x2Shape);
     AnalyzeBatchInfo(x1Shape, x2Shape);
-    OP_TILING_CHECK(
-        !InferOutBatchDim(x1Shape, x2Shape),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "batch dim can not be broadcasted or the batch dims of output do not match with input."),
-        return false);
+    if (!InferOutBatchDim(x1Shape, x2Shape)) {
+        OP_LOGD(
+            inputParams_.opName,
+            "batch dim can not be broadcasted or the batch dims of output do not match with input.");
+        return false;
+    }
 
-    OP_TILING_CHECK(!CheckInputValidInPerblockMode(scaleShape, pertokenShape, x1Shape, x2Shape),
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "CheckInputValidInPerblockMode failed."),
-                    return false); 
+    if (!CheckInputValidInPertileMode(scaleShape, pertokenShape, x1Shape, x2Shape)) {
+        OP_LOGD(inputParams_.opName, "CheckInputValidInPertileMode failed.");
+        return false;
+    }
     inputParams_.isPerBlock = true;
+    return true;
+}
+
+bool AdaptiveSlidingWindowBasicTilingV4::CheckPertileDtype()
+{
+    inputParams_.aDtype = context_->GetInputDesc(GetX1Idx())->GetDataType();
+    auto x2Desc = context_->GetInputDesc(GetX2Idx());
+    inputParams_.bDtype = x2Desc->GetDataType();
+    auto scaleDesc = context_->GetOptionalInputDesc(GetScaleIdx());
+    auto pertokenScaleDesc = context_->GetOptionalInputDesc(GetPertokenIdx());
+    if (scaleDesc == nullptr || pertokenScaleDesc == nullptr) {
+        OP_LOGD(inputParams_.opName, "x1Scale or x2Scale is nullptr.");
+        return false;
+    }
+    
+    inputParams_.scaleDtype = scaleDesc->GetDataType();
+    inputParams_.perTokenScaleDtype = pertokenScaleDesc->GetDataType();
+    auto biasDesc = context_->GetOptionalInputDesc(GetBiasIdx());
+    inputParams_.biasDtype = biasDesc != nullptr ? biasDesc->GetDataType() : ge::DT_INT32;
+    auto x2TableDesc = context_->GetOptionalInputDesc(GetX2TableIdx());
+    inputParams_.x2TableDtype = x2TableDesc != nullptr ? x2TableDesc->GetDataType() : inputParams_.x2TableDtype;
+    auto outputDesc = context_->GetOutputDesc(0);
+    inputParams_.cDtype = outputDesc != nullptr ? outputDesc->GetDataType() : ge::DT_BF16;
+
+    OP_TILING_CHECK(!CheckDtype(), CUBE_INNER_ERR_REPORT(inputParams_.opName, "CheckDtype failed!"), return false);
+
+    bool isA8W8GBDtype = inputParams_.aDtype == ge::DT_INT8 && inputParams_.bDtype == ge::DT_INT8 &&
+                         inputParams_.perTokenScaleDtype == ge::DT_FLOAT && inputParams_.scaleDtype == ge::DT_FLOAT &&
+                         inputParams_.cDtype == ge::DT_BF16 &&
+                         ((inputParams_.hasBias && inputParams_.biasDtype == ge::DT_FLOAT) || !inputParams_.hasBias);
+    if (!isA8W8GBDtype) {
+        return false;
+    }
+    return true;
+}
+bool AdaptiveSlidingWindowBasicTilingV4::IsCapable()
+{
+    if (context_ == nullptr) {
+        OP_LOGE(inputParams_.opName, "context_ is nullptr.");
+        return false;
+    }
+    auto* platformInfoPtr = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfoPtr);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+
+    if (!(ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_3510)) {
+        return false;
+    }
+    if (!CheckPertileDtype()) {
+        return false;
+    }
+
+    auto x1Shape = context_->GetInputShape(GetX1Idx());
+    auto x2Shape = context_->GetInputShape(GetX2Idx());
+    auto x1ScaleShape = context_->GetOptionalInputShape(GetPertokenIdx());
+    auto x2ScaleShape = context_->GetOptionalInputShape(GetScaleIdx());
+    if (x1ScaleShape == nullptr || x2ScaleShape == nullptr) {
+        OP_LOGD(inputParams_.opName, "x1ScaleShape or x2ScaleShape is nullptr.");
+        return false;
+    }
+    auto x1OriginShape = x1Shape->GetOriginShape();
+    auto x2OriginShape = x2Shape->GetOriginShape();
+    auto x1ScaleOriginShape = x1ScaleShape->GetOriginShape();
+    auto x2ScaleOriginShape = x2ScaleShape->GetOriginShape();
+    CheckPerTileShape(x1OriginShape, x2OriginShape, x1ScaleOriginShape, x2ScaleOriginShape);
 
     return true;
 }
 
-bool AdaptiveSlidingWindowBasicTilingV4::CheckInputValidInPerblockMode(const gert::Shape& scaleShape,
-                                                              const gert::StorageShape *pertokenShape,
-                                                              const gert::Shape& x1Shape,
-                                                              const gert::Shape& x2Shape) const
+bool AdaptiveSlidingWindowBasicTilingV4::CheckDtype() const
+{
+    return true;
+}
+
+ge::graphStatus AdaptiveSlidingWindowBasicTilingV4::CheckContext()
+{
+    auto x1Shape = context_->GetInputShape(GetX1Idx());
+    auto x1Desc = context_->GetInputDesc(GetX1Idx());
+    auto x2Shape = context_->GetInputShape(GetX2Idx());
+    auto x2Desc = context_->GetInputDesc(GetX2Idx());
+    auto outputShape = context_->GetOutputShape(0);
+    auto outputDesc = context_->GetOutputDesc(0);
+    auto attrs = context_->GetAttrs();
+    OP_TILING_CHECK(
+        attrs == nullptr, CUBE_INNER_ERR_REPORT(inputParams_.opName, "Function context_->GetAttrs() failed!"),
+        return ge::GRAPH_FAILED);
+    auto dtypeAttr = attrs->GetAttrPointer<int64_t>(0);
+
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, x1Shape);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, x1Desc);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, x2Shape);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, x2Desc);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, outputShape);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, dtypeAttr);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData()->GetData());
+    OP_TILING_CHECK(
+        context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
+        CUBE_INNER_ERR_REPORT(
+            inputParams_.opName, "context tiling data capacity %zu < actual tiling data size %zu.",
+            context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
+        return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+bool AdaptiveSlidingWindowBasicTilingV4::AnalyzeDtype()
+{
+    return true;
+}
+
+bool AdaptiveSlidingWindowBasicTilingV4::AnalyzeInputs()
+{
+    return true;
+}
+
+bool AdaptiveSlidingWindowBasicTilingV4::CheckInputValidInPertileMode(
+    const gert::Shape& scaleShape, const gert::Shape& pertokenShape, const gert::Shape& x1Shape,
+    const gert::Shape& x2Shape) const
 {
     auto scaleShapeLen = scaleShape.GetDimNum();
     auto x2ShapeLen = x2Shape.GetDimNum();
-    auto &pertoken = pertokenShape->GetStorageShape();
-    auto pertokenShapeLen = pertoken.GetDimNum();
+    auto pertokenShapeLen = pertokenShape.GetDimNum();
     auto x1ShapeLen = x1Shape.GetDimNum();
-    if (!CheckDimValidInPerblockMode(x1ShapeLen, x2ShapeLen, pertokenShapeLen, scaleShapeLen)) {
+    if (!CheckDimValidInPertileMode(x1ShapeLen, x2ShapeLen, pertokenShapeLen, scaleShapeLen)) {
         return false;
     }
-    if (!CheckBatchValidInPerblockMode(scaleShape, pertoken, x1Shape, x2Shape)) {
-        return false;
-    }
-
-    if (!CheckGroupValidInPerblockMode()) {
+    if (!CheckBatchValidInPertileMode(scaleShape, pertokenShape, x1Shape, x2Shape)) {
         return false;
     }
 
-    if (!CheckShapeValidInPerblockMode(scaleShape, pertoken, x1Shape, x2Shape)) {
+    if (!CheckGroupValidInPertileMode()) {
+        return false;
+    }
+
+    if (!CheckShapeValidInPertileMode(scaleShape, pertokenShape, x1Shape, x2Shape)) {
         return false;
     }
 
     return true;
 }
 
-bool AdaptiveSlidingWindowBasicTilingV4::CheckGroupValidInPerblockMode() const
+bool AdaptiveSlidingWindowBasicTilingV4::CheckGroupValidInPertileMode() const
 {
     OP_TILING_CHECK(inputParams_.groupSizeM != 1,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
@@ -254,7 +242,7 @@ groupSizeN = (groupSize >> 16) & 0xFFFF.",
   return true;
 }
 
-bool AdaptiveSlidingWindowBasicTilingV4::CheckShapeValidInPerblockMode(const gert::Shape& scaleShape,
+bool AdaptiveSlidingWindowBasicTilingV4::CheckShapeValidInPertileMode(const gert::Shape& scaleShape,
                                                               const gert::Shape& pertoken, const gert::Shape& x1Shape,
                                                               const gert::Shape& x2Shape) const
 {
@@ -300,7 +288,7 @@ k dimension size of pertokenScale is %lu, k dimension size of x1Shape is %lu.",
     return true;
 }
 
-bool AdaptiveSlidingWindowBasicTilingV4::CheckDimValidInPerblockMode(size_t x1ShapeLen, size_t x2ShapeLen,
+bool AdaptiveSlidingWindowBasicTilingV4::CheckDimValidInPertileMode(size_t x1ShapeLen, size_t x2ShapeLen,
                                                             size_t pertokenShapeLen, size_t scaleShapeLen) const
 {
     OP_TILING_CHECK(scaleShapeLen != x2ShapeLen,
@@ -321,7 +309,7 @@ but x1 dimension is: %zu, pertoken dimension is: %zu.",
     return true;
 }
 
-bool AdaptiveSlidingWindowBasicTilingV4::CheckBatchValidInPerblockMode(const gert::Shape& scaleShape,
+bool AdaptiveSlidingWindowBasicTilingV4::CheckBatchValidInPertileMode(const gert::Shape& scaleShape,
                                                               const gert::Shape& pertoken, const gert::Shape& x1Shape,
                                                               const gert::Shape& x2Shape) const
 {

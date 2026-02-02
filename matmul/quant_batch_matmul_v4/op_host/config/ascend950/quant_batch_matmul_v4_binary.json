@@ -352,7 +352,7 @@
                     "index": 3,
                     "dtype": "float32",
                     "format": "ND",
-                    "paramType": "required",
+                    "paramType": "optional",
                     "shape": [
                         -2
                     ],
@@ -363,7 +363,7 @@
                     "index": 4,
                     "dtype": "float32",
                     "format": "ND",
-                    "paramType": "required",
+                    "paramType": "optional",
                     "shape": [
                         -2
                     ],
