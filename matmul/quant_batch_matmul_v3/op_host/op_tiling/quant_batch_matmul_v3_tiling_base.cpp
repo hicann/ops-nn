@@ -809,7 +809,8 @@ bool QuantBatchMatmulV3TilingBase::SetPlatformInfoForTiling()
     auto platformInfoPtr = context_->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     aicoreParams_.aicNum = compileInfo_.aicNum;
-    if (ascendcPlatform.GetSocVersion() != platform_ascendc::SocVersion::KIRINX90) {
+    if (ascendcPlatform.GetSocVersion() != platform_ascendc::SocVersion::KIRINX90 &&
+        ascendcPlatform.GetSocVersion() != platform_ascendc::SocVersion::KIRIN9030) {
         OP_LOGE_IF(compileInfo_.l2Size <= 0, false, inputParams_.opName, "l2Size <= 0");
     }
     // 纠正L2实际物理大小

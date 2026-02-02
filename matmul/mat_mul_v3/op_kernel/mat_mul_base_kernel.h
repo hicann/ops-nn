@@ -48,7 +48,7 @@ public:
 
 protected:
     BLOCK_TYPE block_;
-#if (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     using C_HALF_TYPE = MatmulType<AscendC::TPosition::VECIN, C_TYPE::format, half>;
     MatmulImpl<A_TYPE, B_TYPE, C_HALF_TYPE, BIAS_TYPE, MM_CFG, MM_CB> mm_;
     TQue<QuePosition::VECIN, 1> cLocalHalfQue;
@@ -85,7 +85,7 @@ __aicore__ inline void MatmulBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK
     LocalTensor<uint8_t> buf = ubBuf_.template Get<uint8_t>();
     mm_.SetLocalWorkspace(buf);
 #endif
-#if (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     pipe->InitBuffer(cLocalHalfQue, 1, TOTAL_UB_SIZE / 2);
     pipe->InitBuffer(cLocalFloatQue, 1, TOTAL_UB_SIZE / 2);
 #endif
@@ -177,7 +177,7 @@ __aicore__ inline void MatmulBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK
                     }
                     mm_.Iterate();
 
-#if (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
                     if constexpr (IsSameType<C_T, float>::value) {
                         LocalTensor<half> cLocalHalf_ = cLocalHalfQue.AllocTensor<half>();
                         mm_.GetTensorC(cLocalHalf_, enAtomic);

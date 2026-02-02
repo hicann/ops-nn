@@ -12,7 +12,7 @@
  * \brief
  */
 
-#if __CCE_AICORE__ == 310
+#if __CCE_AICORE__ == 310 && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)
 #include "./arch35/embedding_bag_regbase_1d_sum.h"
 #include "./arch35/embedding_bag_regbase_1d_mean.h"
 #include "./arch35/embedding_bag_regbase_1d_max.h"
@@ -52,7 +52,7 @@ extern "C" __global__ __aicore__ void embedding_bag(
     TPipe pipe;
     GET_TILING_DATA(tilingData, tiling);
 
-#if __CCE_AICORE__ == 310
+#if __CCE_AICORE__ == 310 && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)
     GM_ADDR gmParam[TENSOR_COUNT] = {weight, indices, offsets, per_sample_weights, y, offset2bag, bag_size, max_indices};
     if (TILING_KEY_IS(TILING_KEY_INDICES_1D_SAME)) {
         if (tilingData.mode == MODE_SUM) {
@@ -137,7 +137,7 @@ extern "C" __global__ __aicore__ void embedding_bag(
         EmbeddingBagFP16<half, int> op(gmTensor, tilingData, pipe);
         op.Process();
     }
-#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     if (TILING_KEY_IS(3)) {
         EmbeddingBagFP16<bfloat16_t, int> op(gmTensor, tilingData, pipe);
         op.Process();

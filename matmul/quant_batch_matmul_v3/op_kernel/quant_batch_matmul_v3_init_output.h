@@ -19,7 +19,7 @@
 #include "kernel_operator.h"
 #include "kernel_operator_intf.h"
 
-#if (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 #define SYNC_AIC_FLAG 1
 #endif
 

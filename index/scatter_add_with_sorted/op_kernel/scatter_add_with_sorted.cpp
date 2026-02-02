@@ -55,7 +55,7 @@ extern "C" __global__ __aicore__ void scatter_add_with_sorted(
     } else if (TILING_KEY_IS(5)) {
         CALL_OP_IMPL_SCATTER(int8_t);
     } else if (TILING_KEY_IS(6)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         CALL_OP_IMPL_SCATTER(bfloat16_t);
 #endif
     } else if (TILING_KEY_IS(11)) {
@@ -69,7 +69,7 @@ extern "C" __global__ __aicore__ void scatter_add_with_sorted(
     } else if (TILING_KEY_IS(15)) {
         CALL_OP_IMPL_INT(int8_t);
     } else if (TILING_KEY_IS(16)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         CALL_OP_IMPL_FLOAT(bfloat16_t);
 #endif
     }

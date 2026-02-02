@@ -32,7 +32,7 @@
 
 namespace PpMatMulNS {
 
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 template <uint32_t SwizzleDirect, bool TA, bool TB, typename InDtype = half, typename OutDtype = half, DataFormat FormatB = DataFormat::ND>
 class PpMatmulEinSum {
     using LocalTensor = AscendC::LocalTensor<InDtype>;

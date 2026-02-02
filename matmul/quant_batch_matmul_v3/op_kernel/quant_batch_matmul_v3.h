@@ -22,14 +22,14 @@
 namespace AscendC {
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
 constexpr MatmulConfig BMM_DEQUANT_MDL_CFG = GetMDLConfig(false, false, 0, true);
-#elif (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#elif (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 constexpr MatmulConfig BMM_DEQUANT_MDL_CFG =
     GetMDLConfig(false, false, 0, false, false, false, true, true, true, false, false, true);
 #else
 constexpr MatmulConfig BMM_DEQUANT_MDL_CFG = GetMDLConfig(false, false, 0, false, false, false, true);
 #endif
 
-#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 constexpr MatmulConfig BMM_DEQUANT_PRELOAD_CFG =
     GetMDLConfig(false, false, 2, false, false, false, false, true, true, false, false, true);
 #else

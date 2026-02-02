@@ -69,7 +69,7 @@ constexpr MatmulConfig MM_CFG_MULTI_BATCH = GetMMConfig<configMode>(batchParams)
 constexpr MatmulBatchParams batchParamsNoBatchOut{false, BatchMode::BATCH_LESS_THAN_L1, false, BatchOutMode::SINGLE_BATCH};
 constexpr MatmulConfig MM_CFG_MULTI_BATCH_NO_BATCH_OUT = GetMMConfig<configMode>(batchParamsNoBatchOut);
 
-#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 constexpr MatmulConfig MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG =
     GetMDLConfig(false, false, 0, false, false, false, true, true, false, false, false, true);
 constexpr MatmulConfig MM_DEFAULT_MDL_CFG =
@@ -124,7 +124,7 @@ enum class FusedOpType : uint32_t {
     GELU_ERF = 4UL
 };
 
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 template<typename yType, typename scaleType>
 struct EpilogueParams {
     AscendC::GlobalTensor<int32_t> &curMmOutGm;
@@ -295,7 +295,7 @@ __aicore__ inline constexpr uint32_t GetC0Size()
 #endif
     } else if constexpr (AscendC::IsSameType<T, AscendC::int4b_t>::value) {
         return K0_INT4;
-#if (defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
     } else if constexpr (AscendC::IsSameType<T, fp4x2_e2m1_t>::value ||
                          AscendC::IsSameType<T, fp4x2_e1m2_t>::value) {
         return K0_INT4;
@@ -322,7 +322,7 @@ __aicore__ inline constexpr uint64_t GetSizeWithDataType(uint64_t shapeSize)
 #endif
         is8BitInput = (AscendC::IsSameType<T, AscendC::int4b_t>::value);
     } else {
-#if (defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
         is4BitInput = (AscendC::IsSameType<T, AscendC::int4b_t>::value || AscendC::IsSameType<T, fp4x2_e2m1_t>::value ||
                        AscendC::IsSameType<T, fp4x2_e1m2_t>::value);
 #else
@@ -359,7 +359,7 @@ __aicore__ inline uint64_t CalcAL1Size(uint64_t mL1, uint64_t kL1)
  */
 __aicore__ inline constexpr uint32_t GetTaskRation()
 {
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
+#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113))
     return 2U; // aiv corenum is 2 in C310 platform
 #else
     return 1U;
@@ -367,7 +367,7 @@ __aicore__ inline constexpr uint32_t GetTaskRation()
 }
 
 
-#if (defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
 template <typename T>
 __aicore__ inline constexpr bool IsMxType()
 {
@@ -381,7 +381,7 @@ __aicore__ inline constexpr bool IsFp4()
 }
 #endif
 
-#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 __aicore__ inline void CalcDequantParams(uint32_t curAivM, uint32_t curAivN, AscendC::DequantParams &dequantParams,
                                          bool needUpdate = true)
 {

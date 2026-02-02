@@ -47,12 +47,13 @@ extern "C" __global__ __aicore__ void max_pool3d_with_argmax_v2(
     // 111110 = 1, splitD=1 splitH=1 splitW=1 splitKernel=1 type=float(0)
     // 111111 = 1, splitD=1 splitH=1 splitW=1 splitKernel=1 type=half(1)
     // 111112 = 1, splitD=1 splitH=1 splitW=1 splitKernel=1 type=bfloat(2)
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
+#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113))
     using mask_type = uint8_t;
 #else
     using mask_type = uint16_t;
 #endif
     TPipe pipe;
+
     if (TILING_KEY_IS(100000)) {
         GET_TILING_DATA_WITH_STRUCT(MaxPool3DWithArgmaxV2NoSplitTilingData, tilingDataIn, tiling);
         const MaxPool3DWithArgmaxV2NoSplitTilingData* __restrict tilingData = &tilingDataIn;
@@ -66,7 +67,7 @@ extern "C" __global__ __aicore__ void max_pool3d_with_argmax_v2(
         op.Init(x, y, indices, nullptr, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(100002)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         GET_TILING_DATA_WITH_STRUCT(MaxPool3DWithArgmaxV2NoSplitTilingData, tilingDataIn, tiling);
         const MaxPool3DWithArgmaxV2NoSplitTilingData* __restrict tilingData = &tilingDataIn;
         KernelMaxPool3DWithArgmaxV2NoSplit<float, bfloat16_t> op(tilingData);
@@ -86,7 +87,7 @@ extern "C" __global__ __aicore__ void max_pool3d_with_argmax_v2(
         op.Init(x, y, indices, nullptr, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(110002)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         GET_TILING_DATA_WITH_STRUCT(MaxPool3DWithArgmaxV2SplitDTilingData, tilingDataIn, tiling);
         const MaxPool3DWithArgmaxV2SplitDTilingData* __restrict tilingData = &tilingDataIn;
         KernelMaxPool3DWithArgmaxV2SplitD<float, bfloat16_t> op(tilingData);
@@ -106,7 +107,7 @@ extern "C" __global__ __aicore__ void max_pool3d_with_argmax_v2(
         op.Init(x, y, indices, nullptr, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(111002)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         GET_TILING_DATA_WITH_STRUCT(MaxPool3DWithArgmaxV2SplitHTilingData, tilingDataIn, tiling);
         const MaxPool3DWithArgmaxV2SplitHTilingData* __restrict tilingData = &tilingDataIn;
         KernelMaxPool3DWithArgmaxV2SplitH<float, bfloat16_t> op(tilingData);
@@ -126,7 +127,7 @@ extern "C" __global__ __aicore__ void max_pool3d_with_argmax_v2(
         op.Init(x, y, indices, nullptr, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(111102)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         GET_TILING_DATA_WITH_STRUCT(MaxPool3DWithArgmaxV2SplitWTilingData, tilingDataIn, tiling);
         const MaxPool3DWithArgmaxV2SplitWTilingData* __restrict tilingData = &tilingDataIn;
         KernelMaxPool3DWithArgmaxV2SplitW<float, bfloat16_t> op(tilingData);
@@ -146,7 +147,7 @@ extern "C" __global__ __aicore__ void max_pool3d_with_argmax_v2(
         op.Init(x, y, indices, GetUserWorkspace(workspace), &pipe);
         op.Process();
     } else if (TILING_KEY_IS(111112)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         GET_TILING_DATA_WITH_STRUCT(MaxPool3DWithArgmaxV2HugeKernelTilingData, tilingDataIn, tiling);
         const MaxPool3DWithArgmaxV2HugeKernelTilingData* __restrict tilingData = &tilingDataIn;
         KernelMaxPool3DWithArgmaxV2HugeKernel<float, bfloat16_t> op(tilingData);
@@ -166,7 +167,7 @@ extern "C" __global__ __aicore__ void max_pool3d_with_argmax_v2(
     } else if (TILING_KEY_IS(300002UL)) {
         GET_TILING_DATA_WITH_STRUCT(MaxPool3DWithArgmaxV2NoExpandIndicesTilingData, tilingDataIn, tiling);
         const MaxPool3DWithArgmaxV2NoExpandIndicesTilingData* __restrict tilingData = &tilingDataIn;
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003) && ORIG_DTYPE_X == DT_BF16
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113)) && ORIG_DTYPE_X == DT_BF16
         MaxPool3DWithArgmaxV2NoExpandIndices<DTYPE_X, float, PAD_ENABLE> op;
 #else
         MaxPool3DWithArgmaxV2NoExpandIndices<DTYPE_X, DTYPE_X, PAD_ENABLE> op;
@@ -186,7 +187,7 @@ extern "C" __global__ __aicore__ void max_pool3d_with_argmax_v2(
         op.Init(x, y, indices, GetUserWorkspace(workspace), &pipe, tilingData, 1);
         op.Process();
     } else if (TILING_KEY_IS(311112)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         GET_TILING_DATA_WITH_STRUCT(MaxPool3DWithArgmaxV2BigKernelTilingData, tilingDataIn, tiling);
         const MaxPool3DWithArgmaxV2BigKernelTilingData* __restrict tilingData = &tilingDataIn;
         MaxPool3DWithArgmaxBigKernel<bfloat16_t, float, false, mask_type> op;
