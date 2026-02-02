@@ -30,10 +30,10 @@ constexpr size_t IDX_STRIDES = 2;
 constexpr size_t IDX_INDICES_START = 3;
 constexpr size_t IDX_Y = 0;
 } // namespace
-
+ 
 namespace ops {
 
-graphStatus CanBroadcast(const string name, const vector<vector<int64_t>>& shapes)
+static graphStatus CanBroadcast(const string& name, const vector<vector<int64_t>>& shapes)
 {
     size_t max_dims = 0;
     for (const auto& shape : shapes) {
@@ -63,7 +63,7 @@ graphStatus CanBroadcast(const string name, const vector<vector<int64_t>>& shape
     return GRAPH_SUCCESS;
 }
 
-vector<int64_t> ComputeBroadcastShape(const vector<vector<int64_t>>& shapes)
+static vector<int64_t> ComputeBroadcastShape(const vector<vector<int64_t>>& shapes)
 {
     vector<int64_t> broadcast_shape;
     size_t max_dims = 0;
@@ -90,7 +90,7 @@ vector<int64_t> ComputeBroadcastShape(const vector<vector<int64_t>>& shapes)
 }
 
 // 将单个形状广播到目标形状
-vector<int64_t> BroadcastSingleShape(const vector<int64_t>& original_shape, const vector<int64_t>& broadcast_shape)
+static vector<int64_t> BroadcastSingleShape(const vector<int64_t>& original_shape, const vector<int64_t>& broadcast_shape)
 {
     size_t prepend = broadcast_shape.size() - original_shape.size();
 
@@ -105,7 +105,7 @@ vector<int64_t> BroadcastSingleShape(const vector<int64_t>& original_shape, cons
     return result;
 }
 
-vector<vector<int64_t>> BroadcastAllShapes(const vector<vector<int64_t>>& shapes)
+static vector<vector<int64_t>> BroadcastAllShapes(const vector<vector<int64_t>>& shapes)
 {
     if (shapes.empty()) {
         return {};
@@ -118,7 +118,7 @@ vector<vector<int64_t>> BroadcastAllShapes(const vector<vector<int64_t>>& shapes
     return broadcasted_shapes;
 }
 
-bool AreIndicesContiguous(vector<int64_t> indexed_sizes)
+static bool AreIndicesContiguous(const vector<int64_t>& indexed_sizes)
 {
     if (indexed_sizes.size() == 0ULL) {
         return true;
@@ -148,8 +148,8 @@ bool AreIndicesContiguous(vector<int64_t> indexed_sizes)
 }
 
 // 计算输出形状
-vector<int64_t> ComputeOutputShape(
-    const vector<int64_t>& xShape, vector<int64_t> indexed_sizes, const vector<int64_t>& indicesShape)
+static vector<int64_t> ComputeOutputShape(
+    const vector<int64_t>& xShape, const vector<int64_t>& indexed_sizes, const vector<int64_t>& indicesShape)
 {
     size_t dimCount = indexed_sizes.size();
     vector<int64_t> outputShape;
@@ -181,7 +181,7 @@ vector<int64_t> ComputeOutputShape(
     return outputShape;
 }
 
-string VectorToString(const vector<int64_t>& vec)
+static string VectorToString(const vector<int64_t>& vec)
 {
     stringstream ss;
     for (size_t i = 0; i < vec.size(); ++i) {

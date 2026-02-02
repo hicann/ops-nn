@@ -395,7 +395,7 @@ ChooseInfo CalculateOutputShapeAndTransposeFlag(const aclTensor* self, IndicesIn
 }
 
 const aclTensor* CallKernel(const aclTensor* self, const aclTensor* out, const IndicesInfo& indicesInfo, const ChooseInfo& chooseInfo, aclOpExecutor* executor) {
-    const aclTensor* selfContiguous;
+    const aclTensor* selfContiguous = nullptr;
     if (!chooseInfo.isNonContiguous){
         selfContiguous = l0op::Contiguous(self, executor);
         CHECK_RET(selfContiguous != nullptr, nullptr);
