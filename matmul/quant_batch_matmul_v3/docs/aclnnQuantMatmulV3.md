@@ -221,6 +221,7 @@ aclnnStatus aclnnQuantMatmulV3(
     - scale数据类型支持UINT64、INT64、FLOAT32、BFLOAT16
     - scale支持INT32、BFLOAT16、FLOAT32
     - out支持FLOAT16、INT8、BFLOAT16、INT32
+    - x2为ND格式时，当输入x1为m=0的空tensor或x2为n=0的空tensor时，输出为空tensor；x2为FRACTAL_NZ格式时，当输入x1中m=0的空tensor时，输出为空tensor。
 
 - **返回值：**
 
@@ -254,7 +255,7 @@ aclnnStatus aclnnQuantMatmulV3(
         <td>x1、x2、bias、scale、offset或out的shape不满足校验条件</td>
       </tr>
       <tr>
-        <td>x1、x2、bias、x2Scale、x2Offset或out是空tensor。特殊情况：<term>昇腾910_95 AI处理器</term>：若x2为ND格式，对于m或n=0的空tensor，返回空tensor作为输出，不会报错；若x2为FRACTAL_NZ格式，对于m=0的空tensor，返回空tensor作为输出，不会报错。</td>
+        <td>x1、x2、bias、x2Scale、x2Offset或out是空tensor。</td>
       </tr>
     </tbody>
     </table>

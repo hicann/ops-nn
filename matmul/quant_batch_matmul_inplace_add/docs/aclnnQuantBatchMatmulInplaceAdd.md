@@ -7,8 +7,8 @@
 | 产品                                                                            | 是否支持 |
 | :------------------------------------------------------------------------------ | :------: |
 | <term>Ascend 950PR/Ascend 950DT</term>                                          |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    x    |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    x    |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×    |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×    |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×    |
 | <term>Atlas 推理系列产品 </term>                             |    ×    |
 | <term>Atlas 训练系列产品</term>                              |    ×    |
@@ -25,7 +25,7 @@
   y[m,n] = \sum_{j=0}^{kLoops-1} ((\sum_{k=0}^{gsK-1} (x1Slice * x2Slice)) * (scale1[m, j] * scale2[j, n])) + y[m,n]
   $$
 
-  其中，gsK 代表 K 轴的量化的 block size 即 32，$x1Slice$代表$x1$第 m 行长度为 gsK 的向量，$x2Slice$代表$x2$第 n 列长度为 gsK 的向量，K 轴均从$j*gsK$起始切片，j 的取值范围[0, kLoops), kLoops=ceil($K_i$ / gsK)，支持最后的切片长度不足 gsK。
+  其中，$gsK$ 代表 K 轴的量化的 block size 即 32，$x1Slice$代表$x1$第 m 行长度为 $gsK$ 的向量，$x2Slice$代表$x2$第 n 列长度为 $gsK$ 的向量，K 轴均从$j*gsK$起始切片，j 的取值范围[0, kLoops), kLoops=ceil($K_i$ / $gsK$)，支持最后的切片长度不足 $gsK$。
 
 ## 函数原型
 
@@ -86,7 +86,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <td>-</td>
       <td>FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
-      <td>(K，M)</td>
+      <td>(k，m)</td>
       <td>√</td>
     </tr>
     <tr>
@@ -96,7 +96,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <td>-</td>
       <td>FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
-      <td>(K，N)</td>
+      <td>(k，n)</td>
       <td>√</td>
     </tr>
     <tr>
@@ -110,7 +110,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       </td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
-      <td>(ceil(K / 64), M, 2)</td>
+      <td>(ceil(k / 64), m, 2)</td>
       <td>√</td>
     </tr>
     <tr>
@@ -124,14 +124,18 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       </td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
-      <td>(ceil(K / 64), N, 2)</td>
+      <td>(ceil(k / 64), n, 2)</td>
       <td>√</td>
     </tr>
     <tr>
       <td>yRef</td>
       <td>输入输出</td>
       <td>Device侧的aclTensor，对应公式中的输入输出y。</td>
-      <td>-</td>
+      <td>
+        <ul>
+          <li>当输入x1为m=0的空tensor或x2为n=0的空tensor时，输出为空tensor。</li>
+        </ul>
+      </td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>(M，N)</td>
@@ -218,9 +222,18 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <td>如果传入参数是必选输入、输出或者必选属性，且是空指针。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
       <td>x1、x2、x1Scale、x2Scale、yRef、groupSize的数据类型和数据格式不在支持的范围内。</td>
+    </tr>
+    <tr>
+      <td>x1、x2、x1Scale、x2Scale、yRef的shape不满足校验条件。</td>
+    </tr>
+    <tr>
+      <td>x1、x2、x2Scale、yRef是空tensor。</td>
+    </tr>
+    <tr>
+      <td>传入的groupSize不满足校验条件，或传入的groupSize为0时，x1、x2与x1Scale，x2Scale的shape关系无法推断groupSize。</td>
     </tr>
   </tbody></table>
 
