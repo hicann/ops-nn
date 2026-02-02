@@ -24,6 +24,7 @@
 
 using namespace std;
 using namespace ge;
+using namespace gert;
 
 namespace {
 bool IsDisplayTilingdata(const string& case_name, size_t index, uint64_t tilingKey)
@@ -2744,4 +2745,90 @@ TEST_F(MatMulV3TilingRuntime, splitK_shift_nkm_targetShape) {
   cout<<"===== splitK_shift_nkm_targetShape:"<<tiling_key<<" === \n"<<tiling_data_result<<std::endl;
   ASSERT_EQ(tiling_key, 65616);
 }
+
+TEST_F(MatMulV3TilingRuntime, 910d_slice_non_contiguous_case) {
+  gert::StorageShape x1_shape = {{5, 2, 7}, {70}};
+  gert::StorageShape x2_shape = {{7, 4}, {7, 4}};
+
+  gert::TensorV2 x1Tensor(
+      x1_shape, {ge::FORMAT_ND, ge::FORMAT_ND, ExpandDimsType()}, TensorPlacement::kOnHost, ge::DT_FLOAT16, nullptr,
+      nullptr);
+  gert::TensorV2 x2Tensor(
+      x2_shape, {ge::FORMAT_ND, ge::FORMAT_ND, ExpandDimsType()}, TensorPlacement::kOnHost, ge::DT_FLOAT16, nullptr,
+      nullptr);
+
+  std::vector<gert::StorageShape> output_shapes(1, {{10, 4}, {10, 4}});
+  std::vector<void *> output_shapes_ref(1);
+  for (size_t i = 0; i < output_shapes.size(); ++i) {
+    output_shapes_ref[i] = &output_shapes[i];
+  }
+
+  fe::PlatFormInfos platform_info;
+
+  platform_info.Init();
+  string compile_info_string = R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false,"offset_x":0,"opImplMode":0},
+      "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":33554432},"binary_mode_flag":true,
+      "block_dim":{"CORE_NUM":24},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
+      "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 196608, "L2_SIZE": 201326592, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 24, "socVersion": "Ascend950" },
+      "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})";
+  optiling::MatmulV3CompileInfo compile_info;
+  auto kernel_holder = gert::KernelRunContextFaker()
+                    .KernelIONum(2, 1)
+                    .Inputs({const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info)})
+                    .Outputs({&compile_info})
+                    .Build();
+
+  map<string, string> soc_infos;
+  map<string, string> aicore_spec;
+  map<string, string> intrinsics;
+  map<string, string> soc_version;
+  GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+  aicore_spec["cube_freq"] = "1800";
+
+  ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3"), nullptr);
+  auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->tiling;
+  auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->tiling_parse;
+  auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->gen_simplifiedkey;
+  ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+  kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+  kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+  kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+  kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+  kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                          intrinsics);
+  ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+  auto tiling_data = gert::TilingData::CreateCap(2048);
+  auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+  auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+  std::vector<gert::TensorV2*> inputTensors = {&x1Tensor, &x2Tensor};
+
+  gert::KernelRunContextHolder holder;
+  holder = gert::TilingContextFaker()
+                    .SetOpType("MatMulV3")
+                    .IrInstanceNum({1, 1}, {1})
+                    .InputTensors(inputTensors)
+                    .OutputShapes(output_shapes_ref)
+                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                {"opImplMode", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                    .NodeOutputTd(0, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                    .CompileInfo(&compile_info)
+                    .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                    .TilingData(tiling_data.get())
+                    .Workspace(ws_size)
+                    .Build();
+
+  auto tiling_context = holder.GetContext<gert::TilingContext>();
+  ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+  ge::char_t simplifiedKey[100] = {0};
+  ASSERT_EQ(gen_simplifiedkey_func(tiling_context, simplifiedKey), ge::GRAPH_SUCCESS);
+  uint64_t tiling_key = tiling_context->GetTilingKey();
+  string case_name = "910d_slice_non_contiguous_case";
+  auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData(), case_name, tiling_key);
+  cout<<"===== 910d_slice_non_contiguous_case:"<<tiling_key<<" === \n"<<tiling_data_result<<std::endl;
+  ASSERT_EQ(tiling_key, 1);
+}
+
 } // namespace
