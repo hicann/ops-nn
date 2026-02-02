@@ -136,6 +136,7 @@ TEST_F(SwiGluGradTiling, swi_glu_grad_tiling_002) {
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> socversions = {{"Short_SoC_version", "Ascend310P"}}; //SocV
+    map<string, string> npuarchs = {{"NpuArch", "2002"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -163,6 +164,7 @@ TEST_F(SwiGluGradTiling, swi_glu_grad_tiling_002) {
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", socversions); // label:"version" res:socversions
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -193,9 +195,10 @@ TEST_F(SwiGluGradTiling, swi_glu_grad_tiling_002) {
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     tiling_context->GetPlatformInfo()->SetPlatformRes("version", socversions); // label:"version" res:socversions
+    tiling_context->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
     // workspaces nullptr return failed
 
-    // EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
     // dlog_setlevel(OP,0,0);
 }
 
@@ -217,6 +220,7 @@ TEST_F(SwiGluGradTiling, swi_glu_grad_tiling_003) {
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> socversions = {{"Short_SoC_version", "ASCEND950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, socversions);
 
     // platform info
@@ -244,6 +248,7 @@ TEST_F(SwiGluGradTiling, swi_glu_grad_tiling_003) {
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", socversions); // label:"version" res:socversions
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -274,11 +279,12 @@ TEST_F(SwiGluGradTiling, swi_glu_grad_tiling_003) {
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     tiling_context->GetPlatformInfo()->SetPlatformRes("version", socversions); // label:"version" res:socversions
+    tiling_context->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
     // workspaces nullptr return failed
 
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    // ASSERT_EQ(tiling_key, 1000011);
+    ASSERT_EQ(tiling_key, 1000011);
     // dlog_setlevel(OP,0,0);
 }

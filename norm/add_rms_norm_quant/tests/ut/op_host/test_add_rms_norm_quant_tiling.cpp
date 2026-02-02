@@ -370,6 +370,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut)
     gert::StorageShape out_shape_x = {{2, 1, 256}, {2, 1, 256}};
 
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -410,6 +411,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut)
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -453,6 +455,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // Gen simplified key check
     ge::char_t simplifiedKey[100];
@@ -462,7 +465,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 1170);
+    ASSERT_EQ(tiling_key, 1170);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -482,6 +485,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m)
     gert::StorageShape out_shape_x = {{12, 2048, 6656}, {12, 2048, 6656}};
 
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -522,6 +526,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m)
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -565,6 +570,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // Gen simplified key check
     ge::char_t simplifiedKey[100];
@@ -574,7 +580,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 1170);
+    ASSERT_EQ(tiling_key, 1170);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -594,6 +600,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n)
     gert::StorageShape out_shape_x = {{2, 1, 20480}, {2, 1, 20480}};
 
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -634,6 +641,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n)
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -677,6 +685,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // Gen simplified key check
     ge::char_t simplifiedKey[100];
@@ -686,7 +695,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 1171);
+    ASSERT_EQ(tiling_key, 1171);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -717,6 +726,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed)
     gert::StorageShape out_shape_x = {{2, 1, 20480}, {2, 1, 20480}};
 
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -757,6 +767,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed)
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -800,13 +811,14 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // Gen simplified key check
     ge::char_t simplifiedKey[100];
     ASSERT_EQ(gen_simplifiedkey_func(tiling_context, simplifiedKey), ge::GRAPH_SUCCESS);
 
     // workspaces nullptr return failed
-//    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -826,6 +838,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut_hifloat8)
     gert::StorageShape out_shape_x = {{2, 1, 256}, {2, 1, 256}};
 
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -866,6 +879,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut_hifloat8)
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -910,6 +924,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut_hifloat8)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // Gen simplified key check
     ge::char_t simplifiedKey[100];
@@ -919,7 +934,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut_hifloat8)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 1170);
+    ASSERT_EQ(tiling_key, 1170);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -939,6 +954,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_hifloat8)
     gert::StorageShape out_shape_x = {{12, 2048, 6656}, {12, 2048, 6656}};
 
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -979,6 +995,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_hifloat8)
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1023,6 +1040,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_hifloat8)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // Gen simplified key check
     ge::char_t simplifiedKey[100];
@@ -1032,7 +1050,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_hifloat8)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 1170);
+    ASSERT_EQ(tiling_key, 1170);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -1052,6 +1070,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_hifloat8)
     gert::StorageShape out_shape_x = {{2, 1, 20480}, {2, 1, 20480}};
 
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -1092,6 +1111,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_hifloat8)
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1136,6 +1156,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_hifloat8)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // Gen simplified key check
     ge::char_t simplifiedKey[100];
@@ -1145,7 +1166,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_hifloat8)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 1171);
+    ASSERT_EQ(tiling_key, 1171);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -1176,6 +1197,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_hif
     gert::StorageShape out_shape_x = {{2, 1, 20480}, {2, 1, 20480}};
 
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -1216,6 +1238,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_hif
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1260,13 +1283,14 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_hif
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // Gen simplified key check
     ge::char_t simplifiedKey[100];
     ASSERT_EQ(gen_simplifiedkey_func(tiling_context, simplifiedKey), ge::GRAPH_SUCCESS);
 
     // workspaces nullptr return failed
-//    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -1286,6 +1310,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut_float8_e5m
     gert::StorageShape out_shape_x = {{2, 1, 256}, {2, 1, 256}};
 
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -1326,6 +1351,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut_float8_e5m
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1370,6 +1396,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut_float8_e5m
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // Gen simplified key check
     ge::char_t simplifiedKey[100];
@@ -1379,7 +1406,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut_float8_e5m
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 1170);
+    ASSERT_EQ(tiling_key, 1170);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -1399,6 +1426,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_float8_e5m2
     gert::StorageShape out_shape_x = {{12, 2048, 6656}, {12, 2048, 6656}};
 
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -1439,6 +1467,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_float8_e5m2
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1483,6 +1512,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_float8_e5m2
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // Gen simplified key check
     ge::char_t simplifiedKey[100];
@@ -1492,7 +1522,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_float8_e5m2
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 1170);
+    ASSERT_EQ(tiling_key, 1170);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -1512,6 +1542,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_float8_e5m2
     gert::StorageShape out_shape_x = {{2, 1, 20480}, {2, 1, 20480}};
 
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -1552,6 +1583,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_float8_e5m2
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1596,6 +1628,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_float8_e5m2
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // Gen simplified key check
     ge::char_t simplifiedKey[100];
@@ -1605,7 +1638,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_float8_e5m2
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 1171);
+    ASSERT_EQ(tiling_key, 1171);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -1636,6 +1669,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_flo
     gert::StorageShape out_shape_x = {{2, 1, 20480}, {2, 1, 20480}};
 
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -1676,6 +1710,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_flo
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1720,13 +1755,14 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_flo
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // Gen simplified key check
     ge::char_t simplifiedKey[100];
     ASSERT_EQ(gen_simplifiedkey_func(tiling_context, simplifiedKey), ge::GRAPH_SUCCESS);
 
     // workspaces nullptr return failed
-//    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -1746,6 +1782,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut_float8_e4m
     gert::StorageShape out_shape_x = {{2, 1, 256}, {2, 1, 256}};
 
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -1830,6 +1867,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut_float8_e4m
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // Gen simplified key check
     ge::char_t simplifiedKey[100];
@@ -1839,7 +1877,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut_float8_e4m
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 1170);
+    ASSERT_EQ(tiling_key, 1170);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -1859,6 +1897,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_float8_e4m3
     gert::StorageShape out_shape_x = {{12, 2048, 6656}, {12, 2048, 6656}};
 
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -1899,6 +1938,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_float8_e4m3
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1943,6 +1983,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_float8_e4m3
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // Gen simplified key check
     ge::char_t simplifiedKey[100];
@@ -1952,7 +1993,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_float8_e4m3
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 1170);
+    ASSERT_EQ(tiling_key, 1170);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -1972,6 +2013,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_float8_e4m3
     gert::StorageShape out_shape_x = {{2, 1, 20480}, {2, 1, 20480}};
 
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -2012,6 +2054,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_float8_e4m3
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -2056,6 +2099,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_float8_e4m3
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // Gen simplified key check
     ge::char_t simplifiedKey[100];
@@ -2065,7 +2109,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_float8_e4m3
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 1171);
+    ASSERT_EQ(tiling_key, 1171);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -2096,6 +2140,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_flo
     gert::StorageShape out_shape_x = {{2, 1, 20480}, {2, 1, 20480}};
 
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -2136,6 +2181,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_flo
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -2180,12 +2226,13 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_flo
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // Gen simplified key check
     ge::char_t simplifiedKey[100];
     ASSERT_EQ(gen_simplifiedkey_func(tiling_context, simplifiedKey), ge::GRAPH_SUCCESS);
 
     // workspaces nullptr return failed
-//    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
     //dlog_setlevel(0, 3, 0);
 }

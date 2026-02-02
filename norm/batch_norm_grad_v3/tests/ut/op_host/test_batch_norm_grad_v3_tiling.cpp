@@ -93,6 +93,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_fp32)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
 
     // platform info
@@ -121,6 +122,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_fp32)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -162,18 +164,19 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_fp32)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 10000000);
-  //  auto tilingData = tiling_context->GetRawTilingData();
-   // ASSERT_NE(tilingData, nullptr);
- //   EXPECT_EQ(
-   //     to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-     //   "4 0 2048 0 225 0 904 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 16 0 2 0 16 0 3 0 1 0 ");
-  //  dlog_setlevel(0, 3, 0);
+    ASSERT_EQ(tiling_key, 10000000);
+    auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_NE(tilingData, nullptr);
+    EXPECT_EQ(
+        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+        "4 0 2048 0 225 0 904 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 16 0 2 0 16 0 3 0 1 0 ");
+    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_fp16)
@@ -206,6 +209,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_fp16)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
 
     // platform info
@@ -234,6 +238,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_fp16)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -275,18 +280,19 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_fp16)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 10000000);
-  //  auto tilingData = tiling_context->GetRawTilingData();
-   // ASSERT_NE(tilingData, nullptr);
-  //  EXPECT_EQ(
-    //    to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-      //  "4 0 2048 0 225 0 912 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 22 0 2 0 10 0 2 0 11 0 ");
-//    dlog_setlevel(0, 3, 0);
+    ASSERT_EQ(tiling_key, 10000000);
+    auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_NE(tilingData, nullptr);
+    EXPECT_EQ(
+        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+        "4 0 2048 0 225 0 912 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 22 0 2 0 10 0 2 0 11 0 ");
+    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_bf16)
@@ -319,6 +325,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_bf16)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
 
     // platform info
@@ -347,6 +354,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_bf16)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -388,18 +396,19 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_bf16)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 10000000);
-  //  auto tilingData = tiling_context->GetRawTilingData();
-   // ASSERT_NE(tilingData, nullptr);
- //   EXPECT_EQ(
-   //     to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-     //   "4 0 2048 0 225 0 912 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 22 0 2 0 10 0 2 0 11 0 ");
-   // dlog_setlevel(0, 3, 0);
+    ASSERT_EQ(tiling_key, 10000000);
+    auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_NE(tilingData, nullptr);
+    EXPECT_EQ(
+        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+        "4 0 2048 0 225 0 912 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 22 0 2 0 10 0 2 0 11 0 ");
+    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_fp32)
@@ -432,6 +441,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_fp32)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
 
     // platform info
@@ -460,6 +470,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_fp32)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -501,19 +512,20 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_fp32)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 31000000);
-  //  auto tilingData = tiling_context->GetRawTilingData();
-   // ASSERT_NE(tilingData, nullptr);
-  //  EXPECT_EQ(
-    //    to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-      //  "4 0 2048 0 5000 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 10000 0 10000 0 2 0 0 0 5000 0 5000 "
-       // "0 0 0 0 0 5000 0 5000 0 2 0 ");
-//    dlog_setlevel(0, 3, 0);
+    ASSERT_EQ(tiling_key, 31000000);
+    auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_NE(tilingData, nullptr);
+    EXPECT_EQ(
+        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+        "4 0 2048 0 5000 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 10000 0 10000 0 2 0 0 0 5000 0 5000 "
+        "0 0 0 0 0 5000 0 5000 0 2 0 ");
+    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_fp16)
@@ -546,6 +558,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_fp16)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
 
     // platform info
@@ -574,6 +587,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_fp16)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -615,19 +629,20 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_fp16)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 31000000);
-  //  auto tilingData = tiling_context->GetRawTilingData();
-   // ASSERT_NE(tilingData, nullptr);
-  //  EXPECT_EQ(
-    //    to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-      //  "8 0 2048 0 5000 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 10000 0 10000 0 4 0 0 0 5000 0 5000 "
-       // "0 0 0 0 0 5000 0 5000 0 2 0 ");
-//    dlog_setlevel(0, 3, 0);
+    ASSERT_EQ(tiling_key, 31000000);
+    auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_NE(tilingData, nullptr);
+    EXPECT_EQ(
+        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+        "8 0 2048 0 5000 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 10000 0 10000 0 4 0 0 0 5000 0 5000 "
+        "0 0 0 0 0 5000 0 5000 0 2 0 ");
+    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_bf16)
@@ -660,6 +675,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_bf16)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
 
     // platform info
@@ -688,6 +704,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_bf16)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -729,19 +746,20 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_bf16)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 31000000);
-  //  auto tilingData = tiling_context->GetRawTilingData();
-  //  ASSERT_NE(tilingData, nullptr);
-  //  EXPECT_EQ(
-    //    to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-      //  "8 0 2048 0 5000 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 10000 0 10000 0 4 0 0 0 5000 0 5000 "
-       // "0 0 0 0 0 5000 0 5000 0 2 0 ");
-//    dlog_setlevel(0, 3, 0);
+    ASSERT_EQ(tiling_key, 31000000);
+    auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_NE(tilingData, nullptr);
+    EXPECT_EQ(
+        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+        "8 0 2048 0 5000 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 10000 0 10000 0 4 0 0 0 5000 0 5000 "
+        "0 0 0 0 0 5000 0 5000 0 2 0 ");
+    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_fp32)
@@ -774,6 +792,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_fp32)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
 
     // platform info
@@ -802,6 +821,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_fp32)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -843,19 +863,20 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_fp32)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 32000000);
-  //  auto tilingData = tiling_context->GetRawTilingData();
-    //ASSERT_NE(tilingData, nullptr);
-  //  EXPECT_EQ(
-    //    to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-      //  "4 0 2048 0 89280 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 14880 0 14880 0 4 0 29760 0 7440 0 "
-       // "7440 0 4 0 0 0 7440 0 7440 0 2 0 ");
-//    dlog_setlevel(0, 3, 0);
+    ASSERT_EQ(tiling_key, 32000000);
+    auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_NE(tilingData, nullptr);
+    EXPECT_EQ(
+        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+        "4 0 2048 0 89280 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 14880 0 14880 0 4 0 29760 0 7440 0 "
+        "7440 0 4 0 0 0 7440 0 7440 0 2 0 ");
+    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_fp16)
@@ -888,6 +909,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_fp16)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
 
     // platform info
@@ -916,6 +938,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_fp16)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -957,12 +980,12 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_fp16)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    /*
     ASSERT_EQ(tiling_key, 32000000);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
@@ -971,7 +994,6 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_fp16)
         "4 0 2048 0 89280 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 14880 0 14880 0 4 0 29760 0 7440 0 "
         "7440 0 4 0 0 0 7440 0 7440 0 2 0 ");
     dlog_setlevel(0, 3, 0);
-    */
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_bf16)
@@ -1004,6 +1026,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_bf16)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
 
     // platform info
@@ -1032,6 +1055,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_bf16)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1073,11 +1097,11 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_bf16)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
-    /*
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 32000000);
     auto tilingData = tiling_context->GetRawTilingData();
@@ -1087,7 +1111,6 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_bf16)
         "4 0 2048 0 89280 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 14880 0 14880 0 4 0 29760 0 7440 0 "
         "7440 0 4 0 0 0 7440 0 7440 0 2 0 ");
     dlog_setlevel(0, 3, 0);
-    */
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_split_core_r1_fp32)
@@ -1120,6 +1143,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_split_core_r1_fp32)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
 
     // platform info
@@ -1148,6 +1172,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_split_core_r1_fp32)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1189,9 +1214,9 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_split_core_r1_fp32)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // workspaces nullptr return failed
-    /*
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
@@ -1204,7 +1229,6 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_split_core_r1_fp32)
         "0 1 0 1 0 8 0 4 0 1 0 8 0 1 0 4 0 10224 0 23 0 72 0 72 0 1 0 7 0 1 0 1 0 1 0 1 0 8 0 4 0 1 0 128 0 5 0 8 0 7 "
         "0 16 0 3 0 4 0 ");
     dlog_setlevel(0, 3, 0);
-    */
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_split_core_r1_fp16)
@@ -1237,6 +1261,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_split_core_r1_fp16)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
 
     // platform info
@@ -1265,6 +1290,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_split_core_r1_fp16)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1306,9 +1332,9 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_split_core_r1_fp16)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // workspaces nullptr return failed
-    /*
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
@@ -1321,7 +1347,6 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_split_core_r1_fp16)
         "22 0 5 0 1 0 8 0 2 0 1 0 16 0 1 0 2 0 240 0 1 0 225 0 240 0 42 0 32 0 42 0 32 0 26 0 2 0 8 0 1 0 2 0 16 0 6 0 "
         "5 0 4 0 16 0 6 0 4 0 ");
     dlog_setlevel(0, 3, 0);
-    */
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_ra_split_r1_bf16)
@@ -1581,6 +1606,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_infer_bab)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
 
     // platform info
@@ -1609,6 +1635,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_infer_bab)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1650,9 +1677,9 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_infer_bab)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // workspaces nullptr return failed
-    /*
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
@@ -1663,7 +1690,6 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_infer_bab)
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "1 0 1 0 1 0 5 0 2 0 12 0 1 0 1 0 1 0 5 0 5 0 2 0 2 0 128 0 12 0 0 0 925353388 0 ");
     dlog_setlevel(0, 3, 0);
-    */
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_ra_full_load)
@@ -1696,6 +1722,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_ra_full_load)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
 
     // platform info
@@ -1724,6 +1751,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_ra_full_load)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1765,9 +1793,9 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_ra_full_load)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // workspaces nullptr return failed
-    /*
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
@@ -1778,7 +1806,6 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_ra_full_load)
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "4 0 1637 0 1 0 0 0 64 0 37 0 25 0 26 0 0 0 0 0 0 0 63 0 26 0 25 0 62 0 1 0 26 0 32 0 25 0 32 0 1 0 2 0 0 0 2 0 0 0 2 0 0 0 1 0 ");
     dlog_setlevel(0, 3, 0);
-    */
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_ra_recompute)

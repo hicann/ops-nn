@@ -427,7 +427,7 @@ TEST_F(LayerNormV4Tiling, layer_norm_v4_tiling_0005)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 222);
+    ASSERT_EQ(tiling_key, 222);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -457,6 +457,7 @@ TEST_F(LayerNormV4Tiling, layer_norm_v4_tiling_0006)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
 
     // platform info
@@ -485,6 +486,7 @@ TEST_F(LayerNormV4Tiling, layer_norm_v4_tiling_0006)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -519,12 +521,13 @@ TEST_F(LayerNormV4Tiling, layer_norm_v4_tiling_0006)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // workspaces nullptr return failed
-  //  EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 422);
+    ASSERT_EQ(tiling_key, 422);
     // dlog_setlevel(0, 3, 0);
 }
 

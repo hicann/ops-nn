@@ -269,6 +269,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_tiling_regbase_fullload_001
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
         "BT_SIZE": 0, "load3d_constraints": "1",
@@ -314,6 +315,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_tiling_regbase_fullload_001
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto param = gert::TilingData::CreateCap(4096);
@@ -363,12 +365,13 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_tiling_regbase_fullload_001
     tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     tiling_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    tiling_context->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 8012);
+    ASSERT_EQ(tiling_key, 8012);
     auto block_dim = tiling_context->GetBlockDim();
-  //  ASSERT_EQ(block_dim, 64);
+    ASSERT_EQ(block_dim, 64);
 
     //dlog_setlevel(0, 3, 0);
 }
@@ -385,6 +388,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_qaunt_tiling_regbase_welford_001)
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
         "BT_SIZE": 0, "load3d_constraints": "1",
@@ -429,6 +433,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_qaunt_tiling_regbase_welford_001)
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto param = gert::TilingData::CreateCap(4096);
@@ -475,12 +480,13 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_qaunt_tiling_regbase_welford_001)
     tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     tiling_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    tiling_context->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 8112);
+    ASSERT_EQ(tiling_key, 8112);
     auto block_dim = tiling_context->GetBlockDim();
-  //  ASSERT_EQ(block_dim, 64);
+    ASSERT_EQ(block_dim, 64);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -496,6 +502,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_tiling_regbase_dyn_fullload
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
         "BT_SIZE": 0, "load3d_constraints": "1",
@@ -541,6 +548,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_tiling_regbase_dyn_fullload
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto param = gert::TilingData::CreateCap(4096);
@@ -588,12 +596,13 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_tiling_regbase_dyn_fullload
     tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     tiling_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    tiling_context->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 8022);
+    ASSERT_EQ(tiling_key, 8022);
     auto block_dim = tiling_context->GetBlockDim();
-  //  ASSERT_EQ(block_dim, 64);
+    ASSERT_EQ(block_dim, 64);
 
     //dlog_setlevel(0, 3, 0);
 }
@@ -610,6 +619,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_qaunt_tiling_regbase_dyn_welford_
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
         "BT_SIZE": 0, "load3d_constraints": "1",
@@ -654,6 +664,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_qaunt_tiling_regbase_dyn_welford_
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto param = gert::TilingData::CreateCap(4096);
@@ -698,12 +709,13 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_qaunt_tiling_regbase_dyn_welford_
     tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     tiling_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    tiling_context->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
-//    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-  //  ASSERT_EQ(tiling_key, 8122);
+    ASSERT_EQ(tiling_key, 8122);
     auto block_dim = tiling_context->GetBlockDim();
-  //  ASSERT_EQ(block_dim, 64);
+    ASSERT_EQ(block_dim, 64);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -719,6 +731,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_empty_tiling_9)
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
         "BT_SIZE": 0, "load3d_constraints": "1",
@@ -764,6 +777,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_empty_tiling_9)
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto param = gert::TilingData::CreateCap(4096);
@@ -811,11 +825,12 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_empty_tiling_9)
     tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     tiling_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    tiling_context->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     std::cout << "tiling_key: " << tiling_key << endl;
-   // ASSERT_EQ(tiling_key, 9);
+    ASSERT_EQ(tiling_key, 9);
 }
 
 TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_empty_tiling_9_large_size_240000)
@@ -830,6 +845,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_empty_tiling_9_large_size_2
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
         "BT_SIZE": 0, "load3d_constraints": "1",
@@ -875,6 +891,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_empty_tiling_9_large_size_2
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto param = gert::TilingData::CreateCap(4096);
@@ -922,11 +939,12 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_empty_tiling_9_large_size_2
     tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     tiling_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    tiling_context->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     std::cout << "tiling_key: " << tiling_key << endl;
-//    ASSERT_EQ(tiling_key, 9);
+    ASSERT_EQ(tiling_key, 9);
 }
 
 TEST_F(AddLayerNormQuantTiling, add_layer_norm_qaunt_tiling_reShape_00)
@@ -942,6 +960,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_qaunt_tiling_reShape_00)
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
         "BT_SIZE": 0, "load3d_constraints": "1",
@@ -986,6 +1005,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_qaunt_tiling_reShape_00)
         "AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto param = gert::TilingData::CreateCap(4096);
@@ -1032,10 +1052,11 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_qaunt_tiling_reShape_00)
     tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     tiling_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    tiling_context->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-//    ASSERT_EQ(tiling_key, 8112);
+    ASSERT_EQ(tiling_key, 8112);
     auto block_dim = tiling_context->GetBlockDim();
-  //  ASSERT_EQ(block_dim, 64);
+    ASSERT_EQ(block_dim, 64);
 }

@@ -12,6 +12,8 @@
 #include "../../../op_host/op_api/aclnn_fast_batch_norm_backward.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/tensor_desc.h"
+#include "op_api/op_api_def.h"
+#include "opdev/platform.h"
 
 class l2FastBatchNormBackwardTest : public testing::Test
 {
@@ -749,6 +751,7 @@ TEST_F(l2FastBatchNormBackwardTest, l2_batch_norm_backward_empty_mask)
 
 TEST_F(l2FastBatchNormBackwardTest, arch3510_l2_batch_norm_backward_shape_error)
 {
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto gradOutDesc = TensorDesc({3, 5, 4, 6}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 10);
     auto selfDesc = TensorDesc({3, 5, 4, 6}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 10);
 
@@ -785,12 +788,12 @@ TEST_F(l2FastBatchNormBackwardTest, arch3510_l2_batch_norm_backward_shape_error)
         INPUT(gradOutDesc, selfDesc, weightDesc, rMeanDesc, rVarDesc, sMeanDesc, sVarDesc, false, 1e-5, output_mask, 0),
         OUTPUT(gradInDesc, outputErrDesc, gradBiasDesc));
 getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    // EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+        EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_INNER_NULLPTR);
 
     ut = OP_API_UT(
         aclnnFastBatchNormBackward,
         INPUT(gradOutDesc, selfDesc, weightDesc, rMeanDesc, rVarDesc, sMeanDesc, sVarDesc, false, 1e-5, output_mask, 0),
         OUTPUT(gradInDesc, gradWeightDesc, outputErrDesc));
     getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    // EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+        EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_INNER_NULLPTR);
 }

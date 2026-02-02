@@ -13,6 +13,7 @@
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "opdev/platform.h"
+#include "op_api/op_api_def.h"
 
 class l2BatchNormElemtBackwardTest : public testing::Test
 {
@@ -30,6 +31,7 @@ protected:
 
 TEST_F(l2BatchNormElemtBackwardTest, l2_batch_norm_elemt_backward_float32)
 {
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto gradOutDesc = TensorDesc({2, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto selfDesc = TensorDesc({2, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
 
@@ -48,7 +50,7 @@ TEST_F(l2BatchNormElemtBackwardTest, l2_batch_norm_elemt_backward_float32)
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    // EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_INNER_NULLPTR);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
 
 TEST_F(l2BatchNormElemtBackwardTest, ascend910B2_batch_norm_elemt_backward_bf16)
@@ -71,11 +73,11 @@ TEST_F(l2BatchNormElemtBackwardTest, ascend910B2_batch_norm_elemt_backward_bf16)
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    // if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910B) {
-    //     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_INNER_NULLPTR);
-    // } else {
+    if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910B) {
+        EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+    } else {
         // EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
-    // }
+    }
 }
 
 TEST_F(l2BatchNormElemtBackwardTest, l2_batch_norm_elemt_backward_2d)
@@ -195,6 +197,7 @@ TEST_F(l2BatchNormElemtBackwardTest, l2_batch_norm_elemt_backward_err_null_invst
 
 TEST_F(l2BatchNormElemtBackwardTest, l2_batch_norm_elemt_backward_err_null_weight)
 {
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto gradOutDesc = TensorDesc({2, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto selfDesc = TensorDesc({2, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
 
@@ -213,7 +216,7 @@ TEST_F(l2BatchNormElemtBackwardTest, l2_batch_norm_elemt_backward_err_null_weigh
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    // EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_INNER_NULLPTR);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
 
 TEST_F(l2BatchNormElemtBackwardTest, l2_batch_norm_elemt_backward_err_null_sumDy)
@@ -563,6 +566,7 @@ TEST_F(l2BatchNormElemtBackwardTest, l2_batch_norm_elemt_backward_input_empty)
 
 TEST_F(l2BatchNormElemtBackwardTest, l2_batch_norm_elemt_backward_empty)
 {
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto gradOutDesc = TensorDesc({2, 1, 1, 4}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto selfDesc = TensorDesc({2, 1, 1, 4}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
 
@@ -581,7 +585,7 @@ TEST_F(l2BatchNormElemtBackwardTest, l2_batch_norm_elemt_backward_empty)
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    // EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
 
 TEST_F(l2BatchNormElemtBackwardTest, l2_batch_norm_elemt_backward_err_shape_gradOut)

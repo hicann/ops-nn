@@ -122,6 +122,7 @@ TEST_F(SwiGluTiling, swi_glu_tiling_002) {
     // dlog_setlevel(OP,3,0);
 }
 
+//310p does not support BF16
 TEST_F(SwiGluTiling, swi_glu_tiling_003) {
     // dlog_setlevel(OP,0,0);
     gert::StorageShape input_shape = {{8192, 1, 7808}, {8192, 1, 7808}};
@@ -138,6 +139,7 @@ TEST_F(SwiGluTiling, swi_glu_tiling_003) {
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> socversions = {{"Short_SoC_version", "Ascend310P"}}; //SocV
+    map<string, string> npuarchs = {{"NpuArch", "2002"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -165,7 +167,7 @@ TEST_F(SwiGluTiling, swi_glu_tiling_003) {
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", socversions); // label:"version" res:socversions
-
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -197,13 +199,13 @@ TEST_F(SwiGluTiling, swi_glu_tiling_003) {
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     tiling_context->GetPlatformInfo()->SetPlatformRes("version", socversions); // label:"version" res:socversions
+    tiling_context->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // workspaces nullptr return failed
-    // EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
     // dlog_setlevel(OP,3,0);
 }
 
-/*
 TEST_F(SwiGluTiling, swi_glu_tiling_100)
 {
     std::string op_type("SwiGlu");
@@ -212,6 +214,7 @@ TEST_F(SwiGluTiling, swi_glu_tiling_100)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                             "Intrinsic_fix_pipe_l0c2out": false,
@@ -249,6 +252,7 @@ TEST_F(SwiGluTiling, swi_glu_tiling_100)
                                                                                             intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
                                                                                             soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -280,6 +284,7 @@ TEST_F(SwiGluTiling, swi_glu_tiling_100)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
@@ -288,4 +293,4 @@ TEST_F(SwiGluTiling, swi_glu_tiling_100)
     ASSERT_EQ(tiling_key, 100);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-}*/
+}
