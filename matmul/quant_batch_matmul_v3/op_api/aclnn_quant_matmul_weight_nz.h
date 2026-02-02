@@ -21,10 +21,10 @@ extern "C" {
  * @brief aclnnQuantMatmulWeightNz的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
  * 算子功能：相对于aclnnQuantBatchMatmulV4, 新增了支持x2为nz格式。
- * @param [in] x1: matmul左矩阵，数据类型支持：int8。
- * @param [in] x2: matmul右矩阵，数据类型支持：int8。
- * @param [in] x1Scale: 量化参数，数据类型支持：float32。
- * @param [in] x2Scale: 量化参数，数据类型支持：uint64, float32, bfloat16, int64。
+ * @param [in] x1: matmul左矩阵，数据类型支持：int8, float8_e4m3fn。
+ * @param [in] x2: matmul右矩阵，数据类型支持：int8, float8_e4m3fn。
+ * @param [in] x1Scale: 量化参数，数据类型支持：float32, float8_e8m0。
+ * @param [in] x2Scale: 量化参数，数据类型支持：uint64, float32, bfloat16, int64, float8_e8m0。
  * @param [in] yScale: 预留参数，当前接口不支持该参数。
  * @param [in] x1Offset: 预留参数，当前接口不支持该参数。
  * @param [in] x2Offset: 量化参数，数据类型支持：float32。
@@ -32,8 +32,8 @@ extern "C" {
  * @param [in] bias: 偏置，数据类型支持：int32, bfloat16, float16, float32。
  * @param [in] transposeX1: a矩阵是否转置，默认值：false。
  * @param [in] transposeX2: b矩阵是否转置，默认值：false。
- * @param [in] groupSize: 预留参数，当前接口不支持该参数。
- * @param [out] out: 计算结果，数据类型：float16, int8, bfloat16, int32。
+ * @param [in] groupSize: 量化参数，数据类型支持：int64。
+ * @param [out] out: 计算结果，数据类型：float16, int8, bfloat16, int32, float32。
  * @param [out] workspaceSize: 返回需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码
