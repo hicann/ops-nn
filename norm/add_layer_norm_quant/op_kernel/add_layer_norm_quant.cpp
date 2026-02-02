@@ -51,7 +51,7 @@ extern "C" __global__ __aicore__ void add_layer_norm_quant(
     } else if (TILING_KEY_IS(2122)) {
         KernelAddLayerNormDynamicQuantSingleRow<float, 2122> op(&pipe);
         INIT_AND_PROCESS;
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     } else if (TILING_KEY_IS(3120)) {
         KernelAddLayerNormDynamicQuantSingleRow<bfloat16_t, 3120> op(&pipe);
         INIT_AND_PROCESS;
@@ -113,7 +113,7 @@ extern "C" __global__ __aicore__ void add_layer_norm_quant(
             KernelAddLayerNormSoleStaticQuantSingleRow<float, 2022> op(&pipe);
             INIT_AND_PROCESS;
         }
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     } else if (TILING_KEY_IS(3020)) {
         if (tilingData.scaleOffsetMode >= 200) {
             KernelAddLayerNormDualStaticQuantSingleRow<bfloat16_t, 3020> op(&pipe);
@@ -160,7 +160,7 @@ extern "C" __global__ __aicore__ void add_layer_norm_quant(
     } else if (TILING_KEY_IS(2102)) {
         KernelAddLayerNormDynamicQuantNormal<float, 2102> op(&pipe);
         INIT_AND_PROCESS;
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     } else if (TILING_KEY_IS(3100)) {
         KernelAddLayerNormDynamicQuantNormal<bfloat16_t, 3100> op(&pipe);
         INIT_AND_PROCESS;
@@ -192,7 +192,7 @@ extern "C" __global__ __aicore__ void add_layer_norm_quant(
     } else if (TILING_KEY_IS(2002)) {
         KernelAddLayerNormStaticQuantNormal<float, float, 2002> op(&pipe);
         INIT_AND_PROCESS;
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     } else if (TILING_KEY_IS(3000)) {
         KernelAddLayerNormStaticQuantNormal<bfloat16_t, bfloat16_t, 3000> op(&pipe);
         INIT_AND_PROCESS;

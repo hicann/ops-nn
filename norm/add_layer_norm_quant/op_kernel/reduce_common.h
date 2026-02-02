@@ -41,7 +41,7 @@ __aicore__ inline void ReduceSumForSmallReduceDimPreRepeat(
     if ASCEND_IS_AIV {
         WholeReduceSum<float, false>(dstLocal, tmpLocal, elemNum, repeat, 1, 1, ELEM_PER_BLK_FP32);
     }
-#elif defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003
+#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113)
     WholeReduceSum(dstLocal, tmpLocal, elemNum, repeat, 1, 1, ELEM_PER_BLK_FP32);
 #else
     WholeReduceSum<float, false>(dstLocal, tmpLocal, elemNum, repeat, 1, 1, ELEM_PER_BLK_FP32);

@@ -150,6 +150,7 @@ public:
             .NeedCheckSupportFlag(false);
         this->AICore().AddConfig("ascend310p", config_310p);
         this->AICore().AddConfig("kirinx90", config_310p);
+        this->AICore().AddConfig("kirin9030", config_310p);
 
         OpAICoreConfig config_910d;
         config_910d.Input("x1")
