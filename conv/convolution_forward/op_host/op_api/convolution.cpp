@@ -69,6 +69,18 @@ const int64_t H_DIM_NCDHW_INDEX = 3;
 const int64_t W_DIM_NCDHW_INDEX = 4;
 const FVector<int64_t> INPUT_N2H_SHAPE_DIMS = {3, 2, 0, 4, 1};
 const FVector<int64_t> WEIGHT_TRANSPOSE_SHAPE_DIMS = {0, 2, 3, 4, 1};
+constexpr int64_t C_TRANSPOSE_N2H_RULE_MAX = 128;
+constexpr int64_t STRIDE_TRANSPOSE_N2H_RULE_MAX = 63;
+constexpr int64_t N_TRANSPOSE_N2H_RULE_MIN = 1500;
+constexpr int64_t N_TRANSPOSE_N2H_RULE_MAX = 4096;
+constexpr int64_t W_IN_TRANSPOSE_N2H_RULE_MAX = 64;
+constexpr int64_t W_K_TRANSPOSE_N2H_RULE_MAX = 10;
+constexpr int64_t N2H_W_IN_SIXTY = 60;
+constexpr int64_t N2H_W_IN_FORTY = 40;
+constexpr float MAX_CIN_MULTIPLIER = 1.5f;
+constexpr float MAX_WI_MULTIPLIER_FOR_LOW = 2.0f;
+constexpr float MIN_WI_MULTIPLIER_FOR_HIGH = 3.5f;
+
 
 struct Conv3DTransPoseV2Prarams {
   const aclTensor *input;
@@ -1015,49 +1027,48 @@ static aclnnStatus ConvTranspose2dWithFlag(const aclTensor *input, const aclTens
     return ACLNN_SUCCESS;
 }
 
-static bool CheckN2HAttrAvailable(aclIntArray *stride5, aclIntArray *dilation5, aclIntArray *pad5) {
+static bool CheckN2HTransposeAttrAvailable(aclIntArray *stride5, aclIntArray *dilation5, aclIntArray *pad5) {
     if (stride5->Size() == conv3dDimNum) {
         auto strideData = stride5->GetData();
         auto strideD = strideData[D_DIM_NCDHW_INDEX];
         auto strideH = strideData[H_DIM_NCDHW_INDEX];
         auto strideW = strideData[W_DIM_NCDHW_INDEX];
-        if (strideD != 1 || strideH != 1 || strideW < 1 || strideW > 63) {
-            OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "stride error, strideD:%d, strideH:%d, strideW:%d.", strideD, strideH, strideW);
+        if (strideD != 1 || strideH != 1 || strideW < 1 || strideW > STRIDE_TRANSPOSE_N2H_RULE_MAX) {
+            OP_LOGD("[N2H] strideD and strideH must be 1, and the valid range for strideW is [1, 63], but strideD=%lld, strideH=%lld, strideW=%lld.",
+                    strideD, strideH, strideW);
             return false;
         }
     }
     auto padData = pad5->GetData();
-    for (int64_t i = 0; i < pad5->Size(); i++) {
+    for (uint64_t i = 0; i < pad5->Size(); i++) {
         if (padData[i] != 0) {
-            OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "pad error, pad[%d]:%d.", i, padData[i]);
+            OP_LOGD("[N2H] padding must be 0, but pad[%lld]=%lld.", i, padData[i]);
             return false;
         }
     }
     auto dilationData = dilation5->GetData();
-    for (int64_t i = 0; i < dilation5->Size(); i++) {
+    for (uint64_t i = 0; i < dilation5->Size(); i++) {
         if (dilationData[i] != 1) {
-            OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "dilation error, dilation[%d]:%d.", i, dilationData[i]);
+            OP_LOGD("[N2H] dilation must be 1, but dilation[%lld]=%lld.", i, dilationData[i]);
             return false;
         }
     }
     return true;
 }
 
-static bool CheckN2HEnable(const aclTensor *input, const aclTensor *weight,
-                           aclIntArray *stride5, aclIntArray *dilation5, aclIntArray *pad5, int groups) {
-    OP_LOGD("Check N2H attribute.");
-    if (groups != 1) {
+static bool CheckN2HTransposeAttrCriteria(int64_t wi, int64_t cin) {
+    if (wi >= N2H_W_IN_SIXTY && ((wi > cin && wi < MAX_WI_MULTIPLIER_FOR_LOW * cin) || (wi < cin && cin < MAX_CIN_MULTIPLIER * wi))) {
         return false;
     }
-    if (!CheckN2HAttrAvailable(stride5, dilation5, pad5)) {
+    if (wi >= N2H_W_IN_FORTY && wi < N2H_W_IN_SIXTY && wi > cin && (wi < MAX_WI_MULTIPLIER_FOR_LOW * cin || wi >= MIN_WI_MULTIPLIER_FOR_HIGH * cin)) {
         return false;
     }
+    return true;
+}
+
+static bool CheckN2HTransposeNativeAttrAvailable(const aclTensor *input, const aclTensor *weight) {
     auto inputShape = input->GetStorageShape();
     auto batch = inputShape[N_DIM_NCDHW_INDEX];
-    // batch足够大才有效
-    if (batch < 1500 || batch > 4096) {
-        return false;
-    }
     auto hi = inputShape[H_DIM_NCDHW_INDEX];
     auto wi = inputShape[W_DIM_NCDHW_INDEX];
     auto di = inputShape[D_DIM_NCDHW_INDEX];
@@ -1065,22 +1076,38 @@ static bool CheckN2HEnable(const aclTensor *input, const aclTensor *weight,
     auto hk = weightShape[H_DIM_NCDHW_INDEX];
     auto wk = weightShape[W_DIM_NCDHW_INDEX];
     auto dk = weightShape[D_DIM_NCDHW_INDEX];
-    // 实际转换需要为一维卷积形式
-    if (di != 1 || dk != 1 || hi != 1 || hk != 1 || wi < 1 || wi > 64 || wk < 1 || wk > 10) {
-        return false;
-    }
     auto cout = weightShape[N_DIM_NCDHW_INDEX];
     auto cin = weightShape[C_DIM_NCDHW_INDEX];
-    if (cout < 1 || cout > 128 || cin < 1 || cin > 128) {
+    // batch足够大才有效
+    if (batch < N_TRANSPOSE_N2H_RULE_MIN || batch > N_TRANSPOSE_N2H_RULE_MAX) {
         return false;
     }
-    if (wi >= 60 && ((wi > cin && wi < 2 * cin) || (wi < cin && cin < 1.5f * wi))) {
+    // 实际转换需要为一维卷积形式
+    if (di != 1 || dk != 1 || hi != 1 || hk != 1 || wi < 1 || wi > W_IN_TRANSPOSE_N2H_RULE_MAX || wk < 1 || wk > W_K_TRANSPOSE_N2H_RULE_MAX) {
+        OP_LOGD("[N2H] D and H must be 1, the valid range for Wi is [1, 64], and for Wk is [1, 10], but di=%lld, dk=%lld, hi=%lld, hk=%lld, wi=%lld, wk=%lld.",
+                di, dk, hi, hk, wi, wk);
         return false;
     }
-    if (wi >= 40 && wi < 60 && wi > cin && (wi < 2 * cin || wi >= 3.5f * cin)) {
+    if (cout < 1 || cout > C_TRANSPOSE_N2H_RULE_MAX || cin < 1 || cin > C_TRANSPOSE_N2H_RULE_MAX) {
+        OP_LOGD("[N2H] the valid range for Cout is [1, 128], and for Cin is [1, 128], but cout=%lld, cin=%lld.",
+                cout, cin);
         return false;
     }
-    return true;
+    return CheckN2HTransposeAttrCriteria(wi, cin);
+}
+
+static bool CheckN2HEnable(const aclTensor *input, const aclTensor *weight,
+                           aclIntArray *stride5, aclIntArray *dilation5, aclIntArray *pad5, int groups) {
+    OP_LOGD("Conv3d Transpose Check N2H attribute.");
+    if (groups != 1) {
+        return false;
+    }
+    // check stride, padding and dilation
+    if (!CheckN2HTransposeAttrAvailable(stride5, dilation5, pad5)) {
+        return false;
+    }
+    // check N, D, H, W, C and access criteria
+    return CheckN2HTransposeNativeAttrAvailable(input, weight);
 }
 
 static bool CheckPreTransposeEnable(const aclTensor *weight, int groups) {
@@ -1130,12 +1157,8 @@ static aclnnStatus N2HOptimize(const aclTensor *&input, aclTensor *&output,
     const_cast<aclTensor*>(input)->SetViewFormat(Format::FORMAT_NDHWC);
     // change output shape and format
     auto oriShape = output->GetStorageShape();
-    auto outShape = output->GetStorageShape();
-    outShape[N_DIM_NCDHW_INDEX] = oriShape[H_DIM_NCDHW_INDEX];
-    outShape[C_DIM_NCDHW_INDEX] = oriShape[D_DIM_NCDHW_INDEX];
-    outShape[D_DIM_NCDHW_INDEX] = oriShape[N_DIM_NCDHW_INDEX];
-    outShape[H_DIM_NCDHW_INDEX] = oriShape[W_DIM_NCDHW_INDEX];
-    outShape[W_DIM_NCDHW_INDEX] = oriShape[C_DIM_NCDHW_INDEX];
+    Shape outShape({oriShape[H_DIM_NCDHW_INDEX], oriShape[D_DIM_NCDHW_INDEX], oriShape[N_DIM_NCDHW_INDEX],
+                    oriShape[W_DIM_NCDHW_INDEX], oriShape[C_DIM_NCDHW_INDEX]});
     output->SetStorageShape(outShape);
     output->SetOriginalShape(outShape);
     output->SetViewShape(outShape);
