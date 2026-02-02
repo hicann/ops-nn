@@ -1070,8 +1070,11 @@ static bool IsNonContiguousScene(const aclTensor* self, const aclTensorList* ind
     }
     bool selfContiguous = IsContiguous(self);
     bool valueContiguous = IsContiguous(value);
-    if (selfContiguous && valueContiguous && indicesContiguous && overLimit) {
-        return false;
+    if ((selfContiguous && valueContiguous && indicesContiguous)) {
+      return false;
+    }
+    if ((!selfContiguous || !valueContiguous || !indicesContiguous) && overLimit) {
+      return false;
     }
 
     if (selfContiguous == false) {

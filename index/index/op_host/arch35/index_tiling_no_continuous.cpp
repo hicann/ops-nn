@@ -297,13 +297,13 @@ void IndexNonContinuousTiling::SetTilingData()
 {
     int64_t xShape[ARRAY_LEN_FOUR] = {0, 0, 0, 0};
     int64_t indexShape[ARRAY_LEN_FOUR] = {0, 0, 0, 0};
-    int64_t valueShape[ARRAY_LEN_EIGHT] = {0, 0, 0, 0};
+    int64_t valueShape[ARRAY_LEN_EIGHT] = {0, 0, 0, 0, 0, 0, 0, 0};
     int64_t xStride[ARRAY_LEN_FOUR] = {0, 0, 0, 0};
     int64_t indexStride1[ARRAY_LEN_FOUR] = {0, 0, 0, 0};
     int64_t indexStride2[ARRAY_LEN_FOUR] = {0, 0, 0, 0};
     int64_t indexStride3[ARRAY_LEN_FOUR] = {0, 0, 0, 0};
     int64_t indexStride4[ARRAY_LEN_FOUR] = {0, 0, 0, 0};
-    int64_t valueStride[ARRAY_LEN_EIGHT] = {0, 0, 0, 0};
+    int64_t valueStride[ARRAY_LEN_EIGHT] = {0, 0, 0, 0, 0, 0, 0, 0};
     int64_t yStride[ARRAY_LEN_FOUR] = {0, 0, 0, 0};
     indexedDimNum_ = static_cast<int64_t>(indexShape_.GetDimNum());
 
