@@ -2006,6 +2006,16 @@
   </tr>
   <tr>
     <td>matmul</td>
+    <td><a href="../../matmul/dual_level_quant_batch_matmul/README.md">dual_level_quant_batch_matmul</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>完成二级量化mxfp4的矩阵乘计算。</td>
+  </tr>
+  <tr>
+    <td>matmul</td>
     <td><a href="../../matmul/fused_mat_mul/README.md">fused_mat_mul</a></td>
     <td>✓</td>
     <td>✓</td>
