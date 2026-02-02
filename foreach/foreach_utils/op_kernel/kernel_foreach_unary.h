@@ -74,7 +74,7 @@ __aicore__ inline void KernelForeachUnary<T, Predicate, bufferNum, paramsCount, 
     inTensorsPtr = x;
     outTensorsPtr = y;
 
-#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003))
+#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     if (std::is_same_v<T, bfloat16_t>) {
         Base::pipe.InitBuffer(dataQueue, bufferNum, Base::totalTensorUbSize);
         if (needCopyOut) {
@@ -102,7 +102,7 @@ __aicore__ inline void KernelForeachUnary<T, Predicate, bufferNum, paramsCount, 
 {
     /* 将中间量预留出来 */
     LocalTensor<float> float32Tensor;
-#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003))
+#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     if (std::is_same_v<T, bfloat16_t>) {
         float32Tensor = float32Queue.DeQue<float>();
     }
@@ -131,7 +131,7 @@ __aicore__ inline void KernelForeachUnary<T, Predicate, bufferNum, paramsCount, 
 
     AfterProcess();
 
-#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003))
+#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     if (std::is_same_v<T, bfloat16_t>) {
         float32Queue.FreeTensor(float32Tensor);
     }

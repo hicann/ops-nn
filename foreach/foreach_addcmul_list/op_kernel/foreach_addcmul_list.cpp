@@ -78,7 +78,7 @@ extern "C" __global__ __aicore__ void foreach_addcmul_list(
         ForeachOneScalarQuaternary<int, int, AddcMulListNormalAdapter, 2, 3> op;
         op.Init(tensor1, tensor2, tensor3, scalar, outputs, userWS, &tilingData);
         op.Process();
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     } else if (TILING_KEY_IS(4)) {
         ForeachOneScalarQuaternary<bfloat16_t, float, AddcMulListFloatAdapter, 2, 3> op;
         op.Init(tensor1, tensor2, tensor3, scalar, outputs, userWS, &tilingData);

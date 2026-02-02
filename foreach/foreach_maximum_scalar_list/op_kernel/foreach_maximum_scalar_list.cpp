@@ -50,7 +50,7 @@ extern "C" __global__ __aicore__ void foreach_maximum_scalar_list(
         op.Init(inputs, scalar, outputs, userWS, &tilingData);
         op.Process();
     }
-#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     else if (TILING_KEY_IS(4)) {
         ForeachOneScalarListBinary<bfloat16_t, float, MaxsAdapter<float>, 2, 1> op;
         op.Init(inputs, scalar, outputs, userWS, &tilingData);

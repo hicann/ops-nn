@@ -73,7 +73,7 @@ extern "C" __global__ __aicore__ void foreach_add_list(
         ForeachOneScalarTernary<int, int, AddListNormalAdapter<int>> op;
         op.Init(inputs_1, inputs_2, alpha, outputs, userWS, &tilingData);
         op.Process();
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     } else if (TILING_KEY_IS(4)) {
         ForeachOneScalarTernary<bfloat16_t, float, AddListFloatAdapter<float>> op;
         op.Init(inputs_1, inputs_2, alpha, outputs, userWS, &tilingData);

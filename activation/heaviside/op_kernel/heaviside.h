@@ -22,7 +22,7 @@
 namespace Heaviside {
 
 using namespace AscendC;
-#if (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 constexpr int32_t MAX_UB_SIZE = 128 * 1024;
 constexpr int32_t PP_ELEMENT_NUM = 6 * 1024;
 #else

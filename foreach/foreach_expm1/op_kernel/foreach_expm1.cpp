@@ -48,7 +48,7 @@ extern "C" __global__ __aicore__ void foreach_expm1(GM_ADDR x, GM_ADDR y, GM_ADD
         op.Init(x, y, userWS, &tilingData);
         op.Process();
     }
-#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     else if (TILING_KEY_IS(4)) {
         ForeachImplictOutput<bfloat16_t, float, Expm1Adapter<float>, 2, 1> op;
         op.Init(x, y, userWS, &tilingData);

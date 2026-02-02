@@ -51,7 +51,7 @@ extern "C" __global__ __aicore__ void foreach_add_scalar_list(
         ForeachOneScalarListBinary<int, int, AddsAdapter<int>, 1, 1> op;
         op.Init(inputs, scalar, outputs, userWS, &tilingData);
         op.Process();
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     } else if (TILING_KEY_IS(4)) {
         ForeachOneScalarListBinary<bfloat16_t, float, AddsAdapter<float>, 1, 1> op;
         op.Init(inputs, scalar, outputs, userWS, &tilingData);

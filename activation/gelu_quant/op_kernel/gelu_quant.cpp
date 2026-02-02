@@ -149,7 +149,7 @@ extern "C" __global__ __aicore__ void gelu_quant(
     }
 #endif
 
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003) && (ORIG_DTYPE_X == DT_BF16)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113)) && (ORIG_DTYPE_X == DT_BF16)
     if (TILING_KEY_IS(STATIC_PER_TENSOR_TEMPLATE_BF16_BF16)) {
         invokeTemplateStaticQuantPerTensor<bfloat16_t, bfloat16_t>(
             x, input_scale, input_offset, y, out_scale, userWS, tilingData);

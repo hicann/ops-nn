@@ -69,7 +69,7 @@ __aicore__ inline void KernelForeachBase<T>::Init(const ForeachCommonTilingData*
 
     ParseTilingData(tilingData);
 
-#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003))
+#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     if (std::is_same_v<T, bfloat16_t>) {
         totalTensorUbSize = inputsTensorUbSize * COPY_SPACE_MULTIPLE;
         maxDataCount = totalTensorUbSize / sizeof(T);

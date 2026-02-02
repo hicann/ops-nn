@@ -1,0 +1,163 @@
+{
+    "op_type": "GeluQuant",
+    "op_list": [
+        {
+            "bin_filename": "GeluQuant_1",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ]
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ]
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "int8",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": "ALL"
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": "ALL"
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": "ALL"
+                }
+              ]
+          },
+          {
+            "bin_filename": "GeluQuant_3",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ]
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ]
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "int8",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": "ALL"
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": "ALL"
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": "ALL"
+                }
+              ]
+          }
+    ]
+  }

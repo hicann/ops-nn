@@ -64,6 +64,7 @@ public:
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();
         this->AICore().AddConfig("kirinx90", config_kirin);
+        this->AICore().AddConfig("kirin9030", config_kirin);
 
         OpAICoreConfig config_910d;
         config_910d.DynamicCompileStaticFlag(true)

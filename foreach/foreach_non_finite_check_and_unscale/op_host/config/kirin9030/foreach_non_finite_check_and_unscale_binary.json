@@ -1,0 +1,81 @@
+{
+    "op_type": "ForeachNonFiniteCheckAndUnscale",
+    "op_list": [
+        {
+            "bin_filename": "ForeachNonFiniteCheckAndUnscale_870c7f7c65038f795b7ed298b0b54b9b",
+            "inputs": [
+                [
+                    {
+                        "name": "scaled_grads",
+                        "index": 0,
+                        "dtype": "float16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ],
+                {
+                    "name": "found_inf",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "inv_scale",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "bin_filename": "ForeachNonFiniteCheckAndUnscale_a704359d68c4abd7b14f6c9dc18c4980",
+            "inputs": [
+                [
+                    {
+                        "name": "scaled_grads",
+                        "index": 0,
+                        "dtype": "float32",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ],
+                {
+                    "name": "found_inf",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "inv_scale",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": []
+        }
+    ]
+}
