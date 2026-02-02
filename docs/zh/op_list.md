@@ -2426,6 +2426,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/layer_norm_grad/README.md">layer_norm_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>LayerNorm的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/layer_norm_grad_v3/README.md">layer_norm_grad_v3</a></td>
     <td>✓</td>
     <td>✓</td>
