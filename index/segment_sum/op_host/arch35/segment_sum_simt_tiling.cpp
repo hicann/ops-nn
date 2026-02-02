@@ -50,6 +50,13 @@ uint64_t SegmentSumSimtTiling::GetTilingKey() const
     return tilingKey;
 }
 
+ge::graphStatus SegmentSumSimtTiling::GetWorkspaceSize()
+{
+    auto currentWorkspace = context_->GetWorkspaceSizes(1);
+    currentWorkspace[0] = 0;
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus SegmentSumSimtTiling::PostTiling()
 {
     context_->SetBlockDim(totalCoreNum_);

@@ -35,6 +35,7 @@ private:
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus PostTiling() override;
+    ge::graphStatus GetWorkspaceSize() override;
     uint64_t GetTilingKey() const override;
     void DumpTilingInfo() override;
     void SetTilingData() override;
