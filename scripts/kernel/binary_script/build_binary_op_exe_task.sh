@@ -37,11 +37,16 @@ main() {
     echo "[INFO]exe_task: begin to build kernel with cmd: ${cmd_task}."
     start_time=$(date +%s)
 
-    echo ${cmd_task} > "${output_path}/build_logs/${key}.log"
-    timeout 7200 ${cmd_task} >> "${output_path}/build_logs/${key}.log" 2>&1
+    log_path="${output_path}/build_logs/${key}.log"
+
+    start_timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "[$start_timestamp] Build started: ${cmd_task}" > "$log_path"
+    timeout 7200 ${cmd_task} >> "$log_path" 2>&1
 
     end_time=$(date +%s)
     exe_time=$((end_time - start_time))
+    end_timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "[$end_timestamp] exe_time: $exe_time s" >> "$log_path"
     echo "[INFO]exe_task: end to build kernel with cmd: ${cmd_task} --exe_time=${exe_time}"
   fi
 }

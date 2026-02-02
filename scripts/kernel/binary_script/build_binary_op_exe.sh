@@ -21,6 +21,7 @@ main() {
 
   result=$(bash build_binary_op_exe_task.sh $output_path $idx)
   local gen_res=$?
+  echo "$result"
   if [ $gen_res -ne 0 ]; then
     echo -e "[ERROR] build binary single op failed with ErrorCode[$gen_res]."
     echo -e "For more detail: please set env:"
@@ -29,7 +30,6 @@ main() {
     echo -e "and run again, then check kernel log in $output_path/build_logs"
     return
   fi
-  echo "$result"
 }
 set -o pipefail
-main "$@" | gawk '{print strftime("[%Y-%m-%d %H:%M:%S]"), $0}'
+main "$@"
