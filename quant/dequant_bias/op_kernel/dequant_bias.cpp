@@ -70,7 +70,7 @@ extern "C" __global__ __aicore__ void dequant_bias(
             op.Process();
         }
     } else if (TILING_KEY_IS(10113)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         if (tilingData.N <= 8192) {
             DequantBias::DequantBiasImpl<DTYPE_X, DTYPE_WEIGHT_SCALE, bfloat16_t, DTYPE_Y, true> op;
             op.Init(x, weight_scale, activate_scale, bias, y, &tilingData);

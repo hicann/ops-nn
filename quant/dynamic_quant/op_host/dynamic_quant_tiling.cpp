@@ -727,6 +727,7 @@ static ge::graphStatus TilingForDynamicQuant(gert::TilingContext* context)
     switch (ascendcPlatform.GetCurNpuArch()) {
         case NpuArch::DAV_2201:
         case NpuArch::DAV_3003:
+        case NpuArch::DAV_3113:
             static thread_local DynamicQuantTiling tiling;
             ret = tiling.RunFusionKernelTiling(context);
             return ret;

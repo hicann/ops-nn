@@ -84,6 +84,7 @@ public:
 
         this->AICore().AddConfig("ascend310p", config_310p);
         this->AICore().AddConfig("kirinx90", config_310p);
+        this->AICore().AddConfig("kirin9030", config_310p);
 
         OpAICoreConfig config_950;
         config_950.Input("x")

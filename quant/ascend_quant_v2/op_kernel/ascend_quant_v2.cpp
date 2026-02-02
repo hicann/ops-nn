@@ -71,7 +71,7 @@ extern "C" __global__ __aicore__ void ascend_quant_v2(
         }
 #endif
     }
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     if (TILING_KEY_IS(KEY_PER_HEAD)) {
         AscendQuantV2::AscendQuantV2PerHead<DTYPE_X> op;
         op.Init(x, scale, offset, y, &tilingData);

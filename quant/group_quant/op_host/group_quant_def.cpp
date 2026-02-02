@@ -176,6 +176,7 @@ class GroupQuant : public OpDef {
 
     OpAICoreConfig config_kirin = GetKirinCoreConfig();
     this->AICore().AddConfig("kirinx90", config_kirin);
+        this->AICore().AddConfig("kirin9030", config_kirin);
   }
 
 private:

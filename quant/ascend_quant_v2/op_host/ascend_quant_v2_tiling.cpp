@@ -743,7 +743,7 @@ static ge::graphStatus TilingPrepare4AscendQuantV2(gert::TilingParseContext* con
     OP_LOGD(context->GetNodeName(), "GetCoreNum:%d, ubSize:%lu", compileInfo->vectorCoreNum, compileInfo->ubSize);
 
     auto npuArch = ascendcPlatform.GetCurNpuArch();
-    compileInfo->isAscend910B = ((npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3003));
+    compileInfo->isAscend910B = ((npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3003) || (npuArch == NpuArch::DAV_3113));
 
     return ge::GRAPH_SUCCESS;
 }

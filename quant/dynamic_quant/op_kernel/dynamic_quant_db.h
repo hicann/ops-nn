@@ -19,7 +19,7 @@
 namespace DynamicQuantNDOpt {
 using namespace AscendC;
 
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 template <typename xDtype, typename yDtype>
 class DynamicQuantDbOpt : public DynamicQuantBase
 {

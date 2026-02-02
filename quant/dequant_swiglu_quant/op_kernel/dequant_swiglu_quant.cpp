@@ -75,7 +75,7 @@ extern "C" __global__ __aicore__ void dequant_swiglu_quant(GM_ADDR xGM, GM_ADDR 
   TPipe pipe;
 #if (ORIG_DTYPE_X == DT_INT32)
   if (TILING_KEY_IS(DEQUANT_SWIGLU_QUANT_WITH_GROUP_BF16_BIAS_FP32_QS)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantBaseTilingData, tilingDataIn, tiling);
     const DequantSwigluQuantBaseTilingData* __restrict__ tilingData = &tilingDataIn;
     DequantSwigluQuantOps::DequantSwigluQuantBase<bfloat16_t, float, int64_t, int32_t> op(&pipe);
@@ -84,7 +84,7 @@ extern "C" __global__ __aicore__ void dequant_swiglu_quant(GM_ADDR xGM, GM_ADDR 
     op.Process();
 #endif
   } else if (TILING_KEY_IS(DEQUANT_SWIGLU_QUANT_WITH_GROUP_BF16_BIAS_FP16_QS)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantBaseTilingData, tilingDataIn, tiling);
     const DequantSwigluQuantBaseTilingData* __restrict__ tilingData = &tilingDataIn;
     DequantSwigluQuantOps::DequantSwigluQuantBase<bfloat16_t, half, int64_t, int32_t> op(&pipe);
@@ -93,7 +93,7 @@ extern "C" __global__ __aicore__ void dequant_swiglu_quant(GM_ADDR xGM, GM_ADDR 
     op.Process();
 #endif
   } else if (TILING_KEY_IS(DEQUANT_SWIGLU_QUANT_WITH_GROUP_BF16_BIAS_BF16_QS)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantBaseTilingData, tilingDataIn, tiling);
     const DequantSwigluQuantBaseTilingData* __restrict__ tilingData = &tilingDataIn;
     DequantSwigluQuantOps::DequantSwigluQuantBase<bfloat16_t, bfloat16_t, int64_t, int32_t> op(&pipe);
@@ -116,7 +116,7 @@ extern "C" __global__ __aicore__ void dequant_swiglu_quant(GM_ADDR xGM, GM_ADDR 
             tilingData);
     op.Process();
   } else if (TILING_KEY_IS(DEQUANT_SWIGLU_QUANT_WITH_GROUP_FP16_BIAS_BF16_QS)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantBaseTilingData, tilingDataIn, tiling);
     const DequantSwigluQuantBaseTilingData* __restrict__ tilingData = &tilingDataIn;
     DequantSwigluQuantOps::DequantSwigluQuantBase<half, bfloat16_t, int64_t, int32_t> op(&pipe);
@@ -139,7 +139,7 @@ extern "C" __global__ __aicore__ void dequant_swiglu_quant(GM_ADDR xGM, GM_ADDR 
             tilingData);
     op.Process();
   } else if (TILING_KEY_IS(DEQUANT_SWIGLU_QUANT_WITH_GROUP_FP32_BIAS_BF16_QS)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantBaseTilingData, tilingDataIn, tiling);
     const DequantSwigluQuantBaseTilingData* __restrict__ tilingData = &tilingDataIn;
     DequantSwigluQuantOps::DequantSwigluQuantBase<float, bfloat16_t, int64_t, int32_t> op(&pipe);
@@ -162,7 +162,7 @@ extern "C" __global__ __aicore__ void dequant_swiglu_quant(GM_ADDR xGM, GM_ADDR 
             tilingData);
     op.Process();
   } else if (TILING_KEY_IS(DEQUANT_SWIGLU_QUANT_WITH_GROUP_INT32_BIAS_BF16_QS)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantBaseTilingData, tilingDataIn, tiling);
     const DequantSwigluQuantBaseTilingData* __restrict__ tilingData = &tilingDataIn;
     DequantSwigluQuantOps::DequantSwigluQuantBase<int32_t, bfloat16_t, int64_t, int32_t> op(&pipe);
@@ -187,7 +187,7 @@ extern "C" __global__ __aicore__ void dequant_swiglu_quant(GM_ADDR xGM, GM_ADDR 
             tilingData);
     op.Process();
   } else if (TILING_KEY_IS(DEQUANT_SWIGLU_QUANT_WITHOUT_GROUP_BF16_QS)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantBaseTilingData, tilingDataIn, tiling);
     const DequantSwigluQuantBaseTilingData* __restrict__ tilingData = &tilingDataIn;
     // DTYPE_GROUP_INDEX == float mean have no groupIndex
@@ -209,7 +209,7 @@ extern "C" __global__ __aicore__ void dequant_swiglu_quant(GM_ADDR xGM, GM_ADDR 
     op.Init(xGM, weightSscaleGM, activationScaleGM, biasGM, quantScaleGM, quantOffsetGM, groupIndex, yGM, scaleGM, tilingData);
     op.Process();
   } else if (TILING_KEY_IS(DEQUANT_SWIGLU_QUANT_WITH_GROUP_BF16_QS_GR)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantBaseTilingData, tilingDataIn, tiling);
     const DequantSwigluQuantBaseTilingData* __restrict__ tilingData = &tilingDataIn;
     DequantSwigluQuantGroupOps::DequantSwigluQuantGroup<bfloat16_t, bfloat16_t, int64_t, int32_t> op(&pipe);
@@ -313,7 +313,7 @@ extern "C" __global__ __aicore__ void dequant_swiglu_quant(GM_ADDR xGM, GM_ADDR 
             tilingData, &(pipe));
     op.Process();
   }
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
   // ORIG_DTYPE_BIAS == DT_BF16
   else if (TILING_KEY_IS(10010)) {
     GET_TILING_DATA_WITH_STRUCT(SwiGluTilingData, tilingDataIn, tiling);
@@ -377,7 +377,7 @@ extern "C" __global__ __aicore__ void dequant_swiglu_quant(GM_ADDR xGM, GM_ADDR 
     op.Process();
   }
 #endif
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003) && (ORIG_DTYPE_X == DT_BF16)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113)) && (ORIG_DTYPE_X == DT_BF16)
   if (TILING_KEY_IS(DEQUANT_SWIGLU_QUANT_WITH_GROUP_NO_BIAS_FP32_QS)) {
     // New tiling branch for BF16
     GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantBaseTilingData, tilingDataIn, tiling);

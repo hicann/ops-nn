@@ -66,7 +66,7 @@ private:
         // gm数据
         xGm.SetGlobalBuffer((__gm__ inType *)input_gm, SPLIT_NUM * tilingData_.rowLen * tilingData_.colLen);
         yGm.SetGlobalBuffer((__gm__ int8_t *)y_gm, tilingData_.rowLen * tilingData_.colLen);
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         yGmInt4.SetGlobalBuffer((__gm__ int4b_t *)y_gm, tilingData_.rowLen * tilingData_.colLen);
 #endif
         smooth_scales_Gm.SetGlobalBuffer((__gm__ float *)smooth_scales, tilingData_.groupLen * tilingData_.colLen);
