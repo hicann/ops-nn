@@ -49,7 +49,7 @@ ge::graphStatus AdaptivePool3dBaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto npuArch = ascendcPlatform.GetCurNpuArch();
-    if (npuArch != NpuArch::DAV_3510 || npuArch != NpuArch::DAV_5102) {
+    if (npuArch != NpuArch::DAV_3510) {
         return ge::GRAPH_PARAM_INVALID;
     }
     auto nodeName = context_->GetNodeName();
