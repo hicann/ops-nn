@@ -10,7 +10,7 @@
 /**
  * @brief 编译运行流程说明
  * 
- * 参照 docs/zh/context/op_invocation.md 内 [编译与运行] 章节调用
+ * 参照 docs/zh/invocation/op_invocation.md 内 [编译与运行] 章节调用
  * 
  * 调用流程示例：
  * 1. 安装nn包: 
