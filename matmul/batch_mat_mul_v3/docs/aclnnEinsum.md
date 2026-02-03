@@ -207,9 +207,7 @@ aclnnStatus aclnnEinsum(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-- 确定性说明：
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnEinsum默认确定性实现。
-  - <term>Ascend 950PR/Ascend 950DT</term>: aclnnEinsum默认非确定性实现，不支持通过aclrtCtxSetSysParamOpt开启确定性。
+- 确定性说明：aclnnEinsum默认确定性实现。
 
 - 目前equation需完全匹配，才能找到对应函数。
 

@@ -927,7 +927,7 @@ aclnnStatus aclnnMatmulWeightNzGetWorkspaceSize(
 
     // 构建matmul计算图
     auto matmulOut = BuildMatMulWeightNzGraph(self, mat2, out, cubeMathType, uniqueExecutor.get());
-    CHECK_RET(matmulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(matmulOut != nullptr, ACLNN_ERR_PARAM_INVALID);
     if (matmulOut->IsEmpty()) {
         // 当输出为空tensor的场景，空tensor处理
         *workspaceSize = 0;
