@@ -16,6 +16,12 @@
 
 using namespace std;
 
+#ifdef __aarch64__
+const string CPU_ARCH_STR = "aarch64";
+#elif define(__x86_64__)
+const string CPU_ARCH_STR = "x86_64";
+#endif
+
 class OpGraphUtEnvironment : public testing::Environment {
 public:
     OpGraphUtEnvironment()
@@ -23,7 +29,7 @@ public:
     virtual void SetUp()
     {
         cout << "Global Environment SetpUp." << endl;
-       /* fe::OptionalInfos opti_compilation_infos_ge;
+        fe::OptionalInfos opti_compilation_infos_ge;
         opti_compilation_infos_ge.Init();
         opti_compilation_infos_ge.SetSocVersion("soc_version");
         fe::PlatformInfoManager::GeInstance().SetOptionalCompilationInfo(opti_compilation_infos_ge);
@@ -37,15 +43,35 @@ public:
         } else {
             exePathStr.assign("./");
         }
-        string opHostSoPath = exePathStr + string("/libophost_nn_ut.so");
-        gert::OppSoDesc oppSoDesc(ge::AscendString(opHostSoPath.c_str()), "op_host_so");
-        shared_ptr<gert::OpImplSpaceRegistryV2> opImplSpaceRegistryV2 = make_shared<gert::OpImplSpaceRegistryV2>();
-        if (opImplSpaceRegistryV2->AddSoToRegistry(oppSoDesc) == ge::GRAPH_FAILED) {
-            cout << "add so to registry failed." << endl;
-            return;
+        string opHostSoPath = exePathStr + string("../op_host/libophost_nn_ut.so");
+
+        string mathHostSoPath;
+        const char* ascendToolkitHome = getenv("ASCEND_TOOLKIT_HOME");
+        if (ascendToolkitHome == nullptr || strlen(ascendToolkitHome) == 0) {
+            cout << "can not find env ASCEND_TOOLKIT_HOME." << endl; 
+        }
+        string ascendRoot(ascendToolkitHome);
+        mathHostSoPath = ascendRoot + "/opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux/"
+                        + CPU_ARCH_STR
+                        + "/libophost_math.so";
+        if(access(mathHostSoPath.c_str(), R_OK) == -1) {
+            cout << "libophost_math.so could not be found. Please install ops-math package." << endl;
+        } else {
+            cout << "Success found libophost_math.so." << endl;
         }
 
-        gert::DefaultOpImplSpaceRegistryV2::GetInstance().SetSpaceRegistry(opImplSpaceRegistryV2);*/
+        gert::OppSoDesc oppSoDesc({ge::AscendString(opHostSoPath.c_str())}, "op_host_so");
+        shared_ptr<gert::OpImplSpaceRegistryV2> opImplSpaceRegistryV2 = make_shared<gert::OpImplSpaceRegistryV2>();
+        if (opImplSpaceRegistryV2->AddSoToRegistry(oppSoDesc) == ge::GRAPH_FAILED) {
+            cout << "add op_host.so to registry failed." << endl;
+            return;
+        }
+        gert::OppSoDesc mathSoDesc({ge::AscendString(mathHostSoPath.c_str())}, "math_so");
+        if (opImplSpaceRegistryV2->AddSoToRegistry(mathSoDesc) == ge::GRAPH_FAILED) {
+            cout << "add libophost_math.so to registry failed." << endl;
+            return;
+        }
+        gert::DefaultOpImplSpaceRegistryV2::GetInstance().SetSpaceRegistry(opImplSpaceRegistryV2);
     }
 
     virtual void TearDown()

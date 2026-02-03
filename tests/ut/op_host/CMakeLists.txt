@@ -10,13 +10,41 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-if(UT_TEST_ALL OR OP_HOST_UT)
+if(UT_TEST_ALL OR OP_HOST_UT OR OP_GRAPH_UT)
     file(GLOB SUBDIRECTORIES LIST_DIRECTORIES true RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/*)
     foreach(SUBDIR ${SUBDIRECTORIES})
         if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/CMakeLists.txt)
             add_subdirectory(${SUBDIR})
         endif()
     endforeach()
+
+    ## add ophost_nn_ut so
+    add_library(ophost_${PKG_NAME}_ut SHARED
+        $<$<TARGET_EXISTS:${OPHOST_NAME}_infer_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_infer_obj>>
+    )
+    target_compile_options(ophost_${PKG_NAME}_ut PRIVATE -fPIC)
+    target_compile_definitions(ophost_${PKG_NAME}_ut PRIVATE LOG_CPP)
+    target_link_libraries(ophost_${PKG_NAME}_ut PRIVATE
+        $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
+        -Wl,--whole-archive
+        rt2_registry_static
+        -Wl,--no-whole-archive
+        -Wl,--no-as-needed
+        metadef
+        -Wl,--as-needed
+        error_manager
+        exe_graph
+        graph_base
+        gtest
+        graph
+        platform
+        register
+        opp_registry
+        opsbase
+        tiling_api
+        dlog
+        dl
+    )
 
     ## add ophost ut exe:  nn_op_host_ut
     set(OP_HOST_UT_EXE ${PKG_NAME}_op_host_ut)

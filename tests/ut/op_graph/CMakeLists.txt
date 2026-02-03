@@ -26,8 +26,12 @@ if(UT_TEST_ALL OR OP_GRAPH_UT)
     ## add opgraph ut exe:  nn_op_graph_ut
     set(OP_GRAPH_UT_EXE ${PKG_NAME}_op_graph_ut)
     
+    set(INFERSHAPE_STUB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/stub)
+    file(GLOB INFERSHAPE_STUB_FILES ${INFERSHAPE_STUB_DIR}/*_infershape.cpp)
+
     add_executable(${OP_GRAPH_UT_EXE}
-            test_op_graph_main.cpp
+        ${INFERSHAPE_STUB_FILES}
+        test_op_graph_main.cpp
     )
 
     # 当前桩函数实现不完整，优先从环境变量中链接so
@@ -37,9 +41,15 @@ if(UT_TEST_ALL OR OP_GRAPH_UT)
 
     target_compile_definitions(${OP_GRAPH_UT_EXE} PRIVATE LOG_CPP)
     target_compile_options(${OP_GRAPH_UT_EXE} PUBLIC -fPIE -fno-access-control)
-    add_dependencies(${OP_GRAPH_UT_EXE} json build_es_math build_es_nn)
+    add_dependencies(${OP_GRAPH_UT_EXE} 
+        json 
+        build_es_math 
+        build_es_nn
+        ophost_${PKG_NAME}_ut
+    )
     target_link_directories(${OP_GRAPH_UT_EXE} PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64)
     target_link_libraries(${OP_GRAPH_UT_EXE} PRIVATE
+        ophost_${PKG_NAME}_ut
         es_math
         es_nn
         $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
@@ -70,14 +80,14 @@ if(UT_TEST_ALL OR OP_GRAPH_UT)
         if(${ENABLE_ASAN} STREQUAL "TRUE")
             add_custom_command(
                 TARGET ${OP_GRAPH_UT_EXE} POST_BUILD
-                COMMAND export LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/es_packages_math/lib64:${CMAKE_BINARY_DIR}/es_packages/lib64:${LIB_OP_TILING_SO_PATH}:$ENV{LD_LIBRARY_PATH} && BUILD_PATH=${BUILD_PATH}
+                COMMAND export LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/tests/ut/op_host:${CMAKE_BINARY_DIR}/es_packages_math/lib64:${CMAKE_BINARY_DIR}/es_packages/lib64:${LIB_OP_TILING_SO_PATH}:$ENV{LD_LIBRARY_PATH} && BUILD_PATH=${BUILD_PATH}
                 LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.4:/usr/lib/x86_64-linux-gnu/libstdc++.so.6 ASAN_OPTIONS=detect_leaks=0 && ./${OP_GRAPH_UT_EXE}
                 COMMENT "Run ops op_host utest with asan"
             )
         else()
             add_custom_command(
                 TARGET ${OP_GRAPH_UT_EXE} POST_BUILD
-                COMMAND export LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/es_packages_math/lib64:${CMAKE_BINARY_DIR}/es_packages/lib64:${LIB_OP_TILING_SO_PATH}:$ENV{LD_LIBRARY_PATH}:${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64 && ./${OP_GRAPH_UT_EXE}
+                COMMAND export LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/tests/ut/op_host:${CMAKE_BINARY_DIR}/es_packages_math/lib64:${CMAKE_BINARY_DIR}/es_packages/lib64:${LIB_OP_TILING_SO_PATH}:$ENV{LD_LIBRARY_PATH}:${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64 && ./${OP_GRAPH_UT_EXE}
                 COMMENT "Run ops op_host utest"
             )
         endif()
