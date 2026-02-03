@@ -194,6 +194,8 @@
 | [aclnnFusedLinearOnlineMaxSum](../../matmul/fused_linear_online_max_sum/docs/aclnnFusedLinearOnlineMaxSum.md) |功能等价Megatron的matmul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切卡融合matmul与celoss。|默认确定性实现|
 | [aclnnFusedLinearCrossEntropyLossGrad](../../matmul/fused_linear_cross_entropy_loss_grad/docs/aclnnFusedLinearCrossEntropyLossGrad.md) |是词汇表并行场景下交叉熵损失计算模块中的一部分，解决超大规模词汇表下的显存和计算效率问题，当前部分为梯度计算实现，用于计算叶子节点`input`和`weight`的梯度。|默认确定性实现|
 | [aclnnFusedMatmul](../../matmul/fused_mat_mul/docs/aclnnFusedMatmul.md) |矩阵乘与通用向量计算融合。|默认确定性实现|
+| [aclnnFusedQuantMatmul](../../matmul/fused_quant_mat_mul/docs/aclnnFusedQuantMatmul.md) |量化矩阵乘与通用向量计算融合。|默认确定性实现|
+
 | [aclnnGather](../../index/gather_elements_v2/docs/aclnnGather.md) | 对输入tensor中指定的维度dim进行数据聚集。|默认确定性实现|
 | [aclnnGatherNd](../../index/gather_nd/docs/aclnnGatherNd.md) | 对于维度为r≥1的输入张量self，和维度q≥1的输入张量indices，将数据切片收集到维度为 (q-1) + (r - indices_shape[-1]) 的输出张量out中。|默认确定性实现|
 | [aclnnGatherV2](../../index/gather_v2/docs/aclnnGatherV2.md) | 从输入Tensor的指定维度dim，按index中的下标序号提取元素，保存到out Tensor中。|默认确定性实现|

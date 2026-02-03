@@ -7,6 +7,9 @@
 | <term>Ascend 950PR/Ascend 950DT</term>                             |    ×     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×    |
+| <term>Atlas 推理系列产品 </term>                             |    ×    |
+| <term>Atlas 训练系列产品</term>                              |    ×    |
 
 ## 功能说明
 
@@ -370,7 +373,7 @@ aclnnStatus aclnnFusedQuantMatmul(
 
 ## 约束说明
 - 确定性说明：
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnFusedQuantMatmul默认确定性实现。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：aclnnFusedQuantMatmul默认确定性实现。
 
 - 输入和输出支持以下数据类型组合：
   | x1                        | x2                        | x1Scale     | x2Scale         | x2OffsetOptional    | yScaleOptional   | biasOptional         | yOffsetOptional    | out                                    |
@@ -403,18 +406,12 @@ aclnnStatus aclnnFusedQuantMatmul(
     - shape支持1维，形状为（m,），数据类型支持FLOAT32。
   - x2Scale的约束如下：
     - shape支持1维，形状为（n,）或者（1,），其中n与x2的n一致，数据类型支持FLOAT32、BFLOAT16。
-  - 当前版本不支持yScaleOptional，需要传入nullptr。
-  - 当前版本不支持x1OffsetOptional，需要传入nullptr。
-  - 当前版本不支持x2OffsetOptional，需要传入nullptr。
-  - 当前版本不支持yOffsetOptional，需要传入nullptr。
   - biasOptional的约束如下：
     - shape支持1、3维，INT4量化场景下只支持biasOptional为1维，shape为(n)，3维时biasOptional shape为(batch, 1, n)。
     - 数据类型支持int32、float32、bfloat16或float16。
-  - 当前版本不支持x3Optional，需要传入nullptr。
   - transposeX1：x1和x2为INT32、INT4时，transposeX1仅支持false，各个维度表示：（m, k）。
   - transposeX2的约束如下：
     - ND格式下，为false时维度为：（batch，k，n），为true时维度为：（batch，n，k），batch可不存在，其中k与x1的shape中的k一致。
-  - 当前版本不支持groupSizeOptional，需要传入nullptr。
   - out的约束如下：
     - shape支持2~6维，（batch，m，n）。数据类型支持FLOAT16、BFLOAT16。
 

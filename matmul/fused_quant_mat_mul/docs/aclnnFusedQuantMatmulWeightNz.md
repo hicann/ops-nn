@@ -7,6 +7,9 @@
 | <term>Ascend 950PR/Ascend 950DT</term>                             |    ×     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×    |
+| <term>Atlas 推理系列产品 </term>                             |    ×    |
+| <term>Atlas 训练系列产品</term>                              |    ×    |
 
 ## 功能说明
 
@@ -406,20 +409,14 @@ aclnnStatus aclnnFusedQuantMatmulWeightNz(
     - shape支持1维，形状为（m,），数据类型支持FLOAT32。
   - x2Scale的约束如下：
     - shape支持1维，形状为（n,）或者（1,），其中n与x2的n一致，数据类型支持FLOAT32、BFLOAT16。
-  - 当前版本不支持yScaleOptional，需要传入nullptr。
-  - 当前版本不支持x1OffsetOptional，需要传入nullptr。
-  - 当前版本不支持x2OffsetOptional，需要传入nullptr。
-  - 当前版本不支持yOffsetOptional，需要传入nullptr。
   - biasOptional的约束如下：
     - shape支持1、3维，INT4量化场景下只支持biasOptional为1维，shape为(n)，3维时biasOptional shape为(batch, 1, n)。
     - 数据类型支持int32、float32、bfloat16或float16。
-  - 当前版本不支持x3Optional，需要传入nullptr。
   - transposeX1：x1和x2为INT32、INT4时，transposeX1仅支持false，各个维度表示：（m, k）。
   - transposeX2的约束如下：
     - AI处理器亲和数据排布格式下：
       - 为true时维度为：（batch，k1，n1，n0，k0），batch可不存在，其中k0 = 32，n0 = 16，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 32） = k1。
       - 为false时维度为：（batch，n1，k1，k0，n0），batch可不存在，其中k0 = 16，n0 = 32，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 16） = k1。
-  - 当前版本不支持groupSizeOptional，需要传入nullptr。
   - out的约束如下：
     - shape支持2~6维，（batch，m，n）。数据类型支持FLOAT16、BFLOAT16。
 
