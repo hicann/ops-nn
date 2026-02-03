@@ -52,6 +52,7 @@ public:
             countQueueSize_ = CEIL_DIV(totalLength_ * sizeof(int32_t), blockSize_) * blockSize_;
             pipe_->InitBuffer(countQueue_, BUFFER_NUM, totalLength_ * sizeof(int32_t));
         }
+        
         pipe_->InitBuffer(idxBuf_, CEIL_DIV(totalLength_ * sizeof(int32_t), blockSize_) * blockSize_);
         pipe_->InitBuffer(shapeBuf_, CEIL_DIV(SHAPE_LEN * sizeof(uint64_t), blockSize_) * blockSize_);
 

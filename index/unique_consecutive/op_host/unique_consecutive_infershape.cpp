@@ -24,6 +24,7 @@ namespace ops {
 static constexpr size_t OUT_IDX = 0;
 static constexpr size_t INDICES_IDX = 1;
 static constexpr size_t COUNTS_DIX = 2;
+static constexpr size_t COUNTS_DTYPE_IDX = 3;
 static constexpr size_t RETURN_IDX_IDX = 0;
 static constexpr size_t REUTRN_COUNTS_IDX = 1;
 static constexpr size_t AXIS_IDX = 2;
@@ -86,9 +87,27 @@ static ge::graphStatus InferShape4UniqueConsecutive(gert::InferShapeContext* con
 static ge::graphStatus InferDtype4UniqueConsecutive(gert::InferDataTypeContext* context) {
     OP_LOGD(context->GetNodeName(), "InferDtype4UniqueConsecutive begin");
     auto input_dtype = context->GetInputDataType(0);
+    auto attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    int64_t count_dtype = static_cast<int64_t>(ge::DataType::DT_INT64);
+    ge::DataType output_dtype = ge::DT_INT64;
+    OP_LOGI(context->GetNodeName(), "The default dtype of idx/count is int64.");
+    auto out_idx_dtype_ptr = attrs->GetAttrPointer<int64_t>(COUNTS_DTYPE_IDX);
+    if (out_idx_dtype_ptr != nullptr) {
+        count_dtype = *out_idx_dtype_ptr;
+        if (count_dtype == static_cast<int64_t>(ge::DataType::DT_INT32)) {
+            OP_LOGI(context->GetNodeName(), "The dtype of idx/count is set as int32.");
+            output_dtype = ge::DT_INT32;
+        } else {
+            if (count_dtype != static_cast<int64_t>(ge::DataType::DT_INT64)) {
+                OP_LOGE(context->GetNodeName(), "The dtype of idx/count only support int32 or int64.");
+                return GRAPH_FAILED;
+            }
+        }
+    }
     context->SetOutputDataType(OUT_IDX, input_dtype);
-    context->SetOutputDataType(INDICES_IDX, DT_INT64);
-    context->SetOutputDataType(COUNTS_DIX, DT_INT64);
+    context->SetOutputDataType(INDICES_IDX, output_dtype);
+    context->SetOutputDataType(COUNTS_DIX, output_dtype);
     OP_LOGD(context->GetNodeName(), "OutputDtype: %s", ToString(context->GetOutputDataType(OUT_IDX)).c_str());
     OP_LOGD(context->GetNodeName(), "IdxDtype: %s", ToString(context->GetOutputDataType(INDICES_IDX)).c_str());
     OP_LOGD(context->GetNodeName(), "CountsDtype: %s", ToString(context->GetOutputDataType(COUNTS_DIX)).c_str());

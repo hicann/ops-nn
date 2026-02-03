@@ -105,7 +105,7 @@ TEST_F(UniqueConsecutiveTest, unique_consecutive_infer_data_ype)
                               .NodeAttrs({{"return_idx", Ops::NN::AnyValue::CreateFrom<bool>(0)},
                                           {"return_counts", Ops::NN::AnyValue::CreateFrom<bool>(0)},
                                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                          {"out_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                                          {"out_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(9)}})
                               .InputDataTypes({&input_x})
                               .OutputDataTypes({&y_datatype, &idx_datatype, &idx_datatype})
                               .Build();
