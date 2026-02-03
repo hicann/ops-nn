@@ -22,7 +22,7 @@
 using namespace AscendC;
 static constexpr float ZERO = 0;
 
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 #define OUTPUT_MEAN_RSTD 1
 #define SUPPORT_BF16 1
 #else
@@ -48,7 +48,7 @@ __aicore__ inline void DataCopyEx(
     const R<T>& dst, const S<T>& src, const uint32_t len, const uint32_t count = 1,
     const DataCopyPadParams& padParams = {})
 {
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     DataCopyParams copyParams;
     copyParams.blockLen = len * sizeof(T);
     copyParams.blockCount = count;

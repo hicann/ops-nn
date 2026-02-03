@@ -169,7 +169,7 @@ __aicore__ inline void ReduceSumFP32(
     if (g_coreType == AIV) {
         WholeReduceSum<float, false>(dst_local, work_local, MASK_PLACEHOLDER, 1, 0, 1, 0);
     }
-#elif !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#elif !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     WholeReduceSum<float, false>(dst_local, work_local, MASK_PLACEHOLDER, 1, 1, 1, DEFAULT_REPEAT_STRIDE);
 #endif
     PipeBarrier<PIPE_V>();
@@ -232,7 +232,7 @@ __aicore__ inline void BlockReduceSumFP32(
 template <typename T, typename U, typename R>
 __aicore__ inline void DataCopyCustom(const U& dstTensor, const R& srcTensor, const uint32_t count)
 {
-#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     DataCopyParams copyParams;
     copyParams.blockLen = count * sizeof(T);
     copyParams.blockCount = 1;

@@ -115,7 +115,7 @@ private:
         if (isNumColAlign) {
             DataCopyCustom<T>(xLocal, xGm[gm_bias], calc_row_num * numCol);
         } else {
-#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
             // only support v220
             DataCopyParams copyParams;
             copyParams.blockLen = numCol * sizeof(T);
@@ -293,7 +293,7 @@ private:
         if (isNumColAlign) {
             DataCopyCustom<T>(yGm[progress], yLocal, calc_row_num * numCol);
         } else {
-#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
             // only support v220
             DataCopyParams copyParams;
             copyParams.blockLen = numCol * sizeof(T);
@@ -307,7 +307,7 @@ private:
     __aicore__ inline void CopyOutRstd(uint32_t outer_progress, uint32_t num)
     {
         LocalTensor<float> rstdLocal = outQueueRstd.DeQue<float>();
-#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003) || (defined(__CCE_AICORE__) && __CCE_AICORE__ == 200)
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113)) || (defined(__CCE_AICORE__) && __CCE_AICORE__ == 200)
         DataCopyCustom<float>(rstdGm[outer_progress * rowFactor], rstdLocal, num);
 #endif
         outQueueRstd.FreeTensor(rstdLocal);

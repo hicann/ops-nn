@@ -409,7 +409,7 @@ __aicore__ inline void GroupNormSiluSmallB32<T>::CopyOutMeanAndRstd(const int64_
 {
     LocalTensor<T> meanOut = outQueueMean.DeQue<T>();
     LocalTensor<T> rstdOut = outQueueRstd.DeQue<T>();
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     // when support DataCopyPad, use DataCopyPad
     uint16_t dataCount = static_cast<uint16_t>(copyNum);
     uint16_t blockCount = 1;

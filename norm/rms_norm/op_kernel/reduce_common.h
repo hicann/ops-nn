@@ -46,7 +46,7 @@ __aicore__ inline void ReduceSumForSmallReduceDimPreRepeat(
     if ASCEND_IS_AIV {
         WholeReduceSum<float, false>(dstLocal, tmpLocal, elemNum, repeat, 1, 1, ELEM_PER_BLK_FP32);
     }
-#elif defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003
+#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113)
     WholeReduceSum(dstLocal, tmpLocal, elemNum, repeat, 1, 1, ELEM_PER_BLK_FP32);
 #else
     WholeReduceSum<float, false>(dstLocal, tmpLocal, elemNum, repeat, 1, 1, ELEM_PER_BLK_FP32);
@@ -135,7 +135,7 @@ __aicore__ inline void ReduceSumHalfInterval(
     if (g_coreType == AIV) {
         WholeReduceSum<float, false>(dst_local, src_local, ELEM_PER_REP_FP32, 1, 0, 1, 0);
     }
-#elif defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003
+#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113)
     WholeReduceSum(dst_local, src_local, ELEM_PER_REP_FP32, 1, 1, 1, ELEM_PER_BLK_FP32);
 #else
     WholeReduceSum<float, false>(dst_local, src_local, ELEM_PER_REP_FP32, 1, 1, 1, DEFAULT_REPEAT_STRIDE);
@@ -166,7 +166,7 @@ __aicore__ inline float ReduceSumHalfInterval(const LocalTensor<float>& src_loca
     if (g_coreType == AIV) {
         WholeReduceSum<float, false>(src_local, src_local, ELEM_PER_REP_FP32, 1, 0, 1, 0);
     }
-#elif defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003
+#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113)
     WholeReduceSum(src_local, src_local, ELEM_PER_REP_FP32, 1, 1, 1, ELEM_PER_BLK_FP32);
 #else
     WholeReduceSum<float, false>(src_local, src_local, ELEM_PER_REP_FP32, 1, 1, 1, DEFAULT_REPEAT_STRIDE);

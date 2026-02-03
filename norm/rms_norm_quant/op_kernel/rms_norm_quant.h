@@ -95,7 +95,7 @@ __aicore__ inline void CastFromF16ToI8(
     AscendC::PipeBarrier<PIPE_V>();
     Mins(in, in, (half)127, count); // 127: limit
     AscendC::PipeBarrier<PIPE_V>();
-#if defined(__CCE_KT_TEST__) || (__CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if defined(__CCE_KT_TEST__) || (__CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     Cast(out, in, AscendC::RoundMode::CAST_RINT, count);
 #else
     Cast(out, in, AscendC::RoundMode::CAST_NONE, count);
@@ -323,7 +323,7 @@ __aicore__ inline void MultiplyGamma(
     AscendC::LocalTensor<T>& out_buf, uint32_t numCol_, uint32_t& numColAlignFp32, uint32_t& numColAlignFp16,
     uint32_t& precisionMode_)
 {
-#if defined(__CCE_KT_TEST__) || (__CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if defined(__CCE_KT_TEST__) || (__CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     if constexpr (std::is_same<T, bfloat16_t>::value) {
         Cast(sqx, fp16_gamma, AscendC::RoundMode::CAST_NONE, numColAlignFp16); // g
         AscendC::PipeBarrier<PIPE_V>();

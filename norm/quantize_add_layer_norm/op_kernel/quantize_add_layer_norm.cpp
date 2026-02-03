@@ -26,7 +26,7 @@ extern "C" __global__ __aicore__ void quantize_add_layer_norm(
 
     // per channel
     if (TILING_KEY_IS(3000)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         KernelQuantizeAddLayerNormSingleRow<bfloat16_t, 3000> op(&pipe);
         op.Init(
             x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, usrWorkspace, tiling_data.numCore,
@@ -49,7 +49,7 @@ extern "C" __global__ __aicore__ void quantize_add_layer_norm(
             tiling_data.firstDimPerCoreTail, tiling_data.eps, tiling_data.aveFactor);
         op.Process();
     } else if (TILING_KEY_IS(3100)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         KernelQuantizeAddLayerNormSingleRow<bfloat16_t, 3100> op(&pipe);
         op.Init(
             x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, usrWorkspace, tiling_data.numCore,
@@ -75,7 +75,7 @@ extern "C" __global__ __aicore__ void quantize_add_layer_norm(
 
     // per channel
     if (TILING_KEY_IS(3002)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         KernelQuantizeAddLayerNormSingleRow<bfloat16_t, 3002> op(&pipe);
         op.Init(
             x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, usrWorkspace, tiling_data.numCore,
@@ -98,7 +98,7 @@ extern "C" __global__ __aicore__ void quantize_add_layer_norm(
             tiling_data.firstDimPerCoreTail, tiling_data.eps, tiling_data.aveFactor);
         op.Process();
     } else if (TILING_KEY_IS(3102)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         KernelQuantizeAddLayerNormSingleRow<bfloat16_t, 3102> op(&pipe);
         op.Init(
             x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, usrWorkspace, tiling_data.numCore,
@@ -124,7 +124,7 @@ extern "C" __global__ __aicore__ void quantize_add_layer_norm(
 
     // per_tensor
     else if (TILING_KEY_IS(3001)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         KernelQuantizeAddLayerNormNormalPerTensorKernel<bfloat16_t, float, 3001> op(&pipe);
         op.Init(
             x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, tiling_data.numCore, tiling_data.numLastDim,
@@ -147,7 +147,7 @@ extern "C" __global__ __aicore__ void quantize_add_layer_norm(
             tiling_data.aveFactor);
         op.Process();
     } else if (TILING_KEY_IS(3101)) {
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         KernelQuantizeAddLayerNormNormalPerTensorKernel<bfloat16_t, float, 3101> op(&pipe);
         op.Init(
             x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, tiling_data.numCore, tiling_data.numLastDim,

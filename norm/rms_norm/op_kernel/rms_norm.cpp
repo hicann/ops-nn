@@ -56,7 +56,7 @@ extern "C" __global__ __aicore__ void rms_norm(
     } else if (TILING_KEY_IS(RMSNORM_TILING_SINGLE_ROW)) {
         GENERAL_OP_IMPL(KernelRmsNormSingleRow, DTYPE_X, DTYPE_GAMMA);
 #endif
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     } else if (TILING_KEY_IS(1110)) {
         GENERAL_OP_IMPL(KernelRmsNormWholeReduceSum, half, true);
     } else if (TILING_KEY_IS(1120)) {

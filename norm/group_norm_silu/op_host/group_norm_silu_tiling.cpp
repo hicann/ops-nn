@@ -235,7 +235,8 @@ static void SetTilingParams(const gert::TilingContext* context, GroupNormSiluTil
     tilingData.set_hwNum(hwNum);
     tilingData.set_elemNum(tilingData.get_shapeD() * hwNum);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    uint64_t processSize = (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::KIRINX90) ?
+    uint64_t processSize = (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::KIRINX90 ||
+                            ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::KIRIN9030) ?
                                DEFAULT_PROCESSSIZE_KIRINX90 :
                                DEFAULT_PROCESSSIZE;
     tilingData.set_processSize(static_cast<int64_t>(processSize));

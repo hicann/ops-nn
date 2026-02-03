@@ -452,7 +452,7 @@ __aicore__ inline void GroupNormSiluHW1B32<T>::CopyOutYWithPad(
     const float& mean, const float& rstd, const int64_t& startAddr, const int64_t& copyNum)
 {
     LocalTensor<T> outY = outQueueY.DeQue<T>();
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     uint16_t dataCount = static_cast<uint16_t>(copyNum);
     uint16_t blockCount = 1;
     uint16_t blockLen = dataCount * sizeof(T);
@@ -485,7 +485,7 @@ __aicore__ inline void GroupNormSiluHW1B32<T>::CopyOutMeanAndRstd(const int64_t&
 {
     LocalTensor<T> meanOut = outQueueMean.DeQue<T>();
     LocalTensor<T> rstdOut = outQueueRstd.DeQue<T>();
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     // when support DataCopyPad, use DataCopyPad
     uint16_t dataCount = static_cast<uint16_t>(copyNum);
     uint16_t blockCount = 1;

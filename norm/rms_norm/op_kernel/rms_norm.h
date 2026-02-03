@@ -222,7 +222,7 @@ private:
     {
         LocalTensor<float> rstdLocal = outQueueRstd.DeQue<float>();
         uint32_t copyRstdNumAlgin32 = ROUND_UP(num, NUM_PER_BLK_FP32);
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         DataCopyCustom<float>(rstdGm[outer_progress * row_factor], rstdLocal, num);
 #else
         SetAtomicAdd<float>();

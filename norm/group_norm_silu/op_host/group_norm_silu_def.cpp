@@ -69,6 +69,7 @@ class GroupNormSilu : public OpDef {
         .NeedCheckSupportFlag(false)
         .PrecisionReduceFlag(true);
     this->AICore().AddConfig("kirinx90", config_kirin);
+        this->AICore().AddConfig("kirin9030", config_kirin);
 
     OpAICoreConfig aicore_config;
     aicore_config.DynamicCompileStaticFlag(true)

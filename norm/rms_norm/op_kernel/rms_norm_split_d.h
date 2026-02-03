@@ -384,7 +384,7 @@ private:
     __aicore__ inline void CopyOutRstd(uint32_t i_o_idx, uint32_t num)
     {
         LocalTensor<float> rstdLocal = outQueueRstd.DeQue<float>();
-#if (__CCE_AICORE__ == 220) || (__CCE_AICORE__ == 100) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if (__CCE_AICORE__ == 220) || (__CCE_AICORE__ == 100) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         DataCopyCustom<float>(rstdGm[i_o_idx * row_factor], rstdLocal, num);
 #else
         uint32_t copyRstd_num = ROUND_UP(num, NUM_PER_BLK_FP32);
