@@ -75,9 +75,9 @@ private:
                 int32_t dst = indexValue * strides + i;
                 int32_t dstAligned = (dst / aligned) * aligned;
                 mask[0] = 0b1 << (dst - dstAligned);
-                pipe_barrier(PIPE_V);
+                PipeBarrier<PIPE_V>();
                 Adds(this->xLocalTensor[dstAligned], this->xLocalTensor[dstAligned], value, mask, 1, {1,1,8,8}); // 不支持bool
-                pipe_barrier(PIPE_V);
+                PipeBarrier<PIPE_V>();
             }
         } else {
             for (uint64_t i = 0; i < tasks; i++) {
@@ -143,9 +143,9 @@ private:
                 uint32_t dst = taskId * this->xDim1 + indexValue;
                 int32_t dstAligned = (dst / aligned) * aligned;
                 mask[0] = 0b1 << (dst - dstAligned);
-                pipe_barrier(PIPE_V);
+                PipeBarrier<PIPE_V>();
                 Adds(this->xLocalTensor[dstAligned], this->xLocalTensor[dstAligned], value, mask, 1, {1,1,8,8});
-                pipe_barrier(PIPE_V);
+                PipeBarrier<PIPE_V>();
             }
         } else {
             for (uint64_t i = 0; i < indicesNums; i++) {
@@ -204,9 +204,9 @@ private:
                     uint32_t dst = (xStartRow + i) * this->xDim1 + indexValue;
                     int32_t dstAligned = (dst / aligned) * aligned;
                     mask[0] = 0b1 << (dst - dstAligned);
-                    pipe_barrier(PIPE_V);
+                    PipeBarrier<PIPE_V>();
                     Adds(this->xLocalTensor[dstAligned], this->xLocalTensor[dstAligned], value, mask, 1, {1,1,8,8});
-                    pipe_barrier(PIPE_V);
+                    PipeBarrier<PIPE_V>();
                 }
             }
         } else {
@@ -276,9 +276,9 @@ private:
                 int32_t dst = indexValue * strides + i;
                 int32_t dstAligned = (dst / aligned) * aligned;
                 mask[0] = 0b1 << (dst - dstAligned);
-                pipe_barrier(PIPE_V);
+                PipeBarrier<PIPE_V>();
                 Adds(this->xLocalTensor[dstAligned], this->xLocalTensor[dstAligned], this->updatesValue, mask, 1, {1,1,8,8}); // 不支持bool
-                pipe_barrier(PIPE_V);
+                PipeBarrier<PIPE_V>();
             }
         } else {
             for (uint64_t i = 0; i < tasks; i++) {
@@ -340,9 +340,9 @@ private:
                 uint32_t dst = taskId * this->xDim1 + indexValue;
                 int32_t dstAligned = (dst / aligned) * aligned;
                 mask[0] = 0b1 << (dst - dstAligned);
-                pipe_barrier(PIPE_V);
+                PipeBarrier<PIPE_V>();
                 Adds(this->xLocalTensor[dstAligned], this->xLocalTensor[dstAligned], this->updatesValue, mask, 1, {1,1,8,8});
-                pipe_barrier(PIPE_V);
+                PipeBarrier<PIPE_V>();
             }
         } else {
             for (uint64_t i = 0; i < indicesNums; i++) {
@@ -397,9 +397,9 @@ private:
                     uint32_t dst = (xStartRow + i) * this->xDim1 + indexValue;
                     int32_t dstAligned = (dst / aligned) * aligned;
                     mask[0] = 0b1 << (dst - dstAligned);
-                    pipe_barrier(PIPE_V);
+                    PipeBarrier<PIPE_V>();
                     Adds(this->xLocalTensor[dstAligned], this->xLocalTensor[dstAligned], this->updatesValue, mask, 1, {1,1,8,8});
-                    pipe_barrier(PIPE_V);
+                    PipeBarrier<PIPE_V>();
                 }
             }
         } else {
