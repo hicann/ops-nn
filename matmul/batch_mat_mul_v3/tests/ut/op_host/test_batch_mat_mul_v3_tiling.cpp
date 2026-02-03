@@ -136,6 +136,82 @@ static string to_string(const std::stringstream& tiling_data) {
     return result;
 }
 
+TEST_P(BatchMatMulV3TilingRuntime, general_cases) {
+    TilingTestParam param = GetParam();
+    gert::StorageShape x1_shape = {param.x1_shape, param.x1_shape};
+    gert::StorageShape x2_shape = {param.x2_shape, param.x2_shape};
+    std::vector<gert::StorageShape> output_shapes(1, {param.y_shape, param.y_shape});
+    std::vector<void*> output_shapes_ref(1);
+    for (size_t i = 0; i < output_shapes.size(); ++i) {
+        output_shapes_ref[i] = &output_shapes[i];
+    }
+
+    fe::PlatFormInfos platform_info;
+
+    platform_info.Init();
+
+    optiling::MatmulV3CompileInfo compile_info;
+    auto kernel_holder =
+        gert::KernelRunContextFaker()
+            .KernelIONum(2, 1)
+            .Inputs({const_cast<char*>(param.compile_info.c_str()), reinterpret_cast<void*>(&platform_info)})
+            .Outputs({&compile_info})
+            .Build();
+
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    map<string, string> soc_version;
+    GetPlatFormInfos(param.compile_info.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+    aicore_spec["cube_freq"] = "1800";
+
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(param.op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(param.op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(param.op_type.c_str())->tiling_parse;
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto tiling_data = gert::TilingData::CreateCap(2048);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+
+    gert::KernelRunContextHolder holder;
+    holder = gert::TilingContextFaker()
+                 .SetOpType(param.op_type.c_str())
+                 .NodeIoNum(2, 1)
+                 .IrInstanceNum({1, 1})
+                 .InputShapes({&x1_shape, &x2_shape})
+                 .OutputShapes(output_shapes_ref)
+                 .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(param.trans_a)},
+                             {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(param.trans_b)},
+                             {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(param.offset_x)},
+                             {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(param.enable_hf32)}})
+                 .NodeInputTd(0, param.input_dtype, param.x1_ori_format, param.x1_format)
+                 .NodeInputTd(1, param.input_dtype, param.x2_ori_format, param.x2_format)
+                 .NodeOutputTd(0, param.y_dtype, param.y_ori_format, param.y_format)
+                 .CompileInfo(&compile_info)
+                 .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                 .TilingData(tiling_data.get())
+                 .Workspace(ws_size)
+                 .Build();
+
+    auto tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    uint64_t tiling_key = tiling_context->GetTilingKey();
+    uint32_t block_dim = tiling_context->GetBlockDim();
+    auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData(), param.case_name, tiling_key);
+    auto golden_tiling_data = GenGoldenTilingData(param.tiling_data, param.case_name, param.tiling_key);
+    cout<<"===== "<<tiling_key<<" === "<<tiling_data_result<<std::endl;
+    ASSERT_EQ(tiling_key, param.tiling_key);
+    ASSERT_EQ(block_dim, param.block_dim);
+    ASSERT_EQ(tiling_data_result, golden_tiling_data);
+}
 
 static TilingTestParam ascend910B_cases_params[] = {
     {"BatchMatMulV3_basic_test01",
@@ -355,7 +431,7 @@ static TilingTestParam ascend950_cases_params[] = {
       "block_dim":{"CORE_NUM":32},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, true, 0, true, {10, 9, 47, 8}, {10, 9, 77, 8}, {10, 9, 47, 77}, false, 0, 0, 32, 2097729UL,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, true, 0, true, {10, 9, 47, 8}, {10, 9, 77, 8}, {10, 9, 47, 77}, false, 0, 0, 32, 2097473UL,
     "47 77 8 90 3 3 1 48 80 16 0 1 0 0 "
   },
   {
@@ -414,6 +490,8 @@ static TilingTestParam ascend950_cases_params[] = {
   // },
 };
 
+INSTANTIATE_TEST_CASE_P(BatchMatMulV3910B, BatchMatMulV3TilingRuntime, testing::ValuesIn(ascend910B_cases_params));
+INSTANTIATE_TEST_CASE_P(BatchMatMulV3950, BatchMatMulV3TilingRuntime, testing::ValuesIn(ascend950_cases_params));
 
 TEST_F(BatchMatMulV3TilingRuntime, fail_case) {
   gert::StorageShape x1_shape = {{2, 15, 16}, {2, 15, 16}};
@@ -808,6 +886,87 @@ TEST_F(BatchMatMulV3TilingRuntime, bias_cases_two_dim_bias_failed) {
   ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
 }
 
+TEST_F(BatchMatMulV3TilingRuntime, bias_cases_l0_iterbatchbias_success) {
+  gert::StorageShape x1_shape = { {2048, 16, 16},  {2048, 16, 16}};
+  gert::StorageShape x2_shape = { {2048, 16, 16},  {2048, 16, 16}};
+  gert::StorageShape bias_shape = { {16}, {16}};
+  std::vector<gert::StorageShape> output_shapes(1, {{2048, 16, 16},  {2048, 16, 16}});
+  std::vector<void *> output_shapes_ref(1);
+  for (size_t i = 0; i < output_shapes.size(); ++i) {
+    output_shapes_ref[i] = &output_shapes[i];
+  }
+
+  fe::PlatFormInfos platform_info;
+
+  platform_info.Init();
+  string compile_info_string = R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false},
+      "binary_attrs":{"bias_flag":true, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":33554432},"binary_mode_flag":true,
+      "block_dim":{"CORE_NUM":32},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend950" },
+      "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})";
+  optiling::MatmulV3CompileInfo compile_info;
+  auto kernel_holder = gert::KernelRunContextFaker()
+                    .KernelIONum(2, 1)
+                    .Inputs({const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info)})
+                    .Outputs({&compile_info})
+                    .Build();
+
+  map<string, string> soc_infos;
+  map<string, string> aicore_spec;
+  map<string, string> intrinsics;
+  map<string, string> soc_version;
+  GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+  aicore_spec["cube_freq"] = "1800";
+
+  ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
+  auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->tiling;
+  auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->tiling_parse;
+  ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+  kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+  kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+  kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+  kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+  kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                          intrinsics);
+  ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+  auto tiling_data = gert::TilingData::CreateCap(2048);
+  auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+  auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+
+  gert::KernelRunContextHolder holder;
+  holder = gert::TilingContextFaker()
+                    .SetOpType("BatchMatMulV3")
+                    .NodeIoNum(3, 1)
+                    .IrInstanceNum({1, 1, 1})
+                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                    .OutputShapes(output_shapes_ref)
+                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                    .NodeInputTd(0, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                    .NodeInputTd(1, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                    .NodeInputTd(2, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                    .NodeOutputTd(0, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                    .CompileInfo(&compile_info)
+                    .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                    .TilingData(tiling_data.get())
+                    .Workspace(ws_size)
+                    .Build();
+
+  auto tiling_context = holder.GetContext<gert::TilingContext>();
+  ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+  uint64_t tiling_key = tiling_context->GetTilingKey();;
+  uint32_t block_dim = tiling_context->GetBlockDim();
+  string case_name = "BatchMatMulV3TilingRuntime_bias_cases_l0_iterbatchbias_success";
+  auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData(), case_name, tiling_key);
+  auto golden_tiling_data = GenGoldenTilingData(
+    "16 16 16 2048 64 64 0 16 16 16 0 1 0 0",
+    case_name, tiling_key);
+  cout<<"===== "<<tiling_key<<" === "<<tiling_data_result<<std::endl;
+  ASSERT_EQ(tiling_key, 257UL);
+  ASSERT_EQ(block_dim, 32);
+  ASSERT_EQ(tiling_data_result,golden_tiling_data);
+}
 
 TEST_F(BatchMatMulV3TilingRuntime, bias_cases_l1_iterbatchbias_success) {
   gert::StorageShape x1_shape = { {992, 28, 2},  {992, 2, 1851}};
@@ -963,11 +1122,10 @@ TEST_F(BatchMatMulV3TilingRuntime, 910d_transpose_non_contiguous_cases)
     string case_name = "BatchMatMulV3TilingRuntime_910d_transpose_non_contiguous_cases";
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData(), case_name, tiling_key);
     auto golden_tiling_data = GenGoldenTilingData(
-        "32 150 32 150 150 150 32 150 160 32 80 2 2 1 1 0 0 0 0 0 0 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 "
-        "0 0 8 0 1 1 1 1 1 0 0 0 4 0 512 512 512 1 1 1 1 1 1 1 1 1 1 512 512 512 8 4 1 ",
+        "150 32 150 512 4 1 0 96 32 160 512 1 0 0",
         case_name, tiling_key);
     cout << "===== " << tiling_key << " === " << tiling_data_result << std::endl;
-    ASSERT_EQ(tiling_key, 256UL);
+    ASSERT_EQ(tiling_key, 257UL);
     ASSERT_EQ(block_dim, 32);
     ASSERT_EQ(tiling_data_result, golden_tiling_data);
 }
@@ -1055,11 +1213,10 @@ TEST_F(BatchMatMulV3TilingRuntime, 910d_transpose_non_contiguous_cases1)
     string case_name = "BatchMatMulV3TilingRuntime_910d_transpose_non_contiguous_cases1";
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData(), case_name, tiling_key);
     auto golden_tiling_data = GenGoldenTilingData(
-        "32 150 32 150 150 150 32 150 160 32 80 2 2 1 1 0 0 0 0 0 0 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 "
-        "0 0 8 0 1 1 1 1 1 0 0 0 4 0 512 512 512 1 1 1 1 1 1 1 1 1 1 512 512 512 8 4 1 ",
+        "150 32 150 512 4 1 0 96 32 160 512 1 0 0 ",
         case_name, tiling_key);
     cout << "===== " << tiling_key << " === " << tiling_data_result << std::endl;
-    ASSERT_EQ(tiling_key, 256UL);
+    ASSERT_EQ(tiling_key, 257UL);
     ASSERT_EQ(block_dim, 32);
     ASSERT_EQ(tiling_data_result, golden_tiling_data);
 }

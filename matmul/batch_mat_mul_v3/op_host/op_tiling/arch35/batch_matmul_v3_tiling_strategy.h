@@ -36,8 +36,9 @@ constexpr int32_t BASE = 999;
 
 const static std::map<platform_ascendc::SocVersion, std::vector<int32_t>> BatchMatMulV3PrioritiesMap = {
     {platform_ascendc::SocVersion::ASCEND950,
-     {strategy::BATCH_MATMUL_INPUT_K_EQUAL_ZERO, strategy::BATCH_MATMUL_TO_MUL, strategy::ITER_BATCH, strategy::AL1_FULL_LOAD_BASIC, strategy::BL1_FULL_LOAD_BASIC,
-      strategy::ASW_BASIC, strategy::BASE}},
+     {strategy::BATCH_MATMUL_INPUT_K_EQUAL_ZERO, strategy::BATCH_MATMUL_TO_MUL, strategy::ITER_BATCH_BASICAPI,
+      strategy::ITER_BATCH, strategy::AL1_FULL_LOAD_BASIC, strategy::BL1_FULL_LOAD_BASIC, strategy::ASW_BASIC,
+      strategy::BASE}},
     {platform_ascendc::SocVersion::RESERVED_VERSION, {strategy::ITER_BATCH, strategy::BASE}}, // supportMmadS8S4平台
 };
 

@@ -546,7 +546,7 @@ TEST_P(TestDualLevelQuantBatchMatmulTiling, generalTest)
 
 INSTANTIATE_TEST_CASE_P(DLQBMM_DAV_3510, TestDualLevelQuantBatchMatmulTiling, testing::ValuesIn(GetParams("DAV_3510")));
 
-mutex compileMutex;
+static mutex compileMutex;
 
 static void ThreadFuncInvokeTilingFunc(
     const DualLevelQuantBatchMatmulTilingTestParam* params, size_t testcaseNum, size_t threadIdx, size_t threadNum,

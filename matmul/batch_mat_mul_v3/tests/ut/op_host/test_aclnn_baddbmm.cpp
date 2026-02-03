@@ -1006,7 +1006,7 @@ TEST_F(l2_baddbmm_test, baddbmm_inplace_310_FP32_FP16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_baddbmm_test, ascend910_95_test_bmm_transpose_add1)
+TEST_F(l2_baddbmm_test, ascend950_test_bmm_transpose_add1)
 {
     op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({512, 150, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -1024,7 +1024,7 @@ TEST_F(l2_baddbmm_test, ascend910_95_test_bmm_transpose_add1)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_baddbmm_test, ascend910_95_test_bmm_transpose_add2)
+TEST_F(l2_baddbmm_test, ascend950_test_bmm_transpose_add2)
 {
     op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({512, 150, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
