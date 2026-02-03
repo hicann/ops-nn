@@ -635,7 +635,6 @@ static ge::graphStatus Tiling4GroupNormV2(gert::TilingContext *context)
         reinterpret_cast<const GroupNormV2CompileInfo *>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
 
-
     // get input shape info
     auto input_first = context->GetInputShape(0);
     OP_CHECK_IF(input_first == nullptr,
@@ -650,7 +649,6 @@ static ge::graphStatus Tiling4GroupNormV2(gert::TilingContext *context)
     OP_LOGD(context->GetNodeName(), "GroupNormV2 tik_compile_info is null, runs ascendc tiling func");
     ge::graphStatus set_tiling_data_statues = SetTilingData(context);
     return set_tiling_data_statues;
-
 }
 
 static ge::graphStatus TilingPrepare4GroupNormV2(gert::TilingParseContext *context)

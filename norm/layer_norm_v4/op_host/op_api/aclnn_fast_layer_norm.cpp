@@ -274,7 +274,7 @@ static aclnnStatus doFastLayerNormInput(
 }
 
 static aclnnStatus doFastLayerNorm(
-    LayerNormTensor layerNormTensor, const aclIntArray* normalizedShape, uint64_t* workspaceSize, aclOpExecutor* executor)
+    LayerNormTensor layerNormTensor, const aclIntArray* normalizedShape, aclOpExecutor* executor)
 {
     // 固定写法，将输入转换成连续的tensor
     auto inputContiguous = l0op::Contiguous(layerNormTensor.input, executor);
@@ -289,7 +289,6 @@ static aclnnStatus doFastLayerNorm(
     auto ret = doFastLayerNormInput(layerNormTensor, normalizedShape, weightContiguous, biasContiguous, executor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    
     std::array<aclTensor*, LAYER_NORM_OUT_NUM> fastLayerNormOut = {nullptr, nullptr, nullptr};
 
     l0op::LayerNormV4Params V4_params = {inputContiguous, normalizedShape, weightContiguous, biasContiguous};
@@ -378,7 +377,7 @@ aclnnStatus aclnnFastLayerNormGetWorkspaceSize(
         return ACLNN_SUCCESS;
     }
     LayerNormTensor layerNormTensor = {input, weightOptional, biasOptional, eps, out, meanOutOptional, rstdOutOptional};
-    auto ret2 = doFastLayerNorm(layerNormTensor, normalizedShape, workspaceSize, uniqueExecutor.get());
+    auto ret2 = doFastLayerNorm(layerNormTensor, normalizedShape, uniqueExecutor.get());
     CHECK_RET(ret2 == ACLNN_SUCCESS, ret2);
     
     // 固定写法，获取计算过程中需要使用的workspace大小

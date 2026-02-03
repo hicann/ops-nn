@@ -298,7 +298,7 @@ bool AddRmsNormDynamicQuantTilingHelper::CalculateShapeParameters()
         Ops::Base::CeilDiv(numCol, static_cast<uint64_t>(alignSize)) * static_cast<uint64_t>(alignSize);
 
     // 计算平均因子
-    this->avgFactor_ = 1.0 / ((float)this->numLastDim_);
+    this->avgFactor_ = 1.0 / (static_cast<float>(this->numLastDim_));
 
     return true;
 }

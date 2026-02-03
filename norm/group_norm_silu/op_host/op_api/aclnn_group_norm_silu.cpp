@@ -283,8 +283,6 @@ static const aclTensor* GetBeta(
     return betaContiguous;
 }
 
-
-
 aclnnStatus aclnnGroupNormSiluGetWorkspaceSize(
     const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, int64_t group, double eps, aclTensor* out,
     aclTensor* meanOut, aclTensor* rstdOut, uint64_t* workspaceSize, aclOpExecutor** executor)

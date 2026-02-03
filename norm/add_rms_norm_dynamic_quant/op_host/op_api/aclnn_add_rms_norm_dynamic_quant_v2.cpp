@@ -183,7 +183,7 @@ static aclnnStatus CheckParams(
 } // namespace AddRmsNormDynamicQuantV2ACLNN
 
 aclnnStatus AddRmsNormDynamicQuantV2Int42Int32PackedTensor(
-    const aclTensor* y, const aclTensor*& outTensor, int32_t outDtype, aclOpExecutor* executor)
+    const aclTensor* y, const aclTensor*& outTensor, aclOpExecutor* executor)
 {
     // if outType is int32, pack output
     auto viewShape = y->GetViewShape();
@@ -225,14 +225,15 @@ aclnnStatus ComputeAddRmsNormDynamicQuantV2(
     // 不支持空Tensor
     CHECK_RET(y1ComputeOut != nullptr && y2ComputeOut != nullptr && xComputeOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     if (yType == op::DataType::DT_INT4) {
-        auto ret = AddRmsNormDynamicQuantV2Int42Int32PackedTensor(y1ComputeOut, out1Tensor, yType, executor);
+        auto ret = AddRmsNormDynamicQuantV2Int42Int32PackedTensor(y1ComputeOut, out1Tensor, executor);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
         auto viewCopyY1Result = l0op::ViewCopy(out1Tensor, y1Out, executor);
         CHECK_RET(viewCopyY1Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        ret = AddRmsNormDynamicQuantV2Int42Int32PackedTensor(y2ComputeOut, out2Tensor, yType, executor);
+        ret = AddRmsNormDynamicQuantV2Int42Int32PackedTensor(y2ComputeOut, out2Tensor, executor);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
         auto viewCopyY2Result = l0op::ViewCopy(out2Tensor, y2Out, executor);
         CHECK_RET(viewCopyY2Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
     } else {
         // 将 y1ComputeOut 的结果拷贝到 y1 上
         auto viewCopyY1Result = l0op::ViewCopy(y1ComputeOut, y1Out, executor);

@@ -109,7 +109,6 @@ public:
         GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
         GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, const RmsNormQuantV2RegbaseFullLoadTilingData* tilingData)
     {
-
         // Tiling data
         numA = tilingData->a;
         numR = tilingData->r;
@@ -117,7 +116,6 @@ public:
         blockFactor = tilingData->blockFactor;
         blockTail = tilingData->blockTail;
         ubFactor = tilingData->ubFactor;
-        // ubFactor = 1;
         binaryAdd = tilingData->binaryAdd;
         optionMask = tilingData->optionMask & 0xF;
         isScaleDiv = tilingData->divMode == 1;
@@ -208,13 +206,6 @@ public:
             y2Gm.SetGlobalBuffer((__gm__ yDtype*)y2 + yOffset, yLen);
         }
 
-        // UB buffer
-        // TQue<QuePosition::VECIN, 1> inQueueX;
-        // /gamma beta scales0 scales1 zero_points0 zero_point1 all in this queue
-        // TQue<QuePosition::VECIN, 1> inQueueOhter;
-        // TQue<QuePosition::VECOUT, 1> outQueueY1, outQueueY2;
-        // TBuf<TPosition::VECCALC> rstdBuf;
-        // TBuf<TPosition::VECCALC> reduceBuf;
         pipe_->InitBuffer(inQueueX, DOUBLE_BUFFER_NUM, ubFactor * xGammaBetaAlign * sizeof(T_X));
         // preload data
         pipe_->InitBuffer(inQueueOhter, 1, preloadDataSize);
@@ -243,7 +234,6 @@ public:
 
         for (int64_t i = 0; i < curUbLoops; i++) {
             int64_t curUbFactor = (i == (curUbLoops - 1)) ? ubFactorTail : ubFactor; //ubFactorTail 尾部
-            // int64_t curUbFactor = (i == (curUbLoops - 1)) ? (curBlockFactor-(curUbLoops-1)*ubFactor) : ubFactor;
             int64_t offsetBase = i * numR * ubFactor;
             // x
             DataCopyPadExtParams<T_X> dataCopyPadExtParamsX;
@@ -253,7 +243,6 @@ public:
             dataCopyPadExtParamsX.paddingValue = 0;
             DataCopyExtParams copyInParamsX;
             copyInParamsX.blockCount = curUbFactor;
-            // copyInParamsX.blockLen = xGammaBetaAlign * sizeof(T_X);
             copyInParamsX.blockLen = numR * sizeof(T_X);
             copyInParamsX.srcStride = 0;
             copyInParamsX.dstStride = 0;
@@ -267,8 +256,7 @@ public:
             ComputeSquareReduceSum(xLocal, reduceTmpLocal, rstdLocal, curUbFactor, numR, xGammaBetaAlign, binaryAdd);
             // compute rstd
             ComputeRstd(rstdLocal, rstdLocal, curUbFactor, epsilon, avgFactor);
-            
-            
+
             LocalTensor<yDtype> y1Local = outQueueY1.AllocTensor<yDtype>();
             LocalTensor<yDtype> y2Local;
             if(hasY2){
@@ -678,7 +666,6 @@ private:
                     ComputeQuant<false, false, false, false, false>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
                     y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
                 }
-
             } else {
                 if (optionMask == 0b1111) {
                     ComputeQuant<true, true, true, true, true>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
@@ -899,7 +886,6 @@ private:
                 }
             }
         }
-       
     }
 };
 } // namespace RmsNormQuantV2
