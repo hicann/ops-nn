@@ -94,14 +94,13 @@ ge::graphStatus IsValidDtype(const MatMulV3Args& args, platform_ascendc::SocVers
     } else if (args.hasBias) {
         OP_LOGE(
             args.opName, "Unsupported data type: x1[%s], x2[%s], y[%s], bias[%s]", std::to_string(args.aType).c_str(),
-            std::to_string(args.bType).c_str(), std::to_string(args.cType).c_str());
+            std::to_string(args.bType).c_str(), std::to_string(args.cType).c_str(), std::to_string(args.biasType).c_str());
 
         return ge::GRAPH_FAILED;
     } else {
         OP_LOGE(
             args.opName, "Unsupported data type: x1[%s], x2[%s], y[%s]", std::to_string(args.aType).c_str(),
-            std::to_string(args.bType).c_str(), std::to_string(args.cType).c_str(),
-            std::to_string(args.biasType).c_str());
+            std::to_string(args.bType).c_str(), std::to_string(args.cType).c_str());
         return ge::GRAPH_FAILED;
     }
 }
@@ -117,9 +116,10 @@ ge::graphStatus OpSpecificCheck(
             OP_LOGE(args.opName, "illegal value: output dim num (%zu)", x3DimNum);
             return ge::GRAPH_FAILED;
         }
-        if (x3Shape[x3DimNum - NUM_TWO] != args.mValue || x3Shape[x3DimNum - 1] != args.nValue) {
+        if (x3Shape[x3DimNum - NUM_TWO] != static_cast<int64_t>(args.mValue) ||
+            x3Shape[x3DimNum - 1] != static_cast<int64_t>(args.nValue)) {
             OP_LOGE(
-                args.opName, "illegal value: shape x3Shape[-2]:%ld, x3Shape[-1]:%ld, m:%ld, n%ld",
+                args.opName, "illegal value: shape x3Shape[-2]:%ld, x3Shape[-1]:%ld, m:%lu, n%lu",
                 x3Shape[x3DimNum - NUM_TWO], x3Shape[x3DimNum - 1], args.mValue, args.nValue);
             return ge::GRAPH_FAILED;
         }
@@ -128,7 +128,7 @@ ge::graphStatus OpSpecificCheck(
             OP_TILING_CHECK(
                 x3Shape[0] != 1 && x3Shape[0] != static_cast<int>(args.batchInfo->batchC),
                 CUBE_INNER_ERR_REPORT(
-                    args.opName, "illegal value: batchX3 %ld cannot broadcast to batchC %ld", x3Shape[0],
+                    args.opName, "illegal value: batchX3 %ld cannot broadcast to batchC %lu", x3Shape[0],
                     args.batchInfo->batchC),
                 return ge::GRAPH_FAILED);
             args.batchX3 = x3Shape[0];
