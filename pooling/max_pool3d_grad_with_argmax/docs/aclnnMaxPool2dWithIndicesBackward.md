@@ -6,13 +6,12 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>昇腾910_95 AI处理器</term>                             |    √     |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品 </term>                             |    ×     |
+| <term>Atlas 推理系列产品</term>                             |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    ×     |
-| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
@@ -196,11 +195,11 @@ aclnnStatus aclnnMaxPool2dWithIndicesBackward(
     <td>-</td>
   </tr>
   </tbody></table>
-  <term>昇腾910_95 AI处理器</term>：gradOutput和self数据类型支持FLOAT、FLOAT16、BFLOAT16，数据格式支持ND、NCHW、NHWC。
+  <term>Ascend 950PR/Ascend 950DT</term>：gradOutput和self数据类型支持FLOAT、FLOAT16、BFLOAT16，数据格式支持ND、NCHW、NHWC。
                                    indices数据类型支持INT32、INT64。
                                    支持dilation中的元素值大于0，支持1维或者2维输入。
 
-  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：gradOutput和self数据类型支持FLOAT。数据格式支持NCHW和CHW。indices数据类型支持INT32。仅支持dilation为（1，1）。
+  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：gradOutput和self数据类型支持FLOAT。数据格式支持NCHW和CHW。indices数据类型支持INT32。仅支持dilation为（1，1）。
 
 - **返回值：**
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。

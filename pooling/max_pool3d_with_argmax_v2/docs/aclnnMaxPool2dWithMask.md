@@ -6,13 +6,12 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>昇腾910_95 AI处理器</term>                             |    ×     |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    ×     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品 </term>                             |    √     |
+| <term>Atlas 推理系列产品</term>                             |    √     |
 | <term>Atlas 训练系列产品</term>                              |    √     |
-| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
@@ -92,7 +91,7 @@ aclnnStatus aclnnMaxPool2dWithMask(
       <td>输入</td>
       <td>待计算张量。</td>
       <td>-</td>
-      <td>BFLOAT16、FLOAT16、FLOAT32</td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>NCHW、ND</td>
       <td>3-4</td>
       <td>√</td>
@@ -152,7 +151,7 @@ aclnnStatus aclnnMaxPool2dWithMask(
       <td>输出</td>
       <td>输出的tensor，池化后的结果。</td>
       <td>shape由上述公式推导出。</td>
-      <td>BFLOAT16、FLOAT16、FLOAT32</td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>NCHW、ND</td>
       <td>3-4</td>
       <td>√</td>
@@ -188,11 +187,9 @@ aclnnStatus aclnnMaxPool2dWithMask(
       <td>-</td>
     </tr>
   </tbody></table>
-  <term>Atlas 推理系列产品</term>：数据类型支持FLOAT。
+ - <term>Atlas 推理系列产品</term>：数据类型支持FLOAT。
 
-  <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16。
-
-  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16和BFLOAT16。
+ - <term>Atlas 训练系列产品</term>：不支持BFLOAT16数据类型。
 
 - **返回值：**
 
