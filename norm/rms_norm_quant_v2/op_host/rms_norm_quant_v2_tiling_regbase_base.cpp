@@ -213,7 +213,7 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckInputShapeValue()
 }
 
 bool RmsNormQuantV2RegbaseTilingBase::CheckShapeSame(const gert::StorageShape* src1Shape, const gert::StorageShape* src2Shape,
-    string nodeName, string src1Name, string src2Name)
+    string inNodeName, string inSrc1Name, string inSrc2Name)
 {
     size_t src1DimNum = EnsureNotScalar(src1Shape->GetStorageShape()).GetDimNum();
     size_t src2DimNum = EnsureNotScalar(src2Shape->GetStorageShape()).GetDimNum();
@@ -221,8 +221,8 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckShapeSame(const gert::StorageShape* s
     OP_TILING_CHECK(
         (src1DimNum != src2DimNum),
         OP_LOGE(
-            nodeName.c_str(), "Dim num check invalid, %s is %lu %s is %lu, not equal.", src1Name.c_str(), src1DimNum,
-            src2Name.c_str(), src2DimNum),
+            inNodeName.c_str(), "Dim num check invalid, %s is %lu %s is %lu, not equal.", inSrc1Name.c_str(), src1DimNum,
+            inSrc2Name.c_str(), src2DimNum),
         return false);
     for (size_t i = 0; i < src1DimNum; i++) {
         uint64_t src1DimValue = EnsureNotScalar(src1Shape->GetStorageShape()).GetDim(i);
@@ -231,15 +231,15 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckShapeSame(const gert::StorageShape* s
         OP_TILING_CHECK(
             (src1DimValue != src2DimValue),
             OP_LOGE(
-                nodeName.c_str(), "Dim value check invalid, %s[%lu] is %lu, %s[%lu] is %lu, not equal.",
-                src1Name.c_str(), i, src1DimValue, src2Name.c_str(), i, src2DimValue),
+                inNodeName.c_str(), "Dim value check invalid, %s[%lu] is %lu, %s[%lu] is %lu, not equal.",
+                inSrc1Name.c_str(), i, src1DimValue, inSrc2Name.c_str(), i, src2DimValue),
             return false);
     }
     return true;
 }
 
 bool RmsNormQuantV2RegbaseTilingBase::CheckShapeBC(const gert::StorageShape* srcBcShape, const gert::StorageShape* srcShape,
-    string nodeName, string srcBcName, string srcName)
+    string inNodeName, string inSrcBcName, string inSrcName)
 {
     size_t srcBcDimNum = EnsureNotScalar(srcBcShape->GetStorageShape()).GetDimNum();
     size_t srcDimNum = EnsureNotScalar(srcShape->GetStorageShape()).GetDimNum();
@@ -247,8 +247,8 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckShapeBC(const gert::StorageShape* src
     OP_TILING_CHECK(
         (srcBcDimNum < srcDimNum),
         OP_LOGE(
-            nodeName.c_str(), "Dim num check invalid, %s is %lu %s is %lu, not bigger.", srcBcName.c_str(), srcBcDimNum,
-            srcName.c_str(), srcDimNum),
+            inNodeName.c_str(), "Dim num check invalid, %s is %lu %s is %lu, not bigger.", inSrcBcName.c_str(), srcBcDimNum,
+            inSrcName.c_str(), srcDimNum),
         return false);
     for (size_t i = 0; i < srcDimNum; i++) {
         uint64_t srcBcDimValue;
@@ -262,8 +262,8 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckShapeBC(const gert::StorageShape* src
         OP_TILING_CHECK(
             (srcBcDimValue != srcDimValue),
             OP_LOGE(
-                nodeName.c_str(), "Dim value check invalid, %s[%lu] is %lu, %s[%lu] is %lu, not equal.",
-                srcBcName.c_str(), i, srcBcDimValue, srcName.c_str(), i, srcDimValue),
+                inNodeName.c_str(), "Dim value check invalid, %s[%lu] is %lu, %s[%lu] is %lu, not equal.",
+                inSrcBcName.c_str(), i, srcBcDimValue, inSrcName.c_str(), i, srcDimValue),
             return false);
     }
     return true;

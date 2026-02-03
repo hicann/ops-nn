@@ -82,10 +82,9 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingRecompute::DoOpTiling()
         int64_t powerSplit = GetPowerSplit(initialN);
         int64_t cacheBuffSize = (GetCacheID(powerSplit - 1) + 1) * tilingParams.ubBlockSize;
         while (powerSplit > 1 && 2 * initialN <= binaryAddElemtMaxLen &&
-               2 * initialN *
-                       ((tilingParams.xDtypeSize * (betaNum + 3) + tilingParams.scaleDtypeSize * scalesNum +
-                        tilingParams.zeroPointDtypeSize * zeroPointsNum + yNum) * DOUBLE_BUFFER + sizeof(float)) <=
-                    static_cast<int64_t>(tilingParams.maxUbSize) - RETAINED_SIZE_256 - (rstdBufSize + cacheBuffSize + binaryAddBufSize)) {
+            static_cast<uint64_t>(2 * initialN * ((tilingParams.xDtypeSize * (betaNum + 3) + tilingParams.scaleDtypeSize * scalesNum +
+                    tilingParams.zeroPointDtypeSize * zeroPointsNum + yNum) * DOUBLE_BUFFER + sizeof(float))) <=
+                static_cast<uint64_t>(tilingParams.maxUbSize - RETAINED_SIZE_256 - (rstdBufSize + cacheBuffSize + binaryAddBufSize))) {
             initialN = 2 * initialN;
             powerSplit = GetPowerSplit(initialN);
             cacheBuffSize = powerSplit * tilingParams.ubBlockSize;
