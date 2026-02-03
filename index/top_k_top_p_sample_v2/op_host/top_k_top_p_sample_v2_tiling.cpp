@@ -87,7 +87,7 @@ private:
     ge::graphStatus CheckOpOutputShape(const gert::TilingContext* context);
     ge::graphStatus CheckOpDim(
         const gert::StorageShape* shape1, const gert::StorageShape* shape2, uint32_t shape1Dim, uint32_t shape2Dim);
-    void SetOpTilingData(gert::TilingContext* context);
+    void SetOpTilingData();
     void SetOpTilingKey(gert::TilingContext* context);
     void ResetTilingParams();
     uint32_t SafeCeil(uint32_t a, uint32_t b)
@@ -404,7 +404,7 @@ void TopKTopPSampleV2Tiling::SetOpTilingKey(gert::TilingContext* context)
     }
 }
 
-void TopKTopPSampleV2Tiling::SetOpTilingData(gert::TilingContext* context)
+void TopKTopPSampleV2Tiling::SetOpTilingData()
 {
     if (rowNum <= vectorCoreNum) {
         numCore = rowNum;
@@ -501,7 +501,7 @@ ge::graphStatus TopKTopPSampleV2Tiling::RunKernelTiling(gert::TilingContext* con
 
     numCore = vectorCoreNum;
 
-    SetOpTilingData(context);
+    SetOpTilingData();
     SetOpTilingKey(context);
     context->SetBlockDim(numCore);
     tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
