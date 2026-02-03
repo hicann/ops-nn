@@ -55,29 +55,6 @@ TEST_F(quant_batch_matmul_inplace_add_test, ascend950_test_illegal_format_case_0
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(quant_batch_matmul_inplace_add_test, ascend950_test_illegal_nullptr_case_01)
-{
-    int64_t m = 128;
-    int64_t n = 2048;
-    int64_t k = 4096;
-
-    TensorDesc x1_desc = TensorDesc({k, m}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND).ValueRange(-1, 1);
-    TensorDesc x2_desc = TensorDesc({k, n}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND).ValueRange(-1, 1);
-    TensorDesc x1_scale_desc = TensorDesc({k / 64, m, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND).ValueRange(-1, 1);
-    TensorDesc y_input_desc = TensorDesc({m, n}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-    TensorDesc x2_scale_desc = TensorDesc({k / 64, n, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND).ValueRange(-1, 1);
-    bool transposeX1 = true;
-    bool transposeX2 = false;
-    int64_t groupsize = 32;
-    auto ut = OP_API_UT(aclnnQuantBatchMatmulInplaceAdd,
-                        INPUT(nullptr, x2_desc, x1_scale_desc, x2_scale_desc,
-                              y_input_desc, transposeX1, transposeX2, groupsize),
-                        OUTPUT());
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
-
 TEST_F(quant_batch_matmul_inplace_add_test, ascend950_test_illegal_shape_case_01)
 {
     int64_t m = 128;

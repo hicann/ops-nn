@@ -364,10 +364,10 @@ static inline bool InferGroupSize(QBMMInplaceAdd::QuantBatchMatmulInplaceAddPara
         transX1 ? x1->GetViewShape().GetDim(x1DimNum - PENULTIMATE_DIM) : x1->GetViewShape().GetDim(x1DimNum - 1);
     auto scaleSizeK = 0;
     if (IsMicroScaling(x1Scale, x2Scale)) {
-        scaleSizeK = x1Scale->GetViewShape().GetDim(transX1 ? 0 : 1);
+        scaleSizeK = x1Scale->GetViewShape().GetDim(transX1 ? 0 : 1) * 2; //when scale type is e8m0, scalex1 shape is [m, k/2, 2] or [k/2, m, 2]
     } else {
-        scaleSizeK = transX1 ? x1Scale->GetViewShape().GetDim(x1ScaleDimNum - 1) :
-                               x1Scale->GetViewShape().GetDim(x1ScaleDimNum - PENULTIMATE_DIM);
+        scaleSizeK = transX1 ? x1Scale->GetViewShape().GetDim(x1ScaleDimNum - PENULTIMATE_DIM) :
+                               x1Scale->GetViewShape().GetDim(x1ScaleDimNum - 1);
     }
     CHECK_RET(ReCalcGroupSize(inputSizeK, scaleSizeK, groupSizeK, "k"), false);
     auto inputSizeN =
@@ -422,18 +422,19 @@ static aclnnStatus aclnnQuantBatchMatmulInplaceAddGetWorkspaceSizeCommon(
     TensorContiguousProcess(params.x2, params.transposeX2, executor);
     MxScaleContiguousProcess(params.x1ScaleOptional, executor);
     MxScaleContiguousProcess(params.x2Scale, executor);
-    // 固定写法，参数检查
-    auto ret = CheckParams(params);
-    CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(InferGroupSize(params), ACLNN_ERR_PARAM_INVALID);
     OP_LOGD("Infer groupSize success. groupSize: %ld.", params.groupSize);
     CHECK_COND(CheckGroupSize(params), ACLNN_ERR_PARAM_INVALID, "CheckGroupSize failed.");
+    // 固定写法，参数检查
+    auto ret = CheckParams(params);
+    CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
     bool transposeX1 = QBMMIAGetTransposeAttrValue(params.x1, params.transposeX1, true);
     bool transposeX2 = QBMMIAGetTransposeAttrValue(params.x2, params.transposeX2, true);
     CHECK_COND(
         transposeX1 == true && transposeX2 == false, ACLNN_ERR_PARAM_INVALID,
         "Only support when the transposition of x1 is true and transposition of x2 is false, but actually is %s and %s.",
         transposeX1 ? "true" : "false", transposeX2 ? "true" : "false");
+    // 空tensor校验
     if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
         auto x1DimNum = params.x1->GetViewShape().GetDimNum();
         auto inputSizeM = transposeX1 ? params.x1->GetViewShape().GetDim(x1DimNum - 1) :
@@ -453,7 +454,6 @@ static aclnnStatus aclnnQuantBatchMatmulInplaceAddGetWorkspaceSizeCommon(
             }
         }
     }
-    
     // Invoke l0 operator QuantBatchMatmulInplaceAdd for calculation.
     auto result = l0op::QuantBatchMatmulInplaceAdd(
         params.x1, params.x2, params.x2Scale, params.yRef, params.x1ScaleOptional, transposeX1, transposeX2, params.groupSize,
