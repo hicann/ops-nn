@@ -2146,10 +2146,10 @@ aclnnStatus MatmulGraphImpl::CommonPostProcessWithReshape(){
 // ==========================================================================================================
 // SocMatMulRuleBase
 
-bool SocMatMulRuleBase::CheckInputTensorDtypeValid(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out) {
+bool SocMatMulRuleBase::CheckInputTensorDtypeValid(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out) {
         auto dtypeList = GetSupportedDTypes();
-        OP_CHECK_DTYPE_NOT_SUPPORT(matA, dtypeList, return false);
-        OP_CHECK_DTYPE_NOT_SUPPORT(matB, dtypeList, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeList, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(mat2, dtypeList, return false);
 
         OP_CHECK_DTYPE_NOT_SUPPORT(out, dtypeList, return false);
 

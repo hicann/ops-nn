@@ -156,6 +156,11 @@ static bool CheckDim(
     auto p2Shape = kroneckerP2->GetViewShape();
     auto outShape = out->GetViewShape();
     auto quantScaleShape = quantScale->GetViewShape();
+    if (out->GetDataType() == op::DataType::DT_INT32 || out->GetDataType() == op::DataType::DT_INT4) {
+        OP_CHECK(
+            quantScaleShape.GetDimNum() == 1, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quantScaleShape dim should be 1."),
+            return false);
+    }
     OP_CHECK(
         p1Shape.GetDimNum() == P_DIM_NUM, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kroneckerP1 tensor should be 2D."),
         return false);
@@ -316,7 +321,7 @@ aclnnStatus aclnnFlatQuantGetWorkspaceSize(const aclTensor *x, const aclTensor *
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     auto outResult = l0op::ViewCopy(outTensor, out, uniqueExecutor.get());
-    CHECK_RET(outResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(outResult != nullptr, ACLNN_ERR_PARAM_INVALID);
     auto scaleResult = l0op::ViewCopy(quantScaleTensor, quantScale, uniqueExecutor.get());
     CHECK_RET(scaleResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
