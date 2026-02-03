@@ -214,10 +214,11 @@ static void InitPlatformInfo(
                           "Intrinsic_data_move_l12bt": true,
                           "UB_SIZE": 245760, "L2_SIZE": 134217728, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32,
-                          "cube_core_cnt": 32, "vector_core_cnt": 64, "core_type_list": "CubeCore,VectorCore"}
+                          "cube_core_cnt": 32, "vector_core_cnt": 64, "core_type_list": "CubeCore,VectorCore",
+                          "socVersion": "Ascend950"}
                           })";
     }
-    GetPlatFormInfos(compileInfoStr.c_str(), socInfos, aicoreSpec, intrinsics);
+    GetPlatFormInfos(compileInfoStr.c_str(), socInfos, aicoreSpec, intrinsics, npuArchInfos);
     aicoreSpec["cube_freq"] = "1650";
 
     if (coreNum > 0) {

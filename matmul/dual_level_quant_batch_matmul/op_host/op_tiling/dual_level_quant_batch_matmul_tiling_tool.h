@@ -24,7 +24,6 @@
 
 using AscendC::BLOCK_CUBE;
 using AscendC::ONE_BLK_SIZE;
-using matmul_tiling::MatrixTraverse;
 
 namespace optiling::tool {
 
@@ -41,16 +40,27 @@ T2 CalcTailSize(T1 num1, T2 num2)
     return mod != 0 ? static_cast<T2>(mod) : num2;
 }
 
-int64_t GetDtypeBits(ge::DataType dtype);
+template <typename T>
+T GetShapeWithDataType(T size, ge::DataType dtype)
+{
+    if (dtype == ge::DT_INT4 || dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2) {
+        return size + size;
+    } else {
+        return size / static_cast<T>(ge::GetSizeByDataType(dtype));
+    }
+}
 
-uint64_t GetBlockAlignSizeByDataType(ge::DataType dtype);
-
-uint64_t GetShapeSizeWithDataType(uint64_t shapeSize, ge::DataType dtype);
-
-bool CheckOptionalInputByShape(const gert::StorageShape* storageShape);
-
-matmul_tiling::DataType GetMatmulTilingDtype(ge::DataType dtype);
+template <typename T>
+T GetSizeWithDataType(T shape, ge::DataType dtype)
+{
+    if (dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2 || dtype == ge::DT_INT4) {
+        return (shape + 1) >> 1;
+    } else {
+        return shape * static_cast<T>(ge::GetSizeByDataType(dtype));
+    }
+}
 
 ge::Format GetInputStorageFormat(const gert::TilingContext* context, size_t id);
+
 } // namespace optiling::tool
 #endif // DUAL_LEVEL_QUANT_BATCH_MATMUL_TOOL_H

@@ -96,26 +96,27 @@ struct DualLevelQuantBatchMatmulInfo {
     uint64_t libApiWorkSpaceSize = 0UL;
     QuantType level1QuantType = QuantType::MX;
     QuantType level0QuantType = QuantType::PER_GROUP;
-    const char* opName = nullptr;
+    ge::Format x1Format = ge::FORMAT_ND;
     ge::Format x2Format = ge::FORMAT_FRACTAL_NZ;
+    const char* opName = nullptr; // tiling计算逻辑中使用，不直接依赖GE数据结构
 };
+} // namespace optiling
 
-namespace checker {
+namespace Ops::NN::DLQBMMChecker {
 
-ge::graphStatus CheckContext(gert::TilingContext* context, const char* opName, uint64_t tilingDataSize);
+ge::graphStatus CheckContext(gert::TilingContext* context, uint64_t tilingDataSize);
 
 bool CheckAttrs(
     [[maybe_unused]] gert::TilingContext* context, [[maybe_unused]] NpuArch npuArch,
-    const DualLevelQuantBatchMatmulInfo& inputParams);
+    const optiling::DualLevelQuantBatchMatmulInfo& inputParams);
 
 bool CheckDtypes(
     [[maybe_unused]] gert::TilingContext* context, [[maybe_unused]] NpuArch npuArch,
-    const DualLevelQuantBatchMatmulInfo& inputParams);
+    const optiling::DualLevelQuantBatchMatmulInfo& inputParams);
 
 bool CheckInputs(
     [[maybe_unused]] gert::TilingContext* context, [[maybe_unused]] NpuArch npuArch,
-    const DualLevelQuantBatchMatmulInfo& inputParams);
+    const optiling::DualLevelQuantBatchMatmulInfo& inputParams);
 
-} // namespace checker
-} // namespace optiling
+} // namespace Ops::NN::DLQBMMChecker
 #endif // DUAL_LEVEL_QUANT_BATCH_MATMUL_CHECKER_H

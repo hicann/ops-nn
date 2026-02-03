@@ -56,10 +56,8 @@ protected:
 
     bool SetPlatformInfoForTiling();
 
-    // 算子名称
-    const char* opName_;
     // 输入信息
-    std::unique_ptr<DualLevelQuantBatchMatmulInfo> matmulInfoPtr_;
+    DualLevelQuantBatchMatmulInfo matmulInfo_;
     // 平台相关信息
     DualLevelQuantBatchMatmulCompileInfo compileInfo_;
     bool isCompileInfoInit = false;

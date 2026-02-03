@@ -23,10 +23,10 @@
 
 enum class L2CacheMode : std::uint32_t
 {
-    L2_CACHE_DEFAULT = 0x00,
-    A_L2_CACHE_DISABLE = 0x01,
-    B_L2_CACHE_DISABLE = 0x02,
-    ALL_L2_CACHE_DISABLE = 0x03,
+    L2_CACHE_DEFAULT = 0,
+    A_L2_CACHE_DISABLE = 1,
+    B_L2_CACHE_DISABLE = 2,
+    ALL_L2_CACHE_DISABLE = 3,
 };
 
 // tiling data注意8B对齐，尽量手动添加对齐的保留字段

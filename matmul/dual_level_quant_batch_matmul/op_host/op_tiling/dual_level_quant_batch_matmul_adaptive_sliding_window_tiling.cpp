@@ -22,28 +22,6 @@
 using namespace platform_ascendc;
 using namespace optiling::tool;
 
-namespace {
-template <typename T>
-T GetShapeWithDataType(T size, ge::DataType dtype)
-{
-    if (dtype == ge::DT_INT4 || dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2) {
-        return size + size;
-    } else {
-        return size / static_cast<T>(ge::GetSizeByDataType(dtype));
-    }
-}
-
-template <typename T>
-T GetSizeWithDataType(T shape, ge::DataType dtype)
-{
-    if (dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2 || dtype == ge::DT_INT4) {
-        return (shape + 1) >> 1;
-    } else {
-        return shape * static_cast<T>(ge::GetSizeByDataType(dtype));
-    }
-}
-} // namespace
-
 namespace optiling {
 namespace dual_level_quant_batch_matmul {
 constexpr uint64_t CUBE_BLOCK = 16;
@@ -88,24 +66,24 @@ ge::graphStatus DualLevelQuantBatchMatmulTilingASW::GetShapeAttrsInfo()
 
 ge::graphStatus DualLevelQuantBatchMatmulTilingASW::GetPlatformInfo()
 {
-    OP_LOGE_IF(!SetPlatformInfoForTiling(), ge::GRAPH_FAILED, opName_, "GetPlatformInfo fail");
+    OP_LOGE_IF(!SetPlatformInfoForTiling(), ge::GRAPH_FAILED, context_, "GetPlatformInfo fail");
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus DualLevelQuantBatchMatmulTilingASW::DoOpTiling()
 {
-    OP_LOGD(opName_, "DoOpTiling of adaptive sliding window tiling strategy.");
+    OP_LOGD(matmulInfo_.opName, "DoOpTiling of adaptive sliding window tiling strategy.");
     OP_TILING_CHECK(
         InstantiateTilingData() == ge::GRAPH_FAILED,
-        CUBE_INNER_ERR_REPORT(opName_, "unable to get pointer of tiling data"), return ge::GRAPH_FAILED);
+        CUBE_INNER_ERR_REPORT(matmulInfo_.opName, "unable to get pointer of tiling data"), return ge::GRAPH_FAILED);
 
     if (!AnalyseSlidingWinInfo()) {
-        OP_LOGE(opName_, "DoOpTiling fail");
+        OP_LOGE(matmulInfo_.opName, "DoOpTiling fail");
         return ge::GRAPH_FAILED;
     }
     LoadBalanceDataReset();
     if (!OptimizeEdgeBasicBlock()) {
-        OP_LOGE(opName_, "OptimizeEdgeBasicBlock fail");
+        OP_LOGE(matmulInfo_.opName, "OptimizeEdgeBasicBlock fail");
         return ge::GRAPH_FAILED;
     }
     SetTilingData();
@@ -124,10 +102,10 @@ uint64_t DualLevelQuantBatchMatmulTilingASW::GetTilingKey() const
     uint64_t templateCustom = DLQBMM_TEMPLATE_CUBEBOUND;
     uint64_t level1QuantType = DLQBMM_QUANT_TYPE_MX;
     uint64_t level0QuantType = DLQBMM_QUANT_TYPE_PER_GROUP;
-    bool transA = matmulInfoPtr_->transA;
-    bool transB = matmulInfoPtr_->transB;
-    bool hasBias = matmulInfoPtr_->hasBias;
-    bool isWeightNz = matmulInfoPtr_->x2Format == ge::FORMAT_FRACTAL_NZ;
+    bool transA = matmulInfo_.transA;
+    bool transB = matmulInfo_.transB;
+    bool hasBias = matmulInfo_.hasBias;
+    bool isWeightNz = matmulInfo_.x2Format == ge::FORMAT_FRACTAL_NZ;
     uint64_t tilingKey = GET_TPL_TILING_KEY(
         socVersionType, subSocVersionType, templateCustom, level1QuantType, level0QuantType, transA, transB, hasBias,
         isWeightNz);
@@ -136,16 +114,15 @@ uint64_t DualLevelQuantBatchMatmulTilingASW::GetTilingKey() const
 
 ge::graphStatus DualLevelQuantBatchMatmulTilingASW::GetWorkspaceSize()
 {
-    workspaceSize_ = matmulInfoPtr_->libApiWorkSpaceSize;
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus DualLevelQuantBatchMatmulTilingASW::PostTiling()
 {
-    OP_LOGD(opName_, "final tiling data size: %zu", tilingDataSize_);
+    OP_LOGD(context_, "final tiling data size: %zu", tilingDataSize_);
     OP_TILING_CHECK(
         tilingDataSize_ % sizeof(uint64_t) != 0,
-        CUBE_INNER_ERR_REPORT(opName_, "tiling data size[%zu] is not aligned to 8", tilingDataSize_),
+        CUBE_INNER_ERR_REPORT(context_, "tiling data size[%zu] is not aligned to 8", tilingDataSize_),
         return ge::GRAPH_FAILED);
     errno_t ret = memcpy_s(
         context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
@@ -156,7 +133,7 @@ ge::graphStatus DualLevelQuantBatchMatmulTilingASW::PostTiling()
     }
     context_->SetBlockDim(usedCoreNum);
     context_->GetRawTilingData()->SetDataSize(tilingDataSize_);
-    size_t* workspaces = context_->GetWorkspaceSizes(1); // set workspace
+    size_t* workspaces = context_->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = workspaceSize_;
     return ge::GRAPH_SUCCESS;
@@ -177,14 +154,14 @@ ge::graphStatus DualLevelQuantBatchMatmulTilingASW::InstantiateTilingData()
             // make_unique不会返回空指针，只会返回异常，无需在后面加空指针校验
             tilingData_ = std::make_unique<DualLevelQuantBatchMatmulBasicTilingData>();
         } catch (std::bad_alloc&) {
-            OP_LOGE(opName_, "tiling data memory allocation failed");
+            OP_LOGE(matmulInfo_.opName, "tiling data memory allocation failed");
             return ge::GRAPH_FAILED;
         }
     }
     OP_TILING_CHECK(
         context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
         CUBE_INNER_ERR_REPORT(
-            opName_, "tiling data capacity %zu < actual tiling data size %zu",
+            matmulInfo_.opName, "tiling data capacity %zu < actual tiling data size %zu",
             context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
         return ge::GRAPH_FAILED);
 
@@ -194,14 +171,14 @@ ge::graphStatus DualLevelQuantBatchMatmulTilingASW::InstantiateTilingData()
 bool DualLevelQuantBatchMatmulTilingASW::AnalyseSlidingWinInfo()
 {
     if (!CalcBasicBlock()) {
-        OP_LOGE(opName_, "inappropriate basicBlock");
+        OP_LOGE(matmulInfo_.opName, "inappropriate basicBlock");
         return false;
     }
-    adaptiveWin_.mBlockCnt = ops::CeilDiv(matmulInfoPtr_->mSize, adaptiveWin_.baseM);
-    adaptiveWin_.nBlockCnt = ops::CeilDiv(matmulInfoPtr_->nSize, adaptiveWin_.baseN);
+    adaptiveWin_.mBlockCnt = ops::CeilDiv(matmulInfo_.mSize, adaptiveWin_.baseM);
+    adaptiveWin_.nBlockCnt = ops::CeilDiv(matmulInfo_.nSize, adaptiveWin_.baseN);
     adaptiveWin_.totalBlockCnt = adaptiveWin_.mBlockCnt * adaptiveWin_.nBlockCnt;
-    adaptiveWin_.mTail = matmulInfoPtr_->mSize - (adaptiveWin_.mBlockCnt - 1) * adaptiveWin_.baseM;
-    adaptiveWin_.nTail = matmulInfoPtr_->nSize - (adaptiveWin_.nBlockCnt - 1) * adaptiveWin_.baseN;
+    adaptiveWin_.mTail = matmulInfo_.mSize - (adaptiveWin_.mBlockCnt - 1) * adaptiveWin_.baseM;
+    adaptiveWin_.nTail = matmulInfo_.nSize - (adaptiveWin_.nBlockCnt - 1) * adaptiveWin_.baseN;
     adaptiveWin_.totalWinCnt = ops::CeilDiv(adaptiveWin_.totalBlockCnt, static_cast<uint64_t>(compileInfo_.aicNum));
     adaptiveWin_.tailWinBlockCnt = (adaptiveWin_.totalBlockCnt) % compileInfo_.aicNum;
 
@@ -222,16 +199,16 @@ bool DualLevelQuantBatchMatmulTilingASW::AnalyseSlidingWinInfo()
 bool DualLevelQuantBatchMatmulTilingASW::CalcBasicBlock()
 {
     // baseM=256, baseN=256, baseK=512
-    adaptiveWin_.baseM = std::min(matmulInfoPtr_->mSize, static_cast<uint64_t>(BASIC_BLOCK_SIZE_256));
+    adaptiveWin_.baseM = std::min(matmulInfo_.mSize, static_cast<uint64_t>(BASIC_BLOCK_SIZE_256));
     adaptiveWin_.baseM =
-        ops::CeilAlign(adaptiveWin_.baseM, GetShapeWithDataType(L1_ALIGN_SIZE, matmulInfoPtr_->x1Dtype));
-    adaptiveWin_.baseN = std::min(matmulInfoPtr_->nSize, static_cast<uint64_t>(BASIC_BLOCK_SIZE_256));
+        ops::CeilAlign(adaptiveWin_.baseM, GetShapeWithDataType(L1_ALIGN_SIZE, matmulInfo_.x1Dtype));
+    adaptiveWin_.baseN = std::min(matmulInfo_.nSize, static_cast<uint64_t>(BASIC_BLOCK_SIZE_256));
     adaptiveWin_.baseN = ops::CeilAlign(adaptiveWin_.baseN, CUBE_BLOCK);
     adaptiveWin_.baseK =
-        ops::CeilAlign(std::min(matmulInfoPtr_->kSize, static_cast<uint64_t>(BASIC_BLOCK_SIZE_512)), MXFP_DIVISOR_SIZE);
+        ops::CeilAlign(std::min(matmulInfo_.kSize, static_cast<uint64_t>(BASIC_BLOCK_SIZE_512)), MXFP_DIVISOR_SIZE);
 
-    uint64_t oriBlock = ops::CeilDiv(matmulInfoPtr_->mSize, adaptiveWin_.baseM) *
-                        ops::CeilDiv(matmulInfoPtr_->nSize, adaptiveWin_.baseN);
+    uint64_t oriBlock = ops::CeilDiv(matmulInfo_.mSize, adaptiveWin_.baseM) *
+                        ops::CeilDiv(matmulInfo_.nSize, adaptiveWin_.baseN);
     bool isSmallBlock = oriBlock < compileInfo_.aicNum;
     if (isSmallBlock) {
         AdjustBasicBlock();
@@ -254,44 +231,44 @@ void AdjustMNCoreRatio(
 void DualLevelQuantBatchMatmulTilingASW::AdjustBasicBlock()
 {
     uint64_t baseMAlignNum =
-        matmulInfoPtr_->transA ? GetShapeWithDataType(L2_ALIGN_SIZE, matmulInfoPtr_->x1Dtype) : CUBE_BLOCK;
+        matmulInfo_.transA ? GetShapeWithDataType(L2_ALIGN_SIZE, matmulInfo_.x1Dtype) : CUBE_BLOCK;
     uint64_t baseNAlignNum =
-        matmulInfoPtr_->transB ? CUBE_BLOCK : GetShapeWithDataType(L2_ALIGN_SIZE, matmulInfoPtr_->x1Dtype);
-    uint64_t baseKAlignNum = (matmulInfoPtr_->transA && !matmulInfoPtr_->transB) ?
-                                 GetShapeWithDataType(BASIC_BLOCK_SIZE_32, matmulInfoPtr_->x1Dtype) :
-                                 GetShapeWithDataType(L2_ALIGN_SIZE, matmulInfoPtr_->x1Dtype);
-    uint64_t mMaxtile = ops::CeilDiv(matmulInfoPtr_->mSize, baseMAlignNum);
-    uint64_t nMaxtile = ops::CeilDiv(matmulInfoPtr_->nSize, baseNAlignNum);
+        matmulInfo_.transB ? CUBE_BLOCK : GetShapeWithDataType(L2_ALIGN_SIZE, matmulInfo_.x1Dtype);
+    uint64_t baseKAlignNum = (matmulInfo_.transA && !matmulInfo_.transB) ?
+                                 GetShapeWithDataType(BASIC_BLOCK_SIZE_32, matmulInfo_.x1Dtype) :
+                                 GetShapeWithDataType(L2_ALIGN_SIZE, matmulInfo_.x1Dtype);
+    uint64_t mMaxtile = ops::CeilDiv(matmulInfo_.mSize, baseMAlignNum);
+    uint64_t nMaxtile = ops::CeilDiv(matmulInfo_.nSize, baseNAlignNum);
     uint64_t tempBaseM = adaptiveWin_.baseM;
     uint64_t tempBaseN = adaptiveWin_.baseN;
-    if (mMaxtile * nMaxtile >= compileInfo_.aicNum || (!matmulInfoPtr_->transA && matmulInfoPtr_->transB)) {
-        uint64_t mCore = ops::CeilDiv(matmulInfoPtr_->mSize, adaptiveWin_.baseM);
-        uint64_t nCore = ops::CeilDiv(matmulInfoPtr_->nSize, adaptiveWin_.baseN);
+    if (mMaxtile * nMaxtile >= compileInfo_.aicNum || (!matmulInfo_.transA && matmulInfo_.transB)) {
+        uint64_t mCore = ops::CeilDiv(matmulInfo_.mSize, adaptiveWin_.baseM);
+        uint64_t nCore = ops::CeilDiv(matmulInfo_.nSize, adaptiveWin_.baseN);
         if (mMaxtile < nMaxtile || (mMaxtile == nMaxtile && baseNAlignNum == CUBE_BLOCK)) {
-            tempBaseM = ops::CeilAlign(ops::CeilDiv(matmulInfoPtr_->mSize, mCore), baseMAlignNum);
-            mCore = ops::CeilDiv(matmulInfoPtr_->mSize, tempBaseM);
+            tempBaseM = ops::CeilAlign(ops::CeilDiv(matmulInfo_.mSize, mCore), baseMAlignNum);
+            mCore = ops::CeilDiv(matmulInfo_.mSize, tempBaseM);
             nCore = compileInfo_.aicNum / mCore;
-            tempBaseN = ops::CeilAlign(ops::CeilDiv(matmulInfoPtr_->nSize, nCore), baseNAlignNum);
+            tempBaseN = ops::CeilAlign(ops::CeilDiv(matmulInfo_.nSize, nCore), baseNAlignNum);
         } else {
-            tempBaseN = ops::CeilAlign(ops::CeilDiv(matmulInfoPtr_->nSize, nCore), baseNAlignNum);
-            nCore = ops::CeilDiv(matmulInfoPtr_->nSize, tempBaseN);
+            tempBaseN = ops::CeilAlign(ops::CeilDiv(matmulInfo_.nSize, nCore), baseNAlignNum);
+            nCore = ops::CeilDiv(matmulInfo_.nSize, tempBaseN);
             mCore = compileInfo_.aicNum / nCore;
-            tempBaseM = ops::CeilAlign(ops::CeilDiv(matmulInfoPtr_->mSize, mCore), baseMAlignNum);
+            tempBaseM = ops::CeilAlign(ops::CeilDiv(matmulInfo_.mSize, mCore), baseMAlignNum);
         }
 
         auto updateFunc = [&, this]() {
-            tempBaseM = ops::CeilAlign(ops::CeilDiv(matmulInfoPtr_->mSize, mCore), baseMAlignNum);
-            tempBaseN = ops::CeilAlign(ops::CeilDiv(matmulInfoPtr_->nSize, nCore), baseNAlignNum);
-            mCore = ops::CeilDiv(matmulInfoPtr_->mSize, static_cast<uint64_t>(tempBaseM));
-            nCore = ops::CeilDiv(matmulInfoPtr_->nSize, static_cast<uint64_t>(tempBaseN));
+            tempBaseM = ops::CeilAlign(ops::CeilDiv(matmulInfo_.mSize, mCore), baseMAlignNum);
+            tempBaseN = ops::CeilAlign(ops::CeilDiv(matmulInfo_.nSize, nCore), baseNAlignNum);
+            mCore = ops::CeilDiv(matmulInfo_.mSize, static_cast<uint64_t>(tempBaseM));
+            nCore = ops::CeilDiv(matmulInfo_.nSize, static_cast<uint64_t>(tempBaseN));
         };
         AdjustMNCoreRatio(
             nCore, mCore, tempBaseN, tempBaseM, baseNAlignNum, static_cast<uint64_t>(compileInfo_.aicNum), updateFunc);
         AdjustMNCoreRatio(
             mCore, nCore, tempBaseM, tempBaseN, baseMAlignNum, static_cast<uint64_t>(compileInfo_.aicNum), updateFunc);
 
-        uint64_t kValueAlign = ops::CeilAlign(static_cast<uint64_t>(matmulInfoPtr_->kSize), baseKAlignNum);
-        uint64_t kValueMax = GetShapeWithDataType(compileInfo_.l0aSize / DB_SIZE, matmulInfoPtr_->x1Dtype) /
+        uint64_t kValueAlign = ops::CeilAlign(static_cast<uint64_t>(matmulInfo_.kSize), baseKAlignNum);
+        uint64_t kValueMax = GetShapeWithDataType(compileInfo_.l0aSize / DB_SIZE, matmulInfo_.x1Dtype) /
                              std::max(tempBaseM, tempBaseN) / L0_SPLIT_NUM;
         if (kValueMax >= baseKAlignNum) {
             adaptiveWin_.baseM = tempBaseM;
@@ -351,39 +328,39 @@ uint32_t DualLevelQuantBatchMatmulTilingASW::CalBlockDim()
 
 bool DualLevelQuantBatchMatmulTilingASW::IsInvalidWeightNzTailSplit(uint64_t splitCnt, bool isPreSplit) const
 {
-    if (matmulInfoPtr_->x2Format != ge::FORMAT_FRACTAL_NZ ||
+    if (matmulInfo_.x2Format != ge::FORMAT_FRACTAL_NZ ||
         (((isPreSplit && adaptiveWin_.mTail >= adaptiveWin_.nTail) ||
           (!isPreSplit && adaptiveWin_.mTail < adaptiveWin_.nTail)))) {
         return false;
     }
     uint64_t tailN = adaptiveWin_.baseN / splitCnt;
-    return tailN % GetShapeWithDataType(L1_ALIGN_SIZE, matmulInfoPtr_->x2Dtype) != 0;
+    return tailN % GetShapeWithDataType(L1_ALIGN_SIZE, matmulInfo_.x2Dtype) != 0;
 }
 
 bool DualLevelQuantBatchMatmulTilingASW::OptimizeEdgeBasicBlock()
 {
-    uint64_t mCore = ops::CeilDiv(matmulInfoPtr_->mSize, adaptiveWin_.baseM);
-    uint64_t nCore = ops::CeilDiv(matmulInfoPtr_->nSize, adaptiveWin_.baseN);
+    uint64_t mCore = ops::CeilDiv(matmulInfo_.mSize, adaptiveWin_.baseM);
+    uint64_t nCore = ops::CeilDiv(matmulInfo_.nSize, adaptiveWin_.baseN);
     if (mCore == 1UL || nCore == 1UL) {
         return true;
     }
 
-    uint64_t mBaseTail = static_cast<uint64_t>(matmulInfoPtr_->mSize % adaptiveWin_.baseM);
-    uint64_t nBaseTail = static_cast<uint64_t>(matmulInfoPtr_->nSize % adaptiveWin_.baseN);
-    bool isMxfp4 = (matmulInfoPtr_->x1Dtype == ge::DT_FLOAT4_E2M1 || matmulInfoPtr_->x1Dtype == ge::DT_FLOAT4_E1M2) &&
-                   matmulInfoPtr_->x1Level1ScaleDtype == ge::DT_FLOAT8_E8M0 &&
-                   matmulInfoPtr_->level1GroupSize == MICROSCALE_GROUP_SIZE;
-    bool balanceAfterFixp = matmulInfoPtr_->kSize < static_cast<uint64_t>(BASIC_BLOCK_SIZE_1024);
+    uint64_t mBaseTail = static_cast<uint64_t>(matmulInfo_.mSize % adaptiveWin_.baseM);
+    uint64_t nBaseTail = static_cast<uint64_t>(matmulInfo_.nSize % adaptiveWin_.baseN);
+    bool isMxfp4 = (matmulInfo_.x1Dtype == ge::DT_FLOAT4_E2M1 || matmulInfo_.x1Dtype == ge::DT_FLOAT4_E1M2) &&
+                   matmulInfo_.x1Level1ScaleDtype == ge::DT_FLOAT8_E8M0 &&
+                   matmulInfo_.level1GroupSize == MICROSCALE_GROUP_SIZE;
+    bool balanceAfterFixp = matmulInfo_.kSize < static_cast<uint64_t>(BASIC_BLOCK_SIZE_1024);
     bool isInnerAxisAlign =
-        GetSizeWithDataType(matmulInfoPtr_->kSize, matmulInfoPtr_->x1Dtype) % MTE2_CACHELINE_SIZE == 0UL;
-    if (mBaseTail > 0UL && !matmulInfoPtr_->transA &&
-        (isInnerAxisAlign || (matmulInfoPtr_->mSize >= LOAD_BALANCE_THRESHOLD && !isMxfp4))) {
+        GetSizeWithDataType(matmulInfo_.kSize, matmulInfo_.x1Dtype) % MTE2_CACHELINE_SIZE == 0UL;
+    if (mBaseTail > 0UL && !matmulInfo_.transA &&
+        (isInnerAxisAlign || (matmulInfo_.mSize >= LOAD_BALANCE_THRESHOLD && !isMxfp4))) {
         if (!GetOuterMAxisTailCnt(adaptiveWin_.mBaseTailSplitCnt, adaptiveWin_.mTailMain)) {
             return false;
         };
     }
-    if (nBaseTail > 0UL && matmulInfoPtr_->transB && !balanceAfterFixp &&
-        (isInnerAxisAlign || (matmulInfoPtr_->nSize >= LOAD_BALANCE_THRESHOLD))) {
+    if (nBaseTail > 0UL && matmulInfo_.transB && !balanceAfterFixp &&
+        (isInnerAxisAlign || (matmulInfo_.nSize >= LOAD_BALANCE_THRESHOLD))) {
         if (!GetOuterNAxisTailCnt(adaptiveWin_.nBaseTailSplitCnt, adaptiveWin_.nTailMain)) {
             return false;
         };
@@ -394,10 +371,10 @@ bool DualLevelQuantBatchMatmulTilingASW::OptimizeEdgeBasicBlock()
 bool DualLevelQuantBatchMatmulTilingASW::GetOuterMAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain)
 {
     OP_TILING_CHECK(
-        matmulInfoPtr_->mSize == 0UL, CUBE_INNER_ERR_REPORT(opName_, "Input size of the M-axis is zero."),
+        matmulInfo_.mSize == 0UL, CUBE_INNER_ERR_REPORT(matmulInfo_.opName, "Input size of the M-axis is zero."),
         return false);
-    uint64_t mCnt = ops::CeilDiv(matmulInfoPtr_->mSize, adaptiveWin_.baseM);
-    uint64_t mTailSize = matmulInfoPtr_->mSize % adaptiveWin_.baseM;
+    uint64_t mCnt = ops::CeilDiv(matmulInfo_.mSize, adaptiveWin_.baseM);
+    uint64_t mTailSize = matmulInfo_.mSize % adaptiveWin_.baseM;
     uint64_t baseTailCntMax = std::min((adaptiveWin_.baseM - mTailSize) / BASIC_BLOCK_SIZE_16, mCnt);
     uint64_t windowSize = std::min(WINDOW_LEN, mCnt);
     uint64_t mainWindowNum = mCnt / windowSize - 1UL;
@@ -413,7 +390,7 @@ bool DualLevelQuantBatchMatmulTilingASW::GetOuterMAxisTailCnt(uint64_t& baseTail
         OP_TILING_CHECK(
             mainWindowNum + 1UL < mergeWindowNum,
             CUBE_INNER_ERR_REPORT(
-                opName_, "Subtraction underflow: mainWindowNum(%lu) + 1UL - mergeWindowNum(%lu).", mainWindowNum,
+                matmulInfo_.opName, "Subtraction underflow: mainWindowNum(%lu) + 1UL - mergeWindowNum(%lu).", mainWindowNum,
                 mergeWindowNum),
             return false);
         uint64_t curPerf = (mainWindowNum + 1UL - mergeWindowNum) * adaptiveWin_.baseM + mergeWindowNum * newTailMain;
@@ -429,15 +406,15 @@ bool DualLevelQuantBatchMatmulTilingASW::GetOuterMAxisTailCnt(uint64_t& baseTail
 bool DualLevelQuantBatchMatmulTilingASW::GetOuterNAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain)
 {
     uint64_t baseN = adaptiveWin_.baseN;
-    uint64_t nCnt = ops::CeilDiv(matmulInfoPtr_->nSize, baseN);
-    uint64_t mCnt = ops::CeilDiv(matmulInfoPtr_->mSize, adaptiveWin_.baseM);
-    uint64_t nTail = matmulInfoPtr_->nSize % baseN;
+    uint64_t nCnt = ops::CeilDiv(matmulInfo_.nSize, baseN);
+    uint64_t mCnt = ops::CeilDiv(matmulInfo_.mSize, adaptiveWin_.baseM);
+    uint64_t nTail = matmulInfo_.nSize % baseN;
     uint64_t totalWindows = ops::CeilDiv<uint64_t>(nCnt * mCnt, compileInfo_.aicNum);
 
     OP_TILING_CHECK(
         nCnt == 0UL,
         CUBE_INNER_ERR_REPORT(
-            opName_,
+            matmulInfo_.opName,
             "Subtraction underflow: nCnt(%lu) - 1UL and \
 the divisor is zero: WINDOW_LEN %% nCnt.",
             nCnt),
@@ -446,7 +423,7 @@ the divisor is zero: WINDOW_LEN %% nCnt.",
         ops::CeilDiv<uint64_t>((nCnt - 1UL) * mCnt + mCnt % compileInfo_.aicNum, compileInfo_.aicNum);
 
     OP_TILING_CHECK(
-        compileInfo_.aicNum == 0UL, CUBE_INNER_ERR_REPORT(opName_, "The number of enabled Cube cores is 0."),
+        compileInfo_.aicNum == 0UL, CUBE_INNER_ERR_REPORT(matmulInfo_.opName, "The number of enabled Cube cores is 0."),
         return false);
     if (nCnt * mCnt <= compileInfo_.aicNum ||
         (mCnt % compileInfo_.aicNum == 0UL && (nCnt % WINDOW_LEN == 0UL || WINDOW_LEN % nCnt == 0UL))) {
@@ -455,7 +432,7 @@ the divisor is zero: WINDOW_LEN %% nCnt.",
     OP_TILING_CHECK(
         totalWindows < mainWindows,
         CUBE_INNER_ERR_REPORT(
-            opName_, "Subtraction underflow: totalWindows(%lu) - mainWindows(%lu).", totalWindows, mainWindows),
+            matmulInfo_.opName, "Subtraction underflow: totalWindows(%lu) - mainWindows(%lu).", totalWindows, mainWindows),
         return false);
     uint64_t tailWindows = totalWindows - mainWindows;
     uint64_t perfRes = mainWindows * baseN + tailWindows * nTail;
@@ -483,7 +460,7 @@ uint64_t DualLevelQuantBatchMatmulTilingASW::CalculateCurrentPerf(
     OP_TILING_CHECK(
         adaptiveWin_.baseN < newTailMain,
         CUBE_INNER_ERR_REPORT(
-            opName_, "Subtraction underflow: adaptiveWin_.baseN(%lu) - newTailMain(%lu).", adaptiveWin_.baseN,
+            matmulInfo_.opName, "Subtraction underflow: adaptiveWin_.baseN(%lu) - newTailMain(%lu).", adaptiveWin_.baseN,
             newTailMain),
         return static_cast<uint64_t>(-1));
     uint64_t newTailLast = mergeLen * (adaptiveWin_.baseN - newTailMain) + nTail;
@@ -498,7 +475,7 @@ uint64_t DualLevelQuantBatchMatmulTilingASW::CalculateCurrentPerf(
         OP_TILING_CHECK(
             totalWindows < newMainRound,
             CUBE_INNER_ERR_REPORT(
-                opName_, "Subtraction underflow: totalWindows(%lu) - newMainRound(%lu).", totalWindows, newMainRound),
+                matmulInfo_.opName, "Subtraction underflow: totalWindows(%lu) - newMainRound(%lu).", totalWindows, newMainRound),
             return static_cast<uint64_t>(-1));
         newTailRound = std::min(
             ops::CeilDiv<uint64_t>(mergeLen * mCnt + mCnt % compileInfo_.aicNum, compileInfo_.aicNum),
@@ -508,7 +485,7 @@ uint64_t DualLevelQuantBatchMatmulTilingASW::CalculateCurrentPerf(
     OP_TILING_CHECK(
         totalWindows < newMainRound + newTailRound,
         CUBE_INNER_ERR_REPORT(
-            opName_, "Subtraction underflow: totalWindows(%lu) - newMainRound(%lu) - newTailRound(%lu).", totalWindows,
+            matmulInfo_.opName, "Subtraction underflow: totalWindows(%lu) - newMainRound(%lu) - newTailRound(%lu).", totalWindows,
             newMainRound, newTailRound),
         return static_cast<uint64_t>(-1));
     return newMainRound * adaptiveWin_.baseN + newTailRound * newTailMain +
@@ -520,16 +497,16 @@ void DualLevelQuantBatchMatmulTilingASW::SetTilingData()
     usedCoreNum = CalBlockDim();
 
     tilingData_->l1BufferNum = 2;
-    tilingData_->hasBias = matmulInfoPtr_->hasBias;
+    tilingData_->hasBias = matmulInfo_.hasBias;
     tilingData_->l2CacheDisable = L2CacheMode::L2_CACHE_DEFAULT;
     tilingData_->usedCoreNum = usedCoreNum;
-    tilingData_->mSize = matmulInfoPtr_->mSize;
-    tilingData_->nSize = matmulInfoPtr_->nSize;
-    tilingData_->kSize = matmulInfoPtr_->kSize;
+    tilingData_->mSize = matmulInfo_.mSize;
+    tilingData_->nSize = matmulInfo_.nSize;
+    tilingData_->kSize = matmulInfo_.kSize;
     tilingData_->mL1Size = adaptiveWin_.baseM;
     tilingData_->nL1Size = adaptiveWin_.baseN;
     tilingData_->kL1Size = adaptiveWin_.baseK;
-    tilingData_->level0GroupSize = matmulInfoPtr_->level0GroupSize;
+    tilingData_->level0GroupSize = matmulInfo_.level0GroupSize;
 
     tilingData_->mTailTile = adaptiveWin_.mTailTile;
     tilingData_->nTailTile = adaptiveWin_.nTailTile;
@@ -538,7 +515,7 @@ void DualLevelQuantBatchMatmulTilingASW::SetTilingData()
     tilingData_->mTailMain = static_cast<uint32_t>(adaptiveWin_.mTailMain);
     tilingData_->nTailMain = static_cast<uint32_t>(adaptiveWin_.nTailMain);
 
-    OP_LOGD(opName_, "coreNum: %u", usedCoreNum);
+    OP_LOGD(matmulInfo_.opName, "coreNum: %u", usedCoreNum);
 }
 } // namespace dual_level_quant_batch_matmul
 } // namespace optiling
