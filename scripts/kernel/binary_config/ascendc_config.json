@@ -480,6 +480,7 @@
     {"name":"DetectMatMul", "compute_units": ["ascend910b", "ascend310p", "ascend910_93"], "auto_sync" : false, "compile_options":{"ascend310p":["-mllvm -cce-aicore-jump-expand=true"]}},
     {"name":"BatchMatMulV3", "compute_units": ["ascend910b", "ascend910_93", "ascend310p", "ascend950", "kirinx90", "kirin9030"], "auto_sync": false, "compile_options": {"ascend310p":["-mllvm -cce-aicore-jump-expand=true"], "ascend950":["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"WeightQuantBatchMatmulV2", "compute_units": ["ascend910b", "ascend910_93", "ascend310p", "ascend950", "kirinx90", "kirin9030"], "auto_sync": false, "compile_options": {"ascend950":["-mllvm -cce-aicore-dcci-before-kernel-end=false", "-DENABLE_CV_COMM_VIA_SSBUF=true"]}},
+    {"name":"WeightQuantBatchMatmulExperiment", "compute_units": ["ascend910b"], "auto_sync": false, "impl_mode" : ""},
     {"name":"PpMatMul", "compute_units": ["ascend910b"], "auto_sync" : false},
     {"name":"PpMatmulW8A8", "compute_units": ["ascend910b", "ascend310p"], "auto_sync" : false},
     {"name":"PpMatmulW8A8Compress", "compute_units": ["ascend310p"], "auto_sync" : false},
@@ -624,5 +625,3 @@
     {"name":"SparseTensorDenseMatMul", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"TopKTopPSampleV2", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync": true}
 ]
-
-
