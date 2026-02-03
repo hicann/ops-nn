@@ -74,7 +74,7 @@ void Conv3dTilingAlgorithmHwMode::InitializeL0TilingParamsAndIndices()
     l0TilingParams.hoL0 = l0TilingRange.hoL0Range[INITIAL_INDEX];
     l0TilingParams.nL0 = l0TilingRange.nL0Range[l0TilingIdx.nL0Idx];
     l0TilingParams.orgCoAlignN0 =
-        AlignB(static_cast<uint64_t>(tilingIns_->shapeInfo.orgCo), static_cast<uint64_t>(tilingIns_->cubeInfo.n0));
+        AlignUp(static_cast<uint64_t>(tilingIns_->shapeInfo.orgCo), static_cast<uint64_t>(tilingIns_->cubeInfo.n0));
 }
 
 bool Conv3dTilingAlgorithmHwMode::ShouldUpdateWoL0Index() const

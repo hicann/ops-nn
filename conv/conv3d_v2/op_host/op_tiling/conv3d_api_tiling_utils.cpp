@@ -31,22 +31,6 @@ int64_t LCM(int64_t numL, int64_t numR) {
     return product / numR;
 }
 
-uint64_t CeilDiv(uint64_t a, uint64_t b)
-{
-    if (b == static_cast<uint64_t>(0)) {
-        return b;
-    }
-    return (a + b - static_cast<uint64_t>(1)) / b;
-}
-
-uint64_t AlignB(uint64_t a, uint64_t b)
-{
-    if (b == static_cast<uint64_t>(0)) {
-        return 0;
-    }
-    return ((a + b - static_cast<uint64_t>(1)) / b) * b;
-}
-
 uint64_t Gcd(uint64_t a, uint64_t b)
 {
     if (b == static_cast<uint64_t>(0)) {
@@ -96,12 +80,6 @@ void CalcCommFactorWithPowerOfTwo(const uint64_t num, const uint64_t numMax, std
     sort(resList.begin(), resList.end());
 }
 
-void CalcCommFactor(const uint64_t num, const uint64_t numMax, std::vector<uint64_t> &resList)
-{
-    FindDivisorsUpTo(num, numMax, resList);
-    sort(resList.begin(), resList.end());
-}
-
 void CalcFactorPointWise(uint64_t numMax, std::vector<uint64_t> &resList)
 {
     numMax = numMax < CONST_VALUE_2 ? CONST_VALUE_2 : numMax;
@@ -116,19 +94,6 @@ void VectorElementMultip(std::vector<uint64_t>& range, const uint64_t value)
     for (auto& factor : range) {
         factor *= value;
     }
-}
-
-bool IsArrayEqual(const std::vector<ConvDtype>& arr1, const std::vector<ConvDtype>& arr2, uint32_t size)
-{
-    if (arr1.size() < size || arr2.size() < size) {
-        return false;
-    }
-    for (size_t i = 0; i < size; i++) {
-        if (arr1[i] != arr2[i]) {
-            return false;
-        }
-    }
-    return true;
 }
 
 } // namespace Conv3dApiTiling

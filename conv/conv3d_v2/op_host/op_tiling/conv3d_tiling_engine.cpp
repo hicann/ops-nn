@@ -6,6 +6,11 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
+*/
+
+/*!
+ * \file conv3d_tiling_engine.cpp
+ * \brief Conv3D Tiling Engine - Decoupled tiling decision and check module
  */
 
 #include "conv3d_tiling_engine.h"
@@ -23,13 +28,9 @@ namespace Conv3dTilingEngineApi {
 using namespace optiling::Conv3dOpsTiling;
 
 Conv3dTilingEngine::Conv3dTilingEngine(const std::string &logTag)
-    : logTag_(logTag.empty() ? "Conv3DV2" : logTag)
+    : logTag_(logTag.empty() ? "Conv3DV2" : logTag),
+      initOk_(false)
 {
-    if (!InitPlatformInfoFromAscendC()) {
-        return;
-    }
-
-    // Initialize other member variables
     blockDimRes_.batchDim = 1;
     blockDimRes_.mDim = 1;
     blockDimRes_.nDim = 1;
@@ -37,9 +38,37 @@ Conv3dTilingEngine::Conv3dTilingEngine(const std::string &logTag)
     blockDimRes_.groupDim = 1;
     blockDimRes_.minCost = MAX_64_BIT_NUM;
 
-    // Initialize pointwise flag based on kernel size
     isPointWise = false;
-    outputOrder_ = Conv3dApiTiling::M_Mode;
+    outputOrder_ = static_cast<uint8_t>(Conv3dApiTiling::M_Mode);
+
+    OP_LOGD(logTag_.c_str(), "Conv3dTilingEngine constructed, call Init() to initialize platform info");
+}
+
+bool Conv3dTilingEngine::Init()
+{
+    if (initOk_) {
+        OP_LOGW(logTag_.c_str(), "Conv3dTilingEngine already initialized");
+        return true;
+    }
+
+    if (!InitPlatformInfoFromAscendC()) {
+        OP_LOGE(logTag_.c_str(), "Failed to initialize platform information");
+        return false;
+    }
+
+    initOk_ = true;
+    OP_LOGD(logTag_.c_str(), "Conv3dTilingEngine initialized successfully");
+    return true;
+}
+
+bool Conv3dTilingEngine::IsInitialized() const
+{
+    return initOk_;
+}
+
+uint8_t Conv3dTilingEngine::GetOutputOrder() const
+{
+    return outputOrder_;
 }
 
 bool Conv3dTilingEngine::InitPlatformInfoFromAscendC()
@@ -216,6 +245,20 @@ void Conv3dTilingEngine::SetDataType(Conv3dApiTiling::ConvDtype fmapDtype,
             g_convDtypeToStr[outDtype].c_str());
 }
 
+void Conv3dTilingEngine::SetFormat(Conv3dApiTiling::ConvFormat fmapFormat,
+                                   Conv3dApiTiling::ConvFormat weightFormat,
+                                   Conv3dApiTiling::ConvFormat outFormat)
+{
+    descInfo_.fMapFormat = fmapFormat;
+    descInfo_.weightFormat = weightFormat;
+    descInfo_.outFormat = outFormat;
+
+    OP_LOGD(logTag_.c_str(), "Set formats - fmap: %s, weight: %s, output: %s",
+            Conv3dApiTiling::g_formatToStr.at(fmapFormat).c_str(),
+            Conv3dApiTiling::g_formatToStr.at(weightFormat).c_str(),
+            Conv3dApiTiling::g_formatToStr.at(outFormat).c_str());
+}
+
 void Conv3dTilingEngine::SetBias(bool hasBias, Conv3dApiTiling::ConvDtype biasDtype)
 {
     flagInfo_.hasBias = hasBias;
@@ -226,6 +269,12 @@ void Conv3dTilingEngine::SetBias(bool hasBias, Conv3dApiTiling::ConvDtype biasDt
     OP_LOGD(logTag_.c_str(), "Set bias - hasBias: %s, dtype: %s",
             hasBias ? "true" : "false",
             hasBias ? g_convDtypeToStr[biasDtype].c_str() : "N/A");
+}
+
+void Conv3dTilingEngine::SetBiasShape(const std::vector<int64_t> &biasShape)
+{
+    biasShape_ = biasShape;
+    OP_LOGD(logTag_.c_str(), "Set bias shape, dims=%zu", biasShape_.size());
 }
 
 void Conv3dTilingEngine::SetScale(bool hasScale, Conv3dApiTiling::ConvDtype scaleDtype)
@@ -240,6 +289,12 @@ void Conv3dTilingEngine::SetScale(bool hasScale, Conv3dApiTiling::ConvDtype scal
             hasScale ? g_convDtypeToStr[scaleDtype].c_str() : "N/A");
 }
 
+void Conv3dTilingEngine::SetScaleShape(const std::vector<int64_t> &scaleShape)
+{
+    scaleShape_ = scaleShape;
+    OP_LOGD(logTag_.c_str(), "Set scale shape, dims=%zu", scaleShape_.size());
+}
+
 void Conv3dTilingEngine::SetHF32(bool enable)
 {
     attrInfo_.hf32Enable = static_cast<uint8_t>(enable);
@@ -247,6 +302,11 @@ void Conv3dTilingEngine::SetHF32(bool enable)
 
 bool Conv3dTilingEngine::GetConv3DV2TilingData(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingData)
 {
+    if (!IsInitialized()) {
+        OP_LOGE(logTag_.c_str(), "GetConv3DV2TilingData failed: engine not properly initialized. Call Init() first.");
+        return false;
+    }
+
     if (!CheckAllParams()) {
         OP_LOGE(logTag_.c_str(), "GetConv3DV2TilingData failed: parameter check failed.");
         return false;
@@ -292,9 +352,8 @@ void Conv3dTilingEngine::GetBlockDimDetail(uint32_t &batchDim, uint32_t &mDim, u
     groupDim = blockDimRes_.groupDim;
 }
 
-// Map internal engine state (shapeInfo_/attrInfo_/blockDimRes_/flagInfo_) into
-// Conv3DV2TilingData::conv3dRunInfo. Precondition: CheckAllParams() has passed
-// and blockDimRes_ has been computed.
+// Map internal engine state (shapeInfo_/attrInfo_/blockDimRes_/flagInfo_) into Conv3DV2TilingData::conv3dRunInfo.
+// Precondition: CheckAllParams() has passed and blockDimRes_ has been computed.
 void Conv3dTilingEngine::GetConv3DRunInfo(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingdata)
 {
     OP_LOGD(logTag_.c_str(), "Filling Conv3DRunInfo from engine state.");
@@ -499,7 +558,9 @@ bool Conv3dTilingEngine::CheckStrideLegal()
             static_cast<uint32_t>(attrInfo_.strideW));
 
     if (attrInfo_.strideH <= 0 || attrInfo_.strideW <= 0 || attrInfo_.strideD <= 0) {
-        OP_LOGE(logTag_.c_str(), "Invalid stride values - all stride values must be positive");
+        OP_LOGE(logTag_.c_str(),
+                "Conv3D AscendC: input illegal attr strideH: %ld, strideW: %ld, strideD: %ld, which must > 0.",
+                attrInfo_.strideH, attrInfo_.strideW, attrInfo_.strideD);
         return false;
     }
     return true;
@@ -513,7 +574,9 @@ bool Conv3dTilingEngine::CheckDilationLegal()
             static_cast<uint32_t>(attrInfo_.dilationW));
 
     if (attrInfo_.dilationH <= 0 || attrInfo_.dilationW <= 0 || attrInfo_.dilationD <= 0) {
-        OP_LOGE(logTag_.c_str(), "Invalid dilation values - all dilation values must be positive");
+        OP_LOGE(logTag_.c_str(),
+                "Conv3D AscendC: input illegal attr dilationH: %ld, dilationW: %ld, dilationD: %ld, which must > 0.",
+                attrInfo_.dilationH, attrInfo_.dilationW, attrInfo_.dilationD);
         return false;
     }
     return true;
@@ -524,9 +587,14 @@ bool Conv3dTilingEngine::CheckPadLegal()
     OP_LOGD(logTag_.c_str(), "Checking padding legality - head: %u, tail: %u, up: %u, down: %u, left: %u, right: %u",
             static_cast<uint32_t>(attrInfo_.padHead), static_cast<uint32_t>(attrInfo_.padTail), static_cast<uint32_t>(attrInfo_.padTop), static_cast<uint32_t>(attrInfo_.padBottom), static_cast<uint32_t>(attrInfo_.padLeft), static_cast<uint32_t>(attrInfo_.padRight));
 
-    if (attrInfo_.padTop > LOAD3D_MAX_PAD || attrInfo_.padBottom > LOAD3D_MAX_PAD ||
-        attrInfo_.padLeft > LOAD3D_MAX_PAD || attrInfo_.padRight > LOAD3D_MAX_PAD) {
-        OP_LOGE(logTag_.c_str(), "Padding values exceed LOAD3D limits (max: %u)", LOAD3D_MAX_PAD);
+    // Check if padding values are non-negative (semantic legality only)
+    if (attrInfo_.padHead < 0 || attrInfo_.padTail < 0 ||
+        attrInfo_.padTop < 0 || attrInfo_.padBottom < 0 ||
+        attrInfo_.padLeft < 0 || attrInfo_.padRight < 0) {
+        OP_LOGE(logTag_.c_str(),
+                "Conv3D AscendC: input illegal attr pad: %ld, %ld, %ld, %ld, %ld, %ld, which must >= 0.",
+                attrInfo_.padHead, attrInfo_.padTail, attrInfo_.padTop,
+                attrInfo_.padBottom, attrInfo_.padLeft, attrInfo_.padRight);
         return false;
     }
     return true;
@@ -540,7 +608,11 @@ bool Conv3dTilingEngine::CheckFmapShape()
     // Check if all dimensions are positive
     if (shapeInfo_.batch <= 0 || shapeInfo_.cIn <= 0 || shapeInfo_.di <= 0 ||
         shapeInfo_.hi <= 0 || shapeInfo_.wi <= 0) {
-        OP_LOGE(logTag_.c_str(), "Invalid feature map shape - all dimensions must be positive");
+        OP_LOGE(logTag_.c_str(),
+                "Conv3D AscendC: input illegal featureMap shape: %ld, %ld, %ld, %ld, %ld, which must > 0.",
+                static_cast<int64_t>(shapeInfo_.batch), static_cast<int64_t>(shapeInfo_.cIn),
+                static_cast<int64_t>(shapeInfo_.di), static_cast<int64_t>(shapeInfo_.hi),
+                static_cast<int64_t>(shapeInfo_.wi));
         return false;
     }
     return true;
@@ -554,7 +626,11 @@ bool Conv3dTilingEngine::CheckWeightShape()
     // Check if all dimensions are positive
     if (shapeInfo_.cOut <= 0 || shapeInfo_.kd <= 0 ||
         shapeInfo_.kh <= 0 || shapeInfo_.kw <= 0) {
-        OP_LOGE(logTag_.c_str(), "Invalid weight shape - all dimensions must be positive");
+        OP_LOGE(logTag_.c_str(),
+                "Conv3D AscendC: input illegal weight shape: %ld, %ld, %ld, %ld, %ld, which must > 0.",
+                static_cast<int64_t>(shapeInfo_.cOut), static_cast<int64_t>(shapeInfo_.cIn),
+                static_cast<int64_t>(shapeInfo_.kd), static_cast<int64_t>(shapeInfo_.kh),
+                static_cast<int64_t>(shapeInfo_.kw));
         return false;
     }
 
@@ -569,51 +645,261 @@ bool Conv3dTilingEngine::CheckWeightShape()
     return true;
 }
 
-bool Conv3dTilingEngine::CheckParamsDtype()
+namespace {
+using ConvDtype = Conv3dApiTiling::ConvDtype;
+
+bool IsSupportedTypeCombo(const std::vector<ConvDtype> &paramsType,
+                          const std::vector<std::vector<ConvDtype>> &supportedTypes,
+                          uint32_t paramsCnt)
 {
-    if (flagInfo_.hasBias) {
-        std::vector<Conv3dApiTiling::ConvDtype> paramsType = {
-            descInfo_.fMapDtype, descInfo_.weightDtype,
-            descInfo_.biasDtype, descInfo_.outDtype
-        };
-
-        OP_LOGD(logTag_.c_str(), "Checking data types with bias - fmap: %s, weight: %s, bias: %s, output: %s",
-                g_convDtypeToStr[descInfo_.fMapDtype].c_str(),
-                g_convDtypeToStr[descInfo_.weightDtype].c_str(),
-                g_convDtypeToStr[descInfo_.biasDtype].c_str(),
-                g_convDtypeToStr[descInfo_.outDtype].c_str());
-
-        for (uint32_t kindsId = 0; kindsId < Conv3dApiTiling::SUPPORTED_TYPES_WITH_BIAS.size(); kindsId++) {
-            if (IsArrayEqual(paramsType, Conv3dApiTiling::SUPPORTED_TYPES_WITH_BIAS[kindsId], COUNT_PARAMS_WITH_BIAS)) {
-                OP_LOGD(logTag_.c_str(), "Data type combination with bias is supported (index: %u)", kindsId);
-                return true;
-            }
+    for (uint64_t kindsId = 0; kindsId < supportedTypes.size(); ++kindsId) {
+        if (IsArrayEqual(paramsType, supportedTypes[kindsId], paramsCnt)) {
+            return true;
         }
-        OP_LOGE(logTag_.c_str(), "Unsupported data type combination with bias");
-        return false;
-    } else {
-        std::vector<Conv3dApiTiling::ConvDtype> paramsType = {
-            descInfo_.fMapDtype, descInfo_.weightDtype,
-            descInfo_.outDtype
-        };
-
-        OP_LOGD(logTag_.c_str(), "Checking data types without bias - fmap: %s, weight: %s, output: %s",
-                g_convDtypeToStr[descInfo_.fMapDtype].c_str(),
-                g_convDtypeToStr[descInfo_.weightDtype].c_str(),
-                g_convDtypeToStr[descInfo_.outDtype].c_str());
-
-        for (uint32_t kindsId = 0; kindsId < Conv3dApiTiling::SUPPORTED_TYPES_WITHOUT_BIAS.size(); kindsId++) {
-            if (IsArrayEqual(paramsType, Conv3dApiTiling::SUPPORTED_TYPES_WITHOUT_BIAS[kindsId],
-                COUNT_PARAMS_WITHOUT_BIAS)) {
-                OP_LOGD(logTag_.c_str(), "Data type combination without bias is supported (index: %u)", kindsId);
-                return true;
-            }
-        }
-        OP_LOGE(logTag_.c_str(), "Unsupported data type combination without bias");
-        return false;
     }
+    return false;
 }
 
+bool CheckPointWiseParamsDtypeWithBias(const char *logTag, const Conv3DEngineDescInfo &descInfo)
+{
+    std::vector<ConvDtype> paramsType = {descInfo.fMapDtype, descInfo.weightDtype, descInfo.biasDtype,
+                                         descInfo.outDtype};
+
+    OP_LOGD(logTag,
+            "[PointWise] Checking data types with bias - fmap: %s, weight: %s, bias: %s, output: %s",
+            g_convDtypeToStr[descInfo.fMapDtype].c_str(),
+            g_convDtypeToStr[descInfo.weightDtype].c_str(),
+            g_convDtypeToStr[descInfo.biasDtype].c_str(),
+            g_convDtypeToStr[descInfo.outDtype].c_str());
+
+    if (IsSupportedTypeCombo(paramsType, Conv3dApiTiling::POINTWISE_SUPPORTED_TYPES_WITH_BIAS,
+                             Conv3dApiTiling::COUNT_PARAMS_BIAS)) {
+        return true;
+    }
+
+    OP_LOGE(logTag,
+            "[PointWise] unSupported params data type [fmap, weight, bias, output]: [%s, %s, %s, %s].",
+            g_convDtypeToStr[descInfo.fMapDtype].c_str(),
+            g_convDtypeToStr[descInfo.weightDtype].c_str(),
+            g_convDtypeToStr[descInfo.biasDtype].c_str(),
+            g_convDtypeToStr[descInfo.outDtype].c_str());
+    return false;
+}
+
+bool CheckPointWiseParamsDtypeWithoutBias(const char *logTag, const Conv3DEngineDescInfo &descInfo)
+{
+    std::vector<ConvDtype> paramsType = {descInfo.fMapDtype, descInfo.weightDtype, descInfo.outDtype};
+
+    OP_LOGD(logTag, "[PointWise] Checking data types without bias - fmap: %s, weight: %s, output: %s",
+            g_convDtypeToStr[descInfo.fMapDtype].c_str(),
+            g_convDtypeToStr[descInfo.weightDtype].c_str(),
+            g_convDtypeToStr[descInfo.outDtype].c_str());
+
+    if (IsSupportedTypeCombo(paramsType, Conv3dApiTiling::POINTWISE_SUPPORTED_TYPES_WITHOUT_BIAS,
+                             Conv3dApiTiling::COUNT_PARAMS_NO_BIAS)) {
+        return true;
+    }
+
+    OP_LOGE(logTag, "[PointWise] unSupported params data type [fmap, weight, output]: [%s, %s, %s].",
+            g_convDtypeToStr[descInfo.fMapDtype].c_str(),
+            g_convDtypeToStr[descInfo.weightDtype].c_str(),
+            g_convDtypeToStr[descInfo.outDtype].c_str());
+    return false;
+}
+
+bool CheckParamsDtypeWithScale(const char *logTag, const Conv3DEngineDescInfo &descInfo)
+{
+    std::vector<ConvDtype> paramsType = {descInfo.fMapDtype, descInfo.weightDtype, descInfo.biasDtype,
+                                         descInfo.scaleDtype, descInfo.outDtype};
+
+    OP_LOGD(logTag,
+            "Checking data types with scale - fmap: %s, weight: %s, bias: %s, scale: %s, output: %s",
+            g_convDtypeToStr[descInfo.fMapDtype].c_str(),
+            g_convDtypeToStr[descInfo.weightDtype].c_str(),
+            g_convDtypeToStr[descInfo.biasDtype].c_str(),
+            g_convDtypeToStr[descInfo.scaleDtype].c_str(),
+            g_convDtypeToStr[descInfo.outDtype].c_str());
+
+    if (IsSupportedTypeCombo(paramsType, Conv3dApiTiling::SUPPORTED_TYPES_WITH_BIAS_SCALE,
+                             Conv3dApiTiling::COUNT_PARAMS_BIAS_SCALE)) {
+        return true;
+    }
+
+    OP_LOGE(logTag,
+            "unSupported params data type [fmap, weight, bias, scale, output]: [%s, %s, %s, %s, %s].",
+            g_convDtypeToStr[descInfo.fMapDtype].c_str(),
+            g_convDtypeToStr[descInfo.weightDtype].c_str(),
+            g_convDtypeToStr[descInfo.biasDtype].c_str(),
+            g_convDtypeToStr[descInfo.scaleDtype].c_str(),
+            g_convDtypeToStr[descInfo.outDtype].c_str());
+    return false;
+}
+
+bool CheckParamsDtypeWithBias(const char *logTag, const Conv3DEngineDescInfo &descInfo)
+{
+    std::vector<ConvDtype> paramsType = {descInfo.fMapDtype, descInfo.weightDtype, descInfo.biasDtype,
+                                         descInfo.outDtype};
+
+    OP_LOGD(logTag, "Checking data types with bias - fmap: %s, weight: %s, bias: %s, output: %s",
+            g_convDtypeToStr[descInfo.fMapDtype].c_str(),
+            g_convDtypeToStr[descInfo.weightDtype].c_str(),
+            g_convDtypeToStr[descInfo.biasDtype].c_str(),
+            g_convDtypeToStr[descInfo.outDtype].c_str());
+
+    if (IsSupportedTypeCombo(paramsType, Conv3dApiTiling::SUPPORTED_TYPES_WITH_BIAS,
+                             Conv3dApiTiling::COUNT_PARAMS_BIAS)) {
+        return true;
+    }
+
+    OP_LOGE(logTag, "unSupported params data type [fmap, weight, bias, output]: [%s, %s, %s, %s].",
+            g_convDtypeToStr[descInfo.fMapDtype].c_str(),
+            g_convDtypeToStr[descInfo.weightDtype].c_str(),
+            g_convDtypeToStr[descInfo.biasDtype].c_str(),
+            g_convDtypeToStr[descInfo.outDtype].c_str());
+    return false;
+}
+
+bool CheckParamsDtypeWithoutBias(const char *logTag, const Conv3DEngineDescInfo &descInfo)
+{
+    std::vector<ConvDtype> paramsType = {descInfo.fMapDtype, descInfo.weightDtype, descInfo.outDtype};
+
+    OP_LOGD(logTag, "Checking data types without bias - fmap: %s, weight: %s, output: %s",
+            g_convDtypeToStr[descInfo.fMapDtype].c_str(),
+            g_convDtypeToStr[descInfo.weightDtype].c_str(),
+            g_convDtypeToStr[descInfo.outDtype].c_str());
+
+    if (IsSupportedTypeCombo(paramsType, Conv3dApiTiling::SUPPORTED_TYPES_WITHOUT_BIAS,
+                             Conv3dApiTiling::COUNT_PARAMS_NO_BIAS)) {
+        return true;
+    }
+
+    OP_LOGE(logTag, "unSupported params data type [fmap, weight, output]: [%s, %s, %s].",
+            g_convDtypeToStr[descInfo.fMapDtype].c_str(),
+            g_convDtypeToStr[descInfo.weightDtype].c_str(),
+            g_convDtypeToStr[descInfo.outDtype].c_str());
+    return false;
+}
+} // namespace
+
+bool Conv3dTilingEngine::CheckParamsDtype()
+{
+    const char *logTag = logTag_.c_str();
+
+    // PointWise uses a different supported-type table (bias type differs for fp16).
+    if (isPointWise) {
+        // Scale is currently only supported by quant (INT8) kernels, which do not use pointwise tiling path.
+        if (flagInfo_.hasScale) {
+            OP_LOGE(logTag, "[PointWise] Scale is not supported in pointwise mode.");
+            return false;
+        }
+
+        return flagInfo_.hasBias ? CheckPointWiseParamsDtypeWithBias(logTag, descInfo_)
+                                 : CheckPointWiseParamsDtypeWithoutBias(logTag, descInfo_);
+    }
+
+    // Quant scale path: [fmap, weight, bias, scale, output].
+    if (flagInfo_.hasScale) {
+        return CheckParamsDtypeWithScale(logTag, descInfo_);
+    }
+    if (flagInfo_.hasBias) {
+        return CheckParamsDtypeWithBias(logTag, descInfo_);
+    }
+    return CheckParamsDtypeWithoutBias(logTag, descInfo_);
+}
+
+bool Conv3dTilingEngine::CheckInputFormat()
+{
+    OP_LOGD(logTag_.c_str(), "Checking input format compatibility - mode: %s",
+            isPointWise ? "Pointwise" : "Regular");
+
+    // Validate based on pointwise mode
+    if (isPointWise) {
+        // Pointwise mode: all tensors must be NCDHW
+        if (descInfo_.fMapFormat != Conv3dApiTiling::ConvFormat::NCDHW ||
+            descInfo_.weightFormat != Conv3dApiTiling::ConvFormat::NCDHW ||
+            descInfo_.outFormat != Conv3dApiTiling::ConvFormat::NCDHW) {
+            OP_LOGE(logTag_.c_str(),
+                    "Pointwise convolution (1x1x1 kernel) requires NCDHW format for all tensors. "
+                    "Current formats: [fmap=%s, weight=%s, output=%s]",
+                    Conv3dApiTiling::g_formatToStr.at(descInfo_.fMapFormat).c_str(),
+                    Conv3dApiTiling::g_formatToStr.at(descInfo_.weightFormat).c_str(),
+                    Conv3dApiTiling::g_formatToStr.at(descInfo_.outFormat).c_str());
+            return false;
+        }
+    } else {
+        // Regular mode: NDC1HWC0 for fmap/output, FRACTAL_Z_3D for weight
+        if (descInfo_.fMapFormat != Conv3dApiTiling::ConvFormat::NDC1HWC0 ||
+            descInfo_.weightFormat != Conv3dApiTiling::ConvFormat::FRACTAL_Z_3D ||
+            descInfo_.outFormat != Conv3dApiTiling::ConvFormat::NDC1HWC0) {
+            OP_LOGE(logTag_.c_str(),
+                    "Regular convolution requires [NDC1HWC0, FRACTAL_Z_3D, NDC1HWC0] formats. "
+                    "Current formats: [fmap=%s, weight=%s, output=%s]",
+                    Conv3dApiTiling::g_formatToStr.at(descInfo_.fMapFormat).c_str(),
+                    Conv3dApiTiling::g_formatToStr.at(descInfo_.weightFormat).c_str(),
+                    Conv3dApiTiling::g_formatToStr.at(descInfo_.outFormat).c_str());
+            return false;
+        }
+    }
+
+    // Validate bias format if present
+    if (flagInfo_.hasBias && descInfo_.biasFormat != Conv3dApiTiling::ConvFormat::ND) {
+        OP_LOGE(logTag_.c_str(),
+                "Bias format must be ND, current: %s",
+                Conv3dApiTiling::g_formatToStr.at(descInfo_.biasFormat).c_str());
+        return false;
+    }
+
+    // Validate scale format if present
+    if (flagInfo_.hasScale && descInfo_.scaleFormat != Conv3dApiTiling::ConvFormat::ND) {
+        OP_LOGE(logTag_.c_str(),
+                "Scale format must be ND, current: %s",
+                Conv3dApiTiling::g_formatToStr.at(descInfo_.scaleFormat).c_str());
+        return false;
+    }
+
+    OP_LOGD(logTag_.c_str(), "Format validation passed");
+    return true;
+}
+
+bool Conv3dTilingEngine::CheckPointWiseParams()
+{
+    if (!isPointWise) {
+        return true;
+    }
+
+    if (attrInfo_.groups != 1) {
+        OP_LOGE(logTag_.c_str(),
+                "Conv3D PointWise AscendC: input attr groups: %u, which must = 1.", attrInfo_.groups);
+        return false;
+    }
+
+    if (attrInfo_.strideD != 1 || attrInfo_.strideH != 1 || attrInfo_.strideW != 1) {
+        OP_LOGE(logTag_.c_str(),
+                "Conv3D PointWise AscendC: input attr stride illegal: strideD: %u, strideH: %u, strideW: %u, which must = 1.",
+                attrInfo_.strideD, attrInfo_.strideH, attrInfo_.strideW);
+        return false;
+    }
+
+    if (attrInfo_.dilationD != 1 || attrInfo_.dilationH != 1 || attrInfo_.dilationW != 1) {
+        OP_LOGE(logTag_.c_str(),
+                "Conv3D PointWise AscendC: input attr dilation illegal: dilationD: %u, dilationH: %u, dilationW: %u, which must = 1.",
+                attrInfo_.dilationD, attrInfo_.dilationH, attrInfo_.dilationW);
+        return false;
+    }
+
+    if (attrInfo_.padHead != 0 || attrInfo_.padTail != 0 ||
+        attrInfo_.padTop != 0 || attrInfo_.padBottom != 0 ||
+        attrInfo_.padLeft != 0 || attrInfo_.padRight != 0) {
+        OP_LOGE(logTag_.c_str(),
+                "Conv3D PointWise AscendC: input attr pads illegal: padh: %u, padt: %u, padu: %u, padd: %u, padl: %u, padr: %u, which must = 0.",
+                attrInfo_.padHead, attrInfo_.padTail, attrInfo_.padTop, attrInfo_.padBottom,
+                attrInfo_.padLeft, attrInfo_.padRight);
+        return false;
+    }
+
+    OP_LOGD(logTag_.c_str(), "Pointwise parameter validation passed");
+    return true;
+}
 
 bool Conv3dTilingEngine::CheckLoad3DLimits()
 {
@@ -650,88 +936,90 @@ bool Conv3dTilingEngine::CheckLoad3DLimits()
     return true;
 }
 
-bool Conv3dTilingEngine::CheckInputShapeWithPadDetail(int64_t &idPad, int64_t &ihPad, int64_t &iwPad)
+bool Conv3dTilingEngine::CheckInputShapeWithPad()
 {
-    idPad = static_cast<int64_t>(shapeInfo_.di) +
+    int64_t idPad = static_cast<int64_t>(shapeInfo_.di) +
             static_cast<int64_t>(attrInfo_.padHead) +
             static_cast<int64_t>(attrInfo_.padTail) -
             static_cast<int64_t>(attrInfo_.dilationD) *
             (static_cast<int64_t>(shapeInfo_.kd) - 1LL) - 1LL;
 
-    ihPad = static_cast<int64_t>(shapeInfo_.hi) +
+    int64_t ihPad = static_cast<int64_t>(shapeInfo_.hi) +
             static_cast<int64_t>(attrInfo_.padTop) +
             static_cast<int64_t>(attrInfo_.padBottom) -
             static_cast<int64_t>(attrInfo_.dilationH) *
             (static_cast<int64_t>(shapeInfo_.kh) - 1LL) - 1LL;
 
-    iwPad = static_cast<int64_t>(shapeInfo_.wi) +
+    int64_t iwPad = static_cast<int64_t>(shapeInfo_.wi) +
             static_cast<int64_t>(attrInfo_.padLeft) +
             static_cast<int64_t>(attrInfo_.padRight) -
             static_cast<int64_t>(attrInfo_.dilationW) *
             (static_cast<int64_t>(shapeInfo_.kw) - 1LL) - 1LL;
 
     if (idPad < 0 || ihPad < 0 || iwPad < 0) {
+        OP_LOGE(logTag_.c_str(),
+                "Fmap size(DHW) after padding should be >= filter size(DHW). "
+                "idPad %ld, ihPad %ld, iwPad %ld",
+                idPad, ihPad, iwPad);
         return false;
     }
 
     return true;
 }
 
-bool Conv3dTilingEngine::CheckInputShapeWithPad()
+bool Conv3dTilingEngine::CheckBiasShape()
 {
-    int64_t idPad = 0;
-    int64_t ihPad = 0;
-    int64_t iwPad = 0;
-    return CheckInputShapeWithPadDetail(idPad, ihPad, iwPad);
+    if (!flagInfo_.hasBias) {
+        return true;
+    }
+
+    if (biasShape_.empty()) {
+        OP_LOGE(logTag_.c_str(), "Bias shape is missing while bias flag is set.");
+        return false;
+    }
+
+    if (biasShape_.size() != FORMAT_ND_DIM) {
+        OP_LOGE(logTag_.c_str(),
+                "Bias shape dim num %zu is invalid, expected %u.",
+                biasShape_.size(), FORMAT_ND_DIM);
+        return false;
+    }
+
+    if (biasShape_[0] != static_cast<int64_t>(shapeInfo_.cOut)) {
+        OP_LOGE(logTag_.c_str(),
+                "Conv3D AscendC: input illegal bias shape: %ld, which must equal to Cout: %ld.",
+                biasShape_[0], static_cast<int64_t>(shapeInfo_.cOut));
+        return false;
+    }
+
+    return true;
 }
 
-bool Conv3dTilingEngine::CheckGroupOptAgainstWeightShape(uint64_t weightD, uint64_t weightN1)
+bool Conv3dTilingEngine::CheckScaleShape()
 {
-    OP_LOGD(logTag_.c_str(),
-            "Checking group options against weight shape - groupOpt: %lu, cinOpt: %lu, coutOpt: %lu, "
-            "weightD: %lu, weightN1: %lu",
-            attrInfo_.groupOpt, shapeInfo_.cinOpt, shapeInfo_.coutOpt, weightD, weightN1);
+    if (!flagInfo_.hasScale) {
+        return true;
+    }
 
-    // FRACTAL_Z_3D layout validation:
-    // weightD should equal: groupOpt * CeilDiv(cinOpt, k0) * kd * kh * kw
-    // weightN1 should equal: CeilDiv(coutOpt, n0)
-
-    uint64_t k0 = g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_K_IDX);
-    uint64_t n0 = g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_N_IDX);
-    uint64_t kdkhkw = static_cast<uint64_t>(shapeInfo_.kd) * static_cast<uint64_t>(shapeInfo_.kh) *
-                     static_cast<uint64_t>(shapeInfo_.kw);
-
-    if (k0 == 0 || n0 == 0) {
-        OP_LOGE(logTag_.c_str(),
-                "Invalid cube configuration: k0=%lu, n0=%lu (must be > 0)",
-                k0, n0);
+    if (scaleShape_.empty()) {
+        OP_LOGE(logTag_.c_str(), "Scale shape is missing while scale flag is set.");
         return false;
     }
 
-    uint64_t expectedWeightD = attrInfo_.groupOpt *
-                               CeilDiv(shapeInfo_.cinOpt, k0) *
-                               kdkhkw;
-    uint64_t expectedWeightN1 = CeilDiv(shapeInfo_.coutOpt, n0);
-
-    if (expectedWeightD != weightD) {
+    if (scaleShape_.size() != FORMAT_ND_DIM) {
         OP_LOGE(logTag_.c_str(),
-                "Weight D dimension mismatch: expected %lu, got %lu "
-                "(groupOpt=%ld, cinOpt=%lu, k0=%lu, kdkhkw=%lu)",
-                expectedWeightD, weightD, attrInfo_.groupOpt, shapeInfo_.cinOpt, k0, kdkhkw);
+                "Scale shape dim num %zu is invalid, expected %u.",
+                scaleShape_.size(), FORMAT_ND_DIM);
         return false;
     }
 
-    if (expectedWeightN1 != weightN1) {
+    if (scaleShape_[0] != static_cast<int64_t>(shapeInfo_.cOut)) {
         OP_LOGE(logTag_.c_str(),
-                "Weight N1 dimension mismatch: expected %lu, got %lu "
-                "(coutOpt=%lu, n0=%lu)",
-                expectedWeightN1, weightN1, shapeInfo_.coutOpt, n0);
+                "Conv3D AscendC: input illegal scale shape: %ld, which must equal to Cout: %ld.",
+                scaleShape_[0], static_cast<int64_t>(shapeInfo_.cOut));
         return false;
     }
 
-    OP_LOGD(logTag_.c_str(),
-            "Weight shape validation passed: weightD=%lu, weightN1=%lu",
-            weightD, weightN1);
     return true;
 }
 
@@ -764,18 +1052,15 @@ bool Conv3dTilingEngine::CheckParamsOverflow()
     return true;
 }
 
-bool Conv3dTilingEngine::CheckShapeSizeLimits()
+void Conv3dTilingEngine::CheckShapeSizeLimits()
 {
     OP_LOGD(logTag_.c_str(), "Checking shape size limits (warnings only)");
 
     // Check all shape dimensions against MAX_ORI_ONE_DIM_SIZE (1,000,000)
-    // Only log warnings, don't fail the check (following legacy behavior)
     CheckFmapShapeSizeLimits();
     CheckWeightShapeSizeLimits();
     CheckOutputShapeSizeLimits();
     CheckAttrShapeSizeLimits();
-
-    return true; // Always return true (warnings only)
 }
 
 void Conv3dTilingEngine::CheckFmapShapeSizeLimits()
@@ -871,50 +1156,57 @@ void Conv3dTilingEngine::CheckAttrShapeSizeLimits()
 
 bool Conv3dTilingEngine::CheckAllParams()
 {
-    if (!CheckStrideLegal()) {
-        OP_LOGE(logTag_.c_str(), "CheckAllParams failed: invalid stride configuration.");
-        return false;
+    struct CheckItem {
+        bool (Conv3dTilingEngine::*func)();
+        const char* errMsg;
+    };
+
+    static const CheckItem kAttrTensorAndConstraintChecks[] = {
+
+        // Attribute legality checks.
+        {&Conv3dTilingEngine::CheckStrideLegal, "CheckAllParams failed: invalid stride configuration."},
+        {&Conv3dTilingEngine::CheckDilationLegal, "CheckAllParams failed: invalid dilation configuration."},
+        {&Conv3dTilingEngine::CheckPadLegal, "CheckAllParams failed: invalid padding configuration."},
+
+        // Tensor shape/dtype/format checks.
+        {&Conv3dTilingEngine::CheckFmapShape, "CheckAllParams failed: invalid feature map shape."},
+        {&Conv3dTilingEngine::CheckWeightShape, "CheckAllParams failed: invalid weight shape."},
+        {&Conv3dTilingEngine::CheckParamsDtype, "CheckAllParams failed: unsupported parameter data type combination."},
+        {&Conv3dTilingEngine::CheckInputFormat, "CheckAllParams failed: invalid format configuration."},
+        {&Conv3dTilingEngine::CheckPointWiseParams, "CheckAllParams failed: invalid pointwise convolution parameters."},
+        {&Conv3dTilingEngine::CheckBiasShape, "CheckAllParams failed: invalid bias shape."},
+        {&Conv3dTilingEngine::CheckScaleShape, "CheckAllParams failed: invalid scale shape."},
+
+        // Cross-parameter consistency + hardware limit checks.
+        {&Conv3dTilingEngine::CheckInputShapeWithPad,
+         "CheckAllParams failed: input shape incompatible with pad/dilation/stride."},
+        {&Conv3dTilingEngine::CheckLoad3DLimits,
+         "CheckAllParams failed: configuration violates LOAD3D hardware limits."},
+    };
+
+    for (const auto& check : kAttrTensorAndConstraintChecks) {
+        if (!(this->*check.func)()) {
+            OP_LOGE(logTag_.c_str(), "%s", check.errMsg);
+            return false;
+        }
     }
-    if (!CheckDilationLegal()) {
-        OP_LOGE(logTag_.c_str(), "CheckAllParams failed: invalid dilation configuration.");
-        return false;
+
+    CheckShapeSizeLimits(); // Warning-only checks, doesn't fail validation
+
+    static const CheckItem kGroupOverflowChecks[] = {
+
+        // Group/overflow checks.
+        {&Conv3dTilingEngine::GetGroupConvOpt, "CheckAllParams failed: failed to compute optimal group parameters."},
+        {&Conv3dTilingEngine::CheckParamsOverflow, "CheckAllParams failed: parameter size overflow detected."},
+    };
+
+    for (const auto& check : kGroupOverflowChecks) {
+        if (!(this->*check.func)()) {
+            OP_LOGE(logTag_.c_str(), "%s", check.errMsg);
+            return false;
+        }
     }
-    if (!CheckPadLegal()) {
-        OP_LOGE(logTag_.c_str(), "CheckAllParams failed: invalid padding configuration.");
-        return false;
-    }
-    if (!CheckFmapShape()) {
-        OP_LOGE(logTag_.c_str(), "CheckAllParams failed: invalid feature map shape.");
-        return false;
-    }
-    if (!CheckWeightShape()) {
-        OP_LOGE(logTag_.c_str(), "CheckAllParams failed: invalid weight shape.");
-        return false;
-    }
-    if (!CheckParamsDtype()) {
-        OP_LOGE(logTag_.c_str(), "CheckAllParams failed: unsupported parameter data type combination.");
-        return false;
-    }
-    if (!CheckInputShapeWithPad()) {
-        OP_LOGE(logTag_.c_str(), "CheckAllParams failed: input shape incompatible with pad/dilation/stride.");
-        return false;
-    }
-    if (!CheckLoad3DLimits()) {
-        OP_LOGE(logTag_.c_str(), "CheckAllParams failed: configuration violates LOAD3D hardware limits.");
-        return false;
-    }
-    if (!CheckShapeSizeLimits()) {
-        OP_LOGE(logTag_.c_str(), "CheckAllParams failed: shape size exceeds maximum limits.");
-        return false;
-    }
-    if (!GetGroupConvOpt()) {
-        OP_LOGE(logTag_.c_str(), "CheckAllParams failed: failed to compute optimal group parameters.");
-        return false;
-    }
-    if (!CheckParamsOverflow()) {
-        OP_LOGE(logTag_.c_str(), "CheckAllParams failed: parameter size overflow detected.");
-        return false;
-    }
+
     return true;
 }
 
@@ -1216,6 +1508,8 @@ bool Conv3dTilingEngine::GetConv3dApiTiling(Ops::NN::Conv3dV2::Conv3DV2TilingDat
         conv3dApiTiling_.hasBias = true;
     }
 
+    tilingdata.conv3dApiTiling.outputOrder = outputOrder_;
+
     OP_LOGD(logTag_.c_str(), "API tiling retrieved successfully");
     return true;
 }
@@ -1225,7 +1519,7 @@ void Conv3dTilingEngine::SetSingleOutputShapeByMode()
     OP_LOGD(logTag_.c_str(), "Setting single output shape by mode");
 
     int32_t singleCoreCo = blockDimRes_.nDim == 1 ? shapeInfo_.coutOpt :
-        AlignB(shapeInfo_.coutOpt, g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_N_IDX)) / blockDimRes_.nDim;
+        AlignUp(shapeInfo_.coutOpt, g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_N_IDX)) / blockDimRes_.nDim;
     int32_t singleCoreDo = CeilDiv(static_cast<uint32_t>(shapeInfo_.dOut), blockDimRes_.doDim);
 
     if (outputOrder_ == Conv3dApiTiling::M_Mode) {
@@ -1282,9 +1576,9 @@ bool Conv3dTilingEngine::InitOutputOrder()
 {
     OP_LOGD(logTag_.c_str(), "Initializing output order");
 
-    uint64_t minL1LoadSize = CalcMinL1LoadSize(Conv3dApiTiling::M_Mode);
+    uint64_t minL1LoadSize = CalcMinL1LoadSize(static_cast<uint8_t>(Conv3dApiTiling::M_Mode));
     if (minL1LoadSize <= platformInfo_.l1Size) {
-        outputOrder_ = Conv3dApiTiling::M_Mode;
+        outputOrder_ = static_cast<uint8_t>(Conv3dApiTiling::M_Mode);
         return true;
     } else if (isPointWise) {
         OP_LOGE(logTag_.c_str(), "Conv3D AscendC: MinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
@@ -1299,7 +1593,7 @@ bool Conv3dTilingEngine::InitOutputOrder()
         return false;
     }
 
-    minL1LoadSize = CalcMinL1LoadSize(Conv3dApiTiling::HW_Mode);
+    minL1LoadSize = CalcMinL1LoadSize(static_cast<uint8_t>(Conv3dApiTiling::HW_Mode));
     if (minL1LoadSize > platformInfo_.l1Size) {
         OP_LOGE(logTag_.c_str(), "Conv3D AscendC: MinL1LoadSize > L1size in HW_Mode, current L1size: %lu, "
                 "maxL1Size: %lu", minL1LoadSize, platformInfo_.l1Size);
@@ -1307,13 +1601,14 @@ bool Conv3dTilingEngine::InitOutputOrder()
     }
 
     OP_LOGD(logTag_.c_str(), "Conv3D AscendC: Entering HW_Mode.");
-    outputOrder_ = Conv3dApiTiling::HW_Mode;
+    outputOrder_ = static_cast<uint8_t>(Conv3dApiTiling::HW_Mode);
     return true;
 }
 
-uint64_t Conv3dTilingEngine::CalcMinL1LoadSize(int8_t outputOrder)
+uint64_t Conv3dTilingEngine::CalcMinL1LoadSize(uint8_t outputOrder)
 {
-    OP_LOGD(logTag_.c_str(), "Calculating minimum L1 load size for order %d", outputOrder);
+    OP_LOGD(logTag_.c_str(), "Calculating minimum L1 load size for order %d",
+            static_cast<int32_t>(outputOrder));
 
     uint64_t m0 = static_cast<uint64_t>(g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_M_IDX));
     uint32_t k0 = static_cast<uint32_t>(g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_K_IDX));
@@ -1321,7 +1616,7 @@ uint64_t Conv3dTilingEngine::CalcMinL1LoadSize(int8_t outputOrder)
     uint32_t fMapDtypeSize = static_cast<uint32_t>(Conv3dApiTiling::g_dtypeSizeTab.at(descInfo_.fMapDtype));
     uint32_t biasDtypeSize = static_cast<uint32_t>(Conv3dApiTiling::g_dtypeSizeTab.at(descInfo_.biasDtype));
 
-    uint32_t minBiasSize = flagInfo_.hasBias ? AlignB(n0 * biasDtypeSize, C0_SIZE) : 0;
+    uint32_t minBiasSize = flagInfo_.hasBias ? AlignUp(n0 * biasDtypeSize, C0_SIZE) : 0;
     uint64_t minAL1Size = 0;
     if (outputOrder == Conv3dApiTiling::M_Mode) {
         uint64_t hoAL1min = m0 / shapeInfo_.wo + 2;

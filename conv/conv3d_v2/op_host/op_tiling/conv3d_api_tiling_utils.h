@@ -24,6 +24,7 @@
 #include <cmath>
 #include <algorithm>
 #include "tiling/platform/platform_ascendc.h"
+#include "conv3d_common_utils.h"
 
 namespace Conv3dApiTiling {
 
@@ -124,6 +125,8 @@ const std::map<ConvFormat, std::string> g_formatToStr = {
     {ConvFormat::NDHWC, "NDHWC"},
     {ConvFormat::NCDHW, "NCDHW"},
     {ConvFormat::NC1HWC0, "NC1HWC0"},
+    {ConvFormat::NDC1HWC0, "NDC1HWC0"},
+    {ConvFormat::FRACTAL_Z_3D, "FRACTAL_Z_3D"},
     {ConvFormat::ND, "ND"}
 };
 
@@ -177,29 +180,29 @@ constexpr uint64_t DOUBLE_BUFFER_NUM = 2;
 constexpr int8_t M_Mode = 0;
 constexpr int8_t HW_Mode = 1;
 
-constexpr uint32_t C0_BYTE_SIZE = 32;
+using ::Conv3dCommon::C0_BYTE_SIZE;
+using ::Conv3dCommon::LOAD3D_MAX_STRIDE_H_W;
+using ::Conv3dCommon::LOAD3D_MAX_DILATION_H_W;
+using ::Conv3dCommon::LOAD3D_MAX_PAD;
+using ::Conv3dCommon::LOAD3D_MAX_FILTER_H_W;
 constexpr uint32_t MIN_BURST_SIZE = 128;
-constexpr uint32_t LOAD3D_MAX_STRIDE_H_W = 63;
-constexpr uint32_t LOAD3D_MAX_DILATION_H_W = 255;
-constexpr uint32_t LOAD3D_MAX_PAD = 255;
-constexpr uint32_t LOAD3D_MAX_FILTER_H_W = 511;
 constexpr uint32_t LOAD3D_MAX_DDR2L1_SIZE = 65535;
 
-constexpr uint32_t CUBE_UNIT = 16;
-constexpr uint32_t FP16_CUBE_UNIT = 16;
-constexpr uint32_t FP32_CUBE_UNIT = 8;
-constexpr uint32_t INT8_CUBE_UNIT = 32;
-constexpr uint32_t MKN_MAX_SIZE = 3;
-constexpr uint32_t MKN_M_INDEX = 0;
-constexpr uint32_t MKN_K_INDEX = 1;
-constexpr uint32_t MKN_N_INDEX = 2;
-constexpr uint32_t MKN_VALUE_DEFAULT = 16;
+using ::Conv3dCommon::CUBE_UNIT;
+using ::Conv3dCommon::FP16_CUBE_UNIT;
+using ::Conv3dCommon::FP32_CUBE_UNIT;
+using ::Conv3dCommon::INT8_CUBE_UNIT;
+using ::Conv3dCommon::MKN_MAX_SIZE;
+using ::Conv3dCommon::MKN_M_INDEX;
+using ::Conv3dCommon::MKN_K_INDEX;
+using ::Conv3dCommon::MKN_N_INDEX;
+using ::Conv3dCommon::MKN_VALUE_DEFAULT;
 
-constexpr uint64_t MAX_64_BIT_NUM = 0xFFFFFFFFFFFFFFFFU;
+using ::Conv3dCommon::MAX_64_BIT_NUM;
 
-constexpr uint32_t CONST_VALUE_2 = 2;
+using ::Conv3dCommon::CONST_VALUE_2;
 constexpr uint32_t CONST_HO_1 = 1;
-constexpr uint32_t C0_SIZE = 32;
+using ::Conv3dCommon::C0_SIZE;
 
 constexpr int64_t INVALID_VALUE = -1L;
 constexpr int64_t VALID_VALUE = 0;
@@ -329,15 +332,17 @@ const AscendApiCubeTypeMap CUBE_TYPE_TAB = AscendApiCubeTypeMap();
 const AscendApiCubeMkn CUBE_MKN_TAB = AscendApiCubeMkn();
 
 int64_t LCM(int64_t numL, int64_t numR);
-uint64_t CeilDiv(uint64_t a, uint64_t b);
-uint64_t AlignB(uint64_t a, uint64_t b);
+
+using Conv3dCommon::CeilDiv;
+using Conv3dCommon::AlignUp;
+
 uint64_t Gcd(uint64_t a, uint64_t b);
 void FindDivisorsUpTo(const uint64_t num, const uint64_t numMax, std::vector<uint64_t> &resList);
 void CalcCommFactorWithPowerOfTwo(const uint64_t num, const uint64_t numMax, std::vector<uint64_t> &resList);
-void CalcCommFactor(const uint64_t num, const uint64_t numMax, std::vector<uint64_t> &resList);
+using Conv3dCommon::CalcCommFactor;
 void CalcFactorPointWise(uint64_t numMax, std::vector<uint64_t> &resList);
 void VectorElementMultip(std::vector<uint64_t> &range, const uint64_t value);
-bool IsArrayEqual(const std::vector<ConvDtype>& arr1, const std::vector<ConvDtype>& arr2, uint32_t size);
+using Conv3dCommon::IsArrayEqual;
 
 template <typename T>
 bool AddWithOverflowCheck(T &res, T a, T b)

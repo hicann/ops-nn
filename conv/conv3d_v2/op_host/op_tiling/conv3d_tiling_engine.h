@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
- */
+*/
 
 /*!
  * \file conv3d_tiling_engine.h
@@ -24,7 +24,6 @@
 #include "conv3d_tiling_utils.h"
 #include "conv3d_common_utils.h"
 #include "log/log.h"
-#include "graph/types.h"
 #include "../../op_kernel/conv3d_v2_tiling_data.h"
 
 namespace Ops {
@@ -35,7 +34,7 @@ constexpr uint8_t ATTRS_D_DIM_IDX_NCDHW = 0;
 constexpr uint8_t ATTRS_H_DIM_IDX_NCDHW = 1;
 constexpr uint8_t ATTRS_W_DIM_IDX_NCDHW = 2;
 
-constexpr uint64_t MAX_64_BIT_NUM = 0xFFFFFFFFFFFFFFFFU;
+using ::Conv3dCommon::MAX_64_BIT_NUM;
 constexpr uint8_t CONV_ATTRS_DIM = 3;
 
 struct Conv3dPlatformInfo {
@@ -71,6 +70,11 @@ class Conv3dTilingEngine {
 public:
     explicit Conv3dTilingEngine(const std::string &logTag = "Conv3DV2");
 
+    bool Init();
+    bool IsInitialized() const;
+    void SetInitialized(bool value) { initOk_ = value; }
+    uint8_t GetOutputOrder() const;
+
     Conv3dPlatformInfo platformInfo_;
 
     optiling::Conv3dOpsTiling::Conv3DAscendcShapesInfo shapeInfo_;
@@ -87,7 +91,7 @@ public:
 
     Conv3dApiTiling::Conv3dTiling conv3dApiTiling_;
 
-    int8_t outputOrder_ = Conv3dApiTiling::M_Mode;
+    uint8_t outputOrder_ = static_cast<uint8_t>(Conv3dApiTiling::M_Mode);
 
     void SetOrgWeightShape(const std::vector<int64_t> &orgWeightShapeList);
     void SetOrgFmapShape(const std::vector<int64_t> &orgFmapShapeList);
@@ -100,8 +104,13 @@ public:
     void SetDataType(Conv3dApiTiling::ConvDtype fmapDtype,
                      Conv3dApiTiling::ConvDtype weightDtype,
                      Conv3dApiTiling::ConvDtype outDtype);
+    void SetFormat(Conv3dApiTiling::ConvFormat fmapFormat,
+                   Conv3dApiTiling::ConvFormat weightFormat,
+                   Conv3dApiTiling::ConvFormat outFormat);
     void SetBias(bool hasBias, Conv3dApiTiling::ConvDtype biasDtype);
+    void SetBiasShape(const std::vector<int64_t> &biasShape);
     void SetScale(bool hasScale, Conv3dApiTiling::ConvDtype scaleDtype);
+    void SetScaleShape(const std::vector<int64_t> &scaleShape);
     void SetHF32(bool enable);
 
     bool GetConv3DV2TilingData(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingData);
@@ -138,12 +147,15 @@ public:
     void GetConv3dApiTilingPartSetAttrAndShape();
     void GetConv3dApiTilingSetGroupsInfo();
     bool InitOutputOrder();
-    uint64_t CalcMinL1LoadSize(int8_t outputOrder);
+    uint64_t CalcMinL1LoadSize(uint8_t outputOrder);
     bool CheckInputLimitsHwMode();
     bool CheckDims(const std::vector<int64_t>& shape);
 
 private:
     std::string logTag_ {"Conv3DV2"};
+    bool initOk_ = false;
+    std::vector<int64_t> biasShape_;
+    std::vector<int64_t> scaleShape_;
 
     bool InitPlatformInfoFromAscendC();
 
@@ -154,12 +166,14 @@ public:
     bool CheckFmapShape();
     bool CheckWeightShape();
     bool CheckParamsDtype();
+    bool CheckInputFormat();
+    bool CheckPointWiseParams();
     bool CheckLoad3DLimits();
     bool CheckInputShapeWithPad();
-    bool CheckInputShapeWithPadDetail(int64_t &idPad, int64_t &ihPad, int64_t &iwPad);
-    bool CheckGroupOptAgainstWeightShape(uint64_t weightD, uint64_t weightN1);
+    bool CheckBiasShape();
+    bool CheckScaleShape();
     bool CheckParamsOverflow();
-    bool CheckShapeSizeLimits();
+    void CheckShapeSizeLimits();
     void CheckFmapShapeSizeLimits();
     void CheckWeightShapeSizeLimits();
     void CheckOutputShapeSizeLimits();

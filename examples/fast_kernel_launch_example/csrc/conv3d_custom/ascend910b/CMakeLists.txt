@@ -9,7 +9,7 @@
 # ----------------------------------------------------------------------------
 
 set(CONV3D_TILING_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../conv/conv3d_v2/op_host/op_tiling")
-set(CONV3D_TILING_SOURCES 
+set(CONV3D_TILING_SOURCES
     "${CONV3D_TILING_DIR}/conv3d_api_tiling_algorithm.cpp"
     "${CONV3D_TILING_DIR}/conv3d_api_tiling_algorithm_hw_mode.cpp"
     "${CONV3D_TILING_DIR}/conv3d_api_tiling_algorithm_pointwise.cpp"
@@ -17,7 +17,7 @@ set(CONV3D_TILING_SOURCES
     "${CONV3D_TILING_DIR}/conv3d_api_tiling.cpp"
     "${CONV3D_TILING_DIR}/conv3d_api_tiling_utils.cpp"
     "${CONV3D_TILING_DIR}/conv3d_tiling_engine.cpp"
-    "${CONV3D_TILING_DIR}/conv3d_tiling_utils.cpp"
+    "${CONV3D_TILING_DIR}/conv3d_common_utils.h"
 )
 
 add_sources("--npu-arch=dav-2201" "${CONV3D_TILING_SOURCES}")

@@ -175,7 +175,7 @@ int64_t Conv3dTilingAlgorithm::InitCalcL1Params()
 {
     this->l1TilingCalc.ci0HkWk = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekH * tilingIns_->shapeInfo.singlekW *
         static_cast<int64_t>(tilingIns_->cubeInfo.k0));
-    this->l1TilingCalc.alignCinKhKwKd = AlignB(tilingIns_->shapeInfo.singleCi, tilingIns_->cubeInfo.k0) *
+    this->l1TilingCalc.alignCinKhKwKd = AlignUp(tilingIns_->shapeInfo.singleCi, tilingIns_->cubeInfo.k0) *
         static_cast<uint64_t>(tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW * tilingIns_->shapeInfo.orgkD);
     if (InitCalcL1ParamsForFmap() == INVALID_VALUE || InitCalcL1ParamsForWeight() == INVALID_VALUE) {
         return INVALID_VALUE;
@@ -225,24 +225,18 @@ int64_t Conv3dTilingAlgorithm::InitCalcL1ParamsForWeight()
 
 uint64_t Conv3dTilingAlgorithm::InferHiL1(uint64_t inputHoL1, uint64_t hi) const
 {
-    uint64_t khDilated = static_cast<uint64_t>((tilingIns_->shapeInfo.singlekH - 1) * tilingIns_->attrInfo.dilationH + 1);
-    uint64_t tmpHiL1 = (inputHoL1 - static_cast<uint64_t>(1)) * static_cast<uint64_t>(tilingIns_->attrInfo.strideH) + khDilated;
-    if (tmpHiL1 > hi) {
-        tmpHiL1 = hi;
-    }
-
-    return tmpHiL1;
+    return Conv3dCommon::InferHiL1(inputHoL1, hi,
+                                  static_cast<uint64_t>(tilingIns_->shapeInfo.singlekH),
+                                  static_cast<uint32_t>(tilingIns_->attrInfo.dilationH),
+                                  static_cast<uint32_t>(tilingIns_->attrInfo.strideH));
 }
 
 uint64_t Conv3dTilingAlgorithm::InferWiL1(uint64_t inputWoL1, uint64_t wi) const
 {
-    uint64_t kwDilated = static_cast<uint64_t>((tilingIns_->shapeInfo.singlekW - 1) * tilingIns_->attrInfo.dilationW + 1);
-    uint64_t tmpWiL1 = (inputWoL1 - static_cast<uint64_t>(1)) * static_cast<uint64_t>(tilingIns_->attrInfo.strideW) + kwDilated;
-    if (tmpWiL1 > wi) {
-        tmpWiL1 = wi;
-    }
-
-    return tmpWiL1;
+    return Conv3dCommon::InferWiL1(inputWoL1, wi,
+                                  static_cast<uint64_t>(tilingIns_->shapeInfo.singlekW),
+                                  static_cast<uint32_t>(tilingIns_->attrInfo.dilationW),
+                                  static_cast<uint32_t>(tilingIns_->attrInfo.strideW));
 }
 
 void Conv3dTilingAlgorithm::GetL1TilingRange()
@@ -946,7 +940,7 @@ void Conv3dTilingAlgorithm::L0TilingDecision()
     l0TilingParams.kL0 = 1 * MKN_VALUE_DEFAULT;
     l0TilingParams.mL0 = l0TilingRange.mL0Range[l0TilingIdx.mL0Idx];
     l0TilingParams.nL0 = l0TilingRange.nL0Range[l0TilingIdx.nL0Idx];
-    l0TilingParams.orgCoAlignN0 = AlignB(tilingIns_->shapeInfo.orgCo, tilingIns_->cubeInfo.n0);
+    l0TilingParams.orgCoAlignN0 = AlignUp(tilingIns_->shapeInfo.orgCo, tilingIns_->cubeInfo.n0);
 
     bool updateML0Index = false;
     bool l0BufferNotOverflowFlag = CheckL0Buffer(l0TilingParams.mL0, l0TilingParams.kL0, l0TilingParams.nL0);

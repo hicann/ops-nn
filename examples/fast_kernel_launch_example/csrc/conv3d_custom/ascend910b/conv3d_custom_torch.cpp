@@ -284,6 +284,9 @@ void Conv3dCustomApi(
     __gm__ uint8_t* bias_ptr = nullptr;
     __gm__ uint8_t* output_ptr = (__gm__ uint8_t*)output.data_ptr<T>();
     Conv3dTilingEngine conv3dTilingEngine;
+    if (!conv3dTilingEngine.Init()) {
+        throw std::runtime_error("Failed to initialize Conv3dTilingEngine!");
+    }
     conv3dTilingEngine.SetOrgWeightShape(oriWeightShapeList);
     conv3dTilingEngine.SetOrgFmapShape(oriInputShapeList);
     conv3dTilingEngine.SetOrgOutputShape(oriOutputShapeList);
@@ -304,6 +307,12 @@ void Conv3dCustomApi(
             Conv3dApiTiling::ConvDtype::FLOAT32);
     }
     if (bias.has_value()) {
+        auto biasTensor = bias.value();
+        TORCH_CHECK(biasTensor.dim() == 1, "Bias must be 1D (Cout), but got ", biasTensor.dim(), "D");
+        TORCH_CHECK(
+            biasTensor.numel() == oriWeightShapeList[N_DIM_IDX_NCDHW],
+            "Bias numel must equal Cout (", oriWeightShapeList[N_DIM_IDX_NCDHW], "), but got ", biasTensor.numel());
+        conv3dTilingEngine.SetBiasShape({static_cast<int64_t>(biasTensor.numel())});
         if constexpr (std::is_same_v<T, c10::BFloat16> || std::is_same_v<T, float>) {
             bias_ptr = (__gm__ uint8_t*)bias.value().data_ptr<float>();
             conv3dTilingEngine.SetBias(true, Conv3dApiTiling::ConvDtype::FLOAT32);
@@ -311,6 +320,9 @@ void Conv3dCustomApi(
             bias_ptr = (__gm__ uint8_t*)bias.value().data_ptr<T>();
             conv3dTilingEngine.SetBias(true, Conv3dApiTiling::ConvDtype::FLOAT16);
         }
+    } else {
+        conv3dTilingEngine.SetBias(false, Conv3dApiTiling::ConvDtype::FLOAT32);
+        conv3dTilingEngine.SetBiasShape({});
     }
     Conv3DV2TilingData tilingData;
     if (!conv3dTilingEngine.GetConv3DV2TilingData(tilingData)) {

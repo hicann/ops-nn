@@ -19,6 +19,7 @@
 #include <vector>
 #include "conv3d_api_tiling.h"
 #include "conv3d_api_tiling_utils.h"
+#include "conv3d_common_utils.h"
 
 namespace optiling {
 namespace Conv3dOpsTiling {
@@ -71,31 +72,31 @@ constexpr uint32_t PAD_LEFT_INDEX = 4;
 constexpr uint32_t PAD_RIGHT_INDEX = 5;
 constexpr uint32_t FORMAT_PAD_DIM = 6;
 
-constexpr uint32_t LOAD3D_MAX_STRIDE_H_W = 63;
-constexpr uint32_t LOAD3D_MAX_DILATION_H_W = 255;
-constexpr uint32_t LOAD3D_MAX_PAD = 255;
-constexpr uint32_t LOAD3D_MAX_FILTER_H_W = 511;
+using ::Conv3dCommon::LOAD3D_MAX_STRIDE_H_W;
+using ::Conv3dCommon::LOAD3D_MAX_DILATION_H_W;
+using ::Conv3dCommon::LOAD3D_MAX_PAD;
+using ::Conv3dCommon::LOAD3D_MAX_FILTER_H_W;
 
 constexpr uint32_t MAX_16_BIT_NUM = 65535;
 
 constexpr uint32_t MIN_WORKSPACE_SIZE = static_cast<uint32_t>(16 * 1024 * 1024);
 constexpr uint32_t WORKSPACE_NUM = 4;
-constexpr uint32_t C0_BYTE_SIZE = 32;
+using ::Conv3dCommon::C0_BYTE_SIZE;
 
-constexpr uint32_t CUBE_UNIT = 16;
-constexpr uint32_t FP16_CUBE_UNIT = 16;
-constexpr uint32_t FP32_CUBE_UNIT = 8;
-constexpr uint32_t INT8_CUBE_UNIT = 32;
-constexpr uint32_t MKN_MAX_SIZE = 3;
-constexpr uint32_t MKN_M_INDEX = 0;
-constexpr uint32_t MKN_K_INDEX = 1;
-constexpr uint32_t MKN_N_INDEX = 2;
-constexpr uint32_t MKN_VALUE_DEFAULT = 16;
+using ::Conv3dCommon::CUBE_UNIT;
+using ::Conv3dCommon::FP16_CUBE_UNIT;
+using ::Conv3dCommon::FP32_CUBE_UNIT;
+using ::Conv3dCommon::INT8_CUBE_UNIT;
+using ::Conv3dCommon::MKN_MAX_SIZE;
+using ::Conv3dCommon::MKN_M_INDEX;
+using ::Conv3dCommon::MKN_K_INDEX;
+using ::Conv3dCommon::MKN_N_INDEX;
+using ::Conv3dCommon::MKN_VALUE_DEFAULT;
 
-constexpr uint32_t CONST_VALUE_2 = 2;
+using ::Conv3dCommon::CONST_VALUE_2;
 
 constexpr uint32_t BATCH_AICORE_COF = 2;
-constexpr uint32_t C0_SIZE = 32;
+using ::Conv3dCommon::C0_SIZE;
 
 //blockdim: [batchDim, mdim, nDim, doDim, groupDim]
 constexpr uint32_t BLOCKDIM_DEC_NUM = 5;
@@ -121,23 +122,6 @@ constexpr uint64_t MAX_ORI_FMAP_SIZE = 10000000;
 constexpr uint32_t PBUFFERFLAG_L0A_MASK = 1;
 constexpr uint32_t PBUFFERFLAG_L0B_MASK = 2;
 constexpr uint32_t PBUFFERFLAG_L0C_MASK = 4;
-
-const std::vector<std::vector<Conv3dApiTiling::ConvDtype>> SUPPORTED_TYPES_WITH_BIAS = {
-    {Conv3dApiTiling::ConvDtype::FLOAT16, Conv3dApiTiling::ConvDtype::FLOAT16,
-     Conv3dApiTiling::ConvDtype::FLOAT32, Conv3dApiTiling::ConvDtype::FLOAT16},
-    {Conv3dApiTiling::ConvDtype::FLOAT32, Conv3dApiTiling::ConvDtype::FLOAT32,
-     Conv3dApiTiling::ConvDtype::FLOAT32, Conv3dApiTiling::ConvDtype::FLOAT32},
-    {Conv3dApiTiling::ConvDtype::INT8, Conv3dApiTiling::ConvDtype::INT8,
-     Conv3dApiTiling::ConvDtype::INT32, Conv3dApiTiling::ConvDtype::INT32},
-    {Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16,
-     Conv3dApiTiling::ConvDtype::FLOAT32, Conv3dApiTiling::ConvDtype::BF16}
-};
-const std::vector<std::vector<Conv3dApiTiling::ConvDtype>> SUPPORTED_TYPES_WITHOUT_BIAS = {
-    {Conv3dApiTiling::ConvDtype::FLOAT16, Conv3dApiTiling::ConvDtype::FLOAT16, Conv3dApiTiling::ConvDtype::FLOAT16},
-    {Conv3dApiTiling::ConvDtype::FLOAT32, Conv3dApiTiling::ConvDtype::FLOAT32, Conv3dApiTiling::ConvDtype::FLOAT32},
-    {Conv3dApiTiling::ConvDtype::INT8, Conv3dApiTiling::ConvDtype::INT8, Conv3dApiTiling::ConvDtype::INT32},
-    {Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16},
-};
 
 struct Conv3DAscendcShapesInfo {
     uint32_t batch = 1;
@@ -259,14 +243,12 @@ struct AscendOpsCubeMkn {
 
 static AscendOpsCubeMkn g_cubeMknMap = AscendOpsCubeMkn();
 
-uint64_t CeilDiv(uint64_t a, uint64_t b);
-void CalcCommFactor(const uint64_t num, const uint32_t numMax, std::vector<uint32_t> &reslist);
-bool IsArrayEqual(std::vector<Conv3dApiTiling::ConvDtype>& arr1,
-                  const std::vector<Conv3dApiTiling::ConvDtype>& arr2,
-                  uint32_t size);
-uint64_t AlignB(uint64_t a, uint64_t b);
-uint64_t InferHiL1(uint64_t inputHoL1, uint64_t hi, uint64_t singlekH, uint32_t dilationH, uint32_t strideH);
-uint64_t InferWiL1(uint64_t inputWoL1, uint64_t wi, uint64_t singlekW, uint32_t dilationW, uint32_t strideW);
+using Conv3dCommon::CeilDiv;
+using Conv3dCommon::AlignUp;
+using Conv3dCommon::InferHiL1;
+using Conv3dCommon::InferWiL1;
+using Conv3dCommon::CalcCommFactor;
+using Conv3dCommon::IsArrayEqual;
 
 } // namespace Conv3dOpsTiling
 

@@ -65,7 +65,7 @@ int64_t Conv3dTilingAlgorithmPointWise::InitCalcL1Params()
 {
     this->l1TilingCalc.ci0HkWk = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekH *
                                  tilingIns_->shapeInfo.singlekW * static_cast<int64_t>(tilingIns_->cubeInfo.k0));
-    this->l1TilingCalc.alignCinKhKwKd = AlignB(static_cast<uint64_t>(tilingIns_->shapeInfo.singleCi),
+    this->l1TilingCalc.alignCinKhKwKd = AlignUp(static_cast<uint64_t>(tilingIns_->shapeInfo.singleCi),
                                                static_cast<uint64_t>(tilingIns_->cubeInfo.k0)) *
                                                static_cast<uint64_t>(tilingIns_->shapeInfo.orgkH *
                                                tilingIns_->shapeInfo.orgkW * tilingIns_->shapeInfo.orgkD);
@@ -77,7 +77,7 @@ int64_t Conv3dTilingAlgorithmPointWise::InitCalcL1Params()
         return INVALID_VALUE;
     }
     this->l1TilingCalc.fmapFullLoadL1Size = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) *
-        AlignB(tilingIns_->shapeCalc.singleCi1 * static_cast<uint64_t>(tilingIns_->cubeInfo.k0), POINT_WISE_ALIGN_UNIT) *
+        AlignUp(tilingIns_->shapeCalc.singleCi1 * static_cast<uint64_t>(tilingIns_->cubeInfo.k0), POINT_WISE_ALIGN_UNIT) *
         tilingIns_->shapeCalc.singleM1 * static_cast<uint64_t>(tilingIns_->cubeInfo.m0) * this->fMapDTypeSize;
     uint64_t weightSizeInL1 = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) * tilingIns_->shapeCalc.singleCi1 *
         this->l1TilingCalc.ci0HkWk * tilingIns_->shapeCalc.singleCo1 * static_cast<uint64_t>(tilingIns_->cubeInfo.n0);
@@ -217,9 +217,9 @@ void Conv3dTilingAlgorithmPointWise::GetKL0TilingDecision()
 
 uint64_t Conv3dTilingAlgorithmPointWise::CalcL1SizeForL0Tiling(uint64_t currmL0, uint64_t currnL0) const
 {
-    uint64_t usedL1Size = currmL0 * AlignB(tilingIns_->cubeInfo.k0, POINT_WISE_ALIGN_UNIT) *
+    uint64_t usedL1Size = currmL0 * AlignUp(tilingIns_->cubeInfo.k0, POINT_WISE_ALIGN_UNIT) *
                           fMapDTypeSize * this->doubleBufferValue.pbAL1;
-    usedL1Size += currnL0 * AlignB(tilingIns_->cubeInfo.k0, POINT_WISE_ALIGN_UNIT) *
+    usedL1Size += currnL0 * AlignUp(tilingIns_->cubeInfo.k0, POINT_WISE_ALIGN_UNIT) *
                     weightDTypeSize * this->doubleBufferValue.pbBL1;
     if (tilingIns_->hasBias) {
         uint64_t biasSize = currnL0 * biasDTypeSize * POINT_WISE_BIAS_CUBE_UNIT;
@@ -230,8 +230,8 @@ uint64_t Conv3dTilingAlgorithmPointWise::CalcL1SizeForL0Tiling(uint64_t currmL0,
 
 uint64_t Conv3dTilingAlgorithmPointWise::L1NoFullLoadFmapSize() const
 {
-    uint64_t fmapSingleCoreL1Load =  AlignB(static_cast<uint64_t>(tilingIns_->shapeInfo.singleM), static_cast<uint64_t>(tilingIns_->cubeInfo.m0)) *
-        AlignB(tilingIns_->shapeCalc.singleCi1 * static_cast<uint64_t>(tilingIns_->cubeInfo.k0), POINT_WISE_ALIGN_UNIT) *
+    uint64_t fmapSingleCoreL1Load =  AlignUp(static_cast<uint64_t>(tilingIns_->shapeInfo.singleM), static_cast<uint64_t>(tilingIns_->cubeInfo.m0)) *
+        AlignUp(tilingIns_->shapeCalc.singleCi1 * static_cast<uint64_t>(tilingIns_->cubeInfo.k0), POINT_WISE_ALIGN_UNIT) *
         static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) * this->fMapDTypeSize;
     return fmapSingleCoreL1Load;
 }

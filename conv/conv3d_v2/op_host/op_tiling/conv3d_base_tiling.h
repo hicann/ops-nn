@@ -23,7 +23,9 @@
 #include "conv3d_api_tiling.h"
 #include "tiling/tiling_api.h"
 #include "conv3d_tiling_utils.h"
+#include "conv3d_tiling_engine.h"
 #include "conv/common/op_host/op_tiling/cube_tiling.h"
+#include <memory>
 
 namespace optiling {
 
@@ -160,7 +162,7 @@ protected:
     void SetAdditionalTilingInfo();
 
 private:
-    Conv3dApiTiling::Conv3dTiling conv3dApiTiling_;
+    std::unique_ptr<Ops::NN::Conv3dTilingEngineApi::Conv3dTilingEngine> engine_;
     Conv3DTilingParseInfo opInfo_;
     Conv3DTilingParseInfo opRunInfo_;
     Conv3DAscendcShapesInfo shapeInfo_;
@@ -171,73 +173,37 @@ private:
     Conv3DOrignalFormat originalFormat_;
 
     // blockdim decision
-    BlockDimRange blockDimRanges;
-    BlockDimConstParas blockDimConst;
-    std::vector<uint32_t> blockDimInit;
     BlockDimRes blockDimRes;
 
     bool useTilingRepo_ = false;
     bool isPointWise = false;
     int8_t outputOrder_ = 0;
 
-private:
-    bool CheckDims(const gert::Shape& inputShape);
-    ge::graphStatus CheckStrideLegal();
-    ge::graphStatus CheckDilationLegal();
-    ge::graphStatus CheckPadLegal();
-    ge::graphStatus CheckFmapShape();
-    ge::graphStatus CheckFmapNCDHWShape();
-    ge::graphStatus CheckWeightShape();
-    ge::graphStatus CheckWeightNCDHWShape();
-    ge::graphStatus CheckInputShapeWithPad();
-    ge::graphStatus CheckScaleShape();
-    ge::graphStatus CheckBiasShape();
-    ge::graphStatus CheckOutputShape();
-    ge::graphStatus CheckOutputNCDHWShape();
-    ge::graphStatus CheckInputDesc();
-    ge::graphStatus CheckParamsDtype();
-    ge::graphStatus CheckLoad3DLimits();
-    ge::graphStatus CheckInstructionLimits();
-    ge::graphStatus InitConv3dApiTiling();
-    ge::graphStatus GetConv3dApiTiling();
-    ge::graphStatus CheckInputLimitsHwMode();
-    ge::graphStatus SetTilingKey();
-    ge::graphStatus GetGroupConvOpt();
-    ge::graphStatus CheckGroupOpt();
-    ge::graphStatus CheckParamsOverflow();
-    ge::graphStatus CheckPointWise();
-    ge::graphStatus InitOutputOrder();
-    uint64_t CalcMinL1LoadSize(int8_t outputOrder);
-    void SetSingleOutputShapeByMode();
-    void InitConv3dOriginFormat();
-    void InitPointWiseFlag();
-    void GetConv3dApiTilingPartSetAttrAndShape();
-    void GetConv3dApiTilingSetGroupsInfo();
-    void GetShapeInfo();
-    void GetAttrsInfo();
-    void GetDescInfo();
-    void PrintTilingInfo();
-    void PrintOpTilingData();
-    void PrintApiTilingDataShapeInfo();
-    void PrintApiTilingDataDecisionInfo();
-    void PrintApiTilingDataScalarInfo();
-    void PrintLibApiTilingData();
-    void GetConv3DParasHf32Mode(const uint32_t enableHf32Idx, uint32_t& hf32Mode);
-    bool Is3DFp32InputFp32Output();
+    private:
+      ge::graphStatus SetTilingKey();
+      void InitConv3dOriginFormat();
+      void InitPointWiseFlag();
+      void GetShapeInfo();
+      void GetAttrsInfo();
+      void GetDescInfo();
+      void PrintTilingInfo();
+      void GetConv3DParasHf32Mode(const uint32_t enableHf32Idx, uint32_t& hf32Mode);
+      bool Is3DFp32InputFp32Output();
 
-    // blockdim decision
-    bool IsExceedMinBurstNum(uint64_t input);
-    uint64_t GetMinBurstNum();
-    uint64_t CalcFixParamSize() const;
-    uint64_t CalcTotalCost(uint32_t batchDim, uint32_t mDim, uint32_t nDim, uint32_t doDim, uint32_t groupDim);
-    void BlockDimDecision();
-    void GetBlockDimRange();
-    void GetBlockDimInit();
-    void BlockDimDecisionBackTrack(const std::vector<std::vector<uint32_t>> &inputRanges, uint32_t rangeIdx,
-                                   std::vector<uint32_t> &record);
-    void CoreBlockDimDecision();
-    void BlockDimFactorMix(uint32_t orgDim, std::vector<uint32_t> &inputRange, const std::vector<uint32_t> &mixRange);
-    void GetBlockDimRangeforGroupRange(std::vector<uint32_t> &groupRange);
+      std::vector<int64_t> ExtractOriginFmapShape();
+      std::vector<int64_t> ExtractOriginWeightShape();
+      std::vector<int64_t> ExtractOriginOutputShape();
+      bool ExtractPadList(std::vector<int64_t> &padList);
+      bool ExtractStrideList(std::vector<int64_t> &strideList);
+      bool ExtractDilationList(std::vector<int64_t> &dilationList);
+      bool ExtractBiasShape(std::vector<int64_t> &biasShape);
+      bool ExtractScaleShape(std::vector<int64_t> &scaleShape);
+      int64_t ExtractGroups();
+      void ExtractAndSetDataTypes();
+      void ExtractAndSetFormats();
+      void SetHF32Mode();
+      bool ExtractAndSetBiasScale();
+      bool ExtractAndPassParamsToEngine();
 };
 
 } // namespace Conv3dOpsTiling
