@@ -43,13 +43,13 @@ namespace ge {
 * @li max_grad_norm: An optional Tensor of the same type as "grad", default is ND.
 *
 * @par Attributes:
-* @li lr: A required float, default is 0.1
-* @li beta1: A required float, default is 0.1
-* @li beta2: A required float,default is 0.1
-* @li weight_decay: A required float, default is 0.1
-* @li eps: A required float, default is 0.1
-* @li amsgrad: A required bool, default is false.
-* @li maximize: A required bool, default is false.\n
+* @li lr: A optional float, default is 0.1
+* @li beta1: A optional float, default is 0.1
+* @li beta2: A optional float,default is 0.1
+* @li weight_decay: A optional float, default is 0.1
+* @li eps: A optional float, default is 0.1
+* @li amsgrad: A optional bool, default is false.
+* @li maximize: A optional bool, default is false.\n
 */
 REG_OP(ApplyAdamWV2)
     .INPUT(var, TensorType::FLOAT())
