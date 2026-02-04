@@ -38,7 +38,7 @@ struct l0c_to_gm<ArchType::ASCEND_V220, DataFormat::ND, half, float> {
                          uint32_t dstStride,
                          uint8_t  unitFlag = 0)
     {
-#ifdef __DAV_C220_CUBE__
+#if defined(__DAV_C220_CUBE__) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         auto intriParams = AscendC::FixpipeParamsV220(nTileActual, // nSize
                                                       mTileActual, // mSize
                                                       srcStride,   // srcStride
@@ -71,7 +71,7 @@ struct l0c_to_gm<ArchType::ASCEND_V220, DataFormat::ND, half, int32_t> {
                          uint32_t dstStride,
                          uint8_t  unitFlag = 0)
     {
-#ifdef __DAV_C220_CUBE__
+#if defined(__DAV_C220_CUBE__) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         auto intriParams = AscendC::FixpipeParamsV220(nTileActual, // nSize
                                                       mTileActual, // mSize
                                                       srcStride,   // srcStride
@@ -105,7 +105,7 @@ struct l0c_to_gm<ArchType::ASCEND_V220, DataFormat::ND, bfloat16_t, float> {
                          uint32_t dstStride,
                          uint8_t  unitFlag = 0)
     {
-#ifdef __DAV_C220_CUBE__
+#if defined(__DAV_C220_CUBE__) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         auto intriParams = AscendC::FixpipeParamsV220(nTileActual, // nSize
                                                       mTileActual, // mSize
                                                       srcStride,   // srcStride
@@ -140,7 +140,7 @@ struct l0c_to_gm<ArchType::ASCEND_V220, DataFormat::ND, float, float> {
                          uint32_t dstStride,
                          uint8_t  unitFlag = 0)
     {
-#ifdef __DAV_C220_CUBE__
+#if defined(__DAV_C220_CUBE__) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         auto intriParams = AscendC::FixpipeParamsV220(nTileActual, // nSize
                                                       mTileActual, // mSize
                                                       srcStride,   // srcStride
@@ -173,7 +173,7 @@ struct l0c_to_gm<ArchType::ASCEND_V220, DataFormat::NZ, half, float> {
                          uint32_t dstStride,
                          uint8_t  unitFlag = 0)
     {
-#ifdef __DAV_C220_CUBE__
+#if defined(__DAV_C220_CUBE__) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         auto intriParams = AscendC::FixpipeParamsV220(nTileActual, // nSize
                                                       mTileActual, // mSize
                                                       srcStride,   // srcStride
@@ -205,7 +205,7 @@ struct l0c_to_gm<ArchType::ASCEND_V220, DataFormat::ND, int32_t, int32_t> {
                          uint32_t dstStride,
                          uint8_t  unitFlag = 0)
     {
-#ifdef __DAV_C220_CUBE__
+#if defined(__DAV_C220_CUBE__) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         auto intriParams = AscendC::FixpipeParamsV220(nTileActual, // nSize
                                                       mTileActual, // mSize
                                                       srcStride,   // srcStride

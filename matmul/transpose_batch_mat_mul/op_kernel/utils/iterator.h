@@ -122,7 +122,7 @@ struct l1_to_fb {
 
 #include "iterators/gm_to_l1_iterator.h"
 #include "iterators/gm_to_ub_iterator.h"
-#if __CCE_AICORE__ >= 220
+#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 #include "iterators/l0c_to_gm_iterator.h"
 #include "iterators/l0c_to_l1_iterator.h"
 #endif
