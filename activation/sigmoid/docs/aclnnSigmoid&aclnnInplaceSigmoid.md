@@ -414,7 +414,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API
+  // 1. （固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -453,6 +453,21 @@ int main() {
   ret = aclnnSigmoid(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSigmoid failed. ERROR: %d\n", ret); return ret);
 
+  uint64_t inplaceWorkspaceSize = 0;
+  aclOpExecutor* inplaceExecutor;
+  // 调用aclnnInplaceSigmoid第一段接口
+  ret = aclnnInplaceSigmoidGetWorkspaceSize(self, &inplaceWorkspaceSize, &inplaceExecutor);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceSigmoidGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+  // 根据第一段接口计算出的workspaceSize申请device内存
+  void* inplaceWorkspaceAddr = nullptr;
+  if (inplaceWorkspaceSize > 0) {
+    ret = aclrtMalloc(&inplaceWorkspaceAddr, inplaceWorkspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret;);
+  }
+  // 调用aclnnInplaceSigmoid第二段接口
+  ret = aclnnInplaceSigmoid(inplaceWorkspaceAddr, inplaceWorkspaceSize, inplaceExecutor, stream);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceSigmoid failed. ERROR: %d\n", ret); return ret);
+
   // 4. （固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
@@ -465,6 +480,14 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
   for (int64_t i = 0; i < size; i++) {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
+  }
+
+  auto inplaceSize = GetShapeSize(selfShape);
+  std::vector<float> inplaceResultData(inplaceSize, 0);
+  ret = aclrtMemcpy(inplaceResultData.data(), inplaceResultData.size() * sizeof(inplaceResultData[0]),             selfDeviceAddr, inplaceSize * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
+  for (int64_t i = 0; i < inplaceSize; i++) {
+    LOG_PRINT("inplaceResult[%ld] is: %f\n", i, inplaceResultData[i]);
   }
 
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
