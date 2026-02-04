@@ -9,7 +9,6 @@
  */
 
 #include "aclnn_scaled_masked_softmax_backward.h"
-#include "aclnnInner_scaled_masked_softmax_grad_v2.h"
 #include <dlfcn.h>
 #include <acl/acl.h>
 #include "aclnn_kernels/common/op_error_check.h"
@@ -33,6 +32,13 @@ namespace {
     constexpr int32_t D_LIMIT = 4096;
     constexpr int32_t D_LIMIT_D = 8192;
 }
+
+extern aclnnStatus aclnnInnerScaledMaskedSoftmaxGradV2GetWorkspaceSize(
+    const aclTensor* gradOutput, const aclTensor* y, const aclTensor* mask, double scale, bool fixTriuMask,
+    aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor);
+
+extern aclnnStatus aclnnInnerScaledMaskedSoftmaxGradV2(
+    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream);
 
 static const std::initializer_list<op::DataType> TYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
