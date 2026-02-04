@@ -27,8 +27,13 @@ using namespace matmul;
 #define FORMAT_FRACTAL_NZ
 #endif
 
-constexpr CubeFormat format_x1 = CubeFormat::ND;
+#if defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
+constexpr CubeFormat format_x2 = CubeFormat::NZ;
+#else
 constexpr CubeFormat format_x2 = CubeFormat::ND;
+#endif
+
+constexpr CubeFormat format_x1 = CubeFormat::ND;
 constexpr CubeFormat format_y = CubeFormat::ND;
 
 #define BMMV3_IMPL_CLASS_COMMON(templateClass, Mode, ...)                                \
@@ -66,6 +71,24 @@ __global__ __aicore__ void transpose_batch_mat_mul(
 {
     __gm__ uint8_t* user = GetUserWorkspace(workspaceGM);
     REGISTER_TILING_DEFAULT(TBMMTilingData);
+#if defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
+    if constexpr (BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
+        PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_FALSE &&
+        PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2 && PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
+        GET_TILING_DATA_WITH_STRUCT(TBMMTilingData, tilingData, tilingGM);
+        BMMV3_IMPL_CLASS_COMMON(
+            TransposeBatchMatMulKernel, static_cast<int>(TBMM_MODE::TRANS_BMM_TRANS), TransposeBatchMatMulBlock,
+            MM_CFG_K_SHIFT);
+    } else if constexpr (
+        BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE &&
+        PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_FALSE &&
+        PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2 && PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
+        GET_TILING_DATA_WITH_STRUCT(TBMMTilingData, tilingData, tilingGM);
+        BMMV3_IMPL_CLASS_COMMON(
+            TransposeBatchMatMulKernel, static_cast<int>(TBMM_MODE::TRANS_BMM_TRANS_TRANS), TransposeBatchMatMulBlock,
+            MM_CFG_K_SHIFT);
+    }
+#else 
     if constexpr (BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
         PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_FALSE &&
         PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2 && PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
@@ -96,7 +119,7 @@ __global__ __aicore__ void transpose_batch_mat_mul(
         GET_TILING_DATA_WITH_STRUCT(TBMMTilingData, tilingData, tilingGM);
         BMMV3_IMPL_CLASS_COMMON(
             TransposeBatchMatMulKernel, static_cast<int>(TBMM_MODE::BMM_TRANS_TRANS), TransposeBatchMatMulBlock,
-            MM_CFG_NO_PRELOAD);
+            MM_CFG_NO_PRELOAD);        
     } else if constexpr (
         BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
         PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_TRUE &&
@@ -110,4 +133,5 @@ __global__ __aicore__ void transpose_batch_mat_mul(
         GET_TILING_DATA_WITH_STRUCT(PpMatmulTilingData, tilingData, tilingGM);
         PPMATMUL_EINSUM_CLASS(PpMatMulNS::PpMatmulEinSum, false, true);
     }
+#endif
 }

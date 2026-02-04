@@ -358,9 +358,12 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::CheckArgs()
 
 static inline void GetFormat(const gert::TilingContext &context, optiling::matmul_v3::MatmulV3Args &args)
 {
-    args.aFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(context.GetInputDesc(0)->GetStorageFormat()));
-    args.bFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(context.GetInputDesc(1)->GetStorageFormat()));
-    args.outFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(context.GetOutputDesc(0)->GetStorageFormat()));
+    ge::Format formatA = static_cast<ge::Format>(ge::GetPrimaryFormat(context.GetInputDesc(0)->GetStorageFormat()));
+    ge::Format formatB = static_cast<ge::Format>(ge::GetPrimaryFormat(context.GetInputDesc(1)->GetStorageFormat()));
+    ge::Format formatOut = static_cast<ge::Format>(ge::GetPrimaryFormat(context.GetOutputDesc(0)->GetStorageFormat()));
+    args.aFormat = (formatA != ge::FORMAT_FRACTAL_NZ) ? ge::FORMAT_ND : formatA;
+    args.bFormat = (formatB != ge::FORMAT_FRACTAL_NZ) ? ge::FORMAT_ND : formatB;
+    args.outFormat = (formatOut != ge::FORMAT_FRACTAL_NZ) ? ge::FORMAT_ND : formatOut;
 }
 
 static inline void GetDtype(const gert::TilingContext &context, optiling::matmul_v3::MatmulV3Args &args)
@@ -384,9 +387,12 @@ static ge::graphStatus OpSpecificCheck(const optiling::matmul_v3::MatmulV3Args &
 {
     // format check
     OP_TILING_CHECK(
-        (args.aFormat == ge::FORMAT_FRACTAL_NZ) || (args.bFormat == ge::FORMAT_FRACTAL_NZ) || (args.outFormat == ge::FORMAT_FRACTAL_NZ),
+        (args.aFormat == ge::FORMAT_FRACTAL_NZ) || (args.outFormat == ge::FORMAT_FRACTAL_NZ),
         CUBE_INNER_ERR_REPORT(args.opName, "invalid input/output format"), return ge::GRAPH_FAILED);
 
+    OP_TILING_CHECK(
+        (args.bFormat == ge::FORMAT_FRACTAL_NZ) && args.hasBias,
+        CUBE_INNER_ERR_REPORT(args.opName, "Not support weightNZ, when has bias."), return ge::GRAPH_FAILED);
     // dtype check
     std::vector<ge::DataType> dtype = {args.aType, args.bType, args.cType};
     if (args.hasBias) {
@@ -552,10 +558,14 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::GetArgs()
     if (context_->GetAttrs()->GetAttrNum() >= ATTR_NUM) {
         batchSplitFactor_ = std::max(*(context_->GetAttrs()->GetAttrPointer<int32_t>(ATTR_NUM - 1)), 1);
     }
-    OP_TILING_CHECK((OpSpecificCheck(args_) != ge::GRAPH_SUCCESS),
-                    CUBE_INNER_ERR_REPORT(args_.opName, "format and dtype check failed"), return ge::GRAPH_FAILED);
     OP_TILING_CHECK((GetShape() != ge::GRAPH_SUCCESS),
                     CUBE_INNER_ERR_REPORT(args_.opName, "get shape failed"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK((OpSpecificCheck(args_) != ge::GRAPH_SUCCESS),
+                    CUBE_INNER_ERR_REPORT(args_.opName, "format and dtype check failed"), return ge::GRAPH_FAILED);
+
+    OP_TILING_CHECK(
+        (args_.bFormat == ge::FORMAT_FRACTAL_NZ) && ((transA_ != 213UL) || (transB_ != 123UL) || batchSplitFactor_ > 1),
+        CUBE_INNER_ERR_REPORT(args_.opName, "The current attrs is not support weightNZ."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
