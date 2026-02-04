@@ -65,6 +65,7 @@ constexpr int64_t NUM_TWO = 2;
 constexpr int64_t WEIGHT_DIM_LIMIT = 128L;
 constexpr uint64_t TILING_KEY_SIMT_1D = 300;
 constexpr uint64_t TILING_KEY_SIMT_2D = 400;
+constexpr uint64_t TILING_KEY_SIMT_EMPTY = 500;
 
 bool EmbeddingBagRegBaseTiling::IsCapable()
 {
@@ -478,6 +479,11 @@ ge::graphStatus EmbeddingBagRegBaseTiling::DoOpTiling()
         usedCoreNum_ = 1;
         return ge::GRAPH_SUCCESS;
     }
+    if (embeddingDim_ == 0){
+        usedCoreNum_ = totalCoreNum_;
+        SetTilingData();
+        return ge::GRAPH_SUCCESS;
+    }
     
     AutoTiling();
     if (isNeedOffset_ == 1) {
@@ -498,6 +504,15 @@ ge::graphStatus EmbeddingBagRegBaseTiling::DoLibApiTiling()
 uint64_t EmbeddingBagRegBaseTiling::GetTilingKey() const
 {
     uint64_t tilingKey = 0;
+    if (embeddingDim_ == 0){
+        tilingKey = TILING_KEY_SIMT_EMPTY;
+        tilingKey += (offsetsType_ == indicesType_) ? 0 : OFFSET_DIFF_TYPE_LARGE;
+        auto computeSize = std::max(indicesNumel_, numBags_);
+        if (computeSize > UINT32_MAX) {
+            tilingKey += 1;
+        }
+        return tilingKey;
+    }
     if (isSimt_ == 1) {
         tilingKey = isNeedOffset_ ? TILING_KEY_SIMT_1D : TILING_KEY_SIMT_2D;
 

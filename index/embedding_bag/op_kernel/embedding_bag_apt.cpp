@@ -19,6 +19,8 @@
 #include "./arch35/embedding_bag_regbase_2d.h"
 #include "./arch35/embedding_bag_regbase_1d_simt.h"
 #include "./arch35/embedding_bag_regbase_2d_simt.h"
+#include "./arch35/embedding_bag_regbase_empty_simt.h"
+
 #define TILING_KEY_INDICES_1D_SAME         100
 #define TILING_KEY_INDICES_1D_PROMOTE      101
 #define TILING_KEY_INDICES_2D_SAME         200
@@ -29,8 +31,12 @@
 #define TILING_KEY_SIMT_1D_PROMOTE_INT64         303  
 #define TILING_KEY_SIMT_2D_SAME_INT32         400  
 #define TILING_KEY_SIMT_2D_SAME_INT64         401  
-#define TILING_KEY_SIMT_2D_PROMOTE_INT32         402  
-#define TILING_KEY_SIMT_2D_PROMOTE_INT64         403 
+#define TILING_KEY_SIMT_2D_PROMOTE_INT32         402
+#define TILING_KEY_SIMT_2D_PROMOTE_INT64         403
+#define TILING_KEY_SIMT_EMPTY_SAME_INT32         500
+#define TILING_KEY_SIMT_EMPTY_SAME_INT64         501
+#define TILING_KEY_SIMT_EMPTY_PROMOTE_INT32      502
+#define TILING_KEY_SIMT_EMPTY_PROMOTE_INT64      503
 
 #define MODE_SUM         0
 #define MODE_MEAN        1
@@ -110,7 +116,7 @@ extern "C" __global__ __aicore__ void embedding_bag(
         EmbeddingBag::EmbeddingBagRegBaseSimt1D<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, int64_t, uint64_t> op(tilingData, pipe);
         op.Init(gmParam);
         op.Process();
-    }else if (TILING_KEY_IS(TILING_KEY_SIMT_2D_SAME_INT32)) {
+    } else if (TILING_KEY_IS(TILING_KEY_SIMT_2D_SAME_INT32)) {
         EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, DTYPE_INDICES, uint32_t> op(tilingData, pipe);
         op.Init(gmParam);
         op.Process();
@@ -124,6 +130,22 @@ extern "C" __global__ __aicore__ void embedding_bag(
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_SIMT_2D_PROMOTE_INT64)) {
         EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, int64_t, uint64_t> op(tilingData, pipe);
+        op.Init(gmParam);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_SIMT_EMPTY_SAME_INT32)) {
+        EmbeddingBag::EmbeddingBagRegBaseSimtEmpty<DTYPE_INDICES, uint32_t> op(tilingData, pipe);
+        op.Init(gmParam);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_SIMT_EMPTY_SAME_INT64)) {
+        EmbeddingBag::EmbeddingBagRegBaseSimtEmpty<DTYPE_INDICES, uint64_t> op(tilingData, pipe);
+        op.Init(gmParam);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_SIMT_EMPTY_PROMOTE_INT32)) {
+        EmbeddingBag::EmbeddingBagRegBaseSimtEmpty<int64_t, uint32_t> op(tilingData, pipe);
+        op.Init(gmParam);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_SIMT_EMPTY_PROMOTE_INT64)) {
+        EmbeddingBag::EmbeddingBagRegBaseSimtEmpty<int64_t, uint64_t> op(tilingData, pipe);
         op.Init(gmParam);
         op.Process();
     }
