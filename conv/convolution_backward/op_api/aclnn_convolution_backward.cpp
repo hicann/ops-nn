@@ -1707,7 +1707,7 @@ static aclnnStatus GenConvMmDwInputByMode(BatchMatmulInput &batchMmInput,
   return ACLNN_SUCCESS;
 }
 
-static aclnnStatus GenConvMmDwOutputByMode(aclTensor *&mmDwOutputNDFp32,
+static aclnnStatus GenConvMmDwOutputByMode(aclTensor *&mmDwOutput,
                                        ConvolutionBackwardResult &outputTensor,
                                        aclOpExecutor *executor,
                                        [[maybe_unused]] Conv3DBp2MmMode conv2MmMode)
@@ -1721,10 +1721,10 @@ static aclnnStatus GenConvMmDwOutputByMode(aclTensor *&mmDwOutputNDFp32,
     CHECK_RET(mmDwOutput2d != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto mmDwOutputND = l0op::ReFormat(mmDwOutput2d, op::Format::FORMAT_ND);
-    mmDwOutputNDFp32 = executor->CreateView(mmDwOutputND, mmDwOutputND->GetViewShape(),
+    mmDwOutput = executor->CreateView(mmDwOutputND, mmDwOutputND->GetViewShape(),
       mmDwOutputND->GetViewOffset());
-    CHECK_RET(mmDwOutputNDFp32 != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    mmDwOutputNDFp32->SetDataType(DataType::DT_FLOAT);
+    CHECK_RET(mmDwOutput != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    mmDwOutput->SetDataType(gradWeight->GetDataType());
 
   return ACLNN_SUCCESS;
 }
@@ -1741,13 +1741,13 @@ static aclnnStatus CalculateConv3DBackwardDwByMmMode(ConvolutionBackwardInputTen
     return status;
   }
   OP_LOGD("Enter backprop filter Calculate with matmul mode");
-  aclTensor *mmDwOutputNDFp32 = nullptr;
-  status = GenConvMmDwOutputByMode(mmDwOutputNDFp32, outputTensor, executor, conv2MmMode);
+  aclTensor *mmDwOutput = nullptr;
+  status = GenConvMmDwOutputByMode(mmDwOutput, outputTensor, executor, conv2MmMode);
   if (status != ACLNN_SUCCESS) {
     OP_LOGD("GenConvMmDwOutputByMode False");
     return status;
   }
-  auto gradWeightNND = ExecBatchMatmulOp(batchMmInput.leftData, batchMmInput.rightData, mmDwOutputNDFp32, batchMmInput.isLeftTranspose,
+  auto gradWeightNND = ExecBatchMatmulOp(batchMmInput.leftData, batchMmInput.rightData, mmDwOutput, batchMmInput.isLeftTranspose,
     batchMmInput.isRightTranspose, params.cubeMathType, executor);
   OP_CHECK(gradWeightNND != nullptr,
             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The ExecBatchMatmulOp for 3ddw return nullptr."),
