@@ -426,15 +426,28 @@ __aicore__ inline void TransposeBatchMatMulBlock::CalcAOffset(uint64_t batchAInd
 template <class B_TYPE>
 __aicore__ inline void TransposeBatchMatMulBlock::CalcBOffset(uint64_t batchBIndex, uint64_t nCntIndex)
 {
-    uint64_t offsetBBatch = batchBIndex * static_cast<uint64_t>(tbmmTilingData_->matmulTiling.matmulTiling.N) *
-                            tbmmTilingData_->matmulTiling.matmulTiling.Kb;
-    offset_.offsetB =
-        B_TYPE::isTrans ? offsetBBatch +
-                              (nCntIndex * static_cast<uint64_t>(tbmmTilingData_->matmulTiling.matmulTiling.Kb) *
-                               tbmmTilingData_->matmulTiling.matmulTiling.singleCoreN) +
-                              (params_.nTileAddrOffset * tbmmTilingData_->matmulTiling.matmulTiling.Kb)
-                        : offsetBBatch + (nCntIndex * tbmmTilingData_->matmulTiling.matmulTiling.singleCoreN) +
-                              params_.nTileAddrOffset;
+    if constexpr (B_TYPE::format == CubeFormat::NZ) {
+        uint64_t offsetBBatch = batchBIndex * params_.alignedOriN * params_.alignedKbSize;
+        // false : (b, n1, k1, k0, n0)
+        // true : (b, k1, n1, n0, k0)
+        if constexpr (B_TYPE::isTrans) {
+            offset_.offsetB = offsetBBatch + (nCntIndex * tbmmTilingData_->matmulTiling.matmulTiling.singleCoreN * params_.c0Size) +
+                (params_.nTileAddrOffset * params_.c0Size);
+        } else {
+            offset_.offsetB = offsetBBatch + (nCntIndex * tbmmTilingData_->matmulTiling.matmulTiling.singleCoreN * params_.alignedKbSize) +
+                params_.nTileAddrOffset * params_.alignedKbSize;
+        }
+    } else {
+        uint64_t offsetBBatch = batchBIndex * static_cast<uint64_t>(tbmmTilingData_->matmulTiling.matmulTiling.N) *
+                                tbmmTilingData_->matmulTiling.matmulTiling.Kb;
+        offset_.offsetB = B_TYPE::isTrans ?
+                              offsetBBatch +
+                                  (nCntIndex * static_cast<uint64_t>(tbmmTilingData_->matmulTiling.matmulTiling.Kb) *
+                                   tbmmTilingData_->matmulTiling.matmulTiling.singleCoreN) +
+                                  (params_.nTileAddrOffset * tbmmTilingData_->matmulTiling.matmulTiling.Kb) :
+                              offsetBBatch + (nCntIndex * tbmmTilingData_->matmulTiling.matmulTiling.singleCoreN) +
+                                  params_.nTileAddrOffset;
+    }
 }
 
 template <class C_TYPE, int MODE>

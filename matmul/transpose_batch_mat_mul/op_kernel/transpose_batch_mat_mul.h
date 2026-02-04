@@ -129,18 +129,34 @@ TransposeBatchMatMulKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MODE, BLOCK_TYPE, 
 {
     if constexpr (MODE == static_cast<int>(TBMM_MODE::TRANS_BMM_TRANS) || MODE == static_cast<int>(TBMM_MODE::TRANS_BMM_TRANS_TRANS)) {
         uint64_t mergeBatchK = block_.params_.batchCnt * block_.tbmmTilingData_->matmulTiling.matmulTiling.Kb;
-        mm_.SetOrgShape(block_.tbmmTilingData_->matmulTiling.matmulTiling.M,
-                        block_.tbmmTilingData_->matmulTiling.matmulTiling.N, mergeBatchK, mergeBatchK,
-                        block_.tbmmTilingData_->matmulTiling.matmulTiling.N * block_.params_.batchCnt /
-                        block_.batchSplitFactor_);
+        if constexpr (B_TYPE::format == CubeFormat::NZ) {
+            mm_.SetOrgShape(block_.tbmmTilingData_->matmulTiling.matmulTiling.M,
+                            block_.params_.alignedOriN, mergeBatchK, block_.params_.alignedKbSize,
+                            block_.tbmmTilingData_->matmulTiling.matmulTiling.N * block_.params_.batchCnt /
+                            block_.batchSplitFactor_);
+        } else {
+            mm_.SetOrgShape(block_.tbmmTilingData_->matmulTiling.matmulTiling.M,
+                            block_.tbmmTilingData_->matmulTiling.matmulTiling.N, mergeBatchK, mergeBatchK,
+                            block_.tbmmTilingData_->matmulTiling.matmulTiling.N * block_.params_.batchCnt /
+                            block_.batchSplitFactor_);
+        }
     }
     if constexpr (MODE == static_cast<int>(TBMM_MODE::BMM_TRANS) || MODE == static_cast<int>(TBMM_MODE::BMM_TRANS_TRANS)) {
-        mm_.SetOrgShape(block_.params_.batchCnt * block_.tbmmTilingData_->matmulTiling.matmulTiling.M,
-                        block_.tbmmTilingData_->matmulTiling.matmulTiling.N,
-                        block_.tbmmTilingData_->matmulTiling.matmulTiling.Kb,
-                        block_.tbmmTilingData_->matmulTiling.matmulTiling.Kb,
-                        block_.tbmmTilingData_->matmulTiling.matmulTiling.N * block_.params_.batchCnt /
-                        block_.batchSplitFactor_);
+        if constexpr (B_TYPE::format == CubeFormat::NZ) {
+            mm_.SetOrgShape(block_.params_.batchCnt * block_.tbmmTilingData_->matmulTiling.matmulTiling.M,
+                            block_.params_.alignedOriN,
+                            block_.tbmmTilingData_->matmulTiling.matmulTiling.Ka,
+                            block_.params_.alignedKbSize,
+                            block_.tbmmTilingData_->matmulTiling.matmulTiling.N * block_.params_.batchCnt /
+                            block_.batchSplitFactor_);
+        } else {
+            mm_.SetOrgShape(block_.params_.batchCnt * block_.tbmmTilingData_->matmulTiling.matmulTiling.M,
+                            block_.tbmmTilingData_->matmulTiling.matmulTiling.N,
+                            block_.tbmmTilingData_->matmulTiling.matmulTiling.Kb,
+                            block_.tbmmTilingData_->matmulTiling.matmulTiling.Kb,
+                            block_.tbmmTilingData_->matmulTiling.matmulTiling.N * block_.params_.batchCnt /
+                            block_.batchSplitFactor_);
+        }
     }
 }
 
