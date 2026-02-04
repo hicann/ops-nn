@@ -354,7 +354,7 @@ static const aclTensor* BroadcastTensor(const aclTensor* self, const op::Shape& 
 }
 
 static aclnnStatus ProcessBroadcast(
-    aclTensor* selfRef, const aclTensor* mask, const aclTensor* source, const aclTensor** out, aclOpExecutor* executor)
+    const aclTensor* selfRef, const aclTensor* mask, const aclTensor* source, const aclTensor** out, aclOpExecutor* executor)
 {
     auto selfShape = ShapeToVector(selfRef->GetViewShape());
     auto maskShape = ShapeToVector(mask->GetViewShape());
@@ -515,10 +515,10 @@ aclnnStatus aclnnInplaceMaskedScatterGetWorkspaceSize(
     CHECK_RET(maskBool != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     const aclTensor* opOut = nullptr;
-    if (Ops::NN::AclnnUtil::IsRegbase()) {    // 判断芯片架构
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {    // 判断芯片架构
         opOut = l0op::MaskedScatter(selfRefContiguous, maskBool, sourceContiguous, uniqueExecutor.get());
     } else {
-        auto retStatus = ProcessBroadcast(selfRef, maskBool, sourceContiguous, &opOut, uniqueExecutor.get());
+        auto retStatus = ProcessBroadcast(selfRefContiguous, maskBool, sourceContiguous, &opOut, uniqueExecutor.get());
         CHECK_RET(retStatus == ACLNN_SUCCESS, retStatus);
     }
     CHECK_RET(opOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
