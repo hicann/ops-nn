@@ -211,6 +211,7 @@ static ge::graphStatus Tiling4MaskedScatter(gert::TilingContext* context) {
 }
 
 static ge::graphStatus TilingPrepare4MaskedScatter(gert::TilingParseContext* context) {
+    (void) context;
     return ge::GRAPH_SUCCESS;
 }
 

@@ -22,6 +22,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/aicpu/aicpu_task.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -30,7 +31,7 @@ OP_TYPE_REGISTER(MaskedScatter);
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_UINT8, op::DataType::DT_INT8,
     op::DataType::DT_INT32, op::DataType::DT_INT16,   op::DataType::DT_INT64, op::DataType::DT_BF16};
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_910D = {
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_REGBASE = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_DOUBLE, op::DataType::DT_UINT8,
     op::DataType::DT_INT8,  op::DataType::DT_INT16,   op::DataType::DT_INT32,  op::DataType::DT_INT64,
     op::DataType::DT_BOOL,  op::DataType::DT_BF16};
@@ -44,8 +45,8 @@ static bool CheckShapeLimit(const aclTensor* self, const aclTensor* mask)
 static bool IsAiCoreSupport(const aclTensor* self, const aclTensor* mask)
 {
     // 只需要判断dtype
-    auto supportList = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 ?
-                           AICORE_DTYPE_SUPPORT_LIST_910D :
+    auto supportList = Ops::NN::AclnnUtil::IsRegbase() ?     // 判断芯片架构
+                           AICORE_DTYPE_SUPPORT_LIST_REGBASE :
                            AICORE_DTYPE_SUPPORT_LIST;
     bool result = CheckType(self->GetDataType(), supportList);
     result = result && (mask->GetDataType() == op::DataType::DT_BOOL);

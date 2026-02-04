@@ -63,8 +63,7 @@ class MaskedScatter : public OpDef {
         .DynamicShapeSupportFlag(true)
         .NeedCheckSupportFlag(false)
         .PrecisionReduceFlag(true)
-        .ExtendCfgInfo("opFile.value", "masked_scatter_apt")
-        .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
+        .ExtendCfgInfo("opFile.value", "masked_scatter_apt");
     this->AICore().AddConfig("ascend950", aicore_config);
   }
 };
