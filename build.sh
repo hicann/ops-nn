@@ -1128,7 +1128,8 @@ build_ut() {
   if [ ! -d "${BUILD_PATH}" ]; then
     mkdir -p "${BUILD_PATH}"
   fi
-  cd "${BUILD_PATH}" && cmake ${CMAKE_ARGS} ..
+  # 删除ai_core下的json文件，强制UT执行时重新生成json文件，避免多次执行之间的干扰
+  cd "${BUILD_PATH}"  && rm -rf ${BUILD_PATH}/tbe/op_info_cfg/ai_core/* && cmake ${CMAKE_ARGS} ..
   local enable_cov=FALSE
   if [[ "$CI_MODE" == "TRUE" ]]; then
     # ci 模式
