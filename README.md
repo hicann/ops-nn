@@ -77,7 +77,7 @@ ops-nn是[CANN](https://hiascend.com/software/cann) （Compute Architecture for 
 └── requirements.txt                   # 项目需要的第三方依赖包
 ```
 
-## 📝相关信息
+## 💬相关信息
 
 - [贡献指南](CONTRIBUTING.md)
 - [安全声明](SECURITY.md)

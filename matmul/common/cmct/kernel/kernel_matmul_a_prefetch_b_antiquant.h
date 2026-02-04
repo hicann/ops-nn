@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file kernel_matmul_mix_with_weight_prologue.h
+ * \file kernel_matmul_a_prefetch_b_antiquant.h
  * \brief
  */
 #ifndef KERNEL_MATMUL_A_PREFETCH_B_ANTIQUANT_H
