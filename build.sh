@@ -1216,9 +1216,17 @@ build_example() {
 
   OLDIFS=$IFS
   IFS=$'\n'
-  files=($(find ../ -path "*/${OP_NAME}/examples/${pattern}*.cpp" -not -path "*/opgen/template/*" | grep ${grep_word} "experimental"))
+  {  
+    files=($(find ../ -path "*/${OP_NAME}/examples/${pattern}*.cpp" -not -path "*/opgen/template/*" | grep ${grep_word} "experimental"))
+  } || {
+    files=()
+    echo "INFO: not find ${OP_NAME} A2/A3 examples."
+  }
   if [[ "$COMPUTE_UNIT" == "ascend950" ]]; then
     files=($(find ../ -path "*/${OP_NAME}/examples/arch35/${pattern}*.cpp" | grep ${grep_word} "experimental"))
+  fi
+  if [[ "$COMPUTE_UNIT" == "ascend310p" ]]; then
+    files=($(find ../ -path "*/${OP_NAME}/examples/arch20/${pattern}*.cpp" | grep ${grep_word} "experimental"))
   fi
   IFS=$OLDIFS
 
