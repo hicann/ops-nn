@@ -88,7 +88,6 @@ __aicore__ inline void LayerNormGradV3GroupedReduceBigMGammaBeta<T, PD_GAMMA_TYP
 template <typename T, typename PD_GAMMA_TYPE>
 __aicore__ inline void LayerNormGradV3GroupedReduceBigMGammaBeta<T, PD_GAMMA_TYPE>::Process()
 {
-
     if (GetBlockIdx() < td_->gammaBetaUsableBlocks) {
         // stage 1: 计算核内累加
         tempTensor = tempBuffer.Get<float>();

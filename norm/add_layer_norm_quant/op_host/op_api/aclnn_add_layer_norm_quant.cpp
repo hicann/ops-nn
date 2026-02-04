@@ -286,8 +286,7 @@ aclnnStatus ComputeAddLayerNormQuantEmptyInput(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* beta,
     const aclTensor* biasOptional, const aclTensor* scales1Optional, const aclTensor* scales2Optional,
     const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional, const char* quantMode, double epsilon,
-    bool additionalOutput, bool divMode, aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut, aclTensor* outScales1Out,
-    aclTensor* outScales2Out, aclOpExecutor* executor)
+    bool additionalOutput, bool divMode, aclTensor* outScales1Out, aclTensor* outScales2Out, aclOpExecutor* executor)
 {
     aclTensor* outScales1ComputeOut = nullptr;
     aclTensor* outScales2ComputeOut = nullptr;
@@ -443,7 +442,7 @@ aclnnStatus aclnnAddLayerNormQuantGetWorkspaceSize(
     if (hasEmptyTensor) {
         ret = ComputeAddLayerNormQuantEmptyInput(
             x1Cont, x2Cont, gammaCont, betaCont, biasCont, s1Cont, s2Cont, z1Cont, z2Cont, quantMode, epsilon,
-            additionalOutput, divMode, y1Out, y2Out, xOut, outScales1Out, outScales2Out, uniqueExecutor.get());
+            additionalOutput, divMode, outScales1Out, outScales2Out, uniqueExecutor.get());
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
     }
     else {

@@ -168,6 +168,7 @@ static aclnnStatus AdaLayerNormV2Calculate(
         auto meanResult = l0op::ViewCopy(meanTensor, outputTensor.meanOutOptional, executor);
         CHECK_RET(meanResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
+    return ACLNN_SUCCESS;
 }
 }; // namespace
 
@@ -187,7 +188,8 @@ aclnnStatus aclnnAdaLayerNormV2GetWorkspaceSize(
     auto ret = CheckParams(inputTensor, outputTensor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    AdaLayerNormV2Calculate(inputTensor, outputTensor, epsilon, uniqueExecutor.get());
+    ret = AdaLayerNormV2Calculate(inputTensor, outputTensor, epsilon, uniqueExecutor.get());
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 固定写法，获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();

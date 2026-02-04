@@ -511,8 +511,6 @@ aclnnStatus BatchNormProcDavid(
 {
     op::DataType weigthBiasPromoteDType = op::PromoteType(weight->GetDataType(), bias->GetDataType());
     CHECK_RET(weigthBiasPromoteDType != op::DataType::DT_UNDEFINED, ACLNN_ERR_PARAM_INVALID);
-    op::DataType weightBiasDstType =
-    (weigthBiasPromoteDType == input->GetDataType()) ? input->GetDataType() : DataType::DT_FLOAT;
 
     auto weightContiguous = l0op::Contiguous(weight, executor);
     CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
