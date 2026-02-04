@@ -77,6 +77,12 @@ ge::graphStatus WeightQuantBatchMatmulV2Msd::PostTiling()
     blkDim = CalcTschBlockDim(std::max(usedAivNum, blkDim_), compileInfoPtr_->aicNum, compileInfoPtr_->aivNum);
     context_->SetBlockDim(blkDim);
     OP_LOGD(opName_, "set blkDim %d", blkDim);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
+    if ( npuArch == NpuArch::DAV_2201 ) {
+        // WeightQuantBatchMatmulV2MsdMultiCoreKernel/WeightQuantBatchMatmulV2MsdSplitKKernel kernel use SyncAll()
+        context_->SetScheduleMode(1); 
+    }
     errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), tilingData_.get(), tilingDataSize);
     if (ret != EOK){
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);

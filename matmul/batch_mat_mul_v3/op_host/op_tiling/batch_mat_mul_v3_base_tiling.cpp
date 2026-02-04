@@ -1007,6 +1007,22 @@ ge::graphStatus BatchMatmulV3BaseTiling::PostTiling()
     }
     context_->GetRawTilingData()->SetDataSize(tilingDataSize);
     context_->SetBlockDim(compileInfo_.aicNum);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
+    if (( (npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3003) ) &&
+        (tilingEnable_.tilingEnableMultiBatchL1FullLoad == TilingEnableMultiBatchL1FullLoad::IS_FALSE) &&
+        (tilingEnable_.tilingEnableMultiBatch == TilingEnableMultiBatch::IS_FALSE) && 
+        (tilingEnable_.tilingEnableLoadMode == TilingEnableLoadMode::BASE) &&
+        (tilingEnable_.tilingEnableMultiBatchOut == TilingEnableMultiBatchOut::IS_FALSE) &&
+        (tilingEnable_.tilingEnableMixNd2Nz == TilingEnableMixNd2Nz::IS_TRUE)) {
+        context_->SetScheduleMode(1); // BatchMatMulUnalignedKernel kernel use SyncAll()
+    }
+    if ((tilingEnable_.tilingEnableMultiBatchL1FullLoad == TilingEnableMultiBatchL1FullLoad::IS_FALSE) &&
+        (tilingEnable_.tilingEnableMultiBatch == TilingEnableMultiBatch::IS_TRUE) && 
+        (tilingEnable_.tilingEnableLoadMode == TilingEnableLoadMode::BASE) &&
+        (tilingEnable_.tilingEnableMixNd2Nz == TilingEnableMixNd2Nz::IS_TRUE)) {
+        context_->SetScheduleMode(1); // BatchMatMulUnalignedMultiBatchKernel kernel use SyncAll()
+    }
     if ((tilingEnable_.tilingEnableMultiBatchL1FullLoad == TilingEnableMultiBatchL1FullLoad::IS_FALSE) &&
         (tilingEnable_.tilingEnableMultiBatch == TilingEnableMultiBatch::IS_TRUE) &&
         (tilingEnable_.tilingEnableLoadMode == TilingEnableLoadMode::BASE) &&

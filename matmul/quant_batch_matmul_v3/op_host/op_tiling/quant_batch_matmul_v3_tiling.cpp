@@ -939,6 +939,15 @@ ge::graphStatus QuantBatchMatmulV3Tiling::PostTiling()
     auto blockDim = tilingData_.matmulTiling.usedCoreNum;
     context_->SetBlockDim(blockDim);
     context_->GetRawTilingData()->SetDataSize(tilingDataSize);
+    uint64_t optionAttrs = 0;
+    if (inputParams_.cDtype != ge::DT_BF16) {
+        optionAttrs = NeedAtomiClean();
+    }
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
+    if (npuArch == NpuArch::DAV_2002 && optionAttrs == QUANT_BATCH_MATMUL_V3_NEED_ATOMICLEAN) {
+        context_->SetScheduleMode(1); // kernel use SyncAll()
+    }
     if (NeedAtomiClean() && compileInfo_.supportL0c2Out) {
         context_->SetScheduleMode(1); // 独占全核，设置以后会让所有核空闲以后才启动，有多核同步指令需要做此设置避免影响整网其他算子
     }

@@ -227,6 +227,11 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingSplitK::PostTiling()
     uint32_t usedAivNum = tilingData_->vecBlockDimK * tilingData_->vecBlockDimN;
     context_->SetBlockDim(
         std::max(usedAicNum, CalcTschBlockDim(usedAivNum, compileInfoPtr_->aicNum, compileInfoPtr_->aivNum)));
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
+    if ( npuArch == NpuArch::DAV_2201 ) {
+        context_->SetScheduleMode(1); // WeightQuantBatchMatmulV2MixSplitKKernel kernel use SyncAll()
+    }
     size_t* workspaces = context_->GetWorkspaceSizes(1); // set workspace
     workspaces[0] = workspaceSize_;
     errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), tilingData_.get(), tilingDataSize);

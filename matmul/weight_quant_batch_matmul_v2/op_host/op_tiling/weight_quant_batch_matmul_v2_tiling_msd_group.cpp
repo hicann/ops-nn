@@ -44,7 +44,11 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingMsdGroup::PostTiling()
     uint32_t usedAicNum = tilingData_->cubeBlockDimN * tilingData_->cubeBlockDimK;
     uint32_t usedAivNum = std::max(static_cast<uint32_t>(matmulInfoPtr_->mSize), usedAicNum * 2);
     context_->SetBlockDim(CalcTschBlockDim(usedAivNum, compileInfoPtr_->aicNum, compileInfoPtr_->aivNum));
-    
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
+    if ( npuArch == NpuArch::DAV_2201 ) {
+        context_->SetScheduleMode(1); // WeightQuantBatchMatMulV2MsdGroupKernel kernel use SyncAll()
+    }
     errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), tilingData_.get(), tilingDataSize);
     if (ret != EOK){
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
