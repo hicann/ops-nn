@@ -306,7 +306,8 @@ static bool CheckShapeValidV2(
     auto n = x2->GetViewShape().GetDim(x2Dims - nIndex);
     auto t = deqScale->GetViewShape().GetDim(0);
     OP_LOGD("n is %ld, deqScale shape is %ld, transA: %d, transB: %d", n, t, adjX1, adjX2);
-    if ((n + ALIGN_NUM - 1) / ALIGN_NUM * ALIGN_NUM != t) {
+    if ((n + static_cast<int64_t>(ALIGN_NUM) - 1) / static_cast<int64_t>(ALIGN_NUM) * static_cast<int64_t>(ALIGN_NUM) !=
+        t) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "deqScale shape %s is invalid.",
             op::ToString(deqScale->GetViewShape()).GetString());
@@ -369,8 +370,6 @@ static const aclTensor* ProcessEmptyTensor(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* out, aclOpExecutor* executor)
 {
     // 获取shape信息
-    op::Shape x1Shape = x1->GetViewShape();
-    op::Shape x2Shape = x2->GetViewShape();
     op::Shape outShape = out->GetViewShape();
     auto output = executor->AllocTensor(outShape, x1->GetDataType());
     OP_CHECK(!output->IsEmpty(), OP_LOGI("Return an empty tensor without actually doing allocation"), return output);

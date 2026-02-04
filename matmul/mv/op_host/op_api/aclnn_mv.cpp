@@ -102,19 +102,6 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
     return CheckCubeMathTypeForMm(promoteType, cubeMathType);
 }
 
-static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* vec, aclTensor* out, int8_t cubeMathType)
-{
-    // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(self, vec, out), ACLNN_ERR_PARAM_NULLPTR);
-    // 2. self的dtype支持 + vec、out的数据类型要与self一致
-    CHECK_RET(CheckDtype(self, vec, out), ACLNN_ERR_PARAM_INVALID);
-    // 3. shape: self必须为2维: n x m, vec必须为1维：m, out必须为1维：n
-    CHECK_RET(CheckShape(self, vec, out), ACLNN_ERR_PARAM_INVALID);
-    // 4. 检查cubeMathType
-    CHECK_RET(CheckMathType(self, vec, cubeMathType), ACLNN_ERR_PARAM_INVALID);
-    return ACLNN_SUCCESS;
-}
-
 static aclnnStatus CheckInputParams(const aclTensor* self, const aclTensor* vec, aclTensor* out, int8_t cubeMathType)
 {
     // 1. 检查参数是否为空指针
