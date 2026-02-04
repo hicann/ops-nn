@@ -109,17 +109,17 @@ static bool CheckNullptr(const gert::TilingContext* context)
     const gert::StorageShape* rstd_shape = context->GetOutputShape(OUTPUT_RSTD_INDEX);
     const gert::StorageShape* x_shape = context->GetOutputShape(OUTPUT_X_INDEX);
 
+    size_t rstdDimNum = rstd_shape->GetStorageShape().GetDimNum();
+    size_t xDimNum = x_shape->GetStorageShape().GetDimNum();
+
     norm_key = RMS_NORM_KEY;
-    if (rstd_shape == nullptr && x_shape == nullptr) {
+    if(rstd_shape->GetOriginShape().GetShapeSize() <= 0 && x_shape->GetOriginShape().GetShapeSize() <= 0){
         norm_key = POST_RMS_NORM;
-    } else if (rstd_shape == nullptr && x_shape != nullptr) {
+    } else if (rstd_shape->GetOriginShape().GetShapeSize() <= 0 && x_shape->GetOriginShape().GetShapeSize() > 0) {
         norm_key = PRE_RMS_NORM;
     }
 
     OP_CHECK_NULL_WITH_CONTEXT(context, x1_shape);
-    if (context->GetInputDesc(0)->GetDataType() == ge::DT_FLOAT) {
-        norm_key = RMS_NORM_KEY;
-    }
     OP_CHECK_NULL_WITH_CONTEXT(context, x2_shape);
     OP_CHECK_NULL_WITH_CONTEXT(context, gamma_shape);
     OP_CHECK_NULL_WITH_CONTEXT(context, y_shape);
@@ -145,15 +145,8 @@ static bool CheckInputOutputDim(const gert::TilingContext* context)
     size_t x2DimNum = x2_shape->GetStorageShape().GetDimNum();
     size_t gammaDimNum = gamma_shape->GetStorageShape().GetDimNum();
     size_t yDimNum = y_shape->GetStorageShape().GetDimNum();
-    size_t rstdDimNum;
-    size_t xDimNum;
-
-    if (norm_key == RMS_NORM_KEY) {
-        rstdDimNum = rstd_shape->GetStorageShape().GetDimNum();
-        xDimNum = x_shape->GetStorageShape().GetDimNum();
-    } else if (norm_key == PRE_RMS_NORM) {
-        xDimNum = x_shape->GetStorageShape().GetDimNum();
-    } 
+    size_t rstdDimNum = rstd_shape->GetStorageShape().GetDimNum();
+    size_t xDimNum = x_shape->GetStorageShape().GetDimNum();
 
     OP_CHECK_IF(x1DimNum > MAX_DIM_NUM || x1DimNum < MIN_DIM_X,
         OP_LOGE(context, "Input x1's dim num should not greater than 8 or smaller than 1."), return false);
