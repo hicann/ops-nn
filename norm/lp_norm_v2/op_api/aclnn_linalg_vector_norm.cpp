@@ -195,7 +195,7 @@ static inline bool CheckOrdValue(const aclScalar* ord)
     std::for_each(attrPSupportValue.cbegin(), attrPSupportValue.cend(), [&](float value) { sStream << value << ", "; });
     OP_CHECK(
         it != attrPSupportValue.cend(),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ord must one of [%s], but find %f.", sStream.str().c_str(), pValue),
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ord must one of [inf, -inf, %s], but find %f.", sStream.str().c_str(), pValue),
         return false);
     return true;
 }
