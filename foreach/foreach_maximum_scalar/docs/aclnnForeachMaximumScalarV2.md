@@ -47,7 +47,6 @@ aclnnStatus aclnnForeachMaximumScalarV2(
   uint64_t       workspaceSize,
   aclOpExecutor *executor,
   aclrtStream    stream)
-
 ```
 
 ## aclnnForeachMaximumScalarV2GetWorkspaceSize

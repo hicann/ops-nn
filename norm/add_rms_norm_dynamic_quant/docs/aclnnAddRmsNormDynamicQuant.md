@@ -39,9 +39,11 @@
   $$
 
   - 若仅输入smoothScale1Optional，则y2Out和scale2Out输出无实际意义。计算过程如下所示：
+  
   $$
     input = y\cdot smoothScale1Optional
   $$
+
   $$
    scale1Out=row\_max(abs(input))/127
   $$
@@ -51,18 +53,23 @@
   $$
 
   - 若smoothScale1Optional和smoothScale2Optional均输入，则算子的五个输出均为有效输出。计算过程如下所示：
+  
   $$
     input1 = y\cdot smoothScale1Optional
   $$
+  
   $$
     input2 = y\cdot smoothScale2Optional
   $$
+
   $$
    scale1Out=row\_max(abs(input1))/127
   $$
+
   $$
    scale2Out=row\_max(abs(input2))/127
   $$
+  
   $$
    y1Out=round(input1/scale1Out)
   $$

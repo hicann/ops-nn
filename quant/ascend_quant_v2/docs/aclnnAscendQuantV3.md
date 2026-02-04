@@ -195,7 +195,7 @@ aclnnStatus aclnnAscendQuantV3(
 
 
   - <term>Ascend 950PR/Ascend 950DT</term>：
-    - 参数`x`、`scale`、`offset`的数据格式为NZ时，数据类型仅支持FLOAT32时。
+    - 参数`x`、`scale`、`offset`的数据格式不支持NZ。
     - 入参`roundMode`：`dstType`表示FLOAT8_E5M2或FLOAT8_E4M3FN时，只支持round。`dstType`表示HIFLOAT8时，支持round和hybrid。`dstType`表示其他类型时，支持round，ceil，trunc和floor。
     - 入参`axis`支持指定x的最后两个维度（假设输入x维度是xDimNum，axis取值范围是[-2，-1]或[xDimNum-2，xDimNum-1]）。
 

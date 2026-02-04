@@ -236,7 +236,7 @@ aclnnStatus aclnnBatchNormBackward(
       <td>ND</td>
       <td>1</td>
       <td>√</td>
-    </tr>     
+    </tr>
     <tr>
       <td>workspaceSize</td>
       <td>输出</td>

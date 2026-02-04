@@ -53,7 +53,6 @@ aclnnStatus aclnnForeachSign(
   uint64_t         workspaceSize,
   aclOpExecutor   *executor,
   aclrtStream      stream)
-
 ```
 
 ## aclnnForeachSignGetWorkspaceSize

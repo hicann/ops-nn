@@ -160,22 +160,9 @@
   
     输出参数`save_rstd`保存的是x标准差的倒数。
   
-<!-- 
-- <term>Ascend 950PR/Ascend 950DT</term>：
-  - 输入running_mean、running_var分别表示推理期使用的均值和方差。
-  - 输出running_mean、running_var不生效。
-  - 输出save_mean、save_var不生效。
-**/
-
-
-- <term>Ascend 950PR/Ascend 950DT</term>：输出参数`save_rstd`保存的是x标准差倒数。
-- <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：输出参数`save_rstd`保存的是x方差。
--->
-
 ## 约束说明
 
 <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持训练场景。
-<!-- 仅支持训练场景。 -->
 
 ## 调用说明
 

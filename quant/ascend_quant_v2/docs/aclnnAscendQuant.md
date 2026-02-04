@@ -124,7 +124,7 @@ aclnnStatus aclnnAscendQuant(
       <td>roundMode</td>
       <td>输入</td>
       <td>指定cast到INT8输出的转换方式。</td>
-      <td>支持取值round/ceil/trunc/floor/hybrid。</td>
+      <td>支持取值round/ceil/trunc/floor。</td>
       <td>STRING</td>
       <td>-</td>
       <td>-</td>
@@ -134,7 +134,7 @@ aclnnStatus aclnnAscendQuant(
       <td>dstType</td>
       <td>输入</td>
       <td>指定输出的数据类型。</td>
-      <td>支持取值2、3、29、34、35、36，分别表示INT8、INT32、INT4、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN。</td>
+      <td>支持取值2、3、29，分别表示INT8、INT32、INT4。</td>
       <td>INT32</td>
       <td>-</td>
       <td>-</td>
@@ -145,7 +145,7 @@ aclnnStatus aclnnAscendQuant(
       <td>输出</td>
       <td>量化的计算输出。对应公式中的`y`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型为INT32时，shape的最后一维是`x`最后一维的1/8，其余维度和`x`一致；其他类型时，shape与`x`一致。</li></ul></td>
-      <td>INT8、INT32、INT4、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
+      <td>INT8、INT32、INT4</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -173,16 +173,9 @@ aclnnStatus aclnnAscendQuant(
   </tbody>
   </table>
   
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-
-    - 出参`y`的数据类型仅支持INT8，INT32，INT4。
-    - 入参`roundMode`：支持取值round，ceil，trunc，floor。
-    - 入参`dstType`支持取值2、3、29，分别表示INT8、INT32、INT4。
-
   - <term>Atlas 推理系列产品</term>：
     - 入参`x`、`scale`、`offset`的数据类型不支持BFLOAT16。
     - 出参`y`数据类型仅支持INT8。
-    - 入参`roundMode`：支持取值round，ceil，trunc，floor。
     - 入参`dstType`仅支持取值2，表示INT8。
   
 

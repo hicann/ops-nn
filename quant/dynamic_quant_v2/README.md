@@ -20,43 +20,58 @@
 - 计算公式：
   - 对称量化：
     - 若不输入smooth_scales，则
+
       $$
         scale=row\_max(abs(x))/127
       $$
+
       $$
         y=round(x/scale)
       $$
+
     - 若输入smooth_scales，则
+
       $$
         input = x\cdot smooth_scales
       $$
+
       $$
         scale=row\_max(abs(input))/127
       $$
+
       $$
         y=round(input/scale)
       $$
+
   - 非对称量化：
     - 若不输入smooth_scales，则
+
       $$
         scale=(row\_max(x) - row\_min(x))/scale\_opt
       $$
+
       $$
         offset=offset\_opt-row\_max(x)/scale
       $$
+
       $$
         y=round(x/scale+offset)
       $$
+
     - 若输入smooth_scales，则
+
       $$
         input = x\cdot smooth_scales
       $$
+
       $$
         scale=(row\_max(input) - row\_min(input))/scale\_opt
       $$
+
       $$
         offset=offset\_opt-row\_max(input)/scale
       $$
+
       $$
         y=round(input/scale+offset)
       $$

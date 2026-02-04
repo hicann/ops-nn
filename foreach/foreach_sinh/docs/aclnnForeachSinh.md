@@ -46,8 +46,8 @@ aclnnStatus aclnnForeachSinh(
   uint64_t        workspaceSize,
   aclOpExecutor  *executor,
   aclrtStream     stream)
-
 ```
+
 ## aclnnForeachSinhGetWorkspaceSize
 
 - **参数说明**：

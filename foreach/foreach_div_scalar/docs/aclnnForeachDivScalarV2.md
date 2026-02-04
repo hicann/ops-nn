@@ -47,7 +47,6 @@ aclnnStatus aclnnForeachDivScalarV2(
   uint64_t       workspaceSize,
   aclOpExecutor *executor,
   aclrtStream    stream)
-
 ```
 
 ## aclnnForeachDivScalarV2GetWorkspaceSize
