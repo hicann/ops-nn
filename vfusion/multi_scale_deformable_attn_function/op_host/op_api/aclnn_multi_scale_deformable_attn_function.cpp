@@ -163,6 +163,16 @@ static bool CheckShape(const aclTensor *value, const aclTensor *spatialShape, co
       OP_LOGE(ACLNN_ERR_PARAM_INVALID, "embedDims must be divisible by 8 and less than or equal to 256"),
       return false);
 
+  auto attnWeightShape = attnWeight->GetViewShape();
+  int64_t spatialShapeNumLevels = spatialShapeShape.GetDim(0);
+  int64_t locationNumLevels = locationShape.GetDim(3);
+  int64_t attnWeightNumLevels = attnWeightShape.GetDim(3);
+  
+  OP_CHECK(spatialShapeNumLevels == locationNumLevels && locationNumLevels == attnWeightNumLevels,
+      OP_LOGE(ACLNN_ERR_PARAM_INVALID, "numLevels dimensions must be equal: spatialShape[0]=%ld, location[3]=%ld, attnWeight[3]=%ld", 
+              spatialShapeNumLevels, locationNumLevels, attnWeightNumLevels),
+      return false);
+
   return true;
 }
 
@@ -233,7 +243,7 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunctionGetWorkspaceSize(const aclTenso
     uint64_t numPoints =  locationShape.GetDim(4);
     uint64_t embedDims =  valueShape.GetDim(3);
     uint64_t noTranspose = numLevels <= 8 && numHeads <= 8 && (embedDims == 16 || embedDims == 32) &&
-                        (numPoints % 2 == 0 || numPoints == 1);
+                        (numPoints % 2 == 0);
 
     bool is310PSocVersion = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P;
     bool is910SocVersion = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B || GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93;

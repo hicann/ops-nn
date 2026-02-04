@@ -33,7 +33,6 @@ public:
             .Format({ge::FORMAT_ND}).UnknownShapeFormat({ge::FORMAT_ND}).AutoContiguous();
         this->Output("output").ParamType(REQUIRED).DataType({ge::DT_FLOAT})
             .Format({ge::FORMAT_ND}).UnknownShapeFormat({ge::FORMAT_ND});
-        this->AICore().AddConfig("ascend910");
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
 

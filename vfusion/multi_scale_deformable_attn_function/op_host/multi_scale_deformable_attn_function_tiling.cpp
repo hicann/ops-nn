@@ -141,7 +141,7 @@ static ge::graphStatus TilingFuncForMultiScaleDeformableAttn(gert::TilingContext
         realLevels = attnWeightShape.GetDim(REAL_LEVEL_DIM_TRANSPOSE);
     }
     uint64_t optPoint = numLevels <= 8 && numHeads <= 8 && (embedDims == 16 || embedDims == 32) &&
-                        (numPoints % 2 == 0 || numPoints == 1); // aclnn -> noTranspose
+                        (numPoints % 2 == 0); // aclnn -> noTranspose
 
     if (compileInfo->isInfBase) {
         numPoints = attnWeightShape.GetDim(NUM_POINTS_DIM);
