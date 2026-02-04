@@ -1136,7 +1136,9 @@ bool AdaptiveSlidingWindowTiling::OptimizeEdgeBasicBlock()
     uint64_t nBaseTail = static_cast<uint64_t>(inputParams_.nSize % adaptiveWin_.baseN);
     bool isMxfp4 = inputParams_.isMxPerGroup &&
                    (inputParams_.aDtype == ge::DT_FLOAT4_E2M1 || inputParams_.aDtype == ge::DT_FLOAT4_E1M2);
-    bool balanceAfterFixp = inputParams_.kSize < static_cast<uint64_t>(BASIC_BLOCK_SIZE_1024);
+    bool balanceAfterFixp = (inputParams_.kSize < static_cast<uint64_t>(BASIC_BLOCK_SIZE_1024) || 
+                            (inputParams_.kSize == static_cast<uint64_t>(BASIC_BLOCK_SIZE_1024) &&
+                            nCore >= 8)); // nCore 大于8认为n轴影响不均衡占比很小
     bool isInnerAxisAlign = GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype) % MTE2_CACHELINE_SIZE == 0UL;
     if (mBaseTail > 0UL && !inputParams_.transA &&
         (isInnerAxisAlign || (inputParams_.mSize >= LOAD_BALANCE_THRESHOLD && !isMxfp4))) {
