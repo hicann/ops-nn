@@ -9,6 +9,7 @@
  */
 
 #include "aclnn_scaled_masked_softmax.h"
+#include "aclnnInner_scaled_masked_softmax_v2.h"
 
 #include "aclnn_kernels/common/op_error_check.h"
 #include "aclnn/aclnn_base.h"
@@ -36,13 +37,6 @@ static const std::initializer_list<op::DataType> SOFTMAX_X_DTYPE_SUPPORT_LIST = 
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
 static const std::initializer_list<op::DataType> MASK_DTYPE_SUPPORT_LIST = {op::DataType::DT_BOOL};
-
-extern aclnnStatus aclnnInnerScaledMaskedSoftmaxV2GetWorkspaceSize(
-    const aclTensor* x, const aclTensor* mask, double scale, bool fixedTriuMask, aclTensor* y, uint64_t* workspaceSize,
-    aclOpExecutor** executor);
-
-extern aclnnStatus aclnnInnerScaledMaskedSoftmaxV2(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
 
 static bool CheckNotNull(const aclTensor* x, const aclTensor* mask, aclTensor* y)
 {
