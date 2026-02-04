@@ -523,7 +523,7 @@ protected:
     __aicore__ inline void PostUbProcess(LocalTensor<float> &resFp32, uint32_t curAicM, uint32_t curAicN)
     {
         LocalTensor<float> biasFp32;
-        uint32_t curAivM = ubCalcM_;
+        uint32_t curAivM = DequantBmm::Min(ubCalcM_, curAicM);
         // calcN in ub is equal to aicN
         uint32_t curAivN = curAicN;
         uint32_t mUbLoops = DequantBmm::CeilDiv(curAicM, ubCalcM_);

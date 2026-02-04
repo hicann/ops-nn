@@ -69,6 +69,7 @@ protected:
     bool SetMatmulTilingFromTbeTiling();
     bool GetTbeTiling();
     void ProcessMSmall();
+    bool IsKCNetDecode() const;
     int32_t GetIteratorOrder();
     void PrintTilingData();
     void PrintTbeTiling();

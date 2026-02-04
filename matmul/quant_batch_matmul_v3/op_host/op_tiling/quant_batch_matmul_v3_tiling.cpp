@@ -585,6 +585,42 @@ void QuantBatchMatmulV3Tiling::SetQuantBatchMatmulRunParas(QuantBatchMatmulRunPa
     runParams.batchC = inputParams.batchC;
 }
 
+// 适用整网decode m方向被切分但每核仍计算一个baseM的场景
+bool QuantBatchMatmulV3Tiling::IsKCNetDecode() const
+{
+    // 1. only support int8 pertoken-perchannel
+    if (inputParams_.aDtype != ge::DT_INT8 || !inputParams_.isPertoken || inputParams_.isPerTensor) {
+        return false;
+    }
+    // 2. only support no batch or batch = 1
+    if (inputParams_.batchC != 1UL) {
+        return false;
+    }
+    // 3. only support m <= 256
+    if (inputParams_.mSize > 256UL) {
+        return false;
+    }
+    // 4. only support no bias
+    if (inputParams_.hasBias) {
+        return false;
+    }
+    // 5. only support transA = false, weightnz-transB = false or weightnd-transB = true
+    if (inputParams_.transA || (inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && inputParams_.transB) ||
+        (inputParams_.bFormat == ge::FORMAT_ND && !inputParams_.transB)) {
+        return false;
+    }
+    // 6. only support K/N 64 aligned
+    if (inputParams_.kSize % 64UL != 0 || inputParams_.nSize % 64UL != 0) {
+        return false;
+    }
+    // 7. only support singleCoreM <= baseM for one core
+    if (ops::CeilDiv(inputParams_.mSize, static_cast<uint64_t>(tbeTiling_.m_dim)) >
+        static_cast<uint64_t>(tbeTiling_.m_l0) * BLOCK_CUBE) {
+        return false;
+    }
+    return true;
+}
+
 void QuantBatchMatmulV3Tiling::ProcessMSmall()
 {
     QuantBatchMatmulRunParas runParams_;
@@ -599,7 +635,7 @@ void QuantBatchMatmulV3Tiling::ProcessMSmall()
     // 控制m方向无循环的进入增量优化模板且workspace不能超过50M限制。
     bool isPertoken = (needWorkspace < WORKSPACE_LIMIT) && inputParams_.isPertoken;
     bool isDecode = inputParams_.mSize <= baseM;
-    isBf16Opt_ = isDecode && (isAllMix || isPertoken);
+    isBf16Opt_ = (isDecode && (isAllMix || isPertoken)) || IsKCNetDecode();
     isBf16Opt_ = isBf16Opt_ || CheckSupportConditionQbmm(QbmmType::Perchannel, runParams_, aicoreParams_.aicNum, compileInfo_.supportL0c2Out);
     isBf16Opt_ = isBf16Opt_ || (CheckSupportConditionQbmm(QbmmType::Pertoken, runParams_, aicoreParams_.aicNum, compileInfo_.supportL0c2Out) && isPertoken);
     isBf16Opt_ = isBf16Opt_ && !isTilingOut_;   // isTilingOut_表示MC2场景，不走opt模板
