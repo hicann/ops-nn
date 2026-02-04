@@ -191,7 +191,7 @@ bool CheckAntiQuantDtype(
 
 bool CheckQuantDtype(gert::TilingContext* context, WeightQuantBatchMatmulInfo* inputParams);
 
-bool CheckShapeDims(WeightQuantBatchMatmulInfo* inputParams, platform_ascendc::SocVersion socVersion);
+bool CheckShapeDims(WeightQuantBatchMatmulInfo* inputParams, NpuArch npuArch);
 
 bool CheckBiasShape(WeightQuantBatchMatmulInfo* inputParams, const gert::StorageShape* biasShape);
 
@@ -200,7 +200,7 @@ bool CheckQuantShape(
     const gert::StorageShape* quantOffsetShape);
 
 bool CheckShape(
-    gert::TilingContext* context, WeightQuantBatchMatmulInfo* inputParams, platform_ascendc::SocVersion socVersion);
+    gert::TilingContext* context, WeightQuantBatchMatmulInfo* inputParams, NpuArch npuArch);
 
 bool CheckAntiQuantShape(
     WeightQuantBatchMatmulInfo* inputParams, const gert::StorageShape* antiQuantScaleShape,

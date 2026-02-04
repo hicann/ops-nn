@@ -16,7 +16,7 @@ namespace Cmct::Prologue::Tile {
 using AscendC::MicroAPI::RegTensor;
 namespace MicroAPI = AscendC::MicroAPI;
 using Gemm::IsColumnMajor2D;
-using Gemm::Arch::Ascend950;
+using Gemm::Arch::DAV3510;
 namespace detail {
 // kn
 // int8,int4->float16
@@ -24,7 +24,7 @@ namespace detail {
 template <int32_t N, class TensorOut, class TensorTraitIn, class TensorScale, class Shape, bool HasAntiQuantOffset>
 struct AntiquantImpl<
     // fix k to 64
-    Ascend950, AntiquantFixTile<N, 64, HasAntiQuantOffset>, TensorOut, AscendC::LocalTensor<TensorTraitIn>,
+    DAV3510, AntiquantFixTile<N, 64, HasAntiQuantOffset>, TensorOut, AscendC::LocalTensor<TensorTraitIn>,
     TensorScale, TensorScale, Shape,
     typename AscendC::Std::enable_if_t<
         IsColumnMajor2D<decltype(TensorTraitIn{}.GetLayout())>::value &&
@@ -88,7 +88,7 @@ struct AntiquantImpl<
 template <int32_t N, class TensorOut, class TensorTraitIn, class TensorScale, class Shape, bool HasAntiQuantOffset>
 struct AntiquantImpl<
     // fix k to 64
-    Ascend950, AntiquantFixTile<N, 64, HasAntiQuantOffset>, TensorOut, AscendC::LocalTensor<TensorTraitIn>,
+    DAV3510, AntiquantFixTile<N, 64, HasAntiQuantOffset>, TensorOut, AscendC::LocalTensor<TensorTraitIn>,
     TensorScale, TensorScale, Shape,
     typename AscendC::Std::enable_if_t<
         IsColumnMajor2D<decltype(TensorTraitIn{}.GetLayout())>::value &&
@@ -155,7 +155,7 @@ template <
     int32_t N, class TensorOut, class TensorTraitIn, class Shape, typename TensorTraitScale, bool HasAntiQuantOffset>
 struct AntiquantImpl<
     // fix k to 64
-    Ascend950, AntiquantFixTile<N, 64, HasAntiQuantOffset>, TensorOut, AscendC::LocalTensor<TensorTraitIn>,
+    DAV3510, AntiquantFixTile<N, 64, HasAntiQuantOffset>, TensorOut, AscendC::LocalTensor<TensorTraitIn>,
     AscendC::LocalTensor<TensorTraitScale>, AscendC::LocalTensor<TensorTraitScale>, Shape,
     typename AscendC::Std::enable_if_t<
         IsColumnMajor2D<decltype(TensorTraitIn{}.GetLayout())>::value &&
@@ -240,7 +240,7 @@ template <
     int32_t N, class TensorOut, class TensorTraitIn, class Shape, typename TensorTraitScale, bool HasAntiQuantOffset>
 struct AntiquantImpl<
     // fix k to 64
-    Ascend950, AntiquantFixTile<N, 64, HasAntiQuantOffset>, TensorOut, AscendC::LocalTensor<TensorTraitIn>,
+    DAV3510, AntiquantFixTile<N, 64, HasAntiQuantOffset>, TensorOut, AscendC::LocalTensor<TensorTraitIn>,
     AscendC::LocalTensor<TensorTraitScale>, AscendC::LocalTensor<TensorTraitScale>, Shape,
     typename AscendC::Std::enable_if_t<
         IsColumnMajor2D<decltype(TensorTraitIn{}.GetLayout())>::value &&
@@ -316,7 +316,7 @@ template <
     bool HasAntiQuantOffset>
 struct AntiquantImpl<
     // fix k to 64
-    Ascend950, AntiquantFixTile<N, 64, HasAntiQuantOffset>, TensorOut, AscendC::LocalTensor<TensorTraitIn>,
+    DAV3510, AntiquantFixTile<N, 64, HasAntiQuantOffset>, TensorOut, AscendC::LocalTensor<TensorTraitIn>,
     AscendC::LocalTensor<TensorTraitScale>, TensorOffset, Shape,
     typename AscendC::Std::enable_if_t<
         IsColumnMajor2D<decltype(TensorTraitIn{}.GetLayout())>::value &&

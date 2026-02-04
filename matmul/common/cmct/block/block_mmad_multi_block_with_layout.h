@@ -45,8 +45,8 @@ class BlockMmad<MatmulMultiBlockWithLayout<>, L1TileShape, L0TileShape, AT, BT, 
 template <class L1Shape, class L0Shape, class AType, class BType, class CType, class BiasType, class TileCopy>
 class BlockMmad<MatmulMultiBlockWithLayout<>, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy,
     AscendC::Std::enable_if_t<
-        !AscendC::Std::is_same_v<TileCopy, Tile::TileCopy<Arch::Ascend950, Tile::CopyOutSplitMWithParams>> &&
-        !AscendC::Std::is_same_v<TileCopy, Tile::TileCopy<Arch::Ascend950, Tile::CopyOutSplitNWithParams>> &&
+        !AscendC::Std::is_same_v<TileCopy, Tile::TileCopy<Arch::DAV3510, Tile::CopyOutSplitMWithParams>> &&
+        !AscendC::Std::is_same_v<TileCopy, Tile::TileCopy<Arch::DAV3510, Tile::CopyOutSplitNWithParams>> &&
         !IsMatmulLayoutTypeV<AType>
     >> : public BlockMmadWithLayout<
         BlockMmad<MatmulMultiBlockWithLayout<>, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy>,
@@ -78,8 +78,8 @@ private:
 template <class L1Shape, class L0Shape, class AType, class BType, class CType, class BiasType, class TileCopy>
 class BlockMmad<MatmulMultiBlockWithLayout<>, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy,
     AscendC::Std::enable_if_t<
-        (AscendC::Std::is_same_v<TileCopy, Tile::TileCopy<Arch::Ascend950, Tile::CopyOutSplitMWithParams>> ||
-        AscendC::Std::is_same_v<TileCopy, Tile::TileCopy<Arch::Ascend950, Tile::CopyOutSplitNWithParams>>) &&
+        (AscendC::Std::is_same_v<TileCopy, Tile::TileCopy<Arch::DAV3510, Tile::CopyOutSplitMWithParams>> ||
+        AscendC::Std::is_same_v<TileCopy, Tile::TileCopy<Arch::DAV3510, Tile::CopyOutSplitNWithParams>>) &&
         !IsMatmulLayoutTypeV<AType>
     >> : public BlockMmadWithLayout<
         BlockMmad<MatmulMultiBlockWithLayout<>, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy>,

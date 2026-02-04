@@ -241,6 +241,7 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingRegBaseTestPara
     tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     map<string, string> soc_version_infos;
     soc_version_infos.insert(make_pair("Short_SoC_version", "Ascend950"));
+    soc_version_infos.insert(make_pair("NpuArch", "3510"));
     tilingContext->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
     ASSERT_NE(tilingParseFunc, nullptr);
@@ -452,6 +453,7 @@ TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_init_compile_info)
     tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     map<string, string> soc_version_infos;
     soc_version_infos.insert(make_pair("Short_SoC_version", "Ascend950"));
+    soc_version_infos.insert(make_pair("NpuArch", "3510"));
     tilingContext->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
     ASSERT_NE(tilingParseFunc, nullptr);

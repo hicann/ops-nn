@@ -73,15 +73,15 @@ static const std::initializer_list<DataType> ASCEND910B_X_DTYPE_SUPPORT_LIST = {
 static const std::initializer_list<DataType> ASCEND310P_X_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16};
 static const std::initializer_list<DataType> ASCEND910B_WEIGHT_DTYPE_SUPPORT_LIST = {
     DataType::DT_INT8, DataType::DT_INT4};
-static const std::initializer_list<DataType> ASCEND950_WEIGHT_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<DataType> DAV3510_WEIGHT_DTYPE_SUPPORT_LIST = {
     DataType::DT_INT8,          DataType::DT_INT4,
     DataType::DT_FLOAT8_E4M3FN, DataType::DT_HIFLOAT8, DataType::DT_FLOAT4_E2M1};
-static const std::initializer_list<DataType> ASCEND950_ANTIQUANT_SCALE_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<DataType> DAV3510_ANTIQUANT_SCALE_DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_FLOAT8_E8M0};
 static const std::initializer_list<DataType> ASCEND310P_WEIGHT_DTYPE_SUPPORT_LIST = {DataType::DT_INT8};
 static const std::initializer_list<DataType> ASCEND910B_Y_DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT8};
-static const std::initializer_list<DataType> ASCEND950_Y_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<DataType> DAV3510_Y_DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT16, DataType::DT_BF16};
 static const std::initializer_list<DataType> ASCEND310P_Y_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16};
 static const std::initializer_list<DataType> EMPTY_LIST = {};
@@ -93,14 +93,14 @@ static const std::vector<uint64_t> BIAS_DIM_RANGE_OPTIONAL_INPUT = {1, INPUT_DIM
 static inline const std::initializer_list<DataType>& GetAntiQuantScaleDtypeSupportList()
 {
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910B:
-        case SocVersion::ASCEND910_93:
+    NpuArch npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (npuArch) {
+        case NpuArch::DAV_2201:
             return ASCEND910B_AQSCALE_DTYPE_SUPPORT_LIST;
-        case SocVersion::ASCEND310P:
+        case NpuArch::DAV_2002:
             return ASCEND310P_X_DTYPE_SUPPORT_LIST;
-        case SocVersion::ASCEND950:
-            return ASCEND950_ANTIQUANT_SCALE_DTYPE_SUPPORT_LIST;
+        case NpuArch::DAV_3510:
+            return DAV3510_ANTIQUANT_SCALE_DTYPE_SUPPORT_LIST;
         default: {
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented", op::ToString(socVersion).GetString());
             return EMPTY_LIST;
@@ -110,13 +110,13 @@ static inline const std::initializer_list<DataType>& GetAntiQuantScaleDtypeSuppo
 
 static inline const std::initializer_list<DataType>& GetXDtypeSupportList()
 {
+    NpuArch npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910B:
-        case SocVersion::ASCEND910_93:
-        case SocVersion::ASCEND950:
+    switch (npuArch) {
+        case NpuArch::DAV_2201:
+        case NpuArch::DAV_3510:
             return ASCEND910B_X_DTYPE_SUPPORT_LIST;
-        case SocVersion::ASCEND310P:
+        case NpuArch::DAV_2002:
             return ASCEND310P_X_DTYPE_SUPPORT_LIST;
         default: {
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented", op::ToString(socVersion).GetString());
@@ -127,14 +127,14 @@ static inline const std::initializer_list<DataType>& GetXDtypeSupportList()
 
 static inline const std::initializer_list<DataType>& GetYDtypeSupportList()
 {
+    NpuArch npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910B:
-        case SocVersion::ASCEND910_93:
+    switch (npuArch) {
+        case NpuArch::DAV_2201:
             return ASCEND910B_Y_DTYPE_SUPPORT_LIST;
-        case SocVersion::ASCEND950:
-            return ASCEND950_Y_DTYPE_SUPPORT_LIST;
-        case SocVersion::ASCEND310P:
+        case NpuArch::DAV_3510:
+            return DAV3510_Y_DTYPE_SUPPORT_LIST;
+        case NpuArch::DAV_2002:
             return ASCEND310P_Y_DTYPE_SUPPORT_LIST;
         default: {
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented", op::ToString(socVersion).GetString());
@@ -145,14 +145,14 @@ static inline const std::initializer_list<DataType>& GetYDtypeSupportList()
 
 static inline const std::initializer_list<DataType>& GetWeightDtypeSupportList()
 {
+    NpuArch npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910B:
-        case SocVersion::ASCEND910_93:
+    switch (npuArch) {
+        case NpuArch::DAV_2201:
             return ASCEND910B_WEIGHT_DTYPE_SUPPORT_LIST;
-        case SocVersion::ASCEND950:
-            return ASCEND950_WEIGHT_DTYPE_SUPPORT_LIST;
-        case SocVersion::ASCEND310P:
+        case NpuArch::DAV_3510:
+            return DAV3510_WEIGHT_DTYPE_SUPPORT_LIST;
+        case NpuArch::DAV_2002:
             return ASCEND310P_WEIGHT_DTYPE_SUPPORT_LIST;
         default: {
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented", op::ToString(socVersion).GetString());
@@ -496,7 +496,7 @@ static bool CheckXWeight(const aclTensor* x, const aclTensor* weight, bool trans
         return false;
     }
     if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND310P &&
-        GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950 &&
+        op::GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510 &&
         (kX > M_K_N_MAX_VALUE || nWeight > M_K_N_MAX_VALUE || (transposeX && (mX > M_K_N_MAX_VALUE)))) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
@@ -527,11 +527,11 @@ static bool CheckXWeight(const aclTensor* x, const aclTensor* weight, bool trans
             return false;
         }
 
-        if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 &&
+        if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 &&
             weight->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ && transposeWeight) {
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID,
-                "ascend950 does not support w4 tranB when weight's dtype is FORMAT_FRACTAL_NZ!");
+                "DAV3510 does not support w4 tranB when weight's dtype is FORMAT_FRACTAL_NZ!");
             return false;
         }
     }
@@ -591,9 +591,9 @@ static bool CheckShapeForPerGrp(const aclTensor* weight, int antiquantGroupSize)
 {
     int64_t kWeight = GetWeightK(weight);
     int64_t nWeight = GetWeightN(weight);
-    // ASCEND950 nz没有该限制
+    // DAV3510 nz没有该限制
     if ((antiquantGroupSize != 0) && (kWeight % antiquantGroupSize) != 0 &&
-        GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
+        op::GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
             "when weight's dtype is [int4], weight's format is [FRACTAL_NZ], antiquantGroupSize is larger than 0,"
@@ -602,13 +602,13 @@ static bool CheckShapeForPerGrp(const aclTensor* weight, int antiquantGroupSize)
             kWeight, antiquantGroupSize);
         return false;
     }
-    if ((nWeight % N_ALIGN_VALUE) != 0 && op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
-       OP_LOGE(
-           ACLNN_ERR_PARAM_INVALID,
-           "when weight's dtype is [int4], weight's format is [FRACTAL_NZ], antiquantGroupSize is larger than 0,"
-           "n should be an integer multiple of %ld, actual n is [%ld].",
-           N_ALIGN_VALUE, nWeight);
-       return false;
+    if ((nWeight % N_ALIGN_VALUE) != 0 && op::GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "when weight's dtype is [int4], weight's format is [FRACTAL_NZ], antiquantGroupSize is larger than 0,"
+            "n should be an integer multiple of %ld, actual n is [%ld].",
+            N_ALIGN_VALUE, nWeight);
+        return false;
     }
     return true;
 }
@@ -620,8 +620,7 @@ static bool CheckValForWeightInt4Nz(
     if ((weight->GetDataType() != DataType::DT_INT4) || (weight->GetStorageFormat() != Format::FORMAT_FRACTAL_NZ)) {
         return true;
     }
-
-    SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    NpuArch npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     // per-group场景
     if (antiquantGroupSize > 0) {
         bool transposeX = IsTransposeLastTwoDims(x);
@@ -635,7 +634,7 @@ static bool CheckValForWeightInt4Nz(
             return false;
         }
         if ((antiquantGroupSize != ANTIQUANT_GRP_SIZE128) && (antiquantGroupSize != ANTIQUANT_GRP_SIZE64) &&
-            (socVersion != SocVersion::ASCEND950)) {
+            (npuArch != NpuArch::DAV_3510)) {
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID,
                 "when weight's dtype is [int4], weight's format is [FRACTAL_NZ], antiquantGroupSize should be "
@@ -654,7 +653,7 @@ static bool CheckValForWeightInt4Nz(
             return false;
         }
         // per-channel场景
-        if (!transposeWeight && (socVersion != SocVersion::ASCEND950)) {
+        if (!transposeWeight && (npuArch != NpuArch::DAV_3510)) {
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID,
                 "when weight's dtype is [int4], weight's format is [FRACTAL_NZ], and antiquantGroupSize is 0, "
@@ -727,11 +726,11 @@ static bool AdvancedParamsCheck(
 static aclnnStatus CheckSocValid()
 {
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910B:
-        case SocVersion::ASCEND910_93:
-        case SocVersion::ASCEND950:
-        case SocVersion::ASCEND310P:
+    NpuArch npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (npuArch) {
+        case NpuArch::DAV_2201:
+        case NpuArch::DAV_3510:
+        case NpuArch::DAV_2002:
             break;
         default: {
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented", op::ToString(socVersion).GetString());
@@ -744,8 +743,9 @@ static aclnnStatus CheckSocValid()
 static aclnnStatus CheckNzSocValid()
 {
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND950:
+    NpuArch npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (npuArch) {
+        case NpuArch::DAV_3510:
             break;
         default: {
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "aclnn nz support for %s is not implemented", op::ToString(socVersion).GetString());
@@ -785,7 +785,7 @@ static bool CheckOptionalNotNull(const aclTensor* quantScaleOptional, const aclT
 static bool CheckAntiquantForFixpipe(const aclTensor* antiquantScale, const aclTensor* antiquantOffsetOptional)
 {
     if (antiquantOffsetOptional->GetDataType() == DataType::DT_INT32) {
-        if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+        if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID,
                 "antiquantOffset's dtype only support DT_FLOAT16 and DT_BF16, "
@@ -870,8 +870,8 @@ static bool CheckXDtypeValidForNormal(
     return true;
 }
 
-static bool CheckBiasWithXBf16(const aclTensor* weight, const aclTensor* biasOptional) {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+static bool CheckBiasWithXBf16(const aclTensor* weight, const aclTensor* biasOptional){
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
         if (weight->GetDataType() == DataType::DT_FLOAT4_E2M1 || weight->GetDataType() == DataType::DT_FLOAT8_E4M3FN ||
             weight->GetDataType() == DataType::DT_HIFLOAT8) {
             if (biasOptional->GetDataType() != DataType::DT_BF16) {
@@ -962,7 +962,7 @@ static bool CheckDtypeValid(
     }
 
     if (weight != nullptr && weight->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ &&
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+        op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
         if (weight->GetDataType() != DataType::DT_INT4 && weight->GetDataType() != DataType::DT_FLOAT4_E2M1) {
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID,
@@ -1066,7 +1066,7 @@ static bool CheckQuantScale(const aclTensor* quantScaleOptional, const aclTensor
 static aclnnStatus AntiQuantScaleAndOffsetContiguousCheck(const aclTensor* antiquantScale,
                                                           const aclTensor* antiquantOffsetOptional,
                                                           bool transposeWeight) {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
         if (antiquantScale->GetViewShape().GetDimNum() == ANTIQUANT_DIM_MAX_VALUE &&
             antiquantScale->GetViewShape().GetDim(0) != 1 && antiquantScale->GetViewShape().GetDim(1) != 1) {
             OP_CHECK(
@@ -1474,7 +1474,7 @@ static aclnnStatus TensorPreProcess(TupleTensor mandatoryTensors, TupleTensor op
     // 将int32的输入weight dtype修改为int4。同时ViewShape,ViewStrides也从int32修改为int4所对应的。
     // 采用float32承载float4_e2m1数据，对于float32采用相同处理流程
     if (weight->GetDataType() == DataType::DT_INT32 ||
-        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 &&
+        (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 &&
          weight->GetDataType() == DataType::DT_FLOAT)) {
         CHECK_RET(PackedWeightPreProcess(weight, tensorWeight, executor) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
     } else if (
@@ -1506,7 +1506,7 @@ static aclnnStatus TensorPreProcess(TupleTensor mandatoryTensors, TupleTensor op
     }
 
     // microscaling场景，采用uint8承载float8_e8m0数据，此处需修正antiquantScale dtype
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 &&
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 &&
         weight->GetDataType() == DataType::DT_FLOAT && antiquantScaleRef->GetDataType() == DataType::DT_UINT8) {
         CHECK_RET(
             ModifyTensorDtype(antiquantScaleRef, nullptr, DataType::DT_FLOAT8_E8M0, executor) == ACLNN_SUCCESS,
