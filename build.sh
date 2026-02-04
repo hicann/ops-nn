@@ -23,7 +23,7 @@ SUPPORTED_SHORT_OPTS="hj:vO:uf:-:"
 SUPPORTED_LONG_OPTS=(
   "help" "ops=" "soc=" "vendor_name=" "build-type=" "cov" "noexec" "opkernel" "opkernel_aicpu" "opkernel_aicpu_test" "static"
    "jit" "pkg" "asan" "make_clean_all" "make_clean" "no_force"
-  "ophost" "opgraph" "opapi" "run_example" "example_name=" "genop=" "genop_aicpu=" "experimental" "cann_3rd_lib_path=" "oom" "onnxplugin"
+  "ophost" "opgraph" "opapi" "run_example" "example_name=" "genop=" "genop_aicpu=" "experimental" "cann_3rd_lib_path=" "oom" "onnxplugin" "dump_cce"
 )
 
 source "./install_deps.sh"
@@ -157,6 +157,7 @@ usage() {
         echo "    --cann_3rd_lib_path=<PATH>"
         echo "                           Set ascend third_party package install path, default ./third_party"
         echo "    --oom                  Build with oom mode on the kernel side, with options: '-g --cce-enable-oom'"
+        echo "    --dump_cce             Dump kernel precompiled files (.i) for debugging"
         echo $dotted_line
         echo "Examples:"
         echo "    bash build.sh --pkg --soc=ascend910b --vendor_name=customize -j16 -O3"
@@ -173,6 +174,7 @@ usage() {
         echo "    --ops=op1,op2,...      Compile specified operators (comma-separated for multiple)"
         echo "    --build-type=<Type>    Specify build-type (Type options: Release/Debug), Default:Release"
         echo "    --oom                  Build with oom mode on the kernel side, with options: '-g --cce-enable-oom'"
+        echo "    --dump_cce             Dump kernel precompiled files (.i) for debugging"
         echo "    --no_force             Don't force dependency installation"
         echo $dotted_line
         echo "Examples:"
@@ -349,6 +351,7 @@ usage() {
   echo "    --genop Create the initial directory for op, like: --genop=op_class/op_name"
   echo "    --genop_aicpu Create the initial directory for AI CPU op, like: --genop_aicpu=op_class/op_name"
   echo "    --oom Build with oom mode on the kernel side, with options: '-g --cce-enable-oom'"
+  echo "    --dump_cce Dump kernel precompiled files (.i) for debugging"
   echo "to be continued ..."
 }
 
@@ -423,8 +426,8 @@ check_param() {
   fi
 
   if [[ "${BUILD_TYPE}" == "Debug" ]]; then
-    if [[ "$ENABLE_MSSANITIZER" == "TRUE" || "$ENABLE_OOM" == "TRUE" ]]; then
-      echo "[ERROR] --build-type=Debug cannot be used with --mssanitizer or --oom"
+    if [[ "$ENABLE_MSSANITIZER" == "TRUE" || "$ENABLE_OOM" == "TRUE" || "$ENABLE_DUMP_CCE" == "TRUE" ]]; then
+      echo "[ERROR] --build-type=Debug cannot be used with --mssanitizer, --oom, --dump_cce"
       exit 1
     fi
   fi
@@ -589,6 +592,7 @@ checkopts() {
   BUILD_TYPE="Release"
   ENABLE_MSSANITIZER=FALSE
   ENABLE_OOM=FALSE
+  ENABLE_DUMP_CCE=FALSE
   ENABLE_COVERAGE=FALSE
   ENABLE_UT_EXEC=TRUE
   ENABLE_ASAN=FALSE
@@ -753,6 +757,7 @@ checkopts() {
           ;;
         mssanitizer) ENABLE_MSSANITIZER=FALSE ;;
         oom) ENABLE_OOM=TRUE ;;
+        dump_cce) ENABLE_DUMP_CCE=TRUE ;;
         noexec) ENABLE_UT_EXEC=FALSE ;;
         cov) ENABLE_COVERAGE=TRUE;;
         opkernel)
@@ -873,6 +878,7 @@ assemble_cmake_args() {
   CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_BUILD_TYPE=${BUILD_TYPE}"
   CMAKE_ARGS="$CMAKE_ARGS -DENABLE_MSSANITIZER=${ENABLE_MSSANITIZER}"
   CMAKE_ARGS="$CMAKE_ARGS -DENABLE_OOM=${ENABLE_OOM}"
+  CMAKE_ARGS="$CMAKE_ARGS -DENABLE_DUMP_CCE=${ENABLE_DUMP_CCE}"
   CMAKE_ARGS="$CMAKE_ARGS -DENABLE_COVERAGE=${ENABLE_COVERAGE}"
   CMAKE_ARGS="$CMAKE_ARGS -DENABLE_TEST=${ENABLE_TEST}"
   CMAKE_ARGS="$CMAKE_ARGS -DENABLE_UT_EXEC=${ENABLE_UT_EXEC}"

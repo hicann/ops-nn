@@ -92,9 +92,9 @@ function get_simplified_key_config_file() {
 
 main() {
   echo "[INFO]excute file: $0"
-  if [ $# -lt 4 ]; then
+  if [ $# -lt 7 ]; then
     echo "[ERROR]input error"
-    echo "[ERROR]bash $0 {op_type} {soc_version} {output_path} {task_path}"
+    echo "[ERROR]bash $0 {op_type} {soc_version} {output_path} {task_path} {enable_debug} {enable_oom} {enable_dump_cce}"
     exit 1
   fi
   local workdir=$(
@@ -110,6 +110,7 @@ main() {
   local task_path=$4
   local enable_debug=$5
   local enable_oom=$6
+  local enable_dump_cce=$7
   local is_need_gen_opc_info=TRUE
   local python_arg=${HI_PYTHON}
   if [ "${python_arg}" = "" ]; then
@@ -282,10 +283,20 @@ main() {
         if [ "${enable_debug}" = "Debug" ]; then
           cmd="${cmd} --op_debug_config=debug"
         fi
+        op_debug_configs=()
         if [ "${enable_oom}" = "TRUE" ]; then
-          cmd="${cmd} --op_debug_config=oom"
+          op_debug_configs+=("oom")
         fi
-
+        if [ "${enable_dump_cce}" = "TRUE" ]; then
+          op_debug_configs+=("dump_cce")
+          cmd="${cmd} --debug_dir=${output_path}/kernel_metas"
+        fi
+        if [ ${#op_debug_configs[@]} -gt 0 ]; then
+          OLD_IFS="${IFS}"
+          IFS=','
+          cmd="${cmd} --op_debug_config=${op_debug_configs[*]}"
+          IFS="$OLD_IFS"
+        fi
         echo "[INFO] op:${op_type} do opc cmd is ${cmd}"
         echo ${cmd} >> ${opc_task_cmd_file}
         cmd="${python_arg} gen_output_json.py ${new_file} ${binary_bin_path} ${binary_compile_json_file}"

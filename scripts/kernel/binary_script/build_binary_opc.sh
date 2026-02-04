@@ -23,6 +23,7 @@ main() {
   local output_path=$3
   local enable_debug=$4
   local enable_oom=$5
+  local dump_cce=$6
   local workdir=$(
     cd $(dirname $0)
     pwd
@@ -39,11 +40,11 @@ main() {
     }
   fi
 
-  result=$(bash build_binary_opc_gen_task.sh $op_type $soc_version $output_path $task_path $enable_debug $enable_oom)
+  result=$(bash build_binary_opc_gen_task.sh $op_type $soc_version $output_path $task_path $enable_debug $enable_oom $dump_cce)
   local gen_res=$?
   if [ $gen_res -ne 0 ]; then
     echo -e "[ERROR] [$op_type]build_binary_opc_gen_task failed with ErrorCode[$gen_res]."
-    echo -e "Command executed: build_binary_opc_gen_task.sh $op_type $soc_version $output_path $task_path $enable_debug $enable_oom"
+    echo -e "Command executed: build_binary_opc_gen_task.sh $op_type $soc_version $output_path $task_path $enable_debug $enable_oom $dump_cce"
     echo -e "Error output: \n $result"
     return
   fi
