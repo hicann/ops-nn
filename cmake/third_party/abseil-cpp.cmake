@@ -18,7 +18,7 @@ find_path(ABSL_SOURCE_DIR
         NAMES absl/log/absl_log.h
         NO_CMAKE_SYSTEM_PATH
         NO_CMAKE_FIND_ROOT_PATH
-        PATHS ${PROJECT_SOURCE_DIR}/third_party/abseil-cpp)
+        PATHS ${CANN_3RD_LIB_PATH}/abseil-cpp)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(abseil-cpp
@@ -27,7 +27,7 @@ find_package_handle_standard_args(abseil-cpp
         REQUIRED_VARS
         ABSL_SOURCE_DIR)
 
-set(ABSEIL_SOURCE_DIR ${PROJECT_SOURCE_DIR}/third_party/abseil-cpp)
+set(ABSEIL_SOURCE_DIR ${CANN_3RD_LIB_PATH}/abseil-cpp)
 if(abseil-cpp_FOUND)
   message(STATUS "Found abseil-cpp in ${CANN_3RD_LIB_PATH}/abseil-cpp")
 else()

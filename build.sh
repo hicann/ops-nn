@@ -565,11 +565,6 @@ make_clean_all() {
     rm -rf ./*
   fi
   [ -d "$BUILD_OUT_PATH" ] && rm -rf $BUILD_OUT_PATH
-  THIRD_PARTY_PATH=${BASE_PATH}/third_party
-  if [ -d "${THIRD_PARTY_PATH}" ]; then
-    rm -rf ${THIRD_PARTY_PATH}/abseil-cpp
-    rm -rf ${THIRD_PARTY_PATH}/ascend_protobuf
-  fi
   print_success "make clean all success!"
 }
 

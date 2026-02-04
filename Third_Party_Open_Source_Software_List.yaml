@@ -1,0 +1,17 @@
+#(全量组件，type缺省为run，存在测试组件类型test，构建组件类型build，辅助类插件plugin.以及发行组件类型run，需要额外类型联系安全sig)
+#YAML格式，靠空格缩进表达层级关系（禁止用Tab缩进），缩进2个空格（也可以是4个，只要同级元素缩进一致即可）
+abseil-cpp:
+  version: 20230802.1
+  type: plugin
+googletest:
+  version: v1.14.0
+  type: test
+eigen:
+  version: 3.4.0
+  type: run
+makeself:
+  version: 2.5.0-patch1.0
+  type: build
+nlohmann/json:
+  version: v3.11.3
+  type: run

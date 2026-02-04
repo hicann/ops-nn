@@ -16,10 +16,6 @@ endif()
 unset(json_FOUND CACHE)
 unset(JSON_INCLUDE CACHE)
 
-if(NOT CANN_3RD_PKG_PATH)
-  set(CANN_3RD_PKG_PATH ${PROJECT_SOURCE_DIR}/third_party/pkg)
-endif()
-
 set(JSON_DOWNLOAD_PATH ${CANN_3RD_LIB_PATH}/pkg)
 set(JSON_INSTALL_PATH ${CANN_3RD_LIB_PATH}/json)
 find_path(JSON_INCLUDE
