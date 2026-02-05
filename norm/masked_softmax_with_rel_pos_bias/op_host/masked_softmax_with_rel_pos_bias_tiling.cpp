@@ -193,7 +193,7 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasBaseTiling::GetPlatformInfo() {
   // 因为只是vector算子，所以只获取vector的核数
   aivNum = ascendcPlatform.GetCoreNumAiv();
   // 取全部核数设置blockDim是否合适，因为是纯vector算子
-  aicoreParams_.blockDim = ascendcPlatform.GetCoreNum();
+  aicoreParams_.numBlocks = ascendcPlatform.GetCoreNum();
   // 因为是vector算子，所以无需获取L1, L0的size
   uint64_t ubSizePlatForm;
   ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);

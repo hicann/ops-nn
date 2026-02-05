@@ -112,7 +112,7 @@ ge::graphStatus BatchNormGradInferTiling::DoOpTilingForStage0() {
     int64_t aOuter = Ops::Base::CeilDiv(aDim, aInner);
 
     int64_t totalTiles = r1Outer * aOuter * r0Outer;
-    int64_t tilesPerCore = Ops::Base::CeilDiv(totalTiles, static_cast<int64_t>(aicoreParams_.blockDim));
+    int64_t tilesPerCore = Ops::Base::CeilDiv(totalTiles, static_cast<int64_t>(aicoreParams_.numBlocks));
     usedCoreNums_ = Ops::Base::CeilDiv(totalTiles, tilesPerCore);
 
     int64_t tileBlockR1Tail = r1Dim - r1Inner * (r1Outer - 1);
@@ -247,8 +247,8 @@ ge::graphStatus BatchNormGradInferTiling::DoOpTilingForStage1() {
 
     onceProcUbNeed = INT64_MAX;
     int64_t minADimPerCore = std::max(1L, Ops::Base::CeilDiv(BNG_PER_CORE_PROCESS_MIN_UB_SIZE, onceProcUbNeed));
-    int64_t blockNum = aicoreParams_.blockDim;
-    if (static_cast<int64_t>(minADimPerCore * aicoreParams_.blockDim) > aDim) {
+    int64_t blockNum = aicoreParams_.numBlocks;
+    if (static_cast<int64_t>(minADimPerCore * aicoreParams_.numBlocks) > aDim) {
         // 每个核最少要处理 BNG_PER_CORE_PROCESS_MIN_UB_SIZE, minADimPerCore向上取整不可能是0
         blockNum = aDim / minADimPerCore;
         if (blockNum == 0) {

@@ -50,7 +50,7 @@ REGISTER_TILING_DATA_CLASS(LayerNormGradV3, LayerNormGradV3TilingData)
 BEGIN_TILING_DATA_DEF(LayerNormGradV3TilingDataTranspose)
 TILING_DATA_FIELD_DEF(uint64_t, row);                          // 输入tensor的行
 TILING_DATA_FIELD_DEF(uint64_t, col);                          // 输入tensor的列，即reduce的轴
-TILING_DATA_FIELD_DEF(uint64_t, blockDim);                     // 实际使用的core数量
+TILING_DATA_FIELD_DEF(uint64_t, numBlocks);                     // 实际使用的core数量
 TILING_DATA_FIELD_DEF(uint64_t, blockFormer);                  // 整核处理的row大小
 TILING_DATA_FIELD_DEF(uint64_t, blockTail);                    // 尾核处理的row大小
 TILING_DATA_FIELD_DEF(uint64_t, ubFormer);                     // ub整循环处理的row大小

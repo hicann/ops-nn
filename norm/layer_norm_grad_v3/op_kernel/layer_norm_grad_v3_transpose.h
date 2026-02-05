@@ -36,7 +36,7 @@ public:
         col = tilingData->col;
         row = tilingData->row;
         coff = tilingData->coefficient;
-        blockDim = tilingData->blockDim;
+        numBlocks = tilingData->numBlocks;
         blockFormer = tilingData->blockFormer;
         blockTail = tilingData->blockTail;
         ubFormer = tilingData->ubFormer;
@@ -91,11 +91,11 @@ public:
     {
         uint64_t ubLoopCount;
         uint64_t ubTailLoopBlockLength;
-        if (blockIdx < (blockDim - 1)) {
+        if (blockIdx < (numBlocks - 1)) {
             ubLoopCount = ubLoopOfFormerBlock;
             ubTailLoopBlockLength = ubTailOfFormerBlock;
         }
-        if (blockIdx == (blockDim - 1)) {
+        if (blockIdx == (numBlocks - 1)) {
             ubLoopCount = ubLoopOfTailBlock;
             ubTailLoopBlockLength = ubTailOfTailBlock;
         }
@@ -161,7 +161,7 @@ private:
             Duplicate(outGammaTensor, static_cast<float>(0.0), colB32Align);
             Duplicate(outBetaTensor, static_cast<float>(0.0), colB32Align);
             PipeBarrier<PIPE_V>();
-            for (uint32_t i = 0; i < blockDim; i++) {
+            for (uint32_t i = 0; i < numBlocks; i++) {
                 inTensor = inQueueGamma.AllocTensor<float>();
                 DataCopyPad(inTensor, pdGammaWsp[i * colB32Align], copyInParams, {false, 0, 0, 0});
                 inQueueGamma.EnQue(inTensor);
@@ -174,7 +174,7 @@ private:
             DataCopyPad(pdGammaGm, outGammaTensor, copyOutParams);
             outQueuePdGamma.FreeTensor(outGammaTensor);
             PipeBarrier<PIPE_ALL>();
-            for (uint32_t i = 0; i < blockDim; i++) {
+            for (uint32_t i = 0; i < numBlocks; i++) {
                 inTensor = inQueueGamma.AllocTensor<float>();
                 DataCopyPad(inTensor, pdBetaWsp[i * colB32Align], copyInParams, {false, 0, 0, 0});
                 inQueueGamma.EnQue(inTensor);
@@ -946,7 +946,7 @@ private:
     // tilingData
     uint64_t col;
     uint64_t row;
-    uint64_t blockDim;
+    uint64_t numBlocks;
     uint64_t blockFormer;
     uint64_t blockTail;
     uint64_t ubFormer;

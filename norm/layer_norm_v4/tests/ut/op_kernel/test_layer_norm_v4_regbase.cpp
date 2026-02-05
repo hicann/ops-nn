@@ -52,7 +52,7 @@ TEST_F(layer_norm_v4_test, test_case_0003)
     size_t meanByteSize = 64 * sizeof(float);
     size_t rstdByteSize = 64 * sizeof(float);
     size_t tiling_data_size = sizeof(LayerNormV4TilingDataWelford);
-    uint32_t blockDim = 64;
+    uint32_t numBlocks = 64;
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
@@ -71,7 +71,7 @@ TEST_F(layer_norm_v4_test, test_case_0003)
     tilingDatafromBin->M = 0;
     tilingDatafromBin->N = 0;
     tilingDatafromBin->rAlign = 0;
-    tilingDatafromBin->blockDim = 0;
+    tilingDatafromBin->numBlocks = 0;
     tilingDatafromBin->mainBlockCount = 0;
     tilingDatafromBin->mainBlockFactor = 0;
     tilingDatafromBin->tailBlockFactor = 0;
@@ -85,19 +85,19 @@ TEST_F(layer_norm_v4_test, test_case_0003)
 
     ICPU_SET_TILING_KEY(400);
     ICPU_RUN_KF(
-        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(410);
     ICPU_RUN_KF(
-        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(411);
     ICPU_RUN_KF(
-        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(420);
     ICPU_RUN_KF(
-        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(422);
     ICPU_RUN_KF(
-        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);

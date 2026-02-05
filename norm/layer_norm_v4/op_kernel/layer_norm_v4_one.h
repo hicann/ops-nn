@@ -138,7 +138,7 @@ public:
     __aicore__ inline void InitTiling(const LayerNormV4MergeNTilingData *__restrict tilingData) {
         // load tiling data
         colSize = tilingData->colSize;
-        blockDim = tilingData->blockDim;
+        numBlocks = tilingData->numBlocks;
         rowSize = tilingData->rowSize;
         eps = tilingData->eps;
         coefficient = tilingData->coefficient;
@@ -271,7 +271,7 @@ private:
     float value = 0.0;
 
     // tilingData
-    uint32_t blockDim = 0;
+    uint32_t numBlocks = 0;
     uint32_t rowSize = 0;
     uint32_t colSize = 0;
     float eps = 0.0;

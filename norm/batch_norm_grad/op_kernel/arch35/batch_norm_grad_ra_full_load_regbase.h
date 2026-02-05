@@ -40,7 +40,7 @@ public:
         const BatchNormGradBaseTilingData &baseTilingData = tilingData->baseTilingData;
         rDim_ = baseTilingData.r1Dim;
         aDim_ = baseTilingData.aDim;
-        blockDim = tilingData->blockDim;
+        numBlocks = tilingData->numBlocks;
         mainBlockCount = tilingData->mainBlockCount;
         mainBlockFactor = tilingData->mainBlockFactor;
         tailBlockFactor = tilingData->tailBlockFactor;
@@ -97,7 +97,7 @@ public:
         if (aLoopFactor <= 0) {
             return;
         }
-        if(GetBlockIdx() >= blockDim) {
+        if(GetBlockIdx() >= numBlocks) {
             return;
         }
         for (int64_t idx = 0; idx < aLoopCount; ++idx) {
@@ -647,7 +647,7 @@ private:
     TPipe *pipe_ = nullptr;
     int64_t rDim_;
     int64_t aDim_;
-    int64_t blockDim;
+    int64_t numBlocks;
     int64_t mainBlockCount;
     int64_t mainBlockFactor;
     int64_t tailBlockFactor;

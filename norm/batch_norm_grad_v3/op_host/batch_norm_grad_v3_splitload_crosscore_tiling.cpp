@@ -49,7 +49,7 @@ protected:
             return false;
         }
 
-        if (fusedALen_ % aicoreParams_.blockDim == 0) {
+        if (fusedALen_ % aicoreParams_.numBlocks == 0) {
             return false;
         }
 
@@ -119,7 +119,7 @@ bool BatchNormGradV3SplitLoadCrossCoreTiling::CalcGroupInfo(int64_t tmpALen_, in
         return false;
     }
     // 对核按照C分组，如果每组核数超过总分块数，则取每组核数为总分块数
-    groupCore = aicoreParams_.blockDim / tmpALen_;
+    groupCore = aicoreParams_.numBlocks / tmpALen_;
     groupCore = groupCore > allBlockNum ? allBlockNum : groupCore;
     if (groupCore == 0) {
         return false;
@@ -151,11 +151,11 @@ bool BatchNormGradV3SplitLoadCrossCoreTiling::CalcSplitHwTilingData(int64_t tmpA
     // 每个C的总分块数
     auto allBlockNum = bUbLoop * fusedB0Len_;
 
-    int64_t coreMultiple = aicoreParams_.blockDim / tmpALen_;
+    int64_t coreMultiple = aicoreParams_.numBlocks / tmpALen_;
     if (allBlockNum > TWO && coreMultiple < TWO) {
         // C > 20 || C > 24， 前20个C每两个核处理，后面再走均分逻辑
         morehalfChannel = 1;
-        tmpALen_ -= aicoreParams_.blockDim / TWO;
+        tmpALen_ -= aicoreParams_.numBlocks / TWO;
 
         groupCore = TWO;
         // 计算每个核计算的block数量
@@ -179,11 +179,11 @@ bool BatchNormGradV3SplitLoadCrossCoreTiling::CalcSplitNTilingData(int64_t tmpAL
         return false;
     }
 
-    int64_t coreMultiple = aicoreParams_.blockDim / tmpALen_;
+    int64_t coreMultiple = aicoreParams_.numBlocks / tmpALen_;
     if (allBlockNum > TWO && coreMultiple < TWO) {
         // C > 20 || C > 24， 前20个C每两个核处理，后面再走均分逻辑
         morehalfChannel = 1;
-        tmpALen_ -= aicoreParams_.blockDim / TWO;
+        tmpALen_ -= aicoreParams_.numBlocks / TWO;
 
         groupCore = TWO;
         // 计算每个核计算的block数量
@@ -208,7 +208,7 @@ bool BatchNormGradV3SplitLoadCrossCoreTiling::CalcSplitNTilingData(int64_t tmpAL
 
 ge::graphStatus BatchNormGradV3SplitLoadCrossCoreTiling::DoOpTiling()
 {
-    eachCoreChannel = fusedALen_ / aicoreParams_.blockDim; // 每个核处理的channel个数
+    eachCoreChannel = fusedALen_ / aicoreParams_.numBlocks; // 每个核处理的channel个数
 
     bUbBlock = CalcBubBlock(eachCoreChannel);
     if (dyDtype_ == ge::DT_FLOAT) {
@@ -224,9 +224,9 @@ ge::graphStatus BatchNormGradV3SplitLoadCrossCoreTiling::DoOpTiling()
 
     int64_t tmpALen_ = fusedALen_;
 
-    if (fusedALen_ > aicoreParams_.blockDim) {
+    if (fusedALen_ > aicoreParams_.numBlocks) {
         moreMultiChannel = 1;
-        tmpALen_ -= eachCoreChannel * aicoreParams_.blockDim;
+        tmpALen_ -= eachCoreChannel * aicoreParams_.numBlocks;
     }
 
     if (bUbBlock < fusedB1Align * TWO) {
@@ -267,7 +267,7 @@ void BatchNormGradV3SplitLoadCrossCoreTiling::FillTilingData()
     tilingData_.set_moreMultiChannel(moreMultiChannel);
     tilingData_.set_bUbLoopMulti(bUbLoopMulti);
     tilingData_.set_b0UbBlockTailMulti(b0UbBlockTailMulti);
-    tilingData_.set_coreNum(aicoreParams_.blockDim);
+    tilingData_.set_coreNum(aicoreParams_.numBlocks);
     tilingData_.set_epsilon(epsilon_);
 }
 
@@ -282,7 +282,7 @@ uint64_t BatchNormGradV3SplitLoadCrossCoreTiling::GetTilingKey() const
 
 ge::graphStatus BatchNormGradV3SplitLoadCrossCoreTiling::PostTiling()
 {
-    int64_t coreNum = moreMultiChannel || morehalfChannel ? aicoreParams_.blockDim : needCoreNum;
+    int64_t coreNum = moreMultiChannel || morehalfChannel ? aicoreParams_.numBlocks : needCoreNum;
     context_->SetBlockDim(coreNum);
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);

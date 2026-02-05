@@ -275,7 +275,7 @@ ge::graphStatus QuantizedBatchNormTilingBase::GetPlatformInfo()
         commonParams.ubSizePlatForm = compileInfoPtr->ubSize;
     }
     OP_CHECK_IF(
-        commonParams.coreNum == 0, OP_LOGE(commonParams.nodeName, "blockDim should not be equal to zero."),
+        commonParams.coreNum == 0, OP_LOGE(commonParams.nodeName, "numBlocks should not be equal to zero."),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         commonParams.ubSizePlatForm == 0, OP_LOGE(commonParams.nodeName, "ubSize should not be equal to zero."),

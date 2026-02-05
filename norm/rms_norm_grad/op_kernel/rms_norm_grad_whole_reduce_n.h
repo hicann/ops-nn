@@ -42,7 +42,7 @@ protected:
     uint32_t ubFactor;
     uint32_t coreCalcNum;
     uint32_t coreCalcTail;
-    uint32_t blockDim;
+    uint32_t numBlocks;
     uint32_t ubCalcNum;
     uint32_t ubCalcTail;
     uint32_t ubCalcLoop;
@@ -80,7 +80,7 @@ __aicore__ inline void RmsNormGradWholeReduceN<T>::Init(
     InitData(tiling);
 
     blockIdx = GetBlockIdx();
-    if (blockIdx < blockDim - 1) {
+    if (blockIdx < numBlocks - 1) {
         coreOffset = blockFactor;
     } else {
         coreOffset = coreCalcTail > 0 ? coreCalcTail : blockFactor;
@@ -132,7 +132,7 @@ __aicore__ inline void RmsNormGradWholeReduceN<T>::InitData(const RmsNormGradTil
     ubFactor = tiling->ub_factor;
     coreCalcNum = tiling->core_calc_num;
     coreCalcTail = tiling->core_calc_tail;
-    blockDim = tiling->block_dim;
+    numBlocks = tiling->block_dim;
     ubCalcNum = tiling->ub_calc_num;
     ubCalcTail = tiling->ub_calc_tail;
     ubCalcLoop = tiling->ub_calc_loop;
@@ -169,7 +169,7 @@ __aicore__ inline void RmsNormGradWholeReduceN<T>::Process()
             CopyOut(ubCalcLoop - 1, ubCalcTail);
         }
     } else {
-        if (blockIdx < blockDim - 1) {
+        if (blockIdx < numBlocks - 1) {
             for (uint32_t i = 0; i < (ubCalcTail == 0 ? ubCalcLoop : ubCalcLoop - 1); i++) {
                 CopyIn(i, ubCalcNum);
                 Compute(ubCalcNum, gammaUb, dgamma);

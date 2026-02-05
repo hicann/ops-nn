@@ -145,12 +145,12 @@ ge::graphStatus BatchNormV3InferTiling::GetPlatformInfo()
     auto platformInfo = context_->GetPlatformInfo();
     if (platformInfo != nullptr) {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-        aicoreParams_.blockDim = ascendcPlatform.GetCoreNumAiv();
+        aicoreParams_.numBlocks = ascendcPlatform.GetCoreNumAiv();
         uint64_t ubSizePlatForm;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
         aicoreParams_.ubSize = ubSizePlatForm;
     } else {
-        aicoreParams_.blockDim = compileInfo->coreNum;
+        aicoreParams_.numBlocks = compileInfo->coreNum;
         aicoreParams_.ubSize = compileInfo->ubSize;
     }
     return ge::GRAPH_SUCCESS;
@@ -236,7 +236,7 @@ ge::graphStatus BatchNormV3InferTiling::DoOpTiling()
     int64_t aOuter = CeilDiv(fusedALen_, aInner);
 
     int64_t totalTiles = b0Outer * aOuter * b1Outer;
-    int64_t tilesPerCore = CeilDiv(totalTiles, static_cast<int64_t>(aicoreParams_.blockDim));
+    int64_t tilesPerCore = CeilDiv(totalTiles, static_cast<int64_t>(aicoreParams_.numBlocks));
     usedCoreNums_ = CeilDiv(totalTiles, tilesPerCore);
 
     int64_t tileBlockB0Tail = fusedB0Len_ - b0Inner * (b0Outer - 1);

@@ -64,7 +64,7 @@ private:
 
 ge::graphStatus BatchNormGradV3FullLoadTiling::DoOpTiling()
 {
-    uint64_t eachCoreChannel = std::ceil((float)fusedALen_ / aicoreParams_.blockDim); // 每个核处理的channel个数
+    uint64_t eachCoreChannel = std::ceil((float)fusedALen_ / aicoreParams_.numBlocks); // 每个核处理的channel个数
     if (eachCoreChannel == 0) {
         return ge::GRAPH_FAILED;
     }

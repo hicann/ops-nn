@@ -67,12 +67,12 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::GetPlatformInfo()
 
     if (platformInfo != nullptr) {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-        aicoreParams_.blockDim = ascendcPlatform.GetCoreNumAiv();
+        aicoreParams_.numBlocks = ascendcPlatform.GetCoreNumAiv();
         uint64_t ubSizePlatForm;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
         aicoreParams_.ubSize = ubSizePlatForm;
     } else {
-        aicoreParams_.blockDim = compileInfoPtr->coreNum;
+        aicoreParams_.numBlocks = compileInfoPtr->coreNum;
         aicoreParams_.ubSize = compileInfoPtr->ubSize;
     }
     return ge::GRAPH_SUCCESS;
@@ -328,7 +328,7 @@ ge::graphStatus BatchNormV3FullReduceTilingBase::DoOpTiling()
     batchNormV3TilingData.set_momentum(momentum);
 
     // core num
-    int64_t blockFactor = (a + aicoreParams_.blockDim - 1) / aicoreParams_.blockDim;
+    int64_t blockFactor = (a + aicoreParams_.numBlocks - 1) / aicoreParams_.numBlocks;
     blockNum = (a + blockFactor - 1) / blockFactor;
     batchNormV3TilingData.set_aBlockFactor(blockFactor);
     batchNormV3TilingData.set_blockNum(blockNum);
@@ -492,7 +492,7 @@ ge::graphStatus BatchNormV3RAFullReduceTilingBase::DoOpTiling()
         elemSize = FP16_BYTE;
     }
     int64_t theLeastAPerCore = blockSize / elemSize;
-    int64_t blockFactor = (a + aicoreParams_.blockDim - 1) / aicoreParams_.blockDim;
+    int64_t blockFactor = (a + aicoreParams_.numBlocks - 1) / aicoreParams_.numBlocks;
     if (blockFactor < theLeastAPerCore) {
         blockFactor = theLeastAPerCore;
     }

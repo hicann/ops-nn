@@ -26,7 +26,7 @@
 #pragma pack(1)
 
 struct LayerNormV4TilingDataSingleRead {
-    uint32_t blockDim = 0;
+    uint32_t numBlocks = 0;
     uint32_t colSize = 0;
     uint32_t rowSize = 0;
     float eps = 0;
@@ -49,7 +49,7 @@ struct LayerNormV4TilingDataSingleRead {
 struct LayerNormV4TilingDataTranspose {
     uint64_t col = 0;                 // 输入tensor的行
     uint64_t row = 0;                 // 输入tensor的列，即reduce的轴
-    uint64_t blockDim = 0;            // 实际使用的core数量
+    uint64_t numBlocks = 0;            // 实际使用的core数量
     uint64_t blockFormer = 0;         // 整核处理的row大小
     uint64_t blockTail = 0;           // 尾核处理的row大小
     uint64_t ubFormer = 0;            // ub整循环处理的row大小
@@ -70,7 +70,7 @@ struct LayerNormV4TilingDataTranspose {
 #pragma pack(1)
 
 struct LayerNormV4MergeNTilingData {
-    uint32_t blockDim = 0;
+    uint32_t numBlocks = 0;
     uint32_t colSize = 0;
     uint32_t rowSize = 0;
     float eps = 0;
@@ -97,7 +97,7 @@ struct LayerNormV4MergeNTilingData {
 #pragma pack(1)
 
 struct LayerNormV4CommonTilingData {
-    int64_t blockDim = 0;
+    int64_t numBlocks = 0;
     uint32_t colSize = 0;
     uint32_t rowSize = 0;
     float eps = 0;

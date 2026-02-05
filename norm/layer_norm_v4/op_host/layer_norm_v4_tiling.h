@@ -36,7 +36,7 @@ END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(LayerNormV4, LayerNormV4TilingData)
 
 BEGIN_TILING_DATA_DEF(LayerNormV4TilingDataSingleRead)
-TILING_DATA_FIELD_DEF(uint32_t, blockDim);
+TILING_DATA_FIELD_DEF(uint32_t, numBlocks);
 TILING_DATA_FIELD_DEF(uint32_t, colSize);
 TILING_DATA_FIELD_DEF(uint32_t, rowSize);
 TILING_DATA_FIELD_DEF(float, eps);
@@ -61,7 +61,7 @@ REGISTER_TILING_DATA_CLASS(LayerNormV4_122, LayerNormV4TilingDataSingleRead)
 BEGIN_TILING_DATA_DEF(LayerNormV4TilingDataTranspose)
 TILING_DATA_FIELD_DEF(uint64_t, col);                    // 输入tensor的行
 TILING_DATA_FIELD_DEF(uint64_t, row);                    // 输入tensor的列，即reduce的轴
-TILING_DATA_FIELD_DEF(uint64_t, blockDim);               // 实际使用的core数量
+TILING_DATA_FIELD_DEF(uint64_t, numBlocks);               // 实际使用的core数量
 TILING_DATA_FIELD_DEF(uint64_t, blockFormer);            // 整核处理的row大小
 TILING_DATA_FIELD_DEF(uint64_t, blockTail);              // 尾核处理的row大小
 TILING_DATA_FIELD_DEF(uint64_t, ubFormer);               // ub整循环处理的row大小
@@ -111,7 +111,7 @@ BEGIN_TILING_DATA_DEF(LayerNormV4TilingDataWelford)
 TILING_DATA_FIELD_DEF(int64_t, M);                  // 输入tensor的行
 TILING_DATA_FIELD_DEF(int64_t, N);                  // 输入tensor的列，即reduce的轴
 TILING_DATA_FIELD_DEF(int64_t, rAlign);             // r对齐的大小
-TILING_DATA_FIELD_DEF(int64_t, blockDim);           // 实际使用的core数量
+TILING_DATA_FIELD_DEF(int64_t, numBlocks);           // 实际使用的core数量
 TILING_DATA_FIELD_DEF(int64_t, mainBlockCount);     // 整核的数量
 TILING_DATA_FIELD_DEF(int64_t, mainBlockFactor);    // 整核处理的row大小
 TILING_DATA_FIELD_DEF(int64_t, tailBlockFactor);    // 尾核处理的row大小
@@ -153,7 +153,7 @@ REGISTER_TILING_DATA_CLASS(LayerNormV4_520, LayerNormV4TilingDataRegBaseTwoPassP
 REGISTER_TILING_DATA_CLASS(LayerNormV4_522, LayerNormV4TilingDataRegBaseTwoPassPerf)
 
 BEGIN_TILING_DATA_DEF(LayerNormV4CommonTilingData)
-TILING_DATA_FIELD_DEF(int64_t, blockDim);
+TILING_DATA_FIELD_DEF(int64_t, numBlocks);
 TILING_DATA_FIELD_DEF(uint32_t, colSize);
 TILING_DATA_FIELD_DEF(uint32_t, rowSize);
 TILING_DATA_FIELD_DEF(float, eps);
@@ -168,7 +168,7 @@ REGISTER_TILING_DATA_CLASS(LayerNormV4_701, LayerNormV4CommonTilingData);
 REGISTER_TILING_DATA_CLASS(LayerNormV4_702, LayerNormV4CommonTilingData);
 
 BEGIN_TILING_DATA_DEF(LayerNormV4MergeNTilingData)
-TILING_DATA_FIELD_DEF(uint32_t, blockDim);
+TILING_DATA_FIELD_DEF(uint32_t, numBlocks);
 TILING_DATA_FIELD_DEF(uint32_t, colSize);
 TILING_DATA_FIELD_DEF(uint32_t, rowSize);
 TILING_DATA_FIELD_DEF(float, eps);
@@ -347,7 +347,7 @@ protected:
 
 private:
     struct BlockTilingData {
-        uint64_t blockDim;
+        uint64_t numBlocks;
         uint64_t blockFormer;
         uint64_t blockTail;
     };

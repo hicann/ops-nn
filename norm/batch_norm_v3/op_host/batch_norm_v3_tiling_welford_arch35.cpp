@@ -149,12 +149,12 @@ ge::graphStatus BatchNormV3WelfordReduceTilingBase::GetPlatformInfo()
     auto platformInfo = context_->GetPlatformInfo();
     if (platformInfo != nullptr) {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-        aicoreParams_.blockDim = ascendcPlatform.GetCoreNumAiv();
+        aicoreParams_.numBlocks = ascendcPlatform.GetCoreNumAiv();
         uint64_t ubSizePlatForm;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
         aicoreParams_.ubSize = ubSizePlatForm;
     } else {
-        aicoreParams_.blockDim = compileInfo->coreNum;
+        aicoreParams_.numBlocks = compileInfo->coreNum;
         aicoreParams_.ubSize = compileInfo->ubSize;
     }
     return ge::GRAPH_SUCCESS;
@@ -222,7 +222,7 @@ ge::graphStatus BatchNormV3WelfordReduceTilingBase::GetShapeAttrsInfo()
 ge::graphStatus BatchNormV3WelfordReduceTilingBase::DoOpTiling()
 {
     // block tiling
-    tilingData.set_aBlockFactor(CeilDiv(a0, (int64_t)aicoreParams_.blockDim));
+    tilingData.set_aBlockFactor(CeilDiv(a0, (int64_t)aicoreParams_.numBlocks));
     tilingData.set_realCoreNum(CeilDiv(a0, tilingData.get_aBlockFactor()));
     tilingData.set_numLastCore(a0 % tilingData.get_aBlockFactor());
     blockNum = tilingData.get_realCoreNum();

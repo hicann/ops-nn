@@ -92,9 +92,9 @@ public:
     }
 
     __aicore__ inline void InitInputGmBuffer(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, uint32_t blockDim, uint32_t coreCalcTail)
+        GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, uint32_t numBlocks, uint32_t coreCalcTail)
     {
-        if (GetBlockIdx() < blockDim - 1) {
+        if (GetBlockIdx() < numBlocks - 1) {
             coreOffset_ = blockFactor_;
         } else {
             coreOffset_ = coreCalcTail > 0 ? coreCalcTail : blockFactor_;

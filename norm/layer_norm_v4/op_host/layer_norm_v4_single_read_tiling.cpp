@@ -74,7 +74,7 @@ uint64_t LayerNormV4SingleReadTiling::GetTilingKey() const
 
 ge::graphStatus LayerNormV4SingleReadTiling::DoOpTiling()
 {
-    uint32_t blockDim = 0;
+    uint32_t numBlocks = 0;
     uint32_t nRow = 0;
     uint32_t tailNRow = 0;
     uint32_t blockCount = 0;
@@ -84,21 +84,21 @@ ge::graphStatus LayerNormV4SingleReadTiling::DoOpTiling()
     rowMax = ((commonParams.ubSizePlatForm - NUM_EIGHT * BLOCK_SIZE) / FLOAT_SIZE) / NUM_TWO;
     if (commonParams.colSize <= commonParams.coreNum) {
         nRow = 1;
-        blockDim = static_cast<uint32_t>(commonParams.colSize);
+        numBlocks = static_cast<uint32_t>(commonParams.colSize);
     } else {
         nRow = rowMax / commonParams.rowAlign;
         if (nRow > N_ROW_LIMIT) {
             nRow = N_ROW_LIMIT;
         }
-        blockDim = static_cast<uint32_t>(commonParams.coreNum);
+        numBlocks = static_cast<uint32_t>(commonParams.coreNum);
     }
 
     blockCount = commonParams.colSize / nRow;
     tailNRow = commonParams.colSize - blockCount * nRow;
-    loopCount = blockCount / blockDim;
-    tailLoop = blockCount - loopCount * blockDim;
+    loopCount = blockCount / numBlocks;
+    tailLoop = blockCount - loopCount * numBlocks;
 
-    td_.set_blockDim(blockDim);
+    td_.set_numBlocks(numBlocks);
     td_.set_colSize(commonParams.colSize);
     td_.set_rowSize(commonParams.rowSize);
     td_.set_eps(commonParams.eps);
@@ -118,7 +118,7 @@ ge::graphStatus LayerNormV4SingleReadTiling::DoOpTiling()
 
 ge::graphStatus LayerNormV4SingleReadTiling::PostTiling()
 {
-    context_->SetBlockDim(td_.get_blockDim());
+    context_->SetBlockDim(td_.get_numBlocks());
     td_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(td_.GetDataSize());
 

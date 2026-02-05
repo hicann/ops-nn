@@ -41,10 +41,10 @@ ge::graphStatus LayerNormV3WelfordTiling::DoOpTiling()
     td_.set_epsilon(commonParams.eps);
 
     int64_t blockFactor = (td_.get_M() + commonParams.coreNum - 1) / commonParams.coreNum;
-    int64_t blockDim = (td_.get_M() + blockFactor - 1) / blockFactor;
+    int64_t numBlocks = (td_.get_M() + blockFactor - 1) / blockFactor;
     int64_t mainBlockCount = td_.get_M() / blockFactor;
     td_.set_mainBlockCount(mainBlockCount);
-    td_.set_blockDim(blockDim);
+    td_.set_numBlocks(numBlocks);
     td_.set_mainBlockFactor(blockFactor);
     td_.set_tailBlockFactor(td_.get_M() - mainBlockCount * blockFactor);
 
@@ -134,8 +134,8 @@ ge::graphStatus LayerNormV3WelfordTiling::DoLibApiTiling()
 
 ge::graphStatus LayerNormV3WelfordTiling::PostTiling()
 {
-    int64_t blockDim = td_.get_blockDim();
-    context_->SetBlockDim(blockDim);
+    int64_t numBlocks = td_.get_numBlocks();
+    context_->SetBlockDim(numBlocks);
     td_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(td_.GetDataSize());
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);

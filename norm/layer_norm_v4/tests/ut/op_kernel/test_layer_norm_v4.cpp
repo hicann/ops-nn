@@ -52,7 +52,7 @@ TEST_F(layer_norm_v4_test, test_case_0001_100)
     size_t meanByteSize = 1 * 960 * sizeof(float);
     size_t rstdByteSize = 1 * 960 * sizeof(float);
     size_t tiling_data_size = sizeof(LayerNormV4TilingDataSingleRead);
-    uint32_t blockDim = 48;
+    uint32_t numBlocks = 48;
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
@@ -68,7 +68,7 @@ TEST_F(layer_norm_v4_test, test_case_0001_100)
 
     LayerNormV4TilingDataSingleRead* tilingDatafromBin = reinterpret_cast<LayerNormV4TilingDataSingleRead*>(tiling);
 
-    tilingDatafromBin->blockDim = 48;
+    tilingDatafromBin->numBlocks = 48;
     tilingDatafromBin->colSize = 960;
     tilingDatafromBin->rowSize = 8192;
     tilingDatafromBin->eps = 1e-05;
@@ -86,7 +86,7 @@ TEST_F(layer_norm_v4_test, test_case_0001_100)
 
     ICPU_SET_TILING_KEY(100);
     ICPU_RUN_KF(
-        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -108,7 +108,7 @@ TEST_F(layer_norm_v4_test, test_case_0002)
     size_t meanByteSize = 48 * sizeof(float);
     size_t rstdByteSize = 48 * sizeof(float);
     size_t tiling_data_size = sizeof(LayerNormV4TilingDataTranspose);
-    uint32_t blockDim = 48;
+    uint32_t numBlocks = 48;
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
@@ -126,7 +126,7 @@ TEST_F(layer_norm_v4_test, test_case_0002)
 
     tilingDatafromBin->col = 48;                // 输入tensor的行
     tilingDatafromBin->row = 2;                 // 输入tensor的列，即reduce的轴
-    tilingDatafromBin->blockDim = 48;           // 实际使用的core数量
+    tilingDatafromBin->numBlocks = 48;           // 实际使用的core数量
     tilingDatafromBin->blockFormer = 1;         // 整核处理的row大小
     tilingDatafromBin->blockTail = 1;           // 尾核处理的row大小
     tilingDatafromBin->ubFormer = 1;            // ub整循环处理的row大小
@@ -144,19 +144,19 @@ TEST_F(layer_norm_v4_test, test_case_0002)
 
     ICPU_SET_TILING_KEY(200);
     ICPU_RUN_KF(
-        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(210);
     ICPU_RUN_KF(
-        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(211);
     ICPU_RUN_KF(
-        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(220);
     ICPU_RUN_KF(
-        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(222);
     ICPU_RUN_KF(
-        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -178,7 +178,7 @@ TEST_F(layer_norm_v4_test, test_case_0004)
     size_t meanByteSize = 48 * sizeof(float);
     size_t rstdByteSize = 48 * sizeof(float);
     size_t tiling_data_size = sizeof(LayerNormV4CommonTilingData);
-    uint32_t blockDim = 48;
+    uint32_t numBlocks = 48;
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
@@ -196,7 +196,7 @@ TEST_F(layer_norm_v4_test, test_case_0004)
 
     tilingDatafromBin->colSize = 200;
     tilingDatafromBin->rowSize = 48;
-    tilingDatafromBin->blockDim = 48;
+    tilingDatafromBin->numBlocks = 48;
     tilingDatafromBin->space = 192 * 1024;
     tilingDatafromBin->eps = 0.00001;
     tilingDatafromBin->coefficient = 0.005;
@@ -206,7 +206,7 @@ TEST_F(layer_norm_v4_test, test_case_0004)
 
     ICPU_SET_TILING_KEY(700);
     ICPU_RUN_KF(
-        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -228,7 +228,7 @@ TEST_F(layer_norm_v4_test, test_case_0005)
     size_t meanByteSize = 50 * sizeof(float);
     size_t rstdByteSize = 50 * sizeof(float);
     size_t tiling_data_size = sizeof(LayerNormV4CommonTilingData);
-    uint32_t blockDim = 50;
+    uint32_t numBlocks = 50;
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
@@ -246,7 +246,7 @@ TEST_F(layer_norm_v4_test, test_case_0005)
 
     tilingDatafromBin->colSize = 200;
     tilingDatafromBin->rowSize = 48;
-    tilingDatafromBin->blockDim = 48;
+    tilingDatafromBin->numBlocks = 48;
     tilingDatafromBin->space = 192 * 1024;
     tilingDatafromBin->eps = 0.00001;
     tilingDatafromBin->coefficient = 0.005;
@@ -256,7 +256,7 @@ TEST_F(layer_norm_v4_test, test_case_0005)
 
     ICPU_SET_TILING_KEY(700);
     ICPU_RUN_KF(
-        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -278,7 +278,7 @@ TEST_F(layer_norm_v4_test, test_case_0006)
     size_t meanByteSize = 48 * sizeof(float);
     size_t rstdByteSize = 48 * sizeof(float);
     size_t tiling_data_size = sizeof(LayerNormV4MergeNTilingData);
-    uint32_t blockDim = 48;
+    uint32_t numBlocks = 48;
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
@@ -294,7 +294,7 @@ TEST_F(layer_norm_v4_test, test_case_0006)
 
     LayerNormV4MergeNTilingData* tilingDatafromBin = reinterpret_cast<LayerNormV4MergeNTilingData*>(tiling);
 
-    tilingDatafromBin-> blockDim = 48;
+    tilingDatafromBin-> numBlocks = 48;
     tilingDatafromBin-> colSize = 48;
     tilingDatafromBin-> rowSize = 256;
     float eps = 0.00001;
@@ -317,7 +317,7 @@ TEST_F(layer_norm_v4_test, test_case_0006)
 
     ICPU_SET_TILING_KEY(1600);
     ICPU_RUN_KF(
-        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -339,7 +339,7 @@ TEST_F(layer_norm_v4_test, test_case_0007)
     size_t meanByteSize = 193 * sizeof(float);
     size_t rstdByteSize = 193 * sizeof(float);
     size_t tiling_data_size = sizeof(LayerNormV4MergeNTilingData);
-    uint32_t blockDim = 48;
+    uint32_t numBlocks = 48;
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
@@ -355,7 +355,7 @@ TEST_F(layer_norm_v4_test, test_case_0007)
 
     LayerNormV4MergeNTilingData* tilingDatafromBin = reinterpret_cast<LayerNormV4MergeNTilingData*>(tiling);
 
-    tilingDatafromBin-> blockDim = 48;
+    tilingDatafromBin-> numBlocks = 48;
     tilingDatafromBin-> colSize = 193;
     tilingDatafromBin-> rowSize = 256;
     float eps = 0.00001;
@@ -378,7 +378,7 @@ TEST_F(layer_norm_v4_test, test_case_0007)
 
     ICPU_SET_TILING_KEY(1600);
     ICPU_RUN_KF(
-        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -400,7 +400,7 @@ TEST_F(layer_norm_v4_test, test_case_0008)
     size_t meanByteSize = 48 * sizeof(float);
     size_t rstdByteSize = 48 * sizeof(float);
     size_t tiling_data_size = sizeof(LayerNormV4MergeNTilingData);
-    uint32_t blockDim = 48;
+    uint32_t numBlocks = 48;
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
@@ -416,7 +416,7 @@ TEST_F(layer_norm_v4_test, test_case_0008)
 
     LayerNormV4MergeNTilingData* tilingDatafromBin = reinterpret_cast<LayerNormV4MergeNTilingData*>(tiling);
 
-    tilingDatafromBin-> blockDim = 48;
+    tilingDatafromBin-> numBlocks = 48;
     tilingDatafromBin-> colSize = 48;
     tilingDatafromBin-> rowSize = 2560;
     float eps = 0.00001;
@@ -439,7 +439,7 @@ TEST_F(layer_norm_v4_test, test_case_0008)
 
     ICPU_SET_TILING_KEY(600);
     ICPU_RUN_KF(
-        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -461,7 +461,7 @@ TEST_F(layer_norm_v4_test, test_case_0009)
     size_t meanByteSize = 193 * sizeof(float);
     size_t rstdByteSize = 193 * sizeof(float);
     size_t tiling_data_size = sizeof(LayerNormV4MergeNTilingData);
-    uint32_t blockDim = 48;
+    uint32_t numBlocks = 48;
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
@@ -477,7 +477,7 @@ TEST_F(layer_norm_v4_test, test_case_0009)
 
     LayerNormV4MergeNTilingData* tilingDatafromBin = reinterpret_cast<LayerNormV4MergeNTilingData*>(tiling);
 
-    tilingDatafromBin-> blockDim = 48;
+    tilingDatafromBin-> numBlocks = 48;
     tilingDatafromBin-> colSize = 193;
     tilingDatafromBin-> rowSize = 2560;
     float eps = 0.00001;
@@ -500,7 +500,7 @@ TEST_F(layer_norm_v4_test, test_case_0009)
 
     ICPU_SET_TILING_KEY(600);
     ICPU_RUN_KF(
-        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -522,7 +522,7 @@ TEST_F(layer_norm_v4_test, test_case_0010)
     size_t meanByteSize = 48 * sizeof(float);
     size_t rstdByteSize = 48 * sizeof(float);
     size_t tiling_data_size = sizeof(LayerNormV4MergeNTilingData);
-    uint32_t blockDim = 48;
+    uint32_t numBlocks = 48;
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
@@ -538,7 +538,7 @@ TEST_F(layer_norm_v4_test, test_case_0010)
 
     LayerNormV4MergeNTilingData* tilingDatafromBin = reinterpret_cast<LayerNormV4MergeNTilingData*>(tiling);
 
-    tilingDatafromBin-> blockDim = 48;
+    tilingDatafromBin-> numBlocks = 48;
     tilingDatafromBin-> colSize = 48;
     tilingDatafromBin-> rowSize = 1;
     float eps = 0.00001;
@@ -561,7 +561,7 @@ TEST_F(layer_norm_v4_test, test_case_0010)
 
     ICPU_SET_TILING_KEY(2600);
     ICPU_RUN_KF(
-        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -583,7 +583,7 @@ TEST_F(layer_norm_v4_test, test_case_0011)
     size_t meanByteSize = 193 * sizeof(float);
     size_t rstdByteSize = 193 * sizeof(float);
     size_t tiling_data_size = sizeof(LayerNormV4MergeNTilingData);
-    uint32_t blockDim = 48;
+    uint32_t numBlocks = 48;
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
@@ -599,7 +599,7 @@ TEST_F(layer_norm_v4_test, test_case_0011)
 
     LayerNormV4MergeNTilingData* tilingDatafromBin = reinterpret_cast<LayerNormV4MergeNTilingData*>(tiling);
 
-    tilingDatafromBin-> blockDim = 48;
+    tilingDatafromBin-> numBlocks = 48;
     tilingDatafromBin-> colSize = 193;
     tilingDatafromBin-> rowSize = 1;
     float eps = 0.00001;
@@ -622,7 +622,7 @@ TEST_F(layer_norm_v4_test, test_case_0011)
 
     ICPU_SET_TILING_KEY(2600);
     ICPU_RUN_KF(
-        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);

@@ -82,13 +82,13 @@ ge::graphStatus BatchNormGradV3Base::GetPlatformInfo()
     auto platformInfo = context_->GetPlatformInfo();
     if (platformInfo != nullptr) {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-        aicoreParams_.blockDim = ascendcPlatform.GetCoreNumAiv();
+        aicoreParams_.numBlocks = ascendcPlatform.GetCoreNumAiv();
         socVersion = ascendcPlatform.GetSocVersion();
         uint64_t ubSizePlatForm;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
         aicoreParams_.ubSize = ubSizePlatForm;
     } else {
-        aicoreParams_.blockDim = compileInfo->coreNum;
+        aicoreParams_.numBlocks = compileInfo->coreNum;
         aicoreParams_.ubSize = compileInfo->ubSize;
     }
 

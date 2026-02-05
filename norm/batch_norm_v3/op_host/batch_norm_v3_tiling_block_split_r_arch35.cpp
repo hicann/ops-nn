@@ -164,7 +164,7 @@ ge::graphStatus BatchNormV3BlockSplitRTiling::DoOpTiling()
             fp32EleNumPerBlock) *
         FP32_BYTE;
     int64_t blockDimAlignSize =
-        Ops::Base::CeilAlign(static_cast<int64_t>(aicoreParams_.blockDim), fp32EleNumPerBlock) * FP32_BYTE;
+        Ops::Base::CeilAlign(static_cast<int64_t>(aicoreParams_.numBlocks), fp32EleNumPerBlock) * FP32_BYTE;
     int64_t ubSizeCanUse = aicoreParams_.ubSize - blockDimAlignSize - rFactorMaxAlignSize -
                            aAlignSize * (runningMeanVarNodeNum + gammaBetaNodeNum + BATCH_MEAN_VAR_NODE_NUM);
     int64_t rUbFactor = Ops::Base::FloorDiv(ubSizeCanUse, aAlignSize * (inOutNodeNum + TBUF_NODE_NUM));
@@ -174,7 +174,7 @@ ge::graphStatus BatchNormV3BlockSplitRTiling::DoOpTiling()
         rUbFactor == 0, OP_LOGI(context_->GetNodeName(), "BatchNormV3BlockSplitRTiling rUbFactor == 0"),
         return ge::GRAPH_PARAM_INVALID);
     int64_t rGroups = Ops::Base::FloorDiv(batchNormV3TilingData.get_patternR(), rUbFactor);
-    usedCoreNum = std::min(rGroups, static_cast<int64_t>(aicoreParams_.blockDim));
+    usedCoreNum = std::min(rGroups, static_cast<int64_t>(aicoreParams_.numBlocks));
     int64_t tBufUbFactor = std::max(rUbFactor, usedCoreNum);
     // LastFinalize tbuf无法复用，重新计算rFactor
     while (((rUbFactor * inOutNodeNum + tBufUbFactor * TBUF_NODE_NUM) * aAlignSize > ubSizeCanUse)) {
@@ -182,7 +182,7 @@ ge::graphStatus BatchNormV3BlockSplitRTiling::DoOpTiling()
         rUbFactor = std::min(rUbFactor, batchNormV3TilingData.get_patternR());
         rUbFactor = Ops::Base::FloorAlign(rUbFactor, RA_BINARY_ADD_THRESHOLD);
         rGroups = Ops::Base::FloorDiv(batchNormV3TilingData.get_patternR(), rUbFactor);
-        usedCoreNum = std::min(rGroups, static_cast<int64_t>(aicoreParams_.blockDim));
+        usedCoreNum = std::min(rGroups, static_cast<int64_t>(aicoreParams_.numBlocks));
         tBufUbFactor = std::max(rUbFactor, usedCoreNum);
     }
     OP_CHECK_IF(

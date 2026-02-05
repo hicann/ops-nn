@@ -69,8 +69,8 @@ ge::graphStatus LayerNormGradRecomputeTiling::GammaBetaKernelTiling()
     int64_t nFactorBase = DEFAULT_GAMMA_BETA_N_FACTOR;
     int64_t mainBlockFactor = ops::CeilDiv(colSize, static_cast<int64_t>(commonParams.coreNum));
     mainBlockFactor = std::max(mainBlockFactor, nFactorBase);
-    int64_t blockDim = ops::CeilDiv(colSize, mainBlockFactor);
-    int64_t tailBlockFactor = colSize - (blockDim - CONST_ONE) * mainBlockFactor;
+    int64_t numBlocks = ops::CeilDiv(colSize, mainBlockFactor);
+    int64_t tailBlockFactor = colSize - (numBlocks - CONST_ONE) * mainBlockFactor;
     int64_t nFactorMax = (commonParams.ubSizePlatForm / sizeof(float) - mFactor * CONST_TWO) /
                          (mFactor * CONST_SIX + CONST_THREE + cacheBufferCount * CONST_TWO);
     OP_TILING_CHECK(nFactorMax < nFactorBase,
@@ -87,7 +87,7 @@ ge::graphStatus LayerNormGradRecomputeTiling::GammaBetaKernelTiling()
     int64_t nTailTail = tailBlockFactor - (nLoopTail - CONST_ONE) * nFactor;
 
     td_.set_gammaBetaMainBlockFactor(mainBlockFactor);
-    td_.set_gammaBetaBlockDim(static_cast<int32_t>(blockDim));
+    td_.set_gammaBetaBlockDim(static_cast<int32_t>(numBlocks));
     td_.set_gammaBetaNloopMainBlock(nLoopMain);
     td_.set_gammaBetaNtailMainBlock(nTailMain);
     td_.set_gammaBetaNloopTailBlock(nLoopTail);
@@ -232,9 +232,9 @@ ge::graphStatus LayerNormGradRecomputeTiling::GetWorkspaceSize()
 
 ge::graphStatus LayerNormGradRecomputeTiling::PostTiling()
 {
-    int64_t blockDim = td_.get_gammaBetaBlockDim() > td_.get_backwardBlockDim() ? td_.get_gammaBetaBlockDim() :
+    int64_t numBlocks = td_.get_gammaBetaBlockDim() > td_.get_backwardBlockDim() ? td_.get_gammaBetaBlockDim() :
                                                                                    td_.get_backwardBlockDim();
-    context_->SetBlockDim(blockDim);
+    context_->SetBlockDim(numBlocks);
     td_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(td_.GetDataSize());
 

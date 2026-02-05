@@ -776,14 +776,14 @@ ge::graphStatus BatchNormGradV3RAFullLoadTilingBase::DoOpTiling()
 void BatchNormGradV3RAFullLoadTilingBase::SetBlockFactors(int64_t aDim_, int64_t dtypeSize)
 {
     int64_t aFactor = std::max((aDim_ + coreNum - 1) / coreNum, static_cast<int64_t>(blockSize / dtypeSize));
-    int64_t blockDim = (aDim_ + aFactor - 1) / aFactor;
-    aFactor = (aDim_ + blockDim - 1) / blockDim;
+    int64_t numBlocks = (aDim_ + aFactor - 1) / aFactor;
+    aFactor = (aDim_ + numBlocks - 1) / numBlocks;
     int64_t mainBlockFactor = aFactor;
     int64_t mainBlockCount = aDim_ / aFactor;
     int64_t tailBlockFactor = aDim_ - mainBlockCount * mainBlockFactor;
     int64_t tailBlockCount = tailBlockFactor > 0 ? 1 : 0;
 
-    tilingData.set_blockDim(blockDim);
+    tilingData.set_numBlocks(numBlocks);
     tilingData.set_mainBlockFactor(mainBlockFactor);
     tilingData.set_tailBlockFactor(tailBlockFactor);
     tilingData.set_mainBlockCount(mainBlockCount);
@@ -863,7 +863,7 @@ ge::graphStatus BatchNormGradV3RAFullLoadTilingBase::PostTiling()
 {
     uint64_t tilingKey = GetTilingKey();
     context_->SetTilingKey(tilingKey);
-    context_->SetBlockDim(tilingData.get_blockDim());
+    context_->SetBlockDim(tilingData.get_numBlocks());
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = workspaceSize_;
@@ -926,14 +926,14 @@ ge::graphStatus BatchNormGradV3RARecomputeTilingBase::DoOpTiling()
 void BatchNormGradV3RARecomputeTilingBase::SetBlockFactors(int64_t aDim_, int64_t dtypeSize)
 {
     int64_t aFactor = std::max((aDim_ + coreNum - 1) / coreNum, static_cast<int64_t>(blockSize / dtypeSize));
-    int64_t blockDim = (aDim_ + aFactor - 1) / aFactor;
-    aFactor = (aDim_ + blockDim - 1) / blockDim;
+    int64_t numBlocks = (aDim_ + aFactor - 1) / aFactor;
+    aFactor = (aDim_ + numBlocks - 1) / numBlocks;
     int64_t mainBlockFactor = aFactor;
     int64_t mainBlockCount = aDim_ / aFactor;
     int64_t tailBlockFactor = aDim_ - mainBlockCount * mainBlockFactor;
     int64_t tailBlockCount = tailBlockFactor > 0 ? 1 : 0;
 
-    tilingData.set_blockDim(blockDim);
+    tilingData.set_numBlocks(numBlocks);
     tilingData.set_mainBlockFactor(mainBlockFactor);
     tilingData.set_tailBlockFactor(tailBlockFactor);
     tilingData.set_mainBlockCount(mainBlockCount);
@@ -961,7 +961,7 @@ ge::graphStatus BatchNormGradV3RARecomputeTilingBase::PostTiling()
 {
     uint64_t tilingKey = GetTilingKey();
     context_->SetTilingKey(tilingKey);
-    context_->SetBlockDim(tilingData.get_blockDim());
+    context_->SetBlockDim(tilingData.get_numBlocks());
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = workspaceSize_;

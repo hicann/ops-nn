@@ -152,7 +152,7 @@ ge::graphStatus BatchNormV3RAWelfordTilingBase::DoOpTiling()
         weightElemSize = FP16_BYTE;
     }
     int64_t theLeastAPerCore = blockSize / elemSize;
-    int64_t blockFactor = Ops::Base::CeilDiv(a, static_cast<int64_t>(aicoreParams_.blockDim));
+    int64_t blockFactor = Ops::Base::CeilDiv(a, static_cast<int64_t>(aicoreParams_.numBlocks));
     if (blockFactor < theLeastAPerCore) {
         blockFactor = theLeastAPerCore;
     }

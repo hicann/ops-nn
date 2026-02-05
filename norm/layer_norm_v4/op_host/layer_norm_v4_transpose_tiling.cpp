@@ -123,10 +123,10 @@ void LayerNormV4TransposeTiling::DoBlockTiling(BlockTilingData& blockTilingParam
         blockTilingParams.blockFormer = commonParams.colSize;
         blockTilingParams.blockTail = commonParams.colSize;
     }
-    blockTilingParams.blockDim =
+    blockTilingParams.numBlocks =
         (commonParams.colSize + blockTilingParams.blockFormer - 1) / blockTilingParams.blockFormer;
     blockTilingParams.blockTail =
-        commonParams.colSize - (blockTilingParams.blockDim - 1) * blockTilingParams.blockFormer;
+        commonParams.colSize - (blockTilingParams.numBlocks - 1) * blockTilingParams.blockFormer;
 }
 
 void LayerNormV4TransposeTiling::DoUbTiling(const BlockTilingData& blockTilingParams, UbTilingData& ubTilingParams)
@@ -169,7 +169,7 @@ void LayerNormV4TransposeTiling::DoUbTiling(const BlockTilingData& blockTilingPa
             return;
         }
         // 单核无需判断踩踏情况
-        if (blockTilingParams.blockDim == 1) {
+        if (blockTilingParams.numBlocks == 1) {
             return;
         }
         meanOutLessThanBLOCK = (ubTilingParams.ubTailOfFormerBlock < B32_BLOCK_ALIGN_NUM);
@@ -198,7 +198,7 @@ ge::graphStatus LayerNormV4TransposeTiling::DoOpTiling()
     DoUbTiling(blockTilingParams, ubTilingParams);
     if (ubTilingParams.ubFormer == 0) {
         // ub切分不满足，走单核策略
-        blockTilingParams.blockDim = 1;
+        blockTilingParams.numBlocks = 1;
         blockTilingParams.blockFormer = commonParams.colSize;
         blockTilingParams.blockTail = commonParams.colSize;
         DoUbTiling(blockTilingParams, ubTilingParams);
@@ -210,7 +210,7 @@ ge::graphStatus LayerNormV4TransposeTiling::DoOpTiling()
     // set TilingData
     td_.set_col(commonParams.colSize);
     td_.set_row(commonParams.rowSize);
-    td_.set_blockDim(blockTilingParams.blockDim);
+    td_.set_numBlocks(blockTilingParams.numBlocks);
     td_.set_blockFormer(blockTilingParams.blockFormer);
     td_.set_blockTail(blockTilingParams.blockTail);
     td_.set_ubFormer(ubTilingParams.ubFormer);
@@ -230,7 +230,7 @@ ge::graphStatus LayerNormV4TransposeTiling::DoOpTiling()
 
 ge::graphStatus LayerNormV4TransposeTiling::PostTiling()
 {
-    context_->SetBlockDim(td_.get_blockDim());
+    context_->SetBlockDim(td_.get_numBlocks());
     td_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(td_.GetDataSize());
 

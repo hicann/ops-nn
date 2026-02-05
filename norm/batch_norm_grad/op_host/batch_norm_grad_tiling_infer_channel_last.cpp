@@ -100,7 +100,7 @@ ge::graphStatus BatchNormGradInferChannelLastTiling::DoOpTilingForStage0()
 
     // 切核 （Bouter, Binner, Aouter, Ainner*aTileBase_） -- > (Bouter*Aouter, Binner, Ainner*aTileBase_)
     int64_t totalTiles = aOuter * bOuter;
-    int64_t tilesPerCore = Ops::Base::CeilDiv(totalTiles, static_cast<int64_t>(aicoreParams_.blockDim));
+    int64_t tilesPerCore = Ops::Base::CeilDiv(totalTiles, static_cast<int64_t>(aicoreParams_.numBlocks));
     usedCoreNums_ = Ops::Base::CeilDiv(totalTiles, tilesPerCore);
 
     tilingData_.dxTilingData.set_totalTiles(totalTiles);
@@ -174,7 +174,7 @@ ge::graphStatus BatchNormGradInferChannelLastTiling::DoOpTilingForStage1()
 
     // 尽量占多核
     int64_t aFactorMax = Ops::Base::CeilDiv(aDim, aBase);
-    int64_t aFactorInnerMax = Ops::Base::CeilDiv(aFactorMax, static_cast<int64_t>(aicoreParams_.blockDim));
+    int64_t aFactorInnerMax = Ops::Base::CeilDiv(aFactorMax, static_cast<int64_t>(aicoreParams_.numBlocks));
     int64_t aFactorInner = aFactorInnerMax < factorMax ? aFactorInnerMax : factorMax;
     int64_t aInner = aFactorInner * aBase;
 
@@ -182,7 +182,7 @@ ge::graphStatus BatchNormGradInferChannelLastTiling::DoOpTilingForStage1()
     int64_t aTail = aDim - aInner * (aOuter - 1);
 
     // 不切R轴
-    int64_t aOuterPerCore = Ops::Base::CeilDiv(aOuter, static_cast<int64_t>(aicoreParams_.blockDim));
+    int64_t aOuterPerCore = Ops::Base::CeilDiv(aOuter, static_cast<int64_t>(aicoreParams_.numBlocks));
     int64_t usedCoreNums = Ops::Base::CeilDiv(aOuter, aOuterPerCore);
 
     tilingData_.set_aDimStg1(aDim);

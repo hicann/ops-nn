@@ -53,9 +53,9 @@ extern "C" __global__ __aicore__ void rms_norm_grad(
 
 #ifndef __CCE_KT_TEST__
 void rms_norm_grad_do(
-    uint32_t blockDim, void* l2ctrl, void* stream, uint8_t* dy, uint8_t* x, uint8_t* rstd, uint8_t* gamma, uint8_t* dx,
+    uint32_t numBlocks, void* l2ctrl, void* stream, uint8_t* dy, uint8_t* x, uint8_t* rstd, uint8_t* gamma, uint8_t* dx,
     uint8_t* dgamma, uint8_t* workspace, uint8_t* tiling)
 {
-    rms_norm_grad<<<blockDim, l2ctrl, stream>>>(dy, x, rstd, gamma, dx, dgamma, workspace, tiling);
+    rms_norm_grad<<<numBlocks, l2ctrl, stream>>>(dy, x, rstd, gamma, dx, dgamma, workspace, tiling);
 }
 #endif

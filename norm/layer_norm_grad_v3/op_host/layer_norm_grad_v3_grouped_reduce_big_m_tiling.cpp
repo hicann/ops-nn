@@ -193,8 +193,8 @@ ge::graphStatus LayerNormGradV3GroupedReduceBigMTiling::GetWorkspaceSize()
 
 ge::graphStatus LayerNormGradV3GroupedReduceBigMTiling::PostTiling()
 {
-    int64_t blockDim = commonParams.coreNum;
-    context_->SetBlockDim(blockDim);
+    int64_t numBlocks = commonParams.coreNum;
+    context_->SetBlockDim(numBlocks);
     context_->SetScheduleMode(1); // Set to batch mode, all cores start simultaneously
     td_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(td_.GetDataSize());

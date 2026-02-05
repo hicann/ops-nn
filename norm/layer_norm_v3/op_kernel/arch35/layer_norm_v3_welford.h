@@ -58,7 +58,7 @@ public:
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR lastout)
     {
         // Init
-        if (GetBlockIdx() >= td_->blockDim) {
+        if (GetBlockIdx() >= td_->numBlocks) {
             return;
         }
 
@@ -98,7 +98,7 @@ public:
     __aicore__ inline void Process()
     {
         // Process
-        if (GetBlockIdx() >= td_->blockDim) {
+        if (GetBlockIdx() >= td_->numBlocks) {
             return;
         }
 

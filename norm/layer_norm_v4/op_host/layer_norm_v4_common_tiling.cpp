@@ -82,7 +82,7 @@ ge::graphStatus LayerNormV4CommonTiling::DoOpTiling()
         OP_LOGE(context_->GetNodeName(), "The size of normalized shape is too big.");
         return ge::GRAPH_FAILED;
     }
-    td_.set_blockDim(selfBlockDim_);
+    td_.set_numBlocks(selfBlockDim_);
     td_.set_colSize(commonParams.rowSize);
     td_.set_rowSize(commonParams.colSize);
     td_.set_eps(commonParams.eps);
@@ -97,7 +97,7 @@ ge::graphStatus LayerNormV4CommonTiling::DoOpTiling()
 
 void LayerNormV4CommonTiling::TilingDataPrint()
 {
-    OP_LOGD(context_->GetNodeName(), "blockDim:             %ld", td_.get_blockDim());
+    OP_LOGD(context_->GetNodeName(), "numBlocks:             %ld", td_.get_numBlocks());
     OP_LOGD(context_->GetNodeName(), "colSize:              %u", td_.get_colSize());
     OP_LOGD(context_->GetNodeName(), "rowSize:              %u", td_.get_rowSize());
     OP_LOGD(context_->GetNodeName(), "eps:                  %f", td_.get_eps());
@@ -106,7 +106,7 @@ void LayerNormV4CommonTiling::TilingDataPrint()
 
 ge::graphStatus LayerNormV4CommonTiling::PostTiling()
 {
-    context_->SetBlockDim(td_.get_blockDim());
+    context_->SetBlockDim(td_.get_numBlocks());
     td_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(td_.GetDataSize());
 

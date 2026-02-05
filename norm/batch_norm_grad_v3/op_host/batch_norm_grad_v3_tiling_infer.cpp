@@ -84,7 +84,7 @@ ge::graphStatus BatchNormGradV3InferTiling::DoOpTiling()
     int64_t aOuter = Ops::Base::CeilDiv(fusedALen_, aInner);
 
     int64_t totalTiles = b0Outer * aOuter * b1Outer;
-    int64_t tilesPerCore = Ops::Base::CeilDiv(totalTiles, static_cast<int64_t>(aicoreParams_.blockDim));
+    int64_t tilesPerCore = Ops::Base::CeilDiv(totalTiles, static_cast<int64_t>(aicoreParams_.numBlocks));
     usedCoreNums_ = Ops::Base::CeilDiv(totalTiles, tilesPerCore);
 
     int64_t tileBlockB0Tail = fusedB0Len_ - b0Inner * (b0Outer - 1);

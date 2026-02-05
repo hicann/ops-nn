@@ -34,7 +34,7 @@ public:
         // load tiling data
         col = tilingData->col;
         row = tilingData->row;
-        blockDim = tilingData->blockDim;
+        numBlocks = tilingData->numBlocks;
         blockFormer = tilingData->blockFormer;
         blockTail = tilingData->blockTail;
         ubFormer = tilingData->ubFormer;
@@ -75,10 +75,10 @@ public:
     {
         uint64_t ubLoopCount;
         uint64_t ubTailLoopBlockLength;
-        if (blockIdx < (blockDim - 1)) {
+        if (blockIdx < (numBlocks - 1)) {
             ubLoopCount = ubLoopOfFormerBlock;
             ubTailLoopBlockLength = ubTailOfFormerBlock;
-        } else if (blockIdx == (blockDim - 1)) {
+        } else if (blockIdx == (numBlocks - 1)) {
             ubLoopCount = ubLoopOfTailBlock;
             ubTailLoopBlockLength = ubTailOfTailBlock;
         } else {
@@ -853,7 +853,7 @@ private:
     // tilingData
     uint64_t col;
     uint64_t row;
-    uint64_t blockDim;
+    uint64_t numBlocks;
     uint64_t blockFormer;
     uint64_t blockTail;
     uint64_t ubFormer;

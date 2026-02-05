@@ -38,7 +38,7 @@ public:
         const LayerNormV4TilingDataSingleRead* __restrict tilingData)
     {
         // load tiling data
-        blockDim = tilingData->blockDim;
+        numBlocks = tilingData->numBlocks;
         colSize = tilingData->colSize;
         rowSize = tilingData->rowSize;
         eps = tilingData->eps;
@@ -67,7 +67,7 @@ public:
         // calculate xGm size
         if (GetBlockIdx() < tailLoop) {
             xGmSize = (loopCount + 1) * blockLength;
-        } else if (GetBlockIdx() < blockDim - 1) {
+        } else if (GetBlockIdx() < numBlocks - 1) {
             xGmSize = loopCount * blockLength;
         } else {
             xGmSize = loopCount * blockLength + tailNRow * rowSize;
@@ -81,7 +81,7 @@ public:
         // calculate paramGm size
         if (GetBlockIdx() < tailLoop) {
             paramGmSize = (loopCount + 1) * nRow;
-        } else if (GetBlockIdx() < blockDim - 1) {
+        } else if (GetBlockIdx() < numBlocks - 1) {
             paramGmSize = loopCount * nRow;
         } else {
             paramGmSize = loopCount * nRow + tailNRow;
@@ -116,7 +116,7 @@ public:
         }
 
         // do tail baisc block
-        if (tailNRow > 0 && GetBlockIdx() == (blockDim - 1)) {
+        if (tailNRow > 0 && GetBlockIdx() == (numBlocks - 1)) {
             uint32_t currentBlockOffset = Count * blockLength;
             uint32_t currentParamOffset = Count * nRow;
             ProcessBasicBlock(tailNRow, currentBlockOffset, currentParamOffset);
@@ -345,7 +345,7 @@ private:
     float value = 0.0;
 
     // tilingData
-    uint32_t blockDim = 0;
+    uint32_t numBlocks = 0;
     uint32_t colSize = 0;
     uint32_t rowSize = 0;
     float eps = 0.0;

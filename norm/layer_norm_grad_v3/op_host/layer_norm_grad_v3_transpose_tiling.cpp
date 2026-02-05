@@ -114,7 +114,7 @@ ge::graphStatus LayerNormGradV3TransposeTiling::DoOpTiling()
 
     td_.set_row(commonParams.rowSize);
     td_.set_col(commonParams.colSize);
-    td_.set_blockDim(blockNum);
+    td_.set_numBlocks(blockNum);
     td_.set_blockFormer(blockFormer);
     td_.set_blockTail(blockTail);
     td_.set_ubFormer(ubFormer);
@@ -140,7 +140,7 @@ ge::graphStatus LayerNormGradV3TransposeTiling::GetWorkspaceSize()
 
 ge::graphStatus LayerNormGradV3TransposeTiling::PostTiling()
 {
-    context_->SetBlockDim(td_.get_blockDim());
+    context_->SetBlockDim(td_.get_numBlocks());
     td_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(td_.GetDataSize());
 

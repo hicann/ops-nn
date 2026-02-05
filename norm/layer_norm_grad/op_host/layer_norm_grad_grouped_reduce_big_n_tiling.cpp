@@ -65,8 +65,8 @@ ge::graphStatus LayerNormGradGroupedReduceBigNTiling::GammaBetaKernelTiling()
     int64_t nFactorBase = commonParams.blockSize / HALF_SIZE;
     int64_t mainBlockFactor = ops::CeilDiv(colSize, static_cast<int64_t>(commonParams.coreNum));
     mainBlockFactor = std::max(mainBlockFactor, nFactorBase);
-    int64_t blockDim = ops::CeilDiv(colSize, mainBlockFactor);
-    int64_t tailBlockFactor = colSize - (blockDim - CONST_ONE) * mainBlockFactor;
+    int64_t numBlocks = ops::CeilDiv(colSize, mainBlockFactor);
+    int64_t tailBlockFactor = colSize - (numBlocks - CONST_ONE) * mainBlockFactor;
     int64_t nFactorMax = (commonParams.ubSizePlatForm / sizeof(float) - mFactor * CONST_TWO) /
                          (mFactor * CONST_SIX + CONST_THREE + cacheBufferCount * CONST_TWO);
     OP_TILING_CHECK(nFactorMax < nFactorBase,
@@ -83,7 +83,7 @@ ge::graphStatus LayerNormGradGroupedReduceBigNTiling::GammaBetaKernelTiling()
     int64_t nTailTail = tailBlockFactor - (nLoopTail - CONST_ONE) * nFactor;
 
     td_.set_gammaBetaMainBlockFactor(mainBlockFactor);
-    td_.set_gammaBetaBlockDim(blockDim);
+    td_.set_gammaBetaBlockDim(numBlocks);
     td_.set_gammaBetaNloopMainBlock(nLoopMain);
     td_.set_gammaBetaNtailMainBlock(nTailMain);
     td_.set_gammaBetaNloopTailBlock(nLoopTail);
@@ -113,9 +113,9 @@ ge::graphStatus LayerNormGradGroupedReduceBigNTiling::BackwardKernelTiling()
     coreNum = std::min(coreNum, nFactor);
     int64_t mainBlockFactor = ops::CeilDiv(colSize, coreNum);
     mainBlockFactor = std::max(mainBlockFactor, nFactor);
-    int64_t blockDim = ops::CeilDiv(colSize, mainBlockFactor);
-    int64_t nPerBlock = ops::FloorDiv(colSize, blockDim);
-    int64_t nRem = colSize - nPerBlock * blockDim;
+    int64_t numBlocks = ops::CeilDiv(colSize, mainBlockFactor);
+    int64_t nPerBlock = ops::FloorDiv(colSize, numBlocks);
+    int64_t nRem = colSize - nPerBlock * numBlocks;
     int64_t nToProcessMain = nPerBlock + CONST_ONE;
     int64_t nToProcessTail = nPerBlock;
 
@@ -164,7 +164,7 @@ ge::graphStatus LayerNormGradGroupedReduceBigNTiling::BackwardKernelTiling()
     int64_t mTail = rowSize - (mTotalLoop - CONST_ONE) * mFactor;
 
     // 4. 保存所有参数到td_结构
-    td_.set_backwardBlockDim(blockDim);
+    td_.set_backwardBlockDim(numBlocks);
     td_.set_backwardNPerBlock(nPerBlock);
     td_.set_backwardNRem(nRem);
     td_.set_nToProcessMain(nToProcessMain);
@@ -220,8 +220,8 @@ ge::graphStatus LayerNormGradGroupedReduceBigNTiling::GetWorkspaceSize()
 
 ge::graphStatus LayerNormGradGroupedReduceBigNTiling::PostTiling()
 {
-    int64_t blockDim = commonParams.coreNum;
-    context_->SetBlockDim(blockDim);
+    int64_t numBlocks = commonParams.coreNum;
+    context_->SetBlockDim(numBlocks);
     context_->SetScheduleMode(CONST_ONE);  // Set to batch mode, all cores start simultaneously
     td_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(td_.GetDataSize());

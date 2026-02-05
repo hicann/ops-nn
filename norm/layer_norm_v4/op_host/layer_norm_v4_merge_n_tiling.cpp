@@ -125,7 +125,7 @@ void LayerNormV4MergeNTiling::PrepareTiling(uint64_t ubSize, uint32_t& nRow, uin
 ge::graphStatus LayerNormV4MergeNTiling::DoOpTiling()
 {
     OP_LOGD(context_, "Do MergeN OpTiling");
-    uint32_t blockDim = 0;
+    uint32_t numBlocks = 0;
     uint32_t nRow = 0;
     uint32_t tailNRow = 0;
     uint64_t rowSize = commonParams.rowSize;
@@ -138,25 +138,25 @@ ge::graphStatus LayerNormV4MergeNTiling::DoOpTiling()
     uint64_t ubSize = commonParams.ubSizePlatForm - UB_BUF;
     if (colSize <= coreNum) {
         nRow = 1;
-        blockDim = static_cast<uint32_t>(colSize);
+        numBlocks = static_cast<uint32_t>(colSize);
         formerNum = colSize;
     } else {
-        blockDim = static_cast<uint32_t>(coreNum);
+        numBlocks = static_cast<uint32_t>(coreNum);
         // 余数为前n个处理多余的行数
-        formerNum = colSize % blockDim;
+        formerNum = colSize % numBlocks;
         if (formerNum == 0){
-            formerNum = blockDim;
-            nRow = colSize / blockDim;
+            formerNum = numBlocks;
+            nRow = colSize / numBlocks;
         }else {
             // 总核数减去前面的就是正常函数的个数40 - n
-            tailNum = blockDim - formerNum;
+            tailNum = numBlocks - formerNum;
             // 向上取整
-            nRow = (colSize + blockDim - 1 ) / blockDim;
-            tailNRow = colSize / blockDim;
+            nRow = (colSize + numBlocks - 1 ) / numBlocks;
+            tailNRow = colSize / numBlocks;
         }
     }
     PrepareTiling(ubSize, nRow, tailNRow, tailNum);
-    td_.set_blockDim(blockDim);   // 核数
+    td_.set_numBlocks(numBlocks);   // 核数
     td_.set_colSize(colSize);   // 行数
     td_.set_rowSize(rowSize);   // 列数
     td_.set_coefficient(coefficient);   // 系数
@@ -171,7 +171,7 @@ ge::graphStatus LayerNormV4MergeNTiling::DoOpTiling()
 
 ge::graphStatus LayerNormV4MergeNTiling::PostTiling()
 {
-    context_->SetBlockDim(td_.get_blockDim());
+    context_->SetBlockDim(td_.get_numBlocks());
     td_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(td_.GetDataSize());
 

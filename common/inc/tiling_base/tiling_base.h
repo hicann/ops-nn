@@ -34,6 +34,7 @@ namespace Optiling {
 struct AiCoreParams {
     uint64_t ubSize = 0UL;
     uint64_t blockDim = 0UL;
+    uint64_t numBlocks = 0UL;
     uint64_t aicNum = 0UL;
     uint64_t l1Size = 0UL;
     uint64_t l0aSize = 0UL;

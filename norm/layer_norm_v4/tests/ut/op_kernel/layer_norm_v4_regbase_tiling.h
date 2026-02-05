@@ -49,7 +49,7 @@ struct LayerNormV4TilingDataWelford {
     int64_t M = 0;
     int64_t N = 0;
     int64_t rAlign = 0;
-    int64_t blockDim = 0;
+    int64_t numBlocks = 0;
     int64_t mainBlockCount = 0;
     int64_t mainBlockFactor = 0;
     int64_t tailBlockFactor = 0;

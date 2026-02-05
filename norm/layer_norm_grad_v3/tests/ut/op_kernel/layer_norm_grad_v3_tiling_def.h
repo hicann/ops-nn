@@ -42,7 +42,7 @@ struct LayerNormGradV3TilingDataSingleRead {
 struct LayerNormGradV3TilingDataTranspose {
     uint64_t row = 0;                         // 输入tensor的行
     uint64_t col = 0;                         // 输入tensor的列，即reduce的轴
-    uint64_t blockDim = 0;                    // 实际使用的core数量
+    uint64_t numBlocks = 0;                    // 实际使用的core数量
     uint64_t blockFormer = 0;                 // 整核处理的row大小
     uint64_t blockTail = 0;                   // 尾核处理的row大小
     uint64_t ubFormer = 0;                    // ub整循环处理的row大小
@@ -105,7 +105,7 @@ struct LayerNormGradV3TilingDataRecompute {
     int64_t gammaBetaMfactor = 0;
     int64_t gammaBetaNfactor = 0;
     int64_t gammaBetaMainBlockFactor = 0;
-    int64_t gammaBetaBlockDim = 0;
+    int64_t gammaBetanumBlocks = 0;
     int64_t gammaBetaMainBlockCount = 0;
     int64_t gammaBetaTailBlockCount = 0;
     int64_t gammaBetaTailBlockFactor = 0;
@@ -119,7 +119,7 @@ struct LayerNormGradV3TilingDataRecompute {
     int64_t backwardMfactor = 0;
     int64_t backwardNfactor = 0;
     int64_t backwardMainBlockFactor = 0;
-    int64_t backwardBlockDim = 0;
+    int64_t backwardnumBlocks = 0;
 };
 #pragma pack()
 
