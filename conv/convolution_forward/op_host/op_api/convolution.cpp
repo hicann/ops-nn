@@ -77,6 +77,8 @@ constexpr int64_t W_IN_TRANSPOSE_N2H_RULE_MAX = 64;
 constexpr int64_t W_K_TRANSPOSE_N2H_RULE_MAX = 10;
 constexpr int64_t N2H_W_IN_SIXTY = 60;
 constexpr int64_t N2H_W_IN_FORTY = 40;
+constexpr int64_t C_IN_TRANSPOSE_LIMIT_MIN = 16;
+constexpr int64_t C_IN_TRANSPOSE_LIMIT_MAX = 32;
 constexpr float MAX_CIN_MULTIPLIER = 1.5f;
 constexpr float MAX_WI_MULTIPLIER_FOR_LOW = 2.0f;
 constexpr float MIN_WI_MULTIPLIER_FOR_HIGH = 3.5f;
@@ -1130,18 +1132,20 @@ static bool CheckPreTransposeEnable(const aclTensor *weight, int groups) {
             return false;
         }
     }
-    uint64_t weightC = weightShape[C_DIM_NCDHW_INDEX];
-    uint64_t weightD = weightShape[D_DIM_NCDHW_INDEX];
-    uint64_t weightH = weightShape[H_DIM_NCDHW_INDEX];
-    uint64_t weightW = weightShape[W_DIM_NCDHW_INDEX];
+    uint64_t cout = weightShape[N_DIM_NCDHW_INDEX];
+    uint64_t cin = weightShape[C_DIM_NCDHW_INDEX];
+    uint64_t dk = weightShape[D_DIM_NCDHW_INDEX];
+    uint64_t hk = weightShape[H_DIM_NCDHW_INDEX];
+    uint64_t wk = weightShape[W_DIM_NCDHW_INDEX];
 
-    if (weightD * weightH * weightW <= 1) {
+    if (dk * hk * wk <= 1) {
         return false;
     }
-    if ((weightC != 16 && weightC < 32) || weightC <= weightH * weightW) {
+    // 经验值，超出范围计算获得的收益小于引入transpose算子的损耗
+    if ((cin != C_IN_TRANSPOSE_LIMIT_MIN && cin < C_IN_TRANSPOSE_LIMIT_MAX) || cin <= hk * wk) {
         return false;
     }
-    return true;
+    return (cout > cin) ? (cout < MAX_CIN_MULTIPLIER * cin) : (cin < MAX_CIN_MULTIPLIER * cout);
 }
 
 static aclnnStatus N2HOptimize(const aclTensor *&input, aclTensor *&output,
