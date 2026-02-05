@@ -290,6 +290,8 @@ ge::graphStatus MatMulV3BasicAswtTiling::DoOpTiling()
         runInfo_.stepKa =
             remainSizeForAL1BL1 / NUM_TWO / ((runInfo_.baseM + runInfo_.baseN) * runInfo_.baseK) / args_.aDtypeSize;
         runInfo_.stepKb = runInfo_.stepKa; // has bias, adjust stepK to suitable value
+        runInfo_.depthA1 = runInfo_.stepKa * DB_SIZE;
+        runInfo_.depthB1 = runInfo_.stepKb * DB_SIZE;
     }
     return ge::GRAPH_SUCCESS;
 }

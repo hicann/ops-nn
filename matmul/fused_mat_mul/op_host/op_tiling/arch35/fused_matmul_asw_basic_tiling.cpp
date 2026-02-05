@@ -19,7 +19,7 @@
 
 namespace optiling {
 namespace fused_matmul {
-using matmul_v3_advanced::strategy::BASIC_ASWT;	
+using matmul_v3_advanced::strategy::BASIC_ASWT;
 MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulAswBasicApiTiling, ASCEND950, BASIC_ASWT);
 
 bool FusedMatMulAswBasicApiTiling::IsCapable()
@@ -34,6 +34,21 @@ bool FusedMatMulAswBasicApiTiling::IsCapable()
 
     OP_LOGI(args_.opName, "FusedMatMul tiling enable state basic api");
     return true;
+}
+
+ge::graphStatus FusedMatMulAswBasicApiTiling::DoOpTiling()
+{
+    OP_TILING_CHECK((MatMulV3AswTiling::DoOpTiling() != ge::GRAPH_SUCCESS),
+                    CUBE_INNER_ERR_REPORT(args_.opName, "Do MatMul AswTiling failed in FusedMatMul."),
+                    return ge::GRAPH_FAILED);
+    uint64_t remainSizeForAL1BL1 = args_.hasBias ? (compileInfo_.l1Size - BIAS_TABLE_NUM * DATA_SIZE_FP32) :
+                                                   compileInfo_.l1Size;
+    runInfo_.stepKa = remainSizeForAL1BL1 / NUM_TWO / ((runInfo_.baseM + runInfo_.baseN) * runInfo_.baseK) /
+                      args_.aDtypeSize;
+    runInfo_.stepKb = runInfo_.stepKa; // has bias, adjust stepK to suitable value
+    runInfo_.depthA1 = runInfo_.stepKa * DB_SIZE;
+    runInfo_.depthB1 = runInfo_.stepKb * DB_SIZE;
+    return ge::GRAPH_SUCCESS;
 }
 
 uint64_t FusedMatMulAswBasicApiTiling::GetTilingKey() const

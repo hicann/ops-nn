@@ -30,6 +30,7 @@ public:
 
 protected:
     bool IsCapable() override;
+    ge::graphStatus DoOpTiling() override;
     uint64_t GetTilingKey() const override;
     ge::graphStatus GetTilingData(TilingResult& tiling) const override;
 };
