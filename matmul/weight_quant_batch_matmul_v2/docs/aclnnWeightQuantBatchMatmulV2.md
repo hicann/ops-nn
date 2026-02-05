@@ -210,6 +210,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
   - x（aclTensor *, 计算输入）：
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`x`矩阵为非转置时，m大小在[1, 2^31-1]范围内；转置时，m大小在[1, 65535]范围内。
     - <term>Ascend 950PR/Ascend 950DT</term>：`x`矩阵m大小在[1, 2^31-1]范围内，不支持转置场景。
+    - <term>Atlas 推理系列产品</term>：数据类型支持FLOAT16。shape支持2~6维，输入shape需要为(batch, m, k)，其中batch表示矩阵的批次大小，支持0~4维，m表示单个batch矩阵第1维的大小，k表示单个batch矩阵的第2维的大小，batch维度需要与`weight`的batch维度满足[broadcast关系](../../../docs/zh/context/broadcast关系.md)。当伪量化算法模式为pertensor[量化模式](../../../docs/zh/context/量化介绍.md)时，m*k不能超过512000000。
 
   - weight（aclTensor *, 计算输入）：
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：维度支持2维，Reduce维度k需要与`x`的Reduce维度k大小相等。数据类型支持INT8、INT4、INT32，当`weight`[数据格式](../../../docs/zh/context/数据格式.md)为FRACTAL_NZ且数据类型为INT4或INT32时，或者当`weight`[数据格式](../../../docs/zh/context/数据格式.md)为ND且数据类型为INT32时，仅在INT4Pack场景支持，需配合`aclnnConvertWeightToINT4Pack`接口完成从INT32到INT4Pack的转换，以及从ND到FRACTAL_NZ的转换，[详情可参考样例](../../convert_weight_to_int4_pack/docs/aclnnConvertWeightToINT4Pack.md)，若数据类型为INT4，则`weight`的内轴应为偶数。[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)仅支持转置场景。shape支持(k, n)，其中k表示矩阵第1维的大小，n表示矩阵第2维的大小。
@@ -227,6 +228,11 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
       - perchannel[量化模式](../../../docs/zh/context/量化介绍.md)：`weight`的数据类型为INT4/INT32，`weight`非转置，`x`非转置，y的数据类型为非INT8。
       - pergroup[量化模式](../../../docs/zh/context/量化介绍.md)：`weight`的数据类型为INT4/INT32/FLOAT4_E2M1/FLOAT，`weight`非转置，`x`非转置，k为64对齐，n为64对齐，y的数据类型为非INT8。
       - mx[量化模式](../../../docs/zh/context/量化介绍.md)：`weight`的数据类型为FLOAT4_E2M1/FLOAT，`weight`非转置，`x`非转置，y的数据类型为非INT8。
+    - <term>Atlas 推理系列产品</term>：维度支持2~6维，batch维度需要与`x`的batch维度满足[broadcast关系](../../../docs/zh/context/broadcast关系.md)，数据类型支持INT8。具体如下：
+      - 当[数据格式](../../../docs/zh/context/数据格式.md)为ND时，输入shape需要为(batch, k, n)，其中batch表示矩阵的批次大小，支持0~4维，k表示单个batch矩阵第1维的大小，n表示单个batch矩阵的第2维的大小。
+      - 当[数据格式](../../../docs/zh/context/数据格式.md)为FRACTAL_NZ时：
+        - 输入shape需要为(batch, n, k)，其中batch表示矩阵的批次大小，支持0~4维，k表示单个batch矩阵第1维的大小，n表示单个batch矩阵的第2维的大小。
+        - 配合aclnnCalculateMatmulWeightSizeV2以及aclnnTransMatmulWeight完成输入Format从ND到FRACTAL_NZ的转换，[详情可参考样例](../../trans_mat_mul_weight/docs/aclnnCalculateMatmulWeightSizeV2.md)。
 
   - antiquantScale（aclTensor *, 计算输入）：
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、BFLOAT16、UINT64、INT64（当FLOAT16、BFLOAT16时，数据类型要求和输入`x`保持一致；当为UINT64、INT64时，`x`仅支持FLOAT16，不转置，`weight`仅支持INT8，ND转置，模式仅支持perchannel[量化模式](../../../docs/zh/context/量化介绍.md)，quantScaleOptional和quantOffsetOptional必须传入空指针，m仅支持[1, 96]，k和n要求64对齐，需要首先配合aclnnCast接口完成FLOAT16到FLOAT32的转换，详情请参考[Cast](https://gitcode.com/cann/ops-math/blob/master/math/cast/docs/aclnnCast.md)，再配合aclnnTransQuantParamV2接口完成FLOAT32到UINT64的转换，详情请参考[TransQuantParamV2](../../../quant/trans_quant_param_v2/docs/aclnnTransQuantParamV2.md)）。[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)仅支持转置场景。
@@ -240,81 +246,112 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
         - perchannel[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(1, n)或(n,)。
         - pergroup[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(⌈k/group_size⌉, n)，其中group_size表示k要分组的每组的大小。
         - mx[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(⌈k/group_size⌉, n)，其中group_size表示k要分组的每组的大小，仅支持32。
+    - <term>Atlas 推理系列产品</term>：数据类型支持FLOAT16，数据类型要求和输入`x`保持一致。
+      对于不同伪量化算法模式，`antiquantScale`支持的shape如下:
+      - pertensor[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(1,)或(1, 1)。
+      - perchannel[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(n, 1)或(n,)，不支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
+      - pergroup[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape与`weight`的数据格式相关，如下：
+        - 当`weight`的数据格式为ND时，输入shape为(⌈k/group_size⌉, n)，其中group_size表示k要分组的每组的大小。
+        - 当`weight`的数据格式为FRACTAL_NZ时，输入shape为(n, ⌈k/group_size⌉)，其中group_size表示k要分组的每组的大小。
 
   - antiquantOffsetOptional（aclTensor *, 计算输入）：
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、BFLOAT16、INT32，数据类型为FLOAT16、BFLOAT16时，数据类型要求和输入`x`的数据类型保持一致；数据类型为INT32类型时，数据范围限制为[-128, 127]，x仅支持FLOAT16，weight仅支持INT8，`antiquantScale`仅支持UINT64/INT64。[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)仅支持转置场景。
     - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT16、BFLOAT16，数据类型要求和输入`x`的数据类型保持一致。[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)仅支持转置场景并且连续性要求和weight保持一致。当x是FLOAT16或者BFLOAT16，同时weight是FLOAT、FLOAT4_E2M1、FLOAT8_E4M3FN或者HIFLOAT8时，不支持该参数，填空指针。
+    - <term>Atlas 推理系列产品</term>：数据类型支持FLOAT16，数据类型要求和输入`x`保持一致。
 
   - quantScaleOptional（aclTensor *, 计算输入）：
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT64，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。不支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。可选输入，当不需要时为空指针；对于不同的伪量化算法模式，支持的shape如下:
       - pertensor[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(1,)或(1, 1)。
       - perchannel[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(1, n)或(n,)。
     - <term>Ascend 950PR/Ascend 950DT</term>：预留参数，暂未使用，固定传入空指针。
+    - <term>Atlas 推理系列产品</term>：预留参数，暂未使用，固定传入空指针。
 
   - quantOffsetOptional（aclTensor *, 计算输入）：
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。可选输入, 当不需要时为空指针；存在时shape要求与`quantScaleOptional`一致。不支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
     - <term>Ascend 950PR/Ascend 950DT</term>：预留参数，暂未使用，固定传入空指针。
+    - <term>Atlas 推理系列产品</term>：预留参数，暂未使用，固定传入空指针。
 
   - biasOptional（aclTensor *, 计算输入）：
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：维度支持1维或2维，shape支持(n,)或(1, n)。数据类型支持FLOAT16、FLOAT。当`x`的数据类型为BFLOAT16时，本参数要求为FLOAT；当`x`的数据类型为FLOAT16时，本参数要求为FLOAT16。
-    - <term>Ascend 950PR/Ascend 950DT</term>：维度支持1维或2维，shape支持(n,)或(1, n)。数据类型支持FLOAT16、FLOAT、BFLOAT16。当`x`的数据类型为BFLOAT16时，本参数要求为FLOAT或BFLOAT16；当`x`的数据类型为FLOAT16时，本参数要求为FLOAT16。当`x`的数据类型为BFLOAT16时，同时`weight`类型为FLOAT4_E2M1、FLOAT8_E4M3FN、HIFLOAT8时，本参数要求为BFLOAT16
+    - <term>Ascend 950PR/Ascend 950DT</term>：维度支持1维或2维，shape支持(n,)或(1, n)。数据类型支持FLOAT16、FLOAT、BFLOAT16。当`x`的数据类型为BFLOAT16时，本参数要求为FLOAT或BFLOAT16；当`x`的数据类型为FLOAT16时，本参数要求为FLOAT16。当`x`的数据类型为BFLOAT16时，同时`weight`类型为FLOAT4_E2M1、FLOAT8_E4M3FN、HIFLOAT8时，本参数要求为BFLOAT16。
+    - <term>Atlas 推理系列产品</term>：数据类型支持FLOAT16。维度支持1~6维，带batch时，输入shape需要为(batch，1，n)，batch要与x和weight的batch维度broadcast后的batch保持一致，不带batch时，输入shape需要为(n,)或(1, n)。
 
   - antiquantGroupSize（int, 计算输入）：表示在伪量化pergroup和mx[量化模式](../../../docs/zh/context/量化介绍.md)下，对输入`weight`进行反量化计算的groupSize输入，描述一组反量化参数对应的待反量化数据量在Reduce方向的大小。当伪量化算法不为pergroup和mx[量化模式](../../../docs/zh/context/量化介绍.md)时传入0；当伪量化算法为pergroup[量化模式](../../../docs/zh/context/量化介绍.md)时传入值的范围为[32, k-1]且值要求是32的倍数；在mx[量化模式](../../../docs/zh/context/量化介绍.md)，仅支持32。
 
   - y（aclTensor *, 计算输出）：
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：维度支持2维，shape支持(m, n)。数据类型支持FLOAT16、BFLOAT16、INT8。当`quantScaleOptional`存在时，数据类型为INT8；当`quantScaleOptional`不存在时，数据类型支持FLOAT16、BFLOAT16，且与输入`x`的数据类型一致。
     - <term>Ascend 950PR/Ascend 950DT</term>：维度支持2维，shape支持(m, n)。数据类型支持FLOAT16、BFLOAT16。当`quantScaleOptional`不存在时，与输入`x`的数据类型一致。
+    - <term>Atlas 推理系列产品</term>：数据类型支持FLOAT16。维度支持2~6维，shape支持(batch, m, n)，batch可不存在，支持x与weight的batch维度broadcast，输出batch与broadcast之后的batch一致，m与x的m一致，n与weight的n一致。
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  第一段接口完成入参校验，出现以下场景时报错：
-  <table style="undefined;table-layout: fixed;width: 1030px">
-    <colgroup>
+<table style="undefined;table-layout: fixed;width: 1030px">
+  <colgroup>
       <col style="width: 250px">
       <col style="width: 130px">
       <col style="width: 650px">
-    </colgroup>
-    <thead>
-      <tr>
-        <th>返回值</th>
-        <th>错误码</th>
-        <th>描述</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>ACLNN_ERR_PARAM_NULLPTR</td>
-        <td>161001</td>
-        <td>如果传入参数是必选输入，输出或者必选属性，且是空指针，则返回161001。</td>
-      </tr>
-      <tr>
-        <td>ACLNN_ERR_PARAM_INVALID</td>
-        <td>161002</td>
-        <td>
-- 传入x、weight、antiquantScale、antiquantOffsetOptional、quantScaleOptional、quantOffsetOptional、biasOptional、y的shape维度不符合要求。
-- 传入x、weight、antiquantScale、antiquantOffsetOptional、quantScaleOptional、quantOffsetOptional、biasOptional、y的数据类型不在支持的范围之内。
-- x、weight的reduce维度(k)不相等。
-- antiquantOffsetOptional存在输入时，shape与antiquantScale不相同。
-- quantOffsetOptional存在输入时，shape与quantScale不相同。
-- x的shape不符合要求。
-- biasOptional的shape不符合要求。
-- antiquantGroupSize值不符合要求。
-- quantOffsetOptional存在时，quantScaleOptional是空指针。
-- m、n、k取值不在支持范围内。
-- 不支持空tensor场景。
-- 输入tensor的数据格式不在支持范围内。
-- 传入x、weight、antiquantScale、antiquantOffsetOptional、quantScaleOptional、quantOffsetOptional、biasOptional、y的连续性不符合要求。
-- x为bfloat16，weight为float4_e2m1或者float32时，bias数据类型只支持bfloat16。
-        </td>
-      </tr>
-      <tr>
-        <td>ACLNN_ERR_RUNTIME_ERROR</td>
-        <td>361001</td>
-        <td>产品型号不支持。</td>
-      </tr>
-    </tbody>
+  </colgroup>
+  <thead>
+    <tr>
+      <th>返回值</th>
+      <th>错误码</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>ACLNN_ERR_PARAM_NULLPTR</td>
+      <td>161001</td>
+      <td>如果必选参数传入的是空指针。</td>
+    </tr>
+    <tr>
+      <td rowspan="13">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="13">161002</td>
+      <td>传入x、weight、antiquantScale、antiquantOffsetOptional、quantScaleOptional、quantOffsetOptional、biasOptional、y的shape维度不符合要求。</td>
+    </tr>
+    <tr>
+      <td>传入x、weight、antiquantScale、antiquantOffsetOptional、quantScaleOptional、quantOffsetOptional、biasOptional、y的数据类型不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td>x、weight的reduce维度(k)不相等。</td>
+    </tr>
+    <tr>
+      <td>antiquantOffsetOptional存在输入时，shape与antiquantScale不相同。</td>
+    </tr>
+    <tr>
+      <td>quantOffsetOptional存在输入时，shape与quantScale不相同。</td>
+    </tr>
+    <tr>
+      <td>biasOptional的shape不符合要求。</td>
+    </tr>
+    <tr>
+      <td>antiquantGroupSize值不符合要求。</td>
+    </tr>
+    <tr>
+      <td>quantOffsetOptional存在时，quantScaleOptional是空指针。</td>
+    </tr>
+    <tr>
+      <td>输入的k、n值不在[1, 65535]范围内。</td>
+    </tr>
+    <tr>
+      <td>x矩阵为非转置时，m不在[1, 2^31-1]范围内；转置时，m不在[1, 65535]范围内。</td>
+    </tr>
+    <tr>
+      <td>不支持空tensor场景。</td>
+    </tr>
+    <tr>
+      <td>传入x、weight、antiquantScale、antiquantOffsetOptional、quantScaleOptional、quantOffsetOptional、biasOptional、y的连续性不符合要求。</td>
+    </tr>
+    <tr>
+      <td>x为bfloat16，weight为float4_e2m1或者float32时，bias数据类型只支持bfloat16。</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_RUNTIME_ERROR</td>
+      <td>361001</td>
+      <td>产品型号不支持。</td>
+    </tr>
+  </tbody>
   </table>
 
 ## aclnnWeightQuantBatchMatmulV2

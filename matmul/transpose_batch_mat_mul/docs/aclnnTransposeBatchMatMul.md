@@ -7,6 +7,9 @@
 | <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √    |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×    |
+| <term>Atlas 推理系列产品 </term>                             |    ×    |
+| <term>Atlas 训练系列产品</term>                              |    ×    |
 
 
 ## 功能说明
@@ -23,25 +26,25 @@
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnTransposeBatchMatMulGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnTransposeBatchMatMul”接口执行计算。
 ```cpp
 aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(
-    const aclTensor*   aclTensor* x1,
-    const aclTensor*   aclTensor* x2,
-    const aclTensor*   aclTensor* bias,
-    const aclTensor*   aclTensor* scale,
-    const aclIntArray* permX1,
-    const aclIntArray* permX2,
-    const aclIntArray* permY,
+    const aclTensor    *x1,
+    const aclTensor    *x2,
+    const aclTensor    *bias,
+    const aclTensor    *scale,
+    const aclIntArray  *permX1,
+    const aclIntArray  *permX2,
+    const aclIntArray  *permY,
     int8_t             cubeMathType,
     const int32_t      batchSplitFactor,
-    aclTensor*         out,
-    uint64_t*          workspaceSize,
-    aclOpExecutor**    executor)
+    aclTensor          *out,
+    uint64_t           *workspaceSize,
+    aclOpExecutor      **executor)
 ```
 ```cpp
 aclnnStatus aclnnTransposeBatchMatMul(
-    void              *workspace,
-    uint64_t          workspaceSize,
-    aclOpExecutor     *executor,
-    const aclrtStream stream)
+    void               *workspace,
+    uint64_t           workspaceSize,
+    aclOpExecutor      *executor,
+    const aclrtStream  stream)
 ```
 ## aclnnTransposeBatchMatMulGetWorkSpaceSize
 
@@ -122,11 +125,10 @@ aclnnStatus aclnnTransposeBatchMatMul(
       <tr>
       <td>scale</td>
         <td>输入（可选）</td>
-        <td>表示量化输入，Device侧aclTensor。</td>
+        <td>表示输出矩阵的量化系数，可在输入为FLOAT16且输出为INT8时使能，Device侧aclTensor。</td>
         <td>
         <ul>
-            <li>数据类型需要与x1满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
-            <li>shape仅支持二维且需要满足与mat1相乘条件。</li>
+            <li>shape仅支持一维且需要满足且等于[b*n]。</li>
         </ul>
         </td>
         <td>INT64、UINT64</td>

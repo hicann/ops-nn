@@ -7,6 +7,9 @@
 | <term>Ascend 950PR/Ascend 950DT</term>                             |    √    |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √    |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×    |
+| <term>Atlas 推理系列产品 </term>                             |    √    |
+| <term>Atlas 训练系列产品</term>                              |    ×    |
 
 ## 功能说明
 
@@ -47,6 +50,19 @@
 
       $$
       out = x1@x2 * scale * pertokenScaleOptional + bias
+      $$
+
+  - <term>Atlas 推理系列产品</term>：
+    - 无bias：
+
+      $$
+      out = x1@x2 * scale + offset
+      $$
+
+    - bias int32：
+
+      $$
+      out = (x1@x2 + bias) * scale + offset
       $$
 
 ## 函数原型
@@ -260,6 +276,15 @@ aclnnStatus aclnnQuantMatmulV4(
       <td>-</td>
     </tr>
   </tbody></table>
+  
+  - <term>Atlas 推理系列产品</term>：
+    - x1与x2的最后一维大小不能超过65535（x1的最后一维指transposeX1为true时的m或transposeX1为false时的k，x2的最后一维指transposeX2为true时的k或transposeX2为false时的n。
+ 	- x1数据类型支持INT8。
+    - x2数据类型支持INT8，为NZ格式时，不支持transposeX2为false的场景。
+    - bias数据类型支持INT32。
+    - scale数据类型支持UINT64、INT64。
+    - 不支持pertokenScaleOptional。
+    - out数据类型支持FLOAT16、INT8。
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - x1与x2的最后一维大小不能超过65535。
@@ -369,6 +394,13 @@ aclnnStatus aclnnQuantMatmulV4(
   2.当原始ND的后两维中存在某一维度为1时，不建议转NZ格式，默认x2为非连续，且仅支持x2为非连续的tensor。
 
 输入和输出支持以下数据类型组合：
+- <term>Atlas 推理系列产品</term>：
+
+  | x1 | x2 | scale | offset | bias | pertokenScaleOptional | out |
+  | ------- | ------- | ------ | ------ | ------- | ------- | ------- |
+  | INT8 | INT8 | UINT64/INT64 | null | null/INT32 | null | FLOAT16 |
+  | INT8 | INT8 | UINT64/INT64 | null/FLOAT32 | null/INT32 | null | INT8 |
+
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
   | x1 | x2 | scale | offset | bias | pertokenScaleOptional | out |

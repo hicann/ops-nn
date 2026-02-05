@@ -7,6 +7,9 @@
 | <term>Ascend 950PR/Ascend 950DT</term>                             |     ×    |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √    |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×    |
+| <term>Atlas 推理系列产品 </term>                             |    ×    |
+| <term>Atlas 训练系列产品</term>                              |    ×    |
 
 ## 功能说明
 
@@ -249,8 +252,8 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
       <td>如果必选参数传入的是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="14">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="14">161002</td>
+      <td rowspan="12">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="12">161002</td>
       <td>传入x、weight、antiquantScale、antiquantOffsetOptional、quantScaleOptional、quantOffsetOptional、biasOptional、y的shape维度不符合要求。</td>
     </tr>
     <tr>
@@ -264,9 +267,6 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
     </tr>
     <tr>
       <td>quantOffsetOptional存在输入时，shape与quantScale不相同。</td>
-    </tr>
-    <tr>
-      <td>biasOptional的shape不符合要求。</td>
     </tr>
     <tr>
       <td>antiquantGroupSize值不符合要求。</td>
@@ -287,9 +287,6 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
       <td>不支持空tensor场景。</td>
     </tr>
     <tr>
-      <td>输入tensor的数据格式不在支持范围内。</td>
-    </tr>
-    <tr>
       <td>传入x、weight、antiquantScale、antiquantOffsetOptional、quantScaleOptional、quantOffsetOptional、biasOptional、y的连续性不符合要求。</td>
     </tr>
     <tr>
@@ -299,6 +296,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
     </tr>
   </tbody>
   </table>
+
 ## aclnnWeightQuantBatchMatmulV3
 
 - **参数说明**

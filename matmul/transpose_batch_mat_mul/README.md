@@ -8,6 +8,9 @@
 |Ascend 950PR/Ascend 950DT|√|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas A2 推理系列产品|√|
+|Atlas 200I/500 A2推理产品|×|
+|Atlas 推理系列产品|x|
+|Atlas 训练系列产品|x|
 |Kirin X90 处理器系列产品|√|
 |Kirin 9030 处理器系列产品|√|
 
@@ -17,7 +20,7 @@
 
 - 示例：
   - x1的shape是(B, M, K)，x2的shape是(B, K, N)，scale为None，batchSplitFactor等于1时，计算输出out的shape是(M, B, N)。
-  - x1的shape(B, M, K)，x2的shape是(B, K, N)，scale不为None，batchSplitFactor等于1时，计算输出out的shape是(M, 1, B * N)。
+  - x1的shape是(B, M, K)，x2的shape是(B, K, N)，scale不为None，batchSplitFactor等于1时，计算输出out的shape是(M, 1, B * N)。
   - x1的shape是(B, M, K)，x2的shape是(B, K, N)，scale为None，batchSplitFactor大于1时，计算输出out的shape是(batchSplitFactor, M, B * N / batchSplitFactor)。
 
 ## 参数说明

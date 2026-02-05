@@ -24,14 +24,23 @@
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSparse4to2QuantMatmulGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnSparse4to2QuantMatmul”接口执行计算。
 ```Cpp
 aclnnStatus aclnnSparse4to2QuantMatmulWeightNzGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* sparseWeight, const aclTensor* index, const aclTensor* xScale,
-    const aclTensor* sparseWeightScale, const aclTensor* biasOptional, aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+    const aclTensor *x, 
+    const aclTensor *sparseWeight, 
+    const aclTensor *index, 
+    const aclTensor *xScale,
+    const aclTensor *sparseWeightScale, 
+    const aclTensor *biasOptional, 
+    aclTensor       *out, 
+    uint64_t        *workspaceSize,
+    aclOpExecutor   **executor)
 ```
 
 ```Cpp
 aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+    void          *workspace, 
+    uint64_t      workspaceSize, 
+    aclOpExecutor *executor, 
+    aclrtStream   stream)
 ```
 
 ## aclnnSparse4to2QuantMatmulWeightNzGetWorkspaceSize

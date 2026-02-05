@@ -8,6 +8,9 @@
 |Ascend 950PR/Ascend 950DT|√|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas A2 推理系列产品|√|
+|Atlas 200I/500 A2推理产品|×|
+|Atlas 推理系列产品|√|
+|Atlas 训练系列产品|x|
 |Kirin X90 处理器系列产品|√|
 |Kirin 9030 处理器系列产品|√|
 
@@ -51,6 +54,19 @@
 
       $$
       out = x1@x2 * scale * pertokenScaleOptional + bias
+      $$
+  
+  - <term>Atlas 推理系列产品</term>：
+    - 无bias：
+
+      $$
+      out = x1@x2 * scale + offset
+      $$
+
+    - bias int32：
+
+      $$
+      out = (x1@x2 + bias) * scale + offset
       $$
 
 ## 参数说明
@@ -131,6 +147,13 @@
   - offset只支持FLOAT32数据类型。
   - pertoken_scale只支持FLOAT32数据类型。
   - y只支持FLOAT16和BFLOAT16数据类型。
+- Atlas 推理系列产品：
+  - x1只支持INT8数据类型。
+  - x2只支持INT8数据类型。
+  - scale只支持UINT64数据类型。
+  - bias只支持INT32数据类型。
+  - y只支持FLOAT16和INT32数据类型。
+  - pertoken_scale暂不支持。
 ## 约束说明
 
 - 不支持空tensor。
