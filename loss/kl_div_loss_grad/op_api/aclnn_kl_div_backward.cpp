@@ -199,31 +199,36 @@ aclnnStatus aclnnKlDivBackwardGetWorkspaceSize(
         return ACLNN_SUCCESS;
     }
 
-    auto promoteType = op::DataType::DT_FLOAT;
-
     // 固定写法，将输入gradOutput转换成连续的tensor
     auto gradOutputContiguous = l0op::Contiguous(gradOutput, uniqueExecutor.get());
     CHECK_RET(gradOutputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // 将输入gradoutput的数据类型转换成隐式数据类型，根据具体算子语义按需调用
-    auto gradOutputCasted = l0op::Cast(gradOutputContiguous, promoteType, uniqueExecutor.get());
-    CHECK_RET(gradOutputCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，将输入self转换成连续的tensor
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 将输入self的数据类型转换成隐式数据类型，根据具体算子语义按需调用
-    auto selfCasted = l0op::Cast(selfContiguous, promoteType, uniqueExecutor.get());
-    CHECK_RET(selfCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
     // 固定写法，将输入target转换成连续的tensor
     auto targetContiguous = l0op::Contiguous(target, uniqueExecutor.get());
     CHECK_RET(targetContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 将输入target的数据类型转换成隐式数据类型，根据具体算子语义按需调用
-    auto targetCasted = l0op::Cast(targetContiguous, promoteType, uniqueExecutor.get());
-    CHECK_RET(targetCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto gradOutputCasted = gradOutputContiguous;
+    auto selfCasted = selfContiguous;
+    auto targetCasted = targetContiguous;
+    if (!(gradOutput->GetDataType() == op::DataType::DT_FLOAT16 && self->GetDataType() == op::DataType::DT_FLOAT16 && target->GetDataType() == op::DataType::DT_FLOAT16)) {
+        auto promoteType = op::DataType::DT_FLOAT;
+
+        // 将输入gradoutput的数据类型转换成隐式数据类型，根据具体算子语义按需调用
+        gradOutputCasted = l0op::Cast(gradOutputContiguous, promoteType, uniqueExecutor.get());
+        CHECK_RET(gradOutputCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        // 将输入self的数据类型转换成隐式数据类型，根据具体算子语义按需调用
+        selfCasted = l0op::Cast(selfContiguous, promoteType, uniqueExecutor.get());
+        CHECK_RET(selfCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        // 将输入target的数据类型转换成隐式数据类型，根据具体算子语义按需调用
+        targetCasted = l0op::Cast(targetContiguous, promoteType, uniqueExecutor.get());
+        CHECK_RET(targetCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
 
     op::Shape broadcastShape;
     BroadcastInferShape(target->GetViewShape(), self->GetViewShape(), broadcastShape);
