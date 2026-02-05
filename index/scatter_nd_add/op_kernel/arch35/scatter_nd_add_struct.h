@@ -53,6 +53,7 @@ public:
 
     int64_t ubQuantaIndxFactor;
     int64_t ubRowFactor;
+    int64_t ubRowOptiFactor;
     int64_t eachCoreIndexCount;
     int64_t tailCoreIndexCount;
     int64_t eachCoreVarCount;
@@ -61,5 +62,6 @@ public:
     int64_t isDeterminstic;
     int64_t isSimdNonDeterminstic;
     int64_t isSort;
+    int64_t isOpti;
 };} // namespace ScatterNdAdd
 #endif

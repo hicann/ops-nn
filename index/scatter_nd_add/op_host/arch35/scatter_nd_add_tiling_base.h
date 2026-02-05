@@ -60,6 +60,7 @@ BEGIN_TILING_DATA_DEF(ScatterNdAddTilingData)
 
   TILING_DATA_FIELD_DEF(int64_t, ubQuantaIndxFactor);
   TILING_DATA_FIELD_DEF(int64_t, ubRowFactor);
+  TILING_DATA_FIELD_DEF(int64_t, ubRowOptiFactor);
   TILING_DATA_FIELD_DEF(int64_t, eachCoreIndexCount);
   TILING_DATA_FIELD_DEF(int64_t, tailCoreIndexCount);
   TILING_DATA_FIELD_DEF(int64_t, eachCoreVarCount);
@@ -68,6 +69,7 @@ BEGIN_TILING_DATA_DEF(ScatterNdAddTilingData)
   TILING_DATA_FIELD_DEF(int64_t, isDeterminstic);
   TILING_DATA_FIELD_DEF(int64_t, isSimdNonDeterminstic);
   TILING_DATA_FIELD_DEF(int64_t, isSort);
+  TILING_DATA_FIELD_DEF(int64_t, isOpti);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(ScatterNdAdd, ScatterNdAddTilingData)
@@ -99,6 +101,7 @@ protected:
     void DoOpTilingForDeterminstic();
     void DoOpTilingForSimdNonDetermin();
     void SelectTiling();
+    void DumpTilingInfo() override;
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus DoLibApiTiling() override;
     uint64_t GetTilingKey() const override;
@@ -113,6 +116,7 @@ private:
   void BlockTiling();
   void SetTilingData();
   void SetStride();
+  std::string TilingDataToString();
 
 private:
     int64_t totalCoreNum_ {0};
@@ -156,6 +160,7 @@ private:
     int64_t tailUpdateLoopSize_ = 0;
     int64_t tailUpdateTailNum_ = 0;
     int64_t isSplitAfterAxis_ = 0;
+    int64_t ubRowOptiFactor_ = 0;
 
     int64_t eachCoreIndexCount_ = 0;
     int64_t tailCoreIndexCount_ = 0;
@@ -164,8 +169,8 @@ private:
     int64_t isDeterminstic_ = 0;
     int64_t isSimdNonDeterminstic_ = 0;
     int64_t isSort_ = 0;
-
-    ge::DataType indicesType_ = ge::DT_UNDEFINED;
+    int64_t isOpti_ = 0;
+    
     const char* opName = "ScatterNdAdd";
     ScatterNdAddTilingData tilingData;
 };

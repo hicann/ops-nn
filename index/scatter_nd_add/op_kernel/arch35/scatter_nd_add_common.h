@@ -73,13 +73,13 @@ public:
     TBuf<QuePosition::VECCALC> outOfstBuf_;
     TBuf<QuePosition::VECCALC> strideBuf_;
     TBuf<QuePosition::VECCALC> maxScoreBuf_;
-    TQueBind<QuePosition::VECIN, QuePosition::VECOUT, DOUBLE_BUFFER> dataQueue_;
+    TQueBind<QuePosition::VECIN, QuePosition::VECOUT, 1> dataQueue_;
 
     TBuf<QuePosition::VECCALC> sortIndicesQue_;
-    TQue<QuePosition::VECIN, DOUBLE_BUFFER> updatesOriginIdexQue_;
-    TQue<QuePosition::VECIN, DOUBLE_BUFFER> uniqueIdCountQue_;
-    TQue<QuePosition::VECOUT, DOUBLE_BUFFER> updateSumIdxQue_;
-    TQue<QuePosition::VECOUT, DOUBLE_BUFFER> updateSumQue_;
+    TQue<QuePosition::VECIN, 1> updatesOriginIdexQue_;
+    TQue<QuePosition::VECIN, 1> uniqueIdCountQue_;
+    TQue<QuePosition::VECOUT, 1> updateSumIdxQue_;
+    TQue<QuePosition::VECOUT, 1> updateSumQue_;
 
     using IndexRegType = typename std::conditional<
         IsSameType<U, int64_t>::value,
@@ -100,7 +100,7 @@ public:
         yGm_.SetGlobalBuffer((__gm__ T*)(y));
 
         pipe.InitBuffer(strideBuf_, MAX_RANK_COUNT * sizeof(U));
-        pipe.InitBuffer(dataQueue_, DOUBLE_BUFFER, indicesFactor_ * afterAxisFactor_ * sizeof(T));
+        pipe.InitBuffer(dataQueue_, 1, indicesFactor_ * afterAxisFactor_ * sizeof(T));
         pipe.InitBuffer(outOfstBuf_, indicesFactor_ * sizeof(U));
         pipe.InitBuffer(indicesBuf_, indicesFactor_ * indexRankSize_ * sizeof(U));
         pipe.InitBuffer(maxScoreBuf_, HASH_SCORE_BUF_SIZE * sizeof(float));
@@ -108,12 +108,12 @@ public:
         pipe.InitBuffer(
             sortIndicesQue_,
             ops::CeilAlign(indicesFactor_ * sizeof(U) + SORT_PAD_NUM * UB_AGLIN_VALUE, UB_AGLIN_VALUE));
-        pipe.InitBuffer(updatesOriginIdexQue_, DOUBLE_BUFFER, indicesFactor_ * sizeof(uint32_t));
+        pipe.InitBuffer(updatesOriginIdexQue_, 1, indicesFactor_ * sizeof(uint32_t));
         pipe.InitBuffer(
-            uniqueIdCountQue_, DOUBLE_BUFFER, ops::CeilAlign((indicesFactor_ + 1) * sizeof(int32_t), UB_AGLIN_VALUE));
+            uniqueIdCountQue_, 1, ops::CeilAlign((indicesFactor_ + 1) * sizeof(int32_t), UB_AGLIN_VALUE));
         pipe.InitBuffer(
-            updateSumIdxQue_, DOUBLE_BUFFER, ops::CeilAlign((indicesFactor_ + 1) * sizeof(U), UB_AGLIN_VALUE));
-        pipe.InitBuffer(updateSumQue_, DOUBLE_BUFFER, indicesFactor_ * afterAxisFactor_ * sizeof(float));
+            updateSumIdxQue_, 1, ops::CeilAlign((indicesFactor_ + 1) * sizeof(U), UB_AGLIN_VALUE));
+        pipe.InitBuffer(updateSumQue_, 1, indicesFactor_ * afterAxisFactor_ * sizeof(float));
     }
 
     template <typename PARAM_T>
@@ -328,6 +328,24 @@ public:
                 idLocation += idRepeatTimes;
             }
         }
+    }
+
+    __aicore__ void ComputeIdxCount(
+        LocalTensor<U> outOfstLocal, int64_t rowLen, int64_t colLen)
+    {
+        LocalTensor<U> sortIndicesLocal = sortIndicesQue_.Get<U>();
+        LocalTensor<int32_t> uniqueIdCountLocal = uniqueIdCountQue_.AllocTensor<int32_t>();
+        LocalTensor<uint32_t> updatesOriginIdexLocal = updatesOriginIdexQue_.AllocTensor<uint32_t>();
+        LocalTensor<U> shiftSortLocal = sortIndicesLocal[shiftOffset_];
+        AscendC::Sort<U, false, sortConfig>(
+            shiftSortLocal, updatesOriginIdexLocal, outOfstLocal, static_cast<uint32_t>(rowLen));
+        Duplicate(sortIndicesLocal, (U)-1, shiftOffset_);
+        shiftSortLocal(rowLen) = -1;
+        PipeBarrier<PIPE_V>();
+
+        uniqueIdNum_ = ComputeUniqueIdNum(sortIndicesLocal, uniqueIdCountLocal, rowLen);
+        uniqueIdCountQue_.FreeTensor(uniqueIdCountLocal);
+        updatesOriginIdexQue_.FreeTensor(updatesOriginIdexLocal);
     }
 
     __aicore__ void ComputeSumForUniqueIdx(
@@ -585,6 +603,20 @@ public:
         }
     }
 
+    __aicore__ inline void CopyOutSplitAfterDuplicateIdx(
+        LocalTensor<U> ofstLocal, LocalTensor<T> dataLocal, int64_t rowLen, int64_t colLen, int64_t colIdx)
+    {
+        int64_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(T), UB_AGLIN_VALUE) / sizeof(T);
+        for (int64_t i = 0; i < rowLen; i++) {
+            int64_t rowOfset = ofstLocal(i) * afterAxis_;
+            int64_t outOfset = rowOfset + GetBlockIdx() * eachCoreAfterAxisCount_ + colIdx * afterAxisFactor_;
+            PipeBarrier<PIPE_MTE3>();
+            SetAtomicAdd<T>();
+            CopyOut<T>(yGm_[outOfset], dataLocal[i * colLenAlignSize], colLen);
+            SetAtomicNone();
+        }
+    }
+
     __aicore__ inline void CopyIndiceInSplitAfter(int64_t rowIdx, int64_t rowLen)
     {
         LocalTensor<U> indicesLocal = indicesBuf_.Get<U>();
@@ -689,7 +721,12 @@ public:
         WaitFlag<HardEvent::MTE2_MTE3>(eventIdMte2ToMte3);
 
         if (rowLen < MIN_SAME_IDX_ACCM_COUNT) {
-            CopyOutSplitAfter(outOfstLocal, updatesLocal, rowLen, colLen, colIdx);
+            ComputeIdxCount(outOfstLocal, rowLen, colLen);
+            if (uniqueIdNum_ == rowLen) {
+                CopyOutSplitAfter(outOfstLocal, updatesLocal, rowLen, colLen, colIdx);
+            } else {
+                CopyOutSplitAfterDuplicateIdx(outOfstLocal, updatesLocal, rowLen, colLen, colIdx);
+            }
             dataQueue_.FreeTensor(updatesLocal);
             return;
         }

@@ -50,6 +50,7 @@ static constexpr int64_t BASE_UPDATES_SIZE = 1024;
 static constexpr int64_t SORT_LIMIT = 5;
 static constexpr int64_t FULL_LOAD_LIMIT = 16;
 static constexpr int64_t CORE_NUM = 64;
+static constexpr float THRESHOLD_FACTOR = 0.1;
 
 
 static const std::set<ge::DataType> DETERMIN_DTYPE = {ge::DT_FLOAT, ge::DT_FLOAT16};
@@ -163,7 +164,7 @@ void ScatterNdAddSimtTiling::SelectTiling(){
         isSimdNonDeterminstic_ = 1;
     }
     //是否排序
-    if (indicesAxis_ / varInAxis_ >= SORT_LIMIT) {
+    if (indicesAxis_ / varInAxis_ >= SORT_LIMIT && updateDtype_ != ge::DT_INT64) {
         isSort_ = 1;
     }
 }
@@ -249,8 +250,8 @@ int64_t ScatterNdAddSimtTiling::GetRestAvailableSize(int64_t sampleNum, int64_t 
 
 void ScatterNdAddSimtTiling::DoOpTilingSplitAfter()
 {
-    int64_t halfUbSize = static_cast<int64_t>((ubSize_ - RESERVE_SIZE) / DB_BUFFER);
-    halfUbSize = halfUbSize - MIN_HANDLE_SIZE * FP32_BYTES;//maxScore
+    int64_t UbSize = static_cast<int64_t>((ubSize_ - RESERVE_SIZE));
+    UbSize = UbSize - MIN_HANDLE_SIZE * FP32_BYTES;//maxScore
     int64_t alignNum = ALIGN_SIZE / varTypeSize_;
     /* split afterAxis */
     eachCoreAfterAxisCount_ = Ops::Base::CeilDiv(afterAxis_, totalCoreNum_);
@@ -269,9 +270,9 @@ void ScatterNdAddSimtTiling::DoOpTilingSplitAfter()
                           Ops::Base::CeilAlign(INT32_BYTES, ubBlock) + 
                           Ops::Base::CeilAlign(INT32_BYTES * TWO, ubBlock) +
                           Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +
-                          GetSortTmpSize(indicesType_, 1, false);
+                          GetSortTmpSize(indiceDtype_, 1, false);
     int64_t oneBlockSize = indicesSize + (varTypeSize_ + FP32_BYTES) * eachCoreAfterAxisCount_;
-    indicesFactor_ = halfUbSize / oneBlockSize;
+    indicesFactor_ = UbSize / oneBlockSize;
 
     int64_t occupy = Ops::Base::CeilAlign(rankSize_ * indicesTypeSize_, ubBlock) +
                      Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +
@@ -281,21 +282,21 @@ void ScatterNdAddSimtTiling::DoOpTilingSplitAfter()
                      Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) + 
                      Ops::Base::CeilAlign(varTypeSize_ * eachCoreAfterAxisCount_, ubBlock) + 
                      Ops::Base::CeilAlign(FP32_BYTES * eachCoreAfterAxisCount_, ubBlock) + 
-                     GetSortTmpSize(indicesType_, 1, false);
-    if (occupy > halfUbSize) {
+                     GetSortTmpSize(indiceDtype_, 1, false);
+    if (occupy > UbSize) {
         int64_t indicesUbSize = std::min(INDICES_MIN_BLOCK_SIZE, indicesAxis_ * indicesSize);
         /* indicesBuf_ + outOfstBuf_ */
         indicesFactor_ = Ops::Base::CeilAlign(indicesUbSize, ALIGN_SIZE) / indicesSize;
-        afterAxisFactor_ = (halfUbSize - indicesFactor_ * indicesSize) / indicesFactor_;
+        afterAxisFactor_ = (UbSize - indicesFactor_ * indicesSize) / indicesFactor_;
         afterAxisFactor_ = Ops::Base::FloorAlign(afterAxisFactor_, alignNum);
     } else {
         afterAxisFactor_ = Ops::Base::CeilAlign(eachCoreAfterAxisCount_, alignNum);
-        indicesFactor_ = halfUbSize / (afterAxisFactor_ * (varTypeSize_ + FP32_BYTES) + indicesSize);
+        indicesFactor_ = UbSize / (afterAxisFactor_ * (varTypeSize_ + FP32_BYTES) + indicesSize);
         
         int64_t restSize = static_cast<int64_t>(-1);
         while (restSize <= 0) {
             --indicesFactor_;
-            restSize = halfUbSize - (Ops::Base::CeilAlign(indicesFactor_ * rankSize_ * indicesTypeSize_, ubBlock) +
+            restSize = UbSize - (Ops::Base::CeilAlign(indicesFactor_ * rankSize_ * indicesTypeSize_, ubBlock) +
                                     Ops::Base::CeilAlign(indicesFactor_ * indicesTypeSize_, ubBlock) +
                                     Ops::Base::CeilAlign(indicesFactor_ * (indicesTypeSize_ + TWO * ALIGN_SIZE), ubBlock) + 
                                     Ops::Base::CeilAlign(indicesFactor_ * INT32_BYTES, ubBlock) + 
@@ -303,13 +304,13 @@ void ScatterNdAddSimtTiling::DoOpTilingSplitAfter()
                                     Ops::Base::CeilAlign(indicesFactor_ * indicesTypeSize_, ubBlock) + 
                                     indicesFactor_ * Ops::Base::CeilAlign((varTypeSize_) * eachCoreAfterAxisCount_, ubBlock) + 
                                     indicesFactor_ * Ops::Base::CeilAlign((FP32_BYTES) * eachCoreAfterAxisCount_, ubBlock) + 
-                                    GetSortTmpSize(indicesType_, indicesFactor_, false));
+                                    GetSortTmpSize(indiceDtype_, indicesFactor_, false));
             if (indicesFactor_ > indicesAxis_) {
                 indicesFactor_ = indicesAxis_;
                 break;
             }
         }
-        // indicesFactor_ = ops::CeilAlign(indicesFactor_ * indicesTypeSize_, ALIGN_SIZE) / indicesTypeSize_;
+        // indicesFactor_ = Ops::Base::CeilAlign(indicesFactor_ * indicesTypeSize_, ALIGN_SIZE) / indicesTypeSize_;
     }
 
     /* 每个核分的indices相同 */
@@ -358,10 +359,10 @@ void ScatterNdAddSimtTiling::DoOpTilingForDeterminsticSplitIndices()
     int64_t restSize = static_cast<int64_t>(-1);
     while (restSize <= 0) {
         --indicesFactor_;
-        restSize = GetRestAvailableSize(indicesFactor_, varTypeSize_, halfUbSize, afterAxis_, indicesType_);
+        restSize = GetRestAvailableSize(indicesFactor_, varTypeSize_, halfUbSize, afterAxis_, indiceDtype_);
     }
-    if (indicesFactor_ > indicesAxis_) {
-        indicesFactor_ = indicesAxis_;
+    if (indicesFactor_ > eachCoreIndexCount_) {
+        indicesFactor_ = eachCoreIndexCount_;
     }
 
     /* second step */
@@ -379,8 +380,8 @@ void ScatterNdAddSimtTiling::DoOpTilingForDeterminsticSplitIndices()
                         ubQuantaIndxFactor_ * Ops::Base::CeilAlign(INT32_BYTES * afterAxis_, ubBlock);
         restSize = halfUbSize - occupy;
     }
-    if (ubQuantaIndxFactor_ > indicesAxis_) {
-        ubQuantaIndxFactor_ = indicesAxis_;   // quantaFactor Align
+    if (ubQuantaIndxFactor_ > eachCoreVarCount_) {
+        ubQuantaIndxFactor_ = eachCoreVarCount_;   // quantaFactor Align
     }
     
     /* third step */
@@ -397,6 +398,27 @@ void ScatterNdAddSimtTiling::DoOpTilingForDeterminsticSplitIndices()
     }
     if (ubRowFactor_ > eachCoreVarCount_) {
         ubRowFactor_ = eachCoreVarCount_;
+    }
+
+    float xValue = static_cast<float>(indicesAxis_) / varInAxis_;
+    if (xValue < THRESHOLD_FACTOR) {
+        isOpti_ = 1;
+    }
+
+    /* 优化分支 */
+    oneBlockSize = indicesTypeSize_ + (INT32_BYTES + FP32_BYTES + FP32_BYTES) * afterAxisAlignFp32;
+    ubRowOptiFactor_ = halfUbSize / oneBlockSize;
+    restSize = static_cast<int64_t>(-1);
+    while (restSize <= 0) {
+        --ubRowOptiFactor_;
+        int64_t occupy = Ops::Base::CeilAlign(ubRowOptiFactor_ * indicesTypeSize_, ubBlock) +
+                        ubRowOptiFactor_ * Ops::Base::CeilAlign(INT32_BYTES * afterAxis_, ubBlock) + 
+                        ubRowOptiFactor_ * Ops::Base::CeilAlign(FP32_BYTES * afterAxis_, ubBlock) + 
+                        ubRowOptiFactor_ * Ops::Base::CeilAlign(FP32_BYTES * afterAxis_, ubBlock);
+        restSize = halfUbSize - occupy;
+    }
+    if (ubRowOptiFactor_ > eachCoreIndexCount_) {
+        ubRowOptiFactor_ = eachCoreIndexCount_;
     }
 }
 
@@ -427,7 +449,7 @@ void ScatterNdAddSimtTiling::DoOpTilingSimdSplitIndices()
 
       int64_t updateAlignSize = Ops::Base::CeilAlign(varTypeSize_ * afterAxis_, ubBlock) + 
                                 Ops::Base::CeilAlign(FP32_BYTES * afterAxis_, ubBlock) + 
-                                GetSortTmpSize(indicesType_, 1, false);
+                                GetSortTmpSize(indiceDtype_, 1, false);
     if (indicesAlignSize + updateAlignSize > halfUbSize) {
         int64_t indicesSize = std::min(INDICES_MIN_BLOCK_SIZE, indicesAxis_ * indicesAlignSize);
         /* indicesBuf_ + outOfstBuf_ */
@@ -448,7 +470,7 @@ void ScatterNdAddSimtTiling::DoOpTilingSimdSplitIndices()
                             Ops::Base::CeilAlign(indicesFactor_ * indicesTypeSize_, ubBlock) + 
                             indicesFactor_ * Ops::Base::CeilAlign((varTypeSize_) * afterAxisFactor_, ubBlock) + 
                             indicesFactor_ * Ops::Base::CeilAlign((FP32_BYTES) * afterAxisFactor_, ubBlock) + 
-                            GetSortTmpSize(indicesType_, indicesFactor_, false);
+                            GetSortTmpSize(indiceDtype_, indicesFactor_, false);
             restSize = halfUbSize - occupy;
             if (indicesFactor_ > indicesAxis_) {
                 indicesFactor_ = indicesAxis_;
@@ -547,12 +569,22 @@ ge::graphStatus ScatterNdAddSimtTiling::PostTiling()
     workspaces[0] = workspaceSize;
     context_->SetTilingKey(GetTilingKey());
     context_->SetBlockDim(blockNum);
+    context_->SetScheduleMode(1);
     if (indiceShapeSize == 0 || updateShapeSize == 0) {
         // 输入为空tensor时，设置blockNum为1，在kernel中直接返回
         context_->SetBlockDim(1);
     }
-    if (isDeterminstic_ == 1 || isSimdNonDeterminstic_ == 1 || isSort_ == 1) {
+    if (isSimdNonDeterminstic_ == 1 || isSort_ == 1) {
         context_->SetBlockDim(usedCoreNumBefore_);
+    }
+    if (isDeterminstic_ == 1) {
+        int64_t usedCoreNum = 0;
+        if (isOpti_ == 1) {
+            usedCoreNum = usedCoreNumBefore_;
+        } else {
+            usedCoreNum = std::max(usedCoreNumAfter_, usedCoreNumBefore_);
+        }
+        context_->SetBlockDim(usedCoreNum);
     }
     tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(),
                             context_->GetRawTilingData()->GetCapacity());
@@ -606,7 +638,57 @@ void ScatterNdAddSimtTiling::SetTilingData()
     tilingData.set_isDeterminstic(isDeterminstic_);
     tilingData.set_isSimdNonDeterminstic(isSimdNonDeterminstic_);
     tilingData.set_isSort(isSort_);
+    tilingData.set_ubRowOptiFactor(ubRowOptiFactor_);
+    tilingData.set_isOpti(isOpti_);
+}
+
+
+std::string ScatterNdAddSimtTiling::TilingDataToString()
+{
+    // 基础分块参数
+    std::string result = "blockNum: " + std::to_string(tilingData.get_blockNum());
+    result += "blockTilingSize: " + std::to_string(tilingData.get_blockTilingSize());
+    result += "tailBlockTilingSize: " + std::to_string(tilingData.get_tailBlockTilingSize());
+    result += "ubTilingSize: " + std::to_string(tilingData.get_ubTilingSize());
+    result += "sliceSize: " + std::to_string(tilingData.get_sliceSize());
+    result += "rankSize: " + std::to_string(tilingData.get_rankSize());
+
+    // 轴相关参数
+    result +="varInAxis: " + std::to_string(tilingData.get_varInAxis());
+    result +="indexRankSize: " + std::to_string(tilingData.get_indexRankSize());
+    result +="afterAxis: " + std::to_string(tilingData.get_afterAxis());
+    result +="usedCoreNumBefore: " + std::to_string(tilingData.get_usedCoreNumBefore());
+    result +="usedCoreNumAfter: " + std::to_string(tilingData.get_usedCoreNumAfter());
+    result +="eachCoreAfterAxisCount: " + std::to_string(tilingData.get_eachCoreAfterAxisCount());
+    result +="tailCoreAfterAxisCount: " + std::to_string(tilingData.get_tailCoreAfterAxisCount());
+
+    // 循环与索引相关参数
+    result +="updateLoopSize: " + std::to_string(tilingData.get_updateLoopSize());
+    result +="updateTailNum: " + std::to_string(tilingData.get_updateTailNum());
+    result +="indicesLoopSize: " + std::to_string(tilingData.get_indicesLoopSize());
+    result +="indiceTailNum: " + std::to_string(tilingData.get_indiceTailNum());
+    result +="tailUpdateLoopSize: " + std::to_string(tilingData.get_tailUpdateLoopSize());
+    result +="tailUpdateAxisNum: " + std::to_string(tilingData.get_tailUpdateAxisNum());
+    result +="isSplitAfterAxis: " + std::to_string(tilingData.get_isSplitAfterAxis());
+    result +="eachCoreIndexCount: " + std::to_string(tilingData.get_eachCoreIndexCount());
+    result +="tailCoreIndexCount: " + std::to_string(tilingData.get_tailCoreIndexCount());
+    result +="eachCoreVarCount: " + std::to_string(tilingData.get_eachCoreVarCount());
+    result +="tailCoreVarCount: " + std::to_string(tilingData.get_tailCoreVarCount());
+    result +="indicesFactor: " + std::to_string(tilingData.get_indicesFactor());
+    result +="afterAxisFactor: " + std::to_string(tilingData.get_afterAxisFactor());
+    result +="ubQuantaIndxFactor: " + std::to_string(tilingData.get_ubQuantaIndxFactor());
+    result +="ubRowFactor: " + std::to_string(tilingData.get_ubRowFactor());
+    result +="isDeterminstic: " + std::to_string(tilingData.get_isDeterminstic());
+    result +="isSimdNonDeterminstic: " + std::to_string(tilingData.get_isSimdNonDeterminstic());
+    result +="isSort: " + std::to_string(tilingData.get_isSort());
+    result +="ubRowOptiFactor: " + std::to_string(tilingData.get_ubRowOptiFactor());
+    result +="isOpti: " + std::to_string(tilingData.get_isOpti());
+    return result;
+}
+
+void ScatterNdAddSimtTiling::DumpTilingInfo()
+{
+    OP_LOGI(context_->GetNodeName(), "Tiling info is: %s", TilingDataToString().c_str());
 }
 
 } // namespace optiling
-
