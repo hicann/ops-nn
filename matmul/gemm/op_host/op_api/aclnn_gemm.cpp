@@ -54,6 +54,16 @@ static inline bool CheckSocVersionIsSupportBf16(void)
            GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
 }
 
+static inline bool CheckFormat(const aclTensor* A, const aclTensor* B, const aclTensor* C, const aclTensor* out)
+{
+    if (A->GetStorageFormat() != Format::FORMAT_ND || B->GetStorageFormat() != Format::FORMAT_ND ||
+        C->GetStorageFormat() != Format::FORMAT_ND || out->GetStorageFormat() != Format::FORMAT_ND) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND");
+        return false;
+    }
+    return true;
+}
+
 static inline bool CheckDtypeValid(const aclTensor* C, const aclTensor* A, const aclTensor* B, const aclTensor* out)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(A, dtypeSupportList, return false);
@@ -152,6 +162,10 @@ static aclnnStatus CheckParams(
 
     // 6. 检查cubeMathType
     CHECK_RET(CheckMathType(A, B, cubeMathType), ACLNN_ERR_PARAM_INVALID);
+    
+    // 7. 检查数据格式是否在API支持的范围之内
+    CHECK_RET(CheckFormat(A, B, C, out), ACLNN_ERR_PARAM_INVALID);
+    
     return ACLNN_SUCCESS;
 }
 
