@@ -75,7 +75,7 @@ aclnnStatus aclnnBatchNormReduce(
       </tr></thead>
     <tbody>
     <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示需要求和的源数据张量。对应公式中的`x`。</td>
       <td>支持空Tensor。</td>
@@ -85,7 +85,7 @@ aclnnStatus aclnnBatchNormReduce(
       <td>√</td>
     </tr>
     <tr>
-      <td>sum</td>
+      <td>sum（aclTensor*）</td>
       <td>输出</td>
       <td>表示求和的输出Tensor，对应公式中的`sum`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要与输入`x`的第二维的值一致。</li></ul></td>
@@ -95,7 +95,7 @@ aclnnStatus aclnnBatchNormReduce(
       <td>√</td>
     </tr>
     <tr>
-      <td>squareSum</td>
+      <td>squareSum（aclTensor*）</td>
       <td>输出</td>
       <td>表示求平方和的输出Tensort，对应公式中的`squareSum`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要与输入`x`的第二维的值一致。</li></ul></td>
@@ -105,7 +105,7 @@ aclnnStatus aclnnBatchNormReduce(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -115,7 +115,7 @@ aclnnStatus aclnnBatchNormReduce(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

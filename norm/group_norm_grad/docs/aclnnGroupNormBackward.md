@@ -91,7 +91,7 @@ aclnnStatus aclnnGroupNormBackward(
     </tr></thead>
   <tbody>
     <tr>
-      <td>gradOut</td>
+      <td>gradOut（aclTensor*）</td>
       <td>输入</td>
       <td>表示反向计算的梯度Tensor，对应公式中的`gradOut`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`input`相同。</li><li>元素个数需要等于N*C*HxW。</li></ul></td>
@@ -101,7 +101,7 @@ aclnnStatus aclnnGroupNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>input</td>
+      <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向计算的首个输入，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`gradOut`相同。</li><li>元素个数需要等于N*C*HxW。</li></ul></td>
@@ -111,7 +111,7 @@ aclnnStatus aclnnGroupNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>mean</td>
+      <td>mean（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向计算的第二个输出，表示input分组后每个组的均值，对应公式中的`mean`。</td>
       <td><ul><li>支持空Tensor。</li><li>元素个数需要等于N*group。</li></ul></td>
@@ -121,7 +121,7 @@ aclnnStatus aclnnGroupNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>rstd</td>
+      <td>rstd（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向计算的第三个输出，表示input分组后每个组的标准差倒数，对应公式中的`rstd`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`mean`相同。</li><li>元素个数需要等于N*group。</li></ul></td>
@@ -131,7 +131,7 @@ aclnnStatus aclnnGroupNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>gamma</td>
+      <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示每个channel的缩放系数，对应公式中的`gamma`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`mean`相同。</li><li>元素数量需与`C`相同。</li></ul></td>
@@ -141,57 +141,57 @@ aclnnStatus aclnnGroupNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>N</td>
+      <td>N（int64_t）</td>
       <td>输入</td>
       <td>表示输入`gradOut`在N维度上的空间大小。</td>
       <td>-</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>C</td>
+      <td>C（int64_t）</td>
       <td>输入</td>
       <td>表示输入`gradOut`在C维度上的空间大小。</td>
       <td>-</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>HxW</td>
+      <td>HxW（int64_t）</td>
       <td>输入</td>
       <td>表示输入`gradOut`在除N、C维度外的空间大小。</td>
       <td>-</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>group</td>
+      <td>group（int64_t）</td>
       <td>输入</td>
       <td>表示将输入`gradOut`的C维度分为group组。</td>
       <td><ul><li>group需大于0，且C必须可以被group整除。</li></ul></td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>outputMask</td>
+      <td>outputMask（aclBoolArray*）</td>
       <td>输入</td>
       <td>表示输出掩码，标识是否输出`gradInput`，`gradGammaOut`，`gradBetaOut`。</td>
       <td><ul><li>size为3。分别表示是否输出`gradInput`，`gradGammaOut`，`gradBetaOut`，若为true则输出，否则输出对应位置返回空。</li></ul></td>
-      <td>BOOL</td>
+      <td>BoolArray</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>gradInput</td>
+      <td>gradInput（aclTensor*）</td>
       <td>输出</td>
       <td>表示计算输出的梯度，用于更新输入数据的梯度。对应公式中的`gradInput`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`gradOut`相同。</li><li>shape与`input`相同。</li></ul></td>
@@ -201,7 +201,7 @@ aclnnStatus aclnnGroupNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>gradGammaOut</td>
+      <td>gradGammaOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示计算输出的梯度，用于更新缩放参数的梯度。对应公式中的`gradGammaOut`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`mean`相同。</li><li>shape与`gamma`相同。</li></ul></td>
@@ -211,7 +211,7 @@ aclnnStatus aclnnGroupNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>gradBetaOut</td>
+      <td>gradBetaOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示计算输出的梯度，用于更新偏置参数的梯度。对应公式中的`gradBetaOut`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`mean`相同。</li><li>shape与`gamma`相同。</li></ul></td>
@@ -221,7 +221,7 @@ aclnnStatus aclnnGroupNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回用户需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -231,7 +231,7 @@ aclnnStatus aclnnGroupNormBackward(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

@@ -105,7 +105,7 @@ aclnnStatus aclnnLayerNormBackward(
     </tr></thead>
   <tbody>
     <tr>
-      <td>gradOut</td>
+      <td>gradOut（aclTensor*）</td>
       <td>输入</td>
       <td>表示反向计算的梯度Tensor，对应计算公式中的`gradOut`。</td>
       <td><ul><li>不支持空Tensor。<li>与输入input的数据类型相同。<li>shape与input的shape相等，为[A1,...,Ai,R1,...,Rj], shape长度大于等于normalizedShape的长度。</li></ul></td>
@@ -115,7 +115,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>input</td>
+      <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向计算的首个输入，对应公式中的`input`。</td>
       <td><ul><li>不支持空Tensor。<li>与输入gradOut的数据类型相同。<li>shape与gradOut的shape相等，为[A1,...,Ai,R1,...,Rj], shape长度大于等于normalizedShape的长度。</li></ul></td>
@@ -125,7 +125,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>normalizedShape</td>
+      <td>normalizedShape（aclIntArray*）</td>
       <td>输入</td>
       <td>表示需要进行norm计算的维度，对应计算公式中的reduce_axis_1。</td>
       <td><ul><li>公式中的reduce_axis_0为不进行norm计算的维度。<li>值为[R1,...,Rj], 长度小于等于输入input的shape长度，不支持为空。</li></ul></td>
@@ -135,7 +135,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>-</td>
     </tr>
     <tr>
-      <td>mean</td>
+      <td>mean（aclTensor*）</td>
       <td>输入</td>
       <td>正向计算的第二个输出，表示input的均值，对应计算公式中的mean。</td>
       <td><ul><li>不支持空Tensor。</li><li>与输入rstd的数据类型相同且位宽不低于输入input的数据类型位宽。</li><li>shape与rstd的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
@@ -145,7 +145,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>rstd</td>
+      <td>rstd（aclTensor*）</td>
       <td>输入</td>
       <td>正向计算的第三个输出，表示input的标准差的倒数，对应计算公式中的rstd。</td>
       <td><ul><li>不支持空Tensor。<li>与输入mean的数据类型相同且位宽不低于输入input的数据类型位宽。<li>shape与mean的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
@@ -155,7 +155,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>weightOptional</td>
+      <td>weightOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选参数，表示权重，对应计算公式中的weightOptional。</td>
       <td><ul><li>不支持空Tensor。<li>weightOptional非空时，数据类型与输入input一致或为FLOAT类型，且当biasOptional存在时与biasOptional的数据类型相同。<li>weightOptional为空时，需要构造一个shape为[R1,...,Rj]，数据类型与输入input相同，数据全为1的Tensor。<li>shape与normalizedShape相等，为[R1,...,Rj]。</li></ul></td>
@@ -165,7 +165,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>biasOptional</td>
+      <td>biasOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选参数，表示偏置。</td>
       <td><ul><li>不支持空Tensor。<li>biasOptional非空时，数据类型与输入input一致或为FLOAT类型，且当weightOptional存在时与weightOptional的数据类型相同。<li>biasOptional为空时，不做任何处理。<li>shape与normalizedShape相等，为[R1,...,Rj]。</li></ul></td>
@@ -175,17 +175,17 @@ aclnnStatus aclnnLayerNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>outputMask</td>
+      <td>outputMask（aclBoolArray*）</td>
       <td>输入</td>
       <td>表示输出的掩码。</td>
       <td><ul><li>长度固定为3。<li>取值为True时表示对应位置的输出非空。</li></ul></td>
-      <td>BOOL</td>
+      <td>BoolArray</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>gradInputOut</td>
+      <td>gradInputOut（aclTensor*）</td>
       <td>输出</td>
       <td>可选输出，表示反向传播的输出梯度，对应计算公式中的`gradInputOut`。</td>
       <td><ul><li>不支持空Tensor。</li><li>由outputMask的第0个元素控制是否输出，outputMask第0个元素为True时会进行输出，与输入input的数据类型相同。</li><li>shape与input的shape相等，为[A1,...,Ai,R1,...,Rj]。</li></ul></td>
@@ -195,7 +195,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>gradWeightOut</td>
+      <td>gradWeightOut（aclTensor*）</td>
       <td>输出</td>
       <td>可选输出，表示反向传播权重的梯度，对应计算公式中的`gradWeightOut`。</td>
       <td><ul><li>不支持空Tensor。</li><li>由outputMask的第1个元素控制是否输出，outputMask第1个元素为True时会进行输出，与输入weightOptional的数据类型相同。</li><li>shape与gradBiasOut的shape相等，为[R1,...,Rj]。</li></ul></td>
@@ -205,7 +205,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>gradBiasOut</td>
+      <td>gradBiasOut（aclTensor*）</td>
       <td>输出</td>
       <td>可选输出，表示反向传播偏置的梯度，对应计算公式中的`gradBiasOut`。</td>
       <td><ul><li>不支持空Tensor。</li><li>由outputMask的第2个元素控制是否输出，outputMask第2个元素为True时会进行输出，与输入weightOptional的数据类型相同。</li><li>shape与gradWeightOut的shape相等，为[R1,...,Rj]。</li></ul></td>
@@ -215,7 +215,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -225,7 +225,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

@@ -105,7 +105,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       </tr></thead>
     <tbody>
     <tr>
-      <td>x1</td>
+      <td>x1（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x1`。</td>
       <td><ul><li>支持空Tensor。</li></ul></td>
@@ -115,7 +115,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>x2</td>
+      <td>x2（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x2`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape和数据类型与`x1`保持一致。</li></ul></td>
@@ -125,7 +125,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>gamma</td>
+      <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的权重张量。对应公式中的`g`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与`x1`需要norm（层归一化）的维度保持一致，数据类型与`x1`保持一致。</li></ul></td>
@@ -135,7 +135,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>scales1</td>
+      <td>scales1（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到y1Out进行的scales张量，对应公式中的`scales1`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与`gamma`保持一致，或者最后一维和`gamma`保持一致，其他维度为1。</li></ul></td>
@@ -144,7 +144,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>1-8</td>
       <td>√</td>
     <tr>
-      <td>scales2Optional</td>
+      <td>scales2Optional（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到y2Out进行的scales张量。对应公式中的`scales2`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape、数据类型与`scales1`保持一致。<li>当参数`divMode`的值为True时，该参数的值不能为0。</li></ul></td>
@@ -154,7 +154,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>zeroPoints1Optional</td>
+      <td>zeroPoints1Optional（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到y1Out进行的offset张量。对应公式中的`zero_points1`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape与`scales1`保持一致。</li></ul></td>
@@ -164,7 +164,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>zeroPoints2Optional</td>
+      <td>zeroPoints2Optional（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到y2Out进行的offset张量。对应公式中的`zero_points2`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape与`scales1`保持一致，数据类型与`zeroPoints1Optional`保持一致。</li></ul></td>
@@ -174,37 +174,37 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>axis</td>
+      <td>axis（int64_t）</td>
       <td>输入</td>
       <td>表示需要进行量化的elewise轴，其他的轴做broadcast，指定的轴不能超过输入`x1`的维度数。当前仅支持-1，传其他值均不生效。</td>
-      <td>-
-      <td>int64_t</td>
+      <td>-</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>epsilon</td>
+      <td>epsilon（double）</td>
       <td>输入</td>
       <td>公式中的输入eps，用于防止除0错误，数据类型为double。建议传较小的正数。</td>
       <td>-</td>
-      <td>double</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>divMode</td>
+      <td>divMode（bool）</td>
       <td>输入</td>
       <td>公式中决定量化公式是否使用除法的参数，数据类型为bool。</td>
       <td>支持True和False。</td>
-      <td>bool</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>y1Out</td>
+      <td>y1Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y1Out`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与输入`x1`/`x2`一致。</li></ul></td>
@@ -214,7 +214,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>y2Out</td>
+      <td>y2Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y2Out`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape、数据类型与`y1Out`保持一致。</li></ul></td>
@@ -224,7 +224,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>xOut</td>
+      <td>xOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示x1和x2的和，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与`scales1`保持一致，数据类型与`zeroPoints1Optional`保持一致。</li></ul></td>
@@ -234,7 +234,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -244,7 +244,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

@@ -106,7 +106,7 @@ aclnnStatus aclnnFastBatchNormBackward(
     </tr></thead>
   <tbody>
     <tr>
-      <td>gradOut</td>
+      <td>gradOut（aclTensor*）</td>
       <td>输入</td>
       <td>表示梯度Tensor，对应公式中的`gradOut`。</td>
       <td><ul><li>支持空Tensor。</li><li>支持的shape和格式有：2维（对应的格式为NC），3维（对应的格式为NCL），4维（对应的格式为NCHW），5维（对应的格式为NCDHW），6-8维（对应的格式为ND，其中第2维固定为channel轴）。</li></ul></td>
@@ -116,7 +116,7 @@ aclnnStatus aclnnFastBatchNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>input</td>
+      <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向的输入Tensor，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型、shape、数据格式均需要与`gradOut`保持一致。</li></ul></td>
@@ -126,7 +126,7 @@ aclnnStatus aclnnFastBatchNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>weight</td>
+      <td>weight（aclTensor*）</td>
       <td>输入</td>
       <td>表示权重Tensor，对应公式中的`weight`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -136,7 +136,7 @@ aclnnStatus aclnnFastBatchNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>runningMean</td>
+      <td>runningMean（aclTensor*）</td>
       <td>输入</td>
       <td>表示训练期间计算的平均值，对应公式中的`runningMean`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -146,7 +146,7 @@ aclnnStatus aclnnFastBatchNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>runningVar</td>
+      <td>runningVar（aclTensor*）</td>
       <td>输入</td>
       <td>表示训练期间计算的方差，对应公式中的`runningVar`。</td>
       <td><ul><li>支持空Tensor。</li><li>数值为非负数。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -156,7 +156,7 @@ aclnnStatus aclnnFastBatchNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>saveMean</td>
+      <td>saveMean（aclTensor*）</td>
       <td>输入</td>
       <td>表示保存的均值，对应公式中的`saveMean`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -166,7 +166,7 @@ aclnnStatus aclnnFastBatchNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>saveInvstd</td>
+      <td>saveInvstd（aclTensor*）</td>
       <td>输入</td>
       <td>表示保存的标准差的倒数，分别对应公式中的(Var(x) + eps)开平方的倒数。</td>
       <td><ul><li>支持空Tensor。</li><li>数值为非负数。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -176,47 +176,47 @@ aclnnStatus aclnnFastBatchNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>training</td>
+      <td>training（bool）</td>
       <td>输入</td>
       <td>表示标记是否训练场景，对应公式描述中的`training`。</td>
       <td>true表示训练场景，false表示推理场景。</td>
-      <td>BOOL</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>eps</td>
+      <td>eps（double）</td>
       <td>输入</td>
       <td>表示添加到方差中的值，以避免出现除以零的情况。对应公式中的`eps`。</td>
       <td>-</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>outputMask</td>
+      <td>outputMask（aclBoolArray*）</td>
       <td>输入</td>
       <td>表示输出的掩码。</td>
       <td>size为3。分别表示是否输出`gradInput`、`gradWeight`、 `gradBias`，若为true则输出，否则输出对应位置返回空。</td>
-      <td>BOOLARRAY</td>
+      <td>BoolArray</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>version</td>
+      <td>version（int）</td>
       <td>输入</td>
       <td>表示算子内部使用的算法版本号。</td>
       <td>目前支持可选值：0、1。默认值：0。</td>
-      <td>INT</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>gradInput</td>
+      <td>gradInput（aclTensor*）</td>
       <td>输出</td>
       <td>表示输入Tensor的梯度，对应公式中的`gradInput`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选输出，若outputMask[0]为True，则需要输出，否则不输出。</li><li>数据类型、shape、数据格式均需要与`gradOut`保持一致。</li></ul></td>
@@ -226,7 +226,7 @@ aclnnStatus aclnnFastBatchNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>gradWeight</td>
+      <td>gradWeight（aclTensor*）</td>
       <td>输出</td>
       <td>表示缩放参数的梯度，对应公式中的`gradWeight`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选输出，若outputMask[1]为True，则需要输出，否则不输出。</li><li>长度与入参`input`中channel轴的长度相等</li></ul></td>
@@ -236,7 +236,7 @@ aclnnStatus aclnnFastBatchNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>gradBias</td>
+      <td>gradBias（aclTensor*）</td>
       <td>输出</td>
       <td>表示偏置参数的梯度，对应公式中的`gradBias`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选输出，若outputMask[2]为True，则需要输出，否则不输出。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -246,7 +246,7 @@ aclnnStatus aclnnFastBatchNormBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回用户需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -256,7 +256,7 @@ aclnnStatus aclnnFastBatchNormBackward(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

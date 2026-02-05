@@ -81,7 +81,7 @@ aclnnStatus aclnnBatchNorm(
     </tr></thead>
   <tbody>
     <tr>
-      <td>input</td>
+      <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行BatchNorm计算的输入，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>支持的shape和格式有：2维（对应的格式为NC），3维（对应的格式为NCL），4维（对应的格式为NCHW），5维（对应的格式为NCDHW），6-8维（对应的格式为ND，其中第2维固定为channel轴）。</li></ul></td>
@@ -91,7 +91,7 @@ aclnnStatus aclnnBatchNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>weight</td>
+      <td>weight（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行BatchNorm计算的权重Tensor，对应公式中的`weight`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -101,7 +101,7 @@ aclnnStatus aclnnBatchNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>bias</td>
+      <td>bias（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行BatchNorm计算的偏置Tensor，对应公式中的`bias`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -111,7 +111,7 @@ aclnnStatus aclnnBatchNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>runningMean</td>
+      <td>runningMean（aclTensor*）</td>
       <td>输入</td>
       <td>表示推理期间使用的平均值，对应公式中的`E(x)`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -121,7 +121,7 @@ aclnnStatus aclnnBatchNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>runningVar</td>
+      <td>runningVar（aclTensor*）</td>
       <td>输入</td>
       <td>表示推理期间使用的方差，对应公式中的`Var(x)`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，数值为非负数。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -132,37 +132,37 @@ aclnnStatus aclnnBatchNorm(
     </tr>
     </tr>
     <tr>
-      <td>training</td>
+      <td>training（bool）</td>
       <td>输入</td>
       <td>表示标记是否训练场景。</td>
       <td>true表示训练场景，false表示推理场景。</td>
-      <td>BOOL</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>momentum</td>
+      <td>momentum（double）</td>
       <td>输入</td>
       <td>表示用于更新运行均值和方差。</td>
       <td>-</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>eps</td>
+      <td>eps（double）</td>
       <td>输入</td>
       <td>表示添加到方差中的值，以避免出现除以零的情况。对应公式中的`eps`。</td>
       <td>-</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>output</td>
+      <td>output（aclTensor*）</td>
       <td>输出</td>
       <td>表示BatchNorm的输出结果，对应公式中的`y`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型、数据格式和shape与入参`input`保持一致。</li></ul></td>
@@ -172,7 +172,7 @@ aclnnStatus aclnnBatchNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>saveMean</td>
+      <td>saveMean（aclTensor*）</td>
       <td>输出</td>
       <td>只在训练场景输出，表示保存的均值，对应公式中的`E(x)`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -182,7 +182,7 @@ aclnnStatus aclnnBatchNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>saveInvstd</td>
+      <td>saveInvstd（aclTensor*）</td>
       <td>输出</td>
       <td>只在训练场景输出，表示保存的input方差或者input标准差倒数，分别对应公式中的`Var(x)`、(Var(x) + eps)开平方的倒数。</td>
       <td><ul><li>支持空Tensor。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -192,7 +192,7 @@ aclnnStatus aclnnBatchNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回用户需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -202,7 +202,7 @@ aclnnStatus aclnnBatchNorm(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

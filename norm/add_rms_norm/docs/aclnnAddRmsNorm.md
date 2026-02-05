@@ -37,9 +37,9 @@ aclnnStatus aclnnAddRmsNormGetWorkspaceSize(
   const aclTensor *x2,
   const aclTensor *gamma,
   double           epsilon,
-  const aclTensor *yOut,
-  const aclTensor *rstdOut,
-  const aclTensor *xOut,
+  aclTensor       *yOut,
+  aclTensor       *rstdOut,
+  aclTensor       *xOut,
   uint64_t        *workspaceSize,
   aclOpExecutor  **executor)
 ```
@@ -131,8 +131,8 @@ aclnnStatus aclnnAddRmsNorm(
     <tr>
       <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
-      <td>可选输出，表示归一化后的标准差的倒数。对应公式中`Rms(x)`的倒数。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape与`x1`前几维保持一致，前几维表示不需要norm的维度。rstdOut shape与x1 shape，gamma shape关系举例：若x1 shape:(2，3，4，8)，gamma shape:(8)，rstdOut shape(2，3，4，1)；若x1 shape:(2，3，4，8)，gamma shape:(4，8)，rstdOut shape(2，3，1，1)。</li></ul></td>
+      <td>表示归一化后的标准差的倒数。对应公式中`Rms(x)`的倒数。</td>
+      <td><ul><li>支持空Tensor。</li><li>shape与`x1`前几维保持一致，前几维表示不需要norm的维度。rstdOut shape与x1 shape，gamma shape关系举例：若x1 shape:(2，3，4，8)，gamma shape:(8)，rstdOut shape(2，3，4，1)；若x1 shape:(2，3，4，8)，gamma shape:(4，8)，rstdOut shape(2，3，1，1)。</li><li>当传入的预置值为nullptr时，该参数的最终输出为空Tensor。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
@@ -141,8 +141,8 @@ aclnnStatus aclnnAddRmsNorm(
     <tr>
       <td>xOut（aclTensor*）</td>
       <td>输出</td>
-      <td>可选输出，表示Add计算的结果。对应公式中的`x`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape、数据类型与输入`x1`的shape、数据类型保持一致。</li></ul></td>
+      <td>表示Add计算的结果。对应公式中的`x`。</td>
+      <td><ul><li>支持空Tensor。</li><li>shape、数据类型与输入`x1`的shape、数据类型保持一致。</li><li>当`rstdOut`传入的预置值为nullptr时，且`xOut`传入的预置值为nullptr时，该参数的最终输出为空Tensor。</li><li>当`rstdOut`传入的预置值不为nullptr时，`xOut`传入的预置值不支持nullptr。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -195,9 +195,12 @@ aclnnStatus aclnnAddRmsNorm(
   </thead>
   <tbody>
     <tr>
-      <td>ACLNN_ERR_PARAM_NULLPTR</td>
-      <td>161001</td>
-      <td>如果传入参数是必选输入，输出或者必选属性，且是空指针，则返回161001。</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_NULLPTR</td>
+      <td rowspan="2">161001</td>
+      <td>传入的x1、x2、gamma、yout是空指针。</td>
+    </tr>
+    <tr>
+      <td>当rstdOut传入的预置值不为nullptr时，xOut传入的预置值为nullptr。</td>
     </tr>
     <tr>
       <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>

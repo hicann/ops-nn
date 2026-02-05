@@ -73,7 +73,7 @@ aclnnStatus aclnnRmsNorm(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行归一化计算的输入，对应公式中的`x`。</td>
       <td>支持空Tensor。</td>
@@ -83,7 +83,7 @@ aclnnStatus aclnnRmsNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>gamma</td>
+      <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行归一化计算的缩放因子（权重），对应公式中的`gamma`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要满足gamma_shape = x_shape[n:], n < x_shape.dims()。</li></ul></td>
@@ -93,17 +93,17 @@ aclnnStatus aclnnRmsNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>epsilon</td>
+      <td>epsilon（double）</td>
       <td>输入</td>
       <td>表示添加到方差中的值，以避免出现除以零的情况。对应公式中的`epsilon`。</td>
       <td>缺省值为1e-6。</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>yOut</td>
+      <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示进行归一化后的最终输出，对应公式中的`RmsNorm(x)`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与入参`x`的shape保持一致。</li></ul></td>
@@ -113,7 +113,7 @@ aclnnStatus aclnnRmsNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>rstdOut</td>
+      <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示归一化后的标准差倒数，用于归一化操作，对应公式中的`Rms(x)`的倒数。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与入参`x`的shape前几维保持一致，前几维指`x`的维度减去`gamma`的维度，表示不需要norm的维度。</li></ul></td>
@@ -121,9 +121,9 @@ aclnnStatus aclnnRmsNorm(
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
-    </tr>            
+    </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回用户需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -133,7 +133,7 @@ aclnnStatus aclnnRmsNorm(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

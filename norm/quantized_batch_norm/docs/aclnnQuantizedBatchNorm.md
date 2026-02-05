@@ -95,7 +95,7 @@ aclnnStatus aclnnQuantizedBatchNorm(
     </tr></thead>
   <tbody>
     <tr>
-      <td>input</td>
+      <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>表示模型输入的量化后的数据，对应公式中的`x`。</td>
       <td>不支持空Tensor。</td>
@@ -105,7 +105,7 @@ aclnnStatus aclnnQuantizedBatchNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>mean</td>
+      <td>mean（aclTensor*）</td>
       <td>输入</td>
       <td>表示模型输入数据的均值，对应公式中的`mean`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -115,7 +115,7 @@ aclnnStatus aclnnQuantizedBatchNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>var</td>
+      <td>var（aclTensor*）</td>
       <td>输入</td>
       <td>表示模型输入数据的方差，对应公式中的`var`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -125,7 +125,7 @@ aclnnStatus aclnnQuantizedBatchNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>inputScale</td>
+      <td>inputScale（aclScalar*）</td>
       <td>输入</td>
       <td>表示模型输入数据的缩放系数，对应公式中的`inputScale`。</td>
       <td>-</td>
@@ -135,7 +135,7 @@ aclnnStatus aclnnQuantizedBatchNorm(
       <td>-</td>
     </tr>
     <tr>
-      <td>inputZeroPoint</td>
+      <td>inputZeroPoint（aclScalar*）</td>
       <td>输入</td>
       <td>表示模型输入数据的偏置，对应公式中的`inputZeroPoint`。</td>
       <td>传入值不能超过`input`对应数据类型的上下边界，例如INT8上下边界为[-128,127]。</td>
@@ -146,7 +146,7 @@ aclnnStatus aclnnQuantizedBatchNorm(
     </tr>
     </tr>
     <tr>
-      <td>outputScale</td>
+      <td>outputScale（aclScalar*）</td>
       <td>输入</td>
       <td>表示模型输出数据的缩放系数，对应公式中的`outputScale`。</td>
       <td>-</td>
@@ -156,7 +156,7 @@ aclnnStatus aclnnQuantizedBatchNorm(
       <td>-</td>
     </tr>
     <tr>
-      <td>outputZeroPoint</td>
+      <td>outputZeroPoint（aclScalar*）</td>
       <td>输入</td>
       <td>表示模型输出数据的偏置，对应公式中的`outputZeroPoint`。</td>
       <td>传入值不能超过`input`对应数据类型的上下边界，例如INT8上下边界为[-128,127]。</td>
@@ -166,7 +166,7 @@ aclnnStatus aclnnQuantizedBatchNorm(
       <td>-</td>
     </tr>
     <tr>
-      <td>weight</td>
+      <td>weight（aclTensor*）</td>
       <td>输入</td>
       <td>可选参数，表示归一化权重，对应公式中的`weight`。</td>
       <td><ul><li>不支持空Tensor。</li><li>默认值为：1。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -176,7 +176,7 @@ aclnnStatus aclnnQuantizedBatchNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>bias</td>
+      <td>bias（aclTensor*）</td>
       <td>输入</td>
       <td>可选参数，表示归一化偏置，对应公式中的`bias`。</td>
       <td><ul><li>不支持空Tensor。</li><li>默认值为：0。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -186,17 +186,17 @@ aclnnStatus aclnnQuantizedBatchNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>epsilon</td>
+      <td>epsilon（float）</td>
       <td>输入</td>
       <td>表示添加到方差中的值，以避免出现除以零的情况。对应公式中的`epsilon`。</td>
       <td>-</td>
-      <td>FLOAT32</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>output</td>
+      <td>output（aclTensor*）</td>
       <td>输出</td>
       <td>表示模型输出的量化后的数据，对应公式中的`output`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape、数据格式、数据类型与输入`input`保持一致。</li></ul></td>
@@ -206,7 +206,7 @@ aclnnStatus aclnnQuantizedBatchNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回用户需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -216,7 +216,7 @@ aclnnStatus aclnnQuantizedBatchNorm(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

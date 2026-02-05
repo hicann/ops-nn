@@ -112,7 +112,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       </tr></thead>
     <tbody>
     <tr>
-      <td>x1</td>
+      <td>x1（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x1`。</td>
       <td>支持空Tensor。</td>
@@ -122,7 +122,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>x2</td>
+      <td>x2（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x2`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape和数据类型需要与`x1`保持一致。</li></ul></td>
@@ -132,7 +132,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>gamma</td>
+      <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的权重张量。对应公式中的`gamma`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型需要与`x1`保持一致。</li><li>shape需要与`x1`需要norm的维度保持一致。</li></ul></td>
@@ -142,7 +142,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>scales1</td>
+      <td>scales1（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到y1Out进行的scales张量，对应公式中的`scales1`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要与`gamma`保持一致。</li><li>当参数divMode的值为True时，该参数的值不能为0。</li></ul></td>
@@ -151,7 +151,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>1-8</td>
       <td>√</td>
     <tr>
-      <td>scales2Optional</td>
+      <td>scales2Optional（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到y2Out进行的scales张量。对应公式中的`scales2`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape和数据类型需要与`scales1`保持一致。</li><li>当参数`divMode`的值为True时，该参数的值不能为0。</li></ul></td>
@@ -161,7 +161,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>zeroPoints1Optional</td>
+      <td>zeroPoints1Optional（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到y1Out进行的offset张量。对应公式中的`zeroPoints1Optional`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape需要与`gamma`保持一致。</li></ul></td>
@@ -171,7 +171,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>zeroPoints2Optional</td>
+      <td>zeroPoints2Optional（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到y2Out进行的offset张量。对应公式中的`zeroPoints2Optional`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>数据类型需要与`zeroPoints1Optional`保持一致。</li><li>shape需要与`gamma`保持一致。</li></ul></td>
@@ -181,7 +181,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>betaOptional</td>
+      <td>betaOptional（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的偏置项。对应公式中的`beta`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
@@ -191,37 +191,37 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>-</td>
     </tr>
     <tr>
-      <td>axis</td>
+      <td>axis（int64_t）</td>
       <td>输入</td>
       <td>表示需要进行量化的elewise轴，其他的轴做broadcast，指定的轴不能超过输入`x1`的维度数。</td>
       <td>当前仅支持-1，传其他值均不生效。</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>epsilon</td>
+      <td>epsilon（double）</td>
       <td>输入</td>
       <td>表示用于防止除0错误，对应公式中的`epsilon`。</td>
       <td>建议传较小的正数。</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>divMode</td>
+      <td>divMode（bool）</td>
       <td>输入</td>
       <td>表示决定量化公式是否使用除法的参数，对应公式中的`divMode`。</td>
       <td>-</td>
-      <td>BOOL</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>y1Out</td>
+      <td>y1Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y1Out`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要与输入`x1`/`x2`一致。</li></ul></td>
@@ -231,7 +231,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>y2Out</td>
+      <td>y2Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y2Out`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选输出。</li><li>shape需要与输入`x1`/`x2`一致。</li><li>当`scales2Optional`为空时，该输出的值无效。</li></ul></td>
@@ -241,7 +241,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>xOut</td>
+      <td>xOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示x1和x2的和，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape和数据类型需要与输入`x1`/`x2`一致。</li></ul></td>
@@ -251,7 +251,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>rmsNormOut</td>
+      <td>rmsNormOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示进行RmsNorm之后的结果，对应公式中的`rmsNormOut`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选输出。</li><li>shape和数据类型需要与输入`x1`/`x2`一致。</li></ul></td>
@@ -261,7 +261,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -271,7 +271,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

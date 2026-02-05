@@ -93,7 +93,7 @@ aclnnStatus aclnnBatchNormGatherStatsWithCounts(
     </tr></thead>
   <tbody>
     <tr>
-      <td>input</td>
+      <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行统计的样本值。对应公式中的`x`。</td>
       <td><ul><li>不支持空Tensor。</li><li>第2维固定为channel轴。</li></ul></td>
@@ -103,7 +103,7 @@ aclnnStatus aclnnBatchNormGatherStatsWithCounts(
       <td>√</td>
     </tr>
     <tr>
-      <td>mean</td>
+      <td>mean（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入数据均值，对应公式中的`E(x)`。</td>
       <td><ul><li>不支持空Tensor。</li><li>第一维的size需要与`invstd`和`counts`一致，第二维对应的size需要与`input`的Channel轴size一致。</li></ul></td>
@@ -113,7 +113,7 @@ aclnnStatus aclnnBatchNormGatherStatsWithCounts(
       <td>√</td>
     </tr>
     <tr>
-      <td>invstd</td>
+      <td>invstd（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入数据标准差的倒数，对应公式中的`Var(x)+ eps`开平方的倒数。</td>
       <td><ul><li>不支持空Tensor。</li><li>元素值要求均大于0，小于等于0时，精度不做保证。</li><li>第一维的size需要与`mean`和`counts`一致，第二维对应的size需要与`input`的Channel轴size一致。</li></ul></td>
@@ -123,7 +123,7 @@ aclnnStatus aclnnBatchNormGatherStatsWithCounts(
       <td>√</td>
     </tr>
     <tr>
-      <td>runningMean</td>
+      <td>runningMean（aclTensor*）</td>
       <td>输入</td>
       <td>可选参数，表示用于跟踪整个训练过程中的均值，对应公式中的`runningMean`。</td>
       <td><ul><li>不支持空Tensor。</li><li>元素值要求均大于0，小于等于0时，精度不做保证。</li><li>当`runningMean`非空指针时，shape支持1维，size需要与`input`的Channel轴size一致。</li></ul></td>
@@ -133,7 +133,7 @@ aclnnStatus aclnnBatchNormGatherStatsWithCounts(
       <td>√</td>
     </tr>
     <tr>
-      <td>runningVar</td>
+      <td>runningVar（aclTensor*）</td>
       <td>输入</td>
       <td>可选参数，表示用于跟踪整个训练过程中的方差，对应公式中的`runningVar`。</td>
       <td><ul><li>不支持空Tensor。</li><li>元素值要求均大于0，小于等于0时，精度不做保证。</li><li>当`runningVar`非空指针时，shape支持1维，size需要与`input`的Channel轴size一致。</li></ul></td>
@@ -143,27 +143,27 @@ aclnnStatus aclnnBatchNormGatherStatsWithCounts(
       <td>√</td>
     </tr>
     <tr>
-      <td>momentum</td>
+      <td>momentum（double）</td>
       <td>输入</td>
       <td>表示runningMean和runningVar的指数平滑参数，对应公式中的`momentum`。</td>
       <td>-</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>eps</td>
+      <td>eps（double）</td>
       <td>输入</td>
       <td>表示添加到方差中的值，以避免出现除以零的情况。对应公式中的`eps`。</td>
       <td>-</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>counts</td>
+      <td>counts（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入数据元素的个数。</td>
       <td><ul><li>不支持空Tensor。</li><li>支持元素值均为正整数，其余场景不做保证。</li><li>第一维的size需要与mean和invstd的第一维的size一致。</li></ul></td>
@@ -173,7 +173,7 @@ aclnnStatus aclnnBatchNormGatherStatsWithCounts(
       <td>√</td>
     </tr>
     <tr>
-      <td>meanAll</td>
+      <td>meanAll（aclTensor*）</td>
       <td>输出</td>
       <td>表示所有卡上数据的均值，对应公式中的`E(x)`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape与入参`input`中channel轴保持一致。</li><li>数据格式与入参`input`中数据格式保持一致。</li></ul></td>
@@ -183,7 +183,7 @@ aclnnStatus aclnnBatchNormGatherStatsWithCounts(
       <td>√</td>
     </tr>
     <tr>
-      <td>invstdAll</td>
+      <td>invstdAll（aclTensor*）</td>
       <td>输出</td>
       <td>表示所有卡上数据的标准差的倒数，对应公式中的`Var(x)+ eps`开平方的倒数。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape与入参`input`中channel轴保持一致。</li><li>数据格式与入参`input`中数据格式保持一致。</li></ul></td>
@@ -193,7 +193,7 @@ aclnnStatus aclnnBatchNormGatherStatsWithCounts(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回用户需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -203,7 +203,7 @@ aclnnStatus aclnnBatchNormGatherStatsWithCounts(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

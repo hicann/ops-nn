@@ -98,7 +98,7 @@ aclnnStatus aclnnBatchNormReduceBackward(
     </tr></thead>
   <tbody>
     <tr>
-      <td>gradOut</td>
+      <td>gradOut（aclTensor*）</td>
       <td>输入</td>
       <td>表示梯度Tensor，对应公式中的`<math ><mfrac><mrow><mi mathvariant="normal">∂</mi><mi>l</mi></mrow>/<mrow><mi mathvariant="normal">∂</mi><mi>y</mi></mrow></mfrac></math>`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型、shape需要与`input`一致。</li></ul></td>
@@ -108,7 +108,7 @@ aclnnStatus aclnnBatchNormReduceBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>input</td>
+      <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入Tensor，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>默认第二维为channel轴，且channel轴的值不能为0。</li></ul></td>
@@ -118,7 +118,7 @@ aclnnStatus aclnnBatchNormReduceBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>mean</td>
+      <td>mean（aclTensor*）</td>
       <td>输入</td>
       <td>表示均值，对应公式中的`μ<sub>B</sub>`。</td>
       <td><ul><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -128,7 +128,7 @@ aclnnStatus aclnnBatchNormReduceBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>invstd</td>
+      <td>invstd（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准差的倒数，对应公式中的`(σ<sub>B</sub>)<sup>2</sup>+eps`的开平方倒数。</td>
       <td><ul><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -138,7 +138,7 @@ aclnnStatus aclnnBatchNormReduceBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>weight</td>
+      <td>weight（aclTensor*）</td>
       <td>输入</td>
       <td>表示权重Tensor，对应公式中的`γ`。</td>
       <td><ul><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -148,37 +148,37 @@ aclnnStatus aclnnBatchNormReduceBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>inputG</td>
+      <td>inputG（bool）</td>
       <td>输入</td>
       <td>表示输出掩码，标记是否需要输出`sumDy`和`sumDyXmu`。</td>
       <td>-</td>
-      <td>BOOL</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>weightG</td>
+      <td>weightG（bool）</td>
       <td>输入</td>
       <td>表示输出掩码，标记是否需要输出`gradWeight`。</td>
       <td>-</td>
-      <td>BOOL</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>biasG</td>
+      <td>biasG（bool）</td>
       <td>输入</td>
       <td>表示输出掩码，标记是否需要输出`gradBias`。</td>
       <td>-</td>
-      <td>BOOL</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>sumDy</td>
+      <td>sumDy（aclTensor*）</td>
       <td>输出</td>
       <td>表示正向输出梯度`gradOut`的累加和，对应公式中的`sumDy`。</td>
       <td><ul><li>可选输出，如果`inputG`为True则输出，shape的size需要与`input`的channel轴的长度相等。</li><li>数据格式与`gradOut`保持一致。</li></ul></td>
@@ -188,7 +188,7 @@ aclnnStatus aclnnBatchNormReduceBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>sumDyXmu</td>
+      <td>sumDyXmu（aclTensor*）</td>
       <td>输出</td>
       <td>表示正向输出梯度`gradOut`与输入中心化后数据`(x-μ<sub>B</sub>)`乘积之和，对应公式中的`sumDyXmu`。</td>
       <td><ul><li>可选输出，如果`inputG`为True则输出，shape的size需要与`input`的channel轴的长度相等。</li><li>数据格式与`gradOut`保持一致。</li></ul></td>
@@ -198,7 +198,7 @@ aclnnStatus aclnnBatchNormReduceBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>gradWeight</td>
+      <td>gradWeight（aclTensor*）</td>
       <td>输出</td>
       <td>表示缩放参数的梯度，对应公式中的`gradWeight`。</td>
       <td><ul><li>可选输出，如果`weightG`为True则输出，shape的size需要与`input`的channel轴的长度相等。</li><li>数据格式与`gradOut`保持一致。</li></ul></td>
@@ -208,7 +208,7 @@ aclnnStatus aclnnBatchNormReduceBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>gradBias</td>
+      <td>gradBias（aclTensor*）</td>
       <td>输出</td>
       <td>表示偏置参数的梯度，对应公式中的`gradBias`。</td>
       <td><ul><li>可选输出，如果`biasG`为True则输出，shape的size需要与`input`的channel轴的长度相等。</li><li>数据格式与`gradOut`保持一致。</li></ul></td>
@@ -216,9 +216,9 @@ aclnnStatus aclnnBatchNormReduceBackward(
       <td>ND</td>
       <td>1</td>
       <td>√</td>
-    </tr>     
+    </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回用户需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -228,7 +228,7 @@ aclnnStatus aclnnBatchNormReduceBackward(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

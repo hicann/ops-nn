@@ -77,7 +77,7 @@ aclnnStatus aclnnInplaceAddRmsNorm(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x1Ref</td>
+      <td>x1Ref（aclTensor*）</td>
       <td>输入/输出</td>
       <td>表示用于Add计算的第一个输入和归一化后的最终输出结果。分别对应公式中的`x1Ref`和`RmsNorm(x)`。</td>
       <td>不支持空Tensor。</td>
@@ -87,7 +87,7 @@ aclnnStatus aclnnInplaceAddRmsNorm(
       <td>×</td>
     </tr>
     <tr>
-      <td>x2Ref</td>
+      <td>x2Ref（aclTensor*）</td>
       <td>输入/输出</td>
       <td>表示用于Add计算的第二个输入和Add计算的结果。分别对应公式中的`x2Ref`和`x`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape需要与`x1Ref`保持一致。</li></ul></td>
@@ -97,7 +97,7 @@ aclnnStatus aclnnInplaceAddRmsNorm(
       <td>×</td>
     </tr>
     <tr>
-      <td>gamma</td>
+      <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示RmsNorm的缩放因子（权重）。对应公式中的`gamma`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape需要与`x1Ref`后几维保持一致，后几维为`x1Ref`需要norm的维度。</li></ul></td>
@@ -107,17 +107,17 @@ aclnnStatus aclnnInplaceAddRmsNorm(
       <td>×</td>
     </tr>
     <tr>
-      <td>epsilon</td>
+      <td>epsilon（double）</td>
       <td>输入</td>
       <td>表示添加到分母中的值，以确保数值稳定。对应公式中的`epsilon`。</td>
       <td>建议值为1e-6。</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>rstdOut</td>
+      <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示归一化后的标准差。对应公式中的`Rms(x)`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape与`x1Ref`前几维保持一致，前几维表示不需要norm的维度。rstdOut shape与x1Ref shape，gamma shape关系举例：若x1Ref shape:(2，3，4，8)，gamma shape:(8)，rstdOut shape(2，3，4，1)；若x1Ref shape:(2，3，4，8)，gamma shape:(4，8)，rstdOut shape(2，3，1，1)。</li></ul></td>
@@ -127,7 +127,7 @@ aclnnStatus aclnnInplaceAddRmsNorm(
       <td>×</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -137,7 +137,7 @@ aclnnStatus aclnnInplaceAddRmsNorm(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

@@ -136,7 +136,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
       </tr></thead>
     <tbody>
     <tr>
-      <td>x1</td>
+      <td>x1（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x1`。</td>
       <td>支持空Tensor。</td>
@@ -146,7 +146,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>x2</td>
+      <td>x2（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x2`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape和数据类型需要与`x1`保持一致。</li></ul></td>
@@ -156,7 +156,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>gamma</td>
+      <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的权重张量。对应公式中的`gamma`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型需要与`x1`保持一致。</li><li>shape需要与`x1`最后一维一致。</li></ul></td>
@@ -166,7 +166,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>smoothScale1Optional</td>
+      <td>smoothScale1Optional（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到`y1Out`使用的smoothScale张量。对应公式中的`smoothScale1Optional`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
@@ -176,7 +176,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>smoothScale2Optional</td>
+      <td>smoothScale2Optional（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到`y2Out`使用的smoothScale张量。对应公式中的`smoothScale2Optional`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。必须与smoothScale1Optional配套使用。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
@@ -186,17 +186,17 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>epsilon</td>
+      <td>epsilon（double）</td>
       <td>输入</td>
       <td>表示用于防止除0错误，对应公式中的`epsilon`。</td>
       <td>建议传入较小正数，如1e-6。</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>y1Out</td>
+      <td>y1Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y1Out`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要与输入`x1`/`x2`一致，或者是二维并且第一维等于`x1`除了最后一维的维度乘积，第二维等于`x1`的最后一维。</li></ul></td>
@@ -206,7 +206,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>y2Out</td>
+      <td>y2Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y2Out`。</td>
       <td><ul><li>支持空Tensor。</li><li>当smoothScale2Optional不存在时，此输出无意义。</li><li>如果`y2Out`输出无意义时，shape为[1]；其他场景，shape需要与`y1Out`保持一致。</li></ul></td>
@@ -216,7 +216,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>xOut</td>
+      <td>xOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示x1和x2的和，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape和数据类型需要与输入`x1`/`x2`一致。</li></ul></td>
@@ -226,7 +226,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>scale1Out</td>
+      <td>scale1Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示第一路量化的输出，对应公式中的`scale1Out`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要与输入`x1`除最后一维后的shape一致，或者与`x1`除了最后一维的乘积一致。</li></ul></td>
@@ -236,7 +236,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>scale2Out</td>
+      <td>scale2Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示第二路量化的输出，对应公式中的`scale2Out`。</td>
       <td><ul><li>支持空Tensor。</li><li>当smoothScale2Optional不存在时，此输出无意义。</li><li>shape需要与`scale1Out`一致。</li></ul></td>
@@ -246,7 +246,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -256,7 +256,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

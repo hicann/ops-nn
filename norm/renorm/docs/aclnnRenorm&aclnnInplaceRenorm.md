@@ -127,7 +127,7 @@
     </tr></thead>
   <tbody>
     <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行重归一化计算的输入，对应公式中的`input`。</td>
       <td>支持空Tensor。</td>
@@ -137,7 +137,7 @@
       <td>√</td>
     </tr>
     <tr>
-      <td>p</td>
+      <td>p（aclScalar*）</td>
       <td>输入</td>
       <td>表示范数，对应公式中的`p`。</td>
       <td>取值大于等于0。</td>
@@ -147,17 +147,17 @@
       <td>-</td>
     </tr>
     <tr>
-      <td>dim</td>
+      <td>dim（int64_t）</td>
       <td>输入</td>
       <td>表示指定求norm的维度方向。对应公式中的`i`。</td>
       <td>取值范围为：[-self的维度数量，self的维度数量-1]。</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>maxNorm</td>
+      <td>maxNorm（aclScalar*）</td>
       <td>输入</td>
       <td>表示最大允许的归一化值。对应公式中的`maxNorm`。</td>
       <td><ul><li>取值大于等于0。</li><li>如果运算时对应维度的`p`范数（由`p`值确定）大于`maxNorm`，则将该维度的值关于`p`范数归一化并乘上`maxNorm`。</li><li>如果运算时对应维度的`p`范数（由`p`值确定）小于`maxNorm`，则该维度张量保持不变输出。</li></ul></td>
@@ -167,7 +167,7 @@
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示最终输出，对应公式中的`output`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型、shape与入参`self`保持一致。</li></ul></td>
@@ -177,7 +177,7 @@
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回用户需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -187,7 +187,7 @@
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
@@ -320,7 +320,7 @@
     </tr></thead>
   <tbody>
     <tr>
-      <td>selfRef</td>
+      <td>selfRef（aclTensor*）</td>
       <td>输入/输出</td>
       <td>表示进行重归一化计算的输入和最终输出，对应公式中的`input`和`output`。</td>
       <td>支持空Tensor。</td>
@@ -330,7 +330,7 @@
       <td>√</td>
     </tr>
     <tr>
-      <td>p</td>
+      <td>p（aclScalar*）</td>
       <td>输入</td>
       <td>表示范数，对应公式中的`p`。</td>
       <td>取值大于等于0。</td>
@@ -340,17 +340,17 @@
       <td>-</td>
     </tr>
     <tr>
-      <td>dim</td>
+      <td>dim（int64_t）</td>
       <td>输入</td>
       <td>表示指定求norm的维度方向。对应公式中的`i`。</td>
       <td>取值范围为：[-selfRef的维度数量，selfRef的维度数量-1]。</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>maxNorm</td>
+      <td>maxNorm（aclScalar*）</td>
       <td>输入</td>
       <td>表示最大允许的归一化值。对应公式中的`maxNorm`。</td>
       <td><ul><li>取值大于等于0。</li><li>如果运算时对应维度的`p`范数（由`p`值确定）大于`maxNorm`，则将该维度的值关于`p`范数归一化并乘上`maxNorm`。</li><li>如果运算时对应维度的`p`范数（由`p`值确定）小于`maxNorm`，则该维度张量保持不变输出。</li></ul></td>
@@ -360,7 +360,7 @@
       <td>-</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回用户需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -370,7 +370,7 @@
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

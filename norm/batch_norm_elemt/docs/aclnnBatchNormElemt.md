@@ -82,7 +82,7 @@ aclnnStatus aclnnBatchNormElemt(
     </tr></thead>
   <tbody>
     <tr>
-      <td>input</td>
+      <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行BatchNorm计算的输入，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>支持的shape和格式有：2维（对应的格式为NC），3维（对应的格式为NCL），4维（对应的格式为NCHW），5维（对应的格式为NCDHW），6-8维（对应的格式为ND，其中第2维固定为channel轴）。</li></ul></td>
@@ -92,7 +92,7 @@ aclnnStatus aclnnBatchNormElemt(
       <td>√</td>
     </tr>
     <tr>
-      <td>weight</td>
+      <td>weight（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行BatchNorm计算的权重Tensor，对应公式中的`weight`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -102,7 +102,7 @@ aclnnStatus aclnnBatchNormElemt(
       <td>√</td>
     </tr>
     <tr>
-      <td>bias</td>
+      <td>bias（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行BatchNorm计算的偏置Tensor，对应公式中的`bias`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -112,7 +112,7 @@ aclnnStatus aclnnBatchNormElemt(
       <td>√</td>
     </tr>
     <tr>
-      <td>mean</td>
+      <td>mean（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入数据均值，对应公式中的`E(x)`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -122,7 +122,7 @@ aclnnStatus aclnnBatchNormElemt(
       <td>√</td>
     </tr>
     <tr>
-      <td>invstd</td>
+      <td>invstd（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入数据标准差倒数，对应公式中的`Var(x) + eps`开平方的倒数。</td>
       <td><ul><li>支持空Tensor。</li><li>支持元素值均大于0的场景。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -133,17 +133,17 @@ aclnnStatus aclnnBatchNormElemt(
     </tr>
     </tr>
     <tr>
-      <td>eps</td>
+      <td>eps（double）</td>
       <td>输入</td>
       <td>表示添加到方差中的值，以避免出现除以零的情况。对应公式中的`eps`。</td>
       <td>-</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>output</td>
+      <td>output（aclTensor*）</td>
       <td>输出</td>
       <td>表示最终的输出结果，对应公式中的`y`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型、shape与输入`input`的数据类型、shape保持一致。</li><li>shape与入参`input`的shape相同，支持的shape和格式有：2维（对应的格式为NC），3维（对应的格式为NCL），4维（对应的格式为NCHW），5维（对应的格式为NCDHW），6-8维（对应的格式为ND，其中第2维固定为channel轴）。</li></ul></td>
@@ -153,7 +153,7 @@ aclnnStatus aclnnBatchNormElemt(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回用户需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -163,7 +163,7 @@ aclnnStatus aclnnBatchNormElemt(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

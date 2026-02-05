@@ -88,7 +88,7 @@ aclnnStatus aclnnGroupNorm(
     </tr></thead>
   <tbody>
     <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行归一化计算的输入，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li></ul></td>
@@ -98,7 +98,7 @@ aclnnStatus aclnnGroupNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>gamma</td>
+      <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行归一化计算的缩放因子（权重），对应公式中的`γ`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与self相同。</li><li>元素数量需与C相同。</li></ul></td>
@@ -108,7 +108,7 @@ aclnnStatus aclnnGroupNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>beta</td>
+      <td>beta（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行归一化计算的偏移量，对应公式中的`β`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与self相同。</li><li>元素数量需与C相同。</li></ul></td>
@@ -118,59 +118,59 @@ aclnnStatus aclnnGroupNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>N</td>
+      <td>N（int64_t）</td>
       <td>输入</td>
       <td>表示输入self在N维度上的空间大小。</td>
       <td>-</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     </tr>
     <tr>
-      <td>C</td>
+      <td>C（int64_t）</td>
       <td>输入</td>
       <td>表示输入self在C维度上的空间大小。</td>
       <td>-</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>HxW</td>
+      <td>HxW（int64_t）</td>
       <td>输入</td>
       <td>表示输入self在除N、C维度外的空间大小。</td>
       <td><ul><li>若无其他维度则为1。</li></ul></td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     </tr>
     <tr>
-      <td>group</td>
+      <td>group（int64_t）</td>
       <td>输入</td>
       <td>表示将输入self的C维度分为group组。</td>
       <td><ul><li>group需大于0。</li></ul></td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>eps</td>
+      <td>eps（double）</td>
       <td>输入</td>
       <td>out和rstdOut计算公式中的`eps`值，为数值稳定性而加到分母上的值。</td>
       <td><ul><li>需大于0，若保持精度，则eps需大于等于1e-5。</li></ul></td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示进行归一化计算的结果，对应公式中的`out`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型和shape与self相同。</li><li>数据格式和self相同。</li></ul></td>
@@ -180,7 +180,7 @@ aclnnStatus aclnnGroupNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>meanOut</td>
+      <td>meanOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示进行归一化后的均值，对应公式中的`meanOut`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与self相同。</li><li>shape为(N, group)。</li></ul></td>
@@ -190,7 +190,7 @@ aclnnStatus aclnnGroupNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>rstdOut</td>
+      <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示进行归一化后标准差的倒数，对应公式中的`rstdOut`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与self相同。</li><li>shape为(N, group)。</li></ul></td>
@@ -200,7 +200,7 @@ aclnnStatus aclnnGroupNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回用户需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -210,7 +210,7 @@ aclnnStatus aclnnGroupNorm(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

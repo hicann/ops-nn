@@ -84,7 +84,7 @@ aclnnStatus aclnnAdaLayerNorm(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示计算的输入张量。对应公式中的`x`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape为[B, S, H]，其中B支持0到6维。</li></ul></td>
@@ -94,7 +94,7 @@ aclnnStatus aclnnAdaLayerNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>scale</td>
+      <td>scale（aclTensor*）</td>
       <td>输入</td>
       <td>表示自适应缩放参数。对应公式中的`scale`。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型与入参`x`的数据类型一致。</li><li>shape为[B, H]或[B, 1, H]，其中B支持0到6维，维度数量和大小与`x`中的B保持一致，H与`x`中H维一致。</li></ul></td>
@@ -104,7 +104,7 @@ aclnnStatus aclnnAdaLayerNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>shift</td>
+      <td>shift（aclTensor*）</td>
       <td>输入</td>
       <td>表示自适应偏移参数。对应公式中的`shift`。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型与入参`x`的数据类型一致。</li><li>shape为[B, H]或[B, 1, H]，其中B支持0到6维，维度数量和大小与`x`中的B保持一致，H与`x`中H维一致。</li></ul></td>
@@ -114,7 +114,7 @@ aclnnStatus aclnnAdaLayerNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>weightOptional</td>
+      <td>weightOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入参数，表示归一化缩放参数。对应公式中的`weightOptional`。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型与入参`x`的数据类型一致。</li><li>shape为[H]，H与`x`中H维一致。</li></ul></td>
@@ -124,7 +124,7 @@ aclnnStatus aclnnAdaLayerNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>biasOptional</td>
+      <td>biasOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入参数，表示归一化偏移参数。对应公式中的`biasOptional`。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型与入参`x`的数据类型一致。</li><li>shape为[H]，H与`x`中H维一致。</li></ul></td>
@@ -134,17 +134,17 @@ aclnnStatus aclnnAdaLayerNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>epsilon</td>
+      <td>epsilon（double）</td>
       <td>输入</td>
       <td>表示添加到分母中的值，以确保数值稳定。对应公式中的`epsilon`。</td>
       <td>-</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示计算的输出张量。对应公式中的`out`。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型与入参`x`的数据类型一致。</li><li>shape与`x`保持一致。</li></ul></td>
@@ -154,7 +154,7 @@ aclnnStatus aclnnAdaLayerNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -164,7 +164,7 @@ aclnnStatus aclnnAdaLayerNorm(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

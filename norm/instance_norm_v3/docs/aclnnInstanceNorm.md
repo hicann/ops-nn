@@ -74,7 +74,7 @@ aclnnStatus aclnnInstanceNorm(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行InstanceNorm计算的输入数据，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>实际数据格式由参数`dataFormat`决定。</li></ul></td>
@@ -84,7 +84,7 @@ aclnnStatus aclnnInstanceNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>gamma</td>
+      <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行InstanceNorm计算的缩放因子（权重），对应公式中的`gamma`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`x`的数据类型保持一致。</li><li>shape和输入`x`的C轴一致。</li></ul></td>
@@ -94,7 +94,7 @@ aclnnStatus aclnnInstanceNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>beta</td>
+      <td>beta（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行InstanceNorm计算的偏置，对应公式中的`beta`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`x`的数据类型保持一致。</li><li>shape和输入`x`的C轴一致。</li></ul></td>
@@ -104,27 +104,27 @@ aclnnStatus aclnnInstanceNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>dataFormat</td>
+      <td>dataFormat（char）</td>
       <td>输入</td>
       <td>表示算子输入Tensor的实际数据格式。</td>
       <td>支持NHWC或NCHW。</td>
-      <td>CHAR</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>eps</td>
+      <td>eps（double）</td>
       <td>输入</td>
       <td>表示添加到方差中的值，以避免出现除以零的情况。对应公式中的`eps`。</td>
       <td>-</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>y</td>
+      <td>y（aclTensor*）</td>
       <td>输出</td>
       <td>表示InstanceNorm的输出结果，对应公式中的`y`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape和数据类型与输入`x`的shape和数据类型保持一致。</li></ul></td>
@@ -134,7 +134,7 @@ aclnnStatus aclnnInstanceNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>mean</td>
+      <td>mean（aclTensor*）</td>
       <td>输出</td>
       <td>表示InstanceNorm的均值，对应公式中的`E(x)`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与输入`x`的数据类型保持一致。</li><li>shape与输入`x`满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>（前2维的shape和输入x前2维的shape相同，前2维表示不需要norm的维度，其余维度大小为1）。</li></ul></td>
@@ -144,7 +144,7 @@ aclnnStatus aclnnInstanceNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>variance</td>
+      <td>variance（aclTensor*）</td>
       <td>输出</td>
       <td>表示InstanceNorm的方差，对应公式中的`Var(x)`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`x`的数据类型保持一致。</li><li>shape与输入`x`满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>（前2维的shape和输入x前2维的shape相同，前2维表示不需要norm的维度，其余维度大小为1）。</li></ul></td>
@@ -154,7 +154,7 @@ aclnnStatus aclnnInstanceNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回用户需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -164,7 +164,7 @@ aclnnStatus aclnnInstanceNorm(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

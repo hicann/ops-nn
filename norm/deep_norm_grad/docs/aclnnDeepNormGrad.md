@@ -114,7 +114,7 @@ aclnnStatus aclnnDeepNormGrad(
     </tr></thead>
   <tbody>
     <tr>
-      <td>dy</td>
+      <td>dy（aclTensor*）</td>
       <td>输入</td>
       <td>表示主要的grad输入，对应公式中的`dy`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型、shape与`x`保持一致。</li></ul></td>
@@ -124,7 +124,7 @@ aclnnStatus aclnnDeepNormGrad(
       <td>√</td>
     </tr>
     <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向融合算子的输入张量，对应公式中的`x`。</td>
       <td>支持空Tensor。</td>
@@ -134,7 +134,7 @@ aclnnStatus aclnnDeepNormGrad(
       <td>√</td>
     </tr>
     <tr>
-      <td>gx</td>
+      <td>gx（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向融合算子的输入张量，对应公式中的`gx`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型、shape与`x`保持一致。</li></ul></td>
@@ -144,7 +144,7 @@ aclnnStatus aclnnDeepNormGrad(
       <td>√</td>
     </tr>
     <tr>
-      <td>gamma</td>
+      <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示前向传播的缩放参数，对应公式中的`gamma`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`x`的数据类型保持一致。</li><li>shape维度和输入`x`后几维的维度相同，后几维表示需要norm的维度。</li></ul></td>
@@ -154,7 +154,7 @@ aclnnStatus aclnnDeepNormGrad(
       <td>√</td>
     </tr>
     <tr>
-      <td>mean</td>
+      <td>mean（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向输入x、gx之和的均值，对应公式中的`mean`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape维度和输入`x`前几维的维度相同，前几维表示不需要norm的维度。</li></ul></td>
@@ -164,7 +164,7 @@ aclnnStatus aclnnDeepNormGrad(
       <td>√</td>
     </tr>
     <tr>
-      <td>rstd</td>
+      <td>rstd（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向输入x、gx之和的rstd，对应公式中的`rstd`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与`mean`shape保持一致。</li></ul></td>
@@ -174,17 +174,17 @@ aclnnStatus aclnnDeepNormGrad(
       <td>√</td>
     </tr>
     <tr>
-      <td>alpha</td>
+      <td>alpha（double）</td>
       <td>输入</td>
       <td>表示权重参数，用于调整输入数据的权重，对应公式中的`alpha`。</td>
       <td>-</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>dxOut</td>
+      <td>dxOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示计算输出的梯度，用于更新输入数据x的梯度。对应公式中的`dx`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型、shape与`x`保持一致。</li></ul></td>
@@ -194,7 +194,7 @@ aclnnStatus aclnnDeepNormGrad(
       <td>√</td>
     </tr>
     <tr>
-      <td>dgxOut</td>
+      <td>dgxOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示计算输出的梯度，用于更新输入数据gx的梯度。对应公式中的`dgx`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型、shape与`x`保持一致。</li></ul></td>
@@ -204,7 +204,7 @@ aclnnStatus aclnnDeepNormGrad(
       <td>√</td>
     </tr>
     <tr>
-      <td>dbetaOut</td>
+      <td>dbetaOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示计算输出的梯度，用于更新偏置参数的梯度。对应公式中的`dbeta`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与`gamma`保持一致。</li></ul></td>
@@ -214,7 +214,7 @@ aclnnStatus aclnnDeepNormGrad(
       <td>√</td>
     </tr>
     <tr>
-      <td>dgammaOut</td>
+      <td>dgammaOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示计算输出的梯度，用于更新缩放参数的梯度。对应公式中的`dgamma`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与`gamma`保持一致。</li></ul></td>
@@ -224,7 +224,7 @@ aclnnStatus aclnnDeepNormGrad(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回用户需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -234,7 +234,7 @@ aclnnStatus aclnnDeepNormGrad(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

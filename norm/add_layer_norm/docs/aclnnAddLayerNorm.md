@@ -89,7 +89,7 @@ aclnnStatus aclnnAddLayerNorm(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x1</td>
+      <td>x1（aclTensor*）</td>
       <td>输入</td>
       <td>表示AddLayerNorm中加法计算的输入，将会在算子内做x1 + x2 + biasOptional的计算并对计算结果做层归一化。对应公式中的`x1`。</td>
       <td><ul><li>不支持空Tensor。</li><li>不支持输入的某一维的值为0。</li></ul></td>
@@ -99,7 +99,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>x2</td>
+      <td>x2（aclTensor*）</td>
       <td>输入</td>
       <td>表示AddLayerNorm中加法计算的输入，将会在算子内做x1 + x2 + biasOptional的计算并对计算结果做层归一化。对应公式中的`x2`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape和`x1`保持一致。</li></ul></td>
@@ -109,7 +109,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>beta</td>
+      <td>beta（aclTensor*）</td>
       <td>输入</td>
       <td>表示层归一化中的beta参数。对应公式中的`beta`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape的维度值与`x1`需要norm的维度值相同。</li></ul></td>
@@ -119,7 +119,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>gamma</td>
+      <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示层归一化中的gamma参数。对应公式中的`gamma`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape的维度值与`x1`需要norm的维度值相同。</li></ul></td>
@@ -129,7 +129,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>biasOptional</td>
+      <td>biasOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入参数，表示AddLayerNorm中加法计算的输入，将会在算子内做x1 + x2 + biasOptional的计算并对计算结果做层归一化。对应公式中的`biasOptional`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape可以和`gamma`/`beta`或`x1`/`x2`一致。</li></ul></td>
@@ -139,27 +139,27 @@ aclnnStatus aclnnAddLayerNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>epsilon</td>
+      <td>epsilon（double）</td>
       <td>输入</td>
       <td>表示添加到分母中的值，以确保数值稳定。对应公式中的`epsilon`。</td>
       <td>取值仅支持1e-5。</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>additionalOutput</td>
+      <td>additionalOutput（bool）</td>
       <td>输入</td>
       <td>表示是否开启x=x1+x2+biasOptional的输出。</td>
       <td>-</td>
-      <td>BOOL</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>meanOut</td>
+      <td>meanOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示输出LayerNorm计算过程中（x1 + x2 + biasOptional）的结果的均值。对应公式中的`E(x)`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape需要与`x1`满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</li></ul></td>
@@ -169,7 +169,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>rstdOut</td>
+      <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示输出LayerNorm计算过程中`rstd`的结果。对应公式中的`rstd`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape需要与`x1`满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</li></ul></td>
@@ -179,7 +179,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>yOut</td>
+      <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示LayerNorm的结果输出。对应公式中的`y`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape需要与输入`x1`一致。</li></ul></td>
@@ -189,7 +189,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>xOut</td>
+      <td>xOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示Add的结果输出`x`。对应公式中的`x`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape需要与输入`x1`一致。</li></ul></td>
@@ -199,7 +199,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -209,7 +209,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

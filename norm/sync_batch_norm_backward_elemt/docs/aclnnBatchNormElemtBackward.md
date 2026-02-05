@@ -77,7 +77,7 @@ aclnnStatus aclnnBatchNormElemtBackward(
     </tr></thead>
   <tbody>
     <tr>
-      <td>gradOut</td>
+      <td>gradOut（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向输出的微分，对应公式中的`gradOut`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与`input`的shape保持一致。</li><li>第2维固定为channel轴。</li></ul></td>
@@ -87,7 +87,7 @@ aclnnStatus aclnnBatchNormElemtBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>input</td>
+      <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行BatchNorm计算的输入，对应公式中的`input`。</td>
       <td><ul><li>支持空Tensor。</li><li>第2维固定为channel轴，且channel轴的size不能为0。</li></ul></td>
@@ -97,7 +97,7 @@ aclnnStatus aclnnBatchNormElemtBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>mean</td>
+      <td>mean（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入数据均值，对应公式中的`mean`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -107,7 +107,7 @@ aclnnStatus aclnnBatchNormElemtBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>invstd</td>
+      <td>invstd（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入数据标准差倒数，对应公式中的`invstd`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -117,7 +117,7 @@ aclnnStatus aclnnBatchNormElemtBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>weight</td>
+      <td>weight（aclTensor*）</td>
       <td>输入</td>
       <td>表示权重Tensor，对应公式中的`weight`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -127,7 +127,7 @@ aclnnStatus aclnnBatchNormElemtBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>sumDy</td>
+      <td>sumDy（aclTensor*）</td>
       <td>输入</td>
       <td>表示输出梯度的样本均值和的平均值，对应公式中的`sumDy`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -137,7 +137,7 @@ aclnnStatus aclnnBatchNormElemtBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>sumDyXmu</td>
+      <td>sumDyXmu（aclTensor*）</td>
       <td>输入</td>
       <td>表示样本均值和与输入梯度乘积的平均值，对应公式中的`sumDyXmu`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
@@ -147,7 +147,7 @@ aclnnStatus aclnnBatchNormElemtBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>counter</td>
+      <td>counter（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入数据的数量大小，对应公式中的`counter`。</td>
       <td><ul><li>支持空Tensor。</li></ul></td>
@@ -157,7 +157,7 @@ aclnnStatus aclnnBatchNormElemtBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>gradInput</td>
+      <td>gradInput（aclTensor*）</td>
       <td>输出</td>
       <td>表示输入Tensor的梯度，对应公式中的`gradInput`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与`input`的shape保持一致。</li></ul></td>
@@ -167,7 +167,7 @@ aclnnStatus aclnnBatchNormElemtBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回用户需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -177,7 +177,7 @@ aclnnStatus aclnnBatchNormElemtBackward(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

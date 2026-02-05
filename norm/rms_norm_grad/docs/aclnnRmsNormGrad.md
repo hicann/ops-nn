@@ -86,7 +86,7 @@ aclnnStatus aclnnRmsNormGrad(
     </tr></thead>
   <tbody>
     <tr>
-      <td>dy</td>
+      <td>dy（aclTensor*）</td>
       <td>输入</td>
       <td>表示反向传回的梯度，对应公式中的`dy`。</td>
       <td>支持空Tensor。</td>
@@ -96,7 +96,7 @@ aclnnStatus aclnnRmsNormGrad(
       <td>√</td>
     </tr>
     <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向算子的输入，表示被标准化的数据，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与入参`dy`的shape保持一致。</li></ul></td>
@@ -106,7 +106,7 @@ aclnnStatus aclnnRmsNormGrad(
       <td>√</td>
     </tr>
     <tr>
-      <td>rstd</td>
+      <td>rstd（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向算子的中间计算结果，对应公式中的`Rms(x)`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要满足rstd_shape = x_shape[0:n]，n < x_shape.dims()，n与`gamma`的n一致。</li></ul></td>
@@ -116,7 +116,7 @@ aclnnStatus aclnnRmsNormGrad(
       <td>√</td>
     </tr>
     <tr>
-      <td>gamma</td>
+      <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向算子进行归一化计算的缩放因子（权重），对应公式中的`gamma`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要满足gamma_shape = x_shape[n:], n < x_shape.dims()。</li></ul></td>
@@ -126,7 +126,7 @@ aclnnStatus aclnnRmsNormGrad(
       <td>√</td>
     </tr>
     <tr>
-      <td>dxOut</td>
+      <td>dxOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示输入`x`的梯度，对应公式中的`dx`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与入参`dy`的shape保持一致。</li></ul></td>
@@ -136,7 +136,7 @@ aclnnStatus aclnnRmsNormGrad(
       <td>√</td>
     </tr>
     <tr>
-      <td>dgammaOut</td>
+      <td>dgammaOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示`gamma`的梯度，对应公式中的`dg`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与入参`gamma`的shape保持一致。</li></ul></td>
@@ -146,7 +146,7 @@ aclnnStatus aclnnRmsNormGrad(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回用户需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -156,7 +156,7 @@ aclnnStatus aclnnRmsNormGrad(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

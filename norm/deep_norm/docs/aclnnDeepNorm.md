@@ -81,7 +81,7 @@ aclnnStatus aclnnDeepNorm(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入数据，通常为神经网络的中间层输出，对应公式中的`x`。</td>
       <td>支持空Tensor。</td>
@@ -91,7 +91,7 @@ aclnnStatus aclnnDeepNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>gx</td>
+      <td>gx（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入数据的梯度，用于反向传播，对应公式中的`gx`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`x`的数据类型保持一致。</li><li>shape维度和输入`x`的维度相同。</li></ul></td>
@@ -101,7 +101,7 @@ aclnnStatus aclnnDeepNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>beta</td>
+      <td>beta（aclTensor*）</td>
       <td>输入</td>
       <td>表示偏置参数，用于调整归一化后的输出，对应公式中的`beta`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`x`的数据类型保持一致。</li><li>shape维度和输入`x`后几维的维度相同，后几维表示需要norm的维度。</li></ul></td>
@@ -111,7 +111,7 @@ aclnnStatus aclnnDeepNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>gamma</td>
+      <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示缩放参数，用于调整归一化后的输出，对应公式中的`gamma`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`x`的数据类型保持一致。</li><li>shape维度和输入`x`后几维的维度相同，后几维表示需要norm的维度。</li></ul></td>
@@ -121,27 +121,27 @@ aclnnStatus aclnnDeepNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>alpha</td>
+      <td>alpha（double）</td>
       <td>输入</td>
       <td>表示权重参数，用于调整输入数据的权重，对应公式中的`alpha`。</td>
       <td>-</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>epsilon</td>
+      <td>epsilon（double）</td>
       <td>输入</td>
       <td>表示添加到方差中的值，以避免出现除以零的情况。对应公式中的`epsilon`。</td>
       <td>-</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>meanOut</td>
+      <td>meanOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示计算输出的均值，用于归一化操作，对应公式中的`mean`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与输入`x`满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>（前几维的维度和输入`x`前几维的维度相同，前几维表示不需要norm的维度，其余维度大小为1）。</li></ul></td>
@@ -151,7 +151,7 @@ aclnnStatus aclnnDeepNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>rstdOut</td>
+      <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示计算输出的标准差倒数，用于归一化操作，对应公式中`rstd`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与输入`x`满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>（前几维的维度和输入`x`前几维的维度相同，前几维表示不需要norm的维度，其余维度大小为1）。</li></ul></td>
@@ -161,7 +161,7 @@ aclnnStatus aclnnDeepNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>yOut</td>
+      <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示归一化后的输出数据，对应公式中的`y`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`x`的数据类型保持一致。</li><li>shape维度和输入`x`的维度相同。</li></ul></td>
@@ -171,7 +171,7 @@ aclnnStatus aclnnDeepNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回用户需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -181,7 +181,7 @@ aclnnStatus aclnnDeepNorm(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

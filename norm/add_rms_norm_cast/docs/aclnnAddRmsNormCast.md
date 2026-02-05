@@ -84,7 +84,7 @@ aclnnStatus aclnnAddRmsNormCast(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x1</td>
+      <td>x1（aclTensor*）</td>
       <td>输入</td>
       <td>表示用于Add计算的第一个输入。对应公式中的`x1`。</td>
       <td>支持空Tensor。</td>
@@ -94,7 +94,7 @@ aclnnStatus aclnnAddRmsNormCast(
       <td>×</td>
     </tr>
     <tr>
-      <td>x2</td>
+      <td>x2（aclTensor*）</td>
       <td>输入</td>
       <td>表示用于Add计算的第二个输入。对应公式中的`x2`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape和数据类型需要与`x1`的shape和数据类型保持一致。</li></ul></td>
@@ -104,7 +104,7 @@ aclnnStatus aclnnAddRmsNormCast(
       <td>×</td>
     </tr>
     <tr>
-      <td>gamma</td>
+      <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示RmsNorm的缩放因子（权重）。对应公式中的`gamma`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`x1`的数据类型保持一致。</li><li>shape需要与`x1`后几维保持一致，后几维为`x1`需要norm的维度。</li></ul></td>
@@ -114,17 +114,17 @@ aclnnStatus aclnnAddRmsNormCast(
       <td>×</td>
     </tr>
     <tr>
-      <td>epsilon</td>
+      <td>epsilon（double）</td>
       <td>输入</td>
       <td>表示添加到分母中的值，以确保数值稳定。对应公式中的`epsilon`。</td>
       <td>建议值为1e-6。</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>y1Out</td>
+      <td>y1Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示归一化后经过类型转换的输出数据。对应公式中的`y1Out`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape、数据格式需要与入参`x1`保持一致。</li></ul></td>
@@ -134,7 +134,7 @@ aclnnStatus aclnnAddRmsNormCast(
       <td>×</td>
     </tr>
     <tr>
-      <td>y2Out</td>
+      <td>y2Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示归一化后的输出数据。对应公式中的`y2Out`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape、数据格式、数据类型均需要与入参`x1`保持一致。</li></ul></td>
@@ -144,7 +144,7 @@ aclnnStatus aclnnAddRmsNormCast(
       <td>×</td>
     </tr>
     <tr>
-      <td>rstdOut</td>
+      <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示归一化后的标准差的倒数。对应公式中`Rms(x)`的倒数。</td>
       <td><ul><li>支持空Tensor。</li><li>需要与入参`x1`的数据格式保持一致。</li><li>shape与入参`x1`的shape前几维保持一致，前几维指`x1`的维度减去`gamma`的维度，表示不需要norm的维度。</li></ul></td>
@@ -154,7 +154,7 @@ aclnnStatus aclnnAddRmsNormCast(
       <td>×</td>
     </tr>
     <tr>
-      <td>xOut</td>
+      <td>xOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示Add计算的结果。对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape、数据格式、数据类型均需要与入参`x1`保持一致。</li></ul></td>
@@ -164,7 +164,7 @@ aclnnStatus aclnnAddRmsNormCast(
       <td>×</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -174,7 +174,7 @@ aclnnStatus aclnnAddRmsNormCast(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

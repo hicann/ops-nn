@@ -96,7 +96,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
   </tr></thead>
     <tbody>
     <tr>
-        <td>totalSum</td>
+        <td>totalSum（aclTensor*）</td>
         <td>输入</td>
         <td>表示各设备的通道特征和，对应公式中的totalSum。</td>
         <td>第一维必须大于0。</td>
@@ -106,7 +106,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
         <td>√</td>
     </tr>
     <tr>
-        <td>totalSquareSum</td>
+        <td>totalSquareSum（aclTensor*）</td>
         <td>输入</td>
         <td>表示各设备的通道特征平方，对应公式中的totalSquareSum。</td>
         <td><ul><li>第一维必须大于0。</li><li>shape与totalSum相同。</li></ul></td>
@@ -116,7 +116,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
         <td>√</td>
     </tr>
     <tr>
-        <td>sampleCount</td>
+        <td>sampleCount（aclTensor*）</td>
         <td>输入</td>
         <td>表示各设备的样本计数，对应公式中的sampleCount。</td>
         <td><ul><li>第一维必须大于0。</li><li>shape与totalSum的第一维一致。</li></ul></td>
@@ -126,7 +126,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
         <td>√</td>
     </tr>
     <tr>
-        <td>mean</td>
+        <td>mean（aclTensor*）</td>
         <td>输入</td>
         <td>表示计算过程中的均值，对应公式中的runningMean。</td>
         <td><ul><li>支持空Tensor。</li><li>shape与totalSum的第二维一致。</li></ul></td>
@@ -136,7 +136,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
         <td>√</td>
     </tr>
     <tr>
-        <td>variance</td>
+        <td>variance（aclTensor*）</td>
         <td>输入</td>
         <td>表示计算过程中的方差，对应公式中的runningVar。</td>
         <td><ul><li>支持空Tensor。</li><li>shape与totalSum的第二维一致。</li></ul></td>
@@ -146,27 +146,27 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
         <td>√</td>
     </tr>
     <tr>
-        <td>momentum</td>
+        <td>momentum（float）</td>
         <td>输入</td>
         <td>runningMean和runningVar的指数平滑参数。</td>
         <td>-</td>
-        <td>FLOAT</td>
+        <td>-</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
     </tr>
     <tr>
-        <td>eps</td>
+        <td>eps（float）</td>
         <td>输入</td>
         <td>用于防止产生除0的偏移。</td>
         <td>-</td>
-        <td>FLOAT</td>
+        <td>-</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
     </tr>
     <tr>
-        <td>batchMean</td>
+        <td>batchMean（aclTensor*）</td>
         <td>输出</td>
         <td>表示全局批均值，对应公式中的batchMean。</td>
         <td><ul><li>第一维必须大于0。</li></ul></td>
@@ -176,7 +176,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
         <td>√</td>
     </tr>
     <tr>
-        <td>batchInvstd</td>
+        <td>batchInvstd（aclTensor*）</td>
         <td>输出</td>
         <td>表示标准差倒数，对应公式中的batchInvstd。</td>
         <td><ul><li>第一维必须大于0。</li></ul></td>
@@ -186,7 +186,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
         <td>√</td>
     </tr>
     <tr>
-        <td>workspaceSize</td>
+        <td>workspaceSize（uint64_t*）</td>
         <td>输出</td>
         <td>返回需要在Device侧申请的workspace大小。</td>
         <td>-</td>
@@ -196,7 +196,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
         <td>-</td>
     </tr>
     <tr>
-        <td>executor</td>
+        <td>executor（aclOpExecutor**）</td>
         <td>输出</td>
         <td>返回op执行器，包含了算子计算流程。</td>
         <td>-</td>
