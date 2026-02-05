@@ -1932,7 +1932,7 @@
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>计算输入logits与标签target之间的BCELoss损失</td>
   </tr>
   <tr>
     <td>loss</td>
