@@ -106,7 +106,7 @@ void InplaceIndexAddSimdSortTiling::DoOpTilingSplitAfterSort()
     } else {
         afterAxisFactor_ = Ops::Base::CeilAlign(eachCoreAfterAxisCount_, alignNum);
         ubIndexFactor_ = halfUbSize / (afterAxisFactor_ * (varTypeSize_ + FP32_BYTES) + indicesSize);
-        
+        ubIndexFactor_ += 1;
         int64_t restSize = static_cast<int64_t>(-1);
         while (restSize <= 0) {
             --ubIndexFactor_;
@@ -241,6 +241,7 @@ void InplaceIndexAddSimdSortTiling::DoOpTilingSplitPreSort()
     } else {
         afterAxisFactor_ = Ops::Base::CeilAlign(afterAxis_, alignNum);
         ubIndexFactor_ = halfUbSize / (afterAxisFactor_ * (varTypeSize_ + FP32_BYTES) + indicesSize);
+        ubIndexFactor_ += 1;
         
         int64_t restSize = static_cast<int64_t>(-1);
         while (restSize <= 0) {
