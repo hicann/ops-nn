@@ -167,6 +167,7 @@ __aicore__ inline void KernelIndexNoContiguous<T, F, P, T2>::Init(
     LocalTensor<int64_t> calcParamsUb = Buf_.Get<int64_t>();
     calcParamsPtr_ = (__ubuf__ noConcalcParams<T2>*)calcParamsUb.GetPhyAddr();
 
+    calcParamsPtr_->isIndexPut_ = false;
     inTensorPtr_ = indices;
     outputLength_ = tilingData.outputLength;
     indexedDimNum_ = tilingData.indexedDimNum;
