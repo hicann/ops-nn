@@ -86,4 +86,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_addmm](examples/test_aclnn_addmm_aclnninplace_addmm.cpp) | 通过<br> - [aclnnAddmm&aclnnInplaceAddmm](./docs/aclnnAddmm%26aclnnInplaceAddmm.md)<br> - [aclnnMatmul](docs/aclnnMatmul.md)<br> - [aclnnMatmulWeightNz](docs/aclnnMatmulWeightNz.md)<br> - [aclnnMm](docs/aclnnMm.md)<br>等方式调用MatMulV3算子。 |
+| aclnn接口  | [test_aclnn_addmm](examples/test_aclnn_addmm_aclnninplace_addmm.cpp) | 通过<br> - [aclnnAddmm&aclnnInplaceAddmm](./docs/aclnnAddmm%26aclnnInplaceAddmm.md)<br> - [aclnnMatmul](docs/aclnnMatmul.md)<br> - [aclnnMatmulWeightNz](docs/aclnnMatmulWeightNz.md)<br> - [aclnnMm](docs/aclnnMm.md)<br>- [aclnnAddmmWeightNz](docs/aclnnAddmmWeightNz.md)<br>等方式调用MatMulV3算子。 |

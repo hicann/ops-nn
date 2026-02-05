@@ -81,7 +81,7 @@ static inline bool CheckDtypeValid(
     auto dtypeList = bf16flag ? dtypeSupportList : dtypeSupportListWithoutBf16;
     OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeList, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(mat1, dtypeList, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(mat2, dtypeList, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(mat2, dtypeList, return false); 
     OP_CHECK_DTYPE_NOT_SUPPORT(out, dtypeList, return false);
     if (!bf16flag && (self->GetDataType() == op::DataType::DT_BF16 || mat1->GetDataType() == op::DataType::DT_BF16 ||
                       mat2->GetDataType() == op::DataType::DT_BF16 || out->GetDataType() == op::DataType::DT_BF16)) {

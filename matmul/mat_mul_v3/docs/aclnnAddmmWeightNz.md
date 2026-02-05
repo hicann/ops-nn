@@ -4,7 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    ×     |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
@@ -80,10 +80,10 @@ aclnnStatus aclnnAddmmWeightNz(
       <td>输入</td>
       <td>表示bias矩阵，公式中的self。</td>
       <td><ul><li>数据类型需要与mat1@mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
-      <li>需要与mat1@mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> <li> 在mat1不转置的情况下各个维度表示：（m，k）。</li><li>在mat1转置的情况下各个维度表示：（k，m）。</li> </ul></td>
+      <li>需要与mat1@mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> <li> self支持shape为（n），（1，n），（m，n）。</li> </ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
-      <td>2</td>
+      <td>1-2</td>
       <td>√</td>
     </tr>
     <tr>
@@ -107,7 +107,7 @@ aclnnStatus aclnnAddmmWeightNz(
       </td>
       <td>BFLOAT16、FLOAT16</td>
       <td>NZ</td>
-      <td>2</td>
+      <td>4</td>
       <td>√</td>
     </tr>
     <tr>
@@ -270,9 +270,7 @@ aclnnStatus aclnnAddmmWeightNz(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-- 确定性说明：
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnAddmmWeightNz默认确定性实现。
-  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnAddmWeightNz默认非确定性实现，不支持通过aclrtCtxSetSysParamOpt开启确定性。
+- 确定性说明：aclnnAddmmWeightNz默认确定性实现。
 
 - 不支持mat1与mat2两个输入中一个输入为BFLOAT16，另一个输入为FLOAT或者FLOAT16的数据类型推导。
 - 不支持mat2最后两根轴其中一根轴为1，即k=1或者n=1。
