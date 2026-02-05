@@ -113,7 +113,7 @@ static void ExecuteTestCase(ge::DataType indices_dtype, ge::DataType output_shap
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -204,7 +204,7 @@ TEST_F(SparseToDenseTiling, test_tiling_ascendc_normal01)
     gert::StorageShape outputshape = {{12}, {12}};
     int64_t output_dim = 1;
     int32_t output_shape_value[output_dim] = {12};
-    string expectTilingData = "3 1 12 16 12 12 1 1 3 3 1 1 0 ";
+    string expectTilingData = "1 12 16 12 12 1 1 3 3 1 1 0 ";
     uint64_t tilingKeyValue = 1000000;
 
     ExecuteTestCase<int32_t>(ge::DT_INT32, ge::DT_INT32, ge::DT_INT16, ge::DT_INT16, ge::DT_INT16, shape1, shape2, shape3, shape4, 
@@ -220,7 +220,7 @@ TEST_F(SparseToDenseTiling, test_tiling_ascendc_normal02)
     gert::StorageShape outputshape = {{12, 200, 11, 12}, {12, 200, 11, 12}};
     int64_t output_dim = 4;
     int32_t output_shape_value[output_dim] = {12, 200, 11, 12};
-    string expectTilingData = "10000 4 4950 4960 4950 4950 1 1 157 109 64 64 1 ";
+    string expectTilingData = "4 4950 4960 4950 4950 1 1 157 109 64 64 257 ";
     uint64_t tilingKeyValue = 1000000;
 
     ExecuteTestCase<int32_t>(ge::DT_INT32, ge::DT_INT32, ge::DT_INT16, ge::DT_INT16, ge::DT_INT16, shape1, shape2, shape3, shape4, 
@@ -236,7 +236,7 @@ TEST_F(SparseToDenseTiling, test_tiling_ascendc_normal03)
     gert::StorageShape outputshape = {{99998721, 1, 1, 1}, {99998721, 1, 1, 1}};
     int64_t output_dim = 4;
     int32_t output_shape_value[output_dim] = {99998721, 1, 1, 1};
-    string expectTilingData = "10000 4 1562481 106496 71537 71474 15 15 157 109 64 64 1 ";
+    string expectTilingData = "4 1562481 106496 71537 71474 15 15 157 109 64 64 257 ";
     uint64_t tilingKeyValue = 1000000;
 
     ExecuteTestCase<int32_t>(ge::DT_INT32, ge::DT_INT32, ge::DT_INT16, ge::DT_INT16, ge::DT_INT16, shape1, shape2, shape3, shape4, 

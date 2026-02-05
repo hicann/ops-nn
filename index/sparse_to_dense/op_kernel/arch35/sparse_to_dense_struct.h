@@ -18,7 +18,6 @@
 
 class SparseToDenseTilingData {
 public:
-    int64_t numValues;
     int64_t numDims;
     int64_t normCoreHandleDefaultValues;
     int64_t defaultUbFactor;
@@ -30,6 +29,7 @@ public:
     int64_t tailCoreHandleSparses;
     int64_t defaultValueUsedCoreNum;
     int64_t sparseUsedCoreNum;
+    bool isNeedSyncall;
     bool validateIndices;
 };
 

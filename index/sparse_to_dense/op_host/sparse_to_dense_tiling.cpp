@@ -35,6 +35,8 @@ constexpr int64_t DCACHE_SIZE_SIMT = 32 * 1024;
 constexpr int64_t MIN_THREAD_NUM = 128;
 constexpr int64_t ASCENDC_TOOLS_WORKSPACE = 16777216;  // 16M
 constexpr int64_t MAX_INT32_NUM = 2147483647;
+constexpr int64_t SINGLE_CORE_SPARSE_NUM = 1024;
+constexpr int64_t SINGLE_CORE_DENSE_NUM = 8192;
 
 
 static const std::set<ge::DataType> VALUE_DTYPE = {ge::DT_INT8, ge::DT_UINT8, ge::DT_INT16, ge::DT_UINT16, ge::DT_INT32,
@@ -211,20 +213,33 @@ ge::graphStatus SparseToDenseTiling::DoOpTiling()
     OP_CHECK_IF(valuesTypeSize <= 0, OP_LOGE(opName_, "get valuesTypeSize size fail."),
                     return ge::GRAPH_FAILED);
     int64_t valuesUbBlock = Ops::Base::GetUbBlockSize(context_) / valuesTypeSize;
-    defaultValueUsedCoreNum_ = Ops::Base::CeilDiv(outSize_, MIN_THREAD_NUM);
-    defaultValueUsedCoreNum_ = std::min(totalCoreNum_, defaultValueUsedCoreNum_);
-    normCoreHandleDefaultValues_ = Ops::Base::CeilDiv(outSize_, defaultValueUsedCoreNum_);
+    if (outSize_ <= SINGLE_CORE_DENSE_NUM && numValues_ <= SINGLE_CORE_SPARSE_NUM ) {
+        defaultValueUsedCoreNum_ = 1;
+        normCoreHandleDefaultValues_ = outSize_;
+
+        sparseUsedCoreNum_ = 1;
+        normCoreHandleSparses_ = numValues_;
+        tailCoreHandleSparses_ = numValues_;
+        isNeedSyncall_ = false;
+    } else {
+        defaultValueUsedCoreNum_ = Ops::Base::CeilDiv(outSize_, MIN_THREAD_NUM);
+        defaultValueUsedCoreNum_ = std::min(totalCoreNum_, defaultValueUsedCoreNum_);
+        normCoreHandleDefaultValues_ = Ops::Base::CeilDiv(outSize_, defaultValueUsedCoreNum_);
+
+        isNeedSyncall_ = numValues_ == 0 ? false : true;
+        sparseUsedCoreNum_ = Ops::Base::CeilDiv(numValues_, MIN_THREAD_NUM);
+        sparseUsedCoreNum_ = std::min(totalCoreNum_, sparseUsedCoreNum_);
+        normCoreHandleSparses_ = Ops::Base::CeilDiv(numValues_, sparseUsedCoreNum_);
+        tailCoreHandleSparses_ = numValues_ - normCoreHandleSparses_ * (sparseUsedCoreNum_ - 1);
+    }
+
     defaultUbFactor_ = Ops::Base::FloorAlign(ubSize_ / valuesTypeSize, valuesUbBlock);
     defaultUbFactor_ = std::min(defaultUbFactor_, Ops::Base::CeilAlign(normCoreHandleDefaultValues_, valuesUbBlock));
     normBlockLoop_ = Ops::Base::CeilDiv(normCoreHandleDefaultValues_, defaultUbFactor_);
     normBlockTailLoopSize_ = normCoreHandleDefaultValues_ - defaultUbFactor_ * (normBlockLoop_ - 1);
-    tailBlockLoop_ = Ops::Base::CeilDiv(normCoreHandleDefaultValues_, defaultUbFactor_);
     int64_t tailCoreHandleDefaultValues = outSize_ - normCoreHandleDefaultValues_ * (defaultValueUsedCoreNum_ - 1);
+    tailBlockLoop_ = Ops::Base::CeilDiv(tailCoreHandleDefaultValues, defaultUbFactor_);
     tailBlockTailLoopSize_ = tailCoreHandleDefaultValues - defaultUbFactor_ * (tailBlockLoop_ - 1);
-    sparseUsedCoreNum_ = Ops::Base::CeilDiv(numValues_, MIN_THREAD_NUM);
-    sparseUsedCoreNum_ = std::min(totalCoreNum_, sparseUsedCoreNum_);
-    normCoreHandleSparses_ = Ops::Base::CeilDiv(numValues_, sparseUsedCoreNum_);
-    tailCoreHandleSparses_ = numValues_ - normCoreHandleSparses_ * (sparseUsedCoreNum_ - 1);
 
     useCoreNum_ = std::max(defaultValueUsedCoreNum_, sparseUsedCoreNum_);
     SetTilingData();
@@ -234,7 +249,6 @@ ge::graphStatus SparseToDenseTiling::DoOpTiling()
 void SparseToDenseTiling::SetTilingData()
 {
     SparseToDenseTilingData* tilingData = context_->GetTilingData<SparseToDenseTilingData>();
-    tilingData->numValues = numValues_;
     tilingData->numDims = numDims_;
     tilingData->normCoreHandleDefaultValues = normCoreHandleDefaultValues_;
     tilingData->defaultUbFactor = defaultUbFactor_;
@@ -246,6 +260,7 @@ void SparseToDenseTiling::SetTilingData()
     tilingData->tailCoreHandleSparses = tailCoreHandleSparses_;
     tilingData->defaultValueUsedCoreNum = defaultValueUsedCoreNum_;
     tilingData->sparseUsedCoreNum = sparseUsedCoreNum_;
+    tilingData->isNeedSyncall = isNeedSyncall_;
     tilingData->validateIndices = validateIndices_;
 }
 
@@ -289,7 +304,6 @@ void SparseToDenseTiling::DumpTilingInfo()
     std::ostringstream info;
     info << "usedCoreNum: " << useCoreNum_;
     info << "tilingKey_: " << tilingKey_;
-    info << "numValues: " << numValues_;
     info << "numDims: " << numDims_;
     info << "normCoreHandleDefaultValues: " << normCoreHandleDefaultValues_;
     info << "defaultUbFactor: " << defaultUbFactor_;
@@ -301,6 +315,7 @@ void SparseToDenseTiling::DumpTilingInfo()
     info << "tailCoreHandleSparses: " << tailCoreHandleSparses_;
     info << "defaultValueUsedCoreNum: " << defaultValueUsedCoreNum_;
     info << "sparseUsedCoreNum: " << sparseUsedCoreNum_;
+    info << "isNeedSyncall: " << isNeedSyncall_;
     info << "validateIndices: " << validateIndices_;
 
     OP_LOGI(opName_, "%s", info.str().c_str());

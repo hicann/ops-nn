@@ -39,7 +39,7 @@ public:
 private:
     __aicore__ inline void SetDefaultValue();
     static __simt_vf__ __aicore__ inline void SparseToDenseSimtCompute(
-        COMP_T numValues, COMP_T numDims, COMP_T sparseUsedCoreNum, COMP_T sparseBlockOffset, COMP_T sparseDataNum,
+        COMP_T numDims, COMP_T sparseBlockOffset, COMP_T sparseDataNum,
         __gm__ IDX_T* indices, __gm__ IDX_T* outputShape, __gm__ Y_T* values, __gm__ Y_T* y);
 
 private:
@@ -79,7 +79,6 @@ __aicore__ inline void SparseToDenseSimt<IDX_T, Y_T, COMP_T, isScalar>::Init(
 template <typename IDX_T, typename Y_T, typename COMP_T, bool isScalar>
 __aicore__ inline void SparseToDenseSimt<IDX_T, Y_T, COMP_T, isScalar>::Process()
 {
-    COMP_T numValues = static_cast<COMP_T>(tilingData_.numValues);
     COMP_T numDims = static_cast<COMP_T>(tilingData_.numDims);
     COMP_T defaultValueUsedCoreNum = static_cast<COMP_T>(tilingData_.defaultValueUsedCoreNum);
     if (blockIdx_ >= defaultValueUsedCoreNum) {
@@ -87,7 +86,9 @@ __aicore__ inline void SparseToDenseSimt<IDX_T, Y_T, COMP_T, isScalar>::Process(
     }
     SetDefaultValue();
 
-    SyncAll();
+    if (tilingData_.isNeedSyncall) {
+        SyncAll();
+    }
 
     COMP_T sparseUsedCoreNum = tilingData_.sparseUsedCoreNum;
     if (blockIdx_ >= sparseUsedCoreNum) {
@@ -100,7 +101,7 @@ __aicore__ inline void SparseToDenseSimt<IDX_T, Y_T, COMP_T, isScalar>::Process(
     }
     COMP_T sparseBlockOffset = blockIdx_ * normCoreSparses;
     AscendC::Simt::VF_CALL<SparseToDenseSimt<IDX_T, Y_T, COMP_T, isScalar>::SparseToDenseSimtCompute>(
-        AscendC::Simt::Dim3(USED_THREAD), numValues, numDims, sparseUsedCoreNum, sparseBlockOffset, sparseDataNum,
+        AscendC::Simt::Dim3(USED_THREAD), numDims, sparseBlockOffset, sparseDataNum,
         (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ IDX_T*)(outputShape_.GetPhyAddr()),
         (__gm__ Y_T*)(values_.GetPhyAddr()), (__gm__ Y_T*)(y_.GetPhyAddr()));
 }
@@ -110,8 +111,8 @@ __aicore__ inline void SparseToDenseSimt<IDX_T, Y_T, COMP_T, isScalar>::SetDefau
 {
     LocalTensor<Y_T> outputLocal = outputQue_.AllocTensor<Y_T>();
 
-    COMP_T defaultDataNumBlock = static_cast<COMP_T>(tilingData_.normCoreHandleDefaultValues); //  正常核处理的总数量
-    COMP_T defaultUbFactor = static_cast<COMP_T>(tilingData_.defaultUbFactor);                 //  正常循环处理的数量      
+    int64_t defaultDataNumBlock = tilingData_.normCoreHandleDefaultValues; //  正常核处理的总数量
+    int64_t defaultUbFactor = tilingData_.defaultUbFactor;                 //  正常循环处理的数量      
     Y_T defaultValueScalar = static_cast<Y_T>(((__gm__ Y_T*)(defaultValue_.GetPhyAddr()))[0]);
     
     DataCopyExtParams outputCopyParamsNorm{1, static_cast<uint32_t>(defaultUbFactor * sizeof(Y_T)), 0, 0, 0};
@@ -134,10 +135,11 @@ __aicore__ inline void SparseToDenseSimt<IDX_T, Y_T, COMP_T, isScalar>::SetDefau
 template <typename IDX_T, typename Y_T, typename COMP_T, bool isScalar>
 __simt_vf__ __aicore__
 LAUNCH_BOUND(USED_THREAD) inline void SparseToDenseSimt<IDX_T, Y_T, COMP_T, isScalar>::SparseToDenseSimtCompute(
-    COMP_T numValues, COMP_T numDims, COMP_T sparseUsedCoreNum, COMP_T sparseBlockOffset, COMP_T sparseDataNum,
+    COMP_T numDims, COMP_T sparseBlockOffset, COMP_T sparseDataNum,
     __gm__ IDX_T* indices, __gm__ IDX_T* outputShape, __gm__ Y_T* values, __gm__ Y_T* y)
 {
-    for (COMP_T idx = sparseBlockOffset + Simt::GetThreadIdx(); idx < sparseBlockOffset + sparseDataNum;
+    COMP_T sparseBlockMax = sparseBlockOffset + sparseDataNum;
+    for (COMP_T idx = sparseBlockOffset + Simt::GetThreadIdx(); idx < sparseBlockMax;
          idx += Simt::GetThreadNum()) {
         COMP_T outputIdx = indices[idx * numDims + numDims - 1]; //  idx索引的坐标的最后一个值
         COMP_T strides = 1;                                      //  每个维度对应的偏移步长

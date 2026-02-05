@@ -26,19 +26,19 @@ namespace ge {
 
 * @par Inputs:
 * Four inputs, including:
-* @li indices: A 0D, 1D or 2D Tensor of type int32 or int64.
-* indices should be sorted in lexicographic order and that there are no repeats.
+* @li indices: An ND Tensor of type int32 or int64. Dimension must be 0D, 1D or 2D.
+* Data between different rows(Corresponding index of output) cannot be duplicated, and should be sorted by ascending.
 * Index cannot exceed the size of each dimension of output.
-* @li output_shape: An 1D Tensor of type int32 or int64, has the same dtype of indices.
+* @li output_shape: A 1D Tensor has the same dtype of indices.
 * @li values: A 1D Tensor, Values corresponding to each row of indices, or a scalar value to be used for all sparse indices. \n
 * Must be one of the following types: float32, float16, bfloat16, int16, uint16, int32, int64, int8, uint8, bool, double.
-* @li default_value: An ND Tensor of the same dtype as values . \n
-* Size must be 1.
+* @li default_value: An ND Tensor of the same dtype as values .
+* Size must be 1.  \n
 
 * @par Attributes:
 * @li validate_indices: An optional bool. 
-* If true, indices are checked to make sure they are sorted inlexicographic order and that there are no repeats.
-* This param is currently not effective in 950.
+* If true, indices are checked to make sure they are sorted by ascending, no repeats, and cannot exceed the size of each dimension.
+* This param is currently not effective in Ascend950PR/Ascend950DT. \n
 
 * @par Outputs:
 * y: A Tensor. Has the same type and format as input "values" . \n

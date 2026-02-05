@@ -75,6 +75,7 @@ private:
     int64_t defaultValueUsedCoreNum_ = 0;
     int64_t sparseUsedCoreNum_ = 0;
     bool validateIndices_ = true;
+    bool isNeedSyncall_ = true;
 
     int64_t isValuesScalar_ = 0;
     int64_t totalCoreNum_ = 0;
