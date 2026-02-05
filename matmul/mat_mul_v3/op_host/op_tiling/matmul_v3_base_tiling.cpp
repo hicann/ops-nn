@@ -2217,12 +2217,6 @@ MixNd2NzType MatmulV3BaseTiling::GetMixNd2nzType() // check different platform
         return MixNd2NzType::NO_ND2NZ; // current not support mix kernel
     }
     if (compileInfo_.supportL0c2out) {
-        if (args_.nd2nzA && !args_.nd2nzB && args_.unAlignProcessType > 0 &&
-            tilingEnable_.tilingEnableFullLoad == TilingEnableFullLoad::BL1_FULL_LOAD &&
-            tilingEnable_.tilingEnableSplitCore == TilingEnableSplitCore::BASE &&
-            tilingEnable_.tilingEnableFixOpti == TilingEnableFixOpti::BASE) {
-            return MixNd2NzType::V_PARALELL_ND2NZ;
-        }
         if (args_.nd2nzA || args_.nd2nzB) {
             return MixNd2NzType::V_HEAD_ND2NZ;
         }
