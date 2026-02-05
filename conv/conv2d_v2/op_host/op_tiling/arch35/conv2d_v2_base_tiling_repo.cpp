@@ -155,7 +155,11 @@ void Conv2dBaseTiling::TranslateApiTiling(shared_ptr<tuningtiling::Conv2DV2Tunne
     tilingData_.conv2dApiTiling.set_hf32Enable(convRepoTiling->hf32Enable);
     tilingData_.conv2dApiTiling.set_hf32TransMode(convRepoTiling->hf32TransMode);
     tilingData_.conv2dApiTiling.set_roundMode(attrInfo_.roundMode);
-    tilingData_.conv2dApiTiling.set_enlarge(optGroupInfo_.enlarge);
+    if (convRepoTiling->enlarge > 0) {
+        tilingData_.conv2dApiTiling.set_enlarge(convRepoTiling->enlarge);
+    } else {
+        tilingData_.conv2dApiTiling.set_enlarge(optGroupInfo_.enlarge);
+    }
     tilingData_.conv2dApiTiling.set_innerBatch(convRepoTiling->innerBatch);
 }
 
@@ -207,10 +211,14 @@ void Conv2dBaseTiling::TranslateApiTilingAux(shared_ptr<tuningtiling::Conv2DV2Tu
     tilingData_.conv2dApiTiling.set_aL1SpaceSize(CalcAL1SpaceSize(convRepoTiling));
     tilingData_.conv2dApiTiling.set_hasBias(static_cast<uint8_t>(flagInfo_.hasBias));
     tilingData_.conv2dApiTiling.set_hasScale(static_cast<uint8_t>(flagInfo_.quantFlag || flagInfo_.extendConvFlag));
-    uint64_t singleGroups = flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV ?
-        optGroupInfo_.enlarge : 0;
-    uint64_t singleGroupOpt = flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV ?
-        ConvCeilDiv(optGroupInfo_.groupOpt, convRepoTiling->groupDim) : 0;
+    uint64_t singleGroups = 0;
+    uint64_t singleGroupOpt = 0;
+    if (flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV) {
+        singleGroups = convRepoTiling->enlarge > 0 ? convRepoTiling->enlarge : optGroupInfo_.enlarge;
+        singleGroupOpt = convRepoTiling->enlarge > 0 ?
+            ConvCeilDiv(ConvCeilDiv(convRepoTiling->groups, convRepoTiling->enlarge), convRepoTiling->groupDim) :
+            ConvCeilDiv(optGroupInfo_.groupOpt, convRepoTiling->groupDim);
+    }
 
     tilingData_.conv2dApiTiling.set_singleCoreGroups(singleGroups);
     tilingData_.conv2dApiTiling.set_singleCoreGroupOpt(singleGroupOpt);
@@ -291,10 +299,17 @@ void Conv2dBaseTiling::TranslateRunInfo(shared_ptr<tuningtiling::Conv2DV2TunnerT
     tilingData_.conv2dRunInfo.set_padLeft(convRepoTiling->padLeft);
     tilingData_.conv2dRunInfo.set_hasBias(flagInfo_.hasBias);
     tilingData_.conv2dRunInfo.set_groups(convRepoTiling->groups);
-    tilingData_.conv2dRunInfo.set_cinOpt(optGroupInfo_.cinOpt);
-    tilingData_.conv2dRunInfo.set_coutOpt(optGroupInfo_.coutOpt);
-    tilingData_.conv2dRunInfo.set_groupOpt(optGroupInfo_.groupOpt);
-    tilingData_.conv2dRunInfo.set_enlarge(optGroupInfo_.enlarge);
+    if (convRepoTiling->enlarge > 0) {
+        tilingData_.conv2dRunInfo.set_cinOpt(oriGroupInfo_.ciPerGroup * convRepoTiling->enlarge);
+        tilingData_.conv2dRunInfo.set_coutOpt(oriGroupInfo_.coPerGroup * convRepoTiling->enlarge);
+        tilingData_.conv2dRunInfo.set_groupOpt(ConvCeilDiv(convRepoTiling->groups, convRepoTiling->enlarge));
+        tilingData_.conv2dRunInfo.set_enlarge(convRepoTiling->enlarge);
+    } else {
+        tilingData_.conv2dRunInfo.set_cinOpt(optGroupInfo_.cinOpt);
+        tilingData_.conv2dRunInfo.set_coutOpt(optGroupInfo_.coutOpt);
+        tilingData_.conv2dRunInfo.set_groupOpt(optGroupInfo_.groupOpt);
+        tilingData_.conv2dRunInfo.set_enlarge(optGroupInfo_.enlarge);
+    }
     tilingData_.conv2dRunInfo.set_groupDim(convRepoTiling->groupDim);
 }
 

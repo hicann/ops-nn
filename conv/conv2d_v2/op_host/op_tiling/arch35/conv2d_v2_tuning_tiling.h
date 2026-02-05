@@ -142,6 +142,7 @@ TUNING_TILING_DATA_FIELD_DEF(uint8_t, nDim);
 TUNING_TILING_DATA_FIELD_DEF(uint8_t, groupDim);
 TUNING_TILING_DATA_FIELD_DEF(uint8_t, mMode);
 TUNING_TILING_DATA_FIELD_DEF_WITH_INITVALUE(uint32_t, innerBatch, 1);
+TUNING_TILING_DATA_FIELD_DEF_WITH_INITVALUE(uint32_t, enlarge, 0);
 TUNING_TILING_DATA_FIELD_DEF_WITH_INITVALUE(uint8_t, isWeightUbTransFlag, 0);
 END_TUNING_TILING_DEF
 
@@ -209,6 +210,7 @@ DECLARE_SCHEMA(Conv2DV2TunnerTiling,
   FIELD(Conv2DV2TunnerTiling, groupDim),
   FIELD(Conv2DV2TunnerTiling, mMode),
   FIELD(Conv2DV2TunnerTiling, innerBatch),
+  FIELD(Conv2DV2TunnerTiling, enlarge),
   FIELD(Conv2DV2TunnerTiling, isWeightUbTransFlag));
 
 void GetAttrsInfo(const gert::TilingContext *context, std::shared_ptr<Conv2DV2InputArgs> &conv2dArgs);
