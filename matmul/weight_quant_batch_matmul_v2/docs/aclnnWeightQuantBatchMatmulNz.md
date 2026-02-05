@@ -2,11 +2,11 @@
 
 ## 产品支持情况
 
-| 产品                                                         |  是否支持   |
-| :----------------------------------------------------------- |:-------:|
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √    |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×    |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×    |
+| 产品                                                        | 是否支持 |
+| :---------------------------------------------------------- |:-------:|
+| <term>Ascend 950PR/Ascend 950DT</term>                      |    √    |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>      |    ×    |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>      |    ×    |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×    |
 | <term>Atlas 推理系列产品 </term>                             |    ×    |
 | <term>Atlas 训练系列产品</term>                              |    ×    |
@@ -15,31 +15,24 @@
 
 - **接口功能**：完成一个输入为伪量化场景的矩阵乘计算。此接口仅支持矩阵乘的右输入矩阵为FRACTAL_NZ格式。
 - **计算公式**：
+  - 基础计算公式：
+    $$
+    y = x @ ANTIQUANT(weight) + bias
+    $$
 
-  $$
-  y = x @ ANTIQUANT(weight) + bias
-  $$
+    其中，$weight$为伪量化场景的输入，其反量化公式$ANTIQUANT(weight)$为
 
-  公式中的$weight$为伪量化场景的输入，其反量化公式$ANTIQUANT(weight)$为
+    $$
+    ANTIQUANT(weight) = (weight + antiquantOffset) * antiquantScale
+    $$
 
-  $$
-  ANTIQUANT(weight) = (weight + antiquantOffset) * antiquantScale
-  $$
-
-  当需要对输出进行量化处理时，其量化公式为
-
-  $$
-  \begin{aligned}
-  y &= QUANT(x @ ANTIQUANT(weight) + bias) \\
-  &= (x @ ANTIQUANT(weight) + bias) * quantScale + quantOffset \\
-  \end{aligned}
-  $$
-
-  当不需要对输出再进行量化操作时，其计算公式为
-
-  $$
-  y = x @ ANTIQUANT(weight) + bias
-  $$
+  - 需要对输出进行量化处理时的量化公式：
+    $$
+    \begin{aligned}
+    y &= QUANT(x @ ANTIQUANT(weight) + bias) \\
+    &= (x @ ANTIQUANT(weight) + bias) * quantScale + quantOffset \\
+    \end{aligned}
+    $$
 
 ## 函数原型
 
@@ -99,49 +92,46 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       <tr>
         <td>x</td>
         <td>输入</td>
-        <td>矩阵乘的左输入矩阵，公式中的输入x，device侧的aclTensor。</td>
-        <td>不支持转置场景。</td>
+        <td>矩阵乘的左输入矩阵，公式中的输入<code>x</code>，device侧的aclTensor。</td>
+        <td>不支持转置。</td>
         <td>FLOAT16、BFLOAT16</td>
         <td>ND</td>
-        <td>维度支持2维，shape支持(m, k)，m表示矩阵第1维的大小，k表示矩阵的第2维的大小，其中Reduce维度k需要与weight的Reduce维度k大小相等。m大小在[1, 2^31-1]范围内。</td>
+        <td>2</td>
         <td>×</td>
       </tr>
       <tr>
         <td>weight</td>
         <td>输入</td>
-        <td>矩阵乘的右输入矩阵，公式中的输入weight，device侧的aclTensor。</td>
-        <td>非连续的Tensor仅支持转置场景。
-        若weight数据类型为INT32/FLOAT时，表示紧密排布的INT4/FLOAT4_E2M1，要求INT4/FLOAT4_E2M1尾轴8对齐。
-        若数据类型为INT4或FLOAT4_E2M1，则weight的内轴应为偶数。
-        </td>
+        <td>矩阵乘的右输入矩阵，公式中的输入<code>weight</code>，device侧的aclTensor。</td>
+        <td>不支持转置。</td>
         <td>INT4、FLOAT4_E2M1、INT32、FLOAT</td>
         <td>FRACTAL_NZ</td>
-        <td>维度支持2维，Reduce维度k需要与x的Reduce维度k大小相等。支持(k, n)，其中k表示矩阵第1维的大小，n表示矩阵第2维的大小。k、n大小在[1, 65535]范围内。k, n要求32B对齐。</td>
-        <td>√</td>
+        <td>4</td>
+        <td>×</td>
       </tr>
       <tr>
         <td>antiquantScale</td>
         <td>输入</td>
-        <td>实现输入反量化计算的反量化scale参数，反量化公式中的输入antiquantScale。</td>
-        <td>连续性要求和weight保持一致。</td>
-        <td>FLOAT16、BFLOAT16或FLOAT8_E8M0</td>
+        <td>实现输入反量化计算的scale参数，公式中的输入<code>antiquantScale</code>。</td>
+        <td>连续性要求与weight一致。</td>
+        <td>FLOAT16、BFLOAT16、FLOAT8_E8M0</td>
         <td>ND</td>
-        <td>维度支持1维或2维。shape支持(k/antiquantGroupSize, n)、(1, n)或(n,)</td>
-        <td>√</td>
+        <td>1、2</td>
+        <td>×</td>
       </tr>
       <tr>
         <td>antiquantOffsetOptional</td>
-        <td>输入</td>
-        <td>实现输入反量化计算的反量化offset参数，反量化公式中的antiquantOffset，device侧的aclTensor。</td>
-        <td>可选输入, 连续性要求和weight保持一致。当x是FLOAT16或者BFLOAT16，同时weight是FLOAT、FLOAT4_E2M1时，不支持antiquantOffsetOptional参数，填空指针。</td>
+        <td>可选输入</td>
+        <td>实现输入反量化计算的offset参数，公式中的<code>antiquantOffset</code>，device侧的aclTensor。</td>
+        <td>连续性要求与weight一致。</td>
         <td>FLOAT16、BFLOAT16</td>
         <td>ND</td>
-        <td>shape要求与antiquantScale一致。</td>
-        <td>√</td>
+        <td>1、2</td>
+        <td>×</td>
       </tr>
       <tr>
         <td>quantScaleOptional</td>
-        <td>输入</td>
+        <td>可选输入</td>
         <td>预留参数，暂未使用，固定传入空指针。</td>
         <td>-</td>
         <td>-</td>
@@ -151,7 +141,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       </tr>
       <tr>
         <td>quantOffsetOptional</td>
-        <td>输入</td>
+        <td>可选输入</td>
         <td>预留参数，暂未使用，固定传入空指针。</td>
         <td>-</td>
         <td>-</td>
@@ -161,19 +151,23 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       </tr>
       <tr>
         <td>biasOptional</td>
-        <td>输入</td>
-        <td>偏置输入，公式中的bias，device侧的aclTensor。</td>
-        <td>可选输入, 当不需要时传空指针。</td>
-        <td>BFLOAT16、FLOAT16、FLOAT</td>
+        <td>可选输入</td>
+        <td>偏置输入，公式中的<code>bias</code>，device侧的aclTensor。</td>
+        <td>当不需要时传入空指针。</td>
+        <td>FLOAT16、BFLOAT16、、FLOAT</td>
         <td>ND</td>
-        <td>维度支持1维或2维，shape支持(n,)或(1, n)。</td>
+        <td>1、2</td>
         <td>×</td>
       </tr>
       <tr>
         <td>antiquantGroupSize</td>
         <td>输入</td>
-        <td>表示在伪量化pergroup和mx<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，对输入weight进行反量化计算的groupSize输入，描述一组反量化参数对应的待反量化数据量在Reduce方向的大小。</td>
-        <td>pergroup<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，量化传入值的范围为[32, k-1]且值要求是32的倍数；mx<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，值固定要求传32；perchannel<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，值传0。</td>
+        <td>在pergroup和mx<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，对weight进行反量化计算的groupSize输入，描述Reduce轴被分组的每组大小。</td>
+        <td>
+        pergroup<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，取值范围为[32, k-1]且要求是32的倍数；<br>
+        mx<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，值固定要求传32；<br>
+        perchannel<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，值传0。<br>
+        </td>
         <td>UINT64</td>
         <td>-</td>
         <td>-</td>
@@ -182,11 +176,11 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       <tr>
         <td>y</td>
         <td>输出</td>
-        <td>计算输出，公式中的y，device侧的aclTensor。</td>
+        <td>计算输出，公式中的<code>y</code>，device侧的aclTensor。</td>
         <td>-</td>
-        <td>与输入x的数据类型一致</td>
+        <td>FLOAT16、BFLOAT16</td>
         <td>ND</td>
-        <td>shape支持(m, n)</td>
+        <td>2</td>
         <td>×</td>
       </tr>
       <tr>
@@ -275,24 +269,22 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
 ## 约束说明
   - 确定性说明：aclnnWeightQuantBatchMatmulNz默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
   - 支持的量化模式：perchannel[量化模式](../../../docs/zh/context/量化介绍.md)、pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和mx[量化模式](../../../docs/zh/context/量化介绍.md)。
-  - weight数据类型为FLOAT/FLOAT4_E2M1时，仅支持pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和mx[量化模式](../../../docs/zh/context/量化介绍.md)，pergroup[量化模式](../../../docs/zh/context/量化介绍.md)下，要求`antiquantScale`与`x`的数据类型相同，mx[量化模式](../../../docs/zh/context/量化介绍.md)下，要求`antiquantScale`类型为FLOAT8_E8M0类型，且不支持antiquantOffsetOptional输入。
-  - weight数据类型为INT32/INT4时，仅支持perchannel[量化模式](../../../docs/zh/context/量化介绍.md)和pergroup[量化模式](../../../docs/zh/context/量化介绍.md)，要求`antiquantScale`与`x`的数据类型相同。
-
-输入和输出支持以下数据类型和shape组合：
-- <term>Ascend 950PR/Ascend 950DT</term>：
-  | x        | weight            | antiquantScale | antiquantOffsetOptional | biasOptional          | y        |weight shape      |antiquantScale shape                      |antiquantOffsetOptional shape                     |biasOptional shape|
-  | ----     | ------------------| ---------------| ------------------------| ----------------------| -------- | -----------------| --------                                 | --------                                         | --------         |
-  | BFLOAT16 | INT32/INT4        | BFLOAT16       | NULL/BFLOAT16           | null/BFLOAT16/FLOAT32 | BFLOAT16 |（k, n/8）/（k, n）|（k/antiquantGroupSize, n）/（1, n）/（n,）| null /（k/antiquantGroupSize, n）/（1, n）/（n,） | null /（1, n）   |
-  | FLOAT16  | INT32/INT4        | FLOAT16        | NULL/FLOAT16            | null/FLOAT16          | FLOAT16  |（k, n/8）/（k, n）|（k/antiquantGroupSize, n）/（1, n）/（n,）| null /（k/antiquantGroupSize, n）/（1, n）/（n,） | null /（1, n）   |
-  | BFLOAT16 | FLOAT/FLOAT4_E2M1 | BFLOAT16       | NULL                    | null/BFLOAT16         | BFLOAT16 |（k, n/8）/（k, n）|（k/antiquantGroupSize, n）               | null                                             | null /（1, n）   |
-  | FLOAT16  | FLOAT/FLOAT4_E2M1 | FLOAT16        | NULL                    | null/FLOAT16          | FLOAT16  |（k, n/8）/（k, n）|（k/antiquantGroupSize, n）               | null                                             | null /（1, n）   |
-  | BFLOAT16 | FLOAT/FLOAT4_E2M1 | FLOAT8_E8M0    | NULL                    | null/BFLOAT16         | BFLOAT16 |（n, k/8）/（n, k）|（n, k/32）                               | null                                             | null /（1, n）   |
-  | FLOAT16  | FLOAT/FLOAT4_E2M1 | FLOAT8_E8M0    | NULL                    | null/FLOAT16          | FLOAT16  |（n, k/8）/（n, k）|（n, k/32）                               | null                                             | null /（1, n）   |
-  - 组合说明：
-    - x的shape均为（m, k），y的shape均为（m, n）。
-    - perchannel[量化模式](../../../docs/zh/context/量化介绍.md)下antiquantScale和antiquantOffsetOptional的shape为（1, n）或（n,）。
-    - pergroup[量化模式](../../../docs/zh/context/量化介绍.md)下antiquantScale和antiquantOffsetOptional的shape为（k/antiquantGroupSize, n），其中antiquantGroupSize表示k要分组的每组的大小。
-    - mx[量化模式](../../../docs/zh/context/量化介绍.md)下antiquantScale和antiquantOffsetOptional的shape为（k/antiquantGroupSize, n）。
+  - 当weight数据类型为INT32或FLOAT时，表示紧密排布的INT4或FLOAT4_E2M1，要求INT4或FLOAT4_E2M1尾轴8对齐；当weight数据类型为INT4或FLOAT4_E2M1，尾轴应为偶数。
+  - 输入和输出支持以下数据类型和shape组合：
+    - <term>Ascend 950PR/Ascend 950DT</term>：
+      |[量化模式](../../../docs/zh/context/量化介绍.md)| x | weight | antiquantScale | antiquantOffsetOptional | biasOptional | y | antiquantScale shape | antiquantOffsetOptional shape     |
+      |------------| ----     | ----------------- | ----------- | ------------- | --------------------- | -------- | ------------------------------- | ------------------------------------ |
+      | perchannel | BFLOAT16 | INT32/INT4        | BFLOAT16    | null/BFLOAT16 | null/BFLOAT16/FLOAT32 | BFLOAT16 | (1, n)/(n,)                     | null/(1, n)/(n,)                     |
+      | perchannel | FLOAT16  | INT32/INT4        | FLOAT16     | null/FLOAT16  | null/FLOAT16          | FLOAT16  | (1, n)/(n,)                     | null/(1, n)/(n,)                     |
+      |  pergroup  | BFLOAT16 | INT32/INT4        | BFLOAT16    | null/BFLOAT16 | null/BFLOAT16/FLOAT32 | BFLOAT16 | (ceil(k/antiquantGroupSize), n) | null/(ceil(k/antiquantGroupSize), n) |
+      |  pergroup  | FLOAT16  | INT32/INT4        | FLOAT16     | null/FLOAT16  | null/FLOAT16          | FLOAT16  | (ceil(k/antiquantGroupSize), n) | null/(ceil(k/antiquantGroupSize), n) |
+      |  pergroup  | BFLOAT16 | FLOAT/FLOAT4_E2M1 | BFLOAT16    | null          | null/BFLOAT16         | BFLOAT16 | (ceil(k/antiquantGroupSize), n) | null                                 |
+      |  pergroup  | FLOAT16  | FLOAT/FLOAT4_E2M1 | FLOAT16     | null          | null/FLOAT16          | FLOAT16  | (ceil(k/antiquantGroupSize), n) | null                                 |
+      |     mx     | BFLOAT16 | FLOAT/FLOAT4_E2M1 | FLOAT8_E8M0 | null          | null/BFLOAT16         | BFLOAT16 | (k/32, n)                       | null                                 |
+      |     mx     | FLOAT16  | FLOAT/FLOAT4_E2M1 | FLOAT8_E8M0 | null          | null/FLOAT16          | FLOAT16  | (k/32, n)                       | null                                 |
+      - x的shape均为(m, k)，y的shape均为(m, n)，biasOptional的shape为null/(1, n)/(n,)。
+      - weight的数据类型为INT32或FLOAT时，shape为(ceil(n/16), ceil(k/16), 16, 2)；weight的数据类型为INT4或FLOAT4_E2M1时，shape为(ceil(n/16), ceil(k/16), 16, 16)。
+      - m大小在[1, 2^31-1]范围内；k、n大小在[1, 65535]范围内，要求32B对齐。
 
 ## 调用示例
 
