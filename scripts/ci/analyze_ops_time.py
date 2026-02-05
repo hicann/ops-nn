@@ -59,8 +59,6 @@ for log_dir_path in log_dirs:
     ops_root = log_dir_path.parent / soc_name
     if not ops_root.exists():
         print(f"Ops dir not exist: {ops_root}")
-    else:
-        existing_ops = {d.name for d in ops_root.iterdir() if d.is_dir()}
     
     for log_file in log_dir_path.iterdir():
         if not log_file.is_file():
@@ -88,8 +86,13 @@ for log_dir_path in log_dirs:
             continue
         
         start_time = datetime.strptime(start_match.group(1), TIME_FORMAT)
-        op = main_func_match.group(1)
-        
+        main_func = main_func_match.group(1)
+        if main_func == "conv3dv2":
+            op = "conv3d_v2"
+        elif main_func == "conv2dv2":
+            op = "conv2d_v2"
+        elif main_func == "dynamic_rnn_v2":
+            op = "dynamic_rnnv2"
         all_stats[soc_name][op]['all'] += 1
         
         has_valid_end = False
@@ -112,12 +115,6 @@ for log_dir_path in log_dirs:
         stats = all_stats[soc_name][op]
         if not stats['obj_dir_checked']:
             stats['obj_dir_checked'] = True
-            if op == "conv3dv2":
-                op = "conv3d_v2"
-            elif op == "conv2dv2":
-                op = "conv2d_v2"
-            elif op == "dynamic_rnn_v2":
-                op = "dynamic_rnnv2"
             obj_dir = ops_root / op
             total_size = 0
             if obj_dir.exists():
@@ -146,8 +143,7 @@ for soc_name, op_dict in all_stats.items():
             'op': op,
             'duration(s)': duration_s,
             'size': obj_size,
-            'all': all_count,
-            'fail': fail_count
+            'all': all_count
         })
     
     # 按照有效时长排序（有时长的在前），然后按照时长降序排序。
@@ -157,7 +153,7 @@ for soc_name, op_dict in all_stats.items():
     with open(csv_path, 'w', newline='', encoding='utf-8') as f:
         if csv_rows:
             writer = csv.DictWriter(f, fieldnames=[
-                'op', 'duration(s)', 'size', 'all', 'fail'
+                'op', 'duration(s)', 'size', 'all'
             ])
             writer.writeheader()
             writer.writerows(csv_rows)

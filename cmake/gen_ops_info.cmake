@@ -91,6 +91,7 @@ function(get_op_type_and_validate OP_DIR compute_unit op_name_var op_type_var is
       set(${cache_key} "" CACHE INTERNAL "")
       return()
     endif()
+    message(STATUS "[INFO] On [${compute_unit}], [${op_name}] compile binary with def config.")
   endif()
   
   set(is_valid TRUE)
@@ -404,7 +405,7 @@ function(compile_from_config)
     set(_BUILD_COMMAND)
     List(APPEND _BUILD_COMMAND export TILINGKEY_PAR_COMPILE=1 &&)
     List(APPEND _BUILD_COMMAND export BIN_FILENAME_HASHED=1 &&)
-    List(APPEND _BUILD_COMMAND ${_ASCENDC_ENV_VAR} bash ${OPS_KERNEL_BINARY_SCRIPT}/build_binary_op_exe.sh ${CONFCMP_OUT_DIR}/bin ${idx})
+    List(APPEND _BUILD_COMMAND ${_ASCENDC_ENV_VAR} bash ${OPS_KERNEL_BINARY_SCRIPT}/build_binary_op_exe_task.sh ${CONFCMP_OUT_DIR}/bin ${idx})
     List(APPEND _BUILD_COMMAND && echo $(MAKE))
     add_custom_target(exe_compile_${CONFCMP_COMPUTE_UNIT}_${idx}
       COMMAND ${_BUILD_COMMAND}
