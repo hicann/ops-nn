@@ -1,11 +1,16 @@
 # aclnnUniqueConsecutive
 
 ## 产品支持情况
+
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term> |√|
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √       |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Ascend 950PR/Ascend 950DT</term>                          |    √  |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品 </term>                             |    ×     |
+| <term>Atlas 训练系列产品</term>                              |    ×   |
+
 ## 功能说明
 
 算子功能：去除每一个元素后的重复元素。当dim不为空时，去除对应维度上的每一个张量后的重复张量。
