@@ -94,10 +94,6 @@ bool BatchNormGradRARSplitCoreR0::IsCapable()
         return false;
     }
 
-    if (dyDtype == ge::DT_FLOAT) {
-        return false;
-    }
-
     return true;
 }
 

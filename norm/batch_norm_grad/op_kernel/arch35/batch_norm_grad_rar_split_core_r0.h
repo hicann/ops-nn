@@ -210,7 +210,7 @@ public:
                 uint32_t curR0LenFold = r0OuterIdxFold != (r0OuterInCore - 1) ? r0InerIncore : r0TailIncore;
                 uint32_t curR0AlignedLenFold = curR0LenFold;
                 if (r0OuterIdxFold == (r0OuterInCore - 1) && isLastCore_) {
-                    curR0AlignedLen = tilingData_->r0TailTailAlignedStg0;
+                    curR0AlignedLenFold = tilingData_->r0TailTailAlignedStg0;
                 }
 
                 ProcessFoldBlock(meanLocal, rstdLocal, curAInnerLen, curR1LenFold, curR0LenFold, curR0AlignedLenFold,
