@@ -22,6 +22,7 @@ namespace ge {
 /**
 * @brief Applies a 3D adaptive max pooling over
 * an input signal composed of several input planes.
+* The supported data formats are NCDHW and NCHW.
 
 * @par Inputs:
 * One input, including:
@@ -29,10 +30,8 @@ namespace ge {
 *     float16, bfloat16, float32. \n
 
 * @par Attributes:
-* @li output_size: A required list of 0, 1 or 3 ints. \n
-* 0 specifies the shape of the output tensor is the same as x. \n
-* 1 specifies the size (D,D,D) of the output tensor. \n
-* 3 specifies the size (D,H,W) of the output tensor. \n
+* @li output_size: A required list of 3 ints,
+* specifying the shape of the output tensor. \n
 * @li indices_dtype: An optional int, default value is 3.
 * (3 is int32, 9 is int64) \n
 
