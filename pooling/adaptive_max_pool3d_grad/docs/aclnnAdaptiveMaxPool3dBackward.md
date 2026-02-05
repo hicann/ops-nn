@@ -17,21 +17,41 @@
 
 - 算子功能：
   正向自适应最大池化的反向传播，将梯度回填到每个自适应窗口最大值的坐标处，相同坐标处累加。
--  正向计算公式：
-    N（Batch）表示批量大小、H（Height）表示特征图高度、W（Width）表示特征图宽度、C（Channels）表示特征图通道、D（Depth）表示特征图深度
-    
-    对于输入self维度$[N,C,D,H,W]$、outputSize值为$[D_o,H_o,W_o]$的场景，其输出output维度为$[N,C,D_o,H_o,W_o]$，索引indices维度为$[N,C,D_o,H_o,W_o]$，相应tensor中每个元素的计算公式如下：
-    
-    $$
-    D_{left}^l = \lfloor(l*D)/D_o\rfloor \\
-    D_{right}^l = \lceil(l*D)/D_o\rceil \\
-    H_{left}^m = \lfloor(m*H)/H_o\rfloor \\
-    H_{right}^m = \lceil(m*H)/H_o\rceil  \\
-    W_{left}^n = \lfloor(n*W)/W_o\rfloor \\
-    W_{right}^n = \lceil(n*W)/W_o\rceil  \\
-    output(N,C,l,m,n) = \mathop{\max}\limits_{i \in [D_{left}^l,D_{right}^l],j\in[H_{left}^m,H_{right}^m],k\in[W_{left}^n,W_{right}^n]} input(N,C,i,j,k) \\
-    indices(N,C,l,m,n) = \mathop{\arg\max}\limits_{i \in [D_{left}^l,D_{right}^l],j\in[H_{left}^m,H_{right}^m],k\in[W_{left}^n,W_{right}^n]} input(N,C,i,j,k)
-    $$
+- 正向计算公式：
+  N（Batch）表示批量大小、C（Channels）表示特征图通道、D（Depth）表示特征图深度、H（Height）表示特征图高度、W（Width）表示特征图宽度。
+  对于输入self维度$[N,C,D,H,W]$，outputSize值为$[D_o,H_o,W_o]$的场景，其输出output维度为$[N,C,D_o,H_o,W_o]$，索引indices维度为$[N,C,D_o,H_o,W_o]$，相应tensor中每个元素$(l,m,n)$的计算公式如下：
+
+  $$
+  D^{l}_{left} = \lfloor(l*D)/D_o\rfloor
+  $$
+
+  $$
+  D^{l}_{right} = \lceil((l+1)*D)/D_o\rceil
+  $$
+
+  $$
+  H^{m}_{left} = \lfloor(m*H)/H_o\rfloor
+  $$
+
+  $$
+  H^{m}_{right} = \lceil((m+1)*H)/H_o\rceil
+  $$
+
+  $$
+  W^{n}_{left} = \lfloor(n*W)/W_o\rfloor
+  $$
+
+  $$
+  W^{n}_{right} = \lceil((n+1)*W)/W_o\rceil
+  $$
+
+  $$
+  output(N,C,l,m,n)=\underset {i \in [D^{l}_{left}, D^{l}_{right}],j\in [H^m_{left},H^m_{right}], k \in [W^n_{left},W^n_{right}] }{max} input(N,C,i,j,k)
+  $$
+
+  $$
+  indices(N,C,l,m,n)=\underset {i \in [D^{l}_{left}, D^{l}_{right}],j\in [H^m_{left},H^m_{right}], k \in [W^n_{left},W^n_{right}] }{argmax} input(N,C,i,j,k)
+  $$
 
 ## 函数原型
 

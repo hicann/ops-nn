@@ -20,27 +20,27 @@
   outputOut tensor中对于DHW轴上每个位置为$(l,m,n)$的元素来说，其计算公式为：
 
   $$
-  D^{l}_{left} = floor((l*D)/D_o)
+  D^{l}_{left} = \lfloor(l*D)/D_o\rfloor
   $$
 
   $$
-  D^{l}_{right} = ceil(((l+1)*D)/D_o)
+  D^{l}_{right} = \lceil((l+1)*D)/D_o\rceil
   $$
 
   $$
-  H^{m}_{left} = floor((m*H)/H_o)
+  H^{m}_{left} = \lfloor(m*H)/H_o\rfloor
   $$
 
   $$
-  H^{m}_{right} = ceil(((m+1)*H)/H_o)
+  H^{m}_{right} = \lceil((m+1)*H)/H_o\rceil
   $$
 
   $$
-  W^{n}_{left} = floor((n*W)/W_o)
+  W^{n}_{left} = \lfloor(n*W)/W_o\rfloor
   $$
 
   $$
-  W^{n}_{right} = ceil(((n+1)*W)/W_o)
+  W^{n}_{right} = \lceil((n+1)*W)/W_o\rceil
   $$
 
   $$
@@ -111,7 +111,7 @@ aclnnStatus aclnnAdaptiveMaxPool3d(
         <td>outputSize</td>
         <td>输入</td>
         <td>输出窗口大小。</td>
-        <td>表示输出结果在D_o，H_o，W_o维度上的空间大小。</td>
+        <td>表示输出结果在Dout，Hout，Wout维度上的空间大小。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -255,9 +255,9 @@ aclnnStatus aclnnAdaptiveMaxPool3d(
 
 - Shape描述：
   - self.shape = (N, C, Din, Hin, Win)
-  - outputSize = [Din, Hout, Wout]
-  - outputOut.shape = (N, C, Din, Hout, Wout)
-  - indicesOut.shape = (N, C, Din, Hout, Wout)
+  - outputSize = [Dout, Hout, Wout]
+  - outputOut.shape = (N, C, Dout, Hout, Wout)
+  - indicesOut.shape = (N, C, Dout, Hout, Wout)
 
 ## 调用示例
 

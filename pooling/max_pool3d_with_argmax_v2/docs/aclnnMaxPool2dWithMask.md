@@ -261,7 +261,7 @@ aclnnStatus aclnnMaxPool2dWithMask(
       <td>dilation的长度不等于1或2。</td>
     </tr>
     <tr>
-      <td> dilation的数值不等于1。/2的值。</td>
+      <td> dilation的数值不等于1。</td>
     </tr>
   </tbody>
   </table>

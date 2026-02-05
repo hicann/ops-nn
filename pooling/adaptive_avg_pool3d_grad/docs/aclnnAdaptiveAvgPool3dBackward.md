@@ -62,7 +62,7 @@ aclnnStatus aclnnAdaptiveAvgPool3dBackward(
       <td>gradOutput</td>
       <td>输入</td>
       <td>当前节点的梯度。</td>
-      <td>数据类型与self一致，NC维度和sekf保持一致。</td>
+      <td>数据类型与self一致，NC维度和self保持一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>NCDHW、ND</td>
       <td>4-5</td>
@@ -181,7 +181,7 @@ aclnnStatus aclnnAdaptiveAvgPool3dBackward(
     <tr>
       <td>workspaceSize</td>
       <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnAdaptiveAvgPool2dBackwardGetWorkspaceSize获取。</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnAdaptiveAvgPool3dBackwardGetWorkspaceSize获取。</td>
     </tr>
     <tr>
       <td>executor</td>

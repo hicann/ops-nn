@@ -92,7 +92,7 @@ aclnnStatus aclnnMaxPool(
       <td>输入</td>
       <td>待计算张量。</td>
       <td>-</td>
-      <td>FLOAT16、FLOAT、BF16、INT32、INT64、UINT8、INT16、INT8、UINT16。</td>
+      <td>FLOAT16、FLOAT、BFLOAT16、INT32、INT64、UINT8、INT16、INT8、UINT16。</td>
       <td>ND</td>
       <td>3-4</td>
       <td>√</td>
@@ -162,7 +162,7 @@ aclnnStatus aclnnMaxPool(
       <td>输出</td>
       <td>输出的tensor。</td>
       <td>数据类型和self一致。shape由上述公式推导出。数据格式和维度与输入self一致。</td>
-      <td>FLOAT16、FLOAT、BF16、INT32、INT64、UINT8、INT16、INT8、UINT16。</td>
+      <td>FLOAT16、FLOAT、BFLOAT16、INT32、INT64、UINT8、INT16、INT8、UINT16。</td>
       <td>ND</td>
       <td>3-4</td>
       <td>√</td>
@@ -188,9 +188,9 @@ aclnnStatus aclnnMaxPool(
       <td>-</td>
     </tr>
   </tbody></table>
- - <term>Atlas 训练系列产品</term>：参数self、out的数据类型不支持FLOAT、BF16、INT32、INT64、UINT8、INT16、INT8、UINT16。
+ - <term>Atlas 训练系列产品</term>：参数self、out的数据类型不支持FLOAT、BFLOAT16、INT32、INT64、UINT8、INT16、INT8、UINT16。
 
- - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：参数self、out的数据类型不支持BF16、INT32、INT64、UINT8、INT16、INT8、UINT16。
+ - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：参数self、out的数据类型不支持BFLOAT16、INT32、INT64、UINT8、INT16、INT8、UINT16。
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。

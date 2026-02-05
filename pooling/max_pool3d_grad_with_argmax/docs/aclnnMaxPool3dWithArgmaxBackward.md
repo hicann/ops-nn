@@ -384,7 +384,7 @@ int main() {
   aclTensor* gradIn = nullptr;
   std::vector<float> gradOutHostData = {0.4757};
   std::vector<float> selfHostData = {0.0850, -0.5147, -0.0212, -0.5654, -0.3222, 0.5847, 1.7510, 0.9954};
-  std::vector<int8_t> indicesHostData = {6};
+  std::vector<int32_t> indicesHostData = {6};
   std::vector<float> gradInHostData = {0, 0, 0, 0, 0, 0, 0, 0};
 
   // 创建gradOut aclTensor
