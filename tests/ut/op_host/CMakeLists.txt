@@ -19,8 +19,15 @@ if(UT_TEST_ALL OR OP_HOST_UT OR OP_GRAPH_UT)
     endforeach()
 
     ## add ophost_nn_ut so
+    if(TARGET ${OPHOST_NAME}_infer_obj)
+        message(STATUS "Found infershape file.")
+        set(OPHOST_INFER_OBJ_SRCS $<TARGET_OBJECTS:${OPHOST_NAME}_infer_obj>)
+    else()
+        message(WARNING "Infershape file Not Found.")
+        set(OPHOST_INFER_OBJ_SRCS "${CMAKE_SOURCE_DIR}/tests/ut/op_api/empty_runtime.cpp")
+    endif()
     add_library(ophost_${PKG_NAME}_ut SHARED
-        $<$<TARGET_EXISTS:${OPHOST_NAME}_infer_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_infer_obj>>
+        ${OPHOST_INFER_OBJ_SRCS}
     )
     target_compile_options(ophost_${PKG_NAME}_ut PRIVATE -fPIC)
     target_compile_definitions(ophost_${PKG_NAME}_ut PRIVATE LOG_CPP)

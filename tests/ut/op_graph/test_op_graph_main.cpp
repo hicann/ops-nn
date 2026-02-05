@@ -18,7 +18,7 @@ using namespace std;
 
 #ifdef __aarch64__
 const string CPU_ARCH_STR = "aarch64";
-#elif define(__x86_64__)
+#elif defined(__x86_64__)
 const string CPU_ARCH_STR = "x86_64";
 #endif
 
