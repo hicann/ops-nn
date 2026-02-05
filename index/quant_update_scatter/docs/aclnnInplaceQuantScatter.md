@@ -108,7 +108,7 @@ aclnnStatus aclnnInplaceQuantScatter(
     </tr>
     <tr>
       <td>quantZeroPoints</td>
-      <td>输入</td>
+      <td>可选输入</td>
       <td>量化偏移张量。</td>
       <td>元素个数需要等于updates在quantAxis轴的大小。</td>
       <td>BFLOAT16、INT32</td>
@@ -169,10 +169,8 @@ aclnnStatus aclnnInplaceQuantScatter(
   </tbody></table>
 
   - <term>Atlas 推理系列产品</term>：
-    - updates数据类型仅支持FLOAT16。
-    - quantScales数据类型仅支持FLOAT32。
-    - quantZeroPoints数据类型仅支持INT32。
-  - <term>Atlas 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+    - 不支持BFLOAT16数据类型。
+  - <term>Atlas 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - selfRef、updates最后一维的大小必须32B对齐。
 
 - **返回值：**
@@ -242,7 +240,7 @@ aclnnStatus aclnnInplaceQuantScatter(
     |---|---|---|---|---|
     |INT8|INT32|FLOAT16|FLOAT32|INT32|
     |INT8|INT64|FLOAT16|FLOAT32|INT32|
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
 
     |selfRef|indices|updates|quantScales|quantZeroPoints|
     |---|---|---|---|---|
