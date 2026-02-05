@@ -10,4 +10,4 @@
 
 message(STATUS "=== Debug: start ops.norm.group_norm.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE group_norm ACLNNTYPE aclnn DEPENDENCIES group_norm_silu)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE group_norm ACLNNTYPE aclnn_exclude DEPENDENCIES group_norm_silu)
