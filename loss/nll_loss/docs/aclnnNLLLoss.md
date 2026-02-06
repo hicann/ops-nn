@@ -117,7 +117,7 @@ aclnnStatus aclnnNLLLoss(
       <td>输入</td>
       <td>表示每个类别的缩放权重。</td>
       <td>-</td>
-      <td>数据类型和self保持一致。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>(C)</td>
       <td>√</td>
@@ -148,7 +148,7 @@ aclnnStatus aclnnNLLLoss(
       <td>输出</td>
       <td>公式中的out。</td>
       <td>当reduction为0（'none'）且self的shape为2维时，out shape为(N,), 否则为(1,)。</td>
-      <td>数据类型和self保持一致。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>-</td>
       <td>-</td>
@@ -158,7 +158,7 @@ aclnnStatus aclnnNLLLoss(
       <td>输出</td>
       <td>公式中的totalWeightOut。</td>
       <td>在reduction为非0('none')下输出值有效，shape为(1,)。</td>
-      <td>数据类型和self保持一致。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>-</td>
       <td>-</td>

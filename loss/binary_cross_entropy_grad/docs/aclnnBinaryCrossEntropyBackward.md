@@ -69,17 +69,111 @@ aclnnStatus aclnnBinaryCrossEntropyBackward(
 ## aclnnBinaryCrossEntropyBackwardGetWorkspaceSize
 
 - **参数说明：**
- 
-    | <div style="width:150px">参数名</div>  | <div style="width:120px">输入/输出</div>  | <div style="width:294px">描述</div> |<div style="width:191px">使用说明</div>| <div style="width:150px">数据类型</div>  | <div style="width:102px">数据格式</div> | <div style="width:102px">维度(shape)</div> | <div style="width:145px">非连续Tensor</div> |
-    | ------------------| ------------------ | --------------|-------------------- | ----------------- | --------------------- | ---------------|---------------------------|
-    | gradOutput | 输入 | 网络反向传播前一步的梯度值。数据类型需要与其它参数一起转换到promotion类型，shape可以broadcast到self的shape。 |- |与`self`一致|ND|-|√|
-    | self | 输入 | 网络正向前一层的计算结果。数据类型需要与其它参数一起转换到promotion类型。 | -|  FLOAT16、FLOAT、BFLOAT16|ND|-|√|
-    | target | 输入 | 样本的标签值。数据类型需要与其它参数一起转换到promotion类型，shape可以broadcast到self的shape。 | 取值范围为0~1之间|  与`self`一致|ND|-|√|
-    | weightOptional | 输入 | 结果的权重。数据类型需要与其它参数一起转换到promotion类型，shape可以broadcast到self的shape。 |当weightOptional为空时，需要以self的shape创建一个全1的Tensor |  与`self`一致|ND|-|√|
-    | reduction | 输入 | 表示对二元交叉熵反向求梯度计算结果做的reduce操作。 | 仅支持0,1,2三个值：<ul><li>0表示不做任何操作</li><li>1表示对结果取平均值</li><li>2表示对结果求和</li></ul>| - |-|-|-|
-    | out | 输出 | 存储梯度计算结果，shape与self相同。 | [数据格式](../../../docs/zh/context/数据格式.md)需要与self一致。|-|ND|-|√|
-    | workspaceSize | 输出 | 返回需要在Device侧申请的workspace大小。 | -|  -|-|-|-|
-    | executor | 输出 | 返回op执行器，包含了算子计算流程。 | -|  -|-|-|-|
+
+  <table style="undefined;table-layout: fixed; width: 1537px"><colgroup>
+  <col style="width: 161px">
+  <col style="width: 121px">
+  <col style="width: 287px">
+  <col style="width: 260px">
+  <col style="width: 252px">
+  <col style="width: 166px">
+  <col style="width: 149px">
+  <col style="width: 141px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      <th>使用说明</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+      <th>维度(shape)</th>
+      <th>非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+      <tr>
+      <td>gradOutput</td>
+      <td>输入</td>
+      <td>网络反向传播前一步的梯度值。数据类型需要与其它参数一起转换到promotion类型。</td>
+      <td>shape可以broadcast到self的shape。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td>-</td>
+      <td>0-8</td>
+      <td>√</td>
+    </tr>
+      <tr>
+      <td>self</td>
+      <td>输入</td>
+      <td>网络正向前一层的计算结果。</td>
+      <td>数据类型需要与其它参数一起转换到promotion类型。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td>-</td>
+      <td>0-8</td>
+      <td>√</td>
+    </tr> 
+      <tr>
+      <td>target</td>
+      <td>输入</td>
+      <td>样本的标签值。数据类型需要与其它参数一起转换到promotion类型。</td>
+      <td>shape可以broadcast到self的shape。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td>需要与self保持一致。</td>
+      <td>0-8</td>
+      <td>√</td>
+    </tr> 
+       <tr>
+      <td>weightOptional</td>
+      <td>输入</td>
+      <td>结果的权重。</td>
+      <td><ul><li>shape可以broadcast到self的shape。</li><li>当weightOptional为空时，需要以self的shape创建一个全1的Tensor。</li></ul></td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td>需要与self保持一致。</td>
+      <td>0-8</td>
+      <td>√</td>
+    </tr> 
+    <tr>
+      <td>reduction</td>
+      <td>输入</td>
+      <td>表示对二元交叉熵反向求梯度计算结果做的reduce操作。</td>
+      <td><ul>仅支持0,1,2三个值：<li>0表示不做任何操作。</li><li>1表示对结果取平均值。</li><li>2表示对结果求和。</li></ul></td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>out</td>
+      <td>输出</td>
+      <td>存储梯度计算结果，shape与self相同。</td>
+      <td>-</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td>-</td>
+      <td>0-8</td>
+      <td>√</td>
+    </tr>
+      <tr>
+      <td>workspaceSize</td>
+      <td>输出</td>
+      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+      <tr>
+      <td>executor</td>
+      <td>输出</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+  </tbody>
+  </table>
 
     - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型不支持BFLOAT16。
 
@@ -109,9 +203,6 @@ aclnnStatus aclnnBinaryCrossEntropyBackward(
       <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="6">161002</td>
       <td>gradOutput、self、target、weightOptional的数据类型不在支持的范围内。</td>
-      </tr>
-      <tr>
-      <td>gradOutput、self、target、weightOptional的数据类型不同。</td>
       </tr>
       <tr>
       <td>self为标量，gradOutput为非标量的场景不在支持范围内。</td>
