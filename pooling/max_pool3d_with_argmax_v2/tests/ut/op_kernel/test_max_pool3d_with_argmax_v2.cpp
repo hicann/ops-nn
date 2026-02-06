@@ -1,11 +1,16 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+ /*!
+ * \file test_max_pool3d_with_argmax_v2.cpp
+ * \brief
  */
 
 #include <array>
@@ -667,6 +672,344 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_bfloat16_with_wCo
     tilingDatafromBin->coreNums = 20;
 
     ICPU_SET_TILING_KEY(311112);
+
+    ICPU_RUN_KF(max_pool3d_with_argmax_v2, blockDim, input, out, indices, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(input);
+    AscendC::GmFree(out);
+    AscendC::GmFree(indices);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_simt_float32_int32_NCDHW_600001)
+{
+    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    uint32_t blockDim = 20;
+    size_t inputByteSize = 4 * 30 * 14 * 8 * 14 * sizeof(float);
+    size_t outByteSize = 4 * 30 * 7 * 2 * 3 * sizeof(float);
+    size_t indicesByteSize = 4 * 30 * 7 * 2 * 3 * sizeof(int32_t);
+    size_t tilingDataSize = sizeof(MaxPool3DWithArgmaxV2SimtTilingData);
+
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* out = (uint8_t*)AscendC::GmAlloc(outByteSize);
+    uint8_t* indices = (uint8_t*)AscendC::GmAlloc(indicesByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    MaxPool3DWithArgmaxV2SimtTilingData* tilingDatafromBin =
+        reinterpret_cast<MaxPool3DWithArgmaxV2SimtTilingData*>(tiling);
+    tilingDatafromBin->threadNums = 256;
+    tilingDatafromBin->blockNums = 20;
+    tilingDatafromBin->nDim = 4;
+    tilingDatafromBin->cDim = 30;
+    tilingDatafromBin->dInDim = 14;
+    tilingDatafromBin->hInDim = 8;
+    tilingDatafromBin->wInDim = 14;
+    tilingDatafromBin->dOutDim = 7;
+    tilingDatafromBin->hOutDim = 2;
+    tilingDatafromBin->dOutDim = 3;
+    tilingDatafromBin->kSizeD = 2;
+    tilingDatafromBin->kSizeH = 7;
+    tilingDatafromBin->kSizeW = 6;
+    tilingDatafromBin->stridesD = 2;
+    tilingDatafromBin->stridesH = 7;
+    tilingDatafromBin->stridesW = 6;
+    tilingDatafromBin->padD = 0;
+    tilingDatafromBin->padH = 0;
+    tilingDatafromBin->padW = 0;
+    tilingDatafromBin->dilationD = 1;
+    tilingDatafromBin->dilationH = 1;
+    tilingDatafromBin->dilationW = 1;
+
+    ICPU_SET_TILING_KEY(600001);
+
+    ICPU_RUN_KF(max_pool3d_with_argmax_v2, blockDim, input, out, indices, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(input);
+    AscendC::GmFree(out);
+    AscendC::GmFree(indices);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_simt_float16_NCDHW_600002)
+{
+    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    uint32_t blockDim = 19;
+    size_t inputByteSize = 21 * 21 * 15 * 24 * 4 * sizeof(half);
+    size_t outByteSize = 21 * 4 * 2 * 7 * 4 * sizeof(half);
+    size_t indicesByteSize = 21 * 4 * 2 * 7 * 4 * sizeof(int64_t);
+    size_t tilingDataSize = sizeof(MaxPool3DWithArgmaxV2SimtTilingData);
+
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* out = (uint8_t*)AscendC::GmAlloc(outByteSize);
+    uint8_t* indices = (uint8_t*)AscendC::GmAlloc(indicesByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    MaxPool3DWithArgmaxV2SimtTilingData* tilingDatafromBin =
+        reinterpret_cast<MaxPool3DWithArgmaxV2SimtTilingData*>(tiling);
+    tilingDatafromBin->threadNums = 256;
+    tilingDatafromBin->blockNums = 19;
+    tilingDatafromBin->nDim = 21;
+    tilingDatafromBin->cDim = 4;
+    tilingDatafromBin->dInDim = 21;
+    tilingDatafromBin->hInDim = 15;
+    tilingDatafromBin->wInDim = 24;
+    tilingDatafromBin->dOutDim = 4;
+    tilingDatafromBin->hOutDim = 2;
+    tilingDatafromBin->dOutDim = 7;
+    tilingDatafromBin->kSizeD = 4;
+    tilingDatafromBin->kSizeH = 4;
+    tilingDatafromBin->kSizeW = 4;
+    tilingDatafromBin->stridesD = 5;
+    tilingDatafromBin->stridesH = 8;
+    tilingDatafromBin->stridesW = 3;
+    tilingDatafromBin->padD = 0;
+    tilingDatafromBin->padH = 0;
+    tilingDatafromBin->padW = 0;
+    tilingDatafromBin->dilationD = 1;
+    tilingDatafromBin->dilationH = 1;
+    tilingDatafromBin->dilationW = 1;
+
+    ICPU_SET_TILING_KEY(600002);
+
+    ICPU_RUN_KF(max_pool3d_with_argmax_v2, blockDim, input, out, indices, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(input);
+    AscendC::GmFree(out);
+    AscendC::GmFree(indices);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_no_split)
+{
+    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    uint32_t blockDim = 20;
+    size_t inputByteSize = 1 * 1 * 14 * 12 * 122 * sizeof(bfloat16_t);
+    size_t outByteSize = 1 * 1 * 1 * 1 * 1 * sizeof(bfloat16_t);
+    size_t indicesByteSize = 1 * 1 * 1 * 1 * 1 * sizeof(int32_t);
+    size_t tilingDataSize = sizeof(MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData);
+
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* out = (uint8_t*)AscendC::GmAlloc(outByteSize);
+    uint8_t* indices = (uint8_t*)AscendC::GmAlloc(indicesByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData* tilingDatafromBin =
+        reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData*>(tiling);
+    tilingDatafromBin->dInDim = 14;
+    tilingDatafromBin->hInDim = 12;
+    tilingDatafromBin->wInDim = 122;
+    tilingDatafromBin->dOutDim = 1;
+    tilingDatafromBin->hOutDim = 1;
+    tilingDatafromBin->wOutDim = 1;
+    tilingDatafromBin->kD = 16;
+    tilingDatafromBin->kH = 16;
+    tilingDatafromBin->kW = 128;
+    tilingDatafromBin->sD = 2;
+    tilingDatafromBin->sH = 1;
+    tilingDatafromBin->sW = 2;
+    tilingDatafromBin->pD = 1;
+    tilingDatafromBin->pH = 2;
+    tilingDatafromBin->pW = 3;
+    tilingDatafromBin->dD = 1;
+    tilingDatafromBin->dH = 1;
+    tilingDatafromBin->dW = 1;
+    tilingDatafromBin->blockFactor = 1;
+    tilingDatafromBin->blockTail = 0;
+    tilingDatafromBin->totalIdx = 1;
+    tilingDatafromBin->coreNums = 1;
+    tilingDatafromBin->maxCount = 60416;
+    tilingDatafromBin->isSigOut = 0;
+
+    ICPU_SET_TILING_KEY(611110);
+
+    ICPU_RUN_KF(max_pool3d_with_argmax_v2, blockDim, input, out, indices, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(input);
+    AscendC::GmFree(out);
+    AscendC::GmFree(indices);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_split_d)
+{
+    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    uint32_t blockDim = 20;
+    size_t inputByteSize = 1 * 1 * 3 * 6 * 62000 * sizeof(bfloat16_t);
+    size_t outByteSize = 1 * 1 * 4 * 3 * 336 * sizeof(bfloat16_t);
+    size_t indicesByteSize = 1 * 1 * 4 * 3 * 336 * sizeof(int32_t);
+    size_t tilingDataSize = sizeof(MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData);
+
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* out = (uint8_t*)AscendC::GmAlloc(outByteSize);
+    uint8_t* indices = (uint8_t*)AscendC::GmAlloc(indicesByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData* tilingDatafromBin =
+        reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData*>(tiling);
+    tilingDatafromBin->dInDim = 3;
+    tilingDatafromBin->hInDim = 6;
+    tilingDatafromBin->wInDim = 62000;
+    tilingDatafromBin->dOutDim = 4;
+    tilingDatafromBin->hOutDim = 3;
+    tilingDatafromBin->wOutDim = 336;
+    tilingDatafromBin->kD = 2;
+    tilingDatafromBin->kH = 4;
+    tilingDatafromBin->kW = 61000;
+    tilingDatafromBin->sD = 1;
+    tilingDatafromBin->sH = 2;
+    tilingDatafromBin->sW = 3;
+    tilingDatafromBin->pD = 1;
+    tilingDatafromBin->pH = 1;
+    tilingDatafromBin->pW = 3;
+    tilingDatafromBin->dD = 1;
+    tilingDatafromBin->dH = 1;
+    tilingDatafromBin->dW = 1;
+    tilingDatafromBin->blockFactor = 63;
+    tilingDatafromBin->blockTail = 1;
+    tilingDatafromBin->totalIdx = 4032;
+    tilingDatafromBin->coreNums = 64;
+    tilingDatafromBin->maxCount = 60416;
+    tilingDatafromBin->isSigOut = 0;
+
+    ICPU_SET_TILING_KEY(611110);
+
+    ICPU_RUN_KF(max_pool3d_with_argmax_v2, blockDim, input, out, indices, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(input);
+    AscendC::GmFree(out);
+    AscendC::GmFree(indices);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_split_dh)
+{
+    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    uint32_t blockDim = 20;
+    size_t inputByteSize = 1 * 2 * 10 * 512 * 141 * sizeof(bfloat16_t);
+    size_t outByteSize = 1 * 2 * 7 * 8 * 5 * sizeof(bfloat16_t);
+    size_t indicesByteSize = 1 * 2 * 7 * 8 * 5 * sizeof(int32_t);
+    size_t tilingDataSize = sizeof(MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData);
+
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* out = (uint8_t*)AscendC::GmAlloc(outByteSize);
+    uint8_t* indices = (uint8_t*)AscendC::GmAlloc(indicesByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData* tilingDatafromBin =
+        reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData*>(tiling);
+    tilingDatafromBin->dInDim = 10;
+    tilingDatafromBin->hInDim = 512;
+    tilingDatafromBin->wInDim = 141;
+    tilingDatafromBin->dOutDim = 7;
+    tilingDatafromBin->hOutDim = 8;
+    tilingDatafromBin->wOutDim = 5;
+    tilingDatafromBin->kD = 8;
+    tilingDatafromBin->kH = 513;
+    tilingDatafromBin->kW = 131;
+    tilingDatafromBin->sD = 1;
+    tilingDatafromBin->sH = 2;
+    tilingDatafromBin->sW = 3;
+    tilingDatafromBin->pD = 2;
+    tilingDatafromBin->pH = 3;
+    tilingDatafromBin->pW = 2;
+    tilingDatafromBin->dD = 1;
+    tilingDatafromBin->dH = 1;
+    tilingDatafromBin->dW = 1;
+    tilingDatafromBin->blockFactor = 8;
+    tilingDatafromBin->blockTail = 48;
+    tilingDatafromBin->totalIdx = 560;
+    tilingDatafromBin->coreNums = 64;
+    tilingDatafromBin->maxCount = 60416;
+    tilingDatafromBin->isSigOut = 0;
+
+    ICPU_SET_TILING_KEY(611110);
+
+    ICPU_RUN_KF(max_pool3d_with_argmax_v2, blockDim, input, out, indices, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(input);
+    AscendC::GmFree(out);
+    AscendC::GmFree(indices);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_split_dhw)
+{
+    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    uint32_t blockDim = 20;
+    size_t inputByteSize = 1 * 8 * 32 * 32 * 256 * sizeof(bfloat16_t);
+    size_t outByteSize = 1 * 8 * 9 * 9 * 65 * sizeof(bfloat16_t);
+    size_t indicesByteSize = 1 * 8 * 9 * 9 * 65 * sizeof(int32_t);
+    size_t tilingDataSize = sizeof(MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData);
+
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* out = (uint8_t*)AscendC::GmAlloc(outByteSize);
+    uint8_t* indices = (uint8_t*)AscendC::GmAlloc(indicesByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData* tilingDatafromBin =
+        reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData*>(tiling);
+    tilingDatafromBin->dInDim = 32;
+    tilingDatafromBin->hInDim = 32;
+    tilingDatafromBin->wInDim = 256;
+    tilingDatafromBin->dOutDim = 9;
+    tilingDatafromBin->hOutDim = 9;
+    tilingDatafromBin->wOutDim = 65;
+    tilingDatafromBin->kD = 16;
+    tilingDatafromBin->kH = 16;
+    tilingDatafromBin->kW = 128;
+    tilingDatafromBin->sD = 2;
+    tilingDatafromBin->sH = 2;
+    tilingDatafromBin->sW = 2;
+    tilingDatafromBin->pD = 0;
+    tilingDatafromBin->pH = 0;
+    tilingDatafromBin->pW = 0;
+    tilingDatafromBin->dD = 1;
+    tilingDatafromBin->dH = 1;
+    tilingDatafromBin->dW = 1;
+    tilingDatafromBin->blockFactor = 658;
+    tilingDatafromBin->blockTail = 8;
+    tilingDatafromBin->totalIdx = 42120;
+    tilingDatafromBin->coreNums = 64;
+    tilingDatafromBin->maxCount = 60416;
+    tilingDatafromBin->isSigOut = 0;
+
+    ICPU_SET_TILING_KEY(611110);
 
     ICPU_RUN_KF(max_pool3d_with_argmax_v2, blockDim, input, out, indices, workspace, (uint8_t*)(tilingDatafromBin));
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -1516,4 +1516,221 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_016_large_kerne
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 311112);
     //dlog_setlevel(static_cast<int>(OP), 0, 1);
+}
+
+static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape, gert::StorageShape argmaxShape,
+                            std::vector<int64_t> ksize, std::vector<int64_t> strides, std::vector<int64_t> pads,
+                            std::vector<int64_t> dilation, ge::DataType dtype, int64_t index_dtype, bool ceil_mode,
+                            std::string data_format, uint64_t except_tilingkey, std::string expect)
+{
+    dlog_setlevel(0, 0, 0);
+
+    string compile_info_string = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                          "Intrinsic_fix_pipe_l0c2out": false,
+                          "Intrinsic_data_move_l12ub": true,
+                          "Intrinsic_data_move_l0c2ub": true,
+                          "Intrinsic_data_move_out2l1_nd2nz": false,
+                          "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                          "CORE_NUM": 64}
+                          })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
+
+    // platform info
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    // compile info
+    optiling::MaxPool3DWithArgmaxV2CompileInfo compile_info;
+
+    std::string op_type("MaxPool3DWithArgmaxV2");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
+    // tilingParseFunc simulate
+    auto kernel_holder =
+        gert::KernelRunContextFaker()
+            .KernelIONum(2, 1)
+            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+            .Outputs({&compile_info})
+            .Build();
+
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
+
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    // tilingFunc simulate
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    ge::DataType indices_dtype = ge::DT_INT32;
+    if(index_dtype == 9){
+        indices_dtype = ge::DT_INT64;
+    }
+    ASSERT_NE(param, nullptr);
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .NodeIoNum(1, 2)
+                      .IrInstanceNum({1})
+                      .InputShapes({&xShape})
+                      .OutputShapes({&yShape, &argmaxShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, indices_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilation)},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(ceil_mode)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(index_dtype)}})
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
+    
+    // workspaces nullptr return failed
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    auto tiling_key = tiling_context->GetTilingKey();
+    ASSERT_EQ(tiling_key, except_tilingkey);
+    auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_NE(tilingData, nullptr);
+    dlog_setlevel(0, 3, 0);
+}
+
+TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_017_simt_test_NCDHW)
+{
+    gert::StorageShape xShape = {{30, 4, 19, 22, 13}, {30, 4, 19, 22, 13}};
+    gert::StorageShape yShape = {{30, 4, 1, 3, 1}, {30, 4, 1, 3, 1}};
+    gert::StorageShape argmaxShape = {{30, 4, 1, 3, 1}, {30, 4, 1, 3, 1}};
+    std::vector<int64_t> ksize = {13, 7, 10};
+    std::vector<int64_t> strides = {13, 7, 10};
+    std::vector<int64_t> pads = {0, 0, 2};
+    std::vector<int64_t> dilation = {1, 1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    bool ceil_mode = false;
+    std::string data_format = "NCDHW";
+    uint64_t except_tilingkey = 600001;
+    std::string expect = " ";
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
+}
+
+TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_018_simt_test_NDHWC)
+{
+    gert::StorageShape xShape = {{178, 1053, 4, 4, 4}, {178, 1053, 4, 4, 4}};
+    gert::StorageShape yShape = {{178, 351, 1, 4, 4}, {178, 351, 1, 4, 4}};
+    gert::StorageShape argmaxShape = {{178, 351, 1, 4, 4}, {178, 351, 1, 4, 4}};
+    std::vector<int64_t> ksize = {3, 3, 1};
+    std::vector<int64_t> strides = {3, 3, 1};
+    std::vector<int64_t> pads = {0, 0, 0};
+    std::vector<int64_t> dilation = {1, 1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 9;
+    bool ceil_mode = false;
+    std::string data_format = "NDHWC";
+    uint64_t except_tilingkey = 600002;
+    std::string expect = " ";
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
+}
+
+TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_019_simt_test_NDHWC)
+{
+    gert::StorageShape xShape = {{19, 26, 23, 27, 28}, {19, 26, 23, 27, 28}};
+    gert::StorageShape yShape = {{19, 2, 2, 5, 28}, {19, 2, 2, 5, 28}};
+    gert::StorageShape argmaxShape = {{19, 2, 2, 5, 28}, {19, 2, 2, 5, 28}};
+    std::vector<int64_t> ksize = {17, 7, 2};
+    std::vector<int64_t> strides = {6, 6, 6};
+    std::vector<int64_t> pads = {1, 0, 1};
+    std::vector<int64_t> dilation = {1, 2, 3};
+    ge::DataType dtype = ge::DT_BF16;
+    int64_t index_dtype = 3;
+    bool ceil_mode = false;
+    std::string data_format = "NDHWC";
+    uint64_t except_tilingkey = 600002;
+    std::string expect = " ";
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
+}
+
+TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_016_little_gather_91095)
+{
+    gert::StorageShape xShape = {{1, 1, 16, 4, 20000}, {1, 1, 16, 4, 20000}};
+    gert::StorageShape yShape = {{1, 1, 7, 1, 9999}, {1, 1, 7, 1, 9999}};
+    gert::StorageShape argmaxShape = {{1, 1, 7, 1, 9999}, {1, 1, 7, 1, 9999}};
+    std::vector<int64_t> ksize = {4, 4, 4};
+    std::vector<int64_t> strides = {2, 2, 2};
+    std::vector<int64_t> pads = {0, 0, 0};
+    std::vector<int64_t> dilation = {1, 1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    bool ceil_mode = false;
+    std::string data_format = "NCDHW";
+    uint64_t except_tilingkey = 400001;
+    std::string expect = " ";
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
+}
+
+TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_016_little_gather_padding_int64_91095)
+{
+    gert::StorageShape xShape = {{1, 1, 15, 4, 20000}, {1, 1, 15, 4, 20000}};
+    gert::StorageShape yShape = {{1, 1, 7, 1, 9999}, {1, 1, 7, 1, 9999}};
+    gert::StorageShape argmaxShape = {{1, 1, 7, 1, 9999}, {1, 1, 7, 1, 9999}};
+    std::vector<int64_t> ksize = {4, 4, 4};
+    std::vector<int64_t> strides = {2, 2, 2};
+    std::vector<int64_t> pads = {1, 0, 0};
+    std::vector<int64_t> dilation = {1, 1, 1};
+    ge::DataType dtype = ge::DT_FLOAT16;
+    int64_t index_dtype = 9;
+    bool ceil_mode = false;
+    std::string data_format = "NCDHW";
+    uint64_t except_tilingkey = 400002;
+    std::string expect = " ";
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
+}
+
+TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2BigKernelRegbase_tiling)
+{
+    gert::StorageShape xShape = {{3, 18, 14, 2, 256}, {3, 18, 14, 2, 256}};
+    gert::StorageShape yShape = {{3, 18, 5, 1, 43}, {3, 18, 5, 1, 43}};
+    gert::StorageShape argmaxShape = {{3, 18, 5, 1, 43}, {3, 18, 5, 1, 43}};
+    std::vector<int64_t> ksize = {5, 1, 128};
+    std::vector<int64_t> strides = {3, 5, 3};
+    std::vector<int64_t> pads = {0, 0, 0};
+    std::vector<int64_t> dilation = {1, 1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    bool ceil_mode = false;
+    std::string data_format = "NCDHW";
+    uint64_t except_tilingkey = 611110;
+    std::string expect = " ";
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "tiling_base/tiling_util.h"
 #include "max_pool3d_with_argmax_v2_tiling_base.h"
 
 // 1, splitD=1, splitH=1, splitW=0, splitKernel = 0, dtype=float
@@ -26,6 +27,12 @@ namespace optiling {
 
 bool MaxPool3DWithArgmaxV2SplitHTiling::IsCapable()
 {
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_)){
+        return false;
+    } 
     splitData.partD = inputData.dilation[D_DIM] * (inputData.kernelSize[D_DIM] - 1) + 1;
     splitData.partOutD = 1UL;
     array<uint64_t, DHW_DIMS> parts{
@@ -167,6 +174,6 @@ ge::graphStatus MaxPool3DWithArgmaxV2SplitHTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-REGISTER_TILING_TEMPLATE("MaxPool3DWithArgmaxV2", MaxPool3DWithArgmaxV2SplitHTiling, 4);
+REGISTER_TILING_TEMPLATE("MaxPool3DWithArgmaxV2", MaxPool3DWithArgmaxV2SplitHTiling, 14);
 
 } // namespace optiling

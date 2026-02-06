@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
 #include "opdev/framework_op.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -34,6 +35,7 @@ static const std::initializer_list<DataType> NULL_SUPPORT_LIST = {};
 static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST = {
     DataType::DT_BF16, DataType::DT_FLOAT16, DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT32};
+static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_LIST_REGBASE = {op::DataType::DT_INT32, op::DataType::DT_INT64};
 
 static const size_t CDHW_DIMS = 4;
 static const size_t NCDHW_DIMS = 5;
@@ -55,9 +57,8 @@ static bool CheckNotNullPtr(
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-        Ops::NN::AclnnUtil::IsRegbase()) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return OUT_DTYPE_SUPPORT_LIST;
     } else {
         return NULL_SUPPORT_LIST;
@@ -68,7 +69,11 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out, const a
 {
     auto dtypeSupportList = GetDtypeSupportList();
     OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeSupportList, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(indices, INDICES_DTYPE_SUPPORT_LIST, return false);
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(indices, INDICES_DTYPE_SUPPORT_LIST_REGBASE, return false);
+    } else {
+        OP_CHECK_DTYPE_NOT_SUPPORT(indices, INDICES_DTYPE_SUPPORT_LIST, return false);
+    }
     OP_CHECK_DTYPE_NOT_SAME(self, out, return false);
     return true;
 }
@@ -93,6 +98,16 @@ static bool CheckFormat(const aclTensor* self, const aclTensor* out, const aclTe
     if (self->GetViewShape().GetDimNum() != CDHW_DIMS && self->GetViewShape().GetDimNum() != NCDHW_DIMS) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "4D or 5D tensor expected for inputs");
         return false;
+    }
+
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        if (self->GetStorageFormat() != ge::FORMAT_NDHWC && self->GetStorageFormat() != ge::FORMAT_NCDHW &&
+            self->GetStorageFormat() != ge::FORMAT_NCHW && self->GetStorageFormat() != ge::FORMAT_ND) {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID, "Format of input is not supported, self [%s].",
+                op::ToString(self->GetStorageFormat()).GetString());
+            return false;
+        }
     }
 
     return true;
@@ -168,13 +183,16 @@ static bool CheckParamsValid(
     const int64_t dilationD = dilationRef[0];
     const int64_t dilationH = (dilationRef.Size() == 1) ? dilationD : dilationRef[1];
     const int64_t dilationW = (dilationRef.Size() == 1) ? dilationD : dilationRef[2];
-    OP_CHECK(
-        ((dilationD == 1) && (dilationH == 1) && (dilationW == 1)),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "The value of dilation should be equal 1, but got dilationD:%ld, dilationH:%ld, dilationW:%ld", dilationD,
-            dilationH, dilationW),
-        return false);
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || curArch == NpuArch::DAV_1001) {
+        OP_CHECK(
+            ((dilationD == 1) && (dilationH == 1) && (dilationW == 1)),
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "The value of dilation should be equal 1, but got dilationD:%ld, dilationH:%ld, dilationW:%ld", dilationD,
+                dilationH, dilationW),
+            return false);
+    }
 
     return true;
 }
@@ -192,9 +210,8 @@ static aclnnStatus CheckParams(
 
 static bool CheckPlatform()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-        Ops::NN::AclnnUtil::IsRegbase()) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return true;
     } else {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "aclnnMaxPool3dWithArgmax is not supported on this platform");
@@ -251,7 +268,8 @@ aclnnStatus aclnnMaxPool3dWithArgmaxGetWorkspaceSize(
     auto ret = CheckParams(self, kernelSize, stride, padding, dilation, out, indices);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    std::string dataFormat = "NCDHW";
+    // Default to NCDHW
+    std::string dataFormat = (self->GetStorageFormat() == ge::FORMAT_NDHWC) ? "NDHWC" : "NCDHW";
 
     // Check whether the tensor is empty (the operator does not support empty tensors)
     if (self->IsEmpty() || out->IsEmpty()) {
@@ -272,8 +290,9 @@ aclnnStatus aclnnMaxPool3dWithArgmaxGetWorkspaceSize(
     CHECK_RET(selfUnsqueezed != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // Returns a tuple containing out and indices
+    auto indicesDtype = indices->GetDataType();
     auto [outResult, indicesResult] = l0op::MaxPool3DWithArgmaxV2Ncdhw(
-        selfUnsqueezed, kernelSize, stride, padding, dilation, ceilMode, dataFormat, uniqueExecutor.get());
+        selfUnsqueezed, kernelSize, stride, padding, dilation, ceilMode, dataFormat, uniqueExecutor.get(), indicesDtype);
 
     CHECK_RET(outResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(indicesResult != nullptr, ACLNN_ERR_INNER_NULLPTR);

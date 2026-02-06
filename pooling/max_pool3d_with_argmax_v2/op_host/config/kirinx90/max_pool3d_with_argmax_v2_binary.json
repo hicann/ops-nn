@@ -67,6 +67,11 @@
           "name": "data_format",
           "dtype": "string",
           "value": "NCDHW"
+        },
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 3
         }
       ]
     },
@@ -136,6 +141,11 @@
           "name": "data_format",
           "dtype": "string",
           "value": "NCDHW"
+        },
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 3
         }
       ]
     }

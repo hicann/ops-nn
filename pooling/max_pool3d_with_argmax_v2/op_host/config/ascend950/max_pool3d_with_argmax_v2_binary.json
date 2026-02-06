@@ -8,11 +8,12 @@
           "name": "x",
           "index": 0,
           "dtype": "float32",
-          "format": "NCDHW",
+          "format": "ND",
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode": "FormatAgnostic"
         }
       ],
       "outputs": [
@@ -20,21 +21,23 @@
           "name": "y",
           "index": 0,
           "dtype": "float32",
-          "format": "NCDHW",
+          "format": "ND",
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode": "FormatAgnostic"
         },
         {
           "name": "argmax",
           "index": 1,
           "dtype": "int32",
-          "format": "NCDHW",
+          "format": "ND",
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode": "FormatAgnostic"
         }
       ],
       "attrs": [
@@ -67,6 +70,11 @@
           "name": "data_format",
           "dtype": "string",
           "value": "NCDHW"
+        },
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 3
         }
       ]
     },
@@ -77,11 +85,12 @@
           "name": "x",
           "index": 0,
           "dtype": "float16",
-          "format": "NCDHW",
+          "format": "ND",
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode": "FormatAgnostic"
         }
       ],
       "outputs": [
@@ -89,21 +98,23 @@
           "name": "y",
           "index": 0,
           "dtype": "float16",
-          "format": "NCDHW",
+          "format": "ND",
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode": "FormatAgnostic"
         },
         {
           "name": "argmax",
           "index": 1,
           "dtype": "int32",
-          "format": "NCDHW",
+          "format": "ND",
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode": "FormatAgnostic"
         }
       ],
       "attrs": [
@@ -136,6 +147,11 @@
           "name": "data_format",
           "dtype": "string",
           "value": "NCDHW"
+        },
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 3
         }
       ]
     },
@@ -146,11 +162,12 @@
           "name": "x",
           "index": 0,
           "dtype": "bfloat16",
-          "format": "NCDHW",
+          "format": "ND",
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode": "FormatAgnostic"
         }
       ],
       "outputs": [
@@ -158,21 +175,23 @@
           "name": "y",
           "index": 0,
           "dtype": "bfloat16",
-          "format": "NCDHW",
+          "format": "ND",
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode": "FormatAgnostic"
         },
         {
           "name": "argmax",
           "index": 1,
           "dtype": "int32",
-          "format": "NCDHW",
+          "format": "ND",
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode": "FormatAgnostic"
         }
       ],
       "attrs": [
@@ -205,6 +224,241 @@
           "name": "data_format",
           "dtype": "string",
           "value": "NCDHW"
+        },
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 3
+        }
+      ]
+    },{
+      "bin_filename": "MaxPool3DWithArgmaxV2_7fs1d6j3os14nhkg4n8cg12h4dw37bn1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "argmax",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "ksize",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "dilation",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "ceil_mode",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": "NCDHW"
+        },
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "bin_filename": "MaxPool3DWithArgmaxV2_7fs1d6j3oq64fhkg4n8cg12h4dw37bn2",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "argmax",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "ksize",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "dilation",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "ceil_mode",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": "NCDHW"
+        },
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "bin_filename": "MaxPool3DWithArgmaxV2_6po3d6j3oq64fhkg4n8cg12h4dw37bn3",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "argmax",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "ksize",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "dilation",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "ceil_mode",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": "NCDHW"
+        },
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 3
         }
       ]
     }
