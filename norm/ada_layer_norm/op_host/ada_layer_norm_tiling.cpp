@@ -32,6 +32,7 @@ constexpr int32_t BLOCK_SIZE = 32;
 
 constexpr int64_t MULTI_ROW_SIZE = 3072;
 constexpr int64_t SINGLE_ROW_SIZE = 6144;
+constexpr int64_t WELFORD_ROW_SIZE = 5120;
 constexpr uint32_t FP32_BYTE = 4;
 constexpr uint32_t FP16_BYTE = 2;
 constexpr uint64_t WORK_SPACE_SIZE = 16 * 1024 * 1024;
@@ -51,7 +52,7 @@ public:
     ge::graphStatus RunBigKernelTiling();
 
 private:
-    int32_t SplitCore(int32_t coreNumPlatform);
+    int32_t SplitCore(int32_t coreNumPlatform, bool isRegBase);
     void FillTilingData();
     void DoLayerNormTiling();
     uint8_t GetTilingKey(bool isRegBase);
@@ -128,7 +129,7 @@ ge::graphStatus AdaLayerNormTiling::RunBigKernelTiling()
 
     auto compileInfo = reinterpret_cast<const AdaLayerNormCompileInfo*>(tilingContext->GetCompileInfo());
     int32_t coreNumPlatform = compileInfo->coreNum;
-    int32_t needCoreNum = SplitCore(coreNumPlatform);
+    int32_t needCoreNum = SplitCore(coreNumPlatform, compileInfo->isRegBase);
     if (compileInfo->isRegBase) {
         DoLayerNormTiling();
     }
@@ -146,7 +147,7 @@ ge::graphStatus AdaLayerNormTiling::RunBigKernelTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-int32_t AdaLayerNormTiling::SplitCore(int32_t coreNumPlatform)
+int32_t AdaLayerNormTiling::SplitCore(int32_t coreNumPlatform, bool isRegBase)
 {
     int64_t sliceSize = hiddenDim;
     int64_t rowNum = 1;
@@ -154,6 +155,9 @@ int32_t AdaLayerNormTiling::SplitCore(int32_t coreNumPlatform)
         rowNum = SINGLE_ROW_SIZE / hiddenDimCeil;
     } else if (hiddenDim > SINGLE_ROW_SIZE) {
         int64_t batch = CeilA2B(hiddenDim, SINGLE_ROW_SIZE);
+        if (isRegBase) {
+            batch = CeilA2B(hiddenDim, WELFORD_ROW_SIZE);
+        }
         sliceSize = CeilA2B(hiddenDim, batch);
         sliceSize = CeilA2B(sliceSize, BLOCK_SIZE) * BLOCK_SIZE;
     }

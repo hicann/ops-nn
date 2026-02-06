@@ -33,16 +33,17 @@ private:
     __aicore__ inline void SliceProcess();
     __aicore__ inline void ComputeMeanVar(int64_t offset, int64_t batchCount);
     __aicore__ inline void ComputeAdaLayerNorm(int64_t offset, int64_t scaleOffset, int64_t batchCount);
+    __aicore__ inline void WelfordInitialize(uint32_t computeLength);
     __aicore__ inline void ProcessWelfordUpdate(int64_t computeLength, int64_t welfordCount);
     __aicore__ inline void ProcessWelfordFinalize(int64_t welfordCount, int64_t batchCount);
-    __aicore__ inline void ProcessNormalize(int64_t dataCount, int64_t batchCount);
-    __aicore__ inline void Adaption(int64_t dataCount, int64_t batchCount);
+    __aicore__ inline void ProcessNormalize(uint32_t dataCount, int64_t batchCount);
+    __aicore__ inline void Adaption(uint32_t dataCount);
     __aicore__ inline void DynamicQuant(int64_t offset, int64_t batchCount);
     __aicore__ inline void CalculateScale(int64_t batchCount);
-    __aicore__ inline void ProcessQuant(int64_t dataCount, int64_t batchCount);
+    __aicore__ inline void ProcessQuant(uint32_t dataCount, int64_t batchCount);
 
     __aicore__ inline void CopyInOtherData(int64_t offset, int64_t len);
-    __aicore__ inline void CopyInScaleShift(int64_t offset, int64_t len);
+    __aicore__ inline void CopyInScaleShift(int64_t offset, int64_t smoothOffset, int64_t len);
     __aicore__ inline void CopyInX(int64_t offset, int64_t len);
     __aicore__ inline void CopyInNorm(int64_t offset, int64_t len);
     __aicore__ inline void BaseCopyOut(int64_t offset, int64_t len);
@@ -54,12 +55,9 @@ private:
 private:
     using OUT_DTYPE = std::conditional_t<OP_CODE == QUANT_OP_CODE, float, T>;
     TPipe pipe;
-    TQue<QuePosition::VECIN, 1> xQueue;
-    TQue<QuePosition::VECIN, 1> scaleQueue;
-    TQue<QuePosition::VECIN, 1> shiftQueue;
-    TQue<QuePosition::VECIN, 1> smoothQueue;
-    TBuf<TPosition::VECCALC> weightBuf;
-    TBuf<TPosition::VECCALC> biasBuf;
+    TQue<QuePosition::VECIN, DOUBLE_BUFFER> xQueue;
+    TQue<QuePosition::VECIN, DOUBLE_BUFFER> scaleQueue;
+    TQue<QuePosition::VECIN, DOUBLE_BUFFER> shiftQueue;
     TBuf<TPosition::VECCALC> normBuf;
     TBuf<TPosition::VECCALC> tmpBuf;
     TBuf<TPosition::VECCALC> varBuf;
@@ -83,8 +81,6 @@ private:
     GlobalTensor<float> quantScaleGm;
     GlobalTensor<float> normGm;
 
-    LocalTensor<float> weightLocal;
-    LocalTensor<float> biasLocal;
     LocalTensor<float> normLocal;
     LocalTensor<uint8_t> tmpLocal;
     LocalTensor<float> meanTmpLocal;
@@ -117,17 +113,15 @@ template <typename T, typename U, typename Y, uint8_t OP_CODE>
 __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::InitV2(const GmAddr* gmAddr, const AdaLayerNormTilingData *tilingData)
 {
     ParseTilingData(tilingData);
-    pipe.InitBuffer(xQueue, 1, DATA_COUNT * sizeof(float));
-    pipe.InitBuffer(scaleQueue, 1, DATA_COUNT * sizeof(float));
-    pipe.InitBuffer(shiftQueue, 1, DATA_COUNT * sizeof(float));
-    pipe.InitBuffer(weightBuf, DATA_COUNT * sizeof(float));
-    pipe.InitBuffer(biasBuf, DATA_COUNT * sizeof(float));
+    pipe.InitBuffer(xQueue, DOUBLE_BUFFER, WELFORD_COUNT * sizeof(float));
+    pipe.InitBuffer(scaleQueue, DOUBLE_BUFFER, WELFORD_COUNT * sizeof(float));
+    pipe.InitBuffer(shiftQueue, DOUBLE_BUFFER, WELFORD_COUNT * sizeof(float));
     pipe.InitBuffer(varBuf, BATCH_COUNT * sizeof(float));
-    pipe.InitBuffer(normBuf, DATA_COUNT * sizeof(float));
+    pipe.InitBuffer(normBuf, WELFORD_COUNT * sizeof(float));
     if (tmpBufferSize > 0) {
         pipe.InitBuffer(tmpBuf, tmpBufferSize);
     }
-    pipe.InitBuffer(outQueue, 1, DATA_COUNT * sizeof(float));
+    pipe.InitBuffer(outQueue, DOUBLE_BUFFER, WELFORD_COUNT * sizeof(float));
     pipe.InitBuffer(meanQueue, 1, BATCH_COUNT * sizeof(float));
     pipe.InitBuffer(rstdQueue, 1, BATCH_COUNT * sizeof(float));
 
@@ -146,20 +140,17 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::InitQuant(const Gm
     const AdaLayerNormTilingData *tilingData)
 {
     ParseTilingData(tilingData);
-    pipe.InitBuffer(xQueue, 1, DATA_COUNT * sizeof(float));
-    pipe.InitBuffer(scaleQueue, 1, DATA_COUNT * sizeof(float));
-    pipe.InitBuffer(shiftQueue, 1, DATA_COUNT * sizeof(float));
-    pipe.InitBuffer(smoothQueue, 1, DATA_COUNT * sizeof(float));
-    pipe.InitBuffer(weightBuf, DATA_COUNT * sizeof(float));
-    pipe.InitBuffer(biasBuf, DATA_COUNT * sizeof(float));
+    pipe.InitBuffer(xQueue, DOUBLE_BUFFER, WELFORD_COUNT * sizeof(float));
+    pipe.InitBuffer(scaleQueue, DOUBLE_BUFFER, WELFORD_COUNT * sizeof(float));
+    pipe.InitBuffer(shiftQueue, DOUBLE_BUFFER, WELFORD_COUNT * sizeof(float));
     pipe.InitBuffer(varBuf, BATCH_COUNT * sizeof(float));
     pipe.InitBuffer(maxBuf, V_LENGTH * sizeof(float));
-    pipe.InitBuffer(normBuf, DATA_COUNT * sizeof(float));
+    pipe.InitBuffer(normBuf, WELFORD_COUNT * sizeof(float));
     if (tmpBufferSize > 0) {
         pipe.InitBuffer(tmpBuf, tmpBufferSize);
     }
-    pipe.InitBuffer(outQueue, 1, DATA_COUNT * sizeof(float));
-    pipe.InitBuffer(quantOutQueue, 1, DATA_COUNT * sizeof(int8_t));
+    pipe.InitBuffer(outQueue, DOUBLE_BUFFER, WELFORD_COUNT * sizeof(float));
+    pipe.InitBuffer(quantOutQueue, DOUBLE_BUFFER, WELFORD_COUNT * sizeof(int8_t));
     pipe.InitBuffer(meanQueue, 1, BATCH_COUNT * sizeof(float));
     pipe.InitBuffer(rstdQueue, 1, BATCH_COUNT * sizeof(float));
     pipe.InitBuffer(quantScaleQueue, 1, BATCH_COUNT * sizeof(float));
@@ -182,12 +173,8 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::Process()
         return;
     }
 
-    weightLocal = weightBuf.Get<float>();
-    biasLocal = biasBuf.Get<float>();
     normLocal = normBuf.Get<float>();
     tmpLocal = tmpBuf.Get<uint8_t>();
-    meanTmpLocal = weightLocal;
-    varTmpLocal = biasLocal;
     varLocal = varBuf.Get<float>();
     meanLocal = meanQueue.AllocTensor<float>();
     rstdLocal = rstdQueue.AllocTensor<float>();
@@ -276,9 +263,7 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::SliceProcess()
 template <typename T, typename U, typename Y, uint8_t OP_CODE>
 __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ComputeMeanVar(int64_t offset, int64_t batchCount)
 {
-    Duplicate(meanTmpLocal, 0.0f, sliceSize);
-    Duplicate(varTmpLocal, 0.0f, sliceSize);
-    PipeBarrier<PIPE_V>();
+    WelfordInitialize(sliceSize);
     int64_t welfordCount = 0;
     while (welfordCount < sliceCount) {
         welfordCount ++;
@@ -302,16 +287,16 @@ template <typename T, typename U, typename Y, uint8_t OP_CODE>
 __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ComputeAdaLayerNorm(int64_t offset, int64_t scaleOffset, int64_t batchCount)
 {
     if constexpr (OP_CODE == QUANT_OP_CODE) {
-        Duplicate(maxTmpLocal, 0.0f, sliceSize);
+        Duplicate(maxTmpLocal, 0.0f, V_LENGTH);
         PipeBarrier<PIPE_V>();
     }
     int64_t h = 0;
     for (int64_t i = 0; i < sliceCount; i ++) {
-        CopyInOtherData(h, sliceSize);
         CopyInX(offset + h, sliceSize);
+        CopyInOtherData(h, sliceSize);
         ProcessNormalize(sliceSize, batchCount);
-        CopyInScaleShift(scaleOffset + h, sliceSize);
-        Adaption(sliceSize, batchCount);
+        CopyInScaleShift(scaleOffset + h, h, sliceSize);
+        Adaption(sliceSize);
         if constexpr (OP_CODE == QUANT_OP_CODE) {
             CopyNormOut(normOffset + h, sliceSize);
         } else {
@@ -320,11 +305,11 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ComputeAdaLayerNor
         h += sliceSize;
     }
     if (tailSize > 0) {
-        CopyInOtherData(h, tailSize);
         CopyInX(offset + h, tailSize);
+        CopyInOtherData(h, tailSize);
         ProcessNormalize(tailSize, batchCount);
-        CopyInScaleShift(scaleOffset + h, tailSize);
-        Adaption(tailSize, batchCount);
+        CopyInScaleShift(scaleOffset + h, h, tailSize);
+        Adaption(tailSize);
         if constexpr (OP_CODE == QUANT_OP_CODE) {
             CopyNormOut(normOffset + h, tailSize);
         } else {
@@ -355,183 +340,79 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::DynamicQuant(int64
 }
 
 template <typename T, typename U, typename Y, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::Adaption(int64_t dataCount, int64_t batchCount)
+__aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::Adaption(uint32_t dataCount)
 {
     LocalTensor<T> scaleLocal = scaleQueue.DeQue<T>();
     LocalTensor<T> shiftLocal = shiftQueue.DeQue<T>();
     LocalTensor<T> smoothLocal;
     LocalTensor<OUT_DTYPE> outLocal = outQueue.AllocTensor<OUT_DTYPE>();
 
-    __local_mem__ float* normAddr = (__ubuf__ float*)normLocal.GetPhyAddr();
-    __local_mem__ OUT_DTYPE* outAddr = (__ubuf__ OUT_DTYPE*)outLocal.GetPhyAddr();
-    __local_mem__ T* scaleAddr = (__ubuf__ T*)scaleLocal.GetPhyAddr();
-    __local_mem__ T* shiftAddr = (__ubuf__ T*)shiftLocal.GetPhyAddr();
-
-    __local_mem__ T* smoothAddr;
-    __local_mem__ float* maxTmpAddr;
+    __ubuf__ float* normAddr = (__ubuf__ float*)normLocal.GetPhyAddr();
+    __ubuf__ OUT_DTYPE* outAddr = (__ubuf__ OUT_DTYPE*)outLocal.GetPhyAddr();
+    __ubuf__ T* scaleAddr = (__ubuf__ T*)scaleLocal.GetPhyAddr();
+    __ubuf__ T* shiftAddr = (__ubuf__ T*)shiftLocal.GetPhyAddr();
+    __ubuf__ T* smoothAddr;
+    __ubuf__ float* maxTmpAddr;
     if constexpr (OP_CODE == QUANT_OP_CODE) {
         if (hasSmooth) {
-            smoothLocal = smoothQueue.DeQue<T>();
+            smoothLocal = xQueue.DeQue<T>();
             smoothAddr = (__ubuf__ T*)smoothLocal.GetPhyAddr();
         }
         maxTmpAddr = (__ubuf__ float*)maxTmpLocal.GetPhyAddr();
     }
 
-    uint16_t tailLength = static_cast<uint16_t>(dataCount % TWO_V_LENGTH);
-    uint16_t colLoopTimes = static_cast<uint16_t>(dataCount / TWO_V_LENGTH) + (tailLength > V_LENGTH ? 1 : 0);
-    uint32_t rightLength = static_cast<uint32_t>(dataCount - colLoopTimes * V_LENGTH);
-    __VEC_SCOPE__
-    {
-        RegTensor<float> x1;
-        RegTensor<float> x2;
-        RegTensor<float> scale1;
-        RegTensor<float> scale2;
-        RegTensor<float> shift1;
-        RegTensor<float> shift2;
-        RegTensor<float> tmpMax;
-
-        MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-        MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
-        MaskReg pregLoop;
-        uint32_t sreg2 = rightLength;
-        if constexpr (OP_CODE == QUANT_OP_CODE) {
-            DataCopy<float, LoadDist::DIST_BRC_B32>(tmpMax, maxTmpAddr);
-        }
-        for (uint16_t j = 0; j < colLoopTimes;j ++) {
-            pregLoop = UpdateMask<float>(sreg2);
-            DataCopy(x1, normAddr + j * TWO_V_LENGTH);
-            DataCopy(x2, normAddr + j * TWO_V_LENGTH + V_LENGTH);
-            LoadTensor(scale1, scaleAddr + j * TWO_V_LENGTH, pregFull);
-            LoadTensor(scale2, scaleAddr + j * TWO_V_LENGTH + V_LENGTH, pregLoop);
-            LoadTensor(shift1, shiftAddr + j * TWO_V_LENGTH, pregFull);
-            LoadTensor(shift2, shiftAddr + j * TWO_V_LENGTH + V_LENGTH, pregLoop);
-            Adds(scale1, scale1, 1.0f, pregFull);
-            Adds(scale2, scale2, 1.0f, pregLoop);
-            FusedMulDstAdd(x1, scale1, shift1, pregFull);
-            FusedMulDstAdd(x2, scale2, shift2, pregLoop);
-            if constexpr (OP_CODE == QUANT_OP_CODE) {
-                if (hasSmooth) {
-                    RegTensor<float> smooth1;
-                    RegTensor<float> smooth2;
-                    LoadTensor(smooth1, smoothAddr + j * TWO_V_LENGTH, pregFull);
-                    LoadTensor(smooth2, smoothAddr + j * TWO_V_LENGTH + V_LENGTH, pregLoop);
-                    Mul(x1, x1, smooth1, pregFull);
-                    Mul(x2, x2, smooth2, pregLoop);
-                }
-                CopyToTensor(outAddr + j * TWO_V_LENGTH, x1, pregFull);
-                CopyToTensor(outAddr + j * TWO_V_LENGTH + V_LENGTH, x2, pregLoop);
-                Abs(x1, x1, pregFull);
-                Abs(x2, x2, pregLoop);
-                Max(x1, x1, x2, pregFull);
-                Max(tmpMax, tmpMax, x1, pregFull);
-            } else {
-                CopyToTensor(outAddr + j * TWO_V_LENGTH, x1, pregFull);
-                CopyToTensor(outAddr + j * TWO_V_LENGTH + V_LENGTH, x2, pregLoop);
-            }
-        }
-        if (tailLength > 0 && tailLength <= V_LENGTH) {
-            pregLoop = UpdateMask<float>(sreg2);
-            DataCopy(x1, normAddr + colLoopTimes * TWO_V_LENGTH);
-            LoadTensor(scale1, scaleAddr + colLoopTimes * TWO_V_LENGTH, pregLoop);
-            LoadTensor(shift1, shiftAddr + colLoopTimes * TWO_V_LENGTH, pregLoop);
-            Adds(scale1, scale1, 1.0f, pregLoop);
-            FusedMulDstAdd(x1, scale1, shift1, pregLoop);
-            if constexpr (OP_CODE == QUANT_OP_CODE) {
-                if (hasSmooth) {
-                    RegTensor<float> smooth1;
-                    LoadTensor(smooth1, smoothAddr + colLoopTimes * TWO_V_LENGTH, pregLoop);
-                    Mul(x1, x1, smooth1, pregLoop);
-                }
-                CopyToTensor(outAddr + colLoopTimes * TWO_V_LENGTH, x1, pregLoop);
-                Abs(x1, x1, pregLoop);
-                Max(tmpMax, tmpMax, x1, pregFull);
-            } else {
-                CopyToTensor(outAddr + colLoopTimes * TWO_V_LENGTH, x1, pregLoop);
-            }
-        }
-        if constexpr (OP_CODE == QUANT_OP_CODE) {
-            ReduceMax(tmpMax, tmpMax, pregFull);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(maxTmpAddr, tmpMax, pregMerge);
-        }
+    if (hasSmooth) {
+        WelfordAdaptionVF<T, OUT_DTYPE, OP_CODE, true>(dataCount, normAddr, scaleAddr, shiftAddr, 
+                                                       smoothAddr, maxTmpAddr, outAddr);
+    } else {
+        WelfordAdaptionVF<T, OUT_DTYPE, OP_CODE, false>(dataCount, normAddr, scaleAddr, shiftAddr, 
+                                                        nullptr, maxTmpAddr, outAddr);
     }
     scaleQueue.FreeTensor(scaleLocal);
     shiftQueue.FreeTensor(shiftLocal);
     if constexpr (OP_CODE == QUANT_OP_CODE) {
         if (hasSmooth) {
-            smoothQueue.FreeTensor(smoothLocal);
+            xQueue.FreeTensor(smoothLocal);
         }
     }
     outQueue.EnQue<OUT_DTYPE>(outLocal);
 }
 
 template <typename T, typename U, typename Y, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ProcessQuant(int64_t dataCount, int64_t batchCount)
+__aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ProcessQuant(uint32_t dataCount, int64_t batchCount)
 {
     LocalTensor<float> xLocal = xQueue.DeQue<float>();
     LocalTensor<Y> quantOutLocal = quantOutQueue.AllocTensor<Y>();
+    __ubuf__ float* xAddr = (__ubuf__ float*)xLocal.GetPhyAddr();
+    __ubuf__ Y* quantOutAddr = (__ubuf__ Y*)quantOutLocal.GetPhyAddr();
+    __ubuf__ float* quantScaleAddr = (__ubuf__ float*)quantScaleLocal[batchCount].GetPhyAddr();
 
-    __local_mem__ float* xAddr = (__ubuf__ float*)xLocal.GetPhyAddr();
-    __local_mem__ Y* quantOutAddr = (__ubuf__ Y*)quantOutLocal.GetPhyAddr();
-    __local_mem__ float* quantScaleAddr = (__ubuf__ float*)quantScaleLocal[batchCount].GetPhyAddr();
-
-    uint16_t tailLength = static_cast<uint16_t>(dataCount % TWO_V_LENGTH);
-    uint16_t colLoopTimes = static_cast<uint16_t>(dataCount / TWO_V_LENGTH) + (tailLength > V_LENGTH ? 1 : 0);
-    uint32_t rightLength = static_cast<uint32_t>(dataCount - colLoopTimes * V_LENGTH);
+    uint16_t colLoopTimes = static_cast<uint16_t>(CeilA2B(dataCount, V_LENGTH));
     __VEC_SCOPE__
     {
-        RegTensor<float> x1;
-        RegTensor<float> x2;
+        RegTensor<float> x;
         RegTensor<float> quantScale;
-        RegTensor<int16_t> y1Int16;
-        RegTensor<int16_t> y2Int16;
-        RegTensor<half> y1Fp16;
-        RegTensor<half> y2Fp16;
-        RegTensor<Y> y1;
-        RegTensor<Y> y2;
+        RegTensor<int16_t> yInt16;
+        RegTensor<half> yFp16;
+        RegTensor<Y> y;
 
-        MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
         MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
         MaskReg pregLoop;
-
         DataCopy<float, LoadDist::DIST_BRC_B32>(quantScale, quantScaleAddr);
-        uint32_t sreg2 = rightLength;
         for (uint16_t j = 0; j < colLoopTimes;j ++) {
-            pregLoop = UpdateMask<float>(sreg2);
-            DataCopy(x1, xAddr + j * TWO_V_LENGTH);
-            DataCopy(x2, xAddr + j * TWO_V_LENGTH + V_LENGTH);
-            Div(x1, x1, quantScale, pregFull);
-            Div(x2, x2, quantScale, pregLoop);
+            pregLoop = UpdateMask<float>(dataCount);
+            DataCopy(x, xAddr + j * V_LENGTH);
+            Div(x, x, quantScale, pregLoop);
             if constexpr (std::is_same_v<Y, int8_t>) {
-                Cast<int16_t, float, castTraitF32ToI16>(y1Int16, x1, pregFull);
-                Cast<int16_t, float, castTraitF32ToI16>(y2Int16, x2, pregLoop);
-                Cast<half, int16_t, castTraitI16ToF16>(y1Fp16, y1Int16, pregFull);
-                Cast<half, int16_t, castTraitI16ToF16>(y2Fp16, y2Int16, pregLoop);
-                Cast<Y, half, castTraitF16ToI8>(y1, y1Fp16, pregFull);
-                Cast<Y, half, castTraitF16ToI8>(y2, y2Fp16, pregLoop);
+                Cast<int16_t, float, castTraitF32ToI16>(yInt16, x, pregLoop);
+                Cast<half, int16_t, castTraitI16ToF16>(yFp16, yInt16, pregLoop);
+                Cast<Y, half, castTraitF16ToI8>(y, yFp16, pregLoop);
             } else if constexpr (std::is_same_v<Y, hifloat8_t>) {
-                Cast<Y, float, castTraitF32Toh8>(y1, x1, pregFull);
-                Cast<Y, float, castTraitF32Toh8>(y2, x2, pregLoop);
+                Cast<Y, float, castTraitF32Toh8>(y, x, pregLoop);
             } else {
-                Cast<Y, float, castTraitF32Tofp8>(y1, x1, pregFull);
-                Cast<Y, float, castTraitF32Tofp8>(y2, x2, pregLoop);
+                Cast<Y, float, castTraitF32Tofp8>(y, x, pregLoop);
             }
-            DataCopy<Y, StoreDist::DIST_PACK4_B32>(quantOutAddr + j * TWO_V_LENGTH, y1, pregFull);
-            DataCopy<Y, StoreDist::DIST_PACK4_B32>(quantOutAddr + j * TWO_V_LENGTH + V_LENGTH, y2, pregLoop);
-        }
-        if (tailLength > 0 && tailLength <= V_LENGTH) {
-            pregLoop = UpdateMask<float>(sreg2);
-            DataCopy(x1, xAddr + colLoopTimes * TWO_V_LENGTH);
-            Div(x1, x1, quantScale, pregLoop);
-            if constexpr (std::is_same_v<Y, int8_t>) {
-                Cast<int16_t, float, castTraitF32ToI16>(y1Int16, x1, pregLoop);
-                Cast<half, int16_t, castTraitI16ToF16>(y1Fp16, y1Int16, pregLoop);
-                Cast<Y, half, castTraitF16ToI8>(y1, y1Fp16, pregLoop);
-            } else if constexpr (std::is_same_v<Y, hifloat8_t>) {
-                Cast<Y, float, castTraitF32Toh8>(y1, x1, pregLoop);
-            } else {
-                Cast<Y, float, castTraitF32Tofp8>(y1, x1, pregLoop);
-            }
-            DataCopy<Y, StoreDist::DIST_PACK4_B32>(quantOutAddr + colLoopTimes * TWO_V_LENGTH, y1, pregLoop);
+            DataCopy<Y, StoreDist::DIST_PACK4_B32>(quantOutAddr + j * V_LENGTH, y, pregLoop);
         }
     }
 

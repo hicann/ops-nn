@@ -78,6 +78,13 @@ __aicore__ inline void PIPE_MTE2_V()
     WaitFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
 }
 
+__aicore__ inline void PIPE_V_MTE2()
+{
+    event_t eventIdVToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
+    SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
+    WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
+}
+
 __aicore__ inline void PIPE_V_MTE3()
 {
     event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));

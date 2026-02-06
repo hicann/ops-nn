@@ -32,13 +32,14 @@ private:
     __aicore__ inline void ParseTilingData(const AdaLayerNormTilingData *tilingData);
     __aicore__ inline void FastProcess();
     __aicore__ inline void ProcessLayerNorm(RowRange range, int64_t batchCount);
-    __aicore__ inline void Adaption(RowRange range, int64_t batchCount);
+    __aicore__ inline void Adaption(uint16_t rowNum, int64_t batchCount);
+    __aicore__ inline void DynamicQuant(uint16_t rowNum, int64_t batchCount);
 
     __aicore__ inline void CopyInOtherData();
-    __aicore__ inline void CopyInScaleShift(int64_t offset, uint16_t blockCount, int64_t len);
-    __aicore__ inline void CopyInX(int64_t offset, uint16_t blockCount, int64_t len);
-    __aicore__ inline void BaseCopyOut(int64_t offset, uint16_t blockCount, int64_t len);
-    __aicore__ inline void QuantCopyOut(int64_t offset, uint16_t blockCount, int64_t len);
+    __aicore__ inline void CopyInScaleShift(int64_t offset, int64_t localOffset, int64_t repeatNum);
+    __aicore__ inline void CopyInX(int64_t offset, uint16_t blockCount);
+    __aicore__ inline void BaseCopyOut(int64_t offset, uint16_t blockCount);
+    __aicore__ inline void QuantCopyOut(int64_t offset, uint16_t blockCount);
     __aicore__ inline void CopyMeanRstdOut(int64_t offset, int64_t len);
     __aicore__ inline void CopyScaleOut(int64_t offset, int64_t len);
 
@@ -47,9 +48,9 @@ private:
     TPipe pipe;
     RowRange range;
     TQue<QuePosition::VECIN, DOUBLE_BUFFER> xQueue;
-    TQue<QuePosition::VECIN, 1> scaleQueue;
-    TQue<QuePosition::VECIN, 1> shiftQueue;
-    TQue<QuePosition::VECIN, 1> smoothQueue;
+    TBuf<TPosition::VECCALC> scaleBuf;
+    TBuf<TPosition::VECCALC> shiftBuf;
+    TBuf<TPosition::VECCALC> smoothBuf;
     TBuf<TPosition::VECCALC> weightBuf;
     TBuf<TPosition::VECCALC> biasBuf;
     TBuf<TPosition::VECCALC> normBuf;
@@ -85,9 +86,9 @@ private:
 
     int64_t rowNum = 0;
     int64_t seqLen = 0;
-    int64_t hiddenDim = 0;
-    int64_t hiddenDimCeil = 0;
-    int64_t outIntCeil = 0;
+    uint32_t hiddenDim = 0;
+    uint32_t hiddenDimCeil = 0;
+    uint32_t outIntCeil = 0;
     int64_t rowStart = 0;
     int64_t rowEnd = 0;
     int64_t tmpBufferSize = 0;
@@ -104,8 +105,8 @@ __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::InitV2(const GmAd
 {
     ParseTilingData(tilingData);
     pipe.InitBuffer(xQueue, DOUBLE_BUFFER, DATA_COUNT * sizeof(float));
-    pipe.InitBuffer(scaleQueue, 1, DATA_COUNT * sizeof(float));
-    pipe.InitBuffer(shiftQueue, 1, DATA_COUNT * sizeof(float));
+    pipe.InitBuffer(scaleBuf, DATA_COUNT * sizeof(float));
+    pipe.InitBuffer(shiftBuf, DATA_COUNT * sizeof(float));
     pipe.InitBuffer(weightBuf, DATA_COUNT * sizeof(float));
     pipe.InitBuffer(biasBuf, DATA_COUNT * sizeof(float));
     pipe.InitBuffer(normBuf, DATA_COUNT * sizeof(float));
@@ -113,8 +114,8 @@ __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::InitV2(const GmAd
         pipe.InitBuffer(tmpBuf, tmpBufferSize);
     }
     pipe.InitBuffer(outQueue, DOUBLE_BUFFER, DATA_COUNT * sizeof(float));
-    pipe.InitBuffer(meanQueue, DOUBLE_BUFFER, BATCH_COUNT * sizeof(float));
-    pipe.InitBuffer(rstdQueue, DOUBLE_BUFFER, BATCH_COUNT * sizeof(float));
+    pipe.InitBuffer(meanQueue, 1, BATCH_COUNT * sizeof(float));
+    pipe.InitBuffer(rstdQueue, 1, BATCH_COUNT * sizeof(float));
 
     xGm.SetGlobalBuffer((__gm__ T*)gmAddr->x);
     weightGm.SetGlobalBuffer((__gm__ U*)gmAddr->weight);
@@ -132,9 +133,9 @@ __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::InitQuant(const G
 {
     ParseTilingData(tilingData);
     pipe.InitBuffer(xQueue, DOUBLE_BUFFER, DATA_COUNT * sizeof(float));
-    pipe.InitBuffer(scaleQueue, 1, DATA_COUNT * sizeof(float));
-    pipe.InitBuffer(shiftQueue, 1, DATA_COUNT * sizeof(float));
-    pipe.InitBuffer(smoothQueue, 1, DATA_COUNT * sizeof(float));
+    pipe.InitBuffer(scaleBuf, DATA_COUNT * sizeof(float));
+    pipe.InitBuffer(shiftBuf, DATA_COUNT * sizeof(float));
+    pipe.InitBuffer(smoothBuf, DATA_COUNT * sizeof(float));
     pipe.InitBuffer(weightBuf, DATA_COUNT * sizeof(float));
     pipe.InitBuffer(biasBuf, DATA_COUNT * sizeof(float));
     pipe.InitBuffer(normBuf, DATA_COUNT * sizeof(float));
@@ -164,27 +165,20 @@ __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::Process()
         return;
     }
 
+    scaleLocal = scaleBuf.Get<T>();
+    shiftLocal = shiftBuf.Get<T>();
     weightLocal = weightBuf.Get<float>();
     biasLocal = biasBuf.Get<float>();
     normLocal = normBuf.Get<float>();
     tmpLocal = tmpBuf.Get<uint8_t>();
     meanLocal = meanQueue.AllocTensor<float>();
     rstdLocal = rstdQueue.AllocTensor<float>();
-    CopyInOtherData();
     if constexpr (OP_CODE == QUANT_OP_CODE) {
-        if (hasSmooth) {
-            smoothLocal = smoothQueue.DeQue<T>();
-        }
+        smoothLocal = smoothBuf.Get<T>();
         quantScaleLocal = quantScaleQueue.AllocTensor<float>();
     }
+    CopyInOtherData();
     FastProcess();
-    scaleQueue.FreeTensor(scaleLocal);
-    shiftQueue.FreeTensor(shiftLocal);
-    if constexpr (OP_CODE == QUANT_OP_CODE) {
-        if (hasSmooth) {
-            smoothQueue.FreeTensor(smoothLocal);
-        }
-    }
 }
 
 template <typename T, typename U, typename Y, uint8_t OP_CODE>
@@ -232,25 +226,30 @@ __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::FastProcess()
         // 拷入
         bool scaleShiftReuse = (lastBatchStart == range.batchStart && lastBatchEnd == range.batchEnd);
         if (!scaleShiftReuse) {
-            if (lastBatchStart != -1) {
-                scaleQueue.FreeTensor(scaleLocal);
-                shiftQueue.FreeTensor(shiftLocal);
+            int64_t rowNum = 0;
+            for (int64_t batchIdx = range.batchStart; batchIdx < range.batchEnd; batchIdx++) {
+                int64_t repeatNum = seqLen;
+                if (batchIdx == range.batchEnd - 1) {
+                    repeatNum = range.actualRowNum - rowNum;
+                } else if (batchIdx == range.batchStart) {
+                    repeatNum = Min(seqLen - (range.rowStart % seqLen), range.actualRowNum);
+                }
+                CopyInScaleShift(batchIdx * hiddenDim, rowNum * hiddenDimCeil, repeatNum);
+                rowNum += repeatNum;
             }
-            CopyInScaleShift(range.batchStart * hiddenDim, range.batchEnd - range.batchStart, hiddenDim);
-            scaleLocal = scaleQueue.DeQue<T>();
-            shiftLocal = shiftQueue.DeQue<T>();
             lastBatchStart = range.batchStart;
             lastBatchEnd = range.batchEnd;
         }
-        CopyInX(range.rowStart * hiddenDim, range.actualRowNum, hiddenDim);
+        CopyInX(range.rowStart * hiddenDim, range.actualRowNum);
 
         // 计算 & 拷出
         ProcessLayerNorm(range, batchCount);
-        Adaption(range, batchCount);
+        Adaption(range.actualRowNum, batchCount);
         if constexpr (OP_CODE == QUANT_OP_CODE) {
-            QuantCopyOut(range.rowStart * hiddenDim, range.actualRowNum, hiddenDim);
+            DynamicQuant(range.actualRowNum, batchCount);
+            QuantCopyOut(range.rowStart * hiddenDim, range.actualRowNum);
         } else {
-            BaseCopyOut(range.rowStart * hiddenDim, range.actualRowNum, hiddenDim);
+            BaseCopyOut(range.rowStart * hiddenDim, range.actualRowNum);
         }
 
         batchCount += range.actualRowNum;
@@ -324,40 +323,49 @@ __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::ProcessLayerNorm(
 }
 
 template <typename T, typename U, typename Y, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::Adaption(RowRange range, int64_t batchCount)
+__aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::Adaption(uint16_t rowNum, int64_t batchCount)
 {
     LocalTensor<OUT_DTYPE> outLocal = outQueue.AllocTensor<OUT_DTYPE>();
-    __local_mem__ float* normAddr = (__ubuf__ float*)normLocal.GetPhyAddr();
-    __local_mem__ OUT_DTYPE* outAddr = (__ubuf__ OUT_DTYPE*)outLocal.GetPhyAddr();
-    __local_mem__ T* scaleAddr = (__ubuf__ T*)scaleLocal.GetPhyAddr();
-    __local_mem__ T* shiftAddr = (__ubuf__ T*)shiftLocal.GetPhyAddr();
-
-    LocalTensor<Y> quantOutLocal;
-    __local_mem__ Y* quantOutAddr;
-    __local_mem__ T* smoothAddr;
-    __local_mem__ float* quantScaleAddr;
+    __ubuf__ float* normAddr = (__ubuf__ float*)normLocal.GetPhyAddr();
+    __ubuf__ OUT_DTYPE* outAddr = (__ubuf__ OUT_DTYPE*)outLocal.GetPhyAddr();
+    __ubuf__ T* scaleAddr = (__ubuf__ T*)scaleLocal.GetPhyAddr();
+    __ubuf__ T* shiftAddr = (__ubuf__ T*)shiftLocal.GetPhyAddr();
+    __ubuf__ T* smoothAddr;
+    __ubuf__ float* quantScaleAddr;
     if constexpr (OP_CODE == QUANT_OP_CODE) {
-        quantOutLocal = quantOutQueue.AllocTensor<Y>();
-        quantOutAddr = (__ubuf__ Y*)quantOutLocal.GetPhyAddr();
         smoothAddr = (__ubuf__ T*)smoothLocal.GetPhyAddr();
         quantScaleAddr = (__ubuf__ float*)quantScaleLocal[batchCount].GetPhyAddr();
     }
 
-    uint16_t rowLoopTimes = static_cast<uint16_t>(range.actualRowNum);
-    uint16_t tailLength = static_cast<uint16_t>(hiddenDim % TWO_V_LENGTH);
-    uint16_t colLoopTimes = static_cast<uint16_t>(hiddenDim / TWO_V_LENGTH) + (tailLength > V_LENGTH ? 1 : 0);
-    uint32_t rightLength = static_cast<uint32_t>(hiddenDim - colLoopTimes * V_LENGTH);
+    if (hasSmooth) {
+        AdaptionVF<T, OUT_DTYPE, OP_CODE, true>(rowNum, hiddenDim, hiddenDimCeil, quantFactor, normAddr, 
+            scaleAddr, shiftAddr, smoothAddr, outAddr, quantScaleAddr);
+    } else {
+        AdaptionVF<T, OUT_DTYPE, OP_CODE, false>(rowNum, hiddenDim, hiddenDimCeil, quantFactor, normAddr, 
+            scaleAddr, shiftAddr, smoothAddr, outAddr, quantScaleAddr);
+    }
+    outQueue.EnQue<OUT_DTYPE>(outLocal);
+}
+
+template <typename T, typename U, typename Y, uint8_t OP_CODE>
+__aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::DynamicQuant(uint16_t rowNum, int64_t batchCount) {
+    uint16_t rowLoopTimes = rowNum >> 1;
+    uint16_t tailLoopTimes = rowNum & 1;
+    uint16_t colLoopTimes = static_cast<uint16_t>(CeilA2B(hiddenDim, V_LENGTH));
+
+    LocalTensor<OUT_DTYPE> outLocal = outQueue.DeQue<OUT_DTYPE>();
+    LocalTensor<Y> quantOutLocal = quantOutQueue.AllocTensor<Y>();
+    __ubuf__ OUT_DTYPE* outAddr = (__ubuf__ OUT_DTYPE*)outLocal.GetPhyAddr();
+    __ubuf__ OUT_DTYPE* outAddr2 = outAddr + rowLoopTimes * hiddenDimCeil;
+    __ubuf__ Y* quantOutAddr = (__ubuf__ Y*)quantOutLocal.GetPhyAddr();
+    __ubuf__ Y* quantOutAddr2 = quantOutAddr + rowLoopTimes * outIntCeil;
+    __ubuf__ float* quantScaleAddr = (__ubuf__ float*)quantScaleLocal[batchCount].GetPhyAddr();
     __VEC_SCOPE__
     {
         RegTensor<float> x1;
         RegTensor<float> x2;
-        RegTensor<float> scale1;
-        RegTensor<float> scale2;
-        RegTensor<float> shift1;
-        RegTensor<float> shift2;
-        RegTensor<float> tmpMax;
-        RegTensor<float> quantScale;
-        RegTensor<float> quantScaleBroad;
+        RegTensor<float> quantScale1;
+        RegTensor<float> quantScale2;
         RegTensor<int16_t> y1Int16;
         RegTensor<int16_t> y2Int16;
         RegTensor<half> y1Fp16;
@@ -365,130 +373,63 @@ __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::Adaption(RowRange
         RegTensor<Y> y1;
         RegTensor<Y> y2;
 
-        MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-        MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
         MaskReg pregLoop;
-        __local_mem__ OUT_DTYPE* outAddr1 = outAddr;
-        __local_mem__ OUT_DTYPE* outAddr2 = outAddr;
         for (uint16_t i = 0; i < rowLoopTimes; i++) {
-            uint32_t batchIdx = (static_cast<uint32_t>(range.rowStart) + i) / static_cast<uint32_t>(seqLen);
-            uint32_t scaleOffset = (batchIdx - static_cast<uint32_t>(range.batchStart)) * static_cast<uint32_t>(hiddenDimCeil);
-            uint32_t sreg1 = rightLength;
-            if constexpr (OP_CODE == QUANT_OP_CODE) {
-                Duplicate(tmpMax, 0.0f, pregFull);
-            }
+            DataCopy<float, LoadDist::DIST_BRC_B32>(quantScale1, quantScaleAddr + i);
+            DataCopy<float, LoadDist::DIST_BRC_B32>(quantScale2, quantScaleAddr + i + rowLoopTimes);
+            uint32_t sreg = hiddenDim;
             for (uint16_t j = 0; j < colLoopTimes;j ++) {
-                pregLoop = UpdateMask<float>(sreg1);
-                DataCopy(x1, normAddr + j * TWO_V_LENGTH);
-                DataCopy(x2, normAddr + j * TWO_V_LENGTH + V_LENGTH);
-                LoadTensor(scale1, scaleAddr + scaleOffset + j * TWO_V_LENGTH, pregFull);
-                LoadTensor(scale2, scaleAddr + scaleOffset + j * TWO_V_LENGTH + V_LENGTH, pregLoop);
-                LoadTensor(shift1, shiftAddr + scaleOffset + j * TWO_V_LENGTH, pregFull);
-                LoadTensor(shift2, shiftAddr + scaleOffset + j * TWO_V_LENGTH + V_LENGTH, pregLoop);
-                Adds(scale1, scale1, 1.0f, pregFull);
-                Adds(scale2, scale2, 1.0f, pregLoop);
-                FusedMulDstAdd(x1, scale1, shift1, pregFull);
-                FusedMulDstAdd(x2, scale2, shift2, pregLoop);
-                if constexpr (OP_CODE == BASE_V2_OP_CODE) {
-                    CopyToTensor(outAddr1 + j * TWO_V_LENGTH, x1, pregFull);
-                    CopyToTensor(outAddr1 + j * TWO_V_LENGTH + V_LENGTH, x2, pregLoop);
+                pregLoop = UpdateMask<float>(sreg);
+                DataCopy(x1, outAddr + j * V_LENGTH);
+                DataCopy(x2, outAddr2 + j * V_LENGTH);
+                Div(x1, x1, quantScale1, pregLoop);
+                Div(x2, x2, quantScale2, pregLoop);
+                if constexpr (std::is_same_v<Y, hifloat8_t>) {
+                    Cast<Y, float, castTraitF32Toh8>(y1, x1, pregLoop);
+                    Cast<Y, float, castTraitF32Toh8>(y2, x2, pregLoop);
+                } else if constexpr (std::is_same_v<Y, int8_t>) {
+                    Cast<int16_t, float, castTraitF32ToI16>(y1Int16, x1, pregLoop);
+                    Cast<int16_t, float, castTraitF32ToI16>(y2Int16, x2, pregLoop);
+                    Cast<half, int16_t, castTraitI16ToF16>(y1Fp16, y1Int16, pregLoop);
+                    Cast<half, int16_t, castTraitI16ToF16>(y2Fp16, y2Int16, pregLoop);
+                    Cast<Y, half, castTraitF16ToI8>(y1, y1Fp16, pregLoop);
+                    Cast<Y, half, castTraitF16ToI8>(y2, y2Fp16, pregLoop);
                 } else {
-                    if (hasSmooth) {
-                        RegTensor<float> smooth1;
-                        RegTensor<float> smooth2;
-                        LoadTensor(smooth1, smoothAddr + j * TWO_V_LENGTH, pregFull);
-                        LoadTensor(smooth2, smoothAddr + j * TWO_V_LENGTH + V_LENGTH, pregLoop);
-                        Mul(x1, x1, smooth1, pregFull);
-                        Mul(x2, x2, smooth2, pregLoop);
-                    }
-                    CopyToTensor(outAddr1 + j * TWO_V_LENGTH, x1, pregFull);
-                    CopyToTensor(outAddr1 + j * TWO_V_LENGTH + V_LENGTH, x2, pregLoop);
-                    Abs(x1, x1, pregFull);
-                    Abs(x2, x2, pregLoop);
-                    Max(x1, x1, x2, pregFull);
-                    Max(tmpMax, tmpMax, x1, pregFull);
+                    Cast<Y, float, castTraitF32Tofp8>(y1, x1, pregLoop);
+                    Cast<Y, float, castTraitF32Tofp8>(y2, x2, pregLoop);
                 }
+                DataCopy<Y, StoreDist::DIST_PACK4_B32>(quantOutAddr + j * V_LENGTH, y1, pregLoop);
+                DataCopy<Y, StoreDist::DIST_PACK4_B32>(quantOutAddr2 + j * V_LENGTH, y2, pregLoop);
             }
-            if (tailLength > 0 && tailLength <= V_LENGTH) {
-                pregLoop = UpdateMask<float>(sreg1);
-                DataCopy(x1, normAddr + colLoopTimes * TWO_V_LENGTH);
-                LoadTensor(scale1, scaleAddr + scaleOffset + colLoopTimes * TWO_V_LENGTH, pregLoop);
-                LoadTensor(shift1, shiftAddr + scaleOffset + colLoopTimes * TWO_V_LENGTH, pregLoop);
-                Adds(scale1, scale1, 1.0f, pregLoop);
-                FusedMulDstAdd(x1, scale1, shift1, pregLoop);
-                if constexpr (OP_CODE == QUANT_OP_CODE) {
-                    if (hasSmooth) {
-                        RegTensor<float> smooth1;
-                        LoadTensor(smooth1, smoothAddr + colLoopTimes * TWO_V_LENGTH, pregLoop);
-                        Mul(x1, x1, smooth1, pregLoop);
-                    }
-                    CopyToTensor(outAddr1 + colLoopTimes * TWO_V_LENGTH, x1, pregLoop);
-                    Abs(x1, x1, pregLoop);
-                    Max(tmpMax, tmpMax, x1, pregFull);
-                } else {
-                    CopyToTensor(outAddr1 + colLoopTimes * TWO_V_LENGTH, x1, pregLoop);
-                }
-            }
-            if constexpr (OP_CODE == QUANT_OP_CODE) {
-                ReduceMax(quantScale, tmpMax, pregFull);
-                Muls(quantScale, quantScale, quantFactor, pregMerge);
-                Duplicate(quantScaleBroad, quantScale, pregFull);
-                LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-                uint32_t sreg2 = rightLength;
-                for (uint16_t j = 0; j < colLoopTimes;j ++) {
-                    pregLoop = UpdateMask<float>(sreg2);
-                    DataCopy(x1, outAddr2 + j * TWO_V_LENGTH);
-                    DataCopy(x2, outAddr2 + j * TWO_V_LENGTH + V_LENGTH);
-                    Div(x1, x1, quantScaleBroad, pregFull);
-                    Div(x2, x2, quantScaleBroad, pregLoop);
-                    if constexpr (std::is_same_v<Y, hifloat8_t>) {
-                        Cast<Y, float, castTraitF32Toh8>(y1, x1, pregFull);
-                        Cast<Y, float, castTraitF32Toh8>(y2, x2, pregLoop);
-                    } else if constexpr (std::is_same_v<Y, int8_t>) {
-                        Cast<int16_t, float, castTraitF32ToI16>(y1Int16, x1, pregFull);
-                        Cast<int16_t, float, castTraitF32ToI16>(y2Int16, x2, pregLoop);
-                        Cast<half, int16_t, castTraitI16ToF16>(y1Fp16, y1Int16, pregFull);
-                        Cast<half, int16_t, castTraitI16ToF16>(y2Fp16, y2Int16, pregLoop);
-                        Cast<Y, half, castTraitF16ToI8>(y1, y1Fp16, pregFull);
-                        Cast<Y, half, castTraitF16ToI8>(y2, y2Fp16, pregLoop);
-                    } else {
-                        Cast<Y, float, castTraitF32Tofp8>(y1, x1, pregFull);
-                        Cast<Y, float, castTraitF32Tofp8>(y2, x2, pregLoop);
-                    }
-                    DataCopy<Y, StoreDist::DIST_PACK4_B32>(quantOutAddr + j * TWO_V_LENGTH, y1, pregFull);
-                    DataCopy<Y, StoreDist::DIST_PACK4_B32>(quantOutAddr + j * TWO_V_LENGTH + V_LENGTH, y2, pregLoop);
-                }
-                if (tailLength > 0 && tailLength <= V_LENGTH) {
-                    pregLoop = UpdateMask<float>(sreg2);
-                    DataCopy(x1, outAddr2 + colLoopTimes * TWO_V_LENGTH);
-                    Div(x1, x1, quantScaleBroad, pregLoop);
-                    if constexpr (std::is_same_v<Y, hifloat8_t>) {
-                        Cast<Y, float, castTraitF32Toh8>(y1, x1, pregLoop);
-                    } else if constexpr (std::is_same_v<Y, int8_t>) {
-                        Cast<int16_t, float, castTraitF32ToI16>(y1Int16, x1, pregLoop);
-                        Cast<half, int16_t, castTraitI16ToF16>(y1Fp16, y1Int16, pregLoop);
-                        Cast<Y, half, castTraitF16ToI8>(y1, y1Fp16, pregLoop);
-                    } else {
-                        Cast<Y, float, castTraitF32Tofp8>(y1, x1, pregLoop);
-                    }
-                    DataCopy<Y, StoreDist::DIST_PACK4_B32>(quantOutAddr + colLoopTimes * TWO_V_LENGTH, y1, pregLoop);
-                }
-                // 拷出量化系数
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(quantScaleAddr + i, quantScale, pregMerge);
+            outAddr += hiddenDimCeil;
+            outAddr2 += hiddenDimCeil;
+            quantOutAddr += outIntCeil;
+            quantOutAddr2 += outIntCeil;
+        }
 
-                outAddr2 += static_cast<uint32_t>(hiddenDimCeil);
-                quantOutAddr += static_cast<uint32_t>(outIntCeil);
+        for (uint16_t i = 0; i < tailLoopTimes; i++) {
+            DataCopy<float, LoadDist::DIST_BRC_B32>(quantScale1, quantScaleAddr + rowLoopTimes + rowLoopTimes);
+            uint32_t sreg = hiddenDim;
+            for (uint16_t j = 0; j < colLoopTimes;j ++) {
+                pregLoop = UpdateMask<float>(sreg);
+                DataCopy(x1, outAddr2 + j * V_LENGTH);
+                Div(x1, x1, quantScale1, pregLoop);
+                if constexpr (std::is_same_v<Y, hifloat8_t>) {
+                    Cast<Y, float, castTraitF32Toh8>(y1, x1, pregLoop);
+                } else if constexpr (std::is_same_v<Y, int8_t>) {
+                    Cast<int16_t, float, castTraitF32ToI16>(y1Int16, x1, pregLoop);
+                    Cast<half, int16_t, castTraitI16ToF16>(y1Fp16, y1Int16, pregLoop);
+                    Cast<Y, half, castTraitF16ToI8>(y1, y1Fp16, pregLoop);
+                } else {
+                    Cast<Y, float, castTraitF32Tofp8>(y1, x1, pregLoop);
+                }
+                DataCopy<Y, StoreDist::DIST_PACK4_B32>(quantOutAddr2 + j * V_LENGTH, y1, pregLoop);
             }
-            normAddr += static_cast<uint32_t>(hiddenDimCeil);
-            outAddr1 += static_cast<uint32_t>(hiddenDimCeil);
         }
     }
-    if constexpr (OP_CODE == QUANT_OP_CODE) {
-        quantOutQueue.EnQue<Y>(quantOutLocal);
-        outQueue.FreeTensor(outLocal);
-    } else {
-        outQueue.EnQue<OUT_DTYPE>(outLocal);
-    }
+    
+    quantOutQueue.EnQue<Y>(quantOutLocal);
+    outQueue.FreeTensor(outLocal);
 }
 }  // namespace AdaLayerNormNS
 
