@@ -392,7 +392,7 @@ bool WeightQuantBatchMatmulV2BasicBlockTiling::GetInvalidFlagA16W4() const
             CeilDiv(basicBlockParam_.basicBlock.baseN * basicBlockParam_.l1Param.stepN, BUFF_NUM_2), BLOCK_CUBE);
         // a16w4场景要求BL1尾块可分给两个vector处理
         invalidFlag = invalidFlag || ((nBl1Tail > 0 && nBl1Tail <= nBubSize) ||
-                                      (nBl1TailBlockTail > 0 && nBl1TailBlockTail <= nBubSize));
+                                      (nBl1TailBlockTail > 0 && nBl1TailBlockTail <= nBubSize && nBl1TailBlockTail < basicBlockParam_.nSize));
     } else {
         invalidFlag = GetUbLoadSize() > platformParam_.ubSize * BITS_8;
         // 根据内轴是否minCacheline对齐做初步剪枝
