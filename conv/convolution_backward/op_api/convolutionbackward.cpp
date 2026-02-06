@@ -1795,9 +1795,10 @@ static aclnnStatus Conv3DBackpropFilterWithFlag(const aclTensor *input, const ac
   // useHf32Flag的值为0x40 : 表示HF32
   uint32_t execMode = useHf32 == 0x40 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
   if (useV2Flag) {
+    bool enableHf32 = (outBackprop->GetDataType() == DataType::DT_FLOAT) && (useHf32 == 0x40);
+ 	  OP_LOGD("conv3ddw: enableHf32 is: %d, useHf32 is %ld", enableHf32, useHf32);
     ret = ADD_TO_LAUNCHER_LIST_AICORE(Conv3DBackpropFilterV2, OP_INPUT(input, weightSize, outBackprop), OP_OUTPUT(output),
-    OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32),
-    OP_MODE(execMode));
+    OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, enableHf32, paddingString, useHf32), OP_MODE(execMode));
     OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
                                        "Conv3DBackpropFilterV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
   } else {
@@ -2063,17 +2064,17 @@ static aclnnStatus Conv3DBackpropInputWithFlag(const aclTensor *input, const acl
       }
   }
   if (useV2Flag) {
+    bool enableHf32 = (outBackprop->GetDataType() == DataType::DT_FLOAT) && (useHf32Flag == 0x40);
+ 	  OP_LOGD("conv3ddx: enableHf32 is: %d, useHf32Flag is %ld", enableHf32, useHf32Flag);
     ret = ADD_TO_LAUNCHER_LIST_AICORE(
       Conv3DBackpropInputV2, OP_INPUT(inputSize, weight, outBackprop), OP_OUTPUT(output),
-      OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32Flag),
-      OP_MODE(execMode));
+      OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, enableHf32, paddingString, useHf32Flag), OP_MODE(execMode));
     OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
                                        "Conv3DBackpropInputV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
   } else {
     ret = ADD_TO_LAUNCHER_LIST_AICORE(
       Conv3DBackpropInput, OP_INPUT(inputSize, weight, outBackprop), OP_OUTPUT(output),
-      OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32Flag),
-      OP_MODE(execMode));
+      OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32Flag), OP_MODE(execMode));
     OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
                                        "Conv3DBackpropInput ADD_TO_LAUNCHER_LIST_AICORE failed.");
   }

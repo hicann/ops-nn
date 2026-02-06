@@ -253,7 +253,7 @@ constexpr size_t kConv3DTransposeFilterIdx = 2;
 constexpr size_t kConv3DTransposePadsIdx = 1;
 constexpr size_t kConv3DTransposeGroupsIdx = 3;
 constexpr size_t kConv3DTransposeOutputPaddingIdx = 5;
-constexpr size_t kConv3DTransposePaddingIdx = 7;
+constexpr size_t kConv3DTransposePaddingIdx = 8;
 
 static bool GetConv3DTransposeOutputPadding(const gert::InferShapeContext* const context,
                                             ge::Format x_format, int64_t output_padding[3],

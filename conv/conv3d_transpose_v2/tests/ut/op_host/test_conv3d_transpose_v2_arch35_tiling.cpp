@@ -229,6 +229,7 @@ static void TestOneParamCase(const Conv3DTransposeV2TilingTestParam& param)
                            {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(param.groups)},
                            {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(param.data_format)},
                            {"output_padding", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.output_padding)},
+                           {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                            {"offset", Ops::NN::AnyValue::CreateFrom<int64_t>(param.offset)},
                            {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(param.padding)}})
                       .NodeInputTd(0, ge::DT_INT32, param.input_size_format, param.input_size_format)

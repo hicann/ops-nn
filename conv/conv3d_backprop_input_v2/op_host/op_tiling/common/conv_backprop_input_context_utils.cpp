@@ -81,8 +81,8 @@ constexpr size_t kDkCin1HkWkFRACTALZ3DIdx = 0;
 constexpr size_t kCo1FRACTALZ3DIdx = 1;
 constexpr size_t kCo0FRACTALZ3DIdx = 2;
 constexpr size_t kCin0FRACTALZ3DIdx = 3;
-constexpr size_t kPaddingConv3dBpInputIdx = 5;
-constexpr size_t kPaddingConv3dTransposeIdx = 7;
+constexpr size_t kPaddingConv3dBpInputIdx = 6;
+constexpr size_t kPaddingConv3dTransposeIdx = 8;
 constexpr size_t kPaddingExtendConvTransposeIdx = 9;
 
 constexpr int32_t kBlockSize = 16;
@@ -1441,21 +1441,17 @@ bool GetImplMode(Conv3dBpInputV2RunInfo &runInfoV2, const char* opName,
         return false
     );
     ge::DataType aDtype = inputDesc->GetDataType();
-    size_t idx = 6; // dx impl mode idx is 6
+    size_t enableHf32Index = 5U; // dx enablehf32 idx is 5
     if (opType == optiling::OpTypeV2::kConv3DTransposeV2) {
-        idx = 8U; // transpose impl mode idx is 8
-    } else {
-        idx = 6U; // dx impl mode idx is 6
+        enableHf32Index = 7U; // transpose enablehf32 idx is 7
     }
-    if (aDtype == ge::DT_FLOAT && idx < attrs->GetAttrNum()) {
-        const int32_t *precisionMode = attrs->GetAttrPointer<int32_t>(idx);
-        if (precisionMode != nullptr && *precisionMode != -1) {
-            runInfoV2.hf32_flag = ((static_cast<uint32_t>(*precisionMode) & static_cast<uint32_t>(0x40)) != 0U) ? 1 : 0; // 0x40: hf32 enable flag
-        } else {
-            OP_LOGW(opName, "impl mode is not support, so we set hf32 flag with 0 as default");
-            runInfoV2.hf32_flag = 0;
-        }
-    }
+    if (aDtype == ge::DT_FLOAT && enableHf32Index < attrs->GetAttrNum()) {
+        auto enableHf32Ptr = attrs->GetBool(enableHf32Index);
+        OP_CHECK_IF(enableHf32Ptr == nullptr, OP_LOGE(opName, "failed to get enable_hf32 attr from context"), return false);
+        bool enableHf32 = *enableHf32Ptr;
+        OP_LOGD(opName, "attr idx[%zu] enable_hf32 = %d", enableHf32Index, enableHf32);
+        runInfoV2.hf32_flag = static_cast<uint32_t>(enableHf32 ? 1 : 0);
+ 	  }
     return true;
 }
 

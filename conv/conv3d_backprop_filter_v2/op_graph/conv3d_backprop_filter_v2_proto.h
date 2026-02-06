@@ -67,6 +67,8 @@ namespace ge {
  * @li data_format: An optional string. The value must be one of ["NDHWC", "NCDHW"]. Defaults to "NDHWC".
  * The correspondence is as follows: batch(N), depth(D), height(H), width(W), channels(C).
  * Specify the data format of the x and out_backprop. \n
+ * @li enable_hf32: Optional. An optional bool parameter. Used to enable hf32 computation.
+ * If true, enable hf32 computation, otherwise, disable hf32 computation. Defaults to false. \n
 
 *@par Outputs:
  * y: A Tensor that has the type float32. The format is NCDHW or NDHWC or DHWCN.
@@ -84,6 +86,7 @@ REG_OP(Conv3DBackpropFilterV2)
     .ATTR(dilations, ListInt, {1, 1, 1, 1, 1})
     .ATTR(groups, Int, 1)
     .ATTR(data_format, String, "NDHWC")
+    .ATTR(enable_hf32, Bool, false)
     .OP_END_FACTORY_REG(Conv3DBackpropFilterV2)
 } // namespace ge
 

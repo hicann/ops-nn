@@ -37,8 +37,8 @@ namespace {
     constexpr size_t PADS_INDEX = 1;
     constexpr size_t DIALTIONS_INDEX = 2;
     constexpr size_t GROUPS_INDEX = 3;
-    constexpr size_t PADDING_INDEX = 5;
-    constexpr size_t PRECISION_MODE_INDEX = 6;
+    constexpr size_t ENABLE_HF32_INDEX = 5;
+    constexpr size_t PADDING_INDEX = 6;
 
     constexpr size_t DEFAULT_C0 = 16;
     constexpr size_t DEFAULT_FP32_C0 = 8;
@@ -224,12 +224,12 @@ bool SetGroupsAttrs(const gert::TilingContext *context, Conv3dBpFilterV2RunInfo 
         runInfoV2.cout1_g = (mag_factor * runInfoV2.co / groups + runInfoV2.k0 - 1) / runInfoV2.k0;
     }
     runInfoV2.hf32Flag = 0;
-    if (runInfoV2.a_dtype == ge::DT_FLOAT && (attrs->GetAttrNum() > PRECISION_MODE_INDEX)) {
-        const int32_t *precision_mode = attrs->GetAttrPointer<int32_t>(PRECISION_MODE_INDEX);
-        OP_CHECK_IF(precision_mode == nullptr, OP_LOGE(op_name, "get precision_mode is null"), return false);
-        // op_impl_mode_enum: 0x1: default 0x2: high_performance 0x4: high_precision 0x8: super_performance
-        // 0x10: support_of_bound_index  0x20: enable_float_32_execution  0x40: enable_hi_float_32_execution
-        runInfoV2.hf32Flag = static_cast<bool>(*precision_mode == 0x40) ? uint32_t(1) : uint32_t(0);
+    if (runInfoV2.a_dtype == ge::DT_FLOAT && (attrs->GetAttrNum() > ENABLE_HF32_INDEX)) {
+        auto enableHf32Ptr = attrs->GetBool(ENABLE_HF32_INDEX);
+        OP_CHECK_IF(enableHf32Ptr == nullptr, OP_LOGE(op_name, "get enable_hf32 attr is null"), return false);
+        bool enableHf32 = *enableHf32Ptr;
+        OP_LOGD(op_name, "attr idx[%zu] enable_hf32 = %d", ENABLE_HF32_INDEX, enableHf32);
+        runInfoV2.hf32Flag = static_cast<uint32_t>(enableHf32 ? 1 : 0);
     }
     return true;
 }

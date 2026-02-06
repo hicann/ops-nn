@@ -72,6 +72,11 @@
             "name": "data_format",
             "dtype": "string",
             "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
+            "value": null
           }
         ]
       },
@@ -145,6 +150,11 @@
           {
             "name": "data_format",
             "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
             "value": null
           }
         ]
@@ -220,6 +230,11 @@
             "name": "data_format",
             "dtype": "string",
             "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
+            "value": null
           }
         ]
       },
@@ -293,6 +308,11 @@
           {
             "name": "data_format",
             "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
             "value": null
           }
         ]
@@ -368,6 +388,11 @@
             "name": "data_format",
             "dtype": "string",
             "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
+            "value": null
           }
         ]
       },
@@ -441,6 +466,11 @@
           {
             "name": "data_format",
             "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
             "value": null
           }
         ]
@@ -516,6 +546,11 @@
             "name": "data_format",
             "dtype": "string",
             "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
+            "value": null
           }
         ]
       },
@@ -589,6 +624,11 @@
           {
             "name": "data_format",
             "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
             "value": null
           }
         ]
@@ -664,6 +704,11 @@
             "name": "data_format",
             "dtype": "string",
             "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
+            "value": null
           }
         ]
       },
@@ -737,6 +782,11 @@
           {
             "name": "data_format",
             "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
             "value": null
           }
         ]
@@ -812,6 +862,11 @@
             "name": "data_format",
             "dtype": "string",
             "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
+            "value": null
           }
         ]
       },
@@ -885,6 +940,11 @@
           {
             "name": "data_format",
             "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
             "value": null
           }
         ]
@@ -960,6 +1020,11 @@
             "name": "data_format",
             "dtype": "string",
             "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
+            "value": null
           }
         ]
       },
@@ -1033,6 +1098,11 @@
           {
             "name": "data_format",
             "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
             "value": null
           }
         ]
@@ -1108,6 +1178,11 @@
             "name": "data_format",
             "dtype": "string",
             "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
+            "value": null
           }
         ]
       },
@@ -1181,6 +1256,11 @@
           {
             "name": "data_format",
             "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
             "value": null
           }
         ]
@@ -1256,6 +1336,11 @@
             "name": "data_format",
             "dtype": "string",
             "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
+            "value": null
           }
         ]
       },
@@ -1329,6 +1414,11 @@
           {
             "name": "data_format",
             "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
             "value": null
           }
         ]
@@ -1404,6 +1494,11 @@
             "name": "data_format",
             "dtype": "string",
             "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
+            "value": null
           }
         ]
       },
@@ -1477,6 +1572,11 @@
           {
             "name": "data_format",
             "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
             "value": null
           }
         ]
@@ -1552,6 +1652,11 @@
             "name": "data_format",
             "dtype": "string",
             "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
+            "value": null
           }
         ]
       },
@@ -1625,6 +1730,11 @@
           {
             "name": "data_format",
             "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
             "value": null
           }
         ]
@@ -1700,6 +1810,11 @@
             "name": "data_format",
             "dtype": "string",
             "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
+            "value": null
           }
         ]
       },
@@ -1773,6 +1888,11 @@
           {
             "name": "data_format",
             "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
             "value": null
           }
         ]
@@ -1848,6 +1968,11 @@
             "name": "data_format",
             "dtype": "string",
             "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
+            "value": null
           }
         ]
       },
@@ -1921,6 +2046,11 @@
           {
             "name": "data_format",
             "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
             "value": null
           }
         ]
@@ -1996,6 +2126,11 @@
             "name": "data_format",
             "dtype": "string",
             "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
+            "value": null
           }
         ]
       },
@@ -2069,6 +2204,11 @@
           {
             "name": "data_format",
             "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
             "value": null
           }
         ]
@@ -2144,6 +2284,11 @@
             "name": "data_format",
             "dtype": "string",
             "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
+            "value": null
           }
         ]
       },
@@ -2217,6 +2362,11 @@
           {
             "name": "data_format",
             "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
             "value": null
           }
         ]
@@ -2292,6 +2442,11 @@
             "name": "data_format",
             "dtype": "string",
             "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
+            "value": null
           }
         ]
       },
@@ -2365,6 +2520,11 @@
           {
             "name": "data_format",
             "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
             "value": null
           }
         ]
@@ -2440,6 +2600,11 @@
             "name": "data_format",
             "dtype": "string",
             "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
+            "value": null
           }
         ]
       },
@@ -2513,6 +2678,11 @@
           {
             "name": "data_format",
             "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
             "value": null
           }
         ]
@@ -2588,6 +2758,11 @@
             "name": "data_format",
             "dtype": "string",
             "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
+            "value": null
           }
         ]
       },
@@ -2661,6 +2836,11 @@
           {
             "name": "data_format",
             "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
             "value": null
           }
         ]
@@ -2736,6 +2916,11 @@
             "name": "data_format",
             "dtype": "string",
             "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
+            "value": null
           }
         ]
       },
@@ -2809,6 +2994,11 @@
           {
             "name": "data_format",
             "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
             "value": null
           }
         ]
@@ -2884,6 +3074,11 @@
             "name": "data_format",
             "dtype": "string",
             "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
+            "value": null
           }
         ]
       },
@@ -2957,6 +3152,11 @@
           {
             "name": "data_format",
             "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "enable_hf32",
+            "dtype": "bool",
             "value": null
           }
         ]

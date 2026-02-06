@@ -60,6 +60,7 @@ public:
         this->Attr("data_format").AttrType(OPTIONAL).String("NDHWC");
         this->Attr("output_padding").AttrType(OPTIONAL).ListInt({0, 0, 0, 0, 0});
         this->Attr("offset_x").AttrType(OPTIONAL).Int(0);
+        this->Attr("enable_hf32").AttrType(OPTIONAL).Bool(false);
 
         OpAICoreConfig aicore_config;
         aicore_config.DynamicCompileStaticFlag(true)

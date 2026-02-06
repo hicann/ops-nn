@@ -83,6 +83,8 @@ namespace ge {
  * @li output_padding: Optional. The size will be added in the output shape.
  * Defaults to [0, 0, 0, 0, 0]. The N and C dimensions must be 0.
  * @li offset_x: Optional. Defaults to 0. Reserved. \n
+ * @li enable_hf32: Optional. An optional bool parameter. Used to enable hf32 computation.
+ * If true, enable hf32 computation, otherwise, disable hf32 computation. Defaults to false. \n
 
 *@par Outputs:
  * y: A tensor that has the type bfloat16, float16, float32, hifloat8, float8_e4m3fn. It has the same format as "x".
@@ -101,6 +103,7 @@ REG_OP(Conv3DTransposeV2)
     .ATTR(data_format, String, "NDHWC")
     .ATTR(output_padding, ListInt, {0, 0, 0, 0, 0})
     .ATTR(offset_x, Int, 0)
+    .ATTR(enable_hf32, Bool, false)
     .OP_END_FACTORY_REG(Conv3DTransposeV2)
 
 } // namespace ge

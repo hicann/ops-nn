@@ -108,6 +108,7 @@ TEST_P(Conv3DTransposeV2ProtoTest, general_cases)
                            {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(param.data_format)},
                            {"output_padding", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.output_padding)},
                            {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                           {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                            {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(param.padding)}})
                       .InputShapes({tensor, &x_shape, &filter_shape})
                       .OutputShapes({&y_shape})
