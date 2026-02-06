@@ -256,6 +256,9 @@ aclnnStatus aclnnAddmmWeightNz(
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnAddmmWeightNz默认确定性实现。
   - <term>Ascend 950PR/Ascend 950DT</term>: aclnnAddmWeightNz默认非确定性实现，不支持通过aclrtCtxSetSysParamOpt开启确定性。
 
+- 计算一致性说明
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnAddmmWeightNz默认非一致性实现，支持通过aclrtCtxSetSysParamOpt开启一致性。
+
 - 不支持mat1与mat2两个输入中一个输入为BFLOAT16，另一个输入为FLOAT或者FLOAT16的数据类型推导。
 
 

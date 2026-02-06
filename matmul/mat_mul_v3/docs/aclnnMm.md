@@ -228,6 +228,9 @@ aclnnStatus aclnnMm(
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnMm默认确定性实现。
   - <term>Ascend 950PR/Ascend 950DT</term>: aclnnMm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
+- 计算一致性说明
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnMm默认非一致性实现，支持通过aclrtCtxSetSysParamOpt开启一致性。
+
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
