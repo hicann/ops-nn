@@ -60,7 +60,7 @@ static bool CheckNotNull(const aclTensor *self, const aclScalar *beta, const acl
 
 static bool CheckDtype(const aclTensor *self, const aclScalar *beta, const aclScalar *threshold,
                        const aclTensor *out) {
-  auto DTYPE_SUPPORT_LIST = GetDtypeSupportListV2(ASCEND910B_DTYPE_SUPPORT_LIST, ASCEND910_DTYPE_SUPPORT_LIST);
+  auto DTYPE_SUPPORT_LIST = GetDtypeSupportListV1(ASCEND910B_DTYPE_SUPPORT_LIST, ASCEND910_DTYPE_SUPPORT_LIST);
   // 检查self的数据类型是否在Softplus算子的支持列表内
   OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
 

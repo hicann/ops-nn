@@ -393,7 +393,7 @@
     {"name": "LayerNormGrad", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"MaxPool3DWithArgmaxV2", "compute_units": ["ascend910b", "ascend910_93", "ascend950", "kirinx90", "kirin9030"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"MaxPool3DGradWithArgmax", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync" : false},
-    {"name":"AdaptiveMaxPool3DGrad", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync" : false},
+    {"name":"AdaptiveMaxPool3DGrad", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},
     {"name":"LinSpace", "compute_units": ["ascend910_93", "ascend910b", "ascend910", "ascend310p", "ascend950"], "auto_sync" : true},
     {"name":"ApplyCamePart3", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
     {"name":"BackgroundReplace", "compute_units": ["ascend310p"], "auto_sync" : true},
