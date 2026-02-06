@@ -21,12 +21,25 @@ extern "C" {
 /**
  * @brief aclnnSilu的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
+ * 算子功能：Silu激活函数
+ * @param [in] self: npu device侧的aclTensor，数据类型支持FLOAT32、FLOAT16、BFLOAT16，
+ * 且数据类型与out一致, shape与out相同。支持非连续的Tensor，数据格式支持ND。
+ * @param [out] out: npu device侧的aclTensor，数据类型支持FLOAT32、FLOAT16、BFLOAT16，
+ * 且数据类型与self一致, shape与self一致，支持非连续的Tensor，数据格式支持ND，
+ * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
+ * @param [out] executor: 返回op执行器，包含算子计算流程。
+ * @return aclnnStatus: 返回状态码。
  */
 ACLNN_API aclnnStatus aclnnSiluGetWorkspaceSize(const aclTensor* self, aclTensor* out, uint64_t* workspaceSize,
                                                 aclOpExecutor** executor);
 
 /**
  * @brief aclnnSilu的第二段接口，用于执行计算。
+ * @param [in] workspace: 在npu device侧申请的workspace内存起址。
+ * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnSiluGetWorkspaceSize获取。
+ * @param [in] executor: op执行器，包含了算子计算流程。
+ * @param [in] stream: acl stream流。
+ * @return aclnnStatus: 返回状态码。
  */
 ACLNN_API aclnnStatus aclnnSilu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
                                 aclrtStream stream);

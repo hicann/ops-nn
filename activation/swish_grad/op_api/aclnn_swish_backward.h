@@ -22,13 +22,13 @@ extern "C" {
  * @domain aclnn_ops_train
  * 算子功能：求Swish反向传播的梯度值
  * @param [in] gradOutput: Device侧的aclTensor，公式中的gradOutput。支持非连续的Tensor，数据格式支持ND，
- * gradOutput、self与gradInput的shape和数据类型一致。
+ * 数据类型支持FLOAT32、FLOAT16、BFLOAT16，gradOutput、self与gradInput的shape和数据类型一致。
  * @param [in] self: Device侧的aclTensor，公式中的x。支持非连续的Tensor，数据格式支持ND，gradOutput、
- * self与gradInput的shape和数据类型一致。
+ * 数据类型支持FLOAT32、FLOAT16、BFLOAT16，gradOutput、self与gradInput的shape和数据类型一致。
  * @param [in] betaOptional: Host侧的aclScalar，公式中的beta。数据类型需要是可转换为FLOAT的数据类型。
  * 当betaOptional为空指针时，默认值为1.0。
  * @param [out] gradInput: Device侧的aclTensor，公式中的gradInput。支持非连续的Tensor，数据格式支持ND，
- * gradOutput、self与gradInput的shape和数据类型一致。
+ * 数据类型支持FLOAT32、FLOAT16、BFLOAT16，gradOutput、self与gradInput的shape和数据类型一致。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
@@ -40,9 +40,9 @@ ACLNN_API aclnnStatus aclnnSwishBackwardGetWorkspaceSize(const aclTensor* gradOu
 /**
  * @brief aclnnSwishBackward的第二段接口，用于执行计算。
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnAcosGetWorkspaceSize获取。
- * @param [in] stream: acl stream流。
+ * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnSwishBackwardGetWorkspaceSize获取。
  * @param [in] executor: op执行器，包含了算子计算流程。
+ * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
 ACLNN_API aclnnStatus aclnnSwishBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,

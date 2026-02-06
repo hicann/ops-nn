@@ -58,7 +58,7 @@ static bool CheckDim(const aclTensor *self, const aclTensor *out) {
 static aclnnStatus CheckParams(const aclTensor *self, const aclScalar* betaOptional, const aclTensor *out) {
   CHECK_RET(CheckNotNull2Tensor(self, out), ACLNN_ERR_PARAM_NULLPTR);
 
-  auto supportList = GetDtypeSupportListV1(ASCEND910B_DTYPE_SUPPORT_LIST, ASCEND910_DTYPE_SUPPORT_LIST);
+  auto supportList = GetDtypeSupportListV2(ASCEND910B_DTYPE_SUPPORT_LIST, ASCEND910_DTYPE_SUPPORT_LIST);
   CHECK_RET(CheckDtypeValidActivation(self, out, supportList), ACLNN_ERR_PARAM_INVALID);
   CHECK_RET(CheckDtypeValidBetaToFloat(betaOptional), ACLNN_ERR_PARAM_INVALID);
 
