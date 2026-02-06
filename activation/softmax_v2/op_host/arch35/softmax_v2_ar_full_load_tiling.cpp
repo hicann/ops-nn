@@ -54,7 +54,7 @@ ge::graphStatus SoftmaxV2TilingAR::DoOpTiling()
     int64_t rLoopCount = CeilDiv(rAligned, vlFp32_);
 
     // 按a1分核
-    int64_t aBlockFactor = CeilDiv(a1_, static_cast<int64_t>(aicoreParams_.blockDim));
+    int64_t aBlockFactor = CeilDiv(a1_, static_cast<int64_t>(aicoreParams_.numBlocks));
     usedCoreNums_ = CeilDiv(a1_, aBlockFactor);
 
     ubFactor = ubFactor < aBlockFactor ? ubFactor : aBlockFactor;

@@ -109,7 +109,7 @@ static inline void Init(gert::TilingContext *context, ExpandIntoJaggedPermutePar
 
     param.oneTaskInputOffsetLen = SIZE;
     param.cacheLine = SIZE;
-    param.blockDim = param.coreNum;
+    param.numBlocks = param.coreNum;
     param.oneTaskLen = param.cacheLine / param.dtypeSize; 
     param.taskNum = GetCeilInt(param.permute, param.oneTaskInputOffsetLen); 
     param.numTail = param.permute - SIZE * (param.taskNum - 1);
@@ -130,7 +130,7 @@ static ge::graphStatus SetTilingData(gert::TilingContext *context, const ExpandI
 {
     ExpandIntoJaggedPermuteTilingData tilingData;
     tilingData.set_outputSize(param.outputSize);
-    context->SetBlockDim(param.blockDim);
+    context->SetBlockDim(param.numBlocks);
     tilingData.set_blockFactor(param.taskNum);
     tilingData.set_inputLen(param.permute);
     tilingData.set_offsetLen(param.permute + 1);
@@ -152,7 +152,7 @@ static inline void PrintTilingData(const gert::TilingContext* context, const Exp
     OP_LOGD("inputLen", " param.permute %ld", param.permute);
     OP_LOGD("oneTaskLen", " param.oneTaskLen %ld", param.oneTaskLen);
     OP_LOGD("oneTaskOffsetLen", " param.oneTaskInputOffsetLen %ld", param.oneTaskInputOffsetLen);
-    OP_LOGD("blockDim", " param.blockDim %ld", param.blockDim);
+    OP_LOGD("numBlocks", " param.numBlocks %ld", param.numBlocks);
     OP_LOGD("taskNum", " param.taskNum %ld" , param.taskNum);
     OP_LOGD("outputSize", " param.outputSize %ld", param.outputSize);
     OP_LOGD("numTail", " param.numTail %ld", param.numTail);

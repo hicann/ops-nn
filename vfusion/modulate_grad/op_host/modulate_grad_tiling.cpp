@@ -65,18 +65,18 @@ namespace optiling{
         OP_LOGD(context,"has_scale:%u.", tiling.has_scale);
         OP_LOGD(context,"has_shift:%u.", tiling.has_shift);
     }
-    void GenerateTilingData(ModulateGradTilingData* tiling, uint32_t blockDim){
+    void GenerateTilingData(ModulateGradTilingData* tiling, uint32_t numBlocks){
         uint32_t B = tiling->B;
         uint32_t D = tiling->D;
-        if (blockDim == 0){
+        if (numBlocks == 0){
             return ;
         }
-        blockDim = blockDim < B * D ? blockDim : B * D;
-        uint32_t splitBlock = blockDim / 2; 
+        numBlocks = numBlocks < B * D ? numBlocks : B * D;
+        uint32_t splitBlock = numBlocks / 2; 
         tiling -> splitB = (B < splitBlock) ? 1 : 0;
 
         if (tiling->splitB){
-            tiling->coresPerB = blockDim / B;
+            tiling->coresPerB = numBlocks / B;
             tiling->usedCores = tiling->coresPerB * B;
 
             uint32_t dPerCore = D / tiling -> coresPerB;
@@ -87,15 +87,15 @@ namespace optiling{
             tiling->tailNum = tiling-> coresPerB - remainderD;
             tiling->tailLength = dPerCore; 
         }else{
-            blockDim = blockDim < B ? blockDim : B;
+            numBlocks = numBlocks < B ? numBlocks : B;
             tiling->coresPerB = 1;
-            uint32_t bPerCore = B / blockDim;
-            tiling->usedCores = blockDim;
-            uint32_t remainderB = B % blockDim;
+            uint32_t bPerCore = B / numBlocks;
+            tiling->usedCores = numBlocks;
+            uint32_t remainderB = B % numBlocks;
 
             tiling->formerNum = (remainderB == 0) ? 0 : remainderB;
             tiling->formerLength = (remainderB == 0) ? 0 : bPerCore+1;
-            tiling->tailNum = (remainderB == 0)? blockDim : (blockDim - remainderB);
+            tiling->tailNum = (remainderB == 0)? numBlocks : (numBlocks - remainderB);
             tiling->tailLength = bPerCore; 
         }
     }

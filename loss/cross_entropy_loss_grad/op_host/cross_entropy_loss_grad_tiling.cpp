@@ -149,15 +149,15 @@ static void InitSplitInfo(gert::TilingContext* context) {
   uint64_t rowVal = ceLossGradTiling.get_rowVal();
   uint64_t frontCoreNum = GetDivRem(rowVal, coreNum) != 0ULL ? GetDivRem(rowVal, coreNum) : coreNum;
   uint64_t tailCoreNum = rowVal <= coreNum ? 0 : coreNum - frontCoreNum;
-  uint64_t blockDim = frontCoreNum + tailCoreNum;
+  uint64_t numBlocks = frontCoreNum + tailCoreNum;
   uint64_t frontRowNum = GetCeilInt(rowVal, coreNum);
   uint64_t tailRowNum = GetDiv(rowVal, coreNum);
   ceLossGradTiling.set_frontCoreNum(frontCoreNum);
   ceLossGradTiling.set_tailCoreNum(tailCoreNum);
-  ceLossGradTiling.set_usedCoreNum(blockDim);
+  ceLossGradTiling.set_usedCoreNum(numBlocks);
   ceLossGradTiling.set_frontRowNum(frontRowNum);
   ceLossGradTiling.set_tailRowNum(tailRowNum);
-  context->SetBlockDim(blockDim);
+  context->SetBlockDim(numBlocks);
 }
 
 static ge::graphStatus CELossGradCoreSplitInfo(gert::TilingContext* context,

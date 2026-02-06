@@ -241,12 +241,12 @@ ge::graphStatus SoftmaxV2TilingBase::GetPlatformInfo()
     auto platformInfoPtr = context_->GetPlatformInfo();
     if (platformInfoPtr == nullptr) {
         OP_LOGD(context_->GetNodeName(), "Entering into get core num from compile info.");
-        aicoreParams_.blockDim = static_cast<int32_t>(compileInfo->coreNum);
+        aicoreParams_.numBlocks = static_cast<int32_t>(compileInfo->coreNum);
         aicoreParams_.ubSize = static_cast<int64_t>(compileInfo->ubSize);
     } else {
         OP_LOGD(context_->GetNodeName(), "Entering into get core num from platform.");
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
-        aicoreParams_.blockDim = static_cast<int64_t>(ascendcPlatform.GetCoreNumAiv());
+        aicoreParams_.numBlocks = static_cast<int64_t>(ascendcPlatform.GetCoreNumAiv());
         uint64_t ubSizeTemp = 0;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizeTemp);
         aicoreParams_.ubSize = static_cast<int64_t>(ubSizeTemp);

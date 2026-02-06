@@ -122,10 +122,10 @@ ge::graphStatus ApplyFtrlRegbaseTiling::SetTilingData() {
     currentWorkspace[0] = SYS_WORKSPACE;
     tilingKey = GET_TPL_TILING_KEY(tiling_->elewiseTiling.scheMode);
     tilingContext_->SetTilingKey(tilingKey);
-    uint32_t blockDim = static_cast<uint32_t>(tiling_->elewiseTiling.blockNum);
-    OP_CHECK_IF(blockDim <= 0, OP_LOGE(tilingContext_, "Get blockDim failed"),
+    uint32_t numBlocks = static_cast<uint32_t>(tiling_->elewiseTiling.blockNum);
+    OP_CHECK_IF(numBlocks <= 0, OP_LOGE(tilingContext_, "Get numBlocks failed"),
                 return ge::GRAPH_FAILED);
-    tilingContext_->SetBlockDim(blockDim);
+    tilingContext_->SetBlockDim(numBlocks);
     return ge::GRAPH_SUCCESS;
 }
 

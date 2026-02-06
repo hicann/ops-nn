@@ -121,7 +121,7 @@ ge::graphStatus SoftmaxV2ARATiling::DoOpTiling()
 
     int64_t a0FactorMax = CeilDiv(a0_, a0TileBase_);
     int64_t totalTilesMax = a1_ * a0FactorMax;
-    int64_t a0InnerMax = CeilDiv(totalTilesMax, static_cast<int64_t>(aicoreParams_.blockDim));
+    int64_t a0InnerMax = CeilDiv(totalTilesMax, static_cast<int64_t>(aicoreParams_.numBlocks));
     int64_t a0Inner = a0InnerMax < factorMax ? a0InnerMax : factorMax;
     a0Inner = a0Inner < a0FactorMax ? a0Inner : a0FactorMax;
 
@@ -133,7 +133,7 @@ ge::graphStatus SoftmaxV2ARATiling::DoOpTiling()
 
     // 分核
     totalTiles_ = a1_ * a0Outer;
-    tilesPerCore_ = CeilDiv(totalTiles_, static_cast<int64_t>(aicoreParams_.blockDim));
+    tilesPerCore_ = CeilDiv(totalTiles_, static_cast<int64_t>(aicoreParams_.numBlocks));
     usedCoreNums_ = CeilDiv(totalTiles_, tilesPerCore_);
 
     tilingData_.set_totalTiles(totalTiles_);

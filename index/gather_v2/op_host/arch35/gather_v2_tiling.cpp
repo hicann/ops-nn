@@ -148,7 +148,7 @@ ge::graphStatus Gatherv2TilingBase::GetPlatformInfo() {
     OP_LOGD(opName_, "Get ubSize form ascendcPlatform is: %ld", ubSize_);
     OP_LOGD(opName_, "Get aivNum form ascendcPlatform is: %ld", aivNum_);
   }
-  aicoreParams_.blockDim = aivNum_;
+  aicoreParams_.numBlocks = aivNum_;
   return ge::GRAPH_SUCCESS;
 }
 

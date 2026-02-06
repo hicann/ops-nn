@@ -56,7 +56,7 @@ ge::graphStatus SoftmaxGradTilingARSmallR::DoOpTiling()
     int64_t tileA0Tail = a0New - tileA0Len * (a0Outer - 1);
 
     // 按核均分
-    int64_t tilesPerCore = Ops::Base::CeilDiv(a0Outer, static_cast<int64_t>(aicoreParams_.blockDim));
+    int64_t tilesPerCore = Ops::Base::CeilDiv(a0Outer, static_cast<int64_t>(aicoreParams_.numBlocks));
     usedCoreNums_ = Ops::Base::CeilDiv(a0Outer, tilesPerCore);
 
     tilingData_.set_totalTiles(a0Outer);

@@ -82,7 +82,7 @@ ge::graphStatus SoftmaxGradARARecomputeTiling::DoOpTiling()
     // 尽量占多核
     int64_t a0FactorMax = Ops::Base::CeilDiv(a0_, a0TileBase_);
     int64_t totalTilesMax = a1_ * a0FactorMax;
-    int64_t a0InnerMax = Ops::Base::CeilDiv(totalTilesMax, static_cast<int64_t>(aicoreParams_.blockDim));
+    int64_t a0InnerMax = Ops::Base::CeilDiv(totalTilesMax, static_cast<int64_t>(aicoreParams_.numBlocks));
     int64_t a0Inner = a0InnerMax < factorMax ? a0InnerMax : factorMax;
     a0Inner = a0Inner < a0FactorMax ? a0Inner : a0FactorMax;
 
@@ -92,7 +92,7 @@ ge::graphStatus SoftmaxGradARARecomputeTiling::DoOpTiling()
 
     // 不切R轴
     totalTiles_ = a1_ * a0Outer_;
-    tilesPerCore_ = Ops::Base::CeilDiv(totalTiles_, static_cast<int64_t>(aicoreParams_.blockDim));
+    tilesPerCore_ = Ops::Base::CeilDiv(totalTiles_, static_cast<int64_t>(aicoreParams_.numBlocks));
     usedCoreNums_ = Ops::Base::CeilDiv(totalTiles_, tilesPerCore_);
 
     tilingData_.set_totalTiles(totalTiles_);

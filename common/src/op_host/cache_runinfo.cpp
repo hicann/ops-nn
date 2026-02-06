@@ -25,7 +25,7 @@ CacheTilingContext::~CacheTilingContext()
 bool CacheTilingContext::Save(TilingContext& context)
 {
     tilingKey = context.GetTilingKey();
-    blockDim = context.GetBlockDim();
+    numBlocks = context.GetBlockDim();
     atomicCleanFlag = context.NeedAtomic();
     tilingCond = context.GetTilingCond();
     workspaceNum = context.GetWorkspaceNum();
@@ -71,7 +71,7 @@ bool CacheTilingContext::Save(TilingContext& context)
 bool CacheTilingContext::Load(TilingContext& context) const
 {
     context.SetTilingKey(tilingKey);
-    context.SetBlockDim(blockDim);
+    context.SetBlockDim(numBlocks);
     context.SetNeedAtomic(atomicCleanFlag);
     context.SetTilingCond(tilingCond);
 
@@ -104,7 +104,7 @@ bool CacheTilingContext::Load(TilingContext& context) const
 CacheTilingContext& CacheTilingContext::operator=(const CacheTilingContext& rhs)
 {
     tilingKey = rhs.tilingKey;
-    blockDim = rhs.blockDim;
+    numBlocks = rhs.numBlocks;
     atomicCleanFlag = rhs.atomicCleanFlag;
     tilingCond = rhs.tilingCond;
     tilingDataSize = rhs.tilingDataSize;
@@ -117,7 +117,7 @@ CacheTilingContext& CacheTilingContext::operator=(const CacheTilingContext& rhs)
 CacheTilingContext::CacheTilingContext(const CacheTilingContext& rhs)
 {
     tilingKey = rhs.tilingKey;
-    blockDim = rhs.blockDim;
+    numBlocks = rhs.numBlocks;
     atomicCleanFlag = rhs.atomicCleanFlag;
     tilingCond = rhs.tilingCond;
     tilingDataSize = rhs.tilingDataSize;

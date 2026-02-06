@@ -77,7 +77,7 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context)
     GetTilingKey(dtypeKey, tilingKey);
     context->SetTilingKey(tilingKey);
 
-    // set blockDim
+    // set numBlocks
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     auto coreNum = ascendcPlatform.GetCoreNumAiv();
     // ub size

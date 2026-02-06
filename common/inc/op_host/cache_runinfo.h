@@ -27,7 +27,7 @@ public:
 
 private:
     uint64_t tilingKey{0};
-    uint32_t blockDim{0};
+    uint32_t numBlocks{0};
     bool atomicCleanFlag{false};
     std::shared_ptr<char> tilingData;
     uint32_t tilingDataSize{0};

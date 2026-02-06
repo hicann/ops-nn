@@ -67,7 +67,7 @@ ge::graphStatus GatherElementsSimtTiling::GetPlatformInfo()
         OP_LOGE(opName_,
         "coreNum and ubSize should not be samller than 0, but got coreNum [%ld] and ubSize [%ld], please check.",
         coreNum_, ubSize_), return ge::GRAPH_FAILED);
-    aicoreParams_.blockDim = coreNum_;
+    aicoreParams_.numBlocks = coreNum_;
     aicoreParams_.ubSize = static_cast<int64_t>(ubSize_ - SIMT_CACHE_SIZE);
     OP_CHECK_IF((aicoreParams_.ubSize <= 0),
         OP_LOGE(opName_,

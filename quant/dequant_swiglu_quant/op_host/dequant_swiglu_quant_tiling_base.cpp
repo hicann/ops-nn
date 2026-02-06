@@ -195,7 +195,7 @@ ge::graphStatus DequantSwigluQuantTiling::GetPlatformInfo()
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     curShortSocName_ = ascendcPlatform.GetSocVersion();
     totalCore = ascendcPlatform.GetCoreNumAiv();
-    aicoreParams_.blockDim = totalCore;
+    aicoreParams_.numBlocks = totalCore;
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     aicoreParams_.ubSize = ubSizePlatForm;

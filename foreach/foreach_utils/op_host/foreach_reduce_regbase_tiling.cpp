@@ -254,27 +254,27 @@ ge::graphStatus ForeachReduceRegbaseTiling::DoOpTiling()
         sizePerElem <= 0, OP_LOGE(context_, "The datatype size is neg: %ld.", sizePerElem), return ge::GRAPH_FAILED);
     int64_t elementsPerBlock = SINGLE_CORE_PROCESS_DATA / sizePerElem;
 
-    blockDim_ = std::min<uint64_t>(aicoreParams_.blockDim, MAX_CORE_CONT_910D);
+    numBlocks_ = std::min<uint64_t>(aicoreParams_.numBlocks, MAX_CORE_CONT_910D);
     uint32_t tempCoreNum = Ops::Base::CeilDiv(totalDataCount_, elementsPerBlock);
-    if (tempCoreNum < blockDim_) {
-        blockDim_ = tempCoreNum;
+    if (tempCoreNum < numBlocks_) {
+        numBlocks_ = tempCoreNum;
     }
     // Divisible, representing the amount of data each core needs to process.
-    if (blockDim_ == 0) {
-        blockDim_ = 1;
+    if (numBlocks_ == 0) {
+        numBlocks_ = 1;
     }
     if (totalDataCount_ == 0) {
-        blockDim_ = 1;
+        numBlocks_ = 1;
         tensorStartList_[0] = 0;
         tensorEndList_[0] = 0;
         tensorStartOffsetList_[0] = 0;
         tensorEndOffsetList_[0] = -1;
     } else {
-        AssignDataToEachCore(blockDim_, elementsPerBlock);
+        AssignDataToEachCore(numBlocks_, elementsPerBlock);
     }
 
     // Reduce Op Addition
-    AssignTensorMiddleCountList(blockDim_);
+    AssignTensorMiddleCountList(numBlocks_);
 
     int64_t blockSize = Ops::Base::GetUbBlockSize(context_);
 
@@ -288,7 +288,7 @@ ge::graphStatus ForeachReduceRegbaseTiling::DoOpTiling()
     inputsTensorUbSize = Ops::Base::FloorAlign(inputsTensorUbSize, blockSize) / sizePerElem;
     foreachSoloTilingData_.set_inputsTensorUbSize(inputsTensorUbSize);
 
-    foreachSoloTilingData_.set_needCoreNum(blockDim_);
+    foreachSoloTilingData_.set_needCoreNum(numBlocks_);
     foreachSoloTilingData_.set_totalTensorCount(totalTensorCount_);
     foreachSoloTilingData_.set_tensorDataCountList(tensorDataCountList_);
     foreachSoloTilingData_.set_tensorStartList(tensorStartList_);
@@ -305,7 +305,7 @@ ge::graphStatus ForeachReduceRegbaseTiling::DoOpTiling()
 
 ge::graphStatus ForeachReduceRegbaseTiling::PostTiling()
 {
-    context_->SetBlockDim(blockDim_);
+    context_->SetBlockDim(numBlocks_);
     context_->SetScheduleMode(1); // 设置为batch mode模式，所有核同时启动
 
     // WorkspaceSize

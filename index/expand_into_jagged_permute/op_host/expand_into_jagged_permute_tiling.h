@@ -33,7 +33,7 @@ namespace optiling {
   int64_t coreNum = 0;
   int64_t oneTaskLen = 0;
   int64_t taskNum = 0;
-  int64_t blockDim = 0;
+  int64_t numBlocks = 0;
   int64_t tilingKey = 0;
   int64_t oneTaskInputOffsetLen = 0;
   int64_t cacheLine = 0;

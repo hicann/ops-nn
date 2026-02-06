@@ -35,7 +35,7 @@ struct ForeachCompileInfo {
 };
 
 struct ForeachSoloCompileInfo {
-    int64_t blockDim;
+    int64_t numBlocks;
     uint64_t ubSize;
     platform_ascendc::SocVersion socVersion;
 };

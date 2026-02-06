@@ -136,15 +136,15 @@ void CrossEntropyLossGradRegbaseTiling::InitSplitInfo() {
     // 分核
     int64_t frontCoreNum = GetMod(static_cast<int64_t>(rowVal), static_cast<int64_t>(totalCoreNum)) != 0 ? GetMod(static_cast<int64_t>(rowVal), static_cast<int64_t>(totalCoreNum)) : totalCoreNum;
     int64_t tailCoreNum = rowVal <= totalCoreNum ? 0 : totalCoreNum - frontCoreNum;
-    int64_t blockDim = frontCoreNum + tailCoreNum;
+    int64_t numBlocks = frontCoreNum + tailCoreNum;
     int64_t frontRowNum = Ops::Base::CeilDiv(rowVal, totalCoreNum);
     int64_t tailRowNum = Ops::Base::FloorDiv(rowVal, totalCoreNum);
     ceLossGradRegbaseTiling->frontCoreNum = frontCoreNum;
     ceLossGradRegbaseTiling->tailCoreNum = tailCoreNum;
-    ceLossGradRegbaseTiling->usedCoreNum = blockDim;
+    ceLossGradRegbaseTiling->usedCoreNum = numBlocks;
     ceLossGradRegbaseTiling->frontRowNum = frontRowNum;
     ceLossGradRegbaseTiling->tailRowNum = tailRowNum;
-    tilingContext->SetBlockDim(static_cast<uint64_t>(blockDim));
+    tilingContext->SetBlockDim(static_cast<uint64_t>(numBlocks));
 }
 
 ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetPlatform() {

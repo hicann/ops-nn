@@ -86,7 +86,7 @@ ge::graphStatus SoftmaxGradTilingARRecompute::DoOpTiling()
             VectorToString(xShape_).c_str(), reduceAxes_, a1_, r_, a0_);
 
     // 1、切a：按核均分
-    int64_t coreNum = static_cast<int64_t>(aicoreParams_.blockDim);
+    int64_t coreNum = static_cast<int64_t>(aicoreParams_.numBlocks);
     int64_t aPerCore = Ops::Base::CeilDiv(a1_, coreNum);
     usedCoreNums_ = Ops::Base::CeilDiv(a1_, aPerCore);
 

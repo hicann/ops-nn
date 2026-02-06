@@ -1679,7 +1679,7 @@ ge::graphStatus ForeachBaseClass::GetPlatformInfo()
     if (platformInfo != nullptr) {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
         socVersion = ascendcPlatform.GetSocVersion();
-        aicoreParams_.blockDim = ascendcPlatform.GetCoreNumAiv();
+        aicoreParams_.numBlocks = ascendcPlatform.GetCoreNumAiv();
         uint64_t ubSizePlatForm;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
         aicoreParams_.ubSize = ubSizePlatForm;
@@ -1687,7 +1687,7 @@ ge::graphStatus ForeachBaseClass::GetPlatformInfo()
         auto compileInfoPtr = context_->GetCompileInfo<ForeachSoloCompileInfo>();
         OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_, "compile info is null"), return ge::GRAPH_FAILED);
         socVersion = compileInfoPtr->socVersion;
-        aicoreParams_.blockDim = compileInfoPtr->blockDim;
+        aicoreParams_.numBlocks = compileInfoPtr->numBlocks;
         aicoreParams_.ubSize = compileInfoPtr->ubSize;
     }
 

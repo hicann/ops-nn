@@ -182,19 +182,19 @@ ge::graphStatus ForeachRegbaseTiling::DoOpTiling()
         sizePerElem <= 0, OP_LOGE(context_, "The datatype size is neg: %ld.", sizePerElem), return ge::GRAPH_FAILED);
     int64_t elementsPerBlock = SINGLE_CORE_PROCESS_DATA / sizePerElem;
 
-    blockDim_ = std::min<uint64_t>(aicoreParams_.blockDim, MAX_CORE_CONT_910D);
+    numBlocks_ = std::min<uint64_t>(aicoreParams_.numBlocks, MAX_CORE_CONT_910D);
     uint32_t tempCoreNum = Ops::Base::CeilDiv(totalDataCount_, elementsPerBlock);
-    if (tempCoreNum < blockDim_) {
-        blockDim_ = tempCoreNum;
+    if (tempCoreNum < numBlocks_) {
+        numBlocks_ = tempCoreNum;
     }
     if (totalDataCount_ == 0) {
-        blockDim_ = 1;
+        numBlocks_ = 1;
         tensorStartList_[0] = 0;
         tensorEndList_[0] = 0;
         tensorStartOffsetList_[0] = 0;
         tensorEndOffsetList_[0] = -1;
     } else {
-        AssignDataToEachCore(blockDim_, elementsPerBlock);
+        AssignDataToEachCore(numBlocks_, elementsPerBlock);
     }
 
     foreachSoloTilingData_.set_tensorDataCountList(tensorDataCountList_);
@@ -261,7 +261,7 @@ void ForeachRegbaseTiling::AssignDataToEachCore(int64_t needCoreNum, int64_t ele
 
 ge::graphStatus ForeachRegbaseTiling::PostTiling()
 {
-    context_->SetBlockDim(blockDim_);
+    context_->SetBlockDim(numBlocks_);
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
     currentWorkspace[0] = WORK_SPACE_SIZE;

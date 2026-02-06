@@ -205,13 +205,13 @@ static ge::graphStatus TilingCompute(gert::TilingContext* context)
         context->GetInputDesc(INPUT_V_IDX)->GetDataType() == ge::DT_FLOAT ? FP32_DTYPE_SIZE : FP16_BF16_DTYPE_SIZE;
     uint64_t frontCoreNum = totalDataNum % coreNum != 0 ? totalDataNum % coreNum : coreNum;
     uint64_t tailCoreNum = totalDataNum <= coreNum ? 0 : coreNum - frontCoreNum;
-    uint64_t blockDim = frontCoreNum + tailCoreNum;
+    uint64_t numBlocks = frontCoreNum + tailCoreNum;
     uint64_t coreCalcNum = (totalDataNum + coreNum - 1) / coreNum;
 
     fusedEmaAdamTiling.set_frontCoreNum(frontCoreNum);
     fusedEmaAdamTiling.set_tailCoreNum(tailCoreNum);
     fusedEmaAdamTiling.set_coreCalcNum(coreCalcNum);
-    context->SetBlockDim(blockDim);
+    context->SetBlockDim(numBlocks);
 
     uint64_t tBuffersize = TBUFFER_NUM * BYTE_ONE_BLK;
     uint64_t bufferSize = ubSize - tBuffersize;

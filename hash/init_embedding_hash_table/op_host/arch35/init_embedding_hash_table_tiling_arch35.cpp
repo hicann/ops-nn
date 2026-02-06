@@ -105,9 +105,9 @@ ge::graphStatus Tiling4InitEmbeddingHashTable(gert::TilingContext *context)
     OP_LOGD(context->GetNodeName(), "InitEmbeddingHashTable bucketLength : %ld", static_cast<int64_t>(bucketLength));
 
     int64_t threadDim = std::min(static_cast<uint32_t>(compileInfo->maxThread), MAX_THREAD);
-    int64_t blockDim = CeilDiv(static_cast<int64_t>(*bucketSize), threadDim);
-    blockDim = std::min(blockDim, compileInfo->coreNum);
-    context->SetBlockDim(blockDim);
+    int64_t numBlocks = CeilDiv(static_cast<int64_t>(*bucketSize), threadDim);
+    numBlocks = std::min(numBlocks, compileInfo->coreNum);
+    context->SetBlockDim(numBlocks);
 
     context->SetTilingKey(0);
     tiling.set_bucketSize(static_cast<int64_t>(*bucketSize));
