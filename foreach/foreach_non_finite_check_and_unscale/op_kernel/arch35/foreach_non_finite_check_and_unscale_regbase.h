@@ -176,14 +176,13 @@ __aicore__ inline void ForeachNonFiniteCheckAndUnscaleNDRegbase<T>::CopyIn(uint1
 {
     LocalTensor<T> copyInLT = copyInQueue_.AllocTensor<T>();
     if (dataCount % perBlockCount_) {
-        struct DataCopyParams copyParams = {1, 0, 0, 0};
-        copyParams.blockLen = dataCount * sizeof(T);
-        struct DataCopyPadParams padParams = {true, 0, 0, 0};
-        int64_t alignDataCount = CeilDivision(dataCount, static_cast<int64_t>(perBlockCount_)) * perBlockCount_;
-        padParams.rightPadding = alignDataCount - dataCount;
-        DataCopyPad(copyInLT, scaledGradsGM_[1ULL * index * maxDataCount_], copyParams, padParams);
+        DataCopyExtParams extParams{
+            static_cast<uint16_t>(1), static_cast<uint32_t>(dataCount * sizeof(T)), static_cast<uint32_t>(0),
+            static_cast<uint32_t>(0), 0};
+        DataCopyPadExtParams<T> padParams{true, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<T>(0.0)};
+        DataCopyPad(copyInLT, scaledGradsGM_[index * maxDataCount_], extParams, padParams);
     } else {
-        DataCopy(copyInLT, scaledGradsGM_[1ULL * index * maxDataCount_], dataCount);
+        DataCopy(copyInLT, scaledGradsGM_[index * maxDataCount_], dataCount);
     }
     copyInQueue_.EnQue(copyInLT);
 }
@@ -252,11 +251,12 @@ __aicore__ inline void ForeachNonFiniteCheckAndUnscaleNDRegbase<T>::CopyOut(uint
 {
     LocalTensor<T> copyOutLT = copyOutQueue_.DeQue<T>();
     if (dataCount % perBlockCount_) {
-        struct DataCopyParams copyParams = {1, 0, 0, 0};
-        copyParams.blockLen = dataCount * sizeof(T);
-        DataCopyPad(scaledGradsGM_[1ULL * index * maxDataCount_], copyOutLT, copyParams);
+        DataCopyExtParams extParams{
+            static_cast<uint16_t>(1), static_cast<uint32_t>(dataCount * sizeof(T)), static_cast<uint32_t>(0),
+            static_cast<uint32_t>(0), 0};
+        DataCopyPad(scaledGradsGM_[index * maxDataCount_], copyOutLT, extParams);
     } else {
-        DataCopy(scaledGradsGM_[1ULL * index * maxDataCount_], copyOutLT, dataCount);
+        DataCopy(scaledGradsGM_[index * maxDataCount_], copyOutLT, dataCount);
     }
 
     copyOutQueue_.FreeTensor(copyOutLT);
