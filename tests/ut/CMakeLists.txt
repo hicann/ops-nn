@@ -45,8 +45,9 @@ if (ENABLE_COVERAGE)
         set(_ops_cov_data ${_ops_cov_report}/cpp_utest/ops.info)
         message(STATUS "GENERATE_CPP_COV is ${GENERATE_CPP_COV}")
         add_custom_command(
-                TARGET generate_ops_cpp_cov
-                COMMAND ${GENERATE_CPP_COV} ${_ops_capture_path} ${_ops_cov_data} ${_ops_cov_html}
+            TARGET generate_ops_cpp_cov
+            POST_BUILD
+            COMMAND bash ${GENERATE_CPP_COV} ${_ops_capture_path} ${_ops_cov_data} ${_ops_cov_html}
         )
     endif()
 endif ()
