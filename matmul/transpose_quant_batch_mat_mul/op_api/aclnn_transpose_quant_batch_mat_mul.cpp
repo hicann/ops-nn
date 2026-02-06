@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -114,15 +114,15 @@ static bool CheckPermValid(const aclIntArray* permX1, const aclIntArray* permX2,
     auto yTranspose = ((*permY)[0] == 1 && (*permY)[1] == 0 && (*permY)[2] == 2);     // 1 0 2
 
     if (!x1Transpose) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x1 for ASCEND950 should be [1, 0, 2].");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x1 for DAV_3510 should be [1, 0, 2].");
         return false;
     }
     if (!x2Transpose) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x2 for ASCEND950 should be [0, 1, 2].");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x2 for DAV_3510 should be [0, 1, 2].");
         return false;
     }
     if (!yTranspose) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of y for ASCEND950 should be [1, 0, 2].");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of y for DAV_3510 should be [1, 0, 2].");
         return false;
     }
     return true;
@@ -167,9 +167,9 @@ inline static aclnnStatus CheckParams(
     int32_t dtype, const aclIntArray* permX1, const aclIntArray* permX2, const aclIntArray* permY,
     int32_t batch_split_factor)
 {
-    // Only support 950
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Only support ASCEND950");
+    // Only support DAV_3510
+    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Only support DAV_3510");
         return ACLNN_ERR_PARAM_INVALID;
     }
 

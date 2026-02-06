@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -21,28 +21,33 @@ namespace ge {
 /**
 * @brief Multiplies matrix "a" by matrix "b", producing "a @ b". \n
 * @par Inputs:
-* Four inputs, including:
+* Five inputs, including:
 * @li x1: A matrix tensor. Must be one of the following types:
-* float32, float16, bfloat16. 3D. Has format ND.
+* float8_e4m3fn, float8_e5m2. 3D. Has format ND.
 * @li x2: A matrix tensor. Must be one of the following types:
-* float32, float16, bfloat16. 3D. Has format ND.
+* float8_e4m3fn, float8_e5m2. 3D. Has format ND.
 * @li bias: An optional tensor. Bias for batchmatmul. Must be one of the following types:
 * float32, float16, bfloat16. 1D. Has format ND.
 * @li x1_scale: A matrix tensor, quantization parameter.
-             Must be one of the following types: uint64, int64. The format
-             supports ND. The shape is 1D (t,), with t equal to b*n, where b, n is the same as that of x2.
+             Must be one of the following types: float32. The format
+             supports ND. The shape is 1D (t,), with t equal to m, where m is the same as that of x1.
+* @li x2_scale: A matrix tensor, quantization parameter.
+             Must be one of the following types: float32. The format
+             supports ND. The shape is 1D (t,), with t equal to n, where n is the same as that of x2.
 
 * @par Attributes:
-* Four attributes, including:
-* @li perm_x1: A list int. "x1" is permuted to shape [B, M, K] before multiplication, the default value is no permutation.
-* @li perm_x2: A list int. "x2" is permuted to shape [B, K, N] before multiplication, the default value is no permutation.
-* @li perm_y: A list int. "y" is permuted after multiplication.
-* @li enable_hf32: An optional bool. If True, enable enable_hi_float_32_execution.
+* Six attributes, including:
+* @li dtype: An int. Declare the output type, supports  1(float16), 27(bfloat16). Default: 1(float16).
+* @li group_size: An optional int. Indicating the ratio between x1_scale/x2_scale and x1/x2 in group dequantization. Default to be 0.
+* @li perm_x1: A list int. "x1" is permuted to shape [B, M, K] before multiplication, the default value is [1, 0, 2].
+* @li perm_x2: A list int. "x2" is permuted to shape [B, K, N] before multiplication, the default value is [0, 1, 2].
+* @li perm_y: A list int. "y" is permuted after multiplication, the default value is [1, 0, 2].
 * @li batch_split_factor: An optional int. Declares factor of output_batch. Default to be 1.
 
 * @par Outputs:
-* y: The result matrix tensor. 3D. Must be one of the following
-* types: float32, float16, int8, bfloat16. 3D. Has format ND. \n
+* One output, including:
+* y: A matrix Tensor. Must be one of the following types: float16, bfloat16. 
+  The format supports ND. The shape dim must be 3D. \n
 */
 REG_OP(TransposeQuantBatchMatMul)
     .INPUT(x1, TensorType({DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN}))
@@ -53,9 +58,9 @@ REG_OP(TransposeQuantBatchMatMul)
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_BF16}))
     .ATTR(dtype, Int, 1)
     .ATTR(group_size, Int, 0)
-    .ATTR(perm_x1, ListInt, {})
-    .ATTR(perm_x2, ListInt, {})
-    .ATTR(perm_y, ListInt, {})
+    .ATTR(perm_x1, ListInt, {1, 0, 2})
+    .ATTR(perm_x2, ListInt, {0, 1, 2})
+    .ATTR(perm_y, ListInt, {1, 0, 2})
     .ATTR(batch_split_factor, Int, 1)
     .OP_END_FACTORY_REG(TransposeQuantBatchMatMul)
 } // namespace ge
