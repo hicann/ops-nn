@@ -312,7 +312,7 @@ __aicore__ inline void AddExample<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR z, cons
     inputGMX.SetGlobalBuffer((__gm__ T*)x + blockLength_ * AscendC::GetBlockIdx(), blockLength_);
     ...
     // 3.3 初始化队列长度
-    pipe.InitBuffer(inputQueueX, BUFFER_NUM, tileLength_ * sizeof(T));
+    pipe.InitBuffer(inputQueueX_, BUFFER_NUM, tileLength_ * sizeof(T));
     ...
 }
 

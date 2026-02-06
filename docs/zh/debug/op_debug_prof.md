@@ -155,7 +155,7 @@
    
    之后进入算子可执行文件所在目录，执行如下命令：
    ```bash
-   msprof op simulator --output=$PWD/pipline_auto --kernel-name"AddExample" ./test_aclnn_add_example
+   msprof op simulator --output=$PWD/pipeline_auto --kernel-name"AddExample" ./test_aclnn_add_example
    ```
    采集结果在本项目`$PWD/pipeline_auto/OPPROF_**`目录中。
    其中流水相关文件路径为`OPPROF**/simulator/visualize_data.bin`，可以借助[MindStudio Insight](https://www.hiascend.com/document/redirect/MindStudioInsight)工具查看。
