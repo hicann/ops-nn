@@ -176,9 +176,8 @@ void ApplyTopKTopPWithSortedTiling::SetTilingKey() {
     tilingKey_ += onlyTopK_;
     tilingKey_ += onlyTopP_;
     tilingcontext->SetTilingKey(tilingKey_);
-    if (tilingKey_ == ONLY_TOP_P_KEY){
-        tilingcontext->SetScheduleMode(BATCH_MODE);
-    }
+    tilingcontext->SetScheduleMode(BATCH_MODE);
+
 }
 
 void ApplyTopKTopPWithSortedTiling::GetUsedCore()
@@ -261,7 +260,7 @@ ge::graphStatus ApplyTopKTopPWithSortedTiling::RunKernelTiling()
     OP_LOGD(opName_, "tilingKey: %u.", tilingKey_);
     uint32_t syncWorkspaceSize = SYS_WORKSPACESIZE;
     size_t* currentWorkspace = tilingcontext->GetWorkspaceSizes(1);
-    currentWorkspace[0] = onlyTopP_ > 0 ? syncWorkspaceSize + batchSize_ * vocabSize_ * FLOAT_BYTES : syncWorkspaceSize;
+    currentWorkspace[0] = onlyTopP_ > 0 ? syncWorkspaceSize + batchSize_ * vocabSize_ * FLOAT_BYTES : syncWorkspaceSize + batchSize_ * FLOAT_BYTES;
 
     tilingData.SaveToBuffer(tilingcontext->GetRawTilingData()->GetData(),
                             tilingcontext->GetRawTilingData()->GetCapacity());

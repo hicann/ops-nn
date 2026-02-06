@@ -25,12 +25,12 @@ extern "C" __global__ __aicore__ void apply_top_k_top_p_with_sorted(GM_ADDR sort
     GET_TILING_DATA(tilingData, tiling);
     if (TILING_KEY_IS(0)) {
         ApplyTopKTopPWithSortedOp::ApplyTopKTopPWithSorted<DTYPE_OUT, float, DTYPE_OUT> op;
-        op.InitTilingData(tilingData, sorted_value, sorted_indices, p, k, out);
+        op.InitTilingData(tilingData, sorted_value, sorted_indices, p, k, out, workSpace);
         op.InitBuffer(&pipe);
         op.Process();
     } else if (TILING_KEY_IS(1)) {
         ApplyTopKTopPWithSortedOp::ApplyTopKTopPWithSorted<DTYPE_OUT, float, DTYPE_OUT> op;
-        op.InitTilingData(tilingData, sorted_value, sorted_indices, p, k, out);
+        op.InitTilingData(tilingData, sorted_value, sorted_indices, p, k, out, workSpace);
         op.InitBuffer(&pipe);
         op.ProcessTopK();
     } else if (TILING_KEY_IS(2)) {
