@@ -117,7 +117,9 @@ function(gen_aclnn_classify host_obj prefix ori_out_srcs ori_out_headers opbuild
     add_parent_path("${ACLNNINNER_EXTRA_HEADERS}" PARENT_ACLNNINNER_EXTRA_HEADERS)
 
     set(${opbuild_out_srcs} ${ori_out_srcs} ${out_srcs} ${PARENT_ACLNN_EXTRA_SRCS} ${PARENT_ACLNNINNER_EXTRA_SRCS} PARENT_SCOPE)
-    set(${opbuild_out_headers} ${ori_out_headers} ${out_headers} ${PARENT_ACLNN_EXTRA_HEADERS} ${PARENT_ACLNNINNER_EXTRA_HEADERS} PARENT_SCOPE)
+    if("${prefix}" STREQUAL "aclnn")
+      set(${opbuild_out_headers} ${ori_out_headers} ${out_headers} ${PARENT_ACLNN_EXTRA_HEADERS} ${PARENT_ACLNNINNER_EXTRA_HEADERS} PARENT_SCOPE)
+    endif()
   endif()
 endfunction()
 
