@@ -15,7 +15,8 @@
 #ifndef MAX_POOL_V3_COMMON_H_
 #define MAX_POOL_V3_COMMON_H_
 
-#include "kernel_operator.h"
+#include "kernel_vec_intf.h"
+#include "kernel_micro_intf.h"
 #include "op_kernel/platform_util.h"
 #include "op_kernel/math_util.h"
 

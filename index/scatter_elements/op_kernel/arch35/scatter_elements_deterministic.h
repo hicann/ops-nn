@@ -16,6 +16,8 @@
 #define ASCENDC_SCATTER_ELEMENTS_DETERMINISTIC_H_
 
 #include "kernel_operator.h"
+#include "basic_api/kernel_basic_intf.h"
+#include "adv_api/sort/sort.h"
 
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"

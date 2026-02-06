@@ -20,6 +20,7 @@
 #endif
 
 #include "kernel_operator.h"
+#include "basic_api/kernel_vec_intf.h"
 
 #ifdef __DAV_FPGA__
 constexpr uint32_t THREAD_NUM_LAUNCH_BOUND = 512;

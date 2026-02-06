@@ -16,6 +16,7 @@
 #define GATHER_V2_AFTER_GATHER_FULL_LOAD
 
 #include "kernel_operator.h"
+#include "basic_api/kernel_vec_intf.h"
 #include "op_kernel/platform_util.h"
 
 #ifdef __DAV_FPGA__

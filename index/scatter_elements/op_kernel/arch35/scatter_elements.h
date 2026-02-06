@@ -16,6 +16,8 @@
 #define ASCENDC_SCATTER_ELEMENTS_H_
 
 #include "kernel_operator.h"
+#include "basic_api/kernel_basic_intf.h"
+#include "micro_api/kernel_micro_intf.h"
 
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"

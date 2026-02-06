@@ -19,7 +19,8 @@
 #define K_MAX_SHAPE_DIM 0
 #endif
 
-#include "kernel_operator.h"
+#include "basic_api/kernel_vec_intf.h"
+#include "micro_api/kernel_micro_intf.h"
 #include "op_kernel/platform_util.h"
 
 namespace gatherv2 {
