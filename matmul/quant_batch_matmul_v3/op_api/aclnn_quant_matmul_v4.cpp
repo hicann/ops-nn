@@ -1374,6 +1374,9 @@ static aclnnStatus PreMatmulCalcProcess(TupleTensor &mandatoryTensors, TupleOpti
     auto ret = WeightNZCaseProcess(x2, transposeX2, executor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     if (isA8W4Float(x1, x2)) {
+        bool tempTransposeValue = false;
+        CHECK_RET(TensorContiguousProcess(perTokenScale, tempTransposeValue, executor), ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(TensorContiguousProcess(scale, tempTransposeValue, executor), ACLNN_ERR_INNER_NULLPTR);
         CHECK_RET(
             CheckInputAttrExistence(boolsTrans, mandatoryTensors, optionalTensors),
             ACLNN_ERR_PARAM_INVALID);
