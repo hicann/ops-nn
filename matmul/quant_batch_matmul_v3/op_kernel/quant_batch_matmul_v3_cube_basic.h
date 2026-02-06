@@ -61,7 +61,7 @@ __aicore__ inline void QuantBatchMatmulV3BaseKernel<TemplateBasicValue>::Init(
     const QuantBatchMatmulV3TilingData *__restrict tilingData, TPipe *tPipe)
 {
     block_.Init(tilingData);
-    update_.template Init<x1Format, x2Format, aTrans, bTrans>(&tilingData->matmulTiling, block_.params_);
+    update_.template Init<x1Format, x2Format, aTrans, bTrans, x1Type, x2Type>(&tilingData->matmulTiling, block_.params_);
     pipe_ = tPipe;
     isPerTensor_ = tilingData->params.isPerTensor;
     InitInputs(x1, x2, scale, bias, y);
@@ -120,7 +120,7 @@ __aicore__ inline void QuantBatchMatmulV3BaseKernel<TemplateBasicValue>::OneTile
 {
     for (uint64_t j = 0; j < block_.realRound_; j++) {
         // 更新此次基本块的大小和输入输出地址
-        update_.template UpdateBlockParamsAndCalcGmOffset<x1Format, x2Format, aTrans, bTrans>(block_.params_, offset_,
+        update_.template UpdateBlockParamsAndCalcGmOffset<x1Format, x2Format, aTrans, bTrans, x1Type, x2Type>(block_.params_, offset_,
                                                                                               mTileIndex, nTileIndex);
 
         MMCompute();

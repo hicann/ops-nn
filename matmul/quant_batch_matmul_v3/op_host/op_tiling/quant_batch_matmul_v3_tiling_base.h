@@ -16,6 +16,7 @@
 #ifndef QUANT_BATCH_MATMUL_V3_TILING_BASE_H
 #define QUANT_BATCH_MATMUL_V3_TILING_BASE_H
 #include <memory>
+#include <set>
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
 #include "quant_batch_matmul_v3_compile_info.h"
@@ -183,6 +184,8 @@ protected:
     bool CheckShapeInRangeForMandtoryInputs(size_t x1ShapeLen, size_t x2ShapeLen) const;
     bool CheckShape4WeightNz() const;
     bool CheckStorageShape4WeightNz(const gert::Shape &x2StorageShape, size_t &x2StorageDim) const;
+    bool CheckStorageShape4WeightNzDimAlignment(uint64_t innerDim, uint64_t outerDim, uint64_t x2StorageLastThirdDim,
+        uint64_t x2StorageLastFourthDim) const;
     void SetTransAttr(QuantBatchMatmulV3Trans &trans) const;
     virtual bool SetPlatformInfoForTiling();
 
@@ -238,7 +241,8 @@ protected:
     static constexpr size_t LAST_FOURTH_DIM_INDEX = 4;
     static constexpr size_t WEIGHTNZ_STORAGE_MIN_DIM = 4;
     static constexpr size_t WEIGHTNZ_STORAGE_MAX_DIM = 8;
-    static constexpr uint64_t WEIGHTNZ_STORAGE_LAST_DIM = 32UL;
+    static constexpr uint64_t WEIGHTNZ_STORAGE_LAST_DIM_32 = 32UL;
+    static constexpr uint64_t WEIGHTNZ_STORAGE_LAST_DIM_64 = 64UL;
     static constexpr uint64_t WEIGHTNZ_STORAGE_PENULTIMATE_DIM = 16UL;
 
     // 新增数据成员请注意：如果是在GetShapeAttrsInfo函数过程中获取的，请放到QuantBatchMatmulInfo结构体中，或者保证在DoOpTiling赋值

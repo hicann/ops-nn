@@ -347,10 +347,12 @@ the dimension of x2 must be 2."), return false);
 bool QuantBatchMatmulV3TilingBase::CheckStorageShape4WeightNz(const gert::Shape &x2StorageShape,
                                                               size_t &x2StorageDim) const
 {
+    std::set<uint64_t> weightStorageLastDims = {WEIGHTNZ_STORAGE_LAST_DIM_32, WEIGHTNZ_STORAGE_LAST_DIM_64}; 
     OP_TILING_CHECK(
-        x2StorageShape[x2StorageDim - LAST_FIRST_DIM_INDEX] != WEIGHTNZ_STORAGE_LAST_DIM,
+        weightStorageLastDims.find(x2StorageShape[x2StorageDim - LAST_FIRST_DIM_INDEX]) == weightStorageLastDims.end(),
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "When format of x2 is FRACTAL_NZ, the last first dim of x2 should be 32, actual is %lld.",
+                              "When format of x2 is FRACTAL_NZ, the last first dim of x2 should be 32 for int8 \
+                              and 64 for int4, actual is %lld.",
                               x2StorageShape[x2StorageDim - LAST_FIRST_DIM_INDEX]),
         return false);
     OP_TILING_CHECK(x2StorageShape[x2StorageDim - LAST_SECOND_DIM_INDEX] != WEIGHTNZ_STORAGE_PENULTIMATE_DIM,
@@ -362,36 +364,44 @@ bool QuantBatchMatmulV3TilingBase::CheckStorageShape4WeightNz(const gert::Shape 
     auto x2StorageLastThirdDim = static_cast<uint64_t>(x2StorageShape[x2StorageDim - LAST_THIRD_DIM_INDEX]);
     auto x2StorageLastFourthDim = static_cast<uint64_t>(x2StorageShape[x2StorageDim - LAST_FOURTH_DIM_INDEX]);
     if (!inputParams_.transB) {
-        OP_TILING_CHECK(x2StorageLastThirdDim != ops::CeilDiv(inputParams_.kSize, WEIGHTNZ_STORAGE_PENULTIMATE_DIM),
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "When format of x2 is FRACTAL_NZ, the last third dim of x2 should be \
-ceil(k/16) = %lu, actual is %lu.",
-                                              ops::CeilDiv(inputParams_.kSize, WEIGHTNZ_STORAGE_PENULTIMATE_DIM),
-                                              x2StorageLastThirdDim),
-                        return false);
-        OP_TILING_CHECK(
-            x2StorageLastFourthDim != ops::CeilDiv(inputParams_.nSize, WEIGHTNZ_STORAGE_LAST_DIM),
+        OP_TILING_CHECK(!CheckStorageShape4WeightNzDimAlignment(inputParams_.kSize, inputParams_.nSize,
+            x2StorageLastThirdDim, x2StorageLastFourthDim),
             CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                  "When format of x2 is FRACTAL_NZ, the last fourth dim of x2 should be ceil(n/32) \
-= %lu, actual is %lu.",
-                                  ops::CeilDiv(inputParams_.nSize, WEIGHTNZ_STORAGE_LAST_DIM), x2StorageLastFourthDim),
-            return false);
+                "Dim check does not pass, please read the error report above"),
+            return false;
+        );
     } else {
-        OP_TILING_CHECK(x2StorageLastThirdDim != ops::CeilDiv(inputParams_.nSize, WEIGHTNZ_STORAGE_PENULTIMATE_DIM),
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "When format of x2 is FRACTAL_NZ, the last third dim of x2 should be \
-ceil(n/16) = %lu, actual is %lu.",
-                                              ops::CeilDiv(inputParams_.nSize, WEIGHTNZ_STORAGE_PENULTIMATE_DIM),
-                                              x2StorageLastThirdDim),
-                        return false);
-        OP_TILING_CHECK(
-            x2StorageLastFourthDim != ops::CeilDiv(inputParams_.kSize, WEIGHTNZ_STORAGE_LAST_DIM),
+        OP_TILING_CHECK(!CheckStorageShape4WeightNzDimAlignment(inputParams_.nSize, inputParams_.kSize,
+            x2StorageLastThirdDim, x2StorageLastFourthDim),
             CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                  "When format of x2 is FRACTAL_NZ, the last fourth dim of x2 should be ceil(k/32) \
-= %lu, actual is %lu.",
-                                  ops::CeilDiv(inputParams_.kSize, WEIGHTNZ_STORAGE_LAST_DIM), x2StorageLastFourthDim),
-            return false);
+                "Dim check does not pass, please read the error report above"),
+            return false;
+        );
     }
+    return true;
+}
+
+bool QuantBatchMatmulV3TilingBase::CheckStorageShape4WeightNzDimAlignment(uint64_t innerDim, uint64_t outerDim,
+    uint64_t x2StorageLastThirdDim, uint64_t x2StorageLastFourthDim) const
+{
+    bool isNotLastThirdDimAligned = (x2StorageLastThirdDim != ops::CeilDiv(innerDim, WEIGHTNZ_STORAGE_PENULTIMATE_DIM));
+    bool isNotLastFourthDimAligned = (x2StorageLastFourthDim != ops::CeilDiv(outerDim, WEIGHTNZ_STORAGE_LAST_DIM_32)) &&
+            (x2StorageLastFourthDim != ops::CeilDiv(outerDim, WEIGHTNZ_STORAGE_LAST_DIM_64));
+    OP_TILING_CHECK(isNotLastThirdDimAligned,
+        CUBE_INNER_ERR_REPORT(inputParams_.opName,
+            "When format of x2 is FRACTAL_NZ, the last third dim of x2 should be ceil(k/16) = %lu, actual is %lu.",
+                ops::CeilDiv(innerDim, WEIGHTNZ_STORAGE_PENULTIMATE_DIM),
+                x2StorageLastThirdDim),
+            return false);
+    OP_TILING_CHECK(
+        isNotLastFourthDimAligned,
+        CUBE_INNER_ERR_REPORT(inputParams_.opName,
+            "When format of x2 is FRACTAL_NZ, the last fourth dim of x2 should be ceil(n/32) \
+                = %lu for int8, or ceil(n/64) = %lu for int4, actual is %lu.",
+                ops::CeilDiv(outerDim, WEIGHTNZ_STORAGE_LAST_DIM_32),
+                ops::CeilDiv(outerDim, WEIGHTNZ_STORAGE_LAST_DIM_64),
+                x2StorageLastFourthDim),
+        return false);
     return true;
 }
 

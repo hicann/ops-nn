@@ -31,13 +31,13 @@ struct QBmmUpdateInfo {
 class QuantBatchMatmulV3Update {
 public:
     __aicore__ inline QuantBatchMatmulV3Update() {}
-    template <int x1Format, int x2Format, bool aTrans, bool bTrans>
+    template <int x1Format, int x2Format, bool aTrans, bool bTrans, typename x1Type=int8_t, typename x2Type=int8_t>
     __aicore__ inline void Init(const TCubeTiling *mmTiling, const QBmmBaseBlockArgs &params);
-    template <int x1Format, int x2Format, bool aTrans, bool bTrans>
+    template <int x1Format, int x2Format, bool aTrans, bool bTrans, typename x1Type=int8_t, typename x2Type=int8_t>
     __aicore__ inline void UpdateBlockParamsAndCalcGmOffset(QBmmBaseBlockArgs &params, QBmmBlockOffset &offset,
                                                             uint64_t mTileIndex, uint64_t nTileIndex);
     __aicore__ inline void UpdateBlockParams(QBmmBaseBlockArgs &params, uint64_t mTileIndex, uint64_t nTileIndex);
-    template <int x1Format, int x2Format, bool aTrans, bool bTrans>
+    template <int x1Format, int x2Format, bool aTrans, bool bTrans, typename x1Type=int8_t, typename x2Type=int8_t>
     __aicore__ inline void CalcGMOffset(QBmmBaseBlockArgs &params, QBmmBlockOffset &offset);
 
 private:
@@ -45,7 +45,7 @@ private:
     const TCubeTiling *mmTiling_;
 };
 
-template <int x1Format, int x2Format, bool aTrans, bool bTrans>
+template <int x1Format, int x2Format, bool aTrans, bool bTrans, typename x1Type, typename x2Type>
 __aicore__ inline void QuantBatchMatmulV3Update::Init(const TCubeTiling *mmTiling, const QBmmBaseBlockArgs &params)
 {
     mmTiling_ = mmTiling;
@@ -56,23 +56,23 @@ __aicore__ inline void QuantBatchMatmulV3Update::Init(const TCubeTiling *mmTilin
     if constexpr (aTrans) {                                                                     // (k, m)
         info_.alignedKaSize = DequantBmm::Align(mmTiling_->Ka, BMM_BLOCK_NUM);
     } else {  // (m, k)
-        info_.alignedKaSize = DequantBmm::Align(mmTiling_->Ka, K0_INT8);
+        info_.alignedKaSize = DequantBmm::Align(mmTiling_->Ka, DequantBmm::GetC0Size<x1Type>());
     }
     if constexpr (bTrans) {  // (n, k)
-        info_.alignedKbSize = DequantBmm::Align(mmTiling_->Kb, K0_INT8);
+        info_.alignedKbSize = DequantBmm::Align(mmTiling_->Kb, DequantBmm::GetC0Size<x2Type>());
     } else {  // (k, n)
         info_.alignedKbSize = DequantBmm::Align(mmTiling_->Kb, BMM_BLOCK_NUM);
     }
 }
 
-template <int x1Format, int x2Format, bool aTrans, bool bTrans>
+template <int x1Format, int x2Format, bool aTrans, bool bTrans, typename x1Type, typename x2Type>
 __aicore__ inline void QuantBatchMatmulV3Update::UpdateBlockParamsAndCalcGmOffset(QBmmBaseBlockArgs &params,
                                                                                   QBmmBlockOffset &offset,
                                                                                   uint64_t mTileIndex,
                                                                                   uint64_t nTileIndex)
 {
     UpdateBlockParams(params, mTileIndex, nTileIndex);
-    CalcGMOffset<x1Format, x2Format, aTrans, bTrans>(params, offset);
+    CalcGMOffset<x1Format, x2Format, aTrans, bTrans, x1Type, x2Type>(params, offset);
 }
 
 __aicore__ inline void QuantBatchMatmulV3Update::UpdateBlockParams(QBmmBaseBlockArgs &params, uint64_t mTileIndex,
@@ -94,7 +94,7 @@ __aicore__ inline void QuantBatchMatmulV3Update::UpdateBlockParams(QBmmBaseBlock
     }
 }
 
-template <int x1Format, int x2Format, bool aTrans, bool bTrans>
+template <int x1Format, int x2Format, bool aTrans, bool bTrans, typename x1Type, typename x2Type>
 __aicore__ inline void QuantBatchMatmulV3Update::CalcGMOffset(QBmmBaseBlockArgs &params, QBmmBlockOffset &offset)
 {
     uint64_t mCntIndex = params.index / params.nCntUse;
@@ -112,7 +112,7 @@ __aicore__ inline void QuantBatchMatmulV3Update::CalcGMOffset(QBmmBaseBlockArgs 
         if constexpr (aTrans) {  // (m1, k1, k0, m0)
             offset.offsetA = mOffset * info_.alignedKaSize;
         } else {  // (k1, m1, m0, k0)
-            offset.offsetA = mOffset * K0_INT8;
+            offset.offsetA = mOffset * DequantBmm::GetC0Size<x1Type>();
         }
     }
     // 前面的n都能保证是singleCoreN(baseN)的倍数，n尾块只会出现在n轴最后
@@ -125,7 +125,7 @@ __aicore__ inline void QuantBatchMatmulV3Update::CalcGMOffset(QBmmBaseBlockArgs 
         }
     } else if constexpr (DequantBmm::GetFormat(x2Format) == CubeFormat::NZ) {
         if constexpr (bTrans) {  // (k1, n1, n0, k0)
-            offset.offsetB = nOffset * K0_INT8;
+            offset.offsetB = nOffset * DequantBmm::GetC0Size<x2Type>();
         } else {  // (n1, k1, k0, n0)
             offset.offsetB = nOffset * info_.alignedKbSize;
         }

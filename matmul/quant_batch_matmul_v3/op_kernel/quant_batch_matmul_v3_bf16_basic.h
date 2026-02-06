@@ -42,7 +42,7 @@ public:
         offsetWorkspaceC_ = BUFFER_NUM * blockIdx * baseM_ * baseN_;
 
         block_.Init(tilingData);
-        update_.template Init<x1Format, x2Format, aTrans, bTrans>(&tilingData->matmulTiling, block_.params_);
+        update_.template Init<x1Format, x2Format, aTrans, bTrans, x1Type, x2Type>(&tilingData->matmulTiling, block_.params_);
         loop_ = 0;  // all_gather_quant_batch_mat_mul.h循环调Init和Process，管理CV同步的计数器每次都要清零
     }
 
@@ -151,7 +151,7 @@ private:
     {
         for (uint64_t j = 0; j < block_.realRound_; j++) {
             // 更新此次基本块的大小和输入输出地址
-            update_.template UpdateBlockParamsAndCalcGmOffset<x1Format, x2Format, aTrans, bTrans>(
+            update_.template UpdateBlockParamsAndCalcGmOffset<x1Format, x2Format, aTrans, bTrans, x1Type, x2Type>(
                 block_.params_, offset_, mTileIndex, nTileIndex);
 
             offsetWorkspaceC_ = pingOffsetC + pongSwitch * baseM_ * baseN_;

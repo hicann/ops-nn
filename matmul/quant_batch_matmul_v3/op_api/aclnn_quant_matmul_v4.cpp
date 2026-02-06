@@ -62,8 +62,9 @@ static const int NZ_K1_INDEX = 3;
 static const int NZ_K1_INDEX_TRANS = 4;
 static const int NZ_STORAGE_PENULTIMATE_DIM = 16;
 static const int NZ_STORAGE_LAST_DIM = 32;
-static const int64_t NZ_K0_VALUE_INT8 = 16;
+static const int64_t NZ_K0_VALUE_BMM_BLOCK_NUM = 16;
 static const int64_t NZ_K0_VALUE_INT8_TRANS = 32;
+static const int64_t NZ_K0_VALUE_INT4_TRANS = 64;
 static constexpr int64_t OUTPUT_INFER_FAIL = -1L;
 static const int64_t LAST_AXIS_LIMIT = 65535;
 static const int X2_FIXED_DIM_NUM_A4W4 = 2;
@@ -356,12 +357,12 @@ static inline bool CheckDtypeValid(TupleTensor mandatoryTensors, TupleOptional o
 static inline bool CheckFormatInt4(const aclTensor *x1, const aclTensor *x2) {
     if (x1->GetStorageFormat() != op::Format::FORMAT_ND) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1 only support ND format in a4w4 scenario, but now is %s.",
-                op::ToString(x1->GetStorageFormat()).GetString());
+            op::ToString(x1->GetStorageFormat()).GetString());
         return false;
     }
-    if (x2->GetStorageFormat() != op::Format::FORMAT_ND) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x2 only support ND in a4w4 scenario, but now is %s.",
-                op::ToString(x2->GetStorageFormat()).GetString());
+    if (x2->GetStorageFormat() != op::Format::FORMAT_ND && x2->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x2 only support ND/NZ in a4w4 scenario, but now is %s.",
+            op::ToString(x2->GetStorageFormat()).GetString());
         return false;
     }
     return true;
@@ -566,12 +567,13 @@ static inline bool CheckShapeForWeightNz(const aclTensor *x1, const aclTensor *x
     auto x2DimNum = x2->GetStorageShape().GetDimNum();
     int64_t x1KDim = transposeX1 ? x1Shape[x1DimNum - PENULTIMATE_DIM] : x1Shape[x1DimNum - 1];
     int64_t x2K1Dim = transposeX2 ? x2Shape[x2DimNum - NZ_K1_INDEX_TRANS] : x2Shape[x2DimNum - NZ_K1_INDEX];
-    int64_t aligneValue = transposeX2 ? NZ_K0_VALUE_INT8_TRANS : NZ_K0_VALUE_INT8;
-    int64_t alignedX1K = ((x1KDim + aligneValue - 1) / aligneValue) * aligneValue;
-    if (alignedX1K != x2K1Dim * aligneValue) {
+    int64_t nz_k0_value_trans = x1->GetDataType() == op::DataType::DT_INT8 ? NZ_K0_VALUE_INT8_TRANS : NZ_K0_VALUE_INT4_TRANS;
+    int64_t roundValue = transposeX2 ? nz_k0_value_trans : NZ_K0_VALUE_BMM_BLOCK_NUM;
+    int64_t x1KDimRound = ((x1KDim + roundValue - 1) / roundValue) * roundValue;
+    if (x1KDimRound != x2K1Dim * roundValue) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "AlignedK1 value %ld is not matched with k1 value times aligneValue, which is %ld.",
-                alignedX1K, x2K1Dim * aligneValue);
+            "AlignedK1 value %ld is not matched with k1 value times roundValue, which is %ld.",
+            x1KDimRound, x2K1Dim * roundValue);
         return false;
     }
     return true;
@@ -591,10 +593,7 @@ static inline bool IsAligned(T num, T factor)
 static inline bool CheckShapeInt4(const aclTensor *x1, const aclTensor *x2, bool transposeX1, bool transposeX2,
                                   const aclTensor *bias)
 {
-    int64_t x1KDim;
-    int64_t x1MDim;
-    int64_t x2KDim;
-    int64_t x2NDim;
+    int64_t x1KDim, x1MDim, x2KDim, x2NDim;
     std::tie(x1KDim, x1MDim, x2KDim, x2NDim) = GetX1X2DimValue(x1, x2, transposeX1, transposeX2);
     if (!IsAligned<int64_t>(x1KDim, INT4_NUMS_IN_INT8)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
@@ -1641,12 +1640,14 @@ static op::Shape GetWeightNzShape(const aclTensor *input, bool transpose)
 {
     size_t viewDimNum = input->GetViewShape().GetDimNum();
     int64_t k = transpose ? input->GetViewShape().GetDim(viewDimNum - 1)
-                           : input->GetViewShape().GetDim(viewDimNum - LAST_SECOND_DIM_INDEX);
+        : input->GetViewShape().GetDim(viewDimNum - LAST_SECOND_DIM_INDEX);
     int64_t n = transpose ? input->GetViewShape().GetDim(viewDimNum - LAST_SECOND_DIM_INDEX)
-                           : input->GetViewShape().GetDim(viewDimNum - 1);
+        : input->GetViewShape().GetDim(viewDimNum - 1);
 
-    int64_t k1 = transpose ? CeilDiv(k, NZ_K0_VALUE_INT8_TRANS) : CeilDiv(k, NZ_K0_VALUE_INT8);
-    int64_t n1 = transpose ? CeilDiv(n, NZ_K0_VALUE_INT8) : CeilDiv(n, NZ_K0_VALUE_INT8_TRANS);
+    int64_t nz_k0_value_trans =
+        input->GetDataType() == op::DataType::DT_INT8 ? NZ_K0_VALUE_INT8_TRANS : NZ_K0_VALUE_INT4_TRANS;
+    int64_t k1 = transpose ? CeilDiv(k, nz_k0_value_trans) : CeilDiv(k, NZ_K0_VALUE_BMM_BLOCK_NUM);
+    int64_t n1 = transpose ? CeilDiv(n, NZ_K0_VALUE_BMM_BLOCK_NUM) : CeilDiv(n, nz_k0_value_trans);
 
     op::Shape weightNzShape;
     for (size_t i = 0; i < viewDimNum - LAST_SECOND_DIM_INDEX; i++) {
@@ -1660,7 +1661,7 @@ static op::Shape GetWeightNzShape(const aclTensor *input, bool transpose)
         weightNzShape.AppendDim(k1);
     }
     weightNzShape.AppendDim(NZ_STORAGE_PENULTIMATE_DIM);
-    weightNzShape.AppendDim(NZ_STORAGE_LAST_DIM);
+    weightNzShape.AppendDim(nz_k0_value_trans);
     return weightNzShape;
 }
 

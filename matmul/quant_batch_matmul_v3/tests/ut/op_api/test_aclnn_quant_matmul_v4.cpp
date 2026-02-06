@@ -1422,7 +1422,7 @@ TEST_F(l2_QuantBatchMatmulV4_test, ascend910B2_test_case_70)
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 TEST_F(l2_QuantBatchMatmulV4_test, ascend910B2_test_case_71)
