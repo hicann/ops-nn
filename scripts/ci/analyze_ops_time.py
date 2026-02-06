@@ -76,7 +76,7 @@ for log_dir_path in log_dirs:
             continue
         
         # 约定：第一行一定以时间戳+Build started开始，最后一行以时间戳+exe_time结束 
-        # 参照ops-nn\scripts\kernel\binary_script\build_binary_op_exe_task.sh
+        # 参照scripts\kernel\binary_script\build_binary_op_exe_task.sh
         first_line = lines[0].strip()
         last_line = lines[-1].strip()
         
@@ -86,12 +86,12 @@ for log_dir_path in log_dirs:
             continue
         
         start_time = datetime.strptime(start_match.group(1), TIME_FORMAT)
-        main_func = main_func_match.group(1)
-        if main_func == "conv3dv2":
+        op = main_func_match.group(1)
+        if op == "conv3dv2":
             op = "conv3d_v2"
-        elif main_func == "conv2dv2":
+        elif op == "conv2dv2":
             op = "conv2d_v2"
-        elif main_func == "dynamic_rnn_v2":
+        elif op == "dynamic_rnn_v2":
             op = "dynamic_rnnv2"
         all_stats[soc_name][op]['all'] += 1
         
