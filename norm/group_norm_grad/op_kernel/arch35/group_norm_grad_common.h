@@ -36,6 +36,23 @@ using AscendC::MicroAPI::UpdateMask;
 using namespace NormCommon;
 using namespace NormCommon::NormCommonRegbase;
 
+constexpr int DOUBLE_BUFFER = 2;
+constexpr int TRIPLE_BUFFER = 3;
+
+__aicore__ inline constexpr uint32_t GetVRegSize()
+{
+#if __CCE_AICORE__ == 310
+    return AscendC::VECTOR_REG_WIDTH;
+#else
+    return 256U;
+#endif
+}
+
+__aicore__ inline constexpr uint32_t GetUbBlockSize()
+{
+    return 32U;
+}
+
 constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {
     AscendC::MicroAPI::RegLayout::ZERO,
     AscendC::MicroAPI::SatMode::UNKNOWN,
@@ -213,6 +230,39 @@ __aicore__ inline void VFCastT2Float(
             }
         }
     }
+}
+
+template<typename U>
+__aicore__ inline void UpdateCacheStage2Mode2(const LocalTensor<U>& dstTensor, const LocalTensor<U>& srcTensor,
+                                const int64_t cacheId, const int64_t stride, const int64_t count)
+{
+    uint16_t outerLoopTimes = CeilDiv(static_cast<int64_t>(count * sizeof(U)), static_cast<int64_t>(GetVRegSize()));
+    uint16_t innerLoopTimes = cacheId;
+    uint32_t outerLoopStride = GetVRegSize() / sizeof(U);
+    uint32_t innerLoopStride = stride;
+    __local_mem__ U* dst = (__local_mem__ U*)dstTensor.GetPhyAddr();
+    __local_mem__ U* cache = (__local_mem__ U*)dstTensor.GetPhyAddr() + cacheId * stride;
+    __local_mem__ U* src = (__local_mem__ U*)srcTensor.GetPhyAddr();
+    __VEC_SCOPE__
+    {
+        uint32_t sreg = static_cast<uint32_t>(count);
+        RegTensor<U> aReg, bReg;
+        MaskReg pMask;
+        for (uint16_t i = 0; i < outerLoopTimes; ++i) {
+            pMask = UpdateMask<U>(sreg);
+            DataCopy(aReg, (__local_mem__ U*)src + i * outerLoopStride);
+            for (uint16_t j = 0; j < innerLoopTimes; ++j) {
+                DataCopy(bReg, (__local_mem__ U*)dst + i * outerLoopStride + j * innerLoopStride);
+                Add<U, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+            }
+            DataCopy((__local_mem__ U*)cache + i * outerLoopStride, aReg, pMask);
+        }
+    }
+}
+
+__aicore__ inline int64_t GetCacheId(const int64_t idx)
+{
+    return ScalarGetCountOfValue<1>(idx ^ (idx + 1)) - 1;
 }
 } // namespace GroupNormGrad
 #endif

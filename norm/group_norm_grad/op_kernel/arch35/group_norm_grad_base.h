@@ -26,27 +26,6 @@ using namespace AscendC;
 using namespace NormCommon;
 using namespace NormCommon::NormCommonRegbase;
 
-constexpr int DOUBLE_BUFFER = 2;
-
-/**
- * Get the size of vector registers in bytes
- */
-__aicore__ inline constexpr uint32_t GetVRegSize()
-{
-#if __CCE_AICORE__ == 310
-    return AscendC::VECTOR_REG_WIDTH;
-#else
-    return 256U;
-#endif
-}
-/**
- * Get the block size of unified buffer in bytes
- */
-__aicore__ inline constexpr uint32_t GetUbBlockSize()
-{
-    return 32U;
-}
-
 template <typename T, typename U>
 class GroupNormGradBase {
 public:
@@ -62,6 +41,7 @@ protected:
 
 protected:
     __aicore__ inline void ParseTilingData(const GroupNormGradRegBaseTilingData* tilingData);
+    __aicore__ inline void GetStage2Mode2TilingData(const GroupNormGradRegBaseTilingData* tilingData);
     __aicore__ inline void CustomReduceSum(
         const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const uint32_t idx);
     __aicore__ inline bool IsNeedUpdateLevel1Cache(const int64_t basicBlockIdx);
@@ -104,9 +84,6 @@ protected:
     __aicore__ inline void InitStage2Mode1Buffer();
     __aicore__ inline void stage2Mode1Process(uint32_t cOffset, uint32_t currentCNum);
     __aicore__ inline void ProcessStage2Mode2(const GlobalTensor<float>& workspace, const GlobalTensor<U>& gmOut);
-    __aicore__ inline void VFReduceNC(
-        const LocalTensor<float>& inTensor, const LocalTensor<U>& outTensor, const uint32_t currCNum,
-        const uint32_t cNumAlign, const uint32_t currNNum);
     __aicore__ inline void reduceNMode1Wsp2Ub(
         TQue<QuePosition::VECIN, 1>& vecInQue, const GlobalTensor<float>& workspace, uint32_t gmOffset,
         uint32_t currentCNum);
@@ -134,6 +111,11 @@ protected:
     __aicore__ inline void TwoRowAdd(
         RegTensor<float>& dst, __local_mem__ float* input, MaskReg& preg, uint32_t offset1, uint32_t offset2,
         RegTensor<float>& nextRow);
+    __aicore__ inline void FlodSumDgammaVF(__local_mem__ float* src1, __local_mem__ float* src2, int32_t num);
+    __aicore__ inline void CopyInStage2Mode2(TQue<QuePosition::VECIN, 1>& inQueue, const GlobalTensor<float>& inGm, 
+                                    int64_t offset, int64_t currentNNum, int64_t currentCNum);
+    __aicore__ inline void ProcessStage2Mode2Once(int64_t ubTimes, int64_t currentCNum, 
+                                    const GlobalTensor<float>& workspace, const GlobalTensor<U>& gmOut);                               
 
 protected:
     // Pipe object
@@ -158,6 +140,8 @@ protected:
     TBuf<TPosition::VECCALC> cacheDgammaBuf_;
     TBuf<TPosition::VECCALC> tempDgammaBuf_;
     TBuf<TPosition::VECCALC> tempDbetaBuf_;
+    TBuf<TPosition::VECCALC> sumDgammaAllCacheBuffer; // ub间二分CacheBuffer
+
     // Que for output
     TQue<QuePosition::VECOUT, 1> outQueDgamma_;
     TQue<QuePosition::VECOUT, 1> outQueDs_;
@@ -234,6 +218,19 @@ protected:
     bool dxIsRequire_;
     bool dgammaIsRequire_;
     bool dbetaIsRequire_;
+    // Stage2Mode2 Use
+    int64_t cFactorStage2Mode2;
+    int64_t cBlockLoop;
+    int64_t cTail;
+    int64_t nFactorStage2Mode2;
+    int64_t nLoop;
+    int64_t nMainFlodCount;
+    int64_t nTail;
+    int64_t cacheBufferCount;
+    int64_t cLoopMainBlock;
+    int64_t cTailMainBlock;
+    int32_t resultCacheId;
+
     const uint32_t PF32_PER_BLOCK = GetUbBlockSize() / sizeof(float);
     const uint32_t BLOCK_BYTES = GetUbBlockSize();
     const uint32_t CACHE_BUFF_SIZE = 256;
@@ -262,6 +259,7 @@ protected:
     const uint32_t ROW_FIVE_OFFSET = 5;
     const uint32_t ROW_SIX_OFFSET = 6;
     const uint32_t ROW_SEVEN_OFFSET = 7;
+    const uint16_t BLOCK_SIZE = GetUbBlockSize();
 };
 
 template <typename T, typename U>
@@ -344,6 +342,29 @@ __aicore__ inline void GroupNormGradBase<T, U>::ParseTilingData(const GroupNormG
     this->stage2Mode_ = tilingData->gNGKernel2Params.stage2Mode;
     this->curCoreTaskNum_ = this->taskNumPerCore_;
     this->startTaskId_ = this->taskNumPerCore_ * this->curBlockIdx_;
+
+    GetStage2Mode2TilingData(tilingData);
+}
+
+template<typename T, typename U>
+__aicore__ inline void GroupNormGradBase<T, U>::GetStage2Mode2TilingData(const GroupNormGradRegBaseTilingData* tilingData)
+{
+    this->cFactorStage2Mode2 = tilingData->gNGKernel2Params.cFactorStage2Mode2;
+    this->nFactorStage2Mode2 = tilingData->gNGKernel2Params.nFactorStage2Mode2;
+    this->nLoop = tilingData->gNGKernel2Params.nLoop;
+    this->nMainFlodCount = tilingData->gNGKernel2Params.nMainFlodCount;
+    this->nTail = tilingData->gNGKernel2Params.nTail;
+    this->cacheBufferCount = tilingData->gNGKernel2Params.cacheBufferCount;
+    this->resultCacheId = tilingData->gNGKernel2Params.resultCacheId;
+    this->cLoopMainBlock = tilingData->gNGKernel2Params.cLoopMainBlock;
+    this->cTailMainBlock = tilingData->gNGKernel2Params.cTailMainBlock;
+    if (GetBlockIdx() == (this->stage2CoreUsed_ - 1)) {
+        this->cBlockLoop = tilingData->gNGKernel2Params.cLoopTailBlock;
+        this->cTail = tilingData->gNGKernel2Params.cTailTailBlock;
+    } else {
+        this->cBlockLoop = tilingData->gNGKernel2Params.cLoopMainBlock;
+        this->cTail = tilingData->gNGKernel2Params.cTailMainBlock;
+    }
 }
 
 template <typename T, typename U>
@@ -921,8 +942,9 @@ __aicore__ inline void GroupNormGradBase<T, U>::ComputeSum1Sum2(
 template <typename T, typename U>
 __aicore__ inline void GroupNormGradBase<T, U>::InitStage2Mode2Buffer()
 {
-    pipe->InitBuffer(inQueDgammaChannel_, DOUBLE_BUFFER, stage2FactorN_ * cFactor_ * sizeof(float));
-    pipe->InitBuffer(outQueDgamma_, DOUBLE_BUFFER, cFactor_ * sizeof(U));
+    pipe->InitBuffer(inQueDgammaChannel_, TRIPLE_BUFFER, this->nFactorStage2Mode2 * this->cFactorStage2Mode2 * sizeof(float));
+    pipe->InitBuffer(outQueDgamma_, DOUBLE_BUFFER, this->cFactorStage2Mode2 * sizeof(U));
+    pipe->InitBuffer(sumDgammaAllCacheBuffer, this->cacheBufferCount * this->cFactorStage2Mode2 * sizeof(float));
 }
 
 template <typename T, typename U>
@@ -1057,83 +1079,70 @@ __aicore__ inline void GroupNormGradBase<T, U>::stage2Mode1B16Compute(
 }
 
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradBase<T, U>::VFReduceNC(
-    const LocalTensor<float>& inTensor, const LocalTensor<U>& outTensor, const uint32_t currCNum,
-    const uint32_t cNumAlign, const uint32_t currNNum)
-{
-    __local_mem__ float* ubIn = (__local_mem__ float*)inTensor.GetPhyAddr();
-    __local_mem__ U* ubOut = (__local_mem__ U*)outTensor.GetPhyAddr();
-    uint16_t repeatTimes = CeilDiv(currCNum, VecLen_);
-    uint32_t sregvl = this->VecLen_;
-    __local_mem__ float* currUbIn;
-
-    __VEC_SCOPE__
-    {
-        RegTensor<float> vregOut;
-        uint32_t sreg = currCNum;
-        MaskReg preg;
-        MaskReg pregLoop;
-        for (uint16_t i = 0; i < repeatTimes; i++) {
-            RegTensor<float> vregIn;
-            preg = UpdateMask<float>(sreg);
-            pregLoop = CreateMask<float, MaskPattern::ALL>();
-            LoadOneTensorForDtypeT<U>(ubOut, vregOut, preg, i * sregvl);
-            for (uint16_t idxN = 0; idxN < static_cast<uint16_t>(currNNum); idxN++) {
-                currUbIn = ubIn + (idxN * cNumAlign);
-                LoadOneTensorForDtypeT<float>(currUbIn, vregIn, preg, i * sregvl);
-                Add(vregOut, vregOut, vregIn, preg);
-            }
-            StoreOneTensorForDtypeT<U>(ubOut, vregOut, preg, i * sregvl);
-        }
-    }
-}
-
-template <typename T, typename U>
 __aicore__ inline void GroupNormGradBase<T, U>::ProcessStage2Mode2(
     const GlobalTensor<float>& workspace, const GlobalTensor<U>& gmOut)
 {
-    uint32_t currProcessCNum = (curBlockIdx_ == stage2CoreUsed_ - 1) ? tailcNumMode2PerCore_ : cNumMode2PerCore_;
-    uint32_t currLoopCnt = (curBlockIdx_ == stage2CoreUsed_ - 1) ? stage2LoopCnt_ : CeilDiv(currProcessCNum, cFactor_);
-    uint32_t loopCNum = cFactor_ > cNumMode2PerCore_ ? cNumMode2PerCore_ : cFactor_;
-    uint32_t currCNum = loopCNum;
-    for (uint32_t loopNum = 0; loopNum < currLoopCnt; loopNum++) {
-        if (loopNum == currLoopCnt - 1 && currProcessCNum % cFactor_) {
-            currCNum = currProcessCNum % cFactor_;
-        }
-        uint32_t strideTime = CeilDiv(reduceNCnt_, stage2FactorN_);
-        uint32_t currNNum = stage2FactorN_;
-        LocalTensor<U> outTensor = outQueDgamma_.AllocTensor<U>();
-        Duplicate<U>(outTensor, 0.0f, currCNum);
-        int64_t baseOffset = curBlockIdx_ * cNumMode2PerCore_ + loopNum * cFactor_;
-        for (uint32_t strideNum = 0; strideNum < strideTime; strideNum++) {
-            if (strideNum == strideTime - 1 && reduceNCnt_ % stage2FactorN_) {
-                currNNum = reduceNCnt_ % stage2FactorN_;
-            }
-            LocalTensor<float> inTensor = inQueDgammaChannel_.AllocTensor<float>();
-            int64_t inOffset = baseOffset + strideNum * stage2FactorN_ * C_;
-            uint32_t cNumAlign = CeilAlign(currCNum, PF32_PER_BLOCK);
-            DataCopyExtParams copyParams;
-            copyParams.blockCount = currNNum;
-            copyParams.blockLen = currCNum * sizeof(float);
-            copyParams.srcStride = (C_ - currCNum) * sizeof(float);
-            copyParams.dstStride = 0;
-            DataCopyPadExtParams<float> padParams{false, 0, 0, 0};
-            DataCopyPad(inTensor, workspace[inOffset], copyParams, padParams);
-            inQueDgammaChannel_.EnQue(inTensor);
-            inTensor = inQueDgammaChannel_.DeQue<float>();
-            VFReduceNC(inTensor, outTensor, currCNum, cNumAlign, currNNum);
-            inQueDgammaChannel_.FreeTensor(inTensor);
-        }
-        DataCopyExtParams copyOutParams;
-        copyOutParams.blockCount = 1;
-        copyOutParams.blockLen = currCNum * sizeof(U);
-        copyOutParams.srcStride = 0;
-        copyOutParams.dstStride = 0;
-        outQueDgamma_.EnQue(outTensor);
-        outTensor = outQueDgamma_.DeQue<U>();
-        DataCopyPad(gmOut[baseOffset], outTensor, copyOutParams);
-        outQueDgamma_.FreeTensor(outTensor);
+    for (int64_t i = 0; i < this->cBlockLoop - 1; i++) {
+        ProcessStage2Mode2Once(i, this->cFactorStage2Mode2, workspace, gmOut);
     }
+    ProcessStage2Mode2Once(this->cBlockLoop - 1, this->cTail, workspace, gmOut);
+}
+
+template <typename T, typename U>
+__aicore__ inline void GroupNormGradBase<T, U>::ProcessStage2Mode2Once(
+        int64_t ubTimes, int64_t currentCNum, const GlobalTensor<float>& workspace, const GlobalTensor<U>& gmOut)
+{
+    int64_t baseOffset = ((this->cLoopMainBlock - 1) * this->cFactorStage2Mode2 + this->cTailMainBlock) * curBlockIdx_;
+    int64_t resultOffset = baseOffset + ubTimes * this->cFactorStage2Mode2;
+    int64_t currentCAlignNum = (currentCNum + (BLOCK_SIZE / sizeof(float)) - 1) / (BLOCK_SIZE / sizeof(float)) * (BLOCK_SIZE / sizeof(float));
+    LocalTensor<float> sumDgammaAllCacheUb = sumDgammaAllCacheBuffer.Get<float>();
+
+    for (int64_t basicBlockIdx = 0; basicBlockIdx < this->nLoop; basicBlockIdx++) {
+        int64_t sum1Offset = ubTimes * this->cFactorStage2Mode2 + basicBlockIdx * this->nFactorStage2Mode2 * this->C_;
+        CopyInStage2Mode2(inQueDgammaChannel_, workspace[baseOffset], sum1Offset, this->nFactorStage2Mode2, currentCNum);
+        LocalTensor<float> sum1Ub = inQueDgammaChannel_.DeQue<float>();
+        __local_mem__ float* sum1Local = (__local_mem__ float*)sum1Ub.GetPhyAddr();
+
+        int64_t sum2Offset = ubTimes * this->cFactorStage2Mode2 + (basicBlockIdx + this->nLoop) * this->nFactorStage2Mode2 * this->C_;
+        if (basicBlockIdx < this->nMainFlodCount) {
+            CopyInStage2Mode2(inQueDgammaChannel_, workspace[baseOffset], sum2Offset, this->nFactorStage2Mode2, currentCNum);
+            LocalTensor<float> sum2Ub = inQueDgammaChannel_.DeQue<float>();
+            __local_mem__ float* sum2Local = (__local_mem__ float*)sum2Ub.GetPhyAddr();
+            FlodSumDgammaVF(sum1Local, sum2Local, this->nFactorStage2Mode2 * currentCAlignNum);
+            inQueDgammaChannel_.FreeTensor(sum2Ub);
+        } else if ((basicBlockIdx == this->nMainFlodCount) && (this->nTail > 0)) {
+            CopyInStage2Mode2(inQueDgammaChannel_, workspace[baseOffset], sum2Offset, this->nTail, currentCNum);
+            LocalTensor<float> sum2Ub = inQueDgammaChannel_.DeQue<float>();
+            __local_mem__ float* sum2Local = (__local_mem__ float*)sum2Ub.GetPhyAddr();
+            FlodSumDgammaVF(sum1Local, sum2Local, this->nTail * currentCAlignNum);
+            inQueDgammaChannel_.FreeTensor(sum2Ub);
+        }
+        int64_t cacheId = GetCacheId(basicBlockIdx);
+        int64_t tempIndex = this->cacheBufferCount * this->cFactorStage2Mode2;
+        uint32_t shape[] = {static_cast<uint32_t>(this->nFactorStage2Mode2), static_cast<uint32_t>(currentCAlignNum)};
+        ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(sumDgammaAllCacheUb[tempIndex], sum1Ub, shape, false);
+        inQueDgammaChannel_.FreeTensor(sum1Ub);
+        UpdateCacheStage2Mode2<float>(sumDgammaAllCacheUb, sumDgammaAllCacheUb[tempIndex], cacheId, this->cFactorStage2Mode2, currentCNum);
+    }
+
+    LocalTensor<U> outDgammaTensor = outQueDgamma_.template AllocTensor<U>();
+    if constexpr (IsSameType<U, float>::value) {
+        DataCopy(outDgammaTensor, sumDgammaAllCacheUb[this->resultCacheId * this->cFactorStage2Mode2], 
+            Aligned(static_cast<int64_t>(this->cFactorStage2Mode2), static_cast<int64_t>(GetUbBlockSize() / sizeof(float))));
+    } else {
+        __local_mem__ U* outDgammaLocal = (__local_mem__ U*)outDgammaTensor.GetPhyAddr();
+        __local_mem__ float* sumDgammaResultCacheLocal = (__local_mem__ float*)sumDgammaAllCacheUb[this->resultCacheId * this->cFactorStage2Mode2].GetPhyAddr();
+        VFCastFloat2T(outDgammaLocal, sumDgammaResultCacheLocal, this->cFactorStage2Mode2, GetVRegSize());
+    }
+    DataCopyExtParams copyOutParams;
+    copyOutParams.blockCount = 1;
+    copyOutParams.blockLen = currentCNum * sizeof(U);
+    copyOutParams.srcStride = 0;
+    copyOutParams.dstStride = 0;
+    outQueDgamma_.EnQue(outDgammaTensor);
+    outDgammaTensor = outQueDgamma_.DeQue<U>();
+    DataCopyPad(gmOut[resultOffset], outDgammaTensor, copyOutParams);
+    outQueDgamma_.FreeTensor(outDgammaTensor);
 }
 
 template <typename T, typename U>
@@ -1430,6 +1439,47 @@ __aicore__ inline void GroupNormGradBase<T, U>::TwoRowAdd(
     DataCopy(nextRow, ((__local_mem__ float*)(input) + (offset2)));
     Add(dst, dst, nextRow, preg);
 }
+
+template <typename T, typename U>
+__aicore__ inline void GroupNormGradBase<T, U>::CopyInStage2Mode2(TQue<QuePosition::VECIN, 1>& inQueue, const GlobalTensor<float>& inGm, 
+                                int64_t offset, int64_t currentNNum, int64_t currentCNum)
+{
+    DataCopyExtParams dataCopyExtParams;
+    dataCopyExtParams.blockCount = currentNNum;
+    dataCopyExtParams.blockLen = currentCNum * sizeof(float);
+    dataCopyExtParams.srcStride = (this->C_ - currentCNum) * sizeof(float);
+    dataCopyExtParams.dstStride = 0;
+    DataCopyPadExtParams<float> dataCopyPadExtParams {false, 0, 0, 0};
+    LocalTensor<float> sumUb = inQueue.AllocTensor<float>();
+    DataCopyPad(sumUb, inGm[offset], dataCopyExtParams, dataCopyPadExtParams);
+    inQueue.EnQue(sumUb);
+}
+
+template <typename T, typename U>
+__aicore__ inline void GroupNormGradBase<T, U>::FlodSumDgammaVF(__local_mem__ float* src1, __local_mem__ float* src2, int32_t num)
+{
+    uint16_t vlFp32 = GetVRegSize() / sizeof(float);
+    __VEC_SCOPE__
+    {
+        RegTensor<float> src1Reg;
+        RegTensor<float> src2Reg;
+        RegTensor<float> tempReg;
+        MaskReg mask;
+        uint16_t flodTimes = CeilDivision(num, vlFp32);
+        uint32_t width = num;
+
+        for (uint16_t i = 0; i < flodTimes; i++) {
+            mask = UpdateMask<float>(width);
+            auto src1Addr = src1 + i * vlFp32;
+            auto src2Addr = src2 + i * vlFp32;
+            DataCopy<float, LoadDist::DIST_NORM>(src1Reg, src1Addr);
+            DataCopy<float, LoadDist::DIST_NORM>(src2Reg, src2Addr);
+            Add(src1Reg, src1Reg, src2Reg, mask);
+            DataCopy<float, StoreDist::DIST_NORM>(src1Addr, src1Reg, mask);
+        }
+    }
+}
+
 } // namespace GroupNormGrad
 
 #endif

@@ -42,6 +42,14 @@ static constexpr uint32_t STAGE0_C_PER_CORE = 2;
 // the threshold for n*(d/c_hat)
 static constexpr uint32_t SMALL_NG_ND_CHAT = 32;
 
+static constexpr int16_t CONST_ZERO = 0;
+static constexpr int16_t CONST_ONE = 1;
+static constexpr int16_t CONST_TWO = 2;
+static constexpr int16_t CONST_THREE = 3;
+static constexpr int16_t CONST_FOUR = 4;
+static constexpr int16_t CONST_SIXTY_THREE = 63;
+static constexpr int16_t CONST_SIXTY_FOUR = 64;
+
 enum class GNGDtypeKey : int
 {
     FLOAT_FLOAT = 1,
@@ -392,31 +400,94 @@ ge::graphStatus GroupNormGradRegBaseTiling::Mode2UbTiling()
     return ge::GRAPH_SUCCESS;
 }
 
+int64_t GroupNormGradRegBaseTiling::FindNearestPower2(const int64_t value)
+{
+    if (value <= CONST_ONE) {
+        return CONST_ZERO;
+    } else if (value <= CONST_TWO) {
+        return CONST_ONE;
+    } else if (value <= CONST_FOUR) {
+        return CONST_TWO;
+    } else {
+        const int64_t num = value - CONST_ONE;
+        const int64_t pow = CONST_SIXTY_THREE - __builtin_clzl(num);
+        return (CONST_ONE << pow);
+    }
+}
+
+int64_t GroupNormGradRegBaseTiling::GetCacheID(const int64_t idx)
+{
+    return __builtin_popcountll(idx ^ (idx + CONST_ONE)) - CONST_ONE;
+}
+
 ge::graphStatus GroupNormGradRegBaseTiling::Stage2Mode2Tiling()
 {
-    cNumMode2PerCore_ =
-        Ops::Base::CeilAlign(Ops::Base::CeilDiv(C_, static_cast<int64_t>(coreNum_)), static_cast<int64_t>(vectorLen_));
-    cNumMode2PerCore_ = std::min(C_, static_cast<int64_t>(cNumMode2PerCore_));
-    stage2CoreUsed_ = Ops::Base::CeilDiv(C_, static_cast<int64_t>(cNumMode2PerCore_));
-    tailcNumMode2PerCore_ = (stage2CoreUsed_ == 1) ? C_ : C_ - (stage2CoreUsed_ - 1) * cNumMode2PerCore_;
-    // 至少需要2块内存，开doubleBuffer
-    uint32_t ubCanUseSize = (ubSize_ - FLOAT16_DTYPE_BYTES * UB_COPIES_4) / DOUBLE_BUFFER;
-    uint32_t elemSize = (uTypeStr_ == ge::DT_FLOAT) ? FLOAT_DTYPE_BYTES : FLOAT16_DTYPE_BYTES;
-    uint32_t intputUbAlignSize = Ops::Base::CeilAlign(cNumMode2PerCore_ * FLOAT_DTYPE_BYTES, blockSize_);
-    uint32_t outputUbSize = cNumMode2PerCore_ * elemSize;
-    uint32_t outputUbAlignSize = Ops::Base::CeilAlign(outputUbSize, blockSize_);
-    uint32_t ubAlignSum = outputUbAlignSize + intputUbAlignSize;
-    if (ubCanUseSize > ubAlignSum) { // C方向不切分
-        stage2LoopCnt_ = 1;
-        cFactorAlign_ = intputUbAlignSize / FLOAT_DTYPE_BYTES; // C在UB中能全载
-        // 重新计算UB，这里先减去输出UB，剩余的全部给输入
-        ubCanUseSize = ubCanUseSize - Ops::Base::CeilAlign(outputUbAlignSize, blockSize_);
-        stage2FactorN_ = ubCanUseSize / Ops::Base::CeilAlign(intputUbAlignSize, blockSize_);
-    } else { // C方向切分， N方向一次只能载入一行
-        stage2LoopCnt_ = ubAlignSum / Ops::Base::CeilAlign(ubCanUseSize, blockSize_);
-        cFactorAlign_ = cNumMode2PerCore_ / stage2LoopCnt_; // UB一次读入多少个C
-        stage2FactorN_ = 1;
+    constexpr int16_t ALIGN_FACTOR_BASE_BYTE_LEN = 128;
+    constexpr int16_t TILE_NUM_BASE_LEN_B32 = 512;
+    const uint32_t dTypeSize = FLOAT_DTYPE_BYTES;
+    int16_t blockLenFp32 = this->blockSize_ / dTypeSize;
+    int64_t cBlockFactorBase = ALIGN_FACTOR_BASE_BYTE_LEN / dTypeSize;
+    int64_t cBlockFactorAlignBase = ALIGN_FACTOR_BASE_BYTE_LEN / dTypeSize;
+    if (C_ <= blockLenFp32) {
+        cBlockFactorBase = blockLenFp32;
+        cBlockFactorAlignBase = blockLenFp32;
     }
+    int64_t cBlockFactor = Ops::Base::CeilDiv(C_, static_cast<int64_t>(coreNum_));
+    cBlockFactor = Ops::Base::CeilDiv(cBlockFactor, cBlockFactorAlignBase) * cBlockFactorAlignBase;
+    cBlockFactor = std::max(cBlockFactorBase, cBlockFactor);
+    stage2CoreUsed_ = Ops::Base::CeilDiv(C_, cBlockFactor);
+    int64_t cTileBlockFactor = C_ - (stage2CoreUsed_ - 1) * cBlockFactor;
+    int64_t cTileNumBase;
+    cTileNumBase = TILE_NUM_BASE_LEN_B32 / dTypeSize;
+    if (cTileNumBase > cBlockFactor) {
+        cTileNumBase = cBlockFactor;
+    }
+
+    std::vector<int64_t> nTileNumList = {128, 256, 512, 1024, 2048, 4096};
+    for (const int64_t& nTileNumPossible : nTileNumList) {
+        int64_t nTileNum = nTileNumPossible;
+        int64_t nLoop = reduceNCnt_ / nTileNum;
+        int64_t nTotalLoop = Ops::Base::CeilDiv(reduceNCnt_, nTileNum);
+        int64_t nTail = reduceNCnt_ - nLoop * nTileNum;
+        int64_t basicBlockLoop = FindNearestPower2(nTotalLoop);
+        int64_t mainFoldCount = nLoop - basicBlockLoop;
+        int64_t cacheBufferCount = CONST_ONE;
+        int32_t resultCacheID = CONST_ZERO;
+        if (basicBlockLoop != 0) {
+            cacheBufferCount = CONST_SIXTY_FOUR - __builtin_clzl(basicBlockLoop);
+            resultCacheID = GetCacheID(basicBlockLoop - 1);
+        }
+
+        int64_t cTileNum = 0;
+        cTileNum = (ubSize_ - FLOAT16_DTYPE_BYTES * UB_COPIES_4) / (CONST_THREE * nTileNum + CONST_TWO + cacheBufferCount) / sizeof(float);
+        cTileNum = cTileNum / cTileNumBase * cTileNumBase;
+
+        if ((cTileNum < cBlockFactor && nTileNum != nTileNumList[0]) || cTileNum <=0) {
+            break;
+        }
+
+        int64_t cLoopMain = Ops::Base::CeilDiv(cBlockFactor, cTileNum);
+        int64_t cTailMain = cBlockFactor - (cLoopMain - 1) * cTileNum;
+        int64_t cLoopTail = Ops::Base::CeilDiv(cTileBlockFactor, cTileNum);
+        int64_t cTailTail = cTileBlockFactor - (cLoopTail - 1) * cTileNum;
+
+        cTileNum_ = cTileNum;
+        nTileNum_ = nTileNum;
+        basicBlockLoop_ = basicBlockLoop;
+        mainFoldCount_ = mainFoldCount;
+        nTail_ = nTail;
+        cacheBufferCount_ = cacheBufferCount;
+        resultCacheID_ = resultCacheID;
+        cLoopMain_ = cLoopMain;
+        cTailMain_ = cTailMain;
+        cLoopTail_ = cLoopTail;
+        cTailTail_ = cTailTail;
+    }
+
+    OP_TILING_CHECK((cTileNum_ <= 0),
+        VECTOR_INNER_ERR_REPORT_TILIING(opName, "The axis of C can not be Tiled"),
+        return ge::GRAPH_FAILED);
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -601,18 +672,32 @@ void GroupNormGradRegBaseTiling::SetReduceTilingData()
 
 void GroupNormGradRegBaseTiling::SetKernel2TilingData()
 {
+    // 共用
+    tilingData.gNGKernel2Params.set_stage2CoreUsed(stage2CoreUsed_);
+    tilingData.gNGKernel2Params.set_reduceNCnt(reduceNCnt_);
+    // mode1
     tilingData.gNGKernel2Params.set_stage2Mode(stage2Mode_);
     tilingData.gNGKernel2Params.set_cFactor(cFactorAlign_);
     tilingData.gNGKernel2Params.set_cBlockFactor(cBlockFactor_);
     tilingData.gNGKernel2Params.set_cTailBlockFactor(cTailBlockFactor_);
-    tilingData.gNGKernel2Params.set_stage2CoreUsed(stage2CoreUsed_);
     tilingData.gNGKernel2Params.set_stage2BinaryAddQuotient(stage2BinaryAddQuotient_);
     tilingData.gNGKernel2Params.set_stage2BinaryAddK(stage2BinaryAddK_);
-    tilingData.gNGKernel2Params.set_reduceNCnt(reduceNCnt_);
     tilingData.gNGKernel2Params.set_cNumMode2PerCore(cNumMode2PerCore_);
     tilingData.gNGKernel2Params.set_tailcNumMode2PerCore(tailcNumMode2PerCore_);
     tilingData.gNGKernel2Params.set_stage2LoopCnt(stage2LoopCnt_);
     tilingData.gNGKernel2Params.set_stage2FactorN(stage2FactorN_);
+    // mode2
+    tilingData.gNGKernel2Params.set_cFactorStage2Mode2(cTileNum_);
+    tilingData.gNGKernel2Params.set_nFactorStage2Mode2(nTileNum_);
+    tilingData.gNGKernel2Params.set_nLoop(basicBlockLoop_);
+    tilingData.gNGKernel2Params.set_nMainFlodCount(mainFoldCount_);
+    tilingData.gNGKernel2Params.set_nTail(nTail_);
+    tilingData.gNGKernel2Params.set_cacheBufferCount(cacheBufferCount_);
+    tilingData.gNGKernel2Params.set_resultCacheId(resultCacheID_);
+    tilingData.gNGKernel2Params.set_cLoopMainBlock(cLoopMain_);
+    tilingData.gNGKernel2Params.set_cTailMainBlock(cTailMain_);
+    tilingData.gNGKernel2Params.set_cLoopTailBlock(cLoopTail_);
+    tilingData.gNGKernel2Params.set_cTailTailBlock(cTailTail_);
 }
 
 void GroupNormGradRegBaseTiling::PrintTilingData() const
@@ -663,5 +748,16 @@ void GroupNormGradRegBaseTiling::PrintTilingData() const
     OP_LOGD(opName, "dgammaIsRequire:         %d.", dgammaIsRequire_);
     OP_LOGD(opName, "dbetaIsRequire:          %d.", dbetaIsRequire_);
     OP_LOGD(opName, "modeKey_:                %ld.", this->modeKey_);
+    OP_LOGD(opName, "cFactorStage2Mode2       %ld.", cTileNum_);
+    OP_LOGD(opName, "nFactorStage2Mode2       %ld.", nTileNum_);
+    OP_LOGD(opName, "nLoop                    %ld.", basicBlockLoop_);
+    OP_LOGD(opName, "nMainFlodCount           %ld.", mainFoldCount_);
+    OP_LOGD(opName, "nTail                    %ld.", nTail_);
+    OP_LOGD(opName, "cacheBufferCount         %ld.", cacheBufferCount_);
+    OP_LOGD(opName, "resultCacheId            %d.", resultCacheID_);
+    OP_LOGD(opName, "cLoopMainBlock           %ld.", cLoopMain_);
+    OP_LOGD(opName, "cTailMainBlock           %ld.", cTailMain_);
+    OP_LOGD(opName, "cLoopTailBlock           %ld.", cLoopTail_);
+    OP_LOGD(opName, "cTailTailBlock           %ld.", cTailTail_);
 }
 } // namespace optiling

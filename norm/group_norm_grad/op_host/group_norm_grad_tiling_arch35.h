@@ -74,6 +74,9 @@ private:
     ge::graphStatus Stage2Mode2Tiling();
     ge::graphStatus Stage2Tiling();
 
+    int64_t FindNearestPower2(const int64_t value);
+    int64_t GetCacheID(const int64_t idx);
+
 private:
     const char* opName = "GroupNormGrad";
     GroupNormGradRegBaseTilingData tilingData;
@@ -138,5 +141,18 @@ private:
     bool dxIsRequire_ = false;
     bool dgammaIsRequire_ = false;
     bool dbetaIsRequire_ = false;
+    
+    // Stage2Mode2 Use
+    int64_t cTileNum_ = 0;
+    int64_t nTileNum_ = 0;
+    int64_t basicBlockLoop_ = 0;
+    int64_t mainFoldCount_ = 0;
+    int64_t nTail_ = 0;
+    int64_t cacheBufferCount_ = 0;
+    int64_t resultCacheID_ = 0;
+    int64_t cLoopMain_ = 0;
+    int64_t cTailMain_ = 0;
+    int64_t cLoopTail_ = 0;
+    int64_t cTailTail_ = 0;
 };
 } // namespace optiling

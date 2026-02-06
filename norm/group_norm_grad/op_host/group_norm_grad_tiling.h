@@ -116,6 +116,19 @@ TILING_DATA_FIELD_DEF(int64_t, stage2BinaryAddQuotient);
 TILING_DATA_FIELD_DEF(int64_t, reduceNCnt);    // workSpace中一共有多少个N
 TILING_DATA_FIELD_DEF(int64_t, stage2LoopCnt); // 核内需要循环几次
 TILING_DATA_FIELD_DEF(int64_t, stage2FactorN); // UB一次处理多少个N
+// Stage2Mode2 Use
+TILING_DATA_FIELD_DEF(int64_t, cFactorStage2Mode2);
+TILING_DATA_FIELD_DEF(int64_t, cLoopMainBlock);
+TILING_DATA_FIELD_DEF(int64_t, cTailMainBlock);
+TILING_DATA_FIELD_DEF(int64_t, cLoopTailBlock);
+TILING_DATA_FIELD_DEF(int64_t, cTailTailBlock);
+TILING_DATA_FIELD_DEF(int64_t, nFactorStage2Mode2);
+TILING_DATA_FIELD_DEF(int64_t, nLoop);
+TILING_DATA_FIELD_DEF(int64_t, nMainFlodCount);
+TILING_DATA_FIELD_DEF(int64_t, nTail);
+TILING_DATA_FIELD_DEF(int64_t, cacheBufferCount);
+TILING_DATA_FIELD_DEF(int32_t, resultCacheId);
+
 END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(GroupNormGradKernel2ParamsOp, GroupNormGradKernel2Params)
 
