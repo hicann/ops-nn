@@ -23,8 +23,7 @@ namespace ge {
 
 * @par Inputs:
 * @li x: A matrix tensor. Shape supports (m,k)/(k,m), Format supports ND.
-* The type support float16, bfloat16. The m value must be in [1, 65535] when
-* transpose_x is true or [1, 2147483647] when transpose_x is false. The k value
+* The type support float16, bfloat16. The m value must be in [1, 2147483647]. The k value
 * must be at least 1.
 * @li weight: A matrix tensor of quantized weight. Shape supports (n,k)/(k,n),
 * Format supports ND/NZ. The type support int8, int4, int32, float8_e4m3fn, hifloat8, float4_e2m1. \n
@@ -64,7 +63,8 @@ namespace ge {
 * This parameter must not exist when type of antiquant_scale is uint64/int64.
 * @li bias: An Optional tensor. Shape supports (n)/(1,n), Format supports ND.
 * When type of x is float16, the type of bias should be float16. When type of x
-* is bfloat16, the type of bias should be float32 or bfloat16. \n
+* is bfloat16, the type of bias should be bfloat16. When type of x is bfloat16
+* and weight is int4 or int8, the type of bias should be float32. \n
 * Specifically, these optional inputs support the shape (0,). At this point,
 * it means that the optional input doesn't exist.
 
