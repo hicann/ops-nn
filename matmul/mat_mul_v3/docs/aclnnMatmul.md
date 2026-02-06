@@ -231,7 +231,10 @@ aclnnStatus aclnnMatmul(
   - <term>Ascend 950PR/Ascend 950DT</term>: aclnnMatmul默认确定性实现。
 
 - 计算一致性说明
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnMatmul默认非一致性实现，支持通过aclrtCtxSetSysParamOpt开启一致性。
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
+    - 当开启强一致性计算功能时，计算结果时确定的，多次执行将产生相同的输出。此外，计算结果与数据的位置无关。
+    - aclnnMatmul默认非一致性实现，支持通过aclrtCtxSetSysParamOpt开启一致性。
+    - 例如，在进行矩阵乘时，不同基本块的累加顺序可能不同，这可能会导致相同数据在不同行的计算结果出现细微差异。然而，在开启强一致性计算的情况下，即使在不同的行中，只有输入相同，计算结果也将相同。
 
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。不支持两个输入分别为BFLOAT16和FLOAT32的数据类型推导。
 - self和mat2都是1维时，cubeMathType不生效。
