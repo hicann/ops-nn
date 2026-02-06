@@ -143,6 +143,7 @@
 <term>Ascend 950PR/Ascend 950DT</term>：
 - 当`x`的数据类型为FLOAT32时，`scales1`、`scales2`和`zero_points1`、`zero_points2`的数据类型只能为FLOAT32；当`x`的数据类型为FLOAT16或者BFLOAT16，并且`scales1`、`scales2`的数据类型为FLOAT32时，`zero_points1`、`zero_points2`的数据类型只能是FLOAT32或者INT32，否则`scales1`、`scales2`的数据类型需要与`x`的数据类型保持一致同为FLOAT16或者BFLOAT16，`zero_points1`、`zero_points2`的数据类型也需要与`x`的数据类型保持一致或者为INT8。
 - 当`y`的数据类型为INT4时，`x`、`gamma`以及`beta`的最后一维必须为偶数。
+- `zero_points2`必须在`scales2`存在的情况下，才能作为可选输入。
 
 ## 调用说明
 

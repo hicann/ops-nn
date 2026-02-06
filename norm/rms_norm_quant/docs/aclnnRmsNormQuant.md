@@ -254,7 +254,7 @@ aclnnStatus aclnnRmsNormQuant(
 ## 约束说明
 
 - <term>Atlas 推理系列产品</term>：x、y的尾轴长度，以及gamma的尾轴长度必须大于等于32Bytes。
-- <term>Ascend 950PR/Ascend 950DT</term>：当`y`的数据类型为INT4时，`x`的最后一维、`gamma`以及`beta`的维度必须为偶数。
+- <term>Ascend 950PR/Ascend 950DT</term>：当`y`的数据类型为INT4时，`x`、`gamma`以及`beta`的的最后一维必须为偶数。
 - <term>Ascend 950PR/Ascend 950DT</term>：当`y`的数据类型为INT32时，`y`的最后一维必须是`x`最后一维的1/8。
 - 各产品型号支持数据类型说明：
   
@@ -278,14 +278,14 @@ aclnnStatus aclnnRmsNormQuant(
     | x数据类型 | gamma数据类型 | beta数据类型 | scale数据类型 | offset数据类型 | epsilon数据类型 | y数据类型 |
     | --------- | ------------- | ------------- | ------------- | -------------- | --------- |--------- |
     | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
-    | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16       | INT8           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
-    | FLOAT32   | FLOAT32       | FLOAT32       | FLOAT32       | INT8           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
-    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT32       | INT8           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
-    | BFLOAT16   | BFLOAT16       | BFLOAT16       | FLOAT32      | INT8           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
-    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | FLOAT16           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
-    | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16       | BFLOAT16           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
-    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT32       | FLOAT32           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
-    | BFLOAT16   | BFLOAT16       | BFLOAT16       | FLOAT32       | FLOAT32           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8     |
+ 	  | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16       | INT8           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+ 	  | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | FLOAT16           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+ 	  | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16       | BFLOAT16           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+ 	  | FLOAT32   | FLOAT32       | FLOAT32       | FLOAT32       | FLOAT32           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+ 	  | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT32       | INT32           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+ 	  | BFLOAT16   | BFLOAT16       | BFLOAT16       | FLOAT32      | INT32           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+ 	  | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT32       | FLOAT32           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+ 	  | BFLOAT16   | BFLOAT16       | BFLOAT16       | FLOAT32       | FLOAT32           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8     |
 
 - 确定性计算：
   - aclnnRmsNormQuant默认确定性实现。
