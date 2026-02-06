@@ -109,7 +109,7 @@ static inline bool CheckSocVersionIsSupportBf16(void)
            GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B;
 }
 
-static inline bool CheckA2SocVersionAndAlignScenario(const aclTensor* mat2)
+static inline bool CheckMMV3NzNzNdSupport(const aclTensor* mat2)
 {
     uint64_t nAxis = static_cast<uint64_t>(mat2->GetViewShape().GetDim(mat2->GetViewShape().GetDimNum() - 1));
     return CheckKEqual1Support() && (nAxis % HALF_ALIGN_UNIT == 0);
@@ -424,7 +424,10 @@ static const aclTensor* GetMatMulOp(
 {
     bool enableForceGrpAccForFp32 = opImplModeEnum == 0x4 && mmOpInfo.shapeInfo.kDim >= 2048 && mmOpInfo.ori_info.self_dtype == DataType::DT_FLOAT;
     if (CheckAscendCScenario(x1, x2, bias, mmOpInfo, transposeX1, transposeX2) ||
-        CheckAscendCScenario2(x1, x2, mmOpInfo, transposeX1, transposeX2) || enableForceGrpAccForFp32) {
+        CheckAscendCScenario2(x1, x2, mmOpInfo, transposeX1, transposeX2) || enableForceGrpAccForFp32 ||
+        (CheckMMV3NzNzNdSupport(x2) && mmOpInfo.support_info.self_format == ge::FORMAT_FRACTAL_NZ &&
+         mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ &&
+         mmOpInfo.support_info.output_format == ge::FORMAT_ND)) {
         OP_LOGI("Hit matmul_v3 scenario.");
         if (mmOpInfo.support_info.output_dtype == DataType::DT_FLOAT &&
             ((mmOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT16 &&
@@ -432,8 +435,32 @@ static const aclTensor* GetMatMulOp(
              (mmOpInfo.support_info.mat2_dtype == DataType::DT_BF16 &&
               mmOpInfo.support_info.self_dtype == DataType::DT_BF16)) &&
             bias == nullptr) {
+            if (mmOpInfo.support_info.self_format == ge::FORMAT_FRACTAL_NZ &&
+                mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ &&
+                mmOpInfo.support_info.output_format == ge::FORMAT_ND) {
+                OP_LOGD("check SocVersion, call MatMulV3NzNzNdFp162Fp32.");
+                x1 = l0op::ReFormat(x1, op::Format::FORMAT_FRACTAL_NZ);
+                x2 = l0op::ReFormat(x2, op::Format::FORMAT_FRACTAL_NZ);
+
+                const aclTensor* mmOut = l0op::MatMulV3NzNzNdFp162Fp32(
+                    x1, x2, bias, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
+                return mmOut;
+            }
+
             const aclTensor* mmOut =
                 l0op::MatMulV3NdFp162Fp32(x1, x2, bias, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
+            return mmOut;
+        }
+
+        if (mmOpInfo.support_info.self_format == ge::FORMAT_FRACTAL_NZ &&
+            mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ &&
+            mmOpInfo.support_info.output_format == ge::FORMAT_ND) {
+            OP_LOGD("check SocVersion, call MatMulV3NzNzNd.");
+            x1 = l0op::ReFormat(x1, op::Format::FORMAT_FRACTAL_NZ);
+            x2 = l0op::ReFormat(x2, op::Format::FORMAT_FRACTAL_NZ);
+
+            const aclTensor* mmOut =
+                l0op::MatMulV3NzNzNd(x1, x2, bias, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
             return mmOut;
         }
 
@@ -448,29 +475,13 @@ static const aclTensor* GetMatMulOp(
           mmOpInfo.support_info.self_dtype == DataType::DT_BF16)) &&
         bias == nullptr) {
         // This is Split K Mode; Check if MatMul using Nd in Nd Out
-        const aclTensor* mmOut = nullptr;
-        if (mmOpInfo.support_info.self_format == ge::FORMAT_ND &&
-            mmOpInfo.support_info.output_format == ge::FORMAT_ND) {
-            mmOut = l0op::MatMulNdFp162Fp32(
-                x1, x2, nullptr, nullptr, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
-        } else {
-            // 对于混精度MMV2NZNZNZ场景，在切换至MMV3NZNZND
-            if (CheckA2SocVersionAndAlignScenario(x2) && 
-                mmOpInfo.support_info.self_format == ge::FORMAT_FRACTAL_NZ &&
-                mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ &&
-                mmOpInfo.support_info.output_format == ge::FORMAT_FRACTAL_NZ) {
-                OP_LOGD("check SocVersion, call MatMulV3NzNzNdFp162Fp32.");
-                mmOpInfo.support_info.output_format = ge::FORMAT_ND;
-                x1 = l0op::ReFormat(x1, op::Format::FORMAT_FRACTAL_NZ);
-                x2 = l0op::ReFormat(x2, op::Format::FORMAT_FRACTAL_NZ);
-                
-                mmOut = l0op::MatMulV3NzNzNdFp162Fp32(
-                    x1, x2, bias, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
-            } else {
-                mmOut = l0op::MatMulNzFp162Fp32(
+        const aclTensor* mmOut =
+            (mmOpInfo.support_info.self_format == ge::FORMAT_ND &&
+             mmOpInfo.support_info.output_format == ge::FORMAT_ND) ?
+                l0op::MatMulNdFp162Fp32(
+                    x1, x2, nullptr, nullptr, transposeX1, transposeX2, offsetX, opImplModeEnum, executor) :
+                l0op::MatMulNzFp162Fp32(
                     x1, x2, nullptr, nullptr, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
-            }
-        }
         return mmOut;
     } else {
         if (mmOpInfo.support_info.self_format == ge::FORMAT_ND) {
@@ -488,18 +499,6 @@ static const aclTensor* GetMatMulOp(
                     x1, x2, bias, nullptr, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
                 return mmOut;
             }
-
-            if (CheckA2SocVersionAndAlignScenario(x2)) {
-                // 检查平台，MMV2 NZNZNZ 场景切 MMV3 NZNZND
-                mmOpInfo.support_info.output_format = ge::FORMAT_ND;
-                x1 = l0op::ReFormat(x1, op::Format::FORMAT_FRACTAL_NZ);
-                x2 = l0op::ReFormat(x2, op::Format::FORMAT_FRACTAL_NZ);
-
-                const aclTensor* mmOut =
-                    l0op::MatMulV3NzNzNd(x1, x2, bias, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
-                return mmOut;
-            }
-
             const aclTensor* mmOut =
                 l0op::MatMulNz(x1, x2, bias, nullptr, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
             return mmOut;
@@ -711,7 +710,11 @@ static aclnnStatus SetMatmulOpSupportFormat(
         if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P) {
             mmOpInfo.support_info.output_dtype = DataType::DT_FLOAT;
         } else if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910) {
-            mmOpInfo.support_info.output_format = Format::FORMAT_FRACTAL_NZ;
+            if(CheckMMV3NzNzNdSupport(mat2)){
+                mmOpInfo.support_info.output_format = Format::FORMAT_ND;
+            }else{
+                mmOpInfo.support_info.output_format = Format::FORMAT_FRACTAL_NZ;
+            }
             mmOpInfo.support_info.output_dtype = DataType::DT_FLOAT;
         }
     }
@@ -1912,6 +1915,14 @@ aclnnStatus SetMmSupportFormat(const aclTensor* self, const aclTensor* mat2, MmO
       mmOpInfo.support_info.mat2_format = Format::FORMAT_FRACTAL_NZ;
       return ACLNN_SUCCESS;
     }
+
+    if (CheckMMV3NzNzNdSupport(mat2)) {
+      mmOpInfo.support_info.output_format = Format::FORMAT_ND;
+      mmOpInfo.support_info.self_format = Format::FORMAT_FRACTAL_NZ;
+      mmOpInfo.support_info.mat2_format = Format::FORMAT_FRACTAL_NZ;
+      return ACLNN_SUCCESS;
+    }
+
     mmOpInfo.support_info.output_format = Format::FORMAT_FRACTAL_NZ;
     mmOpInfo.support_info.self_format = Format::FORMAT_FRACTAL_NZ;
     mmOpInfo.support_info.mat2_format = Format::FORMAT_FRACTAL_NZ;
