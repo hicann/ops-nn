@@ -23,6 +23,7 @@
 #include "opdev/format_utils.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 using namespace std;
@@ -48,7 +49,7 @@ static const std::initializer_list<op::DataType> SELF_OUT_DTYPE_SUPPORT_910_LIST
 // 1971支持float16和float
 static const std::initializer_list<op::DataType> SELF_OUT_DTYPE_SUPPORT_910B_LIST = {op::DataType::DT_FLOAT16,
                                                                                      op::DataType::DT_FLOAT};
-static const std::initializer_list<op::DataType> SELF_OUT_DTYPE_SUPPORT_910D_LIST = {
+static const std::initializer_list<op::DataType> SELF_OUT_DTYPE_SUPPORT_REGBASE_LIST = {
   op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16, op::DataType::DT_INT32, op::DataType::DT_INT64,
   op::DataType::DT_UINT8, op::DataType::DT_INT16, op::DataType::DT_INT8, op::DataType::DT_UINT16};
 
@@ -65,16 +66,15 @@ static bool CheckNotNullPtr(const aclTensor* self, const aclIntArray* kernelShap
 }
 
 static const inline std::initializer_list<op::DataType> GetDtypeSupportListBySocVersion() {
-  auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  switch (socVersion) {
-    case SocVersion::ASCEND910_93:
-    case SocVersion::ASCEND910B: {
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  switch (curArch) {
+    case NpuArch::DAV_2201: {
       return SELF_OUT_DTYPE_SUPPORT_910B_LIST;
     }
-    case SocVersion::ASCEND950: {
-      return SELF_OUT_DTYPE_SUPPORT_910D_LIST;
+    case NpuArch::DAV_3510: {
+      return SELF_OUT_DTYPE_SUPPORT_REGBASE_LIST;
     }
-    case SocVersion::ASCEND910: {
+    case NpuArch::DAV_1001: {
       return SELF_OUT_DTYPE_SUPPORT_910_LIST;
     }
     default: { return SELF_OUT_DTYPE_SUPPORT_910_LIST; }
@@ -436,7 +436,7 @@ static const aclTensor* ExecMaxPoolV3(const aclTensor* self, const aclTensor* se
   CHECK_RET(selfUnsqueezed != nullptr, nullptr);
 
   const aclTensor* selfProcsResult = selfUnsqueezed;
-  bool isDavid = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
+  bool isDavid = Ops::NN::AclnnUtil::IsRegbase();
   if (!isDavid) {
     // ND格式-> 5HD格式 NHWC/ NCHW
     selfProcsResult = Selfto5HDProcess(selfUnsqueezed, executor);
@@ -571,9 +571,8 @@ static inline bool ExecMaxPool3DCapable(const aclIntArray* kernelShape, const ac
   if (pads->Size() == SIZE_4 && ((padsRef[0] != padsRef[INDEX_2]) || (padsRef[INDEX_1] != padsRef[INDEX_3]))) {
       padLengthFlag = false;
   }
-
-  bool supportMaxPool3DWithArgmaxV2 = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-                                      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93;
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  bool supportMaxPool3DWithArgmaxV2 = curArch == NpuArch::DAV_2201;
 
   const aclIntArray& kernelRef = *kernelShape;
   const int64_t kH = kernelRef[0];
@@ -637,7 +636,8 @@ aclnnStatus aclnnMaxPoolGetWorkspaceSize(const aclTensor* self, const aclIntArra
   const aclTensor* outSqueezed = nullptr;
   if (ExecMaxPool3DCapable(kernelShape, pads)){
     outSqueezed = ExecMaxPool3DWithArgmaxV2(self, selfContiguous, kernelShape, strides, pads, ceilMode, out, uniqueExecutor.get());
-  } else{
+  }
+  else{
     outSqueezed = ExecMaxPoolV3(self, selfContiguous, kernelShape, strides, pads, ceilMode, out, uniqueExecutor.get());
   }
   CHECK_RET(outSqueezed != nullptr, ACLNN_ERR_INNER_NULLPTR);

@@ -25,6 +25,7 @@
 #include "opdev/format_utils.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus

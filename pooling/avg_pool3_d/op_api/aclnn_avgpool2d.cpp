@@ -21,6 +21,7 @@
 #include "opdev/framework_op.h"
 #include "op_api/op_api_def.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "op_api/aclnn_util.h"
 
 #include "pooling.h"
 #include "avgpool_update.h"

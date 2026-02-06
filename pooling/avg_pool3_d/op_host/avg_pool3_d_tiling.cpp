@@ -29,6 +29,7 @@
 #include "register/op_def_registry.h"
 #include "tiling/tiling_api.h"
 #include "pool_tiling_templates_registry.h"
+#include "tiling_base/tiling_util.h"
 
 using optiling::PoolTilingRegistry;
 
@@ -169,6 +170,7 @@ static inline uint64_t FindDivisorWindowNum(uint64_t len, uint64_t initWindowNum
 
 namespace optiling {
 namespace avgPool3DTiling {
+using namespace Ops::NN::OpTiling;
 using namespace avgPool3DTilingCompileInfo;
 static bool IsRegbaseSocVersion(platform_ascendc::SocVersion version)
 {
@@ -305,7 +307,7 @@ static void Tilling4NCDHWNormal(TilingParams& params)
 static bool CheckBigKernel(TilingParams& params)
 {
     uint64_t sumK = params.kD * params.kH * params.kW;
-    bool bigKernel = (params.kD > BIG_KERNEL_SINGLE_LIMIT || params.kH > BIG_KERNEL_SINGLE_LIMIT || 
+    bool bigKernel = (params.kD > BIG_KERNEL_SINGLE_LIMIT || params.kH > BIG_KERNEL_SINGLE_LIMIT ||
                         params.kW > BIG_KERNEL_SINGLE_LIMIT) && sumK > BIG_KERNEL_SUM_LIMIT;
 
     uint64_t windowsCalc = params.outD * params.outH * params.outW * sumK;
