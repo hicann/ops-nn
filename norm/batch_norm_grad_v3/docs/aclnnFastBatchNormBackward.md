@@ -501,7 +501,7 @@ int main() {
   std::vector<float> sVarHostData = {1, 1};
   std::vector<float> gradInHostData(8, 0);
   std::vector<float> gradWeightHostData(2, 0);
-  std::vector<float> gradBiasHostData(2, 0);;
+  std::vector<float> gradBiasHostData(2, 0);
   bool training = true;
   double eps = 1e-5;
   // 创建gradOut aclTensor
