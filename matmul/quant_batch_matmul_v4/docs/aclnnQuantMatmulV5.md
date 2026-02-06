@@ -299,8 +299,12 @@ aclnnStatus aclnnQuantMatmulV5(
         <td>可选输入</td>
         <td>输出y的反量化scale参数。</td>
         <td>
+          <ul>
+            <li>不支持空Tensor。</li>
+            <li>如果不使用该参数，传入nullptr。</li>
+          </ul>
         </td>
-        <td>UINT64、INT64</td>
+        <td>UINT64<sup>2</sup>、INT64<sup>2</sup></td>
         <td>ND</td>
         <td>2</td>
         <td>×</td>
