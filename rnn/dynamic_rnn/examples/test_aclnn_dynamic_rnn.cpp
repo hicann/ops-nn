@@ -128,6 +128,7 @@ int main()
 
     std::vector<int64_t> inputShape = {time_step, batch_size, input_size};
     std::vector<int64_t> outputShape = {time_step, batch_size, d_scale * hidden_size};
+    std::vector<int64_t> hycyShape = {numLayers * d_scale, batch_size, hidden_size};
     std::vector<std::vector<int64_t>> paramsListShape = {};
 
     std::vector<std::vector<int64_t>> outIListShape = {};
@@ -162,6 +163,8 @@ int main()
     void* paramsListDeviceAddr[2 * numLayers];
 
     void* outputDeviceAddr = nullptr;
+    void* hyDeviceAddr = nullptr;
+    void* cyDeviceAddr = nullptr;
     void* outIListDeviceAddr[numLayers];
     void* outJListDeviceAddr[numLayers];
     void* outFListDeviceAddr[numLayers];
@@ -174,6 +177,8 @@ int main()
     aclTensorList* params = nullptr;
 
     aclTensor* output = nullptr;
+    aclTensor* hy = nullptr;
+    aclTensor* cy = nullptr;
     aclTensorList* outIList = nullptr;
     aclTensorList* outJList = nullptr;
     aclTensorList* outFList = nullptr;
@@ -192,6 +197,13 @@ int main()
 
     std::vector<float> outputHostData(GetShapeSize(outputShape), 1);
     ret = CreateAclTensor<float>(outputHostData, outputShape, &outputDeviceAddr, aclDataType::ACL_FLOAT, &output);
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
+
+    std::vector<float> hycyHostData(GetShapeSize(hycyShape), 1);
+    ret = CreateAclTensor<float>(hycyHostData, hycyShape, &hyDeviceAddr, aclDataType::ACL_FLOAT, &hy);
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
+
+    ret = CreateAclTensor<float>(hycyHostData, hycyShape, &cyDeviceAddr, aclDataType::ACL_FLOAT, &cy);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     ret = CreateAclTensorList<float>(outIListShape, outIListDeviceAddr, aclDataType::ACL_FLOAT, &outIList, 0.0);
@@ -222,8 +234,8 @@ int main()
 
     // 调用aclnnLSTM第一段接口
     ret = aclnnLSTMGetWorkspaceSize(
-        input, params, nullptr, nullptr, isbias, numLayers, 0.0, isTraining, bidirection, batchFirst, output, outIList, outJList,
-        outFList, outOList, outHList, outCList, outTanhCList, &workspaceSize, &executor);
+        input, params, nullptr, nullptr, isbias, numLayers, 0.0, isTraining, bidirection, batchFirst, output, hy, cy,
+        outIList, outJList, outFList, outOList, outHList, outCList, outTanhCList, &workspaceSize, &executor);
 
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnLSTMGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
@@ -250,6 +262,8 @@ int main()
     aclDestroyTensor(input);
     aclDestroyTensorList(params);
     aclDestroyTensor(output);
+    aclDestroyTensor(hy);
+    aclDestroyTensor(cy);
     aclDestroyTensorList(outIList);
     aclDestroyTensorList(outJList);
     aclDestroyTensorList(outFList);
@@ -261,6 +275,8 @@ int main()
     //   // 7. 释放device资源
     aclrtFree(inputDeviceAddr);
     aclrtFree(outputDeviceAddr);
+    aclrtFree(hyDeviceAddr);
+    aclrtFree(cyDeviceAddr);
     for (int i = 0; i < numLayers; i++) {
         aclrtFree(outIListDeviceAddr[i]);
         aclrtFree(outJListDeviceAddr[i]);

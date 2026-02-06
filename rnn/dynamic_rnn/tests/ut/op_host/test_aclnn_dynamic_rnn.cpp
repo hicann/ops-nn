@@ -60,6 +60,7 @@ TEST_F(l2_dynamic_rnn_test, ascend910B_test_dynamic_rnn_params_dim_invalid)
     vector<int64_t> whDim = {4 * hidden_size, hidden_size};
     vector<int64_t> bDim = {4 * hidden_size};
     vector<int64_t> outDim = {time_step, batch_size, d_scale * hidden_size};
+    vector<int64_t> hycyDim = {d_scale * numLayers, batch_size, hidden_size};
     vector<int64_t> outHDim = {time_step, batch_size,  hidden_size};
     
 
@@ -71,6 +72,10 @@ TEST_F(l2_dynamic_rnn_test, ascend910B_test_dynamic_rnn_params_dim_invalid)
     auto params = TensorListDesc({wi, wh, bi, bh});
 
     auto output = TensorDesc(outDim, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+
+    auto hy = TensorDesc(hycyDim, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+
+    auto cy = TensorDesc(hycyDim, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
 
     auto outIForward = TensorDesc(outHDim, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto outIBackward = TensorDesc(outHDim, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -106,7 +111,7 @@ TEST_F(l2_dynamic_rnn_test, ascend910B_test_dynamic_rnn_params_dim_invalid)
     auto ut = OP_API_UT(
         aclnnLSTM, // host api第二段接口名称
         INPUT( input, params, hx_desc, batchSizes, has_biases, numLayers, 0.0, isTraining, bidirectionl, batchFirst), // host api输入
-        OUTPUT(output, outputI, outputJ, outputF, outputO, outputH, outputC, outputTanhC));
+        OUTPUT(output, hy, cy, outputI, outputJ, outputF, outputO, outputH, outputC, outputTanhC));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); 
@@ -132,6 +137,7 @@ TEST_F(l2_dynamic_rnn_test, ascend910B_test_dynamic_rnn_params_shape_invalid)
     vector<int64_t> whDim = {4 * hidden_size, hidden_size};
     vector<int64_t> bDim = {3 * hidden_size};
     vector<int64_t> outDim = {time_step, batch_size, d_scale * hidden_size};
+    vector<int64_t> hycyDim = {d_scale * numLayers, batch_size, hidden_size};
     vector<int64_t> outHDim = {time_step, batch_size,  hidden_size};
     
 
@@ -143,6 +149,10 @@ TEST_F(l2_dynamic_rnn_test, ascend910B_test_dynamic_rnn_params_shape_invalid)
     auto params = TensorListDesc({wi, wh, bi, bh});
 
     auto output = TensorDesc(outDim, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+
+    auto hy = TensorDesc(hycyDim, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+
+    auto cy = TensorDesc(hycyDim, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
 
     auto outIForward = TensorDesc(outHDim, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto outputI = TensorListDesc({outIForward});
@@ -171,7 +181,7 @@ TEST_F(l2_dynamic_rnn_test, ascend910B_test_dynamic_rnn_params_shape_invalid)
     auto ut = OP_API_UT(
         aclnnLSTM, // host api第二段接口名称
         INPUT( input, params, hx_desc, batchSizes, has_biases, numLayers, 0.0, isTraining, bidirectionl, batchFirst), // host api输入
-        OUTPUT(output, outputI, outputJ, outputF, outputO, outputH, outputC, outputTanhC));
+        OUTPUT(output, hy, cy, outputI, outputJ, outputF, outputO, outputH, outputC, outputTanhC));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); 

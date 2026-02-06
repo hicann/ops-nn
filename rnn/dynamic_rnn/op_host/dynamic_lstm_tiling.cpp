@@ -13,6 +13,7 @@
  * \brief
  */
 #include "dynamic_lstm_tiling.h"
+#include "tiling/platform/platform_ascendc.h"
 
 using namespace AscendC;
 
@@ -83,7 +84,9 @@ ge::graphStatus LstmBaseTiling::TilingWithAscendC(gert::TilingContext* context) 
                   VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "set tiling data fail."),
                   return ge::GRAPH_FAILED);
 
-  int64_t workspaceSize = rnnParams.timeStep * rnnParams.batch * 4 * rnnParams.hiddenSize * 4 + 20 * 1024 * 1024;
+  auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
+  size_t sysWorkspaceByteSize = static_cast<size_t>(ascendcPlatform.GetLibApiWorkSpaceSize());
+  int64_t workspaceSize = rnnParams.timeStep * rnnParams.batch * 4 * rnnParams.hiddenSize * 4 + sysWorkspaceByteSize;  // 4为门的数量
   auto launchCore = (rnnParams.usedCoreNum + DEFAULT_INDEX_TWO - 1) / DEFAULT_INDEX_TWO;
   context->SetBlockDim(launchCore);  // 24上限
   context->SetTilingKey(rnnParams.tilingKey);

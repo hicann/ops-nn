@@ -49,6 +49,8 @@ struct LstmDataParamsIn {
 
 struct LstmDataParamsOut {
     aclTensor *output;
+    aclTensor *hy;
+    aclTensor *cy;
     aclTensorList *iOut;
     aclTensorList *jOut;
     aclTensorList *fOut;
@@ -111,6 +113,7 @@ static const int64_t INDEX_1 = 1;
 static const int64_t INDEX_2 = 2;
 static const int64_t INDEX_3 = 3;
 static const int64_t INDEX_4 = 4;
+static const size_t CONCAT_MAX_NUM = 32;
 
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16};
@@ -552,10 +555,8 @@ static aclnnStatus CheckParamsNullptr(const LstmDataParamsIn& inputs, const Lstm
     
     // 输出校验
     OP_CHECK_NULL(outputs.output, return ACLNN_ERR_PARAM_NULLPTR);
-    ret = CheckTensorListNullptr(outputs.hOut);
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    ret = CheckTensorListNullptr(outputs.cOut);
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    OP_CHECK_NULL(outputs.hy, return ACLNN_ERR_PARAM_NULLPTR);
+    OP_CHECK_NULL(outputs.cy, return ACLNN_ERR_PARAM_NULLPTR);
     if (inputs.train) {
         ret = CheckTensorListNullptr(outputs.iOut);
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -564,6 +565,10 @@ static aclnnStatus CheckParamsNullptr(const LstmDataParamsIn& inputs, const Lstm
         ret = CheckTensorListNullptr(outputs.fOut);
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
         ret = CheckTensorListNullptr(outputs.oOut);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        ret = CheckTensorListNullptr(outputs.hOut);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        ret = CheckTensorListNullptr(outputs.cOut);
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
         ret = CheckTensorListNullptr(outputs.tanhCOut);
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -647,10 +652,8 @@ static aclnnStatus CheckDimsAndListLength(const LstmDataParamsIn& inputs, const 
     OP_CHECK_WRONG_DIMENSION(inputs.batchSizes, INDEX_1, return ACLNN_ERR_PARAM_INVALID);
 
     OP_CHECK_WRONG_DIMENSION(outputs.output, INDEX_3, return ACLNN_ERR_PARAM_INVALID);
-    ret = CheckTensorListLength(outputs.hOut, info.LD, "hOut");
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    ret = CheckTensorListLength(outputs.cOut, info.LD, "cOut");
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    OP_CHECK_WRONG_DIMENSION(outputs.hy, INDEX_3, return ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK_WRONG_DIMENSION(outputs.cy, INDEX_3, return ACLNN_ERR_PARAM_INVALID);
     if (inputs.train) {
         ret = CheckTensorListLength(outputs.iOut, info.LD, "iOut");
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -659,6 +662,10 @@ static aclnnStatus CheckDimsAndListLength(const LstmDataParamsIn& inputs, const 
         ret = CheckTensorListLength(outputs.fOut, info.LD, "fOut");
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
         ret = CheckTensorListLength(outputs.oOut, info.LD, "oOut");
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        ret = CheckTensorListLength(outputs.hOut, info.LD, "hOut");
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        ret = CheckTensorListLength(outputs.cOut, info.LD, "cOut");
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
         ret = CheckTensorListLength(outputs.tanhCOut, info.LD, "tanhCOut");
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -702,8 +709,8 @@ static aclnnStatus CheckShapes(const LstmDataParamsIn& inputs, const LstmDataPar
     op::Shape biasShape = {INDEX_4 * info.H};
     op::Shape hxShape = {info.D * info.L, info.B, info.H};
     op::Shape outShape = {info.T, info.B, info.H};
-    op::Shape outInferenceShape = {info.B, info.H};
     op::Shape outputConcatShape = {info.T, info.B, info.H * info.D};
+    op::Shape hycyShape = {info.LD, info.B, info.H};
 
     for (int64_t group = INDEX_0; group < info.LD; group++) {
         int64_t currOffset = group * info.groupLen;
@@ -724,6 +731,8 @@ static aclnnStatus CheckShapes(const LstmDataParamsIn& inputs, const LstmDataPar
     }
 
     OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(outputs.output, outputConcatShape, return ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(outputs.hy, hycyShape, return ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(outputs.cy, hycyShape, return ACLNN_ERR_PARAM_INVALID);
     if (inputs.train) {
         ret = CheckTensorListShape(outputs.iOut, outShape, "iOut");
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -738,11 +747,6 @@ static aclnnStatus CheckShapes(const LstmDataParamsIn& inputs, const LstmDataPar
         ret = CheckTensorListShape(outputs.cOut, outShape, "cOut");
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
         ret = CheckTensorListShape(outputs.tanhCOut, outShape, "tanhCOut");
-        CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    } else {
-        ret = CheckTensorListShape(outputs.hOut, outInferenceShape, "hOut");
-        CHECK_RET(ret == ACLNN_SUCCESS, ret);
-        ret = CheckTensorListShape(outputs.cOut, outInferenceShape, "cOut");
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
     }
 
@@ -762,20 +766,24 @@ static aclnnStatus CheckDtypes(const LstmDataParamsIn& inputs, const LstmDataPar
     OP_CHECK_DTYPE_NOT_SUPPORT(inputs.batchSizes, INT_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
 
     OP_CHECK_DTYPE_NOT_MATCH(outputs.output, info.dtype, return ACLNN_ERR_PARAM_INVALID);
-    ret = CheckTensorListDtype(outputs.iOut, info.dtype, "iOut");
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    ret = CheckTensorListDtype(outputs.jOut, info.dtype, "jOut");
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    ret = CheckTensorListDtype(outputs.fOut, info.dtype, "fOut");
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    ret = CheckTensorListDtype(outputs.oOut, info.dtype, "oOut");
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    ret = CheckTensorListDtype(outputs.hOut, info.dtype, "hOut");
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    ret = CheckTensorListDtype(outputs.cOut, info.dtype, "cOut");
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    ret = CheckTensorListDtype(outputs.tanhCOut, info.dtype, "tanhCOut");
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    OP_CHECK_DTYPE_NOT_MATCH(outputs.hy, info.dtype, return ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK_DTYPE_NOT_MATCH(outputs.cy, info.dtype, return ACLNN_ERR_PARAM_INVALID);
+    if (inputs.train) {
+        ret = CheckTensorListDtype(outputs.iOut, info.dtype, "iOut");
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        ret = CheckTensorListDtype(outputs.jOut, info.dtype, "jOut");
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        ret = CheckTensorListDtype(outputs.fOut, info.dtype, "fOut");
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        ret = CheckTensorListDtype(outputs.oOut, info.dtype, "oOut");
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        ret = CheckTensorListDtype(outputs.hOut, info.dtype, "hOut");
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        ret = CheckTensorListDtype(outputs.cOut, info.dtype, "cOut");
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        ret = CheckTensorListDtype(outputs.tanhCOut, info.dtype, "tanhCOut");
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    }
 
     return ACLNN_SUCCESS;
 }
@@ -870,6 +878,43 @@ static const aclTensor* GetMask(
     return mask;
 }
 
+static const aclTensor* SplitToConcat(std::vector<const aclTensor*> tensorListA, int64_t dim, aclOpExecutor* executor)
+{
+    if (tensorListA.size() == 1) {
+        return tensorListA[0];
+    }
+
+    while (tensorListA.size() > 1) {
+        std::vector<const aclTensor*> tensorListOnce;
+        std::vector<const aclTensor*> tensorListB;
+        for (auto tensor : tensorListA) {
+            tensorListOnce.emplace_back(tensor);
+            if (tensorListOnce.size() == CONCAT_MAX_NUM) {
+                auto tensorList = executor->AllocTensorList(tensorListOnce.data(), tensorListOnce.size());
+                auto concatTensor = l0op::ConcatD(tensorList, dim, executor);
+                CHECK_RET(concatTensor != nullptr, nullptr);
+                tensorListB.emplace_back(concatTensor);
+                tensorListOnce.clear();
+            }
+        }
+        if (!tensorListOnce.empty()) {
+            if (tensorListOnce.size() == 1) {
+                tensorListB.emplace_back(tensorListOnce.front());
+            } else {
+                auto aclTensorListTail = executor->AllocTensorList(tensorListOnce.data(), tensorListOnce.size());
+                auto concatTensorTail = l0op::ConcatD(aclTensorListTail, dim, executor);
+                CHECK_RET(concatTensorTail != nullptr, nullptr);
+                tensorListB.emplace_back(concatTensorTail);
+            }
+            tensorListOnce.clear();
+        }
+        tensorListA = tensorListB;
+    }
+
+    CHECK_RET (!tensorListA.empty(), nullptr);
+    return tensorListA.front();
+}
+
 static aclnnStatus CallBaseOp(
     const BaseOpInputs& baseIn,
     const LstmDataInfo& info,
@@ -906,7 +951,6 @@ static aclnnStatus LstmDataProcessParams(
 {
     // h0、c0。slice
     if (inputs.hx) {
-        // 假设l0op::Slice元素共享内存
         const int64_t offsetData[] = {
             layerIdx * info.D + directIdx,
             INDEX_0,
@@ -997,7 +1041,49 @@ static aclnnStatus LstmDataGetParamsOut(
     res = l0op::ViewCopy(info.lastResult, outputs.output, executor);
     CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 处理其他tensorList
+    // 处理hy、cy
+    // 准备取最后1个step，正序为T-1，反序为0
+    const int64_t offsetUniDirectData[] = {info.T - INDEX_1, INDEX_0, INDEX_0};
+    aclIntArray* offsetUniDirect = executor->AllocIntArray(offsetUniDirectData, INDEX_3);
+    CHECK_RET(offsetUniDirect != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const int64_t offsetReDirectData[] = {INDEX_0, INDEX_0, INDEX_0};
+    aclIntArray* offsetReDirect = executor->AllocIntArray(offsetReDirectData, INDEX_3);
+    CHECK_RET(offsetReDirect != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const int64_t sizeData[] = {INDEX_1, info.B, info.H};
+    aclIntArray* size = executor->AllocIntArray(sizeData, INDEX_3);
+    CHECK_RET(size != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    std::vector<const aclTensor *> hyVec;
+    std::vector<const aclTensor *> cyVec;
+    // 取出并存放到Vector
+    for (int64_t idx = INDEX_0; idx < info.LD; idx++) {
+        res = l0op::Slice(
+            baseOutVec.at(idx).l0_hOut,
+            ((info.D == INDEX_2 and idx % INDEX_2 != INDEX_0) ? offsetReDirect : offsetUniDirect),
+            size,
+            executor
+        );
+        CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        hyVec.push_back(res);
+
+        res = l0op::Slice(
+            baseOutVec.at(idx).l0_cOut,
+            ((info.D == INDEX_2 and idx % INDEX_2 != INDEX_0) ? offsetReDirect : offsetUniDirect),
+            size,
+            executor
+        );
+        CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        cyVec.push_back(res);
+    }
+    auto hy = SplitToConcat(hyVec, INDEX_0, executor);
+    CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto cy = SplitToConcat(cyVec, INDEX_0, executor);
+    CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    res = l0op::ViewCopy(hy, outputs.hy, executor);
+    CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    res = l0op::ViewCopy(cy, outputs.cy, executor);
+    CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 处理训练模式下其他tensorList
     /* 由于输出也是先层后方向排布，因此可以直接按baseOutVec顺序拷贝
      */
     if (inputs.train) {
@@ -1015,43 +1101,6 @@ static aclnnStatus LstmDataGetParamsOut(
             res = l0op::ViewCopy(baseOutVec.at(idx).l0_cOut, (*outputs.cOut)[idx], executor);
             CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
             res = l0op::ViewCopy(baseOutVec.at(idx).l0_tanhcOut, (*outputs.tanhCOut)[idx], executor);
-            CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        }
-    } else {
-        // 准备取最后1个step，正序为T-1，反序为0
-        const int64_t offsetUniDirectData[] = {info.T - INDEX_1, INDEX_0, INDEX_0};
-        aclIntArray* offsetUniDirect = executor->AllocIntArray(offsetUniDirectData, INDEX_3);
-        CHECK_RET(offsetUniDirect != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        const int64_t offsetReDirectData[] = {INDEX_0, INDEX_0, INDEX_0};
-        aclIntArray* offsetReDirect = executor->AllocIntArray(offsetReDirectData, INDEX_3);
-        CHECK_RET(offsetReDirect != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        const int64_t sizeData[] = {INDEX_1, info.B, info.H};
-        aclIntArray* size = executor->AllocIntArray(sizeData, INDEX_3);
-        CHECK_RET(size != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        for (int64_t idx = INDEX_0; idx < info.LD; idx++) {
-            res = l0op::Slice(
-                baseOutVec.at(idx).l0_hOut,
-                ((info.D == INDEX_2 and idx % INDEX_2 != INDEX_0) ? offsetReDirect : offsetUniDirect),
-                size,
-                executor
-            );
-            CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            res = l0op::SqueezeNd(res, INDEX_0, executor);
-            CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            res = l0op::ViewCopy(res, (*outputs.hOut)[idx], executor);
-            CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-            res = l0op::Slice(
-                baseOutVec.at(idx).l0_cOut,
-                ((info.D == INDEX_2 and idx % INDEX_2 != INDEX_0) ? offsetReDirect : offsetUniDirect),
-                size,
-                executor
-            );
-            CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            res = l0op::SqueezeNd(res, INDEX_0, executor);
-            CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            res = l0op::ViewCopy(res, (*outputs.cOut)[idx], executor);
             CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
     }
@@ -1163,6 +1212,8 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
     bool bidirectional,
     bool batch_first,
     aclTensor *output,
+    aclTensor *hy,
+    aclTensor *cy,
     aclTensorList *iOut,
     aclTensorList *jOut,
     aclTensorList *fOut,
@@ -1179,7 +1230,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
     // 判断是否进入data模式
     if (batchSizes) {
         LstmDataParamsIn inputs = {input, params, hx, batchSizes, numLayers, has_biases, train, bidirectional};
-        LstmDataParamsOut outputs = {output, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut};
+        LstmDataParamsOut outputs = {output, hy, cy, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut};
         return LstmDataGetWorkspaceSize(inputs, outputs, workspaceSize, executor);
     }
 

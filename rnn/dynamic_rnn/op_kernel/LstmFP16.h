@@ -51,14 +51,14 @@ public:
     __aicore__ inline void CopyInC(AscendC::LocalTensor<T> &dst, AscendC::GlobalTensor<T> &mixGm, const int64_t off);
     __aicore__ inline void AddfSigmoid(AscendC::LocalTensor<float> &dst, AscendC::LocalTensor<float> &src, int64_t off);
     __aicore__ inline void CaliSigmoid(AscendC::LocalTensor<float> &dst, AscendC::LocalTensor<float> &src, int64_t off);
-    __aicore__ inline void CaljTanh(AscendC::LocalTensor<float> &dst, AscendC::LocalTensor<float> &src, int64_t off);
+    __aicore__ inline void CaljTanh(AscendC::LocalTensor<float> &dst, AscendC::LocalTensor<float> &src, int64_t off, LocalTensor<float> &temp1, LocalTensor<float> &temp2);
     __aicore__ inline void CaloSigmoid(AscendC::LocalTensor<float> &dst, AscendC::LocalTensor<float> &src, int64_t off);
     __aicore__ inline void InitCMulfSigmoid(
         AscendC::LocalTensor<float> &dst, AscendC::LocalTensor<T> &src1, AscendC::LocalTensor<float> &src2);
     __aicore__ inline void CalAddTanh(AscendC::LocalTensor<float> &dst, AscendC::LocalTensor<float> &src1,
-        AscendC::LocalTensor<float> &src2, int64_t off1, int64_t off2);
+        AscendC::LocalTensor<float> &src2, int64_t off1, int64_t off2, LocalTensor<float> &temp1);
     __aicore__ inline void CalAddTanht0(AscendC::LocalTensor<float> &dst, AscendC::LocalTensor<float> &src1,
-        AscendC::LocalTensor<float> &src2, int64_t off1, int64_t off2);
+        AscendC::LocalTensor<float> &src2, int64_t off1, int64_t off2, LocalTensor<float> &temp1);
     __aicore__ inline void CopyOutYH(AscendC::LocalTensor<float> &src, int64_t off1, int64_t off2);
     __aicore__ inline void CopyOutYHt0(AscendC::LocalTensor<float> &src, int64_t off);
 

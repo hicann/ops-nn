@@ -84,7 +84,7 @@ __aicore__ inline void LstmMmSplitNDNDFP16<T>::CopyOutput(GlobalTensor<T> &gm, L
 {
     auto outLocal = this->qidVecOut.template AllocTensor<T>();
     PipeBarrier<PIPE_V>();
-    Cast(outLocal, ub, RoundMode::CAST_ROUND, this->calcSizeAlign);
+    Cast(outLocal, ub, RoundMode::CAST_RINT, this->calcSizeAlign);
     this->qidVecOut.EnQue(outLocal);
 
     outLocal = this->qidVecOut.template DeQue<T>();
@@ -237,12 +237,16 @@ __aicore__ inline void LstmMmSplitNDNDFP16<T>::CaliSigmoid(
 
 template <typename T>
 __aicore__ inline void LstmMmSplitNDNDFP16<T>::CaljTanh(
-    LocalTensor<float> &jTanh, LocalTensor<float> &ubLocalIn, int64_t offset)
+    LocalTensor<float> &jTanh, LocalTensor<float> &ubLocalIn, int64_t offset,
+    LocalTensor<float> &temp1, LocalTensor<float> &temp2)
 {
     ubLocalIn = this->qidVecIn.template DeQue<float>();
     PipeBarrier<PIPE_V>();
     Tanh(jTanh, ubLocalIn, this->calcSizeAlign);
     this->qidVecIn.FreeTensor(ubLocalIn);
+    PipeBarrier<PIPE_V>();
+    this->TanhPartialHighPrecision(ubLocalIn, jTanh, temp1, temp2, this->calcSizeAlign);
+    PipeBarrier<PIPE_V>();
 
     if (this->tiling->isTraining == 1) {
         this->CopyOutput(this->outputGm.outJGm, jTanh, offset);
@@ -281,21 +285,25 @@ __aicore__ inline void LstmMmSplitNDNDFP16<T>::CopyOutYH(
         auto updateY = this->ubLocal1;
         auto initH = this->ubLocal2;
         auto seqLength = this->ubLocal4;
-        Mul(updateY, updateH, seqLength, this->calcSizeAlign);
-        PipeBarrier<PIPE_V>();
+        // 现在是反转的mask，先拿到增量initH
         CopyInHCSeq(initH, this->inputGm.initHGm, initcOffset);
         PipeBarrier<PIPE_V>();
-        Sub(updateH, updateH, initH, this->calcSizeAlign);
+        Mul(initH, initH, seqLength, this->calcSizeAlign);
         PipeBarrier<PIPE_V>();
-        Mul(updateH, updateH, seqLength, this->calcSizeAlign);
+        // 反转恢复
+        Muls(seqLength, seqLength, -1.0f, this->calcSizeAlign);
         PipeBarrier<PIPE_V>();
-        Add(updateH, updateH, initH, this->calcSizeAlign);
+        Adds(seqLength, seqLength, 1.0f, this->calcSizeAlign);
+        PipeBarrier<PIPE_V>();
+        Mul(updateY, updateH, seqLength, this->calcSizeAlign);
+        PipeBarrier<PIPE_V>();
+        Add(updateH, updateY, initH, this->calcSizeAlign);
         this->CopyOutput(this->outputGm.outYGm, updateY, offset);
         this->CopyOutput(this->outputGm.outHGm, updateH, offset);
     } else {
         LocalTensor<T> outLocal = this->qidVecOut.template AllocTensor<T>();
         PipeBarrier<PIPE_V>();
-        Cast(outLocal, updateH, RoundMode::CAST_ROUND, this->calcSizeAlign);
+        Cast(outLocal, updateH, RoundMode::CAST_RINT, this->calcSizeAlign);
         this->qidVecOut.EnQue(outLocal);
         outLocal = this->qidVecOut.template DeQue<T>();
 
@@ -326,7 +334,7 @@ __aicore__ inline void LstmMmSplitNDNDFP16<T>::CopyOutYHt0(LocalTensor<float> &u
 
     LocalTensor<T> outLocal = this->qidVecOut.template AllocTensor<T>();
     PipeBarrier<PIPE_V>();
-    Cast(outLocal, updateH, RoundMode::CAST_ROUND, this->calcSizeAlign);
+    Cast(outLocal, updateH, RoundMode::CAST_RINT, this->calcSizeAlign);
     this->qidVecOut.EnQue(outLocal);
     outLocal = this->qidVecOut.template DeQue<T>();
 
@@ -338,7 +346,7 @@ __aicore__ inline void LstmMmSplitNDNDFP16<T>::CopyOutYHt0(LocalTensor<float> &u
 
 template <typename T>
 __aicore__ inline void LstmMmSplitNDNDFP16<T>::CalAddTanh(LocalTensor<float> &cTanh, LocalTensor<float> &ubLocal2,
-    LocalTensor<float> &cTmp2, int64_t offset, int64_t initcOffset)
+    LocalTensor<float> &cTmp2, int64_t offset, int64_t initcOffset, LocalTensor<float> &temp1)
 {
     PipeBarrier<PIPE_V>();
 
@@ -351,11 +359,15 @@ __aicore__ inline void LstmMmSplitNDNDFP16<T>::CalAddTanh(LocalTensor<float> &cT
         auto seqLength = this->ubLocal4;
         this->CopyInHCSeq(initC, this->inputGm.initCGm, initcOffset);
         PipeBarrier<PIPE_V>();
-        Sub(updateC, updateC, initC, this->calcSizeAlign);
-        PipeBarrier<PIPE_V>();
         this->CopyInHCSeq(seqLength, this->inputGm.seqLengthGm, offset);
         PipeBarrier<PIPE_V>();
         Mul(updateC, updateC, seqLength, this->calcSizeAlign);
+        PipeBarrier<PIPE_V>();
+        Muls(seqLength, seqLength, -1.0f, this->calcSizeAlign);  // 反转seq
+        PipeBarrier<PIPE_V>();
+        Adds(seqLength, seqLength, 1.0f, this->calcSizeAlign);
+        PipeBarrier<PIPE_V>();
+        Mul(initC, initC, seqLength, this->calcSizeAlign);  // 获取历史增量
         PipeBarrier<PIPE_V>();
         Add(updateC, updateC, initC, this->calcSizeAlign);
         PipeBarrier<PIPE_V>();
@@ -367,7 +379,10 @@ __aicore__ inline void LstmMmSplitNDNDFP16<T>::CalAddTanh(LocalTensor<float> &cT
     }
     this->CopyOutput(this->outputGm.outCGm, updateC, offset);
     PipeBarrier<PIPE_V>();
-    Tanh(cTanh, updateC, this->calcSizeAlign);
+    Tanh(cTanh, updateC, this->calcSizeAlign);  // u1是updateC，u2是cTanh，u4是seq且后面要复用。只有u3能用，附加一个qidVecIn即可
+    LocalTensor<float> temp2 = this->qidVecIn.template AllocTensor<float>();
+    this->TanhPartialHighPrecision(updateC, cTanh, temp1, temp2, this->calcSizeAlign);
+    this->qidVecIn.FreeTensor(temp2);
     if (this->tiling->isTraining == 1) {
         this->CopyOutput(this->outputGm.outTanhCGm, cTanh, offset);
     }
@@ -375,7 +390,7 @@ __aicore__ inline void LstmMmSplitNDNDFP16<T>::CalAddTanh(LocalTensor<float> &cT
 
 template <typename T>
 __aicore__ inline void LstmMmSplitNDNDFP16<T>::CalAddTanht0(LocalTensor<float> &cTanh, LocalTensor<float> &ubLocal2,
-    LocalTensor<float> &cTmp2, int64_t offset, int64_t initcOffset)
+    LocalTensor<float> &cTmp2, int64_t offset, int64_t initcOffset, LocalTensor<float> &temp1)
 {
     auto updateC = this->ubLocal4;
 
@@ -395,7 +410,10 @@ __aicore__ inline void LstmMmSplitNDNDFP16<T>::CalAddTanht0(LocalTensor<float> &
     this->CopyOutput(this->outputGm.outCGm, updateC, offset);
 
     PipeBarrier<PIPE_V>();
-    Tanh(cTanh, updateC, this->calcSizeAlign);
+    Tanh(cTanh, updateC, this->calcSizeAlign);  // 分别对应u2u4。u3是seq。u1可用，附加qidVecIn
+    LocalTensor<float> temp2 = this->qidVecIn.template AllocTensor<float>();
+    this->TanhPartialHighPrecision(updateC, cTanh, temp1, temp2, this->calcSizeAlign);
+    this->qidVecIn.FreeTensor(temp2);
     if (this->tiling->isTraining == 1) {
         this->CopyOutput(this->outputGm.outTanhCGm, cTanh, offset);
     }
@@ -441,16 +459,16 @@ __aicore__ inline void LstmMmSplitNDNDFP16<T>::ProcessVectorOnce(
 
     this->InitCMulfSigmoid(this->ubLocal2, initCVec, fSigmoid);
 
+    this->CaljTanh(jTanh, jInput, offset, this->ubLocal1, this->ubLocal4);  // u1、u4可用
+
     this->CaliSigmoid(iSigmoid, iInput, offset);
 
     this->CopyInIO(oInput, mixGm, this->oOffset + ijfoBaseOffset);
 
-    this->CaljTanh(jTanh, jInput, offset);
-
     PipeBarrier<PIPE_V>();
     Mul(this->ubLocal4, jTanh, iSigmoid, this->calcSizeAlign);
 
-    this->CalAddTanh(cTanh, this->ubLocal2, this->ubLocal4, offset, initcOffset);
+    this->CalAddTanh(cTanh, this->ubLocal2, this->ubLocal4, offset, initcOffset, this->ubLocal3);  // u3可用
 
     this->CaloSigmoid(oSigmoid, oInput, offset);
 
@@ -499,12 +517,12 @@ __aicore__ inline void LstmMmSplitNDNDFP16<T>::ProcessVectorInitHC(
 
     this->CopyInIO(oInput, mixGm, this->oOffset + ijfoBaseOffset);
 
-    this->CaljTanh(jTanh, jInput, offset);
+    this->CaljTanh(jTanh, jInput, offset, this->ubLocal2, this->ubLocal4);  // u2、u4可用
 
     PipeBarrier<PIPE_V>();
     Mul(this->ubLocal4, jTanh, iSigmoid, this->calcSizeAlign);
 
-    this->CalAddTanht0(cTanh, this->ubLocal2, this->ubLocal4, offset, initcOffset);
+    this->CalAddTanht0(cTanh, this->ubLocal2, this->ubLocal4, offset, initcOffset, this->ubLocal1);  // u1可用
 
     this->CaloSigmoid(oSigmoid, oInput, offset);
 

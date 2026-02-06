@@ -122,6 +122,21 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyWithTanh(
 }
 
 template <typename T>
+__aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyWithTanhHighPrecision(
+    LocalTensor<T> &dstUb, GlobalTensor<T> &mixGm, int64_t mIdx, int64_t nIdx, int64_t gateOffset,
+    LocalTensor<T> &temp1, LocalTensor<T> &temp2, int64_t calcSizeAlign)
+{
+    LocalTensor<T> ubLocalIn = this->qidVecIn.template AllocTensor<T>();
+    this->CopyGate(ubLocalIn, mixGm, mIdx, nIdx, gateOffset);
+    ubLocalIn = this->qidVecIn.template DeQue<T>();
+    Tanh(dstUb, ubLocalIn, this->calcSizeAlign);
+    PipeBarrier<PIPE_V>();
+    this->TanhPartialHighPrecision(ubLocalIn, dstUb, temp1, temp2, calcSizeAlign);
+    PipeBarrier<PIPE_V>();
+    this->qidVecIn.FreeTensor(ubLocalIn);
+}
+
+template <typename T>
 __aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyWithMul(
     LocalTensor<T> &dstUb, LocalTensor<T> &other, GlobalTensor<T> &mixGm, int64_t mIdx, int64_t nIdx)
 {
@@ -297,6 +312,15 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorOnce(
     auto cTmp1 = this->ubLocal2;
     CopyWithMul(cTmp1, fSigmoid, this->inputGm.initCGm, mIdx, nIdx);
     PipeBarrier<PIPE_V>();
+
+    // j [1] [2] 3 4 -> [1] [2] [3] 4
+    auto jTanh = this->ubLocal3;
+    CopyWithTanhHighPrecision(jTanh, mixGm, mIdx, nIdx, this->jOffset, this->ubLocal1, this->ubLocal4, this->calcSizeAlign);
+    if (this->tiling->isTraining == 1) {
+        CopyOutput(this->outputGm.outJGm, jTanh, tIdx, mIdx, nIdx);
+    }
+    PipeBarrier<PIPE_V>();
+
     // i 1 [2] 3 4 -> [1] [2] 3 4
     auto iSigmoid = this->ubLocal1;
     CopyWithSigmoid(iSigmoid, mixGm, mIdx, nIdx, this->iOffset);
@@ -304,13 +328,7 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorOnce(
         CopyOutput(this->outputGm.outIGm, iSigmoid, tIdx, mIdx, nIdx);
     }
     PipeBarrier<PIPE_V>();
-    // j [1] [2] 3 4 -> [1] [2] [3] 4
-    auto jTanh = this->ubLocal3;
-    CopyWithTanh(jTanh, mixGm, mIdx, nIdx, this->jOffset);
-    if (this->tiling->isTraining == 1) {
-        CopyOutput(this->outputGm.outJGm, jTanh, tIdx, mIdx, nIdx);
-    }
-    PipeBarrier<PIPE_V>();
+
     // i * j [1] [2] [3] 4 -> 1 [2] 3 [4]
     auto cTmp2 = this->ubLocal4;
     Mul(cTmp2, jTanh, iSigmoid, this->calcSizeAlign);
@@ -324,10 +342,14 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorOnce(
         auto initC = this->ubLocal2;
         auto seqLength = this->ubLocal4;
         CopyInHC(initC, this->inputGm.initCGm, 0, mIdx, nIdx);
-        Sub(updateC, updateC, initC, this->calcSizeAlign);
-        PipeBarrier<PIPE_V>();
         CopyInSeq(seqLength, this->inputGm.seqLengthGm, tIdx, mIdx, nIdx);
         Mul(updateC, updateC, seqLength, this->calcSizeAlign);
+        PipeBarrier<PIPE_V>();
+        Muls(seqLength, seqLength, (T)-1.0f, this->calcSizeAlign);
+        PipeBarrier<PIPE_V>();
+        Adds(seqLength, seqLength, (T)1.0f, this->calcSizeAlign);
+        PipeBarrier<PIPE_V>();
+        Mul(initC, initC, seqLength, this->calcSizeAlign);
         PipeBarrier<PIPE_V>();
         Add(updateC, updateC, initC, this->calcSizeAlign);
         PipeBarrier<PIPE_V>();
@@ -343,7 +365,10 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorOnce(
 
     // tanh(c) 1 [2] 3 4 -> 1 [2] 3 4
     auto cTanh = this->ubLocal2;
-    Tanh(cTanh, updateC, this->calcSizeAlign);
+    Tanh(cTanh, updateC, this->calcSizeAlign);  // 这里只有u3可用，还差1块UB，暂且从qidVecIn中取
+    LocalTensor<T> temp2Tensor = this->qidVecIn.template AllocTensor<T>();
+    this->TanhPartialHighPrecision(updateC, cTanh, this->ubLocal3, temp2Tensor, this->calcSizeAlign);
+    this->qidVecIn.FreeTensor(temp2Tensor);
     if (this->tiling->isTraining == 1) {
         CopyOutput(this->outputGm.outTanhCGm, cTanh, tIdx, mIdx, nIdx);
     }
@@ -365,14 +390,18 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorOnce(
         auto updateY = this->ubLocal1;
         auto initH = this->ubLocal2;
         auto seqLength = this->ubLocal4;
+        // 现在是反转的mask，先拿到增量initH
+        CopyInHC(initH, this->inputGm.initHGm, 0, mIdx, nIdx);
+        Mul(initH, initH, seqLength, this->calcSizeAlign);
+        PipeBarrier<PIPE_V>();
+        // 反转恢复
+        Muls(seqLength, seqLength, (T)-1.0f, this->calcSizeAlign);
+        PipeBarrier<PIPE_V>();
+        Adds(seqLength, seqLength, (T)1.0f, this->calcSizeAlign);
+        PipeBarrier<PIPE_V>();
         Mul(updateY, updateH, seqLength, this->calcSizeAlign);
         PipeBarrier<PIPE_V>();
-        CopyInHC(initH, this->inputGm.initHGm, 0, mIdx, nIdx);
-        Sub(updateH, updateH, initH, this->calcSizeAlign);
-        PipeBarrier<PIPE_V>();
-        Mul(updateH, updateH, seqLength, this->calcSizeAlign);
-        PipeBarrier<PIPE_V>();
-        Add(updateH, updateH, initH, this->calcSizeAlign);
+        Add(updateH, updateY, initH, this->calcSizeAlign);
         CopyOutput(this->outputGm.outYGm, updateY, tIdx, mIdx, nIdx);
     } else {
         CopyOutput(this->outputGm.outYGm, updateH, tIdx, mIdx, nIdx);
@@ -430,7 +459,7 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorInitHC(int64_t mIdx,
 
     // j [1] [2] 3 4 -> [1] [2] [3] 4
     auto jTanh = this->ubLocal3;
-    this->CopyWithTanh(jTanh, mixGm, mIdx, nIdx, this->jOffset);
+    CopyWithTanhHighPrecision(jTanh, mixGm, mIdx, nIdx, this->jOffset, this->ubLocal2, this->ubLocal4, this->calcSizeAlign);
     if (this->tiling->isTraining == 1) {
         this->CopyOutput(this->outputGm.outJGm, jTanh, 0, mIdx, nIdx);
     }
@@ -462,6 +491,9 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorInitHC(int64_t mIdx,
     // tanh(c) 1 [2] 3 4 -> 1 [2] 3 4
     auto cTanh = this->ubLocal2;
     Tanh(cTanh, updateC, this->calcSizeAlign);
+    LocalTensor<T> temp2Tensor = this->qidVecIn.template AllocTensor<T>();
+    this->TanhPartialHighPrecision(updateC, cTanh, this->ubLocal1, temp2Tensor, this->calcSizeAlign);  // u1 + qidVecIn
+    this->qidVecIn.FreeTensor(temp2Tensor);
     if (this->tiling->isTraining == 1) {
         this->CopyOutput(this->outputGm.outTanhCGm, cTanh, 0, mIdx, nIdx);
     }

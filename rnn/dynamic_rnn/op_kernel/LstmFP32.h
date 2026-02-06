@@ -46,6 +46,9 @@ protected:
         AscendC::LocalTensor<T> &dstUb, AscendC::GlobalTensor<T> &mixGm, int64_t tIdx, int64_t mIdx, int64_t nIdx);
     __aicore__ inline void CopyOutput(
         AscendC::GlobalTensor<T> &gm, AscendC::LocalTensor<T> &ub, int64_t tIdx, int64_t mIdx, int64_t nIdx);
+    __aicore__ inline void CopyWithTanhHighPrecision(
+        LocalTensor<T> &dstUb, GlobalTensor<T> &mixGm, int64_t mIdx, int64_t nIdx, int64_t gateOffset,
+        LocalTensor<T> &temp1, LocalTensor<T> &temp2, int64_t calcSizeAlign);
 
 public:
     // describe Matmul input/output dtype&format

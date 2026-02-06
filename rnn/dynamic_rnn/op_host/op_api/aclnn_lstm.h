@@ -29,6 +29,8 @@ ACLNN_API aclnnStatus aclnnLSTMGetWorkspaceSize(
     bool bidirectional,        
     bool batch_first,
     aclTensor *output,
+    aclTensor *hy,
+    aclTensor *cy,
     aclTensorList *iOut,  
     aclTensorList *jOut, 
     aclTensorList *fOut,

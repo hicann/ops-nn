@@ -20,6 +20,7 @@
 
 constexpr int64_t LSTM_GATE_SIZE = 4;
 constexpr int64_t DEFAULT_QUEUE_BUFFE_SIZE = 2;
+constexpr int64_t SIZE_256 = 256;
 
 __aicore__ inline int Ceil(int a, int b) {
   if (b == 0) {
@@ -145,6 +146,12 @@ class LstmMmSplitNDNDBase {
                         GM_ADDR outputJ, GM_ADDR outputF, GM_ADDR outputO, GM_ADDR outputTanhC,
                         const DynamicRNNTilingData* __restrict rnnTiling, GM_ADDR workspace);
   __aicore__ inline int64_t Ceil(int64_t x, int64_t y);
+  __aicore__ inline void TanhPartialHighPrecision(
+      LocalTensor<float>& inputTensor,
+      LocalTensor<float>& tanhLowTensor,
+      LocalTensor<float>& temp1Tensor,
+      LocalTensor<float>& temp2Tensor,
+      int64_t calcSizeAlign);
   AscendC::TPipe pipe;
   // output GlobalTensors
   struct OutputGm {
@@ -481,5 +488,46 @@ __aicore__ inline int64_t LstmMmSplitNDNDBase<T>::Ceil(int64_t x, int64_t y) {
     return x;
   }
   return (x + y - 1) / y;
+}
+
+template <typename T>
+__aicore__ inline void LstmMmSplitNDNDBase<T>::TanhPartialHighPrecision(
+  LocalTensor<float>& inputTensor,
+  LocalTensor<float>& tanhLowTensor,
+  LocalTensor<float>& temp1Tensor,
+  LocalTensor<float>& temp2Tensor,
+  int64_t calcSizeAlign)
+{
+  // temp1Tensor: x^2, temp2Tensor: tanh(x)
+  Mul(temp1Tensor, inputTensor, inputTensor, calcSizeAlign);
+  PipeBarrier<PIPE_V>();
+  Muls(temp2Tensor, temp1Tensor, 0.016090461204f, calcSizeAlign);  // Tanh多项式系数
+  PipeBarrier<PIPE_V>();
+  Adds(temp2Tensor, temp2Tensor, -0.052421370438f, calcSizeAlign);  // Tanh多项式系数
+  PipeBarrier<PIPE_V>();
+  Mul(temp2Tensor, temp2Tensor, temp1Tensor, calcSizeAlign);
+  PipeBarrier<PIPE_V>();
+  Adds(temp2Tensor, temp2Tensor, 0.133147126779f, calcSizeAlign);  // Tanh多项式系数
+  PipeBarrier<PIPE_V>();
+  Mul(temp2Tensor, temp2Tensor, temp1Tensor, calcSizeAlign);
+  PipeBarrier<PIPE_V>();
+  Adds(temp2Tensor, temp2Tensor, -0.333324134737f, calcSizeAlign);  // Tanh多项式系数
+  PipeBarrier<PIPE_V>();
+  Mul(temp2Tensor, temp2Tensor, temp1Tensor, calcSizeAlign);
+  PipeBarrier<PIPE_V>();
+  Adds(temp2Tensor, temp2Tensor, 0.999999873294f, calcSizeAlign);  // Tanh多项式系数
+  PipeBarrier<PIPE_V>();
+  Mul(temp2Tensor, temp2Tensor, inputTensor, calcSizeAlign);
+  PipeBarrier<PIPE_V>();
+  // temp1Tensor: abs(x)
+  Abs(temp1Tensor, inputTensor, calcSizeAlign);
+  PipeBarrier<PIPE_V>();
+  // tanhMaskTensor: mask for abs(x) <= 0.55, inplace
+  auto tanhMaskTensor = temp1Tensor.template ReinterpretCast<uint8_t>();
+  int64_t cnt256B = SIZE_256 / sizeof(float);
+  CompareScalar(tanhMaskTensor, temp1Tensor, 0.55f, CMPMODE::LE, Ceil(calcSizeAlign, cnt256B) * cnt256B);  // Tanh多项式实现范围
+  PipeBarrier<PIPE_V>();
+  // pick higher result into tanhLowTensor
+  Select(tanhLowTensor, tanhMaskTensor, temp2Tensor, tanhLowTensor, SELMODE::VSEL_TENSOR_TENSOR_MODE, calcSizeAlign);
 }
 #endif
