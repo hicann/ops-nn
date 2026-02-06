@@ -66,7 +66,7 @@ private:
     int64_t totalCoreNum = 0;
     uint64_t totalUbSize = 0;
     uint64_t vectorLength = 0;
-    int64_t blockSize = 0;
+    uint64_t blockSize = 0;
     int64_t targetSize = 0;
     int64_t rowVal = 1;
     int64_t colVal = 1;

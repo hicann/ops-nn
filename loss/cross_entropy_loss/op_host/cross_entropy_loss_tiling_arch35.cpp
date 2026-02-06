@@ -20,6 +20,7 @@
 #include "register/op_def_registry.h"
 #include "tiling/tiling_api.h"
 #include "cross_entropy_loss_tiling.h"
+#include "op_common/op_host/util/platform_util.h"
 #include "../op_kernel/arch35/cross_entropy_loss_tiling_data.h"
 #include "../op_kernel/arch35/cross_entropy_loss_tiling_key.h"
 
@@ -38,8 +39,6 @@ constexpr uint32_t ATTR_IGNORE_INDEX_IDX = 1;
 constexpr uint32_t ATTR_LABEL_SMOOTHING_IDX = 2;
 
 constexpr int64_t DEFAULT_IGNORE_INDEX = -100LL;
-constexpr int64_t BLOCK_32 = 32;   // 不应该写死
-constexpr int64_t BLOCK_256 = 256; // 不应该写死
 constexpr int64_t DTYPE_LEN_FP16 = 2;
 constexpr int64_t DTYPE_LEN_FP32 = 4;
 constexpr int64_t DTYPE_LEN_INT64 = 8;
@@ -139,6 +138,7 @@ private:
     uint64_t ubSize = 0;
     int64_t dtypeX = 0;
     int64_t dtypeTarget = 0;
+    int64_t blockSize = 0;
     gert::TilingContext* context_ = nullptr;
     CrossEntropyLossRegBaseTilingData* tilingData_{nullptr};
 };
@@ -195,18 +195,18 @@ void CrossEntropyLossRegbaseTiling::ComputeAllC(int64_t aNum, int64_t perBlock, 
 bool CrossEntropyLossRegbaseTiling::IsAllC()
 {
     int64_t blockNum = Ops::Base::CeilDiv(BaseTiling_.N, BaseTiling_.realCoreNum);
-    int64_t perBlock = BLOCK_32 / dtypeX;
+    int64_t perBlock = blockSize / dtypeX;
     int64_t cAligned = (BaseTiling_.C + perBlock - 1) / perBlock * perBlock;
     int64_t allUbSize = static_cast<int64_t>(ubSize);
     int64_t arBuf_db2 = DOUBLE_BUFFER_2 * AR_DB_NUM * cAligned * dtypeX + AR_NUM * cAligned * DTYPE_LEN_FP32;
     int64_t aBuf_db2 = dtypeX + dtypeTarget + A_NUM * DTYPE_LEN_FP32;
-    int64_t aNum_db2 = (allUbSize - cAligned * DTYPE_LEN_FP32 - SUM_NUM * BLOCK_32) / (arBuf_db2 + aBuf_db2);
+    int64_t aNum_db2 = (allUbSize - cAligned * DTYPE_LEN_FP32 - SUM_NUM * blockSize) / (arBuf_db2 + aBuf_db2);
     auto shape = ge::Shape({aNum_db2, cAligned});
     uint32_t maxValue = 0;
     uint32_t minValue = 0;
     AscendC::GetReduceSumMaxMinTmpSize(shape, ge::DT_FLOAT,
         AscendC::ReducePattern::AR, true, false, maxValue, minValue);
-    int64_t aNum_res = (allUbSize - static_cast<int64_t>(maxValue) - cAligned * DTYPE_LEN_FP32 - SUM_NUM * BLOCK_32) /
+    int64_t aNum_res = (allUbSize - static_cast<int64_t>(maxValue) - cAligned * DTYPE_LEN_FP32 - SUM_NUM * blockSize) /
         (arBuf_db2 + aBuf_db2);
     OP_LOGI(
         context_,
@@ -215,11 +215,11 @@ bool CrossEntropyLossRegbaseTiling::IsAllC()
     if (aNum_res < perBlock) {
         int64_t arBuf_db1 = DOUBLE_BUFFER_1 * AR_DB_NUM * cAligned * dtypeX + AR_NUM * cAligned * DTYPE_LEN_FP32;
         int64_t aBuf_db1 = dtypeX + dtypeTarget + A_NUM * DTYPE_LEN_FP32;
-        int64_t aNum_db1 = (allUbSize - cAligned * DTYPE_LEN_FP32 - SUM_NUM * BLOCK_32) / (arBuf_db1 + aBuf_db1);
+        int64_t aNum_db1 = (allUbSize - cAligned * DTYPE_LEN_FP32 - SUM_NUM * blockSize) / (arBuf_db1 + aBuf_db1);
         shape = ge::Shape({aNum_db1, cAligned});
         AscendC::GetReduceSumMaxMinTmpSize(shape, ge::DT_FLOAT,
             AscendC::ReducePattern::AR, true, false, maxValue, minValue);
-        aNum_res = (allUbSize - static_cast<int64_t>(maxValue) - cAligned * DTYPE_LEN_FP32 - SUM_NUM * BLOCK_32) /
+        aNum_res = (allUbSize - static_cast<int64_t>(maxValue) - cAligned * DTYPE_LEN_FP32 - SUM_NUM * blockSize) /
             (arBuf_db1 + aBuf_db1);
         OP_LOGI(
             context_,
@@ -391,7 +391,7 @@ void CrossEntropyLossRegbaseTiling::ComputeUbTiling(
     int64_t queUb = DTYPE_LEN_FP16 * dtypeX + isWeightQue * DTYPE_LEN_FP32 + DTYPE_LEN_FP32;
     int64_t cUbParams = queUb + DTYPE_LEN_FP32 + isSmoothUb * DTYPE_LEN_FP32;
     int64_t onceC = (static_cast<int64_t>(ubSize) - needNub) / cUbParams;
-    int64_t oneBlock = BLOCK_32 / dtypeX;
+    int64_t oneBlock = blockSize / dtypeX;
     BaseTiling_.cOnceNum = (onceC / oneBlock) * oneBlock;
     // 此时计算下cacheUb，看是否够用，不够用需要重新计算下
     int64_t tailUb = static_cast<int64_t>(ubSize) - needNub - cUbParams * BaseTiling_.cOnceNum;
@@ -514,6 +514,9 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::Init()
     OP_LOGD(context_, "Enter CrossEntropyLossRegbaseTiling init.");
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
     coreNum = ascendcPlatform.GetCoreNumAiv();
+    blockSize = Ops::Base::GetUbBlockSize(context_);
+    OP_CHECK_IF((blockSize <= 0), OP_LOGE(context_, "block size is invalid."),
+        return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         coreNum <= 0,
         OP_LOGE(context_, "coreNum must greater than zero, but is %ld", coreNum),
@@ -561,7 +564,7 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::DoTiling()
     context_->SetScheduleMode(1);
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
-    int64_t extraWorkSpace = coreNum * BLOCK_32 * DTYPE_LEN_FP32 * CONST_3;
+    int64_t extraWorkSpace = coreNum * blockSize * DTYPE_LEN_FP32 * CONST_3;
     int64_t workSpaceSize = reduction == static_cast<uint64_t>(0) ? 0 : extraWorkSpace;
     workspaces[0] = WORKSPACE_SIZE + workSpaceSize;
     OP_LOGI(context_, "End dotiling, workspaces is %ld", extraWorkSpace);

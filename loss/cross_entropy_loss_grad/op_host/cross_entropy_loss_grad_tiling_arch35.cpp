@@ -40,7 +40,6 @@ constexpr size_t INPUT_NUM = 6;
 constexpr uint64_t FP16_BF16_DTYPE_SIZE = 2;
 constexpr uint64_t FP32_INT32_DTYPE_SIZE = 4;
 constexpr uint64_t INT64_DTYPE_SIZE = 8;
-constexpr uint64_t BLOCK_SIZE = 32;
 constexpr uint64_t ALIGN_SIZE = 512;
 constexpr int64_t FP32_ALIGN_NUM = 128;
 constexpr uint64_t SPLIT_BUFFER = 12;
@@ -160,9 +159,10 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetPlatform() {
     OP_CHECK_IF((vectorLength <= FP32_INT32_DTYPE_SIZE),
         OP_LOGE(tilingContext, "vector length is invalid."), return ge::GRAPH_FAILED);
 
-    blockSize = static_cast<uint64_t>(Ops::Base::GetUbBlockSize(tilingContext));
-    OP_CHECK_IF((blockSize <= 0), OP_LOGE(tilingContext, "block size is invalid."),
+    int64_t blockSizeTemp = Ops::Base::GetUbBlockSize(tilingContext);
+    OP_CHECK_IF((blockSizeTemp <= 0), OP_LOGE(tilingContext, "block size is invalid."),
         return ge::GRAPH_FAILED);
+    blockSize = static_cast<uint64_t>(blockSizeTemp);
 
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, totalUbSize);
     OP_LOGD(tilingContext, "Get total ub size:%lu", totalUbSize);
@@ -184,7 +184,7 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetPlatform() {
 }
 
 bool CrossEntropyLossGradRegbaseTiling::CELossGradInnerCoreFullLoad() {
-    alignColLoopNum = Ops::Base::CeilAlign(colVal, static_cast<int64_t>(BLOCK_SIZE / dtypeSize));
+    alignColLoopNum = Ops::Base::CeilAlign(colVal, static_cast<int64_t>(blockSize / dtypeSize));
     int64_t queBuffer = 0;
     int64_t tmpBuffer = static_cast<int64_t>(alignColLoopNum * sizeof(float));
     int64_t tmpABuffer = static_cast<int64_t>(FULL_LOAD_N_TMP_BUFFER * sizeof(float)) + static_cast<int64_t>(targetDtypeSize);
@@ -192,8 +192,8 @@ bool CrossEntropyLossGradRegbaseTiling::CELossGradInnerCoreFullLoad() {
     if (ceLossGradTilingKey.reduction == TILING_KEY_NONE) {
         tmpABuffer += static_cast<int64_t>(dtypeSize);   //gradloss
     } else if (ceLossGradTilingKey.reduction == TILING_KEY_MEAN) {
-        tBuf3Size = static_cast<int64_t>(Ops::Base::CeilAlign(totalCoreNum * FP32_INT32_DTYPE_SIZE, BLOCK_SIZE));
-        tBuf2Size = static_cast<int64_t>(BLOCK_SIZE);
+        tBuf3Size = static_cast<int64_t>(Ops::Base::CeilAlign(totalCoreNum * FP32_INT32_DTYPE_SIZE, blockSize));
+        tBuf2Size = static_cast<int64_t>(blockSize);
     }
     if (ceLossGradTilingKey.isWeight == TILING_KEY_TRUE) {
         queBuffer += static_cast<int64_t>(alignColLoopNum * sizeof(float)); // weightbuf
@@ -208,16 +208,16 @@ bool CrossEntropyLossGradRegbaseTiling::CELossGradInnerCoreFullLoad() {
     }
     int64_t ubNSize = static_cast<int64_t>(totalUbSize) - static_cast<int64_t>(queBuffer + tmpBuffer + tBuf2Size + tBuf2Size + tBuf3Size);
     int64_t theoreticalMaxN = ubNSize / ncBufferNum;
-    int64_t theoreticalNAlign = Ops::Base::CeilAlign(theoreticalMaxN, static_cast<int64_t>(BLOCK_SIZE / dtypeSize));
+    int64_t theoreticalNAlign = Ops::Base::CeilAlign(theoreticalMaxN, static_cast<int64_t>(blockSize / dtypeSize));
     int64_t allowedN = (ubNSize - tmpABuffer * theoreticalNAlign) / ncBufferNum;
 
     int64_t finalN = std::min(theoreticalMaxN, allowedN);
-    int64_t finalNAlign = Ops::Base::CeilAlign(finalN, static_cast<int64_t>(BLOCK_SIZE / dtypeSize));
+    int64_t finalNAlign = Ops::Base::CeilAlign(finalN, static_cast<int64_t>(blockSize / dtypeSize));
 
     int64_t finalTotal = ncBufferNum * finalN + tmpABuffer * finalNAlign;
     if (finalTotal > ubNSize) {
         finalN = ubNSize / (ncBufferNum + tmpABuffer);
-        finalNAlign = Ops::Base::CeilAlign(finalN, static_cast<int64_t>(BLOCK_SIZE / dtypeSize));
+        finalNAlign = Ops::Base::CeilAlign(finalN, static_cast<int64_t>(blockSize / dtypeSize));
         finalTotal = ncBufferNum * finalN + tmpABuffer * finalNAlign;
     }
     if (finalTotal > ubNSize || finalN < 1) {
@@ -225,26 +225,26 @@ bool CrossEntropyLossGradRegbaseTiling::CELossGradInnerCoreFullLoad() {
     }
 
     alignNCNum = finalN * alignColLoopNum;
-    targetSize = Ops::Base::CeilAlign(finalNAlign * targetDtypeSize, BLOCK_SIZE);
+    targetSize = Ops::Base::CeilAlign(finalNAlign * targetDtypeSize, blockSize);
     uint64_t peerLoopNNum = Ops::Base::FloorDiv(static_cast<uint64_t>(targetSize), targetDtypeSize);
-    targetCastSize = Ops::Base::CeilAlign(peerLoopNNum * FP32_INT32_DTYPE_SIZE, BLOCK_SIZE);
+    targetCastSize = Ops::Base::CeilAlign(peerLoopNNum * FP32_INT32_DTYPE_SIZE, blockSize);
     ignoreSize = targetCastSize;
     ceLossGradTilingKey.schId = static_cast<uint32_t>(CROSS_ENTROPY_LOSS_GRAD_MODE_1);
     smoothSize = ceLossGradTilingKey.labelS == TILING_KEY_TRUE ? targetCastSize : 0;
     targetWeightSize = ceLossGradTilingKey.isWeight == TILING_KEY_TRUE ? targetCastSize : 0;
-    gradLossSize = ceLossGradTilingKey.reduction == TILING_KEY_NONE ? Ops::Base::CeilAlign(peerLoopNNum * dtypeSize, BLOCK_SIZE) : 0;
+    gradLossSize = ceLossGradTilingKey.reduction == TILING_KEY_NONE ? Ops::Base::CeilAlign(peerLoopNNum * dtypeSize, blockSize) : 0;
     return true;
 }
 
 void CrossEntropyLossGradRegbaseTiling::CELossGradCoreSplitInfo() {
     uint64_t frontRowNum = static_cast<uint64_t>(ceLossGradRegbaseTiling->frontRowNum);
     frontRowNum = frontRowNum > vectorLength ? vectorLength : frontRowNum;
-    targetSize = Ops::Base::CeilAlign(frontRowNum * INT64_DTYPE_SIZE, BLOCK_SIZE);
+    targetSize = Ops::Base::CeilAlign(frontRowNum * INT64_DTYPE_SIZE, blockSize);
     if (targetDtypeSize == FP32_INT32_DTYPE_SIZE) {
-        targetSize = Ops::Base::CeilAlign(frontRowNum * FP32_INT32_DTYPE_SIZE, BLOCK_SIZE);
+        targetSize = Ops::Base::CeilAlign(frontRowNum * FP32_INT32_DTYPE_SIZE, blockSize);
     }
-    targetCastSize = Ops::Base::CeilAlign(frontRowNum * FP32_INT32_DTYPE_SIZE, BLOCK_SIZE);
-    ignoreSize = Ops::Base::CeilAlign(frontRowNum * FP32_INT32_DTYPE_SIZE, BLOCK_SIZE);
+    targetCastSize = Ops::Base::CeilAlign(frontRowNum * FP32_INT32_DTYPE_SIZE, blockSize);
+    ignoreSize = Ops::Base::CeilAlign(frontRowNum * FP32_INT32_DTYPE_SIZE, blockSize);
     smoothSize = ceLossGradRegbaseTiling->labelSmoothing >= 0 ? targetCastSize : 0;
 
     auto weightTensor = tilingContext->GetOptionalInputTensor(INPUT_WEIGHT_IDX);
@@ -254,14 +254,14 @@ void CrossEntropyLossGradRegbaseTiling::CELossGradCoreSplitInfo() {
         bufferNum = SPLIT_BUFFER;
     } else {
         OP_LOGD(tilingContext, "weight is not None");
-        targetWeightSize = Ops::Base::CeilAlign(frontRowNum * FP32_INT32_DTYPE_SIZE, BLOCK_SIZE);
+        targetWeightSize = Ops::Base::CeilAlign(frontRowNum * FP32_INT32_DTYPE_SIZE, blockSize);
         bufferNum = labelSmooth > 0 ? WEIGHT_SPLIT_BUFFER + targetSize : WEIGHT_SPLIT_BUFFER;
     }
     if (ceLossGradTilingKey.reduction == TILING_KEY_NONE) {
-        gradLossSize = Ops::Base::CeilAlign(frontRowNum * dtypeSize, BLOCK_SIZE);
+        gradLossSize = Ops::Base::CeilAlign(frontRowNum * dtypeSize, blockSize);
     } else if (ceLossGradTilingKey.reduction == TILING_KEY_MEAN) {
-        tBuf2Size = static_cast<int64_t>(BLOCK_SIZE);
-        tBuf3Size = Ops::Base::CeilAlign(std::max(static_cast<uint64_t>(totalCoreNum), frontRowNum) * FP32_INT32_DTYPE_SIZE, BLOCK_SIZE);
+        tBuf2Size = static_cast<int64_t>(blockSize);
+        tBuf3Size = Ops::Base::CeilAlign(std::max(static_cast<uint64_t>(totalCoreNum), frontRowNum) * FP32_INT32_DTYPE_SIZE, blockSize);
     }
     colLoopNum = Ops::Base::FloorDiv((totalUbSize - targetSize - targetCastSize - gradLossSize - tBuf2Size -
                                 tBuf3Size - ignoreSize - targetWeightSize - smoothSize),
@@ -310,7 +310,7 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::SetTilingData() {
     ceLossGradRegbaseTiling->kTimesTail = kTimesTail;
     ceLossGradRegbaseTiling->cOnceNumTailAlign = cOnceNumTailAlign;
     ceLossGradRegbaseTiling->cacheStart = cacheStart;
-    size_t usrSize = static_cast<size_t>(totalCoreNum * FP32_INT32_DTYPE_SIZE * BLOCK_SIZE);
+    size_t usrSize = static_cast<size_t>(totalCoreNum * FP32_INT32_DTYPE_SIZE * blockSize);
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
     currentWorkspace[0] = usrSize + SYS_WORKSPACE_SIZE;

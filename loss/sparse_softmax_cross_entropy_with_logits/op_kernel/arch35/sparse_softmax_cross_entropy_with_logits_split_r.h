@@ -164,7 +164,7 @@ __aicore__ inline void SparseSoftmaxCrossEntropyWithLogitsSplitR<T1, T2, schId, 
     pipe_->InitBuffer(logBuf_, aUbNumFactor * sizeof(float));
     pipe_->InitBuffer(sumBuf_, aUbNumFactor * sizeof(float));
     pipe_->InitBuffer(temp1Buf_, aUbNumFactor * sizeof(float));
-    updateStart_ = bcnt1((kTimes - 1) ^ (kTimes)) - 1;
+    updateStart_ = ScalarGetCountOfValue<1>((kTimes - 1) ^ (kTimes)) - 1;
     pipe_->InitBuffer(cacheBuf_, (updateStart_ * VL_FP32 + aUbNumFactor) * sizeof(float));
 
     blockIdx_ = AscendC::GetBlockIdx();
@@ -340,7 +340,7 @@ template <typename T1, typename T2, uint64_t schId, uint64_t db>
 __aicore__ inline void SparseSoftmaxCrossEntropyWithLogitsSplitR<T1, T2, schId, db>::UpdateCache(LocalTensor<float> &srcUb,
     int32_t index, int32_t dimA)
 {
-    const int32_t cacheID = bcnt1(index ^ (index + 1)) - 1;
+    const int64_t cacheID = ScalarGetCountOfValue<1>(index ^ (index + 1)) - 1;
     int32_t elementOneRepeat = VL_FP32;
     uint16_t outerLoopTimes = CeilDivision(dimA, elementOneRepeat);
     int32_t stride = outerLoopTimes * elementOneRepeat;

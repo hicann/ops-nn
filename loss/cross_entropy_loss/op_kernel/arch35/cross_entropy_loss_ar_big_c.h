@@ -430,7 +430,7 @@ __aicore__ inline void FoldAddVF(LocalTensor<float>& tmpUb, LocalTensor<float>& 
 
 __aicore__ inline void UpdateCache(LocalTensor<float>& srcUb, LocalTensor<float>& dstUb, int32_t index)
 {
-    const int32_t cacheID = bcnt1(index ^ (index + 1)) - 1;
+    const int64_t cacheID = ScalarGetCountOfValue<1>(index ^ (index + 1)) - 1;
     int32_t stride = ONE_BLOCK_NUM_B32;
     auto dstUbAddr = (__ubuf__ float*)dstUb.GetPhyAddr();
     auto cahUbAddr = (__ubuf__ float*)dstUb.GetPhyAddr() + cacheID * stride;

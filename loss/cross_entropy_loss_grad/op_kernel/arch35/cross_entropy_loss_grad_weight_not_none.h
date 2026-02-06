@@ -59,7 +59,7 @@ private:
 template <typename T1, typename T2>
 __aicore__ inline void CrossEntropyLossGradWeightNotNone<T1, T2>::UpdateCache(LocalTensor<float> &ubDst, LocalTensor<float> &ubSrc, int64_t index, int64_t dimA)
  {
-    const int64_t cacheID = bcnt1(index ^ (index +1)) - 1;
+    const int64_t cacheID = ScalarGetCountOfValue<1>(index ^ (index + 1)) - 1;
     int64_t elementOneRepeat = platform::GetVRegSize() / sizeof(float);
     const int64_t stride = ops::CeilAlign(dimA, elementOneRepeat);
 
