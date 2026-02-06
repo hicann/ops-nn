@@ -141,13 +141,22 @@ function(add_ops_impl_target)
       endif()
 
       set(cur_op_pairs ${${compute_unit_op_cache}})
-      add_custom_command(OUTPUT ${OPIMPL_OUT_DIR}/${compute_unit}/.gen_timestamp
-        COMMAND mkdir -m 700 -p ${OPIMPL_OUT_DIR}/${compute_unit}
-        COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/util/gen_compile_option.sh ${cur_op_pairs}
-        COMMAND rm -rf ${OPIMPL_OUT_DIR}/${compute_unit}/.gen_timestamp
-        COMMAND touch ${OPIMPL_OUT_DIR}/${compute_unit}/.gen_timestamp
-        DEPENDS merge_ini_${compute_unit} ${OPIMPL_OUT_DIR}/.impl_timestamp
-      )
+      if(ENABLE_EXPERIMENTAL)
+        add_custom_command(OUTPUT ${OPIMPL_OUT_DIR}/${compute_unit}/.gen_timestamp
+          COMMAND mkdir -m 700 -p ${OPIMPL_OUT_DIR}/${compute_unit}
+          COMMAND rm -rf ${OPIMPL_OUT_DIR}/${compute_unit}/.gen_timestamp
+          COMMAND touch ${OPIMPL_OUT_DIR}/${compute_unit}/.gen_timestamp
+          DEPENDS merge_ini_${compute_unit} ${OPIMPL_OUT_DIR}/.impl_timestamp
+        )
+      else()
+        add_custom_command(OUTPUT ${OPIMPL_OUT_DIR}/${compute_unit}/.gen_timestamp
+          COMMAND mkdir -m 700 -p ${OPIMPL_OUT_DIR}/${compute_unit}
+          COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/util/gen_compile_option.sh ${cur_op_pairs}
+          COMMAND rm -rf ${OPIMPL_OUT_DIR}/${compute_unit}/.gen_timestamp
+          COMMAND touch ${OPIMPL_OUT_DIR}/${compute_unit}/.gen_timestamp
+          DEPENDS merge_ini_${compute_unit} ${OPIMPL_OUT_DIR}/.impl_timestamp
+        )
+      endif()
       add_custom_target(gen_compile_options_${compute_unit} ALL
         DEPENDS ${OPIMPL_OUT_DIR}/.impl_timestamp ${OPIMPL_OUT_DIR}/${compute_unit}/.gen_timestamp)
       add_dependencies(${OPIMPL_TARGET} gen_compile_options_${compute_unit})
