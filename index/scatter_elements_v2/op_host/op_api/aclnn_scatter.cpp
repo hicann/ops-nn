@@ -264,6 +264,12 @@ static aclnnStatus CheckParams(
     // 2. 检查参数的数据类型是否符合预期
     CHECK_COND(CheckDtypeValid(self, index, src, out), ACLNN_ERR_PARAM_INVALID, "CheckDtypeValid failed!");
 
+    // 3. 检查参数的数据格式
+    if (self->GetStorageFormat() != Format::FORMAT_ND || index->GetStorageFormat() != Format::FORMAT_ND ||
+        src->GetStorageFormat() != Format::FORMAT_ND || out->GetStorageFormat() != Format::FORMAT_ND) {
+        OP_LOGW("Format only support ND.");
+    }
+
     return ACLNN_SUCCESS;
 }
 
