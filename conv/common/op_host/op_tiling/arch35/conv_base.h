@@ -34,7 +34,6 @@ static std::map<NpuArch, std::string> socNameTab = {
 static std::map<string, NpuArch> socConvertMap = {
     {"DAV_3510", NpuArch::DAV_3510},
     {"Ascend950", NpuArch::DAV_3510},
-    {"Ascend910_95", NpuArch::DAV_3510},
     {"MC62CM12AA", NpuArch::DAV_5102},
     {"DAV_5102", NpuArch::DAV_5102}
 };
