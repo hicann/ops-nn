@@ -128,7 +128,8 @@ static aclnnStatus SetBatchMatMulOpSupportInfoV2(
 }
 
 static aclnnStatus CreateBatchMatmulOpInfo(
-    const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, MmOpInfo& matmulOpInfo, int8_t cubeMathType)
+    const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, MmOpInfo& matmulOpInfo,
+    int8_t cubeMathType, bool isBaddbmm)
 {
     matmulOpInfo.ori_info.self_dtype = self->GetDataType();
     matmulOpInfo.ori_info.self_format = GetPrimaryFormat(self->GetStorageFormat());
@@ -152,11 +153,11 @@ static aclnnStatus CreateBatchMatmulOpInfo(
                          matmulOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT16;
     bool inputBf16Flag = matmulOpInfo.support_info.self_dtype == DataType::DT_BF16 &&
                          matmulOpInfo.support_info.mat2_dtype == DataType::DT_BF16;
-    // 在A2/A3平台下，如果输入数据类型为fp16或bf16，且进行高精度计算，则使能输出数据类型为fp32
+    // 在A2/A3平台下，来自Baddbmm的接口调用，如果输入数据类型为fp16或bf16，且进行高精度计算，则使能输出数据类型为fp32
     matmulOpInfo.enableFp16Bf16InFp32Out = (inputFp16Flag || inputBf16Flag) &&
                                            (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
                                             GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) &&
-                                           (cubeMathType == KEEP_DTYPE);
+                                           (cubeMathType == KEEP_DTYPE) && isBaddbmm;
 
     OP_LOGD(
         "opImplModeEnum=%ld, enableHf32=%d, cubeMathType=%d, enableFp16Bf16InFp32Out=%d", matmulOpInfo.opImplModeEnum, matmulOpInfo.enableHf32,
@@ -374,11 +375,16 @@ const aclTensor* GetBatchMatmulOp(
                 selfTransdata, mat2Transdata, bias, opImplModeEnumV3, adjX1, adjX2, offsetX, executor);
         }
         OP_LOGI("Hit batch_mat_mul_v3 scenario.");
-        if  ((matmulOpInfo.support_info.self_dtype == op::DataType::DT_FLOAT16 || matmulOpInfo.support_info.self_dtype == op::DataType::DT_BF16) && isBaddbmm) {
+        if ((matmulOpInfo.support_info.self_dtype == op::DataType::DT_FLOAT16 ||
+             matmulOpInfo.support_info.self_dtype == op::DataType::DT_BF16) &&
+            isBaddbmm &&
+            (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
+             GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93)) {
             OP_LOGI("Hit batch_mat_mul_v3 fp16/bf16 in - fp32 out scenario.");
             bmmOpOut = l0op::BatchMatMulV3NdFp16Bf162Fp32(
                 selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.enableHf32, executor);
         } else {
+            OP_LOGI("Hit BatchMatMulV3Nd scenario.");
             bmmOpOut = l0op::BatchMatMulV3Nd(
                 selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.enableHf32, executor);
         }
@@ -1019,7 +1025,7 @@ const aclTensor* ExecBatchMatmulOpWithBiasAndAttrsV2(
     int8_t cubeMathType, aclOpExecutor* executor, bool isTransposeMat2Contiguous, bool isBaddbmm)
 {
     MmOpInfo matmulOpInfo;
-    CreateBatchMatmulOpInfo(self, mat2, bias, out, matmulOpInfo, cubeMathType);
+    CreateBatchMatmulOpInfo(self, mat2, bias, out, matmulOpInfo, cubeMathType, isBaddbmm);
 
     auto selfCast = l0op::Cast(self, matmulOpInfo.support_info.self_dtype, executor);
     CHECK_RET(selfCast != nullptr, nullptr);
@@ -1066,9 +1072,7 @@ const aclTensor* ExecBatchMatmulOpWithBiasAndAttrsV2(
     if (isTransposeMat2Contiguous) {
         bmmOpOut = GetBatchMatmulOp(selfTransdata, mat2Transdata, contiguousBias, matmulOpInfo, adjX1, adjX2, 0, executor, isBaddbmm);
     } else if (ifKEqual1) {
-        auto selfTransdataCast = l0op::Cast(selfTransdata, op::DataType::DT_FLOAT, executor);
-        auto mat2TransdataCast = l0op::Cast(mat2Transdata, op::DataType::DT_FLOAT, executor);
-        bmmOpOut = l0op::Mul(selfTransdataCast, mat2TransdataCast, executor);
+        bmmOpOut = l0op::Mul(selfTransdata, mat2Transdata, executor);
     } else {
         bmmOpOut = GetBatchMatmulOp(selfTransdata, mat2Transdata, contiguousBias, matmulOpInfo, adjX1, adjX2, 0, executor, isBaddbmm);
     }
