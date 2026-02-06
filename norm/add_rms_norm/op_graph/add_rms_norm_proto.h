@@ -33,7 +33,7 @@ namespace ge {
 
 * @par Attributes
 * epsilon: Input eps in the formula, which is used to prevent division-by-zero errors.
-* A optional attribute, the type is float. Defaults to 1e-6.
+* An optional attribute, the type is float. Must be greater than or equal to zero. Defaults to 1e-6.
 
 * @par Outputs
 * Three outputs, including:

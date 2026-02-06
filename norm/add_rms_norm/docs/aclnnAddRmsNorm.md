@@ -112,7 +112,7 @@ aclnnStatus aclnnAddRmsNorm(
       <td>epsilon（double）</td>
       <td>输入</td>
       <td>表示添加到分母中的值，以确保数值稳定。对应公式中的`epsilon`。</td>
-      <td>建议值为1e-6。</td>
+      <td><ul><li>epsilon的值需要大于等于零。</li><li>建议值为1e-6。
       <td>-</td>
       <td>-</td>
       <td>-</td>
