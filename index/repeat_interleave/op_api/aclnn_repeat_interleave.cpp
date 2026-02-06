@@ -662,10 +662,6 @@ aclnnStatus aclnnRepeatInterleaveTensorGetWorkspaceSize(
         return ACLNN_SUCCESS;
     }
 
-    bool needCastInt32 = repeats->GetDataType() == op::DataType::DT_INT32;
-    repeats = CastIfNeeded(repeats, needCastInt32, op::DataType::DT_INT64, uniqueExecutor.get());
-    CHECK_RET(repeats != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
     // repeats size转换为tensor
     int64_t repeatsSize = GetTensorElementsNum(repeats);
     op::Shape selfShape = {repeatsSize};
@@ -677,6 +673,10 @@ aclnnStatus aclnnRepeatInterleaveTensorGetWorkspaceSize(
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto repeatsContiguous = InitializeTensor(repeats, uniqueExecutor.get());
+    CHECK_RET(repeatsContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    bool needCastInt32 = repeats->GetDataType() == op::DataType::DT_INT32;
+    repeatsContiguous = CastIfNeeded(repeatsContiguous, needCastInt32, op::DataType::DT_INT64, uniqueExecutor.get());
     CHECK_RET(repeatsContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto repeatInterleaveOut =
