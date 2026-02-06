@@ -35,6 +35,7 @@ constexpr uint64_t PAD_IDX_B = 3;
 constexpr uint64_t PAD_IDX_L = 0;
 constexpr uint64_t PAD_IDX_R = 1;
 constexpr uint64_t MAX_PAD_R = 255;
+constexpr uint64_t MAX_VEC_LEN = 255;
 constexpr uint64_t FMAP_BATCH_DIM = 0;
 constexpr uint64_t FMAP_CIN_DIM = 1;
 constexpr uint64_t FMAP_H_DIM = 2;

@@ -758,7 +758,7 @@
       ]
     },
     {
-      "bin_filename": "Conv3DV2_NDC1HWC0_INT8_FRACTAL_Z_3D_INT8_FP32_NDC1HWC0_BF16",
+      "bin_filename": "Conv3DV2_NDC1HWC0_INT8_FRACTAL_Z_3D_INT8_FP32_NCDHW_BF16",
       "inputs": [
         {
           "name": "x",
@@ -832,12 +832,12 @@
           "name": "y",
           "index": 0,
           "dtype": "bfloat16",
-          "format": "NDC1HWC0",
+          "format": "NCDHW",
           "ori_format": "NCDHW",
           "paramType": "required",
-          "shape": [-1, -1, -1, -1, -1, -1],
+          "shape": [-1, -1, -1, -1, -1],
           "ori_shape": [-1, -1, -1, -1, -1],
-          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
         }
       ],
       "attrs": [
@@ -884,7 +884,7 @@
       ]
     },
     {
-      "bin_filename": "Conv3DV2_NDC1HWC0_INT8_FRACTAL_Z_3D_INT8_FP32_NDC1HWC0_FP16",
+      "bin_filename": "Conv3DV2_NDC1HWC0_INT8_FRACTAL_Z_3D_INT8_FP32_NCDHW_FP16",
       "inputs": [
         {
           "name": "x",
@@ -958,12 +958,12 @@
           "name": "y",
           "index": 0,
           "dtype": "float16",
-          "format": "NDC1HWC0",
+          "format": "NCDHW",
           "ori_format": "NCDHW",
           "paramType": "required",
-          "shape": [-1, -1, -1, -1, -1, -1],
+          "shape": [-1, -1, -1, -1, -1],
           "ori_shape": [-1, -1, -1, -1, -1],
-          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
         }
       ],
       "attrs": [

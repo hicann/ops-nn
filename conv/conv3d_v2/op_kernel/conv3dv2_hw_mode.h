@@ -76,8 +76,13 @@ protected:
     {
         this->fmapOneBatchSize =
             this->conv3dRunInfo->din * this->c1In * this->conv3dRunInfo->hin * this->conv3dRunInfo->win * this->c0In;
-        this->outputOneBatchSize =
-            this->conv3dRunInfo->dout * this->c1Out * this->conv3dRunInfo->hout * this->conv3dRunInfo->wout * this->c0Out;
+        if constexpr (CONV_CFG::quantType == static_cast<int8_t>(QuantType::PER_CHANNEL_NO_OFFSET)) {
+            this->outputOneBatchSize =
+                this->conv3dRunInfo->cout * this->conv3dRunInfo->dout * this->conv3dRunInfo->hout * this->conv3dRunInfo->wout;
+        } else {
+            this->outputOneBatchSize =
+                this->conv3dRunInfo->dout * this->c1Out * this->conv3dRunInfo->hout * this->conv3dRunInfo->wout * this->c0Out;
+        }
 
         int64_t diIdxStart = this->doIdxStart * this->conv3dRunInfo->strideD - this->conv3dRunInfo->padHead;
         int64_t hiIdxStart = this->mIdxStart * this->conv3dRunInfo->strideH - this->conv3dRunInfo->padTop;
@@ -92,6 +97,12 @@ protected:
             this->doIdxStart * this->c1Out * this->conv3dRunInfo->hout * this->conv3dRunInfo->wout * this->c0Out +
             this->nIdxStart * this->conv3dRunInfo->hout * this->conv3dRunInfo->wout +
             this->mIdxStart * this->conv3dRunInfo->wout * this->c0Out;
+        if constexpr (CONV_CFG::quantType == static_cast<int8_t>(QuantType::PER_CHANNEL_NO_OFFSET)) {
+            outputStartAddr = this->batchIdxStart * this->outputOneBatchSize +
+                this->nIdxStart * this->conv3dRunInfo->dout * this->conv3dRunInfo->hout * this->conv3dRunInfo->wout +
+                this->doIdxStart * this->conv3dRunInfo->hout * this->conv3dRunInfo->wout +
+                this->mIdxStart * this->conv3dRunInfo->wout;
+        }
         ASC_OP_LOGD("[Conv3DV2HwMode] fmStartAddr %d weightStartAddr %d outputStartAddr %d.\n",
             fmStartAddr,
             weightStartAddr,

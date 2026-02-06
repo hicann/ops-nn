@@ -34,20 +34,24 @@ struct VecCompute {
     static __aicore__ inline bool call(
         Intf *self, const GlobalTensor<typename Intf::OutputT> &output)
     {
-        uint64_t mSize, nSize;
-        uint64_t ws_startoffset = self->ctx.workspaceDbFlag * self->ctx.conv3dTiling->mL0 * self->ctx.conv3dTiling->nL0;
+        uint64_t mSize, nSize, curNSize;
+        uint64_t ws_startoffset = self->ctx.workspaceDbFlag * self->ctx.conv3dTiling->mL0 *
+                                  self->ctx.conv3dTiling->nL0;
         self->ctx.copyOutIns.GetL0CSize(mSize, nSize);
+        self->ctx.copyOutIns.GetCurNSize(curNSize);
         uint64_t n16num = nSize / BLOCK_L0_N;
         if (n16num > 1) {
             self->ctx.outMoffset = 0;
             if (self->ctx.subblockIdx) {
                 uint64_t halfnum = CeilDIV(n16num, 2) * BLOCK_L0_N;
                 nSize = nSize - halfnum;
+                curNSize = curNSize - halfnum;
                 self->ctx.channelOffset = halfnum;
                 ws_startoffset += halfnum * mSize;
                 self->ctx.outNoffset = halfnum;
             } else {
                 nSize = CeilDIV(n16num, 2) * BLOCK_L0_N;
+                curNSize = nSize;
             }
         } else {
             self->ctx.channelOffset = 0;
@@ -71,18 +75,19 @@ struct VecCompute {
             CopyScaleAndBias(self, 0, nSize);
         }
         CrossCoreWaitFlag(self->ctx.C2VEvent + self->ctx.workspaceDbFlag);
-        DequantCompute(self, mSize, nSize, ws_startoffset, output);
+        DequantCompute(self, mSize, nSize, curNSize, ws_startoffset, output);
         CrossCoreSetFlag<0x2, PIPE_MTE2>(self->ctx.V2CEvent + self->ctx.workspaceDbFlag);
 
         return false;
     }
 
-    static __aicore__ inline void DequantCompute(Intf *self, uint64_t mSize, uint64_t nSize, uint64_t ws_startoffset,
+    static __aicore__ inline void DequantCompute(Intf *self, uint64_t mSize, uint64_t nSize,
+                                                 uint64_t nCurSize, uint64_t ws_startoffset,
                                                  const GlobalTensor<typename Intf::OutputT> &output)
     {
         uint32_t maxnUBIter = CeilDIV(nSize, self->ctx.conv3dTiling->nUB);
         uint32_t maxmUBIter = CeilDIV(mSize, self->ctx.conv3dTiling->mUB);
-        uint16_t totalSrcStride = (mSize - self->ctx.conv3dTiling->mUB) * BLOCK_L0_N * self->ctx.sizeOfL0c / 32;
+        uint16_t totalSrcStride = (mSize - self->ctx.conv3dTiling->mUB) * BLOCK_L0_N * self->ctx.sizeOfL0c / C0_SIZE;
         for (uint32_t nIter = 0; nIter < maxnUBIter - 1; nIter++) {
             if (self->ctx.conv3dTiling->scaleAndBiasLoadType == static_cast<int8_t>(LoadChannelType::NORMAL)) {
                 CopyScaleAndBias(self, nIter, self->ctx.conv3dTiling->nUB);
@@ -91,14 +96,20 @@ struct VecCompute {
                 uint64_t srcOffset = ws_startoffset + (nIter * self->ctx.conv3dTiling->nUB * mSize +
                                     mIter * self->ctx.conv3dTiling->mUB * BLOCK_L0_N);
                 CopyIn(self, self->ctx.totalBlockCount, self->ctx.totalBlockLen, totalSrcStride, srcOffset);
-                oneVecCompute(self, self->ctx.conv3dTiling->mUB, self->ctx.conv3dTiling->nUB, mIter, nIter, output);
+                oneVecCompute(self, self->ctx.conv3dTiling->mUB, self->ctx.conv3dTiling->nUB, mIter, nIter);
+                CopyOut(self, self->ctx.conv3dTiling->mUB, self->ctx.conv3dTiling->nUB, mIter, nIter, output);
             }
-            uint16_t blockLen =  (mSize - (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB) * BLOCK_L0_N * self->ctx.sizeOfL0c / 32;
-            uint16_t srcStride = (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB * BLOCK_L0_N * self->ctx.sizeOfL0c / 32 ;
+            uint16_t blockLen = (mSize - (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB) * BLOCK_L0_N *
+                                self->ctx.sizeOfL0c / C0_SIZE;
+            uint16_t srcStride = (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB * BLOCK_L0_N *
+                                 self->ctx.sizeOfL0c / C0_SIZE ;
             uint64_t srcOffset = ws_startoffset + (nIter * self->ctx.conv3dTiling->nUB * mSize +
                                 (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB * BLOCK_L0_N);
             CopyIn(self, self->ctx.totalBlockCount, blockLen, srcStride, srcOffset);
-            oneVecCompute(self, mSize - (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB, self->ctx.conv3dTiling->nUB, maxmUBIter - 1, nIter, output);
+            oneVecCompute(self, mSize - (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB, self->ctx.conv3dTiling->nUB,
+                          maxmUBIter - 1, nIter);
+            CopyOut(self, mSize - (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB, self->ctx.conv3dTiling->nUB,
+                    maxmUBIter - 1, nIter, output);
             if (self->ctx.conv3dTiling->scaleAndBiasLoadType == static_cast<int8_t>(LoadChannelType::NORMAL)) {
                 FreeScaleAndBias(self);
             }
@@ -111,22 +122,30 @@ struct VecCompute {
             uint64_t srcOffset = ws_startoffset + (maxnUBIter-1) * self->ctx.conv3dTiling->nUB * mSize +
                                                     mIter * self->ctx.conv3dTiling->mUB * BLOCK_L0_N ;
             CopyIn(self, blockCount, self->ctx.totalBlockLen, totalSrcStride, srcOffset);
-            oneVecCompute(self, self->ctx.conv3dTiling->mUB, nSize - (maxnUBIter - 1) * self->ctx.conv3dTiling->nUB, mIter, maxnUBIter - 1, output);
+            oneVecCompute(self, self->ctx.conv3dTiling->mUB, nSize - (maxnUBIter - 1) * self->ctx.conv3dTiling->nUB,
+                          mIter, maxnUBIter - 1);
+            CopyOut(self, self->ctx.conv3dTiling->mUB, nCurSize - (maxnUBIter - 1) * self->ctx.conv3dTiling->nUB,
+                    mIter, maxnUBIter - 1, output);
         }
-        uint16_t blockLen =  (mSize - (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB) * BLOCK_L0_N * self->ctx.sizeOfL0c / 32;
-        uint16_t srcStride = (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB * BLOCK_L0_N * self->ctx.sizeOfL0c / 32 ;
+        uint16_t blockLen = (mSize - (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB) * BLOCK_L0_N *
+                            self->ctx.sizeOfL0c / C0_SIZE;
+        uint16_t srcStride = (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB * BLOCK_L0_N *
+                             self->ctx.sizeOfL0c / C0_SIZE;
         uint64_t srcOffset = ws_startoffset + ((maxnUBIter-1) * self->ctx.conv3dTiling->nUB * mSize +
                                                     (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB * BLOCK_L0_N);
         CopyIn(self, blockCount, blockLen, srcStride, srcOffset);
-        oneVecCompute(self, mSize - (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB, nSize - (maxnUBIter - 1) * self->ctx.conv3dTiling->nUB,
-                        maxmUBIter - 1, maxnUBIter - 1, output);
+        oneVecCompute(self, mSize - (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB,
+                      nSize - (maxnUBIter - 1) * self->ctx.conv3dTiling->nUB, maxmUBIter - 1, maxnUBIter - 1);
+        CopyOut(self, mSize - (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB,
+                nCurSize - (maxnUBIter - 1) * self->ctx.conv3dTiling->nUB, maxmUBIter - 1, maxnUBIter - 1, output);
         if (self->ctx.conv3dTiling->scaleAndBiasLoadType == static_cast<int8_t>(LoadChannelType::LOAD_TOTAL_LC0) ||
             self->ctx.conv3dTiling->scaleAndBiasLoadType == static_cast<int8_t>(LoadChannelType::NORMAL)) {
             FreeScaleAndBias(self);
         }
     }
 
-    static __aicore__ inline void CopyIn(Intf *self, uint16_t blockCount, uint16_t blockLen, uint16_t srcStride, uint64_t srcOffset)
+    static __aicore__ inline void CopyIn(Intf *self, uint16_t blockCount, uint16_t blockLen,
+                                         uint16_t srcStride, uint64_t srcOffset)
     {
         self->ctx.ubin = self->ctx.queueUBin.template AllocTensor<typename Intf::L0cT>();
         DataCopyParams copyinParams;
@@ -192,38 +211,43 @@ struct VecCompute {
     }
 
     template <typename DataTypeT>
-    static __aicore__ inline void CopyInChannel(Intf *self, const LocalTensor<DataTypeT>& dst, const GlobalTensor<DataTypeT> &src, uint16_t nIter, uint16_t num)
+    static __aicore__ inline void CopyInChannel(Intf *self, const LocalTensor<DataTypeT>& dst,
+                                                const GlobalTensor<DataTypeT> &src,
+                                                uint16_t nIter, uint16_t num)
     {
         DataCopyParams copyinParams;
         copyinParams.blockCount = 1;
-        copyinParams.blockLen =  num * sizeof(DataTypeT) / 32;
+        copyinParams.blockLen =  num * sizeof(DataTypeT) / C0_SIZE;
         uint64_t Offset = self->ctx.copyOutIns.GetChannelOffset(nIter * self->ctx.conv3dTiling->nUB);
         DataCopy(dst, src[Offset], copyinParams);
     }
 
-    static __aicore__ inline void MulScaleAddBias(uint16_t m, uint16_t n, const LocalTensor<typename Intf::FP32T>& src,
-                                                 const LocalTensor<typename Intf::FP32T>& bias, const LocalTensor<typename Intf::FP32T>& scale)
+    static __aicore__ inline void MulScaleAddBias(uint16_t m, uint16_t n,
+                                                  const LocalTensor<typename Intf::FP32T>& src,
+                                                  const LocalTensor<typename Intf::FP32T>& bias,
+                                                  const LocalTensor<typename Intf::FP32T>& scale)
     {
         uint64_t mask = BLOCK_L0_N;
         BinaryRepeatParams repeatParams;
         repeatParams.dstBlkStride = 1;
         repeatParams.src0BlkStride = 1;
         repeatParams.src1BlkStride = 1;
-        repeatParams.dstRepStride = BLOCK_L0_N * sizeof(typename Intf::FP32T) / 32;
-        repeatParams.src0RepStride = BLOCK_L0_N * sizeof(typename Intf::FP32T) / 32;
+        repeatParams.dstRepStride = BLOCK_L0_N * sizeof(typename Intf::FP32T) / C0_SIZE;
+        repeatParams.src0RepStride = BLOCK_L0_N * sizeof(typename Intf::FP32T) / C0_SIZE;
         repeatParams.src1RepStride = 0;
 
         uint16_t maxNiter = n / BLOCK_L0_N;
-        uint16_t maxMiter = CeilDIV(m, 255);
+        uint16_t maxMiter = CeilDIV(m, MAX_VEC_LEN);
         for(uint16_t niter = 0; niter < maxNiter; niter++) {
             for (uint16_t miter = 0; miter < maxMiter - 1; miter++)
             {
-                uint64_t offset = m * niter * BLOCK_L0_N + 255 * miter * BLOCK_L0_N;
-                Mul(src[offset], src[offset], scale[niter * BLOCK_L0_N], mask, 255, repeatParams);
+                uint64_t offset = m * niter * BLOCK_L0_N + MAX_VEC_LEN * miter * BLOCK_L0_N;
+                Mul(src[offset], src[offset], scale[niter * BLOCK_L0_N], mask, MAX_VEC_LEN, repeatParams);
             }
 
-            uint64_t offset = m * niter * BLOCK_L0_N + 255 * (maxMiter - 1) * BLOCK_L0_N;
-            Mul(src[offset], src[offset], scale[niter * BLOCK_L0_N], mask, m - (maxMiter - 1) * 255, repeatParams);
+            uint64_t offset = m * niter * BLOCK_L0_N + MAX_VEC_LEN * (maxMiter - 1) * BLOCK_L0_N;
+            Mul(src[offset], src[offset], scale[niter * BLOCK_L0_N], mask,
+                m - (maxMiter - 1) * MAX_VEC_LEN, repeatParams);
         }
 
         PipeBarrier<PIPE_V>();
@@ -231,18 +255,20 @@ struct VecCompute {
         for(uint16_t niter = 0; niter < maxNiter; niter++) {
             for (uint16_t miter = 0; miter < maxMiter - 1; miter++)
             {
-                uint64_t offset = m * niter * BLOCK_L0_N + 255 * miter * BLOCK_L0_N;
-                Add(src[offset], src[offset], bias[niter * BLOCK_L0_N], mask, 255, repeatParams);
+                uint64_t offset = m * niter * BLOCK_L0_N + MAX_VEC_LEN * miter * BLOCK_L0_N;
+                Add(src[offset], src[offset], bias[niter * BLOCK_L0_N], mask, MAX_VEC_LEN, repeatParams);
             }
-            uint64_t offset = m * niter * BLOCK_L0_N + 255 * (maxMiter - 1) * BLOCK_L0_N;
-            Add(src[offset], src[offset], bias[niter * BLOCK_L0_N], mask, m - (maxMiter - 1) * 255, repeatParams);
+            uint64_t offset = m * niter * BLOCK_L0_N + MAX_VEC_LEN * (maxMiter - 1) * BLOCK_L0_N;
+            Add(src[offset], src[offset], bias[niter * BLOCK_L0_N], mask,
+                m - (maxMiter - 1) * MAX_VEC_LEN, repeatParams);
         }
     }
 
-    static __aicore__ inline void oneVecCompute(Intf *self, uint16_t m, uint16_t n, uint16_t mIter, uint16_t nIter, const GlobalTensor<typename Intf::OutputT> &output)
+    static __aicore__ inline void oneVecCompute(Intf *self, uint16_t m, uint16_t n, uint16_t mIter, uint16_t nIter)
     {
         LocalTensor<typename Intf::L0cT> localUBin = self->ctx.queueUBin.template DeQue<typename Intf::L0cT>();
         LocalTensor<typename Intf::FP32T> dstLocal = localUBin.template ReinterpretCast<typename Intf::FP32T>();
+        LocalTensor<typename Intf::OutputT> transLocal = localUBin.template ReinterpretCast<typename Intf::OutputT>();
 
         Cast(dstLocal, localUBin, AscendC::RoundMode::CAST_RINT, m * n);
 
@@ -259,7 +285,8 @@ struct VecCompute {
         }
 
         if (self->ctx.conv3dTiling->scaleAndBiasLoadType == static_cast<int8_t>(LoadChannelType::LOAD_TOTAL_CORE)) {
-            uint64_t Offset = self->ctx.copyOutIns.GetChannelOffset(nIter * self->ctx.conv3dTiling->nUB) + self->ctx.channelOffset;
+            uint64_t Offset = self->ctx.copyOutIns.GetChannelOffset(nIter * self->ctx.conv3dTiling->nUB) +
+                              self->ctx.channelOffset;
             bias = self->ctx.ubbias[Offset];
             scale = self->ctx.ubscale[Offset];
         }
@@ -267,13 +294,65 @@ struct VecCompute {
         MulScaleAddBias(m, n, dstLocal, bias, scale);
 
         //cast to bf16 or fp16
-        self->ctx.ubout = self->ctx.queueUBout.template AllocTensor<typename Intf::OutputT>();
         PipeBarrier<PIPE_V>();
-        Cast(self->ctx.ubout, dstLocal, AscendC::RoundMode::CAST_RINT, m * n);
-        self->ctx.queueUBin.FreeTensor(localUBin);
-        self->ctx.queueUBout.EnQue(self->ctx.ubout);
-        LocalTensor<typename Intf::OutputT> copyubout = self->ctx.queueUBout.template DeQue<typename Intf::OutputT>();
+        Cast(transLocal, dstLocal, AscendC::RoundMode::CAST_RINT, m * n);
+        TransFormat(self, transLocal, m, n);
+    }
 
+    static __aicore__ inline void TransFormat(Intf *self, const LocalTensor<typename Intf::OutputT>& transLocal,
+                                              uint16_t m, uint16_t n)
+    {
+        using transT = std::conditional_t<IsSameType<typename Intf::OutputT, bfloat16_t>::value,
+                                            uint16_t,
+                                            typename Intf::OutputT>;
+        LocalTensor<transT> vecInBuf_ = transLocal.template ReinterpretCast<transT>();
+        LocalTensor<transT> vecOutBuf_ = self->ctx.queueUBout.template AllocTensor<transT>();
+
+        TransDataTo5HDParams transDataParams;
+        transDataParams.dstHighHalf = false;
+        transDataParams.srcHighHalf = false;
+        transDataParams.repeatTimes = static_cast<uint16_t>(CeilDIV(m, NCHW_CONV_ADDR_LIST_SIZE));
+        transDataParams.dstRepStride = 1;
+        transDataParams.srcRepStride = NCHW_CONV_ADDR_LIST_SIZE;
+        // 参考AscendC API的使用说明，当repeatTimes为1时，repStride需要设置为0
+        if (transDataParams.repeatTimes == 1) {
+            transDataParams.dstRepStride = 0;
+            transDataParams.srcRepStride = 0;
+        }
+        uint64_t dstLocalList[NCHW_CONV_ADDR_LIST_SIZE];
+        uint64_t srcLocalList[NCHW_CONV_ADDR_LIST_SIZE];
+        int64_t dstCount = 0;
+        int64_t srcCount = 0;
+        int loopCountN = CeilDIV(n, BLOCK_L0_N);
+        int loopCountM = CeilDIV(m, BLOCK_L0_M);
+        uint64_t dstIncrement = loopCountM * BLOCK_L0_M * BLOCK_L0_N;
+        uint64_t srcIncrement = m * BLOCK_L0_N;
+        for (int nIdx = 0; nIdx < loopCountN; nIdx++) {
+            dstCount = nIdx * dstIncrement;
+            for (int i = 0; i < NCHW_CONV_ADDR_LIST_SIZE; i++) {
+                dstLocalList[i] = reinterpret_cast<uint64_t>(vecOutBuf_[dstCount].GetPhyAddr());
+                dstCount += loopCountM * BLOCK_L0_M;
+            }
+            srcCount = nIdx * srcIncrement;
+            for (int i = 0; i < NCHW_CONV_ADDR_LIST_SIZE; i++) {
+                srcLocalList[i] = reinterpret_cast<uint64_t>(vecInBuf_[srcCount].GetPhyAddr());
+                srcCount += BLOCK_L0_N;
+            }
+            TransDataTo5HD<transT>(dstLocalList, srcLocalList, transDataParams);
+        }
+        if constexpr (IsSameType<typename Intf::OutputT, bfloat16_t>::value) {
+            self->ctx.ubout = vecOutBuf_.template ReinterpretCast<typename Intf::OutputT>();
+        } else {
+            self->ctx.ubout = vecOutBuf_;
+        }
+        self->ctx.queueUBout.EnQue(self->ctx.ubout);
+        self->ctx.queueUBin.FreeTensor(vecInBuf_);
+    }
+
+    static __aicore__ inline void CopyOut(Intf *self, uint16_t m, uint16_t n, uint16_t mIter, uint16_t nIter,
+                                          const GlobalTensor<typename Intf::OutputT> &output)
+    {
+        LocalTensor<typename Intf::OutputT> copyubout = self->ctx.queueUBout.template DeQue<typename Intf::OutputT>();
         self->ctx.copyOutIns.CopyUBOut(output, mIter, nIter, m, n, copyubout);
         self->ctx.queueUBout.FreeTensor(copyubout);
     }

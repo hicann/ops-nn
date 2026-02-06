@@ -1116,8 +1116,8 @@ public:
             return PreProcessV2();
         }
 
-        REG_L0_FUNCTION_BY_OPTYPE(l0Functions, QuantConv3d6HdInt8To6HdBf16, "QuantConv3d6HdInt8To6HdBf16");
-        REG_L0_FUNCTION_BY_OPTYPE(l0Functions, QuantConv3d6HdInt8To6HdFp16, "QuantConv3d6HdInt8To6HdFp16");
+        REG_L0_FUNCTION_BY_OPTYPE(l0Functions, QuantConv3d6HdInt8ToNCDHWBf16, "QuantConv3d6HdInt8ToNCDHWBf16");
+        REG_L0_FUNCTION_BY_OPTYPE(l0Functions, QuantConv3d6HdInt8ToNCDHWFp16, "QuantConv3d6HdInt8ToNCDHWFp16");
         outputDtype = output->GetDataType();
         auto retContiguous = ContiguousPreProcess(input, weight, scale, bias, executor);
         if (retContiguous != ACLNN_SUCCESS) {
@@ -1153,11 +1153,11 @@ public:
             }
         } else {
             if (outputDtype == DataType::DT_FLOAT16) {
-                quantConvOut = FUNCTION_CALL_BY_OPTYPE(l0Functions, "QuantConv3d6HdInt8To6HdFp16", input, weight, bias,
+                quantConvOut = FUNCTION_CALL_BY_OPTYPE(l0Functions, "QuantConv3d6HdInt8ToNCDHWFp16", input, weight, bias,
                     scale, offset, stride, padding, dilation, groups, offsetx, roundMode, outputDtype,
                     outputFormat, executor);
             } else if (outputDtype == DataType::DT_BF16) {
-                quantConvOut = FUNCTION_CALL_BY_OPTYPE(l0Functions, "QuantConv3d6HdInt8To6HdBf16", input, weight, bias,
+                quantConvOut = FUNCTION_CALL_BY_OPTYPE(l0Functions, "QuantConv3d6HdInt8ToNCDHWBf16", input, weight, bias,
                     scale, offset, stride, padding, dilation, groups, offsetx, roundMode, outputDtype,
                     outputFormat, executor);
             }
@@ -1173,10 +1173,7 @@ public:
     aclnnStatus PostProcess() override
     {
         const aclTensor* resConvOut = quantConvOut;
-        if (!IsSocSupportND()) {
-            resConvOut = l0op::TransData(quantConvOut, output->GetStorageFormat(), groups, executor);
-            CHECK_RET(resConvOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        } else {
+        if (IsSocSupportND()) {
             bool isConv3DQuant = input->GetViewShape().GetDimNum() == CONV_3D_INPUT_DIM &&
                                  input->GetDataType() == DataType::DT_INT8 &&
                                  scale->GetDataType() == DataType::DT_FLOAT;

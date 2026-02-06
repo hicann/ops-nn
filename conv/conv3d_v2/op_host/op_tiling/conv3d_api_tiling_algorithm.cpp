@@ -1016,10 +1016,11 @@ void Conv3dTilingAlgorithm::GetVecTiling() const
         tilingIns_->ubTilingInfo.scaleAndBiasLoadType = NUB_LOAD;
     }
 
+    uint64_t multiN0 = tilingIns_->l0TilingInfo.nL0 / tilingIns_->cubeInfo.n0;
     for (uint64_t m = 1; m <= tilingIns_->l0TilingInfo.mL0; m++) { //优先全载m方向，切分n方向，再考虑是否可以开doubleBuffer
-        for (uint64_t n = 1; n <= tilingIns_->l0TilingInfo.nL0 / tilingIns_->cubeInfo.n0; n++) {
+        for (uint64_t n = 1; n <= multiN0; n++) {
             uint64_t mUB = CeilDiv(tilingIns_->l0TilingInfo.mL0, m);
-            uint64_t nUB = CeilDiv(tilingIns_->l0TilingInfo.nL0, n);
+            uint64_t nUB = CeilDiv(multiN0, n) * tilingIns_->cubeInfo.n0;
             uint64_t usedInSize = this->ubInDTypeSize * mUB * nUB;
             uint64_t usedOutSize = this->outputDTypeSize * mUB * nUB;
             if (tilingIns_->ubTilingInfo.scaleAndBiasLoadType == NUB_LOAD) {

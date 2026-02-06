@@ -75,15 +75,15 @@ const aclTensor *Conv3dv2L0Func(const aclTensor *input, const aclTensor *weight,
                                 const aclIntArray *stride, const aclIntArray *padding, const aclIntArray *dilation,
                                 int groups, bool useHf32, aclOpExecutor *executor);
 
-const aclTensor *QuantConv3d6HdInt8To6HdBf16(const aclTensor *input, const aclTensor *weight, const aclTensor *bias,
-                                             const aclTensor *scale, const aclTensor *offset, const aclIntArray *stride,
-                                             const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                             aclOpExecutor *executor);
+const aclTensor *QuantConv3d6HdInt8ToNCDHWBf16(const aclTensor *input, const aclTensor *weight, const aclTensor *bias,
+                                               const aclTensor *scale, const aclTensor *offset, const aclIntArray *stride,
+                                               const aclIntArray *padding, const aclIntArray *dilation, int groups,
+                                               aclOpExecutor *executor);
 
-const aclTensor *QuantConv3d6HdInt8To6HdFp16(const aclTensor *input, const aclTensor *weight, const aclTensor *bias,
-                                             const aclTensor *scale, const aclTensor *offset, const aclIntArray *stride,
-                                             const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                             aclOpExecutor *executor);
+const aclTensor *QuantConv3d6HdInt8ToNCDHWFp16(const aclTensor *input, const aclTensor *weight, const aclTensor *bias,
+                                               const aclTensor *scale, const aclTensor *offset, const aclIntArray *stride,
+                                               const aclIntArray *padding, const aclIntArray *dilation, int groups,
+                                               aclOpExecutor *executor);
 
 const aclTensor *Conv3d6HdBf16(const aclTensor *input, const aclTensor *weight, const aclTensor *bias,
                                const aclIntArray *stride, const aclIntArray *padding, const aclIntArray *dilation,

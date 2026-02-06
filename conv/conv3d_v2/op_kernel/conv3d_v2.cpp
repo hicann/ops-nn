@@ -58,11 +58,19 @@ constexpr ConvFormat aFormat = ConvFormat::NCDHW;
 constexpr ConvFormat bFormat = ConvFormat::NCDHW;
 constexpr ConvFormat cFormat = ConvFormat::NCDHW;
 constexpr ConvBL1ByPass bL1ByPassFlag = ConvBL1ByPass::BYPASS_OFF;
-#else
+constexpr QuantType quantType = QuantType::NO_QUANT;
+#elif defined(ORIG_DTYPE_X) && ORIG_DTYPE_X != DT_INT8
 constexpr ConvFormat aFormat = ConvFormat::NDC1HWC0;
 constexpr ConvFormat bFormat = ConvFormat::FRACTAL_Z_3D;
 constexpr ConvFormat cFormat = ConvFormat::NDC1HWC0;
 constexpr ConvBL1ByPass bL1ByPassFlag = ConvBL1ByPass::BYPASS_ON;
+constexpr QuantType quantType = QuantType::NO_QUANT;
+#else
+constexpr ConvFormat aFormat = ConvFormat::NDC1HWC0;
+constexpr ConvFormat bFormat = ConvFormat::FRACTAL_Z_3D;
+constexpr ConvFormat cFormat = ConvFormat::NCDHW;
+constexpr ConvBL1ByPass bL1ByPassFlag = ConvBL1ByPass::BYPASS_ON;
+constexpr QuantType quantType = QuantType::PER_CHANNEL_NO_OFFSET;
 #endif
 
 #endif
@@ -70,12 +78,6 @@ constexpr ConvBL1ByPass bL1ByPassFlag = ConvBL1ByPass::BYPASS_ON;
 #if (__CCE_AICORE__ > 300)
 constexpr ConvFormat biasFormat = ConvFormat::ND;
 constexpr ConvFormat scaleFormat = ConvFormat::ND;
-#else
-#if defined(ORIG_DTYPE_X) && ORIG_DTYPE_X != DT_INT8
-constexpr QuantType quantType = QuantType::NO_QUANT;
-#else
-constexpr QuantType quantType = QuantType::PER_CHANNEL_NO_OFFSET;
-#endif
 #endif
 
 #if (__CCE_AICORE__ > 300)

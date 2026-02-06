@@ -202,8 +202,8 @@ public:
             }
         }
         ASC_OP_LOGD(
-            "[Mad] mmadParams.cmatrixInitVal %d, mmadParams.cmatrixSource %d, mmadParams.isBias %d, mmadParams.k %d, "
-            "mmadParams.n %d, mmadParams.m %d.\n",
+            "[Mad] mmadParams.cmatrixInitVal %d, mmadParams.cmatrixSource %d, mmadParams.isBias %d,"
+            "mmadParams.k %d, mmadParams.n %d, mmadParams.m %d.\n",
             mmadParams.cmatrixInitVal,
             mmadParams.cmatrixSource,
             mmadParams.isBias,
@@ -238,6 +238,11 @@ public:
     {
         currentML0_ = m;
         currentNL0_ = n;
+    }
+
+    __aicore__ inline void SetVecN(uint64_t n)
+    {
+        currentVecNL0_ = n;
     }
 
     __aicore__ inline void SetFixpipeIntriParams(FixpipeParamsV220 &intriParams)
@@ -285,7 +290,7 @@ public:
     {
         FixpipeParamsV220 intriParams;
         SetFixpipeIntriParams(intriParams);
-        uint64_t offset = CalcFixpipeOffset(0, 0);
+        uint64_t offset = CalcFixpipeOffset();
         ASC_OP_LOGD("[CopyOut] offset %d.\n", offset);
         if constexpr (!(AscendC::IsSameType<typename Intf::L0cT, int32_t>::value &&
                 AscendC::IsSameType<typename Intf::OutputT, bfloat16_t>::value)) {
@@ -304,39 +309,25 @@ public:
         Fixpipe<typename Intf::L0cT, typename Intf::L0cT, CFG_NZ>(output[offset], self_->ctx.cl0, intriParams);
     }
 
-    __aicore__ inline void CopyUBOut(const GlobalTensor<typename Intf::OutputT> &output, uint32_t mIter, uint32_t nIter, uint32_t m, uint32_t n,
-                                     const LocalTensor<typename Intf::OutputT> &ubout)
+    __aicore__ inline void CopyUBOut(const GlobalTensor<typename Intf::OutputT> &output, uint32_t mIter, uint32_t nIter,
+                                     uint32_t mLen, uint32_t nLen, const LocalTensor<typename Intf::OutputT> &ubOut)
     {
-        uint64_t offset = CalcFixpipeOffset(mIter * self_->ctx.conv3dTiling->mUB + self_->ctx.outMoffset, nIter * self_->ctx.conv3dTiling->nUB + self_->ctx.outNoffset);
-
-        DataCopyParams copyParams;
-
-        int32_t blockCount = n / BLOCK_L0_N;
-        uint64_t dstStride = valueHoWo_ - m;
-
-        copyParams.blockLen =  m;
-        copyParams.srcStride = 0;
-        if (dstStride <= MAX_UINT16) {
-            copyParams.dstStride = dstStride;
-            copyParams.blockCount = blockCount;
-            DataCopy(output[offset], ubout, copyParams);
+        uint64_t offset = CalcQuantFixpipeOffset(mIter * self_->ctx.conv3dTiling->mUB + self_->ctx.outMoffset,
+                                                 nIter * self_->ctx.conv3dTiling->nUB + self_->ctx.outNoffset);
+        DataCopyExtParams copyParams(nLen,
+                                     mLen * sizeof(typename Intf::OutputT),
+                                     0,
+                                     (self_->ctx.orgDo * valueHoWo_ - mLen) * sizeof(typename Intf::OutputT),
+                                     0);
+        if (UINT32_MAX >= copyParams.dstStride) {
+            DataCopyPad(output[offset], ubOut, copyParams);
         } else {
-            copyParams.dstStride = 0;
             copyParams.blockCount = 1;
-            uint64_t gmoffset = offset;
-            uint64_t localoffset = 0;
-            uint64_t blockElm = m * BLOCK_L0_N;
-            int iter = 0;
-
-            while (true) {
-                DataCopy(output[gmoffset], ubout[localoffset], copyParams);
-                iter++;
-                if (iter < blockCount) {
-                    localoffset += blockElm;
-                    gmoffset += valueHoWo_ * BLOCK_L0_N;
-                } else {
-                    break;
-                }
+            copyParams.dstStride = 0;
+            uint32_t mLenAlign = AlignB(mLen, BLOCK_L0_M);
+            uint64_t orgDoHoWo = self_->ctx.orgDo * valueHoWo_;
+            for (int i = 0; i < nLen; i++) {
+                DataCopyPad(output[offset + i * orgDoHoWo], ubOut[i * mLenAlign], copyParams);
             }
         }
     }
@@ -349,17 +340,36 @@ public:
         nSize = intriParams.nSize;
     }
 
-    __aicore__ inline uint64_t GetChannelOffset(uint64_t noffset)
+    __aicore__ inline void GetCurNSize(uint64_t &nCurSize)
     {
-        uint64_t offsetCout = tilingNBL1_ * self_->ctx.nBL1Iter + self_->ctx.conv3dTiling->nL0 * self_->ctx.nBL0Iter + noffset;
+        nCurSize = currentVecNL0_;
+    }
+
+    __aicore__ inline uint64_t GetChannelOffset(uint64_t nOffset)
+    {
+        uint64_t offsetCout = tilingNBL1_ * self_->ctx.nBL1Iter +
+                              self_->ctx.conv3dTiling->nL0 * self_->ctx.nBL0Iter +
+                              nOffset;
         return offsetCout;
     }
 
 private:
-    __aicore__ inline uint64_t CalcFixpipeOffset(uint64_t moffset, uint64_t noffset)
+    __aicore__ inline uint64_t CalcQuantFixpipeOffset(uint64_t mOffset, uint64_t nOffset)
     {
-        uint64_t offsetCout = tilingNBL1_ * self_->ctx.nBL1Iter + self_->ctx.conv3dTiling->nL0 * self_->ctx.nBL0Iter + noffset;
-        uint64_t offsetM = tilingMAL1_ * self_->ctx.mAL1Iter + self_->ctx.conv3dTiling->mL0 * self_->ctx.mAL0Iter + moffset;
+        uint64_t offsetCout = tilingNBL1_ * self_->ctx.nBL1Iter +
+                              self_->ctx.conv3dTiling->nL0 * self_->ctx.nBL0Iter +
+                              nOffset;
+        uint64_t offsetM = tilingMAL1_ * self_->ctx.mAL1Iter +
+                           self_->ctx.conv3dTiling->mL0 * self_->ctx.mAL0Iter +
+                           mOffset;
+        // 当前每次只出一个dout
+        uint64_t offsetDout = self_->ctx.dOutIter;
+        return offsetCout * self_->ctx.orgDo * valueHoWo_ + offsetDout * valueHoWo_ + offsetM;
+    }
+    __aicore__ inline uint64_t CalcFixpipeOffset()
+    {
+        uint64_t offsetCout = tilingNBL1_ * self_->ctx.nBL1Iter + self_->ctx.conv3dTiling->nL0 * self_->ctx.nBL0Iter;
+        uint64_t offsetM = tilingMAL1_ * self_->ctx.mAL1Iter + self_->ctx.conv3dTiling->mL0 * self_->ctx.mAL0Iter;
         // 当前每次只出一个dout
         uint64_t offsetDout = self_->ctx.dOutIter;
         if constexpr (Intf::groupConvType) {
@@ -404,6 +414,7 @@ private:
     uint64_t valueHoWo_ = 0;
     uint64_t currentML0_ = 0;
     uint64_t currentNL0_ = 0;
+    uint64_t currentVecNL0_ = 0;
 };
 
 };  // namespace Conv3dFunc

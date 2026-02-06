@@ -317,6 +317,11 @@ public:
         // impl for pointwise
     }
 
+    __aicore__ inline void GetCurNSize(uint64_t &nCurSize)
+    {
+        // impl for pointwise
+    }
+
     __aicore__ inline uint64_t GetChannelOffset(uint64_t noffset)
     {
         return 0;

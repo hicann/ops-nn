@@ -807,38 +807,56 @@ bool Conv3dTilingEngine::CheckParamsDtype()
     return CheckParamsDtypeWithoutBias(logTag, descInfo_);
 }
 
+bool Conv3dTilingEngine::CheckValidFormatCombo(Conv3dApiTiling::ConvFormat expectFmap,
+                                               Conv3dApiTiling::ConvFormat expectWeight,
+                                               Conv3dApiTiling::ConvFormat expectOut,
+                                               const char *errMsg)
+{
+    if (descInfo_.fMapFormat != expectFmap ||
+        descInfo_.weightFormat != expectWeight ||
+        descInfo_.outFormat != expectOut) {
+        OP_LOGE(logTag_.c_str(),
+                "%s Current formats: [fmap=%s, weight=%s, output=%s]",
+                errMsg,
+                Conv3dApiTiling::g_formatToStr.at(descInfo_.fMapFormat).c_str(),
+                Conv3dApiTiling::g_formatToStr.at(descInfo_.weightFormat).c_str(),
+                Conv3dApiTiling::g_formatToStr.at(descInfo_.outFormat).c_str());
+        return false;
+    }
+    return true;
+}
+
 bool Conv3dTilingEngine::CheckInputFormat()
 {
     OP_LOGD(logTag_.c_str(), "Checking input format compatibility - mode: %s",
-            isPointWise ? "Pointwise" : "Regular");
+            isPointWise ? "Pointwise" : (flagInfo_.hasScale ? "Quant" : "Regular"));
 
     // Validate based on pointwise mode
-    if (isPointWise) {
+    if (isPointWise) { 
         // Pointwise mode: all tensors must be NCDHW
-        if (descInfo_.fMapFormat != Conv3dApiTiling::ConvFormat::NCDHW ||
-            descInfo_.weightFormat != Conv3dApiTiling::ConvFormat::NCDHW ||
-            descInfo_.outFormat != Conv3dApiTiling::ConvFormat::NCDHW) {
-            OP_LOGE(logTag_.c_str(),
-                    "Pointwise convolution (1x1x1 kernel) requires NCDHW format for all tensors. "
-                    "Current formats: [fmap=%s, weight=%s, output=%s]",
-                    Conv3dApiTiling::g_formatToStr.at(descInfo_.fMapFormat).c_str(),
-                    Conv3dApiTiling::g_formatToStr.at(descInfo_.weightFormat).c_str(),
-                    Conv3dApiTiling::g_formatToStr.at(descInfo_.outFormat).c_str());
+        if(!CheckValidFormatCombo(
+            Conv3dApiTiling::ConvFormat::NCDHW,
+            Conv3dApiTiling::ConvFormat::NCDHW,
+            Conv3dApiTiling::ConvFormat::NCDHW,
+            "Pointwise convolution (1x1x1 kernel) requires NCDHW format for all tensors.")) {
             return false;
         }
-    } else {
+    } else if (flagInfo_.hasScale) {
+        // Quant mode: NDC1HWC0 for fmap, FRACTAL_Z_3D for weight, NCDHW for output
+        if(!CheckValidFormatCombo(
+            Conv3dApiTiling::ConvFormat::NDC1HWC0,
+            Conv3dApiTiling::ConvFormat::FRACTAL_Z_3D,
+            Conv3dApiTiling::ConvFormat::NCDHW,
+            "Quant convolution requires [NDC1HWC0, FRACTAL_Z_3D, NCDHW] formats.")) {
+            return false;
+        }
+    } else if (!CheckValidFormatCombo(
+            Conv3dApiTiling::ConvFormat::NDC1HWC0,
+            Conv3dApiTiling::ConvFormat::FRACTAL_Z_3D,
+            Conv3dApiTiling::ConvFormat::NDC1HWC0,
+            "Regular convolution requires [NDC1HWC0, FRACTAL_Z_3D, NDC1HWC0] formats.")) {
         // Regular mode: NDC1HWC0 for fmap/output, FRACTAL_Z_3D for weight
-        if (descInfo_.fMapFormat != Conv3dApiTiling::ConvFormat::NDC1HWC0 ||
-            descInfo_.weightFormat != Conv3dApiTiling::ConvFormat::FRACTAL_Z_3D ||
-            descInfo_.outFormat != Conv3dApiTiling::ConvFormat::NDC1HWC0) {
-            OP_LOGE(logTag_.c_str(),
-                    "Regular convolution requires [NDC1HWC0, FRACTAL_Z_3D, NDC1HWC0] formats. "
-                    "Current formats: [fmap=%s, weight=%s, output=%s]",
-                    Conv3dApiTiling::g_formatToStr.at(descInfo_.fMapFormat).c_str(),
-                    Conv3dApiTiling::g_formatToStr.at(descInfo_.weightFormat).c_str(),
-                    Conv3dApiTiling::g_formatToStr.at(descInfo_.outFormat).c_str());
-            return false;
-        }
+        return false;
     }
 
     // Validate bias format if present

@@ -169,7 +169,11 @@ protected:
     __aicore__ inline void InitBuffer(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, GM_ADDR scale, GM_ADDR workspace)
     {
         fmapOneBatchSize = conv3dRunInfo->din * c1In * conv3dRunInfo->hin * conv3dRunInfo->win * c0In;
-        outputOneBatchSize = conv3dRunInfo->dout * c1Out * conv3dRunInfo->hout * conv3dRunInfo->wout * c0Out;
+        if constexpr (CONV_CFG::quantType == static_cast<int8_t>(QuantType::PER_CHANNEL_NO_OFFSET)) {
+            outputOneBatchSize = conv3dRunInfo->cout * conv3dRunInfo->dout * conv3dRunInfo->hout * conv3dRunInfo->wout;
+        } else {
+            outputOneBatchSize = conv3dRunInfo->dout * c1Out * conv3dRunInfo->hout * conv3dRunInfo->wout * c0Out;
+        }
 
         int64_t diIdxStart = doIdxStart * conv3dRunInfo->strideD - conv3dRunInfo->padHead;
         int64_t hiIdxStart = (mIdxStart / conv3dRunInfo->wout) * conv3dRunInfo->strideH - conv3dRunInfo->padTop;
@@ -181,6 +185,12 @@ protected:
         uint64_t outputStartAddr = batchIdxStart * outputOneBatchSize +
                                    doIdxStart * c1Out * conv3dRunInfo->hout * conv3dRunInfo->wout * c0Out +
                                    nIdxStart * conv3dRunInfo->hout * conv3dRunInfo->wout + mIdxStart * c0Out;
+        if constexpr (CONV_CFG::quantType == static_cast<int8_t>(QuantType::PER_CHANNEL_NO_OFFSET)) {
+            outputStartAddr = batchIdxStart * outputOneBatchSize +
+                              nIdxStart * conv3dRunInfo->dout * conv3dRunInfo->hout * conv3dRunInfo->wout +
+                              doIdxStart * conv3dRunInfo->hout * conv3dRunInfo->wout +
+                              mIdxStart;
+        }
         ASC_OP_LOGD("[InitBuffer] fmStartAddr %d weightStartAddr %d outputStartAddr %d.\n",
             fmStartAddr,
             weightStartAddr,
@@ -208,7 +218,6 @@ protected:
         if (isDoDimTail || isNDimTail || isMDimTail) [[unlikely]] {
             conv.SetSingleOutputShape(1, singleCoreN, singleCoreDout, singleCoreM, 0);
         }
-
         int64_t diIdxStart = doIdxStart * conv3dRunInfo->strideD;
         int64_t hiIdxStart = (mIdxStart / conv3dRunInfo->wout) * conv3dRunInfo->strideH;
         ASC_OP_LOGD("[Conv3DV2KernelImpl] doIdxStart %d mIdxStart %d diIdxStart %d hiIdxStart %d.\n",

@@ -1421,9 +1421,28 @@ TEST(TestConv3dTilingEngine, CheckInputFormat_ScaleFormat_Valid)
     // Regular mode with valid formats
     std::vector<int64_t> weightShape = {16, 1, 3, 3, 3};
     engine.SetOrgWeightShape(weightShape);
-    engine.SetFormat(ConvFormat::NDC1HWC0, ConvFormat::FRACTAL_Z_3D, ConvFormat::NDC1HWC0);
+    engine.SetFormat(ConvFormat::NDC1HWC0, ConvFormat::FRACTAL_Z_3D, ConvFormat::NCDHW);
 
     EXPECT_TRUE(engine.CheckInputFormat());
+}
+
+TEST(TestConv3dTilingEngine, CheckInputFormat_Quant_OutFormat_Invalid)
+{
+    using Conv3dApiTiling::ConvFormat;
+    using Conv3dApiTiling::ConvDtype;
+
+    Conv3dTilingEngine engine;
+    InitSimpleConv3dEngine(engine);
+
+    // Setup with scale
+    engine.SetScale(true, ConvDtype::FLOAT32);
+
+    // Regular mode with valid main formats
+    std::vector<int64_t> weightShape = {16, 1, 3, 3, 3};
+    engine.SetOrgWeightShape(weightShape);
+    engine.SetFormat(ConvFormat::NDC1HWC0, ConvFormat::FRACTAL_Z_3D, ConvFormat::NDC1HWC0);
+
+    EXPECT_FALSE(engine.CheckInputFormat());
 }
 
 TEST(TestConv3dTilingEngine, CheckInputFormat_ScaleFormat_Invalid)
@@ -1443,7 +1462,7 @@ TEST(TestConv3dTilingEngine, CheckInputFormat_ScaleFormat_Invalid)
     // Regular mode with valid main formats
     std::vector<int64_t> weightShape = {16, 1, 3, 3, 3};
     engine.SetOrgWeightShape(weightShape);
-    engine.SetFormat(ConvFormat::NDC1HWC0, ConvFormat::FRACTAL_Z_3D, ConvFormat::NDC1HWC0);
+    engine.SetFormat(ConvFormat::NDC1HWC0, ConvFormat::FRACTAL_Z_3D, ConvFormat::NCDHW);
 
     EXPECT_FALSE(engine.CheckInputFormat());
 }

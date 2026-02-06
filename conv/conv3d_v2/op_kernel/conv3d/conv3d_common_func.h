@@ -693,6 +693,9 @@ struct Iterate {
         } else {
             self->ctx.madIns.SetMN(AlignB(m, BLOCK_L0_M), AlignB(n, BLOCK_L0_N));
             self->ctx.copyOutIns.SetMN(m, AlignB(n, self->ctx.cout0));
+            if constexpr (Intf::quantType == static_cast<int8_t>(QuantType::PER_CHANNEL_NO_OFFSET)) {
+                self->ctx.copyOutIns.SetVecN(n);
+            }
             if ASCEND_IS_AIC {
                 InitBiasWithNormal(self, m, n);
             }

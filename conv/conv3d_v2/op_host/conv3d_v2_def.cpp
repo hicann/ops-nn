@@ -98,8 +98,8 @@ static const std::map<std::string, std::vector<ge::Format>> conv3dv2OffsetWForma
 };
 static const std::map<std::string, std::vector<ge::Format>> conv3dv2OutputFormat = {
     {"ascend910b", {ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NCDHW,
-                    ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0,
-                    ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0}},
+                    ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
+                    ge::FORMAT_NCDHW, ge::FORMAT_NCDHW}},
     {"ascend950", {ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
                       ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
                       ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC}}

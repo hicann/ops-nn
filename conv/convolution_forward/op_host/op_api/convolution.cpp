@@ -697,23 +697,13 @@ static aclnnStatus ResetStorageShape(const aclTensor *input, aclTensor *&output)
     return ACLNN_SUCCESS;
   }
 
-  auto storageShape = input->GetStorageShape();  // storageShape dim of output is same as input
   auto viewShape = output->GetViewShape();
-  if (viewShape.GetDimNum() < conv3dDimNum) {
-    OP_LOGE(ACLNN_ERR_INNER, "L0 func get ouput view shapeDim < 5.");
+  if (viewShape.GetDimNum() != conv3dDimNum) {
+    OP_LOGE(ACLNN_ERR_INNER, "L0 func get ouput view shapeDim != 5.");
     return ACLNN_ERR_INNER;
   }
-  if (storageShape.GetDimNum() < conv3dDimNum + 1) {
-    OP_LOGE(ACLNN_ERR_INNER, "L0 func get input storiage shapeDim < 6.");
-    return ACLNN_ERR_INNER;
-  }
-  storageShape[DIM_0] = viewShape[DIM_0];
-  storageShape[DIM_1] = viewShape[DIM_2];
-  storageShape[DIM_2] = (viewShape[DIM_1] + C0_BF16 - 1) / C0_BF16;
-  storageShape[H_DIM_NCDHW_INDEX] = viewShape[H_DIM_NCDHW_INDEX];
-  storageShape[W_DIM_NCDHW_INDEX] = viewShape[W_DIM_NCDHW_INDEX];
-  storageShape[C0_DIM_NDC1HWC0_INDEX] = C0_BF16;
-  output->SetStorageShape(storageShape);
+
+  output->SetStorageShape(viewShape);  // output为NCDHW格式
   return ACLNN_SUCCESS;
 }
 
@@ -859,26 +849,26 @@ const aclTensor *Conv3dv26HdFp16(const aclTensor *input, const aclTensor *weight
     return output;
 }
 
-const aclTensor *QuantConv3d6HdInt8To6HdBf16(const aclTensor *input, const aclTensor *weight, const aclTensor *bias,
+const aclTensor *QuantConv3d6HdInt8ToNCDHWBf16(const aclTensor *input, const aclTensor *weight, const aclTensor *bias,
                                              const aclTensor *scale, const aclTensor *offset, const aclIntArray *stride,
                                              const aclIntArray *padding, const aclIntArray *dilation, int groups,
                                              aclOpExecutor *executor)
 {
-    L0_DFX(QuantConv3d6HdInt8To6HdBf16, input, weight, bias, scale, offset, stride, padding, dilation, groups);
+    L0_DFX(QuantConv3d6HdInt8ToNCDHWBf16, input, weight, bias, scale, offset, stride, padding, dilation, groups);
     auto output =
-        executor->AllocTensor(op::DataType::DT_BF16, input->GetStorageFormat(), input->GetOriginalFormat());
+        executor->AllocTensor(op::DataType::DT_BF16, input->GetOriginalFormat(), input->GetOriginalFormat());
     Conv3dv2WithFlag(input, weight, bias, scale, offset, stride, padding, dilation, groups, false, output, executor);
     return output;
 }
 
-const aclTensor *QuantConv3d6HdInt8To6HdFp16(const aclTensor *input, const aclTensor *weight, const aclTensor *bias,
+const aclTensor *QuantConv3d6HdInt8ToNCDHWFp16(const aclTensor *input, const aclTensor *weight, const aclTensor *bias,
                                              const aclTensor *scale, const aclTensor *offset, const aclIntArray *stride,
                                              const aclIntArray *padding, const aclIntArray *dilation, int groups,
                                              aclOpExecutor *executor)
 {
-    L0_DFX(QuantConv3d6HdInt8To6HdFp16, input, weight, bias, scale, offset, stride, padding, dilation, groups);
+    L0_DFX(QuantConv3d6HdInt8ToNCDHWFp16, input, weight, bias, scale, offset, stride, padding, dilation, groups);
     auto output =
-        executor->AllocTensor(op::DataType::DT_FLOAT16, input->GetStorageFormat(), input->GetOriginalFormat());
+        executor->AllocTensor(op::DataType::DT_FLOAT16, input->GetOriginalFormat(), input->GetOriginalFormat());
     Conv3dv2WithFlag(input, weight, bias, scale, offset, stride, padding, dilation, groups, false, output, executor);
     return output;
 }
