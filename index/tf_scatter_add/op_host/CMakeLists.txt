@@ -7,4 +7,4 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ============================================================================
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE tf_scatter_add ACLNNTYPE aclnn_exclude DEPENDENCIES scatter_add scatter_nd_add)
