@@ -201,7 +201,7 @@ static aclnnStatus CheckParams(const aclTensor *self, int64_t dim, const aclTens
     xsize *= self->GetViewShape().GetDim(i);
   }
 
-  auto indexSize = ge::GetSizeByDataType(index->GetDataType());
+  auto indexSize = 1;
   auto indexDimNum = index->GetViewShape().GetDimNum();
   for (int i = 0; i < indexDimNum ; i++) {
     indexSize *= index->GetViewShape().GetDim(i);

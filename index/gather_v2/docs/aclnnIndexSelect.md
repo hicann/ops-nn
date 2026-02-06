@@ -141,7 +141,7 @@ aclnnStatus aclnnIndexSelect(
       </tr>
     </tbody></table>
 
-    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型不支持BFLOAT。
+    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型不支持BFLOAT16。
 
 - **返回值**
 
@@ -225,6 +225,8 @@ aclnnStatus aclnnIndexSelect(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
+- 当self的shape为[]时，index的shape只能为[1]。
 
 - 确定性计算：
   - aclnnIndexSelect默认确定性实现。
