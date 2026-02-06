@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-算子功能：对输入weight数据做预处理，实现低比特数据由稀疏存储到紧密存储的排布转换。输出weightInt4Pack的[数据格式](../../../docs/zh/context/数据格式.md)声明为FRACTAL_NZ时，该算子将[数据格式](../../../docs/zh/context/数据格式.md)从ND转为FRACTAL_NZ。
+接口功能：对输入weight数据做预处理，实现低比特数据由稀疏存储到紧密存储的排布转换。输出weightInt4Pack的[数据格式](../../../docs/zh/context/数据格式.md)声明为FRACTAL_NZ时，该算子将[数据格式](../../../docs/zh/context/数据格式.md)从ND转为FRACTAL_NZ。
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：将INT32类型的weight输入数据打包为紧密排布的INT4数据。
 - <term>Ascend 950PR/Ascend 950DT</term> ：将INT32类型的weight打包为紧密排布的INT4类型，将FLOAT类型的weight打包为紧密排布的FLOAT4_E2M1类型。
 
@@ -198,127 +198,173 @@ aclnnStatus aclnnConvertWeightToINT4Pack(
 
 ## 约束说明
 - 确定性说明：
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnConvertWeightToINT4Pack默认确定性实现。
 
-参数间数据类型、数据格式间关系如下：
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：aclnnConvertWeightToINT4Pack默认确定性实现。
 
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-  <table style="undefined;table-layout: fixed; width: 1532px"><colgroup>
-  <col style="width: 200px">
-  <col style="width: 121px">
-  <col style="width: 175px">
-  <col style="width: 170px">
-  <col style="width: 160px">
-  <col style="width: 208px">
-  <col style="width: 185px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>weight数据类型</th>
-      <th>weight数据格式</th>
-      <th>weightInt4Pack数据类型</th>
-      <th>weightInt4Pack数据格式</th>
-      <th>weight shape</th>
-      <th>weightInt4Pack view shape</th>
-      <th>weightInt4Pack storage shape</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>INT32（承载INT4类型数据，数据表示范围[-8, 7]）</td>
-      <td>ND</td>
-      <td>INT4</td>
-      <td>ND</td>
-      <td>最后一维度为2对齐</td>
-      <td>和输入weight保持一致，即(dim0, dim1)</td>
-      <td>同view shape</td>
-    </tr>
-    <tr>
-      <td>INT32（承载INT4类型数据，数据表示范围[-8, 7]）</td>
-      <td>ND</td>
-      <td>INT4</td>
-      <td>FRACTAL_NZ</td>
-      <td>最后一维度为2对齐</td>
-      <td>和输入weight保持一致，即(dim0, dim1)</td>
-      <td>(⌈dim1/64⌉, ⌈dim0/16⌉, 16, 64)</td>
-    </tr>
-    <tr>
-      <td>INT32（承载INT4类型数据，数据表示范围[-8, 7]）</td>
-      <td>ND</td>
-      <td>INT32（1个INT32数据存储8个INT4数据）</td>
-      <td>ND</td>
-      <td>最后一维度为8对齐</td>
-      <td>最后一维度为weight最后一维度的1/8，即(dim0, dim1/8)</td>
-      <td>同view shape</td>
-    </tr>
-    <tr>
-      <td>INT32（承载INT4类型数据，数据表示范围[-8, 7]）</td>
-      <td>ND</td>
-      <td>INT32（1个INT32数据存储8个INT4数据）</td>
-      <td>FRACTAL_NZ</td>
-      <td>最后一维度为8对齐</td>
-      <td>最后一维度为weight最后一维度的1/8，即(dim0, dim1/8)</td>
-      <td>(⌈dim1/64⌉, ⌈dim0/16⌉, 16, 8)</td>
-    </tr>
-  </tbody></table>
+- 参数间数据类型、数据格式间关系如下：
 
-- <term>Ascend 950PR/Ascend 950DT</term>：
-  <table style="undefined;table-layout: fixed; width: 1532px"><colgroup>
-  <col style="width: 200px">
-  <col style="width: 121px">
-  <col style="width: 175px">
-  <col style="width: 170px">
-  <col style="width: 160px">
-  <col style="width: 208px">
-  <col style="width: 185px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>weight数据类型</th>
-      <th>weight数据格式</th>
-      <th>weightInt4Pack数据类型</th>
-      <th>weightInt4Pack数据格式</th>
-      <th>weight shape</th>
-      <th>weightInt4Pack view shape</th>
-      <th>weightInt4Pack storage shape</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>INT32（承载INT4类型数据，数据表示范围[-8, 7]）或FLOAT（承载FLOAT4_E2M1类型数据，数据表示范围[-6.0, 6.0]）</td>
-      <td>ND</td>
-      <td>INT4或FLOAT4_E2M1</td>
-      <td>ND</td>
-      <td>最后一维度为2对齐</td>
-      <td>和输入weight保持一致，即(dim0, dim1)</td>
-      <td>同view shape</td>
-    </tr>
-    <tr>
-      <td>INT32（承载INT4类型数据，数据表示范围[-8, 7]）或FLOAT（承载FLOAT4_E2M1类型数据，数据表示范围[-6.0, 6.0]）</td>
-      <td>ND</td>
-      <td>INT4或FLOAT4_E2M1</td>
-      <td>FRACTAL_NZ</td>
-      <td>最后一维度为2对齐</td>
-      <td>和输入weight保持一致，即(dim0, dim1)</td>
-      <td>(⌈dim1/16⌉, ⌈dim0/16⌉, 16, 16)</td>
-    </tr>
-    <tr>
-      <td>INT32（承载INT4类型数据，数据表示范围[-8, 7]）或FLOAT（承载FLOAT4_E2M1类型数据，数据表示范围[-6.0, 6.0]）</td>
-      <td>ND</td>
-      <td>INT32（1个INT32数据存储8个INT4数据）或FLOAT（1个FLOAT数据存储8个FLOAT4_E2M1数据）</td>
-      <td>ND</td>
-      <td>最后一维度为8对齐</td>
-      <td>最后一维度为weight最后一维度的1/8，即(dim0, dim1/8)</td>
-      <td>同view shape</td>
-    </tr>
-    <tr>
-      <td>INT32（承载INT4类型数据，数据表示范围[-8, 7]）或FLOAT（承载FLOAT4_E2M1类型数据，数据表示范围[-6.0, 6.0]）</td>
-      <td>ND</td>
-      <td>INT32（1个INT32数据存储8个INT4数据）或FLOAT（1个FLOAT数据存储8个FLOAT4_E2M1数据）</td>
-      <td>FRACTAL_NZ</td>
-      <td>最后一维度为8对齐</td>
-      <td>最后一维度为weight最后一维度的1/8，即(dim0, dim1/8)</td>
-      <td>(⌈dim1/16⌉, ⌈dim0/16⌉, 16, 2)</td>
-    </tr>
-  </tbody></table>
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+      <table style="undefined;table-layout: fixed; width: 1532px"><colgroup>
+      <col style="width: 200px">
+      <col style="width: 121px">
+      <col style="width: 175px">
+      <col style="width: 170px">
+      <col style="width: 160px">
+      <col style="width: 208px">
+      <col style="width: 185px">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>weight数据类型</th>
+          <th>weight数据格式</th>
+          <th>weightInt4Pack数据类型</th>
+          <th>weightInt4Pack数据格式</th>
+          <th>weight shape</th>
+          <th>weightInt4Pack view shape</th>
+          <th>weightInt4Pack storage shape</th>
+        </tr></thead>
+      <tbody>
+        <tr>
+          <td>INT32（承载INT4类型数据，数据表示范围[-8, 7]）</td>
+          <td>ND</td>
+          <td>INT4</td>
+          <td>ND</td>
+          <td>最后一维度为2对齐</td>
+          <td>和输入weight保持一致，即(dim0, dim1)</td>
+          <td>同view shape</td>
+        </tr>
+        <tr>
+          <td>INT32（承载INT4类型数据，数据表示范围[-8, 7]）</td>
+          <td>ND</td>
+          <td>INT4</td>
+          <td>FRACTAL_NZ</td>
+          <td>最后一维度为2对齐</td>
+          <td>和输入weight保持一致，即(dim0, dim1)</td>
+          <td>(⌈dim1/64⌉, ⌈dim0/16⌉, 16, 64)</td>
+        </tr>
+        <tr>
+          <td>INT32（承载INT4类型数据，数据表示范围[-8, 7]）</td>
+          <td>ND</td>
+          <td>INT32（1个INT32数据存储8个INT4数据）</td>
+          <td>ND</td>
+          <td>最后一维度为8对齐</td>
+          <td>最后一维度为weight最后一维度的1/8，即(dim0, dim1/8)</td>
+          <td>同view shape</td>
+        </tr>
+        <tr>
+          <td>INT32（承载INT4类型数据，数据表示范围[-8, 7]）</td>
+          <td>ND</td>
+          <td>INT32（1个INT32数据存储8个INT4数据）</td>
+          <td>FRACTAL_NZ</td>
+          <td>最后一维度为8对齐</td>
+          <td>最后一维度为weight最后一维度的1/8，即(dim0, dim1/8)</td>
+          <td>(⌈dim1/64⌉, ⌈dim0/16⌉, 16, 8)</td>
+        </tr>
+      </tbody></table>
+
+    - <term>Ascend 950PR/Ascend 950DT</term>：
+      <table style="undefined;table-layout: fixed; width: 1532px"><colgroup>
+      <col style="width: 200px">
+      <col style="width: 121px">
+      <col style="width: 175px">
+      <col style="width: 170px">
+      <col style="width: 160px">
+      <col style="width: 208px">
+      <col style="width: 185px">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>weight数据类型</th>
+          <th>weight数据格式</th>
+          <th>weightInt4Pack数据类型</th>
+          <th>weightInt4Pack数据格式</th>
+          <th>weight shape</th>
+          <th>weightInt4Pack view shape</th>
+          <th>weightInt4Pack storage shape</th>
+        </tr></thead>
+      <tbody>
+        <tr>
+          <td>INT32（承载INT4类型数据，数据表示范围[-8, 7]）或FLOAT（承载FLOAT4_E2M1类型数据，数据表示范围[-6.0, 6.0]）</td>
+          <td>ND</td>
+          <td>INT4或FLOAT4_E2M1</td>
+          <td>ND</td>
+          <td>最后一维度为2对齐</td>
+          <td>和输入weight保持一致，即(dim0, dim1)</td>
+          <td>同view shape</td>
+        </tr>
+        <tr>
+          <td>INT32（承载INT4类型数据，数据表示范围[-8, 7]）或FLOAT（承载FLOAT4_E2M1类型数据，数据表示范围[-6.0, 6.0]）</td>
+          <td>ND</td>
+          <td>INT4或FLOAT4_E2M1</td>
+          <td>FRACTAL_NZ</td>
+          <td>最后一维度为2对齐</td>
+          <td>和输入weight保持一致，即(dim0, dim1)</td>
+          <td>(⌈dim1/16⌉, ⌈dim0/16⌉, 16, 16)</td>
+        </tr>
+        <tr>
+          <td>INT32（承载INT4类型数据，数据表示范围[-8, 7]）或FLOAT（承载FLOAT4_E2M1类型数据，数据表示范围[-6.0, 6.0]）</td>
+          <td>ND</td>
+          <td>INT32（1个INT32数据存储8个INT4数据）或FLOAT（1个FLOAT数据存储8个FLOAT4_E2M1数据）</td>
+          <td>ND</td>
+          <td>最后一维度为8对齐</td>
+          <td>最后一维度为weight最后一维度的1/8，即(dim0, dim1/8)</td>
+          <td>同view shape</td>
+        </tr>
+        <tr>
+          <td>INT32（承载INT4类型数据，数据表示范围[-8, 7]）或FLOAT（承载FLOAT4_E2M1类型数据，数据表示范围[-6.0, 6.0]）</td>
+          <td>ND</td>
+          <td>INT32（1个INT32数据存储8个INT4数据）或FLOAT（1个FLOAT数据存储8个FLOAT4_E2M1数据）</td>
+          <td>FRACTAL_NZ</td>
+          <td>最后一维度为8对齐</td>
+          <td>最后一维度为weight最后一维度的1/8，即(dim0, dim1/8)</td>
+          <td>(⌈dim1/16⌉, ⌈dim0/16⌉, 16, 2)</td>
+        </tr>
+        <tr>
+          <td>INT32（承载INT4类型数据，数据表示范围[-8, 7]）</td>
+          <td>ND</td>
+          <td>INT4（1个INT32数据存储8个INT4数据）</td>
+          <td>FRACTAL_NZ</td>
+          <td>最后一维度为8对齐</td>
+          <td>最后一维度为weight最后一维度的1/8，即(dim0, dim1/8)</td>
+          <td>(⌈dim1/32⌉, ⌈dim0/16⌉, 16, 32)</td>
+        </tr>
+        <tr>
+          <td>FLOAT（承载FLOAT4_E2M1类型数据，数据表示范围[-6, 6]）</td>
+          <td>ND</td>
+          <td>FLOAT4_E2M1</td>
+          <td>ND</td>
+          <td>最后一维度为2对齐</td>
+          <td>和输入weight保持一致，即(dim0, dim1)</td>
+          <td>同view shape</td>
+        </tr>
+        <tr>
+          <td>FLOAT（承载FLOAT4_E2M1类型数据，数据表示范围[-6, 6]）</td>
+          <td>ND</td>
+          <td>FLOAT4_E2M1</td>
+          <td>FRACTAL_NZ</td>
+          <td>最后一维度为2对齐</td>
+          <td>和输入weight保持一致，即(dim0, dim1)</td>
+          <td>(⌈dim1/16⌉, ⌈dim0/16⌉, 16, 16)</td>
+        </tr>
+        <tr>
+          <td>FLOAT（承载FLOAT类型数据，数据表示范围[-6, 6]）</td>
+          <td>ND</td>
+          <td>FLOAT（1个FLOAT数据存储8个FLOAT4_E2M1数据）</td>
+          <td>ND</td>
+          <td>最后一维度为8对齐</td>
+          <td>最后一维度为weight最后一维度的1/8，即(dim0, dim1/8)</td>
+          <td>同view shape</td>
+        </tr>
+        <tr>
+          <td>FLOAT（承载FLOAT4_E2M1类型数据，数据表示范围[-6, 6]）</td>
+          <td>ND</td>
+          <td>FLOAT（1个FLOAT数据存储8个FLOAT4_E2M1数据）</td>
+          <td>FRACTAL_NZ</td>
+          <td>最后一维度为8对齐</td>
+          <td>最后一维度为weight最后一维度的1/8，即(dim0, dim1/8)</td>
+          <td>(⌈dim1/16⌉, ⌈dim0/16⌉, 16, 2)</td>
+        </tr>
+      </tbody></table>
 
 ## 调用示例
 
