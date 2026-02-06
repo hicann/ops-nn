@@ -14,40 +14,52 @@
 ## 功能说明
 
 - 接口功能：根据indices从weight中获得一组被聚合的数，然后根据offsets的偏移和mode指定的聚合模式对获取的数进行max、sum、mean聚合。其余参数则更细化了计算过程的控制。
-- shape推导方式如下：
-  假设:
-
-  ```
-  weight的shape为(numWeight, embeddingDim)
-  indices的shape为(bagIndices)
-  offsets的shape为(bagOffsets)
-  ```
-
-  - 当mode为sum模式：
-
+- shape推导公式：
+  假设输入weight的shape为(numWeight, embeddingDim)，indices的shape为(bagIndices)，offsets的shape为(bagOffsets)。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：
+    
+    - 当mode为sum模式：
     ```
-    output的shape 为 includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
+    output的shape为includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
     offset2bag的shape 为 (bagIndices,)
-    bagSize的shape 为 includeLastOffset ? (bagOffsets - 1) : (bagOffsets,)
-    maxIndices的shape 为 includeLastOffset ? (bagOffsets - 1) : (bagOffsets,)
+    bagSize的shape为includeLastOffset ? (bagOffsets - 1) : (bagOffsets,)
+    maxIndices的shape为includeLastOffset ? (bagOffsets - 1) : (bagOffsets,)
     ```
-
-  - 当mode为mean模式：
-
+    - 当mode为mean模式：
     ```
-    output的shape 为 includeLastOffset? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
-    offset2bag的shape 为 (bagIndices,)
-    bagSize的shape 为 includeLastOffset ? (bagOffsets - 1) : (bagOffsets,)
-    maxIndices的shape 为 includeLastOffset ? (bagOffsets - 1) : (bagOffsets,)
+    output的shape为includeLastOffset? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
+    offset2bag的shape为(bagIndices,)
+    bagSize的shape为includeLastOffset ? (bagOffsets - 1) : (bagOffsets,)
+    maxIndices的shape为includeLastOffset ? (bagOffsets - 1) : (bagOffsets,)
     ```
-
-  - 当mode为max模式：
-
+    - 当mode为max模式：
     ```
-    output的shape 为 includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
-    offset2bag的shape 为 (bagIndices,)
-    bagSize的shape 为 includeLastOffset ? (bagOffsets - 1) : (bagOffsets,)
-    maxIndices的shape 为 includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
+    output的shape为includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
+    offset2bag的shape为(bagIndices,)
+    bagSize的shape为includeLastOffset ? (bagOffsets - 1) : (bagOffsets,)
+    maxIndices的shape为includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
+    ```
+  - <term>Ascend 950PR/Ascend 950DT</term>：
+    - 当mode为sum模式：
+    ```
+    output的shape为includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
+    offset2bag的shape为(bagIndices,)
+    bagSize的shape为(bagOffsets,)
+    maxIndices的shape为(0,)
+    ```
+    - 当mode为mean模式：
+    ```
+    output的shape为includeLastOffset? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
+    offset2bag的shape为(bagIndices,)
+    bagSize的shape为bagOffsets
+    maxIndices的shape为(0,)
+    ```
+    - 当mode为max模式：
+    ```
+    output的shape为includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
+    offset2bag的shape为(bagIndices,)
+    bagSize的shape为(bagOffsets,)
+    maxIndices的shape为includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
     ```
 
 ## 函数原型
@@ -181,7 +193,7 @@ aclnnStatus aclnnEmbeddingBag(
         <td>includeLastOffset</td>
         <td>输入</td>
         <td>控制是否包含最后的偏移。</td>
-        <td><ul><li>当为false时，表示不包含最后的偏移；</li><li>当为true时，表示包含最后的偏移。</li></ul></td>
+        <td><ul><li>当为false时，表示不包含最后的偏移；</li><li>当为true时，表示包含最后的偏移。</li><li>indices为2维时仅支持includeLastOffset为false。</li></ul></td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
