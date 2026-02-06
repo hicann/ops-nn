@@ -113,7 +113,7 @@ aclnnStatus aclnnConvTbc(
   <td>cubeMathType（int8_t）</td>
   <td>输入</td>
   <td>用于判断 Cube 单元应该使用哪种计算逻辑进行运算。</td>
-  <td><ul><li> 0（KEEP_DTYPE）：保持输入数据类型进行计算。</li></ul><ul><li> 1（ALLOW_FP32_DOWN_PRECISION）：允许 FLOAT 降低精度计算，提升性能。</li></ul><ul><li> 2（USE_FP16）：使用 FLOAT16 精度进行计算。</li></ul><ul><li> 3（USE_HF32）：使用 HIFLOAT32（混合精度）进行计算。</li></ul></td>
+  <td><ul><li> 0（KEEP_DTYPE）：保持输入数据类型进行计算。</li></ul><ul><li> 1（ALLOW_FP32_DOWN_PRECISION）：允许 FLOAT 降低精度计算，提升性能。</li></ul><ul><li> 2（USE_FP16）：使用 FLOAT16 精度进行计算。</li></ul><ul><li> 3（USE_HF32）：使用 HFLOAT32（混合精度）进行计算。</li></ul></td>
   <td>INT8</td>
   <td>-</td>
   <td>-</td>
