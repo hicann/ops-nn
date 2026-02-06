@@ -135,6 +135,7 @@ public:
                            uint32_t doDim, uint32_t groupDim);
     void BlockDimFactorMix(uint32_t orgDim, std::vector<uint32_t> &inputRange,
                            const std::vector<uint32_t> &mixRange);
+    void BlockDimRangesFilter(uint32_t orgDim, std::vector<uint32_t> &inputRange);
     void GetBlockDimRangeforGroupRange(std::vector<uint32_t> &groupRange);
     void GetConv3DRunInfo(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingdata);
 

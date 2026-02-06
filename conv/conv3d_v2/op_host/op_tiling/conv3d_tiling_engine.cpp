@@ -1307,6 +1307,7 @@ void Conv3dTilingEngine::GetBlockDimRange()
     } else {
         BlockDimFactorMix(shapeInfo_.batch, blockDimRanges_.batchRange, blockDimRanges_.aicNumRange);
     }
+    BlockDimRangesFilter(shapeInfo_.batch, blockDimRanges_.batchRange);
     // nRange
     uint32_t n0 = g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_N_IDX);
     CalcCommFactor(CeilDiv(shapeInfo_.coutOpt, n0), platformInfo_.aicoreNum, blockDimRanges_.nRange);
@@ -1316,14 +1317,18 @@ void Conv3dTilingEngine::GetBlockDimRange()
         uint64_t m1 = CeilDiv(shapeInfo_.ho * shapeInfo_.wo, m0);
         CalcCommFactor(m1, platformInfo_.aicoreNum, blockDimRanges_.mRange);
         BlockDimFactorMix(m1, blockDimRanges_.mRange, blockDimRanges_.aicNumRange);
+        BlockDimRangesFilter(m1, blockDimRanges_.mRange);
     } else {
         // hoRange
         CalcCommFactor(shapeInfo_.ho, platformInfo_.aicoreNum, blockDimRanges_.mRange);
         BlockDimFactorMix(shapeInfo_.ho, blockDimRanges_.mRange, blockDimRanges_.aicNumRange);
+        BlockDimRangesFilter(shapeInfo_.ho, blockDimRanges_.mRange);
     }
     // doRange
     CalcCommFactor(shapeInfo_.dOut, platformInfo_.aicoreNum, blockDimRanges_.doRange);
     BlockDimFactorMix(shapeInfo_.dOut, blockDimRanges_.doRange, blockDimRanges_.aicNumRange);
+    // filter the d-axis aicore partitioning range to avoid unused idle-core scenarios in its candidate values
+    BlockDimRangesFilter(shapeInfo_.dOut, blockDimRanges_.doRange);
     // groupRange
     if (attrInfo_.groups == 1) {
         GetBlockDimRangeforGroupRange(blockDimRanges_.groupRange);
@@ -1680,6 +1685,21 @@ void Conv3dTilingEngine::BlockDimFactorMix(uint32_t orgDim, std::vector<uint32_t
     std::set<uint32_t>tmpRanges(inputRange.begin(), inputRange.end());
     tmpRanges.insert(tmpSelectMixRange.begin(), tmpSelectMixRange.end());
     inputRange.assign(tmpRanges.begin(), tmpRanges.end());
+}
+
+void Conv3dTilingEngine::BlockDimRangesFilter(uint32_t orgDim, std::vector<uint32_t>& inputRange)
+{
+    std::vector<uint32_t> tmpSelectRange;
+    for (auto blockDim : inputRange) {
+        uint32_t elemPerCore = CeilDiv(orgDim, blockDim);
+        uint32_t realBlockDim = CeilDiv(orgDim, elemPerCore);
+        if (blockDim == realBlockDim) {
+            tmpSelectRange.emplace_back(blockDim);
+        }
+    }
+    if (!tmpSelectRange.empty()) {
+        inputRange.assign(tmpSelectRange.begin(), tmpSelectRange.end());
+    }
 }
 
 void Conv3dTilingEngine::GetBlockDimRangeforGroupRange(std::vector<uint32_t> &groupRange)
