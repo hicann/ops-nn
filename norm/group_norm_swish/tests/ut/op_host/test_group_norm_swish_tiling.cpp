@@ -238,7 +238,7 @@ TEST_F(GroupNormSwishTiling, group_norm_swish_tiling_112_310P) {
   map<string, string> soc_infos;
   map<string, string> aicore_spec;
   map<string, string> intrinsics;
-  map<string, string> socversions = {{"Short_SoC_version", "Ascend310P"}};
+  map<string, string> socversions = {{"Short_SoC_version", "Ascend310P"}, {"NpuArch", "2202"}};
   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
   // platform info

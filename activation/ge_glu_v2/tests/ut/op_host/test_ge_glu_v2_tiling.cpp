@@ -652,7 +652,7 @@ TEST_F(GeGluV2Tiling, ge_glu_v2_tiling_007_Ascend310p_float32)
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend310P"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend310P"}, {"NpuArch", "2202"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -741,7 +741,7 @@ TEST_F(GeGluV2Tiling, ge_glu_v2_tiling_007_Ascend310p_small)
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend310P"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend310P"}, {"NpuArch", "2202"}};
     map<string, string> npuarchs = {{"NpuArch", "2002"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
@@ -834,7 +834,7 @@ TEST_F(GeGluV2Tiling, ge_glu_v2_tiling_007_Ascend310p_float16)
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend310P"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend310P"}, {"NpuArch", "2202"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info

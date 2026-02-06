@@ -23,6 +23,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/make_op_executor.h"
 #include "op_api/op_api_def.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -40,7 +41,7 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_
     op::DataType::DT_FLOAT, op::DataType::DT_INT32, op::DataType::DT_FLOAT16,
     op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> ASCEND950_DTYPE_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> REGBASE_DTYPE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_INT32, op::DataType::DT_FLOAT16,
     op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_BF16, op::DataType::DT_INT64};
 
@@ -55,11 +56,11 @@ static bool CheckPtrValid(const aclTensor *gradOutput, const aclTensor *self) {
 }
 
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
-  auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion >= SocVersion::ASCEND910B && socVersion <= SocVersion::ASCEND910E) {
-    if (socVersion == SocVersion::ASCEND950 && IsFloatEqual(thresholdVal_, 0.0)) {
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (Ops::NN::AclnnUtil::IsRegbase(curArch) && IsFloatEqual(thresholdVal_, 0.0)) {
       // relugrad 支持int64
-      return ASCEND950_DTYPE_DTYPE_SUPPORT_LIST;
+      return REGBASE_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
       return ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST;
     }

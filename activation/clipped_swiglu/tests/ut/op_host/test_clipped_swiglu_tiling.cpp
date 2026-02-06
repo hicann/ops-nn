@@ -54,7 +54,7 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp16_half_ungrouped)
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                             "CORE_NUM": 40, "socVersion": "Ascend910B"}
                             })";
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -146,7 +146,7 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp32_half_ungrouped)
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                             "CORE_NUM": 40, "socVersion": "Ascend910B"}
                             })";
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -239,7 +239,7 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_bf16_half_ungrouped)
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                             "CORE_NUM": 40, "socVersion": "Ascend910B"}
                             })";
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -332,7 +332,7 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp16_interleaved_ungrouped)
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                             "CORE_NUM": 40, "socVersion": "Ascend910B"}
                             })";
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -425,7 +425,7 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp32_interleaved_ungrouped)
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                             "CORE_NUM": 40, "socVersion": "Ascend910B"}
                             })";
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -518,7 +518,7 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_bf16_interleaved_ungrouped)
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                             "CORE_NUM": 40, "socVersion": "Ascend910B"}
                             })";
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -612,7 +612,7 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp16_half_grouped)
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                             "CORE_NUM": 40, "socVersion": "Ascend910B"}
                             })";
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -706,7 +706,7 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp32_half_grouped)
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                             "CORE_NUM": 40, "socVersion": "Ascend910B"}
                             })";
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -800,7 +800,7 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_bf16_half_grouped)
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                             "CORE_NUM": 40, "socVersion": "Ascend910B"}
                             })";
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -894,7 +894,7 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp16_interleaved_grouped)
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                             "CORE_NUM": 40, "socVersion": "Ascend910B"}
                             })";
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -988,7 +988,7 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp32_interleaved_grouped)
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                             "CORE_NUM": 40, "socVersion": "Ascend910B"}
                             })";
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -1082,7 +1082,7 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_bf16_interleaved_grouped)
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                             "CORE_NUM": 40, "socVersion": "Ascend910B"}
                             })";
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -1176,7 +1176,7 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_x_is_None_wrong)
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                             "CORE_NUM": 40, "socVersion": "Ascend910B"}
                             })";
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -1265,7 +1265,7 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_x_dim_div2_wrong)
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                             "CORE_NUM": 40, "socVersion": "Ascend910B"}
                             })";
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -1354,7 +1354,7 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_x_dtpye_wrong)
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                             "CORE_NUM": 40, "socVersion": "Ascend910B"}
                             })";
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -1443,7 +1443,7 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_groupindex_dtpye_wrong)
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                             "CORE_NUM": 40, "socVersion": "Ascend910B"}
                             })";
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -1532,7 +1532,7 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_groupindex_dims_wrong)
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                             "CORE_NUM": 40, "socVersion": "Ascend910B"}
                             })";
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -1621,7 +1621,7 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_y_dims_diff_wrong)
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                             "CORE_NUM": 40, "socVersion": "Ascend910B"}
                             })";
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -1710,7 +1710,7 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_y_dim_equal_x_dim_div2_wrong)
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                             "CORE_NUM": 40, "socVersion": "Ascend910B"}
                             })";
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -1799,7 +1799,7 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_dim_value_wrong)
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                             "CORE_NUM": 40, "socVersion": "Ascend910B"}
                             })";
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;

@@ -17,6 +17,7 @@
 #include "opdev/op_log.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/op_api_def.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus

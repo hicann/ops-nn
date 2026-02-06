@@ -14,6 +14,7 @@
  */
 
 #include "error_util.h"
+#include "tiling_base/tiling_util.h"
 #include "max_pool3d_grad_with_argmax_tiling_arch35.h"
 
 namespace optiling {
@@ -317,11 +318,7 @@ void MaxPool3DGradWithArgmaxTilingBaseV35::SetOtherInputParams()
 
 ge::graphStatus MaxPool3DGradWithArgmaxTilingBaseV35::GetShapeAttrsInfo()
 {
-    auto platformInfo = context_->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    auto socVersion = ascendcPlatform.GetSocVersion();
-    if (socVersion != platform_ascendc::SocVersion::ASCEND950) {
+    if (!Ops::NN::OpTiling::IsRegbaseSocVersion(context_)) {
         // Skip the current template
         return ge::GRAPH_PARAM_INVALID;
     }

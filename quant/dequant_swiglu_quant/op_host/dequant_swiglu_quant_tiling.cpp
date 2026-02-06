@@ -14,6 +14,7 @@
  */
 
 #include "dequant_swiglu_quant_tiling.h"
+#include "tiling_base/tiling_util.h"
 #include "swi_glu_tiling.h"
 
 using Ops::NN::Optiling::TilingRegistry;
@@ -534,7 +535,7 @@ bool DequantSwigluQuantDskTiling::IsPerformanceAndGroupIndexBrach() {
 }
 
 bool DequantSwigluQuantDskTiling::IsCapable() {
-  if (socVersion == platform_ascendc::SocVersion::ASCEND950) {
+  if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_)) {
     return false;
   }
   return IsPerformanceAndGroupIndexBrach();

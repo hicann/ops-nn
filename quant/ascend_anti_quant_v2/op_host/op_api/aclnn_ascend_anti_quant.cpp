@@ -16,6 +16,7 @@
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
 #include "opdev/make_op_executor.h"
+#include "op_api/aclnn_util.h"
 #include "ascend_anti_quant_v2.h"
 #include "aclnn_ascend_anti_quant.h"
 
@@ -44,16 +45,16 @@ static const std::initializer_list<DataType> SCALE_OFFSET_DTYPE_SUPPORT_LIST_ASC
 
 static const std::initializer_list<DataType>& GetXDtypeSupportList()
 {
-    SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910_93:
-        case SocVersion::ASCEND950:
-        case SocVersion::ASCEND910B: {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (curArch) {
+        case NpuArch::DAV_2201:
+        case NpuArch::DAV_3510: {
             return X_DTYPE_SUPPORT_LIST_ASCEND910B;
         }
-        case SocVersion::ASCEND310P:
+        case NpuArch::DAV_2002:
             return X_DTYPE_SUPPORT_LIST_ASCEND310P;
         default: {
+            SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented", op::ToString(socVersion).GetString());
             return EMPTY_LIST;
         }
@@ -62,16 +63,16 @@ static const std::initializer_list<DataType>& GetXDtypeSupportList()
 
 static const std::initializer_list<DataType>& GetOutDtypeSupportList()
 {
-    SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910_93:
-        case SocVersion::ASCEND950:
-        case SocVersion::ASCEND910B: {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (curArch) {
+        case NpuArch::DAV_2201:
+        case NpuArch::DAV_3510: {
             return OUT_DTYPE_SUPPORT_LIST_ASCEND910B;
         }
-        case SocVersion::ASCEND310P:
+        case NpuArch::DAV_2002:
             return OUT_DTYPE_SUPPORT_LIST_ASCEND310P;
         default: {
+            SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented", op::ToString(socVersion).GetString());
             return EMPTY_LIST;
         }
@@ -80,16 +81,16 @@ static const std::initializer_list<DataType>& GetOutDtypeSupportList()
 
 static const std::initializer_list<DataType>& GetScaleOffsetDtypeSupportList()
 {
-    SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910B:
-        case SocVersion::ASCEND950:
-        case SocVersion::ASCEND910_93: {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (curArch) {
+        case NpuArch::DAV_2201:
+        case NpuArch::DAV_3510: {
             return SCALE_OFFSET_DTYPE_SUPPORT_LIST_ASCEND910B;
         }
-        case SocVersion::ASCEND310P:
+        case NpuArch::DAV_2002:
             return SCALE_OFFSET_DTYPE_SUPPORT_LIST_ASCEND310P;
         default: {
+            SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented", op::ToString(socVersion).GetString());
             return EMPTY_LIST;
         }

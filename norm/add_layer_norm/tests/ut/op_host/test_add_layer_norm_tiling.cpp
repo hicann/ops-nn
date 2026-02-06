@@ -1009,7 +1009,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_special_normal)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     std::map<std::string, std::string> soc_version_infos = {
-        {"SoC_version", "Ascend910B4"}, {"Short_SoC_version", "Ascend910B"}};
+        {"SoC_version", "Ascend910B4"}, {"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1116,7 +1116,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_normal310)
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    map<string, string> soc_versions = {{"Short_SoC_version", "Ascend310P"}};
+    map<string, string> soc_versions = {{"Short_SoC_version", "Ascend310P"}, {"NpuArch", "2202"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -2343,7 +2343,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_fullload_001)
     gert::StorageShape out_shape = {{1, 1024, 512}, {1, 1024, 512}};
     gert::StorageShape rstd_shape = {{1, 1024, 1}, {1, 1024, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -2455,7 +2455,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_fullload_002)
     gert::StorageShape out_shape = {{1, 1024, 512}, {1, 1024, 512}};
     gert::StorageShape rstd_shape = {{1, 1024, 1}, {1, 1024, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -2558,7 +2558,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_fullload_003)
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
@@ -2664,7 +2664,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_welford_001)
     gert::StorageShape out_shape = {{1, 1024, 16384}, {1, 1024, 16384}};
     gert::StorageShape rstd_shape = {{1, 1024, 1}, {1, 1024, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -2770,7 +2770,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_welford_002)
     gert::StorageShape out_shape = {{1, 1024, 16384}, {1, 1024, 16384}};
     gert::StorageShape rstd_shape = {{1, 1024, 1}, {1, 1024, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
@@ -2873,7 +2873,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_welford_003)
     gert::StorageShape out_shape = {{1, 1024, 16384}, {1, 1024, 16384}};
     gert::StorageShape rstd_shape = {{1, 1024, 1}, {1, 1024, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     std::string compile_info_string = R"({
      "hardware_info": {
@@ -2975,7 +2975,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_failed_001)
     gert::StorageShape out_shape = {{1, 1024, 16384}, {1, 1024, 16384}};
     gert::StorageShape rstd_shape = {{1, 1024, 1}, {1, 1024, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     std::string compile_info_string = R"({
      "hardware_info": {
@@ -3072,7 +3072,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_failed_002)
     gert::StorageShape out_shape = {{1, 1024, 16384}, {1, 1024, 16384}};
     gert::StorageShape rstd_shape = {{1, 1024, 1}, {1, 1024, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     std::string compile_info_string = R"({
      "hardware_info": {
@@ -3169,7 +3169,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_failed_003)
     gert::StorageShape out_shape = {{1, 1024, 16384}, {1, 1024, 16384}};
     gert::StorageShape rstd_shape = {{1, 1024, 1}, {1, 1024, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     std::string compile_info_string = R"({
      "hardware_info": {
@@ -3266,7 +3266,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_failed_004)
     gert::StorageShape out_shape = {{1, 1024, 16384}, {1, 1024, 16384}};
     gert::StorageShape rstd_shape = {{1, 512, 1}, {1, 512, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::string compile_info_string = R"({
      "hardware_info": {
      "BT_SIZE": 0, "load3d_constraints": "1",

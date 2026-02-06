@@ -16,6 +16,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/op_def.h"
 #include "opdev/op_dfx.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -33,7 +34,7 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_950 =
 
 inline static bool IsAiCoreSupport(const aclTensor* varRef)
 {
-    if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND950) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         return CheckType(varRef->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_950);
     } else {
         return CheckType(varRef->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);

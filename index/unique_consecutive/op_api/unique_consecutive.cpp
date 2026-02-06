@@ -21,6 +21,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -65,7 +66,7 @@ bool CheckSupport4Aicore(const aclTensor* self, bool returnInverse, int64_t dim,
                          aclTensor* inverseOut, aclTensor* countsOut)
 {
     SocVersion version = GetCurrentPlatformInfo().GetSocVersion();
-    OP_CHECK(SocVersion::ASCEND950 == version, OP_LOGW("Aicore UniqueConsecutive only support ASCEND950."),
+    OP_CHECK(Ops::NN::AclnnUtil::IsRegbase(), OP_LOGW("Aicore UniqueConsecutive only support ASCEND950."),
              return false);
 
     OP_CHECK(CheckAttr4Aicore(returnInverse, dim), OP_LOGW("Invalid attrs for aicore, use aicpu."), return false);

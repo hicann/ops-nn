@@ -17,6 +17,7 @@
 
 #include "tiling/tiling_api.h"
 #include "foreach_reduce_tiling_def.h"
+#include "tiling_base/tiling_util.h"
 
 namespace optiling {
 class ForeachReduceRegbaseTiling : public ForeachBaseClass
@@ -34,10 +35,7 @@ public:
 protected:
     bool IsCapable() override
     {
-        if (socVersion != platform_ascendc::SocVersion::ASCEND950) {
-            return false;
-        }
-        return true;
+        return Ops::NN::OpTiling::IsRegbaseSocVersion(context_);
     }
     ge::graphStatus GetShapeAttrsInfo() override;
     // 3、计算数据切分TilingData

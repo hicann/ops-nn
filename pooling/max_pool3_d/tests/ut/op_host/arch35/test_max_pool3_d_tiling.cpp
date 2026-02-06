@@ -71,7 +71,7 @@ static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info

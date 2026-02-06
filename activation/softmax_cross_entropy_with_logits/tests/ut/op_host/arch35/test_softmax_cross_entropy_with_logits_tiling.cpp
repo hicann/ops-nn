@@ -75,7 +75,7 @@ static void DoSCEWithLogtisSplitRTilingCase(
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     InitPlatForm(platFormInfo, socInfos, aicoreSpec, intrinsics);
 
     // compile info

@@ -12,6 +12,7 @@
 #include "max_pool3d_with_argmax_v2.h"
 #include "level0/unsqueeze.h"
 #include "level0/squeeze.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_kernels/transdata.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/common/op_error_check.h"
@@ -56,7 +57,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+        Ops::NN::AclnnUtil::IsRegbase()) {
         return OUT_DTYPE_SUPPORT_LIST;
     } else {
         return NULL_SUPPORT_LIST;
@@ -193,7 +194,7 @@ static bool CheckPlatform()
 {
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+        Ops::NN::AclnnUtil::IsRegbase()) {
         return true;
     } else {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "aclnnMaxPool3dWithArgmax is not supported on this platform");

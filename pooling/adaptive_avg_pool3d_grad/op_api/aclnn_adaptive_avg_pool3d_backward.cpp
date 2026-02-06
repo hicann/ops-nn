@@ -29,6 +29,7 @@
 #include "opdev/data_type_utils.h"
 #include "opdev/op_log.h"
 #include "aclnn_kernels/transpose.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -120,7 +121,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportList(const aclTenso
     int64_t wValue = gradOutputShape.GetDim(gradOutputDimNum - W_DIM_INDEX_FROM_LAST);
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 || 
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+        Ops::NN::AclnnUtil::IsRegbase()) {
         if (dValue == 1 && hValue == 1 && wValue == 1) {
             return ASCEND910B_ALLONE_DTYPE_DTYPE_SUPPORT_LIST;
         } else {

@@ -19,6 +19,7 @@
 #include "register/op_def_registry.h"
 #include "util/math_util.h"
 #include "error_util.h"
+#include "tiling_base/tiling_util.h"
 
 namespace {
 constexpr uint64_t INPUT_Y_GRAD_IDX = 0;
@@ -134,9 +135,8 @@ ge::graphStatus ScaledMaskedSoftmaxGradV2Tiling::CheckInputShape()
 
     auto PlatformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, PlatformInfo);
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(PlatformInfo);
     uint64_t lastDimLimit = LAST_DIM_MAX_SIZE;
-    if (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND950) {
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
         lastDimLimit = LAST_DIM_MAX_SIZE_D;
     }
 

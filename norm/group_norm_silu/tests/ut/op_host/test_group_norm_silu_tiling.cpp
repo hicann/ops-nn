@@ -1099,7 +1099,7 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_013) {
   map<string, string> soc_infos;
   map<string, string> aicore_spec;
   map<string, string> intrinsics;
-  map<string, string> socversions = {{"Short_SoC_version", "Ascend310P"}};
+  map<string, string> socversions = {{"Short_SoC_version", "Ascend310P"}, {"NpuArch", "2202"}};
   map<string, string> npuarchs = {{"NpuArch", "2002"}};
   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 

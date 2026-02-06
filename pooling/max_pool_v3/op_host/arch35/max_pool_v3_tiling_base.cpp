@@ -14,6 +14,7 @@
  */
 
 #include "exe_graph/runtime/shape.h"
+#include "tiling_base/tiling_util.h"
 #include "max_pool_v3_tiling.h"
 
 using namespace ge;

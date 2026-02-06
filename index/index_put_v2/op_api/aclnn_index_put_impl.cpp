@@ -1092,8 +1092,7 @@ static bool IsNonContiguousScene(const aclTensor* self, const aclTensorList* ind
 
 static bool IsIndexPutV2Scene(const aclTensor *selfRef, const bool accumulate) 
 {
-  auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND950) {
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
       int64_t deterministicValue = 0;
       rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
       if (retRts != RT_ERROR_NONE) {

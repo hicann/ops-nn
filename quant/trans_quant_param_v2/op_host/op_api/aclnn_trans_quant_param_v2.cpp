@@ -18,6 +18,7 @@
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
 #include "opdev/tensor_view_utils.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_trans_quant_param_v3.h"
 #include "aclnn_trans_quant_param_v2.h"
 
@@ -68,7 +69,7 @@ static inline bool CheckFormat(const aclTensor* scale, const aclTensor* offset, 
 static inline bool CheckShape(const aclTensor* scale, const aclTensor* offset, int64_t roundMode)
 {
     bool isScaleVaild = (scale->GetViewShape().GetDimNum() == 1 && scale->GetViewShape().GetDim(0) > 0);
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         // 2是scale的shape维度，此时shape为(g, n), (1, n), g为gmm的分组数，n为matmul的右矩阵的n
         if (!(isScaleVaild || (scale->GetViewShape().GetDimNum() == 2 && scale->GetViewShape().GetDim(0) > 0 &&
                                scale->GetViewShape().GetDim(1) > 0))) {

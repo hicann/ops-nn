@@ -91,26 +91,6 @@ inline int64_t GetCeilAlign(const int64_t value1, const int64_t value2) {
   return (value1 + value2 - 1) / value2 * value2;
 }
 
-static bool IsRegbaseSocVersion4CELOSSGrad(platform_ascendc::SocVersion version)
-{
-    const static std::set<platform_ascendc::SocVersion> regbaseSocVersions = {
-        platform_ascendc::SocVersion::ASCEND950
-    };
-
-    return regbaseSocVersions.find(version) != regbaseSocVersions.end();
-}
-
-bool IsRegbaseSocVersion4CELOSSGrad(const gert::TilingContext* context)
-{
-    if (context == nullptr) {
-      OP_LOGE("CrossEntropyLossGrad", "Tiling context is nullptr");
-      return false;
-    }
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    auto socVersion = ascendcPlatform.GetSocVersion();
-    return IsRegbaseSocVersion4CELOSSGrad(socVersion);
-}
-
 static void PrintInfo(gert::TilingContext* context) {
   auto nodeName = context;
   OP_LOGD(nodeName, ">>>>>>>>>>>>>>> Start to print CrossEntropyLossGrad tiling data <<<<<<<<<<<<<<<<");
@@ -304,7 +284,7 @@ static ge::graphStatus Tiling4CrossEntropyLossGrad(gert::TilingContext* context)
   }
   auto nodeName = context;
   OP_LOGD(nodeName, "CrossEntropyLossGradTiling tiling start");
-  if (IsRegbaseSocVersion4CELOSSGrad(context)) {
+  if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
     CrossEntropyLossGradRegbaseTiling regbaseTiling(context);
     return regbaseTiling.RunTiling();
   }

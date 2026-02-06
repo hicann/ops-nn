@@ -38,7 +38,7 @@ class GeluTilingTest : public testing::Test {
 };
 
 TEST_F(GeluTilingTest, test_tiling_fp16_001) {
-  std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+  std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
   string compile_info_string = R"({
                                     "hardware_info": {
                                         "BT_SIZE": 0,

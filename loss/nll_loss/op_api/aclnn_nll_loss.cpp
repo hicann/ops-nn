@@ -17,6 +17,7 @@
 #include "level0/squeeze.h"
 #include "level0/unsqueeze.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "op_api/aclnn_util.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
@@ -65,14 +66,13 @@ static bool CheckNotNull(
 
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySocVersion()
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910B:
-        case SocVersion::ASCEND910_93:
-        case SocVersion::ASCEND950: {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (curArch) {
+        case NpuArch::DAV_2201:
+        case NpuArch::DAV_3510: {
             return ASCEND910B_DTYPE_SUPPORT_LIST;
         }
-        case SocVersion::ASCEND910: {
+        case NpuArch::DAV_1001: {
             return ASCEND910_DTYPE_SUPPORT_LIST;
         }
         default: {
@@ -266,7 +266,7 @@ aclnnStatus aclnnNLLLossGetWorkspaceSize(
         return ACLNN_SUCCESS;
     }
     op::DataType promoteType;
-    if (socVersion == SocVersion::ASCEND950) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         promoteType = self->GetDataType();
     } else {
         promoteType = self->GetDataType() == op::DataType::DT_BF16 ? op::DataType::DT_BF16 : op::DataType::DT_FLOAT;
@@ -281,7 +281,7 @@ aclnnStatus aclnnNLLLossGetWorkspaceSize(
 
     int64_t squeezeDim = 0;
     const aclTensor* selfReshape = nullptr;
-    if (socVersion == SocVersion::ASCEND950) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         selfReshape = selfCast;
     } else {
         selfReshape = self->GetViewShape().GetDimNum() == 1 ?
@@ -295,7 +295,7 @@ aclnnStatus aclnnNLLLossGetWorkspaceSize(
     CHECK_RET(targetContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     op::DataType targetPromoteType;
-    if (socVersion == SocVersion::ASCEND950) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         targetPromoteType = target->GetDataType();
     } else {
         targetPromoteType =
@@ -320,8 +320,8 @@ aclnnStatus aclnnNLLLossGetWorkspaceSize(
     const aclTensor* loss;
     auto totalWeight = lossOut[1];
     if (self->GetViewShape().GetDimNum() == 1 && reduction == 0) {
-        loss = socVersion == SocVersion::ASCEND950 ? lossOut[0] :
-                                                        l0op::SqueezeNd(lossOut[0], squeezeDim, uniqueExecutor.get());
+        loss = Ops::NN::AclnnUtil::IsRegbase() ? lossOut[0] :
+                                                 l0op::SqueezeNd(lossOut[0], squeezeDim, uniqueExecutor.get());
     } else {
         loss = lossOut[0];
     }

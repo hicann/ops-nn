@@ -18,6 +18,7 @@
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_info.h"
 #include "linear_index_v2_tiling.h"
+#include "tiling_base/tiling_util.h"
 
 constexpr int64_t SCALE_SPACE = 20480;
 constexpr int64_t UB_PART = 4;
@@ -242,8 +243,7 @@ ge::graphStatus TilingPrepareForLinearIndexV2(gert::TilingParseContext* context)
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     compileInfo->workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    compileInfo->isAscend950 =
-        ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND950 ? true : false;
+    compileInfo->isAscend950 = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = ubSizePlatForm;

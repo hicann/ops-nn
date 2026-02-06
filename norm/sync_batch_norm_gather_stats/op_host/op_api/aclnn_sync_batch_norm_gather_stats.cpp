@@ -69,7 +69,7 @@ static bool CheckDtypeValid(
 {
     auto dtypeSupportList = ASCEND910_DTYPE_SUPPORT_LIST;
     auto dtypeSampleCountSupportList = ASCEND910_SAMPLT_COUNT_DTYPE_SUPPORT_LIST;
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         dtypeSupportList = ASCEND950_DTYPE_SUPPORT_LIST;
         dtypeSampleCountSupportList = ASCEND950_SAMPLT_COUNT_DTYPE_SUPPORT_LIST;
     }

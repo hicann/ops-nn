@@ -129,7 +129,7 @@ void testTiling(gert::StorageShape &x_shape,
     gert::TilingContext *tiling_context =
         holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend910B"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     tiling_context->GetPlatformInfo()->SetPlatformRes("version", socversions); // label:"version" res:socversions
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
         "SoCInfo", socInfos);
@@ -927,7 +927,7 @@ void test310PTiling(gert::StorageShape &x_shape,
     gert::TilingContext *tiling_context =
         holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend310P"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend310P"}, {"NpuArch", "2202"}};
     tiling_context->GetPlatformInfo()->SetPlatformRes("version", socversions); // label:"version" res:socversions
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
         "SoCInfo", socInfos);

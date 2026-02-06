@@ -13,6 +13,7 @@
  */
 
 #include "cross_entropy_loss_tiling.h"
+#include "tiling_base/tiling_util.h"
 
 namespace optiling {
 constexpr uint32_t INPUT_DATA_IDX = 0;
@@ -103,22 +104,6 @@ static void SplitByRepeat(uint64_t len, uint64_t& loopNum, uint64_t& tailNum)
         loopNum = 0;
         tailNum = len;
     }
-}
-
-static bool IsRegbaseSocVersion4CELOSS(platform_ascendc::SocVersion version)
-{
-    const static std::set<platform_ascendc::SocVersion> regbaseSocVersions = {
-        platform_ascendc::SocVersion::ASCEND950
-    };
-
-    return regbaseSocVersions.find(version) != regbaseSocVersions.end();
-}
-
-bool IsRegbaseSocVersion4CELOSS(const gert::TilingContext* context)
-{
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    auto socVersion = ascendcPlatform.GetSocVersion();
-    return IsRegbaseSocVersion4CELOSS(socVersion);
 }
 
 static void CoresSplitTiling(gert::TilingContext* context)
@@ -378,7 +363,7 @@ ge::graphStatus Tiling4CrossEntropyLoss(gert::TilingContext* context)
 {
     auto nodeName = context;
     OP_LOGD(nodeName, "Tiling4CrossEntropyLoss begin");
-    bool regBase = IsRegbaseSocVersion4CELOSS(context);
+    bool regBase = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
     OP_LOGD(nodeName, "regBase is %d", regBase);
     if (regBase) {
         OP_LOGD(nodeName, "enter Tiling4CrossEntropyLossRegbase");

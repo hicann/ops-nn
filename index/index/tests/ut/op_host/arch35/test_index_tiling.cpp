@@ -149,7 +149,7 @@ TEST_F(IndexTiling, Index_AC_tiling_int32_continue_index64)
     gert::StorageShape indexedStrides = {{2}, {2}};
     gert::StorageShape indices = {{4096}, {4096}};
     gert::StorageShape y = {{4096}, {4096}};
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
 
     int64_t mask[2] = {1, 1};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
@@ -230,7 +230,7 @@ TEST_F(IndexTiling, Index_AC_tiling_bool_continue_2)
     gert::StorageShape indexedStrides = {{2}, {2}};
     gert::StorageShape indices = {{55968}, {55968}};
     gert::StorageShape y = {{55968, 200}, {55968, 200}};
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
 
     int64_t mask[2] = {1, 0};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
@@ -311,7 +311,7 @@ TEST_F(IndexTiling, Index_AC_tiling_int32)
     gert::StorageShape indexedStrides = {{2}, {2}};
     gert::StorageShape indices = {{55968}, {55968}};
     gert::StorageShape y = {{55968, 200}, {55968, 200}};
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
 
     int64_t mask[2] = {1, 0};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
@@ -392,7 +392,7 @@ TEST_F(IndexTiling, Index_AC_tiling_int64)
     gert::StorageShape indexedStrides = {{2}, {2}};
     gert::StorageShape indices = {{55968}, {55968}};
     gert::StorageShape y = {{55968, 200}, {55968, 200}};
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
 
     int64_t mask[2] = {1, 0};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
@@ -473,7 +473,7 @@ TEST_F(IndexTiling, Index_AC_tiling_float16)
     gert::StorageShape indexedStrides = {{2}, {2}};
     gert::StorageShape indices = {{55968}, {55968}};
     gert::StorageShape y = {{55968, 200}, {55968, 200}};
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
 
     int64_t mask[2] = {1, 0};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
@@ -554,7 +554,7 @@ TEST_F(IndexTiling, Index_AC_tiling_int16_not_support)
     gert::StorageShape indexedStrides = {{2}, {2}};
     gert::StorageShape indices = {{55968}, {55968}};
     gert::StorageShape y = {{55968, 200}, {55968, 200}};
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
 
     int64_t mask[2] = {1, 0};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
@@ -635,7 +635,7 @@ TEST_F(IndexTiling, Index_AC_tiling_bool_continue_3)
     gert::StorageShape indexedStrides = {{1}, {1}};
     gert::StorageShape indices = {{4096}, {4096}};
     gert::StorageShape y = {{4096}, {4096}};
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
 
     int64_t mask[2] = {1, 1};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
@@ -732,7 +732,7 @@ TEST_F(IndexTiling, Index_AC_tiling_dim2_int32)
     gert::StorageShape indexedStrides = {{1}, {1}};
     gert::StorageShape indices = {{4096}, {4096}};
     gert::StorageShape y = {{4096}, {4096}};
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
 
     int64_t mask[2] = {1, 1};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
@@ -814,7 +814,7 @@ TEST_F(IndexTiling, Index_AC_tiling_dim2_int32_2)
     gert::StorageShape indexedStrides = {{4}, {4}};
     gert::StorageShape indices = {{4096}, {4096}};
     gert::StorageShape y = {{4096}, {4096}};
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
 
     int64_t mask[2] = {1, 1};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
@@ -896,7 +896,7 @@ TEST_F(IndexTiling, Index_AC_tiling_full_load)
     gert::StorageShape indexedStrides = {{4}, {4}};
     gert::StorageShape indices = {{4096}, {4096}};
     gert::StorageShape y = {{4096}, {4096}};
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
 
     int64_t mask[2] = {1, 2};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;

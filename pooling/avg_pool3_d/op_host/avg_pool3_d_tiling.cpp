@@ -17,7 +17,7 @@
 #include <vector>
 #include <cstdint>
 #include <type_traits>
-
+#include "tiling_base/tiling_util.h"
 #include "register/op_impl_registry.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_info.h"
@@ -172,28 +172,6 @@ namespace optiling {
 namespace avgPool3DTiling {
 using namespace Ops::NN::OpTiling;
 using namespace avgPool3DTilingCompileInfo;
-static bool IsRegbaseSocVersion(platform_ascendc::SocVersion version)
-{
-    const static std::set<platform_ascendc::SocVersion> regbaseSocVersions = {
-        platform_ascendc::SocVersion::ASCEND950
-    };
-
-    return regbaseSocVersions.find(version) != regbaseSocVersions.end();
-}
-
-bool IsRegbaseSocVersion(const gert::TilingParseContext* context)
-{
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    auto socVersion = ascendcPlatform.GetSocVersion();
-    return IsRegbaseSocVersion(socVersion);
-}
-
-bool IsRegbaseSocVersion(const gert::TilingContext* context)
-{
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    auto socVersion = ascendcPlatform.GetSocVersion();
-    return IsRegbaseSocVersion(socVersion);
-}
 
 inline std::unique_ptr<nlohmann::json> GetCompileInfoJson(gert::TilingParseContext* context) {
   auto json_str = context->GetCompiledJson();
@@ -706,7 +684,7 @@ static ge::graphStatus TilingPrepare4AvgPool3DVec(gert::TilingParseContext* cont
     compileInfo->ub_size = static_cast<int64_t>(ubSizePlatForm);
     OP_CHECK_IF((compileInfo->ub_size <= 0), OP_LOGE(nodeName, "Failed to get ub size."), return ge::GRAPH_FAILED);
     compileInfo->is_ascend_c = true;
-    compileInfo->is_regbase = IsRegbaseSocVersion(context);
+    compileInfo->is_regbase = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
     OP_LOGD(nodeName, "TilingPrepare4AvgPool3D Vector end.");
 
     return ge::GRAPH_SUCCESS;

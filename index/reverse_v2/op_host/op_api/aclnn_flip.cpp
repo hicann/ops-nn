@@ -22,6 +22,7 @@
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
 #include "opdev/make_op_executor.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -47,7 +48,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportList() {
   if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
       GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
     return ASCEND910B_DTYPE_SUPPORT_LIST;
-  } else if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+  } else if (Ops::NN::AclnnUtil::IsRegbase()) {
     return ASCEND950_DTYPE_SUPPORT_LIST;
   } else {
     return ASCEND910_DTYPE_SUPPORT_LIST;

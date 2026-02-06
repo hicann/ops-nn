@@ -25,6 +25,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "loss/common/level2_base_loss.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -55,7 +56,7 @@ static const inline std::initializer_list<DataType>& GetSupportDtypeList(SocVers
 {
     static const std::initializer_list<DataType> emptyDtypes = {};
     if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-        socVersion == SocVersion::ASCEND950) {
+        Ops::NN::AclnnUtil::IsRegbase()) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     }
     if (socVersion == SocVersion::ASCEND910 || socVersion == SocVersion::ASCEND310P) {

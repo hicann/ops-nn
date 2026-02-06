@@ -19,6 +19,7 @@
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
 #include "tiling_base/tiling_base.h"
+#include "tiling_base/tiling_util.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_info_def.h"
 #include "op_common/op_host/util/platform_util.h"
@@ -41,10 +42,7 @@ public:
 protected:
     bool IsCapable() override
     {
-        if (socVersion != platform_ascendc::SocVersion::ASCEND950) {
-            return false;
-        }
-        return true;
+        return Ops::NN::OpTiling::IsRegbaseSocVersion(context_);
     }
     // 检查output shape
     ge::graphStatus CheckOutput();

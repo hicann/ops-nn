@@ -46,7 +46,7 @@ TEST_F(FastGeluTilingData, test_tiling_fp16_001)
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
         "BT_SIZE": 0, "load3d_constraints": "1",
@@ -129,7 +129,7 @@ TEST_F(FastGeluTilingData, test_tiling_bf16_002)
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
         "BT_SIZE": 0, "load3d_constraints": "1",
@@ -212,7 +212,7 @@ TEST_F(FastGeluTilingData, test_tiling_fp32_003)
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
         "BT_SIZE": 0, "load3d_constraints": "1",
@@ -295,7 +295,7 @@ TEST_F(FastGeluTilingData, test_tiling_failed_dtype_input_output_diff_004)
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
         "BT_SIZE": 0, "load3d_constraints": "1",
@@ -375,7 +375,7 @@ TEST_F(FastGeluTilingData, test_tiling_failed_shape_input_output_diff_005)
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
         "BT_SIZE": 0, "load3d_constraints": "1",
@@ -454,7 +454,7 @@ TEST_F(FastGeluTilingData, test_tiling_failed_empty_tensor_006)
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
         "BT_SIZE": 0, "load3d_constraints": "1",
@@ -533,7 +533,7 @@ TEST_F(FastGeluTilingData, test_tiling_failed_unsupport_input_007)
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
         "BT_SIZE": 0, "load3d_constraints": "1",

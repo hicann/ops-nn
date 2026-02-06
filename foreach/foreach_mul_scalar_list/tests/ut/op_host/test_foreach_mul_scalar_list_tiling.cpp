@@ -319,7 +319,7 @@ TEST_F(ForeachCommonTiling, foreach_mul_scalar_list_test_tiling_float16_regbase)
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = { { "NpuArch", "3510" } };
 
     string compile_info_string = R"({
@@ -418,7 +418,7 @@ TEST_F(ForeachCommonTiling, foreach_mul_scalar_list_test_tiling_float32_regbase)
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = { { "NpuArch", "3510" } };
 
     string compile_info_string = R"({
@@ -517,7 +517,7 @@ TEST_F(ForeachCommonTiling, foreach_mul_scalar_list_test_tiling_int32_regbase)
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = { { "NpuArch", "3510" } };
 
     string compile_info_string = R"({

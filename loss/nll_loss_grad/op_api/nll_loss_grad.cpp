@@ -17,6 +17,7 @@
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
 #include "opdev/shape_utils.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -39,16 +40,15 @@ static const int64_t SUM = 2;
 
 static inline const std::initializer_list<op::DataType>& GetAiCoreDtypeSupportListBySocVersion()
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910B:
-        case SocVersion::ASCEND910_93: {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (curArch) {
+        case NpuArch::DAV_2201: {
             return ASCEND910B_AICORE_DTYPE_SUPPORT_LIST;
         }
-        case SocVersion::ASCEND950: {
+        case NpuArch::DAV_3510: {
             return ASCEND950_AICORE_DTYPE_SUPPORT_LIST;
         }
-        case SocVersion::ASCEND910: {
+        case NpuArch::DAV_1001: {
             return ASCEND910_AICORE_DTYPE_SUPPORT_LIST;
         }
         default: {

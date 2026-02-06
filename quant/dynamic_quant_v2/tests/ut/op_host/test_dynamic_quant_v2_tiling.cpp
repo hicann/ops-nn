@@ -62,7 +62,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertoken_sym)
     gert::StorageShape scale_shape = {{1, 128}, {1, 128}};
     gert::StorageShape offset_shape = {{1, 128}, {1, 128}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -158,7 +158,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertoken_MOE_noSym)
     gert::StorageShape y_shape = {{1, 128, 128}, {1, 128, 128}};
     gert::StorageShape scale_shape = {{1, 128}, {1, 128}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -255,7 +255,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertensor_fullload_
     gert::StorageShape scale_shape = {{1}, {1}};
     gert::StorageShape offset_shape = {{1}, {1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -351,7 +351,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertensor_fullload_
     gert::StorageShape scale_shape = {{1}, {1}};
     gert::StorageShape offset_shape = {{1}, {1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -447,7 +447,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertensor_largeshap
     gert::StorageShape scale_shape = {{1}, {1}};
     gert::StorageShape offset_shape = {{1}, {1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -543,7 +543,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertensor_largeshap
     gert::StorageShape scale_shape = {{1}, {1}};
     gert::StorageShape offset_shape = {{1}, {1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -639,7 +639,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_perchannel_recomput
     gert::StorageShape scale_shape = {{16, 256}, {16, 256}};
     gert::StorageShape offset_shape = {{16, 256}, {16, 256}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -736,7 +736,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_perchannel_recomput
     gert::StorageShape scale_shape = {{16, 256}, {16, 256}};
     gert::StorageShape offset_shape = {{16, 256}, {16, 256}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -834,7 +834,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_perchannel_full_loa
     gert::StorageShape scale_shape = {{64, 256}, {64, 256}};
     gert::StorageShape offset_shape = {{64, 256}, {64, 256}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -930,7 +930,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_perchannel_full_loa
     gert::StorageShape scale_shape = {{64, 256}, {64, 256}};
     gert::StorageShape offset_shape = {{64, 256}, {64, 256}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -1027,7 +1027,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_perchannel_split_m_
     gert::StorageShape scale_shape = {{1, 64}, {1, 64}};
     gert::StorageShape offset_shape = {{1, 64}, {1, 64}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -1123,7 +1123,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_perchannel_split_m_
     gert::StorageShape scale_shape = {{1, 64}, {1, 64}};
     gert::StorageShape offset_shape = {{1, 64}, {1, 64}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",

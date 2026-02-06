@@ -24,6 +24,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/shape_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -62,7 +63,7 @@ static const std::initializer_list<op::DataType> ASCEND950_AICORE_DTYPE_SUPPORT_
 
 static bool IsAICoreSupport(const aclTensor *self) {
   // 根据芯片类型和输入self类型判断是否走aicore
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
     return CheckType(self->GetDataType(), ASCEND950_AICORE_DTYPE_SUPPORT_LIST);
   } else if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
              GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
@@ -259,7 +260,7 @@ aclnnStatus aclnnIndexAddGetWorkspaceSize(const aclTensor *self, const int64_t d
   auto sourceContiguous = l0op::Contiguous(source, uniqueExecutor.get());
   CHECK_RET(sourceContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
   const aclTensor* alphaTensor = nullptr;
-  bool is91095 = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
+  bool is91095 = Ops::NN::AclnnUtil::IsRegbase();
   bool useNewOp = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
     GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) && dim == 0 &&
     self->GetViewShape().GetDim(0) < MAX_SORT_SHAPE_DIM && self->GetDataType() == op::DataType::DT_BF16 &&

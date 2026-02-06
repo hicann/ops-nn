@@ -20,6 +20,7 @@
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_info.h"
 #include "scatter_list_tiling.h"
+#include "tiling_base/tiling_util.h"
 
 namespace optiling {
 
@@ -137,7 +138,7 @@ ge::graphStatus ScatterListTiling::GetPlatformData()
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     platform_ascendc::SocVersion socVersion = ascendcPlatform.GetSocVersion();
-    supportMovePad = (socVersion == platform_ascendc::SocVersion::ASCEND910B || socVersion == platform_ascendc::SocVersion::ASCEND950);
+    supportMovePad = (socVersion == platform_ascendc::SocVersion::ASCEND910B || Ops::NN::OpTiling::IsRegbaseSocVersion(context));
     isAscend910 = (socVersion == platform_ascendc::SocVersion::ASCEND910);
 
     totalCoreNum = ascendcPlatform.GetCoreNumAiv();

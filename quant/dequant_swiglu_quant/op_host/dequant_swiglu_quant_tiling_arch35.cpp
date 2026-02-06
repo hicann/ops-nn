@@ -18,6 +18,7 @@
 #include "tiling_base/tiling_templates_registry.h"
 #include "dequant_swiglu_quant_tiling.h"
 #include "tiling_base/tiling_base.h"
+#include "tiling_base/tiling_util.h"
 
 using namespace AscendC;
 using namespace ge;
@@ -693,7 +694,7 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::GetShapeAttrsInfo() {
 }
 
 bool DequantSwigluQuantV35DskTiling::IsCapable() {
-  if (socVersion != platform_ascendc::SocVersion::ASCEND950) {
+  if (!Ops::NN::OpTiling::IsRegbaseSocVersion(context_)) {
     return false;
   }
   if (static_cast<size_t>(activateDim_) != xDimNum_ - static_cast<size_t>(1)) {
@@ -1080,7 +1081,7 @@ ge::graphStatus DequantSwigluQuantV35NlastTiling::GetShapeAttrsInfo()
 
 bool DequantSwigluQuantV35NlastTiling::IsCapable()
 {
-  if (socVersion != platform_ascendc::SocVersion::ASCEND950) {
+  if (!Ops::NN::OpTiling::IsRegbaseSocVersion(context_)) {
     return false;
   }
   if (static_cast<size_t>(actDimIndex_) == xShape_.GetDimNum() - 1) {

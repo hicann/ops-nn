@@ -82,7 +82,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling1)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     InitPlatForm(platform_info, soc_infos, aicore_spec, intrinsics);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend910B"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -172,7 +172,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling2)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     InitPlatForm(platform_info, soc_infos, aicore_spec, intrinsics);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend910B"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -262,7 +262,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling3)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     InitPlatForm(platform_info, soc_infos, aicore_spec, intrinsics);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend910B"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -346,7 +346,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling4)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     InitPlatForm(platform_info, soc_infos, aicore_spec, intrinsics);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend910B"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -436,7 +436,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling5)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     InitPlatForm(platform_info, soc_infos, aicore_spec, intrinsics);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend910B"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -527,7 +527,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling6)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     InitPlatForm(platform_info, soc_infos, aicore_spec, intrinsics);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend910B"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -618,7 +618,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling7)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     InitPlatForm(platform_info, soc_infos, aicore_spec, intrinsics);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend910B"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -709,7 +709,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_error_shape1)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     InitPlatForm(platform_info, soc_infos, aicore_spec, intrinsics);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend910B"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -793,7 +793,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_950_1)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     InitPlatForm(platform_info, soc_infos, aicore_spec, intrinsics);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -879,7 +879,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_per_head_950_2)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     InitPlatForm(platform_info, soc_infos, aicore_spec, intrinsics);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -969,7 +969,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_per_tensor_950_3)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     InitPlatForm(platform_info, soc_infos, aicore_spec, intrinsics);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -1054,7 +1054,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_950_error_shape)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     InitPlatForm(platform_info, soc_infos, aicore_spec, intrinsics);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                            "Intrinsic_fix_pipe_l0c2out": false,
@@ -1138,7 +1138,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_950_error_axis)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     InitPlatForm(platform_info, soc_infos, aicore_spec, intrinsics);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
