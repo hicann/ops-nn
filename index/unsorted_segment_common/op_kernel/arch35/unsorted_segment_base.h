@@ -79,7 +79,7 @@ __aicore__ inline constexpr T GetDtypeMax()
     } else if constexpr (IsSameType<T, int64_t>::value) {
         dtypeMax = INT64_MAX;
     } else if constexpr (IsSameType<T, uint32_t>::value) {
-        dtypeMax = INT32_MAX;
+        dtypeMax = UINT32_MAX;
     } else if constexpr (IsSameType<T, uint64_t>::value) {
         dtypeMax = UINT64_MAX;
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {

@@ -76,13 +76,14 @@ extern "C" __global__ __aicore__ void unsorted_segment_min(GM_ADDR x, GM_ADDR se
             op.Process();
         }
     } else if (TILING_KEY_IS(TEMPLATE_ADD_TILING_KEY)) {
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 4000", UnsortedSegmentOutFlTilingData);
+        GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentOutFlTilingData, tilingData, tiling);
         if constexpr (
             std::is_same<uint32_t, DTYPE_X>::value || std::is_same<uint64_t, DTYPE_X>::value ||
-            std::is_same<int64_t, DTYPE_X>::value) {
-            return;
+            std::is_same<int64_t, DTYPE_X>::value) { // 空tensor处理
+            UnsortedSegment::KernelUnsortedSegmentFL<DTYPE_X, DTYPE_SEGMENT_IDS, MODE_FLAGE> op(&pipe);
+            op.Init(x, segment_ids, output, &tilingData);
         } else {
-            REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 4000", UnsortedSegmentOutFlTilingData);
-            GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentOutFlTilingData, tilingData, tiling);
             UnsortedSegment::KernelUnsortedSegmentFL<DTYPE_X, DTYPE_SEGMENT_IDS, MODE_FLAGE> op(&pipe);
             op.Init(x, segment_ids, output, &tilingData);
             op.Process();
