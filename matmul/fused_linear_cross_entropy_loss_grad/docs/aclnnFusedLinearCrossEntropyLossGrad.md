@@ -1,15 +1,21 @@
 # aclnnFusedLinearCrossEntropyLossGrad
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/fused_linear_cross_entropy_loss_grad)
+
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+|产品             |  是否支持  |
+|:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
+|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
-- 算子功能：本算子是词汇表并行场景下交叉熵损失计算模块中的一部分，解决超大规模词汇表下的显存和计算效率问题，当前部分为梯度计算实现，用于计算叶子节点`input`和`weight`的梯度。
+- 接口功能：本算子是词汇表并行场景下交叉熵损失计算模块中的一部分，解决超大规模词汇表下的显存和计算效率问题，当前部分为梯度计算实现，用于计算叶子节点`input`和`weight`的梯度。
   需要获得`aclnnFusedLinearOnlineMaxSum`、`aclnnFusedCrossEntropyLossWithMaxSum`的相关输出，以及`logits`相关的全局通信结果作为本接口输入。
 - 计算公式：
 
@@ -98,56 +104,282 @@ $$
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnFusedLinearCrossEntropyLossGradGetWorkspaceSize`接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用`aclnnFusedLinearCrossEntropyLossGrad`接口执行计算。
 
-- `aclnnStatus aclnnFusedLinearCrossEntropyLossGradGetWorkspaceSize(const aclTensor *grad, const aclTensor *input, const aclTensor *weight, const aclTensor *targetMask, const aclTensor *maskedTarget, float labelSmoothing, const aclTensor *logitsMaxOptional, const aclTensor *sumExpLogitsOptional, const aclTensor *softmaxOptional, aclTensor *inputGradOut, aclTensor *weightGradOut, uint64_t *workspaceSize, aclOpExecutor **executor)`
-- `aclnnStatus aclnnFusedLinearCrossEntropyLossGrad(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`
+  ```Cpp
+  aclnnStatus aclnnFusedLinearCrossEntropyLossGradGetWorkspaceSize(
+    const aclTensor   *grad,
+    const aclTensor   *input,
+    const aclTensor   *weight,
+    const aclTensor   *targetMask,
+    const aclTensor   *maskedTarget,
+    float              labelSmoothing,
+    const aclTensor   *logitsMaxOptional,
+    const aclTensor   *sumExpLogitsOptional,
+    const aclTensor   *softmaxOptional,
+    aclTensor         *inputGradOut,
+    aclTensor         *weightGradOut,
+    uint64_t          *workspaceSize,
+    aclOpExecutor    **executor)
+  ```
+  ```Cpp
+  aclnnStatus aclnnFusedLinearCrossEntropyLossGrad(
+    void             *workspace,
+    uint64_t          workspaceSize,
+    aclOpExecutor    *executor,
+    aclrtStream       stream)
+  ```
 
 ## aclnnFusedLinearCrossEntropyLossGradGetWorkspaceSize
 
-- **参数说明：**
-  
-  - grad(aclTensor*, 计算输入)：当前节点的梯度，公式中的grad，Device侧的aclTensor。数据类型支持FLOAT32，shape支持1维。支持[非连续Tensor](../../../docs/zh/context/非连续的Tensor.md)，支持空tensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  - input(aclTensor*, 计算输入)：矩阵乘的输入矩阵，公式中的input，Device侧的aclTensor。数据类型支持FLOAT16、BFLOAT16，shape支持2维，其中第1维长度与输入grad的长度相同。支持[非连续Tensor](../../../docs/zh/context/非连续的Tensor.md)，支持空tensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  - weight(aclTensor*, 计算输入)：矩阵乘的权重矩阵，公式中的weight，Device侧的aclTensor。数据类型支持FLOAT16、BFLOAT16，数据类型与输入input相同，shape支持2维，其中第1维长度不支持小于128，第2维长度与输入input的第2维长度相同。支持[非连续Tensor](../../../docs/zh/context/非连续的Tensor.md)，支持空tensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  - targetMask(aclTensor*, 计算输入)：中间变量，代表对应词ID是否在目标范围内，公式中的target_mask，Device侧的aclTensor。数据类型支持UINT8，其中每1bit数据代表1个布尔值，0代表false，1代表true。shape支持1维，长度乘以8须不小于输入grad的长度。支持[非连续Tensor](../../../docs/zh/context/非连续的Tensor.md)，支持空tensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  - maskedTarget(aclTensor*, 计算输入)：中间变量，代表对应词ID映射到当前设备词汇表分片的局部索引，无效目标会被掩码targetMask处理，公式中的masked_target，Device侧的aclTensor。数据类型支持INT64、INT32，shape支持1维，长度与输入grad相同。支持[非连续Tensor](../../../docs/zh/context/非连续的Tensor.md)，支持空tensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  - labelSmoothing(float, 计算输入)：标签平滑系数，用于缓解过拟合，目前仅支持取值为0，属性参数。
-  - logitsMaxOptional(aclTensor*, 可选输入)：中间变量，全局logits的最大值，公式中的logits_max，Device侧的aclTensor。可选输入，支持输入nullptr，输入nullptr的场景需要提供有效的softmaxOptional输入。数据类型支持FLOAT32，shape支持1维，长度与输入grad相同。支持[非连续Tensor](../../../docs/zh/context/非连续的Tensor.md)，支持空tensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  - sumExpLogitsOptional(aclTensor*, 可选输入)：中间变量，处理后的logits，公式中的sum_exp_logits，Device侧的aclTensor。可选输入，支持输入nullptr，输入nullptr的场景需要提供有效的softmaxOptional输入。数据类型支持FLOAT32，shape支持1维，长度与输入grad相同。支持[非连续Tensor](../../../docs/zh/context/非连续的Tensor.md)，支持空tensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  - softmaxOptional(aclTensor*, 计算输入)：中间变量，矩阵乘的结果，公式中的softmax，Device侧的aclTensor。可选输入，支持输入nullptr，输入nullptr时须提供有效的logitsMaxOptional、sumExpLogitsOptional输入；输入非nullptr时，logitsMaxOptional、sumExpLogitsOptional输入无效。数据类型支持FLOAT32，shape支持2维，其中第1维长度与输入grad长度相同，第二维长度与输入weight的第1维长度相同。支持[非连续Tensor](../../../docs/zh/context/非连续的Tensor.md)，支持空tensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  - inputGradOut(aclTensor*, 计算输出)：对应叶子节点input的梯度，公式中的grad_input，Device侧的aclTensor。数据类型支持FLOAT16、BFLOAT16，数据类型与输入input相同，shape支持2维，第1维长度与输入grad长度相同，第2维长度与输入weight的第2维长度相同。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  - weightGradOut(aclTensor*, 计算输出)：对应叶子节点weight的梯度，公式中的grad_weight，Device侧的aclTensor。数据类型支持FLOAT16、BFLOAT16，数据类型与输入input相同，shape支持2维，第1维长度与输入weight的第1维长度相同，第2维长度与输入grad长度相同。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  - workspaceSize(uint64_t*, 出参)：返回需要在Device侧申请的workspace大小。
-  - executor(aclOpExecutor**, 出参)：返回op执行器，包含了算子计算流程。
-- **返回值：**
+- **参数说明**
+
+  <table style="undefined;table-layout: fixed; width: 1478px"><colgroup>
+    <col style="width: 169px">
+    <col style="width: 121px">
+    <col style="width: 264px">
+    <col style="width: 253px">
+    <col style="width: 242px">
+    <col style="width: 148px">
+    <col style="width: 135px">
+    <col style="width: 146px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+        <th>使用说明</th>
+        <th>数据类型</th>
+        <th>数据格式</th>
+        <th>维度(shape)</th>
+        <th>非连续Tensor</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>grad</td>
+        <td>输入</td>
+        <td>当前节点的梯度，公式中的输入grad。</td>
+        <td>支持空tensor。</td>
+        <td>FLOAT32</td>
+        <td>ND</td>
+        <td>1</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>input</td>
+        <td>输入</td>
+        <td>矩阵乘的输入矩阵，公式中的输入input。</td>
+        <td>第1维长度与输入grad的长度相同，支持空tensor。</td>
+        <td>FLOAT16、BFLOAT16</td>
+        <td>ND</td>
+        <td>2</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>weight</td>
+        <td>输入</td>
+        <td>矩阵乘的权重矩阵，公式中的weight。</td>
+        <td>数据类型与输入input相同，shape第1维长度不支持小于128，第2维长度与输入input的第2维长度相同。</td>
+        <td>FLOAT16、BFLOAT16</td>
+        <td>ND</td>
+        <td>2</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>targetMask</td>
+        <td>输入</td>
+        <td>中间变量，代表对应词ID是否在目标范围内，公式中的target_mask。</td>
+        <td><ul><li>每1bit数据代表1个布尔值，0代表false，1代表true。</li><li>shape长度乘以8须不小于输入grad的长度。</li></ul></td>
+        <td>UINT8</td>
+        <td>ND</td>
+        <td>1</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>maskedTarget</td>
+        <td>输入</td>
+        <td>中间变量，代表对应词ID映射到当前设备词汇表分片的局部索引，无效目标会被掩码targetMask处理，公式中的masked_target。</td>
+        <td>shape长度与输入grad相同。</td>
+        <td>INT64、INT32</td>
+        <td>ND</td>
+        <td>1</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>labelSmoothing</td>
+        <td>输入</td>
+        <td>标签平滑系数，用于缓解过拟合。</td>
+        <td>目前仅支持取值为0。</td>
+        <td>FLOAT32</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>logitsMaxOptional</td>
+        <td>可选输入</td>
+        <td>中间变量，全局logits的最大值，公式中的logits_max。</td>
+        <td><ul><li>支持输入nullptr，输入nullptr的场景需要提供有效的softmaxOptional输入。</li><li>shape长度与输入grad相同。</li></ul></td>
+        <td>FLOAT32</td>
+        <td>ND</td>
+        <td>1</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>sumExpLogitsOptional</td>
+        <td>可选输入</td>
+        <td>中间变量，处理后的logits，公式中的sum_exp_logits。</td>
+        <td><ul><li>支持输入nullptr，输入nullptr的场景需要提供有效的softmaxOptional输入。</li><li>shape长度与输入grad相同。</li></ul></td>
+        <td>FLOAT32</td>
+        <td>ND</td>
+        <td>1</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>softmaxOptional</td>
+        <td>可选输入</td>
+        <td>中间变量，矩阵乘的结果，公式中的softmax。</td>
+        <td><ul><li>支持输入nullptr，输入nullptr时须提供有效的logitsMaxOptional、sumExpLogitsOptional输入；输入非nullptr时，logitsMaxOptional、sumExpLogitsOptional输入无效。</li><li>shape第1维长度与输入grad长度相同，第二维长度与输入weight的第1维长度相同。</li></ul></td>
+        <td>FLOAT32</td>
+        <td>ND</td>
+        <td>2</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>inputGradOut</td>
+        <td>输出</td>
+        <td>对应叶子节点input的梯度，公式中的grad_input。</td>
+        <td><ul><li>数据类型与输入input相同。</li><li>shape第1维长度与输入grad长度相同，第2维长度与输入weight的第2维长度相同。</li></ul></td>
+        <td>FLOAT16、BFLOAT16</td>
+        <td>ND</td>
+        <td>2</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>weightGradOut</td>
+        <td>输出</td>
+        <td>对应叶子节点weight的梯度，公式中的grad_weight。</td>
+        <td><ul><li>数据类型与输入input相同。</li><li>shape第1维长度与输入weight的第1维长度相同，第2维长度与输入grad长度相同。</li></ul></td>
+        <td>FLOAT16、BFLOAT16</td>
+        <td>ND</td>
+        <td>2</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>workspaceSize</td>
+        <td>输出</td>
+        <td>返回需要在Device侧申请的workspace大小。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>executor</td>
+        <td>输出</td>
+        <td>返回op执行器，包含了算子计算流程。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+    </tbody></table>
+
+- **返回值**
   
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
-  ```
+
   第一段接口完成入参校验，出现以下场景时报错：
-  返回161001 (ACLNN_ERR_PARAM_NULLPTR): 1. 传入的非可选输入是空指针。
-                                        2. 传入的softmaxOptional为空指针的场景下，logitsMaxOptional或sumExpLogitsOptional为空指针。
-  返回161002 (ACLNN_ERR_PARAM_INVALID): 1. 输入的labelSmoothing取值不支持。
-                                        2. 输入的数据类型不在支持的范围内。
-                                        3. 输入的数据格式不在支持的范围内。
-                                        4. 输入的shape不在支持的范围内，不满足长度要求。
-  返回361001 (ACLNN_ERR_RUNTIME_ERROR): 1. 当前平台不在支持的平台范围内。
-  ```
+
+  <table style="undefined;table-layout: fixed; width: 1149px"><colgroup>
+  <col style="width: 281px">
+  <col style="width: 119px">
+  <col style="width: 749px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>返回码</th>
+      <th>错误码</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td rowspan="2">ACLNN_ERR_PARAM_NULLPTR</td>
+      <td rowspan="2">161001</td>
+      <td>传入的非可选输入是空指针。</td>
+    </tr>
+    <tr>
+      <td>传入的softmaxOptional为空指针的场景下，logitsMaxOptional或sumExpLogitsOptional为空指针。</td>
+    </tr>
+    <tr>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
+      <td>输入的labelSmoothing取值不支持。</td>
+    </tr>
+    <tr>
+      <td>输入的数据类型不在支持的范围内。</td>
+    </tr>
+    <tr>
+      <td>输入的数据格式不在支持的范围内。</td>
+    </tr>
+    <tr>
+      <td>输入的shape不在支持的范围内，不满足长度要求。</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_RUNTIME_ERROR</td>
+      <td>361001</td>
+      <td>当前平台不在支持的平台范围内。</td>
+    </tr>
+  </tbody>
+  </table>
 
 ## aclnnFusedLinearCrossEntropyLossGrad
 
-- **参数说明：**
+- **参数说明**
+
+  <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+  <col style="width: 168px">
+  <col style="width: 128px">
+  <col style="width: 854px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnFusedLinearCrossEntropyLossGradGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
+  </table>
   
-  - workspace(void*, 入参)：在Device侧申请的workspace内存地址。
-  - workspaceSize(uint64_t, 入参)：在Device侧申请的workspace大小，由第一段接口aclnnFusedLinearCrossEntropyLossGradGetWorkspaceSize获取。
-  - executor(aclOpExecutor*, 入参)：op执行器，包含了算子计算流程。
-  - stream(aclrtStream, 入参)：指定执行任务的Stream。
-- **返回值：**
+- **返回值**
   
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 - 确定性说明：
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnFusedLinearCrossEntropyLossGrad默认确定性实现。
+  - aclnnFusedLinearCrossEntropyLossGrad默认确定性实现。
 
 ## 调用示例
 
