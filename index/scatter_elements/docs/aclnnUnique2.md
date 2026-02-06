@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-算子功能：对输入张量self进行去重，返回self中的唯一元素。unique功能的增强，新增返回值countsOut，表示valueOut中各元素在输入self中出现的次数，用returnCounts参数控制。
+对输入张量self进行去重，返回self中的唯一元素。unique功能的增强，新增返回值countsOut，表示valueOut中各元素在输入self中出现的次数，用returnCounts参数控制。
 
 ## 函数原型
 
@@ -38,6 +38,7 @@
   - executor（aclOpExecutor**，出参）：返回op执行器，包含了算子计算流程。
 
 * **返回值**：
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   ```
@@ -76,6 +77,7 @@
           - self 输入为 1D
           - self 的数据类型为下列类型：FLOAT、FLOAT16、UINT8、INT8、UINT16、INT16、INT32、UINT32、UINT64、INT64、BFLOAT16
   * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：在输入self包含0的情况下，算子的输出中可能会包含正0和负0，而非只输出一个0。
+  * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当self的数据量超过2亿时，执行时间长，可能会运行超时。
 
 ## 调用示例
 
