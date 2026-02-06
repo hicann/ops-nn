@@ -166,7 +166,8 @@ void MatMulV3BasicAswtTiling::AdjustAL1Tiling91095Basic([[maybe_unused]] uint64_
     }
     // b矩阵开启4buffer
     uint64_t bL14Buffer = runInfo_.baseK * runInfo_.stepKb * runInfo_.baseN * args_.aDtypeSize * BASIC_L1_BUFFER_NUM;
-    runInfo_.l1BufferNum = bL14Buffer + aL1Size + baseBiasSize > compileInfo_.l1Size ? DB_SIZE : BASIC_L1_BUFFER_NUM;
+    runInfo_.l1BufferNum =
+        bL14Buffer + aL1Size + baseBiasSize * BASIC_L1_BUFFER_NUM > compileInfo_.l1Size ? DB_SIZE : BASIC_L1_BUFFER_NUM;
     runInfo_.singleCoreN = runInfo_.baseN;
     runInfo_.dbL0C = runInfo_.baseM * runInfo_.baseN * dtypeSize * DB_SIZE <= compileInfo_.l0CSize ? DB_SIZE : 1UL;
 }
@@ -252,10 +253,10 @@ void MatMulV3BasicAswtTiling::AdjustBL1Tiling91095Basic([[maybe_unused]] uint64_
                                 runInfo_.baseM : ops::CeilAlign(runInfo_.baseM >> 1, BASIC_BLOCK_SIZE_16);
     }
     // 重新计算是否满足aL1开启4buffer loc开启db
-    uint64_t aL14Buffer = static_cast<uint64_t>(runInfo_.baseK) *  runInfo_.stepKa * runInfo_.baseM * \
-                            args_.aDtypeSize * BASIC_L1_BUFFER_NUM;
-    runInfo_.l1BufferNum = aL14Buffer + bL1Size + baseBiasSize > compileInfo_.l1Size ?
-                            DB_SIZE : BASIC_L1_BUFFER_NUM;
+    uint64_t aL14Buffer = static_cast<uint64_t>(runInfo_.baseK) * runInfo_.stepKa * runInfo_.baseM * args_.aDtypeSize *
+                          BASIC_L1_BUFFER_NUM;
+    runInfo_.l1BufferNum =
+        aL14Buffer + bL1Size + baseBiasSize * BASIC_L1_BUFFER_NUM > compileInfo_.l1Size ? DB_SIZE : BASIC_L1_BUFFER_NUM;
     runInfo_.singleCoreM = runInfo_.baseM;
     runInfo_.dbL0C = runInfo_.baseM * runInfo_.baseN * dtypeSize * DB_SIZE <= compileInfo_.l0CSize ? DB_SIZE : 1UL;
     runInfo_.mixInfo.ubDB = runInfo_.baseM * runInfo_.baseN * dtypeSize <= compileInfo_.ubSize ? DB_SIZE : 1UL;
