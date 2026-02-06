@@ -393,11 +393,11 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputBias()
             return ge::GRAPH_FAILED);
           if (hasGroupIndex_) {
             OP_CHECK_IF(biasShape.GetDim(0) != groupNum_,
-                OP_LOGE(context_->GetNodeName(), "when the dimension of bias is 2, the first dimension of bias: %ld should be equal to groupNum when group_index exist, please check.", biasShape.GetDim(0)),
+                OP_LOGE(context_->GetNodeName(), "when the dimension of bias is 2, the first dimension of bias: %ld should be equal to groupNum when group_index exists, please check.", biasShape.GetDim(0)),
                 return ge::GRAPH_FAILED);
           } else {
             OP_CHECK_IF(biasShape.GetDim(0) != 1,
-                OP_LOGE(context_->GetNodeName(), "when the dimension of bias is 2, the first dimension of bias: %ld should be 1 when group_index not exist, please check.", biasShape.GetDim(0)),
+                OP_LOGE(context_->GetNodeName(), "when the dimension of bias is 2, the first dimension of bias: %ld should be 1 when group_index not exists, please check.", biasShape.GetDim(0)),
                 return ge::GRAPH_FAILED);
           }
       }
@@ -471,7 +471,7 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputQuantScale()
     }
     if (quantMode_ == 0) {
       OP_CHECK_IF(!hasQuantScale_,
-                  OP_LOGE(context_->GetNodeName(), "quant_scale must exit when static_quant, please check."),
+                  OP_LOGE(context_->GetNodeName(), "quant_scale must exist when static_quant, please check."),
                   return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -848,7 +848,6 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::DoOpTilingNotFull() {
 
 ge::graphStatus DequantSwigluQuantV35DskTiling::DoOpTiling() {
   if (outDimy_ > Y_LAST_DIM_FULL_LOAD_MAX_VALUE) {
-    ge::graphStatus ret = ge::GRAPH_FAILED;
     return DequantSwigluQuantV35DskTiling::DoOpTilingNotFull();
   }
   auto xDesc = context_->GetInputDesc(X_INDEX);
