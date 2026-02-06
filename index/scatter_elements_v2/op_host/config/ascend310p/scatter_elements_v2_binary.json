@@ -2,65 +2,6 @@
   "op_type": "ScatterElementsV2",
   "op_list": [
     {
-      "bin_filename": "ScatterElementsV2_8553f600b359364747bae68086b2c9f5",
-      "inputs": [
-        {
-          "name": "var",
-          "index": 0,
-          "dtype": "float16",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        },
-        {
-          "name": "indices",
-          "index": 1,
-          "dtype": "int32",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        },
-        {
-          "name": "updates",
-          "index": 2,
-          "dtype": "float16",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        }
-      ],
-      "outputs": [
-        {
-          "name": "var",
-          "index": 0,
-          "dtype": "float16",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        }
-      ],
-      "attrs": [
-        {
-          "name": "axis",
-          "dtype": "int",
-          "value": null
-        },
-        {
-          "name": "reduction",
-          "dtype": "string",
-          "value": "add"
-        }
-      ]
-    },
-    {
       "bin_filename": "ScatterElementsV2_47eb6cc0b55fca7f6b9111ac6e4ca3a5",
       "inputs": [
         {
@@ -116,65 +57,6 @@
           "name": "reduction",
           "dtype": "string",
           "value": "none"
-        }
-      ]
-    },
-    {
-      "bin_filename": "ScatterElementsV2_7b7d13d5d13f19c7aafeff4cc7c0e19d",
-      "inputs": [
-        {
-          "name": "var",
-          "index": 0,
-          "dtype": "float16",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        },
-        {
-          "name": "indices",
-          "index": 1,
-          "dtype": "int64",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        },
-        {
-          "name": "updates",
-          "index": 2,
-          "dtype": "float16",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        }
-      ],
-      "outputs": [
-        {
-          "name": "var",
-          "index": 0,
-          "dtype": "float16",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        }
-      ],
-      "attrs": [
-        {
-          "name": "axis",
-          "dtype": "int",
-          "value": null
-        },
-        {
-          "name": "reduction",
-          "dtype": "string",
-          "value": "add"
         }
       ]
     },
@@ -238,65 +120,6 @@
       ]
     },
     {
-      "bin_filename": "ScatterElementsV2_4d84a98ca4caca6ff4aa36103d1c264e",
-      "inputs": [
-        {
-          "name": "var",
-          "index": 0,
-          "dtype": "float32",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        },
-        {
-          "name": "indices",
-          "index": 1,
-          "dtype": "int32",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        },
-        {
-          "name": "updates",
-          "index": 2,
-          "dtype": "float32",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        }
-      ],
-      "outputs": [
-        {
-          "name": "var",
-          "index": 0,
-          "dtype": "float32",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        }
-      ],
-      "attrs": [
-        {
-          "name": "axis",
-          "dtype": "int",
-          "value": null
-        },
-        {
-          "name": "reduction",
-          "dtype": "string",
-          "value": "add"
-        }
-      ]
-    },
-    {
       "bin_filename": "ScatterElementsV2_f5a640931bcd8b2f6982000e6a5b1340",
       "inputs": [
         {
@@ -352,65 +175,6 @@
           "name": "reduction",
           "dtype": "string",
           "value": "none"
-        }
-      ]
-    },
-    {
-      "bin_filename": "ScatterElementsV2_774a3b8f5801050bafea9d1ee4c79cc1",
-      "inputs": [
-        {
-          "name": "var",
-          "index": 0,
-          "dtype": "float32",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        },
-        {
-          "name": "indices",
-          "index": 1,
-          "dtype": "int64",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        },
-        {
-          "name": "updates",
-          "index": 2,
-          "dtype": "float32",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        }
-      ],
-      "outputs": [
-        {
-          "name": "var",
-          "index": 0,
-          "dtype": "float32",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        }
-      ],
-      "attrs": [
-        {
-          "name": "axis",
-          "dtype": "int",
-          "value": null
-        },
-        {
-          "name": "reduction",
-          "dtype": "string",
-          "value": "add"
         }
       ]
     },
@@ -474,65 +238,6 @@
       ]
     },
     {
-      "bin_filename": "ScatterElementsV2_cccc4e08ac221e6b476e3a8b0417c817",
-      "inputs": [
-        {
-          "name": "var",
-          "index": 0,
-          "dtype": "int32",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        },
-        {
-          "name": "indices",
-          "index": 1,
-          "dtype": "int32",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        },
-        {
-          "name": "updates",
-          "index": 2,
-          "dtype": "int32",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        }
-      ],
-      "outputs": [
-        {
-          "name": "var",
-          "index": 0,
-          "dtype": "int32",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        }
-      ],
-      "attrs": [
-        {
-          "name": "axis",
-          "dtype": "int",
-          "value": null
-        },
-        {
-          "name": "reduction",
-          "dtype": "string",
-          "value": "add"
-        }
-      ]
-    },
-    {
       "bin_filename": "ScatterElementsV2_0de125c91e7c25d3e6b4f766a3ca960a",
       "inputs": [
         {
@@ -588,65 +293,6 @@
           "name": "reduction",
           "dtype": "string",
           "value": "none"
-        }
-      ]
-    },
-    {
-      "bin_filename": "ScatterElementsV2_11c5bc1be88490aaac109656a52a4173",
-      "inputs": [
-        {
-          "name": "var",
-          "index": 0,
-          "dtype": "int32",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        },
-        {
-          "name": "indices",
-          "index": 1,
-          "dtype": "int64",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        },
-        {
-          "name": "updates",
-          "index": 2,
-          "dtype": "int32",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        }
-      ],
-      "outputs": [
-        {
-          "name": "var",
-          "index": 0,
-          "dtype": "int32",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        }
-      ],
-      "attrs": [
-        {
-          "name": "axis",
-          "dtype": "int",
-          "value": null
-        },
-        {
-          "name": "reduction",
-          "dtype": "string",
-          "value": "add"
         }
       ]
     },
@@ -710,65 +356,6 @@
       ]
     },
     {
-      "bin_filename": "ScatterElementsV2_35e6b8013b1ed8d7c211ab707a5d7ad8",
-      "inputs": [
-        {
-          "name": "var",
-          "index": 0,
-          "dtype": "int8",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        },
-        {
-          "name": "indices",
-          "index": 1,
-          "dtype": "int32",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        },
-        {
-          "name": "updates",
-          "index": 2,
-          "dtype": "int8",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        }
-      ],
-      "outputs": [
-        {
-          "name": "var",
-          "index": 0,
-          "dtype": "int8",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        }
-      ],
-      "attrs": [
-        {
-          "name": "axis",
-          "dtype": "int",
-          "value": null
-        },
-        {
-          "name": "reduction",
-          "dtype": "string",
-          "value": "add"
-        }
-      ]
-    },
-    {
       "bin_filename": "ScatterElementsV2_8949267df8ab5b7790fa806ce5f5cc71",
       "inputs": [
         {
@@ -824,65 +411,6 @@
           "name": "reduction",
           "dtype": "string",
           "value": "none"
-        }
-      ]
-    },
-    {
-      "bin_filename": "ScatterElementsV2_cea0d890b57ab2ecd3c216720f84a1ed",
-      "inputs": [
-        {
-          "name": "var",
-          "index": 0,
-          "dtype": "int8",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        },
-        {
-          "name": "indices",
-          "index": 1,
-          "dtype": "int64",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        },
-        {
-          "name": "updates",
-          "index": 2,
-          "dtype": "int8",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        }
-      ],
-      "outputs": [
-        {
-          "name": "var",
-          "index": 0,
-          "dtype": "int8",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        }
-      ],
-      "attrs": [
-        {
-          "name": "axis",
-          "dtype": "int",
-          "value": null
-        },
-        {
-          "name": "reduction",
-          "dtype": "string",
-          "value": "add"
         }
       ]
     },
@@ -946,65 +474,6 @@
       ]
     },
     {
-      "bin_filename": "ScatterElementsV2_2a4793aa805c5b65f016e16f61de8dc0",
-      "inputs": [
-        {
-          "name": "var",
-          "index": 0,
-          "dtype": "uint8",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        },
-        {
-          "name": "indices",
-          "index": 1,
-          "dtype": "int32",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        },
-        {
-          "name": "updates",
-          "index": 2,
-          "dtype": "uint8",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        }
-      ],
-      "outputs": [
-        {
-          "name": "var",
-          "index": 0,
-          "dtype": "uint8",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        }
-      ],
-      "attrs": [
-        {
-          "name": "axis",
-          "dtype": "int",
-          "value": null
-        },
-        {
-          "name": "reduction",
-          "dtype": "string",
-          "value": "add"
-        }
-      ]
-    },
-    {
       "bin_filename": "ScatterElementsV2_e13d3e47fa14436e81c0bc36b58ec410",
       "inputs": [
         {
@@ -1060,65 +529,6 @@
           "name": "reduction",
           "dtype": "string",
           "value": "none"
-        }
-      ]
-    },
-    {
-      "bin_filename": "ScatterElementsV2_9523db00bbeadd6eef49dfdcbd8ee59f",
-      "inputs": [
-        {
-          "name": "var",
-          "index": 0,
-          "dtype": "uint8",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        },
-        {
-          "name": "indices",
-          "index": 1,
-          "dtype": "int64",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        },
-        {
-          "name": "updates",
-          "index": 2,
-          "dtype": "uint8",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        }
-      ],
-      "outputs": [
-        {
-          "name": "var",
-          "index": 0,
-          "dtype": "uint8",
-          "format": "ND",
-          "paramType": "required",
-          "shape": [
-            -2
-          ]
-        }
-      ],
-      "attrs": [
-        {
-          "name": "axis",
-          "dtype": "int",
-          "value": null
-        },
-        {
-          "name": "reduction",
-          "dtype": "string",
-          "value": "add"
         }
       ]
     },
