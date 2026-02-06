@@ -97,7 +97,7 @@ aclnnStatus aclnnTransQuantParamV3(
     </tr></thead>
   <tbody>
     <tr>
-      <td>scale</td>
+      <td>scale（aclTensor*）</td>
       <td>输入</td>
       <td>量化中的scale值。对应公式中的`scale`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape是1维（t,），t = 1或n，以及2维（1, n）其中n与matmul计算中的右矩阵的shape n一致。</li><li>用户需要保证scale数据中不存在NaN和Inf。</li></ul></td>
@@ -107,7 +107,7 @@ aclnnStatus aclnnTransQuantParamV3(
       <td>×</td>
     </tr>
     <tr>
-      <td>offset</td>
+      <td>offset（aclTensor*）</td>
       <td>输入</td>
       <td>可选参数，量化中的offset值。对应公式中的`offset`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape是1维（t,），以及2维（1, n），t = 1或n，其中n与matmul计算中的右矩阵的shape n一致。</li><li>用户需要保证offset数据中不存在NaN和Inf。</li></ul></td>
@@ -117,17 +117,17 @@ aclnnStatus aclnnTransQuantParamV3(
       <td>×</td>
     </tr>
     <tr>
-      <td>roundMode</td>
+      <td>roundMode（int64_t）</td>
       <td>输入</td>
       <td>量化计算中FP32填充到FP19的round模式。对应公式描述中的`roundMode`。</td>
       <td>仅支持以下取值：0（兼容V2），1（提升计算精度）。</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>量化的计算输出。对应公式中的`out`。</td>
       <td><ul><li>不支持空Tensor。</li><li>当输入scale的shape为1维时，out的shape也为1维，该维度的shape大小为scale与offset(若不为nullptr)单维shape大小的最大值，当输入scale的shape为2维时，out的shape与输入scale的shape维度和大小完全一致。</li></ul></td>
@@ -137,7 +137,7 @@ aclnnStatus aclnnTransQuantParamV3(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -147,7 +147,7 @@ aclnnStatus aclnnTransQuantParamV3(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

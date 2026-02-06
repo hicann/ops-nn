@@ -93,7 +93,7 @@ aclnnStatus aclnnDynamicQuant(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>算子输入的Tensor。对应公式中的`x`。</td>
       <td>支持空Tensor。</td>
@@ -103,7 +103,7 @@ aclnnStatus aclnnDynamicQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>smoothScalesOptional</td>
+      <td>smoothScalesOptional（aclTensor*）</td>
       <td>输入</td>
       <td>算子输入的smoothScales。对应公式描述中的`smoothScalesOptional`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型要和x保持一致。</li><li>shape维度与x的最后一维相同。</li></ul></td>
@@ -113,7 +113,7 @@ aclnnStatus aclnnDynamicQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>yOut</td>
+      <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>量化后的输出Tensor。对应公式中的`yOut`。</td>
       <td><ul><li>支持空Tensor。</li><li>类型为INT32时，shape的最后一维是x最后一维的1/8，其余维度和x一致。其他类型时，shape与x一致。</li></ul></td>
@@ -123,7 +123,7 @@ aclnnStatus aclnnDynamicQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>scaleOut</td>
+      <td>scaleOut（aclTensor*）</td>
       <td>输出</td>
       <td>量化使用的scale。对应公式中的`scaleOut`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape维度为x的shape剔除最后一维。</li></ul></td>
@@ -133,7 +133,7 @@ aclnnStatus aclnnDynamicQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -143,7 +143,7 @@ aclnnStatus aclnnDynamicQuant(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

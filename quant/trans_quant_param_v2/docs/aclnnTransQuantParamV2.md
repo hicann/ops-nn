@@ -89,7 +89,7 @@ aclnnStatus aclnnTransQuantParamV2(
     </tr></thead>
   <tbody>
     <tr>
-      <td>scale</td>
+      <td>scale（aclTensor*）</td>
       <td>输入</td>
       <td>量化中的scale值。对应公式中的`scale`。</td>
       <td><ul><li>不支持空Tensor。</li><li>用户需要保证scale数据中不存在NaN和Inf。</li><li>shape的约束请参见<a href="#约束说明">约束说明</a>。</li></ul></td>
@@ -99,7 +99,7 @@ aclnnStatus aclnnTransQuantParamV2(
       <td>×</td>
     </tr>
     <tr>
-      <td>offset</td>
+      <td>offset（aclTensor*）</td>
       <td>输入</td>
       <td>可选参数，量化中的offset值。对应公式中的`offset`。</td>
       <td><ul><li>不支持空Tensor。</li><li>用户需要保证offset数据中不存在NaN和Inf。</li><li>shape的约束请参见<a href="#约束说明">约束说明</a>。</li></ul></td>
@@ -109,7 +109,7 @@ aclnnStatus aclnnTransQuantParamV2(
       <td>×</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>量化的计算输出。对应公式中的`out`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape的约束请参见<a href="#约束说明">约束说明</a>。</li></ul></td>
@@ -119,7 +119,7 @@ aclnnStatus aclnnTransQuantParamV2(
       <td>√ </td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -129,7 +129,7 @@ aclnnStatus aclnnTransQuantParamV2(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

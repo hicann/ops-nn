@@ -80,7 +80,7 @@ aclnnStatus aclnnAscendAntiQuant(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示需要做反量化的输入。对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>当数据类型是INT32时，每个数据被作为8个INT4数据使用。</li><li>当数据类型是INT4时，shape的尾轴为偶数。</li></ul></td>
@@ -90,7 +90,7 @@ aclnnStatus aclnnAscendAntiQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>scale</td>
+      <td>scale（aclTensor*）</td>
       <td>输入</td>
       <td>反量化中的scale值。对应公式中的`scale`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape的大小可以为1，如果不为1，在输入`x`为INT4/INT8类型时，等于输入`x`的最后一个维度的大小；在输入`x`为INT32类型时，等于输入`x`的最后一个维度大小的8倍。</li></ul></td>
@@ -100,7 +100,7 @@ aclnnStatus aclnnAscendAntiQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>offset</td>
+      <td>offset（aclTensor*）</td>
       <td>输入</td>
       <td>反量化中的offset值。对应公式中的`offset`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型和shape需要与`scale`保持一致。</li></ul></td>
@@ -110,27 +110,27 @@ aclnnStatus aclnnAscendAntiQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>dstType</td>
+      <td>dstType（int64_t）</td>
       <td>输入</td>
       <td>指定输出的数据类型。</td>
       <td>支持取值1、27，分别表示FLOAT16、BFLOAT16。</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>sqrtMode</td>
+      <td>sqrtMode（bool）</td>
       <td>输入</td>
       <td>指定scale参与计算的逻辑。对应公式中的`sqrtMode`。</td>
       <td>-</td>
-      <td>BOOL</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>y</td>
+      <td>y（aclTensor*）</td>
       <td>输出</td>
       <td>反量化的计算输出。对应公式中的`y`。</td>
       <td><ul><li>支持空Tensor。</li><li>当输入`x`为INT4或INT8类型时，shape与输入`x`一致。</li><li>当输入`x`为INT32类型时，shape尾轴的大小为输入`x`的尾轴大小的8倍。</li></ul></td>
@@ -140,7 +140,7 @@ aclnnStatus aclnnAscendAntiQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -150,7 +150,7 @@ aclnnStatus aclnnAscendAntiQuant(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

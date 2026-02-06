@@ -73,7 +73,7 @@ aclnnStatus aclnnGroupQuant(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示需要执行量化的输入，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>如果`dstType`为3(INT32)，shape的最后一维需要能被8整除。<li>如果`dstType`为29(INT4)，shape的最后一维需要能被2整除。</li></ul></td>
@@ -83,7 +83,7 @@ aclnnStatus aclnnGroupQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>scale</td>
+      <td>scale（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化中的scale值，对应公式中的`scale`。</td>
       <td><ul><li>支持空Tensor。</li><li>`scale`的第2维与x的第2维相等。</li></ul></td>
@@ -93,7 +93,7 @@ aclnnStatus aclnnGroupQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>groupIndex</td>
+      <td>groupIndex（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化中的groupIndex值。</td>
       <td><ul><li>支持空Tensor。</li><li>维度与scale的第1维相等。</li></ul></td>
@@ -103,7 +103,7 @@ aclnnStatus aclnnGroupQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>offsetOptional</td>
+      <td>offsetOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选参数，表示量化中的offset值，对应公式中的`offsetOptional`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`scale`一致。</li><li>`offsetOptional`为1个数。</li></ul></td>
@@ -113,17 +113,17 @@ aclnnStatus aclnnGroupQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>dstType</td>
+      <td>dstType（int32_t）</td>
       <td>输入</td>
       <td>表示指定输出的数据类型。</td>
       <td><ul><li>支持取值2，3，29，分别表示INT8，INT32，INT4。</li></ul></td>
-      <td>INT32</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>y</td>
+      <td>y（aclTensor*）</td>
       <td>输出</td>
       <td>表示分组量化后的输出，对应公式中的`y`。</td>
       <td><ul><li>支持空Tensor。</li><li>类型为INT32时，shape的最后一维是`x`最后一维的1/8，其余维度和x一致。</li><li>其他类型时，shape与`x`一致。</li></ul></td>
@@ -133,7 +133,7 @@ aclnnStatus aclnnGroupQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -143,7 +143,7 @@ aclnnStatus aclnnGroupQuant(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

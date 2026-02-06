@@ -79,61 +79,61 @@ aclnnStatus aclnnTransQuantParam(
     </tr></thead>
   <tbody>
     <tr>
-      <td>scaleArray</td>
+      <td>scaleArray（float*）</td>
       <td>输入</td>
       <td>表示指向存储scale数据的内存，对应公式中的`scale`。</td>
       <td>需要保证scale数据中不存在NaN和inf。</li></ul></td>
-      <td>FLOAT32</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>scaleSize</td>
+      <td>scaleSize（uint64_t）</td>
       <td>输入</td>
       <td>表示scale数据的数量。</td>
       <td>需要自行保证`scaleSize`与`scaleArray`包含的元素个数相同。</li></ul></td>
-      <td>UINT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>offsetArray</td>
+      <td>offsetArray（float*）</td>
       <td>输入</td>
       <td>表示指向存储offset数据的内存，对应公式中的`offset`。</td>
       <td>需要保证offset数据中不存在NaN和inf。</li></ul></td>
-      <td>FLOAT32</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>offsetSize</td>
+      <td>offsetSize（uint64_t）</td>
       <td>输入</td>
       <td>表示offset数据的数量。</td>
       <td>需要自行保证`offsetSize`与`offsetArray`包含的元素个数相同。</li></ul></td>
-      <td>UINT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>quantParam</td>
+      <td>quantParam（uint64_t**）</td>
       <td>输出</td>
       <td>表示指向存储转换得到的quantParam数据的内存的地址，对应公式中的`out`。</td>
       <td>-</li></ul></td>
-      <td>UINT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>quantParamSize</td>
+      <td>quantParamSize（uint64_t*）</td>
       <td>输出</td>
       <td>表示存储quantParam数据的数量。</td>
       <td>需要自行保证`quantParamSize`与`quantParam`包含的元素个数相同。</li></ul></td>
-      <td>UINT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

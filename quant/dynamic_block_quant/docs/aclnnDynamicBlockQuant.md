@@ -86,7 +86,7 @@ aclnnStatus aclnnDynamicBlockQuant(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示算子输入的Tensor。对应公式中的`x`。</td>
       <td>不支持空Tensor。</td>
@@ -96,57 +96,57 @@ aclnnStatus aclnnDynamicBlockQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>minScale</td>
+      <td>minScale（double）</td>
       <td>输入</td>
       <td>参与scaleOut计算的最小scale值，对应公式中的`minScale`。</td>
       <td>取值不小于0。</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>roundModeOptional</td>
+      <td>roundModeOptional（char*）</td>
       <td>输入</td>
       <td>可选参数，指定cast到输出的转换方式，支持取值rint、round。</td>
       <td>默认值为rint。</td>
-      <td>CHAR</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>dstType</td>
+      <td>dstType（int64_t）</td>
       <td>输入</td>
       <td>指定输出yOut的数据类型。</td>
       <td>支持取值2、34、35、36，分别代表ACL_INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN。</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>rowBlockSize</td>
+      <td>rowBlockSize（int64_t）</td>
       <td>输入</td>
       <td>指定一个block的行大小。</td>
       <td>支持取值1，128，256，512。</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>colBlockSize</td>
+      <td>colBlockSize（int64_t）</td>
       <td>输入</td>
       <td>指定一个block的列大小。</td>
       <td>支持取值64，128，192，256。</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>yOut</td>
+      <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化后的输出Tensor。对应公式中的`yOut`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape与`x`保持一致。</li></ul></td>
@@ -156,7 +156,7 @@ aclnnStatus aclnnDynamicBlockQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>scaleOut</td>
+      <td>scaleOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化使用的scaleOut，对应公式中的`scaleOut`。</td>
       <td><ul><li>不支持空Tensor。</li><li>如果输入`x`的shape为[M, N]，输出`scaleOut`的shape维度为[ceil(M/rowBlockSize), ceil(N/colBlockSize)]；如果输入`x`的shape为[B, M, N]，输出`scaleOut`的shape维度为[B, ceil(M/rowBlockSize), ceil(N/colBlockSize)]。</li></ul></td>
@@ -166,7 +166,7 @@ aclnnStatus aclnnDynamicBlockQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -176,7 +176,7 @@ aclnnStatus aclnnDynamicBlockQuant(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

@@ -81,7 +81,7 @@ aclnnStatus aclnnAscendQuant(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>需要执行量化的输入。对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>如果`dstType`为3，shape的最后一维需要能被8整除；如果`dstType`为29，shape的最后一维需要能被2整除。</li></ul></td>
@@ -91,7 +91,7 @@ aclnnStatus aclnnAscendQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>scale</td>
+      <td>scale（aclTensor*）</td>
       <td>输入</td>
       <td>量化中的scale值。对应公式中的`scale`。</td>
       <td><ul><li>支持空Tensor。</li><li>`scale`支持1维张量或多维张量（当shape为1维张量时，`scale`的第0维需要等于x的最后一维或等于1；当shape为多维张量时，`scale`的维度需要和`x`保持一致，最后一个维度的值需要和`x`保持一致，其他维度为1）。</li><li>如果`x`的dtype不是FLOAT32，需要和`x`的dtype一致。</li></ul></td>
@@ -101,7 +101,7 @@ aclnnStatus aclnnAscendQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>offset</td>
+      <td>offset（aclTensor*）</td>
       <td>输入</td>
       <td>可选参数，反量化中的offset值。对应公式中的`offset`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型和shape需要与`scale`保持一致。</li></ul></td>
@@ -111,37 +111,37 @@ aclnnStatus aclnnAscendQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>sqrtMode</td>
+      <td>sqrtMode（bool）</td>
       <td>输入</td>
       <td>指定scale参与计算的逻辑。对应公式中的`sqrtMode`。</td>
       <td>当取值为true时，公式为 y = round((x * scale * scale) + offset)；当取值为false时，公式为y = round((x * scale) + offset)。</td>
-      <td>BOOL</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>roundMode</td>
+      <td>roundMode（char*）</td>
       <td>输入</td>
       <td>指定cast到INT8输出的转换方式。</td>
       <td>支持取值round/ceil/trunc/floor。</td>
-      <td>STRING</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>dstType</td>
+      <td>dstType（int32_t）</td>
       <td>输入</td>
       <td>指定输出的数据类型。</td>
       <td>支持取值2、3、29，分别表示INT8、INT32、INT4。</td>
-      <td>INT32</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>  
     <tr>
-      <td>y</td>
+      <td>y（aclTensor*）</td>
       <td>输出</td>
       <td>量化的计算输出。对应公式中的`y`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型为INT32时，shape的最后一维是`x`最后一维的1/8，其余维度和`x`一致；其他类型时，shape与`x`一致。</li></ul></td>
@@ -151,7 +151,7 @@ aclnnStatus aclnnAscendQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -161,7 +161,7 @@ aclnnStatus aclnnAscendQuant(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

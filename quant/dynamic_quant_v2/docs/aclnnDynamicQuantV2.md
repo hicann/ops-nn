@@ -130,7 +130,7 @@ aclnnStatus aclnnDynamicQuantV2(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>算子输入的Tensor。对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li></ul></td>
@@ -140,7 +140,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>smoothScalesOptional</td>
+      <td>smoothScalesOptional（aclTensor*）</td>
       <td>输入</td>
       <td>算子输入的smoothScales。对应公式描述中的`smoothScalesOptional`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型要和x保持一致。</li><li>当没有groupIndexOptional时，shape维度与x的最后一维相同。当有groupIndexOptional时，shape是两维，第一维大小是专家数，不超过1024，第二维大小是x的最后一维。</li></ul></td>
@@ -150,7 +150,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>groupIndexOptional</td>
+      <td>groupIndexOptional（aclTensor*）</td>
       <td>输入</td>
       <td>算子输入的groupIndex。</td>
       <td><ul><li>支持空Tensor。</li><li>shape只有一维。</li></ul></td>
@@ -160,17 +160,17 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>dstType</td>
+      <td>dstType（int64_t）</td>
       <td>输入</td>
       <td>输出y的类型对应的枚举值。</td>
       <td><ul><li>如果输出y类型为INT8，则为2；y类型为INT4时，则为29；y类型为INT32时，则为3。</li></ul></td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>yOut</td>
+      <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>量化后的输出Tensor。对应公式中的`yOut`。</td>
       <td><ul><li>支持空Tensor。</li><li>类型为INT32时，shape的最后一维是x最后一维的1/8，其余维度和x一致。其他类型时，shape与x一致。</li></ul></td>
@@ -180,7 +180,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>-</td>
     </tr>
     <tr>
-      <td>scaleOut</td>
+      <td>scaleOut（aclTensor*）</td>
       <td>输出</td>
       <td>量化使用的scale。对应公式中的`scaleOut`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape维度为x的shape剔除最后一维。</li></ul></td>
@@ -190,7 +190,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>-</td>
     </tr>
     <tr>
-      <td>offsetOut</td>
+      <td>offsetOut（aclTensor*）</td>
       <td>输出</td>
       <td>量化使用的offset。对应公式中的`offset`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape维度为x的shape剔除最后一维。</li></ul></td>
@@ -200,7 +200,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>-</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -210,7 +210,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

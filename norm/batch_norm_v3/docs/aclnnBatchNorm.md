@@ -84,7 +84,7 @@ aclnnStatus aclnnBatchNorm(
       <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行BatchNorm计算的输入，对应公式中的`x`。</td>
-      <td><ul><li>支持空Tensor。</li><li>支持的shape和格式有：2维（对应的格式为NC），3维（对应的格式为NCL），4维（对应的格式为NCHW），5维（对应的格式为NCDHW），6-8维（对应的格式为ND，其中第2维固定为channel轴）。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>支持的shape和格式有：2维（对应的格式为NC），3维（对应的格式为NCL），4维（对应的格式为NCHW、NHWC），5维（对应的格式为NCDHW、NDHWC），6-8维（对应的格式为ND，其中第2维固定为channel轴）。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>NC、NCL、NCHW、NHWC、NCDHW、NDHWC、ND</td>
       <td>2-8</td>

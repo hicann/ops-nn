@@ -49,7 +49,7 @@
       <ul><li>进行批量归一化的输入张量，对应公式中的`x`。</li><li>shape支持4D、5D。</li></ul>
       </td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>NCHW/NHWC/NCDHW/NDHWC</td>NHWC/NDHWC
+      <td>NCHW/NHWC/NCDHW/NDHWC</td>
     </tr>
     <tr>
       <td>weight</td>
@@ -107,7 +107,7 @@
       <td>输出</td>
       <td><ul><li>表示批量归一化后的输出结果，对应公式中的`y`。</li><li>数据类型、数据格式、shape与输入x保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>NCHW/NHWC/NCDHW/NDHWC</td>/NHWC/NDHWC
+      <td>NCHW/NHWC/NCDHW/NDHWC</td>
     </tr>
     <tr>
       <td>running_mean</td>

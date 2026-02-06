@@ -129,7 +129,7 @@ aclnnStatus aclnnFlatQuant(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>输入的原始数据，对应公式中的`x`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape为[K, M, N]，其中，K不超过262144，M和N不超过256。</li><li>如果out的数据类型为INT32，N必须是8的整数倍。</li><li>如果out的数据类型为INT4，N必须是偶数。</li><li>如果out的数据类型为FLOAT4_E2M1，N必须是偶数。</li></ul></td>
@@ -139,7 +139,7 @@ aclnnStatus aclnnFlatQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>kroneckerP1</td>
+      <td>kroneckerP1（aclTensor*）</td>
       <td>输入</td>
       <td>输入的计算矩阵1，对应公式中的`kroneckerP1`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape为[M, M]，M与x中M维一致。</li><li>数据类型与入参x的数据类型一致。</li></ul></td>
@@ -149,7 +149,7 @@ aclnnStatus aclnnFlatQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>kroneckerP2</td>
+      <td>kroneckerP2（aclTensor*）</td>
       <td>输入</td>
       <td>输入的计算矩阵2，对应公式中的`kroneckerP2`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape为[N, N]，N与x中N维一致。</li><li>数据类型与入参x的数据类型一致。</li></ul></td>
@@ -159,17 +159,17 @@ aclnnStatus aclnnFlatQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>clipRatio</td>
+      <td>clipRatio（double）</td>
       <td>输入</td>
       <td>用于控制量化的裁剪比例对应公式中的`clipRatio`。</td>
       <td><ul><li>输入数据范围为(0, 1]。</li></ul></td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>输出张量，对应公式中的out。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型为INT32时，shape的最后一维是入参x最后一维的1/8，其余维度和x一致。</li><li>数据类型为INT4时，shape与入参x一致。</li><li>数据类型为FLOAT4_E2M1时，shape为[K,M*N]。</li></ul></td>
@@ -179,7 +179,7 @@ aclnnStatus aclnnFlatQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>quantScale</td>
+      <td>quantScale（aclTensor*）</td>
       <td>输出</td>
       <td>输出的量化因子，对应公式中的quantScale。</td>
       <td><ul><li>不支持空Tensor。</li><li>输出类型为INT4或INT32时，shape为[K]，K与x中K维一致。</li><li>输出类型为FLOAT8_E8M0时，shape为[K,ceilDiv(M*N,64),2]</li></ul></td>
@@ -189,7 +189,7 @@ aclnnStatus aclnnFlatQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回用户需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -199,7 +199,7 @@ aclnnStatus aclnnFlatQuant(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

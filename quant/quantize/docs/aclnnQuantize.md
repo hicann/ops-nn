@@ -73,7 +73,7 @@ aclnnStatus aclnnQuantize(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示需要进行量化的源数据张量。对应公式中的`x`。</td>
       <td>支持空Tensor。</td>
@@ -83,7 +83,7 @@ aclnnStatus aclnnQuantize(
       <td>√</td>
     </tr>
     <tr>
-      <td>scales</td>
+      <td>scales（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中对x进行scales的张量。对应公式中的`scales`。</td>
       <td><ul><li>支持空Tensor。</li><li>size需要为1或和输入x中axis轴的size相等。</li><li>如果`x`的dtype不是FLOAT32，需要和`x`的dtype一致。</li></ul></td>
@@ -93,7 +93,7 @@ aclnnStatus aclnnQuantize(
       <td>√</td>
     </tr>
     <tr>
-      <td>zeroPoints</td>
+      <td>zeroPoints（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中对x进行offset的张量，对应公式中的`zeroPoints`。</td>
       <td><ul><li>支持空Tensor。</li><li>支持传入空指针。</li><li>size需要为1或和输入x中axis轴的size相等，并与scales的size相等。</li></ul></td>
@@ -103,27 +103,27 @@ aclnnStatus aclnnQuantize(
       <td>√</td>
     </tr>
     <tr>
-      <td>dstType</td>
+      <td>dstType（aclDataType）</td>
       <td>输入</td>
       <td>指定输出的数据类型。</td>
       <td>支持配置为ACL_INT8、ACL_UINT8、ACL_INT32、ACL_HIFLOAT8、ACL_FLOAT8_E4M3FN、ACL_FLOAT8_E5M2。</td>
-      <td>aclDataType</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>axis</td>
+      <td>axis（int32_t）</td>
       <td>输入</td>
       <td>表示需要进行量化的element-wise轴，其他的轴做broadcast。</td>
       <td><ul><li>当输入的scales和zeroPoints的size均为1时，该参数实际不使用。</li><li>支持范围为小于输入x的维度数且大于等于x维度数的负值。</li></ul></td>
-      <td>INT32</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出Tensor。对应公式中的`out`。</td>
       <td><ul><li>支持空Tensor。</li><li>其shape需要与`x`一致，数据类型由入参`dstType`指定。</li></ul></td>
@@ -133,7 +133,7 @@ aclnnStatus aclnnQuantize(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -143,7 +143,7 @@ aclnnStatus aclnnQuantize(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
