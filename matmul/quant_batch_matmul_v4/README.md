@@ -14,7 +14,7 @@
 |Kirin X90 处理器系列产品|√|
 |Kirin 9030 处理器系列产品|√|
 
-## 参数说明
+## 功能说明
 
 - 算子功能：完成量化的矩阵乘计算。
 - 计算公式：
@@ -112,7 +112,7 @@
       out = (x1@(x2 * x2Scale)) * yScale
       $$
 
-## 算子规格
+## 参数说明
 
 <table class="tg" style="undefined;table-layout: fixed; width: 1166px"><colgroup>
 <col style="width: 81px">
@@ -204,7 +204,7 @@
 
 - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：
 
-  | x1                        | x2                        | x1Scale     | x2Scale         | x2Offset    | yScale   | bias         | yOffset    | out                                    |
+  | x1                        | x2                        | x1_scale     | x2_scale         | x2_offset    | y_scale   | bias         | y_offset    | y                                    |
   | ------------------------- | ------------------------- | ----------- | -----------     | ----------- | -------  | ------------ | -----------| -------------------------------------- |
   | INT8                      | INT32                     | FLOAT32     | UINT64          | nullptr        | nullptr     | nullptr         | FLOAT32    | FLOAT16/BFLOAT16                       |
   | INT8                      | INT8                      | nullptr        | UINT64/INT64    | nullptr        | nullptr     | nullptr/INT32   | nullptr       | FLOAT16                                |
@@ -219,7 +219,7 @@
   | INT4                | INT4                | FLOAT32     | FLOAT32         | FLOAT16        | nullptr     | nullptr    | nullptr       | BFLOAT16               |
 
 - Ascend 950PR/Ascend 950DT：
-  | x1                        | x2                        | x1Scale     | x2Scale     | x2Offset | yScale | bias    | out                                    |
+  | x1                        | x2                        | x1_scale     | x2_scale     | x2_offset | y_scale | bias    | y                                    |
   | ------------------------- | ------------------------- | ----------- | ----------- | -------- | -------| ------- | -------------------------------------- |
   | INT8                      | INT8                      | nullptr        | UINT64/INT64      | nullptr     | nullptr     | nullptr/INT32   | FLOAT16/BFLOAT16                       |
   | INT8                      | INT8                      | nullptr        | UINT64/INT64      | nullptr/FLOAT32  | nullptr     | nullptr/INT32   | INT8                              |
@@ -241,7 +241,12 @@
 - 支持连续tensor，[非连续tensor](../../docs/zh/context/非连续的Tensor.md)只支持转置场景。
 
 ## 调用说明
-
+<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_quant_matmul_v5](examples/test_aclnn_quant_matmul_v5_at2_at3.cpp) | 通过<br>[aclnnQuantMatmulV5](docs/aclnnQuantMatmulV5.md)<br>等方式调用QuantBatchMatmulV4算子。 |
+
+<term>Ascend 950PR/Ascend 950DT</term>：
+| 调用方式   | 样例代码           | 说明                                         |
+| ---------------- | --------------------------- | --------------------------------------------------- |
+| aclnn接口  | [test_aclnn_quant_matmul_v5](examples/arch35/test_aclnn_quant_matmul_v5_f8f4_nd.cpp) | 通过<br>[aclnnQuantMatmulV5](docs/aclnnQuantMatmulV5.md)<br>等方式调用QuantBatchMatmulV4算子。 |
