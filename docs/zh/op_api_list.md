@@ -290,6 +290,7 @@
 | [aclnnPrelu](../../activation/prelu/docs/aclnnPrelu.md) |激活函数，Tensor中value大于0，取该value，小于0时取权重与value的乘积。|默认确定性实现|
 | [aclnnPreluBackward](../../activation/prelu_grad_update/docs/aclnnPreluBackward.md) |完成aclnnPreluBackward的反向函数。|默认确定性实现|
 | [aclnnQuantConvolution](../../conv/convolution_forward/docs/aclnnQuantConvolution.md) |完成per-channel量化的2D/3D卷积计算。|默认确定性实现|
+| [aclnnQuantConvolutionWeightNz](../../conv/convolution_forward/docs/aclnnQuantConvolutionWeightNz.md) |完成 per-channel 量化的 3D 卷积计算，weight仅支持FRACTAL_Z_3D格式。|默认确定性实现|
 | [aclnnQuantize](../../quant/quantize/docs/aclnnQuantize.md)|对输入张量进行量化处理。|默认确定性实现|
 | [aclnnQuantizeBatchNorm](../../norm/quantized_batch_norm/docs/aclnnQuantizedBatchNorm.md)|将输入Tensor执行一个反量化的计算，再根据输入的weight、bias、epsilon执行归一化，最后根据输出的outputScale以及outputZeroPoint执行量化。|默认确定性实现|
 | [aclnnQuantMatmul](../../matmul/quant_matmul/docs/aclnnQuantMatmul.md)|完成张量self与张量mat2的矩阵乘计算（支持1维到6维作为输入的矩阵乘）。|默认确定性实现|

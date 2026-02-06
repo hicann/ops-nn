@@ -111,6 +111,7 @@ const size_t CONST_VALUE_2 = 2;
 const int32_t OFFSET_X_MAX_VALUE = 127;
 const int32_t OFFSET_X_MIN_VALUE = -128;
 const size_t MAX_STR_LEN = 1024;
+const size_t FRACTAL_Z_3D_DIM = 4;
 
 const std::vector<std::vector<DataType>> SUPPORTED_DTYPES_GROUPS_DEFAULT = {
     // input, weight, output, bias
@@ -229,6 +230,9 @@ public:
         string formatStr = op::ToString(format).GetString();
         tensorShape = tensor->GetViewShape();
         shape = ToFVector(tensorShape);
+        storageFormat = tensor->GetStorageFormat();
+        storageTensorShape = tensor->GetStorageShape();
+        storageShape = ToFVector(storageTensorShape);
 
         auto len = shape.size();
         auto npos = formatStr.npos;
@@ -260,6 +264,9 @@ public:
     op::DataType dataType = DataType::DT_UNDEFINED;
     FVector<int64_t> shape;
     op::Shape tensorShape;
+    op::Format storageFormat = Format::FORMAT_ND;
+    FVector<int64_t> storageShape;
+    op::Shape storageTensorShape;
 
 private:
     int64_t n = 0;
@@ -284,6 +291,7 @@ struct QuantConvParams {
     int32_t offsetx;
     const char* roundMode;
     aclTensor* output;
+    const bool isWeightNz;
 };
 
 struct QuantConvMeta {
@@ -575,7 +583,11 @@ public:
             CHECK_PARAMS_EQ(outputFormat, Format::FORMAT_NCHW);
         } else if (inputDimNum == QUANT_CONV_3D_DIM_SIZE) {
             CHECK_PARAMS_EQ(inputFormat, Format::FORMAT_NCDHW);
-            CHECK_PARAMS_EQ(weightFormat, Format::FORMAT_NCDHW);
+            if (engine.params.isWeightNz) {
+                CHECK_PARAMS_EQ(engine.meta.weight.storageFormat, Format::FORMAT_FRACTAL_Z_3D);
+            } else {
+                CHECK_PARAMS_EQ(weightFormat, Format::FORMAT_NCDHW);
+            }
             CHECK_PARAMS_EQ(outputFormat, Format::FORMAT_NCDHW);
         }
 
@@ -840,6 +852,11 @@ private:
         CHECK_PARAMS_GT(weightDimD, 0L);
         CHECK_PARAMS_GT(weightDimH, 0L);
         CHECK_PARAMS_GT(weightDimW, 0L);
+        if (engine.params.isWeightNz) {
+            if (CheckWeightTransValue(engine) != ACLNN_SUCCESS) {
+                return ACLNN_ERR_PARAM_INVALID;
+            }
+        }
 
         if (engine.params.bias) {
             if (engine.meta.bias.shape[0] != weightDimN) {
@@ -856,6 +873,27 @@ private:
         }
         return ACLNN_SUCCESS;
     }
+
+    static aclnnStatus CheckWeightTransValue(QuantConvEngine &engine)
+    {
+        FVector<int64_t> storageshape = engine.meta.weight.storageShape;
+        auto len = storageshape.size();
+        for (size_t i = 0; i < len; ++i) {
+            CHECK_PARAMS_GT(storageshape[i], 0L);
+        }
+        int64_t c0 = 32;
+        int64_t n0 = 16;
+        int64_t n1 = (engine.meta.weight.N() + n0 - 1) / n0;
+        int64_t dc1hw = engine.meta.weight.D() * ((engine.meta.weight.C() + c0 - 1) / c0) * engine.meta.weight.H() *
+                        engine.meta.weight.W();
+        if (len !=  FRACTAL_Z_3D_DIM || storageshape[0] != dc1hw || storageshape[1] != n1 || storageshape[2] != n0
+           || storageshape[3] != c0) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected weight FRACTAL_Z_3D shape correspond with out NCDHW shape");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        return ACLNN_SUCCESS;
+    }
+
 
     static aclnnStatus CheckAttrValue(QuantConvEngine &engine)
     {
@@ -911,10 +949,10 @@ class TemporaryLimitChecker : public QuantConvolutionChecker {
 public:
     TemporaryLimitChecker() = default;
     ~TemporaryLimitChecker() override = default;
-    aclnnStatus Check([[maybe_unused]] QuantConvEngine &engine) override
+    aclnnStatus Check(QuantConvEngine &engine) override
     {
         SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-        if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+        if (!engine.params.isWeightNz && GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
             OP_LOGD("Get Current NpuArch: DAV_3510.");
             return ACLNN_SUCCESS;
         }
@@ -979,25 +1017,28 @@ static aclIntArray* ViewQuantConv2dPad2dAs4d(const aclIntArray* intArray, aclOpE
 }
 
 static aclnnStatus TransDataPreProcess(const aclTensor* &input, const aclTensor* &weight, const int64_t groups,
-                                       aclOpExecutor* executor)
+                                       aclOpExecutor* executor, bool isWeightNz)
 {
     input = l0op::TransData(input, Format::FORMAT_NDC1HWC0, groups, executor);
     CHECK_NULLPTR(input, ACLNN_ERR_INNER_NULLPTR);
 
-    weight = l0op::TransData(weight, Format::FORMAT_FRACTAL_Z_3D, groups, executor);
-    CHECK_NULLPTR(weight, ACLNN_ERR_INNER_NULLPTR);
+    if (!isWeightNz) {
+        weight = l0op::TransData(weight, Format::FORMAT_FRACTAL_Z_3D, groups, executor);
+        CHECK_NULLPTR(weight, ACLNN_ERR_INNER_NULLPTR);
+    }
 
     return ACLNN_SUCCESS;
 }
 
 static aclnnStatus ContiguousPreProcess(const aclTensor* &input, const aclTensor* &weight, const aclTensor* &scale,
-                                        const aclTensor* &bias, aclOpExecutor* executor)
+                                        const aclTensor* &bias, aclOpExecutor* executor, bool isWeightNz)
 {
     input = l0op::Contiguous(input, executor);
     CHECK_NULLPTR(input, ACLNN_ERR_INNER_NULLPTR);
-
-    weight = l0op::Contiguous(weight, executor);
-    CHECK_NULLPTR(weight, ACLNN_ERR_INNER_NULLPTR);
+    if (!isWeightNz) {
+        weight = l0op::Contiguous(weight, executor);
+        CHECK_NULLPTR(weight, ACLNN_ERR_INNER_NULLPTR);
+    }
 
     scale = l0op::Contiguous(scale, executor);
     CHECK_NULLPTR(scale, ACLNN_ERR_INNER_NULLPTR);
@@ -1078,15 +1119,17 @@ protected:
 };
 
 class QuantConv3dImpl : public QuantConvolutionImpl {
+private:
+    bool is_weight_nz;
 public:
     QuantConv3dImpl(const aclTensor* inputParam, const aclTensor* weightParam, const aclTensor* biasParam,
                     const aclTensor* scaleParam, const aclTensor* offsetParam, const aclIntArray* strideParam,
                     const aclIntArray* paddingParam, const aclIntArray* dilationParam, const bool transposedParam,
                     const aclIntArray* outputPaddingParam, const int64_t groupsParam, int32_t offsetxParam,
-                    const char* roundModeParam, aclTensor* outputParam, aclOpExecutor* executorParam)
+                    const char* roundModeParam, aclTensor* outputParam, aclOpExecutor* executorParam, bool isWeightNz)
     : QuantConvolutionImpl(inputParam, weightParam, biasParam, scaleParam, offsetParam, strideParam,
                            paddingParam, dilationParam, transposedParam, outputPaddingParam, groupsParam, offsetxParam,
-                           roundModeParam, outputParam, executorParam) {}
+                           roundModeParam, outputParam, executorParam), is_weight_nz(isWeightNz) {}
     ~QuantConv3dImpl() override = default;
 
     aclnnStatus PreProcessV2()
@@ -1102,7 +1145,7 @@ public:
                 return ACLNN_ERR_RUNTIME_ERROR;
             }
         }
-        auto ret = ContiguousPreProcess(input, weight, scale, bias, executor);
+        auto ret = ContiguousPreProcess(input, weight, scale, bias, executor, is_weight_nz);
         if (ret != ACLNN_SUCCESS) {
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "quant conv3d contiguous preprocess failed");
             return ret;
@@ -1119,12 +1162,12 @@ public:
         REG_L0_FUNCTION_BY_OPTYPE(l0Functions, QuantConv3d6HdInt8ToNCDHWBf16, "QuantConv3d6HdInt8ToNCDHWBf16");
         REG_L0_FUNCTION_BY_OPTYPE(l0Functions, QuantConv3d6HdInt8ToNCDHWFp16, "QuantConv3d6HdInt8ToNCDHWFp16");
         outputDtype = output->GetDataType();
-        auto retContiguous = ContiguousPreProcess(input, weight, scale, bias, executor);
+        auto retContiguous = ContiguousPreProcess(input, weight, scale, bias, executor, is_weight_nz);
         if (retContiguous != ACLNN_SUCCESS) {
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "quant conv3d contiguous preprocess failed");
             return retContiguous;
         }
-        auto retTransData = TransDataPreProcess(input, weight, groups, executor);
+        auto retTransData = TransDataPreProcess(input, weight, groups, executor, is_weight_nz);
         if (retTransData != ACLNN_SUCCESS) {
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "quant conv3d transdata preprocess failed");
             return retTransData;
@@ -1214,7 +1257,7 @@ public:
                 return ACLNN_ERR_RUNTIME_ERROR;
             }
         }
-        auto ret = ContiguousPreProcess(input, weight, scale, bias, executor);
+        auto ret = ContiguousPreProcess(input, weight, scale, bias, executor, false);
         if (ret != ACLNN_SUCCESS) {
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "quant conv2d contiguous preprocess failed");
             return ret;
@@ -1245,7 +1288,7 @@ std::shared_ptr<QuantConvolutionImpl> CreateQuantConvolutionImpl(const aclTensor
     const aclTensor* bias, const aclTensor* scale, const aclTensor *offset,
     const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation, const bool transposed,
     const aclIntArray *outputPadding, const int64_t groups, int32_t offsetx, const char* roundMode,
-    aclTensor* output, aclOpExecutor* executor)
+    aclTensor* output, bool isWeightNz, aclOpExecutor* executor)
 
 {
     size_t inputDim = input->GetViewShape().GetDimNum();
@@ -1261,7 +1304,7 @@ std::shared_ptr<QuantConvolutionImpl> CreateQuantConvolutionImpl(const aclTensor
 
         case QUANT_CONV_3D_DIM_SIZE:
             return std::make_shared<QuantConv3dImpl>(input, weight, bias, scale, offset, stride, padding, dilation,
-                transposed, outputPadding, groups, offsetx, roundMode, output, executor);
+                transposed, outputPadding, groups, offsetx, roundMode, output, executor, isWeightNz);
         default:
             return nullptr;
     }
@@ -1286,7 +1329,7 @@ aclnnStatus aclnnQuantConvolutionGetWorkspaceSize(const aclTensor *input, const 
         DFX_OUT(output));
 
     QuantConvParams params = {input, weight, bias, scale, offset, stride, padding, dilation,
-                              transposed, outputPadding, groups, offsetx, roundMode, output};
+                              transposed, outputPadding, groups, offsetx, roundMode, output, false};
     QuantConvEngine quantConvEngine(params);
     aclnnStatus ret = CheckQuantConvParams(quantConvEngine);
     if (ret != ACLNN_SUCCESS) {
@@ -1300,7 +1343,7 @@ aclnnStatus aclnnQuantConvolutionGetWorkspaceSize(const aclTensor *input, const 
     std::shared_ptr<AclnnQuantConvolution::QuantConvolutionImpl> quantConvImpl =
         AclnnQuantConvolution::CreateQuantConvolutionImpl(
             input, weight, bias, scale, offset, stride, padding, dilation, transposed, outputPadding, groups, offsetx,
-            roundMode, output, uniqueExecutor.get());
+            roundMode, output, false, uniqueExecutor.get());
     if (quantConvImpl == nullptr) {
         OP_LOGE(ACLNN_ERR_INNER, "create quant convolution failed, convolution = nullptr");
         return ACLNN_ERR_INNER;
@@ -1334,6 +1377,70 @@ aclnnStatus aclnnQuantConvolution(void* workspace, const uint64_t workspaceSize,
                                   aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnQuantConvolution);
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+}
+
+aclnnStatus aclnnQuantConvolutionWeightNzGetWorkspaceSize(const aclTensor *input, const aclTensor *weight, const aclTensor *bias,
+                                                  const aclTensor *scale, const aclTensor *offset, const aclIntArray *stride,
+                                                  const aclIntArray *padding, const aclIntArray *dilation,
+                                                  bool transposed, const aclIntArray *outputPadding, int64_t groups,
+                                                  int32_t offsetx, const char* roundMode, aclTensor* output,
+                                                  uint64_t* workspaceSize, aclOpExecutor** executor)
+{
+    L2_DFX_PHASE_1(aclnnQuantConvolutionWeightNz,
+        DFX_IN(input, weight, bias, scale, offset, stride, padding, dilation, transposed,
+               outputPadding, groups, offsetx, roundMode),
+        DFX_OUT(output));
+
+    QuantConvParams params = {input, weight, bias, scale, offset, stride, padding, dilation,
+                              transposed, outputPadding, groups, offsetx, roundMode, output, true};
+    QuantConvEngine quantConvEngine(params);
+    aclnnStatus ret = CheckQuantConvParams(quantConvEngine);
+    if (ret != ACLNN_SUCCESS) {
+        OP_LOGE(ret, "check quant conv weight nz params failed");
+        return ret;
+    }
+
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+
+    std::shared_ptr<AclnnQuantConvolution::QuantConvolutionImpl> quantConvImpl =
+        AclnnQuantConvolution::CreateQuantConvolutionImpl(
+            input, weight, bias, scale, offset, stride, padding, dilation, transposed, outputPadding, groups, offsetx,
+            roundMode, output, true, uniqueExecutor.get());
+    if (quantConvImpl == nullptr) {
+        OP_LOGE(ACLNN_ERR_INNER, "create quant convolution weight nz failed, convolution = nullptr");
+        return ACLNN_ERR_INNER;
+    }
+
+    aclnnStatus preProcessRet = quantConvImpl->PreProcess();
+    if (preProcessRet != ACLNN_SUCCESS) {
+        OP_LOGE(ACLNN_ERR_INNER, "quant convolution weight nz run preprocess failed");
+        return ACLNN_ERR_INNER;
+    }
+
+    aclnnStatus implRet = quantConvImpl->Impl();
+    if (implRet != ACLNN_SUCCESS) {
+        OP_LOGE(ACLNN_ERR_INNER, "quant convolution weight nz run impl failed");
+        return ACLNN_ERR_INNER;
+    }
+
+    aclnnStatus postProcessRet = quantConvImpl->PostProcess();
+    if (postProcessRet != ACLNN_SUCCESS) {
+        OP_LOGE(ACLNN_ERR_INNER, "quant convolution weight nz run impl postprocess failed");
+        return ACLNN_ERR_INNER;
+    }
+
+    *workspaceSize = (uniqueExecutor.get())->GetWorkspaceSize();
+    uniqueExecutor.ReleaseTo(executor);
+    return ACLNN_SUCCESS;
+}
+
+
+aclnnStatus aclnnQuantConvolutionWeightNz(void* workspace, const uint64_t workspaceSize, aclOpExecutor* executor,
+                                  aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnQuantConvolutionWeightNz);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
