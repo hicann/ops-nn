@@ -640,6 +640,10 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::GetAttr()
               return ge::GRAPH_FAILED);
   auto* attrClampLimit = attrs->GetAttrPointer<float>(ATTR_CLAMP_LIMIT_INDEX);
   clampLimit_ = (attrClampLimit == nullptr) ? 7.0 : *attrClampLimit;
+  OP_CHECK_IF(!(std::isfinite(clampLimit_) && clampLimit_ > 0.0), 
+              OP_LOGE(context_->GetNodeName(),
+              "attr clampLimit_ should be positive finite but current is %f, please check.", clampLimit_),
+              return ge::GRAPH_FAILED);
   auto* attrGluAlpha = attrs->GetAttrPointer<float>(ATTR_GLU_ALPHA_INDEX);
   gluAlpha_ = (attrGluAlpha == nullptr) ? 1.702 : *attrGluAlpha;
   auto* attrGluBias = attrs->GetAttrPointer<float>(ATTR_GLU_BIAS_INDEX);

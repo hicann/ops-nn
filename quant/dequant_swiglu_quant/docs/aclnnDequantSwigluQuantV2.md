@@ -253,7 +253,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>clamp_limit</td>
       <td>输入</td>
       <td>表示变体swiglu使用的门限值。</td>
-      <td><ul><li>该参数为可选参数。</li><li>用于对输入进行裁剪，避免过大数值影响swiglu计算稳定性，默认值为7.0。</li></ul></td>
+      <td><ul><li>该参数为可选参数。</li><li>用于对输入进行裁剪，其值需大于0且小于无穷，避免过大数值影响swiglu计算稳定性，默认值为7.0。</li></ul></td>
       <td>FLOAT</td>
       <td>-</td>
       <td>-</td>
