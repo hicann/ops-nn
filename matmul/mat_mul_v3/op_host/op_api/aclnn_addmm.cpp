@@ -66,22 +66,24 @@ static const std::initializer_list<op::DataType> dtypeSupportList = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 static const std::initializer_list<op::DataType> dtypeSupportListWithoutBf16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
-
+static const std::initializer_list<op::DataType> dtypeSupportListMat1AndMat2 = {
+ 	op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 static inline bool CheckSocVersionIsSupportBf16(void)
 {
     return GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
            GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
 }
 
-static inline bool CheckDtypeValid(
+static inline bool CheckWeightNzDtypeValid(
     const aclTensor* self, const aclTensor* mat1, const aclTensor* mat2, const aclTensor* out)
 {
     bool bf16flag = CheckSocVersionIsSupportBf16();
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     auto dtypeList = bf16flag ? dtypeSupportList : dtypeSupportListWithoutBf16;
+    auto dtypeListMat1AndMat2 = bf16flag ? dtypeSupportListMat1AndMat2 : dtypeSupportListWithoutBf16;
     OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeList, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(mat1, dtypeList, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(mat2, dtypeList, return false); 
+    OP_CHECK_DTYPE_NOT_SUPPORT(mat1, dtypeListMat1AndMat2, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(mat2, dtypeListMat1AndMat2, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(out, dtypeList, return false);
     if (!bf16flag && (self->GetDataType() == op::DataType::DT_BF16 || mat1->GetDataType() == op::DataType::DT_BF16 ||
                       mat2->GetDataType() == op::DataType::DT_BF16 || out->GetDataType() == op::DataType::DT_BF16)) {
@@ -115,6 +117,10 @@ static inline bool CheckMatmul(const aclTensor* mat1, const aclTensor* mat2)
 
 static inline bool CheckBroadcast(const aclTensor* self, const aclTensor* mat1, const aclTensor* mat2)
 {
+    if (self->GetViewShape().GetDimNum() != 1 && self->GetViewShape().GetDimNum() != 2) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dim of self should be 1 or 2.");
+        return false;
+    }
     op::Shape matmulShape = {(mat1->GetViewShape())[0], (mat2->GetViewShape())[1]};
     OP_CHECK_BROADCAST_WITH_SHAPE(self, matmulShape, return false);
 
@@ -386,6 +392,10 @@ static inline bool CheckMatmulWeightNz(const aclTensor* mat1, const aclTensor* m
         return false;
     }
 
+    if (mat1->GetViewShape().GetDimNum() != 2 || mat2->GetViewShape().GetDimNum() != 2) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dim of mat1 and mat2 should be 2.");
+        return false;
+    }
     if ((mat1->GetViewShape())[1] != (mat2->GetViewShape())[0]) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different.");
         return false;
@@ -412,6 +422,9 @@ static aclnnStatus AddmmCheckWeightNzParam(AclnnAddmmTensor& addmmTensor, int8_t
             op::ToString(socVersion).GetString());
         return ACLNN_ERR_PARAM_INVALID;
     }
+    // 1. 检查参数是否为空指针
+    CHECK_RET(CheckNotNull(addmmTensor), ACLNN_ERR_PARAM_NULLPTR);
+    
     // 仅支持 self ND， mat1 Nd，mat2 Nz排布
     if (addmmTensor.self->GetStorageFormat() != Format::FORMAT_ND ||
         addmmTensor.mat1->GetStorageFormat() != Format::FORMAT_ND ||
@@ -423,12 +436,16 @@ static aclnnStatus AddmmCheckWeightNzParam(AclnnAddmmTensor& addmmTensor, int8_t
             op::ToString(addmmTensor.mat2->GetStorageFormat()).GetString());
         return ACLNN_ERR_PARAM_INVALID;
     }
-    // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(addmmTensor), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckDtypeValid(addmmTensor.self, addmmTensor.mat1, addmmTensor.mat2,
+    CHECK_RET(CheckWeightNzDtypeValid(addmmTensor.self, addmmTensor.mat1, addmmTensor.mat2,
         addmmTensor.out), ACLNN_ERR_PARAM_INVALID);
+
+    auto socRule = SocMatMulRule::getInstance();
+    CHECK_RET(socRule != nullptr, ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(
+        socRule->CheckInput(addmmTensor.mat1, addmmTensor.mat2, addmmTensor.self, addmmTensor.out, cubeMathType),
+        ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查mat1和mat2是否满足matmulweightNz条件
     CHECK_RET(CheckMatmulWeightNz(addmmTensor.mat1, addmmTensor.mat2), ACLNN_ERR_PARAM_INVALID);

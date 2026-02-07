@@ -51,10 +51,9 @@ static const int NZ_K0_VALUE_32 = 8;
 static const int NZ_STORAGE_PENULTIMATE_DIM = 16;
 static const size_t MAX_SUPPORT_MATMUL_DIMS_NUMS = 6;
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
+    DataType::DT_FLOAT16, DataType::DT_BF16};
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITHOUT_BF16 = {
     DataType::DT_FLOAT, DataType::DT_FLOAT16};
-
 inline static bool CheckNotNull(const aclTensor* self, const aclTensor* mat2, const aclTensor* out)
 {
     OP_CHECK_NULL(self, return false);
@@ -103,7 +102,7 @@ static bool CheckWeightNzDtype(const aclTensor* self, const aclTensor* mat2)
     return true;
 }
 
-inline static bool CheckDtypeValid(
+inline static bool CheckWeightNzDtypeValid(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType)
 {
     bool bf16flag = CheckSocVersionIsSupportBf16();
@@ -215,7 +214,7 @@ inline static aclnnStatus CheckParam(
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, mat2, out), ACLNN_ERR_PARAM_NULLPTR);
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckDtypeValid(self, mat2, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckWeightNzDtypeValid(self, mat2, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查Shape是否支持
     CHECK_RET(CheckShapeValid(self, mat2), ACLNN_ERR_PARAM_INVALID);
     // 4. 检查cubeMathType
@@ -364,11 +363,16 @@ aclnnStatus CheckWeightNzParam(const aclTensor* self, const aclTensor* mat2, con
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, mat2, out), ACLNN_ERR_PARAM_NULLPTR);
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckDtypeValid(self, mat2, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckWeightNzDtypeValid(self, mat2, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查Shape是否支持
     CHECK_RET(CheckWeightNzShapeValid(self, mat2), ACLNN_ERR_PARAM_INVALID);
     // 4. 检查cubeMathType
     CHECK_RET(CheckMathType(self, mat2, cubeMathType), ACLNN_ERR_PARAM_INVALID);
+    auto socRule = SocMatMulRule::getInstance();
+    CHECK_RET(socRule != nullptr, ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(
+        socRule -> CheckInput(self, mat2, nullptr, out, cubeMathType),
+        ACLNN_ERR_PARAM_INVALID);
     OP_LOGD("MatmulWeightNz check params success.");
     return ACLNN_SUCCESS;
 }
