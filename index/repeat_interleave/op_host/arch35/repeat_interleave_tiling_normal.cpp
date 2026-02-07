@@ -22,9 +22,11 @@ static constexpr int64_t MIN_CP_THRESHOLD = 128;
 static constexpr int64_t MIN_SHAPE_THRESHOLD = 64;
 static constexpr int64_t BATCH_TILING_REPEAT_SCALAR = 101;
 static constexpr int64_t BATCH_TILING_REPEAT_TENSOR = 102;
-static constexpr int64_t BATCH_TILING_SPLIT_REPEATS_SHAPE = 201;
+static constexpr int64_t BATCH_TILING_SPLIT_REPEATS_SHAPE_INT32 = 201;
+static constexpr int64_t BATCH_TILING_SPLIT_REPEATS_SHAPE_INT64 = 202;
 static constexpr int64_t MIN_TOTAL_REPEATS_SUM = 1024;
 static constexpr int64_t REDUCE_SUM_BUFFER = 32;
+static constexpr int64_t INT32_MAX_LIM = 2147483647;
 
 template <typename T1, typename T2>
 inline T1 CeilDiv(T1 a, T2 b)
@@ -89,9 +91,15 @@ void RepeatInterleaveTilingKernelNorm::GetUbFactor()
     }
     averageRepeatTime_ = yShape_.GetDim(axis_) / inputShape_.GetDim(axis_);
     int64_t ubFactor = 0;
+    ge::DataType computeDtype;
+    if (isUseInt64_ == 0) {
+        computeDtype = ge::DataType::DT_INT32;
+    } else if (isUseInt64_ == 1) {
+        computeDtype = ge::DataType::DT_INT64;
+    }
     if (isSplitShape_) {
         ubSize_ -= (totalCoreNum_ * ALIGN_COUNT * DOUBLE);
-        ubFactor = (ubSize_ - REDUCE_SUM_BUFFER * ge::GetSizeByDataType(repeatDtype_)) /
+        ubFactor = (ubSize_ - REDUCE_SUM_BUFFER * ge::GetSizeByDataType(computeDtype)) /
                    (ge::GetSizeByDataType(inputDtype_) * DOUBLE + ge::GetSizeByDataType(repeatDtype_));
     } else {
         ubFactor =
@@ -100,17 +108,33 @@ void RepeatInterleaveTilingKernelNorm::GetUbFactor()
     ubFactor_ = ubFactor / ALIGN_COUNT * ALIGN_COUNT;
     return;
 }
+
+void RepeatInterleaveTilingKernelNorm::UseInt64()
+{
+    uint64_t yShapeNum = 1;
+    for (int i = 0; i < yShape_.GetDimNum(); i++){
+        yShapeNum *= yShape_.GetDim(i);
+    }
+
+    if (repeatDtype_ == ge::DataType::DT_INT64 || yShapeNum > INT32_MAX_LIM){
+        isUseInt64_ = 1;
+    }
+    return;
+}
 ge::graphStatus RepeatInterleaveTilingKernelNorm::DoOpTiling()
 {
     MergDim();
+    UseInt64();
     GetUbFactor();
     return ge::GRAPH_SUCCESS;
 }
 
 uint64_t RepeatInterleaveTilingKernelNorm::GetTilingKey() const
 {
-    if (isSplitShape_) {
-        return BATCH_TILING_SPLIT_REPEATS_SHAPE;
+    if (isSplitShape_ && isUseInt64_ == 0) {
+        return BATCH_TILING_SPLIT_REPEATS_SHAPE_INT32;
+    } else if (isSplitShape_) {
+        return BATCH_TILING_SPLIT_REPEATS_SHAPE_INT64;
     }
     if (repeatsCount_ > -1) {
         return BATCH_TILING_REPEAT_SCALAR;
