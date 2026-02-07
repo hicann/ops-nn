@@ -139,14 +139,12 @@ ge::graphStatus HardtanhGradTiling::RunTiling()
     OP_CHECK_IF(CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"),
                return ge::GRAPH_FAILED);
     ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
+    dType = static_cast<uint64_t>(HardtanhGrad_TPL);
     if (this->outputDtype == ge::DT_FLOAT16) {
-        dType = static_cast<uint64_t>(HardtanhGrad_TPL_FP16);
         baseTilingResult = elewiseBaseTiling.DoTiling<HardtanhGradOp::HardtanhGradDag<half>::OpDag>(tiling->baseTiling);
     } else if (this->outputDtype == ge::DT_BF16) {
-        dType = static_cast<uint64_t>(HardtanhGrad_TPL_BF16);
         baseTilingResult = elewiseBaseTiling.DoTiling<HardtanhGradOp::HardtanhGradDag<bfloat16_t>::OpDag>(tiling->baseTiling);
     } else if (this->outputDtype == ge::DT_FLOAT) {
-        dType = static_cast<uint64_t>(HardtanhGrad_TPL_FP32);
         baseTilingResult = elewiseBaseTiling.DoTiling<HardtanhGradOp::HardtanhGradDag<float>::OpDag>(tiling->baseTiling);
     } else {
         OP_LOGE("HardtanhGrad", "output dtype not support");

@@ -17,25 +17,33 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
+static const std::vector<ge::DataType> dataType = {
+    ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT   
+};
+
+static const std::vector<ge::Format> dataFormat = {
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND
+};
+
 class HardtanhGrad : public OpDef {
     public:
         explicit HardtanhGrad(const char* name) : OpDef(name)
         {
             this->Input("result")
                 .ParamType(REQUIRED)
-                .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+                .DataType(dataType)
+                .Format(dataFormat)
+                .UnknownShapeFormat(dataFormat);
             this->Input("grad")
                 .ParamType(REQUIRED)
-                .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+                .DataType(dataType)
+                .Format(dataFormat)
+                .UnknownShapeFormat(dataFormat);
             this->Output("y")
                 .ParamType(REQUIRED)
-                .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+                .DataType(dataType)
+                .Format(dataFormat)
+                .UnknownShapeFormat(dataFormat);
             this->Attr("min_val")
                 .AttrType(REQUIRED)
                 .Float(-1.0);

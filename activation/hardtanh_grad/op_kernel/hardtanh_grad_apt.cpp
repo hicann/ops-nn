@@ -30,20 +30,8 @@ __global__ __aicore__ void hardtanh_grad(GM_ADDR result, GM_ADDR grad, GM_ADDR y
     REGISTER_TILING_DEFAULT(HardtanhGradTilingData);
 
     TPipe pipe;
-    if constexpr (dType == static_cast<uint64_t>(HardtanhGrad_TPL_FP16)) {
-        ElementwiseSch<schMode, HardtanhGradOp::HardtanhGradDag<half>::OpDag> sch(&(tilingData.baseTiling), &pipe);
-        sch.template SetVar<float, 0>(static_cast<float>(tilingData.minVal));
-        sch.template SetVar<float, 1>(static_cast<float>(tilingData.maxVal));
-        sch.Init(result, grad, y);
-        sch.Process();
-    } else if constexpr (dType == static_cast<uint64_t>(HardtanhGrad_TPL_BF16)) {
-        ElementwiseSch<schMode, HardtanhGradOp::HardtanhGradDag<bfloat16_t>::OpDag> sch(&(tilingData.baseTiling), &pipe);
-        sch.template SetVar<float, 0>(static_cast<float>(tilingData.minVal));
-        sch.template SetVar<float, 1>(static_cast<float>(tilingData.maxVal));
-        sch.Init(result, grad, y);
-        sch.Process();
-    } else if constexpr (dType == static_cast<uint64_t>(HardtanhGrad_TPL_FP32)) {
-        ElementwiseSch<schMode, HardtanhGradOp::HardtanhGradDag<float>::OpDag> sch(&(tilingData.baseTiling), &pipe);
+    if constexpr (dType == static_cast<uint64_t>(HardtanhGrad_TPL)) {
+        ElementwiseSch<schMode, HardtanhGradOp::HardtanhGradDag<DTYPE_RESULT>::OpDag> sch(&(tilingData.baseTiling), &pipe);
         sch.template SetVar<float, 0>(static_cast<float>(tilingData.minVal));
         sch.template SetVar<float, 1>(static_cast<float>(tilingData.maxVal));
         sch.Init(result, grad, y);

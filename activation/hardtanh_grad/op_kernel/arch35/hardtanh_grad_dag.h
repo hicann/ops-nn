@@ -26,7 +26,7 @@ using namespace Ops::Base;
 template <typename U, typename T = float>
 struct HardtanhGradDag {
     // calculate: torch.where((result <= min_val) | (result >= max_val), 0.0, grad)
-    using ConstValueZero = MAKE_CONST(T, 0.0);
+    using ConstValueZero = MAKE_CONST(U, 0.0);
     constexpr static std::int32_t COMPARE_MODE_LT = 0;
     constexpr static std::int32_t COMPARE_MODE_GT = 1;
     constexpr static std::int32_t COMPARE_MODE_NE = 5;
