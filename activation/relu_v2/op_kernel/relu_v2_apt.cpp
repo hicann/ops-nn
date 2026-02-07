@@ -53,6 +53,10 @@ extern "C" __global__ __aicore__ void relu_v2(GM_ADDR x, GM_ADDR y, GM_ADDR z, G
         ElementwiseSch<0UL, ReluV2DAG<uint8_t, half>::OpDag> sch(&(tilingData.baseTiling), &pipe);
         sch.Init(x, y, z);
         sch.Process();
+    } else if (TILING_KEY_IS(107UL)) {
+        ElementwiseSch<0UL, ReluV2MaxDAG<int64_t>::OpDag> sch(&(tilingData.baseTiling), &pipe);
+        sch.Init(x, y, z);
+        sch.Process();
     }
     return;
 }

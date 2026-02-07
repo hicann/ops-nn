@@ -37,6 +37,7 @@ constexpr uint64_t RELU_TILING_KEY_ELEMENTWISE_FP32 = 103;
 constexpr uint64_t RELU_TILING_KEY_ELEMENTWISE_INT8 = 104;
 constexpr uint64_t RELU_TILING_KEY_ELEMENTWISE_INT32 = 105;
 constexpr uint64_t RELU_TILING_KEY_ELEMENTWISE_UINT8 = 106;
+constexpr uint64_t RELU_TILING_KEY_ELEMENTWISE_INT64 = 107;
 const gert::Shape g_vec_1_shape = {1};
 
 class ReluV2Tiling {
@@ -168,6 +169,9 @@ ge::graphStatus ReluV2Tiling::RunTiling()
     } else if (this->outputDtype == ge::DT_UINT8) {
         res = elewiseBaseTiling.DoTiling<ReluV2DAG<uint8_t, half>::OpDag>(tiling->baseTiling);
         tilingContext->SetTilingKey(RELU_TILING_KEY_ELEMENTWISE_UINT8);
+    } else if (this->outputDtype == ge::DT_INT64) {
+        res = elewiseBaseTiling.DoTiling<ReluV2MaxDAG<int64_t>::OpDag>(tiling->baseTiling);
+        tilingContext->SetTilingKey(RELU_TILING_KEY_ELEMENTWISE_INT64);
     } else {
         OP_LOGE(tilingContext, "Data type check failed. Ge type：%d", this->outputDtype);
         return ge::GRAPH_FAILED;

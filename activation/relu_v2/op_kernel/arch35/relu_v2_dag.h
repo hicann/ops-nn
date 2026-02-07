@@ -43,5 +43,21 @@ struct ReluV2DAG {
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
+
+template <typename U>
+struct ReluV2MaxDAG {
+    using ConstValue = MAKE_CONST(int64_t, 0);
+
+    using OpCopyIn0 = Bind<Vec::CopyIn<U>, Placeholder::In0<U>>;
+    using OpResult0 = Bind<Vec::Maxs<U>, OpCopyIn0, ConstValue>;
+    using OpCopyOut0 = Bind<Vec::CopyOut<U>, Placeholder::Out0<U>, OpResult0>;
+
+    using OpResult1 = Bind<Vec::Compare<uint8_t, U, COMPARE_MODE_GT>, OpCopyIn0, ConstValue>;
+    using OpCopyOut1 = Bind<Vec::CopyOut<uint8_t>, Placeholder::Out1<uint1_t>, OpResult1>;
+
+    using Outputs = Elems<OpCopyOut0, OpCopyOut1>;
+    using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
+    using OpDag = DAGSch<Outputs, void, MemCfg>;
+};
 } // namespace ReluV2Op
 #endif // CANN_CUSTOM_OPS_RELU_V2_DAG_H
