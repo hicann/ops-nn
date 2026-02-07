@@ -234,11 +234,13 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__ void UpdateLcabCompute(
                 static_cast<float>(logAlphaGm[logAlphaBatchOffset + logAlphaInputOffset + 2 * targetLength]) +
                 static_cast<float>(logProbsGm[batchOffset + inputBatchOffset + currentTargetPrime]);
 
-            currentTargetPrime = GetTargetPrime<T, DataType, ThreadType>(
-                targetsGm, targetBatchOffset, static_cast<ThreadType>(1), 2 * targetLength - 1, blank);
-            tempGradGm[inputBatchOffset + batchOffset + currentTargetPrime] =
-                static_cast<float>(logAlphaGm[logAlphaBatchOffset + logAlphaInputOffset + 2 * targetLength - 1]) +
-                static_cast<float>(logProbsGm[batchOffset + inputBatchOffset + currentTargetPrime]);
+            if (targetLength > 0) {
+                currentTargetPrime = GetTargetPrime<T, DataType, ThreadType>(
+                    targetsGm, targetBatchOffset, static_cast<ThreadType>(1), 2 * targetLength - 1, blank);
+                tempGradGm[inputBatchOffset + batchOffset + currentTargetPrime] =
+                    static_cast<float>(logAlphaGm[logAlphaBatchOffset + logAlphaInputOffset + 2 * targetLength - 1]) +
+                    static_cast<float>(logProbsGm[batchOffset + inputBatchOffset + currentTargetPrime]);
+            }
         }
         for (ThreadType s = 0; s < alphaLength; s++) {
             if (s < 2 * targetLength + 1 && t != inputLength - 1) {
