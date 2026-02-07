@@ -159,11 +159,8 @@ static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *target,
 
 static const aclTensor *InputPreProcess(const aclTensor *input, int64_t reduction,
                                         op::DataType promoteType, aclOpExecutor *executor) {
-  auto inputContiguous = l0op::Contiguous(input, executor);
-  OP_CHECK(inputContiguous != nullptr,
-           OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The Contiguous return nullptr."), return nullptr);
 
-  auto inputCast = l0op::Cast(inputContiguous, promoteType, executor);
+  auto inputCast = l0op::Cast(input, promoteType, executor);
   OP_CHECK(inputCast != nullptr,
            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The cast return nullptr."), return nullptr);
 
@@ -260,15 +257,20 @@ aclnnStatus aclnnSmoothL1LossGetWorkspaceSize(const aclTensor *self, const aclTe
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
   }
-  ret = CheckShapeBroadcast(&self, &target, uniqueExecutor.get());
+  auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
+  CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+  auto targetContiguous = l0op::Contiguous(target, uniqueExecutor.get());
+  CHECK_RET(targetContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  ret = CheckShapeBroadcast(&selfContiguous, &targetContiguous, uniqueExecutor.get());
   CHECK_RET(ret == ACLNN_SUCCESS, ret);
   auto promoteType = op::PromoteType(self->GetDataType(), target->GetDataType());
-  auto selfpost = InputPreProcess(self, reduction, promoteType, uniqueExecutor.get());
+  auto selfpost = InputPreProcess(selfContiguous, reduction, promoteType, uniqueExecutor.get());
   OP_CHECK(selfpost != nullptr,
            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The self with InputPreProcess return nullptr."),
            return ACLNN_ERR_INNER_NULLPTR);
 
-  auto targetpost = InputPreProcess(target, reduction, promoteType, uniqueExecutor.get());
+  auto targetpost = InputPreProcess(targetContiguous, reduction, promoteType, uniqueExecutor.get());
   OP_CHECK(targetpost != nullptr,
            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The target with InputPreProcess return nullptr."),
            return ACLNN_ERR_INNER_NULLPTR);
