@@ -224,6 +224,22 @@ inline static aclnnStatus CheckParam(
     return ACLNN_SUCCESS;
 }
 
+static bool CheckFormat(const aclTensor* selfTensor, const aclTensor* mat2Tensor, const aclTensor* outTensor)
+{
+    auto selfFormat = selfTensor->GetStorageFormat();
+    auto outTensorFormat = outTensor->GetStorageFormat();
+    bool noSupportFormat =
+        ((selfFormat == Format::FORMAT_FRACTAL_NZ) || (outTensorFormat == Format::FORMAT_FRACTAL_NZ));
+    if (noSupportFormat) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            " The 'self' or 'out' tensor currently not supports NZ format"
+            "format");
+        return false;
+    }
+    return true;
+}
+
 inline static aclnnStatus CheckInputParams(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType)
 {
@@ -241,6 +257,9 @@ inline static aclnnStatus CheckInputParams(
 
     // 3. 检查Shape是否支持
     CHECK_RET(CheckShapeValid(self, mat2), ACLNN_ERR_PARAM_INVALID);
+
+    // 4. 检查self和mat2的format是否符合要求
+    CHECK_RET(CheckFormat(self, mat2, out), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }

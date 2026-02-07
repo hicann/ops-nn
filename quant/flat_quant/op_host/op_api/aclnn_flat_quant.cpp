@@ -228,6 +228,21 @@ static bool CheckShape(const aclTensor *x, const aclTensor *kroneckerP1, const a
     return true;
 }
 
+static bool CheckFormat(const aclTensor* x, const aclTensor* out, const aclTensor* quantScale)
+{
+    auto xFormat = x->GetStorageFormat();
+    auto outFormat = out->GetStorageFormat();
+    auto quantScaleFormat = quantScale->GetStorageFormat();
+    bool noSupportFormat =
+        ((xFormat == Format::FORMAT_FRACTAL_NZ) || (outFormat == Format::FORMAT_FRACTAL_NZ) ||
+         (quantScaleFormat == Format::FORMAT_FRACTAL_NZ));
+    if (noSupportFormat) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, " op [flat_quant] currently only supports ND format.");
+        return false;
+    }
+    return true;
+}
+
 static bool CheckNotNull(const aclTensor *x, const aclTensor *kroneckerP1, const aclTensor *kroneckerP2,
     const aclTensor *out, const aclTensor *quantScale)
 {
@@ -277,6 +292,7 @@ static aclnnStatus CheckParams(const aclTensor *x, const aclTensor *kroneckerP1,
     CHECK_RET(CheckNotNull(x, kroneckerP1, kroneckerP2, out, quantScale), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckDtypeValid(x, kroneckerP1, kroneckerP2, out, quantScale), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckShape(x, kroneckerP1, kroneckerP2, out, quantScale), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckFormat(x, out, quantScale), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 }; // namespace

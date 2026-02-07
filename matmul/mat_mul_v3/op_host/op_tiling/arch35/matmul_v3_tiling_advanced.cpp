@@ -215,6 +215,12 @@ ge::graphStatus MatMulV3Tiling::GetShape()
     int64_t mkDims[TWO_BATCH_DIM];
     int64_t knDims[TWO_BATCH_DIM];
 
+    // NZ异常校验
+    if (args_.aFormat == ge::FORMAT_FRACTAL_NZ || args_.outFormat == ge::FORMAT_FRACTAL_NZ) {
+        OP_LOGE(args_.opName, "Parameter format error: The 'self', and 'out' tensors not support NZ formats.");
+        return ge::GRAPH_FAILED;
+    }
+
     // 非连续校验
     if (!CheckIsNonContiguous(mkDims, knDims)) {
         return ge::GRAPH_FAILED;

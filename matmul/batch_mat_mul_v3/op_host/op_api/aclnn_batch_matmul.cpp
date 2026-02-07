@@ -131,6 +131,22 @@ static bool CheckShape(const aclTensor* selfTensor, const aclTensor* otherTensor
     return true;
 }
 
+static bool CheckFormat(const aclTensor* selfTensor, const aclTensor* otherTensor, const aclTensor* outTensor)
+{
+    auto selfFormat = selfTensor->GetStorageFormat();
+    auto outTensorFormat = outTensor->GetStorageFormat();
+    bool noSupportFormat =
+        ((selfFormat == Format::FORMAT_FRACTAL_NZ) || (outTensorFormat == Format::FORMAT_FRACTAL_NZ));
+    if (noSupportFormat) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            " The 'self' or 'out' tensor currently not supports NZ format"
+            "format");
+        return false;
+    }
+    return true;
+}
+
 static inline bool CheckBmmResIsEmpty(const aclTensor* self, const aclTensor* mat2)
 {
     return self->GetViewShape().GetDim(FIRST_DIM) == 0 || self->GetViewShape().GetDim(SECOND_DIM) == 0 ||
@@ -151,6 +167,9 @@ static aclnnStatus CheckParamsV2(const aclTensor* self, const aclTensor* mat2, c
 
     // 3. 检查self和mat2的shape是否符合要求
     CHECK_RET(CheckShape(self, mat2, out), ACLNN_ERR_PARAM_INVALID);
+    
+    // 4. 检查self和mat2的format是否符合要求
+    CHECK_RET(CheckFormat(self, mat2, out), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
