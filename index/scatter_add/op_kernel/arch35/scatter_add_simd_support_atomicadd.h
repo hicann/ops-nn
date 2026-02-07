@@ -108,6 +108,9 @@ __aicore__ inline void ScatterAddSIMDSupportAtomicAdd<T, U, updatesIsScalar, sca
             } else {
                 LocalTensor<T> updatesLocal = updatesQueue_.AllocTensor<T>();
                 uint64_t offset = blockOffsetUpdate + rowLoop * tilingData_.ubFactorRow * tilingData_.varShape[1] + colLoop * tilingData_.ubFactorCol;
+                auto MTE2WaitMTE3EventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
+                SetFlag<HardEvent::MTE3_MTE2>(MTE2WaitMTE3EventID);
+                WaitFlag<HardEvent::MTE3_MTE2>(MTE2WaitMTE3EventID);
                 CopyIn(updatesLocal, updatesGm_, offset, rows, cols, tilingData_.varShape[1] - cols);
                 updatesQueue_.EnQue<T>(updatesLocal);
     
@@ -117,6 +120,9 @@ __aicore__ inline void ScatterAddSIMDSupportAtomicAdd<T, U, updatesIsScalar, sca
                 WaitFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
 
                 if constexpr (scatterOp == SUB) {
+                    auto VWaitMTE2EventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+                    SetFlag<HardEvent::MTE2_V>(VWaitMTE2EventID);
+                    WaitFlag<HardEvent::MTE2_V>(VWaitMTE2EventID);
  	  	            NegateUpdate<T>(updatesLocal, static_cast<uint32_t>(rows * colsAlign));
                     auto MTE3WaitVEventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
                     SetFlag<HardEvent::V_MTE3>(MTE3WaitVEventID);
