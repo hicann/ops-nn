@@ -146,8 +146,6 @@ public:
     ~RmsNormQuantV2RegbaseTilingBase() override
     {}
 
-    bool CheckShapeBC(
-        const gert::StorageShape* srcBcShape, const gert::StorageShape* srcShape, string srcBcName, string srcName);
     ge::graphStatus CheckDtypeVaild(
         ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList, string srcName);
     bool CheckShapeNull();
@@ -157,9 +155,9 @@ public:
     bool CheckInputDtype();
     bool CheckOutputDtype();
     bool CheckShapeSame(const gert::StorageShape* src1Shape, const gert::StorageShape* src2Shape,
-    string nodeName, string src1Name, string src2Name);
+        string inNodeName, string inSrc1Name, string inSrc2Name);
     bool CheckShapeBC(const gert::StorageShape* srcBcShape, const gert::StorageShape* srcShape,
-    string nodeName, string srcBcName, string srcName);
+        string inNodeName, string inSrcBcName, string inSrcName);
     bool CheckAllDimsAreOne(const gert::StorageShape* storegeShape);
     ge::graphStatus SetInputParams();
     int64_t CalUBTotalSize(int64_t baseM, int64_t baseN, const uint32_t tilingType);
