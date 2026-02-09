@@ -1171,6 +1171,7 @@ build_single_example() {
       fi
       export CUST_LIBRARY_PATH="${ASCEND_HOME_PATH}/opp/vendors/${VENDOR_NAME}_nn/op_api/lib"     # 仅自定义算子需要
       export CUST_INCLUDE_PATH="${ASCEND_HOME_PATH}/opp/vendors/${VENDOR_NAME}_nn/op_api/include" # 仅自定义算子需要
+      export LD_LIBRARY_PATH=${CUST_LIBRARY_PATH}:${LD_LIBRARY_PATH}
       if [ -f ${EAGER_LIBRARY_PATH}/libascendcl.so ]; then
         g++ ${file} -I ${CUST_INCLUDE_PATH} -I ${INCLUDE_PATH} -I ${INCLUDE_PATH}/aclnnop -L ${CUST_LIBRARY_PATH} -L ${EAGER_LIBRARY_PATH} -lcust_opapi -lopapi_math -lascendcl -lnnopbase -o test_aclnn_${example} -Wl,-rpath=${CUST_LIBRARY_PATH}
       else
@@ -1239,12 +1240,14 @@ build_example() {
     example=${file#*"${pattern}"}
     example=${example%.*}
     examples+=($example)
+    local old_ld_path=${LD_LIBRARY_PATH}
     if [[ $EXAMPLE_NAME == "" || $EXAMPLE_NAME == $example ]]; then
       build_single_example || {
         echo -e "\n$dotted_line\nRun ${pattern}${example} failed. \n$dotted_line\n"
         failed_example+=(${example})
       }
     fi
+    export LD_LIBRARY_PATH=${old_ld_path}
   done
 
   examples=$(IFS=,; echo "${examples[*]}")
