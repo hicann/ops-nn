@@ -9,4 +9,4 @@
 #/
 message(STATUS "=== Debug: start ops.norm.inplace_add_layer_norm.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE inplace_add_layer_norm ACLNNTYPE aclnn DEPENDENCIES add_layer_norm)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE inplace_add_layer_norm ACLNNTYPE aclnn_exclude DEPENDENCIES add_layer_norm)

@@ -9,4 +9,4 @@
 #/
 message(STATUS "=== Debug: start ops.norm.quantize_add_layer_norm.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE quantize_add_layer_norm ACLNNTYPE aclnn)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE quantize_add_layer_norm ACLNNTYPE aclnn_exclude)

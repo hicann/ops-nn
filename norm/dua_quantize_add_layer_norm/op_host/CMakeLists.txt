@@ -9,4 +9,4 @@
 #/
 message(STATUS "=== Debug: start ops.norm.dua_quantize_add_layer_norm.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE dua_quantize_add_layer_norm ACLNNTYPE aclnn DEPENDENCIES quantize_add_layer_norm)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE dua_quantize_add_layer_norm ACLNNTYPE aclnn_exclude DEPENDENCIES quantize_add_layer_norm)
