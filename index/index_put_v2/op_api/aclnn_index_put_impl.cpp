@@ -1021,7 +1021,7 @@ static const aclTensor* IndexPutProcessArch3510(aclTensor* selfRef, const aclTen
         for (int i = 0; i < static_cast<int>(masks.size()); i++) {
             OP_LOGD("Process arch3510 masks %d is %ld.", i, masks[i]);
         }
-        if (deterministicValue == 0 && !(accumulate && selfRef->GetDataType() == op::DataType::DT_BOOL)) {
+        if (deterministicValue == 0) {
             OP_LOGD("Enter IndexPutV2 Process");
             return IndexPutV2Process(selfCast, valuesCast, indices, accumulate, masks, selfRef->GetViewShape().GetDimNum(), 
                                       isNonContiguous, allDefinedIndices, executor);
@@ -1098,7 +1098,7 @@ static bool IsIndexPutV2Scene(const aclTensor *selfRef, const bool accumulate)
       if (retRts != RT_ERROR_NONE) {
           deterministicValue = 0;
       }
-      if (deterministicValue == 0 && !(accumulate && selfRef->GetDataType() == op::DataType::DT_BOOL)) {
+      if (deterministicValue == 0) {
           return true;
       }
   }

@@ -57,6 +57,11 @@ extern "C" __global__ __aicore__ void index_put_v2(GM_ADDR inputX, GM_ADDR value
         KernelIndexNoContiguous<int64_t, IndexPutAdd<int64_t>, int32_t, uint32_t> op;
         op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
         op.Process(); 
+    } else if (TILING_KEY_IS(20011)) {
+        GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+        KernelIndexNoContiguous<bool, IndexPutAdd<bool>, int32_t, uint32_t> op;
+        op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
+        op.Process(); 
     } else if (TILING_KEY_IS(20102)) {
         GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
         KernelIndexNoContiguous<half, IndexPutAdd<half>, int64_t, uint32_t> op;
@@ -80,6 +85,11 @@ extern "C" __global__ __aicore__ void index_put_v2(GM_ADDR inputX, GM_ADDR value
     } else if (TILING_KEY_IS(20108)) {
         GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
         KernelIndexNoContiguous<int64_t, IndexPutAdd<int64_t>, int64_t, uint32_t> op;
+        op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
+        op.Process(); 
+    } else if (TILING_KEY_IS(20111)) {
+        GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+        KernelIndexNoContiguous<bool, IndexPutAdd<bool>, int64_t, uint32_t> op;
         op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
         op.Process(); 
     } else if (TILING_KEY_IS(2)) {
@@ -115,6 +125,11 @@ extern "C" __global__ __aicore__ void index_put_v2(GM_ADDR inputX, GM_ADDR value
     } else if (TILING_KEY_IS(10)) {
         GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
         KernelIndex<int64_t, IndexPutAdd<int64_t>, int32_t, uint32_t> op;
+        op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
+        op.Process();
+    } else if (TILING_KEY_IS(11)) {
+        GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
+        KernelIndex<bool, IndexPutAdd<bool>, int32_t, uint32_t> op;
         op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
         op.Process();
     } else if (TILING_KEY_IS(12)) {
@@ -155,6 +170,11 @@ extern "C" __global__ __aicore__ void index_put_v2(GM_ADDR inputX, GM_ADDR value
     } else if (TILING_KEY_IS(110)) {
         GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
         KernelIndex<int64_t, IndexPutAdd<int64_t>, int64_t, uint32_t> op;
+        op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
+        op.Process();
+    } else if (TILING_KEY_IS(111)) {
+        GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
+        KernelIndex<bool, IndexPutAdd<bool>, int64_t, uint32_t> op;
         op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
         op.Process();
     } else if (TILING_KEY_IS(112)) {

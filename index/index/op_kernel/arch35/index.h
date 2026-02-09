@@ -100,7 +100,9 @@ struct IndexPutAdd {
     __aicore__ inline void operator()(__gm__ T* output, __gm__ T* input, uint32_t i, uint32_t idx)
     {
         if constexpr (is_same<bool, T>::value) {
-            Simt::AtomicAnd(output + idx, input[i]);
+            if(input[i]){
+                output[idx] = true;
+            }
         } else {
             Simt::AtomicAdd(output + idx, input[i]);
         }
