@@ -57,84 +57,84 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>公式中的x。</td>
+      <td><ul>公式中的x。</ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输入</td>
-      <td>表示标签，公式中的y。</td>
+      <td><ul>表示标签，公式中的y。</ul></td>
       <td>INT64，INT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>weight</td>
       <td>可选输入</td>
-      <td><li>表示为每个类别指定的缩放权重，公式中的weight。<li>默认为全1。</td>
+      <td><ul><li>表示为每个类别指定的缩放权重，公式中的weight。<li>默认为全1。</ul></td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>reductionOptional</td>
       <td>可选属性</td>
-      <td><li>表示loss的归约方式。<li>默认值为“mean”。</td>
+      <td><ul><li>表示loss的归约方式。<li>默认值为“mean”。</ul></td>
       <td>STRING</td>
       <td>-</td>
     </tr>
     <tr>
       <td>ignoreIndex</td>
       <td>可选属性</td>
-      <td><li>指定忽略的标签。<li>默认值为-100。</td>
+      <td><ul><li>指定被忽略的标签值。<li>默认值为-100。</ul></td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>labelSmoothing</td>
       <td>可选属性</td>
-      <td><li>表示计算loss时的平滑量。<li>默认值为0。</td>
+      <td><ul><li>表示计算loss时的平滑量。<li>默认值为0。</ul></td>
       <td>DOUBLE</td>
       <td>-</td>
     </tr>
     <tr>
       <td>lseSquareScaleForZloss</td>
       <td>可选属性</td>
-      <td><li>表示zloss计算所需的scale。<li>当前暂不支持。</td>
+      <td><ul><li>表示zloss计算所需的scale。<li>当前暂不支持。</ul></td>
       <td>DOUBLE</td>
       <td>-</td>
     </tr>
     <tr>
       <td>returnZloss</td>
       <td>可选属性</td>
-      <td><li>控制是否返回zloss输出。Host侧的布尔值。需要输出zLoss时传入True，否则传入False。<li>当前暂不支持。</td>
+      <td><ul><li>控制是否返回zloss输出。Host侧的布尔值。需要输出zLoss时传入True，否则传入False。<li>当前暂不支持。</ul></td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
     <tr>
       <td>lossOut</td>
       <td>输出</td>
-      <td>表示输出损失，对应公式中的loss。</td>
+      <td><ul>表示输出损失，对应公式中的loss。</ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>logProbOut</td>
       <td>输出</td>
-      <td>输出给反向计算的输出，对应公式中的logProb。</td>
+      <td><ul>输出给反向计算的输出，对应公式中的logProb。</ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>zlossOut</td>
       <td>输出</td>
-      <td><li>表示辅助损失，对应公式中的zlossOut。<li>当前暂不支持。</td>
+      <td><ul><li>表示辅助损失，对应公式中的zlossOut。<li>当前暂不支持。</ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>lseForZlossOut</td>
       <td>输出</td>
-      <td><li>表示zloss场景输出给反向的Tensor，lseSquareScaleForZloss为0时输出为None，对应公式中的lse。<li>当前暂不支持。</td>
+      <td><ul><li>表示zloss场景输出给反向的Tensor，lseSquareScaleForZloss为0时输出为None，对应公式中的lse。<li>当前暂不支持。</ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>

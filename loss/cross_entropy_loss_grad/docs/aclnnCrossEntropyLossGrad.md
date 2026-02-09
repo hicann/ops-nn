@@ -18,96 +18,96 @@
 - 接口功能：aclnnCrossEntropyLoss的反向传播。
 - 计算公式：
 
-$$
-ignoreMask_{target(t)}=\begin{cases}
-1, &target(t) ≠ ignoreIndex \\
-0, &target(t) = ignoreIndex
-\end{cases}
-$$
+  $$
+  ignoreMask_{target(t)}=\begin{cases}
+  1, &target(t) ≠ ignoreIndex \\
+  0, &target(t) = ignoreIndex
+  \end{cases}
+  $$
 
-$$
-smoothLossGrad=\begin{cases}
-grad / sum(weight_{target}* ignoreMask) * labelSmoothing / C, &reduction = mean \\
-grad * labelSmoothing / C, &reduction = sum \\
-grad * labelSmoothing / C, &reduction = none
-\end{cases}
-$$
+  $$
+  smoothLossGrad=\begin{cases}
+  grad / sum(weight_{target}* ignoreMask) * labelSmoothing / C, &reduction = mean \\
+  grad * labelSmoothing / C, &reduction = sum \\
+  grad * labelSmoothing / C, &reduction = none
+  \end{cases}
+  $$
 
-$$
-lossOutGrad=\begin{cases}
-grad * (1-labelSmoothing) / sum(weight_{target}* ignoreMask) * ignoreMask, &reduction = mean \\
-grad * (1-labelSmoothing) * ignoreMask, &reduction = sum \\
-grad * (1-labelSmoothing) * ignoreMask, &reduction = none
-\end{cases}
-$$
+  $$
+  lossOutGrad=\begin{cases}
+  grad * (1-labelSmoothing) / sum(weight_{target}* ignoreMask) * ignoreMask, &reduction = mean \\
+  grad * (1-labelSmoothing) * ignoreMask, &reduction = sum \\
+  grad * (1-labelSmoothing) * ignoreMask, &reduction = none
+  \end{cases}
+  $$
 
-$$
-nllLossGrad = lossOutGrad * weight_{target}
-$$
+  $$
+  nllLossGrad = lossOutGrad * weight_{target}
+  $$
 
-$$
-logSoftmaxGradLossOutSubPart = exp(logProb) * nllLossGrad
-$$
+  $$
+  logSoftmaxGradLossOutSubPart = exp(logProb) * nllLossGrad
+  $$
 
-$$
-predictionsGradLossOut_{ij}=\begin{cases}
-nllLossGrad_i, & j=target(i)  \\
-0, & j ≠ target(i) 
-\end{cases}
-$$
+  $$
+  predictionsGradLossOut_{ij}=\begin{cases}
+  nllLossGrad_i, & j=target(i)  \\
+  0, & j ≠ target(i) 
+  \end{cases}
+  $$
 
-$$
-predictionsGradLossOut = logSoftmaxGradLossOutSubPart - predictionsGradLossOut
-$$
+  $$
+  predictionsGradLossOut = logSoftmaxGradLossOutSubPart - predictionsGradLossOut
+  $$
 
-$$
-smoothLossGrad = smoothLossGrad * ignoreMask
-$$
+  $$
+  smoothLossGrad = smoothLossGrad * ignoreMask
+  $$
 
-$$
-logSoftmaxGradSmoothLoss = smoothLossGrad * weight
-$$
+  $$
+  logSoftmaxGradSmoothLoss = smoothLossGrad * weight
+  $$
 
-$$
-predictionsGradSmoothLoss = exp(logProb) * sum(logSoftmaxGradSmoothLoss) - logSoftmaxGradSmoothLoss
-$$
+  $$
+  predictionsGradSmoothLoss = exp(logProb) * sum(logSoftmaxGradSmoothLoss) - logSoftmaxGradSmoothLoss
+  $$
 
-不涉及zloss场景输出：
+  不涉及zloss场景输出：
 
-$$
-xGrad_{out} = predictionsGradLossOut + predictionsGradSmoothLoss
-$$
+  $$
+  xGrad_{out} = predictionsGradLossOut + predictionsGradSmoothLoss
+  $$
 
-zloss场景：
+  zloss场景：
 
-$$
-gradZ=\begin{cases}
-grad + gradZloss, & 传入gradZloss  \\
-grad, & 不传gradZloss
-\end{cases}
-$$
+  $$
+  gradZ=\begin{cases}
+  grad + gradZloss, & 传入gradZloss  \\
+  grad, & 不传gradZloss
+  \end{cases}
+  $$
 
-$$
-zlossGrad=\begin{cases}
-gradZ / sum(ignoreMask), & &reduction = mean  \\
-gradZ, & &reduction = sum \\
-gradZ, & &reduction = none
-\end{cases}
-$$
+  $$
+  zlossGrad=\begin{cases}
+  gradZ / sum(ignoreMask), & &reduction = mean  \\
+  gradZ, & &reduction = sum \\
+  gradZ, & &reduction = none
+  \end{cases}
+  $$
 
-$$
-lseGrad = 2 * lseSquareScaleForZloss * lseForZloss * ignoreMask * zlossGrad
-$$
+  $$
+  lseGrad = 2 * lseSquareScaleForZloss * lseForZloss * ignoreMask * zlossGrad
+  $$
 
-$$
-zlossOutputGrad = exp(logProb) * lseGrad
-$$
+  $$
+  zlossOutputGrad = exp(logProb) * lseGrad
+  $$
 
-zloss场景输出：
+  zloss场景输出：
 
-$$
-xGrad_{out} = xGrad_{out} + zlossOutputGrad
-$$
+  $$
+  xGrad_{out} = xGrad_{out} + zlossOutputGrad
+  $$
 
 ## 函数原型
 
@@ -188,7 +188,7 @@ aclnnStatus aclnnCrossEntropyLossGrad(
         <td>target</td>
         <td>输入</td>
         <td>类索引，要求为一个维度为1D的Tensor。</td>
-        <td>取值范围为[0, C)。</td>
+        <td>N与input第零维相等。数值范围为[0, C)，当指定了ignoreIndex时，target的值也可以等于ignoreIndex。</td>
         <td>INT64</td>
         <td>ND</td>
         <td>(N,)</td>
@@ -196,8 +196,8 @@ aclnnStatus aclnnCrossEntropyLossGrad(
       </tr>
       <tr>
         <td>weightOptional</td>
-        <td>输入</td>
-        <td>可选输入，要求shape为一个1D的Tensor。</td>
+        <td>可选输入</td>
+        <td>要求shape为一个1D的Tensor。</td>
         <td>-</td>
         <td>FLOAT</td>
         <td>-</td>
@@ -206,8 +206,8 @@ aclnnStatus aclnnCrossEntropyLossGrad(
       </tr>
       <tr>
         <td>gradZlossOptional</td>
-        <td>输入</td>
-        <td>可选输入。参数与公式中gradZloss对应。zloss相关输入，如果正向有zloss的额外输出，反向有个grad_zloss的输入。</td>
+        <td>可选输入</td>
+        <td>参数与公式中gradZloss对应。zloss相关输入，如果正向有zloss的额外输出，反向有个grad_zloss的输入。</td>
         <td><ul><li>当reductionOptional为none时，要求为一个维度为1D的Tensor。</li><li>当reductionOptional为mean/sum时，要求为一个维度为0D的Tensor。</li><li>当前暂不支持。</li></ul></td>
         <td>FLOAT16、FLOAT、BFLOAT16</td>
         <td>ND</td>
@@ -216,8 +216,8 @@ aclnnStatus aclnnCrossEntropyLossGrad(
       </tr>
       <tr>
         <td>lseForZlossOptional</td>
-        <td>输入</td>
-        <td>可选输入。zloss相关输入，如果lse_square_scale_for_zloss非0，正向额外输出的lse_for_zloss中间结果给反向用于计算lse。</td>
+        <td>可选输入</td>
+        <td>zloss相关输入，如果lse_square_scale_for_zloss非0，正向额外输出的lse_for_zloss中间结果给反向用于计算lse。</td>
         <td><ul><li>要求为一个维度为1D的Tensor。</li><li>当前暂不支持。</td>
         <td>FLOAT16、FLOAT、BFLOAT16</td>
         <td>ND</td>
@@ -237,8 +237,8 @@ aclnnStatus aclnnCrossEntropyLossGrad(
       <tr>
         <td>ignoreIndex</td>
         <td>输入</td>
-        <td>指定忽略不影响输入梯度的目标值。</td>
-        <td>数值必须小于C，当小于零时视为无忽略标签。</td>
+        <td>指定被忽略的标签值。</td>
+        <td>-</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>

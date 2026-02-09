@@ -127,77 +127,77 @@
     <tr>
       <td>grad</td>
       <td>输入</td>
-      <td>正向输出loss的梯度，公式中的grad。</td>
+      <td><ul>正向输出loss的梯度，公式中的grad。</ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>logProb</td>
       <td>输入</td>
-      <td>正向输入的logSoftmax计算结果，公式中的logProb。</td>
+      <td><ul>正向输入的logSoftmax计算结果，公式中的logProb。</ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>target</td>
       <td>输入</td>
-      <td>类索引，公式中的target。</td>
+      <td><ul>类索引，公式中的target。</ul></td>
       <td>INT64</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>weight</td>
       <td>可选输入</td>
-      <td><li>表示为每个类别指定的缩放权重，公式中的weight。<li>默认为全1。</td>
+      <td><ul><li>表示为每个类别指定的缩放权重，公式中的weight。<li>默认为全1。</ul></td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>gradZloss</td>
       <td>可选输入</td>
-      <td><li>正向输出zloss的梯度，公式中的gradZloss。<li>当前暂不支持。</td>
+      <td><ul><li>正向输出zloss的梯度，公式中的gradZloss。<li>当前暂不支持。</ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>lseForZloss</td>
       <td>可选输入</td>
-      <td><li>zloss相关输入，如果lse_square_scale_for_zloss非0，正向额外输出的lse_for_zloss中间结果给反向用于计算lse，公式中的lseForZloss。<li>当前暂不支持。</td>
+      <td><ul><li>zloss相关输入，如果lse_square_scale_for_zloss非0，正向额外输出的lse_for_zloss中间结果给反向用于计算lse，公式中的lseForZloss。<li>当前暂不支持。</ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>reduction</td>
       <td>可选属性</td>
-      <td><li>指定要应用于输出的归约方式。<li>默认值为“mean”。</td>
+      <td><ul><li>指定要应用于输出的归约方式。<li>默认值为“mean”。</ul></td>
       <td>STRING</td>
       <td>-</td>
     </tr>
     <tr>
       <td>ignoreIndex</td>
       <td>可选属性</td>
-      <td><li>指定忽略不影响输入梯度的目标值。<li>默认值为-100。</td>
+      <td><ul><li>指定被忽略的标签值。<li>默认值为-100。</ul></td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>labelSmoothing</td>
       <td>可选属性</td>
-      <td><li>表示计算loss时的平滑量。<li>当前仅支持输入0.0。</td>
+      <td><ul><li>表示计算loss时的平滑量。<li>当前仅支持输入0.0。</ul></td>
       <td>DOUBLE</td>
       <td>-</td>
     </tr>
     <tr>
       <td>lseSquareScaleForZloss</td>
       <td>可选属性</td>
-      <td><li>表示zloss计算所需的scale。<li>当前暂不支持。</td>
+      <td><ul><li>表示zloss计算所需的scale。<li>当前暂不支持。</ul></td>
       <td>DOUBLE</td>
       <td>-</td>
     </tr>
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>梯度计算结果，对应公式中的out。</td>
+      <td><ul>梯度计算结果，对应公式中的out。</ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>

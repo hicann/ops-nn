@@ -118,7 +118,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>-</td>
     <td>INT32、INT64</td>
     <td>ND</td>
-    <td>(N)<br>N与input第零维相等，数值在[0, C)之间.</td>
+    <td>(N)<br>N与input第零维相等。数值范围为[0, C)，当指定了ignoreIndex时，target的值也可以等于ignoreIndex。</td>
     <td>-</td>
     </tr>
     <tr>
@@ -144,8 +144,8 @@ aclnnStatus aclnnCrossEntropyLoss(
     <tr>
     <td>ignoreIndex</td>
     <td>输入</td>
-    <td>指定忽略的标签。</td>
-    <td>数值必须小于C，当小于零时视为无忽略标签。</td>
+    <td>指定被忽略的标签值。</td>
+    <td>-</td>
     <td>-</td>
     <td>-</td>
     <td>-</td>
