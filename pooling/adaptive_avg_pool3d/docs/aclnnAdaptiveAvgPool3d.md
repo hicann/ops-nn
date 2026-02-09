@@ -133,8 +133,8 @@ aclnnStatus aclnnAdaptiveAvgPool3d(
       <td>传入的self、outputSize或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="5">161002</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
       <td>self的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -144,7 +144,13 @@ aclnnStatus aclnnAdaptiveAvgPool3d(
       <td>self的维度不等于4或5。</td>
     </tr>
     <tr>
-      <td>outputSize长度不为3</td>
+      <td>self或out的shape的某一维不大于0。</td>
+    </tr>
+    <tr>
+      <td>outputSize长度不为3。</td>
+    </tr>
+    <tr>
+      <td>self和out的NC维度不一致。</td>
     </tr>
     <tr>
       <td>out的shape与self的shape和outputSize推导出的shape结果不一致。</td>
