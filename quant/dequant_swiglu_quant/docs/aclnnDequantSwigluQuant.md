@@ -94,7 +94,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>shape为(N...,H)，最后一维需要是2的倍数，且x的维度必须大于1维。</td>
       <td>FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
-      <td>-</td>
+      <td>2-8</td>
       <td>x</td>
     </tr>
      <tr>

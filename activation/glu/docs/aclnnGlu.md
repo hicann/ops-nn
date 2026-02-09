@@ -78,12 +78,12 @@ aclnnStatus aclnnGlu(
       <td><ul><li>支持空Tensor。</li><li>Tensor的维度必须大于0，且shape必须在入参dim对应的维度上可以整除2，shape表示为$(*_1,N,*_2)$其中$*$表示任何数量的附加维，$N$表示dim指定的维度大小。</li></ul></td>
       <td>DOUBLE、FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>-</td>
+      <td>0-8</td>
       <td>√</td>
     </tr>
       <tr>
       <td>dim</td>
-      <td>输出</td>
+      <td>输入</td>
       <td>表示要拆分输入self的维度。</td>
       <td>取值范围[-self.dim，self.dim-1]。</td>
       <td>INT64</td>
@@ -98,7 +98,7 @@ aclnnStatus aclnnGlu(
       <td>数据类型必须可以由self cast得到，shape为$(*_1,M,*_2)$其中$*$表示self中对应维度，$M = N /2$。</td>
       <td>DOUBLE、FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>-</td>
+      <td>0-8</td>
       <td>√</td>
     </tr>
       <tr>

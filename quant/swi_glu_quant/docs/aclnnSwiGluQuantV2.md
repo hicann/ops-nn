@@ -132,7 +132,7 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>smoothScalesOptional</td>
       <td>输入</td>
       <td>量化的smooth_scales，公式中的smooth_scales。</td>
-      <td>shape支持[G, N]，[G, ]，其中G代表groupIndex分组数量，N为计算输入x的最后一维大小的二分之一。</td>
+      <td><ul><li>不支持空Tensor。</li><li>shape支持[G, N]，[G, ]，其中G代表groupIndex分组数量，N为计算输入x的最后一维大小的二分之一。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
