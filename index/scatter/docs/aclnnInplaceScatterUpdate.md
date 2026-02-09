@@ -4,12 +4,12 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                          |    ×  |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
+| <term> Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
 | <term>Atlas 推理系列产品 </term>                             |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    ×   |
+| <term>Atlas 训练系列产品</term>                              |    √     |
 
 ## 功能说明
 
@@ -58,10 +58,14 @@
 - **参数说明**：
 
   * data(aclTensor*, 计算输入|计算输出)：data只支持2-8维，且维度数需要与updates一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。不支持空Tensor。
-    * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持INT8、FLOAT16、FLOAT32、INT32、BFLOAT16。
+    * <term>Atlas 训练系列产品</term>：数据类型支持INT8、FLOAT16、FLOAT32、INT32。 
+    * <term> Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持INT8、FLOAT16、FLOAT32、INT32、BFLOAT16。 
+    * <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持INT8、UINT8、FLOAT16、FLOAT32、BFLOAT16、INT32。 
   * indices(aclTensor*, 计算输入)：数据类型支持INT32、INT64。目前仅支持零维、一维、二维。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。不支持空Tensor。仅支持非负索引。indices中的索引数据不支持越界。
   * updates(aclTensor*, 计算输入)：数据类型需要与data相同，shape的维度数需要与data shape的维度数相同。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。不支持空Tensor。
-    * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持INT8、FLOAT16、FLOAT32、INT32、BFLOAT16。
+    * <term>Atlas 训练系列产品</term>：数据类型支持INT8、FLOAT16、FLOAT32、INT32。 
+    * <term> Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持INT8、FLOAT16、FLOAT32、INT32、BFLOAT16。 
+    * <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持INT8、UINT8、FLOAT16、FLOAT32、BFLOAT16、INT32。
   * axis(int64_t, 计算输入)：用来scatter的维度，数据类型为INT64，取值范围为(-data_rank, data_rank)（data_rank为data的维度数），且axis不能为0。
   * workspaceSize(uint64_t *，出参)：返回需要在Device侧申请的workspace大小。
   * executor(aclOpExecutor **，出参)：返回op执行器，包含了算子计算流程。
