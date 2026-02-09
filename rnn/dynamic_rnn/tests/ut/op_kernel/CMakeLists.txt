@@ -9,5 +9,5 @@
 # ----------------------------------------------------------------------------
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCaseV2(dynamic_rnn dynamic_rnn_910b "ascend910B1" "-DDTYPE_X1=half -DDTYPE_X2=half -DDTYPE_BIAS=half -DDTYPE_Y=half" dynamic_rnn)
+    AddOpTestCase(dynamic_rnn "ascend910B1" "-DDTYPE_X1=half -DDTYPE_X2=half -DDTYPE_BIAS=half -DDTYPE_Y=half" dynamic_rnn)
 endif()
