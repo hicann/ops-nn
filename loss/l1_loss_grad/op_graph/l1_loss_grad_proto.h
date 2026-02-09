@@ -33,6 +33,11 @@ namespace ge {
 * @par Outputs:
 * y: A Tensor. Has the same type as "grads". \n
 
+* @attention Constraints:
+* @li In Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component and
+* Atlas A3 Training Series Product/Atlas A3 Inference Series Product,
+* broadcasting is not allowed between input grads, input predict and input label, the three inputs must have the same shape. \n
+
 * @par Third-party framework compatibility
 * Compatible with the Pytorch operator L1LossGrad.
 */
