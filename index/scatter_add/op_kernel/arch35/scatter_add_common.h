@@ -188,7 +188,7 @@ __aicore__ inline void BroadcastUpdatesScalar(LocalTensor<T> updatesLocal, Globa
 }
 
 template<typename IDX_T>
-__aicore__ void ComputeUniqueIdNumInt64(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+__aicore__ inline void ComputeUniqueIdNumInt64(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, selReg;
@@ -212,7 +212,7 @@ __aicore__ void ComputeUniqueIdNumInt64(__local_mem__ IDX_T* indicesAddr, __loca
 }
 
 template<typename IDX_T>
-__aicore__ void ComputeUniqueIdNumInt32(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+__aicore__ inline void ComputeUniqueIdNumInt32(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, selReg;
@@ -235,7 +235,7 @@ __aicore__ void ComputeUniqueIdNumInt32(__local_mem__ IDX_T* indicesAddr, __loca
 }
 
 template<typename IDX_T>
-__aicore__ void ComputeUniqueIdNumInt16(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+__aicore__ inline void ComputeUniqueIdNumInt16(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, orderReg2, selReg, selReg2;
@@ -262,7 +262,7 @@ __aicore__ void ComputeUniqueIdNumInt16(__local_mem__ IDX_T* indicesAddr, __loca
 }
 
 template<typename IDX_T>
-__aicore__ void ComputeUniqueIdNumUint8(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+__aicore__ inline void ComputeUniqueIdNumUint8(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, orderReg2, orderReg3, orderReg4;
@@ -300,7 +300,7 @@ __aicore__ void ComputeUniqueIdNumUint8(__local_mem__ IDX_T* indicesAddr, __loca
 }
 
 template<typename IDX_T>
-__aicore__ uint32_t ComputeUniqueIdNum(LocalTensor<IDX_T> indicesLocal, LocalTensor<int32_t> uniqueIdCountLocal, int64_t dataLen)
+__aicore__ inline uint32_t ComputeUniqueIdNum(LocalTensor<IDX_T> indicesLocal, LocalTensor<int32_t> uniqueIdCountLocal, int64_t dataLen)
 {
     __local_mem__ IDX_T* indicesAddr = (__local_mem__ IDX_T*)indicesLocal[(UB_AGLIN_VALUE / sizeof(IDX_T))].GetPhyAddr();
     __local_mem__ int32_t* uniqueIdCountsAddr = (__local_mem__ int32_t*)uniqueIdCountLocal.GetPhyAddr();
@@ -326,7 +326,7 @@ __aicore__ uint32_t ComputeUniqueIdNum(LocalTensor<IDX_T> indicesLocal, LocalTen
 }
 
 template<typename IDX_T>
-__aicore__ uint32_t SortAndComputeUniqueIdx(int64_t rowLen, LocalTensor<IDX_T> indicesSrcLocal, LocalTensor<IDX_T> sortIndicesLocal, 
+__aicore__ inline uint32_t SortAndComputeUniqueIdx(int64_t rowLen, LocalTensor<IDX_T> indicesSrcLocal, LocalTensor<IDX_T> sortIndicesLocal, 
     LocalTensor<int32_t> uniqueIdxLocal, LocalTensor<uint32_t> updatesOriginIdexLocal)
 {
     event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
@@ -337,6 +337,8 @@ __aicore__ uint32_t SortAndComputeUniqueIdx(int64_t rowLen, LocalTensor<IDX_T> i
     AscendC::Sort<IDX_T, true, sortConfig>(
         shiftSortLocal, updatesOriginIdexLocal, indicesSrcLocal, static_cast<uint32_t>(rowLen));
     Duplicate(sortIndicesLocal, (IDX_T)-1, shiftOffset);
+    SetFlag<HardEvent::V_S>(eventIDVToS);
+    WaitFlag<HardEvent::V_S>(eventIDVToS);
     shiftSortLocal(rowLen) = -1;
     
     event_t eventIdSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
