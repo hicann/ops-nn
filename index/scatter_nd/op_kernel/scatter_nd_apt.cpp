@@ -15,9 +15,11 @@
 
 #include "arch35/scatter_nd.h"
 #include "arch35/scatter_nd_deterministic.h"
+#include "arch35/scatter_nd_empty.h"
 
 using namespace ScatterNdSimt;
 using namespace ScatterNdDeterministic;
+using namespace ScatterNdEmpty;
 
 namespace {
 #define INT_INT_INT32_TILING_KEY     101
@@ -33,6 +35,8 @@ namespace {
 #define INT64_INT_INT64_TILING_KEY   221
 #define INT64_HALF_INT64_TILING_KEY  222
 #define INT64_FLOAT_INT64_TILING_KEY 223
+
+#define EMPTY_TENSOR_TILING_KEY      999
 }
 
 extern "C" __global__ __aicore__ void scatter_nd(GM_ADDR indices, GM_ADDR x, GM_ADDR shape, GM_ADDR y,
@@ -49,6 +53,7 @@ extern "C" __global__ __aicore__ void scatter_nd(GM_ADDR indices, GM_ADDR x, GM_
 
   TPipe pipe;
   KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
+
   if (TILING_KEY_IS(INT_INT_INT32_TILING_KEY)) {
     ScatterNd<int32_t, int32_t, uint32_t> op;
     op.Init(indices, x, shape, y, &tilingData, &pipe);
@@ -145,5 +150,8 @@ extern "C" __global__ __aicore__ void scatter_nd(GM_ADDR indices, GM_ADDR x, GM_
       op.Init(indices, x, shape, y, &tilingData, &pipe);
       op.Process(&tilingData);
     }
+  } else if (TILING_KEY_IS(EMPTY_TENSOR_TILING_KEY)) {
+      ScatterNdEmptyImpl<DTYPE_X> op(tilingData);
+      op.Init(y);
   }
 }

@@ -54,6 +54,8 @@ constexpr uint16_t THRESHOLD_TOP = 256;
 constexpr uint16_t THRESHOLD_MID = 128;
 constexpr uint16_t THRESHOLD_BOTTOM = 16;
 constexpr float THRESHOLD_FACTOR = 0.8;
+
+constexpr uint64_t TEMPLATE_EMPTY_TENSOR = 999;
 } // namespace
 
 static const std::unordered_map<ge::DataType, uint64_t> INDICE_DATA_TYPE_TO_INT {
@@ -141,14 +143,17 @@ ge::graphStatus ScatterNdTiling::GetShapeAttrsInfo() {
   indiceDtypeSize_ = ge::GetSizeByDataType(indiceDtype);
 
   preAxis_ = indiceShapeSize_ / rankSize_;
-  afterAxis_ = updateShapeSize_ / preAxis_;
+  if (preAxis_ != 0) {
+    afterAxis_ = updateShapeSize_ / preAxis_;
+  }
   outputSize_ = shapeValue.GetShapeSize();
-  OP_CHECK_IF((outputSize_ <= 0),
+  OP_CHECK_IF((outputSize_ == 0 && preAxis_ != 0),
           OP_LOGE(opName,
-         " shape should not be empty !"),
+         " shape or update should not be empty !"),
           return ge::GRAPH_FAILED);
-  rankFusedAxis_ = outputSize_ / afterAxis_;
-
+  if (afterAxis_ != 0) {  // avoid div 0 when preAxis_ is 0
+    rankFusedAxis_ = outputSize_ / afterAxis_;
+  }
   return ge::GRAPH_SUCCESS;
 }
 
@@ -363,6 +368,11 @@ ge::graphStatus ScatterNdTiling::ScatterNdDeterministicTiling()
 
 ge::graphStatus ScatterNdTiling::DoOpTiling()
 {
+  if (preAxis_ == 0) {
+    OP_LOGD(opName, "ScatterNdTiling for empty input is runing");
+    SetTilingData();
+    return ge::GRAPH_SUCCESS;
+  }
   if (isDeterminTemplate_) {
     OP_LOGD(opName, "ScatterNdDeterministicTiling is running");
     OP_CHECK_IF(ScatterNdDeterministicTiling() != ge::GRAPH_SUCCESS,
@@ -394,6 +404,11 @@ ge::graphStatus ScatterNdTiling::DoLibApiTiling()
 uint64_t ScatterNdTiling::GetTilingKey() const
 {
   uint64_t tilingKey = 0;
+  if (preAxis_ == 0) {
+    tilingKey = TEMPLATE_EMPTY_TENSOR;
+    OP_LOGD(opName, "tilingKey = %lld.", tilingKey);
+    return tilingKey;
+  }
   auto iter = INDICE_DATA_TYPE_TO_INT.find(indiceDtype);
   if (iter != INDICE_DATA_TYPE_TO_INT.end()) {
     tilingKey += iter->second;
@@ -435,7 +450,7 @@ ge::graphStatus ScatterNdTiling::PostTiling()
   workspaces[0] = workspaceSize_;
   context_->SetTilingKey(GetTilingKey());
   auto largeBlockDim = blockNum_ > clrBlockNum_ ? blockNum_ : clrBlockNum_;
-  if (isDeterminTemplate_) {
+  if (isDeterminTemplate_ || preAxis_ == 0) {
     largeBlockDim = coreNum_;
   }
   context_->SetBlockDim(largeBlockDim);
