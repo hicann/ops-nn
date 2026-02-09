@@ -357,7 +357,7 @@
     {"name":"GatherV3", "compute_units": ["ascend910_93", "ascend910b"], "auto_sync" : false},
     {"name":"GatherElements", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"GatherElementsV2", "compute_units": ["ascend910b", "ascend910_93", "kirinx90", "kirin9030"], "auto_sync" : true},
-    {"name":"GatherNd", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
+    {"name":"GatherNd", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend910_95": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"ForeachBinaryOp", "compute_units": ["ascend910b", "ascend950"], "auto_sync" : false},
     {"name":"GridSampler2DGrad", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
     {"name":"GridSampler3DGrad", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},

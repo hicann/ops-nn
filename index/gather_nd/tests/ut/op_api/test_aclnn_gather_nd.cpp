@@ -7,11 +7,12 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+
 #include <vector>
 #include <array>
 #include "gtest/gtest.h"
 
-#include "../../../op_host/op_api/aclnn_gather_nd.h"
+#include "../../../op_api/aclnn_gather_nd.h"
 
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
@@ -90,7 +91,7 @@ TEST_F(l2GatherNdTest, l2_gather_nd_case_dtype_inconsistency_02) {
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_dtype_not_support_01) {
+TEST_F(l2GatherNdTest, l2_gather_nd_case_dtype_not_support_01) {  
   auto selfDesc = TensorDesc({2, 2}, ACL_UINT32, ACL_FORMAT_ND);
   auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
   bool negativeIndexSupport = false;
@@ -103,7 +104,7 @@ TEST_F(l2GatherNdTest, l2_gather_nd_case_dtype_not_support_01) {
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_shape_not_support_01) {
+TEST_F(l2GatherNdTest, l2_gather_nd_case_shape_not_support_01) {  
   auto selfDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND);
   auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
   bool negativeIndexSupport = false;
@@ -116,7 +117,7 @@ TEST_F(l2GatherNdTest, l2_gather_nd_case_shape_not_support_01) {
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_shape_not_support_02) {
+TEST_F(l2GatherNdTest, l2_gather_nd_case_shape_not_support_02) {  
   auto selfDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND);
   auto indexDesc = TensorDesc({2, 3}, ACL_INT32, ACL_FORMAT_ND);
   bool negativeIndexSupport = false;
@@ -129,7 +130,7 @@ TEST_F(l2GatherNdTest, l2_gather_nd_case_shape_not_support_02) {
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_dimension_not_support_01) {
+TEST_F(l2GatherNdTest, l2_gather_nd_case_dimension_not_support_01) {  
   auto selfDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2}, ACL_INT64, ACL_FORMAT_ND);
   auto indexDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2, 2}, ACL_INT32, ACL_FORMAT_ND);
   bool negativeIndexSupport = false;
@@ -142,7 +143,7 @@ TEST_F(l2GatherNdTest, l2_gather_nd_case_dimension_not_support_01) {
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_dimension_not_support_02) {
+TEST_F(l2GatherNdTest, l2_gather_nd_case_dimension_not_support_02) {  
   auto selfDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2, 2}, ACL_INT64, ACL_FORMAT_ND);
   auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
   bool negativeIndexSupport = false;

@@ -1422,7 +1422,7 @@
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>对于输入张量 self 和 输入张量 indices，将数据切片收集到输出张量out中。</td>
   </tr>
   <tr>
     <td>index</td>

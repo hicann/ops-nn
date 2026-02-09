@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ const aclTensor *GatherNd(const aclTensor *self, const aclTensor *indices, aclOp
 
   // 根据推导出的输出shape申请输出tensor
   auto gatherNdOut = executor->AllocTensor(outShape, self->GetDataType(), op::Format::FORMAT_ND);
-  auto retAicore =
+  auto retAicore = 
     ADD_TO_LAUNCHER_LIST_AICORE(GatherNd,
                                 OP_INPUT(self, indices),
                                 OP_OUTPUT(gatherNdOut),
