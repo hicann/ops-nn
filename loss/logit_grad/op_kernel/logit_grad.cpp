@@ -25,7 +25,7 @@ extern "C" __global__ __aicore__ void logit_grad(GM_ADDR x, GM_ADDR dy, GM_ADDR 
 
     GM_ADDR userWs = nullptr;
 
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
     if (TILING_KEY_IS(1)) {
         LogitGradND<half> op;
         op.Init(x, dy, dx, userWs, &tilingData);

@@ -61,7 +61,7 @@ TEST_F(logit_grad_test, test_logit_grad_float_0)
     uint64_t tilingKey = 2;
     uint32_t blockDim = 1;
     size_t workspaceFileSize = 16781184;
-    size_t tilingDataSize = sizeof(LogitGradTilingDataTest);
+    size_t tilingDataSize = sizeof(LogitGradTilingDataTest) + 1024;
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
@@ -113,7 +113,7 @@ TEST_F(logit_grad_test, test_logit_grad_float16_1)
     uint64_t tilingKey = 1;
     uint32_t blockDim = 1;
     size_t workspaceFileSize = 16781184;
-    size_t tilingDataSize = sizeof(LogitGradTilingDataTest);
+    size_t tilingDataSize = sizeof(LogitGradTilingDataTest) + 1024;
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
@@ -165,7 +165,7 @@ TEST_F(logit_grad_test, test_logit_grad_bfloat16_2)
     uint64_t tilingKey = 3;
     uint32_t blockDim = 1;
     size_t workspaceFileSize = 16781184;
-    size_t tilingDataSize = sizeof(LogitGradTilingDataTest);
+    size_t tilingDataSize = sizeof(LogitGradTilingDataTest) + 1024;
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
