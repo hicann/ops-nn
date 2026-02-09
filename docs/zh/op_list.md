@@ -1366,6 +1366,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/embedding_dense_grad/README.md">embedding_dense_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现Embedding的反向计算，将相同索引indices对应grad的一行累加到out上。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/embedding_dense_grad_v2/README.md">embedding_dense_grad_v2</a></td>
     <td>✓</td>
     <td>✓</td>
