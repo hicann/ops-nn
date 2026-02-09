@@ -149,10 +149,10 @@ ge::graphStatus EmbeddingBagRegBaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inclueLastOfstPtr);
     inclueLastOfst_ = *inclueLastOfstPtr;
 
-    auto paddingIdxPtr = attrs->GetAttrPointer<bool>(ATTR_INCLUDE_LAST_OFFSET);
+    auto paddingIdxPtr = attrs->GetAttrPointer<int64_t>(ATTR_PADD_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, paddingIdxPtr);
     paddingIdx_ = *paddingIdxPtr;
-
+    
     if (embeddingDim_ * weightTypeSize_ <= MAX_SIMT_EMBDDING_BYTES) {
         usedCoreNum_ = totalCoreNum_;
         isSimt_ = 1;
@@ -163,6 +163,9 @@ ge::graphStatus EmbeddingBagRegBaseTiling::GetShapeAttrsInfo()
     } else if (indiceShape.GetDimNum() == DIM_TWO) {
         numBags_ = indiceShape.GetDim(0);
         indiceSize_ = indiceShape.GetDim(1);
+    }
+    if (paddingIdx_ < 0) {
+        paddingIdx_ = paddingIdx_ + numEmbeddings_;
     }
     return ge::GRAPH_SUCCESS;
 }

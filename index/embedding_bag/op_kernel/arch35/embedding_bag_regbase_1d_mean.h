@@ -66,6 +66,7 @@ public:
         pipe_.InitBuffer(this->outQueueY_, 1, tiling_.weightDimFactor * sizeof(T));
         pipe_.InitBuffer(this->outQueueOffset2bag_, tiling_.weightRowFactor * sizeof(I));
         pipe_.InitBuffer(this->outQueueBagSize_, 1, (tiling_.offsetsFactor + 1) * sizeof(I));
+        pipe_.InitBuffer(this->maxIndicesCalcBuf_, (tiling_.weightRowFactor) * sizeof(I));
         SyncAll();
     }
 
