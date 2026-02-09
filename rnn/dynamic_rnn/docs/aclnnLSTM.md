@@ -17,13 +17,15 @@
 - 计算公式：
   
   $$
-  f_t =\sigma(W_f[h_{t-1}, x_t] + b_f) （1）\\
-  i_t =\sigma(W_i[h_{t-1}, x_t] + b_i) （2）\\
-  o_t =\sigma(W_o[h_{t-1}, x_t] + b_o) （3）\\
-  \tilde{c}_t =tanh(W_c[h_{t-1}, x_t] + b_c) （4）\\
-  c_t =f_t ⊙ c_{t-1} + i_t ⊙ \tilde{c}_t （5）\\
-  c_{o}^{t} =tanh(c_t) （6）\\
-  h_t =o_t ⊙ c_{o}^{t} （7）\\
+  \begin{aligned}
+  (1)\qquad f_t &=\sigma(W_f[h_{t-1}, x_t] + b_f) \\
+  (2)\qquad     i_t &=\sigma(W_i[h_{t-1}, x_t] + b_i) \\
+  (3)\qquad     o_t &=\sigma(W_o[h_{t-1}, x_t] + b_o) \\
+  (4)\qquad     \tilde{c}_t &=tanh(W_c[h_{t-1}, x_t] + b_c) \\
+  (5)\qquad     c_t &=f_t ⊙ c_{t-1} + i_t ⊙ \tilde{c}_t \\
+  (6)\qquad     c_{o}^{t} &=tanh(c_t) \\
+  (7)\qquad     h_t &=o_t ⊙ c_{o}^{t} \\
+  \end{aligned}
   $$
 
   - $x_t ∈ R^{d}$：LSTM单元的输入向量。
@@ -41,28 +43,28 @@
 
 ```Cpp
 aclnnStatus aclnnLSTMGetWorkspaceSize(
-    const aclTensor *input,
+    const aclTensor     *input,
     const aclTensorList *params,
     const aclTensorList *hx,
-    const aclTensor *batchSizes,
-    bool has_biases,
-    int64_t numLayers,
-    double droupout,
-    bool train,
-    bool bidirectional,        
-    bool batch_first,
-    aclTensor *output,
-    aclTensor *hy,
-    aclTensor *cy,
-    aclTensorList *iOut,  
-    aclTensorList *jOut, 
-    aclTensorList *fOut,
-    aclTensorList *oOut,
-    aclTensorList *hOut,
-    aclTensorList *cOut,
-    aclTensorList *tanhCOut,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor);
+    const aclTensor     *batchSizes,
+    bool                 has_biases,
+    int64_t              numLayers,
+    double               droupout,
+    bool                 train,
+    bool                 bidirectional,        
+    bool                 batch_first,
+    aclTensor           *output,
+    aclTensor           *hy,
+    aclTensor           *cy,
+    aclTensorList       *iOut,  
+    aclTensorList       *jOut, 
+    aclTensorList       *fOut,
+    aclTensorList       *oOut,
+    aclTensorList       *hOut,
+    aclTensorList       *cOut,
+    aclTensorList       *tanhCOut,
+    uint64_t            *workspaceSize,
+    aclOpExecutor       **executor);
 ```
 
 ```Cpp
@@ -78,15 +80,15 @@ aclnnStatus aclnnLSTM(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1420px"><colgroup>
-  <col style="width: 201px">
-  <col style="width: 115px">
-  <col style="width: 200px">
-  <col style="width: 240px">
-  <col style="width: 177px">
-  <col style="width: 104px">
-  <col style="width: 238px">
-  <col style="width: 145px">
+  <table style="undefined;table-layout: fixed; width: 1570px"><colgroup>
+  <col style="width: 134px">
+  <col style="width: 121px">
+  <col style="width: 263px">
+  <col style="width: 469px">
+  <col style="width: 169px">
+  <col style="width: 128px">
+  <col style="width: 142px">
+  <col style="width: 144px">
   </colgroup>
   <thead>
     <tr>
@@ -104,7 +106,22 @@ aclnnStatus aclnnLSTM(
       <td>input</td>
       <td>输入</td>
       <td>LSTM单元的输入向量。</td>
-      <td><ul><li>若batchSizes传入空指针：<br>当batch_first=False时shape应为（time_step, batch_size, input_size）, 否则为（batch_size, time_step, input_size）。其中，batch_first表示batch是否在第一维；time_step表示时间维度；batch_size表示每个时刻需要处理的batch数量；input_size表示输入的特征数量。</li><li>若传入有效batchSizes：<br>shape应为(time_step * batch_size, input_size)，其内存排列与(time_step, batch_size, input_size)相同。</li></ul></td>
+      <td>
+      <ul>
+          <li><strong>若batchSizes传入空指针：</strong>
+            <br>shape格式根据batch_first参数区分：
+            <ul>
+              <li>batch_first=False：(time_step, batch_size, input_size)</li>
+              <li>batch_first=True：(batch_size, time_step, input_size)</li>
+            </ul>
+            说明：batch_first表示batch维度是否在第一维；time_step为时间维度；batch_size为每个时刻处理的样本数；input_size为输入特征数。
+          </li>
+          <li><strong>若传入有效batchSizes：</strong>
+            <br>shape格式：(time_step * batch_size, input_size)
+            <br>说明：内存排列与(time_step, batch_size, input_size)相同。
+          </li>
+      </ul>
+      </td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>
@@ -114,7 +131,31 @@ aclnnStatus aclnnLSTM(
       <td> params</td>
       <td>输入</td>
       <td>表示LSTM运算中的权重和偏置张量列表。</td>
-      <td>列表长度为 2 * D * B * num_layers, 其中，num_layers对应参数numLayers，表示LSTM层数，bidirection为True时 D = 2， 否则 D = 1, has_biases为True时 B = 2, 否则 B = 1；其中bidirection为True， 且has_biases为True时，参数排布如下：[weight_ih_0, weight_hh_0, bias_ih_0, bias_hh_0, weight_ih_reverse_0, weight_hh_reverse_0, bias_ih_reverse_0, bias_hh_reverse_0], 其中 weight_ih_0 表示第0层输入的权重参数，其shape为（4 * hidden_size, cur_input_size），其中cur_intput_size 表示LSTM每层计算时的输入的特征数量（首层为input_size, 后续层为hidden_size, 如果bidirection为True，则为2 * hidden_size）； weight_hh_0 表示第0层隐藏层的权重参数，其shape为（4 * hidden_size, hidden_size）,bias_ih_0 表示第0层输入权重参数的偏置，其shape为（4 * hidden_size）,bias_hh_0 表示第0层隐藏层权重参数的偏置，其shape为（4 * hidden_size）。</td>
+  <td>
+  <ul>
+    <p>列表长度计算公式：<strong>2 * D * B * num_layers</strong></p>
+    <ul>
+    <li>num_layers：对应参数numLayers，表示LSTM层数；</li>
+    <li>D：bidirection=True时D=2，否则D=1；</li>
+    <li>B：has_biases=True时B=2，否则B=1。</li>
+    </ul>
+    
+    <p><strong>特殊场景（bidirection=True 且 has_biases=True）：</strong></p>
+    <p style="padding-left: 20px;">
+      参数排布：[weight_ih_0, weight_hh_0, bias_ih_0, bias_hh_0, weight_ih_reverse_0, weight_hh_reverse_0, bias_ih_reverse_0, bias_hh_reverse_0]
+    </p>
+    
+    <p><strong>核心参数说明（以第0层为例）：</strong></p>
+    <ul>
+    <li>weight_ih_0：第0层输入权重参数，shape=(4 * hidden_size, cur_input_size)
+      <br>注：cur_input_size为每层输入特征数（首层=input_size；后续层=hidden_size；双向时=2*hidden_size）
+    </li>
+    <li>weight_hh_0：第0层隐藏层权重参数，shape=(4 * hidden_size, hidden_size)</li>
+    <li>bias_ih_0：第0层输入权重偏置，shape=(4 * hidden_size)</li>
+    <li>bias_hh_0：第0层隐藏层权重偏置，shape=(4 * hidden_size)</li>
+    </ul>
+    </ul>
+  </td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>/</td>
@@ -122,8 +163,8 @@ aclnnStatus aclnnLSTM(
     </tr>
       <tr>
       <td>hx</td>
-      <td>输入</td>
-      <td>可选入参，表示LSTM运算中的初始hidden和cell状态列表。</td>
+      <td>可选输入</td>
+      <td>表示LSTM运算中的初始hidden和cell状态列表。</td>
       <td>列表长度为2，列表中每个shape支持三维（D * num_layers, batch_size, hidden_size），若输入为空，则表示输入的初始hidden和cell状态为0。</td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
@@ -132,8 +173,8 @@ aclnnStatus aclnnLSTM(
     </tr>
       <tr>
       <td>batchSizes</td>
-      <td>输入</td>
-      <td>可选入参。表示每个时间步实际参与计算的有效Batch数。传入nullptr时，代表输入input为定长模式数据，否则为不定长模式。</td>
+      <td>可选输入</td>
+      <td>表示每个时间步实际参与计算的有效Batch数。传入nullptr时，代表输入input为定长模式数据，否则为不定长模式。</td>
       <td>shape为(time_step,)。其中元素应按降序排列，元素值为正整数且最大不超过总Batch数量，且第一位元素值应与总Batch数量相等。</td>
       <td>INT64</td>
       <td>ND</td>
@@ -204,7 +245,7 @@ aclnnStatus aclnnLSTM(
       <td>output</td>
       <td>输出</td>
       <td>表示LSTM运算中最后一层每个时间步的输出结果。</td>
-      <td><ul><li>若batchSizes传入空指针：<br>当batch_first=False时shape支持三维（time_step, batch_size, D * hidden_size），否则支持三维（batch_size,time_step, D * hidden_size）。</li><li>若传入有效batchSizes：<br>shape应为(time_step, batch_size, D * hidden_size)。</li></ul></td>
+      <td><ul><li>若batchSizes传入空指针：<br>当batch_first=False时shape支持三维（time_step, batch_size, D * hidden_size），否则支持三维（batch_size, time_step, D * hidden_size）。</li><li>若传入有效batchSizes：<br>shape应为(time_step, batch_size, D * hidden_size)。</li></ul></td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>
@@ -214,7 +255,7 @@ aclnnStatus aclnnLSTM(
       <td>hy</td>
       <td>输出</td>
       <td>表示进行LSTM运算中每层最后一个时间步的隐藏层（公式（7）的输出）。</td>
-      <td><ul><li>shape支持三维（D * num_layers, batch_size, hidden_size）</li></ul></td>
+      <td>shape支持三维（D * num_layers, batch_size, hidden_size</td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>
@@ -224,7 +265,27 @@ aclnnStatus aclnnLSTM(
       <td>cy</td>
       <td>输出</td>
       <td>表示进行LSTM运算中每层最后一个时间步的Cell状态（公式（5）的输出）。</td>
-      <td><ul><li>shape支持三维（D * num_layers, batch_size, hidden_size）</li></ul></td>
+      <td>shape支持三维（D * num_layers, batch_size, hidden_size</td>
+      <td>FLOAT16、FLOAT32</td>
+      <td>ND</td>
+      <td>3</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>hy</td>
+      <td>输出</td>
+      <td>表示进行LSTM运算中每层最后一个时间步的隐藏层（公式（7）的输出）。</td>
+      <td>shape支持三维（D * num_layers, batch_size, hidden_size</td>
+      <td>FLOAT16、FLOAT32</td>
+      <td>ND</td>
+      <td>3</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>cy</td>
+      <td>输出</td>
+      <td>表示进行LSTM运算中每层最后一个时间步的Cell状态（公式（5）的输出）。</td>
+      <td>shape支持三维（D * num_layers, batch_size, hidden_size</td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>
@@ -327,6 +388,7 @@ aclnnStatus aclnnLSTM(
 - **返回值：**
 
     aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
     第一段接口会完成入参校验，出现以下场景时报错：
     <table style="undefined;table-layout: fixed; width: 1048px"><colgroup>
     <col style="width: 319px">
