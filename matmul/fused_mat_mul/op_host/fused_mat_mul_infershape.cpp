@@ -105,10 +105,10 @@ ge::graphStatus InferShapeForFusedMatMul(InferShapeContext* context)
     int idx_k_b = *trans_b ? 0 : 1;
     int idx_n = *trans_b ? 1 : 0;
 
-    int a_m = shape_a->GetDim(dim_a - idx_m - 1);
-    int b_n = shape_b->GetDim(dim_b - idx_n - 1);
-    int a_k = shape_a->GetDim(dim_a - idx_k_a - 1);
-    int b_k = shape_b->GetDim(dim_b - idx_k_b - 1);
+    int64_t a_m = shape_a->GetDim(dim_a - idx_m - 1);
+    int64_t b_n = shape_b->GetDim(dim_b - idx_n - 1);
+    int64_t a_k = shape_a->GetDim(dim_a - idx_k_a - 1);
+    int64_t b_k = shape_b->GetDim(dim_b - idx_k_b - 1);
 
     OP_CHECK_IF(
         a_k != b_k,
