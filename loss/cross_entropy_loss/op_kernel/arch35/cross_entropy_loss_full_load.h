@@ -552,80 +552,50 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
         minValue = -65504;
     }
 
-    if (cNum < vfLen) {
-        __VEC_SCOPE__
-        {
-            AscendC::MicroAPI::RegTensor<float> maxReg;
-            AscendC::MicroAPI::RegTensor<T1> inputReg;
-            AscendC::MicroAPI::RegTensor<T1> inputRegTemp;
-            AscendC::MicroAPI::RegTensor<float> inputReg32;
-            AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<float>(tailNum);
-            AscendC::MicroAPI::MaskReg mergePreg = AscendC::MicroAPI::CreateMask<float, MaskPattern::VL1>();
+    __VEC_SCOPE__
+	{
+		AscendC::MicroAPI::RegTensor<T1> inputReg1;
+		AscendC::MicroAPI::RegTensor<float> maxReg;
+        AscendC::MicroAPI::RegTensor<T1> inputReg;
+        AscendC::MicroAPI::RegTensor<T1> inputRegLowest;
+        AscendC::MicroAPI::RegTensor<T1> inputRegHighest;
+        AscendC::MicroAPI::RegTensor<float> inputRegLowest32;
+        AscendC::MicroAPI::RegTensor<float> inputRegHighest32;
+        AscendC::MicroAPI::RegTensor<float> maxRegTemp;
 
-            for (uint16_t i = 0; i < aTimes; i++) {
-                AscendC::MicroAPI::DataCopy(inputReg, inputAddr + i * AlignC);
-                if constexpr (sizeof(T1) == sizeof(half)) {
-                    AscendC::MicroAPI::UnPack(
-                        (AscendC::MicroAPI::RegTensor<int32_t>&)inputRegTemp,
-                        (AscendC::MicroAPI::RegTensor<int16_t>&)inputReg);
-                    AscendC::MicroAPI::Cast<float, T1, castTrait2>(inputReg32, inputRegTemp, preg);
-                    AscendC::MicroAPI::ReduceMax(maxReg, inputReg32, preg);
-                } else {
-                    AscendC::MicroAPI::ReduceMax(maxReg, inputReg, preg);
-                }
-                DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(maxAddr + i, maxReg, mergePreg);
+		AscendC::MicroAPI::MaskReg pregMain = AscendC::MicroAPI::CreateMask<T1, AscendC::MicroAPI::MaskPattern::ALL>();
+		AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<T1>(tailNum);
+		AscendC::MicroAPI::MaskReg pregReduce = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg mergePreg = AscendC::MicroAPI::CreateMask<float, MaskPattern::VL1>();
+		AscendC::MicroAPI::MaskReg comparePreg;
+
+		for(uint16_t i = 0; i < aTimes; i++) {
+			AscendC::MicroAPI::Duplicate(inputReg, minValue);
+            AscendC::MicroAPI::DataCopy(inputReg1, inputAddr + i * AlignC + repeatTimes * vfLen);
+            AscendC::MicroAPI::Max(inputReg1, inputReg, inputReg1, preg);
+            AscendC::MicroAPI::Copy<T1, AscendC::MicroAPI::MaskMergeMode::MERGING>(inputReg, inputReg1, preg);
+            for(uint16_t j = 0; j < repeatTimes; j++) {
+                AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<T1>(i, AlignC, j, vfLen);
+                AscendC::MicroAPI::DataCopy(inputReg1, inputAddr1, offset);
+                AscendC::MicroAPI::Max(inputReg, inputReg1, inputReg, pregMain);
             }
-        }
-    } else {
-        __VEC_SCOPE__
-        {
-            AscendC::MicroAPI::RegTensor<T1> inputRegT1;
-            AscendC::MicroAPI::RegTensor<T1> inputReg;
-            AscendC::MicroAPI::RegTensor<float> maxReg32;
-            AscendC::MicroAPI::RegTensor<T1> maxRegTemp;
-            AscendC::MicroAPI::RegTensor<float> maxRegOne32;
-            AscendC::MicroAPI::RegTensor<T1> maxReg;
-            AscendC::MicroAPI::RegTensor<T1> maxLowReg;
-            AscendC::MicroAPI::RegTensor<float> maxLowReg32;
-            AscendC::MicroAPI::RegTensor<T1> maxHighReg;
-            AscendC::MicroAPI::RegTensor<float> maxHighReg32;
-
-            AscendC::MicroAPI::MaskReg pregAllT1 =
-                AscendC::MicroAPI::CreateMask<T1, AscendC::MicroAPI::MaskPattern::ALL>();
-            AscendC::MicroAPI::MaskReg pregAll =
-                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-            AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<T1>(tailNum);
-            AscendC::MicroAPI::MaskReg mergePreg = AscendC::MicroAPI::CreateMask<float, MaskPattern::VL1>();
-
-            for (uint16_t i = 0; i < aTimes; i++) {
-                AscendC::MicroAPI::Duplicate(maxReg, minValue);
-                for (uint16_t j = 0; j < repeatTimes; j++) {
-                    AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<T1>(i, AlignC, j, vfLen);
-                    AscendC::MicroAPI::DataCopy(inputReg, inputAddr, offset);
-                    AscendC::MicroAPI::Max(maxReg, maxReg, inputReg, pregAllT1);
-                }
-                for (uint16_t k = 0; k < tailLoop; k++) {
-                    AscendC::MicroAPI::DataCopy(inputRegT1, inputAddr + i * AlignC + repeatTimes * vfLen);
-                    AscendC::MicroAPI::Max(maxRegTemp, maxReg, inputRegT1, preg);
-                    AscendC::MicroAPI::Copy<T1, AscendC::MicroAPI::MaskMergeMode::MERGING>(maxReg, maxRegTemp, preg);
-                }
-                if constexpr (sizeof(T1) == sizeof(half)) {
-                    AscendC::MicroAPI::UnPack<int32_t, int16_t, AscendC::MicroAPI::HighLowPart::LOWEST>(
-                        (RegTensor<int32_t>&)maxLowReg, (RegTensor<int16_t>&)maxReg);
-                    AscendC::MicroAPI::UnPack<int32_t, int16_t, AscendC::MicroAPI::HighLowPart::HIGHEST>(
-                        (RegTensor<int32_t>&)maxHighReg, (RegTensor<int16_t>&)maxReg);
-                    AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(maxLowReg32, maxLowReg, pregAll);
-                    AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(maxHighReg32, maxHighReg, pregAll);
-                    AscendC::MicroAPI::Max(maxReg32, maxLowReg32, maxHighReg32, pregAll);
-                    AscendC::MicroAPI::ReduceMax(maxRegOne32, maxReg32, pregAll);
-                } else {
-                    AscendC::MicroAPI::ReduceMax((RegTensor<T1>&)maxRegOne32, maxReg, pregAllT1);
-                }
-                DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    maxAddr + i, maxRegOne32, mergePreg);
-            }
-        }
-    }
+            if constexpr (sizeof(T1) == 2) {
+                AscendC::MicroAPI::UnPack<int32_t, int16_t, AscendC::MicroAPI::HighLowPart::LOWEST>(
+                    (AscendC::MicroAPI::RegTensor<int32_t>&)inputRegLowest,
+                    (AscendC::MicroAPI::RegTensor<int16_t>&)inputReg);
+                AscendC::MicroAPI::UnPack<int32_t, int16_t, AscendC::MicroAPI::HighLowPart::HIGHEST>(
+                    (AscendC::MicroAPI::RegTensor<int32_t>&)inputRegHighest,
+                    (AscendC::MicroAPI::RegTensor<int16_t>&)inputReg);
+				AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(inputRegLowest32, inputRegLowest, pregReduce);
+				AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(inputRegHighest32, inputRegHighest, pregReduce);
+                AscendC::MicroAPI::Max(maxRegTemp, inputRegLowest32, inputRegHighest32, pregReduce);
+			    AscendC::MicroAPI::ReduceMax(maxReg, maxRegTemp, pregReduce);
+		    } else {
+			    AscendC::MicroAPI::ReduceMax(maxReg, inputReg, pregReduce);
+		    }
+            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(maxAddr + i, maxReg, mergePreg);
+		}
+	}
 }
 
 template <typename T1, typename T2, uint64_t reduction, uint64_t isWeight, uint64_t labelS, uint64_t ignorex>
@@ -1067,4 +1037,4 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
 }
 
 } // namespace CrossEntropyLoss
-#endif // namespace CrossEntropyLossFullLoad
+#endif // CROSS_ENTROPY_LOSS_FULL_LOAD_H
