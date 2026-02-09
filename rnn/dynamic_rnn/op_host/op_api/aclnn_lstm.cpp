@@ -211,11 +211,8 @@ static aclnnStatus ProcessViewCopy(std::tuple<const aclTensor *, const aclTensor
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus ProcessViewCopyWithInfer(std::tuple<const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *> layerResult, const aclTensorList *hOut, const aclTensorList *cOut, 
-    int64_t numLayers,  bool bidirectional, const char *direction, aclOpExecutor* executor) {
-    auto paramsNumSingleLayer = bidirectional == true ? 2 : 1;
-    auto directionStart = strcmp(direction, "UNIDIRECTIONAL") == 0 ? 0 : 1;
-    
+static aclnnStatus ProcessOutputHC(std::tuple<const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *> layerResult, std::vector<const aclTensor*>& hyVector, std::vector<const aclTensor*>& cyVector, 
+    bool bidirectional, char *direction, aclOpExecutor* executor) {
     int64_t numStep = std::get<0>(layerResult)->GetViewShape().GetDim(0);
     int64_t batch = std::get<0>(layerResult)->GetViewShape().GetDim(1);
     int64_t hidden = std::get<0>(layerResult)->GetViewShape().GetDim(2);
@@ -227,38 +224,37 @@ static aclnnStatus ProcessViewCopyWithInfer(std::tuple<const aclTensor *, const 
     aclIntArray* size = executor->AllocIntArray(sizeData, 3);
     
     auto thOutput = l0op::Slice(std::get<5>(layerResult), offsets, size, executor);
-    auto thOutputSq = l0op::SqueezeNd(thOutput, (int64_t)0, executor);
-    auto viewCopyResultH = l0op::ViewCopy(thOutputSq, (*hOut)[paramsNumSingleLayer * numLayers + directionStart], executor); 
-    CHECK_RET(viewCopyResultH != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    hyVector.emplace_back(thOutput);
 
     auto tcOutput = l0op::Slice(std::get<6>(layerResult), offsets, size, executor);
-    auto tcOutputSq = l0op::SqueezeNd(tcOutput, (int64_t)0, executor);
-    auto viewCopyResultC = l0op::ViewCopy(tcOutputSq, (*cOut)[paramsNumSingleLayer * numLayers + directionStart], executor);
-    CHECK_RET(viewCopyResultC != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    cyVector.emplace_back(tcOutput);
 
     return ACLNN_SUCCESS;
 }
 
+
 static inline bool CheckNotNull(const aclTensor *input,  const aclTensorList *params,  bool train, 
-    aclTensor *output, aclTensorList *iOut, aclTensorList *jOut, aclTensorList *fOut,  aclTensorList *oOut, 
+    aclTensor *output, aclTensor *hy, aclTensor *cy, aclTensorList *iOut, aclTensorList *jOut, aclTensorList *fOut,  aclTensorList *oOut, 
     aclTensorList *hOut, aclTensorList *cOut, aclTensorList *tanhCOut) {
     OP_CHECK_NULL(input, return false);
     OP_CHECK_NULL(params, return false);
     OP_CHECK_NULL(output, return false);
-    OP_CHECK_NULL(hOut, return false);
-    OP_CHECK_NULL(cOut, return false);
+    OP_CHECK_NULL(hy, return false);
+    OP_CHECK_NULL(cy, return false);
     if (train) {
         OP_CHECK_NULL(iOut, return false);
         OP_CHECK_NULL(jOut, return false);
         OP_CHECK_NULL(fOut, return false);
         OP_CHECK_NULL(oOut, return false);
+        OP_CHECK_NULL(hOut, return false);
+        OP_CHECK_NULL(cOut, return false);
         OP_CHECK_NULL(tanhCOut, return false);
     }
     return true;
 }
 
 static inline bool CheckDtypeValid(const aclTensor *input,  const aclTensorList *params, const aclTensorList *hx, bool train,  
-    aclTensor *output, aclTensorList *iOut, aclTensorList *jOut, aclTensorList *fOut,  aclTensorList *oOut, 
+    aclTensor *output, aclTensor *hy, aclTensor *cy, aclTensorList *iOut, aclTensorList *jOut, aclTensorList *fOut,  aclTensorList *oOut, 
     aclTensorList *hOut, aclTensorList *cOut, aclTensorList *tanhCOut) {
     OP_CHECK_DTYPE_NOT_SUPPORT(input, DTYPE_SUPPORT_LIST, return false);
     auto data_type = input->GetDataType();
@@ -275,13 +271,9 @@ static inline bool CheckDtypeValid(const aclTensor *input,  const aclTensorList 
 
     OP_CHECK_DTYPE_NOT_MATCH(output, data_type, return false);
 
-    for (uint64_t i = 0; i < hOut->Size(); i++) {
-        OP_CHECK_DTYPE_NOT_MATCH((*hOut)[i], data_type, return false);
-	}
+    OP_CHECK_DTYPE_NOT_MATCH(hy, data_type, return false);
 
-    for (uint64_t i = 0; i < cOut->Size(); i++) {
-        OP_CHECK_DTYPE_NOT_MATCH((*cOut)[i], data_type, return false);
-	}
+    OP_CHECK_DTYPE_NOT_MATCH(cy, data_type, return false);
 
     if (train) {
         for (uint64_t i = 0; i < iOut->Size(); i++) {
@@ -299,6 +291,14 @@ static inline bool CheckDtypeValid(const aclTensor *input,  const aclTensorList 
         for (uint64_t i = 0; i < oOut->Size(); i++) {
             OP_CHECK_DTYPE_NOT_MATCH((*oOut)[i], data_type, return false);
         }
+
+        for (uint64_t i = 0; i < hOut->Size(); i++) {
+            OP_CHECK_DTYPE_NOT_MATCH((*hOut)[i], data_type, return false);
+        }
+
+        for (uint64_t i = 0; i < cOut->Size(); i++) {
+            OP_CHECK_DTYPE_NOT_MATCH((*cOut)[i], data_type, return false);
+        }
         
         for (uint64_t i = 0; i < tanhCOut->Size(); i++) {
             OP_CHECK_DTYPE_NOT_MATCH((*tanhCOut)[i], data_type, return false);
@@ -308,7 +308,7 @@ static inline bool CheckDtypeValid(const aclTensor *input,  const aclTensorList 
     return true;
 }
 
-static bool CheckDimsSize(const aclTensorList *params, const aclTensorList *hx, bool has_biases, int64_t numLayers, bool bidirectional, aclTensorList *iOut, aclTensorList *jOut, aclTensorList *fOut,  aclTensorList *oOut, 
+static bool CheckDimsSize(const aclTensorList *params, const aclTensorList *hx, bool has_biases, int64_t numLayers, bool train, bool bidirectional, aclTensorList *iOut, aclTensorList *jOut, aclTensorList *fOut,  aclTensorList *oOut, 
     aclTensorList *hOut, aclTensorList *cOut, aclTensorList *tanhCOut) {
     uint64_t dScale = bidirectional == true ? 2 : 1;
     uint64_t bScale = has_biases == true ? 2 : 1;
@@ -323,39 +323,41 @@ static bool CheckDimsSize(const aclTensorList *params, const aclTensorList *hx, 
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The number of tensors required for the hx lists should be 2 or 0, but %lu was obtained.", hx->Size());
         return false;
     }
-    if (iOut != nullptr && iOut->Size() != output_nums && iOut->Size() != 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The number of tensors required for the output_i lists should be %lu, but %lu was obtained.", output_nums, iOut->Size());
-        return false;
-    }
-    if (jOut != nullptr && jOut->Size() != output_nums && jOut->Size() != 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The number of tensors required for the output_j lists should be %lu, but %lu was obtained.", output_nums, jOut->Size());
-        return false;
-    }
-    if (fOut != nullptr && fOut->Size() != output_nums && fOut->Size() != 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The number of tensors required for the output_f lists should be %lu, but %lu was obtained.", output_nums, fOut->Size());
-        return false;
-    }
-    if (oOut != nullptr && oOut->Size() != output_nums && oOut->Size() != 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The number of tensors required for the output_o lists should be %lu, but %lu was obtained.", output_nums, oOut->Size());
-        return false;
-    }
-    if ( hOut->Size() != output_nums) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The number of tensors required for the output_h lists should be %lu, but %lu was obtained.", output_nums, hOut->Size());
-        return false;
-    }
-    if ( cOut->Size() != output_nums) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The number of tensors required for the output_c lists should be %lu, but %lu was obtained.", output_nums, cOut->Size());
-        return false;
-    }
-    if (tanhCOut != nullptr && tanhCOut->Size() != output_nums && tanhCOut->Size() != 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The number of tensors required for the output_tanhc lists should be %lu, but %lu was obtained.", output_nums, tanhCOut->Size());
-        return false;
+    if (train) {
+        if (iOut->Size() != output_nums) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The number of tensors required for the output_i lists should be %lu, but %lu was obtained.", output_nums, iOut->Size());
+            return false;
+        }
+        if (jOut->Size() != output_nums) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The number of tensors required for the output_j lists should be %lu, but %lu was obtained.", output_nums, jOut->Size());
+            return false;
+        }
+        if (fOut->Size() != output_nums) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The number of tensors required for the output_f lists should be %lu, but %lu was obtained.", output_nums, fOut->Size());
+            return false;
+        }
+        if (oOut->Size() != output_nums) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The number of tensors required for the output_o lists should be %lu, but %lu was obtained.", output_nums, oOut->Size());
+            return false;
+        }
+        if (hOut->Size() != output_nums) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The number of tensors required for the output_h lists should be %lu, but %lu was obtained.", output_nums, hOut->Size());
+            return false;
+        }
+        if (cOut->Size() != output_nums) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The number of tensors required for the output_c lists should be %lu, but %lu was obtained.", output_nums, cOut->Size());
+            return false;
+        }
+        if (tanhCOut->Size() != output_nums) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The number of tensors required for the output_tanhc lists should be %lu, but %lu was obtained.", output_nums, tanhCOut->Size());
+            return false;
+        }
     }
     return true;
 }
 
 static bool CheckDims(const aclTensor *input,  const aclTensorList *params, const aclTensorList *hx, bool has_biases, int64_t numLayers, bool train, bool bidirectional, 
-    aclTensor *output, aclTensorList *iOut, aclTensorList *jOut, aclTensorList *fOut,  aclTensorList *oOut, 
+    aclTensor *output, aclTensor *hy, aclTensor *cy, aclTensorList *iOut, aclTensorList *jOut, aclTensorList *fOut,  aclTensorList *oOut, 
     aclTensorList *hOut, aclTensorList *cOut, aclTensorList *tanhCOut) {
     OP_CHECK_WRONG_DIMENSION(input, INPUT_DIMS, return false);
     uint64_t bScale = has_biases == true ? 2 : 1;
@@ -381,50 +383,46 @@ static bool CheckDims(const aclTensor *input,  const aclTensorList *params, cons
 
     OP_CHECK_WRONG_DIMENSION(output, OUTPUT_DIMS, return false);
 
-    if (iOut != nullptr) {
+    OP_CHECK_WRONG_DIMENSION(hy, OUTPUT_DIMS, return false);
+
+    OP_CHECK_WRONG_DIMENSION(cy, OUTPUT_DIMS, return false);
+
+    if (train) {
+        
         for (uint64_t i = 0; i < iOut->Size(); i++) {
             OP_CHECK_WRONG_DIMENSION((*iOut)[i], OUTPUT_DIMS, return false);
         }
-    }
 
-    if (jOut != nullptr) {
         for (uint64_t i = 0; i < jOut->Size(); i++) {
             OP_CHECK_WRONG_DIMENSION((*jOut)[i], OUTPUT_DIMS, return false);
         }
-    }
 
-    if (fOut != nullptr) {
         for (uint64_t i = 0; i < fOut->Size(); i++) {
             OP_CHECK_WRONG_DIMENSION((*fOut)[i], OUTPUT_DIMS, return false);
         }
-    }
 
-    if (oOut != nullptr) {
         for (uint64_t i = 0; i < oOut->Size(); i++) {
             OP_CHECK_WRONG_DIMENSION((*oOut)[i], OUTPUT_DIMS, return false);
         }
-    }
 
-    if (tanhCOut != nullptr) {
+        for (uint64_t i = 0; i < hOut->Size(); i++) {
+            OP_CHECK_WRONG_DIMENSION((*hOut)[i], OUTPUT_DIMS, return false);
+        }
+        
+        for (uint64_t i = 0; i < cOut->Size(); i++) {
+            OP_CHECK_WRONG_DIMENSION((*cOut)[i], OUTPUT_DIMS, return false);
+        }
+
         for (uint64_t i = 0; i < tanhCOut->Size(); i++) {
             OP_CHECK_WRONG_DIMENSION((*tanhCOut)[i], OUTPUT_DIMS, return false);
         }
     }
 
-    int64_t outputDims = train ? OUTPUT_DIMS : OUTPUT_DIMS_INFER;
-    for (uint64_t i = 0; i < hOut->Size(); i++) {
-        OP_CHECK_WRONG_DIMENSION((*hOut)[i], outputDims, return false);
-	}
-
-    for (uint64_t i = 0; i < cOut->Size(); i++) {
-        OP_CHECK_WRONG_DIMENSION((*cOut)[i], outputDims, return false);
-	}
-
     return true;
 }
 
 static bool CheckShape(const aclTensor *input,  const aclTensorList *params, const aclTensorList *hx, bool has_biases, int64_t numLayers, bool train, bool bidirectional, bool batch_first,
-    aclTensor *output, aclTensorList *iOut, aclTensorList *jOut, aclTensorList *fOut,  aclTensorList *oOut, 
+    aclTensor *output, aclTensor *hy, aclTensor *cy, aclTensorList *iOut, aclTensorList *jOut, aclTensorList *fOut,  aclTensorList *oOut, 
     aclTensorList *hOut, aclTensorList *cOut, aclTensorList *tanhCOut) {
     auto timeStep = batch_first == true ? input->GetViewShape().GetDim(1) : input->GetViewShape().GetDim(0);
     auto batchSize = batch_first == true ? input->GetViewShape().GetDim(0) : input->GetViewShape().GetDim(1);
@@ -464,6 +462,10 @@ static bool CheckShape(const aclTensor *input,  const aclTensorList *params, con
     }
     OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(output, expOutputShape, return false);
 
+    op::Shape expHyShape = {numLayers * dScale, batchSize, hiddenSize};
+    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(hy, expHyShape, return false);
+    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(cy, expHyShape, return false);
+
     if (train) {
         for (uint64_t i = 0; i < iOut->Size(); i++) {
             op::Shape expShape = {timeStep, batchSize, hiddenSize};
@@ -471,46 +473,41 @@ static bool CheckShape(const aclTensor *input,  const aclTensorList *params, con
             OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*jOut)[i], expShape, return false);
             OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*fOut)[i], expShape, return false);
             OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*oOut)[i], expShape, return false);
+            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*hOut)[i], expShape, return false);
+            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*cOut)[i], expShape, return false);
             OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*tanhCOut)[i], expShape, return false);
-            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*hOut)[i], expShape, return false);
-            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*cOut)[i], expShape, return false);
+
         }
-    } else {
-        for (uint64_t i = 0; i < hOut->Size(); i++) {
-            op::Shape expShape = {batchSize, hiddenSize};
-            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*hOut)[i], expShape, return false);
-            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*cOut)[i], expShape, return false);
-        }
-    }
+    } 
     return true;
 }
 
 static aclnnStatus CheckParams(
     const aclTensor *input,  const aclTensorList *params, const aclTensorList *hx, bool has_biases, int64_t numLayers, bool train, bool bidirectional, 
-    bool batch_first, aclTensor *output, aclTensorList *iOut, aclTensorList *jOut, aclTensorList *fOut,  aclTensorList *oOut, 
+    bool batch_first, aclTensor *output, aclTensor *hy, aclTensor *cy, aclTensorList *iOut, aclTensorList *jOut, aclTensorList *fOut,  aclTensorList *oOut, 
     aclTensorList *hOut, aclTensorList *cOut, aclTensorList *tanhCOut)
 {
     // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(input, params, train, output, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNotNull(input, params, train, output, hy, cy, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内
     CHECK_RET(
-        CheckDtypeValid(input, params, hx, train, output, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut),
+        CheckDtypeValid(input, params, hx, train, output, hy, cy, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut),
         ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查输入的tensor list长度是否满足
     CHECK_RET(
-        CheckDimsSize(params, hx, has_biases, numLayers, bidirectional, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut),
+        CheckDimsSize(params, hx, has_biases, numLayers, train, bidirectional, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut),
         ACLNN_ERR_PARAM_INVALID);
 
     // 4. 检查输入的dim 是否满足
     CHECK_RET(
-        CheckDims(input, params, hx, has_biases, numLayers, train, bidirectional, output, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut),
+        CheckDims(input, params, hx, has_biases, numLayers, train, bidirectional, output, hy, cy, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut),
         ACLNN_ERR_PARAM_INVALID);
 
     // 5. 检查输入形状是否满足
     CHECK_RET(
-        CheckShape(input, params, hx, has_biases, numLayers, train, bidirectional, batch_first, output, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut),
+        CheckShape(input, params, hx, has_biases, numLayers, train, bidirectional, batch_first, output, hy, cy, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut),
         ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
@@ -915,6 +912,18 @@ static const aclTensor* SplitToConcat(std::vector<const aclTensor*> tensorListA,
     return tensorListA.front();
 }
 
+static aclnnStatus ProcessViewCopyOutputHC(std::vector<const aclTensor*>& hOut, std::vector<const aclTensor*>& cOut, aclTensor *hy, aclTensor *cy, aclOpExecutor* executor) {
+
+    auto outputHConcat = SplitToConcat(hOut, 0, executor);
+    auto viewCopyResultOutputH = l0op::ViewCopy(outputHConcat, hy, executor); 
+    CHECK_RET(viewCopyResultOutputH != nullptr, ACLNN_ERR_INNER_NULLPTR); 
+    auto outputCConcat = SplitToConcat(cOut, 0, executor);
+    auto viewCopyResultOutputC = l0op::ViewCopy(outputCConcat, cy, executor); 
+    CHECK_RET(viewCopyResultOutputC != nullptr, ACLNN_ERR_INNER_NULLPTR); 
+    
+    return ACLNN_SUCCESS; 
+}
+
 static aclnnStatus CallBaseOp(
     const BaseOpInputs& baseIn,
     const LstmDataInfo& info,
@@ -1225,7 +1234,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
     aclOpExecutor **executor){
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnLSTM, DFX_IN(input, params, hx, batchSizes, has_biases, numLayers, droupout, train, bidirectional, batch_first), 
-    DFX_OUT(output, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut));
+    DFX_OUT(output, hy, cy, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut));
 
     // 判断是否进入data模式
     if (batchSizes) {
@@ -1239,7 +1248,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
-    auto ret = CheckParams(input, params, hx, has_biases, numLayers, train, bidirectional, batch_first, output, 
+    auto ret = CheckParams(input, params, hx, has_biases, numLayers, train, bidirectional, batch_first, output, hy, cy,
             iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
@@ -1269,6 +1278,9 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
     int64_t hiddenSize = output->GetViewShape().GetDim(2);
     hiddenSize = bidirectional == true ? hiddenSize / 2: hiddenSize;
     op::Shape outShape = {curInput->GetViewShape().GetDim(0), curInput->GetViewShape().GetDim(1), hiddenSize};
+
+    std::vector<const aclTensor*> hyVector= {};
+    std::vector<const aclTensor*> cyVector = {};
     
     //isTraing = True
     if (train == true) {
@@ -1294,7 +1306,8 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
                                     "UNIDIRECTIONAL", bidirectional, train, i, has_biases, uniqueExecutor.get());
     
             ProcessViewCopy(layerResultForward, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut, i, bidirectional, "UNIDIRECTIONAL", uniqueExecutor.get());
-            
+            ProcessOutputHC(layerResultForward, hyVector, cyVector, bidirectional, "UNIDIRECTIONAL", uniqueExecutor.get());
+
             if (bidirectional == true) {
                 auto yOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
                 CHECK_RET(yOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -1322,6 +1335,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
                 auto tensorListInput = uniqueExecutor.get()->AllocTensorList(inputConcat.data(), inputConcat.size());
                 curInput = l0op::ConcatD(tensorListInput, 2, uniqueExecutor.get());
                 ProcessViewCopy(layerResultBackward, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut, i, bidirectional, "REDIRECTIONAL", uniqueExecutor.get());
+                ProcessOutputHC(layerResultBackward, hyVector, cyVector, bidirectional, "REDIRECTIONAL", uniqueExecutor.get());
             } else {
                 curInput = std::get<0>(layerResultForward);
             }
@@ -1335,6 +1349,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
         }
         auto viewCopyResultInput = l0op::ViewCopy(outputY, output, uniqueExecutor.get()); 
         CHECK_RET(viewCopyResultInput != nullptr, ACLNN_ERR_INNER_NULLPTR);  
+        ProcessViewCopyOutputHC(hyVector, cyVector, hy, cy, uniqueExecutor.get());
     } else {
         auto iOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
         CHECK_RET(iOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -1376,8 +1391,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
 
             auto layerResultForward = LstmSingleLayerDirec(curInput, paramsContiguous, hxContiguous, yOutForward, iOutForward, jOutForward, fOutForward, oOutForward, hOutForward, cOutForward, tanhCOutForward, 
                                         "UNIDIRECTIONAL", bidirectional, train, i, has_biases, uniqueExecutor.get());
-    
-            ProcessViewCopyWithInfer(layerResultForward, hOut, cOut, i, bidirectional, "UNIDIRECTIONAL", uniqueExecutor.get());
+            ProcessOutputHC(layerResultForward, hyVector, cyVector, bidirectional, "UNIDIRECTIONAL", uniqueExecutor.get());
             
             if (bidirectional == true) {
                 auto hOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
@@ -1395,7 +1409,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
                 inputConcat.emplace_back(std::get<0>(layerResultBackward));
                 auto tensorListInput = uniqueExecutor.get()->AllocTensorList(inputConcat.data(), inputConcat.size());
                 curInput = l0op::ConcatD(tensorListInput, 2, uniqueExecutor.get());
-                ProcessViewCopyWithInfer(layerResultBackward, hOut, cOut, i, bidirectional, "REDIRECTIONAL", uniqueExecutor.get());
+                ProcessOutputHC(layerResultBackward, hyVector, cyVector, bidirectional, "REDIRECTIONAL", uniqueExecutor.get());
             } else {
                 curInput = std::get<0>(layerResultForward);
             }
@@ -1408,6 +1422,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
         }
         auto viewCopyResultInput = l0op::ViewCopy(outputY, output, uniqueExecutor.get()); 
         CHECK_RET(viewCopyResultInput != nullptr, ACLNN_ERR_INNER_NULLPTR);  
+        ProcessViewCopyOutputHC(hyVector, cyVector, hy, cy, uniqueExecutor.get());
     }
 
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();

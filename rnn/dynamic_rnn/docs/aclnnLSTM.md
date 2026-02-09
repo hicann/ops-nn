@@ -52,6 +52,8 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
     bool bidirectional,        
     bool batch_first,
     aclTensor *output,
+    aclTensor *hy,
+    aclTensor *cy,
     aclTensorList *iOut,  
     aclTensorList *jOut, 
     aclTensorList *fOut,
@@ -208,6 +210,26 @@ aclnnStatus aclnnLSTM(
       <td>3</td>
       <td>√</td>
     </tr>
+    <tr>
+      <td>hy</td>
+      <td>输出</td>
+      <td>表示进行LSTM运算中每层最后一个时间步的隐藏层（公式（7）的输出）。</td>
+      <td><ul><li>shape支持三维（D * num_layers, batch_size, hidden_size）</li></ul></td>
+      <td>FLOAT16、FLOAT32</td>
+      <td>ND</td>
+      <td>3</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>cy</td>
+      <td>输出</td>
+      <td>表示进行LSTM运算中每层最后一个时间步的Cell状态（公式（5）的输出）。</td>
+      <td><ul><li>shape支持三维（D * num_layers, batch_size, hidden_size）</li></ul></td>
+      <td>FLOAT16、FLOAT32</td>
+      <td>ND</td>
+      <td>3</td>
+      <td>√</td>
+    </tr>
       <tr>
       <td>iOut</td>
       <td>输出</td>
@@ -252,7 +274,7 @@ aclnnStatus aclnnLSTM(
       <td>hOut</td>
       <td>输出</td>
       <td>表示进行LSTM运算中每层的隐藏层（公式（7）的输出）。</td>
-      <td>列表长度为 D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，不保存每个时间步的结果，只保存最后一个时间步的结果，故而列表中每个shape支持两维（batch_size, hidden_size），列表长度为 D * num_layers。</td>
+      <td>列表长度为 D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。</td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>/</td>
@@ -262,7 +284,7 @@ aclnnStatus aclnnLSTM(
       <td>cOut</td>
       <td>输出</td>
       <td>表示进行LSTM运算中每层的最终Cell状态（公式（5）的输出）。</td>
-      <td>列表长度为 D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，不保存每个时间步的结果，只保存最后一个时间步的结果，故而列表中每个shape支持两维（batch_size, hidden_size），列表长度为 D * num_layers。</td>
+      <td>列表长度为 D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。</td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>/</td>
@@ -495,15 +517,15 @@ int main()
 {
     // 1. （固定写法）device/stream初始化，参考AscendCL对外接口列表
     // 根据自己的实际device填写deviceId
-    int32_t deviceId = 1;
+    int32_t deviceId = 0;
     aclrtStream stream;
     auto ret = Init(deviceId, &stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
     // 2. 构造输入与输出，需要根据API的接口自定义构造
-    int time_step = 2;
+    int time_step = 1;
     int batch_size = 1;
-    int hidden_size = 4;
+    int hidden_size = 1;
     int input_size = hidden_size;
     int64_t numLayers = 1;
     bool isbias = false;
@@ -514,6 +536,7 @@ int main()
 
     std::vector<int64_t> inputShape = {time_step, batch_size, input_size};
     std::vector<int64_t> outputShape = {time_step, batch_size, d_scale * hidden_size};
+    std::vector<int64_t> hycyShape = {numLayers * d_scale, batch_size, hidden_size};
     std::vector<std::vector<int64_t>> paramsListShape = {};
 
     std::vector<std::vector<int64_t>> outIListShape = {};
@@ -548,6 +571,8 @@ int main()
     void* paramsListDeviceAddr[2 * numLayers];
 
     void* outputDeviceAddr = nullptr;
+    void* hyDeviceAddr = nullptr;
+    void* cyDeviceAddr = nullptr;
     void* outIListDeviceAddr[numLayers];
     void* outJListDeviceAddr[numLayers];
     void* outFListDeviceAddr[numLayers];
@@ -560,6 +585,8 @@ int main()
     aclTensorList* params = nullptr;
 
     aclTensor* output = nullptr;
+    aclTensor* hy = nullptr;
+    aclTensor* cy = nullptr;
     aclTensorList* outIList = nullptr;
     aclTensorList* outJList = nullptr;
     aclTensorList* outFList = nullptr;
@@ -578,6 +605,13 @@ int main()
 
     std::vector<float> outputHostData(GetShapeSize(outputShape), 1);
     ret = CreateAclTensor<float>(outputHostData, outputShape, &outputDeviceAddr, aclDataType::ACL_FLOAT, &output);
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
+
+    std::vector<float> hycyHostData(GetShapeSize(hycyShape), 1);
+    ret = CreateAclTensor<float>(hycyHostData, hycyShape, &hyDeviceAddr, aclDataType::ACL_FLOAT, &hy);
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
+
+    ret = CreateAclTensor<float>(hycyHostData, hycyShape, &cyDeviceAddr, aclDataType::ACL_FLOAT, &cy);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     ret = CreateAclTensorList<float>(outIListShape, outIListDeviceAddr, aclDataType::ACL_FLOAT, &outIList, 0.0);
@@ -608,8 +642,8 @@ int main()
 
     // 调用aclnnLSTM第一段接口
     ret = aclnnLSTMGetWorkspaceSize(
-        input, params, nullptr, nullptr, isbias, numLayers, 0.0, isTraining, bidirection, batchFirst, output, outIList, outJList,
-        outFList, outOList, outHList, outCList, outTanhCList, &workspaceSize, &executor);
+        input, params, nullptr, nullptr, isbias, numLayers, 0.0, isTraining, bidirection, batchFirst, output, hy, cy,
+        outIList, outJList, outFList, outOList, outHList, outCList, outTanhCList, &workspaceSize, &executor);
 
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnLSTMGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
@@ -636,6 +670,8 @@ int main()
     aclDestroyTensor(input);
     aclDestroyTensorList(params);
     aclDestroyTensor(output);
+    aclDestroyTensor(hy);
+    aclDestroyTensor(cy);
     aclDestroyTensorList(outIList);
     aclDestroyTensorList(outJList);
     aclDestroyTensorList(outFList);
@@ -647,6 +683,8 @@ int main()
     //   // 7. 释放device资源
     aclrtFree(inputDeviceAddr);
     aclrtFree(outputDeviceAddr);
+    aclrtFree(hyDeviceAddr);
+    aclrtFree(cyDeviceAddr);
     for (int i = 0; i < numLayers; i++) {
         aclrtFree(outIListDeviceAddr[i]);
         aclrtFree(outJListDeviceAddr[i]);
