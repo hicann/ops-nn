@@ -238,22 +238,8 @@ static QuantBatchMatmulV5TestParam casesParams950[] = {
     // {"ascend950_test_quant_bmm_v5_HIF8HIF8FP32_doublescale", {16, 32}, {16, 32}, {1}, {}, {1}, {16}, {}, {}, {}, {16, 16}, {32, 1}, {32, 1}, ACL_HIFLOAT8, ACL_HIFLOAT8, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, false, true, 0, ACLNN_SUCCESS},
     // {"ascend950_test_quant_bmm_v5_HIF8HIF8HIF8_doublescale", {32, 16}, {32, 16}, {1}, {}, {1}, {16}, {}, {}, {}, {16, 16}, {16, 1}, {16, 1}, ACL_HIFLOAT8, ACL_HIFLOAT8, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, true, false, 0, ACLNN_SUCCESS},
     // {"ascend950_test_quant_bmm_v5_FP4E2M1FP4E2M1FP16_mxfp4", {16, 64}, {16, 64}, {16, 1, 2}, {}, {16, 1, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E2M1, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT16, false, true, 32, ACLNN_SUCCESS},
-    // {"ascend950_test_quant_bmm_v5_FP4E2M1FP4E1M2FP16_mxfp4", {16, 64}, {16, 64}, {16, 1, 2}, {}, {16, 1, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E2M1, ACL_FLOAT4_E1M2, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT16, false, true, 32, ACLNN_SUCCESS},
-    // {"ascend950_test_quant_bmm_v5_FP4E1M2FP4E1M2FP16_mxfp4", {16, 64}, {16, 64}, {16, 1, 2}, {}, {16, 1, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E1M2, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT16, false, true, 32, ACLNN_SUCCESS},
-    // {"ascend950_test_quant_bmm_v5_FP4E1M2FP4E2M1FP16_mxfp4", {16, 64}, {16, 64}, {16, 1, 2}, {}, {16, 1, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT16, false, true, 32, ACLNN_SUCCESS},
     // {"ascend950_test_quant_bmm_v5_FP4E2M1FP4E2M1BF16_mxfp4", {16, 64}, {16, 64}, {16, 1, 2}, {}, {16, 1, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E2M1, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_BF16, false, true, 32, ACLNN_SUCCESS},
-    // {"ascend950_test_quant_bmm_v5_FP4E2M1FP4E1M2BF16_mxfp4", {16, 64}, {16, 64}, {16, 1, 2}, {}, {16, 1, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E2M1, ACL_FLOAT4_E1M2, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_BF16, false, true, 32, ACLNN_SUCCESS},
-    // {"ascend950_test_quant_bmm_v5_FP4E1M2FP4E1M2BF16_mxfp4", {16, 64}, {16, 64}, {16, 1, 2}, {}, {16, 1, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E1M2, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_BF16, false, true, 32, ACLNN_SUCCESS},
-    // {"ascend950_test_quant_bmm_v5_FP4E1M2FP4E2M1BF16_mxfp4", {16, 64}, {16, 64}, {16, 1, 2}, {}, {16, 1, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_BF16, false, true, 32, ACLNN_SUCCESS},
     // {"ascend950_test_quant_bmm_v5_FP4E2M1FP4E2M1FP32_mxfp4", {16, 64}, {16, 64}, {16, 1, 2}, {}, {16, 1, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E2M1, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, false, true, 32, ACLNN_SUCCESS},
-    // {"ascend950_test_quant_bmm_v5_FP4E2M1FP4E1M2FP32_mxfp4", {16, 64}, {16, 64}, {16, 1, 2}, {}, {16, 1, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E2M1, ACL_FLOAT4_E1M2, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, false, true, 32, ACLNN_SUCCESS},
-    // {"ascend950_test_quant_bmm_v5_FP4E1M2FP4E1M2FP32_mxfp4", {16, 64}, {16, 64}, {16, 1, 2}, {}, {16, 1, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E1M2, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, false, true, 32, ACLNN_SUCCESS},
-    // {"ascend950_test_quant_bmm_v5_FP4E1M2FP4E2M1FP32_mxfp4", {16, 64}, {16, 64}, {16, 1, 2}, {}, {16, 1, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, false, true, 32, ACLNN_SUCCESS},
-
-    // {"ascend950_test_quant_bmm_v5_FP4E1M2FP4E2M1FP32_mxfp4_even_number_error", {16, 63}, {16, 63}, {16, 1, 2}, {}, {16, 1, 2}, {16}, {}, {}, {}, {16, 16}, {63, 1}, {63, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, false, true, 4295032864, ACLNN_ERR_PARAM_INVALID},
-    // {"ascend950_test_quant_bmm_v5_FP4E1M2FP4E2M1FP32_mxfp4_shape_error", {15, 64}, {15, 64}, {16, 1, 2}, {}, {16, 1, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, false, true, 4295032864, ACLNN_ERR_PARAM_INVALID},
-    // {"ascend950_test_quant_bmm_v5_FP4E1M2FP4E2M1FP32_mxfp4_scale_shape_error", {16, 66}, {16, 66}, {16, 1, 2}, {}, {16, 1, 2}, {16}, {}, {}, {}, {16, 16}, {66, 1}, {66, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, false, true, 4295032864, ACLNN_ERR_PARAM_INVALID},
-    // {"ascend950_test_quant_bmm_v5_FP4E1M2FP4E2M1FP32_mxfp4_scale_even_number_error", {16, 96}, {16, 96}, {16, 3}, {}, {16, 3}, {16}, {}, {}, {}, {16, 16}, {96, 1}, {96, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, false, true, 4295032864, ACLNN_ERR_PARAM_INVALID},
 
     // {"ascend950_test_quant_bmm_v5_FP8E4M3FP8E4M3FP32_mxfp8", {16, 64}, {16, 64}, {16, 1, 2}, {}, {16, 1, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT8_E4M3FN, ACL_FLOAT8_E4M3FN, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, false, true, 32, ACLNN_SUCCESS},
     // {"ascend950_test_quant_bmm_v5_FP8E4M3FP8E5M2FP32_mxfp8", {16, 64}, {16, 64}, {16, 1, 2}, {}, {16, 1, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT8_E4M3FN, ACL_FLOAT8_E5M2, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, false, true, 32, ACLNN_SUCCESS},
@@ -311,19 +297,6 @@ static QuantBatchMatmulV5TestParam casesParams950[] = {
     {"ascend950_test_quant_bmm_v5_HIF8HIF8HIF8_scale_shape_error", {16, 32}, {32, 16}, {2}, {}, {1}, {16}, {}, {}, {}, {16, 16}, {32, 1}, {16, 1}, ACL_HIFLOAT8, ACL_HIFLOAT8, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_HIFLOAT8, false, false, 0, ACLNN_ERR_PARAM_INVALID},
     {"ascend950_test_quant_bmm_v5_HIF8HIF8HIF8_pertoken_shape_error", {16, 32}, {32, 16}, {1}, {}, {2}, {16}, {}, {}, {}, {16, 16}, {32, 1}, {16, 1}, ACL_HIFLOAT8, ACL_HIFLOAT8, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_HIFLOAT8, false, false, 0, ACLNN_ERR_PARAM_INVALID},
     {"ascend950_test_quant_bmm_v5_FP8FP4FP16_mxfp4_pergroup_x1_dtype_error", {16, 64}, {16, 64}, {16, 2}, {}, {16, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT8_E5M2, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT16, false, true, 0, ACLNN_ERR_PARAM_INVALID},
-    {"ascend950_test_quant_bmm_v5_FP4FP8FP16_mxfp4_pergroup_x2_dtype_error", {16, 64}, {16, 64}, {16, 2}, {}, {16, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E1M2, ACL_INT8, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT16, false, true, 0, ACLNN_ERR_PARAM_INVALID},
-    {"ascend950_test_quant_bmm_v5_FP4FP4FP16_mxfp4_pergroup_scale_dtype_error", {16, 64}, {16, 64}, {16, 2}, {}, {16, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E2M1, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT16, false, true, 0, ACLNN_ERR_PARAM_INVALID},
-    {"ascend950_test_quant_bmm_v5_FP4FP4FP16_mxfp4_pergroup_pertoken_dtype_error", {16, 64}, {16, 64}, {16, 2}, {}, {16, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT16, false, true, 0, ACLNN_ERR_PARAM_INVALID},
-    {"ascend950_test_quant_bmm_v5_FP4FP4FP16_mxfp4_pergroup_bias_dtype_error", {16, 64}, {16, 64}, {16, 2}, {}, {16, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_INT32, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT16, false, true, 0, ACLNN_ERR_PARAM_INVALID},
-    {"ascend950_test_quant_bmm_v5_FP4FP4C8_mxfp4_pergroup_output_dtype_error", {16, 64}, {16, 64}, {16, 2}, {}, {16, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_INT8, false, true, 0, ACLNN_ERR_PARAM_INVALID},
-    {"ascend950_test_quant_bmm_v5_FP4E1M2FP4E2M1FP32_mxfp4_pergroup_scale_dim_error", {16, 64}, {16, 64}, {16}, {}, {16, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, false, true, 32, ACLNN_ERR_PARAM_INVALID},
-    {"ascend950_test_quant_bmm_v5_FP4E1M2FP4E2M1FP32_mxfp4_pergroup_scale_shape_m_error", {16, 64}, {16, 64}, {15, 2}, {}, {16, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, false, true, 32, ACLNN_ERR_PARAM_INVALID},
-    {"ascend950_test_quant_bmm_v5_FP4E1M2FP4E2M1FP32_mxfp4_pergroup_scale_shape_k_error", {16, 64}, {16, 64}, {16, 3}, {}, {16, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, false, true, 32, ACLNN_ERR_PARAM_INVALID},
-    {"ascend950_test_quant_bmm_v5_FP4E1M2FP4E2M1FP32_mxfp4_pergroup_pertoken_dim_error", {16, 64}, {16, 64}, {16, 2}, {}, {16}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, false, true, 32, ACLNN_ERR_PARAM_INVALID},
-    {"ascend950_test_quant_bmm_v5_FP4E1M2FP4E2M1FP32_mxfp4_pergroup_pertoken_shape_m_error", {16, 64}, {16, 64}, {16, 2}, {}, {15, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, false, true, 32, ACLNN_ERR_PARAM_INVALID},
-    {"ascend950_test_quant_bmm_v5_FP4E1M2FP4E2M1FP32_mxfp4_pergroup_pertoken_shape_k_error", {16, 64}, {16, 64}, {16, 2}, {}, {16, 3}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, false, true, 32, ACLNN_ERR_PARAM_INVALID},
-    {"ascend950_test_quant_bmm_v5_FP4E1M2FP4E2M1BF16_mxfp4_pergroup_transpose_true_true_error", {64, 16}, {16, 64}, {16, 2}, {}, {16, 2}, {16}, {}, {}, {}, {16, 16}, {16, 1}, {64, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_BF16, true, true, 32, ACLNN_ERR_PARAM_INVALID},
-    {"ascend950_test_quant_bmm_v5_FP4E1M2FP4E2M1BF16_mxfp4_pergroup_transpose_false_false_error", {16, 64}, {64, 16}, {16, 2}, {}, {16, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {16, 1}, ACL_FLOAT4_E1M2, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_BF16, false, false, 32, ACLNN_ERR_PARAM_INVALID},
     {"ascend950_test_quant_bmm_v5_HIFLOAT8FP8E4M3FP32_mxfp8_x1_dtype_error", {16, 64}, {16, 64}, {16, 2}, {}, {16, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_HIFLOAT8, ACL_FLOAT8_E4M3FN, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, false, true, 32, ACLNN_ERR_PARAM_INVALID},
     // {"ascend950_test_quant_bmm_v5_FP8E4M3FP8E4M3FP32_mxfp8_x2_dtype_error", {16, 64}, {16, 64}, {16, 2}, {}, {16, 2}, {16}, {}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT8_E4M3FN, ACL_INT8, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, false, true, 32, ACLNN_ERR_PARAM_INVALID},
     // {"ascend950_test_quant_bmm_v5_yScale_not_null_error", {16, 64}, {16, 64}, {16, 2}, {}, {16, 2}, {16}, {16}, {}, {}, {16, 16}, {64, 1}, {64, 1}, ACL_FLOAT8_E4M3FN, ACL_INT8, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT8_E8M0, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, false, true, 32, ACLNN_ERR_PARAM_NULLPTR},
@@ -498,44 +471,6 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_multi_thread)
 //     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 // }
 
-// TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_case_torch_fp8e4m3_in_fp8_out_pertensor)
-// {
-//     TensorDesc x1_desc = TensorDesc({16, 32}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND, {32, 1}, 0, {12 * 32}).ValueRange(-1, 1);
-//     TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND, {64, 1}, 0, {32 * 64}).ValueRange(-1, 1);
-//     TensorDesc scale_desc = TensorDesc({1}, ACL_INT64, ACL_FORMAT_ND);
-//     TensorDesc out_desc = TensorDesc({16, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
-//     auto ut = OP_API_UT(aclnnQuantMatmulV5, INPUT(x1_desc, x2_desc, nullptr, scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 0),
-//                         OUTPUT(out_desc));
-//     uint64_t workspace_size = 0;
-//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-//     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-// }
-
-// TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_case_torch_fp8e5m2_in_fp8_out_pertensor)
-// {
-//     TensorDesc x1_desc = TensorDesc({16, 32}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND, {32, 1}, 0, {12 * 32}).ValueRange(-1, 1);
-//     TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND, {64, 1}, 0, {32 * 64}).ValueRange(-1, 1);
-//     TensorDesc scale_desc = TensorDesc({1}, ACL_INT64, ACL_FORMAT_ND);
-//     TensorDesc out_desc = TensorDesc({16, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
-//     auto ut = OP_API_UT(aclnnQuantMatmulV5, INPUT(x1_desc, x2_desc, nullptr, scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 0),
-//                         OUTPUT(out_desc));
-//     uint64_t workspace_size = 0;
-//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-//     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-// }
-
-// TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_case_torch_hif8_in_hif8_out_pertensor)
-// {
-//     TensorDesc x1_desc = TensorDesc({16, 32}, ACL_HIFLOAT8, ACL_FORMAT_ND, {32, 1}, 0, {12 * 32}).ValueRange(-1, 1);
-//     TensorDesc x2_desc = TensorDesc({32, 64}, ACL_HIFLOAT8, ACL_FORMAT_ND, {64, 1}, 0, {32 * 64}).ValueRange(-1, 1);
-//     TensorDesc scale_desc = TensorDesc({1}, ACL_INT64, ACL_FORMAT_ND);
-//     TensorDesc out_desc = TensorDesc({16, 64}, ACL_HIFLOAT8, ACL_FORMAT_ND);
-//     auto ut = OP_API_UT(aclnnQuantMatmulV5, INPUT(x1_desc, x2_desc, nullptr, scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 0),
-//                         OUTPUT(out_desc));
-//     uint64_t workspace_size = 0;
-//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-//     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-// }
 
 // TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_case_torch_fp8e4m3_in_fp32_out_double_scale)
 // {

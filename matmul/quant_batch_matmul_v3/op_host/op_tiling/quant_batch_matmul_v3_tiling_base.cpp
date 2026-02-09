@@ -64,7 +64,6 @@ const std::map<ge::DataType, std::vector<BasicQuantMode>> X2_QUANT_MODE_MAP =
     {ge::DT_FLOAT8_E5M2, {BasicQuantMode::PERTENSOR_MODE, BasicQuantMode::PERCHANNEL_MODE,
         BasicQuantMode::PERBLOCK_MODE, BasicQuantMode::MX_PERGROUP_MODE}},
     {ge::DT_FLOAT4_E2M1, {BasicQuantMode::MX_PERGROUP_MODE}},
-    {ge::DT_FLOAT4_E1M2, {BasicQuantMode::MX_PERGROUP_MODE}},
     {ge::DT_HIFLOAT8, {BasicQuantMode::PERTENSOR_MODE, BasicQuantMode::PERCHANNEL_MODE, BasicQuantMode::PERBLOCK_MODE}},
     {ge::DT_INT8, {BasicQuantMode::PERTENSOR_MODE, BasicQuantMode::PERCHANNEL_MODE}},
 
@@ -77,7 +76,6 @@ const std::map<ge::DataType, std::vector<BasicQuantMode>> X1_QUANT_MODE_MAP =
     {ge::DT_FLOAT8_E5M2, {BasicQuantMode::PERTENSOR_MODE, BasicQuantMode::PERTOKEN_MODE,
         BasicQuantMode::PERBLOCK_MODE, BasicQuantMode::MX_PERGROUP_MODE}},
     {ge::DT_FLOAT4_E2M1, {BasicQuantMode::MX_PERGROUP_MODE}},
-    {ge::DT_FLOAT4_E1M2, {BasicQuantMode::MX_PERGROUP_MODE}},
     {ge::DT_HIFLOAT8, {BasicQuantMode::PERTENSOR_MODE, BasicQuantMode::PERTOKEN_MODE, BasicQuantMode::PERBLOCK_MODE}},
     {ge::DT_INT8, {BasicQuantMode::PERTENSOR_MODE, BasicQuantMode::PERTOKEN_MODE}},
 

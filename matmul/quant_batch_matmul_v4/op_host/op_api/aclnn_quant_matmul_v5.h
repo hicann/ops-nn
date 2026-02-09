@@ -23,8 +23,8 @@ extern "C" {
  * @brief aclnnQuantMatmulV5的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
  * 算子功能：实现量化场景的矩阵乘。
- * @param [in] x1: matmul左矩阵，数据类型支持：float4_e2m1, float4_e1m2, int8, float8_e4m3fn, float8_e5m2, hifloat8。
- * @param [in] x2: matmul右矩阵，数据类型支持：float4_e2m1, float4_e1m2, int8, float8_e4m3fn, float8_e5m2, hifloat8。
+ * @param [in] x1: matmul左矩阵，数据类型支持：float4_e2m1, int8, float8_e4m3fn, float8_e5m2, hifloat8。
+ * @param [in] x2: matmul右矩阵，数据类型支持：float4_e2m1, int8, float8_e4m3fn, float8_e5m2, hifloat8。
  * @param [in] x1Scale: x1量化参数，数据类型支持：float8_e8m0, float32。
  * @param [in] x2Scale: x2量化参数，数据类型支持：float8_e8m0, bfloat16, float32, int64, uint64。
  * @param [in] yScale: y量化参数，数据类型支持：int64、uint64。
@@ -35,7 +35,7 @@ extern "C" {
  * @param [in] transposeX1: x1矩阵是否转置。
  * @param [in] transposeX2: x2矩阵是否转置。
  * @param [in] groupSize: 量化参数，数据类型支持：int64。
- * @param [out] out: 计算结果，数据类型：int8，float16, bfloat16, float32, float8_e4m3fn, hifloat8。
+ * @param [out] out: 计算结果，数据类型：int8，float16, bfloat16, float32。
  * @param [out] workspaceSize: 返回需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码

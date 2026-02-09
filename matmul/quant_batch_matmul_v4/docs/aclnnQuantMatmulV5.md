@@ -17,7 +17,7 @@
 
 - 接口功能：完成量化的矩阵乘计算。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：兼容aclnnQuantMatmulV3、aclnnQuantMatmulV4接口功能。完成量化的矩阵乘计算，最小支持输入维度为1维，最大支持输入维度为2维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）。
-  - <term>Ascend 950PR/Ascend 950DT</term>：兼容aclnnQuantMatmulV3、aclnnQuantMatmulV4接口功能，在其基础上新增支持G-B、B-B、T-CG、mx[量化模式](../../../docs/zh/context/量化介绍.md)等特性，新增x1，x2输入支持dtype为FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8、FLOAT4_E2M1、FLOAT4_E1M2。完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。
+  - <term>Ascend 950PR/Ascend 950DT</term>：兼容aclnnQuantMatmulV3、aclnnQuantMatmulV4接口功能，在其基础上新增支持G-B、B-B、T-CG、mx[量化模式](../../../docs/zh/context/量化介绍.md)等特性，新增x1，x2输入支持dtype为FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8、FLOAT4_E2M1。完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。
 
 - 计算公式：
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
@@ -244,7 +244,7 @@ aclnnStatus aclnnQuantMatmulV5(
             <li>仅最后m和k轴转置情况下支持<a href="../../../docs/zh/context/非连续的Tensor.md">非连续的Tensor</a>，其他轴方向不支持非连续的Tensor。</li>
           </ul>
         </td>
-        <td>INT4<sup>1</sup>、INT8、INT32<sup>1</sup>、FLOAT8_E4M3FN<sup>2</sup>、FLOAT8_E5M2<sup>2</sup>、HIFLOAT8<sup>2</sup>、FLOAT4_E2M1<sup>2</sup>、FLOAT4_E1M2<sup>2</sup></td>
+        <td>INT4<sup>1</sup>、INT8、INT32<sup>1</sup>、FLOAT8_E4M3FN<sup>2</sup>、FLOAT8_E5M2<sup>2</sup>、HIFLOAT8<sup>2</sup>、FLOAT4_E2M1<sup>2</sup></td>
         <td>ND</td>
         <td>2-6</td>
         <td>√</td>
@@ -261,7 +261,7 @@ aclnnStatus aclnnQuantMatmulV5(
             <li>ND格式下支持最后两根轴转置情况下的非连续tensor，其他场景的<a href="../../../docs/zh/context/非连续的Tensor.md">非连续的Tensor</a>不支持。</li>
           </ul>
         </td>
-        <td>INT4<sup>1</sup>、INT8、INT32<sup>1</sup>、FLOAT8_E4M3FN<sup>2</sup>、FLOAT8_E5M2<sup>2</sup>、HIFLOAT8<sup>2</sup>、FLOAT4_E2M1<sup>2</sup>、FLOAT4_E1M2<sup>2</sup></td>
+        <td>INT4<sup>1</sup>、INT8、INT32<sup>1</sup>、FLOAT8_E4M3FN<sup>2</sup>、FLOAT8_E5M2<sup>2</sup>、HIFLOAT8<sup>2</sup>、FLOAT4_E2M1<sup>2</sup></td>
         <td>ND、NZ</td>
         <td>2-8</td>
         <td>√</td>
@@ -407,7 +407,7 @@ aclnnStatus aclnnQuantMatmulV5(
             <li>不支持空Tensor。</li>
           </ul>
         </td>
-        <td>FLOAT16、INT8、BFLOAT16、INT32、HIFLOAT8<sup>2</sup>、FLOAT8_E4M3FN<sup>2</sup></td>
+        <td>FLOAT16、INT8、BFLOAT16、INT32</td>
         <td>ND</td>
         <td>2</td>
         <td>✓</td>
@@ -777,17 +777,17 @@ aclnnStatus aclnnQuantMatmulV5(
       |量化类型| x1                        | x2                        | x1Scale     | x2Scale     |   x2Offset | yScale | bias    | out                                    |
       |-------| ------------------------- | ------------------------- | ----------- | ----------- |   -------- | -------| ------- | -------------------------------------- |
       |mx 全量化| FLOAT8_E4M3FN/ FLOAT8_E5M2 | FLOAT8_E4M3FN/ FLOAT8_E5M2 | FLOAT8_E8M0 |   FLOAT8_E8M0       | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
-      |mx 全量化| FLOAT4_E2M1/ FLOAT4_E1M2 | FLOAT4_E2M1/ FLOAT4_E1M2 | FLOAT8_E8M0 |   FLOAT8_E8M0       | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
+      |mx 全量化| FLOAT4_E2M1                | FLOAT4_E2M1                | FLOAT8_E8M0 |   FLOAT8_E8M0       | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
       |mx 伪量化| FLOAT8_E4M3FN             | FLOAT4_E2M1               | FLOAT8_E8M0 |   FLOAT8_E8M0       | null     | null     | null/BFLOAT16|  BFLOAT16                               |
   - x1数据类型、x2数据类型、x1、x2、x1Scale、x2Scale和groupSize的取值关系：
     |量化类型|x1数据类型|x2数据类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|bias shape|yScale shape|[gsM，gsN，gsK]|groupSize|
     |-------|--------|--------|--------|--------|-------------|-------------|------------|---------------------------------------|--|--|
     |mx 全量化|FLOAT8_E4M3FN/ FLOAT8_E5M2|FLOAT8_E4M3FN/ FLOAT8_E5M2|<li>非转置：(batch, m, k)</li><li>转置：(batch, k, m)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(m, ceil(k / 64), 2)</li><li>转置：(ceil(k / 64), m, 2)</li>|<li>非转置：(ceil(k / 64), n, 2)</li><li>转置：(n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
-    |mx 全量化|FLOAT4_E2M1/ FLOAT4_E1M2|FLOAT4_E2M1/ FLOAT4_E1M2|(batch, m, k)|(batch, n, k)|(m, ceil(k / 64), 2)|(n, ceil(k / 64), 2)|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
+    |mx 全量化|FLOAT4_E2M1|FLOAT4_E2M1|(batch, m, k)|(batch, n, k)|(m, ceil(k / 64), 2)|(n, ceil(k / 64), 2)|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
     |mx 伪量化|FLOAT8_E4M3FN|FLOAT4_E2M1|(m, k)|(n, k)|(m, ceil(k / 32))|(n, ceil(k / 32))|(1，n)|null|[0, 0, 32]/[1, 1, 32]|32/4295032864|
 
   - mx全量化场景下，当x2数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2时，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致。
-  - mx全量化场景下，当x2数据类型为FLOAT4_E2M1/FLOAT4_E1M2时，仅支持transposeX1为false且transposeX2为true，要求k为偶数且ceil(k / 32)为偶数。
+  - mx全量化场景下，当x2数据类型为FLOAT4_E2M1时，仅支持transposeX1为false且transposeX2为true，要求k为偶数且ceil(k / 32)为偶数。
   - mx伪量化场景下，当x2数据类型为FLOAT4_E2M1时，transposeX1为false，不支持batch轴。数据格式支持ND和AI处理器亲和数据排布格式。当数据格式为ND格式时，要求支持k是64的倍数。当数据格式为AI处理器亲和数据排布格式时, 要求k, n都是64的倍数。
   - mx伪量化场景下，bias为可选参数。数据类型支持BFLOAT16, 数据格式支持ND，shape支持2维，shape表示(1，n)。如不需要使用该参数，传入nullptr。
     - mx伪量化场景下，[groupSizeM，groupSizeN，groupSizeK]取值组合支持[0, 0, 32]和[1, 1, 32]，对应的groupSize值分别为32和4295032864。

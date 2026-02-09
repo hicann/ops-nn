@@ -213,7 +213,7 @@ protected:
     template <typename T>
     T GetShapeWithDataType(T size, ge::DataType dtype) const
     {
-        if (dtype == ge::DT_INT4 || dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2 ) {
+        if (dtype == ge::DT_INT4 || dtype == ge::DT_FLOAT4_E2M1) {
             return size + size;
         } else {
             return size / static_cast<T>(ge::GetSizeByDataType(dtype));
@@ -223,7 +223,7 @@ protected:
     template <typename T>
     T GetSizeWithDataType(T shape, ge::DataType dtype) const
     {
-        if (dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2 || dtype == ge::DT_INT4) {
+        if (dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_INT4) {
             return (shape + 1) >> 1;
         } else {
             return shape * static_cast<T>(ge::GetSizeByDataType(dtype));

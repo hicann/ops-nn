@@ -23,18 +23,18 @@ namespace ge {
 
 * @par Inputs:
 * Six inputs, including:
-* @li x1: A matrix tensor. Must be one of the following types: int8, int4, hifloat8, float8_e5m2, float8_e4m3fn, float4_e1m2, float4_e2m1. \n
+* @li x1: A matrix tensor. Must be one of the following types: int8, int4, hifloat8, float8_e5m2, float8_e4m3fn, float4_e2m1. \n
           when the data type is int8, supports ND and NZ formats. \n
-          when the data type is int4, hifloat8, float8_e5m2, float8_e4m3fn, float4_e1m2 or float4_e2m1, only supports ND format. \n
+          when the data type is int4, hifloat8, float8_e5m2, float8_e4m3fn, float4_e2m1, only supports ND format. \n
           - In ND format and Non-int4 type, the shape ranges from 2D to 6D. When transpose_x1 is false, the shape is (batch,m,k), where
           batch is optional; In int4 type, shape only supports 2D. \n
           - In NZ (Ascend affinity) format, the shape ranges from 4D to 8D. When tranpose_x1 is true, the shape is
           (batch,x1_m1,x1_k1,x1_k0,x1_m0), where batch is optional, x1_m0 = 32, and x1_k0 = 16. When transpose_x1 is false, the shape is
           (batch,x1_k1,x1_m1,x1_m0,x1_k0), where batch is optional, x1_m0 = 16, and x1_k0 = 32. \n
-          When the data type is int4, float4_e1m2 or float4_e2m1, the last dim must be even. \n
-* @li x2: A matrix tensor. Must be one of the following types: int8, int4, hifloat8, float8_e5m2, float8_e4m3fn, float4_e1m2, float4_e2m1. \n
+          When the data type is int4, float4_e2m1, the last dim must be even. \n
+* @li x2: A matrix tensor. Must be one of the following types: int8, int4, hifloat8, float8_e5m2, float8_e4m3fn, float4_e2m1. \n
           when the data type is int8, supports ND and NZ formats. \n
-          when the data type is int4, hifloat8, float8_e5m2, float8_e4m3fn, float4_e1m2 or float4_e2m1, the format only supports ND. \n
+          when the data type is int4, hifloat8, float8_e5m2, float8_e4m3fn, float4_e2m1, the format only supports ND. \n
           - In ND format and Non-int4 type, the shape ranges from 2D to 6D. When transpose_x2 is false, the shape is (batch,k,n), where
           batch is optional; In int4 type, shape only supports 2D. \n
           - In NZ (Ascend affinity) format, the shape ranges from 4D to 8D. \n
@@ -46,7 +46,7 @@ namespace ge {
                   - when x1_k0 == x2_k0, x1_k1 == x2_k1, \n
                   - when x1_k0 > x2_k0, ceil((x2_k0 * x2_k1) / x1_k0) == x1_k1, \n
                   - when x1_k0 < x2_k0, ceil((x1_k0 * x1_k1) / x2_k0) == x2_k1. \n
-          When the data type is int4, float4_e1m2 or float4_e2m1, the last dim must be even.
+          When the data type is int4, float4_e2m1, the last dim must be even.
 * @li scale: A matrix tensor, quantization parameter,
              Must be one of the following types: uint64, float32, int64, bfloat16, float8_e8m0, supports ND format. \n
             - When the data type is bfloat16, uint64 or int64,
@@ -102,7 +102,7 @@ namespace ge {
 
 * @par Outputs:
 * One output, including:
-* y: A matrix Tensor. Must be one of the following types: float16, int8, bfloat16, int32, float32, hifloat8, float8_e4m3fn.
+* y: A matrix Tensor. Must be one of the following types: float16, int8, bfloat16, int32, float32.
      The format supports ND. The shape ranges from 2D to 6D,
      that is (batch, m, n), where batch is optional. Broadcasting can be performed on the batch dimension of x1 and x2.
      The output batch is the same as the batch after broadcasting, m is the same as that of x1, and n is the same as
@@ -152,13 +152,13 @@ namespace ge {
 | int8                      | int8                      | uint64/int64         | null          | null/int32                  | null        | float16/bfloat16                       |
 | int8                      | int8                      | uint64/int64         | null/float32  | null/int32                  | null        | int8                                   |
 | int8                      | int8                      | float32/bfloat16     | null          | null/int32/float32/bfloat16 | null/float32| bfloat16                               |
-| int8                      | int8                      | float32              | null          | null/int32/float32/float16  | float32     | float16                      |
-| hifloat8                  | hifloat8                  | uint64/int64         | null          | null/float32                | null        | hifloat8/float16/bfloat16/float32      |
+| int8                      | int8                      | float32              | null          | null/int32/float32/float16  | float32     | float16                                |
+| hifloat8                  | hifloat8                  | uint64/int64         | null          | null/float32                | null        | float16/bfloat16/float32               |
 | hifloat8                  | hifloat8                  | float32              | null          | null/float32                | float32     | float16/bfloat16/float32               |
-| float8_e4m3fn/float8_e5m2 | float8_e4m3fn/float8_e5m2 | uint64/int64         | null          | null/float32                | null        | float8_e4m3fn/float16/bfloat16/float32 |
+| float8_e4m3fn/float8_e5m2 | float8_e4m3fn/float8_e5m2 | uint64/int64         | null          | null/float32                | null        | float16/bfloat16/float32               |
 | float8_e4m3fn/float8_e5m2 | float8_e4m3fn/float8_e5m2 | float32              | null          | null/float32                | float32     | float16/bfloat16/float32               |
 | float8_e4m3fn/float8_e5m2 | float8_e4m3fn/float8_e5m2 | float8_e8m0          | null          | null/float32                | float8_e8m0 | float16/bfloat16/float32               |
-| float4_e2m1/float4_e1m2   | float4_e2m1/float4_e1m2   | float8_e8m0          | null          | null/float32                | float8_e8m0 | float16/bfloat16/float32               |
+| float4_e2m1               | float4_e2m1               | float8_e8m0          | null          | null/float32                | float8_e8m0 | float16/bfloat16/float32               |
 *\n
 * - Ascend 950 AI Processor, supported data type and quant mode combinations:
 *\n
@@ -193,7 +193,7 @@ mx quant：
   | x1 type                   | x2 type                   | pertoken type    | scale type       |
   | ------------------------- | ------------------------- | ---------------- | ---------------- |
   | float8_e4m3fn/float8_e5m2 | float8_e4m3fn/float8_e5m2 | float8_e8m0      | float8_e8m0      |
-  | float4_e2m1/float4_e1m2   | float4_e2m1/float4_e1m2   | float8_e8m0      | float8_e8m0      |
+  | float4_e2m1               | float4_e2m1               | float8_e8m0      | float8_e8m0      |
 *\n
 * - Ascend 950 AI Processor with group_sizes scenarios, supported data type and shapes combinations:
 *\n
@@ -208,18 +208,18 @@ mx quant：
 | pergroup-perblock | float8_e4m3fn/float8_e5m2/hifloat8 | float32     | (batch, k, m) | (batch, k, n) | (batch, ceil(k / 128), ceil(n / 128)) | (batch, ceil(k / 128), m)             | [1, 128, 128]   |
 | pergroup-perblock | float8_e4m3fn/float8_e5m2/hifloat8 | float32     | (batch, k, m) | (batch, n, k) | (batch, ceil(n / 128), ceil(k / 128)) | (batch, ceil(k / 128), m)             | [1, 128, 128]   |
 | mx                | float8_e4m3fn/float8_e5m2          | float8_e8m0 | (batch, m, k) | (batch, n, k) | (n, ceil(k / 64) * 2)                 | (m, ceil(k / 64) * 2)                 | [1, 1, 32]      |
-| mx                | float4_e2m1/float4_e1m2            | float8_e8m0 | (batch, m, k) | (batch, n, k) | (n, ceil(k / 64) * 2)                 | (m, ceil(k / 64) * 2)                 | [1, 1, 32]      |
+| mx                | float4_e2m1                        | float8_e8m0 | (batch, m, k) | (batch, n, k) | (n, ceil(k / 64) * 2)                 | (m, ceil(k / 64) * 2)                 | [1, 1, 32]      |
 
 *\n
 */
 REG_OP(QuantBatchMatmulV3)
-    .INPUT(x1, TensorType({DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT4_E1M2, DT_FLOAT4_E2M1}))
-    .INPUT(x2, TensorType({DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT4_E1M2, DT_FLOAT4_E2M1}))
+    .INPUT(x1, TensorType({DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT4_E2M1}))
+    .INPUT(x2, TensorType({DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT4_E2M1}))
     .INPUT(scale, TensorType({DT_UINT64, DT_FLOAT, DT_INT64, DT_BF16, DT_FLOAT8_E8M0}))
     .OPTIONAL_INPUT(offset, TensorType({DT_FLOAT}))
     .OPTIONAL_INPUT(bias, TensorType({DT_INT32, DT_BF16, DT_FLOAT16, DT_FLOAT}))
     .OPTIONAL_INPUT(pertoken_scale, TensorType({DT_FLOAT, DT_FLOAT8_E8M0}))
-    .OUTPUT(y, TensorType({DT_FLOAT16, DT_INT8, DT_BF16, DT_INT32, DT_FLOAT, DT_HIFLOAT8, DT_FLOAT8_E4M3FN}))
+    .OUTPUT(y, TensorType({DT_FLOAT16, DT_INT8, DT_BF16, DT_INT32, DT_FLOAT}))
     .REQUIRED_ATTR(dtype, Int)
     .ATTR(transpose_x1, Bool, false)
     .ATTR(transpose_x2, Bool, false)

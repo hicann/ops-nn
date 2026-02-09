@@ -46,8 +46,7 @@ static const std::initializer_list<op::DataType> EIGHT_BIT_INT_INPUT_LIST = {op:
 static const std::initializer_list<op::DataType> FOUR_BIT_INT_INPUT_LIST = {op::DataType::DT_INT4};
 static const std::initializer_list<op::DataType> EIGHT_BIT_FLOAT_INPUT_LIST = {op::DataType::DT_FLOAT8_E4M3FN,
                                                                                op::DataType::DT_FLOAT8_E5M2};
-static const std::initializer_list<op::DataType> FOUR_BIT_FLOAT_INPUT_LIST = {op::DataType::DT_FLOAT4_E2M1,
-                                                                              op::DataType::DT_FLOAT4_E1M2};
+static const std::initializer_list<op::DataType> FOUR_BIT_FLOAT_INPUT_LIST = {op::DataType::DT_FLOAT4_E2M1};
 static const std::initializer_list<op::DataType> Y_SUPPORT_LIST = {op::DataType::DT_BF16, op::DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> Y_SCALE_SUPPORT_LIST = {op::DataType::DT_UINT64};
 static const std::initializer_list<op::DataType> X1_SCALE_SUPPORT_LIST = {op::DataType::DT_FLOAT};

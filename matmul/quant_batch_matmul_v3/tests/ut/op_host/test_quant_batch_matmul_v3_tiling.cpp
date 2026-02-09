@@ -239,8 +239,7 @@ static std::vector<QuantBatchMatmulV3TilingTestParam> GetParams(const std::strin
                                           {"INT4", ge::DT_INT4},       {"UINT64", ge::DT_UINT64},
                                           {"INT32", ge::DT_INT32},     {"INT64", ge::DT_INT64}, {"FLOAT8-E8M0", ge::DT_FLOAT8_E8M0},
                                           {"HIFLOAT8", ge::DT_HIFLOAT8},{"FLOAT8-E5M2", ge::DT_FLOAT8_E5M2},
-                                          {"FLOAT8-E4M3", ge::DT_FLOAT8_E4M3FN}, {"FLOAT4-E2M1", ge::DT_FLOAT4_E2M1},
-                                          {"FLOAT4-E1M2", ge::DT_FLOAT4_E1M2}};
+                                          {"FLOAT8-E4M3", ge::DT_FLOAT8_E4M3FN}, {"FLOAT4-E2M1", ge::DT_FLOAT4_E2M1}};
 
     std::string line;
     while (std::getline(csvData, line)) {

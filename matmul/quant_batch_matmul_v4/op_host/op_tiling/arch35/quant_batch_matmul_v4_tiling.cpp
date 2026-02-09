@@ -248,16 +248,16 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeDtype()
             ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str()),
         return false);
     // check x2 dtype
-    OP_TILING_CHECK(inputParams_.bDtype != ge::DT_FLOAT4_E2M1 && inputParams_.bDtype != ge::DT_FLOAT4_E1M2,
+    OP_TILING_CHECK(inputParams_.bDtype != ge::DT_FLOAT4_E2M1,
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-            "Unsupported data type [%s] for X2. Only DT_FLOAT4_E2M1 and DT_FLOAT4_E1M2 are supported.",
+            "Unsupported data type [%s] for X2. Only DT_FLOAT4_E2M1 is supported.",
             ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
         return false);
     OP_TILING_CHECK(
         inputParams_.antiQuantType == QuantType::PER_GROUP && inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ &&
         inputParams_.bDtype != ge::DT_FLOAT4_E2M1,
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-            "Unsupported data type [%s] for X2. Only DT_FLOAT4_E2M1 are supported for per_group and NZ format.",
+            "Unsupported data type [%s] for X2. Only DT_FLOAT4_E2M1 is supported for per_group and NZ format.",
             ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
         return false);
     // check y dtype

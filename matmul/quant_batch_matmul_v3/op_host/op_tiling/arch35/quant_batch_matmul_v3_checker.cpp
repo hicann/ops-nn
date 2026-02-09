@@ -40,7 +40,7 @@ bool QuantBatchMatmulV3Checker::LogicXOR(bool cond1, bool cond2) const
 bool QuantBatchMatmulV3Checker::CheckABDtypes() const
 {
     OP_TILING_CHECK(
-        LogicXOR((inputParams_.aDtype == ge::DT_INT8), (inputParams_.bDtype == ge::DT_INT8)),
+        LogicXOR(inputParams_.aDtype == ge::DT_INT8, inputParams_.bDtype == ge::DT_INT8),
         CUBE_INNER_ERR_REPORT(
             inputParams_.opName,
             "When one input dtype is INT8, then the other input dtype must be INT8, actual x1 is %s, x2 is %s.",
@@ -48,7 +48,7 @@ bool QuantBatchMatmulV3Checker::CheckABDtypes() const
             ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
         return false);
     OP_TILING_CHECK(
-        LogicXOR((inputParams_.aDtype == ge::DT_HIFLOAT8), (inputParams_.bDtype == ge::DT_HIFLOAT8)),
+        LogicXOR(inputParams_.aDtype == ge::DT_HIFLOAT8, inputParams_.bDtype == ge::DT_HIFLOAT8),
         CUBE_INNER_ERR_REPORT(
             inputParams_.opName,
             "When one input dtype is HIFLOAT8, then the other input dtype must be HIFLOAT8, actual x1 is %s, x2 is %s.",
@@ -56,8 +56,7 @@ bool QuantBatchMatmulV3Checker::CheckABDtypes() const
             ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
         return false);
     OP_TILING_CHECK(
-        LogicXOR((inputParams_.aDtype == ge::DT_FLOAT4_E2M1 || inputParams_.aDtype == ge::DT_FLOAT4_E1M2),
-                 (inputParams_.bDtype == ge::DT_FLOAT4_E2M1 || inputParams_.bDtype == ge::DT_FLOAT4_E1M2)),
+        LogicXOR(inputParams_.aDtype == ge::DT_FLOAT4_E2M1, inputParams_.bDtype == ge::DT_FLOAT4_E2M1),
         CUBE_INNER_ERR_REPORT(
             inputParams_.opName,
             "When one input dtype is FLOAT4, then the other input dtype must be FLOAT4, actual x1 is %s, x2 is %s.",
@@ -91,7 +90,7 @@ bool QuantBatchMatmulV3Checker::CheckABDtypes() const
 
 bool QuantBatchMatmulV3Checker::CheckScaleDtypeWithPertoken() const
 {
-    bool isFp4 = inputParams_.aDtype == ge::DT_FLOAT4_E2M1 || inputParams_.aDtype == ge::DT_FLOAT4_E1M2;
+    bool isFp4 = inputParams_.aDtype == ge::DT_FLOAT4_E2M1;
     bool isFp8 = inputParams_.aDtype == ge::DT_FLOAT8_E5M2 || inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN;
     OP_TILING_CHECK(inputParams_.aDtype != ge::DT_INT8 && inputParams_.perTokenScaleDtype != inputParams_.scaleDtype,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
@@ -140,7 +139,7 @@ should be FLOAT/BFLOAT16, actual dtype is %s.",
 
 bool QuantBatchMatmulV3Checker::CheckScalesDtype() const
 {
-    bool isFp4 = inputParams_.aDtype == ge::DT_FLOAT4_E2M1 || inputParams_.aDtype == ge::DT_FLOAT4_E1M2;
+    bool isFp4 = inputParams_.aDtype == ge::DT_FLOAT4_E2M1;
     if (context_->GetOptionalInputDesc(GetPertokenIdx()) != nullptr &&
         context_->GetOptionalInputShape(GetPertokenIdx()) != nullptr) {
         OP_TILING_CHECK(!CheckScaleDtypeWithPertoken(),
@@ -228,21 +227,19 @@ bool QuantBatchMatmulV3Checker::CheckOutputDtype() const
 {
     OP_TILING_CHECK(
         (inputParams_.aDtype == ge::DT_FLOAT8_E5M2 || inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN ||
-            inputParams_.aDtype == ge::DT_FLOAT8_E8M0 || inputParams_.aDtype == ge::DT_FLOAT4_E2M1 ||
-            inputParams_.aDtype == ge::DT_FLOAT4_E1M2) &&
-            (inputParams_.cDtype == ge::DT_INT8 || inputParams_.cDtype == ge::DT_HIFLOAT8),
+            inputParams_.aDtype == ge::DT_FLOAT8_E8M0 || inputParams_.aDtype == ge::DT_FLOAT4_E2M1) &&
+            inputParams_.cDtype == ge::DT_INT8,
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                "When input dtype is FLOAT8/FLOAT4, output dtype must not be INT8/HIFLOAT8, actual is %s.",
+                                "When input dtype is FLOAT8/FLOAT4, output dtype must not be INT8, actual is %s.",
                                 ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
         return false);
     OP_TILING_CHECK(inputParams_.aDtype == ge::DT_HIFLOAT8 &&
-                        (inputParams_.cDtype == ge::DT_INT8 || inputParams_.cDtype == ge::DT_FLOAT8_E5M2 ||
-                            inputParams_.cDtype == ge::DT_FLOAT8_E4M3FN),
+                        (inputParams_.cDtype == ge::DT_INT8),
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                            "When input dtype is HIFLOAT8, output must not be INT8/FLOAT8, actual is %s.",
+                                            "When input dtype is HIFLOAT8, output must not be INT8, actual is %s.",
                                             ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
                     return false);
-    bool isFp4 = inputParams_.aDtype == ge::DT_FLOAT4_E2M1 || inputParams_.aDtype == ge::DT_FLOAT4_E1M2;
+    bool isFp4 = inputParams_.aDtype == ge::DT_FLOAT4_E2M1;
     bool isFp8 = inputParams_.aDtype == ge::DT_HIFLOAT8 || inputParams_.aDtype == ge::DT_FLOAT8_E5M2 ||
                     inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams_.aDtype == ge::DT_FLOAT8_E8M0;
     if (context_->GetOptionalInputDesc(GetPertokenIdx()) != nullptr &&
@@ -276,27 +273,27 @@ bool QuantBatchMatmulV3Checker::CheckOutputDtype() const
 bool QuantBatchMatmulV3Checker::CheckDtypesInRange() const
 {
     static const std::vector<ge::DataType> legalInputDtypes = {
-        ge::DT_INT8, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_HIFLOAT8, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2};
+        ge::DT_INT8, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_HIFLOAT8, ge::DT_FLOAT4_E2M1};
     static const std::vector<ge::DataType> legalOutputDtypes = {ge::DT_INT8,          ge::DT_FLOAT16,  ge::DT_BF16,
-                                                                ge::DT_FLOAT8_E4M3FN, ge::DT_HIFLOAT8, ge::DT_FLOAT, ge::DT_INT32};
+                                                                ge::DT_FLOAT, ge::DT_INT32};
     OP_TILING_CHECK(
         std::find(legalInputDtypes.begin(), legalInputDtypes.end(), inputParams_.aDtype) == legalInputDtypes.end(),
         CUBE_INNER_ERR_REPORT(
             inputParams_.opName,
-            "The x1 dtype must be INT8/FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8/FLOAT4_E2M1/FLOAT4_E1M2, actual is %s.",
+            "The x1 dtype must be INT8/FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8/FLOAT4_E2M1, actual is %s.",
             ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str()),
         return false);
     OP_TILING_CHECK(
         std::find(legalInputDtypes.begin(), legalInputDtypes.end(), inputParams_.bDtype) == legalInputDtypes.end(),
         CUBE_INNER_ERR_REPORT(
             inputParams_.opName,
-            "The x2 dtype must be INT8/FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8/FLOAT4_E2M1/FLOAT4_E1M2, actual is %s.",
+            "The x2 dtype must be INT8/FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8/FLOAT4_E2M1, actual is %s.",
             ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
         return false);
     OP_TILING_CHECK(
         std::find(legalOutputDtypes.begin(), legalOutputDtypes.end(), inputParams_.cDtype) == legalOutputDtypes.end(),
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                "Output dtype must be INT8/FLOAT16/BFLOAT16/FLOAT8_E4M3FN/HIFLOAT8/FLOAT, actual is %s.",
+                                "Output dtype must be INT8/FLOAT16/BFLOAT16/FLOAT, actual is %s.",
                                 ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
         return false);
     OP_TILING_CHECK(
@@ -606,7 +603,7 @@ but pertoken is null.");
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "The perTokenScale shape check failed."), return false);
     OP_TILING_CHECK(!MxScaleShapeCheck(scaleShape),
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "The scale shape check failed."), return false);
-    bool isFp4Input = (inputParams_.aDtype == ge::DT_FLOAT4_E2M1 || inputParams_.aDtype == ge::DT_FLOAT4_E1M2);
+    bool isFp4Input = inputParams_.aDtype == ge::DT_FLOAT4_E2M1;
     OP_TILING_CHECK(isFp4Input && (dimValueOfMKN[2] % 2 != 0 || dimValueOfMKN[0] % 2 != 0),
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
                                           "The x1 inner[%ld] or x2 inner[%ld] is not even \
@@ -735,7 +732,7 @@ bool QuantBatchMatmulV3Checker::ExtraInputCheck() const
 {
     bool isInt8Input = !(inputParams_.aDtype == ge::DT_HIFLOAT8 || inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN ||
                          inputParams_.aDtype == ge::DT_FLOAT8_E5M2);
-    bool isFp4Input = (inputParams_.aDtype == ge::DT_FLOAT4_E2M1 || inputParams_.aDtype == ge::DT_FLOAT4_E1M2);
+    bool isFp4Input = inputParams_.aDtype == ge::DT_FLOAT4_E2M1;
     OP_TILING_CHECK(
         inputParams_.isMxPerGroup && isFp4Input && (inputParams_.transA || !inputParams_.transB),
         CUBE_INNER_ERR_REPORT(inputParams_.opName,

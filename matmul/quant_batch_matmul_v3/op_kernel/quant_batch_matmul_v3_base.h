@@ -296,8 +296,7 @@ __aicore__ inline constexpr uint32_t GetC0Size()
     } else if constexpr (AscendC::IsSameType<T, AscendC::int4b_t>::value) {
         return K0_INT4;
 #if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
-    } else if constexpr (AscendC::IsSameType<T, fp4x2_e2m1_t>::value ||
-                         AscendC::IsSameType<T, fp4x2_e1m2_t>::value) {
+    } else if constexpr (AscendC::IsSameType<T, fp4x2_e2m1_t>::value) {
         return K0_INT4;
 #endif
     } else if constexpr (sizeof(T) == sizeof(float)) {
@@ -323,8 +322,7 @@ __aicore__ inline constexpr uint64_t GetSizeWithDataType(uint64_t shapeSize)
         is8BitInput = (AscendC::IsSameType<T, AscendC::int4b_t>::value);
     } else {
 #if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
-        is4BitInput = (AscendC::IsSameType<T, AscendC::int4b_t>::value || AscendC::IsSameType<T, fp4x2_e2m1_t>::value ||
-                       AscendC::IsSameType<T, fp4x2_e1m2_t>::value);
+        is4BitInput = (AscendC::IsSameType<T, AscendC::int4b_t>::value || AscendC::IsSameType<T, fp4x2_e2m1_t>::value);
 #else
         is4BitInput = (AscendC::IsSameType<T, AscendC::int4b_t>::value);
 #endif
@@ -377,7 +375,7 @@ __aicore__ inline constexpr bool IsMxType()
 template <typename T>
 __aicore__ inline constexpr bool IsFp4()
 {
-    return (AscendC::IsSameType<T, fp4x2_e2m1_t>::value || AscendC::IsSameType<T, fp4x2_e1m2_t>::value);
+    return AscendC::IsSameType<T, fp4x2_e2m1_t>::value;
 }
 #endif
 

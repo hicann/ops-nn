@@ -76,13 +76,13 @@
 
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
-    - x1，x2为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8，无x1Scale，x2Scale为INT64/UINT64，无x2Offset，可选参数bias的dtype为FLOAT32，out为FLOAT8_E4M3FN/HIFLOAT8/FLOAT16/BFLOAT16/FLOAT32：
+    - x1，x2为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8，无x1Scale，x2Scale为INT64/UINT64，无x2Offset，可选参数bias的dtype为FLOAT32，out为FLOAT16/BFLOAT16/FLOAT32：
 
       $$
       out = (x1@x2 + bias) * x2Scale
       $$
 
-    - mx[量化模式](../../docs/zh/context/量化介绍.md)中， x1，x2为FLOAT4_E2M1/FLOAT4_E1M2/FLOAT8_E4M3FN/FLOAT8_E5M2，x1Scale为FLOAT8_E8M0，x2Scale为FLOAT8_E8M0，无x2Offset，可选参数bias的dtype为FLOAT32：
+    - mx[量化模式](../../docs/zh/context/量化介绍.md)中， x1，x2为FLOAT4_E2M1/FLOAT8_E4M3FN/FLOAT8_E5M2，x1Scale为FLOAT8_E8M0，x2Scale为FLOAT8_E8M0，无x2Offset，可选参数bias的dtype为FLOAT32：
 
       $$
       out = (x1* x1Scale)@(x2* x2Scale) + bias
@@ -141,7 +141,7 @@
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">x2</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">输入</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">矩阵乘运算中的右矩阵。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">FLOAT4_E1M2, FLOAT4_E2M1, INT4, INT8</span></td>
+    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">FLOAT4_E2M1, INT4, INT8</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">ND, FRACTAL_NZ</span></td>
   </tr>
   <tr>
@@ -225,11 +225,11 @@
   | INT8                      | INT8                      | nullptr        | UINT64/INT64      | nullptr/FLOAT32  | nullptr     | nullptr/INT32   | INT8                              |
   | INT8                      | INT8                      | nullptr/FLOAT32| FLOAT32/BFLOAT16  | nullptr     | nullptr     | nullptr/INT32/FLOAT32/BFLOAT16   | BFLOAT16              |
   | INT8                      | INT8                      | FLOAT32     | FLOAT32           | nullptr     | nullptr     | nullptr/INT32/FLOAT32/FLOAT16  | FLOAT16                 |
-  | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | nullptr        | UINT64/INT64      | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT8_E4M3FN/FLOAT16/BFLOAT16/FLOAT32 |
-  | HIFLOAT8                  | HIFLOAT8                  | nullptr        | UINT64/INT64      | nullptr     | nullptr     | nullptr/FLOAT32 | HIFLOAT8/FLOAT16/BFLOAT16/FLOAT32      |
+  | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | nullptr        | UINT64/INT64      | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32            |
+  | HIFLOAT8                  | HIFLOAT8                  | nullptr        | UINT64/INT64      | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32            |
   | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT32     | FLOAT32           | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
   | HIFLOAT8                  | HIFLOAT8                  | FLOAT32     | FLOAT32           | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
-  | FLOAT4_E2M1/FLOAT4_E1M2   | FLOAT4_E2M1/FLOAT4_E1M2   | FLOAT8_E8M0 | FLOAT8_E8M0       | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
+  | FLOAT4_E2M1               | FLOAT4_E2M1               | FLOAT8_E8M0 | FLOAT8_E8M0       | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
   | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E8M0 | FLOAT8_E8M0       | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
   | FLOAT8_E4M3FN             | FLOAT4_E2M1               | FLOAT8_E8M0 | FLOAT8_E8M0       | nullptr     | nullptr     | nullptr/BFLOAT16| BFLOAT16                               |
   | FLOAT8_E4M3FN             | FLOAT4_E2M1               | nullptr        | BFLOAT16          | nullptr     | INT64/UINT64    | nullptr         | BFLOAT16                               |

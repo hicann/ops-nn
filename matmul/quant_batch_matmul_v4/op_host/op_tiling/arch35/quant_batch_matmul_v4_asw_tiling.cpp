@@ -324,7 +324,7 @@ bool AdaptiveSlidingWindowTilingV4::Is4BitInput(ge::DataType dtype, bool isLut) 
         // lut查表逻辑: 原始数据DT_INT2和DT_UINT1，查表后转DT_INT4; 原始数据DT_INT4, 查表后转DT_INT8
         is4BitInput = (dtype == ge::DT_INT2 || dtype == ge::DT_UINT1);
     } else {
-        is4BitInput = (dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2 || dtype == ge::DT_INT4);
+        is4BitInput = (dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_INT4);
     }
     return is4BitInput;
 }

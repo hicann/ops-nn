@@ -79,8 +79,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam& param)
         {"UINT64", ge::DT_UINT64},
         {"FP8-E8M0", ge::DT_FLOAT8_E8M0},
         {"FP8-E4M3", ge::DT_FLOAT8_E4M3FN},
-        {"FP4-E2M1", ge::DT_FLOAT4_E2M1},
-        {"FP4-E1M2", ge::DT_FLOAT4_E1M2}};
+        {"FP4-E2M1", ge::DT_FLOAT4_E2M1}};
 
     map<string, ge::Format> formatMap = {{"ND", ge::FORMAT_ND}, {"NZ", ge::FORMAT_FRACTAL_NZ}};
 

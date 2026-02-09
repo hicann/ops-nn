@@ -42,10 +42,6 @@ const aclTensor* QuantBatchMatmulV3(const aclTensor* x1, const aclTensor* x2, co
         outType = DataType::DT_BF16;
     } else if (dtype == TYPE_INT32) {
         outType = DataType::DT_INT32;
-    } else if (dtype == TYPE_HIF8) {
-        outType = DataType::DT_HIFLOAT8;
-    } else if (dtype == TYPE_FP8_E4M3FN) {
-        outType = DataType::DT_FLOAT8_E4M3FN;
     } else if (dtype == TYPE_FP32) {
         outType = DataType::DT_FLOAT;
     }

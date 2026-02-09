@@ -28,7 +28,7 @@ namespace ge {
 * - In A4W4 pergroup scenario: The data type supports int4.
 * @li x2: A matrix Tensor of quantized weight. The shape supports (n, k), and the format supports ND/FRACTAL_NZ.\n
 * - In MxA8W4 scenario:
-* For ND format, the data type supports float4_e2m1. For FRACTAL_NZ format, the data type supports float4_e2m1 and float4_e1m2.\n
+* For ND format, the data type supports float4_e2m1. For FRACTAL_NZ format, the data type supports float4_e2m1.\n
 * - In A8W4 scenario:
 * The data type supports float4_e2m1.
 * The k, n value must be at least 1 and k, n value must be a multiple of 64.
@@ -68,7 +68,7 @@ namespace ge {
 */
 REG_OP(QuantBatchMatmulV4)
     .INPUT(x1, TensorType({DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_INT8, DT_INT4}))
-    .INPUT(x2, TensorType({DT_FLOAT4_E1M2, DT_FLOAT4_E2M1, DT_INT4, DT_INT8}))
+    .INPUT(x2, TensorType({DT_FLOAT4_E2M1, DT_INT4, DT_INT8}))
     .OPTIONAL_INPUT(bias, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT32}))
     .OPTIONAL_INPUT(x1_scale, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT8_E8M0, DT_FLOAT32}))
     .OPTIONAL_INPUT(x2_scale, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT8_E8M0, DT_UINT64, DT_FLOAT32}))

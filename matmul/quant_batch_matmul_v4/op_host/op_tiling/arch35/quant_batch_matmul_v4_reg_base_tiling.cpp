@@ -47,8 +47,7 @@ bool QuantBatchMatmulV4RegBase::CustomCheck() const
 
     bool a8w4Flag = (inputParams_.aDtype == ge::DT_HIFLOAT8 || inputParams_.aDtype == ge::DT_FLOAT8_E5M2 ||
                      inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN) &&
-                    (inputParams_.bDtype == ge::DT_FLOAT4_E2M1 || inputParams_.bDtype == ge::DT_FLOAT4_E1M2 ||
-                     inputParams_.bDtype == ge::DT_FLOAT);
+                    (inputParams_.bDtype == ge::DT_FLOAT4_E2M1 || inputParams_.bDtype == ge::DT_FLOAT);
     if (a8w4Flag) {
         OP_CHECK_IF(inputParams_.transA,
                  VECTOR_INNER_ERR_REPORT_TILIING(

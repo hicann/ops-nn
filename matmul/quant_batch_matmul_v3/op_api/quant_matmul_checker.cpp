@@ -75,9 +75,9 @@ static const std::initializer_list<op::DataType> X2_INT8_X2_SCALE_TYPE_SUPPORT_L
 static const std::initializer_list<op::DataType> INT8_OUT_TYPE_SUPPORT_LIST = {
     op::DataType::DT_INT8, op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_INT32};
 static const std::initializer_list<op::DataType> HIF8_OUT_TYPE_SUPPORT_LIST = {
-    op::DataType::DT_HIFLOAT8, op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_FLOAT};
+    op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> FP8_OUT_TYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_FLOAT};
+    op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> PERTOKEN_FP16_OUT_BIAS_SUPPORT_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> PERTOKEN_BF16_OUT_X2SCALE_SUPPORT_LIST = {
@@ -92,8 +92,7 @@ static const std::initializer_list<op::DataType> BIAS_TYPE_SUPPORT_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_BF16, op::DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> FP8_AND_HIF8_COMMON_OUT_TYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_FLOAT};
-static const std::initializer_list<op::DataType> FOUR_BIT_FLOAT_INPUT_LIST = {op::DataType::DT_FLOAT4_E2M1,
-                                                                              op::DataType::DT_FLOAT4_E1M2};
+static const std::initializer_list<op::DataType> FOUR_BIT_FLOAT_INPUT_LIST = {op::DataType::DT_FLOAT4_E2M1};
 static const std::initializer_list<op::DataType> EIGHT_BIT_FLOAT_INPUT_LIST = {op::DataType::DT_FLOAT8_E4M3FN,
                                                                                op::DataType::DT_FLOAT8_E5M2};
 static const std::initializer_list<op::DataType> INT32_OUT_X2SCALE_SUPPORT_LIST = {op::DataType::DT_FLOAT,

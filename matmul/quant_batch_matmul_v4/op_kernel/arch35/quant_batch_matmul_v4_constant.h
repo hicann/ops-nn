@@ -47,8 +47,6 @@ constexpr int32_t C0_SIZE_B8 = 32;
 constexpr uint32_t E2M1_SHIFT_LEFT_SIZE = 0x2;
 constexpr uint32_t SHIFT_RIGHT_SIZE = 0x4;
 constexpr uint32_t E2M1_AND_MASK = 0x9C;
-constexpr uint32_t E1M2_SHIFT_LEFT_SIZE = 0x3;
-constexpr uint32_t E1M2_AND_MASK = 0x8E;
 constexpr uint32_t PERGROUP_NZ_MASK_REG = 32;
 } // namespace QuantBatchMatmulV4
 #endif // QUANT_BATCH_MATMUL_V4_CONSTANT_H

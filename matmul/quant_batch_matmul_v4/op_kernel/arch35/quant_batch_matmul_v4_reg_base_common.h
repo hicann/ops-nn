@@ -563,7 +563,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
     DataCopyPadExtParams<wType> padParams;
     int64_t gmOffset;  // GM 上 B 矩阵的地址偏移（以元素个数为单位）
     if constexpr (bTrans) {
-        if constexpr (IsSameType<wType, fp4x2_e2m1_t>::value || IsSameType<wType, fp4x2_e1m2_t>::value) {
+        if constexpr (IsSameType<wType, fp4x2_e2m1_t>::value) {
             if constexpr (weightNz && (antiQuantType == QuantType::MX)) { // MXA8W4, NZ,(k1,n1,n0,k0)
                 intriParams.blockCount = bubKLen / C0_SIZE_B8;     // k1
                 intriParams.blockLen = bubNLen * BLOCK_CUBE;  // n1 * n0 * k0
@@ -653,9 +653,9 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
                                                                                                 int32_t bubKOffset,
                                                                                                 int32_t outerExtend)
 {
-    static_assert(SupportType<wType, fp4x2_e2m1_t, fp4x2_e1m2_t>(), "only support fp4x2_e2m1_t and fp4x2_e1m2_t");
+    static_assert(SupportType<wType, fp4x2_e2m1_t>(), "only support fp4x2_e2m1_t");
 
-    if constexpr (IsSameType<wType, fp4x2_e2m1_t>::value || IsSameType<wType, fp4x2_e1m2_t>::value) {
+    if constexpr (IsSameType<wType, fp4x2_e2m1_t>::value) {
         uint32_t calTailCount_ = innerExtend % VECTOR_REG_WIDTH;
         if (calTailCount_) {
             predictTailVcvt_ = calTailCount_;
@@ -793,7 +793,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
 {
     DataCopyParams params;
     if constexpr (bTrans) {
-        if constexpr (IsSameType<wType, fp4x2_e2m1_t>::value || IsSameType<wType, fp4x2_e1m2_t>::value) {
+        if constexpr (IsSameType<wType, fp4x2_e2m1_t>::value) {
             if constexpr (weightNz && (antiQuantType == QuantType::MX)) {
                 CopyVecOut2L1WeightNz(l1Offset, ubLocal, bubKLen, bubNLen);
             } else {
@@ -1424,7 +1424,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
                                                                                                  int32_t bubNLen,
                                                                                                  int32_t bubKLen)
 {
-    static_assert(SupportType<wType, fp4x2_e2m1_t, fp4x2_e1m2_t>(), "only support fp4x2_e2m1_t and fp4x2_e1m2_t");
+    static_assert(SupportType<wType, fp4x2_e2m1_t>(), "only support fp4x2_e2m1_t");
 
     uint16_t outExtend;
     uint32_t scaleExtend;
@@ -1520,15 +1520,12 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
                                                                                                  int32_t bubNLen,
                                                                                                  int32_t bubKLen)
 {
-    static_assert(SupportType<wType, fp4x2_e2m1_t, fp4x2_e1m2_t>(), "only support fp4x2_e2m1_t and fp4x2_e1m2_t");
+    static_assert(SupportType<wType, fp4x2_e2m1_t>(), "only support fp4x2_e2m1_t");
     uint32_t shiftLeftSize = 0;
     uint32_t andMask = 0;
     if constexpr (IsSameType<wType, fp4x2_e2m1_t>::value) {
         shiftLeftSize = E2M1_SHIFT_LEFT_SIZE;
         andMask = E2M1_AND_MASK;
-    } else if constexpr (IsSameType<wType, fp4x2_e1m2_t>::value) {
-        shiftLeftSize = E1M2_SHIFT_LEFT_SIZE;
-        andMask = E1M2_AND_MASK;
     }
     uint16_t innerExtend = CeilDiv(bubKLen * bubNLen, VECTOR_REG_WIDTH);
     uint32_t maskB8Tail0 = 0;
@@ -1583,7 +1580,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
     uint64_t weightOutUbOffset;
     uint64_t weightInUbOffset;  // B矩阵反量化前数据类型为 INT4 时, 在 UB 上的存储格式仍是 INT8
     uint64_t scaleUbOffset;
-    if constexpr (IsSameType<wType, fp4x2_e2m1_t>::value || IsSameType<wType, fp4x2_e1m2_t>::value) {  // A8W4
+    if constexpr (IsSameType<wType, fp4x2_e2m1_t>::value) {  // A8W4
         if constexpr (weightNz) {
             weightOutUbOffset = ubBufIdx_ * VEC_MAX_ELEM_B8;
         } else {
