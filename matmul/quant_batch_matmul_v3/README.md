@@ -131,7 +131,7 @@
   </tr>
 </tbody></table>
 
-- Atlas A2 训练系列产品/Atlas A2 推理系列产品：
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   - x1只支持INT8、INT4数据类型。
   - x2只支持INT8、INT4数据类型。
   - scale只支持UINT64、FLOAT32、INT64、BF16数据类型。
@@ -139,15 +139,7 @@
   - offset只支持FLOAT32数据类型。
   - pertoken_scale只支持FLOAT32数据类型。
   - y只支持FLOAT16和BFLOAT16数据类型。
-- Atlas A3 训练系列产品/Atlas A3 推理系列产品：
-  - x1只支持INT8、INT4数据类型。
-  - x2只支持INT8、INT4数据类型。
-  - scale只支持UINT64、FLOAT32、INT64、BF16数据类型。
-  - bias只支持INT32，BFLOAT16，FLOAT16，FLOAT32数据类型。
-  - offset只支持FLOAT32数据类型。
-  - pertoken_scale只支持FLOAT32数据类型。
-  - y只支持FLOAT16和BFLOAT16数据类型。
-- Atlas 推理系列产品：
+- <term>Atlas 推理系列产品</term>：
   - x1只支持INT8数据类型。
   - x2只支持INT8数据类型。
   - scale只支持UINT64数据类型。

@@ -202,51 +202,52 @@
   </tr>
 </tbody></table>
 
-- Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：
-
-  | x1                        | x2                        | x1_scale     | x2_scale         | x2_offset    | y_scale   | bias         | y_offset    | y                                    |
-  | ------------------------- | ------------------------- | ----------- | -----------     | ----------- | -------  | ------------ | -----------| -------------------------------------- |
-  | INT8                      | INT32                     | FLOAT32     | UINT64          | nullptr        | nullptr     | nullptr         | FLOAT32    | FLOAT16/BFLOAT16                       |
-  | INT8                      | INT8                      | nullptr        | UINT64/INT64    | nullptr        | nullptr     | nullptr/INT32   | nullptr       | FLOAT16                                |
-  | INT8                      | INT8                      | nullptr        | UINT64/INT64    | nullptr/FLOAT32| nullptr     | nullptr/INT32   | nullptr       | INT8                                   |
-  | INT8                      | INT8                      | nullptr/FLOAT32| BFLOAT16        | nullptr        | nullptr     | nullptr/INT32/BFLOAT16/FLOAT32   | nullptr       | BFLOAT16              |
-  | INT8                      | INT8                      | FLOAT32     | FLOAT32         | nullptr        | nullptr     | nullptr/INT32/FLOAT16/FLOAT32    | nullptr       | FLOAT16               |
-  | INT4/INT32                | INT4/INT32                | nullptr        | UINT64/INT64    | nullptr        | nullptr     | nullptr/INT32   | nullptr       | INT32                                  |
-  | INT8                      | INT8                      | nullptr        | FLOAT32/BFLOAT16| nullptr        | nullptr     | nullptr/INT32   | nullptr       | FLOAT16                                |
-  | INT8                      | INT8                      | FLOAT32        | FLOAT32| nullptr        | nullptr     | FLOAT32   | nullptr       | BFLOAT16                                |
-  | INT4/INT32                | INT4/INT32                | FLOAT32     | FLOAT32/BFLOAT16| nullptr        | nullptr     | nullptr/INT32/BFLOAT16/FLOAT32   | nullptr       | BFLOAT16              |
-  | INT4/INT32                | INT4/INT32                | FLOAT32     | FLOAT32         | nullptr        | nullptr     | nullptr/INT32/FLOAT16/FLOAT32    | nullptr       | FLOAT16               |
-  | INT4                | INT4                | FLOAT32     | FLOAT32         | FLOAT16        | nullptr     | nullptr    | nullptr       | BFLOAT16               |
-
-- Ascend 950PR/Ascend 950DT：
-  | x1                        | x2                        | x1_scale     | x2_scale     | x2_offset | y_scale | bias    | y                                    |
-  | ------------------------- | ------------------------- | ----------- | ----------- | -------- | -------| ------- | -------------------------------------- |
-  | INT8                      | INT8                      | nullptr        | UINT64/INT64      | nullptr     | nullptr     | nullptr/INT32   | FLOAT16/BFLOAT16                       |
-  | INT8                      | INT8                      | nullptr        | UINT64/INT64      | nullptr/FLOAT32  | nullptr     | nullptr/INT32   | INT8                              |
-  | INT8                      | INT8                      | nullptr/FLOAT32| FLOAT32/BFLOAT16  | nullptr     | nullptr     | nullptr/INT32/FLOAT32/BFLOAT16   | BFLOAT16              |
-  | INT8                      | INT8                      | FLOAT32     | FLOAT32           | nullptr     | nullptr     | nullptr/INT32/FLOAT32/FLOAT16  | FLOAT16                 |
-  | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | nullptr        | UINT64/INT64      | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32            |
-  | HIFLOAT8                  | HIFLOAT8                  | nullptr        | UINT64/INT64      | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32            |
-  | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT32     | FLOAT32           | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
-  | HIFLOAT8                  | HIFLOAT8                  | FLOAT32     | FLOAT32           | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
-  | FLOAT4_E2M1               | FLOAT4_E2M1               | FLOAT8_E8M0 | FLOAT8_E8M0       | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
-  | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E8M0 | FLOAT8_E8M0       | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
-  | FLOAT8_E4M3FN             | FLOAT4_E2M1               | FLOAT8_E8M0 | FLOAT8_E8M0       | nullptr     | nullptr     | nullptr/BFLOAT16| BFLOAT16                               |
-  | FLOAT8_E4M3FN             | FLOAT4_E2M1               | nullptr        | BFLOAT16          | nullptr     | INT64/UINT64    | nullptr         | BFLOAT16                               |
- 
-
 ## 约束说明
 
 - 不支持空tensor。
 - 支持连续tensor，[非连续tensor](../../docs/zh/context/非连续的Tensor.md)只支持转置场景。
+- 输入和输出支持以下数据类型组合:
+
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+    | x1                        | x2                        | x1_scale     | x2_scale         | x2_offset    | y_scale   | bias         | y_offset    | y                                    |
+    | ------------------------- | ------------------------- | ----------- | -----------     | ----------- | -------  | ------------ | -----------| -------------------------------------- |
+    | INT8                      | INT32                     | FLOAT32     | UINT64          | nullptr        | nullptr     | nullptr         | FLOAT32    | FLOAT16/BFLOAT16                       |
+    | INT8                      | INT8                      | nullptr        | UINT64/INT64    | nullptr        | nullptr     | nullptr/INT32   | nullptr       | FLOAT16                                |
+    | INT8                      | INT8                      | nullptr        | UINT64/INT64    | nullptr/FLOAT32| nullptr     | nullptr/INT32   | nullptr       | INT8                                   |
+    | INT8                      | INT8                      | nullptr/FLOAT32| BFLOAT16        | nullptr        | nullptr     | nullptr/INT32/BFLOAT16/FLOAT32   | nullptr       | BFLOAT16              |
+    | INT8                      | INT8                      | FLOAT32     | FLOAT32         | nullptr        | nullptr     | nullptr/INT32/FLOAT16/FLOAT32    | nullptr       | FLOAT16               |
+    | INT4/INT32                | INT4/INT32                | nullptr        | UINT64/INT64    | nullptr        | nullptr     | nullptr/INT32   | nullptr       | INT32                                  |
+    | INT8                      | INT8                      | nullptr        | FLOAT32/BFLOAT16| nullptr        | nullptr     | nullptr/INT32   | nullptr       | FLOAT16                                |
+    | INT8                      | INT8                      | FLOAT32        | FLOAT32| nullptr        | nullptr     | FLOAT32   | nullptr       | BFLOAT16                                |
+    | INT4/INT32                | INT4/INT32                | FLOAT32     | FLOAT32/BFLOAT16| nullptr        | nullptr     | nullptr/INT32/BFLOAT16/FLOAT32   | nullptr       | BFLOAT16              |
+    | INT4/INT32                | INT4/INT32                | FLOAT32     | FLOAT32         | nullptr        | nullptr     | nullptr/INT32/FLOAT16/FLOAT32    | nullptr       | FLOAT16               |
+    | INT4                | INT4                | FLOAT32     | FLOAT32         | FLOAT16        | nullptr     | nullptr    | nullptr       | BFLOAT16               |
+  
+  - <term>Ascend 950PR/Ascend 950DT</term>：
+    | x1                        | x2                        | x1_scale     | x2_scale     | x2_offset | y_scale | bias    | y                                    |
+    | ------------------------- | ------------------------- | ----------- | ----------- | -------- | -------| ------- | -------------------------------------- |
+    | INT8                      | INT8                      | nullptr        | UINT64/INT64      | nullptr     | nullptr     | nullptr/INT32   | FLOAT16/BFLOAT16                       |
+    | INT8                      | INT8                      | nullptr        | UINT64/INT64      | nullptr/FLOAT32  | nullptr     | nullptr/INT32   | INT8                              |
+    | INT8                      | INT8                      | nullptr/FLOAT32| FLOAT32/BFLOAT16  | nullptr     | nullptr     | nullptr/INT32/FLOAT32/BFLOAT16   | BFLOAT16              |
+    | INT8                      | INT8                      | FLOAT32     | FLOAT32           | nullptr     | nullptr     | nullptr/INT32/FLOAT32/FLOAT16  | FLOAT16                 |
+    | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | nullptr        | UINT64/INT64      | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32            |
+    | HIFLOAT8                  | HIFLOAT8                  | nullptr        | UINT64/INT64      | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32            |
+    | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT32     | FLOAT32           | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
+    | HIFLOAT8                  | HIFLOAT8                  | FLOAT32     | FLOAT32           | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
+    | FLOAT4_E2M1               | FLOAT4_E2M1               | FLOAT8_E8M0 | FLOAT8_E8M0       | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
+    | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E8M0 | FLOAT8_E8M0       | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
+    | FLOAT8_E4M3FN             | FLOAT4_E2M1               | FLOAT8_E8M0 | FLOAT8_E8M0       | nullptr     | nullptr     | nullptr/BFLOAT16| BFLOAT16                               |
+    | FLOAT8_E4M3FN             | FLOAT4_E2M1               | nullptr        | BFLOAT16          | nullptr     | INT64/UINT64    | nullptr         | BFLOAT16                               |
+ 
+
 
 ## 调用说明
-<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-| 调用方式   | 样例代码           | 说明                                         |
-| ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_quant_matmul_v5](examples/test_aclnn_quant_matmul_v5_at2_at3.cpp) | 通过<br>[aclnnQuantMatmulV5](docs/aclnnQuantMatmulV5.md)<br>等方式调用QuantBatchMatmulV4算子。 |
-
-<term>Ascend 950PR/Ascend 950DT</term>：
-| 调用方式   | 样例代码           | 说明                                         |
-| ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_quant_matmul_v5](examples/arch35/test_aclnn_quant_matmul_v5_f8f4_nd.cpp) | 通过<br>[aclnnQuantMatmulV5](docs/aclnnQuantMatmulV5.md)<br>等方式调用QuantBatchMatmulV4算子。 |
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  | 调用方式   | 样例代码           | 说明                                         |
+  | ---------------- | --------------------------- | --------------------------------------------------- |
+  | aclnn接口  | [test_aclnn_quant_matmul_v5](examples/test_aclnn_quant_matmul_v5_at2_at3.cpp) | 通过<br>[aclnnQuantMatmulV5](docs/aclnnQuantMatmulV5.md)<br>等方式调用QuantBatchMatmulV4算子。 |
+  
+- <term>Ascend 950PR/Ascend 950DT</term>：
+  | 调用方式   | 样例代码           | 说明                                         |
+  | ---------------- | --------------------------- | --------------------------------------------------- |
+  | aclnn接口  | [test_aclnn_quant_matmul_v5](examples/arch35/test_aclnn_quant_matmul_v5_f8f4_nd.cpp) | 通过<br>[aclnnQuantMatmulV5](docs/aclnnQuantMatmulV5.md)<br>等方式调用QuantBatchMatmulV4算子。 |
