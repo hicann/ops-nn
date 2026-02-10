@@ -535,10 +535,15 @@ inline ge::graphStatus GenSimplifiedKey4AddLayerNormQuant(gert::TilingContext* c
     OP_CHECK_NULL_WITH_CONTEXT(context, context->GetInputDesc(X1_IDX));
     int32_t x1Dtype = static_cast<int32_t>(context->GetInputDesc(X1_IDX)->GetDataType());
 
+    int32_t biasDtype = -1;
     int32_t scale1Dtype = -1;
     int32_t scale2Dtype = -1;
     int32_t offset1Dtype = -1;
     int32_t offset2Dtype = -1;
+    OP_CHECK_IF(
+ 	    context->GetOptionalInputDesc(BIAS_IDX) != nullptr,
+ 	    OP_LOGW(context, "Optional input bias exist"),
+ 	    biasDtype = static_cast<int32_t>(context->GetOptionalInputDesc(BIAS_IDX)->GetDataType()));
     OP_CHECK_IF(
         context->GetOptionalInputDesc(SCALE1_IDX) != nullptr,
         OP_LOGW(context, "Optional input scale1 exist"),
@@ -567,7 +572,7 @@ inline ge::graphStatus GenSimplifiedKey4AddLayerNormQuant(gert::TilingContext* c
         .append("/")
         .append(std::to_string(x1Dtype)) // beta
         .append("/")
-        .append(std::to_string(x1Dtype)) // bias
+        .append(std::to_string(biasDtype)) // bias
         .append("/")
         .append(std::to_string(scale1Dtype)) // scale1
         .append("/")
