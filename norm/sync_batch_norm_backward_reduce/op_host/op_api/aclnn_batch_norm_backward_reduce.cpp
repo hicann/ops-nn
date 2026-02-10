@@ -20,6 +20,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_batch_norm_backward_reduce.h"
 
 using namespace op;
@@ -54,8 +55,8 @@ static const std::initializer_list<DataType> ASCEND910B_DTYPE_SUPPORT_LIST{
     DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910_DTYPE_SUPPORT_LIST;
@@ -483,7 +484,7 @@ aclnnStatus aclnnBatchNormReduceBackwardGetWorkspaceSize(
         auto fillZeroRet = OutputParamFillZeroForEmptyTensor(
             input, inputG, weightG, biasG, sumDy, sumDyXmu, gradWeight, gradBias, uniqueExecutor.get());
         CHECK_RET(fillZeroRet == ACLNN_SUCCESS, fillZeroRet);
-        *workspaceSize = 0;
+        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
