@@ -166,12 +166,12 @@ private:
             PipeBarrier<PIPE_V>();
             Cast(xLocal, x1Fp32, RoundMode::CAST_RINT, elementNum);
         }
+        PipeBarrier<PIPE_V>();
         inQueueX.FreeTensor(x1Local);
         inQueueX.FreeTensor(x2Local);
         if constexpr (MODE == ADD_RMS_NORM_MODE || MODE == PRE_RMS_NORM_MODE) {
             outQueueY.EnQue(xLocal);
         }
-        PipeBarrier<PIPE_V>();
         return xLocal;
     }
 
@@ -179,11 +179,18 @@ private:
     {
         // CopyOut x1 + x2
         auto xOut = outQueueY.DeQue<T>();
+        event_t eventVMTE3_BF16_0 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+        SetFlag<HardEvent::V_MTE3>(eventVMTE3_BF16_0);
+        WaitFlag<HardEvent::V_MTE3>(eventVMTE3_BF16_0);
         if (isNumColAlign) {
             DataCopyCustom<T>(xGm[gm_bias], xOut, calc_row_num * numCol);
         } else {
             DataCopyCustom<T>(xGm[gm_bias], xOut, calc_row_num, numCol);
         }
+        event_t eventMTE3V_BF16_0 = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::MTE3_V>());
+        SetFlag<HardEvent::MTE3_V>(eventMTE3V_BF16_0);
+        WaitFlag<HardEvent::MTE3_V>(eventMTE3V_BF16_0);
+        GetTPipePtr()->ReleaseEventID<HardEvent::MTE3_V>(eventMTE3V_BF16_0);
         outQueueY.FreeTensor(xOut);
     }
 

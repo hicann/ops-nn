@@ -187,6 +187,7 @@ aclnnStatus ComputeAddRmsNorm(
     yComputeOut = std::get<IDX_0>(AddRmsNormOuts);
     rstdComputeOut = std::get<IDX_1>(AddRmsNormOuts);
     xComputeOut = std::get<IDX_2>(AddRmsNormOuts);
+    CHECK_RET(yComputeOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 将 yComputeOut 结果拷贝到 y 上
     auto viewCopyYResult = l0op::ViewCopy(yComputeOut, outputTensor.yOut, executor);
