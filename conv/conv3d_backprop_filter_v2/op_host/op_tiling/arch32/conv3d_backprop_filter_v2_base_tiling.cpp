@@ -77,6 +77,18 @@ const std::map<std::string, Ops::NN::Conv::TilingValueDw> TILINGDATA_MAP_TMP {
     {"1_1_1_27_4_1_1_1_336_135_26_53_4_52_151_151_253_253_140_140_1_3_3",
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
 };
+// key:
+// "N_Do_Co1_Ho_Wo_Ci1_Hi_Wi_Dk_Hk_Wk_strideD_strideH_strideW_
+// _padFront_padBack_padUp_padDown_padLeft_padRight_dilationD_dilationH_dilationW_realG_coreNum"
+// value: group_dim
+const std::map<std::string, int32_t> TILINGDATA_MAP_DETERMINISTIC {
+    {"2_1_1_4096_1_1_4098_1_1_3_1_1_1_1_0_0_0_0_0_0_1_1_1_144_24", {24}},
+    {"2_1_1_1024_1_1_1026_1_1_3_1_1_1_1_0_0_0_0_0_0_1_1_1_32_24", {24}},
+    {"2_1_1_1024_1_1_1026_1_1_3_1_1_1_1_0_0_0_0_0_0_1_1_1_24_24", {24}},
+    {"2_1_1_4096_1_1_4098_1_1_3_1_1_1_1_0_0_0_0_0_0_1_1_1_144_20", {18}},
+    {"2_1_1_1024_1_1_1026_1_1_3_1_1_1_1_0_0_0_0_0_0_1_1_1_32_20", {20}},
+    {"2_1_1_1024_1_1_1026_1_1_3_1_1_1_1_0_0_0_0_0_0_1_1_1_24_20", {20}}
+};
 
 int32_t CalcHi(int32_t ho, int32_t stride_h, int32_t kernel_h_dilation, int32_t ori_hi) {
     return static_cast<int32_t>(std::min(
@@ -569,12 +581,15 @@ void Conv3DBackpropFilterV2Tiling::InitTilingValue(TilingValueDw& tilingParams)
         if (!enableTbeBlock && CalBaseBlockTiling(tilingParams)) {
             return;
         }
-    } else if (enableDeterministic_ && runInfo_.real_g > 1){
+    } else if (enableDeterministic_ && runInfo_.real_g > 1) {
         tbeTiling_.batch_dim = 1;
-        tbeTiling_.group_dim = 1;
+        tbeTiling_.group_dim = deterministicGroupDim_;
         tbeTiling_.d_dim = 1;
         tbeTiling_.k_dim = 1;
     }
+    OP_LOGD(opName_, "batch_dim:%d, group_dim:%d, d_dim:%d, m_dim:%d, n_dim:%d, k_dim:%d",
+                        tbeTiling_.batch_dim, tbeTiling_.group_dim, tbeTiling_.d_dim,
+                        tbeTiling_.m_dim, tbeTiling_.n_dim, tbeTiling_.k_dim);
     // singleCore
     tilingParams.singleCoreBatch = static_cast<uint64_t>(Ops::Base::CeilDiv(runInfo_.batch, tbeTiling_.batch_dim)) *
                             Ops::Base::CeilDiv(runInfo_.dout, tbeTiling_.d_dim);
@@ -681,6 +696,11 @@ void Conv3DBackpropFilterV2Tiling::SetDwTilingFromTbeTiling()
     } else if (TILINGDATA_MAP_TMP.find(key) != TILINGDATA_MAP_TMP.end() && !enableDeterministic_) {
         InitTilingValue(tilingParams);
         tilingParams.stepN = 390U;
+    } else if (enableDeterministic_) {
+        key = key + "_" + std::to_string(runInfo_.real_g) + "_" + std::to_string(coreNum_);
+        deterministicGroupDim_ = TILINGDATA_MAP_DETERMINISTIC.find(key) != TILINGDATA_MAP_DETERMINISTIC.end() ?
+                                 TILINGDATA_MAP_DETERMINISTIC.at(key) : 1;
+        InitTilingValue(tilingParams);
     } else {
         InitTilingValue(tilingParams);
     }

@@ -118,6 +118,7 @@ protected:
     void PrintTilingData();
 
     bool enableDeterministic_ = false;
+    int32_t deterministicGroupDim_ = 1;
     uint32_t libApiWorkSpaceSize_ = 0;
     uint32_t coreNum_ = 1;
     ge::DataType aDtype_ = ge::DT_FLOAT16;

@@ -150,6 +150,70 @@ const vector<vector<int64_t>> CONV2D_BACKPROP_FILTER_V3_WHITE_LIST =
   }
 };
 
+const vector<vector<int64_t>> CONV2D_BACKPROP_FILTER_DETERMINISTIC_WHITE_LIST =
+{
+  {
+    DataType::DT_BF16,     // input data type
+    2, 2304, 4098, 1,      // input shape
+    2304, 1, 3, 1,         // filter shape
+    2, 2304, 4096, 1,      // outBackprop shape
+    1, 1,                  // stride
+    0, 0,                  // padding
+    1, 1,                  // dilation
+    2304                   // groups
+  },
+  {
+    DataType::DT_BF16,     // input data type
+    2, 512, 1026, 1,      // input shape
+    512, 1, 3, 1,         // filter shape
+    2, 512, 1024, 1,      // outBackprop shape
+    1, 1,                  // stride
+    0, 0,                  // padding
+    1, 1,                  // dilation
+    512                   // groups
+  },
+  {
+    DataType::DT_BF16,     // input data type
+    2, 384, 1026, 1,      // input shape
+    384, 1, 3, 1,         // filter shape
+    2, 384, 1024, 1,      // outBackprop shape
+    1, 1,                  // stride
+    0, 0,                  // padding
+    1, 1,                  // dilation
+    384                   // groups
+  },
+  {
+    DataType::DT_FLOAT16,     // input data type
+    2, 2304, 4098, 1,      // input shape
+    2304, 1, 3, 1,         // filter shape
+    2, 2304, 4096, 1,      // outBackprop shape
+    1, 1,                  // stride
+    0, 0,                  // padding
+    1, 1,                  // dilation
+    2304                   // groups
+  },
+  {
+    DataType::DT_FLOAT16,     // input data type
+    2, 512, 1026, 1,      // input shape
+    512, 1, 3, 1,         // filter shape
+    2, 512, 1024, 1,      // outBackprop shape
+    1, 1,                  // stride
+    0, 0,                  // padding
+    1, 1,                  // dilation
+    512                   // groups
+  },
+  {
+    DataType::DT_FLOAT16,     // input data type
+    2, 384, 1026, 1,      // input shape
+    384, 1, 3, 1,         // filter shape
+    2, 384, 1024, 1,      // outBackprop shape
+    1, 1,                  // stride
+    0, 0,                  // padding
+    1, 1,                  // dilation
+    384                   // groups
+  }
+};
+
 const vector<vector<int64_t>> CONV3D_BACKPROP_INPUT_V2_WHITE_LIST =
 {
   // ID_2
@@ -1255,6 +1319,16 @@ bool IsConv2DBackpropInputToCastCase(const ConvBackpropParams &params) {
 bool IsConv2DBpFilterTo3Dcase(const ConvBackpropParams &params) {
   vector<int64_t> caseInfo;
   ConstructCaseInfo(params, caseInfo);
+
+  int64_t deterministicValue = 0;
+  rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
+  if (retRts != RT_ERROR_NONE) {
+    deterministicValue = 0;
+  }
+  if (static_cast<bool>(deterministicValue) && 
+      IsConv2DV2WhiteListCase(caseInfo, CONV2D_BACKPROP_FILTER_DETERMINISTIC_WHITE_LIST)) {
+    return true;
+  }
   return IsConv2DV2WhiteListCase(caseInfo, CONV2D_BACKPROP_FILTER_V3_WHITE_LIST);
 }
 
