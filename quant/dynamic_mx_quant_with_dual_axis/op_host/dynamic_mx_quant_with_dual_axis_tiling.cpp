@@ -213,7 +213,7 @@ ge::graphStatus DynamicMxQuantWithDualAxisTiling::CheckShape() const
 
     auto newScale2Shape = xShape;
     newScale2Shape.SetDim(
-        xShape.GetDimNum() - 2, Ops::Base::CeilDiv(xShape.GetDim(xShape.GetDimNum() - DIGIT_TWO), DIGIT_64));
+        xShape.GetDimNum() - DIGIT_TWO, Ops::Base::CeilDiv(xShape.GetDim(xShape.GetDimNum() - DIGIT_TWO), DIGIT_64));
     newScale2Shape.AppendDim(DIGIT_TWO);
 
     OP_CHECK_IF(

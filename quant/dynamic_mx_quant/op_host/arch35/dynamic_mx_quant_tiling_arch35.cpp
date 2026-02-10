@@ -39,7 +39,9 @@ constexpr int64_t BLOCK_PER_GROUP = 2;
 constexpr int64_t UINT16_BYTES_SIZE = 2;
 constexpr int64_t UINT8_BYTES_SIZE = 1;
 constexpr int64_t DIGIT_TWO = 2;
+constexpr int64_t DIGIT_THREE = 3;
 constexpr int64_t DIGIT_FOUR = 4;
+constexpr int64_t DIGIT_FIVE = 5;
 constexpr int64_t TILING_KEY_INPUT = 1000;
 constexpr int64_t TILING_KEY_OUTPUT = 100;
 constexpr int64_t TILING_KEY_TMPLATE = 10;
@@ -329,16 +331,16 @@ inline static void SetTilingKeyForTail(DataType inputType, DataType outputType, 
     if (outputType == DT_FLOAT4_E1M2) {
         tenDigit = 1;
     } else if (outputType == DT_FLOAT8_E4M3FN) {
-        tenDigit = 2;
+        tenDigit = DIGIT_TWO;
     } else if (outputType == DT_FLOAT8_E5M2) {
-        tenDigit = 3;
+        tenDigit = DIGIT_THREE;
     }
     int64_t digit = 0;
     if (tilingParam.isTailAxis && tilingParam.blockSize == ATTR_BLOCK_SIZE && inputType == DT_FLOAT16 && 
         Y_SUPPORT_DTYPE_FP4_SET.count(outputType) != 0 &&
         (tilingParam.roundMode == static_cast<int64_t>(RoundModeList::MODE_RINT) ||
          tilingParam.roundMode == static_cast<int64_t>(RoundModeList::MODE_ROUND))) {
-        digit = 5;
+        digit = DIGIT_FIVE;
     } else {
         digit = TAIL_TILING_KEY_DIGIT;
     }
@@ -359,9 +361,9 @@ inline static void CalcTilingKey(DataType inputType, DataType outputType, Dynami
     if (outputType == DT_FLOAT4_E1M2) {
         tenDigit = 1;
     } else if (outputType == DT_FLOAT8_E4M3FN) {
-        tenDigit = 2;
+        tenDigit = DIGIT_TWO;
     } else if (outputType == DT_FLOAT8_E5M2) {
-        tenDigit = 3;
+        tenDigit = DIGIT_THREE;
     }
     // 个位数为0、1、2，分别表示reduce尾轴、非尾轴且尾轴大于VL/2、非尾轴且尾轴小于等于VL/2
     int64_t digit = 0;  
@@ -372,7 +374,7 @@ inline static void CalcTilingKey(DataType inputType, DataType outputType, Dynami
  	         Y_SUPPORT_DTYPE_FP4_SET.count(outputType) != 0 &&
  	         (tilingParam.roundMode == static_cast<int64_t>(RoundModeList::MODE_RINT) ||
  	          tilingParam.roundMode == static_cast<int64_t>(RoundModeList::MODE_ROUND))) {
- 	         digit = 5;
+ 	         digit = DIGIT_FIVE;
     } else {
         digit =
             tilingParam.isTailAxis ?
@@ -463,7 +465,7 @@ static void CalcBaseTilingParam(
     if (Y_SUPPORT_DTYPE_FP4_SET.count(output1DataType) != 0) {
         doubleBufferMulByte = 1;
     } else if (Y_SUPPORT_DTYPE_FP8_SET.count(output1DataType) != 0) {
-        doubleBufferMulByte = 2;
+        doubleBufferMulByte = N_BUFFER;
     }
 
     tilingParam.isPad = false;
@@ -717,7 +719,7 @@ static bool checkShapeForNotLastQuantAxis(
             return false;
         }
     } else {
-        if (tilingParam.blockSize != 32 || postAxisSize < 64) {
+        if (tilingParam.blockSize != N_ALIGN32 || postAxisSize < N_ALIGN64) {
             OP_LOGD(
                 context->GetNodeName(),
                 "small tail optimization template blockSize[%ld] should be 32, postAxisSize[%ld] should be no less "
