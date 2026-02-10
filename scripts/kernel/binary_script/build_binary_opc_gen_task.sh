@@ -280,9 +280,6 @@ main() {
         else
           cmd="asc_opc ${op_python_path} --main_func=${op_func} --input_param=${new_file} --soc_version=${opc_soc_version} --output=${binary_bin_path} --impl_mode=${impl_mode} ${simplified_key_param} --op_mode=dynamic"
         fi
-        if [ "${enable_debug}" = "Debug" ]; then
-          cmd="${cmd} --op_debug_config=debug"
-        fi
         op_debug_configs=()
         if [ "${enable_oom}" = "TRUE" ]; then
           op_debug_configs+=("oom")
