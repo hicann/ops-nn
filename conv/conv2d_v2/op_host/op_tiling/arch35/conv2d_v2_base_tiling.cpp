@@ -446,7 +446,8 @@ ge::graphStatus Conv2dBaseTiling::CheckNullPtr()
 
 ge::graphStatus Conv2dBaseTiling::GetFeatureFlag()
 {
-    if (CheckLoad3DLimits() != ge::GRAPH_SUCCESS || CheckL1SizeLimitsKernelFullLoad() != ge::GRAPH_SUCCESS) {
+    if (CheckLoad3DLimits() != ge::GRAPH_SUCCESS ||
+        CheckL1SizeLimitsKernelFullLoad(IsEnableC04()) != ge::GRAPH_SUCCESS) {
         if (CheckDmaLimits() != ge::GRAPH_SUCCESS) {
             return ge::GRAPH_FAILED;
         }

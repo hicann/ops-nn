@@ -1069,7 +1069,7 @@ bool Conv2dTiling::CheckDataCopyLimits()
     return true;
 }
 
-bool Conv2dTiling::CheckL1SizeLimitsKernelFullLoad()
+bool Conv2dTiling::CheckL1SizeLimitsKernelFullLoad(bool isC04Flag)
 {
     InferCubeInfo();
     uint64_t fMapDtypeSize = DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype);
@@ -1078,14 +1078,15 @@ bool Conv2dTiling::CheckL1SizeLimitsKernelFullLoad()
     uint64_t biasUsedL1Size = hasBias ? AlignB(nBL1min * DTYPE_SIZE_TAB.at(descInfo.biasType.dtype), C0_SIZE) : 0;
     uint64_t scaleUsedL1Size = AlignB(static_cast<uint64_t>(nBL1min * shapeInfo.channelWiseCoeff * FP16_DTYPE_SIZE),
                                                             C0_SIZE);
-    uint64_t kBL1min = cubeInfo.k0 * shapeInfo.orgkH * shapeInfo.orgkW;
+    uint64_t kBL1min = isC04Flag ? AlignB(C04_CIN_SIZE * shapeInfo.orgkH * shapeInfo.orgkW, cubeInfo.k0) :
+        (cubeInfo.k0 * shapeInfo.orgkH * shapeInfo.orgkW);
     uint64_t weightUsedL1Size = AlignB(kBL1min * nBL1min * weightDtypeSize, C0_SIZE);
     uint64_t fmapUsedL1Size = 0;
     uint64_t hoAL1min = std::min(shapeInfo.orgWo < cubeInfo.m0 ? CeilDiv(cubeInfo.m0, shapeInfo.orgWo) : 1,
                                  static_cast<uint64_t>(shapeInfo.orgHo));
     uint64_t khDilated = (shapeInfo.orgkH - 1) * attrInfo.dilationH + 1;
     uint64_t hiAL1min = Conv2DInferHiL1(hoAL1min, khDilated, shapeInfo.orgHi, attrInfo.strideH);
-    uint64_t kAL1min = cubeInfo.k0;
+    uint64_t kAL1min = isC04Flag ? C04_CIN_SIZE : cubeInfo.k0;
     uint64_t woAL1min = cubeInfo.m0;
     uint64_t kwDilated = (shapeInfo.orgkW - 1) * attrInfo.dilationW + 1;
     uint64_t wiAL1min = Conv2DInferHiL1(woAL1min, kwDilated, shapeInfo.orgWi, attrInfo.strideW);
@@ -1102,7 +1103,7 @@ bool Conv2dTiling::CheckL1SizeLimitsKernelFullLoad()
 
 bool Conv2dTiling::CheckInstructionLimits()
 {
-    if (!CheckLoad3DLimits() || !CheckL1SizeLimitsKernelFullLoad()) {
+    if (!CheckLoad3DLimits() || !CheckL1SizeLimitsKernelFullLoad(isC04Flag)) {
         if (!CheckDmaLimits()) {
             return false;
         }

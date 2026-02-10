@@ -547,6 +547,9 @@ uint32_t ConvBaseDeci::GetWeightBandWidthCoeff()
             return BW_COEFF;
         }
     }
+    if (flagInfo_.enableC04Flag && descInfo_.fMapFormat == ge::Format::FORMAT_NHWC) {
+        return BW_COEFF_C04;
+    }
     return BW_COEFF_UB;
 }
 
@@ -587,7 +590,9 @@ void ConvBaseDeci::GetBlockDimRangeCommon()
         curCo = optGroupInfo_.coutOpt;
     }
     ConvCalcCommFactor(ConvCeilDiv(curCo, n0_), aicoreNum_, blockDimRanges_.nRange);
-    ConvBlockDimFactorMix(ConvCeilDiv(curCo, n0_), blockDimRanges_.nRange, blockDimRanges_.aicNumRange);
+    if (!flagInfo_.enableC04Flag) {
+        ConvBlockDimFactorMix(ConvCeilDiv(curCo, n0_), blockDimRanges_.nRange, blockDimRanges_.aicNumRange);
+    }
 
     // doRange
     if (descInfo_.fMapFormat == ge::Format::FORMAT_NCDHW || descInfo_.fMapFormat == ge::Format::FORMAT_NDHWC) {
