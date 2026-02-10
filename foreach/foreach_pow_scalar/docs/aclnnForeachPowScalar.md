@@ -77,7 +77,7 @@ aclnnStatus aclnnForeachPowScalar(
       </tr></thead>
     <tbody>
     <tr>
-      <td>x</td>
+      <td>x（aclTensorList*）</td>
       <td>输入</td>
       <td>表示进行n次方运算的底数，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
@@ -87,7 +87,7 @@ aclnnStatus aclnnForeachPowScalar(
       <td>√</td>
     </tr>
     <tr>
-      <td>scalar</td>
+      <td>scalar（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行n次方运算的指数，对应公式中的`exponent`。</td>
       <td><ul><li>不支持空Tensor。</li><li>元素个数为1。</li><li>数据类型与入参`x`的数据类型具有一定对应关系：<ul><li>当`x`的数据类型为FLOAT32、FLOAT16、INT32时，数据类型与`x`的数据类型保持一致。</li><li>当`x`的数据类型为BFLOAT16时，数据类型支持FLOAT32。</li></ul></li><li>取值的绝对值必须小于等于(2^31-1)。</li></ul></td>
@@ -97,7 +97,7 @@ aclnnStatus aclnnForeachPowScalar(
       <td>√</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示进行n次方运算的输出结果，对应公式中的`y`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
@@ -107,7 +107,7 @@ aclnnStatus aclnnForeachPowScalar(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -117,7 +117,7 @@ aclnnStatus aclnnForeachPowScalar(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

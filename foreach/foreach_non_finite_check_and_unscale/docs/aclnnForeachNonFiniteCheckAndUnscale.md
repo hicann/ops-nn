@@ -78,7 +78,7 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
       </tr></thead>
     <tbody>
     <tr>
-      <td>scaledGrads</td>
+      <td>scaledGrads（aclTensorList*）</td>
       <td>输入/输出</td>
       <td>表示进行反缩放计算的输入和输出张量列表，对应公式中的`scaledGrads`。</td>
       <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>支持的最大长度为256个。</li></ul></td>
@@ -88,7 +88,7 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
       <td>√</td>
     </tr>
     <tr>
-      <td>foundInf</td>
+      <td>foundInf（aclTensor*）</td>
       <td>输入/输出</td>
       <td>表示用来标记输入scaledGrads中是否存在Inf或-Inf的张量，对应公式中的`foundInf`。</td>
       <td><ul><li>不支持空Tensor。</li><li>仅包含一个元素。</li></ul></td>
@@ -98,7 +98,7 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
       <td>√</td>
     </tr>
     <tr>
-      <td>invScale</td>
+      <td>invScale（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行反缩放计算的张量，对应公式中的`invScale`。</td>
       <td><ul><li>不支持空Tensor。</li><li>仅包含一个元素。</li></ul></td>
@@ -108,7 +108,7 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -118,7 +118,7 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

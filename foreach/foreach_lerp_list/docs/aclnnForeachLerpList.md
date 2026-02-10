@@ -78,7 +78,7 @@ aclnnStatus aclnnForeachLerpList(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x1</td>
+      <td>x1（aclTensorList*）</td>
       <td>输入</td>
       <td>表示进行线性插值计算的第一个输入张量列表。对应公式中的`x1`。</td>
       <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>shape与入参`x2`、`weight`的shape一致。</li></ul></td>
@@ -88,7 +88,7 @@ aclnnStatus aclnnForeachLerpList(
       <td>√</td>
     </tr>
     <tr>
-      <td>x2</td>
+      <td>x2（aclTensorList*）</td>
       <td>输入</td>
       <td>表示进行线性插值计算的第二个输入张量列表。对应公式中的`x2`。</td>
       <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`一致。</li></ul></td>
@@ -98,7 +98,7 @@ aclnnStatus aclnnForeachLerpList(
       <td>√</td>
     </tr>
     <tr>
-      <td>weight</td>
+      <td>weight（aclTensorList*）</td>
       <td>输入</td>
       <td>表示进行线性插值计算的插值系数张量列表。对应公式中的`weight`。</td>
       <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`的数据类型、数据格式和shape一致。</li></ul></td>
@@ -108,7 +108,7 @@ aclnnStatus aclnnForeachLerpList(
       <td>√</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示进行线性插值计算的输出张量列表。对应公式中的`y`。</td>
       <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size大于等于入参`x1`的shape size。</li></ul></td>
@@ -118,7 +118,7 @@ aclnnStatus aclnnForeachLerpList(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -128,7 +128,7 @@ aclnnStatus aclnnForeachLerpList(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

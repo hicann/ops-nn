@@ -78,7 +78,7 @@ aclnnStatus aclnnForeachMinimumScalarList(
       </tr></thead>
     <tbody>
     <tr>
-      <td>x</td>
+      <td>x（aclTensorList*）</td>
       <td>输入</td>
       <td>表示取最小值运算的输入张量列表，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
@@ -88,7 +88,7 @@ aclnnStatus aclnnForeachMinimumScalarList(
       <td>√</td>
     </tr>
     <tr>
-      <td>scalars</td>
+      <td>scalars（aclScalarList*）</td>
       <td>输入</td>
       <td>表示取最小值运算的输入标量列表，对应公式中的`scalars`。</td>
       <td><ul><li>元素个数与`x`中Tensor的个数相等。</li><li>数据类型与入参`x`的数据类型具有一定对应关系：<ul><li>当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型支持FLOAT32、DOUBLE。</li><li>当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。</li></ul></li></ul></td>
@@ -98,7 +98,7 @@ aclnnStatus aclnnForeachMinimumScalarList(
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示取最小值运算的输出张量列表，对应公式中的`y`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
@@ -108,7 +108,7 @@ aclnnStatus aclnnForeachMinimumScalarList(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -118,7 +118,7 @@ aclnnStatus aclnnForeachMinimumScalarList(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
