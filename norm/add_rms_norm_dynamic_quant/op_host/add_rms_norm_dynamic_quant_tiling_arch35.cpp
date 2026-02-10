@@ -362,17 +362,17 @@ int64_t AddRmsNormDynamicQuantRegbaseTiling::CalFullLoadBaseM(uint64_t baseN, in
     }
     int64_t fullLoadBaseM = LastUbSize / mutilBaseM;
     uint64_t usedUbSize =
-        CalUsedSize(fullLoadBaseM, baseNB8Align, baseNB32Align, baseNDtypeAlign, tmpPower, firstVcaddLength);
+        CalUsedSize(fullLoadBaseM, baseNB8Align, baseNB32Align, baseNDtypeAlign, firstVcaddLength);
     while (usedUbSize > tilingParams.maxUbSize && fullLoadBaseM > 0) {
         fullLoadBaseM--;
         usedUbSize =
-            CalUsedSize(fullLoadBaseM, baseNB8Align, baseNB32Align, baseNDtypeAlign, tmpPower, firstVcaddLength);
+            CalUsedSize(fullLoadBaseM, baseNB8Align, baseNB32Align, baseNDtypeAlign, firstVcaddLength);
     }
     return fullLoadBaseM;
 }
 
 uint64_t AddRmsNormDynamicQuantRegbaseTiling::CalUsedSize(
-    uint64_t baseM, uint64_t baseNB8Align, uint64_t baseNB32Align, uint64_t baseNDtypeAlign, int64_t tmpPower,
+    uint64_t baseM, uint64_t baseNB8Align, uint64_t baseNB32Align, uint64_t baseNDtypeAlign, 
     int64_t firstVcaddLength)
 {
     uint64_t ubFactorRstd = Ops::Base::CeilAlign(baseM, static_cast<uint64_t>(B32_BLOCK_NUM));
@@ -439,11 +439,11 @@ ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::SetTilingParams()
     // 3. Cut n
     tmpUBSize = CalUBTotalSize(1, tilingParams.xReduceAlignNum, TILING_TYPE_SPILT);
     if (tmpUBSize <= tilingParams.maxUbSize) {
-        uint64_t tmpPower = tilingParams.xReduceAlignNum;
-        while (CalUBTotalSize(1, tmpPower * MULTI_FACTOR_2, TILING_TYPE_SPILT) <= tilingParams.maxUbSize) {
-            tmpPower *= MULTI_FACTOR_2;
+        uint64_t tmpPowerCutN = tilingParams.xReduceAlignNum;
+        while (CalUBTotalSize(1, tmpPowerCutN * MULTI_FACTOR_2, TILING_TYPE_SPILT) <= tilingParams.maxUbSize) {
+            tmpPowerCutN *= MULTI_FACTOR_2;
         }
-        tilingParams.powerSplit = tmpPower;
+        tilingParams.powerSplit = tmpPowerCutN;
         uint64_t tmpLoop = 1;
         while (tmpLoop * MULTI_FACTOR_2 * tilingParams.powerSplit <= tilingParams.numN) {
             tmpLoop *= MULTI_FACTOR_2;

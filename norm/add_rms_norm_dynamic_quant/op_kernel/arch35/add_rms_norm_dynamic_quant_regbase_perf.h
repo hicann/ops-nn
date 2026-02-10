@@ -281,11 +281,11 @@ private:
             0                                            // rsv
         };
         DataCopyPad(y1Gm_[offset], y1Local, copyParams);
-        outQueueX_.FreeTensor(y1Local);
+        outQueueY1_.FreeTensor(y1Local);
         if constexpr (HAS_Y2_SCALE2) {
             LocalTensor<T_Y> y2Local = outQueueY2_.DeQue<T_Y>();
             DataCopyPad(y2Gm_[offset], y2Local, copyParams);
-            outQueueX_.FreeTensor(y2Local);
+            outQueueY2_.FreeTensor(y2Local);
         }
     }
 
