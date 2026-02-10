@@ -76,7 +76,7 @@ aclnnStatus aclnnIndex(
         <td>-</td>
         <td>FLOAT、FLOAT16、BFLOAT16、DOUBLE、INT32、INT64、INT16、INT8、UINT8、BOOL</td>
         <td>ND</td>
-        <td>0-8</td>
+        <td>1-8</td>
         <td>√</td>
       </tr>
       <tr>
@@ -96,7 +96,7 @@ aclnnStatus aclnnIndex(
         <td>-</td>
         <td>与self一致</td>
         <td>ND</td>
-        <td>与self一致</td>
+        <td>1-8</td>
         <td>-</td>
       </tr>
       <tr>
