@@ -7,6 +7,5 @@
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
-
 message(STATUS "=== Debug: start ops.pooling.max_pool_grad_with_argmax.op_host.CMakeLists.txt ")
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE max_pool_grad_with_argmax ACLNNTYPE aclnn_exclude  DEPENDENCIES max_pool_grad_with_argmax_common)

@@ -17,6 +17,7 @@
 #define MAX_POOL_GRAD_WITH_ARGMAX_V3_KSIZE_ONE_H_
 
 #include "kernel_operator.h"
+#include "../max_pool_grad_with_argmax_common/max_pool_grad_with_argmax_struct_common.h"
 
 namespace MaxPoolGradWithArgmaxV3KsizeOneNameSpace {
 using namespace AscendC;
@@ -27,7 +28,7 @@ template <typename T>
 class MaxPoolGradWithArgmaxV3KsizeOne {
 public:
     __aicore__ inline MaxPoolGradWithArgmaxV3KsizeOne(
-        const MaxPoolGradWithArgmaxV3KSizeOneTilingData &tilingData, TPipe& pipe):
+        const MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSizeOneTilingCommonData &tilingData, TPipe& pipe):
         tilingData_(tilingData), pipe_(pipe) {};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y);
     __aicore__ inline void Process();
@@ -39,7 +40,7 @@ private:
     TQueBind<QuePosition::VECIN, QuePosition::VECOUT, DB_BUFFER> dataQueue_;
     GlobalTensor<T> gradGm_;
     GlobalTensor<T> yGm_;
-    const MaxPoolGradWithArgmaxV3KSizeOneTilingData &tilingData_;
+    const MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSizeOneTilingCommonData &tilingData_;
     int64_t blockIdx_ = 0;
 };
 

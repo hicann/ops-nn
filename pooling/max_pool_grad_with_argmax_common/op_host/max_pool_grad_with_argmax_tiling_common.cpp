@@ -42,6 +42,7 @@
     return ge::GRAPH_SUCCESS;
  } 
  
+
 void MaxPoolGradWithArgmaxTilingCommon::PrintInputData() const
  {
     OP_LOGD("MaxPoolGradWithArgmaxTilingCommon", "[MaxPoolGradWithArgmax] PrintInputData start running");
@@ -53,7 +54,11 @@ void MaxPoolGradWithArgmaxTilingCommon::PrintInputData() const
      info << "inputData.wKernel: " << inputData.wKernel << std::endl;
      info << "inputData.hStride: " << inputData.hStride << std::endl;
      info << "inputData.wStride: " << inputData.wStride << std::endl;
+     info << "inputData.hDilation: " << inputData.hDilation << std::endl;
+     info << "inputData.wDilation: " << inputData.wDilation << std::endl;
+     info << "inputData.ceilMode: " << inputData.ceilMode << std::endl;
      info << "inputData.inputDtype: " << inputData.inputDtype << std::endl;
+     info << "inputData.indexDtype: " << inputData.indexDtype << std::endl;
      info << "inputData.nGrad: " << inputData.nGrad << std::endl;
      info << "inputData.cGrad: " << inputData.cGrad << std::endl;
      info << "inputData.hGrad: " << inputData.hGrad << std::endl;

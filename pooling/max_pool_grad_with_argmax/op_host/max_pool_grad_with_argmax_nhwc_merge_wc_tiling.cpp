@@ -20,7 +20,6 @@ namespace optiling
 static constexpr int64_t THRESHOLD_WC = 2;
 static constexpr int64_t NO_CHECK_RANGE_TILING_KEY_NHWC_MERGE_WC = 600;
 static constexpr int64_t CHECK_RANGE_TILING_KEY_NHWC_MERGE_WC = 601;
-static constexpr int64_t T3_INT64_WC = 10;
 
 bool MaxPoolGradWithArgmaxNHWCMergeWcTiling::IsCapable()
 {
@@ -45,7 +44,7 @@ uint64_t MaxPoolGradWithArgmaxNHWCMergeWcTiling::GetTilingKey() const
         tilingKey = CHECK_RANGE_TILING_KEY_NHWC_MERGE_WC;
     }
     if (inputData.isInt32Meet == 0) {
-        tilingKey += T3_INT64_WC;
+        tilingKey += T3_INT64;
     }
 
     return tilingKey;

@@ -19,57 +19,6 @@
 #include "max_pool_grad_with_argmax_v3_tiling_base.h"
 
 namespace optiling {
-BEGIN_TILING_DATA_DEF(MaxPoolGradWithArgmaxV3NCHWScalarTilingData)
-TILING_DATA_FIELD_DEF(int64_t, hArgmax);
-TILING_DATA_FIELD_DEF(int64_t, wArgmax);
-TILING_DATA_FIELD_DEF(int64_t, hOutput);
-TILING_DATA_FIELD_DEF(int64_t, wOutput);
-TILING_DATA_FIELD_DEF(int64_t, hKernel);
-TILING_DATA_FIELD_DEF(int64_t, wKernel);
-TILING_DATA_FIELD_DEF(int64_t, hStride);
-TILING_DATA_FIELD_DEF(int64_t, wStride);
-TILING_DATA_FIELD_DEF(int64_t, padH);
-TILING_DATA_FIELD_DEF(int64_t, padW);
-TILING_DATA_FIELD_DEF(int64_t, dilationH);
-TILING_DATA_FIELD_DEF(int64_t, dilationW);
-TILING_DATA_FIELD_DEF(int64_t, highAxisInner);
-TILING_DATA_FIELD_DEF(int64_t, highAxisTail);
-TILING_DATA_FIELD_DEF(int64_t, highAxisOuter);
-TILING_DATA_FIELD_DEF(int64_t, hOutputInner);
-TILING_DATA_FIELD_DEF(int64_t, hOutputTail);
-TILING_DATA_FIELD_DEF(int64_t, hOutputOuter);
-TILING_DATA_FIELD_DEF(int64_t, wOutputInner);
-TILING_DATA_FIELD_DEF(int64_t, wOutputTail);
-TILING_DATA_FIELD_DEF(int64_t, wOutputOuter);
-TILING_DATA_FIELD_DEF(int64_t, normalCoreProcessNum);
-TILING_DATA_FIELD_DEF(int64_t, tailCoreProcessNum);
-TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);
-TILING_DATA_FIELD_DEF(int64_t, outputBufferSize);
-TILING_DATA_FIELD_DEF(int64_t, gradBufferSize);
-TILING_DATA_FIELD_DEF(int64_t, argmaxBufferSize);
-TILING_DATA_FIELD_DEF(int64_t, argmaxNcInner);
-TILING_DATA_FIELD_DEF(int64_t, argmaxNcOuter);
-TILING_DATA_FIELD_DEF(int64_t, argmaxNcTail);
-TILING_DATA_FIELD_DEF(int64_t, argmaxHInner);
-TILING_DATA_FIELD_DEF(int64_t, argmaxHOuter);
-TILING_DATA_FIELD_DEF(int64_t, argmaxHTail);
-TILING_DATA_FIELD_DEF(int64_t, argmaxWInner);
-TILING_DATA_FIELD_DEF(int64_t, argmaxWOuter);
-TILING_DATA_FIELD_DEF(int64_t, argmaxWTail);
-TILING_DATA_FIELD_DEF(int64_t, argmaxInnerLoop);
-TILING_DATA_FIELD_DEF(int64_t, argmaxNcInnerTail);
-TILING_DATA_FIELD_DEF(int64_t, argmaxNcOuterTail);
-TILING_DATA_FIELD_DEF(int64_t, argmaxNcTailTail);
-TILING_DATA_FIELD_DEF(int64_t, argmaxHInnerTail);
-TILING_DATA_FIELD_DEF(int64_t, argmaxHOuterTail);
-TILING_DATA_FIELD_DEF(int64_t, argmaxHTailTail);
-TILING_DATA_FIELD_DEF(int64_t, argmaxWInnerTail);
-TILING_DATA_FIELD_DEF(int64_t, argmaxWOuterTail);
-TILING_DATA_FIELD_DEF(int64_t, argmaxWTailTail);
-TILING_DATA_FIELD_DEF(int64_t, argmaxInnerLoopTail);
-END_TILING_DATA_DEF;
-
-REGISTER_TILING_DATA_CLASS(MaxPoolGradWithArgmaxV3_301, MaxPoolGradWithArgmaxV3NCHWScalarTilingData);
 
 class MaxPoolGradWithArgmaxV3ScalarTilingInfo {
 public:
@@ -158,7 +107,6 @@ protected:
     ge::graphStatus CalcGradArgmax();
     void SetNormalInner();
     void SetTailInner();
-    MaxPoolGradWithArgmaxV3NCHWScalarTilingData tilingData_;
     MaxPoolGradWithArgmaxV3ScalarTilingInfo scalarTilingData_;
     int64_t hInputInner_ {0};
     int64_t wInputInner_ {0};

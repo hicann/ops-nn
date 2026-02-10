@@ -21,7 +21,7 @@ static constexpr int64_t FLOAT16_SIZE = 2;
 static constexpr int64_t FLOAT32_SIZE = 4;
 static constexpr int64_t INT32_SIZE = 4;
 static constexpr int64_t INT64_SIZE = 8;
-static constexpr int64_t UB_RESVERVED_SIZE = 10240;
+static constexpr int64_t UB_RESVERVED_SIZE = 1024;
 static constexpr int64_t EXTRA_BUFFER_SIZE = 256;
 static constexpr int64_t DOUBLE_BUFFER = 2;
 static constexpr int64_t CACHE_LINE_SIZE = 128;
@@ -68,16 +68,16 @@ void MaxPoolGradWithArgmaxNHWCTilingCommon::InitializationVars(gert::TilingConte
 void MaxPoolGradWithArgmaxNHWCTilingCommon::DoBufferCalculate()
 {
     // The calculation only involves inner.
-    int64_t hInputInner = Ops::Base::CeilDiv(splitData.hOutputInner + inputData->hKernel - 1, inputData->hStride);// (1 + 132 -1 )/1 = 132
-    int64_t wInputInner = Ops::Base::CeilDiv(splitData.wOutputInner + inputData->wKernel - 1, inputData->wStride);// 1+ 45 -1 /2 = 23
+    int64_t hInputInner = Ops::Base::CeilDiv(splitData.hOutputInner + inputData->hKernel - 1, inputData->hStride);
+    int64_t wInputInner = Ops::Base::CeilDiv(splitData.wOutputInner + inputData->wKernel - 1, inputData->wStride);
 
-    int64_t inputPlaneSizeHW = hInputInner * wInputInner; // 132*22=3036
-    int64_t outputPlaneSizeHW = splitData.hOutputInner * splitData.wOutputInner;// 1
-    int64_t cOutputAligned = Ops::Base::CeilAlign(splitData.cOutputInner, baseData.maxDataNumInOneBlock);// 6 -- 16 =  16
-    int64_t ncPlaneAlignedSize = cOutputAligned * splitData.nOutputInner;//  16*1=16
+    int64_t inputPlaneSizeHW = hInputInner * wInputInner;
+    int64_t outputPlaneSizeHW = splitData.hOutputInner * splitData.wOutputInner;
+    int64_t cOutputAligned = Ops::Base::CeilAlign(splitData.cOutputInner, baseData.maxDataNumInOneBlock);
+    int64_t ncPlaneAlignedSize = cOutputAligned * splitData.nOutputInner;
 
-    splitData.gradBufferSize = ncPlaneAlignedSize * inputPlaneSizeHW * baseData.inputBytes + EXTRA_BUFFER_SIZE;// 16*3036*2 +256=97408
-    splitData.argmaxBufferSize = ncPlaneAlignedSize * inputPlaneSizeHW * baseData.indexBytes + EXTRA_BUFFER_SIZE;// 16*3036*4+256=194560
+    splitData.gradBufferSize = ncPlaneAlignedSize * inputPlaneSizeHW * baseData.inputBytes + EXTRA_BUFFER_SIZE;
+    splitData.argmaxBufferSize = ncPlaneAlignedSize * inputPlaneSizeHW * baseData.indexBytes + EXTRA_BUFFER_SIZE;
 
     splitData.outputBufferSize = ncPlaneAlignedSize * outputPlaneSizeHW * FLOAT32_SIZE;
 
@@ -380,7 +380,7 @@ void MaxPoolGradWithArgmaxNHWCTilingCommon::PrintBaseData() const
     info << "baseData.wProBatchSize: " << baseData.wProBatchSize << std::endl;
     info << "baseData.moveDataNumCacheLineT2: " << baseData.moveDataNumCacheLineT2 << std::endl;
 
-    OP_LOGI("MaxPoolGradWithArgmaxNHWC", "%s", info.str().c_str());
+    OP_LOGI("MaxPoolGradWithArgmaxNHWCCommon", "%s", info.str().c_str());
 }
 
 void MaxPoolGradWithArgmaxNHWCTilingCommon::PrintSplitData() const
@@ -414,7 +414,7 @@ void MaxPoolGradWithArgmaxNHWCTilingCommon::PrintSplitData() const
     info << "splitData.argmaxBufferSize: " << splitData.argmaxBufferSize << std::endl;
     info << "splitData.totalBufferSize: " << splitData.totalBufferSize << std::endl;
 
-    OP_LOGI("MaxPoolGradWithArgmaxNHWC", "%s", info.str().c_str());
+    OP_LOGI("MaxPoolGradWithArgmaxNHWCCommon", "%s", info.str().c_str());
 }
 
 void MaxPoolGradWithArgmaxNHWCTilingCommon::SetTilingData(gert::TilingContext* context, uint64_t key)
@@ -432,6 +432,8 @@ void MaxPoolGradWithArgmaxNHWCTilingCommon::SetTilingData(gert::TilingContext* c
     tilingData->wStride = inputData->wStride;
     tilingData->padH = inputData->hPad;
     tilingData->padW = inputData->wPad;
+    tilingData->dilationH = inputData->hDilation;
+    tilingData->dilationW = inputData->wDilation;
     tilingData->nOutputInner = splitData.nOutputInner;
     tilingData->nOutputTail = splitData.nOutputTail;
     tilingData->nOutputOuter = splitData.nOutputOuter;

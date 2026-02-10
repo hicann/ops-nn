@@ -20,22 +20,6 @@
 
 namespace optiling
 {
-
-BEGIN_TILING_DATA_DEF(MaxPoolGradWithArgmaxV3KSizeOneTilingData)
-TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);
-TILING_DATA_FIELD_DEF(int64_t, blockFactor);
-TILING_DATA_FIELD_DEF(int64_t, tailBlockFactor);
-TILING_DATA_FIELD_DEF(int64_t, coreLoop);
-TILING_DATA_FIELD_DEF(int64_t, tailCoreLoop);
-TILING_DATA_FIELD_DEF(int64_t, ubFactor);
-TILING_DATA_FIELD_DEF(int64_t, tailUbFactor);
-TILING_DATA_FIELD_DEF(int64_t, tailCoreTailUbFactor);
-TILING_DATA_FIELD_DEF(int64_t, tilingKey);
-END_TILING_DATA_DEF;
-
-
-REGISTER_TILING_DATA_CLASS(MaxPoolGradWithArgmaxV3_800, MaxPoolGradWithArgmaxV3KSizeOneTilingData);
-
 struct MaxPoolGradWithArgmaxV3NHWCBaseInfo {
     int64_t vRegSize{0};
     int64_t ubBlockSize{0};
@@ -86,7 +70,6 @@ private:
     int64_t tailCoreTailUbFactor_ = 0;
     int64_t tilingKey_ = 0;
 
-    MaxPoolGradWithArgmaxV3KSizeOneTilingData tilingData_;
     MaxPoolGradWithArgmaxV3NHWCBaseInfo baseData_;
 };
 

@@ -61,7 +61,7 @@ template <typename VALUE_T, typename INDICES_T, int Format_T, typename FORMAT_TY
 class MaxPoolGradWithArgmaxV3Simt
 {
 public:
-    __aicore__ inline MaxPoolGradWithArgmaxV3Simt(TPipe *pipe, const MaxPoolGradWithArgmaxV3SimtTilingData* __restrict tilingData)
+    __aicore__ inline MaxPoolGradWithArgmaxV3Simt(TPipe *pipe, const MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSimtTilingCommonData* __restrict tilingData)
         : pipe_(pipe), tilingData_(tilingData)
     {
     }
@@ -75,7 +75,7 @@ private:
     AscendC::GlobalTensor<VALUE_T> grad_;
     AscendC::GlobalTensor<INDICES_T> argmax_;
     AscendC::GlobalTensor<VALUE_T> y_;
-    const MaxPoolGradWithArgmaxV3SimtTilingData* tilingData_;
+    const MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSimtTilingCommonData* tilingData_;
     TBuf<TPosition::VECCALC> paramBuf_;
 };
 

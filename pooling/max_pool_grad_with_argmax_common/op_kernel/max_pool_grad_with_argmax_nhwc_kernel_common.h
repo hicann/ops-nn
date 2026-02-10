@@ -283,6 +283,9 @@ public:
     int64_t padH_ = 0;
     int64_t padW_ = 0;
 
+    int64_t dilationH_ = 1;
+    int64_t dilationW_ = 1;
+
     int64_t nOutputInner_ = 1;
     int64_t nOutputTail_ = 1;
     int64_t nOutputOuter_ = 1;
@@ -435,9 +438,9 @@ __aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_
     wAxisIndex_ = tempCTail % wOutputOuter_;
     wOutputActual_ = wAxisIndex_ == (wOutputOuter_ - 1) ? wOutputTail_ : wOutputInner_;
 
-    int64_t hArgmaxActualStart = PStart(hAxisIndex_ * hOutputInner_, padH_, kernelH_, strideH_);
+    int64_t hArgmaxActualStart = PStart(hAxisIndex_ * hOutputInner_, padH_, kernelH_, dilationH_, strideH_);
     int64_t hArgmaxActualEnd = PEnd(hAxisIndex_ * hOutputInner_ + hOutputActual_ - 1, padH_, strideH_, hArgmax_);
-    int64_t wArgmaxActualStart = PStart(wAxisIndex_ * wOutputInner_, padW_, kernelW_, strideW_);
+    int64_t wArgmaxActualStart = PStart(wAxisIndex_ * wOutputInner_, padW_, kernelW_, dilationW_, strideW_);
     int64_t wArgmaxActualEnd = PEnd(wAxisIndex_ * wOutputInner_ + wOutputActual_ - 1, padW_, strideW_, wArgmax_);
     hArgmaxActual_ = hArgmaxActualEnd - hArgmaxActualStart;
     wArgmaxActual_ = wArgmaxActualEnd - wArgmaxActualStart;

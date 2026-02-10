@@ -17,54 +17,30 @@
 #define MAX_POOL_GRAD_WITH_AGRMAX_V3_KSIZE_ONE_TILING_H_
 
 #include "max_pool_grad_with_argmax_v3_tiling_base.h"
+#include "../../max_pool_grad_with_argmax_common/op_host/max_pool_grad_with_argmax_simt_tiling_common.h"
 
 namespace optiling
 {
-
-BEGIN_TILING_DATA_DEF(MaxPoolGradWithArgmaxV3SimtTilingData)
-TILING_DATA_FIELD_DEF(int64_t, nDim);
-TILING_DATA_FIELD_DEF(int64_t, cDim);
-TILING_DATA_FIELD_DEF(int64_t, hInDim);
-TILING_DATA_FIELD_DEF(int64_t, wInDim);
-TILING_DATA_FIELD_DEF(int64_t, hOutDim);
-TILING_DATA_FIELD_DEF(int64_t, wOutDim);
-TILING_DATA_FIELD_DEF(int64_t, kSizeH);
-TILING_DATA_FIELD_DEF(int64_t, kSizeW);
-TILING_DATA_FIELD_DEF(int64_t, stridesH);
-TILING_DATA_FIELD_DEF(int64_t, stridesW);
-TILING_DATA_FIELD_DEF(int64_t, padH);
-TILING_DATA_FIELD_DEF(int64_t, padW);
-TILING_DATA_FIELD_DEF(int64_t, dilationH);
-TILING_DATA_FIELD_DEF(int64_t, dilationW);
-TILING_DATA_FIELD_DEF(int64_t, ceilMode);
-END_TILING_DATA_DEF;
-
-
-REGISTER_TILING_DATA_CLASS(MaxPoolGradWithArgmaxV3_900, MaxPoolGradWithArgmaxV3SimtTilingData);
-REGISTER_TILING_DATA_CLASS(MaxPoolGradWithArgmaxV3_901, MaxPoolGradWithArgmaxV3SimtTilingData);
-
 class MaxPoolGradWithArgmaxV3SimtTiling : public MaxPoolGradWithArgmaxV3BaseTiling
 {
 public:
     explicit MaxPoolGradWithArgmaxV3SimtTiling(gert::TilingContext* context)
         : MaxPoolGradWithArgmaxV3BaseTiling(context)
     {
+        SimtBase = new MaxPoolGradWithArgmaxSIMTTilingCommon(&inputData);
     }
 
     ~MaxPoolGradWithArgmaxV3SimtTiling() override
     {
+        delete SimtBase;
     }
 
 private:
-    void SetTilingData();
+    MaxPoolGradWithArgmaxSIMTTilingCommon* SimtBase;
     uint64_t GetTilingKey() const override;
-    void PrintTilingData();
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus PostTiling() override;
-
-    int64_t tilingKey_ = 0;
-    MaxPoolGradWithArgmaxV3SimtTilingData tilingData_;
 };
 
 }  // namespace optiling

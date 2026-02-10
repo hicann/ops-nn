@@ -20,46 +20,6 @@
 
 namespace optiling {
 
-BEGIN_TILING_DATA_DEF(MaxPoolGradWithArgmaxV3NCHWTilingData)
-TILING_DATA_FIELD_DEF(int64_t, hArgmax);
-TILING_DATA_FIELD_DEF(int64_t, wArgmax);
-TILING_DATA_FIELD_DEF(int64_t, hOutput);
-TILING_DATA_FIELD_DEF(int64_t, wOutput);
-TILING_DATA_FIELD_DEF(int64_t, hKernel);
-TILING_DATA_FIELD_DEF(int64_t, wKernel);
-TILING_DATA_FIELD_DEF(int64_t, hStride);
-TILING_DATA_FIELD_DEF(int64_t, wStride);
-TILING_DATA_FIELD_DEF(int64_t, padH);
-TILING_DATA_FIELD_DEF(int64_t, padW);
-TILING_DATA_FIELD_DEF(int64_t, dilationH);
-TILING_DATA_FIELD_DEF(int64_t, dilationW);
-TILING_DATA_FIELD_DEF(int64_t, highAxisInner);
-TILING_DATA_FIELD_DEF(int64_t, highAxisTail);
-TILING_DATA_FIELD_DEF(int64_t, highAxisOuter);
-TILING_DATA_FIELD_DEF(int64_t, hOutputInner);
-TILING_DATA_FIELD_DEF(int64_t, hOutputTail);
-TILING_DATA_FIELD_DEF(int64_t, hOutputOuter);
-TILING_DATA_FIELD_DEF(int64_t, wOutputInner);
-TILING_DATA_FIELD_DEF(int64_t, wOutputTail);
-TILING_DATA_FIELD_DEF(int64_t, wOutputOuter);
-TILING_DATA_FIELD_DEF(int64_t, normalCoreProcessNum);
-TILING_DATA_FIELD_DEF(int64_t, tailCoreProcessNum);
-TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);
-TILING_DATA_FIELD_DEF(int64_t, outputBufferSize);
-TILING_DATA_FIELD_DEF(int64_t, gradBufferSize);
-TILING_DATA_FIELD_DEF(int64_t, argmaxBufferSize);
-TILING_DATA_FIELD_DEF(int64_t, hProBatchSize);
-TILING_DATA_FIELD_DEF(int64_t, wProBatchSize);
-TILING_DATA_FIELD_DEF(int64_t, tilingKey);
-END_TILING_DATA_DEF;
-
-// no check range 100          check range 101
-// no check range int64  110          check range int64  111
-REGISTER_TILING_DATA_CLASS(MaxPoolGradWithArgmaxV3_100, MaxPoolGradWithArgmaxV3NCHWTilingData);
-REGISTER_TILING_DATA_CLASS(MaxPoolGradWithArgmaxV3_101, MaxPoolGradWithArgmaxV3NCHWTilingData);
-REGISTER_TILING_DATA_CLASS(MaxPoolGradWithArgmaxV3_110, MaxPoolGradWithArgmaxV3NCHWTilingData);
-REGISTER_TILING_DATA_CLASS(MaxPoolGradWithArgmaxV3_111, MaxPoolGradWithArgmaxV3NCHWTilingData);
-
 struct MaxPoolGradWithArgmaxV3NCHWBaseInfo {
     int64_t vRegSize{0};
     int64_t ubBlockSize{0};
@@ -136,7 +96,6 @@ private:
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus PostTiling() override;
 
-    MaxPoolGradWithArgmaxV3NCHWTilingData tilingData;
     MaxPoolGradWithArgmaxV3NCHWBaseInfo baseData;
     MaxPoolGradWithArgmaxV3NCHWSplitInfo splitData;
 };

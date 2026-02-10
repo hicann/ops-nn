@@ -30,7 +30,7 @@ ge::graphStatus TilingPrepare4MaxPoolGradWithArgmaxV3(gert::TilingParseContext* 
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
 
-    auto compileInfoPtr = context->GetCompiledInfo<MaxPoolGradWithArgmaxV3CompileInfo>();
+    auto compileInfoPtr = context->GetCompiledInfo<MaxPoolGradWithArgmaxCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfoPtr);
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
@@ -41,6 +41,6 @@ ge::graphStatus TilingPrepare4MaxPoolGradWithArgmaxV3(gert::TilingParseContext* 
 
 IMPL_OP_OPTILING(MaxPoolGradWithArgmaxV3)
     .Tiling(Tiling4MaxPoolGradWithArgmaxV3)
-    .TilingParse<MaxPoolGradWithArgmaxV3CompileInfo>(TilingPrepare4MaxPoolGradWithArgmaxV3);
+    .TilingParse<MaxPoolGradWithArgmaxCompileInfo>(TilingPrepare4MaxPoolGradWithArgmaxV3);
 
 } // namespace optiling

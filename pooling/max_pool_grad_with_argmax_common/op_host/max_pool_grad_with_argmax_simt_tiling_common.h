@@ -15,8 +15,9 @@
 #define MAX_POOL_GRAD_WITH_ARGMAX_SIMT_TILING_COMMON_H
 
 #include <array>
-#include "max_pool_grad_with_argmax_tiling.h"  
 #include "../op_kernel/max_pool_grad_with_argmax_struct_common.h"
+#include "max_pool_grad_with_argmax_tiling_common.h"
+
 namespace optiling {
 
 class MaxPoolGradWithArgmaxSIMTTilingCommon{

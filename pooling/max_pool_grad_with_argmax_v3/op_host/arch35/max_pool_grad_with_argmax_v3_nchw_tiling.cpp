@@ -371,36 +371,38 @@ void MaxPoolGradWithArgmaxV3NCHWTiling::PrintSplitData() const
 
 void MaxPoolGradWithArgmaxV3NCHWTiling::SetTilingData()
 {
-    tilingData.set_hArgmax(inputData.hGrad);
-    tilingData.set_wArgmax(inputData.wGrad);
-    tilingData.set_hOutput(inputData.hX);
-    tilingData.set_wOutput(inputData.wX);
-    tilingData.set_hKernel(inputData.hKernel);
-    tilingData.set_wKernel(inputData.wKernel);
-    tilingData.set_hStride(inputData.hStride);
-    tilingData.set_wStride(inputData.wStride);
-    tilingData.set_padH(inputData.hPad);
-    tilingData.set_padW(inputData.wPad);
-    tilingData.set_dilationH(inputData.hDilation);
-    tilingData.set_dilationW(inputData.wDilation);
-    tilingData.set_highAxisInner(splitData.highAxisInner);
-    tilingData.set_highAxisTail(splitData.highAxisTail);
-    tilingData.set_highAxisOuter(splitData.highAxisOuter);
-    tilingData.set_hOutputInner(splitData.hOutputInner);
-    tilingData.set_hOutputTail(splitData.hOutputTail);
-    tilingData.set_hOutputOuter(splitData.hOutputOuter);
-    tilingData.set_wOutputInner(splitData.wOutputInner);
-    tilingData.set_wOutputTail(splitData.wOutputTail);
-    tilingData.set_wOutputOuter(splitData.wOutputOuter);
-    tilingData.set_normalCoreProcessNum(splitData.normalCoreProcessNum);
-    tilingData.set_tailCoreProcessNum(splitData.tailCoreProcessNum);
-    tilingData.set_usedCoreNum(splitData.usedCoreNum);
-    tilingData.set_outputBufferSize(splitData.outputBufferSize);
-    tilingData.set_gradBufferSize(splitData.gradBufferSize);
-    tilingData.set_argmaxBufferSize(splitData.argmaxBufferSize);
-    tilingData.set_hProBatchSize(baseData.hProBatchSize);
-    tilingData.set_wProBatchSize(baseData.wProBatchSize);
-    tilingData.set_tilingKey(GetTilingKey());
+    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData* tilingData =
+        context_->GetTilingData<MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData>();
+    tilingData->hArgmax = inputData.hGrad;
+    tilingData->wArgmax = inputData.wGrad;
+    tilingData->hOutput = inputData.hX;
+    tilingData->wOutput = inputData.wX;
+    tilingData->hKernel = inputData.hKernel;
+    tilingData->wKernel = inputData.wKernel;
+    tilingData->hStride = inputData.hStride;
+    tilingData->wStride = inputData.wStride;
+    tilingData->padH = inputData.hPad;
+    tilingData->padW = inputData.wPad;
+    tilingData->dilationH = inputData.hDilation;
+    tilingData->dilationW = inputData.wDilation;
+    tilingData->highAxisInner = splitData.highAxisInner;
+    tilingData->highAxisTail = splitData.highAxisTail;
+    tilingData->highAxisOuter = splitData.highAxisOuter;
+    tilingData->hOutputInner = splitData.hOutputInner;
+    tilingData->hOutputTail = splitData.hOutputTail;
+    tilingData->hOutputOuter = splitData.hOutputOuter;
+    tilingData->wOutputInner = splitData.wOutputInner;
+    tilingData->wOutputTail = splitData.wOutputTail;
+    tilingData->wOutputOuter = splitData.wOutputOuter;
+    tilingData->normalCoreProcessNum = splitData.normalCoreProcessNum;
+    tilingData->tailCoreProcessNum = splitData.tailCoreProcessNum;
+    tilingData->usedCoreNum = splitData.usedCoreNum;
+    tilingData->outputBufferSize = splitData.outputBufferSize;
+    tilingData->gradBufferSize = splitData.gradBufferSize;
+    tilingData->argmaxBufferSize = splitData.argmaxBufferSize;
+    tilingData->hProBatchSize = baseData.hProBatchSize;
+    tilingData->wProBatchSize = baseData.wProBatchSize;
+    tilingData->tilingKey = GetTilingKey();
 }
 
 ge::graphStatus MaxPoolGradWithArgmaxV3NCHWTiling::DoOpTiling()
@@ -415,13 +417,9 @@ ge::graphStatus MaxPoolGradWithArgmaxV3NCHWTiling::DoOpTiling()
 
 ge::graphStatus MaxPoolGradWithArgmaxV3NCHWTiling::PostTiling()
 {
-    context_->SetBlockDim(tilingData.get_usedCoreNum());
-    if (tilingData.GetDataSize() > context_->GetRawTilingData()->GetCapacity()) {
-        return ge::GRAPH_FAILED;
-    }
-
-    tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
+    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData* tilingData =
+        context_->GetTilingData<MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData>();
+    context_->SetBlockDim(tilingData->usedCoreNum);
     return ge::GRAPH_SUCCESS;
 }
 

@@ -18,14 +18,16 @@
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "../inc/platform.h"
-#include "max_pool_grad_with_argmax_v3_base.h"
+#include "../max_pool_grad_with_argmax_common/max_pool_grad_with_argmax_base_common.h"
+#include "../max_pool_grad_with_argmax_common/max_pool_grad_with_argmax_struct_common.h"
+
 namespace MaxPoolGradWithArgmaxV3NCHWScalarNameSpace {
 constexpr int32_t INVALID_INDEX_VALUE = -1;
 template <typename T1, typename T2>
 class MaxPoolGradWithArgmaxV3NCHWScalar {
 public:
     __aicore__ inline MaxPoolGradWithArgmaxV3NCHWScalar(
-        const MaxPoolGradWithArgmaxV3NCHWScalarTilingData& tilingData, TPipe& pipe)
+        const MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWScalarTilingCommonData& tilingData, TPipe& pipe)
         : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y);
     __aicore__ inline void Process();
@@ -51,7 +53,7 @@ private:
         int64_t loopIndex, int64_t& argmaxNcActual, int64_t& argmaxHActual, int64_t& argmaxWActual,
         int64_t& argmaxGmOffset, int64_t& argmaxNcIndex);
 private:
-    const MaxPoolGradWithArgmaxV3NCHWScalarTilingData& tilingData_;
+    const MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWScalarTilingCommonData& tilingData_;
     TPipe& pipe_;
     TQue<QuePosition::VECIN, BUFFER_NUM> gradQue_;
     TQue<QuePosition::VECIN, BUFFER_NUM> argmaxQue_;

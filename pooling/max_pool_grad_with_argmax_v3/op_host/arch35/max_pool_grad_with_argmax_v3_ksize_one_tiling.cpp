@@ -150,15 +150,17 @@ void MaxPoolGradWithArgmaxV3KsizeOneTiling::PrintTilingData() const
 
 void MaxPoolGradWithArgmaxV3KsizeOneTiling::SetTilingData()
 {
-    tilingData_.set_usedCoreNum(usedCoreNum_);
-    tilingData_.set_blockFactor(blockFactor_);
-    tilingData_.set_tailBlockFactor(tailBlockFactor_);
-    tilingData_.set_coreLoop(coreLoop_);
-    tilingData_.set_tailCoreLoop(tailCoreLoop_);
-    tilingData_.set_ubFactor(ubFactor_);
-    tilingData_.set_tailUbFactor(tailUbFactor_);
-    tilingData_.set_tailCoreTailUbFactor(tailCoreTailUbFactor_);
-    tilingData_.set_tilingKey(GetTilingKey());
+    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSizeOneTilingCommonData* tilingData =
+        context_->GetTilingData<MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSizeOneTilingCommonData>();
+    tilingData->usedCoreNum = usedCoreNum_;
+    tilingData->blockFactor = blockFactor_;
+    tilingData->tailBlockFactor = tailBlockFactor_;
+    tilingData->coreLoop = coreLoop_;
+    tilingData->tailCoreLoop = tailCoreLoop_;
+    tilingData->ubFactor = ubFactor_;
+    tilingData->tailUbFactor = tailUbFactor_;
+    tilingData->tailCoreTailUbFactor = tailCoreTailUbFactor_;
+    tilingData->tilingKey = GetTilingKey();
 }
 
 ge::graphStatus MaxPoolGradWithArgmaxV3KsizeOneTiling::DoOpTiling()
@@ -172,13 +174,9 @@ ge::graphStatus MaxPoolGradWithArgmaxV3KsizeOneTiling::DoOpTiling()
 
 ge::graphStatus MaxPoolGradWithArgmaxV3KsizeOneTiling::PostTiling()
 {
-    context_->SetBlockDim(usedCoreNum_);
-    if (tilingData_.GetDataSize() > context_->GetRawTilingData()->GetCapacity()) {
-        return ge::GRAPH_FAILED;
-    }
-
-    tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
+    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSizeOneTilingCommonData* tilingData =
+        context_->GetTilingData<MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSizeOneTilingCommonData>();
+    context_->SetBlockDim(tilingData->usedCoreNum);
     return ge::GRAPH_SUCCESS;
 }
 

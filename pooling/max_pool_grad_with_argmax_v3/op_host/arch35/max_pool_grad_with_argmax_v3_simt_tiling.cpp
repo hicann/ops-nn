@@ -57,69 +57,14 @@ uint64_t MaxPoolGradWithArgmaxV3SimtTiling::GetTilingKey() const
     return tilingKey;
 }
 
-void MaxPoolGradWithArgmaxV3SimtTiling::PrintTilingData()
-{
-    OP_LOGD("MaxPoolGradWithArgmaxV3Simt", "[MaxPoolGradWithArgmaxV3SimtTiling] PrintTilingData start running");
-
-    std::ostringstream info;
-    info << "nDim: " << tilingData_.get_nDim() << std::endl;
-    info << "cDim: " << tilingData_.get_cDim() << std::endl;
-    info << "hInDim: " << tilingData_.get_hInDim() << std::endl;
-    info << "wInDim: " << tilingData_.get_wInDim() << std::endl;
-    info << "hOutDim: " << tilingData_.get_hOutDim() << std::endl;
-    info << "wOutDim: " << tilingData_.get_wOutDim() << std::endl;
-    info << "kSizeH: " << tilingData_.get_kSizeH() << std::endl;
-    info << "kSizeW: " << tilingData_.get_kSizeW() << std::endl;
-    info << "stridesH: " << tilingData_.get_stridesH() << std::endl;
-    info << "stridesW: " << tilingData_.get_stridesW() << std::endl;
-    info << "padH: " << tilingData_.get_padH() << std::endl;
-    info << "padW: " << tilingData_.get_padW() << std::endl;
-    info << "dilationH: " << tilingData_.get_dilationH() << std::endl;
-    info << "dilationW: " << tilingData_.get_dilationW() << std::endl;
-    info << "ceilMode: " << tilingData_.get_ceilMode() << std::endl;
-    info << "coreNum: " << hardwareData.coreNum << std::endl;
-
-    OP_LOGI("MaxPoolGradWithArgmaxV3Simt", "%s", info.str().c_str());
-}
-
-void MaxPoolGradWithArgmaxV3SimtTiling::SetTilingData()
-{
-    tilingData_.set_nDim(inputData.nX);
-    tilingData_.set_cDim(inputData.cX);
-    tilingData_.set_hInDim(inputData.hX);
-    tilingData_.set_wInDim(inputData.wX);
-    tilingData_.set_hOutDim(inputData.hGrad);
-    tilingData_.set_wOutDim(inputData.wGrad);
-    tilingData_.set_kSizeH(inputData.hKernel);
-    tilingData_.set_kSizeW(inputData.wKernel);
-    tilingData_.set_stridesH(inputData.hStride);
-    tilingData_.set_stridesW(inputData.wStride);
-    tilingData_.set_padH(inputData.hPad);
-    tilingData_.set_padW(inputData.wPad);
-    tilingData_.set_dilationH(inputData.hDilation);
-    tilingData_.set_dilationW(inputData.wDilation);
-    tilingData_.set_ceilMode(inputData.ceilMode);
-    context_->SetBlockDim(hardwareData.coreNum);
-}
-
 ge::graphStatus MaxPoolGradWithArgmaxV3SimtTiling::DoOpTiling()
 {
-    SetTilingData();
-    PrintTilingData();
-    return ge::GRAPH_SUCCESS;
+    return SimtBase->DoOpTiling(context_, GetTilingKey());
 }
 
 ge::graphStatus MaxPoolGradWithArgmaxV3SimtTiling::PostTiling()
 {
-    context_->SetBlockDim(hardwareData.coreNum);
-    if (tilingData_.GetDataSize() > context_->GetRawTilingData()->GetCapacity()) {
-        return ge::GRAPH_FAILED;
-    }
-
-    context_->SetLocalMemorySize(static_cast<uint32_t>(LOCAL_MEMORY_SIZE));
-    tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
-    return ge::GRAPH_SUCCESS;
+    return SimtBase->PostTiling(context_, hardwareData);
 }
 
 REGISTER_OPS_TILING_TEMPLATE(MaxPoolGradWithArgmaxV3, MaxPoolGradWithArgmaxV3SimtTiling, 1);

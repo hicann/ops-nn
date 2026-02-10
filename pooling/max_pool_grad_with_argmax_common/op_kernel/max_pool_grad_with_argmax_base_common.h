@@ -65,9 +65,9 @@ __aicore__ inline constexpr uint32_t GetVRegSize()
 #endif
 }
 
-__aicore__ inline int64_t PStart(int64_t index, int64_t pad, int64_t kernel, int64_t stride)
+__aicore__ inline int64_t PStart(int64_t index, int64_t pad, int64_t kernel, int64_t dilation, int64_t stride)
 {
-    return (index + pad < (kernel - 1) + 1) ? 0 : (index + pad - ((kernel - 1) + 1)) / stride + 1;
+    return (index + pad < (kernel - 1) * dilation + 1) ? 0 : (index + pad - ((kernel - 1) * dilation + 1)) / stride + 1;
 };
 __aicore__ inline int64_t PEnd(int64_t index, int64_t pad, int64_t stride, int64_t pooledSize)
 {

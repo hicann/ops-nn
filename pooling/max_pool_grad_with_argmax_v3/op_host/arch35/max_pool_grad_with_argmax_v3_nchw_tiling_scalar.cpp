@@ -214,53 +214,55 @@ uint64_t MaxPoolGradWithArgmaxV3NCHWScalarTiling::GetTilingKey() const
 
 void MaxPoolGradWithArgmaxV3NCHWScalarTiling::SetTilingData()
 {
-    tilingData_.set_hArgmax(inputData.hGrad);
-    tilingData_.set_wArgmax(inputData.wGrad);
-    tilingData_.set_hOutput(inputData.hX);
-    tilingData_.set_wOutput(inputData.wX);
-    tilingData_.set_hKernel(inputData.hKernel);
-    tilingData_.set_wKernel(inputData.wKernel);
-    tilingData_.set_hStride(inputData.hStride);
-    tilingData_.set_wStride(inputData.wStride);
-    tilingData_.set_padH(inputData.hPad);
-    tilingData_.set_padW(inputData.wPad);
-    tilingData_.set_dilationH(inputData.hDilation);
-    tilingData_.set_dilationW(inputData.wDilation);
-    tilingData_.set_highAxisInner(scalarTilingData_.highAxisInner);
-    tilingData_.set_highAxisTail(scalarTilingData_.highAxisTail);
-    tilingData_.set_highAxisOuter(scalarTilingData_.highAxisOuter);
-    tilingData_.set_hOutputInner(scalarTilingData_.hOutputInner);
-    tilingData_.set_hOutputTail(scalarTilingData_.hOutputTail);
-    tilingData_.set_hOutputOuter(scalarTilingData_.hOutputOuter);
-    tilingData_.set_wOutputInner(scalarTilingData_.wOutputInner);
-    tilingData_.set_wOutputTail(scalarTilingData_.wOutputTail);
-    tilingData_.set_wOutputOuter(scalarTilingData_.wOutputOuter);
-    tilingData_.set_normalCoreProcessNum(scalarTilingData_.normalCoreProcessNum);
-    tilingData_.set_tailCoreProcessNum(scalarTilingData_.tailCoreProcessNum);
-    tilingData_.set_usedCoreNum(scalarTilingData_.usedCoreNum);
-    tilingData_.set_outputBufferSize(scalarTilingData_.outputBufferSize);
-    tilingData_.set_gradBufferSize(scalarTilingData_.gradBufferSize);
-    tilingData_.set_argmaxBufferSize(scalarTilingData_.argmaxBufferSize);
-    tilingData_.set_argmaxNcInner(scalarTilingData_.argmaxNcInner);
-    tilingData_.set_argmaxNcOuter(scalarTilingData_.argmaxNcOuter);
-    tilingData_.set_argmaxNcTail(scalarTilingData_.argmaxNcTail);
-    tilingData_.set_argmaxHInner(scalarTilingData_.argmaxHInner);
-    tilingData_.set_argmaxHOuter(scalarTilingData_.argmaxHOuter);
-    tilingData_.set_argmaxHTail(scalarTilingData_.argmaxHTail);
-    tilingData_.set_argmaxWInner(scalarTilingData_.argmaxWInner);
-    tilingData_.set_argmaxWOuter(scalarTilingData_.argmaxWOuter);
-    tilingData_.set_argmaxWTail(scalarTilingData_.argmaxWTail);
-    tilingData_.set_argmaxInnerLoop(scalarTilingData_.argmaxInnerLoop);
-    tilingData_.set_argmaxNcInnerTail(scalarTilingData_.argmaxNcInnerTail);
-    tilingData_.set_argmaxNcOuterTail(scalarTilingData_.argmaxNcOuterTail);
-    tilingData_.set_argmaxNcTailTail(scalarTilingData_.argmaxNcTailTail);
-    tilingData_.set_argmaxHInnerTail(scalarTilingData_.argmaxHInnerTail);
-    tilingData_.set_argmaxHOuterTail(scalarTilingData_.argmaxHOuterTail);
-    tilingData_.set_argmaxHTailTail(scalarTilingData_.argmaxHTailTail);
-    tilingData_.set_argmaxWInnerTail(scalarTilingData_.argmaxWInnerTail);
-    tilingData_.set_argmaxWOuterTail(scalarTilingData_.argmaxWOuterTail);
-    tilingData_.set_argmaxWTailTail(scalarTilingData_.argmaxWTailTail);
-    tilingData_.set_argmaxInnerLoopTail(scalarTilingData_.argmaxInnerLoopTail);
+    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWScalarTilingCommonData* tilingData =
+        context_->GetTilingData<MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWScalarTilingCommonData>();
+    tilingData->hArgmax = inputData.hGrad;
+    tilingData->wArgmax = inputData.wGrad;
+    tilingData->hOutput = inputData.hX;
+    tilingData->wOutput = inputData.wX;
+    tilingData->hKernel = inputData.hKernel;
+    tilingData->wKernel = inputData.wKernel;
+    tilingData->hStride = inputData.hStride;
+    tilingData->wStride = inputData.wStride;
+    tilingData->padH = inputData.hPad;
+    tilingData->padW = inputData.wPad;
+    tilingData->dilationH = inputData.hDilation;
+    tilingData->dilationW = inputData.wDilation;
+    tilingData->highAxisInner = scalarTilingData_.highAxisInner;
+    tilingData->highAxisTail = scalarTilingData_.highAxisTail;
+    tilingData->highAxisOuter = scalarTilingData_.highAxisOuter;
+    tilingData->hOutputInner = scalarTilingData_.hOutputInner;
+    tilingData->hOutputTail = scalarTilingData_.hOutputTail;
+    tilingData->hOutputOuter = scalarTilingData_.hOutputOuter;
+    tilingData->wOutputInner = scalarTilingData_.wOutputInner;
+    tilingData->wOutputTail = scalarTilingData_.wOutputTail;
+    tilingData->wOutputOuter = scalarTilingData_.wOutputOuter;
+    tilingData->normalCoreProcessNum = scalarTilingData_.normalCoreProcessNum;
+    tilingData->tailCoreProcessNum = scalarTilingData_.tailCoreProcessNum;
+    tilingData->usedCoreNum = scalarTilingData_.usedCoreNum;
+    tilingData->outputBufferSize = scalarTilingData_.outputBufferSize;
+    tilingData->gradBufferSize = scalarTilingData_.gradBufferSize;
+    tilingData->argmaxBufferSize = scalarTilingData_.argmaxBufferSize;
+    tilingData->argmaxNcInner = scalarTilingData_.argmaxNcInner;
+    tilingData->argmaxNcOuter = scalarTilingData_.argmaxNcOuter;
+    tilingData->argmaxNcTail = scalarTilingData_.argmaxNcTail;
+    tilingData->argmaxHInner = scalarTilingData_.argmaxHInner;
+    tilingData->argmaxHOuter = scalarTilingData_.argmaxHOuter;
+    tilingData->argmaxHTail = scalarTilingData_.argmaxHTail;
+    tilingData->argmaxWInner = scalarTilingData_.argmaxWInner;
+    tilingData->argmaxWOuter = scalarTilingData_.argmaxWOuter;
+    tilingData->argmaxWTail = scalarTilingData_.argmaxWTail;
+    tilingData->argmaxInnerLoop = scalarTilingData_.argmaxInnerLoop;
+    tilingData->argmaxNcInnerTail = scalarTilingData_.argmaxNcInnerTail;
+    tilingData->argmaxNcOuterTail = scalarTilingData_.argmaxNcOuterTail;
+    tilingData->argmaxNcTailTail = scalarTilingData_.argmaxNcTailTail;
+    tilingData->argmaxHInnerTail = scalarTilingData_.argmaxHInnerTail;
+    tilingData->argmaxHOuterTail = scalarTilingData_.argmaxHOuterTail;
+    tilingData->argmaxHTailTail = scalarTilingData_.argmaxHTailTail;
+    tilingData->argmaxWInnerTail = scalarTilingData_.argmaxWInnerTail;
+    tilingData->argmaxWOuterTail = scalarTilingData_.argmaxWOuterTail;
+    tilingData->argmaxWTailTail = scalarTilingData_.argmaxWTailTail;
+    tilingData->argmaxInnerLoopTail = scalarTilingData_.argmaxInnerLoopTail;
     return;
 }
 void MaxPoolGradWithArgmaxV3NCHWScalarTiling::PrintData() const
@@ -270,13 +272,9 @@ void MaxPoolGradWithArgmaxV3NCHWScalarTiling::PrintData() const
 }
 ge::graphStatus MaxPoolGradWithArgmaxV3NCHWScalarTiling::PostTiling()
 {
-    context_->SetBlockDim(tilingData_.get_usedCoreNum());
-    if (tilingData_.GetDataSize() > context_->GetRawTilingData()->GetCapacity()) {
-        return ge::GRAPH_FAILED;
-    }
-
-    tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
+    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWScalarTilingCommonData* tilingData =
+        context_->GetTilingData<MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWScalarTilingCommonData>();
+    context_->SetBlockDim(tilingData->usedCoreNum);
     return ge::GRAPH_SUCCESS;
 }
 REGISTER_OPS_TILING_TEMPLATE(MaxPoolGradWithArgmaxV3, MaxPoolGradWithArgmaxV3NCHWScalarTiling, 10);

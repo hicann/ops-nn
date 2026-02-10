@@ -19,7 +19,6 @@ namespace optiling
 {
 static constexpr int64_t NO_CHECK_RANGE_TILING_KEY_NHWC_BIGC = 700;
 static constexpr int64_t CHECK_RANGE_TILING_KEY_NHWC_BIGC = 701;
-static constexpr int64_t T3_BIGC_INT64 = 10;
 static constexpr int64_t TWO_BIGC = 2;
 
 bool MaxPoolGradWithArgmaxNHWCBigcTiling::IsCapable()
@@ -45,7 +44,7 @@ uint64_t MaxPoolGradWithArgmaxNHWCBigcTiling::GetTilingKey() const
         tilingKey = CHECK_RANGE_TILING_KEY_NHWC_BIGC;
     }
     if (inputData.isInt32Meet == 0) {
-        tilingKey += T3_BIGC_INT64;
+        tilingKey += T3_INT64;
     }
     return tilingKey;
 }

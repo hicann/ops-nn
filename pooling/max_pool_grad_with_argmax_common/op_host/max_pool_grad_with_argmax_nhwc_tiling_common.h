@@ -16,11 +16,12 @@
 #ifndef MAX_POOL_GRAD_WITH_AGRMAX_NHWC_TILING_COMMON_H_
 #define MAX_POOL_GRAD_WITH_AGRMAX_NHWC_TILING_COMMON_H_
 
-#include "max_pool_grad_with_argmax_tiling.h"
 #include "../op_kernel/max_pool_grad_with_argmax_struct_common.h"
+#include "max_pool_grad_with_argmax_tiling_common.h"
 
 namespace optiling
 {
+static constexpr int64_t T3_INT64 = 10;
 struct MaxPoolGradWithArgmaxNHWCBaseInfo {
     int64_t vRegSize{0};
     int64_t ubBlockSize{0};

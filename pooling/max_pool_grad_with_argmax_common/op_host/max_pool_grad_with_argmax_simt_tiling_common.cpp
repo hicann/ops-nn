@@ -34,6 +34,9 @@ void MaxPoolGradWithArgmaxSIMTTilingCommon::SetTilingData(gert::TilingContext* c
     tilingData->stridesW = inputData->wStride;
     tilingData->padH = inputData->hPad;
     tilingData->padW = inputData->wPad;
+    tilingData->dilationH = inputData->hDilation;
+    tilingData->dilationW = inputData->wDilation;
+    tilingData->ceilMode = inputData->ceilMode;
     OP_LOGD("MaxPoolGradWithArgmax", "MaxPoolGradWithArgmaxSIMTTilingCommon::SetTilingData");
 }
 

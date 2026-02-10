@@ -65,7 +65,7 @@ static void ExecuteTestCase(
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::MaxPoolGradWithArgmaxV3CompileInfo compile_info;
+    optiling::MaxPoolGradWithArgmaxCompileInfo compile_info;
 
     std::string op_type("MaxPoolGradWithArgmaxV3");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -424,8 +424,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NHWC_Test1)
     int64_t index_dtype = 3;
     bool ceil_mode = false;
     std::string data_format = "NHWC";
-    uint64_t except_tilingkey = 201;
-    std::string expect = "10 16 2 18 30 2 2 2 2 1 1 1 1 1 1 16 5 3 4 30 30 1 2 2 1 1 1 64 4800 1792 1792 1 1 201 ";
+    uint64_t except_tilingkey = 502;
+    std::string expect = "10 16 2 18 30 2 2 2 2 1 1 1 1 1 1 16 5 3 4 30 30 1 2 2 1 1 1 64 4800 1792 1792 1 1 502 ";
     ExecuteTestCase(
         xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
         ceil_mode, data_format, except_tilingkey, expect);
@@ -446,8 +446,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NHWC_Test2)
     int64_t index_dtype = 3;
     bool ceil_mode = false;
     std::string data_format = "NHWC";
-    uint64_t except_tilingkey = 201;
-    std::string expect = "10 16 2 18 30 2 2 2 2 1 1 1 1 1 1 16 5 3 4 30 30 1 2 2 1 1 1 64 9600 1792 3328 1 1 201 ";
+    uint64_t except_tilingkey = 502;
+    std::string expect = "10 16 2 18 30 2 2 2 2 1 1 1 1 1 1 16 5 3 4 30 30 1 2 2 1 1 1 64 9600 1792 3328 1 1 502 ";
     ExecuteTestCase(
         xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
         ceil_mode, data_format, except_tilingkey, expect);
@@ -455,9 +455,9 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NHWC_Test2)
 
 TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NHWC_Test3)
 {
-    gert::StorageShape xShape = {{16, 18, 30, 2}, {16, 18, 30, 2}};
+    gert::StorageShape xShape = {{16, 18, 30, 200}, {16, 18, 30, 200}};
     gert::StorageShape yShape = xShape;
-    gert::StorageShape argmaxShape = {{16, 10, 16, 2}, {16, 10, 16, 2}};
+    gert::StorageShape argmaxShape = {{16, 10, 16, 200}, {16, 10, 16, 200}};
     gert::StorageShape gradShape = argmaxShape;
     std::vector<int64_t> ksize = {2, 2};
     std::vector<int64_t> strides = {2, 2};
@@ -468,8 +468,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NHWC_Test3)
     int64_t index_dtype = 3;
     bool ceil_mode = false;
     std::string data_format = "NHWC";
-    uint64_t except_tilingkey = 201;
-    std::string expect = "10 16 2 18 30 2 2 2 2 1 1 1 1 1 1 16 5 3 4 30 30 1 2 2 1 1 1 64 9600 1792 3328 1 1 201 ";
+    uint64_t except_tilingkey = 701;
+    std::string expect = "10 16 2 18 30 2 2 2 2 1 1 1 1 1 1 16 5 3 4 30 30 1 2 2 1 1 1 64 9600 1792 3328 1 1 701 ";
     ExecuteTestCase(
         xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
         ceil_mode, data_format, except_tilingkey, expect);
@@ -479,10 +479,10 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NHWC_Test4)
 {
     gert::StorageShape xShape = {{2, 64, 64, 3}, {2, 64, 64, 3}};
     gert::StorageShape yShape = xShape;
-    gert::StorageShape argmaxShape = {{2, 1, 1, 3}, {2, 1, 1, 3}};
+    gert::StorageShape argmaxShape = {{2, 64, 64, 3}, {2, 64, 64, 3}};
     gert::StorageShape gradShape = argmaxShape;
-    std::vector<int64_t> ksize = {64, 64};
-    std::vector<int64_t> strides = {64, 64};
+    std::vector<int64_t> ksize = {1, 1};
+    std::vector<int64_t> strides = {1, 1};
     std::vector<int64_t> pads = {0, 0};
     std::vector<int64_t> dilation = {1, 1};
     ge::DataType dtype = ge::DT_FLOAT;
@@ -490,8 +490,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NHWC_Test4)
     int64_t index_dtype = 3;
     bool ceil_mode = false;
     std::string data_format = "NHWC";
-    uint64_t except_tilingkey = 201;
-    std::string expect = "1 1 3 64 64 64 64 64 64 0 0 1 1 1 1 2 2 2 32 64 64 1 3 3 1 1 1 64 4096 384 384 1 1 201 ";
+    uint64_t except_tilingkey = 800;
+    std::string expect = "1 1 3 64 64 64 64 64 64 0 0 1 1 1 1 2 2 2 32 64 64 1 3 3 1 1 1 64 4096 384 384 1 1 800 ";
     ExecuteTestCase(
         xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
         ceil_mode, data_format, except_tilingkey, expect);

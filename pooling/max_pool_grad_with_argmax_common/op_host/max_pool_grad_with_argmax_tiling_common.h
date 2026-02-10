@@ -32,6 +32,8 @@
 
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
+static const gert::Shape g_vec_1_shape = {1};
+static constexpr size_t WS_SYS_SIZE = static_cast<size_t>(16 * 1024 * 1024);
 
 struct MaxPoolGradWithArgmaxInputInfoCommon {
     int64_t hPad{0};
@@ -40,6 +42,8 @@ struct MaxPoolGradWithArgmaxInputInfoCommon {
     int64_t wStride{1};
     int64_t hKernel{1};
     int64_t wKernel{1};
+    int64_t hDilation{1};
+    int64_t wDilation{1};
     int64_t nX{1};
     int64_t cX{1};
     int64_t hX{1};
@@ -48,30 +52,13 @@ struct MaxPoolGradWithArgmaxInputInfoCommon {
     int64_t cGrad{1};
     int64_t hGrad{1};
     int64_t wGrad{1};
+    bool ceilMode{false};
+    int64_t gradShapeSize{0};
     ge::DataType inputDtype{ge::DataType::DT_FLOAT};
     ge::DataType indexDtype{ge::DataType::DT_INT32};
     int64_t isInt32Meet{1};
     ge::Format inputFormat{ge::Format::FORMAT_NHWC};
 };
-
-static constexpr int64_t DIMS_FOUR = 4;
-static constexpr int64_t ATTR_INDEX_KSIZE = 0;
-static constexpr int64_t ATTR_INDEX_STRIDES = 1;
-static constexpr int64_t ATTR_INDEX_PADDING = 2;
-static constexpr int64_t ATTR_INDEX_INCLUDE_BATCH_IN_INDEX = 3;
-static constexpr int64_t ATTR_INDEX_FORMAT = 4;
-static constexpr int64_t DIM_ZERO = 0;
-static constexpr int64_t DIM_ONE = 1;
-static constexpr int64_t DIM_TWO = 2;
-static constexpr int64_t DIM_THREE = 3;
-static constexpr int64_t DTYPE_INT32 = 3;
-static constexpr int64_t DTYPE_INT64 = 9;
-static constexpr int64_t INPUT_X = 0;
-static constexpr int64_t INPUT_GRAD = 1;
-static constexpr int64_t INPUT_ARGMAX = 2;
-static constexpr int64_t DIGIT_TWO = 2;
-static constexpr size_t WS_SYS_SIZE = static_cast<size_t>(16 * 1024 * 1024);
-static const gert::Shape g_vec_1_shape = {1};
 
 static const gert::Shape &EnsureNotScalar(const gert::Shape &inShape) {
  if (inShape.IsScalar()) {
@@ -113,40 +100,5 @@ public :
     MaxPoolGradWithArgmaxInputInfoCommon inputData;
     MaxPoolGradWithArgmaxHardwareInfo hardwareData;
 };
- 
- static bool CheckGradShape(const MaxPoolGradWithArgmaxInputInfoCommon& inputData,const std::string padModeStr)
- {
-    int64_t tmpHGrad, tmpWGrad;
-    if (padModeStr == "VALID") {
-      tmpHGrad = (inputData.hX - inputData.hKernel + inputData.hStride) / inputData.hStride;
-      tmpWGrad = (inputData.wX - inputData.wKernel + inputData.wStride) / inputData.wStride;
-    } else if (padModeStr == "SAME") {
-      tmpHGrad = (inputData.hX + inputData.hStride -1) / inputData.hStride;
-      tmpWGrad = (inputData.wX + inputData.wStride -1) / inputData.wStride;
-    }
-
-    if (tmpHGrad != inputData.hGrad || tmpWGrad != inputData.wGrad || inputData.nX != inputData.nGrad ||
-        inputData.cX != inputData.cGrad) {
-        std::string s = "MaxPoolGradWithArgmax";
-        OP_LOGE(s, "grad shape expected n:[%ld], c:[%ld], h:[%ld], w:[%ld], but got n:[%ld], c:[%ld], h:[%ld], w:[%ld]",
-                inputData.nX, inputData.cX, tmpHGrad, tmpWGrad, inputData.nGrad, inputData.cGrad, inputData.hGrad,
-                inputData.wGrad);
-        return false;
-    }
-    return true;
- }
-
- static bool IsInvalidPaddingMode(std::string padMode)
- {
-     const std::set<std::string> supportedPadModeList = {"SAME", "VALID"};
-     bool padModeInValid = (supportedPadModeList.count(padMode) == 0);
-     return padModeInValid;
- }
-
- static inline bool IsGreaterThanInt32Max(const MaxPoolGradWithArgmaxInputInfoCommon& inputData)
- {
-     int64_t planeSize = inputData.hX * inputData.wX * inputData.cX;
-     return planeSize > static_cast<int64_t>(INT32_MAX);
- }
 }  // namespace optiling
 #endif

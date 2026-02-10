@@ -43,31 +43,6 @@ static constexpr int64_t DTYPE_INT64 = 9;
 static constexpr int64_t INPUT_X = 0;
 static constexpr int64_t INPUT_GRAD = 1;
 static constexpr int64_t INPUT_ARGMAX = 2;
-static constexpr size_t WS_SYS_SIZE = static_cast<size_t>(16 * 1024 * 1024);
-
-ge::graphStatus MaxPoolGradWithArgmaxV3BaseTiling::GetPlatformInfo()
-{
-    auto platformPtr = context_->GetPlatformInfo();
-    if (platformPtr == nullptr) {
-        auto compileInfoPtr = reinterpret_cast<const MaxPoolGradWithArgmaxV3CompileInfo*>(context_->GetCompileInfo());
-        OP_TILING_CHECK(
-            compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context_, "compile info is null"),
-            return ge::GRAPH_FAILED);
-        hardwareData.coreNum = compileInfoPtr->coreNum;
-        hardwareData.ubSize = compileInfoPtr->ubSize;
-    } else {
-        auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformPtr);
-        hardwareData.coreNum = ascendcPlatform.GetCoreNumAiv();
-
-        uint64_t ubSizePlatform;
-        ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
-        hardwareData.ubSize = static_cast<int64_t>(ubSizePlatform);
-    }
-
-    OP_TILING_CHECK(
-        hardwareData.coreNum == 0, CUBE_INNER_ERR_REPORT(context_, "coreNum is 0"), return ge::GRAPH_FAILED);
-    return ge::GRAPH_SUCCESS;
-}
 
 static inline int64_t DivRtn(int64_t x, int64_t y)
 {
@@ -82,7 +57,7 @@ static inline int64_t DivRtn(int64_t x, int64_t y)
     return q;
 }
 
-static bool CheckGradShape(const MaxPoolGradWithArgmaxV3InputInfo& inputData)
+static bool CheckGradShape(const MaxPoolGradWithArgmaxInputInfoCommon& inputData)
 {
     int64_t tmpH = inputData.hX + 2 * inputData.hPad - inputData.hDilation * (inputData.hKernel - 1) - 1;
     if (inputData.ceilMode) {
@@ -116,7 +91,7 @@ static bool CheckGradShape(const MaxPoolGradWithArgmaxV3InputInfo& inputData)
     return true;
 }
 
-static inline bool IsGreaterThanInt32Max(const MaxPoolGradWithArgmaxV3InputInfo& inputData)
+static inline bool IsGreaterThanInt32Max(const MaxPoolGradWithArgmaxInputInfoCommon& inputData)
 {
     if (inputData.indexDtype == ge::DataType::DT_INT32) {
         return false;
@@ -307,66 +282,6 @@ ge::graphStatus MaxPoolGradWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
     }
 
     PrintInputData();
-    return ge::GRAPH_SUCCESS;
-}
-
-void MaxPoolGradWithArgmaxV3BaseTiling::PrintInputData() const
-{
-    OP_LOGD("MaxPoolGradWithArgmaxV3BaseTiling", "[MaxPoolGradWithArgmaxV3] PrintInputData start running");
-
-    std::ostringstream info;
-    info << "inputData.hPad: " << inputData.hPad << std::endl;
-    info << "inputData.wPad: " << inputData.wPad << std::endl;
-    info << "inputData.hKernel: " << inputData.hKernel << std::endl;
-    info << "inputData.wKernel: " << inputData.wKernel << std::endl;
-    info << "inputData.hStride: " << inputData.hStride << std::endl;
-    info << "inputData.wStride: " << inputData.wStride << std::endl;
-    info << "inputData.hDilation: " << inputData.hDilation << std::endl;
-    info << "inputData.wDilation: " << inputData.wDilation << std::endl;
-    info << "inputData.ceilMode: " << inputData.ceilMode << std::endl;
-    info << "inputData.inputDtype: " << inputData.inputDtype << std::endl;
-    info << "inputData.indexDtype: " << inputData.indexDtype << std::endl;
-    info << "inputData.inputFormat: " << inputData.inputFormat << std::endl;
-    info << "inputData.nGrad: " << inputData.nGrad << std::endl;
-    info << "inputData.cGrad: " << inputData.cGrad << std::endl;
-    info << "inputData.hGrad: " << inputData.hGrad << std::endl;
-    info << "inputData.wGrad: " << inputData.wGrad << std::endl;
-    info << "inputData.nX: " << inputData.nX << std::endl;
-    info << "inputData.cX: " << inputData.cX << std::endl;
-    info << "inputData.hX: " << inputData.hX << std::endl;
-    info << "inputData.wX: " << inputData.wX << std::endl;
-    info << "inputData.isInt32Meet: " << inputData.isInt32Meet << std::endl;
-
-    OP_LOGI("MaxPoolGradWithArgmaxV3", "%s", info.str().c_str());
-}
-
-bool MaxPoolGradWithArgmaxV3BaseTiling::IsCapable()
-{
-    return true;
-}
-
-ge::graphStatus MaxPoolGradWithArgmaxV3BaseTiling::DoOpTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus MaxPoolGradWithArgmaxV3BaseTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
-
-uint64_t MaxPoolGradWithArgmaxV3BaseTiling::GetTilingKey() const
-{
-    return 0;
-}
-
-ge::graphStatus MaxPoolGradWithArgmaxV3BaseTiling::GetWorkspaceSize()
-{
-    auto sys_workspace = WS_SYS_SIZE;
-    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
-    currentWorkspace[0] = sys_workspace;
-
     return ge::GRAPH_SUCCESS;
 }
 

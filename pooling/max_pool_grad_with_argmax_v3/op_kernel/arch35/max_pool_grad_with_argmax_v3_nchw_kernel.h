@@ -19,7 +19,8 @@
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "../inc/platform.h"
-#include "max_pool_grad_with_argmax_v3_base.h"
+#include "../max_pool_grad_with_argmax_common/max_pool_grad_with_argmax_base_common.h"
+#include "../max_pool_grad_with_argmax_common/max_pool_grad_with_argmax_struct_common.h"
 
 namespace MaxPoolGradWithArgmaxV3NCHWNameSpace
 {
@@ -240,8 +241,8 @@ class MaxPoolGradWithArgmaxV3NCHWKernel
 public:
     __aicore__ inline MaxPoolGradWithArgmaxV3NCHWKernel(void){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, TPipe& pipeIn,
-                                const MaxPoolGradWithArgmaxV3NCHWTilingData& tilingData);
-    __aicore__ inline void ParseTilingData(const MaxPoolGradWithArgmaxV3NCHWTilingData& tilingData);
+                                const MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData& tilingData);
+    __aicore__ inline void ParseTilingData(const MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData& tilingData);
     __aicore__ inline void Process();
     __aicore__ inline void ScalarCompute(int64_t loopNum);
     __aicore__ inline void ProcessPerLoop();
@@ -341,7 +342,7 @@ public:
 
 template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void MaxPoolGradWithArgmaxV3NCHWKernel<T1, T2, T3, IS_CHECK_RANGE>::ParseTilingData(
-    const MaxPoolGradWithArgmaxV3NCHWTilingData& tilingData)
+    const MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData& tilingData)
 {
     hArgmax_ = tilingData.hArgmax;
     wArgmax_ = tilingData.wArgmax;
@@ -388,7 +389,7 @@ __aicore__ inline void MaxPoolGradWithArgmaxV3NCHWKernel<T1, T2, T3, IS_CHECK_RA
 template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void MaxPoolGradWithArgmaxV3NCHWKernel<T1, T2, T3, IS_CHECK_RANGE>::Init(
     GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, TPipe& pipeIn,
-    const MaxPoolGradWithArgmaxV3NCHWTilingData& tilingData)
+    const MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData& tilingData)
 {
     ParseTilingData(tilingData);
 

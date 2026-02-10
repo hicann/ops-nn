@@ -19,7 +19,6 @@ namespace optiling
 {
 static constexpr int64_t NO_CHECK_RANGE_TILING_KEY_NHWC = 500;
 static constexpr int64_t CHECK_RANGE_TILING_KEY_NHWC = 501;
-static constexpr int64_t T3_INT64 = 10;
 static constexpr int64_t THRESHOLD_HWC = 2;
 
 bool MaxPoolGradWithArgmaxMergeHWCTiling::IsCapable()

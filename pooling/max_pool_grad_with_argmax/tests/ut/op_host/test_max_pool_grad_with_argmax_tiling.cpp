@@ -125,7 +125,8 @@ static void ExecuteTestCase(
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
-
+    optiling::MaxPoolGradWithArgmaxBaseTiling* base = new optiling::MaxPoolGradWithArgmaxBaseTiling(tiling_context);
+    base->GetShapeAttrsInfo();
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
