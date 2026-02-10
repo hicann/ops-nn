@@ -25,7 +25,7 @@ using namespace AscendC;
 
 using namespace SiluMul;
 
-extern "C" __global__ __aicore__ void silu_mul(GM_ADDR input, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void silu_mul(GM_ADDR x, GM_ADDR y, GM_ADDR z, GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
 
@@ -34,7 +34,7 @@ extern "C" __global__ __aicore__ void silu_mul(GM_ADDR input, GM_ADDR output, GM
 
         SiluMulND<DTYPE_X> op;
 
-        op.Init(input, output, userWs, &tilingData);
+        op.Init(x, y, z, userWs, &tilingData);
         op.Process();
     }
 }

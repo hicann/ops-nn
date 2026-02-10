@@ -31,21 +31,26 @@ def gen_data_and_golden(input_shape_str, output_size_str, d_type="float32"):
     }
     np_type = d_type_dict[d_type]
     input_shape, _ = parse_str_to_shape_list(input_shape_str)
-    _, output_size = parse_str_to_shape_list(output_size_str)
-
+    
     size = np.prod(input_shape)
-    tmp_input = np.random.random(size).reshape(input_shape).astype(np_type)
-    x_tensor = torch.tensor(tmp_input.astype(np.float32), dtype=torch.float32)
-    d = input_shape[-1] // 2
-    x1 = x_tensor[..., :d]
-    x2 = x_tensor[..., d:]
-    m = torch.nn.SiLU("none")
-    x1 = m(x1)
-    y_golden = x1 * x2
+    
+    tmp_input_x = np.random.uniform(-1, 1, size).reshape(input_shape).astype(np_type)
+    tmp_input_y = np.random.uniform(-1, 1, size).reshape(input_shape).astype(np_type)
+
+    x_tensor = torch.tensor(tmp_input_x.astype(np.float32), dtype=torch.float32)
+    y_tensor = torch.tensor(tmp_input_y.astype(np.float32), dtype=torch.float32)
+    
+    m = torch.nn.SiLU()
+    silu_x = m(x_tensor)
+    y_golden = silu_x * y_tensor
+    
     tmp_golden = np.array(y_golden).astype(np_type)
 
-    tmp_input.astype(np_type).tofile(f"{d_type}_input_silu_mul.bin")
-    tmp_golden.astype(np_type).tofile(f"{d_type}_golden_silu_mul.bin")
+    tmp_input_x.tofile(f"{d_type}_input_x.bin")
+    tmp_input_y.tofile(f"{d_type}_input_y.bin")
+    tmp_golden.tofile(f"{d_type}_golden_silu_mul.bin")
+    
+    print(f"Generated: {d_type}_input_x.bin, {d_type}_input_y.bin, {d_type}_golden_silu_mul.bin")
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:

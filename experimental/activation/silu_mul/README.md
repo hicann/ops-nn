@@ -46,9 +46,16 @@
     </tr></thead>
   <tbody>
     <tr>
-      <td>input</td>
+      <td>x</td>
       <td>输入</td>
-      <td>公式中的输入input。</td>
+      <td>公式中的输入x。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>y</td>
+      <td>输入</td>
+      <td>公式中的输入y。</td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>

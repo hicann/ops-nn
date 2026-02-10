@@ -30,7 +30,7 @@ using namespace std;
 #define DTYPE_X float
 #endif
 
-extern "C" __global__ __aicore__ void silu_mul(GM_ADDR input, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void silu_mul(GM_ADDR x, GM_ADDR y, GM_ADDR z, GM_ADDR workspace, GM_ADDR tiling);
 
 class silu_mul_test : public testing::Test {
 protected:
@@ -44,7 +44,6 @@ protected:
     }
 };
 
-// 【新增】简单的类型映射辅助结构体
 template <typename T>
 struct DataTypeName {
     static constexpr const char* val = "unknown";
@@ -79,13 +78,15 @@ TEST_F(silu_mul_test, test_silu_mul_dynamic)
 
     size_t M = 2;
     size_t N = 4;
-    size_t D = N / 2;
+    size_t D = N;
 
     size_t xFileSize = M * N * sizeof(DTYPE_X);
     size_t yFileSize = M * D * sizeof(DTYPE_X);
+    size_t zFileSize = xFileSize;
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xFileSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(yFileSize);
+    uint8_t* z = (uint8_t*)AscendC::GmAlloc(zFileSize);
 
     uint64_t tilingKey = 0;
     uint32_t blockDim = 1;
@@ -94,9 +95,11 @@ TEST_F(silu_mul_test, test_silu_mul_dynamic)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    std::string fileName = std::string("./silu_mul_data/") + dtypeStr + "_input_silu_mul.bin";
+    std::string xFileName = std::string("./silu_mul_data/") + dtypeStr + "_input_x.bin";
+    std::string yFileName = std::string("./silu_mul_data/") + dtypeStr + "_input_y.bin";
 
-    ReadFile(fileName, xFileSize, x, xFileSize);
+    ReadFile(xFileName, xFileSize, x, xFileSize);
+    ReadFile(yFileName, yFileSize, y, yFileSize);
 
     SiluMulTilingData* tilingDatafromBin = reinterpret_cast<SiluMulTilingData*>(tiling);
     tilingDatafromBin->lastDimSize = 4;
@@ -105,13 +108,14 @@ TEST_F(silu_mul_test, test_silu_mul_dynamic)
     tilingDatafromBin->needCoreNum = 1;
 
     ICPU_SET_TILING_KEY(tilingKey);
-    ICPU_RUN_KF(silu_mul, blockDim, x, y, workspace, (uint8_t*)tilingDatafromBin);
+    ICPU_RUN_KF(silu_mul, blockDim, x, y, z, workspace, (uint8_t*)tilingDatafromBin);
 
-    fileName = std::string("./silu_mul_data/") + dtypeStr + "_output_silu_mul.bin";
-    WriteFile(fileName, y, yFileSize);
+    std::string zFileName = std::string("./silu_mul_data/") + dtypeStr + "_output_silu_mul.bin";
+    WriteFile(zFileName, z, zFileSize);
 
     AscendC::GmFree((void*)x);
     AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)z);
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 

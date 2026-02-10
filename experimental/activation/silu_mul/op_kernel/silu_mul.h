@@ -37,7 +37,8 @@ class SiluMulND {
 public:
     TPipe pipe;
     __aicore__ inline SiluMulND(){};
-    __aicore__ inline void Init(GM_ADDR input, GM_ADDR output, GM_ADDR workspace, const SiluMulTilingData* tilingData);
+    __aicore__ inline void Init(
+        GM_ADDR x, GM_ADDR y, GM_ADDR z, GM_ADDR workspace, const SiluMulTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -69,7 +70,8 @@ private:
     LocalTensor<float> x1TensorFp32;
     LocalTensor<float> x2TensorFp32;
 
-    GlobalTensor<T> inputGm;
+    GlobalTensor<T> inputGmX;
+    GlobalTensor<T> inputGmY;
     GlobalTensor<T> outputGm;
 
     int64_t lastDimSize;
@@ -87,17 +89,18 @@ private:
 
 template <typename T>
 __aicore__ inline void SiluMulND<T>::Init(
-    GM_ADDR input, GM_ADDR output, GM_ADDR workspace, const SiluMulTilingData* tilingData)
+    GM_ADDR x, GM_ADDR y, GM_ADDR z, GM_ADDR workspace, const SiluMulTilingData* tilingData)
 {
-    inputGm.SetGlobalBuffer((__gm__ T*)input);
-    outputGm.SetGlobalBuffer((__gm__ T*)output);
+    inputGmX.SetGlobalBuffer((__gm__ T*)x);
+    inputGmY.SetGlobalBuffer((__gm__ T*)y);
+    outputGm.SetGlobalBuffer((__gm__ T*)z);
 
     batchSize = tilingData->batchSize;
     lastDimSize = tilingData->lastDimSize;
     needCoreNumber = tilingData->needCoreNum;
     PPMaxCalNum = tilingData->PPMaxCalNum;
 
-    d = lastDimSize / 2;
+    d = lastDimSize;
 
     blockIdx = GetBlockIdx();
     pipe.InitBuffer(ubTBuf, MAX_UB_SIZE);
@@ -127,7 +130,7 @@ __aicore__ inline void SiluMulND<T>::BigTailProcess()
     }
     for (int32_t i = 0; i < loopNum; i++) {
         int32_t totalOffset = i * needCoreNumber * lastDimSize + blockIdx * lastDimSize;
-        int32_t outOffset = i * needCoreNumber * d + blockIdx * d;
+        int32_t outOffset = totalOffset;
         int32_t eachLineLoop = d / PPMaxCalNum;
         uint32_t remain = d % PPMaxCalNum;
         if (remain > 0) {
@@ -170,11 +173,11 @@ __aicore__ inline void SiluMulND<T>::CopyIn(int64_t inputOffset, DataCopyExtPara
         x2Tmp = pingPongFlag ?
                     tmpTensor[elementByte + PPMaxCalNum * sizeof(float) + MAX_UB_SIZE / 2].ReinterpretCast<T>() :
                     tmpTensor[elementByte + PPMaxCalNum * sizeof(float)].ReinterpretCast<T>();
-        DataCopyPad(x1Tmp, inputGm[inputOffset], dataCopyParams, padParams);
-        DataCopyPad(x2Tmp, inputGm[inputOffset + d], dataCopyParams, padParams);
+        DataCopyPad(x1Tmp, inputGmX[inputOffset], dataCopyParams, padParams);
+        DataCopyPad(x2Tmp, inputGmY[inputOffset], dataCopyParams, padParams);
     } else {
-        DataCopyPad(x1Tensor, inputGm[inputOffset], dataCopyParams, padParams);
-        DataCopyPad(x2Tensor, inputGm[inputOffset + d], dataCopyParams, padParams);
+        DataCopyPad(x1Tensor, inputGmX[inputOffset], dataCopyParams, padParams);
+        DataCopyPad(x2Tensor, inputGmY[inputOffset], dataCopyParams, padParams);
     }
 
     SetFlag<HardEvent::MTE2_V>(eventId);
@@ -232,8 +235,8 @@ __aicore__ inline void SiluMulND<T>::SmallTailCopyIn(
     for (int32_t j = 0; j < tmpCalNum; j++) {
         int32_t batchOffset = gmOffset + j * lastDimSize;
         for (int32_t k = 0; k < d; k++) {
-            x1Pad.SetValue(j * dAlign + k, inputGm.GetValue(batchOffset + k));
-            x2Pad.SetValue(j * dAlign + k, inputGm.GetValue(batchOffset + d + k));
+            x1Pad.SetValue(j * dAlign + k, inputGmX.GetValue(batchOffset + k));
+            x2Pad.SetValue(j * dAlign + k, inputGmY.GetValue(batchOffset + k));
         }
     }
 }
@@ -276,7 +279,7 @@ template <typename T>
 __aicore__ inline void SiluMulND<T>::SmallTailCopyOut(
     int32_t gmOffset, uint32_t tmpCalNum, uint32_t dAlign, LocalTensor<T>& x1Pad)
 {
-    int32_t outOffset = gmOffset / 2; // 注意：这里假设输入是 x,y 拼接，输出是 z，且 lastDimSize = 2*d
+    int32_t outOffset = gmOffset;
     for (int32_t j = 0; j < tmpCalNum; j++) {
         for (int32_t k = 0; k < d; k++) {
             T val = x1Pad.GetValue(j * dAlign + k);
