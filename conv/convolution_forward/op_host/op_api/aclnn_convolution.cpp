@@ -2934,6 +2934,9 @@ static aclnnStatus CheckConv2dWithWeightFZ(const aclTensor* input, const aclTens
 
 bool isSupportInputHWNC(const aclTensor* input, const ConvolutionOpInfo& opInfo, const int64_t groups)
 {
+    if (!IsSupportND()) {
+        return false;
+    }
     if (groups > 1) {
         return false;
     }
