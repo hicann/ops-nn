@@ -77,17 +77,21 @@ ge::graphStatus HardtanhGradTiling::CalcInputDtype()
     this->inputDtype = inputDesc->GetDataType();
     OP_CHECK_IF(
         this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16 && this->inputDtype != ge::DT_FLOAT,
-        OP_LOGE("HardtanhGrad", "input result dtype not support"),
+        OP_LOGE("HardtanhGrad", "input result dtype[%s] not support",
+        ge::TypeUtils::DataTypeToSerialString(this->inputDtype).c_str()),
         return ge::GRAPH_FAILED);
     auto inputDesc1 = tilingContext->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputDesc1);
     this->inputDtype1 = inputDesc1->GetDataType();
     OP_CHECK_IF(
         this->inputDtype1 != ge::DT_FLOAT16 && this->inputDtype1 != ge::DT_BF16 && this->inputDtype1 != ge::DT_FLOAT,
-        OP_LOGE("HardtanhGrad", "input grad dtype not support"),
+        OP_LOGE("HardtanhGrad", "input grad dtype[%s] not support",
+        ge::TypeUtils::DataTypeToSerialString(this->inputDtype1).c_str()),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(this->inputDtype1 != this->inputDtype,
-               OP_LOGE("HardtanhGrad", "input grad dtype not same as input result"),
+               OP_LOGE("HardtanhGrad", "input grad dtype[%s] not same as input result dtype[%s]",
+               ge::TypeUtils::DataTypeToSerialString(this->inputDtype1).c_str(),
+               ge::TypeUtils::DataTypeToSerialString(this->inputDtype).c_str()),
                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -121,9 +125,13 @@ ge::graphStatus HardtanhGradTiling::CalcOutputDtype()
     this->outputDtype = outputDesc->GetDataType();
     OP_CHECK_IF(
         this->outputDtype != ge::DT_FLOAT16 && this->outputDtype != ge::DT_BF16 && this->outputDtype != ge::DT_FLOAT,
-        OP_LOGE(tilingContext, "output dtype not support"), return ge::GRAPH_FAILED);
+        OP_LOGE(tilingContext, "output y dtype[%s] not support",
+        ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str()),
+        return ge::GRAPH_FAILED);
     OP_CHECK_IF(this->outputDtype != this->inputDtype,
-               OP_LOGE("HardtanhGrad", "output y dtype not same as input result"),
+               OP_LOGE("HardtanhGrad", "output y dtype[%s] not same as input result dtype[%s]",
+               ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str(),
+               ge::TypeUtils::DataTypeToSerialString(this->inputDtype).c_str()),
                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
