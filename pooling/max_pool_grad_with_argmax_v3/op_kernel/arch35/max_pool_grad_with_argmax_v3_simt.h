@@ -116,7 +116,8 @@ __aicore__ inline void MaxPoolGradWithArgmaxV3Simt<VALUE_T, INDICES_T, Format_T,
     SimtParam.SetValue(5, static_cast<DIV_T>(shiftStrideH));
     SimtParam.SetValue(6, static_cast<DIV_T>(magicStrideW));
     SimtParam.SetValue(7, static_cast<DIV_T>(shiftStrideW));
-
+    
+    DataSyncBarrier<MemDsbT::UB>();
     auto gradData = (__gm__ VALUE_T*)grad_.GetPhyAddr();
     auto outputData = (__gm__ VALUE_T*)y_.GetPhyAddr();
     auto indicesData = (__gm__ INDICES_T*)argmax_.GetPhyAddr();
