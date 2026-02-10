@@ -290,7 +290,7 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputWeightScale()
       }
       if (wScaleDimNum > static_cast<size_t>(1)) {
         if (hasGroupIndex_) {
-          OP_CHECK_IF((wScaleShape.GetDim(0) != groupIndexShape_.GetDim(0)) && (wScaleShape[wScaleDimNum - 1] != xShape_.GetDim(xDimNum_ - 1)),
+          OP_CHECK_IF(!(wScaleShape.GetDim(0) == groupIndexShape_.GetDim(0) && wScaleShape[wScaleDimNum - 1] == xShape_.GetDim(xDimNum_ - 1)),
             OP_LOGE(context_->GetNodeName(),
                                             "weight_scale shape[0] must be equal to group_index shape[0], and shape[-1] must be equal to x shape[-1] "
                                             "when group_index exists, please check."),
@@ -382,6 +382,9 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputBias()
             return ge::GRAPH_FAILED);
       // 当biasDimNum=1时
       if (biasDimNum == static_cast<size_t>(1)) {
+        OP_CHECK_IF(hasGroupIndex_ == true,
+                    OP_LOGE(context_->GetNodeName(), "group_index should be none when bias dimension == 1, please check."),
+                    return ge::GRAPH_FAILED);
         OP_CHECK_IF(biasShape.GetDim(0) != xShape_.GetDim(xDimNum_ - 1), 
             OP_LOGE(context_->GetNodeName(), "the last dimension of bias: %ld should be equal to the last dimension of x: %ld currently, please check.", biasShape.GetDim(0), xShape_.GetDim(xDimNum_ - 1)),
             return ge::GRAPH_FAILED);
@@ -394,11 +397,11 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputBias()
             return ge::GRAPH_FAILED);
           if (hasGroupIndex_) {
             OP_CHECK_IF(biasShape.GetDim(0) != groupNum_,
-                OP_LOGE(context_->GetNodeName(), "when the dimension of bias is 2, the first dimension of bias: %ld should be equal to groupNum when group_index exists, please check.", biasShape.GetDim(0)),
+                OP_LOGE(context_->GetNodeName(), "when the dimension of bias is 2, the first dimension of bias should be equal to groupNum when group_index exists, but %ld currently, please check.", biasShape.GetDim(0)),
                 return ge::GRAPH_FAILED);
           } else {
             OP_CHECK_IF(biasShape.GetDim(0) != 1,
-                OP_LOGE(context_->GetNodeName(), "when the dimension of bias is 2, the first dimension of bias: %ld should be 1 when group_index not exists, please check.", biasShape.GetDim(0)),
+                OP_LOGE(context_->GetNodeName(), "when the dimension of bias is 2, the first dimension of bias should be 1 when group_index not exists, but %ld currently, please check.", biasShape.GetDim(0)),
                 return ge::GRAPH_FAILED);
           }
       }

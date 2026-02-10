@@ -153,7 +153,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>biasOptional</td>
       <td>输入</td>
       <td>Matmul的bias，公式中的biasOptional。</td>
-      <td><ul><li>shape支持1维或2维，shape表示为[2H]或[groupNum, 2H]，且取值2H和x最后一维保持一致。</li><li>可选参数，支持传空指针。</li></ul></td>
+      <td><ul><li>shape支持1维或2维，shape表示为[2H]或[groupNum, 2H]，且取值2H和x最后一维保持一致。当groupIndexOptional为空指针时，shape为[2H]；当groupIndexOptional不为空指针时，shape为[groupNum, 2H]。</li><li>可选参数，支持传空指针。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>1或2</td>
