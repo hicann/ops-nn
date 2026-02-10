@@ -705,8 +705,9 @@ bool AddLayerNormQuantRegbaseTiling::CheckOptionalTensor()
     size_t outScaleDimNum = outScale1Shape->GetStorageShape().GetDimNum();
     OP_LOGI("CheckOptionalTensor", "outScaleDimNum=%zu", outScaleDimNum);
     if (this->isDynamicQuant_) {
+        // elewiseDimNum等于weightDimNum时，有场景会把outScale shape由[]转换为[1]
         OP_CHECK_IF(
-            (outScaleDimNum != elewiseDimNum - weightDimNum),
+            ((outScaleDimNum != elewiseDimNum - weightDimNum) && (elewiseDimNum != weightDimNum)),
             OP_LOGE("CheckOptionalTensor",
                     "The dim num of x1 %zu should be equal to the sum of the dim num of weight %zu and outScale1 %zu.",
                     elewiseDimNum, weightDimNum, outScaleDimNum),
