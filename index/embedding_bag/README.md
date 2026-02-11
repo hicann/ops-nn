@@ -21,6 +21,7 @@
     indices的shape为(indices)
     offsets的shape为(offsets)
     ```
+
     - 当mode为sum模式：
       ```
       y的shape 为 include_last_offset ? (offsets - 1, embeddingDim) : (offsets, embeddingDim)
@@ -28,6 +29,7 @@
       bag_size的shape 为 include_last_offset ? (offsets - 1) : (offsets,)
       max_indices的shape 为 include_last_offset ? (offsets - 1) : (offsets,)
       ```
+
     - 当mode为mean模式：
       ```
       y的shape 为 include_last_offset? (offsets - 1, embeddingDim) : (offsets, embeddingDim)
@@ -35,6 +37,7 @@
       bag_size的shape 为 include_last_offset ? (offsets - 1) : (offsets,)
       max_indices的shape 为 include_last_offset ? (offsets - 1) : (offsets,)
       ```
+
     - 当mode为max模式：
       ```
       y的shape 为 include_last_offset ? (offsets - 1, embeddingDim) : (offsets, embeddingDim)
@@ -45,12 +48,12 @@
 
 ## 参数说明
 
-<table style="undefined;table-layout: fixed; width: 1250px"><colgroup>
-  <col style="width: 50px">
-  <col style="width: 60px">
-  <col style="width: 180px">
-  <col style="width: 100px">
-  <col style="width: 40px">
+  <table style="undefined;table-layout: fixed; width: 1250px"><colgroup>
+    <col style="width: 50px">
+    <col style="width: 160px">
+    <col style="width: 350px">
+    <col style="width: 200px">
+    <col style="width: 80px">
   </colgroup>
   <thead>
     <tr>

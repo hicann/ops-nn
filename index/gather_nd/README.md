@@ -104,4 +104,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_gather_nd](./examples/test_aclnn_gather_nd.cpp) | 通过[aclnnGatherNd](./docs/aclnnGatherNd.md)接口方式调用GatherNd算子。 |
+| aclnn调用 | [test_aclnn_gather_nd](examples/arch35/test_aclnn_gather_nd.cpp) | 通过[aclnnGatherNd](./docs/aclnnGatherNd.md)接口方式调用GatherNd算子。 |

@@ -15,22 +15,22 @@
 算子功能：拷贝data的数据至out，同时在指定indices处根据updates更新out中的数据。
 
 ## 函数原型
-每个算子分为[两段式接口](common/两段式接口.md)，必须先调用“aclnnScatterNdGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnScatterNd”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnScatterNdGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnScatterNd”接口执行计算。
 
 * `aclnnStatus aclnnScatterNdGetWorkspaceSize(const aclTensor *data,const aclTensor *indices,const aclTensor *updates, aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor)`
 * `aclnnStatus aclnnScatterNd(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`
 
 ## aclnnScatterNdGetWorkspaceSize
 - **参数说明：**
-  * data(aclTensor*,计算输入)：Device侧的aclTensor, 数据类型与updates、out一致，shape满足1<=rank(data)<=8。支持[非连续的Tensor](common/非连续的Tensor.md)，[数据格式](common/数据格式.md)支持ND。
+  * data(aclTensor*,计算输入)：Device侧的aclTensor, 数据类型与updates、out一致，shape满足1<=rank(data)<=8。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT、BOOL、BFLOAT16
 
-  * indices(aclTensor*,计算输入)：Device侧的aclTensor，数据类型支持INT32、INT64。indices.shape[-1] <= rank(data)，且1<=rank(indices)<=8。支持[非连续的Tensor](common/非连续的Tensor.md)，[数据格式](common/数据格式.md)支持ND。仅支持非负索引。indices中的索引数据不支持越界。
+  * indices(aclTensor*,计算输入)：Device侧的aclTensor，数据类型支持INT32、INT64。indices.shape[-1] <= rank(data)，且1<=rank(indices)<=8。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。仅支持非负索引。indices中的索引数据不支持越界。
 
-  * updates(aclTensor*,计算输入)：Device侧的aclTensor, 数据类型与data、out一致。shape要求rank(updates)=rank(data)+rank(indices)-indices.shape[-1] -1, 且满足1<=rank(updates)<=8。支持[非连续的Tensor](common/非连续的Tensor.md)，[数据格式](common/数据格式.md)支持ND。
+  * updates(aclTensor*,计算输入)：Device侧的aclTensor, 数据类型与data、out一致。shape要求rank(updates)=rank(data)+rank(indices)-indices.shape[-1] -1, 且满足1<=rank(updates)<=8。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT、BOOL、BFLOAT16
 
-  * out(aclTensor*，计算输出)：Device侧的aclTensor，数据类型与data、out一致，shape与data一致。支持[非连续的Tensor](common/非连续的Tensor.md)，[数据格式](common/数据格式.md)支持ND。
+  * out(aclTensor*，计算输出)：Device侧的aclTensor，数据类型与data、out一致，shape与data一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT、BOOL、BFLOAT16
 
   * workspaceSize(uint64_t*，出参)：返回需要在Device侧申请的workspace大小。
@@ -39,7 +39,7 @@
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](common/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   ```
   第一段接口完成入参校验，出现以下场景时报错：
   返回161001(ACLNN_ERR_PARAM_NULLPTR)：1.传入的data、indices、updates、out中有空指针
@@ -57,13 +57,13 @@
   * stream(aclrtStream, 入参)：指定执行任务的Stream。
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](common/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 无
 
 ## 调用示例
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](common/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 ```Cpp
 #include <iostream>
 #include <vector>

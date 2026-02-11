@@ -59,7 +59,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](common/两段式接口.md)，必须先调用“aclnnScatterAddGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnScatterAdd”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnScatterAddGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnScatterAdd”接口执行计算。
 
 * `aclnnStatus aclnnScatterAddGetWorkspaceSize(const aclTensor* self, int64_t dim, const aclTensor* index, const aclTensor* src, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)`
 * `aclnnStatus aclnnScatterAdd(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)`
@@ -68,15 +68,15 @@
 
 - **参数说明：**
 
-  - self（aclTensor*，计算输入）：公式中的输入`self`，Device侧的aclTensor。scatter的目标张量，shape支持0-8维，且维度数量需要与index和src相同。数据类型与src的数据类型一致。支持[非连续的Tensor](common/非连续的Tensor.md)，[数据格式](common/数据格式.md)支持ND。
+  - self（aclTensor*，计算输入）：公式中的输入`self`，Device侧的aclTensor。scatter的目标张量，shape支持0-8维，且维度数量需要与index和src相同。数据类型与src的数据类型一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128。
   - dim（int64_t, 计算输入）：计算公式中的输入`dim`，数据类型为INT64。
 
-  - index（aclTensor*，计算输入）：公式中的输入`index`，Device侧的aclTensor。数据类型支持INT32、INT64。index维度数量需要与src相同。支持[非连续的Tensor](common/非连续的Tensor.md)，[数据格式](common/数据格式.md)支持ND。
+  - index（aclTensor*，计算输入）：公式中的输入`index`，Device侧的aclTensor。数据类型支持INT32、INT64。index维度数量需要与src相同。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
     - <term>Ascend 950PR/Ascend 950DT</term>：当dim轴上index值存在重复时，结果将是不确定的。若开启了确定性计算，可保证结果的确定性。
-  - src（aclTensor*，计算输入）：公式中的输入`src`，Device侧的aclTensor。源张量，src维度数量需要与index相同。数据类型与self的数据类型一致。[数据格式](common/数据格式.md)支持ND。
+  - src（aclTensor*，计算输入）：公式中的输入`src`，Device侧的aclTensor。源张量，src维度数量需要与index相同。数据类型与self的数据类型一致。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128。
-  - out（aclTensor*，计算输出）：公式中的`output`，Device侧的aclTensor。shape需要与self一致。数据类型与self的数据类型一致。[数据格式](common/数据格式.md)支持ND。
+  - out（aclTensor*，计算输出）：公式中的`output`，Device侧的aclTensor。shape需要与self一致。数据类型与self的数据类型一致。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128。
   - workspaceSize（uint64_t* 出参）：返回需要在Device侧申请的workspace大小。
 
@@ -84,7 +84,7 @@
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](common/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   ```
   第一段接口完成入参校验，出现以下场景时报错：
@@ -108,7 +108,7 @@
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](common/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
@@ -116,7 +116,7 @@
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](common/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 ```Cpp
 #include <iostream>
 #include <vector>

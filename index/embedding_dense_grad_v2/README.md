@@ -92,4 +92,3 @@
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_embedding_dense_grad_v2](./examples/test_aclnn_embedding_dense_grad_v2.cpp) | 通过[aclnnEmbeddingDenseBackward](./docs/aclnnEmbeddingDenseBackward.md)接口方式调用EmbeddingDenseGradV2算子。 |
-| 图模式调用 | [test_geir_embedding_dense_grad_v2](./examples/op_graph/test_geir_embedding_dense_grad_v2.cpp)   | 通过[算子IR](./op_graph/embedding_dense_grad_v2_proto.h)构图方式调用EmbeddingDenseGradV2算子。 |

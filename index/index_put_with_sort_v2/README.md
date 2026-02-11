@@ -71,4 +71,4 @@
 
 | 调用方式 | 样例代码                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [IndexPutWithSortV2](../index_put_v2/op_host/op_api/aclnn_index_put_impl.cpp) | 通过[DeterministicProcess](../index_put_v2/docs/aclnnIndexPutImpl.md)接口方式调用index_put_with_sort_v2算子。 |
+| aclnn调用 | [IndexPutWithSortV2](../index_put_v2/op_api/aclnn_index_put_impl.cpp) | 通过[DeterministicProcess](../index_put_v2/docs/aclnnIndexPutImpl.md)接口方式调用index_put_with_sort_v2算子。 |

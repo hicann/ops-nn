@@ -94,4 +94,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_index_put_v2](./examples/test_aclnn_index_put_v2.cpp) | 通过[aclnnAbs](./docs/aclnnIndexPutImpl.md)接口方式调用IndexPutImpl算子。 |
+| aclnn调用 | [test_aclnn_index_put_v2](examples/arch35/test_aclnn_index_put_v2.cpp) | 通过[aclnnAbs](./docs/aclnnIndexPutImpl.md)接口方式调用IndexPutImpl算子。 |

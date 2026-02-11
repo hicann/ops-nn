@@ -87,4 +87,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_masked_scatter_with_position.cpp](./examples/test_aclnn_masked_scatter_with_position.cpp) | 通过[aclnnInplaceMaskedScatter](../masked_scatter/op_host/op_api/aclnn_masked_scatter.cpp)接口方式调用MaskedScatterWithPosition算子的L0接口。 |
+| aclnn调用 | [test_aclnn_masked_scatter_with_position.cpp](./examples/test_aclnn_masked_scatter_with_position.cpp) | 通过[aclnnInplaceMaskedScatter](../masked_scatter/op_api/aclnn_masked_scatter.cpp)接口方式调用MaskedScatterWithPosition算子的L0接口。 |
