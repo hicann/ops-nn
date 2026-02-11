@@ -452,6 +452,14 @@ bool SetConvBackpropFilterAttrs(const gert::TilingContext *context, Conv3dBpFilt
         "pad_l is invalid, current is %d, pad_l support range is [%d, %d]", runInfoV2.pad_l, PAD_LOWWER, PAD_UPPER), return false);
     OP_CHECK_IF(!CheckRange(runInfoV2.pad_r, PAD_LOWWER, PAD_UPPER), OP_LOGE(op_name,
         "pad_r is invalid, current is %d, pad_r support range is [%d, %d]", runInfoV2.pad_r, PAD_LOWWER, PAD_UPPER), return false);
+
+    if (std::max({runInfoV2.pad_f, runInfoV2.pad_b,
+         runInfoV2.pad_u, runInfoV2.pad_d,
+         runInfoV2.pad_l, runInfoV2.pad_r}) > 0) {
+        OP_LOGD(op_name,
+            "gradient calculation in padding regions is shape-dependent."
+            "certain kernel optimizations may skip computation and explicitly force these gradients to 0");
+    }
     return CheckGradOutputShape(context, runInfoV2);
 }
 }
