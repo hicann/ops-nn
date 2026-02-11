@@ -105,21 +105,27 @@ static bool CheckPromoteType(
     }
 
     // 检查alpha和mat/vec能否做数据类型推导
-    DataType promoteType2 = PromoteType(alpha->GetDataType(), promoteType);
-    if (promoteType2 == DataType::DT_UNDEFINED) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Alpha dtype %s and Mat/Vec dtype %s can not promote dtype.",
-            ToString(alpha->GetDataType()).GetString(), ToString(promoteType).GetString());
-        return false;
+    DataType promoteType2 = promoteType;
+    if (std::abs(alpha->ToFloat() - 1.0f) > std::numeric_limits<float>::epsilon()) {
+        promoteType2 = PromoteType(alpha->GetDataType(), promoteType);
+        if (promoteType2 == DataType::DT_UNDEFINED) {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID, "Alpha dtype %s and Mat/Vec dtype %s can not promote dtype.",
+                ToString(alpha->GetDataType()).GetString(), ToString(promoteType).GetString());
+            return false;
+        }
     }
 
     // 检查self和beta能否做数据类型推导
-    DataType promoteType3 = PromoteType(beta->GetDataType(), self->GetDataType());
-    if (promoteType3 == DataType::DT_UNDEFINED) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Self dtype %s and Beta dtype %s can not promote dtype.",
-            ToString(self->GetDataType()).GetString(), ToString(beta->GetDataType()).GetString());
-        return false;
+    DataType promoteType3 = self->GetDataType();
+    if (std::abs(beta->ToFloat() - 1.0f) > std::numeric_limits<float>::epsilon()) {
+        promoteType3 = PromoteType(beta->GetDataType(), self->GetDataType());
+        if (promoteType3 == DataType::DT_UNDEFINED) {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID, "Self dtype %s and Beta dtype %s can not promote dtype.",
+                ToString(self->GetDataType()).GetString(), ToString(beta->GetDataType()).GetString());
+            return false;
+        }
     }
 
     // 检查self和promote_type能否做数据类型推导
