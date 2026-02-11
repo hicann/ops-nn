@@ -95,7 +95,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>
         <ul>
             <li>数据类型需要与x1满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
-            <li>x2的Reduce维度需要与x1的Reduce维度大小相等。</li>
+            <li>x2的k维度需要与x1的k维度大小相等。</li>
             <li>数据类型当前仅支持FLOAT8_E5M2、FLOAT8_E4M3FN。</li>
         </ul>
         </td>
@@ -152,8 +152,8 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>用于指定输出矩阵的数据类型，支持的值为：1、27。</td>
         <td>
         <ul>
-          <li>取值范围为1, 表示输出矩阵类型为FLOAT16。</li>
-          <li>取值范围为27, 表示输出矩阵类型为BFLOAT16。</li>
+          <li>取值为1, 表示输出矩阵类型为FLOAT16。</li>
+          <li>取值为27, 表示输出矩阵类型为BFLOAT16。</li>
         </ul>
         </td>
         <td>INT32</td>
@@ -352,7 +352,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
 - 确定性说明： aclnnTransposeQuantBatchMatMul默认确定性实现。
 
 - <term>Ascend 950PR/Ascend 950DT</term>：
-    - permX1和permY支持[1, 0, 2], 支持permX2支持输入[0, 1, 2]。
+    - permX1和permY支持[1, 0, 2], permX2支持输入[0, 1, 2]。
     - x1Scale和x2Scale为1维，并且x1Scale为(M,), x2Scale为(N,)。
     - out和dtype支持float16和bfloat16。
 
