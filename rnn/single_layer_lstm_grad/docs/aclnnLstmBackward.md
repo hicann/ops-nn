@@ -15,191 +15,179 @@
 
 - 算子功能：LSTM的反向传播，计算正向输入input、权重params、初始状态hx的梯度。
 - 计算公式：
+  <details>
+    <summary> 单层LSTM反向传播计算公式</summary>
 
-**单层LSTM反向传播计算**
+    | 组件 | 公式 |
+    |:---|:---|
+    | 输入拼接 | $\mathbf{z}_t = \begin{bmatrix} \mathbf{h}_{t-1} \\ \mathbf{x}_t \end{bmatrix}$ |
+    | 遗忘门 | $\mathbf{f}_t = \sigma(\mathbf{W}_f \mathbf{z}_t + \mathbf{b}_f)$ |
+    | 输入门 | $\mathbf{i}_t = \sigma(\mathbf{W}_i \mathbf{z}_t + \mathbf{b}_i)$ |
+    | 候选状态 | $\mathbf{g}_t = \tanh(\mathbf{W}_g \mathbf{z}_t + \mathbf{b}_c)$ |
+    | 输出门 | $\mathbf{o}_t = \sigma(\mathbf{W}_o \mathbf{z}_t + \mathbf{b}_o)$ |
+    | 细胞状态 | $\mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \mathbf{g}_t$ |
+    | 隐藏状态 | $\mathbf{h}_t = \mathbf{o}_t \odot \tanh(\mathbf{c}_t)$ |
 
-**前向传播公式**
+    其中：
 
-| 组件 | 公式 |
-|------|------|
-| 输入拼接 | $\mathbf{z}_t = \begin{bmatrix} \mathbf{h}_{t-1} \\ \mathbf{x}_t \end{bmatrix}$ |
-| 遗忘门 | $\mathbf{f}_t = \sigma(\mathbf{W}_f \mathbf{z}_t + \mathbf{b}_f)$ |
-| 输入门 | $\mathbf{i}_t = \sigma(\mathbf{W}_i \mathbf{z}_t + \mathbf{b}_i)$ |
-| 候选状态 | $\mathbf{g}_t = \tanh(\mathbf{W}_g \mathbf{z}_t + \mathbf{b}_c)$ |
-| 输出门 | $\mathbf{o}_t = \sigma(\mathbf{W}_o \mathbf{z}_t + \mathbf{b}_o)$ |
-| 细胞状态 | $\mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \mathbf{g}_t$ |
-| 隐藏状态 | $\mathbf{h}_t = \mathbf{o}_t \odot \tanh(\mathbf{c}_t)$ |
+    - $\sigma$ 是 sigmoid 函数
+    - $\odot$ 表示逐元素乘法 (Hadamard product)
+    - $W_*$ 是可学习的权重矩阵
+    - $b_*$ 是可学习的偏置项
+  </details>
 
-其中：
+  <details>
+    <summary> 反向传播变量定义</summary>
 
-- $\sigma$ 是 sigmoid 函数
-- $\odot$ 表示逐元素乘法 (Hadamard product)
-- $W_*$ 是可学习的权重矩阵
-- $b_*$ 是可学习的偏置项
+    - 总损失：$L = \sum_{t=1}^{T} L_t$
+    - 隐藏状态梯度：$\delta\mathbf{h}_t = \frac{\partial L}{\partial \mathbf{h}_t}$
+    - 细胞状态梯度：$\delta\mathbf{c}_t = \frac{\partial L}{\partial \mathbf{c}_t}$
+  </details>
 
-**反向传播变量定义**
+  <details>
+    <summary> 反向传播算法（时间步 t -> t-1）</summary>
 
-- 总损失：$L = \sum_{t=1}^{T} L_t$
-- 隐藏状态梯度：$\delta\mathbf{h}_t = \frac{\partial L}{\partial \mathbf{h}_t}$
-- 细胞状态梯度：$\delta\mathbf{c}_t = \frac{\partial L}{\partial \mathbf{c}_t}$
+    - **初始化**
 
-**反向传播算法（时间步 $t \rightarrow t-1$）**
+    $$
+    \delta\mathbf{h}_{T} = \mathbf{0}, \quad \delta\mathbf{c}_{T} = \mathbf{0}, \quad \mathbf{f}_{T} = \mathbf{0}
+    $$
 
-**初始化**
+    - **循环 $t = T - 1$ 到 $0$**
 
-$$
-\delta\mathbf{h}_{T} = \mathbf{0}, \quad \delta\mathbf{c}_{T} = \mathbf{0}, \quad \mathbf{f}_{T} = \mathbf{0}
-$$
+      1.**当前隐藏状态梯度**
+        $$
+        \delta\mathbf{h}_t = \frac{\partial L_t}{\partial \mathbf{h}_t} + \delta\mathbf{h}_{\text{next}}
+        $$
 
-### 循环 $t = T - 1$ 到 $0$
+      2.**当前细胞状态梯度**
+        $$
+        \delta\mathbf{c}_t = \delta\mathbf{h}_t \odot \mathbf{o}_t \odot (1 - \tanh^2(\mathbf{c}_t)) + \delta\mathbf{c}_{\text{next}} \odot \mathbf{f}_{\text{next}}
+        $$
 
-1. **当前隐藏状态梯度**
-   
-   $$
-   \delta\mathbf{h}_t = \frac{\partial L_t}{\partial \mathbf{h}_t} + \delta\mathbf{h}_{\text{next}}
-   $$
-2. **当前细胞状态梯度**
-   
-   $$
-   \delta\mathbf{c}_t = \delta\mathbf{h}_t \odot \mathbf{o}_t \odot (1 - \tanh^2(\mathbf{c}_t)) + \delta\mathbf{c}_{\text{next}} \odot \mathbf{f}_{\text{next}}
-   $$
-3. **门控梯度计算**
-   
-   $$
-   \delta\mathbf{o}_t = \delta\mathbf{h}_t \odot \tanh(\mathbf{c}_t) \odot \mathbf{o}_t \odot (1 - \mathbf{o}_t)
-   $$
-   
-   $$
-   \delta\mathbf{g}_t = \delta\mathbf{c}_t \odot \mathbf{i}_t \odot (1 - \mathbf{g}_t^2)
-   $$
-   
-   $$
-   \delta\mathbf{i}_t = \delta\mathbf{c}_t \odot \mathbf{g}_t \odot \mathbf{i}_t \odot (1 - \mathbf{i}_t)
-   $$
-   
-   $$
-   \delta\mathbf{f}_t = \delta\mathbf{c}_t \odot \mathbf{c}_{t-1} \odot \mathbf{f}_t \odot (1 - \mathbf{f}_t)
-   $$
-4. **参数梯度累加**
-   
-   $$
-   \frac{\partial L}{\partial \mathbf{W}_f} \mathrel{+}= \delta\mathbf{f}_t \mathbf{z}_t^\top
-   $$
-   
-   $$
-   \frac{\partial L}{\partial \mathbf{b}_f} \mathrel{+}= \delta\mathbf{f}_t
-   $$
-   
-   $$
-   \frac{\partial L}{\partial \mathbf{W}_i} \mathrel{+}= \delta\mathbf{i}_t \mathbf{z}_t^\top
-   $$
-   
-   $$
-   \frac{\partial L}{\partial \mathbf{b}_i} \mathrel{+}= \delta\mathbf{i}_t
-   $$
-   
-   $$
-   \frac{\partial L}{\partial \mathbf{W}_g} \mathrel{+}= \delta\mathbf{g}_t \mathbf{z}_t^\top
-   $$
-   
-   $$
-   \frac{\partial L}{\partial \mathbf{b}_g} \mathrel{+}= \delta\mathbf{g}_t
-   $$
-   
-   $$
-   \frac{\partial L}{\partial \mathbf{W}_o} \mathrel{+}= \delta\mathbf{o}_t \mathbf{z}_t^\top
-   $$
-   
-   $$
-   \frac{\partial L}{\partial \mathbf{b}_o} \mathrel{+}= \delta\mathbf{o}_t
-   $$
-5. **传播到前一时刻**
-   
-   $$
-   \delta\mathbf{z}_t = \mathbf{W}_f^\top \delta\mathbf{f}_t + \mathbf{W}_i^\top \delta\mathbf{i}_t + \mathbf{W}_g^\top \delta\mathbf{g}_t + \mathbf{W}_o^\top \delta\mathbf{o}_t
-   $$
-   
-   $$
-   \delta\mathbf{h}_{\text{prev}} = \delta\mathbf{z}_t[1:\dim(\mathbf{h}_{t-1})]
-   $$
-   
-   $$
-   \delta\mathbf{c}_{\text{prev}} = \delta\mathbf{c}_t \odot \mathbf{f}_t
-   $$
-6. **更新传播变量**
-   
-   $$
-   \delta\mathbf{h}_{\text{next}} \leftarrow \delta\mathbf{h}_{\text{prev}}
-   $$
-   
-   $$
-   \delta\mathbf{c}_{\text{next}} \leftarrow \delta\mathbf{c}_{\text{prev}}
-   $$
-   
-   $$
-   \mathbf{f}_{\text{next}} \leftarrow \mathbf{f}_t
-   $$
+      3.**门控梯度计算**
+        $$
+        \delta\mathbf{o}_t = \delta\mathbf{h}_t \odot \tanh(\mathbf{c}_t) \odot \mathbf{o}_t \odot (1 - \mathbf{o}_t)
+        $$
+        $$
+        \delta\mathbf{g}_t = \delta\mathbf{c}_t \odot \mathbf{i}_t \odot (1 - \mathbf{g}_t^2)
+        $$
+        $$
+        \delta\mathbf{i}_t = \delta\mathbf{c}_t \odot \mathbf{g}_t \odot \mathbf{i}_t \odot (1 - \mathbf{i}_t)
+        $$
+        $$
+        \delta\mathbf{f}_t = \delta\mathbf{c}_t \odot \mathbf{c}_{t-1} \odot \mathbf{f}_t \odot (1 - \mathbf{f}_t)
+        $$
 
-**梯度计算原理**
+      4.**参数梯度累加**
+        $$
+        \frac{\partial L}{\partial \mathbf{W}_f} \mathrel{+}= \delta\mathbf{f}_t \mathbf{z}_t^\top
+        $$
+        $$
+        \frac{\partial L}{\partial \mathbf{b}_f} \mathrel{+}= \delta\mathbf{f}_t
+        $$
+        $$
+        \frac{\partial L}{\partial \mathbf{W}_i} \mathrel{+}= \delta\mathbf{i}_t \mathbf{z}_t^\top
+        $$
+        $$
+        \frac{\partial L}{\partial \mathbf{b}_i} \mathrel{+}= \delta\mathbf{i}_t
+        $$
+        $$
+        \frac{\partial L}{\partial \mathbf{W}_g} \mathrel{+}= \delta\mathbf{g}_t \mathbf{z}_t^\top
+        $$
+        $$
+        \frac{\partial L}{\partial \mathbf{b}_g} \mathrel{+}= \delta\mathbf{g}_t
+        $$
+        $$
+        \frac{\partial L}{\partial \mathbf{W}_o} \mathrel{+}= \delta\mathbf{o}_t \mathbf{z}_t^\top
+        $$
+        $$
+        \frac{\partial L}{\partial \mathbf{b}_o} \mathrel{+}= \delta\mathbf{o}_t
+        $$
 
-**细胞状态梯度推导**
+      5.**传播到前一时刻**
+        $$
+        \delta\mathbf{z}_t = \mathbf{W}_f^\top \delta\mathbf{f}_t + \mathbf{W}_i^\top \delta\mathbf{i}_t + \mathbf{W}_g^\top \delta\mathbf{g}_t + \mathbf{W}_o^\top \delta\mathbf{o}_t
+        $$
+        $$
+        \delta\mathbf{h}_{\text{prev}} = \delta\mathbf{z}_t[1:\dim(\mathbf{h}_{t-1})]
+        $$
+        $$
+        \delta\mathbf{c}_{\text{prev}} = \delta\mathbf{c}_t \odot \mathbf{f}_t
+        $$
 
-$$
-\delta\mathbf{c}_t = \frac{\partial L}{\partial \mathbf{h}_t} \frac{\partial \mathbf{h}_t}{\partial \mathbf{c}_t} + \frac{\partial L}{\partial \mathbf{c}_{t+1}} \frac{\partial \mathbf{c}_{t+1}}{\partial \mathbf{c}_t}
-$$
+      6.**更新传播变量**
+        $$
+        \delta\mathbf{h}_{\text{next}} \leftarrow \delta\mathbf{h}_{\text{prev}}
+        $$
+        $$
+        \delta\mathbf{c}_{\text{next}} \leftarrow \delta\mathbf{c}_{\text{prev}}
+        $$
+        $$
+        \mathbf{f}_{\text{next}} \leftarrow \mathbf{f}_t
+        $$
+    </details>
 
-其中：
+  <details>
+    <summary> 梯度计算原理</summary>
 
-$$
-\frac{\partial \mathbf{h}_t}{\partial \mathbf{c}_t} = \mathbf{o}_t \odot (1 - \tanh^2(\mathbf{c}_t))
-$$
+    - **细胞状态梯度推导**
+      $$
+      \delta\mathbf{c}_t = \frac{\partial L}{\partial \mathbf{h}_t} \frac{\partial \mathbf{h}_t}{\partial \mathbf{c}_t} + \frac{\partial L}{\partial \mathbf{c}_{t+1}} \frac{\partial \mathbf{c}_{t+1}}{\partial \mathbf{c}_t}
+      $$
+      其中：
+      $$
+      \frac{\partial \mathbf{h}_t}{\partial \mathbf{c}_t} = \mathbf{o}_t \odot (1 - \tanh^2(\mathbf{c}_t))
+      $$
+      $$
+      \frac{\partial \mathbf{c}_{t+1}}{\partial \mathbf{c}_t} = \mathbf{f}_{t+1}
+      $$
 
-$$
-\frac{\partial \mathbf{c}_{t+1}}{\partial \mathbf{c}_t} = \mathbf{f}_{t+1}
-$$
+    - **遗忘门梯度推导**
 
-**遗忘门梯度推导**
+      $$
+      \delta\mathbf{f}_t = \frac{\partial L}{\partial \mathbf{a}_f^t} = \delta\mathbf{c}_t \odot \mathbf{c}_{t-1} \odot \mathbf{f}_t \odot (1 - \mathbf{f}_t)
+      $$
 
-$$
-\delta\mathbf{f}_t = \frac{\partial L}{\partial \mathbf{a}_f^t} = \delta\mathbf{c}_t \odot \mathbf{c}_{t-1} \odot \mathbf{f}_t \odot (1 - \mathbf{f}_t)
-$$
+    - **参数梯度推导**
 
-**参数梯度推导**
+      $$
+      \frac{\partial L}{\partial \mathbf{W}_f} = \sum_{t=1}^{T} \delta\mathbf{f}_t \mathbf{z}_t^\top
+      $$
 
-$$
-\frac{\partial L}{\partial \mathbf{W}_f} = \sum_{t=1}^{T} \delta\mathbf{f}_t \mathbf{z}_t^\top
-$$
+    - **LSTM 梯度流动特性**
 
-**LSTM 梯度流动特性**
-**长程依赖处理**
+      **长程依赖处理**
 
-$$
-\frac{\partial \mathbf{c}_T}{\partial \mathbf{c}_1} = \prod_{k=2}^{T} \mathbf{f}_k \quad \text{(对角矩阵)}
-$$
+      $$
+      \frac{\partial \mathbf{c}_T}{\partial \mathbf{c}_1} = \prod_{k=2}^{T} \mathbf{f}_k \quad \text{(对角矩阵)}
+      $$
+  </details>
 
-**多层LSTMBackward反向传播**
+  <details>
+    <summary> 多层LSTMBackward反向传播</summary>
+    在多层LSTM网络中，层与层之间的梯度传播仅关注隐藏状态的传递（忽略单层内部细节，如门控机制或单元状态）。设：
 
-在多层LSTM网络中，层与层之间的梯度传播仅关注隐藏状态的传递（忽略单层内部细节，如门控机制或单元状态）。设：
+    - $\mathbf{h}^{(l)}$：第 $l$ 层的隐藏状态（$l = 1, 2, \dots, L$，其中 $L$ 为总层数）
+    - $L$：损失函数
+    - $\frac{\partial L}{\partial \mathbf{h}^{(l)}}$：损失函数对第 $l$ 层隐藏状态的梯度
 
-- $\mathbf{h}^{(l)}$：第 $l$ 层的隐藏状态（$l = 1, 2, \dots, L$，其中 $L$ 为总层数）
-- $L$：损失函数
-- $\frac{\partial L}{\partial \mathbf{h}^{(l)}}$：损失函数对第 $l$ 层隐藏状态的梯度
+    **核心传播公式**
 
-## 核心传播公式
+    梯度从顶层（$l = L$）向底层（$l = 1$）传播，层间关系由链式法则给出：
 
-梯度从顶层（$l = L$）向底层（$l = 1$）传播，层间关系由链式法则给出：
+    $$
+    \frac{\partial L}{\partial \mathbf{h}^{(l-1)}} = \frac{\partial L}{\partial \mathbf{h}^{(l)}} \cdot \frac{\partial \mathbf{h}^{(l)}}{\partial \mathbf{h}^{(l-1)}}
+    $$
 
-$$
-\frac{\partial L}{\partial \mathbf{h}^{(l-1)}} = \frac{\partial L}{\partial \mathbf{h}^{(l)}} \cdot \frac{\partial \mathbf{h}^{(l)}}{\partial \mathbf{h}^{(l-1)}}
-$$
+    其中：
 
-其中：
+    - $\frac{\partial L}{\partial \mathbf{h}^{(l)}}$：当前层 $l$ 的梯度（已由上一层反向传播得到）
+    - $\frac{\partial \mathbf{h}^{(l)}}{\partial \mathbf{h}^{(l-1)}}$：第 $l$ 层隐藏状态对第 $l-1$ 层隐藏状态的雅可比矩阵
+    - $\cdot$：矩阵乘法（梯度传播本质为向量-矩阵乘法）
 
-- $\frac{\partial L}{\partial \mathbf{h}^{(l)}}$：当前层 $l$ 的梯度（已由上一层反向传播得到）
-- $\frac{\partial \mathbf{h}^{(l)}}{\partial \mathbf{h}^{(l-1)}}$：第 $l$ 层隐藏状态对第 $l-1$ 层隐藏状态的雅可比矩阵
-- $\cdot$：矩阵乘法（梯度传播本质为向量-矩阵乘法）
-
-即每层的输出的梯度dx为上一层输入的梯度dy。
+    即每层的输出的梯度dx为上一层输入的梯度dy。
+  </details>
 
 ## 函数原型
 
