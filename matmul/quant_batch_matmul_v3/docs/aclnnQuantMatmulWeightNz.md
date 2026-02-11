@@ -16,63 +16,74 @@
 - 接口功能：完成量化的矩阵乘计算。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。支持T-C、T-T、K-C、K-T、mx[量化模式](../../../docs/zh/context/量化介绍.md)。
 
 - 计算公式：
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
-        - 无x1Scale无bias：
+    <details>
+    <summary><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term></summary>
 
-        $$
-        out = x1@x2 * x2Scale + x2Offset
-        $$
+    - 无x1Scale无bias：
 
-        - bias INT32：
+    $$
+    out = x1@x2 * x2Scale + x2Offset
+    $$
 
-        $$
-        out = (x1@x2 + bias) * x2Scale + x2Offset
-        $$
+    - bias INT32：
 
-        - bias BFLOAT16/FLOAT32（此场景无x2Offset）：
+    $$
+    out = (x1@x2 + bias) * x2Scale + x2Offset
+    $$
 
-        $$
-        out = x1@x2 * x2Scale + bias
-        $$
+    - bias BFLOAT16/FLOAT32（此场景无x2Offset）：
 
-        - x1Scale无bias：
+    $$
+    out = x1@x2 * x2Scale + bias
+    $$
 
-        $$
-        out = x1@x2 * x2Scale * x1Scale
-        $$
+    - x1Scale无bias：
 
-        - x1Scale， bias INT32(此场景无x2Offset)：
+    $$
+    out = x1@x2 * x2Scale * x1Scale
+    $$
 
-        $$
-        out = (x1@x2 + bias) * x2Scale * x1Scale
-        $$
+    - x1Scale， bias INT32(此场景无x2Offset)：
 
-        - x1Scale， bias BFLOAT16/FLOAT16/FLOAT32（此场景无x2Offset）：
+    $$
+    out = (x1@x2 + bias) * x2Scale * x1Scale
+    $$
 
-        $$
-        out = x1@x2 * x2Scale * x1Scale + bias
-        $$
-    - <term>Ascend 950PR/Ascend 950DT</term>：
+    - x1Scale， bias BFLOAT16/FLOAT16/FLOAT32（此场景无x2Offset）：
+
+    $$
+    out = x1@x2 * x2Scale * x1Scale + bias
+    $$
+    </details>
+
+    <details>
+    <summary><term>Ascend 950PR/Ascend 950DT</term></summary>
  
-       - **mx量化模式**
+    - **mx量化模式**
  
        $$
        out[m,n] = \sum_{j=0}^{kLoops-1} ((\sum_{k=0}^{gsK-1} (x1Slice * x2Slice))* (x1Scale[m/gsM, j] * x2Scale[j, n/gsN]))+bias[n]
        $$
  
        其中，gsM，gsN和gsK分别代表groupSizeM，groupSizeN和groupSizeK；x1Slice代表x1第m行长度为groupSizeK的向量，x2Slice代表x2第n列长度为groupSizeK的向量；K轴均从j*groupSizeK起始切片，j的取值范围[0, kLoops], kLoops = ceil(K / groupSizeK)，K为K轴长度，支持最后的切片长度不足groupSizeK。mx量化模式下包含bias。对于mx量化模式，[groupSizeM，groupSizeN，groupSizeK]取值组合仅支持[1，1，32]。
-    - <term>Atlas 推理系列产品</term>：
-        - 无x1Scale无bias：
+    </details>
+    
+    <details>
 
-        $$
-        out = x1@x2 * x2Scale + x2Offset
-        $$
+    <summary><term>Atlas 推理系列产品</term></summary>
+    
+    - 无x1Scale无bias：
 
-        - bias INT32：
+    $$
+    out = x1@x2 * x2Scale + x2Offset
+    $$
 
-        $$
-        out = (x1@x2 + bias) * x2Scale + x2Offset
-        $$
+    - bias INT32：
+
+    $$
+    out = (x1@x2 + bias) * x2Scale + x2Offset
+    $$
+    </details>
 
 ## 函数原型
 
@@ -141,7 +152,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
               <li>在transposeX1为true情况下各个维度表示：（batch，k，m），batch可不存在。</li>
           </ul>
       </td>
-        <td>INT8、FLOAT8_E4M3FN</td>
+        <td>INT4、INT8、FLOAT8_E4M3FN</td>
         <td>ND</td>
         <td>2-6</td>
         <td>x</td>
@@ -156,7 +167,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
               <li>在transposeX2为false情况下各个维度表示：（batch，n1，k1，k0，n0），batch可不存在，其中k0 = 16， n0 = 32， x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 16） = k1, x2 shape中的n1与out的n满足以下关系: ceil(n / n0) = n1。</li>
           </ul>
         </td>
-        <td>INT8、FLOAT4_E2M1、FLOAT32、FLOAT8_E4M3FN</td>
+        <td>INT4、INT8、FLOAT4_E2M1、FLOAT32、FLOAT8_E4M3FN</td>
         <td>NZ</td>
         <td>4-8</td>
         <td>x</td>
@@ -351,42 +362,46 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32
     $$
 
-- <term>Atlas 推理系列产品</term>：
+    <details>
+
+    <summary><term>Atlas 推理系列产品</term></summary>
+
     - x1支持的数据类型INT8。
-    - x2支持的数据类型INT8，x2不支持非连续的tensor。
+    - x2支持的数据类型INT8，x2不支持[非连续的tensor](../../../docs/zh/context/非连续的Tensor.md)。
     - 不支持x1Scale。
     - x2Scale数据类型支持UINT64、INT64。
     - bias数据类型支持INT32。
     - 不支持yScale
     - 不支持groupSize，groupSize传0。
     - out数据类型支持FLOAT16、INT8。
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-  - <term>Atlas 推理系列产品</term>：
+    </details>
+
+    <details>
+
+    <summary><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></summary>
+
     - x1支持的数据类型INT8。
-    - x2支持的数据类型INT8，x2不支持非连续的tensor。
-    - 不支持x1Scale。
-    - x2Scale数据类型支持UINT64、INT64。
-    - bias数据类型支持INT32。
-    - 不支持yScale
-    - 不支持groupSize，groupSize传0。
-    - out数据类型支持FLOAT16、INT8。
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-    - x1支持的数据类型INT8。
-    - x2支持的数据类型INT8，x2不支持非连续的tensor。
+    - x2支持的数据类型INT8，x2不支持[非连续的tensor](../../../docs/zh/context/非连续的Tensor.md)。
     - x1Scale数据类型支持FLOAT32，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，shape是1维（t，），t = m，其中m与x1的m一致。
     - x2Scale数据类型支持UINT64、INT64、FLOAT32、BFLOAT16。
     - bias数据类型支持INT32、BFLOAT16、FLOAT16、FLOAT32。
     - 不支持groupSize，groupSize传0。
     - out数据类型支持FLOAT16、INT8、BFLOAT16、INT32。
-- <term>Ascend 950PR/Ascend 950DT</term>：
+    </details>
+
+    <details>
+
+    <summary><term>Ascend 950PR/Ascend 950DT</term></summary>
+
     - x1支持的数据类型INT8、FLOAT8_E4M3FN。
-    - x2支持的数据类型INT8、FLOAT4_E2M1、FLOAT32、FLOAT8_E4M3FN。x2支持最后两根轴转置情况下的非连续tensor，其他场景的[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)不支持，当最后两根轴其中一根轴为1（即n=1或k=1）时，x2不支持私有格式, 不能调用该接口。
+    - x2支持的数据类型INT8、FLOAT4_E2M1、FLOAT32、FLOAT8_E4M3FN。x2支持最后两根轴转置情况下的[非连续的tensor](../../../docs/zh/context/非连续的Tensor.md)，其他场景的[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)不支持，当最后两根轴其中一根轴为1（即n=1或k=1）时，x2不支持私有格式, 不能调用该接口。
     - x1Scale数据类型支持FLOAT32、FLOAT8_E8M0，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
     - x2Scale数据类型支持UINT64、INT64、FLOAT32、BFLOAT16、FLOAT8_E8M0。
     - bias数据类型支持INT32、BFLOAT16、FLOAT16、FLOAT32。
     - yScale数据类型支持INT64、UINT64。
     - 支持groupSize传非0。
     - out数据类型支持FLOAT16、INT8、BFLOAT16、INT32、FLOAT32。
+    </details>
 
 
 - **返回值：**
@@ -496,6 +511,10 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     | INT8 | INT8 | null/FLOAT32 | FLOAT32/BFLOAT16 | null          | null/INT32/BFLOAT16/FLOAT32 | BFLOAT16 |
     | INT8 | INT8 | FLOAT32      | FLOAT32          | null          | null/INT32/FLOAT16/FLOAT32  | FLOAT16  |
     | INT8 | INT8 | null         | FLOAT32/BFLOAT16 | null          | null/INT32                  | INT32    |
+    | INT4 | INT4 | null/FLOAT32 | BFLOAT16         | null/FLOAT32  | null/BFLOAT16               | BFLOAT16 |
+    | INT4 | INT4 | null/FLOAT32 | FLOAT32          | null/FLOAT32  | null/BFLOAT16               | BFLOAT16 |
+ 	| INT4 | INT4 | null/FLOAT32 | UINT64           | null/FLOAT32  | null/INT32                  | FLOAT16  |
+ 	| INT4 | INT4 | null/FLOAT32 | FLOAT32          | null/FLOAT32  | null/INT32                  | FLOAT16  |
 
 </details>
 <details>
