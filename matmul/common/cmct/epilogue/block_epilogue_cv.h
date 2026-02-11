@@ -75,7 +75,7 @@ public:
         problemShape_ = problemShape;
     }
 
-    __aicore__ inline void Run(BlockShape const& blockShape, int64_t dstOffset)
+    __aicore__ inline void Run(BlockShape const& blockShape, int64_t dstOffset, int64_t flagId = 5)
     {   
         // 默认1-2不再基于splitM区分, aiv 0~1分别搬运blockShapeM/2
         int64_t blockShapeM = Get<0>(blockShape);
@@ -100,8 +100,14 @@ public:
             // aiv1需要多偏移aiv0所处理的数据
             offset += AscendC::GetSubBlockIdx() * halfBlockShapeM * N;
             stageSize = AscendC::Std::min(stageSize, inputSize - stageOffset);
-            // do add or mul in ub: x3 + cLocal_[stageOffset] -> cLocal_
-            fusionOp_(offset, stageSize / blockShapeNAlign, blockShapeN, N, stageSize, stageOffset);
+            // Do add or mul in ub: x3 + cLocal_[stageOffset] -> cLocal_  in stage 1
+            fusionOp_(offset, stageSize / blockShapeNAlign, blockShapeN, N, stageSize, stageOffset, 1);
+            if (stageOffset + stageSize >= inputSize) {
+                // Notify aic
+                AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_V>(flagId);
+            }
+            // CopyOut in stage 2
+            fusionOp_(offset, stageSize / blockShapeNAlign, blockShapeN, N, stageSize, stageOffset, 2);
             stageOffset += stageSize;
             loop++;
         }
@@ -113,9 +119,9 @@ public:
         return cLocal_;
     }
 
-    __aicore__ inline void operator()(BlockShape const& blockShape, int64_t dstOffset = 0)
+    __aicore__ inline void operator()(BlockShape const& blockShape, int64_t dstOffset = 0, int64_t flagId = 5)
     {
-        Run(blockShape, dstOffset);
+        Run(blockShape, dstOffset, flagId);
         return;
     }
 

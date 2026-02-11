@@ -243,9 +243,8 @@ public:
                         // Synchronize with aic
                         AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_V>(AIC_SYNC_AIV_FLAG + countId);
                         // Calulate epilogue
-                        epilogueOp({Get<0>(blockShape), Get<1>(blockShape), 1, 1}, offsetC);
-                        // Notify aic
-                        AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(AIV_SYNC_AIC_FLAG + countId);
+                        epilogueOp(
+                            {Get<0>(blockShape), Get<1>(blockShape), 1, 1}, offsetC, (AIV_SYNC_AIC_FLAG + countId));
                     }
                 }
             }

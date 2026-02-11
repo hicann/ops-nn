@@ -79,7 +79,7 @@ public:
         outputGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ DataTypeOut*>(params.outGmAddr));
     }
 
-    __aicore__ inline void Run(BlockShape const& blockShape, int64_t dstOffset)
+    __aicore__ inline void Run(BlockShape const& blockShape, int64_t dstOffset, int64_t flagId = 5)
     {   
         // 默认1-2不再基于splitM区分, aiv 0~1分别搬运blockShapeM/2
         int64_t blockShapeM = Get<0>(blockShape);
@@ -101,10 +101,10 @@ public:
         int64_t N = Get<MNK_N>(problemShape_);
         while (stageOffset < inputSize) {
             int64_t offset = dstOffset + loop * stageSize / blockShapeNAlign * N;
-            // aiv1需要多偏移aiv0所处理的数据
+            // Aiv1需要多偏移aiv0所处理的数据
             offset += AscendC::GetSubBlockIdx() * halfBlockShapeM * N;
             stageSize = AscendC::Std::min(stageSize, inputSize - stageOffset);
-            // do add or mul in ub: x3 + cLocal_[stageOffset] -> cLocal_
+            // Do add or mul in ub: x3 + cLocal_[stageOffset] -> cLocal_
             fusionOp_(cLocal_[stageOffset], cLocalTmp_, offset, blockShapeM, blockShapeN, N, stageSize);
 
             AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(ZERO_FLAG);
@@ -118,6 +118,8 @@ public:
             stageOffset += stageSize;
             loop++;
         }
+        // Notify aic
+        AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(flagId);
     }
 
     // GetTensor from ub from current AIV
@@ -126,9 +128,9 @@ public:
         return cLocal_;
     }
 
-    __aicore__ inline void operator()(BlockShape const& blockShape, int64_t dstOffset = 0)
+    __aicore__ inline void operator()(BlockShape const& blockShape, int64_t dstOffset = 0, int64_t flagId = 5)
     {
-        Run(blockShape, dstOffset);
+        Run(blockShape, dstOffset, flagId);
         return;
     }
 
