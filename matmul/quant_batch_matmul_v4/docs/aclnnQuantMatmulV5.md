@@ -754,7 +754,7 @@ aclnnStatus aclnnQuantMatmulV5(
       | ------------------------- | ------------------------- | ----------- | ----------- |   -------- | -------| ------- | -------------------------------------- |
       | FLOAT8_E4M3FN/ FLOAT8_E5M2 | FLOAT8_E4M3FN/ FLOAT8_E5M2 | FLOAT32     |   FLOAT32           | null     | null     | null | FLOAT16/BFLOAT16/  FLOAT32               |
       | HIFLOAT8                  | HIFLOAT8                  | FLOAT32     |   FLOAT32           | null     | null     | null | FLOAT16/BFLOAT16/  FLOAT32               |
-      | INT8                      |INT8                       | FLOAT32     |   FLOAT32           | null     | FLOAT32     | null |BFLOAT16       |
+      | INT8                      |INT8                       | FLOAT32     |   FLOAT32           | null     | null     | FLOAT32 |BFLOAT16       |
   - x1、x2、x1Scale、x2Scale和groupSize的取值关系：
     |量化类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|yScale shape|[gsM，gsN，gsK]|groupSize|
     |-------|--------|--------|-------------|-------------|------------|---|---|
