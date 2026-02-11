@@ -17,6 +17,7 @@
 
 namespace Ops {
 namespace NN {
+using namespace op;
 // 校验针对cube tensor的dtype，cubeMathType的值是否符合预期
 bool CheckCubeMathType(const op::DataType cubeTensorDtype, int8_t cubeMathType);
 
@@ -40,10 +41,8 @@ bool NeedCubeGoHF32(const op::DataType cubeTensorPromoteType, int8_t cubeMathTyp
 
 // 检查针对x芯片，cube算子是否支持FP32
 inline bool IsCubeSupportFp32() {
-    if (op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND910B &&
-        op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND910_93 &&
-        op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND950 &&
-        op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND310B) {
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    if ((npuArch != NpuArch::DAV_2201) && (npuArch != NpuArch::DAV_3510) && (npuArch != NpuArch::DAV_3002)) {
         return false;
     }
     return true;
@@ -51,10 +50,8 @@ inline bool IsCubeSupportFp32() {
 
 // 检查针对x芯片，cube算子是否支持HF32
 inline bool IsCubeSupportHf32() {
-    if (op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND910B &&
-        op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND910_93 &&
-        op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND950 &&
-        op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND310B) {
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    if ((npuArch != NpuArch::DAV_2201) && (npuArch != NpuArch::DAV_3510) && (npuArch != NpuArch::DAV_3002)) {
         return false;
     }
     return true;

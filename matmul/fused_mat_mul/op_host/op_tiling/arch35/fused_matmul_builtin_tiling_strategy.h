@@ -28,18 +28,18 @@ namespace strategy {
 constexpr int32_t ITER_BATCH_BASICAPI = 0;
 constexpr int32_t BASE = 999;
 
-const static std::map<platform_ascendc::SocVersion, std::vector<int32_t>> FusedMatMulPrioritiesMap = {
-    {platform_ascendc::SocVersion::ASCEND950,
+const static std::map<NpuArch, std::vector<int32_t>> FusedMatMulPrioritiesMap = {
+    {NpuArch::DAV_3510,
      {strategy::ITER_BATCH_BASICAPI, matmul_v3_advanced::strategy::BASIC_STREAM_K,
       matmul_v3_advanced::strategy::BASIC_ASWT}},
-    {platform_ascendc::SocVersion::RESERVED_VERSION, {strategy::BASE}}, // supportMmadS8S4平台
+    {NpuArch::DAV_RESV, {strategy::BASE}}, // supportMmadS8S4平台
 };
 
-inline std::vector<int32_t> GetFusedMatMulPriorities(platform_ascendc::SocVersion socVersion)
+inline std::vector<int32_t> GetFusedMatMulPriorities(NpuArch npuArch)
 {   
     std::vector<int32_t> priorities = {};
-    if (FusedMatMulPrioritiesMap.find(socVersion) != FusedMatMulPrioritiesMap.end()) {
-        priorities = FusedMatMulPrioritiesMap.at(socVersion);
+    if (FusedMatMulPrioritiesMap.find(npuArch) != FusedMatMulPrioritiesMap.end()) {
+        priorities = FusedMatMulPrioritiesMap.at(npuArch);
     }
 
     return priorities;

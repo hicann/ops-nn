@@ -26,15 +26,15 @@ namespace transpose_quant_batch_mat_mul_advanced {
 namespace strategy {
 constexpr int32_t BASE = 999;
 
-const static std::map<platform_ascendc::SocVersion, std::vector<int32_t>> TransposeQuantBatchMatMulPrioritiesMap = {
-    {platform_ascendc::SocVersion::ASCEND950, {strategy::BASE}},
+const static std::map<NpuArch, std::vector<int32_t>> TransposeQuantBatchMatMulPrioritiesMap = {
+    {NpuArch::DAV_3510, {strategy::BASE}},
 };
 
-inline std::vector<int32_t> GetTransposeQuantBatchMatMulPriorities(platform_ascendc::SocVersion socVersion)
+inline std::vector<int32_t> GetTransposeQuantBatchMatMulPriorities(NpuArch npuArch)
 {
     std::vector<int32_t> priorities = {};
-    if (TransposeQuantBatchMatMulPrioritiesMap.find(socVersion) != TransposeQuantBatchMatMulPrioritiesMap.end()) {
-        priorities = TransposeQuantBatchMatMulPrioritiesMap.at(socVersion);
+    if (TransposeQuantBatchMatMulPrioritiesMap.find(npuArch) != TransposeQuantBatchMatMulPrioritiesMap.end()) {
+        priorities = TransposeQuantBatchMatMulPrioritiesMap.at(npuArch);
     }
     return priorities;
 };

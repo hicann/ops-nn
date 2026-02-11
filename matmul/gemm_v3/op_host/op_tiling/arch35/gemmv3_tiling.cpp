@@ -242,9 +242,9 @@ ge::graphStatus GemmV3Tiling::DoTiling()
     GemmV3TilingKey GemmV3TilingKey_;
     MatMulTilingCfg tilingCfg(false, context_->GetCompileInfo(), static_cast<void*>(&args_), &GemmV3TilingKey_);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, tilingCfg.compileInfo);
-    platform_ascendc::SocVersion socVersion =
-        static_cast<const MatmulV3CompileInfo*>(tilingCfg.compileInfo)->socVersion;
-    MMRegisterCfg registerCfg{"MatMulV3", socVersion, strategy::GetGemmV3Priorities(socVersion)};
+    NpuArch npuArch =
+        static_cast<const MatmulV3CompileInfo*>(tilingCfg.compileInfo)->npuArch;
+    MMRegisterCfg registerCfg{"MatMulV3", npuArch, strategy::GetGemmV3Priorities(npuArch)};
     return MMTilingRegistry::GetInstance().DoTilingImpl(context_, tilingCfg, registerCfg);
 }
 } // namespace gemmv3

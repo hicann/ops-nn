@@ -27,7 +27,6 @@
 #include "opdev/format_utils.h"
 #include "opdev/platform.h"
 #include "opdev/op_log.h"
-#include "opdev/tensor_view_utils.h"
 #include "opdev/shape_utils.h"
 #include "op_api/op_api_def.h"
 #include "matmul/common/op_host/op_api/cube_util.h"
@@ -99,14 +98,13 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
 
 static inline bool CheckKEqual1Support(void)
 {
-    return GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-           GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93;
+    return (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201);
 }
 
-static inline bool CheckSocVersionIsSupportBf16(void)
+static inline bool CheckNpuArchIsSupportBf16(void)
 {
-    return GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E &&
-           GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B;
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    return (npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3510);
 }
 
 static inline bool CheckMMV3NzNzNdSupport(const aclTensor* mat2)
@@ -118,7 +116,7 @@ static inline bool CheckMMV3NzNzNdSupport(const aclTensor* mat2)
 static bool CheckDtypeValid(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType)
 {
-    bool bf16flag = CheckSocVersionIsSupportBf16();
+    bool bf16flag = CheckNpuArchIsSupportBf16();
     if (bf16flag) {
         OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
         OP_CHECK_DTYPE_NOT_SUPPORT(mat2, DTYPE_SUPPORT_LIST, return false);
@@ -249,9 +247,8 @@ static bool CheckSupportSingleSplitKFp16Bf16(
     // 2. 在K轴非256字节对齐场景下，输入数据大小不超过INT32最大值
     // 3. K轴大于27392
     // 4. M、N中最大不超过K轴的一半
-    bool supportCurrentSoc = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-                             GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93;
-    if (!supportCurrentSoc) {
+    bool supportCurrentArch = (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201);
+    if (!supportCurrentArch) {
         return false;
     }
     op::Shape selfShape = self->GetViewShape();
@@ -290,9 +287,10 @@ static aclnnStatus SetMatmulOpSupportInfo(
 
     if (IsSplitk(&SpTensor_sefl, &SpTensor_mat2)) {
         mmOpInfo.supporSplitK = true;
-        if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P) {
+        auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+        if (npuArch == NpuArch::DAV_2002) {
             mmOpInfo.support_info.output_dtype = DataType::DT_FLOAT;
-        } else if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910) {
+        } else if (npuArch == NpuArch::DAV_1001) {
             mmOpInfo.support_info.output_format = Format::FORMAT_FRACTAL_NZ;
             mmOpInfo.support_info.output_dtype = DataType::DT_FLOAT;
         }
@@ -343,8 +341,8 @@ static MmOpInfo GetMatmulOpInfoWithTrans(
     mmOpInfo.support_info = mmOpInfo.ori_info;
     // 如果允许降精度处理， 则开启HF32模式（0x40），否则采用默认模式; 后续此字段配置需要按照字段表进行配置
     mmOpInfo.enableHf32 = (cubeMathType == ALLOW_FP32_DOWN_PRECISION) || (cubeMathType == USE_HF32);
-    mmOpInfo.enableForceGrpAccForFp32 = cubeMathType == FORCE_GRP_ACC_FOR_FP32 && (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    mmOpInfo.enableForceGrpAccForFp32 = cubeMathType == FORCE_GRP_ACC_FOR_FP32 && (npuArch == NpuArch::DAV_2201);
     mmOpInfo.opImplModeEnum = mmOpInfo.enableHf32 ? 0x40 : (mmOpInfo.enableForceGrpAccForFp32 ? 0x4 : 0x1);
     OP_LOGD(
         "opImplModeEnum=%ld, enableHf32=%d, enableForceGrpAccForFp32=%d cubeMathType=%d", mmOpInfo.opImplModeEnum,
@@ -371,14 +369,13 @@ static bool CheckAscendCScenario(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const MmOpInfo& mmOpInfo, const bool transposeX1,
     const bool transposeX2)
 {
-    if ((GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B &&
-         GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93 &&
-         GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) ||
-        mmOpInfo.support_info.self_format != ge::FORMAT_ND) {
-        OP_LOGI("Not mat_mul_v3 case for unsupported SOC version or unsupported Format.");
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    if ((npuArch != NpuArch::DAV_2201 && npuArch != NpuArch::DAV_3510) ||
+        (mmOpInfo.support_info.self_format != ge::FORMAT_ND)) {
+        OP_LOGI("Not mat_mul_v3 case for unsupported npu arch or unsupported Format.");
         return false;
     }
-    bool alwaysUseV3 = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
+    bool alwaysUseV3 = (npuArch == NpuArch::DAV_3510);
     return (alwaysUseV3 || Ops::NN::MmCheckHitV3Shape(x1, x2, bias, transposeX1, transposeX2,
                                                       mmOpInfo.support_info.mat2_format, mmOpInfo.supporSplitK));
 }
@@ -386,7 +383,8 @@ static bool CheckAscendCScenario(
 static bool CheckAscendCScenario2(
     const aclTensor* x1, const aclTensor* x2, const MmOpInfo& mmOpInfo, const bool transposeX1, const bool transposeX2)
 {
-    if ((GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND310P)) {
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    if (npuArch != NpuArch::DAV_2002) {
         return false;
     }
     if (x1->GetDataType() != DataType::DT_FLOAT16 || x2->GetDataType() != DataType::DT_FLOAT16) {
@@ -607,9 +605,8 @@ static const aclTensor* HandleEmptyTensor(const aclTensor* self, const aclTensor
     auto emptyOut = ProcessEmptyTensor(self, mat2, executor);
     CHECK_RET(emptyOut != nullptr, nullptr);
     // output cast
-    if ((GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) &&
-        cubeMathType == FP16FP32_KEEP_DTYPE) {
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    if ((npuArch == NpuArch::DAV_2201) && cubeMathType == FP16FP32_KEEP_DTYPE) {
         auto castOut = l0op::Cast(emptyOut, DataType::DT_FLOAT, executor);
         CHECK_RET(castOut != nullptr, nullptr);
         return castOut;
@@ -619,8 +616,9 @@ static const aclTensor* HandleEmptyTensor(const aclTensor* self, const aclTensor
 
 static bool IsUseNonContiguous(const aclTensor* tensor)
 {
-    // Only support ASCEND950
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
+    // Only support 3510
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (npuArch != NpuArch::DAV_3510) {
         return false;
     }
     return !IsContiguous(tensor);
@@ -707,9 +705,10 @@ static aclnnStatus SetMatmulOpSupportFormat(
 
     if (IsSplitk(&SpTensor_sefl, &SpTensor_mat2)) {
         mmOpInfo.supporSplitK = true;
-        if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P) {
+        auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+        if (npuArch == NpuArch::DAV_2002) {
             mmOpInfo.support_info.output_dtype = DataType::DT_FLOAT;
-        } else if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910) {
+        } else if (npuArch == NpuArch::DAV_1001) {
             if(CheckMMV3NzNzNdSupport(mat2)){
                 mmOpInfo.support_info.output_format = Format::FORMAT_ND;
             }else{
@@ -969,8 +968,8 @@ MmOpInfo GetMatmulOpInfo(const aclTensor* self, const aclTensor* mat2, int8_t cu
                          mmOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT;
     // 如果允许降精度处理， 则开启HF32模式（0x40），否则采用默认模式; 后续此字段配置需要按照字段表进行配置
     mmOpInfo.enableHf32 = (cubeMathType == ALLOW_FP32_DOWN_PRECISION) || (cubeMathType == USE_HF32);
-    mmOpInfo.enableForceGrpAccForFp32 = cubeMathType == FORCE_GRP_ACC_FOR_FP32 && (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    mmOpInfo.enableForceGrpAccForFp32 = cubeMathType == FORCE_GRP_ACC_FOR_FP32 && (npuArch == NpuArch::DAV_2201);
     mmOpInfo.opImplModeEnum = mmOpInfo.enableHf32 ? 0x40 : (mmOpInfo.enableForceGrpAccForFp32 ? 0x4 : 0x1);
     OP_LOGD(
         "opImplModeEnum=%ld, enableHf32=%d, enableForceGrpAccForFp32=%d cubeMathType=%d, inputFp32Flag= %d", mmOpInfo.opImplModeEnum,
@@ -1011,8 +1010,8 @@ aclnnStatus CreateMatmulOpInfo(const aclTensor* self, const aclTensor* mat2, con
         mmOpInfo.shapeInfo.dtypeBSize);
 
     // 解析当前规格matmulop支持的dtype能力
-    std::shared_ptr<SocMatMulRuleBase> socRule = SocMatMulRule::getInstance();
-    aclnnStatus status = socRule -> PromoteDtype(self, mat2, bias, out, cubeMathType, mmOpInfo);
+    std::shared_ptr<NpuArchMatMulRuleBase> archRule = NpuArchMatMulRule::getInstance();
+    aclnnStatus status = archRule -> PromoteDtype(self, mat2, bias, out, cubeMathType, mmOpInfo);
     CHECK_RET(status == ACLNN_SUCCESS, status);
 
     // 不同芯片能力不同
@@ -1027,8 +1026,8 @@ aclnnStatus CreateMatmulOpInfo(const aclTensor* self, const aclTensor* mat2, con
                          mmOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT;
     // 如果允许降精度处理， 则开启HF32模式（0x40），否则采用默认模式; 后续此字段配置需要按照字段表进行配置
     mmOpInfo.enableHf32 = (cubeMathType == ALLOW_FP32_DOWN_PRECISION) || (cubeMathType == USE_HF32);
-    mmOpInfo.enableForceGrpAccForFp32 = cubeMathType == FORCE_GRP_ACC_FOR_FP32 && (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
+    mmOpInfo.enableForceGrpAccForFp32 = (cubeMathType == FORCE_GRP_ACC_FOR_FP32) &&
+                                        (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201);
     mmOpInfo.opImplModeEnum = mmOpInfo.enableHf32 ? 0x40 : (mmOpInfo.enableForceGrpAccForFp32 ? 0x4 : 0x1);
     OP_LOGD(
         "opImplModeEnum=%ld, enableHf32=%d, enableForceGrpAccForFp32=%d cubeMathType=%d, inputFp32Flag= %d", mmOpInfo.opImplModeEnum,
@@ -1523,14 +1522,13 @@ bool CheckGemmV3Support(const aclTensor* mat1, const aclTensor* mat2, MmOpInfo& 
         return false;
     }
     // 当前支持平台
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion != SocVersion::ASCEND950 && socVersion != SocVersion::ASCEND910B &&
-        socVersion != SocVersion::ASCEND910_93) {
-        OP_LOGI("Current SOC version does not support GemmV3.");
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    if ((npuArch != NpuArch::DAV_2201) && (npuArch != NpuArch::DAV_3510)) {
+        OP_LOGI("Current npu arch does not support GemmV3.");
         return false;
     }
 
-    if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
+    if (npuArch == NpuArch::DAV_2201) {
         auto dtype_mat1 = mat1->GetDataType();
         auto dtype_mat2 = mat2->GetDataType();
         if (!((dtype_mat1 == DataType::DT_FLOAT16 && dtype_mat2 == DataType::DT_FLOAT16) ||
@@ -1562,14 +1560,13 @@ bool CheckGemmV3Support(const aclTensor* mat1, const aclTensor* mat2, const aclT
         return false;
     }
     // 当前支持平台
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion != SocVersion::ASCEND950 && socVersion != SocVersion::ASCEND910B &&
-        socVersion != SocVersion::ASCEND910_93) {
-        OP_LOGI("Current SOC version does not support GemmV3.");
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    if ((npuArch != NpuArch::DAV_2201) && (npuArch != NpuArch::DAV_3510)) {
+        OP_LOGI("Current npu arch does not support GemmV3.");
         return false;
     }
 
-    if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
+    if (npuArch == NpuArch::DAV_2201) {
         auto dtype_mat1 = mat1->GetDataType();
         auto dtype_mat2 = mat2->GetDataType();
         if (!((dtype_mat1 == DataType::DT_FLOAT16 && dtype_mat2 == DataType::DT_FLOAT16) ||
@@ -1636,9 +1633,8 @@ const aclTensor* ExecGemmV3Op(
 }
 
 bool IsInputSupportFp32() {
-  if (op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND910B &&
-      op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND910_93 &&
-      op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND950) {
+  auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+  if ((npuArch != NpuArch::DAV_2201) && (npuArch != NpuArch::DAV_3510)) {
     return false;
   }
   return true;
@@ -1696,9 +1692,8 @@ bool NeedToConvertBias(const aclTensor *self, const aclTensor *mat1, const aclTe
   TensorInfo Tensor_mat2 = {mat2, mat2->GetDataType(), Format::FORMAT_ND};
 
   bool isSplitK = false;
-  if (op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND910B &&
-      op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND910_93 &&
-      op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND950) {
+  auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+  if ((npuArch != NpuArch::DAV_2201) && (npuArch != NpuArch::DAV_3510)) {
     isSplitK = IsSplitk(&Tensor_matl, &Tensor_mat2);;
   }
   op::Shape selfShape = self->GetViewShape();
@@ -1760,11 +1755,11 @@ bool IsSplitk(const TensorInfo* self, const TensorInfo* mat2) {
 }
 
 bool IsFormatSupportNd(const aclTensor *self, const aclTensor *mat2) {
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+  auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+  if (npuArch == NpuArch::DAV_3510) {
     return true;
   }
-  if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B &&
-      GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93) {
+  if (npuArch != NpuArch::DAV_2201) {
     op::Shape selfShape = self->GetViewShape();
     op::Shape mat2Shape = mat2->GetViewShape();
     int64_t dimNum = selfShape.GetDimNum();
@@ -1907,9 +1902,9 @@ aclnnStatus SetMmSupportFormat(const aclTensor* self, const aclTensor* mat2, MmO
     mmOpInfo.support_info.mat2_format = Format::FORMAT_ND;
   } else {
     OP_LOGD("Matmul do not support NDNDND");
-    // if 310p and n%16==0
-    bool is310p = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P;
-    if (IsSupportNzNzNd(self, mat2) && is310p) {
+    // if Dav2002 and n%16==0
+    bool isDav2002 = (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2002);
+    if (IsSupportNzNzNd(self, mat2) && isDav2002) {
       mmOpInfo.support_info.output_format = Format::FORMAT_ND;
       mmOpInfo.support_info.self_format = Format::FORMAT_FRACTAL_NZ;
       mmOpInfo.support_info.mat2_format = Format::FORMAT_FRACTAL_NZ;
@@ -2118,7 +2113,7 @@ const aclTensor *ContiguousBias(const aclTensor *self, const aclTensor *bias, ac
     CHECK_RET(contiguousBias != nullptr, nullptr);
     // bias为bf16时cast为fp32保证精度
     if ((contiguousBias->GetDataType() == DataType::DT_BF16 &&
-          GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950)||
+          GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510)||
         self->GetDataType() == DataType::DT_FLOAT) {
         contiguousBias = l0op::Cast(contiguousBias, op::DataType::DT_FLOAT, executor);
         CHECK_RET(contiguousBias != nullptr, nullptr);
@@ -2155,9 +2150,9 @@ aclnnStatus MatmulGraphImpl::CommonPostProcessWithReshape(){
 }
 
 // ==========================================================================================================
-// SocMatMulRuleBase
+// NpuArchMatMulRuleBase
 
-bool SocMatMulRuleBase::CheckInputTensorDtypeValid(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out) {
+bool NpuArchMatMulRuleBase::CheckInputTensorDtypeValid(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out) {
         auto dtypeList = GetSupportedDTypes();
         OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeList, return false);
         OP_CHECK_DTYPE_NOT_SUPPORT(mat2, dtypeList, return false);
@@ -2170,7 +2165,7 @@ bool SocMatMulRuleBase::CheckInputTensorDtypeValid(const aclTensor* self, const 
         return true;
 }
 
-aclnnStatus SocMatMulRuleBase::GetUpperDtype(const aclTensor* matA, const aclTensor* matB, int8_t cubeMathType, op::DataType& upperDtype){
+aclnnStatus NpuArchMatMulRuleBase::GetUpperDtype(const aclTensor* matA, const aclTensor* matB, int8_t cubeMathType, op::DataType& upperDtype){
         op::DataType typeA = matA -> GetDataType();
         op::DataType typeB = matB -> GetDataType();
         OP_LOGD("The input dtype is %s and %s", op::ToString(typeA).GetString(), op::ToString(typeB).GetString());
@@ -2191,9 +2186,9 @@ aclnnStatus SocMatMulRuleBase::GetUpperDtype(const aclTensor* matA, const aclTen
         return ACLNN_SUCCESS;
 }
 
-bool Ascend910BMatMulRule::CheckInput(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType)  {
+bool Dav2201MatMulRule::CheckInput(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType)  {
         if (FP16FP32_KEEP_DTYPE == cubeMathType) {
-            if (socVersion != op::SocVersion::ASCEND910B || socVersion != op::SocVersion::ASCEND910_93) {
+            if (npuArch_ != NpuArch::DAV_2201) {
                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Unsupported cubeMathType(FP16FP32_KEEP_DTYPE) for Cube");
                 return false;
             }
@@ -2206,7 +2201,7 @@ bool Ascend910BMatMulRule::CheckInput(const aclTensor* matA, const aclTensor* ma
         return dtypeVaild;
 }
 
-aclnnStatus Ascend910BMatMulRule::PromoteDtype(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType, struct MmOpInfo& mmOpInfo)  {
+aclnnStatus Dav2201MatMulRule::PromoteDtype(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType, struct MmOpInfo& mmOpInfo)  {
         // 输入数据类型
         mmOpInfo.ori_info.self_dtype = matA->GetDataType();
         mmOpInfo.ori_info.mat2_dtype = matB->GetDataType();
@@ -2247,13 +2242,13 @@ aclnnStatus Ascend910BMatMulRule::PromoteDtype(const aclTensor* matA, const aclT
 }
 
 
-std::initializer_list<op::DataType> Ascend910BMatMulRule::GetSupportedDTypes(){
+std::initializer_list<op::DataType> Dav2201MatMulRule::GetSupportedDTypes(){
         static constexpr std::initializer_list<op::DataType> dtypeSupportList = {
             op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
         return dtypeSupportList;
 }
 
-SocMatMulRuleBase::PromoteResult Ascend910BMatMulRule::GetUpperDtypeByLookUpTable(int inputCase, int8_t cubeMathType) {
+NpuArchMatMulRuleBase::PromoteResult Dav2201MatMulRule::GetUpperDtypeByLookUpTable(int inputCase, int8_t cubeMathType) {
         static constexpr const char* WARN0 = "The cubeMathType USE_HF32 will be ignored when the input dtype is FP16 or BF16.";
 
         static constexpr const char*  WARN1 = "The cubeMathType KEEP_DTYPE will be ignored when the inputs dtype are BF16 and FP16.";
@@ -2269,7 +2264,7 @@ SocMatMulRuleBase::PromoteResult Ascend910BMatMulRule::GetUpperDtypeByLookUpTabl
         static constexpr const char*  WARN6 = "The inputs are BF16 and FP32 with cubeMathType USE_FP16, BF16 will be cast to FP16 for computation.";
 
         if (FP16FP32_KEEP_DTYPE == cubeMathType) {
-            if (socVersion != op::SocVersion::ASCEND910B || socVersion != op::SocVersion::ASCEND910_93) {
+            if (npuArch_ != NpuArch::DAV_2201) {
                 return {FP32, true, "Unsupported cubeMathType(FP16FP32_KEEP_DTYPE) for Cube"};
             } else {
                 // cubeMathType为KEEP_DTYPE时保持一致
@@ -2277,7 +2272,7 @@ SocMatMulRuleBase::PromoteResult Ascend910BMatMulRule::GetUpperDtypeByLookUpTabl
             }
         }
 
-        static constexpr SocMatMulRuleBase::PromoteResult promoteResultTable[][6] = {
+        static constexpr NpuArchMatMulRuleBase::PromoteResult promoteResultTable[][6] = {
             /* cubeMathType:   KEEP_DTYPE,            ALLOW_FP32_DOWN_P,    USE_FP16,              USE_HF32,            FORCE_GRP_ACC_FOR_FP32,  USE_HIGH_PREC_MODE */
             /*0: FP32+FP32*/ {{FP32, false, ""},     {FP32, false, ""},    {FP16, false, ""},     {FP32, false, ""},    {FP32, false, ""},       {FP32, false, ""}},
             /*1: FP32+FP16*/ {{FP32, false, ""},     {FP32, false, ""},    {FP16, false, ""},     {FP32, false, ""},    {FP32, false, ""},       {FP32, false, ""}},
@@ -2290,32 +2285,31 @@ SocMatMulRuleBase::PromoteResult Ascend910BMatMulRule::GetUpperDtypeByLookUpTabl
         return promoteResultTable[inputCase][cubeMathType];
 }
 
-op::DataType Ascend910BMatMulRule::UpdateOutputDtype(
+op::DataType Dav2201MatMulRule::UpdateOutputDtype(
     op::DataType upperDtype, op::DataType outOriDtype, int8_t cubeMathType) const {
     // 支持FP32的类型的out参与计算, out可以保持输入要求的类型,不需要做cast
-    if ((socVersion == op::SocVersion::ASCEND910B || socVersion == op::SocVersion::ASCEND910_93) &&
+    if ((npuArch_ == NpuArch::DAV_2201) &&
         (cubeMathType != USE_FP16) && outOriDtype == op::DataType::DT_FLOAT) {
         return op::DataType::DT_FLOAT;
     }
     return upperDtype;
 }
 
-op::DataType Ascend910BMatMulRule::UpdateBiasDtype(op::DataType upperDtype, op::DataType biasOriDtype) const {
+op::DataType Dav2201MatMulRule::UpdateBiasDtype(op::DataType upperDtype, op::DataType biasOriDtype) const {
         if (biasOriDtype == op::DataType::DT_FLOAT) {
             return biasOriDtype;
         }
         if (biasOriDtype != upperDtype){
             return op::DataType::DT_FLOAT;
         }
-        if ((socVersion == op::SocVersion::ASCEND910B || socVersion == op::SocVersion::ASCEND910_93) && upperDtype == op::DataType::DT_BF16){
-            //
+        if ((npuArch_ == NpuArch::DAV_2201) && (upperDtype == op::DataType::DT_BF16)){
             return op::DataType::DT_FLOAT;
         }
         return upperDtype;
 }
 
 
-bool Ascend310AMatMulRule::CheckInput(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType) {
+bool DefaultMatMulRule::CheckInput(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType) {
         bool dtypeVaild = CheckInputTensorDtypeValid(matA, matB, bias, out);
         if (dtypeVaild == false) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Unsupported data types for Cube");
@@ -2323,19 +2317,19 @@ bool Ascend310AMatMulRule::CheckInput(const aclTensor* matA, const aclTensor* ma
         }
         bool isFp32TypeExist = matA->GetDataType() == op::DataType::DT_FLOAT || matB->GetDataType() == op::DataType::DT_FLOAT;
         if(isFp32TypeExist && (cubeMathType == USE_HF32 || cubeMathType == KEEP_DTYPE)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The soc version does not support FP32 for calculations when the cubeMathType is KEEP_DTYPE or USE_HF32, "
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The npu arch does not support FP32 for calculations when the cubeMathType is KEEP_DTYPE or USE_HF32, "
                                         "please change the setting of cubeMathType or the Dtype of input tensor.");
             return false;
         }
         if(isFp32TypeExist && cubeMathType == FP16FP32_KEEP_DTYPE) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The soc version does not support FP32 for calculations when the cubeMathType is FP16FP32_KEEP_DTYPE, "
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The npu arch does not support FP32 for calculations when the cubeMathType is FP16FP32_KEEP_DTYPE, "
                                         "please change the setting of cubeMathType or the Dtype of input tensor.");
             return false;
         }
         return true;
 }
 
-aclnnStatus Ascend310AMatMulRule::PromoteDtype(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType, struct MmOpInfo& mmOpInfo) {
+aclnnStatus DefaultMatMulRule::PromoteDtype(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType, struct MmOpInfo& mmOpInfo) {
         // 输入数据类型
         mmOpInfo.ori_info.self_dtype = matA->GetDataType();
         mmOpInfo.ori_info.mat2_dtype = matB->GetDataType();
@@ -2377,17 +2371,18 @@ aclnnStatus Ascend310AMatMulRule::PromoteDtype(const aclTensor* matA, const aclT
         return ACLNN_SUCCESS;
 }
 
-std::initializer_list<op::DataType> Ascend310AMatMulRule::GetSupportedDTypes(){
+std::initializer_list<op::DataType> DefaultMatMulRule::GetSupportedDTypes(){
         static constexpr std::initializer_list<op::DataType> dtypeSupportList = {
             op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
         return dtypeSupportList;
     }
 
-SocMatMulRuleBase::PromoteResult Ascend310AMatMulRule::GetUpperDtypeByLookUpTable(int inputCase, int8_t cubeMathType){
+NpuArchMatMulRuleBase::PromoteResult DefaultMatMulRule::GetUpperDtypeByLookUpTable(int inputCase, int8_t cubeMathType){
         static constexpr const char*  WARN0 = "The cubeMathType is USE_HF32. For input FP16, it will not be enabled.";
 
-        static constexpr const char*  Err0 = "The soc version does not support FP32 for calculations when the cubeMathType is KEEP_DTYPE or USE_HF32, "
-                                        "please change the setting of cubeMathType or the Dtype of input tensor.";
+        static constexpr const char*  Err0 = "The npu arch does not support FP32 for calculations "
+                                             "when the cubeMathType is KEEP_DTYPE or USE_HF32, "
+                                             "please change the setting of cubeMathType or the Dtype of input tensor.";
         if (FP16FP32_KEEP_DTYPE == cubeMathType) {
             // 和cubeMathType为KEEP_DTYPE时保持一致
             cubeMathType = KEEP_DTYPE;
@@ -2402,7 +2397,7 @@ SocMatMulRuleBase::PromoteResult Ascend310AMatMulRule::GetUpperDtypeByLookUpTabl
         return promoteResultTable[inputCase][cubeMathType];
 }
 
-op::DataType Ascend310AMatMulRule::UpdateOutputDtype(op::DataType upperDtype, op::DataType outOriDtype) const {
+op::DataType DefaultMatMulRule::UpdateOutputDtype(op::DataType upperDtype, op::DataType outOriDtype) const {
         // 如果输出类型是FP32，则按照16进32出的逻辑计算
         if (outOriDtype == op::DataType::DT_FLOAT) {
             return outOriDtype;
@@ -2410,23 +2405,21 @@ op::DataType Ascend310AMatMulRule::UpdateOutputDtype(op::DataType upperDtype, op
         return upperDtype;
 }
 
-op::DataType Ascend310AMatMulRule::PromoteOutputAndBiasDtype(op::DataType outputDtype, op::DataType biasOriDtype) const {
+op::DataType DefaultMatMulRule::PromoteOutputAndBiasDtype(op::DataType outputDtype, op::DataType biasOriDtype) const {
         if (biasOriDtype == op::DataType::DT_FLOAT || outputDtype == op::DataType::DT_FLOAT) {
             return op::DataType::DT_FLOAT;
         }
         return op::DataType::DT_FLOAT16;
 }
 
-std::shared_ptr<SocMatMulRuleBase> SocMatMulRule::instance = nullptr;
+std::shared_ptr<NpuArchMatMulRuleBase> NpuArchMatMulRule::instance = nullptr;
 
-std::shared_ptr<SocMatMulRuleBase> SocMatMulRule::BuildRule() {
-        op::SocVersion soc_version = GetCurrentPlatformInfo().GetSocVersion();
-        if (soc_version == op::SocVersion::ASCEND910B ||
-            soc_version == op::SocVersion::ASCEND910_93 ||
-            soc_version == op::SocVersion::ASCEND950) {
-            return std::make_shared<Ascend910BMatMulRule>(soc_version);
+std::shared_ptr<NpuArchMatMulRuleBase> NpuArchMatMulRule::BuildRule() {
+        auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+        if ((npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3510)) {
+            return std::make_shared<Dav2201MatMulRule>(npuArch);
         } else {
-            return std::make_shared<Ascend310AMatMulRule>(soc_version);
+            return std::make_shared<DefaultMatMulRule>(npuArch);
         }
 }
 

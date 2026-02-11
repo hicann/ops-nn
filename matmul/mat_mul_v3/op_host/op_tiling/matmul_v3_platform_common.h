@@ -20,15 +20,15 @@
 #include "platform/platform_infos_def.h"
 #include "error_util.h"
 namespace optiling {
-const std::initializer_list<platform_ascendc::SocVersion> AdvancedSocVersion = {
-    platform_ascendc::SocVersion::ASCEND950,
-    platform_ascendc::SocVersion::RESERVED_VERSION};  // supportMmadS8S4平台
+const std::initializer_list<NpuArch> AdvancedNpuArch = {
+    NpuArch::DAV_3510,
+    NpuArch::DAV_RESV};  // supportMmadS8S4平台
 
 template <typename T>
 inline typename std::enable_if<
     std::is_same<T, gert::TilingParseContext>::value || std::is_same<T, gert::TilingContext>::value,
     ge::graphStatus>::type
-GetSocVersion(const T *context, platform_ascendc::SocVersion &socVersion)
+GetSocVersion(const T *context, NpuArch &npuArch)
 {
     OP_TILING_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT("MatMulV3", "context is null"), return ge::GRAPH_FAILED);
     fe::PlatFormInfos *platformInfo = context->GetPlatformInfo();
@@ -38,7 +38,7 @@ GetSocVersion(const T *context, platform_ascendc::SocVersion &socVersion)
     std::string mmad;
     bool res = platformInfo->GetPlatformRes("AICoreintrinsicDtypeMap", "Intrinsic_mmad", mmad);
     bool supportMmadS8S4 = res && mmad.find("s8s4") != std::string::npos;
-    socVersion = supportMmadS8S4 ? platform_ascendc::SocVersion::RESERVED_VERSION : ascendcPlatform.GetSocVersion();
+    npuArch = supportMmadS8S4 ? NpuArch::DAV_RESV : ascendcPlatform.GetCurNpuArch();
     return ge::GRAPH_SUCCESS;
 }
 
@@ -46,11 +46,11 @@ template <typename T>
 inline typename std::enable_if<
     std::is_same<T, gert::TilingParseContext>::value || std::is_same<T, gert::TilingContext>::value, bool>::type
 IsAdvancedSocVersion(T *context) {
-    platform_ascendc::SocVersion socVersion;
+    NpuArch npuArch;
     OP_TILING_CHECK(
-        GetSocVersion(context, socVersion) == ge::GRAPH_FAILED,
-        CUBE_INNER_ERR_REPORT("MatMulV3", "fail to get soc version"), return false);
-    return std::find(AdvancedSocVersion.begin(), AdvancedSocVersion.end(), socVersion) != AdvancedSocVersion.end();
+        GetSocVersion(context, npuArch) == ge::GRAPH_FAILED,
+        CUBE_INNER_ERR_REPORT("MatMulV3", "fail to get npu arch"), return false);
+    return std::find(AdvancedNpuArch.begin(), AdvancedNpuArch.end(), npuArch) != AdvancedNpuArch.end();
 }
 }
 #endif // __OP_HOST_MATMUL_V3_PLATFORM_COMMON_H__

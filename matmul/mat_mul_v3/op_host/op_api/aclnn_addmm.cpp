@@ -68,16 +68,16 @@ static const std::initializer_list<op::DataType> dtypeSupportListWithoutBf16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> dtypeSupportListMat1AndMat2 = {
  	op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
-static inline bool CheckSocVersionIsSupportBf16(void)
+static inline bool CheckNpuArchIsSupportBf16(void)
 {
-    return GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-           GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    return (npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3510);
 }
 
 static inline bool CheckWeightNzDtypeValid(
     const aclTensor* self, const aclTensor* mat1, const aclTensor* mat2, const aclTensor* out)
 {
-    bool bf16flag = CheckSocVersionIsSupportBf16();
+    bool bf16flag = CheckNpuArchIsSupportBf16();
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     auto dtypeList = bf16flag ? dtypeSupportList : dtypeSupportListWithoutBf16;
     auto dtypeListMat1AndMat2 = bf16flag ? dtypeSupportListMat1AndMat2 : dtypeSupportListWithoutBf16;
@@ -160,10 +160,10 @@ static aclnnStatus CheckInputParams(AclnnAddmmTensor& addmmTensor, int8_t cubeMa
     CHECK_RET(CheckNotNull(addmmTensor), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    auto socRule = SocMatMulRule::getInstance();
-    CHECK_RET(socRule != nullptr, ACLNN_ERR_PARAM_INVALID);
+    auto archRule = NpuArchMatMulRule::getInstance();
+    CHECK_RET(archRule != nullptr, ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(
-        socRule -> CheckInput(addmmTensor.mat1, addmmTensor.mat2, addmmTensor.self, addmmTensor.out, cubeMathType),
+        archRule -> CheckInput(addmmTensor.mat1, addmmTensor.mat2, addmmTensor.self, addmmTensor.out, cubeMathType),
         ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查mat1和mat2是否满足matmul条件
@@ -412,11 +412,9 @@ static inline bool CheckMatmulWeightNz(const aclTensor* mat1, const aclTensor* m
 static aclnnStatus AddmmCheckWeightNzParam(AclnnAddmmTensor& addmmTensor, int8_t cubeMathType)
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    bool isSupportSocVersion =
-        (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-         socVersion == SocVersion::ASCEND950);
-
-    if (!isSupportSocVersion) {
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    bool isSupportNpuArch = ((npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3510));
+    if (!isSupportNpuArch) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "Weight NZ is unsupported by the current SOC version [%s].",
             op::ToString(socVersion).GetString());
@@ -441,10 +439,10 @@ static aclnnStatus AddmmCheckWeightNzParam(AclnnAddmmTensor& addmmTensor, int8_t
     CHECK_RET(CheckWeightNzDtypeValid(addmmTensor.self, addmmTensor.mat1, addmmTensor.mat2,
         addmmTensor.out), ACLNN_ERR_PARAM_INVALID);
 
-    auto socRule = SocMatMulRule::getInstance();
-    CHECK_RET(socRule != nullptr, ACLNN_ERR_PARAM_INVALID);
+    auto archRule = NpuArchMatMulRule::getInstance();
+    CHECK_RET(archRule != nullptr, ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(
-        socRule->CheckInput(addmmTensor.mat1, addmmTensor.mat2, addmmTensor.self, addmmTensor.out, cubeMathType),
+        archRule->CheckInput(addmmTensor.mat1, addmmTensor.mat2, addmmTensor.self, addmmTensor.out, cubeMathType),
         ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查mat1和mat2是否满足matmulweightNz条件
@@ -494,11 +492,11 @@ public:
         CHECK_RET(out1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
         // 执行 Matmul: out2 = mat1 @ mat2
         // 为了提升addmm的精度，如果输入是fp16或者bf16时，输出需要是fp32类型
-        auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-        bool isSupportSocVersion = (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93);
-        if (((matA->GetDataType() == DataType::DT_FLOAT16 && matB->GetDataType() == DataType::DT_FLOAT16) ||
+        auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+        bool isSupportNpuArch = (npuArch == NpuArch::DAV_2201);
+        if (((matA->GetDataType() == DataType::DT_FLOAT16 && matB->GetDataType() == DataType::DT_FLOAT16) || 
             (matA->GetDataType() == DataType::DT_BF16 && matB->GetDataType() == DataType::DT_BF16)) &&
-            (cubeMathType == KEEP_DTYPE || cubeMathType == USE_HF32) && isSupportSocVersion) {
+            (cubeMathType == KEEP_DTYPE || cubeMathType == USE_HF32) && isSupportNpuArch) {
             cubeMathType = USE_HIGH_PREC_MODE;
         }
         const aclTensor* out2 = MatmulProcess(matA, matB, output, cubeMathType, opInfo, executor);

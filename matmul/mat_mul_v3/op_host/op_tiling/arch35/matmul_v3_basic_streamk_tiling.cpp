@@ -29,7 +29,7 @@ bool CheckStreamKDPSKTilingDefault(const MatmulV3CompileInfo & /* compileInfo */
     return false;
 }
 
-bool CheckStreamKDPSKTiling91095(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args)
+bool CheckStreamKDPSKTilingDav3510(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args)
 {
     constexpr uint64_t STREAM_K_MIN_K_THRESHOLD = 8192UL;
     // 如果k轴小于32*256/DtypeSize_ 或 mn轴不是256对齐 或 输入是fp32类型，不走stream-k-dpsk
@@ -49,8 +49,8 @@ bool CheckStreamKDPSKTiling91095(const MatmulV3CompileInfo &compileInfo, const M
 
 using CheckStreamKDPSKTilingFunc = bool (*)(const MatmulV3CompileInfo &, const MatMulV3Args &);
 
-const static std::map<platform_ascendc::SocVersion, CheckStreamKDPSKTilingFunc> CheckStreamKDPSKTilingFuncMap = {
-    {platform_ascendc::SocVersion::ASCEND950, CheckStreamKDPSKTiling91095},
+const static std::map<NpuArch, CheckStreamKDPSKTilingFunc> CheckStreamKDPSKTilingFuncMap = {
+    {NpuArch::DAV_3510, CheckStreamKDPSKTilingDav3510},
 };
 
 // ------------------------------ CheckStreamKSKTiling -------------------------------------------//
@@ -59,7 +59,7 @@ bool CheckStreamKSKTilingDefault(const MatmulV3CompileInfo & /* compileInfo */, 
     return false;
 }
 
-bool CheckStreamKSKTiling91095(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args)
+bool CheckStreamKSKTilingDav3510(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args)
 {
     constexpr uint64_t STREAM_K_MAX_K_THRESHOLD = 2000000UL;
     // 如果dtype是fp32且k轴大于200万 则走基础模板来保证fp32的精度
@@ -92,8 +92,8 @@ bool CheckStreamKSKTiling91095(const MatmulV3CompileInfo &compileInfo, const Mat
 
 using CheckStreamKSKTilingFunc = bool (*)(const MatmulV3CompileInfo &, const MatMulV3Args &);
 
-const static std::map<platform_ascendc::SocVersion, CheckStreamKSKTilingFunc> CheckStreamKSKTilingFuncMap = {
-    {platform_ascendc::SocVersion::ASCEND950, CheckStreamKSKTiling91095},
+const static std::map<NpuArch, CheckStreamKSKTilingFunc> CheckStreamKSKTilingFuncMap = {
+    {NpuArch::DAV_3510, CheckStreamKSKTilingDav3510},
 };
 
 // ------------------------------ GetL0C2OutFlag -------------------------------------------//
@@ -102,7 +102,7 @@ MatMulV3L0C2Out GetL0C2OutFlagDefault(const MatMulV3Args & /* args */)
     return MatMulV3L0C2Out::ON_THE_FLY;
 }
 
-MatMulV3L0C2Out GetL0C2OutFlag91095(const MatMulV3Args &args)
+MatMulV3L0C2Out GetL0C2OutFlagDav3510(const MatMulV3Args &args)
 {
     if (args.nValue > BASIC_BLOCK_SIZE_64 && args.nValue % BASIC_BLOCK_SIZE_16 != 0 && args.mValue > NUM_TWO &&
         args.mValue * args.nValue >= BASIC_BLOCK_SIZE_256) {
@@ -113,8 +113,8 @@ MatMulV3L0C2Out GetL0C2OutFlag91095(const MatMulV3Args &args)
 
 using GetL0C2OutFlagFunc = MatMulV3L0C2Out (*)(const MatMulV3Args &);
 
-const static std::map<platform_ascendc::SocVersion, GetL0C2OutFlagFunc> GetL0C2OutFlagFuncMap = {
-    {platform_ascendc::SocVersion::ASCEND950, GetL0C2OutFlag91095},
+const static std::map<NpuArch, GetL0C2OutFlagFunc> GetL0C2OutFlagFuncMap = {
+    {NpuArch::DAV_3510, GetL0C2OutFlagDav3510},
 };
 
 }  // namespace
@@ -122,29 +122,29 @@ const static std::map<platform_ascendc::SocVersion, GetL0C2OutFlagFunc> GetL0C2O
 namespace optiling {
 namespace matmul_v3_advanced {
 using namespace strategy;
-MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3BasicStreamKTiling, ASCEND950, BASIC_STREAM_K);
+MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3BasicStreamKTiling, DAV_3510, BASIC_STREAM_K);
 
 bool MatMulV3BasicStreamKTiling::CheckStreamKSKTiling() const
 {
-    auto iter = (CheckStreamKSKTilingFuncMap.find(compileInfo_.socVersion) == CheckStreamKSKTilingFuncMap.end())
+    auto iter = (CheckStreamKSKTilingFuncMap.find(compileInfo_.npuArch) == CheckStreamKSKTilingFuncMap.end())
                     ? CheckStreamKSKTilingDefault
-                    : CheckStreamKSKTilingFuncMap.at(compileInfo_.socVersion);
+                    : CheckStreamKSKTilingFuncMap.at(compileInfo_.npuArch);
     return iter(compileInfo_, args_);
 }
 
 bool MatMulV3BasicStreamKTiling::CheckStreamKDPSKTiling() const
 {
-    auto iter = (CheckStreamKDPSKTilingFuncMap.find(compileInfo_.socVersion) == CheckStreamKDPSKTilingFuncMap.end())
+    auto iter = (CheckStreamKDPSKTilingFuncMap.find(compileInfo_.npuArch) == CheckStreamKDPSKTilingFuncMap.end())
                     ? CheckStreamKDPSKTilingDefault
-                    : CheckStreamKDPSKTilingFuncMap.at(compileInfo_.socVersion);
+                    : CheckStreamKDPSKTilingFuncMap.at(compileInfo_.npuArch);
     return iter(compileInfo_, args_);
 }
 
 MatMulV3L0C2Out MatMulV3BasicStreamKTiling::GetL0C2OutFlag() const
 {
-    auto iter = (GetL0C2OutFlagFuncMap.find(compileInfo_.socVersion) == GetL0C2OutFlagFuncMap.end())
+    auto iter = (GetL0C2OutFlagFuncMap.find(compileInfo_.npuArch) == GetL0C2OutFlagFuncMap.end())
                     ? GetL0C2OutFlagDefault
-                    : GetL0C2OutFlagFuncMap.at(compileInfo_.socVersion);
+                    : GetL0C2OutFlagFuncMap.at(compileInfo_.npuArch);
     return iter(args_);
 }
 

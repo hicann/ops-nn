@@ -20,7 +20,7 @@
 namespace optiling {
 namespace fused_matmul {
 using strategy::ITER_BATCH_BASICAPI;
-MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulIterBatchApiTiling, ASCEND950, ITER_BATCH_BASICAPI);
+MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulIterBatchApiTiling, DAV_3510, ITER_BATCH_BASICAPI);
 
 bool FusedMatMulIterBatchApiTiling::IsCapable()
 {

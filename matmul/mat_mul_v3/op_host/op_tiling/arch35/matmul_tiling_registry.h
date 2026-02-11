@@ -32,7 +32,7 @@
 namespace optiling {
 struct MMRegisterCfg {
     const char *opType{ nullptr };
-    platform_ascendc::SocVersion socVersion{ platform_ascendc::SocVersion::RESERVED_VERSION };
+    NpuArch npuArch{ NpuArch::DAV_RESV };
     std::vector<int32_t> priorities{ }; // 0 base
 };
 
@@ -83,23 +83,23 @@ public:
     }
 #endif
 
-    std::shared_ptr<MMTilingCases> RegisterOp(const std::string &opType, platform_ascendc::SocVersion socVersion)
+    std::shared_ptr<MMTilingCases> RegisterOp(const std::string &opType, NpuArch npuArch)
     {
-        auto socIter = registryMap_.find(socVersion);
+        auto socIter = registryMap_.find(npuArch);
         if (socIter == registryMap_.end()) {
             std::map<std::string, std::shared_ptr<MMTilingCases>> opTypeMap;
             opTypeMap[opType] = std::shared_ptr<MMTilingCases>(new (std::nothrow) MMTilingCases(opType));
-            registryMap_[socVersion] = opTypeMap;
+            registryMap_[npuArch] = opTypeMap;
         } else {
             if (socIter->second.find(opType) == socIter->second.end()) {
                 socIter->second[opType] = std::shared_ptr<MMTilingCases>(new (std::nothrow) MMTilingCases(opType));
             }
         }
 
-        OPS_ERR_IF(registryMap_[socVersion][opType] == nullptr,
+        OPS_ERR_IF(registryMap_[npuArch][opType] == nullptr,
             OPS_REPORT_VECTOR_INNER_ERR(opType, "Register tiling func failed, please check the class name."),
             return nullptr);
-        return registryMap_[socVersion][opType];
+        return registryMap_[npuArch][opType];
     }
 
     ge::graphStatus DoTilingImpl(gert::TilingContext *context, MatMulTilingCfg &tilingCfg,
@@ -110,10 +110,10 @@ public:
             return ge::GRAPH_FAILED;
         }
         const char *opType = registerCfg.opType == nullptr ? context->GetNodeType() : registerCfg.opType;
-        auto tilingTemplateRegistryMap = GetTilingTemplates(opType, registerCfg.socVersion);
-        OPS_LOG_D(context, "registry map find by opType %s, soc version %d", opType, static_cast<int32_t>(registerCfg.socVersion));
+        auto tilingTemplateRegistryMap = GetTilingTemplates(opType, registerCfg.npuArch);
+        OPS_LOG_D(context, "registry map find by opType %s, npu arch %d", opType, static_cast<int32_t>(registerCfg.npuArch));
         if (tilingTemplateRegistryMap.empty()) {
-            OPS_LOG_E(context, "no registry map find by opType %s, soc version %d", opType, static_cast<int32_t>(registerCfg.socVersion));
+            OPS_LOG_E(context, "no registry map find by opType %s, npu arch %d", opType, static_cast<int32_t>(registerCfg.npuArch));
             return ge::GRAPH_FAILED;
         }
         std::vector<int32_t> priorities{ registerCfg.priorities };
@@ -141,12 +141,12 @@ public:
         return ge::GRAPH_FAILED;
     }
 
-    const std::map<int32_t, MMTilingClassCase> &GetTilingTemplates(const std::string &opType, platform_ascendc::SocVersion socVersion)
+    const std::map<int32_t, MMTilingClassCase> &GetTilingTemplates(const std::string &opType, NpuArch npuArch)
     {
-        auto socIter = registryMap_.find(socVersion);
+        auto socIter = registryMap_.find(npuArch);
         OPS_ERR_IF(socIter == registryMap_.end(),
-            OPS_REPORT_VECTOR_INNER_ERR(opType, "Get op tiling func failed, please check the soc version %d",
-            static_cast<int32_t>(socVersion)),
+            OPS_REPORT_VECTOR_INNER_ERR(opType, "Get op tiling func failed, please check the npu arch %d",
+            static_cast<int32_t>(npuArch)),
             return emptyTilingCase_);
         auto opIter = socIter->second.find(opType);
         OPS_ERR_IF(opIter == socIter->second.end(),
@@ -156,7 +156,7 @@ public:
     }
 
 private:
-    std::map<platform_ascendc::SocVersion, std::map<std::string, std::shared_ptr<MMTilingCases>>> registryMap_; // key is socversion
+    std::map<NpuArch, std::map<std::string, std::shared_ptr<MMTilingCases>>> registryMap_; // key is socversion
     const std::map<int32_t, MMTilingClassCase> emptyTilingCase_{};
 };
 
@@ -165,9 +165,9 @@ public:
     explicit MMRegister(std::string opType) : opType_(std::move(opType)) {}
 
     template <typename T>
-    MMRegister &tiling(int32_t priority, platform_ascendc::SocVersion socVersion)
+    MMRegister &tiling(int32_t priority, NpuArch npuArch)
     {
-        auto tilingCases = MMTilingRegistry::GetInstance().RegisterOp(opType_, socVersion);
+        auto tilingCases = MMTilingRegistry::GetInstance().RegisterOp(opType_, npuArch);
         OPS_ERR_IF(tilingCases == nullptr,
             OPS_REPORT_VECTOR_INNER_ERR(opType_, "Register op tiling failed, please the op name."), return *this);
         tilingCases->AddTiling<T>(priority);
@@ -181,10 +181,10 @@ private:
 // opType: 算子名称， className: 注册的 tiling 类,
 // priority: tiling 类的优先级, 越小表示优先级越高, 即被选中的概率越大
 // 取代 MM_REGISTER_TILING_TEMPLATE , 传入的op_type如果是字符串常量，需要去掉引号
-#define MM_REGISTER_TILING_TEMPLATE(opType, className, socVersion, priority)                                      \
+#define MM_REGISTER_TILING_TEMPLATE(opType, className, npuArch, priority)                                      \
     GLOBAL_REGISTER_SYMBOL(opType, className, priority, __COUNTER__, __LINE__);                \
-    static MMRegister __attribute__((unused)) mm_register_##opType##_##className##_##socVersion##_##priority##_ = \
-        MMRegister(#opType).tiling<className>(static_cast<int32_t>(priority), platform_ascendc::SocVersion::socVersion)
+    static MMRegister __attribute__((unused)) mm_register_##opType##_##className##_##npuArch##_##priority##_ = \
+        MMRegister(#opType).tiling<className>(static_cast<int32_t>(priority), NpuArch::npuArch)
 } // namespace optiling
 
 #endif // __OP_HOST_MATMUL_TILING_REGISTRY_H__

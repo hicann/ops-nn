@@ -36,7 +36,7 @@ static const std::vector<std::vector<ge::DataType>> DTYPE_SUPPORT_LIST_RESERVED 
     {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16},
 };
 
-static const std::vector<std::vector<ge::DataType>> DTYPE_SUPPORT_LIST_91095 = {
+static const std::vector<std::vector<ge::DataType>> DTYPE_SUPPORT_LIST_DAV_3510 = {
     // x1,              x2,             y,               bias            x3
     {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16},
     {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16},
@@ -44,7 +44,7 @@ static const std::vector<std::vector<ge::DataType>> DTYPE_SUPPORT_LIST_91095 = {
     {ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16},
     {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT}};
 
-inline void GetDtype(const gert::TilingContext& context, MatMulV3Args& args, platform_ascendc::SocVersion socVersion)
+inline void GetDtype(const gert::TilingContext& context, MatMulV3Args& args, NpuArch npuArch)
 {
     args.aType = context.GetInputDesc(0)->GetDataType();
     args.bType = context.GetInputDesc(1)->GetDataType();
@@ -60,12 +60,12 @@ inline void GetDtype(const gert::TilingContext& context, MatMulV3Args& args, pla
     args.isHf32 = *((context.GetAttrs())->GetAttrPointer<bool>(ATTR_ENABLE_HF32_IDX));
     args.aDtypeSize = ge::GetSizeByDataType(args.aType);
     args.bDtypeSize = ge::GetSizeByDataType(args.bType);
-    if (args.isHf32 && socVersion != platform_ascendc::SocVersion::ASCEND950) {
+    if (args.isHf32 && npuArch != NpuArch::DAV_3510) {
         OP_LOGW(args.opName, "Hf32 flag is: %d, which is not support yet", args.isHf32);
     }
 }
 
-ge::graphStatus IsValidDtype(const MatMulV3Args& args, platform_ascendc::SocVersion socVersion)
+ge::graphStatus IsValidDtype(const MatMulV3Args& args, NpuArch npuArch)
 {
     std::vector<ge::DataType> dtype = {args.aType, args.bType, args.cType};
     if (args.hasBias) {
@@ -77,8 +77,7 @@ ge::graphStatus IsValidDtype(const MatMulV3Args& args, platform_ascendc::SocVers
     }
 
     // check dtype
-    auto supportList = socVersion == platform_ascendc::SocVersion::ASCEND950 ? DTYPE_SUPPORT_LIST_91095 :
-                                                                                  DTYPE_SUPPORT_LIST_RESERVED;
+    auto supportList = (npuArch == NpuArch::DAV_3510) ? DTYPE_SUPPORT_LIST_DAV_3510 : DTYPE_SUPPORT_LIST_RESERVED;
     for (auto& supported : supportList) {
         if (std::equal(dtype.begin(), dtype.end(), supported.begin())) {
             return ge::GRAPH_SUCCESS;
@@ -106,7 +105,7 @@ ge::graphStatus IsValidDtype(const MatMulV3Args& args, platform_ascendc::SocVers
 }
 
 ge::graphStatus OpSpecificCheck(
-    const gert::TilingContext& context, MatMulV3Args& args, platform_ascendc::SocVersion socVersion)
+    const gert::TilingContext& context, MatMulV3Args& args, NpuArch npuArch)
 {
     // check x3 shape
     if (args.hasX3Input) {
@@ -148,7 +147,7 @@ ge::graphStatus OpSpecificCheck(
     }
 
     // dtype check
-    return IsValidDtype(args, socVersion);
+    return IsValidDtype(args, npuArch);
 }
 } // namespace
 
@@ -265,18 +264,18 @@ ge::graphStatus FusedMatMulBuiltInTiling::DoTiling()
     MatMulTilingCfg tilingCfg(
         false, context_->GetCompileInfo(), reinterpret_cast<void*>(&args_), &fusedMatmulTilingKey);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, tilingCfg.compileInfo);
-    MMRegisterCfg registerCfg{"FusedMatMul", socVersion_, strategy::GetFusedMatMulPriorities(socVersion_)};
+    MMRegisterCfg registerCfg{"FusedMatMul", npuArch_, strategy::GetFusedMatMulPriorities(npuArch_)};
     return MMTilingRegistry::GetInstance().DoTilingImpl(context_, tilingCfg, registerCfg);
 }
 
 ge::graphStatus FusedMatMulBuiltInTiling::GetArgs()
 {
     GetFormat();
-    GetDtype(*context_, args_, socVersion_);
+    GetDtype(*context_, args_, npuArch_);
     if (GetShape() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    return OpSpecificCheck(*context_, args_, socVersion_);
+    return OpSpecificCheck(*context_, args_, npuArch_);
 }
 
 ge::graphStatus FusedMatMulBuiltInTiling::CheckArgs()
@@ -312,9 +311,9 @@ ge::graphStatus FusedMatMulBuiltInTiling::CheckArgs()
 ge::graphStatus FusedMatMulBuiltInTiling::GetShapeAttrsInfo()
 {
     OP_TILING_CHECK(
-        GetSocVersion(context_, socVersion_) == ge::GRAPH_FAILED,
-        CUBE_INNER_ERR_REPORT("FusedMatMul", "fail to get soc version"), return ge::GRAPH_FAILED);
-    return BatchMatMulV3Tiling::GetShapeAttrsInfo();
+        GetSocVersion(context_, npuArch_) == ge::GRAPH_FAILED,
+        CUBE_INNER_ERR_REPORT("FusedMatMul", "fail to get npu arch"), return ge::GRAPH_FAILED);
+    return MatMulV3Tiling::GetShapeAttrsInfo();
 }
 } // namespace fused_matmul
 } // namespace optiling

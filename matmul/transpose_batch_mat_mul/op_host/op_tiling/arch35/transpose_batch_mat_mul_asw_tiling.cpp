@@ -21,7 +21,7 @@
 namespace optiling {
 namespace transpose_batch_mat_mul_advanced {
 using namespace strategy;
-MM_REGISTER_TILING_TEMPLATE(TransposeBatchMatMul, TransposeBatchMatMulAswTiling, ASCEND950, BASE);
+MM_REGISTER_TILING_TEMPLATE(TransposeBatchMatMul, TransposeBatchMatMulAswTiling, DAV_3510, BASE);
 
 template <typename T>
 T GetAlignNumWithDataType(T size, ge::DataType dtype) {

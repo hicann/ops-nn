@@ -57,6 +57,7 @@ static ge::graphStatus TilingPrepareForGemmV2(gert::TilingParseContext *context)
     compileInfoPtr->supportL12BtBf16 = (dataMoveL12Bt.find("bf16") != string::npos);
     compileInfoPtr->aicNum = ascendcPlatform.GetCoreNumAic();
     compileInfoPtr->socVersion = ascendcPlatform.GetSocVersion();
+    compileInfoPtr->npuArch = ascendcPlatform.GetCurNpuArch();
     compileInfoPtr->btSize = compileInfoPtr->supportL0c2out ? 1024 : 0; // 1024 is btSize
     compileInfoPtr->btSize = compileInfoPtr->supportL12BtBf16 ? 4096 : compileInfoPtr->btSize; // 4096 is btSize
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->ubSize);
@@ -66,9 +67,10 @@ static ge::graphStatus TilingPrepareForGemmV2(gert::TilingParseContext *context)
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_C, compileInfoPtr->l0CSize);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L2, compileInfoPtr->l2Size);
     OP_LOGI(context->GetNodeName(),
-            "parse compile info success soc:%d, l1Size:%lu, l2Size:%lu, coreNum:%lu, supportL0c2out:%d,\
+            "parse compile info success soc:%d, npu arch: %u, l1Size:%lu, l2Size:%lu, coreNum:%lu, supportL0c2out:%d,\
             supportL12BtBf16:%d",
             static_cast<int>(compileInfoPtr->socVersion),
+            compileInfoPtr->npuArch,
             compileInfoPtr->l1Size,
             compileInfoPtr->l2Size,
             compileInfoPtr->aicNum,

@@ -46,23 +46,24 @@ static const std::initializer_list<op::DataType> ASCEND310P_DTYPE_SUPPORT_LIST =
     op::DataType::DT_UINT16, op::DataType::DT_UINT32, op::DataType::DT_UINT64
 };
 
-static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> DAV_2201_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT,
     op::DataType::DT_INT16, op::DataType::DT_INT32, op::DataType::DT_INT64,
     op::DataType::DT_UINT16, op::DataType::DT_UINT32, op::DataType::DT_UINT64
 };
 
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-      GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
-        return ASCEND910B_DTYPE_SUPPORT_LIST;
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    if ((npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3510)) {
+        return DAV_2201_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND310P_DTYPE_SUPPORT_LIST;
     }
 }
 
 // define 回调函数类型
-typedef aclnnStatus (*callback)(const aclTensorList *tensors, aclTensor *output, uint64_t *workspaceSize, aclOpExecutor **executor);
+using callback =
+    aclnnStatus (*)(const aclTensorList *tensors, aclTensor *output, uint64_t *workspaceSize, aclOpExecutor **executor);
 
 typedef struct {
     std::string equation;
@@ -128,8 +129,7 @@ aclnnStatus HandleABCDxABCED2ABCE(const aclTensorList *tensors, aclTensor *outpu
     auto ret = CheckABCDxABCED2ABCE(tensors, output);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    auto cubeMathType = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-                         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) ? 0 : g_useFP16;
+    auto cubeMathType = (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) ? 0 : g_useFP16;
 
     auto tensor0Contigous = l0op::Contiguous((*tensors)[0], uniqueExecutor.get());
     auto tensor1Contigous = l0op::Contiguous((*tensors)[1], uniqueExecutor.get());

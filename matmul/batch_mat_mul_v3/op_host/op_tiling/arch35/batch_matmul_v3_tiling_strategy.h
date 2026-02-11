@@ -34,19 +34,19 @@ constexpr int32_t BL1_FULL_LOAD_BASIC = 5;
 constexpr int32_t ASW_BASIC = 6;
 constexpr int32_t BASE = 999;
 
-const static std::map<platform_ascendc::SocVersion, std::vector<int32_t>> BatchMatMulV3PrioritiesMap = {
-    {platform_ascendc::SocVersion::ASCEND950,
+const static std::map<NpuArch, std::vector<int32_t>> BatchMatMulV3PrioritiesMap = {
+    {NpuArch::DAV_3510,
      {strategy::BATCH_MATMUL_INPUT_K_EQUAL_ZERO, strategy::BATCH_MATMUL_TO_MUL, strategy::ITER_BATCH_BASICAPI,
       strategy::ITER_BATCH, strategy::AL1_FULL_LOAD_BASIC, strategy::BL1_FULL_LOAD_BASIC, strategy::ASW_BASIC,
       strategy::BASE}},
-    {platform_ascendc::SocVersion::RESERVED_VERSION, {strategy::ITER_BATCH, strategy::BASE}}, // supportMmadS8S4平台
+    {NpuArch::DAV_RESV, {strategy::ITER_BATCH, strategy::BASE}}, // supportMmadS8S4平台
 };
 
-inline std::vector<int32_t> GetBatchMatMulV3Priorities(platform_ascendc::SocVersion socVersion)
+inline std::vector<int32_t> GetBatchMatMulV3Priorities(NpuArch NpuArch)
 {
     std::vector<int32_t> priorities = {};
-    if (BatchMatMulV3PrioritiesMap.find(socVersion) != BatchMatMulV3PrioritiesMap.end()) {
-        priorities = BatchMatMulV3PrioritiesMap.at(socVersion);
+    if (BatchMatMulV3PrioritiesMap.find(NpuArch) != BatchMatMulV3PrioritiesMap.end()) {
+        priorities = BatchMatMulV3PrioritiesMap.at(NpuArch);
     }
     return priorities;
 };

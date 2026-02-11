@@ -22,7 +22,7 @@ namespace optiling {
 namespace batch_matmul_v3_advanced {
 using namespace strategy;
 using StrideIndexPairs = std::vector<std::pair<int64_t, std::pair<int64_t, int64_t>>>;
-MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3IterBatchBasicApiTiling, ASCEND950, ITER_BATCH_BASICAPI);
+MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3IterBatchBasicApiTiling, DAV_3510, ITER_BATCH_BASICAPI);
 
 bool BatchMatMulV3IterBatchBasicApiTiling::IsContiguousStride(StrideIndexPairs& strideIndexPairs) const
 {

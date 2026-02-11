@@ -218,7 +218,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam& param)
                                 "L0B_SIZE" : 65536,
                                 "L0C_SIZE" : 262144,
                                 "CORE_NUM" : 32,
-                                "socVersion" : "Ascend910_95",
+                                "socVersion" : "Ascend950",
                                 "NpuArch" : "3510"
                             }})";
     map<string, string> socInfos;
@@ -328,7 +328,7 @@ static QuantBatchMatmulV4TilingTestParam casesParams[] = {
      * aicNum
      * aivNum
      */
-    {"UT-A8W4-PerGroup-ND-Testcase-0_Ascend910D_128_128_128_0_1_4303356032_ND_ND_INT8_INT8_NULL_FP32_FP32_NULL_"
+    {"UT-A8W4-PerGroup-ND-Testcase-0_Ascend950_128_128_128_0_1_4303356032_ND_ND_INT8_INT8_NULL_FP32_FP32_NULL_"
      "BF16_32_64",
      32, ge::GRAPH_SUCCESS, 533UL},
 

@@ -240,10 +240,10 @@ ge::graphStatus TransposeBatchMatMulTiling::DoTiling()
     args_.batchInfo = &tempBatchInfo;
     MatMulTilingCfg tilingCfg(false, context_->GetCompileInfo(), static_cast<void*>(&args_));
     OPS_CHECK_NULL_WITH_CONTEXT(context_, tilingCfg.compileInfo);
-    platform_ascendc::SocVersion socVersion =
-        static_cast<const MatmulV3CompileInfo*>(tilingCfg.compileInfo)->socVersion;
-    MMRegisterCfg registerCfg{"TransposeBatchMatMul", socVersion,
-                              strategy::GetTransposeBatchMatMulPriorities(socVersion)};
+    NpuArch npuArch =
+        static_cast<const MatmulV3CompileInfo*>(tilingCfg.compileInfo)->npuArch;
+    MMRegisterCfg registerCfg{"TransposeBatchMatMul", npuArch,
+                              strategy::GetTransposeBatchMatMulPriorities(npuArch)};
     return MMTilingRegistry::GetInstance().DoTilingImpl(context_, tilingCfg, registerCfg);
 }
 

@@ -25,7 +25,7 @@ constexpr uint64_t FP32_SPLIT_K_THRESHOLD = 8192UL;
 using namespace strategy;
 
 // 注册BASIC_FULL_LOAD作为基础API实现的全载模板策略
-MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3BasicAswtTiling, ASCEND950, BASIC_ASWT);
+MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3BasicAswtTiling, DAV_3510, BASIC_ASWT);
 
 bool MatMulV3BasicAswtTiling::IsCapable()
 {
@@ -53,7 +53,7 @@ uint64_t MatMulV3BasicAswtTiling::GetAFullLoadBasicNL1() const {
 }
 
 // A全载切换基础API的条件
-bool MatMulV3BasicAswtTiling::CheckAL1FullLoad91095(uint64_t kAlignedValue, uint64_t mAlignedValue)
+bool MatMulV3BasicAswtTiling::CheckAL1FullLoadDav3510(uint64_t kAlignedValue, uint64_t mAlignedValue)
 {
     uint64_t al1Size = kAlignedValue * mAlignedValue * args_.aDtypeSize;
     // 单核上只有一轮，走basic api模板， 头开销较小，无需走全载模板
@@ -97,7 +97,7 @@ bool MatMulV3BasicAswtTiling::CheckAL1FullLoad()
         kAlignedValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
     }
     // check AL1FullLoad
-    return CheckAL1FullLoad91095(kAlignedValue, mAlignedValue);
+    return CheckAL1FullLoadDav3510(kAlignedValue, mAlignedValue);
 }
 
 void MatMulV3BasicAswtTiling::CalcTailBasicBlockBL1Full()
@@ -130,8 +130,8 @@ void MatMulV3BasicAswtTiling::CalcTailBasicBlockAL1Full()
     }
 }
 
-void MatMulV3BasicAswtTiling::AdjustAL1Tiling91095Basic([[maybe_unused]] uint64_t biasBatchDimAll /* args */) {
-    //biasBatchDimAll 没有被使用，但是编译器不发出警告
+void MatMulV3BasicAswtTiling::AdjustAL1Tiling3510Basic([[maybe_unused]] uint64_t biasBatchDimAll /* args */) {
+    // biasBatchDimAll没有被使用，但编译器不会发出警告
     uint64_t kAlignedValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
     uint64_t mAlignedValue = ops::CeilAlign(args_.mValue, BASIC_BLOCK_SIZE_16);
     // aL1 LoadSize
@@ -179,13 +179,13 @@ void MatMulV3BasicAswtTiling::DoAL1FullLoad(uint64_t bBatchDimAll, uint64_t bias
     // adjust tiling common
     MatMulV3TilingHelper::AdjustAL1TilingCommon(bBatchDimAll, compileInfo_, args_, runInfo_);
     // 复用A全载的标记位, 无需再使用函数指针隔离, 不支持的平台无需设置走基础API的标记
-    AdjustAL1Tiling91095Basic(biasBatchDimAll);
+    AdjustAL1Tiling3510Basic(biasBatchDimAll);
     CalcTailBasicBlockAL1Full();
     fullLoad_ = MatMulV3FullLoad::A_FULL_LOAD;
     return;
 }
 
-bool MatMulV3BasicAswtTiling::CheckBL1FullLoad91095(uint64_t kAlignedValue, uint64_t nAlignedValue)
+bool MatMulV3BasicAswtTiling::CheckBL1FullLoadDav3510(uint64_t kAlignedValue, uint64_t nAlignedValue)
 {
     uint64_t bl1Size = kAlignedValue * nAlignedValue * args_.bDtypeSize;
     // 单核上只有一轮，走basic api模板， 头开销较小，无需走全载模板
@@ -224,10 +224,10 @@ bool MatMulV3BasicAswtTiling::CheckBL1FullLoad()
         kAlignedValue = ops::CeilAlign(args_.kValue, BLOCK_BYTE_SIZE / args_.bDtypeSize);
         nAlignedValue = ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16);
     }
-    return CheckBL1FullLoad91095(kAlignedValue, nAlignedValue);
+    return CheckBL1FullLoadDav3510(kAlignedValue, nAlignedValue);
 }
 
-void MatMulV3BasicAswtTiling::AdjustBL1Tiling91095Basic([[maybe_unused]] uint64_t biasBatchDimAll /* args */)
+void MatMulV3BasicAswtTiling::AdjustBL1Tiling3510Basic([[maybe_unused]] uint64_t biasBatchDimAll /* args */)
 {
     //biasBatchDimAll 没有被使用，但是编译器不发出警告
     uint64_t kAlignedValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
@@ -268,7 +268,7 @@ void MatMulV3BasicAswtTiling::DoBL1FullLoad(uint64_t aBatchDimAll, uint64_t bias
     MatMulV3TilingHelper::ResetFullLoadLoadBalance(runInfo_);
     OP_LOGI(args_.opName, "MatMulV3 tiling enable state is DoBL1FullLoad.");
     MatMulV3TilingHelper::AdjustBL1TilingCommon(aBatchDimAll, compileInfo_, args_, runInfo_);
-    AdjustBL1Tiling91095Basic(biasBatchDimAll);
+    AdjustBL1Tiling3510Basic(biasBatchDimAll);
     CalcTailBasicBlockBL1Full();
     fullLoad_ = MatMulV3FullLoad::B_FULL_LOAD;
     return;

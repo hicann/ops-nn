@@ -40,7 +40,7 @@ protected:
         const gert::TilingContext& context, MatMulV3Args& args, MatMulV3BatchInfo& batchInfo) override;
 
 private:
-    platform_ascendc::SocVersion socVersion_;
+    NpuArch npuArch_;
 };
 } // namespace fused_matmul
 } // namespace optiling

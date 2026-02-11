@@ -26,10 +26,10 @@ public:
     MatMulV3BasicAswtTiling(gert::TilingContext *context, MatMulTilingCfg &cfg)
         : MatMulV3AswTiling(context, cfg) {};
     ~MatMulV3BasicAswtTiling() override = default;
-    bool CheckBL1FullLoad91095(uint64_t kAlignedValue, uint64_t nAlignedValue);
-    bool CheckAL1FullLoad91095(uint64_t kAlignedValue, uint64_t mAlignedValue);
-    void AdjustBL1Tiling91095Basic(uint64_t biasBatchDimAll);
-    void AdjustAL1Tiling91095Basic(uint64_t biasBatchDimAll);
+    bool CheckBL1FullLoadDav3510(uint64_t kAlignedValue, uint64_t nAlignedValue);
+    bool CheckAL1FullLoadDav3510(uint64_t kAlignedValue, uint64_t mAlignedValue);
+    void AdjustBL1Tiling3510Basic(uint64_t biasBatchDimAll);
+    void AdjustAL1Tiling3510Basic(uint64_t biasBatchDimAll);
 
 protected:
     bool IsCapable() override;
