@@ -120,7 +120,7 @@ do
     echo "[EXECUTE_COMMAND] bash build.sh --pkg --vendor_name=$name --ops=$name"
     bash build.sh --pkg --vendor_name=$name --ops=$name --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j16
     status=$?
-    if [ $status -ne 0]; then
+    if [ $status -ne 0 ]; then
         echo "${name} check pkg fail"
         exit 1
     fi
@@ -144,7 +144,7 @@ do
     echo "[EXECUTE_COMMAND] bash build.sh --pkg --vendor_name=$name --ops=$name --soc=ascend950"
     bash build.sh --pkg --vendor_name=$name --ops=$name --soc=ascend950 --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j16
     status=$?
-    if [ $status -ne 0]; then
+    if [ $status -ne 0 ]; then
         echo "${name} check ascend950 pkg fail"
         exit 1
     fi

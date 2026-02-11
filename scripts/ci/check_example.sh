@@ -100,7 +100,7 @@ do
     echo "[EXECUTE_COMMAND] bash build.sh --run_example $name eager cust --vendor_name=$name"
     bash build.sh --run_example $name eager cust --vendor_name=$name
     status=$?
-    if [ $status -ne 0]; then
+    if [ $status -ne 0 ]; then
         echo "${name} example fail"
         exit 1
     fi

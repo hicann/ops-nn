@@ -89,7 +89,7 @@ do
         echo "[EXECUTE_COMMAND] bash build.sh -u --opkernel --ops=$name --cov --soc=$soc_version"
         bash build.sh -u --opkernel --ops=$name --cov --soc=$soc_version --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j16
         status=$?
-        if [ $status -ne 0]; then
+        if [ $status -ne 0 ]; then
             echo "${name} kernel ut fail"
             exit 1
         fi
@@ -104,7 +104,7 @@ do
         echo "[EXECUTE_COMMAND] bash build.sh -u --ops=$name --cov --soc=$soc_version"
         bash build.sh -u --ops=$name --cov --soc=$soc_version --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j16
         status=$?
-        if [ $status -ne 0]; then
+        if [ $status -ne 0 ]; then
             echo "${name} ut fail"
             exit 1
         fi
