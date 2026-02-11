@@ -43,6 +43,10 @@ protected:
 private:
     void InitSplitWOI();
 
+    void AdjustSmallCaseBaseBlockForStreamK(uint64_t nBlockCnt);
+    
+    void AdjustSmallCaseBaseBlockForSingleCoreN(uint64_t mBlockCnt, uint64_t nBlockCnt);
+
     void AdjustSmallCaseBaseBlock();
 
     uint64_t GetSingleShapeKByStreamK();

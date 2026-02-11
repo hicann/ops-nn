@@ -91,25 +91,8 @@ ge::graphStatus Conv3DBackpropFilterV2StreamKTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-void Conv3DBackpropFilterV2StreamKTiling::AdjustSmallCaseBaseBlock()
+void Conv3DBackpropFilterV2StreamKTiling::AdjustSmallCaseBaseBlockForStreamK(uint64_t nBlockCnt)
 {
-    // 扩维情况下，不允许调整基本块大小，否则和重排不兼容
-    if (blockTiling_.groupEnlarge) {
-        return;
-    }
-    uint64_t mBlockCnt = Ops::Base::CeilDiv(mmInfo_.mValue, static_cast<uint64_t>(blockTiling_.singleCoreM));
-    uint64_t nBlockCnt = Ops::Base::CeilDiv(mmInfo_.nValue, static_cast<uint64_t>(blockTiling_.singleCoreN));
-    uint64_t totalCnt = mBlockCnt * nBlockCnt * runInfo_.kd * runInfo_.real_g;
-    // 若基本块数量能够做一轮计算，则不调整基本块大小，保持最优基本块
-    if ((totalCnt >= platformInfo_.core_num)) {
-        return;
-    }
-    // 若HWout和BatchDout不满足StreamK的分核，则不调整基本块
-    uint64_t splitCoreNum = platformInfo_.core_num / totalCnt;
-    if ((platformInfo_.core_num % totalCnt == 0) && ((static_cast<uint64_t>(runInfo_.batch * runInfo_.dout) >= splitCoreNum) ||
-        (static_cast<uint64_t>(runInfo_.ho) >= splitCoreNum))) {
-        return;
-    }
     int64_t mCntMax = std::min(Ops::Base::CeilDiv(mmInfo_.mValue, static_cast<uint64_t>(BLOCK_CUBE)),
         static_cast<uint64_t>(platformInfo_.core_num)) / runInfo_.kd / runInfo_.real_g / nBlockCnt;
     for (int64_t mCnt = mCntMax; mCnt >= 1; mCnt--) {
@@ -148,6 +131,75 @@ void Conv3DBackpropFilterV2StreamKTiling::AdjustSmallCaseBaseBlock()
         if (!IsCurBlockL1Invalid()) {
             break;
         }
+    }
+}
+ 
+void Conv3DBackpropFilterV2StreamKTiling::AdjustSmallCaseBaseBlockForSingleCoreN(uint64_t mBlockCnt, uint64_t nBlockCnt)
+{
+    int64_t hkwkc0 = static_cast<int64_t>(runInfo_.kh) * runInfo_.kw * BLOCK_CUBE;
+    int64_t nCntMax = std::min(Ops::Base::CeilDiv(mmInfo_.nValue, static_cast<uint64_t>(hkwkc0)),
+        platformInfo_.core_num / runInfo_.kd / runInfo_.real_g / mBlockCnt);
+    for (int64_t nCnt = nCntMax; nCnt > nBlockCnt; nCnt--) {
+        uint64_t singleCoreN = Ops::Base::CeilAlign(Ops::Base::CeilDiv(mmInfo_.nValue, static_cast<uint64_t>(nCnt)), 
+            static_cast<uint64_t>(hkwkc0));
+        uint64_t nCntFixed = Ops::Base::CeilDiv(mmInfo_.nValue, singleCoreN);
+        uint64_t blockTotalCnt = nCntFixed * mBlockCnt * runInfo_.kd * runInfo_.real_g;
+        if (blockTotalCnt > platformInfo_.core_num) {
+            continue;
+        }
+
+        uint64_t blockBaseK = GetBaseK(blockTiling_.blockBaseM, singleCoreN);
+        if (singleCoreN * blockTiling_.blockBaseM * L0C_DTYPE_BYTE > platformInfo_.l0c_size) {
+            OP_LOGD(opName_, "base block after adjust exceed loC size, singleCoreN[%lu].", singleCoreN);
+            continue;
+        }
+
+        OP_LOGD(opName_, "Adjust the block baseN from [%u] to [%lu]", blockTiling_.blockBaseN, singleCoreN);
+        blockTiling_.blockBaseK = blockBaseK;
+        blockTiling_.blockBaseN = singleCoreN;
+        if (blockTiling_.blockBaseM * blockTiling_.blockBaseN * DB_ON * L0C_DTYPE_BYTE <= platformInfo_.l0c_size) {
+            blockTiling_.dbL0C = DB_ON;
+        } else {
+            blockTiling_.dbL0C = DB_OFF;
+        }
+
+        SetStepK4SplitMN();
+        if (!IsCurBlockL1Invalid()) {
+            break;
+        }
+    }
+}
+ 	 
+void Conv3DBackpropFilterV2StreamKTiling::AdjustSmallCaseBaseBlock()
+{
+    // 扩维情况下，不允许调整基本块大小，否则和重排不兼容
+    if (blockTiling_.groupEnlarge) {
+        return;
+    }
+
+    uint64_t mBlockCnt = Ops::Base::CeilDiv(mmInfo_.mValue, static_cast<uint64_t>(blockTiling_.singleCoreM));
+    uint64_t nBlockCnt = Ops::Base::CeilDiv(mmInfo_.nValue, static_cast<uint64_t>(blockTiling_.singleCoreN));
+    uint64_t totalCnt = mBlockCnt * nBlockCnt * runInfo_.kd * runInfo_.real_g;
+    // 若基本块数量能够做一轮计算，则不调整基本块大小，保持最优基本块
+    if ((totalCnt >= platformInfo_.core_num)) {
+        return;
+    }
+
+    // 若HWout和BatchDout不满足StreamK的分核，则不调整基本块
+    uint64_t splitCoreNum = platformInfo_.core_num / totalCnt;
+    if ((platformInfo_.core_num % totalCnt == 0) && ((static_cast<uint64_t>(runInfo_.batch * runInfo_.dout) >= splitCoreNum) ||
+        (static_cast<uint64_t>(runInfo_.ho) >= splitCoreNum))) {
+        return;
+    }
+
+    AdjustSmallCaseBaseBlockForStreamK(nBlockCnt);
+
+    mBlockCnt = Ops::Base::CeilDiv(mmInfo_.mValue, static_cast<uint64_t>(blockTiling_.singleCoreM));
+    nBlockCnt = Ops::Base::CeilDiv(mmInfo_.nValue, static_cast<uint64_t>(blockTiling_.singleCoreN));
+    totalCnt = mBlockCnt * nBlockCnt * runInfo_.kd * runInfo_.real_g;
+    if (totalCnt > (platformInfo_.core_num >> 1) && totalCnt < platformInfo_.core_num && blockTiling_.blockBaseN >= blockTiling_.blockBaseM) {
+        OP_LOGD(opName_, "begin adjust the block baseN: totalCnt[%lu]", totalCnt);
+        AdjustSmallCaseBaseBlockForSingleCoreN(mBlockCnt, nBlockCnt);
     }
 }
 

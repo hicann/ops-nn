@@ -391,10 +391,15 @@ Conv3DBpFilterV2TilingTestParam cases_params_950[] = {
 
     {"aclnnConvolutionBackward_2DDW_SplitKernelOnKStartPtExceedLimit", "3510", "3510", COMPILE_INFO_STR_950,
     {1, 1, 1, 625, 1}, {1, 1, 1, 625, 1}, {1, 1, 1, 172, 142}, {1, 1, 1, 172, 142}, {1, 1, 1, 192, 43},{1, 1, 1, 192, 43},
-ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,ge::DT_FLOAT,
-{1, 1, 1, 3, 3}, {0, 0, 60, 60, 134, 134}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
-true, true, 32, 1, "1 0 1 1 1 1 1 524288 1 1 1 1 1 1 192 43 1 625 1 1 172 142 1 1 1 3 3 0 0 60 60 134 134 1 1 1 8 2 2 2 2 2 16 32 256 16 8 16 1 1 8 8 0 4816 4096 0 1 1 16 6 43 1 1 0 16 0 1 0 2 32 16 390784 258 0 "},
+    ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,ge::DT_FLOAT,
+    {1, 1, 1, 3, 3}, {0, 0, 60, 60, 134, 134}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
+    true, true, 32, 1, "1 0 1 1 1 1 1 524288 1 1 1 1 1 1 192 43 1 625 1 1 172 142 1 1 1 3 3 0 0 60 60 134 134 1 1 1 8 2 2 2 2 2 16 32 256 16 8 16 1 1 8 8 0 4816 4096 0 1 1 16 6 43 1 1 0 16 0 1 0 2 32 16 390784 258 0 "},
 
+    {"aclnnConvolutionBackward_2DDW_AdjustSmallCaseBaseBlockForSingleCoreN", "3510", "3510", COMPILE_INFO_STR_950,
+    {21, 18, 1, 570, 4155}, {21, 18, 1, 570, 4155}, {18, 18, 1, 15, 15}, {18, 18, 1, 15, 15}, {21, 18, 1, 38, 277},{21, 18, 1, 38, 277},
+    ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,ge::DT_FLOAT,
+    {1, 1, 1, 15, 15}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
+    true, true, 32, 1, "1 0 1 1 1 1 1 524288 21 18 18 18 18 1 38 277 1 570 4155 1 15 15 1 1 1 15 15 0 0 0 0 0 0 1 1 1 8 2 2 2 1 1 32 16 256 16 8 16 1 1 1 1 0 90000 1024 0 1 1 32 3 16 0 1 0 16 0 21 0 2 32 32 3600 831 0 "}
 };
 
 static void ThreadFunc(const Conv3DBpFilterV2TilingTestParam *params, size_t testcase_num, size_t thread_idx,
