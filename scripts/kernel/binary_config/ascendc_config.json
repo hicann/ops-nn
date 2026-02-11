@@ -627,5 +627,6 @@
     {"name":"Bincount", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"Addr", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"SparseTensorDenseMatMul", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
-    {"name":"TopKTopPSampleV2", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync": true}
+    {"name":"TopKTopPSampleV2", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync": true},
+    {"name":"LogSigmoid", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}}
 ]
