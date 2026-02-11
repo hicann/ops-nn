@@ -35,6 +35,7 @@ constexpr uint8_t TILING_HK_WK = 2;
 constexpr uint8_t ENABLE_C04 = 1;
 constexpr uint8_t ENABLE_TILING_HK = 2;
 constexpr uint8_t ENABLE_TILING_HK_WK = 3;
+constexpr uint32_t MAX_16_BIT_NUM = 65535;
 }
 
 namespace Ops {
@@ -239,8 +240,7 @@ bool Conv3DDXV2InnerProductTiling::CheckVecTrans16bitPlus(
     bool isVecLoopTimeSatisfy = vecLoopTime <= 1U; // 此时前置transpose的开销基本被scalar掩盖
     if (!isVecLoopTimeSatisfy && !(Ops::Base::CeilDiv(filterCubeLoadRepeats, cubeTotalCnt) > 1) &&
         !(l0Params.baseM * NUM_FIVE <=
-          l0Params
-              .baseN)) { // NUM_FIVE = 5: 经验值，此时LoadToB1是主要矛盾。该经验值来自于实测，精确值需要后续做理论建模
+          l0Params.baseN)) { // NUM_FIVE = 5: 经验值，此时LoadToB1是主要矛盾。该经验值来自于实测，精确值需要后续做理论建模
         return false;
     }
     return true;
@@ -249,7 +249,7 @@ bool Conv3DDXV2InnerProductTiling::CheckVecTrans16bitPlus(
 bool Conv3DDXV2InnerProductTiling::CheckVecTransEnable(
     const CoreTilingParams& coreParams, const L1TilingParams& l1Params, const L0TilingParams& l0Params)
 {
-    if ((unlikely(runInfo_.groups) > 1) || (runInfo_.filterFormat != ge::FORMAT_NCDHW)) {
+    if ((unlikely(runInfo_.groups) > 1) || (runInfo_.filterFormat != ge::FORMAT_NCDHW) || (runInfo_.dedx_cin > 65535)) { // cin太大会导致超datacopy指令限制
  	    return false;
  	}
     if (tilingRunInfo_.enableC04Flag || tilingRunInfo_.tilingHkWkMode != NO_TILING_HWK) {
