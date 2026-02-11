@@ -1,0 +1,467 @@
+{
+    "op_type": "DeformableOffsets",
+    "op_list": [
+      {
+        "bin_filename": "DeformableOffsets_0dbbb7ea43b1978c622d505927bce5d3",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "offsets",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "ksize",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": "NCHW"
+          },
+          {
+            "name": "deformable_groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "modulated",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      },
+      {
+        "bin_filename": "DeformableOffsets_74099a9777b318fbe6da27158ecf991c",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "offsets",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "ksize",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": "NHWC"
+          },
+          {
+            "name": "deformable_groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "modulated",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      },
+      {
+        "bin_filename": "DeformableOffsets_bb470772b7a6c739609b57a9acf7d265",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "offsets",
+            "index": 1,
+            "dtype": "float16",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "ksize",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": "NCHW"
+          },
+          {
+            "name": "deformable_groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "modulated",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      },
+      {
+        "bin_filename": "DeformableOffsets_a54b7ddfee7ac692290eb7c13650d2dd",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "offsets",
+            "index": 1,
+            "dtype": "float16",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "ksize",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": "NHWC"
+          },
+          {
+            "name": "deformable_groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "modulated",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      },
+      {
+        "bin_filename": "DeformableOffsets_5f976e94bb4de68c4617f442e9cb719c",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "offsets",
+            "index": 1,
+            "dtype": "float32",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "ksize",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": "NCHW"
+          },
+          {
+            "name": "deformable_groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "modulated",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      },
+      {
+        "bin_filename": "DeformableOffsets_e0f33dbf4cacedb8080e0a61cbc85716",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "offsets",
+            "index": 1,
+            "dtype": "float32",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "ksize",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": "NHWC"
+          },
+          {
+            "name": "deformable_groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "modulated",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      }
+    ]
+  }

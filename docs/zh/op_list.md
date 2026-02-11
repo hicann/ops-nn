@@ -765,6 +765,16 @@
     <td>实现卷积功能，支持2D卷积，同时支持可变形卷积、分组卷积。</td>
   </tr>
   <tr>
+    <td>conv</td>
+    <td><a href="../../conv/deformable_offsets/README.md">deformable_offsets</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>用于计算变形卷积（Deformable Convolution）输出的函数。通过引入偏移参数offsets，使得卷积核在输入特征图上的位置可以动态调整，从而适配不规则的集合变化。</td>
+  </tr>
+  <tr>
     <td>foreach</td>
     <td><a href="../../foreach/foreach_abs/README.md">foreach_abs</a></td>
     <td>✓</td>
