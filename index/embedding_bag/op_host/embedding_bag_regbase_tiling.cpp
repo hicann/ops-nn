@@ -164,9 +164,6 @@ ge::graphStatus EmbeddingBagRegBaseTiling::GetShapeAttrsInfo()
         numBags_ = indiceShape.GetDim(0);
         indiceSize_ = indiceShape.GetDim(1);
     }
-    if (paddingIdx_ < 0) {
-        paddingIdx_ = paddingIdx_ + numEmbeddings_;
-    }
     return ge::GRAPH_SUCCESS;
 }
 
