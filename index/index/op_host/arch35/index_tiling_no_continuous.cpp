@@ -43,6 +43,7 @@ constexpr size_t INDICES_IDX = 3;
 constexpr uint32_t DCACHE_SIZE = 32 * 1024;
 constexpr uint32_t ASCENDC_TOOLS_WORKSPACE = 16 * 1024 * 1024;
 constexpr uint32_t IDX_TYPE_TILING_KEY_WEIGHT = 100;
+constexpr uint32_t IS_PERF_TILING_KEY = 1000;
 constexpr uint32_t INDEX_SUPPORT_INT64_TILING_KEY = 10000;
 constexpr uint32_t NON_CONTIG_OFFSET = 20000;          // 非连续Key固定偏移
 constexpr uint32_t MAX_SUPPORT_DIM_NUM = 4;
@@ -508,6 +509,10 @@ void IndexNonContinuousTiling::GenIndexTilingKey() {
 
     if (inputLength_ > INT32_MAX || outputLength_ > INT32_MAX) {
         contigKey += INDEX_SUPPORT_INT64_TILING_KEY; // +10000
+    }
+
+    if (inputDimNum_ == tensorNum_ && inputDimNum_ != 1) {
+        contigKey += IS_PERF_TILING_KEY; // +1000
     }
 
     tilingKey_ = contigKey + NON_CONTIG_OFFSET; // 生成非连续Key（原生Key + 20000偏移）

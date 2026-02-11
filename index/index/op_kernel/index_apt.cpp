@@ -18,6 +18,7 @@
 #include "arch35/index_simd.h"
 #include "arch35/index_full_load.h"
 #include "arch35/index_no_continuous.h"
+#include "arch35/index_perf_no_continuous.h"
 
 using namespace Index;
 #define INDEX_PERF_B8 1001
@@ -46,6 +47,17 @@ using namespace Index;
 #define NOCON_INDEX_B64_INDEX_INT64 20108
 #define NOCON_INDEX_B128_INDEX_INT64 20116
 
+#define NOCON_INDEX_B8_INDEX_INT32_PERF 21001
+#define NOCON_INDEX_B16_INDEX_INT32_PERF 21002
+#define NOCON_INDEX_B32_INDEX_INT32_PERF 21004
+#define NOCON_INDEX_B64_INDEX_INT32_PERF 21008
+#define NOCON_INDEX_B128_INDEX_INT32_PERF 21016
+#define NOCON_INDEX_B8_INDEX_INT64_PERF 21101
+#define NOCON_INDEX_B16_INDEX_INT64_PERF 21102
+#define NOCON_INDEX_B32_INDEX_INT64_PERF 21104
+#define NOCON_INDEX_B64_INDEX_INT64_PERF 21108
+#define NOCON_INDEX_B128_INDEX_INT64_PERF 21116
+
 #define NOCON_INDEX_B8_INDEX_INT32_OVERLENGTH 30001
 #define NOCON_INDEX_B16_INDEX_INT32_OVERLENGTH 30002
 #define NOCON_INDEX_B32_INDEX_INT32_OVERLENGTH 30004
@@ -57,6 +69,16 @@ using namespace Index;
 #define NOCON_INDEX_B64_INDEX_INT64_OVERLENGTH 30108
 #define NOCON_INDEX_B128_INDEX_INT64_OVERLENGTH 30116
 
+#define NOCON_INDEX_B8_INDEX_INT32_OVERLENGTH_PERF 31001
+#define NOCON_INDEX_B16_INDEX_INT32_OVERLENGTH_PERF 31002
+#define NOCON_INDEX_B32_INDEX_INT32_OVERLENGTH_PERF 31004
+#define NOCON_INDEX_B64_INDEX_INT32_OVERLENGTH_PERF 31008
+#define NOCON_INDEX_B128_INDEX_INT32_OVERLENGTH_PERF 31016
+#define NOCON_INDEX_B8_INDEX_INT64_OVERLENGTH_PERF 31101
+#define NOCON_INDEX_B16_INDEX_INT64_OVERLENGTH_PERF 31102
+#define NOCON_INDEX_B32_INDEX_INT64_OVERLENGTH_PERF 31104
+#define NOCON_INDEX_B64_INDEX_INT64_OVERLENGTH_PERF 31108
+#define NOCON_INDEX_B128_INDEX_INT64_OVERLENGTH_PERF 31116
 
 #define TILING_KEY_FULL_LOAD_DIM1_MODE1 211
 #define TILING_KEY_FULL_LOAD_DIM2_MODE0 220
@@ -174,6 +196,106 @@ extern "C" __global__ __aicore__ void index(GM_ADDR inputX, GM_ADDR indexedSizes
     GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
     KernelIndexNoContiguous<int4, IndexAssign<int4, uint64_t>, DTYPE_INDICES, uint64_t> op;
     op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(NOCON_INDEX_B8_INDEX_INT32_PERF)) {
+    GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+    KernelIndexNoContiguousPerf<int8_t, DTYPE_INDICES, uint32_t> op(tPipe);
+    op.Init(output, inputX, indices, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(NOCON_INDEX_B16_INDEX_INT32_PERF)) {
+    GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+    KernelIndexNoContiguousPerf<half, DTYPE_INDICES, uint32_t> op(tPipe);
+    op.Init(output, inputX, indices, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(NOCON_INDEX_B32_INDEX_INT32_PERF)) {
+    GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+    KernelIndexNoContiguousPerf<float, DTYPE_INDICES, uint32_t> op(tPipe);
+    op.Init(output, inputX, indices, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(NOCON_INDEX_B64_INDEX_INT32_PERF)) {
+    GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+    KernelIndexNoContiguousPerf<int64_t, DTYPE_INDICES, uint32_t> op(tPipe);
+    op.Init(output, inputX, indices, tilingData);
+    op.Process();
+  }  else if (TILING_KEY_IS(NOCON_INDEX_B128_INDEX_INT32_PERF)) {
+    GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+    KernelIndexNoContiguousPerf<int4, DTYPE_INDICES, uint32_t> op(tPipe);
+    op.Init(output, inputX, indices, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(NOCON_INDEX_B8_INDEX_INT64_PERF)) {
+    GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+    KernelIndexNoContiguousPerf<int8_t, DTYPE_INDICES, uint64_t> op(tPipe);
+    op.Init(output, inputX, indices, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(NOCON_INDEX_B16_INDEX_INT64_PERF)) {
+    GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+    KernelIndexNoContiguousPerf<half, DTYPE_INDICES, uint64_t> op(tPipe);
+    op.Init(output, inputX, indices, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(NOCON_INDEX_B32_INDEX_INT64_PERF)) {
+    GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+    KernelIndexNoContiguousPerf<float, DTYPE_INDICES, uint64_t> op(tPipe);
+    op.Init(output, inputX, indices, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(NOCON_INDEX_B64_INDEX_INT64_PERF)) {
+    GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+    KernelIndexNoContiguousPerf<int64_t, DTYPE_INDICES, uint64_t> op(tPipe);
+    op.Init(output, inputX, indices, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(NOCON_INDEX_B128_INDEX_INT64_PERF)) {
+    GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+    KernelIndexNoContiguousPerf<int4, DTYPE_INDICES, uint64_t> op(tPipe);
+    op.Init(output, inputX, indices, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(NOCON_INDEX_B8_INDEX_INT32_OVERLENGTH_PERF)) {
+    GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+    KernelIndexNoContiguousPerf<int8_t, DTYPE_INDICES, uint64_t> op(tPipe);
+    op.Init(output, inputX, indices, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(NOCON_INDEX_B16_INDEX_INT32_OVERLENGTH_PERF)) {
+    GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+    KernelIndexNoContiguousPerf<half, DTYPE_INDICES, uint64_t> op(tPipe);
+    op.Init(output, inputX, indices, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(NOCON_INDEX_B32_INDEX_INT32_OVERLENGTH_PERF)) {
+    GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+    KernelIndexNoContiguousPerf<float, DTYPE_INDICES, uint64_t> op(tPipe);
+    op.Init(output, inputX, indices, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(NOCON_INDEX_B64_INDEX_INT32_OVERLENGTH_PERF)) {
+    GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+    KernelIndexNoContiguousPerf<int64_t, DTYPE_INDICES, uint64_t> op(tPipe);
+    op.Init(output, inputX, indices, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(NOCON_INDEX_B128_INDEX_INT32_OVERLENGTH_PERF)) {
+    GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+    KernelIndexNoContiguousPerf<int4, DTYPE_INDICES, uint64_t> op(tPipe);
+    op.Init(output, inputX, indices, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(NOCON_INDEX_B8_INDEX_INT64_OVERLENGTH_PERF)) {
+    GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+    KernelIndexNoContiguousPerf<int8_t, DTYPE_INDICES, uint64_t> op(tPipe);
+    op.Init(output, inputX, indices, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(NOCON_INDEX_B16_INDEX_INT64_OVERLENGTH_PERF)) {
+    GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+    KernelIndexNoContiguousPerf<half, DTYPE_INDICES, uint64_t> op(tPipe);
+    op.Init(output, inputX, indices, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(NOCON_INDEX_B32_INDEX_INT64_OVERLENGTH_PERF)) {
+    GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+    KernelIndexNoContiguousPerf<float, DTYPE_INDICES, uint64_t> op(tPipe);
+    op.Init(output, inputX, indices, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(NOCON_INDEX_B64_INDEX_INT64_OVERLENGTH_PERF)) {
+    GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+    KernelIndexNoContiguousPerf<int64_t, DTYPE_INDICES, uint64_t> op(tPipe);
+    op.Init(output, inputX, indices, tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(NOCON_INDEX_B128_INDEX_INT64_OVERLENGTH_PERF)) {
+    GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
+    KernelIndexNoContiguousPerf<int4, DTYPE_INDICES, uint64_t> op(tPipe);
+    op.Init(output, inputX, indices, tilingData);
     op.Process();
   } else if (TILING_KEY_IS(INDEX_SIMD)) {
     GET_TILING_DATA_WITH_STRUCT(IndexSimdTilingData, tilingData, tiling);

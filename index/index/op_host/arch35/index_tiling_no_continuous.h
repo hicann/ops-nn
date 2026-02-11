@@ -85,6 +85,26 @@ REGISTER_TILING_DATA_CLASS(IndexPutV2_20104, IndexNonContinuousTilingData);
 REGISTER_TILING_DATA_CLASS(IndexPutV2_20105, IndexNonContinuousTilingData);
 REGISTER_TILING_DATA_CLASS(IndexPutV2_20108, IndexNonContinuousTilingData);
 REGISTER_TILING_DATA_CLASS(IndexPutV2_20111, IndexNonContinuousTilingData);
+REGISTER_TILING_DATA_CLASS(Index_21001, IndexNonContinuousTilingData);
+REGISTER_TILING_DATA_CLASS(Index_21002, IndexNonContinuousTilingData);
+REGISTER_TILING_DATA_CLASS(Index_21004, IndexNonContinuousTilingData);
+REGISTER_TILING_DATA_CLASS(Index_21008, IndexNonContinuousTilingData);
+REGISTER_TILING_DATA_CLASS(Index_21016, IndexNonContinuousTilingData);
+REGISTER_TILING_DATA_CLASS(Index_21101, IndexNonContinuousTilingData);
+REGISTER_TILING_DATA_CLASS(Index_21102, IndexNonContinuousTilingData);
+REGISTER_TILING_DATA_CLASS(Index_21104, IndexNonContinuousTilingData);
+REGISTER_TILING_DATA_CLASS(Index_21108, IndexNonContinuousTilingData);
+REGISTER_TILING_DATA_CLASS(Index_21116, IndexNonContinuousTilingData);
+REGISTER_TILING_DATA_CLASS(Index_31001, IndexNonContinuousTilingData);
+REGISTER_TILING_DATA_CLASS(Index_31002, IndexNonContinuousTilingData);
+REGISTER_TILING_DATA_CLASS(Index_31004, IndexNonContinuousTilingData);
+REGISTER_TILING_DATA_CLASS(Index_31008, IndexNonContinuousTilingData);
+REGISTER_TILING_DATA_CLASS(Index_31016, IndexNonContinuousTilingData);
+REGISTER_TILING_DATA_CLASS(Index_31101, IndexNonContinuousTilingData);
+REGISTER_TILING_DATA_CLASS(Index_31102, IndexNonContinuousTilingData);
+REGISTER_TILING_DATA_CLASS(Index_31104, IndexNonContinuousTilingData);
+REGISTER_TILING_DATA_CLASS(Index_31108, IndexNonContinuousTilingData);
+REGISTER_TILING_DATA_CLASS(Index_31116, IndexNonContinuousTilingData);
 
 class IndexNonContinuousTiling : public IndexTilingCommon {
 public:
