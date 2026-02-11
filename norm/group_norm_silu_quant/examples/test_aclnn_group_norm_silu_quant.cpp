@@ -209,6 +209,7 @@ int main() {
   aclDestroyTensor(self);
   aclDestroyTensor(gamma);
   aclDestroyTensor(beta);
+  aclDestroyTensor(quantScale);
   aclDestroyTensor(out);
   aclDestroyTensor(meanOut);
   aclDestroyTensor(rstdOut);
@@ -217,6 +218,7 @@ int main() {
   aclrtFree(selfDeviceAddr);
   aclrtFree(gammaDeviceAddr);
   aclrtFree(betaDeviceAddr);
+  aclrtFree(quantScaleDeviceAddr);
   aclrtFree(outDeviceAddr);
   aclrtFree(meanOutDeviceAddr);
   aclrtFree(rstdOutDeviceAddr);

@@ -2386,6 +2386,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/group_norm_silu_quant/README.md">group_norm_silu_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>x</td>
+    <td>AI Core</td>
+    <td>计算输入self的组归一化，均值meanOut，标准差的倒数rstdOut，以及对silu的输出进行量化的结果out。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/group_norm_silu/README.md">group_norm_silu</a></td>
     <td>✓</td>
     <td>✓</td>

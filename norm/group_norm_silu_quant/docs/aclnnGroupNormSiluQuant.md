@@ -8,7 +8,7 @@
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                             |    x     |
+| <term>Atlas 推理系列产品</term>                             |     ×    |
 | <term>Atlas 训练系列产品</term>                              |    ×     |
 
 
@@ -18,6 +18,7 @@
 - 计算公式：
   - **GroupNorm:**
   记 $E[x] = \bar{x}$代表$x$的均值，$Var[x] = \frac{1}{n} * \sum_{i=1}^n(x_i - E[x])^2$代表$x$的方差，则
+  
   $$
   \left\{
   \begin{array} {rcl}
@@ -27,12 +28,15 @@
   \end{array}
   \right.
   $$
+
   - **Silu:**
+
   $$
   siluOut = \frac{groupNormOut}{1+e^{-groupNormOut}}
   $$
 
   - **Quant:**
+
   $$
   out = round(siluOut / quantScale)
   $$
@@ -103,9 +107,9 @@ aclnnStatus aclnnGroupNormSiluQuant(
     </tr>
     <tr>
         <td>gammaOptional</td>
-        <td>输入</td>
+        <td>可选输入</td>
         <td>公式中的γ。</td>
-        <td>可选参数，为空时元素的默认值为1。数据类型与self保持一致，元素数量需与输入self的第1维度保持相同。</td>
+        <td>为空时元素的默认值为1。数据类型与self保持一致，元素数量需与输入self的第1维度保持相同。</td>
         <td>FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>1</td>
@@ -113,9 +117,9 @@ aclnnStatus aclnnGroupNormSiluQuant(
     </tr>
     <tr>
         <td>betaOptional</td>
-        <td>输入</td>
+        <td>可选输入</td>
         <td>公式中的β。</td>
-        <td>可选参数，为空时元素的默认值为1。数据类型与self保持一致，元素数量需与输入self的第1维度保持相同。</td>
+        <td>为空时元素的默认值为1。数据类型与self保持一致，元素数量需与输入self的第1维度保持相同。</td>
         <td>FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>1</td>
@@ -135,7 +139,7 @@ aclnnStatus aclnnGroupNormSiluQuant(
         <td>group</td>
         <td>输入</td>
         <td>表示将输入self的第1维度分为group组。</td>
-        <td>group需可以整除self的第一维度</td>
+        <td>group需可以整除self的第一维度。</td>
         <td>INT64</td>
         <td>-</td>
         <td>-</td>
@@ -145,7 +149,7 @@ aclnnStatus aclnnGroupNormSiluQuant(
         <td>eps</td>
         <td>输入</td>
         <td>公式中的eps。</td>
-        <td>eps需要大于0</td>
+        <td>eps需要大于0。</td>
         <td>DOUBLE</td>
         <td>-</td>
         <td>-</td>
@@ -169,7 +173,7 @@ aclnnStatus aclnnGroupNormSiluQuant(
         <td>INT8</td>
         <td>ND</td>
         <td>与self一致</td>
-        <td>x</td>
+        <td>-</td>
     </tr>
     <tr>
         <td>meanOut</td>
@@ -179,7 +183,7 @@ aclnnStatus aclnnGroupNormSiluQuant(
         <td>FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>(N, group)</td>
-        <td>x</td>
+        <td>-</td>
     </tr>
     <tr>
         <td>rstdOut</td>
@@ -189,7 +193,7 @@ aclnnStatus aclnnGroupNormSiluQuant(
         <td>FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>(N, group)</td>  
-        <td>x</td>
+        <td>-</td>
     </tr>
     <tr>
         <td>workspaceSize</td>
@@ -251,7 +255,11 @@ aclnnStatus aclnnGroupNormSiluQuant(
 
 -   **参数说明：**
 
-    <table>
+      <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
+        <col style="width: 173px">
+        <col style="width: 112px">
+        <col style="width: 668px">
+        </colgroup>
             <thead>
                 <tr><th>参数名</th><th>输入/输出</th><th>描述</th></tr>
             </thead>
@@ -269,12 +277,8 @@ aclnnStatus aclnnGroupNormSiluQuant(
 
 ## 约束说明
 
-+ 确定性计算：默认确定性实现。
-
-+ 输入shape限制：
-    1. self第1维度需要可以被group整除
-    2. meanOut与rstdOut的shape需为(N, group)，其中N为self第0维度值。
-+ 输入属性限制：eps > 0
+- 确定性计算：
+  - aclnnGroupNormSiluQuant默认确定性实现。
 
 ## 调用示例
 
@@ -482,6 +486,7 @@ int main() {
   aclDestroyTensor(self);
   aclDestroyTensor(gamma);
   aclDestroyTensor(beta);
+  aclDestroyTensor(quantScale);
   aclDestroyTensor(out);
   aclDestroyTensor(meanOut);
   aclDestroyTensor(rstdOut);
@@ -490,6 +495,7 @@ int main() {
   aclrtFree(selfDeviceAddr);
   aclrtFree(gammaDeviceAddr);
   aclrtFree(betaDeviceAddr);
+  aclrtFree(quantScaleDeviceAddr);
   aclrtFree(outDeviceAddr);
   aclrtFree(meanOutDeviceAddr);
   aclrtFree(rstdOutDeviceAddr);
