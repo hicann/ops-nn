@@ -116,8 +116,8 @@ aclnnStatus aclnnGather(
         <td>输入</td>
         <td>公式中的index。</td>
         <td>维度数需要与self一致，且shape需要与out一致，除dim指定的维度外，其他维度的size需要小于等于self对应维度的size。</td>
-        <td>-</td>
-        <td>-</td>
+        <td>INT32、IND64</td>
+        <td>0-8</td>
         <td>-</td>
         <td>√</td>
       </tr>
