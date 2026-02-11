@@ -22,7 +22,11 @@
 #include "cmct/policy/dispatch_policy.h"
 #include "cmct/utils/gemm_type.h"
 #include "cmct/utils/integral_constant.h"
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
 #include "lib/std/type_traits.h"
 #include "quant_batch_matmul_v4_tiling_data.h"
 

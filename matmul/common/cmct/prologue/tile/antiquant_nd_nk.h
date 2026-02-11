@@ -9,7 +9,11 @@
  */
 #ifndef PROLOGUE_TILE_ANTIQUANT_ND_NK_H
 #define PROLOGUE_TILE_ANTIQUANT_ND_NK_H
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator_intf.h"
+#endif
 #include "../../utils/underscore.h"
 #include "../../utils/constant.h"
 #include "kernel_micro_datacopy_intf_impl.h"

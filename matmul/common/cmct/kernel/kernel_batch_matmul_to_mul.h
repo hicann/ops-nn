@@ -16,7 +16,11 @@
 #ifndef MATMUL_KERNEL_KERNEL_BATCH_MATMUL_TO_MUL_H
 #define MATMUL_KERNEL_KERNEL_BATCH_MATMUL_TO_MUL_H
 
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
 #include "lib/matmul_intf.h"
 
 #include "../utils/common_utils.h"

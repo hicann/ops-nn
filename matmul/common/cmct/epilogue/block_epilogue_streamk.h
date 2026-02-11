@@ -15,7 +15,11 @@
 
 #ifndef CMCT_INCLUDE_EPILOGUE_BLOCK_EPILOGUE_STREAMK_H
 #define CMCT_INCLUDE_EPILOGUE_BLOCK_EPILOGUE_STREAMK_H
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
 #include "fusion/default_fusion_op.h"
 #include "../utils/common_utils.h"
 #include "../utils/device_utils.h"

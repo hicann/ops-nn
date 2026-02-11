@@ -17,7 +17,12 @@
 
 #include "../tool_arch35.h"
 #include "../../weight_quant_batch_matmul_v2_constant.h"
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#include "kernel_operator_intf.h"
+#endif
 #include "lib/matmul_intf.h"
 
 namespace WeightQuantBatchMatmulV2::Arch35 {

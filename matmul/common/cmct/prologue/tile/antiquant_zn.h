@@ -11,7 +11,11 @@
 #define PROLOGUE_TILE_ANTIQUANT_ZN_H
 #include "../../utils/constant.h"
 #include "../../utils/underscore.h"
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator_intf.h"
+#endif
 namespace Cmct::Prologue::Tile {
 using AscendC::MicroAPI::RegTensor;
 using Gemm::BLK_ELEM;

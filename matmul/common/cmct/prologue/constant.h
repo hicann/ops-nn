@@ -10,7 +10,11 @@
 #ifndef PROLOGUE_CONSTANT_H
 #define PROLOGUE_CONSTANT_H
 
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator_intf.h"
+#endif
 #include "../utils/tensor_traits.h"
 
 namespace Cmct::Prologue {

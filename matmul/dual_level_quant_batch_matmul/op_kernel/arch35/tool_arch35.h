@@ -18,7 +18,11 @@
 
 #include <limits>
 
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
 #include "kernel_utils.h"
 #include "op_kernel/math_util.h"
 #include "lib/matmul_intf.h"

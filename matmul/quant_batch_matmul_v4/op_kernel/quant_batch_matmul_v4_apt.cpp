@@ -14,7 +14,12 @@
  */
 
 #define K_MAX_SHAPE_DIM 0
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#include "kernel_operator_intf.h"
+#endif
 #if (defined(ORIG_DTYPE_X1) && defined(DT_INT8) && (ORIG_DTYPE_X1 == DT_INT8)) &&               \
     (defined(ORIG_DTYPE_X2) && defined(DT_INT8) && (ORIG_DTYPE_X2 == DT_INT8)) &&               \
     (defined(ORIG_DTYPE_X1_SCALE) && defined(DT_FLOAT) && (ORIG_DTYPE_X1_SCALE == DT_FLOAT)) && \

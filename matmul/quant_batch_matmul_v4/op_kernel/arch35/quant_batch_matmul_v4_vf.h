@@ -16,7 +16,12 @@
  #ifndef QUANT_BATCH_MATMUL_V4_VF_H
  #define QUANT_BATCH_MATMUL_V4_VF_H
 
- #include "kernel_basic_intf.h"
+#if ASC_DEVKIT_MAJOR >= 9
+#include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#include "kernel_operator_intf.h"
+#endif
 
  namespace MicroAPI = AscendC::MicroAPI;
 

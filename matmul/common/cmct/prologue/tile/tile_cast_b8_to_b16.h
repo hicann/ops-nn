@@ -10,7 +10,11 @@
  */
 #ifndef PROLOGUE_TILE_CAST_MX_H
 #define PROLOGUE_TILE_CAST_MX_H
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator_intf.h"
+#endif
 #include "../../utils/math_utils.h"
 #include "../../utils/underscore.h"
 

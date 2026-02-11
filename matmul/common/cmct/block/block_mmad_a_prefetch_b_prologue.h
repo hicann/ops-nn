@@ -21,7 +21,11 @@
 #include "../utils/tensor_utils.h"
 #include "../policy/dispatch_policy.h"
 #include "../utils/tuple_utils.h"
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator_intf.h"
+#endif
 #include "../utils/underscore.h"
 #include "../utils/tensor_traits.h"
 #include "../utils/math_utils.h"

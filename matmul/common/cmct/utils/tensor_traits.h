@@ -9,7 +9,11 @@
  */
 #ifndef UTILS_TENSOR_TRAITS_H
 #define UTILS_TENSOR_TRAITS_H
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
 #include "integral_constant.h"
 
 namespace Cmct::Gemm {

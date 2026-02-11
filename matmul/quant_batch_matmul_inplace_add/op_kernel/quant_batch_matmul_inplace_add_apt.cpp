@@ -12,7 +12,11 @@
  * \file quant_batch_matmul_inplace_add_apt.cpp
  * \brief
  */
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
 #include "arch35/quant_batch_matmul_inplace_add_tiling_data.h"
 #include "arch35/quant_batch_matmul_inplace_add_tiling_key.h"
 #include "arch35/qbmmia_mx_basic_api_cmct.h"

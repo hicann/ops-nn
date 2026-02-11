@@ -10,7 +10,11 @@
 #ifndef TILE_TILE_COPY_IF_H
 #define TILE_TILE_COPY_IF_H
 
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator_intf.h"
+#endif
 #include "../utils/arch.h"
 
 namespace Cmct::Gemm::Tile {

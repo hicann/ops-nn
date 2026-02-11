@@ -16,10 +16,15 @@
 #define QUANT_BATCH_MATMUL_V3_BASE_H
 
 #include <cstdint>
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
 #include "quantization/ascend_dequant_utils.h"
 #include "pad/broadcast.h"
 #include "quantization/ascend_dequant.h"
+#else
+#include "kernel_operator.h"
+#include "kernel_operator_intf.h"
+#endif
 #include "kernel_type.h"
 #include "lib/matmul_intf.h"
 #include "quant_batch_matmul_v3_kernel_tiling_data.h"

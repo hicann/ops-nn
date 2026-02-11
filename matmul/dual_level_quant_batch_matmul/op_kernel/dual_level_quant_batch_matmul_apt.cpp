@@ -16,7 +16,11 @@
 #include "arch35/dual_level_quant_batch_matmul_basic_block_controller.h"
 #include "dual_level_quant_batch_matmul_tiling_data.h"
 #include "dual_level_quant_batch_matmul_tiling_key.h"
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
 #include "kernel_utils.h"
 
 #ifndef DTYPE_BIAS

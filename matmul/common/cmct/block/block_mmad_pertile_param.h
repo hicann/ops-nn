@@ -16,7 +16,11 @@
 #ifndef MATMUL_BLOCK_BLOCK_MMAD_PERTILE_PARAM_H
 #define MATMUL_BLOCK_BLOCK_MMAD_PERTILE_PARAM_H
 
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
 #include "../utils/common_utils.h"
 #include "../utils/layout_utils.h"
 #include "../utils/tuple_utils.h"

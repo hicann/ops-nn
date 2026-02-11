@@ -10,7 +10,11 @@
 #ifndef UTILS_MATH_UTILS_H
 #define UTILS_MATH_UTILS_H
 #include "device_utils.h"
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator_intf.h"
+#endif
 
 using namespace AscendC;
 

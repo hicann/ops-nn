@@ -17,7 +17,11 @@
 #define MATMUL_KERNEL_KERNEL_MATMUL_ITERBATCH_H
 
 #define ASCENDC_CUBE_ONLY
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
 #include "lib/matmul_intf.h"
 
 #include "../utils/common_utils.h"

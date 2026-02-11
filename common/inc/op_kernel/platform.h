@@ -15,7 +15,11 @@
 #ifndef OPS_BUILT_IN_OP_ASCENDC_PLATFORM_INFO_H_
 #define OPS_BUILT_IN_OP_ASCENDC_PLATFORM_INFO_H_
 
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_utils.h"
 

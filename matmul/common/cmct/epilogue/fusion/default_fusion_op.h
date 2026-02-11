@@ -15,7 +15,11 @@
 
 #ifndef EPILOGUE_FUSION_DEFAULT_FUSION_OP_H
 #define EPILOGUE_FUSION_DEFAULT_FUSION_OP_H
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
 #include "../../utils/common_utils.h"
 #include "../../utils/device_utils.h"
 

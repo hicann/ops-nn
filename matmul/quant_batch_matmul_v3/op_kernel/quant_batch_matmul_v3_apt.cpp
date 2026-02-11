@@ -32,7 +32,11 @@
 #else
 #include "arch35/qbmm_cube_basic_api_cmct.h"
 #endif
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
 
 #ifdef __CCE_KT_TEST__
 #define UT_STATIC static

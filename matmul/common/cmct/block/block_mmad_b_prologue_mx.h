@@ -22,7 +22,11 @@
 #include "../utils/tuple_utils.h"
 #include "../policy/dispatch_policy.h"
 #include "block_mmad.h"
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
 #include "lib/matmul_intf.h"
 
 namespace Cmct::Gemm::Block {

@@ -19,7 +19,11 @@
 #include "ascendc/host_api/tiling/template_argument.h"
 #include "fused_mat_mul_tiling_key_public.h"
 #if defined(__CCE_AICORE__)
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
 #endif
 
 #if defined(ORIG_DTYPE_X1) && ((defined(DT_BF16) && ORIG_DTYPE_X1 == DT_BF16)) || \

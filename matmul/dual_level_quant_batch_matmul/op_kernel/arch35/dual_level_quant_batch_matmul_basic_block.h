@@ -15,7 +15,11 @@
 #ifndef DUAL_LEVEL_QUANT_BATCH_MATMUL_BASIC_BLOCK_H
 #define DUAL_LEVEL_QUANT_BATCH_MATMUL_BASIC_BLOCK_H
 
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
 #include "dual_level_quant_batch_matmul_block.h"
 #include "dual_level_quant_batch_matmul_cube_compute.h"
 #include "dual_level_quant_batch_matmul_cube_compute_tools.h"

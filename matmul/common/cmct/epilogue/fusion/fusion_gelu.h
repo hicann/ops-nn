@@ -15,8 +15,12 @@
 
 #ifndef EPILOGUE_FUSION_FUSION_GELU_H
 #define EPILOGUE_FUSION_FUSION_GELU_H
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
 #include "math/erf.h"
+#else
+#include "kernel_operator.h"
+#endif
 #include "../../utils/common_utils.h"
 #include "../../utils/device_utils.h"
 

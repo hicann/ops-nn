@@ -15,7 +15,11 @@
 #ifndef DUAL_LEVEL_QUANT_BATCH_MATMUL_VEC_COMPUTE_H
 #define DUAL_LEVEL_QUANT_BATCH_MATMUL_VEC_COMPUTE_H
 
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
 #include "dual_level_quant_batch_matmul_vf.h"
 #include "op_kernel/math_util.h"
 #include "tool_arch35.h"

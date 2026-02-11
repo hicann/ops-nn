@@ -15,7 +15,11 @@
 #ifndef BATCH_MATMUL_V3_ASW_BLOCK_ADVANCED_H
 #define BATCH_MATMUL_V3_ASW_BLOCK_ADVANCED_H
 
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
 #include "lib/matmul_intf.h"
 #include "../../mat_mul_v3/mat_mul_v3_common.h"
 #include "../../mat_mul_v3/arch35/mat_mul_tiling_data.h"

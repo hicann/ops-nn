@@ -10,7 +10,11 @@
 #ifndef PROLOGUE_TILE_ANTIQUANT_ND_KN_H
 #define PROLOGUE_TILE_ANTIQUANT_ND_KN_H
 #include "../../utils/underscore.h"
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator_intf.h"
+#endif
 namespace Cmct::Prologue::Tile {
 
 using AscendC::MicroAPI::RegTensor;

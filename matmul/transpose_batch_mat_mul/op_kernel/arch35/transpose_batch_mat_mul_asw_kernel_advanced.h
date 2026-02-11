@@ -16,7 +16,11 @@
 #define TRANSPOSE_BATCH_MAT_MUL_ASW_KERNEL_ADVANCED_H
 
 #include "transpose_batch_mat_mul_asw_block_advanced.h"
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
 #include "lib/matmul_intf.h"
 
 namespace TransposeBatchMatMulAdvanced {

@@ -17,7 +17,11 @@
 
 #include "batch_mat_mul_v3_asw_block_advanced.h"
 #include "../../mat_mul_v3/arch35/mat_mul_v3_full_load_kernel_helper.h"
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
 #include "lib/matmul_intf.h"
 
 namespace BatchMatMulV3Advanced {
