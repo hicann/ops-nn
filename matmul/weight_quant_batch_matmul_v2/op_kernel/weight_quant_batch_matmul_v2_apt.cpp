@@ -21,13 +21,24 @@
 #include "arch35/weight_quant_batch_matmul_v2_arch35_tiling_data.h"
 
 #if !defined(__DAV_310R6__) && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
-#if defined(A16) && (defined(WQBMMV2_S4) || defined(F4) || defined(WQBMMV2_S8))
+#if defined(A16) && (defined(WQBMMV2_S4) || defined(F4) || (defined(WQBMMV2_S8) && defined(WEIGHT_ND)))
 #include "arch35/weight_quant_batch_matmul_v2_reg_base.h"
+#endif
+#if defined(A16) && defined(WQBMMV2_S8) && !defined(WEIGHT_ND)
+#ifndef DTYPE_BIAS
+#if defined(ORIG_DTYPE_X) && defined(DT_FLOAT16) && ORIG_DTYPE_X == DT_FLOAT16
+#define DTYPE_BIAS DTYPE_X
+#else
+#define DTYPE_BIAS float
+#endif
+#endif
+#include "weight_quant_batch_matmul_v2_custom_weight_nz.h"
 #endif
 
 #include "arch35/n_first/weight_quant_batch_matmul_v2_basic_block_controller.h"
 
-#if defined(A16) && (defined(WQBMMV2_S4) || defined(WQBMMV2_S8) || defined(WEIGHT_F8_INPUT) || defined(MICROSCALING))
+#if defined(A16) && (defined(WQBMMV2_S4) || (defined(WQBMMV2_S8) && defined(WEIGHT_ND)) || defined(WEIGHT_F8_INPUT) || \
+    defined(MICROSCALING))
 #include "arch35/cmct_convertor.h"
 using WeightQuantBatchMatmulV2::InvokeKernel;
 #endif
@@ -81,6 +92,16 @@ static constexpr VecAntiQuantConfig VEC_ANTIQUANT_CONFIG_5 = VEC_ANTIQUANT_CONFI
             &tPipe);                                                                                              \
         op.Process();                                                                                             \
     } while (0)
+
+#define INVOKE_WEIGHT_QUANT_BMM_OP_IMPL(templateClass, ...)                                                      \
+    do {                                                                                                         \
+        GET_TILING_DATA_WITH_STRUCT(WeightQuantBatchMatmulV2TilingData, tilingDataIn, tiling);                   \
+        templateClass<DTYPE_X, DTYPE_WEIGHT, DTYPE_BIAS, DTYPE_Y, __VA_ARGS__> op;                               \
+        op.Init(                                                                                                 \
+            x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, userWS, &tilingDataIn, \
+            &tPipe);                                                                                             \
+        op.Process();                                                                                            \
+    } while (0)
 #endif
 
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
@@ -126,17 +147,24 @@ __global__ __aicore__ void weight_quant_batch_matmul_v2(
     REGISTER_TILING_DEFAULT(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams);
     using DtypeBias = AscendC::Std::conditional_t<IS_BIAS_FP32, float, DTYPE_X>;
     static constexpr QuantType antiquantType = static_cast<QuantType>(ANTIQUANT_TYPE);
+    static constexpr QuantType quantType = static_cast<QuantType>(QUANT_TYPE);
     if constexpr (SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ANTI_REG_SCSC) {
-#if defined(A16) && (defined(WQBMMV2_S4) || defined(F4) || defined(WQBMMV2_S8))
+#if defined(A16) && (defined(WQBMMV2_S4) || defined(F4) || (defined(WQBMMV2_S8) && defined(WEIGHT_ND)))
         INVOKE_WEIGHT_QUANT_BMM_OP_REG_BASE_IMPL(
             DtypeBias, WeightQuantBatchMatmulV2RegBaseKernel, TRANS_A, TRANS_B, HAS_ANTIQUANT_OFFSET, antiquantType,
             IS_WEIGHT_NZ);
 #endif
-    } else {
-#if defined(A16) && (defined(WQBMMV2_S4) || defined(WQBMMV2_S8) || defined(WEIGHT_F8_INPUT) || defined(MICROSCALING))
+    } else if (SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_TAIL_RESPLIT || SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_BASIC_BLOCK) {
+#if defined(A16) && (defined(WQBMMV2_S4) || (defined(WQBMMV2_S8) && defined(WEIGHT_ND)) || defined(WEIGHT_F8_INPUT) || defined(MICROSCALING))
         InvokeKernel<
             TEMPLATE_CUSTOM, TRANS_A, TRANS_B, ANTIQUANT_TYPE, HAS_ANTIQUANT_OFFSET, IS_BIAS_FP32, IS_WEIGHT_NZ>(
             KERNEL_PARAMS);
+#endif
+    } else if (SUB_ALGORITHM == WQBMMV2_SUB_ALGO_CUSTOM_BACKWARD_COMPATIBLE) {
+#if defined(A16) && defined(WQBMMV2_S8) && !defined(WEIGHT_ND)
+        INVOKE_WEIGHT_QUANT_BMM_OP_IMPL(
+            WeightQuantBatchMatmulV2CustomWeightNzKernel, TRANS_A, TRANS_B, antiquantType, HAS_ANTIQUANT_OFFSET,
+            quantType);
 #endif
     }
 #elif defined(__DAV_310R6__)

@@ -24,8 +24,6 @@
 using AscendC::int4b_t;
 
 namespace WeightQuantBatchMatmulV2 {
-using Cmct::CeilAlign;
-using Cmct::CeilDiv;
 using Cmct::Gemm::GemmType;
 using Cmct::Gemm::KB_ELEM;
 using Cmct::Gemm::MmadAPrefetchBAntiquantScmc;
@@ -85,13 +83,13 @@ struct XWeightStride<InnerK, true, DtypeA, DtypeB> {
             // stride(以m,k为例) m1*m0*k0, m0*k0(256), k0(16), 1
             return AscendC::MakeStride(
                 AscendC::MakeStride(Cmct::Gemm::_16{}, Cmct::Gemm::_256{}),
-                AscendC::MakeStride(Cmct::Gemm::_1{}, CeilAlign(outer, 16UL) * 16UL));
+                AscendC::MakeStride(Cmct::Gemm::_1{}, Cmct::CeilAlign(outer, 16UL) * 16UL));
         } else {
             // k, n -> n1, k1, k0(16), n0(16)
             // k, m -> m1, k1, k0(16), m0(16)
             // stride(以k,m为例) k1*k0*m0, k0*m0(256), m0(16), 1
             return AscendC::MakeStride(
-                AscendC::MakeStride(Cmct::Gemm::_1{}, CeilAlign(k, 16UL) * 16UL),
+                AscendC::MakeStride(Cmct::Gemm::_1{}, Cmct::CeilAlign(k, 16UL) * 16UL),
                 AscendC::MakeStride(Cmct::Gemm::_16{}, Cmct::Gemm::_256{}));
         }
     }
@@ -135,7 +133,7 @@ struct ScaleOffsetStride<
     __aicore__ inline decltype(auto) operator()(uint64_t n, uint64_t k, int32_t groupSize)
     {
         return AscendC::Std::make_tuple(
-            groupSize == 0 ? k : CeilDiv(k, static_cast<uint64_t>(groupSize)), Cmct::Gemm::_1{});
+            groupSize == 0 ? k : Cmct::CeilDiv(k, static_cast<uint64_t>(groupSize)), Cmct::Gemm::_1{});
     }
 };
 
@@ -226,8 +224,8 @@ struct XWeightShapeObj<true> {
     __aicore__ inline decltype(auto) operator()(uint64_t outer, uint64_t k)
     {
         return AscendC::MakeShape(
-            AscendC::MakeShape(Cmct::Gemm::_16{}, CeilDiv(outer, 16UL)),
-            AscendC::MakeShape(Cmct::Gemm::_16{}, CeilDiv(k, 16UL)));
+            AscendC::MakeShape(Cmct::Gemm::_16{}, Cmct::CeilDiv(outer, 16UL)),
+            AscendC::MakeShape(Cmct::Gemm::_16{}, Cmct::CeilDiv(k, 16UL)));
     }
 };
 
@@ -257,7 +255,7 @@ struct ScaleOffsetShapeObj<
         AntiquantType == Cmct::Gemm::QuantType::PER_GROUP || AntiquantType == Cmct::Gemm::QuantType::MX>> {
     __aicore__ inline decltype(auto) operator()(uint64_t n, uint64_t k, int32_t groupSize)
     {
-        return AscendC::Std::make_tuple(n, CeilDiv(k, static_cast<uint64_t>(groupSize)));
+        return AscendC::Std::make_tuple(n, Cmct::CeilDiv(k, static_cast<uint64_t>(groupSize)));
     }
 };
 

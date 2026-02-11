@@ -160,6 +160,32 @@ void GetBatchInfo(WeightQuantBatchMatmulInfo& matmulInfo, const gert::TilingCont
     }
 }
 
+void GetXWeightInputShape(
+    WeightQuantBatchMatmulInfo& matmulInfo, const gert::StorageShape* xShape, const gert::StorageShape* weightShape,
+    const gert::StorageShape* biasShape)
+{
+    auto xShapeLen = xShape->GetOriginShape().GetDimNum();
+    auto weightShapeLen = weightShape->GetOriginShape().GetDimNum();
+    uint64_t weightLastDim = weightShape->GetOriginShape().GetDim(weightShapeLen - LAST_FIRST_DIM_INDEX);
+    uint64_t weightFirstDim = weightShape->GetOriginShape().GetDim(weightShapeLen - LAST_SECOND_DIM_INDEX);
+    if (matmulInfo.bFormat == ge::FORMAT_FRACTAL_NZ_C0_2 || matmulInfo.bFormat == ge::FORMAT_FRACTAL_NZ) {
+        size_t weigthDimNum = weightShape->GetStorageShape().GetDimNum();
+        matmulInfo.c0Size = weightShape->GetStorageShape().GetDim(weigthDimNum - 1);
+    }
+    if (matmulInfo.bDtype == ge::DT_INT32 || matmulInfo.bDtype == ge::DT_FLOAT) {
+        weightLastDim *= INT4_IN_INT32_NUMS;
+        matmulInfo.c0Size *= INT4_IN_INT32_NUMS;
+    }
+
+    uint64_t xFirstDim = xShape->GetOriginShape().GetDim(xShapeLen - LAST_SECOND_DIM_INDEX);
+    uint64_t xLastDim = xShape->GetOriginShape().GetDim(xShapeLen - LAST_FIRST_DIM_INDEX);
+    matmulInfo.hasBias = biasShape != nullptr && biasShape->GetStorageShape().GetShapeSize() != 0;
+    matmulInfo.biasWithBatch = matmulInfo.hasBias && biasShape->GetStorageShape().GetDimNum() > 1;
+    matmulInfo.mSize = static_cast<uint64_t>(matmulInfo.transA ? xLastDim : xFirstDim);
+    matmulInfo.kSize = static_cast<uint64_t>(matmulInfo.transA ? xFirstDim : xLastDim);
+    matmulInfo.nSize = static_cast<uint64_t>(matmulInfo.transB ? weightFirstDim : weightLastDim);
+}
+
 void GetInputs(WeightQuantBatchMatmulInfo& matmulInfo, const gert::TilingContext* context)
 {
     size_t idx = 0;
@@ -170,20 +196,7 @@ void GetInputs(WeightQuantBatchMatmulInfo& matmulInfo, const gert::TilingContext
     auto quantScaleShape = context->GetOptionalInputShape(idx++);
     auto biasShape = context->GetOptionalInputShape(BIAS_INDEX);
     matmulInfo.bFormat = GetInputStorageFormat(context, 1);
-    auto xShapeLen = xShape->GetOriginShape().GetDimNum();
-    auto weightShapeLen = weightShape->GetOriginShape().GetDimNum();
-    uint64_t weightLastDim = weightShape->GetOriginShape().GetDim(weightShapeLen - LAST_FIRST_DIM_INDEX);
-    uint64_t weightFirstDim = weightShape->GetOriginShape().GetDim(weightShapeLen - LAST_SECOND_DIM_INDEX);
-    if (matmulInfo.bDtype == ge::DT_INT32 || matmulInfo.bDtype == ge::DT_FLOAT) {
-        weightLastDim *= INT4_IN_INT32_NUMS;
-    }
-    uint64_t xFirstDim = xShape->GetOriginShape().GetDim(xShapeLen - LAST_SECOND_DIM_INDEX);
-    uint64_t xLastDim = xShape->GetOriginShape().GetDim(xShapeLen - LAST_FIRST_DIM_INDEX);
-    matmulInfo.hasBias = biasShape != nullptr && biasShape->GetStorageShape().GetShapeSize() != 0;
-    matmulInfo.biasWithBatch = matmulInfo.hasBias && biasShape->GetStorageShape().GetDimNum() > 1;
-    matmulInfo.mSize = static_cast<uint64_t>(matmulInfo.transA ? xLastDim : xFirstDim);
-    matmulInfo.kSize = static_cast<uint64_t>(matmulInfo.transA ? xFirstDim : xLastDim);
-    matmulInfo.nSize = static_cast<uint64_t>(matmulInfo.transB ? weightFirstDim : weightLastDim);
+    GetXWeightInputShape(matmulInfo, xShape, weightShape, biasShape);
 
     if (CheckOptionalInputByShape(antiQuantOffsetShape)) {
         matmulInfo.hasAntiQuantOffset = true;
@@ -617,7 +630,8 @@ bool CheckBiasShape(WeightQuantBatchMatmulInfo* inputParams, const gert::Storage
 bool CheckShapeDims(WeightQuantBatchMatmulInfo* inputParams, NpuArch npuArch)
 {
     OP_TILING_CHECK(
-        npuArch != NpuArch::DAV_3510 &&
+        (npuArch != NpuArch::DAV_3510 ||
+         (inputParams->bDtype == ge::DT_INT8 && inputParams->bFormat == ge::FORMAT_FRACTAL_NZ)) &&
             (inputParams->kSize > MAX_SHAPE_DIM || inputParams->nSize > MAX_SHAPE_DIM),
         VECTOR_INNER_ERR_REPORT_TILIING(
             inputParams->opName, "Dim of k or n should not more than 65535, but they are [%lu] and [%lu]",
@@ -720,7 +734,9 @@ bool CheckBiasDtype(
     NpuArch npuArch = ascendcPlatform.GetCurNpuArch();
     auto biasDtype = biasDesc->GetDataType();
     if (inputParams->aDtype == ge::DT_BF16) {
-        if (socVersion == platform_ascendc::SocVersion::ASCEND910B) {
+        if (socVersion == platform_ascendc::SocVersion::ASCEND910B ||
+            (npuArch == NpuArch::DAV_3510 && inputParams->bDtype == ge::DT_INT8 &&
+             inputParams->bFormat == ge::FORMAT_FRACTAL_NZ)) {
             OP_TILING_CHECK(
                 biasDtype != ge::DT_FLOAT,
                 VECTOR_INNER_ERR_REPORT_TILIING(
@@ -967,24 +983,56 @@ bool CheckTempLimit(WeightQuantBatchMatmulInfo* inputParams)
     return true;
 }
 
+bool CheckDav3510NzSupported(WeightQuantBatchMatmulInfo* inputParams)
+{
+    // not support transA and c8 and per-tensor
+    if (inputParams->transA || inputParams->cDtype == ge::DT_INT8 ||
+        inputParams->antiQuantType == QuantType::PER_TENSOR) {
+        return false;
+    }
+
+    // int8 per-group not support transB
+    if (inputParams->bDtype == ge::DT_INT8) {
+        if (inputParams->antiQuantType == QuantType::PER_GROUP) {
+            return !inputParams->transB;
+        } else if (inputParams->antiQuantType == QuantType::PER_CHANNEL) {
+            return true;
+        }
+    }
+
+    // int4 not support transB
+    if (inputParams->bDtype == ge::DT_INT4 || inputParams->bDtype == ge::DT_INT32) {
+        if (inputParams->antiQuantType == QuantType::PER_GROUP ||
+            inputParams->antiQuantType == QuantType::PER_CHANNEL) {
+            return !inputParams->transB;
+        }
+    }
+
+    // fp4 not support transB
+    if (inputParams->bDtype == ge::DT_FLOAT4_E2M1 || inputParams->bDtype == ge::DT_FLOAT) {
+        if (inputParams->antiQuantType == QuantType::MX || inputParams->antiQuantType == QuantType::PER_GROUP) {
+            return !inputParams->transB;
+        }
+    }
+
+    return false;
+}
+
 bool CheckNzSupportedScenarios(WeightQuantBatchMatmulInfo* inputParams, NpuArch npuArch)
 {
     if (npuArch == NpuArch::DAV_3510) {
         // WeightNZ only support the following scenarios:
-        // (1) Weight in int4 dtye with per-channel or per-group quantization without transA, transB or C8.
-        // (2) Weight in fp4 dtye with per-group or MX quantization without transA, transB or C8.
+        // (1) Weight in int4 dtype with per-channel or per-group quantization without transA, transB or C8.
+        // (2) Weight in fp4 dtype with per-group or MX quantization without transA, transB or C8.
+        // (3) Weight in int8 dtype with per-channel quantization without transA or C8, with per-group
+        //     quantization without transA , transB or C8.
         OP_TILING_CHECK(
-            (inputParams->transB || inputParams->transA || inputParams->cDtype == ge::DT_INT8 ||
-             !(((inputParams->antiQuantType == QuantType::PER_GROUP ||
-                 inputParams->antiQuantType == QuantType::PER_CHANNEL) &&
-                (inputParams->bDtype == ge::DT_INT4 || inputParams->bDtype == ge::DT_INT32)) ||
-               ((inputParams->antiQuantType == QuantType::MX || inputParams->antiQuantType == QuantType::PER_GROUP) &&
-                (inputParams->bDtype == ge::DT_FLOAT4_E2M1 ||
-                 inputParams->bDtype == ge::DT_FLOAT)))),
+            !CheckDav3510NzSupported(inputParams),
             VECTOR_INNER_ERR_REPORT_TILIING(
                 inputParams->opName,
-                "WeightNZ supports S4/FP4_E2M1 weights only, with non-transposed A/B, no C8, "
-                "and excludes per-tensor quantization."),
+                "WeightNZ supports S4/FP4_E2M1/FP4_E1M2 weights with non-transposed A/B, "
+                "and supports INT8 per-channel quantization with non-transposed A, INT8 per-group quantization with "
+                "non-transposed A/B. WeightNZ cannot support int8 output or per-tensor quantization"),
             return ge::GRAPH_FAILED);
     } else {
         OP_TILING_CHECK(

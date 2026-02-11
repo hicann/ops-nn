@@ -18,6 +18,7 @@
 #include "weight_quant_batch_matmul_v2_reg_base_tiling.h"
 #include "tiling_base/tiling_key.h"
 #include "../../../op_kernel/arch35/weight_quant_batch_matmul_v2_arch35_tiling_key.h"
+#include "tiling_base/tiling_templates_registry.h"
 
 using namespace platform_ascendc;
 using Ops::NN::Optiling::RecursiveSum;
@@ -42,12 +43,20 @@ constexpr double FREQUENCY_v100 = 1.6;
 constexpr double HBM_BW_V100 = 1.6;
 constexpr double L2_BW_V100 = 5.4;
 constexpr int32_t ANTI_REG_PRIORITY = 8;
+constexpr uint64_t SUPPORT_C0_SIZE = 16;
 } // namespace
 namespace optiling {
 
 bool WeightQuantBatchMatmulV2RegBase::IsCapable()
 {
     if (compileInfoPtr_->socVersion == SocVersion::ASCEND910_55) {
+        return false;
+    }
+
+    if (matmulInfoPtr_->bFormat == ge::FORMAT_FRACTAL_NZ && matmulInfoPtr_->c0Size != SUPPORT_C0_SIZE) {
+        OP_LOGI(
+            opName_, "the reg base template only support c0 is 16 when weight's layout is FRACTAL_NZ, but c0 is [%lu]",
+            matmulInfoPtr_->c0Size);
         return false;
     }
 
@@ -356,6 +365,8 @@ void WeightQuantBatchMatmulV2RegBase::PrintCVTilingData(bool debugLevel) const
     }
 }
 
-REGISTER_TILING_TEMPLATE("WeightQuantBatchMatmulV2", WeightQuantBatchMatmulV2RegBase, ANTI_REG_PRIORITY);
+REGISTER_TILING_TEMPLATE_WITH_ARCH(
+    WeightQuantBatchMatmulV2, WeightQuantBatchMatmulV2RegBase, static_cast<int32_t>(NpuArch::DAV_3510),
+    ANTI_REG_PRIORITY);
 
 } // namespace optiling

@@ -125,4 +125,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_weight_quant_batch_matmul_v2](examples/test_aclnn_weight_quant_batch_matmul_v2.cpp) | 通过<br>[aclnnWeightQuantBatchMatmulV2](docs/aclnnWeightQuantBatchMatmulV2.md)<br>[aclnnWeightQuantBatchMatmulV3](docs/aclnnWeightQuantBatchMatmulV3.md)<br>等方式调用WeightQuantBatchMatmulV2算子。|
+| aclnn接口  | [test_aclnn_weight_quant_batch_matmul_v2](examples/test_aclnn_weight_quant_batch_matmul_v2.cpp) | 通过<br>[aclnnWeightQuantBatchMatmulV2](docs/aclnnWeightQuantBatchMatmulV2.md)<br>[aclnnWeightQuantBatchMatmulV3](docs/aclnnWeightQuantBatchMatmulV3.md)<br>[aclnnWeightQuantBatchMatmulNz](docs/aclnnWeightQuantBatchMatmulNz.md)<br>等方式调用WeightQuantBatchMatmulV2算子。|

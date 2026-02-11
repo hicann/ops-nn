@@ -26,6 +26,7 @@
 
 using Ops::NN::Optiling::TilingRegistry;
 using Ops::NN::TilingPrepareForOpCache;
+using Ops::NN::Optiling::TilingRegistryArch;
 
 namespace optiling {
 
@@ -40,6 +41,7 @@ constexpr int32_t ADAPTIVE_SPLIT_PRIORITY = 7;
 constexpr int32_t ANTI_REG_PRIORITY = 8;
 constexpr int32_t ITERBATCH_PRIORITY = 9;
 constexpr int32_t ASW_PRIORITY = 10;
+constexpr int32_t CUSTOM_DEPRECATED_PRIORITY = 11;
 
 REGISTER_TILING_TEMPLATE("WeightQuantBatchMatmulV2", WeightQuantBatchMatmulV2TilingSplitK, SPLIT_K_PRIORITY);
 REGISTER_TILING_TEMPLATE("WeightQuantBatchMatmulV2", WeightQuantBatchMatmulV2TilingMsdGroup, MSD_GROUP_PRIORITY);
@@ -48,6 +50,30 @@ REGISTER_TILING_TEMPLATE("WeightQuantBatchMatmulV2", WeightQuantBatchMatmulV2Cus
 REGISTER_TILING_TEMPLATE("WeightQuantBatchMatmulV2", WeightQuantBatchMatmulV2TilingCustom, CUSTOM_PRIORITY);
 REGISTER_TILING_TEMPLATE("WeightQuantBatchMatmulV2", WeightQuantBatchMatmulV2TilingFixpipe, FIXPIPE_PRIORITY);
 REGISTER_TILING_TEMPLATE("WeightQuantBatchMatmulV2", WeightQuantBatchMatmulV2WeightNz, WEIGHT_NZ_PRIORITY);
+
+static ge::graphStatus ArchNotSupportMmadS8S4(gert::TilingContext* context, platform_ascendc::SocVersion socVersion) {
+    OP_LOGI(context->GetNodeName(), "Platform not support Intrinsic_mmad s8s4");
+    OP_TILING_CHECK(
+        CheckPara(context, socVersion) != ge::GRAPH_SUCCESS,
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "WeightQuantBatchMatMul para is illegal"),
+        return ge::GRAPH_FAILED);
+    auto platformInfoPtr = context->GetPlatformInfo();
+    OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "platformInfoPtr is null");
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);  
+    if (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_3510) {
+        OP_LOGI(context->GetNodeName(), "DAV_3510 Platform support Intrinsic_data_move_l12bt bf16");
+        return TilingRegistryArch::GetInstance().DoTilingImpl(context);
+    } else if (
+        socVersion == platform_ascendc::SocVersion::ASCEND910B ||
+        socVersion == platform_ascendc::SocVersion::ASCEND910_93) {
+        OP_LOGI(context->GetNodeName(), "Platform not support Intrinsic_data_move_l12bt bf16");
+        return TilingRegistry::GetInstance().DoTilingImpl(context);
+    } else {
+        OP_LOGI(context->GetNodeName(), "Platform support Intrinsic_data_move_l12bt bf16");
+        std::vector<int32_t> registerList = {ADAPTIVE_SPLIT_PRIORITY, ANTI_REG_PRIORITY};
+        return TilingRegistry::GetInstance().DoTilingImpl(context, registerList);
+    }
+}
 
 static ge::graphStatus WeightQuantBatchMatmulV2TilingFunc(gert::TilingContext* context)
 {
@@ -79,19 +105,7 @@ static ge::graphStatus WeightQuantBatchMatmulV2TilingFunc(gert::TilingContext* c
             std::vector<int32_t> registerList = {ITERBATCH_PRIORITY, ASW_PRIORITY};
             return TilingRegistry::GetInstance().DoTilingImpl(context, registerList);
         } else {
-            OP_LOGI(context->GetNodeName(), "Platform not support Intrinsic_mmad s8s4");
-            OP_TILING_CHECK(
-                CheckPara(context, socVersion) != ge::GRAPH_SUCCESS,
-                VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "WeightQuantBatchMatMul para is illegal"),
-                return ge::GRAPH_FAILED);
-            if (socVersion != platform_ascendc::SocVersion::ASCEND910B) {
-                OP_LOGI(context->GetNodeName(), "Platform support Intrinsic_data_move_l12bt bf16");
-                std::vector<int32_t> registerList = {ADAPTIVE_SPLIT_PRIORITY, ANTI_REG_PRIORITY};
-                return TilingRegistry::GetInstance().DoTilingImpl(context, registerList);
-            } else {
-                OP_LOGI(context->GetNodeName(), "Platform not support Intrinsic_data_move_l12bt bf16");
-                return TilingRegistry::GetInstance().DoTilingImpl(context);
-            }
+            return ArchNotSupportMmadS8S4(context, socVersion);
         }
     } else {
         OP_LOGI(context->GetNodeName(), "Platform not support Intrinsic_fix_pipe_l0c2out");

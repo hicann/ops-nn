@@ -21,6 +21,7 @@
 #include "matmul/common/op_host/math_util.h"
 #include "../../../op_kernel/arch35/weight_quant_batch_matmul_v2_arch35_tiling_key.h"
 #include "matmul/weight_quant_batch_matmul_v2/op_kernel/arch35/weight_quant_batch_matmul_v2_arch35_tiling_data.h"
+#include "tiling_base/tiling_templates_registry.h"
 
 using namespace platform_ascendc;
 
@@ -50,6 +51,7 @@ constexpr uint64_t L1_MAX_SIZE = 512UL * 1024UL;
 constexpr uint64_t L1_MAX_SIZE_WITH_BIAS_QUANT = 496UL * 1024UL;
 constexpr int32_t ADAPTIVE_SPLIT_PRIORITY = 7;
 constexpr std::array<int64_t, 4> SUPPORTED_GROUP_SIZE{32L, 64L, 128L, 256L};
+constexpr uint64_t SUPPORT_C0_SIZE = 16;
 
 ge::graphStatus WeightQuantBatchMatmulV2TilingAS::PostTiling()
 {
@@ -83,6 +85,14 @@ bool WeightQuantBatchMatmulV2TilingAS::IsCapable()
             (matmulInfoPtr_->transA || matmulInfoPtr_->transB),
         VECTOR_INNER_ERR_REPORT_TILIING(
             opName_, "DAV3510 does not support A16W4 transA or transB when weight's layout is FRACTAL_NZ."),
+        return false);
+
+    OP_TILING_CHECK(
+        (matmulInfoPtr_->bFormat == ge::FORMAT_FRACTAL_NZ && matmulInfoPtr_->c0Size != SUPPORT_C0_SIZE),
+        OP_LOGI(
+            opName_,
+            "the adaptive split template only support c0 is 16 when weight's layout is FRACTAL_NZ, but c0 is [%lu]",
+            matmulInfoPtr_->c0Size),
         return false);
 
     // PS 从RegBase模板迁移的场景: pergroup int4 Nz groupsize(32, 64, 128, 256)
@@ -888,6 +898,8 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingAS::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-REGISTER_TILING_TEMPLATE("WeightQuantBatchMatmulV2", WeightQuantBatchMatmulV2TilingAS, ADAPTIVE_SPLIT_PRIORITY);
+REGISTER_TILING_TEMPLATE_WITH_ARCH(
+    WeightQuantBatchMatmulV2, WeightQuantBatchMatmulV2TilingAS, static_cast<int32_t>(NpuArch::DAV_3510),
+    ADAPTIVE_SPLIT_PRIORITY);
 } // namespace weight_quant_batch_matmul_v2
 } // namespace optiling

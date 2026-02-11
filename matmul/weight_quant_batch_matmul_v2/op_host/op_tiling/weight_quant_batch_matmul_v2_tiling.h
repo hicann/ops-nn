@@ -108,6 +108,7 @@ struct WeightQuantBatchMatmulInfo {
     uint64_t batchX = 1UL;
     uint64_t batchWeight = 1UL;
     uint64_t batchY = 1UL;
+    uint64_t c0Size = 0L;
 };
 
 struct WeightQuantBatchMatmulV2CompileInfo {

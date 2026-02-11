@@ -94,5 +94,71 @@ struct WeightQuantBatchMatmulV2ASWTilingDataParams {
     WeightQuantBatchMatmulV2BatchParams params;
 };
 #pragma pack(pop)
+
+#pragma pack(push, 8)
+// 8 means 8 bytes aligned
+struct alignas(8) WeightQuantBatchMatmulV2TilingData
+{
+    uint8_t vecBlockDimN;
+    uint8_t vecBlockDimK;
+    uint8_t cubeBlockDimN;
+    uint8_t cubeBlockDimM;
+    uint8_t cubeBlockDimK;
+    uint8_t kPadSize;
+    uint8_t nPadSize;
+    uint8_t haveBatchA;
+    uint8_t haveBatchB;
+    uint8_t reserve1;
+    uint8_t reserve2;
+    uint8_t reserve3;
+    uint16_t vecSingleKGroupNum;
+    uint16_t vecSingleKTailGroupNum;
+    uint16_t AL1Pingpong;
+    uint16_t BL1Pingpong;
+    uint32_t vecSingleK;
+    uint32_t vecSingleN;
+    uint32_t vec2SingleM;
+    uint32_t vecSingleKTail;
+    uint32_t vecSingleNTail;
+    uint32_t wInQueueSize;
+    uint32_t offsetInQueueSize;
+    uint32_t scaleInQueueSize;
+    uint32_t wOutQueueSize;
+    uint32_t antiQuantTmpBufferSize;
+    uint32_t vecCubeNRatio;
+    uint32_t vecCubeTailNRatio;
+    uint32_t vecCubeKRatio;
+    uint32_t vecCubeTailKRatio;
+    uint32_t cubeTailM;
+    uint32_t cubeTailN;
+    uint32_t cubeSingleNLoop;
+    uint32_t cubeSingleNTailLoop;
+    uint32_t repeatAxisMax;
+    uint64_t vecSingleKLoop;
+    uint64_t vecSingleNLoop;
+    uint64_t vecSingleKTailLoop;
+    uint64_t vecSingleNTailLoop;
+    uint64_t vec2SingleMLoop;
+    uint64_t kAlign;
+    uint64_t nAlign;
+    uint64_t kSize;
+    uint64_t nSize;
+    uint64_t groupSize;
+    uint64_t mSize;
+    uint64_t blockBatch;
+    uint64_t shapeBatch;
+    uint64_t mAubSize;
+    uint64_t kAubSize;
+    uint64_t nBubSize;
+    uint64_t kBubSize;
+    uint64_t mCubSize;
+    uint64_t nCubSize;
+    uint64_t mAL1Size;
+    uint64_t kAL1Size;
+    uint64_t nBL1Size;
+    uint64_t kBL1Size;
+    TCubeTiling matmulTiling;
+};
+#pragma pack(pop)
 } // namespace wqbmmv2_tiling
 #endif // ARCH35_WEIGHT_QUANT_BATCH_MATMUL_V2_TILING_DATA_H

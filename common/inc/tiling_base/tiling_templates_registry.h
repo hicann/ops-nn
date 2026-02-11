@@ -62,6 +62,123 @@ private:
     const std::string op_type_;
 };
 
+// --------------------------------Interfacce with npu arch --------------------------------
+class TilingRegistryArch {
+public:
+    TilingRegistryArch() = default;
+
+#ifdef ASCENDC_OP_TEST
+    static TilingRegistryArch& GetInstance();
+#else
+    static TilingRegistryArch& GetInstance()
+    {
+        static TilingRegistryArch registryImpl;
+        return registryImpl;
+    }
+#endif
+
+    std::shared_ptr<TilingCases> RegisterOp(const std::string& opType, int32_t arch)
+    {
+        auto archIter = registryMap_.find(arch);
+        if (archIter == registryMap_.end()) {
+            std::map<std::string, std::shared_ptr<TilingCases>> opTypeMap;
+            opTypeMap[opType] = std::shared_ptr<TilingCases>(new (std::nothrow) TilingCases(opType));
+            registryMap_[arch] = opTypeMap;
+        } else {
+            if (archIter->second.find(opType) == archIter->second.end()) {
+                archIter->second[opType] = std::shared_ptr<TilingCases>(new (std::nothrow) TilingCases(opType));
+            }
+        }
+
+        OP_CHECK_IF(registryMap_[arch][opType] == nullptr,
+            OP_LOGE(opType, "Register tiling func failed, please check the class name."), return nullptr);
+        return registryMap_[arch][opType];
+    }
+
+    ge::graphStatus DoTilingImpl(gert::TilingContext* context)
+    {
+        int32_t arch = (int32_t)NpuArch::DAV_RESV;
+        const char* opType = context->GetNodeType();
+        fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
+        if (platformInfoPtr == nullptr) {
+            OP_LOGE(opType, "Do op tiling failed, cannot get platformInfo.");
+            return ge::GRAPH_FAILED;
+        } else {
+            auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+            arch = static_cast<int32_t>(ascendcPlatform.GetCurNpuArch());
+            OP_LOGD(context, "npu arch is %d", arch);
+            if (arch == (int32_t)NpuArch::DAV_RESV) {
+                OP_LOGE(opType, "Do op tiling failed, cannot find npu arch.");
+                return ge::GRAPH_FAILED;
+            }
+        }
+        auto tilingTemplateRegistryMap = GetTilingTemplates(opType, arch);
+        for (auto it = tilingTemplateRegistryMap.begin(); it != tilingTemplateRegistryMap.end(); ++it) {
+            auto tilingTemplate = it->second(context);
+            if (tilingTemplate != nullptr) {
+                ge::graphStatus status = tilingTemplate->DoTiling();
+                if (status != ge::GRAPH_PARAM_INVALID) {
+                    OP_LOGD(context, "Do general op tiling success priority=%d", it->first);
+                    return status;
+                }
+                OP_LOGD(context, "Ignore general op tiling priority=%d", it->first);
+            }
+        }
+        OP_LOGE(opType, "Do op tiling failed, no valid template is found.");
+        return ge::GRAPH_FAILED;
+    }
+
+    const std::map<int32_t, TilingClassCase>& GetTilingTemplates(const std::string& opType, int32_t arch)
+    {
+        auto archIter = registryMap_.find(arch);
+        OP_CHECK_IF(archIter == registryMap_.end(),
+            OP_LOGE(opType, "Get op tiling func failed, please check the npu arch %d", arch),
+            return emptyTilingCase_);
+        auto opIter = archIter->second.find(opType);
+        OP_CHECK_IF(
+            opIter == archIter->second.end(), OP_LOGE(opType, "Get op tiling func failed, please check the op name."),
+            return emptyTilingCase_);
+        return opIter->second->GetTilingCases();
+    }
+
+private:
+    std::map<int32_t, std::map<std::string, std::shared_ptr<TilingCases>>> registryMap_; // key is npu-arch
+    const std::map<int32_t, TilingClassCase> emptyTilingCase_{};
+};
+
+class RegisterArch {
+public:
+    explicit RegisterArch(std::string opType) : opType_(std::move(opType))
+    {}
+
+    template <typename T>
+    RegisterArch& tiling(int32_t priority, int32_t arch)
+    {
+        auto tilingCases = TilingRegistryArch::GetInstance().RegisterOp(opType_, arch);
+        OP_CHECK_IF(
+            tilingCases == nullptr, OP_LOGE(opType_, "Register op tiling failed, please check the op name."),
+            return *this);
+        tilingCases->AddTiling<T>(priority);
+        return *this;
+    }
+
+    template <typename T>
+    RegisterArch& tiling(int32_t priority, const std::vector<int32_t>& archs)
+    {
+        for (int32_t arch : archs) {
+            auto tilingCases = TilingRegistryArch::GetInstance().RegisterOp(opType_, arch);
+            OP_CHECK_IF(
+                tilingCases == nullptr, OP_LOGE(opType_, "Register op tiling failed, please check the op name."),
+                return *this);
+            tilingCases->AddTiling<T>(priority);
+        }
+        return *this;
+    }
+
+private:
+    const std::string opType_;
+};
+
 // --------------------------------Interfacce with soc version --------------------------------
 class TilingRegistryNew
 {
@@ -321,6 +438,12 @@ public:
 private:
     const std::string op_type_;
 };
+// op_type: 算子名称， class_name: 注册的 tiling 类, arch：芯片架构号
+// priority: tiling 类的优先级, 越小表示优先级越高, 即会优先选择这个tiling类
+#define REGISTER_TILING_TEMPLATE_WITH_ARCH(op_type, class_name, archs, priority)    \
+    [[maybe_unused]] uint32_t op_impl_register_template_##op_type##_##class_name##priority;      \
+    static Ops::NN::Optiling::RegisterArch VAR_UNUSED##op_type##class_name##priority_register = \
+        Ops::NN::Optiling::RegisterArch(#op_type).tiling<class_name>(priority, archs)
 
 // op_type: 算子名称， class_name: 注册的 tiling 类, soc_version：芯片版本号
 // priority: tiling 类的优先级, 越小表示优先级越高, 即会优先选择这个tiling类
