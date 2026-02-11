@@ -567,7 +567,7 @@ static inline bool CheckShapeForWeightNz(const aclTensor *x1, const aclTensor *x
     auto x2DimNum = x2->GetStorageShape().GetDimNum();
     int64_t x1KDim = transposeX1 ? x1Shape[x1DimNum - PENULTIMATE_DIM] : x1Shape[x1DimNum - 1];
     int64_t x2K1Dim = transposeX2 ? x2Shape[x2DimNum - NZ_K1_INDEX_TRANS] : x2Shape[x2DimNum - NZ_K1_INDEX];
-    int64_t nz_k0_value_trans = x1->GetDataType() == op::DataType::DT_INT8 ? NZ_K0_VALUE_INT8_TRANS : NZ_K0_VALUE_INT4_TRANS;
+    int64_t nz_k0_value_trans = x1->GetDataType() == op::DataType::DT_INT4 ? NZ_K0_VALUE_INT4_TRANS : NZ_K0_VALUE_INT8_TRANS;
     int64_t roundValue = transposeX2 ? nz_k0_value_trans : NZ_K0_VALUE_BMM_BLOCK_NUM;
     int64_t x1KDimRound = ((x1KDim + roundValue - 1) / roundValue) * roundValue;
     if (x1KDimRound != x2K1Dim * roundValue) {
@@ -1645,7 +1645,7 @@ static op::Shape GetWeightNzShape(const aclTensor *input, bool transpose)
         : input->GetViewShape().GetDim(viewDimNum - 1);
 
     int64_t nz_k0_value_trans =
-        input->GetDataType() == op::DataType::DT_INT8 ? NZ_K0_VALUE_INT8_TRANS : NZ_K0_VALUE_INT4_TRANS;
+        input->GetDataType() == op::DataType::DT_INT4 ? NZ_K0_VALUE_INT4_TRANS : NZ_K0_VALUE_INT8_TRANS;
     int64_t k1 = transpose ? CeilDiv(k, nz_k0_value_trans) : CeilDiv(k, NZ_K0_VALUE_BMM_BLOCK_NUM);
     int64_t n1 = transpose ? CeilDiv(n, NZ_K0_VALUE_BMM_BLOCK_NUM) : CeilDiv(n, nz_k0_value_trans);
 
