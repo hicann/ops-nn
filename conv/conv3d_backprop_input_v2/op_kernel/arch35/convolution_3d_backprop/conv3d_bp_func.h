@@ -303,6 +303,7 @@ __aicore__ inline void InitParams(Intf *self)
     self->ctx.singleShapeM_ = 0;
     self->ctx.singleShapeCin_ = 0;
     self->ctx.singleShapeCout_ = 0;
+    self->ctx.l0cPingPongFlag_ = 1;
 
     self->ctx.isFirstIter_ = true;
     self->ctx.hkWk_ = static_cast<uint64_t>(self->ctx.tiling_->hk) * self->ctx.tiling_->wk;
@@ -429,7 +430,13 @@ __aicore__ inline void InitTque(Intf *self)
         self->ctx.pipe_.InitBuffer(self->ctx.inQueL1A_, self->ctx.tiling_->al1Pbuffer, aMatrixByteSize);
 
         uint32_t baseMN = self->ctx.tiling_->baseM * self->ctx.tiling_->baseN;
-        self->ctx.pipe_.InitBuffer(self->ctx.outQueL0C_, self->ctx.tiling_->cl0Pbuffer, baseMN * sizeof(typename Intf::L0cT));
+
+        if (self->ctx.tiling_->cl0Pbuffer > 1) {
+            self->ctx.pipe_.InitBuffer(self->ctx.l0cPing_, 1, (TOTAL_L0C_SIZE >> 1));
+            self->ctx.pipe_.InitBuffer(self->ctx.l0cPong_, 1, (TOTAL_L0C_SIZE >> 1));
+        } else {
+            self->ctx.pipe_.InitBuffer(self->ctx.l0cPing_, 1, TOTAL_L0C_SIZE);
+        }
         self->ctx.pipe_.InitBuffer(self->ctx.l0aBuf_, TOTAL_L0A_SIZE);
         self->ctx.pipe_.InitBuffer(self->ctx.l0bBuf_, TOTAL_L0B_SIZE);
 #if defined(__DAV_310R6__)
@@ -482,7 +489,11 @@ static __aicore__ inline void ComputeStart(Intf *self, LocalTensor<typename Intf
         InitMmadParams<Intf>(self);
         UpdateLoadToA2ParamsM<Intf>(self);
         UpdateLoadToB2ParamsN<Intf>(self);
-        l0c = self->ctx.outQueL0C_.template AllocTensor<typename Intf::L0cT>();
+        if (self->ctx.l0cPingPongFlag_) {
+            l0c = self->ctx.l0cPing_.template AllocTensor<typename Intf::L0cT>();
+        } else {
+            l0c = self->ctx.l0cPong_.template AllocTensor<typename Intf::L0cT>();
+        }
     }
 
     CrossCoreSetHead<Intf>(self);
@@ -492,7 +503,11 @@ template <class Intf>
 static __aicore__ inline void ComputeEnd(Intf *self, LocalTensor<typename Intf::L0cT> &l0c, uint8_t l0PingPongFlag)
 {
     if ASCEND_IS_AIC {
-        self->ctx.outQueL0C_.EnQue(l0c);
+        if (self->ctx.l0cPingPongFlag_) {
+            self->ctx.l0cPing_.EnQue(l0c);
+        } else {
+            self->ctx.l0cPong_.EnQue(l0c);
+        }
     }
 
     self->ctx.l0PingPongFlag_ = l0PingPongFlag;
@@ -1017,7 +1032,11 @@ struct End {
 
         self->ctx.inQueL1A_.FreeAllEvent();
         self->ctx.inQueL1B_.FreeAllEvent();
-        self->ctx.outQueL0C_.FreeAllEvent();
+        
+        self->ctx.l0cPing_.FreeAllEvent();
+        if (self->ctx.tiling_->cl0Pbuffer > 1) {
+            self->ctx.l0cPong_.FreeAllEvent();
+        }
         if (self->ctx.tiling_->hf32Flag) {
             SetHF32Mode(false);
         }

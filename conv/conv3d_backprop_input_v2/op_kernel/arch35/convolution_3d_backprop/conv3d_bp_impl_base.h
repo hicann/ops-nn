@@ -75,7 +75,9 @@ public:
         DEFINE_STUCT_FIELD(uint32_t, tailK_);
         DEFINE_STUCT_TEMPLATE_FIELD(TQue, inQueL1A_, TPosition::A1, 2); // 有Preload, 队列深度2
         DEFINE_STUCT_TEMPLATE_FIELD(TQue, inQueL1B_, TPosition::B1, 2);
-        DEFINE_STUCT_TEMPLATE_FIELD(TQue, outQueL0C_, TPosition::CO1, 1); // 一般的队列深度1即可, 也可支持pingpong切换，编译器有额外优化
+        DEFINE_STUCT_TEMPLATE_FIELD(TQue, l0cPing_, TPosition::CO1, 1);
+        DEFINE_STUCT_TEMPLATE_FIELD(TQue, l0cPong_, TPosition::CO1, 1);
+        DEFINE_STUCT_FIELD(uint8_t, l0cPingPongFlag_);
         DEFINE_STUCT_TEMPLATE_FIELD(TQue, biasL1Que_, TPosition::A1, 1);
         DEFINE_STUCT_TEMPLATE_FIELD(TQue, biasBTQue_, TPosition::C2, 1);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, l0aBuf_, TPosition::A2);

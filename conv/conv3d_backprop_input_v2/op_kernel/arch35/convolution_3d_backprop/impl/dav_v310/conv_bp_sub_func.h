@@ -545,7 +545,14 @@ static __aicore__ inline void FreeTensorC1Buf(Intf *self, LocalTensor<typename I
 {
     if ASCEND_IS_AIC {
         // l0c不搬运数据，需释放l0c的空间，否则会等待卡死
-        self->ctx.outQueL0C_.FreeTensor(useC1Buf);
+        if (self->ctx.l0cPingPongFlag_) {
+            self->ctx.l0cPing_.FreeTensor(useC1Buf);
+        } else {
+            self->ctx.l0cPong_.FreeTensor(useC1Buf);
+        }
+        if (self->ctx.tiling_->cl0Pbuffer > 1) {
+            self->ctx.l0cPingPongFlag_ = !self->ctx.l0cPingPongFlag_;
+        }
     }
 }
 
@@ -555,8 +562,13 @@ static __aicore__ inline void L0CDeQue(Intf *self, LocalTensor<typename Intf::L0
     if ASCEND_IS_AIV {
         return;
     }
-
-    useC1Buf = self->ctx.outQueL0C_.template DeQue<typename Intf::L0cT>();
+    
+    if (self->ctx.l0cPingPongFlag_) {
+        useC1Buf = self->ctx.l0cPing_.template DeQue<typename Intf::L0cT>();
+    } else {
+        useC1Buf = self->ctx.l0cPong_.template DeQue<typename Intf::L0cT>();
+    }
+    
 }
 
 template <class Intf>
