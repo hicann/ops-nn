@@ -46,7 +46,7 @@ __global__ __aicore__ void quant_conv3d(GM_ADDR x, GM_ADDR filter, GM_ADDR scale
 #if defined(DTYPE_BIAS)
     using biasType = ConvType<TPosition::GM, biasFormat, DTYPE_BIAS>;
 #else
-    using biasType = ConvType<TPosition::GM, biasFormat, half>;  // only for compile
+    using biasType = ConvType<TPosition::GM, biasFormat, int32_t>;  // only for compile
 #endif
     using scaleType = ConvType<TPosition::GM, scaleFormat, uint64_t>;
 
