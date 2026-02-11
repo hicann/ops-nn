@@ -31,8 +31,8 @@ T GetAlignNumWithDataType(T size, ge::DataType dtype) {
 void TransposeBatchMatMulAswTiling::ResetBasicBlock(uint64_t tempBaseM, uint64_t tempBaseN)
 {
     uint64_t baseKAlignNum = (!args_.isATrans && args_.isBTrans) ?
-                                GetAlignNumWithDataType(BASIC_BLOCK_K_256_BYTE, args_.aType) :
-                                GetAlignNumWithDataType(BLOCK_BYTE_SIZE, args_.aType);
+                                 GetAlignNumWithDataType(BASIC_BLOCK_K_256_BYTE, args_.aType) :
+                                 BASIC_BLOCK_SIZE_16;
     uint64_t kValueAlign = ops::CeilAlign(static_cast<uint64_t>(args_.kValue), baseKAlignNum);
     uint64_t maxBaseK =
         GetAlignNumWithDataType(compileInfo_.l0ASize / DB_SIZE, args_.aType) / std::max(tempBaseM, tempBaseN);

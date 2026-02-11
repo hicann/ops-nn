@@ -41,7 +41,7 @@ static const std::initializer_list<op::DataType> x2_SCALE_SUPPORT_LIST = {DataTy
 static const std::initializer_list<op::DataType> SCALE_DTYPE_SUPPORT_LIST = {DataType::DT_INT64, DataType::DT_UINT64};
 static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT8};
 static constexpr size_t EXPECTED_DIM = 3;
-static constexpr int BLOCK_SIZE = 128;
+static constexpr int BLOCK_SIZE = 16;
 static constexpr int SUPPORTED_INNER_AXIS = 65536;
 
 inline static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const aclTensor* out,

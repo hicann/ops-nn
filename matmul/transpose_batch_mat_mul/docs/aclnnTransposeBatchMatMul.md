@@ -263,7 +263,7 @@ aclnnStatus aclnnTransposeBatchMatMul(
       <td>x1或x2的维度大小不等于3。</td>
     </tr>
     <tr>
-      <td>x2的第二维或x2的第三维不能被128整除。</td>
+      <td>x2的第二维或x2的第三维不能被16整除。</td>
     </tr>
     <tr>
       <td>scale的数据类型不在支持的范围内。</td>

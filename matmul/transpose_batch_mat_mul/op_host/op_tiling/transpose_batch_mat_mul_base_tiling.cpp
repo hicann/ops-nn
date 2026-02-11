@@ -234,9 +234,8 @@ static void TuneBaseMKN(matmul_v3::MatmulV3RunInfo &runInfo,
 
 void TransposeBatchMatMulBaseTiling::ResetBasicBlock(uint64_t tempBaseM, uint64_t tempBaseN)
 {
-    uint64_t baseKAlignNum = (!args_.isATrans && args_.isBTrans) ?
-                                GetAlignNumWithDataType(BASIC_BLOCK_SIZE_256, args_.aType) :
-                                GetAlignNumWithDataType(DEFAULT_SIZE, args_.aType);
+    uint64_t baseKAlignNum =
+        (!args_.isATrans && args_.isBTrans) ? GetAlignNumWithDataType(BASIC_BLOCK_SIZE_256, args_.aType) : BLOCK_CUBE;
     uint64_t kValueAlign = ops::CeilAlign(static_cast<uint64_t>(args_.kValue), baseKAlignNum);
     uint64_t maxBaseK =
         GetAlignNumWithDataType(compileInfo_.l0ASize / NUM_TWO, args_.aType) / std::max(tempBaseM, tempBaseN);
@@ -380,7 +379,7 @@ bool TransposeBatchMatMulBaseTiling::CheckBMMTilingDataIsVaild() const {
 }
 
 ge::graphStatus TransposeBatchMatMulBaseTiling::PostTiling()
-{   
+{
     size_t tilingDataSize = sizeof(TBMMTilingData);
     OP_TILING_CHECK(tilingDataSize % sizeof(uint64_t) != 0,
                     OP_LOGE(args_.opName, "tiling data size[%zu] is not aligned to 8", tilingDataSize),
@@ -607,8 +606,7 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::GetShape()
     uint64_t input_batch = batchInfo_.batchC;
     uint64_t input_k = args_.kValue;
     uint64_t input_n = args_.nValue;
-    uint64_t alignLen = 256UL / dtypeSize;
-    bool support_k_n = (input_k % alignLen == 0UL) && (input_n % alignLen == 0UL);
+    bool support_k_n = (input_k % BLOCK_CUBE == 0UL) && (input_n % BLOCK_CUBE == 0UL);
     bool support_batch_m = true;
 
     if (transA_ == 213UL) { //213 指的是 {1,0,2} 转置
