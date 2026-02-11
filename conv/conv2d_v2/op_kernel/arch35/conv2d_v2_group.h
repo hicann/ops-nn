@@ -208,8 +208,7 @@ __aicore__ inline bool GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYP
     }
 
     DimDataToFill nToFill(this->singleCoreN, this->nIdxStart, this->isNDimTail);
-    isRealDim = convCommon.CalcDimData(this->nBlockNums, conv2dRunInfo->nDim, convCommon.AlignB(coPerGroup, N0),
-                                        coPerGroup, nToFill);
+    isRealDim = convCommon.CalcNDimDataAlign(this->nBlockNums, conv2dRunInfo->nDim, coPerGroup, nToFill);
     if (unlikely(!isRealDim)) {
         return false;
     }
@@ -229,9 +228,7 @@ __aicore__ inline bool GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYP
     }
 
     DimDataToFill nToFill(singleCoOpt, this->nIdxStart, this->isNDimTail);
-    isRealDim = convCommon.CalcDimData(this->nBlockNums, conv2dRunInfo->nDim,
-                                        convCommon.AlignB(conv2dRunInfo->coutOpt, N0),
-                                        conv2dRunInfo->coutOpt, nToFill);
+    isRealDim = convCommon.CalcNDimDataAlign(this->nBlockNums, conv2dRunInfo->nDim, conv2dRunInfo->coutOpt, nToFill);
     if (unlikely(!isRealDim)) {
         return false;
     }

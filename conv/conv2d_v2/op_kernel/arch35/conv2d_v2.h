@@ -222,14 +222,7 @@ __aicore__ inline bool Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
     }
 
     DimDataToFill nToFill(singleCoreN, nIdxStart, isNDimTail);
-    if constexpr (B_FORMAT == ConvFormat::FRACTAL_Z || B_FORMAT == ConvFormat::FRACTAL_Z_C04) {
-        isRealDim =
-            convCommon.CalcNDimDataWeightNZ(blockPerNDim, conv2dRunInfo->nDim,
-                                            convCommon.AlignB(conv2dRunInfo->cout, N0), conv2dRunInfo->cout, nToFill);
-    } else {
-        isRealDim = convCommon.CalcDimData(blockPerNDim, conv2dRunInfo->nDim,
-                                           convCommon.AlignB(conv2dRunInfo->cout, N0), conv2dRunInfo->cout, nToFill);
-    }
+    isRealDim = convCommon.CalcNDimDataAlign(blockPerNDim, conv2dRunInfo->nDim, conv2dRunInfo->cout, nToFill);
     if (unlikely(!isRealDim)) {
         return false;
     }

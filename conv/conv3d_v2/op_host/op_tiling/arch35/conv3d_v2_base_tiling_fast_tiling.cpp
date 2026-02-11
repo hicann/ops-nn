@@ -203,10 +203,10 @@ void Conv3dBaseTilingV2::Conv3dOpTilingSetShape()
     conv3dApiTiling_.SetSingleWeightShape(static_cast<int64_t>(singleCoreCi), static_cast<int64_t>(shapeInfo_.kd),
                                           static_cast<int64_t>(shapeInfo_.kh), static_cast<int64_t>(shapeInfo_.kw));
 
-    uint64_t curCo = flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV ?
-        (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ?
-         oriGroupInfo_.coPerGroup : optGroupInfo_.coutOpt) : shapeInfo_.co;
-    int64_t singleCoreCo = ConvCeilDiv(ConvAlignB(curCo, convOpsConstParams_.n0), blockDimRes.nDim);
+    uint64_t curCo = flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV ? (flagInfo_.convGroupType ==
+        ConvGroupType::ORI_GROUP_CONV ? oriGroupInfo_.coPerGroup : optGroupInfo_.coutOpt) : shapeInfo_.co;
+    int64_t singleCoreCo = ConvAlignB(ConvCeilDiv(ConvAlignB(curCo, convOpsConstParams_.n0), blockDimRes.nDim),
+                           convOpsConstParams_.n0);
     int64_t singleCoreDo = ConvCeilDiv(shapeInfo_.dout, blockDimRes.doDim);
     int64_t singleCoreBatch = ConvCeilDiv(shapeInfo_.batch, blockDimRes.batchDim);
     int64_t singleCoreHo = 0;

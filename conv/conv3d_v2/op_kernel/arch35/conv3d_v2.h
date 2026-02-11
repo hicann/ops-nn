@@ -198,8 +198,7 @@ __aicore__ inline bool Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TY
     }
 
     DimDataToFill nStruct(singleCoreN, nIdxStart, isNDimTail);
-    isRealDim = convCommon.CalcDimData(blockPerNDim, conv3dRunInfo->nDim,
-                                       convCommon.AlignB(conv3dRunInfo->cout, N0), conv3dRunInfo->cout, nStruct);
+    isRealDim = convCommon.CalcNDimDataAlign(blockPerNDim, conv3dRunInfo->nDim, conv3dRunInfo->cout, nStruct);
     if (unlikely(!isRealDim)) {
         return false;
     }

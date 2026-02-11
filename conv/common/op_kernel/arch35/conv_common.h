@@ -73,10 +73,9 @@ public:
                                                 const uint64_t& wholeDim, const uint64_t &realWholeDim,
                                                 DimDataToFill& curStruct);
 
-    // Calc singleCore N dim data for weight NZ
-    __aicore__ __forceinline__ bool CalcNDimDataWeightNZ(const uint64_t& blockPerDim, const uint64_t& dim,
-                                                         const uint64_t& wholeDim, const uint64_t& realWholeDim,
-                                                         DimDataToFill& curStruct);
+    // Calc singleCore N dim data with align by N0
+    __aicore__ __forceinline__ bool CalcNDimDataAlign(const uint64_t& blockPerDim, const uint64_t& dim,
+                                                      const uint64_t& wholeDim, DimDataToFill& curStruct);
 
     __aicore__ __forceinline__ void CalcStartAddrCommon(const uint32_t din, const uint32_t dout);
 
@@ -159,22 +158,21 @@ __aicore__ __forceinline__ bool ConvCommon<CONV, RUN_INFO>::
 }
 
 template <class CONV, class RUN_INFO>
-__aicore__ __forceinline__ bool ConvCommon<CONV, RUN_INFO>::CalcNDimDataWeightNZ(const uint64_t& blockPerDim,
-                                                                                 const uint64_t& dim,
-                                                                                 const uint64_t& wholeDim,
-                                                                                 const uint64_t& realWholeDim,
-                                                                                 DimDataToFill& curStruct)
+__aicore__ __forceinline__ bool ConvCommon<CONV, RUN_INFO>::CalcNDimDataAlign(const uint64_t& blockPerDim,
+                                                                              const uint64_t& dim,
+                                                                              const uint64_t& wholeDim,
+                                                                              DimDataToFill& curStruct)
 {
     const uint64_t dimIdx = (blockIdx / blockPerDim) % dim;
-    const uint64_t maxDimPerCore = AlignB(CeilDiv(wholeDim, dim), N0);
-    const uint64_t realDim = CeilDiv(realWholeDim, maxDimPerCore);
+    const uint64_t maxDimPerCore = AlignB(CeilDiv(AlignB(wholeDim, N0), dim), N0);
+    const uint64_t realDim = CeilDiv(wholeDim, maxDimPerCore);
 
     if (unlikely(dimIdx >= realDim)) {
         return false;
     }
 
     curStruct.isDimTail = (dimIdx == (realDim - 1));
-    curStruct.singleCoreDim = !curStruct.isDimTail ? maxDimPerCore : realWholeDim - (realDim - 1) * maxDimPerCore;
+    curStruct.singleCoreDim = !curStruct.isDimTail ? maxDimPerCore : wholeDim - (realDim - 1) * maxDimPerCore;
     curStruct.dimIdxStart = dimIdx * maxDimPerCore;
     return true;
 }
