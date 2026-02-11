@@ -74,7 +74,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <th>使用说明</th>
       <th>数据类型</th>
       <th><a href="../../../docs/zh/context/数据格式.md" target="_blank">数据格式</a></th>
-      <th style="white-space: nowrap">维度(shape)</th>
+      <th style="white-space: nowrap">维度</th>
       <th><a href="../../../docs/zh/context/非连续的Tensor.md" target="_blank">非连续的Tensor</a></th>
     </tr>
   </thead>
@@ -86,7 +86,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <td>-</td>
       <td>FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
-      <td>(k，m)</td>
+      <td>2</td>
       <td>√</td>
     </tr>
     <tr>
@@ -96,7 +96,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <td>-</td>
       <td>FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
-      <td>(k，n)</td>
+      <td>2</td>
       <td>√</td>
     </tr>
     <tr>
@@ -110,7 +110,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       </td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
-      <td>(ceil(k / 64), m, 2)</td>
+      <td>3</td>
       <td>√</td>
     </tr>
     <tr>
@@ -124,7 +124,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       </td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
-      <td>(ceil(k / 64), n, 2)</td>
+      <td>3</td>
       <td>√</td>
     </tr>
     <tr>
@@ -138,7 +138,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       </td>
       <td>FLOAT32</td>
       <td>ND</td>
-      <td>(M，N)</td>
+      <td>2</td>
       <td>√</td>
     </tr>
     <tr>
@@ -167,8 +167,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <td>整数型参数，用于输入m、n、k方向上的量化分组大小。</td>
       <td>
         <ul>
-          <li>groupSize输入由3个方向的groupSizeM，groupSizeN，groupSizeK三个值拼接组成，每个值占16位，共占用int64_t类型groupSize的低48位（groupSize中的高16位的数值无效），计算公式为：groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32。</li>
-          <li>对于mx量化模式，[groupSizeM，groupSizeN，groupSizeK]取值组合支持[1，1，32]。</li>
+          <li>由3个方向的groupSizeM，groupSizeN，groupSizeK三个值拼接组成，每个值占16位，共占用int64_t类型groupSize的低48位（groupSize中的高16位的数值无效），计算公式见表格下方。</li>
         </ul>
       </td>
       <td>INT64</td>
@@ -197,6 +196,12 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <td>-</td>
     </tr>
   <tbody></table>
+
+  - 计算公式：<a name='f1'></a>
+
+    $$
+    groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32
+    $$
 
 - **返回值：**
 
@@ -260,17 +265,26 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
 
 - 确定性说明：aclnnQuantBatchMatmulInplaceAdd 默认确定性实现。
 - 当前仅支持 transposeX1 为 true，transposeX2 为 false。
-- 动态量化（mx 量化）场景支持的数据类型为：
-  - 数据类型组合要满足下表：
+- groupSize相关约束：
+  - 传入的groupSize内部会按如下公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0，会根据x1/x2/x1Scale/x2Scale输入shape重新设置groupSizeM、groupSizeN、groupSizeK用于计算。原理：假设groupSizeM=0，表示m方向量化分组值由接口推断，推断公式为groupSizeM = m / scaleM（需保证m能被scaleM整除），其中m与x1 shape中的m一致，scaleM与x1Scale shape中的m一致。
+    $$
+    groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32
+    $$
+- 动态量化（mx 量化）场景约束：
+  - 输入和输出支持以下数据类型组合：
     | x1 | x2 | x1Scale | x2Scale | outRef |
     |:-------:|:-------:| :------- | :------ | :------ |
     |FLOAT8_E5M2/FLOAT8_E4M3FN |FLOAT8_E5M2/FLOAT8_E4M3FN| FLOAT8_E8M0 | FLOAT8_E8M0 | FLOAT32 |
+  - x1数据类型、x2数据类型、x1、x2、x1Scale、x2Scale和groupSize的取值关系：
+      | x1数据类型 | x2数据类型 | x1 shape | x2 shape | x1Scale Shape | x2Scale Shape | yRef Shape | [gsM, gsN, gsK] | groupSize |
+      |:-------:|:-------:| :------- | :------ | :------ | :------ | :------ | :------ | :------ |
+      |FLOAT8_E5M2/FLOAT8_E4M3FN |FLOAT8_E5M2/FLOAT8_E4M3FN| (k, m) | (k, n) | (ceil(k / 64), m, 2) | (ceil(k / 64), n, 2) | (m, n) | [1, 1, 32] | 32 |
 
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
-```c++
+```Cpp
 #include <iostream>
 #include <vector>
 #include <memory>
@@ -478,4 +492,4 @@ int main()
     Finalize(deviceId, stream);
     return 0;
 }
-```
+  ```
