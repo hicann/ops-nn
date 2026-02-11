@@ -328,42 +328,6 @@ aclnnStatus aclnnConvertWeightToINT4Pack(
           <td>最后一维度为weight最后一维度的1/8，即(dim0, dim1/8)</td>
           <td>(⌈dim1/32⌉, ⌈dim0/16⌉, 16, 32)</td>
         </tr>
-        <tr>
-          <td>FLOAT（承载FLOAT4_E2M1类型数据，数据表示范围[-6, 6]）</td>
-          <td>ND</td>
-          <td>FLOAT4_E2M1</td>
-          <td>ND</td>
-          <td>最后一维度为2对齐</td>
-          <td>和输入weight保持一致，即(dim0, dim1)</td>
-          <td>同view shape</td>
-        </tr>
-        <tr>
-          <td>FLOAT（承载FLOAT4_E2M1类型数据，数据表示范围[-6, 6]）</td>
-          <td>ND</td>
-          <td>FLOAT4_E2M1</td>
-          <td>FRACTAL_NZ</td>
-          <td>最后一维度为2对齐</td>
-          <td>和输入weight保持一致，即(dim0, dim1)</td>
-          <td>(⌈dim1/16⌉, ⌈dim0/16⌉, 16, 16)</td>
-        </tr>
-        <tr>
-          <td>FLOAT（承载FLOAT类型数据，数据表示范围[-6, 6]）</td>
-          <td>ND</td>
-          <td>FLOAT（1个FLOAT数据存储8个FLOAT4_E2M1数据）</td>
-          <td>ND</td>
-          <td>最后一维度为8对齐</td>
-          <td>最后一维度为weight最后一维度的1/8，即(dim0, dim1/8)</td>
-          <td>同view shape</td>
-        </tr>
-        <tr>
-          <td>FLOAT（承载FLOAT4_E2M1类型数据，数据表示范围[-6, 6]）</td>
-          <td>ND</td>
-          <td>FLOAT（1个FLOAT数据存储8个FLOAT4_E2M1数据）</td>
-          <td>FRACTAL_NZ</td>
-          <td>最后一维度为8对齐</td>
-          <td>最后一维度为weight最后一维度的1/8，即(dim0, dim1/8)</td>
-          <td>(⌈dim1/16⌉, ⌈dim0/16⌉, 16, 2)</td>
-        </tr>
       </tbody></table>
 
 ## 调用示例
