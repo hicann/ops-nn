@@ -58,7 +58,7 @@
       <td>scalar</td>
       <td>输入</td>
       <td>表示加法运算的输入张量，对应公式中的`scalar`。元素个数为1。</td>
-      <td>FLOAT32、FLOAT16、INT32</td><!--V2多了double、int64-->
+      <td>FLOAT32、FLOAT16、INT32</td>
       <td>ND</td>
     </tr>
     <tr>

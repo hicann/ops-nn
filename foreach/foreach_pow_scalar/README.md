@@ -58,7 +58,7 @@
       <td>scalar</td>
       <td>输入</td>
       <td>表示进行n次方运算的指数，对应公式中的`exponent`。元素个数为1。</td>
-      <td>FLOAT32、INT64、FLOAT16、DOUBLE</td><!--V2多了double，没有INT64;V1多了FLOAT16-->
+      <td>FLOAT32、INT64、FLOAT16、DOUBLE</td>
       <td>ND</td>
     </tr>
     <tr>

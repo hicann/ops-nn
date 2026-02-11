@@ -158,7 +158,7 @@ aclnnStatus aclnnAddLayerNormGrad(
       <td>dy（aclTensor*）</td>
       <td>输入</td>
       <td>表示主要的grad输入。对应公式中的`inputdy`。</td>
-      <td><ul><li>支持空Tensor。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -168,7 +168,7 @@ aclnnStatus aclnnAddLayerNormGrad(
       <td>x1（aclTensor*）</td>
       <td>输入</td>
       <td>表示为正向融合算子的输入x1。对应公式中的`inputx1`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape、数据类型与`dy`的shape、数据类型保持一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape、数据类型与`dy`的shape、数据类型保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -178,7 +178,7 @@ aclnnStatus aclnnAddLayerNormGrad(
       <td>x2（aclTensor*）</td>
       <td>输入</td>
       <td>表示为正向融合算子的输入x2。对应公式中的`inputx2`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape、数据类型与`dy`的shape、数据类型保持一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape、数据类型与`dy`的shape、数据类型保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -188,7 +188,7 @@ aclnnStatus aclnnAddLayerNormGrad(
       <td>rstd（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向输入x1、x2之和的标准差的倒数。对应公式中的`rstd`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与`dy`满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>（前几维的维度和`dy`前几维的维度相同，前几维指`dy`的维度减去`gamma`的维度，表示不需要norm的维度）。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape需要与`dy`满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>（前几维的维度和`dy`前几维的维度相同，前几维指`dy`的维度减去`gamma`的维度，表示不需要norm的维度）。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
@@ -198,7 +198,7 @@ aclnnStatus aclnnAddLayerNormGrad(
       <td>mean（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向输入x1、x2之和的均值。对应公式中的`E(x)`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与`dy`满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>（前几维的维度和`dy`前几维的维度相同，前几维指`dy`的维度减去`gamma`的维度，表示不需要norm的维度）。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape需要与`dy`满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>（前几维的维度和`dy`前几维的维度相同，前几维指`dy`的维度减去`gamma`的维度，表示不需要norm的维度）。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
@@ -208,7 +208,7 @@ aclnnStatus aclnnAddLayerNormGrad(
       <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向输入的gamma。对应公式中的`gamma`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与`dy`的数据类型保持一致。</li><li>shape的维度值与`dy`需要norm的维度值相同。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型与`dy`的数据类型保持一致。</li><li>shape的维度值与`dy`需要norm的维度值相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -218,7 +218,7 @@ aclnnStatus aclnnAddLayerNormGrad(
       <td>dsumOptional（aclTensor*）</td>
       <td>输入</td>
       <td>表示额外的反向梯度累加输入。对应公式中的`dsumOptional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape、数据类型与`dy`的shape、数据类型保持一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape、数据类型与`dy`的shape、数据类型保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -228,7 +228,7 @@ aclnnStatus aclnnAddLayerNormGrad(
       <td>dxOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示Add的结果输出`x`的梯度。对应公式中的`dxOut`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape、数据类型与`dy`的shape、数据类型保持一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape、数据类型与`dy`的shape、数据类型保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -238,7 +238,7 @@ aclnnStatus aclnnAddLayerNormGrad(
       <td>dgammaOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示入参gamma的梯度。对应公式中的`dgammaOut`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape与输入`gamma`一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape与输入`gamma`一致。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
@@ -248,7 +248,7 @@ aclnnStatus aclnnAddLayerNormGrad(
       <td>dbetaOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示正向入参beta的反向梯度。对应公式中的`dbetaOut`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape与输入`gamma`一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape与输入`gamma`一致。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>

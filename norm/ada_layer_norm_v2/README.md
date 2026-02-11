@@ -129,7 +129,3 @@
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_ada_layer_norm_v2](examples/test_aclnn_ada_layer_norm_v2.cpp) | 通过[aclnnAdaLayerNormV2](docs/aclnnAdaLayerNormV2.md)接口方式调用AdaLayerNormV2算子。 |
-<!--
-| 图模式 | -  | 通过[算子IR](op_graph/ada_layer_norm_proto.h)构图方式调用AdaLayerNormV2算子。         |-->
-
-<!--[test_geir_ada_layer_norm](examples/test_geir_ada_layer_norm.cpp)-->

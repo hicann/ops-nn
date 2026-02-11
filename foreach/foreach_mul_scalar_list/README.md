@@ -75,7 +75,7 @@
   - 当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型仅支持FLOAT32。
   - 当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。
 - <term>Ascend 950PR/Ascend 950DT</term>：`scalars`的ScalarList长度需要与`x`的TensorList长度相等，且与入参`x`的数据类型具有一定对应关系：
-  - 当`x`的数据类型为BFLOAT16、FLOAT32、FLOAT16时，数据类型支持FLOAT32。<!--、DOUBLE（aclnn多了个double）-->。
+  - 当`x`的数据类型为BFLOAT16、FLOAT32、FLOAT16时，数据类型支持FLOAT32。
   - 当`x`的数据类型为INT32时，数据类型支持INT64。
   - `x`支持包含的最大Tensor个数为50。
 

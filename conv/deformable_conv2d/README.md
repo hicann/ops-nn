@@ -186,4 +186,3 @@
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_deformable_conv2d](examples/test_aclnn_deformable_conv2d.cpp) | 通过[aclnnDeformableConv2d](docs/aclnnDeformableConv2d.md)接口方式调用DeformableConv2d算子。 |
-<!--| 图模式 | [test_geir_deformable_conv2d](examples/test_geir_deformable_conv2d.cpp)  | 通过[算子IR](op_graph/deformable_conv2d_proto.h)构图方式调用DeformableConv2d算子。         |-->

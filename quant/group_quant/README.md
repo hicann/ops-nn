@@ -71,8 +71,7 @@
     <tr>
       <td>dst_type</td>
       <td>可选属性</td>
-      <td><ul><li>指定输出的数据类型，支持取值2，29，分别表示INT8，INT4。<!--INT32(3)acln
-      n中有--></li><li>默认值为DT_INT8。</li></ul></td>
+      <td><ul><li>指定输出的数据类型，支持取值2，29，分别表示INT8，INT4。</li><li>默认值为DT_INT8。</li></ul></td>
       <td>INT</td>
       <td>-</td>
     </tr>

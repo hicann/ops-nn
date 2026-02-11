@@ -64,14 +64,14 @@
     <tr>
       <td>mean</td>
       <td>输入</td>
-      <td>模型输入数据的均值，对应公式中的`mean`。shape维度限制为1维，长度需与输入NCHW中的C相同。</td><!--aclnn的约束：shape维度限制为1维，长度需与输入NCHW中的C相同，-->
+      <td>模型输入数据的均值，对应公式中的`mean`。shape维度限制为1维，长度需与输入NCHW中的C相同。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>var</td>
       <td>输入</td>
-      <td>模型输入数据的方差，对应公式中的`var`。shape维度限制为1维，长度需与输入NCHW中的C相同。</td><!--aclnn的约束：shape维度限制为1维，长度需与输入NCHW中的C相同，-->
+      <td>模型输入数据的方差，对应公式中的`var`。shape维度限制为1维，长度需与输入NCHW中的C相同。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
@@ -85,7 +85,7 @@
     <tr>
       <td>input_zero_point</td>
       <td>输入</td>
-      <td>输入标量，模型输入数据的偏置，对应公式中的`inputZeroPoint`。传入值不能超过input对应数据类型的上下边界，例如INT8上下边界为[-128,127]。</td><!--aclnn约束：传入值不能超过input对应数据类型的上下边界，例如INT8上下边界为[-128,127]。-->
+      <td>输入标量，模型输入数据的偏置，对应公式中的`inputZeroPoint`。传入值不能超过input对应数据类型的上下边界，例如INT8上下边界为[-128,127]。</td>
       <td>INT32</td>
       <td>ND</td>
     </tr>
@@ -99,21 +99,21 @@
     <tr>
       <td>output_zero_point</td>
       <td>输入</td>
-      <td>输入标量，模型输出数据的偏置，对应公式中的`outputZeroPoint`。传入值不能超过input对应数据类型的上下边界，例如INT8上下边界为[-128,127]。</td><!--aclnn约束：传入值不能超过input对应数据类型的上下边界，例如INT8上下边界为[-128,127]。-->
+      <td>输入标量，模型输出数据的偏置，对应公式中的`outputZeroPoint`。传入值不能超过input对应数据类型的上下边界，例如INT8上下边界为[-128,127]。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>weight</td>
       <td>输入</td>
-      <td>进行批量归一化的权重，对应公式中的`γ`。shape维度限制为1维，长度需与输入参数input的数据格式NCHW中的C相同。</td><!--aclnn约束：shape维度限制为1维，长度需与输入参数input的数据格式NCHW中的C相同，-->
+      <td>进行批量归一化的权重，对应公式中的`γ`。shape维度限制为1维，长度需与输入参数input的数据格式NCHW中的C相同。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>bias</td>
       <td>输入</td>
-      <td>进行批量归一化的偏置值，对应公式中的`β`。shape维度限制为1维，长度需与输入NCHW中的C相同。</td><!--aclnn约束：shape维度限制为1维，长度需与输入NCHW中的C相同，不支持空Tensor。-->
+      <td>进行批量归一化的偏置值，对应公式中的`β`。shape维度限制为1维，长度需与输入NCHW中的C相同。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>

@@ -64,7 +64,7 @@
       <td>weight</td>
       <td>输入</td>
       <td>表示进行线性插值计算的插值系数，对应公式中的`weight`。</td>
-      <td>FLOAT32</td><!--aclnn中还有double，看一下算子是不是少了？-->
+      <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>

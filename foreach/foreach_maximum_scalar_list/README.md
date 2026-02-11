@@ -59,7 +59,7 @@
       <td>scalars</td>
       <td>输入</td>
       <td>表示取最大值运算的输入标量列表，对应公式中的`scalars`。元素个数与`x`中Tensor的个数相等。数据类型与输入`x`的数据类型具有一定对应关系：当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型支持FLOAT32。<1--、DOUBLE-->；当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。</td>
-      <td>FLOAT32、INT64</td><!--aclnn支持DOUBLE,IR原型没有-->
+      <td>FLOAT32、INT64</td>
       <td>ND</td>
     </tr>
     <tr>

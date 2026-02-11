@@ -133,4 +133,3 @@
 | 图模式 | -  | 通过[算子IR](op_graph/dynamic_block_quant_proto.h)构图方式调用DynamicBlockQuant算子。         |
 
 <!--图模式仅支持Ascend 950PR/Ascend 950DT-->
-<!-- [test_geir_dynamic_block_quant](examples/test_geir_dynamic_block_quant.cpp)-->

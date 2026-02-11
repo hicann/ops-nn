@@ -98,7 +98,7 @@
     <tr>
       <td>is_training</td>
       <td>可选属性</td>
-      <td><ul><li>标记是否训练场景，true表示训练场景，false表示推理场景。</li><li>默认值为true。</li></ul></td><!--当前仅支持配置为true的场景。-->
+      <td><ul><li>标记是否训练场景，true表示训练场景，false表示推理场景。</li><li>默认值为true。</li></ul></td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
