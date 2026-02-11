@@ -140,6 +140,7 @@ std::string ToShapeString(std::initializer_list<uint64_t> shape)
         shapeStr.append(std::to_string(x));
         sep = ", ";
     }
+    shapeStr.push_back(']');
     return shapeStr;
 }
 
