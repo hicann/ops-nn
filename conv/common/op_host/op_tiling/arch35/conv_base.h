@@ -26,18 +26,6 @@
 namespace optiling {
 namespace conv_ops_tiling {
 
-static std::map<NpuArch, std::string> socNameTab = {
-    {NpuArch::DAV_3510, "Ascend950"},
-    {NpuArch::DAV_5102, "MC62CM12A"}
-};
-
-static std::map<string, NpuArch> socConvertMap = {
-    {"DAV_3510", NpuArch::DAV_3510},
-    {"Ascend950", NpuArch::DAV_3510},
-    {"MC62CM12AA", NpuArch::DAV_5102},
-    {"DAV_5102", NpuArch::DAV_5102}
-};
-
 static std::map<ge::DataType, std::string> dtypeToStrTab = {
     {ge::DataType::DT_FLOAT, "float32"}, {ge::DataType::DT_FLOAT16, "float16"},
     {ge::DataType::DT_BF16, "bfloat16"}, {ge::DataType::DT_INT64, "int64"},

@@ -23,29 +23,6 @@
 
 namespace optiling {
 namespace conv_ops_tiling {
-ge::graphStatus Conv2dBaseTiling::GetQuantConv2dCompileInfo()
-{
-    auto compileInfoPtr =
-        static_cast<const Conv2DTilingParseInfo*>(context_->GetCompileInfo());
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, compileInfoPtr);
-    Conv2DTilingParseInfo opInfo = *compileInfoPtr;
-    opInfo_->aicoreNum = opInfo.aicoreNum;
-    opInfo_->l2Size = opInfo.l2Size;
-    opInfo_->l1Size = opInfo.l1Size;
-    opInfo_->l0aSize = opInfo.l0aSize;
-    opInfo_->l0bSize = opInfo.l0bSize;
-    opInfo_->l0cSize = opInfo.l0cSize;
-    opInfo_->ubSize = opInfo.ubSize;
-    opInfo_->btSize = opInfo.btSize;
-    opInfo_->l2Rate = opInfo.l2Rate;
-    if (socConvertMap.find(opInfo.shortSocVersion) == socConvertMap.end()) {
-        OP_LOGE(context_->GetNodeName(), "%s AscendC: GetPlatform SocVersion %s not in socConvert.",
-                                         paramInfo_.nodeType.c_str(), opInfo.shortSocVersion.c_str());
-    }
-    opInfo_->npuArch = socConvertMap.at(opInfo.shortSocVersion); 
-    return ge::GRAPH_SUCCESS;
-}
-
 ge::graphStatus Conv2dBaseTiling::GetPlatformInfoInner()
 {
     // Temporary Solution: aclnn use GetCompileInfo; others use PlatformInfo
@@ -56,11 +33,6 @@ ge::graphStatus Conv2dBaseTiling::GetPlatformInfoInner()
     npuArch = tilingCache.GetSocVersion();
     if (npuArch == NpuArch::DAV_RESV) {
         fe::PlatFormInfos* platformInfoPtr = context_->GetPlatformInfo();
-        if (platformInfoPtr == nullptr && paramInfo_.nodeType == "QuantConv2D") {
-            if (GetQuantConv2dCompileInfo() != ge::GRAPH_SUCCESS) {
-                return ge::GRAPH_FAILED;
-            }
-        }
         OPS_CHECK_NULL_WITH_CONTEXT(context_, platformInfoPtr);
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
         opInfo_->aicoreNum = ascendcPlatform.GetCoreNumAic();
@@ -92,9 +64,9 @@ void Conv2dBaseTiling::SetApiInputPlatformInfo()
     apiInputPlatformInfo.fbSize = opInfo_->fbSize;
     OP_LOGD(context_->GetNodeName(),
         "%s AscendC: Tiling get platformInfo: l1Size: %ld, l0CSize: %ld, l0ASize: %ld, l0BSize: %ld, ubSize: %ld, " \
-        "btSize: %ld, fbSize: %ld, socName: %s.", paramInfo_.nodeType.c_str(), opInfo_->l1Size, opInfo_->l0cSize,
+        "btSize: %ld, fbSize: %ld.", paramInfo_.nodeType.c_str(), opInfo_->l1Size, opInfo_->l0cSize,
         opInfo_->l0aSize, opInfo_->l0bSize, opInfo_->ubSize, opInfo_->btSize,
-        opInfo_->fbSize, socNameTab.at(opInfo_->npuArch).c_str());
+        opInfo_->fbSize);
 }
 
 ge::graphStatus Conv2dBaseTiling::InitConv2dApiTiling()

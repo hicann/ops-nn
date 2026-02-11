@@ -62,30 +62,15 @@ public:
         const char *op_type = context->GetNodeType();
         fe::PlatFormInfos *platformInfoPtr = context->GetPlatformInfo();
         if (platformInfoPtr == nullptr) {
-            if (strcmp(op_type, "QuantConv2D") == 0) {
-                auto compileInfoPtr =
-                    static_cast<const Conv2DTilingParseInfo *>(context->GetCompileInfo());
-                OPS_ERR_IF(compileInfoPtr == nullptr, OPS_REPORT_VECTOR_INNER_ERR(op_type, "compileInfoPtr is null."),
-                        return ge::GRAPH_FAILED);
-                OPS_LOG_D(context, "get short soc version is %s", compileInfoPtr->shortSocVersion.c_str());
-                soc_version = static_cast<int32_t>(conv_ops_tiling::socConvertMap.at(compileInfoPtr->shortSocVersion));
-            } else {
-                auto compileInfoPtr =
-                    static_cast<const conv_ops_tiling::ConvTilingParseInfo *>(context->GetCompileInfo());
-                OPS_ERR_IF(compileInfoPtr == nullptr, OPS_REPORT_VECTOR_INNER_ERR(op_type, "compileInfoPtr is null."),
-                        return ge::GRAPH_FAILED);
-                OPS_LOG_D(context, "get short soc version is %s", compileInfoPtr->shortSocVersion.c_str());
-                soc_version = static_cast<int32_t>(conv_ops_tiling::socConvertMap.at(compileInfoPtr->shortSocVersion));
-            }
-            OPS_LOG_D(context, "soc version in compileInfo is %d", soc_version);
-        } else {
-            auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
-            soc_version = static_cast<int32_t>(ascendcPlatform.GetCurNpuArch());
-            OPS_LOG_D(context, "soc version is %d", soc_version);
-            if (soc_version == static_cast<int32_t>(NpuArch::DAV_RESV)) {
-                OPS_REPORT_VECTOR_INNER_ERR(op_type, "Do op tiling failed, cannot find soc version.");
-                return ge::GRAPH_FAILED;
-            }
+            OPS_LOG_E(context, "platformInfoPtr is nullptr");
+            return ge::GRAPH_FAILED;
+        }
+        auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+        soc_version = static_cast<int32_t>(ascendcPlatform.GetCurNpuArch());
+        OPS_LOG_D(context, "soc version is %d", soc_version);
+        if (soc_version == static_cast<int32_t>(NpuArch::DAV_RESV)) {
+            OPS_REPORT_VECTOR_INNER_ERR(op_type, "Do op tiling failed, cannot find soc version.");
+            return ge::GRAPH_FAILED;
         }
 
         auto tilingTemplateRegistryMap = GetTilingTemplates(op_type, soc_version);

@@ -193,7 +193,6 @@ private:
     void Conv2dApiTilingSetShape();
     void Conv2dApiTilingSetAttrs();
     void SetApiInputPlatformInfo();
-    ge::graphStatus GetQuantConv2dCompileInfo();
     ge::graphStatus GetPlatformInfoInner();
     ge::graphStatus InitConv2dApiTiling();
     ge::graphStatus SetTilingKey();
