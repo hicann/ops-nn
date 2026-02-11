@@ -59,7 +59,7 @@ static bool CheckUnknownShape(const gert::Shape* x1IndicesShape, const gert::Sha
 }
 
 static ge::graphStatus ValidShapeCheck(
-    gert::InferShapeContext* context, const gert::Shape* x1IndicesShape, const gert::Shape* x1ValuesShape,
+    const gert::InferShapeContext* context, const gert::Shape* x1IndicesShape, const gert::Shape* x1ValuesShape,
     const gert::Shape* x1ShapeShape, const gert::Shape* x2Shape)
 {
     OP_CHECK_IF(
@@ -99,7 +99,7 @@ static ge::graphStatus ValidShapeCheck(
 }
 
 static ge::graphStatus GetX1ShapeValue(
-    gert::InferShapeContext* context, const gert::Tensor* x1ShapeTensor, std::vector<int64_t>& x1ShapeValue)
+    const gert::InferShapeContext* context, const gert::Tensor* x1ShapeTensor, std::vector<int64_t>& x1ShapeValue)
 {
     auto x1ShapeDtype = x1ShapeTensor->GetDataType();
     OP_CHECK_IF(
@@ -116,7 +116,7 @@ static ge::graphStatus GetX1ShapeValue(
     return ge::GRAPH_FAILED;
 }
 
-static void SetUnknownOutputShape(gert::InferShapeContext* context, gert::Shape* yShape)
+static void SetUnknownOutputShape(const gert::InferShapeContext* context, gert::Shape* yShape)
 {
     yShape->SetDimNum(SPARSETENSORDENSEMATMUL_NUM_TWO);
     yShape->SetDim(SPARSETENSORDENSEMATMUL_NUM_ZERO, SPARSETENSORDENSEMATMUL_UNKNOWNDIM);
@@ -124,7 +124,7 @@ static void SetUnknownOutputShape(gert::InferShapeContext* context, gert::Shape*
     OP_LOGD(context->GetNodeName(), "InferShape4SparseTensorDenseMatMul end with unknown out shape.");
 }
 
-static void SetOutputShape(gert::InferShapeContext* context, gert::Shape* yShape, const int64_t &outerLeft,
+static void SetOutputShape(const gert::InferShapeContext* context, gert::Shape* yShape, const int64_t &outerLeft,
                            const int64_t &outerRight)
 {
     yShape->SetDimNum(SPARSETENSORDENSEMATMUL_NUM_TWO);
