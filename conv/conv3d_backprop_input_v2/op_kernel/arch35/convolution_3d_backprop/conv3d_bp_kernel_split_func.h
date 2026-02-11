@@ -315,6 +315,10 @@ struct FreeB1Tensor {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
     static __aicore__ inline void call(Intf *self)
     {
+        // 整轮计算都未加载B1Tensor就不需要重复释放
+        if (self->ctx.isLoadB1_ && !self->ctx.isFreeB1_) {
+            return;
+        }
         if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
             if (self->ctx.isB1FullLoadFlag_ && self->ctx.tiling_->dk == 1) {
                 self->ctx.isLoadB1_ = true;
