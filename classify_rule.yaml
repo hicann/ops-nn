@@ -1239,56 +1239,56 @@ VC1@ops-nn:
       kernel_style: null
     unrelease:
       test_code:
-        - ops/ops-nn/activation/elu/examples/
-        - ops/ops-nn/activation/elu/tests/
+        #- ops/ops-nn/activation/elu/examples/
+        #- ops/ops-nn/activation/elu/tests/
         - ops/ops-nn/activation/elu_grad/examples/
         - ops/ops-nn/activation/elu_grad/tests/
-        - ops/ops-nn/activation/elu_grad_v2/examples/
-        - ops/ops-nn/activation/elu_grad_v2/tests/
-        - ops/ops-nn/activation/fast_gelu/examples/
-        - ops/ops-nn/activation/fast_gelu/tests/
-        - ops/ops-nn/activation/fast_gelu_grad/examples/
+        #- ops/ops-nn/activation/elu_grad_v2/examples/
+        #- ops/ops-nn/activation/elu_grad_v2/tests/
+        #- ops/ops-nn/activation/fast_gelu/examples/
+        #- ops/ops-nn/activation/fast_gelu/tests/
+        #- ops/ops-nn/activation/fast_gelu_grad/examples/
         - ops/ops-nn/activation/fast_gelu_grad/tests/
-        - ops/ops-nn/activation/ge_glu_grad_v2/examples/
-        - ops/ops-nn/activation/ge_glu_grad_v2/tests/
-        - ops/ops-nn/activation/ge_glu_v2/examples/
-        - ops/ops-nn/activation/ge_glu_v2/tests/
-        - ops/ops-nn/activation/gelu/examples/
-        - ops/ops-nn/activation/gelu/tests/
-        - ops/ops-nn/activation/gelu_grad/examples/
+        #- ops/ops-nn/activation/ge_glu_grad_v2/examples/
+        #- ops/ops-nn/activation/ge_glu_grad_v2/tests/
+        #- ops/ops-nn/activation/ge_glu_v2/examples/
+        #- ops/ops-nn/activation/ge_glu_v2/tests/
+        #- ops/ops-nn/activation/gelu/examples/
+        #- ops/ops-nn/activation/gelu/tests/
+        #- ops/ops-nn/activation/gelu_grad/examples/
         - ops/ops-nn/activation/gelu_grad/tests/
-        - ops/ops-nn/activation/gelu_grad_v2/examples/
-        - ops/ops-nn/activation/gelu_grad_v2/tests/
-        - ops/ops-nn/activation/gelu_quant/examples/
-        - ops/ops-nn/activation/gelu_quant/tests/
-        - ops/ops-nn/activation/gelu_v2/examples/
-        - ops/ops-nn/activation/gelu_v2/tests/
-        - ops/ops-nn/activation/hardtanh_grad/examples/
-        - ops/ops-nn/activation/hardtanh_grad/tests/
-        - ops/ops-nn/activation/leaky_relu/examples/
-        - ops/ops-nn/activation/leaky_relu/tests/
-        - ops/ops-nn/activation/leaky_relu_grad/examples/
-        - ops/ops-nn/activation/leaky_relu_grad/tests/
-        - ops/ops-nn/activation/prelu/examples/
-        - ops/ops-nn/activation/prelu/tests/
-        - ops/ops-nn/activation/relu/examples/
-        - ops/ops-nn/activation/relu/tests/
+        #- ops/ops-nn/activation/gelu_grad_v2/examples/
+        #- ops/ops-nn/activation/gelu_grad_v2/tests/
+        #- ops/ops-nn/activation/gelu_quant/examples/
+        #- ops/ops-nn/activation/gelu_quant/tests/
+        #- ops/ops-nn/activation/gelu_v2/examples/
+        #- ops/ops-nn/activation/gelu_v2/tests/
+        #- ops/ops-nn/activation/hardtanh_grad/examples/
+        #- ops/ops-nn/activation/hardtanh_grad/tests/
+        #- ops/ops-nn/activation/leaky_relu/examples/
+        #- ops/ops-nn/activation/leaky_relu/tests/
+        #- ops/ops-nn/activation/leaky_relu_grad/examples/
+        #- ops/ops-nn/activation/leaky_relu_grad/tests/
+        #- ops/ops-nn/activation/prelu/examples/
+        #- ops/ops-nn/activation/prelu/tests/
+        #- ops/ops-nn/activation/relu/examples/
+        #- ops/ops-nn/activation/relu/tests/
         - ops/ops-nn/activation/relu_grad/examples/
         - ops/ops-nn/activation/relu_grad/tests/
         - ops/ops-nn/activation/relu_v2/examples/
         - ops/ops-nn/activation/relu_v2/tests/
-        - ops/ops-nn/activation/sigmoid/examples/
-        - ops/ops-nn/activation/sigmoid/tests/
-        - ops/ops-nn/activation/sigmoid_grad/examples/
-        - ops/ops-nn/activation/sigmoid_grad/tests/
-        - ops/ops-nn/activation/silu_grad/examples/
-        - ops/ops-nn/activation/silu_grad/tests/
-        - ops/ops-nn/activation/swi_glu_grad/examples/
-        - ops/ops-nn/activation/swi_glu_grad/tests/
-        - ops/ops-nn/activation/swish/examples/
-        - ops/ops-nn/activation/swish/tests/
-        - ops/ops-nn/activation/swish_grad/examples/
-        - ops/ops-nn/activation/swish_grad/tests/
+        #- ops/ops-nn/activation/sigmoid/examples/
+        #- ops/ops-nn/activation/sigmoid/tests/
+        #- ops/ops-nn/activation/sigmoid_grad/examples/
+        #- ops/ops-nn/activation/sigmoid_grad/tests/
+        #- ops/ops-nn/activation/silu_grad/examples/
+        #- ops/ops-nn/activation/silu_grad/tests/
+        #- ops/ops-nn/activation/swi_glu_grad/examples/
+        #- ops/ops-nn/activation/swi_glu_grad/tests/
+        #- ops/ops-nn/activation/swish/examples/
+        #- ops/ops-nn/activation/swish/tests/
+        #- ops/ops-nn/activation/swish_grad/examples/
+        #- ops/ops-nn/activation/swish_grad/tests/
         - ops/ops-nn/quant/ascend_quant/examples/
         - ops/ops-nn/quant/ascend_quant/tests/
         - ops/ops-nn/quant/ascend_quant_v2/examples/
@@ -1355,16 +1355,20 @@ VC7@ops-nn:
         - ops/ops-nn/pooling/max_pool_grad_with_argmax_v3/op_kernel/
         - ops/ops-nn/pooling/max_pool_with_argmax_v3/op_host/
         - ops/ops-nn/pooling/max_pool_with_argmax_v3/op_kernel/
-        - ops/ops-nn/pooling/avg_pool3_d/
+        - ops/ops-nn/pooling/avg_pool3_d/op_host/
+        - ops/ops-nn/pooling/avg_pool3_d/op_kernel/
         - ops/ops-nn/pooling/max_pool3_d/op_host/
         - ops/ops-nn/pooling/max_pool3_d/op_kernel/
         - ops/ops-nn/pooling/max_pool_v2/op_host/
         - ops/ops-nn/pooling/max_pool_v2/op_kernel/
         - ops/ops-nn/pooling/max_pool_v3/op_host/
         - ops/ops-nn/pooling/max_pool_v3/op_kernel/
-        - ops/ops-nn/pooling/max_pool3d_with_argmax_v2/
-        - ops/ops-nn/pooling/max_pool_grad_with_argmax/
-        - ops/ops-nn/pooling/max_pool_grad_with_argmax_common/
+        - ops/ops-nn/pooling/max_pool3d_with_argmax_v2/op_kernel/
+        - ops/ops-nn/pooling/max_pool3d_with_argmax_v2/op_host/
+        - ops/ops-nn/pooling/max_pool_grad_with_argmax/op_kernel/
+        - ops/ops-nn/pooling/max_pool_grad_with_argmax/op_host/
+        - ops/ops-nn/pooling/max_pool_grad_with_argmax_common/op_kernel/
+        - ops/ops-nn/pooling/max_pool_grad_with_argmax_common/op_host/
         - ops/ops-nn/index/masked_scatter_with_position/op_kernel/
         - ops/ops-nn/index/masked_scatter_with_position/op_host/
         - ops/ops-nn/pooling/avg_pool3_d_grad/op_host/
@@ -1381,6 +1385,13 @@ VC7@ops-nn:
         - ops/ops-nn/pooling/adaptive_avg_pool3d_grad/op_kernel/
         - ops/ops-nn/pooling/max_pool3d_grad_with_argmax/op_host/
         - ops/ops-nn/pooling/max_pool3d_grad_with_argmax/op_kernel/
+        - ops/ops-nn/index/embedding_dense_grad_v2/op_kernel/v35/
+        - ops/ops-nn/index/embedding_dense_grad_v2/op_host/
+        - ops/ops-nn/index/embedding_bag/op_host/
+        - ops/ops-nn/index/embedding_bag/op_kernel/arch35/
+        - ops/ops-nn/pooling/adaptive_max_pool3d/op_host/
+        - ops/ops-nn/pooling/max_pool_with_argmax/op_kernel/
+        - ops/ops-nn/pooling/max_pool_with_argmax/op_host/
       opensource_style: null
       kernel_style: null
     unrelease:
@@ -1389,42 +1400,15 @@ VC7@ops-nn:
         - ops/ops-nn/pooling/max_pool_grad_with_argmax_v3/tests/
         ## max_pool_with_argmax_v3
         - ops/ops-nn/pooling/max_pool_with_argmax_v3/tests/
-        ## avg_pool3_d
-        - ops/ops-nn/pooling/avg_pool3_d/examples/
-        - ops/ops-nn/pooling/avg_pool3_d/tests/
         ## max_pool3_d
         - ops/ops-nn/pooling/max_pool3_d/tests/
         ## max_pool_v2
         - ops/ops-nn/pooling/max_pool_v2/tests/
-        ## max_pool_v3
-        - ops/ops-nn/pooling/max_pool_v2/tests/
-        - ops/ops-nn/pooling/max_pool_v2/examples/
-        ## max_pool3d_with_argmax_v2
-        - ops/ops-nn/pooling/max_pool3d_with_argmax_v2/tests/
-        - ops/ops-nn/pooling/max_pool3d_with_argmax_v2/examples/
         ## max_pool_grad_with_argmax
         - ops/ops-nn/pooling/max_pool_grad_with_argmax/tests/
         ## masked_scatter_with_position
         - ops/ops-nn/index/masked_scatter_with_position/tests/
         - ops/ops-nn/index/masked_scatter_with_position/examples/
-        ## avg_pool3_d_grad
-        - ops/ops-nn/pooling/avg_pool3_d_grad/tests/
-        - ops/ops-nn/pooling/avg_pool3_d_grad/examples/
-        ## adaptive_max_pool3d
-        - ops/ops-nn/pooling/adaptive_max_pool3d/tests/
-        - ops/ops-nn/pooling/adaptive_max_pool3d/examples/
-        ## adaptive_max_pool3d_grad
-        - ops/ops-nn/pooling/adaptive_max_pool3d_grad/tests/
-        - ops/ops-nn/pooling/adaptive_max_pool3d_grad/examples/
-        ## adaptive_avg_pool3d
-        - ops/ops-nn/pooling/adaptive_avg_pool3d/tests/
-        - ops/ops-nn/pooling/adaptive_avg_pool3d/examples/
-        ## adaptive_avg_pool3d_grad
-        - ops/ops-nn/pooling/adaptive_avg_pool3d_grad/tests/
-        - ops/ops-nn/pooling/adaptive_avg_pool3d_grad/examples/
-        ## max_pool3d_grad_with_argmax
-        - ops/ops-nn/pooling/max_pool3d_grad_with_argmax/tests/
-        - ops/ops-nn/pooling/max_pool3d_grad_with_argmax/examples/
       non_delivery: null
       open_source: null
 
