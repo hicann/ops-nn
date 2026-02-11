@@ -51,7 +51,8 @@ static constexpr int64_t SORT_LIMIT = 5;
 static constexpr int64_t FULL_LOAD_LIMIT = 16;
 static constexpr int64_t CORE_NUM = 64;
 static constexpr float THRESHOLD_FACTOR = 0.1;
-
+static constexpr int64_t CUT_THRESHOLD = 128;
+static constexpr int64_t SPLIT_THRESHOLD = 64;
 
 static const std::set<ge::DataType> DETERMIN_DTYPE = {ge::DT_FLOAT, ge::DT_FLOAT16};
 
@@ -156,7 +157,7 @@ ge::graphStatus ScatterNdAddSimtTiling::GetShapeAttrsInfo()
 }
 
 void ScatterNdAddSimtTiling::SelectTiling(){
-    if (context_->GetDeterministic() == 1 && (DETERMIN_DTYPE.find(updateDtype_) != DETERMIN_DTYPE.end())) {
+    if (context_->GetDeterministic() == 1 && (DETERMIN_DTYPE.find(updateDtype_) != DETERMIN_DTYPE.end()) && indicesAxis_ != ONE) {
         isDeterminstic_ = 1;
     }
     if (isDeterminstic_ != 1 && afterAxis_ * varTypeSize_ >= MIN_SIZE_SIMD_NONDETERMINSTIC &&
@@ -250,13 +251,20 @@ int64_t ScatterNdAddSimtTiling::GetRestAvailableSize(int64_t sampleNum, int64_t 
 
 void ScatterNdAddSimtTiling::DoOpTilingSplitAfter()
 {
-    int64_t UbSize = static_cast<int64_t>((ubSize_ - RESERVE_SIZE));
-    UbSize = UbSize - MIN_HANDLE_SIZE * FP32_BYTES;//maxScore
+    int64_t ubSize = static_cast<int64_t>((ubSize_ - RESERVE_SIZE));
+    ubSize = ubSize - MIN_HANDLE_SIZE * FP32_BYTES;//maxScore
     int64_t alignNum = ALIGN_SIZE / varTypeSize_;
+    int64_t afterAxisSize = afterAxis_ * varTypeSize_;
     /* split afterAxis */
-    eachCoreAfterAxisCount_ = Ops::Base::CeilDiv(afterAxis_, totalCoreNum_);
-    usedCoreNumBefore_ = Ops::Base::CeilDiv(afterAxis_, eachCoreAfterAxisCount_);
-    tailCoreAfterAxisCount_ = afterAxis_ - eachCoreAfterAxisCount_ * (usedCoreNumBefore_ - 1);
+    if (afterAxisSize < CUT_THRESHOLD) {
+        eachCoreAfterAxisCount_ = afterAxis_;
+        usedCoreNumBefore_ = ONE;
+        tailCoreAfterAxisCount_ = afterAxis_;
+    } else {
+        eachCoreAfterAxisCount_ = Ops::Base::CeilDiv(afterAxis_, totalCoreNum_);
+        usedCoreNumBefore_ = Ops::Base::CeilDiv(afterAxis_, eachCoreAfterAxisCount_);
+        tailCoreAfterAxisCount_ = afterAxis_ - eachCoreAfterAxisCount_ * (usedCoreNumBefore_ - 1);
+    }
 
     auto ubBlock = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
     /* 同地址优化:搬入多少行indices,就搬入相同行数的updates, strideBuf放在RESERVE_SIZE中:
@@ -272,7 +280,7 @@ void ScatterNdAddSimtTiling::DoOpTilingSplitAfter()
                           Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +
                           GetSortTmpSize(indiceDtype_, 1, false);
     int64_t oneBlockSize = indicesSize + (varTypeSize_ + FP32_BYTES) * eachCoreAfterAxisCount_;
-    indicesFactor_ = UbSize / oneBlockSize;
+    indicesFactor_ = ubSize / oneBlockSize;
 
     int64_t occupy = Ops::Base::CeilAlign(rankSize_ * indicesTypeSize_, ubBlock) +
                      Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +
@@ -283,20 +291,20 @@ void ScatterNdAddSimtTiling::DoOpTilingSplitAfter()
                      Ops::Base::CeilAlign(varTypeSize_ * eachCoreAfterAxisCount_, ubBlock) + 
                      Ops::Base::CeilAlign(FP32_BYTES * eachCoreAfterAxisCount_, ubBlock) + 
                      GetSortTmpSize(indiceDtype_, 1, false);
-    if (occupy > UbSize) {
+    if (occupy > ubSize) {
         int64_t indicesUbSize = std::min(INDICES_MIN_BLOCK_SIZE, indicesAxis_ * indicesSize);
         /* indicesBuf_ + outOfstBuf_ */
         indicesFactor_ = Ops::Base::CeilAlign(indicesUbSize, ALIGN_SIZE) / indicesSize;
-        afterAxisFactor_ = (UbSize - indicesFactor_ * indicesSize) / indicesFactor_;
+        afterAxisFactor_ = (ubSize - indicesFactor_ * indicesSize) / indicesFactor_;
         afterAxisFactor_ = Ops::Base::FloorAlign(afterAxisFactor_, alignNum);
     } else {
         afterAxisFactor_ = Ops::Base::CeilAlign(eachCoreAfterAxisCount_, alignNum);
-        indicesFactor_ = UbSize / (afterAxisFactor_ * (varTypeSize_ + FP32_BYTES) + indicesSize);
+        indicesFactor_ = ubSize / (afterAxisFactor_ * (varTypeSize_ + FP32_BYTES) + indicesSize);
         
         int64_t restSize = static_cast<int64_t>(-1);
         while (restSize <= 0) {
             --indicesFactor_;
-            restSize = UbSize - (Ops::Base::CeilAlign(indicesFactor_ * rankSize_ * indicesTypeSize_, ubBlock) +
+            restSize = ubSize - (Ops::Base::CeilAlign(indicesFactor_ * rankSize_ * indicesTypeSize_, ubBlock) +
                                     Ops::Base::CeilAlign(indicesFactor_ * indicesTypeSize_, ubBlock) +
                                     Ops::Base::CeilAlign(indicesFactor_ * (indicesTypeSize_ + TWO * ALIGN_SIZE), ubBlock) + 
                                     Ops::Base::CeilAlign(indicesFactor_ * INT32_BYTES, ubBlock) + 
@@ -487,7 +495,7 @@ void ScatterNdAddSimtTiling::DoOpTilingForDeterminstic()
 {
     /* 优先分after */
     int64_t splitThresh = totalCoreNum_ * MIN_HANDLE_SIZE / varTypeSize_;
-    if ((afterAxis_ > splitThresh) || (indicesAxis_ < (totalCoreNum_ / TWO))) {
+    if ((afterAxis_ > splitThresh) || (indicesAxis_ < (totalCoreNum_ / TWO)) || (varInAxis_ / indicesAxis_) > SPLIT_THRESHOLD) {
         DoOpTilingSplitAfter();
         return;
     }
