@@ -645,7 +645,7 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::GetAttr()
   clampLimit_ = (attrClampLimit == nullptr) ? 7.0 : *attrClampLimit;
   OP_CHECK_IF(!(std::isfinite(clampLimit_) && clampLimit_ > 0.0), 
               OP_LOGE(context_->GetNodeName(),
-              "attr clampLimit_ should be positive finite but current is %f, please check.", clampLimit_),
+              "attr clamp_limit should be positive finite but current is %f, please check.", clampLimit_),
               return ge::GRAPH_FAILED);
   auto* attrGluAlpha = attrs->GetAttrPointer<float>(ATTR_GLU_ALPHA_INDEX);
   gluAlpha_ = (attrGluAlpha == nullptr) ? 1.702 : *attrGluAlpha;
@@ -1168,7 +1168,7 @@ ge::graphStatus DequantSwigluQuantV35NlastTiling::DoOpTiling()
 {
   DoBlockSplit();
   if (!DoUbSplit()) {
-    OP_LOGE(context_->GetNodeName(), "UB size cannot load two last dim, return failed.");
+    OP_LOGE(context_->GetNodeName(), "UB size cannot load last dim of input x, return failed.");
     return ge::GRAPH_FAILED;
   }
   int64_t ubLoopOfFormerBlock0 = (blockFormer0_ + ubFormer0_ - 1) / ubFormer0_;
