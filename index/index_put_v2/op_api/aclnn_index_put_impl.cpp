@@ -967,7 +967,7 @@ static const aclTensor* DeterministicProcess(const aclTensor* selfCast, const ac
     auto valueSizeTensor = executor->ConvertToTensor(valueSize.data(), valueSize.size(), DataType::DT_INT32);
 
     // Indices Broadcast
-    auto ret = IndicesBroadcast(allIndices, executor);   // scalar tensor will be broadcast
+    auto ret = IndicesBroadcastUndeter(allIndices, executor);   // scalar tensor will be broadcast
     CHECK_RET(ret, nullptr);
     auto allIndicesTensorList = executor->AllocTensorList(allIndices.data(), allIndices.size());
 
