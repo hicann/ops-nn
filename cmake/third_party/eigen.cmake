@@ -13,11 +13,15 @@ endif()
 
 set(EIGEN_DOWNLOAD_PATH ${CANN_3RD_LIB_PATH}/pkg)
 
-if (EXISTS "${CANN_3RD_LIB_PATH}/eigen/CMakeLists.txt" AND NOT FORCE_REBUILD_CANN_3RD)
-  message("eigen found, and not force rebuild cann third_party")
+if (EXISTS "${CANN_3RD_LIB_PATH}/eigen-5.0.0/CMakeLists.txt" AND NOT FORCE_REBUILD_CANN_3RD)
+  message(STATUS "Eigen path found in cache: ${CANN_3RD_LIB_PATH}/eigen-5.0.0, and not force rebuild cann third_party.")
+  set(SOURCE_DIR "${CANN_3RD_LIB_PATH}/eigen-5.0.0")
+elseif (EXISTS "${CANN_3RD_LIB_PATH}/eigen/CMakeLists.txt" AND NOT FORCE_REBUILD_CANN_3RD)
+  message(STATUS "Eigen path found in cache: ${CANN_3RD_LIB_PATH}/eigen, and not force rebuild cann third_party.")
   set(SOURCE_DIR "${CANN_3RD_LIB_PATH}/eigen")
 else()
-  set(REQ_URL "https://gitcode.com/cann-src-third-party/eigen/releases/download/3.4.0/eigen-3.4.0.tar.gz")
+  message("The eigen package needs to be downloaded.")
+  set(REQ_URL "https://gitcode.com/cann-src-third-party/eigen/releases/download/5.0.0/eigen-5.0.0.tar.gz")
   include(ExternalProject)
   ExternalProject_Add(external_eigen_nn
     TLS_VERIFY        OFF
