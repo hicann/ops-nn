@@ -101,7 +101,7 @@ aclnnStatus aclnnApplyAdamWV2(
         <td>-</td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
-        <td>-</td>
+        <td>1-8</td>
         <td>√</td>
       </tr>
       <tr>
@@ -111,7 +111,7 @@ aclnnStatus aclnnApplyAdamWV2(
         <td>-</td>
         <td>与“varRef”参数一致。</td>
         <td>ND</td>
-        <td>与“self”一致。</td>
+        <td>与“varRef”参数一致。</td>
         <td>√</td>
       </tr>
       <tr>
@@ -121,13 +121,13 @@ aclnnStatus aclnnApplyAdamWV2(
         <td>-</td>
         <td>与“varRef”参数一致。</td>
         <td>ND</td>
-        <td>与“self”一致。</td>
+        <td>与“varRef”参数一致。</td>
         <td>√</td>
       </tr>
       <tr>
         <td>maxGradNormOptionalRef</td>
         <td>输入/输出</td>
-        <td>保存v参数的最大值，公式中的v。</td>
+        <td>保存vRef参数的最大值。</td>
         <td>此参数在amsgrad参数为true时必选，在amsgrad参数为false时可选。</td>
         <td>与“varRef”参数一致。</td>
         <td>ND</td>

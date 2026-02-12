@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 算子功能：均方误差函数[aclnnMseLoss](aclnnMseLoss.md)的反向传播。
+- 算子功能：均方误差函数[aclnnMseLoss](../mse_loss/docs/aclnnMseLoss.md)的反向传播。
 
 - 计算公式：
 
@@ -92,4 +92,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_mse_loss_grad](./examples/test_aclnn_mse_loss_grad.cpp) | 通过[aclnnMseLossGrad](./docs/aclnnMseLossBackward.md)接口方式调用mse_loss_grad算子。    |
+| aclnn调用 | [test_aclnn_mse_loss_grad](./examples/test_aclnn_mse_loss_backward.cpp) | 通过[aclnnMseLossGrad](../mse_loss_grad_v2/docs/aclnnMseLossBackward.md)接口方式调用mse_loss_grad算子。    |

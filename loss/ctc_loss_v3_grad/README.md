@@ -132,4 +132,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口 | [test_aclnn_ctc_loss_v3_grad](examples/test_aclnn_ctc_loss_v3_grad.cpp) | 通过[aclnnCtcLossBackward](docs/aclnnCtcLossBackward.md)接口方式调用CtclossV3Grad算子。 |
+| aclnn接口 | [test_aclnn_ctc_loss_v3_grad](examples/test_aclnn_ctc_loss_v3_grad.cpp) | 通过[aclnnCtcLossBackward](../ctc_loss_v2_grad/docs/aclnnCtcLossBackward.md)接口方式调用CtclossV3Grad算子。 |

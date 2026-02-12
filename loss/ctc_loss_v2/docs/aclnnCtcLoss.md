@@ -107,7 +107,7 @@ aclnnStatus aclnnCtcLoss(
         <td>targets</td>
         <td>输入</td>
         <td>表示包含目标序列的标签，公式中的π。</td>
-        <td>当shape为(N,S)，S为不小于targetLengthstargetLengthstargetLengths中的最大值的值；或者shape为(SUM(targetLengths))，假设targets是未填充的而且在1维内级联的。当logProbs为2维时，N=1。</td>
+        <td>当shape为(N,S)，S为不小于targetLengths中的最大值的值；或者shape为(SUM(targetLengths))，假设targets是未填充的而且在1维内级联的。当logProbs为2维时，N=1。</td>
         <td>INT64、INT32、BOOL、FLOAT、FLOAT16</td>
         <td>ND</td>
         <td>-</td>
@@ -137,7 +137,7 @@ aclnnStatus aclnnCtcLoss(
         <td>blank</td>
         <td>输入</td>
         <td>表示空白标识。</td>
-        <td>数值必须小于C大于等于0</td>
+        <td>数值必须大于等于0且小于C。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>

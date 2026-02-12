@@ -84,7 +84,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
         <td>-</td>
         <td>FLOAT16、FLOAT、BFLOAT16</td>
         <td>ND</td>
-        <td>-</td>
+        <td>1-8</td>
         <td>√</td>
       </tr>
       <tr>

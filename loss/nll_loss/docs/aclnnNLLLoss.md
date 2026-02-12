@@ -32,9 +32,9 @@
   $$
   \ell(x, y) = \begin{cases}
       \sum_{n=1}^N \frac{1}{\sum_{n=1}^N w_{y_n}} l_n, &
-      \text{if reduction} = \text{`mean';}\\
+      \text{if reduction} = \text{`mean'}\\
       \sum_{n=1}^N l_n,  &
-      \text{if reduction} = \text{`sum'.}
+      \text{if reduction} = \text{`sum'}
   \end{cases}
   $$
 
@@ -126,8 +126,8 @@ aclnnStatus aclnnNLLLoss(
       <td>reduction</td>
       <td>输入</td>
       <td>表示要应用到输出的缩减。</td>
-      <td><ul>支持 0('none') | 1('mean') | 2('sum')。<li>'none'表示不应用缩减</li><li>'mean'表示输出的总和将除以输出中的元素数</li><li>'sum'表示输出将被求和</li></ul></td>
-      <td>-</td>
+      <td><ul>支持0('none')|1('mean')|2('sum')。<li>'none'表示不应用缩减</li><li>'mean'表示输出的总和将除以输出中的元素数</li><li>'sum'表示输出将被求和</li></ul></td>
+      <td>INT64</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -137,7 +137,7 @@ aclnnStatus aclnnNLLLoss(
       <td>输入</td>
       <td>表示一个被忽略且不影响输入梯度的目标值。
       </td>
-      <td>-</td>
+      <td>INT64</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -157,7 +157,7 @@ aclnnStatus aclnnNLLLoss(
       <td>totalWeightOut</td>
       <td>输出</td>
       <td>公式中的totalWeightOut。</td>
-      <td>在reduction为非0('none')下输出值有效，shape为(1,)。</td>
+      <td>在reduction为非0(非'none')下输出值有效，shape为(1,)。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>-</td>

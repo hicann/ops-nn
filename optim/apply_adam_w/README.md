@@ -193,4 +193,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_apply_adam_w](./examples/test_aclnn_apply_adam_w.cpp) | 通过[aclnnApplyAdamW](./docs/aclnnApplyAdamW.md)接口方式调用ApplyAdamW算子。 |
+| aclnn调用 | [test_aclnn_apply_adam_w](./examples/arch35/test_aclnn_apply_adam_w.cpp) | 通过[aclnnApplyAdamW](./docs/aclnnApplyAdamW.md)接口方式调用ApplyAdamW算子。 |

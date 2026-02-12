@@ -71,4 +71,5 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_mse_loss](./examples/test_aclnn_mes_loss.cpp) | 通过[aclnnMseLoss](./docs/aclnnMseLoss.md)接口方式调用MseLoss算子。 |
+| aclnn调用 | [test_aclnn_mse_loss](./examples/arch35/test_aclnn_mse_loss.cpp) | 通过[aclnnMseLoss](./docs/aclnnMseLoss.md)接口方式调用MseLoss算子。 |
+| aclnn调用 | [test_aclnn_mse_loss_out](./examples/arch35/test_aclnn_mse_loss_out.cpp) | 通过[aclnnMseLossOut](./docs/aclnnMseLossOut.md)接口方式调用MseLoss算子。 |

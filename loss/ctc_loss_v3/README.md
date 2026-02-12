@@ -113,4 +113,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口 | [test_aclnn_ctc_loss_v3](examples/test_aclnn_ctc_loss_v3.cpp) | 通过[aclnnCtcLossV3](docs/aclnnCtcLoss.md)接口方式调用CtclossV3算子。 |
+| aclnn接口 | [test_aclnn_ctc_loss_v3](examples/test_aclnn_ctc_loss_v3.cpp) | 通过[aclnnCtcLoss](../ctc_loss_v2/docs/aclnnCtcLoss.md)接口方式调用CtclossV3算子。 |

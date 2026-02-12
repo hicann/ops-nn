@@ -140,8 +140,8 @@ aclnnStatus aclnnNLLLossBackward(
         <td>reduction</td>
         <td>输入</td>
         <td>指定损失函数的计算方式。</td>
-        <td><ul>支持 0('none') | 1('mean') | 2('sum')。<li>'none'表示不应用缩减</li><li>'mean'表示输出的总和将除以输出中的元素数</li><li>'sum'表示输出将被求和</li></ul></td>
-        <td>-</td>
+        <td><ul>支持0('none')|1('mean')|2('sum')。<li>'none'表示不应用缩减</li><li>'mean'表示输出的总和将除以输出中的元素数</li><li>'sum'表示输出将被求和</li></ul></td>
+        <td>INT64</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -152,7 +152,7 @@ aclnnStatus aclnnNLLLossBackward(
          <td>指定一个被忽略且不影响输入梯度的目标值。
         </td>
         <td>-</td>
-        <td>-</td>
+        <td>INT64</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -164,7 +164,7 @@ aclnnStatus aclnnNLLLossBackward(
         <td>仅当reduction为mean时，totalWeight是通过target取相应位置的weight，然后去除掉ignoreIndex对应的weight，将剩下的weight求和；当reduction为其他值时，该参数默认不处理。</td>
         <td>数据类型与weight相同。</td>
         <td>ND</td>
-        <td>(1，)</td>
+        <td>(1,)</td>
         <td>-</td>
       </tr>
       <tr>
@@ -265,7 +265,7 @@ aclnnStatus aclnnNLLLossBackward(
     <tr>
       <td>workspaceSize</td>
       <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnNLLLossGetWorkspaceSize获取。</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnNLLLossBackwardGetWorkspaceSize获取。</td>
     </tr>
     <tr>
       <td>executor</td>

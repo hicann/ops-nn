@@ -93,7 +93,7 @@ aclnnStatus aclnnNLLLoss2dBackward(
         <td>target</td>
         <td>输入</td>
         <td>表示真实标签。</td>
-        <td><ul><li>公式中的y，shape为3维</li><li>target的第1维与self的第1维相等、target的第2维与self的第3维相等、target的第3维与self的第4维相等</li><li>其中每个元素的取值范围是[0, C - 1]</li></ul></td>
+        <td><ul><li>公式中的y，shape为3维</li><li>target的第0维、第1维、第2维的shape分别与self的第0维、第2维、第3维的shape一致</li><li>其中每个元素的取值范围是[0, C - 1]</li></ul></td>
         <td>INT64、UINT8、INT32</td>
         <td>ND</td>
         <td>-</td>
@@ -106,15 +106,15 @@ aclnnStatus aclnnNLLLoss2dBackward(
         <td>公式中的w，shape为(C,)。</td>
         <td>数据类型和self保持一致。</td>
         <td>ND</td>
-        <td>(C)</td>
+        <td>(C,)</td>
         <td>√</td>
       </tr>
       <tr>
         <td>reduction</td>
         <td>输入</td>
         <td>指定要应用到输出的缩减。</td>
-        <td><ul>支持 0('none') | 1('mean') | 2('sum')。<li>'none'表示不应用缩减</li><li>'mean'表示输出的总和将除以输出中的元素数</li><li>'sum'表示输出将被求和</li><li>当reduction为0时，要求target的shape与gradOutput的shape一致，否则返回false。</li></ul></td>
-        <td>-</td>
+        <td><ul>支持0('none')|1('mean')|2('sum')。<li>'none'表示不应用缩减</li><li>'mean'表示输出的总和将除以输出中的元素数</li><li>'sum'表示输出将被求和</li><li>当reduction为0时，要求target的shape与gradOutput的shape一致，否则返回false。</li></ul></td>
+        <td>INT64</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -125,7 +125,7 @@ aclnnStatus aclnnNLLLoss2dBackward(
          <td>指定一个被忽略且不影响输入梯度的目标值。
         </td>
         <td>-</td>
-        <td>-</td>
+        <td>INT64</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -137,7 +137,7 @@ aclnnStatus aclnnNLLLoss2dBackward(
         <td>仅当reduction为mean时，totalWeight是通过target取相应位置的weight，然后去除掉ignoreIndex对应的weight，将剩下的weight求和；当reduction为其他值时，该参数默认不处理。</td>
         <td>数据类型与weight相同。</td>
         <td>ND</td>
-        <td>(1，)</td>
+        <td>(1,)</td>
         <td>-</td>
       </tr>
       <tr>
@@ -253,7 +253,7 @@ aclnnStatus aclnnNLLLoss2dBackward(
     <tr>
       <td>workspaceSize</td>
       <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnNLLLossGetWorkspaceSize获取。</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnNLLLoss2dBackwardGetWorkspaceSize获取。</td>
     </tr>
     <tr>
       <td>executor</td>

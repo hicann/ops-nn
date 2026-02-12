@@ -20,7 +20,7 @@
 - 计算公式：
 
   $$
-  \ell(self, target)= L = \{l_{1},...,l_{n}\}^{T}, \ell_{n} = -  weight_{n}[target_{n}·log(self_{n}) + (1 - target_{n}·log(1-self_{n}))]
+  \ell(self, target)= L = \{l_{1},...,l_{n}\}^{T}, \ell_{n} = -  weight_{n}[target_{n}·log(self_{n}) + ((1 - target_{n})·log(1-self_{n}))]
   $$
 
   当reduction不为None时：

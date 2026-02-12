@@ -114,4 +114,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_ctc_loss_v2](./examples/test_aclnn_ctc_loss_v2.cpp) | 通过[aclnnCtcLoss](./docs/aclnnCtcLoss.md)接口方式调用CtcLossV2算子。    |
+| aclnn调用 | [test_aclnn_ctc_loss_v2](./examples/arch35/test_aclnn_ctc_loss_v2.cpp) | 通过[aclnnCtcLoss](./docs/aclnnCtcLoss.md)接口方式调用CtcLossV2算子。    |
