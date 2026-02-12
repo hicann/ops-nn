@@ -88,4 +88,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| 图模式调用  | [参考示例算子调用](../../../examples/add_example/examples/test_geir_add_example.cpp) | 通过[算子IR](op_graph/gemm_v2_proto.h)等方式调用GemmV2算子。 |
+| 图模式调用  | [test_geir_gemm_v2](./examples/test_geir_gemm_v2.cpp) | 通过[算子IR](op_graph/gemm_v2_proto.h)等方式调用GemmV2算子。 |

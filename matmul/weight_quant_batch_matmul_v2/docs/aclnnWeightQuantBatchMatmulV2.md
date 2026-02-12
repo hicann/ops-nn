@@ -360,7 +360,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
     - 当[数据格式](../../../docs/zh/context/数据格式.md)为ND时，输入shape需要为(batch, k, n)，其中batch表示矩阵的批次大小，支持0~4维，k表示单个batch矩阵第1维的大小，n表示单个batch矩阵的第2维的大小。
     - 当[数据格式](../../../docs/zh/context/数据格式.md)为FRACTAL_NZ时：
       - 输入shape需要为(batch, n, k)，其中batch表示矩阵的批次大小，支持0~4维，k表示单个batch矩阵第1维的大小，n表示单个batch矩阵的第2维的大小。
-      - 配合aclnnCalculateMatmulWeightSizeV2以及aclnnTransMatmulWeight完成输入Format从ND到FRACTAL_NZ的转换，[详情可参考样例](../../trans_mat_mul_weight/docs/aclnnCalculateMatmulWeightSizeV2.md)。
+      - 配合aclnnCalculateMatmulWeightSizeV2以及aclnnTransMatmulWeight完成输入Format从ND到FRACTAL_NZ的转换。
   - `antiquantScale`（aclTensor *, 计算输入）：数据类型支持FLOAT16，数据类型要求和输入`x`保持一致。
     对于不同伪量化算法模式，`antiquantScale`支持的shape如下:
     - pertensor[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(1,)或(1, 1)。

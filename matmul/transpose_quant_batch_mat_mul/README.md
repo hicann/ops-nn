@@ -14,7 +14,7 @@
 
 ## 功能说明
 
-- 算子功能：完成张量x1与张量x2量化的矩阵乘计算，支持K-C[量化模式](../../../docs/zh/context/量化介绍.md)。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的序列进行变更。permX1代表张量x1的转置序列，支持[1,0,2]，permX2代表张量x2的转置序列[0,1,2]，permY表示矩阵乘输出矩阵的转置序列，当前仅支持[1,0,2]，序列值为0的是batch维度，其余两个维度做矩阵乘法。x1_scale和x2_scale表示输出矩阵的量化系数；bias为预留参数，当前暂不支持，详细约束条件可见约束说明或者[aclnnTransposeQuantBatchMatMul](docs/aclnnTransposeQuantBatchMatMul.md)调用说明文档。
+- 算子功能：完成张量x1与张量x2量化的矩阵乘计算，支持K-C[量化模式](../../docs/zh/context/量化介绍.md)。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的序列进行变更。permX1代表张量x1的转置序列，支持[1,0,2]，permX2代表张量x2的转置序列[0,1,2]，permY表示矩阵乘输出矩阵的转置序列，当前仅支持[1,0,2]，序列值为0的是batch维度，其余两个维度做矩阵乘法。x1_scale和x2_scale表示输出矩阵的量化系数；bias为预留参数，当前暂不支持，详细约束条件可见约束说明或者[aclnnTransposeQuantBatchMatMul](docs/aclnnTransposeQuantBatchMatMul.md)调用说明文档。
 
 - 示例：
   假设x1的shape是[M, B, K]，x2的shape是[B, K, N]，x1_scale和x2_scale不为None，batchSplitFactor等于1时，计算输出out的shape是[M, B, N]。

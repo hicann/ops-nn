@@ -85,4 +85,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_batchmatmul](examples/test_aclnn_batchmatmul.cpp) | 通过<br>[aclnnAddbmm&aclnnInplaceAddbmm](./docs/aclnnAddbmm%26aclnnInplaceAddbmm.md)<br>[aclnnBaddbmm&aclnnInplaceBaddbmm](./docs/aclnnBaddbmm%26aclnnInplaceBaddbmm.md)<br>[aclnnBatchMatMul](docs/aclnnBatchMatMul.md)<br>[aclnnBatchMatMulWeightNz](docs/aclnnBatchMatMulWeightNz.md)<br>等方式调用BatchMatMulV3算子。 |
+| aclnn接口  | [test_aclnn_batchmatmul](examples/test_aclnn_batchmatmul.cpp) | 通过<br>[aclnnAddbmm&aclnnInplaceAddbmm](./docs/aclnnAddbmm&aclnnInplaceAddbmm.md)<br>[aclnnBaddbmm&aclnnInplaceBaddbmm](./docs/aclnnBaddbmm&aclnnInplaceBaddbmm.md)<br>[aclnnBatchMatMul](docs/aclnnBatchMatMul.md)<br>[aclnnBatchMatMulWeightNz](docs/aclnnBatchMatMulWeightNz.md)<br>等方式调用BatchMatMulV3算子。 |
