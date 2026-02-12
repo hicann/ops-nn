@@ -317,13 +317,13 @@ aclnnStatus aclnnConvDepthwise2d(
    </tr>
    <tr>
      <th scope="row">kernelSize 约束</th>
-     <td colspan="4">
+     <td colspan="2">
         kernelSize 数值为 weight 的 H、W 两维的大小。
      </td>
    </tr>
    <tr>
      <th scope="row">其他约束</th>
-     <td colspan="4">
+     <td colspan="2">
         self, weight, bias 中每一组 tensor 的每一维大小都应不大于 1000000。
      </td>
    </tr>
