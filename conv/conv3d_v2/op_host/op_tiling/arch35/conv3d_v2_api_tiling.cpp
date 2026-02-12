@@ -808,7 +808,7 @@ void Conv3dTiling::SetRoundMode(int8_t roundMode)
 void Conv3dTiling::SetShape(optiling::conv_ops_tiling::ConvAscendcTilingFlag flagInfo,
                             optiling::conv_ops_tiling::ConvAscendcShapesInfo convShapeInfo,
                             optiling::conv_ops_tiling::ConvOpsConstParams convOpsConstParams,
-                            optiling::conv_ops_tiling::BlockDimRes blockDimRes)
+                            optiling::conv_ops_tiling::NumBlocksRes numBlocksRes)
 {
     SetOrgWeightShape(static_cast<int64_t>(convShapeInfo.co), static_cast<int64_t>(convShapeInfo.kd),
                                        static_cast<int64_t>(convShapeInfo.kh), static_cast<int64_t>(convShapeInfo.kw));
@@ -820,16 +820,16 @@ void Conv3dTiling::SetShape(optiling::conv_ops_tiling::ConvAscendcTilingFlag fla
                                           static_cast<int64_t>(convShapeInfo.kh), static_cast<int64_t>(convShapeInfo.kw));
 
     uint64_t curCo = convShapeInfo.co;
-    int64_t singleCoreCo = ConvCeilDiv(ConvAlignB(curCo, convOpsConstParams.n0), blockDimRes.nDim);
-    int64_t singleCoreDo = ConvCeilDiv(convShapeInfo.dout, blockDimRes.doDim);
-    int64_t singleCoreBatch = ConvCeilDiv(convShapeInfo.batch, blockDimRes.batchDim);
+    int64_t singleCoreCo = ConvCeilDiv(ConvAlignB(curCo, convOpsConstParams.n0), numBlocksRes.nDim);
+    int64_t singleCoreDo = ConvCeilDiv(convShapeInfo.dout, numBlocksRes.doDim);
+    int64_t singleCoreBatch = ConvCeilDiv(convShapeInfo.batch, numBlocksRes.batchDim);
     int64_t singleCoreHo = 0;
     int64_t singleCoreMo = 0;
     if (flagInfo.mSplitModeFlag) {
-        singleCoreMo = ConvCeilDiv(ConvAlignB(convShapeInfo.ho * convShapeInfo.wo, convOpsConstParams.m0), blockDimRes.mDim);
+        singleCoreMo = ConvCeilDiv(ConvAlignB(convShapeInfo.ho * convShapeInfo.wo, convOpsConstParams.m0), numBlocksRes.mDim);
         SetSingleOutputShape(singleCoreCo, singleCoreDo, singleCoreMo, singleCoreBatch);
     } else {
-        singleCoreHo = ConvCeilDiv(convShapeInfo.ho, blockDimRes.hoDim);
+        singleCoreHo = ConvCeilDiv(convShapeInfo.ho, numBlocksRes.hoDim);
         SetSingleOutputShape(singleCoreCo, singleCoreDo, singleCoreHo,
             static_cast<int64_t>(convShapeInfo.wo), singleCoreBatch);
     }
@@ -840,10 +840,10 @@ int64_t Conv3dTiling::GetTilingData(optiling::conv_ops_tiling::ConvAscendcAttrIn
                                     optiling::conv_ops_tiling::ConvAscendcTilingFlag flagInfo,
                                     optiling::conv_ops_tiling::ConvAscendcShapesInfo convShapeInfo,
                                     optiling::conv_ops_tiling::ConvOpsConstParams convOpsConstParams,
-                                    optiling::conv_ops_tiling::BlockDimRes blockDimRes,
+                                    optiling::conv_ops_tiling::NumBlocksRes numBlocksRes,
                                     Ops::NN::Conv3dV2::Conv3DV2TilingData& tilingData)
 {
-    SetShape(flagInfo, convShapeInfo, convOpsConstParams, blockDimRes);
+    SetShape(flagInfo, convShapeInfo, convOpsConstParams, numBlocksRes);
     bool hf32TransModeEnable = false;
     bool isHF32 = (convAttrInfo.hf32Mode == 1);
     if (isHF32) {

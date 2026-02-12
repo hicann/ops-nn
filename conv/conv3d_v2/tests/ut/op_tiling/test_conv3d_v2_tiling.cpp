@@ -34,7 +34,7 @@ using Ops::NN::Conv3dTilingEngineApi::Conv3dTilingEngine;
 namespace {
 
 static Conv3dTilingEngine BuildEngineFromBase(const optiling::Conv3dOpsTiling::Conv3dBaseTiling &base);
-static optiling::Conv3dOpsTiling::BlockDimRes ComputeBlockDimViaEngine(
+static optiling::Conv3dOpsTiling::NumBlocksRes ComputeNumBlocksViaEngine(
     const optiling::Conv3dOpsTiling::Conv3dBaseTiling &base);
 static std::unique_ptr<Conv3dTilingEngine> MakeInitializedEngineForTest(uint32_t aicoreNum = 20,
                                                                         const char *socVersion = "Ascend910B");
@@ -81,7 +81,7 @@ struct Conv3DV2TilingTestParam {
     std::string dataFormat;
 
     // output of tiling
-    uint32_t blockDim = 0;
+    uint32_t numBlocks = 0;
     uint64_t tilingKey = 0;
     int32_t aicoreNum = 0;
 };
@@ -139,8 +139,8 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2AllDimEqualTo1)
     conv3dBT.attrInfo_.groupOpt = conv3dBT.attrInfo_.groups;
     conv3dBT.shapeInfo_.cinOpt = shapeInfo.cIn;
     conv3dBT.shapeInfo_.coutOpt = shapeInfo.cOut;
-    auto res = ComputeBlockDimViaEngine(conv3dBT);
-    optiling::Conv3dOpsTiling::BlockDimRes expectRes = {1, 1, 1, 1, 1, 1};
+    auto res = ComputeNumBlocksViaEngine(conv3dBT);
+    optiling::Conv3dOpsTiling::NumBlocksRes expectRes = {1, 1, 1, 1, 1, 1};
     ASSERT_EQ(res.batchDim, expectRes.batchDim);
     ASSERT_EQ(res.mDim, expectRes.mDim);
     ASSERT_EQ(res.nDim, expectRes.nDim);
@@ -185,8 +185,8 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2BatchDimEqualToAicoreNum)
     conv3dBT.attrInfo_.groupOpt = conv3dBT.attrInfo_.groups;
     conv3dBT.shapeInfo_.cinOpt = shapeInfo.cIn;
     conv3dBT.shapeInfo_.coutOpt = shapeInfo.cOut;
-    auto res = ComputeBlockDimViaEngine(conv3dBT);
-    optiling::Conv3dOpsTiling::BlockDimRes expectRes = {aicoreNum, 1, 1, 1, 1, 1};
+    auto res = ComputeNumBlocksViaEngine(conv3dBT);
+    optiling::Conv3dOpsTiling::NumBlocksRes expectRes = {aicoreNum, 1, 1, 1, 1, 1};
     ASSERT_EQ(res.batchDim, expectRes.batchDim);
     ASSERT_EQ(res.mDim, expectRes.mDim);
     ASSERT_EQ(res.nDim, expectRes.nDim);
@@ -232,7 +232,7 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2KB)
     conv3dBT.attrInfo_.groupOpt = conv3dBT.attrInfo_.groups;
     conv3dBT.shapeInfo_.cinOpt = shapeInfo.cIn;
     conv3dBT.shapeInfo_.coutOpt = shapeInfo.cOut;
-    conv3dBT.blockDimRes = ComputeBlockDimViaEngine(conv3dBT);
+    conv3dBT.numBlocksRes = ComputeNumBlocksViaEngine(conv3dBT);
 
     conv3dBT.tilingData_.conv3dApiTiling.groups = 1;
     conv3dBT.tilingData_.conv3dApiTiling.orgCi = 3;
@@ -318,8 +318,8 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2NdimEqualToAicoreNum)
     conv3dBT.attrInfo_.groupOpt = conv3dBT.attrInfo_.groups;
     conv3dBT.shapeInfo_.cinOpt = shapeInfo.cIn;
     conv3dBT.shapeInfo_.coutOpt = shapeInfo.cOut;
-    auto res = ComputeBlockDimViaEngine(conv3dBT);
-    optiling::Conv3dOpsTiling::BlockDimRes expectRes = {1, 1, aicoreNum, 1, 1, 1};
+    auto res = ComputeNumBlocksViaEngine(conv3dBT);
+    optiling::Conv3dOpsTiling::NumBlocksRes expectRes = {1, 1, aicoreNum, 1, 1, 1};
     ASSERT_EQ(res.batchDim, expectRes.batchDim);
     ASSERT_EQ(res.mDim, expectRes.mDim);
     ASSERT_EQ(res.nDim, expectRes.nDim);
@@ -364,8 +364,8 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2MdimEqualToAicoreNum)
     conv3dBT.attrInfo_.groupOpt = conv3dBT.attrInfo_.groups;
     conv3dBT.shapeInfo_.cinOpt = shapeInfo.cIn;
     conv3dBT.shapeInfo_.coutOpt = shapeInfo.cOut;
-    auto res = ComputeBlockDimViaEngine(conv3dBT);
-    optiling::Conv3dOpsTiling::BlockDimRes expectRes = {1, aicoreNum, 1, 1, 1, 1};
+    auto res = ComputeNumBlocksViaEngine(conv3dBT);
+    optiling::Conv3dOpsTiling::NumBlocksRes expectRes = {1, aicoreNum, 1, 1, 1, 1};
     ASSERT_EQ(res.batchDim, expectRes.batchDim);
     ASSERT_EQ(res.mDim, expectRes.mDim);
     ASSERT_EQ(res.nDim, expectRes.nDim);
@@ -410,8 +410,8 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2DodimEqualToAicoreNum)
     conv3dBT.attrInfo_.groupOpt = conv3dBT.attrInfo_.groups;
     conv3dBT.shapeInfo_.cinOpt = shapeInfo.cIn;
     conv3dBT.shapeInfo_.coutOpt = shapeInfo.cOut;
-    auto res = ComputeBlockDimViaEngine(conv3dBT);
-    optiling::Conv3dOpsTiling::BlockDimRes expectRes = {1, 1, 1, aicoreNum, 1, 1};
+    auto res = ComputeNumBlocksViaEngine(conv3dBT);
+    optiling::Conv3dOpsTiling::NumBlocksRes expectRes = {1, 1, 1, aicoreNum, 1, 1};
     ASSERT_EQ(res.batchDim, expectRes.batchDim);
     ASSERT_EQ(res.mDim, expectRes.mDim);
     ASSERT_EQ(res.nDim, expectRes.nDim);
@@ -444,7 +444,7 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2GetGroupOptSuccess)
     EXPECT_TRUE(res);
 }
 
-TEST_F(Conv3DV2TilingRuntime, TestConv3DV2BlockDimEqualToHoDim)
+TEST_F(Conv3DV2TilingRuntime, TestConv3DV2NumBlocksEqualToHoDim)
 {
     uint32_t aicoreNum = 20;
     auto holder = gert::TilingContextFaker()
@@ -483,8 +483,8 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2BlockDimEqualToHoDim)
     conv3dBT.shapeInfo_.coutOpt = shapeInfo.cOut;
     conv3dBT.outputOrder_ = 1;
 
-    auto res = ComputeBlockDimViaEngine(conv3dBT);
-    optiling::Conv3dOpsTiling::BlockDimRes expectRes = {1, static_cast<uint32_t>(shapeInfo.ho), 1, 1, 1, 1};
+    auto res = ComputeNumBlocksViaEngine(conv3dBT);
+    optiling::Conv3dOpsTiling::NumBlocksRes expectRes = {1, static_cast<uint32_t>(shapeInfo.ho), 1, 1, 1, 1};
     ASSERT_EQ(res.batchDim, expectRes.batchDim);
     ASSERT_EQ(res.mDim, expectRes.mDim);
     ASSERT_EQ(res.nDim, expectRes.nDim);
@@ -540,17 +540,17 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2InitOutputOrderMMode)
     uint64_t minL1LoadSize = engine.CalcMinL1LoadSize(0);
     ASSERT_LE(minL1LoadSize, opInfo.l1Size);
 
-    engine.blockDimRes_.batchDim = 1;
-    engine.blockDimRes_.mDim = 4;
-    engine.blockDimRes_.nDim = 1;
-    engine.blockDimRes_.doDim = 1;
-    engine.blockDimRes_.groupDim = 1;
+    engine.numBlocksRes_.batchDim = 1;
+    engine.numBlocksRes_.mDim = 4;
+    engine.numBlocksRes_.nDim = 1;
+    engine.numBlocksRes_.doDim = 1;
+    engine.numBlocksRes_.groupDim = 1;
     engine.SetSingleOutputShapeByMode();
     EXPECT_EQ(engine.conv3dApiTiling_.shapeInfo.singleCo, static_cast<int64_t>(shapeInfo.cOut));
     EXPECT_EQ(engine.conv3dApiTiling_.shapeInfo.singleDo, static_cast<int64_t>(shapeInfo.dOut));
     uint64_t expectedSingleM = optiling::Conv3dOpsTiling::CeilDiv(
         static_cast<uint64_t>(shapeInfo.ho * shapeInfo.wo),
-        static_cast<uint64_t>(engine.blockDimRes_.mDim));
+        static_cast<uint64_t>(engine.numBlocksRes_.mDim));
     EXPECT_EQ(engine.conv3dApiTiling_.shapeInfo.singleM, static_cast<uint64_t>(expectedSingleM));
 }
 
@@ -1239,7 +1239,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingPostTiling_BufferBounds)
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling baseFail(holderFail.GetContext<gert::TilingContext>());
     baseFail.tilingData_ = {};
-    baseFail.blockDimRes = {1, 1, 1, 1, 1, 0};
+    baseFail.numBlocksRes = {1, 1, 1, 1, 1, 0};
     EXPECT_EQ(baseFail.PostTiling(), ge::GRAPH_FAILED);
 
     // Success: tiling buffer large enough.
@@ -1266,7 +1266,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingPostTiling_BufferBounds)
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling baseOk(holderOk.GetContext<gert::TilingContext>());
     baseOk.tilingData_ = {};
-    baseOk.blockDimRes = {1, 1, 1, 1, 1, 0};
+    baseOk.numBlocksRes = {1, 1, 1, 1, 1, 0};
     EXPECT_EQ(baseOk.PostTiling(), ge::GRAPH_SUCCESS);
 }
 
@@ -1311,7 +1311,7 @@ static std::vector<std::pair<std::string, Ops::NN::AnyValue>> MakeConv3DV2Attrs(
 }
 
 // ---------------------------------------------------------------------------
-// BlockDimDecision helpers using Conv3dTilingEngine directly
+// NumBlocksDecision helpers using Conv3dTilingEngine directly
 // ---------------------------------------------------------------------------
 
 static Conv3dTilingEngine BuildEngineFromBase(const optiling::Conv3dOpsTiling::Conv3dBaseTiling &base)
@@ -1343,16 +1343,16 @@ static Conv3dTilingEngine BuildEngineFromBase(const optiling::Conv3dOpsTiling::C
     return engine;
 }
 
-static optiling::Conv3dOpsTiling::BlockDimRes ComputeBlockDimViaEngine(
+static optiling::Conv3dOpsTiling::NumBlocksRes ComputeNumBlocksViaEngine(
     const optiling::Conv3dOpsTiling::Conv3dBaseTiling &base)
 {
     auto engine = BuildEngineFromBase(base);
-    engine.GetBlockDimRange();
-    engine.GetBlockDimInit();
-    engine.CoreBlockDimDecision();
+    engine.GetNumBlocksRange();
+    engine.GetNumBlocksInit();
+    engine.CoreNumBlocksDecision();
 
-    optiling::Conv3dOpsTiling::BlockDimRes res;
-    engine.GetBlockDimDetail(res.batchDim, res.mDim, res.nDim, res.doDim, res.groupDim);
+    optiling::Conv3dOpsTiling::NumBlocksRes res;
+    engine.GetNumBlocksDetail(res.batchDim, res.mDim, res.nDim, res.doDim, res.groupDim);
     return res;
 }
 

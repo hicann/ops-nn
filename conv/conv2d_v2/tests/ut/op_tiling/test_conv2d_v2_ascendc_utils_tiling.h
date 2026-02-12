@@ -74,7 +74,7 @@ uint64_t ConvCeilDiv(uint64_t a, uint64_t b);
 
 void Conv2DCase(vector<uint64_t> fmShape, vector<uint64_t> weightShape,
                 vector<uint32_t> pads, vector<uint32_t> strides, vector<uint32_t> dilations,
-                vector<uint32_t> blockDims, std::vector<ConvDtype> dtypes,
+                vector<uint32_t> NumBlocks, std::vector<ConvDtype> dtypes,
                 std::vector<bool> flags,
                 std::vector<uint8_t> modes, uint32_t groups);
 void CheckValidTilingData(optiling::TConv2DTiling &tilingData,

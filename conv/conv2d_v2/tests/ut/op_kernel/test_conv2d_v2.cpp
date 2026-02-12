@@ -148,7 +148,7 @@ void SetTilingData(Conv2DTilingData* tiling, const std::vector<uint64_t>& inputS
 void TestSimpleKernel(const std::vector<uint64_t>& inputShape, const std::vector<uint64_t>& weightShape)
 {
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
-    const uint64_t blockDim = 1;
+    const uint64_t numBlocks = 1;
     const uint64_t groups = 1;
     std::vector<uint64_t> pads = {0, 0, 0, 0};
     std::vector<uint64_t> strides = {1, 1};
@@ -179,7 +179,7 @@ void TestSimpleKernel(const std::vector<uint64_t>& inputShape, const std::vector
         GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
             conv2dv2<0, 0, 0, 0, 0, 0, 0, 0, 0>(x, filter, bias, offset_w, y, workspace, tiling);
     };
-    ICPU_RUN_KF(conv2dv2_func, blockDim, input, weight, nullptr, nullptr, output, workspace, tiling);
+    ICPU_RUN_KF(conv2dv2_func, numBlocks, input, weight, nullptr, nullptr, output, workspace, tiling);
 
     AscendC::GmFree(input);
     AscendC::GmFree(weight);

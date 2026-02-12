@@ -104,7 +104,7 @@ uint64_t Conv3dV2BaseTilingKey::GetWeightTilingVal()
     uint32_t n0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.fMapDtype), MKN_N_IDX);
     uint64_t ci1 = CeilDiv(shapeInfo_.ci, k0);
     uint64_t weightKSize = ci1 * shapeInfo_.kd * shapeInfo_.kh * shapeInfo_.kw * k0;
-    uint64_t singleCoreNSize = AlignB(CeilDiv(shapeInfo_.co, blockDimRes_.nDim), n0);
+    uint64_t singleCoreNSize = AlignB(CeilDiv(shapeInfo_.co, numBlocksRes_.nDim), n0);
     if (tilingData_.conv3dApiTiling.kBL1 == weightKSize) {
         kBL1FullloadFlag = true;
     }

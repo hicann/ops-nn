@@ -57,7 +57,7 @@ public:
 
     __aicore__ inline void Process()
     {
-        if (!normalInit || blockIdx >= blockDim) [[unlikely]] {
+        if (!normalInit || blockIdx >= numBlocks) [[unlikely]] {
             return;
         }
         Conv3DV2KernelImpl();
@@ -70,7 +70,7 @@ protected:
         this->conv3dRunInfo = &(allTilingData->conv3dRunInfo);
         this->conv3dApiTiling = &(allTilingData->conv3dApiTiling);
 
-        blockDim = this->conv3dRunInfo->mDim * this->conv3dRunInfo->nDim * this->conv3dRunInfo->groupDim * this->conv3dRunInfo->doDim *
+        numBlocks = this->conv3dRunInfo->mDim * this->conv3dRunInfo->nDim * this->conv3dRunInfo->groupDim * this->conv3dRunInfo->doDim *
                    this->conv3dRunInfo->batchDim;
     }
 
@@ -279,7 +279,7 @@ protected:
     uint32_t blockIdx = GetBlockIdx();
     uint32_t subblocknum = GetSubBlockNum();
     uint32_t subblockIdx;
-    uint32_t blockDim;
+    uint32_t numBlocks;
 
     // Single core data
     uint64_t singleCoreBatch;

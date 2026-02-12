@@ -75,7 +75,7 @@ void CallSimpleKernel(
     const std::vector<uint32_t>& dimConfig)
 {
     AscendC::SetKernelMode(KernelMode::AIC_MODE);
-    const uint32_t blockDim = 24;
+    const uint32_t numBlocks = 24;
     const uint32_t groups = 1;
 
     std::vector<uint32_t> pad = {0, 0, 0, 0, 0, 0};
@@ -218,7 +218,7 @@ void CallSimpleKernel(
         ::conv3dv2<0, 0, 0, 0>(x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     };
     ICPU_RUN_KF(
-        Conv3dv2Kernel, blockDim, input, weight, nullptr, nullptr, nullptr, nullptr, output, workspace,
+        Conv3dv2Kernel, numBlocks, input, weight, nullptr, nullptr, nullptr, nullptr, output, workspace,
         (uint8_t*)(tilingDataFromBin));
 
     AscendC::GmFree(input);

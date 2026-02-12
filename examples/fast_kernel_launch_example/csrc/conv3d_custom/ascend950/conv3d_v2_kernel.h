@@ -69,6 +69,6 @@ void Conv3dv2Template(
     int8_t FmapTiling, int8_t WeightTiling, int8_t L1PingPong, int8_t L0PingPong,
     int8_t OutputOrder, int8_t IterOrder,
     const std::string& dtype,
-    int32_t blockDim, aclrtStream stream);
+    int32_t numBlocks, aclrtStream stream);
  
 #endif // CONV3D_V2_KERNEL_H

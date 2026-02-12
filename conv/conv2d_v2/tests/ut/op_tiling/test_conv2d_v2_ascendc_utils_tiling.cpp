@@ -338,7 +338,7 @@ uint64_t ConvAlignB(uint64_t a, uint64_t b)
 
 void Conv2DCase(vector<uint64_t> fmShape, vector<uint64_t> weightShape,
                 vector<uint32_t> pads, vector<uint32_t> strides, vector<uint32_t> dilations,
-                vector<uint32_t> blockDims, std::vector<ConvDtype> dtypes,
+                vector<uint32_t> NumBlocks, std::vector<ConvDtype> dtypes,
                 std::vector<bool> flags,
                 std::vector<uint8_t> modes,
                 uint32_t groups)
@@ -362,11 +362,11 @@ void Conv2DCase(vector<uint64_t> fmShape, vector<uint64_t> weightShape,
     uint32_t hoDim = 0;
     uint32_t moDim = 0;
     if (outputOrder == 1) {
-        moDim = blockDims[0];
+        moDim = NumBlocks[0];
     } else {
-        hoDim = blockDims[0];
+        hoDim = NumBlocks[0];
     }
-    uint32_t nDim = blockDims[1];
+    uint32_t nDim = NumBlocks[1];
 
     uint32_t padTop = pads[0];
     uint32_t padBottom = pads[1];

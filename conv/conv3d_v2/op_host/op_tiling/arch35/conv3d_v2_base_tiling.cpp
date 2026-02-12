@@ -177,7 +177,7 @@ ge::graphStatus Conv3dBaseTilingV2::GetShapeAttrsInfo()
         ParseQuantOffsetXLegal() !=ge::GRAPH_SUCCESS || ParseQuantRoundModeLegal() !=ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    optiling::conv_ops_tiling::InitblockDimConstParas(convOpsConstParams_, descInfo_, shapeInfo_);
+    optiling::conv_ops_tiling::InitNumBlocksConstParas(convOpsConstParams_, descInfo_, shapeInfo_);
     convBase_.ConvBaseInit(shapeInfo_, descInfo_, flagInfo_, context_);
     // hf32 judgement should after get dtype
     OP_LOGE_IF(!convBase_.GetConvParasHf32Mode(ATTR_ENABLE_HF32_INDEX, attrInfo_.hf32Mode), ge::GRAPH_FAILED,
@@ -293,12 +293,12 @@ ge::graphStatus Conv3dBaseTilingV2::DoOpTiling()
         }
     }
     if (flagInfo_.useTilingCache || flagInfo_.useTilingRepo) {
-        blockDimRes.batchDim = tilingData_.conv3dRunInfo.batchDim;
-        blockDimRes.nDim = tilingData_.conv3dRunInfo.nDim;
-        blockDimRes.mDim = tilingData_.conv3dRunInfo.hoDim;
-        blockDimRes.hoDim = tilingData_.conv3dRunInfo.hoDim;
-        blockDimRes.doDim = tilingData_.conv3dRunInfo.doDim;
-        blockDimRes.groupDim = tilingData_.conv3dRunInfo.groupDim;
+        numBlocksRes.batchDim = tilingData_.conv3dRunInfo.batchDim;
+        numBlocksRes.nDim = tilingData_.conv3dRunInfo.nDim;
+        numBlocksRes.mDim = tilingData_.conv3dRunInfo.hoDim;
+        numBlocksRes.hoDim = tilingData_.conv3dRunInfo.hoDim;
+        numBlocksRes.doDim = tilingData_.conv3dRunInfo.doDim;
+        numBlocksRes.groupDim = tilingData_.conv3dRunInfo.groupDim;
         if (SetTilingKey() != ge::GRAPH_SUCCESS) {
             return ge::GRAPH_FAILED;
         }
@@ -313,7 +313,7 @@ ge::graphStatus Conv3dBaseTilingV2::DoOpTiling()
         return ge::GRAPH_FAILED;
     }
 
-    BlockDimDecision();
+    NumBlocksDecision();
 
     if (GetConv3dOpsTiling() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
@@ -356,11 +356,11 @@ ge::graphStatus Conv3dBaseTilingV2::PostTiling()
     }
     context_->GetRawTilingData()->SetDataSize(sizeof(tilingData_));
     if (flagInfo_.mSplitModeFlag) {
-        context_->SetBlockDim(blockDimRes.batchDim * blockDimRes.doDim * blockDimRes.mDim * blockDimRes.nDim *
-            blockDimRes.groupDim);
+        context_->SetBlockDim(numBlocksRes.batchDim * numBlocksRes.doDim * numBlocksRes.mDim * numBlocksRes.nDim *
+            numBlocksRes.groupDim);
     } else {
-        context_->SetBlockDim(blockDimRes.batchDim * blockDimRes.doDim * blockDimRes.nDim * blockDimRes.hoDim *
-            blockDimRes.groupDim);
+        context_->SetBlockDim(numBlocksRes.batchDim * numBlocksRes.doDim * numBlocksRes.nDim * numBlocksRes.hoDim *
+            numBlocksRes.groupDim);
     }
     return ge::GRAPH_SUCCESS;
 }

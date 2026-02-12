@@ -140,9 +140,9 @@ print("Verification successful!")
     {
         auto z = add_meta(x, y);
         auto stream = c10_npu::getCurrentNPUStream().stream(false);
-        int64_t totalLength, blockDim, blockLength, tileSize;
+        int64_t totalLength, numBlocks, blockLength, tileSize;
         totalLength = x.numel();
-        std::tie(blockDim, blockLength, tileSize) = calc_tiling_params(totalLength);
+        std::tie(numBlocks, blockLength, tileSize) = calc_tiling_params(totalLength);
         auto x_ptr = (GM_ADDR)x.data_ptr();
         auto y_ptr = (GM_ADDR)y.data_ptr();
         auto z_ptr = (GM_ADDR)z.data_ptr();
@@ -152,15 +152,15 @@ print("Verification successful!")
                 // 根据不同的数据类型，调用不同的NPU Kernel
                 AT_DISPATCH_CASE(torch::kFloat32, [&] {
                     using scalar_t = float;
-                    add_kernel<scalar_t><<<blockDim, nullptr, stream>>>(x_ptr, y_ptr, z_ptr,     totalLength, blockLength, tileSize);
+                    add_kernel<scalar_t><<<numBlocks, nullptr, stream>>>(x_ptr, y_ptr, z_ptr,     totalLength, blockLength, tileSize);
                 })
                 AT_DISPATCH_CASE(torch::kFloat16, [&] {
                     using scalar_t = half;
-                    add_kernel<scalar_t><<<blockDim, nullptr, stream>>>(x_ptr, y_ptr, z_ptr,     totalLength, blockLength, tileSize);
+                    add_kernel<scalar_t><<<numBlocks, nullptr, stream>>>(x_ptr, y_ptr, z_ptr,     totalLength, blockLength, tileSize);
                 })
                 AT_DISPATCH_CASE(torch::kInt32, [&] {
                     using scalar_t = int32_t;
-                    add_kernel<scalar_t><<<blockDim, nullptr, stream>>>(x_ptr, y_ptr, z_ptr,     totalLength, blockLength, tileSize);
+                    add_kernel<scalar_t><<<numBlocks, nullptr, stream>>>(x_ptr, y_ptr, z_ptr,     totalLength, blockLength, tileSize);
                 })
             );
             return 0;

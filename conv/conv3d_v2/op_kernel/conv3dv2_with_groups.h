@@ -38,7 +38,7 @@ public:
 
     __aicore__ inline void Process()
     {
-        if (!this->normalInit || this->blockIdx > this->blockDim) [[unlikely]] {
+        if (!this->normalInit || this->blockIdx > this->numBlocks) [[unlikely]] {
             return;
         }
         Conv3DV2KernelImpl();

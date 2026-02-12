@@ -172,8 +172,8 @@ private:
     Conv3DTilingFlag flagInfo_;
     Conv3DOrignalFormat originalFormat_;
 
-    // blockdim decision
-    BlockDimRes blockDimRes;
+    // numblocks decision
+    NumBlocksRes numBlocksRes;
 
     bool useTilingRepo_ = false;
     bool isPointWise = false;

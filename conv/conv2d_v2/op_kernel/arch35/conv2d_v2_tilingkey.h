@@ -416,7 +416,7 @@ ASCENDC_TPL_UINT_SEL(WeightUbTrans, ASCENDC_TPL_UI_LIST,                        
 ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST,                                                              \
     CONV_FMAP_LOAD3D_MODE),                                                                                          \
 ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_INNER_BATCH_SINGLE)                                                                                         \
+    CONV_INNER_BATCH_SINGLE),                                                                                         \
 ASCENDC_TPL_UINT_SEL(DisContinuous, ASCENDC_TPL_UI_LIST,                                                             \
     CONV_DIS_CONTINUOUS_CLOSE)
 

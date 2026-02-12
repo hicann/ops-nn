@@ -393,11 +393,11 @@ ge::graphStatus Conv3dBaseTiling::DoOpTiling()
     // Path 1: Try to get tiling from AOE knowledge repository
     if (GetTilingFromRepo()) {
         OP_LOGD(context_->GetNodeName(), "Conv3D AscendC: get tiling from knowledge_tiling.");
-        blockDimRes.batchDim = tilingData_.conv3dRunInfo.batchDim;
-        blockDimRes.nDim = tilingData_.conv3dRunInfo.nDim;
-        blockDimRes.mDim = tilingData_.conv3dRunInfo.mDim;
-        blockDimRes.doDim = tilingData_.conv3dRunInfo.doDim;
-        blockDimRes.groupDim = tilingData_.conv3dRunInfo.groupDim;
+        numBlocksRes.batchDim = tilingData_.conv3dRunInfo.batchDim;
+        numBlocksRes.nDim = tilingData_.conv3dRunInfo.nDim;
+        numBlocksRes.mDim = tilingData_.conv3dRunInfo.mDim;
+        numBlocksRes.doDim = tilingData_.conv3dRunInfo.doDim;
+        numBlocksRes.groupDim = tilingData_.conv3dRunInfo.groupDim;
 
         // Align output order decision with master behavior
         if (!engine_->InitOutputOrder()) {
@@ -425,18 +425,18 @@ ge::graphStatus Conv3dBaseTiling::DoOpTiling()
     // Path 2: Use Engine for complete tiling calculation
     OP_LOGD(context_->GetNodeName(), "Conv3D AscendC: get tiling from fast_tiling.");
 
-    // Engine performs: CheckAllParams() + ComputeBlockDim() + GetConv3dApiTiling()
+    // Engine performs: CheckAllParams() + ComputeNumBlocks() + GetConv3dApiTiling()
     if (!engine_->GetConv3DV2TilingData(tilingData_)) {
         OP_LOGE(context_->GetNodeName(), "Conv3D AscendC: Engine GetConv3DV2TilingData failed.");
         return ge::GRAPH_FAILED;
     }
 
-    // Sync BlockDim results from Engine to BaseTiling
-    blockDimRes.batchDim = tilingData_.conv3dRunInfo.batchDim;
-    blockDimRes.mDim = tilingData_.conv3dRunInfo.mDim;
-    blockDimRes.nDim = tilingData_.conv3dRunInfo.nDim;
-    blockDimRes.doDim = tilingData_.conv3dRunInfo.doDim;
-    blockDimRes.groupDim = tilingData_.conv3dRunInfo.groupDim;
+    // Sync NumBlocks results from Engine to BaseTiling
+    numBlocksRes.batchDim = tilingData_.conv3dRunInfo.batchDim;
+    numBlocksRes.mDim = tilingData_.conv3dRunInfo.mDim;
+    numBlocksRes.nDim = tilingData_.conv3dRunInfo.nDim;
+    numBlocksRes.doDim = tilingData_.conv3dRunInfo.doDim;
+    numBlocksRes.groupDim = tilingData_.conv3dRunInfo.groupDim;
 
     // Sync outputOrder for TilingKey calculation
     outputOrder_ = tilingData_.conv3dApiTiling.outputOrder;
@@ -700,7 +700,7 @@ void Conv3dBaseTiling::TranslateRunInfo(std::shared_ptr<tuningtiling::Conv3DTunn
 
 void Conv3dBaseTiling::SetAdditionalTilingInfo()
 {
-    uint64_t singleCoreGroupOpt = CeilDiv(attrInfo_.groupOpt, blockDimRes.groupDim);
+    uint64_t singleCoreGroupOpt = CeilDiv(attrInfo_.groupOpt, numBlocksRes.groupDim);
     uint32_t k0 = static_cast<uint32_t>(g_cubeMknMap.GetMKN(g_dtypeMap[descInfo_.fMapDtype], MKN_K_IDX));
     uint64_t n0 = static_cast<uint64_t>(g_cubeMknMap.GetMKN(g_dtypeMap[descInfo_.fMapDtype], MKN_N_IDX));
     uint64_t singleCi1 = CeilDiv(shapeInfo_.cinOpt, k0);
@@ -775,8 +775,8 @@ ge::graphStatus Conv3dBaseTiling::GetWorkspaceSize()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     size_t wssize = MIN_WORKSPACE_SIZE;
     if (flagInfo_.hasScale) {
-        wssize += blockDimRes.batchDim * blockDimRes.nDim * blockDimRes.mDim *
-                blockDimRes.doDim * blockDimRes.groupDim * WORKSPACE_NUM *
+        wssize += numBlocksRes.batchDim * numBlocksRes.nDim * numBlocksRes.mDim *
+                numBlocksRes.doDim * numBlocksRes.groupDim * WORKSPACE_NUM *
                 tilingData_.conv3dApiTiling.nL0 * tilingData_.conv3dApiTiling.mL0 *
                 Conv3dApiTiling::g_dtypeSizeTab.at(engine_->conv3dApiTiling_.cubeInfo.madType);
     }
@@ -801,8 +801,8 @@ ge::graphStatus Conv3dBaseTiling::PostTiling()
         return ge::GRAPH_FAILED;
     }
     context_->GetRawTilingData()->SetDataSize(sizeof(tilingData_));
-    context_->SetBlockDim(blockDimRes.batchDim * blockDimRes.nDim * blockDimRes.mDim *
-                          blockDimRes.doDim * blockDimRes.groupDim);
+    context_->SetBlockDim(numBlocksRes.batchDim * numBlocksRes.nDim * numBlocksRes.mDim *
+                          numBlocksRes.doDim * numBlocksRes.groupDim);
 
     return ge::GRAPH_SUCCESS;
 }

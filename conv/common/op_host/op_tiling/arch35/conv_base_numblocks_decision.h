@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file conv_base_blockdim_decision.h
+ * \file conv_base_numblocks_decision.h
  * \brief
  */
 #ifndef OPS_BUILT_IN_OP_TILING_RUNTIME_CONV_BASE_BLOCK_DIM_DECISION_H
@@ -30,8 +30,8 @@ uint64_t ConvInferWiL1(uint64_t inputWoL1, uint64_t wi, uint64_t singlekW, uint3
 int64_t ConvComputeHo(int64_t hi, int64_t hk, int64_t padTop, int64_t padBottom, int64_t dilationH, int64_t strideH);
 int64_t ConvComputeWo(int64_t wi, int64_t wk, int64_t padLeft, int64_t padRight, int64_t dilationW, int64_t strideW);
 int64_t ConvComputeDo(int64_t di, int64_t dk, int64_t padHead, int64_t padTail, int64_t dilationD, int64_t strideD);
-void ConvBlockDimFactorMix(uint32_t orgDim, vector<uint32_t> &inputRange, const vector<uint32_t> &mixRange);
-void InitblockDimConstParas(ConvOpsConstParams& convOpsConstParams,
+void ConvNumBlocksFactorMix(uint32_t orgDim, vector<uint32_t> &inputRange, const vector<uint32_t> &mixRange);
+void InitNumBlocksConstParas(ConvOpsConstParams& convOpsConstParams,
                             const ConvAscendcDescInfo& descInfo, const ConvAscendcShapesInfo& shapeInfo);
 
 class __attribute__((visibility("default"))) ConvBaseDeci {
@@ -39,30 +39,30 @@ public:
     ConvBaseDeci(){};
     void SetMKN(uint32_t m0, uint32_t k0, uint32_t n0);
     void SetAiCoreNum(uint32_t aicoreNum);
-    ge::graphStatus GetBlockDimInfo(ConvAscendcTilingInfo& tilingInfo);
+    ge::graphStatus GetNumBlocksInfo(ConvAscendcTilingInfo& tilingInfo);
     void ConvBaseInitAttrInfo(const ConvAscendcAttrInfo& attrInfo);
     void GetConvBaseCoreInfo(ConvOpsConstParams& convOpsConstParams);
     void ConvBaseInitNodeInfo (const string& nodeName, const string& nodeType);
-    void InitblockDimConstParas();
+    void InitNumBlocksConstParas();
     bool CheckInstrLimitsHWmode();
     bool CheckInstrLimitsMmode();
     uint64_t CalcMinUsedL1SizeInMsplitMode(uint64_t kAL1min, uint64_t kBL1min);
     uint64_t CalcMinUsedL1SizeInHWsplitMode(uint64_t kAL1min, uint64_t kBL1min, uint64_t wiAL1min);
-    BlockDimRes BlockDimDecisionMsplitMode();
-    BlockDimRes BlockDimDecisionHWsplitMode();
+    NumBlocksRes NumBlocksDecisionMsplitMode();
+    NumBlocksRes NumBlocksDecisionHWsplitMode();
     ge::graphStatus CheckL1SizeLimitsInMSplitMode();
     ge::graphStatus CheckL1SizeLimitsInHWsplitMode();
-    int32_t BlockDimDecision(BlockDimRes& blockDimRes);
+    int32_t NumBlocksDecision(NumBlocksRes& numBlocksRes);
 private:
     void SetTilingInfo(ConvAscendcTilingInfo& tilingInfo);
     void ConvBaseInit(const ConvAscendcShapesInfo& shapeInfo,
                       const ConvAscendcDescInfo& descInfo, const ConvAscendcTilingFlag& flagInfo);
     void ConvBaseInitPlatformInfo (const ConvAscendcPlatformInfo& platformInfo);
-    void GetBlockDimRangeCommon();
-    void GetBlockDimRangeMsplitMode();
-    void GetBlockDimInitMsplitMode();
-    void CoreBlockDimDecisionMsplitMode();
-    void BlockDimDecisionBackTrackMsplitMode(const vector<vector<uint32_t>> &inputRanges,
+    void GetNumBlocksRangeCommon();
+    void GetNumBlocksRangeMsplitMode();
+    void GetNumBlocksInitMsplitMode();
+    void CoreNumBlocksDecisionMsplitMode();
+    void NumBlocksDecisionBackTrackMsplitMode(const vector<vector<uint32_t>> &inputRanges,
                                              uint32_t rangeIdx, vector<uint32_t> &record);
     uint64_t CalcTotalCostMsplitMode(uint32_t batchDim, uint32_t mDim,
                                      uint32_t nDim, uint32_t doDim, uint32_t groupDim);
@@ -71,25 +71,25 @@ private:
     bool CmpCoreUtilizeMsplitMode(uint32_t batchDim, uint32_t hoDim, uint32_t nDim, uint32_t doDim, uint32_t groupDim);
     bool CmpCoreUtilizeHWsplitMode(const vector<uint32_t> &record);
     bool SkipScaleBiasL1Size();
-    uint64_t CalcCostHWsplitMode(const BlockDimRes &blockDimRes, const uint64_t ci1, const uint64_t ci0,
+    uint64_t CalcCostHWsplitMode(const NumBlocksRes &numBlocksRes, const uint64_t ci1, const uint64_t ci0,
                                  const uint64_t co1);
-    uint64_t CalcTotalCostHWsplitMode(const BlockDimRes &blockDimRes);
+    uint64_t CalcTotalCostHWsplitMode(const NumBlocksRes &numBlocksRes);
     void SeperateHoRangeHWsplitMode();
-    void GetBlockDimRangeHWsplitMode();
-    void GetBlockDimInitHWsplitMode();
-    void SetBlockDimHWsplitMode(const vector<uint32_t> &record, const uint64_t curCost,
-                                BlockDimRes &blockDimRes) const;
-    void SetBlockDimMsplitMode(const vector<uint32_t> &record, uint64_t curCost);
-    void BlockDimDecisionBackTrackHWsplitMode(const vector<vector<uint32_t>> &inputRanges,
+    void GetNumBlocksRangeHWsplitMode();
+    void GetNumBlocksInitHWsplitMode();
+    void SetNumBlocksHWsplitMode(const vector<uint32_t> &record, const uint64_t curCost,
+                                NumBlocksRes &numBlocksRes) const;
+    void SetNumBlocksMsplitMode(const vector<uint32_t> &record, uint64_t curCost);
+    void NumBlocksDecisionBackTrackHWsplitMode(const vector<vector<uint32_t>> &inputRanges,
                                               uint32_t rangeIdx, vector<uint32_t> &record);
-    void CoreBlockDimDecisionHWsplitMode();
+    void CoreNumBlocksDecisionHWsplitMode();
     void CheckCoreUsedupHWsplitMode();
 
     uint64_t GetMinBurstNum();
     uint32_t GetWeightBandWidthCoeff();
 
-    ge::graphStatus SelectBlockDimMode();
-    void GetBlockDimRes();
+    ge::graphStatus SelectNumBlocksMode();
+    void GetNumBlocksRes();
 public:
     ConvAscendcShapesInfo shapeInfo_;
     ConvAscendcAttrInfo attrInfo_;
@@ -108,9 +108,9 @@ public:
     uint32_t m0_ = 1;
     uint32_t k0_ = 1;
     uint32_t n0_ = 1;
-    BlockDimRes blockDimRes_;
-    BlockDimRange blockDimRanges_;
-    vector<uint32_t> blockDimInit_;
+    NumBlocksRes numBlocksRes_;
+    NumBlocksRange numBlocksRanges_;
+    vector<uint32_t> numBlocksInit_;
     ConvOpsConstParams convOpsConstParams_;
 };
 }

@@ -64,7 +64,7 @@ protected:
     ge::graphStatus ParseAndCheckInfo();
     ge::graphStatus Conv2DInfoInitAndCheck();
 
-    void SetBlockDimRes();
+    void SetNumBlocksRes();
     bool GetTilingFromRepo();
     bool QueryTilingBank(std::string socHardWareVersion, uint32_t aicoreNum);
     bool TranslateRepoTiling(tuningtiling::TuningTilingDefPtr &tuningTiling);
@@ -129,10 +129,10 @@ private:
     ConvOpsConstParams convOpsConstParams_;
     conv_tiling::PlatformInfo apiInputPlatformInfo;
     ConvParamInfo paramInfo_;
-    // blockdim decision
-    BlockDimRange blockDimRanges;
-    vector<uint32_t> blockDimInit;
-    BlockDimRes blockDimRes;
+    // NumBlocks decision
+    NumBlocksRange numBlocksRanges;
+    vector<uint32_t> numBlocksInit;
+    NumBlocksRes numBlocksRes;
     bool useTilingRepo_ = false;
     ConvBase convBase_;
 

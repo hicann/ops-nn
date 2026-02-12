@@ -18,7 +18,7 @@
 #include "tiling/conv/conv3d/conv3d_tiling.h"
 #include "platform/platform_info.h"
 #include "../../../op_host/op_tiling/arch35/conv3d_v2_api_tiling.h"
-#include "../../../../common/op_host/op_tiling/arch35/conv_base_blockdim_decision.h"
+#include "../../../../common/op_host/op_tiling/arch35/conv_base_numblocks_decision.h"
 #include "../../../../common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_HWmode.h"
 #include "../../../../common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_Mmode.h"
 
@@ -49,7 +49,7 @@ protected:
 
 TEST_F(TestConv3dV2Tiling, Demo_api_tiling)
 {
-    static uint32_t g_blockDim = 1;
+    static uint32_t g_numBlocks = 1;
     optiling::conv_ops_tiling::ConvAscendcTilingInfo tilingInfo {};
     tilingInfo.shapeInfo.batch  = static_cast<uint64_t>(1);
     tilingInfo.shapeInfo.ci     = static_cast<uint64_t>(4);
@@ -106,14 +106,14 @@ TEST_F(TestConv3dV2Tiling, Demo_api_tiling)
     tilingInfo.nodeInfo.nodeName = "conv3d_v2";
     tilingInfo.nodeInfo.nodeType = "conv3d_v2";
 
-    tilingInfo.blockDimRes.batchDim = 1;
-    tilingInfo.blockDimRes.mDim = 1;
-    tilingInfo.blockDimRes.nDim = 4;
-    tilingInfo.blockDimRes.doDim = 8;
-    tilingInfo.blockDimRes.hoDim = 1;
-    tilingInfo.blockDimRes.woDim = 1;
-    tilingInfo.blockDimRes.groupDim = 1;
-    tilingInfo.blockDimRes.minCost = 7008;
+    tilingInfo.numBlocksRes.batchDim = 1;
+    tilingInfo.numBlocksRes.mDim = 1;
+    tilingInfo.numBlocksRes.nDim = 4;
+    tilingInfo.numBlocksRes.doDim = 8;
+    tilingInfo.numBlocksRes.hoDim = 1;
+    tilingInfo.numBlocksRes.woDim = 1;
+    tilingInfo.numBlocksRes.groupDim = 1;
+    tilingInfo.numBlocksRes.minCost = 7008;
 
     // Init tilingData
     Ops::NN::Conv3dV2::Conv3DV2TilingData tilingData;
@@ -171,7 +171,7 @@ TEST_F(TestConv3dV2Tiling, Demo_api_tiling)
     tilingInfo.convOpsConstParams.co1 = optiling::conv_ops_tiling::ConvCeilDiv(tilingInfo.shapeInfo.co, tilingInfo.convOpsConstParams.n0);
     conv_tiling::Conv3dTiling conv3dApiTiling(platform);
 
-    EXPECT_EQ(conv3dApiTiling.GetTilingData(tilingInfo.attrInfo, tilingInfo.descInfo, tilingInfo.flagInfo, tilingInfo.shapeInfo, tilingInfo.convOpsConstParams, tilingInfo.blockDimRes, tilingData), 0);
+    EXPECT_EQ(conv3dApiTiling.GetTilingData(tilingInfo.attrInfo, tilingInfo.descInfo, tilingInfo.flagInfo, tilingInfo.shapeInfo, tilingInfo.convOpsConstParams, tilingInfo.numBlocksRes, tilingData), 0);
 }
 
 TEST_F(TestConv3dV2Tiling, L0Range_cout_prime)

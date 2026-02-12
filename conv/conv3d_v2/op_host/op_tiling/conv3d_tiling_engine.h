@@ -84,10 +84,10 @@ public:
 
     bool isPointWise = false;
 
-    optiling::Conv3dOpsTiling::BlockDimRange blockDimRanges_;
-    optiling::Conv3dOpsTiling::BlockDimConstParas blockDimConst_;
-    std::vector<uint32_t> blockDimInit_;
-    optiling::Conv3dOpsTiling::BlockDimRes blockDimRes_;
+    optiling::Conv3dOpsTiling::NumBlocksRange numBlocksRanges_;
+    optiling::Conv3dOpsTiling::NumBlocksConstParas numBlocksConst_;
+    std::vector<uint32_t> numBlocksInit_;
+    optiling::Conv3dOpsTiling::NumBlocksRes numBlocksRes_;
 
     Conv3dApiTiling::Conv3dTiling conv3dApiTiling_;
 
@@ -114,8 +114,8 @@ public:
     void SetHF32(bool enable);
 
     bool GetConv3DV2TilingData(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingData);
-    uint32_t GetBlockDim() const;
-    void GetBlockDimDetail(uint32_t &batchDim, uint32_t &mDim, uint32_t &nDim,
+    uint32_t GetNumBlocks() const;
+    void GetNumBlocksDetail(uint32_t &batchDim, uint32_t &mDim, uint32_t &nDim,
                            uint32_t &doDim, uint32_t &groupDim) const;
 
     void PrintOpTilingData(const Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingData) const;
@@ -124,24 +124,24 @@ public:
     void PrintApiTilingDataScalarInfo(const Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingData) const;
 
     // Decision pipeline pieces
-    void GetBlockDimRange();
-    void GetBlockDimInit();
-    void BlockDimDecision();
-    void CoreBlockDimDecision();
-    void BlockDimDecisionBackTrack(const std::vector<std::vector<uint32_t>> &inputRanges,
+    void GetNumBlocksRange();
+    void GetNumBlocksInit();
+    void NumBlocksDecision();
+    void CoreNumBlocksDecision();
+    void NumBlocksDecisionBackTrack(const std::vector<std::vector<uint32_t>> &inputRanges,
                                    uint32_t rangeIdx,
                                    std::vector<uint32_t> &record);
     uint64_t CalcTotalCost(uint32_t batchDim, uint32_t mDim, uint32_t nDim,
                            uint32_t doDim, uint32_t groupDim);
-    void BlockDimFactorMix(uint32_t orgDim, std::vector<uint32_t> &inputRange,
+    void NumBlocksFactorMix(uint32_t orgDim, std::vector<uint32_t> &inputRange,
                            const std::vector<uint32_t> &mixRange);
-    void BlockDimRangesFilter(uint32_t orgDim, std::vector<uint32_t> &inputRange);
-    void GetBlockDimRangeforGroupRange(std::vector<uint32_t> &groupRange);
+    void NumBlocksRangesFilter(uint32_t orgDim, std::vector<uint32_t> &inputRange);
+    void GetNumBlocksRangeforGroupRange(std::vector<uint32_t> &groupRange);
     void GetConv3DRunInfo(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingdata);
 
     // Checks and computations (return bool for success/failure)
     bool GetGroupConvOpt();
-    bool ComputeBlockDim();
+    bool ComputeNumBlocks();
     bool ComputeApiTiling(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingdata);
     bool GetConv3dApiTiling(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingdata);
     void SetSingleOutputShapeByMode();

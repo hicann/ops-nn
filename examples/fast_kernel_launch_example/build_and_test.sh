@@ -30,7 +30,7 @@ if [ -z "$NPU_ARCH" ]; then
 fi
 echo "Running tests for NPU architecture: ${NPU_ARCH}"
 echo "Running tests..."
-if [ "$NPU_ARCH" = "Ascend950" ]; then
+if [ "$NPU_ARCH" = "ascend950" ]; then
     pytest tests/conv3d_custom/ascend950 -v -s
 else
     pytest tests/conv3d_custom/ascend910b -v -s

@@ -55,10 +55,10 @@ std::tuple<int64_t, int64_t, int64_t> calc_tiling_params(int64_t totalLength)
     ascendcPlatform->GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     int64_t coreNum = ascendcPlatform->GetCoreNumAiv();
     TORCH_CHECK(coreNum > 0, "coreNum must be positive.");
-    int64_t blockDim = std::min(coreNum, (totalLength + MIN_ELEMS_PER_CORE - 1) / MIN_ELEMS_PER_CORE);
-    int64_t blockLength = (totalLength + blockDim - 1) / blockDim;
+    int64_t numBlocks = std::min(coreNum, (totalLength + MIN_ELEMS_PER_CORE - 1) / MIN_ELEMS_PER_CORE);
+    int64_t blockLength = (totalLength + numBlocks - 1) / numBlocks;
     int64_t tileSize = ubSize / PIPELINE_DEPTH / BUFFER_NUM;
-    return std::make_tuple(blockDim, blockLength, tileSize);
+    return std::make_tuple(numBlocks, blockLength, tileSize);
 }
 
 template <typename T>
@@ -148,9 +148,9 @@ torch::Tensor add_npu(const torch::Tensor &x, const torch::Tensor &y)
 {
     auto z = add_meta(x, y);
     auto stream = c10_npu::getCurrentNPUStream().stream(false);
-    int64_t totalLength, blockDim, blockLength, tileSize;
+    int64_t totalLength, numBlocks, blockLength, tileSize;
     totalLength = x.numel();
-    std::tie(blockDim, blockLength, tileSize) = calc_tiling_params(totalLength);
+    std::tie(numBlocks, blockLength, tileSize) = calc_tiling_params(totalLength);
     auto x_ptr = (GM_ADDR)x.data_ptr();
     auto y_ptr = (GM_ADDR)y.data_ptr();
     auto z_ptr = (GM_ADDR)z.data_ptr();
@@ -159,15 +159,15 @@ torch::Tensor add_npu(const torch::Tensor &x, const torch::Tensor &y)
             x.scalar_type(), "add_npu",
             AT_DISPATCH_CASE(torch::kFloat32, [&] {
                 using scalar_t = float;
-                add_kernel<scalar_t><<<blockDim, nullptr, stream>>>(x_ptr, y_ptr, z_ptr, totalLength, blockLength, tileSize);
+                add_kernel<scalar_t><<<numBlocks, nullptr, stream>>>(x_ptr, y_ptr, z_ptr, totalLength, blockLength, tileSize);
             })
             AT_DISPATCH_CASE(torch::kFloat16, [&] {
                 using scalar_t = half;
-                add_kernel<scalar_t><<<blockDim, nullptr, stream>>>(x_ptr, y_ptr, z_ptr, totalLength, blockLength, tileSize);
+                add_kernel<scalar_t><<<numBlocks, nullptr, stream>>>(x_ptr, y_ptr, z_ptr, totalLength, blockLength, tileSize);
             })
             AT_DISPATCH_CASE(torch::kInt32, [&] {
                 using scalar_t = int32_t;
-                add_kernel<scalar_t><<<blockDim, nullptr, stream>>>(x_ptr, y_ptr, z_ptr, totalLength, blockLength, tileSize);
+                add_kernel<scalar_t><<<numBlocks, nullptr, stream>>>(x_ptr, y_ptr, z_ptr, totalLength, blockLength, tileSize);
             })
         );
         return 0;

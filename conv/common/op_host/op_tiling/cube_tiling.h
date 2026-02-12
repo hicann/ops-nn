@@ -34,7 +34,7 @@ struct CubeTilingCommonParseInfo {
     std::vector<std::vector<std::string>> customVarsList;
     std::vector<std::vector<int64_t>> defaultRangeList;
     std::vector<std::vector<int64_t>> tilingRangeList;
-    std::vector<int32_t> blockDimList;
+    std::vector<int32_t> numBlocksList;
     std::vector<std::vector<int32_t>> repoSeedsList;
     std::vector<std::vector<int64_t>> repoRangeList;
     std::vector<std::vector<int64_t>> costRangeList;

@@ -11,7 +11,7 @@
 
 /*!
  * \file test_conv3d_tiling_engine.cpp
- * \brief Unit tests for Conv3dTilingEngine (attr limits, blockDim vs legacy).
+ * \brief Unit tests for Conv3dTilingEngine (attr limits, numBlocks vs legacy).
  */
 
 #include <gtest/gtest.h>
@@ -654,7 +654,7 @@ TEST(TestConv3dTilingEngine, GetConv3dApiTiling_HF32)
     // Initialize required state before calling GetConv3dApiTiling
     ASSERT_TRUE(engine.CheckAllParams());
     ASSERT_TRUE(engine.InitOutputOrder());
-    ASSERT_TRUE(engine.ComputeBlockDim());
+    ASSERT_TRUE(engine.ComputeNumBlocks());
 
     Ops::NN::Conv3dV2::Conv3DV2TilingData tilingData;
     bool ok = engine.GetConv3dApiTiling(tilingData);
@@ -717,7 +717,7 @@ TEST(TestConv3dTilingEngine, CheckParameterConsistency_GroupChannelMismatch)
     EXPECT_FALSE(engine.GetGroupConvOpt());
 }
 
-TEST(TestConv3dTilingEngine, PerformanceTest_BlockDimDecisionComplexShape)
+TEST(TestConv3dTilingEngine, PerformanceTest_NumBlocksDecisionComplexShape)
 {
     Conv3dTilingEngine engine;
     InitConv3dEngineWithPlatform(engine);
@@ -735,12 +735,12 @@ TEST(TestConv3dTilingEngine, PerformanceTest_BlockDimDecisionComplexShape)
     engine.SetGroups(1);
     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16);
 
-    // Test that BlockDim decision completes successfully
-    EXPECT_TRUE(engine.ComputeBlockDim());
+    // Test that NumBlocks decision completes successfully
+    EXPECT_TRUE(engine.ComputeNumBlocks());
 
-    // Verify we get valid BlockDim values
+    // Verify we get valid NumBlocks values
     uint32_t batchDim, mDim, nDim, doDim, groupDim;
-    engine.GetBlockDimDetail(batchDim, mDim, nDim, doDim, groupDim);
+    engine.GetNumBlocksDetail(batchDim, mDim, nDim, doDim, groupDim);
 
     EXPECT_GT(batchDim, 0);
     EXPECT_GT(mDim, 0);
@@ -749,12 +749,12 @@ TEST(TestConv3dTilingEngine, PerformanceTest_BlockDimDecisionComplexShape)
     EXPECT_GT(groupDim, 0);
 }
 
-TEST(TestConv3dTilingEngine, ComputeBlockDim_TieBreakerPreference)
+TEST(TestConv3dTilingEngine, ComputeNumBlocks_TieBreakerPreference)
 {
     Conv3dTilingEngine engine;
     InitConv3dEngineWithPlatform(engine);
 
-    // Setup shape that creates multiple equal-cost BlockDim combinations
+    // Setup shape that creates multiple equal-cost NumBlocks combinations
     // This test ensures the preference order: batch > group > do
     std::vector<int64_t> fmapShape = {8, 32, 16, 32, 32};
     std::vector<int64_t> weightShape = {64, 1, 3, 3, 3};
@@ -768,11 +768,11 @@ TEST(TestConv3dTilingEngine, ComputeBlockDim_TieBreakerPreference)
     engine.SetGroups(4); // Multi-group to trigger groupDim consideration
     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16);
 
-    EXPECT_TRUE(engine.ComputeBlockDim());
+    EXPECT_TRUE(engine.ComputeNumBlocks());
 
-    // Verify BlockDim values follow the documented preference
+    // Verify NumBlocks values follow the documented preference
     uint32_t batchDim, mDim, nDim, doDim, groupDim;
-    engine.GetBlockDimDetail(batchDim, mDim, nDim, doDim, groupDim);
+    engine.GetNumBlocksDetail(batchDim, mDim, nDim, doDim, groupDim);
 
     EXPECT_GT(batchDim, 0);
     EXPECT_GT(groupDim, 0);
@@ -1178,7 +1178,7 @@ TEST(TestConv3dTilingEngine, IntegrationTest_MultiGroupComplexShape)
 // 9) Overflow Protection and Special Cases Tests
 // ---------------------------------------------------------------------------
 
-TEST(TestConv3dTilingEngine, ComputeBlockDim_MinMaxScenarios)
+TEST(TestConv3dTilingEngine, ComputeNumBlocks_MinMaxScenarios)
 {
     Conv3dTilingEngine engine;
     InitSimpleConv3dEngine(engine);
@@ -1194,10 +1194,10 @@ TEST(TestConv3dTilingEngine, ComputeBlockDim_MinMaxScenarios)
     engine.platformInfo_.aicoreNum = 1; // Single core
 
     // Test with single core - should use minimum distribution
-    EXPECT_TRUE(engine.ComputeBlockDim());
+    EXPECT_TRUE(engine.ComputeNumBlocks());
 
     uint32_t batchDim, mDim, nDim, doDim, groupDim;
-    engine.GetBlockDimDetail(batchDim, mDim, nDim, doDim, groupDim);
+    engine.GetNumBlocksDetail(batchDim, mDim, nDim, doDim, groupDim);
 
     // With single core, total should be 1
     EXPECT_EQ(batchDim * mDim * nDim * doDim * groupDim, 1);

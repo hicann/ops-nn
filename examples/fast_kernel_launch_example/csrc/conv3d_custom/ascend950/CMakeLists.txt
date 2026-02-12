@@ -20,7 +20,6 @@ set(CONV3D_TILING_SOURCES
     "${COMMOM_TILING_DIR}/conv_api_tiling_algorithm_Mmode.cpp"
     "${COMMOM_TILING_DIR}/conv_api_tiling_base.cpp"
     "${COMMOM_TILING_DIR}/conv_api_tiling_util.cpp"
-    "${COMMOM_TILING_DIR}/conv_base_blockdim_decision.cpp"
-    "${COMMOM_TILING_DIR}/conv_base.cpp"
+    "${COMMOM_TILING_DIR}/conv_base_numblocks_decision.cpp"
 )
 add_sources("--npu-arch=dav-3101" "${CONV3D_TILING_SOURCES}")

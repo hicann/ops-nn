@@ -92,10 +92,10 @@ private:
     ConvAscendcTilingFlag flagInfo_;
     ConvBase convBase_;
     ConvParamInfo paramInfo_;
-    // blockdim decision
-    BlockDimRange blockDimRanges;
-    std::vector<uint32_t> blockDimInit;
-    BlockDimRes blockDimRes;
+    // numBlocks decision
+    NumBlocksRange numBlocksRanges;
+    std::vector<uint32_t> numBlocksInit;
+    NumBlocksRes numBlocksRes;
     ConvTilingKeyPara tilingKeyPara_;
     Conv3dOriginFormatAixsPosInfo conv3dOriginFormatAixsPosInfo_;
     ConvInputArgs cacheInputArgs_;
@@ -139,9 +139,9 @@ private:
     ge::graphStatus ParseGroupLegal();
     uint64_t GetLoad3dMaxFilterHW();
     ge::graphStatus CheckNullPtr();
-    void InitblockDimConstParas();
-    // blockdim decision
-    void BlockDimDecision();
+    void InitNumBlocksConstParas();
+    // numBlocks decision
+    void NumBlocksDecision();
 	void SetConvBase();
     ge::graphStatus GetOriPadFromAttrPad();
     ge::graphStatus CheckOriPadLegal();

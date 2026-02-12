@@ -39,7 +39,7 @@ struct Conv2DBasicBlockTilingParams {
     BoundType boundType = BoundType::INVALID;
 };
 
-struct Conv2DBasicBlockDim {
+struct Conv2DBasicNumBlocks {
     uint32_t fDim = 0;
     uint32_t nDim = 0;
     uint32_t batchDim = 0;
@@ -65,7 +65,7 @@ struct Conv2DBasicBlockMinLoadStrategy {
 // multiple inheritance
 struct Conv2DBasicBlockInfo :
     public Conv2DBasicBlockTilingParams,
-    public Conv2DBasicBlockDim,
+    public Conv2DBasicNumBlocks,
     public Conv2DBasicBlockMinLoadStrategy
 {};
 

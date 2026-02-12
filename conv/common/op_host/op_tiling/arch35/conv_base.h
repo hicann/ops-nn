@@ -21,7 +21,7 @@
 #include "../cube_tiling.h"
 #include "conv_base_utils.h"
 #include "conv_api_tiling_util.h"
-#include "conv_base_blockdim_decision.h"
+#include "conv_base_numblocks_decision.h"
 #include "conv_template_utils.h"
 namespace optiling {
 namespace conv_ops_tiling {
@@ -295,7 +295,6 @@ public:
     void ConvBaseInitFeatureFlag(const ConvAscendcFeatureFlag featureFlagInfo);
     void InitGroupInfo(ConvOriGroupInfo convOriGroupInfo,
                        ConvOptGroupInfo convOptGroupInfo);
-    void InitBlockDimConstParas();
     void UpdateFlagInfo(const ConvAscendcTilingFlag& flagInfo);
     void updatePlatformInfoFromOpInfo();
 

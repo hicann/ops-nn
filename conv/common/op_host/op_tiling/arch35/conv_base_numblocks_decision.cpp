@@ -9,10 +9,10 @@
  */
  
 /*!
- * \file conv_base_blockdim_decision.cpp
+ * \file conv_base_numblocks_decision.cpp
  * \brief
  */
-#include "conv_base_blockdim_decision.h"
+#include "conv_base_numblocks_decision.h"
 #include "log/log.h"
 #include <cmath>
 #include <set>
@@ -95,15 +95,15 @@ bool IsWeightNZFormat(ge::Format weightFormat)
     return weightFormat == ge::Format::FORMAT_FRACTAL_Z || weightFormat == ge::Format::FORMAT_FRACTAL_Z_C04;
 }
 
-ge::graphStatus ConvBaseDeci::GetBlockDimInfo(ConvAscendcTilingInfo& tilingInfo)
+ge::graphStatus ConvBaseDeci::GetNumBlocksInfo(ConvAscendcTilingInfo& tilingInfo)
 {
     ConvBaseInit(tilingInfo.shapeInfo, tilingInfo.descInfo, tilingInfo.flagInfo);
     ConvBaseInitAttrInfo(tilingInfo.attrInfo);
     ConvBaseInitPlatformInfo(tilingInfo.platformInfo);
     ConvBaseInitNodeInfo(tilingInfo.nodeInfo.nodeName, tilingInfo.nodeInfo.nodeType);
-    InitblockDimConstParas();
+    InitNumBlocksConstParas();
     GetConvBaseCoreInfo(tilingInfo.convOpsConstParams);
-    if (BlockDimDecision(tilingInfo.blockDimRes) != 0) {
+    if (NumBlocksDecision(tilingInfo.numBlocksRes) != 0) {
         return ge::GRAPH_FAILED;
     }
     SetTilingInfo(tilingInfo);
@@ -150,7 +150,7 @@ void ConvBaseDeci::SetAiCoreNum(uint32_t aicoreNum)
     aicoreNum_ = aicoreNum;
 }
 
-void ConvBaseDeci::InitblockDimConstParas()
+void ConvBaseDeci::InitNumBlocksConstParas()
 {
     convOpsConstParams_.m0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.fMapDtype), MKN_M_IDX);
     convOpsConstParams_.k0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.weightDtype), MKN_K_IDX);
@@ -163,7 +163,7 @@ void ConvBaseDeci::InitblockDimConstParas()
                      CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.fMapDtype), MKN_N_IDX));
 }
 
-ge::graphStatus ConvBaseDeci::SelectBlockDimMode()
+ge::graphStatus ConvBaseDeci::SelectNumBlocksMode()
 {
     flagInfo_.mSplitModeFlag = false;
     if (CheckL1SizeLimitsInMSplitMode() == ge::GRAPH_SUCCESS && CheckInstrLimitsMmode()) {
@@ -213,40 +213,40 @@ void ConvBaseDeci::SetMKN(uint32_t m0, uint32_t k0, uint32_t n0)
     n0_ = n0;
 }
 
-void ConvBaseDeci::GetBlockDimRes()
+void ConvBaseDeci::GetNumBlocksRes()
 {
     if (flagInfo_.mSplitModeFlag) {
-        blockDimRes_ = BlockDimDecisionMsplitMode();
+        numBlocksRes_ = NumBlocksDecisionMsplitMode();
         OP_LOGD(nodeInfo_.nodeName,
             "%s AscendC: batchDim / mDim / nDim / doDim / groupDim / minCost: %u, %u, %u, %u, %u, %lu.",
             nodeInfo_.nodeType.c_str(),
-            blockDimRes_.batchDim,
-            blockDimRes_.mDim,
-            blockDimRes_.nDim,
-            blockDimRes_.doDim,
-            blockDimRes_.groupDim,
-            blockDimRes_.minCost);
+            numBlocksRes_.batchDim,
+            numBlocksRes_.mDim,
+            numBlocksRes_.nDim,
+            numBlocksRes_.doDim,
+            numBlocksRes_.groupDim,
+            numBlocksRes_.minCost);
     } else {
-        blockDimRes_ = BlockDimDecisionHWsplitMode();
+        numBlocksRes_ = NumBlocksDecisionHWsplitMode();
         OP_LOGD(nodeInfo_.nodeName,
             "%s AscendC: batchDim / hoDim / nDim / doDim / groupDim / minCost: %u, %u, %u, %u, %u, %lu.",
             nodeInfo_.nodeType.c_str(),
-            blockDimRes_.batchDim,
-            blockDimRes_.hoDim,
-            blockDimRes_.nDim,
-            blockDimRes_.doDim,
-            blockDimRes_.groupDim,
-            blockDimRes_.minCost);
+            numBlocksRes_.batchDim,
+            numBlocksRes_.hoDim,
+            numBlocksRes_.nDim,
+            numBlocksRes_.doDim,
+            numBlocksRes_.groupDim,
+            numBlocksRes_.minCost);
     }
 }
 
-int32_t ConvBaseDeci::BlockDimDecision(BlockDimRes& blockDimRes)
+int32_t ConvBaseDeci::NumBlocksDecision(NumBlocksRes& numBlocksRes)
 {
-    if (SelectBlockDimMode() != ge::GRAPH_SUCCESS) {
+    if (SelectNumBlocksMode() != ge::GRAPH_SUCCESS) {
         return -1;
     }
-    GetBlockDimRes();
-    blockDimRes = blockDimRes_;
+    GetNumBlocksRes();
+    numBlocksRes = numBlocksRes_;
     return 0;
 }
 
@@ -381,137 +381,137 @@ ge::graphStatus ConvBaseDeci::CheckL1SizeLimitsInMSplitMode()
     return ge::GRAPH_SUCCESS;
 }
 
-BlockDimRes ConvBaseDeci::BlockDimDecisionMsplitMode()
+NumBlocksRes ConvBaseDeci::NumBlocksDecisionMsplitMode()
 {
-    GetBlockDimRangeMsplitMode();
-    GetBlockDimInitMsplitMode();
-    CoreBlockDimDecisionMsplitMode();
-    return blockDimRes_;
+    GetNumBlocksRangeMsplitMode();
+    GetNumBlocksInitMsplitMode();
+    CoreNumBlocksDecisionMsplitMode();
+    return numBlocksRes_;
 }
 
-void ConvBaseDeci::GetBlockDimRangeMsplitMode()
+void ConvBaseDeci::GetNumBlocksRangeMsplitMode()
 {
-    GetBlockDimRangeCommon();
+    GetNumBlocksRangeCommon();
     uint64_t m1 = ConvCeilDiv(shapeInfo_.ho * shapeInfo_.wo, m0_); // mRange
-    ConvCalcCommFactor(m1, aicoreNum_, blockDimRanges_.mRange);
-    ConvBlockDimFactorMix(m1, blockDimRanges_.mRange, blockDimRanges_.aicNumRange);
+    ConvCalcCommFactor(m1, aicoreNum_, numBlocksRanges_.mRange);
+    ConvNumBlocksFactorMix(m1, numBlocksRanges_.mRange, numBlocksRanges_.aicNumRange);
 }
 
-void ConvBaseDeci::GetBlockDimInitMsplitMode()
+void ConvBaseDeci::GetNumBlocksInitMsplitMode()
 {
-    blockDimInit_.resize(BLOCKDIM_MSPLIT_DEC_NUM, 1);
-    blockDimInit_[BLOCKDIM_MSPLIT_BATCH_IDX] = blockDimRanges_.batchRange[0];
-    blockDimInit_[BLOCKDIM_MSPLIT_M_IDX] = blockDimRanges_.mRange[0];
-    blockDimInit_[BLOCKDIM_MSPLIT_N_IDX] = blockDimRanges_.nRange[0];
-    blockDimInit_[BLOCKDIM_MSPLIT_DO_IDX] = blockDimRanges_.doRange[0];
-    blockDimInit_[BLOCKDIM_MSPLIT_GROUP_IDX] = blockDimRanges_.groupRange[0];
+    numBlocksInit_.resize(NUMBLOCKS_MSPLIT_DEC_NUM, 1);
+    numBlocksInit_[NUMBLOCKS_MSPLIT_BATCH_IDX] = numBlocksRanges_.batchRange[0];
+    numBlocksInit_[NUMBLOCKS_MSPLIT_M_IDX] = numBlocksRanges_.mRange[0];
+    numBlocksInit_[NUMBLOCKS_MSPLIT_N_IDX] = numBlocksRanges_.nRange[0];
+    numBlocksInit_[NUMBLOCKS_MSPLIT_DO_IDX] = numBlocksRanges_.doRange[0];
+    numBlocksInit_[NUMBLOCKS_MSPLIT_GROUP_IDX] = numBlocksRanges_.groupRange[0];
 }
 
-void ConvBaseDeci::CoreBlockDimDecisionMsplitMode()
+void ConvBaseDeci::CoreNumBlocksDecisionMsplitMode()
 {
-    blockDimRes_.batchDim = 1;
-    blockDimRes_.mDim = 1;
-    blockDimRes_.nDim = 1;
-    blockDimRes_.doDim = 1;
-    blockDimRes_.groupDim = 1;
-    blockDimRes_.minCost = CalcTotalCostMsplitMode(blockDimRes_.batchDim, blockDimRes_.mDim, blockDimRes_.nDim,
-                                                   blockDimRes_.doDim, blockDimRes_.groupDim);
-    vector<vector<uint32_t>> allRanges(BLOCKDIM_MSPLIT_DEC_NUM, vector<uint32_t>(1, 1));
-    allRanges[BLOCKDIM_MSPLIT_BATCH_IDX] = blockDimRanges_.batchRange;
-    allRanges[BLOCKDIM_MSPLIT_M_IDX] = blockDimRanges_.mRange;
-    allRanges[BLOCKDIM_MSPLIT_N_IDX] = blockDimRanges_.nRange;
-    allRanges[BLOCKDIM_MSPLIT_DO_IDX] = blockDimRanges_.doRange;
-    allRanges[BLOCKDIM_MSPLIT_GROUP_IDX] = blockDimRanges_.groupRange;
+    numBlocksRes_.batchDim = 1;
+    numBlocksRes_.mDim = 1;
+    numBlocksRes_.nDim = 1;
+    numBlocksRes_.doDim = 1;
+    numBlocksRes_.groupDim = 1;
+    numBlocksRes_.minCost = CalcTotalCostMsplitMode(numBlocksRes_.batchDim, numBlocksRes_.mDim, numBlocksRes_.nDim,
+                                                   numBlocksRes_.doDim, numBlocksRes_.groupDim);
+    vector<vector<uint32_t>> allRanges(NUMBLOCKS_MSPLIT_DEC_NUM, vector<uint32_t>(1, 1));
+    allRanges[NUMBLOCKS_MSPLIT_BATCH_IDX] = numBlocksRanges_.batchRange;
+    allRanges[NUMBLOCKS_MSPLIT_M_IDX] = numBlocksRanges_.mRange;
+    allRanges[NUMBLOCKS_MSPLIT_N_IDX] = numBlocksRanges_.nRange;
+    allRanges[NUMBLOCKS_MSPLIT_DO_IDX] = numBlocksRanges_.doRange;
+    allRanges[NUMBLOCKS_MSPLIT_GROUP_IDX] = numBlocksRanges_.groupRange;
     vector<uint32_t> dimsRecord;
-    BlockDimDecisionBackTrackMsplitMode(allRanges, BLOCKDIM_MSPLIT_BATCH_IDX, dimsRecord);
+    NumBlocksDecisionBackTrackMsplitMode(allRanges, NUMBLOCKS_MSPLIT_BATCH_IDX, dimsRecord);
 }
 
 
-void ConvBaseDeci::BlockDimDecisionBackTrackMsplitMode(const vector<vector<uint32_t>> &inputRanges,
+void ConvBaseDeci::NumBlocksDecisionBackTrackMsplitMode(const vector<vector<uint32_t>> &inputRanges,
                                                        uint32_t rangeIdx, vector<uint32_t> &record)
 {
     if (record.size() == inputRanges.size()) {
-        uint32_t curBlockDim = record[BLOCKDIM_MSPLIT_BATCH_IDX] * record[BLOCKDIM_MSPLIT_M_IDX] *
-                               record[BLOCKDIM_MSPLIT_N_IDX] * record[BLOCKDIM_MSPLIT_DO_IDX] *
-                               record[BLOCKDIM_MSPLIT_GROUP_IDX];
-        if (curBlockDim > aicoreNum_) {
+        uint32_t curNumBlocks = record[NUMBLOCKS_MSPLIT_BATCH_IDX] * record[NUMBLOCKS_MSPLIT_M_IDX] *
+                               record[NUMBLOCKS_MSPLIT_N_IDX] * record[NUMBLOCKS_MSPLIT_DO_IDX] *
+                               record[NUMBLOCKS_MSPLIT_GROUP_IDX];
+        if (curNumBlocks > aicoreNum_) {
             return;
         }
         bool update_flag = false;
-        uint64_t curCost = CalcTotalCostMsplitMode(record[BLOCKDIM_MSPLIT_BATCH_IDX],
-                                                   record[BLOCKDIM_MSPLIT_M_IDX], record[BLOCKDIM_MSPLIT_N_IDX],
-                                                   record[BLOCKDIM_MSPLIT_DO_IDX], record[BLOCKDIM_MSPLIT_GROUP_IDX]);
-        if (curCost < blockDimRes_.minCost) {
+        uint64_t curCost = CalcTotalCostMsplitMode(record[NUMBLOCKS_MSPLIT_BATCH_IDX],
+                                                   record[NUMBLOCKS_MSPLIT_M_IDX], record[NUMBLOCKS_MSPLIT_N_IDX],
+                                                   record[NUMBLOCKS_MSPLIT_DO_IDX], record[NUMBLOCKS_MSPLIT_GROUP_IDX]);
+        if (curCost < numBlocksRes_.minCost) {
             update_flag = true;
-        } else if (curCost == blockDimRes_.minCost) {
-            update_flag = CmpCoreUtilizeMsplitMode(record[BLOCKDIM_MSPLIT_BATCH_IDX], record[BLOCKDIM_MSPLIT_M_IDX],
-                record[BLOCKDIM_MSPLIT_N_IDX], record[BLOCKDIM_MSPLIT_DO_IDX], record[BLOCKDIM_MSPLIT_GROUP_IDX]);
+        } else if (curCost == numBlocksRes_.minCost) {
+            update_flag = CmpCoreUtilizeMsplitMode(record[NUMBLOCKS_MSPLIT_BATCH_IDX], record[NUMBLOCKS_MSPLIT_M_IDX],
+                record[NUMBLOCKS_MSPLIT_N_IDX], record[NUMBLOCKS_MSPLIT_DO_IDX], record[NUMBLOCKS_MSPLIT_GROUP_IDX]);
         }
         if (update_flag) {
-            SetBlockDimMsplitMode(record, curCost);
+            SetNumBlocksMsplitMode(record, curCost);
         }
         return;
     }
 
-    if (rangeIdx >= inputRanges.size() || rangeIdx >= blockDimInit_.size()) {
+    if (rangeIdx >= inputRanges.size() || rangeIdx >= numBlocksInit_.size()) {
         return;
     }
 
     for (uint32_t i = 0; i < inputRanges[rangeIdx].size(); i++) {
         record.push_back(inputRanges[rangeIdx][i]);
-        BlockDimDecisionBackTrackMsplitMode(inputRanges, rangeIdx + 1, record);
+        NumBlocksDecisionBackTrackMsplitMode(inputRanges, rangeIdx + 1, record);
         record.pop_back();
     }
 }
 
 // hw split mode
-BlockDimRes ConvBaseDeci::BlockDimDecisionHWsplitMode()
+NumBlocksRes ConvBaseDeci::NumBlocksDecisionHWsplitMode()
 {
-    GetBlockDimRangeHWsplitMode();
-    GetBlockDimInitHWsplitMode();
-    CoreBlockDimDecisionHWsplitMode();
+    GetNumBlocksRangeHWsplitMode();
+    GetNumBlocksInitHWsplitMode();
+    CoreNumBlocksDecisionHWsplitMode();
     CheckCoreUsedupHWsplitMode();
-    return blockDimRes_;
+    return numBlocksRes_;
 }
 
-uint64_t ConvBaseDeci::CalcCostHWsplitMode(const BlockDimRes &blockDimRes,
+uint64_t ConvBaseDeci::CalcCostHWsplitMode(const NumBlocksRes &numBlocksRes,
     const uint64_t ci1, const uint64_t ci0, const uint64_t co1)
 {
     const uint64_t curGroups = flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV ?
         optGroupInfo_.groupOpt : attrInfo_.groups;
 
-    const uint64_t loadFeatureMapCost = ConvCeilDiv(shapeInfo_.batch, blockDimRes.batchDim) *
-        ConvCeilDiv(curGroups, blockDimRes.groupDim) * ConvCeilDiv(shapeInfo_.dout, blockDimRes.doDim) *
-        shapeInfo_.kd * ci1 * ConvCeilDiv(shapeInfo_.hi, blockDimRes.hoDim) *
-        ConvCeilDiv(shapeInfo_.wi, blockDimRes.woDim) * ci0;
+    const uint64_t loadFeatureMapCost = ConvCeilDiv(shapeInfo_.batch, numBlocksRes.batchDim) *
+        ConvCeilDiv(curGroups, numBlocksRes.groupDim) * ConvCeilDiv(shapeInfo_.dout, numBlocksRes.doDim) *
+        shapeInfo_.kd * ci1 * ConvCeilDiv(shapeInfo_.hi, numBlocksRes.hoDim) *
+        ConvCeilDiv(shapeInfo_.wi, numBlocksRes.woDim) * ci0;
 
     const uint64_t weightKSize = flagInfo_.enableC04Flag ?
         static_cast<uint64_t>(ConvAlignB(ci1 * shapeInfo_.kh * shapeInfo_.kw, static_cast<uint64_t>(k0_))) :
         ci1 * shapeInfo_.kh * shapeInfo_.kw * static_cast<uint64_t>(k0_);
-    uint64_t loadWeightCost = ConvCeilDiv(shapeInfo_.batch, blockDimRes.batchDim) *
-        ConvCeilDiv(curGroups, blockDimRes.groupDim) * shapeInfo_.kd * weightKSize;
+    uint64_t loadWeightCost = ConvCeilDiv(shapeInfo_.batch, numBlocksRes.batchDim) *
+        ConvCeilDiv(curGroups, numBlocksRes.groupDim) * shapeInfo_.kd * weightKSize;
 
     // N dim full load to UB in opt group mode.
     if (flagInfo_.convGroupType != ConvGroupType::OPT_GROUP_CONV) {
-        loadWeightCost *= ConvCeilDiv(co1 * n0_, blockDimRes.nDim);
+        loadWeightCost *= ConvCeilDiv(co1 * n0_, numBlocksRes.nDim);
     }
 
-    const uint64_t loadOutputCost = ConvCeilDiv(shapeInfo_.batch, blockDimRes.batchDim) *
-        ConvCeilDiv(curGroups, blockDimRes.groupDim) * ConvCeilDiv(shapeInfo_.dout, blockDimRes.doDim) *
-        ConvCeilDiv(co1 * n0_, blockDimRes.nDim) * ConvCeilDiv(shapeInfo_.ho, blockDimRes.hoDim) *
-        ConvCeilDiv(shapeInfo_.wo, blockDimRes.woDim);
+    const uint64_t loadOutputCost = ConvCeilDiv(shapeInfo_.batch, numBlocksRes.batchDim) *
+        ConvCeilDiv(curGroups, numBlocksRes.groupDim) * ConvCeilDiv(shapeInfo_.dout, numBlocksRes.doDim) *
+        ConvCeilDiv(co1 * n0_, numBlocksRes.nDim) * ConvCeilDiv(shapeInfo_.ho, numBlocksRes.hoDim) *
+        ConvCeilDiv(shapeInfo_.wo, numBlocksRes.woDim);
 
-    const uint64_t cubeCalcCost = ConvCeilDiv(shapeInfo_.batch, blockDimRes.batchDim) *
-        ConvCeilDiv(curGroups, blockDimRes.groupDim) * ConvCeilDiv(co1, blockDimRes.nDim) *
-        ConvCeilDiv(shapeInfo_.dout, blockDimRes.doDim) * shapeInfo_.kd * ci1 * shapeInfo_.kh * shapeInfo_.kw *
-        ConvCeilDiv(ConvCeilDiv(shapeInfo_.ho, blockDimRes.hoDim) * ConvCeilDiv(shapeInfo_.wo, blockDimRes.woDim),
+    const uint64_t cubeCalcCost = ConvCeilDiv(shapeInfo_.batch, numBlocksRes.batchDim) *
+        ConvCeilDiv(curGroups, numBlocksRes.groupDim) * ConvCeilDiv(co1, numBlocksRes.nDim) *
+        ConvCeilDiv(shapeInfo_.dout, numBlocksRes.doDim) * shapeInfo_.kd * ci1 * shapeInfo_.kh * shapeInfo_.kw *
+        ConvCeilDiv(ConvCeilDiv(shapeInfo_.ho, numBlocksRes.hoDim) * ConvCeilDiv(shapeInfo_.wo, numBlocksRes.woDim),
         m0_);
 
     uint32_t curBwCoeff = GetWeightBandWidthCoeff();
     return (loadFeatureMapCost + (loadWeightCost * curBwCoeff) + loadOutputCost) / MIN_L2_BAND_WIDTH + cubeCalcCost;
 }
 
-uint64_t ConvBaseDeci::CalcTotalCostHWsplitMode(const BlockDimRes &blockDimRes)
+uint64_t ConvBaseDeci::CalcTotalCostHWsplitMode(const NumBlocksRes &numBlocksRes)
 {
     uint64_t ci0 = k0_;
     uint64_t curCi = flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV ?
@@ -529,7 +529,7 @@ uint64_t ConvBaseDeci::CalcTotalCostHWsplitMode(const BlockDimRes &blockDimRes)
         ci0 = C04_CIN_SIZE;
     }
     
-    return CalcCostHWsplitMode(blockDimRes, ci1, ci0, co1);
+    return CalcCostHWsplitMode(numBlocksRes, ci1, ci0, co1);
 }
 
 uint64_t ConvBaseDeci::GetMinBurstNum()
@@ -555,7 +555,7 @@ uint32_t ConvBaseDeci::GetWeightBandWidthCoeff()
 
 void ConvBaseDeci::SeperateHoRangeHWsplitMode()
 {
-    std::vector<uint32_t> tmpHoRange = blockDimRanges_.hoRange;
+    std::vector<uint32_t> tmpHoRange = numBlocksRanges_.hoRange;
     uint64_t minValue = GetMinBurstNum() / shapeInfo_.wo;
     uint32_t firstValidIdx = tmpHoRange.size();
     for (uint32_t i = 0; i < tmpHoRange.size(); i++) {
@@ -564,23 +564,23 @@ void ConvBaseDeci::SeperateHoRangeHWsplitMode()
             break;
         }
     }
-    blockDimRanges_.hoRange.clear();
-    blockDimRanges_.hoSpareRange.clear();
-    blockDimRanges_.hoRange.assign(tmpHoRange.begin() + firstValidIdx, tmpHoRange.end());
-    blockDimRanges_.hoSpareRange.assign(tmpHoRange.begin(), tmpHoRange.begin() + firstValidIdx);
+    numBlocksRanges_.hoRange.clear();
+    numBlocksRanges_.hoSpareRange.clear();
+    numBlocksRanges_.hoRange.assign(tmpHoRange.begin() + firstValidIdx, tmpHoRange.end());
+    numBlocksRanges_.hoSpareRange.assign(tmpHoRange.begin(), tmpHoRange.begin() + firstValidIdx);
 }
 
-void ConvBaseDeci::GetBlockDimRangeCommon()
+void ConvBaseDeci::GetNumBlocksRangeCommon()
 {
     // aicoreRange
-    ConvCalcCommFactor(aicoreNum_, aicoreNum_, blockDimRanges_.aicNumRange);
+    ConvCalcCommFactor(aicoreNum_, aicoreNum_, numBlocksRanges_.aicNumRange);
     // batchRange
-    ConvCalcCommFactor(shapeInfo_.batch, aicoreNum_, blockDimRanges_.batchRange);
+    ConvCalcCommFactor(shapeInfo_.batch, aicoreNum_, numBlocksRanges_.batchRange);
 
     if (shapeInfo_.batch >= BATCH_AICORE_COF * aicoreNum_) {
-        blockDimRanges_.batchRange = blockDimRanges_.aicNumRange;
+        numBlocksRanges_.batchRange = numBlocksRanges_.aicNumRange;
     } else {
-        ConvBlockDimFactorMix(shapeInfo_.batch, blockDimRanges_.batchRange, blockDimRanges_.aicNumRange);
+        ConvNumBlocksFactorMix(shapeInfo_.batch, numBlocksRanges_.batchRange, numBlocksRanges_.aicNumRange);
     }
     // nRange
     uint64_t curCo = shapeInfo_.co;
@@ -589,36 +589,36 @@ void ConvBaseDeci::GetBlockDimRangeCommon()
     } else if (flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV) {
         curCo = optGroupInfo_.coutOpt;
     }
-    ConvCalcCommFactor(ConvCeilDiv(curCo, n0_), aicoreNum_, blockDimRanges_.nRange);
+    ConvCalcCommFactor(ConvCeilDiv(curCo, n0_), aicoreNum_, numBlocksRanges_.nRange);
     if (!flagInfo_.enableC04Flag) {
-        ConvBlockDimFactorMix(ConvCeilDiv(curCo, n0_), blockDimRanges_.nRange, blockDimRanges_.aicNumRange);
+        ConvNumBlocksFactorMix(ConvCeilDiv(curCo, n0_), numBlocksRanges_.nRange, numBlocksRanges_.aicNumRange);
     }
 
     // doRange
     if (descInfo_.fMapFormat == ge::Format::FORMAT_NCDHW || descInfo_.fMapFormat == ge::Format::FORMAT_NDHWC) {
-        ConvCalcCommFactor(shapeInfo_.dout, aicoreNum_, blockDimRanges_.doRange);
-        ConvBlockDimFactorMix(shapeInfo_.dout, blockDimRanges_.doRange, blockDimRanges_.aicNumRange);
+        ConvCalcCommFactor(shapeInfo_.dout, aicoreNum_, numBlocksRanges_.doRange);
+        ConvNumBlocksFactorMix(shapeInfo_.dout, numBlocksRanges_.doRange, numBlocksRanges_.aicNumRange);
     } else {
-        blockDimRanges_.doRange.assign(1, 1);
+        numBlocksRanges_.doRange.assign(1, 1);
     }
     // groupRange
     uint64_t curGroups = flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV ?
         optGroupInfo_.groupOpt : attrInfo_.groups;
-    ConvCalcCommFactor(curGroups, aicoreNum_, blockDimRanges_.groupRange);
-    ConvBlockDimFactorMix(curGroups, blockDimRanges_.groupRange, blockDimRanges_.aicNumRange);
+    ConvCalcCommFactor(curGroups, aicoreNum_, numBlocksRanges_.groupRange);
+    ConvNumBlocksFactorMix(curGroups, numBlocksRanges_.groupRange, numBlocksRanges_.aicNumRange);
 }
 
-void ConvBaseDeci::GetBlockDimRangeHWsplitMode()
+void ConvBaseDeci::GetNumBlocksRangeHWsplitMode()
 {
-    GetBlockDimRangeCommon();
-    ConvCalcCommFactor(shapeInfo_.ho, aicoreNum_, blockDimRanges_.hoRange);
-    ConvBlockDimFactorMix(shapeInfo_.ho, blockDimRanges_.hoRange, blockDimRanges_.aicNumRange);
+    GetNumBlocksRangeCommon();
+    ConvCalcCommFactor(shapeInfo_.ho, aicoreNum_, numBlocksRanges_.hoRange);
+    ConvNumBlocksFactorMix(shapeInfo_.ho, numBlocksRanges_.hoRange, numBlocksRanges_.aicNumRange);
     if (featureFlagInfo_ == ConvAscendcFeatureFlag::IS_CONV1D_FLAG) {
-        ConvCalcCommFactor(shapeInfo_.wo, aicoreNum_, blockDimRanges_.woRange);
-        ConvBlockDimFactorMix(shapeInfo_.wo, blockDimRanges_.woRange, blockDimRanges_.aicNumRange);
+        ConvCalcCommFactor(shapeInfo_.wo, aicoreNum_, numBlocksRanges_.woRange);
+        ConvNumBlocksFactorMix(shapeInfo_.wo, numBlocksRanges_.woRange, numBlocksRanges_.aicNumRange);
         return;
     }
-    blockDimRanges_.woRange.emplace_back(1);
+    numBlocksRanges_.woRange.emplace_back(1);
 
     if (shapeInfo_.wo < GetMinBurstNum()) {
         SeperateHoRangeHWsplitMode();
@@ -642,7 +642,7 @@ void ConvCalcCommFactor(const uint64_t num, const uint32_t numMax, std::vector<u
     sort(reslist.begin(), reslist.end());
 }
 
-void ConvBlockDimFactorMix(uint32_t orgDim, std::vector<uint32_t> &inputRange, const std::vector<uint32_t> &mixRange)
+void ConvNumBlocksFactorMix(uint32_t orgDim, std::vector<uint32_t> &inputRange, const std::vector<uint32_t> &mixRange)
 {
     std::vector<uint32_t> tmpSelectMixRange;
     for (auto v : mixRange) {
@@ -655,7 +655,7 @@ void ConvBlockDimFactorMix(uint32_t orgDim, std::vector<uint32_t> &inputRange, c
     inputRange.assign(tmpRanges.begin(), tmpRanges.end());
 }
 
-void InitblockDimConstParas(ConvOpsConstParams& convOpsConstParams,
+void InitNumBlocksConstParas(ConvOpsConstParams& convOpsConstParams,
                             const ConvAscendcDescInfo& descInfo,
                             const ConvAscendcShapesInfo& shapeInfo)
 {
@@ -673,7 +673,7 @@ bool ConvBaseDeci::CmpCoreUtilize(const uint32_t curCoreUtilize, const uint32_t 
         return false;
     } else if (curCoreUtilize == minCostCoreUtilize) {
         // for same cost, preference: batch > dout
-        bool updateFlag = std::make_tuple(batchDim, doDim) > std::make_tuple(blockDimRes_.batchDim, blockDimRes_.doDim);
+        bool updateFlag = std::make_tuple(batchDim, doDim) > std::make_tuple(numBlocksRes_.batchDim, numBlocksRes_.doDim);
         return updateFlag;
     }
     return true;
@@ -683,129 +683,129 @@ bool ConvBaseDeci::CmpCoreUtilizeMsplitMode(uint32_t batchDim, uint32_t mDim,
                                             uint32_t nDim, uint32_t doDim, uint32_t groupDim)
 {
     const uint32_t curCoreUtilize = batchDim * mDim * nDim * doDim * groupDim / aicoreNum_;
-    const uint32_t minCostCoreUtilize = blockDimRes_.batchDim * blockDimRes_.mDim * blockDimRes_.nDim *
-                                  blockDimRes_.doDim * blockDimRes_.groupDim / aicoreNum_;
+    const uint32_t minCostCoreUtilize = numBlocksRes_.batchDim * numBlocksRes_.mDim * numBlocksRes_.nDim *
+                                  numBlocksRes_.doDim * numBlocksRes_.groupDim / aicoreNum_;
     return CmpCoreUtilize(curCoreUtilize, minCostCoreUtilize, batchDim, doDim);
 }
 
 bool ConvBaseDeci::CmpCoreUtilizeHWsplitMode(const vector<uint32_t> &record)
 {
-    auto batchDim = record[BLOCKDIM_HWSPLIT_BATCH_IDX];
-    auto hoDim = record[BLOCKDIM_HWSPLIT_HO_IDX];
-    auto woDim = record[BLOCKDIM_HWSPLIT_WO_IDX];
-    auto nDim = record[BLOCKDIM_HWSPLIT_N_IDX];
-    auto doDim = record[BLOCKDIM_HWSPLIT_DO_IDX];
-    auto groupDim = record[BLOCKDIM_HWSPLIT_GROUP_IDX];
+    auto batchDim = record[NUMBLOCKS_HWSPLIT_BATCH_IDX];
+    auto hoDim = record[NUMBLOCKS_HWSPLIT_HO_IDX];
+    auto woDim = record[NUMBLOCKS_HWSPLIT_WO_IDX];
+    auto nDim = record[NUMBLOCKS_HWSPLIT_N_IDX];
+    auto doDim = record[NUMBLOCKS_HWSPLIT_DO_IDX];
+    auto groupDim = record[NUMBLOCKS_HWSPLIT_GROUP_IDX];
     const uint32_t curCoreUtilize = batchDim * hoDim * woDim * nDim * doDim * groupDim / aicoreNum_;
-    const uint32_t minCostCoreUtilize = blockDimRes_.batchDim * blockDimRes_.hoDim * blockDimRes_.woDim *
-                                        blockDimRes_.nDim * blockDimRes_.doDim * blockDimRes_.groupDim / aicoreNum_;
+    const uint32_t minCostCoreUtilize = numBlocksRes_.batchDim * numBlocksRes_.hoDim * numBlocksRes_.woDim *
+                                        numBlocksRes_.nDim * numBlocksRes_.doDim * numBlocksRes_.groupDim / aicoreNum_;
     return CmpCoreUtilize(curCoreUtilize, minCostCoreUtilize, batchDim, doDim);
 }
 
-void ConvBaseDeci::SetBlockDimHWsplitMode(const vector<uint32_t> &record, const uint64_t curCost,
-    BlockDimRes &blockDimRes) const
+void ConvBaseDeci::SetNumBlocksHWsplitMode(const vector<uint32_t> &record, const uint64_t curCost,
+    NumBlocksRes &numBlocksRes) const
 {
-    blockDimRes.batchDim = record[BLOCKDIM_HWSPLIT_BATCH_IDX];
-    blockDimRes.hoDim = record[BLOCKDIM_HWSPLIT_HO_IDX];
-    blockDimRes.woDim = record[BLOCKDIM_HWSPLIT_WO_IDX];
-    blockDimRes.nDim = record[BLOCKDIM_HWSPLIT_N_IDX];
-    blockDimRes.doDim = record[BLOCKDIM_HWSPLIT_DO_IDX];
-    blockDimRes.groupDim = record[BLOCKDIM_HWSPLIT_GROUP_IDX];
-    blockDimRes.minCost = curCost;
+    numBlocksRes.batchDim = record[NUMBLOCKS_HWSPLIT_BATCH_IDX];
+    numBlocksRes.hoDim = record[NUMBLOCKS_HWSPLIT_HO_IDX];
+    numBlocksRes.woDim = record[NUMBLOCKS_HWSPLIT_WO_IDX];
+    numBlocksRes.nDim = record[NUMBLOCKS_HWSPLIT_N_IDX];
+    numBlocksRes.doDim = record[NUMBLOCKS_HWSPLIT_DO_IDX];
+    numBlocksRes.groupDim = record[NUMBLOCKS_HWSPLIT_GROUP_IDX];
+    numBlocksRes.minCost = curCost;
 }
 
-void ConvBaseDeci::SetBlockDimMsplitMode(const vector<uint32_t> &record, uint64_t curCost)
+void ConvBaseDeci::SetNumBlocksMsplitMode(const vector<uint32_t> &record, uint64_t curCost)
 {
-    blockDimRes_.batchDim = record[BLOCKDIM_MSPLIT_BATCH_IDX];
-    blockDimRes_.mDim = record[BLOCKDIM_MSPLIT_M_IDX];
-    blockDimRes_.nDim = record[BLOCKDIM_MSPLIT_N_IDX];
-    blockDimRes_.doDim = record[BLOCKDIM_MSPLIT_DO_IDX];
-    blockDimRes_.groupDim = record[BLOCKDIM_MSPLIT_GROUP_IDX];
-    blockDimRes_.minCost = curCost;
+    numBlocksRes_.batchDim = record[NUMBLOCKS_MSPLIT_BATCH_IDX];
+    numBlocksRes_.mDim = record[NUMBLOCKS_MSPLIT_M_IDX];
+    numBlocksRes_.nDim = record[NUMBLOCKS_MSPLIT_N_IDX];
+    numBlocksRes_.doDim = record[NUMBLOCKS_MSPLIT_DO_IDX];
+    numBlocksRes_.groupDim = record[NUMBLOCKS_MSPLIT_GROUP_IDX];
+    numBlocksRes_.minCost = curCost;
 }
 
-void ConvBaseDeci::GetBlockDimInitHWsplitMode()
+void ConvBaseDeci::GetNumBlocksInitHWsplitMode()
 {
-    blockDimInit_.resize(BLOCKDIM_HWSPLIT_DEC_NUM, 1);
-    blockDimInit_[BLOCKDIM_HWSPLIT_BATCH_IDX] = blockDimRanges_.batchRange[0];
-    blockDimInit_[BLOCKDIM_HWSPLIT_HO_IDX] = blockDimRanges_.hoRange.empty() ? 1 : blockDimRanges_.hoRange[0];
-    blockDimInit_[BLOCKDIM_HWSPLIT_WO_IDX] = blockDimRanges_.woRange.empty() ? 1 : blockDimRanges_.woRange[0];
-    blockDimInit_[BLOCKDIM_HWSPLIT_N_IDX] = blockDimRanges_.nRange[0];
-    blockDimInit_[BLOCKDIM_HWSPLIT_DO_IDX] = blockDimRanges_.doRange[0];
-    blockDimInit_[BLOCKDIM_HWSPLIT_GROUP_IDX] = blockDimRanges_.groupRange[0];
+    numBlocksInit_.resize(NUMBLOCKS_HWSPLIT_DEC_NUM, 1);
+    numBlocksInit_[NUMBLOCKS_HWSPLIT_BATCH_IDX] = numBlocksRanges_.batchRange[0];
+    numBlocksInit_[NUMBLOCKS_HWSPLIT_HO_IDX] = numBlocksRanges_.hoRange.empty() ? 1 : numBlocksRanges_.hoRange[0];
+    numBlocksInit_[NUMBLOCKS_HWSPLIT_WO_IDX] = numBlocksRanges_.woRange.empty() ? 1 : numBlocksRanges_.woRange[0];
+    numBlocksInit_[NUMBLOCKS_HWSPLIT_N_IDX] = numBlocksRanges_.nRange[0];
+    numBlocksInit_[NUMBLOCKS_HWSPLIT_DO_IDX] = numBlocksRanges_.doRange[0];
+    numBlocksInit_[NUMBLOCKS_HWSPLIT_GROUP_IDX] = numBlocksRanges_.groupRange[0];
 }
 
-void ConvBaseDeci::BlockDimDecisionBackTrackHWsplitMode(const vector<vector<uint32_t>> &inputRanges,
+void ConvBaseDeci::NumBlocksDecisionBackTrackHWsplitMode(const vector<vector<uint32_t>> &inputRanges,
                                                         uint32_t rangeIdx, vector<uint32_t> &record)
 {
     if (record.size() == inputRanges.size()) {
-        BlockDimRes blockDimResTemp;
-        SetBlockDimHWsplitMode(record, 0, blockDimResTemp);
-        const uint32_t curBlockDim = blockDimResTemp.batchDim * blockDimResTemp.hoDim *
-            blockDimResTemp.woDim * blockDimResTemp.nDim * blockDimResTemp.doDim *
-            blockDimResTemp.groupDim;
-        if (curBlockDim > aicoreNum_) {
+        NumBlocksRes numBlocksResTemp;
+        SetNumBlocksHWsplitMode(record, 0, numBlocksResTemp);
+        const uint32_t curNumBlocks = numBlocksResTemp.batchDim * numBlocksResTemp.hoDim *
+            numBlocksResTemp.woDim * numBlocksResTemp.nDim * numBlocksResTemp.doDim *
+            numBlocksResTemp.groupDim;
+        if (curNumBlocks > aicoreNum_) {
             return;
         }
 
         bool updateFlag = false;
-        const uint64_t curCost = CalcTotalCostHWsplitMode(blockDimResTemp);
-        if (curCost < blockDimRes_.minCost) {
+        const uint64_t curCost = CalcTotalCostHWsplitMode(numBlocksResTemp);
+        if (curCost < numBlocksRes_.minCost) {
             updateFlag = true;
-        } else if (curCost == blockDimRes_.minCost) {
+        } else if (curCost == numBlocksRes_.minCost) {
             updateFlag = CmpCoreUtilizeHWsplitMode(record);
         }
         if (updateFlag) {
-            SetBlockDimHWsplitMode(record, curCost, blockDimRes_);
+            SetNumBlocksHWsplitMode(record, curCost, numBlocksRes_);
         }
         return;
     }
 
-    if (rangeIdx >= inputRanges.size() || rangeIdx >= blockDimInit_.size()) {
+    if (rangeIdx >= inputRanges.size() || rangeIdx >= numBlocksInit_.size()) {
         return;
     }
 
     for (uint32_t i = 0; i < inputRanges[rangeIdx].size(); i++) {
         record.push_back(inputRanges[rangeIdx][i]);
-        BlockDimDecisionBackTrackHWsplitMode(inputRanges, rangeIdx + 1, record);
+        NumBlocksDecisionBackTrackHWsplitMode(inputRanges, rangeIdx + 1, record);
         record.pop_back();
     }
 }
 
-void ConvBaseDeci::CoreBlockDimDecisionHWsplitMode()
+void ConvBaseDeci::CoreNumBlocksDecisionHWsplitMode()
 {
-    blockDimRes_.batchDim = static_cast<uint32_t>(1);
-    blockDimRes_.hoDim = static_cast<uint32_t>(1);
-    blockDimRes_.woDim = static_cast<uint32_t>(1);
-    blockDimRes_.nDim = static_cast<uint32_t>(1);
-    blockDimRes_.doDim = static_cast<uint32_t>(1);
-    blockDimRes_.groupDim = static_cast<uint32_t>(1);
-    blockDimRes_.minCost = CalcTotalCostHWsplitMode(blockDimRes_);
+    numBlocksRes_.batchDim = static_cast<uint32_t>(1);
+    numBlocksRes_.hoDim = static_cast<uint32_t>(1);
+    numBlocksRes_.woDim = static_cast<uint32_t>(1);
+    numBlocksRes_.nDim = static_cast<uint32_t>(1);
+    numBlocksRes_.doDim = static_cast<uint32_t>(1);
+    numBlocksRes_.groupDim = static_cast<uint32_t>(1);
+    numBlocksRes_.minCost = CalcTotalCostHWsplitMode(numBlocksRes_);
 
-    vector<vector<uint32_t>> allRanges(BLOCKDIM_HWSPLIT_DEC_NUM, vector<uint32_t>(1, 1));
+    vector<vector<uint32_t>> allRanges(NUMBLOCKS_HWSPLIT_DEC_NUM, vector<uint32_t>(1, 1));
     vector<uint32_t> tmpHoRange = {static_cast<uint32_t>(1)};
-    allRanges[BLOCKDIM_HWSPLIT_BATCH_IDX] = blockDimRanges_.batchRange;
-    allRanges[BLOCKDIM_HWSPLIT_HO_IDX] = blockDimRanges_.hoRange.empty() ? tmpHoRange : blockDimRanges_.hoRange;
-    allRanges[BLOCKDIM_HWSPLIT_WO_IDX] = blockDimRanges_.woRange;
-    allRanges[BLOCKDIM_HWSPLIT_N_IDX] = blockDimRanges_.nRange;
-    allRanges[BLOCKDIM_HWSPLIT_DO_IDX] = blockDimRanges_.doRange;
-    allRanges[BLOCKDIM_HWSPLIT_GROUP_IDX] = blockDimRanges_.groupRange;
+    allRanges[NUMBLOCKS_HWSPLIT_BATCH_IDX] = numBlocksRanges_.batchRange;
+    allRanges[NUMBLOCKS_HWSPLIT_HO_IDX] = numBlocksRanges_.hoRange.empty() ? tmpHoRange : numBlocksRanges_.hoRange;
+    allRanges[NUMBLOCKS_HWSPLIT_WO_IDX] = numBlocksRanges_.woRange;
+    allRanges[NUMBLOCKS_HWSPLIT_N_IDX] = numBlocksRanges_.nRange;
+    allRanges[NUMBLOCKS_HWSPLIT_DO_IDX] = numBlocksRanges_.doRange;
+    allRanges[NUMBLOCKS_HWSPLIT_GROUP_IDX] = numBlocksRanges_.groupRange;
     vector<uint32_t> dimsRecord;
-    BlockDimDecisionBackTrackHWsplitMode(allRanges, BLOCKDIM_HWSPLIT_BATCH_IDX, dimsRecord);
+    NumBlocksDecisionBackTrackHWsplitMode(allRanges, NUMBLOCKS_HWSPLIT_BATCH_IDX, dimsRecord);
 }
 
 void ConvBaseDeci::CheckCoreUsedupHWsplitMode()
 {
     // woDim is not considered because it is only used in Conv1d scene and hoDim is always 1
-    if (blockDimRes_.batchDim * blockDimRes_.hoDim * blockDimRes_.nDim *
-        blockDimRes_.doDim * blockDimRes_.groupDim == aicoreNum_) {
+    if (numBlocksRes_.batchDim * numBlocksRes_.hoDim * numBlocksRes_.nDim *
+        numBlocksRes_.doDim * numBlocksRes_.groupDim == aicoreNum_) {
         return;
     }
 
-    for (auto newHoDim : blockDimRanges_.hoSpareRange) {
-        if (blockDimRes_.batchDim * blockDimRes_.groupDim * newHoDim *
-            blockDimRes_.nDim * blockDimRes_.doDim <= aicoreNum_) {
-            blockDimRes_.hoDim = std::max(blockDimRes_.hoDim, newHoDim);
+    for (auto newHoDim : numBlocksRanges_.hoSpareRange) {
+        if (numBlocksRes_.batchDim * numBlocksRes_.groupDim * newHoDim *
+            numBlocksRes_.nDim * numBlocksRes_.doDim <= aicoreNum_) {
+            numBlocksRes_.hoDim = std::max(numBlocksRes_.hoDim, newHoDim);
         }
     }
 }

@@ -22,1195 +22,1195 @@ void Conv3dv2Template(
     GM_ADDR offset_w, GM_ADDR y, GM_ADDR workspace, Ops::NN::Conv3dV2::Conv3DV2TilingData& tiling,
     int8_t FmapTiling, int8_t WeightTiling, int8_t L1PingPong, int8_t L0PingPong,
     int8_t OutputOrder, int8_t IterOrder,
-    const std::string& dtype, int32_t blockDim, aclrtStream stream)
+    const std::string& dtype, int32_t numBlocks, aclrtStream stream)
 {   
     if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_CLOSE && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_CLOSE, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_CLOSE, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_CLOSE && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_CLOSE, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_CLOSE, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ABL1_FULLLOAD_N_FIRST_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ABL1_FULLLOAD_N_FIRST_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ABL1_FULLLOAD_N_FIRST_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float") {  // CONV_COMMON_ABL1_FULLLOAD_N_FIRST_SEL
         conv3dv2_template<float, float, float, float, float,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_CLOSE && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_CLOSE, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_CLOSE, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_CLOSE && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_CLOSE, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_CLOSE, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ABL1_FULLLOAD_N_FIRST_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ABL1_FULLLOAD_N_FIRST_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ABL1_FULLLOAD_N_FIRST_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "float16") {  // CONV_COMMON_ABL1_FULLLOAD_N_FIRST_SEL
         conv3dv2_template<half, half, half, float, half,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_MN_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_OTHER && L1PingPong == CONV_L1_PINGPONG_BL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_AL1_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_OTHER, CONV_L1_PINGPONG_BL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_OTHER && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_AL1_OPEN &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ONLY_BL1_FULLLOAD_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_OTHER, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_AL1_OPEN, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_CLOSE && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_CLOSE, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_CLOSE, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_CLOSE && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_CLOSE, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_CLOSE, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_AL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_MITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_MITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ABL1_FULLLOAD_N_FIRST_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_BL0_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ABL1_FULLLOAD_N_FIRST_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_BL0_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_HW_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ABL1_FULLLOAD_N_FIRST_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_HW_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     } else if (FmapTiling == CONV_FMAP_TILING_FULLLOAD_AL1 && WeightTiling == CONV_WEIGHT_TILING_FULLLOAD_BL1 && L1PingPong == CONV_L1_PINGPONG_ALL_CLOSE &&
         L0PingPong == CONV_L0_PINGPONG_ALL_OPEN && OutputOrder == CONV_OUTPUT_ORDER_M_MODE && IterOrder == CONV_ITER_ORDER_NITER_FIRST &&
         dtype == "bfloat16") {  // CONV_COMMON_ABL1_FULLLOAD_N_FIRST_SEL
         conv3dv2_template<bfloat16_t, bfloat16_t, bfloat16_t, float, bfloat16_t,
-            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<blockDim, nullptr, stream>>>
+            CONV_FMAP_TILING_FULLLOAD_AL1, CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_ALL_OPEN, CONV_OUTPUT_ORDER_M_MODE, CONV_ITER_ORDER_NITER_FIRST><<<numBlocks, nullptr, stream>>>
             (x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     }
     else {

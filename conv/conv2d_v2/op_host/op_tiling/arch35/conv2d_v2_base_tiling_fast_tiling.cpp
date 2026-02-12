@@ -56,26 +56,26 @@ ge::graphStatus Conv2dBaseTiling::GetTilingFromFastTiling()
                 paramInfo_.nodeType.c_str());
             OP_LOGD(context_->GetNodeName(),
                 "%s AscendC: batchDim / mDim / nDim / groupDim: %u, %u, %u, %u.", paramInfo_.nodeType.c_str(),
-                blockDimRes.batchDim, blockDimRes.mDim, blockDimRes.nDim, blockDimRes.groupDim);
+                numBlocksRes.batchDim, numBlocksRes.mDim, numBlocksRes.nDim, numBlocksRes.groupDim);
         } else {
-            blockDimRes = convBase_.BlockDimDecisionMsplitMode();
+            numBlocksRes = convBase_.NumBlocksDecisionMsplitMode();
             OP_LOGD(context_->GetNodeName(),
                 "%s AscendC: get tiling from Mmode formulaic algorithm, belong to fast_tiling.",
                 paramInfo_.nodeType.c_str());
             OP_LOGD(context_->GetNodeName(),
                 "%s AscendC: batchDim / mDim / nDim / doDim / groupDim / minCost: %u, %u, %u, %u, %u, %lu.",
-                paramInfo_.nodeType.c_str(), blockDimRes.batchDim, blockDimRes.mDim, blockDimRes.nDim,
-                blockDimRes.doDim, blockDimRes.groupDim, blockDimRes.minCost);
+                paramInfo_.nodeType.c_str(), numBlocksRes.batchDim, numBlocksRes.mDim, numBlocksRes.nDim,
+                numBlocksRes.doDim, numBlocksRes.groupDim, numBlocksRes.minCost);
         }
     } else { // HW split mode
-        blockDimRes = convBase_.BlockDimDecisionHWsplitMode();
+        numBlocksRes = convBase_.NumBlocksDecisionHWsplitMode();
         OP_LOGD(context_->GetNodeName(),
             "%s AscendC: get tiling from HWmode formulaic algorithm, belong to fast_tiling.",
             paramInfo_.nodeType.c_str());
         OP_LOGD(context_->GetNodeName(),
             "%s AscendC: batchDim / hoDim / woDim / nDim / groupDim / minCost: %u, %u, %u, %u, %u, %lu.",
-            paramInfo_.nodeType.c_str(), blockDimRes.batchDim, blockDimRes.hoDim, blockDimRes.woDim,
-            blockDimRes.nDim, blockDimRes.groupDim, blockDimRes.minCost);
+            paramInfo_.nodeType.c_str(), numBlocksRes.batchDim, numBlocksRes.hoDim, numBlocksRes.woDim,
+            numBlocksRes.nDim, numBlocksRes.groupDim, numBlocksRes.minCost);
     }
     if (GetConv2dOpsTiling() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
@@ -89,7 +89,7 @@ ge::graphStatus Conv2dBaseTiling::Conv2DInfoInitAndCheck()
     convBase_.ConvBaseInitOpInfo(opInfo_);
     convBase_.updatePlatformInfoFromOpInfo();
     convBase_.ConvBaseInitFixpipeInfo(fixpipeInfo_);
-    convBase_.InitblockDimConstParas();
+    convBase_.InitNumBlocksConstParas();
     convBase_.GetConvBaseCoreInfo(convOpsConstParams_);
     convBase_.ConvBaseInitNodeInfo(context_->GetNodeName(), paramInfo_.nodeType.c_str());
     // check if enable c04 mode
@@ -200,13 +200,13 @@ void Conv2dBaseTiling::Conv2dApiTilingSetShape()
     uint64_t curCo = flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV ?
         (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ?
          oriGroupInfo_.coPerGroup : optGroupInfo_.coutOpt) : shapeInfo_.co;
-    uint64_t singleCoreCo = ConvAlignB(ConvCeilDiv(ConvAlignB(curCo, convOpsConstParams_.n0), blockDimRes.nDim),
+    uint64_t singleCoreCo = ConvAlignB(ConvCeilDiv(ConvAlignB(curCo, convOpsConstParams_.n0), numBlocksRes.nDim),
                             convOpsConstParams_.n0);
-    uint64_t singleCoreHo = ConvCeilDiv(shapeInfo_.ho, blockDimRes.hoDim);
-    uint64_t singleCoreWo = ConvCeilDiv(shapeInfo_.wo, blockDimRes.woDim);
-    uint64_t singleCoreBatch = ConvCeilDiv(shapeInfo_.batch, blockDimRes.batchDim);
+    uint64_t singleCoreHo = ConvCeilDiv(shapeInfo_.ho, numBlocksRes.hoDim);
+    uint64_t singleCoreWo = ConvCeilDiv(shapeInfo_.wo, numBlocksRes.woDim);
+    uint64_t singleCoreBatch = ConvCeilDiv(shapeInfo_.batch, numBlocksRes.batchDim);
     uint64_t singleCoreM = ConvCeilDiv(ConvAlignB(shapeInfo_.ho * shapeInfo_.wo, convOpsConstParams_.m0),
-                           blockDimRes.mDim);
+                           numBlocksRes.mDim);
     if (flagInfo_.mSplitModeFlag) {
         conv2dApiTiling_.SetSingleOutputShape(static_cast<int64_t>(singleCoreCo), static_cast<int64_t>(singleCoreM),
                                               static_cast<int64_t>(singleCoreBatch));
@@ -222,7 +222,7 @@ void Conv2dBaseTiling::Conv2dApiTilingSetShape()
     uint64_t enlarge = 0;
     if (flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV) {
         singleGroups = optGroupInfo_.enlarge;
-        singleGroupOpt = ConvCeilDiv(optGroupInfo_.groupOpt, blockDimRes.groupDim);
+        singleGroupOpt = ConvCeilDiv(optGroupInfo_.groupOpt, numBlocksRes.groupDim);
         enlarge = optGroupInfo_.enlarge;
         conv2dApiTiling_.SetOptGroupParams(static_cast<int32_t>(enlarge), static_cast<int64_t>(singleGroups),
                                            static_cast<int64_t>(singleGroupOpt));
@@ -339,9 +339,9 @@ ge::graphStatus Conv2dBaseTiling::GetConv2dOpsTiling()
     tilingData_.conv2dRunInfo.set_padTop(static_cast<uint32_t>(attrInfo_.padTop));
     tilingData_.conv2dRunInfo.set_padLeft(static_cast<uint32_t>(attrInfo_.padLeft));
     tilingData_.conv2dRunInfo.set_hasBias(static_cast<uint8_t>(flagInfo_.hasBias));
-    tilingData_.conv2dRunInfo.set_batchDim(static_cast<uint32_t>(blockDimRes.batchDim));
-    tilingData_.conv2dRunInfo.set_nDim(static_cast<uint32_t>(blockDimRes.nDim));
-    tilingData_.conv2dRunInfo.set_groupDim(static_cast<uint32_t>(blockDimRes.groupDim));
+    tilingData_.conv2dRunInfo.set_batchDim(static_cast<uint32_t>(numBlocksRes.batchDim));
+    tilingData_.conv2dRunInfo.set_nDim(static_cast<uint32_t>(numBlocksRes.nDim));
+    tilingData_.conv2dRunInfo.set_groupDim(static_cast<uint32_t>(numBlocksRes.groupDim));
     tilingData_.conv2dRunInfo.set_groups(static_cast<uint32_t>(attrInfo_.groups));
     if (flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV) {
         tilingData_.conv2dRunInfo.set_cinOpt(static_cast<uint32_t>(optGroupInfo_.cinOpt));
@@ -351,11 +351,11 @@ ge::graphStatus Conv2dBaseTiling::GetConv2dOpsTiling()
     }
 
     if (flagInfo_.mSplitModeFlag) {
-        tilingData_.conv2dRunInfo.set_hoDim(static_cast<uint32_t>(blockDimRes.mDim));
+        tilingData_.conv2dRunInfo.set_hoDim(static_cast<uint32_t>(numBlocksRes.mDim));
         tilingData_.conv2dRunInfo.set_woDim(static_cast<uint32_t>(1));
     } else {
-        tilingData_.conv2dRunInfo.set_hoDim(static_cast<uint32_t>(blockDimRes.hoDim));
-        tilingData_.conv2dRunInfo.set_woDim(static_cast<uint32_t>(blockDimRes.woDim));
+        tilingData_.conv2dRunInfo.set_hoDim(static_cast<uint32_t>(numBlocksRes.hoDim));
+        tilingData_.conv2dRunInfo.set_woDim(static_cast<uint32_t>(numBlocksRes.woDim));
     }
     return ge::GRAPH_SUCCESS;
 }

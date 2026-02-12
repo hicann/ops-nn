@@ -66,7 +66,7 @@ uint64_t Conv2dBaseTiling::GetWeightTilingVal()
     uint64_t weightKSize = flagInfo_.enableC04Flag ? ConvAlignB(C04_CIN_SIZE *
                            shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0) :
                            ci1 * shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
-    uint64_t singleCoreNSize = ConvAlignB(ConvCeilDiv(shapeInfo_.co, blockDimRes.nDim), convOpsConstParams_.n0);
+    uint64_t singleCoreNSize = ConvAlignB(ConvCeilDiv(shapeInfo_.co, numBlocksRes.nDim), convOpsConstParams_.n0);
     if (tilingData_.conv2dApiTiling.get_kBL1() == weightKSize) {
         kBL1FullloadFlag = true;
     }

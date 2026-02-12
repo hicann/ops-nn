@@ -328,9 +328,9 @@ void Conv3dCustomApi(
     if (!conv3dTilingEngine.GetConv3DV2TilingData(tilingData)) {
         throw std::runtime_error("Failed to GetConv3DV2TilingData!");
     }
-    uint32_t blockDim = tilingData.conv3dRunInfo.batchDim * tilingData.conv3dRunInfo.doDim *
+    uint32_t numBlocks = tilingData.conv3dRunInfo.batchDim * tilingData.conv3dRunInfo.doDim *
                         tilingData.conv3dRunInfo.mDim * tilingData.conv3dRunInfo.nDim;
-    Conv3dCustomKernel<T><<<blockDim, nullptr, stream>>>(input_ptr, weight_ptr, bias_ptr, output_ptr, tilingData);
+    Conv3dCustomKernel<T><<<numBlocks, nullptr, stream>>>(input_ptr, weight_ptr, bias_ptr, output_ptr, tilingData);
 }
 
 template <>

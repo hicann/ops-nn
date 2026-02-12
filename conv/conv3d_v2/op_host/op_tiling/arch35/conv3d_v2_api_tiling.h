@@ -36,12 +36,12 @@ public:
                           optiling::conv_ops_tiling::ConvAscendcTilingFlag flagInfo,
                           optiling::conv_ops_tiling::ConvAscendcShapesInfo convShapeInfo,
                           optiling::conv_ops_tiling::ConvOpsConstParams convOpsConstParams,
-                          optiling::conv_ops_tiling::BlockDimRes blockDimRes,
+                          optiling::conv_ops_tiling::NumBlocksRes numBlocksRes,
                           Ops::NN::Conv3dV2::Conv3DV2TilingData& tilingData);
     void SetShape(optiling::conv_ops_tiling::ConvAscendcTilingFlag flagInfo,
                   optiling::conv_ops_tiling::ConvAscendcShapesInfo convShapeInfo,
                   optiling::conv_ops_tiling::ConvOpsConstParams convOpsConstParams,
-                  optiling::conv_ops_tiling::BlockDimRes blockDimRes);
+                  optiling::conv_ops_tiling::NumBlocksRes numBlocksRes);
     void SetOrgWeightShape(int64_t orgCo, int64_t orgKd, int64_t orgKh, int64_t orgKw);
     void SetOrgFmapShape(int64_t orgCi, int64_t orgDi, int64_t orgHi, int64_t orgWi);
     void SetSingleWeightShape(int64_t singleCi, int64_t singleKd, int64_t singleKh, int64_t singleKw);

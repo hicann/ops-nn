@@ -31,12 +31,12 @@ Conv3dTilingEngine::Conv3dTilingEngine(const std::string &logTag)
     : logTag_(logTag.empty() ? "Conv3DV2" : logTag),
       initOk_(false)
 {
-    blockDimRes_.batchDim = 1;
-    blockDimRes_.mDim = 1;
-    blockDimRes_.nDim = 1;
-    blockDimRes_.doDim = 1;
-    blockDimRes_.groupDim = 1;
-    blockDimRes_.minCost = MAX_64_BIT_NUM;
+    numBlocksRes_.batchDim = 1;
+    numBlocksRes_.mDim = 1;
+    numBlocksRes_.nDim = 1;
+    numBlocksRes_.doDim = 1;
+    numBlocksRes_.groupDim = 1;
+    numBlocksRes_.minCost = MAX_64_BIT_NUM;
 
     isPointWise = false;
     outputOrder_ = static_cast<uint8_t>(Conv3dApiTiling::M_Mode);
@@ -317,8 +317,8 @@ bool Conv3dTilingEngine::GetConv3DV2TilingData(Ops::NN::Conv3dV2::Conv3DV2Tiling
         return false;
     }
 
-    if (!ComputeBlockDim()) {
-        OP_LOGE(logTag_.c_str(), "GetConv3DV2TilingData failed: ComputeBlockDim failed.");
+    if (!ComputeNumBlocks()) {
+        OP_LOGE(logTag_.c_str(), "GetConv3DV2TilingData failed: ComputeNumBlocks failed.");
         return false;
     }
 
@@ -336,24 +336,24 @@ bool Conv3dTilingEngine::GetConv3DV2TilingData(Ops::NN::Conv3dV2::Conv3DV2Tiling
     return true;
 }
 
-uint32_t Conv3dTilingEngine::GetBlockDim() const
+uint32_t Conv3dTilingEngine::GetNumBlocks() const
 {
-    return blockDimRes_.batchDim * blockDimRes_.mDim * blockDimRes_.nDim *
-           blockDimRes_.doDim * blockDimRes_.groupDim;
+    return numBlocksRes_.batchDim * numBlocksRes_.mDim * numBlocksRes_.nDim *
+           numBlocksRes_.doDim * numBlocksRes_.groupDim;
 }
 
-void Conv3dTilingEngine::GetBlockDimDetail(uint32_t &batchDim, uint32_t &mDim, uint32_t &nDim,
+void Conv3dTilingEngine::GetNumBlocksDetail(uint32_t &batchDim, uint32_t &mDim, uint32_t &nDim,
                                           uint32_t &doDim, uint32_t &groupDim) const
 {
-    batchDim = blockDimRes_.batchDim;
-    mDim = blockDimRes_.mDim;
-    nDim = blockDimRes_.nDim;
-    doDim = blockDimRes_.doDim;
-    groupDim = blockDimRes_.groupDim;
+    batchDim = numBlocksRes_.batchDim;
+    mDim = numBlocksRes_.mDim;
+    nDim = numBlocksRes_.nDim;
+    doDim = numBlocksRes_.doDim;
+    groupDim = numBlocksRes_.groupDim;
 }
 
-// Map internal engine state (shapeInfo_/attrInfo_/blockDimRes_/flagInfo_) into Conv3DV2TilingData::conv3dRunInfo.
-// Precondition: CheckAllParams() has passed and blockDimRes_ has been computed.
+// Map internal engine state (shapeInfo_/attrInfo_/numBlocksRes_/flagInfo_) into Conv3DV2TilingData::conv3dRunInfo.
+// Precondition: CheckAllParams() has passed and numBlocksRes_ has been computed.
 void Conv3dTilingEngine::GetConv3DRunInfo(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingdata)
 {
     OP_LOGD(logTag_.c_str(), "Filling Conv3DRunInfo from engine state.");
@@ -373,11 +373,11 @@ void Conv3dTilingEngine::GetConv3DRunInfo(Ops::NN::Conv3dV2::Conv3DV2TilingData 
     runInfo.hout = shapeInfo_.ho;
     runInfo.wout = shapeInfo_.wo;
 
-    runInfo.batchDim = blockDimRes_.batchDim;
-    runInfo.mDim = blockDimRes_.mDim;
-    runInfo.nDim = blockDimRes_.nDim;
-    runInfo.doDim = blockDimRes_.doDim;
-    runInfo.groupDim = blockDimRes_.groupDim;
+    runInfo.batchDim = numBlocksRes_.batchDim;
+    runInfo.mDim = numBlocksRes_.mDim;
+    runInfo.nDim = numBlocksRes_.nDim;
+    runInfo.doDim = numBlocksRes_.doDim;
+    runInfo.groupDim = numBlocksRes_.groupDim;
 
     runInfo.strideH = static_cast<uint32_t>(attrInfo_.strideH);
     runInfo.strideW = static_cast<uint32_t>(attrInfo_.strideW);
@@ -1254,22 +1254,22 @@ bool Conv3dTilingEngine::GetGroupConvOpt()
     return true;
 }
 
-bool Conv3dTilingEngine::ComputeBlockDim()
+bool Conv3dTilingEngine::ComputeNumBlocks()
 {
     OP_LOGD(logTag_.c_str(), "Computing block dimension decisions");
 
     // Get block dimension ranges
-    GetBlockDimRange();
+    GetNumBlocksRange();
 
     // Initialize block dimension
-    GetBlockDimInit();
+    GetNumBlocksInit();
 
     // Perform core block dimension decision
-    CoreBlockDimDecision();
+    CoreNumBlocksDecision();
 
     OP_LOGD(logTag_.c_str(), "Block dimension computed - batch: %u, m: %u, n: %u, do: %u, group: %u",
-            blockDimRes_.batchDim, blockDimRes_.mDim, blockDimRes_.nDim,
-            blockDimRes_.doDim, blockDimRes_.groupDim);
+            numBlocksRes_.batchDim, numBlocksRes_.mDim, numBlocksRes_.nDim,
+            numBlocksRes_.doDim, numBlocksRes_.groupDim);
 
     return true;
 }
@@ -1288,159 +1288,159 @@ bool Conv3dTilingEngine::ComputeApiTiling(Ops::NN::Conv3dV2::Conv3DV2TilingData 
     return true;
 }
 
-void Conv3dTilingEngine::BlockDimDecision()
+void Conv3dTilingEngine::NumBlocksDecision()
 {
     OP_LOGD(logTag_.c_str(), "Starting block dimension decision");
 
-    (void)ComputeBlockDim();
+    (void)ComputeNumBlocks();
 }
 
-void Conv3dTilingEngine::GetBlockDimRange()
+void Conv3dTilingEngine::GetNumBlocksRange()
 {
     OP_LOGD(logTag_.c_str(), "Getting block dimension ranges");
 
-    CalcCommFactor(platformInfo_.aicoreNum, platformInfo_.aicoreNum, blockDimRanges_.aicNumRange);
+    CalcCommFactor(platformInfo_.aicoreNum, platformInfo_.aicoreNum, numBlocksRanges_.aicNumRange);
     // batchRange
-    CalcCommFactor(shapeInfo_.batch, platformInfo_.aicoreNum, blockDimRanges_.batchRange);
+    CalcCommFactor(shapeInfo_.batch, platformInfo_.aicoreNum, numBlocksRanges_.batchRange);
     if (shapeInfo_.batch >= BATCH_AICORE_COF * platformInfo_.aicoreNum) {
-        blockDimRanges_.batchRange = blockDimRanges_.aicNumRange;
+        numBlocksRanges_.batchRange = numBlocksRanges_.aicNumRange;
     } else {
-        BlockDimFactorMix(shapeInfo_.batch, blockDimRanges_.batchRange, blockDimRanges_.aicNumRange);
+        NumBlocksFactorMix(shapeInfo_.batch, numBlocksRanges_.batchRange, numBlocksRanges_.aicNumRange);
     }
-    BlockDimRangesFilter(shapeInfo_.batch, blockDimRanges_.batchRange);
+    NumBlocksRangesFilter(shapeInfo_.batch, numBlocksRanges_.batchRange);
     // nRange
     uint32_t n0 = g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_N_IDX);
-    CalcCommFactor(CeilDiv(shapeInfo_.coutOpt, n0), platformInfo_.aicoreNum, blockDimRanges_.nRange);
+    CalcCommFactor(CeilDiv(shapeInfo_.coutOpt, n0), platformInfo_.aicoreNum, numBlocksRanges_.nRange);
     if (outputOrder_ == Conv3dApiTiling::M_Mode) {
         // mRange
         uint32_t m0 = g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_M_IDX);
         uint64_t m1 = CeilDiv(shapeInfo_.ho * shapeInfo_.wo, m0);
-        CalcCommFactor(m1, platformInfo_.aicoreNum, blockDimRanges_.mRange);
-        BlockDimFactorMix(m1, blockDimRanges_.mRange, blockDimRanges_.aicNumRange);
-        BlockDimRangesFilter(m1, blockDimRanges_.mRange);
+        CalcCommFactor(m1, platformInfo_.aicoreNum, numBlocksRanges_.mRange);
+        NumBlocksFactorMix(m1, numBlocksRanges_.mRange, numBlocksRanges_.aicNumRange);
+        NumBlocksRangesFilter(m1, numBlocksRanges_.mRange);
     } else {
         // hoRange
-        CalcCommFactor(shapeInfo_.ho, platformInfo_.aicoreNum, blockDimRanges_.mRange);
-        BlockDimFactorMix(shapeInfo_.ho, blockDimRanges_.mRange, blockDimRanges_.aicNumRange);
-        BlockDimRangesFilter(shapeInfo_.ho, blockDimRanges_.mRange);
+        CalcCommFactor(shapeInfo_.ho, platformInfo_.aicoreNum, numBlocksRanges_.mRange);
+        NumBlocksFactorMix(shapeInfo_.ho, numBlocksRanges_.mRange, numBlocksRanges_.aicNumRange);
+        NumBlocksRangesFilter(shapeInfo_.ho, numBlocksRanges_.mRange);
     }
     // doRange
-    CalcCommFactor(shapeInfo_.dOut, platformInfo_.aicoreNum, blockDimRanges_.doRange);
-    BlockDimFactorMix(shapeInfo_.dOut, blockDimRanges_.doRange, blockDimRanges_.aicNumRange);
+    CalcCommFactor(shapeInfo_.dOut, platformInfo_.aicoreNum, numBlocksRanges_.doRange);
+    NumBlocksFactorMix(shapeInfo_.dOut, numBlocksRanges_.doRange, numBlocksRanges_.aicNumRange);
     // filter the d-axis aicore partitioning range to avoid unused idle-core scenarios in its candidate values
-    BlockDimRangesFilter(shapeInfo_.dOut, blockDimRanges_.doRange);
+    NumBlocksRangesFilter(shapeInfo_.dOut, numBlocksRanges_.doRange);
     // groupRange
     if (attrInfo_.groups == 1) {
-        GetBlockDimRangeforGroupRange(blockDimRanges_.groupRange);
+        GetNumBlocksRangeforGroupRange(numBlocksRanges_.groupRange);
     } else {
-        CalcCommFactor(attrInfo_.groupOpt, platformInfo_.aicoreNum, blockDimRanges_.groupRange);
+        CalcCommFactor(attrInfo_.groupOpt, platformInfo_.aicoreNum, numBlocksRanges_.groupRange);
     }
 }
 
-void Conv3dTilingEngine::GetBlockDimInit()
+void Conv3dTilingEngine::GetNumBlocksInit()
 {
     OP_LOGD(logTag_.c_str(), "Initializing block dimensions");
 
-    blockDimInit_.resize(BLOCKDIM_DEC_NUM, 1);
-    if (!blockDimRanges_.batchRange.empty()) {
-        blockDimInit_[BLOCKDIM_BATCH_IDX] = blockDimRanges_.batchRange[0];
+    numBlocksInit_.resize(NUMBLOCKS_DEC_NUM, 1);
+    if (!numBlocksRanges_.batchRange.empty()) {
+        numBlocksInit_[NUMBLOCKS_BATCH_IDX] = numBlocksRanges_.batchRange[0];
     }
-    if (!blockDimRanges_.mRange.empty()) {
-        blockDimInit_[BLOCKDIM_M_IDX] = blockDimRanges_.mRange[0];
+    if (!numBlocksRanges_.mRange.empty()) {
+        numBlocksInit_[NUMBLOCKS_M_IDX] = numBlocksRanges_.mRange[0];
     }
-    if (!blockDimRanges_.nRange.empty()) {
-        blockDimInit_[BLOCKDIM_N_IDX] = blockDimRanges_.nRange[0];
+    if (!numBlocksRanges_.nRange.empty()) {
+        numBlocksInit_[NUMBLOCKS_N_IDX] = numBlocksRanges_.nRange[0];
     }
-    if (!blockDimRanges_.doRange.empty()) {
-        blockDimInit_[BLOCKDIM_DO_IDX] = blockDimRanges_.doRange[0];
+    if (!numBlocksRanges_.doRange.empty()) {
+        numBlocksInit_[NUMBLOCKS_DO_IDX] = numBlocksRanges_.doRange[0];
     }
-    if (!blockDimRanges_.groupRange.empty()) {
-        blockDimInit_[BLOCKDIM_GROUP_IDX] = blockDimRanges_.groupRange[0];
+    if (!numBlocksRanges_.groupRange.empty()) {
+        numBlocksInit_[NUMBLOCKS_GROUP_IDX] = numBlocksRanges_.groupRange[0];
     }
 
-    blockDimConst_.m0 = g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_M_IDX);
-    blockDimConst_.k0 = g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_K_IDX);
-    blockDimConst_.n0 = g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_N_IDX);
-    blockDimConst_.ci1 = CeilDiv(shapeInfo_.cinOpt, blockDimConst_.k0);
-    blockDimConst_.co1 = CeilDiv(shapeInfo_.coutOpt, blockDimConst_.n0);
+    numBlocksConst_.m0 = g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_M_IDX);
+    numBlocksConst_.k0 = g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_K_IDX);
+    numBlocksConst_.n0 = g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_N_IDX);
+    numBlocksConst_.ci1 = CeilDiv(shapeInfo_.cinOpt, numBlocksConst_.k0);
+    numBlocksConst_.co1 = CeilDiv(shapeInfo_.coutOpt, numBlocksConst_.n0);
 }
 
-void Conv3dTilingEngine::CoreBlockDimDecision()
+void Conv3dTilingEngine::CoreNumBlocksDecision()
 {
     OP_LOGD(logTag_.c_str(), "Performing core block dimension decision");
 
-    blockDimRes_.batchDim = 1;
-    blockDimRes_.mDim = 1;
-    blockDimRes_.nDim = 1;
-    blockDimRes_.doDim = 1;
-    blockDimRes_.groupDim = 1;
-    blockDimRes_.minCost = MAX_64_BIT_NUM;
+    numBlocksRes_.batchDim = 1;
+    numBlocksRes_.mDim = 1;
+    numBlocksRes_.nDim = 1;
+    numBlocksRes_.doDim = 1;
+    numBlocksRes_.groupDim = 1;
+    numBlocksRes_.minCost = MAX_64_BIT_NUM;
 
-    std::vector<std::vector<uint32_t>> allRanges(BLOCKDIM_DEC_NUM, std::vector<uint32_t>(1, 1));
-    allRanges[BLOCKDIM_BATCH_IDX] = blockDimRanges_.batchRange;
-    allRanges[BLOCKDIM_M_IDX] = blockDimRanges_.mRange;
-    allRanges[BLOCKDIM_N_IDX] = blockDimRanges_.nRange;
-    allRanges[BLOCKDIM_DO_IDX] = blockDimRanges_.doRange;
-    allRanges[BLOCKDIM_GROUP_IDX] = blockDimRanges_.groupRange;
+    std::vector<std::vector<uint32_t>> allRanges(NUMBLOCKS_DEC_NUM, std::vector<uint32_t>(1, 1));
+    allRanges[NUMBLOCKS_BATCH_IDX] = numBlocksRanges_.batchRange;
+    allRanges[NUMBLOCKS_M_IDX] = numBlocksRanges_.mRange;
+    allRanges[NUMBLOCKS_N_IDX] = numBlocksRanges_.nRange;
+    allRanges[NUMBLOCKS_DO_IDX] = numBlocksRanges_.doRange;
+    allRanges[NUMBLOCKS_GROUP_IDX] = numBlocksRanges_.groupRange;
     std::vector<uint32_t> dimsRecord;
-    BlockDimDecisionBackTrack(allRanges, BLOCKDIM_BATCH_IDX, dimsRecord);
+    NumBlocksDecisionBackTrack(allRanges, NUMBLOCKS_BATCH_IDX, dimsRecord);
 }
 
-void Conv3dTilingEngine::BlockDimDecisionBackTrack(const std::vector<std::vector<uint32_t>> &inputRanges,
+void Conv3dTilingEngine::NumBlocksDecisionBackTrack(const std::vector<std::vector<uint32_t>> &inputRanges,
                                                    uint32_t rangeIdx,
                                                    std::vector<uint32_t> &record)
 {
     if (record.size() == inputRanges.size()) {
-        uint32_t curBlockDim = record[BLOCKDIM_BATCH_IDX] * record[BLOCKDIM_M_IDX] * record[BLOCKDIM_N_IDX] *
-                               record[BLOCKDIM_DO_IDX] * record[BLOCKDIM_GROUP_IDX];
-        if (curBlockDim > platformInfo_.aicoreNum) {
+        uint32_t curNumBlocks = record[NUMBLOCKS_BATCH_IDX] * record[NUMBLOCKS_M_IDX] * record[NUMBLOCKS_N_IDX] *
+                               record[NUMBLOCKS_DO_IDX] * record[NUMBLOCKS_GROUP_IDX];
+        if (curNumBlocks > platformInfo_.aicoreNum) {
             return;
         }
         bool updateFlag = false;
-        uint64_t curCost = CalcTotalCost(record[BLOCKDIM_BATCH_IDX], record[BLOCKDIM_M_IDX], record[BLOCKDIM_N_IDX],
-                                         record[BLOCKDIM_DO_IDX], record[BLOCKDIM_GROUP_IDX]);
-        if (curCost < blockDimRes_.minCost) {
+        uint64_t curCost = CalcTotalCost(record[NUMBLOCKS_BATCH_IDX], record[NUMBLOCKS_M_IDX], record[NUMBLOCKS_N_IDX],
+                                         record[NUMBLOCKS_DO_IDX], record[NUMBLOCKS_GROUP_IDX]);
+        if (curCost < numBlocksRes_.minCost) {
             updateFlag = true;
-        } else if (curCost == blockDimRes_.minCost) {
+        } else if (curCost == numBlocksRes_.minCost) {
             // for same cost, preference: batch > group > dout
-            if (blockDimRes_.batchDim < record[BLOCKDIM_BATCH_IDX]) {
+            if (numBlocksRes_.batchDim < record[NUMBLOCKS_BATCH_IDX]) {
                 updateFlag = true;
-            } else if ((blockDimRes_.batchDim == record[BLOCKDIM_BATCH_IDX]) &&
-                        (blockDimRes_.groupDim < record[BLOCKDIM_GROUP_IDX])) {
+            } else if ((numBlocksRes_.batchDim == record[NUMBLOCKS_BATCH_IDX]) &&
+                        (numBlocksRes_.groupDim < record[NUMBLOCKS_GROUP_IDX])) {
                 updateFlag = true;
-            } else if ((blockDimRes_.batchDim == record[BLOCKDIM_BATCH_IDX]) &&
-                       (blockDimRes_.groupDim == record[BLOCKDIM_GROUP_IDX]) &&
-                       (blockDimRes_.doDim < record[BLOCKDIM_DO_IDX])) {
+            } else if ((numBlocksRes_.batchDim == record[NUMBLOCKS_BATCH_IDX]) &&
+                       (numBlocksRes_.groupDim == record[NUMBLOCKS_GROUP_IDX]) &&
+                       (numBlocksRes_.doDim < record[NUMBLOCKS_DO_IDX])) {
                 updateFlag = true;
             }
         }
         if (updateFlag) {
-            blockDimRes_.batchDim = record[BLOCKDIM_BATCH_IDX];
-            blockDimRes_.mDim = record[BLOCKDIM_M_IDX];
-            blockDimRes_.nDim = record[BLOCKDIM_N_IDX];
-            blockDimRes_.doDim = record[BLOCKDIM_DO_IDX];
-            blockDimRes_.groupDim = record[BLOCKDIM_GROUP_IDX];
-            blockDimRes_.minCost = curCost;
+            numBlocksRes_.batchDim = record[NUMBLOCKS_BATCH_IDX];
+            numBlocksRes_.mDim = record[NUMBLOCKS_M_IDX];
+            numBlocksRes_.nDim = record[NUMBLOCKS_N_IDX];
+            numBlocksRes_.doDim = record[NUMBLOCKS_DO_IDX];
+            numBlocksRes_.groupDim = record[NUMBLOCKS_GROUP_IDX];
+            numBlocksRes_.minCost = curCost;
         }
         return;
     }
 
-    if (rangeIdx >= inputRanges.size() || rangeIdx >= blockDimInit_.size()) {
+    if (rangeIdx >= inputRanges.size() || rangeIdx >= numBlocksInit_.size()) {
         return;
     }
 
     for (uint32_t i = 0; i < inputRanges[rangeIdx].size(); i++) {
-        if (inputRanges[rangeIdx][i] < blockDimInit_[rangeIdx] && i < inputRanges[rangeIdx].size() - 1) {
+        if (inputRanges[rangeIdx][i] < numBlocksInit_[rangeIdx] && i < inputRanges[rangeIdx].size() - 1) {
             continue;
         }
 
-        if (inputRanges[rangeIdx][i] < blockDimInit_[rangeIdx] && i == inputRanges[rangeIdx].size() - 1) {
+        if (inputRanges[rangeIdx][i] < numBlocksInit_[rangeIdx] && i == inputRanges[rangeIdx].size() - 1) {
             record.emplace_back(1);
         } else {
             record.emplace_back(inputRanges[rangeIdx][i]);
         }
 
-        BlockDimDecisionBackTrack(inputRanges, rangeIdx + 1, record);
+        NumBlocksDecisionBackTrack(inputRanges, rangeIdx + 1, record);
         record.pop_back();
     }
 }
@@ -1451,25 +1451,25 @@ uint64_t Conv3dTilingEngine::CalcTotalCost(uint32_t batchDim, uint32_t mDim, uin
     double loadFeatureMapCost = static_cast<double>(shapeInfo_.batch) / static_cast<double>(batchDim) *
                                 static_cast<double>(shapeInfo_.dOut) / static_cast<double>(doDim) *
                                 static_cast<double>(shapeInfo_.hi * shapeInfo_.wi) / static_cast<double>(mDim) *
-                                static_cast<double>(shapeInfo_.kd * blockDimConst_.ci1 * blockDimConst_.k0) /
+                                static_cast<double>(shapeInfo_.kd * numBlocksConst_.ci1 * numBlocksConst_.k0) /
                                 static_cast<double>(platformInfo_.l2Rate);
-    double loadWeightCost = static_cast<double>(blockDimConst_.co1 * blockDimConst_.n0) / static_cast<double>(nDim) *
-                            static_cast<double>(shapeInfo_.kd * blockDimConst_.ci1 *
-                            shapeInfo_.kh * shapeInfo_.kw * blockDimConst_.k0) *
+    double loadWeightCost = static_cast<double>(numBlocksConst_.co1 * numBlocksConst_.n0) / static_cast<double>(nDim) *
+                            static_cast<double>(shapeInfo_.kd * numBlocksConst_.ci1 *
+                            shapeInfo_.kh * shapeInfo_.kw * numBlocksConst_.k0) *
                             static_cast<double>(shapeInfo_.batch) / static_cast<double>(batchDim) /
                             static_cast<double>(platformInfo_.l2Rate);
     double loadOutputCost = static_cast<double>(shapeInfo_.batch) / static_cast<double>(batchDim) *
-                            static_cast<double>(blockDimConst_.co1 * blockDimConst_.n0) / static_cast<double>(nDim) *
+                            static_cast<double>(numBlocksConst_.co1 * numBlocksConst_.n0) / static_cast<double>(nDim) *
                             static_cast<double>(shapeInfo_.dOut) / static_cast<double>(doDim) *
                             static_cast<double>(shapeInfo_.ho * shapeInfo_.wo) /
                             static_cast<double>(mDim) / static_cast<double>(platformInfo_.l2Rate);
     double singleM1 = outputOrder_ == Conv3dApiTiling::M_Mode ?
-            static_cast<double>(CeilDiv(shapeInfo_.ho * shapeInfo_.wo, blockDimConst_.m0)) / static_cast<double>(mDim) :
-            static_cast<double>(CeilDiv(CeilDiv(shapeInfo_.ho, mDim) * shapeInfo_.wo, blockDimConst_.m0));
+            static_cast<double>(CeilDiv(shapeInfo_.ho * shapeInfo_.wo, numBlocksConst_.m0)) / static_cast<double>(mDim) :
+            static_cast<double>(CeilDiv(CeilDiv(shapeInfo_.ho, mDim) * shapeInfo_.wo, numBlocksConst_.m0));
     double cubeCalcCost = static_cast<double>(shapeInfo_.batch) / static_cast<double>(batchDim) *
-                          static_cast<double>(blockDimConst_.co1) / static_cast<double>(nDim) *
+                          static_cast<double>(numBlocksConst_.co1) / static_cast<double>(nDim) *
                           static_cast<double>(shapeInfo_.dOut) / static_cast<double>(doDim) *
-                          static_cast<double>(shapeInfo_.kd * blockDimConst_.ci1 * shapeInfo_.kh * shapeInfo_.kw) *
+                          static_cast<double>(shapeInfo_.kd * numBlocksConst_.ci1 * shapeInfo_.kh * shapeInfo_.kw) *
                           singleM1;
     if (attrInfo_.groups != 1) {
         loadFeatureMapCost = loadFeatureMapCost * static_cast<double>(attrInfo_.groupOpt) / static_cast<double>(groupDim);
@@ -1541,15 +1541,15 @@ void Conv3dTilingEngine::SetSingleOutputShapeByMode()
 {
     OP_LOGD(logTag_.c_str(), "Setting single output shape by mode");
 
-    int32_t singleCoreCo = blockDimRes_.nDim == 1 ? shapeInfo_.coutOpt :
-        AlignUp(shapeInfo_.coutOpt, g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_N_IDX)) / blockDimRes_.nDim;
-    int32_t singleCoreDo = CeilDiv(static_cast<uint32_t>(shapeInfo_.dOut), blockDimRes_.doDim);
+    int32_t singleCoreCo = numBlocksRes_.nDim == 1 ? shapeInfo_.coutOpt :
+        AlignUp(shapeInfo_.coutOpt, g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_N_IDX)) / numBlocksRes_.nDim;
+    int32_t singleCoreDo = CeilDiv(static_cast<uint32_t>(shapeInfo_.dOut), numBlocksRes_.doDim);
 
     if (outputOrder_ == Conv3dApiTiling::M_Mode) {
-        int64_t singleCoreMo = CeilDiv(static_cast<uint64_t>(shapeInfo_.ho * shapeInfo_.wo), static_cast<uint64_t>(blockDimRes_.mDim));
+        int64_t singleCoreMo = CeilDiv(static_cast<uint64_t>(shapeInfo_.ho * shapeInfo_.wo), static_cast<uint64_t>(numBlocksRes_.mDim));
         conv3dApiTiling_.SetSingleOutputShape(singleCoreCo, singleCoreDo, singleCoreMo);
     } else {
-        int64_t singleCoreHo = CeilDiv(static_cast<uint64_t>(shapeInfo_.ho), static_cast<uint64_t>(blockDimRes_.mDim));
+        int64_t singleCoreHo = CeilDiv(static_cast<uint64_t>(shapeInfo_.ho), static_cast<uint64_t>(numBlocksRes_.mDim));
         conv3dApiTiling_.SetSingleOutputShape(singleCoreCo, singleCoreDo, singleCoreHo, shapeInfo_.wo);
     }
 }
@@ -1581,7 +1581,7 @@ void Conv3dTilingEngine::GetConv3dApiTilingSetGroupsInfo()
 
     conv3dApiTiling_.SetGroups(static_cast<int64_t>(attrInfo_.groups));
 
-    int64_t singleCoreGroupOpt = static_cast<int64_t>(CeilDiv(attrInfo_.groupOpt, blockDimRes_.groupDim));
+    int64_t singleCoreGroupOpt = static_cast<int64_t>(CeilDiv(attrInfo_.groupOpt, numBlocksRes_.groupDim));
     conv3dApiTiling_.SetOptGroupInfo(static_cast<int64_t>(attrInfo_.groupOpt), singleCoreGroupOpt,
                                      static_cast<int64_t>(shapeInfo_.cinOpt), static_cast<int64_t>(shapeInfo_.coutOpt));
     SetSingleOutputShapeByMode();
@@ -1671,7 +1671,7 @@ bool Conv3dTilingEngine::CheckInputLimitsHwMode()
     return true;
 }
 
-void Conv3dTilingEngine::BlockDimFactorMix(uint32_t orgDim, std::vector<uint32_t> &inputRange,
+void Conv3dTilingEngine::NumBlocksFactorMix(uint32_t orgDim, std::vector<uint32_t> &inputRange,
                                           const std::vector<uint32_t> &mixRange)
 {
     OP_LOGD(logTag_.c_str(), "Mixing block dimension factors");
@@ -1687,14 +1687,14 @@ void Conv3dTilingEngine::BlockDimFactorMix(uint32_t orgDim, std::vector<uint32_t
     inputRange.assign(tmpRanges.begin(), tmpRanges.end());
 }
 
-void Conv3dTilingEngine::BlockDimRangesFilter(uint32_t orgDim, std::vector<uint32_t>& inputRange)
+void Conv3dTilingEngine::NumBlocksRangesFilter(uint32_t orgDim, std::vector<uint32_t>& inputRange)
 {
     std::vector<uint32_t> tmpSelectRange;
-    for (auto blockDim : inputRange) {
-        uint32_t elemPerCore = CeilDiv(orgDim, blockDim);
-        uint32_t realBlockDim = CeilDiv(orgDim, elemPerCore);
-        if (blockDim == realBlockDim) {
-            tmpSelectRange.emplace_back(blockDim);
+    for (auto numBlocks : inputRange) {
+        uint32_t elemPerCore = CeilDiv(orgDim, numBlocks);
+        uint32_t realNumBlocks = CeilDiv(orgDim, elemPerCore);
+        if (numBlocks == realNumBlocks) {
+            tmpSelectRange.emplace_back(numBlocks);
         }
     }
     if (!tmpSelectRange.empty()) {
@@ -1702,7 +1702,7 @@ void Conv3dTilingEngine::BlockDimRangesFilter(uint32_t orgDim, std::vector<uint3
     }
 }
 
-void Conv3dTilingEngine::GetBlockDimRangeforGroupRange(std::vector<uint32_t> &groupRange)
+void Conv3dTilingEngine::GetNumBlocksRangeforGroupRange(std::vector<uint32_t> &groupRange)
 {
     // groupDim = 1, groupRange = {1}
     groupRange.assign(1, 1);

@@ -65,10 +65,10 @@ void Conv2dBaseTiling::BasicBlock()
     BasicBlockBoundMode();
     BasicBlockFWDimDecision();
     BasicBlockBatchMDimDecision();
-    blockDimRes.batchDim = conv2dBasicBlockInfo_.batchDim;
-    blockDimRes.mDim = conv2dBasicBlockInfo_.mDim;
-    blockDimRes.nDim = conv2dBasicBlockInfo_.nDim;
-    blockDimRes.groupDim = conv2dBasicBlockInfo_.groupDim;
+    numBlocksRes.batchDim = conv2dBasicBlockInfo_.batchDim;
+    numBlocksRes.mDim = conv2dBasicBlockInfo_.mDim;
+    numBlocksRes.nDim = conv2dBasicBlockInfo_.nDim;
+    numBlocksRes.groupDim = conv2dBasicBlockInfo_.groupDim;
 }
 
 void Conv2dBaseTiling::BasicBlockGroupDecision()
@@ -291,7 +291,7 @@ void Conv2dBaseTiling::GenerateSingleCandidateCaseCommon(const uint32_t cores, c
     const uint32_t cut2, unordered_set<pair<uint32_t, uint32_t>, pair_hash> &candidates) const
 {
     if (dim == 0) {
-        OP_LOGD(context_->GetNodeName(), "%s AscendC: blockDim is equal to 0", context_->GetNodeType());
+        OP_LOGD(context_->GetNodeName(), "%s AscendC: numBlocks is equal to 0", context_->GetNodeType());
         return;
     }
 

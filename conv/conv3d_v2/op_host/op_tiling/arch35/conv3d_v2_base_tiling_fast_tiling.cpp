@@ -21,7 +21,7 @@ ge::graphStatus Conv3dBaseTilingV2::Conv3DInfoInitAndCheck() {
     convBase_.ConvBaseInitOpInfo(opInfo_);
     convBase_.updatePlatformInfoFromOpInfo();
     convBase_.ConvBaseInitFixpipeInfo(fixpipeInfo_);
-    convBase_.InitblockDimConstParas();
+    convBase_.InitNumBlocksConstParas();
     convBase_.GetConvBaseCoreInfo(convOpsConstParams_);
     convBase_.ConvBaseInitNodeInfo(context_->GetNodeName(), paramInfo_.nodeType.c_str());
 
@@ -87,10 +87,10 @@ ge::graphStatus Conv3dBaseTilingV2::GetConv3dOpsTiling()
     tilingData_.conv3dRunInfo.kd = static_cast<uint32_t>(shapeInfo_.kd);
     tilingData_.conv3dRunInfo.kh = static_cast<uint32_t>(shapeInfo_.kh);
     tilingData_.conv3dRunInfo.kw = static_cast<uint32_t>(shapeInfo_.kw);
-    tilingData_.conv3dRunInfo.batchDim = static_cast<uint32_t>(blockDimRes.batchDim);
-    tilingData_.conv3dRunInfo.nDim = static_cast<uint32_t>(blockDimRes.nDim);
-    tilingData_.conv3dRunInfo.doDim = static_cast<uint32_t>(blockDimRes.doDim);
-    tilingData_.conv3dRunInfo.groupDim = static_cast<uint32_t>(blockDimRes.groupDim);
+    tilingData_.conv3dRunInfo.batchDim = static_cast<uint32_t>(numBlocksRes.batchDim);
+    tilingData_.conv3dRunInfo.nDim = static_cast<uint32_t>(numBlocksRes.nDim);
+    tilingData_.conv3dRunInfo.doDim = static_cast<uint32_t>(numBlocksRes.doDim);
+    tilingData_.conv3dRunInfo.groupDim = static_cast<uint32_t>(numBlocksRes.groupDim);
     tilingData_.conv3dRunInfo.strideH = static_cast<uint32_t>(attrInfo_.strideH);
     tilingData_.conv3dRunInfo.strideD = static_cast<uint32_t>(attrInfo_.strideD);
     tilingData_.conv3dRunInfo.dilationH = static_cast<uint32_t>(attrInfo_.dilationH);
@@ -107,44 +107,44 @@ ge::graphStatus Conv3dBaseTilingV2::GetConv3dOpsTiling()
     }
 
     if (flagInfo_.mSplitModeFlag) {
-        tilingData_.conv3dRunInfo.hoDim = static_cast<uint32_t>(blockDimRes.mDim);
+        tilingData_.conv3dRunInfo.hoDim = static_cast<uint32_t>(numBlocksRes.mDim);
     } else {
-        tilingData_.conv3dRunInfo.hoDim = static_cast<uint32_t>(blockDimRes.hoDim);
+        tilingData_.conv3dRunInfo.hoDim = static_cast<uint32_t>(numBlocksRes.hoDim);
     }
 
     return ge::GRAPH_SUCCESS;
 }
 
-void Conv3dBaseTilingV2::BlockDimDecision()
+void Conv3dBaseTilingV2::NumBlocksDecision()
 {
     convBase_.UpdateFlagInfo(flagInfo_);
     if (flagInfo_.mSplitModeFlag) { // M split mode
-        blockDimRes = convBase_.BlockDimDecisionMsplitMode();
+        numBlocksRes = convBase_.NumBlocksDecisionMsplitMode();
         OP_LOGD(context_->GetNodeName(),
             "%s AscendC: get tiling from Mmode formulaic algorithm, belong to fast_tiling.",
             paramInfo_.nodeType.c_str());
         OP_LOGD(context_->GetNodeName(),
             "%s AscendC: batchDim / mDim / nDim / doDim / groupDim / minCost: %u, %u, %u, %u, %u, %lu.",
             paramInfo_.nodeType.c_str(),
-            blockDimRes.batchDim,
-            blockDimRes.mDim,
-            blockDimRes.nDim,
-            blockDimRes.doDim,
-            blockDimRes.groupDim,
-            blockDimRes.minCost);
+            numBlocksRes.batchDim,
+            numBlocksRes.mDim,
+            numBlocksRes.nDim,
+            numBlocksRes.doDim,
+            numBlocksRes.groupDim,
+            numBlocksRes.minCost);
     } else { // HW split mode
-        blockDimRes = convBase_.BlockDimDecisionHWsplitMode();
+        numBlocksRes = convBase_.NumBlocksDecisionHWsplitMode();
         OP_LOGD(context_->GetNodeName(),
             "%s AscendC: get tiling from HWmode formulaic algorithm, belong to fast_tiling.",
             paramInfo_.nodeType.c_str());
         OP_LOGD(context_->GetNodeName(),
             "Conv3D AscendC: batchDim / hoDim / nDim / doDim / groupDim / minCost: %u, %u, %u, %u, %u, %lu.",
-            blockDimRes.batchDim,
-            blockDimRes.hoDim,
-            blockDimRes.nDim,
-            blockDimRes.doDim,
-            blockDimRes.groupDim,
-            blockDimRes.minCost);
+            numBlocksRes.batchDim,
+            numBlocksRes.hoDim,
+            numBlocksRes.nDim,
+            numBlocksRes.doDim,
+            numBlocksRes.groupDim,
+            numBlocksRes.minCost);
     }
 }
 
@@ -205,17 +205,17 @@ void Conv3dBaseTilingV2::Conv3dOpTilingSetShape()
 
     uint64_t curCo = flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV ? (flagInfo_.convGroupType ==
         ConvGroupType::ORI_GROUP_CONV ? oriGroupInfo_.coPerGroup : optGroupInfo_.coutOpt) : shapeInfo_.co;
-    int64_t singleCoreCo = ConvAlignB(ConvCeilDiv(ConvAlignB(curCo, convOpsConstParams_.n0), blockDimRes.nDim),
+    int64_t singleCoreCo = ConvAlignB(ConvCeilDiv(ConvAlignB(curCo, convOpsConstParams_.n0), numBlocksRes.nDim),
                            convOpsConstParams_.n0);
-    int64_t singleCoreDo = ConvCeilDiv(shapeInfo_.dout, blockDimRes.doDim);
-    int64_t singleCoreBatch = ConvCeilDiv(shapeInfo_.batch, blockDimRes.batchDim);
+    int64_t singleCoreDo = ConvCeilDiv(shapeInfo_.dout, numBlocksRes.doDim);
+    int64_t singleCoreBatch = ConvCeilDiv(shapeInfo_.batch, numBlocksRes.batchDim);
     int64_t singleCoreHo = 0;
     int64_t singleCoreMo = 0;
     if (flagInfo_.mSplitModeFlag) {
-        singleCoreMo = ConvCeilDiv(ConvAlignB(shapeInfo_.ho * shapeInfo_.wo, convOpsConstParams_.m0), blockDimRes.mDim);
+        singleCoreMo = ConvCeilDiv(ConvAlignB(shapeInfo_.ho * shapeInfo_.wo, convOpsConstParams_.m0), numBlocksRes.mDim);
         conv3dApiTiling_.SetSingleOutputShape(singleCoreCo, singleCoreDo, singleCoreMo, singleCoreBatch);
     } else {
-        singleCoreHo = ConvCeilDiv(shapeInfo_.ho, blockDimRes.hoDim);
+        singleCoreHo = ConvCeilDiv(shapeInfo_.ho, numBlocksRes.hoDim);
         conv3dApiTiling_.SetSingleOutputShape(singleCoreCo, singleCoreDo, singleCoreHo,
             static_cast<int64_t>(shapeInfo_.wo), singleCoreBatch);
     }
@@ -225,7 +225,7 @@ void Conv3dBaseTilingV2::Conv3dOpTilingSetShape()
     uint64_t enlarge = 0;
     if (flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV) {
         singleGroups = optGroupInfo_.enlarge;
-        singleGroupOpt = ConvCeilDiv(optGroupInfo_.groupOpt, blockDimRes.groupDim);
+        singleGroupOpt = ConvCeilDiv(optGroupInfo_.groupOpt, numBlocksRes.groupDim);
         enlarge = optGroupInfo_.enlarge;
         conv3dApiTiling_.SetOptGroupParams(static_cast<int32_t>(enlarge), static_cast<int64_t>(singleGroups),
                                            static_cast<int64_t>(singleGroupOpt));

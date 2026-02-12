@@ -27,9 +27,9 @@ class __attribute__((visibility("default"))) Conv3dV2BaseTilingKey {
 public:
     Conv3dV2BaseTilingKey(Ops::NN::Conv3dV2::Conv3DV2TilingData& tilingData,
     ConvAscendcTilingFlag& flagInfo, ConvAscendcDescInfo& descInfo, ConvAscendcShapesInfo& shapeInfo,
-    BlockDimRes& blockDimRes, ConvOpsConstParams& convOpsConstParams) : 
+    NumBlocksRes& numBlocksRes, ConvOpsConstParams& convOpsConstParams) : 
     tilingData_(tilingData), flagInfo_(flagInfo), descInfo_(descInfo), shapeInfo_(shapeInfo), 
-    blockDimRes_(blockDimRes), convOpsConstParams_(convOpsConstParams) {};
+    numBlocksRes_(numBlocksRes), convOpsConstParams_(convOpsConstParams) {};
  
     ~Conv3dV2BaseTilingKey() {};
  
@@ -50,7 +50,7 @@ private:
     ConvAscendcTilingFlag flagInfo_;
     ConvAscendcDescInfo descInfo_;
     ConvAscendcShapesInfo shapeInfo_;
-    BlockDimRes blockDimRes_;
+    NumBlocksRes numBlocksRes_;
     ConvOpsConstParams convOpsConstParams_;
 };
  

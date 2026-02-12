@@ -98,13 +98,13 @@ using ::Conv3dCommon::CONST_VALUE_2;
 constexpr uint32_t BATCH_AICORE_COF = 2;
 using ::Conv3dCommon::C0_SIZE;
 
-//blockdim: [batchDim, mdim, nDim, doDim, groupDim]
-constexpr uint32_t BLOCKDIM_DEC_NUM = 5;
-constexpr uint32_t BLOCKDIM_BATCH_IDX = 0;
-constexpr uint32_t BLOCKDIM_M_IDX = 1;
-constexpr uint32_t BLOCKDIM_N_IDX = 2;
-constexpr uint32_t BLOCKDIM_DO_IDX = 3;
-constexpr uint32_t BLOCKDIM_GROUP_IDX = 4;
+//numBlocks: [batchDim, mdim, nDim, doDim, groupDim]
+constexpr uint32_t NUMBLOCKS_DEC_NUM = 5;
+constexpr uint32_t NUMBLOCKS_BATCH_IDX = 0;
+constexpr uint32_t NUMBLOCKS_M_IDX = 1;
+constexpr uint32_t NUMBLOCKS_N_IDX = 2;
+constexpr uint32_t NUMBLOCKS_DO_IDX = 3;
+constexpr uint32_t NUMBLOCKS_GROUP_IDX = 4;
 
 constexpr uint32_t MKN_M_IDX = 0;
 constexpr uint32_t MKN_K_IDX = 1;
@@ -145,7 +145,7 @@ struct Conv3DTilingFlag {
     bool hasScale = false;
 };
 
-struct BlockDimRange {
+struct NumBlocksRange {
   std::vector<uint32_t> aicNumRange;
   std::vector<uint32_t> batchRange;
   std::vector<uint32_t> mRange;
@@ -154,7 +154,7 @@ struct BlockDimRange {
   std::vector<uint32_t> groupRange;
 };
 
-struct BlockDimConstParas {
+struct NumBlocksConstParas {
   uint64_t m0;
   uint64_t n0;
   uint64_t k0;
@@ -162,7 +162,7 @@ struct BlockDimConstParas {
   uint64_t co1;
 };
 
-struct BlockDimRes {
+struct NumBlocksRes {
   uint32_t batchDim = 0;
   uint32_t mDim = 0;
   uint32_t nDim = 0;

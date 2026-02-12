@@ -107,21 +107,21 @@ constexpr uint32_t C0_SIZE = 32;
 constexpr uint32_t MIN_M_L1_SIZE = 16;
 constexpr uint64_t MIN_L2_BAND_WIDTH = 128;
 constexpr uint64_t BATCH_AICORE_COF = 2;
-constexpr uint32_t BLOCKDIM_MSPLIT_DEC_NUM = 5;
-constexpr uint32_t BLOCKDIM_MSPLIT_BATCH_IDX = 0;
-constexpr uint32_t BLOCKDIM_MSPLIT_M_IDX = 1;
-constexpr uint32_t BLOCKDIM_MSPLIT_N_IDX = 2;
-constexpr uint32_t BLOCKDIM_MSPLIT_DO_IDX = 3;
-constexpr uint32_t BLOCKDIM_MSPLIT_GROUP_IDX = 4;
+constexpr uint32_t NUMBLOCKS_MSPLIT_DEC_NUM = 5;
+constexpr uint32_t NUMBLOCKS_MSPLIT_BATCH_IDX = 0;
+constexpr uint32_t NUMBLOCKS_MSPLIT_M_IDX = 1;
+constexpr uint32_t NUMBLOCKS_MSPLIT_N_IDX = 2;
+constexpr uint32_t NUMBLOCKS_MSPLIT_DO_IDX = 3;
+constexpr uint32_t NUMBLOCKS_MSPLIT_GROUP_IDX = 4;
 constexpr uint32_t C04_CI1_SIZE = 1;
 constexpr uint32_t C04_CIN_SIZE = 4;
-constexpr uint32_t BLOCKDIM_HWSPLIT_DEC_NUM = 6;
-constexpr uint32_t BLOCKDIM_HWSPLIT_BATCH_IDX = 0;
-constexpr uint32_t BLOCKDIM_HWSPLIT_HO_IDX = 1;
-constexpr uint32_t BLOCKDIM_HWSPLIT_WO_IDX = 2;
-constexpr uint32_t BLOCKDIM_HWSPLIT_N_IDX = 3;
-constexpr uint32_t BLOCKDIM_HWSPLIT_DO_IDX = 4;
-constexpr uint32_t BLOCKDIM_HWSPLIT_GROUP_IDX = 5;
+constexpr uint32_t NUMBLOCKS_HWSPLIT_DEC_NUM = 6;
+constexpr uint32_t NUMBLOCKS_HWSPLIT_BATCH_IDX = 0;
+constexpr uint32_t NUMBLOCKS_HWSPLIT_HO_IDX = 1;
+constexpr uint32_t NUMBLOCKS_HWSPLIT_WO_IDX = 2;
+constexpr uint32_t NUMBLOCKS_HWSPLIT_N_IDX = 3;
+constexpr uint32_t NUMBLOCKS_HWSPLIT_DO_IDX = 4;
+constexpr uint32_t NUMBLOCKS_HWSPLIT_GROUP_IDX = 5;
 
 constexpr uint32_t INPUT_FMAP_INDEX = 0;
 constexpr uint32_t INPUT_WEIGHT_INDEX = 1;
@@ -371,7 +371,7 @@ struct ConvOpsConstParams {
     uint64_t co1 = 0;
 };
 
-struct BlockDimRes {
+struct NumBlocksRes {
     uint32_t batchDim = 0;
     uint32_t mDim = 0;
     uint32_t nDim = 0;
@@ -382,7 +382,7 @@ struct BlockDimRes {
     uint64_t minCost = 0;
 };
 
-struct BlockDimRange {
+struct NumBlocksRange {
     std::vector<uint32_t> aicNumRange;
     std::vector<uint32_t> batchRange;
     std::vector<uint32_t> mRange;
@@ -408,7 +408,7 @@ struct ConvAscendcTilingInfo {
     ConvAscendcTilingFlag flagInfo;
     ConvAscendcPlatformInfo platformInfo;
     ConvAscendcNodeInfo nodeInfo;
-    BlockDimRes blockDimRes;
+    NumBlocksRes numBlocksRes;
     ConvOpsConstParams convOpsConstParams;
 };
 

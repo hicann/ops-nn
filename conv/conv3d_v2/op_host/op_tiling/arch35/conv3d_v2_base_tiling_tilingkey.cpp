@@ -24,7 +24,7 @@ using namespace Conv3DV2Key;
 ge::graphStatus Conv3dBaseTilingV2::SetTilingKey()
 {
     Conv3dV2BaseTilingKey conv3dV2BaseTilingKey(tilingData_, flagInfo_, 
-    descInfo_, shapeInfo_, blockDimRes, convOpsConstParams_);
+    descInfo_, shapeInfo_, numBlocksRes, convOpsConstParams_);
     conv3dV2BaseTilingKey.GetTemplateTilingKey(tilingKeyPara_);
     
     tilingKey_ = GET_TPL_TILING_KEY(tilingKeyPara_.fmpTiling,

@@ -92,12 +92,12 @@ constexpr uint64_t LOAD3D_MAX_DILATION_H_W = 255;
 constexpr uint64_t LOAD3D_MAX_PAD = 255;
 constexpr uint64_t LOAD3D_MAX_FILTER_H_W_DAV = 511;
 
-constexpr uint32_t BLOCKDIM_DEC_NUM = 5;
-constexpr uint32_t BLOCKDIM_BATCH_IDX = 0;
-constexpr uint32_t BLOCKDIM_M_IDX = 1;
-constexpr uint32_t BLOCKDIM_N_IDX = 2;
-constexpr uint32_t BLOCKDIM_DO_IDX = 3;
-constexpr uint32_t BLOCKDIM_GROUP_IDX = 4;
+constexpr uint32_t NUMBLOCKS_DEC_NUM = 5;
+constexpr uint32_t NUMBLOCKS_BATCH_IDX = 0;
+constexpr uint32_t NUMBLOCKS_M_IDX = 1;
+constexpr uint32_t NUMBLOCKS_N_IDX = 2;
+constexpr uint32_t NUMBLOCKS_DO_IDX = 3;
+constexpr uint32_t NUMBLOCKS_GROUP_IDX = 4;
 
 constexpr uint32_t PB_AL0_IDX = 0x01;
 constexpr uint32_t PB_BL0_IDX = 0x02;

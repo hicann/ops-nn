@@ -22,7 +22,7 @@
 #include "graph/types.h"
 #include "conv3d_v2_tiling_data.h"
 #include "conv_template_utils.h"
-#include "conv_base_blockdim_decision.h"
+#include "conv_base_numblocks_decision.h"
 #include "kernel_operator.h"
 #include "conv3d_v2_api_tiling.h"
 #include "conv3d_v2_base_tiling_template_tilingkey.h"
@@ -70,13 +70,13 @@ static void InitConv3dRunInfo(Ops::NN::Conv3dV2::Conv3DRunInfo& conv3dRunInfo,
     conv3dRunInfo.dout      = static_cast<uint32_t>(tilingInfo.shapeInfo.dout);
     conv3dRunInfo.hout      = static_cast<uint32_t>(tilingInfo.shapeInfo.ho);
     conv3dRunInfo.wout      = static_cast<uint32_t>(tilingInfo.shapeInfo.wo);
-    conv3dRunInfo.batchDim  = tilingInfo.blockDimRes.batchDim;
-    conv3dRunInfo.doDim     = tilingInfo.blockDimRes.doDim;
-    conv3dRunInfo.mDim      = tilingInfo.blockDimRes.mDim;
-    conv3dRunInfo.wDim      = tilingInfo.blockDimRes.woDim;
-    conv3dRunInfo.nDim      = tilingInfo.blockDimRes.nDim;
-    conv3dRunInfo.groupDim  = tilingInfo.blockDimRes.groupDim;
-    conv3dRunInfo.hoDim     = tilingInfo.blockDimRes.hoDim;
+    conv3dRunInfo.batchDim  = tilingInfo.numBlocksRes.batchDim;
+    conv3dRunInfo.doDim     = tilingInfo.numBlocksRes.doDim;
+    conv3dRunInfo.mDim      = tilingInfo.numBlocksRes.mDim;
+    conv3dRunInfo.wDim      = tilingInfo.numBlocksRes.woDim;
+    conv3dRunInfo.nDim      = tilingInfo.numBlocksRes.nDim;
+    conv3dRunInfo.groupDim  = tilingInfo.numBlocksRes.groupDim;
+    conv3dRunInfo.hoDim     = tilingInfo.numBlocksRes.hoDim;
     conv3dRunInfo.strideD   = static_cast<uint32_t>(tilingInfo.attrInfo.strideD);
     conv3dRunInfo.strideH   = static_cast<uint32_t>(tilingInfo.attrInfo.strideH);
     conv3dRunInfo.strideW   = static_cast<uint32_t>(tilingInfo.attrInfo.strideW);
@@ -96,9 +96,9 @@ static void InitConv3dRunInfo(Ops::NN::Conv3dV2::Conv3DRunInfo& conv3dRunInfo,
     conv3dRunInfo.groupOpt  = 1;
     conv3dRunInfo.hasBias   = static_cast<uint8_t>(tilingInfo.flagInfo.hasBias);
     if (tilingInfo.flagInfo.mSplitModeFlag) {
-        conv3dRunInfo.hoDim = static_cast<uint32_t>(tilingInfo.blockDimRes.mDim);
+        conv3dRunInfo.hoDim = static_cast<uint32_t>(tilingInfo.numBlocksRes.mDim);
     } else {
-        conv3dRunInfo.hoDim = static_cast<uint32_t>(tilingInfo.blockDimRes.hoDim);
+        conv3dRunInfo.hoDim = static_cast<uint32_t>(tilingInfo.numBlocksRes.hoDim);
     }
 }
 
@@ -259,7 +259,7 @@ void Conv3dV2CustomApi(
         bias_ptr = (__gm__ uint8_t*)bias.value().data_ptr<T>();
         tilingInfo.flagInfo.hasBias = static_cast<bool>(bias.has_value());
     }
-    TORCH_CHECK(convBaseDeci.GetBlockDimInfo(tilingInfo) == 0,
+    TORCH_CHECK(convBaseDeci.GetNumBlocksInfo(tilingInfo) == 0,
         "Failed to get block dimension information from convolution base decision");
 
     Ops::NN::Conv3dV2::Conv3DV2TilingData tilingData;
@@ -275,13 +275,13 @@ void Conv3dV2CustomApi(
     platform.btSize = tilingInfo.platformInfo.btSize;
     conv_tiling::Conv3dTiling conv3dApiTiling(platform);
     conv3dApiTiling.GetTilingData(tilingInfo.attrInfo, tilingInfo.descInfo, tilingInfo.flagInfo, tilingInfo.shapeInfo,
-        tilingInfo.convOpsConstParams, tilingInfo.blockDimRes, tilingData);
+        tilingInfo.convOpsConstParams, tilingInfo.numBlocksRes, tilingData);
 
-    uint32_t g_blockDim = tilingData.conv3dRunInfo.batchDim * tilingData.conv3dRunInfo.doDim *
+    uint32_t g_numBlocks = tilingData.conv3dRunInfo.batchDim * tilingData.conv3dRunInfo.doDim *
                         tilingData.conv3dRunInfo.hoDim * tilingData.conv3dRunInfo.nDim;
     optiling::conv_ops_tiling::ConvTilingKeyPara tilingKeyPara {};
     optiling::conv_ops_tiling::Conv3dV2BaseTilingKey tilingKey {tilingData, tilingInfo.flagInfo,
-        tilingInfo.descInfo, tilingInfo.shapeInfo, tilingInfo.blockDimRes, tilingInfo.convOpsConstParams};
+        tilingInfo.descInfo, tilingInfo.shapeInfo, tilingInfo.numBlocksRes, tilingInfo.convOpsConstParams};
     tilingKey.GetTemplateTilingKey(tilingKeyPara);
 
     Conv3dv2Template(input_ptr, weight_ptr, bias_ptr, nullptr, nullptr, nullptr,
@@ -289,7 +289,7 @@ void Conv3dV2CustomApi(
         static_cast<int8_t>(tilingKeyPara.fmpTiling), static_cast<int8_t>(tilingKeyPara.weightTiling),
         static_cast<int8_t>(tilingKeyPara.l1PingPong), static_cast<int8_t>(tilingKeyPara.l0PingPong),
         static_cast<int8_t>(tilingKeyPara.outputOrder), static_cast<int8_t>(tilingKeyPara.iterOrder),
-        inDtype, g_blockDim, stream);
+        inDtype, g_numBlocks, stream);
 }
 
 torch::Tensor CreateOutputTensor(

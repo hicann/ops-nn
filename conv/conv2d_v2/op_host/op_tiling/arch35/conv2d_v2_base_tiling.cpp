@@ -371,7 +371,7 @@ ge::graphStatus Conv2dBaseTiling::GetShapeAttrsInfo()
     
     GetShapeInfo();
     GetAttrsInfo(); // include flagInfo update
-    InitblockDimConstParas(convOpsConstParams_, descInfo_, shapeInfo_);
+    InitNumBlocksConstParas(convOpsConstParams_, descInfo_, shapeInfo_);
     convBase_.ConvBaseInit(shapeInfo_, descInfo_, flagInfo_, context_);
     // hf32 judgement should after get dtype
     OP_LOGE_IF(!convBase_.GetConvParasHf32Mode(ATTR_ENABLE_HF32_INDEX, attrInfo_.hf32Mode), ge::GRAPH_FAILED,
@@ -446,14 +446,14 @@ ge::graphStatus Conv2dBaseTiling::GetFeatureFlag()
     return ge::GRAPH_SUCCESS;
 }
 
-void Conv2dBaseTiling::SetBlockDimRes()
+void Conv2dBaseTiling::SetNumBlocksRes()
 {
-    blockDimRes.batchDim = tilingData_.conv2dRunInfo.get_batchDim();
-    blockDimRes.nDim = tilingData_.conv2dRunInfo.get_nDim();
-    blockDimRes.hoDim = tilingData_.conv2dRunInfo.get_hoDim();
-    blockDimRes.woDim = tilingData_.conv2dRunInfo.get_woDim();
-    blockDimRes.mDim = blockDimRes.hoDim;
-    blockDimRes.groupDim = tilingData_.conv2dRunInfo.get_groupDim();
+    numBlocksRes.batchDim = tilingData_.conv2dRunInfo.get_batchDim();
+    numBlocksRes.nDim = tilingData_.conv2dRunInfo.get_nDim();
+    numBlocksRes.hoDim = tilingData_.conv2dRunInfo.get_hoDim();
+    numBlocksRes.woDim = tilingData_.conv2dRunInfo.get_woDim();
+    numBlocksRes.mDim = numBlocksRes.hoDim;
+    numBlocksRes.groupDim = tilingData_.conv2dRunInfo.get_groupDim();
 }
 
 // reset conv2d API's tilingdata
@@ -498,7 +498,7 @@ ge::graphStatus Conv2dBaseTiling::DoOpTiling()
         return ge::GRAPH_FAILED;
     }
     if (flagInfo_.useTilingCache || flagInfo_.useTilingRepo) {
-        SetBlockDimRes();
+        SetNumBlocksRes();
         if (SetTilingKey() != ge::GRAPH_SUCCESS) {
             return ge::GRAPH_FAILED;
         }
@@ -528,10 +528,10 @@ ge::graphStatus Conv2dBaseTiling::PostTiling()
         context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     if (flagInfo_.mSplitModeFlag) {
-        context_->SetBlockDim(blockDimRes.batchDim * blockDimRes.mDim * blockDimRes.nDim * blockDimRes.groupDim);
+        context_->SetBlockDim(numBlocksRes.batchDim * numBlocksRes.mDim * numBlocksRes.nDim * numBlocksRes.groupDim);
     } else {
-        context_->SetBlockDim(blockDimRes.batchDim * blockDimRes.nDim * blockDimRes.hoDim * blockDimRes.woDim *
-                              blockDimRes.groupDim);
+        context_->SetBlockDim(numBlocksRes.batchDim * numBlocksRes.nDim * numBlocksRes.hoDim * numBlocksRes.woDim *
+                              numBlocksRes.groupDim);
     }
     return ge::GRAPH_SUCCESS;
 }
