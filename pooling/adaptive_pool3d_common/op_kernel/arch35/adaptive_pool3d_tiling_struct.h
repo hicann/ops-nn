@@ -25,12 +25,13 @@ namespace AdaptivePool3DTiling{
 #define TPL_INT64_UINT32 2
 #define TPL_INT32_UINT64 3
 #define TPL_INT64_UINT64 4
+#define TPL_MODE_0 0
 #define TPL_MODE_1 1
 #define TPL_MODE_2 2
 #define TPL_MULTI_MODE_0 0
 
 ASCENDC_TPL_ARGS_DECL(AdaptiveMaxPool3d,
-    ASCENDC_TPL_UINT_DECL(TEMPLATE_MODE, 1, ASCENDC_TPL_UI_LIST, TPL_MODE_1, TPL_MODE_2),
+    ASCENDC_TPL_UINT_DECL(TEMPLATE_MODE, 2, ASCENDC_TPL_UI_LIST, TPL_MODE_0, TPL_MODE_1, TPL_MODE_2),
     ASCENDC_TPL_UINT_DECL(DYTPE_MODE, 3, ASCENDC_TPL_UI_LIST, TPL_DYTPE_0, TPL_INT32_UINT32, TPL_INT64_UINT32, TPL_INT32_UINT64, TPL_INT64_UINT64),
     ASCENDC_TPL_UINT_DECL(MULTI_MODE, 1, ASCENDC_TPL_UI_LIST, TPL_MULTI_MODE_0)
 );
@@ -45,6 +46,12 @@ ASCENDC_TPL_SEL(
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
         ASCENDC_TPL_UINT_SEL(TEMPLATE_MODE, ASCENDC_TPL_UI_LIST, TPL_MODE_1),
+        ASCENDC_TPL_UINT_SEL(DYTPE_MODE, ASCENDC_TPL_UI_LIST, TPL_DYTPE_0),
+        ASCENDC_TPL_UINT_SEL(MULTI_MODE, ASCENDC_TPL_UI_LIST, TPL_MULTI_MODE_0)
+    ),
+    ASCENDC_TPL_ARGS_SEL(
+        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+        ASCENDC_TPL_UINT_SEL(TEMPLATE_MODE, ASCENDC_TPL_UI_LIST, TPL_MODE_0),
         ASCENDC_TPL_UINT_SEL(DYTPE_MODE, ASCENDC_TPL_UI_LIST, TPL_DYTPE_0),
         ASCENDC_TPL_UINT_SEL(MULTI_MODE, ASCENDC_TPL_UI_LIST, TPL_MULTI_MODE_0)
     ),
@@ -78,6 +85,32 @@ public:
     int64_t coreNums = 1;
     int64_t maxCount = 1;
     int64_t batchCount = 1;
+};
+
+class AdaptivePool3dParaKernelTilingData {
+public:
+    int64_t dIn = 1;
+    int64_t hIn = 1;
+    int64_t wIn = 1;
+    int64_t dOut = 1;
+    int64_t hOut = 1;
+    int64_t wOut = 1;
+    int64_t useCoreNum = 1;
+    int64_t blockFactor = 1;
+    int64_t blockTail = 1;
+    int64_t ncFactor = 1;
+    int64_t doFactor = 1;
+    int64_t hoFactor = 1;
+    int64_t woFactor = 1;
+    int64_t ncOuter = 1;
+    int64_t doOuter = 1;
+    int64_t hoOuter = 1;
+    int64_t woOuter = 1;
+    int64_t ncTail = 1;
+    int64_t doTail = 1;
+    int64_t hoTail = 1;
+    int64_t woTail = 1;
+    int64_t maxInputSize = 1;
 };
 
 }

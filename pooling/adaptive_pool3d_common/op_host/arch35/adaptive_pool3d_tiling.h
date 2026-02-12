@@ -36,6 +36,7 @@ struct BaseInput {
     uint64_t coreNum{0};
     uint64_t ubSize{0};
     ge::DataType xDtype{ge::DT_FLOAT};
+    ge::DataType indicesDtype{ge::DT_INT32};
     uint64_t nIn{0};
     uint64_t cIn{0};
     uint64_t dIn{0};

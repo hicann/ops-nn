@@ -15,6 +15,7 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
+#include "../adaptive_pool3d_common/arch35/adaptive_max_pool3d_parall_pool.h"
 #include "../adaptive_pool3d_common/arch35/adaptive_max_pool3d_big_kernel.h"
 #include "../adaptive_pool3d_common/arch35/adaptive_max_pool3d_simt.h"
 #include "../adaptive_pool3d_common/arch35/adaptive_pool3d_tiling_struct.h"
@@ -61,6 +62,13 @@ __global__ __aicore__ void adaptive_max_pool3d(
         "TEMPLATE_MODE == TPL_MODE_2 && DYTPE_MODE == TPL_INT64_UINT64 && MULTI_MODE == TPL_MULTI_MODE_0", AdaptivePool3DTiling::AdaptivePool3DSimtTilingData);
         GET_TILING_DATA_WITH_STRUCT(AdaptivePool3DTiling::AdaptivePool3DSimtTilingData, tilingData, tiling);
         AdaptivePool3DWithSimt::AdaptivePool3DSimt<DTYPE_X, DTYPE_INDICES, int64_t, uint64_t> op(&pipeBase, &tilingData);
+        op.Init(x, y, indices);
+        op.Process();
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_0 && DYTPE_MODE == TPL_DYTPE_0 && MULTI_MODE == TPL_MULTI_MODE_0 ){
+        REGISTER_TILING_FOR_TILINGKEY(
+        "TEMPLATE_MODE == TPL_MODE_0 && DYTPE_MODE == TPL_DYTPE_0 && MULTI_MODE == TPL_MULTI_MODE_0", AdaptivePool3DTiling::AdaptivePool3dParaKernelTilingData);
+        GET_TILING_DATA_WITH_STRUCT(AdaptivePool3DTiling::AdaptivePool3dParaKernelTilingData, tilingData, tiling);
+        AdaptivePool3d::AdaptiveMaxPool3dParaPool<DTYPE_X, DTYPE_INDICES> op(tilingData, pipeBase);
         op.Init(x, y, indices);
         op.Process();
     }

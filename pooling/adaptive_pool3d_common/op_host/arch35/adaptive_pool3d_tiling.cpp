@@ -49,10 +49,12 @@ ge::graphStatus AdaptivePool3dBaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto npuArch = ascendcPlatform.GetCurNpuArch();
+    auto nodeName = context_->GetNodeName();
+    OP_LOGD(nodeName, "GetShapeAttrsInfo begin 950, arch:%d.", npuArch);
+
     if (npuArch != NpuArch::DAV_3510) {
         return ge::GRAPH_PARAM_INVALID;
     }
-    auto nodeName = context_->GetNodeName();
     OP_LOGD(nodeName, "GetShapeAttrsInfo begin.");
 
     auto inputX = context_->GetInputShape(0);
@@ -64,6 +66,14 @@ ge::graphStatus AdaptivePool3dBaseTiling::GetShapeAttrsInfo()
         (xDtype != ge::DT_FLOAT && xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_BF16),
         OP_LOGE(nodeName, "The data type of x only supports float, float16, bfloat16"), return ge::GRAPH_FAILED);
     input_.xDtype = xDtype;
+
+    auto outputIndicesDesc = context_->GetOutputDesc(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, outputIndicesDesc);
+    auto indicesDtype = outputIndicesDesc->GetDataType();
+    OP_CHECK_IF((indicesDtype != ge::DT_INT32 && indicesDtype != ge::DT_INT64),
+        OP_LOGE(nodeName, "output indices datatype only support int32, int64"), return ge::GRAPH_FAILED);
+    input_.indicesDtype = indicesDtype;
+
     gert::Shape xShape = EnsureNotScalar(inputX->GetStorageShape());
     if (xShape.GetDimNum() == DIM_NUM_FIVE) {
         input_.nIn = xShape.GetDim(DIM_N);
