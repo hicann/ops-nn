@@ -43,7 +43,9 @@ enum class QuantBatchMatmulV4QuantType : std::uint8_t {
     PER_TENSOR = 1,
     PER_CHANNEL = 2,
     PER_GROUP = 3,
-    MX = 4
+    MX = 4,
+    K_C = 5, //pertoken + perchannel
+    K_G = 6  //pertoken + pergroup
 };
 
 // kernel template type

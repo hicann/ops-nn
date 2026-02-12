@@ -263,7 +263,7 @@ TEST_F(quant_batch_matmul_v4_test, quant_batch_matmul_v4_msd_0)
     auto quant_batch_matmul_v4_wrapper = [](GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2_scale,
                                             GM_ADDR y_scale, GM_ADDR x1_offset, GM_ADDR x2_offset, GM_ADDR y_offset,
                                             GM_ADDR x2_table, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-        ::quant_batch_matmul_v4<0, 4, 0, 0, 0>(
+        ::quant_batch_matmul_v4<0, 6, 0, 0, 0>(
             x1, x2, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, x2_table, y, workspace, tiling);
     };
 

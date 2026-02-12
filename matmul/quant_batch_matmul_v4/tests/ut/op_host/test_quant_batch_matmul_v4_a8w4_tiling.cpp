@@ -35,7 +35,7 @@ struct QuantBatchMatmulV4TilingMsdTestParam {
     string caseName;
 
     // output
-    uint32_t numBlocks;
+    uint32_t blockDim;
     ge::graphStatus tilingResult;
     uint64_t tilingKey;
 };
@@ -175,10 +175,14 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingMsdTestParam &param)
     x1Shape.MutableStorageShape() = gert::Shape({m, k});
     x2Shape.MutableStorageShape() = gert::Shape({k, n});
     if (x1Dtype == DT_INT8 && x2Dtype == DT_INT4) {
-        x1ScaleShape.MutableStorageShape() = gert::Shape({m, 1});
-        ASSERT_NE(groupSize, 0);
-        int64_t groupNum = (k + groupSize - 1) / groupSize;
-        x2ScaleShape.MutableStorageShape() = gert::Shape({groupNum, n});
+        if (groupSize != 0) {
+            x1ScaleShape.MutableStorageShape() = gert::Shape({m, 1});
+            int64_t groupNum = (k + groupSize - 1) / groupSize;
+            x2ScaleShape.MutableStorageShape() = gert::Shape({groupNum, n});
+        } else {
+            x1ScaleShape.MutableStorageShape() = gert::Shape({m});
+            x2ScaleShape.MutableStorageShape() = gert::Shape({n});
+        }
         yOffsetShape.MutableStorageShape() = gert::Shape({n});
         x1Shape.MutableStorageShape() = x1Shape.MutableStorageShape();
         x2Shape.MutableStorageShape() = x2Shape.MutableStorageShape();
@@ -263,7 +267,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingMsdTestParam &param)
     ASSERT_EQ(ret, param.tilingResult);
     if (ret == ge::GRAPH_SUCCESS) {
         ASSERT_EQ(tilingContext->GetTilingKey(), param.tilingKey);
-        ASSERT_EQ(tilingContext->GetBlockDim(), param.numBlocks);
+        ASSERT_EQ(tilingContext->GetBlockDim(), param.blockDim);
     }
 }
 
@@ -273,12 +277,14 @@ TEST_P(TestQuantBatchMatmulV4TilingMsd, generalTest)
     TestOneParamCase(param);
 }
 
-// format: caseName m k n transA transB groupSize x1Format x2Format x1Dtype x2Dtype x2ScaleDtype yScaleDtype yOffset yDtype
-//         aicNum aivNum platform weightFormat
+// format: platform
+//         caseName m k n transA transB groupSize x1Format x2Format x1Dtype x2Dtype biasDtype x1ScaleDtype x2ScaleDtype yScaleDtype yOffset yDtype aicNum aivNum
+//         bolckdim, result, tilingkey
 static QuantBatchMatmulV4TilingMsdTestParam casesParams[] = {
     // A int8 W int4
-    {"Ascend910B4", "UT-A8W4-MSD-ND-Testcase-0_16_256_256_0_0_256_ND_ND_INT8_INT4_NULL_FP32_UINT64_NULL_FP32_BF16_20_40", 20, ge::GRAPH_SUCCESS, 16UL},
-    {"Ascend910B4", "UT-A8W4-MSD-ND-Testcase-0_16_256_256_0_0_256_ND_ND_INT8_INT4_NULL_FP32_UINT64_NULL_FP32_FP16_20_40", 20, ge::GRAPH_SUCCESS, 16UL},
+    {"Ascend910B4", "UT-A8W4-MSD-ND-Testcase-0_16_256_256_0_0_256_ND_ND_INT8_INT4_NULL_FP32_UINT64_NULL_FP32_BF16_20_40", 20, ge::GRAPH_SUCCESS, 24UL},
+    {"Ascend910B4", "UT-A8W4-MSD-ND-Testcase-1_16_256_256_0_0_256_ND_ND_INT8_INT4_NULL_FP32_UINT64_NULL_FP32_FP16_20_40", 20, ge::GRAPH_SUCCESS, 24UL},
+    {"Ascend910B4", "UT-A8W4-MSD-ND-Testcase-2_16_256_256_0_0_0_ND_ND_INT8_INT4_NULL_FP32_UINT64_NULL_FP32_FP16_20_40", 20, ge::GRAPH_SUCCESS, 20UL}
  };
 
 INSTANTIATE_TEST_CASE_P(MMA8W4MSD, TestQuantBatchMatmulV4TilingMsd, testing::ValuesIn(casesParams));

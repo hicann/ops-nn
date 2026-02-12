@@ -81,15 +81,21 @@ ge::graphStatus QuantBatchMatmulV4MsdTiling::CheckContext()
 bool QuantBatchMatmulV4MsdTiling::AnalyzeAttrs()
 {
     auto attrs = context_->GetAttrs();
-    const int64_t *groupSizePtr = attrs->GetAttrPointer<int64_t>(GROUP_SIZE_IDX);
-    OP_TILING_CHECK(groupSizePtr == nullptr,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Group size can not be nullptr."),
-                    return false);
-    inputParams_.groupSize = static_cast<uint64_t>(*groupSizePtr);
-    OP_TILING_CHECK(inputParams_.groupSize != 256,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Group size only support group k 256 on the A8W4 scenario, actual group sizeN is [%lu]", inputParams_.groupSize),
-                    return false);
-
+    auto x1ScaleShape = GetOptionShape(X1_SCALE_IDX);
+    auto x2ScaleShape = GetOptionShape(X2_SCALE_IDX);
+    if (x1ScaleShape.GetDimNum() == 1 && x2ScaleShape.GetDimNum() == 1) {
+        inputParams_.antiQuantType = QuantBatchMatmulV4QuantType::K_C;
+    } else {
+        inputParams_.antiQuantType = QuantBatchMatmulV4QuantType::K_G;
+        const int64_t *groupSizePtr = attrs->GetAttrPointer<int64_t>(GROUP_SIZE_IDX);
+        OP_TILING_CHECK(groupSizePtr == nullptr,
+                        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Group size can not be nullptr."),
+                        return false);
+        inputParams_.groupSize = static_cast<uint64_t>(*groupSizePtr);
+        OP_TILING_CHECK(inputParams_.groupSize != 256,
+                        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Group size only support group k 256 on the A8W4 scenario, actual group sizeN is [%lu]", inputParams_.groupSize),
+                        return false);
+    }
     // check transposeX1
     auto transposeX1 = attrs->GetAttrPointer<bool>(TRANSPOSE_X1_IDX);
     OP_TILING_CHECK(transposeX1 == nullptr,
@@ -171,13 +177,31 @@ bool QuantBatchMatmulV4MsdTiling::AnalyzeInputs()
     return AnalyzeScaleInputs() && AnalyzeYOffsetInputs();
 }
 
-bool QuantBatchMatmulV4MsdTiling::AnalyzeScaleInputs()
-{
-    auto x1ScaleShape = GetOptionShape(X1_SCALE_IDX);
-    auto x2ScaleShape = GetOptionShape(X2_SCALE_IDX);
-    auto x1ScaleShapeLen = x1ScaleShape.GetDimNum();
+bool QuantBatchMatmulV4MsdTiling::AnalyzeScalePerChannel(const gert::Shape &x1ScaleShape, const gert::Shape &x2ScaleShape,
+                                                       int64_t x1ScaleShapeLen, int64_t x2ScaleShapeLen) {
+    OP_TILING_CHECK(x1ScaleShapeLen != 1,
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Input x1Scale dimension should equal to 1, but x1Scale dimension %lu", x1ScaleShapeLen),
+                    return false);
+    auto x1ScaleShapeSize = x1ScaleShape.GetDim(0);
+    OP_TILING_CHECK(static_cast<uint64_t>(x1ScaleShapeSize) != inputParams_.mSize,
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "x1Scale size should equal to mSize %zu, but x1Scale inner dim is %ld",
+                                                   inputParams_.mSize, x1ScaleShapeSize),
+                    return false);
+    OP_TILING_CHECK(x2ScaleShapeLen != 1,
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Input x2Scale dimension should equal to 1, but x2Scale dimension is %lu", x2ScaleShapeLen),
+                    return false);
+    auto x2ScaleShapeSize = x2ScaleShape.GetDim(0);
+    OP_TILING_CHECK(static_cast<uint64_t>(x2ScaleShapeSize) != inputParams_.nSize,
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "x2Scale size should equal to nSize %zu, but x2Scale outer dim is %ld",
+                                                   inputParams_.nSize, x2ScaleShapeSize),
+                    return false);
+    return true;
+}
+
+bool QuantBatchMatmulV4MsdTiling::AnalyzeScalePerGroup(const gert::Shape &x1ScaleShape, const gert::Shape &x2ScaleShape,
+                                                       int64_t x1ScaleShapeLen, int64_t x2ScaleShapeLen) {
     OP_TILING_CHECK(x1ScaleShapeLen != 2,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Input x1Scale dimension should equal to 2, but x1Scale dimension %zu", x1ScaleShapeLen),
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Input x1Scale dimension should equal to 2, but x1Scale dimension %lu", x1ScaleShapeLen),
                     return false);
     auto x1ScaleShapeInner = x1ScaleShape.GetDim(0);
     auto x1ScaleShapeOuter = x1ScaleShape.GetDim(1);
@@ -189,9 +213,8 @@ bool QuantBatchMatmulV4MsdTiling::AnalyzeScaleInputs()
                     VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "x1Scale outer dim should equal to 1, but x1Scale outer dim is %ld",
                                                     x1ScaleShapeOuter),
                     return false);
-    auto x2ScaleShapeLen = x2ScaleShape.GetDimNum();
     OP_TILING_CHECK(x2ScaleShapeLen != 2,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Input x2Scale dimension should equal to 2, but x2Scale dimension is %zu", x2ScaleShapeLen),
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Input x2Scale dimension should equal to 2, but x2Scale dimension is %lu", x2ScaleShapeLen),
                     return false);
     auto x2ScaleShapeInner = x2ScaleShape.GetDim(0);
     auto x2ScaleShapeOuter = x2ScaleShape.GetDim(1);
@@ -203,6 +226,24 @@ bool QuantBatchMatmulV4MsdTiling::AnalyzeScaleInputs()
                     VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "x2Scale outer dim should equal to nSize %zu, but x2Scale outer dim is %ld",
                                                    inputParams_.nSize, x2ScaleShapeOuter),
                     return false);
+    return true;
+}
+
+bool QuantBatchMatmulV4MsdTiling::AnalyzeScaleInputs()
+{
+    auto x1ScaleShape = GetOptionShape(X1_SCALE_IDX);
+    auto x2ScaleShape = GetOptionShape(X2_SCALE_IDX);
+    auto x1ScaleShapeLen = x1ScaleShape.GetDimNum();
+    auto x2ScaleShapeLen = x2ScaleShape.GetDimNum();
+    if (inputParams_.antiQuantType == QuantBatchMatmulV4QuantType::K_C) {
+        OP_TILING_CHECK(!AnalyzeScalePerChannel(x1ScaleShape, x2ScaleShape, x1ScaleShapeLen, x2ScaleShapeLen),
+                        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "A8W4 perchannel scale check failed"),
+                        return false);
+    } else {
+        OP_TILING_CHECK(!AnalyzeScalePerGroup(x1ScaleShape, x2ScaleShape, x1ScaleShapeLen, x2ScaleShapeLen),
+                        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "A8W4 pergroup scale check failed"),
+                        return false);
+    }
     return true;
 }
 
@@ -424,14 +465,22 @@ bool QuantBatchMatmulV4MsdTiling::IsCapable()
                     VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "K should be less than 18432 on the A8W4 scenario,"
                                                     "but now is %lu", inputParams_.kSize),
                     return false);
-    OP_TILING_CHECK(inputParams_.kSize % inputParams_.groupSize != 0 ,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "K should be divisible by groupSizek, but now k = %lu,"
-                                                    "groupSize is %lu", inputParams_.kSize, inputParams_.groupSize),
-                    return false);
-    OP_TILING_CHECK(inputParams_.groupSize != 256 ,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "groupSize should be 256, but now groupSize = %lu",
-                                                    inputParams_.groupSize),
-                    return false);
+    if (inputParams_.antiQuantType == QuantBatchMatmulV4QuantType::K_G) {
+        OP_TILING_CHECK(inputParams_.kSize % inputParams_.groupSize != 0 ,
+                        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "K should be divisible by groupSizek, but now k = %lu,"
+                                                        "groupSize is %lu", inputParams_.kSize, inputParams_.groupSize),
+                        return false);
+        OP_TILING_CHECK(inputParams_.groupSize != 256 ,
+                        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "A8W4 pergroup groupSize should be 256, but now groupSize = %lu",
+                                                        inputParams_.groupSize),
+                        return false);        
+    } else {
+        OP_TILING_CHECK(inputParams_.groupSize != 0,
+                        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "A8W4 perchannel groupSize should be 0, but now groupSize = %lu",
+                                                        inputParams_.groupSize),
+                        return false);
+    }
+
     return true;
 }
 
@@ -452,7 +501,7 @@ void QuantBatchMatmulV4MsdTiling::Reset()
     inputParams_.x1ScaleDtype = ge::DT_FLOAT;
     inputParams_.x2ScaleDtype = ge::DT_UINT64;
     inputParams_.yOffsetDtype = ge::DT_FLOAT;
-    inputParams_.antiQuantType = QuantBatchMatmulV4QuantType::MX;
+    inputParams_.antiQuantType = QuantBatchMatmulV4QuantType::K_C;
     inputParams_.opName = nullptr;
 }
 

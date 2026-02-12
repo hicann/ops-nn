@@ -98,6 +98,10 @@ protected:
     bool AnalyzeDtype();
     bool AnalyzeInputs();
     bool SetMatmulTiling();
+    bool AnalyzeScalePerChannel(const gert::Shape &x1ScaleShape, const gert::Shape &x2ScaleShape,
+                                int64_t x1ScaleShapeLen, int64_t x2ScaleShapeLen);
+    bool AnalyzeScalePerGroup(const gert::Shape &x1ScaleShape, const gert::Shape &x2ScaleShape,
+                              int64_t x1ScaleShapeLen, int64_t x2ScaleShapeLen);
     QuantBatchMatmulMsdInfo inputParams_;
     const gert::Shape GetShape(const size_t index) const;
     const gert::Shape GetOptionShape(const size_t index) const;

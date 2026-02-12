@@ -815,7 +815,7 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A4W4_22)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_1)
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_PerGroup_1)
 {
     // A8W4 msd方案 支持fp16输出
     TensorDesc x1_desc = TensorDesc({1, 8192}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -828,10 +828,10 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_1)
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_2)
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_PerGroup_2)
 {
     // A8W4 msd方案 支持bf16输出
     TensorDesc x1_desc = TensorDesc({1, 8192}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -844,10 +844,10 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_2)
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_3)
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_PerGroup_3)
 {
     // A8W4 msd方案 x1scale_desc shape 必须是[m,1]
     TensorDesc x1_desc = TensorDesc({1, 8192}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -860,10 +860,10 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_3)
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_4)
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_PerGroup_4)
 {
     // A8W4 msd方案 x1scale_desc shape 必须是[m,1]
     TensorDesc x1_desc = TensorDesc({1, 8192}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -876,10 +876,10 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_4)
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_5)
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_PerGroup_5)
 {
     // A8W4 msd方案 x1_desc shpae [1] 必须等于 x2_desc shape [0]
     TensorDesc x1_desc = TensorDesc({1, 8191}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -892,10 +892,10 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_5)
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_6)
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_PerGroup_6)
 {
     // A8W4 msd方案 x2scale_desc shape 必须为 [k // 256, n]
     TensorDesc x1_desc = TensorDesc({1, 8192}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -908,10 +908,10 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_6)
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_7)
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_PerGroup_7)
 {
     // A8W4 msd方案 x2scale_desc shape 必须为 [k // 256, n]
     TensorDesc x1_desc = TensorDesc({1, 8192}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -924,10 +924,10 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_7)
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_8)
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_PerGroup_8)
 {
     // A8W4 msd方案 out_desc shape 必须是 [m,n]
     TensorDesc x1_desc = TensorDesc({1, 8192}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -940,10 +940,10 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_8)
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_9)
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_PerGroup_9)
 {
     // A8W4 msd方案 out_desc shape 必须是 [m,n]
     TensorDesc x1_desc = TensorDesc({1, 8192}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -956,10 +956,10 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_9)
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_10)
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_PerGroup_10)
 {
     // A8W4 msd方案 x1scale_desc 类型必须是FLOAT
     TensorDesc x1_desc = TensorDesc({1, 8192}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -972,10 +972,10 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_10)
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_11)
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_PerGroup_11)
 {
     // A8W4 msd方案 x2scale_desc 类型必须是 UINT64
     TensorDesc x1_desc = TensorDesc({1, 8192}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -988,10 +988,10 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_11)
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_12)
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_PerGroup_12)
 {
     // A8W4 msd方案 yoffset_desc 类型必须是 FLOAT
     TensorDesc x1_desc = TensorDesc({1, 8192}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -1004,10 +1004,10 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_12)
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_13)
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_PerGroup_13)
 {
     // A8W4 msd方案 out_desc类型必须是 FLOAT16 / BF16
     TensorDesc x1_desc = TensorDesc({1, 8192}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -1020,10 +1020,10 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_13)
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_14)
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_PerGroup_14)
 {
     // A8W4 msd方案 x2 shape的n维度没有65535限制
     TensorDesc x1_desc = TensorDesc({1, 8192}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -1036,10 +1036,10 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_14)
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_15)
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_PerGroup_15)
 {
     // A8W4 msd方案 x2 shape的x2NDim 必须大于1
     TensorDesc x1_desc = TensorDesc({1, 8192}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -1052,7 +1052,39 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_15)
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_PerChannel_1)
+{
+    // A8W4 msd方案 支持fp16输出
+    TensorDesc x1_desc = TensorDesc({1, 8192}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({8192, 128}, ACL_INT32, ACL_FORMAT_ND).ValueRange(-1, 1); // INT32 = INT4 * 8, 128 = 1024 / 8
+    TensorDesc x1scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2scale_desc = TensorDesc({1024}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc yoffset_desc = TensorDesc({1024}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulV5, INPUT(x1_desc, x2_desc, x1scale_desc, x2scale_desc, nullptr, nullptr, nullptr, yoffset_desc, nullptr, false, false, 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A8W4_MSD_PerChannel_2)
+{
+    // A8W4 msd方案 支持bf16输出
+    TensorDesc x1_desc = TensorDesc({1, 8192}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({8192, 128}, ACL_INT32, ACL_FORMAT_ND).ValueRange(-1, 1); // INT32 = INT4 * 8, 128 = 1024 / 8
+    TensorDesc x1scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2scale_desc = TensorDesc({1024}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc yoffset_desc = TensorDesc({1024}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({1, 1024}, ACL_BF16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulV5, INPUT(x1_desc, x2_desc, x1scale_desc, x2scale_desc, nullptr, nullptr, nullptr, yoffset_desc, nullptr, false, false, 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A4W4_PERGROUP_1)
