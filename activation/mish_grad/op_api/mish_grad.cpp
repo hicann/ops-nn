@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -33,6 +33,16 @@ const aclTensor* MishGrad(const aclTensor* gradOutput, const aclTensor* self, ac
   CHECK_RET(out != nullptr, nullptr);
   auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MishGrad, OP_INPUT(gradOutput, self), OP_OUTPUT(out));
   OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MishGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+    return nullptr);
+  return out;
+}
+
+const aclTensor* MishGradWithTanhX(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* tanhx, aclOpExecutor* executor) {
+  L0_DFX(MishGradWithTanhX, gradOutput, self);
+  auto out = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), self->GetStorageFormat());
+  CHECK_RET(out != nullptr, nullptr);
+  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MishGrad, OP_INPUT(gradOutput, self, nullptr), OP_OUTPUT(out));
+  OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MishGradWithTanhXAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
     return nullptr);
   return out;
 }

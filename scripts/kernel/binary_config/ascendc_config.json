@@ -35,6 +35,7 @@
     {"name":"EluGrad", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-simd-vf-fusion=true", "-mllvm -cce-aicore-dcci-before-kernel-end=false"]}, "impl_mode": ""},
     {"name":"EluGradV2", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-simd-vf-fusion=true", "-mllvm -cce-aicore-dcci-before-kernel-end=false"]}, "impl_mode": ""},
     {"name":"LeakyRelu", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "--cce-simd-at-voss=true"]}, "impl_mode" : ""},
+    {"name":"MishGrad", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}, "impl_mode" : ""},
     {"name":"Softplus", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "--cce-simd-at-voss=true"]}, "impl_mode" : ""},
     {"name":"Mish", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"Elu", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},

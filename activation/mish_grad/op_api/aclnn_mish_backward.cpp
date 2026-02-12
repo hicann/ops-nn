@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -175,8 +176,17 @@ aclnnStatus aclnnMishBackwardGetWorkspaceSize(const aclTensor* gradOutput, const
   CHECK_RET(gradOutputCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
   // 进行计算
-  auto grad = l0op::MishGrad(gradOutputCasted, selfCasted, uniqueExecutor.get());
-  CHECK_RET(grad != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  const aclTensor* grad = nullptr;
+  if (curArch == NpuArch::DAV_3510) {
+        // 950 芯片版本的梯度计算逻辑
+      grad = l0op::MishGradWithTanhX(gradOutputCasted, selfCasted, nullptr, uniqueExecutor.get());
+      CHECK_RET(grad != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  } else {  
+        // 其他所有芯片版本的梯度计算逻辑
+      grad = l0op::MishGrad(gradOutputCasted, selfCasted, uniqueExecutor.get());
+      CHECK_RET(grad != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  }
 
   auto castedRes = l0op::Cast(grad, gradInput->GetDataType(), uniqueExecutor.get());
   CHECK_RET(castedRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
