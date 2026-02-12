@@ -346,7 +346,7 @@
     {"name":"MoeGatingTopKSoftmax", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},
     {"name":"MoeGatingTopKSoftmaxV2", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync" : {"ascend910b": false, "ascend910_93": false, "ascend950": true}},
     {"name":"GeGluGradV2", "compute_units": ["ascend950", "ascend910_93", "ascend910b", "ascend310p"], "auto_sync" : true, "compile_options": {"ascend310p":["-mllvm -cce-aicore-jump-expand=true"], "ascend950": ["--cce-simd-vf-fusion=true", "-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
-    {"name":"ReverseSequence", "compute_units": ["ascend310p"], "auto_sync" : false},
+    {"name":"ReverseSequence", "compute_units": ["ascend310p", "ascend950"], "auto_sync" : false},
     {"name":"ReverseV2", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"GroupNormSilu", "compute_units": ["ascend910_93", "ascend910b", "ascend310p", "ascend950", "kirinx90", "kirin9030"], "auto_sync": {"ascend910_93": true, "ascend910b": true, "ascend310p": true, "ascend950": false}, "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"GroupNormSiluQuant", "compute_units": ["ascend910_93", "ascend910b"], "auto_sync": true},
