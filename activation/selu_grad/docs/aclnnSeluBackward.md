@@ -60,13 +60,13 @@ aclnnStatus aclnnSeluBackward(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1500px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 330px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -83,7 +83,7 @@ aclnnStatus aclnnSeluBackward(
    <tbody>
       <tr>
      <tr>
-      <td>gradOutput</td>
+      <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
       <td>表示Selu计算的损失函数，公式中的E。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型、shape需要与result，gradInput一致。</li></ul></td>
@@ -92,7 +92,7 @@ aclnnStatus aclnnSeluBackward(
       <td>1-8</td>
       <td>√</td>
     </tr>
-      <td>result</td>
+      <td>result（aclTensor*）</td>
       <td>输入</td>
       <td>表示Selu计算的正向输出，公式中的y。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型、shape需要与gradOutput，gradInput一致。</li></ul></td>
@@ -102,9 +102,9 @@ aclnnStatus aclnnSeluBackward(
       <td>√</td>
     </tr>
       <tr>
-      <td>gradInput</td>
+      <td>gradInput（aclTensor*）</td>
       <td>输出</td>
-      <td>表示Selu计算输入的梯度，公式中的\frac{\partial E}{\partial x}。</td>
+      <td>表示Selu计算输入的梯度，公式中的∂E/∂X。</td>
       <td>数据类型、shape需要与gradOutput，result一致。</td>
       <td>FLOAT、FLOAT16、INT32、INT8、BFLOAT16</td>
       <td>ND</td>
@@ -112,7 +112,7 @@ aclnnStatus aclnnSeluBackward(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -122,7 +122,7 @@ aclnnStatus aclnnSeluBackward(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
@@ -166,7 +166,7 @@ aclnnStatus aclnnSeluBackward(
       <td>gradOutput、result、gradInput的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>gradOutput、result、gradInput的维度关系不满足可broadcast原则。</td>
+      <td>gradOutput、result、gradInput的shape不一致。</td>
     </tr>
     <tr>
       <td>gradOutput、result、gradInput的数据类型不满足数据类型推导规则。</td>
