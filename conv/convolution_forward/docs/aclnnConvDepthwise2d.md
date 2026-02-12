@@ -7,10 +7,13 @@
 | <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>       |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>       |    √     |
+|  <term>Atlas 200I/500 A2 推理产品</term>                      |     ×    |
+|  <term>Atlas 推理系列产品</term>                              |     ×    |
+|  <term>Atlas 训练系列产品</term>                              |     ×    |
 
 ## 功能说明
 
-- 算子功能：DepthwiseConv2D 是一种二维深度卷积运算。在该运算中，每个输入通道都会与一个独立的卷积核（称为深度卷积核）进行卷积。
+- 接口功能：DepthwiseConv2D 是一种二维深度卷积运算。在该运算中，每个输入通道都会与一个独立的卷积核（称为深度卷积核）进行卷积。
 
 - 计算公式：
 
@@ -51,11 +54,11 @@ aclnnStatus aclnnConvDepthwise2d(
 
 ## aclnnConvDepthwise2dGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table>
   <tr>
-  <th style="width:170px">参数名</th>
+  <th style="width:420px">参数名</th>
   <th style="width:120px">输入/输出</th>
   <th style="width:300px">描述</th>
   <th style="width:420px">使用说明</th>
@@ -148,7 +151,7 @@ aclnnStatus aclnnConvDepthwise2d(
   <td>cubeMathType（int8_t）</td>
   <td>输入</td>
   <td>用于判断 Cube 单元应该使用哪种计算逻辑进行运算。</td>
-  <td><ul><li> 0（KEEP_DTYPE）：保持输入数据类型进行计算。</li></ul><ul><li> 1（ALLOW_FP32_DOWN_PRECISION）：允许 FLOAT 降低精度计算，提升性能。</li></ul><ul><li> 2（USE_FP16）：使用 FLOAT16 精度进行计算。</li></ul><ul><li> 3（USE_HF32）：使用 HIFLOAT32（混合精度）进行计算。</li></ul></td>
+  <td><ul><li> 0（KEEP_DTYPE）：保持输入数据类型进行计算。</li></ul><ul><li> 1（ALLOW_FP32_DOWN_PRECISION）：允许 FLOAT 降低精度计算，提升性能。</li></ul><ul><li> 2（USE_FP16）：使用 FLOAT16 精度进行计算。</li></ul><ul><li> 3（USE_HF32）：使用 HFLOAT32（混合精度）进行计算。</li></ul></td>
   <td>INT8</td>
   <td>-</td>
   <td>-</td>
@@ -176,17 +179,22 @@ aclnnStatus aclnnConvDepthwise2d(
   </tr>
   </table>
 
-- **返回值：**
+- **返回值**
 
   `aclnnStatus`：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn返回码.md">aclnn 返回码</a>。
 
   第一段接口完成入参校验，出现以下场景时报错：
-
-  <table>
+  <table style="undefined;table-layout: fixed; width: 1430px"><colgroup>
+    <col style="width:250px">
+    <col style="width:130px">
+    <col style="width:1050px">
+    </colgroup>
+   <thead>
+  
   <tr>
-  <td align="center">返回值</td>
-  <td align="center">错误码</td>
-  <td align="center">描述</td>
+  <td>返回值</td>
+  <td>错误码</td>
+  <td>描述</td>
   </tr>
   <tr>
   <td align="left">ACLNN_ERR_PARAM_NULLPTR</td>
@@ -217,7 +225,7 @@ aclnnStatus aclnnConvDepthwise2d(
 
 ## aclnnConvDepthwise2d
 
-- **参数说明：**
+- **参数说明**
 
   <table>
   <tr>
@@ -247,7 +255,7 @@ aclnnStatus aclnnConvDepthwise2d(
   </tr>
   </table>
 
-- **返回值：**
+- **返回值**
 
   `aclnnStatus`：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn返回码.md">aclnn 返回码</a>。
 
@@ -284,14 +292,10 @@ aclnnStatus aclnnConvDepthwise2d(
    <tr>
      <th scope="row">bias</th>
      <td>
-        <ul>
-          bias 数据类型不支持 HIFLOAT8、FLOAT8_E4M3FN。数据类型与 self、weight 一致。
-        </ul>
+        bias 数据类型不支持 HIFLOAT8、FLOAT8_E4M3FN。数据类型与 self、weight 一致。
      </td>
      <td>
-        <ul>
-          当 self 数据类型为 HIFLOAT8 时，bias 数据类型最终会转成 FLOAT 参与计算。
-        </ul>
+        当 self 数据类型为 HIFLOAT8 时，bias 数据类型最终会转成 FLOAT 参与计算。
      </td>
    </tr>
    <tr>
@@ -314,17 +318,13 @@ aclnnStatus aclnnConvDepthwise2d(
    <tr>
      <th scope="row">kernelSize 约束</th>
      <td colspan="4">
-        <ul>
-          kernelSize 数值为 weight 的 H、W 两维的大小。
-        </ul>
+        kernelSize 数值为 weight 的 H、W 两维的大小。
      </td>
    </tr>
    <tr>
      <th scope="row">其他约束</th>
      <td colspan="4">
-        <ul>
-          self, weight, bias 中每一组 tensor 的每一维大小都应不大于 1000000。
-        </ul>
+        self, weight, bias 中每一组 tensor 的每一维大小都应不大于 1000000。
      </td>
    </tr>
    </tbody>

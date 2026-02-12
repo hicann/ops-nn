@@ -7,6 +7,9 @@
 | <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>       |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>       |    √     |
+|  <term>Atlas 200I/500 A2 推理产品</term>                      |     ×    |
+|  <term>Atlas 推理系列产品</term>                              |     ×    |
+|  <term>Atlas 训练系列产品</term>                              |     ×    |
 
 ## 功能说明
 
@@ -46,11 +49,11 @@ aclnnStatus aclnnConvTbc(
 
 ## aclnnConvTbcGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table>
   <tr>
-  <th style="width:170px">参数名</th>
+  <th style="width:220px">参数名</th>
   <th style="width:120px">输入/输出</th>
   <th style="width:300px">描述</th>
   <th style="width:400px">使用说明</th>
@@ -141,17 +144,23 @@ aclnnStatus aclnnConvTbc(
   </tr>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn返回码.md">aclnn 返回码</a>。
 
   一段接口完成入参校验，出现以下场景时报错：
 
-  <table>
+  <table style="undefined;table-layout: fixed; width: 1430px"><colgroup>
+    <col style="width:250px">
+    <col style="width:130px">
+    <col style="width:1050px">
+    </colgroup>
+   <thead>
+
   <tr>
-  <td align="center">返回值</td>
-  <td align="center">错误码</td>
-  <td align="center">描述</td>
+  <td>返回值</td>
+  <td>错误码</td>
+  <td>描述</td>
   </tr>
   <tr>
   <td align="left">ACLNN_ERR_PARAM_NULLPTR</td>
@@ -185,7 +194,7 @@ aclnnStatus aclnnConvTbc(
 
 ## aclnnConvTbc
 
-- **参数说明：**
+- **参数说明**
 
   <table>
   <tr>
@@ -215,7 +224,7 @@ aclnnStatus aclnnConvTbc(
   </tr>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn返回码.md">aclnn 返回码</a>。
 
@@ -258,17 +267,13 @@ aclnnStatus aclnnConvTbc(
      <th scope="row">bias</th>
      <td>-</td>
      <td>
-        <ul>
-          当 self 数据类型为 HIFLOAT8 时，bias 数据类型最终会转成 FLOAT 参与计算。
-        </ul>
+        当 self 数据类型为 HIFLOAT8 时，bias 数据类型最终会转成 FLOAT 参与计算。
      </td>
    </tr>
    <tr>
      <th scope="row">out</th>
      <td>
-        <ul>
-          out 支持 N、C、L 维度大于等于 0（等于 0 的场景仅在 self 的 N 或 C 或 L 维度等于 0 时支持）。
-        </ul>
+        out 支持 N、C、L 维度大于等于 0（等于 0 的场景仅在 self 的 N 或 C 或 L 维度等于 0 时支持）。
      </td>
      <td>
         <ul>

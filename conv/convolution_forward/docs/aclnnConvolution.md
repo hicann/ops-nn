@@ -7,6 +7,9 @@
 | <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>       |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>       |    √     |
+|  <term>Atlas 200I/500 A2 推理产品</term>                      |     ×    |
+|  <term>Atlas 推理系列产品</term>                              |     ×    |
+|  <term>Atlas 训练系列产品</term>                              |     ×    |
 
 ## 功能说明
 
@@ -71,11 +74,11 @@ aclnnStatus aclnnConvolution(
 
 ## aclnnConvolutionGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table>
   <tr>
-  <th style="width:170px">参数名</th>
+  <th style="width:220px">参数名</th>
   <th style="width:120px">输入/输出</th>
   <th style="width:300px">描述</th>
   <th style="width:400px">使用说明</th>
@@ -188,7 +191,7 @@ aclnnStatus aclnnConvolution(
   <td>cubeMathType（int8_t）</td>
   <td>输入</td>
   <td>用于判断 Cube 单元应该使用哪种计算逻辑进行运算。</td>
-  <td><ul><li>如果输入的数据类型存在<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>，该参数默认对互推导后的数据类型进行处理。</li><li>支持的枚举值如下：</li><ul><li> 0（KEEP_DTYPE）：保持输入数据类型进行计算。</li></ul><ul><li> 1（ALLOW_FP32_DOWN_PRECISION）：允许 FLOAT 降低精度计算，提升性能。</li></ul><ul><li> 2（USE_FP16）：使用 FLOAT16 精度进行计算。</li></ul><ul><li> 3（USE_HF32）：使用 HIFLOAT32（混合精度）进行计算。</li></ul></td>
+  <td><ul><li>如果输入的数据类型存在<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>，该参数默认对互推导后的数据类型进行处理。</li><li>支持的枚举值如下：</li><ul><li> 0（KEEP_DTYPE）：保持输入数据类型进行计算。</li></ul><ul><li> 1（ALLOW_FP32_DOWN_PRECISION）：允许 FLOAT 降低精度计算，提升性能。</li></ul><ul><li> 2（USE_FP16）：使用 FLOAT16 精度进行计算。</li></ul><ul><li> 3（USE_HF32）：使用 HFLOAT32（混合精度）进行计算。</li></ul></td>
   <td>INT8</td>
   <td>-</td>
   <td>-</td>
@@ -216,17 +219,23 @@ aclnnStatus aclnnConvolution(
   </tr>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见<a href="../../../docs/zh/context/aclnn返回码.md">aclnn返回码</a>。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table>
+  <table style="undefined;table-layout: fixed; width: 1430px"><colgroup>
+    <col style="width:250px">
+    <col style="width:130px">
+    <col style="width:1050px">
+    </colgroup>
+   <thead>
+   
   <tr>
-  <td align="center">返回值</td>
-  <td align="center">错误码</td>
-  <td align="center">描述</td>
+  <td>返回值</td>
+  <td>错误码</td>
+  <td>描述</td>
   </tr>
   <tr>
   <td align="left">ACLNN_ERR_PARAM_NULLPTR</td>
@@ -262,7 +271,7 @@ aclnnStatus aclnnConvolution(
 
 ## aclnnConvolution
 
-- **参数说明：**
+- **参数说明**
 
   <table>
   <tr>
@@ -292,7 +301,7 @@ aclnnStatus aclnnConvolution(
   </tr>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见<a href="../../../docs/zh/context/aclnn返回码.md">aclnn返回码</a>。
 
@@ -355,40 +364,28 @@ aclnnStatus aclnnConvolution(
    <tr>
      <th scope="row">stride</th>
      <td>
-        <ul>
-          conv3d transposed=true场景，strideD应该大于等于1，strideH、strideW应该在[1,63]的范围内。conv1d和conv2d transposed=true场景，各个值都应该大于等于1。conv3d正向场景，strideH和strideW应该在[1,63]的范围内。
-        </ul>
+        conv3d transposed=true场景，strideD应该大于等于1，strideH、strideW应该在[1,63]的范围内。conv1d和conv2d transposed=true场景，各个值都应该大于等于1。conv3d正向场景，strideH和strideW应该在[1,63]的范围内。
      </td>
      <td>
-        <ul>
-          conv3d transposed=true场景，strideD、strideH、strideW应该大于等于1。conv3d transposed=false场景，strideH、strideW应该在[1,63]的范围内，strideD应该在[1, 1000000]的范围内。
-        </ul>
+        conv3d transposed=true场景，strideD、strideH、strideW应该大于等于1。conv3d transposed=false场景，strideH、strideW应该在[1,63]的范围内，strideD应该在[1, 1000000]的范围内。
      </td>
    </tr>
    <tr>
      <th scope="row">padding</th>
      <td>
-        <ul>
-          conv3d transposed=true场景，paddingD应该大于等于0，paddingH、paddingW应该在[0,255]的范围内。conv1d和conv2d transposed=false场景，各个值都应该在[0,255]的范围内。conv3d正向场景，paddingH和paddingW应该在[0,255]的范围内。
-        </ul>
+        conv3d transposed=true场景，paddingD应该大于等于0，paddingH、paddingW应该在[0,255]的范围内。conv1d和conv2d transposed=false场景，各个值都应该在[0,255]的范围内。conv3d正向场景，paddingH和paddingW应该在[0,255]的范围内。
      </td>
      <td>
-        <ul>
-          conv3d transposed=true场景，paddingD、paddingH、paddingW应该大于等于0。conv3d transposed=false场景，paddingH、paddingW应该在[0,255]范围内，paddingD应该在[0, 1000000]的范围内。
-        </ul>
+        conv3d transposed=true场景，paddingD、paddingH、paddingW应该大于等于0。conv3d transposed=false场景，paddingH、paddingW应该在[0,255]范围内，paddingD应该在[0, 1000000]的范围内。
      </td>
    </tr>
    <tr>
      <th scope="row">dilation</th>
      <td>
-        <ul>
-          conv1d、conv2d和conv3d transposed=true场景，各个值都应该在[1,255]的范围内。conv3d正向场景，dilationH和dilationW应该在[1,255]的范围内。
-        </ul>
+        conv1d、conv2d和conv3d transposed=true场景，各个值都应该在[1,255]的范围内。conv3d正向场景，dilationH和dilationW应该在[1,255]的范围内。
      </td>
      <td>
-        <ul>
-          conv3d transposed=true场景，dilationD、dilationH、dilationW应该大于等于1。conv3d transposed=false场景，dilationH、dilationW应该在[1,255]范围内，dilationD应该在[1, 1000000]的范围内。
-        </ul>
+        conv3d transposed=true场景，dilationD、dilationH、dilationW应该大于等于1。conv3d transposed=false场景，dilationH、dilationW应该在[1,255]范围内，dilationD应该在[1, 1000000]的范围内。
      </td>
    </tr>
    <tr>
@@ -412,14 +409,10 @@ aclnnStatus aclnnConvolution(
    <tr>
      <th scope="row">其他约束</th>
      <td>
-        <ul>
-          input, weight, bias中每一组tensor的每一维大小都应不大于1000000。
-        </ul>
+        input, weight, bias中每一组tensor的每一维大小都应不大于1000000。
      </td>
      <td>
-        <ul>
-          transposed为true的场景，支持1D、2D和3D卷积，支持空 Tensor。
-        </ul>
+        transposed为true的场景，支持1D、2D和3D卷积，支持空 Tensor。
      </td>
    </tr>
    </tbody>

@@ -4,14 +4,14 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+| 产品                                                         | 是否支持 |
+| :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                       |    ×     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>       |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>       |    √     |
+|  <term>Atlas 200I/500 A2 推理产品</term>                      |     ×    |
+|  <term>Atlas 推理系列产品</term>                              |     ×    |
+|  <term>Atlas 训练系列产品</term>                              |     ×    |
 
 ## 功能说明
 
@@ -65,7 +65,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
 
 ## aclnnQuantConvolutionWeightNzGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table>
   <tr>
@@ -239,17 +239,23 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   </tr>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn返回码.md">aclnn 返回码</a>。
 
   一段接口完成入参校验，出现以下场景时报错：
 
-  <table>
+  <table style="undefined;table-layout: fixed; width: 1430px"><colgroup>
+    <col style="width:250px">
+    <col style="width:130px">
+    <col style="width:1050px">
+    </colgroup>
+   <thead>
+
   <tr>
-  <td align="center">返回值</td>
-  <td align="center">错误码</td>
-  <td align="center">描述</td>
+  <td>返回值</td>
+  <td>错误码</td>
+  <td>描述</td>
   </tr>
   <tr>
   <td align="left">ACLNN_ERR_PARAM_NULLPTR</td>
@@ -285,7 +291,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
 
 ## aclnnQuantConvolutionWeightNz
 
-- **参数说明：**
+- **参数说明**
 
   <table>
   <tr>
@@ -315,7 +321,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   </tr>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn返回码.md">aclnn 返回码</a>。
 
