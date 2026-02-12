@@ -95,7 +95,7 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
 | `-v /usr/local/Ascend/driver/version.info:/usr/local/Ascend/driver/version.info` | 挂载驱动版本信息文件。 | |
 | `-v /etc/ascend_install.info:/etc/ascend_install.info` | 挂载CANN软件安装信息文件。 | |
 | `-it` | `-i`（交互式）和 `-t`（分配伪终端）的组合参数。 | |
-| `swr.cn-south-1.myhuaweicloud.com/ascendhub/8.5.0-910b-ubuntu22.04-py3.10-ops-x86` | 指定要运行的Docker镜像。 |请确保此镜像名和标签（tag）与你通过`docker pull`拉取的镜像完全一致。 |
+| `swr.cn-south-1.myhuaweicloud.com/ascendhub/cann:8.5.0-910b-ubuntu22.04-py3.10-ops` | 指定要运行的Docker镜像。 |请确保此镜像名和标签（tag）与你通过`docker pull`拉取的镜像完全一致。 |
 | `bash` | 容器启动后立即执行的命令。 | |
 
 ### 手动安装CANN包
