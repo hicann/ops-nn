@@ -262,7 +262,7 @@ protected:
                     if (this->nCoreIdx_ == this->nTailCnt_ - 1) {
                         nCoreUse = this->nGroupCoreTail_;
                     } else if (this->nCoreIdx_ > this->nTailCnt_ - 1) {
-                        return;
+                        continue;
                     }
 
                 }
