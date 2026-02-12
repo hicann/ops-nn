@@ -66,6 +66,7 @@ constexpr uint32_t BLOCK_BYTES = 32;
 constexpr uint32_t NONE_SAMPLE = 0;
 constexpr uint32_t Q_SAMPLE = 1;
 constexpr uint32_t TOP_K_MAX = 1024;
+constexpr uint32_t BATCH_MODE = 1;
 
 
 
@@ -506,6 +507,10 @@ ge::graphStatus TopKTopPSampleV2Tiling::RunKernelTiling(gert::TilingContext* con
     context->SetBlockDim(numCore);
     tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
+
+    if (isNeedSampleResult_ || isNeedLogits_) {
+        context->SetScheduleMode(BATCH_MODE);
+    }
 
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     currentWorkspace[0] = usrSize + sysWorkspaceSize;

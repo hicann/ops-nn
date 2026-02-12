@@ -56,6 +56,7 @@ constexpr uint32_t MRG_QUE_PER_NUM = 4;
 constexpr uint32_t MRG_QUE_SORT_0_NUM = 4;
 constexpr uint32_t MRG_QUE_SORT_1_NUM = 6;
 constexpr uint32_t BLOCK_BYTES = 32;
+constexpr uint32_t BATCH_MODE = 1;
 
 uint32_t SafeCeil(uint32_t a, uint32_t b)
 {
@@ -339,6 +340,10 @@ void TopKTopPSampleTiling::SetOpTilingData(gert::TilingContext* context)
     tiling.set_isNeedLogits(*isNeedLogits ? 1 : 0); 
     const uint32_t* topKGuess = attrs->GetAttrPointer<uint32_t>(TOP_K_GUESS_IDX);
     tiling.set_topKGuess(*topKGuess);
+
+    if (*isNeedLogits) {
+        context->SetScheduleMode(BATCH_MODE);
+    }
 }
 
 void TopKTopPSampleTiling::ResetTilingParams()
