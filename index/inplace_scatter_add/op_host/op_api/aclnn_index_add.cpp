@@ -11,6 +11,7 @@
 #include "level0/inplace_index_add.h"
 #include "level0/sort.h"
 #include "level0/mul.h"
+#include "inplace_scatter_add.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "level0/unsqueeze.h"
@@ -25,6 +26,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
+#include "runtime/context.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -227,6 +229,40 @@ static const aclTensor* DoIndexAddWithSorted(const aclTensor *self, const int64_
   return indexAddRes;
 }
 
+static bool inplaceScatterAddSupport(const aclTensor * self, int64_t dim, const aclScalar * alpha) {
+  int64_t deterministicValue = 0;
+  rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
+  if (retRts != RT_ERROR_NONE) {
+      deterministicValue = 0;
+  }
+  if (deterministicValue == 1) {
+    OP_LOGD("InplaceScatterAdd Op not support deterministic compute!");
+    return false;
+  }
+
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (curArch != NpuArch::DAV_2201) {
+      OP_LOGD("InplaceScatterAdd Op not support this Soc Version!");
+      return false;
+  }
+
+  if (self->GetViewShape().GetDimNum() == 0) {
+    OP_LOGD("InplaceScatterAdd Op not support self dimNums=0");
+    return false;
+  }
+  int64_t realDim = dim >= 0 ? dim : self->GetViewShape().GetDimNum() + dim;
+  if (realDim != 0 || alpha->ToDouble() != 1.0) {
+    OP_LOGD("InplaceScatterAdd Op only support realDim=0 and alpha=1");
+    return false;
+  }
+  if (self->GetDataType() != op::DataType::DT_FLOAT && self->GetDataType() != op::DataType::DT_INT32) {
+    OP_LOGD("InplaceScatterAdd Op only support self dtype is int32 or float32");
+    return false;
+  }
+  OP_LOGD("Will use InplaceScatterAdd Op");
+  return true;
+}
+
 aclnnStatus aclnnIndexAddGetWorkspaceSize(const aclTensor *self, const int64_t dim, const aclTensor *index,
     const aclTensor *source, const aclScalar *alpha, aclTensor *out, uint64_t *workspaceSize,
     aclOpExecutor **executor) {
@@ -281,8 +317,10 @@ aclnnStatus aclnnIndexAddGetWorkspaceSize(const aclTensor *self, const int64_t d
   auto indexContiguous = l0op::Contiguous(index, uniqueExecutor.get());
   CHECK_RET(indexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
   const aclTensor* indexAddOut = nullptr;
-  // 当设备类型为A2或A3且index为int32类型时，切为InplaceIndexAddWithSorted算子
-  if (useNewOp) {
+
+  if (inplaceScatterAddSupport(selfContiguous, dim, alpha)) {
+ 	  indexAddOut = l0op::InplaceScatterAddAiCore(selfContiguous, indexContiguous, sourceContiguous, uniqueExecutor.get());
+ 	} else if (useNewOp) {
     indexAddOut = DoIndexAddWithSorted(selfContiguous, dim, indexContiguous, sourceContiguous, alphaTensor,
                                        uniqueExecutor.get());
   } else if (IsAICoreSupport(self)) {
