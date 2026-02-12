@@ -57,7 +57,8 @@ static bool CheckDtypeValid(const aclTensor *data, const aclTensor *indices, con
     OP_CHECK_DTYPE_NOT_MATCH(out, data->GetDataType(), return false);
     if (data->GetDataType() == op::DataType::DT_BF16 &&
         GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93) {
+        GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93 &&
+        GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "data dtype %s is unsupported by the current SOC version.",
                 op::ToString(data->GetDataType()).GetString());
         return false;
