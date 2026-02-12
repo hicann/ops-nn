@@ -4,17 +4,16 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>昇腾910_95 AI处理器</term>   |     ×    |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     ×    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     ×    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
 |  <term>Atlas 推理系列产品 </term>    |     √    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
-|  <term>Atlas 200/300/500 推理产品</term>       |     ×    |
 
 ## 功能说明
 
-- 接口功能：LSTM（Long Short-Term Memory，长短时记忆）网络是一种特殊的循环神经网络（RNN）模型。进行LSTM网络计算，接收输入序列和初始状态，返回输出序列和最终状态。相比[aclnnBidirectionLSTM](../aclnnBidirectionLSTM.md)新增了Sequence不等长场景。
+- 接口功能：LSTM（Long Short-Term Memory，长短时记忆）网络是一种特殊的循环神经网络（RNN）模型。进行LSTM网络计算，接收输入序列和初始状态，返回输出序列和最终状态。相比[aclnnBidirectionLSTM](../../bidirection_lstm/docs/aclnnBidirectionLSTM.md)新增了Sequence不等长场景。
 - 计算公式：
   
   $$
@@ -101,7 +100,7 @@ aclnnStatus aclnnBidirectionLSTMV2(
     </tr></thead>
    <tbody>
       <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>LSTM单元的输入向量，公式中的x。</td>
       <td><ul><li>支持空Tensor。</li><li>当参数packed为true时，shape支持三维（time_step, batch_size, input_size）</li><li>当参数packed为true时，shape支持二维（total_batch_size, input_size）。其中，`time_step`表示时间维度；`batch_size`表示每个时刻需要处理的batch数量；`input_size`表示输入的特征数量；`total_batch_size`表示每个时刻的batch数量不对齐时所有时刻的总batch数量。</li></ul></td>
@@ -111,7 +110,7 @@ aclnnStatus aclnnBidirectionLSTMV2(
       <td>√</td>
     </tr>
       <tr>
-      <td>initH</td>
+      <td>initH（aclTensor*）</td>
       <td>输入</td>
       <td>初始化hidden状态，公式中的h。</td>
       <td><ul><li>支持空Tensor。</li><li>shape支持三维（num_layers, batch_size, hidden_size）或者当bidirection为True时（2 * num_layers, batch_size, hidden_size）。其中，`num_layers`对应参数`numLayers`，表示LSTM层数；`hidden_size`表示隐藏状态的特征数量。</li></ul></td>
@@ -121,7 +120,7 @@ aclnnStatus aclnnBidirectionLSTMV2(
       <td>√</td>
     </tr>
       <tr>
-      <td>initC</td>
+      <td>initC（aclTensor*）</td>
       <td>输入</td>
       <td>初始化cell状态，公式中的c。</td>
       <td><ul><li>支持空Tensor。</li><li>shape支持三维（num_layers, batch_size, hidden_size）或者当bidirection为True时（2 * num_layers, batch_size, hidden_size）。</li></ul></td>
@@ -131,7 +130,7 @@ aclnnStatus aclnnBidirectionLSTMV2(
       <td>√</td>
     </tr>
       <tr>
-      <td>wIh</td>
+      <td>wIh（aclTensor*）</td>
       <td>输入</td>
       <td>input-hidden权重，公式中的W。</td>
       <td><ul><li>支持空Tensor。</li><li>shape支持二维（4 * hidden_size, input_size）。</li></ul></td>
@@ -141,7 +140,7 @@ aclnnStatus aclnnBidirectionLSTMV2(
       <td>√</td>
     </tr>
       <tr>
-      <td>wHh</td>
+      <td>wHh（aclTensor*）</td>
       <td>输入</td>
       <td>hidden-hidden权重，公式中的W。</td>
       <td><ul><li>支持空Tensor。</li><li>shape支持二维（4 * hidden_size, hidden_size）。</li></ul></td>
@@ -151,7 +150,7 @@ aclnnStatus aclnnBidirectionLSTMV2(
       <td>√</td>
     </tr>
       <tr>
-      <td>bIhOptional</td>
+      <td>bIhOptional（aclTensor*）</td>
       <td>输入</td>
       <td>input-hidden偏移，公式中的b。</td>
       <td><ul><li>支持空Tensor。</li><li>shape支持一维（4 * hidden_size）。</li></ul></td>
@@ -161,7 +160,7 @@ aclnnStatus aclnnBidirectionLSTMV2(
       <td>√</td>
     </tr>
        <tr>
-      <td>bHhOptional</td>
+      <td>bHhOptional（aclTensor*）</td>
       <td>输入</td>
       <td>hidden-hidden偏移，公式中的b。</td>
       <td><ul><li>支持空Tensor。</li><li>shape支持一维（4 * hidden_size）。</li></ul></td>
@@ -171,7 +170,7 @@ aclnnStatus aclnnBidirectionLSTMV2(
       <td>√</td>
     </tr>
        <tr>
-      <td>wIhReverseOptional</td>
+      <td>wIhReverseOptional（aclTensor*）</td>
       <td>输入</td>
       <td>逆向input-hidden权重，公式中的W。</td>
       <td><ul><li>支持空Tensor。</li><li>shape支持二维（4 * hidden_size, input_size）。</li></ul></td>
@@ -181,7 +180,7 @@ aclnnStatus aclnnBidirectionLSTMV2(
       <td>√</td>
     </tr>
       <tr>
-      <td>wHhReverseOptional</td>
+      <td>wHhReverseOptional（aclTensor*）</td>
       <td>输入</td>
       <td>逆向hidden-hidden权重，公式中的W。</td>
       <td><ul><li>支持空Tensor。</li><li>shape支持二维（4 * hidden_size, input_size）。</li></ul></td>
@@ -191,7 +190,7 @@ aclnnStatus aclnnBidirectionLSTMV2(
       <td>√</td>
     </tr>
        <tr>
-      <td>bIhReverseOptional</td>
+      <td>bIhReverseOptional（aclTensor*）</td>
       <td>输入</td>
       <td>逆向input-hidden偏移，公式中的b。</td>
       <td><ul><li>支持空Tensor。</li><li>shape支持一维（4 * hidden_size）。</li></ul></td>
@@ -201,7 +200,7 @@ aclnnStatus aclnnBidirectionLSTMV2(
       <td>√</td>
     </tr>
        <tr>
-      <td>bHhReverseOptional</td>
+      <td>bHhReverseOptional（aclTensor*）</td>
       <td>输入</td>
       <td>逆向hidden-hidden偏移，公式中的b。</td>
       <td><ul><li>支持空Tensor。</li><li>shape支持一维（4 * hidden_size）。</li></ul></td>
@@ -211,7 +210,7 @@ aclnnStatus aclnnBidirectionLSTMV2(
       <td>√</td>
     </tr>
        <tr>
-      <td>batchSizeOptional</td>
+      <td>batchSizeOptional（aclTensor*）</td>
       <td>输入</td>
       <td>每轮迭代实际参与计算的batch_size。</td>
       <td><ul><li>支持空Tensor。</li><li>shape支持一维（time_step）。</li></ul></td>
@@ -221,57 +220,57 @@ aclnnStatus aclnnBidirectionLSTMV2(
       <td>√</td>
     </tr>
       <tr>
-      <td>numLayers</td>
+      <td>numLayers（int64_t）</td>
       <td>输入</td>
       <td>表示LSTM层数。</td>
       <td>当前只支持1。</td>
-      <td>INT</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
       <tr>
-      <td>isbias</td>
+      <td>isbias（bool）</td>
       <td>输入</td>
       <td>表示是否有bias。</td>
       <td>-</td>
-      <td>BOOL</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
       <tr>
-      <td>batchFirst</td>
+      <td>batchFirst（bool）</td>
       <td>输入</td>
       <td>表示batch是否是第一维。</td>
       <td>当前只支持false。</td>
-      <td>BOOL</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
       <tr>
-      <td>bidirection</td>
+      <td>bidirection（bool）</td>
       <td>输入</td>
       <td>表示是否是双向。</td>
       <td>-</td>
-      <td>BOOL</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
       <tr>
-      <td>packed</td>
+      <td>packed（bool）</td>
       <td>输入</td>
       <td>表示输入x是否压缩。</td>
       <td>仅在batchSizeOptional不为空时生效。</td>
-      <td>BOOL</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
        <tr>
-      <td>yOut</td>
+      <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>LSTM单元的输出向量。</td>
       <td><ul><li>bidirection为false时，当参数packed为false，shape支持三维（time_step, batch_size, input_size）；当参数packed为true，shape支持二维（total_batch_size, input_size）。</li><li>bidirection为true时，当参数packed为false，shape支持三维（time_step, batch_size, 2 * input_size）；当参数packed为true，shape支持二维（total_batch_size, 2 * input_size）。</li></ul></td>
@@ -281,7 +280,7 @@ aclnnStatus aclnnBidirectionLSTMV2(
       <td>√</td>
     </tr>
        <tr>
-      <td>outputHOut</td>
+      <td>outputHOut（aclTensor*）</td>
       <td>输出</td>
       <td>最终hidden状态，公式中的h。</td>
       <td>shape支持三维（num_layers, batch_size, hidden_size）或者当bidirection为True时（2 * num_layers, batch_size, hidden_size）。</td>
@@ -291,7 +290,7 @@ aclnnStatus aclnnBidirectionLSTMV2(
       <td>√</td>
     </tr>
        <tr>
-      <td>outputCOut</td>
+      <td>outputCOut（aclTensor*）</td>
       <td>输出</td>
       <td>最终cell状态，公式中的c。</td>
       <td>shape支持三维（num_layers, batch_size, hidden_size）或者当bidirection为True时（2 * num_layers, batch_size, hidden_size）。</td>
@@ -301,7 +300,7 @@ aclnnStatus aclnnBidirectionLSTMV2(
       <td>√</td>
     </tr>
        <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -311,7 +310,7 @@ aclnnStatus aclnnBidirectionLSTMV2(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

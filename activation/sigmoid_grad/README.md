@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 接口功能：完成[sigmoid](../../sigmoid/docs/aclnnSigmoid&aclnnInplaceSigmoid.md)的反向传播，根据sigmoid反向传播梯度与正向输出计算sigmoid的梯度输入。
+- 接口功能：完成[sigmoid](../sigmoid/docs/aclnnSigmoid&aclnnInplaceSigmoid.md)的反向传播，根据sigmoid反向传播梯度与正向输出计算sigmoid的梯度输入。
 - 计算公式：
 
   $$

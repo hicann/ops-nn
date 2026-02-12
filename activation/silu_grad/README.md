@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 接口功能：[aclnnSilu](../../swish/docs/aclnnSilu.md)的反向传播，根据silu反向传播梯度与正向输出计算silu的梯度输入。
+- 接口功能：[aclnnSilu](../swish/docs/aclnnSilu.md)的反向传播，根据silu反向传播梯度与正向输出计算silu的梯度输入。
 - 计算公式：
 
   $$

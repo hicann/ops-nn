@@ -23,6 +23,8 @@
   Softmax\left ( {{x}_{i}} \right )= {\frac {{e}^{{x}_{i}}} {\sum ^{n-1}_{j=0} {{e}^{{x}_{j}}}}}
   $$
 
+  实际计算时，会使用减去输入最大值的方式防止浮点数运算的溢出问题，保证数值计算的稳定性。
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSoftmaxGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSoftmax”接口执行计算。
@@ -71,7 +73,7 @@ aclnnStatus aclnnSoftmax(
     </tr></thead>
   <tbody>
     <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>待进行Softmax计算的入参，公式中的x。</td>
       <td>支持空Tensor。</td>
@@ -81,7 +83,7 @@ aclnnStatus aclnnSoftmax(
       <td>√</td>
     </tr>
       <tr>
-      <td>dim</td>
+      <td>dim（int64_t）</td>
       <td>输入</td>
       <td>需要做Softmax的轴。</td>
       <td>-</td>
@@ -91,7 +93,7 @@ aclnnStatus aclnnSoftmax(
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>计算的出参。</td>
       <td>shape需要与self一致。</td>
@@ -101,7 +103,7 @@ aclnnStatus aclnnSoftmax(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -111,7 +113,7 @@ aclnnStatus aclnnSoftmax(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
@@ -124,7 +126,6 @@ aclnnStatus aclnnSoftmax(
   </table>
   
    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：数据类型支持FLOAT16、FLOAT32、DOUBLE。
-
 
 - **返回值：**
 

@@ -23,6 +23,8 @@
   logsoftmax\left ( {{x}_{i}} \right )=log\left ( {\frac {{e}^{{x}_{i}}}   {\sum ^{n-1}_{j=0} {{e}^{{x}_{j}}}}} \right )
   $$
 
+  实际计算时，会使用减去输入最大值和直接计算对数差值的方式防止浮点数运算的溢出和下溢问题，保证数值计算的稳定性。
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnLogSoftmaxGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnLogSoftmax”接口执行计算。
@@ -71,7 +73,7 @@ aclnnStatus aclnnLogSoftmax(
     </tr></thead>
   <tbody>
       <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>待进行LogSoftmax计算的入参，公式中的x。</td>
       <td>支持空Tensor。</td>
@@ -81,7 +83,7 @@ aclnnStatus aclnnLogSoftmax(
       <td>√</td>
     </tr>
       <tr>
-      <td>dim</td>
+      <td>dim（int64_t）</td>
       <td>输入</td>
       <td>需要做Logsoftmax的轴。</td>
       <td>-</td>
@@ -91,7 +93,7 @@ aclnnStatus aclnnLogSoftmax(
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>计算的出参。</td>
       <td><ul><li>数据类型是self可转化的数据类型。</li><li>输出shape应该与输入shape一致。</li></ul></td>
@@ -101,7 +103,7 @@ aclnnStatus aclnnLogSoftmax(
       <td>√</td>
     </tr>
        <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -111,7 +113,7 @@ aclnnStatus aclnnLogSoftmax(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

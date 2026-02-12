@@ -63,6 +63,6 @@ $$
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_relu](./examples/test_aclnn_relu.cpp) | 通过[aclnnRelu](./docs/aclnnRelu.md)接口方式调用Relu算子。 |
-| aclnn调用 | [test_aclnn_inplace_relu](./examples/test_aclnn_inplace_relu.cpp) | 通过[aclnnInplaceRelu](./docs/aclnnInplaceRelu.md)接口方式调用Relu算子。 |
+| aclnn调用 | [test_aclnn_relu](examples/test_aclnn_relu.cpp) | 通过[aclnnRelu&aclnnInplaceRelu](docs/aclnnRelu&aclnnInplaceRelu.md)接口方式调用Relu算子。 |
+| aclnn调用 | [test_aclnn_inplace_relu](examples/test_aclnn_inplace_relu.cpp) | 通过[aclnnRelu&aclnnInplaceRelu](docs/aclnnRelu&aclnnInplaceRelu.md)接口方式调用Relu算子。 |
 | 图模式 | - | 通过[算子IR](op_graph/relu_proto.h)构图方式调用Relu算子。 |

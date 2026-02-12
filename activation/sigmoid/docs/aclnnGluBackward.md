@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：完成[aclnnGlu](../../sigmoid/docs/aclnnGlu.md)的反向。
+- 接口功能：完成[aclnnGlu](../../glu/docs/aclnnGlu.md)的反向。
 - 计算公式：
 
   $$
