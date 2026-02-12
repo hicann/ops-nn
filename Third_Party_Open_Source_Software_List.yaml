@@ -12,6 +12,9 @@ eigen:
 makeself:
   version: 2.5.0-patch1.0
   type: build
-nlohmann/json:
+json:
   version: v3.11.3
+  type: run
+protobuf:
+  version: v25.1
   type: run
