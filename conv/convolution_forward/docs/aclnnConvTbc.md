@@ -233,12 +233,10 @@ aclnnStatus aclnnConvTbc(
 - 确定性计算
   - aclnnConvTbc默认确定性实现。
 
-  <table style="undefined;table-layout: fixed; width: 1500px"><colgroup>
-    <col style="width:70px">
-    <col style="width:200px">
-    <col style="width:200px">
-    <col style="width:200px">
-    <col style="width:200px">
+<table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+    <col style="width:150px">
+    <col style="width:500px">
+    <col style="width:500px">
     </colgroup>
    <thead>
     <tr>
@@ -305,7 +303,8 @@ aclnnStatus aclnnConvTbc(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考 <a href="../../../docs/zh/context/编译与运行样例.md">编译与运行样例</a>。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <memory>

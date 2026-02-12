@@ -31,7 +31,9 @@
   $$
 
 ## 函数原型
+
 每个算子分为<a href="../../../docs/zh/context/两段式接口.md">两段式接口</a>，必须先调用 aclnnQuantConvolutionGetWorkspaceSize 接口获取计算所需 workspace 大小以及包含了算子计算流程的执行器，再调用 aclnnQuantConvolution 接口执行计算。
+
 ```cpp
 aclnnStatus aclnnQuantConvolutionGetWorkspaceSize(
     const aclTensor       *input,
@@ -326,7 +328,7 @@ aclnnStatus aclnnQuantConvolution(
 - 确定性计算
   - aclnnQuantConvolution默认确定性实现。
 
-  <table style="undefined;table-layout: fixed; width: 1000px"><colgroup>
+<table style="undefined;table-layout: fixed; width: 1000px"><colgroup>
     <col style="width:150px">
     <col style="width:700px">
     </colgroup>
@@ -401,7 +403,8 @@ aclnnStatus aclnnQuantConvolution(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考 <a href="../../../docs/zh/context/编译与运行样例.md">编译与运行样例</a>。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 不同产品型号请参考使用不同的 main 函数。
 
 ```Cpp

@@ -16,15 +16,20 @@
 - 接口功能：[Gelu](../gelu/README.md)激活函数的反向传播算子，用于计算Gelu激活函数的梯度。
 - 计算公式：
   - 前向计算公式
+
   $$
   out=GELU(self)=self × Φ(self)=0.5 * self * (1 + tanh( \sqrt{2 / \pi} * (self + 0.044715 * self^{3})))
   $$
+
   - 反向梯度公式
+
   $$
    out = \frac{d(\text{GELU})}{dx} = dy \cdot \left[ \underbrace{0.5(1 + \tanh(\text{inner}))}_{\text{left\_derivative}}+ \underbrace{0.5x\cdot (1-\tanh^2(\text{inner})) \cdot \beta(1+3\cdot 0.044715x^2)}_{\text{right\_derivative}}\right]
 
   $$
+  
   - 其中：
+
   $$
   
    \beta = \sqrt{\frac{2}{\pi}},\quad \text{inner}= \beta \left(x+0.044715x^3 \right)

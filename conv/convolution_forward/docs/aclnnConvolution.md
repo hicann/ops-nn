@@ -18,7 +18,7 @@
 
 - 计算公式：
 
-  我们假定输入（input）的 shape 是 $(N, C_{\text{in}}, D, H, W)$，(weight) 的 shape 是 $(C_{\text{out}}, C_{\text{in}}, K_d, K_h, K_w)$，输出（output）的 shape 是 $(N, C_{\text{out}}, D_{\text{out}}, H_{\text{out}}, W_{\text{out}})$，其中 $N$ 表示批次大小（batch size），$C$ 是通道数，$D$、$H$ 和 $W$ 分别是样本的深度、高度和宽度，$K_d$、$K_h$ 和 $K_w$ 分别是卷积核的深度、高度和宽度，那输出将被表示为：
+  假定输入（input）的 shape 是 $(N, C_{\text{in}}, D, H, W)$，(weight) 的 shape 是 $(C_{\text{out}}, C_{\text{in}}, K_d, K_h, K_w)$，输出（output）的 shape 是 $(N, C_{\text{out}}, D_{\text{out}}, H_{\text{out}}, W_{\text{out}})$，其中 $N$ 表示批次大小（batch size），$C$ 是通道数，$D$、$H$ 和 $W$ 分别是样本的深度、高度和宽度，$K_d$、$K_h$ 和 $K_w$ 分别是卷积核的深度、高度和宽度，那输出将被表示为：
 
   $$
   \text{output}(N_i, C_{\text{out}_j}, D_{\text{out}}, H_{\text{out}}, W_{\text{out}}) = \sum_{k = 0}^{C_{\text{in}} - 1} \text{weight}(C_{\text{out}_j}, k) \star \text{input}(N_i, k) + \text{bias}(C_{\text{out}_j})
@@ -27,21 +27,23 @@
   其中，$\star$ 表示卷积计算，根据卷积输入的维度，卷积的类型（空洞卷积、分组卷积）而定。$N$ 代表批次大小（batch size），$C$ 代表通道数，$D$、$H$ 和 $W$ 分别代表深度、高度和宽度，相应输出维度的计算公式如下：
 
   - 对于入参 `transposed = False` 时：
-  $$
-  D_{\text{out}}=[(D + 2 \times padding[0] - dilation[0] \times (K_d - 1) - 1 ) / stride[0]] + 1 \\
-  H_{\text{out}}=[(H + 2 \times padding[1] - dilation[1] \times (K_h - 1) - 1 ) / stride[1]] + 1 \\
-  W_{\text{out}}=[(W + 2 \times padding[2] - dilation[2] \times (K_w - 1) - 1 ) / stride[2]] + 1
-  $$
+
+    $$
+    D_{\text{out}}=[(D + 2 \times padding[0] - dilation[0] \times (K_d - 1) - 1 ) / stride[0]] + 1 \\
+    H_{\text{out}}=[(H + 2 \times padding[1] - dilation[1] \times (K_h - 1) - 1 ) / stride[1]] + 1 \\
+    W_{\text{out}}=[(W + 2 \times padding[2] - dilation[2] \times (K_w - 1) - 1 ) / stride[2]] + 1
+    $$
 
   - 对于入参 `transposed = True` 时：
-  $$
-  D_{\text{out}}=(D - 1) \times \text{stride}[0] - 2 \times \text{padding}[0] + \text{dilation}[0]
-            \times (K_d - 1) + \text {outputPadding}[0] + 1 \\
-  H_{\text{out}}=(H - 1) \times \text{stride}[1] - 2 \times \text{padding}[1] + \text{dilation}[1]
-            \times (K_h - 1) + \text {outputPadding}[1] + 1 \\
-  W_{\text{out}}=(W - 1) \times \text{stride}[2] - 2 \times \text{padding}[2] + \text{dilation}[2]
-            \times (K_w - 1) + \text {outputPadding}[2] + 1
-  $$
+
+    $$
+    D_{\text{out}}=(D - 1) \times \text{stride}[0] - 2 \times \text{padding}[0] + \text{dilation}[0]
+              \times (K_d - 1) + \text {outputPadding}[0] + 1 \\
+    H_{\text{out}}=(H - 1) \times \text{stride}[1] - 2 \times \text{padding}[1] + \text{dilation}[1]
+              \times (K_h - 1) + \text {outputPadding}[1] + 1 \\
+    W_{\text{out}}=(W - 1) \times \text{stride}[2] - 2 \times \text{padding}[2] + \text{dilation}[2]
+              \times (K_w - 1) + \text {outputPadding}[2] + 1
+    $$
 
 ## 函数原型
 
@@ -310,12 +312,10 @@ aclnnStatus aclnnConvolution(
 - 确定性计算
   - aclnnConvolution默认确定性实现。
 
-  <table style="undefined;table-layout: fixed; width: 1500px"><colgroup>
-    <col style="width:70px">
-    <col style="width:200px">
-    <col style="width:200px">
-    <col style="width:200px">
-    <col style="width:200px">
+<table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+    <col style="width:150px">
+    <col style="width:450px">
+    <col style="width:550px">
     </colgroup>
    <thead>
     <tr>
@@ -334,13 +334,11 @@ aclnnStatus aclnnConvolution(
         <ul><li>conv3d 正向场景，weight H、W 的大小应该在[1,511]范围内。</li></ul>
      </td>
      <td>
-        <ul>
            input、weight 数据类型支持 FLOAT、FLOAT16、BFLOAT16、HIFLOAT8。
            <ul>
               <li>transposed=true 时：input 数据类型额外支持 FLOAT8_E4M3FN，当input数据类型为HIFLOAT8或FLOAT8_E4M3FN时，output和weight的数据类型必须与input一致。支持 N 维度大于等于0，其他各个维度的大小应该大于等于1。weight数据类型额外支持 FLOAT8_E4M3FN，所有维度的大小应该大于等于0（当D、H 或 W 维度为0时，要求推导出的output对应维度也为0）。</li>
               <li>transposed=false 时：当 input 数据类型为 HIFLOAT8 时，weight 的数据类型必须与 input 一致。支持 N 维度大于等于0，支持 D、H、W 维度大于等于0（等于0的场景仅在 output 推导的 D、H、W 维度也等于0时支持），支持 C 维度大于等于0（等于0的场景仅在 output 推导的 N、C、D、H、W 其中某一维度等于0时支持）。weight的H、W的大小应该在[1,511]的范围内。N维度大小应该大于等于0（等于0的场景仅在bias、output的N维度也等于0时支持）。C维度大小的支持情况与input的C维度一致。</li>
             </ul>
-        </ul>
      </td>
    </tr>
    <tr>
@@ -352,13 +350,11 @@ aclnnStatus aclnnConvolution(
         </ul>
      </td>
      <td>
-        <ul>
           bias 数据类型不支持 HIFLOAT8、FLOAT8_E4M3FN。
           <ul>
             <li>transposed=true 时：当 input 和 weight 数据类型是 HIFLOAT8 和 FLOAT8_E4M3FN 时，不支持带 bias。</li>
             <li>transposed=false 时：当 input 和 weight 数据类型是 HIFLOAT8 时，bias 数据类型会转成 FLOAT 参与计算。</li>
           </ul>
-        </ul>
      </td>
    </tr>
    <tr>
@@ -420,7 +416,8 @@ aclnnStatus aclnnConvolution(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考<a href="../../../docs/zh/context/编译与运行样例.md">编译与运行样例</a>。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <memory>

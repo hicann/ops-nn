@@ -17,6 +17,7 @@
 
 - 接口功能：完成[aclnnLogSoftmax](../../log_softmax_v2/docs/aclnnLogSoftmax.md)的反向传播。
 - 计算公式：
+
 $$
 out = gradOutput - sum(gradOutput) \cdot exp(output)
 $$

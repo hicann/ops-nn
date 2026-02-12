@@ -26,6 +26,7 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnLogSigmoidGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnLogSigmoid”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnLogSigmoidGetWorkspaceSize(
   const aclTensor* self,

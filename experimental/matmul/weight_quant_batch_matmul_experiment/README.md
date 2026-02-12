@@ -22,20 +22,35 @@
 - 算子功能：
 本样例算子实现的是MatMul伪量化A16W4 PerGroup场景，并使用MSD算法完成伪量化的计算过程。其数学表达式为：
 1. 计算$A_{max}$:
+
 $$A_{max} = rowMax(|A_{group}|)$$
+
 2. 计算$tmp_{1}$:
+
 $$tmp_{1} = \frac{7.49 * A_{group}}{A_{max}}$$
+
 3. 计算$A_1$:
+
 $$A_1 = round(tmp_{1})$$
+
 4. 计算$tmp_{2}$:
+
 $$tmp_{2}=(tmp_{1}-A_{1})*14.98$$
+
 5. 计算$A_{2}$:
+
 $$A_{2}=round(tmp_{2})$$
+
 6. 计算$tmp_{3}$:
+
 $$tmp_{3}=(tmp_{2}-A_{2})*14.98$$
+
 7. 计算$A_{3}$:
+
 $$A_{3}=round(tmp_{3})$$
+
 8. 构造矩阵$A_{int}$:
+
 $$
 A_{int} =
     \begin{bmatrix}
@@ -44,15 +59,21 @@ A_{int} =
     A_{3} \\
     \end{bmatrix}
 $$
+
 9. 计算$C_{int}$:
+
 $$Y_{int} =     \begin{bmatrix}
     Y_{1} \\
     Y_{2} \\
     Y_{3} \\
     \end{bmatrix} = A_{int} Weight_{group}$$
+
 10. 计算$C_{group}$:
+
 $$Y_{group} = [(\frac{Y_{1}}{7.49}+\frac{Y_{2}}{7.49*14.98}+\frac{Y_{3}}{7.49*14.98*14.98})*A_{max}] * scale_{group}$$
+
 11. 计算$Y^i$:
+
 $$Y^{i} = Y_{group} + Y^{i-1}$$
 
 - 算子规格：

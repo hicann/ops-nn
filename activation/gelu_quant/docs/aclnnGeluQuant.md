@@ -44,12 +44,15 @@
     $$
     geluOut = geluOut * inputScaleOptional
     $$
+
     $$
     Max = max(abs(geluOut))
     $$
+
     $$
     outScaleOptional = Max/maxValue
     $$
+    
     $$
     y = round\_to\_dst\_type(geluOut / outScaleOptional, round\_mode)
     $$

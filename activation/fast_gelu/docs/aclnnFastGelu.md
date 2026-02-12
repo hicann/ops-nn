@@ -17,6 +17,7 @@
 
 快速高斯误差线性单元激活函数。
 FastGelu定义如下：
+
 $$
 FastGelu(x_i) = \frac {x_i} {1 + e^{-1.702 x_i}}
 $$

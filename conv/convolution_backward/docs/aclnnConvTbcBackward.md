@@ -367,11 +367,11 @@ aclnnStatus aclnnConvTbcBackward(
 - 确定性计算
   - aclnnConvTbcBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
-  <table style="undefined;table-layout: fixed; width: 1396px"><colgroup>
-  <col style="width: 168px">
-  <col style="width: 404px">
-  <col style="width: 429px">
-  <col style="width: 395px">
+<table style="undefined;table-layout: fixed; width: 1400px"><colgroup>
+  <col style="width: 150px">
+  <col style="width: 440px">
+  <col style="width: 410px">
+  <col style="width: 400px">
     </colgroup>
    <thead>
     <tr>
@@ -391,19 +391,19 @@ aclnnStatus aclnnConvTbcBackward(
       </ul>
      </td>   
      <td colspan="2">
-        <ul>支持 N、C、L 维度大于等于 0（等于 0 的场景仅在 self 的 N 或 C 或 L 维度等于 0 时支持）。</ul>
+        支持 N、C、L 维度大于等于 0（等于 0 的场景仅在 self 的 N 或 C 或 L 维度等于 0 时支持）。
      </td>
    </tr>
    <tr>
      <th scope="row">input约束</th>
      <td>
-      <ul>input 支持 N、C 维度大于等于 0，支持 L 维度大于等于 0（等于 0 的场景仅在 out 推导的 L 维度也等于 0 时支持）。</ul>
+      input 支持 N、C 维度大于等于 0，支持 L 维度大于等于 0（等于 0 的场景仅在 out 推导的 L 维度也等于 0 时支持）。
       </td>   
      <td>
-        <ul>input 数据类型不支持 HIFLOAT8。支持 N、C、L 维度大于等于 0。</ul>
+        input 数据类型不支持 HIFLOAT8。支持 N、C、L 维度大于等于 0。
      </td>
      <td>
-        <ul>input 数据类型不支持 BFLOAT16、HIFLOAT8。支持 N、C、L 维度大于等于 0。</ul>
+        input 数据类型不支持 BFLOAT16、HIFLOAT8。支持 N、C、L 维度大于等于 0。
      </td>
    </tr>
    <tr>
@@ -415,26 +415,22 @@ aclnnStatus aclnnConvTbcBackward(
         </ul>
      </td>   
      <td>
-        <ul>
           weight 数据类型不支持 HIFLOAT8。支持 N、C、L 维度大于等于 0。
-        </ul>
      </td>
      <td>
-        <ul>
           weight 数据类型不支持 BFLOAT16、HIFLOAT8。支持 N、C、L 维度大于等于 0。
-        </ul>
      </td>
    </tr>
    <tr>
      <th scope="row">dtype约束</th>
      <td>
-        <ul>只有在gradWeight参数中，才支持HIFLOAT8、FLOAT8_E4M3FN，在其他参数中不支持HIFLOAT8、FLOAT8_E4M3FN。</ul>
+        只有在gradWeight参数中，才支持HIFLOAT8、FLOAT8_E4M3FN，在其他参数中不支持HIFLOAT8、FLOAT8_E4M3FN。
      </td>   
      <td>
-        <ul>不支持HIFLOAT8、FLOAT8_E4M3FN。</ul>
+        不支持HIFLOAT8、FLOAT8_E4M3FN。
      </td>
      <td>
-        <ul>不支持BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN。</ul>
+        不支持BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN。
      </td>
    </tr>
    <tr>

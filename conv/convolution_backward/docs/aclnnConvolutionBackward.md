@@ -445,11 +445,11 @@ aclnnStatus aclnnConvolutionBackward(
 - 确定性计算
   - aclnnConvolutionBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
-  <table style="undefined;table-layout: fixed; width: 1396px"><colgroup>
-  <col style="width: 168px">
-  <col style="width: 404px">
-  <col style="width: 429px">
-  <col style="width: 395px">
+<table style="undefined;table-layout: fixed; width: 1400px"><colgroup>
+  <col style="width: 150px">
+  <col style="width: 430px">
+  <col style="width: 430px">
+  <col style="width: 390px">
   </colgroup>
    <thead>
     <tr>
@@ -477,10 +477,10 @@ aclnnStatus aclnnConvolutionBackward(
      <th scope="row">gradOutput约束</th>
      <td>-</td>
      <td>
-        <ul>1d、2d和3d transposed=false场景，各个维度的大小应该大于等于1, 当input为空Tensor时，支持N、C、D、H、W维度为0。</ul>
+        1d、2d和3d transposed=false场景，各个维度的大小应该大于等于1, 当input为空Tensor时，支持N、C、D、H、W维度为0。
      </td>
      <td>
-        <ul>不支持空Tensor。</ul>
+        不支持空Tensor。
      </td>
    </tr>
    <tr>
@@ -490,10 +490,9 @@ aclnnStatus aclnnConvolutionBackward(
         <li>transposed=false：支持N、C维度为0的空Tensor（C维度为0时要求weight的C维度也为0）。当N或C维度为0且满足空Tensor约束时，还支持DHW维度为0。</li></ul>
      </td>
      <td>
-        <ul>1d、2d和3d transposed=false场景，各个维度的大小应该大于等于1。
+        1d、2d和3d transposed=false场景，各个维度的大小应该大于等于1。
           <ul><li>transposed=true：支持N维度为0的空Tensor。当N维度为0且满足空Tensor约束时，还支持DHW维度为0。</li>
           <li>transposed=false：支持N、C维度为0的空Tensor（C维度为0时要求weight的C维度也为0）。当N或C维度为0且满足空Tensor约束时，还支持DHW维度为0。</li></ul>
-         </ul>
      </td>
      <td>-</td>
    </tr>
@@ -504,56 +503,54 @@ aclnnStatus aclnnConvolutionBackward(
         <li>transposed=false：支持C维度等于0（C为0时要求input C维度也为0），所有维度的大小应该大于等于1。当input为空Tensor且满足空Tensor约束时，此时支持D、H、W轴为0。</li></ul>
      </td>
      <td>
-        <ul>2d和3d transposed=false场景，H、W的大小应该在[1,255]的范围内，其他维度的大小应该大于等于1。1d transposed=false场景，L的大小应该在[1,255]的范围内，其他维度的大小应该大于等于1。
+        2d和3d transposed=false场景，H、W的大小应该在[1,255]的范围内，其他维度的大小应该大于等于1。1d transposed=false场景，L的大小应该在[1,255]的范围内，其他维度的大小应该大于等于1。
            <ul><li>transposed=true: 当input为空Tensor且满足空Tensor约束时，此时支持C、D、H、W轴为0。</li>
            <li>transposed=false：支持C维度等于0（C为0时要求input C维度也为0），当input为空Tensor且满足空Tensor约束时，此时支持D、H、W轴为0。</li></ul>
-        </ul>
      </td>
      <td>
-        <ul>不支持空Tensor。</ul>
+        不支持空Tensor。
      </td>
    </tr>
    <tr>
      <th scope="row">stride约束</th>
      <td>
-        <ul>1d、2d和3d transposed=false场景，各个值都应该大于等于1。1d、2d和3d transposed=true场景，strideD应该在[1,1000000]的范围内，strideH、strideW应该在[1,63]的范围内。</ul>
+        1d、2d和3d transposed=false场景，各个值都应该大于等于1。1d、2d和3d transposed=true场景，strideD应该在[1,1000000]的范围内，strideH、strideW应该在[1,63]的范围内。
      </td>
      <td>
-        <ul>3d transposed=false场景，strideD应该大于等于1，strideH、strideW应该在[1,63]的范围内。1d和2d transposed=false场景，各个值都应该大于等于1。</ul>
+        3d transposed=false场景，strideD应该大于等于1，strideH、strideW应该在[1,63]的范围内。1d和2d transposed=false场景，各个值都应该大于等于1。
      </td>
      <td>-</td>
    </tr>
    <tr>
      <th scope="row">padding约束</th>
      <td>
-        <ul>1d、2d和3d transposed=false场景，各个值都应该大于等于0。1d、2d和3d transposed=true场景，paddingD应该在[0,1000000]的范围内，paddingH、paddingW应该在[0,255]的范围内。</ul>
+        1d、2d和3d transposed=false场景，各个值都应该大于等于0。1d、2d和3d transposed=true场景，paddingD应该在[0,1000000]的范围内，paddingH、paddingW应该在[0,255]的范围内。
      </td>
      <td>
-        <ul>3d transposed=false场景，paddingD应该大于等于0，paddingH、paddingW应该在[0,255]的范围内。1d和2d transposed=false场景，各个值都应该在[0,255]的范围内。</ul>
+        3d transposed=false场景，paddingD应该大于等于0，paddingH、paddingW应该在[0,255]的范围内。1d和2d transposed=false场景，各个值都应该在[0,255]的范围内。
      </td>
      <td>-</td>
    </tr>
    <tr>
      <th scope="row">dilation约束</th>
      <td>
-        <ul>1d、2d和3d transposed=false场景，各个值都应该大于等于1。1d、2d和3d transposed=true场景，dilationD应该在[1,1000000]的范围内，dilationH、dilationW应该在[1,255]的范围内。</ul>
+        1d、2d和3d transposed=false场景，各个值都应该大于等于1。1d、2d和3d transposed=true场景，dilationD应该在[1,1000000]的范围内，dilationH、dilationW应该在[1,255]的范围内。
      </td>
      <td>
-        <ul>1d、2d和3d transposed=false场景，各个值都应该在[1,255]的范围内。</ul>
+        1d、2d和3d transposed=false场景，各个值都应该在[1,255]的范围内。
      </td>
      <td>-</td>
    </tr>
    <tr>
      <th scope="row">dtype约束</th>
      <td>
-        <ul>只有在transposed=true且output_mask[0]=true时，数据类型才支持HIFLOAT8、FLOAT8_E4M3FN。
-        </ul>
+        只有在transposed=true且output_mask[0]=true时，数据类型才支持HIFLOAT8、FLOAT8_E4M3FN。
      </td>
      <td>
-        <ul>不支持HIFLOAT8、FLOAT8_E4M3FN。</ul>
+        不支持HIFLOAT8、FLOAT8_E4M3FN。
      </td>
      <td>
-        <ul>不支持BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN。</ul>
+        不支持BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN。
      </td>
    </tr>
    <tr>
@@ -576,11 +573,11 @@ aclnnStatus aclnnConvolutionBackward(
    <tr>
      <th scope="row">其他约束</th>
      <td>
-        <ul>padding区域梯度的计算行为取决于输入shape，根据算子优化策略的不同，padding区域梯度可能直接置0。</ul>
+        padding区域梯度的计算行为取决于输入shape，根据算子优化策略的不同，padding区域梯度可能直接置0。
      </td>
      <td>-</td>
      <td>
-        <ul>当前仅支持1D和2D卷积的反向传播，暂不支持3D卷积的反向传播。</ul>
+        当前仅支持1D和2D卷积的反向传播，暂不支持3D卷积的反向传播。
      </td>
    </tr>
    </tbody>
