@@ -744,8 +744,9 @@ bool CheckBiasDtype(
                     ge::TypeUtils::DataTypeToAscendString(biasDtype).GetString()),
                 return false);
         } else {
-            if (npuArch == NpuArch::DAV_3510 && 
-                (inputParams->bDtype == ge::DT_FLOAT4_E2M1 || inputParams->bDtype == ge::DT_FLOAT)) {
+            if (npuArch == NpuArch::DAV_3510 &&
+                (inputParams->bDtype == ge::DT_FLOAT4_E2M1 || inputParams->bDtype == ge::DT_FLOAT ||
+                 inputParams->bDtype == ge::DT_FLOAT8_E4M3FN || inputParams->bDtype == ge::DT_HIFLOAT8)) {
                 OP_TILING_CHECK(
                     biasDtype != inputParams->aDtype,
                     VECTOR_INNER_ERR_REPORT_TILIING(
