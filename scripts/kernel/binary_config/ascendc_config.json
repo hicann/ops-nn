@@ -270,7 +270,7 @@
     {"name":"RotaryPositionEmbedding", "compute_units": ["ascend910_93", "ascend910b", "ascend950"], "auto_sync" : true},
     {"name":"ResizeNearestNeighborV2", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"ResizeNearestNeighborV2Grad", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
-    {"name":"DeformableOffsets", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
+    {"name":"DeformableOffsets", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"DeformableOffsetsGrad", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"ResizeLinear", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"ResizeLinearGrad", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
