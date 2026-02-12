@@ -179,7 +179,9 @@ bool Conv3DDXV2KernelSplitTiling::IsBaseShapeFitKernelSplitHW(const uint32_t bes
                              (runInfo_.dedx_w <= BLOCK_CUBE && kernelSplitPara_.splitHiWi <= BASIC_BLOCK_SIZE_256))) {
         return false; // wi 大于10小于16时，需要M方向足够大, 才能体现kernel拆分的优势
     }
-
+    if (kSCoutFullLoad_ && runInfo_.dedx_w <= TWO_U32) {
+        return false; //全载时wi小于等于2性能不佳，且易触发问题
+    } 
     return true;
 }
 
