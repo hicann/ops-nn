@@ -3,7 +3,7 @@
 
 基于本项目进行[算子调用](../invocation/quick_op_invocation.md)或[算子开发](../develop/aicore_develop_guide.md)之前，请您先参考下面步骤完成基础环境搭建。
 
-环境搭建一般分为如下场景，您可以按需安装：
+注意本文提到的编译态和运行态含义如下，请按需操作：
 
 - 编译态：针对仅编译不运行本项目的场景，只需安装前置依赖和CANN toolkit包。
 - 运行态：针对运行本项目的场景（编译运行或纯运行），除了安装前置依赖和CANN toolkit包，还需安装驱动与固件、CANN ops包。
@@ -37,13 +37,28 @@
 
    安装指导详见《[CANN 软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstSoftware)》。
 
-## 环境准备（二选一）
+## 环境准备（三选一）
 
- ### 使用Docker部署
+### WebIDE环境（内测中）
+
+对于无环境的用户，可直接使用WebIDE开发平台，即“**算子一站式开发平台**”。该平台为您提供在线可直接运行的昇腾环境，环境中已安装必备的软件包，无需手动安装。
+
+> **前提说明：**
+>
+> - 该平台功能正在内测中，若您想体验，请先单击[LINK](https://gitcode.com/org/cann/discussions/47)申请云开发平台资源，并获取平台介绍文档。只有成功申请了平台资源，开源项目的首页才会有“**云开发**”按钮，您才可以参考下述步骤体验。
+> - 版本说明：环境默认提供最新商发版CANN软件包，目前是8.5.0。
+
+进入本开源项目首页，单击“`云开发 > WebIDE for Ascend`”进入算子一站式开发平台，根据页面提示启动云开发环境。
+
+<img src="../figures/cloudIDE.png" alt="云平台"  width="700px" height="100px">
+
+
+### 使用Docker部署
 
 > **说明：**
 > - Docker镜像是一种高效部署方式，目前仅适用于Atlas A2系列产品，且目前仅适配Ubuntu操作系统。
 > - 镜像文件比较大，下载需要一定时间，请您耐心等待。
+> - 版本说明：环境默认提供最新商发版CANN软件包，目前是8.5.0。
 
 #### 1. 下载镜像
 
@@ -83,7 +98,13 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
 
 #### 1. 下载软件包
 
-单击[下载链接](https://mirror-centralrepo.devcloud.cn-north-4.huaweicloud.com/artifactory/cann-run-release/software/9.0.0/)，根据实际产品型号和环境架构，获取`Ascend-cann-toolkit_${cann_version}_linux-${arch}.run`、`Ascend-cann-${soc_name}-ops_${cann_version}_linux-${arch}.run`。其中ops包是运行态依赖，若仅编译算子，可以不安装此包。
+请根据下述场景，按需获取`Ascend-cann-toolkit_${cann_version}_linux-${arch}.run`、`Ascend-cann-${soc_name}-ops_${cann_version}_linux-${arch}.run`。
+
+- 场景1：如果您想体验**官网正式发布的CANN包**能力，访问[CANN官网下载中心](https://www.hiascend.com/cann/download)，选择对应版本CANN软件包（仅支持CANN 8.5.0及后续版本），安装指导详见《[CANN 软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstSoftware)》。
+
+- 场景2：如果您想体验**master分支最新能力**，单击[下载链接](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-release/software/master)获取。
+
+注意产品型号和环境架构需与真实环境对应，此外ops包是运行态依赖，若仅编译算子，可以不安装此包。
 
 #### 2. 安装软件包
 1. **安装社区CANN toolkit包**
@@ -139,9 +160,11 @@ source /usr/local/Ascend/cann/set_env.sh
 
 ## 源码下载
 
+通过如下命令下载项目源码，同时安装其他依赖。\$\{tag\_version\}请替换为分支标签名，本源码仓与CANN版本配套关系可参见[release仓库](https://gitcode.com/cann/release-management)。
+
 ```bash
-# 下载项目源码，以master分支为例
-git clone https://gitcode.com/cann/ops-nn.git
+# 下载项目对应分支源码
+git clone -b ${tag_version} https://gitcode.com/cann/ops-nn.git
 # 安装根目录requirements.txt依赖
 cd ops-nn
 pip3 install -r requirements.txt

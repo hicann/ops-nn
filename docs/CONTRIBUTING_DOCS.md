@@ -170,7 +170,7 @@
 > **写作规范**：推荐表格形式，如果内容复杂可采用其他形式。
 >
 > - 调用方式：支持aclnn、图模式等方式调用，也支持您自定义，请提供至少一种方式。
-> - 样例代码：请在算子的`examples`目录提供调用示例代码，例如`examples/test_aclnn_add_example.cpp`。示例文件命名规则为test\_\$\{invoke\_mode\}\_\${op_name}，\$\{invoke\_mode\}表示调用方式，\${op_name}表示算子名。
+> - 样例代码：请在算子的`examples`目录提供调用示例代码，例如`examples/test_aclnn_add_example.cpp`。文件命名规则为test\_\$\{invoke\_mode\}\_\${op_name}，\$\{invoke\_mode\}表示调用方式，\${op_name}表示算子名。
 > - 说明：不同调用方式的补充说明，例如调用场景、调用原理、编译运行指导等，请根据实际情况自定义。
 
 <table><thead>
