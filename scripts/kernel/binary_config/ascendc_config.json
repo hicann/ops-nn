@@ -15,6 +15,7 @@
     {"name":"AdamApplyOneWithDecay", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"ApplyCamePart1", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
     {"name":"ApplyAdamWV2", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},
+    {"name":"ApplyMomentum", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "-mllvm -cce-aicore-dcci-before-kernel-end=true"]}},
     {"name":"ApplyFtrl", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "-mllvm -cce-aicore-dcci-before-kernel-end=true"]}},
     {"name":"ApplyTopKTopPWithSorted", "compute_units": ["ascend910b", "ascend910_93", "ascend950", "kirinx90", "kirin9030"], "auto_sync" : true},
     {"name":"ExpandIntoJaggedPermute", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
