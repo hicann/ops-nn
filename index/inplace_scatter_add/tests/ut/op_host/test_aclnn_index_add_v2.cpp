@@ -86,7 +86,7 @@ TEST_F(l2_index_add_v2_test, Ascend910B_case_FLOAT) {
   // SAMPLE: only test GetWorkspaceSize
   uint64_t workspace_size = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  // EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+  EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 TEST_F(l2_index_add_v2_test, Ascend910B_case_DOUBLE) {
@@ -103,7 +103,7 @@ TEST_F(l2_index_add_v2_test, Ascend910B_case_DOUBLE) {
   // SAMPLE: only test GetWorkspaceSize
   uint64_t workspace_size = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  // EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+  EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 TEST_F(l2_index_add_v2_test, Ascend910B_case_FLOAT_self_dim3) {
@@ -116,11 +116,10 @@ TEST_F(l2_index_add_v2_test, Ascend910B_case_FLOAT_self_dim3) {
 
   auto ut = OP_API_UT(aclnnIndexAddV2, INPUT(tensor_desc, dims, index_desc, source_desc, scalar_desc, mode), OUTPUT(tensor_desc));
 
-
   // SAMPLE: only test GetWorkspaceSize
   uint64_t workspace_size = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  // EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+  EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 TEST_F(l2_index_add_v2_test, Ascend910B_case_error_type_self) {
