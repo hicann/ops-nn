@@ -1,16 +1,16 @@
-# aclnnLogSigmoid
+# aclnnLogSigmoidForward
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/logsigmoid)
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/log_sigmoid)
 
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
 ## 功能说明
@@ -19,39 +19,40 @@
 
 - 计算公式：
 
-  $$
-  out = LogSigmoid(x) = \log(\frac{1}{1+\exp(-x)})
-  $$
+$$
+out = LogSigmoid(x) = \log(\frac{1}{1+\exp(-x)})
+$$
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnLogSigmoidGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnLogSigmoid”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnLogSigmoidForwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnLogSigmoidForward”接口执行计算。
 
 ```Cpp
-aclnnStatus aclnnLogSigmoidGetWorkspaceSize(
-  const aclTensor* self,
-  aclTensor*       out,
-  uint64_t*        workspaceSize,
-  aclOpExecutor**  executor)
+aclnnStatus aclnnLogSigmoidForwardGetWorkspaceSize(
+  const aclTensor*   self,
+  aclTensor*         out,
+  aclTensor*         buffer,
+  uint64_t*          workspaceSize,
+  aclOpExecutor**    executor)
 ```
 
 ```Cpp
-aclnnStatus aclnnLogSigmoid(
-  void*            workspace,
-  uint64_t         workspaceSize,
-  aclOpExecutor*   executor,
-  aclrtStream      stream)
+aclnnStatus aclnnLogSigmoidForward(
+  void*              workspace,
+  uint64_t           workspaceSize,
+  aclOpExecutor*     executor,
+  aclrtStream        stream)
 ```
 
-## aclnnLogSigmoidGetWorkspaceSize
+## aclnnLogSigmoidForwardGetWorkspaceSize
 
 - **参数说明：**
   
-  <table style="undefined;table-layout: fixed; width: 1420px"><colgroup>
+  <table style="undefined;table-layout: fixed; width: 1450px"><colgroup>
   <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 220px">
-  <col style="width: 250px">
+  <col style="width: 280px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -72,7 +73,7 @@ aclnnStatus aclnnLogSigmoid(
       <tr>
       <td>self</td>
       <td>输入</td>
-      <td>待进行LogSigmoid计算的入参，公式中的x。</td>
+      <td>待进行LogSigmoidForward计算的入参，公式中的x。</td>
       <td><ul><li>支持空Tensor。</li><li>self与out的shape一致。</li><li>self与out的数据类型一致。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -82,14 +83,24 @@ aclnnStatus aclnnLogSigmoid(
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>计算的出参。</td>
+      <td>计算的出参，公式中的out。</td>
       <td><ul><li>self与out的shape一致。</li><li>self与out的数据类型一致。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
     </tr>
-       <tr>
+      <tr>
+      <td>buffer</td>
+      <td>输出</td>
+      <td>用于保存正向计算的中间结果，暂无用。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+      <tr>
       <td>workspaceSize</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
@@ -112,7 +123,7 @@ aclnnStatus aclnnLogSigmoid(
   </tbody>
   </table>
   
-   - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16。
+   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。
 
 - **返回值：**
 
@@ -149,7 +160,7 @@ aclnnStatus aclnnLogSigmoid(
     </tr>
   </tbody></table>
 
-## aclnnLogSigmoid
+## aclnnLogSigmoidForward
 
 - **参数说明：**
 
@@ -173,7 +184,7 @@ aclnnStatus aclnnLogSigmoid(
     <tr>
       <td>workspaceSize</td>
       <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnLogSigmoidGetWorkspaceSize获取。</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnLogSigmoidForwardGetWorkspaceSize获取。</td>
     </tr>
     <tr>
       <td>executor</td>
@@ -195,7 +206,7 @@ aclnnStatus aclnnLogSigmoid(
 ## 约束说明
 
 - 确定性计算：
-  - aclnnLogSigmoid默认确定性实现。
+  - aclnnLogSigmoidForward默认确定性实现。
 
 ## 调用示例
 
@@ -272,34 +283,41 @@ int main() {
   // 2. 构造输入与输出，需要根据API的接口自定义构造
   std::vector<int64_t> selfShape = {4, 2};
   std::vector<int64_t> outShape = {4, 2};
+  std::vector<int64_t> bufferShape = {4, 2};
   void* selfDeviceAddr = nullptr;
   void* outDeviceAddr = nullptr;
+  void* bufferDeviceAddr = nullptr;
   aclTensor* self = nullptr;
   aclTensor* out = nullptr;
+  aclTensor* buffer = nullptr;
   std::vector<float> selfHostData = {1, 2, 3, 4, 5, 6, 7, 8};
   std::vector<float> outHostData = {0, 0, 0, 0, 0, 0, 0, 0};
+  std::vector<float> bufferHostData = {0, 0, 0, 0, 0, 0, 0, 0};
   // 创建self aclTensor
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建out aclTensor
   ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
+  // 创建out aclTensor
+  ret = CreateAclTensor(bufferHostData, bufferShape, &bufferDeviceAddr, aclDataType::ACL_FLOAT, &buffer);
+  CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 3. 调用CANN算子库API，需要修改为具体的Api名称
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
-  // 调用aclnnLogSigmoid第一段接口
-  ret = aclnnLogSigmoidGetWorkspaceSize(self, out, &workspaceSize, &executor);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnLogSigmoidGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+  // 调用aclnnLogSigmoidForward第一段接口
+  ret = aclnnLogSigmoidForwardGetWorkspaceSize(self, out, buffer, &workspaceSize, &executor);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnLogSigmoidForwardGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
   void* workspaceAddr = nullptr;
   if (workspaceSize > 0) {
     ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
   }
-  // 调用aclnnLogSigmoid第二段接口
-  ret = aclnnLogSigmoid(workspaceAddr, workspaceSize, executor, stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnLogSigmoid failed. ERROR: %d\n", ret); return ret);
+  // 调用aclnnLogSigmoidForward第二段接口
+  ret = aclnnLogSigmoidForward(workspaceAddr, workspaceSize, executor, stream);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnLogSigmoidForward failed. ERROR: %d\n", ret); return ret);
 
   // 4. （固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
@@ -318,10 +336,12 @@ int main() {
   // 6. 释放aclTensor，需要根据具体API的接口定义修改
   aclDestroyTensor(self);
   aclDestroyTensor(out);
+  aclDestroyTensor(buffer);
 
   // 7. 释放device资源，需要根据具体API的接口定义修改
   aclrtFree(selfDeviceAddr);
   aclrtFree(outDeviceAddr);
+  aclrtFree(bufferDeviceAddr);
   if (workspaceSize > 0) {
     aclrtFree(workspaceAddr);
   }

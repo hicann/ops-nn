@@ -1,6 +1,6 @@
 # aclnnBinaryCrossEntropyWithLogitsTargetBackward
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/logsigmoid)
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/log_sigmoid)
 
 ## 产品支持情况
 
