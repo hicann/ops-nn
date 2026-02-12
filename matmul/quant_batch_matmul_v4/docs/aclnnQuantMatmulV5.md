@@ -572,11 +572,11 @@ aclnnStatus aclnnQuantMatmulV5(
 
     |量化类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|bias shape|[gsM，gsN，gsK]|
     | ----- | ------ | ------ | ----------- | ----------- | ----------- | ----------- |
-    | G-B量化 | (m, k)|(n, k)|(m, ceil(k / 128))|(ceil(k / 128)，ceil(n / 128)),| (n, ) | [1, 128, 128]|
+    | G-B量化 | (m, k) |(n, k)|(m, ceil(k / 128))|(ceil(n / 128),ceil(k / 128))| (n, ) | [1, 128, 128]|
 
   - 注：上表中gsM、gsK和gsN分别表示groupSizeM、groupSizeK和groupSizeN。
-  - x1的约束：目前n需与256对齐, k与128对齐且为4 * 128的倍数。
-  - x2的约束：目前n需与256对齐，k与128对齐且为4 * 128的倍数。
+  - x1的约束：目前n需与256对齐, k与128对齐且为4 * 128的倍数, transposeX1为false。
+  - x2的约束：目前n需与256对齐，k与128对齐且为4 * 128的倍数，transposeX2为true。
 
   </details>
 
@@ -641,7 +641,7 @@ aclnnStatus aclnnQuantMatmulV5(
   - x1、x2、x1Scale、x2Scale和groupSize的取值关系：
     |量化类型| x1数据类型                 | x2数据类型                 | x1Scale数据类型| x2Scale数据类型| x1 shape | x2 shape| x1Scale shape| x2Scale shape| yOffset shape| [gsM，gsN，gsK]|
     | ----- | ------------------------- | ------------------------- | -------------- | ------------- | -------- | ------- | ------------ | ------------ | ------------ | ------------ |
-    | K-G量化 | INT8                    |INT32                   |FLOAT32              |UINT64             |<li>非转置：(m, k)</li><li>转置：(k, m)</li> |<li>非转置：(k, ceil(n, 8))</li><li>转置：(ceil(n, 8), k)</li>|<li>非转置：(m, 1)</li><li>转置：(1, m)</li>|<li>非转置：(ceil(k / 256), n)</li><li>转置：(n, ceil(k / 256))</li>| (n) | [0, 0, 256]|
+    | K-G量化 | INT8                    |INT32                   |FLOAT32              |UINT64             |<li>非转置：(m, k)</li><li>转置：(k, m)</li> |<li>非转置：(k, ceil(n / 8))</li><li>转置：(ceil(n / 8), k)</li>|<li>非转置：(m, 1)</li><li>转置：(1, m)</li>|<li>非转置：(ceil(k / 256), n)</li><li>转置：(n, ceil(k / 256))</li>| (n) | [0, 0, 256]|
     | K-G量化 | INT4                    |INT4                    |FLOAT32              |FLOAT32             |(m, k)|(n, k)|(m, 1)|(n, ceil(k / 256))| null | [0, 0, 256]|
   - x1的约束：当数据类型为INT8时，k需与256对齐，并小于18432。当数据类型为INT4时，k需与1024对齐，transposeX1为false。
   - x2的约束：当数据类型为INT8时，k需与256对齐。当数据类型为INT4时，transposeX2为true，k需与1024对称，n需与256对齐。
