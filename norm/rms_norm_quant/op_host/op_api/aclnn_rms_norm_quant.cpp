@@ -149,7 +149,7 @@ static bool CheckDtypeValid(RmsNormQuantInputTensor& inputTensor, const aclTenso
                         ACLNN_ERR_PARAM_INVALID,
                         "if xType is float16 or bfloat16 and scaleType is float, offsetType are not float32 or int32"),
                     return false);
-            }else {
+            } else {
                 OP_CHECK(
                     inputTensor.x->GetDataType() == inputTensor.scale->GetDataType(),
                     OP_LOGE(
@@ -184,6 +184,20 @@ aclnnStatus PreDealData(RmsNormQuantInputTensor& inputTensor, aclOpExecutor* exe
     return ACLNN_SUCCESS;
 }
 
+bool CheckShapeDimWithFrontN(const op::Shape& shape1, const op::Shape& shape2, size_t front_n) {
+    size_t x1n = shape1.GetDimNum();
+    size_t x2n = shape2.GetDimNum();
+    if (x1n != x2n) {
+        return false;
+    }
+    for (size_t i = 0; i < x1n && i < front_n; ++i) {
+        if (shape1.GetDim(i) != shape2.GetDim(i)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static bool CheckShapeDim(RmsNormQuantInputTensor& inputTensor, const aclTensor* y)
 {
     OP_CHECK_MAX_DIM(inputTensor.x, MAX_DIM_LEN, return false);
@@ -215,6 +229,12 @@ static bool CheckShapeDim(RmsNormQuantInputTensor& inputTensor, const aclTensor*
     int64_t yDimNum = static_cast<int64_t>(y->GetViewShape().GetDimNum());
     int64_t outLastDim = y->GetViewShape().GetDim(yDimNum - 1);
     if (outDtype == op::DataType::DT_INT32) {
+        if (Ops::NN::AclnnUtil::IsRegbase()) {
+            OP_CHECK(
+                CheckShapeDimWithFrontN(inputTensor.x->GetViewShape(), y->GetViewShape(), xDimNum - 1),
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The size of the first n - 1 dims of x is not equal with that of y"),
+                return false);
+        }
         OP_CHECK(
             xLastDim == outLastDim * INT4_NUMS_IN_INT32_SPACE,
             OP_LOGE(
@@ -225,6 +245,9 @@ static bool CheckShapeDim(RmsNormQuantInputTensor& inputTensor, const aclTensor*
             return false);
     } else if (Ops::NN::AclnnUtil::IsRegbase() && outDtype == op::DataType::DT_INT4) {
         OP_CHECK(
+            CheckShapeDimWithFrontN(inputTensor.x->GetViewShape(), y->GetViewShape(), xDimNum),
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x shape is not equal with y shape"), return false);
+        OP_CHECK(
             xLastDim % 2 == 0,
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID,
@@ -233,14 +256,20 @@ static bool CheckShapeDim(RmsNormQuantInputTensor& inputTensor, const aclTensor*
                 xLastDim),
             return false);
     } else {
-        OP_CHECK(
-            xLastDim == outLastDim,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "if outType is int4 or int8, x last dim must be equal with out last dim. "
-                "x last dim is (%ld), out last dim is (%ld).",
-                xLastDim, outLastDim),
-            return false);
+        if (Ops::NN::AclnnUtil::IsRegbase()){
+            OP_CHECK(
+                CheckShapeDimWithFrontN(inputTensor.x->GetViewShape(), y->GetViewShape(), xDimNum),
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x shape is not equal with y shape"), return false);
+        } else {
+            OP_CHECK(
+                xLastDim == outLastDim,
+                OP_LOGE(
+                    ACLNN_ERR_PARAM_INVALID,
+                    "if outType is int4 or int8, x last dim must be equal with out last dim. "
+                    "x last dim is (%ld), out last dim is (%ld).",
+                    xLastDim, outLastDim),
+                return false);
+        }
     }
 
     OP_CHECK_SHAPE_NOT_EQUAL(inputTensor.gamma, inputTensor.beta, return false);
