@@ -322,7 +322,7 @@ bool CheckAttrRangeStrides(const gert::TilingContext *context, const int64_t *st
 bool CheckAttrRangePads(const gert::TilingContext *context, const int64_t *pads) {
     const auto op_name = context->GetNodeName();
     int32_t kPadUpTmp = kDimUp;
-    if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
+    if (IsSocVersionFuse(context)) {
       kPadUpTmp = kPadUp;
     }
     OP_CHECK_IF(
@@ -1112,7 +1112,7 @@ static inline bool CheckValue(int32_t value, int32_t value_temp) { return value 
 bool CheckPadParamsWithLog(const Conv3dBpInputV2RunInfo &runInfoV2, const gert::TilingContext *context) {
   const auto op_name = context->GetNodeName();
   int32_t kPadUpTmp = kDimUp;
-  if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
+  if (IsSocVersionFuse(context)) {
     kPadUpTmp = kPadUp;
   }
   OP_CHECK_IF(!CheckRange(runInfoV2.pad_h, 0, kPadUpTmp),
@@ -1671,11 +1671,18 @@ bool CheckParams(Conv3dBpInputV2RunInfo &runInfoV2, gert::TilingContext *context
   return true;
 }
 
-bool CheckAttrs(Conv3dBpInputV2RunInfo &runInfoV2, const char* opName, OtherParams& otherParams) {
+bool CheckAttrs(const gert::TilingContext *context, Conv3dBpInputV2RunInfo &runInfoV2, const char* opName, OtherParams& otherParams) {
   // kernel大于1时，才能有dilation属性, 前面代码已经做了兼容性属性重设，这里做二次check
   bool dilationDFlag = (runInfoV2.dilation_d != 1 && otherParams.b_shape.d == 1);
   bool dilationHFlag = (runInfoV2.dilation_h != 1 && otherParams.b_shape.h == 1);
   bool dilationWFlag = (runInfoV2.dilation_w != 1 && otherParams.b_shape.w == 1);
+
+  int32_t strideHwUp = STRIDES_DIM_HW_UP;
+  int32_t strideDUp = STRIDES_DIM_DEPTH_UP;
+  if (IsArchAfter35(context)) {
+      strideHwUp = kDimUp;
+      strideDUp = kDimUp;
+  }
 
   OP_CHECK_IF(dilationDFlag,
       CUBE_INNER_ERR_REPORT(opName, "cannot support dilation_d: [%d] != 1 while kernel_d: [%ld] = 1",
@@ -1693,16 +1700,16 @@ bool CheckAttrs(Conv3dBpInputV2RunInfo &runInfoV2, const char* opName, OtherPara
       OP_LOGE(opName, "cannot support stride_d: %d > kernel_d: %ld", runInfoV2.stride_d, otherParams.b_shape.d),
       return false);
 
-  OP_CHECK_IF(CheckRange(runInfoV2.stride_h, DIM_LOW, STRIDES_DIM_HW_UP) == false,
-      OP_LOGE(opName, "stride_h: %d is invalid, support range [%d, %d]", runInfoV2.stride_h, DIM_LOW, STRIDES_DIM_HW_UP),
+  OP_CHECK_IF(CheckRange(runInfoV2.stride_h, DIM_LOW, strideHwUp) == false,
+      OP_LOGE(opName, "stride_h: %d is invalid, support range [%d, %d]", runInfoV2.stride_h, DIM_LOW, strideHwUp),
       return false);
 
-  OP_CHECK_IF(CheckRange(runInfoV2.stride_w, DIM_LOW, STRIDES_DIM_HW_UP) == false,
-      OP_LOGE(opName, "stride_w: %d is invalid, support range [%d, %d]", runInfoV2.stride_w, DIM_LOW, STRIDES_DIM_HW_UP),
+  OP_CHECK_IF(CheckRange(runInfoV2.stride_w, DIM_LOW, strideHwUp) == false,
+      OP_LOGE(opName, "stride_w: %d is invalid, support range [%d, %d]", runInfoV2.stride_w, DIM_LOW, strideHwUp),
       return false);
 
-  OP_CHECK_IF(CheckRange(runInfoV2.stride_d, DIM_LOW, STRIDES_DIM_DEPTH_UP) == false,
-      OP_LOGE(opName, "stride_d: %d is invalid, support range [%d, %d]", runInfoV2.stride_d, DIM_LOW, STRIDES_DIM_DEPTH_UP),
+  OP_CHECK_IF(CheckRange(runInfoV2.stride_d, DIM_LOW, strideDUp) == false,
+      OP_LOGE(opName, "stride_d: %d is invalid, support range [%d, %d]", runInfoV2.stride_d, DIM_LOW, strideDUp),
       return false);
   uint64_t curL0CDstStride = static_cast<uint64_t>(otherParams.c_shape.h) * otherParams.c_shape.w;
   OP_CHECK_IF(curL0CDstStride > UINT32_MAX,
@@ -1716,10 +1723,15 @@ bool CheckAttrs(Conv3dBpInputV2RunInfo &runInfoV2, const char* opName, OtherPara
   return true;
 }
 
-bool CheckPadRange(Conv3dBpInputV2RunInfo &runInfoV2, const char* opName, OtherParams& otherParams) {
-    int32_t padHDimUp = std::min(PAD_DIM_UP, static_cast<int32_t>(otherParams.b_shape.d - 1));
-    int32_t padUDimUp = std::min(PAD_DIM_UP, static_cast<int32_t>(otherParams.b_shape.h - 1));
-    int32_t padLDimUp = std::min(PAD_DIM_UP, static_cast<int32_t>(otherParams.b_shape.w - 1));
+bool CheckPadRange(const gert::TilingContext *context, Conv3dBpInputV2RunInfo &runInfoV2, const char* opName, OtherParams& otherParams) {
+    int32_t padDimUp = PAD_DIM_UP;
+    if (IsArchAfter35(context)) {
+        padDimUp = kDimUp;
+    }
+
+    int32_t padHDimUp = std::min(padDimUp, static_cast<int32_t>(otherParams.b_shape.d - 1));
+    int32_t padUDimUp = std::min(padDimUp, static_cast<int32_t>(otherParams.b_shape.h - 1));
+    int32_t padLDimUp = std::min(padDimUp, static_cast<int32_t>(otherParams.b_shape.w - 1));
     OP_CHECK_IF(CheckRange(runInfoV2.pad_h, PAD_DIM_LOW, padHDimUp) == false,
                 OP_LOGE(opName, "pad head: %d invalid, it should be in [%d, %d]", runInfoV2.pad_h, PAD_DIM_LOW, padHDimUp),
                 return false);
@@ -1859,7 +1871,7 @@ bool SetRunInfoToV2(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInf
     }
 
     if (!CheckCalPads(context, runInfoV2, opType, otherParams) || !CheckParams(runInfoV2, context, otherParams) ||
-        !CheckAttrs(runInfoV2, context->GetNodeName(), otherParams) || !CheckPadRange(runInfoV2, context->GetNodeName(), otherParams)) {
+        !CheckAttrs(context, runInfoV2, context->GetNodeName(), otherParams) || !CheckPadRange(context, runInfoV2, context->GetNodeName(), otherParams)) {
         OP_LOGE(context, "params is invalid");
         return false;
     }
