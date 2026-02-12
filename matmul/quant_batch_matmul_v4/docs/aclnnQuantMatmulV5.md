@@ -774,9 +774,9 @@ aclnnStatus aclnnQuantMatmulV5(
 
   - mx全量化场景下，当x2数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2时，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致。
   - mx全量化场景下，当x2数据类型为FLOAT4_E2M1时，仅支持transposeX1为false且transposeX2为true，要求k为偶数且ceil(k / 32)为偶数。
-  - mx伪量化场景下，当x2数据类型为FLOAT4_E2M1时，transposeX1为false，不支持batch轴。数据格式支持ND和AI处理器亲和数据排布格式。当数据格式为ND格式时，要求支持k是64的倍数。当数据格式为AI处理器亲和数据排布格式时, 要求k, n都是64的倍数。
-  - mx伪量化场景下，bias为可选参数。数据类型支持BFLOAT16, 数据格式支持ND，shape支持2维，shape表示(1，n)。如不需要使用该参数，传入nullptr。
-    - mx伪量化场景下，[groupSizeM，groupSizeN，groupSizeK]取值组合支持[0, 0, 32]和[1, 1, 32]，对应的groupSize值分别为32和4295032864。
+  - mx伪量化场景下，当x2数据类型为FLOAT4_E2M1时，transposeX1为false且transposeX2为true，不支持batch轴。数据格式支持ND和AI处理器亲和数据排布格式。当数据格式为ND格式时，要求支持k是64的倍数。当数据格式为AI处理器亲和数据排布格式时，要求k，n都是64的倍数。
+  - mx伪量化场景下，bias为可选参数。数据类型支持BFLOAT16，数据格式支持ND，shape支持2维，shape表示(1，n)。如不需要使用该参数，传入nullptr。
+  - mx伪量化场景下，[groupSizeM，groupSizeN，groupSizeK]取值组合支持[0, 0, 32]和[1, 1, 32]，对应的groupSize值分别为32和4295032864。
 
   </details>
 
@@ -796,7 +796,8 @@ aclnnStatus aclnnQuantMatmulV5(
     |T-CG量化|(m, k)|(n, k)/(k, n)|null|(n, ceil(k / 32))/(ceil(k / 32), n)|(1, n)|[0, 0, 32]/[1, 1, 32]|32/4295032864|
   - T-CG量化模式下，yScale数据类型支持INT64和UINT64，数据格式支持ND，shape支持2维，shape表示为(1, n)。当原始输入类型不满足约束和限制中的数据类型组合时，需要提前调用TransQuantParamV2算子的aclnn接口来将其转成UINT64数据类型。当输入数据类型是INT64时，内部会把INT64当成UINT64处理。
   - T-CG量化模式下，bias是预留参数，当前版本不支持，需要传入nullptr。
-    - T-CG量化模式下，[groupSizeM，groupSizeN，groupSizeK]取值组合支持[0, 0, 32]和[1, 1, 32]，对应的groupSize值分别为32和4295032864。
+  - T-CG量化模式下，transposeX1为false。数据格式支持ND和AI处理器亲和数据排布格式。当数据格式为ND格式时，要求支持k是64的倍数，transposeX2为true。当数据格式为AI处理器亲和数据排布格式时，要求k，n都是64的倍数，transposeX2为false。
+  - T-CG量化模式下，[groupSizeM，groupSizeN，groupSizeK]取值组合支持[0, 0, 32]和[1, 1, 32]，对应的groupSize值分别为32和4295032864。
 
   </details>
 
