@@ -263,9 +263,6 @@ aclnnStatus aclnnTransposeBatchMatMul(
       <td>x1或x2的维度大小不等于3。</td>
     </tr>
     <tr>
-      <td>x2的第二维或x2的第三维不能被16整除。</td>
-    </tr>
-    <tr>
       <td>scale的数据类型不在支持的范围内。</td>
     </tr>
     <tr>
@@ -335,12 +332,12 @@ aclnnStatus aclnnTransposeBatchMatMul(
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-- 确定性说明：
-  - <term>Ascend 950PR/Ascend 950DT</term>: aclnnTransposeBatchMatMul默认确定性实现。
+- 确定性说明：aclnnTransposeBatchMatMul默认确定性实现。
 
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - B的取值范围为[1, 65536)，N的取值范围为[1, 65536)。
     - 当x1的输入shape为(B, M, K)时，K <= 65535；当x1的输入shape为(M, B, K)时，B * K <= 65535。
+    - x2的第二维或x2的第三维不能被16整除。
     - permX2仅支持输入[0, 1, 2]。
     - 当scale不为空时，B与N的乘积小于65536, 且仅支持输入为FLOAT16和输出为INT8的类型推导。
 - <term>Ascend 950PR/Ascend 950DT</term>：
