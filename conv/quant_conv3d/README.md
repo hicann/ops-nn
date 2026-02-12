@@ -246,4 +246,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_quant_conv3d](./examples/test_aclnn_quant_conv3d.cpp) | 通过 [aclnnQuantConvolution](../convolution_forward/docs/aclnnQuantConvolution.md) 接口方式调用 QuantConv3D 算子。    |
+| aclnn调用 | [test_aclnn_quant_conv3d](./examples/arch35/test_aclnn_quant_conv3d.cpp) | 通过 [aclnnQuantConvolution](../convolution_forward/docs/aclnnQuantConvolution.md) 接口方式调用 QuantConv3D 算子。    |

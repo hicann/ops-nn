@@ -329,4 +329,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_extend_conv2d](./examples/test_aclnn_extend_conv2d.cpp) | 通过 [aclnnQuantConvolution](../convolution_forward/docs/aclnnQuantConvolution.md) 接口方式调用 extend_conv2d 算子。
+| aclnn调用 | [test_aclnn_extend_conv2d](./examples/arch35/test_aclnn_extend_conv2d.cpp) | 通过 [aclnnQuantConvolution](../convolution_forward/docs/aclnnQuantConvolution.md) 接口方式调用 extend_conv2d 算子。
