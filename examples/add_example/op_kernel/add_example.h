@@ -27,8 +27,7 @@ using namespace AscendC;
 constexpr int32_t BUFFER_NUM = 2;
 
 template <typename T>
-class AddExample
-{
+class AddExample {
 public:
     __aicore__ inline AddExample(){};
 
@@ -36,9 +35,9 @@ public:
     __aicore__ inline void Process();
 
 private:
-    __aicore__ inline void CopyIn(int32_t progress);
-    __aicore__ inline void CopyOut(int32_t progress);
-    __aicore__ inline void Compute(const int32_t dataLength);
+    __aicore__ inline void CopyIn(int64_t progress, int64_t currentNum);
+    __aicore__ inline void CopyOut(int64_t progress, int64_t currentNum);
+    __aicore__ inline void Compute(int64_t currentNum);
 
 private:
     TPipe pipe;
@@ -51,52 +50,61 @@ private:
     GlobalTensor<T> outputGMZ;
 
     int64_t blockLength_ = 0;
-    int64_t tileNum_ = 0;
-    uint32_t tileLength_ = 0;
+    int64_t ubLength_ = 0;
 };
 
 template <typename T>
 __aicore__ inline void AddExample<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR z, const AddExampleTilingData* tilingData)
 {
-    blockLength_ = tilingData->totalLength / AscendC::GetBlockNum();
-    tileNum_ = tilingData->tileNum;
-    tileLength_ = blockLength_ / tileNum_ / BUFFER_NUM;
+    int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * (AscendC::GetBlockIdx() - 1);
+    blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
+    ubLength_ = tilingData->ubFactor;
 
-    inputGMX.SetGlobalBuffer((__gm__ T*)x + blockLength_ * AscendC::GetBlockIdx(), blockLength_);
-    inputGMY.SetGlobalBuffer((__gm__ T*)y + blockLength_ * AscendC::GetBlockIdx(), blockLength_);
-    outputGMZ.SetGlobalBuffer((__gm__ T*)z + blockLength_ * AscendC::GetBlockIdx(), blockLength_);
+    inputGMX.SetGlobalBuffer((__gm__ T*)x + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
+    inputGMY.SetGlobalBuffer((__gm__ T*)y + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
+    outputGMZ.SetGlobalBuffer((__gm__ T*)z + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
 
-    pipe.InitBuffer(inputQueueX, BUFFER_NUM, tileLength_ * sizeof(T));
-    pipe.InitBuffer(inputQueueY, BUFFER_NUM, tileLength_ * sizeof(T));
-    pipe.InitBuffer(outputQueueZ, BUFFER_NUM, tileLength_ * sizeof(T));
+    pipe.InitBuffer(inputQueueX, BUFFER_NUM, ubLength_ * sizeof(T));
+    pipe.InitBuffer(inputQueueY, BUFFER_NUM, ubLength_ * sizeof(T));
+    pipe.InitBuffer(outputQueueZ, BUFFER_NUM, ubLength_ * sizeof(T));
 }
 
 template <typename T>
-__aicore__ inline void AddExample<T>::CopyIn(int32_t progress)
+__aicore__ inline void AddExample<T>::CopyIn(int64_t progress, int64_t currentNum)
 {
     AscendC::LocalTensor<T> xLocal = inputQueueX.AllocTensor<T>();
     AscendC::LocalTensor<T> yLocal = inputQueueY.AllocTensor<T>();
-    AscendC::DataCopy(xLocal, inputGMX[progress * tileLength_], tileLength_);
-    AscendC::DataCopy(yLocal, inputGMY[progress * tileLength_], tileLength_);
+    AscendC::DataCopyParams copyParams;
+    copyParams.blockCount = 1;
+    copyParams.blockLen = currentNum * sizeof(T);
+    copyParams.srcStride = 0;
+    copyParams.dstStride = 0;
+    AscendC::DataCopyPad(xLocal, inputGMX[progress * ubLength_], copyParams, {false, 0, 0, 0});
+    AscendC::DataCopyPad(yLocal, inputGMY[progress * ubLength_], copyParams, {false, 0, 0, 0});
     inputQueueX.EnQue(xLocal);
     inputQueueY.EnQue(yLocal);
 }
 
 template <typename T>
-__aicore__ inline void AddExample<T>::CopyOut(int32_t progress)
+__aicore__ inline void AddExample<T>::CopyOut(int64_t progress, int64_t currentNum)
 {
     AscendC::LocalTensor<T> zLocal = outputQueueZ.DeQue<T>();
-    AscendC::DataCopy(outputGMZ[progress * tileLength_], zLocal, tileLength_);
+    AscendC::DataCopyParams copyParams;
+    copyParams.blockCount = 1;
+    copyParams.blockLen = currentNum * sizeof(T);
+    copyParams.srcStride = 0;
+    copyParams.dstStride = 0;
+    AscendC::DataCopyPad(outputGMZ[progress * ubLength_], zLocal, copyParams);
     outputQueueZ.FreeTensor(zLocal);
 }
 
 template <typename T>
-__aicore__ inline void AddExample<T>::Compute(int32_t progress)
+__aicore__ inline void AddExample<T>::Compute(int64_t currentNum)
 {
     AscendC::LocalTensor<T> xLocal = inputQueueX.DeQue<T>();
     AscendC::LocalTensor<T> yLocal = inputQueueY.DeQue<T>();
     AscendC::LocalTensor<T> zLocal = outputQueueZ.AllocTensor<T>();
-    AscendC::Add(zLocal, xLocal, yLocal, tileLength_);
+    AscendC::Add(zLocal, xLocal, yLocal, currentNum);
     outputQueueZ.EnQue<T>(zLocal);
     inputQueueX.FreeTensor(xLocal);
     inputQueueY.FreeTensor(yLocal);
@@ -105,11 +113,12 @@ __aicore__ inline void AddExample<T>::Compute(int32_t progress)
 template <typename T>
 __aicore__ inline void AddExample<T>::Process()
 {
-    int32_t loopCount = tileNum_ * BUFFER_NUM;
-    for (int32_t i = 0; i < loopCount; i++) {
-        CopyIn(i);
-        Compute(i);
-        CopyOut(i);
+    int64_t loopCount = (blockLength_ + ubLength_ - 1) / ubLength_;
+    for (int64_t i = 0; i < loopCount; i++) {
+        int64_t currentNum = (i == (loopCount - 1)) ? (blockLength_ - ubLength_ * i) : ubLength_;
+        CopyIn(i, currentNum);
+        Compute(currentNum);
+        CopyOut(i, currentNum);
     }
 }
 

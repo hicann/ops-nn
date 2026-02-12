@@ -97,6 +97,7 @@ int main()
     // 2. 构造输入与输出，需要根据API的接口自定义构造
     aclTensor* selfX = nullptr;
     void* selfXDeviceAddr = nullptr;
+    // 当前样例算子未进行shape、dtype全泛化，其他输入场景可能存在不支持情况
     std::vector<int64_t> selfXShape = {32, 4, 4, 4};
     std::vector<float> selfXHostData(2048, 1);
     ret = CreateAclTensor(selfXHostData, selfXShape, &selfXDeviceAddr, aclDataType::ACL_FLOAT, &selfX);

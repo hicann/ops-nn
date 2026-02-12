@@ -17,7 +17,8 @@
  #define _ROTARY_POSITION_EMBEDDING_GRAD_TILING_DATA_H_
 
 struct AddExampleTilingData {
-     int64_t  totalLength;
-     int64_t  tileNum;
+    int64_t totalNum = 0;
+    int64_t blockFactor = 0;
+    int64_t ubFactor = 0;
 };
 #endif

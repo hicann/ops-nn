@@ -42,7 +42,7 @@ TEST_F(add_example_test, test_case_0)
     size_t yByteSize = 32 * 4 * 4 * 4 * sizeof(float);
     size_t zByteSize = 32 * 4 * 4 * 4 * sizeof(float);
     size_t tiling_data_size = sizeof(AddExampleTilingData);
-    uint32_t blockDim = 8;
+    uint32_t numBlocks = 8;
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
@@ -56,8 +56,10 @@ TEST_F(add_example_test, test_case_0)
 
     AddExampleTilingData* tilingDatafromBin = reinterpret_cast<AddExampleTilingData*>(tiling);
 
-    tilingDatafromBin->totalLength = 32 * 4 * 4 * 4;
-    tilingDatafromBin->tileNum = 8;
+
+    tilingDatafromBin->totalNum = 32 * 4 * 4 * 4;
+    tilingDatafromBin->blockFactor = 8;
+    tilingDatafromBin->ubFactor = 8;
 
     auto AddExampleKernel = [](GM_ADDR x, GM_ADDR y, GM_ADDR z, GM_ADDR workspace, GM_ADDR tiling) {
         ::add_example<0>(x, y, z, workspace, tiling);
@@ -66,7 +68,7 @@ TEST_F(add_example_test, test_case_0)
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(AddExampleKernel,
-        blockDim,
+        numBlocks,
         x,
         y,
         z,
