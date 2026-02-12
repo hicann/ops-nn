@@ -64,7 +64,7 @@ protected:
     // 7、保存Tiling数据
     ge::graphStatus PostTiling() override;
     void SetInputInfo();
-    ge::graphStatus BinaryAddTiling(int64_t elemSize, int64_t weightElemSize, int64_t theLeastAPerCore);
+    ge::graphStatus BinaryAddTiling(int64_t elemSize, int64_t weightElemSize, int64_t aFactor);
 
 private:
     int64_t blockNum;

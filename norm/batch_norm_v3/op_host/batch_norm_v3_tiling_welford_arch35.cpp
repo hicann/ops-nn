@@ -222,7 +222,7 @@ ge::graphStatus BatchNormV3WelfordReduceTilingBase::GetShapeAttrsInfo()
 ge::graphStatus BatchNormV3WelfordReduceTilingBase::DoOpTiling()
 {
     // block tiling
-    tilingData.set_aBlockFactor(CeilDiv(a0, (int64_t)aicoreParams_.numBlocks));
+    tilingData.set_aBlockFactor(CeilDiv(a0, static_cast<int64_t>(aicoreParams_.numBlocks)));
     tilingData.set_realCoreNum(CeilDiv(a0, tilingData.get_aBlockFactor()));
     tilingData.set_numLastCore(a0 % tilingData.get_aBlockFactor());
     blockNum = tilingData.get_realCoreNum();
