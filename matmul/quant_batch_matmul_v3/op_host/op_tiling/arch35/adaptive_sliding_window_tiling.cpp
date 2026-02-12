@@ -986,7 +986,13 @@ void AdaptiveSlidingWindowTiling::CalcTailBasicBlockAfullLoad()
     uint64_t nTile = 1UL;
     uint64_t nTileValid = 1UL;
     constexpr uint64_t MIN_BASEN_PER_TILE = 16UL; // 尾窗口切分后N方向不少于16
-    if (adaptiveWin_.tailWinBlockCnt != 0UL) {
+    // A全载模板使能尾块切分时，需要保证m只有一行，假如N切2份，如下，aic1核原本非尾轮计算需计算m1，现在尾轮需计算m0，不满足A全载
+    // m0n0(0)            |   m0n1(2)
+    // m1n0(1)            |   m1n1(3)
+    //   |
+    // m0n00(0) m0n01(1)  |   ...
+    // m1n00(2) m1n01(3)  |   ...
+    if (adaptiveWin_.tailWinBlockCnt != 0UL && adaptiveWin_.mBlockCnt == 1UL) {
         while (CalUsedCoreNum(adaptiveWin_.mTailTile, (nTile + 1UL)) <= aicoreParams_.aicNum &&
                adaptiveWin_.baseN / (nTile + 1UL) >= MIN_BASEN_PER_TILE) {
             nTile += 1UL;
