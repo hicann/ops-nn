@@ -511,7 +511,6 @@ conv_forward_ascendc@ops-nn:
         - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/arch35
         - ops/ops-nn/conv/common/op_host/op_tiling/arch35
         - ops/ops-nn/conv/common/op_kernel/arch35
-        - ops/ops-nn/conv/common/op_host/conv_forward_infershape.cpp
         - ops/ops-nn/conv/convolution_forward/op_host/op_api/
       opensource_style: null
       kernel_style: null
