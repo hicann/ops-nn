@@ -155,6 +155,7 @@ set(OPAPI_INCLUDE
   ${OPS_NN_DIR}/common/inc/op_api
   ${TOP_DIR}/output/${PRODUCT}/aclnnop_resource
   ${OPS_NN_DIR}/common/stub/op_api
+  ${ASCEND_AUTOGEN_PATH}/inner
 )
 
 set(OP_TILING_INCLUDE

@@ -21,19 +21,13 @@
 #include "op_api/aclnn_util.h"
 #include "aclnn_trans_quant_param_v3.h"
 #include "aclnn_trans_quant_param_v2.h"
+#include "aclnnInner_trans_quant_param_v2.h"
 
 using namespace op;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-extern aclnnStatus aclnnInnerTransQuantParamV2GetWorkspaceSize(
-    const aclTensor* scale, const aclTensor* offset, int64_t roundMode, const aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor);
-
-extern aclnnStatus aclnnInnerTransQuantParamV2(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream);
 
 static const std::initializer_list<op::DataType> SCALE_TYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> OUT_TYPE_SUPPORT_LIST = {

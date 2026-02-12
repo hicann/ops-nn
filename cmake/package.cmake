@@ -38,10 +38,13 @@ function(pack_custom)
     list(APPEND op_package_list cust_opmaster)
   endif()
 
-  npu_op_package_add(${PACK_CUSTOM_NAME}
-    LIBRARY
-      ${op_package_list}
-  )
+  list(LENGTH op_package_list OP_PACKAGE_LENGTH)
+  if(OP_PACKAGE_LENGTH GREATER 0)
+    npu_op_package_add(${PACK_CUSTOM_NAME}
+      LIBRARY
+        ${op_package_list}
+    )
+  endif()
 endfunction()
 
 macro(INSTALL_SCRIPTS src_path)
