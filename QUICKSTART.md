@@ -1,8 +1,8 @@
 # 快速入门：基于ops-nn仓
 
-本指南旨在帮助您快速上手CANN和`ops-nn`算子仓的使用，**基于WebIDE或Docker环境**提供极简化软件安装、编译部署及算子运行指导。
+本指南旨在帮助您快速上手CANN和`ops-nn`算子仓的使用，**基于WebIDE或Docker环境**提供极简化软件安装、编译部署及算子运行指导，两种环境默认提供最新商发版本CANN软件包，目前是CANN 8.5.0。
 
-如果您是手动安装CANN软件包等其他场景，请参考如下指南，获取详细教程：
+如果您是手动安装CANN软件包或体验master分支最新能力等其他场景，请参考如下指南，获取详细教程：
 
 1. [环境部署指南](./docs/zh/context/quick_install.md)：不同场景下环境搭建指导，包括Docker安装、手动安装CANN软件包等。
 
@@ -84,7 +84,7 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
     ```
 -   **检查CANN安装**
     
-    执行如下命令查看CANN Toolkit版本信息，默认最新商发版本，目前是CANN 8.5.0。
+    执行如下命令查看CANN Toolkit版本信息，默认最新商发版本（目前是8.5.0）。
     
     ```bash
     cat /usr/local/Ascend/ascend-toolkit/latest/opp/version.info
@@ -97,6 +97,7 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
 对于无环境的用户，提供WebIDE开发平台，即“**算子一站式开发平台**”。该平台为您提供在线可直接运行的昇腾环境，环境中已安装必备的软件包，无需手动安装。
 
 > **前提说明：**
+>
 > 当前平台功能正在内测中，若您想体验，请先单击[LINK](https://gitcode.com/org/cann/discussions/47)申请云开发平台资源，并获取平台介绍文档。只有成功申请了平台资源，开源项目的首页才会有“**云开发**”按钮，您才可以参考下述步骤体验。
 
 1. 进入ops-nn开源项目，单击“`云开发 > WebIDE for Ascend`”进入算子一站式开发平台，根据页面提示启动云开发环境。
@@ -117,7 +118,7 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
     
     -   **检查CANN安装**：
 
-        执行如下命令查看CANN Toolkit版本信息，默认最新商发版本，目前是CANN 8.5.0。
+        执行如下命令查看CANN Toolkit版本信息，默认最新商发版本（目前是8.5.0）。
         
         ```bash
         cat /home/developer/Ascend/ascend-toolkit/latest/opp/version.info

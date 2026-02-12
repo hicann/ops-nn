@@ -25,6 +25,8 @@ ops-nn是[CANN](https://hiascend.com/software/cann) （Compute Architecture for 
 1. [算子列表](docs/zh/op_list.md)：项目全量算子信息，方便快速查询。
 2. [QuickStart](QUICKSTART.md)：**基于WebIDE或Docker环境**提供极简快速上手指南，包括搭建环境、编译部署、算子调用/开发/调试、贡献等。
 
+    > **说明**：无论是WebIDE或Docker环境，默认提供最新商发版本CANN软件包，目前是CANN 8.5.0。若您想手动安装CANN包或体验master分支最新能力等，请参考[学习教程](#📖学习教程)中的步骤，完成环境搭建、编译执行、算子开发等操作。
+
 ## 📖学习教程
 
 若您已完成**快速入门**学习，对本项目有了一定认知，并希望**深入了解和体验项目**，请访问如下文档。
