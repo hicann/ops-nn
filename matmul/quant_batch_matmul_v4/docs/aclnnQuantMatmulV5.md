@@ -21,11 +21,11 @@
 
 - 计算公式：
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-    支持K-C && K-T、T-C && T-T、G-B、K-CG[量化模式](../../../docs/zh/context/量化介绍.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
+    支持K-C && K-T、T-C && T-T、G-B、K-G[量化模式](../../../docs/zh/context/量化介绍.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
 
     <details>
     
-    <summary><term><strong>K-CG量化模式</strong></term></summary>
+    <summary><term><strong>K-G量化模式</strong></term></summary>
     
       - x1为INT8，x2为INT32，x1Scale为FLOAT32，x2Scale为UINT64，yOffset为FLOAT32：
 
@@ -545,37 +545,16 @@ aclnnStatus aclnnQuantMatmulV5(
 
 - **公共约束：**
   <a id="公共约束1"></a>
-  - x1的约束如下：
-    - 在transposeX1为false情况下，形状为（batch, m, k）。
-    - 在transposeX1为true情况下，形状为（batch, k, m），其中batch代表前0~4维，0维表示batch不存在。
-  - x2的约束如下：
-    - ND格式下，shape支持2~6维，
-      - transposeX2为false情况下各个维度表示：（batch，k，n）。
-      - transposeX2为true情况下各个维度表示：（batch，n，k）。
-      - batch可不存在，其中k与x1的shape中的k一致。
-    - 可使用aclnnConvertWeightToINT4Pack接口完成x2从INT32（1个int32在0~3bit位存储1个int4）到INT32（1个int32存储8个int4）或INT4（1个int4表示1个int4）的数据格式转换，具体参见[aclnnConvertWeightToINT4Pack接口](../../convert_weight_to_int4_pack/docs/aclnnConvertWeightToINT4Pack.md)。
-    - AI处理器亲和数据排布格式下，shape支持4~8维。
-      - transposeX2为true时维度为：（batch，k1，n1，n0，k0），batch可不存在，其中k0 = 32，n0 = 16，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 32） = k1。
-      - transposeX2为false时维度为：（batch，n1，k1，k0，n0），batch可不存在，其中k0 = 16，n0 = 32，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 16） = k1。
-      - 可使用aclnnCalculateMatmulWeightSizeV2接口以及aclnnTransMatmulWeight接口完成输入Format从ND到AI处理器亲和数据排布格式的转换。
-  - x1Scale约束如下：
-    - shape支持2维，形状为（m，1）。数据类型支持FLOAT32。
-  - x2Scale的约束如下：
-    - shape支持2维，形状为（k / groupSize，n）其中n与x2的n一致。
-    - 数据类型支持UINT64、INT64、FLOAT32、BFLOAT16。
-    - 当原始输入类型不满足[约束说明](#约束说明)中类型组合时，由于TransQuantParamV2只支持1维，需要将x2_scale view成一维(k / groupSize * n)，再调用TransQuantParamV2算子的aclnn接口来将x2Scale转成UINT64数据类型，再将输出view成二维（k / groupSize, n）。
-  - 当前版本不支持yScale，需要传入nullptr。
-  - x2Offset的约束如下：
-    - 可选量化参数，数据类型支持FLOAT32。
-    - 当out数据类型为INT8时，offset可以存在，其他输入类型需要传入nullptr。
-  - transposeX1：x1和x2为INT32、INT4时，transposeX1仅支持false，各个维度表示：（m, k）。
+  - transposeX1为false情况下X1各个维度表示：（batch, m, k）。transposeX1为true情况下X1各个维度表示：（batch, k, m），batch可不存在。
   - transposeX2的约束如下：
-    - ND格式下，为false时维度为：（batch，k，n），为true时维度为：（batch，n，k），batch可不存在，其中k与x1的shape中的k一致。
-    - AI处理器亲和数据排布格式下：
-      - 为true时维度为：（batch，k1，n1，n0，k0），batch可不存在，其中k0 = 32，n0 = 16，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 32） = k1。
-      - 为false时维度为：（batch，n1，k1，k0，n0），batch可不存在，其中k0 = 16，n0 = 32，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 16） = k1。
-  - out的约束如下：
-    - shape支持2维，（m，n）。数据类型支持FLOAT16、INT8、BFLOAT16、INT32。
+    - ND格式下，为false时X2维度为：（batch，k，n），为true时维度为：（batch，n，k），batch可不存在，其中k与x1的shape中的k一致。
+    - NZ格式下：
+      - 为true时X2维度为：（batch，k1，n1，n0，k0），batch可不存在，其中k0 = 32，n0 = 16，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 32） = k1。
+      - 为false时X2维度为：（batch，n1，k1，k0，n0），batch可不存在，其中k0 = 16，n0 = 32，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 16） = k1。
+      - 可使用aclnnCalculateMatmulWeightSizeV2接口以及aclnnTransMatmulWeight接口完成输入Format从ND到NZ格式的转换。
+  - 当前版本不支持yScale，需要传入nullptr。
+  - x2Offset仅当out数据类型为INT8时支持，数据类型支持FLOAT32。其他输入类型需要传入nullptr。
+  - out的shape支持2~6维，（batch，m，n），batch可不存在。数据类型支持FLOAT16、INT8、BFLOAT16、INT32。
 
   <details>
 
@@ -589,18 +568,15 @@ aclnnStatus aclnnQuantMatmulV5(
     | ------------------------- | ------------------------- | ----------- | -----------     | ----------- | -------  | ------------ | -----------| -------------------------------------- |
     | INT8                      | INT8                      | FLOAT32     | FLOAT32         | null        | null     | FLOAT32      | null       | BFLOAT16                               |
 
-  - x1、x2、x1Scale、x2Scale、yOffset和groupSize的取值关系：
-    |量化类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|yOffset shape|[gsM，gsN，gsK]|
-    | ----- | ------ | ------ | ----------- | ----------- | ----------- | ------------- |
-    | G-B量化 | (m, k)|(n, k)|(m, k // 128)|((k // 128)，(n // 128))| null | [1, 128, 128]|
+  - x1 shape、x2 shape、x1Scale shape、x2Scale shape、bias shape和groupSize的取值关系：
+
+    |量化类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|bias shape|[gsM，gsN，gsK]|
+    | ----- | ------ | ------ | ----------- | ----------- | ----------- | ----------- |
+    | G-B量化 | (m, k)|(n, k)|(m, ceil(k / 128))|(ceil(k / 128)，ceil(n / 128)),| (n, ) | [1, 128, 128]|
 
   - 注：上表中gsM、gsK和gsN分别表示groupSizeM、groupSizeK和groupSizeN。
-  - x1的约束：目前n需与256对齐, k与128对齐且为4 * 128的倍数，transposeX1为false，形状为(m, k)。
-  - x2的约束：transposeX2为true，形状为(n, k)，目前n需与256对齐，k与128对齐且为4 * 128的倍数。
-  - x1Scale的约束：形状为(m, ceil(k / 128))。
-  - x2Scale的约束：当x2的transpose为true时，形状为(ceil(n / 128), ceil(k / 128))，当x2的transpose为false时，形状为(ceil(k / 128), ceil(n / 128))。
-  - bias的约束：shape支持一维(n, )。
-  - groupSize的约束：[groupSizeM，groupSizeN，groupSizeK]取值组合仅支持[1, 128, 128]。
+  - x1的约束：目前n需与256对齐, k与128对齐且为4 * 128的倍数。
+  - x2的约束：目前n需与256对齐，k与128对齐且为4 * 128的倍数。
 
   </details>
 
@@ -627,8 +603,8 @@ aclnnStatus aclnnQuantMatmulV5(
     | INT4                      | INT4                      | FLOAT32     | FLOAT32         | FLOAT16     | null     | null         | null       | BFLOAT16                               |
 
   - x1的约束：
-    - 当数据类型为INT4时，transposeX1为false。维度为：（batch，m，k），要求k为偶数。
-    - 当数据类型为INT32时，transposeX1为false。每个INT32数据存放8个INT4数据，对应维度表示：（batch，m，k // 8），要求k为8的倍数。
+    - 当数据类型为INT4时，transposeX1为false。维度为：（m，k），要求k为偶数。
+    - 当数据类型为INT32时，transposeX1为false。每个INT32数据存放8个INT4数据，对应维度表示：（m，ceil(k / 8)），要求k为8的倍数。
   - x2的约束：
     - 数据类型为INT4时：
       - 当前仅支持2维ND格式。
@@ -636,20 +612,27 @@ aclnnStatus aclnnQuantMatmulV5(
       - transposeX2为false时维度为：（k，n），要求n为偶数。
     - 数据类型为INT32时，每个INT32数据存放8个INT4数据，
       - 当前仅支持2维ND格式。
-      - transposeX2为true时维度为：（n，k // 8），要求k为8的倍数。
-      - transposeX2为false时维度为：（k，n // 8），要求n为8的倍数。
-  - yOffset的约束：
-      - shape支持1维（n）。为计算过程中离线计算的辅助结果，值要求为8*x2*x2Scale，并在第1维累加。
+      - transposeX2为true时维度为：（n，ceil(k / 8)），要求k为8的倍数。
+      - transposeX2为false时维度为：（k，ceil(n / 8)），要求n为8的倍数。
+      - 可使用aclnnConvertWeightToINT4Pack接口完成x2从INT32（1个int32在0~3bit位存储1个int4）到INT32（1个int32存储8个int4）或INT4（1个int4表示1个int4）的数据格式转换，具体参见[aclnnConvertWeightToINT4Pack接口](../../convert_weight_to_int4_pack/docs/aclnnConvertWeightToINT4Pack.md)。
+  - x1Scale的约束：数据格式支持ND，shape是1维（t，），t = m，其中m与x1的m一致。
+  - x2Scale的约束：数据格式支持ND，shape是1维（t，），t = 1或n，其中n与x2的n一致。
+  - x2Offset的约束：数据格式支持ND，shape是1维（t，），t = 1或n，其中n与x2的n一致。
+  - bias的约束：
+      - 数据格式支持ND。shape支持1维（n，）或3维（batch，1，n），n与x2的n一致。
+      - 当x1和x2为INT32、INT4时，bias的shape只支持1维（n，）。
+      - 当out的shape为2、4、5、6维时，bias的shape只支持1维（n，）。
+  - yOffset的约束：shape支持1维（n）。为计算过程中离线计算的辅助结果，值要求为8*x2*x2Scale，并在第1维累加。
 
   </details>
 
   <details>
 
-  <summary><term><strong>K-CG量化场景约束：</strong></term></summary>
-  <a id="K-CG量化"></a>
+  <summary><term><strong>K-G量化场景约束：</strong></term></summary>
+  <a id="K-G量化"></a>
 
   - 输入和输出支持以下数据类型组合：
-  <a id="输入和输出支持以下数据类型组合K-CG"></a>
+  <a id="输入和输出支持以下数据类型组合K-G"></a>
       | x1                        | x2                        | x1Scale     | x2Scale         | x2Offset    | yScale   | bias         | yOffset    | out                                    |
       | ------------------------- | ------------------------- | ----------- | -----------     | ----------- | -------  | ------------ | -----------| -------------------------------------- |
       | INT8                      | INT32                     | FLOAT32     | UINT64          | null        | null     | null         | FLOAT32    | FLOAT16/BFLOAT16                       |
@@ -658,14 +641,11 @@ aclnnStatus aclnnQuantMatmulV5(
   - x1、x2、x1Scale、x2Scale和groupSize的取值关系：
     |量化类型| x1数据类型                 | x2数据类型                 | x1Scale数据类型| x2Scale数据类型| x1 shape | x2 shape| x1Scale shape| x2Scale shape| yOffset shape| [gsM，gsN，gsK]|
     | ----- | ------------------------- | ------------------------- | -------------- | ------------- | -------- | ------- | ------------ | ------------ | ------------ | ------------ |
-    | K-CG量化 | INT8                    |INT32                   |FLOAT32              |UINT64             | (m, k)|(k, n // 8)|(m, 1)|(k // 256，n)| (n) | [0, 0, 256]|
-    | K-CG量化 | INT4                    |INT4                    |FLOAT32              |FLOAT32             | (m, k)|(n, k)|(m, 1)| (k // 256, n) | null | [0, 0, 256]|
-  - x1的约束：当数据类型为INT8时，k需与256对齐，并小于18432。当数据类型为INT4时，k需与1024对齐，transposeX1为false，形状为(m, k)。
-  - x2的约束：当数据类型为INT8时，k需与256对齐。当数据类型为INT4时，transposeX2为true，形状为(n, k)，k需与1024对称，n需与256对齐。
-  - x1Scale的约束：形状为(m, 1)。
-  - x2Scale的约束：当x2的transpose为false时，形状为(ceil(k / 256), n)。
-  - x2Offset的约束：当数据类型为INT4时，形状为(ceil(k, 256)，n)。
-  - groupSize的约束：[groupSizeM，groupSizeN，groupSizeK]取值组合仅支持仅支持[0, 0, 256]。
+    | K-G量化 | INT8                    |INT32                   |FLOAT32              |UINT64             |<li>非转置：(m, k)</li><li>转置：(k, m)</li> |<li>非转置：(k, ceil(n, 8))</li><li>转置：(ceil(n, 8), k)</li>|<li>非转置：(m, 1)</li><li>转置：(1, m)</li>|<li>非转置：(ceil(k / 256), n)</li><li>转置：(n, ceil(k / 256))</li>| (n) | [0, 0, 256]|
+    | K-G量化 | INT4                    |INT4                    |FLOAT32              |FLOAT32             |(m, k)|(n, k)|(m, 1)|(n, ceil(k / 256))| null | [0, 0, 256]|
+  - x1的约束：当数据类型为INT8时，k需与256对齐，并小于18432。当数据类型为INT4时，k需与1024对齐，transposeX1为false。
+  - x2的约束：当数据类型为INT8时，k需与256对齐。当数据类型为INT4时，transposeX2为true，k需与1024对称，n需与256对齐。
+  - x2Scale的约束：当数据类型为UINT64时，由于TransQuantParamV2只支持1维，需要将x2Scale view成一维(k / groupSize * n)，再调用TransQuantParamV2算子的aclnn接口来将x2Scale转成UINT64数据类型，再将输出view成二维（k / groupSize, n），groupSize值为256。
 
   </details>
 
