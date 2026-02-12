@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file batch_matmul_v3_asw_al1_full_load_basic_tiling.cc
+ * \file batch_matmul_v3_asw_al1_full_load_basic_tiling.cpp
  * \brief
  */
 
@@ -29,7 +29,7 @@ bool BatchMatMulV3AswAL1FullLoadBasicTiling::IsCapable()
     if (batchInfo_->batchA > 1UL) { // matrix A should not have batch when AL1FullLoad
         return false;
     }
-    if (args_.mValue > BASIC_BLOCK_SIZE_256) { // m should be less then 256
+    if (args_.mValue > BASIC_BLOCK_SIZE_256) { // m should be larger than 256
         return false;
     }
     // get align m,k,n value

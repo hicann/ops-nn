@@ -24,18 +24,18 @@ namespace matmul_v3_advanced {
 constexpr uint64_t FP32_SPLIT_K_THRESHOLD = 8192UL;
 using namespace strategy;
 
-// 注册BASIC_FULL_LOAD作为基础API实现的全载模板策略
+// 注册BASIC_ASWT作为基础API实现的模板策略
 MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3BasicAswtTiling, DAV_3510, BASIC_ASWT);
 
 bool MatMulV3BasicAswtTiling::IsCapable()
 {
-    // FP32大K场景需要核内切K 基础API暂未实现
+    // FP32场景且K>8192需要核内切K模板,跳出当前模板
     if (args_.aDtypeSize == DATA_SIZE_FP32 && !args_.isHf32 && args_.bFormat == ge::FORMAT_ND &&
         args_.kValue > FP32_SPLIT_K_THRESHOLD) {
         OP_LOGD(args_.opName, "fp32 big k is not supported for basic api");
         return false;
     }
-    OP_LOGI(args_.opName, "MatMulV3 tiling enable state basic api");
+    OP_LOGI(args_.opName, "operator launched with BasicAswt module.");
     return true;
 }
 
