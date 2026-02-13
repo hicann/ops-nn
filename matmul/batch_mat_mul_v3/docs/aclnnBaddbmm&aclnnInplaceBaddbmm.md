@@ -527,8 +527,7 @@ aclnnStatus aclnnInplaceBaddbmm(
 
 ## 约束说明
 - 确定性说明：
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnBaddbmm&aclnnInplaceBaddbmm默认确定性实现。
-  - <term>Ascend 950PR/Ascend 950DT</term>: aclnnBaddbmm&aclnnInplaceBaddbmm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+aclnnBaddbmm&aclnnInplaceBaddbmm默认确定性实现。
 
 - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：Cube单元不支持FLOAT32计算。当输入为FLOAT32，可通过设置cubeMathType=1（ALLOW_FP32_DOWN_PRECISION）来允许接口内部cast到FLOAT16进行计算。
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持batch1和batch2两输入其中一个输入为BFLOAT16, 另一个输入为FLOAT或FLOAT16的数据类型推导。

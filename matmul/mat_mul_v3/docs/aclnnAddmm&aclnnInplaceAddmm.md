@@ -19,7 +19,7 @@
   $$
   out = β  self + α  (mat1 @ mat2)
   $$
-  
+
 - 示例：
   * 对于aclnnAddmm接口，self的shape是[1, n], mat1的shape是[m, k], mat2的shape是[k, n], mat1和mat2的矩阵乘的结果shape是[m, n], self的shape能broadcast到[m, n]。
   * 对于aclnnAddmm接口，self的shape是[m, 1], mat1的shape是[m, k], mat2的shape是[k, n], mat1和mat2的矩阵乘的结果shape是[m, n], self的shape能broadcast到[m, n]。
@@ -34,14 +34,14 @@
 - 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 “aclnnAddmmGetWorkspaceSize” 或者 “aclnnInplaceAddmmGetWorkspaceSize” 接口获取入参并根据计算流程计算所需workspace大小，再调用 “aclnnAddmm” 或者 “aclnnInplaceAddmm” 接口执行计算。
 ```cpp
 aclnnStatus aclnnAddmmGetWorkspaceSize(
-  const aclTensor *self, 
-  const aclTensor *mat1, 
-  const aclTensor *mat2, 
-  const aclScalar *beta, 
-  const aclScalar *alpha, 
-  aclTensor       *out, 
-  int8_t          cubeMathType, 
-  uint64_t        *workspaceSize, 
+  const aclTensor *self,
+  const aclTensor *mat1,
+  const aclTensor *mat2,
+  const aclScalar *beta,
+  const aclScalar *alpha,
+  aclTensor       *out,
+  int8_t          cubeMathType,
+  uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
 ```cpp
@@ -53,13 +53,13 @@ aclnnStatus aclnnAddmm(
 ```
 ```cpp
 aclnnStatus aclnnInplaceAddmmGetWorkspaceSize(
-  const aclTensor *selfRef, 
-  const aclTensor *mat1, 
-  const aclTensor *mat2, 
-  const aclScalar *beta, 
-  const aclScalar *alpha, 
-  int8_t          cubeMathType, 
-  uint64_t        *workspaceSize, 
+  const aclTensor *selfRef,
+  const aclTensor *mat1,
+  const aclTensor *mat2,
+  const aclScalar *beta,
+  const aclScalar *alpha,
+  int8_t          cubeMathType,
+  uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
 ```cpp
@@ -212,7 +212,7 @@ aclnnStatus aclnnInplaceAddmm(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现如下场景时报错：
   <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
     <col style="width: 283px">
@@ -401,22 +401,22 @@ aclnnStatus aclnnInplaceAddmm(
       <td>-</td>
     </tr>
   </tbody></table>
-  
+
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
-  
+
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
     - 不支持BFLOAT16数据类型；
     - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
     - 不支持cubeMathType=3。
-  
+
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现如下场景时报错：
   <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
       <col style="width: 283px">
@@ -498,14 +498,14 @@ aclnnStatus aclnnInplaceAddmm(
 ## 约束说明
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnAddmm&aclnnInplaceAddmm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
-  - <term>Ascend 950PR/Ascend 950DT</term>: aclnnAddmm&aclnnInplaceAddmm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
-   
+  - <term>Ascend 950PR/Ascend 950DT</term>: aclnnAddmm&aclnnInplaceAddmm默认确定性实现。
+
 - 计算一致性说明
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
     - 当开启强一致性计算功能时，计算结果时确定的，多次执行将产生相同的输出。此外，计算结果与数据的位置无关。
     - aclnnAddmm&aclnnInplaceAddmm默认非一致性实现，支持通过aclrtCtxSetSysParamOpt开启一致性。
     - 例如，在进行矩阵乘时，不同基本块的累加顺序可能不同，这可能会导致相同数据在不同行的计算结果出现细微差异。然而，在开启强一致性计算的情况下，即使在不同的行中，只要输入相同，计算结果也将相同。
-  
+
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

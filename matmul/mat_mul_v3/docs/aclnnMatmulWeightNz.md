@@ -26,11 +26,11 @@
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMatmulWeightNzGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMatmulWeightNz”接口执行计算。
 ```cpp
 aclnnStatus aclnnMatmulWeightNzGetWorkspaceSize(
-  const aclTensor *self, 
-  const aclTensor *mat2, 
-  aclTensor       *out, 
-  int8_t          cubeMathType, 
-  uint64_t        *workspaceSize, 
+  const aclTensor *self,
+  const aclTensor *mat2,
+  aclTensor       *out,
+  int8_t          cubeMathType,
+  uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
 ```cpp
@@ -232,8 +232,7 @@ aclnnStatus aclnnMatmulWeightNz(
 
 ## 约束说明
 - 确定性说明：
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnMatmulWeightNz默认确定性实现。
-  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnMatmulWeightNz默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：aclnnMatmulWeightNz默认确定性实现。
 
 - 计算一致性说明
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
@@ -287,7 +286,7 @@ aclnnStatus aclnnMatmulWeightNz(
       // Zero or Denormal
       if (f == 0) {
         return s ? -0.0f : 0.0f;
-      } 
+      }
       // Denormals
       float sig = f / 1024.0f;
       float result = sig * pow(2, -24);
@@ -505,7 +504,7 @@ aclnnStatus aclnnMatmulWeightNz(
       uint32_t sign = (h & 0x8000U) ? 0x80000000U : 0x00000000U;  // sign bit
       uint32_t exponent = (h >> 7) & 0x00FFU;                      // exponent bits
       uint32_t mantissa =  h & 0x007FU;                           // mantissa bits
-      
+
       // 指数偏移不变
       // mantissa 左移 23 - 7 ，其余补0
       uint32_t f_bits = sign | (exponent << 23) | (mantissa << (23 - 7));
@@ -548,7 +547,7 @@ aclnnStatus aclnnMatmulWeightNz(
     }
 
     template <typename T>
-    int CreateAclTensorWithFormat(const std::vector<T>& hostData, const std::vector<int64_t>& shape, 
+    int CreateAclTensorWithFormat(const std::vector<T>& hostData, const std::vector<int64_t>& shape,
                                   int64_t** storageShape, uint64_t* storageShapeSize, void** deviceAddr,
                                   aclDataType dataType, aclTensor** tensor, aclFormat format) {
         auto size = hostData.size() * sizeof(T);
@@ -594,7 +593,7 @@ aclnnStatus aclnnMatmulWeightNz(
       aclTensor* mat2 = nullptr;
       aclTensor* out = nullptr;
       aclTensor* mat2NZ = nullptr;
-      
+
       std::vector<uint16_t> selfHostData(m * k, 0x3F80); // bfloat16_t 用0x3F80表示uint_16的1
       std::vector<uint16_t> mat2HostData(k * n, 0x3F80); // bfloat16_t 用0x3F80表示uint_16的1
       std::vector<uint16_t> outHostData(m * n, 0);

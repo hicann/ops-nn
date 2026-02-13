@@ -234,8 +234,7 @@ aclnnStatus aclnnMm(
 
 ## 约束说明
 - 确定性说明:
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnMm默认确定性实现。
-  - <term>Ascend 950PR/Ascend 950DT</term>: aclnnMm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：aclnnMm默认确定性实现。
 
 - 计算一致性说明
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
