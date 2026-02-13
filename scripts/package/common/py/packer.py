@@ -113,8 +113,9 @@ def get_compress_tool() -> str:
 
 def get_compress_format() -> str:
     tar_format = "gnu"
-    path = shutil.which("bsdtar")
-    if path:
+    gtar = shutil.which("gtar")
+    bsdtar = shutil.which("bsdtar")
+    if not gtar and bsdtar:
         tar_format = "ustar"
     return tar_format
 
