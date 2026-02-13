@@ -183,7 +183,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>groupIndexOptional</td>
       <td>输入</td>
       <td>MoE分组需要的group_index。</td>
-      <td><ul><li>shape支持1维或2维的Tensor，shape为[groupNum]或[groupIds, 2]，groupNum大于等于1，groupIds ≤ groupNum。</li><li>可选参数，支持传空指针。</li></ul></td>
+      <td><ul><li>shape支持1维或2维的Tensor，shape为[groupNum]或[groupNum, 2]，groupNum大于等于1。</li><li>可选参数，支持传空指针。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1或2</td>
