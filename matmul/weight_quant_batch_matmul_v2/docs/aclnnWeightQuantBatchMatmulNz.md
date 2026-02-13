@@ -269,7 +269,6 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
 ## 约束说明
   - 确定性说明：aclnnWeightQuantBatchMatmulNz默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
   - 支持的量化模式：perchannel[量化模式](../../../docs/zh/context/量化介绍.md)、pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和mx[量化模式](../../../docs/zh/context/量化介绍.md)。
-  - 当weight数据类型为INT32或FLOAT时，表示紧密排布的INT4或FLOAT4_E2M1，要求INT4或FLOAT4_E2M1尾轴8对齐；当weight数据类型为INT4或FLOAT4_E2M1，尾轴应为偶数。
   - 输入和输出支持以下数据类型和shape组合：
     - <term>Ascend 950PR/Ascend 950DT</term>：
       |[量化模式](../../../docs/zh/context/量化介绍.md)| x | weight | antiquantScale | antiquantOffsetOptional | biasOptional | y | antiquantScale shape | antiquantOffsetOptional shape     |
@@ -282,9 +281,16 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       |  pergroup  | FLOAT16  | FLOAT/FLOAT4_E2M1 | FLOAT16     | null          | null/FLOAT16          | FLOAT16  | (ceil(k/antiquantGroupSize), n) | null                                 |
       |     mx     | BFLOAT16 | FLOAT/FLOAT4_E2M1 | FLOAT8_E8M0 | null          | null/BFLOAT16         | BFLOAT16 | (k/32, n)                       | null                                 |
       |     mx     | FLOAT16  | FLOAT/FLOAT4_E2M1 | FLOAT8_E8M0 | null          | null/FLOAT16          | FLOAT16  | (k/32, n)                       | null                                 |
-      - x的shape均为(m, k)，y的shape均为(m, n)，biasOptional的shape为null/(1, n)/(n,)。
-      - weight的数据类型为INT32或FLOAT时，shape为(ceil(n/16), ceil(k/16), 16, 2)；weight的数据类型为INT4或FLOAT4_E2M1时，shape为(ceil(n/16), ceil(k/16), 16, 16)。
-      - m大小在[1, 2^31-1]范围内；k、n大小在[1, 65535]范围内，要求32B对齐。
+      - x的shape均为(m, k)，weight原始ND矩阵的shape均为(k, n)，y的shape均为(m, n)，biasOptional的shape为null/(1, n)/(n,)。
+      - weight的数据类型为INT32或FLOAT时，表示紧密排布的INT4或FLOAT4_E2M1，需要满足以下约束：
+        - 原始ND矩阵的最后一维8对齐；
+        - 在调用本接口前，必须配合`aclnnConvertWeightToINT4Pack`接口完成从稀疏排布的INT32/FLOAT到紧密排布的INT4/FLOAT4_E2M1及ND到FRACTAL_NZ的转换，[详情可参考样例](../../convert_weight_to_int4_pack/docs/aclnnConvertWeightToINT4Pack.md)；
+        - 传入本接口的FRACTAL_NZ矩阵的shape为(ceil(n/16), ceil(k/16), 16, 2)。
+      - weight的数据类型为INT4或FLOAT4_E2M1时，需要满足以下约束：
+        - 原始ND矩阵的最后一维2对齐；
+        - 在调用本接口前，必须配合`aclnnConvertWeightToINT4Pack`接口完成从ND到FRACTAL_NZ的转换，[详情可参考样例](../../convert_weight_to_int4_pack/docs/aclnnConvertWeightToINT4Pack.md)；
+        - 传入本接口的FRACTAL_NZ矩阵的shape为(ceil(n/16), ceil(k/16), 16, 16)。
+      - m大小在[1, 2^31-1]范围内。
 
 ## 调用示例
 
