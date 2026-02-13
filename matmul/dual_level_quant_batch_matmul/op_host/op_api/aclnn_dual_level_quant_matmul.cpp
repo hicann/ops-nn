@@ -106,8 +106,9 @@ static bool IsDimSupport(const aclTensor* input, const std::vector<uint64_t>& di
 static aclnnStatus CheckSocValid()
 {
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND950:
+    NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (npuArch) {
+        case NpuArch::DAV_3510:
             break;
         default: {
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented", op::ToString(socVersion).GetString());

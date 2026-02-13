@@ -9,6 +9,7 @@
  */
 #include "aclnn_batch_matmul.h"
 
+#include "runtime/runtime/base.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "aclnn_kernels/contiguous.h"
@@ -65,6 +66,7 @@ static const int32_t SECOND_DIM = 1;
 static const int32_t THIRD_DIM = 2;
 static const int32_t PENULTIMATE_DIM = 2;
 static const int32_t LAST_DIM = 1;
+static const uint32_t SOC_SPEC_INFO_LEN = 32;
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
@@ -143,10 +145,10 @@ static aclnnStatus CheckParamsV2(const aclTensor* self, const aclTensor* mat2, c
     CHECK_RET(CheckNotNull(self, mat2, out), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    auto socRule = SocMatMulRule::getInstance();
-    CHECK_RET(socRule != nullptr, ACLNN_ERR_PARAM_INVALID);
+    auto archRule = NpuArchMatMulRule::getInstance();
+    CHECK_RET(archRule != nullptr, ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(
-        socRule -> CheckInput(self, mat2, nullptr, out, cubeMathType),
+        archRule -> CheckInput(self, mat2, nullptr, out, cubeMathType),
         ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查self和mat2的shape是否符合要求
@@ -175,12 +177,11 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
 
 bool CheckDtypeValidWeightNz(const aclTensor* self, const aclTensor* mat2, const aclTensor* out)
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (!(socVersion == SocVersion::ASCEND910B || socVersion ==SocVersion::ASCEND910_93)) {
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (npuArch != NpuArch::DAV_2201) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
-            "batchmatmulweightnz is unsupported in this SOC version [%s]",
-            op::ToString(socVersion).GetString());
+            "batchmatmulweightnz is unsupported in this npu arch");
         return false;
     }
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);

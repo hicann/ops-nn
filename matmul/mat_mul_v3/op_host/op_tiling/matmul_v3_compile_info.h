@@ -31,6 +31,7 @@ struct MatmulV3CompileInfo {
     uint64_t l0BSize{0UL};
     uint64_t btSize{0UL};
     float cubeFreq{0};
+    NpuArch npuArch;
     platform_ascendc::SocVersion socVersion;
     std::string socVersionStr = "";
     bool supportL0c2out = false;

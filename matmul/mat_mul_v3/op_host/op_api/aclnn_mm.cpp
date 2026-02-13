@@ -51,20 +51,20 @@ static inline bool CheckNotNull(const aclTensor* self, const aclTensor* mat2, co
 
 static inline bool CheckKEqual1Support(void)
 {
-    return GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-           GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93;
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    return (npuArch == NpuArch::DAV_2201);
 }
 
-static inline bool CheckSocVersionIsSupportBf16(void)
+static inline bool CheckNpuArchIsSupportBf16(void)
 {
-    return GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E &&
-           GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B;
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    return (npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3510);
 }
 
 static bool CheckDtypeValid(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType)
 {
-    bool bf16flag = CheckSocVersionIsSupportBf16();
+    bool bf16flag = CheckNpuArchIsSupportBf16();
     if (bf16flag) {
         OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
         OP_CHECK_DTYPE_NOT_SUPPORT(mat2, DTYPE_SUPPORT_LIST, return false);
@@ -166,9 +166,9 @@ inline static aclnnStatus CheckMmInputParams(
     CHECK_RET(CheckNotNull(self, mat2, out), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验。
-    auto socRule = SocMatMulRule::getInstance();
-    CHECK_RET(socRule != nullptr, ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET( socRule -> CheckInput(self, mat2, nullptr, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
+    auto archRule = NpuArchMatMulRule::getInstance();
+    CHECK_RET(archRule != nullptr, ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(archRule -> CheckInput(self, mat2, nullptr, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查Shape是否支持
     CHECK_RET(CheckShapeValid(self, mat2), ACLNN_ERR_PARAM_INVALID);

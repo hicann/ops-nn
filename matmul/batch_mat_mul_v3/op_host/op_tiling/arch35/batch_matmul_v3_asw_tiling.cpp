@@ -22,9 +22,9 @@
 namespace optiling {
 namespace batch_matmul_v3_advanced {
 using namespace strategy;
-MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3AswTiling, ASCEND950, BASE);
-MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3AswTiling, RESERVED_VERSION, BASE); //supportMmadS8S4平台
-MM_REGISTER_TILING_TEMPLATE(FusedMatMul, BatchMatMulV3AswTiling, RESERVED_VERSION, BASE); //supportMmadS8S4平台
+MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3AswTiling, DAV_3510, BASE);
+MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3AswTiling, DAV_RESV, BASE); //supportMmadS8S4平台
+MM_REGISTER_TILING_TEMPLATE(FusedMatMul, BatchMatMulV3AswTiling, DAV_RESV, BASE); //supportMmadS8S4平台
 
 ge::graphStatus BatchMatMulV3AswTiling::DoOpTiling()
 {

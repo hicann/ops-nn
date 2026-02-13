@@ -293,7 +293,7 @@ static ge::graphStatus QuantBatchMatmulInplaceAddTilingFunc(gert::TilingContext*
         OP_LOGD("QuantBatchMatmulInplaceAddTilingFunc", "Using the tiling strategy in the mx quant.");
         return TilingRegistry::GetInstance().DoTilingImpl(context, registerList);
     } else {
-        OP_LOGD("QuantBatchMatmulInplaceAddTilingFunc", "Do op tiling failed, now only support 91095.");
+        OP_LOGD("QuantBatchMatmulInplaceAddTilingFunc", "Do op tiling failed, now only support 950.");
         return ge::GRAPH_FAILED;
     }
 }

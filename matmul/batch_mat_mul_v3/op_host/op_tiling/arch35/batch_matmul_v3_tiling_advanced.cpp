@@ -40,9 +40,8 @@ ge::graphStatus BatchMatMulV3Tiling::DoTiling()
     args_.batchInfo = &tempBatchInfo;
     MatMulTilingCfg tilingCfg(false, context_->GetCompileInfo(), static_cast<void *>(&args_));
     OPS_CHECK_NULL_WITH_CONTEXT(context_, tilingCfg.compileInfo);
-    platform_ascendc::SocVersion socVersion =
-        static_cast<const MatmulV3CompileInfo *>(tilingCfg.compileInfo)->socVersion;
-    MMRegisterCfg registerCfg{ "BatchMatMulV3", socVersion, strategy::GetBatchMatMulV3Priorities(socVersion) };
+    NpuArch npuArch = static_cast<const MatmulV3CompileInfo *>(tilingCfg.compileInfo)->npuArch;
+    MMRegisterCfg registerCfg{ "BatchMatMulV3", npuArch, strategy::GetBatchMatMulV3Priorities(npuArch) };
     return MMTilingRegistry::GetInstance().DoTilingImpl(context_, tilingCfg, registerCfg);
 }
 

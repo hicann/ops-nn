@@ -52,6 +52,7 @@ static ge::graphStatus TilingPrepareForTransposeQuantBatchMatMul(gert::TilingPar
     compileInfoPtr->supportL12BtBf16 = (dataMoveL12Bt.find("bf16") != std::string::npos);
     compileInfoPtr->aicNum = ascendcPlatform.GetCoreNumAic();
     compileInfoPtr->socVersion = ascendcPlatform.GetSocVersion();
+    compileInfoPtr->npuArch = ascendcPlatform.GetCurNpuArch();
     compileInfoPtr->btSize = compileInfoPtr->supportL0c2out ? 1024UL : 0UL;                      // 1024 is btSize
     compileInfoPtr->btSize = compileInfoPtr->supportL12BtBf16 ? 4096UL : compileInfoPtr->btSize; // 4096 is btSize
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->ubSize);

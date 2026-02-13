@@ -9,6 +9,7 @@
  */
 #include "batch_matmul_util.h"
 
+#include "runtime/runtime/base.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "aclnn_kernels/contiguous.h"
@@ -55,6 +56,8 @@ static const uint64_t KB_SIZE = 1024UL;
 static const uint64_t UB_SIZE = 248UL * 1024UL;
 static const uint64_t MIN_BATCH_NUM = 128UL;
 static const uint64_t MIN_BATCH_L0 = 4;
+static const uint32_t SOC_SPEC_INFO_LEN = 32;
+
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
@@ -64,10 +67,10 @@ static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITHOUT_BF16
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> DTYPE_LIST_HALF = {op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static inline bool CheckSocVersionIsSupportBf16(void)
+static inline bool CheckNpuArchIsSupportBf16(void)
 {
-    return GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-           GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    return (npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3510);
 }
 
 static const aclTensor* ProcessEmptyTensor(const aclTensor* self, const aclTensor* mat2, aclOpExecutor* executor)
@@ -105,14 +108,14 @@ static aclnnStatus SetBatchMatMulOpSupportInfoV2(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, MmOpInfo& matmulOpInfo, int8_t cubeMathType)
 {
     // 判断传入L0接口，用于计算的Dtype
-    std::shared_ptr<SocMatMulRuleBase> socRule = SocMatMulRule::getInstance();
-    CHECK_RET(socRule != nullptr, ACLNN_ERR_PARAM_INVALID);
+    std::shared_ptr<NpuArchMatMulRuleBase> archRule = NpuArchMatMulRule::getInstance();
+    CHECK_RET(archRule != nullptr, ACLNN_ERR_PARAM_INVALID);
 
-    aclnnStatus status = socRule -> PromoteDtype(self, mat2, bias, out, cubeMathType, matmulOpInfo);
+    aclnnStatus status = archRule -> PromoteDtype(self, mat2, bias, out, cubeMathType, matmulOpInfo);
     CHECK_RET(status == ACLNN_SUCCESS, status);
 
-    // 1971场景 ACLNN中BMM全部走ND格式，1980场景进入函数路由
-    if (CheckSocVersionIsSupportBf16()) {
+    // 支持BF16的架构ACLNN中BMM全部走ND格式，其他架构进入函数路由
+    if (CheckNpuArchIsSupportBf16()) {
         matmulOpInfo.support_info.output_format = Format::FORMAT_ND;
         matmulOpInfo.support_info.self_format = Format::FORMAT_ND;
         if (matmulOpInfo.ori_info.mat2_format == Format::FORMAT_FRACTAL_NZ) {
@@ -154,8 +157,7 @@ static aclnnStatus CreateBatchMatmulOpInfo(
                          matmulOpInfo.support_info.mat2_dtype == DataType::DT_BF16;
     // 在A2/A3平台下，如果输入数据类型为fp16或bf16，且进行高精度计算，则使能输出数据类型为fp32
     matmulOpInfo.enableFp16Bf16InFp32Out = (inputFp16Flag || inputBf16Flag) &&
-                                           (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-                                            GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) &&
+                                           (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) &&
                                            (cubeMathType == KEEP_DTYPE);
 
     OP_LOGD(
@@ -216,13 +218,13 @@ static bool CheckAscendCScenario(
         OP_LOGI("Hit batch_mat_mul_v3 weightNz.");
         return true;
     }
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    if (npuArch == NpuArch::DAV_3510) {
         return true;
     }
-    if ((GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B &&
-         GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93) ||
+    if ((npuArch != NpuArch::DAV_2201) ||
         mmOpInfo.support_info.self_format != ge::FORMAT_ND || mmOpInfo.support_info.mat2_format != ge::FORMAT_ND) {
-        OP_LOGI("Not batch_mat_mul_v3 case for unsupported SOC version or unsupported Format.");
+        OP_LOGI("Not batch_mat_mul_v3 case for unsupported npu arch or unsupported Format.");
         return false;
     }
     if ((x1->GetDataType() != DataType::DT_FLOAT16 && x1->GetDataType() != DataType::DT_BF16 &&
@@ -285,7 +287,7 @@ const aclTensor* TransBmm2Mm(
     return l0op::Reshape(mmOut, outShapeIntArray, executor);
 }
 
-bool CheckSocIfBatchMatMulToMul910B(const aclTensor* self, const aclTensor* mat2, bool adjX1, bool adjX2)
+bool CheckArchIfBatchMatMulToMulDav2201(const aclTensor* self, const aclTensor* mat2, bool adjX1, bool adjX2)
 {
     (void) adjX1;
     if (self->GetDataType() == DataType::DT_BF16 || mat2->GetDataType() == DataType::DT_BF16) {
@@ -315,7 +317,7 @@ bool CheckShapeEqualToMul(const uint64_t& mDim, const uint64_t& nDim, const uint
   return nDim % (BLOCK_SIZE_256 / dataSize) != 0;
 }
 
-bool CheckSocIfBatchMatMulToMul91095(const aclTensor* self, const aclTensor* mat2, bool adjX1, bool adjX2)
+bool CheckArchIfBatchMatMulToMulDav3510(const aclTensor* self, const aclTensor* mat2, bool adjX1, bool adjX2)
 {
     // now only basic api iterbatch temp not need convert to mul
     uint64_t aicoreNum = static_cast<uint64_t>(GetCurrentPlatformInfo().GetCubeCoreNum());
@@ -323,10 +325,15 @@ bool CheckSocIfBatchMatMulToMul91095(const aclTensor* self, const aclTensor* mat
     uint64_t c0 = static_cast<uint64_t>(BLOCK_BYTE_SIZE) / dtypeSize;
     constexpr uint64_t floatSize = 4UL;
     constexpr uint64_t pingPong = 2UL;
-    constexpr uint64_t l0aSize = 64 * KB_SIZE;
-    constexpr uint64_t l0bSize = 64 * KB_SIZE;
-    constexpr uint64_t l0cSize = 256 * KB_SIZE;
-    constexpr uint64_t l1Size = 512 * KB_SIZE;
+    char val[SOC_SPEC_INFO_LEN];
+    CHECK_RET(rtGetSocSpec("AICoreSpec", "l0_a_size", val, SOC_SPEC_INFO_LEN) == 0, false);
+    uint64_t l0aSize = std::strtoul(val, nullptr, 10);
+    CHECK_RET(rtGetSocSpec("AICoreSpec", "l0_b_size", val, SOC_SPEC_INFO_LEN) == 0, false);
+    uint64_t l0bSize = std::strtoul(val, nullptr, 10);
+    CHECK_RET(rtGetSocSpec("AICoreSpec", "l0_c_size", val, SOC_SPEC_INFO_LEN) == 0, false);
+    uint64_t l0cSize = std::strtoul(val, nullptr, 10);
+    CHECK_RET(rtGetSocSpec("AICoreSpec", "l1_size", val, SOC_SPEC_INFO_LEN) == 0, false);
+    uint64_t l1Size = std::strtoul(val, nullptr, 10);
 
     uint64_t mDim = adjX1 ? self->GetViewShape()[self->GetViewShape().GetDimNum() - 1] :
                            self->GetViewShape()[self->GetViewShape().GetDimNum() - NUM_TWO];
@@ -345,18 +352,17 @@ bool CheckSocIfBatchMatMulToMul91095(const aclTensor* self, const aclTensor* mat
     bool lessThanL0b = (alignKbValue * alignNValue * dtypeSize * pingPong <= l0bSize);
     bool lessThanL0c = (alignMValue * alignNValue * floatSize * pingPong <= l0cSize);
     bool lessThanL1 = (alignMValue * alignKaValue + alignKbValue * alignNValue) * dtypeSize * pingPong <= l1Size;
-    OP_LOGI("Checking If IterBatch Template in this socversion: %ld.", static_cast<int64_t>(batchEqual &&
+    OP_LOGI("Checking If IterBatch Template in this npu arch: %ld.", static_cast<int64_t>(batchEqual &&
             batchLargerThanAicNum && lessThanL0a && lessThanL0b && lessThanL0c && lessThanL1));
     bool fitIterBatch = batchEqual && batchLargerThanAicNum && lessThanL0a && lessThanL0b && lessThanL0c && lessThanL1;
     bool fitBatchMatMulToMul = CheckShapeEqualToMul(mDim, nDim, batchNum, dtypeSize, c0);
     return !(fitIterBatch || fitBatchMatMulToMul);
 }
 
-using CheckSocIfBatchMatMulToMulFunc = bool (*)(const aclTensor* self, const aclTensor* mat2, bool adjX1, bool adjX2);
-const static std::map<SocVersion, CheckSocIfBatchMatMulToMulFunc> CheckSocIfBatchMatMulToMulFuncMap = {
-    {SocVersion::ASCEND950, CheckSocIfBatchMatMulToMul91095},
-    {SocVersion::ASCEND910B, CheckSocIfBatchMatMulToMul910B},
-    {SocVersion::ASCEND910_93, CheckSocIfBatchMatMulToMul910B},
+using CheckArchIfBatchMatMulToMulFunc = bool (*)(const aclTensor* self, const aclTensor* mat2, bool adjX1, bool adjX2);
+const static std::map<NpuArch, CheckArchIfBatchMatMulToMulFunc> CheckArchIfBatchMatMulToMulFuncMap = {
+    {NpuArch::DAV_3510, CheckArchIfBatchMatMulToMulDav3510},
+    {NpuArch::DAV_2201, CheckArchIfBatchMatMulToMulDav2201},
 };
 
 const aclTensor* GetBatchMatmulOp(
@@ -365,10 +371,10 @@ const aclTensor* GetBatchMatmulOp(
 {
     auto bmmOpOut = selfTransdata;
     if (CheckAscendCScenario(selfTransdata, mat2Transdata, bias, matmulOpInfo, adjX1, adjX2)) {
-        if (GetCurrentPlatformInfo().GetSocVersion() ==
-                SocVersion::ASCEND950 && // 1.多维*2维(左非转置)2.多维*多维batch为1
+        auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+        if ((npuArch == NpuArch::DAV_3510) && // 1.多维*2维(左非转置)2.多维*多维batch为1
             (GetBatchDimAll(mat2Transdata) <= 1 &&
-             (!adjX1 || GetBatchDimAll(selfTransdata) <= 1))) { // 仅950路由该场景
+             (!adjX1 || GetBatchDimAll(selfTransdata) <= 1))) {
             int64_t opImplModeEnumV3 = matmulOpInfo.enableHf32 ? 0x40 : (matmulOpInfo.enableForceGrpAccForFp32 ? 0x4 : 0x1);
             return TransBmm2Mm(
                 selfTransdata, mat2Transdata, bias, opImplModeEnumV3, adjX1, adjX2, offsetX, executor);
@@ -426,11 +432,17 @@ bool CheckTransNonContiguousShapeSupport(const aclTensor* self, const aclTensor*
     uint64_t dtypeSize = static_cast<uint64_t>(op::TypeSize(self->GetDataType()));
     constexpr uint64_t floatSize = 4UL;
     constexpr uint64_t pingPong = 2UL;
-    // 91095芯片参数
-    constexpr uint64_t l0aSize = 64 * KB_SIZE;
-    constexpr uint64_t l0bSize = 64 * KB_SIZE;
-    constexpr uint64_t l0cSize = 256 * KB_SIZE;
-    constexpr uint64_t l1Size = 512 * KB_SIZE;
+
+    char val[SOC_SPEC_INFO_LEN];
+    CHECK_RET(rtGetSocSpec("AICoreSpec", "l0_a_size", val, SOC_SPEC_INFO_LEN) == 0, false);
+    uint64_t l0aSize = std::strtoul(val, nullptr, 10);
+    CHECK_RET(rtGetSocSpec("AICoreSpec", "l0_b_size", val, SOC_SPEC_INFO_LEN) == 0, false);
+    uint64_t l0bSize = std::strtoul(val, nullptr, 10);
+    CHECK_RET(rtGetSocSpec("AICoreSpec", "l0_c_size", val, SOC_SPEC_INFO_LEN) == 0, false);
+    uint64_t l0cSize = std::strtoul(val, nullptr, 10);
+    CHECK_RET(rtGetSocSpec("AICoreSpec", "l1_size", val, SOC_SPEC_INFO_LEN) == 0, false);
+    uint64_t l1Size = std::strtoul(val, nullptr, 10);
+
     uint64_t mDim = self->GetViewShape()[self->GetViewShape().GetDimNum() - NUM_TWO];
     uint64_t kDim = self->GetViewShape()[self->GetViewShape().GetDimNum() - 1];
     uint64_t nDim = mat2->GetViewShape()[mat2->GetViewShape().GetDimNum() - 1]; // 非连续场景viewshape一定是bkn格式
@@ -507,10 +519,13 @@ bool CheckMergeBatchNonContiguousShapeSupport(
     }
     constexpr uint64_t floatSize = 4UL;
     constexpr uint64_t pingPong = 2UL;
-    // 91095芯片参数
-    constexpr uint64_t l0aSize = 64 * KB_SIZE;
-    constexpr uint64_t l0bSize = 64 * KB_SIZE;
-    constexpr uint64_t l0cSize = 256 * KB_SIZE;
+    char val[SOC_SPEC_INFO_LEN];
+    CHECK_RET(rtGetSocSpec("AICoreSpec", "l0_a_size", val, SOC_SPEC_INFO_LEN) == 0, false);
+    uint64_t l0aSize = std::strtoul(val, nullptr, 10);
+    CHECK_RET(rtGetSocSpec("AICoreSpec", "l0_b_size", val, SOC_SPEC_INFO_LEN) == 0, false);
+    uint64_t l0bSize = std::strtoul(val, nullptr, 10);
+    CHECK_RET(rtGetSocSpec("AICoreSpec", "l0_c_size", val, SOC_SPEC_INFO_LEN) == 0, false);
+    uint64_t l0cSize = std::strtoul(val, nullptr, 10);
     uint64_t al0Size = tempAlignM * minBaseK * adtypeSize * pingPong;
     uint64_t bl0Size = tempAlignN * minBaseK * bdtypeSize * pingPong;
     if (al0Size > l0aSize || bl0Size > l0bSize || tempAlignM * tempAlignN * floatSize * pingPong > l0cSize) {
@@ -558,11 +573,11 @@ bool CheckSocIfBatchMatMulToMulDefault(const aclTensor* self, const aclTensor* m
     return false;
 }
 
-bool CheckSocIfBatchMatMulToMul(const aclTensor* self, const aclTensor* mat2, bool adjX1, bool adjX2)
+bool CheckArchIfBatchMatMulToMul(const aclTensor* self, const aclTensor* mat2, bool adjX1, bool adjX2)
 {
-    auto iter = (CheckSocIfBatchMatMulToMulFuncMap.find(GetCurrentPlatformInfo().GetSocVersion()) ==
-                    CheckSocIfBatchMatMulToMulFuncMap.end()) ? CheckSocIfBatchMatMulToMulDefault :
-                    CheckSocIfBatchMatMulToMulFuncMap.at(GetCurrentPlatformInfo().GetSocVersion());
+    auto iter = (CheckArchIfBatchMatMulToMulFuncMap.find(op::GetCurrentPlatformInfo().GetCurNpuArch()) ==
+                    CheckArchIfBatchMatMulToMulFuncMap.end()) ? CheckSocIfBatchMatMulToMulDefault :
+                    CheckArchIfBatchMatMulToMulFuncMap.at(op::GetCurrentPlatformInfo().GetCurNpuArch());
     return iter(self, mat2, adjX1, adjX2);
 }
 
@@ -571,7 +586,7 @@ static inline int64_t ProcessEqual1Cases(
     bool& adjX2, const aclTensor*& selfReshape, const aclTensor*& mat2Reshape, aclOpExecutor* executor, bool& ifKEqual1)
 {
     ifKEqual1 = IfKEqual1(selfCast, matmulOpInfo, adjX1, bias) &&
-                     CheckSocIfBatchMatMulToMul(selfCast, mat2Cast, adjX1, adjX2); // distincted by different soc
+                     CheckArchIfBatchMatMulToMul(selfCast, mat2Cast, adjX1, adjX2); // distincted by different arch
     if (ifKEqual1) {
         aclnnStatus kEqual1SelfToMKRes = IfKEqual1Mat2ToKN(selfCast, selfReshape, adjX1, executor);
         CHECK_RET(kEqual1SelfToMKRes == ACLNN_SUCCESS, -1);
@@ -600,7 +615,7 @@ static inline bool CheckNotNull(const aclTensor* self, const aclTensor* mat2, co
 static bool CheckDtypeValid(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType)
 {
-    bool bf16flag = CheckSocVersionIsSupportBf16();
+    bool bf16flag = CheckNpuArchIsSupportBf16();
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     auto dtypeList = bf16flag ? DTYPE_SUPPORT_LIST : DTYPE_SUPPORT_LIST_WITHOUT_BF16;
     OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeList, return false);
@@ -653,8 +668,8 @@ static aclnnStatus SetBatchMatMulOpSupportInfo(
     // 判断传入L0接口，用于计算的Dtype
     SetMmSupportDType(matmulOpInfo, cubeMathType);
 
-    // 910B场景 ACLNN中BMM全部走ND格式，910场景进入函数路由
-    if (CheckSocVersionIsSupportBf16()) {
+    // 2201/3510场景 ACLNN中BMM全部走ND格式，其他场景进入函数路由
+    if (CheckNpuArchIsSupportBf16()) {
         matmulOpInfo.support_info.output_format = Format::FORMAT_ND;
         matmulOpInfo.support_info.self_format = Format::FORMAT_ND;
         if (matmulOpInfo.ori_info.mat2_format == Format::FORMAT_FRACTAL_NZ) {
@@ -694,9 +709,9 @@ static aclnnStatus GetBatchMatmulOpInfo(
     bool inputBf16Flag = matmulOpInfo.support_info.self_dtype == DataType::DT_BF16 &&
                          matmulOpInfo.support_info.mat2_dtype == DataType::DT_BF16;
     // 在A2/A3平台下，来自Baddbmm的接口调用，如果输入数据类型为fp16或bf16，且进行高精度计算，则使能输出数据类型为fp32
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     matmulOpInfo.enableFp16Bf16InFp32Out = (inputFp16Flag || inputBf16Flag) &&
-                                           (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-                                            GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) &&
+                                           (npuArch == NpuArch::DAV_2201) &&
                                            (cubeMathType == KEEP_DTYPE) && isBaddbmm;
     OP_LOGD(
         "opImplModeEnum=%ld, enableHf32=%d, cubeMathType=%d, enableFp16Bf16InFp32Out=%d", matmulOpInfo.opImplModeEnum, matmulOpInfo.enableHf32,
@@ -707,12 +722,11 @@ static aclnnStatus GetBatchMatmulOpInfo(
 
 bool CheckDtypeValidWeightNz(const aclTensor* self, const aclTensor* mat2, const aclTensor* out)
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (!(socVersion == SocVersion::ASCEND910B || socVersion ==SocVersion::ASCEND910_93)) {
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (npuArch != NpuArch::DAV_2201) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
-            "batchmatmulweightnz is unsupported in this SOC version [%s]",
-            op::ToString(socVersion).GetString());
+            "batchmatmulweightnz is unsupported in this npu arch");
         return false;
     }
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);

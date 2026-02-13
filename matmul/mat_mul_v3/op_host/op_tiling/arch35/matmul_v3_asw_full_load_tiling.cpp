@@ -28,7 +28,7 @@ bool ABL1FullLoadExtraCondDefault(uint64_t /* al1SingleCoreSize */, uint64_t /* 
     return true;
 }
 
-bool ABL1FullLoadExtraCond91095(uint64_t al1SingleCoreSize, uint64_t bl1SingleCoreSize)
+bool ABL1FullLoadExtraCondDav3510(uint64_t al1SingleCoreSize, uint64_t bl1SingleCoreSize)
 {
     // 单边矩阵小于64K，MMAD启动较快，AB全载更有优势
     constexpr uint64_t AB_L1_SINGLE_LOAD_THRE = 64 * 1024UL;
@@ -39,8 +39,8 @@ bool ABL1FullLoadExtraCond91095(uint64_t al1SingleCoreSize, uint64_t bl1SingleCo
 }
 
 using ABL1FullLoadExtraCondFunc = bool (*)(uint64_t, uint64_t);
-const static std::map<platform_ascendc::SocVersion, ABL1FullLoadExtraCondFunc> ABL1FullLoadExtraCondFuncMap = {
-    {platform_ascendc::SocVersion::ASCEND950, ABL1FullLoadExtraCond91095},
+const static std::map<NpuArch, ABL1FullLoadExtraCondFunc> ABL1FullLoadExtraCondFuncMap = {
+    {NpuArch::DAV_3510, ABL1FullLoadExtraCondDav3510},
 };
 
 } // namespace
@@ -50,7 +50,7 @@ namespace matmul_v3_advanced {
 using namespace strategy;
 
 // 注册FULL_LOAD_BASE作为高阶API实现的全载模板策略
-MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3AswFullLoadTiling, ASCEND950, FULL_LOAD_BASE);
+MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3AswFullLoadTiling, DAV_3510, FULL_LOAD_BASE);
 
 void MatMulV3AswFullLoadTiling::FullLoadPre()
 {
@@ -63,9 +63,9 @@ void MatMulV3AswFullLoadTiling::FullLoadPre()
 
 bool MatMulV3AswFullLoadTiling::ABL1FullLoadExtraCond(uint64_t al1SingleCoreSize, uint64_t bl1SingleCoreSize) const
 {
-    auto iter = (ABL1FullLoadExtraCondFuncMap.find(compileInfo_.socVersion) == ABL1FullLoadExtraCondFuncMap.end()) ?
+    auto iter = (ABL1FullLoadExtraCondFuncMap.find(compileInfo_.npuArch) == ABL1FullLoadExtraCondFuncMap.end()) ?
                     ABL1FullLoadExtraCondDefault :
-                    ABL1FullLoadExtraCondFuncMap.at(compileInfo_.socVersion);
+                    ABL1FullLoadExtraCondFuncMap.at(compileInfo_.npuArch);
     return iter(al1SingleCoreSize, bl1SingleCoreSize);
 }
 

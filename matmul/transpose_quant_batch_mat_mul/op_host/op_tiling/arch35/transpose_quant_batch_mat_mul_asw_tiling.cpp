@@ -23,7 +23,7 @@ using Ops::NN::MathUtil;
 namespace optiling {
 namespace transpose_quant_batch_mat_mul_advanced {
 using namespace strategy;
-MM_REGISTER_TILING_TEMPLATE(TransposeQuantBatchMatMul, TransposeQuantBatchMatMulAswTiling, ASCEND950, BASE);
+MM_REGISTER_TILING_TEMPLATE(TransposeQuantBatchMatMul, TransposeQuantBatchMatMulAswTiling, DAV_3510, BASE);
 
 ge::graphStatus TransposeQuantBatchMatMulAswTiling::DoOpTiling()
 {

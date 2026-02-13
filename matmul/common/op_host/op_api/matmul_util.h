@@ -16,6 +16,7 @@
 
 namespace Ops {
 namespace NN {
+using namespace op;
 // These are used to check repo hit
 const int32_t FP16_BF16_FLAG = 1;
 const int32_t FP32_FLAG = 0;
@@ -89,7 +90,7 @@ bool IsTransposeLastTwoDims(const aclTensor* tensor);
 bool CheckGemmV3Support(const aclTensor* mat1, const aclTensor* mat2, MmOpInfo& mmOpInfo,
                                       int8_t cubeMathType);
 
-bool IsSliceNonContiguous(const aclTensor* tensor, const aclTensor* mat2);
+bool IsSliceNonContiguous(const aclTensor* self, const aclTensor* mat2);
 
 bool IsTransposeNonContiguous(const aclTensor* tensor, bool& isNeedSwapInnerTwoDim);
 
@@ -248,24 +249,24 @@ protected:
 
 // ======================================================================================================
 
-// SoC规则基类：抽象不同SoC的校验和数据类型推导逻辑
-class SocMatMulRuleBase {
+// NpuArch规则基类：抽象不同NpuArch的校验和数据类型推导逻辑
+class NpuArchMatMulRuleBase {
 protected:
     static const op::DataType FP16 = op::DataType::DT_FLOAT16;
     static const op::DataType FP32 = op::DataType::DT_FLOAT;
     static const op::DataType BF16 = op::DataType::DT_BF16;
 
-    // 存储SoC版本
-    op::SocVersion socVersion;
+    // 存储NpuArch
+    NpuArch npuArch_;
 
     // 保护构造函数：禁止直接实例化基类（只能通过派生类构造）
-    SocMatMulRuleBase(op::SocVersion ascendSocVersion) : socVersion(ascendSocVersion) {}
+    NpuArchMatMulRuleBase(NpuArch npuArch) : npuArch_(npuArch) {}
 
 public:
     // 虚析构函数：确保派生类析构正常调用
-    virtual ~SocMatMulRuleBase() = default;
+    virtual ~NpuArchMatMulRuleBase() = default;
 
-    // 校验规则接口：检查当前输入是否符合SoC的约束
+    // 校验规则接口：检查当前输入是否符合NpuArch的约束
     // 返回：校验通过返回true，否则返回false
     virtual bool CheckInput(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType) = 0;
 
@@ -319,13 +320,13 @@ protected:
     aclnnStatus GetUpperDtype(const aclTensor* matA, const aclTensor* matB, int8_t cubeMathType, op::DataType& upperDtype);
 };
 
-// 适用soc: ASCEND910B, ASCEND910_93, ASCEND950,
-class Ascend910BMatMulRule : public SocMatMulRuleBase {
+// 适用arch: DAV_2201, DAV_3510
+class Dav2201MatMulRule : public NpuArchMatMulRuleBase {
 public:
-    Ascend910BMatMulRule(op::SocVersion soc_version)
-        : SocMatMulRuleBase(soc_version) {}
+    Dav2201MatMulRule(NpuArch npu_arch)
+        : NpuArchMatMulRuleBase(npu_arch) {}
 
-    ~Ascend910BMatMulRule() override = default;
+    ~Dav2201MatMulRule() override = default;
 
     bool CheckInput(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType) override;
 
@@ -342,13 +343,13 @@ private:
     op::DataType UpdateBiasDtype(op::DataType upperDtype, op::DataType biasOriDtype) const;
 };
 
-// 适用其他soc
-class Ascend310AMatMulRule : public SocMatMulRuleBase {
+// 适用其他arch
+class DefaultMatMulRule : public NpuArchMatMulRuleBase {
 public:
-    Ascend310AMatMulRule(op::SocVersion soc_version)
-        : SocMatMulRuleBase(soc_version) {}
+    DefaultMatMulRule(NpuArch npu_arch)
+        : NpuArchMatMulRuleBase(npu_arch) {}
 
-    ~Ascend310AMatMulRule() override = default;
+    ~DefaultMatMulRule() override = default;
 
     bool CheckInput(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType) override;
 
@@ -366,9 +367,9 @@ private:
 };
 
 // 单例
-class SocMatMulRule {
+class NpuArchMatMulRule {
 public:
-    static std::shared_ptr<SocMatMulRuleBase> getInstance() {
+    static std::shared_ptr<NpuArchMatMulRuleBase> getInstance() {
         if(instance == nullptr) {
             instance = BuildRule();
         }
@@ -376,9 +377,9 @@ public:
     }
 
 private:
-    static std::shared_ptr<SocMatMulRuleBase> instance;
+    static std::shared_ptr<NpuArchMatMulRuleBase> instance;
 
-    static std::shared_ptr<SocMatMulRuleBase> BuildRule() ;
+    static std::shared_ptr<NpuArchMatMulRuleBase> BuildRule() ;
 };
 
 // =====================================================================================================

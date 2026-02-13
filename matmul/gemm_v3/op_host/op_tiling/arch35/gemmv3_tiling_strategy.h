@@ -26,15 +26,15 @@ namespace gemmv3 {
 namespace strategy {
 constexpr int32_t BASE = 999;
 
-const static std::map<platform_ascendc::SocVersion, std::vector<int32_t>> Gemmv3PrioritiesMap = {
-    {platform_ascendc::SocVersion::ASCEND950, {strategy::BASE}},
+const static std::map<NpuArch, std::vector<int32_t>> Gemmv3PrioritiesMap = {
+    {NpuArch::DAV_3510, {strategy::BASE}},
 };
 
-inline std::vector<int32_t> GetGemmV3Priorities(platform_ascendc::SocVersion socVersion)
+inline std::vector<int32_t> GetGemmV3Priorities(NpuArch npuArch)
 {
     std::vector<int32_t> priorities = {};
-    if (Gemmv3PrioritiesMap.find(socVersion) != Gemmv3PrioritiesMap.end()) {
-        priorities = Gemmv3PrioritiesMap.at(socVersion);
+    if (Gemmv3PrioritiesMap.find(npuArch) != Gemmv3PrioritiesMap.end()) {
+        priorities = Gemmv3PrioritiesMap.at(npuArch);
     }
     return priorities;
 };

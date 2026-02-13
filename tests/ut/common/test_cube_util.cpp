@@ -14,7 +14,17 @@
 #include <nlohmann/json.hpp>
 #include <unistd.h>
 #include <climits>
+#include <map>
 #include "test_cube_util.h"
+
+const std::map<std::string, std::string> g_socToNpuArchMap = {
+  {"Ascend910",     "1001"},
+  {"Ascend910B",    "2201"},
+  {"ASCEND910_93",  "2201"},
+  {"Ascend950",     "3510"},
+  {"Ascend310",     "2002"},
+  {"Ascend310P",    "2002"}
+};
 
 void GetPlatFormInfos(const char *compile_info_str, map<string, string> &soc_infos, map<string, string> &aicore_spec,
                       map<string, string> &intrinsics) {
@@ -82,7 +92,7 @@ void GetPlatFormInfos(const char *compile_info_str, map<string, string> &soc_inf
     return;
   }
 
-  map<string, string> version_keys = {{"Short_SoC_version", "socVersion"}, {"NpuArch", "NpuArch"}};
+  map<string, string> version_keys = {{"Short_SoC_version", "socVersion"}};
 
   for (auto &t : version_keys) {
     if (compile_info_json.contains("hardware_info") && compile_info_json["hardware_info"].contains(t.second)) {
@@ -94,6 +104,17 @@ void GetPlatFormInfos(const char *compile_info_str, map<string, string> &soc_inf
       }
     }
   }
+
+  std::string socVersion = version["Short_SoC_version"];
+  std::string npuArch = "2001";
+  const auto it = g_socToNpuArchMap.find(socVersion);
+  if (it != g_socToNpuArchMap.end()) {
+    npuArch =  it->second;
+  } else {
+    std::cout << "cannot find the corresponding npu arch for socVerion: " << socVersion << std::endl;
+    std::cout << "the npu arch default value is: " << npuArch << std::endl;
+  }
+  version["NpuArch"] = npuArch;
 }
 
 std::string GetExeDirPath() {

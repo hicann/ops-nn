@@ -186,6 +186,7 @@ void MatmulV3BaseTiling::InitCompileInfo() // 检查输入属性是否支持
     compileInfo.aicNum = static_cast<uint64_t>(ascendcPlatform.GetCoreNumAic());
     compileInfo.aivNum = static_cast<uint64_t>(ascendcPlatform.GetCoreNumAiv());
     compileInfo.socVersion = ascendcPlatform.GetSocVersion();
+    compileInfo.npuArch = ascendcPlatform.GetCurNpuArch();
     compileInfo.btSize = compileInfo.supportL0c2out ? 1024UL : 0UL;                    // 1024 is btSize
     compileInfo.btSize = compileInfo.supportL12BtBf16 ? 4096 : compileInfo.btSize; // 4096 is btSize
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfo.ubSize);

@@ -65,8 +65,8 @@ static const std::initializer_list<op::DataType> dtypeSupportListWithoutBf16 = {
 
 static inline bool CheckSocVersionIsSupportBf16(void)
 {
-    return GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-           GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    return (npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3510);
 }
 
 static bool CheckShape(const aclTensor* selfTensor, const aclTensor* batch1Tensor, const aclTensor* batch2Tensor)
@@ -178,9 +178,9 @@ static aclnnStatus CheckInputParams(
     CHECK_RET(CheckOutputNotNull(out), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    auto socRule = SocMatMulRule::getInstance();
-    CHECK_RET(socRule != nullptr, ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(socRule->CheckInput(batch1, batch2, self, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
+    auto archRule = NpuArchMatMulRule::getInstance();
+    CHECK_RET(archRule != nullptr, ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(archRule->CheckInput(batch1, batch2, self, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查batch1和batch2是否满足Shape、广播、Empty条件
     CHECK_RET(CheckShape(self, batch1, batch2), ACLNN_ERR_PARAM_INVALID);

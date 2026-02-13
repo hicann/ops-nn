@@ -43,6 +43,7 @@ inline ge::graphStatus InitCompileInfo(fe::PlatFormInfos *platformInfo, MatmulV3
     bool supportMmadS8S4 = res && mmad.find("s8s4") != std::string::npos;
     compileInfoPtr->socVersion =
         supportMmadS8S4 ? platform_ascendc::SocVersion::RESERVED_VERSION : ascendcPlatform.GetSocVersion();
+    compileInfoPtr->npuArch = supportMmadS8S4 ? NpuArch::DAV_RESV : ascendcPlatform.GetCurNpuArch();
     compileInfoPtr->supportL0c2out = false; // Not used
     compileInfoPtr->supportL12BtBf16 = false; // Not used
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->ubSize);
@@ -53,12 +54,14 @@ inline ge::graphStatus InitCompileInfo(fe::PlatFormInfos *platformInfo, MatmulV3
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L2, compileInfoPtr->l2Size);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::BT, compileInfoPtr->btSize);
     OP_LOGI("MatMul",
-        "parse compile info success soc:%d, aicNum:%lu, aivNum:%lu, ubSize:%lu, l1Size:%lu, l2Size:%lu, l0ASize:%lu, "
+        "parse compile info success soc:%d, npuArch:%u, "
+        "aicNum:%lu, aivNum:%lu, ubSize:%lu, l1Size:%lu, l2Size:%lu, l0ASize:%lu, "
         "l0BSize:%lu, "
         "l0CSize:%lu, btSize:%lu",
-        static_cast<int>(compileInfoPtr->socVersion), compileInfoPtr->aicNum, compileInfoPtr->aivNum,
-        compileInfoPtr->ubSize, compileInfoPtr->l1Size, compileInfoPtr->l2Size, compileInfoPtr->l0ASize,
-        compileInfoPtr->l0BSize, compileInfoPtr->l0CSize, compileInfoPtr->btSize);
+        static_cast<int>(compileInfoPtr->socVersion), compileInfoPtr->npuArch,
+        compileInfoPtr->aicNum, compileInfoPtr->aivNum, compileInfoPtr->ubSize, compileInfoPtr->l1Size,
+        compileInfoPtr->l2Size, compileInfoPtr->l0ASize, compileInfoPtr->l0BSize,
+        compileInfoPtr->l0CSize, compileInfoPtr->btSize);
     return ge::GRAPH_SUCCESS;
 }
 

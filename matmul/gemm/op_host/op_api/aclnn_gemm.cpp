@@ -50,8 +50,8 @@ static inline bool CheckNotNull(const aclTensor* A, const aclTensor* B, const ac
 
 static inline bool CheckSocVersionIsSupportBf16(void)
 {
-    return GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-           GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    return (npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3510);
 }
 
 static inline bool CheckDtypeValid(const aclTensor* C, const aclTensor* A, const aclTensor* B, const aclTensor* out)
@@ -86,8 +86,8 @@ static inline bool CheckMatmul(const aclTensor* A, const aclTensor* B, int64_t t
     OP_CHECK_WRONG_DIMENSION(B, 2, return false);
 
     // check whether matrices can be multiplied
-    auto kDimA = transA ? (A->GetViewShape())[0] : (A->GetViewShape())[1];
-    auto kDimB = transB ? (B->GetViewShape())[1] : (B->GetViewShape())[0];
+    auto kDimA = static_cast<bool>(transA) ? (A->GetViewShape())[0] : (A->GetViewShape())[1];
+    auto kDimB = static_cast<bool>(transB) ? (B->GetViewShape())[1] : (B->GetViewShape())[0];
     if (kDimA != kDimB) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different.");
         return false;
@@ -99,8 +99,8 @@ static inline bool CheckMatmul(const aclTensor* A, const aclTensor* B, int64_t t
 static inline bool CheckBroadcast(
     const aclTensor* A, const aclTensor* B, const aclTensor* C, int64_t transA, int64_t transB)
 {
-    auto mDim = transA ? (A->GetViewShape())[1] : (A->GetViewShape())[0];
-    auto nDim = transB ? (B->GetViewShape())[0] : (B->GetViewShape())[1];
+    auto mDim = static_cast<bool>(transA) ? (A->GetViewShape())[1] : (A->GetViewShape())[0];
+    auto nDim = static_cast<bool>(transB) ? (B->GetViewShape())[0] : (B->GetViewShape())[1];
     op::Shape matmulShape = {mDim, nDim};
     OP_CHECK_BROADCAST_WITH_SHAPE(C, matmulShape, return false);
 
@@ -111,8 +111,8 @@ static inline bool CheckBroadcast(
 static inline bool CheckOutShape(
     const aclTensor* A, const aclTensor* B, int64_t transA, int64_t transB, const aclTensor* out)
 {
-    auto mDim = transA ? A->GetViewShape().GetDim(1) : A->GetViewShape().GetDim(0);
-    auto nDim = transB ? B->GetViewShape().GetDim(0) : B->GetViewShape().GetDim(1);
+    auto mDim = static_cast<bool>(transA) ? A->GetViewShape().GetDim(1) : A->GetViewShape().GetDim(0);
+    auto nDim = static_cast<bool>(transB) ? B->GetViewShape().GetDim(0) : B->GetViewShape().GetDim(1);
 
     int64_t out_m = out->GetViewShape().GetDim(0);
     int64_t out_n = out->GetViewShape().GetDim(1);
@@ -158,8 +158,8 @@ static aclnnStatus CheckParams(
 // A: m x k, B: k x n  ->   m x n 是否为空tensor，为空tensor返回true
 static inline bool CheckMulResIsEmpty(const aclTensor* A, const aclTensor* B, int64_t transA, int64_t transB)
 {
-    auto mDim = transA ? A->GetViewShape().GetDim(1) : A->GetViewShape().GetDim(0);
-    auto nDim = transB ? B->GetViewShape().GetDim(0) : B->GetViewShape().GetDim(1);
+    auto mDim = static_cast<bool>(transA) ? A->GetViewShape().GetDim(1) : A->GetViewShape().GetDim(0);
+    auto nDim = static_cast<bool>(transB) ? B->GetViewShape().GetDim(0) : B->GetViewShape().GetDim(1);
     return mDim == 0 || nDim == 0;
 }
 
@@ -173,7 +173,7 @@ static aclnnStatus GemmMulEmptyProcess(const aclTensor* C, float beta, aclTensor
 
     // broadcast成和out一个shape
     if (mulOut->GetViewShape() != out->GetViewShape()) {
-        int64_t tensorSize = (int64_t)(out->GetViewShape().GetDimNum());
+        int64_t tensorSize = static_cast<int64_t>(out->GetViewShape().GetDimNum());
         std::vector<int64_t> tensorShape(tensorSize);
         for (int64_t i = 0; i < tensorSize; i++) {
             tensorShape[i] = (out->GetViewShape())[i];

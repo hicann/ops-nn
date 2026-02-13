@@ -96,15 +96,15 @@ static bool CheckDavidLimit(const aclTensor* scale, const aclIntArray* perm_x1, 
     auto x2_need_transpose = ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 1 && (*perm_x2)[2] == 2) ||
                              ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 2 && (*perm_x2)[2] == 1);
     if (!x1_need_transpose) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x1 for ASCEND950 should be [0,1,2] or [1,0,2].");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x1 for npu arch 3510 should be [0,1,2] or [1,0,2].");
         return false;
     }
     if (!x2_need_transpose) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x2 for ASCEND950 should be [0,1,2] or [0,2,1].");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x2 for npu arch 3510 should be [0,1,2] or [0,2,1].");
         return false;
     }
     if (scale != nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ASCEND950 not support scale.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "npu arch 3510 not support scale.");
         return false;
     }
     return true;
@@ -136,9 +136,9 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclT
 
     auto x1_need_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2);
     auto x2_need_transpose = ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 1 && (*perm_x2)[2] == 2);
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
         if (!CheckDavidLimit(scale, perm_x1, perm_x2)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ASCEND950 Limit.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "npu arch 3510 Limit.");
             return false;
         }
     } else {
@@ -186,8 +186,8 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, 
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The perm parameter must be three-dimensional!");
         return ACLNN_ERR_PARAM_INVALID;
     }
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 && cubeMathType == -1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "cubeMathType[%d] can not be -1 for ASCEND950.",
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 && cubeMathType == -1) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "cubeMathType[%d] can not be -1 for npu arch 3510",
             cubeMathType);
         return ACLNN_ERR_PARAM_INVALID;
     }

@@ -99,8 +99,8 @@ void CalL1Tiling310P(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args 
 
 using CalL1TilingFunc = void (*)(const MatmulV3CompileInfo &, const MatMulV3Args &, MatMulV3RunInfo &);
 
-const static std::map<platform_ascendc::SocVersion, CalL1TilingFunc> CalL1TilingFuncMap = {
-    {platform_ascendc::SocVersion::ASCEND310P, CalL1Tiling310P},
+const static std::map<NpuArch, CalL1TilingFunc> CalL1TilingFuncMap = {
+    {NpuArch::DAV_2002, CalL1Tiling310P},
 };
 
 // ------------------------------ ResetBase -------------------------------------------//
@@ -123,7 +123,7 @@ void ResetBaseDefault(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args
     runInfo.tailInfo.nTailMain = INIT_SPLIT_VALUE;
 }
 
-void ResetBase91095(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args, MatMulV3RunInfo &runInfo)
+void ResetBaseDav3510(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args, MatMulV3RunInfo &runInfo)
 {
     ResetBaseDefault(compileInfo, args, runInfo);
     runInfo.baseM = BASIC_BLOCK_SIZE_256;
@@ -132,8 +132,8 @@ void ResetBase91095(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &
 
 using ResetBaseFunc = void (*)(const MatmulV3CompileInfo &, const MatMulV3Args &, MatMulV3RunInfo &);
 
-const static std::map<platform_ascendc::SocVersion, ResetBaseFunc> ResetBaseFuncMap = {
-    {platform_ascendc::SocVersion::ASCEND950, ResetBase91095},
+const static std::map<NpuArch, ResetBaseFunc> ResetBaseFuncMap = {
+    {NpuArch::DAV_3510, ResetBaseDav3510},
 };
 
 // ------------------------------ GetL0C2Out -------------------------------------------//
@@ -143,7 +143,7 @@ MatMulV3L0C2Out GetL0C2OutDefault(const MatmulV3CompileInfo & /* compileInfo */,
     return MatMulV3L0C2Out::ON_THE_FLY;
 }
 
-MatMulV3L0C2Out GetL0C2Out91095(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args,
+MatMulV3L0C2Out GetL0C2OutDav3510(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args,
                                 const MatMulV3RunInfo &runInfo)
 {
     bool isValidMKN = args.kValue <= BASIC_BLOCK_SIZE_256 && args.mValue >= BASIC_BLOCK_SIZE_256;
@@ -166,8 +166,8 @@ MatMulV3L0C2Out GetL0C2Out91095(const MatmulV3CompileInfo &compileInfo, const Ma
 
 using GetL0C2OutFunc = MatMulV3L0C2Out (*)(const MatmulV3CompileInfo &, const MatMulV3Args &, const MatMulV3RunInfo &);
 
-const static std::map<platform_ascendc::SocVersion, GetL0C2OutFunc> GetL0C2OutFuncMap = {
-    {platform_ascendc::SocVersion::ASCEND950, GetL0C2Out91095},
+const static std::map<NpuArch, GetL0C2OutFunc> GetL0C2OutFuncMap = {
+    {NpuArch::DAV_3510, GetL0C2OutDav3510},
 };
 
 
@@ -177,7 +177,7 @@ uint64_t GetStepSmallKDefault(const MatMulV3Args& /* args */, const MatMulV3RunI
     return isBL1FullLoad ? runInfo.stepKa : runInfo.stepKb;
 }
 
-uint64_t GetStepSmallK91095(const MatMulV3Args& args, const MatMulV3RunInfo& runInfo, bool isBL1FullLoad)
+uint64_t GetStepSmallKDav3510(const MatMulV3Args& args, const MatMulV3RunInfo& runInfo, bool isBL1FullLoad)
 {
     uint64_t stepBigK = runInfo.stepKa;
     uint64_t stepSmallK = runInfo.stepKb;
@@ -207,8 +207,8 @@ uint64_t GetStepSmallK91095(const MatMulV3Args& args, const MatMulV3RunInfo& run
 using GetStepSmallKFunc = uint64_t (*)(const MatMulV3Args&, const MatMulV3RunInfo&, bool);
 
 // 全载模板修改stepK
-const static std::map<platform_ascendc::SocVersion, GetStepSmallKFunc> GetStepSmallKFuncMap = {
-    {platform_ascendc::SocVersion::ASCEND950, GetStepSmallK91095},
+const static std::map<NpuArch, GetStepSmallKFunc> GetStepSmallKFuncMap = {
+    {NpuArch::DAV_3510, GetStepSmallKDav3510},
 };
 }  // namespace
 
@@ -217,36 +217,36 @@ namespace matmul_v3_advanced {
 void MatMulV3TilingHelper::ResetBase(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args,
                                      MatMulV3RunInfo &runInfo)
 {
-    auto iter = (ResetBaseFuncMap.find(compileInfo.socVersion) == ResetBaseFuncMap.end())
+    auto iter = (ResetBaseFuncMap.find(compileInfo.npuArch) == ResetBaseFuncMap.end())
                     ? ResetBaseDefault
-                    : ResetBaseFuncMap.at(compileInfo.socVersion);
+                    : ResetBaseFuncMap.at(compileInfo.npuArch);
     iter(compileInfo, args, runInfo);
 }
 
 void MatMulV3TilingHelper::CalL1Tiling(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args,
                                        MatMulV3RunInfo &runInfo)
 {
-    auto iter = (CalL1TilingFuncMap.find(compileInfo.socVersion) == CalL1TilingFuncMap.end())
+    auto iter = (CalL1TilingFuncMap.find(compileInfo.npuArch) == CalL1TilingFuncMap.end())
                     ? CalL1TilingDefault
-                    : CalL1TilingFuncMap.at(compileInfo.socVersion);
+                    : CalL1TilingFuncMap.at(compileInfo.npuArch);
     iter(compileInfo, args, runInfo);
 }
 
 MatMulV3L0C2Out MatMulV3TilingHelper::GetL0C2Out(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args,
                                                  const MatMulV3RunInfo &runInfo)
 {
-    auto iter = (GetL0C2OutFuncMap.find(compileInfo.socVersion) == GetL0C2OutFuncMap.end())
+    auto iter = (GetL0C2OutFuncMap.find(compileInfo.npuArch) == GetL0C2OutFuncMap.end())
                     ? GetL0C2OutDefault
-                    : GetL0C2OutFuncMap.at(compileInfo.socVersion);
+                    : GetL0C2OutFuncMap.at(compileInfo.npuArch);
     return iter(compileInfo, args, runInfo);
 }
 
 uint64_t MatMulV3TilingHelper::GetStepSmallK(
     bool isBL1FullLoad, const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo)
 {
-    auto iter = (GetStepSmallKFuncMap.find(compileInfo.socVersion) == GetStepSmallKFuncMap.end()) ?
+    auto iter = (GetStepSmallKFuncMap.find(compileInfo.npuArch) == GetStepSmallKFuncMap.end()) ?
                     GetStepSmallKDefault :
-                    GetStepSmallKFuncMap.at(compileInfo.socVersion);
+                    GetStepSmallKFuncMap.at(compileInfo.npuArch);
     return iter(args, runInfo, isBL1FullLoad);
 }
 

@@ -110,9 +110,9 @@ static aclnnStatus CheckInputParams(const aclTensor* self, const aclTensor* vec,
     CHECK_RET(CheckDtypeSame(self, vec, out), ACLNN_ERR_PARAM_INVALID);
 
     //  self dtype 按soc校验。
-    auto socRule = SocMatMulRule::getInstance();
-    CHECK_RET(socRule != nullptr, ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(socRule->CheckInput(self, vec, nullptr, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
+    auto archRule = NpuArchMatMulRule::getInstance();
+    CHECK_RET(archRule != nullptr, ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(archRule -> CheckInput(self, vec, nullptr, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
 
     // 3. shape: self必须为2维: n x m, vec必须为1维：m, out必须为1维：n
     CHECK_RET(CheckShape(self, vec, out), ACLNN_ERR_PARAM_INVALID);

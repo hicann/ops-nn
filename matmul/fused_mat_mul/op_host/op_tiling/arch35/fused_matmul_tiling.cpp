@@ -35,12 +35,12 @@ constexpr uint64_t FOUR_BATCH_DIM = 4;
 constexpr uint64_t ALIGN_NUM = 16;
 constexpr uint64_t WORKSPACE_SIZE = 1024;
 
-// soc_version, built-in, others
-const std::unordered_map<platform_ascendc::SocVersion, std::array<std::vector<std::string>, 2>> SocFusedOpSupport = {
-    {platform_ascendc::SocVersion::ASCEND950,
+// NpuArch, built-in, others
+const std::unordered_map<NpuArch, std::array<std::vector<std::string>, 2>> NpuArchFusedOpSupport = {
+    {NpuArch::DAV_3510,
      std::array<std::vector<std::string>, 2>{
          std::vector<std::string>{"", "relu", "add", "mul",}, std::vector<std::string>{"gelu_erf", "gelu_tanh"}}},
-    {platform_ascendc::SocVersion::RESERVED_VERSION,
+    {NpuArch::DAV_RESV,
      std::array<std::vector<std::string>, 2>{std::vector<std::string>{"relu"}, std::vector<std::string>{}}}};
 
 const std::initializer_list<std::string> FusedOpTypeSupportF32 = {"", "relu", "add", "mul"};
@@ -241,13 +241,13 @@ bool CheckFusedOpType(const gert::TilingContext& context)
     std::string fusedOpType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
 
     // get available fused op type
-    platform_ascendc::SocVersion socVersion;
+    NpuArch npuArch;
     OP_TILING_CHECK(
-        GetSocVersion(&context, socVersion) == ge::GRAPH_FAILED,
-        CUBE_INNER_ERR_REPORT(context.GetNodeName(), "fail to get soc version"), return false);
-    auto it = SocFusedOpSupport.find(socVersion);
+        GetSocVersion(&context, npuArch) == ge::GRAPH_FAILED,
+        CUBE_INNER_ERR_REPORT(context.GetNodeName(), "fail to get npu arch"), return false);
+    auto it = NpuArchFusedOpSupport.find(npuArch);
     OP_TILING_CHECK(
-        it == SocFusedOpSupport.end(),
+        it == NpuArchFusedOpSupport.end(),
         CUBE_INNER_ERR_REPORT(context.GetNodeName(), "unsupported platform(impossible situation)"), return false);
 
     // check op type support
@@ -266,13 +266,13 @@ ge::graphStatus BuiltInTilingCheck(gert::TilingContext* context, bool& useBuiltI
     std::string fusedOpType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
 
     // get available fused op type
-    platform_ascendc::SocVersion socVersion;
+    NpuArch npuArch;
     OP_TILING_CHECK(
-        GetSocVersion(context, socVersion) == ge::GRAPH_FAILED,
-        CUBE_INNER_ERR_REPORT(context->GetNodeName(), "fail to get soc version"), return ge::GRAPH_FAILED);
-    auto it = SocFusedOpSupport.find(socVersion);
+        GetSocVersion(context, npuArch) == ge::GRAPH_FAILED,
+        CUBE_INNER_ERR_REPORT(context->GetNodeName(), "fail to get npu arch"), return ge::GRAPH_FAILED);
+    auto it = NpuArchFusedOpSupport.find(npuArch);
     OP_TILING_CHECK(
-        it == SocFusedOpSupport.end(),
+        it == NpuArchFusedOpSupport.end(),
         CUBE_INNER_ERR_REPORT(context->GetNodeName(), "unsupported platform(impossible situation)"),
         return ge::GRAPH_FAILED);
 
@@ -288,7 +288,7 @@ ge::graphStatus FusedMatMulTilingFunc(gert::TilingContext* context)
     OP_TILING_CHECK(
         context == nullptr, CUBE_INNER_ERR_REPORT("FusedMatMul", "context is null"), return ge::GRAPH_FAILED);
     if (!IsAdvancedSocVersion(context)) {
-        OP_LOGE("FusedMatMul", "not support soc version");
+        OP_LOGE("FusedMatMul", "not support npu arch");
         return ge::GRAPH_FAILED;
     }
     bool useBuiltInTiling = false;
