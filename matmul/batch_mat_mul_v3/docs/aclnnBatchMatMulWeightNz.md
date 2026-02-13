@@ -223,7 +223,6 @@ aclnnStatus aclnnBatchMatMulWeightNZ(
 ## 约束说明
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnBatchMatMulWeightNz默认确定性实现。
-  - <term>Ascend 950PR/Ascend 950DT</term>: aclnnBatchMatMulWeightNz默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 - 不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。
 
