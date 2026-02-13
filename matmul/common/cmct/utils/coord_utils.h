@@ -60,13 +60,14 @@ __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t> GetOffset(
 template <class BlockCoord, class ProblemShape>
 __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetForNDLayout(
     BlockCoord blockCoord, ProblemShape problemShape, bool transA, bool transB, bool isBias,
-    AscendC::Shape<int64_t, int64_t> sliceParams, uint64_t curML1 = 1UL)
+    AscendC::Shape<int64_t, int64_t, int64_t> nonContinuousParams, uint64_t curML1 = 1UL)
 {
     int64_t m = Get<MNK_M>(problemShape);
     int64_t n = Get<MNK_N>(problemShape);
     int64_t k = Get<MNK_K>(problemShape);
-    uint64_t sliceM = Get<0>(sliceParams);
-    uint64_t srcNdStride = Get<1>(sliceParams);
+    uint64_t sliceM = Get<0>(nonContinuousParams);
+    uint64_t srcNdStride = Get<1>(nonContinuousParams);
+    int64_t innerBatch = AscendC::Std::max(Get<2>(nonContinuousParams), 1L);
     int64_t realM = m;
     int64_t realMOffset = Get<0>(blockCoord);
     if (srcNdStride != 1 && sliceM != 0) {
@@ -74,17 +75,24 @@ __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetFo
         realM = (curML1 / sliceM) * oriM; // ndNum * oriM
         realMOffset = Get<2>(blockCoord);
     }
+
     int64_t offsetA = Get<MNK_B>(blockCoord) * realM * k;
     int64_t offsetB = Get<MNK_B>(blockCoord) * n * k;
     int64_t offsetC = Get<MNK_B>(blockCoord) * m * n + Get<0>(blockCoord) * n + Get<1>(blockCoord);
     int64_t offsetBias = 0;
+    if (innerBatch > 1) {
+        offsetA = transA ? Get<MNK_B>(blockCoord) * realM : Get<MNK_B>(blockCoord) * k;
+        offsetB = transB ? Get<MNK_B>(blockCoord) * k : Get<MNK_B>(blockCoord) * n;
+    }
     if (transA) {
         offsetA += Get<0>(blockCoord);
     } else {
-        offsetA += realMOffset * k; // get mOffsetNew from kTileIdx
+        // m, b, k
+        offsetA += realMOffset * innerBatch * k; // get mOffsetNew from kTileIdx
     }
     if (transB) {
-        offsetB += Get<1>(blockCoord) * k;
+        // n, b, k
+        offsetB += Get<1>(blockCoord) * innerBatch * k;
     } else {
         offsetB += Get<1>(blockCoord);
     }
@@ -150,13 +158,13 @@ __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetFo
 template <class BlockCoord, class ProblemShape, CubeFormat LayoutB = CubeFormat::ND, class B_T>
 __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetWithoutLayout(
     BlockCoord blockCoord, ProblemShape problemShape, bool transA, bool transB, bool isBias,
-    AscendC::Shape<int64_t, int64_t> sliceParams, uint64_t curML1 = 1UL,
+    AscendC::Shape<int64_t, int64_t, int64_t> nonContinuousParams, uint64_t curML1 = 1UL,
     AscendC::Shape<int64_t, int64_t, int64_t, int64_t> tileL1 = {0, 0, 0, 0},
     AscendC::Shape<int64_t, int64_t> SplitOffset = {0, 0},
     AscendC::Shape<int64_t, int64_t, int64_t, int64_t> tailParams = {0, 0, 0, 0})
 {
     if constexpr (LayoutB == CubeFormat::ND) {
-        return GetOffsetForNDLayout(blockCoord, problemShape, transA, transB, isBias, sliceParams, curML1);
+        return GetOffsetForNDLayout(blockCoord, problemShape, transA, transB, isBias, nonContinuousParams, curML1);
     } else {
         return GetOffsetForNZLayout<BlockCoord, ProblemShape, B_T>(
             blockCoord, problemShape, transA, transB, isBias, tileL1, SplitOffset, tailParams);

@@ -40,6 +40,7 @@ public:
     int64_t perCoreBlockNum_{0};
     int64_t blockNum_{0};
     int64_t batch_{0};
+    int64_t innerBatch_{0};
     int64_t k_{0};
     int64_t tailL1M_{0};
     int64_t tailL1N_{0};
@@ -89,9 +90,6 @@ public:
         const MatMulV3BasicTilingData* tilingData;
     };
 
-    struct BatchMatMulParams {
-        const BatchMatMulV3BasicTilingData* tilingData;
-    };
 public:
     __aicore__ inline BlockSchedulerAswtBuiltIn(
         const ProblemShape& shape, int64_t blockIdx, int64_t blockNum, const Params& params)
@@ -99,6 +97,7 @@ public:
     {
         k_ = shape.k;
         batch_ = AscendC::Std::max(shape.b, 1L);
+        innerBatch_ = params.tilingData->innerBatch;
         mL1_ = params.tilingData->mL1;
         nL1_ = params.tilingData->nL1;
         kL1_ = params.tilingData->kL1;
@@ -180,9 +179,9 @@ public:
                 l2CacheDisable_ == L2CacheMode::B_L2_CACHE_DISABLE);
     }
 
-    __aicore__ inline Shape<int64_t, int64_t> GetSliceParams()
+    __aicore__ inline Shape<int64_t, int64_t, int64_t> GetNonContinuousParams()
     {
-        return {sliceM_, srcNdStride_};
+        return {sliceM_, srcNdStride_, innerBatch_};
     }
 
     __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTailParams()

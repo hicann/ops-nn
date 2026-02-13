@@ -113,6 +113,7 @@ struct MatMulV3BasicTilingData {
     L2CacheMode l2CacheDisable = L2CacheMode::L2_CACHE_DEFAULT; // L2Cache默认使能
     uint32_t sliceM;  // 非连续场景m轴
     uint32_t srcNdStride; // 非连续场景m轴stride
+    uint32_t innerBatch = 1; // 非连续transpose场景内轴batch值
 };
 #pragma pack(pop)
 

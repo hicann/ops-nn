@@ -22,7 +22,20 @@
 namespace optiling {
 namespace batch_matmul_v3_advanced {
 using namespace strategy;
+using StrideIndexPairs = std::vector<std::pair<int64_t, std::pair<int64_t, int64_t>>>;
 MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3AswBasicTiling, DAV_3510, ASW_BASIC);
+
+bool BatchMatMulV3AswBasicTiling::IsContiguousStride(StrideIndexPairs& strideIndexPairs) const
+{
+    int64_t expectStride = 1;
+    for (auto it = strideIndexPairs.rbegin(); it != strideIndexPairs.rend(); it++) {
+        if (it->first != expectStride) {
+            return false;
+        }
+        expectStride *= it->second.second;
+    }
+    return true;
+}
 
 bool BatchMatMulV3AswBasicTiling::IsCapable()
 {
@@ -50,7 +63,51 @@ ge::graphStatus BatchMatMulV3AswBasicTiling::DoOpTiling()
         runInfo_.l1BufferNum = NUM_TWO;
     }
 
+    // 特殊处理3D非连续场景
+    if (context_->InputIsView(0) && IsTransposeNonContiguous(0) && context_->InputIsView(1) &&
+        IsTransposeNonContiguous(1)) {
+        runInfo_.innerBatch = batchInfo_->batchC;
+    }
     return ge::GRAPH_SUCCESS;
+}
+
+bool BatchMatMulV3AswBasicTiling::IsTransposeNonContiguous(uint64_t idx) const
+{
+    // 获得stride 然后根据stride判断
+    auto viewShape = context_->GetInputShape(idx)->GetOriginShape();
+    auto viewStride = context_->GetInputStride(idx);
+    int64_t dimNum = viewStride->GetDimNum();
+    StrideIndexPairs strideIndexPairs;
+    strideIndexPairs.reserve(dimNum);
+    auto lastStride = INT64_MAX;
+    bool isTranspose = false;
+    for (int64_t i = 0; i < dimNum; i++) {
+        int64_t curStride = viewStride->GetStride(i);
+        if (curStride == 0 || viewShape[i] == 1) {
+            return false;
+        }
+        if (lastStride < curStride) {
+            isTranspose = true;
+        }
+        lastStride = curStride;
+        strideIndexPairs.emplace_back(std::make_pair(curStride, std::make_pair(i, viewShape[i])));
+    }
+    if (!isTranspose) {
+        return false;
+    }
+    // strides顺序排序
+    std::sort(strideIndexPairs.rbegin(), strideIndexPairs.rend());
+    if (!IsContiguousStride(strideIndexPairs)) {
+        return false;
+    }
+    std::vector<int> indexs;
+    for (auto it = strideIndexPairs.begin(); it != strideIndexPairs.end(); it++) {
+        indexs.push_back(it->second.first);
+    }
+    // 3D场景只有下标符合{1 0 2} * {2 0 1}才是满足支持transpose场景，右矩阵转置为{1 0 2}
+    std::set<std::vector<int>> transposeIndexs = {{1, 0, 2}};
+    auto isNoNeedSwap = find(transposeIndexs.begin(), transposeIndexs.end(), indexs);
+    return isNoNeedSwap != transposeIndexs.end();
 }
 
 uint64_t BatchMatMulV3AswBasicTiling::GetTilingKey() const

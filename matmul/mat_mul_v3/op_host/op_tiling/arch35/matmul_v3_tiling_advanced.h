@@ -42,7 +42,7 @@ protected:
 
     virtual ge::graphStatus CheckSelfSlice(int64_t (&dims)[2]);
 
-    virtual ge::graphStatus CheckMat2Transpose(int64_t (&dims)[2]);
+    virtual ge::graphStatus CheckInputTranspose(int64_t (&dims)[2], int64_t idx);
 
     virtual bool CheckIsNonContiguous(int64_t (&mkDims)[2], int64_t (&knDims)[2]);
 protected:

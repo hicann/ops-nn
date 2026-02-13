@@ -175,7 +175,8 @@ public:
         epilogueOp.Init(params.epilogueParams, problemShape_);
         if ASCEND_IS_AIC {
             blockMmadOp.template Init<BlockScheduler::FULL_LOAD_MODE>(
-                problemShape_, tileL1, tileL0, isBias_, bs.GetL1BuferNum_(), bs.GetL0cDB(), bs.GetSliceParams());
+                problemShape_, tileL1, tileL0, isBias_, bs.GetL1BuferNum_(), bs.GetL0cDB(),
+                bs.GetNonContinuousParams());
             blockMmadOp.SetDualParam(enable2UB);
             if constexpr (BlockScheduler::FULL_LOAD_MODE == B_FULL_LOAD_MODE) {
                 blockMmadOp.template CopyInB1<BlockMmadBuilder::formatB>(
@@ -204,8 +205,8 @@ public:
                         blockCoord = bs.GetSingleBlockCoord(tileIdx);
                     }
                     auto blockOffset = GetOffsetWithoutLayout<BlockCoord, TupleShape, BlockMmadBuilder::formatB, BType>(
-                        blockCoord, problemShape_, transA, transB, isBias_, bs.GetSliceParams(), Get<MNK_M>(blockShape),
-                        tileL1, bs.GetSplitOffset(), bs.GetTailParams());
+                        blockCoord, problemShape_, transA, transB, isBias_, bs.GetNonContinuousParams(),
+                        Get<MNK_M>(blockShape), tileL1, bs.GetSplitOffset(), bs.GetTailParams());
                     // calculate block-level offset
                     if (Get<0>(blockShape) <= 0 || Get<1>(blockShape) <= 0) {
                         if (isHf32) {

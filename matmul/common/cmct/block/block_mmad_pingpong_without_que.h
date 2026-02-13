@@ -78,6 +78,7 @@ public:
     bool isBias_{false};
     uint64_t sliceM_{1};
     uint64_t srcNdStride_{1};
+    int64_t innerBatch_{1};
     constexpr static uint64_t BUFFER_NUM = 2;
     constexpr static uint64_t SPLIT_M_ALIGN = 2;
     constexpr static uint64_t HALF_L0_SIZE = L0A_SIZE / DOUBLE_BUFFER_COUNT / sizeof(A_T);
@@ -129,7 +130,7 @@ public:
     template <uint64_t FULL_LOAD_MODE_ = B_FULL_LOAD_MODE>
     __aicore__ inline void Init(
         const TupleShape& shape, const TupleShape& tileL1, const TupleShape& tileL0, bool isBias, uint64_t l1BufNum,
-        bool l0cDB, AscendC::Shape<int64_t, int64_t> sliceParams)
+        bool l0cDB, const AscendC::Shape<int64_t, int64_t, int64_t>& nonContinuousParam)
     {
         m_ = Get<DIMENSION_M>(shape);
         n_ = Get<DIMENSION_N>(shape);
@@ -169,8 +170,9 @@ public:
         l0PingPong_ = 0;
         abL1LoopCnt_ = 0;
         l0cPingPong_ = 0;
-        sliceM_ = Get<0>(sliceParams);
-        srcNdStride_ = Get<1>(sliceParams);
+        sliceM_ = Get<0>(nonContinuousParam);
+        srcNdStride_ = Get<1>(nonContinuousParam);
+        innerBatch_ = Get<2>(nonContinuousParam);
     }
 
     __aicore__ inline void SetDualParam(bool splitM)
@@ -191,9 +193,20 @@ public:
             nd2nzParams.dValue = dDim;
             nd2nzParams.srcNdMatrixStride = srcNdStride_;
             nd2nzParams.srcDValue = k_;
-            nd2nzParams.dstNzC0Stride = (curML1 + AscendC::BLOCK_CUBE - 1) / AscendC::BLOCK_CUBE * AscendC::BLOCK_CUBE;
+            nd2nzParams.dstNzC0Stride = Cmct::Gemm::Align(curML1, AscendC::BLOCK_CUBE);
             nd2nzParams.dstNzNStride = 1;
             nd2nzParams.dstNzMatrixStride = sliceM_ * C0_SIZE;
+        } else if (innerBatch_ > 1) {
+            nd2nzParams.ndNum = 1;
+            uint64_t nDim = AType::isTrans ? curKL1 : curML1;
+            uint64_t dDim = AType::isTrans ? curML1 : curKL1;
+            nd2nzParams.nValue = nDim;
+            nd2nzParams.dValue = dDim;
+            nd2nzParams.srcNdMatrixStride = 1;
+            nd2nzParams.srcDValue = innerBatch_ * (AType::isTrans ? m_ : k_);
+            nd2nzParams.dstNzC0Stride = Cmct::Gemm::Align(nDim, AscendC::BLOCK_CUBE);
+            nd2nzParams.dstNzNStride = 1;
+            nd2nzParams.dstNzMatrixStride = 1;
         } else {
             nd2nzParams.ndNum = 1;
             uint64_t nDim = AType::isTrans ? curKL1 : curML1;
@@ -202,7 +215,7 @@ public:
             nd2nzParams.dValue = dDim;
             nd2nzParams.srcNdMatrixStride = 1;
             nd2nzParams.srcDValue = AType::isTrans ? m_ : k_;
-            nd2nzParams.dstNzC0Stride = (nDim + AscendC::BLOCK_CUBE - 1) / AscendC::BLOCK_CUBE * AscendC::BLOCK_CUBE;
+            nd2nzParams.dstNzC0Stride = Cmct::Gemm::Align(nDim, AscendC::BLOCK_CUBE);
             nd2nzParams.dstNzNStride = 1;
             nd2nzParams.dstNzMatrixStride = 1;
         }
@@ -215,19 +228,28 @@ public:
         const AscendC::GlobalTensor<B_T>& bGlobal, const AscendC::LocalTensor<B_T>& bl1Local, uint64_t curNL1,
         uint64_t curKL1)
     {
+        AscendC::Nd2NzParams nd2nzParams;
+        nd2nzParams.ndNum = 1;
+        uint64_t nDim = BType::isTrans ? curNL1 : curKL1;
+        uint64_t dDim = BType::isTrans ? curKL1 : curNL1;
         if constexpr (LayoutB == CubeFormat::ND) {
-            AscendC::Nd2NzParams nd2nzParams;
-            nd2nzParams.ndNum = 1;
-            uint64_t nDim = BType::isTrans ? curNL1 : curKL1;
-            uint64_t dDim = BType::isTrans ? curKL1 : curNL1;
-
-            nd2nzParams.nValue = nDim;
-            nd2nzParams.dValue = dDim;
-            nd2nzParams.srcNdMatrixStride = 1;
-            nd2nzParams.srcDValue = BType::isTrans ? k_ : n_;
-            nd2nzParams.dstNzC0Stride = (nDim + AscendC::BLOCK_CUBE - 1) / AscendC::BLOCK_CUBE * AscendC::BLOCK_CUBE;
-            nd2nzParams.dstNzNStride = 1;
-            nd2nzParams.dstNzMatrixStride = 1;
+            if (innerBatch_ > 1) {
+                nd2nzParams.nValue = nDim;
+                nd2nzParams.dValue = dDim;
+                nd2nzParams.srcNdMatrixStride = 1;
+                nd2nzParams.srcDValue = innerBatch_ * (BType::isTrans ? k_ : n_);
+                nd2nzParams.dstNzC0Stride = Cmct::Gemm::Align(nDim, AscendC::BLOCK_CUBE);
+                nd2nzParams.dstNzNStride = 1;
+                nd2nzParams.dstNzMatrixStride = 1;
+            } else {
+                nd2nzParams.nValue = nDim;
+                nd2nzParams.dValue = dDim;
+                nd2nzParams.srcNdMatrixStride = 1;
+                nd2nzParams.srcDValue = BType::isTrans ? k_ : n_;
+                nd2nzParams.dstNzC0Stride = Cmct::Gemm::Align(nDim, AscendC::BLOCK_CUBE);
+                nd2nzParams.dstNzNStride = 1;
+                nd2nzParams.dstNzMatrixStride = 1;
+            }
             AscendC::DataCopy(bl1Local, bGlobal, nd2nzParams);
         } else {
             AscendC::DataCopyExtParams dataCopyParams;
