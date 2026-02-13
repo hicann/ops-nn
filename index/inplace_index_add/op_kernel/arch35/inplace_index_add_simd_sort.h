@@ -22,9 +22,10 @@ constexpr int64_t INDICES_SORT_THRESHOLD = 128;
 namespace InplaceIndexAdd {
 using namespace AscendC;
 
-template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS>
-class InplaceIndexAddSimdSort : InplaceIndexAddBase<VAR_T, IDX_T> {
+template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+class InplaceIndexAddSimdSort : InplaceIndexAddBase<VAR_T, IDX_T, CAST_MODE> {
 public:
+    using CAST_T = typename InplaceIndexAddBase<VAR_T, IDX_T, CAST_MODE>::CAST_T;
     __aicore__ inline InplaceIndexAddSimdSort(const InplaceIndexAddSimdSortTilingData& tilingData, TPipe& pipe)
         : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR alpha, GM_ADDR workspace);
@@ -64,8 +65,8 @@ private:
     float maxScore_ = static_cast<float>(0);
 };
 
-template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::Init(
+template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST_MODE>::Init(
     GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR alpha, GM_ADDR workspace)
 {
     var_.SetGlobalBuffer((__gm__ VAR_T*)(var));
@@ -91,8 +92,8 @@ __aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::Ini
     }
 }
 
-template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::HandleAlpha(
+template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST_MODE>::HandleAlpha(
     LocalTensor<VAR_T> updatesLocal, VAR_T alphaValue, int64_t dataCount)
 {
     if (tilingData_.isWithAlpha) {
@@ -107,8 +108,8 @@ __aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::Han
     return;
 }
 
-template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::CopyIndiceIn(int64_t rowIdx, int64_t rowLen)
+template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST_MODE>::CopyIndiceIn(int64_t rowIdx, int64_t rowLen)
 {
     LocalTensor<IDX_T> indicesLocal = indicesQue_.AllocTensor<IDX_T>();
     LocalTensor<float> dstLocal = maxScoreBuf_.Get<float>();
@@ -130,8 +131,8 @@ __aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::Cop
     indicesQue_.EnQue(indicesLocal);
 }
 
-template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::ProcessPreSmallIndices(
+template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST_MODE>::ProcessPreSmallIndices(
     int64_t preOfset, int64_t colIdx, int64_t preLen, int64_t colLen)
 {
     LocalTensor<VAR_T> updatesLocal = updatesQue_.AllocTensor<VAR_T>();
@@ -173,8 +174,8 @@ __aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::Pro
     indicesQue_.FreeTensor(indicesLocal);
 }
 
-template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::ComputeSumAndCopyOutSlitPre(
+template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST_MODE>::ComputeSumAndCopyOutSlitPre(
     int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen)
 {
     LocalTensor<VAR_T> updatesLocal = updatesQue_.AllocTensor<VAR_T>();
@@ -216,8 +217,8 @@ __aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::Com
     this->updateSumIdxQue_.template EnQue(updateSumIdxLocal);
 }
 
-template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::CopyInAndCopyOutSlitPre(
+template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST_MODE>::CopyInAndCopyOutSlitPre(
     int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen)
 {
     LocalTensor<VAR_T> updatesLocal = updatesQue_.AllocTensor<VAR_T>();
@@ -254,8 +255,8 @@ __aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::Cop
     indicesQue_.EnQue(indicesLocal);
 }
 
-template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::ProcessPre()
+template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST_MODE>::ProcessPre()
 {
     pipe_.InitBuffer(indicesQue_, DOUBLE_BUFFER, (tilingData_.ubIndexFactor) * sizeof(IDX_T));
     pipe_.InitBuffer(updatesQue_, DOUBLE_BUFFER, tilingData_.ubIndexFactor * tilingData_.afterAxisFactor * sizeof(VAR_T));
@@ -291,7 +292,14 @@ __aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::Pro
         CopyIndiceIn(rowIdx, rowDataLen);
         if (maxScore_ > SORT_HIST_THRESHOLD) {
             LocalTensor<IDX_T> indicesLocal = indicesQue_.DeQue<IDX_T>();
-            this->SortIndices(indicesLocal, rowDataLen);
+            if constexpr (CAST_MODE == CAST_0){
+                this->SortIndices(indicesLocal, rowDataLen);
+            } else {
+                LocalTensor<CAST_T> indicesCastLocal = this->indicesCastQue_.template AllocTensor<CAST_T>();
+                this->IndicesSortCast(indicesLocal, indicesCastLocal, rowDataLen);
+                this->SortIndices(indicesCastLocal, rowDataLen);
+                this->indicesCastQue_.template FreeTensor(indicesCastLocal);
+            }
             indicesQue_.FreeTensor(indicesLocal);
             for (int64_t colIdx = 0; colIdx < colLoopNum; colIdx++) {
                 int64_t colDataLen = (colIdx == colLoopNum - 1) ? colTailDataLen : colMainDataLen;
@@ -314,8 +322,8 @@ __aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::Pro
     }
 }
 
-template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::ComputeSumAndCopyOutSlitAfter(
+template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST_MODE>::ComputeSumAndCopyOutSlitAfter(
     int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen)
 {
     LocalTensor<VAR_T> updatesLocal = updatesQue_.AllocTensor<VAR_T>();
@@ -361,8 +369,8 @@ __aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::Com
     this->updateSumIdxQue_.template EnQue(updateSumIdxLocal);
 }
 
-template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::CopyInAndCopyOutSlitAfter(
+template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST_MODE>::CopyInAndCopyOutSlitAfter(
     int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen)
 {
     LocalTensor<IDX_T> indicesLocal = indicesQue_.DeQue<IDX_T>();
@@ -398,8 +406,8 @@ __aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::Cop
     indicesQue_.EnQue(indicesLocal);
 }
 
-template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::ProcessAfter()
+template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST_MODE>::ProcessAfter()
 {
     pipe_.InitBuffer(indicesQue_, DOUBLE_BUFFER, (tilingData_.ubIndexFactor) * sizeof(IDX_T));
     pipe_.InitBuffer(updatesQue_, DOUBLE_BUFFER, tilingData_.ubIndexFactor * tilingData_.afterAxisFactor * sizeof(VAR_T));
@@ -420,7 +428,14 @@ __aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::Pro
         CopyIndiceIn(rowIdx, rowDataLen);
         if (maxScore_ > SORT_HIST_THRESHOLD) {
             LocalTensor<IDX_T> indicesLocal = indicesQue_.DeQue<IDX_T>();
-            this->SortIndices(indicesLocal, rowDataLen);
+            if constexpr (CAST_MODE == CAST_0){
+                this->SortIndices(indicesLocal, rowDataLen);
+            } else {
+                LocalTensor<CAST_T> indicesCastLocal = this->indicesCastQue_.template AllocTensor<CAST_T>();
+                this->IndicesSortCast(indicesLocal, indicesCastLocal, rowDataLen);
+                this->SortIndices(indicesCastLocal, rowDataLen);
+                this->indicesCastQue_.template FreeTensor(indicesCastLocal);
+            }
             indicesQue_.FreeTensor(indicesLocal);
             for (int64_t colIdx = 0; colIdx < colLoopNum; colIdx++) {
                 int64_t colDataLen = (colIdx == colLoopNum - 1) ? colTailDataLen : colMainDataLen;
@@ -443,8 +458,8 @@ __aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::Pro
     }
 }
 
-template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::ComputeSumAndCopyOutSlitIndices(
+template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST_MODE>::ComputeSumAndCopyOutSlitIndices(
     int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen)
 {
     LocalTensor<VAR_T> updatesLocal = updatesQue_.AllocTensor<VAR_T>();
@@ -489,8 +504,8 @@ __aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::Com
     this->updateSumIdxQue_.template EnQue(updateSumIdxLocal);
 }
 
-template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::CopyInAndCopyOutSlitIndices(
+template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST_MODE>::CopyInAndCopyOutSlitIndices(
     int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen)
 {
     LocalTensor<IDX_T> indicesLocal = indicesQue_.DeQue<IDX_T>();
@@ -526,8 +541,8 @@ __aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::Cop
     indicesQue_.EnQue(indicesLocal);
 }
 
-template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::ProcessIndices()
+template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST_MODE>::ProcessIndices()
 {
     pipe_.InitBuffer(indicesQue_, DOUBLE_BUFFER, (tilingData_.ubIndexFactor) * sizeof(IDX_T));
     pipe_.InitBuffer(updatesQue_, DOUBLE_BUFFER, tilingData_.ubIndexFactor * tilingData_.afterAxisFactor * sizeof(VAR_T));
@@ -548,7 +563,14 @@ __aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::Pro
         CopyIndiceIn(rowIdx, rowDataLen);
         if (maxScore_ > SORT_HIST_THRESHOLD && rowDataLen > INDICES_SORT_THRESHOLD) {
             LocalTensor<IDX_T> indicesLocal = indicesQue_.DeQue<IDX_T>();
-            this->SortIndices(indicesLocal, rowDataLen);
+            if constexpr (CAST_MODE == CAST_0){
+                this->SortIndices(indicesLocal, rowDataLen);
+            } else {
+                LocalTensor<CAST_T> indicesCastLocal = this->indicesCastQue_.template AllocTensor<CAST_T>();
+                this->IndicesSortCast(indicesLocal, indicesCastLocal, rowDataLen);
+                this->SortIndices(indicesCastLocal, rowDataLen);
+                this->indicesCastQue_.template FreeTensor(indicesCastLocal);
+            }
             indicesQue_.FreeTensor(indicesLocal);
             for (int64_t colIdx = 0; colIdx < colLoopNum; colIdx++) {
                 int64_t colDataLen = (colIdx == colLoopNum - 1) ? colTailDataLen : colMainDataLen;
@@ -571,8 +593,8 @@ __aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::Pro
     }
 }
 
-template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS>::Process()
+template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST_MODE>::Process()
 {
     if (GetBlockIdx() >= tilingData_.usedCoreNumBefore) {
         return;

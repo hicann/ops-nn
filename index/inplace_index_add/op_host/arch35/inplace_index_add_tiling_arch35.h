@@ -67,6 +67,7 @@ protected:
     void CombineAxis(const gert::Shape& varShape, const gert::Shape& updatesShape);
     void GetCastTypeSize();
     uint32_t GetSortTmpSize(ge::DataType dataType, uint32_t lastAxisNum, bool isDescend);
+    void GetCastTypeForSort();
     
 public:
     int64_t ubSize_ = 0;
@@ -133,9 +134,12 @@ public:
     int64_t ubVarOptiFactor_ = 0;
     int64_t isOpti_ = 0;
     int64_t indicesStride_ = 1;
+    uint64_t indicesCastMode_ = 0;  // 0: 不Cast; 1：int32 Cast int16; 2：int64 Cast int32; 3：int64 Cast int16; 4:int32 Cast uint8; 5:int64 Cast uint8.
+    int64_t indicesCastDtypeSize_ = 0;
 
     ge::DataType dtype_ = ge::DT_UNDEFINED;
     ge::DataType indicesDtype_ = ge::DT_UNDEFINED;
+    ge::DataType indicesCastDtype_ = ge::DT_UNDEFINED;
 };
 }  // namespace optiling
 #endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_INPLACE_INDEX_ADD_TILING_H_

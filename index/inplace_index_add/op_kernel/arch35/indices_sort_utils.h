@@ -29,7 +29,7 @@ static constexpr MicroAPI::CastTrait castTraitInt16ToFp32 = {
 * 用于计算
 */
 template<typename INDICE_TYPE>
-__aicore__ void IndexStatisticInt32(
+__aicore__ void inline IndexStatisticInt32(
     LocalTensor<INDICE_TYPE>& srcLocal, LocalTensor<float>& dstLocal, float& maxScore, int64_t rowLen, int64_t lastDim)
 {
     __local_mem__ uint32_t* srcLocalAddr = (__local_mem__ uint32_t*)srcLocal.GetPhyAddr();
@@ -124,7 +124,7 @@ __aicore__ void IndexStatisticInt32(
 }
 
 template<typename INDICE_TYPE>
-__aicore__ void IndexStatisticInt64(
+__aicore__ void inline IndexStatisticInt64(
     LocalTensor<INDICE_TYPE>& srcLocal, LocalTensor<float>& dstLocal, float& maxScore, int64_t rowLen, int64_t lastDim)
 {
     __local_mem__ uint64_t* srcLocalAddr = (__local_mem__ uint64_t*)srcLocal.GetPhyAddr();

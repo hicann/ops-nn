@@ -36,6 +36,8 @@ TILING_DATA_FIELD_DEF(int64_t, tailUpdatesPreNum);        // 尾循环搬运upda
 TILING_DATA_FIELD_DEF(int64_t, updatesPreLoop);           // 搬1次indices时，要搬多份updates的循环次数
 TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);
 TILING_DATA_FIELD_DEF(int64_t, indicesStride);
+TILING_DATA_FIELD_DEF(int64_t, indicesCastMode);
+
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(InplaceIndexAdd_500000, InplaceIndexAddSimtSortTilingData)

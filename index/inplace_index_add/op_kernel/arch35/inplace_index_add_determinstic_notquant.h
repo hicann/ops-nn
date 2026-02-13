@@ -27,7 +27,7 @@ constexpr uint64_t ALIGN_SIZE = 32;
 constexpr int64_t MAXSCORE_SORT_THRESHOLD = 128;
 
 template <typename VAR_T, typename IDX_T>
-class InplaceIndexAddDeterminsticNotQuant : public InplaceIndexAddBase<VAR_T, IDX_T> {
+class InplaceIndexAddDeterminsticNotQuant : public InplaceIndexAddBase<VAR_T, IDX_T, CAST_0> {
 public:
     __aicore__ inline InplaceIndexAddDeterminsticNotQuant(const InplaceIndexAddDeterminsticTilingData& tilingData, TPipe& pipe)
         : tilingData_(tilingData), pipe_(pipe){};

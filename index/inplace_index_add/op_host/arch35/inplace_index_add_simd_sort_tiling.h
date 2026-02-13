@@ -53,6 +53,7 @@ TILING_DATA_FIELD_DEF(int64_t, isSplitAfterAxis);
 TILING_DATA_FIELD_DEF(int64_t, isSplitIndicesAxis);
 TILING_DATA_FIELD_DEF(int64_t, isWithAlpha);
 TILING_DATA_FIELD_DEF(int64_t, indicesStride);
+TILING_DATA_FIELD_DEF(int64_t, indicesCastMode);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(InplaceIndexAdd_200000, InplaceIndexAddSimdSortTilingData)

@@ -45,16 +45,30 @@ bool InplaceIndexAddSimdSortTiling::IsCapable()
 
 int64_t InplaceIndexAddSimdSortTiling::GetIndicesAlignBlockSize(int64_t indicesFactor)
 {
-    /* ubIndexFactor_: indicesindicesQue + (sortIndicesQue + 2 * shiftOfset) +
-                       (uniqueIdCntQue_ + 1) + (updateSumIdxQue_ + 1) + originIdxQue
-    */ 
+    int64_t occupy = 0;
     auto ubBlock = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
-    int64_t occupy = Ops::Base::CeilAlign(indicesFactor * indicesTypeSize_, ubBlock) +
-                    (Ops::Base::CeilAlign(indicesFactor * (indicesTypeSize_), ubBlock) + SIZE_TWO * ALIGN_SIZE) +
-                    (Ops::Base::CeilAlign(indicesFactor * INT32_BYTES, ubBlock) + ALIGN_SIZE) +
-                    (Ops::Base::CeilAlign(indicesFactor * indicesTypeSize_, ubBlock) + ALIGN_SIZE) + 
-                     Ops::Base::CeilAlign(indicesFactor * INT32_BYTES, ubBlock) +
-                     GetSortTmpSize(indicesDtype_, indicesFactor, false);
+    if (indicesCastMode_ == 0) {
+        /* ubIndexFactor_: indicesindicesQue + (sortIndicesQue + 2 * shiftOfset) +
+                       (uniqueIdCntQue_ + 1) + (updateSumIdxQue_ + 1) + originIdxQue
+        */ 
+        occupy = Ops::Base::CeilAlign(indicesFactor * indicesTypeSize_, ubBlock) +
+                (Ops::Base::CeilAlign(indicesFactor * (indicesTypeSize_), ubBlock) + SIZE_TWO * ALIGN_SIZE) +
+                (Ops::Base::CeilAlign(indicesFactor * INT32_BYTES, ubBlock) + ALIGN_SIZE) +
+                (Ops::Base::CeilAlign(indicesFactor * indicesTypeSize_, ubBlock) + ALIGN_SIZE) + 
+                Ops::Base::CeilAlign(indicesFactor * INT32_BYTES, ubBlock) +
+                GetSortTmpSize(indicesDtype_, indicesFactor, false);
+    } else {
+        /* ubIndexFactor_: indicesQue + indicesCastQue + (sortIndicesCastQue + 2 * shiftOfset) +
+                       (uniqueIdCntQue_ + 1) + (updateSumIdxQue_ + 1) + originIdxQue
+        */ 
+        occupy = Ops::Base::CeilAlign(indicesFactor * indicesTypeSize_, ubBlock) +
+                Ops::Base::CeilAlign(indicesFactor * indicesCastDtypeSize_, ubBlock) +
+                (Ops::Base::CeilAlign(indicesFactor * (indicesCastDtypeSize_), ubBlock) + SIZE_TWO * ALIGN_SIZE) +
+                (Ops::Base::CeilAlign(indicesFactor * INT32_BYTES, ubBlock) + ALIGN_SIZE) +
+                (Ops::Base::CeilAlign(indicesFactor * indicesTypeSize_, ubBlock) + ALIGN_SIZE) + 
+                Ops::Base::CeilAlign(indicesFactor * INT32_BYTES, ubBlock) +
+                GetSortTmpSize(indicesCastDtype_, indicesFactor, false);
+    }
     return occupy;
 }
 
@@ -83,25 +97,37 @@ void InplaceIndexAddSimdSortTiling::DoOpTilingSplitAfterSort()
     *                 (uniqueIdCntQue_ + 1) + updateSumIdxQue_,
     * ubIndexFactor_ * eachCoreAfterAxisCount_: updatesQue_ + updateSumQue_
     */
-    int64_t occupy = Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +
-                     Ops::Base::CeilAlign(indicesTypeSize_ + SIZE_TWO * ALIGN_SIZE, ubBlock) + 
-                     Ops::Base::CeilAlign(INT32_BYTES, ubBlock) + 
-                     Ops::Base::CeilAlign(INT32_BYTES * SIZE_TWO, ubBlock) +
-                     Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) + 
-                     Ops::Base::CeilAlign(varTypeSize_ * eachCoreAfterAxisCount_, ubBlock) + 
-                     Ops::Base::CeilAlign(FP32_BYTES * eachCoreAfterAxisCount_, ubBlock) + 
-                     GetSortTmpSize(indicesDtype_, 1, false);
-    int64_t indicesSize = Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +
-                          Ops::Base::CeilAlign(indicesTypeSize_ + SIZE_TWO * ALIGN_SIZE, ubBlock) + 
-                          Ops::Base::CeilAlign(INT32_BYTES, ubBlock) + 
-                          Ops::Base::CeilAlign(INT32_BYTES * SIZE_TWO, ubBlock) +
-                          Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +
-                          GetSortTmpSize(indicesDtype_, 1, false);                     
+    int64_t indicesSize = 0;
+    int64_t occupy = 0;
+    if (indicesCastMode_ == 0) {
+        indicesSize = Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +
+                    Ops::Base::CeilAlign(indicesTypeSize_ + SIZE_TWO * ALIGN_SIZE, ubBlock) + 
+                    Ops::Base::CeilAlign(INT32_BYTES, ubBlock) + 
+                    Ops::Base::CeilAlign(INT32_BYTES * SIZE_TWO, ubBlock) +
+                    Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +
+                    GetSortTmpSize(indicesDtype_, 1, false);
+        occupy = indicesSize +
+                    Ops::Base::CeilAlign(varTypeSize_ * eachCoreAfterAxisCount_, ubBlock) + 
+                    Ops::Base::CeilAlign(FP32_BYTES * eachCoreAfterAxisCount_, ubBlock); 
+    } else {
+        indicesSize = Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +                            // indices
+                    Ops::Base::CeilAlign(indicesCastDtypeSize_, ubBlock) +                         // indicesCast
+                    Ops::Base::CeilAlign(indicesCastDtypeSize_ + SIZE_TWO * ALIGN_SIZE, ubBlock) + // sortIndicesCast
+                    Ops::Base::CeilAlign(INT32_BYTES, ubBlock) +                                   // originIdxQue
+                    Ops::Base::CeilAlign(INT32_BYTES * SIZE_TWO, ubBlock) +                        // uniqueIdCntQue_
+                    Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +                         // updateSumIdxQue_
+                    GetSortTmpSize(indicesCastDtype_, 1, false);
+        occupy = indicesSize +
+                    Ops::Base::CeilAlign(varTypeSize_ * eachCoreAfterAxisCount_, ubBlock) +    // updatesQue_
+                    Ops::Base::CeilAlign(FP32_BYTES * eachCoreAfterAxisCount_, ubBlock);        // updateSumQue_
+    }
     if (occupy > halfUbSize) {
         int64_t indicesUbSize = std::min(INDICES_MIN_BLOCK_SIZE, indicesAxis_ * indicesSize);
         /* indicesBuf_ + outOfstBuf_ */
         ubIndexFactor_ = Ops::Base::CeilAlign(indicesUbSize, ALIGN_SIZE) / indicesSize;
-        afterAxisFactor_ = (halfUbSize - ubIndexFactor_ * indicesSize) / ubIndexFactor_;
+        int64_t updateSize = Ops::Base::CeilAlign(varTypeSize_ * ubIndexFactor_, ubBlock) +
+                            Ops::Base::CeilAlign(FP32_BYTES * ubIndexFactor_, ubBlock);
+        afterAxisFactor_ = (halfUbSize - ubIndexFactor_ * indicesSize) / updateSize;
         afterAxisFactor_ = Ops::Base::FloorAlign(afterAxisFactor_, ALIGN_SIZE) / varTypeSize_;
     } else {
         afterAxisFactor_ = Ops::Base::CeilAlign(eachCoreAfterAxisCount_, alignNum);
@@ -110,14 +136,27 @@ void InplaceIndexAddSimdSortTiling::DoOpTilingSplitAfterSort()
         int64_t restSize = static_cast<int64_t>(-1);
         while (restSize <= 0) {
             --ubIndexFactor_;
-            restSize = halfUbSize - (Ops::Base::CeilAlign(ubIndexFactor_ * indicesTypeSize_, ubBlock) +
-                                    Ops::Base::CeilAlign(ubIndexFactor_ * (indicesTypeSize_ + SIZE_TWO * ALIGN_SIZE), ubBlock) + 
-                                    Ops::Base::CeilAlign(ubIndexFactor_ * INT32_BYTES, ubBlock) + 
-                                    Ops::Base::CeilAlign(ubIndexFactor_ * (INT32_BYTES * SIZE_TWO), ubBlock) +
-                                    Ops::Base::CeilAlign(ubIndexFactor_ * indicesTypeSize_, ubBlock) + 
-                                    ubIndexFactor_ * Ops::Base::CeilAlign((FP32_BYTES) * eachCoreAfterAxisCount_, ubBlock) + 
-                                    ubIndexFactor_ * Ops::Base::CeilAlign((varTypeSize_) * eachCoreAfterAxisCount_, ubBlock) + 
-                                    GetSortTmpSize(indicesDtype_, ubIndexFactor_, false));
+            if (indicesCastMode_ == 0) {
+                restSize = halfUbSize - (Ops::Base::CeilAlign(ubIndexFactor_ * indicesTypeSize_, ubBlock) +
+                        Ops::Base::CeilAlign(ubIndexFactor_ * (indicesTypeSize_ + SIZE_TWO * ALIGN_SIZE), ubBlock) + 
+                        Ops::Base::CeilAlign(ubIndexFactor_ * INT32_BYTES, ubBlock) + 
+                        Ops::Base::CeilAlign(ubIndexFactor_ * (INT32_BYTES * SIZE_TWO), ubBlock) +
+                        Ops::Base::CeilAlign(ubIndexFactor_ * indicesTypeSize_, ubBlock) + 
+                        ubIndexFactor_ * Ops::Base::CeilAlign((FP32_BYTES) * eachCoreAfterAxisCount_, ubBlock) + 
+                        ubIndexFactor_ * Ops::Base::CeilAlign((varTypeSize_) * eachCoreAfterAxisCount_, ubBlock) + 
+                        GetSortTmpSize(indicesDtype_, ubIndexFactor_, false));
+            } else {
+                restSize = halfUbSize - (Ops::Base::CeilAlign(ubIndexFactor_ * indicesTypeSize_, ubBlock) +
+                        Ops::Base::CeilAlign(ubIndexFactor_ * indicesCastDtypeSize_, ubBlock) +
+                        Ops::Base::CeilAlign(ubIndexFactor_ * (indicesCastDtypeSize_ + SIZE_TWO * ALIGN_SIZE), ubBlock) + 
+                        Ops::Base::CeilAlign(ubIndexFactor_ * INT32_BYTES, ubBlock) + 
+                        Ops::Base::CeilAlign(ubIndexFactor_ * (INT32_BYTES * SIZE_TWO), ubBlock) +
+                        Ops::Base::CeilAlign(ubIndexFactor_ * indicesTypeSize_, ubBlock) + 
+                        ubIndexFactor_ * Ops::Base::CeilAlign((FP32_BYTES) * eachCoreAfterAxisCount_, ubBlock) + 
+                        ubIndexFactor_ * Ops::Base::CeilAlign((varTypeSize_) * eachCoreAfterAxisCount_, ubBlock) + 
+                        GetSortTmpSize(indicesCastDtype_, ubIndexFactor_, false));
+            }
+        
             if (ubIndexFactor_ > indicesAxis_) {
                 ubIndexFactor_ = indicesAxis_;
                 break;
@@ -152,10 +191,18 @@ void InplaceIndexAddSimdSortTiling::DoOpTilingSplitIndicesSort()
     usedCoreNumBefore_ = Ops::Base::CeilDiv(indicesAxis_, eachCoreIndexCount_);
     tailCoreIndexCount_ = indicesAxis_ - eachCoreIndexCount_ * (usedCoreNumBefore_ - 1);
 
-    int64_t indicesSize = indicesTypeSize_ + (indicesTypeSize_ + SIZE_TWO * ubBlock) + 
-                          INT32_BYTES + INT32_BYTES + indicesTypeSize_;
-    int64_t indicesAlignSize = GetIndicesAlignBlockSize(ubIndexFactor_);
-    int64_t afterAlignSize = GetAfterAlignBlockSize(ubIndexFactor_, afterAxis_);
+    // CAST
+    int64_t indicesSize = 0;
+    if (indicesCastMode_ ==0) {
+        indicesSize = indicesTypeSize_ + (indicesTypeSize_ + SIZE_TWO * ubBlock) + 
+                        INT32_BYTES + INT32_BYTES + indicesTypeSize_;
+    } else {
+        indicesSize = indicesTypeSize_ + indicesCastDtypeSize_ + (indicesCastDtypeSize_ + SIZE_TWO * ubBlock) + 
+                        INT32_BYTES + INT32_BYTES + indicesTypeSize_;
+    }
+    
+    int64_t indicesAlignSize = GetIndicesAlignBlockSize(indicesUbFactor_);
+    int64_t afterAlignSize = GetAfterAlignBlockSize(indicesUbFactor_, afterAxis_);
     int64_t oneBlockSize = indicesAlignSize + afterAlignSize;
 
     if (oneBlockSize > halfUbSize) {
@@ -218,25 +265,38 @@ void InplaceIndexAddSimdSortTiling::DoOpTilingSplitPreSort()
     *                 (uniqueIdCntQue_ + 1) + updateSumIdxQue_,
     * ubIndexFactor_ * afterAxis_: updatesQue_ + updateSumQue_
     */
-    int64_t indicesSize = Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +
-                          Ops::Base::CeilAlign(indicesTypeSize_ + SIZE_TWO * ALIGN_SIZE, ubBlock) + 
-                          Ops::Base::CeilAlign(INT32_BYTES, ubBlock) + 
-                          Ops::Base::CeilAlign(INT32_BYTES * SIZE_TWO, ubBlock) +
-                          Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +
-                          GetSortTmpSize(indicesDtype_, 1, false);
-    int64_t occupy = Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +
-                     Ops::Base::CeilAlign(indicesTypeSize_ + SIZE_TWO * ALIGN_SIZE, ubBlock) + 
-                     Ops::Base::CeilAlign(INT32_BYTES, ubBlock) + 
-                     Ops::Base::CeilAlign(INT32_BYTES * SIZE_TWO, ubBlock) +
-                     Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) + 
-                     Ops::Base::CeilAlign(varTypeSize_ * afterAxis_, ubBlock) + 
-                     Ops::Base::CeilAlign(FP32_BYTES * afterAxis_, ubBlock) + 
-                     GetSortTmpSize(indicesDtype_, 1, false);
+    int64_t indicesSize = 0;
+    int64_t occupy = 0;
+    if (indicesCastMode_ == 0) {
+        indicesSize = Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +
+                    Ops::Base::CeilAlign(indicesTypeSize_ + SIZE_TWO * ALIGN_SIZE, ubBlock) + 
+                    Ops::Base::CeilAlign(INT32_BYTES, ubBlock) + 
+                    Ops::Base::CeilAlign(INT32_BYTES * SIZE_TWO, ubBlock) +
+                    Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +
+                    GetSortTmpSize(indicesDtype_, 1, false);
+        occupy =  indicesSize +
+                Ops::Base::CeilAlign(varTypeSize_ * afterAxis_, ubBlock) + 
+                Ops::Base::CeilAlign(FP32_BYTES * afterAxis_, ubBlock);
+    } else {
+        indicesSize = Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +                            // indiecesQue 
+                    Ops::Base::CeilAlign(indicesCastDtypeSize_, ubBlock) +                         // indiecesCastQue 
+                    Ops::Base::CeilAlign(indicesCastDtypeSize_ + SIZE_TWO * ALIGN_SIZE, ubBlock) + // SortindiecesCastQue 
+                    Ops::Base::CeilAlign(INT32_BYTES, ubBlock) +                                   // originIdxQue 
+                    Ops::Base::CeilAlign(INT32_BYTES * SIZE_TWO, ubBlock) +                        // uniqueIdCntQue_
+                    Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +                         // updateSumIdxQue_
+                    GetSortTmpSize(indicesCastDtype_, 1, false);
+        occupy =  indicesSize +
+                Ops::Base::CeilAlign(varTypeSize_ * afterAxis_, ubBlock) +                         // updatesQue_
+                Ops::Base::CeilAlign(FP32_BYTES * afterAxis_, ubBlock);                            // updateSumQue_
+    }
+    
     if (occupy > halfUbSize) {
         int64_t indicesUbSize = std::min(INDICES_MIN_BLOCK_SIZE, indicesAxis_ * indicesSize);
         /* indicesBuf_ + outOfstBuf_ */
         ubIndexFactor_ = Ops::Base::CeilAlign(indicesUbSize, ALIGN_SIZE) / indicesSize;
-        afterAxisFactor_ = (halfUbSize - ubIndexFactor_ * indicesSize) / ubIndexFactor_;
+        int64_t updateSize = Ops::Base::CeilAlign(varTypeSize_ * ubIndexFactor_, ubBlock) +
+                            Ops::Base::CeilAlign(FP32_BYTES * ubIndexFactor_, ubBlock);
+        afterAxisFactor_ = (halfUbSize - ubIndexFactor_ * indicesSize) / updateSize;
         afterAxisFactor_ = Ops::Base::FloorAlign(afterAxisFactor_, ALIGN_SIZE) / varTypeSize_;
     } else {
         afterAxisFactor_ = Ops::Base::CeilAlign(afterAxis_, alignNum);
@@ -246,14 +306,27 @@ void InplaceIndexAddSimdSortTiling::DoOpTilingSplitPreSort()
         int64_t restSize = static_cast<int64_t>(-1);
         while (restSize <= 0) {
             --ubIndexFactor_;
-            restSize = halfUbSize - (Ops::Base::CeilAlign(ubIndexFactor_ * indicesTypeSize_, ubBlock) +
-                                    Ops::Base::CeilAlign(ubIndexFactor_ * (indicesTypeSize_ + SIZE_TWO * ALIGN_SIZE), ubBlock) + 
-                                    Ops::Base::CeilAlign(ubIndexFactor_ * INT32_BYTES, ubBlock) + 
-                                    Ops::Base::CeilAlign(ubIndexFactor_ * (INT32_BYTES * SIZE_TWO), ubBlock) +
-                                    Ops::Base::CeilAlign(ubIndexFactor_ * indicesTypeSize_, ubBlock) + 
-                                    ubIndexFactor_ * Ops::Base::CeilAlign((varTypeSize_) * eachCoreAfterAxisCount_, ubBlock) + 
-                                    ubIndexFactor_ * Ops::Base::CeilAlign((FP32_BYTES) * eachCoreAfterAxisCount_, ubBlock) + 
-                                    GetSortTmpSize(indicesDtype_, ubIndexFactor_, false));
+            if (indicesCastMode_ == 0) {
+                restSize = halfUbSize - (Ops::Base::CeilAlign(ubIndexFactor_ * indicesTypeSize_, ubBlock) +
+                        Ops::Base::CeilAlign(ubIndexFactor_ * (indicesTypeSize_ + SIZE_TWO * ALIGN_SIZE), ubBlock) + 
+                        Ops::Base::CeilAlign(ubIndexFactor_ * INT32_BYTES, ubBlock) + 
+                        Ops::Base::CeilAlign(ubIndexFactor_ * (INT32_BYTES * SIZE_TWO), ubBlock) +
+                        Ops::Base::CeilAlign(ubIndexFactor_ * indicesTypeSize_, ubBlock) + 
+                        ubIndexFactor_ * Ops::Base::CeilAlign((varTypeSize_) * eachCoreAfterAxisCount_, ubBlock) + 
+                        ubIndexFactor_ * Ops::Base::CeilAlign((FP32_BYTES) * eachCoreAfterAxisCount_, ubBlock) + 
+                        GetSortTmpSize(indicesDtype_, ubIndexFactor_, false));
+            } else {
+                restSize = halfUbSize - (Ops::Base::CeilAlign(ubIndexFactor_ * indicesTypeSize_, ubBlock) +
+                        Ops::Base::CeilAlign(ubIndexFactor_ * indicesCastDtypeSize_, ubBlock) +
+                        Ops::Base::CeilAlign(ubIndexFactor_ * (indicesCastDtypeSize_ + SIZE_TWO * ALIGN_SIZE), ubBlock) + 
+                        Ops::Base::CeilAlign(ubIndexFactor_ * INT32_BYTES, ubBlock) + 
+                        Ops::Base::CeilAlign(ubIndexFactor_ * (INT32_BYTES * SIZE_TWO), ubBlock) +
+                        Ops::Base::CeilAlign(ubIndexFactor_ * indicesTypeSize_, ubBlock) + 
+                        ubIndexFactor_ * Ops::Base::CeilAlign((FP32_BYTES) * eachCoreAfterAxisCount_, ubBlock) + 
+                        ubIndexFactor_ * Ops::Base::CeilAlign((varTypeSize_) * eachCoreAfterAxisCount_, ubBlock) + 
+                        GetSortTmpSize(indicesCastDtype_, ubIndexFactor_, false));
+            }
+
             if (ubIndexFactor_ > indicesAxis_) {
                 ubIndexFactor_ = indicesAxis_;
                 break;
@@ -272,6 +345,7 @@ void InplaceIndexAddSimdSortTiling::DoOpTilingSplitPreSort()
 
 ge::graphStatus InplaceIndexAddSimdSortTiling::DoOpTiling()
 {
+    GetCastTypeForSort();
     usedCoreNum_ = totalCoreNum_;
     if (afterAxis_ * varTypeSize_ >= AFTER_HANDLE_THRESHOLD * usedCoreNum_) {
         DoOpTilingSplitAfterSort();
@@ -365,6 +439,7 @@ void InplaceIndexAddSimdSortTiling::SetTilingData()
     tilingData_.set_isSplitIndicesAxis(isSplitIndicesAxis_);
     tilingData_.set_afterAxisFactor(afterAxisFactor_);
     tilingData_.set_isWithAlpha(withAlpha_);
+    tilingData_.set_indicesCastMode(indicesCastMode_);
     return;
 }
 

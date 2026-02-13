@@ -71,6 +71,72 @@ using namespace InplaceIndexAdd;
 #define TEMPLATE_SIMT_SORT_UINT64_NO_ALPHA  500010
 #define TEMPLATE_SIMT_SORT_UINT64_ALPHA     500011
 
+template <typename VAR_T, typename IDX_T, bool IS_CONTIGUOUS>
+ __aicore__ inline void InplaceIndexAddSimdSortCast(
+    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR alpha, GM_ADDR var_out, GM_ADDR userWS, GM_ADDR tiling, TPipe &pipe)
+{
+    GET_TILING_DATA_WITH_STRUCT(InplaceIndexAddSimdSortTilingData, tilingData, tiling);
+    uint32_t cast_mode = tilingData.indicesCastMode;
+    if (cast_mode == CAST_1) {
+        InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST_1> op(tilingData, pipe);
+        op.Init(var, indices, updates, alpha, userWS);
+        op.Process();
+    } else if (cast_mode == CAST_2) {
+        InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST_2> op(tilingData, pipe);
+        op.Init(var, indices, updates, alpha, userWS);
+        op.Process();
+    } else if (cast_mode == CAST_3) {
+        InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST_3> op(tilingData, pipe);
+        op.Init(var, indices, updates, alpha, userWS);
+        op.Process();
+    } else if (cast_mode == CAST_4) {
+        InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST_4> op(tilingData, pipe);
+        op.Init(var, indices, updates, alpha, userWS);
+        op.Process();
+    } else if (cast_mode == CAST_5) {
+        InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST_5> op(tilingData, pipe);
+        op.Init(var, indices, updates, alpha, userWS);
+        op.Process();
+    } else {
+        InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST_0> op(tilingData, pipe);
+        op.Init(var, indices, updates, alpha, userWS);
+        op.Process();
+    }
+}
+
+template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS>
+ __aicore__ inline void InplaceIndexAddSimtSortCast(
+    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR alpha, GM_ADDR var_out, GM_ADDR userWS, GM_ADDR tiling, TPipe &pipe)
+{
+    GET_TILING_DATA_WITH_STRUCT(InplaceIndexAddSimtSortTilingData, tilingData, tiling);
+    uint32_t cast_mode = tilingData.indicesCastMode;
+    if (cast_mode == CAST_1) {
+        InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_1> op(tilingData, pipe);
+        op.Init(var, indices, updates, alpha, userWS);
+        op.Process();
+    } else if (cast_mode == CAST_2) {
+        InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_2> op(tilingData, pipe);
+        op.Init(var, indices, updates, alpha, userWS);
+        op.Process();
+    } else if (cast_mode == CAST_3) {
+        InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_3> op(tilingData, pipe);
+        op.Init(var, indices, updates, alpha, userWS);
+        op.Process();
+    } else if (cast_mode == CAST_4) {
+        InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_4> op(tilingData, pipe);
+        op.Init(var, indices, updates, alpha, userWS);
+        op.Process();
+    } else if (cast_mode == CAST_5) {
+        InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_5> op(tilingData, pipe);
+        op.Init(var, indices, updates, alpha, userWS);
+        op.Process();
+    } else {
+        InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_0> op(tilingData, pipe);
+        op.Init(var, indices, updates, alpha, userWS);
+        op.Process();
+    }
+}
+
 extern "C" __global__ __aicore__ void inplace_index_add(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR alpha,
                                                         GM_ADDR var_out, GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -521,13 +587,9 @@ extern "C" __global__ __aicore__ void inplace_index_add(GM_ADDR var, GM_ADDR ind
         } else {
             GET_TILING_DATA_WITH_STRUCT(InplaceIndexAddSimdSortTilingData, tilingData, tiling);
             if (tilingData.indicesStride == 1) {
-                InplaceIndexAddSimdSort<DTYPE_VAR, DTYPE_INDICES, true> op(tilingData, pipe);
-                op.Init(var, indices, updates, alpha, userWS);
-                op.Process();
+                InplaceIndexAddSimdSortCast<DTYPE_VAR, DTYPE_INDICES, true>(var, indices, updates, alpha, var_out, userWS, tiling, pipe);
             } else {
-                InplaceIndexAddSimdSort<DTYPE_VAR, DTYPE_INDICES, false> op(tilingData, pipe);
-                op.Init(var, indices, updates, alpha, userWS);
-                op.Process();
+                InplaceIndexAddSimdSortCast<DTYPE_VAR, DTYPE_INDICES, false>(var, indices, updates, alpha, var_out, userWS, tiling, pipe);
             }
         }
     } else if (TILING_KEY_IS(TEMPLATE_SIMD)) {
@@ -552,13 +614,9 @@ extern "C" __global__ __aicore__ void inplace_index_add(GM_ADDR var, GM_ADDR ind
         } else {
             GET_TILING_DATA_WITH_STRUCT(InplaceIndexAddSimtSortTilingData, tilingData, tiling);
             if (tilingData.indicesStride == 1) {
-                InplaceIndexAddSimtSort<DTYPE_VAR, DTYPE_INDICES, uint32_t, false, true> op(tilingData, pipe);
-                op.Init(var, indices, updates, alpha, userWS);
-                op.Process();
+                InplaceIndexAddSimtSortCast<DTYPE_VAR, DTYPE_INDICES, uint32_t, false, true>(var, indices, updates, alpha, var_out, userWS, tiling, pipe);
             } else {
-                InplaceIndexAddSimtSort<DTYPE_VAR, DTYPE_INDICES, uint32_t, false, false> op(tilingData, pipe);
-                op.Init(var, indices, updates, alpha, userWS);
-                op.Process();
+                InplaceIndexAddSimtSortCast<DTYPE_VAR, DTYPE_INDICES, uint32_t, false, false>(var, indices, updates, alpha, var_out, userWS, tiling, pipe);
             }
         }
     } else if (TILING_KEY_IS(TEMPLATE_SIMT_SORT_UINT32_ALPHA)) {
@@ -568,13 +626,9 @@ extern "C" __global__ __aicore__ void inplace_index_add(GM_ADDR var, GM_ADDR ind
         } else {
             GET_TILING_DATA_WITH_STRUCT(InplaceIndexAddSimtSortTilingData, tilingData, tiling);
             if (tilingData.indicesStride == 1) {
-                InplaceIndexAddSimtSort<DTYPE_VAR, DTYPE_INDICES, uint32_t, true, true> op(tilingData, pipe);
-                op.Init(var, indices, updates, alpha, userWS);
-                op.Process();
+                InplaceIndexAddSimtSortCast<DTYPE_VAR, DTYPE_INDICES, uint32_t, true, true>(var, indices, updates, alpha, var_out, userWS, tiling, pipe);
             } else {
-                InplaceIndexAddSimtSort<DTYPE_VAR, DTYPE_INDICES, uint32_t, true, false> op(tilingData, pipe);
-                op.Init(var, indices, updates, alpha, userWS);
-                op.Process();
+                InplaceIndexAddSimtSortCast<DTYPE_VAR, DTYPE_INDICES, uint32_t, true, false>(var, indices, updates, alpha, var_out, userWS, tiling, pipe);
             }
         }
     } else if (TILING_KEY_IS(TEMPLATE_SIMT_SORT_UINT64_NO_ALPHA)) {
@@ -584,13 +638,9 @@ extern "C" __global__ __aicore__ void inplace_index_add(GM_ADDR var, GM_ADDR ind
         } else {
             GET_TILING_DATA_WITH_STRUCT(InplaceIndexAddSimtSortTilingData, tilingData, tiling);
             if (tilingData.indicesStride == 1) {
-                InplaceIndexAddSimtSort<DTYPE_VAR, DTYPE_INDICES, uint64_t, false, true> op(tilingData, pipe);
-                op.Init(var, indices, updates, alpha, userWS);
-                op.Process();
+                InplaceIndexAddSimtSortCast<DTYPE_VAR, DTYPE_INDICES, uint64_t, false, true>(var, indices, updates, alpha, var_out, userWS, tiling, pipe);
             } else {
-                InplaceIndexAddSimtSort<DTYPE_VAR, DTYPE_INDICES, uint64_t, false, false> op(tilingData, pipe);
-                op.Init(var, indices, updates, alpha, userWS);
-                op.Process();
+                InplaceIndexAddSimtSortCast<DTYPE_VAR, DTYPE_INDICES, uint64_t, false, false>(var, indices, updates, alpha, var_out, userWS, tiling, pipe);
             }
         } 
     } else if (TILING_KEY_IS(TEMPLATE_SIMT_SORT_UINT64_ALPHA)) {
@@ -600,13 +650,9 @@ extern "C" __global__ __aicore__ void inplace_index_add(GM_ADDR var, GM_ADDR ind
         } else {
             GET_TILING_DATA_WITH_STRUCT(InplaceIndexAddSimtSortTilingData, tilingData, tiling);
             if (tilingData.indicesStride == 1) {
-                InplaceIndexAddSimtSort<DTYPE_VAR, DTYPE_INDICES, uint64_t, true, true> op(tilingData, pipe);
-                op.Init(var, indices, updates, alpha, userWS);
-                op.Process();
+                InplaceIndexAddSimtSortCast<DTYPE_VAR, DTYPE_INDICES, uint64_t, true, true>(var, indices, updates, alpha, var_out, userWS, tiling, pipe);
             } else {
-                InplaceIndexAddSimtSort<DTYPE_VAR, DTYPE_INDICES, uint64_t, true, false> op(tilingData, pipe);
-                op.Init(var, indices, updates, alpha, userWS);
-                op.Process();
+                InplaceIndexAddSimtSortCast<DTYPE_VAR, DTYPE_INDICES, uint64_t, true, false>(var, indices, updates, alpha, var_out, userWS, tiling, pipe);
             }
         } 
     }

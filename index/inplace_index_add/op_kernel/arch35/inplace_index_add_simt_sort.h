@@ -62,10 +62,32 @@ __aicore__ inline void CopyOut(
     DataCopyPad(dstGm[offset], srcLocal, dataCoptExtParams);
 }
 
-template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS>
-class InplaceIndexAddSimtSort : InplaceIndexAddBase<VAR_T, IDX_T>
+template <typename IDX_T, typename CAST_T, uint32_t castType>
+__aicore__ inline void IndicesSortCastSimt(LocalTensor<IDX_T> indicesLocal, LocalTensor<CAST_T> indicesCastLocal,
+                                                LocalTensor<int32_t> indicesCastTmpLocal, uint32_t indicesCount)
+{
+    if constexpr (castType == CAST_4) {  // int32 Cast uint8
+        CompareScalar(indicesCastLocal, indicesLocal, static_cast<IDX_T>(0), CMPMODE::GE, indicesCount);
+        Select(indicesLocal, indicesCastLocal, indicesLocal, static_cast<IDX_T>(MASK_UINT8), SELMODE::VSEL_TENSOR_SCALAR_MODE, indicesCount);
+        Cast<CAST_T, IDX_T>(indicesCastLocal, indicesLocal, RoundMode::CAST_NONE, indicesCount);
+    } else if constexpr (castType == CAST_3) {  // int64 Cast int16
+        Cast<int32_t, IDX_T>(indicesCastTmpLocal, indicesLocal, RoundMode::CAST_NONE, indicesCount);
+        Cast<CAST_T, int32_t>(indicesCastLocal, indicesCastTmpLocal, RoundMode::CAST_NONE, indicesCount);
+    } else if constexpr (castType == CAST_5) {  // int64 Cast uint8
+        CompareScalar(indicesCastLocal, indicesLocal, static_cast<IDX_T>(0), CMPMODE::GE, indicesCount);
+        Select(indicesLocal, indicesCastLocal, indicesLocal, static_cast<IDX_T>(MASK_UINT8), SELMODE::VSEL_TENSOR_SCALAR_MODE, indicesCount);
+        Cast<int32_t, IDX_T>(indicesCastTmpLocal, indicesLocal, RoundMode::CAST_NONE, indicesCount);
+        Cast<CAST_T, int32_t>(indicesCastLocal, indicesCastTmpLocal, RoundMode::CAST_NONE, indicesCount);
+    } else {    // CAST_1 + CAST_2, int32 Cast int16 + int64 Cast int32
+        Cast<CAST_T, IDX_T>(indicesCastLocal, indicesLocal, RoundMode::CAST_NONE, indicesCount);
+    }
+}
+
+template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+class InplaceIndexAddSimtSort : InplaceIndexAddBase<VAR_T, IDX_T, CAST_MODE>
 {
 public:
+    using CAST_T = typename  InplaceIndexAddBase<VAR_T, IDX_T, CAST_MODE>::CAST_T;
     __aicore__ inline InplaceIndexAddSimtSort(const InplaceIndexAddSimtSortTilingData& tilingData, TPipe& pipe)
         : td_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR alpha, GM_ADDR workspace);
@@ -76,10 +98,6 @@ public:
     __aicore__ inline void Process();
 
 private:
-    static __simt_vf__ __aicore__ inline void SimtCompute(COMP_T varInAxis, uint32_t afterAxis, uint32_t uniqueIdNum, uint32_t updatesPreNum, uint32_t updatesStride,
-                                           int64_t preIdx, __local_mem__ IDX_T* sortedAddr, __local_mem__ uint32_t* updatesOriginIdxAddr,
-                                           __local_mem__ int32_t* uniqueIdCountAddr, __local_mem__ VAR_T* updatesLocalAddr, __gm__ VAR_T* varAddr, 
-                                           __gm__ VAR_T* alpha, uint32_t m0, uint32_t shift0);
     static __simt_vf__ __aicore__ inline void SimtComputeNoSort(COMP_T varInAxis, uint32_t afterAxis, COMP_T preAxis, COMP_T updatesInAxis, COMP_T indicesOffset,
                                            uint32_t indicesCount, __local_mem__ IDX_T* indicesLocalAddr, __gm__ VAR_T* varAddr,
                                            __gm__ VAR_T* updatesAddr, __gm__ VAR_T* alpha, uint32_t m1, uint32_t shift1);
@@ -92,6 +110,7 @@ private:
     
     TQue<QuePosition::VECIN, 1> indicesInQueue_;
     TQue<QuePosition::VECIN, 1> updatesInQueue_;
+    TBuf<QuePosition::VECCALC> castIndicesQue_;
     TBuf<QuePosition::VECCALC> sortIndicesQue_;
     TBuf<QuePosition::VECCALC> updatesOriginIdexQue_;
     TBuf<QuePosition::VECCALC> uniqueIdCountQue_;
@@ -107,11 +126,11 @@ private:
     int64_t loopNum_{0};
     int64_t indicesTailLoopLength_{0};
     int64_t indicesLoopCount_{0};
-    static constexpr uint32_t shiftOffset_ = platform::GetUbBlockSize() / sizeof(IDX_T);
+    static constexpr uint32_t shiftOffset_ = platform::GetUbBlockSize() / sizeof(CAST_T);
 };
 
-template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS>::Init(GM_ADDR var, GM_ADDR indices,
+template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_MODE>::Init(GM_ADDR var, GM_ADDR indices,
                                                                                        GM_ADDR updates,
                                                                                        GM_ADDR alpha,
                                                                                        GM_ADDR workspace)
@@ -125,12 +144,17 @@ __aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA,
     pipe_.InitBuffer(indicesInQueue_, 1, ops::CeilAlign(td_.indicesUbFactor * sizeof(IDX_T), UB_AGLIN_VALUE));
     pipe_.InitBuffer(updatesInQueue_, 1,
         ops::CeilAlign(td_.indicesUbFactor * td_.afterAxis * sizeof(VAR_T), UB_AGLIN_VALUE) * td_.normalUpdatesPreNum);
-    pipe_.InitBuffer(sortIndicesQue_, ops::CeilAlign(td_.indicesUbFactor * sizeof(IDX_T), UB_AGLIN_VALUE) + SORT_PAD_NUM * UB_AGLIN_VALUE);
     pipe_.InitBuffer(updatesOriginIdexQue_, ops::CeilAlign(td_.indicesUbFactor * sizeof(uint32_t), UB_AGLIN_VALUE));
     pipe_.InitBuffer(uniqueIdCountQue_, ops::CeilAlign(td_.indicesUbFactor * sizeof(int32_t), UB_AGLIN_VALUE) + SORT_PAD_NUM * UB_AGLIN_VALUE);
     pipe_.InitBuffer(sharedTmpBuf_, ops::Aligned(static_cast<uint64_t>(td_.sortShareBufSize), UB_AGLIN_VALUE));
     pipe_.InitBuffer(hashBuffer_, HASH_SCORE_BUF_SIZE * sizeof(float));
-
+    if constexpr (CAST_MODE == CAST_0){
+        pipe_.InitBuffer(sortIndicesQue_, ops::CeilAlign(td_.indicesUbFactor * sizeof(IDX_T), UB_AGLIN_VALUE) + SORT_PAD_NUM * UB_AGLIN_VALUE);
+    } else {
+        pipe_.InitBuffer(sortIndicesQue_, ops::CeilAlign(td_.indicesUbFactor * sizeof(CAST_T), UB_AGLIN_VALUE) + SORT_PAD_NUM * UB_AGLIN_VALUE);
+        pipe_.InitBuffer(castIndicesQue_, ops::CeilAlign(td_.indicesUbFactor * sizeof(CAST_T), UB_AGLIN_VALUE));
+    }
+    
     if (blockIdx_ == td_.usedCoreNum - 1) {
         indicesLoopCount_ = td_.tailBlockIndicesLoopSize;
         indicesTailLoopLength_ = td_.indiceAxisTailNum;
@@ -140,8 +164,8 @@ __aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA,
     }
 }
 
-template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS>::CopyInIndices(
+template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_MODE>::CopyInIndices(
                                                                int64_t loopIdx, uint32_t indicesCount)
 {
     LocalTensor<IDX_T> indicesLocal = indicesInQueue_.AllocTensor<IDX_T>();
@@ -154,8 +178,8 @@ __aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA,
     indicesInQueue_.EnQue<IDX_T>(indicesLocal);
 }
 
-template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS>::CopyInUpdates(
+template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_MODE>::CopyInUpdates(
                                 int64_t loopIdx, int64_t preIdx, uint32_t indicesCount, uint32_t updatesPreNum)
 {
     LocalTensor<VAR_T> updatesLocal = updatesInQueue_.AllocTensor<VAR_T>();
@@ -168,8 +192,8 @@ __aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA,
     updatesInQueue_.EnQue<VAR_T>(updatesLocal);
 }
 
-template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS>
-__simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_SORT) inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS>::SimtCompute(
+template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_SORT) inline void SimtCompute(
     COMP_T varInAxis, uint32_t afterAxis, uint32_t uniqueIdNum, uint32_t updatesPreNum, uint32_t updatesStride, int64_t preIdx,
     __local_mem__ IDX_T* sortedAddr, __local_mem__ uint32_t* updatesOriginIdxAddr, __local_mem__ int32_t* uniqueIdCountAddr,
     __local_mem__ VAR_T* updatesLocalAddr, __gm__ VAR_T* varAddr, __gm__ VAR_T* alpha, uint32_t m0, uint32_t shift0)
@@ -218,8 +242,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_SORT) inline void InplaceIndexAd
     }
 }
 
-template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS>
-__simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_SORT) inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS>::SimtComputeNoSort(
+template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_SORT) inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_MODE>::SimtComputeNoSort(
             COMP_T varInAxis, uint32_t afterAxis, COMP_T preAxis, COMP_T updatesInAxis, COMP_T indicesOffset, uint32_t indicesCount,
             __local_mem__ IDX_T* indicesLocalAddr, __gm__ VAR_T* varAddr, __gm__ VAR_T* updatesAddr, __gm__ VAR_T* alpha, uint32_t m1, uint32_t shift1)
 {
@@ -267,8 +291,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_SORT) inline void InplaceIndexAd
     }
 }
 
-template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS>::Compute(
+template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_MODE>::Compute(
                     uint32_t uniqueIdNum, int64_t preIdx, uint32_t indicesCount, uint32_t updatesPreNum)
 {
     uint32_t afterAxis = td_.afterAxis;
@@ -276,12 +300,12 @@ __aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA,
     uint32_t updatesLocalStride = ops::CeilAlign(indicesCount * afterAxis, static_cast<uint32_t>(UB_AGLIN_VALUE / sizeof(VAR_T)));  // 每次处理的indices数量对应1个pre的updates对齐的数量
     
     LocalTensor<VAR_T> updatesLocal = updatesInQueue_.DeQue<VAR_T>();
-    LocalTensor<IDX_T> indicesSortedLocal = sortIndicesQue_.Get<IDX_T>();
+    LocalTensor<CAST_T> indicesSortedLocal = sortIndicesQue_.Get<CAST_T>();
     LocalTensor<uint32_t> updatesOriginIdxLocal = updatesOriginIdexQue_.Get<uint32_t>();
     LocalTensor<int32_t> uniqueIdCountLocal = uniqueIdCountQue_.Get<int32_t>();
     LocalTensor<uint8_t> sharedTmpBuffer = sharedTmpBuf_.Get<uint8_t>();
 
-    __local_mem__ IDX_T* indicesSortedPtr = (__local_mem__ IDX_T*)(indicesSortedLocal.GetPhyAddr()) + shiftOffset_;
+    __local_mem__ CAST_T* indicesSortedPtr = (__local_mem__ CAST_T*)(indicesSortedLocal.GetPhyAddr()) + shiftOffset_;
     __local_mem__ VAR_T* updatesLocalPtr = (__local_mem__ VAR_T*)(updatesLocal.GetPhyAddr());
     __local_mem__ uint32_t* updatesOriginIdxPtr = (__local_mem__ uint32_t*)(updatesOriginIdxLocal.GetPhyAddr());
     __local_mem__ int32_t* uniqueIdCountPtr = (__local_mem__ int32_t*)(uniqueIdCountLocal.GetPhyAddr());
@@ -294,7 +318,7 @@ __aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA,
     uint32_t threadBlock = currentMaxThread / afterAxis;
     threadBlock = threadBlock < uniqueIdNum * updatesPreNum ? threadBlock : uniqueIdNum * updatesPreNum;
 
-    Simt::VF_CALL<InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS>::SimtCompute>(
+    Simt::VF_CALL<SimtCompute<VAR_T, CAST_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_MODE>>(
         Simt::Dim3({afterAxis, threadBlock}), varInAxis, afterAxis, uniqueIdNum, updatesPreNum, updatesLocalStride,
         preIdx, indicesSortedPtr, updatesOriginIdxPtr, uniqueIdCountPtr, updatesLocalPtr,
         (__gm__ VAR_T*)(var_.GetPhyAddr()), (__gm__ VAR_T*)(alpha_.GetPhyAddr()), m0, shift0);
@@ -302,8 +326,8 @@ __aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA,
     updatesInQueue_.FreeTensor(updatesLocal);
 }
 
-template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS>::ComputeNoSort(
+template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_MODE>::ComputeNoSort(
                                    int64_t loopIdx, uint32_t indicesCount, LocalTensor<IDX_T> indicesLocal)
 {
     uint32_t afterAxis = td_.afterAxis;
@@ -323,13 +347,13 @@ __aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA,
     uint32_t threadBlock = currentMaxThread / afterAxis;
     threadBlock = threadBlock < indicesCount * preAxis ? threadBlock : indicesCount * preAxis ;
 
-    Simt::VF_CALL<InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS>::SimtComputeNoSort>(Simt::Dim3({afterAxis, threadBlock}),
+    Simt::VF_CALL<InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_MODE>::SimtComputeNoSort>(Simt::Dim3({afterAxis, threadBlock}),
         varInAxis, afterAxis, preAxis, updatesInAxis, indicesOffset, indicesCount, indicesLocalPtr,
         (__gm__ VAR_T*)(var_.GetPhyAddr()), (__gm__ VAR_T*)(updates_.GetPhyAddr()), (__gm__ VAR_T*)(alpha_.GetPhyAddr()), m1, shift1);
 }
 
-template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS>::Process()
+template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
+__aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_MODE>::Process()
 {
     uint32_t indicesCount = 0;
     for (int64_t idx = 0; idx < indicesLoopCount_; idx++) {
@@ -346,12 +370,21 @@ __aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA,
         }
 
         if (maxScore > SIMT_SORT_HIST_THRESHOLD) {
-            LocalTensor<IDX_T> indicesSortedLocal = sortIndicesQue_.Get<IDX_T>();
             LocalTensor<uint32_t> updatesOriginIdxLocal = updatesOriginIdexQue_.Get<uint32_t>();
             LocalTensor<int32_t> uniqueIdCountLocal = uniqueIdCountQue_.Get<int32_t>();
             LocalTensor<uint8_t> sharedTmpBuffer = sharedTmpBuf_.Get<uint8_t>();
-            uint32_t uniqueIdNum = this->SortAndComputeUniqueIdx(
-                indicesCount, indicesLocal, indicesSortedLocal, uniqueIdCountLocal, updatesOriginIdxLocal, sharedTmpBuffer);
+            uint32_t uniqueIdNum = 0;
+            if constexpr (CAST_MODE == CAST_0) {
+                LocalTensor<IDX_T> indicesSortedLocal = sortIndicesQue_.Get<IDX_T>();
+                uniqueIdNum = this->SortAndComputeUniqueIdx(
+                    indicesCount, indicesLocal, indicesSortedLocal, uniqueIdCountLocal, updatesOriginIdxLocal, sharedTmpBuffer);
+            } else {
+                LocalTensor<CAST_T> indicesSortedLocal = sortIndicesQue_.Get<CAST_T>();
+                LocalTensor<CAST_T> indicesCastLocal = castIndicesQue_.Get<CAST_T>();
+                IndicesSortCastSimt<IDX_T, CAST_T, CAST_MODE>(indicesLocal, indicesCastLocal, uniqueIdCountLocal, indicesCount);
+                uniqueIdNum = this->SortAndComputeUniqueIdx(
+                    indicesCount, indicesCastLocal, indicesSortedLocal, uniqueIdCountLocal, updatesOriginIdxLocal, sharedTmpBuffer);
+            }
             uint32_t updatesPreNum = 0;
             for (int64_t preLoopIdx = 0; preLoopIdx < td_.updatesPreLoop; preLoopIdx++) {
                 updatesPreNum = (preLoopIdx == td_.updatesPreLoop - 1) ?
