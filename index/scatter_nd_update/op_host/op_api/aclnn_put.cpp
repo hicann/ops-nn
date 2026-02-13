@@ -74,8 +74,8 @@ static bool CheckNotNull(const aclTensor* self, const aclTensor* index, const ac
 }
 
 static const std::initializer_list<DataType>& GetDtypeSupportList(bool accumulate) {
-  if ((GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-      GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND950) && accumulate == false) {
+  if (((GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) || 
+      Ops::NN::AclnnUtil::IsRegbase()) && accumulate == false) {
     return ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST;
   } else {
     return ASCEND910_DTYPE_DTYPE_SUPPORT_LIST;
