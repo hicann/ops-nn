@@ -158,7 +158,7 @@ aclnnStatus aclnnAvgPool2dBackward(
       <td>divisorOverride</td>
       <td>输入</td>
       <td>取平均的除数。</td>
-      <td>Atlas 推理系列产品、Atlas 训练系列产品：支持范围为[-255,255]，0表示不影响padding是否参与平均计算。</td>
+      <td><term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：支持范围为[-255,255]，0表示不影响padding是否参与平均计算。</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
