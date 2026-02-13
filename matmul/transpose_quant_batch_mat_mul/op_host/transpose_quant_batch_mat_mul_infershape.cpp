@@ -123,7 +123,7 @@ static ge::graphStatus CheckPermForTransposeQuantBatchMatMul(
         permSizeInvalid,
         CUBE_INNER_ERR_REPORT(
             "TQBMM",
-            "The dims of the permArray should be 3, now permX1 dims: %ld, permX2 dims: %ld, permY dims: %ld",
+            "The dims of the permArray should be 3, now permX1 dims: %zu, permX2 dims: %zu, permY dims: %zu",
             permX1.GetSize(), permX2.GetSize(), permY.GetSize()),
         return ge::GRAPH_FAILED);
     const auto permX1_attr = permX1.GetData();
@@ -186,7 +186,7 @@ static ge::graphStatus InferShapeForTransposeQuantBatchMatMul(InferShapeContext*
     CHECK(
         (shapeX1Transposed.GetDimNum() != PERM_DIM_NUM) || (shapeX2Transposed.GetDimNum() != PERM_DIM_NUM),
         CUBE_INNER_ERR_REPORT(
-            nameOp, "The dims of the two inputs should be 3, now x1 dims: %ld and x2 dims: %d.", shapeX1Transposed.GetDimNum(),
+            nameOp, "The dims of the two inputs should be 3, now x1 dims: %zu and x2 dims: %zu.", shapeX1Transposed.GetDimNum(),
             shapeX2Transposed.GetDimNum()),
         return ge::GRAPH_FAILED);
     // check x1 and x2 k-axis
