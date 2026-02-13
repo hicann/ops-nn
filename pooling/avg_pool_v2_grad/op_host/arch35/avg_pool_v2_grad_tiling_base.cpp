@@ -63,8 +63,8 @@ static bool IsInvalidPaddingMode(std::string padMode)
 
 static inline bool IsGreaterThanInt32Max(const AvgPoolV2GradInputInfo& inputData, AvgPoolV2GradCommon& commInfo)
 {   
-    int64_t HWSize = inputData.inputShape[commInfo.hDim] * inputData.inputShape[commInfo.wDim];
-    return HWSize > static_cast<int64_t>(INT32_MAX);
+    int64_t totalSize = inputData.batches * inputData.channels * inputData.inputShape[H_DIM] * inputData.inputShape[W_DIM];
+    return totalSize > static_cast<int64_t>(INT32_MAX);
 }
 
 static ge::graphStatus GetPadInfo(gert::TilingContext* context, const gert::RuntimeAttrs* runtimeAttrs,
