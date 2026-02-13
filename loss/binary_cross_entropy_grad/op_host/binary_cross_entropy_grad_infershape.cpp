@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -7,18 +7,21 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef PTA_NPU_OP_API_INC_LEVEL0_OP_BINARY_CROSS_ENTROPY_OP_H_
-#define PTA_NPU_OP_API_INC_LEVEL0_OP_BINARY_CROSS_ENTROPY_OP_H_
 
-#include "opdev/op_executor.h"
+/*!
+ * \file binary_cross_entropy_grad_infershape.cpp
+ * \brief
+ */
 
-namespace l0op {
-const aclTensor *BinaryCrossEntropy(const aclTensor *self,
-                      const aclTensor *target,
-                      const aclTensor *weight,
-                      const std::string &reduction,
-                      aclOpExecutor *executor);
+#include "infershape_elewise_util.h"
+#include "log/log.h"
+#include "register/op_impl_registry.h"
 
+namespace ops {
+static ge::graphStatus InferShape4BinaryCrossEntropyGrad(gert::InferShapeContext *context)
+{
+    return Ops::Base::InferShape4Elewise(context);
 }
 
-#endif // PTA_NPU_OP_API_INC_LEVEL0_OP_BINARY_CROSS_ENTROPY_OP_H_
+IMPL_OP_INFERSHAPE(BinaryCrossEntropyGrad).InferShape(InferShape4BinaryCrossEntropyGrad);
+} // namespace ops

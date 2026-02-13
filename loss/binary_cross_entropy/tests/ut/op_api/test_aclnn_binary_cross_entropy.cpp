@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 #include "gtest/gtest.h"
 #include "opdev/op_log.h"
 
-#include "../../../op_host/op_api/aclnn_binary_cross_entropy.h"
+#include "../../../op_api/aclnn_binary_cross_entropy.h"
 
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
@@ -35,11 +35,10 @@ TEST_F(l2_binary_cross_entropy_test, case_nullptr_1) {
   auto weight = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
   auto out = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
   int64_t reduction = Reduction::None;
-
+  
   auto ut = OP_API_UT(aclnnBinaryCrossEntropy,
                       INPUT(nullptr, target, weight, reduction),
                       OUTPUT(out));
-
   uint64_t workspace_size = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
   EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);

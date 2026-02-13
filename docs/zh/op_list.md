@@ -1717,22 +1717,22 @@
   <tr>
     <td>loss</td>
     <td><a href="../../loss/binary_cross_entropy/README.md">binary_cross_entropy</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>计算x和y的二元交叉熵。</td>
   </tr>
   <tr>
     <td>loss</td>
     <td><a href="../../loss/binary_cross_entropy_grad/README.md">binary_cross_entropy_grad</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>求二元交叉熵反向传播的梯度值。</td>
   </tr>
   <tr>
     <td>loss</td>

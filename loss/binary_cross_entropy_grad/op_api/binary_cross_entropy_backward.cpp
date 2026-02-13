@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -39,8 +39,8 @@ const aclTensor *BinaryCrossEntropyGrad(const aclTensor *gradOutput, const aclTe
   auto retAiCore = ADD_TO_LAUNCHER_LIST_AICORE(BinaryCrossEntropyGrad, OP_INPUT(self, target, gradOutput, weightOptional),
                                          OP_OUTPUT(out),
                                          OP_ATTR_NAMES({"reduction"}), OP_ATTR(reduction));
-  OP_CHECK(retAiCore ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "BinaryCrossEntropyGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-    return nullptr);
+  OP_CHECK(retAiCore ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "BinaryCrossEntropyGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),	 
+     return nullptr);
   return out;
 }
 }
