@@ -21,16 +21,14 @@
 #include "common/inc/error_util.h"
 
 using Ops::NN::TilingPrepareForOpCache;
-using Ops::NN::Optiling::TilingRegistryNew;
+using Ops::NN::Optiling::TilingRegistry;
 
 namespace optiling {
 using dual_level_quant_batch_matmul::DualLevelQuantBatchMatmulTilingASW;
 
 // tiling模板查找的key
 constexpr int32_t ASW_CUBE_BOUND_TEMPLATE = 0;
-REGISTER_TILING_TEMPLATE_WITH_SOCVERSION(
-    DualLevelQuantBatchMatmul, DualLevelQuantBatchMatmulTilingASW,
-    static_cast<int>(platform_ascendc::SocVersion::ASCEND950), ASW_CUBE_BOUND_TEMPLATE);
+REGISTER_TILING_TEMPLATE("DualLevelQuantBatchMatmul", DualLevelQuantBatchMatmulTilingASW, ASW_CUBE_BOUND_TEMPLATE);
 
 static ge::graphStatus DualLevelQuantBatchMatmulTilingFunc(gert::TilingContext* context)
 {
@@ -49,7 +47,7 @@ static ge::graphStatus DualLevelQuantBatchMatmulTilingFunc(gert::TilingContext* 
         npuArch = compileInfoPtr->npuArch;
     }
     OP_LOGE_IF(npuArch != NpuArch::DAV_3510, ge::GRAPH_FAILED, context->GetNodeName(), "Platform not supported");
-    return TilingRegistryNew::GetInstance().DoTilingImpl(context);
+    return TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
 static ge::graphStatus TilingParseForDualLevelQuantBatchMatmul(gert::TilingParseContext* context)
