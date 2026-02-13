@@ -471,41 +471,47 @@ void QuantBatchMatmulV4BasicBlockTiling::GetNdBasicBlockBaseKSolution(const int6
 
 void QuantBatchMatmulV4BasicBlockTiling::GetNzBasicBlockBaseKSolution(const int64_t baseM, const int64_t baseN)
 {
-    // baseK选取能开启L0 DB的最大值，另外满足32对齐，方便MTE2 cache line对齐
-    int64_t baseKMax = min(ops::CeilAlign(basicBlockParam_.kSize, BLOCK_CUBE),
-                            max((BASE_MK_LIMIT / max(baseM, baseN)) / BLOCK_CUBE * BLOCK_CUBE, BLOCK_CUBE));
-    for (int64_t baseK = baseKMax; baseK >= BLOCK_CUBE; baseK -= BLOCK_CUBE) {
-        // 转置只要求K 64对齐，非转置N为内轴，NK都要求64对齐
-        if (transB_) {
-            if (baseK % NZ_BASIC_BLOCK_ALIGN_SIZE != 0) {
-                continue;
-            }
-        } else {
-            if (baseK % NZ_BASIC_BLOCK_ALIGN_SIZE != 0 ||
-                baseN % NZ_BASIC_BLOCK_ALIGN_SIZE != 0) {
-                continue;
-            }
-        }
-        if ((baseM * baseK * BUFF_NUM_2 > platformParam_.l0aSize) ||
-            (baseN * baseK * BUFF_NUM_2 > platformParam_.l0bSize)) {
-            continue;
-        }
-        double minBW = GetMinMte2BW(baseM, baseN, basicBlockParam_.mDim, basicBlockParam_.nDim);
-        double curBW = GetMte2BW(baseM, baseN, basicBlockParam_.mDim, basicBlockParam_.nDim);
-        double mteBWRatio = GetMte2BWRatio(baseM, baseN, basicBlockParam_.mDim, basicBlockParam_.nDim);
-        basicBlockParam_.basicBlock = {baseM, baseN, baseK, curBW, minBW, mteBWRatio, 0.0};
-        AddOptionalSolution();
+    int64_t baseK = max((BASE_MK_LIMIT / max(baseM, baseN)) / BLOCK_CUBE * BLOCK_CUBE, BLOCK_CUBE);
+    constexpr int64_t baseKAlignThreshold = 128L;
+    if (baseM >= K_MTE2_ALIGN_BASE_M_THRESHOLD && baseK > baseKAlignThreshold &&
+        basicBlockParam_.kSize > K_MTE2_ALIGN_K_THRESHOLD) {
+        baseK = ops::FloorAlign(baseK, baseKAlignThreshold);
     }
+    baseK = min(ops::CeilAlign(basicBlockParam_.kSize, BLOCK_CUBE), baseK);
+    if ((baseM * baseK * BUFF_NUM_2 > platformParam_.l0aSize) ||
+        (baseN * baseK * BUFF_NUM_2 > platformParam_.l0bSize)) {
+        return;
+    }
+    if (transB_) {
+        if (baseK % NZ_BASIC_BLOCK_ALIGN_SIZE != 0) {
+            baseK = ops::FloorAlign(baseK, NZ_BASIC_BLOCK_ALIGN_SIZE);
+            baseK = max(baseK, NZ_BASIC_BLOCK_ALIGN_SIZE);
+        }
+    } else {
+        if (baseK % NZ_BASIC_BLOCK_ALIGN_SIZE != 0 || baseN % NZ_BASIC_BLOCK_ALIGN_SIZE != 0) {
+            return;
+        }
+    }
+    double minBW = GetMinMte2BW(baseM, baseN, basicBlockParam_.mDim, basicBlockParam_.nDim);
+    double curBW = GetMte2BW(baseM, baseN, basicBlockParam_.mDim, basicBlockParam_.nDim);
+    double mteBWRatio = GetMte2BWRatio(baseM, baseN, basicBlockParam_.mDim, basicBlockParam_.nDim);
+    basicBlockParam_.basicBlock = {baseM, baseN, baseK, curBW, minBW, mteBWRatio, 0.0};
+    AddOptionalSolution();
 }
 
 void QuantBatchMatmulV4BasicBlockTiling::GetBasicBlockSolution()
 {
     // 给定singleM、singleN、mDim、nDim，获取可行基本块集
     int64_t maxMNSize = isMxType_ ? BASE_MN_LIMIT_BUFF_2 : BASE_MN_LIMIT_BUFF_1;
-    for (int64_t baseM = BLOCK_CUBE; baseM <= basicBlockParam_.singleM; baseM += BLOCK_CUBE) {
+    // 当nSize大于核数*BASE_N_THRESHOLD时，baseN取小于BASE_N_THRESHOLD的值会让计算轮次增加，无性能收益
+    int64_t baseNMin =
+        basicBlockParam_.nSize >= BASE_N_THRESHOLD * platformParam_.blockNum ? BASE_N_THRESHOLD : BLOCK_CUBE;
+    int64_t baseMMin =
+        basicBlockParam_.mSize >= BASE_M_THRESHOLD * platformParam_.blockNum ? BASE_M_THRESHOLD : BLOCK_CUBE;
+    for (int64_t baseM = baseMMin; baseM <= basicBlockParam_.singleM; baseM += BLOCK_CUBE) {
         int64_t baseNMax = min(BASE_BLOCK_MAX, (maxMNSize / baseM) / BLOCK_CUBE * BLOCK_CUBE);
         baseNMax = min(basicBlockParam_.singleN, baseNMax);
-        for (int64_t baseN = baseNMax; baseN >= BLOCK_CUBE; baseN -= BLOCK_CUBE) {
+        for (int64_t baseN = baseNMax; baseN >= baseNMin; baseN -= BLOCK_CUBE) {
             if (baseM * baseN > maxMNSize || baseM > BASE_BLOCK_MAX || baseN > BASE_BLOCK_MAX) {
                 continue;
             }

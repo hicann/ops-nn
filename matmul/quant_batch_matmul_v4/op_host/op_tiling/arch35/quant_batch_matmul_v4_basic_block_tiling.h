@@ -51,7 +51,7 @@ constexpr int64_t STEPK_CUSTOM = 2;
 constexpr int64_t BASE_MN_LIMIT_BUFF_1 = 65536;
 constexpr int64_t BASE_MN_LIMIT_BUFF_2 = 32768;
 constexpr int64_t BASE_MK_LIMIT = 32768;
-constexpr int64_t BASE_BLOCK_MAX = 512;
+constexpr int64_t BASE_BLOCK_MAX = 256;
 constexpr int64_t MAX_BL1_SIZE = 98304; // 96 * 1024
 constexpr int64_t MAX_BUB_ELEM_SIZE = 24576;
 constexpr int64_t MTE2_AIV_RATE = 16;
@@ -65,6 +65,11 @@ constexpr int64_t NZ_BASIC_BLOCK_ALIGN_SIZE = 64;
 constexpr int64_t NZ_SINGLE_N_ALIGN_SIZE = 32;
 constexpr int64_t BYTE_SIZE = 8;
 constexpr int64_t SCALE_FACTOR_MAX = 2;
+constexpr int64_t K_MTE2_ALIGN_BASE_M_THRESHOLD = 64; // 当baseM大于等于这个值时，优先让KL1对齐到cacheline
+constexpr int64_t K_MTE2_ALIGN_K_THRESHOLD = 4096; // 当原始K大于等于这个值时，优先让KL1对齐到cacheline
+constexpr int64_t BASE_N_THRESHOLD = 128;
+constexpr int64_t BASE_M_THRESHOLD = 64;
+constexpr double EPSILON = 1e-9;
 
 struct PlatformParam {
     int64_t blockNum = 0;
@@ -184,6 +189,34 @@ protected:
     void PrintFinalResult(const BasicBlockParam &param, bool enable) const;
     int64_t GetL1LoadSize(const BasicBlock &basicBlock, const L1TilingParam &l1Param) const;
 
+    static int32_t CompareMxResult(const BasicBlockParam &param1, const BasicBlockParam &param2) {
+        // 取单核上 mte2DataSize更小的
+        int64_t blockNum1 = param1.nDim * param1.mDim;
+        int64_t blockNum2 = param2.nDim * param2.mDim;
+
+        if (param1.mte2DataSize / blockNum1 != param2.mte2DataSize / blockNum2) {
+            return param1.mte2DataSize / blockNum1 < param2.mte2DataSize / blockNum2 ? 1 : -1;
+        }
+
+        // 取mte2DataSize总数据量更小的
+        if (param1.mte2DataSize != param2.mte2DataSize) {
+            return param1.mte2DataSize < param2.mte2DataSize ? 1 : -1;
+        }
+
+        int64_t mBlocks1 = CeilDiv(param1.mSize, param1.basicBlock.baseM);
+        int64_t nBlocks1 = CeilDiv(param1.nSize, param1.basicBlock.baseN);
+        int64_t mBlocks2 = CeilDiv(param2.mSize, param2.basicBlock.baseM);
+        int64_t nBlocks2 = CeilDiv(param2.nSize, param2.basicBlock.baseN);
+        double tailCoreRatio1 =
+            static_cast<double>(mBlocks1) * static_cast<double>(nBlocks1) / static_cast<double>(blockNum1);
+        double tailCoreRatio2 =
+            static_cast<double>(mBlocks2) * static_cast<double>(nBlocks2) / static_cast<double>(blockNum2);
+        if (std::abs(tailCoreRatio1 - tailCoreRatio2) > EPSILON) {
+            return tailCoreRatio1 > tailCoreRatio2 ? 1 : -1;
+        }
+        return 0;
+    }
+
     /*
         解的排序函数，优先级:
         1）单核上mte2数据量更小的
@@ -195,17 +228,9 @@ protected:
     static bool CompareOptionalResult(const BasicBlockParam &param1, const BasicBlockParam &param2)
     {
         if (param1.mxType == 1) {
-            // 取单核上 mte2DataSize更小的
-            int64_t blockNum1 = param1.nDim * param1.mDim;
-            int64_t blockNum2 = param2.nDim * param2.mDim;
-
-            if (param1.mte2DataSize / blockNum1 != param2.mte2DataSize / blockNum2) {
-                return param1.mte2DataSize / blockNum1 < param2.mte2DataSize / blockNum2;
-            }
-
-            // 取mte2DataSize总数据量更小的
-            if (param1.mte2DataSize != param2.mte2DataSize) {
-                return param1.mte2DataSize < param2.mte2DataSize;
+            int32_t mxRet = CompareMxResult(param1, param2);
+            if (mxRet != 0) {
+                return mxRet == 1;
             }
         }
 
