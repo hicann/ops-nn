@@ -66,6 +66,9 @@ public:
     // 7、保存Tiling数据
     ge::graphStatus PostTiling() override;
 
+private:
+    void Reset();
+
 protected:
     ge::graphStatus CalcUbTiling() override;
     virtual uint64_t GetBatchCoreCnt() const;
@@ -108,7 +111,6 @@ protected:
     virtual void CalL1TilingDepth4MmadS8S4(uint64_t leftL1Size);
 
     bool IsInValidWeighNzTailSplit(uint64_t splitCnt, bool isPreSplit) const;
-    virtual void Reset();
 
     void LoadBalanceDataReset();
     bool OptimizeEdgeBasicBlock();

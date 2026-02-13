@@ -40,10 +40,12 @@ public:
     // 7、保存Tiling数据
     ge::graphStatus PostTiling() override;
 
+private:
+    void Reset();
+
 protected:
     bool IsCapable() override;
     uint64_t GetBatchCoreCnt() const override;
-    void Reset() override;
     bool AnalyseSlidingWinInfo() override;
     void IsAFullLoad() override;
     void SetTilingData() override;

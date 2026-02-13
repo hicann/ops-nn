@@ -19,7 +19,6 @@
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
 
-using namespace op;
 using TupleInput = std::tuple<const aclTensor *, const aclTensor *>;
 using TupleQuant = std::tuple<const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *,
                               const aclTensor *, const aclTensor *, const aclTensor *, const int64_t &, const int64_t &>;
@@ -74,7 +73,7 @@ private:
     std::string GetX1ScaleName() const;
     std::string GetX2ScaleName() const;
     std::string GetX2OffsetName() const;
-    bool ReCalcGroupSize(uint64_t inputSize, uint64_t scaleSize, uint64_t &groupSize, const char *dimensionName);
+    bool ReCalcGroupSize(int64_t inputSize, int64_t scaleSize, int64_t &groupSize, const char *dimensionName) const;
 
 public:
     const TupleInput inputTensors_;

@@ -28,6 +28,7 @@
 #include "aclnn_quant_matmul_v5.h"
 #include "quant_matmul_common_check.h"
 
+using namespace op;
 using Ops::NN::SwapLastTwoDimValue;
 using Ops::NN::IsTransposeLastTwoDims;
 namespace {

@@ -54,12 +54,12 @@ protected:
     void SetTilingData();
     uint64_t GetBiasMode() const;
     uint64_t GetKernelType() const;
-    void Reset();
     DequantBmm::QuantBatchMatmulV3TilingDataParams tilingDataSelf_;
     DequantBmm::QuantBatchMatmulV3TilingDataParams &tilingData_;
 
 private:
     BasicRunInfoTiling basicTiling_;
+    void Reset();
 };
 }
 #endif // QUANT_BATCH_MATMUL_V3_ITERBATCH_TILING_H

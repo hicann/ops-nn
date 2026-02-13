@@ -30,6 +30,7 @@
 #include "aclnn_fused_quant_matmul_weight_nz.h"
 #include "util/math_util.h"
 
+using namespace op;
 using Ops::NN::SwapLastTwoDimValue;
 using Ops::NN::IsTransposeLastTwoDims;
 
