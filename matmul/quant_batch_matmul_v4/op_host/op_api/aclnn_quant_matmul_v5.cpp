@@ -518,7 +518,7 @@ static inline bool CheckOutAndOffsetShape(const TupleQuant& quantTensors, int64_
             return false;
         }
     }
-    if (yOffset != nullptr) {
+    if (yOffset != nullptr && !yOffset->IsEmpty()) {
         if (yOffset->GetViewShape().GetDim(0) != x2NDim) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The yOffset shape must be [%ld], which is [%ld]", x2NDim,
                     yOffset->GetViewShape().GetDim(0));
