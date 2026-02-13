@@ -58,11 +58,11 @@ aclnnStatus aclnnHardtanhBackward(
 
 - **参数说明：**
 
-<table style="undefined;table-layout: fixed; width: 1312px"><colgroup>
-  <col style="width: 158px">
+<table style="undefined;table-layout: fixed; width: 1412px"><colgroup>
+  <col style="width: 258px">
   <col style="width: 120px">
-  <col style="width: 333px">
-  <col style="width: 137px">
+  <col style="width: 233px">
+  <col style="width: 237px">
   <col style="width: 212px">
   <col style="width: 100px">
   <col style="width: 107px">
@@ -82,7 +82,7 @@ aclnnStatus aclnnHardtanhBackward(
   </thead>
   <tbody>
     <tr>
-      <td>gradOutput</td>
+      <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
       <td>反向传播过程中上一步输出的梯度，公式中的grad_output。</td>
       <td><ul>
@@ -96,7 +96,7 @@ aclnnStatus aclnnHardtanhBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>正向的输入数据，公式中的self。</td>
       <td><ul>
@@ -110,7 +110,7 @@ aclnnStatus aclnnHardtanhBackward(
       <td>√</td>
     </tr>
       <tr>
-      <td>min</td>
+      <td>min（aclScalar*）</td>
       <td>输入</td>
       <td>线性范围的下限，公式中的min。</td>
       <td>-</td>
@@ -120,7 +120,7 @@ aclnnStatus aclnnHardtanhBackward(
       <td>-</td>
     </tr>
       <tr>
-      <td>max</td>
+      <td>max（aclScalar*）</td>
       <td>输入</td>
       <td>线性范围的上限，公式中的max。</td>
       <td>-</td>
@@ -130,7 +130,7 @@ aclnnStatus aclnnHardtanhBackward(
       <td>-</td>
     </tr>
      <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>计算得到的梯度结果。</td>
       <td><ul>
@@ -144,7 +144,7 @@ aclnnStatus aclnnHardtanhBackward(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -154,7 +154,7 @@ aclnnStatus aclnnHardtanhBackward(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

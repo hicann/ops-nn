@@ -53,13 +53,13 @@ aclnnStatus aclnnThresholdBackward(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1330px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 150px">
   <col style="width: 230px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -75,7 +75,7 @@ aclnnStatus aclnnThresholdBackward(
     </tr></thead>
   <tbody>
     <tr>
-      <td>gradOutput</td>
+      <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
       <td>公式中的gradOutput。</td>
       <td><ul><li>支持空Tensor。</li><li>dtype需要与self保持一致。</li><li>shape需要与self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
@@ -85,7 +85,7 @@ aclnnStatus aclnnThresholdBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>公式中的threshold。</td>
       <td>数据类型与gradOutput的数据类型满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</td>
@@ -95,7 +95,7 @@ aclnnStatus aclnnThresholdBackward(
       <td>√</td>
     </tr>
       <tr>
-      <td>threshold</td>
+      <td>threshold（aclScalar*）</td>
       <td>输入</td>
       <td>公式中的self。</td>
       <td><ul><li>支持空Tensor。</li><li>dtype需要与gradOutput保持一致。</li><li>shape需要与gradOutput满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系。</a></li></ul></td>
@@ -106,7 +106,7 @@ aclnnStatus aclnnThresholdBackward(
     </tr>
     <tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>公式中的out。</td>
       <td><ul><li>dtype需要与self相同。</li><li>shape需要与self和gradOutput进行broadcast之后的shape相等。</li></ul></td>
@@ -116,7 +116,7 @@ aclnnStatus aclnnThresholdBackward(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -126,7 +126,7 @@ aclnnStatus aclnnThresholdBackward(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

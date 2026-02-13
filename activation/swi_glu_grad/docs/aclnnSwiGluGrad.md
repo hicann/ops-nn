@@ -54,13 +54,13 @@ aclnnStatus aclnnSwiGluGrad(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1450px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 200px">
   <col style="width: 300px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -76,7 +76,7 @@ aclnnStatus aclnnSwiGluGrad(
     </tr></thead>
   <tbody>
       <tr>
-      <td>yGrad</td>
+      <td>yGrad（aclTensor*）</td>
       <td>输入</td>
       <td>反向传播中梯度的输入，求梯度时的权重，即为了将正向输出的tensor变为标量所相乘的权重tensor，公式中的yGrad<sub>i</sub>。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型与计算输入x的类型一致。</li><li>shape中除dim维外，其它维的大小跟x一样，dim维的大小是x的一半。</li></ul></td>
@@ -86,7 +86,7 @@ aclnnStatus aclnnSwiGluGrad(
       <td>×</td>
     </tr>
     <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示待计算的数据，公式中的A和B。</td>
       <td><ul><li>不支持空Tensor。</li><li>Tensor的维度必须大于0，shape中除dim维外，其它维的大小跟yGrad一样，dim维的大小是yGrad的两倍。</li><li>shape不支持非64字节对齐。</li></ul></td>
@@ -96,17 +96,17 @@ aclnnStatus aclnnSwiGluGrad(
       <td>√</td>
     </tr>
       <tr>
-      <td>dim</td>
+      <td>dim（int64_t）</td>
       <td>输入</td>
       <td>需要进行切分的维度序号。</td>
       <td>取值范围为[-x.dim(), x.dim()-1]。</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示计算结果，公式中的out<sub>A</sub>和out<sub>B</sub>的合并。</td>
       <td><ul><li>数据类型与计算输入x的类型一致。</li><li>shape与x一致。</li></ul></td>
@@ -116,7 +116,7 @@ aclnnStatus aclnnSwiGluGrad(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -126,7 +126,7 @@ aclnnStatus aclnnSwiGluGrad(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

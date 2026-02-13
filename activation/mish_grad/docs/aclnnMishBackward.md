@@ -43,13 +43,13 @@ aclnnStatus aclnnMishBackward(
 
 - **参数说明**：
   <table style="undefined;table-layout: fixed; width: 1497px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 247px">
   <col style="width: 300px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -65,7 +65,7 @@ aclnnStatus aclnnMishBackward(
     </tr></thead>
   <tbody>
     <tr>
-      <td>gradOutput</td>
+      <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
       <td>反向传播过程中上一步输出的梯度，作为本反向算子的输入。公式中的gradOutput。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>shape需要与self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
@@ -75,7 +75,7 @@ aclnnStatus aclnnMishBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>正向的输入数据。公式中的self。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型与gradOutput的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>shape需要与gradOutput满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
@@ -85,7 +85,7 @@ aclnnStatus aclnnMishBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>gradInput</td>
+      <td>gradInput（aclTensor*）</td>
       <td>输出</td>
       <td>计算得到梯度，作为反向传播下一步反向算子的计算输入。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型与gradOutput的数据类型需满足推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>shape需要与gradOutput满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
@@ -95,7 +95,7 @@ aclnnStatus aclnnMishBackward(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -105,7 +105,7 @@ aclnnStatus aclnnMishBackward(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

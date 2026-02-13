@@ -85,13 +85,13 @@ aclnnStatus aclnnQuantMatmulDequant(
 - **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1380px"><colgroup>
-  <col style="width: 101px">
+  <col style="width: 201px">
   <col style="width: 115px">
   <col style="width: 200px">
   <col style="width: 300px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -107,7 +107,7 @@ aclnnStatus aclnnQuantMatmulDequant(
     </tr></thead>
    <tbody>
        <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入的左矩阵，公式中的x。</td>
       <td><ul><li>shape支持2维，各个维度表示：（m，k）。</li><li>不支持空Tensor。</li></ul></td>
@@ -117,7 +117,7 @@ aclnnStatus aclnnQuantMatmulDequant(
       <td>√</td>
     </tr>
      <tr>
-      <td>weight</td>
+      <td>weight（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入的右矩阵。公式中的weight_{quantized}。</td>
       <td>不支持空Tensor。</td>
@@ -126,7 +126,7 @@ aclnnStatus aclnnQuantMatmulDequant(
       <td>2、4</td>
       <td>√</td>
     </tr>
-      <td>weightScale</td>
+      <td>weightScale（aclTensor*）</td>
       <td>输入</td>
       <td>表示weight的量化系数，公式中的scale_{weight}。</td>
       <td><ul><li>shape是1维（n，），其中n与weight的n一致。</li><li>支持空Tensor。</li><li>当数据类型为INT64时，必须要求xScaleOptional数据类型为FLOAT16，且xQuantMode值为pertensor。</li></ul></td>
@@ -136,7 +136,7 @@ aclnnStatus aclnnQuantMatmulDequant(
       <td>√</td>
     </tr>
       <tr>
-      <td>biasOptional</td>
+      <td>biasOptional（aclTensor*）</td>
       <td>可选输入</td>
       <td>表示计算的偏移量，公式中的bias。</td>
       <td>当前仅支持传入空指针。</td>
@@ -146,7 +146,7 @@ aclnnStatus aclnnQuantMatmulDequant(
       <td>-</td>
     </tr>
        <tr>
-      <td>xScaleOptional</td>
+      <td>xScaleOptional（aclTensor*）</td>
       <td>可选输入</td>
       <td>表示x的量化系数，公式中的scale_{x}。</td>
       <td><ul><li>当xQuantMode为pertensor时，shape是1维（1，）；当xQuantMode为pertoken时，shape是1维（m，），其中m与输入x的m一致。若为空则为动态量化。</li><li>支持空Tensor。</li><li>当数据类型为FLOAT16时，必须要求weightScale数据类型为INT64，且xQuantMode值为pertensor。</li></ul></td>
@@ -156,7 +156,7 @@ aclnnStatus aclnnQuantMatmulDequant(
       <td>√</td>
     </tr>
        <tr>
-      <td>xOffsetOptional</td>
+      <td>xOffsetOptional（aclTensor*）</td>
       <td>可选输入</td>
       <td>表示x的偏移量。</td>
       <td>当前仅支持传入空指针。</td>
@@ -166,7 +166,7 @@ aclnnStatus aclnnQuantMatmulDequant(
       <td>-</td>
     </tr>
       <tr>
-      <td>smoothScaleOptional</td>
+      <td>smoothScaleOptional（aclTensor*）</td>
       <td>可选输入</td>
       <td>表示x的平滑系数，x的平滑系数，公式中的scale_{smooth}。</td>
       <td><ul><li>shape是1维（k，），其中k与x的k一致。</li><li>支持空Tensor。</li></ul></td>
@@ -176,7 +176,7 @@ aclnnStatus aclnnQuantMatmulDequant(
       <td>√</td>
     </tr>
       <tr>
-      <td>xQuantMode</td>
+      <td>xQuantMode（char*）</td>
       <td>输入</td>
       <td>指定输入x的量化模式。</td>
       <td>支持取值pertoken/pertensor，动态量化时只支持pertoken。pertoken表示每个token（某一行）都有自己的量化参数；pertensor表示整个张量使用统一的量化参数。</td>
@@ -186,7 +186,7 @@ aclnnStatus aclnnQuantMatmulDequant(
       <td>-</td>
     </tr>
     <tr>
-      <td>transposeWeight</td>
+      <td>transposeWeight（bool）</td>
       <td>输入</td>
       <td>表示输入weight是否转置。</td>
       <td>当前只支持true。</td>
@@ -196,7 +196,7 @@ aclnnStatus aclnnQuantMatmulDequant(
       <td>-</td>
     </tr>
        <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>计算结果，公式中的out。</td>
       <td>shape支持2维，各个维度表示：（m，n）。其中m与x的m一致，n与weight的n一致。</td>
@@ -206,7 +206,7 @@ aclnnStatus aclnnQuantMatmulDequant(
       <td>√</td>
     </tr>
        <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -216,7 +216,7 @@ aclnnStatus aclnnQuantMatmulDequant(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

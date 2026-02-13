@@ -50,13 +50,13 @@ aclnnStatus aclnnSoftmaxBackward(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1410px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 200px">
   <col style="width: 260px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -72,7 +72,7 @@ aclnnStatus aclnnSoftmaxBackward(
     </tr></thead>
   <tbody>
     <tr>
-      <td>gradOutput</td>
+      <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
       <td>反向传播的梯度值，即上一层的输出梯度。公式中的gradOutput。</td>
       <td>支持空Tensor。</td>
@@ -82,7 +82,7 @@ aclnnStatus aclnnSoftmaxBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>output</td>
+      <td>output（aclTensor*）</td>
       <td>输入</td>
       <td>Softmax函数的输出值，公式中的output。</td>
       <td><ul><li>支持空Tensor。</li><li>shape和数据类型需要与gradOutput保持一致。</li></ul></td>
@@ -92,17 +92,17 @@ aclnnStatus aclnnSoftmaxBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>dim</td>
+      <td>dim（int64_t）</td>
       <td>输入</td>
       <td>Softmax函数的维度。</td>
       <td>-</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>√</td>
     </tr>
       <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>函数的输出是输入的梯度值。</td>
       <td><ul><li>对输入进行求导后的结果，支持多种数据类型，不需要额外申请空间，其他数据类型（FP64、COMPLEX64等）通过自动cast能力支持，但会额外申请空间。</li><li>shape需要与gradOutput保持一致。</li></ul></td>
@@ -112,7 +112,7 @@ aclnnStatus aclnnSoftmaxBackward(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -122,7 +122,7 @@ aclnnStatus aclnnSoftmaxBackward(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

@@ -54,13 +54,13 @@ aclnnStatus aclnnSoftplusBackward(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1450px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 200px">
   <col style="width: 300px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -76,7 +76,7 @@ aclnnStatus aclnnSoftplusBackward(
     </tr></thead>
   <tbody>
     <tr>
-      <td>gradOutput</td>
+      <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
       <td>输入的梯度。公式中的gradOutput。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要与self、gradInput相同。</li><li>shape需要与self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>，且Broadcast后shape与self的shape相等。</li></ul></td>
@@ -86,7 +86,7 @@ aclnnStatus aclnnSoftplusBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>输入数据。公式中的self。</td>
       <td><ul><li>支持空Tensor。</li><li>softplus的正向输入值。</li><li>shape需要与gradOutput、gradInput相同。</li></ul></td>
@@ -96,7 +96,7 @@ aclnnStatus aclnnSoftplusBackward(
       <td>√</td>
     </tr>
       <tr>
-      <td>beta</td>
+      <td>beta（aclScalar*）</td>
       <td>输入</td>
       <td>公式中的beta，可表示与relu的近似程度。</td>
       <td><ul><li>数据类型满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>支持可转换为FLOAT的类型。</li></ul></td>
@@ -106,7 +106,7 @@ aclnnStatus aclnnSoftplusBackward(
       <td>-</td>
     </tr>
       <tr>
-      <td>threshold</td>
+      <td>threshold（aclScalar*）</td>
       <td>输入</td>
       <td>公式中的threshold，表示阈值，大于此值时恢复为线性函数。</td>
       <td><ul><li>数据类型满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>支持可转换为FLOAT的类型。</li></ul></td>
@@ -116,7 +116,7 @@ aclnnStatus aclnnSoftplusBackward(
       <td>-</td>
     </tr>
     <tr>
-      <td>gradInput</td>
+      <td>gradInput（aclTensor*）</td>
       <td>输出</td>
       <td>公式中的gradInput。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要与gradOutput、self相同。</li><li>gradInput的shape和数据类型与self的相同。</li></ul></td>
@@ -126,7 +126,7 @@ aclnnStatus aclnnSoftplusBackward(
       <td>√</td>
     </tr>
        <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -136,7 +136,7 @@ aclnnStatus aclnnSoftplusBackward(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

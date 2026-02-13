@@ -53,13 +53,13 @@ aclnnStatus aclnnSoftshrink(
 - **参数说明：**
   
   <table style="undefined;table-layout: fixed; width: 1390px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 220px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -75,7 +75,7 @@ aclnnStatus aclnnSoftshrink(
     </tr></thead>
   <tbody>
       <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>输入的张量，公式中的x。</td>
       <td>支持空Tensor。</td>
@@ -85,7 +85,7 @@ aclnnStatus aclnnSoftshrink(
       <td>√</td>
     </tr>
        <tr>
-      <td>lambd</td>
+      <td>lambd（aclScalar*）</td>
       <td>输入</td>
       <td>输入的标量，公式中的输入λ。</td>
       <td>数值要求大于等于0。</td>
@@ -95,7 +95,7 @@ aclnnStatus aclnnSoftshrink(
       <td>√</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>Softshrink计算的出参。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要与self一致。</li></ul></td>
@@ -105,7 +105,7 @@ aclnnStatus aclnnSoftshrink(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -115,7 +115,7 @@ aclnnStatus aclnnSoftshrink(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

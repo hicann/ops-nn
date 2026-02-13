@@ -48,13 +48,13 @@ aclnnStatus aclnnGelu(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1420px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 250px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -70,7 +70,7 @@ aclnnStatus aclnnGelu(
     </tr></thead>
   <tbody>
       <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示GELU激活函数的输入，公式中的self。</td>
       <td><ul><li>数据类型必须和out一样。</li><li>shape必须和out一样。</li><li>支持空Tensor。</li></ul></td>
@@ -80,7 +80,7 @@ aclnnStatus aclnnGelu(
       <td>√</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示GELU激活函数的输出。</td>
       <td><ul><li>数据类型必须和self一致。</li><li>shape必须和self一致。</li></ul></td>
@@ -90,7 +90,7 @@ aclnnStatus aclnnGelu(
       <td>√</td>
     </tr>
      <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -100,7 +100,7 @@ aclnnStatus aclnnGelu(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

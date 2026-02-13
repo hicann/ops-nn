@@ -62,13 +62,13 @@ aclnnStatus aclnnLogit(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1400px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 200px">
   <col style="width: 250px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -84,7 +84,7 @@ aclnnStatus aclnnLogit(
     </tr></thead>
   <tbody>
     <tr>
-      <td>input</td>
+      <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>输入的张量，公式中的x。</td>
       <td>支持空Tensor。</td>
@@ -94,17 +94,17 @@ aclnnStatus aclnnLogit(
       <td>√</td>
     </tr>
       <tr>
-      <td>eps</td>
+      <td>eps（double）</td>
       <td>输入</td>
       <td>输入input的epsilon限制边界，防止除0错误，公式中的eps。</td>
       <td>建议值-1。</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>输出张量，公式中的输出y。</td>
       <td>输出的数据类型、数据格式和shape与输入input保持一致。</td>
@@ -114,7 +114,7 @@ aclnnStatus aclnnLogit(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -124,7 +124,7 @@ aclnnStatus aclnnLogit(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

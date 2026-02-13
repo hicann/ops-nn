@@ -98,13 +98,13 @@ aclnnStatus aclnnGeluQuant(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1500px"><colgroup>
-  <col style="width: 201px">
+  <col style="width: 301px">
   <col style="width: 115px">
   <col style="width: 200px">
   <col style="width: 320px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -120,7 +120,7 @@ aclnnStatus aclnnGeluQuant(
     </tr></thead>
    <tbody>
       <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>公式中的输入self。</td>
       <td><ul><li>不支持空Tensor。</li><li>quantMode为"dynamic"时shape支持2-8维。</li><li>quantMode为"static"时shape支持1-8维。</li></ul></td>
@@ -130,7 +130,7 @@ aclnnStatus aclnnGeluQuant(
       <td>√</td>
     </tr>
      <tr>
-      <td>inputScaleOptional</td>
+      <td>inputScaleOptional（aclTensor*）</td>
       <td>输入</td>
       <td>算子的输入，公式中的inputScaleOptional。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape仅支持1维，大小只能是self的尾轴维度大小或1。</li><li>当quantMode为static的时候为必选输入，为dynamic的时候为可选输入。</li></ul></td>
@@ -139,7 +139,7 @@ aclnnStatus aclnnGeluQuant(
       <td>1</td>
       <td>√</td>
     </tr>
-      <td>inputOffsetOptional</td>
+      <td>inputOffsetOptional（aclTensor*）</td>
       <td>输入</td>
       <td>算子的可选输入，公式中的inputOffsetOptional。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape仅支持1维，与inputScaleOptional的dtype和shape保持一致。</li><li>当quantMode为dynamic时，inputScaleOptional不输入的情况下，offset不输入。</li></ul></td>
@@ -149,7 +149,7 @@ aclnnStatus aclnnGeluQuant(
       <td>√</td>
     </tr>
       <tr>
-      <td>approximate</td>
+      <td>approximate（char*）</td>
       <td>输入</td>
       <td>公式中的approximate，gelu激活函数的模式。</td>
       <td>approximate仅支持{"none", "tanh"}。</td>
@@ -159,7 +159,7 @@ aclnnStatus aclnnGeluQuant(
       <td>-</td>
     </tr>
        <tr>
-      <td>quantMode</td>
+      <td>quantMode（char*）</td>
       <td>输入</td>
       <td>公式中的quantMode，量化的模式。</td>
       <td>quantMode仅支持{"static", "dynamic"}, 分别对应量化模式为静态量化和动态量化。</td>
@@ -169,7 +169,7 @@ aclnnStatus aclnnGeluQuant(
       <td>-</td>
     </tr>
        <tr>
-      <td>roundMode</td>
+      <td>roundMode（char*）</td>
       <td>输入</td>
       <td>公式中的approximate，gelu激活函数的模式。</td>
       <td><ul><li>支持{"rint", "round", "hybrid"}模式。</li><li>dstType为2/35/36，对应的数据类型为INT8/FLOAT8_E4M3FN/FLOAT8_E5M2时，仅支持{"rint"}。</li><li>dstType为34，对应的数据类型为HIFLOAT8，支持{"round", "hybrid"}。</li></ul></td>
@@ -179,17 +179,17 @@ aclnnStatus aclnnGeluQuant(
       <td>-</td>
     </tr>
       <tr>
-      <td>dstType</td>
+      <td>dstType（int64_t）</td>
       <td>输入</td>
       <td>公式中的dst_type。</td>
       <td>指定数据转换后y的类型，输入范围为{2, 34, 35, 36}，分别对应输出y的数据类型为{2: INT8, 34: HIFLOAT8, 35: FLOAT8_E5M2, 36: FLOAT8_E4M3FN}。</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
       <tr>
-      <td>y</td>
+      <td>y（aclTensor*）</td>
       <td>输出</td>
       <td>激活后输出量化后的对应结果，公式中的y。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型需与dstType对应。</li><li>与self的shape大小保持一致。</li></ul></td>
@@ -199,7 +199,7 @@ aclnnStatus aclnnGeluQuant(
       <td>√</td>
     </tr>
       <tr>
-      <td>outScaleOptional</td>
+      <td>outScaleOptional（aclTensor*）</td>
       <td>输出</td>
       <td>动态量化的量化尺度，公式中的outScaleOptional。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape比self维度少1维。</li><li>维度大小与self除了最后一个维度外的大小一致。</li><li>当quantMode为static时，outScaleOptional输出应该为空指针。</li></ul></td>
@@ -209,7 +209,7 @@ aclnnStatus aclnnGeluQuant(
       <td>√</td>
     </tr>
        <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -219,7 +219,7 @@ aclnnStatus aclnnGeluQuant(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

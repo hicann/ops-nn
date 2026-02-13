@@ -56,13 +56,13 @@ aclnnStatus aclnnLogSigmoidBackward(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1497px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 247px">
   <col style="width: 300px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -78,7 +78,7 @@ aclnnStatus aclnnLogSigmoidBackward(
     </tr></thead>
   <tbody>
       <tr>
-      <td>gradOutput</td>
+      <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
       <td>表示LogSigmoid激活函数正向输出的梯度，公式中的gradOutput。</td>
       <td><ul><li>支持空Tensor。</li><li>gradOutput、self、buffer与gradInput的shape一致。</li><li>gradOutput、self、buffer与gradInput的数据类型一致。</li></ul></td>
@@ -87,7 +87,7 @@ aclnnStatus aclnnLogSigmoidBackward(
       <td>1-8</td>
       <td>√</td>
     </tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>待进行LogSigmoidBackward计算的入参，公式中的x。</td>
       <td><ul><li>支持空Tensor。</li><li>gradOutput、self、buffer与gradInput的shape一致。</li><li>gradOutput、self、buffer与gradInput的数据类型一致。</li></ul></td>
@@ -96,7 +96,7 @@ aclnnStatus aclnnLogSigmoidBackward(
       <td>1-8</td>
       <td>√</td>
     </tr>
-       <td>buffer</td>
+       <td>buffer（aclTensor*）</td>
       <td>输入</td>
       <td>正向计算的中间结果，暂不使用。</td>
       <td><ul><li>支持空Tensor。</li><li>gradOutput、self、buffer与gradInput的shape一致。</li><li>gradOutput、self、buffer与gradInput的数据类型一致。</li></ul></td>
@@ -106,7 +106,7 @@ aclnnStatus aclnnLogSigmoidBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>gradInput</td>
+      <td>gradInput（aclTensor*）</td>
       <td>输出</td>
       <td>出参，公式中的gradInput。</td>
       <td><ul><li>支持空Tensor。</li><li>gradOutput、self、buffer与gradInput的shape一致。</li><li>gradOutput、self、buffer与gradInput的数据类型一致。</li></ul></td>
@@ -116,7 +116,7 @@ aclnnStatus aclnnLogSigmoidBackward(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -126,7 +126,7 @@ aclnnStatus aclnnLogSigmoidBackward(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

@@ -69,13 +69,13 @@ aclnnStatus aclnnGeluBackward(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1390px"><colgroup>
-  <col style="width: 131px">
+  <col style="width: 231px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 260px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -91,7 +91,7 @@ aclnnStatus aclnnGeluBackward(
     </tr></thead>
   <tbody>
       <tr>
-      <td>gradOutput</td>
+      <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
       <td>求梯度时的权重，即为了将正向输出的tensor变为标量所相乘的权重tensor。</td>
       <td><ul><li>shape需要和正向self的shape满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>dtype与self的dtype满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>支持空Tensor。</li></ul></td>
@@ -101,7 +101,7 @@ aclnnStatus aclnnGeluBackward(
       <td>√</td>
     </tr>
       <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>Gelu的正向输入值。</td>
       <td><ul><li>shape需要和gradOutput的shape满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>dtype与gradOutput的dtype满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>支持空Tensor。</li></ul></td>
@@ -111,7 +111,7 @@ aclnnStatus aclnnGeluBackward(
       <td>√</td>
     </tr>
        <tr>
-      <td>gradInput</td>
+      <td>gradInput（aclTensor*）</td>
       <td>输出</td>
       <td>backward计算的输出，为GELU正向入参的梯度值，即对输入进行求导后的结果。</td>
       <td><ul><li>dtype与self和gradOutput进行数据类型推导后的可转换的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）一致。</li><li>shape与gradOutput和self进行broadcast后的shape一致。</li></ul></td>
@@ -121,7 +121,7 @@ aclnnStatus aclnnGeluBackward(
       <td>√</td>
     </tr>
      <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -131,7 +131,7 @@ aclnnStatus aclnnGeluBackward(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

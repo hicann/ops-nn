@@ -54,13 +54,13 @@ aclnnStatus aclnnShrink(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1380px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 200px">
   <col style="width: 230px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -76,7 +76,7 @@ aclnnStatus aclnnShrink(
     </tr></thead>
   <tbody>
     <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示待转换的目标张量，公式中的self。</td>
       <td>支持空Tensor。</td>
@@ -86,7 +86,7 @@ aclnnStatus aclnnShrink(
       <td>√</td>
     </tr>
      <tr>
-      <td>lambd</td>
+      <td>lambd（aclScalar*）</td>
       <td>输入</td>
       <td>表示转换过程中用于判断self大小的阈值，公式中的lambd。</td>
       <td>取值为非负数。</td>
@@ -96,7 +96,7 @@ aclnnStatus aclnnShrink(
       <td>-</td>
     </tr>
      <tr>
-      <td>bias</td>
+      <td>bias（aclScalar*）</td>
       <td>输入</td>
       <td>表示转换过程中添加到目标张量的偏差值，公式中的bias。</td>
       <td>取值为任意实数。</td>
@@ -106,7 +106,7 @@ aclnnStatus aclnnShrink(
       <td>-</td>
     </tr>
      <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>输出目标张量，公式中的out。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要与self一致。</li></ul></td>
@@ -116,7 +116,7 @@ aclnnStatus aclnnShrink(
       <td>√</td>
     </tr>
        <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -126,7 +126,7 @@ aclnnStatus aclnnShrink(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

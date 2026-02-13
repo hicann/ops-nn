@@ -54,13 +54,13 @@ aclnnStatus aclnnSigmoidBackward(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1400px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 230px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -76,7 +76,7 @@ aclnnStatus aclnnSigmoidBackward(
     </tr></thead>
   <tbody>
     <tr>
-      <td>gradOutput</td>
+      <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
       <td>损失函数对sigmoid输出的梯度，公式中的grad_output。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要与output满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
@@ -86,7 +86,7 @@ aclnnStatus aclnnSigmoidBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>output</td>
+      <td>output（aclTensor*）</td>
       <td>输入</td>
       <td>前向sigmoid的输出，公式中的out。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要与gradOutput满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
@@ -96,7 +96,7 @@ aclnnStatus aclnnSigmoidBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>gradInput</td>
+      <td>gradInput（aclTensor*）</td>
       <td>输出</td>
       <td>为self的梯度值，公式中的grad_input。</td>
       <td><ul><li>shape需要与gradOutput，output满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>数据类型需要是gradOutput，output可转换的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</li></ul></td>
@@ -106,7 +106,7 @@ aclnnStatus aclnnSigmoidBackward(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -116,7 +116,7 @@ aclnnStatus aclnnSigmoidBackward(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

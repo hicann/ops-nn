@@ -59,13 +59,13 @@ aclnnStatus aclnnDequantBias(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1500px"><colgroup>
-  <col style="width: 201px">
+  <col style="width: 301px">
   <col style="width: 115px">
   <col style="width: 200px">
   <col style="width: 320px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -81,7 +81,7 @@ aclnnStatus aclnnDequantBias(
     </tr></thead>
   <tbody>
      <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示反量化操作的输入tensor，公式中的A。</td>
     <td><ul><li>支持空Tensor。</li><li>shape为[M，N]。</li></ul></td>
@@ -91,7 +91,7 @@ aclnnStatus aclnnDequantBias(
       <td>×</td>
     </tr>
     <tr>
-      <td>weightScale</td>
+      <td>weightScale（aclTensor*）</td>
       <td>输入</td>
       <td>表示反量化操作输入N维度上乘法的权重，公式中的输入weight_scale。</td>
       <td><ul><li>支持空Tensor。</li><li>shape为[N]，长度与x的N维长度一致。</li></ul></td>
@@ -101,7 +101,7 @@ aclnnStatus aclnnDequantBias(
       <td>×</td>
     </tr>
      <tr>
-      <td>activateScaleOptional</td>
+      <td>activateScaleOptional（aclTensor*）</td>
       <td>输入</td>
       <td>表示反量化操作输入M维度上乘法的权重，公式中的输入activate_scale。</td>
       <td><ul><li>支持空Tensor。</li><li>shape为[M]，长度与x的M维长度一致。</li></ul></td>
@@ -111,7 +111,7 @@ aclnnStatus aclnnDequantBias(
       <td>×</td>
     </tr>
     <tr>
-      <td>biasOptional</td>
+      <td>biasOptional（aclTensor*）</td>
       <td>输入</td>
       <td>表示反量化操作输入N维度上加法的权重，公式中的输入bias。</td>
       <td><ul><li>支持空Tensor。</li><li>shape为[N]，长度与x的N维长度一致。</li></ul></td>
@@ -121,17 +121,17 @@ aclnnStatus aclnnDequantBias(
       <td>×</td>
     </tr> 
       <tr>
-      <td>outputDtype</td>
+      <td>outputDtype（int64_t）</td>
       <td>输入</td>
       <td>表示输出out的数据类型。</td>
       <td><ul><li>支持空Tensor。</li><li>值为[1，27]。值为1表示输出的类型是FLOAT16，值为27表示输出的类型是BFLOAT16。</li><li>当weightScale数据类型为FLOAT时，该参数配置为1。</li><li>当weightScale数据类型为BFLOAT16时，该参数配置为27。</li></ul></td>
-      <td>UINT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示反量化操作的输出Tensor，公式中的输出y。</td>
       <td>shape为[M，N]。</td>
@@ -141,7 +141,7 @@ aclnnStatus aclnnDequantBias(
       <td>×</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -151,7 +151,7 @@ aclnnStatus aclnnDequantBias(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

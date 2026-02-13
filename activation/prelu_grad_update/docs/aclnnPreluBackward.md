@@ -64,13 +64,13 @@ aclnnStatus aclnnPreluBackward(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1490px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 240px">
   <col style="width: 300px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -86,7 +86,7 @@ aclnnStatus aclnnPreluBackward(
     </tr></thead>
   <tbody>
     <tr>
-      <td>gradOutput</td>
+      <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
       <td>反向传播的梯度值。公式中的gradOutput。</td>
       <td><ul><li>支持空Tensor。</li><li>dtype需要与self相同。</li><li>shape需要与self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>，且Broadcast后shape与self的shape相等。</li></ul></td>
@@ -96,7 +96,7 @@ aclnnStatus aclnnPreluBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>prelu的正向输入值。公式中的self。</td>
       <td>支持空Tensor。</td>
@@ -106,7 +106,7 @@ aclnnStatus aclnnPreluBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>weight</td>
+      <td>weight（aclTensor*）</td>
       <td>输入</td>
       <td>prelu的权重，公式中的weight。</td>
       <td><ul><li>支持空Tensor。</li><li>dtype需要与self相同。</li><li>当self的shape维度大于1维时，weight的shape维度可以与self的shape维度相同且第2维度的值保持一致，同时weight的shape其他维度的值为1；或者weight是1维Tensor，元素个数为self的shape的第2维度。</li><li></li>否则，weight元素个数为1。</ul></td>
@@ -116,7 +116,7 @@ aclnnStatus aclnnPreluBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>gradInput</td>
+      <td>gradInput（aclTensor*）</td>
       <td>输出</td>
       <td>为self的梯度值。</td>
       <td><ul><li>dtype需要与self相同。</li><li>shape需要与gradOutput满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>gradInput的shape和数据类型与self的相同。</li></ul></td>
@@ -126,7 +126,7 @@ aclnnStatus aclnnPreluBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>gradWeight</td>
+      <td>gradWeight（aclTensor*）</td>
       <td>输出</td>
       <td>为weight的梯度值。</td>
       <td><ul><li>dtype需要与self相同。</li><li>需要与weight的数据类型相同。</li><li>gradWeight的shape与weight的shape保持一致。</li></ul></td>
@@ -136,7 +136,7 @@ aclnnStatus aclnnPreluBackward(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -146,7 +146,7 @@ aclnnStatus aclnnPreluBackward(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

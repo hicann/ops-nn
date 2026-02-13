@@ -37,6 +37,7 @@
   $$
 
 ## 函数原型
+
 - aclnnRReluWithNoise和aclnnInplaceRReluWithNoise实现相同的功能，使用区别如下，请根据自身实际场景选择合适的算子。
   - aclnnRReluWithNoise：需新建一个输出张量对象存储计算结果。
   - aclnnInplaceRReluWithNoise：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
@@ -85,18 +86,18 @@ aclnnStatus aclnnInplaceRReluWithNoise(
   const aclrtStream stream)
 ```
 
-
 ## aclnnRReluWithNoiseGetWorkspaceSize
+
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1360px"><colgroup>
-  <col style="width: 111px">
+  <col style="width: 211px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 250px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -112,7 +113,7 @@ aclnnStatus aclnnInplaceRReluWithNoise(
     </tr></thead>
   <tbody>
       <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>待进行RReluWithNoise计算的入参，公式中的self。</td>
       <td><ul><li>shape支持的维度不超过32。</li><li>数据类型需要和out的数据类型保持一致。</li><li>shape需要和out的shape保持一致。</li><li>数据格式需要和out的数据格式类型保持一致。</li><li>支持空Tensor。</li></ul></td>
@@ -122,7 +123,7 @@ aclnnStatus aclnnInplaceRReluWithNoise(
       <td>√</td>
     </tr>
     <tr>
-      <td>noise</td>
+      <td>noise（aclTensor*）</td>
       <td>输入</td>
       <td>公式中的noise_i。</td>
       <td><ul><li>Size需要不小于self（shape建议与self一致）。</li><li>数据类型需要和self的数据类型保持一致。</li><li>shape需要和self的shape保持一致。</li><li>shape支持的维度不超过32。</li><li>支持空Tensor。</li></ul></td>
@@ -132,7 +133,7 @@ aclnnStatus aclnnInplaceRReluWithNoise(
       <td>√</td>
     </tr>
       <tr>
-      <td>lower</td>
+      <td>lower（aclScalar*）</td>
       <td>输入</td>
       <td>均匀分布U中的lower。</td>
       <td>数据类型需要与self、out满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</td>
@@ -142,7 +143,7 @@ aclnnStatus aclnnInplaceRReluWithNoise(
       <td>-</td>
     </tr>
        <tr>
-      <td>upper</td>
+      <td>upper（aclScalar*）</td>
       <td>输入</td>
       <td>均匀分布U中的upper。</td>
       <td>数据类型需要与self、out满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</td>
@@ -152,37 +153,37 @@ aclnnStatus aclnnInplaceRReluWithNoise(
       <td>-</td>
     </tr>
       <tr>
-      <td>training</td>
+      <td>training（bool）</td>
       <td>输入</td>
       <td>区分是训练还是推理。</td>
       <td>-</td>
-      <td>BOOL</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
       <tr>
-      <td>seed</td>
+      <td>seed（int64_t）</td>
       <td>输入</td>
       <td>随机数生成器的种子，影响生成的随机数序列。</td>
       <td>-</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
      <tr>
-      <td>offset</td>
+      <td>offset（int64_t）</td>
       <td>输入</td>
       <td>随机数生成器的偏移量，影响生成的随机数序列的位置。</td>
       <td>偏移量设置后，生成的随机数序列会从指定位置开始。</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
        <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>均匀分布U中的upper。</td>
       <td><ul><li>数据类型需要和self的数据类型保持一致。</li><li>shape需要和self的shape保持一致。</li><li>数据格式需要和self的数据格式类型保持一致。</li></ul></td>
@@ -192,7 +193,7 @@ aclnnStatus aclnnInplaceRReluWithNoise(
       <td>-</td>
     </tr>
      <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -202,7 +203,7 @@ aclnnStatus aclnnInplaceRReluWithNoise(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
@@ -216,7 +217,6 @@ aclnnStatus aclnnInplaceRReluWithNoise(
   
    - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。 
 
-  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -258,8 +258,8 @@ aclnnStatus aclnnInplaceRReluWithNoise(
     </tr>
   </tbody></table>
 
-
 ## aclnnRReluWithNoise
+
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
@@ -297,12 +297,12 @@ aclnnStatus aclnnInplaceRReluWithNoise(
   </tbody>
   </table>
 
-  
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## aclnnInplaceRReluWithNoiseGetWorkspaceSize
+
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1360px"><colgroup>
@@ -420,14 +420,14 @@ aclnnStatus aclnnInplaceRReluWithNoise(
   </tbody>
   </table>
   
-   - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。   
+   - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。
 
-
-  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -462,8 +462,8 @@ aclnnStatus aclnnInplaceRReluWithNoise(
     </tr>
   </tbody></table>
 
-
 ## aclnnInplaceRReluWithNoise
+
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
@@ -501,7 +501,6 @@ aclnnStatus aclnnInplaceRReluWithNoise(
   </tbody>
   </table>
 
-  
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。

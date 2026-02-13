@@ -70,13 +70,13 @@ aclnnStatus aclnnInplaceThreshold(
 - **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1403px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 200px">
   <col style="width: 230px">
   <col style="width: 200px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -92,7 +92,7 @@ aclnnStatus aclnnInplaceThreshold(
     </tr></thead>
   <tbody>
     <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入张量，待进行Threshold计算的入参，公式中的输入x。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要与out一致。</li></ul></td>
@@ -102,7 +102,7 @@ aclnnStatus aclnnInplaceThreshold(
       <td>√</td>
     </tr>
       <tr>
-      <td>threshold</td>
+      <td>threshold（aclScalar*）</td>
       <td>输入</td>
       <td>表示阈值，公式中的输入threshold。</td>
       <td>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</td>
@@ -112,7 +112,7 @@ aclnnStatus aclnnInplaceThreshold(
       <td>-</td>
     </tr>
       <tr>
-      <td>value</td>
+      <td>value（aclScalar*）</td>
       <td>输入</td>
       <td>表示输入self的元素小于阈值时的返回值，公式中的输入value。</td>
       <td>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</td>
@@ -122,7 +122,7 @@ aclnnStatus aclnnInplaceThreshold(
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示输出张量，公式中的输出out。</td>
       <td><ul><li>数据类型是self与threshold、value推导之后可转换的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>shape需要与self一致。</li></ul></td>
@@ -132,7 +132,7 @@ aclnnStatus aclnnInplaceThreshold(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -142,7 +142,7 @@ aclnnStatus aclnnInplaceThreshold(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
@@ -243,13 +243,13 @@ aclnnStatus aclnnInplaceThreshold(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1405px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 247px">
   <col style="width: 208px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -265,7 +265,7 @@ aclnnStatus aclnnInplaceThreshold(
     </tr></thead>
   <tbody>
     <tr>
-      <td>selfRef</td>
+      <td>selfRef（aclTensor*）</td>
       <td>输入/输出</td>
       <td>表示输入/输出张量，公式中的x/out。</td>
       <td>-</td>
@@ -275,7 +275,7 @@ aclnnStatus aclnnInplaceThreshold(
       <td>√</td>
     </tr>
        <tr>
-      <td>threshold</td>
+      <td>threshold（aclScalar*）</td>
       <td>输入</td>
       <td>表示阈值，公式中的输入threshold。</td>
       <td>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）。</td>
@@ -285,7 +285,7 @@ aclnnStatus aclnnInplaceThreshold(
       <td>-</td>
     </tr>
       <tr>
-      <td>value</td>
+      <td>value（aclScalar*）</td>
       <td>输入</td>
       <td>表示输入self的元素小于阈值时的返回值，公式中的输入value。</td>
       <td>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）。</td>
@@ -295,7 +295,7 @@ aclnnStatus aclnnInplaceThreshold(
       <td>-</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -305,7 +305,7 @@ aclnnStatus aclnnInplaceThreshold(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

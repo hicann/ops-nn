@@ -111,13 +111,13 @@ aclnnStatus aclnnClippedSwiglu(
 
 - **参数说明**
   <table style="undefined;table-layout: fixed; width: 1567px"><colgroup>
-  <col style="width: 170px">
+  <col style="width: 270px">
   <col style="width: 120px">
   <col style="width: 300px">
   <col style="width: 330px">
   <col style="width: 212px">
   <col style="width: 100px">
-  <col style="width: 190px">
+  <col style="width: 90px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -133,7 +133,7 @@ aclnnStatus aclnnClippedSwiglu(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>公式中的输入x。</td>
       <td>不支持空指针，维度必须大于0且shape必须在入参dim对应维度上是偶数。</td>
@@ -143,7 +143,7 @@ aclnnStatus aclnnClippedSwiglu(
       <td>-</td>
     </tr>
     <tr>
-      <td>groupIndexOptional</td>
+      <td>groupIndexOptional（aclTensor*）</td>
       <td>输入</td>
       <td>公式中的输入group_index，表示分组的情况。</td>
       <td>支持空指针。不为空指针时，维度要求为1维，且元素需大于等于0。第i个元素代表第i组需要处理x的batch数量。</td>
@@ -153,57 +153,57 @@ aclnnStatus aclnnClippedSwiglu(
       <td>-</td>
     </tr>
     <tr>
-      <td>dim</td>
+      <td>dim（int64_t）</td>
       <td>输入</td>
       <td>公式中的输入dim，表示对x进行合轴以及切分的维度序号。</td>
       <td>取值范围为[-x.dim(), x.dim()-1]。</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>alpha</td>
+      <td>alpha（double）</td>
       <td>输入</td>
       <td>公式中的输入alpha，表示变体SwiGlu使用的参数。</td>
       <td>建议为1.702。</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>limit</td>
+      <td>limit（double）</td>
       <td>输入</td>
       <td>公式中的输入limit，表示变体SwiGlu使用的门限值。</td>
       <td>建议为7.0。</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>bias</td>
+      <td>bias（double）</td>
       <td>输入</td>
       <td>公式中的输入bias，表示变体SwiGlu使用的偏差参数。</td>
       <td>建议为1.0。</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>interleaved</td>
+      <td>interleaved（bool）</td>
       <td>输入</td>
       <td>公式中的输入interleaved，表示切分x时是否按奇偶方式切分</td>
       <td>设置为true表示对x进行奇偶切分，设置为false表示对x进行前后切分。</td>
-      <td>BOOL</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>公式中的输出y。</td>
       <td>不支持空指针。shape在入参dim对应的维度上为x的一半，其他维度上与x一致。</td>
@@ -213,7 +213,7 @@ aclnnStatus aclnnClippedSwiglu(
       <td>-</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -223,7 +223,7 @@ aclnnStatus aclnnClippedSwiglu(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

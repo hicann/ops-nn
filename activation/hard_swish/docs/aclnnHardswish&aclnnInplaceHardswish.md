@@ -71,13 +71,13 @@ aclnnStatus aclnnInplaceHardswish(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1380px"><colgroup>
-  <col style="width: 131px">
+  <col style="width: 231px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 250px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -93,7 +93,7 @@ aclnnStatus aclnnInplaceHardswish(
     </tr></thead>
   <tbody>
       <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示激活函数的输入张量，公式中的输入x。</td>
       <td><ul><li>支持空Tensor。</li><li>self的数据类型需要是可转换为out的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</li></ul></td>
@@ -103,7 +103,7 @@ aclnnStatus aclnnInplaceHardswish(
       <td>√</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示激活函数的输出张量，公式中的输出Hardswish。</td>
       <td>out的数据类型需要是可转换为self的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
@@ -113,7 +113,7 @@ aclnnStatus aclnnInplaceHardswish(
       <td>√</td>
     </tr>
      <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -123,7 +123,7 @@ aclnnStatus aclnnInplaceHardswish(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
@@ -222,13 +222,13 @@ aclnnStatus aclnnInplaceHardswish(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1370px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 200px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -244,7 +244,7 @@ aclnnStatus aclnnInplaceHardswish(
     </tr></thead>
   <tbody>
       <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示激活函数的输入/输出张量，公式中的x和输出结果。</td>
       <td>支持空Tensor。</td>
@@ -254,7 +254,7 @@ aclnnStatus aclnnInplaceHardswish(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -264,7 +264,7 @@ aclnnStatus aclnnInplaceHardswish(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

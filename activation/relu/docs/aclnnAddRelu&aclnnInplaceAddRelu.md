@@ -75,9 +75,9 @@
 - **参数说明：**
   
   <table style="undefined;table-layout: fixed; width: 1478px"><colgroup>
-    <col style="width: 149px">
+    <col style="width: 249px">
     <col style="width: 121px">
-    <col style="width: 264px">
+    <col style="width: 164px">
     <col style="width: 253px">
     <col style="width: 262px">
     <col style="width: 148px">
@@ -97,64 +97,64 @@
       </tr></thead>
     <tbody>
       <tr>
-        <td>self</td>
-        <td>输入</td>
-        <td>公式中的输入self，表示待转换的目标张量。</td>
-        <td><ul><li>shape需要与other满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>与other的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></ul></td>
-        <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
-        <td>ND</td>
-        <td>0-8</td>
-        <td>√</td>
+      <td>self（aclTensor*）</td>
+      <td>输入</td>
+      <td>公式中的输入self，表示待转换的目标张量。</td>
+      <td><ul><li>shape需要与other满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>与other的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></ul></td>
+      <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
+      <td>ND</td>
+      <td>0-8</td>
+      <td>√</td>
       </tr>
       <tr>
-        <td>other</td>
-        <td>输入</td>
-        <td>公式中的输入other。</td>
-        <td><ul><li>shape需要与self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></ul></td>
-        <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
-        <td>ND</td>
-        <td>0-8</td>
-        <td>√</td>
+      <td>other（aclTensor*）</td>
+      <td>输入</td>
+      <td>公式中的输入other。</td>
+      <td><ul><li>shape需要与self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></ul></td>
+      <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
+      <td>ND</td>
+      <td>0-8</td>
+      <td>√</td>
       </tr>
       <tr>
-        <td>alpha</td>
-        <td>输入</td>
-        <td>公式中的alpha。</td>
-        <td>数据类型需要可转换成self与other推导后的数据类型。</td>
-        <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
+      <td>alpha（aclScalar*）</td>
+      <td>输入</td>
+      <td>公式中的alpha。</td>
+      <td>数据类型需要可转换成self与other推导后的数据类型。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
       </tr>
       <tr>
-        <td>out</td>
-        <td>输出</td>
-        <td>公式中的out。</td>
-        <td>数据类型需要是self与other推导之后可转换的数据类型，shape需要是self与other broadcast之后的shape。</td>
-        <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
-        <td>ND</td>
-        <td>0-8</td>
-        <td>√</td>
+      <td>out（aclTensor*）</td>
+      <td>输出</td>
+      <td>公式中的out。</td>
+      <td>数据类型需要是self与other推导之后可转换的数据类型，shape需要是self与other broadcast之后的shape。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
+      <td>ND</td>
+      <td>0-8</td>
+      <td>√</td>
       </tr>
       <tr>
-        <td>workspaceSize</td>
-        <td>输出</td>
-        <td>返回需要在Device侧申请的workspace大小。</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
+      <td>workspaceSize（uint64_t*）</td>
+      <td>输出</td>
+      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
       </tr>
       <tr>
-        <td>executor</td>
-        <td>输出</td>
-        <td>返回op执行器，包含了算子计算流程。</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
+      <td>executor（aclOpExecutor**）</td>
+      <td>输出</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
       </tr>
     </tbody></table>
 
@@ -250,9 +250,9 @@
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1478px"><colgroup>
-    <col style="width: 149px">
+    <col style="width: 249px">
     <col style="width: 121px">
-    <col style="width: 264px">
+    <col style="width: 164px">
     <col style="width: 253px">
     <col style="width: 262px">
     <col style="width: 148px">
@@ -272,54 +272,54 @@
       </tr></thead>
     <tbody>
       <tr>
-        <td>selfRef</td>
-        <td>输入|输出</td>
-        <td>公式中的self与out，表示待转换的目标张量。</td>
-        <td>与other的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>），且需要是推导之后可转换的数据类型。</td>
-        <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
-        <td>ND</td>
-        <td>0-8</td>
-        <td>√</td>
+      <td>selfRef（aclTensor*）</td>
+      <td>输入|输出</td>
+      <td>公式中的self与out，表示待转换的目标张量。</td>
+      <td>与other的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>），且需要是推导之后可转换的数据类型。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
+      <td>ND</td>
+      <td>0-8</td>
+      <td>√</td>
       </tr>
       <tr>
-        <td>other</td>
-        <td>输入</td>
-        <td>公式中的输入other。</td>
-        <td><ul><li>shape需要与selfRef满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>与selfRef的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></ul></td>
-        <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
-        <td>ND</td>
-        <td>0-8</td>
-        <td>√</td>
+      <td>other（aclTensor*）</td>
+      <td>输入</td>
+      <td>公式中的输入other。</td>
+      <td><ul><li>shape需要与selfRef满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>与selfRef的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></ul></td>
+      <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
+      <td>ND</td>
+      <td>0-8</td>
+      <td>√</td>
       </tr>
       <tr>
-        <td>alpha</td>
-        <td>输入</td>
-        <td>公式中的alpha。</td>
-        <td>数据类型需要可转换成selfRef与other推导后的数据类型。</td>
-        <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
+      <td>alpha（aclScalar*）</td>
+      <td>输入</td>
+      <td>公式中的alpha。</td>
+      <td>数据类型需要可转换成selfRef与other推导后的数据类型。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
       </tr>
       <tr>
-        <td>workspaceSize</td>
-        <td>输出</td>
-        <td>返回需要在Device侧申请的workspace大小。</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
+      <td>workspaceSize（uint64_t*）</td>
+      <td>输出</td>
+      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
       </tr>
       <tr>
-        <td>executor</td>
-        <td>输出</td>
-        <td>返回op执行器，包含了算子计算流程。</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
+      <td>executor（aclOpExecutor**）</td>
+      <td>输出</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
       </tr>
     </tbody></table>
 

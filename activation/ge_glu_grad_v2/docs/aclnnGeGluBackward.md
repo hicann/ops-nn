@@ -62,13 +62,13 @@ aclnnStatus aclnnGeGluBackward(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1450px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 280px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -84,7 +84,7 @@ aclnnStatus aclnnGeGluBackward(
     </tr></thead>
    <tbody>
       <tr>
-      <td>gradOutput</td>
+      <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
       <td>待进行GeGluBackward计算的入参，公式中的gradOutput。</td>
       <td><ul><li>数据类型与self一致。</li><li>shape中除dim维外，其它维的大小跟self一样，dim维的大小是self的一半。</li></ul></td>
@@ -94,7 +94,7 @@ aclnnStatus aclnnGeGluBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>GeGluBackward计算的入参，公式中的self。</td>
       <td><ul><li>shape中除dim维外，其它维的大小与gradOutput一样，dim维的大小是gradOutput的两倍。</li></ul></td>
@@ -103,7 +103,7 @@ aclnnStatus aclnnGeGluBackward(
       <td>1-8</td>
       <td>√</td>
     </tr>
-      <td>gelu</td>
+      <td>gelu（aclTensor*）</td>
       <td>输入</td>
       <td>GeGluBackward计算的入参，公式中的gelu。</td>
       <td><ul><li>数据类型与self一致。</li><li>shape需要与gradOutput一样。</li></ul></td>
@@ -113,27 +113,27 @@ aclnnStatus aclnnGeGluBackward(
       <td>√</td>
     </tr>
       <tr>
-      <td>dim</td>
+      <td>dim（int64_t）</td>
       <td>输入</td>
       <td>-</td>
       <td>当前取值支持[-len(输入shape), len(输入shape)]。</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
       <tr>
-      <td>approximate</td>
+      <td>approximate（int64_t）</td>
       <td>输入</td>
       <td>-</td>
       <td>取值范围是0('none')、1('tanh')。Atlas 推理系列产品只支持1('tanh')。</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>gradInput</td>
+      <td>gradInput（aclTensor*）</td>
       <td>输出</td>
       <td>GeGluBackward计算的出参，公式中的gradInput。</td>
       <td><ul><li>数据类型与self一致。</li><li>shape需要与self一样。</li></ul></td>
@@ -143,7 +143,7 @@ aclnnStatus aclnnGeGluBackward(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -153,7 +153,7 @@ aclnnStatus aclnnGeGluBackward(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

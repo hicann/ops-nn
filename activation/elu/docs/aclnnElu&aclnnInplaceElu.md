@@ -76,13 +76,13 @@ aclnnStatus aclnnInplaceElu(
 - **参数说明：**
   
   <table style="undefined;table-layout: fixed; width: 1370px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 200px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -98,7 +98,7 @@ aclnnStatus aclnnInplaceElu(
     </tr></thead>
   <tbody>
       <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示ELU激活函数的输入，公式中的x。</td>
       <td>支持空Tensor。</td>
@@ -108,7 +108,7 @@ aclnnStatus aclnnInplaceElu(
       <td>√</td>
     </tr>
       <tr>
-      <td>alpha</td>
+      <td>alpha（aclScalar*）</td>
       <td>输入</td>
       <td>表示ELU激活函数的激活系数，公式中的α。</td>
       <td>数据类型需要是可转换为FLOAT的数据类型。</td>
@@ -118,7 +118,7 @@ aclnnStatus aclnnInplaceElu(
       <td>-</td>
     </tr>
      <tr>
-      <td>scale</td>
+      <td>scale（aclScalar*）</td>
       <td>输入</td>
       <td>表示ELU激活函数的缩放系数，公式中的scale。</td>
       <td>数据类型需要是可转换为FLOAT的数据类型。</td>
@@ -128,7 +128,7 @@ aclnnStatus aclnnInplaceElu(
       <td>-</td>
     </tr>
      <tr>
-      <td>inputScale</td>
+      <td>inputScale（aclScalar*）</td>
       <td>输入</td>
       <td>表示ELU激活函数的输入的缩放系数，公式中的inputScale。</td>
       <td>数据类型需要是可转换为FLOAT的数据类型。</td>
@@ -138,7 +138,7 @@ aclnnStatus aclnnInplaceElu(
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示ELU激活函数的输出。</td>
       <td>shape需要与self一致。</td>
@@ -148,7 +148,7 @@ aclnnStatus aclnnInplaceElu(
       <td>√</td>
     </tr>
      <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -158,7 +158,7 @@ aclnnStatus aclnnInplaceElu(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
@@ -284,7 +284,7 @@ aclnnStatus aclnnInplaceElu(
     </tr></thead>
   <tbody>
       <tr>
-      <td>selfRef</td>
+      <td>selfRef（aclTensor*）</td>
       <td>输入</td>
       <td>表示ELU激活函数的输入，公式中的x。</td>
       <td>支持空Tensor。</td>
@@ -294,7 +294,7 @@ aclnnStatus aclnnInplaceElu(
       <td>√</td>
     </tr>
       <tr>
-      <td>alpha</td>
+      <td>alpha（aclScalar*）</td>
       <td>输入</td>
       <td>表示ELU激活函数的激活系数，公式中的α。</td>
       <td>数据类型需要是可转换为FLOAT的数据类型。</td>
@@ -304,7 +304,7 @@ aclnnStatus aclnnInplaceElu(
       <td>-</td>
     </tr>
        <tr>
-      <td>scale</td>
+      <td>scale（aclScalar*）</td>
       <td>输入</td>
       <td>表示ELU激活函数的激活系数，公式中的scale。</td>
       <td>数据类型需要是可转换为FLOAT的数据类型。</td>
@@ -314,7 +314,7 @@ aclnnStatus aclnnInplaceElu(
       <td>-</td>
     </tr>
        <tr>
-      <td>inputScale</td>
+      <td>inputScale（aclScalar*）</td>
       <td>输入</td>
       <td>表示ELU激活函数的输入的缩放系数。</td>
       <td>数据类型需要是可转换为FLOAT的数据类型。</td>
@@ -324,7 +324,7 @@ aclnnStatus aclnnInplaceElu(
       <td>-</td>
     </tr>
      <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -334,7 +334,7 @@ aclnnStatus aclnnInplaceElu(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

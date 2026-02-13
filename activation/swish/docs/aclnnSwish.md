@@ -55,13 +55,13 @@ aclnnStatus aclnnSwish(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1420px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 230px">
   <col style="width: 240px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -77,7 +77,7 @@ aclnnStatus aclnnSwish(
     </tr></thead>
   <tbody>
     <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示用于计算激活函数的张量，公式中的x。</td>
       <td><ul><li>支持空Tensor。</li><li>self的shape和数据类型与out的一致。</li></ul></td>
@@ -87,7 +87,7 @@ aclnnStatus aclnnSwish(
       <td>√</td>
     </tr>
        <tr>
-      <td>betaOptional</td>
+      <td>betaOptional（aclScalar*）</td>
       <td>输入</td>
       <td>表示可调节参数，用于控制Swish函数的形状和斜率的标量，公式中的β。</td>
       <td><ul><li>数据类型需要是可转换为FLOAT的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</li><li>当betaOptional为空指针时，接口以1.0进行计算。</li></ul></td>
@@ -97,7 +97,7 @@ aclnnStatus aclnnSwish(
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示Swish函数的输出，公式中的s(x)。</td>
       <td><ul><li>支持空Tensor。</li><li>out的shape和数据类型与self的一致。</li></ul></td>
@@ -107,7 +107,7 @@ aclnnStatus aclnnSwish(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -117,7 +117,7 @@ aclnnStatus aclnnSwish(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

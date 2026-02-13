@@ -67,13 +67,13 @@ aclnnStatus aclnnInplaceSelu(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1390px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 220px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -89,7 +89,7 @@ aclnnStatus aclnnInplaceSelu(
     </tr></thead>
   <tbody>
     <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示Selu符号函数的计算输入，计算公式中的input_i。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要与out一致。</li></ul></td>
@@ -99,7 +99,7 @@ aclnnStatus aclnnInplaceSelu(
       <td>√</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示Selu符号函数的计算输出，计算公式中的output_i。</td>
       <td>shape需要与self一致。</td>
@@ -109,7 +109,7 @@ aclnnStatus aclnnInplaceSelu(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -119,7 +119,7 @@ aclnnStatus aclnnInplaceSelu(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
@@ -136,7 +136,9 @@ aclnnStatus aclnnInplaceSelu(
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -216,13 +218,13 @@ aclnnStatus aclnnInplaceSelu(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1355px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 247px">
   <col style="width: 158px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -238,7 +240,7 @@ aclnnStatus aclnnInplaceSelu(
     </tr></thead>
   <tbody>
     <tr>
-      <td>selfRef</td>
+      <td>selfRef（aclTensor*）</td>
       <td>输入</td>
       <td>表示Selu符号函数的计算输入，计算公式中的input_i。</td>
       <td>支持空Tensor。</td>
@@ -248,7 +250,7 @@ aclnnStatus aclnnInplaceSelu(
       <td>√</td>
     </tr>
        <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -258,7 +260,7 @@ aclnnStatus aclnnInplaceSelu(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

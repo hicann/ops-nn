@@ -51,13 +51,13 @@ aclnnStatus aclnnLogSoftmax(
 - **参数说明：**
   
   <table style="undefined;table-layout: fixed; width: 1430px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 200px">
   <col style="width: 280px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -87,7 +87,7 @@ aclnnStatus aclnnLogSoftmax(
       <td>输入</td>
       <td>需要做Logsoftmax的轴。</td>
       <td>-</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

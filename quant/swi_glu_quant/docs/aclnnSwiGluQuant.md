@@ -74,13 +74,13 @@ aclnnStatus aclnnSwiGluQuant(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1480px"><colgroup>
-  <col style="width: 201px">
+  <col style="width: 301px">
   <col style="width: 115px">
   <col style="width: 200px">
   <col style="width: 300px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -96,7 +96,7 @@ aclnnStatus aclnnSwiGluQuant(
     </tr></thead>
   <tbody>
       <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>输入待处理的数据，公式中的x。</td>
       <td><ul><li>不支持空Tensor。</li><li>x的最后一维需要为2的倍数，且x的维数必须大于1维，当前仅支持输入x的最后一维长度不超过8192。</li></ul></td>
@@ -106,7 +106,7 @@ aclnnStatus aclnnSwiGluQuant(
       <td>×</td>
     </tr>
     <tr>
-      <td>smoothScalesOptional</td>
+      <td>smoothScalesOptional（aclTensor*）</td>
       <td>输入</td>
       <td>量化的smooth_scales，公式中的smooth_scales。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape支持[G, N]，[G, ]，其中G代表groupIndex分组数量，N为计算输入x的最后一维大小的二分之一，当前版本下不支持用户传入空指针。</li></ul></td>
@@ -116,7 +116,7 @@ aclnnStatus aclnnSwiGluQuant(
       <td>×</td>
     </tr>
      <tr>
-      <td>offsetsOptional</td>
+      <td>offsetsOptional（aclTensor*）</td>
       <td>输入</td>
       <td>公式中的offsets。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数在动态量化场景下不生效，用户传入空指针即可。</li><li>静态量化场景下：数据类型支持FLOAT。</li><li>per_channel模式下shape支持[G, N]。</li><li>per_tensor模式下shape支持[G, ]，且数据类型和shape需要与smoothScalesOptional保持一致。</li></ul></td>
@@ -126,7 +126,7 @@ aclnnStatus aclnnSwiGluQuant(
       <td>×</td>
     </tr>
     <tr>
-      <td>groupIndexOptional</td>
+      <td>groupIndexOptional（aclTensor*）</td>
       <td>输入</td>
       <td>MoE分组需要的group_index，公式中的group_index。</td>
       <td><ul><li>支持空Tensor。</li><li>shape支持[G, ]，group_index内元素要求为非递减，且最大值不得超过输入x的除最后一维之外的所有维度大小之积；G的值不得超过输入x的除最后一维之外的所有维度大小之积。</li></ul></td>
@@ -136,7 +136,7 @@ aclnnStatus aclnnSwiGluQuant(
       <td>×</td>
     </tr>
       <tr>
-      <td>activateLeft</td>
+      <td>activateLeft（bool）</td>
       <td>输入</td>
       <td>计算输入。</td>
       <td>true代表激活输入x的前半部分，false代表激活输入x后半部分。</td>
@@ -146,7 +146,7 @@ aclnnStatus aclnnSwiGluQuant(
       <td>-</td>
     </tr>
      <tr>
-      <td>quantModeOptional</td>
+      <td>quantModeOptional（char*）</td>
       <td>输入</td>
       <td>计算输入。</td>
       <td>"static"表示静态量化、"dynamic"表示动态量化、"dynamic_msd"表示动态MSD量化。当前仅支持"dynamic"动态量化, "static"静态量化。静态量化仅支持per_tensor量化和per_channel量化，用户传入空指针时代表动态量化。</td>
@@ -156,7 +156,7 @@ aclnnStatus aclnnSwiGluQuant(
       <td>-</td>
     </tr>
     <tr>
-      <td>yOut</td>
+      <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>输出张量。</td>
       <td>计算输出yOut的shape最后一维大小为计算输入x最后一维的二分之一，其余维度与x保持一致。</td>
@@ -166,7 +166,7 @@ aclnnStatus aclnnSwiGluQuant(
       <td>×</td>
     </tr>
       <tr>
-      <td>scaleOut</td>
+      <td>scaleOut（aclTensor*）</td>
       <td>输出</td>
       <td>输出张量。</td>
       <td>计算输出scaleOut的shape与计算输入x相比，无最后一维，其余维度与计算输入x保持一致。</td>
@@ -176,7 +176,7 @@ aclnnStatus aclnnSwiGluQuant(
       <td>×</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -186,7 +186,7 @@ aclnnStatus aclnnSwiGluQuant(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

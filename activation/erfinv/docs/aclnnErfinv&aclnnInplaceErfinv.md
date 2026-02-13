@@ -66,13 +66,13 @@ aclnnStatus aclnnInplaceErfinv(
 - **参数说明：**
   
   <table style="undefined;table-layout: fixed; width: 1370px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 200px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -88,7 +88,7 @@ aclnnStatus aclnnInplaceErfinv(
     </tr></thead>
   <tbody>
       <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>待进行erfinv计算的入参。对应计算公式中的x。</td>
       <td><ul><li>shape需要与out一致。</li><li>支持空Tensor。</li></ul></td>
@@ -98,7 +98,7 @@ aclnnStatus aclnnInplaceErfinv(
       <td>√</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>erfinv计算的出参。对应计算公式中的y。</td>
       <td>shape需要与self一致。</td>
@@ -108,7 +108,7 @@ aclnnStatus aclnnInplaceErfinv(
       <td>√</td>
     </tr>
      <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -118,7 +118,7 @@ aclnnStatus aclnnInplaceErfinv(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
@@ -238,7 +238,7 @@ aclnnStatus aclnnInplaceErfinv(
     </tr></thead>
   <tbody>
       <tr>
-      <td>selfRef</td>
+      <td>selfRef（aclTensor*）</td>
       <td>输入</td>
       <td>待进行erfinv计算的入参。输入时对应计算公式中的x，输出时内容为计算公式中的y，复用输入的空间。</td>
       <td>支持空Tensor。</td>
@@ -248,7 +248,7 @@ aclnnStatus aclnnInplaceErfinv(
       <td>√</td>
     </tr>
      <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -258,7 +258,7 @@ aclnnStatus aclnnInplaceErfinv(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
@@ -274,7 +274,9 @@ aclnnStatus aclnnInplaceErfinv(
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+  
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">

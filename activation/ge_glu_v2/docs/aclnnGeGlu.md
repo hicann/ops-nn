@@ -52,13 +52,13 @@ aclnnStatus aclnnGeGlu(
 - **参数说明：**
   
   <table style="undefined;table-layout: fixed; width: 1460px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 290px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -74,7 +74,7 @@ aclnnStatus aclnnGeGlu(
     </tr></thead>
   <tbody>
       <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>待进行GeGlu计算的入参，公式中的self。</td>
       <td>-</td>
@@ -84,7 +84,7 @@ aclnnStatus aclnnGeGlu(
       <td>√</td>
     </tr>
       <tr>
-      <td>dim</td>
+      <td>dim（int64_t）</td>
       <td>输入</td>
       <td>可选入参。</td>
       <td><ul><li>设定的slice轴，需要对self对应的轴进行对半分割。</li><li>dim对应的self的轴必须是偶数。</li></ul></td>
@@ -94,7 +94,7 @@ aclnnStatus aclnnGeGlu(
       <td>-</td>
     </tr>
       <tr>
-      <td>approximate</td>
+      <td>approximate（int64_t）</td>
       <td>输入</td>
       <td>可选入参。</td>
       <td>GeGlu计算使用的激活函数索引，0表示使用none，1表示使用tanh。</td>
@@ -104,7 +104,7 @@ aclnnStatus aclnnGeGlu(
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>GeGlu计算的出参，公式中的out_i。</td>
       <td><ul><li>out的shape跟self的shape除了dim指定的轴外需要保持一致，dim指定的轴为self的shape对应轴的一半。</li><li>数据类型与self一致。</li></ul></td>
@@ -114,7 +114,7 @@ aclnnStatus aclnnGeGlu(
       <td>√</td>
     </tr>
     <tr>
-      <td>outGelu</td>
+      <td>outGelu（aclTensor*）</td>
       <td>输出</td>
       <td>GeGlu计算的出参。</td>
       <td><ul><li>out的shape跟self的shape除了dim指定的轴外需要保持一致，dim指定的轴为self的shape对应轴的一半。</li><li>数据类型与self一致。</li></ul></td>
@@ -124,7 +124,7 @@ aclnnStatus aclnnGeGlu(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -134,7 +134,7 @@ aclnnStatus aclnnGeGlu(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

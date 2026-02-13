@@ -49,13 +49,13 @@ aclnnStatus aclnnGeluV2(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1380px"><colgroup>
-  <col style="width: 131px">
+  <col style="width: 231px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 250px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -71,7 +71,7 @@ aclnnStatus aclnnGeluV2(
     </tr></thead>
   <tbody>
       <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示GELU激活函数的输入，公式中的self。</td>
       <td><ul><li>数据类型必须和y一致。</li><li>shape必须和y一致。</li><li>支持空Tensor。</li></ul></td>
@@ -81,7 +81,7 @@ aclnnStatus aclnnGeluV2(
       <td>√</td>
     </tr>
       <tr>
-      <td>approximate</td>
+      <td>approximate（int64_t）</td>
       <td>属性</td>
       <td>表示GELU近似计算的算法。</td>
       <td>可选参数，取值0或1，默认0（0表示：none，1表示：tanh）。</td>
@@ -91,7 +91,7 @@ aclnnStatus aclnnGeluV2(
       <td>-</td>
     </tr>
        <tr>
-      <td>y</td>
+      <td>y（aclTensor*）</td>
       <td>输出</td>
       <td>表示GELU激活函数的输出。</td>
       <td><ul><li>数据类型必须和x一致。</li><li>shape必须和x一致。</li></ul></td>
@@ -101,7 +101,7 @@ aclnnStatus aclnnGeluV2(
       <td>√</td>
     </tr>
      <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -111,7 +111,7 @@ aclnnStatus aclnnGeluV2(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

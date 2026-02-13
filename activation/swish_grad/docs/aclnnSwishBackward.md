@@ -69,13 +69,13 @@ aclnnStatus aclnnSwishBackward(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1380px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 200px">
   <col style="width: 230px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -91,7 +91,7 @@ aclnnStatus aclnnSwishBackward(
     </tr></thead>
   <tbody>
     <tr>
-      <td>gradOutput</td>
+      <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
       <td>表示Swish激活函数正向输出的梯度，公式中的gradOutput。</td>
       <td><ul><li>支持空Tensor。</li><li>gradOutput、self与gradInput的shape一致。</li><li>gradOutput、self与gradInput的数据类型一致。</li></ul></td>
@@ -101,7 +101,7 @@ aclnnStatus aclnnSwishBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示用于计算激活函数的张量，公式中的x。</td>
       <td><ul><li>支持空Tensor。</li><li>gradOutput、self与gradInput的shape一致。</li><li>gradOutput、self与gradInput的数据类型一致。</li></ul></td>
@@ -111,7 +111,7 @@ aclnnStatus aclnnSwishBackward(
       <td>√</td>
     </tr>
       <tr>
-      <td>betaOptional</td>
+      <td>betaOptional（aclScalar*）</td>
       <td>输入</td>
       <td>表示可调节参数，用于控制Swish函数的形状和斜率的标量，公式中的β。</td>
       <td><ul><li>数据类型需要是可转换为FLOAT的数据类型（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>当betaOptional为空指针时，接口以1.0进行计算。</li></ul></td>
@@ -121,7 +121,7 @@ aclnnStatus aclnnSwishBackward(
       <td>-</td>
     </tr>
     <tr>
-      <td>gradInput</td>
+      <td>gradInput（aclTensor*）</td>
       <td>输出</td>
       <td><ul><li>backward计算的输出，为Swish正向输入的梯度值，即对输入进行求导后的结果。</li><li>公式中的gradInput。</li></ul></td>
       <td><ul><li>支持空Tensor。</li><li>gradOutput、self与gradInput的shape一致。</li><li>gradOutput、self与gradInput的数据类型一致。</li></ul></td>
@@ -131,7 +131,7 @@ aclnnStatus aclnnSwishBackward(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -141,7 +141,7 @@ aclnnStatus aclnnSwishBackward(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

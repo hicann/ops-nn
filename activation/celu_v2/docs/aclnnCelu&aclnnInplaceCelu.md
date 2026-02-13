@@ -65,19 +65,18 @@ aclnnStatus aclnnInplaceCelu(
   aclrtStream     stream)
 ```
 
-
 ## aclnnCeluGetWorkspaceSize
 
 - **参数说明：**
   
   <table style="undefined;table-layout: fixed; width: 1370px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 200px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -93,7 +92,7 @@ aclnnStatus aclnnInplaceCelu(
     </tr></thead>
   <tbody>
       <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示CELU激活函数的输入，公式中的x。</td>
       <td>支持空Tensor。</td>
@@ -103,7 +102,7 @@ aclnnStatus aclnnInplaceCelu(
       <td>√</td>
     </tr>
       <tr>
-      <td>alpha</td>
+      <td>alpha（aclScalar*）</td>
       <td>输入</td>
       <td>表示CELU激活函数的激活系数，公式中的\alpha。</td>
       <td><ul><li>数据类型需要是可转换为FLOAT的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</li><li>alpha不能为0。</li></ul></td>
@@ -113,7 +112,7 @@ aclnnStatus aclnnInplaceCelu(
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示CELU激活函数的输出。</td>
       <td><ul><li>数据类型需要是self可转换的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</li><li>shape需要与self一致。</li></ul></td>
@@ -123,7 +122,7 @@ aclnnStatus aclnnInplaceCelu(
       <td>√</td>
     </tr>
      <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -133,7 +132,7 @@ aclnnStatus aclnnInplaceCelu(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
@@ -191,7 +190,6 @@ aclnnStatus aclnnInplaceCelu(
     </tr>
   </tbody></table>
 
-
 ## aclnnCelu
 
 - **参数说明：**
@@ -231,7 +229,6 @@ aclnnStatus aclnnInplaceCelu(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -263,7 +260,7 @@ aclnnStatus aclnnInplaceCelu(
     </tr></thead>
   <tbody>
       <tr>
-      <td>selfRef</td>
+      <td>selfRef（aclTensor*）</td>
       <td>输入</td>
       <td>表示CELU激活函数的输入，公式中的x。</td>
       <td>支持空Tensor。</td>
@@ -273,7 +270,7 @@ aclnnStatus aclnnInplaceCelu(
       <td>√</td>
     </tr>
       <tr>
-      <td>alpha</td>
+      <td>alpha（aclScalar*）</td>
       <td>输入</td>
       <td>表示CELU激活函数的激活系数，公式中的\alpha。</td>
       <td><ul><li>数据类型需要是可转换为FLOAT的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</li><li>alpha不能为0。</li></ul></td>
@@ -283,7 +280,7 @@ aclnnStatus aclnnInplaceCelu(
       <td>-</td>
     </tr>
      <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -293,7 +290,7 @@ aclnnStatus aclnnInplaceCelu(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
@@ -310,7 +307,9 @@ aclnnStatus aclnnInplaceCelu(
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -344,7 +343,6 @@ aclnnStatus aclnnInplaceCelu(
       <td>alpha等于0。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnInplaceCelu
 

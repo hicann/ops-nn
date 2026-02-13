@@ -55,13 +55,13 @@ aclnnStatus aclnnHeaviside(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1390px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 220px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -77,7 +77,7 @@ aclnnStatus aclnnHeaviside(
     </tr></thead>
    <tbody>
       <tr>
-      <td>input</td>
+      <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>输入的张量，公式中的input。</td>
       <td><ul><li>支持空Tensor。</li><li>需要与values满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
@@ -87,7 +87,7 @@ aclnnStatus aclnnHeaviside(
       <td>√</td>
     </tr>
     <tr>
-      <td>values</td>
+      <td>values（aclTensor*）</td>
       <td>输入</td>
       <td>input值为零时使用的值的张量，公式中的values。</td>
       <td><ul><li>支持空Tensor。</li><li>需要与input满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
@@ -97,7 +97,7 @@ aclnnStatus aclnnHeaviside(
       <td>√</td>
     </tr>
      <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>输出的张量。</td>
       <td><ul><li>输出的数据类型与输入保持一致。</li><li>输出shape和输入input和values经过broadcast后的shape一致。</li></ul></td>
@@ -107,7 +107,7 @@ aclnnStatus aclnnHeaviside(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -117,7 +117,7 @@ aclnnStatus aclnnHeaviside(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

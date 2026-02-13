@@ -54,13 +54,13 @@ aclnnStatus aclnnHardshrinkBackward(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1380px"><colgroup>
-  <col style="width: 131px">
+  <col style="width: 231px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 250px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -76,7 +76,7 @@ aclnnStatus aclnnHardshrinkBackward(
     </tr></thead>
   <tbody>
       <tr>
-      <td>gradOutput</td>
+      <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
       <td>反向传播过程中上一步输出的梯度，作为本反向算子的输入，公式中的grad。</td>
       <td><ul><li>gradOutput与self的shape满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>gradOutput与self、gradInput的数据类型一致。</li></ul></td>
@@ -86,7 +86,7 @@ aclnnStatus aclnnHardshrinkBackward(
       <td>√</td>
     </tr>
       <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入的Tensor、公式中的x。</td>
       <td><ul><li>gradOutput与self的shape满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>gradOutput与self、gradInput的数据类型一致。</li></ul></td>
@@ -96,7 +96,7 @@ aclnnStatus aclnnHardshrinkBackward(
       <td>√</td>
     </tr>
      <tr>
-      <td>lambd</td>
+      <td>lambd（aclScalar*）</td>
       <td>输入</td>
       <td>公式中的\lambda。</td>
       <td>当\lambda小于0时，按0计算。</td>
@@ -106,7 +106,7 @@ aclnnStatus aclnnHardshrinkBackward(
       <td>-</td>
     </tr>
      <tr>
-      <td>gradInput</td>
+      <td>gradInput（aclTensor*）</td>
       <td>输出</td>
       <td>公式中的HardshrinkBackward(x,grad)。</td>
       <td><ul><li>gradInput与self和gradOutput的broadcast后的Tensor的shape一致。</li><li>支持空Tensor传入。</li><li>gradOutput与self、gradInput的数据类型一致。</li></ul></td>
@@ -116,7 +116,7 @@ aclnnStatus aclnnHardshrinkBackward(
       <td>√</td>
     </tr>
      <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -126,7 +126,7 @@ aclnnStatus aclnnHardshrinkBackward(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

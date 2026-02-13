@@ -77,13 +77,13 @@ aclnnStatus aclnnAdvanceStep(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1500px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 250px">
   <col style="width: 300px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -99,7 +99,7 @@ aclnnStatus aclnnAdvanceStep(
     </tr></thead>
   <tbody>
     <tr>
-      <td>inputTokens</td>
+      <td>inputTokens（aclTensor*）</td>
       <td>输入</td>
       <td>待进行AdvanceStep计算的入参/出参，公式中的输出inputTokens，用于更新vLLM模型中的token值。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape长度与numSeqs一致。</li><li>取值范围是大于0的正整数。</li></ul></td>
@@ -109,7 +109,7 @@ aclnnStatus aclnnAdvanceStep(
       <td>×</td>
     </tr>
     <tr>
-      <td>sampledTokenIds</td>
+      <td>sampledTokenIds（aclTensor*）</td>
       <td>输入</td>
       <td>待进行AdvanceStep计算的入参，用于储存tokenID，公式中的输入sampledTokenIds。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape第一维长度与numQueries一致，第二维长度为1。</li><li>取值范围是大于0的正整数。</li></ul></td>
@@ -119,7 +119,7 @@ aclnnStatus aclnnAdvanceStep(
       <td>×</td>
     </tr>
       <tr>
-      <td>inputPositions</td>
+      <td>inputPositions（aclTensor*）</td>
       <td>输入/输出</td>
       <td>待进行AdvanceStep计算的入参/出参，公式中的输出inputPositions，用于记录token的index。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape长度与numSeqs一致。</li><li>取值范围是大于0的正整数。</li></ul></td>
@@ -129,7 +129,7 @@ aclnnStatus aclnnAdvanceStep(
       <td>×</td>
     </tr>
       <tr>
-      <td>seqLens</td>
+      <td>seqLens（aclTensor*）</td>
       <td>输入/输出</td>
       <td>待进行AdvanceStep计算的入参/出参，用于记录不同blockIdx下seq的长度，公式中的输入/输出seqLens。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape长度与numSeqs一致。</li><li>取值范围是大于0的正整数。</li></ul></td>
@@ -139,7 +139,7 @@ aclnnStatus aclnnAdvanceStep(
       <td>×</td>
     </tr>
       <tr>
-      <td>slotMapping</td>
+      <td>slotMapping（aclTensor*）</td>
       <td>输入/输出</td>
       <td>待进行AdvanceStep计算的入参/出参，公式中的输出slotMapping，用于将token值在序列中的位置映射到物理位置。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape长度与numSeqs一致。</li><li>取值范围是大于0的正整数。</li></ul></td>
@@ -149,7 +149,7 @@ aclnnStatus aclnnAdvanceStep(
       <td>×</td>
     </tr>
       <tr>
-      <td>blockTables</td>
+      <td>blockTables（aclTensor*）</td>
       <td>输入</td>
       <td>待进行AdvanceStep计算的入参，用于记录不同blockIdx下block的大小，公式中的输入blockTables。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape第一维长度与numSeqs一致，第二维大于（seqLens中的最大值）/blockSize。</li><li>取值范围是大于0的正整数。</li></ul></td>
@@ -157,39 +157,39 @@ aclnnStatus aclnnAdvanceStep(
       <td>ND</td>
       <td>2</td>
       <td>×</td>
-    </tr> 
+    </tr>
       <tr>
-      <td>numSeqs</td>
+      <td>numSeqs（int64_t）</td>
       <td>输入</td>
       <td>记录输入的seq数量，大小与seqLens的长度一致。</td>
       <td><ul><li>取值范围是小于200000000的正整数。</li><li>numSeqs的值大于输入numQueries的值。</li></ul></td>
-      <td>INT64</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
-    </tr> 
+      <td>-</td>
+    </tr>
       <tr>
-      <td>numQueries</td>
+      <td>numQueries（int64_t）</td>
       <td>输入</td>
       <td>记录输入的Query的数量，大小与sampledTokenIds第一维的长度一致。</td>
       <td>取值范围是大于0的正整数。</td>
-      <td>INT64</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
-    </tr> 
+      <td>-</td>
+    </tr>
      <tr>
-      <td>blockSize</td>
+      <td>blockSize（int64_t）</td>
       <td>输入</td>
       <td>每个block的大小，对应公式中的blockSize。</td>
       <td>取值范围是大于0的正整数。</td>
-      <td>INT64</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
-    </tr>      
+      <td>-</td>
+    </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -199,7 +199,7 @@ aclnnStatus aclnnAdvanceStep(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

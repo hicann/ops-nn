@@ -77,13 +77,13 @@ aclnnStatus aclnnFatreluMul(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1450px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 280px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -99,7 +99,7 @@ aclnnStatus aclnnFatreluMul(
     </tr></thead>
    <tbody>
       <tr>
-      <td>input</td>
+      <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>输入的张量，公式中的input。</td>
       <td><ul><li>支持空Tensor。</li><li>最后一维值为偶数且小于等于1024。</li><li>其他维度的乘积小于等于200000。</li></ul></td>
@@ -109,7 +109,7 @@ aclnnStatus aclnnFatreluMul(
       <td>√</td>
     </tr>
      <tr>
-      <td>threshold</td>
+      <td>threshold（aclTensor*）</td>
       <td>输入</td>
       <td>Threshold计算的边界值，公式中的threshold。</td>
       <td><ul><li>数据类型和数据格式与input保持一致。</li><li>要求tensor中元素只有一个。</li><li>不支持NaN和Inf。</li></ul></td>
@@ -119,7 +119,7 @@ aclnnStatus aclnnFatreluMul(
       <td>√</td>
     </tr>
       <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>输出的张量，公式中的out。</td>
       <td><ul><li>输出的数据类型与输入input的数据类型保持一致。</li><li>输出shape最后一维的值为输入shape最后一维值的二分之一。</li><li>其他维度的值和输入input的shape其他维度的值保持一致。</li></ul></td>
@@ -129,7 +129,7 @@ aclnnStatus aclnnFatreluMul(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -139,7 +139,7 @@ aclnnStatus aclnnFatreluMul(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

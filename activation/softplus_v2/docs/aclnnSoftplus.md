@@ -52,13 +52,13 @@ aclnnStatus aclnnSoftplus(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1460px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 210px">
   <col style="width: 300px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -74,7 +74,7 @@ aclnnStatus aclnnSoftplus(
     </tr></thead>
   <tbody>
     <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>待进行Softplus计算的入参，公式中的输入self。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要与out一致。</li></ul></td>
@@ -84,7 +84,7 @@ aclnnStatus aclnnSoftplus(
       <td>√</td>
     </tr>
       <tr>
-      <td>beta</td>
+      <td>beta（aclScalar*）</td>
       <td>输入</td>
       <td>公式中的beta。</td>
       <td><ul><li>可表示与relu的近似程度。</li><li>数据类型与self的数据类型满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）（当beta是float，self是整型；或者beta不是bool，而self是bool；或者beta是复数，而self不是复数。这些场景不满足推导关系外，其余场景均满足推导关系）。</li></ul></td>
@@ -94,7 +94,7 @@ aclnnStatus aclnnSoftplus(
       <td>-</td>
     </tr>
        <tr>
-      <td>threshold</td>
+      <td>threshold（aclScalar*）</td>
       <td>输入</td>
       <td>公式中的threshold。</td>
       <td><ul><li>表示阈值。</li><li>大于此值时恢复为线性函数，数据类型与self的数据类型满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）（除了当beta是float，self是整型；或者beta不是bool，而self是bool；或者beta是复数，而self不是复数的场景不满足以外，其余场景均满足推导关系）。</li></ul></td>
@@ -104,7 +104,7 @@ aclnnStatus aclnnSoftplus(
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示输出数据，公式中的out。</td>
       <td>shape需要与self一致。</td>
@@ -114,7 +114,7 @@ aclnnStatus aclnnSoftplus(
       <td>√</td>
     </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -124,7 +124,7 @@ aclnnStatus aclnnSoftplus(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

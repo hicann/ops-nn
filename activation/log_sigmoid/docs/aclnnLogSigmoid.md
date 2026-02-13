@@ -48,13 +48,13 @@ aclnnStatus aclnnLogSigmoid(
 - **参数说明：**
   
   <table style="undefined;table-layout: fixed; width: 1420px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 250px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -70,7 +70,7 @@ aclnnStatus aclnnLogSigmoid(
     </tr></thead>
   <tbody>
       <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>待进行LogSigmoid计算的入参，公式中的x。</td>
       <td><ul><li>支持空Tensor。</li><li>self与out的shape一致。</li><li>self与out的数据类型一致。</li></ul></td>
@@ -80,7 +80,7 @@ aclnnStatus aclnnLogSigmoid(
       <td>√</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>计算的出参。</td>
       <td><ul><li>self与out的shape一致。</li><li>self与out的数据类型一致。</li></ul></td>
@@ -90,7 +90,7 @@ aclnnStatus aclnnLogSigmoid(
       <td>√</td>
     </tr>
        <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -100,7 +100,7 @@ aclnnStatus aclnnLogSigmoid(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
@@ -117,7 +117,9 @@ aclnnStatus aclnnLogSigmoid(
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+  
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">

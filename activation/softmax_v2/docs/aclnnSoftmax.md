@@ -51,13 +51,13 @@ aclnnStatus aclnnSoftmax(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1400px"><colgroup>
-  <col style="width: 171px">
+  <col style="width: 271px">
   <col style="width: 115px">
   <col style="width: 250px">
   <col style="width: 200px">
   <col style="width: 177px">
   <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>

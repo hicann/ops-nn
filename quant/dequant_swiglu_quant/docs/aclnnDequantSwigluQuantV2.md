@@ -99,10 +99,10 @@ aclnnStatus aclnnDequantSwigluQuantV2(
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1480px"><colgroup>
-  <col style="width: 201px">
+  <col style="width: 301px">
   <col style="width: 115px">
-  <col style="width: 200px">
-  <col style="width: 400px">
+  <col style="width: 150px">
+  <col style="width: 350px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 138px">
@@ -121,7 +121,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
     </tr></thead>
    <tbody>
        <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>输入待处理的数据，公式中的x。</td>
       <td><ul><li>shape为[X1,X2,...Xn,2H]，shape不超过8维，不小于2维。</li><li>输入x对应activateDim的维度需要是2的倍数。</li></ul></td>
@@ -131,7 +131,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>x</td>
     </tr>
      <tr>
-      <td>weightScaleOptional</td>
+      <td>weightScaleOptional（aclTensor*）</td>
       <td>输入</td>
       <td>weight的反量化scale。</td>
       <td><ul><li>shape支持1维或2维，shape表示为[2H]或[groupNum, 2H]，且取值2H和x最后一维保持一致。</li><li>可选参数，支持传空指针。当groupIndexOptional为空指针时，shape为[2H]；当groupIndexOptional不为空指针时，shape为[groupNum, 2H]。</li></ul></td>
@@ -140,7 +140,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>1或2</td>
       <td>x</td>
     </tr>
-      <td>activationScaleOptional</td>
+      <td>activationScaleOptional（aclTensor*）</td>
       <td>输入</td>
       <td>激活函数的反量化scale。</td>
       <td><ul><li>激活函数的反量化scale。</li><li>shape为[X1,X2,...Xn]，shape不超过7维不小于1维，维度比x的维度少一维，且shape与对应维度的x的shape一致。</li><li>可选参数，支持传空指针。</li></ul></td>
@@ -150,7 +150,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>x</td>
     </tr>
       <tr>
-      <td>biasOptional</td>
+      <td>biasOptional（aclTensor*）</td>
       <td>输入</td>
       <td>Matmul的bias，公式中的biasOptional。</td>
       <td><ul><li>shape支持1维或2维，shape表示为[2H]或[groupNum, 2H]，且取值2H和x最后一维保持一致。当groupIndexOptional为空指针时，shape为[2H]；当groupIndexOptional不为空指针时，shape为[groupNum, 2H]。</li><li>可选参数，支持传空指针。</li></ul></td>
@@ -160,7 +160,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>x</td>
     </tr>
        <tr>
-      <td>quantScaleOptional</td>
+      <td>quantScaleOptional（aclTensor*）</td>
       <td>输入</td>
       <td>量化的scale，公式中的quantScaleOptional。</td>
       <td><ul><li>当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]。</li><li>当quantModeOptional为dynamic时，shape为1维或2维，shape表示为[H], [2H]或[groupNum, H]。</li><li>当groupIndexOptional为空指针且activateDim为尾轴时，shape为[H]。</li><li>当groupIndexOptional不为空指针且activateDim为尾轴时，shape为[groupNum, H]。</li></ul></td>
@@ -170,7 +170,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>x</td>
     </tr>
        <tr>
-      <td>quantOffsetOptional</td>
+      <td>quantOffsetOptional（aclTensor*）</td>
       <td>输入</td>
       <td>量化的offset。</td>
       <td><ul><li>quant_mode为动态时不需要quantOffset输入，静态量化中quantOffset必须输入，且数据类型与shape同quantScale。</td>
@@ -180,7 +180,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>x</td>
     </tr>
       <tr>
-      <td>groupIndexOptional</td>
+      <td>groupIndexOptional（aclTensor*）</td>
       <td>输入</td>
       <td>MoE分组需要的group_index。</td>
       <td><ul><li>shape支持1维或2维的Tensor，shape为[groupNum]或[groupNum, 2]，groupNum大于等于1。</li><li>可选参数，支持传空指针。</li></ul></td>
@@ -190,97 +190,97 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>x</td>
     </tr>
       <tr>
-      <td>activateLeft</td>
+      <td>activateLeft（bool）</td>
       <td>输入</td>
       <td>表示是否对输入的左半部分做swiglu激活。</td>
       <td><ul><li>当值为false时，对输入的右半部分做激活。如果swigluMode为1，activateLeft必须为true。</td>
-      <td>BOOL</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
       <tr>
-      <td>quantModeOptional</td>
+      <td>quantModeOptional（char*）</td>
       <td>输入</td>
       <td>表示使用动态量化或静态量化。</td>
       <td><ul><li>支持“dynamic”和“static”。</li><li>支持传入空指针，传入空指针时，则默认使用“static”。</li></ul></td>
-      <td>STRING</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
       <tr>
-      <td>dstType</td>
+      <td>dstType（int64_t）</td>
       <td>输入</td>
       <td>表示指定输出y的数据类型。</td>
       <td><ul><li>dstType的取值范围是:[2, 34,35, 36, 40, 41]，分别对应INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2。</td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
       <tr>
-      <td>roundModeOptional</td>
+      <td>roundModeOptional（char*）</td>
       <td>输入</td>
       <td>表示对输出y结果的舍入模式。</td>
       <td><ul><li>取值范围是：["rint", "round", "floor", "ceil", "trunc"]。</li><li>当输出y的数据类型为INT8、FLOAT8_E5M2、FLOAT8_E4M3FN时，仅支持"rint"模式。<li>当输出y的数据类型为HIFLOAT8时，仅支持"round"模式。<li>支持传入空指针，传入空指针时，则默认使用“rint”。</li></ul></td>
-      <td>STRING</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
       <tr>
-      <td>activateDim</td>
+      <td>activateDim（int64_t）</td>
       <td>输入</td>
       <td>表示进行swish计算时，选择的指定切分轴。</td>
       <td><ul><li>activateDim的取值范围是：[-xDim, xDim - 1]（其中xDim指输入x的维度）。</li><li>当activateDim对应的不是x的尾轴时，不允许输入groupIndexOptional。</li><li>当activateDim对应的不是x的尾轴时，quantModeOptional仅支持static。</li></ul></td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
       <tr>
-      <td>swiglu_mode</td>
+      <td>swiglu_mode（int64_t）</td>
       <td>输入</td>
       <td>表示swiglu的计算模式。</td>
       <td><ul><li>取值范围为：[0, 1]。</li><li>0：表示传统swiglu计算方式。</li><li>1：表示swiglu的变种，使用奇偶分块方式，并支持clamp_limit、激活系数以及偏差，0表示不使用，1表示使用，默认是0。</li></ul></td>
-      <td>INT64</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
       <tr>
-      <td>clamp_limit</td>
+      <td>clamp_limit（double）</td>
       <td>输入</td>
       <td>表示变体swiglu使用的门限值。</td>
       <td><ul><li>该参数为可选参数。</li><li>用于对输入进行裁剪，其值需大于0且小于无穷，避免过大数值影响swiglu计算稳定性，默认值为7.0。</li></ul></td>
-      <td>FLOAT</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
       <tr>
-      <td>glu_alpha</td>
+      <td>glu_alpha（double）</td>
       <td>输入</td>
       <td>表示变体swiglu使用的参数。</td>
       <td><ul><li>该参数为可选参数。</li><li>用于调整glu激活函数中线性部分的缩放，默认值为1.702。</li></ul></td>
-      <td>FLOAT</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
       <tr>
-      <td>glu_bias</td>
+      <td>glu_bias（double）</td>
       <td>输入</td>
       <td>表示变体swiglu使用的偏差参数。</td>
       <td><ul><li>该参数为可选参数。</li><li>用于在swiglu的线性计算中增加偏移，默认值为1.0。</li></ul></td>
-      <td>FLOAT</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
       <tr>
-      <td>yOut</td>
+      <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>-</td>
       <td><ul><li>当activateDim对应的x的尾轴时，shape为[X1,X2,...Xn,H]。</li><li>当activateDim对应的不是x的尾轴时，shape为[X1,X2,...,XactivateDim / 2,...,2H]。</li><li>当yOut的数据类型为FLOAT4_E2M1、FLOAT4_E1M2时，yOut的最后一维需要是2的倍数。</li><li>当activateDim对应的不是x的尾轴时，yOut的尾轴需要小于5120。</li></ul></td>
@@ -290,7 +290,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>x</td>
     </tr>
     <tr>
-      <td>scaleOut</td>
+      <td>scaleOut（aclTensor*）</td>
       <td>输出</td>
       <td>-</td>
       <td><ul><li>当activateDim对应的x的尾轴时，shape为[X1,X2,...,Xn]。</li><li>当activateDim对应的不是x的尾轴时，shape为[X1,X2,...,XactivateDim / 2,...,Xn]。</li><li>当quantModeOptional为static时，不计算scaleOut。</li></ul></td>
@@ -300,7 +300,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>x</td>
     </tr>
        <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -310,7 +310,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>-</td>
     </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
