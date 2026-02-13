@@ -31,6 +31,7 @@
 #include "opdev/op_log.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -81,8 +82,8 @@ static bool CheckNotNull(const aclTensor* selfRef, const aclTensor* mask, const 
 
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return ASCEND910B_SELFREF_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910_SELFREF_DTYPE_SUPPORT_LIST;
@@ -353,7 +354,7 @@ static const aclTensor* BroadcastTensor(const aclTensor* self, const op::Shape& 
 }
 
 static aclnnStatus ProcessBroadcast(
-    aclTensor* selfRef, const aclTensor* mask, const aclTensor* source, const aclTensor** out, aclOpExecutor* executor)
+    const aclTensor* selfRef, const aclTensor* mask, const aclTensor* source, const aclTensor** out, aclOpExecutor* executor)
 {
     auto selfShape = ShapeToVector(selfRef->GetViewShape());
     auto maskShape = ShapeToVector(mask->GetViewShape());
@@ -448,6 +449,12 @@ static void CheckFormat(const aclTensor* self, const aclTensor* mask, const aclT
     }
 }
 
+// 得到tensor的维度数
+static inline int64_t GetTensorDimNum(const aclTensor* self)
+{
+    return static_cast<int64_t>(self->GetViewShape().GetDimNum());
+}
+
 aclnnStatus aclnnInplaceMaskedScatterGetWorkspaceSize(
     aclTensor* selfRef, const aclTensor* mask, const aclTensor* source, uint64_t* workspaceSize,
     aclOpExecutor** executor)
@@ -479,6 +486,16 @@ aclnnStatus aclnnInplaceMaskedScatterGetWorkspaceSize(
     auto maskContiguous = l0op::Contiguous(mask, uniqueExecutor.get());
     CHECK_RET(maskContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
+    // mask 0维转换维1维
+    if (GetTensorDimNum(maskContiguous) == 0 && maskContiguous->Size() > 0) {
+        maskContiguous = uniqueExecutor.get()->CreateView(maskContiguous, {1}, maskContiguous->GetViewOffset());
+    }
+
+    // input 0维转换维1维
+    if (GetTensorDimNum(selfRefContiguous) == 0 && selfRefContiguous->Size() > 0) {
+        selfRefContiguous = uniqueExecutor.get()->CreateView(selfRefContiguous, {1}, selfRefContiguous->GetViewOffset());
+    } 
+
     // 当输入source不是空tensor时，将其换成连续的tensor
     const aclTensor* sourceContiguous = nullptr;
     if (source->IsEmpty()) {
@@ -488,15 +505,20 @@ aclnnStatus aclnnInplaceMaskedScatterGetWorkspaceSize(
         CHECK_RET(sourceContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
+    // source 0维转换维1维
+    if (GetTensorDimNum(sourceContiguous) == 0 && sourceContiguous->Size() > 0) {
+        sourceContiguous = uniqueExecutor.get()->CreateView(sourceContiguous, {1}, sourceContiguous->GetViewOffset());
+    }
+
     // 将输入mask的数据类型转换成bool数据类型
     auto maskBool = l0op::Cast(maskContiguous, DataType::DT_BOOL, uniqueExecutor.get());
     CHECK_RET(maskBool != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     const aclTensor* opOut = nullptr;
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {    // 判断芯片架构
         opOut = l0op::MaskedScatter(selfRefContiguous, maskBool, sourceContiguous, uniqueExecutor.get());
     } else {
-        auto retStatus = ProcessBroadcast(selfRef, maskBool, sourceContiguous, &opOut, uniqueExecutor.get());
+        auto retStatus = ProcessBroadcast(selfRefContiguous, maskBool, sourceContiguous, &opOut, uniqueExecutor.get());
         CHECK_RET(retStatus == ACLNN_SUCCESS, retStatus);
     }
     CHECK_RET(opOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
