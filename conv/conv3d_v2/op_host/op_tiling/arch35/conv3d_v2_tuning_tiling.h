@@ -184,15 +184,15 @@ DECLARE_SCHEMA(Conv3DV2TunnerTiling,
   FIELD(Conv3DV2TunnerTiling, isC04Flag),
   FIELD(Conv3DV2TunnerTiling, mMode));
 
-void GetAttrsInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3d_args);
-void GetOutputInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3d_args);
-void GetFmapInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3d_args,
-                 size_t fmap_input_index);
-void GetBiasInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3d_args,
-                 size_t bias_input_index);
-void GetFilterInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3d_args,
-                   size_t filter_input_index);
-bool TilingForConv3DV2Input(const gert::TilingContext *context, std::shared_ptr<void> &input_args,
+void GetAttrsInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3dArgs);
+void GetOutputInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3dArgs);
+void GetFmapInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3dArgs,
+                 size_t fmapInputIndex);
+void GetBiasInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3dArgs,
+                 size_t biasInputIndex);
+void GetFilterInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3dArgs,
+                   size_t filterInputIndex);
+bool TilingForConv3DV2Input(const gert::TilingContext *context, std::shared_ptr<void> &inputArgs,
                           size_t &size);
 }  // namespace tuningtiling
 

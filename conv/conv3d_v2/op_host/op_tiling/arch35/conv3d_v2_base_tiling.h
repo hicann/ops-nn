@@ -28,8 +28,6 @@
 #include "conv/conv3d_v2/op_kernel/conv3d_v2_tiling_data.h"
 #include "conv/common/op_host/op_tiling/arch35/conv_template_utils.h"
 
-using namespace platform_ascendc;
-
 namespace optiling {
 namespace conv_ops_tiling {
 using conv_tiling::IterateMNOrder;
@@ -63,11 +61,11 @@ protected:
     ge::graphStatus Conv3DInfoInitAndCheck();
     bool GetTilingFromRepo();
     bool TranslateRepoTiling(tuningtiling::TuningTilingDefPtr &tuningTiling);
-    void TranslateApiTiling(std::shared_ptr<tuningtiling::Conv3DV2TunnerTiling> aoeTiling);
-    void TranslateRunInfo(std::shared_ptr<tuningtiling::Conv3DV2TunnerTiling> aoeTiling);
+    void TranslateApiTiling(std::shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);
+    void TranslateRunInfo(std::shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);
     void GetTilingInputArgs(std::shared_ptr<void> &inputArgs, size_t &size);
-    void TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> aoeTiling);
-    uint32_t CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> aoeTiling);
+    void TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);
+    uint32_t CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);
     bool CheckSupportCacheTiling();
     void GetCacheTilingInputArgs();
     bool GetTilingFromCache();
@@ -159,7 +157,7 @@ private:
     bool CheckInstrLimitsHWmode();
     ge::graphStatus ApplySamesPad(const string& padMode);
     ge::graphStatus PrepareTiling();
-    ge::graphStatus CheckBiasShape();
+    ge::graphStatus CheckBiasShape() const;
     void SetApiInputPlatformInfo();
 };
 }

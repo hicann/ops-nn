@@ -205,7 +205,7 @@ ge::graphStatus Conv3dBaseTilingV2::ParseBiasShape()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Conv3dBaseTilingV2::CheckBiasShape()
+ge::graphStatus Conv3dBaseTilingV2::CheckBiasShape() const
 {
     return ge::GRAPH_SUCCESS;
 }

@@ -13,12 +13,12 @@
  * \brief
  */
  
+#ifndef OPS_CONV_OP_TILING_CONV3D_V2_BASE_TILINGKEY_H
+#define OPS_CONV_OP_TILING_CONV3D_V2_BASE_TILINGKEY_H
+ 
 #include "conv/common/op_host/op_tiling/arch35/conv_template_utils.h"
 #include "conv/conv3d_v2/op_host/op_tiling/arch35/conv3d_v2_tiling.h"
 #include "conv/conv3d_v2/op_kernel/conv3d_v2_tiling_data.h"
- 
-#ifndef OPS_CONV_OP_TILING_CONV3D_V2_BASE_TILINGKEY_H
-#define OPS_CONV_OP_TILING_CONV3D_V2_BASE_TILINGKEY_H
  
 namespace optiling {
 namespace conv_ops_tiling {

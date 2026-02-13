@@ -16,9 +16,6 @@
 #ifndef CONV_OP_TILING_CONV3D_V2_TILINGDATA_H
 #define CONV_OP_TILING_CONV3D_V2_TILINGDATA_H
 
-#include "register/tilingdata_base.h"
-#include "conv/conv3d_v2/op_host/op_tiling/arch35/conv3d_v2_tiling.h"
-
 // sizeof(TConv3DTiling) must algin with 8Byte, type sort
 namespace optiling {
 }  // namespace optiling

@@ -114,10 +114,10 @@ void Conv3dBaseTilingV2::PrintLibApiSpaceSize()
     uint32_t pbBL0 = ((tilingData_.conv3dApiTiling.pBufferFlag & PB_BL0_IDX) >> PB_BL0_IDX) + 1;
     uint32_t pbCL0 = ((tilingData_.conv3dApiTiling.pBufferFlag & PB_CL0_IDX) >> PB_CL0_IDX) + 1;
     uint32_t pbBL1 = ((tilingData_.conv3dApiTiling.pBufferFlag & PB_BL1_IDX) >> PB_BL1_IDX) + 1;
-    uint64_t biasL1Size = flagInfo_.hasBias ? ConvAlignB(tilingData_.conv3dApiTiling.nBL1 * descInfo_.biasDtype,
-        C0_SIZE) : 0;
+    uint64_t biasL1Size = flagInfo_.hasBias ? ConvAlignB(tilingData_.conv3dApiTiling.nBL1 *
+        static_cast<uint64_t>(descInfo_.biasDtype), C0_SIZE) : 0;
     uint64_t scaleL1Size = flagInfo_.quantFlag ?
-        ConvAlignB(tilingData_.conv3dApiTiling.nBL1 * descInfo_.scaleDtype,
+        ConvAlignB(tilingData_.conv3dApiTiling.nBL1 * static_cast<uint64_t>(descInfo_.scaleDtype),
         C0_SIZE) : 0;
     uint64_t apiL1Size = (tilingData_.conv3dApiTiling.aL1SpaceSize + tilingData_.conv3dApiTiling.kBL1 *
         tilingData_.conv3dApiTiling.nBL1 * dtypeSizeTab.at(descInfo_.weightDtype) * pbBL1 +

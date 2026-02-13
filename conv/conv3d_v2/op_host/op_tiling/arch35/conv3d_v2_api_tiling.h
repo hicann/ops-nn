@@ -54,15 +54,15 @@ public:
     void SetOutputType(TPosition pos, ConvFormat format, ConvDtype dtype);
     void SetPadding(int64_t padHead, int64_t padTail, int64_t padTop, int64_t padBottom,
         int64_t padLeft, int64_t padRight);
-    void SetDilation(int64_t dilationD, int64_t dilationH, int64_t dilationW);
-    void SetStride(int64_t strideD, int64_t strideH, int64_t strideW);
+    void SetDilation(int64_t dilationH, int64_t dilationW, int64_t dilationD);
+    void SetStride(int64_t strideH, int64_t strideW, int64_t strideD);
     void SetGroups(int32_t groups);
     void SetOptGroupParams(int32_t enlarge, int64_t singleGroups, int64_t singleGroupOpt);
     void CalcOptGroupParams(const optiling::conv_ops_tiling::ConvOriGroupInfo& oriGroupInfo,
                             optiling::conv_ops_tiling::ConvOptGroupInfo& optGroupInfo) const;
     void SetOutputOrder(int8_t outputOrder);
     void SetScalarParams(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
-    void SetHF32(bool hf32Enable, bool hf32TransMode);
+    void SetHF32(bool hf32EnableFlag, bool hf32TransModeFlag);
     void SetScaleType(TPosition pos, ConvFormat format, ConvDtype dtype);
     void SetQuantConvFlag(bool quantConvEnable);
     void SetFixpipeParams(const optiling::conv_ops_tiling::FixpipeInfo& fixpipeInfo);
@@ -77,7 +77,7 @@ private:
     void PrintTilingData() const;
     void Infer5hdShape();
     bool CheckInputParam();
-    bool CheckAlgorithmLimit();
+    bool CheckAlgorithmLimit() const;
     bool CheckAttr();
     bool CheckPadStrideDilation();
     bool CheckDataCopyLimits();

@@ -90,15 +90,15 @@ void GetOutputInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2I
 }
 
 void GetFmapInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3dArgs,
-                 size_t fmap_input_index)
+                 size_t fmapInputIndex)
 {
-  auto fmapDesc = context->GetInputDesc(fmap_input_index);
+  auto fmapDesc = context->GetInputDesc(fmapInputIndex);
   conv3dArgs->aDtype = fmapDesc->GetDataType();
 
   auto fmapOriFormat = fmapDesc->GetOriginFormat();
   conv3dArgs->aFormat = fmapOriFormat;
 
-  auto fmapShape = context->GetInputShape(fmap_input_index);
+  auto fmapShape = context->GetInputShape(fmapInputIndex);
   auto &fmapOriShape = fmapShape->GetOriginShape();
 
   if (fmapOriFormat == ge::FORMAT_NCDHW) {
@@ -128,15 +128,15 @@ void GetBiasInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2Inp
 }
 
 void GetFilterInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3dArgs,
-                   size_t filter_input_index)
+                   size_t filterInputIndex)
 {
-  auto filterDesc = context->GetInputDesc(filter_input_index);
+  auto filterDesc = context->GetInputDesc(filterInputIndex);
   conv3dArgs->bDtype = filterDesc->GetDataType();
 
   auto filterOriFormat = filterDesc->GetOriginFormat();
   conv3dArgs->bFormat = filterOriFormat;
 
-  auto filterShape = context->GetInputShape(filter_input_index);
+  auto filterShape = context->GetInputShape(filterInputIndex);
   auto &filterOriShape = filterShape->GetOriginShape();
 
   if (filterOriFormat == ge::FORMAT_NCDHW) {

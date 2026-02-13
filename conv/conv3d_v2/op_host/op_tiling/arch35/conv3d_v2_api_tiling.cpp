@@ -110,8 +110,7 @@ void Conv3dTiling::Infer5hdShape()
 
 bool Conv3dTiling::CheckInputFormat()
 {
-    std::set<std::pair<ConvFormat, ConvFormat>> conv3dSupportFormatSet;
-    conv3dSupportFormatSet = {
+    std::set<std::pair<ConvFormat, ConvFormat>> conv3dSupportFormatSet = {
         {ConvFormat::NCDHW, ConvFormat::NCDHW}, {ConvFormat::NDHWC, ConvFormat::DHWCN}
     };
 
@@ -483,7 +482,7 @@ bool Conv3dTiling::CheckInputParam()
     return true;
 }
 
-bool Conv3dTiling::CheckAlgorithmLimit()
+bool Conv3dTiling::CheckAlgorithmLimit() const
 {
     if (isC04Flag) {
         TILING_LOG_ERROR("conv3d temporarily unSupport C04 format.");
