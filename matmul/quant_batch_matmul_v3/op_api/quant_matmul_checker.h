@@ -104,6 +104,7 @@ private:
     int64_t x2KDim_ = 0;
     int64_t x2NDim_ = 0;
     SocVersion socVersion_;
+    NpuArch npuArch_;
 };
 }
 

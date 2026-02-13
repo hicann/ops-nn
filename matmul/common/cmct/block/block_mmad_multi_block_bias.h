@@ -56,7 +56,7 @@ public:
     friend class BlockMmadWithParams<Self, DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy_>;
 
     using TileCopy = AscendC::Std::conditional_t<AscendC::Std::is_same_v<TileCopy_, void>,
-                                                 Tile::TileCopy<Arch::Ascend910B, Tile::CopyWithParams>, TileCopy_>;
+                                                 Tile::TileCopy<Arch::DAV2201, Tile::CopyWithParams>, TileCopy_>;
     using MM = MatmulImplTraitsT<DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy>;
 
     static_assert(

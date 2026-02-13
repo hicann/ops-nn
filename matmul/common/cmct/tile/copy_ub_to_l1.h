@@ -15,12 +15,12 @@ namespace Cmct::Gemm::Tile {
 using Gemm::in_l1;
 using Gemm::in_ub;
 using Gemm::IsZn2D;
-using Gemm::Arch::Ascend950;
+using Gemm::Arch::DAV3510;
 namespace detail {
 // (n1,k1,k0,n0)
 template <class DstTrait, class SrcTrait, class Shape, CacheMode CacheMode>
 struct CopyIfImpl<
-    Ascend950, AscendC::LocalTensor<DstTrait>, AscendC::LocalTensor<SrcTrait>, Shape, CacheMode,
+    DAV3510, AscendC::LocalTensor<DstTrait>, AscendC::LocalTensor<SrcTrait>, Shape, CacheMode,
     typename AscendC::Std::enable_if_t<
         in_ub<SrcTrait> && in_l1<DstTrait> && IsZn2D<decltype(DstTrait{}.GetLayout())>::value &&
         IsZn2D<decltype(SrcTrait{}.GetLayout())>::value && CacheMode == CacheMode::NORMAL_FIRST>> {
@@ -45,7 +45,7 @@ struct CopyIfImpl<
 // (k1,n1,n0,k0)
 template <class DstTrait, class SrcTrait, class Shape, CacheMode CacheMode>
 struct CopyIfImpl<
-    Ascend950, AscendC::LocalTensor<DstTrait>, AscendC::LocalTensor<SrcTrait>, Shape, CacheMode,
+    DAV3510, AscendC::LocalTensor<DstTrait>, AscendC::LocalTensor<SrcTrait>, Shape, CacheMode,
     typename AscendC::Std::enable_if_t<
         in_ub<SrcTrait> && in_l1<DstTrait> && IsNz2D<decltype(DstTrait{}.GetLayout())>::value &&
         IsNz2D<decltype(SrcTrait{}.GetLayout())>::value && CacheMode == CacheMode::NORMAL_FIRST>> {
@@ -72,7 +72,7 @@ struct CopyIfImpl<
 //  dst (x,_z):(_z,_1)
 template <class DstTrait, class SrcTrait, class Shape, CacheMode CacheMode>
 struct CopyIfImpl<
-    Ascend950, AscendC::LocalTensor<DstTrait>, AscendC::LocalTensor<SrcTrait>, Shape, CacheMode,
+    DAV3510, AscendC::LocalTensor<DstTrait>, AscendC::LocalTensor<SrcTrait>, Shape, CacheMode,
     typename AscendC::Std::enable_if_t<
         in_ub<SrcTrait> && in_l1<DstTrait> && IsRowMajor2DContiguous<decltype(DstTrait{}.GetLayout())>::value &&
         IsRowMajor2D<decltype(SrcTrait{}.GetLayout())>::value && CacheMode == CacheMode::NORMAL_FIRST>> {

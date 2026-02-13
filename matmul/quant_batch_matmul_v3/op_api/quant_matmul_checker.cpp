@@ -238,6 +238,7 @@ static inline bool IsAligned(T num, T factor)
 void QuantMatmulChecker::Init()
 {
     socVersion_ = GetCurrentPlatformInfo().GetSocVersion();
+    npuArch_ = op::GetCurrentPlatformInfo().GetCurNpuArch();
     x1_ = std::get<INDEX_X1_IN_INPUT_TUPLE>(inputTensors_);
     x2_ = std::get<INDEX_X2_IN_INPUT_TUPLE>(inputTensors_);
     x1Scale_ = std::get<INDEX_X1_SCALE_IN_QUANT_TUPLE>(quantTensors_);
@@ -863,7 +864,7 @@ that of %s is %zu, x1 is %zu",  GetX2ScaleName().c_str(),  GetX2ScaleName().c_st
 
 bool QuantMatmulChecker::CheckGroupSize() const
 {
-    if (socVersion_ != SocVersion::ASCEND950) {
+    if (npuArch_ != NpuArch::DAV_3510) {
         return true;
     }
     uint64_t groupSizeM = (static_cast<uint64_t>(groupSize_) >> GROUP_M_OFFSET) & GROUP_MNK_BIT_SIZE;
@@ -989,7 +990,7 @@ bool QuantMatmulChecker::CheckFormat() const
 {
     auto x2StorageFormat = ge::GetPrimaryFormat(x2_->GetStorageFormat());
     CHECK_RET(x1_->GetStorageFormat() == op::Format::FORMAT_ND, false);
-    if (socVersion_ == SocVersion::ASCEND310P) {
+    if (npuArch_ == NpuArch::DAV_2002) {
         CHECK_RET(x2_->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ, false);
     } else {
         CHECK_RET(x2StorageFormat == op::Format::FORMAT_ND || x2StorageFormat == op::Format::FORMAT_FRACTAL_NZ, false);
@@ -1377,15 +1378,14 @@ but got %s and %s.",
                 op::ToString(x1_->GetDataType()).GetString(), op::ToString(x2_->GetDataType()).GetString());
         return ACLNN_ERR_PARAM_INVALID;
     }
-    switch (socVersion_) {
-        case SocVersion::ASCEND910B:
-        case SocVersion::ASCEND910_93:
+    switch (npuArch_) {
+        case NpuArch::DAV_2201:
             CHECK_RET(CheckDtypeOnlyL0c2out() == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
             break;
-        case SocVersion::ASCEND950:
+        case NpuArch::DAV_3510:
             CHECK_RET(CheckDtypeL0c2outOrL0c2ub() == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
             break;
-        case SocVersion::ASCEND310P:
+        case NpuArch::DAV_2002:
             CHECK_RET(CheckDtypeOnlyL0c2ub() == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
             break;
         default:

@@ -255,6 +255,7 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingCustomSplitKTes
     tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     map<string, string> soc_version_infos;
     soc_version_infos.insert(make_pair("Short_SoC_version", "Ascend910B"));
+    soc_version_infos.insert(make_pair("NpuArch", "2201"));
     tilingContext->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
     ASSERT_NE(tilingParseFunc, nullptr);

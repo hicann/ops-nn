@@ -324,7 +324,7 @@ static void TestMultiThread(const WeightQuantBatchMatmulNzTestParam* params, siz
 TEST_F(l2_weight_quant_batch_matmul_nz_test_950, ascend950_multi_thread)
 {
     // 用3个线程测试
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(op::NpuArch::DAV_3510);
     TestMultiThread(
         casesParamsAscend950, sizeof(casesParamsAscend950) / sizeof(WeightQuantBatchMatmulNzTestParam), 3);
 }
