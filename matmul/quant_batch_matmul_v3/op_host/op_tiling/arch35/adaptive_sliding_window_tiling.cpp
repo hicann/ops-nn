@@ -863,34 +863,34 @@ uint64_t AdaptiveSlidingWindowTiling::GetScaleFactorBAfullLoad(uint64_t leftSize
                 ops::CeilDiv(static_cast<uint64_t>(basicTiling_.baseK), MX_GROUP_SIZE), MXFP_MULTI_BASE_SIZE),
         inputParams_.scaleDtype);
 
-    uint64_t scaleFactorbBase = 1UL;
+    uint64_t scaleFactorBBase = 1UL;
     if (inputParams_.transB) {
         // k 是内轴的情况
-        uint64_t singleScalebBasekSize = GetSizeWithDataType(
+        uint64_t singleScaleBBasekSize = GetSizeWithDataType(
             ops::CeilAlign(
                 ops::CeilDiv(static_cast<uint64_t>(basicTiling_.baseK), MX_GROUP_SIZE), MXFP_MULTI_BASE_SIZE),
             inputParams_.scaleDtype);
-        if (singleScalebBasekSize < L2_ALIGN_SIZE) {
-            scaleFactorbBase = ops::CeilDiv(L2_ALIGN_SIZE, singleScalebBasekSize);
+        if (singleScaleBBasekSize < L2_ALIGN_SIZE) {
+            scaleFactorBBase = ops::CeilDiv(L2_ALIGN_SIZE, singleScaleBBasekSize);
         }
     }
 
-    uint64_t scaleFactorbMaxFromK =
+    uint64_t scaleFactorBMaxFromK =
         inputParams_.kSize / static_cast<uint64_t>(basicTiling_.stepKb * basicTiling_.baseK);
-    scaleFactorbMaxFromK = std::min(static_cast<uint64_t>(SCALER_FACTOR_MAX), scaleFactorbMaxFromK);
-    scaleFactorbMaxFromK = std::max(static_cast<uint64_t>(SCALER_FACTOR_MIN), scaleFactorbMaxFromK);
+    scaleFactorBMaxFromK = std::min(static_cast<uint64_t>(SCALER_FACTOR_MAX), scaleFactorBMaxFromK);
+    scaleFactorBMaxFromK = std::max(static_cast<uint64_t>(SCALER_FACTOR_MIN), scaleFactorBMaxFromK);
 
     uint64_t scaleFactorB = 1;
-    if (scaleFactorbBase > scaleFactorbMaxFromK) {
-        // 一次性搬运所有的K 方向上所有的scaleB 也无法满足内轴128对齐,按照搬运量来计算scaleFactorb
-        uint64_t scaleFactorBMax =
-            std::min(MTE2_MIN_LOAD_SIZE_V100 * DB_SIZE, leftSize) / (baseScaleBSize * basicTiling_.depthB1);
-        scaleFactorB = std::min(scaleFactorBMax, scaleFactorbMaxFromK);
-    } else {
-        // 在内轴128对齐的基础上，同时确保搬运量不小于32， 且不超L1 内存
-        uint64_t scaleFactor = std::min(MTE2_MIN_LOAD_SIZE_V100 * DB_SIZE, leftSize) /
-                               (baseScaleBSize * scaleFactorbBase * basicTiling_.depthB1);
-        scaleFactorB = std::min(scaleFactor * scaleFactorbBase, scaleFactorbMaxFromK);
+    uint64_t scaleFactorBMax =
+        std::min(MTE2_MIN_LOAD_SIZE_V100 * DB_SIZE, leftSize) / (baseScaleBSize * basicTiling_.depthB1);
+    if (scaleFactorBMax != 0 && scaleFactorBBase != 0) {
+        if (scaleFactorBBase <= scaleFactorBMaxFromK && scaleFactorBMax >= scaleFactorBBase) {
+            // 在内轴128对齐的基础上，同时确保搬运量不小于32， 且不超L1 内存
+            scaleFactorB = std::min(scaleFactorBMax / scaleFactorBBase * scaleFactorBBase, scaleFactorBMaxFromK);
+        } else {
+            // 一次性搬运所有的K 方向上所有的scaleB 也无法满足内轴128对齐,按照搬运量来计算scaleFactorb
+            scaleFactorB = std::min(scaleFactorBMax, scaleFactorBMaxFromK);
+        }
     }
 
     return scaleFactorB;
