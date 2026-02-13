@@ -52,7 +52,13 @@ bool Conv3DBackpropFilterV2StreamKTiling::IsCapable()
 void Conv3DBackpropFilterV2StreamKTiling::InitSplitWOI()
 {
     if (enableSplitW) {
-        if (runInfo_.wo <= SPLIT_WO_THRESHOLD) {
+        int32_t splitWoThreshold = 0;
+        if (runInfo_.pad_l > LOAD3D_PAD_THRESHOLD || runInfo_.pad_r > LOAD3D_PAD_THRESHOLD) {
+            splitWoThreshold = SPLIT_WO_THRESHOLD4SPLIT_KERNEL;
+        } else {
+            splitWoThreshold = SPLIT_WO_THRESHOLD;
+        }
+        if (runInfo_.wo <= splitWoThreshold) {
             blockTiling_.splitWo = runInfo_.wo;
             blockTiling_.splitWi = runInfo_.wi;
         } else {

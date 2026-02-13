@@ -25,7 +25,8 @@ constexpr uint32_t NO_STREAMK_CALC = 0;
 constexpr uint32_t STREAMK_BATCHDOUT = 1;
 constexpr uint32_t STREAMK_HWOUT = 2;
 // DW累加轴大小阈值，支持按需修改大小，当前大小 256*256
-constexpr uint64_t SINGLE_BLOCK_ADD_THRESHHOLD = 65536;
+constexpr uint64_t SINGLE_BLOCK_ADD_THRESHOLD = 65536;
+constexpr uint64_t HUGE_PADDING_HO_THRESHOLD = 256;
 
 namespace AscendC {
 using Conv3ddwConfig = typename ConvolutionBackprop::Conv3ddwConfig;
@@ -124,6 +125,7 @@ protected:
     static constexpr uint64_t L0C_SIZE_BY_ELEMENT_IN_FLOAT = AscendC::TOTAL_L0C_SIZE >> 2;
     static constexpr uint64_t DOUBLE_BUFFER = 2;
     uint32_t deterAddCoreNum_ = 0;
+    bool isSplitKernelHW_ = false;
 
     __aicore__ inline void InitSplitTilingData(const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
     {
@@ -131,6 +133,7 @@ protected:
         this->singleShapeK_ = tilingData->basicBlockTiling.singleCoreK;
         this->singleShapeN_ = tilingData->basicBlockTiling.singleCoreN;
         this->singleCoreBatch_ = tilingData->basicBlockTiling.singleCoreBatchDout;
+        this->isSplitKernelHW_ = tilingData->dwTiling.isSplitKernelHW;
         this->CalBasicBlockCnt();
     }
 
@@ -412,15 +415,21 @@ protected:
         }
     }
 
-    __aicore__ static inline void CalcReduceSegments(
+    __aicore__ inline void CalcReduceSegments(
         uint64_t nd,
         uint64_t ho,
         uint64_t wo,
         uint64_t& segmentsH,
         uint64_t& segmentsND)
     {
-        uint64_t segmentsNDH = Ceil(SINGLE_BLOCK_ADD_THRESHHOLD, wo);
+        const uint64_t segmentsNDH = Ceil(SINGLE_BLOCK_ADD_THRESHOLD, wo);
         segmentsH = AscendC::Std::min(segmentsNDH, ho);
+        
+        // 对于SplitKernelHW分支，限制H轴切分的大小最大为256，使得padding不会超load3d的限制
+        if (unlikely(this->isSplitKernelHW_)) {
+            segmentsH = AscendC::Std::min(segmentsH, HUGE_PADDING_HO_THRESHOLD);
+        }
+
         segmentsND = AscendC::Std::min(Ceil(segmentsNDH, segmentsH), nd);
     }
 };

@@ -431,10 +431,15 @@ bool Conv3DDWV2BasicBlockTilingArch35::checkLargeSpecs()
     constexpr int32_t MAX_DILATION_W = 255;
     constexpr int32_t MAX_STRIDE_H = 63;
     constexpr int32_t MAX_STRIDE_W = 63;
+    constexpr int32_t MAX_PADDING_W = 255;
+    constexpr int32_t MAX_PADDING_H = 255;
     constexpr int32_t LOAD3D_KSTART_MAX = 65535;
 
-    if (runInfo_.kh > MAX_KERNEL_H || runInfo_.kw > MAX_KERNEL_W || runInfo_.dilation_h > MAX_DILATION_H ||
-        runInfo_.dilation_w > MAX_DILATION_W || runInfo_.stride_h > MAX_STRIDE_H || runInfo_.stride_w > MAX_STRIDE_W) {
+    if (runInfo_.kh > MAX_KERNEL_H || runInfo_.kw > MAX_KERNEL_W ||
+        runInfo_.dilation_h > MAX_DILATION_H || runInfo_.dilation_w > MAX_DILATION_W ||
+        runInfo_.stride_h > MAX_STRIDE_H || runInfo_.stride_w > MAX_STRIDE_W ||
+        runInfo_.pad_l > MAX_PADDING_W || runInfo_.pad_r > MAX_PADDING_W ||
+        runInfo_.pad_u > MAX_PADDING_H || runInfo_.pad_d > MAX_PADDING_H) {
         return true;
     }
 

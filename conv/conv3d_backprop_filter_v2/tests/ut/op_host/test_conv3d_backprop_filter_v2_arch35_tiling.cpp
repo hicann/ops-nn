@@ -382,6 +382,18 @@ Conv3DBpFilterV2TilingTestParam cases_params_950[] = {
     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,ge::DT_FLOAT,
     {1, 1, 1, 1, 2}, {0, 0, 0, 0, 1, 1}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
     true, false, 36, 1, ""},
+    
+    {"aclnnConvolutionBackward_3DDW_padW256", "3510", "3510", COMPILE_INFO_STR_950,
+    {64, 16, 5, 9, 38}, {64, 16, 5, 9, 38}, {64, 16, 4, 5, 10}, {164, 16, 4, 5, 10}, {16, 16, 2, 5, 10}, {16, 16, 2, 5, 10},
+    ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_BF16,
+    {1, 1, 1, 1, 60}, {0, 0, 0, 0, 256, 256}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
+    true, true, 32, 1, "1 0 1 1 1 1 1 524288 16 16 16 16 16 2 5 10 5 9 38 4 5 10 1 1 1 1 60 0 0 0 0 256 256 1 1 1 16 2 2 2 2 2 16 64 208 16 16 16 1 1 1 1 0 1280 1024 0 1 1 16 5 10 1 1 0 16 0 4 0 1 32 16 800 50 0 "},
+
+    {"aclnnConvolutionBackward_3DDW_padH256", "3510", "3510", COMPILE_INFO_STR_950,
+    {64, 16, 5, 443, 518}, {64, 16, 5, 443, 518}, {64, 16, 4, 5, 10}, {164, 16, 4, 5, 10}, {16, 16, 2, 20, 10}, {16, 16, 2, 20, 10},
+    ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_BF16,
+    {1, 1, 1, 50, 60}, {0, 0, 256, 256, 16, 16}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
+    true, true, 32, 1, "1 0 1 1 1 1 1 524288 16 16 16 16 16 2 20 10 5 443 518 4 5 10 1 1 1 50 60 0 0 256 256 16 16 1 1 1 16 2 2 2 2 2 16 64 208 16 16 16 1 1 4 4 0 4320 4096 0 1 1 16 20 10 1 1 0 16 0 4 0 1 32 16 800 200 0 "},
 
     {"aclnnConvolutionBackward_3DDW_AdjustSmallBlock", "3510", "3510", COMPILE_INFO_STR_950_36_CORE,
     {32, 1024, 1, 14, 14}, {32, 1024, 1, 14, 14}, {1024, 1024, 1, 1, 1}, {1024, 1024, 1, 1, 1}, {32, 1024, 1, 14, 14},{32, 1024, 1, 14, 14},

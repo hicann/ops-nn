@@ -25,18 +25,17 @@
 namespace ConvolutionBackpropFunc {
 template <class Intf>
 __aicore__ inline void updateParasForSplitKernelHW(
-    Intf* self, Out2L1ScalarParams& out2L1Params, uint32_t startWo,
-    uint64_t out2B1SrcAddrStart, uint32_t wkIdx)
+    Intf *self, Out2L1ScalarParams& out2L1Params, uint32_t startWo,
+ 	uint64_t out2B1SrcAddrStart, uint32_t wkIdx)
 {
-    int32_t padLeft = 0;
-    int32_t padRight = 0;
+    int64_t padLeft = 0;
+    int64_t padRight = 0;
     int64_t leftValidAddrOffset = 0;
     int64_t b1SrcWiLeftOffGm = static_cast<int64_t>(startWo) * self->ctx.tiling_->strideW - self->ctx.tiling_->padLeft +
                                wkIdx * self->ctx.tiling_->dilationW;
     if (b1SrcWiLeftOffGm < 0) {
         padLeft = -b1SrcWiLeftOffGm;
     }
-    self->ctx.load3d_.padList[0] = padLeft < 0 ? (0) : Ceil(padLeft, self->ctx.tiling_->strideW);
     leftValidAddrOffset =
         Ceil(padLeft, self->ctx.tiling_->strideW) * self->ctx.tiling_->strideW + b1SrcWiLeftOffGm;
 
@@ -46,16 +45,18 @@ __aicore__ inline void updateParasForSplitKernelHW(
         padRight = b1SrcWiRightOffGm;
     }
     padRight = padRight - (self->ctx.tiling_->wk - wkIdx - 1) * self->ctx.tiling_->dilationW;
-    self->ctx.load3d_.padList[1] = padRight < 0 ? (0) : Ceil(padRight, self->ctx.tiling_->strideW);
+    
+    padLeft = padLeft < 0 ? (0) : Ceil(padLeft, self->ctx.tiling_->strideW);
+    padRight = padRight < 0 ? (0) : Ceil(padRight, self->ctx.tiling_->strideW);
 
     if (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
-        if (self->ctx.load3d_.padList[0]) {
+        if (padLeft) {
             out2L1Params.out2B1SrcAddr = out2B1SrcAddrStart + leftValidAddrOffset;
         } else {
             out2L1Params.out2B1SrcAddr = out2B1SrcAddrStart + b1SrcWiLeftOffGm;
         }
     } else if (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NDHWC) {
-        if (self->ctx.load3d_.padList[0]) {
+        if (padLeft) {
             out2L1Params.out2B1SrcAddr = out2B1SrcAddrStart + leftValidAddrOffset * self->ctx.tiling_->cin;
         } else {
             out2L1Params.out2B1SrcAddr = out2B1SrcAddrStart + b1SrcWiLeftOffGm * self->ctx.tiling_->cin;
@@ -63,12 +64,16 @@ __aicore__ inline void updateParasForSplitKernelHW(
     }
 
     out2L1Params.singleShapeWi = self->ctx.singleShapeWo_;
-    if (out2L1Params.singleShapeWi > (self->ctx.load3d_.padList[0] + self->ctx.load3d_.padList[1])) {
+    if (out2L1Params.singleShapeWi > (padLeft + padRight)) {
         self->ctx.load3d_.l1W = out2L1Params.singleShapeWi -
-                                self->ctx.load3d_.padList[0] - self->ctx.load3d_.padList[1];
+                                padLeft - padRight;
     } else {
         self->ctx.load3d_.l1W = 0;
     }
+    // singleShapeWi已经被限制到256，因此padLeft和padRight最大可能为256，
+    // 当padLeft或者padRight大于uint8的最大值255，此时l1w等于0，因此padList值溢出也不影响结果
+    self->ctx.load3d_.padList[0] = padLeft;
+    self->ctx.load3d_.padList[1] = padRight;
 }
 
 template <class Intf>
@@ -221,7 +226,7 @@ static __aicore__ inline void LoadToB1Dn2NzSplitKernelHW(
     for (uint32_t i = 0; i < hiCopyLen; ++i) {
         DataCopy(useB1Buf[dstAddrOffset], self->ctx.fmapGlobal_[out2B1SrcAddrOffset], dn2NzParams);
 
-        out2B1SrcAddrOffset += self->ctx.tiling_->wi * self->ctx.tiling_->strideH;
+        out2B1SrcAddrOffset += static_cast<uint64_t>(self->ctx.tiling_->wi) * self->ctx.tiling_->strideH;
         dstAddrOffset += self->ctx.load3d_.l1W * self->ctx.tiling_->k0;
     }
 }
@@ -247,7 +252,7 @@ static __aicore__ inline void LoadToB1Nd2NzSplitKernelHW(
     for (uint32_t i = 0; i < hiCopyLen; ++i) {
         DataCopy(useB1Buf[dstAddrOffset], self->ctx.fmapGlobal_[out2B1SrcAddrOffset], nd2NzParams);
         dstAddrOffset += self->ctx.load3d_.l1W * self->ctx.tiling_->k0;
-        out2B1SrcAddrOffset += self->ctx.tiling_->wi * self->ctx.tiling_->strideH * self->ctx.tiling_->cin;
+        out2B1SrcAddrOffset += static_cast<uint64_t>(self->ctx.tiling_->wi) * self->ctx.tiling_->strideH * self->ctx.tiling_->cin;
     }
 }
 
