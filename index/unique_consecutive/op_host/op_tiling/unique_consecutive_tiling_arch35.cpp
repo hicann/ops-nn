@@ -72,25 +72,16 @@ bool UniqueConsecutiveTilingHelper::GetBaseInfo()
 
 bool UniqueConsecutiveTilingHelper::GetPlatformInfo()
 {
-    auto compileInfo = reinterpret_cast<const UniqueConsecutiveCompileInfo*>(context_->GetCompileInfo());
-    if (compileInfo != nullptr) {
-        this->ubSize_ = compileInfo->ubSize_;
-        this->aivCoreNum_ = compileInfo->aivCoreNum_;
-        this->blockSize_ = compileInfo->blockSize_;
-        this->vecRegSize_ = compileInfo->vecRegSize_;
-        this->sysWorkspaceSize_ = compileInfo->sysWorkspaceSize_;
-    } else {
-        auto platformInfo = this->context_->GetPlatformInfo();
-        OP_CHECK_IF(nullptr == platformInfo, OP_LOGE(context_->GetNodeName(), "platform info is null"), return false);
+    auto platformInfo = this->context_->GetPlatformInfo();
+    OP_CHECK_IF(nullptr == platformInfo, OP_LOGE(context_->GetNodeName(), "platform info is null"), return false);
 
-        auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-        ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, this->ubSize_);
-        this->aivCoreNum_ = ascendcPlatform.GetCoreNumAiv();
-        this->blockSize_ = GetUbBlockSize(this->context_);
-        this->vecRegSize_ = GetVRegSize(this->context_);
-        this->sysWorkspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
-    }
-
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, this->ubSize_);
+    this->aivCoreNum_ = ascendcPlatform.GetCoreNumAiv();
+    this->blockSize_ = GetUbBlockSize(this->context_);
+    this->vecRegSize_ = GetVRegSize(this->context_);
+    this->sysWorkspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
+    
     OP_CHECK_IF((this->ubSize_ <= 0),
         OP_LOGE(context_->GetNodeName(), "ubSize_ less or equal than zero, please check."),
         return false);

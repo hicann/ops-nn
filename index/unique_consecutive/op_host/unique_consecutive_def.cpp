@@ -40,7 +40,7 @@ static const std::vector<ge::DataType> DataTypeCount = {ge::DT_INT32, ge::DT_INT
                                                         ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
                                                         ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
                                                         ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
-                                                        
+
 static ge::graphStatus CheckSupport(const ge::Operator& op, ge::AscendString& result) {
     bool attr_idx = false;
     std::string resultJsonStr;
@@ -100,6 +100,13 @@ public:
         this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };
-
 OP_ADD(UniqueConsecutive);
-}  // namespace ops
+// 手动注册opDef.AICore()里设置的CheckSupport函数
+// 需要当前目录下的CMakeLists.txt将本_def.cpp加入${OPHOST_NAME}_tiling_obj编译目标内
+static int UNIQUE_CONSECUTIVE_REGISTERED = [](const char* name) {
+    UniqueConsecutive opDef(name);
+    optiling::OpCheckFuncHelper(FUNC_CHECK_SUPPORTED, name, opDef.AICore().GetCheckSupport());
+    return 0;
+}("UniqueConsecutive");
+
+} // namespace ops
