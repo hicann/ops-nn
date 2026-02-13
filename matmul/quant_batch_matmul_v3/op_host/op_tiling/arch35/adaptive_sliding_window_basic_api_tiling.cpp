@@ -269,6 +269,10 @@ bool AdaptiveSlidingWindowBasicAPITiling::AnalyseSlidingWinInfo()
     if (adaptiveWin_.useTailWinLogic) {
         if (isAFullLoad_) {
             AdaptiveSlidingWindowTiling::CalcTailBasicBlockAfullLoad();
+            // 切低阶api大于1轮时，A全载的mBlockCnt超过1时不能使能尾块切分，否则以当前blocksch会有精度问题
+            if (adaptiveWin_.totalBlockCnt > aicoreParams_.aicNum && adaptiveWin_.mBlockCnt != 1UL) {
+                adaptiveWin_.nTailTile = 1UL;
+            }
         } else {
             AdaptiveSlidingWindowTiling::CalcTailBasicBlock();
         }
