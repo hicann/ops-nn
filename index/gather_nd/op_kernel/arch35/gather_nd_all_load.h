@@ -152,13 +152,13 @@ __aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::CopyInX(LocalTensor<int8
     dataCopyPadExtParams.rightPadding = 0;
     dataCopyPadExtParams.paddingValue = 0;
 
-    DataCopyExtParams dataCoptExtParams;
-    dataCoptExtParams.blockCount = tilingData_->gSize;
-    dataCoptExtParams.blockLen = tilingData_->aSize;
-    dataCoptExtParams.srcStride = 0;
-    dataCoptExtParams.dstStride = (tilingData_->aSizeAligned - tilingData_->aSize) / platform::GetUbBlockSize();
+    DataCopyExtParams dataCopyExtParams;
+    dataCopyExtParams.blockCount = tilingData_->gSize;
+    dataCopyExtParams.blockLen = tilingData_->aSize;
+    dataCopyExtParams.srcStride = 0;
+    dataCopyExtParams.dstStride = (tilingData_->aSizeAligned - tilingData_->aSize) / platform::GetUbBlockSize();
 
-    DataCopyPad(xLocal[tilingData_->aSizeAligned], xGm_, dataCoptExtParams, dataCopyPadExtParams);
+    DataCopyPad(xLocal[tilingData_->aSizeAligned], xGm_, dataCopyExtParams, dataCopyPadExtParams);
 }
 
 template <typename INDICES_T, const bool NIS>
@@ -179,12 +179,12 @@ __aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::CopyInIndices(
     dataCopyPadExtParams.rightPadding = 0;
     dataCopyPadExtParams.paddingValue = 0;
 
-    DataCopyExtParams dataCoptExtParams;
-    dataCoptExtParams.blockCount = burstLen;
-    dataCoptExtParams.blockLen = tilingData_->rank * sizeof(INDICES_T);
-    dataCoptExtParams.srcStride = 0;
-    dataCoptExtParams.dstStride = 0;
-    DataCopyPad(indicesLocal, indicesGm_[(indicesGmOffset_ + coreOffset) * tilingData_->rank], dataCoptExtParams, dataCopyPadExtParams);
+    DataCopyExtParams dataCopyExtParams;
+    dataCopyExtParams.blockCount = burstLen;
+    dataCopyExtParams.blockLen = tilingData_->rank * sizeof(INDICES_T);
+    dataCopyExtParams.srcStride = 0;
+    dataCopyExtParams.dstStride = 0;
+    DataCopyPad(indicesLocal, indicesGm_[(indicesGmOffset_ + coreOffset) * tilingData_->rank], dataCopyExtParams, dataCopyPadExtParams);
 }
 
 
@@ -575,14 +575,14 @@ __aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::GatherProcessVfWithGA(
 template <typename INDICES_T, const bool NIS>
 __aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::CopyOutY(int32_t nBurst, int32_t indicesCoreOffset)
 {
-    DataCopyExtParams dataCoptExtParams;
-    dataCoptExtParams.blockCount = nBurst;
-    dataCoptExtParams.blockLen = tilingData_->aSize;
-    dataCoptExtParams.srcStride = (tilingData_->aSizeAligned - tilingData_->aSize) / platform::GetUbBlockSize();
-    dataCoptExtParams.dstStride = 0;
+    DataCopyExtParams dataCopyExtParams;
+    dataCopyExtParams.blockCount = nBurst;
+    dataCopyExtParams.blockLen = tilingData_->aSize;
+    dataCopyExtParams.srcStride = (tilingData_->aSizeAligned - tilingData_->aSize) / platform::GetUbBlockSize();
+    dataCopyExtParams.dstStride = 0;
 
     LocalTensor<int8_t> yLocal = yQueue_.DeQue<int8_t>();
-    DataCopyPad(yGm_[(indicesGmOffset_ + indicesCoreOffset) * tilingData_->aSize], yLocal, dataCoptExtParams);
+    DataCopyPad(yGm_[(indicesGmOffset_ + indicesCoreOffset) * tilingData_->aSize], yLocal, dataCopyExtParams);
     yQueue_.FreeTensor(yLocal);
 }
 

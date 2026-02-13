@@ -30,14 +30,14 @@ namespace ge {
 * @par Attributes:
 * @li num_weights: An int attr which use to judge how many words in dict. \n
 
-* @li padding_idx: An int attr judge which word to fill zeros. Defaults to "-1". \n
+* @li padding_idx: An integer attribute that specifies which word index should have its gradient filled with zeros. Defaults to "-1". \n
 
 * @li scale_grad_by_freq: An optional bool. Defaults to "False".
 *     If "True", "grad_weight" will be scale by word_frequency.
 *     If "False", "grad_weight" will not be scale by word_frequency. \n
 
 * @par Outputs:
-* y: A mutable output Tensor of new word grad has the same type as "grads". \n
+* y: A mutable output Tensor of new word grad has the same type as "grad". \n
 
 * @par Third-party framework compatibility
 * Compatible with the Pytorch operator EmbeddingDenseGrad.
@@ -45,7 +45,7 @@ namespace ge {
 REG_OP(EmbeddingDenseGrad)
     .INPUT(grad, TensorType({ DT_FLOAT32, DT_FLOAT16, DT_BF16 }))  /* "First operand." */
     .INPUT(indices, TensorType({ DT_INT32, DT_INT64 }))  /* "Second operand." */
-    .OUTPUT(y, TensorType({ DT_FLOAT32, DT_FLOAT16, DT_BF16 }))  /* "Result, has same element type as two inputs" */
+    .OUTPUT(y, TensorType({ DT_FLOAT32, DT_FLOAT16, DT_BF16 }))  /* "Result, has same element type as grad input" */
     .REQUIRED_ATTR(num_weights, Int)
     .ATTR(padding_idx, Int, -1)
     .ATTR(scale_grad_by_freq, Bool, false)

@@ -102,27 +102,27 @@ __aicore__ inline void GatherNdSimd<INDICES_T>::CopyIn(LocalTensor<T> xLocal,
     dataCopyPadExtParams.rightPadding = 0;
     dataCopyPadExtParams.paddingValue = 0;
 
-    DataCopyExtParams dataCoptExtParams;
-    dataCoptExtParams.blockCount = nBurst;
-    dataCoptExtParams.blockLen = copyLen * sizeof(T);
-    dataCoptExtParams.srcStride = 0;
-    dataCoptExtParams.dstStride = 0;
-    DataCopyPad(xLocal, xGm[offset], dataCoptExtParams, dataCopyPadExtParams);
+    DataCopyExtParams dataCopyExtParams;
+    dataCopyExtParams.blockCount = nBurst;
+    dataCopyExtParams.blockLen = copyLen * sizeof(T);
+    dataCopyExtParams.srcStride = 0;
+    dataCopyExtParams.dstStride = 0;
+    DataCopyPad(xLocal, xGm[offset], dataCopyExtParams, dataCopyPadExtParams);
 }
 
 template <typename INDICES_T>
 __aicore__ inline void GatherNdSimd<INDICES_T>::CopyOut(int64_t offset, uint32_t nBurst, uint32_t copyLen)
 {
-    DataCopyExtParams dataCoptExtParams;
-    dataCoptExtParams.blockCount = nBurst;
-    dataCoptExtParams.blockLen = copyLen;
-    dataCoptExtParams.srcStride = 0;
-    dataCoptExtParams.dstStride = 0;
+    DataCopyExtParams dataCopyExtParams;
+    dataCopyExtParams.blockCount = nBurst;
+    dataCopyExtParams.blockLen = copyLen;
+    dataCopyExtParams.srcStride = 0;
+    dataCopyExtParams.dstStride = 0;
     LocalTensor<int8_t> yLocal = inQueue_.DeQue<int8_t>();
     event_t eventIdVtoMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
     SetFlag<HardEvent::V_MTE3>(eventIdVtoMTE3);
     WaitFlag<HardEvent::V_MTE3>(eventIdVtoMTE3);
-    DataCopyPad(yGm_[offset], yLocal, dataCoptExtParams);
+    DataCopyPad(yGm_[offset], yLocal, dataCopyExtParams);
     inQueue_.FreeTensor(yLocal);
 }
 

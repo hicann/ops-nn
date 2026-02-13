@@ -70,12 +70,12 @@ extern "C" {
  *
  * @param [in] self: npu device侧的aclTensor，数据类型支持INT64、INT32、INT8、UINT8、BOOL、FLOAT、FLOAT16、BFLOAT16，支
  * 持非连续的Tensor，数据格式支持ND，数据维度不支持8维以上。
- * @param [in] index: npu
+ * @param [in] indices: npu
  * device侧的aclTensor，数据类型支持INT64、INT32，支持非连续的Tensor，数据格式支持ND，数据维度不支持 8维以上。
  * @param [in] negativeIndexSupport: 属性，表示是否支持负数场景，数据类型支持bool。
  * @param [in] out: npu device侧的aclTensor，数据类型支持INT64、INT32、INT8、UINT8、BOOL、FLOAT、FLOAT16、BFLOAT16，数据
  * 类型需要与self一致，数据格式支持ND。
- * @param [out] workspace_size: 返回用户需要在npu device侧申请的workspace大小。
+ * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
@@ -86,7 +86,7 @@ ACLNN_API aclnnStatus aclnnGatherNdGetWorkspaceSize(const aclTensor* self, const
 /**
  * @brief aclnnGatherNd的第二段接口，用于执行计算。
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspace_size: 在npu device侧申请的workspace大小，由第一段接口aclnnGatherNdGetWorkspaceSize获取。
+ * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnGatherNdGetWorkspaceSize获取。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。

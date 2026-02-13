@@ -43,7 +43,7 @@ class EmbeddingDenseGrad : public OpDef {
         this->Attr("scale_grad_by_freq").AttrType(OPTIONAL).Bool(false);
 
         OpAICoreConfig aicoreConfig;
-            aicoreConfig.DynamicCompileStaticFlag(true)
+        aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)

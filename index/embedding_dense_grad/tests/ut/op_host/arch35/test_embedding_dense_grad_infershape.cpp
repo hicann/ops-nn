@@ -24,7 +24,7 @@
 #include "log/log.h"
 #include "platform/platform_info.h"
 #include "ut_op_common.h"
-#include "../../../op_graph/embedding_dense_grad_proto.h"
+#include "../../../../op_graph/embedding_dense_grad_proto.h"
 
 class EmbeddingDenseGradTest : public testing::Test {
 protected:
