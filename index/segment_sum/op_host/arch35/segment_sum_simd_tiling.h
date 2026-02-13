@@ -57,8 +57,8 @@ private:
     int64_t blockNumInCol_ = 0;
     int64_t normalCoreInnerNum_ = 0;
     int64_t normalCoreOutterNum_ = 0;
-    int64_t tailCoreInnerNum_ = 0;
-    int64_t tailCoreOutterNum_ = 0;
+    int64_t tailCoreInnerNum_ = 0; // 列尾核列上处理的inner数
+    int64_t tailCoreOutterNum_ = 0; // 行尾核行上处理的行数
 
     int64_t normalCoreRowUbLoop_ = 0;
     int64_t normalCoreNormalLoopOutters_ = 0;
@@ -80,7 +80,7 @@ private:
 
     int64_t usedCoreNumForMultAdd_ = 0;
     int64_t normalCoreMultAddInners_ = 0;
-    int64_t tailCoreMultAddInners_ = 0;
+    int64_t tailCoreMultAddInners_ = 0; // 多核累加尾核处理的inner数
 
     int64_t normalCoreMultAddInnerLoop_ = 0;
     int64_t normalCoreMultAddNormalLoopInners_ = 0;
@@ -90,6 +90,7 @@ private:
     int64_t tailCoreMultAddTailLoopInners_ = 0;
 
     int64_t multAddXBufferSize_ = 0;
+    int64_t multAddIdsBufferSize_ = 0;
     int64_t multAddYBufferSize_ = 0;
 
     bool isDeterministic_ = false;

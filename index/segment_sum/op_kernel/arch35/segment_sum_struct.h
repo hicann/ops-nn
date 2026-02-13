@@ -17,12 +17,19 @@ struct SegmentSumSimtTilingData
     uint64_t innerDim{0};
     uint64_t initNumPerCore{0};
     uint64_t initNumTailCore{0};
+    uint32_t isDeterministic{0};
+    uint32_t maxSegIdsInUb{0};
+    int32_t loopTimes{0};   // 整核循环次数
+    int32_t loopTimesTailCore{0}; // 尾核循环次数
+    uint32_t segIdsPerLoop{0};  //整核整循环处理多少id
+    uint32_t segIdsPerLoopTailCore{0}; //尾核整循环处理多少id
+    uint32_t segIdsTailLoop{0}; // 整核尾循环处理多少id
+    uint32_t segIdsTailLoopTailCore{0}; //尾核尾循环处理多少id
 };
 
 struct SegmentSumSimdTilingData
 {
     int64_t needCoreNum{0};
-    int64_t outerDim{0}; // kernel没用
     int64_t innerDim{0};
 
     int64_t xBufferSize{0};
@@ -37,9 +44,7 @@ struct SegmentSumSimdTilingData
     int64_t blockNumInCol{0}; // 列切分的核数
 
     int64_t normalCoreInnerNum{0}; // 正常列核列上处理的inner数
-    int64_t tailCoreInnerNum{0}; // 列尾核列上处理的inner数
     int64_t normalCoreOutterNum{0}; // 正常行核行上处理的行数
-    int64_t tailCoreOutterNum{0}; // 行尾核行上处理的行数
 
     int64_t normalCoreRowUbLoop{0}; // 正常行核ub在行上的循环次数
     int64_t normalCoreNormalLoopOutters{0}; // 正常行核ub正常循环一次处理的行数
@@ -57,7 +62,6 @@ struct SegmentSumSimdTilingData
 
     int64_t usedCoreNumForMultAdd{0}; // 多核累加使用的核数
     int64_t normalCoreMultAddInners{0}; // 多核累加正常核处理的inner数
-    int64_t tailCoreMultAddInners{0}; // 多核累加尾核处理的inner数
 
     int64_t normalCoreMultAddInnerLoop{0}; // 多核累加正常核列循环次数
     int64_t normalCoreMultAddNormalLoopInners{0}; // 多核累加正常核正常循环处理的inner数
@@ -67,6 +71,7 @@ struct SegmentSumSimdTilingData
     int64_t tailCoreMultAddTailLoopInners{0}; // 多核累加尾核尾循环处理的inner数
 
     int64_t multAddXBufferSize{0};
+    int64_t multAddIdsBufferSize{0};
     int64_t multAddYBufferSize{0};
 };
 

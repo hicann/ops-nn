@@ -158,7 +158,7 @@ __aicore__ inline INDICES_T Gatherv2Simd<INDICES_T>::GetIndex(int64_t idx, int64
           copyLen = startBIdx + maxBSize > endBIdx ? (endBIdx - startBIdx + 1) * gatherSize_ : maxBSize * gatherSize_;
           indicesOffsetBase_ = startBIdx * gatherSize_;
        } else {
-          copyLen = startGIdx + maxIndex_ >= gatherSize_ ? (endBIdx + 1) * gatherSize_ - idx: maxIndex_;
+          copyLen = startGIdx + maxIndex_ >= (endBIdx + 1) * gatherSize_ ? (endBIdx + 1) * gatherSize_ - idx: maxIndex_;
           indicesOffsetBase_ = idx;
        }
       curIndexSize_ = copyLen;

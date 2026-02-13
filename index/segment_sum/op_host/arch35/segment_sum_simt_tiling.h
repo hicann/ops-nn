@@ -44,6 +44,16 @@ private:
     SegmentSumSimtTilingData* tilingData_;
     uint64_t initNumPerCore_{0};
     uint64_t initNumTailCore_{0};
+    uint32_t isDeterministic_{0};
+    uint32_t maxSegIdsInUb{0};
+    uint64_t segIdsPerCore_{0};
+    uint64_t segIdsTailCore_{0};
+    uint32_t segIdsPerLoop_{0};
+    uint32_t segIdsPerLoopTailCore_{0};
+    uint32_t segIdsTailLoop_{0};
+    uint32_t segIdsTailLoopTailCore_{0};
+    uint32_t loopTimes_{0};
+    uint32_t loopTimesTailCore_{0};
 };
 } // namespace optiling
 #endif // SEGMENT_SUM_SIMT_TILING_H

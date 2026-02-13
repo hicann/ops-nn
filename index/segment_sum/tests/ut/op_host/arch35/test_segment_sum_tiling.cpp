@@ -67,7 +67,7 @@ static void ExecuteTestCase(
                           "Intrinsic_data_move_l12ub": true,
                           "Intrinsic_data_move_l0c2ub": true,
                           "Intrinsic_data_move_out2l1_nd2nz": false,
-                          "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "UB_SIZE": 253952, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                           "CORE_NUM": 64}
                           })";
@@ -75,7 +75,7 @@ static void ExecuteTestCase(
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
 
     // platform info
     fe::PlatFormInfos platform_info;
@@ -144,7 +144,7 @@ static void ExecuteTestCase(
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     dlog_setlevel(0, 3, 0);
-    auto tiling_data_result = to_string<int64_t>(tilingData->GetData(), tilingData->GetDataSize());
+    auto tiling_data_result = to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize());
     std::cout << tiling_data_result << std::endl;
     EXPECT_EQ(tiling_data_result, expect);
 }
@@ -158,7 +158,22 @@ TEST_F(SegmentSumTiling, simt) {
     ge::DataType dtype = ge::DT_FLOAT;
     ge::DataType segment_ids_dtype = ge::DT_INT32;
     uint64_t except_tilingkey = 1000;
-    std::string expect = "4 2 0 8 ";
+    std::string expect = "4 0 2 0 0 0 8 0 0 27640 0 1 0 4 0 4 ";
+    ExecuteTestCase(
+        data_shape, segment_ids_shape, y_shape, 
+        dtype, segment_ids_dtype, except_tilingkey, expect);
+}
+
+TEST_F(SegmentSumTiling, simt_perf) {
+    // input
+    gert::StorageShape data_shape = {{2500, 1}, {2500, 1}};
+    gert::StorageShape segment_ids_shape = {{2500}, {2500}};
+    // output
+    gert::StorageShape y_shape = {{2500, 1}, {2500, 1}};   // assume that max segment_id is 3
+    ge::DataType dtype = ge::DT_FLOAT;
+    ge::DataType segment_ids_dtype = ge::DT_INT32;
+    uint64_t except_tilingkey = 1000;
+    std::string expect = "2500 0 1 0 39 0 43 0 0 27640 1 1 39 43 39 43 ";
     ExecuteTestCase(
         data_shape, segment_ids_shape, y_shape, 
         dtype, segment_ids_dtype, except_tilingkey, expect);

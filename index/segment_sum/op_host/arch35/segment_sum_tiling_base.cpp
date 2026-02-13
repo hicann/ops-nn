@@ -95,7 +95,7 @@ ge::graphStatus SegmentSumBaseTiling::GetShapeAttrsInfo()
     outerDim_ = dataShape.GetDim(0);
     
     OP_CHECK_IF(
-        outerDim_ != segmentIdsShape.GetDim(0),
+        static_cast<int64_t>(outerDim_) != segmentIdsShape.GetDim(0),
         OP_LOGE(
             context_->GetNodeName(), "the dimension 0 of data shape should be same with segment_ids."),
         return ge::GRAPH_FAILED);

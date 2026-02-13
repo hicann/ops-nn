@@ -51,8 +51,8 @@ static std::string OtherErrMsg(const std::string& error_detail) {
   return msg;
 }
 
-static bool CheckAndUpdateAxis(gert::InferShapeContext* context, int64_t& batch_dims, int64_t& axes_data,
-                               GatherInfo& gather_info) {
+static bool CheckAndUpdateAxis(const gert::InferShapeContext* context, int64_t& batch_dims, int64_t& axes_data,
+                               const GatherInfo& gather_info) {
   int64_t x_real_dim_cnt = gather_info.x_real_dim_cnt;
   int64_t index_batch_dims = gather_info.index_batch_dims;
   int64_t rank_indices = gather_info.rank_indices;
