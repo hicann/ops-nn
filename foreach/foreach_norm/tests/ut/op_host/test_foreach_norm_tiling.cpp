@@ -92,7 +92,7 @@ TEST_F(ForeachCommonTiling, test_foreach_norm_tiling_float32_1)
             .Outputs({&foreach_info})
             .Build();
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910B"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
@@ -148,7 +148,7 @@ TEST_F(ForeachCommonTiling, test_foreach_norm_tiling_float32_regbase)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = { { "NpuArch", "3510" } };
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -258,7 +258,7 @@ TEST_F(ForeachCommonTiling, test_foreach_norm_tiling_float32_regbase_failed)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = { { "NpuArch", "3510" } };
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",

@@ -268,7 +268,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_tiling_regbase_fullload_001
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
@@ -387,7 +387,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_qaunt_tiling_regbase_welford_001)
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
@@ -501,7 +501,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_tiling_regbase_dyn_fullload
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
@@ -618,7 +618,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_qaunt_tiling_regbase_dyn_welford_
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
@@ -730,7 +730,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_empty_tiling_9)
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
@@ -844,7 +844,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_empty_tiling_9_large_size_2
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
@@ -959,7 +959,7 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_qaunt_tiling_reShape_00)
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {

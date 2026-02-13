@@ -68,7 +68,7 @@ static void ExecuteTestCase(ge::DataType inDtype, ge::DataType outDtype, gert::S
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    map<string, string> soc_versions = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> soc_versions = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
 
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
@@ -167,7 +167,7 @@ static void ExecuteTestCaseA2(ge::DataType inDtype, ge::DataType outDtype, gert:
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    map<string, string> soc_versions = {{"Short_SoC_version", "Ascend910B"}};
+    map<string, string> soc_versions = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
 
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 

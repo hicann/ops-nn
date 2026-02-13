@@ -17,6 +17,7 @@
 #include "opdev/make_op_executor.h"
 #include "opdev/op_dfx.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -33,7 +34,7 @@ const aclTensor* LinearIndexV2(
 
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (socVersion != SocVersion::ASCEND910B && socVersion != SocVersion::ASCEND910_93 &&
-        socVersion != SocVersion::ASCEND950) {
+        !Ops::NN::AclnnUtil::IsRegbase()) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "[LinearIndexV2] only support ASCEND910B and ASCEND950");
         return nullptr;
     }
@@ -64,7 +65,7 @@ const aclTensor* LinearIndexV2(
     }
     outShape.SetDimNum(1);
     outShape.SetDim(0, outputSize);
-    if (socVersion == SocVersion::ASCEND950) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         auto index = executor->AllocTensor(
             outShape, (*indicesList)[validIdx]->GetDataType(), (*indicesList)[validIdx]->GetViewFormat());
         auto ret =

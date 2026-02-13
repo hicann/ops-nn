@@ -73,7 +73,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_30013)
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -166,7 +166,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_000)
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -266,7 +266,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_000_x_dtype_bf16)
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -366,7 +366,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_000_x_dtype_bf16_gr
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -463,7 +463,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_spe_000)
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -563,7 +563,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_x_dtype
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -659,7 +659,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_group_d
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -756,7 +756,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_x_shape
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -852,7 +852,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_bias)
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -950,7 +950,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_weight_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1047,7 +1047,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_activat
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1144,7 +1144,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_quant_s
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1242,7 +1242,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1346,7 +1346,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1450,7 +1450,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1554,7 +1554,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1658,7 +1658,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1762,7 +1762,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1866,7 +1866,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1970,7 +1970,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -2074,7 +2074,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -2178,7 +2178,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -2282,7 +2282,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -2386,7 +2386,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -2490,7 +2490,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -2590,7 +2590,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -2690,7 +2690,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_swiglumode_illegal)
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -2791,7 +2791,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_bias_speGroupType_t
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -2891,7 +2891,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_swiglumode_1_speGro
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -2997,7 +2997,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_111)
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -3098,7 +3098,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_011)
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -3198,7 +3198,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_101)
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -3298,7 +3298,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_110)
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -3395,7 +3395,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1000100
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = { { "NpuArch", "3510" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
@@ -3495,7 +3495,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1011111
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = { { "NpuArch", "3510" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
@@ -3598,7 +3598,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1010110
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = { { "NpuArch", "3510" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
@@ -3699,7 +3699,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1141100
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::map<std::string, std::string> npu_arch_infos = { { "NpuArch", "3510" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
@@ -3800,7 +3800,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_dtype_fail)
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -3894,7 +3894,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_shape_fail_0)
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -3988,7 +3988,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_shape_fail_1)
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4082,7 +4082,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_shape_fail_2)
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4176,7 +4176,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_no_exis
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4269,7 +4269,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_shape_f
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4363,7 +4363,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_shape_f
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4456,7 +4456,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_shape_f
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4549,7 +4549,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_fail_3)
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4644,7 +4644,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_1111_last_dim)
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4743,7 +4743,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_1111_nlast_dim)
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4837,7 +4837,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_101110_error)
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4932,7 +4932,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_activate_scale_
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -5027,7 +5027,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_bias_type_fail)
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -5122,7 +5122,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_quant_scale_typ
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -5217,7 +5217,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_dst_type_error)
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -5312,7 +5312,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_round_mode_erro
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -5400,7 +5400,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement2_activa
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -5504,7 +5504,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -5609,7 +5609,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -5714,7 +5714,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -5816,7 +5816,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -5918,7 +5918,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_qs_qo_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -6020,7 +6020,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_qo_nul
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -6122,7 +6122,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_qo_qs_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -6224,7 +6224,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info

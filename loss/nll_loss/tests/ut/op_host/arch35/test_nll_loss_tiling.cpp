@@ -180,7 +180,7 @@ TEST_F(NLLLossTiling, NLLLoss_AC_tiling_2)
     // compile info
     optiling::NLLLossCompileInfo compile_info;
     std::map<std::string, std::string> soc_version_infos = {
-        {"SoC_version", "Ascend950"}, {"Short_SoC_version", "Ascend950"}};
+        {"SoC_version", "Ascend950"}, {"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
 
     compile_info.maxThread = 1024;
     compile_info.maxCoreNum = 64;
@@ -262,7 +262,7 @@ TEST_F(NLLLossTiling, NLLLoss_AC_tiling_3)
     // compile info
     optiling::NLLLossCompileInfo compile_info;
     std::map<std::string, std::string> soc_version_infos = {
-        {"SoC_version", "Ascend950"}, {"Short_SoC_version", "Ascend950"}};
+        {"SoC_version", "Ascend950"}, {"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
 
     compile_info.maxThread = 1024;
     compile_info.maxCoreNum = 64;

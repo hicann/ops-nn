@@ -19,6 +19,7 @@
 
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/op_api_def.h"
+#include "op_api/aclnn_util.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 
@@ -43,7 +44,7 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST =
 
 static const std::initializer_list<DataType> GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND950) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         return ASCEND950_DTYPE_SUPPORT_LIST_SELF;
     }
     if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
@@ -242,7 +243,7 @@ static const aclTensor* InitializeTensor(const aclTensor* x, aclOpExecutor* exec
 static const aclTensor* IntToTensor(int64_t repeats, aclOpExecutor* executor)
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion != SocVersion::ASCEND950) {
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
         auto repeatsScalar = executor->AllocScalar(repeats);
         auto repeatsTensor = executor->ConvertToTensor(repeatsScalar, op::DataType::DT_INT64);
         auto baseShape = getBaseShape(executor);

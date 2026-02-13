@@ -78,7 +78,7 @@ static string to_string(const std::stringstream& tiling_data)
 }
 
 // TEST_F(CTCLossV2Tiling, test_rt2_success_targets_2d) {
-//   std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+//   std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
 //   string compile_info_string = R"({
 //                                     "hardware_info": {
 //                                         "BT_SIZE": 0,

@@ -500,21 +500,6 @@ ge::graphStatus TilingEmbeddingDenseGradV2(gert::TilingContext* context)
     return tilingObject.SetKernelTiling();
 }
 
-static bool IsRegbaseSocVersion(platform_ascendc::SocVersion version)
-{
-    const static std::set<platform_ascendc::SocVersion> regbaseSocVersions = {
-        platform_ascendc::SocVersion::ASCEND950};
-
-    return regbaseSocVersions.find(version) != regbaseSocVersions.end();
-}
-
-static bool IsRegbaseSocVersion(const gert::TilingParseContext* context)
-{
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    auto socVersion = ascendcPlatform.GetSocVersion();
-    return IsRegbaseSocVersion(socVersion);
-}
-
 ge::graphStatus TilingPrepareForEmbeddingDenseGradV2(gert::TilingParseContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Tiling Prepare For EmbeddingDenseGradV2 start");
@@ -524,7 +509,7 @@ ge::graphStatus TilingPrepareForEmbeddingDenseGradV2(gert::TilingParseContext* c
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    compileInfo->isRegBase = IsRegbaseSocVersion(context);
+    compileInfo->isRegBase = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);

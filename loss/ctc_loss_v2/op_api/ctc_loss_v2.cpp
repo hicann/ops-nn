@@ -21,6 +21,7 @@
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -77,8 +78,7 @@ static int64_t GetDtypeSize(const op::DataType dtype)
 
 static bool IsregBaseAiCoreSupport(const aclTensor* logProbs)
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion == SocVersion::ASCEND950) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         return CheckType(logProbs->GetDataType(), V3_AICORE_DTYPE_SUPPORT_LIST);
     }
     return false;
@@ -216,8 +216,7 @@ const std::tuple<op::Shape, op::Shape> CtcLossNpuOutputShape(const aclTensor* lo
         inputN = logProbsShape.GetDim(LOG_PROBS_3D_DIM_N);
     }
     int64_t alphaTailSize = 2 * maxLength + 1;
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    int64_t alphaTailSizeAlign = (socVersion == SocVersion::ASCEND950) ? alphaTailSize : (alphaTailSize + 7) / 8 * 8;
+    int64_t alphaTailSizeAlign = (Ops::NN::AclnnUtil::IsRegbase()) ? alphaTailSize : (alphaTailSize + 7) / 8 * 8;
     op::Shape logAlphaShape = {inputN, inputT, alphaTailSizeAlign};
 
     if (logProbsShape.GetDimNum() == DIM_NUM_THREE) {

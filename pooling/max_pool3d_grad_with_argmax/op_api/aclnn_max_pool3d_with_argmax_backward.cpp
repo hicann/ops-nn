@@ -23,6 +23,7 @@
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
 #include "opdev/framework_op.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -63,14 +64,13 @@ static bool CheckNotNullPtr(
 
 static const std::initializer_list<op::DataType> GetDtypeSupportListBySocVersion()
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910B:
-        case SocVersion::ASCEND950:
-        case SocVersion::ASCEND910_93: {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (curArch) {
+        case NpuArch::DAV_3510:
+        case NpuArch::DAV_2201: {
             return GRAD_DTYPE_SUPPORT_LIST;
         }
-        case SocVersion::ASCEND910: {
+        case NpuArch::DAV_1001: {
             return NULL_DTYPE_SUPPORT_LIST;
         }
         default: {
@@ -84,7 +84,7 @@ static bool CheckDtypeValid(
 {
     auto dtypeSupportList = GetDtypeSupportListBySocVersion();
     OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeSupportList, return false);
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         OP_CHECK_DTYPE_NOT_SUPPORT(indices, INDICES_DTYPE_SUPPORT_LIST_950, return false);
     } else {
         OP_CHECK_DTYPE_NOT_SUPPORT(indices, INDICES_DTYPE_SUPPORT_LIST, return false);
@@ -236,7 +236,7 @@ static bool CheckSelfShapeSupport(const aclTensor* self)
 
     const int64_t selfSize = selfDimW * selfDimH * selfDimD;
 
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
         OP_CHECK(
             (selfSize <= MAX_INT32),
             OP_LOGE(

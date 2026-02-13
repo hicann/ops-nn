@@ -18,6 +18,7 @@
 
 #include "register/tilingdata_base.h"
 #include "tiling_base/tiling_templates_registry.h"
+#include "tiling_base/tiling_util.h"
 #include "foreach_tiling_common.h"
 
 namespace optiling {
@@ -142,10 +143,7 @@ REGISTER_TILING_DATA_CLASS(ForeachDivScalar, ForeachCommonTilingData)
     protected:                                                                                    \
         bool IsCapable() override                                                                 \
         {                                                                                         \
-            if (socVersion == platform_ascendc::SocVersion::ASCEND950) {                       \
-                return false;                                                                     \
-            }                                                                                     \
-            return true;                                                                          \
+            return !Ops::NN::OpTiling::IsRegbaseSocVersion(context_);                             \
         }                                                                                         \
         ge::graphStatus DoOpTiling() override                                                     \
         {                                                                                         \

@@ -19,6 +19,7 @@
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
 #include "opdev/make_op_executor.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -38,31 +39,29 @@ static const std::initializer_list<op::DataType> GROUP_INDEX_DTYPE_SUPPORT_LIST 
 static const std::initializer_list<DataType> Y_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_INT8, op::DataType::DT_INT32, op::DataType::DT_INT4};
 
-static const std::map<op::SocVersion, const std::initializer_list<op::DataType>*> SOC_X_SUPPORT_DTYPES = {
-    {SocVersion::ASCEND910B, &X_DTYPE_SUPPORT_LIST},
-    {SocVersion::ASCEND910_93, &X_DTYPE_SUPPORT_LIST},
-    {SocVersion::ASCEND950, &X_DTYPE_SUPPORT_LIST}
+static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_X_SUPPORT_DTYPES = {
+    {NpuArch::DAV_2201, &X_DTYPE_SUPPORT_LIST},
+    {NpuArch::DAV_3510, &X_DTYPE_SUPPORT_LIST}
 };
 
-static const std::map<op::SocVersion, const std::initializer_list<op::DataType>*> SOC_GROUP_INDEX_SUPPORT_DTYPES = {
-    {SocVersion::ASCEND910B, &GROUP_INDEX_DTYPE_SUPPORT_LIST},
-    {SocVersion::ASCEND910_93, &GROUP_INDEX_DTYPE_SUPPORT_LIST},
-    {SocVersion::ASCEND950, &GROUP_INDEX_DTYPE_SUPPORT_LIST}
+static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_GROUP_INDEX_SUPPORT_DTYPES = {
+    {NpuArch::DAV_2201, &GROUP_INDEX_DTYPE_SUPPORT_LIST},
+    {NpuArch::DAV_3510, &GROUP_INDEX_DTYPE_SUPPORT_LIST}
 };
 
-static const std::map<op::SocVersion, const std::initializer_list<op::DataType>*> SOC_Y_SUPPORT_DTYPES = {
-    {SocVersion::ASCEND910B, &Y_DTYPE_SUPPORT_LIST},
-    {SocVersion::ASCEND910_93, &Y_DTYPE_SUPPORT_LIST},
-    {SocVersion::ASCEND950, &Y_DTYPE_SUPPORT_LIST}
+static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_Y_SUPPORT_DTYPES = {
+    {NpuArch::DAV_2201, &Y_DTYPE_SUPPORT_LIST},
+    {NpuArch::DAV_3510, &Y_DTYPE_SUPPORT_LIST}
 };
 
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportList(
-    const std::map<op::SocVersion, const std::initializer_list<op::DataType>*> &socSupportDtypes) {
-  auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  auto found = socSupportDtypes.find(socVersion);
+    const std::map<NpuArch, const std::initializer_list<op::DataType>*> &socSupportDtypes) {
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  auto found = socSupportDtypes.find(curArch);
   if (found != socSupportDtypes.end()) {
     return *(found->second);
   }
+  auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
   OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented", op::ToString(socVersion).GetString());
   return EMPTY_LIST;
 }

@@ -18,6 +18,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
 
 using namespace op;
@@ -30,13 +31,12 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
               op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16};
 
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySocVersion() {
-  const std::map<op::SocVersion, const std::initializer_list<op::DataType>*> socSupportDtypes = {
-    {SocVersion::ASCEND910B, &AICORE_DTYPE_SUPPORT_LIST},
-    {SocVersion::ASCEND910_93, &AICORE_DTYPE_SUPPORT_LIST},
-    {SocVersion::ASCEND950, &AICORE_DTYPE_SUPPORT_LIST}
+  const std::map<NpuArch, const std::initializer_list<op::DataType>*> socSupportDtypes = {
+    {NpuArch::DAV_2201, &AICORE_DTYPE_SUPPORT_LIST},
+    {NpuArch::DAV_3510, &AICORE_DTYPE_SUPPORT_LIST}
   };
-  auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  auto found = socSupportDtypes.find(socVersion);
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  auto found = socSupportDtypes.find(curArch);
   if (found != socSupportDtypes.end()) {
     return *(found->second);
   }

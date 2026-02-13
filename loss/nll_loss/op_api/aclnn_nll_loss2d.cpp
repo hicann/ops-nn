@@ -18,6 +18,7 @@
 #include "level0/fill.h"
 #include "nll_loss.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "op_api/aclnn_util.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
@@ -52,7 +53,7 @@ static const std::initializer_list<DataType>& GetSelfDtypeSupportList()
 {
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+        Ops::NN::AclnnUtil::IsRegbase()) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     }
     return ASCEND910_DTYPE_SUPPORT_LIST;
@@ -260,7 +261,7 @@ aclnnStatus aclnnNLLLoss2dGetWorkspaceSize(
     }
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     op::DataType promoteType;
-    if (socVersion == SocVersion::ASCEND950) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         promoteType = self->GetDataType();
     } else {
         promoteType = self->GetDataType() == op::DataType::DT_BF16 ? op::DataType::DT_BF16 : op::DataType::DT_FLOAT;
@@ -290,7 +291,7 @@ aclnnStatus aclnnNLLLoss2dGetWorkspaceSize(
     const aclTensor* totalWeight;
 
     // [permute] 完成4维矩阵的维度转换
-    if (socVersion != SocVersion::ASCEND950) {
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
         // [ReFormat] 类型转换
         auto selfFormat = l0op::ReFormat(selfCast, static_cast<op::Format>(ACL_FORMAT_ND));
         const aclTensor* selfPermute;

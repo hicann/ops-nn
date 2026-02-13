@@ -15,6 +15,7 @@
 #include "level0/squeeze.h"
 #include "level0/unsqueeze.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "op_api/aclnn_util.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
@@ -62,14 +63,13 @@ static bool CheckNotNull(
 
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySocVersion()
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910B:
-        case SocVersion::ASCEND910_93:
-        case SocVersion::ASCEND950: {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (curArch) {
+        case NpuArch::DAV_2201:
+        case NpuArch::DAV_3510: {
             return ASCEND910B_DTYPE_SUPPORT_LIST;
         }
-        case SocVersion::ASCEND910: {
+        case NpuArch::DAV_1001: {
             return ASCEND910_DTYPE_SUPPORT_LIST;
         }
         default: {
@@ -220,7 +220,7 @@ aclnnStatus aclnnNLLLossBackwardGetWorkspaceSize(
     }
 
     op::DataType promoteType = self->GetDataType();
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
         promoteType = self->GetDataType() == op::DataType::DT_FLOAT16 ? op::DataType::DT_FLOAT : self->GetDataType();
     }
 
@@ -256,7 +256,7 @@ aclnnStatus aclnnNLLLossBackwardGetWorkspaceSize(
     CHECK_RET(targetContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto targetCasted = targetContiguous;
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
         // 将输入target的数据类型转换成int
         OP_LOGW("Transfer target type to int32");
         targetCasted = l0op::Cast(targetContiguous, DataType::DT_INT32, uniqueExecutor.get());

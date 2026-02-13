@@ -23,6 +23,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "loss/common/level2_base_loss.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -207,7 +208,7 @@ aclnnStatus aclnnL1LossBackwardGetWorkspaceSize(
     BroadcastInferShape(gradOutput->GetViewShape(), self->GetViewShape(), broadcastShape1);
     BroadcastInferShape(target->GetViewShape(), broadcastShape1, broadcastShape2);
     auto gradOutputBroadcast = gradOutputContiguous;
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950 ||
+    if (!Ops::NN::AclnnUtil::IsRegbase() ||
         !gradOutput->GetViewShape().IsScalar()) {
         // 判断gradOutput是否需要进行broadcast或者promote
         gradOutputBroadcast = BroadcastTensor(gradOutputContiguous, broadcastShape2, uniqueExecutor.get());

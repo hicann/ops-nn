@@ -19,7 +19,7 @@
 #include "scatter.h"
 #include "level0/squeeze.h"
 #include "level0/unsqueeze.h"
-
+#include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
@@ -49,8 +49,7 @@ static const int64_t BATCH_DIM = 0;
 
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySocVersion()
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion == SocVersion::ASCEND950) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         return ASCEND950_DTYPE_SUPPORT_LIST_DATA;
     } else {
         return DTYPE_SUPPORT_LIST_DATA;

@@ -19,6 +19,7 @@
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 using namespace std;
@@ -37,16 +38,15 @@ static const std::initializer_list<op::DataType> DTYPE_SUPPORT_950_LIST = {
     op::DataType::DT_UINT8, op::DataType::DT_INT16, op::DataType::DT_INT8, op::DataType::DT_UINT16};
 
 static const inline std::initializer_list<op::DataType> GetDtypeSupportListBySocVersion() {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910_93:
-        case SocVersion::ASCEND910B: {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (curArch) {
+        case NpuArch::DAV_2201: {
             return DTYPE_SUPPORT_910B_LIST;
         }
-        case SocVersion::ASCEND910: {
+        case NpuArch::DAV_1001: {
             return DTYPE_SUPPORT_910_LIST;
         }
-        case SocVersion::ASCEND950: {
+        case NpuArch::DAV_3510: {
             return DTYPE_SUPPORT_950_LIST;
         }
         default: {

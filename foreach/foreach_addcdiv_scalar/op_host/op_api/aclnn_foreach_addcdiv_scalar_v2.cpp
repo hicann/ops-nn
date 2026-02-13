@@ -17,6 +17,7 @@
 #include "foreach_addcdiv_scalar_v2.h"
 #include "aclnn_kernels/contiguous.h"
 #include "op_api/op_api_def.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/op_dfx.h"
 #include "opdev/make_op_executor.h"
@@ -64,9 +65,8 @@ static inline bool ForeachAddcdivScalarV2CheckFormat(
 }
 
 static const std::initializer_list<DataType>& ForeachAddcdivScalarV2GetDtypeSupportList() {
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
     return FOREACH_ADDCDIV_SCALAR_V2_ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
   } else {
     OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented",

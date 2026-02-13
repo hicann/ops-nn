@@ -19,6 +19,7 @@
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 namespace l0op {
@@ -32,14 +33,13 @@ static const size_t DHW_DIMS = 3;
 
 static const inline std::initializer_list<op::DataType> GetDtypeSupportListBySocVersion()
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910_93:
-        case SocVersion::ASCEND950:
-        case SocVersion::ASCEND910B: {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (curArch) {
+        case NpuArch::DAV_2201:
+        case NpuArch::DAV_3510: {
             return GRAD_DTYPE_SUPPORT_LIST;
         }
-        case SocVersion::ASCEND910: {
+        case NpuArch::DAV_1001: {
             return NULL_DTYPE_SUPPORT_LIST;
         }
         default: {
@@ -69,7 +69,7 @@ const inline aclTensor* MaxPool3DGradWithArgmaxAiCore(
     L0_DFX(
         MaxPool3DGradWithArgmaxAiCore, gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode,
         gradInput);
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         ADD_TO_LAUNCHER_LIST_AICORE(
             MaxPool3DGradWithArgmax, OP_INPUT(self, gradOutput, indices), OP_OUTPUT(gradInput),
             OP_ATTR(kernelSize, stride, padding, dilation, ceilMode, "NCDHW"));

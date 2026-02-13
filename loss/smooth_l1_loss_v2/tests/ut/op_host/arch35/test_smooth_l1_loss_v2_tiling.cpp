@@ -75,7 +75,7 @@ static void DoSmoothL1LossV2TilingCase(
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
-    map<string, string> socVersion = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> socVersion = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     InitPlatForm(platFormInfo, socInfos, aicoreSpec, intrinsics, socVersion);
 
     optiling::SmoothL1LossV2CompileInfo compileInfo;

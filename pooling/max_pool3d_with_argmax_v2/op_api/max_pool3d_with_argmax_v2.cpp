@@ -17,6 +17,7 @@
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 #include "max_pool3d_with_argmax_v2.h"
 
 using namespace op;
@@ -38,7 +39,7 @@ static const std::initializer_list<DataType> GetDtypeSupportListBySocVersion()
 {
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+        Ops::NN::AclnnUtil::IsRegbase()) {
         return SELF_DTYPE_SUPPORT_LIST;
     } else {
         return NULL_SUPPORT_LIST;

@@ -255,7 +255,7 @@ TEST_F(AddRmsNormCastTiling, add_rms_norm_cast_regbase_tiling_100)
     gert::StorageShape rstd_shape = {{256, 1, 1}, {256, 1, 1}};
     gert::StorageShape out_shape_x = {{256, 1, 256}, {256, 1, 256}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
       "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -363,7 +363,7 @@ TEST_F(AddRmsNormCastTiling, add_rms_norm_cast_regbase_tiling_101)
     gert::StorageShape rstd_shape = {{256, 1, 1}, {256, 1, 1}};
     gert::StorageShape out_shape_x = {{256, 1, 16000}, {256, 1, 16000}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
       "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -465,7 +465,7 @@ TEST_F(AddRmsNormCastTiling, add_rms_norm_cast_regbase_overflow_check)
     gert::StorageShape rstd_shape = {{1, 1, 1}, {1, 1, 1}};
     gert::StorageShape out_shape_x = {{1,2147483648,2147483648}, {1,2147483648,2147483648}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
       "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -569,7 +569,7 @@ TEST_F(AddRmsNormCastTiling, add_rms_norm_cast_regbase_tiling_102)
     gert::StorageShape rstd_shape = {{1, 1, 1}, {1, 1, 1}};
     gert::StorageShape out_shape_x = {{1, 1, 7168}, {1, 1, 7168}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
       "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",

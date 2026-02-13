@@ -20,6 +20,7 @@
 #include "platform/platform_infos_def.h"
 #include "error_util.h"
 #include "apply_adam_w_v2_tiling.h"
+#include "tiling_base/tiling_util.h"
 
 using namespace std;
 using namespace ge;
@@ -402,8 +403,7 @@ static ge::graphStatus TilingPrepareForApplyAdamWV2(gert::TilingParseContext* co
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    auto socVersion = ascendcPlatform.GetSocVersion();
-    compileInfo->isRegbase = (socVersion == platform_ascendc::SocVersion::ASCEND950) ? true : false;
+    compileInfo->isRegbase = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
     OP_CHECK_IF(
         (compileInfo->totalCoreNum <= 0),
         OP_LOGE(context, "TilingPrepareForApplyAdamWV2 fail to get core num."), return ge::GRAPH_FAILED);

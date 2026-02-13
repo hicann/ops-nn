@@ -28,6 +28,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -87,7 +88,7 @@ static bool CheckDtypeValid(
     bool is910bSocVersion =
         (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
          GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
-    bool is910dSocVersion = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
+    bool is910dSocVersion = Ops::NN::AclnnUtil::IsRegbase();
     int64_t inputN = logProbs->GetViewShape().GetDim(1);
     int64_t inputC = logProbs->GetViewShape().GetDim(CDIM);
     int64_t inputS = (logAlpha->GetViewShape().GetDim(SDIM) - 1) / DOUBLE;

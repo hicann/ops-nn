@@ -154,7 +154,7 @@ static void Execute310PTestCase(gert::StorageShape xShape,
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend310P"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend310P"}, {"NpuArch", "2202"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info

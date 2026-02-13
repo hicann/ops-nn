@@ -21,6 +21,7 @@
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -76,7 +77,7 @@ static int64_t GetDtypeSize(const op::DataType dtype)
 // 判断当前是否支持910d
 static bool IsAscend91055iCoreSupport(const aclTensor* logProbs, const aclTensor* targets)
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
         return false;
     }
 

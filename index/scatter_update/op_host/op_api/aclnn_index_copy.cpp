@@ -27,6 +27,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -88,7 +89,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportList() {
   if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
       GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
     return SELF_DTYPE_SUPPORT_LIST_910B;
-  } else if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+  } else if (Ops::NN::AclnnUtil::IsRegbase()) {
     return SELF_DTYPE_SUPPORT_LIST_950;
   } else {
     return SELF_DTYPE_SUPPORT_LIST;

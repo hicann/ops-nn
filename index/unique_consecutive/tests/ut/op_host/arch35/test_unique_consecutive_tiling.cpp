@@ -45,7 +45,7 @@ TEST_F(UniqueConsecutiveTiling, unique_consecutive_testcase_001)
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
         "BT_SIZE": 0, "load3d_constraints": "1",
@@ -143,7 +143,7 @@ TEST_F(UniqueConsecutiveTiling, unique_consecutive_testcase_002)
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
         "BT_SIZE": 0, "load3d_constraints": "1",
@@ -241,7 +241,7 @@ TEST_F(UniqueConsecutiveTiling, unique_consecutive_testcase_003)
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     std::string compile_info_string = R"({
       "hardware_info": {
         "BT_SIZE": 0, "load3d_constraints": "1",

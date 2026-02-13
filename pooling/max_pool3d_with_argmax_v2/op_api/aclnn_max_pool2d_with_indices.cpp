@@ -25,6 +25,7 @@
 #include "opdev/format_utils.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -83,21 +84,20 @@ static bool CheckNotNullPtr(
 
 static const inline std::initializer_list<op::DataType> GetDtypeSupportListBySocVersion(bool isMask, bool isMask2ND)
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND950:
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (curArch) {
+        case NpuArch::DAV_3510:
             return MASK_SELF_OUT_DTYPE_SUPPORT_910B_LIST;
-        case SocVersion::ASCEND910_93:
-        case SocVersion::ASCEND910B: {
+        case NpuArch::DAV_2201: {
             return (
                 isMask    ? MASK_SELF_OUT_DTYPE_SUPPORT_910B_LIST :
                 isMask2ND ? MASK_SELF_OUT_DTYPE_SUPPORT_910B_LIST :
                             SELF_OUT_DTYPE_SUPPORT_910B_LIST);
         }
-        case SocVersion::ASCEND910: {
+        case NpuArch::DAV_1001: {
             return (isMask ? MASK_SELF_OUT_DTYPE_SUPPORT_910_LIST : SELF_OUT_DTYPE_SUPPORT_910_LIST);
         }
-        case SocVersion::ASCEND310P: {
+        case NpuArch::DAV_2002: {
             return (isMask ? SELF_OUT_DTYPE_SUPPORT_310P_LIST : SELF_OUT_DTYPE_SUPPORT_910_LIST);
         }
         default: {
@@ -352,7 +352,7 @@ static bool CheckShape(
     const aclIntArray& dilationRef = *dilation;
     const int64_t dilationH = dilationRef[0];
     const int64_t dilationW = (dilationRef.Size() == 1) ? dilationH : dilationRef[1];
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         OP_CHECK(
             ((dilationH > 0) && (dilationW > 0)),
             OP_LOGE(
@@ -887,7 +887,7 @@ aclnnStatus aclnnMaxPool2dWithMaskGetWorkspaceSize(
     CHECK_RET(CheckAttrSize1Or2(kernelSize), ACLNN_ERR_PARAM_INVALID);
 
     OP_CHECK(
-        GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950,
+        !Ops::NN::AclnnUtil::IsRegbase(),
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
             "On the 950 chip, the aclnnMaxPool2dWithMaskGetWorkspaceSize interface has been deprecated, "
@@ -924,7 +924,7 @@ aclnnStatus aclnnMaxPool2dWithIndicesGetWorkspaceSize(
     L2_DFX_PHASE_1(
         aclnnMaxPool2dWithIndices, DFX_IN(self, kernelSize, stride, padding, dilation, ceilMode),
         DFX_OUT(out, indices));
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         return ExecMaxPool2dWithIndicesGetWorkspaceSizeV3(
             self, kernelSize, stride, padding, dilation, ceilMode, out, indices, workspaceSize, executor);
     } else {

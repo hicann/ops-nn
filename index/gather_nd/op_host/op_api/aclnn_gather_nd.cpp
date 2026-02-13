@@ -23,6 +23,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -84,20 +85,20 @@ static inline bool CheckNotNull(const aclTensor *self, const aclTensor *indices,
 }
 
 static const std::initializer_list<DataType>& GetOutDtypeSupportList() {
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  switch (socVersion) {
-    case SocVersion::ASCEND950: {
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  switch (curArch) {
+    case NpuArch::DAV_3510: {
       return DTYPE_SUPPORT_LIST_950;
     }
-    case SocVersion::ASCEND910_93:
-    case SocVersion::ASCEND910B: {
+    case NpuArch::DAV_2201: {
       return DTYPE_SUPPORT_LIST_910B;
     }
-    case SocVersion::ASCEND310P:
+    case NpuArch::DAV_2002:
       return DTYPE_SUPPORT_LIST_310P;
-    case SocVersion::ASCEND910:
+    case NpuArch::DAV_1001:
       return DTYPE_SUPPORT_LIST_910;
     default: {
+      SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
       OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented", op::ToString(socVersion).GetString());
       return EMPTY_LIST;
     }

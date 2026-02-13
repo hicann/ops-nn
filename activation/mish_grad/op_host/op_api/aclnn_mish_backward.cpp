@@ -15,6 +15,7 @@
 #include "level0/broadcast_to.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/op_api_def.h"
+#include "op_api/aclnn_util.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
@@ -39,11 +40,10 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST =
                                                                                   op::DataType::DT_BF16};
 
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySocVersion() {
-  auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  switch (socVersion) {
-    case SocVersion::ASCEND910B:
-    case SocVersion::ASCEND910_93:
-    case SocVersion::ASCEND950: {
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+ 	  switch (curArch) {
+ 	    case NpuArch::DAV_2201:
+ 	    case NpuArch::DAV_3510: {
       return ASCEND910B_DTYPE_SUPPORT_LIST;
     }
     default: {

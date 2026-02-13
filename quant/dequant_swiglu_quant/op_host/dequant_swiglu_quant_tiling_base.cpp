@@ -17,6 +17,7 @@
 #include <cstdint>
 #include "tiling/tiling_api.h"
 #include "swi_glu_tiling.h"
+#include "tiling_base/tiling_util.h"
 #include "dequant_swiglu_quant_tiling.h"
 
 #define CHECK_FAIL(cont, cond, ...)                      \
@@ -92,7 +93,7 @@ public:
 protected:
     bool IsCapable() override
     {
-        if (socVersion == platform_ascendc::SocVersion::ASCEND950) {
+        if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_)) {
             return false;
         }
         auto shapeGroupIndex = context_->GetOptionalInputShape(6);

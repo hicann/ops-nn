@@ -312,7 +312,7 @@ TEST_F(ForeachCommonTiling, foreach_add_scalar_list_test_tiling_int32_3_regbase)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    std::map<std::string, std::string> soc_version_infos = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     string compile_info_string = R"({
                                         "hardware_info": {
                                             "BT_SIZE": 0,
@@ -402,7 +402,7 @@ TEST_F(ForeachCommonTiling, foreach_add_scalar_list_test_tiling_int32_4_regbase)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    std::map<std::string, std::string> soc_version_infos = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     string compile_info_string = R"({
                                         "hardware_info": {
                                             "BT_SIZE": 0,
@@ -492,7 +492,7 @@ TEST_F(ForeachCommonTiling, foreach_add_scalar_list_test_tiling_int32_5_regbase)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    std::map<std::string, std::string> soc_version_infos = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     string compile_info_string = R"({
                                         "hardware_info": {
                                             "BT_SIZE": 0,
@@ -582,7 +582,7 @@ TEST_F(ForeachCommonTiling, foreach_add_scalar_list_test_tiling_int32_6_regbase)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    std::map<std::string, std::string> soc_version_infos = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     string compile_info_string = R"({
                                         "hardware_info": {
                                             "BT_SIZE": 0,

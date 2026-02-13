@@ -16,6 +16,7 @@
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/transdata.h"
 #include "op_api/op_api_def.h"
+#include "op_api/aclnn_util.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
@@ -66,7 +67,7 @@ static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
   if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
       GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+      Ops::NN::AclnnUtil::IsRegbase()) {
     return DTYPE_SUPPORT_LIST_WITH_BF16;
   }
   return DTYPE_SUPPORT_LIST;

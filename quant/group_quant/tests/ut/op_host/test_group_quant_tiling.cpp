@@ -77,7 +77,7 @@ void GroupQuantTilingSimpleTest(
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
     InitPlatForm(platformInfo, socInfos, aicoreSpec, intrinsics);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend910B"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
     string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
