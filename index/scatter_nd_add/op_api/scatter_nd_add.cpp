@@ -13,6 +13,7 @@
 #include "opdev/make_op_executor.h"
 #include "opdev/op_dfx.h"
 #include "opdev/aicpu/aicpu_task.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
 
 using namespace op;
@@ -23,14 +24,14 @@ OP_TYPE_REGISTER(ScatterNdAdd);
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_BOOL};
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_950 = {
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_REGBASE = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_INT64,
     op::DataType::DT_BOOL};
 
 inline static bool IsAiCoreSupport(const aclTensor* self) {
   // ScatterNdAdd只需要判断self
-  if (op::GetCurrentPlatformInfo().GetSocVersion() >= op::SocVersion::ASCEND950) {
-    return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_950);
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
+    return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_REGBASE);
   }
   return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
 }

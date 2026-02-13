@@ -51,7 +51,10 @@ public:
                                                       int64_t rowLen, int64_t colLen);
     __aicore__ inline void CopyRValueAndIntWsIn(int64_t rowIdx, int64_t colIdx,
                                                 int64_t rowLen, int64_t colLen);
+    __aicore__ inline void CopyRValueAndIntWsAndIndexInOpti(int64_t rowIdx, int64_t colIdx,
+                                                int64_t rowLen, int64_t colLen);
     __aicore__ inline void InverseQuantize(int64_t rowLen, int64_t colLen);
+    __aicore__ inline void CopyInverseQuantizedValueOutOpti(int64_t colLen);
     __aicore__ inline void CopyInverseQuantizedValueOut(int64_t rowIdx, int64_t colIdx,
                                                         int64_t rowLen, int64_t colLen);
     __aicore__ inline void ProcessFirstStep();
@@ -95,6 +98,7 @@ private:
 
     uint64_t afterAxisAlignSize_{0};
     uint64_t afterAxisAlignFp32_{0};
+    uint64_t uniqueSumIdNum_{0};
 };
 
 template <typename T, typename U>
@@ -143,6 +147,9 @@ __aicore__ inline void ScatterNdAddDeterministic<T, U>::Init(GM_ADDR var, GM_ADD
     workspaceInitGm_.SetGlobalBuffer((__gm__ float *)workspace + wsInitOfset, curCoreLen);
     InitGlobalMemory(workspaceInitGm_, curCoreLen, (float)0);
 
+    event_t eventIdMte3ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_S));
+    SetFlag<HardEvent::MTE3_S>(eventIdMte3ToS);
+    WaitFlag<HardEvent::MTE3_S>(eventIdMte3ToS);
     sameIdxCountWsGm_.SetGlobalBuffer((__gm__ uint32_t *)workspace, varRowCount);
     updateRValueWsGm_.SetGlobalBuffer((__gm__ float *)workspace + varRowCount, varNumel_);
     sumQuanToIntWsGm_.SetGlobalBuffer((__gm__ int32_t *)workspace + rValueWsSize_, varNumel_);
@@ -153,7 +160,7 @@ __aicore__ inline void ScatterNdAddDeterministic<T, U>::Init(GM_ADDR var, GM_ADD
                                     GetBlockIdx() * tilingData_.eachCoreIndexCount, tilingData_.eachCoreIndexCount);
     
     InitGlobalMemory(updateSumWsGm_, sumWsSize_, (float)(0));
-    InitGlobalMemory(updateSumIdxWsGm_, tilingData_.eachCoreIndexCount, (U)(0));
+    InitGlobalMemory(updateSumIdxWsGm_, tilingData_.eachCoreIndexCount, (U)(-1));
     AscendC::SyncAll();
 }
 
@@ -203,7 +210,7 @@ __aicore__ inline void ScatterNdAddDeterministic<T, U>::CopyIndicesAndUpdatesIn(
     updatesQue_.EnQue(updatesLocal);
 
     LocalTensor<U> indicesLocal = this->indicesBuf_.template Get<U>();
-    offset = GetBlockIdx() * tilingData_.eachCoreIndexCount * tilingData_.indexRankSize + rowIdx * tilingData_.indicesFactor;
+    offset = GetBlockIdx() * tilingData_.eachCoreIndexCount * tilingData_.indexRankSize + rowIdx * tilingData_.indicesFactor * tilingData_.indexRankSize;
     this->template CopyIn<U>(indicesLocal, indicesGm_[offset], rowLen * tilingData_.indexRankSize);
 }
 
@@ -274,7 +281,7 @@ __aicore__ inline void ScatterNdAddDeterministic<T, U>::CopySumAndRValueIn(
 
     int32_t rowOfset = rowIdx * tilingData_.ubQuantaIndxFactor;
     this->template CopyIn<U>(sumIdxLocal, updateSumIdxWsGm_[rowOfset], rowLen);
-    int32_t inOfset = rowOfset;
+    int32_t inOfset = rowOfset * tilingData_.afterAxis;
 
     DataCopyExtParams copyParams = {static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen * sizeof(float)),
                                     static_cast<uint32_t>(0),
@@ -286,6 +293,9 @@ __aicore__ inline void ScatterNdAddDeterministic<T, U>::CopySumAndRValueIn(
     WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
     for (int64_t i = 0; i < rowLen; i++) {
         int64_t sumIdx = sumIdxLocal(i);
+        if (sumIdx < 0 || sumIdx >= tilingData_.varInAxis) {
+            sumIdx = 0;
+        }        
         uint32_t count = sameIdxCountWsGm_(sumIdx);
         int64_t rowOfset = sumIdx * tilingData_.afterAxis;
         int64_t localOfset = i * afterAxisAlignFp32_;
@@ -364,6 +374,10 @@ __aicore__ void ScatterNdAddDeterministic<T, U>::CopyQuantizedSumOutToIntWs(
 
     SetAtomicAdd<int32_t>();
     for (int32_t i = 0; i < rowLen; i++) {
+        int64_t sumIdx = sumIdxLocal(i);
+        if (sumIdx < 0 || sumIdx >= tilingData_.varInAxis) {
+            continue;
+        }
         int64_t rowOfset = sumIdxLocal(i) * tilingData_.afterAxis;
         int64_t outOfset = rowOfset;
         event_t eventIdSToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
@@ -416,6 +430,47 @@ __aicore__ inline void ScatterNdAddDeterministic<T, U>::CopyRValueAndIntWsIn(
 }
 
 template <typename T, typename U>
+__aicore__ inline void ScatterNdAddDeterministic<T, U>::CopyRValueAndIntWsAndIndexInOpti(
+    int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen)
+{
+    LocalTensor<U> sumIdxLocal = sumIdxQue_.AllocTensor<U>();
+    LocalTensor<float> rValueLocal = rValueQue_.AllocTensor<float>();
+    LocalTensor<int32_t> sumQuanToIntLocal = sumQuanToIntQue_.AllocTensor<int32_t>();
+
+    int64_t outOfset = rowIdx * tilingData_.ubRowOptiFactor;
+    this->template CopyIn<U>(sumIdxLocal, updateSumIdxWsGm_[outOfset], rowLen);
+    event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
+    SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
+    WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
+
+    bool zeroFlag = false;
+    uint64_t leftFlag = 0;
+    for (int64_t i = 0; i < rowLen; i++) {
+        int64_t sumIdx = sumIdxLocal(i);  
+        if (sumIdx < 0 || sumIdx >= tilingData_.varInAxis) {
+            continue;
+        }
+        uint32_t count = AscendC::AtomicExch(const_cast<__gm__ uint32_t *>(sameIdxCountWsGm_[sumIdx].GetPhyAddr()), uint32_t(0));
+        if (count == 0) {
+            continue;
+        }
+        sumIdxLocal(leftFlag) = sumIdxLocal(i);
+        int64_t rowOfset = sumIdx * tilingData_.afterAxis;
+        int64_t localOfset = (leftFlag++) * afterAxisAlignFp32_;
+        this->template CopyIn<float>(rValueLocal[localOfset], updateRValueWsGm_[rowOfset], colLen);
+        this->template CopyIn<int32_t>(sumQuanToIntLocal[localOfset], sumQuanToIntWsGm_[rowOfset], colLen);
+        event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+        SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+        WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+        AscendC::Muls(rValueLocal[localOfset], rValueLocal[localOfset], (float)count, colLen);
+    }
+    uniqueSumIdNum_ = leftFlag;
+    sumIdxQue_.EnQue(sumIdxLocal);
+    rValueQue_.EnQue(rValueLocal);
+    sumQuanToIntQue_.EnQue(sumQuanToIntLocal);
+}
+
+template <typename T, typename U>
 __aicore__ inline void ScatterNdAddDeterministic<T, U>::InverseQuantize(int64_t rowLen, int64_t colLen)
 {
     LocalTensor<int32_t> sumQuanToIntLocal = sumQuanToIntQue_.DeQue<int32_t>();
@@ -464,6 +519,26 @@ __aicore__ inline void ScatterNdAddDeterministic<T, U>::InverseQuantize(int64_t 
     invQuanDataQue_.EnQue(inverseQuantData);
     sumQuanToIntQue_.FreeTensor(sumQuanToIntLocal);
     rValueQue_.FreeTensor(rValueLocal);
+}
+
+template <typename T, typename U>
+__aicore__ void ScatterNdAddDeterministic<T, U>::CopyInverseQuantizedValueOutOpti(int64_t colLen)
+{
+    LocalTensor<T> inverseQuantData = invQuanDataQue_.DeQue<T>();
+    LocalTensor<U> sumIdxLocal = sumIdxQue_.DeQue<U>();
+
+    SetAtomicAdd<T>();                                          
+    for (uint64_t i = 0; i < this->uniqueSumIdNum_; i++) {
+        int64_t sumIdx = sumIdxLocal(i);                            
+        int64_t rowOfset = sumIdx * tilingData_.afterAxis;
+        event_t eventIdSToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
+        SetFlag<HardEvent::S_MTE3>(eventIdSToMte3);
+        WaitFlag<HardEvent::S_MTE3>(eventIdSToMte3);
+        this->template CopyOut<T>(yGm_[rowOfset], inverseQuantData[i * afterAxisAlignSize_], colLen);
+    }
+    SetAtomicNone();
+    invQuanDataQue_.FreeTensor(inverseQuantData);
+    sumIdxQue_.FreeTensor(sumIdxLocal); 
 }
 
 template <typename T, typename U>
@@ -538,27 +613,44 @@ __aicore__ inline void ScatterNdAddDeterministic<T, U>::ProcessSecondStep()
 template <typename T, typename U>
 __aicore__ inline void ScatterNdAddDeterministic<T, U>::ProcessThirdStep()
 {
-    if (GetBlockIdx() >= tilingData_.usedCoreNumAfter) {
+    int64_t usedCoreNum = 0;
+    if (tilingData_.isOpti == 1) {
+        usedCoreNum = tilingData_.usedCoreNumBefore;
+    } else {
+        usedCoreNum = tilingData_.usedCoreNumAfter;
+    }
+    if (GetBlockIdx() >= usedCoreNum) {
         return;
     }
     /* step 3: invers quantization and add to var */
+    int64_t rowMainDataLen = tilingData_.isOpti == 1 ? tilingData_.ubRowOptiFactor : tilingData_.ubRowFactor;
+    int64_t curCoreProcessCount = tilingData_.isOpti == 1 ? curCoreIndexCount_ : curCoreVarCount_;
+    int64_t rowLoopNum = ops::CeilDiv(curCoreProcessCount, rowMainDataLen);
+    int64_t rowTailDataLen = curCoreProcessCount - rowMainDataLen * (rowLoopNum - 1);
     pipe_.Reset();
-    pipe_.InitBuffer(sumQuanToIntQue_, DOUBLE_BUFFER, tilingData_.ubRowFactor * afterAxisAlignFp32_ * sizeof(int32_t));
-    pipe_.InitBuffer(rValueQue_, DOUBLE_BUFFER, tilingData_.ubRowFactor * afterAxisAlignFp32_ * sizeof(float));
-    pipe_.InitBuffer(invQuanDataQue_, DOUBLE_BUFFER, tilingData_.ubRowFactor * afterAxisAlignSize_ * sizeof(T));
-
-    int64_t rowLoopNum = ops::CeilDiv(curCoreVarCount_, tilingData_.ubRowFactor);
-    int64_t rowMainDataLen = tilingData_.ubRowFactor; // align by 32 bytes
-    int64_t rowTailDataLen = curCoreVarCount_ - tilingData_.ubRowFactor * (rowLoopNum - 1);
-
-    for (int32_t rowIdx = 0; rowIdx < rowLoopNum - 1; rowIdx++) {
-        CopyRValueAndIntWsIn(rowIdx, 0, rowMainDataLen, tilingData_.afterAxis);
-        InverseQuantize(rowMainDataLen, tilingData_.afterAxis);
-        CopyInverseQuantizedValueOut(rowIdx, 0, rowMainDataLen, tilingData_.afterAxis);
+    pipe_.InitBuffer(sumQuanToIntQue_, DOUBLE_BUFFER, rowMainDataLen * afterAxisAlignFp32_ * sizeof(int32_t));
+    pipe_.InitBuffer(rValueQue_, DOUBLE_BUFFER, rowMainDataLen * afterAxisAlignFp32_ * sizeof(float));
+    pipe_.InitBuffer(invQuanDataQue_, DOUBLE_BUFFER, rowMainDataLen * afterAxisAlignSize_ * sizeof(T));
+    if (tilingData_.isOpti == 1) {
+        pipe_.InitBuffer(sumIdxQue_, DOUBLE_BUFFER, rowMainDataLen * sizeof(U));
+        for (uint64_t rowIdx = 0; rowIdx < rowLoopNum - 1; rowIdx++) {
+            CopyRValueAndIntWsAndIndexInOpti(rowIdx, 0, rowMainDataLen, tilingData_.afterAxis);
+            InverseQuantize(this->uniqueSumIdNum_, tilingData_.afterAxis);
+            CopyInverseQuantizedValueOutOpti(tilingData_.afterAxis);
+        }
+        CopyRValueAndIntWsAndIndexInOpti(rowLoopNum - 1, 0, rowTailDataLen, tilingData_.afterAxis);
+        InverseQuantize(this->uniqueSumIdNum_, tilingData_.afterAxis);
+        CopyInverseQuantizedValueOutOpti(tilingData_.afterAxis);
+    } else {
+        for (uint64_t rowIdx = 0; rowIdx < rowLoopNum - 1; rowIdx++) {
+            CopyRValueAndIntWsIn(rowIdx, 0, rowMainDataLen, tilingData_.afterAxis);
+            InverseQuantize(rowMainDataLen, tilingData_.afterAxis);
+            CopyInverseQuantizedValueOut(rowIdx, 0, rowMainDataLen, tilingData_.afterAxis);
+        }
+        CopyRValueAndIntWsIn(rowLoopNum - 1, 0, rowTailDataLen, tilingData_.afterAxis);
+        InverseQuantize(rowTailDataLen, tilingData_.afterAxis);
+        CopyInverseQuantizedValueOut(rowLoopNum - 1, 0, rowTailDataLen, tilingData_.afterAxis);
     }
-    CopyRValueAndIntWsIn(rowLoopNum - 1, 0, rowTailDataLen, tilingData_.afterAxis);
-    InverseQuantize(rowTailDataLen, tilingData_.afterAxis);
-    CopyInverseQuantizedValueOut(rowLoopNum - 1, 0, rowTailDataLen, tilingData_.afterAxis);
 }
 
 template <typename T, typename U>
