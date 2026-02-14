@@ -34,7 +34,8 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_SELF 
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_WITH_BF16 = {
     DataType::DT_FLOAT,  DataType::DT_INT32,     DataType::DT_INT64,      DataType::DT_FLOAT16, DataType::DT_BF16,
     DataType::DT_INT16,  DataType::DT_UINT16,    DataType::DT_INT8,       DataType::DT_UINT8,   DataType::DT_BOOL,
-    DataType::DT_DOUBLE, DataType::DT_COMPLEX64, DataType::DT_BF16};
+    DataType::DT_DOUBLE, DataType::DT_COMPLEX64, DataType::DT_BF16,       DataType::DT_FLOAT8_E5M2, DataType::DT_FLOAT8_E8M0,
+    DataType::DT_FLOAT8_E4M3FN};
 
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_INDICES = {
     op::DataType::DT_INT32, op::DataType::DT_INT64};

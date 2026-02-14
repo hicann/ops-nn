@@ -39,6 +39,11 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BOOL,
     op::DataType::DT_BF16, op::DataType::DT_INT64, op::DataType::DT_INT8};
 
+static const std::initializer_list<op::DataType> ASCEND950_DTYPE_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BOOL,
+    op::DataType::DT_BF16, op::DataType::DT_INT64, op::DataType::DT_INT8,
+    op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_FLOAT8_E8M0};
+
 static const std::initializer_list<op::DataType> INDEX_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT64,
                                                                              op::DataType::DT_INT32};
 
@@ -50,6 +55,9 @@ static bool CheckNotNull(aclTensor *varRef, const aclTensor *indices, const aclT
 }
 
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
+    return ASCEND950_DTYPE_DTYPE_SUPPORT_LIST;
+  }
   if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
       GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
     return ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST;

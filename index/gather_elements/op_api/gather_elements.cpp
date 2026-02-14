@@ -58,13 +58,17 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_WITH_
     op::DataType::DT_UINT8, op::DataType::DT_UINT32,
     op::DataType::DT_INT16, op::DataType::DT_UINT16,
     op::DataType::DT_INT64, op::DataType::DT_UINT64,
-    op::DataType::DT_BF16, op::DataType::DT_BOOL};
+    op::DataType::DT_BF16, op::DataType::DT_BOOL,
+    op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_FLOAT8_E8M0,
+    op::DataType::DT_FLOAT8_E4M3FN};
 
 static const std::initializer_list<op::DataType> ONE_BYTE_DTYPE_LIST = {
     op::DataType::DT_INT8, op::DataType::DT_UINT8};
 
 static const std::initializer_list<op::DataType> ONE_BYTE_DTYPE_LIST_REGBASE = {
-    op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_BOOL};
+    op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_BOOL,
+    op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_FLOAT8_E8M0,
+    op::DataType::DT_FLOAT8_E4M3FN};
 
 static const std::initializer_list<op::DataType> TWO_BYTE_DTYPE_LIST = {
     op::DataType::DT_FLOAT16, op::DataType::DT_INT16,

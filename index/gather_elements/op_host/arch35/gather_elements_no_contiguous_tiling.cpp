@@ -73,7 +73,8 @@ inline bool GatherElementsNoContiguousTiling::ParamTypeIsInvalid(ge::DataType &x
     std::set<ge::DataType> supportedDtype = {
         ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_BOOL,
         ge::DT_INT8,  ge::DT_UINT8,   ge::DT_INT16, ge::DT_UINT16,
-        ge::DT_INT32, ge::DT_UINT32,  ge::DT_INT64, ge::DT_UINT64 };
+        ge::DT_INT32, ge::DT_UINT32,  ge::DT_INT64, ge::DT_UINT64,
+        ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E4M3FN };
     return supportedDtype.count(x) == 0;
 }
 
@@ -134,7 +135,7 @@ ge::graphStatus GatherElementsNoContiguousTiling::GetInAndOutInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
     xDtype_ = xDesc->GetDataType();
     OP_CHECK_IF(ParamTypeIsInvalid(xDtype_), OP_LOGE(opName_,
-        "x dtype should be float,float16,bfloat16,bool,int8,uint8,int16,uint16,int32,uint32,int64,uint64, but got [%s], please check.",
+        "x dtype should be float,float16,bfloat16,fp8,bool,int8,uint8,int16,uint16,int32,uint32,int64,uint64, but got [%s], please check.",
         Ops::Base::ToString(xDtype_).c_str()), return ge::GRAPH_FAILED);
     auto indexDesc = context_->GetRequiredInputDesc(IN_INDEX_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indexDesc);

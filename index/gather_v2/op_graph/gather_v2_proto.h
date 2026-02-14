@@ -29,7 +29,7 @@ namespace ge {
 * @par Inputs:
 * @li x: A ND (Support 1D~8D) tensor. Must be one of the following types: complex128, complex64, float64, float32, float16,
 *     int16, int32, int64, int8, qint16, qint32, qint8, quint16, quint8, uint16, uint32, uint64, uint8,
-*     bool, string, bfloat16.
+*     bool, FLOAT8_E5M2, FLOAT8_E8M0, FLOAT8_E4M3FN, string, bfloat16.
 * @li indices: A ND (Support 1D~8D) tensor of type int32 or int64.
 * @li axis: A Scalar with type as int32 or int64. Must be in the range [-rank(input_tensor), rank(input_tensor)).
 
@@ -56,12 +56,12 @@ namespace ge {
 REG_OP(GatherV2)
     .INPUT(x, TensorType({DT_COMPLEX128, DT_COMPLEX64, DT_DOUBLE, DT_FLOAT, DT_FLOAT16, DT_INT16, DT_INT32, DT_INT64,
                           DT_INT8, DT_QINT16, DT_QINT32, DT_QINT8, DT_QUINT16, DT_QUINT8, DT_UINT16, DT_UINT32,
-                          DT_UINT64, DT_UINT8, DT_BOOL, DT_STRING, DT_BF16}))
+                          DT_UINT64, DT_UINT8, DT_BOOL, DT_STRING, DT_BF16, DT_FLOAT8_E5M2, DT_FLOAT8_E8M0, DT_FLOAT8_E4M3FN}))
     .INPUT(indices, TensorType::IndexNumberType())
     .INPUT(axis, TensorType::IndexNumberType())
     .OUTPUT(y, TensorType({DT_COMPLEX128, DT_COMPLEX64, DT_DOUBLE, DT_FLOAT, DT_FLOAT16, DT_INT16, DT_INT32, DT_INT64,
                           DT_INT8, DT_QINT16, DT_QINT32, DT_QINT8, DT_QUINT16, DT_QUINT8, DT_UINT16, DT_UINT32,
-                          DT_UINT64, DT_UINT8, DT_BOOL, DT_STRING, DT_BF16}))
+                          DT_UINT64, DT_UINT8, DT_BOOL, DT_STRING, DT_BF16, DT_FLOAT8_E5M2, DT_FLOAT8_E8M0, DT_FLOAT8_E4M3FN}))
     .ATTR(batch_dims, Int, 0)
     .ATTR(is_preprocessed, Bool, false)
     .ATTR(negative_index_support, Bool, false)
@@ -70,4 +70,3 @@ REG_OP(GatherV2)
 } // namespace ge
 
 #endif // OPS_OP_PROTO_INC_GATHER_V2_H_
-

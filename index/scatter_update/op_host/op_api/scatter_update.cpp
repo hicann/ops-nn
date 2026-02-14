@@ -34,7 +34,8 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_910B 
 
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_950 = {
   op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_UINT32,
-  op::DataType::DT_INT64, op::DataType::DT_BF16, op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_UINT64};
+  op::DataType::DT_INT64, op::DataType::DT_BF16, op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_UINT64,
+  op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_FLOAT8_E8M0, op::DataType::DT_FLOAT8_E4M3FN};
 
 static bool IsAiCoreSupport(const aclTensor* self) {
   if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||

@@ -45,6 +45,12 @@ static const std::initializer_list<DataType> DTYPE_SUPPORT_910B_LIST = {
     DataType::DT_INT16, DataType::DT_INT64, DataType::DT_UINT64,  DataType::DT_UINT32, DataType::DT_UINT16,
     DataType::DT_UINT8, DataType::DT_BOOL,  DataType::DT_BF16};
 
+static const std::initializer_list<DataType> DTYPE_SUPPORT_950_LIST = {
+    DataType::DT_FLOAT, DataType::DT_INT32, DataType::DT_FLOAT16, DataType::DT_INT8,   DataType::DT_DOUBLE,
+    DataType::DT_INT16, DataType::DT_INT64, DataType::DT_UINT64,  DataType::DT_UINT32, DataType::DT_UINT16,
+    DataType::DT_UINT8, DataType::DT_BOOL,  DataType::DT_BF16, DataType::DT_FLOAT8_E5M2, DataType::DT_FLOAT8_E4M3FN,
+    DataType::DT_FLOAT8_E8M0};
+
 static const std::initializer_list<DataType> INDEX_DTYPE_SUPPORT_LIST = {DataType::DT_INT64, DataType::DT_INT32};
 
 static const std::initializer_list<DataType> GATHER_ELEMENTS_V2_DTYPE_SUPPORT_LIST = {
@@ -83,10 +89,16 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* index, const
 {
     bool is910bSocVersion =
         (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-         Ops::NN::AclnnUtil::IsRegbase());
-    const std::initializer_list<op::DataType> CURRENT_DTYPE_SUPPORT_LIST =
-        is910bSocVersion ? DTYPE_SUPPORT_910B_LIST : DTYPE_SUPPORT_LIST;
+         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
+    bool is950SocVersion = (Ops::NN::AclnnUtil::IsRegbase());
+    std::initializer_list<op::DataType> CURRENT_DTYPE_SUPPORT_LIST;
+    if (is910bSocVersion) {
+        CURRENT_DTYPE_SUPPORT_LIST = DTYPE_SUPPORT_910B_LIST;
+    } else if (is950SocVersion) {
+        CURRENT_DTYPE_SUPPORT_LIST = DTYPE_SUPPORT_950_LIST;
+    } else {
+        CURRENT_DTYPE_SUPPORT_LIST = DTYPE_SUPPORT_LIST;
+    }
     OP_CHECK_DTYPE_NOT_SUPPORT(self, CURRENT_DTYPE_SUPPORT_LIST, return false);
     if (!index->IsEmpty() && !CheckType(index->GetDataType(), INDEX_DTYPE_SUPPORT_LIST)) {
         OP_LOGE(

@@ -113,7 +113,8 @@ static inline auto max(T1 a, T2 b) -> T1 {
 static const std::set<ge::DataType> X_SUPPORT_DTYPE = {
   ge::DT_BF16,  ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_UINT8,  ge::DT_INT8,  ge::DT_UINT16,
   ge::DT_INT16, ge::DT_UINT32,  ge::DT_INT32, ge::DT_UINT64, ge::DT_INT64, ge::DT_BOOL,
-  ge::DT_COMPLEX64, ge::DT_COMPLEX32, ge::DT_DOUBLE
+  ge::DT_COMPLEX64, ge::DT_COMPLEX32, ge::DT_DOUBLE, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0,
+  ge::DT_FLOAT8_E4M3FN,
 };
 
 static const std::set<ge::DataType> INDICES_SUPPORT_DTYPE = {
@@ -156,7 +157,7 @@ inline ge::graphStatus Gatherv2TilingBase::GetXInfoAndCheck() {
   // x
   xDtype_ = context_->GetInputDesc(INPUT_X_INDEX)->GetDataType();
   OP_CHECK_IF(!IsSupportDtype(X_SUPPORT_DTYPE, xDtype_), OP_LOGE(context_->GetNodeName(),
-    "The dtype only support float32, float16, bfloat16, int64, uint64, int32, uint32, int16, uint16, int8, uint8, \
+    "The dtype only support float32, float16, bfloat16, fp8, int64, uint64, int32, uint32, int16, uint16, int8, uint8, \
 bool currently, please check."), return ge::GRAPH_FAILED);
 
   xShape_ = context_->GetInputShape(INPUT_X_INDEX)->GetStorageShape();

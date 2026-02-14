@@ -44,10 +44,10 @@ namespace ge {
 * Compatible with the Mindspore operator Scatter.
 */
 REG_OP(Scatter)
-    .INPUT(var, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16}))
+    .INPUT(var, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_FLOAT8_E8M0}))
     .INPUT(indices, TensorType::IndexNumberType())
-    .INPUT(updates, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16}))
-    .OUTPUT(var, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16}))
+    .INPUT(updates, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_FLOAT8_E8M0}))
+    .OUTPUT(var, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_FLOAT8_E8M0}))
     .REQUIRED_ATTR(reduce, String)
     .ATTR(axis, Int, -1)
     .OP_END_FACTORY_REG(Scatter)
@@ -55,4 +55,3 @@ REG_OP(Scatter)
 } // namespace ge
 
 #endif // OPS_OP_PROTO_INC_RSQRT_H_
-

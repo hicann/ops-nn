@@ -34,14 +34,21 @@ static const std::initializer_list<op::DataType> ASCEND910B_AICORE_DTYPE_SUPPORT
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BOOL, op::DataType::DT_BF16,
     op::DataType::DT_INT64, op::DataType::DT_INT8};
 
+static const std::initializer_list<op::DataType> ASCEND950_AICORE_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BOOL, op::DataType::DT_BF16,
+    op::DataType::DT_INT64, op::DataType::DT_INT8,
+    op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_FLOAT8_E8M0};
+
 inline static bool IsAiCoreSupport(const aclTensor* self) {
-  // ScatterNdUpdate只需要判断self
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-      Ops::NN::AclnnUtil::IsRegbase()) {
-    return CheckType(self->GetDataType(), ASCEND910B_AICORE_DTYPE_SUPPORT_LIST);
-  }
-  return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
+    // ScatterNdUpdate只需要判断self
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return CheckType(self->GetDataType(), ASCEND950_AICORE_DTYPE_SUPPORT_LIST);
+    }
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
+        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
+        return CheckType(self->GetDataType(), ASCEND910B_AICORE_DTYPE_SUPPORT_LIST);
+        }
+    return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
 }
 
 // AiCore的执行逻辑
