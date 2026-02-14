@@ -542,7 +542,7 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
         IDX_T idx = indices(idxOffset);
         IDX_T interval = noDupCountTensor(i);
         idxOffset = idxOffset + interval;
-        if (idx == tiling_.paddingIdx || idx < 0) {
+        if (idx == tiling_.paddingIdx || idx < 0 || idx >= tiling_.numWeights) {
             continue;
         }
 
