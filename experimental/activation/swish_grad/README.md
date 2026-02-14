@@ -83,7 +83,7 @@ $$
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_swish_grad.cpp](./examples/test_aclnn_swish_grad.cpp) | 通过[test_aclnn_swish_grad](./docs/test_aclnn_swish_grad.md)接口方式调用SwishGrad算子。 |
+| aclnn调用 | [test_aclnn_swish_grad.cpp](./examples/test_aclnn_swish_grad.cpp) | 通过[test_aclnn_swish_grad](./docs/aclnnSwishBackward.md)接口方式调用SwishGrad算子。 |
 
 ## 贡献说明
 

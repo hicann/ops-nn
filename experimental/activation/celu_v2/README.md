@@ -29,4 +29,4 @@
 
 | 调用方式  | 样例代码                                                     | 说明                                                         |
 | :-------- | :----------------------------------------------------------- | :----------------------------------------------------------- |
-| aclnn接口 | [test_celu](ops-nn/activation/celu_v2/examples/test_aclnn_celu_v2.cpp) | 通过[aclnnCelu]接口方式调用Celu算子。 |
+| aclnn接口 | [test_celu](./examples/test_aclnn_celu_v2.cpp) | 通过[aclnnCelu]接口方式调用Celu算子。 |

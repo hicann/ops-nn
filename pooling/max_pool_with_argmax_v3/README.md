@@ -113,4 +113,4 @@
 
 | 调用方式 | 样例代码                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_max_pool_with_argmax_v3](examples/test_aclnn_max_pool_with_argmax_v3.cpp) | 通过[aclnnMaxPool2dWithIndices](../max_pool3d_with_argmax_v2/docs/aclnnMaxPool2dWithIndices.md)接口方式调用MaxPoolWithArgmaxV3算子。 |
+| aclnn调用 | [test_aclnn_max_pool_with_argmax_v3](examples/arch35/test_aclnn_max_pool_with_argmax_v3.cpp) | 通过[aclnnMaxPool2dWithIndices](../max_pool3d_with_argmax_v2/docs/aclnnMaxPool2dWithIndices.md)接口方式调用MaxPoolWithArgmaxV3算子。 |

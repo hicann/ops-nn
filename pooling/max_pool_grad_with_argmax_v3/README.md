@@ -120,4 +120,4 @@
 
 | 调用方式 | 样例代码                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_max_pool_grad_with_argmax_v3](examples/test_aclnn_max_pool_grad_with_argmax_v3.cpp) | 通过[aclnnMaxPool2dWithIndicesBackward](../max_pool3d_grad_with_argmax/docs/aclnnMaxPool2dWithIndicesBackward.md)接口方式调用aclnnMaxPoolGradWithArgmaxV3算子。|
+| aclnn调用 | [test_aclnn_max_pool_grad_with_argmax_v3](examples/arch35/test_aclnn_max_pool_grad_with_argmax_v3.cpp) | 通过[aclnnMaxPool2dWithIndicesBackward](../max_pool3d_grad_with_argmax/docs/aclnnMaxPool2dWithIndicesBackward.md)接口方式调用aclnnMaxPoolGradWithArgmaxV3算子。|

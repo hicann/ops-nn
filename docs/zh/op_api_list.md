@@ -72,7 +72,7 @@
 | [aclnnBatchNormReduce](../../norm/bn_training_reduce/docs/aclnnBatchNormReduce.md)|对数据做正则化处理的第一步，对数据进行求和及平方和|默认非确定性实现，支持配置开启|
 | [aclnnBatchNormReduceBackward](../../norm/sync_batch_norm_backward_reduce/docs/aclnnBatchNormReduceBackward.md)|主要用于反向传播过程中计算BatchNorm操作的梯度，并进行一些中间结果的规约操作以优化计算效率。|默认确定性实现|
 | [aclnnBidirectionLSTM](../../rnn/bidirection_lstm/docs/aclnnBidirectionLSTM.md) | 进行LSTM网络计算，接收输入序列和初始状态，返回输出序列和最终状态。|默认确定性实现|
-| [aclnnBidirectionLSTMV2](../../rnn/bidirection_lstm_v2/docs/aclnnBidirectionLSTMV2.md) | 进行LSTM网络计算，接收输入序列和初始状态，返回输出序列和最终状态。|默认确定性实现|
+| [aclnnBidirectionLSTMV2](../../rnn/bidirection_lstmv2/docs/aclnnBidirectionLSTMV2.md) | 进行LSTM网络计算，接收输入序列和初始状态，返回输出序列和最终状态。|默认确定性实现|
 | [aclnnBinaryCrossEntropy](../../loss/binary_cross_entropy/docs/aclnnBinaryCrossEntropy.md) | 计算self和target的二元交叉熵。|默认确定性实现|
 | [aclnnBinaryCrossEntropyBackward](../../loss/binary_cross_entropy_grad/docs/aclnnBinaryCrossEntropyBackward.md) | 求二元交叉熵反向传播的梯度值。|默认确定性实现|
 | [aclnnBinaryCrossEntropyWithLogits](../../loss/sigmoid_cross_entropy_with_logits_v2/docs/aclnnBinaryCrossEntropyWithLogits.md) |计算输入logits与标签target之间的BCELoss损失。|默认确定性实现|
@@ -211,7 +211,7 @@
 | [aclnnGeluV2](../../activation/gelu_v2/docs/aclnnGeluV2.md) |高斯误差线性单元激活函数。|默认确定性实现|
 | [aclnnGemm](../../matmul/gemm/docs/aclnnGemm.md) |计算α 乘以A与B的乘积，再与β 和input C的乘积求和。|默认确定性实现|
 | [aclnnGemmaRmsNorm](../../norm/gemma_rms_norm/docs/aclnnGemmaRmsNorm.md)|GemmaRmsNorm算子是大模型常用的归一化操作，相比RmsNorm算子，在计算时对gamma执行了+1操作。|默认确定性实现|
-| [aclnnGlu](../../activation/sigmoid/docs/aclnnGlu.md) |GLU是一个门控线性单元函数，它将输入张量沿着指定的维度dim平均分成两个张量，并将其前部分张量与后部分张量的Sigmoid函数输出的结果逐元素相乘。|默认确定性实现|
+| [aclnnGlu](../../activation/glu/docs/aclnnGlu.md) |GLU是一个门控线性单元函数，它将输入张量沿着指定的维度dim平均分成两个张量，并将其前部分张量与后部分张量的Sigmoid函数输出的结果逐元素相乘。|默认确定性实现|
 | [aclnnGluBackward](../../activation/sigmoid/docs/aclnnGluBackward.md) |完成aclnnGlu的反向。|默认确定性实现|
 | [aclnnHardshrink](../../activation/hard_shrink/docs/aclnnHardshrink.md) |以元素为单位，强制收缩λ范围内的元素。|默认确定性实现|
 | [aclnnGroupNorm](../../norm/group_norm/docs/aclnnGroupNorm.md)|计算输入self的组归一化结果out，均值meanOut，标准差的倒数rstdOut。|默认确定性实现|
@@ -227,7 +227,6 @@
 | [aclnnHardswishBackward](../../activation/hard_swish_grad/docs/aclnnHardswishBackward.md) |aclnnHardswish的反向传播，完成张量self的梯度计算。|默认确定性实现|
 | [aclnnHardswishBackwardV2](../../activation/hard_swish_grad_v2/docs/aclnnHardswishBackwardV2.md) |aclnnHardswish的反向传播，完成张量self的梯度计算。|默认确定性实现|
 | [aclnnHardswish&aclnnInplaceHardswish](../../activation/hard_swish/docs/aclnnHardswish&aclnnInplaceHardswish.md) |激活函数，返回与输入tensor shape相同的输出tensor，输入的value小于-3时取0，大于3时取该value，其余时刻取value加3的和乘上value再除以6。|默认确定性实现|
-| [aclnnHardtanh](../../activation/hardtanh_tanh/docs/aclnnHardtanh&aclnnInplaceHardtanh.md) |将输入的所有元素限制在[clipValueMin,clipValueMax]范围内，若元素大于clipValueMax则限制为clipValueMax，若元素小于clipValueMin则限制为clipValueMin，否则等于元素本身。|默认确定性实现|
 | [aclnnHardtanhBackward](../../activation/hardtanh_grad/docs/aclnnHardtanhBackward.md) |激活函数aclnnHardtanh的反向。|默认确定性实现|
 | [aclnnHeaviside](../../activation/heaviside/docs/aclnnHeaviside.md) |计算输入input中每个元素的Heaviside阶跃函数，作为模型的激活函数。|默认确定性实现|
 | [aclnnIndex](../../index/index/docs/aclnnIndex.md) | 根据索引indices将输入x对应坐标的数据取出。|默认确定性实现|
@@ -243,7 +242,6 @@
 | [aclnnInstanceNorm](../../norm/instance_norm_v3/docs/aclnnInstanceNorm.md)|用于执行Instance Normalization（实例归一化）操作。|默认确定性实现|
 | [aclnnKlDivBackward](../../loss/kl_div_loss_grad/docs/aclnnKlDivBackward.md) | 进行aclnnKlDiv api的结果的反向计算。|默认确定性实现|
 | [aclnnKthvalue](../../index/gather_v2/docs/aclnnKthvalue.md) | 返回输入Tensor在指定维度上的第k个最小值及索引。|默认确定性实现|
-| [aclnnKvRmsNormRopeCache](../../norm/kv_rms_norm_rope_cache/docs/aclnnKvRmsNormRopeCache.md) |对输入张量(kv)的尾轴，拆分出左半边用于rms_norm计算，右半边用于rope计算，再将计算结果分别scatter到两块cache中。|默认确定性实现|
 | [aclnnL1Loss](../../loss/lp_loss/docs/aclnnL1Loss.md) | 计算输入self和目标target中每个元素之间的平均绝对误差（Mean Absolute Error，简称MAE）。|默认确定性实现|
 | [aclnnL1LossBackward](../../loss/l1_loss_grad/docs/aclnnL1LossBackward.md) | 计算aclnnL1Loss的反向传播。reduction指定损失函数的计算方式。|默认确定性实现|
 | [aclnnLayerNorm&aclnnLayerNormWithImplMode](../../norm/layer_norm_v4/docs/aclnnLayerNorm&aclnnLayerNormWithImplMode.md)|对指定层进行均值为0、标准差为1的归一化计算。|默认确定性实现|
@@ -256,7 +254,7 @@
 | [aclnnLogSigmoid](../../activation/logsigmoid/docs/aclnnLogSigmoid.md) |对输入张量逐元素实现LogSigmoid运算。|默认确定性实现|
 | [aclnnLogSigmoidBackward](../../activation/logsigmoid_grad/docs/aclnnLogSigmoidBackward.md) |aclnnLogSigmoid的反向传播，根据上一层传播的梯度与LogSigmoid正向输入计算其梯度输入。|默认确定性实现|
 | [aclnnLogSigmoidForward](../../activation/logsigmoid/docs/aclnnLogSigmoidForward.md) |对输入张量逐元素实现LogSigmoid运算。|默认确定性实现|
-| [aclnnLogSoftmax](../../activation/logsoftmax_v2/docs/aclnnLogSoftmax.md) |对输入张量计算logsoftmax值。|默认确定性实现|
+| [aclnnLogSoftmax](../../activation/log_softmax_v2/docs/aclnnLogSoftmax.md) |对输入张量计算logsoftmax值。|默认确定性实现|
 | [aclnnLogSoftmaxBackward](../../activation/logsoftmax_grad/docs/aclnnLogSoftmaxBackward.md) |完成aclnnLogSoftmax的反向传播。|默认确定性实现|
 | [aclnnMaskedSoftmaxWithRelPosBias](../../norm/masked_softmax_with_rel_pos_bias/docs/aclnnMaskedSoftmaxWithRelPosBias.md) |替换在swinTransformer中使用window attention计算softmax的部分。|默认确定性实现|
 | [aclnnMatmul](../../matmul/mat_mul_v3/docs/aclnnMatmul.md) |完成1到6维张量self与张量mat2的矩阵乘计算。|默认确定性实现|
@@ -298,7 +296,7 @@
 | [aclnnQuantMatmulV3](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV3.md) |完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。|默认确定性实现|
 | [aclnnQuantMatmulV4](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md) |完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。|默认确定性实现|
 | [aclnnQuantMatmulV5](../../matmul/quant_batch_matmul_v4/docs/aclnnQuantMatmulV5.md) |完成量化的矩阵乘计算。|默认确定性实现|
-| [aclnnQuantBatchMatmulInplaceAdd](../../matmul/quant_batch_matmul_v4/docs/aclnnQuantBatchMatmulInplaceAdd.md) |实现量化矩阵乘计算和原地累加加法计算，基本功能为矩阵乘和加法的组合。|-|
+| [aclnnQuantBatchMatmulInplaceAdd](../../matmul/quant_batch_matmul_inplace_add/docs/aclnnQuantBatchMatmulInplaceAdd.md) |实现量化矩阵乘计算和原地累加加法计算，基本功能为矩阵乘和加法的组合。|-|
 | [aclnnQuantMatmulReduceSumWeightNz](../../matmul/quant_matmul_reduce_sum/docs/aclnnQuantMatmulReduceSumWeightNz.md) |完成量化的分组矩阵计算，然后所有组的矩阵计算结果相加后输出。|默认非确定性实现，支持配置开启。|
 | [aclnnQuantMatmulWeightNz](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulWeightNz.md) |完成量化的矩阵乘计算。|默认确定性实现|
 | [aclnnRelu&aclnnInplaceRelu](../../activation/relu/docs/aclnnRelu&aclnnInplaceRelu.md) |激活函数，返回与输入tensor shape相同的tensor, tensor中value大于等于0时，取值该value，小于0，取0。|默认确定性实现|

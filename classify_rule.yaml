@@ -412,8 +412,6 @@ HPTG1@ops-nn:
                 - ops/ops-nn/quant/dequant_swiglu_quant/op_host/dequant_swiglu_quant_infershape.cpp
                 - ops/ops-nn/quant/dequant_swiglu_quant/op_host/dequant_swiglu_quant_tiling_arch35.cpp
                 - ops/ops-nn/quant/dequant_swiglu_quant/op_kernel/arch35/
-                - ops/ops-nn/norm/kv_rms_norm_rope_cache/op_host/
-                - ops/ops-nn/norm/kv_rms_norm_rope_cache/op_kernel/
                 - ops/ops-nn/norm/rms_norm/op_kernel/arch35/
                 - ops/ops-nn/norm/rms_norm_grad/op_host/rms_norm_grad_regbase_tiling.cpp
                 - ops/ops-nn/norm/rms_norm_grad/op_kernel/arch35/

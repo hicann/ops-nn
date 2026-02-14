@@ -28,4 +28,4 @@ $$ y = \begin{cases} x, & x \ge 0 \\ negative\_slope \times x, & x < 0 \end{case
 
 | 调用方式  | 样例代码                                                     | 说明                                                         |
 | :-------- | :----------------------------------------------------------- | :----------------------------------------------------------- |
-| aclnn接口 | [test_leaky_relu](ops-nn/activation/leakyrelu_v2/examples/test_aclnn_leaky_relu.cpp) | 通过[aclnnLeakyRelu]接口方式调用LeakyRelu算子。 |
+| aclnn接口 | [test_leaky_relu](./examples/test_aclnn_leakyrelu_v2.cpp) | 通过[aclnnLeakyRelu]接口方式调用LeakyRelu算子。 |
