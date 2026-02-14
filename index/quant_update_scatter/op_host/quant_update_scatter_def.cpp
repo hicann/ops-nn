@@ -16,6 +16,7 @@
 
 namespace ops
 {
+constexpr int32_t DEFAULT_QUANT_UPDATE_SCATTER_AXIS = -2;
 class QuantUpdateScatter : public OpDef
 {
 public:
@@ -52,7 +53,7 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Attr("reduce").AttrType(REQUIRED).String();
-        this->Attr("axis").AttrType(OPTIONAL).Int(-2);
+        this->Attr("axis").AttrType(OPTIONAL).Int(DEFAULT_QUANT_UPDATE_SCATTER_AXIS);
         this->Attr("quant_axis").AttrType(OPTIONAL).Int(-1);
         this->Attr("reciprocal_scale").AttrType(OPTIONAL).Bool(false);
         this->Attr("round_mode").AttrType(OPTIONAL).String("rint");

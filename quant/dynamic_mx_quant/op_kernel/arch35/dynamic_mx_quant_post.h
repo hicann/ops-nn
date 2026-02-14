@@ -402,7 +402,7 @@ __aicore__ inline void DynamicMxQuantPost::CopyInPaddingZero(
         {static_cast<uint32_t>(axisSize1), static_cast<uint32_t>(axisSize2), static_cast<uint32_t>(axisSize3)},
         {0, 0, 0},
         {0, 0, 0}};
-    MultiCopyLoopInfo<3> loopInfo2 = {
+    MultiCopyLoopInfo<COPY_WITH_DIM_3> loopInfo2 = {
         {1, static_cast<uint32_t>(DIGIT_TWO * axisSize1),
          static_cast<uint32_t>((DIGIT_TWO * axisSize2 - 1) * axisSize1)},
         {1, static_cast<uint32_t>(axisSize1), static_cast<uint32_t>(axisSize1 * axisSize2)},

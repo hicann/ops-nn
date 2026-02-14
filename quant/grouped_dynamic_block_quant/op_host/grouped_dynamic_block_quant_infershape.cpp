@@ -79,7 +79,7 @@ graphStatus InferShapeForGroupedDynamicBlockQuant(gert::InferShapeContext* conte
         scaleShape->SetDim(0, dim0);
         // In practice, the number of rows in each group may not be divisible by rowBlockSize, so we allocate additional space for groupNum here.
         scaleShape->SetDim(1, dim1 / static_cast<int64_t>(*rowBlockSize) + groupNum);
-        scaleShape->SetDim(2, Ops::Base::CeilDiv(dim2, static_cast<int64_t>(*colBlockSize)));
+        scaleShape->SetDim(INPUT_DIM_TWO, Ops::Base::CeilDiv(dim2, static_cast<int64_t>(*colBlockSize)));
     } else {
         OP_LOGE(context, "only support input dim num is 2 or 3, infershape failed");
         return ge::GRAPH_FAILED;

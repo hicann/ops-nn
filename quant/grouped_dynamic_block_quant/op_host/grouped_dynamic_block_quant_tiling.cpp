@@ -264,7 +264,7 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, GroupedDyn
         static_cast<int64_t>(groupListShape.GetDimNum()) != 1,
         OP_LOGE(context, "The shape of group_list dim must be 1, please check."), return ge::GRAPH_FAILED);
 
-    if (static_cast<int64_t>(xShape.GetDimNum()) == 2) {
+    if (static_cast<int64_t>(xShape.GetDimNum()) == DIGIT_TWO) {
         OP_CHECK_IF(
             ((static_cast<int64_t>(scaleShape.GetDim(0)) !=
               static_cast<int64_t>(xShape.GetDim(0)) / tilingParam.rowBlockSize + tilingParam.groupNum) ||
@@ -276,13 +276,13 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, GroupedDyn
                 "groupListSize, ceil(x.cols / col_block_size)], "
                 "please check."),
             return ge::GRAPH_FAILED);
-    } else if (static_cast<int64_t>(xShape.GetDimNum()) == 3) {
+    } else if (static_cast<int64_t>(xShape.GetDimNum()) == DIGIT_THREE) {
         OP_CHECK_IF(
             ((static_cast<int64_t>(scaleShape.GetDim(0)) != static_cast<int64_t>(xShape.GetDim(0))) ||
              (static_cast<int64_t>(scaleShape.GetDim(1)) !=
               static_cast<int64_t>(xShape.GetDim(1)) / tilingParam.rowBlockSize + tilingParam.groupNum) ||
-             (static_cast<int64_t>(scaleShape.GetDim(2)) !=
-              Ops::Base::CeilDiv(xShape.GetDim(2), tilingParam.colBlockSize))),
+             (static_cast<int64_t>(scaleShape.GetDim(DIGIT_TWO)) !=
+              Ops::Base::CeilDiv(xShape.GetDim(DIGIT_TWO), tilingParam.colBlockSize))),
             OP_LOGE(
                 context,
                 "When the shape dim of x is 3, the shape of output scale must be same with [x.batch, x.rows / "
@@ -322,14 +322,14 @@ inline static void CalcTilingKey(
 
 static void CalcAxisSize(GroupedDynamicBlockQuantTilingParam& tilingParam, const gert::Shape& xShape)
 {
-    if (xShape.GetDimNum() == 2) {
+    if (xShape.GetDimNum() == DIGIT_TWO) {
         tilingParam.batchNum = 1;
         tilingParam.rowNum = xShape.GetDim(0);
         tilingParam.colNum = xShape.GetDim(1);
     } else {
         tilingParam.batchNum = xShape.GetDim(0);
         tilingParam.rowNum = xShape.GetDim(1);
-        tilingParam.colNum = xShape.GetDim(2);
+        tilingParam.colNum = xShape.GetDim(DIGIT_TWO);
     }
 }
 
