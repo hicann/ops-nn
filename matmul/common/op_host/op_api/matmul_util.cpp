@@ -88,6 +88,11 @@ static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITHOUT_BF16 = {
     DataType::DT_FLOAT, DataType::DT_FLOAT16};
 
+static const std::map<op::DataType, uint64_t> ALIGN_UNIT_MAP = {
+    {DataType::DT_FLOAT16, BASIC_BLOCK_SIZE_256},
+    {DataType::DT_BF16, BASIC_BLOCK_SIZE_256},
+    {DataType::DT_FLOAT, BASIC_BLOCK_SIZE_128}};
+
 static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, int8_t cubeMathType)
 {
     bool mat2Float = mat2->GetDataType() == DataType::DT_FLOAT;
@@ -107,10 +112,16 @@ static inline bool CheckNpuArchIsSupportBf16(void)
     return (npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3510);
 }
 
-static inline bool CheckMMV3NzNzNdSupport(const aclTensor* mat2)
+static inline bool CheckMMV3NzNzNdSupport(MmOpInfo& mmOpInfo)
 {
-    uint64_t nAxis = static_cast<uint64_t>(mat2->GetViewShape().GetDim(mat2->GetViewShape().GetDimNum() - 1));
-    return CheckKEqual1Support() && (nAxis % HALF_ALIGN_UNIT == 0);
+    if (mmOpInfo.ori_info.self_dtype != mmOpInfo.ori_info.mat2_dtype ||
+        ALIGN_UNIT_MAP.find(mmOpInfo.ori_info.self_dtype) == ALIGN_UNIT_MAP.end()) {
+        return false;
+    }
+    auto it = ALIGN_UNIT_MAP.find(mmOpInfo.ori_info.self_dtype);
+    uint64_t alignUnit = it->second;
+    return (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) &&
+           (mmOpInfo.shapeInfo.nDim % alignUnit == 0);
 }
 
 static bool CheckDtypeValid(
@@ -416,16 +427,29 @@ static const aclTensor* GetGemmV3Op(
     return mmOut;
 }
 
+static const bool CheckMatmulV3Support(
+    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, MmOpInfo& mmOpInfo, const bool transposeX1,
+    const bool transposeX2, const int64_t opImplModeEnum)
+{
+    bool enableForceGrpAccForFp32 =
+        opImplModeEnum == 0x4 && mmOpInfo.shapeInfo.kDim >= 2048 && mmOpInfo.ori_info.self_dtype == DataType::DT_FLOAT;
+    return CheckAscendCScenario(x1, x2, bias, mmOpInfo, transposeX1, transposeX2) ||
+           CheckAscendCScenario2(x1, x2, mmOpInfo, transposeX1, transposeX2) || enableForceGrpAccForFp32;
+}
+
+static const bool CheckSupportInfoFormatNzNzNd(MmOpInfo& mmOpInfo)
+{
+    return mmOpInfo.support_info.self_format == ge::FORMAT_FRACTAL_NZ &&
+           mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ &&
+           mmOpInfo.support_info.output_format == ge::FORMAT_ND;
+}
+
 static const aclTensor* GetMatMulOp(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, MmOpInfo& mmOpInfo, const bool transposeX1,
     const bool transposeX2, const bool offsetX, const int64_t opImplModeEnum, aclOpExecutor* executor)
 {
-    bool enableForceGrpAccForFp32 = opImplModeEnum == 0x4 && mmOpInfo.shapeInfo.kDim >= 2048 && mmOpInfo.ori_info.self_dtype == DataType::DT_FLOAT;
-    if (CheckAscendCScenario(x1, x2, bias, mmOpInfo, transposeX1, transposeX2) ||
-        CheckAscendCScenario2(x1, x2, mmOpInfo, transposeX1, transposeX2) || enableForceGrpAccForFp32 ||
-        (CheckMMV3NzNzNdSupport(x2) && mmOpInfo.support_info.self_format == ge::FORMAT_FRACTAL_NZ &&
-         mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ &&
-         mmOpInfo.support_info.output_format == ge::FORMAT_ND)) {
+    if (CheckMatmulV3Support(x1, x2, bias, mmOpInfo, transposeX1, transposeX2, opImplModeEnum) ||
+        (CheckMMV3NzNzNdSupport(mmOpInfo) && CheckSupportInfoFormatNzNzNd(mmOpInfo))) {
         OP_LOGI("Hit matmul_v3 scenario.");
         if (mmOpInfo.support_info.output_dtype == DataType::DT_FLOAT &&
             ((mmOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT16 &&
@@ -433,9 +457,7 @@ static const aclTensor* GetMatMulOp(
              (mmOpInfo.support_info.mat2_dtype == DataType::DT_BF16 &&
               mmOpInfo.support_info.self_dtype == DataType::DT_BF16)) &&
             bias == nullptr) {
-            if (mmOpInfo.support_info.self_format == ge::FORMAT_FRACTAL_NZ &&
-                mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ &&
-                mmOpInfo.support_info.output_format == ge::FORMAT_ND) {
+            if (CheckSupportInfoFormatNzNzNd(mmOpInfo)) {
                 OP_LOGD("check SocVersion, call MatMulV3NzNzNdFp162Fp32.");
                 x1 = l0op::ReFormat(x1, op::Format::FORMAT_FRACTAL_NZ);
                 x2 = l0op::ReFormat(x2, op::Format::FORMAT_FRACTAL_NZ);
@@ -450,9 +472,7 @@ static const aclTensor* GetMatMulOp(
             return mmOut;
         }
 
-        if (mmOpInfo.support_info.self_format == ge::FORMAT_FRACTAL_NZ &&
-            mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ &&
-            mmOpInfo.support_info.output_format == ge::FORMAT_ND) {
+        if (CheckSupportInfoFormatNzNzNd(mmOpInfo)) {
             OP_LOGD("check SocVersion, call MatMulV3NzNzNd.");
             x1 = l0op::ReFormat(x1, op::Format::FORMAT_FRACTAL_NZ);
             x2 = l0op::ReFormat(x2, op::Format::FORMAT_FRACTAL_NZ);
@@ -709,11 +729,7 @@ static aclnnStatus SetMatmulOpSupportFormat(
         if (npuArch == NpuArch::DAV_2002) {
             mmOpInfo.support_info.output_dtype = DataType::DT_FLOAT;
         } else if (npuArch == NpuArch::DAV_1001) {
-            if(CheckMMV3NzNzNdSupport(mat2)){
-                mmOpInfo.support_info.output_format = Format::FORMAT_ND;
-            }else{
-                mmOpInfo.support_info.output_format = Format::FORMAT_FRACTAL_NZ;
-            }
+            mmOpInfo.support_info.output_format = Format::FORMAT_FRACTAL_NZ;
             mmOpInfo.support_info.output_dtype = DataType::DT_FLOAT;
         }
     }
@@ -1913,7 +1929,7 @@ aclnnStatus SetMmSupportFormat(const aclTensor* self, const aclTensor* mat2, MmO
       return ACLNN_SUCCESS;
     }
 
-    if (CheckMMV3NzNzNdSupport(mat2)) {
+    if (CheckMMV3NzNzNdSupport(mmOpInfo)) {
       mmOpInfo.support_info.output_format = Format::FORMAT_ND;
       mmOpInfo.support_info.self_format = Format::FORMAT_FRACTAL_NZ;
       mmOpInfo.support_info.mat2_format = Format::FORMAT_FRACTAL_NZ;
