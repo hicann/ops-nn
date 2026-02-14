@@ -20,7 +20,9 @@
 #endif
 
 #include "kernel_operator.h"
+#if ASC_DEVKIT_MAJOR >=9
 #include "basic_api/kernel_vec_intf.h"
+#endif
 
 #ifdef __DAV_FPGA__
 constexpr uint32_t THREAD_NUM_LAUNCH_BOUND_TWO_DIM = 512;

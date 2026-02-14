@@ -18,9 +18,12 @@
 #ifndef K_MAX_SHAPE_DIM
 #define K_MAX_SHAPE_DIM 0
 #endif
-
+#if ASC_DEVKIT_MAJOR >=9
 #include "basic_api/kernel_vec_intf.h"
 #include "micro_api/kernel_micro_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
 #include "op_kernel/platform_util.h"
 
 namespace gatherv2 {
