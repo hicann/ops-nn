@@ -83,7 +83,7 @@ static bool CheckNotNull(const aclTensor* selfRef, const aclTensor* mask, const 
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
         return ASCEND910B_SELFREF_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910_SELFREF_DTYPE_SUPPORT_LIST;
