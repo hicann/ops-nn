@@ -21,6 +21,7 @@
 #include <cstdint>
 
 #include "tiling/platform/platform_ascendc.h"
+#include "tiling_base/tiling_base.h"
 
 namespace optiling {
 namespace matmul_v3_advanced {

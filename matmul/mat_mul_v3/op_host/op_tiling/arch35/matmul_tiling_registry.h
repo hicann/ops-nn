@@ -24,6 +24,7 @@
 #include "tiling_base/static_register_symbol.h"
 #include "exe_graph/runtime/tiling_context.h"
 #include "tiling/platform/platform_ascendc.h"
+#include "tiling_base/tiling_base.h"
 #include "error_util.h"
 
 #include "matmul_base_tiling.h"
