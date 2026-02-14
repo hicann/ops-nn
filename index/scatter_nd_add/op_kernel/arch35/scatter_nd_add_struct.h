@@ -31,6 +31,7 @@ public:
     uint64_t sliceSize;
     uint64_t outPutShape[MAX_SHAPE_RANK_NUM];
     uint64_t strideList[MAX_RANK_COUNT_NUM];
+    uint64_t indiceCastMode;
     /* for determinstic */
     int64_t varInAxis;
     int64_t indexRankSize;

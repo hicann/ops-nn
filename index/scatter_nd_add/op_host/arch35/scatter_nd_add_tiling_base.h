@@ -38,6 +38,7 @@ BEGIN_TILING_DATA_DEF(ScatterNdAddTilingData)
   TILING_DATA_FIELD_DEF(uint64_t, sliceSize);
   TILING_DATA_FIELD_DEF_ARR(uint64_t, OPTILING_MAX_SHAPE_RANK, outPutShape);
   TILING_DATA_FIELD_DEF_ARR(uint64_t, OPTILING_MAX_RANK_COUNT, strideList);
+  TILING_DATA_FIELD_DEF(uint64_t, indiceCastMode);
   /* for determinstic */
   TILING_DATA_FIELD_DEF(int64_t, varInAxis);
   TILING_DATA_FIELD_DEF(int64_t, indexRankSize);
@@ -107,7 +108,8 @@ protected:
     uint64_t GetTilingKey() const override;
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
-
+    ge::graphStatus GetCastType();
+    
     // customized functions
     ge::graphStatus GenerateTilingKey();
 
@@ -122,6 +124,8 @@ private:
     int64_t totalCoreNum_ {0};
     ge::DataType updateDtype_;
     ge::DataType indiceDtype_;
+    ge::DataType indiceCastDtype_;
+    uint64_t indiceCastMode_ = 0;  // 0: 不Cast；1：int32 Cast int16；2：int64 Cast int32；3：int64 Cast int16
     uint64_t updateShapeSize {0};
     uint64_t indiceShapeSize {0};
     uint64_t outputShapeSize = 1;
@@ -142,6 +146,7 @@ private:
     int64_t afterAxis_ = 1;
     int64_t varTypeSize_ = 0;
     int64_t indicesTypeSize_ = 0;
+    int64_t indiceCastDtypeSize_ = 0;
     int64_t indicesFactor_ = 0;
     int64_t ubRowFactor_ = 0;
     int64_t afterAxisFactor_ = 0;

@@ -24,8 +24,8 @@
 namespace ScatterNdAdd {
 using namespace AscendC;
 
-template <typename T, typename U>
-class ScatterNdAddSimd : public ScatterNdAddBase<T, U>
+template <typename T, typename U, typename CAST_T, uint32_t castType>
+class ScatterNdAddSimd : public ScatterNdAddBase<T, U, CAST_T, castType>
 {
 public:
     __aicore__ inline ScatterNdAddSimd(const ScatterNdAddRegBaseTilingData& tilingData, TPipe& pipe)
@@ -48,8 +48,8 @@ private:
     uint64_t strideList[MAX_RANK_COUNT];
 };
 
-template <typename T, typename U>
-__aicore__ inline void ScatterNdAddSimd<T, U>::Init(
+template <typename T, typename U, typename CAST_T, uint32_t castType>
+__aicore__ inline void ScatterNdAddSimd<T, U, CAST_T, castType>::Init(
     GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace)
 {
     varGm_.SetGlobalBuffer((__gm__ T*)(var));
@@ -70,8 +70,8 @@ __aicore__ inline void ScatterNdAddSimd<T, U>::Init(
                                                                 tilingData_.tailCoreIndexCount);
 }
 
-template <typename T, typename U>
-__aicore__ inline void ScatterNdAddSimd<T, U>::ProcessSplitAfter()
+template <typename T, typename U, typename CAST_T, uint32_t castType>
+__aicore__ inline void ScatterNdAddSimd<T, U, CAST_T, castType>::ProcessSplitAfter()
 {
     if (GetBlockIdx() >= tilingData_.usedCoreNumBefore) {
         return;
@@ -120,8 +120,8 @@ __aicore__ inline void ScatterNdAddSimd<T, U>::ProcessSplitAfter()
     }
 }
 
-template <typename T, typename U>
-__aicore__ inline void ScatterNdAddSimd<T, U>::ProcessSplitIndices()
+template <typename T, typename U, typename CAST_T, uint32_t castType>
+__aicore__ inline void ScatterNdAddSimd<T, U, CAST_T, castType>::ProcessSplitIndices()
 {
     if (GetBlockIdx() >= tilingData_.usedCoreNumBefore) {
         return;
@@ -173,8 +173,8 @@ __aicore__ inline void ScatterNdAddSimd<T, U>::ProcessSplitIndices()
     }
 }
 
-template <typename T, typename U>
-__aicore__ inline void ScatterNdAddSimd<T, U>::Process()
+template <typename T, typename U, typename CAST_T, uint32_t castType>
+__aicore__ inline void ScatterNdAddSimd<T, U, CAST_T, castType>::Process()
 {
     LocalTensor<U> strideLocal = this->strideBuf_.template Get<U>();
     for (int32_t i = 0; i < MAX_RANK_COUNT; i++) {

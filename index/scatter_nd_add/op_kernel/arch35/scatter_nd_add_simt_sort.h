@@ -64,8 +64,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtOut
     }
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-class ScatterNdAddSimtSort : public ScatterNdAddBase<PARAMS_T, INDICES_T>
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename CAST_T, uint32_t castType>
+class ScatterNdAddSimtSort : public ScatterNdAddBase<PARAMS_T, INDICES_T, CAST_T, castType>
 {
 public:
     __aicore__ inline ScatterNdAddSimtSort(const ScatterNdAddRegBaseTilingData& tilingData, TPipe& pipe)
@@ -84,8 +84,8 @@ private:
     uint64_t strideList[MAX_RANK_COUNT];
 };
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T>::Init(
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename CAST_T, uint32_t castType>
+__aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST_T, castType>::Init(
     GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace)
 {
     this->indicesFactor_ = tilingData_.indicesFactor;
@@ -101,8 +101,8 @@ __aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T>::Init(
                                                                 tilingData_.tailCoreIndexCount);
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T>::SimtOutUpdate(int64_t rowLen, int64_t colLen, int64_t updateOfset){
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename CAST_T, uint32_t castType>
+__aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST_T, castType>::SimtOutUpdate(int64_t rowLen, int64_t colLen, int64_t updateOfset){
     LocalTensor<INDICES_T> updateSumIdxLocal = this->updateSumIdxQue_.template DeQue<INDICES_T>();
     LocalTensor<PARAMS_T> updatesLocal = this->dataQueue_.template DeQue<PARAMS_T>();
     
@@ -159,8 +159,8 @@ __aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T>::SimtOu
     this->updateSumIdxQue_.template EnQue(updateSumIdxLocal);
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T>::SimtOutUpdateNonSort(
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename CAST_T, uint32_t castType>
+__aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST_T, castType>::SimtOutUpdateNonSort(
     int64_t rowLen, int64_t colLen, int64_t updateOfset)
 {
     LocalTensor<INDICES_T> outOfstLocal = this->outOfstBuf_.template Get<INDICES_T>();
@@ -187,8 +187,8 @@ __aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T>::SimtOu
     this->dataQueue_.template FreeTensor(updatesLocal);
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T>::ProcessSplitIndices()
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename CAST_T, uint32_t castType>
+__aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST_T, castType>::ProcessSplitIndices()
 {
     if (GetBlockIdx() >= tilingData_.usedCoreNumBefore) {
         return;
@@ -232,8 +232,8 @@ __aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T>::Proces
     }
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T>::Process()
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename CAST_T, uint32_t castType>
+__aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST_T, castType>::Process()
 {
     LocalTensor<INDICES_T> strideLocal = this->strideBuf_.template Get<INDICES_T>();
     for (int32_t i = 0; i < MAX_RANK_COUNT; i++) {

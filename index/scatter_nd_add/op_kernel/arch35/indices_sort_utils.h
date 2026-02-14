@@ -28,15 +28,15 @@ static constexpr MicroAPI::CastTrait castTraitInt16ToFp32 = {
 /*
 * 用于计算
 */
-template<typename INDICE_TYPE>
+template<typename INDICE_CAST_TYPE>
 __aicore__ void IndexStatisticInt32(
-    LocalTensor<INDICE_TYPE>& srcLocal, LocalTensor<float>& dstLocal, float& maxScore, int64_t rowLen, int64_t lastDim)
+    LocalTensor<INDICE_CAST_TYPE>& srcLocal, LocalTensor<float>& dstLocal, float& maxScore, int64_t rowLen, int64_t lastDim)
 {
     __local_mem__ uint32_t* srcLocalAddr = (__local_mem__ uint32_t*)srcLocal.GetPhyAddr();
     __local_mem__ uint32_t* srcM = srcLocalAddr;
     __local_mem__ float* dstLocalAddr = (__local_mem__ float*)dstLocal.GetPhyAddr();
     
-    uint64_t lastDimSize = lastDim * sizeof(INDICE_TYPE);
+    uint64_t lastDimSize = lastDim * sizeof(INDICE_CAST_TYPE);
     int32_t lastDimShift = 0;
     if (lastDimSize < LAST_DIM_SIZE_LIMIT) {
         uint64_t divisor = LAST_DIM_SIZE_LIMIT / lastDimSize;
@@ -123,15 +123,15 @@ __aicore__ void IndexStatisticInt32(
     maxScore = dstLocalAddr[0] / rowLen;
 }
 
-template<typename INDICE_TYPE>
+template<typename INDICE_CAST_TYPE>
 __aicore__ void IndexStatisticInt64(
-    LocalTensor<INDICE_TYPE>& srcLocal, LocalTensor<float>& dstLocal, float& maxScore, int64_t rowLen, int64_t lastDim)
+    LocalTensor<INDICE_CAST_TYPE>& srcLocal, LocalTensor<float>& dstLocal, float& maxScore, int64_t rowLen, int64_t lastDim)
 {
     __local_mem__ uint64_t* srcLocalAddr = (__local_mem__ uint64_t*)srcLocal.GetPhyAddr();
     __local_mem__ uint64_t* srcM = srcLocalAddr;
     __local_mem__ float* dstLocalAddr = (__local_mem__ float*)dstLocal.GetPhyAddr();
     
-    int32_t lastDimSize = lastDim * sizeof(INDICE_TYPE);
+    int32_t lastDimSize = lastDim * sizeof(INDICE_CAST_TYPE);
     int64_t lastDimShift = 0;
     if (lastDimSize < LAST_DIM_SIZE_LIMIT) {
         uint64_t divisor = LAST_DIM_SIZE_LIMIT / lastDimSize;
