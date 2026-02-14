@@ -1,50 +1,63 @@
-# AscendOps
+# Fast Kernel Launch
+
+## 简介
+
+本文档演示如何使用Ascend C和[PyTorch Extension](https://docs.pytorch.org/tutorials/extension.html)能力开发自定义NPU算子。
+
+**核心优势:**
+- **单交付件：** 一个文件完成算子开发和PyTorch框架适配。
+- **高效调用：** 使用`<<<>>>`语法启动核函数，流程简单高效。
 
 ## 环境部署 | Prerequisites
 
 - 请先参考[环境部署](../../docs/zh/context/quick_install.md)完成基础环境搭建
-- GCC 9.4.0+
-- Python 3.8+
-- PyTorch>=2.6.0
-- 对应版本的[TorchNPU](https://gitcode.com/Ascend/pytorch/releases)
+- gcc 9.4.0+
+- python 3.8+
+- torch>=2.6.0
+- 对应版本的[torch_npu](https://gitcode.com/Ascend/pytorch/releases)
 
 ## 安装步骤 | Installation Steps
 
-1. 安装依赖 | Install Dependencies:
+1. 进入`examples/fast_kernel_launch_example`目录。
+
+2. 安装依赖 | Install Dependencies:
     ```sh
     python3 -m pip install -r requirements.txt
     ```
 
-2. 构建Wheel包 | Build the Wheel:
+3. 构建Wheel包 | Build the Wheel:
     ```sh
     # -n: non-isolated build (uses existing environment)
     python3 -m build --wheel -n
     ```
+    构建完成后，产物在当前目录的`dist`文件夹下，产物名`ascend_ops-1.0.0-${python_version}-abi3-${arch}.whl`，
+    `${python_version}`表示当前环境中的python版本(python3.8.3为cp38)，`${arch}`表示CPU架构。
 
-3. 安装 | Install Package:
+4. 安装Wheel包 | Install Package:
     ```sh
     python3 -m pip install dist/*.whl --force-reinstall --no-deps
     ```
 
-4. （可选）再次构建前建议先执行以下命令清理编译缓存
+5. （可选）再次构建前建议先执行以下命令清理编译缓存
    ```sh
-   python3 setup.py clean
-   ```
+    python setup.py clean
+    ```
 
 ## 快速开始 | Quick Start
-安装完成后，您可以像使用普通PyTorch操作一样使用NPU算子
+
+安装完成后，您可以像使用普通PyTorch操作一样使用NPU算子，以add算子调用为例。
 
 ```python
 import torch
 import torch_npu
-import ascend_ops
+import ascend_ops  # 构建出的python包
 
 # Initialize data on NPU
 x = torch.randn(10, 32, dtype=torch.float32).npu()
 y = torch.randn(10, 32, dtype=torch.float32).npu()
 
 # Call the custom NPU operator
-npu_result = torch.ops.ascend_ops.add(x, y)
+npu_result = torch.ops.ascend_ops.add(x, y)  # PyTorch Custom Operator Dispatch机制: torch.ops.<library_name>.<operator_name>
 
 # Verify against CPU ATen implementation
 cpu_x = x.cpu()
@@ -57,20 +70,20 @@ print("Verification successful!")
 
 ## 开发指南：新增一个算子 | Developer Guide: Adding a New Operator
 
-为了实现一个新算子(如`add`)，你只需要提供一个C++实现即可。
+为了实现一个新算子(如`add`)，您只需要提供一个C++实现即可。
 
-1. 首先你需要在csrc目录下使用算子名`add`建立一个文件夹，在此文件夹内使用你当前想要开发的soc名建立一个子文件夹`ascend910b`.
+1. 首先您需要在csrc目录下使用算子名`add`建立一个文件夹，在此文件夹内使用你当前想要开发的soc名建立一个子文件夹`ascend910b`。
 
 2. 在soc目录下新建一个`CMakeLists.txt`
     ```
     add_sources("--npu-arch=dav-2201")
     ```
-    这里`dav-2201`为ascend910b芯片对应的编译参数
+    这里`dav-2201`为ascend910b芯片对应的编译参数，获取方法参考[NpuArch说明和使用指导](https://gitcode.com/cann/ops-math/wiki/NpuArch%E8%AF%B4%E6%98%8E%E5%92%8C%E4%BD%BF%E7%94%A8%E6%8C%87%E5%AF%BC.md)。
 
-3. 在soc目录下新建一个`add.cpp`(建议使用算子名为文件名)。这个文件包含了开发一个AICORE算子所需要的全部模块。
+3. 在soc目录下新建一个`add.cpp`(建议使用算子名为文件名)。这个文件包含了开发一个AI Core算子所需要的全部模块。
     - 算子Schema注册
     - 算子Meta Function实现 & 注册
-    - 算子Kernel实现 (AscendC)
+    - 算子Kernel实现 (Ascend C)
     - 算子NPU调用实现 & 注册
 
     ```cpp
@@ -138,6 +151,9 @@ print("Verification successful!")
      */
     torch::Tensor add_npu(const torch::Tensor &x, const torch::Tensor &y)
     {
+        // OptionalDeviceGuard 确保后续操作在正确的设备上下文执行
+        // 它会记录当前设备状态，执行完作用域代码后自动恢复
+        const c10::OptionalDeviceGuard guard(x.device());
         auto z = add_meta(x, y);
         auto stream = c10_npu::getCurrentNPUStream().stream(false);
         int64_t totalLength, numBlocks, blockLength, tileSize;
@@ -184,5 +200,5 @@ print("Verification successful!")
     }  // namespace ascend_ops
 
     ```
-4. 使用[安装步骤](#安装步骤--installation-steps)章节构建Wheel包，安装并测试
-5. 测试算子API请参考[test_add.py](tests/add/test_add.py)的实现
+4. 参考[安装步骤](#安装步骤--installation-steps)章节重新构建Wheel包并安装。
+5. 基于pytest测试算子API，请参考[test_add.py](tests/add/test_add.py)的实现。
