@@ -60,7 +60,7 @@ struct MaxPoolGradWithArgmaxInputInfoCommon {
     ge::Format inputFormat{ge::Format::FORMAT_NHWC};
 };
 
-static const gert::Shape &EnsureNotScalar(const gert::Shape &inShape) {
+inline static const gert::Shape &EnsureNotScalar(const gert::Shape &inShape) {
  if (inShape.IsScalar()) {
    return g_vec_1_shape;
  }

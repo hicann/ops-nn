@@ -158,25 +158,25 @@ ge::graphStatus MaxPool3DGradWithArgmaxTilingBaseV35::CheckAttrShape()
     auto stridesVector = attrs->GetListInt(STRIDES_ATTR_INDEX)->GetData();
     auto padsVector = attrs->GetListInt(PADS_ATTR_INDEX)->GetData();
     auto dilationsVector = attrs->GetListInt(DILATION_ATTR_INDEX)->GetData();
-    for (uint32_t i = 0; i < (uint32_t)kSizeDimNum; i++) {
+    for (uint32_t i = 0; i < static_cast<uint32_t>(kSizeDimNum); i++) {
         OP_CHECK_IF((kSizeVector[i] <= 0),
                     OP_LOGE(context_->GetNodeName(), "Attr value invalid, kSize[%u] is %ld, should bigger than 0.",
                             i, kSizeVector[i]),
                     return ge::GRAPH_FAILED);
     }
-    for (uint32_t i = 0; i < (uint32_t)stridesDimNum; i++) {
+    for (uint32_t i = 0; i < static_cast<uint32_t>(stridesDimNum); i++) {
         OP_CHECK_IF((stridesVector[i] <= 0),
                     OP_LOGE(context_->GetNodeName(), "Attr value invalid, strides[%u] is %ld, should bigger than 0.",
                             i, stridesVector[i]),
                     return ge::GRAPH_FAILED);
     }
-    for (uint32_t i = 0; i < (uint32_t)padsDimNum; i++) {
+    for (uint32_t i = 0; i < static_cast<uint32_t>(padsDimNum); i++) {
         OP_CHECK_IF((padsVector[i] < 0),
                     OP_LOGE(context_->GetNodeName(), "Attr value invalid, pads[%u] is %ld, should bigger or equal 0.",
                             i, padsVector[i]),
                     return ge::GRAPH_FAILED);
     }
-    for (uint32_t i = 0; i < (uint32_t)dilationsDimNum; i++) {
+    for (uint32_t i = 0; i < static_cast<uint32_t>(dilationsDimNum); i++) {
         OP_CHECK_IF((dilationsVector[i] <= 0),
                     OP_LOGE(context_->GetNodeName(), "Attr value invalid, dilations[%u] is %ld, should bigger than 0.",
                             i, dilationsVector[i]),
@@ -360,7 +360,7 @@ ge::graphStatus MaxPool3DGradWithArgmaxTilingBaseV35::GetPlatformInfo()
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr == nullptr) {
         auto compileInfoPtr =
-            reinterpret_cast<const Tiling4MaxPool3DGradWithArgmaxCompileInfo*>(context_->GetCompileInfo());
+            static_cast<const Tiling4MaxPool3DGradWithArgmaxCompileInfo*>(context_->GetCompileInfo());
         OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
                     return ge::GRAPH_FAILED);
         coreNum_ = compileInfoPtr->totalCoreNum;

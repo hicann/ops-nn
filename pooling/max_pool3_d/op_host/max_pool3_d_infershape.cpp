@@ -35,7 +35,7 @@ constexpr size_t PAD_BOTTOM = 3;
 constexpr size_t PAD_LEFT = 4;
 constexpr size_t PAD_RIGHT = 5;
 
-typedef ge::graphStatus (*InferShapePaddingFunc)(
+using InferShapePaddingFunc = ge::graphStatus (*)(
     gert::InferShapeContext*, size_t, size_t, size_t, const gert::RuntimeAttrs*);
 
 static std::string Int64ToString(const int64_t* data, size_t size)
@@ -54,7 +54,7 @@ static int64_t SameUpdateDim(const int64_t ksize, const int64_t strides, int64_t
 }
 
 static void CalculateUpdateDim(
-    const int64_t ksize, const int64_t stride, const int64_t dilation, const int32_t ceil_mode, int64_t& dim_size)
+    const int64_t ksize, const int64_t stride, const int64_t dilation, const bool ceil_mode, int64_t& dim_size)
 {
     if (ceil_mode) {
         dim_size = (stride == 0) ? (dim_size - ksize + 1) :
@@ -72,7 +72,7 @@ static ge::graphStatus InferShapePaddingCalculated(
     OP_CHECK_IF(
         ksize->GetSize() != SHAPE_SIZE,
         OP_LOGE(context->GetNodeName(), "Length of ksize %zu must be 5!", ksize->GetSize()), return GRAPH_FAILED);
-    auto ksize_data = reinterpret_cast<const int64_t*>(ksize->GetData());
+    auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
     auto pads = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_PADS);
     OP_CHECK_NULL_WITH_CONTEXT(context, pads);
     OP_CHECK_IF(
@@ -85,7 +85,7 @@ static ge::graphStatus InferShapePaddingCalculated(
     OP_CHECK_IF(
         strides->GetSize() != SHAPE_SIZE,
         OP_LOGE(context->GetNodeName(), "Length of strides %zu must be 5!", strides->GetSize()), return GRAPH_FAILED);
-    auto strides_data = reinterpret_cast<const int64_t*>(strides->GetData());
+    auto strides_data = static_cast<const int64_t*>(strides->GetData());
     OP_CHECK_IF(
         strides_data[d_dim] <= 0 || strides_data[h_dim] <= 0 || strides_data[w_dim] <= 0,
         OP_LOGE(
@@ -93,7 +93,7 @@ static ge::graphStatus InferShapePaddingCalculated(
             Int64ToString(strides_data, strides->GetSize()).c_str(), strides_data[d_dim], strides_data[h_dim],
             strides_data[w_dim]),
         return GRAPH_FAILED);
-    auto pads_data = reinterpret_cast<const int64_t*>(pads->GetData());
+    auto pads_data = static_cast<const int64_t*>(pads->GetData());
 
     auto dilations = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_DILATION);
     OP_CHECK_NULL_WITH_CONTEXT(context, dilations);
@@ -101,7 +101,7 @@ static ge::graphStatus InferShapePaddingCalculated(
         ((dilations->GetSize() != SHAPE_SIZE) && (dilations->GetSize() != DIM_SIZE6)),
         OP_LOGE(context->GetNodeName(), "Length of dilation %zu must be 5!", dilations->GetSize()),
         return GRAPH_FAILED);
-    auto dilations_data = reinterpret_cast<const int64_t*>(dilations->GetData());
+    auto dilations_data = static_cast<const int64_t*>(dilations->GetData());
     if (dilations->GetSize() == DIM_SIZE6) {
         OP_LOGW("InferShapePaddingCalculated", "The size of dilationList: 6 is deprecated, should be 5");
     }
@@ -147,13 +147,13 @@ static ge::graphStatus InferShapePaddingValid(
     OP_CHECK_IF(
         ksize->GetSize() != SHAPE_SIZE,
         OP_LOGE(context->GetNodeName(), "Length of ksize %zu must be 5!", ksize->GetSize()), return GRAPH_FAILED);
-    auto ksize_data = reinterpret_cast<const int64_t*>(ksize->GetData());
+    auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
     auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_STRIDES);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
     OP_CHECK_IF(
         strides->GetSize() != SHAPE_SIZE,
         OP_LOGE(context->GetNodeName(), "Length of strides %zu must be 5!", strides->GetSize()), return GRAPH_FAILED);
-    auto strides_data = reinterpret_cast<const int64_t*>(strides->GetData());
+    auto strides_data = static_cast<const int64_t*>(strides->GetData());
     OP_CHECK_IF(
         strides_data[d_dim] <= 0 || strides_data[h_dim] <= 0 || strides_data[w_dim] <= 0,
         OP_LOGE(
@@ -187,7 +187,7 @@ static ge::graphStatus InferShapePaddingSame(
     OP_CHECK_IF(
         strides->GetSize() != SHAPE_SIZE,
         OP_LOGE(context->GetNodeName(), "Length of strides %zu must be 5!", strides->GetSize()), return GRAPH_FAILED);
-    auto strides_data = reinterpret_cast<const int64_t*>(strides->GetData());
+    auto strides_data = static_cast<const int64_t*>(strides->GetData());
     OP_CHECK_IF(
         strides_data[d_dim] <= 0 || strides_data[h_dim] <= 0 || strides_data[w_dim] <= 0,
         OP_LOGE(

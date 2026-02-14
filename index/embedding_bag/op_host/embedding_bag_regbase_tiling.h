@@ -12,6 +12,8 @@
  * \file embedding_bag_regbase_tiling.h
  * \brief
  */
+#ifndef EMBEDDING_BAG_REGBASE_TILING_H
+#define EMBEDDING_BAG_REGBASE_TILING_H
 
 #include "register/tilingdata_base.h"
 #include "tiling_base/tiling_base.h"
@@ -34,7 +36,7 @@ protected:
     bool IsCapable() override;
     ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus GetPlatformInfo() override;
-    std::set<int64_t> FindUniqueCut();
+    std::set<int64_t> FindUniqueCut() const;
     void AutoTiling();
     void ComputeFactor();
     ge::graphStatus DoOpTiling() override;
@@ -44,10 +46,10 @@ protected:
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
     void SetTilingData();
-    int64_t GetOffsetAlignSize1D(int64_t offsetFactor);
-    int64_t GetWeightAlignSize1D(int64_t weightRowFactor, int64_t weightDimFactor);
-    int64_t GetInidcesAlignSize2D(int64_t indicesFactor);
-    int64_t GetWeightAlignSize2D(int64_t weightRowFactor, int64_t weightDimFactor);
+    int64_t GetOffsetAlignSize1D(int64_t offsetFactor) const;
+    int64_t GetWeightAlignSize1D(int64_t weightRowFactor, int64_t weightDimFactor) const;
+    int64_t GetIndicesAlignSize2D(int64_t indicesFactor) const;
+    int64_t GetWeightAlignSize2D(int64_t weightRowFactor, int64_t weightDimFactor) const;
     void Compute2DFactor();
     void Compute1DFactor();
 
@@ -90,4 +92,4 @@ private:
     EmbeddingBagTilingData tilingData_;
 };
 } // namespace optiling
-
+#endif // EMBEDDING_BAG_REGBASE_TILING_H

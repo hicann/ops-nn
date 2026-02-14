@@ -29,7 +29,6 @@
 #include "op_common/op_host/util/platform_util.h"
 
 using namespace MaxPool3DGradWithArgmaxOp;
-
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
 
@@ -84,7 +83,7 @@ struct MaxPool3DGradWithArgmaxNCDHWBaseInfo {
 
 struct MaxPool3DGradWithArgmaxNCDHWSplitInfo {
     // DoUBTiling
-    int64_t isCheckRange{0};
+    uint32_t isCheckRange{0};
 
     int64_t highAxisInner{0};
     int64_t highAxisTail{0};

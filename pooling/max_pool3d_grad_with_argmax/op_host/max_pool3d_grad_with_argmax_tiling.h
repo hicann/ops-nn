@@ -24,7 +24,6 @@
 #include "../../pool_3d_common/op_host/arch32/max_pool3d_grad_tiling_constants.h"
 
 namespace optiling {
-using Ops::NN::Optiling::TilingBaseClass;
 const uint32_t DHW_DIMS = 3;
 const uint32_t D_DIM = 0;
 const uint32_t H_DIM = 1;
@@ -192,9 +191,9 @@ struct MaxPoolGradWithArgmaxTilingParams {
     bool isNeedWorkspace{false};
 };
 
-class MaxPool3DGradWithArgmaxTilingBase : public TilingBaseClass {
+class MaxPool3DGradWithArgmaxTilingBase : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit MaxPool3DGradWithArgmaxTilingBase(gert::TilingContext* context) : TilingBaseClass(context)
+    explicit MaxPool3DGradWithArgmaxTilingBase(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
     {}
     ~MaxPool3DGradWithArgmaxTilingBase() override
     {}

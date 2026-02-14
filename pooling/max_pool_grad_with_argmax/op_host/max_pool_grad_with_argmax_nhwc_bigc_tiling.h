@@ -24,9 +24,9 @@ class MaxPoolGradWithArgmaxNHWCBigcTiling : public MaxPoolGradWithArgmaxBaseTili
 {
 public:
     explicit MaxPoolGradWithArgmaxNHWCBigcTiling(gert::TilingContext* context)
-        : MaxPoolGradWithArgmaxBaseTiling(context)
+        : MaxPoolGradWithArgmaxBaseTiling(context), 
+          NHWCBase(new MaxPoolGradWithArgmaxNHWCTilingCommon(&inputData))
     {
-        NHWCBase = new MaxPoolGradWithArgmaxNHWCTilingCommon(&inputData);
     }
 
     ~MaxPoolGradWithArgmaxNHWCBigcTiling() override

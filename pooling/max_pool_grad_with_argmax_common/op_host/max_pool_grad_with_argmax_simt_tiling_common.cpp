@@ -40,7 +40,7 @@ void MaxPoolGradWithArgmaxSIMTTilingCommon::SetTilingData(gert::TilingContext* c
     OP_LOGD("MaxPoolGradWithArgmax", "MaxPoolGradWithArgmaxSIMTTilingCommon::SetTilingData");
 }
 
-ge::graphStatus MaxPoolGradWithArgmaxSIMTTilingCommon::PostTiling(gert::TilingContext* context_,MaxPoolGradWithArgmaxHardwareInfo hwinfo)
+ge::graphStatus MaxPoolGradWithArgmaxSIMTTilingCommon::PostTiling(gert::TilingContext* context_, MaxPoolGradWithArgmaxHardwareInfo hwinfo)
 {
     MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSimtTilingCommonData* tilingData =
         context_->GetTilingData<MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSimtTilingCommonData>();

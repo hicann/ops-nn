@@ -23,11 +23,11 @@ namespace optiling {
 class MaxPoolGradWithArgmaxSIMTTilingCommon{
 public:
     explicit MaxPoolGradWithArgmaxSIMTTilingCommon(MaxPoolGradWithArgmaxInputInfoCommon* input)
+            :inputData(input)
     {
-        inputData = input;
     }
     ge::graphStatus DoOpTiling(gert::TilingContext* context_, uint64_t key);
-    ge::graphStatus PostTiling(gert::TilingContext* context_, MaxPoolGradWithArgmaxHardwareInfo hardWare);
+    ge::graphStatus PostTiling(gert::TilingContext* context_, MaxPoolGradWithArgmaxHardwareInfo hwinfo);
 
 private: 
     void SetTilingData(gert::TilingContext* context, uint64_t key);

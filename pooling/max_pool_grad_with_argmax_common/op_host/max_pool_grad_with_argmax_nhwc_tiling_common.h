@@ -76,8 +76,8 @@ class MaxPoolGradWithArgmaxNHWCTilingCommon
 {
 public:
     MaxPoolGradWithArgmaxNHWCTilingCommon(MaxPoolGradWithArgmaxInputInfoCommon* input)
+        :inputData(input)
     {
-        inputData = input;
     }
     void InitializationVars(gert::TilingContext* context_, MaxPoolGradWithArgmaxHardwareInfo* hardwareData);
     ge::graphStatus DoOpTiling(gert::TilingContext* context, uint64_t key);

@@ -81,14 +81,14 @@ ge::graphStatus InferShapeForMaxPoolWithArgmax(gert::InferShapeContext* context)
     OP_CHECK_IF(ksize->GetSize() != ATTR_LIST_SHAPE_SIZE,
                 OP_LOGE(context->GetNodeName(), "Length of ksize %lu must be 4!", ksize->GetSize()),
                 return GRAPH_FAILED);
-    auto ksize_data = reinterpret_cast<const int64_t*>(ksize->GetData());
+    auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
 
     auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_STRIDES);
     OPS_CHECK_NULL_WITH_CONTEXT(context, strides);
     OP_CHECK_IF(strides->GetSize() != ATTR_LIST_SHAPE_SIZE,
                 OP_LOGE(context->GetNodeName(), "Length of strides %lu must be 4!", strides->GetSize()),
                 return GRAPH_FAILED);
-    auto strides_data = reinterpret_cast<const int64_t*>(strides->GetData());
+    auto strides_data = static_cast<const int64_t*>(strides->GetData());
 
     const char* dataFormatPtr = attrs->GetAttrPointer<char>(INDEX_DATA_FORMAT);
     OP_LOGE_IF(dataFormatPtr == nullptr, GRAPH_FAILED, context->GetNodeName(), "Get dataFormat failed.");

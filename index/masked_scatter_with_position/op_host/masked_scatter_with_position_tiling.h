@@ -44,7 +44,7 @@ private:
     ge::graphStatus CheckOutputShape();
     ge::graphStatus CheckDataType();
     bool CanBroadcastBAOrAB(const gert::Shape xShape, const gert::Shape maskShape);
-    void CanBroadcastBAOrABEqual(const std::vector<int64_t>& A, const std::vector<int64_t>& B, const size_t lenA, bool& left_ok, bool& right_ok);
+    void CanBroadcastBAOrABEqual(const std::vector<int64_t>& xShapeVec, const std::vector<int64_t>& maskShapeVec, const size_t len, bool& BA, bool& AB);
 
 private:
     const char* opName_ = "MaskedScatterWithPosition";

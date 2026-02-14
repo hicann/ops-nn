@@ -100,28 +100,28 @@ ge::graphStatus InferShapeForMaxPoolWithArgmaxV3(gert::InferShapeContext* contex
     OP_CHECK_IF(
         ksize->GetSize() != ATTR_LIST_SHAPE_SIZE,
         OP_LOGE(context->GetNodeName(), "Length of ksize %lu must be 2!", ksize->GetSize()), return GRAPH_FAILED);
-    auto ksize_data = reinterpret_cast<const int64_t*>(ksize->GetData());
+    auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
 
     auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_STRIDES);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
     OP_CHECK_IF(
         strides->GetSize() != ATTR_LIST_SHAPE_SIZE,
         OP_LOGE(context->GetNodeName(), "Length of strides %lu must be 2!", strides->GetSize()), return GRAPH_FAILED);
-    auto strides_data = reinterpret_cast<const int64_t*>(strides->GetData());
+    auto strides_data = static_cast<const int64_t*>(strides->GetData());
 
     auto pads = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_PADS);
     OP_CHECK_NULL_WITH_CONTEXT(context, pads);
     OP_CHECK_IF(
         pads->GetSize() != ATTR_LIST_SHAPE_SIZE,
         OP_LOGE(context->GetNodeName(), "Length of pads %lu must be 2!", pads->GetSize()), return GRAPH_FAILED);
-    auto pads_data = reinterpret_cast<const int64_t*>(pads->GetData());
+    auto pads_data = static_cast<const int64_t*>(pads->GetData());
 
     auto dilation = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_DILATION);
     OP_CHECK_NULL_WITH_CONTEXT(context, dilation);
     OP_CHECK_IF(
         dilation->GetSize() != ATTR_LIST_SHAPE_SIZE,
         OP_LOGE(context->GetNodeName(), "Length of dilation %lu must be 2!", dilation->GetSize()), return GRAPH_FAILED);
-    auto dilation_data = reinterpret_cast<const int64_t*>(dilation->GetData());
+    auto dilation_data = static_cast<const int64_t*>(dilation->GetData());
 
     auto ceil_mode = attrs->GetAttrPointer<bool>(INDEX_CEIL_MODE);
     OP_CHECK_NULL_WITH_CONTEXT(context, ceil_mode);

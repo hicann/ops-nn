@@ -63,7 +63,6 @@ static aclTensor* AllocTensorForEmbeddingBag(
     op::DataType dtype910,
     const op::Shape& shapeOther,
     op::DataType dtypeOther,
-    op::SocVersion socVersion,
     aclOpExecutor* executor)
 {
     if (Ops::NN::AclnnUtil::IsRegbase()) {
@@ -112,7 +111,6 @@ const std::tuple<aclTensor*, aclTensor*, aclTensor*, aclTensor*> EmbeddingBag(
     if (!IsAiCoreSupport(weight, indices, offsets, perSampleWeights)) {
         return MakeNullEmbeddingBagResult();
     }
-    auto socVersion = op::GetCurrentPlatformInfo().GetSocVersion();
     op::DataType indicesDtype = indices->GetDataType();
     op::DataType offsetsDtype = offsets->GetDataType();
     op::DataType indexPromoteDtype = (indicesDtype == offsetsDtype) ? indicesDtype : op::DataType::DT_INT64;
@@ -124,7 +122,7 @@ const std::tuple<aclTensor*, aclTensor*, aclTensor*, aclTensor*> EmbeddingBag(
     op::Shape offset2bagShape910, offset2bagShapeOther;
     offset2bagShape910.AppendDim(indices->GetViewShape().GetShapeSize());
     offset2bagShapeOther.AppendDim(indices->GetViewShape().GetShapeSize());
-    offset2bag = AllocTensorForEmbeddingBag(offset2bagShape910, indexPromoteDtype, offset2bagShapeOther, indicesDtype, socVersion, executor);
+    offset2bag = AllocTensorForEmbeddingBag(offset2bagShape910, indexPromoteDtype, offset2bagShapeOther, indicesDtype, executor);
     aclTensor* bagSize = nullptr;
     op::Shape bagSizeShape910, bagSizeShapeOther;
     bagSizeShape910.AppendDim(offsets->GetViewShape().GetDim(0));  
@@ -133,10 +131,10 @@ const std::tuple<aclTensor*, aclTensor*, aclTensor*, aclTensor*> EmbeddingBag(
     } else {
         bagSizeShapeOther = offsets->GetViewShape();
     }
-    bagSize = AllocTensorForEmbeddingBag(bagSizeShape910, indexPromoteDtype, bagSizeShapeOther, offsetsDtype, socVersion, executor);
+    bagSize = AllocTensorForEmbeddingBag(bagSizeShape910, indexPromoteDtype, bagSizeShapeOther, offsetsDtype, executor);
     aclTensor* maxIndices = nullptr;
     auto maxIndicesShapes = GetMaxIndicesShapes(modeStr, includeLastOffset, offsets->GetViewShape(), outputShape);
-    maxIndices = AllocTensorForEmbeddingBag(maxIndicesShapes.first, indexPromoteDtype, maxIndicesShapes.second, offsetsDtype, socVersion, executor);
+    maxIndices = AllocTensorForEmbeddingBag(maxIndicesShapes.first, indexPromoteDtype, maxIndicesShapes.second, offsetsDtype, executor);
     if (outputTensor == nullptr || offset2bag == nullptr || bagSize == nullptr || maxIndices == nullptr) {
         return MakeNullEmbeddingBagResult();
     }

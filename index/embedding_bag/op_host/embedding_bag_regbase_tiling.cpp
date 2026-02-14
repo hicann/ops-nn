@@ -167,7 +167,7 @@ ge::graphStatus EmbeddingBagRegBaseTiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-std::set<int64_t> EmbeddingBagRegBaseTiling::FindUniqueCut()
+std::set<int64_t> EmbeddingBagRegBaseTiling::FindUniqueCut() const
 {
     std::set<int64_t> result;
     int64_t upbound = std::ceil(std::sqrt(usedCoreNum_) + 1);
@@ -247,7 +247,7 @@ void EmbeddingBagRegBaseTiling::AutoTiling()
     usedCoreNum_ = rowTileNum_ * colTileNum_;
 }
 
-int64_t EmbeddingBagRegBaseTiling::GetOffsetAlignSize1D(int64_t offsetFactor)
+int64_t EmbeddingBagRegBaseTiling::GetOffsetAlignSize1D(int64_t offsetFactor) const
 {
     /**
      * inQueueOffsets_ -> (offsetFactor + 1) * offsetsTypeSize_
@@ -259,7 +259,7 @@ int64_t EmbeddingBagRegBaseTiling::GetOffsetAlignSize1D(int64_t offsetFactor)
     return occupy;
 }
 
-int64_t EmbeddingBagRegBaseTiling::GetWeightAlignSize1D(int64_t weightRowFactor, int64_t weightDimFactor)
+int64_t EmbeddingBagRegBaseTiling::GetWeightAlignSize1D(int64_t weightRowFactor, int64_t weightDimFactor) const
 {
     /**
     * inQueueWeight_ -> weightRowFactor * weightDimFactor * weightTypeSize_
@@ -317,7 +317,7 @@ void EmbeddingBagRegBaseTiling::Compute1DFactor()
     weightRowFactor_ = weightRowFactor_ == 0 ? 1 : weightRowFactor_;
 }
 
-int64_t EmbeddingBagRegBaseTiling::GetInidcesAlignSize2D(int64_t indicesFactor)
+int64_t EmbeddingBagRegBaseTiling::GetIndicesAlignSize2D(int64_t indicesFactor) const
 {
     /**
     * indicesQue -> indicesFactor_ * indiceSize_ * indicesTypeSize_
@@ -335,7 +335,7 @@ int64_t EmbeddingBagRegBaseTiling::GetInidcesAlignSize2D(int64_t indicesFactor)
     return occupy;
 }
 
-int64_t EmbeddingBagRegBaseTiling::GetWeightAlignSize2D(int64_t weightRowFactor, int64_t weightDimFactor)
+int64_t EmbeddingBagRegBaseTiling::GetWeightAlignSize2D(int64_t weightRowFactor, int64_t weightDimFactor) const
 {
     int64_t ubBlock = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
     /**
@@ -375,7 +375,7 @@ void EmbeddingBagRegBaseTiling::Compute2DFactor()
     int64_t ubBlock = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
 
     int64_t weightBlockSize = GetWeightAlignSize2D(indiceSize_, colNormalNum_);
-    int64_t indicesBlockSize = GetInidcesAlignSize2D(rowNormalNum_);
+    int64_t indicesBlockSize = GetIndicesAlignSize2D(rowNormalNum_);
 
     if ((indiceSize_ * indicesTypeSize_ * NUM_TWO) > INDICES_LIMIT_BYTE) {
         isSimt_ = 1;
@@ -399,7 +399,7 @@ void EmbeddingBagRegBaseTiling::Compute2DFactor()
         indicesFactor_ += 1;
         while (resetSize <= 0) {
             --indicesFactor_;
-            resetSize = aviableSizeForIndices - GetInidcesAlignSize2D(indicesFactor_);
+            resetSize = aviableSizeForIndices - GetIndicesAlignSize2D(indicesFactor_);
         }
         indicesFactor_ = indicesFactor_ == 0 ? 1 : indicesFactor_;
     } else {
@@ -408,12 +408,12 @@ void EmbeddingBagRegBaseTiling::Compute2DFactor()
         indicesFactor_ += 1;
         while (resetSize <= 0) {
             --indicesFactor_;
-            resetSize = aviableSizeForIndices - GetInidcesAlignSize2D(indicesFactor_);
+            resetSize = aviableSizeForIndices - GetIndicesAlignSize2D(indicesFactor_);
         }
         indicesFactor_ = indicesFactor_ == 0 ? 1 : indicesFactor_;
     
         /* 确定indicesFactor_后更新weight的可用ub空间 */
-        int64_t aviableSizeForWeight = halfUbSize - GetInidcesAlignSize2D(indicesFactor_);
+        int64_t aviableSizeForWeight = halfUbSize - GetIndicesAlignSize2D(indicesFactor_);
         if (GetWeightAlignSize2D(1, colNormalNum_) > aviableSizeForWeight) {
             weightDimFactor_ = std::min(colNormalNum_, 128L);
         } else {
@@ -514,7 +514,7 @@ uint64_t EmbeddingBagRegBaseTiling::GetTilingKey() const
         return tilingKey;
     }
     if (isSimt_ == 1) {
-        tilingKey = isNeedOffset_ ? TILING_KEY_SIMT_1D : TILING_KEY_SIMT_2D;
+        tilingKey = (isNeedOffset_ == 1 ? TILING_KEY_SIMT_1D : TILING_KEY_SIMT_2D);
 
         if (weightShapeSize_ <= UINT32_MAX) {
             tilingKey += (offsetsType_ == indicesType_) ? 0 : OFFSET_DIFF_TYPE_SMALL;
@@ -524,7 +524,7 @@ uint64_t EmbeddingBagRegBaseTiling::GetTilingKey() const
         return tilingKey;
     }
 
-    tilingKey = isNeedOffset_ ? TILING_KEY_INDICES_1D : TILING_KEY_INDICES_2D;
+    tilingKey = (isNeedOffset_  == 1 ? TILING_KEY_INDICES_1D : TILING_KEY_INDICES_2D);
     if (offsetsType_ != indicesType_) {
         tilingKey += 1;
     }

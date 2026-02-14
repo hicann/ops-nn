@@ -23,9 +23,9 @@ namespace optiling {
 class MaxPoolGradWithArgmaxTilingSIMT : public MaxPoolGradWithArgmaxBaseTiling {
 public:
     explicit MaxPoolGradWithArgmaxTilingSIMT(gert::TilingContext* context)
-        : MaxPoolGradWithArgmaxBaseTiling(context)
+        : MaxPoolGradWithArgmaxBaseTiling(context), 
+          SimtBase(new MaxPoolGradWithArgmaxSIMTTilingCommon(&inputData))
     {
-        SimtBase = new MaxPoolGradWithArgmaxSIMTTilingCommon(&inputData);
     }
     ~MaxPoolGradWithArgmaxTilingSIMT() override
     {

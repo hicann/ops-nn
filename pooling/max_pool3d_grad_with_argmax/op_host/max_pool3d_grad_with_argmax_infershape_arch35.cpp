@@ -121,7 +121,7 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
         OP_LOGE(context->GetNodeName(), "Length of ksize %lu must be equal 1 or 3!", ksize->GetSize()),
         return GRAPH_FAILED);
 
-    auto ksize_data = reinterpret_cast<const int64_t*>(ksize->GetData());
+    auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
     for (uint32_t i = 0; i < static_cast<uint32_t>(ksize->GetSize()); i++) {
         OP_CHECK_IF(
             (ksize_data[i] <= 0),
@@ -142,7 +142,7 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
         OP_LOGE(context->GetNodeName(), "Length of strides %lu must be equal 0 or 1 or 3!", strides->GetSize()),
         return GRAPH_FAILED);
 
-    auto strides_data = reinterpret_cast<const int64_t*>(strides->GetData());
+    auto strides_data = static_cast<const int64_t*>(strides->GetData());
     for (uint32_t i = 0; i < static_cast<uint32_t>(strides->GetSize()); i++) {
         OP_CHECK_IF(
             (strides_data[i] <= 0),
@@ -168,7 +168,7 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
         OP_LOGE(context->GetNodeName(), "Length of pads %lu must be equal 1 or 3!", pads->GetSize()),
         return GRAPH_FAILED);
 
-    auto pads_data = reinterpret_cast<const int64_t*>(pads->GetData());
+    auto pads_data = static_cast<const int64_t*>(pads->GetData());
     for (uint32_t i = 0; i < static_cast<uint32_t>(pads->GetSize()); i++) {
         OP_CHECK_IF(
             (pads_data[i] < 0),
@@ -189,7 +189,7 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
         OP_LOGE(context->GetNodeName(), "Length of dilation %lu must be equal 1 or 3!", dilation->GetSize()),
         return GRAPH_FAILED);
 
-    auto dilation_data = reinterpret_cast<const int64_t*>(dilation->GetData());
+    auto dilation_data = static_cast<const int64_t*>(dilation->GetData());
     for (uint32_t i = 0; i < static_cast<uint32_t>(dilation->GetSize()); i++) {
         OP_CHECK_IF(
             (dilation_data[i] <= 0),

@@ -97,7 +97,7 @@ ge::graphStatus MaxPoolWithArgmaxBaseTiling::GetPlatformInfo()
 {
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr == nullptr) {
-        auto compileInfoPtr = reinterpret_cast<const MaxPoolWithArgmaxCompileInfo*>(context_->GetCompileInfo());
+        auto compileInfoPtr = static_cast<const MaxPoolWithArgmaxCompileInfo*>(context_->GetCompileInfo());
         OP_TILING_CHECK(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context_, "compile info is null"),
                         return ge::GRAPH_FAILED);
         coreNum = compileInfoPtr->coreNum;

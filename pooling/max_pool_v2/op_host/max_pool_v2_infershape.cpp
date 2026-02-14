@@ -25,7 +25,7 @@ constexpr size_t INSHAPE_DIM_NUM = 4;
 constexpr size_t INPUT_KSIZE_IDX = 1;
 constexpr size_t INPUT_STRIDES_IDX = 2;
 
-typedef ge::graphStatus (*InferShapePaddingFunc)(gert::InferShapeContext*, size_t, size_t);
+using InferShapePaddingFunc = ge::graphStatus (*)(gert::InferShapeContext*, size_t, size_t);
 
 static int64_t SameUpdateDim(const int64_t ksize, const int64_t strides, int64_t dimSize)
 {
@@ -80,8 +80,8 @@ static ge::graphStatus InferShapePaddingSame(
     auto strides = context->GetInputTensor(INPUT_STRIDES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
     OP_CHECK_IF(
-        strides->GetShapeSize() != SHAPE_NHWC_SIZE,
-        OP_LOGE(context->GetNodeName(), "Length of strides %ld must be 4!", strides->GetShapeSize()), return GRAPH_FAILED);
+        static_cast<int64_t>(strides->GetShapeSize()) != SHAPE_NHWC_SIZE,
+        OP_LOGE(context->GetNodeName(), "Length of strides %ld must be 4!", static_cast<int64_t>(strides->GetShapeSize())), return GRAPH_FAILED);
     int64_t hstridesData = static_cast<int64_t>(strides->GetData<int32_t>()[hDim]);
     int64_t wstridesData = static_cast<int64_t>(strides->GetData<int32_t>()[wDim]);
     OP_CHECK_IF(
