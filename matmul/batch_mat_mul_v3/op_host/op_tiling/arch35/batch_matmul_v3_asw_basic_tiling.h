@@ -21,7 +21,6 @@
 namespace optiling {
 namespace batch_matmul_v3_advanced {
 using namespace matmul_v3_advanced;
-using StrideIndexPairs = std::vector<std::pair<int64_t, std::pair<int64_t, int64_t>>>;
 class BatchMatMulV3AswBasicTiling : public MatMulV3BaseTiling {
 public:
     BatchMatMulV3AswBasicTiling(gert::TilingContext *context, MatMulTilingCfg &cfg)
@@ -39,9 +38,6 @@ protected:
     uint64_t GetNumBlocks() const override;
 
     ge::graphStatus GetTilingData(TilingResult &tiling) const override;
-    bool IsTransposeNonContiguous(uint64_t idx) const;
-
-    bool IsContiguousStride(StrideIndexPairs& strideIndexPairs) const;
 };
 }
 }
