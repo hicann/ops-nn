@@ -366,6 +366,7 @@ __aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOC
             bias4N1Gm2UbParams, padParams);
     }
     AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(biasPingPongID_);
+    AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(biasPingPongID_);
 }
 QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
 template <class T>
@@ -778,12 +779,15 @@ __aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOC
     const AscendC::LocalTensor<CalcType>& mmAddUb)
 {
     if (ubParams_.validM == 0) {
+        if (isBias_) {
+            AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(biasPingPongID_);
+            biasPingPongID_ = biasPingPongID_ ^ 1;
+        }
         return;
     }
     if constexpr (AscendC::IsSameType<CalcType, BiasType>::value) {
         if (isBias_) {
             auto biasUb = biasPingPongID_ == 2 ? biasUbPing_ : biasUbPong_;
-            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(biasPingPongID_);
             auto mmAddUbAddr = reinterpret_cast<__ubuf__ CalcType*>(mmAddUb.GetPhyAddr());
             auto biasUbAddr = reinterpret_cast<__ubuf__ BiasType*>(biasUb.GetPhyAddr());
             if (ubParams_.ndNum == 1) {

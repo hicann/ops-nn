@@ -98,6 +98,7 @@ protected:
     uint64_t GetScaleFactorBAfullLoad(uint64_t leftSize);
     void CalScaleFactors(uint64_t baseASize, uint64_t baseBSize, uint64_t baseScaleASize, uint64_t baseScaleBSize);
     void CalStepKs();
+    bool isA8W8GB() const;
     bool IsMxKOdd() const;
     bool IsMxBackwardTrans() const;
     virtual void IsAFullLoad();

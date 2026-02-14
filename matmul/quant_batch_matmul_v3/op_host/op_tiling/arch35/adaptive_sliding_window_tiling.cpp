@@ -666,9 +666,43 @@ void AdaptiveSlidingWindowTiling::CalL1TilingDepthAfullload(uint64_t leftL1Size)
     basicTiling_.stepKb = basicTiling_.depthB1 == 1U ? basicTiling_.depthB1 : basicTiling_.depthB1 / DB_SIZE;
 }
 
+bool AdaptiveSlidingWindowTiling::isA8W8GB() const
+{
+    if (context_ == nullptr) {
+        OP_LOGE(inputParams_.opName, "context_ is nullptr.");
+        return false;
+    }
+    auto* platformInfoPtr = context_->GetPlatformInfo();
+    if (platformInfoPtr == nullptr) {
+        OP_LOGE(inputParams_.opName, "platformInfoPtr is nullptr.");
+        return false;
+    }
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+
+    auto x1Shape = context_->GetInputShape(GetX1Idx());
+    auto x2Shape = context_->GetInputShape(GetX2Idx());
+    auto x1ScaleShape = context_->GetOptionalInputShape(GetPertokenIdx());
+    auto x2ScaleShape = context_->GetOptionalInputShape(GetScaleIdx());
+    if (x1ScaleShape == nullptr || x2ScaleShape == nullptr) {
+        OP_LOGD(inputParams_.opName, "x1ScaleShape or x2ScaleShape is nullptr.");
+        return false;
+    }
+    auto x1OriginShapeLen = x1Shape->GetOriginShape().GetDimNum();
+    auto x2OriginShapeLen = x2Shape->GetOriginShape().GetDimNum();
+    auto x1ScaleOriginShapeLen = x1ScaleShape->GetOriginShape().GetDimNum();
+    auto x2ScaleOriginShapeLen = x2ScaleShape->GetOriginShape().GetDimNum();
+    // 检查是否符合A8W8GB量化场景
+    return ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_3510 &&
+           inputParams_.aDtype == ge::DT_INT8 && inputParams_.bDtype == ge::DT_INT8 &&
+           inputParams_.perTokenScaleDtype == ge::DT_FLOAT && inputParams_.scaleDtype == ge::DT_FLOAT &&
+           inputParams_.cDtype == ge::DT_BF16 &&
+           ((inputParams_.hasBias && inputParams_.biasDtype == ge::DT_FLOAT) || !inputParams_.hasBias) &&
+           x1OriginShapeLen == x1ScaleOriginShapeLen && x2OriginShapeLen == x2ScaleOriginShapeLen;
+}
+
 void AdaptiveSlidingWindowTiling::CalL1TilingDepthNotfullload(uint64_t leftL1Size)
 {
-    if (inputParams_.isMxPerGroup) {
+    if (inputParams_.isMxPerGroup || isA8W8GB()) {
         uint64_t baseASize = GetSizeWithDataType(basicTiling_.baseM * basicTiling_.baseK, inputParams_.aDtype);
         uint64_t baseBSize = GetSizeWithDataType(basicTiling_.baseN * basicTiling_.baseK, inputParams_.bDtype);
 
