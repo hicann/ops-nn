@@ -47,25 +47,70 @@
 
 ## 参数说明
 
-  - self（aclTensor*，计算输入）：公式中的`x`，Device侧的aclTensor。shape支持0-8维，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：数据类型支持FLOAT、FLOAT16。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16。
+<table style="undefined;table-layout: fixed; width: 1576px"><colgroup>
+  <col style="width: 170px">
+  <col style="width: 170px">
+  <col style="width: 312px">
+  <col style="width: 213px">
+  <col style="width: 100px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出/属性</th>
+      <th>描述</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>self</td>
+      <td>输入</td>
+      <td>公式中的x。</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>pScalar</td>
+      <td>输入</td>
+      <td>表示范数的类型，公式中的p。</td>
+      <td>FLOAT32</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>dim</td>
+      <td>输入</td>
+      <td>计算self范数的维度。</td>
+      <td>INT64</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>keepdim</td>
+      <td>输入</td>
+      <td>决定输出张量是否保留dim参数指定的轴。</td>
+      <td>BOOL </td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>relType</td>
+      <td>输入</td>
+      <td>预留参数，暂不支持使用。</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>out</td>
+      <td>输出</td>
+      <td>公式中的out。</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>ND</td>
+    </tr>
+  </tbody></table>
 
-  - pScalar（aclScalar*，计算输入）：表示范数的类型，公式中的`p`。支持1/2范数、无穷范数以及其他为FLOAT类型的范数计算，数据类型支持FLOAT。
-
-  - dim（aclIntArray*，计算输入）：计算self范数的维度，支持[-N, N-1]，且dims中的元素不能重复，N为self的维度，支持负数，数据类型支持INT。
-
-  - keepdim（bool，计算输入）：决定输出张量是否保留dim参数指定的轴，Host侧的bool常量。
-
-  - relType（aclDataType，计算输入）：预留参数，暂不支持使用。
-
-  - out（aclTensor*，计算输出）：Device侧的aclTensor。shape支持0-8维。若keepdim为true，除dim指定维度上的size为1以外，其余维度的shape需要与self保持一致；若keepdim为false，reduce轴的维度不保留，其余维度shape需要与self一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：数据类型支持FLOAT、FLOAT16。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16。
+  - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：数据类型不支持BFLOAT16。
 
 ## 约束说明
-
-默认非确定性计算，支持配置开启。
+无
 
 ## 调用示例
 

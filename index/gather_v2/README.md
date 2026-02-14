@@ -31,14 +31,11 @@
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1420px"><colgroup>
-  <col style="width: 171px">
-  <col style="width: 115px">
-  <col style="width: 220px">
-  <col style="width: 250px">
-  <col style="width: 177px">
-  <col style="width: 104px">
-  <col style="width: 238px">
-  <col style="width: 145px">
+  <col style="width: 215px">
+  <col style="width: 163px">
+  <col style="width: 287px">
+  <col style="width: 439px">
+  <col style="width: 135px">
   </colgroup>
   <thead>
       <tr>
@@ -102,3 +99,4 @@
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_gather_v2](./examples/test_aclnn_gather_v2.cpp) | 通过[aclnnGatherV2](./docs/aclnnGatherV2.md)接口方式调用GatherV2算子。 |
+| aclnn调用 | [test_aclnn_embedding_renorm](./examples/test_aclnn_embedding_renorm.cpp) | 通过[aclnnEmbeddingRenorm](./docs/aclnnEmbeddingRenorm.md)接口方式调用Renorm算子。 |
