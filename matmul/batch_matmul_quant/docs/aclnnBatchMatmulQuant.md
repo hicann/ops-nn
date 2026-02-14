@@ -4,6 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    ×     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
@@ -13,8 +14,8 @@
 
 ## 功能说明
 
-- 算子功能：
-实现输入Tensor的dtype是float16, 输出的dtype是int8的矩阵乘计算
+- 接口功能：
+实现输入Tensor的dtype是float16, 输出的dtype是int8的矩阵乘计算。
 
 - 计算公式：
 
@@ -24,7 +25,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnBatchMatmulQuantGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnBatchMatmulQuant”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 aclnnBatchMatmulQuantGetWorkspaceSize 接口获取入参并根据流程计算所需workspace大小，再调用 aclnnBatchMatmulQuant 接口执行计算。
 ```cpp
 aclnnStatus aclnnBatchMatmulQuantGetWorkspaceSize(
   const aclTensor* x1, 
@@ -48,6 +49,7 @@ aclnnStatus aclnnBatchMatmulQuant(
 ## aclnnBatchMatmulQuantGetWorkspaceSize
 
 - **参数说明：**
+
   <table style="undefined;table-layout: fixed; width: 1587px"><colgroup>
   <col style="width: 159px">
   <col style="width: 127px">
@@ -94,7 +96,7 @@ aclnnStatus aclnnBatchMatmulQuant(
       <td>bias</td>
       <td>输入</td>
       <td>公式中的输入bias。</td>
-      <td>shape的大小等于输出tensor(out)最后一个维度的大小，输入可以为空</td>
+      <td>shape的大小等于输出tensor(out)最后一个维度的大小，输入可以为空。</td>
       <td>FLOAT16</td>
       <td>-</td>
       <td>1</td>
@@ -103,9 +105,9 @@ aclnnStatus aclnnBatchMatmulQuant(
     <tr>
       <td>quantParam</td>
       <td>输入</td>
-      <td>硬件完成量化计算的量化参数，可以通过aclnnTransQuantParam接口获取。</td>
-      <td>shape的大小（即元素个数）需要满足以下场景中任意一种:<ul><li>shape的大小为1</li>
-      <li>shape的大小等于输出tensor(out)最后一个维度的大小向上对齐到16的倍数</li></ul></td>
+      <td>硬件完成量化计算的量化参数。</td>
+      <td>可以通过 <a href="../../quant/trans_quant_param/docs/aclnnTransQuantParam.md">aclnnTransQuantParam</a> 接口获取。shape的大小（即元素个数）需要满足以下场景中任意一种:<ul><li>shape的大小为1。</li>
+      <li>shape的大小等于输出tensor(out)最后一个维度的大小向上对齐到16的倍数。</li></ul></td>
       <td>UINT64</td>
       <td>NC1HWC0</td>
       <td>1</td>
@@ -134,7 +136,7 @@ aclnnStatus aclnnBatchMatmulQuant(
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>输出Tensor，是Device侧aclTensor。</td>
+      <td>输出Tensor。</td>
       <td>-</td>
       <td>INT8</td>
       <td>ND</td>
@@ -162,7 +164,9 @@ aclnnStatus aclnnBatchMatmulQuant(
       <td>-</td>
     </tr>
   </tbody></table>
+
 - **返回值：**
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
@@ -210,6 +214,7 @@ aclnnStatus aclnnBatchMatmulQuant(
 ## aclnnBatchMatmulQuant
 
 - **参数说明：**
+
   <table style="undefined;table-layout: fixed; width: 1000px"><colgroup>
   <col style="width: 230px">
   <col style="width: 150px">
@@ -244,15 +249,19 @@ aclnnStatus aclnnBatchMatmulQuant(
     </tr>
   </tbody>
   </table>
+
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性说明：
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnBatchMatmulQuant默认确定性实现。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：aclnnBatchMatmulQuant默认确定性实现。
+
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 ```Cpp
 #include <iostream>

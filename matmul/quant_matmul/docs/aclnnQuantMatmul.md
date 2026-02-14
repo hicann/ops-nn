@@ -15,9 +15,7 @@
 
 ## 功能说明
 
-- 算子功能：完成量化的矩阵乘计算，最小支持维度为2维，最大支持输入维度为3维。
-
-  相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。
+- 接口功能：完成量化的矩阵乘计算，最小支持维度为2维，最大支持输入维度为3维。相似接口有[aclnnMm](../../mat_mul_v3/docs/aclnnMm.md)（仅支持2维Tensor作为输入的矩阵乘）和[aclnnBatchMatMul](../../batch_mat_mul_v3/docs/aclnnBatchMatMul.md)（仅支持三维的矩阵乘，其中第一维是Batch维度）。
 
 - 计算公式：
 
@@ -26,7 +24,8 @@ out = (x1@x2 + bias) * deqScale
 $$
 
 ## 函数原型
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnQuantMatmulGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnQuantMatmul”接口执行计算。
+
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 aclnnQuantMatmulGetWorkspaceSize 接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用 aclnnQuantMatmul 接口执行计算。
 ```cpp
 aclnnStatus aclnnQuantMatmulGetWorkspaceSize(
   const aclTensor *x1, 
@@ -48,6 +47,7 @@ aclnnStatus aclnnQuantMatmul(
 ## aclnnQuantMatmulGetWorkspaceSize
 
 - **参数说明**
+
   <table style="undefined;table-layout: fixed; width: 1587px"><colgroup>
   <col style="width: 159px">
   <col style="width: 127px">
@@ -73,8 +73,8 @@ aclnnStatus aclnnQuantMatmul(
     <tr>
       <td>x1</td>
       <td>输入</td>
-      <td>Device侧的2维至3维aclTensor，维度与x2一致，不支持broadcast。</td>
-      <td>数据类型需要与x2满足<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a></td>
+      <td>公式中的输入x1。</td>
+      <td>维度与x2一致，不支持broadcast。数据类型需要与x2满足<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>。</td>
       <td>INT8</td>
       <td>ND</td>
       <td>2-3</td>
@@ -83,8 +83,8 @@ aclnnStatus aclnnQuantMatmul(
     <tr>
       <td>x2</td>
       <td>输入</td>
-      <td>Device侧的2维至3维aclTensor，维度与x1一致，不支持broadcast。</td>
-      <td>数据类型需要与x1满足<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a></td>
+      <td>公式中的输入x2。</td>
+      <td>维度与x1一致，不支持broadcast。数据类型需要与x1满足<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>。</td>
       <td>INT8</td>
       <td>ND</td>
       <td>2-3</td>
@@ -93,8 +93,8 @@ aclnnStatus aclnnQuantMatmul(
     <tr>
       <td>bias</td>
       <td>输入</td>
-      <td>Device侧的1维Tensor，shape支持一维(n, )，n与x2的n一致。公式输入bias。</td>
-      <td>量化特殊处理过程：biasINT32 = round(round(biasFLOAT16/deqScale) - offsetX * wINT8)</td>
+      <td>公式中的输入bias。</td>
+      <td>shape支持一维(n, )，n与x2的n一致。量化特殊处理过程：biasINT32 = round(round(biasFLOAT16/deqScale) - offsetX * wINT8)。</td>
       <td>INT32</td>
       <td>ND</td>
       <td>1</td>
@@ -103,7 +103,7 @@ aclnnStatus aclnnQuantMatmul(
     <tr>
       <td>deqScale</td>
       <td>输入</td>
-      <td>公式中的输入deqScale，量化参数</td>
+      <td>公式中的输入deqScale，量化参数。</td>
       <td>-</td>
       <td>float</td>
       <td>-</td>
@@ -113,7 +113,7 @@ aclnnStatus aclnnQuantMatmul(
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>Device侧的aclTensor，数据类型支持FLOAT16，Shape需要是x1与x2经过推导之后的Shape</td>
+      <td>公式中的输出out。</td>
       <td>-</td>
       <td>FLOAT16</td>
       <td>ND</td>
@@ -141,9 +141,11 @@ aclnnStatus aclnnQuantMatmul(
       <td>-</td>
     </tr>
   </tbody></table>
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed; width: 887px"><colgroup>
@@ -182,8 +184,11 @@ aclnnStatus aclnnQuantMatmul(
     </tr>
   </tbody>
   </table>
+
 ## aclnnQuantMatmul
+
 - **参数说明：**
+
   <table style="undefined;table-layout: fixed; width: 1000px"><colgroup>
   <col style="width: 230px">
   <col style="width: 150px">
@@ -218,12 +223,15 @@ aclnnStatus aclnnQuantMatmul(
     </tr>
   </tbody>
   </table>
+
 - **返回值：**
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性说明：
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnQuantMatmul默认确定性实现
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：aclnnQuantMatmul默认确定性实现。
 
 该接口迁移到aclnnQuantMatmulV4接口的方法：
 - 输入x1，x2，bias可以直接转为aclnnQuantMatmulV4接口中的x1，x2，bias。

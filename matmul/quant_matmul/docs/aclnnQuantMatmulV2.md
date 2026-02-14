@@ -16,7 +16,7 @@
 
 ## 功能说明
 
-- 算子功能：完成量化的矩阵乘计算，最大支持输入维度为3维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。
+- 接口功能：完成量化的矩阵乘计算，最大支持输入维度为3维。相似接口有[aclnnMm](../../mat_mul_v3/docs/aclnnMm.md)（仅支持2维Tensor作为输入的矩阵乘）和[aclnnBatchMatMul](../../batch_mat_mul_v3/docs/aclnnBatchMatMul.md)（仅支持三维的矩阵乘，其中第一维是Batch维度）。
 - 计算公式：
 
 $$
@@ -24,7 +24,8 @@ out = (x1@x2 + bias) * deqScale
 $$
 
 ## 函数原型
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnQuantMatmulV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnQuantMatmulV2”接口执行计算。
+
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 aclnnQuantMatmulV2GetWorkspaceSize 接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用 aclnnQuantMatmulV2 接口执行计算。
 ```cpp
 aclnnStatus aclnnQuantMatmulV2GetWorkspaceSize(
   const aclTensor *x1, 
@@ -48,6 +49,7 @@ aclnnStatus aclnnQuantMatmulV2(
 ## aclnnQuantMatmulV2GetWorkspaceSize
 
 - **参数说明：**
+
   <table style="undefined;table-layout: fixed; width: 1587px"><colgroup>
   <col style="width: 159px">
   <col style="width: 127px">
@@ -73,7 +75,7 @@ aclnnStatus aclnnQuantMatmulV2(
     <tr>
       <td>x1</td>
       <td>输入</td>
-      <td>公式中的输入x1，device侧的aclTensor。</td>
+      <td>公式中的输入x1。</td>
       <td>在adjX1为false情况下各个维度表示：（batch，m，k），在adjX1为true情况下各个维度表示：（batch，k，m），batch可不存在。</td>
       <td>INT8</td>
       <td>ND</td>
@@ -83,7 +85,7 @@ aclnnStatus aclnnQuantMatmulV2(
     <tr>
       <td>x2</td>
       <td>输入</td>
-      <td>公式中的输入x2，device侧的aclTensor。</td>
+      <td>公式中的输入x2。</td>
       <td>在adjX2为false情况下各个维度表示：（batch，k，n），在adjX2为true情况下各个维度表示：（batch，n，k），batch可不存在，其中k与x1的shape中的k一致。</td>
       <td>INT8</td>
       <td>ND</td>
@@ -93,7 +95,7 @@ aclnnStatus aclnnQuantMatmulV2(
     <tr>
       <td>bias</td>
       <td>输入</td>
-      <td>公式中的输入bias，device侧的aclTensor。</td>
+      <td>公式中的输入bias。</td>
       <td>shape是1维（n，），n与x2的n一致。</td>
       <td>INT32</td>
       <td>ND</td>
@@ -103,8 +105,8 @@ aclnnStatus aclnnQuantMatmulV2(
     <tr>
       <td>deqScale</td>
       <td>输入</td>
-      <td>表示量化参数，公式中的输入deqScale，device侧的aclTensor。</td>
-      <td>shape是1维（t，），t = align（n， 16）， 其中n与x2的n一致</td>
+      <td>表示量化参数，公式中的输入deqScale。</td>
+      <td>shape是1维（t，），t = align（n， 16）， 其中n与x2的n一致。</td>
       <td>UINT64</td>
       <td>ND</td>
       <td>1</td>
@@ -133,7 +135,7 @@ aclnnStatus aclnnQuantMatmulV2(
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>公式中的输出out，device侧的aclTensor。</td>
+      <td>公式中的输出out。</td>
       <td>（batch，m，n），batch可不存在，支持x1与x2的batch维度broadcast，输出batch与broadcast之后的batch一致，m、n分别与x1的m、x2的n一致。</td>
       <td>FLOAT16</td>
       <td>ND</td>
@@ -161,11 +163,12 @@ aclnnStatus aclnnQuantMatmulV2(
       <td>-</td>
     </tr>
   </tbody></table>
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-第一段接口完成入参校验，出现以下场景时报错：
+  第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed; width: 887px"><colgroup>
   <col style="width: 300px">
@@ -203,9 +206,11 @@ aclnnStatus aclnnQuantMatmulV2(
     </tr>
   </tbody>
   </table>
+
 ## aclnnQuantMatmulV2
 
 - **参数说明：**
+
   <table style="undefined;table-layout: fixed; width: 1000px"><colgroup>
   <col style="width: 230px">
   <col style="width: 150px">
@@ -240,13 +245,15 @@ aclnnStatus aclnnQuantMatmulV2(
     </tr>
   </tbody>
   </table>
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性说明：
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnQuantMatmulV2默认确定性实现。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：aclnnQuantMatmulV2默认确定性实现。
 
 该接口迁移到aclnnQuantMatmulV4接口的方法：
 - 输入x1，x2，bias，adjX1和adjX2可以直接转为aclnnQuantMatmulV4接口中的x1，x2，bias，transposeX1和transposeX2。
@@ -255,6 +262,7 @@ aclnnStatus aclnnQuantMatmulV2(
 - 接口参数设置为`aclnnQuantMatmulV4GetWorkspaceSize(x1, x2, scale, nullptr, nullptr, bias, adjX1, adjX2, out, workspaceSize, executor)`。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 ```Cpp
 #include <memory>

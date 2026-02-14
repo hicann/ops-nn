@@ -6,6 +6,7 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    ×     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √       |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |     ×     |
@@ -14,7 +15,7 @@
 
 ## 功能说明
 
-- 算子功能：伪量化用于对self * mat2（matmul/batchmatmul）中的mat2进行量化。
+- 接口功能：伪量化用于对self * mat2（matmul/batchmatmul）中的mat2进行量化。
 - 计算公式：
 
   $$
@@ -23,7 +24,7 @@
 
 ## 函数原型
 
-- [两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnWeightQuantBatchMatmulGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnWeightQuantBatchMatmul”接口执行计算。
+- [两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 aclnnWeightQuantBatchMatmulGetWorkspaceSize 接口获取入参并根据计算流程计算所需workspace大小，再调用 aclnnWeightQuantBatchMatmul 接口执行计算。
 ```cpp
 aclnnStatus aclnnWeightQuantBatchMatmulGetWorkspaceSize(
   const aclTensor *x1, 
@@ -53,6 +54,7 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
 ## aclnnWeightQuantBatchMatmulGetWorkspaceSize
 
 - **参数说明**
+
   <table style="undefined;table-layout: fixed; width: 1587px"><colgroup>
   <col style="width: 159px">
   <col style="width: 127px">
@@ -78,8 +80,8 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
     <tr>
       <td>x1</td>
       <td>输入</td>
-      <td>公式中的输入`self`</td>
-      <td>维度仅支持2维不支持batch轴，与x2需满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a></td>
+      <td>公式中的输入self。</td>
+      <td>维度仅支持2维不支持batch轴，与x2需满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</td>
       <td>FLOAT16</td>
       <td>ND</td>
       <td>2</td>
@@ -88,8 +90,8 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
     <tr>
       <td>x2</td>
       <td>输入</td>
-      <td>经处理能得到公式中的输入`mat2`</td>
-      <td>维度仅支持2维不支持batch轴，但与x1需满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a></td>
+      <td>经处理能得到公式中的输入mat2。</td>
+      <td>维度仅支持2维不支持batch轴，但与x1需满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</td>
       <td>INT8</td>
       <td>ND</td>
       <td>2</td>
@@ -98,7 +100,7 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
     <tr>
       <td>diagonalMatrix</td>
       <td>输入</td>
-      <td>对x2反量化得到公式中的输入`mat2`</td>
+      <td>对x2反量化得到公式中的输入mat2。</td>
       <td>shape为（32, 32），为单位矩阵，m > 64时不参与计算且可以为空。</td>
       <td>INT8</td>
       <td>ND</td>
@@ -108,7 +110,7 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
     <tr>
       <td>deqOffset</td>
       <td>输入</td>
-      <td>对x2反量化得到公式中的输入`mat2`，由addOffset、antiquantOffset、antiquantScale计算得到，计算方式见示例代码</td>
+      <td>对x2反量化得到公式中的输入mat2，由addOffset、antiquantOffset、antiquantScale计算得到，计算方式见示例代码。</td>
       <td>shape支持1或者n或者（1, 1）或者（1, n）或者（n, 1），需和x2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。m > 64时不参与计算且可以为空。</td>
       <td>INT32</td>
       <td>ND</td>
@@ -118,7 +120,7 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
     <tr>
       <td>deqScale</td>
       <td>输入</td>
-      <td>对x2反量化得到公式中的输入`mat2`，由接口aclnnTransQuantParam计算得到，计算方式见示例代码</td>
+      <td>对x2反量化得到公式中的输入mat2，由接口aclnnTransQuantParam计算得到，计算方式见示例代码。</td>
       <td>shape支持 1 或者 n 或者（1, 1） 或者（1, n） 或者（n, 1），需和x2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。m > 64时不参与计算且可以为空。</td>
       <td>UINT64</td>
       <td>ND</td>
@@ -128,7 +130,7 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
     <tr>
       <td>addOffset</td>
       <td>输入</td>
-      <td>对x2反量化得到公式中的输入`mat2`</td>
+      <td>对x2反量化得到公式中的输入mat2。</td>
       <td>shape支持 1 或者 n 或者（1, 1）或者（1, n）或者（n, 1），需和x2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。m < 64时不参与计算, 任意情况都可以为空。</td>
       <td>FLOAT16</td>
       <td>ND</td>
@@ -138,7 +140,7 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
     <tr>
       <td>mulScale</td>
       <td>输入</td>
-      <td>对x2反量化得到公式中的输入`mat2`</td>
+      <td>对x2反量化得到公式中的输入mat2。</td>
       <td>shape支持 1 或者 n 或者（1, 1）或者（1, n）或者（n, 1），需和x2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。m < 64时不参与计算, 任意情况都可以为空。</td>
       <td>FLOAT16</td>
       <td>ND</td>
@@ -148,7 +150,7 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
     <tr>
       <td>bias</td>
       <td>输入</td>
-      <td>公式中的输入`bias`</td>
+      <td>公式中的输入bias。</td>
       <td>维度为1维且值等于N，可以为空。</td>
       <td>FLOAT</td>
       <td>ND</td>
@@ -178,7 +180,7 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
     <tr>
       <td>antiquantScale</td>
       <td>输入</td>
-      <td>对x2反量化得到公式中的输入`mat2`。</td>
+      <td>对x2反量化得到公式中的输入mat2。</td>
       <td>-</td>
       <td>float</td>
       <td>-</td>
@@ -188,7 +190,7 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
     <tr>
       <td>antiquantOffset</td>
       <td>输入</td>
-      <td>对x2反量化得到公式中的输入`mat2`。</td>
+      <td>对x2反量化得到公式中的输入mat2。</td>
       <td>-</td>
       <td>float</td>
       <td>-</td>
@@ -198,7 +200,7 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>公式中的`result`</td>
+      <td>公式中的result。</td>
       <td>数据类型需要是x1与x2推导之后可转换的数据类型，shape需要是x1与x2 broadcast之后的shape。</td>
       <td>FLOAT16,INT8</td>
       <td>ND</td>
@@ -226,11 +228,13 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
       <td>-</td>
     </tr>
   </tbody></table>
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed; width: 887px"><colgroup>
   <col style="width: 300px">
   <col style="width: 200px">
@@ -259,6 +263,7 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
 ## aclnnWeightQuantBatchMatmul
 
 - **参数说明**
+
   <table style="undefined;table-layout: fixed; width: 1000px"><colgroup>
   <col style="width: 230px">
   <col style="width: 150px">
@@ -300,8 +305,9 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
 
 
 ## 约束说明
+
 - 确定性说明：
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnWeightQuantBatchMatmul默认确定性实现。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：aclnnWeightQuantBatchMatmul默认确定性实现。
 
 ## 调用示例
 
