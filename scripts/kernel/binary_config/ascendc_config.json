@@ -303,7 +303,7 @@
     {"name":"MoeTokenUnpermuteGrad", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
     {"name":"MoeTokenUnpermuteWithEpGrad", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
     {"name":"MoeTokenUnpermuteWithRoutingMapGrad", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
-    {"name":"CrossV2", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
+    {"name":"CrossV2", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync" : true},
     {"name":"CrossEntropyLossGrad", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync" : true, "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"ApplyFusedEmaAdam", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
     {"name":"MatmulAllReduce", "compute_units": ["ascend910b", "ascend310p", "ascend950"], "auto_sync" : false, "compile_options": {"ascend310p":["-mllvm -cce-aicore-jump-expand=true"]}},
