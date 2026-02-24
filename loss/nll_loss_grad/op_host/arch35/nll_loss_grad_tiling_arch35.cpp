@@ -128,7 +128,7 @@ ge::graphStatus NLLLossGradSimtTiling::ProcessAttributesInfo() {
         return ge::GRAPH_FAILED;
     }
 
-    auto* ignoreIndex = attrs->GetAttrPointer<int32_t>(1);
+    auto* ignoreIndex = attrs->GetAttrPointer<int64_t>(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, ignoreIndex);
     tilingData_.set_ignoreIdx(*ignoreIndex);
     return ge::GRAPH_SUCCESS;
