@@ -887,20 +887,20 @@ bool Conv3dTilingEngine::CheckPointWiseParams()
 
     if (attrInfo_.groups != 1) {
         OP_LOGE(logTag_.c_str(),
-                "Conv3D PointWise AscendC: input attr groups: %u, which must = 1.", attrInfo_.groups);
+                "Conv3D PointWise AscendC: input attr groups: %ld, which must = 1.", attrInfo_.groups);
         return false;
     }
 
     if (attrInfo_.strideD != 1 || attrInfo_.strideH != 1 || attrInfo_.strideW != 1) {
         OP_LOGE(logTag_.c_str(),
-                "Conv3D PointWise AscendC: input attr stride illegal: strideD: %u, strideH: %u, strideW: %u, which must = 1.",
+                "Conv3D PointWise AscendC: input attr stride illegal: strideD: %ld, strideH: %ld, strideW: %ld, which must = 1.",
                 attrInfo_.strideD, attrInfo_.strideH, attrInfo_.strideW);
         return false;
     }
 
     if (attrInfo_.dilationD != 1 || attrInfo_.dilationH != 1 || attrInfo_.dilationW != 1) {
         OP_LOGE(logTag_.c_str(),
-                "Conv3D PointWise AscendC: input attr dilation illegal: dilationD: %u, dilationH: %u, dilationW: %u, which must = 1.",
+                "Conv3D PointWise AscendC: input attr dilation illegal: dilationD: %ld, dilationH: %ld, dilationW: %ld, which must = 1.",
                 attrInfo_.dilationD, attrInfo_.dilationH, attrInfo_.dilationW);
         return false;
     }
@@ -909,7 +909,7 @@ bool Conv3dTilingEngine::CheckPointWiseParams()
         attrInfo_.padTop != 0 || attrInfo_.padBottom != 0 ||
         attrInfo_.padLeft != 0 || attrInfo_.padRight != 0) {
         OP_LOGE(logTag_.c_str(),
-                "Conv3D PointWise AscendC: input attr pads illegal: padh: %u, padt: %u, padu: %u, padd: %u, padl: %u, padr: %u, which must = 0.",
+                "Conv3D PointWise AscendC: input attr pads illegal: padh: %ld, padt: %ld, padu: %ld, padd: %ld, padl: %ld, padr: %ld, which must = 0.",
                 attrInfo_.padHead, attrInfo_.padTail, attrInfo_.padTop, attrInfo_.padBottom,
                 attrInfo_.padLeft, attrInfo_.padRight);
         return false;
