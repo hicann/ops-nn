@@ -12,10 +12,9 @@
 set -e
 
 main() {
-  echo "[INFO]excute file: $0"
   if [ $# -lt 2 ]; then
-    echo "[ERROR]input error"
-    echo "[ERROR]bash $0 {out_path} {task_id}"
+    echo "[ERROR] input error"
+    echo "[ERROR] bash $0 {out_path} {task_id}"
     exit 1
   fi
   local output_path="$1"
@@ -33,14 +32,14 @@ main() {
   if [[ -f "${opc_cmd_file}" && "$idx" =~ ^[0-9]+$ && "$idx" -gt 0 ]]; then
     total_lines=$(wc -l < "${opc_cmd_file}")
     if [ "$idx" -gt "$total_lines" ]; then
-      echo "[ERROR]task $idx is bigger than file:$opc_cmd_file lines: $total_lines, please check."
+      echo "[ERROR] task $idx is bigger than file:$opc_cmd_file lines: $total_lines, please check."
       exit 1
     fi
     # step1: do compile kernel
     set +e
     cmd_task=$(sed -n ''${idx}'p;' ${opc_cmd_file})
     key=$(echo "${cmd_task}" | grep -oP '\w*\.json_\d*')
-    echo "[INFO]exe_task: begin to build kernel with cmd: ${cmd_task}."
+    echo "[INFO] exe_task: begin to build kernel with cmd: ${cmd_task}"
     start_time=$(date +%s)
 
     log_file="${output_path}/build_logs/${key}.log"
@@ -54,19 +53,19 @@ main() {
     exe_time=$((end_time - start_time))
     if [ ${compile_rc} -ne 0 ]; then
       if [ ${compile_rc} -eq 124 ]; then
-        echo "[ERROR]exe_task: build kernel TIMEOUT, op name: ${key}. Run this command again for debug:"
-        echo "[ERROR]${cmd_task}"
+        echo "[ERROR] exe_task: build kernel TIMEOUT, op name: ${key}. Run this command again for debug:"
+        echo "[ERROR] ${cmd_task}"
       else
-        echo "[ERROR]exe_task: build kernel FAILED, op name: ${key}. Run this command again for debug:"
-        echo "[ERROR]${cmd_task}"
+        echo "[ERROR] exe_task: build kernel FAILED, op name: ${key}. Run this command again for debug:"
+        echo "[ERROR] ${cmd_task}"
       fi
       cat ${log_file}
       exit ${compile_rc}
     fi
     end_timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     echo "[$end_timestamp] exe_time: $exe_time s" >> "$log_file"
-    echo "[INFO]exe_task: end to build kernel: ${key} --exe_time=${exe_time}"
+    echo "[INFO] exe_task: end to build kernel: ${key} --exe_time=${exe_time}"
   fi
 }
 set -o pipefail
-main "$@" | gawk '{print strftime("[%Y-%m-%d %H:%M:%S]"), $0}'
+main "$@"

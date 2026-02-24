@@ -15,10 +15,10 @@ FILE_NAME="$(basename $0)"
 source build_env.sh
 
 main() {
-  echo "[INFO]excute file: $0"
+  echo "[INFO] excute file: $0"
   if [ $# -lt 1 ]; then
-    echo "[ERROR]input error"
-    echo "[ERROR]bash $0 {soc_version}"
+    echo "[ERROR] input error"
+    echo "[ERROR] bash $0 {soc_version}"
     exit 1
   fi
   local workdir=$(
@@ -41,4 +41,4 @@ main() {
   exit 0
 }
 set -o pipefail
-main "$@" | gawk '{print strftime("[%Y-%m-%d %H:%M:%S]"), $0}'
+main "$@"

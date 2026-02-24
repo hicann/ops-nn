@@ -15,7 +15,7 @@ SCRIPT_NAME_OF_GEN_OPCINFO="gen_opcinfo_from_opinfo.py"
 FILE_NAME="$(basename $0)"
 
 main() {
-  echo "[INFO]excute file: $0"
+  echo "[INFO] excute file: $0"
   if [ $# -ne 2 ]; then
     echo "[ERROR] ${FILE_NAME}: input error"
     echo "[ERROR] bash $0 soc_version out_opcinfo_csv_file"
@@ -23,12 +23,12 @@ main() {
   fi
   local soc_version=$1
   local out_opcinfo_csv_file=$2
-  echo "[INFO] ${FILE_NAME}: arg1: ${soc_version}"
-  echo "[INFO] ${FILE_NAME}: arg2: ${out_opcinfo_csv_file}"
+  echo "[INFO] ${FILE_NAME}: soc_version: ${soc_version}"
+  echo "[INFO] ${FILE_NAME}: out_opcinfo_csv_file: ${out_opcinfo_csv_file}"
   # check
   local output_file_extrnsion=${out_opcinfo_csv_file##*.}
   if [ "${output_file_extrnsion}" != "csv" ]; then
-    echo "[ERROR]the output must be .csv, but is ${output_file_extrnsion}"
+    echo "[ERROR] the output must be .csv, but is ${output_file_extrnsion}"
     exit 1
   fi
   local soc_version_lower=${soc_version,,}
@@ -55,7 +55,7 @@ main() {
   local gen_cmd="bash ${script_file0} ${soc_version} ${workspace_json_file}"
   ${gen_cmd}
   if [ $? -ne 0 ]; then
-    echo "[ERROR]exe failed"
+    echo "[ERROR] exe failed"
     exit 1
   fi
 
@@ -73,4 +73,4 @@ main() {
   ${parer_cmd}
 }
 set -o pipefail
-main "$@" | gawk '{print strftime("[%Y-%m-%d %H:%M:%S]"), $0}'
+main "$@"

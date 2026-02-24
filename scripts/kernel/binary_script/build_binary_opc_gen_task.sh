@@ -91,10 +91,10 @@ function get_simplified_key_config_file() {
 }
 
 main() {
-  echo "[INFO]excute file: $0"
+  echo "[INFO] excute file: $0"
   if [ $# -lt 7 ]; then
-    echo "[ERROR]input error"
-    echo "[ERROR]bash $0 {op_type} {soc_version} {output_path} {task_path} {enable_debug} {enable_oom} {enable_dump_cce}"
+    echo "[ERROR] input error"
+    echo "[ERROR] bash $0 {op_type} {soc_version} {output_path} {task_path} {enable_debug} {enable_oom} {enable_dump_cce}"
     exit 1
   fi
   local workdir=$(

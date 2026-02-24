@@ -12,10 +12,10 @@
 set -e
 
 main() {
-  echo "[INFO]excute file: $0"
+  echo "[INFO] excute file: $0"
   if [ $# -lt 1 ]; then
-    echo "[ERROR]input error"
-    echo "[ERROR]bash $0 {out_path}"
+    echo "[ERROR] input error"
+    echo "[ERROR] bash $0 {out_path}"
     exit 1
   fi
   local output_path="$1"

@@ -12,10 +12,10 @@
 source get_threadnum_with_op.sh
 
 main() {
-  echo "[INFO]excute file: $0"
+  echo "[INFO] excute file: $0"
   if test $# -lt 3; then
-    echo "[ERROR]input error"
-    echo "[ERROR]bash $0 {op_type} {soc_version} {output_path} {opc_info_csv}(optional)"
+    echo "[ERROR] input error"
+    echo "[ERROR] bash $0 {op_type} {soc_version} {output_path} {opc_info_csv}(optional)"
     exit 1
   fi
   local op_type=$1

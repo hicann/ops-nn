@@ -13,7 +13,7 @@ set -e
 FILE_NAME="$(basename $0)"
 
 main() {
-  echo "[INFO]excute file: $0"
+  echo "[INFO] excute file: $0"
   if [ $# != 2 ]; then
     echo "[ERROR] ${FILE_NAME}:input error"
     echo "[ERROR] bash $0 soc_version output_json_file"
@@ -21,8 +21,8 @@ main() {
   fi
   soc_version=$1
   output_file=$2
-  echo "[INFO] ${FILE_NAME}: arg1: ${soc_version}"
-  echo "[INFO] ${FILE_NAME}: arg2: ${output_file}"
+  echo "[INFO] ${FILE_NAME}: soc_version: ${soc_version}"
+  echo "[INFO] ${FILE_NAME}: output_file: ${output_file}"
   # check
   local output_file_suffix=${output_file##*.}
   if [ "${output_file_suffix}" != "json" ]; then
@@ -37,7 +37,7 @@ main() {
   local topdir=$(readlink -f ${workdir}/../../..)
   local binary_config_dir=${topdir}/build/tbe/config
   ini_file="${binary_config_dir}/aic-${soc_version_lower}-ops-info.ini"  # modify ini path
-  echo "[INFO]op ini path: ${ini_file}"
+  echo "[INFO] op ini path: ${ini_file}"
   if [ ! -f "${ini_file}" ]; then
     echo "[ERROR] ${FILE_NAME}: the ops ini file in env is not exited, return fail"
     exit 1
@@ -53,7 +53,7 @@ main() {
     python_arg="python3"
   fi
   parer_cmd="${python_arg} ${parer_python_file} ${ini_file} ${output_file}"
-  echo "[INFO]parser cmd: ${parer_cmd}"
+  echo "[INFO] parser cmd: ${parer_cmd}"
   ${parer_cmd}
 }
 set -o pipefail
