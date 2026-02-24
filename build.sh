@@ -569,7 +569,7 @@ make_clean_all() {
 }
 
 checkopts() {
-  THREAD_NUM=$(awk '/^processor/ {count++} END {print (count > 32) ? 32 : count}' /proc/cpuinfo)
+  THREAD_NUM=$(grep -c ^processor /proc/cpuinfo)
   VERBOSE=""
   BUILD_MODE=""
   COMPILED_OPS=""
