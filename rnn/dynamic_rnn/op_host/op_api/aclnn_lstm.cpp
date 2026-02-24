@@ -820,7 +820,7 @@ static aclnnStatus CheckParamsValid(const LstmDataParamsIn& inputs, const LstmDa
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     
     // dtype校验
-    CheckDtypes(inputs, outputs, info);
+    ret = CheckDtypes(inputs, outputs, info);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     return ACLNN_SUCCESS;
