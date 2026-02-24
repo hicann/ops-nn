@@ -277,8 +277,7 @@ ge::graphStatus QuantBatchMatmulInplaceAddTiling::GetShapeAttrsInfo()
 uint64_t QuantBatchMatmulInplaceAddTiling::GetTilingKey() const
 {
     return GET_TPL_TILING_KEY(
-        static_cast<uint64_t>(inputParams_.transA), static_cast<uint64_t>(inputParams_.transB), GetBiasMode(),
-        GetKernelType(), USE_BASIC_API);
+        static_cast<uint64_t>(inputParams_.transA), static_cast<uint64_t>(inputParams_.transB), GetKernelType());
 }
 
 REGISTER_TILING_TEMPLATE("QuantBatchMatmulInplaceAdd", QuantBatchMatmulInplaceAddTiling, 0);
@@ -293,7 +292,8 @@ static ge::graphStatus QuantBatchMatmulInplaceAddTilingFunc(gert::TilingContext*
         OP_LOGD("QuantBatchMatmulInplaceAddTilingFunc", "Using the tiling strategy in the mx quant.");
         return TilingRegistry::GetInstance().DoTilingImpl(context, registerList);
     } else {
-        OP_LOGD("QuantBatchMatmulInplaceAddTilingFunc", "Do op tiling failed, now only support 950.");
+        OP_LOGD("QuantBatchMatmulInplaceAddTilingFunc",
+                "Do op tiling failed, only supports on Ascend 950PR/Ascend 950DT for now.");
         return ge::GRAPH_FAILED;
     }
 }

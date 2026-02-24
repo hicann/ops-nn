@@ -155,13 +155,13 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::Run(const 
 
     if (params.problemShape.b == 1) {
         ProcessSingleBatch(params, bs, 0, true);
+        if constexpr (isAtomicAdd) {
+ 	        AscendC::SetAtomicNone();
+ 	    }
         return;
     }
 
     ProcessWithBatch(params, bs);
-    if constexpr (isAtomicAdd) {
-        AscendC::SetAtomicNone();
-    }
 }
 
 QBMM_MX_KERNEL_CLASS_TEM_PARAMS
