@@ -457,6 +457,14 @@ aclnnStatus aclnnConvTbcBackward(
         </ul>
      </td>
    </tr>
+   <tr>
+     <th scope="row">其他约束</th>
+     <td>
+        <ul>padding区域梯度的计算行为取决于输入shape，根据算子优化策略的不同，padding区域梯度可能直接置0。</ul>
+     </td>
+     <td>-</td>
+     <td>-</td>
+   </tr>
    </tbody>
 </table>
 
