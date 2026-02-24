@@ -24,7 +24,7 @@ if(UT_TEST_ALL OR OP_HOST_UT OR OP_GRAPH_UT)
         set(OPHOST_INFER_OBJ_SRCS $<TARGET_OBJECTS:${OPHOST_NAME}_infer_obj>)
     else()
         message(WARNING "Infershape file Not Found.")
-        set(OPHOST_INFER_OBJ_SRCS "${CMAKE_SOURCE_DIR}/tests/ut/op_api/empty_runtime.cpp")
+        set(OPHOST_INFER_OBJ_SRCS "${CMAKE_SOURCE_DIR}/tests/ut/empty.cpp")
     endif()
     add_library(ophost_${PKG_NAME}_ut SHARED
         ${OPHOST_INFER_OBJ_SRCS}

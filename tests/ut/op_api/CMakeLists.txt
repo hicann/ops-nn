@@ -29,7 +29,7 @@ if(UT_TEST_ALL OR OP_API_UT)
           $<$<TARGET_EXISTS:${OPHOST_NAME}_opapi_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_opapi_obj>>
           $<$<TARGET_EXISTS:opbuild_gen_aclnn_all>:$<TARGET_OBJECTS:opbuild_gen_aclnn_all>>
           )
-  target_sources(${OPHOST_NAME}_opapi PRIVATE empty_runtime.cpp)
+  target_sources(${OPHOST_NAME}_opapi PRIVATE ${CMAKE_SOURCE_DIR}/tests/ut/empty.cpp)
   target_link_libraries(${OPHOST_NAME}_opapi PRIVATE
           $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
           opapi_math_stub
