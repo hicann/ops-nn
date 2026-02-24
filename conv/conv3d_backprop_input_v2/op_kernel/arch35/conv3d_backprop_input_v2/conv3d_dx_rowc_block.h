@@ -264,7 +264,6 @@ protected:
                     } else if (this->nCoreIdx_ > this->nTailCnt_ - 1) {
                         continue;
                     }
-
                 }
             }
             this->dedx_.SetSingleShape(mCoreUse, coutCoreUse, nCoreUse, dinCoreUse);

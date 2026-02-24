@@ -2531,9 +2531,7 @@ static aclnnStatus CalculateConvolutionBackward(ConvolutionBackwardInputTensor &
                                                 ConvolutionBackwardOutput &outputTensor,
                                                 ConvolutionBackwardParams &params, aclOpExecutor *executor) {
   ConvolutionBackwardResult resultTensor = {outputTensor.gradInput, outputTensor.gradWeight, outputTensor.gradBias};
-  auto inputDim = inputTensor.input->GetViewShape().GetDimNum();
-
-  // inputDim 为 3 时，进行1D卷积反向
+  auto inputDim = inputTensor.input->GetViewShape().GetDimNum(); // inputDim 为 3 时，进行1D卷积反向
   if (inputDim == CONV1DINPUTDIM) {
     if (Ops::NN::AclnnUtil::IsRegbase()) {
       auto ret = CheckCubeMathTypeFor3D(inputTensor, params);
@@ -2548,8 +2546,7 @@ static aclnnStatus CalculateConvolutionBackward(ConvolutionBackwardInputTensor &
       auto ret = CalculateConv1DTransposeBackward(inputTensor, resultTensor, params, executor);
       CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
     }
-    // inputDim 为 4 时，非ASCEND950平台进行2D卷积反向
-  } else if (inputDim == CONV2DINPUTDIM) {
+  } else if (inputDim == CONV2DINPUTDIM) { // inputDim 为 4 时，非ASCEND950平台进行2D卷积反向
     auto ret = CalculateConv2DBp(inputTensor, resultTensor, params, executor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
   } else if (inputDim == CONV3DINPUTDIM) {

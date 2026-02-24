@@ -568,7 +568,6 @@ static __aicore__ inline void L0CDeQue(Intf *self, LocalTensor<typename Intf::L0
     } else {
         useC1Buf = self->ctx.l0cPong_.template DeQue<typename Intf::L0cT>();
     }
-    
 }
 
 template <class Intf>

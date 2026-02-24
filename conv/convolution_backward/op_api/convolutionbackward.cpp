@@ -1977,29 +1977,40 @@ const aclTensor *Conv3DBackpropFilter(ConvolutionBackwardInputTensor &inputTenso
 OP_TYPE_REGISTER(Conv3DBackpropInput);
 OP_TYPE_REGISTER(Conv3DBackpropInputV2);
 
-static bool CheckN2HAttrAvailable(aclIntArray *stride5, aclIntArray *dilation5, aclIntArray *pad6) {
-    if (stride5->Size() == CONV3D_DIM) {
-        auto strideData = stride5->GetData();
-        auto strideD = strideData[D_DIM_NCDHW_INDEX];
-        auto strideH = strideData[H_DIM_NCDHW_INDEX];
-        auto strideW = strideData[W_DIM_NCDHW_INDEX];
-        if (strideD != 1 || strideH != 1 || strideW < 1 || strideW > STRIDE_TRANSPOSE_N2H_RULE_MAX) {
-            return false;
-        }
-    }
-    auto padData = pad6->GetData();
-    for (uint64_t i = 0; i < pad6->Size(); i++) {
-        if (padData[i] != 0) {
-            return false;
-        }
-    }
-    auto dilationData = dilation5->GetData();
-    for (uint64_t i = 0; i < dilation5->Size(); i++) {
-        if (dilationData[i] != 1) {
-            return false;
-        }
-    }
-    return true;
+static bool CheckN2HAttrAvailable(const aclIntArray *stride5, aclIntArray *dilation5, aclIntArray *pad6) {
+  if (stride5 == nullptr) {
+    return false;
+  }
+  if (stride5->Size() == CONV3D_DIM) {
+      auto strideData = stride5->GetData();
+      auto strideD = strideData[D_DIM_NCDHW_INDEX];
+      auto strideH = strideData[H_DIM_NCDHW_INDEX];
+      auto strideW = strideData[W_DIM_NCDHW_INDEX];
+      if (strideD != 1 || strideH != 1 || strideW < 1 || strideW > STRIDE_TRANSPOSE_N2H_RULE_MAX) {
+          return false;
+      }
+  }
+
+  if (pad6 == nullptr) {
+    return false;
+  }
+  auto padData = pad6->GetData();
+  for (uint64_t i = 0; i < pad6->Size(); i++) {
+      if (padData[i] != 0) {
+          return false;
+      }
+  }
+
+  if (dilation5 == nullptr) {
+    return false;
+  }
+  auto dilationData = dilation5->GetData();
+  for (uint64_t i = 0; i < dilation5->Size(); i++) {
+      if (dilationData[i] != 1) {
+          return false;
+      }
+  }
+  return true;
 }
 
 static bool CheckN2HAttrCriteria(int64_t wi, int64_t cin) {
@@ -2113,7 +2124,7 @@ static aclnnStatus Conv3DBackpropInputWithFlag(const aclTensor *input, const acl
 
   ConvBackpropParams params = {input, weight, outBackprop, stride, padding, dilation, groups};
   bool useV2Flag = IsConv3DBackpropInputV2(params);
-  if (useV2Flag && !useHf32Flag && weight->GetDataType() != DataType::DT_FLOAT && (!Ops::NN::AclnnUtil::IsRegbase())) {
+  if (useV2Flag && useHf32Flag == 0x0 && weight->GetDataType() != DataType::DT_FLOAT && (!Ops::NN::AclnnUtil::IsRegbase())) {
     output->SetStorageFormat(op::Format::FORMAT_NCDHW);
   }
   auto inputSize = GetOutputSize(input, executor);
