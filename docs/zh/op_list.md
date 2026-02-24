@@ -306,7 +306,7 @@
   </tr>
   <tr>
     <td>activation</td>
-    <td><a href="../../activation/logsoftmax_grad/README.md">logsoftmax_grad</a></td>
+    <td><a href="../../activation/log_softmax_grad/README.md">logsoftmax_grad</a></td>
     <td>✗</td>
     <td>✓</td>
     <td>✓</td>
@@ -316,7 +316,7 @@
   </tr>
   <tr>
     <td>activation</td>
-    <td><a href="../../activation/logsoftmax_v2/README.md">logsoftmax_v2</a></td>
+    <td><a href="../../activation/log_softmax_v2/README.md">logsoftmax_v2</a></td>
     <td>✗</td>
     <td>✓</td>
     <td>✓</td>

@@ -255,7 +255,7 @@
 | [aclnnLogSigmoidBackward](../../activation/logsigmoid_grad/docs/aclnnLogSigmoidBackward.md) |aclnnLogSigmoid的反向传播，根据上一层传播的梯度与LogSigmoid正向输入计算其梯度输入。|默认确定性实现|
 | [aclnnLogSigmoidForward](../../activation/logsigmoid/docs/aclnnLogSigmoidForward.md) |对输入张量逐元素实现LogSigmoid运算。|默认确定性实现|
 | [aclnnLogSoftmax](../../activation/log_softmax_v2/docs/aclnnLogSoftmax.md) |对输入张量计算logsoftmax值。|默认确定性实现|
-| [aclnnLogSoftmaxBackward](../../activation/logsoftmax_grad/docs/aclnnLogSoftmaxBackward.md) |完成aclnnLogSoftmax的反向传播。|默认确定性实现|
+| [aclnnLogSoftmaxBackward](../../activation/log_softmax_grad/docs/aclnnLogSoftmaxBackward.md) |完成aclnnLogSoftmax的反向传播。|默认确定性实现|
 | [aclnnMaskedSoftmaxWithRelPosBias](../../norm/masked_softmax_with_rel_pos_bias/docs/aclnnMaskedSoftmaxWithRelPosBias.md) |替换在swinTransformer中使用window attention计算softmax的部分。|默认确定性实现|
 | [aclnnMatmul](../../matmul/mat_mul_v3/docs/aclnnMatmul.md) |完成1到6维张量self与张量mat2的矩阵乘计算。|默认确定性实现|
 | [aclnnMatmulWeightNz](../../matmul/mat_mul_v3/docs/aclnnMatmulWeightNz.md) |完成张量self与张量mat2的矩阵乘计算，mat2仅支持昇腾亲和数据排布格式。|默认确定性实现|

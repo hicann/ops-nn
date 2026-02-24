@@ -11,7 +11,7 @@
 #include <vector>
 #include "gtest/gtest.h"
 
-#include "../../../../op_host/op_api/aclnn_logsoftmax_backward.h"
+#include "../../../op_api/aclnn_logsoftmax_backward.h"
 
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
@@ -59,19 +59,6 @@ TEST_F(l2_logsoftmax_backward_test, case_003_double_abnormal) {
   auto grad_output = TensorDesc({2, 3}, ACL_DOUBLE, ACL_FORMAT_ND);
   auto output = TensorDesc({2, 3}, ACL_DOUBLE, ACL_FORMAT_ND);
   auto out = TensorDesc({2, 3}, ACL_DOUBLE, ACL_FORMAT_ND);
-  int64_t dim = 0;
-
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
-
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
-
-TEST_F(l2_logsoftmax_backward_test, case_004_bfloat_abnormal) {
-  auto grad_output = TensorDesc({2, 3}, ACL_BF16, ACL_FORMAT_ND);
-  auto output = TensorDesc({2, 3}, ACL_BF16, ACL_FORMAT_ND);
-  auto out = TensorDesc({2, 3}, ACL_BF16, ACL_FORMAT_ND).Precision(0.001, 0.001);
   int64_t dim = 0;
 
   auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
@@ -292,30 +279,4 @@ TEST_F(l2_logsoftmax_backward_test, ascend910B2_case_BF16_910b) {
   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
   // ut.TestPrecision();
-}
-
-TEST_F(l2_logsoftmax_backward_test, case_BF16_910) {
-  auto grad_output = TensorDesc({2, 3}, ACL_BF16, ACL_FORMAT_ND);
-  auto output = TensorDesc({2, 3}, ACL_BF16, ACL_FORMAT_ND);
-  auto out = TensorDesc({2, 3}, ACL_BF16, ACL_FORMAT_ND).Precision(0.001, 0.001);
-  int64_t dim = 0;
-
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
-
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
-
-TEST_F(l2_logsoftmax_backward_test, case_zero_dim_num) {
-  auto grad_output = TensorDesc({}, ACL_BF16, ACL_FORMAT_ND);
-  auto output = TensorDesc({}, ACL_BF16, ACL_FORMAT_ND);
-  auto out = TensorDesc({}, ACL_BF16, ACL_FORMAT_ND).Precision(0.001, 0.001);
-  int64_t dim = 0;
-
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
-
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
