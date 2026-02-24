@@ -788,6 +788,7 @@ const aclTensor* ExecBatchMatmulOpWithBiasAndAttrs(
         // 刷新oriShape
         mat2Cast = executor->CreateView(
             mat2, mat2->GetViewShape(), mat2->GetStorageShape(), mat2->GetViewStrides(), mat2->GetViewOffset());
+        CHECK_RET(mat2Cast != nullptr, nullptr);
         mat2Cast = SetTensorToNDFormat(mat2Cast);
     } else {
         mat2Cast = l0op::Cast(mat2, matmulOpInfo.support_info.mat2_dtype, executor);
@@ -1048,6 +1049,7 @@ const aclTensor* ExecBatchMatmulOpWithBiasAndAttrsV2(
         // 刷新oriShape
         mat2Cast = executor->CreateView(
             mat2, mat2->GetViewShape(), mat2->GetStorageShape(), mat2->GetViewStrides(), mat2->GetViewOffset());
+        CHECK_RET(mat2Cast != nullptr, nullptr);
         mat2Cast = SetTensorToNDFormat(mat2Cast);
     } else {
         mat2Cast = l0op::Cast(mat2, matmulOpInfo.support_info.mat2_dtype, executor);
@@ -1169,6 +1171,7 @@ const aclTensor* ExecFusedmmOp(
     mat2Cast = executor->CreateView(
         contiguousMat2, contiguousMat2->GetViewShape(), contiguousMat2->GetStorageShape(),
         contiguousMat2->GetViewStrides(), contiguousMat2->GetViewOffset());
+    CHECK_RET(mat2Cast != nullptr, nullptr);
     mat2Cast = SetTensorToNDFormat(mat2Cast);
 
     // 处理self
