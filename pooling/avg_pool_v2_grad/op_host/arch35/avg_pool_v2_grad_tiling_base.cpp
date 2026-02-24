@@ -277,10 +277,6 @@ static ge::graphStatus GetShapeAndDtype(gert::TilingContext* context, const gert
         inputData.inputFormat = ge::Format::FORMAT_NCHW;
     } else if (inputFormatStr == "NHWC") {
         inputData.inputFormat = ge::Format::FORMAT_NHWC;
-    } else if (shapeDim == CHW_DIMS) {
-        commInfo.cDim = AVG_POOL_GRAD_DIM_ZERO;
-        commInfo.hDim = AVG_POOL_GRAD_DIM_ONE;
-        commInfo.wDim = AVG_POOL_GRAD_DIM_TWO;
     } else {
         VECTOR_INNER_ERR_REPORT_TILIING(context, 
             "AvgPoolV2Grad: only support NCHW、NHWC, not support format %s",
@@ -289,21 +285,32 @@ static ge::graphStatus GetShapeAndDtype(gert::TilingContext* context, const gert
     } 
 
     if (inputData.inputFormat == ge::Format::FORMAT_NCHW) {
-        commInfo.nDim = AVG_POOL_GRAD_DIM_ZERO;
-        commInfo.cDim = AVG_POOL_GRAD_DIM_ONE;
-        commInfo.hDim = AVG_POOL_GRAD_DIM_TWO;
-        commInfo.wDim = AVG_POOL_GRAD_DIM_THREE;
-        inputData.batches = shapeValue[commInfo.nDim] * shapeValue[commInfo.cDim];
+        if (shapeDim == CHW_DIMS) {
+            commInfo.cDim = AVG_POOL_GRAD_DIM_ZERO;
+            commInfo.hDim = AVG_POOL_GRAD_DIM_ONE;
+            commInfo.wDim = AVG_POOL_GRAD_DIM_TWO;
+            inputData.batches = shapeValue[commInfo.cDim];
+        } else {
+            commInfo.nDim = AVG_POOL_GRAD_DIM_ZERO;
+            commInfo.cDim = AVG_POOL_GRAD_DIM_ONE;
+            commInfo.hDim = AVG_POOL_GRAD_DIM_TWO;
+            commInfo.wDim = AVG_POOL_GRAD_DIM_THREE;
+            inputData.batches = shapeValue[commInfo.nDim] * shapeValue[commInfo.cDim];
+        }
         inputData.channels = ONE;
     } else if (inputData.inputFormat == ge::Format::FORMAT_NHWC) {
-        commInfo.nDim = AVG_POOL_GRAD_DIM_ZERO;
-        commInfo.cDim = AVG_POOL_GRAD_DIM_THREE;
-        commInfo.hDim = AVG_POOL_GRAD_DIM_ONE;
-        commInfo.wDim = AVG_POOL_GRAD_DIM_TWO;
-        inputData.batches = shapeValue[commInfo.nDim];
-        inputData.channels = shapeValue[commInfo.cDim];
-    } else if (shapeDim == CHW_DIMS) {
-        inputData.batches = ONE;
+        if (shapeDim == CHW_DIMS) {
+            commInfo.cDim = AVG_POOL_GRAD_DIM_TWO;
+            commInfo.hDim = AVG_POOL_GRAD_DIM_ZERO;
+            commInfo.wDim = AVG_POOL_GRAD_DIM_ONE;
+            inputData.batches = ONE;
+        } else {
+            commInfo.nDim = AVG_POOL_GRAD_DIM_ZERO;
+            commInfo.cDim = AVG_POOL_GRAD_DIM_THREE;
+            commInfo.hDim = AVG_POOL_GRAD_DIM_ONE;
+            commInfo.wDim = AVG_POOL_GRAD_DIM_TWO;
+            inputData.batches = shapeValue[commInfo.nDim];
+        }
         inputData.channels = shapeValue[commInfo.cDim];
     } else {
         VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(),
@@ -497,6 +504,19 @@ ge::graphStatus GetAvgPoolV2GradShapeAttrsInfo(gert::TilingContext *context, Avg
                     VECTOR_INNER_ERR_REPORT_TILIING(context, "CheckGradShape fail."), 
                     return ge::GRAPH_FAILED);
     
+    if (inputData.globalPooling) {
+        OP_TILING_CHECK((inputData.inputShape[0] != 0 && inputData.gradShape[0] != 1) ||
+                        (inputData.inputShape[1] != 0 && inputData.gradShape[1] != 1),
+                        VECTOR_INNER_ERR_REPORT_TILIING(context,
+        "AvgPoolV2Grad: when global_pooling is true, the gradshape in h-dim and w-dim must be 1 if the size of corresponding inputshape is not zero"), return ge::GRAPH_FAILED);
+        inputData.pad = {0, 0, 0, 0};
+        inputData.stride = inputData.inputShape;
+        inputData.kernelSize = inputData.inputShape;
+        if (inputData.divisorOverride == 0) {
+            inputData.divisorOverride = inputData.kernelSize[0] * inputData.kernelSize[1];
+        }
+    }
+
     if (IsGreaterThanInt32Max(inputData, commInfo)) {
         inputData.isInt32Meet = 0;
     } else {
