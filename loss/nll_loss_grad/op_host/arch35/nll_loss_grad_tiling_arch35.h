@@ -38,9 +38,9 @@ TILING_DATA_FIELD_DEF(uint64_t, veryImportantProcessCoreNums);
 TILING_DATA_FIELD_DEF(uint64_t, notVeryImportantProcessCoreNums);
 TILING_DATA_FIELD_DEF(uint64_t, blockPerCore);
 TILING_DATA_FIELD_DEF(uint64_t, blockTailCore);
-TILING_DATA_FIELD_DEF(uint32_t, reductionMode);
-TILING_DATA_FIELD_DEF(int32_t, ignoreIdx);
 TILING_DATA_FIELD_DEF(uint32_t, xDims);
+TILING_DATA_FIELD_DEF(uint32_t, reductionMode);
+TILING_DATA_FIELD_DEF(int64_t, ignoreIdx);
 END_TILING_DATA_DEF;
 
 // simt template ascendc tools

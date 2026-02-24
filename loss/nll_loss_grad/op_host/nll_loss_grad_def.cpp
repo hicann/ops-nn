@@ -16,7 +16,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-static constexpr int32_t DEFAULT_IGNORE_IDX = -100;
+static constexpr int64_t DEFAULT_IGNORE_IDX = -100;
 class NLLLossGrad : public OpDef {
  public:
   explicit NLLLossGrad(const char* name) : OpDef(name) {

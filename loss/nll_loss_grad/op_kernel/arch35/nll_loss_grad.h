@@ -62,7 +62,7 @@ private:
     uint64_t classNum_{1};
     uint64_t height_{1};
     uint64_t width_{1};
-    int32_t ignoreIdx_{-100};
+    int64_t ignoreIdx_{-100};
     uint32_t reductionMode_{1};
     uint32_t usedThread_{THREAD_DIM};
     uint32_t xDims_{1};
@@ -118,7 +118,7 @@ __aicore__ inline void TargetCheck(const int64_t idx, const int64_t classNum)
 
 template <typename T, typename F>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeNoReduce2d(uint64_t classNum_, uint64_t batchNum_,
-                                                                                __gm__ F* target_, int32_t ignoreIdx_,
+                                                                                __gm__ F* target_, int64_t ignoreIdx_,
                                                                                 __gm__ T* outputGm_, __gm__ T* yGrad_,
                                                                                 __gm__ T* weight_, uint32_t blockId_,
                                                                                 uint32_t blockNums_)
@@ -138,7 +138,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeNoReduce2
 
 template <typename T, typename F>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeReduceMean2d(
-    uint64_t classNum_, uint64_t batchNum_, __gm__ F* target_, int32_t ignoreIdx_, __ubuf__ float* tmpOut_,
+    uint64_t classNum_, uint64_t batchNum_, __gm__ F* target_, int64_t ignoreIdx_, __ubuf__ float* tmpOut_,
     __gm__ T* outputGm_, __gm__ T* yGrad_, __gm__ T* weight_, uint32_t blockId_, uint32_t blockNums_)
 {
     int64_t localClassNum = classNum_;
@@ -157,7 +157,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeReduceMea
 
 template <typename T, typename F>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeReduceSum2d(
-    uint64_t classNum_, uint64_t batchNum_, __gm__ F* target_, int32_t ignoreIdx_, __ubuf__ float* singleGrad_,
+    uint64_t classNum_, uint64_t batchNum_, __gm__ F* target_, int64_t ignoreIdx_, __ubuf__ float* singleGrad_,
     __gm__ T* outputGm_, __gm__ T* yGrad_, __gm__ T* weight_, uint32_t blockId_, uint32_t blockNums_)
 {
     int64_t localClassNum = classNum_;
@@ -176,7 +176,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeReduceSum
 
 template <typename T, typename F>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeNoReduce4d(uint64_t classNum_, uint64_t batchNum_, uint64_t height_, uint64_t width_,
-                                                                                __gm__ F* target_, int32_t ignoreIdx_,
+                                                                                __gm__ F* target_, int64_t ignoreIdx_,
                                                                                 __gm__ T* outputGm_, __gm__ T* yGrad_,
                                                                                 __gm__ T* weight_, uint32_t blockId_,
                                                                                 uint32_t blockNums_, uint64_t productOfNHW_, uint64_t productOfHW_)
@@ -199,7 +199,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeNoReduce4
 
 template <typename T, typename F>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeReduceMean4d(
-    uint64_t classNum_, uint64_t batchNum_, uint64_t height_, uint64_t width_, __gm__ F* target_, int32_t ignoreIdx_, __ubuf__ float* tmpOut_,
+    uint64_t classNum_, uint64_t batchNum_, uint64_t height_, uint64_t width_, __gm__ F* target_, int64_t ignoreIdx_, __ubuf__ float* tmpOut_,
     __gm__ T* outputGm_, __gm__ T* yGrad_, __gm__ T* weight_, uint32_t blockId_, uint32_t blockNums_, uint64_t productOfNHW_, uint64_t productOfHW_)
 {
     int64_t localClassNum = classNum_;
@@ -220,7 +220,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeReduceMea
 
 template <typename T, typename F>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeReduceSum4d(
-    uint64_t classNum_, uint64_t batchNum_, uint64_t height_, uint64_t width_, __gm__ F* target_, int32_t ignoreIdx_, __ubuf__ float* singleGrad_,
+    uint64_t classNum_, uint64_t batchNum_, uint64_t height_, uint64_t width_, __gm__ F* target_, int64_t ignoreIdx_, __ubuf__ float* singleGrad_,
     __gm__ T* outputGm_, __gm__ T* yGrad_, __gm__ T* weight_, uint32_t blockId_, uint32_t blockNums_, uint64_t productOfNHW_, uint64_t productOfHW_)
 {
     int64_t localClassNum = classNum_;

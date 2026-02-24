@@ -67,7 +67,7 @@ ge::graphStatus NLLLossGradSimtTiling::GetShapeAttrsInfo()
         return attrStatus;
     }
 
-    OP_LOGD("NLLLossGrad Simt", "ignoreIndex: %u", static_cast<uint32_t>(tilingData_.get_ignoreIdx()));
+    OP_LOGD("NLLLossGrad Simt", "ignoreIndex: %ld", tilingData_.get_ignoreIdx());
     OP_LOGD("NLLLossGrad Simt", "batchNum_: %lu", batchNum_);
     OP_LOGD("NLLLossGrad Simt", "classNum: %lu", tilingData_.get_classNum());
     OP_LOGD("NLLLossGrad Simt", "height_: %lu", height_);
