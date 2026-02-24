@@ -133,6 +133,8 @@ ops-nn:
       - pooling/max_pool3d_with_argmax_v2/op_graph/max_pool3d_with_argmax_v2_proto.h
       - pooling/max_pool3d_with_argmax_v2/op_host/common_dtype.h
       - index/embedding_bag/op_host/embedding_bag_def.cpp
+      - pooling/adaptive_max_pool2d/op_kernel/adaptive_max_pool2d.cpp
+      - pooling/adaptive_max_pool2d/op_kernel/arch35/adaptive_max_pool2d_simt.h
       - pooling/adaptive_max_pool3d/op_kernel/adaptive_max_pool3d.cpp
       - pooling/adaptive_max_pool3d/op_kernel/adaptive_max_pool3d_small_pool.h
       - pooling/adaptive_max_pool3d/op_kernel/adaptive_max_pool3d_big_pool.h
