@@ -17,7 +17,6 @@
 #define CONV_OP_TILING_CONV3D_V2_TILING_H
 
 #include <memory>
-#include "conv3d_v2_api_tilingdata.h"
 #include "../../../../common/op_host/op_tiling/arch35/conv_api_tiling_base.h"
 #include "../../../../common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_base.h"
 #include "../../../../conv3d_v2/op_kernel/conv3d_v2_tiling_data.h"
@@ -60,7 +59,7 @@ public:
     void SetOptGroupParams(int32_t enlarge, int64_t singleGroups, int64_t singleGroupOpt);
     void CalcOptGroupParams(const optiling::conv_ops_tiling::ConvOriGroupInfo& oriGroupInfo,
                             optiling::conv_ops_tiling::ConvOptGroupInfo& optGroupInfo) const;
-    void SetOutputOrder(int8_t outputOrder);
+    void SetOutputOrder(int8_t outOrder);
     void SetScalarParams(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
     void SetHF32(bool hf32EnableFlag, bool hf32TransModeFlag);
     void SetScaleType(TPosition pos, ConvFormat format, ConvDtype dtype);

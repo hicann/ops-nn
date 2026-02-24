@@ -202,7 +202,7 @@ uint32_t Conv3dBaseTilingV2::CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv3DV2T
         hiAL1Max = hiAL1Max > convRepoTiling->orgHi ? convRepoTiling->orgHi : hiAL1Max;
 
         uint64_t wiAL1Max = 0;
-        if (convRepoTiling->isC04Flag && convRepoTiling->singleCoreWo == convRepoTiling->woL1) {
+        if ((convRepoTiling->isC04Flag == 1) && convRepoTiling->singleCoreWo == convRepoTiling->woL1) {
             wiAL1Max = convRepoTiling->orgWi;
 
             aL1SpaceSize = ConvAlignB(hiAL1Max * wiAL1Max, C0_SIZE /
