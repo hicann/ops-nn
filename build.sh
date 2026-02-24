@@ -21,7 +21,7 @@ SUPPORTED_SHORT_OPTS="hj:vO:uf:-:"
 
 # 所有支持的长选项
 SUPPORTED_LONG_OPTS=(
-  "help" "ops=" "soc=" "vendor_name=" "build-type=" "cov" "noexec" "opkernel" "opkernel_aicpu" "opkernel_aicpu_test" "static"
+  "help" "ops=" "soc=" "vendor_name=" "build-type=" "cov" "noexec" "no_aicpu" "opkernel" "opkernel_aicpu" "opkernel_aicpu_test" "static"
    "jit" "pkg" "asan" "make_clean_all" "make_clean" "no_force"
   "ophost" "opgraph" "opapi" "run_example" "example_name=" "genop=" "genop_aicpu=" "experimental" "cann_3rd_lib_path=" "oom" "onnxplugin" "dump_cce"
 )
@@ -601,6 +601,7 @@ checkopts() {
   ENABLE_EXPERIMENTAL=FALSE
   NO_FORCE=FALSE
   AICPU_ONLY=FALSE
+  NO_AICPU=FALSE
   OP_API_UT=FALSE
   OP_HOST_UT=FALSE
   OP_GRAPH_UT=FALSE
@@ -754,6 +755,7 @@ checkopts() {
         oom) ENABLE_OOM=TRUE ;;
         dump_cce) ENABLE_DUMP_CCE=TRUE ;;
         noexec) ENABLE_UT_EXEC=FALSE ;;
+        no_aicpu) NO_AICPU=TRUE ;;
         cov) ENABLE_COVERAGE=TRUE;;
         opkernel)
           ENABLE_BINARY=TRUE
@@ -894,6 +896,9 @@ assemble_cmake_args() {
   fi
   if [[ "$ENABLE_CUSTOM" == "TRUE" ]]; then
     ENABLE_BINARY=TRUE
+  fi
+  if [[ "$NO_AICPU" == "TRUE" ]]; then
+    CMAKE_ARGS="$CMAKE_ARGS -DNO_AICPU=TRUE"
   fi
   CMAKE_ARGS="$CMAKE_ARGS -DENABLE_BINARY=${ENABLE_BINARY}"
   CMAKE_ARGS="$CMAKE_ARGS -DENABLE_PACKAGE=${ENABLE_PACKAGE}"

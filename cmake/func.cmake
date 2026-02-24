@@ -131,6 +131,31 @@ function(add_opapi_modules)
   endif()
 endfunction()
 
+# determine whether aicpu kernels skip the processing.
+function(skip_aicpu_kernel op_type ascend_op_name)
+  set(SKIP_AICPU_FLAG FALSE PARENT_SCOPE)
+
+  if(NO_AICPU)
+    message(STATUS "disable aicpu kernel ${op_type}, skip it.")
+    set(SKIP_AICPU_FLAG TRUE PARENT_SCOPE)
+    return()
+  endif()
+
+  if(NOT "${ascend_op_name}" STREQUAL "")
+    set(_ascend_op_name_tmp "${ascend_op_name}")
+    separate_arguments(_ascend_op_name_tmp)
+
+    list(FIND _ascend_op_name_tmp "${op_type}" _index)
+    if(_index EQUAL -1)
+      message(STATUS "[${op_type}] skipped, not in ascend_op_name list: ${ascend_op_name}")
+      set(SKIP_AICPU_FLAG TRUE PARENT_SCOPE)
+      return()
+    else()
+      message(STATUS "[${op_type}] selected, in ascend_op_name list: ${ascend_op_name}")
+    endif()
+  endif()
+endfunction()
+
 function(add_aicpu_kernel_modules)
   message(STATUS "add_aicpu_kernel_modules")
   if(NOT TARGET ${OPHOST_NAME}_aicpu_obj)

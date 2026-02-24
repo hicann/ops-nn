@@ -11,17 +11,9 @@
 set(ASCEND_OP_NAME "" CACHE STRING "Ascend op names to compile")
 set(OP_TYPE "identity")
 
-if(ASCEND_OP_NAME)
-  set(_ASCEND_OP_NAME_TMP "${ASCEND_OP_NAME}")
-  separate_arguments(_ASCEND_OP_NAME_TMP)
-
-  list(FIND _ASCEND_OP_NAME_TMP "${OP_TYPE}" _index)
-  if(_index EQUAL -1)
-    message(STATUS "[${OP_TYPE}] skipped, not in ASCEND_OP_NAME list: ${ASCEND_OP_NAME}")
-    return()
-  else()
-    message(STATUS "[${OP_TYPE}] selected, in ASCEND_OP_NAME list: ${ASCEND_OP_NAME}")
-  endif()
+skip_aicpu_kernel("${OP_TYPE}" "${ASCEND_OP_NAME}")
+if(SKIP_AICPU_FLAG)
+  return()
 endif()
 
 if (BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
