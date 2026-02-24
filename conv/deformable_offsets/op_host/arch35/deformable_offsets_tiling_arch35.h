@@ -25,34 +25,34 @@
 
 namespace optiling {
 BEGIN_TILING_DATA_DEF(DeformableOffsetsTilingDataSimt);
-TILING_DATA_FIELD_DEF(uint32_t, blockNum);
-TILING_DATA_FIELD_DEF(uint32_t, strideHeight);
-TILING_DATA_FIELD_DEF(uint32_t, strideWidth);
-TILING_DATA_FIELD_DEF(uint32_t, dilationHeight);
-TILING_DATA_FIELD_DEF(uint32_t, dilationWidth);
-TILING_DATA_FIELD_DEF(uint32_t, padsHeight);
-TILING_DATA_FIELD_DEF(uint32_t, padsWidth);
-TILING_DATA_FIELD_DEF(uint32_t, dimKHeight);
-TILING_DATA_FIELD_DEF(uint32_t, dimKWidth);
-TILING_DATA_FIELD_DEF(uint32_t, imgChannel);
-TILING_DATA_FIELD_DEF(uint32_t, imgWidth);
-TILING_DATA_FIELD_DEF(uint32_t, imgHeight);
-TILING_DATA_FIELD_DEF(uint32_t, imgWidthStride);
-TILING_DATA_FIELD_DEF(uint32_t, imgOutHeight);
-TILING_DATA_FIELD_DEF(uint32_t, imgOutWidth);
-TILING_DATA_FIELD_DEF(uint32_t, offsetKernelElementStride);
-TILING_DATA_FIELD_DEF(uint32_t, offsetPointStride);
-TILING_DATA_FIELD_DEF(uint32_t, offsetWidthStride);
-TILING_DATA_FIELD_DEF(uint32_t, offsetValueDim);
-TILING_DATA_FIELD_DEF(uint32_t, deformableGroups);
-TILING_DATA_FIELD_DEF(uint32_t, outputPointWidthStride);
-TILING_DATA_FIELD_DEF(uint32_t, outputWidthStride);
-TILING_DATA_FIELD_DEF(uint32_t, outputKernelWidthStride);
-TILING_DATA_FIELD_DEF(uint32_t, numKernels);
-TILING_DATA_FIELD_DEF(uint32_t, imgBatchStride);
-TILING_DATA_FIELD_DEF(uint32_t, offsetBatchStride);
-TILING_DATA_FIELD_DEF(uint32_t, outputBatchStride);
-TILING_DATA_FIELD_DEF(uint32_t, imgBatchNum);
+TILING_DATA_FIELD_DEF(int64_t, blockNum);
+TILING_DATA_FIELD_DEF(int64_t, strideHeight);
+TILING_DATA_FIELD_DEF(int64_t, strideWidth);
+TILING_DATA_FIELD_DEF(int64_t, dilationHeight);
+TILING_DATA_FIELD_DEF(int64_t, dilationWidth);
+TILING_DATA_FIELD_DEF(int64_t, padsHeight);
+TILING_DATA_FIELD_DEF(int64_t, padsWidth);
+TILING_DATA_FIELD_DEF(int64_t, dimKHeight);
+TILING_DATA_FIELD_DEF(int64_t, dimKWidth);
+TILING_DATA_FIELD_DEF(int64_t, imgChannel);
+TILING_DATA_FIELD_DEF(int64_t, imgWidth);
+TILING_DATA_FIELD_DEF(int64_t, imgHeight);
+TILING_DATA_FIELD_DEF(int64_t, imgWidthStride);
+TILING_DATA_FIELD_DEF(int64_t, imgOutHeight);
+TILING_DATA_FIELD_DEF(int64_t, imgOutWidth);
+TILING_DATA_FIELD_DEF(int64_t, offsetKernelElementStride);
+TILING_DATA_FIELD_DEF(int64_t, offsetPointStride);
+TILING_DATA_FIELD_DEF(int64_t, offsetWidthStride);
+TILING_DATA_FIELD_DEF(int64_t, offsetValueDim);
+TILING_DATA_FIELD_DEF(int64_t, deformableGroups);
+TILING_DATA_FIELD_DEF(int64_t, outputPointWidthStride);
+TILING_DATA_FIELD_DEF(int64_t, outputWidthStride);
+TILING_DATA_FIELD_DEF(int64_t, outputKernelWidthStride);
+TILING_DATA_FIELD_DEF(int64_t, numKernels);
+TILING_DATA_FIELD_DEF(int64_t, imgBatchStride);
+TILING_DATA_FIELD_DEF(int64_t, offsetBatchStride);
+TILING_DATA_FIELD_DEF(int64_t, outputBatchStride);
+TILING_DATA_FIELD_DEF(int64_t, imgBatchNum);
 END_TILING_DATA_DEF;
 
 struct TilingPrepareForDeformableOffsetsCompileInfo {
@@ -71,32 +71,32 @@ struct DeformableOffsetAttr {
     int64_t padsWidthRight;
     int64_t dimKh;
     int64_t dimKw;
-    uint32_t deformableGroupsAttr;
-    uint32_t offsetValueDim;
+    int64_t deformableGroupsAttr;
+    int64_t offsetValueDim;
 };
 
 struct DeformableOffsetsOffset {
-    uint32_t imgBatchNum;
-    uint32_t imgChannel;
-    uint32_t imgWidth;
-    uint32_t imgHeight;
-    uint32_t imgWidthStride;
-    uint32_t imgBatchStride;
-    uint32_t imgOutHeight;
-    uint32_t imgOutWidth;
-    uint32_t offsetBatchStride;
-    uint32_t deformableGroups;
-    uint32_t offsetKernelElementStride;
-    uint32_t offsetPointStride;
-    uint32_t offsetWidthStride;
+    int64_t imgBatchNum;
+    int64_t imgChannel;
+    int64_t imgWidth;
+    int64_t imgHeight;
+    int64_t imgWidthStride;
+    int64_t imgBatchStride;
+    int64_t imgOutHeight;
+    int64_t imgOutWidth;
+    int64_t offsetBatchStride;
+    int64_t deformableGroups;
+    int64_t offsetKernelElementStride;
+    int64_t offsetPointStride;
+    int64_t offsetWidthStride;
 
-    uint32_t outputBatchStride;
-    uint32_t outputPointWidthStride;
-    uint32_t outputWidthStride;
-    uint32_t outputKernelWidthStride;
+    int64_t outputBatchStride;
+    int64_t outputPointWidthStride;
+    int64_t outputWidthStride;
+    int64_t outputKernelWidthStride;
 
-    uint32_t numKernels;
-    uint32_t blockDimValue;
+    int64_t numKernels;
+    int64_t blockDimValue;
 };
 
 REGISTER_TILING_DATA_CLASS(DeformableOffsets, DeformableOffsetsTilingDataSimt)

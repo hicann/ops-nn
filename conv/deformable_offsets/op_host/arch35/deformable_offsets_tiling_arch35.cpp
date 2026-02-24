@@ -37,12 +37,12 @@ static constexpr int32_t LIST_INDEX_0 = 0;
 static constexpr int32_t LIST_INDEX_1 = 1;
 static constexpr int32_t LIST_INDEX_2 = 2;
 static constexpr int32_t LIST_INDEX_3 = 3;
-static constexpr int32_t POINT_WEIGHT_SIZE = 3;
-static constexpr int32_t POINT_NOT_WEIGHT_SIZE = 2;
-static constexpr uint32_t MAX_CORE_NUM = 64;
-static constexpr uint32_t VF_MAX_THREAD_NUM = 512;
-static constexpr uint32_t EXCEPTED_KERNEL_SIZE = 2;
-static constexpr uint32_t SIMT_COMMON_TILING_KEY = 1000;
+static constexpr int64_t POINT_WEIGHT_SIZE = 3;
+static constexpr int64_t POINT_NOT_WEIGHT_SIZE = 2;
+static constexpr int64_t VF_MAX_THREAD_NUM = 512;
+static constexpr int64_t EXCEPTED_KERNEL_SIZE = 2;
+static constexpr int64_t SIMT_COMMON_TILING_KEY = 1000;
+static constexpr int64_t DATA_INT32_MAX = 2147483647; // int32最大值
 static const std::set<ge::DataType> supportDtype = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
 
 ge::graphStatus CheckDeformableOffsetParams(
@@ -182,7 +182,7 @@ ge::graphStatus CheckDeformableOffsetAttrs(gert::TilingContext* context, Deforma
     deformableOffsetAttrInfo.dimKh = ksizesData[LIST_INDEX_0];
     deformableOffsetAttrInfo.dimKw = ksizesData[LIST_INDEX_1];
     deformableOffsetAttrInfo.offsetValueDim =
-        static_cast<uint32_t>(isModulated ? POINT_WEIGHT_SIZE : POINT_NOT_WEIGHT_SIZE);
+        isModulated ? POINT_WEIGHT_SIZE : POINT_NOT_WEIGHT_SIZE;
     OP_CHECK_IF(
         !isModulated, OP_LOGE(context->GetNodeName(), "Deformable modulate attr only support true."),
         return ge::GRAPH_FAILED);
@@ -193,12 +193,12 @@ ge::graphStatus CheckOffsetArgs(
     gert::TilingContext* context, DeformableOffsetsOffset& deformableOffsetsOffset, const gert::Shape inputOffsetShape,
     const gert::Shape outputShapeInfo, DeformableOffsetAttr deformableOffsetAttrInfo) {
     // input offset info
-    uint32_t offsetWidth = inputOffsetShape.GetDim(LIST_INDEX_2);
-    uint32_t offsetHeight = inputOffsetShape.GetDim(LIST_INDEX_1);
-    uint32_t offsetChannel = inputOffsetShape.GetDim(LIST_INDEX_3);
+    int64_t offsetWidth = inputOffsetShape.GetDim(LIST_INDEX_2);
+    int64_t offsetHeight = inputOffsetShape.GetDim(LIST_INDEX_1);
+    int64_t offsetChannel = inputOffsetShape.GetDim(LIST_INDEX_3);
     deformableOffsetsOffset.offsetBatchStride = offsetHeight * offsetWidth * offsetChannel;
-    deformableOffsetsOffset.deformableGroups = static_cast<uint32_t>(offsetChannel /
-        (deformableOffsetAttrInfo.dimKh * deformableOffsetAttrInfo.dimKw * deformableOffsetAttrInfo.offsetValueDim));
+    deformableOffsetsOffset.deformableGroups = offsetChannel /
+        (deformableOffsetAttrInfo.dimKh * deformableOffsetAttrInfo.dimKw * deformableOffsetAttrInfo.offsetValueDim);
     OP_CHECK_IF(deformableOffsetsOffset.imgChannel % deformableOffsetsOffset.deformableGroups != 0,
         OP_LOGE(context->GetNodeName(), "Img channel(%u) not equal to %d", deformableOffsetsOffset.imgChannel,
             deformableOffsetsOffset.deformableGroups),
@@ -210,11 +210,11 @@ ge::graphStatus CheckOffsetArgs(
             deformableOffsetAttrInfo.deformableGroupsAttr, deformableOffsetsOffset.deformableGroups),
         return ge::GRAPH_FAILED);
 
-    uint32_t outputHeight = outputShapeInfo.GetDim(LIST_INDEX_1);
-    uint32_t outputWidth = outputShapeInfo.GetDim(LIST_INDEX_2);
+    int64_t outputHeight = outputShapeInfo.GetDim(LIST_INDEX_1);
+    int64_t outputWidth = outputShapeInfo.GetDim(LIST_INDEX_2);
     deformableOffsetsOffset.outputBatchStride = outputHeight * outputWidth * deformableOffsetsOffset.imgChannel;
-    uint32_t offsetHeightSame = static_cast<uint32_t>(offsetHeight * deformableOffsetAttrInfo.dimKh);
-    uint32_t offsetWidthSame = static_cast<uint32_t>(offsetWidth * deformableOffsetAttrInfo.dimKw);
+    int64_t offsetHeightSame = offsetHeight * deformableOffsetAttrInfo.dimKh;
+    int64_t offsetWidthSame = offsetWidth * deformableOffsetAttrInfo.dimKw;
 
     OP_CHECK_IF(outputShapeInfo.GetDim(LIST_INDEX_1) != offsetHeightSame,
         OP_LOGE(context->GetNodeName(), "Img out height not equal to offsetHeight muti dimkh"),
@@ -235,8 +235,8 @@ ge::graphStatus CheckOffsetArgs(
     OP_CHECK_IF(deformableOffsetsOffset.imgBatchNum != outputShapeInfo.GetDim(LIST_INDEX_0),
         OP_LOGE(context->GetNodeName(), "Output batchNum not equal to input"), return ge::GRAPH_FAILED);
     // offset NHC (N, H, W, offsetValueDim, group=1, k_h, k_w)
-    deformableOffsetsOffset.offsetKernelElementStride = static_cast<uint32_t>(
-        deformableOffsetsOffset.deformableGroups * deformableOffsetAttrInfo.dimKh * deformableOffsetAttrInfo.dimKw);
+    deformableOffsetsOffset.offsetKernelElementStride =
+        deformableOffsetsOffset.deformableGroups * deformableOffsetAttrInfo.dimKh * deformableOffsetAttrInfo.dimKw;
     deformableOffsetsOffset.offsetPointStride =
         deformableOffsetAttrInfo.offsetValueDim * deformableOffsetsOffset.offsetKernelElementStride;
     deformableOffsetsOffset.offsetWidthStride = offsetWidth * deformableOffsetsOffset.offsetPointStride;
@@ -251,18 +251,16 @@ ge::graphStatus CalDeformableOffsetsOffset(
     deformableOffsetsOffset.imgBatchStride =
         deformableOffsetsOffset.imgHeight * deformableOffsetsOffset.imgWidth * deformableOffsetsOffset.imgChannel;
     // conved img
-    deformableOffsetsOffset.imgOutHeight = static_cast<uint32_t>(
+    deformableOffsetsOffset.imgOutHeight =
         (deformableOffsetsOffset.imgHeight + deformableOffsetAttrInfo.padsHeightUp +
          deformableOffsetAttrInfo.padsHeightDown -
          (deformableOffsetAttrInfo.dilationH * (deformableOffsetAttrInfo.dimKh - 1) + 1)) /
-            deformableOffsetAttrInfo.strideH +
-        1);
-    deformableOffsetsOffset.imgOutWidth = static_cast<uint32_t>(
+            deformableOffsetAttrInfo.strideH + 1;
+    deformableOffsetsOffset.imgOutWidth =
         (deformableOffsetsOffset.imgWidth + deformableOffsetAttrInfo.padsWidthLeft +
          deformableOffsetAttrInfo.padsWidthRight -
          (deformableOffsetAttrInfo.dilationW * (deformableOffsetAttrInfo.dimKw - 1) + 1)) /
-            deformableOffsetAttrInfo.strideW +
-        1);
+            deformableOffsetAttrInfo.strideW + 1;
 
     OP_CHECK_IF(
         deformableOffsetsOffset.imgOutHeight <= 0, OP_LOGE(context->GetNodeName(), "ImgOutHeight must greate 0"),
@@ -282,16 +280,16 @@ ge::graphStatus CalDeformableOffsetsOffset(
     // output NHWC
     // real is (N, H, K_h, W, k_w, c)
     deformableOffsetsOffset.outputPointWidthStride =
-        static_cast<uint32_t>(deformableOffsetAttrInfo.dimKw * deformableOffsetsOffset.imgChannel);
+        deformableOffsetAttrInfo.dimKw * deformableOffsetsOffset.imgChannel;
     deformableOffsetsOffset.outputWidthStride =
         deformableOffsetsOffset.imgOutWidth * deformableOffsetsOffset.outputPointWidthStride;
     deformableOffsetsOffset.outputKernelWidthStride =
-        static_cast<uint32_t>(deformableOffsetAttrInfo.dimKh * deformableOffsetsOffset.outputWidthStride);
+        deformableOffsetAttrInfo.dimKh * deformableOffsetsOffset.outputWidthStride;
     deformableOffsetsOffset.numKernels = deformableOffsetsOffset.imgOutWidth * deformableOffsetsOffset.imgOutHeight *
                                          deformableOffsetsOffset.imgChannel * deformableOffsetsOffset.imgBatchNum;
-    deformableOffsetsOffset.blockDimValue = static_cast<uint32_t>(
+    deformableOffsetsOffset.blockDimValue =
         (deformableOffsetsOffset.numKernels / VF_MAX_THREAD_NUM) +
-        ((deformableOffsetsOffset.numKernels % VF_MAX_THREAD_NUM) == 0 ? 0 : 1));
+        ((deformableOffsetsOffset.numKernels % VF_MAX_THREAD_NUM) == 0 ? 0 : 1);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -331,7 +329,7 @@ void SetDeformableOffsetsTilingData(
         context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
 }
 
-ge::graphStatus DeformableOffsetTiling(gert::TilingContext* context, int32_t maxCoreNum)
+ge::graphStatus DeformableOffsetTiling(gert::TilingContext* context, int64_t maxCoreNum)
 {
     OP_LOGD("DeformableOffsetTilingForAscendC", "DeformableOffsetTiling start");
     DeformableOffsetsTilingDataSimt deformableOffsetTilingData;
@@ -357,8 +355,15 @@ ge::graphStatus DeformableOffsetTiling(gert::TilingContext* context, int32_t max
             ge::GRAPH_SUCCESS,
         OP_LOGE(context->GetNodeName(), "get offsets failed."), return ge::GRAPH_FAILED);
     deformableOffsetsOffset.blockDimValue =
-        std::min(deformableOffsetsOffset.blockDimValue, static_cast<uint32_t>(maxCoreNum));
-    context->SetTilingKey(SIMT_COMMON_TILING_KEY);
+        std::min(deformableOffsetsOffset.blockDimValue, maxCoreNum);
+    int64_t input0Size = inputXShape.GetShapeSize();
+    int64_t input1Size = inputOffsetShape.GetShapeSize();
+    int64_t outputSize = outputShapeInfo.GetShapeSize();
+    int64_t tilingKey = SIMT_COMMON_TILING_KEY;
+    if (input0Size > DATA_INT32_MAX || input1Size > DATA_INT32_MAX || outputSize > DATA_INT32_MAX) {
+        tilingKey = tilingKey + 1;
+    }
+    context->SetTilingKey(tilingKey);
     context->SetBlockDim(deformableOffsetsOffset.blockDimValue);
     SetDeformableOffsetsTilingData(
         context, deformableOffsetTilingData, deformableOffsetsOffset, deformableOffsetAttrInfo);
@@ -373,7 +378,7 @@ ge::graphStatus DeformableOffsetTiling(gert::TilingContext* context, int32_t max
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus DeformableOffsetTilingSimt(gert::TilingContext* context, int32_t maxCoreNum)
+ge::graphStatus DeformableOffsetTilingSimt(gert::TilingContext* context, int64_t maxCoreNum)
 {
     return DeformableOffsetTiling(context, maxCoreNum);
 }
@@ -384,7 +389,7 @@ ge::graphStatus Tiling4DeformableOffsets(gert::TilingContext* context)
     const TilingPrepareForDeformableOffsetsCompileInfo* compileInfo =
         context->GetCompileInfo<TilingPrepareForDeformableOffsetsCompileInfo>();
 
-    int32_t maxCoreNum = static_cast<int32_t>(compileInfo->coreNum);
+    int64_t maxCoreNum = compileInfo->coreNum;
     OP_CHECK_IF(
         DeformableOffsetTilingSimt(context, maxCoreNum) != ge::GRAPH_SUCCESS,
         OP_LOGE(context->GetNodeName(), "The simd tiling function failed"), return ge::GRAPH_FAILED);

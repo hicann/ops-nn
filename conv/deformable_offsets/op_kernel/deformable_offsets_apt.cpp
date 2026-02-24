@@ -15,7 +15,8 @@
 
 #include "arch35/deformable_offsets.h"
 
-#define TILING_SIMT_COMMON_KEY 1000
+#define TILING_SIMT_INT32 1000 // 输入和输出的shape乘积都在int32表示范围内
+#define TILING_SIMT_INT64 1001 // 输入和输出的shape乘积都在int64表示范围内
 
 using namespace DeformableOffsets;
 using namespace AscendC;
@@ -25,8 +26,13 @@ extern "C" __global__ __aicore__ void deformable_offsets(
 {
     GET_TILING_DATA(tilingData, tiling);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
-    if (TILING_KEY_IS(TILING_SIMT_COMMON_KEY)) {
-        DeformableOffset<DTYPE_X> deformableOffsetObject;
+    if (TILING_KEY_IS(TILING_SIMT_INT32)) {
+        DeformableOffset<DTYPE_X, int32_t, uint32_t> deformableOffsetObject;
+        deformableOffsetObject.Init(x, offsets, y, workspace, &tilingData);
+        deformableOffsetObject.Process();
+    }
+    if (TILING_KEY_IS(TILING_SIMT_INT64)) {
+        DeformableOffset<DTYPE_X, int64_t, uint64_t> deformableOffsetObject;
         deformableOffsetObject.Init(x, offsets, y, workspace, &tilingData);
         deformableOffsetObject.Process();
     }
