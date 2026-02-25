@@ -42,7 +42,7 @@ const aclTensor *ExecBatchMatmulOp(const aclTensor *self, const aclTensor *mat2,
 const aclTensor *ExecBmmOp(const aclTensor *self, const aclTensor *mat2, const aclTensor *out, int8_t cubeMathType,
                            aclOpExecutor *executor, bool isBaddbmm = false);
 
-const bool checkFusedmm(
+bool checkFusedmm(
     const aclTensor* bias, const aclTensor* self, const aclTensor* mat2, const aclScalar* alpha, const aclScalar* beta,
     int8_t cubeMathType, bool& isNeedSwapInnerTwoDim);
 

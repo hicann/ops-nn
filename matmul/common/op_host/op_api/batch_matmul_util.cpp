@@ -1106,7 +1106,7 @@ const aclTensor* ExecBmmOpV2(
     return ExecBmmOpWithBiasV2(self, mat2, nullptr, out, cubeMathType, executor, isBaddbmm);
 }
 
-const bool checkFusedmm(
+bool checkFusedmm(
     const aclTensor* bias, const aclTensor* self, const aclTensor* mat2, const aclScalar* alpha, const aclScalar* beta,
     int8_t cubeMathType, bool& isNeedSwapInnerTwoDim)
 {
