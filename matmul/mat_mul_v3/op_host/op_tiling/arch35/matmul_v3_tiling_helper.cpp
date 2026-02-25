@@ -297,7 +297,7 @@ void MatMulV3TilingHelper::ResetFullLoadLoadBalance(MatMulV3RunInfo& runInfo)
     runInfo.tailInfo.nTailMain = 0UL;
 }
 
-bool MatMulV3TilingHelper::IsSelfNonContiguous(gert::TilingContext* context)
+bool MatMulV3TilingHelper::IsSelfNonContiguous(const gert::TilingContext* context)
 {
     auto selfShape = context->GetInputShape(0)->GetOriginShape();
     auto mat2Shape = context->GetInputShape(1)->GetOriginShape();

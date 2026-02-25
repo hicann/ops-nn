@@ -2168,41 +2168,47 @@ aclnnStatus MatmulGraphImpl::CommonPostProcessWithReshape(){
 // ==========================================================================================================
 // NpuArchMatMulRuleBase
 
-bool NpuArchMatMulRuleBase::CheckInputTensorDtypeValid(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out) {
-        auto dtypeList = GetSupportedDTypes();
-        OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeList, return false);
-        OP_CHECK_DTYPE_NOT_SUPPORT(mat2, dtypeList, return false);
+bool NpuArchMatMulRuleBase::CheckInputTensorDtypeValid(
+    const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out)
+{
+    auto dtypeList = GetSupportedDTypes();
+    OP_CHECK_DTYPE_NOT_SUPPORT(matA, dtypeList, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(matB, dtypeList, return false);
 
-        OP_CHECK_DTYPE_NOT_SUPPORT(out, dtypeList, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(out, dtypeList, return false);
 
-        if (bias != nullptr) {
-            OP_CHECK_DTYPE_NOT_SUPPORT(bias, dtypeList, return false);
-        }
-        return true;
+    if (bias != nullptr) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(bias, dtypeList, return false);
+    }
+    return true;
 }
 
-aclnnStatus NpuArchMatMulRuleBase::GetUpperDtype(const aclTensor* matA, const aclTensor* matB, int8_t cubeMathType, op::DataType& upperDtype){
-        op::DataType typeA = matA -> GetDataType();
-        op::DataType typeB = matB -> GetDataType();
-        OP_LOGD("The input dtype is %s and %s", op::ToString(typeA).GetString(), op::ToString(typeB).GetString());
-        OP_LOGD("The cubeMathType is %d", static_cast<int32_t>(cubeMathType));
-        int inputCase = GetInputCase(typeA, typeB);
+aclnnStatus NpuArchMatMulRuleBase::GetUpperDtype(
+    const aclTensor* matA, const aclTensor* matB, int8_t cubeMathType, op::DataType& upperDtype)
+{
+    op::DataType typeA = matA->GetDataType();
+    op::DataType typeB = matB->GetDataType();
+    OP_LOGD("The input dtype is %s and %s", op::ToString(typeA).GetString(), op::ToString(typeB).GetString());
+    OP_LOGD("The cubeMathType is %d", static_cast<int32_t>(cubeMathType));
+    int inputCase = GetInputCase(typeA, typeB);
 
-        PromoteResult result = GetUpperDtypeByLookUpTable(inputCase, cubeMathType);
-        // process result
-        if (result.isError) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s", result.logMessage);
-            return ACLNN_ERR_PARAM_INVALID;
-        }
-        if (result.logMessage != nullptr && strlen(result.logMessage) > 0){
-            OP_LOGW("%s", result.logMessage);
-        }
-        // 返回推导类型
-        upperDtype = result.type;
-        return ACLNN_SUCCESS;
+    PromoteResult result = GetUpperDtypeByLookUpTable(inputCase, cubeMathType);
+    // process result
+    if (result.isError) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s", result.logMessage);
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    if (result.logMessage != nullptr && strlen(result.logMessage) > 0) {
+        OP_LOGW("%s", result.logMessage);
+    }
+    // 返回推导类型
+    upperDtype = result.type;
+    return ACLNN_SUCCESS;
 }
 
-bool Dav2201MatMulRule::CheckInput(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType)  {
+bool Dav2201MatMulRule::CheckInput(
+    const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType)
+{
         if (FP16FP32_KEEP_DTYPE == cubeMathType) {
             if (npuArch_ != NpuArch::DAV_2201) {
                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Unsupported cubeMathType(FP16FP32_KEEP_DTYPE) for Cube");
@@ -2217,7 +2223,10 @@ bool Dav2201MatMulRule::CheckInput(const aclTensor* matA, const aclTensor* matB,
         return dtypeVaild;
 }
 
-aclnnStatus Dav2201MatMulRule::PromoteDtype(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType, struct MmOpInfo& mmOpInfo)  {
+aclnnStatus Dav2201MatMulRule::PromoteDtype(
+    const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType,
+    struct MmOpInfo& mmOpInfo)
+{
         // 输入数据类型
         mmOpInfo.ori_info.self_dtype = matA->GetDataType();
         mmOpInfo.ori_info.mat2_dtype = matB->GetDataType();
@@ -2256,7 +2265,6 @@ aclnnStatus Dav2201MatMulRule::PromoteDtype(const aclTensor* matA, const aclTens
 
         return ACLNN_SUCCESS;
 }
-
 
 std::initializer_list<op::DataType> Dav2201MatMulRule::GetSupportedDTypes(){
         static constexpr std::initializer_list<op::DataType> dtypeSupportList = {

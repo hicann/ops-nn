@@ -14,7 +14,6 @@
 #include "aclnn_kernels/common/op_error_check.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/reshape.h"
-#include "op_api/op_api_def.h"
 #include "matmul/common/op_host/op_api/batch_matmul.h"
 #include "matmul/common/op_host/op_api/matmul.h"
 #include "level0/fill.h"
@@ -133,7 +132,8 @@ static bool CheckShape(const aclTensor* selfTensor, const aclTensor* otherTensor
     return true;
 }
 
-static bool CheckFormat(const aclTensor* selfTensor, const aclTensor* otherTensor, const aclTensor* outTensor)
+static bool CheckFormat(
+    const aclTensor* selfTensor, [[maybe_unused]] const aclTensor* otherTensor, const aclTensor* outTensor)
 {
     auto selfFormat = selfTensor->GetStorageFormat();
     auto outTensorFormat = outTensor->GetStorageFormat();

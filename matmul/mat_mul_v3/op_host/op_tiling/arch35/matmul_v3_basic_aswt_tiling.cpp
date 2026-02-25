@@ -48,12 +48,13 @@ void MatMulV3BasicAswtTiling::FullLoadPre()
     return;
 }
 
-uint64_t MatMulV3BasicAswtTiling::GetAFullLoadBasicNL1() const {
+uint64_t MatMulV3BasicAswtTiling::GetAFullLoadBasicNL1() const
+{
     return std::min(ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16), runInfo_.baseN * DB_SIZE);
 }
 
 // A全载切换基础API的条件
-bool MatMulV3BasicAswtTiling::CheckAL1FullLoadDav3510(uint64_t kAlignedValue, uint64_t mAlignedValue)
+bool MatMulV3BasicAswtTiling::CheckAL1FullLoadDav3510(const uint64_t kAlignedValue, const uint64_t mAlignedValue)
 {
     uint64_t al1Size = kAlignedValue * mAlignedValue * args_.aDtypeSize;
     // 单核上只有一轮，走basic api模板， 头开销较小，无需走全载模板
@@ -148,7 +149,7 @@ void MatMulV3BasicAswtTiling::AdjustAL1Tiling3510Basic([[maybe_unused]] uint64_t
         // 如果stepKa > 2 && stepKb = 2, 则baseN不变， stepKb -> 2 stepKa > 2
         runInfo_.baseN = (runInfo_.stepKb == std::min(runInfo_.stepKa, 2UL)) ? runInfo_.baseN >> 1 : runInfo_.baseN;
         runInfo_.stepKb = std::min(runInfo_.stepKa, 2UL); // 最小为2保证baseK * 2 * adtype = 256B
-        runInfo_.depthB1 = DB_SIZE * runInfo_.stepKb; // stepN = DB_SIZE
+        runInfo_.depthB1 = DB_SIZE * runInfo_.stepKb;     // stepN = DB_SIZE
         runInfo_.baseN = ops::CeilAlign(runInfo_.baseN, BASIC_BLOCK_SIZE_16);
         bL1loadSize = runInfo_.depthB1 * runInfo_.baseN * runInfo_.baseK * args_.aDtypeSize;
     }
@@ -185,7 +186,7 @@ void MatMulV3BasicAswtTiling::DoAL1FullLoad(uint64_t bBatchDimAll, uint64_t bias
     return;
 }
 
-bool MatMulV3BasicAswtTiling::CheckBL1FullLoadDav3510(uint64_t kAlignedValue, uint64_t nAlignedValue)
+bool MatMulV3BasicAswtTiling::CheckBL1FullLoadDav3510(const uint64_t kAlignedValue, const uint64_t nAlignedValue)
 {
     uint64_t bl1Size = kAlignedValue * nAlignedValue * args_.bDtypeSize;
     // 单核上只有一轮，走basic api模板， 头开销较小，无需走全载模板
@@ -229,7 +230,7 @@ bool MatMulV3BasicAswtTiling::CheckBL1FullLoad()
 
 void MatMulV3BasicAswtTiling::AdjustBL1Tiling3510Basic([[maybe_unused]] uint64_t biasBatchDimAll /* args */)
 {
-    //biasBatchDimAll 没有被使用，但是编译器不发出警告
+    // biasBatchDimAll 没有被使用，但是编译器不发出警告
     uint64_t kAlignedValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
     uint64_t nAlignedValue = ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16);
     uint64_t bL1Size = kAlignedValue * nAlignedValue * args_.bDtypeSize;
@@ -249,8 +250,9 @@ void MatMulV3BasicAswtTiling::AdjustBL1Tiling3510Basic([[maybe_unused]] uint64_t
     runInfo_.singleCoreM = runInfo_.baseM;
     // 内轴*dtype是256 * 2的整数倍表明tiling减半不影响MTE2搬运效率
     if (!args_.isATrans || (runInfo_.baseM * args_.aDtypeSize) % (BASIC_BLOCK_SIZE_256 * NUM_TWO) == 0) {
-            runInfo_.baseM = runInfo_.baseM * runInfo_.baseN * dtypeSize * DB_SIZE <= compileInfo_.l0CSize ?
-                                runInfo_.baseM : ops::CeilAlign(runInfo_.baseM >> 1, BASIC_BLOCK_SIZE_16);
+        runInfo_.baseM = runInfo_.baseM * runInfo_.baseN * dtypeSize * DB_SIZE <= compileInfo_.l0CSize ?
+                             runInfo_.baseM :
+                             ops::CeilAlign(runInfo_.baseM >> 1, BASIC_BLOCK_SIZE_16);
     }
     // 重新计算是否满足aL1开启4buffer loc开启db
     uint64_t aL14Buffer = static_cast<uint64_t>(runInfo_.baseK) * runInfo_.stepKa * runInfo_.baseM * args_.aDtypeSize *

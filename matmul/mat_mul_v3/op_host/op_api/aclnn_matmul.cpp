@@ -223,7 +223,8 @@ inline static aclnnStatus CheckParam(
     return ACLNN_SUCCESS;
 }
 
-static bool CheckFormat(const aclTensor* selfTensor, const aclTensor* mat2Tensor, const aclTensor* outTensor)
+static bool CheckFormat(
+    const aclTensor* selfTensor, [[maybe_unused]] const aclTensor* mat2Tensor, const aclTensor* outTensor)
 {
     auto selfFormat = selfTensor->GetStorageFormat();
     auto outTensorFormat = outTensor->GetStorageFormat();

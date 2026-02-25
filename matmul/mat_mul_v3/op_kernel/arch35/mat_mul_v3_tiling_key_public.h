@@ -16,8 +16,6 @@
 #ifndef MAT_MUL_TILING_KEY_PUBLIC_H
 #define MAT_MUL_TILING_KEY_PUBLIC_H
 
-#include <cstdint>
-
 #define MAT_MUL_BASIC_LEVEL 1 // 数据类型定义
 #define MAT_MUL_HIGH_LEVEL 0
 

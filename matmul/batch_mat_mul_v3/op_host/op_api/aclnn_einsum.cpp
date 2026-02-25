@@ -65,10 +65,10 @@ static const std::initializer_list<DataType>& GetDtypeSupportList() {
 using callback =
     aclnnStatus (*)(const aclTensorList *tensors, aclTensor *output, uint64_t *workspaceSize, aclOpExecutor **executor);
 
-typedef struct {
+struct EinsumCallBack{
     std::string equation;
     callback einsumFunc;
-} EinsumCallBack;
+};
 
 aclnnStatus CheckABCDxABCED2ABCE(const aclTensorList *tensors, const aclTensor *output) {
     auto const &tensor0Shape = (*tensors)[0]->GetViewShape();

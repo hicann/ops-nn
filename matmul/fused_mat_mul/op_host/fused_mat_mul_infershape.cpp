@@ -12,8 +12,6 @@
  * \file fused_mat_mul_infershape.cpp
  * \brief
  */
-#include <string>
-
 #include "error_util.h"
 #include "log/log.h"
 #include "runtime/infer_shape_context.h"

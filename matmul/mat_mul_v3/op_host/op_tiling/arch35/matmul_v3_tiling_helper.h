@@ -39,7 +39,7 @@ public:
         uint64_t bBatchDimAll, const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
         MatMulV3RunInfo& runInfo);
     static void ResetFullLoadLoadBalance(MatMulV3RunInfo& runInfo);
-    static bool IsSelfNonContiguous(gert::TilingContext *context);
+    static bool IsSelfNonContiguous(const gert::TilingContext *context);
 };
 }
 }
