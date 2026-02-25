@@ -91,6 +91,8 @@ private:
     static constexpr uint64_t WINDOW_LEN = 4;
     static constexpr uint64_t L0_BASE_K_SIZE = 512;
     static constexpr uint64_t LEVEL1_SCALE_K_L1_SIZE = 4096;
+    static constexpr uint64_t LEVEL0_SCALE_K_UB_RATIO = 32;
+    static constexpr uint64_t LEVEL0_SCALE_K_UB_SIZE = L0_BASE_K_SIZE * LEVEL0_SCALE_K_UB_RATIO;
 };
 
 __aicore__ inline void DualLevelQuantBatchMatmulBaseBlock::Init(
@@ -103,7 +105,7 @@ __aicore__ inline void DualLevelQuantBatchMatmulBaseBlock::Init(
     offset_.kSize = tilingData->kSize;
     offset_.nSize = tilingData->nSize;
     offset_.level0GroupSize = tilingData->level0GroupSize;
-    offset_.level0ScaleKUbSize = 16384; // 512 * 32，x1_level0_scale一次载入的k方向的大小
+    offset_.level0ScaleKUbSize = LEVEL0_SCALE_K_UB_SIZE; // 512 * 32，x1_level0_scale一次载入的k方向的大小
     offset_.l0BaseK = L0_BASE_K_SIZE;
     offset_.level1ScaleKL1Size = LEVEL1_SCALE_K_L1_SIZE;
     offset_.level0ScaleGmGroupNum = Ops::Base::CeilDiv(offset_.kSize, offset_.level0GroupSize);

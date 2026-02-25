@@ -63,8 +63,8 @@ public:
         this->Attr("dtype").AttrType(REQUIRED).Int();
         this->Attr("transpose_x1").AttrType(OPTIONAL).Bool(false);
         this->Attr("transpose_x2").AttrType(OPTIONAL).Bool(true);
-        this->Attr("level0_group_size").AttrType(OPTIONAL).Int(512);
-        this->Attr("level1_group_size").AttrType(OPTIONAL).Int(32);
+        this->Attr("level0_group_size").AttrType(OPTIONAL).Int(LEVEL0_GROUP_SIZE);
+        this->Attr("level1_group_size").AttrType(OPTIONAL).Int(LEVEL1_GROUP_SIZE);
 
         OpAICoreConfig config910D;
         config910D.DynamicCompileStaticFlag(true)
@@ -77,6 +77,9 @@ public:
             .ExtendCfgInfo("opFile.value","dual_level_quant_batch_matmul_apt");
         this->AICore().AddConfig("ascend950", config910D);
     }
+
+    static constexpr int64_t LEVEL0_GROUP_SIZE = 512L;
+    static constexpr int64_t LEVEL1_GROUP_SIZE = 32L;
 };
 
 OP_ADD(DualLevelQuantBatchMatmul);

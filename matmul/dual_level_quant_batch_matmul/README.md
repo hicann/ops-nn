@@ -23,112 +23,112 @@
 
 ## 参数说明
 
-<table class="tg" style="undefined;table-layout: fixed; width: 1166px"><colgroup>
-<col style="width: 81px">
+<table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
+<col style="width: 150px">
 <col style="width: 150px">
 <col style="width: 430px">
-<col style="width: 390px">
+<col style="width: 212px">
 <col style="width: 144px">
 </colgroup>
 <thead>
   <tr>
-    <th class="tg-xbcz"><span style="font-weight:700;color:var(--theme-text);background-color:var(--theme-table-header-bg)">参数名</span></th>
-    <th class="tg-xbcz"><span style="font-weight:700;color:var(--theme-text);background-color:var(--theme-table-header-bg)">输入/输出/属性</span></th>
-    <th class="tg-xbcz"><span style="font-weight:700;color:var(--theme-text);background-color:var(--theme-table-header-bg)">描述</span></th>
-    <th class="tg-xbcz"><span style="font-weight:700;color:var(--theme-text);background-color:var(--theme-table-header-bg)">数据类型</span></th>
-    <th class="tg-xbcz"><span style="font-weight:700;color:var(--theme-text);background-color:var(--theme-table-header-bg)">数据格式</span></th>
+    <th>参数名</th>
+    <th>输入/输出/属性</th>
+    <th>描述</th>
+    <th>数据类型</th>
+    <th>数据格式</th>
   </tr></thead>
 <tbody>
   <tr>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">x1</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">输入</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">矩阵乘运算中的左矩阵。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">FLOAT4_E2M1</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">ND</span></td>
+    <td>x1</td>
+    <td>输入</td>
+    <td>矩阵乘运算中的左矩阵。</td>
+    <td>FLOAT4_E2M1</td>
+    <td>ND</td>
   </tr>
   <tr>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">x2</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">输入</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">矩阵乘运算中的右矩阵。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">FLOAT4_E2M1</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">FRACTAL_NZ</span></td>
+    <td>x2</td>
+    <td>输入</td>
+    <td>矩阵乘运算中的右矩阵。</td>
+    <td>FLOAT4_E2M1</td>
+    <td>FRACTAL_NZ</td>
   </tr>
   <tr>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">x1_level0_scale</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">输入</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">矩阵乘计算时，x1的一级量化参数的缩放因子，对应公式的x1Level0Scale。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">FLOAT32</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">ND</span></td>
+    <td>x1_level0_scale</td>
+    <td>输入</td>
+    <td>矩阵乘计算时，x1的一级量化参数的缩放因子，对应公式的x1Level0Scale。</td>
+    <td>FLOAT32</td>
+    <td>ND</td>
   </tr>
   <tr>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">x1_level1_scale</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">输入</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">矩阵乘计算时，x1的二级量化参数的缩放因子，对应公式的x1Level1Scale。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">FLOAT32</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">ND</span></td>
+    <td>x1_level1_scale</td>
+    <td>输入</td>
+    <td>矩阵乘计算时，x1的二级量化参数的缩放因子，对应公式的x1Level1Scale。</td>
+    <td>FLOAT8_E8M0</td>
+    <td>ND</td>
   </tr>
   <tr>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">x2_level0_scale</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">输入</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">矩阵乘计算时，x2的一级量化参数的缩放因子，对应公式的x2Level0Scale。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">FLOAT32</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">ND</span></td>
+    <td>x2_level0_scale</td>
+    <td>输入</td>
+    <td>矩阵乘计算时，x2的一级量化参数的缩放因子，对应公式的x2Level0Scale。</td>
+    <td>FLOAT32</td>
+    <td>ND</td>
   </tr>
   <tr>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">x2_level1_scale</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">输入</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">矩阵乘计算时，x2的二级量化参数的缩放因子，对应公式的x2Level1Scale。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">FLOAT32</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">ND</span></td>
+    <td>x2_level1_scale</td>
+    <td>输入</td>
+    <td>矩阵乘计算时，x2的二级量化参数的缩放因子，对应公式的x2Level1Scale。</td>
+    <td>FLOAT8_E8M0</td>
+    <td>ND</td>
   </tr>
   <tr>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">bias</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">输入</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">矩阵乘运算后累加的偏置，对应公式中的bias。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">FLOAT32</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">ND</span></td>
+    <td>bias</td>
+    <td>输入</td>
+    <td>矩阵乘运算后累加的偏置，对应公式中的bias。</td>
+    <td>FLOAT32</td>
+    <td>ND</td>
   </tr>
   <tr>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">y</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">输出</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">矩阵乘运算的计算结果。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">BFLOAT16, FLOAT16</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">ND</span></td>
+    <td>y</td>
+    <td>输出</td>
+    <td>矩阵乘运算的计算结果。</td>
+    <td>BFLOAT16, FLOAT16</td>
+    <td>ND</td>
   </tr>
   <tr>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">dtype</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">属性</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">矩阵乘运算计算结果的输出类型。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">INT64</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">-</span></td>
+    <td>dtype</td>
+    <td>属性</td>
+    <td>矩阵乘运算计算结果的输出类型。</td>
+    <td>INT64</td>
+    <td>-</td>
   </tr>
   <tr>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">transpose_x1</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">属性</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">矩阵乘运算中的左矩阵x1是否转置</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">BOOL</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">-</span></td>
+    <td>transpose_x1</td>
+    <td>属性</td>
+    <td>矩阵乘运算中的左矩阵x1是否转置</td>
+    <td>BOOL</td>
+    <td>-</td>
   </tr>
   <tr>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">transpose_x2</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">属性</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">矩阵乘运算中的右矩阵x2是否转置。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">BOOL</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">-</span></td>
+    <td>transpose_x2</td>
+    <td>属性</td>
+    <td>矩阵乘运算中的右矩阵x2是否转置。</td>
+    <td>BOOL</td>
+    <td>-</td>
   </tr>
   <tr>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">level0_group_size</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">属性</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">一级量化groupsize的大小，对应公式中的level0GroupSize</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">INT64</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">-</span></td>
+    <td>level0_group_size</td>
+    <td>属性</td>
+    <td>一级量化groupsize的大小，对应公式中的level0GroupSize</td>
+    <td>INT64</td>
+    <td>-</td>
   </tr>
   <tr>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">level1_group_size</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">属性</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">二级量化groupsize的大小，对应公式中的level1GroupSize</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">INT64</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">-</span></td>
+    <td>level1_group_size</td>
+    <td>属性</td>
+    <td>二级量化groupsize的大小，对应公式中的level1GroupSize</td>
+    <td>INT64</td>
+    <td>-</td>
   </tr>
 </tbody></table>
 

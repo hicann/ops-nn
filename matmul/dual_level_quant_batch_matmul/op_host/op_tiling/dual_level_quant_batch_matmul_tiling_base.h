@@ -22,8 +22,6 @@
 #include "../../op_kernel/dual_level_quant_batch_matmul_tiling_data.h"
 #include "dual_level_quant_batch_matmul_checker.h"
 
-using Ops::NN::Optiling::TilingBaseClass;
-
 namespace optiling {
 struct DualLevelQuantBatchMatmulCompileInfo {
     uint64_t ubSize;
@@ -37,7 +35,7 @@ struct DualLevelQuantBatchMatmulCompileInfo {
     NpuArch npuArch;
 };
 
-class DualLevelQuantBatchMatmulBaseTiling : public TilingBaseClass {
+class DualLevelQuantBatchMatmulBaseTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
     using TilingBaseClass::Reset;
 

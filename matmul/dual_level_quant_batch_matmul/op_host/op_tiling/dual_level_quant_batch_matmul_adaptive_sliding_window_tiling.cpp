@@ -256,7 +256,7 @@ void DualLevelQuantBatchMatmulTilingASW::AdjustBasicBlock()
             tempBaseM = ops::CeilAlign(ops::CeilDiv(matmulInfo_.mSize, mCore), baseMAlignNum);
         }
 
-        auto updateFunc = [&, this]() {
+        auto updateFunc = [&tempBaseM, &tempBaseN, &mCore, &nCore, baseMAlignNum, baseNAlignNum, this]() {
             tempBaseM = ops::CeilAlign(ops::CeilDiv(matmulInfo_.mSize, mCore), baseMAlignNum);
             tempBaseN = ops::CeilAlign(ops::CeilDiv(matmulInfo_.nSize, nCore), baseNAlignNum);
             mCore = ops::CeilDiv(matmulInfo_.mSize, static_cast<uint64_t>(tempBaseM));
@@ -496,7 +496,7 @@ void DualLevelQuantBatchMatmulTilingASW::SetTilingData()
 {
     usedCoreNum = CalBlockDim();
 
-    tilingData_->l1BufferNum = 2;
+    tilingData_->l1BufferNum = DB_SIZE;
     tilingData_->hasBias = matmulInfo_.hasBias;
     tilingData_->l2CacheDisable = L2CacheMode::L2_CACHE_DEFAULT;
     tilingData_->usedCoreNum = usedCoreNum;

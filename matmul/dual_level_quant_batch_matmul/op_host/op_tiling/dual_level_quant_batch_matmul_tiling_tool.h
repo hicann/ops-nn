@@ -22,9 +22,6 @@
 #include "common/inc/error_util.h"
 #include "tiling/platform/platform_ascendc.h"
 
-using AscendC::BLOCK_CUBE;
-using AscendC::ONE_BLK_SIZE;
-
 namespace optiling::tool {
 
 constexpr uint64_t BASIC_BLOCK = 512UL;
