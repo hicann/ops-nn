@@ -193,7 +193,7 @@ void InplaceIndexAddSimdSortTiling::DoOpTilingSplitIndicesSort()
 
     // CAST
     int64_t indicesSize = 0;
-    if (indicesCastMode_ ==0) {
+    if (indicesCastMode_ == 0) {
         indicesSize = indicesTypeSize_ + (indicesTypeSize_ + SIZE_TWO * ubBlock) + 
                         INT32_BYTES + INT32_BYTES + indicesTypeSize_;
     } else {

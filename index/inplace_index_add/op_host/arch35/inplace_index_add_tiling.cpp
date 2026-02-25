@@ -159,7 +159,6 @@ static bool CalRunningInfo(const InplaceIndexAddCompileInfo *compile_info,
 ge::graphStatus Tiling4InplaceIndexAdd(gert::TilingContext* context) {
   (void) context;
   return InplaceIndexAddTilingForAscendC(context);
-  
 }
 
 ge::graphStatus TilingPrepareInplaceIndexAddForAscendC(gert::TilingParseContext *context)

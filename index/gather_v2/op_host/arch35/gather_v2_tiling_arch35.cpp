@@ -1449,7 +1449,6 @@ static ge::graphStatus TilingPrepareForGatherV2(gert::TilingParseContext* contex
   compile_info->ub_size = static_cast<int64_t>(ubSize);
   OP_LOGD(context->GetNodeName(), "TilingPrepareForGatherV2 GRAPH_SUCCESS.");
   return ge::GRAPH_SUCCESS;
-
 }
 
 // register tiling interface of the GatherV2 and Gather op.

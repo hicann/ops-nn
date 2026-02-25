@@ -36,6 +36,9 @@ constexpr uint32_t HASH_SCORE_BUF_SIZE = 128;
 constexpr float SORT_HIST_THRESHOLD = 0.01f;
 static constexpr SortConfig sortConfig{SortType::RADIX_SORT, false};
 
+constexpr uint32_t TWO = 2;
+constexpr uint32_t THREE = 3;
+constexpr uint32_t FOUR = 4;
 constexpr uint32_t CAST_0 = 0;
 constexpr uint32_t CAST_1 = 1;
 constexpr uint32_t CAST_2 = 2;

@@ -471,7 +471,7 @@ __aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST
                                     static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
     DataCopyPadExtParams<VAR_T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<VAR_T>(0)};
     int64_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(VAR_T), UB_AGLIN_VALUE) / sizeof(VAR_T);
-    int64_t indicesOfset = rowIdx * tilingData_.ubIndexFactor;
+    int64_t indicesOfset = tilingData_.eachCoreIndexCount * GetBlockIdx() + rowIdx * tilingData_.ubIndexFactor;
     event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
     SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
     WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);

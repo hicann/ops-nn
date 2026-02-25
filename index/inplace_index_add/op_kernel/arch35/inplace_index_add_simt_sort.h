@@ -334,7 +334,7 @@ __aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA,
     COMP_T preAxis = td_.preAxis;
     COMP_T varInAxis = td_.varInAxis;
     COMP_T updatesInAxis = td_.updatesInAxis;
-    COMP_T indicesOffset = loopIdx * td_.indicesUbFactor;
+    COMP_T indicesOffset = loopIdx * td_.indicesUbFactor + blockIdx_ * td_.eachCoreIndexCount;
     
     __local_mem__ IDX_T* indicesLocalPtr = (__local_mem__ IDX_T*)(indicesLocal.GetPhyAddr());
 
