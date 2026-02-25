@@ -138,6 +138,9 @@ bool IndexTilingSimd::IsSimd()
         OP_LOGE(context_->GetNodeName(), "merge input shape error!");
         return false;
     }
+    if (mergeInputShapeDim_ == 0) {
+        return false;
+    }
     if (!(mergeInputIndexed_[static_cast<int32_t>(mergeInputShapeDim_ - 1)] != static_cast<uint32_t>(1) &&
           mergeInputShape_[static_cast<int32_t>(mergeInputShapeDim_ - 1)] >= SIMD_THRES &&
           ubSize_ >= NUM_TWO * static_cast<uint64_t>(indexedDimNum_) * static_cast<uint64_t>(INDICES_SIZE) &&
@@ -214,8 +217,7 @@ bool IndexTilingSimd::IsIndexContinue()
  * x:       [..., no_indices, indices, inner_size]
  * 判断indices是否连续，连续如下：
  * out:     [other_size, gather_size, inner_size]
- * 不连续，则：
- * out:     [gather_size, ..., other_size, ..., inner_size]
+ * 不连续，则：out:     [gather_size, ..., other_size, ..., inner_size]
  */
 ge::graphStatus IndexTilingSimd::MargeOutputAxis()
 {

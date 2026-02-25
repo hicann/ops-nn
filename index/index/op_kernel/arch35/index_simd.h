@@ -65,8 +65,8 @@ private:
     int64_t currentCoreElements_;
     int32_t blockIdx_;
     bool isIndicesValid_ = true;
-    uint32_t indicesGmOffset_ = 0;
-    uint32_t indicesBufOffset_ = 0;
+    uint64_t indicesGmOffset_ = 0;
+    uint64_t indicesBufOffset_ = 0;
     ListTensorDesc inputList_;
 };
 

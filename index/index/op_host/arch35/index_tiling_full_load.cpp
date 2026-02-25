@@ -154,7 +154,7 @@ ge::graphStatus IndexFullLoadTiling::GetPlatformInfo()
 {
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr == nullptr) {
-        auto compileInfoPtr = reinterpret_cast<const IndexCompileInfo*>(context_->GetCompileInfo());
+        auto compileInfoPtr = static_cast<const IndexCompileInfo*>(context_->GetCompileInfo());
         OP_CHECK_IF(
             compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
             return ge::GRAPH_FAILED);

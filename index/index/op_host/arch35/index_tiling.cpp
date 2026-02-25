@@ -84,7 +84,7 @@ static ge::graphStatus IsAiCore(IndexTilingData* params, const IndexCompileInfo*
 static ge::graphStatus Tiling4Index(gert::TilingContext* context)
 {
     OP_LOGD(OP_NAME.c_str(), "Tiling4Index rt2.0 is running.");
-    auto compile_info = reinterpret_cast<const IndexCompileInfo*>(context->GetCompileInfo());
+    auto compile_info = static_cast<const IndexCompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
 
     OP_LOGD(context->GetNodeName(), "Tiling4Index dsl compile_info is Null, running Simt tiling.");

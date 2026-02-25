@@ -377,7 +377,16 @@ ChooseInfo CalculateOutputShapeAndTransposeFlag(const aclTensor* self, IndicesIn
     }
     size_t tailSize = 1;
     for (size_t i = indicesInfo.masks.size(); i < self->GetViewShape().GetDimNum(); i++) {
-        tailSize = tailSize * self->GetViewShape().GetDim(i);
+        int64_t dim = self->GetViewShape().GetDim(i);
+        if (dim < 0) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GetDim returns negative value");
+            return chooseInfo;
+        }
+        if (tailSize > SIZE_MAX / static_cast<size_t>(dim)) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tailSize overflow detected");
+            return chooseInfo;
+        }
+        tailSize = tailSize * static_cast<size_t>(dim);
     }
     chooseInfo.tailSize = tailSize;
 

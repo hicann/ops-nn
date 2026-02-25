@@ -171,8 +171,8 @@ private:
     gert::Stride valueStride_;
     gert::Stride yStride_;
 
-    ge::DataType xDtype_;
-    ge::DataType indexDtype_;
+    ge::DataType xDtype_ = ge::DT_FLOAT;
+    ge::DataType indexDtype_ = ge::DT_INT32;
     std::vector<gert::Stride> indexstrideList = {};
     
     const char *opName_ = "Index";

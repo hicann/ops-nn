@@ -94,13 +94,13 @@ protected:
     ge::graphStatus GenIndexTilingKey();
 
 private:
-    bool accumulateMode_;
+    bool accumulateMode_ = false;
     uint64_t inputShapes_[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    uint64_t inputLength_;
-    uint32_t inputDimNum_;
-    uint64_t outputLength_;
-    uint32_t indexedDimNum_;
-    uint32_t tilingKey_;
+    uint64_t inputLength_ = 0;
+    uint32_t inputDimNum_ = 0;
+    uint64_t outputLength_ = 0;
+    uint32_t indexedDimNum_ = 0;
+    uint32_t tilingKey_ = 0;
     bool isPerfTemplate_{false};
     IndexSimtTilingData tilingData_;
     IndexPerfSimtTilingData PerfTilingData_;
