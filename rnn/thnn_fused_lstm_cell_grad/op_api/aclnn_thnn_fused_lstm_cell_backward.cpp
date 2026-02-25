@@ -153,7 +153,7 @@ static bool CheckDtypeValid(const aclTensor *gradHyOptional,
 }
 
 static bool ValidateInputShape(const aclTensor *input, const std::vector<int64_t>& expected_dims, const char* tensorName) {
-  auto shape = input->GetStorageShape();
+  auto shape = input->GetViewShape();
   if (shape.GetDimNum() != expected_dims.size()) {
       OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor %s has wrong dimension count", tensorName);
       return false;
