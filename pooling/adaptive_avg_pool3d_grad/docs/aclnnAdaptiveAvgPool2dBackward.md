@@ -146,9 +146,6 @@ aclnnStatus aclnnAdaptiveAvgPool2dBackward(
         <td>gradOutput和self维度不一致。</td>
       </tr>
       <tr>
-        <td>gradOutput和self维度不一致。</td>
-      </tr>
-      <tr>
         <td>gradOutput或self的维度不等于3或4。</td>
       </tr>
       <tr>

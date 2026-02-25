@@ -18,7 +18,7 @@
 - 算子功能：
   正向自适应最大池化的反向传播，将梯度回填到每个自适应窗口最大值的坐标处，相同坐标处累加。
 - 正向计算公式：
-  对于输入self维度$[N,C,H,W]$，N（Batch）表示批量大小、C（Channels）表示特征图通道、H（Height）表示特征图高度、W（Width）表示特征图宽度，outputSize值为$[H_o,W_o]$的场景，其输出output维度为$[N,C,H_o,W_o]$，索引indices维度为$[N,C,H_o,W_o]$，其中$m$表示输出高度维度的索引（取值范围$[0, H_o)$），$n$表示输出宽度维度的索引（取值范围$[0, W_o)$），相应tensor中每个元素的计算公式如下：
+  对于输入self维度$[N,C,H,W]$，N（Batch）表示批量大小、C（Channels）表示特征图通道、H（Height）表示特征图高度、W（Width）表示特征图宽度，outputSize值为$[H_o,W_o]$的场景，其输出output维度为$[N,C,H_o,W_o]$，索引indices维度为$[N,C,H_o,W_o]$，其中$m$表示输出高度维度的索引（取值范围$[0, H_o)$），$n$表示输出宽度维度的索引（取值范围$[0, W_o)$），相应tensor中每个元素$(m,n)$的计算公式如下：
   $$
   H_{left}^m = \lfloor(m*H)/H_o\rfloor \\
   H_{right}^m = \lceil(m*H)/H_o\rceil  \\

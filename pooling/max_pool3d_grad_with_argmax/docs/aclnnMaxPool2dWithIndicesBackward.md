@@ -202,6 +202,7 @@ aclnnStatus aclnnMaxPool2dWithIndicesBackward(
   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：gradOutput和self数据类型支持FLOAT。数据格式支持NCHW和CHW。indices数据类型支持INT32。仅支持dilation为（1，1）。
 
 - **返回值：**
+
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   第一段接口完成入参校验，出现以下场景时报错：
   <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
@@ -292,9 +293,9 @@ aclnnStatus aclnnMaxPool2dWithIndicesBackward(
     </tr>
   </tbody>
   </table>
--  **返回值：**
+- **返回值：**
 
-    aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 - 确定性计算：
