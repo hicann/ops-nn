@@ -81,11 +81,11 @@ int64_t BatchNormGradV3SplitLoadTiling::CalcBubBlock(int64_t tmpChannelNum)
 
 ge::graphStatus BatchNormGradV3SplitLoadTiling::DoOpTiling()
 {
-    int64_t eachCoreChannel = std::ceil((float)fusedALen_ / aicoreParams_.numBlocks); // 每个核处理的channel个数
+    int64_t eachCoreChannel = std::ceil(static_cast<float>(fusedALen_) / aicoreParams_.numBlocks); // 每个核处理的channel个数
     if (eachCoreChannel == 0) {
         return ge::GRAPH_FAILED;
     }
-    needCoreNum = std::ceil((float)fusedALen_ / eachCoreChannel);                   // 需要总核数
+    needCoreNum = std::ceil(static_cast<float>(fusedALen_) / eachCoreChannel);                   // 需要总核数
     int64_t eachCoreChannelTail = fusedALen_ - (needCoreNum - 1) * eachCoreChannel; // 尾块
 
     int64_t tmpChannelNum = eachCoreChannel > MAX_CHANNEL_SIZE ? MAX_CHANNEL_SIZE : eachCoreChannel;
