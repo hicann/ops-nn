@@ -268,7 +268,7 @@ public:
                 xInQue_.FreeTensor(xLocal);
             }
         }
-        pipe_barrier(PIPE_ALL);
+        PipeBarrier<PIPE_ALL>();
     }
 
     __aicore__ inline void CopyInMeanAndRstd(int64_t offset)

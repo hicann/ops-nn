@@ -78,7 +78,7 @@ struct BatchNormGradRARRecomputeTilingData {
 struct BatchNormGradRAFullLoadTilingData {
     BatchNormGradBaseTilingData baseTilingData;
     BatchNormGradBinaryAddTilingData binaryAddTilingData;
-    int64_t blockDim;
+    int64_t numBlocks;
     int64_t mainBlockFactor;
     int64_t tailBlockFactor;
     int64_t mainBlockCount;
@@ -100,7 +100,7 @@ struct BatchNormGradRAFullLoadTilingData {
 struct BatchNormGradRARecomputeTilingData {
     BatchNormGradBaseTilingData baseTilingData;
     BatchNormGradBinaryAddTilingData binaryAddTilingData;
-    int64_t blockDim;
+    int64_t numBlocks;
     int64_t mainBlockFactor;
     int64_t tailBlockFactor;
     int64_t mainBlockCount;

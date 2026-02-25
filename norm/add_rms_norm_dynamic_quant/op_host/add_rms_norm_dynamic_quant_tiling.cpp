@@ -443,10 +443,6 @@ ge::graphStatus Tiling4AddRmsNormDynamicQuant(gert::TilingContext* context)
     auto colStorageShape = optiling::EnsureNotScalar(colShape->GetStorageShape());
     uint32_t col_val = colStorageShape.GetDim(0);
     bool isEmptyTensor = (col_val == 0);
-    auto ptrCompileInfo = reinterpret_cast<const AddRmsNormDynamicQuantCompileInfo*>(context->GetCompileInfo());
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    platform_ascendc::SocVersion curSocVersion =
-        (ptrCompileInfo) == nullptr ? ascendcPlatform.GetSocVersion() : ptrCompileInfo->curSocVersion;
     if (IsRegbaseSocVersion(context)) {
         if (isEmptyTensor) {
             AddRmsNormDynamicQuantEmptyTiling emptyTiling(context);

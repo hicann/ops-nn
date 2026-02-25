@@ -278,10 +278,6 @@ static ge::graphStatus Tiling4AddRmsNormQuantNotRegbase(gert::TilingContext* con
 
 ge::graphStatus Tiling4AddRmsNormQuant(gert::TilingContext* context)
 {
-    auto ptrCompileInfo = reinterpret_cast<const AddRmsNormQuantCompileInfo*>(context->GetCompileInfo());
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    platform_ascendc::SocVersion curSocVersion =
-        (ptrCompileInfo) == nullptr ? ascendcPlatform.GetSocVersion() : ptrCompileInfo->curSocVersion;
     if (IsRegbaseSocVersion(context)) {
         AddRmsNormQuantRegbaseTiling regbaseTiling(context);
         return regbaseTiling.DoTiling();

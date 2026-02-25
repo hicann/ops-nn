@@ -107,7 +107,7 @@ ge::graphStatus LayerNormGradRecomputeTiling::BackwardKernelTiling()
 {
     int64_t backwardMfactor = DEFAULT_BACKWARD_M_FACTOR;
     int64_t backwardNfactor = DEFAULT_BACKWARD_N_FACTOR;
-    if (commonParams.colSize < backwardNfactor) {
+    if (static_cast<int64_t>(commonParams.colSize) < backwardNfactor) {
         backwardNfactor = ops::CeilAlign(static_cast<int64_t>(commonParams.colSize),
             static_cast<int64_t>(commonParams.vlFp32));
     }

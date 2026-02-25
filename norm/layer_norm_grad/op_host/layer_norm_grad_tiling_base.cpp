@@ -28,8 +28,7 @@ static const size_t BASE_WSP_SIZE = 0;
 static const size_t GRAD_OUT_NUM = 3;
 
 bool LayerNormGradTilingBase::CheckShapeSame(
-    const gert::TilingContext* context_, const size_t leftIndex, const size_t rightIndex, const bool isLeftInput,
-    const bool isRightInput)
+    const size_t leftIndex, const size_t rightIndex, const bool isLeftInput, const bool isRightInput)
 {
     const gert::StorageShape* leftShape = nullptr;
     const gert::StorageShape* rightShape = nullptr;
@@ -65,8 +64,8 @@ bool LayerNormGradTilingBase::CheckShapeSame(
 }
 
 ge::graphStatus LayerNormGradTilingBase::InputDtypeCheck(
-    gert::TilingContext* context_, ge::DataType dyDtype, ge::DataType xDtype, 
-    ge::DataType varianceDtype, ge::DataType meanDtype, ge::DataType gammaDtype)
+    ge::DataType dyDtype, ge::DataType xDtype, ge::DataType varianceDtype,
+    ge::DataType meanDtype, ge::DataType gammaDtype)
 {
     // input check
     OP_CHECK_IF(
@@ -89,13 +88,13 @@ ge::graphStatus LayerNormGradTilingBase::InputDtypeCheck(
 ge::graphStatus LayerNormGradTilingBase::GetShapeAttrsInfo()
 {
     // check dy and x and pdx shape must be the same
-    CheckShapeSame(context_, INPUT_IDX_ZERO, INPUT_IDX_ONE, true, true);
-    CheckShapeSame(context_, INPUT_IDX_ZERO, OUTPUT_IDX_ZERO, true, false);
+    CheckShapeSame(INPUT_IDX_ZERO, INPUT_IDX_ONE, true, true);
+    CheckShapeSame(INPUT_IDX_ZERO, OUTPUT_IDX_ZERO, true, false);
     // check variance and mean shape must be the same
-    CheckShapeSame(context_, INPUT_IDX_TWO, INPUT_IDX_THREE, true, true);
+    CheckShapeSame(INPUT_IDX_TWO, INPUT_IDX_THREE, true, true);
     // check gamma and pdbeta and pdgamma shape must be the same
-    CheckShapeSame(context_, INPUT_IDX_FOUR, OUTPUT_IDX_ONE, true, false);
-    CheckShapeSame(context_, INPUT_IDX_FOUR, OUTPUT_IDX_TWO, true, false);
+    CheckShapeSame(INPUT_IDX_FOUR, OUTPUT_IDX_ONE, true, false);
+    CheckShapeSame(INPUT_IDX_FOUR, OUTPUT_IDX_TWO, true, false);
 
     // get input
     auto dyDesc = context_->GetInputDesc(INPUT_IDX_ZERO);
@@ -163,7 +162,7 @@ ge::graphStatus LayerNormGradTilingBase::GetShapeAttrsInfo()
     
     // check input dtype
     OP_CHECK_IF(
-        InputDtypeCheck(context_, commonParams.dyDtype, commonParams.xDtype, commonParams.varianceDtype,
+        InputDtypeCheck(commonParams.dyDtype, commonParams.xDtype, commonParams.varianceDtype,
         commonParams.meanDtype,commonParams.gammaDtype) == ge::GRAPH_FAILED,
         OP_LOGE(context_->GetNodeName(), "input dtype check failed."), 
         return ge::GRAPH_FAILED);

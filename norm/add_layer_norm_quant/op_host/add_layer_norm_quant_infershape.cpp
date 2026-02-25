@@ -53,17 +53,10 @@ static bool InferReduceShape(const gert::Shape* xShape, const gert::Shape* gamma
     int64_t xDimValue = 0;
     int64_t gammaDimValue = 0;
 
-    for (size_t i = 0; i < xDimNum; i++) {
-        xDimValue = xShape->GetDim(i);
-        if (i < xDimNum - gammaDimNum) {
-            OP_LOGD("InferShape4AddLayerNormQuant", "xShape[%zu] = %zu", i, xDimValue);
-            reduceShape->SetDim(i, xDimValue);
-        } else {
-            gammaDimValue = gammaShape->GetDim(i - xDimNum + gammaDimNum);
-            OP_LOGD("InferShape4AddLayerNormQuant", "xShape[%zu] = %zu", i, xDimValue);
-            OP_LOGD("InferShape4AddLayerNormQuant", "gammaShape[%zu] = %zu", i - xDimNum + gammaDimNum, gammaDimValue);
-        }
-        OP_LOGD("InferShape4AddLayerNormQuant", "reduceShape[%zu] = [%zu]", i, reduceShape->GetDim(i));
+    for (size_t i = 0; i < xDimNum - gammaDimNum; i++) {
+ 	    xDimValue = xShape->GetDim(i);
+ 	    reduceShape->SetDim(i, xDimValue);
+ 	    OP_LOGI("InferShape4AddLayerNormQuant", "reduceShape[%zu] = [%zu]", i, reduceShape->GetDim(i));
     }
     return true;
 }

@@ -50,7 +50,6 @@ ge::graphStatus LayerNormGradV3GroupedReduceBigMTiling::GammaBetaKernelTiling()
     int64_t blockNum = static_cast<int64_t>(commonParams.coreNum);
     // 受二分累加存活空间计算限制
     blockNum = std::min(MAX_CORE_NUM, blockNum);
-    int64_t maxBlocks = commonParams.coreNum;  // Hardware max blocks
     int64_t blocksNeeded = ops::CeilDiv(row, gammaBetaMfactor);
     int64_t usableBlocks = std::min(blocksNeeded, blockNum);
 

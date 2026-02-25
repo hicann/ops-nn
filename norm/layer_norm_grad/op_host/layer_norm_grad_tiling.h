@@ -246,11 +246,10 @@ public:
 
 protected:
     ge::graphStatus InputDtypeCheck(
-        gert::TilingContext* context_, ge::DataType dyDtype, ge::DataType xDtype, 
-        ge::DataType varianceDtype, ge::DataType meanDtype, ge::DataType gammaDtype);
+        ge::DataType dyDtype, ge::DataType xDtype, ge::DataType varianceDtype,
+        ge::DataType meanDtype, ge::DataType gammaDtype);
     bool CheckShapeSame(
-        const gert::TilingContext* context_, const size_t leftIndex, const size_t rightIndex, const bool isLeftInput,
-        const bool isRightInput);
+        const size_t leftIndex, const size_t rightIndex, const bool isLeftInput, const bool isRightInput);
     ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus GetPlatformInfo() override;
     bool IsCapable() override;

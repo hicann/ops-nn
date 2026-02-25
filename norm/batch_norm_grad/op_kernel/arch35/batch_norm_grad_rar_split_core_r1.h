@@ -406,7 +406,7 @@ public:
 
     __aicore__ inline int64_t GetCacheID(const int64_t idx)
     {
-        return bcnt1(idx ^ (idx + CONST_ONE)) - CONST_ONE;
+        return ScalarGetCountOfValue<1>(idx ^ (idx + CONST_ONE)) - CONST_ONE;
     }
 
     __aicore__ inline void UpdateCache(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
