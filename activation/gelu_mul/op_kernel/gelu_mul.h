@@ -226,6 +226,31 @@ __aicore__ inline void GeluMulND<T>::Compute(int64_t dataCount) {
     PipeBarrier<PIPE_V>();
 }
 
+#if __CCE_AICORE__ == 330
+template <typename T>
+__aicore__ inline void GeluMulND<T>::ComputeGeluErf(LocalTensor<float> &castFp32, LocalTensor<float> &tempRes,
+                                        LocalTensor<float> &xSquared, int64_t calCount)
+{
+    Muls(tempRes, castFp32, ERF_SQRT_TWO_REC, calCount);
+    PiperBarrier<PIPE_V>();
+
+    static constexpr ErfConfig config = {
+        ErfAlgo::SUBSECTION_POLYNOMIAL_APPROXIMATION
+    };
+    Erf<float, false, config>(tempRes, tempRes, calCount);
+    PipeBarrier<PIPE_V>();
+
+    //0.5 * (1 + erf(x / sqrt(2)))
+    Adds(tempRes, tempRes, ERF_ONE, calCount);
+    PipeBarrier<PIPE_V>();
+    Muls(tempRes, tempRes, ERF_DOT_FIVE, calCount);
+    PipeBarrier<PIPE_V>();
+
+    // x * gelu
+    Mul(castFp32, castFp32, tempRes, calCount);
+    PipeBarrier<PIPE_V>();
+}
+#else
 template <typename T>
 __aicore__ inline void GeluMulND<T>::ComputeGeluErf(LocalTensor<float> &castFp32, LocalTensor<float> &tempRes,
                                         LocalTensor<float> &xSquared, int64_t calCount)
@@ -282,6 +307,7 @@ __aicore__ inline void GeluMulND<T>::ComputeGeluErf(LocalTensor<float> &castFp32
     Div(castFp32, castFp32, tempRes, calCount);
     PipeBarrier<PIPE_V>();
 }
+#endif
 
 template <typename T>
 __aicore__ inline void GeluMulND<T>::ComputeGeluTanh(LocalTensor<float> &castFp32, LocalTensor<float> &tempRes,
