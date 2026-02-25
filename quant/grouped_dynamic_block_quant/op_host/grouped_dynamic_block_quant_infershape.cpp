@@ -22,10 +22,79 @@ namespace ops {
 constexpr size_t INDEX_ATTR_DST_TYPE = 2;
 constexpr size_t INDEX_ATTR_ROW_BLOCK_SIZE = 3;
 constexpr size_t INDEX_ATTR_COL_BLOCK_SIZE = 4;
+constexpr size_t INPUT_DIM_ONE = 1;
 constexpr size_t INPUT_DIM_TWO = 2;
 constexpr size_t INPUT_DIM_THREE = 3;
+constexpr int64_t UNKNOWN_DIM_VALUE = -1;
 
-graphStatus InferShapeForGroupedDynamicBlockQuant(gert::InferShapeContext* context)
+void SetShapeDimTwo(gert::InferShapeContext* context, int64_t groupNum, int64_t rowBlockSize, int64_t colBlockSize)
+{
+    const gert::Shape* inputXShape = context->GetInputShape(0);
+    const gert::Shape* inputGroupListShape = context->GetInputShape(1);
+    gert::Shape* scaleShape = context->GetOutputShape(1);
+
+    int64_t dim0 = inputXShape->GetDim(0);
+    int64_t dim1 = inputXShape->GetDim(1);
+
+    OP_LOGD(
+        context, "GroupedDynamicBlockQuant input shape is [%s], rowBlockSize is %ld, colBlockSize is %ld", Ops::Base::ToString(*inputXShape).c_str(), rowBlockSize, colBlockSize);
+
+    scaleShape->SetDimNum(INPUT_DIM_TWO);
+    if (dim0 == UNKNOWN_DIM_VALUE || groupNum == UNKNOWN_DIM_VALUE || Ops::Base::IsUnknownRank(*inputGroupListShape)) {
+        scaleShape->SetDim(0, UNKNOWN_DIM_VALUE);
+    } else {
+        if (rowBlockSize <= 0) {
+            return;
+        }
+        // In practice, the number of rows in each group may not be divisible by rowBlockSize, so we allocate additional
+        // space for groupNum here.
+        scaleShape->SetDim(0, dim0 / rowBlockSize + groupNum);
+    }
+    if (dim1 == UNKNOWN_DIM_VALUE) {
+        scaleShape->SetDim(1, UNKNOWN_DIM_VALUE);
+    } else {
+        scaleShape->SetDim(1, Ops::Base::CeilDiv(dim1, colBlockSize));
+    }
+}
+
+void SetShapeDimThree(gert::InferShapeContext* context, int64_t groupNum, int64_t rowBlockSize, int64_t colBlockSize)
+{
+    const gert::Shape* inputXShape = context->GetInputShape(0);
+    const gert::Shape* inputGroupListShape = context->GetInputShape(1);
+    gert::Shape* scaleShape = context->GetOutputShape(1);
+
+    int64_t dim0 = inputXShape->GetDim(0);
+    int64_t dim1 = inputXShape->GetDim(1);
+    int64_t dim2 = inputXShape->GetDim(2);
+
+    OP_LOGD(
+        context, "GroupedDynamicBlockQuant input shape is [%s], rowBlockSize is %ld, colBlockSize is %ld",
+        Ops::Base::ToString(*inputXShape).c_str(), rowBlockSize, colBlockSize);
+
+    scaleShape->SetDimNum(INPUT_DIM_THREE);
+    if (dim0 == UNKNOWN_DIM_VALUE) {
+        scaleShape->SetDim(0, UNKNOWN_DIM_VALUE);
+    } else {
+        scaleShape->SetDim(0, dim0);
+    }
+    if (dim1 == UNKNOWN_DIM_VALUE || groupNum == UNKNOWN_DIM_VALUE || Ops::Base::IsUnknownRank(*inputGroupListShape)) {
+        scaleShape->SetDim(1, UNKNOWN_DIM_VALUE);
+    } else {
+        if (rowBlockSize <= 0) {
+            return;
+        }
+        // In practice, the number of rows in each group may not be divisible by rowBlockSize, so we allocate additional
+        // space for groupNum here.
+        scaleShape->SetDim(1, dim1 / rowBlockSize + groupNum);
+    }
+    if (dim2 == UNKNOWN_DIM_VALUE) {
+        scaleShape->SetDim(2, UNKNOWN_DIM_VALUE);
+    } else {
+        scaleShape->SetDim(2, Ops::Base::CeilDiv(dim2, colBlockSize));
+    }
+}
+
+ge::graphStatus InferShapeForGroupedDynamicBlockQuant(gert::InferShapeContext* context)
 {
     OP_LOGD(context, "Begin to do InferShapeForGroupedDynamicBlockQuant");
     const gert::Shape* inputXShape = context->GetInputShape(0);
@@ -37,8 +106,18 @@ graphStatus InferShapeForGroupedDynamicBlockQuant(gert::InferShapeContext* conte
 
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-    const int32_t* rowBlockSize = attrs->GetAttrPointer<int32_t>(INDEX_ATTR_ROW_BLOCK_SIZE);
-    const int32_t* colBlockSize = attrs->GetAttrPointer<int32_t>(INDEX_ATTR_COL_BLOCK_SIZE);
+    const int64_t* rowBlockSize = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_ROW_BLOCK_SIZE);
+    const int64_t* colBlockSize = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_COL_BLOCK_SIZE);
+
+    if (rowBlockSize == nullptr || colBlockSize == nullptr) {
+        OP_LOGD(context, "rowBlockSize or colBlockSize is nullptr, please check!");
+        return ge::GRAPH_FAILED;
+    }
+
+    if ((*rowBlockSize) <= 0 || (*colBlockSize) <= 0) {
+        OP_LOGD(context, "rowBlockSize or colBlockSize is invalid, please check!");
+        return ge::GRAPH_FAILED;
+    }
 
     gert::Shape* outputShape = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
@@ -52,34 +131,12 @@ graphStatus InferShapeForGroupedDynamicBlockQuant(gert::InferShapeContext* conte
         return ge::GRAPH_SUCCESS;
     }
 
+    *outputShape = *inputXShape;
+
     if (inputXShape->GetDimNum() == INPUT_DIM_TWO) {
-        int64_t dim0 = inputXShape->GetDim(0);
-        int64_t dim1 = inputXShape->GetDim(1);
-
-        OP_LOGD(
-            context, "GroupedDynamicBlockQuant input shape is (%ld, %ld), rowBlockSize is %d, colBlockSize is %d",
-            dim0, dim1, *rowBlockSize, *colBlockSize);
-        
-        *outputShape = *inputXShape;
-        scaleShape->SetDimNum(INPUT_DIM_TWO);
-        // In practice, the number of rows in each group may not be divisible by rowBlockSize, so we allocate additional space for groupNum here.
-        scaleShape->SetDim(0, dim0 / static_cast<int64_t>(*rowBlockSize) + groupNum);
-        scaleShape->SetDim(1, Ops::Base::CeilDiv(dim1, static_cast<int64_t>(*colBlockSize)));
+        SetShapeDimTwo(context, groupNum, *rowBlockSize, *colBlockSize);
     } else if (inputXShape->GetDimNum() == INPUT_DIM_THREE) {
-        int64_t dim0 = inputXShape->GetDim(0);
-        int64_t dim1 = inputXShape->GetDim(1);
-        int64_t dim2 = inputXShape->GetDim(2);
-
-        OP_LOGD(
-            context, "GroupedDynamicBlockQuant input shape is (%ld, %ld, %ld), rowBlockSize is %d, colBlockSize is %d",
-            dim0, dim1, dim2, *rowBlockSize, *colBlockSize);
-        
-        *outputShape = *inputXShape;
-        scaleShape->SetDimNum(INPUT_DIM_THREE);
-        scaleShape->SetDim(0, dim0);
-        // In practice, the number of rows in each group may not be divisible by rowBlockSize, so we allocate additional space for groupNum here.
-        scaleShape->SetDim(1, dim1 / static_cast<int64_t>(*rowBlockSize) + groupNum);
-        scaleShape->SetDim(INPUT_DIM_TWO, Ops::Base::CeilDiv(dim2, static_cast<int64_t>(*colBlockSize)));
+        SetShapeDimThree(context, groupNum, *rowBlockSize, *colBlockSize);
     } else {
         OP_LOGE(context, "only support input dim num is 2 or 3, infershape failed");
         return ge::GRAPH_FAILED;
