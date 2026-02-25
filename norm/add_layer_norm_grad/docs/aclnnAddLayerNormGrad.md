@@ -78,7 +78,6 @@
 
       其中，当i=j时，$\delta_{ij}$=1；当i!=j时，$\delta_{ij}$=0。
 
-
     - $\frac{{\rm d}\operatorname{E}(x)}{{\rm d}x_i}$：
 
       $$
@@ -217,7 +216,7 @@ aclnnStatus aclnnAddLayerNormGrad(
     <tr>
       <td>dsumOptional（aclTensor*）</td>
       <td>输入</td>
-      <td>表示额外的反向梯度累加输入。对应公式中的`dsumOptional`。</td>
+      <td>可选输入，表示额外的反向梯度累加输入。对应公式中的`dsumOptional`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape、数据类型与`dy`的shape、数据类型保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -307,7 +306,7 @@ aclnnStatus aclnnAddLayerNormGrad(
     <tr>
       <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="1">161002</td>
-      <td>输入或输出的数据类型不在支持的范围之内。</td>
+      <td>必选输入或必选输出的数据类型不在支持的范围之内。</td>
     </tr>
   </tbody></table>
 

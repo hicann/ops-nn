@@ -37,6 +37,7 @@
     $$
 
   - 反向公式：
+
     $$
     x= inputx1 + inputx2
     $$
@@ -65,17 +66,17 @@
       $$
       rstd=\frac {1}{\sqrt{\operatorname{Var}(x)}}
       $$
-    
+
     - $\frac{{\rm d}\hat{x_j}}{{\rm d}x_i}$：
-    
+
       $$
       \frac{{\rm d}\hat{x_j}}{{\rm d}x_i}=(\delta_{ij} - \frac{{\rm d}\operatorname{E}(x)}{{\rm d}  x_i}) * \frac{1}{\sqrt{\operatorname{Var}(x_i)}}-\frac{1}{\operatorname{Var}(x_i)}  (x_j-\operatorname{E}(x))\frac{\rm d \operatorname{Var}(x_i)}{\rm dx}
       $$
 
       其中，当i=j时，$\delta_{ij}$=1；当i!=j时，$\delta_{ij}$=0。
- 
+
     - $\frac{{\rm d}\operatorname{E}(x)}{{\rm d}x_i}$：
-    
+
       $$
       \frac{{\rm d}\operatorname{E}(x)}{{\rm d}x_i}=\frac{1}{D}
       $$
@@ -83,7 +84,7 @@
       其中，D为x中参加均值计算的数量。
 
     - $\frac{\rm d \operatorname{Var}(x_i)}{\rm dx}$：
-      
+
       $$
       \frac{\rm d \operatorname{Var}(x_i)}{\rm dx}=\frac{1}{D}\frac{1}{\sqrt{\operatorname{Var}  (x_i)}}(x_i-\operatorname{E}(x))
       $$
@@ -93,7 +94,6 @@
       $$
       dxOut = rstd * ({inputdy_i * \gamma_j} - \frac{1}{D} * (\sum_{j}{inputdy_i * \gamma_j} + \hat      {x_j} * \sum_{j}{inputdy_i * \gamma_j * \hat{x_j}})) + dsumOptional
       $$
-
 
 ## 参数说明
 
@@ -150,7 +150,7 @@
     </tr>
     <tr>
       <td>gamma</td>
-      <td>可选输入</td>
+      <td>输入</td>
       <td>表示需要norm的维度，对应公式中的`γ`。shape维度和`dy`后几维的维度相同。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
