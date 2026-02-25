@@ -2456,6 +2456,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/instance_norm/README.md">instance_norm</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>用于执行Instance Normalization（实例归一化）操作。相比BatchNorm算子，InstanceNorm在每个样本的实例上进行归一化，而不是在整个批次上进行归一化，这使得该函数更适合处理图像等数据。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/instance_norm_v3/README.md">instance_norm_v3</a></td>
     <td>✗</td>
     <td>✓</td>

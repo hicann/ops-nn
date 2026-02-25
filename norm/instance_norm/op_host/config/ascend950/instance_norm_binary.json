@@ -1,0 +1,2130 @@
+{
+    "op_type": "InstanceNorm",
+    "op_list": [ 
+      {
+        "bin_filename": "InstanceNorm_float32_float32_float32_NCHW",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NCHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NCHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_float16_float32_float32_NCHW",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NCHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NCHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_float16_float16_float16_NCHW",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NCHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NCHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_bfloat16_float32_float32_NCHW",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NCHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NCHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_bfloat16_bfloat16_bfloat16_NCHW",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NCHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NCHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_float32_float32_float32_NHWC",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_float16_float32_float32_NHWC",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_float16_float16_float16_NHWC",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_bfloat16_float32_float32_NHWC",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_bfloat16_bfloat16_bfloat16_NHWC",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_float32_float32_float32_NCDHW",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_float16_float32_float32_NCDHW",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_float16_float16_float16_NCDHW",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_bfloat16_float32_float32_NCDHW",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_bfloat16_bfloat16_bfloat16_NCDHW",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_float32_float32_float32_NDHWC",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_float16_float32_float32_NDHWC",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_float16_float16_float16_NDHWC",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_bfloat16_float32_float32_NDHWC",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_bfloat16_bfloat16_bfloat16_NDHWC",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_float32_float32_float32_ND",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_float16_float32_float32_ND",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_float16_float16_float16_ND",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_bfloat16_float32_float32_ND",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      },
+      {
+        "bin_filename": "InstanceNorm_bfloat16_bfloat16_bfloat16_ND",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "gamma",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "beta",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "mean",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "variance",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": 1e-6
+          }
+        ]
+      }
+    ]
+}
