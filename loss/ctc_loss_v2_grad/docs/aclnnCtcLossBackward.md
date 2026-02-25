@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-[aclnnCtcLoss](../../ctc_loss_v2/docs/aclnnCtcLoss.md)的反向传播，计算CTC的损失梯度。
+- 接口功能：[aclnnCtcLoss](../../ctc_loss_v2/docs/aclnnCtcLoss.md)的反向传播，计算CTC的损失梯度。
 
 ## 函数原型
 
@@ -23,26 +23,26 @@
 
 ```Cpp
 aclnnStatus aclnnCtcLossBackwardGetWorkspaceSize(
- const aclTensor*     gradOut,
- const aclTensor*     logProbs,
- const aclTensor*     targets,
- const aclIntArray*   inputLengths,
- const aclIntArray*   targetLengths,
- const aclTensor*     negLogLikelihood,
- const aclTensor*     logAlpha,
- int64_t              blank,
- bool                 zeroInfinity,
- aclTensor*           out,
- uint64_t*            workspaceSize,
- aclOpExecutor**      executor)
+    const aclTensor*     gradOut,
+    const aclTensor*     logProbs,
+    const aclTensor*     targets,
+    const aclIntArray*   inputLengths,
+    const aclIntArray*   targetLengths,
+    const aclTensor*     negLogLikelihood,
+    const aclTensor*     logAlpha,
+    int64_t              blank,
+    bool                 zeroInfinity,
+    aclTensor*           out,
+    uint64_t*            workspaceSize,
+    aclOpExecutor**      executor)
 ```
 
 ```Cpp
 aclnnStatus aclnnCtcLossBackward(
- void*          workspace,
- uint64_t       workspaceSize,
- aclOpExecutor* executor,
- aclrtStream    stream)
+    void*          workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor* executor,
+    aclrtStream    stream)
 ```
 
 ## aclnnCtcLossBackwardGetWorkspaceSize
@@ -72,7 +72,7 @@ aclnnStatus aclnnCtcLossBackward(
       </tr></thead>
     <tbody>
       <tr>
-      <td>gradOut</td>
+      <td>gradOut（aclTensor*）</td>
       <td>输入</td>
       <td>表示梯度更新系数。</td>
       <td>数据类型必须和logProbs一致。</td>
@@ -82,7 +82,7 @@ aclnnStatus aclnnCtcLossBackward(
       <td>√</td>
       </tr>
       <tr>
-      <td>logProbs</td>
+      <td>logProbs（aclTensor*）</td>
       <td>输入</td>
       <td>表示输出的对数概率。</td>
       <td>-</td>
@@ -92,7 +92,7 @@ aclnnStatus aclnnCtcLossBackward(
       <td>√</td>
       </tr>
       <tr>
-      <td>targets</td>
+      <td>targets（aclTensor*）</td>
       <td>输入</td>
       <td>表示包含目标序列的标签。</td>
       <td>当shape为(N,S)，S为不小于targetLengths中的最大值的值；或者shape为(SUM(targetLengths))，假设targets是未填充的而且在1维内级联的。数值必须小于C大于等于0。</td>
@@ -102,7 +102,7 @@ aclnnStatus aclnnCtcLossBackward(
       <td>√</td>
       </tr>
       <tr>
-      <td>inputLengths</td>
+      <td>inputLengths（aclIntArray*）</td>
       <td>输入</td>
       <td>表示输入序列的实际长度。</td>
       <td>数组长度为N，数组中的每个值必须小于等于T</td>
@@ -112,7 +112,7 @@ aclnnStatus aclnnCtcLossBackward(
       <td>-</td>
       </tr>
       <tr>
-      <td>targetLengths</td>
+      <td>targetLengths（aclIntArray*）</td>
       <td>输入</td>
       <td>表示目标序列的实际长度。</td>
       <td>数组长度为N，当targets的shape为(N,S)时，数组中的每个值必须小于等于S，最大值为maxTargetLength</td>
@@ -122,7 +122,7 @@ aclnnStatus aclnnCtcLossBackward(
       <td>-</td>
       </tr>
       <tr>
-      <td>negLogLikelihood</td>
+      <td>negLogLikelihood（aclTensor*）</td>
       <td>输入</td>
       <td>表示相对于每个输入节点可微分的损失值。</td>
       <td>数据类型必须和logProbs一致。</td>
@@ -132,7 +132,7 @@ aclnnStatus aclnnCtcLossBackward(
       <td>√</td>
       </tr>
       <tr>
-      <td>logAlpha</td>
+      <td>logAlpha（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入到目标的可能跟踪的概率。</td>
       <td>数据类型必须和logProbs一致。shape必须为3维的非空Tensor, shape为(N,T,alpha), 满足(alpha−1)/2>=maxTargetLength。</td>
@@ -142,7 +142,7 @@ aclnnStatus aclnnCtcLossBackward(
       <td>√</td>
       </tr>
       <tr>
-      <td>blank</td>
+      <td>blank（int64_t）</td>
       <td>输入</td>
       <td>表示空白标识。</td>
       <td>数值必须小于C大于等于0</td>
@@ -152,7 +152,7 @@ aclnnStatus aclnnCtcLossBackward(
       <td>-</td>
       </tr>
       <tr>
-      <td>zeroInfinity</td>
+      <td>zeroInfinity（bool）</td>
       <td>输入</td>
       <td>表示是否将无限损耗和相关梯度归零。</td>
       <td>-</td>
@@ -162,7 +162,7 @@ aclnnStatus aclnnCtcLossBackward(
       <td>-</td>
       </tr>
       <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示CTC的损失梯度。</td>
       <td>数据类型必须和gradOut一致</td>
@@ -172,7 +172,7 @@ aclnnStatus aclnnCtcLossBackward(
       <td>√</td>
       </tr>
       <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -182,7 +182,7 @@ aclnnStatus aclnnCtcLossBackward(
       <td>-</td>
       </tr>
       <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>

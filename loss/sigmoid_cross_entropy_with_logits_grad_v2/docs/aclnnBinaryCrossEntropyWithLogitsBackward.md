@@ -22,38 +22,38 @@
 
 ```Cpp
 aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackwardGetWorkspaceSize(
- const aclTensor *gradOutput,
- const aclTensor *self,
- const aclTensor *target,
- const aclTensor *weightOptional,
- const aclTensor *posWeightOptional,
- int64_t          reduction,
- aclTensor       *out,
- uint64_t        *workspaceSize,
- aclOpExecutor  **executor)
+    const aclTensor *gradOutput,
+    const aclTensor *self,
+    const aclTensor *target,
+    const aclTensor *weightOptional,
+    const aclTensor *posWeightOptional,
+    int64_t          reduction,
+    aclTensor       *out,
+    uint64_t        *workspaceSize,
+    aclOpExecutor  **executor)
 ```
 
 ```Cpp
 aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
- void             *workspace,
- uint64_t          workspaceSize,
- aclOpExecutor    *executor,
- const aclrtStream stream)
+    void             *workspace,
+    uint64_t          workspaceSize,
+    aclOpExecutor    *executor,
+    const aclrtStream stream)
 ```
 
 ## aclnnBinaryCrossEntropyWithLogitsBackwardGetWorkspaceSize
 
 - **参数说明：**
 
-    <table style="undefined;table-layout: fixed; width: 1290px"><colgroup>
+    <table style="undefined;table-layout: fixed; width: 1200px"><colgroup>
     <col style="width: 183px">
     <col style="width: 120px">
-    <col style="width: 293px">
+    <col style="width: 240px">
     <col style="width: 192px">
     <col style="width: 152px">
     <col style="width: 101px">
     <col style="width: 104px">
-    <col style="width: 145px">
+    <col style="width: 108px">
     </colgroup>
     <thead>
       <tr>
@@ -68,7 +68,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
       </tr></thead>
     <tbody>
       <tr>
-        <td>gradOutput</td>
+        <td>gradOutput（aclTensor*）</td>
         <td>输入</td>
         <td>网络反向传播前一步的梯度值。</td>
         <td>shape可以broadcast到self的shape</td>
@@ -78,7 +78,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
         <td>√</td>
       </tr>
       <tr>
-        <td>self</td>
+        <td>self（aclTensor*）</td>
         <td>输入</td>
         <td>网络正向前一层的计算结果。</td>
         <td>-</td>
@@ -88,7 +88,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
         <td>√</td>
       </tr>
       <tr>
-        <td>target</td>
+        <td>target（aclTensor*）</td>
         <td>输入</td>
         <td>样本的标签值。</td>
         <td>取值范围为0~1</td>
@@ -98,7 +98,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
         <td>√</td>
       </tr>
       <tr>
-        <td>weightOptional</td>
+        <td>weightOptional（aclTensor*）</td>
         <td>输入</td>
         <td>二分交叉熵权重。</td>
         <td><ul><li>shape可以broadcast到self的shape</li><li>当weightOptional为空时，会以self的shape创建一个全1的Tensor</li></ul></td>
@@ -108,7 +108,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
         <td>√</td>
       </tr>
       <tr>
-        <td>posWeightOptional</td>
+        <td>posWeightOptional（aclTensor*）</td>
         <td>输入</td>
         <td>正类的权重。</td>
         <td><ul><li>shape可以broadcast到self的shape</li><li>当posWeightOptional为空时，会以self的shape创建一个全1的Tensor</li></ul></td>
@@ -118,7 +118,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
         <td>√</td>
       </tr>
       <tr>
-        <td>reduction</td>
+        <td>reduction（int64_t）</td>
         <td>输入</td>
         <td>表示对二元交叉熵反向求梯度计算结果做的reduce操作。</td>
         <td>仅支持0,1,2三个值：<ul><li>0表示不做任何操作</li><li>1表示对结果取平均值</li><li>2表示对结果求和</li></ul></td>
@@ -128,7 +128,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
         <td>-</td>
       </tr>
       <tr>
-        <td>out</td>
+        <td>out（aclTensor*）</td>
         <td>输出</td>
         <td>存储梯度计算结果。</td>
         <td><a href="../../../docs/zh/context/数据格式.md">数据格式</a>需要与self一致。</td>
@@ -138,7 +138,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
         <td>-</td>
       </tr>
       <tr>
-        <td>workspaceSize</td>
+        <td>workspaceSize（uint64_t*）</td>
         <td>输出</td>
         <td>返回需要在Device侧申请的workspace大小。</td>
         <td>-</td>
@@ -148,7 +148,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
         <td>-</td>
       </tr>
       <tr>
-        <td>executor</td>
+        <td>executor（aclOpExecutor**）</td>
         <td>输出</td>
         <td>返回op执行器，包含了算子计算流程。</td>
         <td>-</td>

@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 算子功能：本算子是词汇表并行场景下交叉熵计算模块的一部分，解决超大规模词汇表下的显存和计算效率问题，当前部分为计算loss与softMax的结果。
+- 接口功能：本算子是词汇表并行场景下交叉熵计算模块的一部分，解决超大规模词汇表下的显存和计算效率问题，当前部分为计算loss与softMax的结果。
 - 计算公式：
 
     $$
@@ -31,59 +31,247 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnFusedCrossEntropyLossWithMaxSumGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnFusedCrossEntropyLossWithMaxSum”接口执行计算。
 
-- `aclnnStatus aclnnFusedCrossEntropyLossWithMaxSumGetWorkspaceSize(const aclTensor* logitsMax, const aclTensor* sumExpLogits, const aclTensor* predictedLogits, float labelSmoothing, const aclTensor* inputOptional, const aclTensor* weightOptional, const aclTensor* vocabParallelLogitsOptional, aclTensor* lossOut, aclTensor* softMaxOutOptional, uint64_t* workspaceSize, aclOpExecutor** executor);`
-- `aclnnStatus aclnnFusedCrossEntropyLossWithMaxSum(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)`
+```Cpp
+aclnnStatus aclnnFusedCrossEntropyLossWithMaxSumGetWorkspaceSize(
+    const aclTensor* logitsMax,
+    const aclTensor* sumExpLogits,
+    const aclTensor* predictedLogits,
+    float            labelSmoothing, 
+    const aclTensor* inputOptional,
+    const aclTensor* weightOptional,
+    const aclTensor* vocabParallelLogitsOptional,
+    aclTensor*       lossOut,
+    aclTensor*       softMaxOutOptional,
+    uint64_t*        workspaceSize,
+    aclOpExecutor**  executor)
+```
+
+```Cpp
+aclnnStatus aclnnFusedCrossEntropyLossWithMaxSum(
+    void*          workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor* executor,
+    aclrtStream    stream)
+```
 
 ## aclnnFusedCrossEntropyLossWithMaxSumGetWorkspaceSize
 
 - **参数说明：**
 
-  - logitsMax(aclTensor*，计算输入)：matmul计算后各行的最大值，公式中的logitsMax。Device侧的aclTensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，数据维度支持1维，数据类型支持FLOAT。
-
-  - sumExpLogits(aclTensor*，计算输入)：matmul计算结果与其各行的最大值作差后exp的结果。公式中的sumExpLogits。Device侧的aclTensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，数据维度支持1维，shape与logitsMax一致，数据类型支持FLOAT。
-
-  - predictedLogits(aclTensor*，计算输入)：表示matmul计算结果与其各行的最大值作差后maskedTargetOut筛选后的结果。公式中的predictedLogits。Device侧的aclTensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，数据维度支持1维，shape与logitsMax一致，数据类型支持FLOAT。
-
-  - labelSmoothing(float，计算输入)：标签平滑系数，用于缓解过拟合，当前只支持0。
-
-  - inputOptional(aclTensor*，计算输入)：matmul输入左矩阵。Device侧的aclTensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，当前只支持输入空指针。
-
-  - weightOptional(aclTensor*，计算输入)：matmul输入右矩阵。权重矩阵。Device侧的aclTensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，当前只支持输入空指针。
-
-  - vocabParallelLogitsOptional(aclTensor*，计算输入)：matmul计算结果。公式中的vocabParallelLogits。Device侧的aclTensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，数据维度支持2维，shape第1维需要与logitsMax第1维一致。数据类型支持FLOAT16，BFLOAT16。
-
-  - lossOut(aclTensor*，计算输出)：中间变量。公式中的loss，Device侧的aclTensor，shape与logitsMax一致，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，数据类型支持FLOAT。
-
-  - softMaxOutOptional(aclTensor*，计算输出)：中间变量。公式中的vocabParallelLogits，Device侧的aclTensor，shape与vocabParallelLogitsOptional一致，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，数据类型支持FLOAT。
-
-  - workspaceSize(uint64_t*，出参)：返回需要在Device侧申请的workspace大小。
-
-  - executor(aclOpExecutor**，出参)：返回op执行器，包含了算子计算流程。
+  </style>
+  <table class="tg" style="undefined;table-layout: fixed; width: 1268px"><colgroup>
+  <col style="width: 267px">
+  <col style="width: 87px">
+  <col style="width: 274px">
+  <col style="width: 193px">
+  <col style="width: 118px">
+  <col style="width: 113px">
+  <col style="width: 108px">
+  <col style="width: 108px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">参数名</th>
+      <th class="tg-0pky">输入/输出</th>
+      <th class="tg-0pky">描述</th>
+      <th class="tg-0pky">使用说明</th>
+      <th class="tg-0pky">数据类型</th>
+      <th class="tg-0pky">数据格式</th>
+      <th class="tg-0pky">维度(shape)</th>
+      <th class="tg-0pky">非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky">logitsMax（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">matmul计算后各行的最大值，公式中的logitsMax。</td>
+      <td class="tg-0pky">数据维度支持1维。</td>
+      <td class="tg-0pky">FLOAT</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">sumExpLogits（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">matmul计算结果与其各行的最大值作差后exp的结果，公式中的sumExpLogits。</td>
+      <td class="tg-0pky">数据维度支持1维，shape与logitsMax一致。</td>
+      <td class="tg-0pky">FLOAT</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">predictedLogits（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">表示matmul计算结果与其各行的最大值作差后maskedTargetOut筛选后的结果，公式中的predictedLogits。</td>
+      <td class="tg-0pky">数据维度支持1维，shape与logitsMax一致。</td>
+      <td class="tg-0pky">FLOAT</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">labelSmoothing（float）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">标签平滑系数，用于缓解过拟合。</td>
+      <td class="tg-0pky">当前只支持0。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">inputOptional（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">matmul输入左矩阵。</td>
+      <td class="tg-0pky">当前只支持输入空指针。</td>
+      <td class="tg-0pky">FLOAT</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">weightOptional（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">matmul输入右矩阵，权重矩阵。</td>
+      <td class="tg-0pky">当前只支持输入空指针。</td>
+      <td class="tg-0pky">FLOAT</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">vocabParallelLogitsOptional（aclTensor*）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">matmul计算结果，公式中的vocabParallelLogits。</td>
+      <td class="tg-0pky">数据维度支持2维，shape第1维需要与logitsMax第1维一致。</td>
+      <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">2</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">lossOut（aclTensor*）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">中间变量，公式中的loss。</td>
+      <td class="tg-0pky">shape与logitsMax一致。</td>
+      <td class="tg-0pky">FLOAT</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">softMaxOutOptional（aclTensor*）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">中间变量，公式中的vocabParallelLogits。</td>
+      <td class="tg-0pky">shape与vocabParallelLogitsOptional一致。</td>
+      <td class="tg-0pky">FLOAT</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">2</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">workspaceSize（uint64_t*）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回需要在Device侧申请的workspace大小。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">executor（aclOpExecutor**）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回op执行器，包含了算子计算流程。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+  </tbody></table>
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-```
   第一段接口完成入参校验，出现以下场景时报错：
-  161001(ACLNN_ERR_PARAM_NULLPTR)：1. 参数self、index、out是空指针。
-  161002(ACLNN_ERR_PARAM_INVALID)：1. 输入，输出参数的数据类型不在支持的范围内。
-                                   2. 输入，输出参数的维度不在支持的范围内。
-                                   3. 输入，输出参数的shape不满足约束。
-                                   4. labelSmoothing不等于0。
-```
+  
+  </style>
+  <table class="tg" style="undefined;table-layout: fixed; width: 970px"><colgroup>
+  <col style="width: 263px">
+  <col style="width: 88px">
+  <col style="width: 619px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">返回值</th>
+      <th class="tg-0pky">错误码</th>
+      <th class="tg-0pky">描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky">ACLNN_ERR_PARAM_NULLPTR</td>
+      <td class="tg-0pky">161001</td>
+      <td class="tg-0pky">logitsMax、sumExpLogits、predictedLogits、lossOut是空指针。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky" rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="4">161002</td>
+      <td class="tg-0pky">输入和输出的数据类型不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">输入和输出shape不满足约束。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">输入和输出维度不满足约束。</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">labelSmoothing不等于0。</td>
+    </tr>
+  </tbody>
+  </table>
 
 ## aclnnFusedCrossEntropyLossWithMaxSum
 
 - **参数说明：**
 
-  - workspace(void*，入参)：在Device侧申请的workspace内存地址。
-
-  - workspaceSize(uint64_t，入参)：在Device侧申请的workspace大小，由第一段接口aclnnFusedCrossEntropyLossWithMaxSumGetWorkspaceSize获取。
-
-  - executor(aclOpExecutor*，入参)：op执行器，包含了算子计算流程。
-
-  - stream(aclrtStream，入参)：指定执行任务的Stream。
+   <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+      <col style="width: 200px">
+      <col style="width: 162px">
+      <col style="width: 882px">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>参数名</th>
+          <th>输入/输出</th>
+          <th>描述</th>
+        </tr></thead>
+      <tbody>
+        <tr>
+          <td>workspace</td>
+          <td>输入</td>
+          <td>在Device侧申请的workspace内存地址。</td>
+        </tr>
+        <tr>
+          <td>workspaceSize</td>
+          <td>输入</td>
+          <td>在Device侧申请的workspace大小，由第一段接口aclnnBinaryCrossEntropyBackwardGetWorkspaceSize获取。</td>
+        </tr>
+        <tr>
+          <td>executor</td>
+          <td>输入</td>
+          <td>op执行器，包含了算子计算流程。</td>
+        </tr>
+        <tr>
+          <td>stream</td>
+          <td>输入</td>
+          <td>指定执行任务的Stream。</td>
+        </tr>
+      </tbody>
+    </table>
 
 - **返回值：**
 

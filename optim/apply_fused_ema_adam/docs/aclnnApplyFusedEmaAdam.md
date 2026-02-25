@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- **算子功能**：实现FusedEmaAdam融合优化器功能。
+- **接口功能**：实现FusedEmaAdam融合优化器功能。
 - **计算公式**：
 
   $$
@@ -71,46 +71,290 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 “aclnnApplyFusedEmaAdamGetWorkspaceSize” 接口获取入参并根据计算流程计算所需workspace大小以及包含了算子计算流程的执行器，再调用 “aclnnApplyFusedEmaAdam” 接口执行计算。
 
-* `aclnnStatus aclnnApplyFusedEmaAdamGetWorkspaceSize(const aclTensor* grad, aclTensor* varRef, aclTensor* mRef, aclTensor* vRef, aclTensor* sRef, const aclTensor* step, double lr, double emaDecay, double beta1, double beta2, double eps, int64_t mode, bool biasCorrection, double weightDecay, uint64_t* workspaceSize, aclOpExecutor** executor)`
-* `aclnnStatus aclnnApplyFusedEmaAdam(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)`
+```cpp
+aclnnStatus aclnnApplyFusedEmaAdamGetWorkspaceSize(
+    const aclTensor       *grad,
+    aclTensor       *varRef,
+    aclTensor       *mRef,
+    aclTensor       *vRef,
+    const aclTensor *sRef,
+    const aclTensor *step,
+    double           lr,
+    double           emaDecay,
+    double           beta1,
+    double           beta2,
+    double           eps,
+    int64_t          mode,
+    bool             biasCorrection,
+    double           weightDecay,
+    uint64_t        *workspaceSize,
+    aclOpExecutor  **executor)
+```
+
+```cpp
+aclnnStatus aclnnApplyFusedEmaAdam(
+    void          *workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor *executor,
+    aclrtStream    stream)
+```
 
 ## aclnnApplyFusedEmaAdamGetWorkspaceSize
 
 - **参数说明：**
-  - grad（aclTensor*，计算输入）：待更新参数对应的梯度，对应公式中的``grad``，Device侧的aclTensor，数据类型支持BFLOAT16，FLOAT16，FLOAT32，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  - varRef（aclTensor\*，计算输入/输出）：待更新参数，对应公式中的``var``，Device侧的aclTensor, 数据类型支持BFLOAT16，FLOAT16，FLOAT32，shape和数据类型需要和grad保持一致，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  - mRef（aclTensor\*，计算输入/输出）：待更新参数对应的一阶动量，对应公式中的``m``，Device侧的aclTensor, 数据类型支持BFLOAT16，FLOAT16，FLOAT32，shape和数据类型需要和grad保持一致，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  - vRef（aclTensor\*，计算输入/输出）：待更新参数对应的二阶动量，对应公式中的``v``，Device侧的aclTensor, 数据类型支持BFLOAT16，FLOAT16，FLOAT32，shape和数据类型需要和grad保持一致，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  - sRef（aclTensor\*，计算输入/输出）：待更新参数对应的EMA权重，对应公式中的``s``，Device侧的aclTensor, 数据类型支持BFLOAT16，FLOAT16，FLOAT32，shape和数据类型需要和grad保持一致，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  - step（aclTensor*，计算输入）：优化器当前的更新次数，对应公式中的``step``，Device侧的aclTensor, 数据类型支持INT64，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  - lr（double，计算输入）：学习率，对应公式中的``lr``。
-  - emaDecay（double，计算输入）：指数移动平均（EMA）的衰减速率，对应公式中的``emaDecay``。
-  - beta1（double，计算输入）：计算一阶动量的系数，对应公式中的$\beta_1$。
-  - beta2（double，计算输入）：计算二阶动量的系数，对应公式中的$\beta_2$。
-  - eps（double，计算输入）：加到分母上的项，用于数值稳定性，对应公式中的``eps``。
-  - mode（int64_t，计算输入）：控制应用L2正则化还是权重衰减，对应公式中的``mode``，1为adamw，0为L2。
-  - biasCorrection（bool，计算输入）：控制是否进行偏差校正，对应公式中的``biasCorrection``，true表示进行校正，false表示不做校正。
-  - weightDecay（double，计算输入）：权重衰减，对应公式中的``weightDecay``。
-  - workspaceSize（uint64\_t\*，出参）：返回需要在Device侧申请的workspace大小。
-  - executor（aclOpExecutor\*\*，出参）：返回op执行器，包含了算子计算流程。
+  </style>
+  <table class="tg" style="undefined;table-layout: fixed; width: 1137px"><colgroup>
+  <col style="width: 201px">
+  <col style="width: 88px">
+  <col style="width: 289px">
+  <col style="width: 156px">
+  <col style="width: 120px">
+  <col style="width: 95px">
+  <col style="width: 108px">
+  <col style="width: 108px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">参数名</th>
+      <th class="tg-0pky">输入/输出</th>
+      <th class="tg-0pky">描述</th>
+      <th class="tg-0pky">使用说明</th>
+      <th class="tg-0pky">数据类型</th>
+      <th class="tg-0pky">数据格式</th>
+      <th class="tg-0pky">维度(shape)</th>
+      <th class="tg-0pky">非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky">grad（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">待更新参数对应的梯度，对应公式中的grad。</td>
+      <td class="tg-0pky"></td>
+      <td class="tg-0pky">FLOAT16、BFLOAT16、FLOAT32</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">x</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">varRef（aclTensor*）</td>
+      <td class="tg-0pky">输入/输出</td>
+      <td class="tg-0pky">待更新参数，对应公式中的var。</td>
+      <td class="tg-0pky">shape要求与输入grad保持一致。</td>
+      <td class="tg-0pky">与grad保持一致</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">x</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">mRef（aclTensor*）</td>
+      <td class="tg-0pky">输入/输出</td>
+      <td class="tg-0pky">待更新参数对应的一阶动量，对应公式中的m。</td>
+      <td class="tg-0pky">shape要求与输入grad保持一致。</td>
+      <td class="tg-0pky">与grad保持一致</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">x</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">vRef（aclTensor*）</td>
+      <td class="tg-0pky">输入/输出</td>
+      <td class="tg-0pky">待更新参数对应的二阶动量，对应公式中的v。</td>
+      <td class="tg-0pky">shape要求与输入grad保持一致。</td>
+      <td class="tg-0pky">与grad保持一致</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">x</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">sRef（aclTensor*）</td>
+      <td class="tg-0pky">输入/输出</td>
+      <td class="tg-0pky">待更新参数对应的EMA权重，对应公式中的s。</td>
+      <td class="tg-0pky">shape要求与输入grad保持一致。</td>
+      <td class="tg-0pky">与grad保持一致</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">x</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">step（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">优化器当前的更新次数，对应公式中的step。</td>
+      <td class="tg-0pky">shape要求是[1,]。</td>
+      <td class="tg-0pky">INT64</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1</td>
+      <td class="tg-0pky">x</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">lr（double）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">学习率，公式中的η，推荐1e-3，1e-5，1e-8，范围0~1。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">DOUBLE</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">emaDecay（double）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">指数移动平均（EMA）的衰减速率，对应公式中的emaDecay。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">DOUBLE</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">beta1（double）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">计算一阶动量的系数，公式中beta1参数，推荐0.9，范围0~1。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">DOUBLE</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">beta2（double）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">计算二阶动量的系数，公式中beta1参数，推荐0.9，范围0~1。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">DOUBLE</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">eps（double）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">加到分母上的项，用于数值稳定性，对应公式中的eps。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">DOUBLE</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">mode（int64_t）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">控制应用L2正则化还是权重衰减，对应公式中的mode，1为adamw，0为L2。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">INT64</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">biasCorrection（bool）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">控制是否进行偏差校正，对应公式中的biasCorrection，true表示进行校正，false表示不做校正。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">BOOL</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">weightDecay（double）</td>
+      <td class="tg-0lax">输入</td>
+      <td class="tg-0lax">权重衰减，对应公式中的weightDecay。</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">DOUBLE</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">workspaceSize（uint64_t*）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回需要在Device侧申请的workspace大小。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">executor（aclOpExecutor**）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回op执行器，包含了算子计算流程。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+  </tbody></table>
 
 - **返回值：**
 
   返回aclnnStatus状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  ```
+
   第一段接口完成入参校验，出现以下场景时报错：
-  返回161001(ACLNN_ERR_PARAM_NULLPTR)：1. 输入和输出的Tensor是空指针。
-  返回161002(ACLNN_ERR_PARAM_INVALID)：1. 输入和输出的数据类型和数据格式不在支持的范围之内；
-                                       2. 输入grad、var、m、v、s的数据类型和shape不一致。
-  ```
+  </style>
+  <table class="tg" style="undefined;table-layout: fixed; width: 728px"><colgroup>
+  <col style="width: 267px">
+  <col style="width: 87px">
+  <col style="width: 374px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">返回码</th>
+      <th class="tg-0pky">错误码</th>
+      <th class="tg-0pky">描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky">ACLNN_ERR_PARAM_NULLPTR</td>
+      <td class="tg-0pky">161001</td>
+      <td class="tg-0pky">输入和输出的Tensor是空指针。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky">161002</td>
+      <td class="tg-0pky">输入和输出的数据类型和数据格式不在支持的范围之内。</td>
+    </tr>
+  </tbody>
+  </table>
 
 ## aclnnApplyFusedEmaAdam
 
 - **参数说明：**
-  - workspace（void\*，入参）：在Device侧申请的workspace内存地址。
-  - workspaceSize（uint64\_t，入参）：在Device侧申请的workspace大小，由第一段接口aclnnApplyFusedEmaAdamGetWorkspaceSize获取。
-  - executor（aclOpExecutor\*，入参）：op执行器，包含了算子计算流程。
-  - stream（aclrtStream，入参）：指定执行任务的Stream。
+  <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+  <col style="width: 200px">
+  <col style="width: 162px">
+  <col style="width: 882px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnApplyAdamWV2GetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
+  </table>
 
 - **返回值：**
 

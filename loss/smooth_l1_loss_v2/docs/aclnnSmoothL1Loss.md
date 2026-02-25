@@ -14,7 +14,7 @@
 |  <term>Atlas 训练系列产品</term>    |     √    |
 ## 功能说明
 
-- 算子功能：计算SmoothL1损失函数。
+- 接口功能：计算SmoothL1损失函数。
 - 计算公式:
 
   Batch为N的损失函数，当`reduction`为none时，此函数定义为：
@@ -47,76 +47,208 @@
 
 ```cpp
 aclnnStatus aclnnSmoothL1LossGetWorkspaceSize(
-  const aclTensor* self, 
-  const aclTensor* target, 
-  int64_t reduction, 
-  float beta, 
-  aclTensor* result, 
-  uint64_t* workspaceSize, 
-  aclOpExecutor** executor)
+      const aclTensor* self, 
+      const aclTensor* target, 
+      int64_t reduction, 
+      float beta, 
+      aclTensor* result, 
+      uint64_t* workspaceSize, 
+      aclOpExecutor** executor)
 ```
 
 ```cpp
 aclnnStatus aclnnSmoothL1Loss(
-  void* workspace, 
-  uint64_t workspaceSize,  
-  aclOpExecutor* executor, 
-  aclrtStream stream)
+    void* workspace, 
+    uint64_t workspaceSize,  
+    aclOpExecutor* executor, 
+    aclrtStream stream)
 ```
 
 ## aclnnSmoothL1LossGetWorkspaceSize
 - **参数说明：**
 
-  - self（aclTensor*，计算输入）：公式中的`self`，Device侧的aclTensor。shape需要与target满足[broadcast关系](../../../docs/zh/context/broadcast关系.md)且最高支持8维，数据类型需满足数据类型推导规则（参见[互推导关系](../../../docs/zh/context/互推导关系.md)），支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)， [数据格式](../../../docs/zh/context/数据格式.md)支持ND、NCL、NCHW、NHWC。
-
-    - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR AI处理器</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32。
-
-  - target（aclTensor*，计算输入）：公式中的`target`，Device侧的aclTensor。shape需要与self满足[broadcast关系](../../../docs/zh/context/broadcast关系.md)且最高支持8维，数据类型需满足数据类型推导规则（参见[互推导关系](../../../docs/zh/context/互推导关系.md)），支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)， [数据格式](../../../docs/zh/context/数据格式.md)支持ND、NCL、NCHW、NHWC。
-
-    - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR AI处理器</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32。
-
-  - reduction（int64_t，计算输入）：用于指定要应用到输出的缩减公式中的输入，公式中的`reduction`，Host侧的整型。取值支持0('none')|1('mean')|2('sum')，其中'none'表示不应用缩减，'mean'表示输出的总和将除以输出中的元素数，'sum'表示输出将被求和。
-
-  - beta（float，计算输入）：数据类型支持FLOAT，该值必须是非负的。
-
-  - result（aclTensor*，计算输出）：公式中输出的损失函数$\ell$，当`reduction`为`none`时，shape与self和target的broadcast结果一致，当`reduction`为`mean`或`sum`时为[ ]，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND、NCL、NCHW、NHWC。
-
-    - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR AI处理器</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32。
-
-  - workspaceSize（uint64_t*，出参）：返回需要在Device侧申请的workspace大小。
-
-  - executor（aclOpExecutor**，出参）：返回op执行器，包含了算子计算流程。
+  </style>
+  <table class="tg" style="undefined;table-layout: fixed; width: 1215px"><colgroup>
+  <col style="width: 194px">
+  <col style="width: 87px">
+  <col style="width: 253px">
+  <col style="width: 234px">
+  <col style="width: 118px">
+  <col style="width: 113px">
+  <col style="width: 108px">
+  <col style="width: 108px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">参数名</th>
+      <th class="tg-0pky">输入/输出</th>
+      <th class="tg-0pky">描述</th>
+      <th class="tg-0pky">使用说明</th>
+      <th class="tg-0pky">数据类型</th>
+      <th class="tg-0pky">数据格式</th>
+      <th class="tg-0pky">维度(shape)</th>
+      <th class="tg-0pky">非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky">self（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">输入张量，公式中的输入self。</td>
+      <td class="tg-0pky">shape需要与target满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>数据类型需满足与target数据类型推导规则（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
+      <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
+      <td class="tg-0pky">ND、NCL、NCHW、NHWC</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">target（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">真是标签，公式中的输入y。</td>
+      <td class="tg-0pky">shape需要与self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>数据类型需满足与self数据类型推导规则（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
+      <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
+      <td class="tg-0pky">ND、NCL、NCHW、NHWC</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">reduction（int64_t）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">指定要应用到输出的缩减，公式中的参数reduction。</td>
+      <td class="tg-0pky">支持0(none)|1(mean)|2(sum)。<br>'none'表示不应用缩减<br>'mean'表示输出的总和将除以输出中的元素数<br>'sum'表示输出将被求和</td>
+      <td class="tg-0pky">INT64</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">beta（float）</td>
+      <td class="tg-0lax">输入</td>
+      <td class="tg-0lax">计算属性，指定在L1和L2损失之间更改的数值。</td>
+      <td class="tg-0lax">该值必须是非负的。</td>
+      <td class="tg-0lax">FLOAT</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">result（aclTensor*）</td>
+      <td class="tg-0lax">输出</td>
+      <td class="tg-0lax">公式中输出的损失函数ℓ(self,target)。</td>
+      <td class="tg-0lax">当reduction为none时，shape与self和target的<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>结果一致，当reduction为mean或sum时为[ ]，数据类型时self和target推导后可转换的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）</td>
+      <td class="tg-0lax">FLOAT、FLOAT16、BFLOAT16</td>
+      <td class="tg-0lax">ND、NCL、NCHW、NHWC</td>
+      <td class="tg-0lax">1-8</td>
+      <td class="tg-0lax">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">workspaceSize（uint64_t*）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回需要在Device侧申请的workspace大小。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">executor（aclOpExecutor**）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回op执行器，包含了算子计算流程。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+  </tbody></table>
 
 - **返回值：**
   
-  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
-  ```
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  
   第一段接口完成入参校验，出现以下场景时报错：
-  返回161001 (ACLNN_ERR_PARAM_NULLPTR)：传入的self、target或result为空指针。
-  返回161002（ACLNN_ERR_PARAM_INVALID）：1. self、target或result的数据类型不在支持的范围之内。
-                                        2. self、target或result的shape不符合约束。
-                                        3. reduction不符合约束。
-                                        4. beta不符合约束。
-                                        5. self和target的数据类型不满足数据类型推导规则。
-                                        6. self和target的shape不满足broadcast关系。
-                                        7. reduction=0时，result的shape与self和target的broadcast的shape不一致。
-  ```
+  </style>
+  <table class="tg" style="undefined;table-layout: fixed; width: 991px"><colgroup>
+  <col style="width: 269px">
+  <col style="width: 90px">
+  <col style="width: 632px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">返回值</th>
+      <th class="tg-0pky">错误码</th>
+      <th class="tg-0pky">描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky">ACLNN_ERR_PARAM_NULLPTR</td>
+      <td class="tg-0pky">161001</td>
+      <td class="tg-0pky">传入的self、target或result为空指针。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky" rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="7">161002</td>
+      <td class="tg-0pky">self、target或result的数据类型不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">self、target或result的shape不符合约束。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">reduction不符合约束。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">beta不符合约束。</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">self和target的数据类型不满足数据类型推导规则。</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">self和target的shape不满足broadcast关系。</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">reduction=0时，result的shape与self和target的broadcast的shape不一致。</td>
+    </tr>
+  </tbody>
+  </table>
+
 ## aclnnSmoothL1Loss
 
 - **参数说明：**
 
-  - workspace（void*，入参）：在Device侧申请的workspace内存地址。
-
-  - workspaceSize（uint64_t，入参）：在Device侧申请的workspace大小，由第一段接口aclnnSmoothL1LossGetWorkspaceSize获取。
-
-  - executor（aclOpExecutor*，入参）：op执行器，包含了算子计算流程。
-
-  - stream（aclrtStream，入参）：指定执行任务的Stream。
-
+    <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+      <col style="width: 200px">
+      <col style="width: 162px">
+      <col style="width: 882px">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>参数名</th>
+          <th>输入/输出</th>
+          <th>描述</th>
+        </tr></thead>
+      <tbody>
+        <tr>
+          <td>workspace</td>
+          <td>输入</td>
+          <td>在Device侧申请的workspace内存地址。</td>
+        </tr>
+        <tr>
+          <td>workspaceSize</td>
+          <td>输入</td>
+          <td>在Device侧申请的workspace大小，由第一段接口aclnnBinaryCrossEntropyGetWorkspaceSize获取。</td>
+        </tr>
+        <tr>
+          <td>executor</td>
+          <td>输入</td>
+          <td>op执行器，包含了算子计算流程。</td>
+        </tr>
+        <tr>
+          <td>stream</td>
+          <td>输入</td>
+          <td>指定执行任务的Stream。</td>
+        </tr>
+      </tbody>
+    </table>
 
 - **返回值：**
 

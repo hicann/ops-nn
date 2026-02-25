@@ -16,54 +16,226 @@
 
 ## 功能说明
 
-算子功能：进行[aclnnKlDiv](https://gitcode.com/cann/ops-math/blob/master/math/kl_div_v2/docs/aclnnKlDiv.md) api的结果的反向计算。
+  进行[aclnnKlDiv](https://gitcode.com/cann/ops-math/blob/master/math/kl_div_v2/docs/aclnnKlDiv.md) api的结果的反向计算。
 
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnKlDivBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnKlDivBackward”接口执行计算。
 
-- `aclnnStatus aclnnKlDivBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, int64_t reduction, bool logTarget, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)`
-- `aclnnStatus aclnnKlDivBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)`
+```Cpp
+aclnnStatus aclnnKlDivBackwardGetWorkspaceSize(
+    const aclTensor* gradOutput,
+    const aclTensor* self,
+    const aclTensor* target,
+    int64_t          reduction,
+    bool             logTarget,
+    aclTensor*       out,
+    uint64_t*        workspaceSize,
+    aclOpExecutor**  executor)
+```
+
+```Cpp
+aclnnStatus aclnnKlDivBackward(
+    void*          workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor* executor,
+    aclrtStream    stream)
+```
 
 ## aclnnKlDivBackwardGetWorkspaceSize
 
 - **参数说明：**
 
-  - gradOutput(aclTensor*, 计算输入)：Device侧的aclTensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。shape需要与self满足[broadcast关系](../../../docs/zh/context/broadcast关系.md)。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16。
-  - self(aclTensor*, 计算输入)：Device侧的aclTensor。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16。
-  - target(aclTensor*, 计算输入)：Device侧的aclTensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。shape需要与self满足[broadcast关系](../../../docs/zh/context/broadcast关系.md)。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16。
-  - reduction(int64_t, 计算输入)：Host侧的int64_t，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。指定要应用到输出的缩减。支持0（‘none’）| 1（‘mean’）| 2（‘sum’）|3（‘batchmean’）。‘none’表示不应用减少，‘mean’表示输出的总和将除以输出中的元素数，‘sum’表示输出将被求和，‘batchmean’表示输出的总和将除以batch的个数。
-  - logTarget(bool, 计算输入)：Host侧的BOOL类型，是否对target进行log空间转换。
-  - out(aclTensor*, 计算输出)：Device侧的aclTensor。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16。
-  - workspaceSize(uint64_t*, 出参): 返回需要在Device侧申请的workspace大小。
-  - executor(aclOpExecutor**, 出参): 返回op执行器，包含了算子计算流程。
+  </style>
+  <table class="tg" style="undefined;table-layout: fixed; width: 1247px"><colgroup>
+  <col style="width: 205px">
+  <col style="width: 87px">
+  <col style="width: 274px">
+  <col style="width: 234px">
+  <col style="width: 118px">
+  <col style="width: 113px">
+  <col style="width: 108px">
+  <col style="width: 108px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">参数名</th>
+      <th class="tg-0pky">输入/输出</th>
+      <th class="tg-0pky">描述</th>
+      <th class="tg-0pky">使用说明</th>
+      <th class="tg-0pky">数据类型</th>
+      <th class="tg-0pky">数据格式</th>
+      <th class="tg-0pky">维度(shape)</th>
+      <th class="tg-0pky">非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky">gradOutput（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">梯度反向输入。</td>
+      <td class="tg-0pky">shape需要与self满足broadcast关系。</td>
+      <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">self（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">输入张量。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">target（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">真实的标签。</td>
+      <td class="tg-0pky">shape需要与self满足broadcast关系。</td>
+      <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">reduction（int64_t）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">指定要应用到输出的缩减。</td>
+      <td class="tg-0pky">支持0(none)|1(mean)|2(sum)|3(batchmean)。<br>'none'表示不应用缩减。<br>'mean'表示输出的总和将除以输出中的元素数。<br>'sum'表示输出将被求和。<br>'batchmean'表示输出的总和将除以batch的个数。</td>
+      <td class="tg-0pky">INT64</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">logTarget（bool）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">是否对target进行log空间转换。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">BOOL</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">out（aclTensor*）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">输出的损失。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">与self保持一致</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">workspaceSize（uint64_t*）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回需要在Device侧申请的workspace大小。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">executor（aclOpExecutor**）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回op执行器，包含了算子计算流程。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+  </tbody></table>
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
   第一段接口完成入参校验，出现以下场景时报错：
-  返回161001（ACLNN_ERR_PARAM_INVALID）: 1. 传入的gradOutput、self、target和out是空指针时。
-  返回161002（ACLNN_ERR_PARAM_INVALID）: 1. gradOutput、self、target和out的数据类型不在支持的范围内时。
-                                        2. gradOutput、self、target的数据类型不一致。
-                                        3. gradOutput的shape不能向self或者target broadcast。
-                                        4. target的shape和self的shape不满足broadcast关系。
-                                        5. self的shape与out的shape不相同。
-                                        6. gradOutput、self、target或者out维度大于8。
-  ```
+  
+  </style>
+  <table class="tg" style="undefined;table-layout: fixed; width: 991px"><colgroup>
+  <col style="width: 269px">
+  <col style="width: 90px">
+  <col style="width: 632px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">返回值</th>
+      <th class="tg-0pky">错误码</th>
+      <th class="tg-0pky">描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky">ACLNN_ERR_PARAM_NULLPTR</td>
+      <td class="tg-0pky">161001</td>
+      <td class="tg-0pky">传入的gradOutput、self、target和out是空指针。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky" rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="6">161002</td>
+      <td class="tg-0pky">gradOutput、self、target和out的数据类型不在支持的范围内时。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">self、out的数据类型不一致。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">gradOutput的shape不能向self或者target broadcast。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">target的shape和self的shape不满足broadcast关系。</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">self的shape与out的shape不相同。</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">gradOutput、self、target或者out维度大于8。</td>
+    </tr>
+  </tbody>
+  </table>
 
 ## aclnnKlDivBackward
 
 - **参数说明：**
 
-  * workspace（void\*, 入参）：在Device侧申请的workspace内存地址。
-  * workspaceSize（uint64\_t, 入参）：在Device侧申请的workspace大小，由第一段接口aclnnKlDivBackwardGetWorkspaceSize获取。
-  * executor（aclOpExecutor\*, 入参）：op执行器，包含了算子计算流程。
-  * stream（aclrtStream, 入参）：指定执行任务的Stream。
+   <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+      <col style="width: 200px">
+      <col style="width: 162px">
+      <col style="width: 882px">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>参数名</th>
+          <th>输入/输出</th>
+          <th>描述</th>
+        </tr></thead>
+      <tbody>
+        <tr>
+          <td>workspace</td>
+          <td>输入</td>
+          <td>在Device侧申请的workspace内存地址。</td>
+        </tr>
+        <tr>
+          <td>workspaceSize</td>
+          <td>输入</td>
+          <td>在Device侧申请的workspace大小，由第一段接口aclnnBinaryCrossEntropyBackwardGetWorkspaceSize获取。</td>
+        </tr>
+        <tr>
+          <td>executor</td>
+          <td>输入</td>
+          <td>op执行器，包含了算子计算流程。</td>
+        </tr>
+        <tr>
+          <td>stream</td>
+          <td>输入</td>
+          <td>指定执行任务的Stream。</td>
+        </tr>
+      </tbody>
+    </table>
 
 - **返回值：**
 

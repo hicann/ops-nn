@@ -54,37 +54,37 @@
 
 ```Cpp
 aclnnStatus aclnnBinaryCrossEntropyWithLogitsGetWorkspaceSize(
- const aclTensor *self,
- const aclTensor *target,
- const aclTensor *weightOptional,
- const aclTensor *posWeightOptional,
- int64_t          reduction,
- aclTensor       *out,
- uint64_t        *workspaceSize,
- aclOpExecutor  **executor)
+    const aclTensor *self,
+    const aclTensor *target,
+    const aclTensor *weightOptional,
+    const aclTensor *posWeightOptional,
+    int64_t          reduction,
+    aclTensor       *out,
+    uint64_t        *workspaceSize,
+    aclOpExecutor  **executor)
 ```
 
 ```Cpp
 aclnnStatus aclnnBinaryCrossEntropyWithLogits(
- void             *workspace,
- uint64_t          workspaceSize,
- aclOpExecutor    *executor,
- const aclrtStream stream)
+    void             *workspace,
+    uint64_t          workspaceSize,
+    aclOpExecutor    *executor,
+    const aclrtStream stream)
 ```
 
 ## aclnnBinaryCrossEntropyWithLogitsGetWorkspaceSize
 
 - **参数说明：**
 
-   <table style="undefined;table-layout: fixed; width: 1290px"><colgroup>
+   <table style="undefined;table-layout: fixed; width: 1193px"><colgroup>
     <col style="width: 183px">
     <col style="width: 120px">
-    <col style="width: 263px">
+    <col style="width: 203px">
     <col style="width: 222px">
     <col style="width: 152px">
     <col style="width: 101px">
     <col style="width: 104px">
-    <col style="width: 145px">
+    <col style="width: 108px">
     </colgroup>
     <thead>
       <tr>
@@ -99,7 +99,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogits(
       </tr></thead>
     <tbody>
       <tr>
-        <td>self</td>
+        <td>self（aclTensor*）</td>
         <td>输入</td>
         <td>连接层输出。</td>
         <td>-</td>
@@ -109,7 +109,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogits(
         <td>√</td>
       </tr>
       <tr>
-        <td>target</td>
+        <td>target（aclTensor*）</td>
         <td>输入</td>
         <td>label标签值。</td>
         <td>-</td>
@@ -119,7 +119,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogits(
         <td>√</td>
       </tr>
       <tr>
-      <td>weightOptional</td>
+      <td>weightOptional（aclTensor*）</td>
       <td>输入</td>
       <td>二分交叉熵权重。</td>
       <td>shape需要能够broadcast到“target”</td>
@@ -129,7 +129,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogits(
       <td>√</td>
       </tr>
       <tr>
-        <td>posWeightOptional</td>
+        <td>posWeightOptional（aclTensor*）</td>
         <td>输入</td>
         <td>各类的正类权重。</td>
         <td>shape需要能够broadcast到“target”</td>
@@ -139,7 +139,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogits(
         <td>√</td>
       </tr>
       <tr>
-        <td>reduction</td>
+        <td>reduction（int64_t）</td>
         <td>输入</td>
         <td>输出结果计算方式。</td>
         <td>仅支持0,1,2三个值：<ul><li>0表示不做任何操作</li><li>1表示对结果取平均值</li><li>2表示对结果求和</li></ul></td>
@@ -149,7 +149,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogits(
         <td>-</td>
       </tr>
       <tr>
-        <td>out</td>
+        <td>out（aclTensor*）</td>
         <td>输出</td>
         <td>输出误差。</td>
         <td>如果reduction = None，shape与self一致，其他情况shape为[1]</td>
@@ -159,7 +159,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogits(
         <td>√</td>
       </tr>
       <tr>
-        <td>workspaceSize</td>
+        <td>workspaceSize（uint64_t*）</td>
         <td>输出</td>
         <td>返回需要在Device侧申请的workspace大小。</td>
         <td>-</td>
@@ -169,7 +169,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogits(
         <td>-</td>
       </tr>
       <tr>
-        <td>executor</td>
+        <td>executor（aclOpExecutor**）</td>
         <td>输出</td>
         <td>返回op执行器，包含了算子计算流程。</td>
         <td>-</td>

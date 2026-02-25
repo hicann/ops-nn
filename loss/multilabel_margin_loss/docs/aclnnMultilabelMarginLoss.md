@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 算子功能：计算负对数似然损失值。
+- 接口功能：计算负对数似然损失值。
 - 计算公式：
 self为输入，shape为(N,C)或者(C)，其中N表示batch size，C表示类别数。target表示真实标签，shape为(N，C) 或者(C)，其中每个元素的取值范围是[-1, C - 1]，为确保与输入相同的形状，用-1填充，即首个-1之前的标签代表样本所属真实标签yTrue。如y=[0,3,-1,1],真实标签yTrue为[0,3]。对于每个样本计算的公式如下:
 
@@ -52,46 +52,205 @@ self为输入，shape为(N,C)或者(C)，其中N表示batch size，C表示类别
 ## 函数原型
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMultilabelMarginLossGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMultilabelMarginLoss”接口执行计算。
 
-- `aclnnStatus aclnnMultilabelMarginLossGetWorkspaceSize(const aclTensor* self, const aclTensor* target, int64_t reduction, aclTensor* out, aclTensor* isTarget, uint64_t* workspaceSize, aclOpExecutor** executor)`
-- `aclnnStatus aclnnMultilabelMarginLoss(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)`
+```Cpp
+aclnnStatus aclnnMultilabelMarginLossGetWorkspaceSize(
+    const aclTensor* self, 
+    const aclTensor* target,
+    int64_t          reduction, 
+    aclTensor*       out, 
+    aclTensor*       isTarget,
+    uint64_t*        workspaceSize, 
+    aclOpExecutor**  executor)
+```
+
+```Cpp
+aclnnStatus aclnnMultilabelMarginLoss(
+    void            *workspace,
+    uint64_t         workspaceSize,
+    aclOpExecutor   *executor,
+    aclrtStream      stream)
+```
 
 ## aclnnMultilabelMarginLossGetWorkspaceSize
 
 - **参数说明**
 
-  - self（aclTensor\*, 计算输入）：公式中的输入`self`，Device侧的aclTensor，shape为(N,C)或者(C)，其中N表示batch size，C表示类别数。self与out、isTarget的数据类型一致，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md), [数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。当 `self`中元素个数大于15000\*20000时可能出现507034 Vector Core运行超时。
-  - target（aclTensor\*, 计算输入）：公式中的输入`target`，Device侧的aclTensor，表示真实标签，shape为(N，C) 或者(C)，其中每个元素的取值范围是[-1, C - 1]，用-1填充，即首个-1之前的标签代表样本所属真实标签。数据类型支持INT64、INT32 ，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)， [数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  - reduction（int64_t, 计算输入）：公式中的`reduction`，Host侧的整型，指定要应用到输出的缩减，支持 0(none) | 1(mean) | 2(sum)。none表示不应用reduce，mean表示输出的总和将除以输出中的样本数，sum表示输出将被求和。
-  - out（aclTensor\*, 计算输出）：公式中的`out`，Device侧的aclTensor，self与out、isTarget的数据类型一致，shape(N)为或者()。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
-  - isTarget（aclTensor\*, 计算输出）：公式中的输出`istarget`，Device侧的aclTensor，self与out、isTarget的数据类型一致，shape为(N，C) 或者(C)，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)， [数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
-  - workspaceSize（uint64_t\*, 出参）：返回需要在Device侧申请的workspace大小。
-  - executor（aclOpExecutor\**, 出参）：返回op执行器，包含了算子计算流程。
+  </style>
+  <table class="tg" style="undefined;table-layout: fixed; width: 1215px"><colgroup>
+  <col style="width: 194px">
+  <col style="width: 87px">
+  <col style="width: 253px">
+  <col style="width: 234px">
+  <col style="width: 118px">
+  <col style="width: 113px">
+  <col style="width: 108px">
+  <col style="width: 108px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">参数名</th>
+      <th class="tg-0pky">输入/输出</th>
+      <th class="tg-0pky">描述</th>
+      <th class="tg-0pky">使用说明</th>
+      <th class="tg-0pky">数据类型</th>
+      <th class="tg-0pky">数据格式</th>
+      <th class="tg-0pky">维度(shape)</th>
+      <th class="tg-0pky">非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky">self（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">输入张量，公式中的输入x。</td>
+      <td class="tg-0pky">shape为(N,C)或者(C)，其中N表示batch size，C表示类别数。<br>当 `self`中元素个数大于15000*20000时可能出现507034 Vector Core运行超时。</td>
+      <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1、2</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">target（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">真是标签，公式中的输入y。</td>
+      <td class="tg-0pky">shape为(N，C) 或者(C)，其中每个元素的取值范围是[-1, C - 1]，用-1填充，即首个-1之前的标签代表样本所属真实标签。</td>
+      <td class="tg-0pky">INT32、INT64</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1、2</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">reduction（int64_t）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">指定要应用到输出的缩减，公式中的参数reduction。</td>
+      <td class="tg-0pky">支持0(none)|1(mean)|2(sum)。<br>'none'表示不应用缩减<br>'mean'表示输出的总和将除以输出中的元素数<br>'sum'表示输出将被求和</td>
+      <td class="tg-0pky">INT64</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">out（aclTensor*）</td>
+      <td class="tg-0lax">输出</td>
+      <td class="tg-0lax">输出的loss，公式中的ℓ(x,y)。</td>
+      <td class="tg-0lax">shape(N)为或者()</td>
+      <td class="tg-0lax">与self、isTarget保持一致</td>
+      <td class="tg-0lax">ND</td>
+      <td class="tg-0lax">0、1</td>
+      <td class="tg-0lax"></td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">isTarget（aclTensor*）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">公式中的输出`istarget`</td>
+      <td class="tg-0pky">shape为(N，C) 或者(C)</td>
+      <td class="tg-0pky">与self、out保持一致</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1、2</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">workspaceSize（uint64_t*）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回需要在Device侧申请的workspace大小。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">executor（aclOpExecutor**）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回op执行器，包含了算子计算流程。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+  </tbody></table>
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
   第一段接口完成入参校验，出现以下场景时报错：
-  返回161001（ACLNN_ERR_PARAM_NULLPTR）：1. 传入的self、target、out、isTarget为空指针。
-  返回161002（ACLNN_ERR_PARAM_INVALID）：1. self、out、isTarget的数据类型不在支持的范围之内。
-                                        2. self、out、isTarget的数据类型不一致。
-                                        3. target的数据类型不在支持的范围之内。
-                                        4. self、target、isTarget的shape不满足参数说明中的要求。
-                                        5. out的shape不满足参数说明中的要求。
-  ```
+  </style>
+  <table class="tg" style="undefined;table-layout: fixed; width: 991px"><colgroup>
+  <col style="width: 269px">
+  <col style="width: 90px">
+  <col style="width: 632px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">返回值</th>
+      <th class="tg-0pky">错误码</th>
+      <th class="tg-0pky">描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky">ACLNN_ERR_PARAM_NULLPTR</td>
+      <td class="tg-0pky">161001</td>
+      <td class="tg-0pky">传入的self、target、out、isTarget为空指针。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky" rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="5">161002</td>
+      <td class="tg-0pky">self、out、isTarget的数据类型不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">self、out、isTarget的数据类型不一致。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">target的数据类型不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">self、target、isTarget的shape不满足参数说明中的要求。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">out的shape不满足参数说明中的要求。</td>
+    </tr>
+  </tbody>
+  </table>
 
 ## aclnnMultilabelMarginLoss
 
-- **参数说明**
+- **参数说明：**
 
-  - workspace（void\*, 入参）：在Device侧申请的workspace内存地址。
-  - workspaceSize（uint64_t, 入参）：在Device侧申请的workspace大小，由第一段接口aclnnMultilabelMarginLossGetWorkspaceSize获取。
-  - executor（aclOpExecutor\*, 入参）：op执行器，包含了算子计算流程。
-  - stream（aclrtStream, 入参）：指定执行任务的Stream。
+    <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+      <col style="width: 200px">
+      <col style="width: 162px">
+      <col style="width: 882px">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>参数名</th>
+          <th>输入/输出</th>
+          <th>描述</th>
+        </tr></thead>
+      <tbody>
+        <tr>
+          <td>workspace</td>
+          <td>输入</td>
+          <td>在Device侧申请的workspace内存地址。</td>
+        </tr>
+        <tr>
+          <td>workspaceSize</td>
+          <td>输入</td>
+          <td>在Device侧申请的workspace大小，由第一段接口aclnnBinaryCrossEntropyGetWorkspaceSize获取。</td>
+        </tr>
+        <tr>
+          <td>executor</td>
+          <td>输入</td>
+          <td>op执行器，包含了算子计算流程。</td>
+        </tr>
+        <tr>
+          <td>stream</td>
+          <td>输入</td>
+          <td>指定执行任务的Stream。</td>
+        </tr>
+      </tbody>
+    </table>
 
 - **返回值：**
 

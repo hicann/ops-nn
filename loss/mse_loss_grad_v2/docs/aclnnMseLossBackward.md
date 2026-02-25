@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 算子功能：均方误差函数[aclnnMseLoss](../../mse_loss/docs/aclnnMseLoss.md)的反向传播。
+- 接口功能：均方误差函数[aclnnMseLoss](../../mse_loss/docs/aclnnMseLoss.md)的反向传播。
 
 - 计算公式：
 
@@ -35,59 +35,207 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMseLossBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMseLossBackward”接口执行计算。
 
-  - `aclnnStatus aclnnMseLossBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, int64_t reduction, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)`
-  - `aclnnStatus aclnnMseLossBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)`
+```Cpp
+aclnnStatus aclnnMseLossBackwardGetWorkspaceSize(
+    onst aclTensor*  gradOutput, 
+    const aclTensor* self,
+    const aclTensor* target, 
+    int64_t          reduction,
+    aclTensor*       out,
+    uint64_t*        workspaceSize, 
+    aclOpExecutor**  executor)
+
+```Cpp
+aclnnStatus aclnnMseLossBackward(
+    void            *workspace,
+    uint64_t         workspaceSize,
+    aclOpExecutor   *executor,
+    aclrtStream      stream)
+```
 
 ## aclnnMseLossBackwardGetWorkspaceSize
 
 - **参数说明：**
 
-  - gradOutput(aclTensor*, 计算输入)：公式中的输入`grad`，Device侧的aclTensor，gradOutput与self、target的数据类型一致，gradOutput与self、target的shape满足[broadcast关系](../../../docs/zh/context/broadcast关系.md)。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，shape支持0到8维。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
-
-  - self(aclTensor*, 计算输入)：公式中的输入`x`，Device侧的aclTensor，gradOutput与self、target的数据类型一致，gradOutput与self、target的shape满足[broadcast关系](../../../docs/zh/context/broadcast关系.md)。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，shape支持0到8维。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
-
-  - target(aclTensor*, 计算输入)：公式中的输入`y`，Device侧的aclTensor，gradOutput与self、target的数据类型一致，gradOutput与self、target的shape满足[broadcast关系](../../../docs/zh/context/broadcast关系.md)。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，shape支持0到8维。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
-
-  - reduction(int64_t, 计算输入)：公式中的参数`reduction`，指定损失函数的计算方式，支持 0('none') | 1('mean') | 2('sum')。
-
-    'none' 表示不应用减少，'mean' 表示输出的总和将除以self中的元素数，'sum' 表示输出将被求和。
-
-  - out(aclTensor*, 计算输出)：公式中的输出`MselossBackward(grad, x, y)`，Device侧的aclTensor，out与gradOutput、self、target broadcast之后的tensor的shape一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
-
-  - workspaceSize(uint64_t*, 出参)：返回需要在Device侧申请的workspace大小。
-
-  - executor(aclOpExecutor**, 出参)：返回op执行器，包含了算子计算流程。
+  </style>
+  <table class="tg" style="undefined;table-layout: fixed; width: 1259px"><colgroup>
+  <col style="width: 217px">
+  <col style="width: 87px">
+  <col style="width: 274px">
+  <col style="width: 234px">
+  <col style="width: 118px">
+  <col style="width: 113px">
+  <col style="width: 108px">
+  <col style="width: 108px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">参数名</th>
+      <th class="tg-0pky">输入/输出</th>
+      <th class="tg-0pky">描述</th>
+      <th class="tg-0pky">使用说明</th>
+      <th class="tg-0pky">数据类型</th>
+      <th class="tg-0pky">数据格式</th>
+      <th class="tg-0pky">维度(shape)</th>
+      <th class="tg-0pky">非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky">gradOutput(aclTensor*)</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">梯度反向输入，公式中的输入`grad`。</td>
+      <td class="tg-0pky">shape需要与self和target满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br></td>
+      <td class="tg-0pky">与self保持一致。</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">self(aclTensor*)</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">输入张量，公式中的输入`x`。</td>
+      <td class="tg-0pky">shape需要与gradOutput、target满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br></td>
+      <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">target(aclTensor*)</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">真实的标签，公式中的输入`y`。</td>
+      <td class="tg-0pky">shape需要与gradOutput、self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br></td>
+      <td class="tg-0pky">与self保持一致。</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">reduction（int64_t）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">指定要应用到输出的缩减，公式中的参数`reduction`。</td>
+      <td class="tg-0pky">支持0('none')|1('mean')|2('sum')。<br>-'none'表示不应用缩减<br>-'mean'表示输出的总和将除以输出中的元素数<br>-'sum'表示输出将被求和</td>
+      <td class="tg-0pky">INT64</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">out(aclTensor*)</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">输出的损失，公式中的输出`MselossBackward(grad, x, y)`。</td>
+      <td class="tg-0pky">out与gradOutput、self、target <a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>之后的tensor的shape一致。<br>数据类型时self可推导的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
+      <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">workspaceSize（uint64_t*）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回需要在Device侧申请的workspace大小。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">executor（aclOpExecutor**）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回op执行器，包含了算子计算流程。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+  </tbody></table>
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
-  第一段接口完成入参校验，出现如下场景时报错：
-  返回161001（ACLNN_ERR_PARAM_NULLPTR）：1. 传入的gradOutput、self、target或out是空指针时。
-  返回161002（ACLNN_ERR_PARAM_INVALID）：1. self的数据类型不在支持的范围之内。
-                                        2. gradOutput、target的数据类型和self不同。
-                                        3. gradOutput、self和target的shape无法做broadcast。
-                                        4. gradOutput、self和target做broadcast后的shape与out的shape不一致。
-                                        5. reduction值不在0~2范围之内。
-                                        6. gradOutput、self或target的shape超过8维。
-  ```
+  第一段接口完成入参校验，出现以下场景时报错：
+  </style>
+  <table class="tg" style="undefined;table-layout: fixed; width: 991px"><colgroup>
+  <col style="width: 269px">
+  <col style="width: 90px">
+  <col style="width: 632px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">返回值</th>
+      <th class="tg-0pky">错误码</th>
+      <th class="tg-0pky">描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky">ACLNN_ERR_PARAM_NULLPTR</td>
+      <td class="tg-0pky">161001</td>
+      <td class="tg-0pky">传入的gradOutput、self、target或out是空指针时。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky" rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="6">161002</td>
+      <td class="tg-0pky">self的数据类型不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">gradOutput、target的数据类型和self不同。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">gradOutput、self和target的shape无法做broadcast。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">gradOutput、self和target做broadcast后的shape与out的shape不一致。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">reduction值不在0~2范围之内。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">gradOutput、self或target的shape超过8维。</td>
+    </tr>
+  </tbody>
+  </table>
 
 ## aclnnMseLossBackward
 
 - **参数说明：**
 
-  - workspace(void*, 入参)：在Device侧申请的workspace内存地址。
-
-  - workspaceSize(uint64_t, 入参)：在Device侧申请的workspace大小，由第一段接口aclnnMseLossBackwardGetWorkspaceSize获取。
-
-  - executor(aclOpExecutor*, 入参)：op执行器，包含了算子计算流程。
-
-  - stream(aclrtStream, 入参)：指定执行任务的Stream。
+    <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+      <col style="width: 200px">
+      <col style="width: 162px">
+      <col style="width: 882px">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>参数名</th>
+          <th>输入/输出</th>
+          <th>描述</th>
+        </tr></thead>
+      <tbody>
+        <tr>
+          <td>workspace</td>
+          <td>输入</td>
+          <td>在Device侧申请的workspace内存地址。</td>
+        </tr>
+        <tr>
+          <td>workspaceSize</td>
+          <td>输入</td>
+          <td>在Device侧申请的workspace大小，由第一段接口aclnnBinaryCrossEntropyGetWorkspaceSize获取。</td>
+        </tr>
+        <tr>
+          <td>executor</td>
+          <td>输入</td>
+          <td>op执行器，包含了算子计算流程。</td>
+        </tr>
+        <tr>
+          <td>stream</td>
+          <td>输入</td>
+          <td>指定执行任务的Stream。</td>
+        </tr>
+      </tbody>
+    </table>
 
 - **返回值：**
 

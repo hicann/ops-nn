@@ -23,39 +23,39 @@
 
 ```cpp
 aclnnStatus aclnnNLLLoss2dBackwardGetWorkspaceSize(
-  const aclTensor *gradOutput,
-  const aclTensor *self,
-  const aclTensor *target,
-  const aclTensor *weight,
-  int64_t          reduction,
-  int64_t          ignoreIndex,
-  aclTensor       *totalWeight,
-  aclTensor       *out,
-  uint64_t        *workspaceSize,
-  aclOpExecutor  **executor)
+    const aclTensor *gradOutput,
+    const aclTensor *self,
+    const aclTensor *target,
+    const aclTensor *weight,
+    int64_t          reduction,
+    int64_t          ignoreIndex,
+    aclTensor       *totalWeight,
+    aclTensor       *out,
+    uint64_t        *workspaceSize,
+    aclOpExecutor  **executor)
 ```
 
 ```cpp
 aclnnStatus aclnnNLLLoss2dBackward(
-  void          *workspace,
-  uint64_t       workspaceSize,
-  aclOpExecutor *executor,
-  aclrtStream    stream)
+    void          *workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor *executor,
+    aclrtStream    stream)
 ```
 
 ## aclnnNLLLoss2dBackwardGetWorkspaceSize
 
 - **参数说明**
 
-  <table style="undefined;table-layout: fixed; width: 1349px"><colgroup>
+  <table style="undefined;table-layout: fixed; width: 1262px"><colgroup>
       <col style="width: 158px">
       <col style="width: 120px">
-      <col style="width: 253px">
+      <col style="width: 203px">
       <col style="width: 283px">
       <col style="width: 218px">
       <col style="width: 110px">
       <col style="width: 102px">
-      <col style="width: 145px">
+      <col style="width: 108px">
       </colgroup>
       <thead>
         <tr>
@@ -70,7 +70,7 @@ aclnnStatus aclnnNLLLoss2dBackward(
       </tr></thead>
     <tbody>
       <tr>
-        <td>gradOutput</td>
+        <td>gradOutput（aclTensor*）</td>
         <td>输入</td>
         <td>输入aclTensor。</td>
         <td>shape为三维（第一维是N）或者一维（且元素个数为1）。</td>
@@ -80,7 +80,7 @@ aclnnStatus aclnnNLLLoss2dBackward(
         <td>√</td>
       </tr>
       <tr>
-        <td>self</td>
+        <td>self（aclTensor*）</td>
         <td>输入</td>
         <td>输入aclTensor。</td>
         <td><ul><li>shape为四维，第一维是N表示batch size，第二维是C表示类别。</li><li>要求self的第0维、第2维、第3维的shape分别与target的第0维、第1维、第2维的shape一致，否则返回false。</li></ul></td>
@@ -90,7 +90,7 @@ aclnnStatus aclnnNLLLoss2dBackward(
         <td>√</td>
       </tr>
       <tr>
-        <td>target</td>
+        <td>target（aclTensor*）</td>
         <td>输入</td>
         <td>表示真实标签。</td>
         <td><ul><li>公式中的y，shape为3维</li><li>target的第0维、第1维、第2维的shape分别与self的第0维、第2维、第3维的shape一致</li><li>其中每个元素的取值范围是[0, C - 1]</li></ul></td>
@@ -100,7 +100,7 @@ aclnnStatus aclnnNLLLoss2dBackward(
         <td>√</td>
       </tr>
       <tr>
-        <td>weight</td>
+        <td>weight（aclTensor*）</td>
         <td>输入</td>
         <td>表示每个类别的缩放权重。</td>
         <td>公式中的w，shape为(C,)。</td>
@@ -110,7 +110,7 @@ aclnnStatus aclnnNLLLoss2dBackward(
         <td>√</td>
       </tr>
       <tr>
-        <td>reduction</td>
+        <td>reduction（int64_t）</td>
         <td>输入</td>
         <td>指定要应用到输出的缩减。</td>
         <td><ul>支持0('none')|1('mean')|2('sum')。<li>'none'表示不应用缩减</li><li>'mean'表示输出的总和将除以输出中的元素数</li><li>'sum'表示输出将被求和</li><li>当reduction为0时，要求target的shape与gradOutput的shape一致，否则返回false。</li></ul></td>
@@ -120,7 +120,7 @@ aclnnStatus aclnnNLLLoss2dBackward(
         <td>-</td>
       </tr>
       <tr>
-        <td>ignoreIndex</td>
+        <td>ignoreIndex（int64_t）</td>
         <td>输入</td>
          <td>指定一个被忽略且不影响输入梯度的目标值。
         </td>
@@ -131,7 +131,7 @@ aclnnStatus aclnnNLLLoss2dBackward(
         <td>-</td>
       </tr>
           <tr>
-        <td>totalWeight</td>
+        <td>totalWeight（aclTensor*）</td>
         <td>输入</td>
         <td>公式中的totalWeight。</td>
         <td>仅当reduction为mean时，totalWeight是通过target取相应位置的weight，然后去除掉ignoreIndex对应的weight，将剩下的weight求和；当reduction为其他值时，该参数默认不处理。</td>
@@ -141,7 +141,7 @@ aclnnStatus aclnnNLLLoss2dBackward(
         <td>-</td>
       </tr>
       <tr>
-        <td>out</td>
+        <td>out（aclTensor*）</td>
         <td>输出</td>
         <td>公式中的out。</td>
         <td>shape与self相同。</td>
@@ -151,7 +151,7 @@ aclnnStatus aclnnNLLLoss2dBackward(
         <td>√</td>
       </tr>
       <tr>
-        <td>workspaceSize</td>
+        <td>workspaceSize（uint64_t*）</td>
         <td>输出</td>
         <td>返回需要在Device侧申请的workspace大小。</td>
         <td>-</td>
@@ -161,7 +161,7 @@ aclnnStatus aclnnNLLLoss2dBackward(
         <td>-</td>
       </tr>
       <tr>
-        <td>executor</td>
+        <td>executor（aclOpExecutor**）</td>
         <td>输出</td>
         <td>返回op执行器，包含了算子计算流程。</td>
         <td>-</td>

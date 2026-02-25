@@ -48,23 +48,23 @@
 
 ```cpp
 aclnnStatus aclnnNLLLossGetWorkspaceSize(
-  const aclTensor *self,
-  const aclTensor *target,
-  const aclTensor *weight,
-  int64_t          reduction,
-  int64_t          ignoreIndex,
-  aclTensor       *out,
-  aclTensor       *totalWeightOut,
-  uint64_t        *workspaceSize,
-  aclOpExecutor  **executor)
+    const aclTensor *self,
+    const aclTensor *target,
+    const aclTensor *weight,
+    int64_t          reduction,
+    int64_t          ignoreIndex,
+    aclTensor       *out,
+    aclTensor       *totalWeightOut,
+    uint64_t        *workspaceSize,
+    aclOpExecutor  **executor)
 ```
 
 ```cpp
 aclnnStatus aclnnNLLLoss(
-  void          *workspace,
-  uint64_t       workspaceSize,
-  aclOpExecutor *executor,
-  aclrtStream    stream)
+    void          *workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor *executor,
+    aclrtStream    stream)
 ```
 
 ## aclnnNLLLossGetWorkspaceSize
@@ -93,7 +93,7 @@ aclnnStatus aclnnNLLLoss(
     </tr></thead>
   <tbody>
     <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入张量。</td>
       <td>-</td>
@@ -103,7 +103,7 @@ aclnnStatus aclnnNLLLoss(
       <td>√</td>
     </tr>
     <tr>
-      <td>target</td>
+      <td>target（aclTensor*）</td>
       <td>输入</td>
       <td>表示真实标签。</td>
       <td><ul><li>当self的shape为(N,C)时，target的shape为(N)</li><li>当self的shape为(C)时，target的shape为()，其中每个元素的取值范围是[0, C - 1]。</li></ul></td>
@@ -113,7 +113,7 @@ aclnnStatus aclnnNLLLoss(
       <td>√</td>
     </tr>
     <tr>
-      <td>weight</td>
+      <td>weight（aclTensor*）</td>
       <td>输入</td>
       <td>表示每个类别的缩放权重。</td>
       <td>-</td>
@@ -123,17 +123,17 @@ aclnnStatus aclnnNLLLoss(
       <td>√</td>
     </tr>
     <tr>
-      <td>reduction</td>
+      <td>reduction（int64_t）</td>
       <td>输入</td>
       <td>表示要应用到输出的缩减。</td>
-      <td><ul>支持0('none')|1('mean')|2('sum')。<li>'none'表示不应用缩减</li><li>'mean'表示输出的总和将除以输出中的元素数</li><li>'sum'表示输出将被求和</li></ul></td>
+      <td><ul>支持0(none)|1(mean)|2(sum)。<li>'none'表示不应用缩减</li><li>'mean'表示输出的总和将除以输出中的元素数</li><li>'sum'表示输出将被求和</li></ul></td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>ignoreIndex</td>
+      <td>ignoreIndex（int64_t）</td>
       <td>输入</td>
       <td>表示一个被忽略且不影响输入梯度的目标值。
       </td>
@@ -144,7 +144,7 @@ aclnnStatus aclnnNLLLoss(
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>公式中的out。</td>
       <td>当reduction为0（'none'）且self的shape为2维时，out shape为(N,), 否则为(1,)。</td>
@@ -154,7 +154,7 @@ aclnnStatus aclnnNLLLoss(
       <td>-</td>
     </tr>
     <tr>
-      <td>totalWeightOut</td>
+      <td>totalWeightOut（aclTensor*）</td>
       <td>输出</td>
       <td>公式中的totalWeightOut。</td>
       <td>在reduction为非0(非'none')下输出值有效，shape为(1,)。</td>
@@ -164,7 +164,7 @@ aclnnStatus aclnnNLLLoss(
       <td>-</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -174,7 +174,7 @@ aclnnStatus aclnnNLLLoss(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

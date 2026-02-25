@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- **算子功能：** 实现adamW优化器功能。
+- **接口功能：** 实现adamW优化器功能。
 
 - **计算公式：**
   $$
@@ -55,62 +55,313 @@
 ## 函数原型
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnApplyAdamWGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnApplyAdamW”接口执行计算。
 
-* `aclnnStatus aclnnApplyAdamWGetWorkspaceSize(aclTensor* varRef, aclTensor* mRef, aclTensor* vRef, const aclTensor* beta1Power, const aclTensor* beta2Power, const aclTensor* lr, const aclTensor* weightDecay, const aclTensor* beta1, const aclTensor* beta2, const aclTensor* eps, const aclTensor* grad, const aclTensor* maxGradNormOptional, bool amsgrad, bool maximize, uint64_t* workspaceSize, aclOpExecutor** executor)`
-* `aclnnStatus aclnnApplyAdamW(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)`
+```Cpp
+aclnnStatus aclnnApplyAdamWGetWorkspaceSize(
+    aclTensor*       varRef, 
+    aclTensor*       mRef, 
+    aclTensor*       vRef,
+    const aclTensor* beta1Power, 
+    const aclTensor* beta2Power, 
+    const aclTensor* lr,
+    const aclTensor* weightDecay, 
+    const aclTensor* beta1, 
+    const aclTensor* beta2,
+    const aclTensor* eps, 
+    const aclTensor* grad, 
+    const aclTensor* maxGradNormOptional,
+    bool             amsgrad, 
+    bool             maximize,
+    uint64_t*        workspaceSize, 
+    aclOpExecutor**  executor)
+```
+
+```Cpp
+aclnnStatus aclnnApplyAdamW(
+    void            *workspace,
+    uint64_t         workspaceSize,
+    aclOpExecutor   *executor,
+    aclrtStream      stream)
+```
 
 ## aclnnApplyAdamWGetWorkspaceSize
 
 - **参数说明：**
 
-  * varRef（aclTensor\*, 计算输入/计算输出）：待计算的权重输入同时也是输出，公式中的theta，Device侧的aclTensor，shape支持1-8维度，数据类型支持FLOAT16、BFLOAT16、FLOAT32。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * mRef（aclTensor\*, 计算输入/计算输出）：adamw优化器中m参数，公式中的m，Device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16、FLOAT32，shape、dtype要求与“varRef”参数一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * vRef（aclTensor\*, 计算输入/计算输出）：adamw优化器中v参数，公式中的v，Device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16、FLOAT32，shape、dtype要求与“varRef”参数一致，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * beta1Power（aclTensor\*, 计算输入）：beta1^(t-1)参数，Device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16、FLOAT32，shape要求为[1]，dtype要求与“varRef”参数一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * beta2Power（aclTensor\*, 计算输入）：beta2^(t-1)参数，Device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16、FLOAT32，shape要求为[1]，dtype要求与“varRef”参数一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * lr（aclTensor\*, 计算输入）：学习率，公式中的eta，Device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16、FLOAT32，shape要求为[1]，dtype要求与“varRef”参数一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * weightDecay（aclTensor\*, 计算输入）：权重衰减系数，Device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16、FLOAT32，shape要求为[1]，dtype要求与“varRef”参数一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * beta1（aclTensor\*, 计算输入）：beta1参数，Device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16、FLOAT32，shape要求为[1]，dtype要求与“varRef”参数一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * beta2（aclTensor\*, 计算输入）：beta2参数，Device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16、FLOAT32，shape要求为[1]，dtype要求与“varRef”参数一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * eps（aclTensor\*, 计算输入）：防止除数为0，Device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16、FLOAT32，shape要求为[1]，dtype要求与“varRef”参数一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * grad（aclTensor*, 计算输入）：梯度数据，公式中的g_t，Device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16、FLOAT32，shape、dtype要求与“varRef”参数一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * maxGradNormOptional（aclTensor\*, 计算输入）：保存v参数的最大值，公式中的v，Device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16、FLOAT32，shape、dtype要求与“varRef”参数一致，此参数在amsgrad参数为true时必选，在amsgrad参数为false时可选。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * amsgrad（bool, 计算输入）：是否使用maxGradNormOptional变量，数据类型为BOOL。
-  * maximize（bool, 计算输入）：是否对梯度grad取反，应用梯度上升方向优化权重使损失函数最大化，数据类型为BOOL。
-  * workspaceSize（uint64_t\*, 出参）：返回需要在Device侧申请的workspace大小。
-  * executor（aclOpExecutor\*\*, 出参）：内存地址。
+  </style>
+  <table class="tg" style="undefined;table-layout: fixed; width: 1155px"><colgroup>
+  <col style="width: 267px">
+  <col style="width: 87px">
+  <col style="width: 201px">
+  <col style="width: 153px">
+  <col style="width: 138px">
+  <col style="width: 93px">
+  <col style="width: 108px">
+  <col style="width: 108px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">参数名</th>
+      <th class="tg-0pky">输入/输出</th>
+      <th class="tg-0pky">描述</th>
+      <th class="tg-0pky">使用说明</th>
+      <th class="tg-0pky">数据类型</th>
+      <th class="tg-0pky">数据格式</th>
+      <th class="tg-0pky">维度(shape)</th>
+      <th class="tg-0pky">非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0lax">varRef（aclTensor*）</td>
+      <td class="tg-0lax">输入/输出</td>
+      <td class="tg-0lax">待计算的权重输入同时也是输出，公式中的θ。</td>
+      <td class="tg-0lax"></td>
+      <td class="tg-0lax">FLOAT16、BFLOAT16、FLOAT32</td>
+      <td class="tg-0lax">ND</td>
+      <td class="tg-0lax">1-8</td>
+      <td class="tg-0lax">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">mRef（aclTensor*）</td>
+      <td class="tg-0lax">输入/输出</td>
+      <td class="tg-0lax">adamw优化器中m参数，公式中的m。</td>
+      <td class="tg-0lax">shape要求与输入varRef保持一致。</td>
+      <td class="tg-0lax">与varRef保持一致</td>
+      <td class="tg-0lax">ND</td>
+      <td class="tg-0lax">1-8</td>
+      <td class="tg-0lax">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">vRef（aclTensor*）</td>
+      <td class="tg-0pky">输入/输出</td>
+      <td class="tg-0pky">adamw优化器中v参数，公式中的v。</td>
+      <td class="tg-0pky">shape要求与输入varRef保持一致。</td>
+      <td class="tg-0pky">与varRef保持一致</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">beta1Power（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">beta1^(t-1)参数。</td>
+      <td class="tg-0pky">shape要求为[1]。</td>
+      <td class="tg-0pky">与varRef保持一致</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">beta2Power（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">beta2^(t-1)参数。</td>
+      <td class="tg-0pky">shape要求为[1]。</td>
+      <td class="tg-0pky">与varRef保持一致</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">lr（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">学习率，公式中的η，通常情况下为1-e3、1-恶、1-e9。</td>
+      <td class="tg-0pky">shape要求为[1]。</td>
+      <td class="tg-0pky">与varRef保持一致</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">weightDecay（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">权重衰减系数。</td>
+      <td class="tg-0pky">shape要求为[1]。</td>
+      <td class="tg-0pky">与varRef保持一致</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">beta1（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">beta1参数。</td>
+      <td class="tg-0pky">shape要求为[1]。</td>
+      <td class="tg-0pky">与varRef保持一致</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">beta2（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">beta2参数。</td>
+      <td class="tg-0pky">shape要求为[1]。</td>
+      <td class="tg-0pky">与varRef保持一致</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">eps（aclTensor*）</td>
+      <td class="tg-0lax">输入</td>
+      <td class="tg-0lax">防止除数为0。</td>
+      <td class="tg-0lax">shape要求为[1]。</td>
+      <td class="tg-0lax">与varRef保持一致</td>
+      <td class="tg-0lax">ND</td>
+      <td class="tg-0lax">1</td>
+      <td class="tg-0lax">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">grad（aclTensor*）</td>
+      <td class="tg-0lax">输入</td>
+      <td class="tg-0lax">梯度数据，公式中的g</td>
+      <td class="tg-0lax">shape要求与输入varRef保持一致。</td>
+      <td class="tg-0lax">与varRef保持一致</td>
+      <td class="tg-0lax">ND</td>
+      <td class="tg-0lax">1-8</td>
+      <td class="tg-0lax">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">maxGradNormOptional（aclTensor*）</td>
+      <td class="tg-0lax">输入</td>
+      <td class="tg-0lax">如果amsgrad=true，在vRef中保存maxGradNorm与v最大值。如果amsgrad=false，在vRef中的值不做额外计算。此参数在amsgrad参数为true时必选，在amsgrad参数为false时可选。</td>
+      <td class="tg-0lax">shape要求与输入varRef保持一致。</td>
+      <td class="tg-0lax">与varRef保持一致</td>
+      <td class="tg-0lax">ND</td>
+      <td class="tg-0lax">1-8</td>
+      <td class="tg-0lax">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">amsgrad（bool）</td>
+      <td class="tg-0lax">输入</td>
+      <td class="tg-0lax">是否使用maxGradNormOptional变量。</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">bool</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">maximize（bool）</td>
+      <td class="tg-0lax">输入</td>
+      <td class="tg-0lax">是否对梯度grad取反，应用梯度上升方向优化权重使损失函数最大化。</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">bool</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">workspaceSize（uint64_t*）</td>
+      <td class="tg-0lax">输出</td>
+      <td class="tg-0lax">返回需要在Device侧申请的workspace大小。</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">executor（aclOpExecutor**）</td>
+      <td class="tg-0lax">输出</td>
+      <td class="tg-0lax">返回op执行器，包含了算子计算流程。</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+    </tr>
+  </tbody></table>
 
 - **返回值：**
 
   aclnnStatus： 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
   第一段接口完成入参校验，出现以下场景时报错：
-  161001 (ACLNN_ERR_PARAM_NULLPTR)：1. 传入的计算输入参数是空指针时。
-                                    2. 当amsgrad为true时，maxGradNormOptional为空指针时
-  161002 (ACLNN_ERR_PARAM_INVALID)：1. 传入的计算输入的数据类型不在支持的范围内时。
-                                    2. 传入的计算输入的数据类型不一致时。
-                                    3. 传入的计算输入的shape不一致时。
-                                    4. 当amsgrad为true时，maxGradNormOptional和varRef的数据类型或shape不一致时
-                                    5. beta1Power、beta2Power、lr、weightDecay、beta1、beta2、eps的shape大小不为1时。
-  ```
+  </style>
+  <table class="tg" style="undefined;table-layout: fixed; width: 731px"><colgroup>
+  <col style="width: 268px">
+  <col style="width: 87px">
+  <col style="width: 376px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">返回码</th>
+      <th class="tg-0pky">错误码</th>
+      <th class="tg-0pky">描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky" rowspan="2">ACLNN_ERR_PARAM_NULLPTR</td>
+      <td class="tg-0pky" rowspan="2">161001</td>
+      <td class="tg-0pky">传入的计算输入参数是空指针时。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">当amsgrad为true时，maxGradNormOptional为空指针时。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky" rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="5">161002</td>
+      <td class="tg-0pky">传入的计算输入的数据类型不在支持的范围内时。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">传入的计算输入的数据类型不一致时。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">传入的计算输入的shape不一致时。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">当amsgrad为true时，maxGradNormOptional和varRef的数据类型或shape不一致时。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">beta1Power、beta2Power、lr、weightDecay、beta1、beta2、eps的shape大小不为1时。</td>
+    </tr>
+  </tbody>
+  </table>
 
 ## aclnnApplyAdamW
 
 - **参数说明：**
 
-  * workspace(void \*, 入参): 在Device侧申请的workspace内存地址。
-  * workspaceSize(uint64_t, 入参): 在Device侧申请的workspace大小，由第一段接口aclnnApplyAdamWGetWorkspaceSize获取。
-  * executor(aclOpExecutor \*, 入参): op执行器，包含了算子计算流程。
-  * stream(aclrtStream, 入参): 指定执行任务的AscendCL Stream流。
+  <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
+  <col style="width: 173px">
+  <col style="width: 112px">
+  <col style="width: 668px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnAdvanceStepGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
+  </table>
 
 - **返回值：**
 
   aclnnStatus： 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-- 输入张量的数据类型应保持一致，数据类型支持FLOAT16、BFLOAT16、FLOAT32。
-- 输入张量beta1Power、beta2Power、lr、weightDecay、beta1、beta2、eps的shape大小应为1。
-- 输入布尔值maximize为true时，maxGradNormOptional参数必选且数据类型和shape应与varRef一致时。
 
 - 确定性计算： 
   - aclnnApplyAdamW默认确定性实现。

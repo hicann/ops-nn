@@ -52,28 +52,28 @@
 
 ```Cpp
 aclnnStatus aclnnCrossEntropyLossGetWorkspaceSize(
- const aclTensor *input,
- const aclTensor *target,
- const aclTensor *weightOptional,
- char            *reductionOptional,
- int64_t          ignoreIndex,
- double           labelSmoothing,
- double           lseSquareScaleForZloss,
- bool             returnZloss,
- const aclTensor *lossOut,
- const aclTensor *logProbOut,
- const aclTensor *zlossOut,
- const aclTensor *lseForZlossOut,
- uint64_t        *workspaceSize,
- aclOpExecutor  **executor)
+    const aclTensor *input,
+    const aclTensor *target,
+    const aclTensor *weightOptional,
+    char            *reductionOptional,
+    int64_t          ignoreIndex,
+    double           labelSmoothing,
+    double           lseSquareScaleForZloss,
+    bool             returnZloss,
+    const aclTensor *lossOut,
+    const aclTensor *logProbOut,
+    const aclTensor *zlossOut,
+    const aclTensor *lseForZlossOut,
+    uint64_t        *workspaceSize,
+    aclOpExecutor  **executor)
 ```
 
 ```Cpp
 aclnnStatus aclnnCrossEntropyLoss(
- void          *workspace,
- uint64_t       workspaceSize,
- aclOpExecutor *executor,
- aclrtStream    stream)
+    void          *workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor *executor,
+    aclrtStream    stream)
 ```
 
 ## aclnnCrossEntropyLossGetWorkspaceSize
@@ -102,7 +102,7 @@ aclnnStatus aclnnCrossEntropyLoss(
       </tr></thead>
     <tbody>
     <tr>
-    <td>input</td>
+    <td>input（aclTensor*）</td>
     <td>输入</td>
     <td>公式中的input。</td>
     <td>-</td>
@@ -112,7 +112,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>-</td>
     </tr>
     <tr>
-    <td>target</td>
+    <td>target（aclTensor*）</td>
     <td>输入</td>
     <td>表示标签，公式中的y。</td>
     <td>-</td>
@@ -122,7 +122,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>-</td>
     </tr>
     <tr>
-    <td>weightOptional</td>
+    <td>weightOptional（aclTensor*）</td>
     <td>输入</td>
     <td>表示为每个类别指定的缩放权重，公式中的weight。</td>
     <td>如果不给定，则不对target加权.</td>
@@ -132,7 +132,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>-</td>
     </tr>
     <tr>
-    <td>reductionOptional</td>
+    <td>reductionOptional（char*）</td>
     <td>输入</td>
     <td>表示loss的归约方式。</td>
     <td>支持["mean", "sum", "none"]。</td>
@@ -142,7 +142,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>-</td>
     </tr>
     <tr>
-    <td>ignoreIndex</td>
+    <td>ignoreIndex（int64_t）</td>
     <td>输入</td>
     <td>指定被忽略的标签值。</td>
     <td>-</td>
@@ -152,7 +152,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>-</td>
     </tr>
     <tr>
-    <td>labelSmoothing</td>
+    <td>labelSmoothing（double）</td>
     <td>输入</td>
     <td>表示计算loss时的平滑量。</td>
     <td>数值在[0.0, 1.0]之间。</td>
@@ -162,7 +162,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>-</td>
     </tr>
     <tr>
-    <td>lseSquareScaleForZloss</td>
+    <td>lseSquareScaleForZloss（double）</td>
     <td>输入</td>
     <td>表示zloss计算所需的scale。公式中的lse_square_scale_for_zloss。</td>
     <td>数值在[0, 1)之间。当前暂不支持。</td>
@@ -172,7 +172,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>-</td>
     </tr>
     <tr>
-    <td>returnZloss</td>
+    <td>returnZloss（bool）</td>
     <td>输入</td>
     <td>控制是否返回zloss输出。</td>
     <td>需要输出zLoss时传入True，否则传入False。当前暂不支持。</td>
@@ -182,7 +182,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>-</td>
     </tr>
     <tr>
-    <td>lossOut</td>
+    <td>lossOut（aclTensor*）</td>
     <td>输出</td>
     <td>表示输出损失。</td>
     <td>reductionOptional为“None”时，shape为[N]，与input第零维一致；否则shape为[1]。</td>
@@ -192,7 +192,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>-</td>
     </tr>
     <tr>
-    <td>logProbOut</td>
+    <td>logProbOut（aclTensor*）</td>
     <td>输出</td>
     <td>输出给反向计算的输出。</td>
     <td>-</td>
@@ -202,7 +202,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>-</td>
     </tr>
     <tr>
-    <td>zlossOut</td>
+    <td>zlossOut（aclTensor*）</td>
     <td>输出</td>
     <td>表示辅助损失。</td>
     <td>当前暂不支持。</td>
@@ -212,7 +212,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>-</td>
     </tr>
     <tr>
-    <td>lseForZlossOut</td>
+    <td>lseForZlossOut（aclTensor*）</td>
     <td>输出</td>
     <td>表示zloss场景输出给反向的Tensor，lseSquareScaleForZloss为0时输出为None。</td>
     <td>当前暂不支持。</td>
@@ -222,7 +222,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>-</td>
     </tr>
     <tr>
-    <td>workspaceSize</td>
+    <td>workspaceSize（uint64_t*）</td>
     <td>输出</td>
     <td>返回需要在Device侧申请的workspace大小。</td>
     <td>-</td>
@@ -232,7 +232,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>-</td>
     </tr>
     <tr>
-    <td>executor</td>
+    <td>executor（aclOpExecutor**）</td>
     <td>输出</td>
     <td>返回op执行器，包含了算子计算流程。</td>
     <td>-</td>

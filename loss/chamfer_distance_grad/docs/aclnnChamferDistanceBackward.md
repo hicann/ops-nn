@@ -16,7 +16,7 @@
 
 ## 功能说明
 
-- 算子功能：ChamferDistance（倒角距离）的反向算子，根据正向的输入对输出的贡献及初始梯度求出输入对应的梯度。
+- 接口功能：ChamferDistance（倒角距离）的反向算子，根据正向的输入对输出的贡献及初始梯度求出输入对应的梯度。
 - 计算公式：
 
   假设有两个点集：  xyz1=[B,N,2], xyz2=[B,M,2]
@@ -27,23 +27,23 @@
     $dist2_i=Min((x_{2_i}-x_1)^2+(y_{2_i}-y_1)^2)，x_1,y_1∈xyz1$
 
   - 反向算子即为对该公式求导，计算公式为：
-    - $dist1_i 对x_{1_i} $的导数$=2*grad\_dist1*(x_{1_i}-x_2)$
+    - $dist1_i$ 对$x_{1_i}$ 的导数 $=2*grad\_dist1*(x_{1_i}-x_2)$
 
       其中：$x_{1_i}∈xyz1$，$x_2$是根据正向输出的id1的索引值从xyz2中取出距离最小的点的横坐标，单点求导公式如上，因为单点梯度更新的位置是连续的，所以考虑多点并行计算。
 
-    - $dist1_i 对y_{1_i} $的导数$=2*grad\_dist1*(y_{1_i}-y_2)$
+    - $dist1_i 对y_{1_i}$ 的导数 $=2*grad\_dist1*(y_{1_i}-y_2)$
 
       其中$y_{1_i}∈xyz1$，$y_2$是根据正向输出的id1的索引值从xyz2中取出距离最小的点的纵坐标，单点求导公式如上，因为单点梯度更新的位置是连续的，所以也可以考虑多点并行计算。
 
-    - $dist1_i 对x_2 $的导数$=-2*grad\_dist1*(x_{1_i}-x_2)$
+    - $dist1_i$ 对 $x_2$的导数 $=-2*grad\_dist1*(x_{1_i}-x_2)$
 
       其中$x_{1_i}∈xyz1，x_2$是根据正向输出的id1的索引值从xyz2中取出距离最小的点的横坐标，单点求导公式如上，因为单点梯度需要根据最小距离值对应的索引值去更新，所以这块无法并行只能单点计算。
 
-    - $dist1_i 对y_2 $的导数$=-2*grad\_dist1*(y_{1_i}-y_2)$
+    - $dist1_i$ 对$y_2$的导数$=-2*grad\_dist1*(y_{1_i}-y_2)$
 
-      其中$y_{1_i}∈xyz1，y_2$是根据正向输出的id1的索引值从xyz2中取出距离最小的点的纵坐标，单点求导公式如上，因为单点梯度需要根据最小值对应的索引值去更新，所以这块也无法并行只能单点计算。
+      其中$y_{1_i}∈xyz1$，$y_2$是根据正向输出的id1的索引值从xyz2中取出距离最小的点的纵坐标，单点求导公式如上，因为单点梯度需要根据最小值对应的索引值去更新，所以这块也无法并行只能单点计算。
 
-  对应$dist2_i$对$x_{2_i} 、x_1、y_{2_i} 、y_1$的导数和上述过程类似，这里不再赘述。
+  对应$dist2_i$对$x_{2_i}$ 、$x_1$、$y_{2_i}$ 、$y_1$的导数和上述过程类似，这里不再赘述。
 
   最终计算公式如下，i∈[0,n)：
 
@@ -57,45 +57,236 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnChamferDistanceBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnChamferDistanceBackward”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnChamferDistanceBackwardGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnChamferDistanceBackward”接口执行计算。
 
-- `aclnnStatus aclnnChamferDistanceBackwardGetWorkspaceSize(const aclTensor* xyz1, const aclTensor* xyz2, const aclTensor* idx1, const aclTensor* idx2, const aclTensor* gradDist1, const aclTensor* gradDist2, aclTensor* gradXyz1, aclTensor* gradXyz2, uint64_t *workspaceSize, aclOpExecutor **executor)`
-- `aclnnStatus aclnnChamferDistanceBackward(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`
+```Cpp
+aclnnStatus aclnnChamferDistanceBackwardGetWorkspaceSize(
+    const aclTensor* xyz1, 
+    const aclTensor* xyz2, 
+    const aclTensor* idx1, 
+    const aclTensor* idx2,
+    const aclTensor* gradDist1, 
+    const aclTensor* gradDist2, 
+    aclTensor*       gradXyz1, 
+    aclTensor*       gradXyz2,
+    uint64_t*        workspaceSize,
+    aclOpExecutor**  executor)
+```
+
+```Cpp
+aclnnStatus aclnnChamferDistanceBackward(
+    void*            workspace, 
+    uint64_t         workspaceSize, 
+    aclOpExecutor*   executor, 
+    aclrtStream      stream)
+```
 
 ## aclnnChamferDistanceBackwardGetWorkspaceSize
 
 - **参数说明**：
 
-  - xyz1（aclTensor\*, 计算输入）：算子正向输入的点集1的坐标，Device侧的aclTensor，数据类型支持FLOAT、FLOAT16，且数据类型与xyz2、grad_dist1、grad_dist2、grad_xyz1、grad_xyz2一致，shape为（B,N,2），[数据格式](../../../docs/zh/context/数据格式.md)支持ND
-  - xyz2（aclTensor\*, 计算输入）：算子正向输入的点集2的坐标，Device侧的aclTensor，数据类型支持FLOAT、FLOAT16，且数据类型与xyz2、grad_dist1、grad_dist2、grad_xyz1、grad_xyz2一致，shape为（B,N,2），[数据格式](../../../docs/zh/context/数据格式.md)支持ND
-  - idx1（aclTensor\*, 计算输入）：算子正向输出的距离xyz1最小距离的xyz2中的点的索引tensor，Device侧的aclTensor，数据类型支持INT32，且数据类型与idx2一致，shape为（B,N），[数据格式](../../../docs/zh/context/数据格式.md)支持ND
-  - idx2（aclTensor\*, 计算输入）：算子正向输出的距离xyz2最小距离的xyz1中的点的索引tensor，Device侧的aclTensor，数据类型支持INT32，且数据类型与idx1一致，shape为（B,N），[数据格式](../../../docs/zh/context/数据格式.md)支持ND
-  - gradDist1（aclTensor\*, 计算输入）：正向输出dist1的反向梯度，也是反向算子的初始梯度，Device侧的aclTensor，数据类型支持FLOAT、FLOAT16，且数据类型与xyz2、xyz1、grad_dist2、grad_xyz1、grad_xyz2一致，shape为（B,N），[数据格式](../../../docs/zh/context/数据格式.md)支持ND
-  - gradDist2（aclTensor\*, 计算输出）：正向输出dist2的反向梯度，也是反向算子的初始梯度，Device侧的aclTensor，数据类型支持FLOAT、FLOAT16，且数据类型与xyz2、xyz1、grad_dist2、grad_xyz1、grad_xyz2一致，shape为（B,N），[数据格式](../../../docs/zh/context/数据格式.md)支持ND
-  - gradXyz1（aclTensor\*, 计算输出）：梯度更新之后正向算子输入xyz1对应的梯度，Device侧的aclTensor，数据类型支持FLOAT、FLOAT16，且数据类型与xyz1、xyz2、grad_dist1、grad_dist2、grad_xyz2一致，shape为（B,N,2），[数据格式](../../../docs/zh/context/数据格式.md)支持ND
-  - gradXyz2（aclTensor\*, 计算输出）：正向输出dist2的反向梯度，也是反向算子的初始梯度，Device侧的aclTensor，数据类型支持FLOAT、FLOAT16，且数据类型与xyz1、xyz2、grad_dist1、grad_dist2、grad_xyz1一致，shape为（B,N,2），[数据格式](../../../docs/zh/context/数据格式.md)支持ND
-  - workspaceSize（uint64_t\*, 出参）：返回需要在Device侧申请的workspace大小。
-  - executor（aclOpExecutor\**, 出参）：返回op执行器，包含了算子计算流程。
+  </style>
+  <table class="tg" style="undefined;table-layout: fixed; width: 1172px"><colgroup>
+  <col style="width: 184px">
+  <col style="width: 86px">
+  <col style="width: 269px">
+  <col style="width: 190px">
+  <col style="width: 116px">
+  <col style="width: 111px">
+  <col style="width: 108px">
+  <col style="width: 108px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">参数名</th>
+      <th class="tg-0pky">输入/输出</th>
+      <th class="tg-0pky">描述</th>
+      <th class="tg-0pky">使用说明</th>
+      <th class="tg-0pky">数据类型</th>
+      <th class="tg-0pky">数据格式</th>
+      <th class="tg-0pky">维度(shape)</th>
+      <th class="tg-0pky">非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky">xyz1（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">算子正向输入的点集1的坐标。</td>
+      <td class="tg-0pky">shape为(B,N,2)。</td>
+      <td class="tg-0pky">FLOAT、FLOAT16</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">3</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">xyz2（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">算子正向输入的点集2的坐标。</td>
+      <td class="tg-0pky">shape为(B,N,2)。</td>
+      <td class="tg-0pky">FLOAT、FLOAT16</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">3</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">idx1（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">算子正向输出的距离xyz1最小距离的xyz2中的点的索引tensor。</td>
+      <td class="tg-0pky">shape为(B,N)。</td>
+      <td class="tg-0pky">INT32</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">2</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">idx2（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">算子正向输出的距离xyz2最小距离的xyz1中的点的索引tensor。</td>
+      <td class="tg-0pky">shape为(B,N)。</td>
+      <td class="tg-0pky">INT32</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">2</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">gradDist1（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">正向输出dist1的反向梯度，也是反向算子的初始梯度。</td>
+      <td class="tg-0pky">shape为(B,N)。</td>
+      <td class="tg-0pky">FLOAT、FLOAT16</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">2</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">gradDist2（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">正向输出dist2的反向梯度，也是反向算子的初始梯度。</td>
+      <td class="tg-0pky">shape为(B,N)。</td>
+      <td class="tg-0pky">FLOAT、FLOAT16</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">2</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">gradXyz1（aclTensor*）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">梯度更新之后正向算子输入xyz1对应的梯度。</td>
+      <td class="tg-0pky">shape为(B,N,2)。</td>
+      <td class="tg-0pky">FLOAT、FLOAT16</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">3</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">gradXyz2（aclTensor*）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">梯度更新之后正向算子输入xyz2对应的梯度。</td>
+      <td class="tg-0pky">shape为(B,N,2)。</td>
+      <td class="tg-0pky">FLOAT、FLOAT16</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">3</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">workspaceSize（uint64_t*）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回需要在Device侧申请的workspace大小。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">executor（aclOpExecutor**）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回op执行器，包含了算子计算流程。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+  </tbody></table>
+
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
   第一段接口完成入参校验，出现以下场景时报错：
-  返回161001（ACLNN_ERR_PARAM_NULLPTR）: 1. 传入的xyz1、xyz2等输入或grad_xyz1、grad_xyz2是空指针。
-  返回161002（ACLNN_ERR_PARAM_INVALID）: 1. 输入和输出的数据类型不在支持的范围之内。
-                                        2. 输入无法做数据类型推导。
-                                        3. 推导出的数据类型无法转换为指定输出out的类型。
-  ```
+  
+  </style>
+  <table class="tg" style="undefined;table-layout: fixed; width: 951px"><colgroup>
+  <col style="width: 258px">
+  <col style="width: 86px">
+  <col style="width: 607px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">返回值</th>
+      <th class="tg-0pky">错误码</th>
+      <th class="tg-0pky">描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky">ACLNN_ERR_PARAM_NULLPTR</td>
+      <td class="tg-0pky">161001</td>
+      <td class="tg-0pky">传入的xyz1、xyz2、idx1、idx2、gradDist1、gradDist2或输出grad_xyz1、grad_xyz2是空指针。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky" rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="3">161002</td>
+      <td class="tg-0pky">输入和输出的数据类型不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">输入无法做数据类型推导。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">推导出的数据类型无法转换为指定输出out的类型。</td>
+    </tr>
+  </tbody>
+  </table>
 
 ## aclnnChamferDistanceBackward
 
 - **参数说明**：
 
-  - workspace（void\*, 入参）：在Device侧申请的workspace内存地址。
-  - workspaceSize（uint64_t, 入参）：在Device侧申请的workspace大小，由第一段接口aclnnChamferDistanceBackwardGetWorkspaceSize获取。
-  - executor（aclOpExecutor\*, 入参）：op执行器，包含了算子计算流程。
-  - stream（aclrtStream, 入参）：指定执行任务的Stream。
+   <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+      <col style="width: 200px">
+      <col style="width: 162px">
+      <col style="width: 882px">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>参数名</th>
+          <th>输入/输出</th>
+          <th>描述</th>
+        </tr></thead>
+      <tbody>
+        <tr>
+          <td>workspace</td>
+          <td>输入</td>
+          <td>在Device侧申请的workspace内存地址。</td>
+        </tr>
+        <tr>
+          <td>workspaceSize</td>
+          <td>输入</td>
+          <td>在Device侧申请的workspace大小，由第一段接口aclnnBinaryCrossEntropyBackwardGetWorkspaceSize获取。</td>
+        </tr>
+        <tr>
+          <td>executor</td>
+          <td>输入</td>
+          <td>op执行器，包含了算子计算流程。</td>
+        </tr>
+        <tr>
+          <td>stream</td>
+          <td>输入</td>
+          <td>指定执行任务的Stream。</td>
+        </tr>
+      </tbody>
+    </table>
+
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。

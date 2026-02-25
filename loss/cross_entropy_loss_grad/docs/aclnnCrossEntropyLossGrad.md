@@ -115,27 +115,27 @@
 
 ```Cpp
 aclnnStatus aclnnCrossEntropyLossGradGetWorkspaceSize(
- const aclTensor *gradLoss,
- const aclTensor *logProb,
- const aclTensor *target,
- const aclTensor *weightOptional,
- const aclTensor *gradZlossOptional,
- const aclTensor *lseForZlossOptional,
- char            *reductionOptional,
- int64_t          ignoreIndex,
- double           labelSmoothing,
- double           lseSquareScaleForZloss,
- const aclTensor *out,
- uint64_t        *workspaceSize,
- aclOpExecutor  **executor)
+    const aclTensor *gradLoss,
+    const aclTensor *logProb,
+    const aclTensor *target,
+    const aclTensor *weightOptional,
+    const aclTensor *gradZlossOptional,
+    const aclTensor *lseForZlossOptional,
+    char            *reductionOptional,
+    int64_t          ignoreIndex,
+    double           labelSmoothing,
+    double           lseSquareScaleForZloss,
+    const aclTensor *out,
+    uint64_t        *workspaceSize,
+    aclOpExecutor  **executor)
 ```
 
 ```Cpp
 aclnnStatus aclnnCrossEntropyLossGrad(
- void          *workspace,
- uint64_t       workspaceSize,
- aclOpExecutor *executor,
- aclrtStream    stream)
+    void          *workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor *executor,
+    aclrtStream    stream)
 ```
 
 ## aclnnCrossEntropyLossGradGetWorkspaceSize
@@ -165,7 +165,7 @@ aclnnStatus aclnnCrossEntropyLossGrad(
       </tr></thead>
     <tbody>
       <tr>
-        <td>gradLoss</td>
+        <td>gradLoss（aclTensor*）</td>
         <td>输入</td>
         <td>正向输出loss的梯度。参数与公式中grad对应。</td>
         <td><ul><li>当reductionOptional为none时，要求为一个维度为1D的Tensor。</li><li>当reductionOptional为mean/sum时，要求为一个维度为0D的Tensor。</td>
@@ -175,7 +175,7 @@ aclnnStatus aclnnCrossEntropyLossGrad(
         <td>-</td>
       </tr>
       <tr>
-        <td>logProb</td>
+        <td>logProb（aclTensor*）</td>
         <td>输入</td>
         <td>正向输入的logSoftmax计算结果，要求为一个维度为2D的Tensor。</td>
         <td>-</td>
@@ -185,7 +185,7 @@ aclnnStatus aclnnCrossEntropyLossGrad(
         <td>-</td>
       </tr>
       <tr>
-        <td>target</td>
+        <td>target（aclTensor*）</td>
         <td>输入</td>
         <td>类索引，要求为一个维度为1D的Tensor。</td>
         <td>N与input第零维相等。数值范围为[0, C)，当指定了ignoreIndex时，target的值也可以等于ignoreIndex。</td>
@@ -195,7 +195,7 @@ aclnnStatus aclnnCrossEntropyLossGrad(
         <td>-</td>
       </tr>
       <tr>
-        <td>weightOptional</td>
+        <td>weightOptional（aclTensor*）</td>
         <td>可选输入</td>
         <td>要求shape为一个1D的Tensor。</td>
         <td>-</td>
@@ -205,7 +205,7 @@ aclnnStatus aclnnCrossEntropyLossGrad(
         <td>-</td>
       </tr>
       <tr>
-        <td>gradZlossOptional</td>
+        <td>gradZlossOptional（aclTensor*）</td>
         <td>可选输入</td>
         <td>参数与公式中gradZloss对应。zloss相关输入，如果正向有zloss的额外输出，反向有个grad_zloss的输入。</td>
         <td><ul><li>当reductionOptional为none时，要求为一个维度为1D的Tensor。</li><li>当reductionOptional为mean/sum时，要求为一个维度为0D的Tensor。</li><li>当前暂不支持。</li></ul></td>
@@ -215,7 +215,7 @@ aclnnStatus aclnnCrossEntropyLossGrad(
         <td>-</td>
       </tr>
       <tr>
-        <td>lseForZlossOptional</td>
+        <td>lseForZlossOptional（aclTensor*）</td>
         <td>可选输入</td>
         <td>zloss相关输入，如果lse_square_scale_for_zloss非0，正向额外输出的lse_for_zloss中间结果给反向用于计算lse。</td>
         <td><ul><li>要求为一个维度为1D的Tensor。</li><li>当前暂不支持。</td>
@@ -225,7 +225,7 @@ aclnnStatus aclnnCrossEntropyLossGrad(
         <td>-</td>
       </tr>
       <tr>
-        <td>reductionOptional</td>
+        <td>reductionOptional（char*）</td>
         <td>输入</td>
         <td>指定要应用于输出的缩减。</td>
         <td><ul><li>none：不应用缩减。</li><li>mean：取输出的加权平均值。</li><li>sum：求和输出。</li></ul></td>
@@ -235,7 +235,7 @@ aclnnStatus aclnnCrossEntropyLossGrad(
         <td>-</td>
       </tr>
       <tr>
-        <td>ignoreIndex</td>
+        <td>ignoreIndex（int64_t）</td>
         <td>输入</td>
         <td>指定被忽略的标签值。</td>
         <td>-</td>
@@ -245,7 +245,7 @@ aclnnStatus aclnnCrossEntropyLossGrad(
         <td>-</td>
       </tr>
       <tr>
-        <td>labelSmoothing</td>
+        <td>labelSmoothing（double）</td>
         <td>输入</td>
         <td>表示计算损失时的平滑量。取值范围在[0.0, 1.0]的浮点数，其中0.0表示不平滑。</td>
         <td>当前仅支持输入0.0。</td>
@@ -255,7 +255,7 @@ aclnnStatus aclnnCrossEntropyLossGrad(
         <td>-</td>
       </tr>
       <tr>
-        <td>lseSquareScaleForZloss</td>
+        <td>lseSquareScaleForZloss（double）</td>
         <td>输入</td>
         <td>zloss相关属性，0.0走pytorch原生分支，非0.0走zloss新分支。</td>
         <td>当前暂不支持。</td>
@@ -265,7 +265,7 @@ aclnnStatus aclnnCrossEntropyLossGrad(
         <td>-</td>
       </tr>
       <tr>
-        <td>out</td>
+        <td>out（aclTensor*）</td>
         <td>输出</td>
         <td>梯度计算结果，要求是一个2D的Tensor。</td>
         <td>-</td>
@@ -275,7 +275,7 @@ aclnnStatus aclnnCrossEntropyLossGrad(
         <td>-</td>
       </tr>
       <tr>
-        <td>workspaceSize</td>
+        <td>workspaceSize（uint64_t*）</td>
         <td>输出</td>
         <td>返回需要在Device侧申请的workspace大小。</td>
         <td>-</td>
@@ -285,7 +285,7 @@ aclnnStatus aclnnCrossEntropyLossGrad(
         <td>-</td>
       </tr>
       <tr>
-        <td>executor</td>
+        <td>executor（aclOpExecutor**）</td>
         <td>输出</td>
         <td>返回op执行器，包含了算子计算流程。</td>
         <td>-</td>

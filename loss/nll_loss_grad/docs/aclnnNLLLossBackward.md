@@ -50,24 +50,24 @@
 
 ```cpp
 aclnnStatus aclnnNLLLossBackwardGetWorkspaceSize(
-  const aclTensor *gradOutput,
-  const aclTensor *self,
-  const aclTensor *target,
-  const aclTensor *weight,
-  int64_t          reduction,
-  int64_t          ignoreIndex,
-  const aclTensor *totalWeight,
-  aclTensor       *out,
-  uint64_t        *workspaceSize,
-  aclOpExecutor  **executor)
+    const aclTensor *gradOutput,
+    const aclTensor *self,
+    const aclTensor *target,
+    const aclTensor *weight,
+    int64_t          reduction,
+    int64_t          ignoreIndex,
+    const aclTensor *totalWeight,
+    aclTensor       *out,
+    uint64_t        *workspaceSize,
+    aclOpExecutor  **executor)
 ```
 
 ```cpp
 aclnnStatus aclnnNLLLossBackward(
-  void          *workspace,
-  uint64_t       workspaceSize,
-  aclOpExecutor *executor,
-  aclrtStream    stream)
+    void          *workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor *executor,
+    aclrtStream    stream)
 ```
 
 ## aclnnNLLLossBackwardGetWorkspaceSize
@@ -97,7 +97,7 @@ aclnnStatus aclnnNLLLossBackward(
       </tr></thead>
     <tbody>
       <tr>
-        <td>gradOutput</td>
+        <td>gradOutput（aclTensor*）</td>
         <td>输入</td>
         <td>输入aclTensor。</td>
         <td>shape为(N)、一维（且元素个数为1）或()。<ul><li>当reduction为0，且self的shape为(N,C)时，shape支持(N)。</li><li>当reduction为0，且self的shape为(C)时，shape支持一维（且元素个数为1）或()。</li><li>当reduction不为0，shape支持一维（且元素个数为1）或()。</li></ul></td>
@@ -107,7 +107,7 @@ aclnnStatus aclnnNLLLossBackward(
         <td>√</td>
       </tr>
       <tr>
-        <td>self</td>
+        <td>self（aclTensor*）</td>
         <td>输入</td>
         <td>输入aclTensor。</td>
         <td>数据类型与出参out的数据类型一致，shape与出参out的shape一致。<ul><li>shape为(N,C)或者(C)，其中N表示batch size，C表示类别数。</li><li>当target的shape为(N)时，self的shape需为(N,C)。</li><li>当target的shape为()，self的shape需为(C)。</li></ul></td>
@@ -117,7 +117,7 @@ aclnnStatus aclnnNLLLossBackward(
         <td>√</td>
       </tr>
       <tr>
-        <td>target</td>
+        <td>target（aclTensor*）</td>
         <td>输入</td>
         <td>表示真实标签。</td>
         <td>shape为(N) 或者()，其中每个元素的取值范围是[0, C - 1]。</td>
@@ -127,7 +127,7 @@ aclnnStatus aclnnNLLLossBackward(
         <td>√</td>
       </tr>
       <tr>
-        <td>weight</td>
+        <td>weight（aclTensor*）</td>
         <td>输入</td>
         <td>表示每个类别的缩放权重。</td>
         <td>公式中的w，shape为(C,)。</td>
@@ -137,7 +137,7 @@ aclnnStatus aclnnNLLLossBackward(
         <td>√</td>
       </tr>
       <tr>
-        <td>reduction</td>
+        <td>reduction（int64_t）</td>
         <td>输入</td>
         <td>指定损失函数的计算方式。</td>
         <td><ul>支持0('none')|1('mean')|2('sum')。<li>'none'表示不应用缩减</li><li>'mean'表示输出的总和将除以输出中的元素数</li><li>'sum'表示输出将被求和</li></ul></td>
@@ -147,7 +147,7 @@ aclnnStatus aclnnNLLLossBackward(
         <td>-</td>
       </tr>
       <tr>
-        <td>ignoreIndex</td>
+        <td>ignoreIndex（int64_t）</td>
         <td>输入</td>
          <td>指定一个被忽略且不影响输入梯度的目标值。
         </td>
@@ -158,7 +158,7 @@ aclnnStatus aclnnNLLLossBackward(
         <td>-</td>
       </tr>
           <tr>
-        <td>totalWeight</td>
+        <td>totalWeight（aclTensor*）</td>
         <td>输入</td>
         <td>公式中的totalWeight。</td>
         <td>仅当reduction为mean时，totalWeight是通过target取相应位置的weight，然后去除掉ignoreIndex对应的weight，将剩下的weight求和；当reduction为其他值时，该参数默认不处理。</td>
@@ -168,7 +168,7 @@ aclnnStatus aclnnNLLLossBackward(
         <td>-</td>
       </tr>
       <tr>
-        <td>out</td>
+        <td>out（aclTensor*）</td>
         <td>输出</td>
         <td>公式中的out。</td>
         <td>shape与self相同。</td>
@@ -178,7 +178,7 @@ aclnnStatus aclnnNLLLossBackward(
         <td>√</td>
       </tr>
       <tr>
-        <td>workspaceSize</td>
+        <td>workspaceSize（uint64_t*）</td>
         <td>输出</td>
         <td>返回需要在Device侧申请的workspace大小。</td>
         <td>-</td>
@@ -188,7 +188,7 @@ aclnnStatus aclnnNLLLossBackward(
         <td>-</td>
       </tr>
       <tr>
-        <td>executor</td>
+        <td>executor（aclOpExecutor**）</td>
         <td>输出</td>
         <td>返回op执行器，包含了算子计算流程。</td>
         <td>-</td>

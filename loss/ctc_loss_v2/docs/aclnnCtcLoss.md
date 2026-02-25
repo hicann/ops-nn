@@ -48,23 +48,24 @@
 
 ```Cpp
 aclnnStatus aclnnCtcLossGetWorkspaceSize(
- const aclTensor*     logProbs,
- const aclTensor*     targets,
- const aclIntArray*   inputLengths,
- const aclIntArray*   targetLengths,
- int64_t blank, bool  zeroInfinity,
- aclTensor*           negLogLikelihoodOut,
- aclTensor*           logAlphaOut,
- uint64_t*            workspaceSize,
- aclOpExecutor**      executor)
+    const aclTensor*     logProbs,
+    const aclTensor*     targets,
+    const aclIntArray*   inputLengths,
+    const aclIntArray*   targetLengths,
+    int64_t              blank,
+    bool                 zeroInfinity,
+    aclTensor*           negLogLikelihoodOut,
+    aclTensor*           logAlphaOut,
+    uint64_t*            workspaceSize,
+    aclOpExecutor**      executor)
 ```
 
 ```Cpp
 aclnnStatus aclnnCtcLoss(
- void*          workspace,
- uint64_t       workspaceSize,
- aclOpExecutor* executor,
- aclrtStream    stream)
+    void*          workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor* executor,
+    aclrtStream    stream)
 ```
 
 ## aclnnCtcLossGetWorkspaceSize
@@ -94,7 +95,7 @@ aclnnStatus aclnnCtcLoss(
       </tr></thead>
     <tbody>
       <tr>
-        <td>logProbs</td>
+        <td>logProbs（aclTensor*）</td>
         <td>输入</td>
         <td>表示输出的对数概率，公式中的y。</td>
         <td>-</td>
@@ -104,7 +105,7 @@ aclnnStatus aclnnCtcLoss(
         <td>√</td>
       </tr>
       <tr>
-        <td>targets</td>
+        <td>targets（aclTensor*）</td>
         <td>输入</td>
         <td>表示包含目标序列的标签，公式中的π。</td>
         <td>当shape为(N,S)，S为不小于targetLengths中的最大值的值；或者shape为(SUM(targetLengths))，假设targets是未填充的而且在1维内级联的。当logProbs为2维时，N=1。</td>
@@ -114,7 +115,7 @@ aclnnStatus aclnnCtcLoss(
         <td>√</td>
       </tr>
       <tr>
-        <td>inputLengths</td>
+        <td>inputLengths（aclIntArray*）</td>
         <td>输入</td>
         <td>表示输入序列的实际长度，公式中的T为inputLengths中的元素。</td>
         <td>数组长度为N，数组中的每个值必须小于等于T。当logProbs为2维时，N=1</td>
@@ -124,7 +125,7 @@ aclnnStatus aclnnCtcLoss(
         <td>-</td>
       </tr>
       <tr>
-        <td>targetLengths</td>
+        <td>targetLengths（aclIntArray*）</td>
         <td>输入</td>
         <td>表示目标序列的实际长度，公式中的l的长度为targetLengths中的元素。</td>
         <td>数组长度为N，当targets的shape为(N,S)时，数组中的每个值必须小于等于S。当logProbs为2维时，N=1</td>
@@ -134,7 +135,7 @@ aclnnStatus aclnnCtcLoss(
         <td>-</td>
       </tr>
       <tr>
-        <td>blank</td>
+        <td>blank（int64_t）</td>
         <td>输入</td>
         <td>表示空白标识。</td>
         <td>数值必须大于等于0且小于C。</td>
@@ -144,7 +145,7 @@ aclnnStatus aclnnCtcLoss(
         <td>-</td>
       </tr>
       <tr>
-        <td>zeroInfinity</td>
+        <td>zeroInfinity（bool）</td>
         <td>输入</td>
         <td>表示是否将无限损耗和相关梯度归零，公式中的zeroInfinity。</td>
         <td>-</td>
@@ -154,7 +155,7 @@ aclnnStatus aclnnCtcLoss(
         <td>-</td>
       </tr>
       <tr>
-        <td>negLogLikelihoodOut</td>
+        <td>negLogLikelihoodOut（aclTensor*）</td>
         <td>输出</td>
         <td>表示输出的损失值，公式中的h。</td>
         <td>数据类型必须和logProbs一致。当logProbs为3维时，negLogLikelihoodOut的shape为(N)的Tensor，否则negLogLikelihoodOut为0维Tensor</td>
@@ -164,7 +165,7 @@ aclnnStatus aclnnCtcLoss(
         <td>√</td>
       </tr>
       <tr>
-        <td>logAlphaOut</td>
+        <td>logAlphaOut（aclTensor*）</td>
         <td>输出</td>
         <td>表示输入到目标的可能跟踪的概率，公式中的p(l|x)</td>
         <td>数据类型必须和logProbs一致。当logProbs为2维时，N=1</td>
@@ -174,7 +175,7 @@ aclnnStatus aclnnCtcLoss(
         <td>√</td>
       </tr>
       <tr>
-        <td>workspaceSize</td>
+        <td>workspaceSize（uint64_t*）</td>
         <td>输出</td>
         <td>返回需要在Device侧申请的workspace大小。</td>
         <td>-</td>
@@ -184,7 +185,7 @@ aclnnStatus aclnnCtcLoss(
         <td>-</td>
       </tr>
       <tr>
-        <td>executor</td>
+        <td>executor（aclOpExecutor**）</td>
         <td>输出</td>
         <td>返回op执行器，包含了算子计算流程。</td>
         <td>-</td>
@@ -196,7 +197,7 @@ aclnnStatus aclnnCtcLoss(
     </tbody></table>
 
   - logAlphaOut：
-     - <term>Ascend 950PR/Ascend 950DT/Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：shape为($N, T, (2*max(targetLengths)+8)/8*8$)。
+     - <term>Ascend 950PR</term>、<term>Ascend 950DT</term>、<term>Atlas A2 训练系列产/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：shape为($N, T, (2*max(targetLengths)+8)/8*8$)。
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。

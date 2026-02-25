@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- **算子功能：** 对优化器输入的m和v作为索引，取出各自qmap中的值，乘以每个blockSize对应的absmax进行反量化，而后实现adamW优化器功能，更新后的m和v每blockSize中取一个最大值，每blockSize个m和v对应一个absmax，进行一次norm归一化，利用二分法找到对应m和v对应qmap中的索引作为输出，absmax也作为下一轮量化的输入。
+- **接口功能：** 对优化器输入的m和v作为索引，取出各自qmap中的值，乘以每个blockSize对应的absmax进行反量化，而后实现adamW优化器功能，更新后的m和v每blockSize中取一个最大值，每blockSize个m和v对应一个absmax，进行一次norm归一化，利用二分法找到对应m和v对应qmap中的索引作为输出，absmax也作为下一轮量化的输入。
 
 - **优化器计算公式：**
 
@@ -46,51 +46,325 @@
 ## 函数原型
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnApplyAdamWQuantGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnApplyAdamWQuant”接口执行计算。
 
-* `aclnnStatus aclnnApplyAdamWQuantGetWorkspaceSize(aclTensor *varRef, const aclTensor *grad, aclTensor *mRef, aclTensor *vRef, const aclTensor *qmapM, const aclTensor *qmapV, aclTensor *absmaxMRef, aclTensor *absmaxVRef, const aclTensor *step, double lr, double beta1, double beta2, double weightDecay, double eps, double gnormScale, char *quantModeOptional, int64_t blockSize, uint64_t *workspaceSize, aclOpExecutor **executor);`
-* `aclnnStatus aclnnApplyAdamWQuant(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream);`
+```Cpp
+aclnnStatus aclnnApplyAdamWQuantGetWorkspaceSize(
+    const aclTensor *varRef,
+    const aclTensor *grad,
+    const aclTensor *mRef,
+    const aclTensor *vRef,
+    const aclTensor *qmapM,
+    const aclTensor *qmapV,
+    const aclTensor *absmaxMRef,
+    const aclTensor *absmaxVRef,
+    const aclTensor *step,
+    double          lr,
+    double          beta1,
+    double          beta2,
+    double          weightDecay,
+    double          eps,
+    double          gnormScale,
+    char *          quantModeOptional,
+    int64_t         blockSize,
+    uint64_t        *workspaceSize,
+    aclOpExecutor  **executor)
+```
+
+```Cpp
+aclnnStatus aclnnApplyAdamWQuant(
+    void            *workspace,
+    uint64_t         workspaceSize,
+    aclOpExecutor   *executor,
+    aclrtStream      stream)
+```
 
 ## aclnnApplyAdamWQuantGetWorkspaceSize
 
 - **参数说明：**
 
-  * varRef（const aclTensor*，计算输入/计算输出）：Device侧的aclTensor，公式中的theta，待计算的权重输入同时也是输出。数据类型支持FLOAT、FLOAT16、BFLOAT16。不支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * grad（aclTensor*， 计算输入）：Device侧的aclTensor，梯度，公式中的gt，数据类型支持FLOAT16、BFLOAT16、FLOAT32，且与varRef保持一致，shape要求与“varRef”参数一致，不支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * mRef（aclTensor*， 计算输入/计算输出）：Device侧的aclTensor，adamw优化器公式中m参数量化前的索引值，根据索引导出qmapM中具体的值，数据类型支持UINT8，shape要求与“varRef”参数一致，不支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * vRef（aclTensor*， 计算输入/计算输出）：Device侧的aclTensor，adamw优化器公式中v参数量化前的索引值，根据索引导出qmapV中具体的值，数据类型支持UINT8，shape要求与“varRef”参数一致，不支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * qmapM（aclTensor*， 计算输入）：Device侧的aclTensor，量化映射表升序排列，数据类型支持FLOAT32，数据格式要求为ND，shape要求为[256,]，不支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * qmapV（aclTensor*， 计算输入）：Device侧的aclTensor，量化映射表升序排列，数据类型支持FLOAT32，数据格式要求为ND，shape要求为[256,]，不支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * absmaxMRef（aclTensor*， 计算输入/计算输出） ：Device侧的aclTensor，计算输入为本次反量化阶段将分位数反归一化（乘以absmaxMRef），计算输出为本次量化和下一轮反量化的参数，数据类型支持FLOAT32，shape要求为每256个m对应一个最值，shape要求为“absmaxMRef.size = m.size/blockSize”，不支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * absmaxVRef（aclTensor*， 计算输入/计算输出） ：Device侧的aclTensor，计算输入为本次反量化阶段将分位数反归一化（乘以absmaxVRef），计算输出为本次量化和下一轮反量化的参数，数据类型支持FLOAT32，shape要求为每256个v对应一个最值，shape要求为“absmaxVRef.size = m.size/blockSize”，不支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * step（aclTensor*）：Device侧的aclTensor，公式中的t，迭代次数，数据类型支持INT64，shape为[1,]，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * lr（float\*, 计算输入）：学习率，公式中的eta，推荐1e-3，1e-5，1e-8，范围0~1，数据类型支持float。
-  * beta1（float\*, 计算输入）：adamw优化器公式中beta1参数，推荐0.9，范围0~1，数据类型支持float。
-  * beta2（float\*, 计算输入）：adamw优化器公式中beta2参数，推荐0.99，范围0~1，数据类型支持float。
-  * weightDecay（float\*, 计算输入）：权重衰减系数，adamw优化器公式中lambda参数，推荐0.999，范围0~1，数据类型支持float。
-  * eps（float\*, 计算输入）：adamw优化器公式中epsilon参数，加在分母中用来防止除0，推荐1e-8，数据类型支持float。
-  * gnormScale（float\*, 计算输入）： 对输入参数grad进行缩放的参数，推荐0.999，范围0~1，数据类型支持float。
-  * blockSize（int64\*, 计算输入）：每个block参与计算的大小，固定为256，数据类型支持int64。
-  * quantModeOptional（char\*, 计算输入）：保留参数。
-  * workspaceSize（uint64_t\*, 出参）：返回用户需要在npu device侧申请的workspace大小。
-  * executor（aclOpExecutor\*\*, 出参）：返回op执行器，包含了算子计算流程。
+  </style>
+  <table class="tg" style="undefined;table-layout: fixed; width: 1235px"><colgroup>
+  <col style="width: 271px">
+  <col style="width: 88px">
+  <col style="width: 289px">
+  <col style="width: 156px">
+  <col style="width: 120px">
+  <col style="width: 95px">
+  <col style="width: 108px">
+  <col style="width: 108px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">参数名</th>
+      <th class="tg-0pky">输入/输出</th>
+      <th class="tg-0pky">描述</th>
+      <th class="tg-0pky">使用说明</th>
+      <th class="tg-0pky">数据类型</th>
+      <th class="tg-0pky">数据格式</th>
+      <th class="tg-0pky">维度(shape)</th>
+      <th class="tg-0pky">非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky">varRef（aclTensor*）</td>
+      <td class="tg-0pky">输入/输出</td>
+      <td class="tg-0pky">待计算的权重输入同时也是输出，公式中的θ。</td>
+      <td class="tg-0pky"></td>
+      <td class="tg-0pky">FLOAT16、BFLOAT16、FLOAT32</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">x</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">grad（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">输入梯度，公式中的g。</td>
+      <td class="tg-0pky">shape要求与输入varRef保持一致。</td>
+      <td class="tg-0pky">与varRef保持一致</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">x</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">mRef（aclTensor*）</td>
+      <td class="tg-0pky">输入/输出</td>
+      <td class="tg-0pky">adamw优化器公式中m参数量化前的索引值，根据索引导出qmapM中具体的值。</td>
+      <td class="tg-0pky">shape要求与输入varRef保持一致。</td>
+      <td class="tg-0pky">uin8_t</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">x</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">vRef（aclTensor*）</td>
+      <td class="tg-0pky">输入/输出</td>
+      <td class="tg-0pky">adamw优化器公式中v参数量化前的索引值，根据索引导出qmapV中具体的值。</td>
+      <td class="tg-0pky">shape要求与输入varRef保持一致。</td>
+      <td class="tg-0pky">uin8_t</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">x</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">qmapM（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">量化映射表升序排列，每个m根据mRef中的索引值进行选择。</td>
+      <td class="tg-0pky">shape要求时[256,]。</td>
+      <td class="tg-0pky">FLOAT32</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1</td>
+      <td class="tg-0pky">x</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">qmapV（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">量化映射表升序排列，每个v根据vRef中的索引值进行选择。</td>
+      <td class="tg-0pky">shape要求时[256,]。</td>
+      <td class="tg-0pky">FLOAT32</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1</td>
+      <td class="tg-0pky">x</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">absmaxMRef（aclTensor*）</td>
+      <td class="tg-0pky">输入/输出</td>
+      <td class="tg-0pky">每blockSize(256)个vRef对应一个最大值，对于用于对mRef索引选择qmapM中的值乘以对应的absmaxMRef进行反量化。再通过更新后的mRef每blockSize(256)个选择出一个最大值，作为absmaxMRef的输出。</td>
+      <td class="tg-0pky">shape要求为“absmaxMRef.size = mRef.size/blockSize”。</td>
+      <td class="tg-0pky">FLOAT32</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1</td>
+      <td class="tg-0pky">x</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">absmaxVRef（aclTensor*）</td>
+      <td class="tg-0pky">输入/输出</td>
+      <td class="tg-0pky">每blockSize(256)个vRef对应一个最大值，对于用于对vRef索引选择qmapV中的值乘以对应的absmaxVRef进行反量化。再通过更新后的vRef每blockSize(256)个选择出一个最大值，作为absmaxVRef的输出。</td>
+      <td class="tg-0pky">shape要求为“absmaxVRef.size = vRef.size/blockSize”。</td>
+      <td class="tg-0pky">FLOAT32</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1</td>
+      <td class="tg-0pky">x</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">step（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">公式中的t，迭代次数。</td>
+      <td class="tg-0pky">shape要求为[1]。</td>
+      <td class="tg-0pky">INT64</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1</td>
+      <td class="tg-0pky">x</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">lr（double）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">学习率，公式中的η，推荐1e-3，1e-5，1e-8，范围0~1。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">DOUBLE</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">beta1（double）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">adamw优化器公式中beta1参数，推荐0.9，范围0~1。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">DOUBLE</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">beta2（double）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">adamw优化器公式中beta2参数，推荐0.999，范围0~1。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">DOUBLE</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">weightDeacy（double）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">权重衰减系数，adamw优化器公式中λ参数，推荐0.999，范围0~1。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">DOUBLE</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">eps（double）</td>
+      <td class="tg-0lax">输入</td>
+      <td class="tg-0lax">adamw优化器公式中ϵ参数，加在分母中用来防止除0，推荐1e-8。</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">DOUBLE</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">gnormScale（double）</td>
+      <td class="tg-0lax">输入</td>
+      <td class="tg-0lax">对输入参数grad进行缩放的参数，推荐0.999，范围0~1。</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">DOUBLE</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">blockSize（int64_t）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">每个block参与计算的size大小，固定为256。为上述absmax中所说，每blockSize选择一个最大值。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">INT64</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">quantModeOptional（char*）</td>
+      <td class="tg-0lax">输入</td>
+      <td class="tg-0lax">保留参数暂无意义</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">workspaceSize（uint64_t*）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回需要在Device侧申请的workspace大小。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">executor（aclOpExecutor**）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回op执行器，包含了算子计算流程。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+  </tbody></table>
 
 - **返回值：**
 
   aclnnStatus： 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
     第一段接口完成入参校验，出现以下场景时报错：
-    返回161001（ACLNN_ERR_PARAM_NULLPTR）：1.输入和输出的Tensor是空指针。
-    返回161002（ACLNN_ERR_PARAM_INVALID）：1.输入和输出的数据类型和数据格式不在支持的范围之内。
-  ```
+  </style>
+  <table class="tg" style="undefined;table-layout: fixed; width: 728px"><colgroup>
+  <col style="width: 267px">
+  <col style="width: 87px">
+  <col style="width: 374px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">返回码</th>
+      <th class="tg-0pky">错误码</th>
+      <th class="tg-0pky">描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky">ACLNN_ERR_PARAM_NULLPTR</td>
+      <td class="tg-0pky">161001</td>
+      <td class="tg-0pky">输入和输出的Tensor是空指针。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky">161002</td>
+      <td class="tg-0pky">输入和输出的数据类型和数据格式不在支持的范围之内。</td>
+    </tr>
+  </tbody>
+  </table>
 
 ## aclnnApplyAdamWQuant
 
 - **参数说明：**
 
-  * workspace（void \*， 入参）： 在Device侧申请的workspace内存地址。
-  * workspaceSize（uint64_t， 入参）： 在Device侧申请的workspace大小，由第一段接口aclnnApplyAdamWQuantGetWorkspaceSize获取。
-  * executor（aclOpExecutor \*， 入参）： op执行器，包含了算子计算流程。
-  * stream（aclrtStream， 入参）： 指定执行任务的Stream。
+  <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
+  <col style="width: 173px">
+  <col style="width: 112px">
+  <col style="width: 668px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnAdvanceStepGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
+  </table>
 
 - **返回值：**
 
@@ -104,8 +378,8 @@
   - varRef.size/blockSize = absmaxMRef.size
   - varRef.size/blockSize = absmaxVRef.size
 
-  - 确定性计算：
-    - aclnnApplyAdamWQuant默认确定性实现。
+  确定性计算：
+  - aclnnApplyAdamWQuant默认确定性实现。
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
