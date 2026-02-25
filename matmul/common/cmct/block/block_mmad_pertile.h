@@ -199,19 +199,18 @@ __aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAM
         uint32_t aL0OneBuffer = baseM_ * baseK_;
         uint32_t bL0OneBuffer = baseN_ * baseK_;
         uint32_t cL0OneBuffer = baseM_ * baseN_;
-        uint64_t halfOffset = AscendC::TOTAL_L1_SIZE >> 1;
         uint64_t AL1OneBufferSize = baseM_ * kaL1_ * sizeof(AType);
         uint64_t BL1OneBufferSize = baseN_ * kbL1_ * sizeof(BType);
-        // 2 buffer L1 space is : |A0|B1|.........256KB|B0|A1|.........
-        // 4 buffer L1 space is : |A0|B1|A2|B3|...256KB|B0|A1|B2|A3|...
-        l1BufferBOffset_[0] = halfOffset;
-        l1BufferBOffset_[1] = AL1OneBufferSize;
-        l1BufferAOffset_[1] = l1BufferBOffset_[0] + BL1OneBufferSize;
+        // 2 buffer L1 space is : |A0|B0|.........256KB|A1|B1|.........
+        // 4 buffer L1 space is : |A0|B0|A2|B2|...256KB|A1|B1|A3|B3|...
+        l1BufferAOffset_[1] = AscendC::TOTAL_L1_SIZE >> 1;
+        l1BufferBOffset_[0] = AL1OneBufferSize;
+        l1BufferBOffset_[1] = l1BufferAOffset_[1] + AL1OneBufferSize;
         if (l1BufNum_ == FOUR_BUFFER) {
-            l1BufferAOffset_[2] = l1BufferBOffset_[1] + BL1OneBufferSize;
-            l1BufferBOffset_[2] = l1BufferAOffset_[1] + AL1OneBufferSize;
-            l1BufferBOffset_[3] = l1BufferAOffset_[2] + AL1OneBufferSize;
-            l1BufferAOffset_[3] = l1BufferBOffset_[2] + BL1OneBufferSize;
+            l1BufferAOffset_[2] = l1BufferBOffset_[0] + BL1OneBufferSize;
+            l1BufferAOffset_[3] = l1BufferBOffset_[1] + BL1OneBufferSize;
+            l1BufferBOffset_[2] = l1BufferAOffset_[2] + AL1OneBufferSize;
+            l1BufferBOffset_[3] = l1BufferAOffset_[3] + AL1OneBufferSize;
         }
         aL0Ping_ = AscendC::LocalTensor<AType>(AscendC::TPosition::A2, 0, aL0OneBuffer);
         aL0Pong_ = AscendC::LocalTensor<AType>(AscendC::TPosition::A2, aL0OneBuffer * sizeof(AType), aL0OneBuffer);
