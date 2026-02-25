@@ -78,7 +78,7 @@ aclnnStatus aclnnAdaptiveMaxPool2d(
         <td>输入</td>
         <td>表示输出结果在H和W维度上的空间大小。</td>
         <td>-</td>
-        <td>-</td>
+        <td>INT32</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
