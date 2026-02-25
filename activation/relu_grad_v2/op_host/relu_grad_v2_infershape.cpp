@@ -13,7 +13,6 @@
  * \brief
  */
 #include "infershape_elewise_util.h"
-#include "log/log.h"
 #include "register/op_impl_registry.h"
 
 using namespace ge;

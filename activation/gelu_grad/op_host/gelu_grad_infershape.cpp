@@ -12,7 +12,6 @@
  * \file gelu_grad_infershape.cpp
  * \brief
  */
-#include "op_util.h"
 #include "log/log.h"
 #include "infershape_broadcast_util.h"
 #include "platform/platform_info.h"

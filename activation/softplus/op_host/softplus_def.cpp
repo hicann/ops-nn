@@ -13,7 +13,6 @@
  * \brief softplus def
  */
 
-#include <cstdint>
 #include "register/op_def_registry.h"
 
 namespace ops {

@@ -12,7 +12,6 @@
  * \file log_softmax_v2_infershape.cpp
  * \brief
  */
-#include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "infershape_elewise_util.h"
 
