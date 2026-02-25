@@ -166,7 +166,8 @@ bool SetOneBlockDense(
 }
 
 bool CalParseWeightAndIndex(
-    const int8_t* weight, const aclIntArray* shape, int8_t* sparseWeight, uint8_t* index, int64_t* sparseWeightShape)
+    const int8_t* weight, const aclIntArray* shape, int8_t* sparseWeight, uint8_t* index,
+    const int64_t* sparseWeightShape)
 {
     int64_t nDimNzShape = sparseWeightShape[1] * sparseWeightShape[2];
     int64_t nDimNdShape = (*shape)[0];
@@ -181,15 +182,17 @@ bool CalParseWeightAndIndex(
             for (int64_t k0Loop = 0; k0Loop < static_cast<int64_t>(INDEX_C0_SIZE); k0Loop++) {
                 int64_t kNdOffset = k1Loop * NZ_K0_INT8_SIZE * SPARSE_MULTI + k0Loop * SPARSE_ATOMIC_SIZE;
                 int32_t validWeightCount = kNdOffset + SPARSE_ATOMIC_SIZE >= static_cast<uint64_t>(kDimNdShape) ?
-                                            (kDimNdShape - kNdOffset) : SPARSE_ATOMIC_SIZE;
+                                               (kDimNdShape - kNdOffset) :
+                                               SPARSE_ATOMIC_SIZE;
                 int64_t ndOffset = nLoop * kDimNdShape + kNdOffset;
-                int64_t sparseWeightOffset = (k1Loop * nDimNzShape + nLoop) * NZ_K0_INT8_SIZE +
-                                             k0Loop * SPARSE_INDEX_MULTI;
+                int64_t sparseWeightOffset =
+                    (k1Loop * nDimNzShape + nLoop) * NZ_K0_INT8_SIZE + k0Loop * SPARSE_INDEX_MULTI;
                 int64_t sparseIndexOffset = (k1Loop * nDimNzShape + nLoop) * INDEX_C0_SIZE + k0Loop;
 
                 CHECK_RET(
-                    SetOneBlockDense(&weight[ndOffset], &sparseWeight[sparseWeightOffset], &index[sparseIndexOffset],
-                                     validWeightCount),
+                    SetOneBlockDense(
+                        &weight[ndOffset], &sparseWeight[sparseWeightOffset], &index[sparseIndexOffset],
+                        validWeightCount),
                     false);
             }
         }

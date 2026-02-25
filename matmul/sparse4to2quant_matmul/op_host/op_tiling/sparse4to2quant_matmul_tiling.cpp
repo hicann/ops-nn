@@ -102,7 +102,7 @@ const std::vector<uint64_t> K_BASE = {1024, 512, 256, 128, 64};
 ge::graphStatus Sparse4to2QuantMatmulTiling::GetPlatformInfo()
 {
     // mc2和qbmm把compileInfo都赋值给compileInfo_，后续硬件信息可以直接从compileInfo_中获取
-    auto mmCompileInfo = reinterpret_cast<const Sparse4to2QuantMatmulCompileInfo*>(context_->GetCompileInfo());
+    auto mmCompileInfo = context_->GetCompileInfo<Sparse4to2QuantMatmulCompileInfo>();
     OP_TILING_CHECK(
         mmCompileInfo == nullptr,
         CUBE_INNER_ERR_REPORT(inputParams_.opName, "Sparse4to2_quant_matmul_tiling GetCompileInfo is null"),
