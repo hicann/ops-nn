@@ -20,16 +20,6 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "conv_config.h"
 
-#if defined(FORMAT_X)
-#if FORMAT_X == FORMAT_NCHW || FORMAT_X == FORMAT_NHWC
-#include "../../conv2d_v2/arch35/conv2d_v2_api.h"
-using namespace conv2d;
-#elif FORMAT_X == FORMAT_NCDHW || FORMAT_X == FORMAT_NDHWC
-#include "../../conv3d_v2/arch35/conv3d_v2_api.h"
-using namespace conv3d;
-#endif
-#endif
-
 using namespace conv;
 
 constexpr uint8_t SINGLE_BLOCK_SIZE = 32;

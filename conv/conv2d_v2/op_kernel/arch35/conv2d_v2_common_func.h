@@ -137,23 +137,23 @@ struct Init {
                 self->ctx.ciPerGroup = self->ctx.convTiling->orgCi / self->ctx.convTiling->groups;
                 self->ctx.singleGroupOpt = self->ctx.convTiling->singleCoreGroupOpt;
             } else if constexpr (Intf::c04NDFlag) {
-                C04InitIterValue<Intf>(self);
+                self->ctx.c04ProcessTools.C04InitIterValue(self);
             } else if constexpr (Intf::weightUbTrans) {
-                WeightUbTransCalcBL1LoadTimes<Intf>(self);
+                self->ctx.weightUbProcessTools.WeightUbTransCalcBL1LoadTimes(self);
             } else if constexpr (Intf::isDmaFlag) {
-                DmaCalcAL1LoadTimes<Intf>(self);
-                DmaCubeInit(self);
+                self->ctx.dmaProcessTools.DmaCalcAL1LoadTimes(self);
+                self->ctx.dmaProcessTools.DmaCubeInit(self);
             }
         }
         if ASCEND_IS_AIV_CONV {
             if constexpr (Intf::groupOptNDFlag) {
                 OptGroupVecInit<Intf>(self);
             } else if constexpr (Intf::c04NDFlag) {
-                C04VecInit<Intf>(self);
+                self->ctx.c04ProcessTools.C04VecInit(self);
             } else if constexpr (Intf::weightUbTrans) {
-                WeightUbTransVecInit<Intf>(self);
+                self->ctx.weightUbProcessTools.WeightUbTransVecInit(self);
             } else if constexpr (Intf::isDmaFlag) {
-                DmaVecInit<Intf>(self);
+                self->ctx.dmaProcessTools.DmaVecInit(self);
             }
         }
     }
@@ -264,11 +264,11 @@ struct SetSingleOutputShape {
                 if constexpr (Intf::groupOptFlag) {
                     OptGroupCalcBL1LoadTimes<Intf>(self);
                 } else if constexpr (Intf::c04NDFlag) {
-                    C04InitIterValue<Intf>(self);
+                    self->ctx.c04ProcessTools.C04InitIterValue(self);
                 } else if constexpr (Intf::weightUbTrans) {
-                    WeightUbTransCalcBL1LoadTimes<Intf>(self);
+                    self->ctx.weightUbProcessTools.WeightUbTransCalcBL1LoadTimes(self);
                 } else if constexpr (Intf::isDmaFlag) {
-                    DmaCalcAL1LoadTimes<Intf>(self);
+                    self->ctx.dmaProcessTools.DmaCalcAL1LoadTimes(self);
                 }
             }
             if ASCEND_IS_AIV_CONV {
@@ -279,15 +279,15 @@ struct SetSingleOutputShape {
                         OptGroupCalcBL1LoadTimes<Intf>(self);
                     }
                 } else if constexpr (Intf::c04NDFlag) {
-                    C04InitNValue<Intf>(self);
-                    C04InitIterValue<Intf>(self);
+                    self->ctx.c04ProcessTools.C04InitNValue(self);
+                    self->ctx.c04ProcessTools.C04InitIterValue(self);
                 } else if constexpr (Intf::weightUbTrans) {
-                    WeightUbTransInitNValue<Intf>(self);
-                    WeightUbTransInitIterValue<Intf>(self);
-                    WeightUbTransCalcBL1LoadTimes<Intf>(self);
+                    self->ctx.weightUbProcessTools.WeightUbTransInitNValue(self);
+                    self->ctx.weightUbProcessTools.WeightUbTransInitIterValue(self);
+                    self->ctx.weightUbProcessTools.WeightUbTransCalcBL1LoadTimes(self);
                 } else if constexpr (Intf::isDmaFlag) {
-                    DmaInitHWValue<Intf>(self);
-                    DmaInitIterValue<Intf>(self);
+                    self->ctx.dmaProcessTools.DmaInitHWValue(self);
+                    self->ctx.dmaProcessTools.DmaInitIterValue(self);
                 }
             }
         }
@@ -306,9 +306,9 @@ struct SetSingleOutputShape {
                 if constexpr (Intf::groupOptFlag) {
                     OptGroupCalcBL1LoadTimes<Intf>(self);
                 } else if constexpr (Intf::c04NDFlag) {
-                    C04InitIterValue<Intf>(self);
+                    self->ctx.c04ProcessTools.C04InitIterValue(self);
                 } else if constexpr (Intf::weightUbTrans) {
-                    WeightUbTransCalcBL1LoadTimes<Intf>(self);
+                    self->ctx.weightUbProcessTools.WeightUbTransCalcBL1LoadTimes(self);
                 }
             }
             if ASCEND_IS_AIV_CONV {
@@ -319,12 +319,12 @@ struct SetSingleOutputShape {
                         OptGroupCalcBL1LoadTimes<Intf>(self);
                     }
                 } else if constexpr (Intf::c04NDFlag) {
-                    C04InitNValue<Intf>(self);
-                    C04InitIterValue<Intf>(self);
+                    self->ctx.c04ProcessTools.C04InitNValue(self);
+                    self->ctx.c04ProcessTools.C04InitIterValue(self);
                 } else if constexpr (Intf::weightUbTrans) {
-                    WeightUbTransInitNValue<Intf>(self);
-                    WeightUbTransInitIterValue<Intf>(self);
-                    WeightUbTransCalcBL1LoadTimes<Intf>(self);
+                    self->ctx.weightUbProcessTools.WeightUbTransInitNValue(self);
+                    self->ctx.weightUbProcessTools.WeightUbTransInitIterValue(self);
+                    self->ctx.weightUbProcessTools.WeightUbTransCalcBL1LoadTimes(self);
                 }
             }
         }

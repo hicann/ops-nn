@@ -108,15 +108,19 @@ public:
         Conv2dFunc::C04LoadGM2UBTools<Intf> c04LoadGm2UBTools;
         Conv2dFunc::C04TransFractalZC04Tools<Intf> c04TransFractalZC04Tools;
         Conv2dFunc::C04LoadUB2L1Tools<Intf> c04LoadUB2L1Tools;
+        Conv2dFunc::C04ProcessTools<Intf> c04ProcessTools;
 
         // Used in weight ub trans mode
         Conv2dFunc::WeightLoadGM2UBTools<Intf> weightUbLoadGM2UBTools;
         Conv2dFunc::WeightND2NZTools<Intf> weightUbTransND2NZTools;
         Conv2dFunc::WeightUB2L1Tools<Intf> weightUbLoadUB2L1Tools;
+        Conv2dFunc::WeightUbProcessTools<Intf> weightUbProcessTools;
 
         // Used in dma mode
         Conv2dFunc::DmaLoadGM2UBTools<Intf> dmaLoadGM2UBTools;
         Conv2dFunc::DmaUB2L1Tools<Intf> dmaLoadUB2L1Tools;
+        Conv2dFunc::DmaProcessTools<Intf> dmaProcessTools;
+
         TBuf<TPosition::A1> aL1TBuf;
         TBuf<TPosition::VECIN> ubBuf;
         LocalTensor<typename Intf::FmapT> img2ColTensor;

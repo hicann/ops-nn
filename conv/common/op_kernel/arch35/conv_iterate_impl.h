@@ -48,11 +48,11 @@ struct Iterate {
             if constexpr (Intf::groupOptNDFlag) {
                 return OptGroupVecImpl<Intf>(self);
             } else if constexpr (Intf::c04NDFlag) {
-                return Conv2dFunc::C04VecImpl<Intf>(self);
+                return self->ctx.c04ProcessTools.C04VecImpl(self);
             } else if constexpr (Intf::weightUbTrans) {
-                return Conv2dFunc::WeightUbTransVecImpl<Intf>(self);
+                return self->ctx.weightUbProcessTools.WeightUbTransVecImpl(self);
             } else if constexpr (Intf::isDmaFlag) {
-                return Conv2dFunc::DmaVecImpl<Intf>(self);
+                return self->ctx.dmaProcessTools.DmaVecImpl(self);
             } else if constexpr (Intf::isDeQuantFlag) {
 #if defined(FORMAT_X) && (FORMAT_X == FORMAT_NCDHW || FORMAT_X == FORMAT_NDHWC)
                 return Conv3dFunc::DeQuantVecImpl<Intf>(self);
