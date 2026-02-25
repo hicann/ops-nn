@@ -1684,7 +1684,7 @@ aclnnStatus aclnnLstmBackwardGetWorkspaceSize(
     L2_DFX_PHASE_1(aclnnLstmBackward,
         DFX_IN(input, hx, params, dy, dh, dc, i, g, f, o, h, c, tanhc, batchSizesOptional, hasBias, numLayers, dropout, train,
                bidirectional, batchFirst),
-        DFX_OUT(dxOut, dhPrevOut, dcPrevOut, dparamsOut));
+        DFX_OUT(outputMask, dxOut, dhPrevOut, dcPrevOut, dparamsOut));
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     auto ret = CheckParams(input, hx, params, dy, dh, dc, i, g, f, o, h, c, tanhc, dxOut, dhPrevOut, dcPrevOut,

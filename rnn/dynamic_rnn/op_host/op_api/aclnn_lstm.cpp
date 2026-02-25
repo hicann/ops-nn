@@ -211,8 +211,7 @@ static aclnnStatus ProcessViewCopy(std::tuple<const aclTensor *, const aclTensor
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus ProcessOutputHC(std::tuple<const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *> layerResult, std::vector<const aclTensor*>& hyVector, std::vector<const aclTensor*>& cyVector, 
-    bool bidirectional, char *direction, aclOpExecutor* executor) {
+static aclnnStatus ProcessOutputHC(std::tuple<const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *> layerResult, std::vector<const aclTensor*>& hyVector, std::vector<const aclTensor*>& cyVector,  const char *direction, aclOpExecutor* executor) {
     int64_t numStep = std::get<0>(layerResult)->GetViewShape().GetDim(0);
     int64_t batch = std::get<0>(layerResult)->GetViewShape().GetDim(1);
     int64_t hidden = std::get<0>(layerResult)->GetViewShape().GetDim(2);
@@ -1306,7 +1305,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
                                     "UNIDIRECTIONAL", bidirectional, train, i, has_biases, uniqueExecutor.get());
     
             ProcessViewCopy(layerResultForward, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut, i, bidirectional, "UNIDIRECTIONAL", uniqueExecutor.get());
-            ProcessOutputHC(layerResultForward, hyVector, cyVector, bidirectional, "UNIDIRECTIONAL", uniqueExecutor.get());
+            ProcessOutputHC(layerResultForward, hyVector, cyVector, "UNIDIRECTIONAL", uniqueExecutor.get());
 
             if (bidirectional == true) {
                 auto yOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
@@ -1335,7 +1334,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
                 auto tensorListInput = uniqueExecutor.get()->AllocTensorList(inputConcat.data(), inputConcat.size());
                 curInput = l0op::ConcatD(tensorListInput, 2, uniqueExecutor.get());
                 ProcessViewCopy(layerResultBackward, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut, i, bidirectional, "REDIRECTIONAL", uniqueExecutor.get());
-                ProcessOutputHC(layerResultBackward, hyVector, cyVector, bidirectional, "REDIRECTIONAL", uniqueExecutor.get());
+                ProcessOutputHC(layerResultBackward, hyVector, cyVector, "REDIRECTIONAL", uniqueExecutor.get());
             } else {
                 curInput = std::get<0>(layerResultForward);
             }
@@ -1391,7 +1390,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
 
             auto layerResultForward = LstmSingleLayerDirec(curInput, paramsContiguous, hxContiguous, yOutForward, iOutForward, jOutForward, fOutForward, oOutForward, hOutForward, cOutForward, tanhCOutForward, 
                                         "UNIDIRECTIONAL", bidirectional, train, i, has_biases, uniqueExecutor.get());
-            ProcessOutputHC(layerResultForward, hyVector, cyVector, bidirectional, "UNIDIRECTIONAL", uniqueExecutor.get());
+            ProcessOutputHC(layerResultForward, hyVector, cyVector, "UNIDIRECTIONAL", uniqueExecutor.get());
             
             if (bidirectional == true) {
                 auto hOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
@@ -1409,7 +1408,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
                 inputConcat.emplace_back(std::get<0>(layerResultBackward));
                 auto tensorListInput = uniqueExecutor.get()->AllocTensorList(inputConcat.data(), inputConcat.size());
                 curInput = l0op::ConcatD(tensorListInput, 2, uniqueExecutor.get());
-                ProcessOutputHC(layerResultBackward, hyVector, cyVector, bidirectional, "REDIRECTIONAL", uniqueExecutor.get());
+                ProcessOutputHC(layerResultBackward, hyVector, cyVector, "REDIRECTIONAL", uniqueExecutor.get());
             } else {
                 curInput = std::get<0>(layerResultForward);
             }
