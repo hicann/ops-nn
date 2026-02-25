@@ -148,7 +148,7 @@ private:
     bool CheckBBmodeLimits(Conv2DBasicBlockInfo& conv2DBasicBlockInfo);
     void PrintConv2DBasicBlockInfoPhase1(const Conv2DBasicBlockInfo& conv2DBasicBlockInfo) const;
     void PrintConv2DBasicBlockInfoPhase2(const Conv2DBasicBlockInfo& conv2DBasicBlockInfo) const;
-    bool CheckL1SizeLimitsKernelFullLoad(bool isC04Flag);
+    bool CheckL1SizeLimitsKernelFullLoad(bool isC04);
 };
 } // namespace conv_tiling
 
