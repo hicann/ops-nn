@@ -356,23 +356,23 @@
   </tr>
   <tr>
     <td>activation</td>
-    <td><a href="../../activation/prelu_grad_reduce/README.md">prelu_grad_reduce</a></td>
-    <td>✗</td>
+    <td><a href="../../activation/p_relu_grad_reduce/README.md">p_relu_grad_reduce</a></td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>对应PRelu的的反向传播梯度实现的vector计算部分。</td>
   </tr>
   <tr>
     <td>activation</td>
-    <td><a href="../../activation/prelu_grad_update/README.md">prelu_grad_update</a></td>
-    <td>✗</td>
+    <td><a href="../../activation/p_relu_grad_update/README.md">p_relu_grad_update</a></td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>对应PRelu的的反向传播梯度实现的reduce计算部分。</td>
   </tr>
   <tr>
     <td>activation</td>
