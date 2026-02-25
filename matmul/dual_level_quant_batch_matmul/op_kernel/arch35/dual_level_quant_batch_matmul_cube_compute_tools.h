@@ -34,6 +34,8 @@ static constexpr int32_t UNIT_FALG_CHECK_ONLY = 2;  // 只检查标记位
 static constexpr uint64_t FIXP_DST_STRIDE = 128L;   // fixp搬出N方向stride固定128元素
 static constexpr AscendC::FixpipeConfig CFG_ROW_MAJOR_UB = {AscendC::CO2Layout::ROW_MAJOR, true};
 
+static constexpr uint64_t K_ALIGNMENT64 = 64UL;     // 处理K轴非64对齐的场景
+
 struct L0CopyAndCalcParams {
     uint64_t mL0Size; // M方向当前在L0上实际计算的大小
     uint64_t mL1Size; // M方向当前在L1上实际载入的大小
@@ -164,7 +166,7 @@ __aicore__ inline void MmadCompute(
     AscendC::MmadParams mmadParams;
     mmadParams.m = l0CopyAndCalcParams.mL0Size;
     mmadParams.n = l0CopyAndCalcParams.nL0Size;
-    mmadParams.k = l0CopyAndCalcParams.kL0Size;
+    mmadParams.k = Ops::Base::CeilAlign(l0CopyAndCalcParams.kL0Size, K_ALIGNMENT64);
     mmadParams.cmatrixInitVal = l0CopyAndCalcParams.isFirstKLoop;
     mmadParams.disableGemv = true;
     mmadParams.unitFlag = l0CopyAndCalcParams.isLastKLoop ? UNIT_FALG_UPDATE : UNIT_FALG_CHECK_ONLY;

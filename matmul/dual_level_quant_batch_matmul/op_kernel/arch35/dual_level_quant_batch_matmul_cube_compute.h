@@ -71,6 +71,7 @@ private:
 
     static constexpr uint64_t C0_SIZE = GetC0Size<wType>();
     static constexpr uint64_t B8_IN_B16_NUM = 2;
+    static constexpr uint64_t K_ALIGNMENT64 = 64UL;
 
     static constexpr uint64_t EVENT_MTE1_MTE2_ID = 2;
     static constexpr uint64_t EVENT_SCALE_MTE1_MTE2_ID = 4;
@@ -135,7 +136,7 @@ __aicore__ inline void DLQBMM_CUBE_COMPUTE_CLASS::CopyGmToL1(
 {
     if (blockParams.kGmOffset % blockParams.level1ScaleKL1Size == 0) {
         l0Params.scaleKL1Size = blockParams.kGmOffset + blockParams.level1ScaleKL1Size > blockParams.kSize ?
-                                    blockParams.kSize - blockParams.kGmOffset :
+                                    Ops::Base::CeilAlign(blockParams.kSize - blockParams.kGmOffset, K_ALIGNMENT64) :
                                     blockParams.level1ScaleKL1Size;
         DataCopyScaleGmToL1(blockParams, l0Params);
     }
@@ -184,8 +185,9 @@ DLQBMM_CUBE_COMPUTE_TEMPLATE_PARAM
 __aicore__ inline void DLQBMM_CUBE_COMPUTE_CLASS::DataCopyScaleGmToL1(
     const DualLevelQbmmBasicBlockOffsetParams& blockParams, const L0CopyAndCalcParams& l0Params)
 {
-    uint64_t scaleKGmGroupNum = blockParams.kSize / MX_GROUPSIZE;
-    uint64_t scaleKL1GroupNum = l0Params.scaleKL1Size / MX_GROUPSIZE;
+    uint64_t kSizeAlign = Ops::Base::CeilAlign(blockParams.kSize, K_ALIGNMENT64);
+    uint64_t scaleKGmGroupNum = Ops::Base::CeilDiv(kSizeAlign, MX_GROUPSIZE);
+    uint64_t scaleKL1GroupNum = Ops::Base::CeilDiv(l0Params.scaleKL1Size, MX_GROUPSIZE);
 
     Dn2NzParams aScaleDn2NzParams;
     ConfigScaleDn2NzParams(l0Params.mL1Size, scaleKGmGroupNum, scaleKL1GroupNum, aScaleDn2NzParams);
@@ -212,11 +214,11 @@ __aicore__ inline void DLQBMM_CUBE_COMPUTE_CLASS::ConfigScaleDn2NzParams(
 {
     dn2NzParams.dnNum = 1;
     dn2NzParams.dValue = rowNum; // 矩阵的行数，即待搬运的mxScaleA的m或mxScaleB的n
-    dn2NzParams.nValue = scaleKL1GroupNum / B8_IN_B16_NUM; // 矩阵的列数，使用B16搬B8需要除以2
+    dn2NzParams.nValue = Ops::Base::CeilDiv(scaleKL1GroupNum, B8_IN_B16_NUM); // 矩阵的列数，使用B16搬B8需要除以2
     dn2NzParams.srcDnMatrixStride = 0;
-    dn2NzParams.srcDValue = scaleKGmGroupNum / B8_IN_B16_NUM; // 源矩阵一行所含B16元素个数
+    dn2NzParams.srcDValue = Ops::Base::CeilDiv(scaleKGmGroupNum, B8_IN_B16_NUM); // 源矩阵一行所含B16元素个数
     // 目标矩阵行方向两个相邻分形起始地址之间的间隔，单位32B(一个16 * 2分形)
-    dn2NzParams.dstNzC0Stride = scaleKL1GroupNum / B8_IN_B16_NUM;
+    dn2NzParams.dstNzC0Stride = Ops::Base::CeilDiv(scaleKL1GroupNum, B8_IN_B16_NUM);
     // 目标矩阵列方向两个相邻分形起始地址之间的间隔，单位32B(一个16 * 2分形)
     dn2NzParams.dstNzNStride = 1;
     dn2NzParams.dstNzMatrixStride = 0;
