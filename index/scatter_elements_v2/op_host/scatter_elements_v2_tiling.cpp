@@ -51,7 +51,7 @@ const int VAR_LIMIT = 128;
 const int VAR_GROUPS = 64;
 
 const size_t TWO_DIM = 2;
-const size_t NO_TRANSPOSE_DIM_MAX = 256;
+const int64_t NO_TRANSPOSE_DIM_MAX = 256;
 const size_t NO_TRANSPOSE_TASKS_MIN = 768;
 } // namespace
 
@@ -388,8 +388,6 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
         return ge::GRAPH_FAILED;
     }
 
-    uint32_t isDeterministicKey = tilingContext->GetDeterministic() == 1 ? 1 : 0;
-
     if (ge::DT_INT64 == indicesDtype) {
         indicesSize += SIZE_OF_INT32;
     }
@@ -688,9 +686,9 @@ ge::graphStatus ScatterElementsV2Tiling::SetCacheOpTiling() {
     OP_LOGD(tilingContext, "updatesDim0: %lu.", updatesDim0);
     OP_LOGD(tilingContext, "updatesDim1: %lu.", updatesDim1);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(tilingContext->GetPlatformInfo());
-    size_t workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
+    size_t libApiworkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     size_t *currentWorkSpace = tilingContext->GetWorkspaceSizes(1);
-    currentWorkSpace[0] = workspaceSize;
+    currentWorkSpace[0] = libApiworkspaceSize;
     tilingContext->SetBlockDim(usedCoreNum);
     tilingContext->SetTilingKey(0);
     tiling.SaveToBuffer(tilingContext->GetRawTilingData()->GetData(), tilingContext->GetRawTilingData()->GetCapacity());
