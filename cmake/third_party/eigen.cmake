@@ -21,7 +21,7 @@ elseif (EXISTS "${CANN_3RD_LIB_PATH}/eigen/CMakeLists.txt" AND NOT FORCE_REBUILD
   set(SOURCE_DIR "${CANN_3RD_LIB_PATH}/eigen")
 else()
   message("The eigen package needs to be downloaded.")
-  set(REQ_URL "https://gitcode.com/cann-src-third-party/eigen/releases/download/5.0.0/eigen-5.0.0.tar.gz")
+  set(REQ_URL "https://gitcode.com/cann-src-third-party/eigen/releases/download/5.0.0-h0.trunk/eigen-5.0.0.tar.gz")
   include(ExternalProject)
   ExternalProject_Add(external_eigen_nn
     TLS_VERIFY        OFF
