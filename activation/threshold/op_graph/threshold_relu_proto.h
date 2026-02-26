@@ -15,7 +15,6 @@
 #ifndef OPS_BUILT_IN_OP_PROTO_INC_THREASHOLD_RELU_OPS_H_
 #define OPS_BUILT_IN_OP_PROTO_INC_THREASHOLD_RELU_OPS_H_
 #include "graph/operator_reg.h"
-#include "graph/types.h"
 
 namespace ge {
 /**
