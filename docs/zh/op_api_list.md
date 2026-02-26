@@ -256,6 +256,8 @@
 | [aclnnLogSigmoidForward](../../activation/logsigmoid/docs/aclnnLogSigmoidForward.md) |对输入张量逐元素实现LogSigmoid运算。|默认确定性实现|
 | [aclnnLogSoftmax](../../activation/log_softmax_v2/docs/aclnnLogSoftmax.md) |对输入张量计算logsoftmax值。|默认确定性实现|
 | [aclnnLogSoftmaxBackward](../../activation/log_softmax_grad/docs/aclnnLogSoftmaxBackward.md) |完成aclnnLogSoftmax的反向传播。|默认确定性实现|
+| [aclnnLSTM](../../rnn/dynamic_rnn/docs/aclnnLSTM.md) |完成LSTM的计算。|默认确定性实现|
+| [aclnnLstmBackward](../../rnn/single_layer_lstm_grad/docs/aclnnLstmBackward.md) |完成LSTM反向的计算。|默认确定性实现|
 | [aclnnMaskedSoftmaxWithRelPosBias](../../norm/masked_softmax_with_rel_pos_bias/docs/aclnnMaskedSoftmaxWithRelPosBias.md) |替换在swinTransformer中使用window attention计算softmax的部分。|默认确定性实现|
 | [aclnnMatmul](../../matmul/mat_mul_v3/docs/aclnnMatmul.md) |完成1到6维张量self与张量mat2的矩阵乘计算。|默认确定性实现|
 | [aclnnMatmulWeightNz](../../matmul/mat_mul_v3/docs/aclnnMatmulWeightNz.md) |完成张量self与张量mat2的矩阵乘计算，mat2仅支持昇腾亲和数据排布格式。|默认确定性实现|
@@ -340,6 +342,7 @@
 | [aclnnSwishBackward](../../activation/swish_grad/docs/aclnnSwishBackward.md) |aclnnSwishBackward是aclnnSwish激活函数的反向传播，用于计算Swish激活函数的梯度。|默认确定性实现|
 | [aclnnSyncBatchNormGatherStats](../../norm/sync_batch_norm_gather_stats/docs/aclnnSyncBatchNormGatherStats.md) |收集所有device的均值和方差，更新全局的均值和方差。|默认确定性实现|
 | [aclnnTake](../../index/gather_v2/docs/aclnnTake.md) | 将输入的self张量视为一维数组，把index的值当作索引，从self中取值，输出shape与index一致的Tensor。|默认确定性实现|
+| [aclnnThnnFusedLstmCellBackward](../../rnn/thnn_fused_lstm_cell_grad/docs/aclnnThnnFusedLstmCellBackward.md) |完成单个时间步LSTM反向的计算。|默认确定性实现|
 | [aclnnThreshold&aclnnInplaceThreshold](../../activation/threshold/docs/aclnnThreshold&aclnnInplaceThreshold.md) |对输入x进行阈值操作。当x中的elements大于threshold时，返回elements；否则，返回value。|默认确定性实现|
 | [aclnnThresholdBackward](../../activation/threshold_grad_v2_d/docs/aclnnThresholdBackward.md) |完成aclnnThreshold的反向。|默认确定性实现|
 | [aclnnTransposeBatchMatMul](../../matmul/transpose_batch_mat_mul/docs/aclnnTransposeBatchMatMul.md) |完成张量x1与张量x2的矩阵乘计算。|默认确定性实现|
