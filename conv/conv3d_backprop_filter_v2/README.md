@@ -44,14 +44,17 @@
         - [out_channels, filter_depth, filter_height, filter_width, in_channels]
 * strides
     - N和C的维度必须为1。
-    - H和W的维度的取值范围必须在 [1,63] 之间。
-    - D维度的取值范围必须在 [1,255] 之间。
+    - Ascend 950PR/Ascend 950DT：D、H和W维度的取值必须范围在 [1,2147483646] 之间。
+    - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：H和W的维度的取值范围必须在 [1,63] 之间，D维度的取值范围必须在 [1,255] 之间。
 * pads
     - 填充顺序为：[front, back, top, bottom, left, right]。
-    - H、W和D维度的取值范围必须在 [0,255] 之间。
+    - Ascend 950PR/Ascend 950DT：H、W和D维度的取值范围必须在 [1,2147483646] 之间。
+    - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：H、W和D维度的取值范围必须在 [0,255] 之间。
 * dilations
     - N与C的维度必须为1。
-    - W、H和D维度的取值范围必须在 [1,255] 之间。
+    - Ascend 950PR/Ascend 950DT：H、W和D维度的取值范围必须在 [1,2147483646] 之间。
+    - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：H、W和D维度的取值范围必须在 [1,255] 之间。
+* 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击 [Link](https://www.hiascend.com/support) 获取技术支持。
 
 ## 调用说明
 

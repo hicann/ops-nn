@@ -514,7 +514,7 @@ aclnnStatus aclnnConvolutionBackward(
    <tr>
      <th scope="row">stride约束</th>
      <td>
-        1d、2d和3d transposed=false场景，各个值都应该大于等于1。1d、2d和3d transposed=true场景，strideD应该在[1,1000000]的范围内，strideH、strideW应该在[1,63]的范围内。
+        1d、2d和3d transposed=false场景，各个值都应该大于等于1。1d、2d和3d transposed=true场景，strideD应该在[1,1000000]的范围内，strideH、strideW应该在[1,2147483646]的范围内。
      </td>
      <td>
         3d transposed=false场景，strideD应该大于等于1，strideH、strideW应该在[1,63]的范围内。1d和2d transposed=false场景，各个值都应该大于等于1。
@@ -524,7 +524,7 @@ aclnnStatus aclnnConvolutionBackward(
    <tr>
      <th scope="row">padding约束</th>
      <td>
-        1d、2d和3d transposed=false场景，各个值都应该大于等于0。1d、2d和3d transposed=true场景，paddingD应该在[0,1000000]的范围内，paddingH、paddingW应该在[0,255]的范围内。
+        1d、2d和3d transposed=false场景，各个值都应该大于等于0。1d、2d和3d transposed=true场景，paddingD应该在[0,1000000]的范围内，paddingH、paddingW应该在[0,2147483646]的范围内。
      </td>
      <td>
         3d transposed=false场景，paddingD应该大于等于0，paddingH、paddingW应该在[0,255]的范围内。1d和2d transposed=false场景，各个值都应该在[0,255]的范围内。
@@ -534,7 +534,7 @@ aclnnStatus aclnnConvolutionBackward(
    <tr>
      <th scope="row">dilation约束</th>
      <td>
-        1d、2d和3d transposed=false场景，各个值都应该大于等于1。1d、2d和3d transposed=true场景，dilationD应该在[1,1000000]的范围内，dilationH、dilationW应该在[1,255]的范围内。
+        1d、2d和3d transposed=false场景，各个值都应该大于等于1。1d、2d和3d transposed=true场景，dilationD应该在[1,1000000]的范围内，dilationH、dilationW应该在[1,2147483646]的范围内。
      </td>
      <td>
         1d、2d和3d transposed=false场景，各个值都应该在[1,255]的范围内。
