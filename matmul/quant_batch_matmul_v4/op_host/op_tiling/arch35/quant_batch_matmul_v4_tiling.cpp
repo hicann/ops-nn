@@ -549,12 +549,16 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeX1ScaleShape(const gert::StorageShape*
                 VALID_X1_SCALE_DIM_NUM,
                 x1ScaleShapeDimNum),
             return false);
-        OP_TILING_CHECK(x1ScaleStorageShape.GetDim(0) != static_cast<int64_t>(inputParams_.mSize) ||
-                            x1ScaleStorageShape.GetDim(1) != static_cast<int64_t>(inputParams_.kSize / GROUP_ALIGN_SIZE),
-            VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-                "Expected shape of X1 scale to be [%lu, %lu], but actual shape is %s.",
-                inputParams_.mSize, inputParams_.kSize / GROUP_ALIGN_SIZE,
-                Ops::Base::ToString(x1ScaleStorageShape).c_str()), return false);
+        // x1ScaleStorageShape (m, k / GROUP_ALIGN_SIZE / 2, 2)
+        OP_TILING_CHECK(
+            x1ScaleStorageShape.GetDim(0) != static_cast<int64_t>(inputParams_.mSize) ||
+                x1ScaleStorageShape.GetDim(1) != static_cast<int64_t>(inputParams_.kSize) / (GROUP_ALIGN_SIZE * 2) ||
+                x1ScaleStorageShape.GetDim(2) != 2UL,
+            VECTOR_INNER_ERR_REPORT_TILIING(
+                inputParams_.opName, "Expected shape of X1 scale to be [%lu, %lu, 2], but actual shape is %s.",
+                inputParams_.mSize, inputParams_.kSize / (GROUP_ALIGN_SIZE * 2),
+                Ops::Base::ToString(x1ScaleStorageShape).c_str()),
+            return false);
     }
     return true;
 }
@@ -598,12 +602,16 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeX2ScaleShape(const gert::StorageShape*
             VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
                 "Expected dimension of X2 scale to be %lu, but actual dimension is %lu.",
                 VALID_X2_SCALE_DIM_NUM, x2ScaleShapeDimNum), return false);
-        OP_TILING_CHECK(x2ScaleStorageShape.GetDim(0) != static_cast<int64_t>(inputParams_.nSize) ||
-                            x2ScaleStorageShape.GetDim(1) != static_cast<int64_t>(inputParams_.kSize) / GROUP_ALIGN_SIZE,
-            VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-                "Expected shape of X2 scale to be [%lu, %lu], but actual shape is %s.",
-                inputParams_.nSize, inputParams_.kSize / GROUP_ALIGN_SIZE,
-                Ops::Base::ToString(x2ScaleStorageShape).c_str()), return false);
+        // x2ScaleStorageShape: (n, k / GROUP_ALIGN_SIZE / 2, 2)
+        OP_TILING_CHECK(
+            x2ScaleStorageShape.GetDim(0) != static_cast<int64_t>(inputParams_.nSize) ||
+                x2ScaleStorageShape.GetDim(1) != static_cast<int64_t>(inputParams_.kSize) / (GROUP_ALIGN_SIZE * 2) ||
+                x2ScaleStorageShape.GetDim(2) != 2,
+            VECTOR_INNER_ERR_REPORT_TILIING(
+                inputParams_.opName, "Expected shape of X2 scale to be [%lu, %lu, 2], but actual shape is %s.",
+                inputParams_.nSize, inputParams_.kSize / (GROUP_ALIGN_SIZE * 2),
+                Ops::Base::ToString(x2ScaleStorageShape).c_str()),
+            return false);
     } else if (inputParams_.groupSize > 0) {
         return AnalyzeX2ScalePerGroupShape(x2ScaleShape);
     } else if (x2ScaleShapeSize == 1) {

@@ -1284,8 +1284,8 @@ aclnnStatus aclnnQuantMatmulWeightNz(
       int64_t groupSize = 32;
       std::vector<int64_t> x1Shape = {m, k};
       std::vector<int64_t> x2Shape = {n, k};
-      std::vector<int64_t> x1ScaleShape = {m, k / groupSize};
-      std::vector<int64_t> x2ScaleShape = {n, k / groupSize};
+      std::vector<int64_t> x1ScaleShape = {m, k / groupSize / 2, 2};
+      std::vector<int64_t> x2ScaleShape = {n, k / groupSize / 2, 2};
       std::vector<int64_t> outShape = {m, n};
       void* x1DeviceAddr = nullptr;
       void* x2DeviceAddr = nullptr;

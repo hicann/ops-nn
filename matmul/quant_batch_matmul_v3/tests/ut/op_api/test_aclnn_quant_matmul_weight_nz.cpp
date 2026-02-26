@@ -259,8 +259,8 @@ TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_a8w4_mx_0)
     op::NpuArchManager archManager(NpuArch::DAV_3510);
     TensorDesc x1_desc = TensorDesc({1, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({8, 128}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ, {1, 8}, 0, {2, 8, 16, 4});
-    TensorDesc x1_scale_desc = TensorDesc({1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
-    TensorDesc x2_scale_desc = TensorDesc({128, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc x1_scale_desc = TensorDesc({1, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc x2_scale_desc = TensorDesc({128, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
     int64_t groupSize = 32;
     TensorDesc out_desc = TensorDesc({1, 128}, ACL_BF16, ACL_FORMAT_ND);
     auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1_scale_desc, x2_scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, groupSize),

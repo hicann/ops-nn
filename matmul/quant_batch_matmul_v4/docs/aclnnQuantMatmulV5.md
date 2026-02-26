@@ -770,7 +770,7 @@ aclnnStatus aclnnQuantMatmulV5(
     |-------|--------|--------|--------|--------|-------------|-------------|------------|---------------------------------------|--|--|
     |mx 全量化|FLOAT8_E4M3FN/ FLOAT8_E5M2|FLOAT8_E4M3FN/ FLOAT8_E5M2|<li>非转置：(batch, m, k)</li><li>转置：(batch, k, m)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(m, ceil(k / 64), 2)</li><li>转置：(ceil(k / 64), m, 2)</li>|<li>非转置：(ceil(k / 64), n, 2)</li><li>转置：(n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
     |mx 全量化|FLOAT4_E2M1|FLOAT4_E2M1|(batch, m, k)|(batch, n, k)|(m, ceil(k / 64), 2)|(n, ceil(k / 64), 2)|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
-    |mx 伪量化|FLOAT8_E4M3FN|FLOAT4_E2M1|(m, k)|(n, k)|(m, ceil(k / 32))|(n, ceil(k / 32))|(1，n)|null|[0, 0, 32]/[1, 1, 32]|32/4295032864|
+    |mx 伪量化|FLOAT8_E4M3FN|FLOAT4_E2M1|(m, k)|(n, k)|(m, ceil(k / 64), 2)|(n, ceil(k / 64), 2)|(1，n)|null|[0, 0, 32]/[1, 1, 32]|32/4295032864|
 
   - mx全量化场景下，当x2数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2时，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致。
   - mx全量化场景下，当x2数据类型为FLOAT4_E2M1时，仅支持transposeX1为false且transposeX2为true，要求k为偶数且ceil(k / 32)为偶数。

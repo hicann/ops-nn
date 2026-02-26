@@ -57,8 +57,8 @@ constexpr size_t GROUP_SIZE_INDEX = 4UL;
 // valid dim
 constexpr size_t VALID_INPUT_DIM_NUM = 2UL;
 constexpr size_t MATMUL_SHAPE_DIM_NUM = 2UL;
-constexpr size_t VALID_X1_SCALE_DIM_NUM = 2UL;
-constexpr size_t VALID_X2_SCALE_DIM_NUM = 2UL;
+constexpr size_t VALID_X1_SCALE_DIM_NUM = 3UL;
+constexpr size_t VALID_X2_SCALE_DIM_NUM = 3UL;
 constexpr size_t VALID_WEIGHT_NZ_DIM_NUM = 4UL;
 constexpr size_t VALID_BIAS_MIN_DIM = 1;
 constexpr size_t VALID_BIAS_MAX_DIM = 2;

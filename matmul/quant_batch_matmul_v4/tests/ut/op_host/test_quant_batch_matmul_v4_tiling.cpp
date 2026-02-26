@@ -226,9 +226,11 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam &param)
         groupM = static_cast<int64_t>((group & 0xFFFF00000000) >> 32); // 32-47bit group_m
         int64_t groupNum = (k + group - 1) / group;
         if (!hasX2Table) {
-            x1ScaleShape.MutableStorageShape() = gert::Shape({m, groupNum});
+            x1ScaleShape.MutableStorageShape() =
+                x1ScaleDtype == ge::DT_FLOAT8_E8M0 ? gert::Shape({m, groupNum / 2, 2}) : gert::Shape({m, groupNum});
             if (transB) {
-                x2ScaleShape.MutableStorageShape() = gert::Shape({n, groupNum});
+                x2ScaleShape.MutableStorageShape() =
+                    x2ScaleDtype == ge::DT_FLOAT8_E8M0 ? gert::Shape({n, groupNum / 2, 2}) : gert::Shape({n, groupNum});
             } else {
                 x2ScaleShape.MutableStorageShape() = gert::Shape({groupNum, n});
             }
