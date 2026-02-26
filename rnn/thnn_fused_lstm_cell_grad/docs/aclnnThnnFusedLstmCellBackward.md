@@ -383,7 +383,7 @@ int main() {
   // 形状定义
   std::vector<int64_t> bShape = {hiddenSize * 4};
   std::vector<int64_t> dhShape = {n, hiddenSize};
-  std::vector<int64_t> gatesShape = {n, 4 * hiddenSize};;
+  std::vector<int64_t> gatesShape = {n, 4 * hiddenSize};
 
   // 设备地址指针
   void* dhyDeviceAddr = nullptr;

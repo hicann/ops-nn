@@ -294,18 +294,9 @@ aclnnStatus aclnnLstmBackward(
       <td><ul><li>batch_size表示序列组数；time_step表示时间维度；input_size表示输入的特征数量。</li></td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
-      <td>[time_step, batch_size, input_size] 或 [batch_size, time_step, input_size]</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>params</td>
-      <td>输入</td>
-      <td>LSTM每层的权重和偏置张量列表，对应公式中的w与b。</td>
-      <td><ul><li>bidirection为True时 `D = 2`，否则 `D = 1`，hasBiases为True时 `B = 2`，否则 `B = 1`。列表长度为 D * B * num_layers。</li><li>当bidirection和hasBias均为True时排布为：[weight_ih_0, weight_hh_0, bias_ih_0, bias_hh_0, weight_ih_reverse_0, weight_hh_reverse_0, bias_ih_reverse_0, bias_hh_reverse_0]。</li>
-      <li>hasBias为False时无bias项；bidirection为False时无reverse项。</li><li>多层时逐层排布。</li><li>数据类型与input一致。</li></td>
-      <td>FLOAT32、FLOAT16</td>
-      <td>ND</td>
-      <td>weight_ih: [4*hidden_size, cur_input_size]<br>weight_hh: [4*hidden_size, hidden_size]<br>bias: [4*hidden_size]</td>
+      <td><ul>
+      <li>若传入有效batchSizesOptional，为[time_step * batch_size, input_size];
+      <li>若传入空指针batchSizesOptional，为[time_step, batch_size, input_size] 或 [batch_size, time_step, input_size]</td>
       <td>√</td>
     </tr>
     <tr>
@@ -316,6 +307,17 @@ aclnnStatus aclnnLstmBackward(
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>列表内每个tensor shape为[D * num_layers, batch_size, hidden_size]</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>params</td>
+      <td>输入</td>
+      <td>LSTM每层的权重和偏置张量列表，对应公式中的w与b。</td>
+      <td><ul><li>bidirection为True时 `D = 2`，否则 `D = 1`，hasBiases为True时 `B = 2`，否则 `B = 1`。列表长度为 D * B * num_layers。</li><li>当bidirection和hasBias均为True时排布为：[weight_ih_0, weight_hh_0, bias_ih_0, bias_hh_0, weight_ih_reverse_0, weight_hh_reverse_0, bias_ih_reverse_0, bias_hh_reverse_0]。</li>
+      <li>hasBias为False时无bias项；bidirection为False时无reverse项。</li><li>多层时逐层排布。</li><li>数据类型与input一致。</li></td>
+      <td>FLOAT32、FLOAT16</td>
+      <td>ND</td>
+      <td>weight_ih: [4*hidden_size, cur_input_size]<br>weight_hh: [4*hidden_size, hidden_size]<br>bias_ih: [4*hidden_size]<br>bias_hh: [4*hidden_size]</td>
       <td>√</td>
     </tr>
     <tr>
@@ -381,7 +383,7 @@ aclnnStatus aclnnLstmBackward(
     <tr>
       <td>o</td>
       <td>输入</td>
-      <td>LSTM政协中每层输出门的激活值。对于公式中的o。</td>
+      <td>LSTM正向中每层输出门的激活值。对于公式中的o。</td>
       <td><ul><li>列表长度为 D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
@@ -569,7 +571,7 @@ aclnnStatus aclnnLstmBackward(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>如果传入参数为aclTensor或aclTensorList，是空指针。</td>
+      <td>如果传入参数为aclTensor或aclTensorList且非batchSizesOptional，是空指针。</td>
     </tr>
     <tr>
       <td rowspan="12">ACLNN_ERR_PARAM_INVALID</td>
