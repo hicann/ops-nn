@@ -12,9 +12,6 @@ cmake_minimum_required(VERSION 3.16)
 set(PKG_NAME nn)
 project(${PKG_NAME} VERSION 1.0.0)
 
-set(CMAKE_C_FLAGS_RELEASE "")
-set(CMAKE_CXX_FLAGS_RELEASE "")
-
 set(CCACHE_PROGRAM "")
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
