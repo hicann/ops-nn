@@ -1,5 +1,7 @@
 # aclnnQuantMatmulReduceSumWeightNz
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/quant_matmul_reduce_sum)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
@@ -13,7 +15,7 @@
 
 ## 功能说明
 
-- 算子功能：完成量化的分组矩阵计算，然后所有组的矩阵计算结果相加后输出
+- 接口功能：完成量化的分组矩阵计算，然后所有组的矩阵计算结果相加后输出。
 
 - 计算公式：
 
@@ -56,45 +58,215 @@ aclnnStatus aclnnQuantMatmulReduceSumWeightNz(
 
 ## aclnnQuantMatmulReduceSumWeightNzGetWorkspaceSize
 
-- **参数说明：**
-  - x1（aclTensor*，计算输入）：公式中的输入x1，device侧的aclTensor。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。不支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，shape支持3维，形状为（batch, m, k）。数据类型支持INT8。
+- 参数说明
 
-  - x2（aclTensor*，计算输入）：公式中的输入x2，device侧的aclTensor。数据类型支持INT8，不支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持AI处理器亲和数据排布格式。shape支持5维。
-    - 在transposeX2为false情况下各个维度表示：（batch，n1，k1，k0，n0），其中k0 = 16， n0 = 32， x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 16） = k1, x2 shape中的n1与out的n满足以下关系: ceil(n / n0) = n1。
-    - 可使用aclnnCalculateMatmulWeightSizeV2接口以及aclnnTransMatmulWeight接口完成输入Format从ND到AI处理器亲和数据排布格式的转换。原始的ND格式的shape为(batch, k, n)。
+  <table style="undefined; table-layout: fixed; width: 1450px"><colgroup>
+  <col style="width: 170px">
+  <col style="width: 120px">
+  <col style="width: 300px">
+  <col style="width: 350px">
+  <col style="width: 100px">
+  <col style="width: 100px">
+  <col style="width: 165px">
+  <col style="width: 145px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      <th>使用说明</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+      <th>维度(shape)</th>
+      <th>非连续Tensor</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>x1（aclTensor*）</td>
+      <td>输入</td>
+      <td>公式中的x1。</td>
+      <td>不支持空Tensor。</td>
+      <td>INT8</td>
+      <td>ND</td>
+      <td>(batch, m, k)</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>x2（aclTensor*）</td>
+      <td>输入</td>
+      <td>公式中的x2。</td>
+      <td>
+        <ul><li>不支持空Tensor。</li>
+        <li>各个维度表示：(batch，n1，k1，k0，n0)，其中k0 = 16， n0 = 32， x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 16） = k1, x2 shape中的n1与out的n满足以下关系: ceil(n / n0) = n1。</li>
+        <li>可使用aclnnCalculateMatmulWeightSizeV2接口以及aclnnTransMatmulWeight接口完成输入Format从ND到AI处理器亲和数据排布格式的转换。原始的ND格式的shape为(batch, k, n)。</li>
+      </td>
+      <td>INT8</td>
+      <td>NZ</td>
+      <td>5维</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>x1Scale（aclTensor*）</td>
+      <td>输入</td>
+      <td>公式中的x1Scale。</td>
+      <td>
+        <ul><li>不支持空Tensor。</li>
+        <li>在实际计算时，x1Scale会被广播为(batch，m，n)。</li>
+      </td>
+      <td>FLOAT32</td>
+      <td>ND</td>
+      <td>(batch，m)</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>x2Scale（aclTensor*）</td>
+      <td>输入</td>
+      <td>公式中的x2Scale。</td>
+      <td>
+        <ul><li>不支持空Tensor。</li>
+        <li>在实际计算时，x2Scale会被广播为(batch，m，n)。</li>
+      </td>
+      <td>BFLOAT16</td>
+      <td>ND</td>
+      <td>(n,)</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>yScale（aclTensor*）</td>
+      <td>输入</td>
+      <td>预留参数，当前版本不支持。</td>
+      <td>需要传入nullptr。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>x1Offset（aclTensor*）</td>
+      <td>输入</td>
+      <td>预留参数，当前版本不支持。</td>
+      <td>需要传入nullptr。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>x2Offset（aclTensor*）</td>
+      <td>输入</td>
+      <td>预留参数，当前版本不支持。</td>
+      <td>需要传入nullptr。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>yOffset（aclTensor*）</td>
+      <td>输入</td>
+      <td>预留参数，当前版本不支持。</td>
+      <td>需要传入nullptr。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>bias（aclTensor*）</td>
+      <td>输入</td>
+      <td>预留参数，当前版本不支持。</td>
+      <td>需要传入nullptr。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>transposeX1（bool）</td>
+      <td>输入</td>
+      <td>x1的输入shape是否包含transpose。</td>
+      <td>当前版本仅支持false，表示x1的输入shape意义不变。</td>
+      <td>bool</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>transposeX2（bool）</td>
+      <td>输入</td>
+      <td>x2的输入shape是否包含transpose。</td>
+      <td>当前版本仅支持false，表示x2的输入shape意义不变</td>
+      <td>bool</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>groupSize（int64_t）</td>
+      <td>输入</td>
+      <td>预留参数，当前版本不支持。</td>
+      <td>需要传入0。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>dims（aclIntArray *）</td>
+      <td>输入</td>
+      <td>指定reduce维度。</td>
+      <td>当前版本仅支持填[0]，表示在第0维（batch维）做ReduceSum。</td>
+      <td>INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>keepDims（bool）</td>
+      <td>输入</td>
+      <td>是否在输出张量中保留输入张量的维度。</td>
+      <td>当前版本仅支持false。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>out（aclTensor*）</td>
+      <td>输出</td>
+      <td>公式中的out。</td>
+      <td>-</td>
+      <td>BFLOAT16</td>
+      <td>ND</td>
+      <td>(m, n)</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>workspaceSize（uint64_t*）</td>
+      <td>输出</td>
+      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>executor（aclOpExecutor**）</td>
+      <td>输出</td>
+      <td>返回op执行器，包含了算子计算流程</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+  </tbody>
+  </table>
 
-  - x1Scale（aclTensor*，计算输入）：公式中的输入x1Scale，device侧的aclTensor。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。shape支持2维，形状为（batch，m）。数据类型支持FLOAT32。
-    - 在实际计算时，x1Scale会被广播为(batch，m，n)。
-    
-  - x2Scale（aclTensor*，计算输入）：表示量化参数，公式中的输入x2Scale，device侧的aclTensor。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。shape支持1维，形状为（n，）其中n与x2的n一致。数据类型支持BFLOAT16。
-    - 在实际计算时，x2Scale会被广播为(batch，m，n)。
-
-  - yScale（aclTensor*，计算输入）：预留参数，当前版本不支持，需要传入nullptr。
-  
-  - x1Offset（aclTensor*，计算输入）：预留参数，当前版本不支持，需要传入nullptr。
-  
-  - x2Offset（aclTensor*，计算输入）：预留参数，当前版本不支持，需要传入nullptr。
-
-  - yOffset（aclTensor*，计算输入）：预留参数，当前版本不支持，需要传入nullptr。
-  
-  - bias（aclTensor*，计算输入）：预留参数，当前版本不支持，需要传nullptr。
-  
-  - transposeX1（bool，计算输入）：表示x1的输入shape是否包含transpose。当前版本仅支持false，表示x1的输入shape意义不变。
-
-  - transposeX2（bool，计算输入）：表示x2的输入shape是否包含transpose，当前版本仅支持false，表示x2的输入shape意义不变。
-
-  - groupSize（int64_t，计算输入）：预留参数，当前版本不支持，需要传入0。
-  
-  - dims（aclIntArray *）：Host侧的aclIntArray，指定reduce维度，数据类型支持INT64。当前版本仅支持填[0]，表示在第0维（batch维）做ReduceSum。
-
-  - keepDims（bool, 计算输入）：指定是否在输出张量中保留输入张量的维度。当前版本仅支持false。
-
-  - out（aclTensor*，计算输出）：公式中的输出out，device侧的aclTensor。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，数据类型支持BFLOAT16。shape支持2维，形状为（m, n）。
-
-  - workspaceSize（uint64_t*，出参）：返回需要在Device侧申请的workspace大小。
-  - executor（aclOpExecutor**，出参）：返回op执行器，包含了算子计算流程。
-
-- **返回值：**
+- 返回值
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -133,7 +305,7 @@ aclnnStatus aclnnQuantMatmulReduceSumWeightNz(
 
 ## aclnnQuantMatmulReduceSumWeightNz
 
-- **参数说明：**
+- 参数说明
 
     <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
     <col style="width: 168px">
@@ -170,19 +342,15 @@ aclnnStatus aclnnQuantMatmulReduceSumWeightNz(
     </tbody>
     </table>
 
-- **返回值：**
+- 返回值
 
   aclnnStatus： 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-- 确定性说明：
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnQuantMatmulReduceSumWeightNz默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
-  
-输入和输出支持以下数据类型组合：
 
-| x1   | x2   | x1Scale  | x2Scale  | yScale | x1Offset | x2Offset | yOffset | bias  | out     |
-|------|------|----------|----------|--------|----------|----------|---------|-------|---------|
-| INT8 | INT8 | FLOAT32  | BFLOAT16 | null   | null     | null     | null    | null  |BFLOAT16 |
+- 确定性说明：
+  - aclnnQuantMatmulReduceSumWeightNz默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+
 
 ## 调用示例
 
