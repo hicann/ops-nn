@@ -131,32 +131,32 @@ static void DoApplyFtrlTilingCase(std::initializer_list<int64_t>& inputShape, ge
     EXPECT_EQ(tiling_data_result, expectStr);
 }
 
-// TEST_F(TestApplyFtrlTiling, apply_ftrl_testcase_float32) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {16, 26, 16, 19};
-//     auto inputDtype = ge::DT_FLOAT;
-//     auto inputFormat = ge::FORMAT_ND;
-//     std::string expectStr =
-//         "1 126464 4080 31 2816 2 2 1264 1248 2816 0 0 ";
-//     DoApplyFtrlTilingCase(inputShape, inputDtype, inputFormat, expectStr);
-// }
+TEST_F(TestApplyFtrlTiling, apply_ftrl_testcase_float32) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {16, 26, 16, 19};
+    auto inputDtype = ge::DT_FLOAT;
+    auto inputFormat = ge::FORMAT_ND;
+    std::string expectStr =
+        "126464 12094627905567 4096 31 2 2 1280 768 2816 1 ";
+    DoApplyFtrlTilingCase(inputShape, inputDtype, inputFormat, expectStr);
+}
 
-// TEST_F(TestApplyFtrlTiling, apply_ftrl_testcase_float16) {
-//     // FLOAT16
-//     std::initializer_list<int64_t> inputShape = {3761, 4, 44, 4};
-//     auto inputDtype = ge::DT_FLOAT16;
-//     auto inputFormat = ge::FORMAT_ND;
-//     std::string expectStr =
-//         "1 2647744 41376 64 2560 17 17 416 96 2560 0 0 ";
-//     DoApplyFtrlTilingCase(inputShape, inputDtype, inputFormat, expectStr);
-// }
+TEST_F(TestApplyFtrlTiling, apply_ftrl_testcase_float16) {
+    // FLOAT16
+    std::initializer_list<int64_t> inputShape = {3761, 4, 44, 4};
+    auto inputDtype = ge::DT_FLOAT16;
+    auto inputFormat = ge::FORMAT_ND;
+    std::string expectStr =
+        "2647744 10995116277824 41472 64 17 14 512 1728 2560 1 ";
+    DoApplyFtrlTilingCase(inputShape, inputDtype, inputFormat, expectStr);
+}
 
-// TEST_F(TestApplyFtrlTiling, apply_ftrl_testcase_bfloat16) {
-//     // BFLOAT16
-//     std::initializer_list<int64_t> inputShape = {7, 2, 7, 8, 10};
-//     auto inputDtype = ge::DT_BF16;
-//     auto inputFormat = ge::FORMAT_ND;
-//     std::string expectStr =
-//         "1 7840 3920 2 2560 2 2 1360 1360 2560 0 0 ";
-//     DoApplyFtrlTilingCase(inputShape, inputDtype, inputFormat, expectStr);
-// }
+TEST_F(TestApplyFtrlTiling, apply_ftrl_testcase_bfloat16) {
+    // BFLOAT16
+    std::initializer_list<int64_t> inputShape = {7, 2, 7, 8, 10};
+    auto inputDtype = ge::DT_BF16;
+    auto inputFormat = ge::FORMAT_ND;
+    std::string expectStr =
+        "7840 10995116277762 4096 2 2 2 1536 1184 2560 1 ";
+    DoApplyFtrlTilingCase(inputShape, inputDtype, inputFormat, expectStr);
+}
