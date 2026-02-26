@@ -49,7 +49,7 @@ struct AddLayerNormGradTilingData {
     uint32_t roundUpNumLastDim = 0;
     uint32_t roundUpNumLastDimDtype = 0;
     uint32_t roundUp1Dtype = 0;
-    uint32_t roundUpNumLastDimFloat = 0;
+    uint64_t roundUpNumLastDimFloat = 0;
     uint32_t workspace_size = 0;
     uint32_t isDeterministicKey = 0;
 };

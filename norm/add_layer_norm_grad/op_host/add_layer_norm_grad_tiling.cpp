@@ -409,7 +409,7 @@ static void CalNInUb(const uint32_t blockNumberTdtype, TilingStruct& tilingStruc
 
     tilingStruct.roundUpNumLastDim = ROUND_UP(tilingStruct.numLastDim, blockNumberTdtype);
     tilingStruct.roundUp1Dtype = ROUND_UP(1, BLOCK_NUMBER);
-    tilingStruct.roundUpNumLastDimFloat = ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER) * sizeof(float);
+    tilingStruct.roundUpNumLastDimFloat = (static_cast<uint64_t>(tilingStruct.numLastDim) + BLOCK_NUMBER -1) / BLOCK_NUMBER * BLOCK_NUMBER * sizeof(float);
 }
 
 void SetTiling(

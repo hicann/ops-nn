@@ -562,13 +562,13 @@ private:
     GlobalTensor<int32_t> syncGlobal_;
     GlobalTensor<int32_t> syncGlobal1_;
 
-    uint32_t roundUpNumLastDimFloatLen;
+    uint64_t roundUpNumLastDimFloatLen;
 
     uint32_t nInOneCore;
     uint32_t gmOneCoreElemXY;
     uint32_t blockNumber;
     uint32_t blockNumberTdtype;
-    uint32_t deterministicWorkSpaceSize = 0;
+    uint64_t deterministicWorkSpaceSize = 0;
     bool isComputedCore = false;
 };
 }
