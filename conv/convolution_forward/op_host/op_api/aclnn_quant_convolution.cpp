@@ -894,7 +894,6 @@ private:
         return ACLNN_SUCCESS;
     }
 
-
     static aclnnStatus CheckAttrValue(QuantConvEngine &engine)
     {
         if (CheckVectorValueGt0(engine.meta.stride) != ACLNN_SUCCESS) {
