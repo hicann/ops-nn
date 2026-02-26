@@ -156,14 +156,17 @@ protected:
         int32_t loopNum, int32_t tailNum, LocalTensor<uint32_t>& addUbSize, LocalTensor<uint32_t>& maskUbSize);
 };
 #define ComputeOutIds(dst0, dst1, srcReg, qmulReg, k0, shape0, subReg, offset, dstInt32Ptr, preg) \
+do {                                                                                              \
     Mull(dst0, dst1, srcReg, qmulReg, preg);                                                      \
     Add(dst0, srcReg, dst1, preg);                                                                \
     ShiftRights(dst1, dst0, k0, preg);                                                            \
     DataCopy(dstInt32Ptr, dst1, offset, preg);                                                    \
     Muls(dst0, dst1, shape0, preg);                                                               \
-    Sub(subReg, srcReg, dst0, preg);
+    Sub(subReg, srcReg, dst0, preg);                                                              \
+} while (0)
 
 #define CastInt32(repeatTimes, preg, sregInt32, dst1, dstInt32Ptr1, dstInt64Ptr1)                              \
+do {                                                                                                           \
     int32_t vfLenInt32 = VF_LEN_INT32;                                                                         \
     int32_t halfVfLentInt32 = VF_LEN_INT32 / DIM2;                                                             \
     for (uint16_t k = 0; k < repeatTimes; k++) {                                                               \
@@ -173,31 +176,38 @@ protected:
         DataCopy<int32_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B32>(                                       \
             (RegTensor<int32_t>&)dst1, dstInt32Ptr1, srcOffset);                                               \
         DataCopy(dstInt64Ptr1, (RegTensor<int32_t>&)dst1, dstOffset, preg);                                    \
-    }
+    }                                                                                                          \
+} while (0)
 
 #define ComputeOutIdsTrans24(dst0, dst1, srcReg, q3mulReg, preg, shape2, k2, subReg) \
+do {                                                                                 \
     Mull(dst0, dst1, srcReg, q3mulReg, preg);                                        \
     Add(dst0, srcReg, dst1, preg);                                                   \
     ShiftRights(dst1, dst0, k2, preg);                                               \
     Muls(dst0, dst1, shape2, preg);                                                  \
-    Sub(subReg, srcReg, dst0, preg);
+    Sub(subReg, srcReg, dst0, preg);                                                 \
+} while (0)
 
 #define ComputeOutIdsTrans(dst0, dst1, srcReg, qmulReg, subReg, transReg2, dstInt32Ptr, k1, shape1, preg) \
+do {                                                                                                      \
     Mull(dst0, dst1, srcReg, qmulReg, preg);                                                              \
     Add(dst0, srcReg, dst1, preg);                                                                        \
     ShiftRights(dst1, dst0, k1, preg);                                                                    \
     Muls(dst0, dst1, shape1, preg);                                                                       \
     Sub(subReg, srcReg, dst0, preg);                                                                      \
-    DataCopyScatter(dstInt32Ptr, dst1, (RegTensor<uint32_t>&)transReg2, preg);
+    DataCopyScatter(dstInt32Ptr, dst1, (RegTensor<uint32_t>&)transReg2, preg);                            \
+} while (0)
 
 #define ComputeOutIdsTrans1(dst0, dst1, subReg, qmulReg, transReg2, transReg, dstInt32Ptr, k1, shape1, kk, preg) \
+do {                                                                                                             \
     Mull(dst0, dst1, subReg, qmulReg, preg);                                                                     \
     Add(dst0, subReg, dst1, preg);                                                                               \
     ShiftRights(dst1, dst0, k1, preg);                                                                           \
     Muls(dst0, dst1, shape1, preg);                                                                              \
     Sub(subReg, subReg, dst0, preg);                                                                             \
     Adds(transReg, transReg2, kk, preg);                                                                         \
-    DataCopyScatter(dstInt32Ptr, dst1, (RegTensor<uint32_t>&)transReg, preg);
+    DataCopyScatter(dstInt32Ptr, dst1, (RegTensor<uint32_t>&)transReg, preg);                                    \
+} while (0)
 
 template <typename T1, typename T2, int TILING_KEY>
 __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfCleanUb(LocalTensor<uint32_t>& addUbSize)

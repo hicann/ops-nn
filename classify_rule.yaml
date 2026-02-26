@@ -1328,8 +1328,10 @@ VC6@ops-nn:
     release:
       style:
         - ops/ops-nn/index/non_zero/
-        - ops/ops-nn/index/index/
-        - ops/ops-nn/index/index_put_v2/
+        - ops/ops-nn/index/index/op_kernel/
+        - ops/ops-nn/index/index/op_host/
+        - ops/ops-nn/index/index_put_v2/op_kernel/
+        - ops/ops-nn/index/index_put_v2/op_host/
       opensource_style: null
       kernel_style: null
     unrelease:
