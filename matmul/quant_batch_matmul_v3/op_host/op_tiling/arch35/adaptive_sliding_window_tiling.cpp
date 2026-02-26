@@ -74,6 +74,9 @@ constexpr uint64_t MIN_CARRY_DATA_SIZE_32K = 32 * 1024UL;
 constexpr uint64_t FULL_LOAD_DATA_SIZE_64K = 64 * 1024UL;
 constexpr uint64_t CACHE_LINE_512B = 512UL;
 constexpr uint32_t MAX_STEPK_With_BL1_FULL = 8U;
+
+// 控核比例
+constexpr uint32_t CORE_RATIO = 2;
 } // namespace
 
 namespace optiling {
@@ -170,8 +173,26 @@ ge::graphStatus AdaptiveSlidingWindowTiling::GetShapeAttrsInfo()
     return QuantBatchMatmulV3TilingBase::GetShapeAttrsInfo();
 }
 
+bool AdaptiveSlidingWindowTiling::CheckCoreNum() const
+{
+    auto aicNum = compileInfo_.aicNum;
+    auto aivNum = compileInfo_.aivNum;
+    bool isScaleVecPostProcess = inputParams_.isPerChannel &&
+                                 !(inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64);
+    if ((isScaleVecPostProcess || inputParams_.isPertoken || isBf16Mix_ || inputParams_.isPerBlock) && aivNum != CORE_RATIO * aicNum) {
+        OP_LOGE(inputParams_.opName, "For mix template, aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.", aicNum, aivNum);
+        return false;
+    }
+    return true;
+}
+
 ge::graphStatus AdaptiveSlidingWindowTiling::DoOpTiling()
 {
+    SetBf16Compat();
+    if (!CheckCoreNum()) {
+        OP_LOGE(inputParams_.opName, "CheckCoreNum fail.");
+        return ge::GRAPH_FAILED;
+    }
     OP_LOGD(inputParams_.opName, "DoOpTiling of adaptive sliding window tiling strategy.");
     if (!AnalyseSlidingWinInfo()) {
         OP_LOGE(inputParams_.opName, "DoOpTiling fail");
@@ -182,7 +203,6 @@ ge::graphStatus AdaptiveSlidingWindowTiling::DoOpTiling()
         OP_LOGE(inputParams_.opName, "OptimizeEdgeBasicBlock fail");
         return ge::GRAPH_FAILED;
     }
-    SetBf16Compat();
     CalL1Tiling();
     if (inputParams_.isPertoken) {
         CalcUbTiling();

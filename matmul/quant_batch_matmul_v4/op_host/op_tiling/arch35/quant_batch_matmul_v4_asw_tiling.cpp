@@ -367,4 +367,10 @@ uint64_t AdaptiveSlidingWindowTilingV4::GetTilingKey() const
         static_cast<uint64_t>(kernelType));
 }
 
+bool AdaptiveSlidingWindowTilingV4::CheckCoreNum() const
+{
+    // 预留校验接口
+    return true;
+}
+
 }  // namespace optiling

@@ -119,6 +119,7 @@ protected:
                                   uint64_t& newTailMain);
     bool GetOuterMAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain);
     bool GetOuterNAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain);
+    virtual bool CheckCoreNum() const;
 
     DequantBmm::QuantBatchMatmulV3TilingDataParams tilingDataSelf_;
     DequantBmm::QuantBatchMatmulV3TilingDataParams &tilingData_;

@@ -77,6 +77,7 @@ protected:
                                        const gert::Shape& pertoken, const gert::Shape& x1Shape,
                                        const gert::Shape& x2Shape) const;
     bool SetPlatformInfoForTiling() override;
+    bool CheckCoreNum() const override;
  
     std::unique_ptr<QuantBatchMatmulV4CompileInfo> compileInfoPtr_;
 };

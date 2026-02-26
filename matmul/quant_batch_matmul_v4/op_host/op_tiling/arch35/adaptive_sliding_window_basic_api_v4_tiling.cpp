@@ -38,6 +38,9 @@ constexpr size_t LAST_FIRST_DIM_INDEX = 1;
 constexpr size_t LAST_SECOND_DIM_INDEX = 2;
 constexpr uint64_t PER_BLOCK_SIZE = 128;
 constexpr size_t DIM_NUM_TWO = 2;
+
+// 控核比例
+constexpr uint32_t CORE_RATIO = 2;
 }  // namespace
 
 namespace optiling {
@@ -359,7 +362,17 @@ bool AdaptiveSlidingWindowBasicTilingV4::CheckBatchValidInPertileMode(const gert
      aicoreParams_.l0cSize = compileInfoPtr_->l0cSize;
      aicoreParams_.blockDim = 0;
      return true;
- }
+}
+bool AdaptiveSlidingWindowBasicTilingV4::CheckCoreNum() const
+{
+    auto aicNum = compileInfoPtr_->aicNum;
+    auto aivNum = compileInfoPtr_->aivNum;
+    if (aivNum != CORE_RATIO * aicNum) {
+        OP_LOGE(inputParams_.opName, "aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.", aicNum, aivNum);
+        return false;
+    }
+    return true;
+}
 
 uint64_t AdaptiveSlidingWindowBasicTilingV4::GetTilingKey() const
 {

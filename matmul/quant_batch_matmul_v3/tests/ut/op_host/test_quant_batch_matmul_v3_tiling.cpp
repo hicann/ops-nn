@@ -48,7 +48,8 @@ public:
     std::string caseName;
     std::string kernelUtDir;
     std::string prefix;
-    int64_t coreNum;
+    int64_t aicNum;
+    int64_t aivNum;
     int64_t x1Dim;
     int64_t x2Dim;
     int64_t yDim;
@@ -135,7 +136,7 @@ static void SplitStr2Vec(const string &input, const string &delimiter, vector<st
 }
 
 static void InitPlatformInfo(const std::string &socVersion, gert::TilingContext *tilingContext, string &compileInfoStr,
-                             int64_t coreNum = -1)
+                             int64_t aicNum = -1, int64_t aivNum = -1)
 {
     map<string, string> soc_version_infos = {{"SoC_version", socVersion},};
     map<string, string> soc2Arch = {
@@ -209,10 +210,13 @@ static void InitPlatformInfo(const std::string &socVersion, gert::TilingContext 
         aicoreSpec["cube_freq"] = "1650";
     }
 
-    if (coreNum > 0) {
-        socInfos["ai_core_cnt"] = std::to_string(coreNum);
-        socInfos["cube_core_cnt"] = std::to_string(coreNum);
-        socInfos["vector_core_cnt"] = std::to_string(coreNum * 2);
+    if (aicNum > 0) {
+        socInfos["ai_core_cnt"] = std::to_string(aicNum);
+        socInfos["cube_core_cnt"] = std::to_string(aicNum);
+        socInfos["vector_core_cnt"] = std::to_string(aicNum * 2);
+    }
+    if (aivNum > 0) {
+        socInfos["vector_core_cnt"] = std::to_string(aivNum);
     }
 
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
@@ -256,11 +260,17 @@ static std::vector<QuantBatchMatmulV3TilingTestParam> GetParams(const std::strin
         param.caseName = testParam[idx++];
         param.kernelUtDir = testParam[idx++];
         param.prefix = testParam[idx++];
-        auto coreNum = testParam[idx++];
-        if (coreNum.empty()) {
-            param.coreNum = -1;
+        auto aicNum = testParam[idx++];
+        if (aicNum.empty()) {
+            param.aicNum = -1;
         } else {
-            param.coreNum = stol(coreNum);
+            param.aicNum = stol(aicNum);
+        }
+        auto aivNum = testParam[idx++];
+        if (aivNum.empty()) {
+            param.aivNum = -1;
+        } else {
+            param.aivNum = stol(aivNum);
         }
         param.x1Dim = stol(testParam[idx++]);
         param.x2Dim = stol(testParam[idx++]);
@@ -474,7 +484,7 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo &c
 
     string compileInfoStr;
     gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
-    InitPlatformInfo(socVersion, tilingContext, compileInfoStr, coreNum);
+    InitPlatformInfo(socVersion, tilingContext, compileInfoStr, aicNum, aivNum);
 
     auto kernelHold = gert::KernelRunContextFaker()
                           .KernelIONum(2, 1)

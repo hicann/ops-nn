@@ -217,7 +217,10 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam& param)
                                 "L0A_SIZE" : 65536,
                                 "L0B_SIZE" : 65536,
                                 "L0C_SIZE" : 262144,
-                                "CORE_NUM" : 32,
+                                "CORE_NUM" : aicNum,
+                                "cube_core_cnt": aicNum,
+                                "vector_core_cnt": aivNum,
+                                "core_type_list": "CubeCore,VectorCore",
                                 "socVersion" : "Ascend950",
                                 "NpuArch" : "3510"
                             }})";
@@ -225,6 +228,12 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam& param)
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
     map<string, string> socVersion;
+    // 6为替换原aicNum字符串的长度，配置CORE_NUM
+    compileInfoStr = compileInfoStr.replace(compileInfoStr.find("aicNum"), 6, to_string(aicNum));
+    // 6为替换原aicNum字符串的长度，配置cube_core_cnt
+    compileInfoStr = compileInfoStr.replace(compileInfoStr.find("aicNum"), 6, to_string(aicNum));
+    // 6为替换原aivNum字符串的长度，配置vector_core_cnt
+    compileInfoStr = compileInfoStr.replace(compileInfoStr.find("aivNum"), 6, to_string(aivNum));
     GetPlatFormInfos(compileInfoStr.c_str(), socInfos, aicoreSpec, intrinsics, socVersion);
     aicoreSpec["cube_freq"] = "1650";
 
@@ -331,6 +340,15 @@ static QuantBatchMatmulV4TilingTestParam casesParams[] = {
     {"UT-A8W4-PerGroup-ND-Testcase-0_Ascend950_128_128_128_0_1_4303356032_ND_ND_INT8_INT8_NULL_FP32_FP32_NULL_"
      "BF16_32_64",
      32, ge::GRAPH_SUCCESS, 533UL},
+    {"UT-A8W4-PerGroup-ND-Testcase-1_Ascend950_128_128_128_0_1_4303356032_ND_ND_INT8_INT8_NULL_FP32_FP32_NULL_"
+     "BF16_32_50",
+     32, ge::GRAPH_FAILED, 533UL},
+    {"UT-A8W4-PerGroup-ND-Testcase-2_Ascend950_128_128_128_0_1_4303356032_ND_ND_INT8_INT8_NULL_FP32_FP32_NULL_"
+     "BF16_32_0",
+     32, ge::GRAPH_FAILED, 533UL},
+    {"UT-A8W4-PerGroup-ND-Testcase-2_Ascend950_128_128_128_0_1_4303356032_ND_ND_INT8_INT8_NULL_FP32_FP32_NULL_"
+     "BF16_0_50",
+     32, ge::GRAPH_FAILED, 533UL},
 
 };
 INSTANTIATE_TEST_CASE_P(MM, TestQuantBatchMatmulV4PerTileTiling, testing::ValuesIn(casesParams));

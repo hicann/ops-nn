@@ -82,6 +82,7 @@ protected:
     // 根据shape(元素个数)和数据类型，计算得出size(字节数)
     uint64_t GetSizeWithDataType(uint64_t shape, ge::DataType dtype, bool isLut = false) const;
     bool SetPlatformInfoForTiling() override;
+    bool CheckCoreNum() const override;
 
     std::unique_ptr<QuantBatchMatmulV4CompileInfo> compileInfoPtr_;
 };

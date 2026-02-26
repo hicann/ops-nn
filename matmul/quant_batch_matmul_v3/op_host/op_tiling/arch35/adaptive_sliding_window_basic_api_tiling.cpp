@@ -117,6 +117,10 @@ ge::graphStatus AdaptiveSlidingWindowBasicAPITiling::DoOpTiling()
         AdaptiveSlidingWindowTiling::CalcUbTiling();
     }
     SetTilingData();
+    if (!CheckCoreNum()) {
+        OP_LOGE(inputParams_.opName, "CheckCoreNum fail.");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
