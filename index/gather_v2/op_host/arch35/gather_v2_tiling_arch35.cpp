@@ -178,7 +178,7 @@ static inline const gert::Shape &EnsureNotScalar(const gert::Shape &in_shape) {
   return in_shape;
 }
 
-bool CheckAndUpdateAxisAndBatchdims(gert::TilingContext* context, int64_t& axis, int64_t& batch_dims,
+bool CheckAndUpdateAxisAndBatchdims(const gert::TilingContext* context, int64_t& axis, int64_t& batch_dims,
                                     int64_t params_dims, int64_t indices_dims) {
   const gert::Shape& xShape = EnsureNotScalar(context->GetInputShape(0)->GetStorageShape());
   const gert::Shape& indiesShape = EnsureNotScalar(context->GetInputShape(1)->GetStorageShape());
@@ -1431,8 +1431,6 @@ static ge::graphStatus GatherTiling(gert::TilingContext* context) {
   OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
   Gatherv2TilingBase tiling(context);
   return tiling.DoTiling();
-  OP_LOGD(context->GetNodeName(), "GatherTiling running end");
-  return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus TilingPrepareForGatherV2(gert::TilingParseContext* context) {
