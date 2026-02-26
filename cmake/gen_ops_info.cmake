@@ -416,7 +416,7 @@ function(compile_from_config)
     List(APPEND _BUILD_COMMAND export BIN_FILENAME_HASHED=1 &&)
     List(APPEND _BUILD_COMMAND export ASCEND_SLOG_PRINT_TO_STDOUT=1 &&)
     List(APPEND _BUILD_COMMAND ${_ASCENDC_ENV_VAR} stdbuf -oL bash ${OPS_KERNEL_BINARY_SCRIPT}/build_binary_op_exe_task.sh ${CONFCMP_OUT_DIR}/bin ${idx})
-    List(APPEND _BUILD_COMMAND && echo $(MAKE) &> /dev/null)
+    List(APPEND _BUILD_COMMAND && echo $(MAKE))
     add_custom_target(exe_compile_${CONFCMP_COMPUTE_UNIT}_${idx}
       COMMAND ${_BUILD_COMMAND}
       WORKING_DIRECTORY ${OPS_KERNEL_BINARY_SCRIPT}
