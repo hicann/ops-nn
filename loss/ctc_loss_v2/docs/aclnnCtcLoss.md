@@ -109,7 +109,7 @@ aclnnStatus aclnnCtcLoss(
         <td>输入</td>
         <td>表示包含目标序列的标签，公式中的π。</td>
         <td>当shape为(N,S)，S为不小于targetLengths中的最大值的值；或者shape为(SUM(targetLengths))，假设targets是未填充的而且在1维内级联的。当logProbs为2维时，N=1。</td>
-        <td>INT64、INT32、BOOL、FLOAT、FLOAT16</td>
+        <td>INT64、INT32</td>
         <td>ND</td>
         <td>-</td>
         <td>√</td>
@@ -119,7 +119,7 @@ aclnnStatus aclnnCtcLoss(
         <td>输入</td>
         <td>表示输入序列的实际长度，公式中的T为inputLengths中的元素。</td>
         <td>数组长度为N，数组中的每个值必须小于等于T。当logProbs为2维时，N=1</td>
-        <td>-</td>
+        <td>INT64、INT32</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -129,7 +129,7 @@ aclnnStatus aclnnCtcLoss(
         <td>输入</td>
         <td>表示目标序列的实际长度，公式中的l的长度为targetLengths中的元素。</td>
         <td>数组长度为N，当targets的shape为(N,S)时，数组中的每个值必须小于等于S。当logProbs为2维时，N=1</td>
-        <td>-</td>
+        <td>INT64、INT32</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -139,7 +139,7 @@ aclnnStatus aclnnCtcLoss(
         <td>输入</td>
         <td>表示空白标识。</td>
         <td>数值必须大于等于0且小于C。</td>
-        <td>-</td>
+        <td>INT64</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -149,7 +149,7 @@ aclnnStatus aclnnCtcLoss(
         <td>输入</td>
         <td>表示是否将无限损耗和相关梯度归零，公式中的zeroInfinity。</td>
         <td>-</td>
-        <td>-</td>
+        <td>BOOL</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -197,7 +197,7 @@ aclnnStatus aclnnCtcLoss(
     </tbody></table>
 
   - logAlphaOut：
-     - <term>Ascend 950PR</term>、<term>Ascend 950DT</term>、<term>Atlas A2 训练系列产/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：shape为($N, T, (2*max(targetLengths)+8)/8*8$)。
+     - <term>Ascend 950PR/Ascend 950DT</term>、<term>Atlas A2 训练系列产/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：shape为($N, T, (2*max(targetLengths)+8)/8*8$)。
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -281,9 +281,9 @@ aclnnStatus aclnnCtcLoss(
 
 - **值域限制说明：**
   - `targets`的值域要求为$[0, C - 1]$且不包括blank对应的数值，其中$C$代表`logProbs`中的最后一维，即类别数。
-  - `input_lengths`的值域要求为$[1, T]$，其中$T$代表`logProbs`中的第0维，代表输入长度。
-  - `target_lengths`的值域要求为大于等于1。
-  - `target_lengths`中的元素要求小于等于`input_lengths`中对应的元素。
+  - `inputLengths`的值域要求为$[1, T]$，其中$T$代表`logProbs`中的第0维，代表输入长度。
+  - `targetLengths`的值域要求为大于等于1。
+  - `targetLengths`中的元素要求小于等于`inputLengths`中对应的元素。
 
   若不满足前三条值域约束，CPU/GPU可能存在越界行为，导致negLogLikelihoodOut和logAlphaOut的计算结果可能与CPU/GPU存在差异。若不满足第四条值域约束，logAlphaOut在对应batch上的计算结果与CPU/GPU存在差异。
 

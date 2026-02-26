@@ -116,7 +116,7 @@ aclnnStatus aclnnFusedCrossEntropyLossWithMaxSum(
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">标签平滑系数，用于缓解过拟合。</td>
       <td class="tg-0pky">当前只支持0。</td>
-      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">FLOAT</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">-</td>

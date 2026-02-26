@@ -123,7 +123,7 @@ aclnnStatus aclnnNLLLoss2d(
         <td>reduction（int64_t）</td>
         <td>输入</td>
         <td>指定要应用到输出的缩减。</td>
-        <td><ul>支持0('none')|1('mean')|2('sum')。<li>'none'表示不应用缩减</li><li>'mean'表示输出的总和将除以输出中的元素数</li><li>'sum'表示输出将被求和</li></ul></td>
+        <td><ul>支持0(none)|1(mean)|2(sum)。<li>'none'表示不应用缩减</li><li>'mean'表示输出的总和将除以输出中的元素数</li><li>'sum'表示输出将被求和</li></ul></td>
         <td>INT64</td>
         <td>-</td>
         <td>-</td>
@@ -144,7 +144,7 @@ aclnnStatus aclnnNLLLoss2d(
         <td>out（aclTensor*）</td>
         <td>输出</td>
         <td>公式中的out。</td>
-        <td>当reduction为0（'none'）时，shape与target的shape相同，否则为(1,)。</td>
+        <td>当reduction为0（none）时，shape与target的shape相同，否则为(1,)。</td>
         <td>数据类型和self保持一致。</td>
         <td>ND</td>
         <td>-</td>
@@ -154,7 +154,7 @@ aclnnStatus aclnnNLLLoss2d(
         <td>totalWeightOut（aclTensor*）</td>
         <td>输出</td>
         <td>公式中的totalWeightOut。</td>
-        <td>在reduction为非0(非'none')下输出值有效，shape为(1,)。</td>
+        <td>在reduction为非0(非none)下输出值有效，shape为(1,)。</td>
         <td>数据类型和self保持一致。</td>
         <td>ND</td>
         <td>-</td>

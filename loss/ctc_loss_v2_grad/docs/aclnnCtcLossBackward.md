@@ -96,7 +96,7 @@ aclnnStatus aclnnCtcLossBackward(
       <td>输入</td>
       <td>表示包含目标序列的标签。</td>
       <td>当shape为(N,S)，S为不小于targetLengths中的最大值的值；或者shape为(SUM(targetLengths))，假设targets是未填充的而且在1维内级联的。数值必须小于C大于等于0。</td>
-      <td>INT64、INT32、BOOL、FLOAT、FLOAT16</td>
+      <td>INT64、INT32</td>
       <td>ND</td>
       <td>-</td>
       <td>√</td>
@@ -106,7 +106,7 @@ aclnnStatus aclnnCtcLossBackward(
       <td>输入</td>
       <td>表示输入序列的实际长度。</td>
       <td>数组长度为N，数组中的每个值必须小于等于T</td>
-      <td>-</td>
+      <td>INT64、INT32</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -116,7 +116,7 @@ aclnnStatus aclnnCtcLossBackward(
       <td>输入</td>
       <td>表示目标序列的实际长度。</td>
       <td>数组长度为N，当targets的shape为(N,S)时，数组中的每个值必须小于等于S，最大值为maxTargetLength</td>
-      <td>-</td>
+      <td>INT64、INT32</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -145,7 +145,7 @@ aclnnStatus aclnnCtcLossBackward(
       <td>blank（int64_t）</td>
       <td>输入</td>
       <td>表示空白标识。</td>
-      <td>数值必须小于C大于等于0</td>
+      <td>数值必须小于C且大于等于0</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -184,7 +184,7 @@ aclnnStatus aclnnCtcLossBackward(
       <tr>
       <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
-      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

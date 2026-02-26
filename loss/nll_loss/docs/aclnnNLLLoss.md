@@ -137,8 +137,8 @@ aclnnStatus aclnnNLLLoss(
       <td>输入</td>
       <td>表示一个被忽略且不影响输入梯度的目标值。
       </td>
-      <td>INT64</td>
       <td>-</td>
+      <td>INT64</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -147,7 +147,7 @@ aclnnStatus aclnnNLLLoss(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>公式中的out。</td>
-      <td>当reduction为0（'none'）且self的shape为2维时，out shape为(N,), 否则为(1,)。</td>
+      <td>当reduction为0（none）且self的shape为2维时，out shape为(N,), 否则为(1,)。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>-</td>
@@ -157,7 +157,7 @@ aclnnStatus aclnnNLLLoss(
       <td>totalWeightOut（aclTensor*）</td>
       <td>输出</td>
       <td>公式中的totalWeightOut。</td>
-      <td>在reduction为非0(非'none')下输出值有效，shape为(1,)。</td>
+      <td>在reduction为非0(非none)下输出值有效，shape为(1,)。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>-</td>

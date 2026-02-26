@@ -105,7 +105,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogits(
         <td>-</td>
         <td>FLOAT16、FLOAT、BFLOAT16</td>
         <td>ND</td>
-        <td>-</td>
+        <td>1-8</td>
         <td>√</td>
       </tr>
       <tr>
@@ -113,36 +113,36 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogits(
         <td>输入</td>
         <td>label标签值。</td>
         <td>-</td>
-        <td>与“self”一致</td>
+        <td>与self保持一致</td>
         <td>ND</td>
-        <td>与“self”一致</td>
+        <td>与self保持一致</td>
         <td>√</td>
       </tr>
       <tr>
       <td>weightOptional（aclTensor*）</td>
       <td>输入</td>
       <td>二分交叉熵权重。</td>
-      <td>shape需要能够broadcast到“target”</td>
-      <td>与“self”一致</td>
+      <td>shape需要能够<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到target</td>
+      <td>与self保持一致</td>
       <td>ND</td>
-      <td>-</td>
+      <td>1-8</td>
       <td>√</td>
       </tr>
       <tr>
         <td>posWeightOptional（aclTensor*）</td>
         <td>输入</td>
         <td>各类的正类权重。</td>
-        <td>shape需要能够broadcast到“target”</td>
-        <td>与“self”一致</td>
+        <td>shape需要能够<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到target</td>
+        <td>与self保持一致</td>
         <td>ND</td>
-        <td>-</td>
+        <td>1-8</td>
         <td>√</td>
       </tr>
       <tr>
         <td>reduction（int64_t）</td>
         <td>输入</td>
         <td>输出结果计算方式。</td>
-        <td>仅支持0,1,2三个值：<ul><li>0表示不做任何操作</li><li>1表示对结果取平均值</li><li>2表示对结果求和</li></ul></td>
+        <td>支持0(none)|1(mean)|2(sum)。<ul><li>0表示不做任何操作</li><li>1表示对结果取平均值</li><li>2表示对结果求和</li></ul></td>
         <td>INT64</td>
         <td>-</td>
         <td>-</td>
@@ -152,10 +152,10 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogits(
         <td>out（aclTensor*）</td>
         <td>输出</td>
         <td>输出误差。</td>
-        <td>如果reduction = None，shape与self一致，其他情况shape为[1]</td>
-        <td>与“target”一致</td>
+        <td>如果reduction = 0，shape与self一致，其他情况shape为[1]</td>
+        <td>与target保持一致</td>
         <td>ND</td>
-        <td>-</td>
+        <td>与self保持一致</td>
         <td>√</td>
       </tr>
       <tr>

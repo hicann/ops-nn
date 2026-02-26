@@ -184,10 +184,10 @@ aclnnStatus aclnnMseLossBackward(
       <td class="tg-0pky">gradOutput、target的数据类型和self不同。</td>
     </tr>
     <tr>
-      <td class="tg-0pky">gradOutput、self和target的shape无法做broadcast。</td>
+      <td class="tg-0pky">gradOutput、self和target的shape无法做<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>。</td>
     </tr>
     <tr>
-      <td class="tg-0pky">gradOutput、self和target做broadcast后的shape与out的shape不一致。</td>
+      <td class="tg-0pky">gradOutput、self和target做<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>后的shape与out的shape不一致。</td>
     </tr>
     <tr>
       <td class="tg-0pky">reduction值不在0~2范围之内。</td>

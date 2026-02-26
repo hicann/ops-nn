@@ -173,7 +173,7 @@ aclnnStatus aclnnSoftMarginLoss(
       <td class="tg-0pky">self、target或out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td class="tg-0pky">self和target的shape不满足broadcast规则，或者broadcast后的shape与out不一致。</td>
+      <td class="tg-0pky">self和target的shape不满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>规则，或者<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>后的shape与out不一致。</td>
     </tr>
   </tbody>
   </table>

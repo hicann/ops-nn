@@ -96,9 +96,9 @@ aclnnStatus aclnnBinaryCrossEntropyBackward(
       <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
       <td>网络反向传播前一步的梯度值。数据类型需要与其它参数一起转换到promotion类型。</td>
-      <td>shape可以broadcast到self的shape。</td>
+      <td>shape可以<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
-      <td>-</td>
+      <td>ND</td>
       <td>0-8</td>
       <td>√</td>
     </tr>
@@ -108,7 +108,7 @@ aclnnStatus aclnnBinaryCrossEntropyBackward(
       <td>网络正向前一层的计算结果。</td>
       <td>数据类型需要与其它参数一起转换到promotion类型。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
-      <td>-</td>
+      <td>ND</td>
       <td>0-8</td>
       <td>√</td>
     </tr> 
@@ -116,7 +116,7 @@ aclnnStatus aclnnBinaryCrossEntropyBackward(
       <td>target（aclTensor*）</td>
       <td>输入</td>
       <td>样本的标签值。数据类型需要与其它参数一起转换到promotion类型。</td>
-      <td>shape可以broadcast到self的shape。</td>
+      <td>shape可以<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>需要与self保持一致。</td>
       <td>0-8</td>
@@ -126,7 +126,7 @@ aclnnStatus aclnnBinaryCrossEntropyBackward(
       <td>weightOptional（aclTensor*）</td>
       <td>输入</td>
       <td>结果的权重。</td>
-      <td><ul><li>shape可以broadcast到self的shape。</li><li>当weightOptional为空时，需要以self的shape创建一个全1的Tensor。</li></ul></td>
+      <td><ul><li>shape可以<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape。</li><li>当weightOptional为空时，需要以self的shape创建一个全1的Tensor。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>需要与self保持一致。</td>
       <td>0-8</td>
@@ -136,8 +136,8 @@ aclnnStatus aclnnBinaryCrossEntropyBackward(
       <td>reduction（int64_t）</td>
       <td>输入</td>
       <td>表示对二元交叉熵反向求梯度计算结果做的reduce操作。</td>
-      <td><ul>仅支持0,1,2三个值：<li>0表示不做任何操作。</li><li>1表示对结果取平均值。</li><li>2表示对结果求和。</li></ul></td>
-      <td>-</td>
+      <td><ul>仅支持0(none),1(mean),2(sum)三个值：<li>0表示不做任何操作。</li><li>1表示对结果取平均值。</li><li>2表示对结果求和。</li></ul></td>
+      <td>INT64</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -208,7 +208,7 @@ aclnnStatus aclnnBinaryCrossEntropyBackward(
       <td>self为标量，gradOutput为非标量的场景不在支持范围内。</td>
       </tr>
       <tr>
-      <td>gradOutput、target和weightOptional的shape不能broadcast到self的shape。</td>
+      <td>gradOutput、target和weightOptional的shape不能<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape。</td>
       </tr>
       <tr>
       <td>reduction的值非0,1,2三值之一。</td>

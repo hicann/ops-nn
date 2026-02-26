@@ -65,8 +65,8 @@ aclnnStatus aclnnBinaryCrossEntropy(
     | self（aclTensor*） | 输入 | 表示预测的概率值，公式中的输入`self`。 | 取值在0~1之间|  FLOAT16、FLOAT、BFLOAT16|ND|1-8|√|
     | target（aclTensor*） | 输入 | 表示目标张量，公式中的输入`target`。 | 取值在0~1之间|  与`self`一致|ND|与`self`一致|√|
     | weight（aclTensor*） | 输入 | 表示权重张量，公式中的输入`weight`。 |weight可以是nullptr，等价于所有权重值都是1 |  与`self`一致|ND|与`self`一致|√|
-    | reduction（int64_t） | 输入 | 表示规约方式，公式中的输入`reduction`，输出规约的枚举值。 | 支持三种枚举值：<ul><li>当取值为0，即为Reduction::None</li><li>当取值为1，即为Reduction::Mean</li><li>当取值为2，即为Reduction::Sum</li></ul>| - |-|-|-|
-    | out（aclTensor*） | 输出 | 表示计算输出，公式中的$\ell(self,target)$。 | 如果reduction = None，shape与`self`一致，其他情况shape为[1]|  与`self`一致|ND|与`self`保持一致|√|
+    | reduction（int64_t） | 输入 | 表示规约方式，公式中的输入`reduction`，输出规约的枚举值。 | 支持0(none)，1(mean)，2(sum)。<ul><li>当取值为0，即为Reduction::None，表示不做任何操作。</li><li>当取值为1，即为Reduction::Mean，表示对结果取平均值。</li><li>当取值为2，即为Reduction::Sum，表示对结果求和。</li></ul>| INT64 |-|-|-|
+    | out（aclTensor*） | 输出 | 表示计算输出，公式中的$\ell(self,target)$。 | 如果reduction = 0，shape与`self`一致，其他情况shape为[1]|  与`self`一致|ND|与`self`保持一致|√|
     | workspaceSize（uint64_t*） | 输出 | 返回需要在Device侧申请的workspace大小。 | -|  -|-|-|-|
     | executor（aclOpExecutor**） | 输出 | 返回op执行器，包含了算子计算流程。 | -|  -|-|-|-|
 

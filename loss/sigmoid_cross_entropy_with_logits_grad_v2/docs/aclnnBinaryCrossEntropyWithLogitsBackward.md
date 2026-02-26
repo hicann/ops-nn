@@ -45,11 +45,11 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
 
 - **参数说明：**
 
-    <table style="undefined;table-layout: fixed; width: 1200px"><colgroup>
+    <table style="undefined;table-layout: fixed; width: 1220px"><colgroup>
     <col style="width: 183px">
     <col style="width: 120px">
     <col style="width: 240px">
-    <col style="width: 192px">
+    <col style="width: 212px">
     <col style="width: 152px">
     <col style="width: 101px">
     <col style="width: 104px">
@@ -71,7 +71,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
         <td>gradOutput（aclTensor*）</td>
         <td>输入</td>
         <td>网络反向传播前一步的梯度值。</td>
-        <td>shape可以broadcast到self的shape</td>
+        <td>shape可以<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape。</td>
         <td>FLOAT16、FLOAT、BFLOAT16</td>
         <td>ND</td>
         <td>-</td>
@@ -91,18 +91,18 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
         <td>target（aclTensor*）</td>
         <td>输入</td>
         <td>样本的标签值。</td>
-        <td>取值范围为0~1</td>
-        <td>与self一致</td>
+        <td>取值范围为0~1。</td>
+        <td>与self保持一致</td>
         <td>ND</td>
-        <td>与self一致</td>
+        <td>与self保持一致</td>
         <td>√</td>
       </tr>
       <tr>
         <td>weightOptional（aclTensor*）</td>
         <td>输入</td>
         <td>二分交叉熵权重。</td>
-        <td><ul><li>shape可以broadcast到self的shape</li><li>当weightOptional为空时，会以self的shape创建一个全1的Tensor</li></ul></td>
-        <td>与self一致</td>
+        <td><ul><li>shape可以<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape。</li><li>当weightOptional为空时，会以self的shape创建一个全1的Tensor。</li></ul></td>
+        <td>与self保持一致</td>
         <td>ND</td>
         <td>-</td>
         <td>√</td>
@@ -111,8 +111,8 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
         <td>posWeightOptional（aclTensor*）</td>
         <td>输入</td>
         <td>正类的权重。</td>
-        <td><ul><li>shape可以broadcast到self的shape</li><li>当posWeightOptional为空时，会以self的shape创建一个全1的Tensor</li></ul></td>
-        <td>与self一致</td>
+        <td><ul><li>shape可以<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape。</li><li>当posWeightOptional为空时，会以self的shape创建一个全1的Tensor。</li></ul></td>
+        <td>与self保持一致</td>
         <td>ND</td>
         <td>-</td>
         <td>√</td>
@@ -121,7 +121,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
         <td>reduction（int64_t）</td>
         <td>输入</td>
         <td>表示对二元交叉熵反向求梯度计算结果做的reduce操作。</td>
-        <td>仅支持0,1,2三个值：<ul><li>0表示不做任何操作</li><li>1表示对结果取平均值</li><li>2表示对结果求和</li></ul></td>
+        <td>支持0(none)|1(mean)|2(sum)。<ul><li>0表示不做任何操作。</li><li>1表示对结果取平均值。</li><li>2表示对结果求和。</li></ul></td>
         <td>INT64</td>
         <td>-</td>
         <td>-</td>
@@ -131,10 +131,10 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
         <td>out（aclTensor*）</td>
         <td>输出</td>
         <td>存储梯度计算结果。</td>
-        <td><a href="../../../docs/zh/context/数据格式.md">数据格式</a>需要与self一致。</td>
+        <td><a href="../../../docs/zh/context/数据格式.md">数据格式</a>需要与self保持一致。</td>
+        <td>与self保持一致</td>
         <td>-</td>
-        <td>-</td>
-        <td>与self一致</td>
+        <td>与self保持一致</td>
         <td>-</td>
       </tr>
       <tr>
@@ -194,10 +194,10 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
       <td>self、target、out的shape不一致。</td>
       </tr>
       <tr>
-      <td>当weightOptional和posWeightOptional不为空指针，其shape不能broadcast到self的shape。</td>
+      <td>当weightOptional和posWeightOptional不为空指针，其shape不能<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape。</td>
       </tr>
       <tr>
-      <td>gradOutput不能broadcast到self的shape。</td>
+      <td>gradOutput不能<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape。</td>
       </tr>
       <tr>
       <td>reduction的值非0,1,2三值之一。</td>

@@ -176,7 +176,7 @@ aclnnStatus aclnnMseLoss(
         <td class="tg-0pky">self、target或out的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>
-        <td class="tg-0pky">self和target的shape无法做broadcast。</td>
+        <td class="tg-0pky">self和target的shape无法做<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>。</td>
       </tr>
       <tr>
         <td class="tg-0pky">self或target的shape超过8维。</td>
@@ -185,7 +185,7 @@ aclnnStatus aclnnMseLoss(
         <td class="tg-0pky">reduction值不在0~2范围之内。</td>
       </tr>
       <tr>
-        <td class="tg-0pky">当reduction的值为0时，self和target做broadcast后的shape与out的shape不一致。</td>
+        <td class="tg-0pky">当reduction的值为0时，self和target做<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>后的shape与out的shape不一致。</td>
       </tr>
       <tr>
         <td class="tg-0pky">当reduction的值为1或2时，out的维度大于0。</td>

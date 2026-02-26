@@ -73,7 +73,7 @@ aclnnStatus aclnnKlDivBackward(
       <td class="tg-0pky">gradOutput（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">梯度反向输入。</td>
-      <td class="tg-0pky">shape需要与self满足broadcast关系。</td>
+      <td class="tg-0pky">shape需要与self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>关系。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -93,7 +93,7 @@ aclnnStatus aclnnKlDivBackward(
       <td class="tg-0pky">target（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">真实的标签。</td>
-      <td class="tg-0pky">shape需要与self满足broadcast关系。</td>
+      <td class="tg-0pky">shape需要与self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>关系。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -184,10 +184,10 @@ aclnnStatus aclnnKlDivBackward(
       <td class="tg-0pky">self、out的数据类型不一致。</td>
     </tr>
     <tr>
-      <td class="tg-0pky">gradOutput的shape不能向self或者target broadcast。</td>
+      <td class="tg-0pky">gradOutput的shape不能向self或者target做<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>。</td>
     </tr>
     <tr>
-      <td class="tg-0pky">target的shape和self的shape不满足broadcast关系。</td>
+      <td class="tg-0pky">target的shape和self的shape不满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>关系。</td>
     </tr>
     <tr>
       <td class="tg-0lax">self的shape与out的shape不相同。</td>

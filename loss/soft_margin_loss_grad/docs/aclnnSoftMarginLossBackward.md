@@ -110,7 +110,7 @@ aclnnStatus aclnnSoftMarginLossBackward(
         <td class="tg-0pky">out（aclTensor*）</td>
         <td class="tg-0pky">输出</td>
         <td class="tg-0pky">计算输出。</td>
-        <td class="tg-0pky">shape为gradOut，self，target的broadcast结果。</td>
+        <td class="tg-0pky">shape为gradOut，self，target的<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>结果。</td>
         <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
         <td class="tg-0pky">ND</td>
         <td class="tg-0pky">1-8</td>
@@ -167,10 +167,10 @@ aclnnStatus aclnnSoftMarginLossBackward(
         <td class="tg-0pky">gradOutput、self、target或out的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>
-        <td class="tg-0lax">gradOutput、self和target、out的shape不满足broadcast规则。</td>
+        <td class="tg-0lax">gradOutput、self和target、out的shape不满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>规则。</td>
       </tr>
       <tr>
-        <td class="tg-0pky">gradOutput、self和target做broadcast后的shape与out不一致。</td>
+        <td class="tg-0pky">gradOutput、self和target做<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>后的shape与out不一致。</td>
       </tr>
     </tbody>
     </table>

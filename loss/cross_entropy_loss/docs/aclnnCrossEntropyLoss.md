@@ -31,7 +31,7 @@
   log\_prob计算公式为：
 
   $$
-  lse_n = log*\sum_{c=1}^{C}exp(x_{n,c})
+  lse_n = log\sum_{c=1}^{C}exp(x_{n,c})
   $$
 
   $$
@@ -146,7 +146,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>输入</td>
     <td>指定被忽略的标签值。</td>
     <td>-</td>
-    <td>-</td>
+    <td>INT64</td>
     <td>-</td>
     <td>-</td>
     <td>-</td>
@@ -156,7 +156,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>输入</td>
     <td>表示计算loss时的平滑量。</td>
     <td>数值在[0.0, 1.0]之间。</td>
-    <td>-</td>
+    <td>DOUBLE</td>
     <td>-</td>
     <td>-</td>
     <td>-</td>
@@ -166,7 +166,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>输入</td>
     <td>表示zloss计算所需的scale。公式中的lse_square_scale_for_zloss。</td>
     <td>数值在[0, 1)之间。当前暂不支持。</td>
-    <td>-</td>
+    <td>DOUBLE</td>
     <td>-</td>
     <td>-</td>
     <td>-</td>
@@ -176,7 +176,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>输入</td>
     <td>控制是否返回zloss输出。</td>
     <td>需要输出zLoss时传入True，否则传入False。当前暂不支持。</td>
-    <td>-</td>
+    <td>BOOL</td>
     <td>-</td>
     <td>-</td>
     <td>-</td>
@@ -185,7 +185,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>lossOut（aclTensor*）</td>
     <td>输出</td>
     <td>表示输出损失。</td>
-    <td>reductionOptional为“None”时，shape为[N]，与input第零维一致；否则shape为[1]。</td>
+    <td>reductionOptional为“none”时，shape为[N]，与input第零维一致；否则shape为[1]。</td>
     <td>与input相同</td>
     <td>ND</td>
     <td>-</td>
@@ -205,7 +205,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>zlossOut（aclTensor*）</td>
     <td>输出</td>
     <td>表示辅助损失。</td>
-    <td>当前暂不支持。</td>
+    <td>当前暂不支持，计算时必须传入，但不参与计算。</td>
     <td>与input相同</td>
     <td>ND</td>
     <td>与lossOut一致</td>
@@ -215,7 +215,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>lseForZlossOut（aclTensor*）</td>
     <td>输出</td>
     <td>表示zloss场景输出给反向的Tensor，lseSquareScaleForZloss为0时输出为None。</td>
-    <td>当前暂不支持。</td>
+    <td>当前暂不支持，计算时必须传入，但不参与计算。</td>
     <td>与input相同</td>
     <td>ND</td>
     <td>(N)</td>

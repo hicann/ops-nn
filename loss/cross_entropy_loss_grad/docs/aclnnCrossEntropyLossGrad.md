@@ -239,7 +239,7 @@ aclnnStatus aclnnCrossEntropyLossGrad(
         <td>输入</td>
         <td>指定被忽略的标签值。</td>
         <td>-</td>
-        <td>-</td>
+        <td>INT64</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -249,7 +249,7 @@ aclnnStatus aclnnCrossEntropyLossGrad(
         <td>输入</td>
         <td>表示计算损失时的平滑量。取值范围在[0.0, 1.0]的浮点数，其中0.0表示不平滑。</td>
         <td>当前仅支持输入0.0。</td>
-        <td>-</td>
+        <td>DOUBLE</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -259,7 +259,7 @@ aclnnStatus aclnnCrossEntropyLossGrad(
         <td>输入</td>
         <td>zloss相关属性，0.0走pytorch原生分支，非0.0走zloss新分支。</td>
         <td>当前暂不支持。</td>
-        <td>-</td>
+        <td>DOUBLE</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>

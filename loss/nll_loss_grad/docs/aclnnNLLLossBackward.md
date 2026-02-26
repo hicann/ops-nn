@@ -140,7 +140,7 @@ aclnnStatus aclnnNLLLossBackward(
         <td>reduction（int64_t）</td>
         <td>输入</td>
         <td>指定损失函数的计算方式。</td>
-        <td><ul>支持0('none')|1('mean')|2('sum')。<li>'none'表示不应用缩减</li><li>'mean'表示输出的总和将除以输出中的元素数</li><li>'sum'表示输出将被求和</li></ul></td>
+        <td><ul>支持0(none)|1(mean)|2(sum)。<li>'none'表示不应用缩减</li><li>'mean'表示输出的总和将除以输出中的元素数</li><li>'sum'表示输出将被求和</li></ul></td>
         <td>INT64</td>
         <td>-</td>
         <td>-</td>

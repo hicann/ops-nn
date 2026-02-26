@@ -73,10 +73,10 @@ aclnnStatus aclnnApplyAdamWV2(
 
 - **参数说明：**
 
-    <table style="undefined;table-layout: fixed; width: 1345px"><colgroup>
+    <table style="undefined;table-layout: fixed; width: 1365px"><colgroup>
     <col style="width: 232px">
     <col style="width: 125px">
-    <col style="width: 225px">
+    <col style="width: 245px">
     <col style="width: 200px">
     <col style="width: 227px">
     <col style="width: 120px">
@@ -98,7 +98,7 @@ aclnnStatus aclnnApplyAdamWV2(
       <tr>
         <td>varRef（aclTensor*）</td>
         <td>输入/输出</td>
-        <td>待计算的权重输入同时也是输出，公式中的theta。</td>
+        <td>待计算的权重输入同时也是输出，公式中的θ。</td>
         <td>-</td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
@@ -128,7 +128,7 @@ aclnnStatus aclnnApplyAdamWV2(
       <tr>
         <td>maxGradNormOptionalRef（aclTensor*）</td>
         <td>输入/输出</td>
-        <td>保存vRef参数的最大值。</td>
+        <td>输入maxGradNormOptionalRef与更新后的vRef比较后，得到的最大值，在maxGradNormOptionalRef输出。</td>
         <td>此参数在amsgrad参数为true时必选，在amsgrad参数为false时可选。</td>
         <td>与“varRef”参数一致。</td>
         <td>ND</td>
@@ -138,7 +138,7 @@ aclnnStatus aclnnApplyAdamWV2(
       <tr>
         <td>grad（aclTensor*）</td>
         <td>输入</td>
-        <td>梯度数据，公式中的gt。</td>
+        <td>梯度数据，公式中的g<sub>t</sub>。</td>
         <td>-</td>
         <td>与“varRef”参数一致。</td>
         <td>ND</td>
@@ -158,7 +158,7 @@ aclnnStatus aclnnApplyAdamWV2(
       <tr>
         <td>lr（double）</td>
         <td>输入</td>
-        <td>学习率，公式中的eta。</td>
+        <td>学习率，公式中的η。</td>
         <td>-</td>
         <td>FLOAT</td>
         <td>-</td>
@@ -168,7 +168,7 @@ aclnnStatus aclnnApplyAdamWV2(
       <tr>
         <td>beta1（double）</td>
         <td>输入</td>
-        <td>beta1参数。</td>
+        <td>β<sub>1</sub>参数。</td>
         <td>-</td>
         <td>FLOAT</td>
         <td>-</td>
@@ -178,7 +178,7 @@ aclnnStatus aclnnApplyAdamWV2(
       <tr>
         <td>beta2（double）</td>
         <td>输入</td>
-        <td>beta2参数。</td>
+        <td>β<sub>2</sub>参数。</td>
         <td>-</td>
         <td>FLOAT</td>
         <td>-</td>
