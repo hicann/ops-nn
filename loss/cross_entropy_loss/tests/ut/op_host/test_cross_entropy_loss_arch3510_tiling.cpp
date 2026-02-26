@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 /*!
- * \file test_cross_entropy_loss_regbase_tiling.cpp
+ * \file test_cross_entropy_loss_arch3510_tiling.cpp
  * \brief
  */
 
@@ -47,12 +47,12 @@ protected:
 
 static void InitPlatForm(
     fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics)
+    map<string, string>& intrinsics, map<string, string>& socVersion)
 {
     string hardwareInfo = R"({
-        "hardware_info": {"UB_SIZE": 253952, "CORE_NUM": 64}
+        "hardware_info": {"UB_SIZE": 253952, "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
-    GetPlatFormInfos(hardwareInfo.c_str(), socInfos, aicoreSpec, intrinsics);
+    GetPlatFormInfos(hardwareInfo.c_str(), socInfos, aicoreSpec, intrinsics, socVersion);
 
     platFormInfo.Init();
 }
@@ -83,7 +83,7 @@ static void DoCrossEntropyLossTilingCase(
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
-    InitPlatForm(platFormInfo, socInfos, aicoreSpec, intrinsics);
+    InitPlatForm(platFormInfo, socInfos, aicoreSpec, intrinsics, soc_version_infos);
 
     // compile info
     struct CrossEntropyLossCompileInfo {
@@ -111,7 +111,7 @@ static void DoCrossEntropyLossTilingCase(
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -155,6 +155,7 @@ static void DoCrossEntropyLossTilingCase(
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
@@ -164,8 +165,6 @@ static void DoCrossEntropyLossTilingCase(
     std::cout << tiling_key << std::endl;
     std::cout << block_dim << std::endl;
     auto raw_tiling_data = tiling_context->GetRawTilingData();
-    auto tiling_data_result = to_string<int64_t>(raw_tiling_data->GetData(), raw_tiling_data->GetDataSize());
-    std::cout << tiling_data_result << std::endl;
 }
 
 TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_fp32_none)

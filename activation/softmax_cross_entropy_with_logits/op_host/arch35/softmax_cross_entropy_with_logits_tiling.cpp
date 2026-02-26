@@ -247,8 +247,8 @@ ge::graphStatus SoftmaxCrossEntropyWithLogitsRegbaseTiling::CalTilingDataRSplit(
     baseTiling_.rLoopTile = rTail == 0 ? baseTiling_.rUbNumFactor : rTail;
     baseTiling_.rLoopTileAlign = Ops::Base::CeilAlign(baseTiling_.rLoopTile, perBlock);
     int64_t mainTile = baseTiling_.rLoopTile == 0 ? baseTiling_.rLoopTime : baseTiling_.rLoopTime - 1;
-    int64_t logK = std::floor(std::log(mainTile) / std::log(2));
-    baseTiling_.kTimes = baseTiling_.rLoopTime == 1 ? 1 : std::exp2(logK);
+    int64_t logK = static_cast<int64_t>(std::floor(std::log(mainTile) / std::log(2)));
+    baseTiling_.kTimes = baseTiling_.rLoopTime == 1 ? 1 : static_cast<int64_t>(std::exp2(logK));
     baseTiling_.kTimesTail = baseTiling_.rLoopTime - baseTiling_.kTimes;
 
     return ge::GRAPH_SUCCESS;
