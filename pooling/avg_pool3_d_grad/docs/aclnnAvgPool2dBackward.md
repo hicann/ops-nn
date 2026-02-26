@@ -207,7 +207,7 @@ aclnnStatus aclnnAvgPool2dBackward(
   </tbody></table>
   <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：参数self、out的数据类型不支持BFLOAT16。
 
-  <term>cubeMathType</term>：支持的枚举值如下：
+  cubeMathType：支持的枚举值如下：
     * 0：KEEP_DTYPE，保持输入的数据类型进行计算。
       * <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：当输入数据类型为FLOAT32时不支持该选项。
     * 1：ALLOW_FP32_DOWN_PRECISION，支持将输入数据降精度计算。
