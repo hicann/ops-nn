@@ -114,7 +114,7 @@ aclnnStatus aclnnConvolutionBackward(
     <tr>
       <td>gradOutput</td>
       <td>输入</td>
-      <td>输出张量y对L的梯度。</a></td>
+      <td>输出张量y对L的梯度。</td>
       <td>  
        <ul><li>支持空Tensor。</li>
        <li>数据类型与input、weight满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推关系</a>和<a href="#约束说明" target="_blank">约束说明</a>）。</li>
@@ -298,7 +298,7 @@ aclnnStatus aclnnConvolutionBackward(
        <ul><li>支持空Tensor。</li>
        <li>数据格式需要与weight一致。</li>
       </td>
-      <td>FLOAT、FLOAT16、BFLOAT16、</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>NCL、NCHW、NCDHW</td>
       <td>-</td>
       <td>×</td>
