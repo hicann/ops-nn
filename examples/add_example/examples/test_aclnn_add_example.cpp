@@ -37,12 +37,14 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape)
 void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr,
  	                const std::vector<float>& selfXHostData, const std::vector<float>& selfYHostData)
 {
-    auto size = GetShapeSize(shape);
+    // If you want to print more data, please modify the code.
+    auto size = std::min(GetShapeSize(shape), static_cast<int64_t>(10));
     std::vector<float> resultData(size, 0);
     auto ret = aclrtMemcpy(
         resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr, size * sizeof(resultData[0]),
         ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
+    LOG_PRINT("Notice: Only printing the first 10 elements. If you need to print more, please modify the code.\n");
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("add_example first input[%ld] is: %f, second input[%ld] is: %f, result[%ld] is: %f\n", i, selfXHostData[i], i, selfYHostData[i], i, resultData[i]);
     }
