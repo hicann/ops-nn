@@ -27,7 +27,8 @@ namespace Cmct {
 namespace Gemm {
 namespace Block {
 
-template <typename L0TileShape_, typename DataTypeOut_, typename DataTypeIn_,
+template <
+    typename L0TileShape_, typename DataTypeOut_, typename DataTypeIn_, typename DispatchPolicy_,
     typename FusionOp_ = DefaultFusion<DataTypeOut_, DataTypeIn_>>
 class BlockEpilogueFixpipe {
 public:
@@ -45,6 +46,7 @@ public:
     using DataTypeOut = DataTypeOut_;
     using DataTypeIn = DataTypeIn_;
     using FusionOp = FusionOp_;
+    using DispatchPolicy = DispatchPolicy_;
 
     static constexpr int64_t l0M = GetIntegralConstant<MNK_M, L0TileShape_>();
     static constexpr int64_t l0N = GetIntegralConstant<MNK_N, L0TileShape_>();
@@ -96,6 +98,9 @@ public:
             0,
             static_cast<int64_t>((N - blockShapeN) * sizeof(DataTypeOut)),
             0};
+        if constexpr (DispatchPolicy::enableRelu && !AscendC::IsSameType<DataTypeOut, bfloat16_t>::value) {
+            AscendC::Relu(ubLocalTmp_, ubLocalTmp_, blockShapeM * blockShapeN);
+        }
         DataCopyPad<DataTypeOut>(outputGlobal_[offset], ubLocalTmp_, copyParams);
     }
 

@@ -38,6 +38,8 @@ protected:
     ge::graphStatus GetTilingData(TilingResult& tiling) const override;
     void DoBL1FullLoad(uint64_t aBatchDimAll = 1UL, uint64_t biasBatchDimAll = 1UL);
     void DoAL1FullLoad(uint64_t bBatchDimAll = 1UL, uint64_t biasBatchDimAll = 1UL);
+    MatMulV3FullLoad fullLoad_ {MatMulV3FullLoad::NONE_FULL_LOAD};
+    MatMulV3L0C2Out l0C2Out_ {MatMulV3L0C2Out::ON_THE_FLY};
 
 private:
     void FullLoadPre();
@@ -47,8 +49,6 @@ private:
     bool CheckBL1FullLoad();
     bool CheckAL1FullLoad();
 
-    MatMulV3FullLoad fullLoad_ {MatMulV3FullLoad::NONE_FULL_LOAD};
-    MatMulV3L0C2Out l0C2Out_ {MatMulV3L0C2Out::ON_THE_FLY};
     uint64_t biasSize_ {0};
     bool isSingleRound_ {false};
     bool isAFullLoad_ {false};

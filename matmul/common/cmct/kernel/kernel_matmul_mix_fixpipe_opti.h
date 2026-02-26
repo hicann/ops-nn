@@ -39,7 +39,6 @@ namespace Cmct {
 namespace Gemm {
 namespace Kernel {
 
-const int16_t FLAG_ID_MAX = 16;
 template <class ProblemShape, class BlockMmadBuilder, class BlockEpilogue, class BlockScheduler, typename Enable = void>
 class KernelMatmulMixFixpipeOpti;
 

@@ -15,16 +15,16 @@
 #ifndef __OP_HOST_FUSED_MATMUL_ASW_BASIC_TILING_H__
 #define __OP_HOST_FUSED_MATMUL_ASW_BASIC_TILING_H__
 
-#include "mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_asw_tiling.h"
+#include "mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_basic_aswt_tiling.h"
 
 namespace optiling {
 namespace fused_matmul {
-using matmul_v3_advanced::MatMulV3AswTiling;
+using matmul_v3_advanced::MatMulV3BasicAswtTiling;
 
-class FusedMatMulAswBasicApiTiling : public MatMulV3AswTiling {
+class FusedMatMulAswBasicApiTiling : public MatMulV3BasicAswtTiling {
 public:
     FusedMatMulAswBasicApiTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
-        : MatMulV3AswTiling(context, cfg){};
+        : MatMulV3BasicAswtTiling(context, cfg){};
 
     ~FusedMatMulAswBasicApiTiling() override = default;
 
@@ -32,7 +32,6 @@ protected:
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
     uint64_t GetTilingKey() const override;
-    ge::graphStatus GetTilingData(TilingResult& tiling) const override;
 };
 } // namespace fused_matmul
 } // namespace optiling

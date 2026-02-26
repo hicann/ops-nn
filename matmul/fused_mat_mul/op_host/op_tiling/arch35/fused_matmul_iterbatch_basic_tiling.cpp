@@ -24,9 +24,6 @@ MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulIterBatchApiTiling, DAV_3510
 
 bool FusedMatMulIterBatchApiTiling::IsCapable()
 {
-    if (args_.batchInfo->batchC <= 1) {
-        return false;
-    }
     bool status = BatchMatMulV3IterBatchBasicApiTiling::IsCapable();
     if (!status) {
         OP_LOGD(args_.opName, "IterBatch model is not supported for this shape");
