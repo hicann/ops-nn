@@ -33,7 +33,7 @@ static constexpr size_t DYNAMIC_OUTPUT_NUM = 4;
 
 // ----------------EmbeddingHashTableExport InferShape Begin-------------------
 graphStatus CheckEmbeddingHashTableExportParams(
-    gert::InferShapeContext* context, int64_t numTable, int64_t numEmbeddingDim)
+    const gert::InferShapeContext* context, int64_t numTable, int64_t numEmbeddingDim)
 {
     OP_CHECK_IF(numTable < 0, OP_LOGE(context->GetNodeName(), "numTable must be equal or greater than 0, but it's %ld", numTable),
         return GRAPH_FAILED);

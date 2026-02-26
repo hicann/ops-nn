@@ -100,7 +100,7 @@ ge::graphStatus Tiling4InitEmbeddingHashTable(gert::TilingContext *context)
     OP_LOGD(context->GetNodeName(), "InitEmbeddingHashTable mode : %ld", static_cast<int64_t>(mode));
     OP_LOGD(context->GetNodeName(), "InitEmbeddingHashTable constantValue : %f", static_cast<float>(*constantValue));
 
-    int64_t bucketValueSize = CeilDiv((uint64_t)(*embeddingDim * sizeof(float)), ADDR_ALING_FACTOR);
+    int64_t bucketValueSize = CeilDiv(static_cast<uint64_t>(*embeddingDim * sizeof(float)), ADDR_ALING_FACTOR);
     int64_t bucketLength = BUCKET_HANDLE_SIZE + BUCKET_COUNTER_SIZE + BUCKET_FLAG_SIZE + bucketValueSize;
     OP_LOGD(context->GetNodeName(), "InitEmbeddingHashTable bucketLength : %ld", static_cast<int64_t>(bucketLength));
 

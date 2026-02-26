@@ -22,6 +22,7 @@ constexpr uint32_t INPUT_KEYS_IDX = 1;
 constexpr uint32_t INPUT_VALUES_IDX = 2;
 constexpr uint32_t ATTR_EMBEDDINGDIM_IDX = 0;
 constexpr uint32_t ATTR_TABLE_SIZE_IDX = 1;
+constexpr uint32_t MAX_UINT32 = 4294967295;
 
 // values support datatype
 static const std::unordered_map<ge::DataType, uint64_t> VALUES_DATA_TYPE_TO_INT{{ge::DataType::DT_FLOAT16, 2},
@@ -43,7 +44,11 @@ ge::graphStatus EmbeddingHashTableApplyAdamWTiling::GetShapeAttrsInfo() {
   auto const keyShape = context_->GetInputShape(INPUT_KEYS_IDX);
   OP_CHECK_NULL_WITH_CONTEXT(context_, keyShape);
   auto const keyShapeVal = keyShape->GetStorageShape();
-  keyNum_ = keyShapeVal.GetShapeSize();
+  int64_t keyShapeSize = keyShapeVal.GetShapeSize();
+  OP_CHECK_IF((keyShapeSize < 0) || (keyShapeSize > MAX_UINT32), OP_LOGE(opName, 
+      "keyShape has a value of %ld, which exceeds the representable range of the uint32_t type.", keyShapeSize), 
+      return ge::GRAPH_FAILED);
+  keyNum_ = static_cast<uint32_t>(keyShapeSize);
 
   auto values = context_->GetInputDesc(INPUT_VALUES_IDX);
   OP_CHECK_NULL_WITH_CONTEXT(context_, values);
