@@ -124,8 +124,8 @@ public:
 
         this->AICore().AddConfig("ascend310p", config_310p);
 
-        OpAICoreConfig config910d;
-        config910d.Input("x1")
+        OpAICoreConfig config950;
+        config950.Input("x1")
             .ParamType(REQUIRED)
             .DataType({ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,
                        ge::DT_INT8,          ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E4M3FN,
@@ -246,7 +246,7 @@ public:
                                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .IgnoreContiguous();
 
-        config910d.Input("x2")
+        config950.Input("x2")
             .ParamType(REQUIRED)
             .DataType({ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,
                        ge::DT_INT8,          ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,
@@ -367,7 +367,7 @@ public:
                                  ge::FORMAT_FRACTAL_NZ, ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ})
             .IgnoreContiguous();
 
-        config910d.Input("scale")
+        config950.Input("scale")
             .ParamType(REQUIRED)
             .DataType({ge::DT_UINT64,      ge::DT_UINT64,      ge::DT_BF16,        ge::DT_FLOAT,       ge::DT_BF16,   
                        ge::DT_FLOAT,       ge::DT_FLOAT,       ge::DT_FLOAT8_E8M0,
@@ -487,7 +487,7 @@ public:
                                  ge::FORMAT_FRACTAL_NZ, ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,
                                  ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND, ge::FORMAT_ND});
 
-        config910d.Input("offset")
+        config950.Input("offset")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
                        ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
@@ -607,7 +607,7 @@ public:
                                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
-        config910d.Input("bias")
+        config950.Input("bias")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
                        ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT,
@@ -727,7 +727,7 @@ public:
                                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
-        config910d.Input("pertoken_scale")
+        config950.Input("pertoken_scale")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_FLOAT,       ge::DT_FLOAT,       ge::DT_FLOAT,       ge::DT_FLOAT,       ge::DT_FLOAT,
                        ge::DT_FLOAT,       ge::DT_FLOAT,       ge::DT_FLOAT8_E8M0,
@@ -847,7 +847,7 @@ public:
                                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
-        config910d.Output("y")
+        config950.Output("y")
             .ParamType(REQUIRED)
             .DataType({ge::DT_INT32,         ge::DT_INT32,         ge::DT_INT32,         ge::DT_INT32,         ge::DT_INT32,
                        ge::DT_INT32,         ge::DT_FLOAT,         ge::DT_FLOAT,
@@ -967,7 +967,7 @@ public:
                                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
-        config910d.DynamicCompileStaticFlag(true)
+        config950.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
@@ -975,7 +975,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("aclnnSupport.value", "support_aclnn")
             .ExtendCfgInfo("opFile.value","quant_batch_matmul_v3_apt");
-        this->AICore().AddConfig("ascend950", config910d);
+        this->AICore().AddConfig("ascend950", config950);
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();
         this->AICore().AddConfig("kirinx90", config_kirin);

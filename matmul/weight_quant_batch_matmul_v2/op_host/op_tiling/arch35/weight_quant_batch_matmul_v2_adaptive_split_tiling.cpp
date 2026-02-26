@@ -138,7 +138,7 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingAS::DoOpTiling()
         InstantiateTilingData() == ge::GRAPH_FAILED,
         VECTOR_INNER_ERR_REPORT_TILIING(opName_, "unable to get pointer of tiling data"), return ge::GRAPH_FAILED);
     if (compileInfoPtr_->socVersion != SocVersion::ASCEND910_55) {
-        // 910D上默认给L1的n轴大小为256
+        // 950上默认给L1的n轴大小为256
         l1NMaxSize_ = 256UL;
     } else {
         // 910_55上默认给L1的n轴大小转置情况下为128，非转置情况下为256

@@ -66,8 +66,8 @@ public:
         this->Attr("level0_group_size").AttrType(OPTIONAL).Int(LEVEL0_GROUP_SIZE);
         this->Attr("level1_group_size").AttrType(OPTIONAL).Int(LEVEL1_GROUP_SIZE);
 
-        OpAICoreConfig config910D;
-        config910D.DynamicCompileStaticFlag(true)
+        OpAICoreConfig config950;
+        config950.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
@@ -75,7 +75,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("aclnnSupport.value", "support_aclnn")
             .ExtendCfgInfo("opFile.value","dual_level_quant_batch_matmul_apt");
-        this->AICore().AddConfig("ascend950", config910D);
+        this->AICore().AddConfig("ascend950", config950);
     }
 
     static constexpr int64_t LEVEL0_GROUP_SIZE = 512L;
