@@ -161,6 +161,13 @@ static bool CheckBroadCast(
         return false;
     }
 
+    if (broadcastShape != bmmLastTwoShape) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "Shape of out should be %s, but current is %s.",
+            op::ToString(bmmLastTwoShape).GetString(), op::ToString(broadcastShape).GetString());
+        return false;
+    }
+
     return true;
 }
 

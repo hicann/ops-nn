@@ -381,7 +381,7 @@ TEST_F(l2_addbmm_test, case_self_broadcast3)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
 TEST_F(l2_addbmm_test, case_self_empty_not_broadcast)
