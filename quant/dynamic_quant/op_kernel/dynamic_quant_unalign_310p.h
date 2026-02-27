@@ -41,6 +41,29 @@ public:
         ProcessWithTailComputeAndCopyOutForUnalign();
     }
 
+    __aicore__ inline void CopyOutUnalign(uint64_t progress, uint32_t calCount)
+    {
+        // deque output tensor from VECOUT queue
+        AscendC::LocalTensor<int8_t> outLocal = outQueue_.DeQue<int8_t>();
+        AscendC::LocalTensor<float> scaleLocal = scaleQueue_.DeQue<float>();
+        AscendC::LocalTensor<float> offsetLocal;
+        if (asymmetric_) {
+            offsetLocal = offsetQueue_.DeQue<float>();
+        }
+        // copy progress_th tile from local tensor to global tensor
+        DataCopy(outGm_[progress * lenCopyRow_], outLocal, calCount);
+        uint32_t realNumRowAlign = (calCount / sizeH_ + DYNAMIC_QUANT_ALIGN_NUM_SCALE - 1) /
+                                   DYNAMIC_QUANT_ALIGN_NUM_SCALE * DYNAMIC_QUANT_ALIGN_NUM_SCALE;
+        DataCopy(scaleGm_[progress * numCopyRow_], scaleLocal, realNumRowAlign);
+        if (asymmetric_) {
+            DataCopy(offsetGm_[progress * numCopyRow_], offsetLocal, realNumRowAlign);
+            offsetQueue_.FreeTensor(offsetLocal);
+        }
+        // free output tensor for reuse
+        outQueue_.FreeTensor(outLocal);
+        scaleQueue_.FreeTensor(scaleLocal);
+    }
+
     __aicore__ inline void ProcessWithTailCopyInForUnalign()
     {
         if (isTailLoop_) {
@@ -56,7 +79,7 @@ public:
             } else {
                 DynamicQuantAlign310p::Compute(numLastTailRow_, sizeH_);
             }
-            DynamicQuantAlign310p::CopyOut(loopCount_, lenLastTail_);
+            CopyOutUnalign(loopCount_, lenLastTail_);
         }
     }
 };

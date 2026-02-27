@@ -190,7 +190,12 @@ private:
         Muls(scaleLocal, scaleLocal, static_cast<float>(1.0f / DYNAMIC_QUANT_MAX_VALUE), calRow);
         AscendC::SetFlag<HardEvent::V_MTE3>(EVENT_ID0);
         AscendC::WaitFlag<HardEvent::V_MTE3>(EVENT_ID0);
-        DataCopy(scaleGm_[progress * this->numCopyRow_], scaleLocal, this->numCopyRow_);
+        uint32_t realNumRowAlign = this->numCopyRow_;
+        if (isTailLoop_) {
+            realNumRowAlign = (calRow + DYNAMIC_QUANT_ALIGN_NUM_SCALE - 1) / DYNAMIC_QUANT_ALIGN_NUM_SCALE *
+                              DYNAMIC_QUANT_ALIGN_NUM_SCALE;
+        }
+        DataCopy(scaleGm_[progress * this->numCopyRow_], scaleLocal, realNumRowAlign);
         // free scale tensor for reuse
         scaleQueue_.FreeTensor(scaleLocal);
     }
