@@ -16,6 +16,7 @@
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/reshape.h"
 #include "aclnn_kernels/transpose.h"
+#include "../../../convolution_forward/op_host/op_api/convolution.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
@@ -88,15 +89,23 @@ static aclnnStatus InputTransProcess(const aclTensor*& inputTensor, const string
                      tensorName.c_str()),
              return ACLNN_ERR_INNER_NULLPTR);
 
-    int64_t valuePerm[4] = {0, 2, 3, 1};
-    auto perm = executor->AllocIntArray(valuePerm, 4);
-    CHECK_RET(perm != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    inputTensor = l0op::Transpose(inputTensor, perm, executor);
-    OP_CHECK(inputTensor != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input preprocess failed, %s with Transpose return nullptr.",
-                     tensorName.c_str()),
-             return ACLNN_ERR_INNER_NULLPTR);
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch != NpuArch::DAV_3510 || tensorName != "weight") {
+        int64_t valuePerm[4] = {0, 2, 3, 1};
+        auto perm = executor->AllocIntArray(valuePerm, 4);
+        CHECK_RET(perm != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        inputTensor = l0op::Transpose(inputTensor, perm, executor);
+        OP_CHECK(inputTensor != nullptr,
+                OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input preprocess failed, %s with Transpose return nullptr.",
+                        tensorName.c_str()),
+                return ACLNN_ERR_INNER_NULLPTR);
+    }
 
+    if (curArch == NpuArch::DAV_3510 && tensorName != "weight") {
+        const_cast<aclTensor *>(inputTensor)->SetStorageFormat(Format::FORMAT_NHWC);
+        const_cast<aclTensor *>(inputTensor)->SetOriginalFormat(Format::FORMAT_NHWC);
+        const_cast<aclTensor *>(inputTensor)->SetViewFormat(Format::FORMAT_NHWC);
+    }
     return ACLNN_SUCCESS;
 }
 
@@ -130,37 +139,42 @@ static aclnnStatus ResultViewProcess(DeformableConv2dInputTensor& inputTensor, C
                                      ConvolutionOutput& outputTensor, aclOpExecutor* executor)
 {
     auto dtype = outputTensor.out->GetDataType();
-    auto res = BiasProcess(inputTensor, resultTensor, executor);
-    CHECK_RET(res == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
-    if (dtype == op::DataType::DT_BF16 || dtype == op::DataType::DT_FLOAT16) {
-        resultTensor.out = l0op::Cast(resultTensor.out, dtype, executor);
-        CHECK_RET(resultTensor.out != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch != NpuArch::DAV_3510) {
+        auto res = BiasProcess(inputTensor, resultTensor, executor);
+        CHECK_RET(res == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+        if (dtype == op::DataType::DT_BF16 || dtype == op::DataType::DT_FLOAT16) {
+            resultTensor.out = l0op::Cast(resultTensor.out, dtype, executor);
+            CHECK_RET(resultTensor.out != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
+        int64_t outPerm[4] = {0, 2, 1, 3};
+        auto outPermArray = executor->AllocIntArray(outPerm, 4);
+        CHECK_RET(outPermArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        resultTensor.out = l0op::Transpose(resultTensor.out, outPermArray, executor);
+        OP_CHECK(resultTensor.out != nullptr,
+                OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The output viewprocess failed, out with Transpose return nullptr."),
+                return ACLNN_ERR_INNER_NULLPTR);
     }
-    int64_t outPerm[4] = {0, 2, 1, 3};
-    auto outPermArray = executor->AllocIntArray(outPerm, 4);
-    CHECK_RET(outPermArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    resultTensor.out = l0op::Transpose(resultTensor.out, outPermArray, executor);
-    OP_CHECK(resultTensor.out != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The output viewprocess failed, out with Transpose return nullptr."),
-             return ACLNN_ERR_INNER_NULLPTR);
     auto resultOut = l0op::ViewCopy(resultTensor.out, outputTensor.out, executor);
     OP_CHECK(resultOut != nullptr,
              OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The output viewprocess failed, out with ViewCopy return nullptr."),
              return ACLNN_ERR_INNER_NULLPTR);
 
     if (outputTensor.deformOutOptional != nullptr) {
-        if (dtype == op::DataType::DT_BF16 || dtype == op::DataType::DT_FLOAT16) {
-            resultTensor.deformOutOptional = l0op::Cast(resultTensor.deformOutOptional, dtype, executor);
-            CHECK_RET(resultTensor.deformOutOptional != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        if (curArch != NpuArch::DAV_3510) {
+            if (dtype == op::DataType::DT_BF16 || dtype == op::DataType::DT_FLOAT16) {
+                resultTensor.deformOutOptional = l0op::Cast(resultTensor.deformOutOptional, dtype, executor);
+                CHECK_RET(resultTensor.deformOutOptional != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            }
+            int64_t deformOutPerm[4] = {0, 3, 1, 2};
+            auto perm = executor->AllocIntArray(deformOutPerm, 4);
+            CHECK_RET(perm != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            resultTensor.deformOutOptional = l0op::Transpose(resultTensor.deformOutOptional, perm, executor);
+            OP_CHECK(resultTensor.deformOutOptional != nullptr,
+                    OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
+                            "The output viewprocess failed, deformableOut with Transpose return nullptr."),
+                    return ACLNN_ERR_INNER_NULLPTR);
         }
-        int64_t deformOutPerm[4] = {0, 3, 1, 2};
-        auto perm = executor->AllocIntArray(deformOutPerm, 4);
-        CHECK_RET(perm != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        resultTensor.deformOutOptional = l0op::Transpose(resultTensor.deformOutOptional, perm, executor);
-        OP_CHECK(resultTensor.deformOutOptional != nullptr,
-                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-                         "The output viewprocess failed, deformableOut with Transpose return nullptr."),
-                 return ACLNN_ERR_INNER_NULLPTR);
         auto resultDeformableOut =
             l0op::ViewCopy(resultTensor.deformOutOptional, outputTensor.deformOutOptional, executor);
         OP_CHECK(resultDeformableOut != nullptr,
@@ -168,6 +182,68 @@ static aclnnStatus ResultViewProcess(DeformableConv2dInputTensor& inputTensor, C
                          "The output viewprocess failed, deformableOut with ViewCopy return nullptr."),
                  return ACLNN_ERR_INNER_NULLPTR);
     }
+    return ACLNN_SUCCESS;
+}
+
+static aclIntArray* ResetParams(const aclIntArray* inputArray, int64_t newValue, aclOpExecutor* executor) {
+    int64_t data[DIM_FOUR];
+    data[INDEX_ZERO] = newValue;
+    data[INDEX_ONE] = newValue;
+    data[INDEX_TWO] = newValue;
+    data[INDEX_THREE] = newValue;
+    aclIntArray *newArray = executor->AllocIntArray(data, DIM_FOUR);
+    return newArray;
+}
+
+static aclIntArray* ParamsTranspose(const aclIntArray* inputArray, aclOpExecutor* executor) {
+    int64_t data[DIM_FOUR];
+    data[INDEX_ZERO] = (*inputArray)[INDEX_ZERO];
+    data[INDEX_ONE] = (*inputArray)[INDEX_TWO];
+    data[INDEX_TWO] = (*inputArray)[INDEX_THREE];
+    data[INDEX_THREE] = (*inputArray)[INDEX_ONE];
+    aclIntArray *newArray = executor->AllocIntArray(data, DIM_FOUR);
+    return newArray;
+}
+
+static aclnnStatus DeformableConv2dV2(DeformableConv2dInputTensor& inputTensor, ConvolutionOutput& outputTensor,
+                                     DeformableConv2dParams& params, aclOpExecutor* executor)
+{
+    params.stride = ParamsTranspose(params.stride, executor);
+    params.dilation = ParamsTranspose(params.dilation, executor);
+    OP_CHECK_NULL(params.stride, return ACLNN_ERR_INNER_NULLPTR);
+    OP_CHECK_NULL(params.dilation, return ACLNN_ERR_INNER_NULLPTR);
+    auto deformOut = l0op::DeformableOffsetsNHWC(inputTensor.input, inputTensor.offset, params.kernelSize,
+                                                    outputTensor.out->GetDataType(), params.stride,
+                                                    params.padding, params.dilation,
+                                                    params.deformableGroups, params.modulated, executor);
+    int64_t deformOutPerm[4] = {0, 3, 1, 2};
+    auto perm = executor->AllocIntArray(deformOutPerm, 4);
+    CHECK_RET(perm != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    deformOut = l0op::Transpose(deformOut, perm, executor);
+    OP_CHECK(deformOut != nullptr,
+                OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
+                        "DeformableOut with Transpose return nullptr."),
+                return ACLNN_ERR_INNER_NULLPTR);
+    const_cast<aclTensor *>(deformOut)->SetStorageFormat(Format::FORMAT_NCHW);
+    const_cast<aclTensor *>(deformOut)->SetOriginalFormat(Format::FORMAT_NCHW);
+    const_cast<aclTensor *>(deformOut)->SetViewFormat(Format::FORMAT_NCHW);
+    params.padding = ResetParams(params.padding, 0, executor);
+    params.dilation = ResetParams(params.dilation, 1, executor);
+    OP_CHECK_NULL(params.padding, return ACLNN_ERR_INNER_NULLPTR);
+    OP_CHECK_NULL(params.dilation, return ACLNN_ERR_INNER_NULLPTR);
+    int64_t newStride[KERNEL_ARRAY_DIM_SIZE];
+    newStride[INDEX_ZERO] = (*params.kernelSize)[INDEX_ZERO];
+    newStride[INDEX_ONE] = (*params.kernelSize)[INDEX_ONE];
+    aclIntArray *newStrideArray = executor->AllocIntArray(newStride, KERNEL_ARRAY_DIM_SIZE);
+    OP_CHECK_NULL(newStrideArray, return ACLNN_ERR_INNER_NULLPTR);
+    const aclTensor* tmpOut = l0op::Conv2dV2NCHW(deformOut, inputTensor.weight, inputTensor.biasOptional,
+                                                    outputTensor.out->GetDataType(), newStrideArray,
+                                                    params.padding, params.dilation, params.groups,
+                                                    false, executor);
+    ConvolutionResult resultTensor = {tmpOut, deformOut};
+    auto result = ResultViewProcess(inputTensor, resultTensor, outputTensor, executor);
+    CHECK_RET(result == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+    OP_LOGD("After CalculateDeformableConv2d");
     return ACLNN_SUCCESS;
 }
 
@@ -180,6 +256,11 @@ static aclnnStatus CalculateDeformableConv2d(DeformableConv2dInputTensor& inputT
     if (inputTensor.biasOptional != nullptr) {
         CHECK_RET(InputProcess(inputTensor.biasOptional, "biasOptional", executor) == ACLNN_SUCCESS,
                   ACLNN_ERR_INNER_NULLPTR);
+    }
+
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_3510) {
+        return DeformableConv2dV2(inputTensor, outputTensor, params, executor);
     }
 
     auto dtype = inputTensor.input->GetDataType();
@@ -243,9 +324,15 @@ static bool CheckDtypeValid(DeformableConv2dInputTensor& inputTensor, Convolutio
 static bool CheckFormat(DeformableConv2dInputTensor& inputTensor, ConvolutionOutput& outputTensor)
 {
     // 如果输入格式不满足格式要求，记录日志，直接报错
-    OP_CHECK(inputTensor.input->GetStorageFormat() == Format::FORMAT_NCHW ||
-                 inputTensor.input->GetStorageFormat() == Format::FORMAT_ND,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x Format only support NCHW or ND."), return false);
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_3510) {
+        OP_CHECK(inputTensor.input->GetStorageFormat() == Format::FORMAT_NCHW,
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x Format only support NCHW or ND."), return false);
+    } else {
+        OP_CHECK(inputTensor.input->GetStorageFormat() == Format::FORMAT_NCHW ||
+                    inputTensor.input->GetStorageFormat() == Format::FORMAT_ND,
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x Format only support NCHW or ND."), return false);
+    }
 
     OP_CHECK(inputTensor.offset->GetStorageFormat() == inputTensor.input->GetStorageFormat(),
              OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of offset and x should be equal."), return false);

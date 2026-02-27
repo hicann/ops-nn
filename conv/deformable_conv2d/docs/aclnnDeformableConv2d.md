@@ -6,7 +6,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
@@ -372,6 +372,31 @@ aclnnStatus aclnnDeformableConv2d(
 
 - 确定性计算：
   - aclnnDeformableConv2d默认确定性实现。
+
+<table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+    <col style="width:150px">
+    <col style="width:450px">
+    <col style="width:550px">
+    </colgroup>
+   <thead>
+    <tr>
+     <th><term>参数名</term></th>
+     <th><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
+     <th><term>Ascend 950PR/Ascend 950DT</term></th>
+   </tr>
+   </thead>
+   <tbody>
+   <tr>
+     <th scope="row">input、weight、offset、out、deformOutOptional</th>
+     <td>
+           数据格式支持ND、NCHW。
+     </td>
+     <td>
+           数据格式仅支持NCHW。
+     </td>
+   </tr>
+   </tbody>
+  </table>
 
 ## 调用示例
 

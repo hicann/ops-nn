@@ -21,6 +21,11 @@ const std::tuple<aclTensor*, aclTensor*> DeformableConv2d(const aclTensor* x, co
                                                           const aclIntArray* padding, const aclIntArray* dilation,
                                                           int64_t groups, int64_t deformableGroups, bool modulated,
                                                           aclOpExecutor* executor);
+
+const aclTensor *DeformableOffsetsNHWC(const aclTensor *x, const aclTensor *offset, const aclIntArray *kernelSize,
+                                       op::DataType outputDtype, const aclIntArray *stride,const aclIntArray *padding,
+                                       const aclIntArray *dilation, int64_t deformableGroups, bool modulated,
+                                       aclOpExecutor* executor);
 }  // namespace l0op
 
 #endif  // OP_API_INC_LEVEL0_DEFORMABLE_CONV2D_
