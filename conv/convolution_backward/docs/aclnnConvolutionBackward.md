@@ -556,7 +556,7 @@ aclnnStatus aclnnConvolutionBackward(
    <tr>
      <th scope="row">cubeMathType说明</th>
      <td colspan="2">
-        <ul><li>枚举值为0：暂无说明。</li>
+        <ul><li>枚举值为0：暂无约束。</li>
         <li>枚举值为1：当输入是FLOAT，转换为HFLOAT32计算。当输入为其他数据类型时不做处理。</li>
         <li>枚举值为2：当输入是BFLOAT16时不支持该选项。当输入为其他数据类型时不做处理。</li>
         <li>枚举值为3：当输入是FLOAT，转换为HFLOAT32计算。当输入为其他数据类型时不做处理。</li>
@@ -565,7 +565,7 @@ aclnnStatus aclnnConvolutionBackward(
      <td>
         <ul><li>枚举值为0：当输入是FLOAT，Cube计算单元暂不支持，取0时会报错。</li>
         <li>枚举值为1：当输入是FLOAT，转换为FLOAT16计算。当输入为其他数据类型时不做处理。</li>
-        <li>枚举值为2：暂无说明。</li>
+        <li>枚举值为2：暂无约束。</li>
         <li>枚举值为3：当输入是FLOAT，Cube计算单元暂不支持。</li>
         </ul>
      </td>
