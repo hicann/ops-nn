@@ -539,10 +539,13 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
     IDX_T curLastIdx = -2; // 确保本核最后放到workspace的indices是升序的
     IDX_T curLastCount = 0;
     for (int64_t i = 0; i < arNum; i++) {
+        if (idxOffset >= indices.GetSize()) {
+            break;
+        }
         IDX_T idx = indices(idxOffset);
         IDX_T interval = noDupCountTensor(i);
         idxOffset = idxOffset + interval;
-        if (idx == tiling_.paddingIdx || idx < 0 || idx >= tiling_.numWeights) {
+        if (idx == tiling_.paddingIdx || static_cast<uint64_t>(idx) >= tiling_.numWeights) {
             continue;
         }
 
