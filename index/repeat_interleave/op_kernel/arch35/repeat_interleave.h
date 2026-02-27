@@ -189,7 +189,7 @@ __aicore__ inline void RepeatInterleaveImpl<T, U>::CopyOneCpToRepeatOut(
         }
         AscendC::MicroAPI::DataCopyUnAlignPost(xOutLocalPtr, uOut, 0);
     }
-    copyFromXNum_ += dataCount;
+
     copyToMatchOutNum_ += repeatTimes * dataCount;
     xOutQueue_.EnQue(xOutLocal);
     return;
@@ -226,6 +226,7 @@ __aicore__ inline void RepeatInterleaveImpl<T, U>::CopyXToMatchOut(int64_t start
             xOutQueue_.EnQue(xOutLocal);
         }
         CopyOneCpToRepeatOut(xInLocal, tailRepeatTimes);
+        copyFromXNum_ += tilingData_.mergedDims[2];
     }
     xInQueue_.FreeTensor(xInLocal);
     return;
