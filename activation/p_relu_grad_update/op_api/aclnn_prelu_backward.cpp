@@ -142,6 +142,7 @@ aclnnStatus CalcPreluBackwardL0Kernel(const aclTensor *contiguousGradOutput,
                                       const aclTensor *contiguousWeight,
                                       const aclTensor *&preluGradInput,
                                       const aclTensor *&preluGradReduceOut,
+                                      const op::Shape &originalSelfShape,
                                       UniqueExecutor &uniqueExecutor) {
   // 调用PReluGradUpdate算子kernel
   auto preluGradUpdateOut = l0op::PReluGradUpdate(contiguousGradOutput, contiguousSelf, contiguousWeight,
@@ -157,8 +158,8 @@ aclnnStatus CalcPreluBackwardL0Kernel(const aclTensor *contiguousGradOutput,
   CHECK_RET(preluGradReduceOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
   // dx和x的shape如果不相等，需要reshape
-  if (preluGradInput->GetViewShape() != contiguousSelf->GetViewShape()){
-    preluGradInput = l0op::Reshape(preluGradInput, contiguousSelf->GetViewShape(), uniqueExecutor.get());
+  if (preluGradInput->GetViewShape() != originalSelfShape){
+    preluGradInput = l0op::Reshape(preluGradInput, originalSelfShape, uniqueExecutor.get());
     CHECK_RET(preluGradInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
   }
 
@@ -220,7 +221,7 @@ aclnnStatus aclnnPreluBackwardGetWorkspaceSize(const aclTensor *gradOutput,
   const aclTensor *preluGradReduceOut = nullptr;
 
   CHECK_RET(CalcPreluBackwardL0Kernel(contiguousGradOutput, contiguousSelf, contiguousWeight,
-                preluGradInput, preluGradReduceOut, uniqueExecutor) == ACLNN_SUCCESS,
+                preluGradInput, preluGradReduceOut, originalSelfShape, uniqueExecutor) == ACLNN_SUCCESS,
             ACLNN_ERR_INNER_NULLPTR);
 
   // 固定写法，将计算结果拷贝到输出gradInput上, gradInput可能是非连续的tensor
