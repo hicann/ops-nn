@@ -122,7 +122,7 @@ const aclTensor *Conv3DBackpropInputFp162Fp16(const aclTensor *input, const aclT
                                               const aclIntArray *padding, const aclIntArray *dilation, int groups,
                                               aclOpExecutor *executor);
 
-// Ascend910D: adapt Tensor between 3D and 2D. Other platform will return directly.
+// Ascend950: adapt Tensor between 3D and 2D. Other platform will return directly.
 const aclTensor *AdapterTensor(const aclTensor *tensor, aclOpExecutor *executor, size_t inputDim, size_t targetDim);
 
 // 1971 6HD->FZ with Fp32

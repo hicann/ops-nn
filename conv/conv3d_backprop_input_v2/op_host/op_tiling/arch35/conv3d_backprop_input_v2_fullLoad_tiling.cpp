@@ -52,7 +52,7 @@ bool Conv3DDXV2FullLoadTiling::IsCapable()
         return false;
     }
 
-    // 根据910D理论建模，只有MTE2 Bound或者FIXP Bound场景走全载，减少载入量或者开PingPong掩盖写出
+    // 根据950理论建模，只有MTE2 Bound或者FIXP Bound场景走全载，减少载入量或者开PingPong掩盖写出
     // 对MTE2带宽要求最高的为1*1卷积，MN/(M+N)计算密度要求512以上
     // FIXP耗时大于CUBE耗时的理论值为82，考虑到FIXP流水掩盖收益和实际场景命中，取阈值128
     bool isMTE2BoundThreshold = (tilingRunInfo_.mValue * tilingRunInfo_.nValue) <

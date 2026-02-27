@@ -171,7 +171,7 @@ protected:
 
     void InitBaseMNK();
 
-    void InitBaseBlock910D();
+    void InitBaseBlock();
 
     void UpdateStepMNK();
 

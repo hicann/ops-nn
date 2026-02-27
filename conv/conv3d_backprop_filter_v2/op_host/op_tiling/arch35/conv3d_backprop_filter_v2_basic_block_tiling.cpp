@@ -267,7 +267,7 @@ void Conv3DDWV2BasicBlockTilingArch35::UpdateSingleCoreInfo()
     }
 }
 
-void Conv3DDWV2BasicBlockTilingArch35::InitBaseBlock910D()
+void Conv3DDWV2BasicBlockTilingArch35::InitBaseBlock()
 {
     if (mmInfo_.mValue > BASIC_BLOCK_SIZE_256) {
         blockTiling_.blockBaseM = Ops::Base::CeilAlign(
@@ -333,7 +333,7 @@ uint64_t Conv3DDWV2BasicBlockTilingArch35::GetBaseK(uint64_t baseM, uint64_t bas
 void Conv3DDWV2BasicBlockTilingArch35::InitBaseMNK()
 {
     if (IsSocVersion91095()) {
-        InitBaseBlock910D();
+        InitBaseBlock();
     }
 }
 
