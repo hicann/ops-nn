@@ -66,7 +66,7 @@ TEST_F(dequant_swiglu_quant_test, test_dequant_swiglu_quant_1)
     uint8_t *scale = (uint8_t *)AscendC::GmAlloc(inDimx * 1 * sizeof(int32_t));
 
     uint64_t tilingKey = 0;
-    uint32_t blockDim = 36;
+    uint32_t blockDim = 24;
     size_t workspaceFileSize = 32;
     size_t tilingDataSize = sizeof(DequantSwigluQuantBaseTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -135,7 +135,7 @@ TEST_F(dequant_swiglu_quant_test, test_dequant_swiglu_quant_2)
     uint8_t *scale = (uint8_t *)AscendC::GmAlloc(scaleSize);
 
     uint64_t tilingKey = 100000000;
-    uint32_t blockDim = 36;
+    uint32_t blockDim = 24;
     size_t workspaceFileSize = 32;
     size_t tilingDataSize = sizeof(DequantSwigluQuantBaseTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -206,7 +206,7 @@ TEST_F(dequant_swiglu_quant_test, test_dequant_swiglu_quant_3)
     uint8_t *scale = (uint8_t *)AscendC::GmAlloc(scaleSize);
 
     uint64_t tilingKey = 100000200;
-    uint32_t blockDim = 36;
+    uint32_t blockDim = 24;
     size_t workspaceFileSize = 32;
     size_t tilingDataSize = sizeof(DequantSwigluQuantBaseTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -277,7 +277,7 @@ TEST_F(dequant_swiglu_quant_test, test_dequant_swiglu_quant_4)
     uint8_t *scale = (uint8_t *)AscendC::GmAlloc(scaleSize);
 
     uint64_t tilingKey = 100000100;
-    uint32_t blockDim = 36;
+    uint32_t blockDim = 24;
     size_t workspaceFileSize = 32;
     size_t tilingDataSize = sizeof(DequantSwigluQuantBaseTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -348,7 +348,7 @@ TEST_F(dequant_swiglu_quant_test, test_activationScale_None_dynamic)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(ySize);
     uint8_t *scale = (uint8_t *)AscendC::GmAlloc(scaleSize);
 
-    uint32_t blockDim = 36;
+    uint32_t blockDim = 24;
     size_t workspaceFileSize = 32;
     size_t tilingDataSize = sizeof(DequantSwigluQuantBaseTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -415,7 +415,7 @@ TEST_F(dequant_swiglu_quant_test, test_activationScale_None_static)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(ySize);
     uint8_t *scale = (uint8_t *)AscendC::GmAlloc(scaleSize);
 
-    uint32_t blockDim = 36;
+    uint32_t blockDim = 24;
     size_t workspaceFileSize = 32;
     size_t tilingDataSize = sizeof(DequantSwigluQuantBaseTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -482,7 +482,7 @@ TEST_F(dequant_swiglu_quant_test, test_activationScale_None_static_quantIsOne)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(ySize);
     uint8_t *scale = (uint8_t *)AscendC::GmAlloc(scaleSize);
 
-    uint32_t blockDim = 36;
+    uint32_t blockDim = 24;
     size_t workspaceFileSize = 32;
     size_t tilingDataSize = sizeof(DequantSwigluQuantBaseTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -1443,7 +1443,7 @@ TEST_F(dequant_swiglu_quant_test, test_case_DynamicBiasInt32_36_perf) {
     uint8_t* y1 = (uint8_t*)AscendC::GmAlloc(output2ByteSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-    uint32_t blockDim = 32;
+    uint32_t blockDim = 24;
 
     char* path_ = get_current_dir_name();
     string path(path_);
@@ -1800,7 +1800,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_int32_qs_f32)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(ySize);
     uint8_t *scale = (uint8_t *)AscendC::GmAlloc(scaleSize);
 
-    uint32_t blockDim = 36;
+    uint32_t blockDim = 24;
     size_t workspaceFileSize = 32;
     size_t tilingDataSize = sizeof(DequantSwigluQuantBaseTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -1867,7 +1867,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_int32_qs_f16)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(ySize);
     uint8_t *scale = (uint8_t *)AscendC::GmAlloc(scaleSize);
 
-    uint32_t blockDim = 36;
+    uint32_t blockDim = 24;
     size_t workspaceFileSize = 32;
     size_t tilingDataSize = sizeof(DequantSwigluQuantBaseTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -1934,7 +1934,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_int32_qs_bf16)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(ySize);
     uint8_t *scale = (uint8_t *)AscendC::GmAlloc(scaleSize);
 
-    uint32_t blockDim = 36;
+    uint32_t blockDim = 24;
     size_t workspaceFileSize = 32;
     size_t tilingDataSize = sizeof(DequantSwigluQuantBaseTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -2001,7 +2001,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_f32_qs_f32)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(ySize);
     uint8_t *scale = (uint8_t *)AscendC::GmAlloc(scaleSize);
 
-    uint32_t blockDim = 36;
+    uint32_t blockDim = 24;
     size_t workspaceFileSize = 32;
     size_t tilingDataSize = sizeof(DequantSwigluQuantBaseTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -2068,7 +2068,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_f32_qs_f16)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(ySize);
     uint8_t *scale = (uint8_t *)AscendC::GmAlloc(scaleSize);
 
-    uint32_t blockDim = 36;
+    uint32_t blockDim = 24;
     size_t workspaceFileSize = 32;
     size_t tilingDataSize = sizeof(DequantSwigluQuantBaseTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -2135,7 +2135,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_f32_qs_bf16)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(ySize);
     uint8_t *scale = (uint8_t *)AscendC::GmAlloc(scaleSize);
 
-    uint32_t blockDim = 36;
+    uint32_t blockDim = 24;
     size_t workspaceFileSize = 32;
     size_t tilingDataSize = sizeof(DequantSwigluQuantBaseTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -2202,7 +2202,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_f16_qs_f32)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(ySize);
     uint8_t *scale = (uint8_t *)AscendC::GmAlloc(scaleSize);
 
-    uint32_t blockDim = 36;
+    uint32_t blockDim = 24;
     size_t workspaceFileSize = 32;
     size_t tilingDataSize = sizeof(DequantSwigluQuantBaseTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -2269,7 +2269,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_f16_qs_f16)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(ySize);
     uint8_t *scale = (uint8_t *)AscendC::GmAlloc(scaleSize);
 
-    uint32_t blockDim = 36;
+    uint32_t blockDim = 24;
     size_t workspaceFileSize = 32;
     size_t tilingDataSize = sizeof(DequantSwigluQuantBaseTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -2336,7 +2336,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_f16_qs_bf16)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(ySize);
     uint8_t *scale = (uint8_t *)AscendC::GmAlloc(scaleSize);
 
-    uint32_t blockDim = 36;
+    uint32_t blockDim = 24;
     size_t workspaceFileSize = 32;
     size_t tilingDataSize = sizeof(DequantSwigluQuantBaseTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -2403,7 +2403,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_bf16_qs_f32)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(ySize);
     uint8_t *scale = (uint8_t *)AscendC::GmAlloc(scaleSize);
 
-    uint32_t blockDim = 36;
+    uint32_t blockDim = 24;
     size_t workspaceFileSize = 32;
     size_t tilingDataSize = sizeof(DequantSwigluQuantBaseTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -2470,7 +2470,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_bf16_qs_f16)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(ySize);
     uint8_t *scale = (uint8_t *)AscendC::GmAlloc(scaleSize);
 
-    uint32_t blockDim = 36;
+    uint32_t blockDim = 24;
     size_t workspaceFileSize = 32;
     size_t tilingDataSize = sizeof(DequantSwigluQuantBaseTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -2537,7 +2537,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_bf16_qs_bf16)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(ySize);
     uint8_t *scale = (uint8_t *)AscendC::GmAlloc(scaleSize);
 
-    uint32_t blockDim = 36;
+    uint32_t blockDim = 24;
     size_t workspaceFileSize = 32;
     size_t tilingDataSize = sizeof(DequantSwigluQuantBaseTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -2603,7 +2603,7 @@ TEST_F(dequant_swiglu_quant_test, test_dequant_swiglu_quant_more_expert_fewer_to
     uint8_t *scale = (uint8_t *)AscendC::GmAlloc(inDimx * 1 * sizeof(int32_t));
 
     uint64_t tilingKey = 0;
-    uint32_t blockDim = 36;
+    uint32_t blockDim = 24;
     size_t workspaceFileSize = 32;
     size_t tilingDataSize = sizeof(DequantSwigluQuantBaseTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);

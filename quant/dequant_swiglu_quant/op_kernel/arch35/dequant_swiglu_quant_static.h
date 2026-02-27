@@ -517,10 +517,20 @@ __aicore__ inline void DequantSwigluQuantBaseStatic<TActScale, TQuantScale, TGro
       }
       
       // static_quant
-      VF_CALL<StaticQuant>(tmpXPtr, qScalePtr, qOffsetPtr, tmpXPtr, width, xDimPerLoop, repeatTimes,
+      if (tl_->quantIsOne == 1 && hasQuantOffset_) {
+        VF_CALL<StaticQuantWithQuantOffsetOne>(tmpXPtr, qScalePtr, qOffsetPtr, tmpXPtr, width, xDimPerLoop, repeatTimes,
                            sizePerRepeat, xTypeUbAlignB32_, static_cast<uint16_t>(tl_->quantIsOne), hasQuantOffset_);
+      } else if (tl_->quantIsOne == 1 && !hasQuantOffset_) {
+        VF_CALL<StaticQuantWithOne>(tmpXPtr, qScalePtr, qOffsetPtr, tmpXPtr, width, xDimPerLoop, repeatTimes,
+                           sizePerRepeat, xTypeUbAlignB32_, static_cast<uint16_t>(tl_->quantIsOne), hasQuantOffset_);
+      } else if (tl_->quantIsOne != 1 && hasQuantOffset_) {
+        VF_CALL<StaticQuantWithQuantOffset>(tmpXPtr, qScalePtr, qOffsetPtr, tmpXPtr, width, xDimPerLoop, repeatTimes,
+                           sizePerRepeat, xTypeUbAlignB32_, static_cast<uint16_t>(tl_->quantIsOne), hasQuantOffset_);
+      } else if (tl_->quantIsOne != 1 && !hasQuantOffset_) {
+        VF_CALL<StaticQuant>(tmpXPtr, qScalePtr, qOffsetPtr, tmpXPtr, width, xDimPerLoop, repeatTimes,
+                           sizePerRepeat, xTypeUbAlignB32_, static_cast<uint16_t>(tl_->quantIsOne), hasQuantOffset_);
+      }
       
-    
       xActQueue_.FreeTensor(xActLocal);
 
       // cast y
