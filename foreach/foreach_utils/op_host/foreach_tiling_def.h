@@ -24,8 +24,8 @@
 namespace optiling {
 constexpr uint16_t MAX_TENSOR_CONT = 50;
 constexpr uint16_t MAX_CORE_CONT = 50;
-constexpr uint16_t MAX_TENSOR_CONT_910D = 50;
-constexpr uint16_t MAX_CORE_CONT_910D = 80;
+constexpr uint16_t MAX_TENSOR_CONT_950 = 50;
+constexpr uint16_t MAX_CORE_CONT_950 = 80;
 
 BEGIN_TILING_DATA_DEF(ForeachCommonTilingData)
 TILING_DATA_FIELD_DEF(uint64_t, inputsTensorUbSize);
@@ -38,11 +38,11 @@ END_TILING_DATA_DEF;
 
 BEGIN_TILING_DATA_DEF(ForeachSoloTilingDataRegbase)
 TILING_DATA_FIELD_DEF(uint32_t, inputsTensorUbSize);
-TILING_DATA_FIELD_DEF_ARR(int64_t, MAX_TENSOR_CONT_910D, tensorDataCountList);
-TILING_DATA_FIELD_DEF_ARR(uint16_t, MAX_CORE_CONT_910D, tensorStartList);
-TILING_DATA_FIELD_DEF_ARR(uint16_t, MAX_CORE_CONT_910D, tensorEndList);
-TILING_DATA_FIELD_DEF_ARR(int64_t, MAX_CORE_CONT_910D, tensorStartOffsetList);
-TILING_DATA_FIELD_DEF_ARR(int64_t, MAX_CORE_CONT_910D, tensorEndOffsetList);
+TILING_DATA_FIELD_DEF_ARR(int64_t, MAX_TENSOR_CONT_950, tensorDataCountList);
+TILING_DATA_FIELD_DEF_ARR(uint16_t, MAX_CORE_CONT_950, tensorStartList);
+TILING_DATA_FIELD_DEF_ARR(uint16_t, MAX_CORE_CONT_950, tensorEndList);
+TILING_DATA_FIELD_DEF_ARR(int64_t, MAX_CORE_CONT_950, tensorStartOffsetList);
+TILING_DATA_FIELD_DEF_ARR(int64_t, MAX_CORE_CONT_950, tensorEndOffsetList);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(ForeachPowScalarAndTensor, ForeachCommonTilingData)

@@ -61,11 +61,11 @@ protected:
     ge::DataType dataType_ = ge::DT_UNDEFINED;
     ge::DataType scalarDtype_ = ge::DT_UNDEFINED;
     int64_t numBlocks_ = 0;
-    int64_t tensorDataCountList_[MAX_TENSOR_CONT_910D] = {0};
-    uint16_t tensorStartList_[MAX_CORE_CONT_910D] = {0};
-    uint16_t tensorEndList_[MAX_CORE_CONT_910D] = {0};
-    int64_t tensorStartOffsetList_[MAX_CORE_CONT_910D] = {0};
-    int64_t tensorEndOffsetList_[MAX_CORE_CONT_910D] = {0};
+    int64_t tensorDataCountList_[MAX_TENSOR_CONT_950] = {0};
+    uint16_t tensorStartList_[MAX_CORE_CONT_950] = {0};
+    uint16_t tensorEndList_[MAX_CORE_CONT_950] = {0};
+    int64_t tensorStartOffsetList_[MAX_CORE_CONT_950] = {0};
+    int64_t tensorEndOffsetList_[MAX_CORE_CONT_950] = {0};
     int64_t totalDataCount_ = 0;
     uint16_t totalTensorCount_ = 0;
     ForeachSoloTilingDataRegbase foreachSoloTilingData_;

@@ -987,9 +987,9 @@ HPTG5@ops-nn:
   src:
     release:
       style:
-        - ops-nn/foreach/foreach_div_scalar_list/op_host/foreach_div_scalar_list_def.cpp
-        - ops-nn/activation/swi_glu/op_host/swi_glu_def.cpp
-        - ops-nn/norm/group_norm_silu/op_host/group_norm_silu_def.cpp
+        - ops/ops-nn/foreach/foreach_div_scalar_list/op_host/foreach_div_scalar_list_def.cpp
+        - ops/ops-nn/activation/swi_glu/op_host/swi_glu_def.cpp
+        - ops/ops-nn/norm/group_norm_silu/op_host/group_norm_silu_def.cpp
       opensource_style: null
       kernel_style: null
     unrelease:

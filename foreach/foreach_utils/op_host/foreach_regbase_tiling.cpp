@@ -54,10 +54,10 @@ ge::graphStatus ForeachRegbaseTiling::GetShapeAttrsInfo()
         anchorInstanceInfo == nullptr, OP_LOGE(context_, "GetInputInstanceInfo failed."), return ge::GRAPH_FAILED);
     totalTensorCount_ = anchorInstanceInfo->GetInstanceNum();
     OP_CHECK_IF(
-        totalTensorCount_ > MAX_TENSOR_CONT_910D || totalTensorCount_ <= 0,
+        totalTensorCount_ > MAX_TENSOR_CONT_950 || totalTensorCount_ <= 0,
         OP_LOGE(
             context_, "The number of input tensors must not be greater than %hu or smaller than 1, but get [%hu].",
-            MAX_TENSOR_CONT_910D, totalTensorCount_),
+            MAX_TENSOR_CONT_950, totalTensorCount_),
         return ge::GRAPH_FAILED);
     totalDataCount_ = 0;
     dataType_ = ge::DT_UNDEFINED;
@@ -182,7 +182,7 @@ ge::graphStatus ForeachRegbaseTiling::DoOpTiling()
         sizePerElem <= 0, OP_LOGE(context_, "The datatype size is neg: %ld.", sizePerElem), return ge::GRAPH_FAILED);
     int64_t elementsPerBlock = SINGLE_CORE_PROCESS_DATA / sizePerElem;
 
-    numBlocks_ = std::min<uint64_t>(aicoreParams_.numBlocks, MAX_CORE_CONT_910D);
+    numBlocks_ = std::min<uint64_t>(aicoreParams_.numBlocks, MAX_CORE_CONT_950);
     uint32_t tempCoreNum = Ops::Base::CeilDiv(totalDataCount_, elementsPerBlock);
     if (tempCoreNum < numBlocks_) {
         numBlocks_ = tempCoreNum;
