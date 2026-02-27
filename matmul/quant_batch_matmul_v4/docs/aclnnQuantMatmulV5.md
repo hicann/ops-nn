@@ -748,8 +748,8 @@ aclnnStatus aclnnQuantMatmulV5(
     |G-B量化|<li>非转置：(batch, m, k)</li><li>转置：(batch, k, m)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(batch, m, ceil(k / 128))</li><li>转置：(batch, ceil(k / 128), m)</li>|<li>非转置：(batch, ceil(k / 128), ceil(n / 128))</li><li>转置：(batch, ceil(n / 128), ceil(k / 128))</li>|null|[1, 128, 128]|4303356032|
   - 注：上表中gsM、gsK和gsN分别表示groupSizeM、groupSizeK和groupSizeN。
   - G-B量化和B-B量化场景下，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致。
-  - G-B量化下，INT8 量化场景支持可选bias，其余场景不支持。
-  - B-B量化场景下，不支持bias。
+  - G-B量化场景下，仅INT8输入支持bias，其余场景不支持bias。
+  - B-B量化场景下，不支持int8输入，且不支持bias。
 
   </details>
 
