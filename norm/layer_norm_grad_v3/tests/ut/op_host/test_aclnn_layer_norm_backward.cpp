@@ -880,7 +880,7 @@ TEST_F(l2_layer_norm_backward_test, ascend310P_aclnnLayerNormBackward_x_backprop
 }
 
 // gradWeight and gradBias need cast
-TEST_F(l2_layer_norm_backward_test, ascend910D_aclnnLayerNormBackward_float32_nd_float16_nd)
+TEST_F(l2_layer_norm_backward_test, ascend950_aclnnLayerNormBackward_float32_nd_float16_nd)
 {
     vector<int64_t> input_shape = {9, 2, 2, 2};
     vector<int64_t> norm_shape = {2, 2};
@@ -912,7 +912,7 @@ TEST_F(l2_layer_norm_backward_test, ascend910D_aclnnLayerNormBackward_float32_nd
 }
 
 // gradWeight and gradBias not need cast
-TEST_F(l2_layer_norm_backward_test, ascend910D_aclnnLayerNormBackward_float32_nd_float32_nd)
+TEST_F(l2_layer_norm_backward_test, ascend950_aclnnLayerNormBackward_float32_nd_float32_nd)
 {
     vector<int64_t> input_shape = {9, 2, 2, 2};
     vector<int64_t> norm_shape = {2, 2};
@@ -943,7 +943,7 @@ TEST_F(l2_layer_norm_backward_test, ascend910D_aclnnLayerNormBackward_float32_nd
 }
 
 // gradWeight and gradBias all mask
-TEST_F(l2_layer_norm_backward_test, ascend910D_aclnnLayerNormBackward_float32_nd_float32_nd_all_mask)
+TEST_F(l2_layer_norm_backward_test, ascend950_aclnnLayerNormBackward_float32_nd_float32_nd_all_mask)
 {
     vector<int64_t> input_shape = {9, 2, 2, 2};
     vector<int64_t> norm_shape = {2, 2};
@@ -974,7 +974,7 @@ TEST_F(l2_layer_norm_backward_test, ascend910D_aclnnLayerNormBackward_float32_nd
 }
 
 // gradBias mask and gradWeight not need cast
-TEST_F(l2_layer_norm_backward_test, ascend910D_aclnnLayerNormBackward_float32_nd_float16_nd_all_mask)
+TEST_F(l2_layer_norm_backward_test, ascend950_aclnnLayerNormBackward_float32_nd_float16_nd_all_mask)
 {
     vector<int64_t> input_shape = {9, 2, 2, 2};
     vector<int64_t> norm_shape = {2, 2};

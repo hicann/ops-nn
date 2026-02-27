@@ -32,7 +32,7 @@ constexpr int64_t INDEX_3 = 3;
 constexpr int64_t INDEX_4 = 4;
 constexpr int64_t TWO = 2;
 constexpr int64_t THREE = 3;
-constexpr uint32_t TILING_910D_PREFIX = 8000;
+constexpr uint32_t TILING_950_PREFIX = 8000;
 constexpr size_t SHAPE_MAX_DIM_NUM = 8;
 // full-load: 000, welford: 100
 constexpr uint32_t TILING_WELFORD = 100;
@@ -796,7 +796,7 @@ ge::graphStatus AddLayerNormRegbaseTiling::DoOpTiling()
     tilingData_.set_eps(epsilon_);
     tilingData_.set_outputX(needOutputX_);
 
-    tilingKey_ = TILING_910D_PREFIX;
+    tilingKey_ = TILING_950_PREFIX;
     if (isWelford_) {
         tilingKey_ += TILING_WELFORD;
     }

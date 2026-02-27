@@ -690,7 +690,7 @@ static ge::graphStatus TilingPrepare4AddLayerNorm(gert::TilingParseContext* cont
     compileInfo->aivCoreNum_ = ascendcPlatform.GetCoreNumAiv();
     compileInfo->sysWorkspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
     auto npuArch = ascendcPlatform.GetCurNpuArch();
-    compileInfo->isAscend910D_ =
+    compileInfo->isAscend950_ =
         (IsRegbaseSocVersion(context) ||
          npuArch == NpuArch::DAV_5102) ? true : false;
     uint64_t ubSizePlatform;
@@ -700,9 +700,9 @@ static ge::graphStatus TilingPrepare4AddLayerNorm(gert::TilingParseContext* cont
     compileInfo->blockSize_ = Ops::Base::GetUbBlockSize(context);
     OP_LOGD(
         context,
-        "aivCoreNum %ld, ubSize %lu, blockSize %ld, vecRegSize %ld, sysWorkspaceSize %ld, isAscend910D %d",
+        "aivCoreNum %ld, ubSize %lu, blockSize %ld, vecRegSize %ld, sysWorkspaceSize %ld, isAscend950 %d",
         compileInfo->aivCoreNum_, compileInfo->ubSize_, compileInfo->blockSize_, compileInfo->vecRegSize_,
-        compileInfo->sysWorkspaceSize_, compileInfo->isAscend910D_);
+        compileInfo->sysWorkspaceSize_, compileInfo->isAscend950_);
     return ge::GRAPH_SUCCESS;
 }
 

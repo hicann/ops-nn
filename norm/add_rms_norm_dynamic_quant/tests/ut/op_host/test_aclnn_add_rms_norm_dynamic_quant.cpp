@@ -87,7 +87,7 @@ TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend910B_case_002)
 }
 
 //***************************************************************************************************************
-TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend910D_case_001)
+TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend950_case_001)
 {
     auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
     auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
@@ -112,7 +112,7 @@ TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend910D_case_001)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend910D_case_002)
+TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend950_case_002)
 {
     auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
     auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
@@ -137,7 +137,7 @@ TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend910D_case_002)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend910D_case_003)
+TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend950_case_003)
 {
     auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
     auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
@@ -162,7 +162,7 @@ TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend910D_case_003)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend910D_case_004)
+TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend950_case_004)
 {
     auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
     auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);

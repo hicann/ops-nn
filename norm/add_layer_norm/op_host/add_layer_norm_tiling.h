@@ -146,7 +146,7 @@ struct AddLayerNormCompileInfo {
     uint64_t ubSize_ = 0;
     int64_t vecRegSize_ = 0;
     int64_t blockSize_ = 0;
-    bool isAscend910D_ = false;
+    bool isAscend950_ = false;
 };
 } // namespace optiling
 

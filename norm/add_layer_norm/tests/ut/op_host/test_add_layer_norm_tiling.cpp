@@ -72,7 +72,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_001)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -176,7 +176,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_200)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -280,7 +280,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_303)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -384,7 +384,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_302)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -488,7 +488,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_bias_bc)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -593,7 +593,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_bias)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -698,7 +698,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_slice)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -803,7 +803,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_bign)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -908,7 +908,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_sliceext)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -1022,7 +1022,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_special_normal)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -1129,7 +1129,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_normal310)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -1234,7 +1234,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_mix_input_x1)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -1338,7 +1338,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_mix_input_x2)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -1442,7 +1442,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_mix_input_gamma)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -1637,7 +1637,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_special_reduce_1172)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -1742,7 +1742,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_special_reduce_82)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -1847,7 +1847,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_special_reduce_170)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -1951,7 +1951,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_special_reduce_80)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -2055,7 +2055,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_error_shape_001)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -2156,7 +2156,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_error_shape_002)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -2264,7 +2264,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_error_shape_003)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -2367,7 +2367,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_fullload_001)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -2477,7 +2477,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_fullload_002)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -2581,7 +2581,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_fullload_003)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -2688,7 +2688,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_welford_001)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -2794,7 +2794,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_welford_002)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -2896,7 +2896,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_welford_003)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -2998,7 +2998,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_failed_001)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -3095,7 +3095,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_failed_002)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -3192,7 +3192,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_failed_003)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 
@@ -3288,7 +3288,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_failed_004)
         uint64_t ubSize_ = 0;
         uint32_t vecRegSize_ = 0;
         uint32_t blockSize_ = 0;
-        bool isAscend910D_ = false;
+        bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
 

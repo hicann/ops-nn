@@ -152,72 +152,72 @@ public:
         this->AICore().AddConfig("kirinx90", config_310p);
         this->AICore().AddConfig("kirin9030", config_310p);
 
-        OpAICoreConfig config_910d;
-        config_910d.Input("x1")
+        OpAICoreConfig config_950;
+        config_950.Input("x1")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16,
             ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910)
             .AutoContiguous();
-        config_910d.Input("x2")
+        config_950.Input("x2")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
             ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910)
             .AutoContiguous();
-        config_910d.Input("gamma")
+        config_950.Input("gamma")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
             ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910)
             .AutoContiguous();
-        config_910d.Input("beta")
+        config_950.Input("beta")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
             ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910)
             .AutoContiguous();
-        config_910d.Input("bias")
+        config_950.Input("bias")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
             ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910)
             .AutoContiguous();
-        config_910d.Output("y")
+        config_950.Output("y")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
             ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910);
-        config_910d.Output("mean")
+        config_950.Output("mean")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
             ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910);
-        config_910d.Output("rstd")
+        config_950.Output("rstd")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
             ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910);
-        config_910d.Output("x")
+        config_950.Output("x")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
             ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910);
-        config_910d.DynamicCompileStaticFlag(true)
+        config_950.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "add_layer_norm_apt");
-        this->AICore().AddConfig("ascend950", config_910d);
-        this->AICore().AddConfig("mc62cm12a", config_910d);
+        this->AICore().AddConfig("ascend950", config_950);
+        this->AICore().AddConfig("mc62cm12a", config_950);
     }
 };
 
