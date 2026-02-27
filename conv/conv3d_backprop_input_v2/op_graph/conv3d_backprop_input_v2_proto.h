@@ -88,6 +88,9 @@ namespace ge {
  * y: A tensor. It has the same format as out_backprop.
  * The type is float16, bfloat16, float32.
  * The gradients of feature map.
+ * @attention Constraints:
+ * In Ascend 950PR/Ascend 950DT: The behavior of gradient computation in the padding region depends on the input shape.
+ * Depending on the operator optimization strategy, the padding gradients may be directly set to 0.\n
 *@par Third-party framework compatibility
  * Compatible with Tensorflow's conv3d_backprop_input
 */

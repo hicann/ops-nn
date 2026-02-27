@@ -88,6 +88,9 @@ namespace ge {
 
 *@par Outputs:
  * y: A tensor that has the type bfloat16, float16, float32, hifloat8, float8_e4m3fn. It has the same format as "x".
+ * @attention Constraints:
+ * In Ascend 950PR/Ascend 950DT: The behavior of gradient computation in the padding region depends on the input shape.
+ * Depending on the operator optimization strategy, the padding gradients may be directly set to 0.\n
 */
 REG_OP(Conv3DTransposeV2)
     .INPUT(input_size, TensorType({DT_INT32, DT_INT64}))

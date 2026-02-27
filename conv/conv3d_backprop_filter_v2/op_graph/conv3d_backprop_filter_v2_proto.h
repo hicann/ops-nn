@@ -72,7 +72,9 @@ namespace ge {
 
 *@par Outputs:
  * y: A Tensor that has the type float32. The format is NCDHW or NDHWC or DHWCN.
-
+* @attention Constraints:
+ * In Ascend 950PR/Ascend 950DT: The behavior of gradient computation in the padding region depends on the input shape.
+ * Depending on the operator optimization strategy, the padding gradients may be directly set to 0.\n
 *@par Third-party framework compatibility
  * Compatible with Tensorflow's conv3d_backprop_filter
 */
