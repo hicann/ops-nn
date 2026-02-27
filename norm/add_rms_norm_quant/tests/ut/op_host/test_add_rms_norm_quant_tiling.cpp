@@ -354,7 +354,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_003)
     //dlog_setlevel(0, 3, 0);
 }
 
-TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut)
+TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172)
 {
     //dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{2, 1, 256}, {2, 1, 256}};
@@ -465,7 +465,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 1170);
+    ASSERT_EQ(tiling_key, 1172);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -822,7 +822,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed)
     //dlog_setlevel(0, 3, 0);
 }
 
-TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut_hifloat8)
+TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172_hifloat8)
 {
     //dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{2, 1, 256}, {2, 1, 256}};
@@ -934,7 +934,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut_hifloat8)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 1170);
+    ASSERT_EQ(tiling_key, 1172);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -1294,7 +1294,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_hif
     //dlog_setlevel(0, 3, 0);
 }
 
-TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut_float8_e5m2)
+TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172_float8_e5m2)
 {
     //dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{2, 1, 256}, {2, 1, 256}};
@@ -1406,7 +1406,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut_float8_e5m
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 1170);
+    ASSERT_EQ(tiling_key, 1172);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -1766,7 +1766,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_flo
     //dlog_setlevel(0, 3, 0);
 }
 
-TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut_float8_e4m3fn)
+TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172_float8_e4m3fn)
 {
     //dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{2, 1, 256}, {2, 1, 256}};
@@ -1877,7 +1877,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut_float8_e4m
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 1170);
+    ASSERT_EQ(tiling_key, 1172);
     //dlog_setlevel(0, 3, 0);
 }
 

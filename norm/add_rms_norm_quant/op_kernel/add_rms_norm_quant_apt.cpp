@@ -14,6 +14,7 @@
  */
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
 #include "arch35/add_rms_norm_quant_regbase.h"
+#include "arch35/add_rms_norm_quant_regbase_perf.h"
 #include "arch35/add_rms_norm_quant_regbase_split_reduce.h"
 #else
 #include "add_rms_norm_quant.h"
@@ -62,6 +63,12 @@ extern "C" __global__ __aicore__ void add_rms_norm_quant(
         } else if (TILING_KEY_IS(1101)) {
             KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 101> op(&pipe);
             INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1002)) {
+            KernelAddRmsNormQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 2> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1102)) {
+            KernelAddRmsNormQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 102> op(&pipe);
+            INIT_AND_PROCESS;
         }
     #endif
     #if !defined(ORIG_DTYPE_SCALES2) && !defined(ORIG_DTYPE_ZERO_POINTS1) && defined(ORIG_DTYPE_ZERO_POINTS2)
@@ -76,6 +83,12 @@ extern "C" __global__ __aicore__ void add_rms_norm_quant(
             INIT_AND_PROCESS;
         } else if (TILING_KEY_IS(1111)) {
             KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 111> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1012)) {
+            KernelAddRmsNormQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 12> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1112)) {
+            KernelAddRmsNormQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 112> op(&pipe);
             INIT_AND_PROCESS;
         }
     #endif
@@ -92,6 +105,12 @@ extern "C" __global__ __aicore__ void add_rms_norm_quant(
         } else if (TILING_KEY_IS(1141)) {
             KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 141> op(&pipe);
             INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1042)) {
+            KernelAddRmsNormQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 42> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1142)) {
+            KernelAddRmsNormQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 142> op(&pipe);
+            INIT_AND_PROCESS;
         }
     #endif
     #if !defined(ORIG_DTYPE_SCALES2) && defined(ORIG_DTYPE_ZERO_POINTS1) && defined(ORIG_DTYPE_ZERO_POINTS2)
@@ -106,6 +125,12 @@ extern "C" __global__ __aicore__ void add_rms_norm_quant(
             INIT_AND_PROCESS;
         } else if (TILING_KEY_IS(1151)) {
             KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 151> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1052)) {
+            KernelAddRmsNormQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 52> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1152)) {
+            KernelAddRmsNormQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 152> op(&pipe);
             INIT_AND_PROCESS;
         }
     #endif
@@ -122,6 +147,12 @@ extern "C" __global__ __aicore__ void add_rms_norm_quant(
         } else if (TILING_KEY_IS(1121)) {
             KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 121> op(&pipe);
             INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1022)) {
+            KernelAddRmsNormQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 22> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1122)) {
+            KernelAddRmsNormQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 122> op(&pipe);
+            INIT_AND_PROCESS;
         }
     #endif
     #if defined(ORIG_DTYPE_SCALES2) && !defined(ORIG_DTYPE_ZERO_POINTS1) && defined(ORIG_DTYPE_ZERO_POINTS2)
@@ -136,6 +167,12 @@ extern "C" __global__ __aicore__ void add_rms_norm_quant(
             INIT_AND_PROCESS;
         } else if (TILING_KEY_IS(1131)) {
             KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 131> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1032)) {
+            KernelAddRmsNormQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 32> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1132)) {
+            KernelAddRmsNormQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 132> op(&pipe);
             INIT_AND_PROCESS;
         }
     #endif
@@ -152,6 +189,12 @@ extern "C" __global__ __aicore__ void add_rms_norm_quant(
         } else if (TILING_KEY_IS(1161)) {
             KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 161> op(&pipe);
             INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1062)) {
+            KernelAddRmsNormQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 62> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1162)) {
+            KernelAddRmsNormQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 162> op(&pipe);
+            INIT_AND_PROCESS;
         }
     #endif
     #if defined(ORIG_DTYPE_SCALES2) && defined(ORIG_DTYPE_ZERO_POINTS1) && defined(ORIG_DTYPE_ZERO_POINTS2)
@@ -166,6 +209,12 @@ extern "C" __global__ __aicore__ void add_rms_norm_quant(
             INIT_AND_PROCESS;
         } else if (TILING_KEY_IS(1171)) {
             KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 171> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1072)) {
+            KernelAddRmsNormQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 72> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1172)) {
+            KernelAddRmsNormQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 172> op(&pipe);
             INIT_AND_PROCESS;
         }
     #endif

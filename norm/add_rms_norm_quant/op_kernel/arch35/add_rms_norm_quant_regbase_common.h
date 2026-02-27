@@ -44,6 +44,12 @@ constexpr uint32_t SUM_COUNT = 2;
 constexpr int32_t VL_SIZE = GetVRegSize();
 constexpr int32_t V_LENGTH = (VL_SIZE / sizeof(float));
 
+constexpr AscendC::MicroAPI::CastTrait castTraitF162F32 = {
+    AscendC::MicroAPI::RegLayout::ZERO,
+    AscendC::MicroAPI::SatMode::UNKNOWN,
+    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::UNKNOWN,
+};
 constexpr AscendC::MicroAPI::CastTrait castTraitFp322Int32 = {
     AscendC::MicroAPI::RegLayout::UNKNOWN,
     AscendC::MicroAPI::SatMode::NO_SAT,

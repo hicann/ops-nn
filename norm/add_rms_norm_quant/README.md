@@ -147,14 +147,14 @@
       <td>y1</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y1`。</td>
-      <td>INT8</td>
+      <td>INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y2</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y2`。</td>
-      <td>INT8</td>
+      <td>INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
     </tr>
     <tr>
