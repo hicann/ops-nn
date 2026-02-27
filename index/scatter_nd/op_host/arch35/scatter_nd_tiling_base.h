@@ -28,114 +28,20 @@ namespace optiling {
 constexpr uint16_t MAX_RANK_COUNT = 7;
 constexpr uint16_t MAX_SHAPE_RANK = 8;
 
-constexpr int64_t BLOCK_SIZE = 32;
-// addDataNum is 32b aligned, ub can store all adds_num
-constexpr int64_t TILING_MODE_1 = 1;
-// addDataNum is 32b aligned, ub can't store all adds_num
-constexpr int64_t TILING_MODE_2 = 2;
-// addDataNum isn't 32b aligned and less than 1 block
-// ub can store all adds_num
-constexpr int64_t TILING_MODE_3 = 3;
-// addDataNum isn't 32b aligned and less than 1 block
-// ub can't store all adds_num
-constexpr int64_t TILING_MODE_4 = 4;
-// addDataNum isn't 32b aligned and more than 1 block
-constexpr int64_t TILING_MODE_5 = 5;
-// highperm branch
-constexpr int64_t TILING_MODE_6 = 6;
-constexpr int64_t TILING_MODE_7 = 7;
-constexpr int64_t UPDATE_ROW_THRESHOLD = 2048;
-
 struct CalcShapeInfo {
-  gert::Shape var_shape;
-  gert::Shape indices_shape;
-  gert::Shape adds_shape;
-  gert::Shape out_shape;
+  gert::Shape varShape;
+  gert::Shape indicesShape;
+  gert::Shape addsShape;
+  gert::Shape outShape;
 };
-
-struct ScatterNdTilingParams {
-  int64_t updates_last_num;
-  int64_t var_num;
-  int64_t var_loop_num;
-  int64_t var_last_num;
-  int64_t var_each_core_burst_len;
-  int64_t var_last_core_set_zero_loop_num;
-  int64_t var_last_core_set_zero_last_num;
-  int64_t indices_each_core_data;
-  int64_t indices_last_core_data;
-  int64_t each_core_indices_loop_num;
-  int64_t each_core_indices_last_num;
-  int64_t last_core_indices_loop_num;
-  int64_t last_core_indices_last_num;
-  int64_t tiling_core_num;
-  int64_t var_last_core_burst_len;
-  int64_t max_indice;
-  int64_t var_each_core_data;
-  int64_t tiling_mode;
-  int64_t indice_step;
-  int64_t core_num;
-  int64_t updates_data_num;
-  int64_t indices_loop_num;
-  int64_t indices_last_num;
-  int64_t updates_num;
-  int64_t updates_loop_num;
-  int64_t indices_last_dim;
-  int64_t var_offset[7] = {0, 0, 0, 0, 0, 0, 0};
-  int64_t var_each_core_set_zero_loop_num;
-  int64_t var_each_core_set_zero_last_num;
-
-  void Init() {
-    var_each_core_data = 0;
-    indices_last_dim = 0;
-    var_each_core_set_zero_loop_num = 0;
-    var_each_core_set_zero_last_num = 0;
-    var_last_core_set_zero_loop_num = 0;
-    var_last_core_set_zero_last_num = 0;
-    indices_each_core_data = 0;
-    indices_last_core_data = 0;
-    each_core_indices_loop_num = 0;
-    each_core_indices_last_num = 0;
-    last_core_indices_loop_num = 0;
-    last_core_indices_last_num = 0;
-    tiling_core_num = 0;
-    tiling_mode = TILING_MODE_1;
-    indice_step = 0;
-    core_num = 0;
-    updates_data_num = 0;
-    indices_loop_num = 0;
-    indices_last_num = 0;
-    updates_num = 0;
-    updates_loop_num = 0;
-    updates_last_num = 0;
-    var_num = 0;
-    var_loop_num = 0;
-    var_last_num = 0;
-    var_each_core_burst_len = 0;
-    var_last_core_burst_len = 0;
-    max_indice = 0;
-  }
-};
-
-// div 0 check
-constexpr int64_t ZERO = 0;
-
-constexpr int64_t INDICES_SIZE_INDEX = 3;
-constexpr int64_t VAR_SIZE_INDEX = 2;
-constexpr int64_t SHAPE_ADDS_INDEX = 2;
-constexpr int64_t ATOMIC_FLAG_INDEX = 4;
-
-// varsize intput compile params
-constexpr int64_t VARSIZE_COMPILE_INDEX = 2;
-// indicessize intput compile params
-constexpr int64_t INDICESSIZE_COMPILE_INDEX = 3;
 
 struct ScatterNdCompileInfo {
-  int64_t ub_size{1};
-  int64_t core_num{1};
-  int64_t updates_size{1};
-  int64_t indices_size{1};
-  int64_t support_atomic{1};
-  int64_t need_cast{1};
+  int64_t ubSize{1};
+  int64_t coreNum{1};
+  int64_t updatesSize{1};
+  int64_t indicesSize{1};
+  int64_t supportAtomic{1};
+  int64_t needCast{1};
 };
 
 BEGIN_TILING_DATA_DEF(ScatterNdTilingData)

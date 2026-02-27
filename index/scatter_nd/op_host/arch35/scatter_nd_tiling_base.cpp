@@ -12,7 +12,7 @@
  * \file scatter_nd_tiling_base.cpp
  * \brief
  */
-
+ 
 #include "scatter_nd_tiling_base.h"
 #include "register/op_impl_registry.h"
 #include "op_common/op_host/util/math_util.h"
