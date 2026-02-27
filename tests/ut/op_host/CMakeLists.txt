@@ -47,7 +47,6 @@ if(UT_TEST_ALL OR OP_HOST_UT OR OP_GRAPH_UT)
         platform
         register
         opp_registry
-        opsbase
         tiling_api
         dlog
         dl
@@ -71,6 +70,9 @@ if(UT_TEST_ALL OR OP_HOST_UT OR OP_GRAPH_UT)
         -Wl,--whole-archive
         $<$<TARGET_EXISTS:${OP_TILING_MODULE_NAME}_static_lib>:${OP_TILING_MODULE_NAME}_static_lib>
         $<$<TARGET_EXISTS:${OP_INFERSHAPE_MODULE_NAME}_static_lib>:${OP_INFERSHAPE_MODULE_NAME}_static_lib>
+        $<$<TARGET_EXISTS:opbase_util_objs>:$<TARGET_OBJECTS:opbase_util_objs>>
+        $<$<TARGET_EXISTS:opbase_infer_objs>:$<TARGET_OBJECTS:opbase_infer_objs>>
+        $<$<TARGET_EXISTS:opbase_tiling_objs>:$<TARGET_OBJECTS:opbase_tiling_objs>>
         -Wl,--no-whole-archive
         -Wl,--no-as-needed
         metadef
@@ -83,11 +85,13 @@ if(UT_TEST_ALL OR OP_HOST_UT OR OP_GRAPH_UT)
         platform
         register
         opp_registry
-        opsbase
         tiling_api
         dlog
+        unified_dlog
         dl
     )
+
+    target_link_directories(${OP_HOST_UT_EXE} PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64)
 
     add_dependencies(${OP_HOST_UT_EXE} json)
 

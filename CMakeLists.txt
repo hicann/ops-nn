@@ -96,6 +96,7 @@ endif()
 set(CMAKE_CXX_STANDARD
     17
     CACHE STRING "c++17 is needed for this project")
+include(cmake/third_party/opbase.cmake) # 放在dependencies.cmake前面
 include(cmake/dependencies.cmake)
 include(cmake/third_party/nlohmann_json.cmake)
 include(cmake/third_party/abseil-cpp.cmake)

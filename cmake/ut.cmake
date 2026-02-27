@@ -515,6 +515,8 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
                 )
         target_sources(${opName}_${socVersion}_tiling_tmp PUBLIC
             $<TARGET_OBJECTS:${OPHOST_NAME}_tiling_obj>
+            $<$<TARGET_EXISTS:opbase_util_objs>:$<TARGET_OBJECTS:opbase_util_objs>>
+            $<$<TARGET_EXISTS:opbase_tiling_objs>:$<TARGET_OBJECTS:opbase_tiling_objs>>
             # 只要尝试跑ophost ut，legacy_common_manager.cpp就不会编译到tiling obj里，此时需要把打桩代码编译进去
             $<$<OR:$<BOOL:${UT_TEST_ALL}>,$<BOOL:${OP_HOST_UT}>>:${OPS_NN_DIR}/tests/ut/common/legacy_common_manager_stub.cpp>
         )
@@ -524,15 +526,14 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
                 _GLIBCXX_USE_CXX11_ABI=0
                 )
         target_link_libraries(${opName}_${socVersion}_tiling_tmp PRIVATE
-                -Wl,--no-as-needed
-                    $<$<TARGET_EXISTS:opsbase>:opsbase>
-                -Wl,--as-needed
                 $<BUILD_INTERFACE:dlog_headers>
                 -Wl,--whole-archive
                     tiling_api
                 -Wl,--no-whole-archive
                 gcov
                 metadef
+                register
+                opp_registry
                 )
 
         ## gen ascendc tiling head files
@@ -695,7 +696,6 @@ if(UT_TEST_ALL OR OP_KERNEL_AICPU_UT)
             gtest
             c_sec
             Eigen3::EigenNn
-            $<$<TARGET_EXISTS:opsbase>:opsbase>
             )
 
     ## add object: nn_op_kernel_ut_cases_obj
@@ -716,7 +716,6 @@ if(UT_TEST_ALL OR OP_KERNEL_AICPU_UT)
             gtest
             c_sec
             Eigen3::EigenNn
-      $<$<TARGET_EXISTS:opsbase>:opsbase>
             )
   endfunction()
 endif()

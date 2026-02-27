@@ -17,6 +17,9 @@ function(gen_ophost_symbol)
     $<$<TARGET_EXISTS:${OPHOST_NAME}_infer_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_infer_obj>>
     $<$<TARGET_EXISTS:${OPHOST_NAME}_tiling_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_tiling_obj>>
     $<$<TARGET_EXISTS:${OPHOST_NAME}_aicpu_objs>:$<TARGET_OBJECTS:${OPHOST_NAME}_aicpu_objs>>
+    $<$<TARGET_EXISTS:opbase_util_objs>:$<TARGET_OBJECTS:opbase_util_objs>>
+    $<$<TARGET_EXISTS:opbase_infer_objs>:$<TARGET_OBJECTS:opbase_infer_objs>>
+    $<$<TARGET_EXISTS:opbase_tiling_objs>:$<TARGET_OBJECTS:opbase_tiling_objs>>
     )
 
   target_link_libraries(
@@ -25,13 +28,13 @@ function(gen_ophost_symbol)
             c_sec
             -Wl,--no-as-needed
             register
-            $<$<TARGET_EXISTS:opsbase>:opsbase>
             -Wl,--as-needed
             -Wl,--whole-archive
             rt2_registry_static
             tiling_api
             -Wl,--no-whole-archive
             -Wl,-Bsymbolic
+            unified_dlog
     )
 
   target_link_directories(${OPHOST_NAME} PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64)
@@ -57,7 +60,6 @@ function(gen_es_nn_lib_ready)
       c_sec
       -Wl,--no-as-needed
       register
-      $<$<TARGET_EXISTS:opsbase>:opsbase>
       -Wl,--as-needed
     )
   target_link_directories(proto_${PKG_NAME} PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64)
@@ -90,7 +92,6 @@ function(gen_es_nn_lib_ready_cust)
       c_sec
       -Wl,--no-as-needed
       register
-      $<$<TARGET_EXISTS:opsbase>:opsbase>
       -Wl,--as-needed
     )
   target_link_directories(proto_${PKG_NAME}_cust PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64)
@@ -133,6 +134,8 @@ function(gen_opgraph_symbol)
       add_library(
         ${OPGRAPH_NAME} SHARED
         $<$<TARGET_EXISTS:${GRAPH_PLUGIN_NAME}_obj>:$<TARGET_OBJECTS:${GRAPH_PLUGIN_NAME}_obj>>
+        $<$<TARGET_EXISTS:opbase_util_objs>:$<TARGET_OBJECTS:opbase_util_objs>>
+        $<$<TARGET_EXISTS:opbase_infer_objs>:$<TARGET_OBJECTS:opbase_infer_objs>>
       )
       
       target_link_libraries(
@@ -141,7 +144,6 @@ function(gen_opgraph_symbol)
                 c_sec
                 -Wl,--no-as-needed
                 register
-                $<$<TARGET_EXISTS:opsbase>:opsbase>
                 -Wl,--as-needed
                 -Wl,--whole-archive
                 rt2_registry_static
@@ -150,6 +152,8 @@ function(gen_opgraph_symbol)
                 ge_compiler
                 es_math
                 es_nn
+                unified_dlog
+                ascendalog
         )
 
       target_link_directories(${OPGRAPH_NAME} PRIVATE 
@@ -233,12 +237,13 @@ function(gen_cust_optiling_symbol)
     cust_opmaster
     PUBLIC $<$<TARGET_EXISTS:${OPHOST_NAME}_tiling_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_tiling_obj>>
            $<$<TARGET_EXISTS:${COMMON_NAME}_obj>:$<TARGET_OBJECTS:${COMMON_NAME}_obj>>
+           $<$<TARGET_EXISTS:opbase_util_objs>:$<TARGET_OBJECTS:opbase_util_objs>>
+           $<$<TARGET_EXISTS:opbase_tiling_objs>:$<TARGET_OBJECTS:opbase_tiling_objs>>
     )
 
   target_link_libraries(
     cust_opmaster
     PUBLIC $<BUILD_INTERFACE:intf_pub_cxx17>
-    PRIVATE $<$<TARGET_EXISTS:opsbase>:opsbase>
     -Wl,-Bsymbolic
     )
 endfunction()
@@ -274,12 +279,13 @@ function(gen_cust_proto_symbol)
     cust_proto
     PUBLIC $<$<TARGET_EXISTS:${OPHOST_NAME}_infer_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_infer_obj>>
            $<$<TARGET_EXISTS:${GRAPH_PLUGIN_NAME}_obj>:$<TARGET_OBJECTS:${GRAPH_PLUGIN_NAME}_obj>>
+           $<$<TARGET_EXISTS:opbase_util_objs>:$<TARGET_OBJECTS:opbase_util_objs>>
+           $<$<TARGET_EXISTS:opbase_infer_objs>:$<TARGET_OBJECTS:opbase_infer_objs>>
     )
   
   target_link_libraries(
     cust_proto
     PUBLIC $<BUILD_INTERFACE:intf_pub_cxx17>
-    PRIVATE $<$<TARGET_EXISTS:opsbase>:opsbase>
     ge_compiler
     )
 
@@ -389,7 +395,6 @@ function(gen_onnx_plugin_symbol)
             c_sec
             -Wl,--no-as-needed
             register
-            $<$<TARGET_EXISTS:opsbase>:opsbase>
             -Wl,--as-needed
             -Wl,--whole-archive
             rt2_registry_static
