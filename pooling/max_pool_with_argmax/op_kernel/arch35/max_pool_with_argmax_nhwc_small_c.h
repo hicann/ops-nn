@@ -39,8 +39,8 @@ template <typename T1, typename T2, const uint32_t IS_PAD, const uint32_t NANPRO
 __aicore__ inline void MaxPoolWithArgMaxGatherImpl(
     __local_mem__ T1* xAddr, __local_mem__ T1* maxValueAddr, __local_mem__ T2* argmaxAddr, uint16_t kH, uint16_t kW,
     uint32_t rowStrideInUb, uint16_t alignedC, int32_t gatterIndexOffset, MicroAPI::RegTensor<uint32_t>& gatterStartIdx,
-    int32_t count, MicroAPI::RegTensor<T2>& argmaxHStart, MicroAPI::RegTensor<T2>& argmaxWStart, int32_t argmaxHOffset,
-    int32_t argmaxWOffset, MicroAPI::RegTensor<uint32_t>& scatterStartIdx, int32_t scatterOffset, int32_t padH,
+    int32_t count, MicroAPI::RegTensor<T2>& argmaxHStart, MicroAPI::RegTensor<T2>& argmaxWStart, T2 argmaxHOffset,
+    T2 argmaxWOffset, MicroAPI::RegTensor<uint32_t>& scatterStartIdx, int32_t scatterOffset, int32_t padH,
     int32_t padW, int32_t wInput, MicroAPI::RegTensor<T2>& argmaxCStart, int32_t cInput)
 {
     MicroAPI::RegTensor<T1> vd0;
@@ -81,11 +81,11 @@ __aicore__ inline void MaxPoolWithArgMaxGatherImpl(
 
     for (uint16_t hIdx = 0; hIdx < kH; hIdx++) {
         int32_t hKernelOffset = hIdx * rowStrideInUb;
-        int32_t argmaxHKernelOffset = hIdx + argmaxHOffset;
+        T2 argmaxHKernelOffset = hIdx + argmaxHOffset;
 
         for (uint16_t wIdx = 0; wIdx < kW; wIdx++) {
             int32_t wKernelOffset = wIdx * alignedC;
-            int32_t argmaxWKernelOffset = wIdx + argmaxWOffset;
+            T2 argmaxWKernelOffset = wIdx + argmaxWOffset;
 
             int32_t gatterIndexOffsetTotal = gatterIndexOffset + hKernelOffset + wKernelOffset;
             MicroAPI::Adds(gatterIndexReg, gatterStartIdx, gatterIndexOffsetTotal, computeU32);
@@ -269,8 +269,8 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
     int32_t wInputActualAmend = (this->wOutputActual_ - 1) * this->wStride_ + this->wKernel_;
     int32_t ubNumHWC = hInputActualAmend * wInputActualAmend * this->cOutputActualAlign_;
 
-    int32_t wBlockArgmaxOffset = this->wAxisIndex_ * this->wStride_ * this->wOutputInner_;
-    int32_t hBlockArgmaxOffset = this->hAxisIndex_ * this->hStride_ * this->hOutputInner_;
+    int64_t wBlockArgmaxOffset = this->wAxisIndex_ * this->wStride_ * this->wOutputInner_;
+    int64_t hBlockArgmaxOffset = this->hAxisIndex_ * this->hStride_ * this->hOutputInner_;
 
     uint32_t oneLoopElements = static_cast<uint32_t>(
         nFactor * this->hOutputActual_ * this->wOutputActual_ * this->cInput_); // 一次循环处理的输出元素
@@ -321,8 +321,8 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
             MicroAPI::Adds(scatterNStartIdx, scatterStartIdx, nIdex * nFactor * oneNOutScatterElements, maskAllU32);
 
             int32_t gatterIndexOffset = 0;
-            int32_t argmaxHOffset = hBlockArgmaxOffset;
-            int32_t argmaxWOffset = wBlockArgmaxOffset;
+            T2 argmaxHOffset = hBlockArgmaxOffset;
+            T2 argmaxWOffset = wBlockArgmaxOffset;
             int32_t scatterOffset = 0;
 
             MaxPoolWithArgMaxGatherImpl<T1, T2, IS_PAD, NANPROP>(
@@ -336,8 +336,8 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
         MicroAPI::Adds(scatterNStartIdx, scatterStartIdx, loopN * nFactor * oneNOutScatterElements, maskAllU32);
 
         int32_t gatterIndexOffset = 0;
-        int32_t argmaxHOffset = hBlockArgmaxOffset;
-        int32_t argmaxWOffset = wBlockArgmaxOffset;
+        T2 argmaxHOffset = hBlockArgmaxOffset;
+        T2 argmaxWOffset = wBlockArgmaxOffset;
         int32_t scatterOffset = 0;
 
         MaxPoolWithArgMaxGatherImpl<T1, T2, IS_PAD, NANPROP>(
@@ -371,8 +371,8 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
     int32_t wInputActualAmend = (this->wOutputActual_ - 1) * this->wStride_ + this->wKernel_;
     int32_t ubNumHWC = hInputActualAmend * wInputActualAmend * this->cOutputActualAlign_;
 
-    int32_t wBlockArgmaxOffset = this->wAxisIndex_ * this->wStride_ * this->wOutputInner_;
-    int32_t hBlockArgmaxOffset = this->hAxisIndex_ * this->hStride_ * this->hOutputInner_;
+    int64_t wBlockArgmaxOffset = this->wAxisIndex_ * this->wStride_ * this->wOutputInner_;
+    int64_t hBlockArgmaxOffset = this->hAxisIndex_ * this->hStride_ * this->hOutputInner_;
 
     uint32_t oneLoopElements = static_cast<uint32_t>(
         nFactor * this->hOutputActual_ * this->wOutputActual_ * this->cInput_); // 一次循环处理的输出元素
@@ -457,8 +457,8 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
             MicroAPI::Adds(scatterNStartIdx, scatterStartIdx, nIdex * nFactor * oneNOutScatterElements, maskAllU32);
 
             int32_t gatterIndexOffset = 0;
-            int32_t argmaxHOffset = hBlockArgmaxOffset;
-            int32_t argmaxWOffset = wBlockArgmaxOffset;
+            T2 argmaxHOffset = hBlockArgmaxOffset;
+            T2 argmaxWOffset = wBlockArgmaxOffset;
             int32_t scatterOffset = 0;
 
             MaxPoolWithArgMaxGatherImpl<T1, T2, IS_PAD, NANPROP>(
@@ -472,8 +472,8 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
         MicroAPI::Adds(scatterNStartIdx, scatterStartIdx, loopN * nFactor * oneNOutScatterElements, maskAllU32);
 
         int32_t gatterIndexOffset = 0;
-        int32_t argmaxHOffset = hBlockArgmaxOffset;
-        int32_t argmaxWOffset = wBlockArgmaxOffset;
+        T2 argmaxHOffset = hBlockArgmaxOffset;
+        T2 argmaxWOffset = wBlockArgmaxOffset;
         int32_t scatterOffset = 0;
 
         MaxPoolWithArgMaxGatherImpl<T1, T2, IS_PAD, NANPROP>(
@@ -508,8 +508,8 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
     int32_t wInputActualAmend = (this->wOutputActual_ - 1) * this->wStride_ + this->wKernel_;
     int32_t ubNumHWC = hInputActualAmend * wInputActualAmend * this->cOutputActualAlign_;
 
-    int32_t wBlockArgmaxOffset = this->wAxisIndex_ * this->wStride_ * this->wOutputInner_;
-    int32_t hBlockArgmaxOffset = this->hAxisIndex_ * this->hStride_ * this->hOutputInner_;
+    int64_t wBlockArgmaxOffset = this->wAxisIndex_ * this->wStride_ * this->wOutputInner_;
+    int64_t hBlockArgmaxOffset = this->hAxisIndex_ * this->hStride_ * this->hOutputInner_;
 
     uint32_t oneLoopStrideH =
         static_cast<uint32_t>(hFactor * this->hStride_ * wInputActualAmend * this->cOutputActualAlign_);
@@ -555,8 +555,8 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
 
             for (uint16_t j = 0; j < loopH; j++) {
                 int32_t gatterIndexOffset = j * oneLoopStrideH;
-                int32_t argmaxHOffset = j * hStride * hFactor + hBlockArgmaxOffset;
-                int32_t argmaxWOffset = wBlockArgmaxOffset;
+                T2 argmaxHOffset = j * hStride * hFactor + hBlockArgmaxOffset;
+                T2 argmaxWOffset = wBlockArgmaxOffset;
                 int32_t scatterOffset = j * hFactor * wOutputActual * alignedC;
 
                 MaxPoolWithArgMaxGatherImpl<T1, T2, IS_PAD, NANPROP>(
@@ -567,8 +567,8 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
 
             // tail H
             int32_t gatterIndexOffset = loopH * oneLoopStrideH;
-            int32_t argmaxHOffset = loopH * hStride * hFactor + hBlockArgmaxOffset;
-            int32_t argmaxWOffset = wBlockArgmaxOffset;
+            T2 argmaxHOffset = loopH * hStride * hFactor + hBlockArgmaxOffset;
+            T2 argmaxWOffset = wBlockArgmaxOffset;
             int32_t scatterOffset = loopH * hFactor * wOutputActual * alignedC;
 
             MaxPoolWithArgMaxGatherImpl<T1, T2, IS_PAD, NANPROP>(
@@ -605,8 +605,8 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
     int32_t wInputActualAmend = (this->wOutputActual_ - 1) * this->wStride_ + this->wKernel_;
     int32_t ubNumHWC = hInputActualAmend * wInputActualAmend * this->cOutputActualAlign_;
 
-    int32_t wBlockArgmaxOffset = this->wAxisIndex_ * this->wStride_ * this->wOutputInner_;
-    int32_t hBlockArgmaxOffset = this->hAxisIndex_ * this->hStride_ * this->hOutputInner_;
+    int64_t wBlockArgmaxOffset = this->wAxisIndex_ * this->wStride_ * this->wOutputInner_;
+    int64_t hBlockArgmaxOffset = this->hAxisIndex_ * this->hStride_ * this->hOutputInner_;
 
     uint32_t oneLoopStrideH =
         static_cast<uint32_t>(hFactor * this->hStride_ * wInputActualAmend * this->cOutputActualAlign_);
@@ -688,8 +688,8 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
 
             for (uint16_t j = 0; j < loopH; j++) {
                 int32_t gatterIndexOffset = j * oneLoopStrideH;
-                int32_t argmaxHOffset = j * hStride * hFactor + hBlockArgmaxOffset;
-                int32_t argmaxWOffset = wBlockArgmaxOffset;
+                T2 argmaxHOffset = j * hStride * hFactor + hBlockArgmaxOffset;
+                T2 argmaxWOffset = wBlockArgmaxOffset;
                 int32_t scatterOffset = j * hFactor * wOutputActual * alignedC;
 
                 MaxPoolWithArgMaxGatherImpl<T1, T2, IS_PAD, NANPROP>(
@@ -700,8 +700,8 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
 
             // tail H
             int32_t gatterIndexOffset = loopH * oneLoopStrideH;
-            int32_t argmaxHOffset = loopH * hStride * hFactor + hBlockArgmaxOffset;
-            int32_t argmaxWOffset = wBlockArgmaxOffset;
+            T2 argmaxHOffset = loopH * hStride * hFactor + hBlockArgmaxOffset;
+            T2 argmaxWOffset = wBlockArgmaxOffset;
             int32_t scatterOffset = loopH * hFactor * wOutputActual * alignedC;
 
             MaxPoolWithArgMaxGatherImpl<T1, T2, IS_PAD, NANPROP>(
@@ -740,8 +740,8 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
     int32_t wInputActualAmend = (this->wOutputActual_ - 1) * this->wStride_ + this->wKernel_;
     int32_t ubNumHWC = hInputActualAmend * wInputActualAmend * this->cOutputActualAlign_;
 
-    int32_t wBlockArgmaxOffset = this->wAxisIndex_ * this->wStride_ * this->wOutputInner_;
-    int32_t hBlockArgmaxOffset = this->hAxisIndex_ * this->hStride_ * this->hOutputInner_;
+    int64_t wBlockArgmaxOffset = this->wAxisIndex_ * this->wStride_ * this->wOutputInner_;
+    int64_t hBlockArgmaxOffset = this->hAxisIndex_ * this->hStride_ * this->hOutputInner_;
 
     uint32_t oneLoopStrideH = static_cast<uint32_t>(
         this->hStride_ * wInputActualAmend * this->cOutputActualAlign_); // 输入H方向每次循环的stride
@@ -784,11 +784,11 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
 
             for (uint16_t i = 0; i < loopH; i++) {
                 int32_t hOffset = i * oneLoopStrideH;
-                int32_t argmaxHOffset = i * hStride + hBlockArgmaxOffset;
+                T2 argmaxHOffset = i * hStride + hBlockArgmaxOffset;
 
                 for (uint16_t j = 0; j < loopW; j++) {
                     int32_t wOffset = j * oneLoopStrideW;
-                    int32_t argmaxWOffset = j * wStride * wFactor + wBlockArgmaxOffset;
+                    T2 argmaxWOffset = j * wStride * wFactor + wBlockArgmaxOffset;
                     int32_t gatterIndexOffset = hOffset + wOffset;
                     int32_t scatterOffset = (j * wFactor + i * wOutputActual) * alignedC;
 
@@ -800,7 +800,7 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
 
                 // tail w
                 int32_t wOffset = loopW * oneLoopStrideW;
-                int32_t argmaxWOffset = loopW * wStride * wFactor + wBlockArgmaxOffset;
+                T2 argmaxWOffset = loopW * wStride * wFactor + wBlockArgmaxOffset;
                 int32_t gatterIndexOffset = hOffset + wOffset;
                 int32_t scatterOffset = (loopW * wFactor + i * wOutputActual) * alignedC;
 

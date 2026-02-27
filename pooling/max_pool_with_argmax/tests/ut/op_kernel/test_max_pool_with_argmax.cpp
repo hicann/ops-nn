@@ -18,9 +18,9 @@
 #include <numeric>
 #include <unistd.h>
 #include <type_traits>
+#include "../../../op_kernel/arch35/max_pool_with_argmax_struct_common.h"
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
-#include "max_pool_with_argmax_tiling_def.h"
 #include "data_utils.h"
 
 #include <cstdint>
