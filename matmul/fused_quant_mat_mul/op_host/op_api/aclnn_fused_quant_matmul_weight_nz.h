@@ -34,8 +34,6 @@ extern "C" {
  * @param [in] biasOptional: 偏置，数据类型支持：int32, bfloat16, float16, float32。
  * @param [in] x3Optional: 后融合矩阵，当前接口暂不支持该参数。
  * @param [in] fusedOpType: 融合类型，支持："gelu_tanh", "gelu_erf"。
- * @param [in] transposeX1: x1矩阵是否转置。
- * @param [in] transposeX2: x2矩阵是否转置。
  * @param [in] groupSizeOptional: 量化参数，数据类型支持：int64。
  * @param [out] out: 计算结果，数据类型：float16, bfloat16。
  * @param [out] workspaceSize: 返回需要在npu device侧申请的workspace大小。
@@ -47,8 +45,7 @@ ACLNN_API aclnnStatus aclnnFusedQuantMatmulWeightNzGetWorkspaceSize(const aclTen
                                                          const aclTensor *yScaleOptional, const aclTensor *x1OffsetOptional,
                                                          const aclTensor *x2OffsetOptional, const aclTensor *yOffsetOptional,
                                                          const aclTensor *biasOptional, const aclTensor *x3Optional, 
-                                                         const char *fusedOpType, bool transposeX1,
-                                                         bool transposeX2, int64_t groupSizeOptional,
+                                                         const char *fusedOpType, int64_t groupSizeOptional,
                                                          aclTensor *out, uint64_t *workspaceSize,
                                                          aclOpExecutor **executor);
 

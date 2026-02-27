@@ -50,8 +50,9 @@ static constexpr int INDEX_FUSEDOPTYPE_IN_FUSED_TUPLE = 1;
 static constexpr int INDEX_OUT_IN_TUPLE = 2;
 
 static constexpr size_t LAST_SECOND_DIM_INDEX = 2;
-static const int64_t NZ_K0_VALUE_INT8 = 16;
+static const int64_t NZ_K0_VALUE_INT8_INT4 = 16;
 static const int64_t NZ_K0_VALUE_INT8_TRANS = 32;
+static const int64_t NZ_K0_VALUE_INT4_TRANS = 64;
 static const int NZ_STORAGE_PENULTIMATE_DIM = 16;
 static const int NZ_STORAGE_LAST_DIM = 32;
 

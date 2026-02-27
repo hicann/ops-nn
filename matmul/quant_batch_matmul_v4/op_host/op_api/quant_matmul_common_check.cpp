@@ -50,8 +50,10 @@ op::Shape GetWeightNzShape(const aclTensor *input, bool transpose)
     int64_t n = transpose ? input->GetViewShape().GetDim(viewDimNum - LAST_SECOND_DIM_INDEX)
                            : input->GetViewShape().GetDim(viewDimNum - 1);
 
-    int64_t k1 = transpose ? CeilDiv(k, NZ_K0_VALUE_INT8_TRANS) : CeilDiv(k, NZ_K0_VALUE_INT8);
-    int64_t n1 = transpose ? CeilDiv(n, NZ_K0_VALUE_INT8) : CeilDiv(n, NZ_K0_VALUE_INT8_TRANS);
+    int64_t nz_k0_value_trans = (input->GetDataType() == op::DataType::DT_INT32 || input->GetDataType() == op::DataType::DT_INT4) ? 
+        NZ_K0_VALUE_INT4_TRANS : NZ_K0_VALUE_INT8_TRANS;
+    int64_t k1 = transpose ? CeilDiv(k, nz_k0_value_trans) : CeilDiv(k, NZ_K0_VALUE_INT8_INT4);
+    int64_t n1 = transpose ? CeilDiv(n, NZ_K0_VALUE_INT8_INT4) : CeilDiv(n, nz_k0_value_trans);
 
     op::Shape weightNzShape;
     for (size_t i = 0; i < viewDimNum - LAST_SECOND_DIM_INDEX; i++) {
@@ -65,7 +67,7 @@ op::Shape GetWeightNzShape(const aclTensor *input, bool transpose)
         weightNzShape.AppendDim(k1);
     }
     weightNzShape.AppendDim(NZ_STORAGE_PENULTIMATE_DIM);
-    weightNzShape.AppendDim(NZ_STORAGE_LAST_DIM);
+    weightNzShape.AppendDim(nz_k0_value_trans);
     return weightNzShape;
 }
 

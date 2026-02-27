@@ -28,8 +28,8 @@ namespace op {
 class QuantMatmulChecker {
 public:
     QuantMatmulChecker(const TupleInput &inputTensors, const TupleQuant &quantTensors,
-                       const TupleAttr &boolsTrans, const aclTensor *out)
-     : inputTensors_(inputTensors), quantTensors_(quantTensors), boolsTrans_(boolsTrans), out_(out) {}
+                       const TupleAttr &boolsTrans, const aclTensor *out, const bool isWeightNz = false)
+     : inputTensors_(inputTensors), quantTensors_(quantTensors), boolsTrans_(boolsTrans), out_(out), isWeightNz_(isWeightNz) {}
 
     ~QuantMatmulChecker() = default;
     void Init();
@@ -80,6 +80,7 @@ public:
     const TupleQuant quantTensors_;
     const TupleAttr boolsTrans_;
     const aclTensor *out_ = nullptr;
+    const bool isWeightNz_;
 
 private:
     const aclTensor *x1_ = nullptr;

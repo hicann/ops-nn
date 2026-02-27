@@ -38,8 +38,9 @@ static const size_t PENULTIMATE_DIM = 2;
 static const size_t BATCH_TAILENDER_DIM = 3;
 static const size_t NZ_K1_INDEX = 3;
 static const size_t NZ_K1_INDEX_TRANS = 4;
-static const int64_t NZ_K0_VALUE_INT8 = 16;
+static const int64_t NZ_K0_VALUE_INT8_INT4 = 16;
 static const int64_t NZ_K0_VALUE_INT8_TRANS = 32;
+static const int64_t NZ_K0_VALUE_INT4_TRANS = 64;
 static constexpr int64_t OUTPUT_INFER_FAIL = -1L;
 static const int64_t PERGROUP_GROUP_SIZE = 32;
 static const int64_t PERGROUP_GROUPSIZEK_SIZE = 256;
@@ -350,7 +351,9 @@ bool QuantMatmulChecker::CheckShapeForWeightNz() const
     const op::Shape x2Shape = x2_->GetStorageShape();
     auto x2DimNum = x2_->GetStorageShape().GetDimNum();
     int64_t x2K1Dim = transposeX2_ ? x2Shape[x2DimNum - NZ_K1_INDEX_TRANS] : x2Shape[x2DimNum - NZ_K1_INDEX];
-    int64_t aligneValue = transposeX2_ ? NZ_K0_VALUE_INT8_TRANS : NZ_K0_VALUE_INT8;
+    int64_t nz_k0_value_trans = (x1_->GetDataType() == op::DataType::DT_INT32 || x1_->GetDataType() == op::DataType::DT_INT4) ? 
+        NZ_K0_VALUE_INT4_TRANS : NZ_K0_VALUE_INT8_TRANS;
+    int64_t aligneValue = transposeX2_ ? nz_k0_value_trans : NZ_K0_VALUE_INT8_INT4;
     int64_t alignedX1K = ((x1KDim_ + aligneValue - 1) / aligneValue) * aligneValue;
     if (alignedX1K != x2K1Dim * aligneValue) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
@@ -954,7 +957,11 @@ bool QuantMatmulChecker::CheckFormatInt4() const
                 op::ToString(x1_->GetStorageFormat()).GetString());
         return false;
     }
-    if (x2_->GetStorageFormat() != op::Format::FORMAT_ND) {
+    if (isWeightNz_ && x2_->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input x2 only support NZ in a4w4 weightNz scenario, but now is %s.",
+                op::ToString(x2_->GetStorageFormat()).GetString());
+        return false;
+    } else if (!isWeightNz_ && x2_->GetStorageFormat() != op::Format::FORMAT_ND) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input x2 only support ND in a4w4 scenario, but now is %s.",
                 op::ToString(x2_->GetStorageFormat()).GetString());
         return false;

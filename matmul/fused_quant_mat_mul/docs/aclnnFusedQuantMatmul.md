@@ -64,8 +64,6 @@ aclnnStatus aclnnFusedQuantMatmulGetWorkspaceSize(
   const aclTensor *biasOptional,
   const aclTensor *x3Optional,
   const char      *fusedOpType,
-  bool             transposeX1,
-  bool             transposeX2,
   int64_t          groupSizeOptional,
   aclTensor       *out,
   uint64_t        *workspaceSize,
@@ -117,7 +115,7 @@ aclnnStatus aclnnFusedQuantMatmul(
         <td>INT4、INT8、INT32</td>
         <td>ND</td>
         <td>2-6</td>
-        <td>×</td>
+        <td>√</td>
       </tr>
       <tr>
         <td>x2</td>
@@ -132,7 +130,7 @@ aclnnStatus aclnnFusedQuantMatmul(
         <td>INT4、INT8、INT32</td>
         <td>ND</td>
         <td>2-6</td>
-        <td>x</td>
+        <td>√</td>
       </tr>
       <tr>
         <td>x1Scale</td>
@@ -220,26 +218,6 @@ aclnnStatus aclnnFusedQuantMatmul(
         <td>公式中的输入fusedOpType，表示指定QuantBatchMatmul算子支持的融合模式。</td>
         <td>融合模式取值必须是"gelu_erf"、"gelu_tanh"中的一种。</td>
         <td>STRING</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-      </tr>
-      <tr>
-        <td>transposeX1</td>
-        <td>输入</td>
-        <td>表示x1的输入shape是否包含transpose。</td>
-        <td>-</td>
-        <td>BOOL</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-      </tr>
-      <tr>
-        <td>transposeX2</td>
-        <td>输入</td>
-        <td>表示x2的输入shape是否包含transpose。</td>
-        <td>-</td>
-        <td>BOOL</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -388,19 +366,14 @@ aclnnStatus aclnnFusedQuantMatmul(
   - x1数据类型支持INT8、INT32、INT4。
     - 当数据类型为INT32、INT4时，为INT4量化场景：
       - 当前仅支持ND输入。
-      - 只支持transposeX1为false情况。
+      - 当前只支持不转置输入。
       - 要求x1内轴为偶数。
     - 当数据类型为INT32时，每个INT32数据存放8个INT4数据，对应维度表示：（batch，m，k // 8），要求k为8的倍数。
-    - 在transposeX1为false情况下，形状为（batch, m, k），batch轴支持0~4维。
   - x2数据类型支持INT8、INT32、INT4。
     - 当数据类型为INT32、INT4时，为INT4量化场景：
       - 该接口仅支持2维ND格式。
       - 要求x2内轴为偶数。
     - 数据类型为INT32时，每个INT32数据存放8个INT4数据：
-      - transposeX2为true时维度为：（n，k // 8），要求k为8的倍数。
-      - transposeX2为false时维度为：（k，n // 8），要求n为8的倍数。
-    - transposeX2为false情况下各个维度表示：（batch，k，n），batch轴支持0~4维，其中k与x1的shape中的k一致。
-    - transposeX2为true情况下各个维度表示：（batch，n，k），batch轴支持0~4维，其中k与x1的shape中的k一致。
     - 可使用aclnnConvertWeightToINT4Pack接口完成x2从INT32（1个int32在0~3bit位存储1个int4）到INT32（1个int32存储8个int4）或INT4（1个int4表示1个int4）的数据格式转换，具体参见[aclnnConvertWeightToINT4Pack接口](../../convert_weight_to_int4_pack/docs/aclnnConvertWeightToINT4Pack.md)。
   - x1Scale约束如下：
     - shape支持1维，形状为（m,），数据类型支持FLOAT32。
@@ -409,9 +382,6 @@ aclnnStatus aclnnFusedQuantMatmul(
   - biasOptional的约束如下：
     - shape支持1、3维，INT4量化场景下只支持biasOptional为1维，shape为(n)，3维时biasOptional shape为(batch, 1, n)。
     - 数据类型支持int32、float32、bfloat16或float16。
-  - transposeX1：x1和x2为INT32、INT4时，transposeX1仅支持false，各个维度表示：（m, k）。
-  - transposeX2的约束如下：
-    - ND格式下，为false时维度为：（batch，k，n），为true时维度为：（batch，n，k），batch可不存在，其中k与x1的shape中的k一致。
   - out的约束如下：
     - shape支持2~6维，（batch，m，n）。数据类型支持FLOAT16、BFLOAT16。
 
@@ -557,8 +527,6 @@ x1为INT8，x2为INT8，x1Scale为FLOAT32，x2Scale为FLOAT32。
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> outTensorPtr(out, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void*)> outDeviceAddrPtr(outDeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-      bool transposeX1 = false;
-      bool transposeX2 = false;
       int64_t groupSize = 0;
       const char fusedOpType[] = "gelu_tanh";
 
@@ -567,7 +535,7 @@ x1为INT8，x2为INT8，x1Scale为FLOAT32，x2Scale为FLOAT32。
       aclOpExecutor* executor = nullptr;
 
       ret = aclnnFusedQuantMatmulGetWorkspaceSize(
-          x1, x2, x1Scale, x2Scale, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, fusedOpType, transposeX1, transposeX2, groupSize, out,
+          x1, x2, x1Scale, x2Scale, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, fusedOpType, groupSize, out,
           &workspaceSize, &executor);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnFusedQuantMatmulGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
       // 根据第一段接口计算出的workspaceSize申请device内存

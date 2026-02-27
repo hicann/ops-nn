@@ -177,8 +177,6 @@ int aclnnFusedQuantMatmulWeightNzTest(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> outTensorPtr(out, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> outDeviceAddrPtr(outDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    bool transposeX1 = false;
-    bool transposeX2 = false;
     int64_t groupSize = 0;
     const char fusedOpType[] = "gelu_tanh";
 
@@ -205,7 +203,7 @@ int aclnnFusedQuantMatmulWeightNzTest(int32_t deviceId, aclrtStream& stream)
     // 调用aclnnFusedQuantMatmulWeightNz第一段接口
     workspaceSize = 0;
     ret = aclnnFusedQuantMatmulWeightNzGetWorkspaceSize(
-        x1, x2, x1Scale, x2Scale, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, fusedOpType, transposeX1, transposeX2, groupSize, out,
+        x1, x2, x1Scale, x2Scale, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, fusedOpType, groupSize, out,
         &workspaceSize, &executor);
 
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnFusedQuantMatmulWeightNzGetWorkspaceSize failed. ERROR: %d\n", ret);
