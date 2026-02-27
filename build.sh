@@ -1403,7 +1403,7 @@ main() {
     exit $?
   fi
   mkdir -p "${BUILD_PATH}"
-  cd "${BUILD_PATH}" && rm -f CMakeCache.txt && cmake -DENABLE_EXPERIMENTAL=${ENABLE_EXPERIMENTAL} -DPREPROCESS_ONLY=ON ..
+  cd "${BUILD_PATH}" && rm -f CMakeCache.txt && cmake -DCANN_3RD_LIB_PATH=${CANN_3RD_LIB_PATH} -DENABLE_EXPERIMENTAL=${ENABLE_EXPERIMENTAL} -DPREPROCESS_ONLY=ON ..
 
   if [[ "$CI_MODE" == "TRUE" ]]; then
     set_ci_mode

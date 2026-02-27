@@ -23,10 +23,6 @@ set(VENDOR_PACKAGE_NAME ${VENDOR_NAME}_nn)
 set(ACLNN_EXTRA_HEADERS "" CACHE STRING "Aclnn Extra Headers" FORCE)
 set(ACLNN_EXTRA_SRCS "" CACHE STRING "Aclnn Extra Sources" FORCE)
 
-if(NOT CANN_3RD_LIB_PATH)
-  set(CANN_3RD_LIB_PATH ${PROJECT_SOURCE_DIR}/build/third_party)
-endif()
-
 message(STATUS "System processor: ${CMAKE_SYSTEM_PROCESSOR}")
 if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64")
   set(ARCH x86_64)

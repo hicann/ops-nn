@@ -29,6 +29,7 @@
 #include "platform/platform_infos_def.h"
 #include "tiling/platform/platform_ascendc.h"
 
+
 using namespace ut_util;
 using namespace std;
 using namespace ge;
