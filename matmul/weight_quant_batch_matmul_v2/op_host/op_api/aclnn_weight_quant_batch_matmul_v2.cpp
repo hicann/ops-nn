@@ -1186,18 +1186,10 @@ static aclnnStatus ContiguousCheck(
     const aclTensor* antiquantOffsetOptional, const aclTensor* y)
 {
     bool transposeX = IsTransposeLastTwoDims(x);
-    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
-        OP_CHECK(
-            !transposeX && IsContiguous(x),
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "DAV_3510 not support x transpose and only support x tensor is contiguous."),
-            return ACLNN_ERR_PARAM_INVALID);
-    } else {
-        OP_CHECK(
-            transposeX || IsContiguous(x),
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "only support x tensor is contiguous or transpose last two dims."),
-            return ACLNN_ERR_PARAM_INVALID);
-    }
+    OP_CHECK(
+        transposeX || IsContiguous(x),
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "only support x tensor is contiguous or transpose last two dims."),
+        return ACLNN_ERR_PARAM_INVALID);
 
     bool transposeWeight = IsTransposeLastTwoDims(weight);
     OP_CHECK(
@@ -1594,6 +1586,13 @@ aclnnStatus CheckContiguous(
     const aclTensor*& quantOffsetOptional, const aclTensor*& biasOptional, const int& antiquantGroupSize,
     bool& transposeX, bool& transposeWeight, aclOpExecutor* executor)
 {
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+        OP_CHECK(
+            !transposeX && IsContiguous(x),
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID, "DAV_3510 not support x transpose and only support x tensor is contiguous."),
+            return ACLNN_ERR_PARAM_INVALID);
+    }
     CHECK_RET(TensorContiguousProcess(x, transposeX, executor), ACLNN_ERR_INNER_NULLPTR);
 
     if (weight->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ &&
