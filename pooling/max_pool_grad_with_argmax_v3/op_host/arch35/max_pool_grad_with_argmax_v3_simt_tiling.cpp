@@ -59,7 +59,7 @@ uint64_t MaxPoolGradWithArgmaxV3SimtTiling::GetTilingKey() const
 
 ge::graphStatus MaxPoolGradWithArgmaxV3SimtTiling::DoOpTiling()
 {
-    return SimtBase->DoOpTiling(context_, GetTilingKey());
+    return SimtBase->DoOpTiling(context_);
 }
 
 ge::graphStatus MaxPoolGradWithArgmaxV3SimtTiling::PostTiling()

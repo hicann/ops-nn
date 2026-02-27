@@ -18,7 +18,7 @@
 namespace optiling
 {
 
-void MaxPoolGradWithArgmaxSIMTTilingCommon::SetTilingData(gert::TilingContext* context, uint64_t key )
+void MaxPoolGradWithArgmaxSIMTTilingCommon::SetTilingData(gert::TilingContext* context)
 {
     MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSimtTilingCommonData* tilingData =
         context->GetTilingData<MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSimtTilingCommonData>();
@@ -42,15 +42,13 @@ void MaxPoolGradWithArgmaxSIMTTilingCommon::SetTilingData(gert::TilingContext* c
 
 ge::graphStatus MaxPoolGradWithArgmaxSIMTTilingCommon::PostTiling(gert::TilingContext* context_, MaxPoolGradWithArgmaxHardwareInfo hwinfo)
 {
-    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSimtTilingCommonData* tilingData =
-        context_->GetTilingData<MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSimtTilingCommonData>();
     context_->SetBlockDim(hwinfo.coreNum);
     OP_LOGD("MaxPoolGradWithArgmax", "MaxPoolGradWithArgmaxSIMTTilingCommon::PostTiling");
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus MaxPoolGradWithArgmaxSIMTTilingCommon::DoOpTiling(gert::TilingContext* context_, uint64_t key){
-    SetTilingData(context_, key);
+ge::graphStatus MaxPoolGradWithArgmaxSIMTTilingCommon::DoOpTiling(gert::TilingContext* context_){
+    SetTilingData(context_);
     return ge::GRAPH_SUCCESS;
 }
 }

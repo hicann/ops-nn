@@ -26,11 +26,11 @@ public:
             :inputData(input)
     {
     }
-    ge::graphStatus DoOpTiling(gert::TilingContext* context_, uint64_t key);
+    ge::graphStatus DoOpTiling(gert::TilingContext* context_);
     ge::graphStatus PostTiling(gert::TilingContext* context_, MaxPoolGradWithArgmaxHardwareInfo hwinfo);
 
 private: 
-    void SetTilingData(gert::TilingContext* context, uint64_t key);
+    void SetTilingData(gert::TilingContext* context);
     MaxPoolGradWithArgmaxInputInfoCommon* inputData;
     MaxPoolGradWithArgmaxHardwareInfo hardWare;
 };
