@@ -109,9 +109,6 @@ static bool CheckNullptr(const gert::TilingContext* context)
     const gert::StorageShape* rstd_shape = context->GetOutputShape(OUTPUT_RSTD_INDEX);
     const gert::StorageShape* x_shape = context->GetOutputShape(OUTPUT_X_INDEX);
 
-    size_t rstdDimNum = rstd_shape->GetStorageShape().GetDimNum();
-    size_t xDimNum = x_shape->GetStorageShape().GetDimNum();
-
     norm_key = RMS_NORM_KEY;
     if(rstd_shape->GetOriginShape().GetShapeSize() <= 0 && x_shape->GetOriginShape().GetShapeSize() <= 0){
         norm_key = POST_RMS_NORM;

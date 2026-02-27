@@ -229,15 +229,6 @@ aclnnStatus aclnnAddRmsNormGetWorkspaceSize(
     auto ret = CheckParams(inputTensorOri, outputTensor, mode);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    // 支持空tensor
-    bool anyEmptyTensor = x1->IsEmpty() || gamma->IsEmpty() || yOut->IsEmpty();
-    if (anyEmptyTensor) {
-        OP_LOGW("Got empty tensor in aclnnAddRmsNorm!");
-        *workspaceSize = 0;
-        uniqueExecutor.ReleaseTo(executor);
-        return ACLNN_SUCCESS;
-    }
-
     // 固定写法，将输入转换成连续的tensor，可选输入不做判空校验
     auto x1Cont = l0op::Contiguous(x1, uniqueExecutor.get());
     auto x2Cont = l0op::Contiguous(x2, uniqueExecutor.get());
