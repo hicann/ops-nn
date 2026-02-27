@@ -33,6 +33,13 @@ using namespace ge;
 namespace optiling{
 
 static const gert::Shape g_vec_1_shape = {1};
+static const int32_t MP_MAX_3D_DIM_ZERO = 0;
+static const int32_t MP_MAX_3D_DIM_ONE = 1;
+static const int32_t MP_MAX_3D_DIM_TWO = 2;
+static const int32_t MP_MAX_3D_DIM_THREE = 3;
+static const int32_t MP_MAX_3D_DIM_FOUR = 4;
+constexpr uint64_t H_LOCATION = 1;
+constexpr uint64_t W_LOCATION = 2;
 
 static const gert::Shape& EnsureNotScalar(const gert::Shape &inShape) {
   if (inShape.IsScalar()) {
@@ -50,7 +57,7 @@ ge::graphStatus MaxPool3DWithArgmaxV2TilingSIMT::GetPlatformInfo()
 {
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr == nullptr) {
-        auto compileInfoPtr = reinterpret_cast<const MaxPool3DWithArgmaxV2CompileInfo*>(context_->GetCompileInfo());
+        auto compileInfoPtr = static_cast<const MaxPool3DWithArgmaxV2CompileInfo*>(context_->GetCompileInfo());
         OP_CHECK_IF(
             compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
             return ge::GRAPH_FAILED);
@@ -109,11 +116,11 @@ ge::graphStatus MaxPool3DWithArgmaxV2TilingSIMT::GetShapeAttrsInfo()
     }
 
     if (inputData.data_format == "ndhwc") {
-        nDimPos = 0;
-        cDimPos = 4;
-        dDimPos = 1;
-        hDimPos = 2;
-        wDimPos = 3;
+        nDimPos = MP_MAX_3D_DIM_ZERO;
+        cDimPos = MP_MAX_3D_DIM_FOUR;
+        dDimPos = MP_MAX_3D_DIM_ONE;
+        hDimPos = MP_MAX_3D_DIM_TWO;
+        wDimPos = MP_MAX_3D_DIM_THREE;
     }
     inputData.inputShape =
         array<uint64_t, NCDHW_DIMS>{uint64_t(inputShape.GetDim(nDimPos)), uint64_t(inputShape.GetDim(cDimPos)),
@@ -137,20 +144,20 @@ ge::graphStatus MaxPool3DWithArgmaxV2TilingSIMT::GetShapeAttrsInfo()
     const gert::TypedContinuousVector<int64_t>* kernelSize = runtimeAttrs->GetListInt(KERNEL_POS);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, kernelSize);
     int32_t kSizeD = *(kernelSize->GetData());
-    int32_t kSizeH = *(kernelSize->GetData() + 1);
-    int32_t kSizeW = *(kernelSize->GetData() + 2);
+    int32_t kSizeH = *(kernelSize->GetData() + H_LOCATION);
+    int32_t kSizeW = *(kernelSize->GetData() + W_LOCATION);
     inputData.kernelSize = array<uint64_t, DHW_DIMS>{uint64_t(kSizeD), uint64_t(kSizeH), uint64_t(kSizeW)};
     const gert::TypedContinuousVector<int64_t>* stride = runtimeAttrs->GetListInt(STRIDE_POS);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, stride);
     uint64_t strideD = *(stride->GetData());
-    uint64_t strideH = *(stride->GetData() + 1);
-    uint64_t strideW = *(stride->GetData() + 2);
+    uint64_t strideH = *(stride->GetData() + H_LOCATION);
+    uint64_t strideW = *(stride->GetData() + W_LOCATION);
     inputData.stride = array<uint64_t, DHW_DIMS>{strideD, strideH, strideW};
     const gert::TypedContinuousVector<int64_t>* padding = runtimeAttrs->GetListInt(PADDING_POS);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, padding);
     int32_t padsD = *(padding->GetData());
-    int32_t padsH = *(padding->GetData() + 1);
-    int32_t padsW = *(padding->GetData() + 2);
+    int32_t padsH = *(padding->GetData() + H_LOCATION);
+    int32_t padsW = *(padding->GetData() + W_LOCATION);
     OP_CHECK_IF((padsD * DOUB > kSizeD || padsH * DOUB > kSizeH || padsW * DOUB > kSizeW),
              OP_LOGE(context_, "pad should be smaller than or equal to half of kernel size, pad shape is [%d, %d, %d], kernel shape [%d, %d, %d]",
              padsD, padsH, padsW, kSizeD, kSizeH, kSizeW),
@@ -159,8 +166,8 @@ ge::graphStatus MaxPool3DWithArgmaxV2TilingSIMT::GetShapeAttrsInfo()
     const gert::TypedContinuousVector<int64_t>* dilation = runtimeAttrs->GetListInt(DILATION_POS);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, dilation);
     uint64_t dilationD = *(dilation->GetData());
-    uint64_t dilationH = *(dilation->GetData() + 1);
-    uint64_t dilationW = *(dilation->GetData() + 2);
+    uint64_t dilationH = *(dilation->GetData() + H_LOCATION);
+    uint64_t dilationW = *(dilation->GetData() + W_LOCATION);
     inputData.dilation =
         array<uint64_t, DHW_DIMS>{dilationD, dilationH, dilationW};
     inputData.ceilMode = *runtimeAttrs->GetAttrPointer<bool>(CEIL_POS);

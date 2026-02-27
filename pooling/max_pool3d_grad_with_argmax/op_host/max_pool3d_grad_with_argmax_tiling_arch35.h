@@ -28,10 +28,10 @@
 #include "tiling/tiling_api.h"
 #include "op_common/op_host/util/platform_util.h"
 
-using namespace MaxPool3DGradWithArgmaxOp;
+
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
-
+using namespace MaxPool3DGradWithArgmaxOp;
 struct MaxPool3DGradWithArgmaxInputInfo {
     int64_t dPad{0};
     int64_t hPad{0};

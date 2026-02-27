@@ -105,7 +105,7 @@ ge::graphStatus MaxPool3DWithArgmaxV2BigKernelRegbaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, kernelSize);
     dValue = *(kernelSize->GetData());
     hValue = *(kernelSize->GetData() + 1);
-    wValue = *(kernelSize->GetData() + 2);
+    wValue = *(kernelSize->GetData() + MP_MAX_3D_DIM_TWO);
     inputData.kernelSize = array<uint64_t, DHW_DIMS>{uint64_t(dValue), uint64_t(hValue), uint64_t(wValue)};
     OP_CHECK_IF(
         dValue <= 0 || hValue <= 0 || wValue <= 0,
@@ -120,7 +120,7 @@ ge::graphStatus MaxPool3DWithArgmaxV2BigKernelRegbaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, stride);
     dValue = *(stride->GetData());
     hValue = *(stride->GetData() + 1);
-    wValue = *(stride->GetData() + 2);
+    wValue = *(stride->GetData() + MP_MAX_3D_DIM_TWO);
     inputData.stride = array<uint64_t, DHW_DIMS>{uint64_t(dValue), uint64_t(hValue), uint64_t(wValue)};
     OP_CHECK_IF(
         dValue <= 0 || hValue <= 0 || wValue <= 0,
@@ -132,7 +132,7 @@ ge::graphStatus MaxPool3DWithArgmaxV2BigKernelRegbaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, padding);
     dValue = *(padding->GetData());
     hValue = *(padding->GetData() + 1);
-    wValue = *(padding->GetData() + 2);
+    wValue = *(padding->GetData() + MP_MAX_3D_DIM_TWO);
     inputData.pad = array<uint64_t, DHW_DIMS>{uint64_t(dValue), uint64_t(hValue), uint64_t(wValue)};
     OP_CHECK_IF(
         dValue > kdValue / 2 || hValue > khValue / 2 || wValue > kwValue / 2,
@@ -149,7 +149,7 @@ ge::graphStatus MaxPool3DWithArgmaxV2BigKernelRegbaseTiling::GetShapeAttrsInfo()
     if (dilation != nullptr) {
         dValue = *(dilation->GetData());
         hValue = *(dilation->GetData() + 1);
-        wValue = *(dilation->GetData() + 2);
+        wValue = *(dilation->GetData() + MP_MAX_3D_DIM_TWO);
         inputData.dilation = array<uint64_t, DHW_DIMS>{uint64_t(dValue), uint64_t(hValue), uint64_t(wValue)};
         OP_CHECK_IF(
             dValue <= 0 || hValue <= 0 || wValue <= 0,
@@ -187,7 +187,7 @@ ge::graphStatus MaxPool3DWithArgmaxV2BigKernelRegbaseTiling::GetPlatformInfo()
 {
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr == nullptr) {
-        auto compileInfoPtr = reinterpret_cast<const MaxPool3DWithArgmaxV2CompileInfo*>(context_->GetCompileInfo());
+        auto compileInfoPtr = static_cast<const MaxPool3DWithArgmaxV2CompileInfo*>(context_->GetCompileInfo());
         OP_CHECK_IF(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context_, "compile info is null"),
                         return ge::GRAPH_FAILED);
         coreNum = compileInfoPtr->coreNum;

@@ -80,8 +80,8 @@ static ge::graphStatus InferShapePaddingSame(
     auto strides = context->GetInputTensor(INPUT_STRIDES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
     OP_CHECK_IF(
-        static_cast<int64_t>(strides->GetShapeSize()) != SHAPE_NHWC_SIZE,
-        OP_LOGE(context->GetNodeName(), "Length of strides %ld must be 4!", static_cast<int64_t>(strides->GetShapeSize())), return GRAPH_FAILED);
+        static_cast<uint64_t>(strides->GetShapeSize()) != SHAPE_NHWC_SIZE,
+        OP_LOGE(context->GetNodeName(), "Length of strides %ld must be 4!", static_cast<uint64_t>(strides->GetShapeSize())), return GRAPH_FAILED);
     int64_t hstridesData = static_cast<int64_t>(strides->GetData<int32_t>()[hDim]);
     int64_t wstridesData = static_cast<int64_t>(strides->GetData<int32_t>()[wDim]);
     OP_CHECK_IF(

@@ -47,7 +47,6 @@ public:
         this->offset2bagGm_.SetGlobalBuffer((__gm__ I*)(gmParam[OFFSET2BAG_OUTPUT_IDX]));
         this->maxIndicesGm_.SetGlobalBuffer((__gm__ I*)(gmParam[MAXINDICES_OUTPUT_IDX]));
         
-
         if (GetBlockIdx() == 0){
             InitGlobalMemory(this->yGm_, tiling_.embeddingDim * tiling_.nBags, (T)(0));
             int32_t eventIDMTE3ToV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));

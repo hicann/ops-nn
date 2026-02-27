@@ -42,6 +42,7 @@ constexpr uint64_t TILING_KEY_SMALL_DIM = 100;
 constexpr size_t EMBEDDING_DENSE_GRAD_ATTR_NUM_WEIGHTS = 0;
 constexpr size_t EMBEDDING_DENSE_GRAD_ATTR_PADDING_IDX = 1;
 constexpr size_t EMBEDDING_DENSE_GRAD_ATTR_SCALE_GRAD_BY_FREQ = 2;
+constexpr uint64_t HALF_SIZE = 2;
 
 class EmbeddingDenseGradV2Tiling {
 public:
@@ -265,7 +266,7 @@ inline void EmbeddingDenseGradV2Tiling::Tiling4SmallDim(const int64_t gradRow)
     uint64_t dataInBlock = BLOCK_SIZE / sizeof(float);
     uint64_t divNum = UB_SORT_PART + (embeddingDim_ + dataInBlock - 1) / dataInBlock * dataInBlock;
     maxRowInUb_ = ((ubSize_ - RESERVED_UB_SIZE) / SIZE_OF_FP32 - embeddingDim_ - VEC_PROCESS_SIZE) / divNum;
-    maxRowInUb_ = dataTypeSize_ == sizeof(float) ? maxRowInUb_ : maxRowInUb_ / 2;
+    maxRowInUb_ = dataTypeSize_ == sizeof(float) ? maxRowInUb_ : maxRowInUb_ / HALF_SIZE;
     formerCopyTime_ = (formerCopyRow_ + maxRowInUb_ - 1UL) / maxRowInUb_;
     tailCopyTime_ = (tailCopyRow_ + maxRowInUb_ - 1UL) / maxRowInUb_;
     formerLastRow_ = formerCopyRow_ - maxRowInUb_ * (formerCopyTime_ - 1UL);
