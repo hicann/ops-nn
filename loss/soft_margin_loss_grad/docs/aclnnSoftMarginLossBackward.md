@@ -15,11 +15,12 @@
 
 ## 功能说明
 
-- 接口功能：计算[aclnnSoftMarginLoss](../../soft_margin_loss/docs/aclnnSoftMarginLoss.md)二分类逻辑损失函数的反向传播。reduction指定损失函数的计算方式，支持 'none'、'mean'、'sum'。'none' 表示不应用reduction，'mean' 表示输出的总和将除以输出中的元素数，'sum' 表示输出将被求和。
+计算[aclnnSoftMarginLoss](../../soft_margin_loss/docs/aclnnSoftMarginLoss.md)二分类逻辑损失函数的反向传播。reduction指定损失函数的计算方式，支持 'none'、'mean'、'sum'。'none' 表示不应用reduction，'mean' 表示输出的总和将除以输出中的元素数，'sum' 表示输出将被求和。
 
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSoftMarginLossBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSoftMarginLossBackward”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnSoftMarginLossBackwardGetWorkspaceSize(
     const aclTensor* gradOutput, 
@@ -44,15 +45,15 @@ aclnnStatus aclnnSoftMarginLossBackward(
 - **参数说明**：
 
     </style>
-    <table class="tg" style="undefined;table-layout: fixed; width: 1279px"><colgroup>
+    <table class="tg" style="undefined;table-layout: fixed; width: 1547px"><colgroup>
     <col style="width: 217px">
-    <col style="width: 87px">
-    <col style="width: 204px">
-    <col style="width: 234px">
-    <col style="width: 118px">
-    <col style="width: 113px">
-    <col style="width: 108px">
-    <col style="width: 108px">
+    <col style="width: 120px">
+    <col style="width: 280px">
+    <col style="width: 350px">
+    <col style="width: 200px">
+    <col style="width: 115px">
+    <col style="width: 120px">
+    <col style="width: 145px">
     </colgroup>
     <thead>
       <tr>
@@ -144,10 +145,10 @@ aclnnStatus aclnnSoftMarginLossBackward(
 
   第一段接口完成入参校验，出现以下场景时报错：
     </style>
-    <table class="tg" style="undefined;table-layout: fixed; width: 991px"><colgroup>
-    <col style="width: 269px">
-    <col style="width: 90px">
-    <col style="width: 632px">
+  <table class="tg" style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+  <col style="width: 269px">
+  <col style="width: 135px">
+  <col style="width: 746px">
     </colgroup>
     <thead>
       <tr>
@@ -179,10 +180,10 @@ aclnnStatus aclnnSoftMarginLossBackward(
 
 - **参数说明：**
 
-    <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+    <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
       <col style="width: 200px">
-      <col style="width: 162px">
-      <col style="width: 882px">
+      <col style="width: 150px">
+      <col style="width: 800px">
       </colgroup>
       <thead>
         <tr>

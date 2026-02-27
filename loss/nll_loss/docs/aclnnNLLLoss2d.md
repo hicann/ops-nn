@@ -67,15 +67,15 @@ aclnnStatus aclnnNLLLoss2d(
 
 - **参数说明**
 
-  <table style="undefined;table-layout: fixed; width: 1312px"><colgroup>
-      <col style="width: 158px">
-      <col style="width: 120px">
-      <col style="width: 253px">
-      <col style="width: 283px">
-      <col style="width: 218px">
-      <col style="width: 110px">
-      <col style="width: 102px">
-      <col style="width: 108px">
+   <table style="undefined;table-layout: fixed; width: 1446px"><colgroup>
+    <col style="width: 158px">
+    <col style="width: 120px">
+    <col style="width: 290px">
+    <col style="width: 320px">
+    <col style="width: 218px">
+    <col style="width: 115px">
+    <col style="width: 120px">
+    <col style="width: 145px">
       </colgroup>
       <thead>
         <tr>
@@ -189,10 +189,10 @@ aclnnStatus aclnnNLLLoss2d(
 
   第一段接口完成入参校验，出现以下场景时报错：
 
-    <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
-      <col style="width: 276px">
-      <col style="width: 132px">
-      <col style="width: 836px">
+    <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+      <col style="width: 300px">
+      <col style="width: 134px">
+      <col style="width: 716px">
       </colgroup>
       <thead>
       <tr>
@@ -227,10 +227,10 @@ aclnnStatus aclnnNLLLoss2d(
 
 - **参数说明**
 
-  <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
-      <col style="width: 200px">
-      <col style="width: 162px">
-      <col style="width: 882px">
+  <table style="undefined;table-layout: fixed; width: 1151px"><colgroup>
+      <col style="width: 184px">
+      <col style="width: 134px">
+      <col style="width: 833px">
       </colgroup>
       <thead>
       <tr>

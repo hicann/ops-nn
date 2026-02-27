@@ -64,15 +64,15 @@ aclnnStatus aclnnL1Loss(
 - **参数说明：**
 
   </style>
-  <table class="tg" style="undefined;table-layout: fixed; width: 1196px"><colgroup>
-  <col style="width: 204px">
-  <col style="width: 87px">
-  <col style="width: 214px">
-  <col style="width: 234px">
-  <col style="width: 118px">
-  <col style="width: 113px">
-  <col style="width: 108px">
-  <col style="width: 108px">
+  <table class="tg" style="undefined;table-layout: fixed; width: 1435px"><colgroup>
+  <col style="width: 205px">
+  <col style="width: 120px">
+  <col style="width: 280px">
+  <col style="width: 320px">
+  <col style="width: 130px">
+  <col style="width: 115px">
+  <col style="width: 120px">
+  <col style="width: 145px">
   </colgroup>
   <thead>
     <tr>
@@ -110,7 +110,7 @@ aclnnStatus aclnnL1Loss(
       <td class="tg-0pky">reduction（int64_t）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">指定要应用到输出的缩减。</td>
-      <td class="tg-0pky">支持0('none')|1('mean')|2('sum')。<br>-'none'表示不应用缩减<br>-'mean'表示输出的总和将除以输出中的元素数<br>-'sum'表示输出将被求和</td>
+      <td class="tg-0pky">支持0('none')|1('mean')|2('sum')。<ul><li>'none'表示不应用缩减</li></ul><ul><li>'mean'表示输出的总和将除以输出中的元素数</li></ul><ul><li>'sum'表示输出将被求和</li></ul></td>
       <td class="tg-0pky">INT64</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">-</td>
@@ -154,10 +154,10 @@ aclnnStatus aclnnL1Loss(
 
   第一段接口完成入参校验，出现以下场景时报错：
   </style>
-  <table class="tg" style="undefined;table-layout: fixed; width: 991px"><colgroup>
+  <table class="tg" style="undefined;table-layout: fixed; width: 1150px"><colgroup>
   <col style="width: 269px">
-  <col style="width: 90px">
-  <col style="width: 632px">
+  <col style="width: 120px">
+  <col style="width: 761px">
   </colgroup>
   <thead>
     <tr>
@@ -205,52 +205,55 @@ aclnnStatus aclnnL1Loss(
 ## aclnnL1Loss
 
 - **参数说明：**
-    <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
-      <col style="width: 200px">
-      <col style="width: 162px">
-      <col style="width: 882px">
-      </colgroup>
-      <thead>
-        <tr>
-          <th>参数名</th>
-          <th>输入/输出</th>
-          <th>描述</th>
-        </tr></thead>
-      <tbody>
-        <tr>
-          <td>workspace</td>
-          <td>输入</td>
-          <td>在Device侧申请的workspace内存地址。</td>
-        </tr>
-        <tr>
-          <td>workspaceSize</td>
-          <td>输入</td>
-          <td>在Device侧申请的workspace大小，由第一段接口aclnnBinaryCrossEntropyGetWorkspaceSize获取。</td>
-        </tr>
-        <tr>
-          <td>executor</td>
-          <td>输入</td>
-          <td>op执行器，包含了算子计算流程。</td>
-        </tr>
-        <tr>
-          <td>stream</td>
-          <td>输入</td>
-          <td>指定执行任务的Stream。</td>
-        </tr>
-      </tbody>
-    </table>
+
+  <table style="undefined;table-layout: fixed; width: 1151px"><colgroup>
+  <col style="width: 184px">
+  <col style="width: 134px">
+  <col style="width: 833px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnBinaryCrossEntropyGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
+  </table>
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算： 
     - aclnnL1Loss默认确定性实现。
 
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

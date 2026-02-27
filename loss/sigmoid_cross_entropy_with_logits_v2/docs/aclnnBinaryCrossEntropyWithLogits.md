@@ -76,15 +76,15 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogits(
 
 - **参数说明：**
 
-   <table style="undefined;table-layout: fixed; width: 1193px"><colgroup>
-    <col style="width: 183px">
+    <table style="undefined;table-layout: fixed; width: 1500px"><colgroup>
+    <col style="width: 200px">
     <col style="width: 120px">
-    <col style="width: 203px">
-    <col style="width: 222px">
-    <col style="width: 152px">
-    <col style="width: 101px">
-    <col style="width: 104px">
-    <col style="width: 108px">
+    <col style="width: 250px">
+    <col style="width: 330px">
+    <col style="width: 220px">
+    <col style="width: 115px">
+    <col style="width: 120px">
+    <col style="width: 145px">
     </colgroup>
     <thead>
       <tr>

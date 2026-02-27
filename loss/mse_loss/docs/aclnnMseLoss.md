@@ -15,25 +15,25 @@
 
 ## 功能说明
 
-计算输入x和目标y中每个元素之间的均方误差。
+- 接口功能：计算输入x和目标y中每个元素之间的均方误差。
 
-计算公式：
+- 计算公式：
   - 当`reduction`为`none`时：
 
-$$
-  \ell(x, y) = L = \{l_1,\dots,l_N\}^\top, \quad
-  l_n = \left( x_n - y_n \right)^2,
-$$
+  $$
+    \ell(x, y) = L = \{l_1,\dots,l_N\}^\top, \quad
+    l_n = \left( x_n - y_n \right)^2,
+  $$
 
   - 其中$x$是self，$y$是target，$N$是batch的大小。如果`reduction`不是`none`, 那么：
 
-$$
-  \ell(x, y) =
-  \begin{cases}
-      \operatorname{mean}(L), &  \text{if reduction} = \text{'mean';}\\
-      \operatorname{sum}(L),  &  \text{if reduction} = \text{'sum'.}
-  \end{cases}
-$$
+  $$
+    \ell(x, y) =
+    \begin{cases}
+        \operatorname{mean}(L), &  \text{if reduction} = \text{'mean';}\\
+        \operatorname{sum}(L),  &  \text{if reduction} = \text{'sum'.}
+    \end{cases}
+  $$
 
 ## 函数原型
 
@@ -62,15 +62,15 @@ aclnnStatus aclnnMseLoss(
 - **参数说明：**
 
   </style>
-  <table class="tg" style="undefined;table-layout: fixed; width: 1265px"><colgroup>
-  <col style="width: 194px">
-  <col style="width: 87px">
-  <col style="width: 303px">
-  <col style="width: 234px">
-  <col style="width: 118px">
-  <col style="width: 113px">
-  <col style="width: 108px">
-  <col style="width: 108px">
+  <table class="tg" style="undefined;table-layout: fixed; width: 1435px"><colgroup>
+  <col style="width: 205px">
+  <col style="width: 120px">
+  <col style="width: 280px">
+  <col style="width: 320px">
+  <col style="width: 130px">
+  <col style="width: 115px">
+  <col style="width: 120px">
+  <col style="width: 145px">
   </colgroup>
   <thead>
     <tr>
@@ -153,10 +153,10 @@ aclnnStatus aclnnMseLoss(
 
   第一段接口完成入参校验，出现以下场景时报错：
     </style>
-    <table class="tg" style="undefined;table-layout: fixed; width: 991px"><colgroup>
+    <table class="tg" style="undefined;table-layout: fixed; width: 1150px"><colgroup>
     <col style="width: 269px">
-    <col style="width: 90px">
-    <col style="width: 632px">
+    <col style="width: 120px">
+    <col style="width: 761px">
     </colgroup>
     <thead>
       <tr>
@@ -196,10 +196,11 @@ aclnnStatus aclnnMseLoss(
 ## aclnnMseLoss
 
 - **参数说明：**
-    <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
-      <col style="width: 200px">
-      <col style="width: 162px">
-      <col style="width: 882px">
+
+  <table style="undefined;table-layout: fixed; width: 1151px"><colgroup>
+  <col style="width: 184px">
+  <col style="width: 134px">
+  <col style="width: 833px">
       </colgroup>
       <thead>
         <tr>

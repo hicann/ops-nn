@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：[aclnnCtcLoss](../../ctc_loss_v2/docs/aclnnCtcLoss.md)的反向传播，计算CTC的损失梯度。
+[aclnnCtcLoss](../../ctc_loss_v2/docs/aclnnCtcLoss.md)的反向传播，计算CTC的损失梯度。
 
 ## 函数原型
 
@@ -105,7 +105,7 @@ aclnnStatus aclnnCtcLossBackward(
       <td>inputLengths（aclIntArray*）</td>
       <td>输入</td>
       <td>表示输入序列的实际长度。</td>
-      <td>数组长度为N，数组中的每个值必须小于等于T</td>
+      <td>数组长度为N，数组中的每个值必须小于等于T。</td>
       <td>INT64、INT32</td>
       <td>-</td>
       <td>-</td>
@@ -115,7 +115,7 @@ aclnnStatus aclnnCtcLossBackward(
       <td>targetLengths（aclIntArray*）</td>
       <td>输入</td>
       <td>表示目标序列的实际长度。</td>
-      <td>数组长度为N，当targets的shape为(N,S)时，数组中的每个值必须小于等于S，最大值为maxTargetLength</td>
+      <td>数组长度为N，当targets的shape为(N,S)时，数组中的每个值必须小于等于S，最大值为maxTargetLength。</td>
       <td>INT64、INT32</td>
       <td>-</td>
       <td>-</td>
@@ -145,7 +145,7 @@ aclnnStatus aclnnCtcLossBackward(
       <td>blank（int64_t）</td>
       <td>输入</td>
       <td>表示空白标识。</td>
-      <td>数值必须小于C且大于等于0</td>
+      <td>数值必须小于C且大于等于0。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -165,7 +165,7 @@ aclnnStatus aclnnCtcLossBackward(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示CTC的损失梯度。</td>
-      <td>数据类型必须和gradOut一致</td>
+      <td>数据类型必须和gradOut一致。</td>
       <td>与gradOut一致</td>
       <td>ND</td>
       <td>(T,N,C)</td>

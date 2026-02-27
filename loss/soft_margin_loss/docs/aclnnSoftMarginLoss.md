@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 算子功能：计算输入self和目标target的二分类逻辑损失函数。reduction指定要应用到输出的缩减，支持 'none'、'mean'、'sum'。'none' 表示不应用reduction，'mean' 表示输出的总和将除以输出中的元素数，'sum' 表示输出将被求和。
+- 接口功能：计算输入self和目标target的二分类逻辑损失函数。reduction指定要应用到输出的缩减，支持 'none'、'mean'、'sum'。'none' 表示不应用reduction，'mean' 表示输出的总和将除以输出中的元素数，'sum' 表示输出将被求和。
 
 - 计算公式：
 
@@ -37,6 +37,7 @@ $$
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSoftMarginLossGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSoftMarginLoss”接口执行计算。
+
 ```cpp
 aclnnStatus aclnnSoftMarginLossGetWorkspaceSize(
   const aclTensor* self, 
@@ -60,15 +61,15 @@ aclnnStatus aclnnSoftMarginLoss(
 - **参数说明**：
 
   </style>
-  <table class="tg" style="undefined;table-layout: fixed; width: 1235px"><colgroup>
-  <col style="width: 194px">
-  <col style="width: 87px">
-  <col style="width: 303px">
-  <col style="width: 234px">
-  <col style="width: 118px">
-  <col style="width: 113px">
-  <col style="width: 88px">
-  <col style="width: 98px">
+  <table class="tg" style="undefined;table-layout: fixed; width: 1547px"><colgroup>
+  <col style="width: 217px">
+  <col style="width: 120px">
+  <col style="width: 280px">
+  <col style="width: 350px">
+  <col style="width: 200px">
+  <col style="width: 115px">
+  <col style="width: 120px">
+  <col style="width: 145px">
   </colgroup>
   <thead>
     <tr>
@@ -150,10 +151,10 @@ aclnnStatus aclnnSoftMarginLoss(
 
   第一段接口完成入参校验，出现以下场景时报错：
   </style>
-  <table class="tg" style="undefined;table-layout: fixed; width: 991px"><colgroup>
+  <table class="tg" style="undefined;table-layout: fixed; width: 1150px"><colgroup>
   <col style="width: 269px">
-  <col style="width: 90px">
-  <col style="width: 632px">
+  <col style="width: 135px">
+  <col style="width: 746px">
   </colgroup>
   <thead>
     <tr>

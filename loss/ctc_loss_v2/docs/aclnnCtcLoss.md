@@ -118,7 +118,7 @@ aclnnStatus aclnnCtcLoss(
         <td>inputLengths（aclIntArray*）</td>
         <td>输入</td>
         <td>表示输入序列的实际长度，公式中的T为inputLengths中的元素。</td>
-        <td>数组长度为N，数组中的每个值必须小于等于T。当logProbs为2维时，N=1</td>
+        <td>数组长度为N，数组中的每个值必须小于等于T。当logProbs为2维时，N=1。</td>
         <td>INT64、INT32</td>
         <td>-</td>
         <td>-</td>
@@ -128,7 +128,7 @@ aclnnStatus aclnnCtcLoss(
         <td>targetLengths（aclIntArray*）</td>
         <td>输入</td>
         <td>表示目标序列的实际长度，公式中的l的长度为targetLengths中的元素。</td>
-        <td>数组长度为N，当targets的shape为(N,S)时，数组中的每个值必须小于等于S。当logProbs为2维时，N=1</td>
+        <td>数组长度为N，当targets的shape为(N,S)时，数组中的每个值必须小于等于S。当logProbs为2维时，N=1。</td>
         <td>INT64、INT32</td>
         <td>-</td>
         <td>-</td>
@@ -158,7 +158,7 @@ aclnnStatus aclnnCtcLoss(
         <td>negLogLikelihoodOut（aclTensor*）</td>
         <td>输出</td>
         <td>表示输出的损失值，公式中的h。</td>
-        <td>数据类型必须和logProbs一致。当logProbs为3维时，negLogLikelihoodOut的shape为(N)的Tensor，否则negLogLikelihoodOut为0维Tensor</td>
+        <td>数据类型必须和logProbs一致。当logProbs为3维时，negLogLikelihoodOut的shape为(N)的Tensor，否则negLogLikelihoodOut为0维Tensor。</td>
         <td>与logProbs一致</td>
         <td>ND</td>
         <td>-</td>
@@ -168,7 +168,7 @@ aclnnStatus aclnnCtcLoss(
         <td>logAlphaOut（aclTensor*）</td>
         <td>输出</td>
         <td>表示输入到目标的可能跟踪的概率，公式中的p(l|x)</td>
-        <td>数据类型必须和logProbs一致。当logProbs为2维时，N=1</td>
+        <td>数据类型必须和logProbs一致。当logProbs为2维时，N=1。</td>
         <td>与logProbs一致</td>
         <td>ND</td>
         <td>-</td>
@@ -198,6 +198,7 @@ aclnnStatus aclnnCtcLoss(
 
   - logAlphaOut：
      - <term>Ascend 950PR/Ascend 950DT</term>、<term>Atlas A2 训练系列产/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：shape为($N, T, (2*max(targetLengths)+8)/8*8$)。
+     
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。

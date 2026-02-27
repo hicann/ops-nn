@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-接口功能：负对数似然损失反向。
+负对数似然损失反向。
 
 ## 函数原型
 
@@ -47,15 +47,15 @@ aclnnStatus aclnnNLLLoss2dBackward(
 
 - **参数说明**
 
-  <table style="undefined;table-layout: fixed; width: 1262px"><colgroup>
-      <col style="width: 158px">
+  <table style="undefined;table-layout: fixed; width: 1500px"><colgroup>
+      <col style="width: 180px">
       <col style="width: 120px">
-      <col style="width: 203px">
-      <col style="width: 283px">
-      <col style="width: 218px">
-      <col style="width: 110px">
-      <col style="width: 102px">
-      <col style="width: 108px">
+      <col style="width: 250px">
+      <col style="width: 350px">
+      <col style="width: 220px">
+      <col style="width: 115px">
+      <col style="width: 120px">
+      <col style="width: 145px">
       </colgroup>
       <thead>
         <tr>

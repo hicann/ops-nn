@@ -66,15 +66,15 @@ aclnnStatus aclnnSmoothL1LossBackward(
 - **参数说明：**
 
   </style>
-  <table class="tg" style="undefined;table-layout: fixed; width: 1209px"><colgroup>
+  <table class="tg" style="undefined;table-layout: fixed; width: 1547px"><colgroup>
   <col style="width: 217px">
-  <col style="width: 87px">
-  <col style="width: 224px">
-  <col style="width: 234px">
-  <col style="width: 118px">
-  <col style="width: 113px">
-  <col style="width: 108px">
-  <col style="width: 108px">
+  <col style="width: 120px">
+  <col style="width: 280px">
+  <col style="width: 350px">
+  <col style="width: 200px">
+  <col style="width: 115px">
+  <col style="width: 120px">
+  <col style="width: 145px">
   </colgroup>
   <thead>
     <tr>
@@ -177,10 +177,10 @@ aclnnStatus aclnnSmoothL1LossBackward(
 
   第一段接口完成入参校验，出现以下场景时报错：
   </style>
-  <table class="tg" style="undefined;table-layout: fixed; width: 991px"><colgroup>
+  <table class="tg" style="undefined;table-layout: fixed; width: 1150px"><colgroup>
   <col style="width: 269px">
-  <col style="width: 90px">
-  <col style="width: 632px">
+  <col style="width: 135px">
+  <col style="width: 746px">
   </colgroup>
   <thead>
     <tr>

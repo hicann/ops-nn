@@ -103,15 +103,15 @@ aclnnStatus aclnnApplyFusedEmaAdam(
 
 - **参数说明：**
   </style>
-  <table class="tg" style="undefined;table-layout: fixed; width: 1137px"><colgroup>
-  <col style="width: 201px">
-  <col style="width: 88px">
-  <col style="width: 289px">
-  <col style="width: 156px">
+  <table class="tg" style="undefined;table-layout: fixed; width: 1500px"><colgroup>
+  <col style="width: 200px">
   <col style="width: 120px">
-  <col style="width: 95px">
-  <col style="width: 108px">
-  <col style="width: 108px">
+  <col style="width: 380px">
+  <col style="width: 220px">
+  <col style="width: 200px">
+  <col style="width: 115px">
+  <col style="width: 120px">
+  <col style="width: 145px">
   </colgroup>
   <thead>
     <tr>
@@ -293,10 +293,10 @@ aclnnStatus aclnnApplyFusedEmaAdam(
 
   第一段接口完成入参校验，出现以下场景时报错：
   </style>
-  <table class="tg" style="undefined;table-layout: fixed; width: 728px"><colgroup>
-  <col style="width: 267px">
-  <col style="width: 87px">
-  <col style="width: 374px">
+  <table class="tg" style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+  <col style="width: 270px">
+  <col style="width: 130px">
+  <col style="width: 750px">
   </colgroup>
   <thead>
     <tr>

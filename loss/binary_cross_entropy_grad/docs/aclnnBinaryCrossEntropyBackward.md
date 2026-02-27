@@ -66,6 +66,7 @@ aclnnStatus aclnnBinaryCrossEntropyBackward(
     aclOpExecutor    *executor,
     const aclrtStream stream)
 ```
+
 ## aclnnBinaryCrossEntropyBackwardGetWorkspaceSize
 
 - **参数说明：**
@@ -211,7 +212,7 @@ aclnnStatus aclnnBinaryCrossEntropyBackward(
       <td>gradOutput、target和weightOptional的shape不能<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape。</td>
       </tr>
       <tr>
-      <td>reduction的值非0,1,2三值之一。</td>
+      <td>reduction的值非0、1、2三值之一。</td>
       </tr>
       <tr>
       <td>gradOutput、self、target、weightOptional的shape维度大于8。</td>

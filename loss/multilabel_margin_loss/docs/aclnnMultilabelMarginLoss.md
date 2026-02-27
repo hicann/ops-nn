@@ -50,6 +50,7 @@ self为输入，shape为(N,C)或者(C)，其中N表示batch size，C表示类别
   $$
 
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMultilabelMarginLossGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMultilabelMarginLoss”接口执行计算。
 
 ```Cpp
@@ -76,15 +77,15 @@ aclnnStatus aclnnMultilabelMarginLoss(
 - **参数说明**
 
   </style>
-  <table class="tg" style="undefined;table-layout: fixed; width: 1215px"><colgroup>
-  <col style="width: 194px">
-  <col style="width: 87px">
-  <col style="width: 253px">
-  <col style="width: 234px">
-  <col style="width: 118px">
-  <col style="width: 113px">
-  <col style="width: 108px">
-  <col style="width: 108px">
+  <table class="tg" style="undefined;table-layout: fixed; width: 1475px"><colgroup>
+  <col style="width: 205px">
+  <col style="width: 120px">
+  <col style="width: 320px">
+  <col style="width: 320px">
+  <col style="width: 130px">
+  <col style="width: 115px">
+  <col style="width: 120px">
+  <col style="width: 145px">
   </colgroup>
   <thead>
     <tr>
@@ -176,10 +177,10 @@ aclnnStatus aclnnMultilabelMarginLoss(
 
   第一段接口完成入参校验，出现以下场景时报错：
   </style>
-  <table class="tg" style="undefined;table-layout: fixed; width: 991px"><colgroup>
+  <table class="tg" style="undefined;table-layout: fixed; width: 1150px"><colgroup>
   <col style="width: 269px">
-  <col style="width: 90px">
-  <col style="width: 632px">
+  <col style="width: 120px">
+  <col style="width: 761px">
   </colgroup>
   <thead>
     <tr>
@@ -217,10 +218,10 @@ aclnnStatus aclnnMultilabelMarginLoss(
 
 - **参数说明：**
 
-    <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
-      <col style="width: 200px">
-      <col style="width: 162px">
-      <col style="width: 882px">
+  <table style="undefined;table-layout: fixed; width: 1151px"><colgroup>
+  <col style="width: 184px">
+  <col style="width: 134px">
+  <col style="width: 833px">
       </colgroup>
       <thead>
         <tr>

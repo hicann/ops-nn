@@ -16,7 +16,7 @@
 
 ## 功能说明
 
-  进行[aclnnKlDiv](https://gitcode.com/cann/ops-math/blob/master/math/kl_div_v2/docs/aclnnKlDiv.md) api的结果的反向计算。
+进行[aclnnKlDiv](https://gitcode.com/cann/ops-math/blob/master/math/kl_div_v2/docs/aclnnKlDiv.md) api的结果的反向计算。
 
 ## 函数原型
 
@@ -47,15 +47,15 @@ aclnnStatus aclnnKlDivBackward(
 - **参数说明：**
 
   </style>
-  <table class="tg" style="undefined;table-layout: fixed; width: 1247px"><colgroup>
+  <table class="tg" style="undefined;table-layout: fixed; width: 1435px"><colgroup>
   <col style="width: 205px">
-  <col style="width: 87px">
-  <col style="width: 274px">
-  <col style="width: 234px">
-  <col style="width: 118px">
-  <col style="width: 113px">
-  <col style="width: 108px">
-  <col style="width: 108px">
+  <col style="width: 120px">
+  <col style="width: 300px">
+  <col style="width: 300px">
+  <col style="width: 130px">
+  <col style="width: 115px">
+  <col style="width: 120px">
+  <col style="width: 145px">
   </colgroup>
   <thead>
     <tr>

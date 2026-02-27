@@ -74,14 +74,14 @@ aclnnStatus aclnnNLLLossBackward(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1349px"><colgroup>
-      <col style="width: 158px">
+  <table style="undefined;table-layout: fixed; width: 1500px"><colgroup>
+      <col style="width: 180px">
       <col style="width: 120px">
-      <col style="width: 253px">
-      <col style="width: 283px">
-      <col style="width: 218px">
-      <col style="width: 110px">
-      <col style="width: 102px">
+      <col style="width: 250px">
+      <col style="width: 350px">
+      <col style="width: 220px">
+      <col style="width: 115px">
+      <col style="width: 120px">
       <col style="width: 145px">
       </colgroup>
       <thead>

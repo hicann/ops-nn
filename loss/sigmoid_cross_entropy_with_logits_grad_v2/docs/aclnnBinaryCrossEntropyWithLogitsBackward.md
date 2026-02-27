@@ -12,6 +12,7 @@
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
 |  <term>Atlas 推理系列产品</term>     |     √    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
+
 ## 功能说明
 
 将输入`self`执行`logits`计算，将得到的值与标签值`target`一起进行`BCELoss`的反向传播计算。
@@ -45,15 +46,15 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
 
 - **参数说明：**
 
-    <table style="undefined;table-layout: fixed; width: 1220px"><colgroup>
-    <col style="width: 183px">
+    <table style="undefined;table-layout: fixed; width: 1500px"><colgroup>
+    <col style="width: 180px">
     <col style="width: 120px">
-    <col style="width: 240px">
-    <col style="width: 212px">
-    <col style="width: 152px">
-    <col style="width: 101px">
-    <col style="width: 104px">
-    <col style="width: 108px">
+    <col style="width: 250px">
+    <col style="width: 350px">
+    <col style="width: 220px">
+    <col style="width: 115px">
+    <col style="width: 120px">
+    <col style="width: 145px">
     </colgroup>
     <thead>
       <tr>

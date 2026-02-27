@@ -44,6 +44,7 @@
   $$
 
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnApplyAdamWQuantGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnApplyAdamWQuant”接口执行计算。
 
 ```Cpp
@@ -82,15 +83,15 @@ aclnnStatus aclnnApplyAdamWQuant(
 - **参数说明：**
 
   </style>
-  <table class="tg" style="undefined;table-layout: fixed; width: 1235px"><colgroup>
-  <col style="width: 271px">
-  <col style="width: 88px">
-  <col style="width: 289px">
-  <col style="width: 156px">
+  <table class="tg" style="undefined;table-layout: fixed; width: 1498px"><colgroup>
+  <col style="width: 250px">
   <col style="width: 120px">
-  <col style="width: 95px">
-  <col style="width: 108px">
-  <col style="width: 108px">
+  <col style="width: 380px">
+  <col style="width: 230px">
+  <col style="width: 138px">
+  <col style="width: 115px">
+  <col style="width: 120px">
+  <col style="width: 145px">
   </colgroup>
   <thead>
     <tr>
@@ -300,12 +301,12 @@ aclnnStatus aclnnApplyAdamWQuant(
 
   aclnnStatus： 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-    第一段接口完成入参校验，出现以下场景时报错：
+  第一段接口完成入参校验，出现以下场景时报错：
   </style>
-  <table class="tg" style="undefined;table-layout: fixed; width: 728px"><colgroup>
-  <col style="width: 267px">
-  <col style="width: 87px">
-  <col style="width: 374px">
+  <table class="tg" style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+  <col style="width: 270px">
+  <col style="width: 130px">
+  <col style="width: 750px">
   </colgroup>
   <thead>
     <tr>

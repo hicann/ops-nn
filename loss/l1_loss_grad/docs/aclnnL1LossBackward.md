@@ -45,15 +45,15 @@ aclnnStatus aclnnBinaryCrossEntropy(
 - **参数说明：**
   
   </style>
-  <table class="tg" style="undefined;table-layout: fixed; width: 1249px"><colgroup>
-  <col style="width: 207px">
-  <col style="width: 87px">
-  <col style="width: 274px">
-  <col style="width: 234px">
-  <col style="width: 118px">
-  <col style="width: 113px">
-  <col style="width: 108px">
-  <col style="width: 108px">
+  <table class="tg" style="undefined;table-layout: fixed; width: 1435px"><colgroup>
+  <col style="width: 205px">
+  <col style="width: 120px">
+  <col style="width: 280px">
+  <col style="width: 320px">
+  <col style="width: 130px">
+  <col style="width: 115px">
+  <col style="width: 120px">
+  <col style="width: 145px">
   </colgroup>
   <thead>
     <tr>

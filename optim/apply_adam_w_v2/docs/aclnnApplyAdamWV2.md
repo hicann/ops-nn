@@ -40,6 +40,7 @@
   $$
 
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnApplyAdamWV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnApplyAdamWV2”接口执行计算。
 
 ```cpp
@@ -73,15 +74,15 @@ aclnnStatus aclnnApplyAdamWV2(
 
 - **参数说明：**
 
-    <table style="undefined;table-layout: fixed; width: 1365px"><colgroup>
-    <col style="width: 232px">
-    <col style="width: 125px">
-    <col style="width: 245px">
-    <col style="width: 200px">
-    <col style="width: 227px">
+    <table style="undefined;table-layout: fixed; width: 1520px"><colgroup>
+    <col style="width: 230px">
     <col style="width: 120px">
-    <col style="width: 108px">
-    <col style="width: 108px">
+    <col style="width: 330px">
+    <col style="width: 220px">
+    <col style="width: 230px">
+    <col style="width: 115px">
+    <col style="width: 130px">
+    <col style="width: 145px">
     </colgroup>
     <thead>
       <tr>
