@@ -41,6 +41,7 @@ constexpr uint64_t B8_BLOCK_NUM = 32;
 constexpr uint64_t ALIGN_32_FACTOR = 32;
 constexpr uint64_t ALIGN_512_FACTOR = 512;
 constexpr uint32_t SUM_COUNT = 2;
+constexpr uint32_t DOUBLE_BUFFER_NUM = 2;
 constexpr uint32_t CONST_FACTOR_2 = 2;
 constexpr int32_t NDDMA_DIM = 5;
 constexpr int32_t VL_SIZE = GetVRegSize();
@@ -184,6 +185,32 @@ __aicore__ inline void ComputeYMulti(
             y2Addr1 += count;
             y2Addr2 += count;
         }
+    }
+}
+
+template <typename T_IN>
+__aicore__ inline void LoadTensorForDtypeTIn(
+    __local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
+{
+    if constexpr (IsSameType<T_IN, float>::value) {
+        DataCopy<float, LoadDist::DIST_NORM>(dst, src + offset);
+    } else {
+        RegTensor<T_IN> xIn;
+        DataCopy<T_IN, LoadDist::DIST_UNPACK_B16>(xIn, src + offset);
+        Cast<float, T_IN, castTraitB162B32>(dst, xIn, preg);
+    }
+}
+
+template <typename T_OUT>
+__aicore__ inline void StoreTensorForDtypeTOut(
+    __local_mem__ T_OUT* dst, RegTensor<float>& src, MaskReg& preg, uint32_t offset)
+{
+    if constexpr (IsSameType<T_OUT, float>::value) {
+        DataCopy<T_OUT, StoreDist::DIST_NORM>(dst + offset, src, preg);
+    } else {
+        RegTensor<T_OUT> xOut;
+        Cast<T_OUT, float, castTraitB322B16>(xOut, src, preg);
+        DataCopy<T_OUT, StoreDist::DIST_PACK_B32>(dst + offset, xOut, preg);
     }
 }
 

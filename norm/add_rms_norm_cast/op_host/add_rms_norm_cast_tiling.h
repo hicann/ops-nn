@@ -55,6 +55,7 @@ END_TILING_DATA_DEF;
 constexpr uint32_t TILING_TYPE_NORMAL = 0;
 constexpr uint32_t TILING_TYPE_SPILT = 1;
 constexpr uint32_t TILING_TYPE_MAGIC_AND_WONDERFUL = 2;
+constexpr uint32_t TILING_TYPE_HIGN_PERFORMANCE = 3;
 constexpr uint32_t TILING_OFFSET_REGBASE = 100;
 constexpr uint64_t TILING_KEY_UNRUN = 199;
 
@@ -70,6 +71,7 @@ REGISTER_TILING_DATA_CLASS(AddRmsNormCast, AddRMSNormCastTilingData)
 REGISTER_TILING_DATA_CLASS(AddRmsNormCast_100, AddRmsNormCastRegbaseTilingData)
 REGISTER_TILING_DATA_CLASS(AddRmsNormCast_101, AddRmsNormCastRegbaseTilingData)
 REGISTER_TILING_DATA_CLASS(AddRmsNormCast_102, AddRmsNormCastRegbaseTilingData)
+REGISTER_TILING_DATA_CLASS(AddRmsNormCast_103, AddRmsNormCastRegbaseTilingData)
 REGISTER_TILING_DATA_CLASS(AddRmsNormCast_199, AddRmsNormCastRegbaseTilingData)
 
 struct AddRmsNormCastRegbaseTilingParams {

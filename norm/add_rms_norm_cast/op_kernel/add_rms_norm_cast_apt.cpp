@@ -16,6 +16,7 @@
 #include "arch35/add_rms_norm_cast_regbase.h"
 #include "arch35/add_rms_norm_cast_regbase_spilt_reduce.h"
 #include "arch35/add_rms_norm_cast_regbase_single_n.h"
+#include "arch35/add_rms_norm_cast_regbase_high_performance.h"
 
 using namespace AscendC;
 using namespace AddRmsNormCast;
@@ -40,6 +41,10 @@ extern "C" __global__ __aicore__ void add_rms_norm_cast(
         op.Process();
     } else if (TILING_KEY_IS(102)) {
         KernelAddRmsNormCastRegBaseSingleN<DTYPE_X1> op(&pipe);
+        op.Init(x1, x2, gamma, y1, y2, rstd, x, workspace, tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(103)) {
+        KernelAddRmsNormCastRegBaseHighPerformance<DTYPE_X1> op(&pipe);
         op.Init(x1, x2, gamma, y1, y2, rstd, x, workspace, tilingData);
         op.Process();
     } else if (TILING_KEY_IS(199)) {

@@ -37,7 +37,12 @@ constexpr uint32_t BLOCK_SIZE = 32;
 constexpr uint32_t ALING_FACTOR_512 = 512;
 constexpr uint32_t ONCE_VECTOR_SIZE = 256;
 constexpr uint32_t DEFAULT_SYS_WORKSPACE = 16 * 1024 * 1024;
+constexpr uint32_t UB_RESERVE_FOR_RSTDALIGN = 1024;
+constexpr uint32_t FULL_LOAD_R_MAX = 16384;
+constexpr uint32_t DOUBLE_BUFFER_NUM = 2;
+constexpr uint32_t ULONG_BIT_LEN = 64;
 
+constexpr uint32_t QUE_MODE_NORMAL_NUM = 4;
 constexpr uint32_t LEVEL_BUFFER_CNT = 3;
 constexpr uint32_t MULTI_FACTOR_2 = 2;
 constexpr uint32_t SMOOTH_SCALE1_BIN_OFFSET = 1;
@@ -262,7 +267,32 @@ ge::graphStatus AddRmsNormCastRegbaseTiling::SetTilingParams()
 {
     OP_LOGD(nodeName.c_str(), "Enter AddRmsNormCastRegbaseTiling SetTilingParams.");
     uint64_t tmpUBSize;
-    tilingParams.powerLoop = 1;
+    // Full Load with High-Performance Sum
+    tilingParams.baseN = tilingParams.numN;
+    tilingParams.baseNDtypeAlign = Ops::Base::CeilAlign(tilingParams.baseN, tilingParams.xDtypeAlignNum);
+    tmpUBSize = tilingParams.maxUbSize  - UB_RESERVE_FOR_RSTDALIGN - (tilingParams.baseNDtypeAlign * tilingParams.xDtypeSize);
+
+    // Calculate with binary add
+    uint64_t binAddQuotient = tilingParams.baseNDtypeAlign == 0 ? 1 : (1L << (ULONG_BIT_LEN - 1 - __builtin_clzl(tilingParams.baseNDtypeAlign)));
+    binAddQuotient = (binAddQuotient == tilingParams.baseNDtypeAlign) ? binAddQuotient / NUM_TWO : binAddQuotient;
+    uint64_t binAddBufferOneline = Ops::Base::CeilAlign(
+        (binAddQuotient + tilingParams.vecLength - 1) / tilingParams.vecLength, static_cast<uint64_t>(B32_BLOCK_NUM));
+    
+    if (tmpUBSize > 0 && tilingParams.baseNDtypeAlign <= FULL_LOAD_R_MAX) {
+        tilingParams.baseM =
+            tmpUBSize /
+            (tilingParams.baseNDtypeAlign * tilingParams.xDtypeSize * DOUBLE_BUFFER_NUM * QUE_MODE_NORMAL_NUM +
+             tilingParams.baseNDtypeAlign * sizeof(float) * DOUBLE_BUFFER_NUM + 
+             tilingParams.baseNDtypeAlign * sizeof(float) + sizeof(float) * (DOUBLE_BUFFER_NUM + 1) +
+             binAddBufferOneline * sizeof(float));
+    }
+    if (tilingParams.baseM >= 1 && tilingParams.mPerCore > 1) { // Meets hign performance && Meets no single_n
+        tilingParams.baseM = std::min(tilingParams.baseM, tilingParams.mPerCore);
+        tilingParams.powerSplit = binAddQuotient;
+        tilingParams.tilingType = TILING_TYPE_HIGN_PERFORMANCE;
+        return ge::GRAPH_SUCCESS;
+    }
+
 
     // 1. No cut
     tmpUBSize = CalUBTotalSize(tilingParams.mPerCore, tilingParams.numN);
@@ -299,6 +329,7 @@ ge::graphStatus AddRmsNormCastRegbaseTiling::SetTilingParams()
     }
 
     // 3. Cut n
+    tilingParams.powerLoop = 1;
     tmpUBSize = CalUBTotalSize(1, tilingParams.xReduceAlignNum, TILING_TYPE_SPILT);
     if (tmpUBSize <= tilingParams.maxUbSize) {
         uint64_t tmpPower = tilingParams.xReduceAlignNum;
@@ -419,11 +450,12 @@ ge::graphStatus AddRmsNormCastRegbaseTiling::PostTiling()
     context_->SetBlockDim(tilingParams.usedCoreNum);
     tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
 
     OP_LOGW(nodeName.c_str(), "Tiling usrWorkspaceSize is %lu.", tilingParams.workspaceSize);
 
     size_t usrWorkspaceSize = tilingParams.workspaceSize;
-    size_t sysWorkSpaceSize = DEFAULT_SYS_WORKSPACE;
+    size_t sysWorkSpaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     currentWorkspace[0] = usrWorkspaceSize + sysWorkSpaceSize;
     return ge::GRAPH_SUCCESS;
