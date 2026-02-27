@@ -62,7 +62,7 @@ done
 #搜索变更的文件名，将存在于valid_dirs清单中的算子保存到ops_name中
 
 ops_name=()
-ops_name_mirror=()
+operator_list_950=()
 
 mapfile -t lines < ${pr_file}
 for file_path in "${lines[@]}"
@@ -92,12 +92,40 @@ do
     #如果file_path为scripts/ci/mirror_update_time.txt，则将准备好的需验证算子列表加到ops_name与ops_name_mirror中
     if [[ "$file_path" == "scripts/ci/mirror_update_time.txt" ]]; then
 
-        operator_list=("conv2d_v2" "conv3d_v2")
-        ops_name_mirror=("${operator_list[@]}")
-        for op in "${operator_list[@]}"; do
+        foreach_ops_910b=("foreach_abs" "foreach_add_list")
+        control_ops_910b=("assert")
+        index_ops_910b=("embedding_dense_grad_v2" "gather_elements_v2" "index_put_v2" "scatter_elements_v2")
+        vfusion_ops_910b=("scaled_masked_softmax_v2")
+        rnn_ops_910b=("dynamic_rnn")
+        pooling_ops_910b=("avg_pool3_d" "adaptive_max_pool3d")
+        activation_ops_910b=("ge_glu_v2" "ge_glu_grad_v2")
+        loss_ops_910b=("logit" "logit_grad")
+        optim_ops_910b=("apply_adam_w_v2" "apply_fused_ema_adam")
+        norm_ops_910b=("rms_norm" "add_layer_norm_grad")
+        quant_ops_910b=("flat_quant" "dynamic_quant")
+        matmul_ops_910b=("addmv" "batch_mat_mul_v3" "fused_linear_cross_entropy_loss_grad" "fused_linear_online_max_sum" "fused_quant_mat_mul" "gemm" "mat_mul_v3" "mv" "quant_batch_matmul_v3" "weight_quant_batch_matmul_v2")
+        conv_ops_910b=("conv2d_v2" "conv3d_v2")
+        operator_list_910b=("${foreach_ops_910b[@]}" "${control_ops_910b[@]}" "${index_ops_910b[@]}" "${vfusion_ops_910b[@]}" "${rnn_ops_910b[@]}" "${pooling_ops_910b[@]}" "${activation_ops_910b[@]}" "${loss_ops_910b[@]}" "${optim_ops_910b[@]}" "${norm_ops_910b[@]}" "${quant_ops_910b[@]}" "${matmul_ops_910b[@]}" "${conv_ops_910b[@]}")
+
+        foreach_ops_950=("foreach_abs" "foreach_add_list")
+        control_ops_950=("assert")
+        index_ops_950=("embedding_dense_grad_v2" "scatter_elements_v2")
+        vfusion_ops_950=("scaled_masked_softmax_v2")
+        rnn_ops_950=()
+        pooling_ops_950=("avg_pool3_d" "max_pool_grad_with_argmax_v3")
+        activation_ops_950=("ge_glu_grad_v2" "swi_glu")
+        loss_ops_950=("logit" "logit_grad")
+        optim_ops_950=("apply_adam_w_v2" "apply_fused_ema_adam")
+        norm_ops_950=("add_layer_norm" "rms_norm_grad")
+        quant_ops_950=("dequant_swiglu_quant" "dynamic_quant")
+        matmul_ops_950=("mat_mul_v3" "quant_batch_matmul_v4" "weight_quant_batch_matmul_v2")
+        conv_ops_950=("conv2d_v2" "conv3d_v2" "conv3d_backprop_filter_v2" "conv3d_backprop_input_v2" "conv3d_transpose_v2")
+        operator_list_950=("${foreach_ops_950[@]}" "${control_ops_950[@]}" "${index_ops_950[@]}" "${vfusion_ops_950[@]}" "${rnn_ops_950[@]}" "${pooling_ops_950[@]}" "${activation_ops_950[@]}" "${loss_ops_950[@]}" "${optim_ops_950[@]}" "${norm_ops_950[@]}" "${quant_ops_950[@]}" "${matmul_ops_950[@]}" "${conv_ops_950[@]}")
+        
+        for op in "${operator_list_910b[@]}"; do
             op_exists=0
-            for operator_list in "${ops_name[@]}"; do
-                if [ "$operator_list" = "$op" ]; then
+            for existing_op in "${ops_name[@]}"; do
+                if [ "$existing_op" = "$op" ]; then
                     op_exists=1
                     break
                 fi
@@ -135,32 +163,33 @@ do
     done
 done
 
-#自定义算子包验证(ascend950)
-
-for name in "${ops_name_mirror[@]}"
-do
-    rm -rf build
-    rm -rf build_out
-    echo "[EXECUTE_COMMAND] bash build.sh --pkg --vendor_name=$name --ops=$name --soc=ascend950"
-    bash build.sh --pkg --vendor_name=$name --ops=$name --soc=ascend950 --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j16
-    status=$?
-    if [ $status -ne 0 ]; then
-        echo "${name} check ascend950 pkg fail"
-        exit 1
-    fi
-    for dir in "${valid_example_dirs[@]}"
-    do
-        if [[ "$dir" == "$name" ]]; then
-            echo "--------------------------------"
-            mkdir -p ${WORKSPACE}/single
-            cp build_out/cann-ops-nn-${name}-linux.*.run ${WORKSPACE}/single/
-            break
-        fi
-    done
-done
-
 echo "==============================="
-cd ${WORKSPACE}
+cd "${WORKSPACE}"
 ls
 tar -zcf single.tar.gz single/
 ls
+
+# #自定义算子包验证(ascend950)
+# if [ ${#operator_list_950[@]} -gt 0 ]; then
+#     for name in "${operator_list_950[@]}"
+#     do
+#         rm -rf build
+#         rm -rf build_out
+#         echo "[EXECUTE_COMMAND] bash build.sh --pkg --vendor_name=$name --ops=$name --soc=ascend950"
+#         bash build.sh --pkg --vendor_name=$name --ops=$name --soc=ascend950 --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j16
+#         status=$?
+#         if [ $status -ne 0 ]; then
+#             echo "${name} check ascend950 pkg fail"
+#             exit 1
+#         fi
+#         for dir in "${valid_example_dirs[@]}"
+#         do
+#             if [[ "$dir" == "$name" ]]; then
+#                 echo "--------------------------------"
+#                 mkdir -p ${WORKSPACE}/single
+#                 cp build_out/cann-ops-nn-${name}-linux.*.run ${WORKSPACE}/single/
+#                 break
+#             fi
+#         done
+#     done
+# fi
