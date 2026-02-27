@@ -524,7 +524,6 @@ convolution_backprop@ops-nn:
       style:
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_graph
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_host/op_tiling/arch35
-        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_host/op_tiling/arch35/conv3d_backprop_input_v2_base_tiling.cpp
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/conv3d_backprop_input_v2/conv3d_backprop_input_v2_tiling_data.h
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2_arch35_tiling_key.h
@@ -543,7 +542,8 @@ convolution_backprop@ops-nn:
         - ops/ops-nn/conv/conv3d_transpose_v2/tests
         - ops/ops-nn/conv/conv3d_backprop_input_v2/tests
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/tests
-      non_delivery: null
+      non_delivery:
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_host/op_tiling/arch35/conv3d_backprop_input_v2_base_tiling.cpp
       open_source: null
 activation-c@ops-nn:
   src:
