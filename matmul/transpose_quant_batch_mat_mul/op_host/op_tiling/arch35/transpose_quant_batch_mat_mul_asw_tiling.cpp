@@ -89,7 +89,8 @@ void TransposeQuantBatchMatMulAswTiling::AdjustBasicBlock()
             nCore = MathUtil::CeilDivision(args_.nValue, static_cast<uint64_t>(tempBaseN));
         }
         uint64_t kValueAlign = ops::CeilAlign(static_cast<uint64_t>(args_.kValue), baseKAlignNum);
-        uint64_t kValueMax = compileInfo_.l0ASize / DB_SIZE / std::max(tempBaseM, tempBaseN);
+        uint64_t kValueMax =
+            ops::FloorDiv(ops::FloorDiv(compileInfo_.l0ASize, DB_SIZE), std::max(tempBaseM, tempBaseN));
         if (kValueMax >= baseKAlignNum) {
             runInfo_.baseM = tempBaseM;
             runInfo_.baseN = tempBaseN;
