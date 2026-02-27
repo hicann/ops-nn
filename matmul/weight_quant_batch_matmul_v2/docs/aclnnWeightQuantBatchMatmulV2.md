@@ -416,8 +416,8 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
     | ----     | ------------------| --------------| -------------- | ------------------------| ------------------ | ------------------- | ------------ | ------------------ | ---- | ------- |
     | FLOAT16/BFLOAT16 | INT4/INT32 | ND | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | 0 | 与x一致 | T 量化 |
     | FLOAT16/BFLOAT16 | INT4/INT32 | ND/FRACTAL_NZ | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | pergroup: [32, k-1]且为32倍数<br>其他: 0 | 与x一致 | C & G 量化 |
-    | FLOAT16/BFLOAT16 | FLOAT4_E2M1 | FRACTAL_NZ | 与x一致 | 与x一致/null | null | null | 与x一致/null | [32, k-1]且为32倍数 | 与x一致 | G 量化 |
-    | FLOAT16/BFLOAT16 | FLOAT | FRACTAL_NZ | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | [32, k-1]且为32倍数 | 与x一致 | G 量化 |
+    | FLOAT16/BFLOAT16 | FLOAT4_E2M1 | FRACTAL_NZ | 与x一致 | null | null | null | 与x一致/null | [32, k-1]且为32倍数 | 与x一致 | G 量化 |
+    | FLOAT16/BFLOAT16 | FLOAT | FRACTAL_NZ | 与x一致 | null | null | null | 与x一致/null | [32, k-1]且为32倍数 | 与x一致 | G 量化 |
     | FLOAT16/BFLOAT16 | FLOAT4_E2M1 | ND/FRACTAL_NZ | FLOAT8_E8M0 | null | null | null | 与x一致/null | 32 | 与x一致 | MX 量化 |
     | FLOAT16/BFLOAT16 | FLOAT | ND/FRACTAL_NZ | FLOAT8_E8M0 | null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | 32 | 与x一致 | MX 量化 |
 
@@ -430,7 +430,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
         - perchannel[量化模式](../../../docs/zh/context/量化介绍.md)：`weight`的数据类型为INT4/INT32，`weight`非转置，`x`非转置
         - pergroup[量化模式](../../../docs/zh/context/量化介绍.md)：`weight`的数据类型为INT4/INT32/FLOAT4_E2M1/FLOAT，`weight`非转置，`x`非转置。
         - mx[量化模式](../../../docs/zh/context/量化介绍.md)：`weight`的数据类型为FLOAT4_E2M1/FLOAT，`weight`非转置，`x`非转置。
-    
+
   <a id="ascend_950pr_ascend950dt_性能优化建议"></a>
   - **性能优化建议**
 

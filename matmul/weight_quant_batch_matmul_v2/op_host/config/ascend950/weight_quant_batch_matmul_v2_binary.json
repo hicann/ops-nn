@@ -1498,7 +1498,7 @@
             ]
         },
         {
-            "bin_filename": "WeightQuantBatchMatmulV2_fp16_float4_e2m1_weight_nd_fp16",
+            "bin_filename": "WeightQuantBatchMatmulV2_fp16_float4_e2m1_weight_nd_mx_fp16",
             "inputs": [
                 {
                     "name": "x",
@@ -1612,7 +1612,7 @@
             ]
         },
         {
-            "bin_filename": "WeightQuantBatchMatmulV2_bf16_float4_e2m1_weight_nd_bf16",
+            "bin_filename": "WeightQuantBatchMatmulV2_bf16_float4_e2m1_weight_nd_mx_bf16",
             "inputs": [
                 {
                     "name": "x",
