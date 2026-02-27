@@ -47,6 +47,7 @@ constexpr int32_t DIM15 = 15;
 constexpr int32_t DIM16 = 16;
 constexpr int32_t DIM17 = 17;
 constexpr int32_t DIM18 = 18;
+constexpr int64_t DB_BUFFER = 2;
 const int32_t ONE_BLOCK = 32;
 const int32_t ALL_CORE_NUM = 72 * 32;
 const int32_t MAX_SHAPE = 7;
@@ -60,7 +61,7 @@ public:
 protected:
     const NonZeroTilingData* tilingData_;
     TPipe pipe;
-    TQueBind<QuePosition::VECIN, QuePosition::VECOUT, 2> inQueX_;
+    TQueBind<QuePosition::VECIN, QuePosition::VECOUT, DB_BUFFER> inQueX_;
     GlobalTensor<T1> xGm_;
     GlobalTensor<T2> yGm_;
     GlobalTensor<uint64_t> shapeGm_;
