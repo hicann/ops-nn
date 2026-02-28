@@ -44,10 +44,28 @@ protected:
         EXPECT_EQ(aclRet, expect_status);
         // SAMPLE: precision simulate
         if (expect_status == ACL_SUCCESS) {
-            // ut.TestPrecision();  // soc version  2. 二段接口
+            ut.TestPrecision();  // soc version  2. 二段接口
         }
     }
 };
+
+TEST_F(l2_batch_matmul_weight_nz_test, ascend950_test_aligned_fp16_out_weight_nz)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    TensorDesc a_desc = TensorDesc({2, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({2, 32, 16}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 1, 16, 16});
+    TensorDesc out_desc = TensorDesc({2, 16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_weight_nz_test, ascend950_test_aligned_bf16_out_weight_nz)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    TensorDesc a_desc = TensorDesc({2, 16, 32}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({2, 32, 16}, ACL_BF16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 1, 16, 16});
+    TensorDesc out_desc = TensorDesc({2, 16, 16}, ACL_BF16, ACL_FORMAT_ND);
+    BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
+}
 
 TEST_F(l2_batch_matmul_weight_nz_test, ascend910B_test_aligned_fp32_out_weight_nd)
 {

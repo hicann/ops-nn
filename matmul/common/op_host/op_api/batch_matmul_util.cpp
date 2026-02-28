@@ -281,6 +281,11 @@ const aclTensor* TransBmm2Mm(
     OP_LOGI("Hit bmm2mm scenario.");
     auto x1Bmm2Mm = l0op::Reshape(x1, {-1, x1->GetViewShape().GetDim(x1->GetViewShape().GetDimNum() - 1)}, executor);
     auto x2Bmm2Mm = l0op::Reshape(x2, {-1, x2->GetViewShape().GetDim(x2->GetViewShape().GetDimNum() - 1)}, executor);
+    auto x2StorageShape = x2->GetStorageShape();
+    if (x2->GetStorageFormat() == ge::FORMAT_FRACTAL_NZ) {
+        x2Bmm2Mm->SetStorageShape(x2StorageShape);
+        x2Bmm2Mm = l0op::ReFormat(x2Bmm2Mm, op::Format::FORMAT_FRACTAL_NZ);
+    }
     const aclTensor* mmOut = l0op::MatMulV3Nd(x1Bmm2Mm, x2Bmm2Mm, bias, adjX1, adjX2, offsetX, opImplModeEnum, executor);
     CHECK_RET(mmOut != nullptr, nullptr);
     auto outShapeIntArray = GetOutputSize(x1, x2, adjX1, adjX2, executor);
@@ -746,7 +751,7 @@ static aclnnStatus GetBatchMatmulOpInfo(
 bool CheckDtypeValidWeightNz(const aclTensor* self, const aclTensor* mat2, const aclTensor* out)
 {
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (npuArch != NpuArch::DAV_2201) {
+    if ((npuArch != NpuArch::DAV_2201) && (npuArch != NpuArch::DAV_3510)) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
             "batchmatmulweightnz is unsupported in this npu arch");

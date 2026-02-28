@@ -40,8 +40,15 @@ bool BatchMatMulV3AswBasicTiling::IsContiguousStride(StrideIndexPairs& strideInd
 bool BatchMatMulV3AswBasicTiling::IsCapable()
 {
     bool isEqualBatch = batchInfo_->batchA0 == batchInfo_->batchB0 && batchInfo_->batchA1 == batchInfo_->batchB1 &&
-                           batchInfo_->batchA2 == batchInfo_->batchB2 && batchInfo_->batchA3 == batchInfo_->batchB3;
+                        batchInfo_->batchA2 == batchInfo_->batchB2 && batchInfo_->batchA3 == batchInfo_->batchB3;
     if (!isEqualBatch) {
+        return false;
+    }
+    bool isSupportType = (args_.aType == ge::DT_FLOAT16 || args_.aType == ge::DT_BF16) &&
+                         (args_.bType == ge::DT_FLOAT16 || args_.bType == ge::DT_BF16) &&
+                         (args_.cType == ge::DT_FLOAT16 || args_.cType == ge::DT_BF16);
+    if ((!isSupportType) && args_.bFormat == ge::FORMAT_FRACTAL_NZ) {
+        OP_LOGE(args_.opName, "NZ format is not supported when the data type is FP32");
         return false;
     }
     return true;

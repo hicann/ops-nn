@@ -92,6 +92,10 @@ bool BatchMatMulV3IterBatchBasicApiTiling::IsMat2TransposeNonContiguous(
 
 bool BatchMatMulV3IterBatchBasicApiTiling::IsCapable()
 {
+    if (args_.aFormat == ge::FORMAT_FRACTAL_NZ || args_.bFormat == ge::FORMAT_FRACTAL_NZ) {
+        OP_LOGD(args_.opName, "[iterbatch_basicapi] The NZ format is not supported in this strategy.");
+        return false;
+    }
     if (batchInfo_->batchBias > 1UL) {
         return false;
     }

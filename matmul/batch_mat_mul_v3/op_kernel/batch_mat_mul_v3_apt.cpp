@@ -160,7 +160,9 @@ __global__ __aicore__ void batch_mat_mul_v3(
 
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
     using aLayout = std::conditional_t<aTran, layout::ColumnMajor, layout::RowMajor>;
-    using bLayout = std::conditional_t<bTran, layout::ColumnMajor, layout::RowMajor>;
+    using bLayout = std::conditional_t<
+        (format_x2 == CubeFormat::NZ), std::conditional_t<bTran, layout::Zn, layout::Nz>,
+        std::conditional_t<bTran, layout::ColumnMajor, layout::RowMajor> >;
 #endif
 
     REGISTER_TILING_DEFAULT(BatchMatMulV3TilingData);

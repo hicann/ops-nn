@@ -27,6 +27,10 @@ MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3KEqZeroTiling, DAV_3510,
 
 bool BatchMatMulV3KEqZeroTiling::IsCapable()
 {
+    if (args_.aFormat == ge::FORMAT_FRACTAL_NZ || args_.bFormat == ge::FORMAT_FRACTAL_NZ) {
+        OP_LOGD(args_.opName, "[k_equal_zero] The NZ format is not supported in this strategy.");
+        return false;
+    }
     if (args_.hasBias) {
         return false;
     }

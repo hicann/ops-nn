@@ -95,6 +95,10 @@ static bool CheckShape(const aclTensor* selfTensor, const aclTensor* otherTensor
     const op::Shape self = selfTensor->GetViewShape();
     const op::Shape other = otherTensor->GetViewShape();
     const op::Shape out = outTensor->GetViewShape();
+    if ((other[1] == 1 || other[2] == 1) && otherTensor->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis or n-axis can not be 1.");
+        return false;
+    }
     // selfDimNum - 1 means self's last dim, and otherDimNum - 2 means mat2's penultimate dim
     if (selfDimNum < 2 || otherDimNum < 2 || outDimNum < 2) {
         OP_LOGE(
@@ -197,7 +201,7 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
 bool CheckDtypeValidWeightNz(const aclTensor* self, const aclTensor* mat2, const aclTensor* out)
 {
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (npuArch != NpuArch::DAV_2201) {
+    if ((npuArch != NpuArch::DAV_2201) && (npuArch != NpuArch::DAV_3510)) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
             "batchmatmulweightnz is unsupported in this npu arch");
