@@ -123,7 +123,7 @@ endfunction()
 # and install to packages/vendors/${VENDOR_NAME}/op_impl/ai_core/tbe/${VENDOR_NAME}_impl/dynamic
 ###################################################################################################
 function(add_ops_impl_target)
-  set(oneValueArgs TARGET OPS_INFO_DIR IMPL_DIR OUT_DIR INSTALL_DIR)
+  set(oneValueArgs TARGET OPS_INFO_DIR IMPL_DIR OUT_DIR INSTALL_DIR DEPENDS)
   cmake_parse_arguments(OPIMPL "" "${oneValueArgs}" "OPS_BATCH;OPS_ITERATE" ${ARGN})
 
   add_custom_command(OUTPUT ${OPIMPL_OUT_DIR}/.impl_timestamp
@@ -135,6 +135,7 @@ function(add_ops_impl_target)
     COMMAND rm -rf ${OPIMPL_OUT_DIR}/.impl_timestamp
     COMMAND touch ${OPIMPL_OUT_DIR}/.impl_timestamp
     DEPENDS ${CMAKE_SOURCE_DIR}/scripts/util/ascendc_impl_build.py
+            ${OPIMPL_DEPENDS}
   )
   add_custom_target(${OPIMPL_TARGET} ALL
     DEPENDS ${OPIMPL_OUT_DIR}/.impl_timestamp
@@ -568,15 +569,7 @@ function(gen_ops_info_and_python)
       DESTINATION ${IMPL_INSTALL_DIR}/inc
     )
   endif()
-
-  add_ops_impl_target(
-    TARGET ascendc_impl_gen
-    OPS_INFO_DIR ${ASCEND_AUTOGEN_PATH}
-    IMPL_DIR ${ASCEND_KERNEL_SRC_DST}
-    OUT_DIR ${CMAKE_BINARY_DIR}/tbe
-    INSTALL_DIR ${IMPL_DYNAMIC_INSTALL_DIR}
-  )
-
+  
   set(ascendc_impl_gen_depends ascendc_kernel_src_copy opbuild_custom_gen_aclnn_all common_copy)
   foreach(compute_unit ${ASCEND_ALL_COMPUTE_UNIT})
     # generate aic-${compute_unit}-ops-info.json, operator infos
@@ -600,6 +593,15 @@ function(gen_ops_info_and_python)
     )
     list(APPEND ascendc_impl_gen_depends ops_info_gen_${compute_unit})
   endforeach()
+
+  add_ops_impl_target(
+    TARGET ascendc_impl_gen
+    OPS_INFO_DIR ${ASCEND_AUTOGEN_PATH}
+    IMPL_DIR ${ASCEND_KERNEL_SRC_DST}
+    OUT_DIR ${CMAKE_BINARY_DIR}/tbe
+    INSTALL_DIR ${IMPL_DYNAMIC_INSTALL_DIR}
+    DEPENDS ${ascendc_impl_gen_depends}
+  )
   add_dependencies(ascendc_impl_gen ${ascendc_impl_gen_depends})
 
   if(ENABLE_BINARY OR ENABLE_CUSTOM)
