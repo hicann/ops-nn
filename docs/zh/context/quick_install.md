@@ -173,3 +173,9 @@ git clone -b ${tag_version} https://gitcode.com/cann/ops-nn.git
 cd ops-nn
 pip3 install -r requirements.txt
 ```
+> [!NOTE] 注意
+> gitcode平台在使用HTTPS协议的时候要配置并使用个人访问令牌代替登录密码进行克隆，推送等操作。
+
+若您的编译环境无法访问网络，无法通过`git`指令下载代码，需要在联网环境中下载源码后，手动上传至目标环境。
+- 在联网环境中，进入[本项目主页](https://gitcode.com/cann/ops-nn), 通过`下载ZIP`或`clone`按钮，根据指导，完成源码下载。
+- 连接至离线环境中，上传源码至您指定的目录下。若下载的为源码压缩包，还需进行解压。

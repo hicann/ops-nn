@@ -104,7 +104,7 @@ int main()
 >说明：对于项目内已实现的算子（非自定义算子），可通过根目录下build.sh直接运行算子，操作请参考[本地验证](./quick_op_invocation.md#本地验证)。
 
 1. 前提条件。
-   请参考本项目[编译执行](./quick_op_invocation.md#编译执行)完成目标算子的编译部署。
+   请参考本项目[源码编译](./quick_op_invocation.md#源码编译)完成目标算子的编译部署。
 
 2. 创建CMakeLists文件。
 
@@ -281,7 +281,7 @@ int main() {
 >说明：对于项目内已实现的算子（非自定义算子），可通过根目录下build.sh直接运行算子，操作请参考[本地验证](./quick_op_invocation.md#本地验证)。
 
 1. 前提条件。
-   请参考本项目[编译执行](./quick_op_invocation.md#编译执行)完成目标算子的编译部署。
+   请参考本项目[源码编译](./quick_op_invocation.md#源码编译)完成目标算子的编译部署。
 
 2. 创建CMakeLists文件。
 

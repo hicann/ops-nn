@@ -1,6 +1,6 @@
 # AI Core算子开发指南
 
-> **说明：** 
+> **说明：**
 >
 > 1. 算子开发过程中涉及的基本概念如Tiling、Kernel、硬件架构等请参考[《Ascend C算子开发》](https://hiascend.com/document/redirect/CannCommunityOpdevAscendC)，涉及的接口请参考[《Ascend C算子开发接口》](https://hiascend.com/document/redirect/CannCommunityAscendCApi)、《基础数据结构和接口》。
 > 2. AI Core算子是使用Ascend C语言开发，运行在AI Core硬件单元算子；AI CPU算子是使用C++语言开发，运行在AI CPU硬件单元算子。如果您想贡献AI CPU算子，请参考[AI CPU算子开发指南](./aicpu_develop_guide.md)。
@@ -19,12 +19,12 @@
 
 5. [aclnn适配](#aclnn适配)：自定义算子推荐aclnn接口调用，需提前完成二进制发布。**如采用图模式调用算子**，请参考[图模式适配指南](./graph_develop_guide.md)。
 
-6. [编译部署](#编译部署)：通过工程编译脚本完成自定义算子的编译和安装。 
+6. [编译部署](#编译部署)：通过工程编译脚本完成自定义算子的编译和安装。
 
-7. [算子验证](#算子验证)：通过常见算子调用方式，验证自定义算子功能。  
+7. [算子验证](#算子验证)：通过常见算子调用方式，验证自定义算子功能。
 
 ## 工程创建
-**1. 环境部署** 
+**1. 环境部署**
 
 开发算子前，请先参考[环境部署](../context/quick_install.md)完成基础环境搭建。
 
@@ -134,7 +134,7 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context){
     OP_CHECK_IF(
         GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo error"),
         return ge::GRAPH_FAILED);
-    
+
     // 2.2获取输入信息
     // 获取输入张量shape信息
     auto inputX = context->GetInputShape(0);
@@ -268,7 +268,7 @@ class AddExample
 {
 public:
     // 默认构造函数，__aicore__表示该函数在AI Core上运行
-    __aicore__ inline AddExample(){};     
+    __aicore__ inline AddExample(){};
     // 初始化函数，用于设置输入输出地址和Tiling切分信息计算
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR z, const AddExampleTilingData* tilingData);
     // 主处理函数，执行数据拷贝和计算
@@ -298,7 +298,7 @@ private:
     GlobalTensor<T> inputGMY_;
     // 输入Z的GM地址
     GlobalTensor<T> outputGMZ_;
-    
+
     // 总数据长度
     int64_t blockLength_ = 0;
     // 每个block被划分多少块
@@ -361,7 +361,7 @@ __aicore__ inline void AddExample<T>::Process()
 
     以`AddExample`算子为例，假设开发交付件在`examples`目录，完整代码参见[add_example](../../../examples/add_example)目录。
 
-    > 说明：编译过程依赖第三方开源软件，联网场景会自动下载，离线编译场景需要自行安装，具体参考[离线编译](../context/build_offline.md)。
+    > 说明：编译过程依赖第三方开源软件，联网场景会自动下载，离线编译场景需要自行安装，具体参考[未联网编译](../invocation/quick_op_invocation.md#未联网编译)。
 
     ```bash
     # 编译指定算子，如bash build.sh --pkg --ops=add_example
@@ -371,13 +371,13 @@ __aicore__ inline void AddExample<T>::Process()
     - --vendor_name（可选）：\$\{vendor\_name\}表示构建的自定义算子包名，默认名为custom。
     - --ops（可选）：\$\{op\_list\}表示待编译算子，不指定时默认编译所有算子。格式形如"--ops=add_example"。
     - --experimental（可选）：若编译的算子为贡献算子，需配置--experimental。
-    
+
     若提示如下信息，说明编译成功：
-    
+
     ```bash
     Self-extractable archive "cann-ops-nn-${vendor_name}-linux.${arch}.run" successfully created.
     ```
-    
+
 3. **安装自定义算子包。**
 
     ```bash

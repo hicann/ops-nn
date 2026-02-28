@@ -33,10 +33,10 @@ ops-nn是[CANN](https://hiascend.com/software/cann) （Compute Architecture for 
 
 这些文档提供了多样化场景和更全面的操作指导，方便您应用于各种AI业务场景。
 
-1. [环境部署](docs/zh/context/quick_install.md)：**基础环境搭建**指南，提供多种场景下CANN软件包安装方法，例如Docker部署、手动安装等。
-2. [算子调用](docs/zh/invocation/quick_op_invocation.md)：算子**源码编译和执行**指南，提供多种编译算子包以及运行算子的方法（包括执行算子样例和UT）等。
-3. [算子开发](docs/zh/develop/aicore_develop_guide.md)：基于项目工程**开发新算子**指南，从零学习创建算子工程、实现Tiling和Kernel核心交付件等。
-4. [算子调试调优](docs/zh/debug/op_debug_prof.md)：提供常见的算子**调试和调优**方法，如DumpTensor、msProf、Simulator等。
+1. [环境部署](docs/zh/context/quick_install.md)：搭建**基础环境**的指南，提供了多种场景下第三方依赖和软件包安装方法等。
+2. [算子调用](docs/zh/invocation/quick_op_invocation.md)：算子**源码编译和执行**指南，提供了不同场景下算子包编译（包括联网/未联网等）和算子运行的方法（包括执行算子样例和UT）等。
+3. [算子开发](docs/zh/develop/aicore_develop_guide.md)：基于本项目工程**开发新算子**的指南，提供了创建算子工程、实现Tiling和Kernel核心交付件等指导。
+4. [算子调试调优](docs/zh/debug/op_debug_prof.md)：提供了常见的**算子调试和调优**方法，如DumpTensor、msProf、Simulator等。
 
 除了上述指南，还提供了其他文档介绍，例如算子调用方式和流程、算子基本概念等，全量文档介绍请访问[docs](docs/README.md)。
 
