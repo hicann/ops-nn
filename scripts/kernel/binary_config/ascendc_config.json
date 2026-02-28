@@ -336,7 +336,7 @@
     {"name":"Axpy", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"AxpyV2", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"SwiGluGrad", "compute_units": ["ascend910_93", "ascend910b", "ascend950"], "auto_sync": true, "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
-    {"name":"SwiGluQuant", "compute_units": ["ascend910_93", "ascend910b", "kirinx90", "kirin9030"], "auto_sync": true},
+    {"name":"SwiGluQuant", "compute_units": ["ascend910_93", "ascend910b", "ascend950", "kirinx90", "kirin9030"], "auto_sync": true},
     {"name":"DeepNorm", "compute_units": ["ascend910_93", "ascend910b", "ascend310p", "ascend950", "kirinx90", "kirin9030"], "auto_sync" : false},
     {"name":"DeepNormGrad", "compute_units": ["ascend910b", "ascend910_93", "ascend310p"], "auto_sync" : false},
     {"name": "SoftmaxV2", "compute_units": ["ascend950", "mc62cm12a"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
