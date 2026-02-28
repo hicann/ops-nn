@@ -23,7 +23,8 @@
 namespace Ops {
 namespace NN {
 ge::graphStatus InferShapeForBatchMatMul(gert::InferShapeContext* context, const int32_t attr_adj_idx,
-                                         const size_t input_bias_index, const bool is_x2_packed = false);
+                                         const size_t input_bias_index, const bool is_x2_packed = false,
+                                         const char* fused_op_type = "");
 ge::graphStatus InferShapeRangeForBatchMatMul(gert::InferShapeRangeContext* context, const int32_t attr_adj_idx,
                                               const size_t input_bias_index);
 bool CheckIsUnknownDimNum(const gert::Shape& shape);

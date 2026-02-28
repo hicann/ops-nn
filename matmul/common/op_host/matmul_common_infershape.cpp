@@ -20,9 +20,12 @@ constexpr size_t BATCH_MATMUL_MIN_SHAPE_SIZE = 2;
 constexpr size_t BATCH_MATMUL_MAX_SHAPE_SIZE = 8;
 constexpr size_t BATCH_MATMUL_BIAS_IDX = 2; // input_bias index is different with op_type
 constexpr size_t BATCH_MATMUL_FIXPIPE_BIAS_IDX = 3;
+constexpr size_t SWIGLU_CONCAT_WEIGHT_DIM_NUM = 3;
 constexpr int64_t UNKNOWN_DIM = -1;
 constexpr int64_t UNKNOWN_DIM_NUM = -2;
+constexpr int64_t SWIGLU_CONCAT_DIM_VALUE = 2;
 const int64_t B4_NUMS_IN_B32 = 8;
+constexpr char* FUSED_OP_TYPE_SWIGLU = "swiglu";
 
 struct InferShapeBatchTensor {
     const Shape input_shape_a;
@@ -320,7 +323,7 @@ static bool CalculateTransX2Float(
 
 static ge::graphStatus UpdateX2NewShape(
     const gert::InferShapeContext* context, Shape& new_shape, bool& reshape_flag, bool trans_x1, bool trans_x2,
-    const bool is_packed)
+    const bool is_packed, const char* fused_op_type)
 {
     auto op_name = context->GetNodeName();
     if (new_shape.GetDimNum() == 1 && new_shape.GetDim(0) > UNKNOWN_DIM_NUM) {
@@ -353,12 +356,35 @@ static ge::graphStatus UpdateX2NewShape(
             }
         }
     }
+
+    if (strcmp(fused_op_type, FUSED_OP_TYPE_SWIGLU) == 0) {
+        if (new_shape.GetDimNum() != SWIGLU_CONCAT_WEIGHT_DIM_NUM) {
+            CUBE_INNER_ERR_REPORT(op_name,
+                "[InferShape] For swiglu fused operation, x2 shape must be 3-dimensional, \
+                but got %zu dimensions (shape: %s)", new_shape.GetDimNum(), Ops::Base::ToString(new_shape).c_str());
+            return ge::GRAPH_FAILED;
+        }
+
+        int64_t highest_dim = new_shape.GetDim(0);
+        // the highest dimension (dimension 0) equals 2 (indicating concatenation of two weights)
+        if (highest_dim != SWIGLU_CONCAT_DIM_VALUE) {
+            CUBE_INNER_ERR_REPORT(op_name,
+                "[InferShape] For swiglu fused operation, the highest dimension must be 2, but got %ld", highest_dim);
+            return ge::GRAPH_FAILED;
+        }
+
+        // remove the highest dimension (value 2) to perform normal matmul inferShape
+        new_shape.SetDimNum(BATCH_MATMUL_MIN_SHAPE_SIZE);
+        new_shape.SetDim(0, new_shape.GetDim(1));
+        new_shape.SetDim(1, new_shape.GetDim(2));
+    }
+
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus InferShapeForBatchMatMul(
     gert::InferShapeContext* context, const int32_t attr_adj_idx, const size_t input_bias_index,
-    const bool is_x2_packed)
+    const bool is_x2_packed, const char* fused_op_type)
 {
     auto shape_x1 = context->GetInputShape(0);
     auto shape_x2 = context->GetInputShape(1);
@@ -393,7 +419,7 @@ ge::graphStatus InferShapeForBatchMatMul(
     // 补充bmmv3单轴逻辑，输入的单轴代表的都是k轴
     Shape shape_x2_new(*shape_x2);
     bool shape_x2_reshape_flag = false;
-    if (UpdateX2NewShape(context, shape_x2_new, shape_x2_reshape_flag, *adj_x1, *adj_x2, is_x2_packed) !=
+    if (UpdateX2NewShape(context, shape_x2_new, shape_x2_reshape_flag, *adj_x1, *adj_x2, is_x2_packed, fused_op_type) !=
         ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }

@@ -72,7 +72,7 @@ ge::graphStatus InferShapeForFusedQuantMatMul(InferShapeContext *context) {
             Shape2String(*shape_a).c_str(), Shape2String(*shape_b).c_str(), *trans_a, *trans_b);
 
     // first transpose attr is transpose_x1, its index is 2 and bias input tensor index is 2, is_x2_packed is true
-    return Ops::NN::InferShapeForBatchMatMul(context, kAttrTransposeX1Idx, kBiasIdx, true);
+    return Ops::NN::InferShapeForBatchMatMul(context, kAttrTransposeX1Idx, kBiasIdx, true, fused_op_type);
 }
 
 } // namespace
