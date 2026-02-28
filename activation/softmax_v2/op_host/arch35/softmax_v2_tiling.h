@@ -157,6 +157,7 @@ constexpr int64_t FLOAT16_BYTES = 2;
 constexpr int64_t FP32_BLOCK_ALIGN_NUM = 8;
 constexpr int64_t FP16_BLOCK_ALIGN_NUM = 16;
 constexpr int64_t DATA_BLOCK_COUNT = 16;
+constexpr int64_t SMALL_A_LEN = 160;
 
 constexpr int64_t DIM_NUM_ONE = 1;
 constexpr int64_t MAX_DIMS = 8;
