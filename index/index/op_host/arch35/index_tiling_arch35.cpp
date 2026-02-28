@@ -22,6 +22,7 @@
 #include "util/math_util.h"
 #include "index_tiling.h"
 #include "index_tiling_arch35.h"
+#include <string_view>
 
 using namespace AscendC;
 
@@ -188,6 +189,10 @@ ge::graphStatus IndexSimtTiling::GetParamsShapeInfo()
 
 ge::graphStatus IndexSimtTiling::GetShapeAttrsInfo()
 {
+    const char *op_type = context_->GetNodeType();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, op_type);
+    OP_LOGD("IndexSimtTiling", "tiling for %s", op_type);
+    isIndexPut_ = std::string_view(op_type) == "IndexPutV2";
     if (!isIndexPut_) {
         accumulateMode_ = false;
         tilingData_.set_accumulateMode(0);
@@ -341,4 +346,5 @@ ge::graphStatus IndexSimtTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 REGISTER_OPS_TILING_TEMPLATE(Index, IndexSimtTiling, 30);
+REGISTER_OPS_TILING_TEMPLATE(IndexPutV2, IndexSimtTiling, 30);
 } // namespace optiling

@@ -23,6 +23,7 @@
 #include "op_common/op_host/util/const_util.h"
 #include "util/math_util.h"
 #include "index_tiling.h"
+#include <string_view>
 
 using namespace AscendC;
 
@@ -390,6 +391,10 @@ void IndexNonContinuousTiling::PrintTilingData()
 }
 
 ge::graphStatus IndexNonContinuousTiling::GetShapeAttrsInfo() {
+    const char *op_type = context_->GetNodeType();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, op_type);
+    OP_LOGD("IndexNonContinuousTiling", "tiling for %s", op_type);
+    isIndexPut_ = std::string_view(op_type) == "IndexPutV2";
     paramIndexedSizesIdx_ = isIndexPut_ ? INDEXPUT_INDEXSIZE_IDX : IN_INDEXSIZE_IDX;
     paramIndicesIdx_ = isIndexPut_ ? INDEXPUT_INDEX_IDX : IN_INDEX_IDX;
     auto xDesc = context_->GetRequiredInputDesc(IN_X_IDX);
@@ -560,6 +565,6 @@ ge::graphStatus IndexNonContinuousTiling::PostTiling() {
   context_->SetLocalMemorySize(DCACHE_SIZE);
   return ge::GRAPH_SUCCESS;
 }
-REGISTER_TILING_TEMPLATE("Index", IndexNonContinuousTiling, 0);
+REGISTER_OPS_TILING_TEMPLATE(Index, IndexNonContinuousTiling, 0);
+REGISTER_OPS_TILING_TEMPLATE(IndexPutV2, IndexNonContinuousTiling, 0);
 } // namespace optiling
-

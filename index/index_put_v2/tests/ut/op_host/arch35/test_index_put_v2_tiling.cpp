@@ -125,6 +125,7 @@ TEST_F(IndexPutV2Tiling, IndexPutV2_AC_tiling_fp16_continue_0) {
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
     SetConstInput(2, DT_INT64, mask, 2, const_tensors);
     auto holder = gert::TilingContextFaker()
+        .SetOpType(op_type)
         .NodeIoNum(5, 1)
         .IrInstanceNum({1,1,1,1,1})
         .InputShapes({&x, &value, &indexedSizes, &indexedStrides, &indices})
