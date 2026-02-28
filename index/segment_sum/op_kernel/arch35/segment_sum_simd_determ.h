@@ -44,8 +44,9 @@ private:
     GlobalTensor<T1> sumWorkspace_;
     GlobalTensor<T2> segIdWorkspace_;
     
-    TQue<QuePosition::VECIN, BUFFER_NUM> xQue_;
-    TQue<QuePosition::VECIN, BUFFER_NUM> segmentIdsQue_;
+    TQue<QuePosition::VECIN, X_BUFFER_NUM> xQue_;
+    TQue<QuePosition::VECIN, X_BUFFER_NUM> segmentIdsQue_;
+    TQue<QuePosition::VECOUT, TMP_BUFFER_NUM> tmpQue_;
     TBuf<QuePosition::VECCALC> yBuf_;
     TBuf<QuePosition::VECCALC> tmpBuf_;
 
@@ -111,8 +112,9 @@ __aicore__ inline void SegmentSumSimdDeterm<T1, T2>::Init(
     sumWorkspace_.SetGlobalBuffer((__gm__ T1*)workspace + rowCoreIdx_ * DOUBLE * tilingData_->innerDim + colGmOffset_);
     segIdWorkspace_.SetGlobalBuffer((__gm__ T2*)workspace + segIdAddrOffset + rowCoreIdx_ * DOUBLE);
 
-    pipeIn.InitBuffer(xQue_, BUFFER_NUM, tilingData_->xBufferSize);
-    pipeIn.InitBuffer(segmentIdsQue_, BUFFER_NUM, tilingData_->segmentIdBufferSize);
+    pipeIn.InitBuffer(xQue_, X_BUFFER_NUM, tilingData_->xBufferSize);
+    pipeIn.InitBuffer(segmentIdsQue_, X_BUFFER_NUM, tilingData_->segmentIdBufferSize);
+    pipeIn.InitBuffer(tmpQue_, TMP_BUFFER_NUM, tilingData_->yBufferSize);
     pipeIn.InitBuffer(yBuf_, tilingData_->yBufferSize);
     pipeIn.InitBuffer(tmpBuf_, platform::GetUbBlockSize()); // 放头尾id
 
@@ -209,19 +211,19 @@ __aicore__ inline void SegmentSumSimdDeterm<T1, T2>::ComputeSumAndCopyOut(LocalT
             Copy(yLocal, xLocal[i * curLoopInnersAlign], curLoopInners);
             preId_ = curId;
         } else { // curId != preId_
-            event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-            SetFlag<HardEvent::V_MTE3>(eventId);
-            WaitFlag<HardEvent::V_MTE3>(eventId);
+            LocalTensor<T1> tmpLocal = tmpQue_.AllocTensor<T1>();
+            Copy(tmpLocal, yLocal, curLoopInners);
+            tmpQue_.EnQue(tmpLocal);
+            LocalTensor<T1> outLocal = tmpQue_.DeQue<T1>();
+
             if (isFirstId_ && !isStartRowCore_) {
-                CopyOutSumWorkspace(yLocal, curLoopInners, colOffset, 0);
+                CopyOutSumWorkspace(outLocal, curLoopInners, colOffset, 0);
                 position0_ = preId_;
                 isFirstId_ = false;
             } else {
-                CopyOutY(yLocal, curLoopInners, preId_, colOffset);
+                CopyOutY(outLocal, curLoopInners, preId_, colOffset);
             }
-            event_t eventId1 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
-            SetFlag<HardEvent::MTE3_V>(eventId1);
-            WaitFlag<HardEvent::MTE3_V>(eventId1);
+            tmpQue_.FreeTensor(outLocal);
 
             preId_ = curId;
             Copy(yLocal, xLocal[i * curLoopInnersAlign], curLoopInners);

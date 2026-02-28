@@ -36,7 +36,8 @@ private:
     GlobalTensor<T1> sumWorkspace_;
     GlobalTensor<T2> segIdWorkspace_;
 
-    TQue<QuePosition::VECIN, BUFFER_NUM> xQue_;
+    TQue<QuePosition::VECIN, X_BUFFER_NUM> xQue_;
+    TQue<QuePosition::VECOUT, TMP_BUFFER_NUM> tmpQue_;
     TBuf<QuePosition::VECCALC> segmentIdsBuf_;
     TBuf<QuePosition::VECCALC> yBuf_;
 
@@ -77,7 +78,8 @@ __aicore__ inline void SegmentSumMultiCoreAdd<T1, T2>::Init(GM_ADDR y, GM_ADDR w
     sumWorkspace_.SetGlobalBuffer((__gm__ T1*)workspace + colGmOffset_);
     segIdWorkspace_.SetGlobalBuffer((__gm__ T2*)workspace + segIdAddrOffset);
 
-    pipeIn.InitBuffer(xQue_, BUFFER_NUM, tilingData_->multAddXBufferSize);
+    pipeIn.InitBuffer(xQue_, X_BUFFER_NUM, tilingData_->multAddXBufferSize);
+    pipeIn.InitBuffer(tmpQue_, TMP_BUFFER_NUM, tilingData_->multAddYBufferSize);
     pipeIn.InitBuffer(segmentIdsBuf_, tilingData_->multAddIdsBufferSize);
     pipeIn.InitBuffer(yBuf_, tilingData_->multAddYBufferSize);
 }
@@ -154,17 +156,15 @@ __aicore__ inline void SegmentSumMultiCoreAdd<T1, T2>::ComputeAndCopyOut(LocalTe
         } else if (curId == -1) {
             continue;
         } else { // curId != preId
-            event_t eventId2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-            SetFlag<HardEvent::V_MTE3>(eventId2);
-            WaitFlag<HardEvent::V_MTE3>(eventId2);
+            LocalTensor<T1> tmpLocal = tmpQue_.AllocTensor<T1>();
+            Copy(tmpLocal, yLocal, curLoopInners);
+            tmpQue_.EnQue(tmpLocal);
+            LocalTensor<T1> outLocal = tmpQue_.DeQue<T1>();
 
-            CopyOutY(yLocal, curLoopInners, preId, colOffset);
+            CopyOutY(outLocal, curLoopInners, preId, colOffset);
+            tmpQue_.FreeTensor(outLocal);
+
             preId = curId;
-
-            event_t eventId3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
-            SetFlag<HardEvent::MTE3_V>(eventId3);
-            WaitFlag<HardEvent::MTE3_V>(eventId3);
-
             Copy(yLocal, xLocal[i * curLoopInnersAlign], curLoopInners);
         }
     }

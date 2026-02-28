@@ -25,6 +25,8 @@ static constexpr int64_t INNER_ADD_NUM = 128;
 static constexpr int64_t BASE_BLOCK_ALIGN = 512;
 static constexpr int64_t SINGLE_CORE_THRESHOLD = 4 * 1024;
 static constexpr int64_t NUM_TWO = 2;
+static constexpr int64_t Y_BUFFER_NUM = 3;
+static constexpr int64_t MIN_OUTTERS = 8;
 static constexpr uint64_t NUM_FOUR = 4;
 static constexpr uint64_t MIN_INNER_SIZE = 256;
 static constexpr size_t WS_SYS_SIZE = static_cast<size_t>(16 * 1024 * 1024);
@@ -95,9 +97,9 @@ void SegmentSumSimdTiling::AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTil
     }
 
     std::sort(allTiling.begin(), allTiling.end(), [](const std::vector<int64_t>& a, const std::vector<int64_t>& b) {
-        constexpr int MIndex = 0;
+        constexpr int NIndex = 1;
         constexpr int DeltaIndex = 3;
-        return std::make_pair(a[DeltaIndex], a[MIndex]) < std::make_pair(b[DeltaIndex], b[MIndex]);
+        return std::make_pair(a[NIndex], a[DeltaIndex]) < std::make_pair(b[NIndex], b[DeltaIndex]);
     });
 
     while (allTiling.size() > 1 && outerDim_ / allTiling[0][0] < std::min(NUM_FOUR, outerDim_)) {
@@ -149,14 +151,15 @@ void SegmentSumSimdTiling::DoSplitColUBTiling(int64_t availableUbsize)
     int64_t innerSizeAlign = Ops::Base::CeilAlign(normalCoreInnerNum_ * valueTypeBytes_, ubBlockSize_);
     int64_t tmpColSize = BLOCK_TILING_THRES + idTypeBytes_;
     int64_t tmpRowNum = availableUbsize / tmpColSize;
-    while (tmpRowNum - 1 > normalCoreOutterNum_) {
+    int64_t minOutter = std::min(MIN_OUTTERS, normalCoreOutterNum_);
+    while (tmpRowNum - Y_BUFFER_NUM > minOutter) {
         if (tmpColSize >= static_cast<int64_t>(innerSizeAlign + idTypeBytes_)) {
             break;
         }
         tmpColSize += INNER_ADD_NUM;
         tmpRowNum = availableUbsize / tmpColSize;
     }
-    int64_t rowNumInUb = std::min(tmpRowNum - 1, normalCoreOutterNum_);
+    int64_t rowNumInUb = std::min(tmpRowNum - Y_BUFFER_NUM, normalCoreOutterNum_);
     int64_t colSizeInUb = std::min(static_cast<int64_t>(tmpColSize - idTypeBytes_), innerSizeAlign);
 
     xBufferSize_ = rowNumInUb * colSizeInUb;
@@ -199,7 +202,7 @@ void SegmentSumSimdTiling::DoUBTiling()
         int64_t innerSizeAlign = Ops::Base::CeilAlign(normalCoreInnerNum_ * valueTypeBytes_, ubBlockSize_);
         int64_t tmpColSize = innerSizeAlign + idTypeBytes_;
         int64_t tmpRowNum = availableUbsize / tmpColSize;
-        int64_t rowNumInUb = std::min(tmpRowNum - 1, normalCoreOutterNum_);
+        int64_t rowNumInUb = std::min(tmpRowNum - Y_BUFFER_NUM, normalCoreOutterNum_);
 
         xBufferSize_ = rowNumInUb * innerSizeAlign;
         segmentIdBufferSize_ = Ops::Base::CeilAlign(rowNumInUb * idTypeBytes_, ubBlockSize_);
@@ -239,7 +242,7 @@ void SegmentSumSimdTiling::DoMultCoreAddTiling()
     int64_t mulAddUbsize =  ubSize_;
     multAddIdsBufferSize_ = Ops::Base::CeilAlign(NUM_TWO * blockNumInRow_ * idTypeBytes_, ubBlockSize_);
     mulAddUbsize -= multAddIdsBufferSize_;
-    mulAddUbsize /= blockNumInRow_ * NUM_TWO + 1;
+    mulAddUbsize /= blockNumInRow_ * NUM_TWO + Y_BUFFER_NUM;
     int64_t availableInnerUb = Ops::Base::FloorAlign(mulAddUbsize, static_cast<int64_t>(ubBlockSize_));
 
     int64_t innerNumInUb = availableInnerUb / valueTypeBytes_;

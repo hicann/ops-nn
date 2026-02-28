@@ -208,7 +208,7 @@ __simt_vf__ __launch_bounds__(MAX_THREAD_NUM) inline void ComputeInWs(__gm__ TX*
         if (segmentIdsWs[i] == -1) {
             continue;
         }
-        if (threadIdx.y > 0) {
+        if (i > 0) {
             int32_t prevId = (segmentIdsWs[i - 1] == -1) ? (i - 2) : (i - 1);
             if (segmentIdsWs[i] == segmentIdsWs[prevId]) {  // 如果当前线程组对应id非0且跟前一行id相同，则跳过
                 continue;

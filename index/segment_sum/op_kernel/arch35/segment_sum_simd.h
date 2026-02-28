@@ -19,7 +19,8 @@
 namespace SegmentSum {
 using namespace AscendC;
 
-constexpr uint32_t BUFFER_NUM = 1;
+constexpr uint32_t X_BUFFER_NUM = 1;
+constexpr uint32_t TMP_BUFFER_NUM = 2;
 
 
 template <typename T1, typename T2>
@@ -40,8 +41,9 @@ private:
     GlobalTensor<T2> segmentIdsGm_;
     GlobalTensor<T1> yGm_;
     
-    TQue<QuePosition::VECIN, BUFFER_NUM> xQue_;
-    TQue<QuePosition::VECIN, BUFFER_NUM> segmentIdsQue_;
+    TQue<QuePosition::VECIN, X_BUFFER_NUM> xQue_;
+    TQue<QuePosition::VECIN, X_BUFFER_NUM> segmentIdsQue_;
+    TQue<QuePosition::VECOUT, TMP_BUFFER_NUM> tmpQue_;
     TBuf<QuePosition::VECCALC> yBuf_;
 
     const SegmentSumSimdTilingData* tilingData_;
@@ -101,8 +103,9 @@ __aicore__ inline void SegmentSumSimd<T1, T2>::Init(
     segmentIdsGm_.SetGlobalBuffer((__gm__ T2*)segmentIds + rowGmOffset_);
     yGm_.SetGlobalBuffer((__gm__ T1*)y + colGmOffset_);
 
-    pipeIn.InitBuffer(xQue_, BUFFER_NUM, tilingData_->xBufferSize); // 需要满足double  block对齐
-    pipeIn.InitBuffer(segmentIdsQue_, BUFFER_NUM, tilingData_->segmentIdBufferSize);
+    pipeIn.InitBuffer(xQue_, X_BUFFER_NUM, tilingData_->xBufferSize); // 需要满足double  block对齐
+    pipeIn.InitBuffer(segmentIdsQue_, X_BUFFER_NUM, tilingData_->segmentIdBufferSize);
+    pipeIn.InitBuffer(tmpQue_, TMP_BUFFER_NUM, tilingData_->yBufferSize);
     pipeIn.InitBuffer(yBuf_, tilingData_->yBufferSize);
 
 }
@@ -176,20 +179,20 @@ __aicore__ inline void SegmentSumSimd<T1, T2>::ComputeSumAndCopyOut(LocalTensor<
             Copy(yLocal, xLocal[i * curLoopInnersAlign], curLoopInners);
             preId_ = curId;
         } else { // curId != preId_
-            event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-            SetFlag<HardEvent::V_MTE3>(eventId);
-            WaitFlag<HardEvent::V_MTE3>(eventId);
+            LocalTensor<T1> tmpLocal = tmpQue_.AllocTensor<T1>();
+            Copy(tmpLocal, yLocal, curLoopInners);
+            tmpQue_.EnQue(tmpLocal);
+            LocalTensor<T1> outLocal = tmpQue_.DeQue<T1>();
+
             if (isFirstId_ && !isStartRowCore_) {
                 SetAtomicAdd<T1>();
-                CopyOutY(yLocal, curLoopInners, preId_, colOffset);
+                CopyOutY(outLocal, curLoopInners, preId_, colOffset);
                 SetAtomicNone();
                 isFirstId_ = false;
             } else {
-                CopyOutY(yLocal, curLoopInners, preId_, colOffset);
+                CopyOutY(outLocal, curLoopInners, preId_, colOffset);
             }
-            event_t eventId1 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
-            SetFlag<HardEvent::MTE3_V>(eventId1);
-            WaitFlag<HardEvent::MTE3_V>(eventId1);
+            tmpQue_.FreeTensor(outLocal);
 
             preId_ = curId;
             Copy(yLocal, xLocal[i * curLoopInnersAlign], curLoopInners);
