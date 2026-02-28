@@ -36,6 +36,44 @@ public:
     int64_t divisorOverride;
     int64_t countIncludePad;
 };
+class AvgPoolV2GradNHWCTilingData {
+public:
+    int64_t hGrad = 0;
+    int64_t wGrad = 0;
+    int64_t cOutput = 0;
+    int64_t hOutput = 0;
+    int64_t wOutput = 0;
+    int64_t hKernel = 0;
+    int64_t wKernel = 0;
+    int64_t hStride = 0;
+    int64_t wStride = 0;
+    int64_t padTop = 0;
+    int64_t padBottom = 0;
+    int64_t padLeft = 0;
+    int64_t padRight = 0;
+    int64_t nOutputInner = 0;
+    int64_t nOutputTail = 0;
+    int64_t nOutputOuter = 0;
+    int64_t hOutputInner = 0;
+    int64_t hOutputTail = 0;
+    int64_t hOutputOuter = 0;
+    int64_t wOutputInner = 0;
+    int64_t wOutputTail = 0;
+    int64_t wOutputOuter = 0;
+    int64_t cOutputInner = 0;
+    int64_t cOutputTail = 0;
+    int64_t cOutputOuter = 0;
+    int64_t normalCoreProcessNum = 0;
+    int64_t tailCoreProcessNum = 0;
+    int64_t usedCoreNum = 0;
+    int64_t outputBufferSize = 0;
+    int64_t inputGradBufferSize = 0;
+    int64_t hProBatchSize = 0;
+    int64_t wProBatchSize = 0;
+    int64_t divisorOverride = 0;
+    int64_t countIncludePad = 0;
+    int64_t tilingKey = 0;
+};
 class AvgPoolV2GradSimtTilingData {
 public:
     int64_t nDim = 0;

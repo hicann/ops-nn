@@ -13,11 +13,13 @@
  * \brief
  */
 #include "arch35/avg_pool_v2_grad_simt.h"
+#include "arch35/avg_pool_v2_grad_nhwc_kernel.h"
 #include "arch35/avg_pool_v2_grad_nchw_kernel.h"
 #include "arch35/avg_pool_v2_grad_tiling_data.h"
 #include "arch35/avg_pool_v2_grad_tiling_key.h"
 using namespace AscendC;
 using namespace AvgPoolV2Grad;
+using namespace AvgPoolV2GradNHWCNameSpace;
 using namespace AvgPoolV2GradNCHWNameSpace;
 template <
     uint32_t schMode, uint32_t format, uint32_t isInt32Meet, uint32_t isPad, uint32_t isCheckRange,
@@ -50,6 +52,19 @@ __global__ __aicore__ void avg_pool_v2_grad(
         } else {
             GET_TILING_DATA_WITH_STRUCT(AvgPoolV2GradNCHWTilingData, tilingData, tiling);
             AvgPoolV2GradNCHWKernel<DTYPE_INPUT_GRAD, int64_t, hasDivsor, isCheckRange, countIncludePad> op(&pipe, &tilingData);
+            op.Init(input_grad, out_grad);
+            op.Process();
+        }
+    } else if constexpr (schMode == TPL_NHWC_KERNEL) {    //NHWC
+        REGISTER_TILING_FOR_TILINGKEY("schMode == TPL_NHWC_KERNEL", AvgPoolV2GradNHWCTilingData);
+        if constexpr (isInt32Meet == TPL_INT32){
+            GET_TILING_DATA_WITH_STRUCT(AvgPoolV2GradNHWCTilingData, tilingData, tiling);
+            AvgPoolV2GradNHWCNameSpace::AvgPoolV2GradKernelNHWC<DTYPE_INPUT_GRAD, int32_t, hasDivsor, isCheckRange, countIncludePad> op(&pipe, &tilingData);
+            op.Init(input_grad, out_grad);
+            op.Process();
+        } else {
+            GET_TILING_DATA_WITH_STRUCT(AvgPoolV2GradNHWCTilingData, tilingData, tiling);
+            AvgPoolV2GradNHWCNameSpace::AvgPoolV2GradKernelNHWC<DTYPE_INPUT_GRAD, int64_t, hasDivsor, isCheckRange, countIncludePad> op(&pipe, &tilingData);
             op.Init(input_grad, out_grad);
             op.Process();
         }

@@ -33,10 +33,10 @@ struct AvgPoolV2GradCompileInfo {
 };
 
 struct AvgPoolV2GradCommon {
-    int64_t nDim; 
-    int64_t cDim; 
-    int64_t hDim; 
-    int64_t wDim; 
+    int64_t nDim;
+    int64_t cDim;
+    int64_t hDim;
+    int64_t wDim;
     std::string padModeStr;
 };
 
@@ -49,5 +49,5 @@ ge::graphStatus GetAvgPoolV2GradPlatformInfo(gert::TilingContext* context, uint6
 ge::graphStatus GetAvgPoolV2GradShapeAttrsInfo(gert::TilingContext* context, AvgPoolV2GradInputInfo& inputData);
 
 }  // namespace optiling
- 
+
 #endif
