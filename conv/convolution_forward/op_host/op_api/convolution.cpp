@@ -1186,7 +1186,6 @@ static aclnnStatus ConvTranspose3dWithFlag(const aclTensor *input, const aclTens
                                            const aclIntArray *dilation, int groups, const aclIntArray *outputPadding,
                                            bool useHf32, aclTensor *&output, aclOpExecutor *executor)
 {
-    L0_DFX(ConvTranspose3dWithFlag, input, weight, bias, stride, padding, dilation, groups, outputPadding, useHf32);
     const char *dataFormat = "NCDHW"; // 由于transpose中infershape的逻辑只支持dataformat为‘NCHW’,而不是input的GetOriginalForamt
     const int64_t hf32 = useHf32 ? 0x40 : 0x00;
     aclIntArray *stride5;
@@ -1252,6 +1251,7 @@ static aclnnStatus ConvTranspose3dWithFlag(const aclTensor *input, const aclTens
         const_cast<aclTensor*>(weight)->SetViewFormat(Format::FORMAT_NDHWC);
     }
 
+    L0_DFX(ConvTranspose3dWithFlag, input, weight, bias, stride, padding, dilation, groups, outputPadding, useHf32);
     // 将inputSize刷新成预期的out的shape
     auto outputShapeVector = op::ToShapeVector(output->GetViewShape());
     inputSize = InitializeTensor(outputShapeVector, executor, input);

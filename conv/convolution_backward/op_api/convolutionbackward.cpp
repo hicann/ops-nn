@@ -1812,7 +1812,6 @@ static aclnnStatus Conv3DBackpropFilterWithFlag(const aclTensor *input, const ac
                                                 const aclTensor *outBackprop, const aclIntArray *stride,
                                                 const aclIntArray *padding, const aclIntArray *dilation, int groups,
                                                 int64_t useHf32, aclTensor *&output, aclOpExecutor *executor) {
-  L0_DFX(Conv3DBackpropFilterWithFlag, input, weight, outBackprop, stride, padding, dilation, groups, useHf32);
   AdaptParam adptParams = {0};
   GetConv3DBackpropAdapterParam(input, stride, padding, dilation, executor, &adptParams);
   aclIntArray *stride5 = adptParams.adaptStride;
@@ -1863,7 +1862,8 @@ static aclnnStatus Conv3DBackpropFilterWithFlag(const aclTensor *input, const ac
         oriDilationData[N_DIM_NCDHW_INDEX],oriDilationData[W_DIM_NCDHW_INDEX],oriDilationData[C_DIM_NCDHW_INDEX]};
         dilation5 = executor->AllocIntArray(newDilations.data(),CONV3D_DIM);
       }
-    }
+  }
+  L0_DFX(Conv3DBackpropFilterWithFlag, input, weight, outBackprop, stride, padding, dilation, groups, useHf32);
   ConvBackpropParams params = {input, weight, outBackprop, stride, padding, dilation, groups};
   bool useV2Flag = IsConv3DBackpropFilterV2(params);
   // useHf32Flag的值为0x40 : 表示HF32
@@ -2113,7 +2113,6 @@ static aclnnStatus Conv3DBackpropInputWithFlag(const aclTensor *input, const acl
                                               const aclIntArray *padding, const aclIntArray *dilation, int groups,
                                               int64_t useHf32Flag, aclTensor *&output, aclOpExecutor *executor)
 {
-  L0_DFX(Conv3DBackpropInputWithFlag, input, weight, outBackprop, stride, padding, dilation, groups, useHf32Flag, output);
   AdaptParam adptParams = {0};
   GetConv3DBackpropAdapterParam(input, stride, padding, dilation, executor, &adptParams);
   aclIntArray *stride5 = adptParams.adaptStride;   // Conv3d stride维度为5
@@ -2148,6 +2147,7 @@ static aclnnStatus Conv3DBackpropInputWithFlag(const aclTensor *input, const acl
           return ACLNN_ERR_INNER_NULLPTR;
       }
   }
+  L0_DFX(Conv3DBackpropInputWithFlag, input, weight, outBackprop, stride, padding, dilation, groups, useHf32Flag, output);
   if (useV2Flag) {
     bool enableHf32 = (outBackprop->GetDataType() == DataType::DT_FLOAT) && (useHf32Flag == 0x40);
  	  OP_LOGD("conv3ddx: enableHf32 is: %d, useHf32Flag is %ld", enableHf32, useHf32Flag);
