@@ -222,7 +222,7 @@ aclnnStatus aclnnBatchMatMulWeightNZ(
 
 ## 约束说明
 - 确定性说明：
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnBatchMatMulWeightNz默认确定性实现。
+  - aclnnBatchMatMulWeightNz默认确定性实现。
 
 - 不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。
 - self只支持3维, mat2只支持昇腾私有格式，调用此接口之前，必须完成mat2从ND到昇腾私有格式的转换。
