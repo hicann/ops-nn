@@ -112,6 +112,11 @@ extern "C" __global__ __aicore__ void gather_v2(GM_ADDR x, GM_ADDR indices, GM_A
         Gatherv2SimdLastGather<int8_t, DTYPE_INDICES, false> gatherv2Op(&pipe);
         gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
         gatherv2Op.Process();
+    #elif TILING_KEY_VAR == SIMD_LAST_GATHER_B16_TILING_KEY
+        GET_TILING_DATA_WITH_STRUCT(GatherV2LastTilingData, tilingDataIn, tiling);
+        Gatherv2SimdLastGather<int16_t, DTYPE_INDICES, false> gatherv2Op(&pipe);
+        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+        gatherv2Op.Process();
     #elif TILING_KEY_VAR == SIMD_LAST_GATHER_B32_TILING_KEY
         GET_TILING_DATA_WITH_STRUCT(GatherV2LastTilingData, tilingDataIn, tiling);
         Gatherv2SimdLastGather<int32_t, DTYPE_INDICES, false> gatherv2Op(&pipe);
