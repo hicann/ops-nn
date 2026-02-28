@@ -995,8 +995,10 @@ MmOpInfo GetMatmulOpInfo(const aclTensor* self, const aclTensor* mat2, int8_t cu
     return mmOpInfo;
 }
 
-aclnnStatus CreateMatmulOpInfo(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias,
-            const aclTensor* out, int8_t cubeMathType, MmOpInfo& mmOpInfo, bool isSelfSlice = false){
+aclnnStatus CreateMatmulOpInfo(
+    const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType,
+    MmOpInfo& mmOpInfo, bool isSelfSlice = false)
+{
     // 获取m、k、n轴的大小
     op::Shape selfShape = self->GetViewShape();
     op::Shape mat2Shape = mat2->GetViewShape();

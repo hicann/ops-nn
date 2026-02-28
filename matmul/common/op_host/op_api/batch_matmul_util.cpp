@@ -539,34 +539,52 @@ bool CheckMergeBatchNonContiguousShapeSupport(
     return true;
 }
 
-bool CheckNonContiguousTranspose(
-    const aclTensor* self, const aclTensor* mat2, bool& isNeedSwapInnerTwoDim, const aclTensor* bias, bool adjX1 , bool adjX2, int8_t cubeMathType)
+NonContiguousMode CheckNonContiguousTranspose(
+    const aclTensor* self, const aclTensor* mat2, bool& isANeedSwapInnerTwoDim, bool& isBNeedSwapInnerTwoDim,
+    const aclTensor* bias, bool adjX1, bool adjX2, int8_t cubeMathType)
 {
-    if (!Ops::NN::IsTransposeNonContiguous(mat2, isNeedSwapInnerTwoDim)) {
-        return false;
+    bool isATranspose = Ops::NN::IsTransposeNonContiguous(self, isANeedSwapInnerTwoDim);
+    bool isBTranspose = Ops::NN::IsTransposeNonContiguous(mat2, isBNeedSwapInnerTwoDim);
+    if (isATranspose && isBTranspose && (isANeedSwapInnerTwoDim || !isBNeedSwapInnerTwoDim)){
+        OP_LOGI("When isATranspose&isBTranspose, only support mbk * nbk");
+        return NonContiguousMode::CONTINUOUS;
+    }
+    uint64_t kDim = self->GetViewShape()[self->GetViewShape().GetDimNum() - 1];
+    if (!isBTranspose || kDim <= 1) {
+        return NonContiguousMode::CONTINUOUS;
     }
     // 不支持NZ
     if (mat2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ ||
         self->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
         OP_LOGI("Format NZ is not supported for transpose.");
-        return false;
-    }
-    if (CheckMergeBatchNonContiguousShapeSupport(self, mat2, bias, adjX1, adjX2, cubeMathType)) {
-        OP_LOGI("Shape is not supported for transpose. It match the mergebatch");
-        return false;
-    }
-    // 对shape多batch模板校验，只支持多batch载入模板
-    if (!CheckTransNonContiguousShapeSupport(self, mat2, bias)) {
-        OP_LOGI("Shape is not supported for transpose. It does not match the iterbatch");
-        return false;
+        return NonContiguousMode::CONTINUOUS;
     }
     // transpose场景下，增加dtype判断，仅支持左右矩阵dtype相同
     if (self->GetDataType() != mat2->GetDataType()) {
         OP_LOGI("The data type of the self does not match the type of mat2 for transpose.");
-        return false;
+        return NonContiguousMode::CONTINUOUS;
     }
-    OP_LOGI("Hit transpose scenario.");
-    return true;
+    // 对shape校验，当前没有非连续场景支持merge
+    if (CheckMergeBatchNonContiguousShapeSupport(self, mat2, bias, adjX1, adjX2, cubeMathType)) {
+        OP_LOGI("Shape is not supported for transpose. It match the mergebatch.");
+        return NonContiguousMode::CONTINUOUS;
+    }
+    // 对shape校验，A连续的场景，只支持多batch载入模板
+    if (!isATranspose && !CheckTransNonContiguousShapeSupport(self, mat2, bias)) {
+        OP_LOGI("Shape is not supported for transpose, self is contiguous but it does not match the iterbatch.");
+        return NonContiguousMode::CONTINUOUS;
+    }
+    // A非连续场景仅支持基础模板
+    if (isATranspose && CheckTransNonContiguousShapeSupport(self, mat2, bias)) {
+        OP_LOGI("When isATranspose&isBTranspose, only basic template is supported.");
+        return NonContiguousMode::CONTINUOUS;
+    }
+    if (isATranspose) {
+        OP_LOGI("Hit isATranspose&isBTranspose transpose scenario.");
+        return NonContiguousMode::AB_NON_CONTINUOUS;
+    }
+    OP_LOGI("Hit isBTranspose transpose scenario.");
+    return NonContiguousMode::B_NON_CONTINUOUS;
 }
 
 bool CheckSocIfBatchMatMulToMulDefault(const aclTensor* self, const aclTensor* mat2, bool adjX1, bool adjX2)
@@ -960,23 +978,32 @@ const aclTensor* ExecBmmOpWithBiasV2(
         CHECK_RET(emptyOut != nullptr, nullptr);
         return emptyOut;
     }
-
-    // reformat，全部转成ND
-    auto reformatSelf = self;
-    reformatSelf = l0op::ReFormat(self, op::Format::FORMAT_ND);
-    CHECK_RET(reformatSelf != nullptr, nullptr);
     auto transposeSelf = Ops::NN::IsTransposeLastTwoDims(self);
     auto transposeMat2 = Ops::NN::IsTransposeLastTwoDims(mat2);
-
-    bool isNeedSwapInnerTwoDim = false; // 非连续场景下右矩阵转置属性
-    bool isTransposeMat2Contiguous =
-        CheckNonContiguousTranspose(self, mat2, isNeedSwapInnerTwoDim, bias, transposeSelf, transposeMat2, cubeMathType);
+    bool isANeedSwapInnerTwoDim = false; // 非连续场景下左矩阵转置属性
+    bool isBNeedSwapInnerTwoDim = false; // 非连续场景下右矩阵转置属性
+    NonContiguousMode nonContinousMode = CheckNonContiguousTranspose(
+        self, mat2, isANeedSwapInnerTwoDim, isBNeedSwapInnerTwoDim, bias, transposeSelf, transposeMat2, cubeMathType);
     transposeMat2 = false;
+
+    const aclTensor* reformatSelf = nullptr;
+    if (self->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ &&
+        static_cast<int32_t>(nonContinousMode) < static_cast<int32_t>(NonContiguousMode::AB_NON_CONTINUOUS)) {
+        OP_LOGI("Self StorageFormat not FORMAT_FRACTAL_NZ.");
+        reformatSelf = l0op::ReFormat(self, op::Format::FORMAT_ND);
+    } else {
+        // 非连续场景
+        reformatSelf = self;
+    }
+    CHECK_RET(reformatSelf != nullptr, nullptr);
+
     const aclTensor* reformatMat2 = nullptr;
-    if (mat2->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ && !isTransposeMat2Contiguous) {
+    if (mat2->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ &&
+        static_cast<int32_t>(nonContinousMode) < static_cast<int32_t>(NonContiguousMode::B_NON_CONTINUOUS)) {
         OP_LOGI("Mat2 StorageFormat not FORMAT_FRACTAL_NZ.");
         reformatMat2 = l0op::ReFormat(mat2, op::Format::FORMAT_ND);
     } else {
+        // 非连续场景
         reformatMat2 = mat2;
     }
     auto reformatOut = l0op::ReFormat(out, op::Format::FORMAT_ND);
@@ -985,16 +1012,31 @@ const aclTensor* ExecBmmOpWithBiasV2(
     auto contiguousSelf = reformatSelf;
     auto contiguousMat2 = reformatMat2;
 
-    transposeSelf = Ops::NN::IsTransposeLastTwoDims(self);
-    if (transposeSelf) {
-        contiguousSelf = executor->CreateView(self, SwapLastTwoDimValue(self->GetViewShape()), self->GetViewOffset());
+    if (nonContinousMode == NonContiguousMode::AB_NON_CONTINUOUS) {
+        if (isANeedSwapInnerTwoDim) {
+            // Swap inner two axis (dim 1 & dim2) b1 b2 k m b1 b2 m k
+            contiguousSelf = executor->CreateView(
+                self, SwapLastTwoDimValue(self->GetViewShape(), LAST_DIM, PENULTIMATE_DIM), self->GetViewOffset());
+            op::Strides strides = self->GetViewStrides();
+            const size_t size = strides.size();
+            std::swap(strides[size - LAST_DIM], strides[size - NUM_TWO]);
+            const_cast<aclTensor*>(contiguousSelf)->SetViewStrides(strides);
+            transposeSelf = true;
+        }
     } else {
-        contiguousSelf = l0op::Contiguous(self, executor);
+        // 原内轴转置
+        transposeSelf = Ops::NN::IsTransposeLastTwoDims(self);
+        if (transposeSelf) {
+            contiguousSelf =
+                executor->CreateView(self, SwapLastTwoDimValue(self->GetViewShape()), self->GetViewOffset());
+        } else {
+            contiguousSelf = l0op::Contiguous(self, executor);
+        }
+        CHECK_RET(contiguousSelf != nullptr, nullptr);
     }
-    CHECK_RET(contiguousSelf != nullptr, nullptr);
 
-    if (isTransposeMat2Contiguous) {
-        if (isNeedSwapInnerTwoDim) {
+    if (static_cast<int32_t>(nonContinousMode) >= static_cast<int32_t>(NonContiguousMode::B_NON_CONTINUOUS)) {
+        if (isBNeedSwapInnerTwoDim) {
             // Swap inner two axis (dim 1 & dim2) b1 b2 n k b1 b2 k n
             contiguousMat2 = executor->CreateView(
                 mat2, SwapLastTwoDimValue(mat2->GetViewShape(), LAST_DIM, PENULTIMATE_DIM), mat2->GetViewOffset());
@@ -1023,7 +1065,7 @@ const aclTensor* ExecBmmOpWithBiasV2(
 
     auto batchMatmulOut = ExecBatchMatmulOpWithBiasAndAttrsV2(
         contiguousSelf, contiguousMat2, bias, reformatOut, transposeSelf, transposeMat2, cubeMathType,
-        executor, isTransposeMat2Contiguous, isBaddbmm);
+        executor, nonContinousMode, isBaddbmm);
 
     CHECK_RET(batchMatmulOut != nullptr, nullptr);
 
@@ -1036,16 +1078,24 @@ const aclTensor* ExecBmmOpWithBiasV2(
 
 const aclTensor* ExecBatchMatmulOpWithBiasAndAttrsV2(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, bool adjX1, bool adjX2,
-    int8_t cubeMathType, aclOpExecutor* executor, bool isTransposeMat2Contiguous, bool isBaddbmm)
+    int8_t cubeMathType, aclOpExecutor* executor, NonContiguousMode nonContinousMode, bool isBaddbmm)
 {
     MmOpInfo matmulOpInfo;
     CreateBatchMatmulOpInfo(self, mat2, bias, out, matmulOpInfo, cubeMathType, isBaddbmm);
 
-    auto selfCast = l0op::Cast(self, matmulOpInfo.support_info.self_dtype, executor);
-    CHECK_RET(selfCast != nullptr, nullptr);
-
+    auto selfCast = self;
+    if (nonContinousMode == NonContiguousMode::AB_NON_CONTINUOUS) {
+        // 刷新oriShape
+        selfCast = executor->CreateView(
+            self, self->GetViewShape(), self->GetStorageShape(), self->GetViewStrides(), self->GetViewOffset());
+        selfCast = SetTensorToNDFormat(selfCast);
+        CHECK_RET(selfCast != nullptr, nullptr);
+    } else {
+        selfCast = l0op::Cast(self, matmulOpInfo.support_info.self_dtype, executor);
+        CHECK_RET(selfCast != nullptr, nullptr);
+    }
     auto mat2Cast = mat2;
-    if (isTransposeMat2Contiguous) {
+    if (static_cast<int32_t>(nonContinousMode) >= static_cast<int32_t>(NonContiguousMode::B_NON_CONTINUOUS)) {
         // 刷新oriShape
         mat2Cast = executor->CreateView(
             mat2, mat2->GetViewShape(), mat2->GetStorageShape(), mat2->GetViewStrides(), mat2->GetViewOffset());
@@ -1068,28 +1118,30 @@ const aclTensor* ExecBatchMatmulOpWithBiasAndAttrsV2(
     auto mat2Reshape = mat2Cast;
 
     bool ifKEqual1 = false;
-    if (!isTransposeMat2Contiguous) {
+    if (nonContinousMode == NonContiguousMode::CONTINUOUS) {
         CHECK_RET(
             ProcessEqual1Cases(
                 selfCast, mat2Cast, matmulOpInfo, contiguousBias, adjX1, adjX2, selfReshape, mat2Reshape, executor,
-                ifKEqual1) != -1, nullptr);
+                ifKEqual1) != -1,
+            nullptr);
     }
-
-    auto selfTransdata = l0op::TransData(selfReshape, matmulOpInfo.support_info.self_format, 0, executor);
-    CHECK_RET(selfTransdata != nullptr, nullptr);
+    auto selfTransdata = selfReshape;
+    if (static_cast<int32_t>(nonContinousMode) < static_cast<int32_t>(NonContiguousMode::AB_NON_CONTINUOUS)) {
+        selfTransdata = l0op::TransData(selfReshape, matmulOpInfo.support_info.self_format, 0, executor);
+        CHECK_RET(selfTransdata != nullptr, nullptr);
+    }
     auto mat2Transdata = mat2Reshape;
-    if (!isTransposeMat2Contiguous) {
+    if (nonContinousMode == NonContiguousMode::CONTINUOUS) {
         mat2Transdata = l0op::TransData(mat2Reshape, matmulOpInfo.support_info.mat2_format, 0, executor);
         CHECK_RET(mat2Transdata != nullptr, nullptr);
     }
 
     const aclTensor* bmmOpOut = nullptr;
-    if (isTransposeMat2Contiguous) {
-        bmmOpOut = GetBatchMatmulOp(selfTransdata, mat2Transdata, contiguousBias, matmulOpInfo, adjX1, adjX2, 0, executor, isBaddbmm);
-    } else if (ifKEqual1) {
+    if (ifKEqual1) {
         bmmOpOut = l0op::Mul(selfTransdata, mat2Transdata, executor);
     } else {
-        bmmOpOut = GetBatchMatmulOp(selfTransdata, mat2Transdata, contiguousBias, matmulOpInfo, adjX1, adjX2, 0, executor, isBaddbmm);
+        bmmOpOut = GetBatchMatmulOp(
+            selfTransdata, mat2Transdata, contiguousBias, matmulOpInfo, adjX1, adjX2, 0, executor, isBaddbmm);
     }
 
     CHECK_RET(bmmOpOut != nullptr, nullptr);
@@ -1101,7 +1153,8 @@ const aclTensor* ExecBatchMatmulOpWithBiasAndAttrsV2(
 }
 
 const aclTensor* ExecBmmOpV2(
-    const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor, bool isBaddbmm)
+    const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor,
+    bool isBaddbmm)
 {
     return ExecBmmOpWithBiasV2(self, mat2, nullptr, out, cubeMathType, executor, isBaddbmm);
 }

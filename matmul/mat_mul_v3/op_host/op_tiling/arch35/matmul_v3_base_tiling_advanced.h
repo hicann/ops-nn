@@ -386,7 +386,7 @@ protected:
             tilingData.sliceM = runInfo_.baseM;
             tilingData.srcNdStride = 1;
         }
-
+        tilingData.innerBatch = runInfo_.innerBatch;
         return ge::GRAPH_SUCCESS;
     };
 

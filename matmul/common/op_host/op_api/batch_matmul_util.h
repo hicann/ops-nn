@@ -17,12 +17,20 @@
 
 namespace Ops {
 namespace NN {
+enum class NonContiguousMode : int32_t
+{
+    CONTINUOUS = 0,
+    B_NON_CONTINUOUS = 1,
+    AB_NON_CONTINUOUS = 2
+};
+
 const aclTensor *ExecBmmOpWithBiasV2(const aclTensor *self, const aclTensor *mat2, const aclTensor *bias,
     const aclTensor *out, int8_t cubeMathType, aclOpExecutor *executor, bool isBaddbmm = false);
 
-const aclTensor *ExecBatchMatmulOpWithBiasAndAttrsV2(const aclTensor *self, const aclTensor *mat2, const aclTensor *bias,
-    const aclTensor *out, bool adjX1, bool adjX2,
-    int8_t cubeMathType, aclOpExecutor *executor, bool isTransposeMat2Contiguous = false, bool isBaddbmm = false);
+const aclTensor* ExecBatchMatmulOpWithBiasAndAttrsV2(
+    const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, bool adjX1, bool adjX2,
+    int8_t cubeMathType, aclOpExecutor* executor,
+    NonContiguousMode isTransposeMat2Contiguous = NonContiguousMode::CONTINUOUS, bool isBaddbmm = false);
 
 const aclTensor *ExecBmmOpV2(const aclTensor *self, const aclTensor *mat2, const aclTensor *out, int8_t cubeMathType,
     aclOpExecutor *executor, bool isBaddbmm = false);

@@ -143,17 +143,16 @@ ge::graphStatus MatMulV3Tiling::CheckSelfSlice(int64_t (&dims)[TWO_BATCH_DIM])
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus MatMulV3Tiling::CheckMat2Transpose(int64_t (&dims)[TWO_BATCH_DIM])
+ge::graphStatus MatMulV3Tiling::CheckInputTranspose(int64_t (&dims)[TWO_BATCH_DIM], int64_t idx)
 {
-    auto mat2ViewShape = context_->GetInputShape(1)->GetOriginShape();
-    const size_t oriDimNum = mat2ViewShape.GetDimNum();
-    const size_t dimNum = mat2ViewShape.GetDimNum();
-    if (dimNum <= TWO_BATCH_DIM) {
-        OP_LOGE(args_.opName, "non-contiguous transpose viewShape less than 2");
+    auto inputViewShape = context_->GetInputShape(idx)->GetOriginShape();
+    const size_t oriDimNum = inputViewShape.GetDimNum();
+    if (oriDimNum != THREE_BATCH_DIM) {
+        OP_LOGE(args_.opName, "non-contiguous transpose viewShape dim is not 3");
         return ge::GRAPH_FAILED;
     }
-    dims[0] = mat2ViewShape[oriDimNum - TWO_BATCH_DIM];
-    dims[1] = mat2ViewShape[oriDimNum - ONE_BATCH_DIM];
+    dims[0] = inputViewShape[oriDimNum - TWO_BATCH_DIM];
+    dims[1] = inputViewShape[oriDimNum - ONE_BATCH_DIM];
     return ge::GRAPH_SUCCESS;
 }
 
@@ -174,11 +173,24 @@ bool MatMulV3Tiling::CheckIsNonContiguous(int64_t (&mkDims)[TWO_BATCH_DIM], int6
     auto selfShape = context_->GetInputShape(0)->GetOriginShape();
     auto mat2Shape = context_->GetInputShape(1)->GetOriginShape();
     auto selfStorageShape = context_->GetInputShape(0)->GetStorageShape();
+    auto mat2StorageShape = context_->GetInputShape(1)->GetStorageShape();
     size_t selfDimNum = selfShape.GetDimNum();
     size_t mat2DimNum = mat2Shape.GetDimNum();
+    // transpose非连续校验，根据storageshape 1d和右矩阵维度3d判断
+    bool isANonContiguous =
+        context_->InputIsView(0) && (selfStorageShape.GetDimNum() == 1) && (selfDimNum == THREE_BATCH_DIM);
+    bool isBTransposeNonContiguous =
+        context_->InputIsView(1) && (mat2StorageShape.GetDimNum() == 1) && (mat2DimNum == THREE_BATCH_DIM);
+    bool isASliceNonContiguous = isANonContiguous && mat2DimNum == 2;
+    bool isATransposeNonContiguous = isANonContiguous && mat2DimNum == 3;
     // createView with TensorV2 & 3D *2D & storageShape 1d -> support  slice
-    if (context_->InputIsView(0) && selfStorageShape.GetDimNum() == 1 && selfDimNum == 3 && mat2DimNum == 2) {
+    if (isASliceNonContiguous) {
         if (CheckSelfSlice(mkDims) != ge::GRAPH_SUCCESS) {
+            return false;
+        }
+    } else if (isATransposeNonContiguous) { // only 3d support  transpose
+        // transpose非连续校验，根据storageshape 1d 和右矩阵维度 3d 判断
+        if (CheckInputTranspose(mkDims, 0) != ge::GRAPH_SUCCESS) {
             return false;
         }
     } else {
@@ -187,16 +199,13 @@ bool MatMulV3Tiling::CheckIsNonContiguous(int64_t (&mkDims)[TWO_BATCH_DIM], int6
             return false;
         }
     }
-    // transpose非连续校验，根据storageshape 1d 和右矩阵维度 3d 判断
-    if (context_->InputIsView(1) && (context_->GetInputShape(1)->GetStorageShape().GetDimNum() == 1) &&
-        (mat2DimNum == THREE_BATCH_DIM)) { // only 3d support  transpose
-        if (CheckMat2Transpose(knDims) != ge::GRAPH_SUCCESS) {
+
+    if (isBTransposeNonContiguous) { // only 3d support  transpose
+        if (CheckInputTranspose(knDims, 1) != ge::GRAPH_SUCCESS) {
             return false;
         }
     } else {
-        if ((GetInputDims(
-                 context_->GetInputShape(1)->GetStorageShape(), mat2Shape, args_.bDtypeSize, args_.bFormat, knDims) !=
-             ge::GRAPH_SUCCESS)) {
+        if ((GetInputDims(mat2StorageShape, mat2Shape, args_.bDtypeSize, args_.bFormat, knDims) != ge::GRAPH_SUCCESS)) {
             OP_LOGE(args_.opName, "invalid input dim num for mat2");
             return false;
         }
