@@ -133,7 +133,7 @@ void Conv3dBaseTiling::GetDescInfo()
               (GetPrimaryFormat(context_->GetInputDesc(INPUT_WEIGHT_INDEX)->GetStorageFormat()));
     descInfo_.weightDtype = context_->GetInputDesc(INPUT_WEIGHT_INDEX)->GetDataType();
     descInfo_.outFormat = static_cast<ge::Format>
-              (GetPrimaryFormat(context_->GetInputDesc(OUTPUT_INDEX)->GetStorageFormat()));
+              (GetPrimaryFormat(context_->GetOutputDesc(OUTPUT_INDEX)->GetStorageFormat()));
     descInfo_.outDtype = context_->GetOutputDesc(OUTPUT_INDEX)->GetDataType();
 
     if (flagInfo_.hasBias) {
