@@ -135,6 +135,7 @@ void TransposeBatchMatMulAswTiling::GetTransposeBatchMatMulInfo()
     }
 }
 
+
 uint64_t TransposeBatchMatMulAswTiling::GetTilingKey() const
 {
     uint64_t tilingKey =

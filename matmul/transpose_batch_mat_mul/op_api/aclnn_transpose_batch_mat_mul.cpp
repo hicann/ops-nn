@@ -80,7 +80,7 @@ inline static bool CheckScaleValid(const aclTensor* scale, int64_t batchN)
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dimTensorScale[%zu] != 1 or Scale dim != batch mul N", dimTensorScale);
             return false;
         }
-        if (scaleDim >= SUPPORTED_INNER_AXIS) {
+        if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510 && scaleDim >= SUPPORTED_INNER_AXIS) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch mul N should be less than 65536.");
             return false;
         }
@@ -101,10 +101,6 @@ static bool CheckDavidLimit(const aclTensor* scale, const aclIntArray* perm_x1, 
     }
     if (!x2_need_transpose) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x2 for npu arch 3510 should be [0,1,2] or [0,2,1].");
-        return false;
-    }
-    if (scale != nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "npu arch 3510 not support scale.");
         return false;
     }
     return true;

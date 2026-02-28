@@ -445,7 +445,8 @@ private:
         { ge::DT_FLOAT, matmul_tiling::DataType::DT_FLOAT },
         { ge::DT_BF16, matmul_tiling::DataType::DT_BF16 },
         { ge::DT_FLOAT8_E5M2, matmul_tiling::DataType::DT_FLOAT8_E5M2 },
-        { ge::DT_FLOAT8_E4M3FN, matmul_tiling::DataType::DT_FLOAT8_E4M3FN }
+        { ge::DT_FLOAT8_E4M3FN, matmul_tiling::DataType::DT_FLOAT8_E4M3FN },
+        { ge::DT_INT8, matmul_tiling::DataType::DT_INT8 }
     };
 };
 } // namespace matmul_v3

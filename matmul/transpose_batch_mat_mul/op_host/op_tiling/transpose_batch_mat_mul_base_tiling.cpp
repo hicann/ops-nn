@@ -37,6 +37,7 @@ constexpr size_t KA_IDX = 2;
 constexpr size_t KB_IDX = 1;
 constexpr size_t N_IDX = 2;
 constexpr size_t BIAS_IDX = 2;
+constexpr size_t SCALE_IDX = 3;
 constexpr uint64_t BLOCK_CUBE = 16;
 constexpr uint64_t NO_BATCH_SHAPE_DIM = 2;
 constexpr uint64_t ONE_BATCH_SHAPE_DIM = 3;
@@ -47,6 +48,7 @@ constexpr uint64_t DEFAULT_SIZE = 32;
 constexpr uint64_t NUM_TWO = 2;
 constexpr uint64_t BASIC_BLOCK_SIZE_128 = 128;
 constexpr uint64_t BASIC_BLOCK_SIZE_256 = 256;
+constexpr uint64_t kSupportedInnerAxis = 65536;
 }  // namespace
 
 
@@ -420,6 +422,12 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::CheckArgs()
     idx++;
     if (context_->GetOptionalInputShape(2)!= nullptr) { // bias是第2入参
         args_.hasBias = true;
+    }
+    auto* shape_scale = context_->GetOptionalInputShape(SCALE_IDX);
+    if (shape_scale != nullptr) {
+        OP_TILING_CHECK(shape_scale->GetShape().GetDim(0) >= kSupportedInnerAxis,
+                        CUBE_INNER_ERR_REPORT(args_.opName, "batch mul n should be less than 65536."),
+                        return ge::GRAPH_FAILED);
     }
     if (attrs->GetAttrNum() >= ATTR_NUM) {
         OPS_CHECK_NULL_WITH_CONTEXT(context_,

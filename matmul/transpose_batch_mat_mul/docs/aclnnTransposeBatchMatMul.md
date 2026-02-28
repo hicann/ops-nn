@@ -339,11 +339,10 @@ aclnnStatus aclnnTransposeBatchMatMul(
     - 当x1的输入shape为(B, M, K)时，K <= 65535；当x1的输入shape为(M, B, K)时，B * K <= 65535。
     - x2的第二维或x2的第三维不能被16整除。
     - permX2仅支持输入[0, 1, 2]。
-    - 当scale不为空时，B与N的乘积小于65536, 且仅支持输入为FLOAT16和输出为INT8的类型推导。
+    - 当scale不为空时，batchSplitFactor只能等于1，B与N的乘积小于65536, 且仅支持输入为FLOAT16和输出为INT8的类型推导。
 - <term>Ascend 950PR/Ascend 950DT</term>：
     - permX2支持输入[0, 1, 2]、[0, 2, 1]。
-    - 不支持scale。
-    - out不支持INT8类型。
+    - 当scale不为空时，batchSplitFactor只能等于1，且仅支持输入为FLOAT16和输出为INT8的类型推导。
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

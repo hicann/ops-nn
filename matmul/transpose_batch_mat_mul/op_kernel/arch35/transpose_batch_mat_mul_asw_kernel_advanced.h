@@ -89,6 +89,11 @@ TransposeBatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MODE, BLOCK_TYP
         static_cast<uint64_t>(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N));
     biasGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BiasT *>(biasGM),
         block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N);
+    if constexpr (sizeof(C_T) == 1) {
+        auto scalesSize = block_.params_.cBatchDimAll *
+                          static_cast<uint64_t>(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N);
+        scalesGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ uint64_t*>(scalesGM), scalesSize);
+    }
 }
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, TBMM_MODE MODE, class BLOCK_TYPE,
@@ -144,6 +149,9 @@ TransposeBatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MODE, BLOCK_TYP
 
                 mm_.SetSingleShape(block_.params_.singleCoreM, block_.params_.singleCoreN,
                     block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.singleCoreK);
+                if constexpr (sizeof(C_T) == 1) {
+                    mm_.SetQuantVector(scalesGlobal_[block_.offset_.offsetScales]);
+                }
                 mm_.SetTensorA(aGlobal_[block_.offset_.offsetA], A_TYPE::isTrans);
                 mm_.SetTensorB(bGlobal_[block_.offset_.offsetB], B_TYPE::isTrans);
                 if (block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.isBias) {

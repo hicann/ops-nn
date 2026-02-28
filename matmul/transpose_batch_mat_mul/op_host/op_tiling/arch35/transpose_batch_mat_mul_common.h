@@ -31,6 +31,7 @@ constexpr size_t N_IDX = 2;
 constexpr size_t BIAS_IDX = 2;
 constexpr size_t SCALE_IDX = 3;
 constexpr size_t ATTR_NUM = 5;
+constexpr int64_t UNKNOWN_DIM_NUM = -2;
 }
 } // namespace
 #endif // __OP_HOST_TRANSPOSE_BATCH_MAT_MUL_COMMON_H__

@@ -26,7 +26,6 @@ namespace {
         }                                  \
     } while (0)
 const size_t kTransposeBatchMatMulScaleIdx = 3;
-const int64_t kSupportedInnerAxis = 65536;
 const size_t kBlockSize = 128;
 constexpr static int64_t UNKNOWN_DIM_NUM = static_cast<int64_t>(-2);
 constexpr static int64_t N_DIM_NUM = 2;
@@ -53,16 +52,20 @@ static bool CheckIsUnknownDimNum(const gert::Shape& shape)
     return shape.GetDimNum() == 1 && shape.GetDim(0) == UNKNOWN_DIM_NUM;
 }
 
-static ge::graphStatus CheckScaleForTransposeBatchMatMul(const InferShapeContext *context, const Shape *shape_x2) {
-  const Shape *shape_scale = context->GetOptionalInputShape(kTransposeBatchMatMulScaleIdx);
-  if (shape_scale != nullptr && shape_scale->GetDimNum() == 1) {
-    int64_t scale_dim = shape_scale->GetDimNum();
-    CHECK(shape_scale->GetDim(scale_dim - 1) != shape_x2->GetDim(0) * shape_x2->GetDim(2),  // scale = batch * n
-          OP_LOGE(context->GetNodeName(), "The dimension of n * b [%ld] and scale [%ld] tensors must be the same",
-                  shape_x2->GetDim(0) * shape_x2->GetDim(2), shape_scale->GetDim(scale_dim - 1)),
-          return ge::GRAPH_FAILED);
-  }
-  return ge::GRAPH_SUCCESS;
+static ge::graphStatus CheckScaleForTransposeBatchMatMul(const InferShapeContext* context,
+                                                         const Shape& shape_x2_transposed)
+{
+    const Shape* shape_scale = context->GetOptionalInputShape(kTransposeBatchMatMulScaleIdx);
+    if (shape_scale != nullptr && shape_scale->GetDimNum() == 1) {
+        int64_t scale_dim = shape_scale->GetDimNum();
+        CHECK(shape_scale->GetDim(scale_dim - 1) !=
+                  shape_x2_transposed.GetDim(0) * shape_x2_transposed.GetDim(2), // scale = batch * n
+              OP_LOGE(context->GetNodeName(), "The dimension of n * b [%ld] and scale [%ld] tensors must be the same",
+                      shape_x2_transposed.GetDim(0) * shape_x2_transposed.GetDim(2),
+                      shape_scale->GetDim(scale_dim - 1)),
+              return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus SetShapeY(Shape &shape_y, const Shape &shape_x1_transposed, const Shape &shape_x2_transposed,
@@ -184,11 +187,6 @@ static ge::graphStatus InferShapeForTransposeBatchMatMul(InferShapeContext *cont
             name_op, "The dimension of n mul b [%ld] and scale [%ld] tensors must be the same",
             shape_x1_transposed.GetDim(0) * shape_x2_transposed.GetDim(2), shape_scale->GetDim(0)),
         return ge::GRAPH_FAILED);
-
-    CHECK(
-        shape_scale->GetDim(0) >= kSupportedInnerAxis,
-        CUBE_INNER_ERR_REPORT(name_op, "batch mul n should be less than 65536."), return ge::GRAPH_FAILED);
-
     auto tensor_x1 = context->GetInputDesc(0);
     auto tensor_x2 = context->GetInputDesc(1);
     ge::DataType dtype_x1 = tensor_x1->GetDataType();
@@ -204,8 +202,8 @@ static ge::graphStatus InferShapeForTransposeBatchMatMul(InferShapeContext *cont
   CHECK(ret != ge::GRAPH_SUCCESS, CUBE_INNER_ERR_REPORT(name_op, "[InferShape] set shape_y failed"),
         return ge::GRAPH_FAILED);
 
-  CHECK(CheckScaleForTransposeBatchMatMul(context, shape_x2) != ge::GRAPH_SUCCESS, CUBE_INNER_ERR_REPORT(name_op,
-        "[InferShape] scale shape check failed"), return ge::GRAPH_FAILED);
+  CHECK(CheckScaleForTransposeBatchMatMul(context, shape_x2_transposed) != ge::GRAPH_SUCCESS,
+        CUBE_INNER_ERR_REPORT(name_op, "[InferShape] scale shape check failed"), return ge::GRAPH_FAILED);
   // no need to SetDataType in runtime
   return ge::GRAPH_SUCCESS;
 }

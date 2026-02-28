@@ -187,6 +187,38 @@ ge::graphStatus TransposeBatchMatMulTiling::GetArgs()
     return TBMMOpSpecificCheck(args_);
 }
 
+ge::graphStatus TransposeBatchMatMulTiling::CheckScale(const gert::Shape& shape_scale) const
+{
+    const gert::Shape& bShape = context_->GetInputShape(1)->GetOriginShape();
+    auto attrs = context_->GetAttrs();
+    const gert::ContinuousVector* bPermList = attrs->GetAttrPointer<gert::ContinuousVector>(1);
+    if (attrs->GetAttrNum() >= ATTR_NUM) {
+        uint32_t batchSplitFactor = std::max(*(attrs->GetAttrPointer<int32_t>(ATTR_NUM - 1)), 1);
+        OP_TILING_CHECK(batchSplitFactor != 1,
+                        CUBE_INNER_ERR_REPORT(args_.opName, "batchSplitFactor should be 1 when the scale is not null."),
+                        return ge::GRAPH_FAILED);
+    }
+    if (bPermList != nullptr && bPermList->GetSize() == ALLOW_DIM) {
+        const int64_t* bPerm = static_cast<const int64_t*>(bPermList->GetData());
+        int64_t n = bShape[bPerm[N_IDX]];
+        int64_t b = bShape[bPerm[BATCH_IDX]];
+        OP_TILING_CHECK(shape_scale.GetDim(0) != b * n,
+                        CUBE_INNER_ERR_REPORT(args_.opName,
+                                              "The dimension of n mul b [%ld] and scale [%ld] tensors must be the same",
+                                              b * n, shape_scale.GetDim(0)),
+                        return ge::GRAPH_FAILED);
+    }
+    auto tensor_x1 = context_->GetInputDesc(0);
+    auto tensor_x2 = context_->GetInputDesc(1);
+    ge::DataType dtype_x1 = tensor_x1->GetDataType();
+    ge::DataType dtype_x2 = tensor_x2->GetDataType();
+    OP_TILING_CHECK(dtype_x2 != ge::DT_FLOAT16 || dtype_x1 != ge::DT_FLOAT16,
+                    CUBE_INNER_ERR_REPORT(args_.opName,
+                                          "the dtype of input is only supported FLOAT16 when the scale takes effect."),
+                    return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus TransposeBatchMatMulTiling::CheckArgs()
 {
     auto attrs = context_->GetAttrs();
@@ -202,9 +234,11 @@ ge::graphStatus TransposeBatchMatMulTiling::CheckArgs()
         OP_LOGE(args_.opName, "bias is not supported now");
         return ge::GRAPH_FAILED;
     }
-    if (context_->GetOptionalInputShape(SCALE_IDX) != nullptr) {
-        OP_LOGE(args_.opName, "scale is not supported now");
-        return ge::GRAPH_FAILED;
+    const gert::StorageShape* storageShape_scale = context_->GetOptionalInputShape(SCALE_IDX);
+    if (storageShape_scale != nullptr) {
+        const gert::Shape shape_scale = storageShape_scale->GetOriginShape();
+        OP_TILING_CHECK((CheckScale(shape_scale) != ge::GRAPH_SUCCESS),
+                        CUBE_INNER_ERR_REPORT(args_.opName, "scale condition not satisfied"), return ge::GRAPH_FAILED);
     }
     if (attrs->GetAttrNum() >= HF32_ATTR_NUM) {
         OPS_CHECK_NULL_WITH_CONTEXT(context_,
@@ -238,6 +272,10 @@ ge::graphStatus TransposeBatchMatMulTiling::DoTiling()
     OP_TILING_CHECK((GetBatchInfo(*context_, args_, tempBatchInfo) != ge::GRAPH_SUCCESS),
                     CUBE_INNER_ERR_REPORT(args_.opName, "GetBatchInfo failed"), return ge::GRAPH_FAILED);
     args_.batchInfo = &tempBatchInfo;
+    if (context_->GetOptionalInputShape(SCALE_IDX) != nullptr) {
+        args_.hasScale = true;
+        OP_LOGI(args_.opName, "Quant function is activated.");
+    }
     MatMulTilingCfg tilingCfg(false, context_->GetCompileInfo(), static_cast<void*>(&args_));
     OPS_CHECK_NULL_WITH_CONTEXT(context_, tilingCfg.compileInfo);
     NpuArch npuArch =

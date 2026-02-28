@@ -36,6 +36,8 @@ protected:
     ge::graphStatus GetArgs() override;
 
     ge::graphStatus CheckArgs() override;
+
+    ge::graphStatus CheckScale(const gert::Shape &shape_scale) const;
 };
 }
 }

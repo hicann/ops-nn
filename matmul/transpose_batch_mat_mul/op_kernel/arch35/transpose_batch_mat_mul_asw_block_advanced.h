@@ -36,6 +36,7 @@ struct TBmmAswBlockOffset {
     uint64_t offsetB = 0;
     uint64_t offsetC = 0;
     uint64_t offsetBias = 0;
+    uint64_t offsetScales = 0;
 };
 
 struct TBmmAswBlockArgs {
@@ -177,7 +178,9 @@ __aicore__ inline void TransposeBatchMatMulAswBlock::CalcGMOffset()
                 (params_.nCntIndex * static_cast<uint64_t>(batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb) *
                  params_.blockBaseN) :
             offsetBBatch + (params_.nCntIndex * params_.blockBaseN);
-
+    offset_.offsetScales =
+        totalBmTileIndex * static_cast<uint64_t>(batchMatmulTilingData_->matMulTilingData.tCubeTiling.N) +
+        (params_.nCntIndex * params_.blockBaseN);
     if (batchMatmulTilingData_->matMulTilingData.tCubeTiling.isBias) {
         offset_.offsetBias = params_.nCntIndex * params_.blockBaseN;
     }

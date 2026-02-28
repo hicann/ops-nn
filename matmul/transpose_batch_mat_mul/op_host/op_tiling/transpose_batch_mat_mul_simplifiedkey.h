@@ -9,27 +9,29 @@
  */
 
 /* !
- * \file matmul_v3_simplifiedkey.h
+ * \file transpose_batch_mat_mul_simplifiedkey.h
  * \brief
  */
 
-#ifndef __OP_HOST_MATMUL_V3_SIMPILIFIEDKEY_H__
-#define __OP_HOST_MATMUL_V3_SIMPILIFIEDKEY_H__
+#ifndef __OP_HOST_TRANSPOSE_BATCH_MATMUL_SIMPILIFIEDKEY_H__
+#define __OP_HOST_TRANSPOSE_BATCH_MATMUL_SIMPILIFIEDKEY_H__
 
 #include "exe_graph/runtime/tiling_context.h"
 #include "error_util.h"
 
 namespace optiling {
-inline ge::graphStatus GenSimplifiedKey(gert::TilingContext *context, ge::char_t *simplifiedKey)
+namespace transpose_batch_matmul {
+inline ge::graphStatus GenSimplifiedKey(gert::TilingContext* context, ge::char_t* simplifiedKey)
 {
     static const size_t DEST_MAX = 100;
     static const size_t MAX_LEN_SIMPLIFIED_KEY = 256;
     static const int32_t INPUT0_INDEX = 0;
     static const int32_t INPUT1_INDEX = 1;
     static const int32_t BIAS_INDEX = 2;
+    static const int32_t SCALE_INDEX = 3;
     OP_LOGI(context->GetNodeName(), "Enter genSimplifiedKey.");
     OP_TILING_CHECK(simplifiedKey == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "simplifiedKey is null"),
-        return ge::GRAPH_FAILED);
+                    return ge::GRAPH_FAILED);
 
     OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetInputDesc(INPUT0_INDEX));
     OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetInputDesc(INPUT1_INDEX));
@@ -41,12 +43,14 @@ inline ge::graphStatus GenSimplifiedKey(gert::TilingContext *context, ge::char_t
     auto input0DataType = context->GetInputDesc(INPUT0_INDEX)->GetDataType();
     auto input1DataType = context->GetInputDesc(INPUT1_INDEX)->GetDataType();
     auto outputDataType = context->GetOutputDesc(0)->GetDataType();
+    auto scaleDataType = ge::DT_INT64;
     auto biasDataType = input0DataType;
-    // 二进制发布json有无bias场景合并为同一个json发布，当无法获取bias信息时，当前约定使用input0的信息代替
     if (context->GetOptionalInputDesc(BIAS_INDEX) != nullptr) {
         biasDataType = context->GetOptionalInputDesc(BIAS_INDEX)->GetDataType();
     }
-
+    if (context->GetOptionalInputDesc(SCALE_INDEX) != nullptr) {
+        scaleDataType = context->GetOptionalInputDesc(SCALE_INDEX)->GetDataType();
+    }
     std::string simpleKeyTemp = "";
     strcat_s(simplifiedKey, DEST_MAX, "diy,");
     simpleKeyTemp.append(std::to_string(input0Format))
@@ -54,7 +58,9 @@ inline ge::graphStatus GenSimplifiedKey(gert::TilingContext *context, ge::char_t
         .append(std::to_string(input1Format))
         .append("/")
         .append(std::to_string(ge::FORMAT_ND))
-        .append("/") // bias的format均为FormatND,因此约束为仅通过FORMAT_ND参与匹配
+        .append("/")
+        .append(std::to_string(ge::FORMAT_ND))
+        .append("/") 
         .append(std::to_string(outputFormat))
         .append("/")
         .append(std::to_string(input0DataType))
@@ -62,6 +68,8 @@ inline ge::graphStatus GenSimplifiedKey(gert::TilingContext *context, ge::char_t
         .append(std::to_string(input1DataType))
         .append("/")
         .append(std::to_string(biasDataType))
+        .append("/")
+        .append(std::to_string(scaleDataType))
         .append("/")
         .append(std::to_string(outputDataType));
     errno_t err = strcat_s(simplifiedKey, DEST_MAX, simpleKeyTemp.c_str());
@@ -71,10 +79,11 @@ inline ge::graphStatus GenSimplifiedKey(gert::TilingContext *context, ge::char_t
     }
 
     OP_TILING_CHECK(strlen(simplifiedKey) > MAX_LEN_SIMPLIFIED_KEY,
-        CUBE_INNER_ERR_REPORT(context->GetNodeName(), "len of simplifiedKey exceeds max length."),
-        return ge::GRAPH_FAILED);
+                    CUBE_INNER_ERR_REPORT(context->GetNodeName(), "len of simplifiedKey exceeds max length."),
+                    return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
-}
-#endif // __OP_HOST_MATMUL_V3_SIMPILIFIEDKEY_H__
+} // namespace transpose_batch_matmul
+} // namespace optiling
+#endif // __OP_HOST_TRANSPOSE_BATCH_MATMUL_SIMPILIFIEDKEY_H__

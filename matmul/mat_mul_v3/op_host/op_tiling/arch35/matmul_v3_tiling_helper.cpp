@@ -25,6 +25,9 @@ using namespace optiling::matmul_v3_advanced;
 void CalL1TilingDefault(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args, MatMulV3RunInfo &runInfo)
 {
     uint64_t totalL1Size = compileInfo.l1Size;
+    if (args.hasScale) {
+        totalL1Size -= runInfo.baseN * sizeof(uint64_t);
+    }
     uint64_t reserveBTSize = args.hasBias ? BIAS_TABLE_NUM * DATA_SIZE_FP32 : 0UL;
     runInfo.depthA1 = totalL1Size / NUM_TWO / runInfo.baseM / runInfo.baseK / args.aDtypeSize;  // 2: half of l1
     runInfo.depthB1 = totalL1Size / NUM_TWO / runInfo.baseN / runInfo.baseK / args.bDtypeSize;  // 2: half of l1

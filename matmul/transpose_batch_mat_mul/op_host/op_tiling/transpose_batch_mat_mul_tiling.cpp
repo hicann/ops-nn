@@ -17,7 +17,7 @@
 #include <type_traits>
 
 #include "matmul/mat_mul_v3/op_host/op_tiling/matmul_v3_platform_common.h"
-#include "matmul/mat_mul_v3/op_host/op_tiling/matmul_v3_simplifiedkey.h"
+#include "transpose_batch_mat_mul_simplifiedkey.h"
 #include "./arch35/transpose_batch_mat_mul_tiling_advanced.h"
 #include "transpose_batch_mat_mul_base_tiling.h"
 #include "transpose_batch_mat_mul_einsum_tiling.h"
@@ -161,5 +161,5 @@ static ge::graphStatus TilingPrepareForTransposeBatchMatMul(gert::TilingParseCon
 IMPL_OP_OPTILING(TransposeBatchMatMul)
     .Tiling(TransposeBatchMatMulTilingFunc)
     .TilingParse<MatmulV3CompileInfo>(TilingPrepareForTransposeBatchMatMul)
-    .GenSimplifiedKey(GenSimplifiedKey);
+    .GenSimplifiedKey(transpose_batch_matmul::GenSimplifiedKey);
 }

@@ -3,8 +3,8 @@
   "optional_input_mode": "gen_placeholder",
   "op_list": [
     {
-      "bin_filename": "TransposeBatchMatMul_ND_ND_ND_ND_FP16_FP16_FP16_FP16",
-      "simplified_key": "diy,2/2/2/2/1/1/1/1",
+      "bin_filename": "TransposeBatchMatMul_ND_ND_ND_ND_ND_FP16_FP16_FP32_INT64_FP16",
+      "simplified_key": "diy,2/2/2/2/2/1/1/0/9/1",
       "inputs": [
         {
           "name": "x1",
@@ -29,7 +29,7 @@
         {
           "name": "bias",
           "index": 2,
-          "dtype": "float16",
+          "dtype": "float32",
           "format": "ND",
           "paramType": "optional",
           "shape": [
@@ -39,7 +39,7 @@
         {
           "name": "scale",
           "index": 3,
-          "dtype": "uint64",
+          "dtype": "int64",
           "format": "ND",
           "paramType": "optional",
           "shape": [
@@ -88,8 +88,93 @@
       ]
     },
     {
-      "bin_filename": "TransposeBatchMatMul_ND_ND_ND_ND_FP16_FP16_FP16_INT8",
-      "simplified_key": "diy,2/2/2/2/1/1/1/2",
+      "bin_filename": "TransposeBatchMatMul_ND_ND_ND_ND_ND_FP16_FP16_FP16_INT64_FP16",
+      "simplified_key": "diy,2/2/2/2/2/1/1/1/9/1",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "scale",
+          "index": 3,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "enable_hf32",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "bin_filename": "TransposeBatchMatMul_ND_ND_ND_ND_ND_FP16_FP16_FP16_UINT64_INT8",
+      "simplified_key": "diy,2/2/2/2/2/1/1/1/10/2",
       "inputs": [
         {
           "name": "x1",
@@ -173,8 +258,93 @@
       ]
     },
     {
-      "bin_filename": "TransposeBatchMatMul_ND_ND_ND_ND_BF16_BF16_BF16_BF16",
-      "simplified_key": "diy,2/2/2/2/27/27/27/27",
+      "bin_filename": "TransposeBatchMatMul_ND_ND_ND_ND_ND_FP16_FP16_FP16_INT64_INT8",
+      "simplified_key": "diy,2/2/2/2/2/1/1/1/9/2",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "scale",
+          "index": 3,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "enable_hf32",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "bin_filename": "TransposeBatchMatMul_ND_ND_ND_ND_ND_BF16_BF16_FP32_INT64_BF16",
+      "simplified_key": "diy,2/2/2/2/2/27/27/0/9/27",
       "inputs": [
         {
           "name": "x1",
@@ -199,7 +369,7 @@
         {
           "name": "bias",
           "index": 2,
-          "dtype": "bfloat16",
+          "dtype": "float32",
           "format": "ND",
           "paramType": "optional",
           "shape": [
@@ -209,7 +379,7 @@
         {
           "name": "scale",
           "index": 3,
-          "dtype": "uint64",
+          "dtype": "int64",
           "format": "ND",
           "paramType": "optional",
           "shape": [
@@ -258,8 +428,93 @@
       ]
     },
     {
-      "bin_filename": "TransposeBatchMatMul_ND_ND_ND_ND_FP32_FP32_FP32_FP32",
-      "simplified_key": "diy,2/2/2/2/0/0/0/0",
+      "bin_filename": "TransposeBatchMatMul_ND_ND_ND_ND_ND_BF16_BF16_BF16_INT64_BF16",
+      "simplified_key": "diy,2/2/2/2/2/27/27/27/9/27",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "scale",
+          "index": 3,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "enable_hf32",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "bin_filename": "TransposeBatchMatMul_ND_ND_ND_ND_ND_FP32_FP32_FP32_INT64_FP32",
+      "simplified_key": "diy,2/2/2/2/2/0/0/0/9/0",
       "inputs": [
         {
           "name": "x1",
@@ -294,7 +549,7 @@
         {
           "name": "scale",
           "index": 3,
-          "dtype": "uint64",
+          "dtype": "int64",
           "format": "ND",
           "paramType": "optional",
           "shape": [

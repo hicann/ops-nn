@@ -78,6 +78,7 @@ struct MatMulV3Args {
     bool isBTrans = false;
     bool isHf32 = false;
     bool hasBias = false;
+    bool hasScale = false;
     ge::DataType aType = ge::DT_FLOAT16;
     ge::DataType bType = ge::DT_FLOAT16;
     ge::DataType cType = ge::DT_FLOAT16;
