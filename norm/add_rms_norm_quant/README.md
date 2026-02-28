@@ -166,9 +166,9 @@
     </tr>
   </tbody></table>
 
-  - <term>Atlas 推理系列产品</term>：x1、x2、gamma、scales1、scales2、zero_points1、zero_points2、beta、x的数据类型不支持BFLOAT16。
+  - <term>Atlas 推理系列产品</term>：x1、x2、gamma、scales1、scales2、zero_points1、zero_points2、beta、x的数据类型不支持BFLOAT16，输出参数y1、y2的数据类型仅支持INT8。
 
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：x1、x2、gamma、x、beta的数据类型不支持FLOAT32。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：x1、x2、gamma、x、beta的数据类型不支持FLOAT32，输出参数y1、y2的数据类型仅支持INT8。
 
   - <term>Ascend 950PR/Ascend 950DT</term>：可选输入beta不支持配置。
 
