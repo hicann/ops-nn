@@ -158,6 +158,106 @@ static void ExecuteTestCase(
     ASSERT_EQ(tiling_key, except_tilingkey);
 }
 
+TEST_F(AvgPoolV2GradTiling, AvgPoolV2GradTiling_Test_nchw_tiling_1)
+{
+    gert::StorageShape xShape = {{4}, {4}};
+    gert::StorageShape gradShape = {{100, 8, 4, 4}, {100, 8, 4, 4}};
+    gert::StorageShape yShape = {{100, 8, 8, 8}, {100, 8, 8, 8}};
+    std::vector<int64_t> ksize = {2, 2};
+    std::vector<int64_t> strides = {2, 2};
+    std::string padding_mode = "CALCULATED";
+    std::vector<int64_t> pads = {0, 0};
+    ge::DataType dtype = ge::DT_FLOAT;
+    ge::DataType dtypeIdx = ge::DT_INT32;
+    std::string data_format = "NCHW";
+    bool global_pooling = false;
+    bool ceil_mode = false;
+    bool exclusive = true;
+    int32_t divisor_override = 0;
+    uint64_t except_tilingkey = 256;
+    int shape_data[4] = {100, 8, 8, 8};
+
+    ExecuteTestCase(
+        xShape, yShape, gradShape, ksize, strides, padding_mode, pads,
+        data_format, global_pooling, ceil_mode, exclusive,
+        divisor_override, dtype, dtypeIdx, except_tilingkey, shape_data);
+}
+
+TEST_F(AvgPoolV2GradTiling, AvgPoolV2GradTiling_Test_nchw_tiling_2)
+{
+    gert::StorageShape xShape = {{4}, {4}};
+    gert::StorageShape gradShape = {{25, 8, 6, 4}, {25, 8, 6, 4}};
+    gert::StorageShape yShape = {{25, 8, 11, 12}, {25, 8, 11, 12}};
+    std::vector<int64_t> ksize = {2, 3};
+    std::vector<int64_t> strides = {2, 3};
+    std::string padding_mode = "CALCULATED";
+    std::vector<int64_t> pads = {0, 0, 0, 0};
+    ge::DataType dtype = ge::DT_FLOAT;
+    ge::DataType dtypeIdx = ge::DT_INT32;
+    std::string data_format = "NCHW";
+    bool global_pooling = false;
+    bool ceil_mode = true;
+    bool exclusive = true;
+    int32_t divisor_override = 0;
+    uint64_t except_tilingkey = 1280;
+    int shape_data[4] = {25, 8, 11, 12};
+
+    ExecuteTestCase(
+        xShape, yShape, gradShape, ksize, strides, padding_mode, pads,
+        data_format, global_pooling, ceil_mode, exclusive,
+        divisor_override, dtype, dtypeIdx, except_tilingkey, shape_data);
+}
+
+TEST_F(AvgPoolV2GradTiling, AvgPoolV2GradTiling_Test_nchw_tiling_3)
+{
+    gert::StorageShape xShape = {{4}, {4}};
+    gert::StorageShape gradShape = {{2, 5, 8, 151}, {2, 5, 8, 151}};
+    gert::StorageShape yShape = {{2, 5, 29, 753}, {2, 5, 29, 753}};
+    std::vector<int64_t> ksize = {6, 16};
+    std::vector<int64_t> strides = {4, 5};
+    std::string padding_mode = "CALCULATED";
+    std::vector<int64_t> pads = {3, 5};
+    ge::DataType dtype = ge::DT_FLOAT16;
+    ge::DataType dtypeIdx = ge::DT_INT32;
+    std::string data_format = "NCHW";
+    bool global_pooling = false;
+    bool ceil_mode = true;
+    bool exclusive = false;
+    int32_t divisor_override = 9;
+    uint64_t except_tilingkey = 7424;
+    int shape_data[4] = {2, 5, 29, 753};
+
+    ExecuteTestCase(
+        xShape, yShape, gradShape, ksize, strides, padding_mode, pads,
+        data_format, global_pooling, ceil_mode, exclusive,
+        divisor_override, dtype, dtypeIdx, except_tilingkey, shape_data);
+}
+
+TEST_F(AvgPoolV2GradTiling, AvgPoolV2GradTiling_Test_nchw_tiling_4)
+{
+    gert::StorageShape xShape = {{4}, {4}};
+    gert::StorageShape gradShape = {{64, 94, 16, 18}, {64, 94, 16, 18}};
+    gert::StorageShape yShape = {{64, 94, 31, 55}, {64, 94, 31, 55}};
+    std::vector<int64_t> ksize = {5, 7};
+    std::vector<int64_t> strides = {2, 3};
+    std::string padding_mode = "CALCULATED";
+    std::vector<int64_t> pads = {2, 2, 2, 2};
+    ge::DataType dtype = ge::DT_FLOAT;
+    ge::DataType dtypeIdx = ge::DT_INT32;
+    std::string data_format = "NCHW";
+    bool global_pooling = false;
+    bool ceil_mode = false;
+    bool exclusive = false;
+    int32_t divisor_override = 0;
+    uint64_t except_tilingkey = 3328;
+    int shape_data[4] = {64, 94, 31, 55};
+
+    ExecuteTestCase(
+        xShape, yShape, gradShape, ksize, strides, padding_mode, pads,
+        data_format, global_pooling, ceil_mode, exclusive,
+        divisor_override, dtype, dtypeIdx, except_tilingkey, shape_data);
+}
+
 TEST_F(AvgPoolV2GradTiling, AvgPoolV2GradTiling_Test_1)
 {
     gert::StorageShape xShape = {{4}, {4}};

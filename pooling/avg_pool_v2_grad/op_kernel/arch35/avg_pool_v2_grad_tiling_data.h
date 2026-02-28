@@ -55,5 +55,38 @@ public:
     int64_t countIncludePad = 0;
     int64_t divisorOverride = 0;
 };
+
+class AvgPoolV2GradNCHWTilingData {
+public:
+    int64_t hGrad = 0;
+    int64_t wGrad = 0;
+    int64_t hOutput = 0;
+    int64_t wOutput = 0;
+    int64_t hKernel = 1;
+    int64_t wKernel = 1;
+    int64_t hStride = 1;
+    int64_t wStride = 1;
+    int64_t padTopH = 0;
+    int64_t padDownH = 0;
+    int64_t padLeftW = 0;
+    int64_t padRightW = 0;
+    int64_t highAxisInner = 0;
+    int64_t highAxisTail = 0;
+    int64_t highAxisOuter = 0;
+    int64_t hOutputInner = 0;
+    int64_t hOutputTail = 0;
+    int64_t hOutputOuter = 0;
+    int64_t wOutputInner = 0;
+    int64_t wOutputTail = 0;
+    int64_t wOutputOuter = 0;
+    int64_t normalCoreProcessNum = 0;
+    int64_t tailCoreProcessNum = 0;
+    int64_t usedCoreNum = 0;
+    int64_t outputBufferSize = 0;
+    int64_t gradBufferSize = 0;
+    int64_t hProBatchSize = 0;
+    int64_t wProBatchSize = 0;
+    int64_t divisorOverride = 1;
+};
 } // namespace AvgPoolV2Grad
 #endif // AVG_POOL_V2_GRAD_STRUCT_H
