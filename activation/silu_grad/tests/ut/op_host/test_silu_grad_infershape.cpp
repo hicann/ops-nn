@@ -21,6 +21,7 @@ class SiluGrad : public testing::Test {
     std::cout << "SiluGrad SetUp" << std::endl;
   }
 
+
   static void TearDownTestCase() {
     std::cout << "SiluGrad TearDown" << std::endl;
   }

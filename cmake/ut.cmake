@@ -7,6 +7,22 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
+function(add_opbase_ut_common)
+    if(TARGET opbase_ut_common)
+        return()
+    endif()
+    add_library(opbase_ut_common STATIC
+        $<$<TARGET_EXISTS:opbase_util_objs>:$<TARGET_OBJECTS:opbase_util_objs>>
+        $<$<TARGET_EXISTS:opbase_infer_objs>:$<TARGET_OBJECTS:opbase_infer_objs>>
+        $<$<TARGET_EXISTS:opbase_tiling_objs>:$<TARGET_OBJECTS:opbase_tiling_objs>>
+    )
+    target_link_libraries(opbase_ut_common PRIVATE
+        ascendalog
+        unified_dlog
+    )
+    target_link_directories(opbase_ut_common PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64)
+endfunction()
+
 
 function(add_optiling_ut_modules OP_TILING_MODULE_NAME)
 
@@ -15,7 +31,7 @@ function(add_optiling_ut_modules OP_TILING_MODULE_NAME)
     set(UT_CONV3DV2_TILING_INC ${PROJECT_SOURCE_DIR}/common/inc/op_host
                                ${PROJECT_SOURCE_DIR}
                                ${PROJECT_SOURCE_DIR}/common/include)
-
+    add_opbase_ut_common()
     # add op tiling ut test cases obj
     add_library(${OP_TILING_MODULE_NAME}_cases_obj OBJECT)
     add_dependencies(${OP_TILING_MODULE_NAME}_cases_obj json)
@@ -53,19 +69,18 @@ function(add_optiling_ut_modules OP_TILING_MODULE_NAME)
     add_library(${OP_TILING_MODULE_NAME}_static_lib STATIC
         $<$<TARGET_EXISTS:${OPHOST_NAME}_tiling_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_tiling_obj>>
         $<$<TARGET_EXISTS:${OP_TILING_MODULE_NAME}_common_obj>:$<TARGET_OBJECTS:${OP_TILING_MODULE_NAME}_common_obj>>
-        $<$<TARGET_EXISTS:opbase_util_objs>:$<TARGET_OBJECTS:opbase_util_objs>>
-        $<$<TARGET_EXISTS:opbase_tiling_objs>:$<TARGET_OBJECTS:opbase_tiling_objs>>
     )
     target_link_libraries(${OP_TILING_MODULE_NAME}_static_lib PRIVATE
         ${OP_TILING_MODULE_NAME}_common_obj
         ${OP_TILING_MODULE_NAME}_cases_obj
+        opbase_ut_common
     )
 endfunction()
 
 function(add_infershape_ut_modules OP_INFERSHAPE_MODULE_NAME)
     # set variables
     set(UT_COMMON_INC ${PROJECT_SOURCE_DIR}/tests/ut/common)
-
+    add_opbase_ut_common()
     # add op tiling ut test cases obj
     add_library(${OP_INFERSHAPE_MODULE_NAME}_cases_obj OBJECT)
     add_dependencies(${OP_INFERSHAPE_MODULE_NAME}_cases_obj json)
@@ -101,12 +116,12 @@ function(add_infershape_ut_modules OP_INFERSHAPE_MODULE_NAME)
     # add infershape ut static lib
     add_library(${OP_INFERSHAPE_MODULE_NAME}_static_lib STATIC
         $<$<TARGET_EXISTS:${OPHOST_NAME}_infer_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_infer_obj>>
-        $<$<TARGET_EXISTS:opbase_infer_objs>:$<TARGET_OBJECTS:opbase_infer_objs>>
         $<$<TARGET_EXISTS:${OP_INFERSHAPE_MODULE_NAME}_common_obj>:$<TARGET_OBJECTS:${OP_INFERSHAPE_MODULE_NAME}_common_obj>>
     )
     target_link_libraries(${OP_INFERSHAPE_MODULE_NAME}_static_lib PRIVATE
         ${OP_INFERSHAPE_MODULE_NAME}_common_obj
         ${OP_INFERSHAPE_MODULE_NAME}_cases_obj
+        opbase_ut_common
     )
 endfunction()
 

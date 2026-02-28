@@ -28,6 +28,8 @@ if(UT_TEST_ALL OR OP_HOST_UT OR OP_GRAPH_UT)
     endif()
     add_library(ophost_${PKG_NAME}_ut SHARED
         ${OPHOST_INFER_OBJ_SRCS}
+        $<$<TARGET_EXISTS:opbase_util_objs>:$<TARGET_OBJECTS:opbase_util_objs>>
+        $<$<TARGET_EXISTS:opbase_infer_objs>:$<TARGET_OBJECTS:opbase_infer_objs>>
     )
     target_compile_options(ophost_${PKG_NAME}_ut PRIVATE -fPIC)
     target_compile_definitions(ophost_${PKG_NAME}_ut PRIVATE LOG_CPP)
