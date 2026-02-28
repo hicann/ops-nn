@@ -415,7 +415,7 @@ private:
         __local_mem__ T_X* xInUb, __local_mem__ T_MEAN* meanUb, __local_mem__ float* meanFp32Ub,
         __local_mem__ float* tmpUb, uint16_t curRows, uint32_t numColAlign, uint32_t reduceNum, float avgFactor)
     {
-        uint32_t binaryAddQuotient = binaryAddQuotient_; // TODO:
+        uint32_t binaryAddQuotient = binaryAddQuotient_;
         uint16_t binaryAddQuotientLoop = (binaryAddQuotient + VL_FP32 - 1) / VL_FP32;
 
         uint32_t lastBinaryAddNum = binaryAddQuotient / VL_FP32;

@@ -70,7 +70,7 @@ static graphStatus InferDataType4InstanceNorm(gert::InferDataTypeContext* contex
     OP_LOGD(context->GetNodeName(), "Begin to do InferDataType4InstanceNorm");
     context->SetOutputDataType(0, context->GetInputDataType(0));
     context->SetOutputDataType(1, context->GetInputDataType(1));
-    context->SetOutputDataType(2, context->GetInputDataType(2));
+    context->SetOutputDataType(2, context->GetInputDataType(1));
     OP_LOGD(context->GetNodeName(), "End to do InferDataType4InstanceNorm");
     return GRAPH_SUCCESS;
 }

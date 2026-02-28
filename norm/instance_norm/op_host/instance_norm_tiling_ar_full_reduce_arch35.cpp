@@ -123,6 +123,7 @@ ge::graphStatus InstanceNormARFullReduceTiling::PostTiling()
 {
     context_->SetBlockDim(blockNum_);
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
     currentWorkspace[0] = workspaceSize_;
     auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_IF(
@@ -145,5 +146,3 @@ ge::graphStatus InstanceNormARFullReduceTiling::PostTiling()
 
 REGISTER_OPS_TILING_TEMPLATE(InstanceNorm, InstanceNormARFullReduceTiling, IN_AR_FULL_REDUCE_PRIORITY);
 } // namespace optiling
-
-

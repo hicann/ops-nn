@@ -75,7 +75,7 @@ ge::graphStatus InstanceNormRegbaseTilingBase::GetShapeAttrsInfo()
     auto xShape = context_->GetInputShape(INPUT_X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xShape);
     xStorageShape = xShape->GetStorageShape();
-    if (CheckShapeAllPositive(xStorageShape) != ge::GRAPH_SUCCESS) {
+    if (CheckShapeAllNotNegative(xStorageShape) != ge::GRAPH_SUCCESS) {
         OP_LOGE(context_->GetNodeName(), "Not supported shape info.");
         return ge::GRAPH_FAILED;
     }
@@ -128,6 +128,9 @@ ge::graphStatus InstanceNormRegbaseTilingBase::GetShapeAttrsInfo()
         OP_LOGE(context_->GetNodeName(), "Not supported format.");
         return ge::GRAPH_FAILED;
     }
+    OP_CHECK_IF(a1 <= 0 || a0 <= 0, 
+        OP_LOGE(context_->GetNodeName(),"Input dims N (=%ld) and C (=%ld) must be positive (>0).", a1, a0),
+        return ge::GRAPH_FAILED);
 
     if (CheckDtypeValid() != ge::GRAPH_SUCCESS) {
         OP_LOGE(context_->GetNodeName(), "Not supported datatype info.");
@@ -205,13 +208,13 @@ ge::graphStatus InstanceNormRegbaseTilingBase::CheckShapeValid()
     
     // Step2.校验gamma/betta的shape
     if (CheckGammaBettaShapeValid() != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "Not supported X Y shape info.");
+        OP_LOGE(context_->GetNodeName(), "Not supported gamma betta shape info.");
         return ge::GRAPH_FAILED;
     }
     
     // Step3.校验输出mean/varience的shape
     if (CheckMeanVarianceShapeValid() != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "Not supported X Y shape info.");
+        OP_LOGE(context_->GetNodeName(), "Not supported mean varience shape info.");
         return ge::GRAPH_FAILED;
     }
 
@@ -263,15 +266,6 @@ ge::graphStatus InstanceNormRegbaseTilingBase::CheckGammaBettaShapeValid()
         OP_CHECK_NULL_WITH_CONTEXT(context_, gammaBettaShape);
         auto gammaBettaStorageShape = gammaBettaShape->GetStorageShape();
         int64_t gammaBettaShapeSize = gammaBettaStorageShape.GetDimNum();
-
-        auto gammaBettaDesc = context_->GetInputDesc(i);
-        OP_CHECK_NULL_WITH_CONTEXT(context_, gammaBettaDesc);
-        ge::Format gammaBettaFormat = gammaBettaDesc->GetFormat().GetStorageFormat();
-
-        OP_CHECK_IF(
-            (gammaBettaFormat != FORMAT_ND),
-            OP_LOGE(context_->GetNodeName(), "Input [%ld] format [%s] should be ND",
-                    i, ge::TypeUtils::FormatToAscendString(gammaBettaFormat).GetString()), return ge::GRAPH_FAILED);
         
         OP_CHECK_IF(
             (gammaBettaShapeSize != 1),
@@ -299,15 +293,6 @@ ge::graphStatus InstanceNormRegbaseTilingBase::CheckMeanVarianceShapeValid()
         auto meanVarianceStorageShape = meanVarianceShape->GetStorageShape();
         int64_t meanVarianceShapeSize = meanVarianceStorageShape.GetDimNum();
 
-        auto meanVarianceDesc = context_->GetOutputDesc(i);
-        OP_CHECK_NULL_WITH_CONTEXT(context_, meanVarianceDesc);
-        ge::Format meanVarianceFormat = meanVarianceDesc->GetFormat().GetStorageFormat();
-
-        OP_CHECK_IF(
-            (meanVarianceFormat != FORMAT_ND),
-            OP_LOGE(context_->GetNodeName(), "Output [%ld] format [%s] should be ND",
-                    i, ge::TypeUtils::FormatToAscendString(meanVarianceFormat).GetString()), return ge::GRAPH_FAILED);
-        
         OP_CHECK_IF(
             (meanVarianceShapeSize != xShapeSize),
             OP_LOGE(
@@ -350,13 +335,13 @@ ge::graphStatus InstanceNormRegbaseTilingBase::CheckMeanVarianceShapeValid()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus InstanceNormRegbaseTilingBase::CheckShapeAllPositive(gert::Shape& shape)
+ge::graphStatus InstanceNormRegbaseTilingBase::CheckShapeAllNotNegative(gert::Shape& shape)
 {
     for (size_t i = 0; i < shape.GetDimNum(); i++) {
         OP_CHECK_IF(
-            shape.GetDim(i) <= 0,
+            shape.GetDim(i) < 0,
             OP_LOGE(
-                context_->GetNodeName(), "Dim %lu of input expect be positive, but actual %ld.", i, shape.GetDim(i)),
+                context_->GetNodeName(), "Dim %lu of input expect be not negative, but actual %ld.", i, shape.GetDim(i)),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;

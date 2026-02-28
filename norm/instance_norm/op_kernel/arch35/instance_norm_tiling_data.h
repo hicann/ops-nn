@@ -82,4 +82,15 @@ struct InstanceNormARAWelfordTilingData {
     float epsilon;
 };
 
+struct InstanceNormReduceEmptyTilingData {
+    uint64_t perCoreElements;          // 每个核要处理的元素个数（头核）
+    uint64_t lastCoreElements;         // 尾核要处理的元素个数
+    uint64_t perCoreLoops;             // 每个核的循环数（头核）
+    uint64_t perCorePerLoopElements;   // 每个核每次循环处理的元素数（头核头部循环）
+    uint64_t perCoreLastLoopElements;  // 每个核末次循环处理的元素数（头核末次循环）
+    uint64_t lastCoreLoops;            // 尾核的循环数
+    uint64_t lastCorePerLoopElements;  // 尾核每次循环处理的元素数（头部循环）
+    uint64_t lastCoreLastLoopElements; // 尾核末次循环处理的元素数（末次循环）
+};
+
 #endif

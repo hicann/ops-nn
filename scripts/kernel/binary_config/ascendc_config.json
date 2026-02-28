@@ -379,7 +379,7 @@
  	{"name":"AdaLayerNormV2", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync" : false},
  	{"name":"AdaLayerNormQuant", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync" : false},
     {"name":"LpNormV2", "compute_units": ["ascend950", "mc62cm12a"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
-    {"name":"InstanceNorm", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-simd-vf-fusion=false"]}},
+    {"name":"InstanceNorm", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode": "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false", "--cce-simd-vf-fusion=false"]}},
     {"name":"InstanceNormV3", "compute_units": ["ascend310p"], "auto_sync" : false},
     {"name":"BatchNormV3", "compute_units": ["ascend910b", "ascend910_93", "ascend950", "mc62cm12a"], "auto_sync" : false, "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"KvRmsNormRopeCache", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync": false},

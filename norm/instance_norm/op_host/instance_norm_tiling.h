@@ -34,6 +34,7 @@
 using namespace Ops::NN::Optiling;
 
 namespace optiling {
+static constexpr uint64_t IN_REDUCE_EMPTY_PRIORITY = 5000;
 static constexpr uint64_t IN_AR_FULL_REDUCE_PRIORITY = 9000;
 static constexpr uint64_t IN_AR_WELFORD_PRIORITY = 9100;
 static constexpr uint64_t IN_ARA_FULL_REDUCE_PRIORITY = 10000;
@@ -82,7 +83,7 @@ protected:
     ge::graphStatus CheckXYShapeValid();
     ge::graphStatus CheckGammaBettaShapeValid();
     ge::graphStatus CheckMeanVarianceShapeValid();
-    ge::graphStatus CheckShapeAllPositive(gert::Shape& shape);
+    ge::graphStatus CheckShapeAllNotNegative(gert::Shape& shape);
 protected:
     int64_t a1;
     int64_t a0;
@@ -106,6 +107,20 @@ protected:
     gert::Shape xStorageShape;
 };
 
+class InstanceNormReduceEmptyTiling : public InstanceNormRegbaseTilingBase {
+public:
+    explicit InstanceNormReduceEmptyTiling(gert::TilingContext* context) : InstanceNormRegbaseTilingBase(context)
+    {}
+    ~InstanceNormReduceEmptyTiling() override = default;
+    void Reset(gert::TilingContext* context) override;
+protected:
+    bool IsCapable() override;
+    uint64_t GetTilingKey() const override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus PostTiling() override;
+private:
+    InstanceNormReduceEmptyTilingData td_;
+};
 
 class InstanceNormARFullReduceTiling : public InstanceNormRegbaseTilingBase {
 public:
@@ -142,7 +157,7 @@ protected:
     bool IsCapable() override;
     uint64_t GetTilingKey() const override;
     ge::graphStatus DoOpTiling() override;
-    ge::graphStatus DoLibApiTiling();
+    ge::graphStatus DoLibApiTiling() override;
     ge::graphStatus PostTiling() override;
     bool IsValidwelfordTileLength(int64_t welfordTileLength);
     int64_t GammaBetaTypeSize = 1;
@@ -177,7 +192,7 @@ protected:
     uint64_t GetTilingKey() const override;
     ge::graphStatus PostTiling() override;
     void SetInputInfo();
-    ge::graphStatus BinaryAddTiling(int64_t elemSize, int64_t weightElemSize, int64_t theLeastAPerCore);
+    ge::graphStatus BinaryAddTiling(int64_t elemSize, int64_t gammaElemSize, int64_t tileA0Len);
 private:
     int64_t blockNum;   // 这个变量要合并到基类里面去
     InstanceNormARAWelfordTilingData td_;

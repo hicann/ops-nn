@@ -20,10 +20,12 @@
 #include "arch35/instance_norm_ar_welford.h"
 #include "arch35/instance_norm_ara_full_reduce.h"
 #include "arch35/instance_norm_ara_welford.h"
+#include "arch35/instance_norm_reduce_empty.h"
 
 using namespace AscendC;
 using namespace InstanceNormOps;
 
+#define TILINGKEY_REDUCE_EMPTY 50000
 #define TILINGKEY_AR_FULL_REDUCE 200000
 #define TILINGKEY_AR_WELFORD 300000
 #define TILINGKEY_ARA_FULL_REDUCE 400000
@@ -56,6 +58,11 @@ extern "C" __global__ __aicore__ void instance_norm(
         const InstanceNormARAWelfordTilingData* __restrict tilingData = &tiling_data_in;
         InstanceNormARAWelford<DTYPE_X, DTYPE_BETA, DTYPE_MEAN> op(tilingData);
         op.Init(x, gamma, beta, y, mean_out, variance_out);
+        op.Process();
+    } else if (TILING_KEY_IS(TILINGKEY_REDUCE_EMPTY)) {
+        GET_TILING_DATA_WITH_STRUCT(InstanceNormReduceEmptyTilingData, tilingData, tiling);
+        InstanceNormReduceEmpty<DTYPE_MEAN> op(&tilingData);
+        op.Init(mean_out, variance_out);
         op.Process();
     }
 }

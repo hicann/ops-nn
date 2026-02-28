@@ -25,7 +25,6 @@ constexpr int64_t TILINGKEY_AR_WELFORD = 300000;
 constexpr static int64_t WELFORD_CONSTANT_TWO = 2;
 constexpr static int64_t WELFORD_TILELENGTH_STEP_SIZE = 64;
 constexpr static int64_t WELFORD_DOUBLE_BUFFER = 2;
-constexpr static uint32_t WELFORD_DEFAULT_WORKSPACE = 16 * 1024 * 1024;
 constexpr static int64_t WELFORD_B32_SIZE = 4;
 constexpr static int64_t WELFORD_B16_SIZE = 2;
 
@@ -174,6 +173,7 @@ ge::graphStatus InstanceNormARWelfordTiling::PostTiling()
 {
     context_->SetBlockDim(blockNum_);
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
     currentWorkspace[0] = workspaceSize_;
     auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_IF(

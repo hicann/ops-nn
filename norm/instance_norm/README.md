@@ -42,7 +42,7 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td><ul><li>不支持空Tensor。</li><li>表示进行InstanceNorm计算的输入数据，对应公式中的`x`。</li><li>实际数据格式由参数dataFormat决定。</li><li>NCHW/NHWC：shape支持4D。</li><li>NCDHW/NDHWC：shape支持5D。</li><li>ND：shape支持2~8D，其中第2维固定为channel轴。</li></ul></td>
+      <td><ul><li>支持空Tensor，仅支持reduce轴输入为0，不支持N轴和C轴输入为0。</li><li>表示进行InstanceNorm计算的输入数据，对应公式中的`x`。</li><li>实际数据格式由参数data_format决定。</li><li>NCHW/NHWC：shape支持4D。</li><li>NCDHW/NDHWC：shape支持5D。</li><li>ND：shape支持2~8D，其中第2维固定为C轴。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>NCHW/NHWC/NCDHW/NDHWC/ND</td>
     </tr>
@@ -63,7 +63,7 @@
     <tr>
       <td>data_format</td>
       <td>可选属性</td>
-      <td><ul><li>指定输入x的数据格式。</li><li>默认值为NDHWC。</li><li>参数data_format仅支持"NHWC"、"NCHW"、"NDHWC"、"NCDHW"、"ND"。</li></ul></td>
+      <td><ul><li>指定输入x的数据格式。</li><li>默认值为NDHWC。</li><li>参数data_format仅支持"NCHW"、"NHWC"、"NCDHW"、"NDHWC"、"ND"。</li></ul></td>
       <td>STRING</td>
       <td>-</td>
     </tr>
@@ -77,7 +77,7 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td><ul><li>不支持空Tensor。</li><li>表示InstanceNorm的输出结果，对应公式中的`y`。</li><li>shape、数据类型和数据格式与输入x的保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>表示InstanceNorm的输出结果，对应公式中的`y`。</li><li>shape、数据类型和数据格式与输入x的保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>NCHW/NHWC/NCDHW/NDHWC/ND</td>
     </tr>

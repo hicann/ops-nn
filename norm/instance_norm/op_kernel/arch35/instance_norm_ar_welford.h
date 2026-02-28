@@ -13,7 +13,6 @@
  * \brief
  */
 
-
 #ifndef INSTANCE_NORM_AR_WELFORD_H_
 #define INSTANCE_NORM_AR_WELFORD_H_
 
@@ -238,7 +237,6 @@ private:
                 pregLoop = AscendC::MicroAPI::UpdateMask<int32_t>(sreg4);
                 DataCopy(((__local_mem__ int32_t*)tmpCountLocal + i * VL_F32), tmpCount, pregLoop);
             }
-
         }
     }
 
@@ -251,80 +249,80 @@ private:
 
     __aicore__ inline void CastBatchMeanVariance(uint64_t currentANum)
     {
-      __local_mem__ float* batchMeanInAddr = (__local_mem__ float*)meanTensor.GetPhyAddr();
-      __local_mem__ float* batchVarianceInAddr = (__local_mem__ float*)varianceTensor.GetPhyAddr();
-      __local_mem__ T_MEAN* batchMeanOutAddr = (__local_mem__ T_MEAN*)meanTensor.GetPhyAddr();
-      __local_mem__ T_MEAN* batchVarianceOutAddr = (__local_mem__ T_MEAN*)varianceTensor.GetPhyAddr();
+        __local_mem__ float* batchMeanInAddr = (__local_mem__ float*)meanTensor.GetPhyAddr();
+        __local_mem__ float* batchVarianceInAddr = (__local_mem__ float*)varianceTensor.GetPhyAddr();
+        __local_mem__ T_MEAN* batchMeanOutAddr = (__local_mem__ T_MEAN*)meanTensor.GetPhyAddr();
+        __local_mem__ T_MEAN* batchVarianceOutAddr = (__local_mem__ T_MEAN*)varianceTensor.GetPhyAddr();
 
-      uint32_t castCount = static_cast<uint32_t>(currentANum);
-      uint16_t castLoops = static_cast<uint32_t>((castCount + VL_F32 - 1) / VL_F32);
-      __VEC_SCOPE__
-      {
-        RegTensor<float> input_mean;
-        RegTensor<float> input_variance;
-        RegTensor<T_MEAN> output_mean;
-        RegTensor<T_MEAN> output_variance;
-        MicroAPI::MaskReg pregLoop;
-        for (uint16_t i = 0; i < castLoops; i++) {
-          pregLoop = MicroAPI::UpdateMask<float>(castCount);
-          MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(input_mean, batchMeanInAddr + VL_F32 * i);
-          MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(input_variance, batchVarianceInAddr + VL_F32 * i);
-          Cast<T_MEAN, float, castTraitB322B16>(output_mean, input_mean, pregLoop);
-          Cast<T_MEAN, float, castTraitB322B16>(output_variance, input_variance, pregLoop);
-          DataCopy<T_MEAN, StoreDist::DIST_PACK_B32>(((__local_mem__ T_MEAN *)batchMeanOutAddr + i * VL_MEAN), output_mean, pregLoop);
-          DataCopy<T_MEAN, StoreDist::DIST_PACK_B32>(((__local_mem__ T_MEAN *)batchVarianceOutAddr + i * VL_MEAN), output_variance, pregLoop);
+        uint32_t castCount = static_cast<uint32_t>(currentANum);
+        uint16_t castLoops = static_cast<uint32_t>((castCount + VL_F32 - 1) / VL_F32);
+        __VEC_SCOPE__
+        {
+            RegTensor<float> input_mean;
+            RegTensor<float> input_variance;
+            RegTensor<T_MEAN> output_mean;
+            RegTensor<T_MEAN> output_variance;
+            MicroAPI::MaskReg pregLoop;
+            for (uint16_t i = 0; i < castLoops; i++) {
+                pregLoop = MicroAPI::UpdateMask<float>(castCount);
+                MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(input_mean, batchMeanInAddr + VL_F32 * i);
+                MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(input_variance, batchVarianceInAddr + VL_F32 * i);
+                Cast<T_MEAN, float, castTraitB322B16>(output_mean, input_mean, pregLoop);
+                Cast<T_MEAN, float, castTraitB322B16>(output_variance, input_variance, pregLoop);
+                DataCopy<T_MEAN, StoreDist::DIST_PACK_B32>(((__local_mem__ T_MEAN *)batchMeanOutAddr + i * VL_MEAN), output_mean, pregLoop);
+                DataCopy<T_MEAN, StoreDist::DIST_PACK_B32>(((__local_mem__ T_MEAN *)batchVarianceOutAddr + i * VL_MEAN), output_variance, pregLoop);
+            }
         }
-      }
     }
 
     __aicore__ inline void CopyoutMeanVarience(const int64_t elemCnt) 
     {
-      if constexpr(!IsSameType<T_MEAN, float>::value) {
-        // float to bfloat16 or float16, input continue and output each repeat have only half value
-        CastBatchMeanVariance(elemCnt);
-        outQueueMean_.EnQue(meanTensor);
-        outQueueVariance_.EnQue(varianceTensor);
-        meanTensor = outQueueMean_.template DeQue<float>();
-        varianceTensor = outQueueVariance_.template DeQue<float>();
+        if constexpr(!IsSameType<T_MEAN, float>::value) {
+            // float to bfloat16 or float16, input continue and output each repeat have only half value
+            CastBatchMeanVariance(elemCnt);
+            outQueueMean_.EnQue(meanTensor);
+            outQueueVariance_.EnQue(varianceTensor);
+            meanTensor = outQueueMean_.template DeQue<float>();
+            varianceTensor = outQueueVariance_.template DeQue<float>();
 
-        // VL_F32
-        uint32_t castDmaCount = static_cast<uint32_t>(elemCnt);
-        uint32_t castDmaLoops = static_cast<uint32_t>(castDmaCount / VL_F32);
-        if (castDmaLoops > 0) {
-          DataCopyExtParams copyInParams;
-          copyInParams.blockCount = castDmaLoops;
-          copyInParams.blockLen = VL_F32 * sizeof(T_MEAN);
-          copyInParams.srcStride = (VECTOR_REG_WIDTH - VL_F32 * sizeof(T_MEAN)) / BLOCK_SIZE;
-          copyInParams.dstStride = 0;
-          DataCopyPad(meanGm_[meanGmOffset], meanTensor.ReinterpretCast<T_MEAN>(), copyInParams);
-          DataCopyPad(varianceGm_[meanGmOffset], varianceTensor.ReinterpretCast<T_MEAN>(), copyInParams);
+            // VL_F32
+            uint32_t castDmaCount = static_cast<uint32_t>(elemCnt);
+            uint32_t castDmaLoops = static_cast<uint32_t>(castDmaCount / VL_F32);
+            if (castDmaLoops > 0) {
+                DataCopyExtParams copyInParams;
+                copyInParams.blockCount = castDmaLoops;
+                copyInParams.blockLen = VL_F32 * sizeof(T_MEAN);
+                copyInParams.srcStride = (VECTOR_REG_WIDTH - VL_F32 * sizeof(T_MEAN)) / BLOCK_SIZE;
+                copyInParams.dstStride = 0;
+                DataCopyPad(meanGm_[meanGmOffset], meanTensor.ReinterpretCast<T_MEAN>(), copyInParams);
+                DataCopyPad(varianceGm_[meanGmOffset], varianceTensor.ReinterpretCast<T_MEAN>(), copyInParams);
+            }
+
+            // tail
+            uint32_t tailSize = static_cast<uint32_t>(castDmaCount % VL_F32);
+            if (tailSize > 0) {
+                DataCopyExtParams copyInParamsTail;
+                copyInParamsTail.blockCount = 1;
+                copyInParamsTail.blockLen = tailSize * sizeof(T_MEAN);
+                copyInParamsTail.srcStride = 0;
+                copyInParamsTail.dstStride = 0;
+                DataCopyPad(meanGm_[meanGmOffset + castDmaLoops * VL_F32], meanTensor[castDmaLoops * VL_F32].ReinterpretCast<T_MEAN>(), copyInParamsTail);
+                DataCopyPad(varianceGm_[meanGmOffset + castDmaLoops * VL_F32], varianceTensor[castDmaLoops * VL_F32].ReinterpretCast<T_MEAN>(), copyInParamsTail);
+            }
+            outQueueMean_.FreeTensor(meanTensor);
+            outQueueVariance_.FreeTensor(varianceTensor);
+            } else {
+            // Refresh Cache
+            outQueueMean_.EnQue(meanTensor);
+            meanTensor = outQueueMean_.template DeQue<float>();
+            CopyOut(meanGm_[meanGmOffset], meanTensor, elemCnt);
+            outQueueMean_.FreeTensor(meanTensor);
+
+            outQueueVariance_.EnQue(varianceTensor);
+            varianceTensor = outQueueVariance_.template DeQue<float>();
+            CopyOut(varianceGm_[meanGmOffset], varianceTensor, elemCnt);
+            outQueueVariance_.FreeTensor(varianceTensor);
         }
-
-        // tail
-        uint32_t tailSize = static_cast<uint32_t>(castDmaCount % VL_F32);
-        if (tailSize > 0) {
-          DataCopyExtParams copyInParamsTail;
-          copyInParamsTail.blockCount = 1;
-          copyInParamsTail.blockLen = tailSize * sizeof(T_MEAN);
-          copyInParamsTail.srcStride = 0;
-          copyInParamsTail.dstStride = 0;
-          DataCopyPad(meanGm_[meanGmOffset + castDmaLoops * VL_F32], meanTensor[castDmaLoops * VL_F32].ReinterpretCast<T_MEAN>(), copyInParamsTail);
-          DataCopyPad(varianceGm_[meanGmOffset + castDmaLoops * VL_F32], varianceTensor[castDmaLoops * VL_F32].ReinterpretCast<T_MEAN>(), copyInParamsTail);
-        }
-        outQueueMean_.FreeTensor(meanTensor);
-        outQueueVariance_.FreeTensor(varianceTensor);
-      } else {
-        // Refresh Cache
-        outQueueMean_.EnQue(meanTensor);
-        meanTensor = outQueueMean_.template DeQue<float>();
-        CopyOut(meanGm_[meanGmOffset], meanTensor, elemCnt);
-        outQueueMean_.FreeTensor(meanTensor);
-
-        outQueueVariance_.EnQue(varianceTensor);
-        varianceTensor = outQueueVariance_.template DeQue<float>();
-        CopyOut(varianceGm_[meanGmOffset], varianceTensor, elemCnt);
-        outQueueVariance_.FreeTensor(varianceTensor);
-      }
     }
 
     __aicore__ inline void WelfordInitialize(const LocalTensor<float>& mean, const LocalTensor<float>& variance,
@@ -371,8 +369,8 @@ private:
 
     __aicore__ inline void CalculateBatchRstd(const int64_t offset)
     {
-        __local_mem__ float* batchRstdTensorTensorAddr = (__local_mem__ float*)rstdTensor.GetPhyAddr();
-        __local_mem__ float* batchVarTensorTensorAddr = (__local_mem__ float*)varianceTensor.GetPhyAddr();
+        __local_mem__ float* batchRstdTensorAddr = (__local_mem__ float*)rstdTensor.GetPhyAddr();
+        __local_mem__ float* batchVarTensorAddr = (__local_mem__ float*)varianceTensor.GetPhyAddr();
         __VEC_SCOPE__
         {
             RegTensor<float> var;
@@ -394,7 +392,7 @@ private:
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
             Duplicate(one, 1.0, pregOne);
 
-            DataCopy<float, LoadDist::DIST_BRC_B32>(var, ((__local_mem__ float*)batchVarTensorTensorAddr + offset));
+            DataCopy<float, LoadDist::DIST_BRC_B32>(var, ((__local_mem__ float*)batchVarTensorAddr + offset));
             Duplicate(scalar1, float(0.5), pregOne);
             Duplicate(scalarInf, POS_INF, pregOne);
             Duplicate(scalarZero, float(0.0), pregOne);
@@ -418,7 +416,7 @@ private:
             Select(rstd, scalarZero, rstd, cmpRegZero);
             CompareScalar(cmpRegInf, var, float(0.0), pregOne);
             Select(rstd, scalarInf, rstd, cmpRegInf);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)batchRstdTensorTensorAddr + offset), rstd, pregOne);
+            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)batchRstdTensorAddr + offset), rstd, pregOne);
         }
     }
 
@@ -433,7 +431,6 @@ private:
         CopyIn<T_BETA>(betaTensor, betaGm_[paramOffset], elemCnt);
         inQueueBeta_.EnQue(betaTensor);
         betaTensor = inQueueBeta_.template DeQue<T_BETA>();
-
     }
 
     template <typename T_SRC>
@@ -516,9 +513,7 @@ private:
                 } else {
                     DataCopy(yTensorAddr + i * VL_F32, y, mask0);
                 }
-
             }
-        
         }
     }
 
@@ -545,7 +540,6 @@ private:
 private:
     // Constants
     constexpr static int64_t DOUBLE_BUFFER = 2;
-    // constexpr static int64_t AGGREGATION_COUNT = 256;
     constexpr static uint32_t VL_F32 = VECTOR_REG_WIDTH / sizeof(float);
     constexpr static uint32_t VL_MEAN = VECTOR_REG_WIDTH / sizeof(T_MEAN);
     constexpr static int64_t BLOCK_SIZE = Ops::Base::GetUbBlockSize();
