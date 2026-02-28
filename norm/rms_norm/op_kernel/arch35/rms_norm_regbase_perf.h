@@ -340,7 +340,7 @@ namespace RmsNorm {
             // first flod
             uint32_t firstFlodTial = static_cast<uint32_t>(colNum - colFlodFactor);
             uint16_t firstFlodAddLoops = static_cast<uint16_t>((firstFlodTial + VectorLenB32-1) / VectorLenB32);
-            uint16_t firstFlodWithOutAddLoops = static_cast<uint16_t>((colNumAlign + VectorLenB32-1) / VectorLenB32) - firstFlodAddLoops;
+            uint16_t firstFlodWithOutAddLoops = static_cast<uint16_t>((colFlodNum + VectorLenB32-1) / VectorLenB32) - firstFlodAddLoops;
 
             // first vcadd
             uint32_t firstVcaddNum = static_cast<uint32_t>((colFlodFactor + VectorLenB32-1 )/ VectorLenB32);
