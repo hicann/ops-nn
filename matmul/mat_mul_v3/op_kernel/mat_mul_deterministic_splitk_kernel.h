@@ -1382,50 +1382,27 @@ __aicore__ inline void MatMulKernelDeterministicSplitK(GM_ADDR aGM, GM_ADDR bGM,
         }
         GM_ADDR mmOffsetGM = reinterpret_cast<GM_ADDR>(mmGM + GetBlockIdx() * singleSize * NUM_TWO * sizeof(float));
         using cType = MatmulType<C_TYPE::pos, C_TYPE::format, float, C_TYPE::isTrans>;
+        // 默认情况：处理isNzA和isNzB均为true的情况
+        using aType = MatmulType<A_TYPE::pos, CubeFormat::NZ, typename A_TYPE::T, A_TYPE::isTrans>;
+        using bType = MatmulType<B_TYPE::pos, CubeFormat::NZ, typename B_TYPE::T, B_TYPE::isTrans>;
+        if (!matmulTilingData.matmulRunInfo.isNzA && !matmulTilingData.matmulRunInfo.isNzB) {
+            using aType = A_TYPE;
+            using bType = B_TYPE;
+        } else if (matmulTilingData.matmulRunInfo.isNzA && !matmulTilingData.matmulRunInfo.isNzB) {
+            using aType = MatmulType<A_TYPE::pos, CubeFormat::NZ, typename A_TYPE::T, A_TYPE::isTrans>;
+            using bType = B_TYPE;
+        } else if (!matmulTilingData.matmulRunInfo.isNzA && matmulTilingData.matmulRunInfo.isNzB) {
+            using aType = A_TYPE;
+            using bType = MatmulType<B_TYPE::pos, CubeFormat::NZ, typename B_TYPE::T, B_TYPE::isTrans>;
+        }
         if (isL2cacheSplit) {
-            if (!matmulTilingData.matmulRunInfo.isNzA && !matmulTilingData.matmulRunInfo.isNzB) {
-                MatMulMultiCoreSplitKDivideL2cache<A_TYPE, B_TYPE, cType, BIAS_TYPE>(aGM, bGM, biasGM, mmOffsetGM, singleSize,
-                                                                    matmulTilingData.matmulRunInfo.isHf32,
-                                                                    &que, tiling, tiling.isBias);
-            } else if (matmulTilingData.matmulRunInfo.isNzA && !matmulTilingData.matmulRunInfo.isNzB) {
-                using aType = MatmulType<A_TYPE::pos, CubeFormat::NZ, typename A_TYPE::T, A_TYPE::isTrans>;
-                MatMulMultiCoreSplitKDivideL2cache<aType, B_TYPE, cType, BIAS_TYPE>(aGM, bGM, biasGM, mmOffsetGM, singleSize,
-                                                                    matmulTilingData.matmulRunInfo.isHf32,
-                                                                    &que, tiling, tiling.isBias);
-            } else if (!matmulTilingData.matmulRunInfo.isNzA && matmulTilingData.matmulRunInfo.isNzB) {
-                using bType = MatmulType<B_TYPE::pos, CubeFormat::NZ, typename B_TYPE::T, B_TYPE::isTrans>;
-                MatMulMultiCoreSplitKDivideL2cache<A_TYPE, bType, cType, BIAS_TYPE>(aGM, bGM, biasGM, mmOffsetGM, singleSize,
-                                                                    matmulTilingData.matmulRunInfo.isHf32,
-                                                                    &que, tiling, tiling.isBias);
-            } else {
-                using aType = MatmulType<A_TYPE::pos, CubeFormat::NZ, typename A_TYPE::T, A_TYPE::isTrans>;
-                using bType = MatmulType<B_TYPE::pos, CubeFormat::NZ, typename B_TYPE::T, B_TYPE::isTrans>;
-                MatMulMultiCoreSplitKDivideL2cache<aType, bType, cType, BIAS_TYPE>(aGM, bGM, biasGM, mmOffsetGM, singleSize,
-                                                                    matmulTilingData.matmulRunInfo.isHf32,
-                                                                    &que, tiling, tiling.isBias);
-            }
+            MatMulMultiCoreSplitKDivideL2cache<aType, bType, cType, BIAS_TYPE>(aGM, bGM, biasGM, mmOffsetGM, singleSize,
+                                                                matmulTilingData.matmulRunInfo.isHf32,
+                                                                &que, tiling, tiling.isBias);
         } else {
-            if (!matmulTilingData.matmulRunInfo.isNzA && !matmulTilingData.matmulRunInfo.isNzB) {
-                MatMulMultiCoreSplitKDivide<A_TYPE, B_TYPE, cType, BIAS_TYPE>(aGM, bGM, biasGM, mmOffsetGM, singleSize,
-                                                                    matmulTilingData.matmulRunInfo.isHf32,
-                                                                    &que, tiling, tiling.isBias);
-            } else if (matmulTilingData.matmulRunInfo.isNzA && !matmulTilingData.matmulRunInfo.isNzB) {
-                using aType = MatmulType<A_TYPE::pos, CubeFormat::NZ, typename A_TYPE::T, A_TYPE::isTrans>;
-                MatMulMultiCoreSplitKDivide<aType, B_TYPE, cType, BIAS_TYPE>(aGM, bGM, biasGM, mmOffsetGM, singleSize,
-                                                                    matmulTilingData.matmulRunInfo.isHf32,
-                                                                    &que, tiling, tiling.isBias);
-            } else if (!matmulTilingData.matmulRunInfo.isNzA && matmulTilingData.matmulRunInfo.isNzB) {
-                using bType = MatmulType<B_TYPE::pos, CubeFormat::NZ, typename B_TYPE::T, B_TYPE::isTrans>;
-                MatMulMultiCoreSplitKDivide<A_TYPE, bType, cType, BIAS_TYPE>(aGM, bGM, biasGM, mmOffsetGM, singleSize,
-                                                                    matmulTilingData.matmulRunInfo.isHf32,
-                                                                    &que, tiling, tiling.isBias);
-            } else {
-                using aType = MatmulType<A_TYPE::pos, CubeFormat::NZ, typename A_TYPE::T, A_TYPE::isTrans>;
-                using bType = MatmulType<B_TYPE::pos, CubeFormat::NZ, typename B_TYPE::T, B_TYPE::isTrans>;
-                MatMulMultiCoreSplitKDivide<aType, bType, cType, BIAS_TYPE>(aGM, bGM, biasGM, mmOffsetGM, singleSize,
-                                                                    matmulTilingData.matmulRunInfo.isHf32,
-                                                                    &que, tiling, tiling.isBias);
-            }
+            MatMulMultiCoreSplitKDivide<aType, bType, cType, BIAS_TYPE>(aGM, bGM, biasGM, mmOffsetGM, singleSize,
+                                                                matmulTilingData.matmulRunInfo.isHf32,
+                                                                &que, tiling, tiling.isBias);
         }
         return;
     }
