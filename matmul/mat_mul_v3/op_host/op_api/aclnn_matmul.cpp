@@ -496,6 +496,7 @@ static const aclTensor* BuildMatMulWeightNzGraph(
 
     // Set Nz format
     mat2 = SetTensorToNZFormat(mat2, weightNzShape, executor);
+    CHECK_RET(mat2 != nullptr, nullptr);
 
     // 固定selt二维 mat2四维
     matmulOut = ExecMmOpWithBias(self, mat2, nullptr, cubeMathType, executor, transposeX2);
@@ -542,10 +543,15 @@ public:
         CHECK_RET(outputNew != nullptr, ACLNN_ERR_INNER_NULLPTR);
         FVector<int64_t> fillShape = GetShape(outputNew);
         const aclTensor* dims = executor->ConvertToTensor(fillShape.data(), fillShape.size(), op::DataType::DT_INT64);
+        CHECK_RET(dims != nullptr, ACLNN_ERR_INNER_NULLPTR);
         aclIntArray* shapeArray = executor->AllocIntArray(fillShape.data(), fillShape.size());
+        CHECK_RET(shapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
         const aclScalar* valueScalar = executor->AllocScalar(0);
+        CHECK_RET(valueScalar != nullptr, ACLNN_ERR_INNER_NULLPTR);
         const aclTensor* valueTensor = executor->ConvertToTensor(valueScalar, output->GetDataType());
+        CHECK_RET(valueTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto fillTensor = l0op::Fill(dims, valueTensor, shapeArray, executor);
+        CHECK_RET(fillTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
         convOut = fillTensor;
         return ACLNN_SUCCESS;
     };
@@ -818,7 +824,7 @@ public:
 
         // Set Nz format
         matB = SetTensorToNZFormat(matB, weightNzShape, executor);
-
+        CHECK_RET(matB != nullptr, ACLNN_ERR_INNER_NULLPTR);
         // 执行 Matmul: out = matA @ matB
         const aclTensor* out = MatmulCommonProcess(matA, matB, nullptr, output, cubeMathType, opInfo, executor, transposeX2);
         CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);

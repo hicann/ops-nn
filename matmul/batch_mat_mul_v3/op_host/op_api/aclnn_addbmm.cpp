@@ -267,10 +267,15 @@ public:
     aclnnStatus Impl() override{
         FVector<int64_t> fillShape = {(matA->GetViewShape())[SECOND_DIM], (matB->GetViewShape())[THIRD_DIM]};
         const aclTensor* dims = executor->ConvertToTensor(fillShape.data(), fillShape.size(), op::DataType::DT_INT64);
+        CHECK_RET(dims != nullptr, ACLNN_ERR_INNER_NULLPTR);
         aclIntArray* shapeArray = executor->AllocIntArray(fillShape.data(), fillShape.size());
+        CHECK_RET(shapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
         const aclScalar* valueScalar = executor->AllocScalar(0);
+        CHECK_RET(valueScalar != nullptr, ACLNN_ERR_INNER_NULLPTR);
         const aclTensor* valueTensor = executor->ConvertToTensor(valueScalar, output->GetDataType());
+        CHECK_RET(valueTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
         const aclTensor* fillTensor = l0op::Fill(dims, valueTensor, shapeArray, executor);
+        CHECK_RET(fillTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
         convOut = fillTensor;
         return ACLNN_SUCCESS;
     };
@@ -332,6 +337,7 @@ public:
 
         const int64_t dim[] = {0};
         const aclTensor* reduceSumOut = l0op::ReduceSumOp(bmmOut, executor->AllocIntArray(dim, 1), false, executor);
+        CHECK_RET(reduceSumOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         // mulOut = reduceSumOut * alpha
         const aclTensor* mulOut = l0op::Muls(reduceSumOut, alpha->ToFloat(), executor);
@@ -367,6 +373,7 @@ public:
         CHECK_RET(biasBmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         const int64_t dim[] = {0};
         biasBmmOut = l0op::ReduceSumOp(biasBmmOut, executor->AllocIntArray(dim, 1), false, executor);
+        CHECK_RET(biasBmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         convOut = biasBmmOut;
         return ACLNN_SUCCESS;
     };
