@@ -19,67 +19,27 @@ namespace optiling {
 
 static constexpr int64_t ADAPTIVE_MAX_POOL3D_BIG_KERNEL_THERSHOLD = 128;
 static constexpr int64_t BIG_KERNEL_B2_MAX_COUNT = 32640;                 // FloorAlign(max_int16, VRegSize/sizeof(int16_t) int16最大值对)向下对齐
-static constexpr int64_t KERNEL_CALC_COUNT_THERSHOLD = 10000;
-static constexpr int64_t BIG_KERNEL_TILING_KEY = 2000;
 static constexpr int64_t UB_MAX_INDICES_USE_COUNT = 1024;
 static constexpr int64_t BUFFER_NUM = 2;
 static constexpr int64_t FLOAT16_BYTPES = 2;
 static constexpr int64_t FLOAT32_BYTPES = 4;
-static constexpr int64_t INT32_MAX_SUPPORT_VALUE = 2147483647UL;
-static constexpr int64_t MULTI_NO_SPILT_COPY_FLAG = 1;
-
-ge::graphStatus AdaptiveMaxPool3dBigKernelTiling::GetIndexDtypeInfo()
-{
-    auto opNodeName = context_->GetNodeName();
-    OP_LOGD(opNodeName, "GetShapeAttrsInfo begin.");
-
-    auto outputIndices = context_->GetOutputShape(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, outputIndices);
-    auto outputIndicesDesc = context_->GetOutputDesc(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, outputIndicesDesc);
-    auto indicesDtype = outputIndicesDesc->GetDataType();
-    OP_CHECK_IF((indicesDtype != ge::DT_INT32 && indicesDtype != ge::DT_INT64),
-        OP_LOGE(opNodeName, "output indices datatype only support int32, int64"), return ge::GRAPH_FAILED);
-    int64_t outputIndicesMaxValue = input_.dIn * input_.hIn * input_.wIn;
-    OP_CHECK_IF((outputIndicesMaxValue > INT32_MAX_SUPPORT_VALUE && indicesDtype == ge::DT_INT32),
-        OP_LOGE(opNodeName, "max index exceeds the max value of int32"), return ge::GRAPH_FAILED);
-    bigKernelInfo.indicesDtype = indicesDtype;
-    return ge::GRAPH_SUCCESS;
-}
 
 bool AdaptiveMaxPool3dBigKernelTiling::IsCapable()
 {
     // 按照搬运对齐的大小全载UB 和 kernelW<=16, 判断是否走当前模板
     OP_LOGD(context_->GetNodeName(), "AdaptiveMaxPool3dBigKernelTiling IsCapable check.");
-    int64_t kernelDMax = CalKernelMax(input_.dIn, input_.dOut);
-    int64_t kernelHMax = CalKernelMax(input_.hIn, input_.hOut);
-    int64_t kernelWMax = CalKernelMax(input_.wIn, input_.wOut);
+    uint64_t kernelDMax = CalKernelSizeOneDimMax(input_.dIn, input_.dOut);
+    uint64_t kernelHMax = CalKernelSizeOneDimMax(input_.hIn, input_.hOut);
+    uint64_t kernelWMax = CalKernelSizeOneDimMax(input_.wIn, input_.wOut);
     bigKernelInfo.kernelMaxDHW = kernelDMax * kernelHMax * kernelWMax;
     bool isCapable = bigKernelInfo.kernelMaxDHW >= ADAPTIVE_MAX_POOL3D_BIG_KERNEL_THERSHOLD;
     OP_LOGD(context_->GetNodeName(), "AdaptiveMaxPool3dBigKernelTiling IsCapable check: %s", isCapable ? "true" : "false");
     return isCapable;
 }
 
-int64_t AdaptiveMaxPool3dBigKernelTiling::CalKernelMax(int64_t inSize, int64_t outSize)
-{
-    // 计算kernel的max值
-    int64_t kernelSize = 1;
-    outSize = outSize == 0 ? 1 : outSize;
-    if (outSize > KERNEL_CALC_COUNT_THERSHOLD) {
-        return (inSize + outSize - 1) / outSize + 1; // 防止计算时间过长
-    }
-    for (int64_t i = 0; i < outSize; i++) {
-        auto kernelLeft = (i * inSize) / outSize;
-        auto kernelRight = ((i + 1) * inSize + outSize - 1) / outSize;
-        auto kernelCurrent = kernelRight - kernelLeft;
-        kernelSize = kernelCurrent > kernelSize ? kernelCurrent : kernelSize;
-    }
-    return kernelSize;
-}
-
 uint64_t AdaptiveMaxPool3dBigKernelTiling::GetTilingKey() const
 {
-    return GET_TPL_TILING_KEY(TPL_MODE_1, TPL_DYTPE_0, TPL_MULTI_MODE_0);
+    return GET_TPL_TILING_KEY(TPL_MODE_1, TPL_DYTPE_0, TPL_MULTI_MODE_0, TPL_DATA_FORMAT_MODE_0);
 }
 
 void AdaptiveMaxPool3dBigKernelTiling::DoBlockTiling()
@@ -95,7 +55,7 @@ void AdaptiveMaxPool3dBigKernelTiling::DoBlockTiling()
     }
 
     int64_t vRegSize = Ops::Base::GetVRegSize(context_);
-    auto idxDtypeSize = ge::GetSizeByDataType(bigKernelInfo.indicesDtype);
+    auto idxDtypeSize = ge::GetSizeByDataType(input_.indicesDtype);
     auto xDtypeSize = input_.xDtype == ge::DT_FLOAT ? FLOAT32_BYTPES : FLOAT16_BYTPES;
     int64_t ubAvailable = input_.ubSize - (xDtypeSize + idxDtypeSize) * UB_MAX_INDICES_USE_COUNT;
     int64_t defaultMaxSize = Ops::Base::FloorAlign(ubAvailable / BUFFER_NUM, vRegSize);
@@ -145,7 +105,7 @@ void AdaptiveMaxPool3dBigKernelTiling::SetTilingData()
 ge::graphStatus AdaptiveMaxPool3dBigKernelTiling::DoOpTiling()
 {
     OP_LOGD(context_->GetNodeName(), "AdaptiveMaxPool3dBigKernelTiling DoOpTiling start.");
-    OP_CHECK_IF(GetIndexDtypeInfo() != ge::GRAPH_SUCCESS,
+    OP_CHECK_IF(GetAndCheckIndicesDtype() != ge::GRAPH_SUCCESS,
         OP_LOGE(context_->GetNodeName(), "AdaptiveMaxPool3d indices dtype unexpected"), return ge::GRAPH_FAILED);
     DoBlockTiling();
     SetTilingData();

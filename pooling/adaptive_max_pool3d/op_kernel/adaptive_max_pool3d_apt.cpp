@@ -21,7 +21,7 @@
 #include "../adaptive_pool3d_common/arch35/adaptive_pool3d_tiling_struct.h"
 
 using maskdType = uint8_t;
-template <uint64_t TEMPLATE_MODE, uint64_t DYTPE_MODE, uint64_t MULTI_MODE>
+template <uint64_t TEMPLATE_MODE, uint64_t DYTPE_MODE, uint64_t MULTI_MODE, uint64_t FORMAT_MODE>
 __global__ __aicore__ void adaptive_max_pool3d(
     GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR workspace, GM_ADDR tiling)
 {

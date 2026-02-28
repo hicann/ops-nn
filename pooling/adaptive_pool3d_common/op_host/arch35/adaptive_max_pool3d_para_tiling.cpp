@@ -14,7 +14,6 @@
  */
 
 #include <cstdint>
-#include "adaptive_max_pool3d_tiling.h"
 #include "adaptive_max_pool3d_para_tiling.h"
 
 constexpr uint64_t KERNEL_SIZE_LIMIT = 128;
@@ -41,9 +40,9 @@ bool AdaptiveMaxPool3dParaPoolTiling::IsCapable()
     computeInfo_.hoFactor = 1;
     computeInfo_.woFactor = 1;
 
-    computeInfo_.kernelDMax = CalKernelMax(input_.dIn, input_.dOut);
-    computeInfo_.kernelHMax = CalKernelMax(input_.hIn, input_.hOut);
-    computeInfo_.kernelWMax = CalKernelMax(input_.wIn, input_.wOut);
+    computeInfo_.kernelDMax = CalKernelSizeOneDimMax(input_.dIn, input_.dOut);
+    computeInfo_.kernelHMax = CalKernelSizeOneDimMax(input_.hIn, input_.hOut);
+    computeInfo_.kernelWMax = CalKernelSizeOneDimMax(input_.wIn, input_.wOut);
 
     bool isKernelSizeMeet =
         (computeInfo_.kernelDMax * computeInfo_.kernelHMax * computeInfo_.kernelWMax < KERNEL_SIZE_LIMIT);
@@ -56,25 +55,6 @@ bool AdaptiveMaxPool3dParaPoolTiling::IsCapable()
     OP_LOGD(
         context_->GetNodeName(), "AdaptiveMaxPool3dParaPoolTiling IsCapable check: %s", isCapable ? "true" : "false");
     return isCapable;
-}
-
-uint64_t AdaptiveMaxPool3dParaPoolTiling::CalKernelMax(uint64_t inputSize, uint64_t outputSize)
-{
-    if (outputSize == 0) {
-        OP_LOGE(context_->GetNodeName(), "outputSize is 0, not support");
-        return 0;
-    }
-    uint64_t kernelSize = 1;
-    if (outputSize > CAL_KER_THRESHOLD) {
-        return (inputSize + outputSize - 1) / outputSize + 1; // 防止计算时间过长
-    }
-    for (uint64_t i = 0; i < outputSize; i++) {
-        auto kernelLeft = (i * inputSize) / outputSize;
-        auto kernelRight = ((i + 1) * inputSize + outputSize - 1) / outputSize;
-        auto kernelCurrent = kernelRight - kernelLeft;
-        kernelSize = kernelCurrent > kernelSize ? kernelCurrent : kernelSize;
-    }
-    return kernelSize;
 }
 
 void AdaptiveMaxPool3dParaPoolTiling::CalMaxUbSplitSize()
@@ -238,6 +218,10 @@ ge::graphStatus AdaptiveMaxPool3dParaPoolTiling::DoOpTiling()
 {
     OP_LOGD(context_->GetNodeName(), "AdaptiveMaxPool3dParaPoolTiling DoOpTiling start.");
     OP_CHECK_IF(
+        GetAndCheckIndicesDtype() != ge::GRAPH_SUCCESS,
+        OP_LOGE(context_->GetNodeName(), "AdaptiveMaxPool3dParaPoolTiling get indices type failed"),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
         InitUbFactor() != ge::GRAPH_SUCCESS,
         OP_LOGE(context_->GetNodeName(), "AdaptiveMaxPool3dParaPoolTiling init ubfactor failed"),
         return ge::GRAPH_FAILED);
@@ -320,7 +304,7 @@ void AdaptiveMaxPool3dParaPoolTiling::PrintTilingData() const
 uint64_t AdaptiveMaxPool3dParaPoolTiling::GetTilingKey() const
 {
     OP_LOGD(context_->GetNodeName(), "AdaptiveMaxPool3dParaPoolTiling GetTilingKey start.");
-    return GET_TPL_TILING_KEY(TPL_MODE_0, TPL_DYTPE_0, TPL_MULTI_MODE_0);
+    return GET_TPL_TILING_KEY(TPL_MODE_0, TPL_DYTPE_0, TPL_MULTI_MODE_0, TPL_DATA_FORMAT_MODE_0);
 }
 
 ge::graphStatus AdaptiveMaxPool3dParaPoolTiling::PostTiling()

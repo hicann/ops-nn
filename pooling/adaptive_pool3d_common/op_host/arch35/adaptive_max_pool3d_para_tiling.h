@@ -69,7 +69,6 @@ public:
     ge::graphStatus PostTiling() override;
 
 private:
-    uint64_t CalKernelMax(uint64_t inputSize, uint64_t outputSize);
     uint64_t CalOccupySize();
     void CalMaxUbSplitSize();
     void CalUbBlockFactor();

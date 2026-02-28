@@ -32,11 +32,30 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Attr("output_size").AttrType(REQUIRED).ListInt();
-
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
-        this->AICore().AddConfig("ascend950");
 
+        OpAICoreConfig aicore_config_950;
+        aicore_config_950.Input("x")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        aicore_config_950.Output("y")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Attr("data_format").AttrType(OPTIONAL).String("NDHWC");
+        aicore_config_950.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "adaptive_avg_pool3d_apt");
+        this->AICore().AddConfig("ascend950", aicore_config_950);
+        
         OpAICoreConfig ascend310p_config;
         ascend310p_config.Input("x")
             .ParamType(REQUIRED)
@@ -53,7 +72,6 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false);
-
         this->AICore().AddConfig("ascend310p", ascend310p_config);
         this->AICore().AddConfig("kirinx90", ascend310p_config);
         this->AICore().AddConfig("kirin9030", ascend310p_config);

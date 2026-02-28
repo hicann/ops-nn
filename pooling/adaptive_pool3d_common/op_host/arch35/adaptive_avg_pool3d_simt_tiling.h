@@ -9,41 +9,39 @@
  */
 
 /*!
- * \file adaptive_max_pool3d_simt_tiling.h
- * \brief simt imply for adaptive_max_pool3d_simt_tiling
+ * \file adaptive_avg_pool3d_simt_tiling.h
+ * \brief simt imply for adaptive_avg_pool3d_simt_tiling
  */
 
-#ifndef AIR_CXX_RUNTIME_V2_OP_IMPL_ADAPATIVE_MAX_POOL3D_SIMT_TILING_H
-#define AIR_CXX_RUNTIME_V2_OP_IMPL_ADAPATIVE_MAX_POOL3D_SIMT_TILING_H
+#ifndef AIR_CXX_RUNTIME_V2_OP_IMPL_ADAPATIVE_AVG_POOL3D_SIMT_TILING_H
+#define AIR_CXX_RUNTIME_V2_OP_IMPL_ADAPATIVE_AVG_POOL3D_SIMT_TILING_H
 
 #include "../op_kernel/arch35/adaptive_pool3d_tiling_struct.h"
 #include "../op_host/arch35/adaptive_pool3d_tiling.h"
 namespace optiling
 {
-class AdaptiveMaxPool3DTilingSimt : public AdaptivePool3dBaseTiling
+class AdaptiveAvgPool3DTilingSimt : public AdaptivePool3dBaseTiling
 {
 public:
-    explicit AdaptiveMaxPool3DTilingSimt(gert::TilingContext* context) : AdaptivePool3dBaseTiling(context)
+    explicit AdaptiveAvgPool3DTilingSimt(gert::TilingContext* context) : AdaptivePool3dBaseTiling(context)
     {}
-    ~AdaptiveMaxPool3DTilingSimt() override
+    ~AdaptiveAvgPool3DTilingSimt() override
     {}
     
 protected:
+    void SetTilingData();
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus DoLibApiTiling() override;
     uint64_t GetTilingKey() const override;
     ge::graphStatus PostTiling() override;
     void DumpTilingInfo() override;
+    ge::graphStatus GetDataFormatAttrInfo();
 
     AdaptivePool3DTiling::AdaptivePool3DSimtTilingData* tilingData_ = 
         context_->GetTilingData<AdaptivePool3DTiling::AdaptivePool3DSimtTilingData>();
-    int64_t outputDataCount = 0;
-    int64_t indexNeedNum = 0;
-    uint64_t divNeedNum = 0;
-    uint64_t coreNum = 1;
-    uint64_t ubSize = 0;
+    int64_t maxDivUseNum_ = 0;
 };
 
 }  // namespace optiling
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_ADAPATIVE_MAX_POOL3D_SIMT_TILING_H
+#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_ADAPATIVE_AVG_POOL3D_SIMT_TILING_H

@@ -15,7 +15,10 @@
  */
 
 #include "adaptive_avg_pool3d_tiling.h"
+#include "op_host/tiling_util.h"
 #include <sstream>
+
+using Ops::NN::Optiling::TilingRegistry;
 
 namespace {
 constexpr size_t X_INDEX = 0;
@@ -254,6 +257,10 @@ static ge::graphStatus KernelTiling(
 
 static ge::graphStatus Tiling4AdaptiveAvgPool3d(gert::TilingContext* context)
 {
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
+        return TilingRegistry::GetInstance().DoTilingImpl(context);
+    }
+
     auto nodeName = context->GetNodeName();
     OP_LOGD(nodeName, "Tiling4AdaptiveAvgPool3d start.");
 

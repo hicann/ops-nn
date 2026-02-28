@@ -30,13 +30,12 @@ using namespace AdaptivePool3DTiling;
 namespace optiling {
 
 struct AdaptiveMaxPool3dBigKernelInfo {
-    ge::DataType indicesDtype{ge::DT_INT32};
     int64_t blockFactor {0};
     int64_t blockTail {0};
     int64_t totalIdx {0};
     int64_t coreNums {0};
     int64_t maxCount {0};
-    int64_t kernelMaxDHW {0};
+    uint64_t kernelMaxDHW {0};
     int64_t batchCount {1};
 };
 

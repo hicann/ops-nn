@@ -38,6 +38,8 @@ bool AdaptiveMaxPool3DTilingSimt::IsCapable()
 
 ge::graphStatus AdaptiveMaxPool3DTilingSimt::DoOpTiling()
 {
+    OP_CHECK_IF(GetAndCheckIndicesDtype() != ge::GRAPH_SUCCESS,
+        OP_LOGE(context_->GetNodeName(), "AdaptiveMaxPool3d get indices dtype failed."), return ge::GRAPH_FAILED);
     tilingData_->nDim = input_.nIn;
     tilingData_->cDim = input_.cIn;
     tilingData_->dInDim = input_.dIn;
@@ -59,14 +61,14 @@ ge::graphStatus AdaptiveMaxPool3DTilingSimt::DoOpTiling()
 
 uint64_t AdaptiveMaxPool3DTilingSimt::GetTilingKey() const
 {
-    if (indexNeedNum <= MAX_INT32 && divNeedNum < MAX_UINT32) {
-        return GET_TPL_TILING_KEY(TPL_MODE_2, TPL_INT32_UINT32, TPL_MULTI_MODE_0);
-    }else if (indexNeedNum > MAX_INT32 && divNeedNum < MAX_UINT32) {
-        return GET_TPL_TILING_KEY(TPL_MODE_2, TPL_INT64_UINT32, TPL_MULTI_MODE_0);
-    }else if (indexNeedNum <= MAX_INT32 && divNeedNum > MAX_UINT32){
-        return GET_TPL_TILING_KEY(TPL_MODE_2, TPL_INT32_UINT64, TPL_MULTI_MODE_0);
+    if (indexNeedNum <= MAX_INT32 && divNeedNum < MAX_INT32) {
+        return GET_TPL_TILING_KEY(TPL_MODE_2, TPL_INT32_UINT32, TPL_MULTI_MODE_0, TPL_DATA_FORMAT_MODE_0);
+    }else if (indexNeedNum > MAX_INT32 && divNeedNum < MAX_INT32) {
+        return GET_TPL_TILING_KEY(TPL_MODE_2, TPL_INT64_UINT32, TPL_MULTI_MODE_0, TPL_DATA_FORMAT_MODE_0);
+    }else if (indexNeedNum <= MAX_INT32 && divNeedNum > MAX_INT32){
+        return GET_TPL_TILING_KEY(TPL_MODE_2, TPL_INT32_UINT64, TPL_MULTI_MODE_0, TPL_DATA_FORMAT_MODE_0);
     }else {
-        return GET_TPL_TILING_KEY(TPL_MODE_2, TPL_INT64_UINT64, TPL_MULTI_MODE_0);
+        return GET_TPL_TILING_KEY(TPL_MODE_2, TPL_INT64_UINT64, TPL_MULTI_MODE_0, TPL_DATA_FORMAT_MODE_0);
     }
     
 }

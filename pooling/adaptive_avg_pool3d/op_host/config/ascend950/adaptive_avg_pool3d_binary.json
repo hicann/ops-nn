@@ -12,7 +12,8 @@
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode": "FormatAgnostic"
         }
       ],
       "outputs": [
@@ -24,7 +25,8 @@
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode": "FormatAgnostic"
         }
       ],
       "attrs": [
@@ -32,6 +34,11 @@
           "name": "output_size",
           "dtype": "list_int",
           "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": "NDHWC"
         }
       ]
     },
@@ -46,7 +53,8 @@
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode": "FormatAgnostic"
         }
       ],
       "outputs": [
@@ -58,7 +66,8 @@
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode": "FormatAgnostic"
         }
       ],
       "attrs": [
@@ -66,6 +75,11 @@
           "name": "output_size",
           "dtype": "list_int",
           "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": "NDHWC"
         }
       ]
     },
@@ -80,7 +94,8 @@
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode": "FormatAgnostic"
         }
       ],
       "outputs": [
@@ -92,7 +107,8 @@
           "paramType": "required",
           "shape": [
             -2
-          ]
+          ],
+          "format_match_mode": "FormatAgnostic"
         }
       ],
       "attrs": [
@@ -100,6 +116,11 @@
           "name": "output_size",
           "dtype": "list_int",
           "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": "NDHWC"
         }
       ]
     }

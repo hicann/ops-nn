@@ -13,6 +13,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
+#include "op_api/aclnn_util.h"
 using namespace op;
 namespace l0op {
 
@@ -21,12 +22,16 @@ OP_TYPE_REGISTER(AdaptiveAvgPool3d);
 static constexpr size_t DIM_D = 0;
 static constexpr size_t DIM_H = 1;
 static constexpr size_t DIM_W = 2;
+static constexpr size_t SUB_DIM_D = -3;
+static constexpr size_t SUB_DIM_H = -2;
+static constexpr size_t SUB_DIM_W = -1;
 
 static const aclTensor* AdaptiveAvgPool3dAiCore(
     const aclTensor* self, const aclIntArray* outputSize, aclTensor* out, aclOpExecutor* executor)
 {
     L0_DFX(AdaptiveAvgPool3dAiCore, self, outputSize, out);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AdaptiveAvgPool3d, OP_INPUT(self), OP_OUTPUT(out), OP_ATTR(outputSize));
+    std::string dataFormat = (Ops::NN::AclnnUtil::IsRegbase()) ? "NCDHW" : "NDHWC";
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AdaptiveAvgPool3d, OP_INPUT(self), OP_OUTPUT(out), OP_ATTR(outputSize, dataFormat));
     OP_CHECK(
         ret == ACLNN_SUCCESS,
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AdaptiveAvgPool3dAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
@@ -38,10 +43,16 @@ const aclTensor* AdaptiveAvgPool3d(const aclTensor* self, const aclIntArray* out
 {
     L0_DFX(AdaptiveAvgPool3d, self, outputSize);
     op::Shape outShape = self->GetViewShape();
-    outShape.SetDim(DIM_D + 1, (*outputSize)[DIM_D]);
-    outShape.SetDim(DIM_H + 1, (*outputSize)[DIM_H]);
-    outShape.SetDim(DIM_W + 1, (*outputSize)[DIM_W]);
-
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        uint64_t size = outShape.GetDimNum();
+        outShape.SetDim(size + SUB_DIM_D, (*outputSize)[DIM_D]);
+        outShape.SetDim(size + SUB_DIM_H, (*outputSize)[DIM_H]);
+        outShape.SetDim(size + SUB_DIM_W, (*outputSize)[DIM_W]); 
+    }else {
+        outShape.SetDim(DIM_D + 1, (*outputSize)[DIM_D]);
+        outShape.SetDim(DIM_H + 1, (*outputSize)[DIM_H]);
+        outShape.SetDim(DIM_W + 1, (*outputSize)[DIM_W]);
+    }
     auto out = executor->AllocTensor(outShape, self->GetDataType(), self->GetStorageFormat());
     if (out == nullptr) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "out is nullptr.");

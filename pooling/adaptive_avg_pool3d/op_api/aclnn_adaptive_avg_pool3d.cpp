@@ -23,6 +23,7 @@
 #include "aclnn/aclnn_base.h"
 #include "aclnn_kernels/reshape.h"
 #include "aclnn_adaptive_avg_pool3d.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -37,6 +38,7 @@ static const int64_t INDEX_DIM4 = 4;
 static const int64_t cdhwShapeSize = 4;
 static const int64_t ncdhwShapeSize = 5;
 static const int64_t outputSizeLimit = 3;
+static const int64_t INDEX_W = 2;
 static const std::initializer_list<op::DataType> dtypeSupportList310P = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> dtypeSupportListOrigin = {
@@ -65,8 +67,8 @@ static bool CheckInputOutputDims(const aclTensor* self, const aclTensor* out)
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Out dims %zu should equal to self dims %zu.", outputDimNum, inputDimNum);
         return false;
     }
-
-    for (size_t i = 0; i < inputDimNum; i++) {
+    // ncdhw n = 0, cdhw c= 0 is ok!
+    for (size_t i = Ops::NN::AclnnUtil::IsRegbase() ? 1 : 0 ; i < inputDimNum; i++) {
         if (inputShape.GetDim(i) <= 0) {
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID, "self'dims is invalid, self No.[%lu] dim is not bigger than [%d].", i + 1, 0);
@@ -122,10 +124,19 @@ static bool CheckFormat(const aclTensor* self, const aclTensor* out)
         return false;
     }
 
-    // 如果输入格式是私有格式，记录日志，直接报错
-    if (op::IsPrivateFormat(self->GetStorageFormat())) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format don't support private format.");
-        return false;
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        if (self->GetStorageFormat() != ge::FORMAT_NCDHW && self->GetStorageFormat() != ge::FORMAT_NCHW && self->GetStorageFormat() != ge::FORMAT_ND) {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID, "Format of input is not supported, self [%s].",
+                op::ToString(self->GetStorageFormat()).GetString());
+            return false;
+        }
+    }else {
+        // 如果输入格式是私有格式，记录日志，直接报错
+        if (op::IsPrivateFormat(self->GetStorageFormat())) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format don't support private format.");
+            return false;
+        }
     }
     return true;
 }
@@ -192,45 +203,53 @@ static aclnnStatus DoAdaptiveAvgPool3D(
     const aclTensor* self, const aclIntArray* outputSize, aclTensor* out, aclOpExecutor* executor)
 {
     auto inputReshape = self;
-    // 将CDHW格式reshape为1CDHW
-    if (self->GetViewShape().GetDimNum() == cdhwShapeSize) {
-        op::Shape inputShape = self->GetViewShape();
-        std::vector<int64_t> valueShape(ncdhwShapeSize);
-        valueShape[0] = 1;
-        for (int64_t i = 1; i < ncdhwShapeSize; i++) {
-            valueShape[i] = inputShape.GetDim(i - 1);
+    if(Ops::NN::AclnnUtil::IsRegbase()){
+ 	         auto pool3dResult950 = l0op::AdaptiveAvgPool3d(self, outputSize, executor);
+             CHECK_RET(pool3dResult950 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+ 	         auto viewCopyResult = l0op::ViewCopy(pool3dResult950, out, executor);
+ 	         CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+ 	         return ACLNN_SUCCESS;
+ 	}else {
+        // 将CDHW格式reshape为1CDHW
+        if (self->GetViewShape().GetDimNum() == cdhwShapeSize) {
+            op::Shape inputShape = self->GetViewShape();
+            std::vector<int64_t> valueShape(ncdhwShapeSize);
+            valueShape[0] = 1;
+            for (int64_t i = 1; i < ncdhwShapeSize; i++) {
+                valueShape[i] = inputShape.GetDim(i - 1);
+            }
+            auto reshapeShape = executor->AllocIntArray(valueShape.data(), ncdhwShapeSize);
+            CHECK_RET(reshapeShape != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            inputReshape = l0op::Reshape(self, reshapeShape, executor);
         }
-        auto reshapeShape = executor->AllocIntArray(valueShape.data(), ncdhwShapeSize);
-        CHECK_RET(reshapeShape != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        inputReshape = l0op::Reshape(self, reshapeShape, executor);
+        CHECK_RET(inputReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // 将C维度转置到最后
+        std::vector<int64_t> valuePerm{INDEX_DIM0, INDEX_DIM2, INDEX_DIM3, INDEX_DIM4, INDEX_DIM1};
+        auto tranPerm = executor->AllocIntArray(valuePerm.data(), ncdhwShapeSize);
+        CHECK_RET(tranPerm != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto inputReshapeTran = l0op::Transpose(inputReshape, tranPerm, executor);
+        CHECK_RET(inputReshapeTran != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto pool3dResult = l0op::AdaptiveAvgPool3d(inputReshapeTran, outputSize, executor);
+        CHECK_RET(pool3dResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // 将C维度转置到原位置
+        std::vector<int64_t> valuePermRes{INDEX_DIM0, INDEX_DIM4, INDEX_DIM1, INDEX_DIM2, INDEX_DIM3};
+        auto resPerm = executor->AllocIntArray(valuePermRes.data(), ncdhwShapeSize);
+        CHECK_RET(resPerm != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto resTran = l0op::Transpose(pool3dResult, resPerm, executor);
+        CHECK_RET(resTran != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // 将1CDHW格式reshape回CDHW
+        auto resTranReshape = resTran;
+        if (self->GetViewShape().GetDimNum() == cdhwShapeSize) {
+            auto outShapeVector = op::ToShapeVector(out->GetViewShape());
+            aclIntArray* outShapeArray = executor->AllocIntArray(outShapeVector.data(), outShapeVector.size());
+            CHECK_RET(outShapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            resTranReshape = l0op::Reshape(resTran, outShapeArray, executor);
+        }
+        CHECK_RET(resTranReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto viewCopyResult = l0op::ViewCopy(resTranReshape, out, executor);
+        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        return ACLNN_SUCCESS;
     }
-    CHECK_RET(inputReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    // 将C维度转置到最后
-    std::vector<int64_t> valuePerm{INDEX_DIM0, INDEX_DIM2, INDEX_DIM3, INDEX_DIM4, INDEX_DIM1};
-    auto tranPerm = executor->AllocIntArray(valuePerm.data(), ncdhwShapeSize);
-    CHECK_RET(tranPerm != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto inputReshapeTran = l0op::Transpose(inputReshape, tranPerm, executor);
-    CHECK_RET(inputReshapeTran != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto pool3dResult = l0op::AdaptiveAvgPool3d(inputReshapeTran, outputSize, executor);
-    CHECK_RET(pool3dResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    // 将C维度转置到原位置
-    std::vector<int64_t> valuePermRes{INDEX_DIM0, INDEX_DIM4, INDEX_DIM1, INDEX_DIM2, INDEX_DIM3};
-    auto resPerm = executor->AllocIntArray(valuePermRes.data(), ncdhwShapeSize);
-    CHECK_RET(resPerm != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto resTran = l0op::Transpose(pool3dResult, resPerm, executor);
-    CHECK_RET(resTran != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    // 将1CDHW格式reshape回CDHW
-    auto resTranReshape = resTran;
-    if (self->GetViewShape().GetDimNum() == cdhwShapeSize) {
-        auto outShapeVector = op::ToShapeVector(out->GetViewShape());
-        aclIntArray* outShapeArray = executor->AllocIntArray(outShapeVector.data(), outShapeVector.size());
-        CHECK_RET(outShapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        resTranReshape = l0op::Reshape(resTran, outShapeArray, executor);
-    }
-    CHECK_RET(resTranReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto viewCopyResult = l0op::ViewCopy(resTranReshape, out, executor);
-    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    return ACLNN_SUCCESS;
 }
 
 static aclnnStatus SelectAdaptiveAvgPool3D(
@@ -238,7 +257,7 @@ static aclnnStatus SelectAdaptiveAvgPool3D(
 {
     int64_t dValue = (*outputSize)[0];
     int64_t hValue = (*outputSize)[1];
-    int64_t wValue = (*outputSize)[2];
+    int64_t wValue = (*outputSize)[INDEX_W];
     if (dValue == 1 && hValue == 1 && wValue == 1) {
         return DoReduceMean(self, out, executor);
     }

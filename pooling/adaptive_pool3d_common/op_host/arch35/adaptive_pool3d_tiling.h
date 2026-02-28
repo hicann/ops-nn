@@ -20,6 +20,7 @@
 
 #include <array>
 #include "log/log.h"
+#include "error_util.h"
 #include "register/op_impl_registry.h"
 #include "register/tilingdata_base.h"
 #include "op_host/tiling_base.h"
@@ -31,12 +32,32 @@ using namespace std;
 
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
+constexpr int64_t MAX_INT32 = 2147483647;
+constexpr uint64_t MAX_UINT32 = 4294967295;
+constexpr int64_t MAX_THREAD_NUM = 1024;
+constexpr uint64_t DCACHE_SIZE = 128 * 1024UL;
+constexpr uint64_t DIM_N = 0;
+constexpr uint64_t DIM_C = 1;
+constexpr uint64_t DIM_D = 2;
+constexpr uint64_t DIM_H = 3;
+constexpr uint64_t DIM_W = 4;
+constexpr uint64_t OUTPUTSIZE_DIMW = 2;
+constexpr uint64_t OUTPUT_DIM_MAX = 3;
+constexpr uint64_t DIM_NUM_FIVE = 5;
+constexpr uint64_t DIM_NUM_FOUR = 4;
+constexpr int64_t DTYPE_INT32 = 3;
+constexpr int64_t DTYPE_INT64 = 9;
+constexpr int64_t ONE_DIM = 1;
+constexpr int64_t NONE_DIM = 0;
+constexpr size_t SYS_WORKSPACE_SIZE = 16 * 1024 * 1024;
+constexpr uint64_t KERNEL_CALC_COUNT_THERSHOLD = 10000;
 
 struct BaseInput {
     uint64_t coreNum{0};
     uint64_t ubSize{0};
     ge::DataType xDtype{ge::DT_FLOAT};
     ge::DataType indicesDtype{ge::DT_INT32};
+    ge::Format dataFormat{ge::Format::FORMAT_NDHWC};
     uint64_t nIn{0};
     uint64_t cIn{0};
     uint64_t dIn{0};
@@ -71,6 +92,9 @@ protected:
     ge::graphStatus PostTiling() override;
     uint64_t GetTilingKey() const override;
     void DumpTilingInfo() override;
+    ge::graphStatus GetAndCheckIndicesDtype();
+    ge::graphStatus GetAndCheckDataFormat();
+    uint64_t CalKernelSizeOneDimMax(uint64_t inSize, uint64_t outSize);
 };
 
 }// namespace optiling
