@@ -17,7 +17,7 @@
 
 #include "../../op_kernel/arch35/smooth_l1_loss_grad_v2_tiling_key.h"
 #include "smooth_l1_loss_grad_v2_tiling_base.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 
 namespace optiling {
 

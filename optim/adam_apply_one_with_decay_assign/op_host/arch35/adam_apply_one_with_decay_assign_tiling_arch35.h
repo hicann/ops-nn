@@ -17,7 +17,7 @@
 #define OPS_OPTIM_ADAM_APPLY_ONE_WITH_DECAY_ASSIGN_OP_HOST_ADAM_APPLY_ONE_WITH_DEACY_ASSIGN_TILING_ARCH35_H
 
 #include "../../op_kernel/arch35/adam_apply_one_with_decay_assign_tiling_key.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 
 using namespace Ops::NN::Optiling;
 

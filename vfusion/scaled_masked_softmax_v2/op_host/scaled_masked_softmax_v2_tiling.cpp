@@ -18,7 +18,7 @@
 #include "platform/platform_infos_def.h"
 #include "register/op_def_registry.h"
 #include "util/math_util.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 #include "scaled_masked_softmax_v2_tiling.h"
 
 namespace {

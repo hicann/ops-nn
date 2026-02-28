@@ -16,7 +16,7 @@
 #include <algorithm>
 #include "platform/platform_ascendc.h"
 #include "atvoss/broadcast/broadcast_tiling.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "avg_pool_v2_grad_simt_tiling.h"
 
 using namespace AscendC;

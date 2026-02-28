@@ -13,7 +13,7 @@
 
 #include <memory>
 #include <vector>
-#include "common/runtime2_util.h"
+#include "op_api/runtime2_util.h"
 
 namespace optiling {
 class CacheTilingContext {

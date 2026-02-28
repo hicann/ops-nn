@@ -24,7 +24,7 @@
 #include "kernel_run_context_facker.h"
 #include "platform/platform_infos_def.h"
 #include "register/op_impl_registry.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "test_cube_util.h"
 #include "ut_op_util.h"
 #include "../../../op_host/op_tiling/quant_batch_matmul_inplace_add_tiling.h"

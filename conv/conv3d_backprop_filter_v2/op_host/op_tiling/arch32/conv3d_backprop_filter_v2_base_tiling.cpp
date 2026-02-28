@@ -24,7 +24,7 @@
 
 #include "../common/conv_backprop_filter_context_utils.h"
 #include "../../../op_kernel/arch32/conv3d_backprop_filter_v2_tiling_data.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "conv/common/op_host/op_tiling/math_util.h"
 #include "conv/common/op_host/op_tiling/platform_util.h"
 #include "error_util.h"

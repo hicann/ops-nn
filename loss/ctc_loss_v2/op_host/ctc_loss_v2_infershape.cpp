@@ -16,7 +16,7 @@
 #include "error_util.h"
 #include "util/shape_util.h"
 #include "register/op_impl_registry.h"
-#include "common/op_util.h"
+#include "op_api/op_util.h"
 
 namespace {
 constexpr int64_t LOG_ALPHA_LEN = 3;

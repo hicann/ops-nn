@@ -16,7 +16,7 @@
 #define CANN_QUANT_UPDATE_SCATTER_REGBASE_TILING_H_
 
 #include <string>
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "register/tilingdata_base.h"
 
 namespace optiling

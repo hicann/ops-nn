@@ -19,8 +19,8 @@
 #include "platform/platform_info.h"
 #include "register/op_impl_registry.h"
 #include "util/platform_util.h"
-#include "tiling_base/tiling_util.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_util.h"
+#include "op_host/tiling_base.h"
 #include "norm/lp_norm_v2/op_kernel/arch35/lp_norm_v2_dag.h"
 #include "norm/lp_norm_v2/op_kernel/arch35/lp_norm_v2_tiling_key.h"
 

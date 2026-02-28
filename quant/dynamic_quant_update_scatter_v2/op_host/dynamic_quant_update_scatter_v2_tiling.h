@@ -16,7 +16,7 @@
 #define AIR_CXX_RUNTIME_V2_OP_IMPL_DYNAMIC_QUANT_UPDATE_SCATTER_V2_TILING_H
 #include <cstdint>
 #include "tiling/tiling_api.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 
 namespace optiling {
 BEGIN_TILING_DATA_DEF(DynamicQuantUpdateScatterV2TilingData)

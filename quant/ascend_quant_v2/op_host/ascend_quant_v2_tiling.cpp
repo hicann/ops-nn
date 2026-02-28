@@ -15,7 +15,7 @@
 
 #include "ascend_quant_v2_tiling.h"
 #include "ascend_quant_v2_regbase_tiling.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 
 namespace optiling {
 using namespace Ops::NN::OpTiling;

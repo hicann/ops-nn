@@ -19,8 +19,8 @@
 #include <cstdint>
 #include "register/op_impl_registry.h"
 #include "register/tilingdata_base.h"
-#include "tiling_base/tiling_base.h"
-#include "common/runtime2_util.h"
+#include "op_host/tiling_base.h"
+#include "op_api/runtime2_util.h"
 
 namespace optiling {
 struct GroupNormV2CompileInfo {

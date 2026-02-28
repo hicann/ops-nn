@@ -16,7 +16,7 @@
 #define __OP_HOST_TRANSPOSE_BATCH_MAT_MUL_EINSUM_TILING_H__
 
 #include "transpose_batch_mat_mul_tiling.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "pp_matmul_default.h"
 

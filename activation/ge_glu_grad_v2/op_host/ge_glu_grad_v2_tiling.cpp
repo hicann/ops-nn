@@ -18,7 +18,7 @@
 #include "log/log.h"
 #include "util/math_util.h"
 #include "ge_glu_grad_v2_tiling.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 
 namespace optiling {
 using namespace Ops::NN::OpTiling;

@@ -20,7 +20,7 @@
 #include "optim/apply_adagrad_d/op_kernel/arch35/apply_adagrad_d_dag.h"
 #include "optim/apply_adagrad_d/op_kernel/arch35/apply_adagrad_d_tiling_key.h"
 #include "apply_adagrad_d_tiling_arch35.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "atvoss/elewise/elewise_tiling.h"

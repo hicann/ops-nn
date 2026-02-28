@@ -17,7 +17,7 @@
 #include <cstdint>
 #include "tiling/tiling_api.h"
 #include "swi_glu_tiling.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 #include "dequant_swiglu_quant_tiling.h"
 
 #define CHECK_FAIL(cont, cond, ...)                      \

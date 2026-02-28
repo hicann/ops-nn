@@ -23,10 +23,10 @@
 #include "util/math_util.h"
 #include "log/log.h"
 #include "util/platform_util.h"
-#include "tiling_base/tiling_base.h"
-#include "tiling_base/tiling_util.h"
-#include "tiling_base/tiling_templates_registry.h"
-#include "common/op_util.h"
+#include "op_host/tiling_base.h"
+#include "op_host/tiling_util.h"
+#include "op_host/tiling_templates_registry.h"
+#include "op_api/op_util.h"
 
 namespace optiling {
 const int32_t HW_DIMS = 2;

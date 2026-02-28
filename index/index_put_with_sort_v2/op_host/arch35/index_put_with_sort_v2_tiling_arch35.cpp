@@ -13,7 +13,7 @@
  */
 
 #include "util/platform_util.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 #include "index_put_with_sort_v2_tiling_arch35.h"
 
 namespace optiling

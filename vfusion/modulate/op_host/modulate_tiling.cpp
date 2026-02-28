@@ -20,7 +20,7 @@
 #include "platform/platform_info.h"
 #include "register/op_def_registry.h"
 #include "register/op_impl_registry.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "util/math_util.h"
 

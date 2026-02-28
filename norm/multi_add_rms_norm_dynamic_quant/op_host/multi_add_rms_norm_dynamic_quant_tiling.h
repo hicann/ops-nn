@@ -16,7 +16,7 @@
 #define OPS_NORM_MULTI_ADD_RMS_NORM_DYNAMIC_QUANT_OP_HOST_H_
 
 
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "tiling/tiling_api.h"
 #include "register/op_impl_registry.h"
 #include "register/tilingdata_base.h"

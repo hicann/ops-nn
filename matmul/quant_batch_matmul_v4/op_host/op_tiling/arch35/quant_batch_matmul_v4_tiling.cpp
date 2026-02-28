@@ -24,7 +24,7 @@
 #include "util/math_util.h"
 #include "graph/utils/type_utils.h"
 #include "log/log.h"
-#include "common/inc/error_util.h"
+#include "error_util.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 #include "error_util.h"

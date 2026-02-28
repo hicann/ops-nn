@@ -18,7 +18,7 @@
 #include "weight_quant_batch_matmul_v2_compute_matmul_tiling.h"
 #include "weight_quant_batch_matmul_v2_white_list.h"
 #include "weight_quant_batch_matmul_v2_tiling_key.h"
-#include "tiling_base/tiling_key.h"
+#include "op_host/tiling_key.h"
 #include "op_cache_tiling.h"
 #include "op_cache_def_tiling.h"
 #include "../../op_kernel/weight_quant_batch_matmul_v2_kernel_tiling_key.h"

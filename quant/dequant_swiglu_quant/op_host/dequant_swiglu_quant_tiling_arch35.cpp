@@ -15,10 +15,10 @@
 
 #include <cmath>
 #include "dequant_swiglu_quant_tiling.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "dequant_swiglu_quant_tiling.h"
-#include "tiling_base/tiling_base.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_base.h"
+#include "op_host/tiling_util.h"
 
 using namespace AscendC;
 using namespace ge;

@@ -13,7 +13,7 @@
  * \brief
  */
 
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "max_pool_grad_with_argmax_v3_tiling_base.h"
 
 using namespace AscendC;

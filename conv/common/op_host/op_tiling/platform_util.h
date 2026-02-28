@@ -18,7 +18,7 @@
 #include <cstdint>
 #include <string>
 #include <tiling/platform/platform_ascendc.h>
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 
 namespace Ops {
 namespace NN {

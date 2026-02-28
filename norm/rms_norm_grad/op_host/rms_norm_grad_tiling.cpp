@@ -14,7 +14,7 @@
  */
 #include "rms_norm_grad_tiling.h"
 #include "register/op_def_registry.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 #include "tiling/tiling_api.h"
 
 namespace optiling {

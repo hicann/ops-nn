@@ -16,10 +16,10 @@
 #ifndef AIR_CXX_RUNTIME_V2_OP_IMPL_DYNAMIC_MX_QUANT_WITH_DUAL_AXIS_H
 #define AIR_CXX_RUNTIME_V2_OP_IMPL_DYNAMIC_MX_QUANT_WITH_DUAL_AXIS_H
 #include "tiling/tiling_api.h"
-#include "tiling_base/tiling_base.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_base.h"
+#include "op_host/tiling_util.h"
 #include "register/op_impl_registry.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 
 namespace optiling {
 BEGIN_TILING_DATA_DEF(DynamicMxQuantWithDualAxisTilingData)

@@ -16,7 +16,7 @@
 #ifndef AIR_CXX_RUNTIME_V2_OP_IMPL_INDEX_TILING_COMMON_H_
 #define AIR_CXX_RUNTIME_V2_OP_IMPL_INDEX_TILING_COMMON_H_
 #pragma once
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "tiling/tiling_api.h"
 #include "index_tiling.h"
 

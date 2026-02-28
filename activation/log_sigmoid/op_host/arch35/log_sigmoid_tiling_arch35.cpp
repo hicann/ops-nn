@@ -16,7 +16,7 @@
 #include <iostream>
 
 #include "platform/platform_ascendc.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 
 #include "error_util.h"
 #include "graph/utils/type_utils.h"
@@ -28,7 +28,7 @@
 
 #include "../op_kernel/arch35/log_sigmoid_dag.h"
 #include "../op_kernel/arch35/log_sigmoid_struct.h"
-#include "common/inc/tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 #include "atvoss/elewise/elewise_tiling.h"
 
 using namespace ge;

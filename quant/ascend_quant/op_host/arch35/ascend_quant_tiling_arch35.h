@@ -17,7 +17,7 @@
 #define OPS_BUILT_IN_OP_TILING_RUNTIME_ASCEND_QUANT_REGBASE_TILING_H
 
 #include "register/tilingdata_base.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "ascend_quant_tiling.h"
 
 namespace optiling {

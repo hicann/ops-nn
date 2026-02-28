@@ -17,7 +17,7 @@
 
 #include "common/op_host/op_tiling/tiling_type.h"
 #include "error_util.h"
-#include "op_util.h"
+#include "op_api/op_util.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "../../op_kernel/fused_quant_mat_mul_kernel_tilingkey.h"
 

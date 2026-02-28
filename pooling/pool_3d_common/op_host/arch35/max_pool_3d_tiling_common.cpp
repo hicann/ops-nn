@@ -17,7 +17,7 @@
 #include "pool_tiling_templates_registry.h"
 #include "error_util.h"
 #include "platform/platform_info.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 #include "max_pool_3d_tiling_common.h"
 
 using namespace AscendC;

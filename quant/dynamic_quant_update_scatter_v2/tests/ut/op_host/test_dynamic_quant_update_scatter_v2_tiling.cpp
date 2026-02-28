@@ -25,7 +25,7 @@
 #include "ut_op_util.h"
 #include "ut_op_common.h"
 #include "platform/platform_infos_def.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "../../../op_host/dynamic_quant_update_scatter_v2_tiling.h"
 
 

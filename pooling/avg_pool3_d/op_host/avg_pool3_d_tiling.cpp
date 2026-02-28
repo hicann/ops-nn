@@ -17,7 +17,7 @@
 #include <vector>
 #include <cstdint>
 #include <type_traits>
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 #include "register/op_impl_registry.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_info.h"
@@ -29,7 +29,7 @@
 #include "register/op_def_registry.h"
 #include "tiling/tiling_api.h"
 #include "pool_tiling_templates_registry.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 
 using optiling::PoolTilingRegistry;
 

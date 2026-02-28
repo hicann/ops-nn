@@ -13,7 +13,7 @@
  * \brief
  */
 #include "group_norm_v2_tiling_arch35.h"
-#include "common/runtime2_util.h"
+#include "op_api/runtime2_util.h"
 #include "error_util.h"
 #include <nlohmann/json.hpp>
 

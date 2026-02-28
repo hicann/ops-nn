@@ -17,7 +17,7 @@
 
 #include "kl_div_loss_grad_tiling_arch35.h"
 #include "register/op_impl_registry.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 
 #include "../../../../loss/kl_div_loss_grad/op_kernel/arch35/kl_div_loss_grad_dag.h"
 #include "../../../../loss/kl_div_loss_grad/op_kernel/arch35/kl_div_loss_grad_tiling_key.h"

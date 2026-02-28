@@ -15,7 +15,7 @@
 #ifndef DUAL_LEVEL_QUANT_BATCH_MATMUL_TILING_BASE_H
 #define DUAL_LEVEL_QUANT_BATCH_MATMUL_TILING_BASE_H
 
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
 #include "dual_level_quant_batch_matmul_tiling_tool.h"

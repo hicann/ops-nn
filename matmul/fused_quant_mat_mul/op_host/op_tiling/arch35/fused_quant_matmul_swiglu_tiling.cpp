@@ -17,7 +17,7 @@
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "common/op_host/op_tiling/tiling_type.h"
 #include "error_util.h"
-#include "op_util.h"
+#include "op_api/op_util.h"
 
 namespace optiling {
 

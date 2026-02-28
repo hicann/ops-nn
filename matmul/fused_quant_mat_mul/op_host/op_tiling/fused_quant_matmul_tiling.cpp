@@ -21,7 +21,7 @@
 #include "op_cache_tiling.h"
 #include "platform/platform_infos_def.h"
 #include "register/op_impl_registry.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 
 #include "./arch35/fused_quant_matmul_asw_tiling.h"
 #include "./arch35/fused_quant_matmul_swiglu_tiling.h"

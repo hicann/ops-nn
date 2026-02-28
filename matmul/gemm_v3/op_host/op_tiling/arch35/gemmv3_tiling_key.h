@@ -17,7 +17,7 @@
 #define __OP_HOST_GEMM_V3_TILING_KEY_H__
 
 #include <sstream>
-#include "tiling_base/tiling_key.h"
+#include "op_host/tiling_key.h"
 #include "../../../../mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_tiling_key.h"
 
 namespace optiling {

@@ -24,7 +24,7 @@
 #include "../../../mat_mul_v3/op_host/op_tiling/matmul_v3_simplifiedkey.h"
 #include "../../../mat_mul_v3/op_host/op_tiling/matmul_v3_platform_common.h"
 #include "register/op_def_registry.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "arch35/gemmv3_tiling.h"
 
 using namespace optiling::matmul_v3;

@@ -15,8 +15,8 @@
 
 #include "log/log.h"
 #include "util/math_util.h"
-#include "tiling_base/tiling_util.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_util.h"
+#include "op_host/tiling_templates_registry.h"
 #include "../op_kernel/masked_scatter_with_position_tiling_struct.h"
 #include "masked_scatter_with_position_tiling.h"
 #include "op_common/op_host/util/platform_util.h"

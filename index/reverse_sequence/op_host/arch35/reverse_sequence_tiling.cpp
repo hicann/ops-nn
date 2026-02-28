@@ -15,7 +15,7 @@
 #include "reverse_sequence_tiling.h"
 #include "log/log.h"
 #include "op_host/util/math_util.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "op_common/log/log.h"
 #include "op_common/op_host/util/platform_util.h"
 

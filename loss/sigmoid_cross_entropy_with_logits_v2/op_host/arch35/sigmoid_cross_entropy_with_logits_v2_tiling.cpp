@@ -17,9 +17,9 @@
 #include "tiling/platform/platform_ascendc.h"
 #include "log/log.h"
 #include "register/op_impl_registry.h"
-#include "common/runtime2_util.h"
-#include "op_util.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_api/runtime2_util.h"
+#include "op_api/op_util.h"
+#include "op_host/tiling_templates_registry.h"
 
 namespace optiling {
 

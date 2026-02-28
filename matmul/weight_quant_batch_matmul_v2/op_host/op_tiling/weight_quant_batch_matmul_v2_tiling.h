@@ -17,7 +17,7 @@
 
 #include "weight_quant_batch_matmul_v2_tiling_tool.h"
 #include "weight_quant_batch_matmul_v2_tiling_key.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "../../op_kernel/weight_quant_batch_matmul_v2_tiling_data.h"
 
 using Ops::NN::Optiling::TilingBaseClass;

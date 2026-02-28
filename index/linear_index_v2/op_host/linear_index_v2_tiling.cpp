@@ -18,7 +18,7 @@
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_info.h"
 #include "linear_index_v2_tiling.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 
 constexpr int64_t SCALE_SPACE = 20480;
 constexpr int64_t UB_PART = 4;

@@ -19,7 +19,7 @@
 #include "register/tilingdata_base.h"
 #include "register/op_def_registry.h"
 #include "tiling/tiling_api.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "avg_pool_v2_grad_tiling_common.h"
 #include "avg_pool_v2_grad_tiling_base.h"
 #include "../op_kernel/arch35/avg_pool_v2_grad_tiling_data.h"

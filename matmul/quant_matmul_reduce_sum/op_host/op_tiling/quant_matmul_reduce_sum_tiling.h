@@ -17,7 +17,7 @@
 
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "../../op_kernel/quant_matmul_reduce_sum_tiling_data.h"
 
 namespace optiling {

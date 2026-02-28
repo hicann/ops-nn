@@ -9,7 +9,7 @@
  */
 
 #include <climits>
-#include "common/inc/error_util.h"
+#include "error_util.h"
 #include "common/op_host/op_tiling/tiling_type.h"
 #include "error_util.h"
 #include "log/log.h"
@@ -17,7 +17,7 @@
 #include "platform/platform_infos_def.h"
 #include "quant_batch_matmul_inplace_add_tiling.h"
 #include "register/op_impl_registry.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "../../../quant_batch_matmul_v3/op_host/op_tiling/platform_util.h"
 #include "../../../quant_batch_matmul_v3/op_host/op_tiling/quant_batch_matmul_v3_compile_info.h"
 

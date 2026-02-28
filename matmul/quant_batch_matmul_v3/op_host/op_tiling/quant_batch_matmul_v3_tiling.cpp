@@ -18,7 +18,7 @@
 #include <map>
 #include <numeric>
 
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "common/op_host/op_tiling/tiling_type.h"
 #include "graph/utils/type_utils.h"
 #include "log/log.h"

@@ -17,7 +17,7 @@
 #include "log/log.h"
 #include "register/tilingdata_base.h"
 #include "../../../../matmul/common/op_host/op_tiling/tiling_cache.h"
-#include "common/runtime2_util.h"
+#include "op_api/runtime2_util.h"
 #include "../../../../matmul/common/op_host/op_tiling/hash.h"
 
 

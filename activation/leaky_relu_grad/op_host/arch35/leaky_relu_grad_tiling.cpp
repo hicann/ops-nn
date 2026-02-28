@@ -21,7 +21,7 @@
 #include "../../op_kernel/arch35/leaky_relu_grad_dag.h"
 #include "register/op_impl_registry.h"
 #include "register/tilingdata_base.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 
 using namespace AscendC;
 using namespace ge;

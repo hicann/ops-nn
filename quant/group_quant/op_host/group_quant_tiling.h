@@ -18,7 +18,7 @@
 #include <vector>
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;

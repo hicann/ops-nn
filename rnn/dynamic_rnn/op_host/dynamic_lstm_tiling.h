@@ -25,8 +25,8 @@
 #include "log/log.h"                           // 如果涉及LOG日志打印
 #include "register/op_impl_registry.h"         // 必需
 #include "register/tilingdata_base.h"          // 必需
-#include "tiling_base/tiling_base.h"                // 如果涉及TilingBaseClass类继承
-#include "tiling_base/tiling_templates_registry.h" // 如果涉及TilingBaseClass类继承
+#include "op_host/tiling_base.h"                // 如果涉及TilingBaseClass类继承
+#include "op_host/tiling_templates_registry.h" // 如果涉及TilingBaseClass类继承
 #include "util/math_util.h"                   // 如果涉及CeilDiv等对齐运算
 #include "tiling/tiling_api.h"
 #include "error_util.h"

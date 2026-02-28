@@ -14,7 +14,7 @@
  * \brief
  */
 #include "platform/platform_info.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "max_pool3d_grad_with_argmax_tiling_arch35.h"
 
 namespace optiling {

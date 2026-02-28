@@ -14,7 +14,7 @@
  */
 #include <cctype>
 #include <algorithm>
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "max_pool_with_argmax_v3_simt_tiling.h"
 
 using namespace AscendC;

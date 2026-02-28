@@ -14,7 +14,7 @@
  */
 #include "log/log.h"
 #include "register/op_impl_registry.h"
-#include "common/runtime2_util.h"
+#include "op_api/runtime2_util.h"
 
 using namespace Ops::Base;
 using namespace ge;

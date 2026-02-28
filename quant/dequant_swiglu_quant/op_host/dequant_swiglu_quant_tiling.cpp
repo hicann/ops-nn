@@ -14,7 +14,7 @@
  */
 
 #include "dequant_swiglu_quant_tiling.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 #include "swi_glu_tiling.h"
 
 using Ops::NN::Optiling::TilingRegistry;

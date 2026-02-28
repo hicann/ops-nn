@@ -15,7 +15,7 @@
 #ifndef OPS_BUILD_IN_OP_TILING_RUNTIME_APPLY_ADAGRAD_D_TILING_H
 #define OPS_BUILD_IN_OP_TILING_RUNTIME_APPLY_ADAGRAD_D_TILING_H
 
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "../../op_kernel/apply_adagrad_d_struct.h"
 
 using namespace ApplyAdagradDTilingData;

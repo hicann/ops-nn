@@ -16,7 +16,7 @@
 #define SIGMOID_CROSS_ENTROPY_WITH_LOGITS_V2_TILING_H
 
 #include "tiling/tiling_api.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "atvoss/broadcast/broadcast_tiling.h"
 #include "loss/sigmoid_cross_entropy_with_logits_v2/op_kernel/arch35/sigmoid_cross_entropy_with_logits_v2_dag.h"
 #include "loss/sigmoid_cross_entropy_with_logits_v2/op_kernel/arch35/sigmoid_cross_entropy_with_logits_v2_tiling_key.h"

@@ -20,7 +20,7 @@
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 #include "tiling/tiling_api.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 
 namespace optiling {
 

@@ -13,7 +13,7 @@
  * \brief RmsNorm tiling file
  */
 #include <iostream>
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 #include "rms_norm_tiling.h"
 
 namespace optiling {

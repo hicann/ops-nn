@@ -20,7 +20,7 @@
 #include <cstdint>
 
 #include "tiling/platform/platform_ascendc.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 
 namespace optiling {
 namespace transpose_quant_batch_mat_mul_advanced {

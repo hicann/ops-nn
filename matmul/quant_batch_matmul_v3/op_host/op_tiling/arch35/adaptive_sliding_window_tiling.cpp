@@ -18,7 +18,7 @@
 #include "quant_batch_matmul_v3_checker_for_mmads8s4.h"
 #include "op_cache_tiling.h"
 #include "log/log.h"
-#include "common/inc/error_util.h"
+#include "error_util.h"
 #include "adaptive_sliding_window_tiling.h"
 
 using Ops::NN::MathUtil;

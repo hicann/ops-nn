@@ -16,7 +16,7 @@
 #ifndef OPS_OP_TILING_RUNTIME_MASKED_SCATTER_TILING_H_
 #define OPS_OP_TILING_RUNTIME_MASKED_SCATTER_TILING_H_
 
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "register/tilingdata_base.h"
 
 namespace optiling {

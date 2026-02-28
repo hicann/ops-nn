@@ -19,7 +19,7 @@
 #include <string>
 #include <memory>
 #include <exe_graph/runtime/tiling_context.h>
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "log/log.h"
 #include "error_util.h"
 

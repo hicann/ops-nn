@@ -13,7 +13,7 @@
  * \brief big kernel imply for max_pool_with_argmax
  */
 
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "max_pool_with_argmax_v3_big_kernel_mul_core_tiling.h"
 
 static constexpr uint64_t MAX_POOL_WITH_ARGMAX_V3_TILING_KEY_BIG_KERNEL_SPLIT_FP_INT32 = 400001;

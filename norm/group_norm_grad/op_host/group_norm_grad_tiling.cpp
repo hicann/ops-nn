@@ -15,7 +15,7 @@
 #include "group_norm_grad_tiling_arch35.h"
 #include "group_norm_grad_empty_tiling_arch35.h"
 #include "group_norm_grad_tiling.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 
 namespace {
 constexpr int64_t FP32_MODE = 0;

@@ -21,7 +21,7 @@
 #include "register/tilingdata_base.h"
 #include "../op_kernel/arch35/relu_v2_dag.h"
 #include "../op_kernel/arch35/relu_v2_tiling_struct.h"
-#include "common/inc/tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 
 #include <iostream>
 

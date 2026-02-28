@@ -14,7 +14,7 @@
  */
 #include "error_util.h"
 #include "conv2d_v2/op_host/op_tiling/arch35/conv2d_v2_base_tiling.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "register/op_def_registry.h"
 #include "../../../common/op_host/op_tiling/conv_tiling_templates_registry.h"
 

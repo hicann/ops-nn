@@ -15,7 +15,7 @@
 
 #include "log/log.h"
 #include "tiling/tiling_api.h"
-#include "tiling_base/tiling_key.h"
+#include "op_host/tiling_key.h"
 #include "util/platform_util.h"
 #include "util/math_util.h"
 #include "gather_nd_tiling_arch35.h"

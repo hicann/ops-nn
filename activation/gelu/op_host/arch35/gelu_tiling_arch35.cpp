@@ -15,7 +15,7 @@
 #include "register/op_impl_registry.h"
 #include "../op_kernel/arch35/gelu_dag.h"
 #include "../op_kernel/arch35/gelu_struct.h"
-#include "common/inc/tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 #include <iostream>
 
 namespace optiling

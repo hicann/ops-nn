@@ -14,7 +14,7 @@
  */
 
 #include "transpose_quant_batch_mat_mul_tiling.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "register/op_def_registry.h"
 #include "./arch35/transpose_quant_batch_mat_mul_tiling_advanced.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/matmul_v3_compile_info.h"

@@ -13,7 +13,7 @@
  * \brief
  */
 
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 #include "batch_norm_v3_tiling.h"
 
 static constexpr uint64_t BNV3_WELFORD_R0_SPLIT_NOT_ALIGN_TILING_KEY = 1000;

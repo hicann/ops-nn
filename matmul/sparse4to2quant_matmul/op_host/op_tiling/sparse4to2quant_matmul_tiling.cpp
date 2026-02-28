@@ -22,7 +22,7 @@
 #include <string>
 #include <tuple>
 
-#include "common/inc/tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "common/op_host/op_tiling/tiling_type.h"
 #include "common/op_host/op_tiling/hash.h"
 #include "error_util.h"

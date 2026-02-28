@@ -15,7 +15,7 @@
 
 #ifndef AIR_CXX_RUNTIME_V2_OP_IMPL_BATCH_NORM_GRAD_H_
 #define AIR_CXX_RUNTIME_V2_OP_IMPL_BATCH_NORM_GRAD_H_
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "register/tilingdata_base.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "tiling/tiling_api.h"

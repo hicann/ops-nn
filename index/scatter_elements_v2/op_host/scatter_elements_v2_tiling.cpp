@@ -17,7 +17,7 @@
 #include "log/log.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_info.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 #include "scatter_elements_v2_asc_tiling.h"
 #include "scatter_elements_v2_tiling.h"
 

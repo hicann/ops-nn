@@ -14,7 +14,7 @@
  */
 #include "max_pool_grad_with_argmax_v3_ksize_one_tiling.h"
 #include "platform/platform_info.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 
 namespace optiling
 {

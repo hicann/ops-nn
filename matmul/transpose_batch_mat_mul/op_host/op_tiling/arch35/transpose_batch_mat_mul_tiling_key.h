@@ -17,7 +17,7 @@
 #define __OP_HOST_TBMM_TILING_KEY_H__
 
 #include <sstream>
-#include "tiling_base/tiling_key.h"
+#include "op_host/tiling_key.h"
 #include "../../../op_kernel/arch35/transpose_batch_mat_mul_tiling_key_public.h"
 
 namespace optiling {

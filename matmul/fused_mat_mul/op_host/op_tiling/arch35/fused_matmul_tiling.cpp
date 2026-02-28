@@ -22,7 +22,7 @@
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_compile_info_advanced.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/matmul_v3_platform_common.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
-#include "tiling_base/tiling_key.h"
+#include "op_host/tiling_key.h"
 #include "register/op_impl_registry.h"
 
 namespace {

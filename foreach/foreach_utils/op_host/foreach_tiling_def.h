@@ -17,8 +17,8 @@
 #define AIR_CXX_RUNTIME_V2_OP_IMPL_FOREACH_COMMON_H_
 
 #include "register/tilingdata_base.h"
-#include "tiling_base/tiling_templates_registry.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_templates_registry.h"
+#include "op_host/tiling_util.h"
 #include "foreach_tiling_common.h"
 
 namespace optiling {

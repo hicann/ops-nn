@@ -18,7 +18,7 @@
 #include "platform/platform_infos_def.h"
 #include "log/log.h"
 #include "tiling/platform/platform_ascendc.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 #include "embedding_dense_grad_v2_regbase_tiling.h"
 #include "embedding_dense_grad_v2_tiling.h"
 

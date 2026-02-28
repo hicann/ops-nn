@@ -18,8 +18,8 @@
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "register/tilingdata_base.h"
-#include "tiling_base/tiling_base.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_base.h"
+#include "op_host/tiling_templates_registry.h"
 #include "util/math_util.h"
 #include "../../pool_3d_common/op_host/arch32/max_pool3d_grad_tiling_constants.h"
 

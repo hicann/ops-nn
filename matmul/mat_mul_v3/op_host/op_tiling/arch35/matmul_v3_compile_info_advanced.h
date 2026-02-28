@@ -18,7 +18,7 @@
 
 #include "platform/platform_infos_def.h"
 #include "tiling/platform/platform_ascendc.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "exe_graph/runtime/tiling_context.h"
 #include "exe_graph/runtime/tiling_parse_context.h"
 #include "../matmul_v3_compile_info.h"

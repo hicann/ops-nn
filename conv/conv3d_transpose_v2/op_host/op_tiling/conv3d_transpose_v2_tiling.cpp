@@ -15,7 +15,7 @@
 
 #include <register/op_impl_registry.h>
 #include <log/log.h>
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "conv/common/op_host/op_tiling/platform_util.h"
 #include "error_util.h"
 #include "../../op_kernel/conv3d_transpose_v2_tiling_key.h"

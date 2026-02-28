@@ -17,8 +17,8 @@
 #define OPS_BUILD_IN_OP_TILING_RUNTIME_MSE_LOSS_GRAD_TILING_H
 
 #include "register/op_impl_registry.h"
-#include "tiling_base/tiling_base.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_base.h"
+#include "op_host/tiling_templates_registry.h"
 
 namespace optiling {
 

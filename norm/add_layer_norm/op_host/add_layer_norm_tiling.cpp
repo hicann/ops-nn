@@ -15,7 +15,7 @@
 
 #include <iostream>
 #include <vector>
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 #include "add_layer_norm_tiling.h"
 
 namespace optiling {

@@ -29,7 +29,7 @@
 #include "matmul/fused_quant_mat_mul/op_host/op_tiling/arch35/fused_quant_matmul_asw_tiling.h"
 #include "platform/platform_infos_def.h"
 #include "test_cube_util.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "ut_op_util.h"
 
 using namespace std;

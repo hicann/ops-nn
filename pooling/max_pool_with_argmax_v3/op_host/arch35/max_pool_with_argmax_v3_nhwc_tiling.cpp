@@ -13,7 +13,7 @@
  * \brief
  */
 #include "platform/platform_info.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "max_pool_with_argmax_v3_nhwc_tiling.h"
 #include "op_common/op_host/util/platform_util.h"
 

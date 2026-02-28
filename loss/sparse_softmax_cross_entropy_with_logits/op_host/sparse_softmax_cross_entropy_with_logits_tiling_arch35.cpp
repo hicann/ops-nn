@@ -15,7 +15,7 @@
 
 #include <iostream>
 #include <cstring>
-#include "common/inc/error_util.h"
+#include "error_util.h"
 #include "register/tilingdata_base.h"
 #include "register/op_def_registry.h"
 #include "tiling/platform/platform_ascendc.h"
@@ -24,9 +24,9 @@
 #include "tiling/tiling_api.h"
 #include "util/math_util.h"
 #include "log/log.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "op_common/op_host/util/platform_util.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "../op_kernel/arch35/sparse_softmax_cross_entropy_with_logits_tiling_data.h"
 #include "../op_kernel/arch35/sparse_softmax_cross_entropy_with_logits_tiling_key.h"
 

@@ -19,8 +19,8 @@
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "platform/platform_infos_def.h"
 #include "register/op_def_registry.h"
-#include "tiling_base/tiling_key.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_key.h"
+#include "op_host/tiling_templates_registry.h"
 
 using namespace optiling;
 

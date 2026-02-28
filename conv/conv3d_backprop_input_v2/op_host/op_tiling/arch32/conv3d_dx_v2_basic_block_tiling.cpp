@@ -23,12 +23,12 @@
 #include <log/log.h>
 #include <util/math_util.h>
 #include <register/op_impl_registry.h>
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "conv/common/op_host/op_tiling/math_util.h"
 #include "conv/common/op_host/op_tiling/platform_util.h"
 #include "tbe_tiling_api.h"
 #include "error_util.h"
-#include "tiling_base/tiling_key.h"
+#include "op_host/tiling_key.h"
 #include "conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2_tiling_key.h"
 
 using Ops::NN::GetTbeTiling;

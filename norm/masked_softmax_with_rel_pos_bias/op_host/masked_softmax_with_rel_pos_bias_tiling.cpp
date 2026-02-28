@@ -24,8 +24,8 @@
 #include "platform/platform_infos_def.h"
 #include "register/tilingdata_base.h"
 #include "exe_graph/runtime/shape.h"
-#include "tiling_base/tiling_base.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_base.h"
+#include "op_host/tiling_templates_registry.h"
 
 #include "exe_graph/runtime/tiling_context.h"
 #include "graph/utils/type_utils.h"

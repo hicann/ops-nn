@@ -13,9 +13,9 @@
  * \brief big kernel imply for max_pool_with_argmax
  */
 
-#include "op_util.h"
+#include "op_api/op_util.h"
 #include "platform/platform_info.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "max_pool_with_argmax_v3_big_kernel_tiling.h"
 
 static constexpr uint64_t MAX_POOL_WITH_ARGMAX_V3_TILING_KEY_BIG_KERNEL_NCHW = 311110;

@@ -16,7 +16,7 @@
 #ifndef EMBEDDING_DENSE_GRAD_V2_TILING_H
 #define EMBEDDING_DENSE_GRAD_V2_TILING_H
 #include "register/tilingdata_base.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 
 namespace optiling {
 BEGIN_TILING_DATA_DEF(EmbeddingDenseGradV2TilingParam)

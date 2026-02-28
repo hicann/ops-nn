@@ -14,8 +14,8 @@
  */
 
 #include "batch_norm_grad_v3_tiling.h"
-#include "op_util.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_api/op_util.h"
+#include "op_host/tiling_templates_registry.h"
 
 using namespace AscendC;
 

@@ -16,7 +16,7 @@
 #include "transpose_quant_batch_mat_mul_common.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "transpose_quant_batch_mat_mul_tiling_strategy.h"
-#include "tiling_base/tiling_key.h"
+#include "op_host/tiling_key.h"
 #include "../../../op_kernel/arch35/transpose_quant_batch_mat_mul_tiling_key.h"
 
 using Ops::NN::MathUtil;

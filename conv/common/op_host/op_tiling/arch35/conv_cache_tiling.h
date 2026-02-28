@@ -18,7 +18,7 @@
 #include <string>
 #include <mutex>
 #include "conv_base_utils.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 
 namespace optiling {
 namespace conv_ops_tiling {

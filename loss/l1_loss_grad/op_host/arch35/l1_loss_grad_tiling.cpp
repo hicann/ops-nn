@@ -17,7 +17,7 @@
 #include "../../op_kernel/arch35/l1_loss_grad_dag.h"
 #include "l1_loss_grad_tiling_base.h"
 #include "l1_loss_grad_tiling.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 
 #include "log/log.h"
 #include "register/op_impl_registry.h"

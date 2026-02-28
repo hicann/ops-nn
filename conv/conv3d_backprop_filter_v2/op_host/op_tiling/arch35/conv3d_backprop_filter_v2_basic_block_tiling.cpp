@@ -20,7 +20,7 @@
 #include <graph/utils/type_utils.h>
 #include <platform/soc_spec.h>
 #include "error_util.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "common/op_host/op_tiling/platform_util.h"
 #include "common/op_host/op_tiling/math_util.h"
 #include "conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_data.h"

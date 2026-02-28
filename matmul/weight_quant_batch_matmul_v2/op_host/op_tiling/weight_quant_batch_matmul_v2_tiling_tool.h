@@ -16,7 +16,7 @@
 #define WEIGHT_QUANT_BATCH_MATMUL_V2_TOOL_H
 
 #include "tiling/tiling_api.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "error_util.h"
 
 using AscendC::BLOCK_CUBE;

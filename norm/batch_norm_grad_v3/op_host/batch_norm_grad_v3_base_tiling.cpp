@@ -14,7 +14,7 @@
  */
 
 #include "batch_norm_grad_v3_tiling.h"
-#include "op_util.h"
+#include "op_api/op_util.h"
 #include "batch_norm_grad_v3_base_tiling.h"
 
 using namespace ge;

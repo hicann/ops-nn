@@ -20,7 +20,7 @@
 #include "platform/platform_infos_def.h"
 #include "error_util.h"
 #include "apply_adam_w_v2_tiling.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 
 using namespace std;
 using namespace ge;

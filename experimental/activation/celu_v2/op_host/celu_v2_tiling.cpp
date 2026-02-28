@@ -25,8 +25,8 @@
 
 #include "log/log.h"
 #include "util/math_util.h"
-#include "tiling_base/tiling_util.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_util.h"
+#include "op_host/tiling_templates_registry.h"
 #include "../op_kernel/celu_v2_tiling_data.h"
 #include "../op_kernel/celu_v2_tiling_key.h"
 

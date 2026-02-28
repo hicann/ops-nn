@@ -13,7 +13,7 @@
  * \brief ac index tiling cpp
  */
 
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "register/op_def_registry.h"
 #include "tiling/tiling_api.h"
 #include "log/log.h"

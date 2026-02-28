@@ -20,7 +20,7 @@
 #include "matmul/common/op_host/math_util.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "op_cache_tiling.h"
-#include "tiling_base/tiling_key.h"
+#include "op_host/tiling_key.h"
 #include "../../op_kernel/quant_batch_matmul_v4_tiling_key.h"
 
 namespace optiling {

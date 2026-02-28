@@ -17,8 +17,8 @@
 #include <string>
 #include "tiling/tiling_api.h"
 #include "register/tilingdata_base.h"
-#include "tiling_base/tiling_base.h"
-#include "tiling_base/tiling_key.h"
+#include "op_host/tiling_base.h"
+#include "op_host/tiling_key.h"
 #include "index/embedding_dense_grad_v2/op_kernel/v35/embedding_dense_grad_v2_struct.h"
 
 namespace optiling {

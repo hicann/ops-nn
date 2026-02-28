@@ -17,7 +17,7 @@
 #define OPS_LOSS_NLL_LOSS_OP_HOST_NLL_LOSS_TILING_ARCH35_H_
 
 #include <cstdint>
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "register/tilingdata_base.h"
 
 namespace optiling {

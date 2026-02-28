@@ -17,7 +17,7 @@
 
 #include "register/tilingdata_base.h"
 #include "atvoss/broadcast/broadcast_tiling.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 
 using namespace Ops::NN::Optiling;
 

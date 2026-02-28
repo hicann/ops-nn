@@ -17,7 +17,7 @@
 
 #include "tiling/tiling_api.h"
 #include "foreach_reduce_tiling_def.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 
 namespace optiling {
 class ForeachReduceRegbaseTiling : public ForeachBaseClass

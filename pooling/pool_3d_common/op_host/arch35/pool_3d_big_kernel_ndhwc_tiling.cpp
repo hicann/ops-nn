@@ -13,7 +13,7 @@
  * \brief big kernel imply for pool_3d ndhwc format
  */
 
-#include "op_util.h"
+#include "op_api/op_util.h"
 #include "pool_tiling_templates_registry.h"
 #include "pool_3d_big_kernel_ndhwc_tiling.h"
 #include "op_common/op_host/util/platform_util.h"

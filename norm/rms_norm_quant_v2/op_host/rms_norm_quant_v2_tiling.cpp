@@ -13,14 +13,14 @@
  * \brief
  */
 #include "rms_norm_quant_v2_tiling.h"
-#include "op_util.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_api/op_util.h"
+#include "op_host/tiling_templates_registry.h"
 #include <graph/utils/type_utils.h>
 #include "tiling/platform/platform_ascendc.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "log/log.h"
 #include <iostream>
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "register/op_impl_registry.h"
 

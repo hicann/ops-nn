@@ -23,7 +23,7 @@
 
 #include "conv3d_backprop_filter_v2_base_tiling.h"
 #include "../../../op_kernel/arch32/conv3d_backprop_filter_v2_tiling_data.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "conv/common/op_host/op_tiling/platform_util.h"
 #include "error_util.h"
 #include "conv/conv3d_backprop_filter_v2/op_kernel/conv3d_backprop_filter_v2_tiling_key.h"

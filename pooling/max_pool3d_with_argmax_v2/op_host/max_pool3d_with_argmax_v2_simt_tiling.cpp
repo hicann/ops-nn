@@ -18,14 +18,14 @@
 #include "log/log.h"
 #include "util/math_util.h"
 #include "error_util.h"
-#include "tiling_base/tiling_base.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_base.h"
+#include "op_host/tiling_templates_registry.h"
 #include "max_pool3d_with_argmax_v2_simt_tiling.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "platform/platform_ascendc.h"
 #include "register/op_def_registry.h"
 #include "platform/platform_info.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 #include "register/op_impl_registry.h"
 
 using namespace ge;

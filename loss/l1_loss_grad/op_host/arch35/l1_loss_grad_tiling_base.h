@@ -17,7 +17,7 @@
 #define OPS_BUILD_IN_OP_TILING_RUNTIME_L1_LOSS_GRAD_TILING_H
  
 #include "../../op_kernel/arch35/l1_loss_grad_tiling_key.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "register/op_impl_registry.h"
 
 using namespace Ops::NN::Optiling;

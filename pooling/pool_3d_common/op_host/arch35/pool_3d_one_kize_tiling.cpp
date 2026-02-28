@@ -12,7 +12,7 @@
  * \file pool_3d_one_kize_tiling.cpp
  * \brief
  */
-#include "op_util.h"
+#include "op_api/op_util.h"
 
 #include "pool_tiling_templates_registry.h"
 #include "pool_3d_one_kize_tiling.h"

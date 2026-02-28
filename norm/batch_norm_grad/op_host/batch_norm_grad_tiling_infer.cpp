@@ -15,7 +15,7 @@
 
 #include <cstdint>
 #include "batch_norm_grad_tiling.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "batch_norm_grad_tiling_infer_base.h"
 
 using namespace ge;

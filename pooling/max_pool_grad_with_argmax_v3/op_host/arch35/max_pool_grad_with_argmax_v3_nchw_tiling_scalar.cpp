@@ -14,7 +14,7 @@
  */
 #include "max_pool_grad_with_argmax_v3_nchw_tiling_scalar.h"
 #include "platform/platform_info.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 namespace optiling {
 static constexpr int64_t HALF = 2;
 static constexpr int64_t DOUBLE_BUFFER = 2;

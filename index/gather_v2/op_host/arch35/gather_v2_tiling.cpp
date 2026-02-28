@@ -18,7 +18,7 @@
 #include "register/tilingdata_base.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "platform/platform_info.h"
-#include "common/inc/tiling_base/tiling_key.h"
+#include "op_host/tiling_key.h"
 #include "util/const_util.h"
 
 namespace optiling {

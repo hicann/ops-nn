@@ -17,9 +17,9 @@
 
 #include "log/log.h"
 #include "tiling/tiling_api.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "error_util.h"
-#include "common/inc/error_util.h"
+#include "error_util.h"
 #include "tiling/platform/platform_ascendc.h"
 
 namespace optiling::tool {

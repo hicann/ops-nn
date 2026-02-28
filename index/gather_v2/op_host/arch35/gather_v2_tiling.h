@@ -18,7 +18,7 @@
 #include <cmath>
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "gather_v2_tiling_arch35.h"
 
 namespace optiling {

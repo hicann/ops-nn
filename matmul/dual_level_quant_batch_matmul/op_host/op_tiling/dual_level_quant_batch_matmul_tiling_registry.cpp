@@ -18,7 +18,7 @@
 #include "op_cache_tiling.h"
 #include "platform/platform_infos_def.h"
 #include "tiling/platform/platform_ascendc.h"
-#include "common/inc/error_util.h"
+#include "error_util.h"
 
 using Ops::NN::TilingPrepareForOpCache;
 using Ops::NN::Optiling::TilingRegistry;

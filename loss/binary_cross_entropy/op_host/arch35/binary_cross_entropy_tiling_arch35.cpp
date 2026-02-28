@@ -18,7 +18,7 @@
 #include "binary_cross_entropy_tiling_arch35.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "register/op_impl_registry.h"
-#include "op_util.h"
+#include "op_api/op_util.h"
 #include "util/math_util.h"
 #include "util/platform_util.h"
 #include "platform/platform_info.h"

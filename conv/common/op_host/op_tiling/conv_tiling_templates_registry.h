@@ -14,8 +14,8 @@
  */
 #ifndef OPS_BUILT_IN_OP_TILING_RUNTIME_CONV_TILING_TEMPLATES_REGISTRY_H
 #define OPS_BUILT_IN_OP_TILING_RUNTIME_CONV_TILING_TEMPLATES_REGISTRY_H
-#include "tiling_base/tiling_templates_registry.h"
-#include "tiling_base/static_register_symbol.h"
+#include "op_host/tiling_templates_registry.h"
+#include "op_host/static_register_symbol.h"
 #include "platform/platform_infos_def.h"
 #include "arch35/conv_base.h"
 #include "arch35/conv_base_utils.h"

@@ -23,7 +23,7 @@
 #include "register/tilingdata_base.h"
 #include "atvoss/reduce/reduce_tiling.h"
 #include "atvoss/reduce/reduce_tiling_data.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 #include "error_util.h"
 #include <graph/utils/type_utils.h>
 #include "tiling/platform/platform_ascendc.h"

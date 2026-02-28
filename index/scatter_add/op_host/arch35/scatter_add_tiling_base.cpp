@@ -19,7 +19,7 @@
 #include "scatter_add_tiling.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "op_common/op_host/util/math_util.h"
-#include "tiling_base/tiling_key.h"
+#include "op_host/tiling_key.h"
 
 using namespace AscendC;
 

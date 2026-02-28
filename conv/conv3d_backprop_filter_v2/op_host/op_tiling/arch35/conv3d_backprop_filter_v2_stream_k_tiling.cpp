@@ -20,7 +20,7 @@
 #include <util/math_util.h>
 #include <log/log.h>
 #include <graph/utils/type_utils.h>
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 
 namespace Ops {
 namespace NN {

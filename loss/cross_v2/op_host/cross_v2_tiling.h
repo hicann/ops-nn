@@ -23,7 +23,7 @@
 #ifndef CROSS_V2_TILING_H
 #define CROSS_V2_TILING_H
 #include "register/tilingdata_base.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 
 namespace optiling {
 BEGIN_TILING_DATA_DEF(CrossV2TilingData)

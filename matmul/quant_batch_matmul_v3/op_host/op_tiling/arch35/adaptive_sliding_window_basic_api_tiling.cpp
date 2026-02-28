@@ -15,7 +15,7 @@
 
 #include "common/op_host/op_tiling/tiling_type.h"
 #include "log/log.h"
-#include "common/inc/error_util.h"
+#include "error_util.h"
 #include "adaptive_sliding_window_basic_api_tiling.h"
 
 using Ops::NN::MathUtil;

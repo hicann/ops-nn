@@ -18,7 +18,7 @@
 #include "exe_graph/runtime/tiling_parse_context.h"
 #include "exe_graph/runtime/tiling_context.h"
 #include "platform/platform_infos_def.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "error_util.h"
 namespace optiling {
 const std::initializer_list<NpuArch> AdvancedNpuArch = {

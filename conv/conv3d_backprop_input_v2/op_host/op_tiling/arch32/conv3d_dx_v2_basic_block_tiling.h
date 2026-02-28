@@ -18,7 +18,7 @@
 #include <register/tilingdata_base.h>
 #include "../../../op_kernel/arch32/conv3d_backprop_input_v2_tiling_data.h"
 #include "conv3d_backprop_input_v2_base_tiling.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 
 namespace Ops {
 namespace NN {

@@ -15,7 +15,7 @@
 #include "pp_matmul_default.h"
 #include "pp_matmul_common_tiling.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/matmul_v3_tiling.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "register/op_def_registry.h"
 #include "error_util.h"
 #include "platform/platform_infos_def.h"

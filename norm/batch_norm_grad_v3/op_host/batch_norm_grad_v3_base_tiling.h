@@ -16,15 +16,15 @@
 #ifndef BATCH_NORM_GRAD_V3_BASE_TILING_H_
 #define BATCH_NORM_GRAD_V3_BASE_TILING_H_
 
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
-#include "op_util.h"
+#include "op_api/op_util.h"
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "platform/platform_infos_def.h"
 #include "op_common/op_host/util/platform_util.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 
 namespace optiling {
 using namespace ge;

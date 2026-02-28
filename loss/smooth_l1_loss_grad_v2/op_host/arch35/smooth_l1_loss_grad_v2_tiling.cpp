@@ -16,7 +16,7 @@
 #include <graph/utils/type_utils.h>
 #include <map>
 #include "atvoss/broadcast/broadcast_tiling.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "smooth_l1_loss_grad_v2_tiling_base.h"
 #include "smooth_l1_loss_grad_v2_tiling.h"
 #include "../../op_kernel/arch35/smooth_l1_loss_grad_v2_tiling_key.h"

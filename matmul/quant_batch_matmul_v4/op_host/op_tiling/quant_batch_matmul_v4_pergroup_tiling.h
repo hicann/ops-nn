@@ -17,7 +17,7 @@
 #include <cstdint>
 #include <vector>
 #include <string>
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "common/op_host/op_tiling/tiling_type.h"
 #include "tiling/tiling_api.h"
 #include "quant_batch_matmul_v4_msd_tiling.h"

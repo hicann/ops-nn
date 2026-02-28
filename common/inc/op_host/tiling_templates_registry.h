@@ -19,8 +19,8 @@
 #include <string>
 #include <memory>
 #include "exe_graph/runtime/tiling_context.h"
-#include "tiling_base/tiling_base.h"
-#include "tiling_base/static_register_symbol.h"
+#include "op_host/tiling_base.h"
+#include "op_host/static_register_symbol.h"
 #include "log/log.h"
 
 namespace Ops {

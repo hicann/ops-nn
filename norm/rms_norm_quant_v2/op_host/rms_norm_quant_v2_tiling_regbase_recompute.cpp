@@ -16,7 +16,7 @@
 #include "norm/norm_common/op_host/norm_tiling_check_common.h"
 #include "rms_norm_quant_v2_tiling.h"
 #include "util/math_util.h"
-#include "op_util.h"
+#include "op_api/op_util.h"
 
 using namespace Ops::Base;
 using namespace ge;

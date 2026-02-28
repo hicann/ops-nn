@@ -13,7 +13,7 @@
  * \brief quantize op tiling
  */
 
-#include "op_util.h"
+#include "op_api/op_util.h"
 #include "quant/quantize/op_kernel/arch35/quantize_struct.h"
 #include "quantize_tiling_arch35.h"
 #include <graph/utils/type_utils.h>

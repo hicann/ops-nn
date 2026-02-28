@@ -22,7 +22,7 @@
 #include "./arch35/batch_matmul_v3_tiling_advanced.h"
 #include "batch_mat_mul_v3_base_tiling.h"
 
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "register/op_def_registry.h"
 #include "platform/platform_infos_def.h"
 #include "op_cache_tiling.h"

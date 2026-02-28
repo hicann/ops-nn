@@ -13,7 +13,7 @@
  * \brief
  */
 
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "avg_pool_v2_grad_tiling_base.h"
 #include "error_util.h"
 

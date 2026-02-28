@@ -19,7 +19,7 @@
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "register/tilingdata_base.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 #include "util/math_util.h"
 
 #include "../op_kernel/arch35/cross_entropy_loss_grad_tiling_data.h"

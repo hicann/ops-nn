@@ -16,7 +16,7 @@
 #ifndef AIR_CXX_RUNTIME_V2_OP_IMPL_GROUPED_DYNAMIC_BLOCK_QUANT_H
 #define AIR_CXX_RUNTIME_V2_OP_IMPL_GROUPED_DYNAMIC_BLOCK_QUANT_H
 #include "tiling/tiling_api.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 
 namespace optiling {
 

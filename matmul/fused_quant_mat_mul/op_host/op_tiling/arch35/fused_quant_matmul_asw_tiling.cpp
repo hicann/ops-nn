@@ -17,7 +17,7 @@
 
 #include "common/op_host/op_tiling/tiling_type.h"
 #include "error_util.h"
-#include "op_util.h"
+#include "op_api/op_util.h"
 
 #include "fused_quant_matmul_checker.h"
 

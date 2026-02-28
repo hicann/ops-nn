@@ -19,7 +19,7 @@
 #include "log/log.h"
 #include "platform/platform_info.h"
 #include "register/tilingdata_base.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 
 using Ops::NN::Optiling::TilingBaseClass;
 namespace optiling {

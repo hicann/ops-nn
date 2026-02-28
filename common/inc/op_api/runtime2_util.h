@@ -16,7 +16,7 @@
 #define CANN_OPS_BUILT_IN_OP_TILING_RUNTIME2_UTIL_H_
 
 #include "register/op_impl_registry.h"
-#include "op_util.h"
+#include "op_api/op_util.h"
 #include "log/log.h"
 #include "platform/platform_infos_def.h"
 #include "util/fp16.h"

@@ -22,7 +22,7 @@
 #include "tiling/tiling_api.h"
 #include "quant_batch_matmul_v4_compile_info.h"
 #include "quant_batch_matmul_v4_tiling_info.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;

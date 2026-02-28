@@ -14,7 +14,7 @@
  */
 
 #include "layer_norm_v3_tiling.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 
 namespace optiling {
 static constexpr int64_t LNV3_DOUBLE_BUFFER = 2;

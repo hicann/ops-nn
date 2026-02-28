@@ -14,7 +14,7 @@
  */
 
 #include "weight_quant_batch_matmul_v2_tiling_custom_backward_compatible.h"
-#include "tiling_base/tiling_key.h"
+#include "op_host/tiling_key.h"
 #include "../../../../op_kernel/arch35/weight_quant_batch_matmul_v2_arch35_tiling_key.h"
 
 namespace {

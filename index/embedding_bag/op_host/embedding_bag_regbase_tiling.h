@@ -16,8 +16,8 @@
 #define EMBEDDING_BAG_REGBASE_TILING_H
 
 #include "register/tilingdata_base.h"
-#include "tiling_base/tiling_base.h"
-#include "tiling_base/tiling_key.h"
+#include "op_host/tiling_base.h"
+#include "op_host/tiling_key.h"
 #include "tiling/tiling_api.h"
 #include "embedding_bag_tiling.h"
 

@@ -20,8 +20,8 @@
 
 #include "register/op_def_registry.h"
 #include "register/tilingdata_base.h"
-#include "tiling_base/tiling_base.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_base.h"
+#include "op_host/tiling_util.h"
 #include "pool_3d_tiling_common.h"
 
 namespace optiling

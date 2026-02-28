@@ -18,7 +18,7 @@
 #include "register/tilingdata_base.h"
 #include "layer_norm_v3_tiling.h"
 #include "../../../../matmul/common/op_host/op_tiling/tiling_cache.h"
-#include "common/runtime2_util.h"
+#include "op_api/runtime2_util.h"
 #include "../../../../matmul/common/op_host/op_tiling/hash.h"
 #include "op_host/cache_runinfo.h"
 #include <nlohmann/json.hpp>

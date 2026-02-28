@@ -19,7 +19,7 @@
 #include "register/op_def_registry.h"
 #include "util/math_util.h"
 #include "error_util.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 
 namespace {
 constexpr uint64_t INPUT_Y_GRAD_IDX = 0;

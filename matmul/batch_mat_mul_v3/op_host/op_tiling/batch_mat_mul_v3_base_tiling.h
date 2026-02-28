@@ -16,7 +16,7 @@
 #define __OP_HOST_BATCH_MAT_MUL_V3_BASE_TILING_H__
 
 #include "batch_mat_mul_v3_tiling.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/matmul_v3_base_tiling.h"
 
 namespace optiling {

@@ -16,7 +16,7 @@
 
 #include <string>
 #include "tiling/tiling_api.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "swi_glu_tiling.h"
 
 namespace optiling {

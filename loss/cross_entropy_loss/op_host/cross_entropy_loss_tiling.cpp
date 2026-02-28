@@ -13,7 +13,7 @@
  */
 
 #include "cross_entropy_loss_tiling.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 
 namespace optiling {
 constexpr uint32_t INPUT_DATA_IDX = 0;

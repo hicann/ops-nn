@@ -21,7 +21,7 @@
 #include "atvoss/elewise/elewise_tiling.h"
 #include "activation/gelu_grad/op_kernel/arch35/gelu_grad_dag.h"
 #include "activation/gelu_grad/op_kernel/arch35/gelu_grad_struct.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 
 using namespace AscendC;
 using namespace GeluGradOp;

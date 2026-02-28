@@ -17,7 +17,7 @@
 #define OPS_LOSS_CTC_LOSS_V2_OP_HOST_CTC_LOSS_V2_TILING_ARCH35_H_
 #include <cstdint>
 #include "register/tilingdata_base.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 
 namespace optiling {
 ge::graphStatus Tiling4CTCLossV2ForAscendC(gert::TilingContext* context);

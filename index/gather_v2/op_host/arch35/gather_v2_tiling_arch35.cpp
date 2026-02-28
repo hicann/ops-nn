@@ -18,7 +18,7 @@
 #include "gather_v2_tiling.h"
 #include "register/op_impl_registry.h"
 #include "register/tilingdata_base.h"
-#include "common/inc/tiling_base/tiling_util.h"
+#include "op_host/tiling_util.h"
 
 namespace optiling {
 static const size_t INPUT_IDX_AXIS = 2;

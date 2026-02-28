@@ -22,8 +22,8 @@
 #define AIR_CXX_RUNTIME_V2_OP_IMPL_DYNAMIC_QUANT_UPDATE_SCATTER_TILING_H
 #include <algorithm>
 #include "tiling/tiling_api.h"
-#include "tiling_base/tiling_base.h"
-#include "tiling_base/tiling_util.h"
+#include "op_host/tiling_base.h"
+#include "op_host/tiling_util.h"
 #include "register/op_def_registry.h"
 #include "util/math_util.h"
 #include "error_util.h"

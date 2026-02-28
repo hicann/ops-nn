@@ -14,7 +14,7 @@
  */
 
 #include <vector>
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "platform/platform_info.h"
 #include "op_common/atvoss/broadcast/broadcast_tiling.h"
 #include "util/math_util.h"

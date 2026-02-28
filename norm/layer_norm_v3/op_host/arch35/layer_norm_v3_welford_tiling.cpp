@@ -15,7 +15,7 @@
 
 #include "layer_norm_v3_tiling.h"
 #include "platform/platform_info.h"
-#include "tiling_base/tiling_templates_registry.h"
+#include "op_host/tiling_templates_registry.h"
 
 namespace optiling {
 constexpr static int64_t WELFORD_CONSTANT_TWO = 2;

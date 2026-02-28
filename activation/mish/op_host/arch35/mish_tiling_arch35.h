@@ -11,7 +11,7 @@
 #define OPS_BUILD_IN_OP_TILING_RUNTIME_MISH_REGBASE_OPTILING
 
 #include "register/tilingdata_base.h"
-#include "tiling_base/tiling_base.h"
+#include "op_host/tiling_base.h"
 #include "atvoss/elewise/elewise_tiling.h"
 
 namespace optiling {
