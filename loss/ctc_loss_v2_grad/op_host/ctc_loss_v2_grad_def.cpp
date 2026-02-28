@@ -12,7 +12,7 @@
  * \file ctc_loss_v2_grad_def.cpp
  * \brief ctc_loss_v2_grad_def
  */
-#include <cstdint>
+
 #include "register/op_def_registry.h"
 
 namespace ops {

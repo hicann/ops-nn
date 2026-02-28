@@ -44,7 +44,6 @@ class ApplyMomentumRegbaseTiling {
   uint64_t tilingKey_ = 0;
   uint64_t useNesterovKey_ = 0;
   bool useNesterov_ = false;
-
 };
 }  // namespace optiling
 

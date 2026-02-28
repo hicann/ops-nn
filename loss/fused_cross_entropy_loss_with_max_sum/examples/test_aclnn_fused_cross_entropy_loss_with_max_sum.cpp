@@ -131,7 +131,6 @@ int main() {
   ret = CreateAclTensor(weightHostData, weightShape, &weightDeviceAddr, aclDataType::ACL_FLOAT, &weight);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-
   ret = CreateAclTensor(vocabParallelLogitsOptionalHostData, vocabParallelLogitsOptionalShape, &vocabParallelLogitsOptionalDeviceAddr, aclDataType::ACL_FLOAT, &vocabParallelLogitsOptional);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 

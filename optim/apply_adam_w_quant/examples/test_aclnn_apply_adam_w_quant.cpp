@@ -10,6 +10,7 @@
 
 #include <iostream>
 #include <vector>
+#include <string>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_apply_adam_w_quant.h"
 #define FAILED 1
@@ -71,7 +72,6 @@ strides[i] = shape[i + 1] * strides[i + 1];
 *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
 shape.data(), shape.size(), *deviceAddr);
 return 0;
-
 }
 
 int main() {

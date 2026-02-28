@@ -13,7 +13,6 @@
  * \brief smooth_l1_loss_v2 def
  */
 
-#include <cstdint>
 #include "register/op_def_registry.h"
 
 namespace ops {

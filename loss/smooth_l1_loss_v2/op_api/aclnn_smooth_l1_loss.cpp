@@ -159,7 +159,6 @@ static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *target,
 
 static const aclTensor *InputPreProcess(const aclTensor *input, int64_t reduction,
                                         op::DataType promoteType, aclOpExecutor *executor) {
-
   auto inputCast = l0op::Cast(input, promoteType, executor);
   OP_CHECK(inputCast != nullptr,
            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The cast return nullptr."), return nullptr);
