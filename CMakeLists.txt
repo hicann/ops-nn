@@ -107,10 +107,16 @@ include(cmake/opbuild.cmake)
 include(cmake/third_party/eigen.cmake)
 include(cmake/intf_pub_linux.cmake)
 include(cmake/modules/Finddlog.cmake)
+include(cmake/version.cmake)
 
 if(ENABLE_CUSTOM AND ENABLE_ASC_BUILD)
   include(cmake/custom_kernel.cmake)
 endif()
+
+if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
+  check_pkg_build_deps("ops-nn")
+endif()
+add_version_info_targets()
 
 if(ENABLE_TEST)
   # ut common dependencies

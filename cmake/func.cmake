@@ -829,3 +829,76 @@ macro(add_onnx_plugin_sources)
     message(STATUS "ONNX_PLUGIN_SRCS is empty")
   endif()
 endmacro()
+# 设置包和版本号
+function(set_package name)
+  cmake_parse_arguments(VERSION "" "VERSION" "" ${ARGN})
+  set(VERSION "${VERSION_VERSION}")
+  if(NOT name)
+      message(FATAL_ERROR "The name parameter is not set in set_package.")
+  endif()
+  if(NOT VERSION)
+      message(FATAL_ERROR "The VERSION parameter is not set in set_package(${name}).")
+  endif()
+  string(REGEX MATCH "^([0-9]+\\.[0-9]+)" VERSION_MAJOR_MINOR "${VERSION}")
+  set(CANN_VERSION_PACKAGES "${name}" PARENT_SCOPE)
+  set(CANN_VERSION "${VERSION}" PARENT_SCOPE)
+  set(CANN_VERSION_MAJOR_MINOR "${VERSION_MAJOR_MINOR}" PARENT_SCOPE)
+  set(CANN_VERSION_BUILD_DEPS PARENT_SCOPE)
+  set(CANN_VERSION_RUN_DEPS PARENT_SCOPE)
+endfunction()
+
+# 设置构建依赖
+function(set_build_dependencies pkg_name depend)
+  if(NOT CANN_VERSION_PACKAGES)
+      message(FATAL_ERROR "The set_package must be invoked first.")
+  endif()
+  if(NOT pkg_name)
+      message(FATAL_ERROR "The pkg_name parameter is not set in set_build_dependencies.")
+  endif()
+  if(NOT depend)
+      message(FATAL_ERROR "The depend parameter is not set in set_build_dependencies.")
+  endif()
+  
+  list(APPEND CANN_VERSION_BUILD_DEPS "${pkg_name}" "${depend}")
+  set(CANN_VERSION_BUILD_DEPS "${CANN_VERSION_BUILD_DEPS}" PARENT_SCOPE)
+endfunction()
+
+# 设置运行依赖
+function(set_run_dependencies pkg_name depend)
+  if(NOT CANN_VERSION_PACKAGES)
+      message(FATAL_ERROR "The set_package must be invoked first.")
+  endif()
+  if(NOT pkg_name)
+      message(FATAL_ERROR "The pkg_name parameter is not set in set_run_dependencies.")
+  endif()
+  if(NOT depend)
+      message(FATAL_ERROR "The depend parameter is not set in set_run_dependencies.")
+  endif()
+  
+  list(APPEND CANN_VERSION_RUN_DEPS "${pkg_name}" "${depend}")
+  set(CANN_VERSION_RUN_DEPS "${CANN_VERSION_RUN_DEPS}" PARENT_SCOPE)
+endfunction()
+
+# 检查构建依赖
+function(check_pkg_build_deps pkg_name)
+  execute_process(
+      COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_build_dependencies.py "${ASCEND_DIR}" ${CANN_VERSION_BUILD_DEPS}
+      RESULT_VARIABLE result
+  )
+  if(result)
+      message(FATAL_ERROR "Check ${pkg_name} build dependencies failed!")
+  endif()
+endfunction()
+
+# 添加生成version.info的目标
+# 目标名格式为：version.info
+function(add_version_info_targets)
+  execute_process(
+    COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_version_info.py --output ${CMAKE_BINARY_DIR}/version.info
+            "${CANN_VERSION}" ${CANN_VERSION_RUN_DEPS}
+    RESULT_VARIABLE result
+  )
+  if(result)
+      message(FATAL_ERROR "Generate ${pkg_name} version.info failed!")
+  endif()
+endfunction()
