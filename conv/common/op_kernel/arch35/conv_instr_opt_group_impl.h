@@ -58,16 +58,25 @@ public:
             }
             ndTensor = self_->ctx.ndUbBuf.template Get<typename Intf::WeightT>();
         }
+        uint64_t gmOffset = 0;
+        if constexpr (Intf::groupOptPreloadFlag) {
+            uint64_t weightOneGroupSize = self_->ctx.coPerGroup * self_->ctx.ciPerGroup * self_->ctx.enlarge;
+            if constexpr (Intf::formatOutput == ConvFormat::NCHW) {
+                weightOneGroupSize *= self_->ctx.convTiling->kernelHxkernelWxkernelD;
+            }
+            gmOffset = weightOneGroupSize * self_->ctx.groupOptIter;
+        }
         if constexpr (Intf::formatOutput == ConvFormat::NDHWC || Intf::formatOutput == ConvFormat::NHWC) {
             uint64_t curSrcCoOpt = self_->ctx.convTiling->orgCo;
             copyParamsHWC.loopInfo.loopSrcStride[NDDMA_LOOP1_INDEX] = curSrcCoOpt;
             copyParamsHWC.loopInfo.loopSrcStride[NDDMA_LOOP3_INDEX] = curSrcCoOpt * self_->ctx.ciPerGroup;
             copyParamsHWC.loopInfo.loopSize[NDDMA_LOOP2_INDEX] = self_->ctx.singleGroups;
-            DataCopy<typename Intf::WeightT, NDDMA_HWC_DIMS, kDefaultMultiCopyConfig>(ndTensor, self_->ctx.bgm,
-                copyParamsHWC);
+            DataCopy<typename Intf::WeightT, NDDMA_HWC_DIMS, kDefaultMultiCopyConfig>(ndTensor,
+                self_->ctx.bgm[gmOffset], copyParamsHWC);
         } else {
             copyParams.loopInfo.loopSize[NDDMA_LOOP2_INDEX] = self_->ctx.singleGroups;
-            DataCopy<typename Intf::WeightT, NDDMA_DIMS, kDefaultMultiCopyConfig>(ndTensor, self_->ctx.bgm, copyParams);
+            DataCopy<typename Intf::WeightT, NDDMA_DIMS, kDefaultMultiCopyConfig>(ndTensor, self_->ctx.bgm[gmOffset],
+                copyParams);
         }
     }
 

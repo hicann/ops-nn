@@ -90,6 +90,7 @@ struct Conv3dIntf {
                                            formatWeight != ConvFormat::FRACTAL_Z;
     constexpr static bool groupOptNZFlag = false;
     constexpr static bool isConv3D = true;
+    constexpr static bool groupOptPreloadFlag = false;
 
     constexpr static uint8_t sizeOfFmap = sizeof(FmapT);
     constexpr static uint8_t sizeOfWeight = sizeof(WeightT);

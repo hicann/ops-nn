@@ -192,8 +192,12 @@ struct ConvPreProcess {
             if constexpr (!Intf::isDeQuantFlag) {
                 if (self->ctx.convTiling->biasFullLoadFlag && self->ctx.enableBias) {
                     self->ctx.biasL1 = self->ctx.queueBiasL1.template AllocTensor<typename Intf::BiasT>();
+                    uint64_t biasLoadNum = self->ctx.singleCoreCo;
+                    if constexpr (Intf::groupOptPreloadFlag) {
+                        biasLoadNum = self->ctx.singleCoreCo * self->ctx.convTiling->groups;
+                    }
                     self->ctx.loadBiasL1Ins.LoadChannelWiseL1FullLoad(self->ctx.biasL1, self->ctx.biasgm,
-                        self->ctx.singleCoreCo, 0);
+                        biasLoadNum, 0);
                     self->ctx.queueBiasL1.EnQue(self->ctx.biasL1);
                     self->ctx.biasL1 = self->ctx.queueBiasL1.template DeQue<typename Intf::BiasT>();
                 }
@@ -257,6 +261,7 @@ struct IterateAll {
         return IterateAll<Intf, ImplType>::call(self, output, output1, enPartialSum);
     }
 
+    // IterateAll会跳转到这里
     template <bool sync = true>
     static __aicore__ inline bool call(
         Intf *self, const GlobalTensor<typename Intf::OutputT> &output0,
@@ -297,7 +302,7 @@ struct IterateAll {
             }
         }
 
-        ConvPostProcess<Intf, ImplType>::call(self);
+        ConvPostProcess<Intf, ImplType>::call(self);    // free掉bias的tensor
 
         return false;
     }
@@ -402,7 +407,7 @@ __aicore__ inline void InitBufferWithDoubleBuf(Intf *self)
         self->ctx.pipe.InitBuffer(
             self->ctx.queueBL1, 1, self->ctx.bL1SpaceSize * Intf::sizeOfWeight);
     } else {
-        if constexpr (Intf::weightUbTrans) {
+        if constexpr (Intf::weightUbTrans || Intf::groupOptPreloadFlag) {
             self->ctx.pipe.InitBuffer(self->ctx.bL1TBuf, self->ctx.bL1SpaceSize * DOUBLE_BUF * Intf::sizeOfWeight);
             self->ctx.bL1Tensor = self->ctx.bL1TBuf.template Get<typename Intf::WeightT>();
         } else {
@@ -429,6 +434,14 @@ __aicore__ inline void InitBuffer(Intf *self)
             uint64_t biasl1Spacesize = self->ctx.convTiling->biasFullLoadFlag ? AlignB(
                 self->ctx.singleCoreCo * Intf::sizeOfBias, BLOCK_L0_N * Intf::sizeOfBias) :
                 self->ctx.convTiling->nL0 * Intf::sizeOfBias;
+            if constexpr (Intf::groupOptPreloadFlag) {
+                if (self->ctx.convTiling->biasFullLoadFlag) {
+                    biasl1Spacesize = AlignB(
+                        self->ctx.singleCoreCo * self->ctx.convTiling->groups * Intf::sizeOfBias,
+                        self->ctx.convTiling->nL0 * Intf::sizeOfBias
+                    );
+                }
+            }
             uint64_t biasBTSpacesize = self->ctx.convTiling->nL0;
             self->ctx.pipe.InitBuffer(self->ctx.queueBiasL1, 1, AlignB(biasl1Spacesize, C0_SIZE));
             self->ctx.pipe.InitBuffer(

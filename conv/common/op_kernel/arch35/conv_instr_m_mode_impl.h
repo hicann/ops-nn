@@ -430,6 +430,10 @@ private:
         }
         uint64_t offsetCout = self_->ctx.nBL1Iter * self_->ctx.convTiling->nBL1 +
                               self_->ctx.nL0Iter * self_->ctx.convTiling->nL0;
+        if constexpr (Intf::groupOptPreloadFlag) {
+            offsetCout += self_->ctx.groupOptIter * self_->ctx.convTiling->orgCo / self_->ctx.convTiling->groups *
+                          self_->ctx.convTiling->enlarge;
+        }
         uint64_t offsetMAL1 = self_->ctx.mAL1Iter * self_->ctx.mAL1 +
                               self_->ctx.mL0Iter * self_->ctx.mL0;
                           

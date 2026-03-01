@@ -96,8 +96,61 @@ void ConvTilingAlgorithmBase::PrintRanges(std::vector<uint64_t> inputRanges, std
     TILING_LOG_DEBUG("%s", res.c_str());
 }
 
+void ConvTilingAlgorithmBase::ResetOptGroupDoubleBuffer(bool resetFlag)
+{
+    if (resetFlag) {
+        uint64_t curHoAL1 = min(tilingIns_->cubeInfo.m0 / tilingIns_->shapeInfo.orgWo + CONST_VALUE_2,
+                                tilingIns_->shapeInfo.orgHo);
+        uint64_t curHiAL1 = InferHiL1(curHoAL1, tilingIns_->shapeInfo.orgHi);
+        uint64_t curKAL1 = tilingIns_->cubeInfo.k0;
+        uint64_t curAL1Size = AlignB(curHiAL1 * tilingIns_->shapeInfo.orgWi * curKAL1 * this->fMapDTypeSize, C0_SIZE);
+
+        uint64_t curKBL1 = tilingIns_->shapeInfo.singlekH * tilingIns_->shapeInfo.singlekW * tilingIns_->cubeInfo.k0;
+        uint64_t curBL1Size = AlignB(curKBL1 * tilingIns_->cubeInfo.n0 * this->weightDTypeSize, C0_SIZE);
+
+        uint64_t curBiasSize = tilingIns_->hasBias ? AlignB(tilingIns_->cubeInfo.n0 * this->biasDTypeSize, C0_SIZE) : 0;
+        uint64_t needL1Size = (curAL1Size + curBL1Size) * CONST_VALUE_2 + curBiasSize;
+
+        if (needL1Size <= tilingIns_->platformInfo.l1Size) {
+            dbValue.pbBL1 = 2;
+            dbValue.pbAL1 = 2;
+        }
+    }
+}
+
+bool ConvTilingAlgorithmBase::CheckOptGroupPreload()
+{
+    bool sceneFlag = tilingIns_->optGroupFlag && tilingIns_->innerBatch == 1 &&
+        !tilingIns_->isC04Flag && !tilingIns_->isDmaFlag;
+
+    uint64_t kSize = tilingIns_->shapeInfo.singleCi1 * tilingIns_->shapeInfo.singlekH *
+        tilingIns_->shapeInfo.singlekW * tilingIns_->cubeInfo.k0;
+    bool kAL1FullloadFlag = tilingIns_->l1TilingInfo.kAL1 == kSize;
+    bool kBL1FullloadFlag = tilingIns_->l1TilingInfo.kBL1 == kSize;
+    bool nBL1FullloadFlag = tilingIns_->l1TilingInfo.nBL1 == tilingIns_->shapeInfo.singleCo;
+    bool fullLoadFlag = kAL1FullloadFlag && kBL1FullloadFlag && nBL1FullloadFlag;
+
+    bool otherFlag = tilingIns_->l1TilingInfo.iterateMNOrder == IterateMNOrder::ITER_M_FST &&
+                     tilingIns_->ubTilingInfo.mUb == 0 && tilingIns_->ubTilingInfo.nUb == 0 &&
+                     tilingIns_->outputOrder == static_cast<int8_t>(OutputOrder::M);
+
+    bool multiMFlag = tilingIns_->l1TilingInfo.mAL1 == tilingIns_->l0TilingInfo.mL0;
+
+    bool dtypeFlag = tilingIns_->descInfo.fMapType.dtype != ConvDtype::FLOAT8_E4M3FN &&
+                     tilingIns_->descInfo.fMapType.dtype != ConvDtype::HIFLOAT8 &&
+                     tilingIns_->descInfo.fMapType.dtype != ConvDtype::INT8 &&
+                     tilingIns_->descInfo.fMapType.dtype != ConvDtype::UINT8;
+
+    bool resetFlag = sceneFlag && fullLoadFlag && otherFlag && multiMFlag && dtypeFlag;
+
+    return resetFlag;
+}
+
 void ConvTilingAlgorithmBase::SetPBufferRes()
 {
+    bool resetOptGroupFlag = CheckOptGroupPreload();
+    ResetOptGroupDoubleBuffer(resetOptGroupFlag);
+
     tilingIns_->dbValue.pBufferFlag = 0;
     tilingIns_->dbValue.pbBL1 = dbValue.pbBL1;
     tilingIns_->dbValue.pbAL1 = dbValue.pbAL1;

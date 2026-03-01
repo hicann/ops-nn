@@ -300,6 +300,7 @@ __aicore__ inline void OptGroupVecInit(Intf *self)
     self->ctx.singleGroups = self->ctx.convTiling->singleCoreGroups;
     self->ctx.singleGroupOpt = self->ctx.convTiling->singleCoreGroupOpt;
 
+    self->ctx.enlarge = self->ctx.convTiling->enlarge;
     self->ctx.ciPerGroup = self->ctx.convTiling->orgCi / self->ctx.convTiling->groups;
     self->ctx.coPerGroup = self->ctx.convTiling->orgCo / self->ctx.convTiling->groups;
     self->ctx.ciOpt = self->ctx.ciPerGroup * self->ctx.convTiling->enlarge;

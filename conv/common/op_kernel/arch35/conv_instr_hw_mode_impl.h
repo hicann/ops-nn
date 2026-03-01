@@ -359,6 +359,10 @@ public:
 
         uint64_t offsetCout = self_->ctx.nBL1Iter * self_->ctx.convTiling->nBL1 +
                               self_->ctx.nL0Iter * self_->ctx.convTiling->nL0;
+        if constexpr (Intf::groupOptPreloadFlag) {
+            offsetCout += self_->ctx.groupOptIter * self_->ctx.convTiling->orgCo / self_->ctx.convTiling->groups *
+                          self_->ctx.convTiling->enlarge;
+        }
         if constexpr (Intf::formatOutput == ConvFormat::NCDHW) {
             offset += offsetCout * self_->ctx.orgDo * valueHoWo_ + self_->ctx.dOutIter * valueHoWo_ +
                 offsetH * self_->ctx.orgWo + offsetW;

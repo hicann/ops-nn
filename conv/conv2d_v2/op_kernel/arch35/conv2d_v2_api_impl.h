@@ -95,7 +95,8 @@ public:
         CopyOutTools1 copyOutIns1;
 
         // normal: <A1, 1>, <B1, 1>; preload: <A1, 2>, <B1, 2>
-        TQue<QuePosition::A1, static_cast<int8_t>(Intf::kPreLoadAFlag || Intf::kPreLoadABFlag) + 1> queueAL1; // AL1
+        TQue<QuePosition::A1, static_cast<int8_t>(Intf::kPreLoadAFlag ||
+            Intf::kPreLoadABFlag || Intf::groupOptPreloadFlag) + 1> queueAL1; // AL1
         TQue<QuePosition::B1, static_cast<int8_t>(Intf::kPreLoadBFlag || Intf::kPreLoadABFlag) + 1> queueBL1; // BL1
 
         // Used in opt group mode(groups > 1)

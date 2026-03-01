@@ -82,6 +82,12 @@ struct Conv2dIntf {
         ConvParam::groupType == static_cast<int8_t>(ConvGroupType::NORMAL_CONV);
     constexpr static bool kPreLoadFlag =
         kPreLoadAFlag || kPreLoadBFlag || kPreLoadABFlag;
+    constexpr static bool groupOptPreloadFlag =
+        ConvParam::groupType == static_cast<int8_t>(ConvGroupType::OPT_GROUP_CONV) &&
+        ConvParam::weightTiling == static_cast<int8_t>(ConvWeightTiling::FULLLOAD_BL1) &&
+        (ConvParam::fmapTiling == static_cast<int8_t>(ConvFmapTiling::FULLLOAD_AL1) ||
+        ConvParam::fmapTiling == static_cast<int8_t>(ConvFmapTiling::OTHER)) &&
+        ConvParam::l1PingPong == static_cast<int8_t>(ConvL1PingPong::ALL_OPEN);
     constexpr static bool iterateMFirstFlag = ConvParam::iterOrder == 0;
     constexpr static bool iterateNFirstFlag = ConvParam::iterOrder == 1;
 

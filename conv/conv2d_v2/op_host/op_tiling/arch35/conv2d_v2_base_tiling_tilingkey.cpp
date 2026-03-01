@@ -161,7 +161,7 @@ uint64_t Conv2dBaseTiling::GetFmapCopyMode()
 
 void Conv2dBaseTiling::ReSetTilingKeyPara()
 {
-    if (flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV) {
+    if (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV) {
         return;
     }
     bool weightTilingResetFlag = tilingKeyPara_.weightTiling == 1 &&
@@ -174,6 +174,20 @@ void Conv2dBaseTiling::ReSetTilingKeyPara()
                               !(tilingKeyPara_.weightTiling == 1 && tilingKeyPara_.outputOrder == 1);
     if (fmpTilingResetFlag) {
         tilingKeyPara_.fmpTiling = FMP_OTHER;
+    }
+    bool sceneFlag = 
+        flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV && tilingKeyPara_.fmapCppyMode == FMAP_LOAD3D_MODE &&
+        tilingData_.conv2dApiTiling.get_innerBatch() == 1 && flagInfo_.mSplitModeFlag == true &&
+        tilingData_.conv2dApiTiling.get_hoL1() == tilingData_.conv2dApiTiling.get_hoL0();
+    bool otherFlag = tilingKeyPara_.iterOrder == 0 && tilingKeyPara_.l1PingPong == L1_PB_ALL_OPEN;
+    if (sceneFlag && otherFlag) {
+        bool updateFmapTilingFlag = true;
+        if (flagInfo_.mSplitModeFlag) {
+            tilingKeyPara_.fmpTiling = GetFmpTilingValForMSplit(updateFmapTilingFlag);
+        } else {
+            tilingKeyPara_.fmpTiling = GetFmpTilingValForHWSplit(updateFmapTilingFlag);
+        }
+        tilingKeyPara_.weightTiling = FULLLOAD_BL1;
     }
 }
 

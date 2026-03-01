@@ -358,6 +358,7 @@ public:
         uint8_t pingPongFlag = 0;
 
         // Used in opt group mode(groups > 1)
+        uint32_t enlarge = 0;
         uint16_t ciPerGroup = 0;
         uint16_t coPerGroup = 0;
         uint16_t ciOpt = 0;

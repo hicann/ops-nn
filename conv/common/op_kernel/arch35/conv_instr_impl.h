@@ -89,6 +89,10 @@ public:
         if (self_->ctx.convTiling->biasFullLoadFlag) {
             offset = self_->ctx.nBL1Iter * self_->ctx.convTiling->nBL1 +
                      self_->ctx.nL0Iter * self_->ctx.convTiling->nL0;
+            if constexpr (Intf::groupOptPreloadFlag) {
+                offset += self_->ctx.groupOptIter * self_->ctx.convTiling->orgCo / self_->ctx.convTiling->groups *
+                          self_->ctx.convTiling->enlarge;
+            }
         }
 
         // fixed-point multiplication should set cvt_mode = 2 and fix_val, which is encapsulated by basic api.

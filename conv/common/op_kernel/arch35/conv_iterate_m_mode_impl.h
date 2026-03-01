@@ -68,6 +68,11 @@ __aicore__ inline void FirstIterateImplMMode(Intf *self)
 
     CalcMDirectionVar<Intf>(self);
     CalcCoDirectionVar<Intf>(self);
+
+    if (Intf::groupOptPreloadFlag) {
+        LoadAL1BaseMoudle<Intf>(self);
+        self->ctx.loadAL1Flag = true;
+    }
 }
 
 template <class Intf>
@@ -107,6 +112,39 @@ __aicore__ inline bool IterateL0MFirstMMode(Intf *self)
 }
 
 template <class Intf>
+__aicore__ inline void CalcGroupOptParamForMMode(Intf *self)
+{
+    if (self->ctx.groupOptIter == self->ctx.singleGroupOpt - 1) {
+        self->ctx.singleGroups = self->ctx.convTiling->groups % self->ctx.convTiling->enlarge;
+        self->ctx.singleGroups = self->ctx.singleGroups == 0 ? self->ctx.convTiling->enlarge : self->ctx.singleGroups;
+    }
+    uint64_t enlargeTail = self->ctx.singleGroups % self->ctx.convTiling->enlarge;
+    enlargeTail = enlargeTail == 0 ? self->ctx.convTiling->enlarge : enlargeTail;
+    if (enlargeTail != self->ctx.convTiling->enlarge) {
+        self->ctx.singleCoreCi = enlargeTail * (self->ctx.convTiling->orgCi / self->ctx.convTiling->groups);
+        self->ctx.singleCoreCo = enlargeTail * (self->ctx.convTiling->orgCo / self->ctx.convTiling->groups);
+        uint64_t totalKAlignK0 = AlignB(self->ctx.singleCoreCi, Intf::k0) * self->ctx.convTiling->kernelHxkernelW;
+        self->ctx.ddr2l0LoopK = CeilDiv(totalKAlignK0, self->ctx.convTiling->kL0);
+        self->ctx.maxKL0Iter = self->ctx.ddr2l0LoopK - 1;
+        self->ctx.kL0Tail = totalKAlignK0 % self->ctx.convTiling->kL0;
+        if constexpr (Intf::k0 != Intf::k0FmapTail) {
+            self->ctx.kAL0Tail = AlignB(self->ctx.singleCoreCi, Intf::k0FmapTail) *
+                self->ctx.convTiling->kernelHxkernelW % self->ctx.convTiling->kL0;
+            self->ctx.kAL0Tail = self->ctx.kAL0Tail == 0 ? self->ctx.convTiling->kL0 : self->ctx.kAL0Tail;
+        }
+        self->ctx.kL0Tail = self->ctx.kL0Tail == 0 ? self->ctx.convTiling->kL0 : self->ctx.kL0Tail;
+        InitCoDirectionValue<Intf>(self);
+    }
+    if ASCEND_IS_AIC_CONV {
+        CalcCoDirectionVar<Intf>(self);
+        CalcMDirectionVar<Intf>(self);
+        if constexpr (Intf::groupOptPreloadFlag) {
+            OptGroupCalcBL1LoadTimes<Intf>(self);
+        }
+    }
+}
+
+template <class Intf>
 __aicore__ inline bool IterateMFirstMMode(Intf *self)
 {
     if (IterateL0MFirstMMode<Intf>(self)) {
@@ -114,8 +152,10 @@ __aicore__ inline bool IterateMFirstMMode(Intf *self)
     }
 
     if ASCEND_IS_AIC_CONV {
-        if (self->ctx.kAL1fullload) {
-            self->ctx.queueAL1.FreeTensor(self->ctx.al1);
+        if constexpr (!Intf::groupOptPreloadFlag) {
+            if (self->ctx.kAL1fullload) {
+                self->ctx.queueAL1.FreeTensor(self->ctx.al1);
+            }
         }
     }
 
@@ -148,8 +188,10 @@ __aicore__ inline bool IterateMFirstMMode(Intf *self)
     }
 
     if ASCEND_IS_AIC_CONV {
-        if (self->ctx.kBL1fullload) {
-            self->ctx.queueBL1.FreeTensor(self->ctx.bl1);
+        if constexpr (!Intf::groupOptPreloadFlag) {
+            if (self->ctx.kBL1fullload) {
+                self->ctx.queueBL1.FreeTensor(self->ctx.bl1);
+            }
         }
     }
 
@@ -159,6 +201,18 @@ __aicore__ inline bool IterateMFirstMMode(Intf *self)
         self->ctx.loadBL1Flag = true;
         if (self->ctx.nBL1Iter != self->ctx.ddr2l1LoopN) {
             return true;
+        }
+    }
+
+    if constexpr (Intf::groupOptPreloadFlag) {
+        self->ctx.nBL1Iter = 0;
+        self->ctx.groupOptIter++;
+        self->ctx.vecId = (self->ctx.groupOptIter % VEC_NUM) * VEC_ID_MAX;
+        CalcGroupOptParamForMMode<Intf>(self);
+        if (self->ctx.groupOptIter != self->ctx.singleGroupOpt) {
+            return true;
+        } else {
+            self->ctx.loadAL1Flag = false;
         }
     }
 

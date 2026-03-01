@@ -144,6 +144,12 @@ public:
                                     (IsSameType<FMAP_T, hifloat8_t>::value) ||
                                     (IsSameType<FMAP_T, fp8_e4m3fn_t>::value);
     constexpr static int8_t IS_EXTEND_CONV2D = CONV_CFG::isExtendConv2d;
+    constexpr static bool IS_OPTGROUP_PRELOAD = 
+        (CONV_CFG::fmapTiling == static_cast<int8_t>(ConvFmapTiling::FULLLOAD_AL1) ||
+        CONV_CFG::fmapTiling == static_cast<int8_t>(ConvFmapTiling::OTHER)) &&
+        CONV_CFG::weightTiling == static_cast<int8_t>(ConvWeightTiling::FULLLOAD_BL1) &&
+        CONV_CFG::groupType == static_cast<int8_t>(ConvGroupType::OPT_GROUP_CONV) &&
+        CONV_CFG::l1PingPong == static_cast<int8_t>(ConvL1PingPong::ALL_OPEN);
     constexpr static bool DIS_CONTINUOUS =
         CONV_CFG::disContinuous == static_cast<int8_t>(ConvDisContinuous::INPUT_HWNC);
 

@@ -124,6 +124,18 @@ __aicore__ inline void OptGroupSyncSet(Intf *self)
 }
 
 template <class Intf>
+__aicore__ inline void OptGroupPreloadSyncSet(Intf *self)
+{
+    if (!OptGroupUpdateBL1<Intf>(self)) {
+        return;
+    }
+
+    if ((self->ctx.groupOptIter < self->ctx.singleGroupOpt - 2)) {
+        CrossCoreSetFlag<CV_ENHANCE_MODE, PIPE_MTE1>(self->ctx.vecId + CV_SYNC_ID_MTE1_MTE3);
+    }
+}
+
+template <class Intf>
 __aicore__ inline void OptGroupUpdateLoopN(Intf *self) {
     if constexpr (Intf::hasNL0IterFlag) {
         self->ctx.l12l0LoopN = self->ctx.nBL1Iter == self->ctx.maxNBL1Iter ?
@@ -284,6 +296,52 @@ __aicore__ inline bool OptGroupVecImpl(Intf *self)
         CrossCoreSetFlag<CV_ENHANCE_MODE, PIPE_MTE3>(CV_SYNC_ID_MTE3_MTE1);
 
         self->ctx.loadUB2L1Iter++;
+    }
+
+    return false;
+}
+
+template <class Intf>
+__aicore__ inline bool OptGroupPreloadVecImpl(Intf *self)
+{
+    while (self->ctx.groupOptIter < self->ctx.singleGroupOpt) {
+        if (self->ctx.vecId != (self->ctx.groupOptIter % VEC_NUM)) {
+            self->ctx.groupOptIter++;
+            continue;
+        }
+
+        // For next nddma wait nd2nz
+        event_t eventId = static_cast<event_t>(self->ctx.pipe.FetchEventID(HardEvent::V_MTE2));
+        SetFlag<HardEvent::V_MTE2>(eventId);
+        WaitFlag<HardEvent::V_MTE2>(eventId);
+
+        self->ctx.optGroupLoadGm2UBTools.LoadGM2UB();
+
+        // For nd2nz wait nddma
+        eventId = static_cast<event_t>(self->ctx.pipe.FetchEventID(HardEvent::MTE2_V));
+        SetFlag<HardEvent::MTE2_V>(eventId);
+        WaitFlag<HardEvent::MTE2_V>(eventId);
+        // For next nd2nz wait ub2l1
+        eventId = static_cast<event_t>(self->ctx.pipe.FetchEventID(HardEvent::MTE3_V));
+        SetFlag<HardEvent::MTE3_V>(eventId);
+        WaitFlag<HardEvent::MTE3_V>(eventId);
+
+        self->ctx.optGroupTransND2NZTools.TransND2NZ();
+
+        // For ub2l1 wait nd2nz
+        eventId = static_cast<event_t>(self->ctx.pipe.FetchEventID(HardEvent::V_MTE3));
+        SetFlag<HardEvent::V_MTE3>(eventId);
+        WaitFlag<HardEvent::V_MTE3>(eventId);
+
+        OptGroupIterInit<Intf>(self);
+        if (!(self->ctx.groupOptIter == 0 || self->ctx.groupOptIter == 1)) {
+            CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE3>(CV_SYNC_ID_MTE1_MTE3);
+        }
+
+        self->ctx.optGroupLoadUB2L1Tools.LoadUB2L1();
+        CrossCoreSetFlag<CV_ENHANCE_MODE, PIPE_MTE3>(CV_SYNC_ID_MTE3_MTE1);
+
+        self->ctx.groupOptIter++;
     }
 
     return false;

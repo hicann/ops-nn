@@ -116,6 +116,7 @@ public:
     constexpr static bool isQuant = (IsSameType<FMAP_T, int8_t>::value) ||
                                     (IsSameType<FMAP_T, hifloat8_t>::value) ||
                                     (IsSameType<FMAP_T, fp8_e4m3fn_t>::value);
+    constexpr static bool IS_OPTGROUP_PRELOAD = false;
     constexpr static bool IS_EXTEND_CONV2D = false;
     constexpr static bool DIS_CONTINUOUS = false;
 };
