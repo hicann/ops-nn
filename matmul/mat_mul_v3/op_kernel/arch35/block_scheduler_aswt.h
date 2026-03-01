@@ -18,6 +18,7 @@
 
 #include "cmct/block/block_scheduler_policy.h"
 #include "cmct/block/block_scheduler_utils.h"
+#include "cmct/utils/common_utils.h"
 #include "mat_mul_tiling_data.h"
 
 namespace Cmct {
@@ -25,6 +26,8 @@ namespace Gemm {
 namespace Block {
 constexpr uint16_t A_FULL_LOAD_MODE = 1;
 constexpr uint16_t B_FULL_LOAD_MODE = 2;
+constexpr int64_t FP32_SPLIT_K_THRESHOLD = 1024;
+
 template <
     class ProblemShape_,
     class L1TileShape_,
@@ -53,9 +56,18 @@ public:
     int64_t tailWindow_{1};
     int64_t mTileIdx_{1};
     int64_t nTileIdx_{1};
+    int64_t splitSingleKIdx_{0};
     int64_t lastTileIdx_{-1};
     int64_t nSplitOffset_{0};
     int64_t mSplitOffset_{0};
+    bool isSlice_{false};
+    bool isNdFormat_{true};
+    bool isFp32_{false};
+    bool isSplitSingleK_{false};
+    int64_t blkK_{0};
+    int64_t splitSingleKRound_{0};
+    int64_t splitSingleK_{0};
+    int64_t splitSingleKTail_{0};
     int64_t mL1_{0};
     int64_t nL1_{0};
     int64_t kL1_{0};
@@ -92,8 +104,8 @@ public:
 
 public:
     __aicore__ inline BlockSchedulerAswtBuiltIn(
-        const ProblemShape& shape, int64_t blockIdx, int64_t blockNum, const Params& params)
-        : blockIdx_(blockIdx), blockNum_(blockNum)
+        const ProblemShape& shape, int64_t blockIdx, int64_t blockNum, const Params& params, bool isFp32=false, bool isNdFormat=true)
+        : blockIdx_(blockIdx), blockNum_(blockNum), isFp32_(isFp32), isNdFormat_(isNdFormat)
     {
         k_ = shape.k;
         batch_ = AscendC::Std::max(shape.b, 1L);
@@ -127,6 +139,20 @@ public:
         l2CacheDisable_ = params.tilingData->l2CacheDisable;
         sliceM_ = params.tilingData->sliceM;
         srcNdStride_ = params.tilingData->srcNdStride;
+        isSlice_ = srcNdStride_ != 1 && sliceM_ != 0;
+        blkK_ = k_;
+        // 连续且非全载场景切K
+        if (!isSlice_ && isFp32_ && !isHf32_ && isNdFormat_ && k_ > FP32_SPLIT_K_THRESHOLD && FullLoadMode_ == 0) {
+            isSplitSingleK_ = true;
+            splitSingleK_ = FP32_SPLIT_K_THRESHOLD;
+            if (k_ % FP32_SPLIT_K_THRESHOLD == 0) {
+                splitSingleKRound_ = k_ / FP32_SPLIT_K_THRESHOLD;
+                splitSingleKTail_ = FP32_SPLIT_K_THRESHOLD;
+            } else {
+                splitSingleKRound_ = CeilDiv(k_, FP32_SPLIT_K_THRESHOLD) - 1;
+                splitSingleKTail_ = k_ % splitSingleK_ + splitSingleK_;
+            }
+        }
         if (batch_ == 1) {
             mTailCnt_ = params.tilingData->mTailCnt;
             nTailCnt_ = params.tilingData->nTailCnt;
@@ -140,6 +166,11 @@ public:
         mainWindow_ = WINDOW_LEN < mTileNum_ ? WINDOW_LEN : mTileNum_;
         mainRow_ = mTileNum_ / mainWindow_ - 1;
         tailWindow_ = mTileNum_ - mainRow_ * mainWindow_;
+    }
+
+    __aicore__ inline void DisableSplitSingleK()
+    {
+        isSplitSingleK_ = false;
     }
 
     __aicore__ inline int64_t GetTileNum()
@@ -237,7 +268,7 @@ public:
     }
 
     template <CubeFormat LayoutB = CubeFormat::ND, bool TransB_ = false, class B_T>
-    __aicore__ inline BlockL1L0Shape GetBlockShape(int64_t tileIdx, int64_t mOffset, int64_t nOffset)
+    __aicore__ inline BlockL1L0Shape GetBlockShape(int64_t tileIdx, int64_t mOffset, int64_t nOffset, int64_t kOffset=0)
     {
         UpdateMNTileIdx(tileIdx);
         int64_t blkM = mL1_;
@@ -254,13 +285,17 @@ public:
         if (mTileIdx_ >= mL1NormCnt_) {
             blkM = mTileIdx_ == (mTileNum_ - 1) ? mL1TailLast_ : mL1TailMain_;
         }
+        if (isSplitSingleK_) {
+            splitSingleKIdx_ = CeilDiv(kOffset, splitSingleK_);
+            blkK_ = splitSingleKIdx_ == (splitSingleKRound_ - 1) ? splitSingleKTail_ : splitSingleK_;
+        }
         int64_t mL0 = blkM;
         int64_t nL0 = blkN;
         if (tileIdx / blockNum_ != (perCoreBlockNum_ - 1) || tailCnt_ == 1) {
             // mL1, nL1, k, batch, mL0, nL0
             mL0 = AscendC::Std::min(AscendC::Std::min(baseM_, blkM), blkM - mOffset);
             nL0 = AscendC::Std::min(AscendC::Std::min(baseN_, blkN), blkN - nOffset);
-            return {blkM, blkN, k_, batch_, mL0, nL0};
+            return {blkM, blkN, blkK_, batch_, mL0, nL0};
         }
         // SplitM and SplitN
         int64_t splitBlkM = CeilDiv(blkM, mTailCnt_);
@@ -274,13 +309,13 @@ public:
         mSplitOffset_ = mSplitIdx * splitBlkM;
         nSplitOffset_ = nSplitIdx * splitBlkN;
         if (mSplitOffset_ >= blkM || nSplitOffset_ >= blkN) {
-            return {0, 0, k_, batch_, 0, 0};
+            return {0, 0, blkK_, batch_, 0, 0};
         }
         splitBlkM = AscendC::Std::min(blkM - mSplitOffset_, splitBlkM);
         splitBlkN = AscendC::Std::min(blkN - nSplitOffset_, splitBlkN);
         mL0 = AscendC::Std::min(AscendC::Std::min(baseM_, splitBlkM), splitBlkM - mOffset);
         nL0 = AscendC::Std::min(AscendC::Std::min(baseN_, splitBlkN), splitBlkN - nOffset);
-        return {splitBlkM, splitBlkN, k_, batch_, mL0, nL0};
+        return {splitBlkM, splitBlkN, blkK_, batch_, mL0, nL0};
     }
 
     __aicore__ inline BlockCoord GetBlockCoord(int tileIdx)
@@ -315,6 +350,26 @@ public:
         int64_t mOffsetNonContiguous = mTileIdx_ * (ndNum * (srcNdStride_ / k_)) + mSplitOffset_;
         // 当前不切k, 使用kOffset传递非连续场景mOffset
         return {mTileIdx_, nTileIdx_, mOffsetNonContiguous, batchIdx};
+    }
+
+    __aicore__ inline BlockCoord GetSplitKBlockCoord(int tileIdx)
+    {
+        UpdateMNTileIdx(tileIdx);
+        int64_t batchIdx = 0;
+        if (batch_ > 1) {
+            batchIdx = tileIdx / tileNum_;
+        }
+        int64_t mOffset = mTileIdx_ * mL1_ + mSplitOffset_;
+        int64_t nOffset = nTileIdx_ * nL1_ + nSplitOffset_;
+        int64_t kOffset = splitSingleKIdx_ * splitSingleK_;
+        if (mTileIdx_ > mL1NormCnt_) {
+            mOffset = mL1NormCnt_ * mL1_ + (mTileIdx_ - mL1NormCnt_) * mL1TailMain_ + mSplitOffset_;
+        }
+        if (nTileIdx_ > nL1NormCnt_) {
+            nOffset = nL1NormCnt_ * nL1_ + (nTileIdx_ - nL1NormCnt_) * nL1TailMain_ + nSplitOffset_;
+        }
+        // 连续场景切K
+        return {mOffset, nOffset, kOffset, batchIdx};
     }
 
     __aicore__ inline Shape<int64_t, int64_t> GetSplitOffset()

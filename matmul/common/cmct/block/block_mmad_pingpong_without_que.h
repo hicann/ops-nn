@@ -66,12 +66,16 @@ public:
     uint64_t m_{1};
     uint64_t n_{1};
     uint64_t k_{1};
+    uint64_t blkK_{1};
     uint64_t kAlign_{1};
     uint64_t l1BufNum_{1};
     uint64_t kL1Iter_{0};
     uint64_t mL1_{1};
     uint64_t nL1_{1};
     uint64_t kL1_{1};
+    bool isSplitSingleK_{false};
+    bool isFirstSplitK_{false};
+    bool isEndSplitK_{false};
     uint64_t baseM_{16};
     uint64_t baseN_{16};
     uint64_t baseK_{16};
@@ -130,18 +134,20 @@ public:
     template <uint64_t FULL_LOAD_MODE_ = B_FULL_LOAD_MODE>
     __aicore__ inline void Init(
         const TupleShape& shape, const TupleShape& tileL1, const TupleShape& tileL0, bool isBias, uint64_t l1BufNum,
-        bool l0cDB, const AscendC::Shape<int64_t, int64_t, int64_t>& nonContinuousParam)
+        bool l0cDB, const AscendC::Shape<int64_t, int64_t, int64_t>& nonContinuousParam, bool isSplitSingleK = false)
     {
         m_ = Get<DIMENSION_M>(shape);
         n_ = Get<DIMENSION_N>(shape);
         k_ = Get<DIMENSION_K>(shape);
+        blkK_ = Get<DIMENSION_K>(shape);
         mL1_ = Get<DIMENSION_M>(tileL1);
         nL1_ = Get<DIMENSION_N>(tileL1);
         kL1_ = Get<DIMENSION_K>(tileL1);
+        isSplitSingleK_ = isSplitSingleK;
         baseM_ = Get<DIMENSION_M>(tileL0);
         baseN_ = Get<DIMENSION_N>(tileL0);
         baseK_ = Get<DIMENSION_K>(tileL0);
-        kAlign_ = Cmct::Gemm::Align(k_, AscendC::BLOCK_CUBE);
+        kAlign_ = Cmct::Gemm::Align(blkK_, AscendC::BLOCK_CUBE);
         isBias_ = isBias;
         l1BufNum_ = l1BufNum;
         enableL0cPingPong_ = l0cDB;
@@ -166,7 +172,7 @@ public:
             bL1OneBuffer_ = nL1_ * kL1_;
         }
         fullLoadMode_ = FULL_LOAD_MODE_;
-        kL1Iter_ = CeilDiv(k_, kL1_);
+        kL1Iter_ = CeilDiv(blkK_, kL1_);
         l0PingPong_ = 0;
         abL1LoopCnt_ = 0;
         l0cPingPong_ = 0;
@@ -397,6 +403,9 @@ public:
     __aicore__ inline void CopyOut(
         const AscendC::GlobalTensor<C_T> &cGlobal, AscendC::LocalTensor<float> &c1Local, uint64_t baseM, uint64_t baseN)
     {
+        if (isSplitSingleK_ && !isFirstSplitK_) {
+            AscendC::SetAtomicAdd<float>();
+        }
         AscendC::DataCopyCO12DstParams intriParams;
         intriParams.nSize = baseN;
         intriParams.mSize = baseM;
@@ -419,6 +428,9 @@ public:
         intriParams.unitFlag = enableL0cPingPong_ ? 0 : FINAL_ACCUMULATION;  // 3 unitflag
         AscendC::SetFixpipeNz2ndFlag(1, 1, 1);
         AscendC::DataCopy(cGlobal, c1Local, intriParams);
+        if (isSplitSingleK_ && isEndSplitK_) {
+            AscendC::DisableDmaAtomic();
+        }
     }
 
     // fixpipe CopyOut实现c01拷贝到UB
@@ -499,7 +511,8 @@ public:
     __aicore__ inline void operator()(
         T cTensor, AscendC::GlobalTensor<A_T> aGlobal, AscendC::GlobalTensor<B_T> bGlobal,
         AscendC::GlobalTensor<Bias_T> biasGlobal, TupleL1L0Shape tileShape, uint64_t mOffset, uint64_t nOffset,
-        bool isFirstTile = false, bool isAllLoc2Ub = false)
+        bool isFirstTile = false, bool isAllLoc2Ub = false, uint64_t blkK = 0, bool isFirstSplitK = false,
+        bool isEndSplitK = false)
     {
         if (fullLoadMode_ == A_FULL_LOAD_MODE) {
             return DoAFullLoad<T, LayoutB>(cTensor, aGlobal, bGlobal, biasGlobal, tileShape, mOffset);
@@ -507,7 +520,7 @@ public:
             return DoAllLoc2UbAswt(cTensor, aGlobal, bGlobal, biasGlobal, tileShape, nOffset);
         } else {
             return DoBFullLoadOrAswt<T, LayoutB>(
-                cTensor, aGlobal, bGlobal, biasGlobal, tileShape, nOffset, isFirstTile);
+                cTensor, aGlobal, bGlobal, biasGlobal, tileShape, nOffset, isFirstTile, blkK, isFirstSplitK, isEndSplitK);
         }
     }
 
@@ -624,8 +637,16 @@ public:
     template <typename T, CubeFormat LayoutB>
     __aicore__ inline void DoBFullLoadOrAswt(
         T cTensor, AscendC::GlobalTensor<A_T> aGlobal, AscendC::GlobalTensor<B_T> bGlobal,
-        AscendC::GlobalTensor<Bias_T> biasGlobal, TupleL1L0Shape tileShape, uint64_t nL1Offset, bool isFirstTile)
+        AscendC::GlobalTensor<Bias_T> biasGlobal, TupleL1L0Shape tileShape, uint64_t nL1Offset, bool isFirstTile,
+        uint64_t blkK = 0, bool isFirstSplitK = false, bool isEndSplitK = false)
     {
+        if (isSplitSingleK_) {
+            blkK_ = blkK;
+            kAlign_ = Cmct::Gemm::Align(blkK, AscendC::BLOCK_CUBE);
+            kL1Iter_ = CeilDiv(blkK, kL1_);
+            isFirstSplitK_ = isFirstSplitK;
+            isEndSplitK_ = isEndSplitK;
+        }
         uint64_t curML1 = Get<MNK_M>(tileShape);
         uint64_t curNL1 = Get<MNK_N>(tileShape);
         uint64_t curML0 = Get<MNK_M0>(tileShape);
@@ -645,7 +666,7 @@ public:
             AscendC::WaitFlag<AscendC::HardEvent::FIX_M>(l0cPingPong_ & 0x1);
         }
         AscendC::LocalTensor<Bias_T> biasL1Local;
-        kL1_ = Min(k_, kL1_);
+        kL1_ = Min(blkK_, kL1_);
         uint64_t curKL1 = kL1_;
         bool isFirstLoopKL1Half = false;
         uint64_t kL1OffsetLength = 0;
@@ -656,7 +677,7 @@ public:
             curKL1Iter++;
         }
         for (uint64_t iter0 = 0; iter0 < curKL1Iter; ++iter0) {
-            curKL1 = (iter0 + 1 == curKL1Iter) ? (k_ - kL1OffsetLength) : kL1_;
+            curKL1 = (iter0 + 1 == curKL1Iter) ? (blkK_ - kL1OffsetLength) : kL1_;
             //前两轮将搬运量减半，提前mmad计算
             if (isFirstLoopKL1Half) {
                 if (iter0 == 0) {
@@ -729,7 +750,11 @@ public:
                                           0 :
                                           ((iter0 + 1 == curKL1Iter && iter1 + 1 == kL0Iter) ? FINAL_ACCUMULATION :
                                                                                                NON_FINAL_ACCUMULATION);
-                mmadParams.cmatrixInitVal = (iter0 == 0 && iter1 == 0 && !isBias_);
+                if (isSplitSingleK_) {
+                    mmadParams.cmatrixInitVal = (iter0 == 0 && iter1 == 0 && !(isBias_ && isFirstSplitK_));
+                } else {
+                    mmadParams.cmatrixInitVal = (iter0 == 0 && iter1 == 0 && !isBias_);
+                }
                 Mmad(mmadParams, l0cOffset, l0Offset, baseN_ * biasBufId, NeedBias(iter0, iter1));
                 AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(static_cast<uint16_t>(mte1Flag));
                 l0PingPong_++;
@@ -841,7 +866,6 @@ public:
                                           : ((iter0 + 1 == kL1Iter_ && iter1 + 1 == kL0Iter) ? FINAL_ACCUMULATION
                                                                                              : NON_FINAL_ACCUMULATION);
                 mmadParams.cmatrixInitVal = (iter0 == 0 && iter1 == 0 && !isBias_);
-
                 // mmad
                 Mmad(mmadParams, l0cOffset, l0Offset, baseN_ * (abL1LoopCnt_ & 0x1), NeedBias(iter0, iter1));
 
@@ -869,7 +893,11 @@ public:
 private:
     __aicore__ inline bool NeedBias(uint64_t kIter0, uint64_t kIter1)
     {
-        return isBias_ && kIter0 == 0 && kIter1 == 0;
+        if (isSplitSingleK_) {
+            return isBias_ && kIter0 == 0 && kIter1 == 0 && isFirstSplitK_;
+        } else {
+            return isBias_ && kIter0 == 0 && kIter1 == 0;
+        } 
     }
 
     __aicore__ inline void Mmad(

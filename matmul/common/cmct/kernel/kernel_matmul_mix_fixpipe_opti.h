@@ -157,6 +157,7 @@ public:
             curBlockIdx /= AscendC::GetTaskRation();
         }
         BlockSchedulerOp bs(params.problemShape, curBlockIdx, blockNum, params.schParams);
+        bs.DisableSplitSingleK();
         int64_t tileNum = bs.GetTileNum();
         TupleShape tileL1 = bs.GetTileL1Shape();
         TupleShape tileL0 = bs.GetTileL0Shape();
@@ -205,7 +206,7 @@ public:
                     }
                     auto blockOffset = GetOffsetWithoutLayout<BlockCoord, TupleShape, BlockMmadBuilder::formatB, BType>(
                         blockCoord, problemShape_, transA, transB, isBias_, bs.GetNonContinuousParams(),
-                        Get<MNK_M>(blockShape), tileL1, bs.GetSplitOffset(), bs.GetTailParams());
+                        blockShape, tileL1, bs.GetSplitOffset(), bs.GetTailParams());
                     // calculate block-level offset
                     if (Get<0>(blockShape) <= 0 || Get<1>(blockShape) <= 0) {
                         if (isHf32) {

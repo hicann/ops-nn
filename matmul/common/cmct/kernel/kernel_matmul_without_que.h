@@ -75,6 +75,7 @@ public:
     using BType = typename BlockMmadBuilder::BType;
     using CType = typename BlockMmadBuilder::CType;
     using BiasType = typename BlockMmadBuilder::BiasType;
+    using LayoutB = typename BlockMmadBuilder::LayoutB;
     using TupleL1L0Shape = Shape<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t>;
     using TupleShape = Shape<int64_t, int64_t, int64_t, int64_t>;
     using BlockShape = Shape<int64_t, int64_t, int64_t, int64_t>;
@@ -82,6 +83,10 @@ public:
 
     // ND layout
     using NDLayout = AscendC::Layout<AscendC::Shape<int64_t, int64_t>, AscendC::Stride<int64_t, int64_t>>;
+
+    static constexpr CubeFormat formatB = TagToFormat<LayoutB>::format;
+    static constexpr bool isNdFormat = formatB == CubeFormat::ND;
+    static constexpr bool isFp32 = std::is_same_v<CType, float>;
 
     // no need to have tensortrait
     AscendC::GlobalTensor<AType> aGlobal_;
@@ -206,7 +211,7 @@ public:
         // Init
         Init(params);
 
-        BlockSchedulerOp bs(params.problemShape, curBlockIdx, blockNum, params.schParams);
+        BlockSchedulerOp bs(params.problemShape, curBlockIdx, blockNum, params.schParams, isFp32, isNdFormat);
         if (bs.GetBL2CacheDisable()) {
             bGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
         }
@@ -221,6 +226,7 @@ public:
         if (curBlockIdx >= realBlockNum) {
             return;
         }
+        
         // come from the block_mmad_pingpong_without_que.h
         if (isHf32) {
             AscendC::SetHF32Mode(1);
@@ -228,7 +234,8 @@ public:
         }
         SetMMLayoutTransform(true);
         blockMmadOp.template Init<BlockScheduler::FULL_LOAD_MODE>(
-            problemShape_, tileL1, tileL0, isBias_, bs.GetL1BuferNum_(), bs.GetL0cDB(), bs.GetNonContinuousParams());
+            problemShape_, tileL1, tileL0, isBias_, bs.GetL1BuferNum_(), bs.GetL0cDB(), bs.GetNonContinuousParams(),
+            bs.isSplitSingleK_);
         // Process tiles in ping-pong mode
         if constexpr (BlockScheduler::FULL_LOAD_MODE == B_FULL_LOAD_MODE) {
             blockMmadOp.template CopyInB1<BlockMmadBuilder::formatB>(
@@ -245,31 +252,39 @@ public:
             for (uint64_t mOffset = 0; mOffset < curML1; mOffset += Get<0>(tileL0)) {
                 // nIter
                 for (uint64_t nOffset = 0; nOffset < curNL1; nOffset += Get<1>(tileL0)) {
-                    TupleL1L0Shape blockShape =
-                        bs.template GetBlockShape<BlockMmadBuilder::formatB, transB, BType>(tileIdx, mOffset, nOffset);
-                    auto blockCoord = bs.GetBlockCoord(tileIdx);
-                    if constexpr (BlockMmadBuilder::formatB == CubeFormat::NZ) {
-                        blockCoord = bs.GetSingleBlockCoord(tileIdx);
+                    // kIter
+                    for (uint64_t kOffset = 0; kOffset < bs.k_; kOffset += bs.blkK_) {
+                        TupleL1L0Shape blockShape =
+                            bs.template GetBlockShape<BlockMmadBuilder::formatB, transB, BType>(tileIdx, mOffset, nOffset, kOffset);
+                        auto blockCoord = bs.GetBlockCoord(tileIdx);
+                        if constexpr (BlockMmadBuilder::formatB == CubeFormat::NZ) {
+                            blockCoord = bs.GetSingleBlockCoord(tileIdx);
+                        }
+                        if (bs.isSplitSingleK_) {
+                            blockCoord = bs.GetSplitKBlockCoord(tileIdx);
+                        }
+                        // cal offset between blocks
+                        auto blockOffset = GetOffsetWithoutLayout<BlockCoord, TupleShape, BlockMmadBuilder::formatB, BType>(
+                            blockCoord, problemShape_, transA, transB, isBias_, bs.GetNonContinuousParams(), blockShape,
+                            tileL1, bs.GetSplitOffset(), bs.GetTailParams(), bs.isSplitSingleK_);
+                        if (Get<0>(blockShape) <= 0 || Get<1>(blockShape) <= 0) {
+                            UnsetHf32(isHf32);
+                            return;
+                        }
+                        int64_t offsetA = Get<0>(blockOffset);
+                        int64_t offsetB = Get<1>(blockOffset);
+                        int64_t offsetC = Get<2>(blockOffset);
+                        int64_t offsetBias = Get<3>(blockOffset);
+                        offsetC += mOffset * n + nOffset;
+                        blockMmadOp.template operator()<AscendC::GlobalTensor<CType>, BlockMmadBuilder::formatB>(
+                            cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias], blockShape,
+                            mOffset, nOffset, tileIdx == curBlockIdx, false, bs.blkK_, bs.splitSingleKIdx_ == 0,
+                            bs.splitSingleKIdx_ == (bs.splitSingleKRound_ -1));
                     }
-                    // cal offset between blocks
-                    auto blockOffset = GetOffsetWithoutLayout<BlockCoord, TupleShape, BlockMmadBuilder::formatB, BType>(
-                        blockCoord, problemShape_, transA, transB, isBias_, bs.GetNonContinuousParams(),
-                        Get<MNK_M>(blockShape), tileL1, bs.GetSplitOffset(), bs.GetTailParams());
-                    if (Get<0>(blockShape) <= 0 || Get<1>(blockShape) <= 0) {
-                        UnsetHf32(isHf32);
-                        return;
-                    }
-                    int64_t offsetA = Get<0>(blockOffset);
-                    int64_t offsetB = Get<1>(blockOffset);
-                    int64_t offsetC = Get<2>(blockOffset);
-                    int64_t offsetBias = Get<3>(blockOffset);
-                    offsetC += mOffset * n + nOffset;
-                    blockMmadOp.template operator()<AscendC::GlobalTensor<CType>, BlockMmadBuilder::formatB>(
-                        cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias], blockShape,
-                        mOffset, nOffset, tileIdx == curBlockIdx);
                 }
             }
         }
+        
         SetMMLayoutTransform(false);
         UnsetHf32(isHf32);
     }

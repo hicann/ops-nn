@@ -27,6 +27,8 @@ constexpr int IDX_M_BASE_TAIL_MAIN = 1;
 constexpr int IDX_N_BASE_NORM_CNT = 2;
 constexpr int IDX_N_BASE_TAIL_MAIN = 3;
 
+using TupleL1L0Shape = AscendC::Shape<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t>;
+
 template <class BlockCoord_, class ProblemShape_, class ATensorType_, class BTensorType_, class CTensorType_>
 __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t> GetOffset(
     BlockCoord_ blockCoord, ProblemShape_ problemShape, ATensorType_ aTensor, BTensorType_ bTensor,
@@ -60,7 +62,7 @@ __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t> GetOffset(
 template <class BlockCoord, class ProblemShape>
 __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetForNDLayout(
     BlockCoord blockCoord, ProblemShape problemShape, bool transA, bool transB, bool isBias,
-    AscendC::Shape<int64_t, int64_t, int64_t> nonContinuousParams, uint64_t curML1 = 1UL)
+    AscendC::Shape<int64_t, int64_t, int64_t> nonContinuousParams, TupleL1L0Shape& blockShape, bool isSplitSingleK = 0)
 {
     int64_t m = Get<MNK_M>(problemShape);
     int64_t n = Get<MNK_N>(problemShape);
@@ -72,7 +74,7 @@ __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetFo
     int64_t realMOffset = Get<0>(blockCoord);
     if (srcNdStride != 1 && sliceM != 0) {
         int64_t oriM = srcNdStride / k;
-        realM = (curML1 / sliceM) * oriM; // ndNum * oriM
+        realM = (Get<MNK_M>(blockShape) / sliceM) * oriM;  // ndNum * oriM
         realMOffset = Get<2>(blockCoord);
     }
 
@@ -80,21 +82,22 @@ __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetFo
     int64_t offsetB = Get<MNK_B>(blockCoord) * n * k;
     int64_t offsetC = Get<MNK_B>(blockCoord) * m * n + Get<0>(blockCoord) * n + Get<1>(blockCoord);
     int64_t offsetBias = 0;
+    int64_t kOffset = isSplitSingleK ? Get<2>(blockCoord) : 0;
     if (innerBatch > 1) {
         offsetA = transA ? Get<MNK_B>(blockCoord) * realM : Get<MNK_B>(blockCoord) * k;
         offsetB = transB ? Get<MNK_B>(blockCoord) * k : Get<MNK_B>(blockCoord) * n;
     }
     if (transA) {
-        offsetA += Get<0>(blockCoord);
+        offsetA += Get<0>(blockCoord) + kOffset * realM;
     } else {
         // m, b, k
-        offsetA += realMOffset * innerBatch * k; // get mOffsetNew from kTileIdx
+        offsetA += realMOffset * innerBatch * k + kOffset; // get mOffsetNew from kTileIdx
     }
     if (transB) {
         // n, b, k
-        offsetB += Get<1>(blockCoord) * innerBatch * k;
+        offsetB += Get<1>(blockCoord) * innerBatch * k + kOffset;
     } else {
-        offsetB += Get<1>(blockCoord);
+        offsetB += Get<1>(blockCoord) +  kOffset * n;
     }
     if (isBias) {
         offsetBias = Get<1>(blockCoord);
@@ -158,13 +161,15 @@ __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetFo
 template <class BlockCoord, class ProblemShape, CubeFormat LayoutB = CubeFormat::ND, class B_T>
 __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetWithoutLayout(
     BlockCoord blockCoord, ProblemShape problemShape, bool transA, bool transB, bool isBias,
-    AscendC::Shape<int64_t, int64_t, int64_t> nonContinuousParams, uint64_t curML1 = 1UL,
+    AscendC::Shape<int64_t, int64_t, int64_t> nonContinuousParams, TupleL1L0Shape& blockShape,
     AscendC::Shape<int64_t, int64_t, int64_t, int64_t> tileL1 = {0, 0, 0, 0},
     AscendC::Shape<int64_t, int64_t> SplitOffset = {0, 0},
-    AscendC::Shape<int64_t, int64_t, int64_t, int64_t> tailParams = {0, 0, 0, 0})
+    AscendC::Shape<int64_t, int64_t, int64_t, int64_t> tailParams = {0, 0, 0, 0},
+    bool isSplitSingleK = 0)
 {
     if constexpr (LayoutB == CubeFormat::ND) {
-        return GetOffsetForNDLayout(blockCoord, problemShape, transA, transB, isBias, nonContinuousParams, curML1);
+        return GetOffsetForNDLayout(blockCoord, problemShape, transA, transB, isBias, nonContinuousParams,
+	    blockShape, isSplitSingleK);
     } else {
         return GetOffsetForNZLayout<BlockCoord, ProblemShape, B_T>(
             blockCoord, problemShape, transA, transB, isBias, tileL1, SplitOffset, tailParams);
