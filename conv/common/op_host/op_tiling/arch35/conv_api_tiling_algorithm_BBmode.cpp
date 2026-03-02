@@ -693,27 +693,36 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyKFullLoad::GetAOrBFullLoadL1Tiling
 {
     uint64_t maxMAL1Iter = CeilDiv(bbPtr->conv2DBasicBlockInfoPtr->mCut, bbPtr->conv2DBasicBlockInfoPtr->mDim);
     uint64_t maxNBL1Iter = CeilDiv(bbPtr->conv2DBasicBlockInfoPtr->nCut, bbPtr->conv2DBasicBlockInfoPtr->nDim);
-    if ((!bbPtr->tilingIns_->enableInnerBatch && bbPtr->conv2DBasicBlockInfoPtr->batch <=
-        bbPtr->conv2DBasicBlockInfoPtr->batchDim) || (bbPtr->tilingIns_->enableInnerBatch &&
-        CeilDiv(bbPtr->conv2DBasicBlockInfoPtr->batch, bbPtr->tilingIns_->innerBatch) <=
-        bbPtr->conv2DBasicBlockInfoPtr->batchDim)) {
-        // 1. Fmap and weight fullLoad in L1
-        if (singleBBFmapSize + singleBBWeightSize <= bbPtr->availableL1Size) {
-            GetL1LoadTilingBothFullLoad(bbPtr, maxMAL1Iter, maxNBL1Iter);
-            return true;
-        }
-        // 2. Fmap fullLoad in L1
+    // Fmap and weight fullLoad in L1
+    if (singleBBFmapSize + singleBBWeightSize <= bbPtr->availableL1Size) {
+        GetL1LoadTilingBothFullLoad(bbPtr, maxMAL1Iter, maxNBL1Iter);
+        return true;
+    }
+    if (bbPtr->conv2DBasicBlockInfoPtr->iterateMNOrder == IterateMNOrder::ITER_N_FST){
+        // Fmap fullLoad in L1
         if (singleBBFmapSize + weightLoadBBSizeMultix1 * static_cast<int64_t>(DOUBLE_BUFFER_NUM) <=
             bbPtr->availableL1Size) {
             GetL1LoadTilingFmapFullLoad(bbPtr, maxMAL1Iter);
             return true;
         }
+        // weight fullLoad in L1
+        else if (fmapLoadSizeMultix1 * static_cast<int64_t>(DOUBLE_BUFFER_NUM) + singleBBWeightSize <= bbPtr->availableL1Size) {
+            GetL1LoadTilingWeightFullLoad(bbPtr, maxNBL1Iter);
+            return true;
+        }
     }
-
-    // 3. weight fullLoad in L1
-    if (fmapLoadSizeMultix1 * static_cast<int64_t>(DOUBLE_BUFFER_NUM) + singleBBWeightSize <= bbPtr->availableL1Size) {
-        GetL1LoadTilingWeightFullLoad(bbPtr, maxNBL1Iter);
-        return true;
+    else{
+        // weight fullLoad in L1
+        if (fmapLoadSizeMultix1 * static_cast<int64_t>(DOUBLE_BUFFER_NUM) + singleBBWeightSize <= bbPtr->availableL1Size) {
+            GetL1LoadTilingWeightFullLoad(bbPtr, maxNBL1Iter);
+            return true;
+        }
+        // Fmap fullLoad in L1
+        else if (singleBBFmapSize + weightLoadBBSizeMultix1 * static_cast<int64_t>(DOUBLE_BUFFER_NUM) <=
+            bbPtr->availableL1Size) {
+            GetL1LoadTilingFmapFullLoad(bbPtr, maxMAL1Iter);
+            return true;
+        }
     }
     return false;
 }
