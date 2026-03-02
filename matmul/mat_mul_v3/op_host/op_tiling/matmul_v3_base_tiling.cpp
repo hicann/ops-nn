@@ -391,9 +391,16 @@ static ge::graphStatus SetMatmulDimensions(
 static ge::graphStatus GetShape(const gert::TilingContext &context, MatmulV3Args &args)
 {
     // get transpose
-    args.isATrans = *context.GetAttrs()->GetAttrPointer<bool>(0);
-    args.isBTrans = *context.GetAttrs()->GetAttrPointer<bool>(1);
-
+    if (strcmp(context.GetNodeType(), "GemmV3") == 0) {
+        // GemmV3 OP_ATTR: alpha, beta, transposeX1, transposeX2, ...
+        args.isATrans = *context.GetAttrs()->GetAttrPointer<bool>(2);
+        args.isBTrans = *context.GetAttrs()->GetAttrPointer<bool>(3);
+    } else {
+        // Other OP_ATTR: transposeX1, transposeX2, ...
+        args.isATrans = *context.GetAttrs()->GetAttrPointer<bool>(0);
+        args.isBTrans = *context.GetAttrs()->GetAttrPointer<bool>(1);
+    }
+    
     // get (m, k, n)
     int64_t mkDims[TWO_BATCH_DIM];
     int64_t knDims[TWO_BATCH_DIM];
