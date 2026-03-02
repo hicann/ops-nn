@@ -237,7 +237,7 @@
 
 - 基于**自定义算子包**执行算子样例，包安装后，执行如下命令：
     ```bash
-    bash build.sh --run_example ${op} ${mode} ${pkg_mode} [--example_name=${example_name}] [--vendor_name=${vendor_name}] [--soc=${soc_version}]
+    bash build.sh --run_example ${op} ${mode} ${pkg_mode} [--example_name=${example_name}] [--vendor_name=${vendor_name}] [--soc=${soc_version}] [--simulator]
     # 以TransposeBatchMatMul算子执行test_aclnn_transpose_batch_mat_mul.cpp为例
     # bash build.sh --run_example transpose_batch_mat_mul eager cust --example_name=transpose_batch_mat_mul --vendor_name=transpose_batch_mat_mul
     ```
@@ -248,12 +248,13 @@
     - \$\{example_name\}（可选）：表示待执行样例名，名称为各个算子examples文件夹下的文件名称，去掉`test_aclnn_`前缀和`.cpp`后缀。
     - \$\{vendor\_name\}（可选）：与构建的自定义算子包设置一致，默认名为custom。
     - \$\{soc_version\}（可选）：表示NPU型号。当设置为"ascend950"时会额外运行"arch35"目录下的示例文件。
+    - \$\{simulator\}（可选）：表示仿真模式，目前仅支持eager（aclnn调用）场景下使用。仿真模式下，会根据soc_version链接对应的仿真库。
 
     说明：\$\{mode\}为graph时，不指定\$\{pkg_mode\}和\$\{vendor\_name\}
 
 - 基于**ops-nn包**执行算子样例，安装后，执行命令如下：
     ```bash
-    bash build.sh --run_example ${op} ${mode} [--soc=${soc_version}]
+    bash build.sh --run_example ${op} ${mode} [--soc=${soc_version}] [--simulator]
     # 以TransposeBatchMatMul算子example执行为例
     # bash build.sh --run_example transpose_batch_mat_mul eager
     ```
@@ -261,6 +262,7 @@
     - \$\{op\}：表示待执行算子，算子名为小写下划线形式，如transpose_batch_mat_mul。
     - \$\{mode\}：表示算子执行模式，目前支持eager（aclnn调用）、graph（图模式调用）。
     - \$\{soc_version\}（可选）：表示NPU型号。当设置为"ascend950"时会额外运行"arch35"目录下的示例文件。
+    - \$\{simulator\}（可选）：表示仿真模式，目前仅支持eager（aclnn调用）场景下使用。仿真模式下，会根据soc_version链接对应的仿真库。
 
 - 基于**ops-nn静态库**执行算子样例：
 

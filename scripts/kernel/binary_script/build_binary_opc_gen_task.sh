@@ -94,7 +94,7 @@ main() {
   echo "[INFO] excute file: $0"
   if [ $# -lt 7 ]; then
     echo "[ERROR] input error"
-    echo "[ERROR] bash $0 {op_type} {soc_version} {output_path} {task_path} {enable_debug} {enable_oom} {enable_dump_cce}"
+    echo "[ERROR] bash $0 {op_type} {soc_version} {output_path} {task_path} {enable_debug} {enable_oom} {enable_dump_cce} {enable_mssanitizer} bisheng_flags={bisheng_flags}"
     exit 1
   fi
   local workdir=$(
@@ -111,6 +111,8 @@ main() {
   local enable_debug=$5
   local enable_oom=$6
   local enable_dump_cce=$7
+  local enable_mssanitizer=$8
+  local bisheng_flags=$9
   local is_need_gen_opc_info=TRUE
   local python_arg=${HI_PYTHON}
   if [ "${python_arg}" = "" ]; then
@@ -280,19 +282,29 @@ main() {
         else
           cmd="asc_opc ${op_python_path} --main_func=${op_func} --input_param=${new_file} --soc_version=${opc_soc_version} --output=${binary_bin_path} --impl_mode=${impl_mode} ${simplified_key_param} --op_mode=dynamic"
         fi
-        op_debug_configs=()
-        if [ "${enable_oom}" = "TRUE" ]; then
-          op_debug_configs+=("oom")
+        if [[ -n "$bisheng_flags" ]]; then
+          echo "bisheng_flags is: ${bisheng_flags}"
+          cmd="${cmd} --op_debug_config=${bisheng_flags}"
+        else
+          op_debug_configs=()
+          if [ "${enable_mssanitizer}" = "TRUE" ]; then
+            op_debug_configs+=("sanitizer")
+          fi
+          if [ "${enable_oom}" = "TRUE" ]; then
+            op_debug_configs+=("oom")
+          fi
+          if [ "${enable_dump_cce}" = "TRUE" ]; then
+            op_debug_configs+=("dump_cce")
+          fi
+          if [ ${#op_debug_configs[@]} -gt 0 ]; then
+              OLD_IFS="${IFS}"
+              IFS=','
+              cmd="${cmd} --op_debug_config=${op_debug_configs[*]}"
+              IFS="$OLD_IFS" 
+          fi
         fi
-        if [ "${enable_dump_cce}" = "TRUE" ]; then
-          op_debug_configs+=("dump_cce")
-          cmd="${cmd} --debug_dir=${output_path}/kernel_metas"
-        fi
-        if [ ${#op_debug_configs[@]} -gt 0 ]; then
-          OLD_IFS="${IFS}"
-          IFS=','
-          cmd="${cmd} --op_debug_config=${op_debug_configs[*]}"
-          IFS="$OLD_IFS"
+        if [[ "$cmd" == *"dump_cce"* ]]; then
+          cmd="${cmd} --debug_dir=${output_path}/kernel_metas/${op_type}_${i}" 
         fi
         echo "[INFO] op:${op_type} do opc cmd is ${cmd}"
         echo ${cmd} >> ${opc_task_cmd_file}

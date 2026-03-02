@@ -62,6 +62,9 @@ main() {
       cat ${log_file}
       exit ${compile_rc}
     fi
+    if [[ -d ${output_path}/kernel_metas ]]; then
+      chmod +r ${output_path}/kernel_metas/*
+    fi
     end_timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     echo "[$end_timestamp] exe_time: $exe_time s" >> "$log_file"
     echo "[INFO] exe_task: end to build kernel: ${key} --exe_time=${exe_time}"

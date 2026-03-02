@@ -59,3 +59,5 @@ bash build.sh --help
 | --oom            | 可选     | 开启kernel侧oom内存检测功能。                                                   |
 | --dump_cce       | 可选     | 开启kernel侧dump预编译文件功能。                                                      |
 | --cann_3rd_lib_path| 可选   | 离线编译场景下第三方库存放的目录。                                                   |
+| --simulator      | 可选     | 与--run_example组合使用，启用仿真器模式执行--run_example任务。仿真模式下，会根据soc_version链接对应的仿真库。          |
+| --bisheng_flags  | 可选     | 指定毕昇编译器编译参数，多个编译参数用英文逗号“,”分隔，不可与--mssanitizer、--oom、--dump_cce同时使用。     |

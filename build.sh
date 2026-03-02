@@ -12,6 +12,9 @@ set -e
 RELEASE_TARGETS=("ophost" "opapi" "onnxplugin" "opgraph")
 
 SUPPORT_COMPUTE_UNIT_SHORT=("ascend031" "ascend035" "ascend310b" "ascend310p" "ascend910_93" "ascend950" "ascend910b" "ascend910" "kirinx90" "kirin9030" "mc62cm12a")
+declare -A SOC_TO_ARCH
+SOC_TO_ARCH=(["ascend310b"]="3002" ["ascend310p"]="2002" ["ascend910_93"]="2201" ["ascend910b"]="2201" 
+            ["ascend950"]="3510" ["ascend910"]="1001" ["mc62cm12a"]="5102")
 # 对SUPPORT_COMPUTE_UNIT_SHORT按字符串长度从长到短排序，避免前缀匹配时出错
 SUPPORT_COMPUTE_UNIT_SHORT=($(printf '%s\n' "${SUPPORT_COMPUTE_UNIT_SHORT[@]}" | awk '{print length($0) " " $0}' | sort -rn | cut -d ' ' -f2-))
 TRIGER_UTS=()
@@ -24,6 +27,7 @@ SUPPORTED_LONG_OPTS=(
   "help" "ops=" "soc=" "vendor_name=" "build-type=" "cov" "noexec" "noaicpu" "opkernel" "opkernel_aicpu" "opkernel_aicpu_test" "static"
    "jit" "pkg" "asan" "make_clean_all" "make_clean" "no_force"
   "ophost" "opgraph" "opapi" "run_example" "example_name=" "genop=" "genop_aicpu=" "experimental" "cann_3rd_lib_path=" "oom" "onnxplugin" "dump_cce"
+  "simulator" "bisheng_flags="
 )
 
 source "./install_deps.sh"
@@ -158,12 +162,15 @@ usage() {
         echo "                           Set ascend third_party package install path, default ./third_party"
         echo "    --oom                  Build with oom mode on the kernel side, with options: '-g --cce-enable-oom'"
         echo "    --dump_cce             Dump kernel precompiled files (.i) for debugging"
+        echo "    --bisheng_flags=ccec_g,oom"
+        echo "                           Specify bisheng compiler flags (comma-separated for multiple)"
         echo $dotted_line
         echo "Examples:"
         echo "    bash build.sh --pkg --soc=ascend910b --vendor_name=customize -j16 -O3"
         echo "    bash build.sh --pkg --ops=transpose_batch_mat_mul,fatrelu_mul --build-type=Debug"
         echo "    bash build.sh --pkg --soc=ascend910b --ops=transpose_batch_mat_mul --oom"
         echo "    bash build.sh --pkg --experimental --soc=ascend910b --ops=\${experimental_op}"
+        echo "    bash build.sh --pkg --experimental --soc=ascend910b --ops=\${experimental_op} --bisheng_flags=ccec_g,oom"
         return
         ;;
       opkernel)
@@ -175,6 +182,8 @@ usage() {
         echo "    --build-type=<Type>    Specify build-type (Type options: Release/Debug), Default:Release"
         echo "    --oom                  Build with oom mode on the kernel side, with options: '-g --cce-enable-oom'"
         echo "    --dump_cce             Dump kernel precompiled files (.i) for debugging"
+        echo "    --bisheng_flags=ccec_g,oom"
+        echo "                           Specify bisheng compiler flags (comma-separated for multiple)"
         echo "    --no_force             Don't force dependency installation"
         echo $dotted_line
         echo "Examples:"
@@ -286,6 +295,7 @@ usage() {
         echo "    bash build.sh --run_example mat_mul_v3 eager --example_name=mm"
         echo "    bash build.sh --run_example mat_mul_v3 eager cust"
         echo "    bash build.sh --run_example mat_mul_v3 eager cust --vendor_name=custom"
+        echo "    bash build.sh --run_example mat_mul_v3 eager cust --vendor_name=custom --simulator"
         return
         ;;
       genop)
@@ -352,6 +362,7 @@ usage() {
   echo "    --genop_aicpu Create the initial directory for AI CPU op, like: --genop_aicpu=op_class/op_name"
   echo "    --oom Build with oom mode on the kernel side, with options: '-g --cce-enable-oom'"
   echo "    --dump_cce Dump kernel precompiled files (.i) for debugging"
+  echo "    --bisheng_flags Specify bisheng compiler config, like: --bisheng_flags=ccec_g,oom, use ',' to separate different compiler flags"
   echo "to be continued ..."
 }
 
@@ -428,6 +439,13 @@ check_param() {
   if [[ "${BUILD_TYPE}" == "Debug" ]]; then
     if [[ "$ENABLE_MSSANITIZER" == "TRUE" || "$ENABLE_OOM" == "TRUE" || "$ENABLE_DUMP_CCE" == "TRUE" ]]; then
       echo "[ERROR] --build-type=Debug cannot be used with --mssanitizer, --oom, --dump_cce"
+      exit 1
+    fi
+  fi
+
+  if [ -n "$BISHENG_FLAGS" ]; then
+    if [[ "$ENABLE_MSSANITIZER" == "TRUE" || "$ENABLE_OOM" == "TRUE" || "$ENABLE_DUMP_CCE" == "TRUE" ]]; then
+      echo "[ERROR] --bisheng_flags= cannot be used with --mssanitizer, --oom, --dump_cce"
       exit 1
     fi
   fi
@@ -615,6 +633,8 @@ checkopts() {
   OP_KERNEL_AICPU=FALSE
   ENABLE_CREATE_LIB=FALSE
   ENABLE_RUN_EXAMPLE=FALSE
+  ENABLE_SIMULATOR=FALSE
+  BISHENG_FLAGS=""
   BUILD_LIBS=()
   UT_TARGES=()
 
@@ -781,9 +801,7 @@ checkopts() {
           ;;
         asan) ENABLE_ASAN=TRUE ;;
         run_example) ENABLE_RUN_EXAMPLE=TRUE
-          step=0
-          set_example_opt $2 $3 $4
-          shift $step
+          set_example_opt "$@"
           ;;
         experimental) ENABLE_EXPERIMENTAL=TRUE ;;
         make_clean_all) make_clean_all
@@ -791,6 +809,10 @@ checkopts() {
         make_clean) make_clean
                     exit 0 ;;
         no_force) NO_FORCE=TRUE ;;
+        simulator) ENABLE_SIMULATOR=TRUE ;;
+        bisheng_flags=*)
+          BISHENG_FLAGS=${OPTARG#*=}
+          ;;
         *)
           ## 如果不在RELEASE_TARGETS，不做处理
           if ! in_array "$OPTARG" "${RELEASE_TARGETS[@]}"; then
@@ -841,17 +863,17 @@ checkopts() {
 }
 
 set_example_opt() {
-  if [[ -n $1 && $1 != -* ]]; then
-    OP_NAME=$1
-    step=$((step + 1))
+  if [[ $OPTIND -le $# && ${!OPTIND} != -* ]]; then
+    OP_NAME=${!OPTIND}
+    ((OPTIND++))
   fi
-  if [[ -n $2 && $2 != -* ]]; then
-    EXAMPLE_MODE=$2
-    step=$((step + 1))
+  if [[ $OPTIND -le $# && ${!OPTIND} != -* ]]; then
+    EXAMPLE_MODE=${!OPTIND}
+    ((OPTIND++))
   fi
-  if [[ -n $3 && $3 != -* ]]; then
-    PKG_MODE=$3
-    step=$((step + 1))
+  if [[ $OPTIND -le $# && ${!OPTIND} != -* ]]; then
+    PKG_MODE=${!OPTIND}
+    ((OPTIND++))
   fi
 }
 
@@ -911,6 +933,9 @@ assemble_cmake_args() {
   CMAKE_ARGS="$CMAKE_ARGS -DOP_KERNEL_UT=${OP_KERNEL_UT}"
   CMAKE_ARGS="$CMAKE_ARGS -DOP_KERNEL_AICPU_UT=${OP_KERNEL_AICPU_UT}"
   CMAKE_ARGS="$CMAKE_ARGS -DUT_TEST_ALL=${UT_TEST_ALL}"
+  if [[ "x$BISHENG_FLAGS" != "x" ]]; then
+    CMAKE_ARGS="$CMAKE_ARGS -DBISHENG_FLAGS=${BISHENG_FLAGS}"
+  fi
   if [[ -n $COMPUTE_UNIT ]]; then
     IFS=',' read -ra COMPUTE_UNIT <<<"$COMPUTE_UNIT"
     COMPUTE_UNIT_SHORT=""
@@ -1168,6 +1193,39 @@ build_ut() {
 
 build_single_example() {
   echo "Start to run example,op_name:${OP_NAME} example_name:${example} mode:${EXAMPLE_MODE}."
+
+  if [[ "${ENABLE_SIMULATOR}" == "TRUE" ]]; then
+    if [[ "${EXAMPLE_MODE}" == "graph" ]]; then
+      usage "run_example"
+      exit 1
+    fi
+    # 根据soc设置仿真库路径
+    if [[ -n $COMPUTE_UNIT_SHORT ]]; then
+      IFS=';' read -ra COMPUTE_UNITS <<<"$COMPUTE_UNIT_SHORT"
+      unit=${COMPUTE_UNITS[0]}
+    else
+      unit="ascend910b"
+    fi
+    if [[ "${SOC_TO_ARCH[${unit}]}x" == "x" ]]; then
+      usage "run_example"
+      exit 1
+    fi
+    SIMULATOR_PATH="${ASCEND_HOME_PATH}/${ARCH_INFO}-linux/simulator/dav_${SOC_TO_ARCH[${unit}]}/lib"
+    if [[ ! -f ${SIMULATOR_PATH}/libruntime_camodel.so ]]; then
+      echo "[ERROR] ${SIMULATOR_PATH}/libruntime_camodel.so not found."
+      exit 1
+    fi
+    if [[ ! -f ${SIMULATOR_PATH}/libnpu_drv_camodel.so ]]; then
+      echo "[ERROR] ${SIMULATOR_PATH}/libnpu_drv_camodel.so not found."
+      exit 1
+    fi
+    rm -fr ${BUILD_PATH}/simulator
+    mkdir -p ${BUILD_PATH}/simulator
+    ln -sf ${SIMULATOR_PATH}/libruntime_camodel.so ${BUILD_PATH}/simulator/libruntime.so
+    ln -sf ${SIMULATOR_PATH}/libnpu_drv_camodel.so ${BUILD_PATH}/simulator/libascend_hal.so
+    echo "[INFO] Successfully linked simulator libraries: ${SIMULATOR_PATH}/libruntime_camodel.so, ${SIMULATOR_PATH}/libnpu_drv_camodel.so"
+    export LD_LIBRARY_PATH=${BUILD_PATH}/simulator:${SIMULATOR_PATH}:${LD_LIBRARY_PATH}
+  fi
 
   if [[ "${EXAMPLE_MODE}" == "eager" ]]; then
     if [[ "${PKG_MODE}" == "cust" ]]; then
