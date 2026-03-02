@@ -22,8 +22,10 @@
 #include "conv_api_tiling_algorithm_base.h"
 #include "conv_api_tiling_base.h"
 #include "conv/conv2d_v2/op_host/op_tiling/arch35/conv2d_v2_api_tiling.h"
-using namespace conv_tiling;
+
 namespace conv_tiling_algo_bb {
+using namespace conv_tiling;
+
 struct L1TilingParams {
     uint64_t kAL1 = 0;
     uint64_t kBL1 = 0;
@@ -95,9 +97,9 @@ public:
         void GetL1LoadTilingWeightFullLoad(ConvTilingAlgorithmBBmode* bbPtr, uint64_t maxNBL1Iter) const;
         void GetL1LoadTilingWithoutFullLoad(ConvTilingAlgorithmBBmode* bbPtr) const;
         bool GetAOrBFullLoadL1TilingParams(ConvTilingAlgorithmBBmode* bbPtr, int64_t fmapLoadSizeMultix1,
-            int64_t weightLoadBBSizeMultix1, int64_t singleBBFmapSize, int64_t singleBBWeightSize);
+            int64_t weightLoadBBSizeMultix1, int64_t singleBBFmapSize, int64_t singleBBWeightSize) const;
         bool GetNoneFullLoadL1TilingParams(ConvTilingAlgorithmBBmode* bbPtr, int64_t fmapLoadSizeMultix1,
-            int64_t weightLoadBBSizeMultix1);
+            int64_t weightLoadBBSizeMultix1) const;
     };
     class L1LoadStrategyNFirst : public L1LoadStrategyBase {
     public:

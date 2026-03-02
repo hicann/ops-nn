@@ -563,7 +563,7 @@ bool ConvTilingAlgorithmHWmode::CheckBL1FullLoad()
            this->l1TilingCalc.fixpParamsL1MaxSize <= tilingIns_->platformInfo.l1Size;
 }
 
-bool ConvTilingAlgorithmHWmode::CheckHoWoL1FullLoad()
+bool ConvTilingAlgorithmHWmode::CheckHoWoL1FullLoad() const
 {
     uint64_t hoAL1Full = tilingIns_->shapeInfo.singleHo;
     uint64_t woAL1Full = AlignB(tilingIns_->shapeInfo.singleWo, tilingIns_->cubeInfo.m0);
@@ -704,7 +704,7 @@ uint64_t ConvTilingAlgorithmHWmode::CalcCurL1Size(const L1TilingParams &inputTil
     return feaMapSize + weightSize + biasL1Size + fixpParamsSize;
 }
 
-uint64_t ConvTilingAlgorithmHWmode::CalcCurUbSize(uint64_t hoL1, uint64_t woL1, uint64_t curKh, uint64_t curKw)
+uint64_t ConvTilingAlgorithmHWmode::CalcCurUbSize(uint64_t hoL1, uint64_t woL1, uint64_t curKh, uint64_t curKw) const
 {
     if (!tilingIns_->isDmaFlag) {
         return 0;
@@ -1276,7 +1276,7 @@ void ConvTilingAlgorithmHWmode::InitCalcL1Params()
     Printl1TilingCalc();
 }
 
-void ConvTilingAlgorithmHWmode::Printl1TilingCalc()
+void ConvTilingAlgorithmHWmode::Printl1TilingCalc() const
 {
     TILING_LOG_DEBUG("In Printl1TilingCalc");
     TILING_LOG_DEBUG("khL1: %lu, kwL1: %lu", this->l1TilingCalc.khL1, this->l1TilingCalc.kwL1);

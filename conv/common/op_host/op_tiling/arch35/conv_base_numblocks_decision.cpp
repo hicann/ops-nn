@@ -312,7 +312,7 @@ uint64_t ConvBaseDeci::CalcMinUsedL1SizeInMsplitMode(uint64_t kAL1min, uint64_t 
     uint64_t biasUsedL1Size = (flagInfo_.hasBias && !SkipScaleBiasL1Size()) ?
         ConvAlignB(nBL1min * biasDtypeSize, C0_SIZE) : 0;
     uint64_t scaleUsedL1Size = !SkipScaleBiasL1Size() ?
-        ConvAlignB(nBL1min * fixpipeInfo_.channelWiseCoeff * FP16_DTYPE_SIZE, C0_SIZE) : 0;
+        ConvAlignB(static_cast<uint32_t>(nBL1min * fixpipeInfo_.channelWiseCoeff * FP16_DTYPE_SIZE), C0_SIZE) : 0;
     uint64_t weightUsedL1Size = ConvAlignB(kBL1min * nBL1min * weightDtypeSize, C0_SIZE);
     uint64_t hoAL1min = std::min(convOpsConstParams_.m0 / shapeInfo_.wo + CONST_VALUE_2, shapeInfo_.ho);
     uint64_t hiAL1min = ConvInferHiL1(hoAL1min, shapeInfo_.hi, shapeInfo_.kh, attrInfo_.dilationH, attrInfo_.strideH);
@@ -332,7 +332,7 @@ uint64_t ConvBaseDeci::CalcMinUsedL1SizeInHWsplitMode(uint64_t kAL1min, uint64_t
     uint64_t biasUsedL1Size = (flagInfo_.hasBias && !SkipScaleBiasL1Size()) ?
         ConvAlignB(nBL1min * biasDtypeSize, C0_SIZE) : 0;
     uint64_t scaleUsedL1Size = !SkipScaleBiasL1Size() ?
-        ConvAlignB(nBL1min * fixpipeInfo_.channelWiseCoeff * FP16_DTYPE_SIZE, C0_SIZE) : 0;
+        ConvAlignB(static_cast<uint32_t>(nBL1min * fixpipeInfo_.channelWiseCoeff * FP16_DTYPE_SIZE), C0_SIZE) : 0;
     uint64_t weightUsedL1Size = ConvAlignB(kBL1min * nBL1min * weightDtypeSize, C0_SIZE);
 
     uint64_t fmapUsedL1Size = 0;

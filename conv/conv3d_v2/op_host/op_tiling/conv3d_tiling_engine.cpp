@@ -540,7 +540,7 @@ void Conv3dTilingEngine::PrintApiTilingDataScalarInfo(const Ops::NN::Conv3dV2::C
         api.kL0xorgCoAlignN0);
 }
 
-bool Conv3dTilingEngine::CheckDims(const std::vector<int64_t>& shape)
+bool Conv3dTilingEngine::CheckDims(const std::vector<int64_t>& shape) const
 {
     for (size_t i = 0; i < shape.size(); i++) {
         if (shape[i] <= 0) {
@@ -783,28 +783,26 @@ bool CheckParamsDtypeWithoutBias(const char *logTag, const Conv3DEngineDescInfo 
 
 bool Conv3dTilingEngine::CheckParamsDtype()
 {
-    const char *logTag = logTag_.c_str();
-
     // PointWise uses a different supported-type table (bias type differs for fp16).
     if (isPointWise) {
         // Scale is currently only supported by quant (INT8) kernels, which do not use pointwise tiling path.
         if (flagInfo_.hasScale) {
-            OP_LOGE(logTag, "[PointWise] Scale is not supported in pointwise mode.");
+            OP_LOGE(logTag_.c_str(), "[PointWise] Scale is not supported in pointwise mode.");
             return false;
         }
 
-        return flagInfo_.hasBias ? CheckPointWiseParamsDtypeWithBias(logTag, descInfo_)
-                                 : CheckPointWiseParamsDtypeWithoutBias(logTag, descInfo_);
+        return flagInfo_.hasBias ? CheckPointWiseParamsDtypeWithBias(logTag_.c_str(), descInfo_)
+                                 : CheckPointWiseParamsDtypeWithoutBias(logTag_.c_str(), descInfo_);
     }
 
     // Quant scale path: [fmap, weight, bias, scale, output].
     if (flagInfo_.hasScale) {
-        return CheckParamsDtypeWithScale(logTag, descInfo_);
+        return CheckParamsDtypeWithScale(logTag_.c_str(), descInfo_);
     }
     if (flagInfo_.hasBias) {
-        return CheckParamsDtypeWithBias(logTag, descInfo_);
+        return CheckParamsDtypeWithBias(logTag_.c_str(), descInfo_);
     }
-    return CheckParamsDtypeWithoutBias(logTag, descInfo_);
+    return CheckParamsDtypeWithoutBias(logTag_.c_str(), descInfo_);
 }
 
 bool Conv3dTilingEngine::CheckValidFormatCombo(Conv3dApiTiling::ConvFormat expectFmap,

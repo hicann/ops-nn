@@ -689,7 +689,7 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyKFullLoad::GetL1LoadTilingParams(C
 
 bool ConvTilingAlgorithmBBmode::L1LoadStrategyKFullLoad::GetAOrBFullLoadL1TilingParams(
     ConvTilingAlgorithmBBmode* bbPtr, int64_t fmapLoadSizeMultix1, int64_t weightLoadBBSizeMultix1,
-    int64_t singleBBFmapSize, int64_t singleBBWeightSize)
+    int64_t singleBBFmapSize, int64_t singleBBWeightSize) const
 {
     uint64_t maxMAL1Iter = CeilDiv(bbPtr->conv2DBasicBlockInfoPtr->mCut, bbPtr->conv2DBasicBlockInfoPtr->mDim);
     uint64_t maxNBL1Iter = CeilDiv(bbPtr->conv2DBasicBlockInfoPtr->nCut, bbPtr->conv2DBasicBlockInfoPtr->nDim);
@@ -728,7 +728,7 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyKFullLoad::GetAOrBFullLoadL1Tiling
 }
 
 bool ConvTilingAlgorithmBBmode::L1LoadStrategyKFullLoad::GetNoneFullLoadL1TilingParams(
-    ConvTilingAlgorithmBBmode* bbPtr, int64_t fmapLoadSizeMultix1, int64_t weightLoadBBSizeMultix1)
+    ConvTilingAlgorithmBBmode* bbPtr, int64_t fmapLoadSizeMultix1, int64_t weightLoadBBSizeMultix1) const
 {
     // 4. No one FullLoad, DB on
     if (fmapLoadSizeMultix1 * static_cast<int64_t>(DOUBLE_BUFFER_NUM) +

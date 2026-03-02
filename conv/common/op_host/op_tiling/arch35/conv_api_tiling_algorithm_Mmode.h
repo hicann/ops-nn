@@ -20,8 +20,10 @@
 #include <unordered_map>
 #include "conv_api_tiling_algorithm_base.h"
 #include "conv_api_tiling_base.h"
-using namespace conv_tiling;
+
 namespace conv_tiling_algo_m {
+using namespace conv_tiling;
+
 struct L1TilingFlag {
     L1TilingMode abL1Mode = L1TilingMode::INVALID;
     IterateMNOrder iterateMNOrder = IterateMNOrder::INVALID;
@@ -104,7 +106,7 @@ public:
 private:
     // L1 Tiling
     int64_t GetL1Tiling();
-    bool CheckMinL1Tiling();
+    bool CheckMinL1Tiling() const;
     int64_t PreProcessingL1Tiling();
     bool CheckL1Buffer();
     int64_t InitCalcL1FullLoadParams();

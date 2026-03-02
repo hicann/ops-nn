@@ -185,7 +185,7 @@ static aclnnStatus ResultViewProcess(DeformableConv2dInputTensor& inputTensor, C
     return ACLNN_SUCCESS;
 }
 
-static aclIntArray* ResetParams(const aclIntArray* inputArray, int64_t newValue, aclOpExecutor* executor) {
+static aclIntArray* ResetParams(int64_t newValue, aclOpExecutor* executor) {
     int64_t data[DIM_FOUR];
     data[INDEX_ZERO] = newValue;
     data[INDEX_ONE] = newValue;
@@ -227,8 +227,8 @@ static aclnnStatus DeformableConv2dV2(DeformableConv2dInputTensor& inputTensor, 
     const_cast<aclTensor *>(deformOut)->SetStorageFormat(Format::FORMAT_NCHW);
     const_cast<aclTensor *>(deformOut)->SetOriginalFormat(Format::FORMAT_NCHW);
     const_cast<aclTensor *>(deformOut)->SetViewFormat(Format::FORMAT_NCHW);
-    params.padding = ResetParams(params.padding, 0, executor);
-    params.dilation = ResetParams(params.dilation, 1, executor);
+    params.padding = ResetParams(0, executor);
+    params.dilation = ResetParams(1, executor);
     OP_CHECK_NULL(params.padding, return ACLNN_ERR_INNER_NULLPTR);
     OP_CHECK_NULL(params.dilation, return ACLNN_ERR_INNER_NULLPTR);
     int64_t newStride[KERNEL_ARRAY_DIM_SIZE];

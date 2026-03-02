@@ -1060,11 +1060,15 @@ static bool CheckN2HTransposeAttrCriteria(int64_t wi, int64_t cin) {
 
 static bool CheckN2HTransposeNativeAttrAvailable(const aclTensor *input, const aclTensor *weight) {
     auto inputShape = input->GetStorageShape();
+    auto weightShape = weight->GetStorageShape();
+    if (inputShape.GetDimNum() != conv3dDimNum || weightShape.GetDimNum() != conv3dDimNum) {
+      return false;
+    }
+
     auto batch = inputShape[N_DIM_NCDHW_INDEX];
     auto hi = inputShape[H_DIM_NCDHW_INDEX];
     auto wi = inputShape[W_DIM_NCDHW_INDEX];
     auto di = inputShape[D_DIM_NCDHW_INDEX];
-    auto weightShape = weight->GetStorageShape();
     auto hk = weightShape[H_DIM_NCDHW_INDEX];
     auto wk = weightShape[W_DIM_NCDHW_INDEX];
     auto dk = weightShape[D_DIM_NCDHW_INDEX];
@@ -1117,6 +1121,9 @@ static bool CheckPreTransposeEnable(const aclTensor *weight, int groups) {
     }
 
     auto weightShape = weight->GetOriginalShape();
+    if (weightShape.GetDimNum() != conv3dDimNum) {
+      return false;
+    }
     for (size_t i = 0; i < weightShape.GetDimNum(); i++) {
         if (weightShape[i] <= 0) {
             return false;

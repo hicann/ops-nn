@@ -3978,7 +3978,7 @@ public:
     ~ConvTransposed1dImpl() override = default;
 private:
     bool ConvTranspose1dSwapHW = false;
-    bool isConvTransposed1dSwitchHW()
+    bool isConvTransposed1dSwitchHW() const
     {
         //针对特定场景进行优化 outW>4096 N=1 inC<=768
         if(!op::IsSupportND()
@@ -4074,7 +4074,7 @@ public:
     ~ConvTransposed2dImpl() override = default;
 private:
     bool ConvTransposed2dSwitchHW = false;
-    bool isConvTransposed2dSwitchHW()
+    bool isConvTransposed2dSwitchHW() const
     {
         //针对特定场景进行优化 pad=0 dilation=1 outputPadding=0 outW>4096 N=1 inC<=768
         if (!op::IsSupportND() && (*stride)[0] == 1 && (*padding)[0] == 0 && (*dilation)[0] == 1 && (*outputPadding)[0] == 0

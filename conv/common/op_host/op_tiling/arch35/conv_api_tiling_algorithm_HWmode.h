@@ -127,7 +127,7 @@ private:
     // L1 tiling
     void InitPingPong();
     uint64_t CalcCurL1Size(const L1TilingParams &inputTiling, uint64_t biasFixpParamNB);
-    uint64_t CalcCurUbSize(uint64_t hoL1, uint64_t woL1, uint64_t curKh, uint64_t curKw);
+    uint64_t CalcCurUbSize(uint64_t hoL1, uint64_t woL1, uint64_t curKh, uint64_t curKw) const;
     int64_t GetL1Tiling();
     void InitCalcL1Params();
     void InitCalcL1ParamsC04Mode();
@@ -147,7 +147,7 @@ private:
     int64_t InferWiL1(uint64_t inputWoL1, int64_t wi) const;
 
     bool CheckBL1FullLoad();
-    bool CheckHoWoL1FullLoad();
+    bool CheckHoWoL1FullLoad() const;
     bool CheckAL1FullLoad();
     bool CheckABL1FullLoad();
     bool CheckHinOverLoad3dv2Limit(uint64_t hout) const;
@@ -186,7 +186,7 @@ private:
                         uint64_t anotherValue);
     void L0TilingRest(bool kFullLoadFlag);
     void CheckL0DoubleBuffer();
-    void Printl1TilingCalc();
+    void Printl1TilingCalc() const;
     void GetDmaL1Tiling();
     void ScaleBiasUbTilingDecision();
     void GetUbTiling();

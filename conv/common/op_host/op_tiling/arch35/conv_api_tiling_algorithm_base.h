@@ -54,8 +54,8 @@ protected:
     void SetPBufferRes();
     void ResetOptGroupDoubleBuffer(bool resetFlag);
     void PrintRanges(std::vector<uint64_t> inputRanges, std::string rangeName) const;
-    bool CheckL0Buffer(uint64_t currmL0, uint64_t currkL0, uint64_t currnL0);
-    bool CheckOptGroupPreload();
+    bool CheckL0Buffer(uint64_t currmL0, uint64_t currkL0, uint64_t currnL0) const;
+    bool CheckOptGroupPreload() const;
     ConvTilingBase* tilingIns_ = nullptr;
     PBufferParams dbValue;
     uint64_t fMapDTypeSize = 0;

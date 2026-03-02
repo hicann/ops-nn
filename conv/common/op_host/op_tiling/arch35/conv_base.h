@@ -248,8 +248,8 @@ struct pair_hash {
 };
 
 ge::graphStatus ShapeAttrSynthesisCheck(ConvAscendcOriginShapeAttrInfo oriShapeAttrInfo, gert::TilingContext* context);
-ge::graphStatus ShapeAttrSynthesisCheckAux(ConvAscendcOriginShapeAttrInfo oriShapeAttrInfo,
-                                           gert::TilingContext* context);
+ge::graphStatus ShapeAttrSynthesisCheckAux(const ConvAscendcOriginShapeAttrInfo oriShapeAttrInfo,
+                                           const gert::TilingContext* context);
 void GetSupportedDataTypes(bool hasBias, bool quantFlag, std::vector<std::vector<ConvDtype>>& supportTypes);
 void GetSupportedDataTypes(const NpuArch& socVersion, bool quantFlag,
                            ge::Format fMapFormat, bool exendConvFlag,
@@ -306,7 +306,6 @@ public:
     void SetBytesFromUint8(uint64_t& number, const std::array<uint8_t, UINT64_BYTE_COUNT>& bytes) const;
     void SetBytesFromUint32(uint64_t& number, uint32_t highPart, uint32_t lowPart) const;
     bool GetConvParasHf32Mode(const uint32_t enableHf32Idx, uint32_t& hf32Mode);
-    uint32_t GetWeightBandWidthCoeff();
     void GetSupportedFormats(bool quantFlag, bool is2dFlag,
                              std::stringstream& ss, std::vector<std::vector<ge::Format>>& supportFormats);
     void ConvBaseInitFixpipeInfo(const FixpipeInfo& fixpipeInfo);

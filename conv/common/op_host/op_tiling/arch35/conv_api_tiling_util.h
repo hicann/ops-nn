@@ -26,10 +26,8 @@
 #include <tiling/platform/platform_ascendc.h>
 #include "conv_template_utils.h"
 
-using namespace std;
-
-using optiling::conv_ops_tiling::ConvDtype;
 namespace conv_tiling {
+using namespace std;
 using optiling::conv_ops_tiling::ConvDtype;
 using optiling::conv_ops_tiling::ConvFormat;
 #ifdef ENABLE_CONV_TILING_DEBUG

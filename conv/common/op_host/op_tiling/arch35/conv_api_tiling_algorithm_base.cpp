@@ -51,7 +51,7 @@ uint64_t ConvTilingAlgorithmBase::CalcCL0Size(uint64_t mL0, uint64_t nL0) const
         DTYPE_SIZE_TAB.at(tilingIns_->cubeInfo.madType) * tilingIns_->innerBatch;
 }
 
-bool ConvTilingAlgorithmBase::CheckL0Buffer(uint64_t currmL0, uint64_t currkL0, uint64_t currnL0)
+bool ConvTilingAlgorithmBase::CheckL0Buffer(uint64_t currmL0, uint64_t currkL0, uint64_t currnL0) const
 {
     if (CalcAL0Size(currmL0, currkL0) > tilingIns_->platformInfo.l0ASize ||
         CalcBL0Size(currkL0, currnL0) > tilingIns_->platformInfo.l0BSize ||
@@ -118,7 +118,7 @@ void ConvTilingAlgorithmBase::ResetOptGroupDoubleBuffer(bool resetFlag)
     }
 }
 
-bool ConvTilingAlgorithmBase::CheckOptGroupPreload()
+bool ConvTilingAlgorithmBase::CheckOptGroupPreload() const
 {
     bool sceneFlag = tilingIns_->optGroupFlag && tilingIns_->innerBatch == 1 &&
         !tilingIns_->isC04Flag && !tilingIns_->isDmaFlag;

@@ -33,7 +33,7 @@ int64_t ConvTilingAlgorithmMmode::Process()
     return 0;
 }
 
-bool ConvTilingAlgorithmMmode::CheckMinL1Tiling()
+bool ConvTilingAlgorithmMmode::CheckMinL1Tiling() const
 {
     if (tilingIns_->shapeInfo.orgWo == 0) {
         TILING_LOG_ERROR("zero div in CheckMinL1Tiling.");

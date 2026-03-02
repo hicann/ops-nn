@@ -725,9 +725,9 @@ void Conv3dBaseTiling::SetAdditionalTilingInfo()
     tilingData_.conv3dApiTiling.kL0xorgCoAlignN0 = tilingData_.conv3dApiTiling.kL0 * AlignUp(tilingData_.conv3dApiTiling.orgCo, n0);
     tilingData_.conv3dApiTiling.mAL1DivmL0 = CeilDiv(tilingData_.conv3dApiTiling.mAL1, tilingData_.conv3dApiTiling.mL0);
     tilingData_.conv3dApiTiling.nBL1DivnL0 = CeilDiv(tilingData_.conv3dApiTiling.nBL1, tilingData_.conv3dApiTiling.nL0);
-    tilingData_.conv3dApiTiling.cin1InAL1 = tilingData_.conv3dApiTiling.kAL1 / ci0HkWk;
+    tilingData_.conv3dApiTiling.cin1InAL1 = ci0HkWk == 0 ? 0 : tilingData_.conv3dApiTiling.kAL1 / ci0HkWk;
     tilingData_.conv3dApiTiling.kAL1Tail = kAL1Tail;
-    tilingData_.conv3dApiTiling.cin1InAL1Tail = kAL1Tail / ci0HkWk;
+    tilingData_.conv3dApiTiling.cin1InAL1Tail = ci0HkWk == 0 ? 0 : kAL1Tail / ci0HkWk;
     tilingData_.conv3dApiTiling.KBL1Divk0 = tilingData_.conv3dApiTiling.kBL1 / k0;
     tilingData_.conv3dApiTiling.kBL1Tail = kBL1Tail;
     tilingData_.conv3dApiTiling.KBL1TailDivk0 = kBL1Tail / k0;

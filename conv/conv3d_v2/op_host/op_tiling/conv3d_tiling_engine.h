@@ -150,7 +150,7 @@ public:
     bool InitOutputOrder();
     uint64_t CalcMinL1LoadSize(uint8_t outputOrder);
     bool CheckInputLimitsHwMode();
-    bool CheckDims(const std::vector<int64_t>& shape);
+    bool CheckDims(const std::vector<int64_t>& shape) const;
     bool CheckValidFormatCombo(Conv3dApiTiling::ConvFormat expectFmap,
                                Conv3dApiTiling::ConvFormat expectWeight,
                                Conv3dApiTiling::ConvFormat expectOut,

@@ -16,9 +16,10 @@
 #define OPS_BUILT_IN_OP_TILING_RUNTIME_CONV_BASE_BLOCK_DIM_DECISION_H
 
 #include "conv_template_utils.h"
-using namespace std;
+
 namespace optiling {
 namespace conv_ops_tiling {
+using namespace std;
 
 uint32_t Gcd(uint32_t i, uint32_t j);
 
@@ -68,7 +69,7 @@ private:
                                      uint32_t nDim, uint32_t doDim, uint32_t groupDim);
     bool CmpCoreUtilize(const uint32_t curCoreUtilize, const uint32_t minCostCoreUtilize,
                         const uint32_t batchDim, const uint32_t doDim);
-    bool CmpCoreUtilizeMsplitMode(uint32_t batchDim, uint32_t hoDim, uint32_t nDim, uint32_t doDim, uint32_t groupDim);
+    bool CmpCoreUtilizeMsplitMode(uint32_t batchDim, uint32_t mDim, uint32_t nDim, uint32_t doDim, uint32_t groupDim);
     bool CmpCoreUtilizeHWsplitMode(const vector<uint32_t> &record);
     bool SkipScaleBiasL1Size();
     uint64_t CalcCostHWsplitMode(const NumBlocksRes &numBlocksRes, const uint64_t ci1, const uint64_t ci0,
