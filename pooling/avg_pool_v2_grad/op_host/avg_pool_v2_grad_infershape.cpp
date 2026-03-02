@@ -147,8 +147,9 @@ ge::graphStatus InferShape4AvgPoolV2Grad(gert::InferShapeContext* context)
     const gert::Tensor* inputShape0 = context->GetInputTensor(IDX_ORIGIN_INPUT);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputShape0);
     size_t inputDimNum = static_cast<size_t>(inputShape0->GetOriginShape().GetShapeSize());
+    const int32_t* shapeValue = inputShape0->GetData<int32_t>();
     OP_CHECK_IF(
-        inputDimNum != CHW_DIMS || inputDimNum != NCHW_DIMS,
+        inputDimNum != CHW_DIMS && inputDimNum != NCHW_DIMS,
         OP_LOGE(context->GetNodeName(), "input dim num should be 3 or 4, but get %zu.", inputDimNum),
         return GRAPH_FAILED);
     const gert::Shape* inputShape1 = context->GetInputShape(IDX_ORIGIN_INPUT);
@@ -167,6 +168,10 @@ ge::graphStatus InferShape4AvgPoolV2Grad(gert::InferShapeContext* context)
     }
 
     OutShape->SetDimNum(inputDimNum);
+
+    for (size_t idx = 0; idx < inputDimNum; ++idx) {
+        OutShape->SetDim(idx, shapeValue[idx]);
+    }
 
     OP_LOGD(context->GetNodeName(), "runtime2.0 end AvgPoolV2Grad infershape");
     return ge::GRAPH_SUCCESS;
