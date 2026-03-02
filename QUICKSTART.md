@@ -1,36 +1,64 @@
 # 快速入门：基于ops-nn仓
 
-本指南旨在帮助您快速上手CANN和`ops-nn`算子仓的使用，**基于WebIDE或Docker环境**提供极简化软件安装、编译部署及算子运行指导，两种环境默认提供最新商发版本CANN软件包，目前是CANN 8.5.0。
+## 使用须知
 
-如果您是手动安装CANN软件包或体验master分支最新能力等其他场景，请参考如下指南，获取详细教程：
+本指南旨在帮助您快速上手CANN和`ops-nn`算子仓的使用，**基于WebIDE或Docker环境**提供极简化软件安装和编译运行指导。注意，WebIDE或Docker环境默认提供**最新商发版本CANN软件包**，目前是CANN 8.5.0。
 
-1. [环境部署指南](./docs/zh/context/quick_install.md)：不同场景下环境搭建指导，包括Docker安装、手动安装CANN软件包等。
+> **说明**：如果您是手动安装CANN包或体验master分支最新能力等其他场景，可跳过快速入门，参考下方指南获取详细教程，该教程提供不同场景下丰富的操作方法，以满足多样化业务诉求。
+>
+> 1. [环境部署指南](./docs/zh/context/quick_install.md)：不同场景下的环境搭建指导，包括Docker安装、手动安装CANN软件包等。
+> 2. [编译执行算子指南](./docs/zh/invocation/quick_op_invocation.md)：不同场景下的算子包编译和验证指导，例如离线编译，深入了解编译参数与调用方式。
+> 3. [算子开发指南](./docs/zh/develop/aicore_develop_guide.md)：自定义开发标准算子的指南，学习从零创建算子工程、实现Tiling和Kernel。
+> 4. [调试调优指南](./docs/zh/debug/op_debug_prof.md)：不同场景下的系统性调试技巧与性能优化方法。
 
-2. [编译执行算子指南](./docs/zh/invocation/quick_op_invocation.md)：不同场景下算子包编译和验证指导，例如离线编译，深入了解编译参数与调用方式。
 
-3. [算子开发指南](./docs/zh/develop/aicore_develop_guide.md)：自定义开发标准算子指南，学习从零创建算子工程、实现Tiling和Kernel。
-
-4. [调试调优指南](./docs/zh/debug/op_debug_prof.md)：不同场景下系统的调试技巧与性能优化方法。
-
-无论是极简还是标准场景，算子开发和贡献流程一般如下图，我们欢迎并鼓励您在社区贡献算子，共同丰富项目生态。
+算子开发和贡献的基本流程如下图，欢迎并鼓励您在社区贡献算子，共同丰富项目生态。
 
 ![算子开发贡献流程](./docs/zh/figures/算子开发贡献流程.png "算子开发贡献流程图")
 
-这里将以**AddExample**算子作为实践对象，源文件位于`ops-nn/examples/add_example`目录，请参考下面步骤快速体验起来吧！
+为方便您能快速了解算子开发的全流程，我们将以**AddExample**算子作为实践对象，其源文件位于`ops-nn/examples/add_example`，具体操作步骤如下：
 
-## 目录导读
-
-1.  **[环境安装](#一环境安装)**：搭建算子开发和运行环境。
+1.  **[环境安装](#一环境安装二选一)**：搭建算子开发和运行环境。
 2.  **[编译部署](#二编译部署)**：编译自定义算子包并部署安装，实现快速调用算子。
 3.  **[算子开发](#三算子开发)**：通过修改现有算子Kernel，体验开发、编译、验证的完整闭环。
 4.  **[算子调试](#四算子调试)**：掌握算子打印和性能采集方法。
 5.  **[算子验证](#五算子验证)**：学习如何修改算子example样例，以验证算子在不同输入下的功能正确性。
 
-完成以上步骤，您将对算子开发的全流程有一个基础的实践认知。
-
 ## 一、环境安装（二选一）
 
-### 1. 有环境场景：Docker安装
+### 1. 无环境场景：WebIDE开发
+
+对于无环境的用户，可直接使用WebIDE开发平台，即“**算子一站式开发平台**”，该平台为您提供在线可直接运行的昇腾环境，环境中已安装必备的软件包，无需手动安装。更多关于开发平台的介绍请参考[LINK](https://gitcode.com/org/cann/discussions/54)。
+
+1. 进入ops-nn开源项目，单击“`云开发`”按钮，使用已认证过的华为云账号登录。若未注册或认证，请根据页面提示进行注册和认证。
+
+   <img src="docs/zh/figures/cloudIDE.png" alt="云平台"  width="750px" height="90px">
+
+2. 根据页面提示创建并启动云开发环境，单击“`连接 > WebIDE `”进入算子一站式开发平台，开源项目的资源默认在`/mnt/workspace`目录下。
+
+    <img src="docs/zh/figures/webIDE.png" alt="云平台"  width="1000px" height="150px">
+    
+3. 检查环境是否完备。
+
+    在云平台终端窗口，执行如下命令验证环境和驱动是否正常。
+
+    -   **检查NPU设备**
+
+        执行如下命令，若返回驱动相关信息说明已成功挂载。    
+        
+        ```bash    
+        npu-smi info
+        ```
+
+    -   **检查CANN版本**
+
+        执行如下命令查看CANN Toolkit版本信息。
+        
+        ```bash
+        cat /home/developer/Ascend/ascend-toolkit/latest/opp/version.info
+        ```
+
+### 2. 有环境场景：Docker安装
 
 #### 前提条件
 
@@ -82,47 +110,15 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
     ```bash    
     npu-smi info
     ```
--   **检查CANN安装**
+-   **检查CANN版本**
     
-    执行如下命令查看CANN Toolkit版本信息，默认最新商发版本（目前是8.5.0）。
+    执行如下命令查看CANN Toolkit版本信息。
     
     ```bash
     cat /usr/local/Ascend/ascend-toolkit/latest/opp/version.info
     ```
 
 你已经拥有了一个“开箱即用”的算子开发环境。接下来，需要在这个环境里验证从源码到可运行算子的完整工具链。
-
-### 2. 无环境场景：WebIDE开发（内测中）
-
-对于无环境的用户，提供WebIDE开发平台，即“**算子一站式开发平台**”。该平台为您提供在线可直接运行的昇腾环境，环境中已安装必备的软件包，无需手动安装。
-
-> **前提说明：**
->
-> 当前平台功能正在内测中，若您想体验，请先单击[LINK](https://gitcode.com/org/cann/discussions/47)申请云开发平台资源，并获取平台介绍文档。只有成功申请了平台资源，开源项目的首页才会有“**云开发**”按钮，您才可以参考下述步骤体验。
-
-1. 进入ops-nn开源项目，单击“`云开发 > WebIDE for Ascend`”进入算子一站式开发平台，根据页面提示启动云开发环境。
-
-   <img src="docs/zh/figures/cloudIDE.png" alt="云平台"  width="700px" height="100px">
-
-2. 检查环境是否完备。
-
-    打开`云平台终端`窗口，默认在`/mnt/workspace`目录下，执行如下命令验证环境和驱动是否正常。
-
-    -   **检查NPU设备**：
-    
-        执行如下命令，若返回驱动相关信息说明已成功挂载。    
-        
-        ```bash    
-        npu-smi info
-        ```
-    
-    -   **检查CANN安装**：
-
-        执行如下命令查看CANN Toolkit版本信息，默认最新商发版本（目前是8.5.0）。
-        
-        ```bash
-        cat /home/developer/Ascend/ascend-toolkit/latest/opp/version.info
-        ```
 
 ## 二、编译部署
 
@@ -132,12 +128,12 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
 
 1. 获取项目源码。
 
-    无论Docker或WebIDE环境，默认提供最新商发分支源码（目前是8.5.0）。如需获取其他分支源码，可通过如下命令下载，\$\{tag\_version\}需替换为目标分支标签名，算子仓与CANN版本配套关系可参见[release仓库](https://gitcode.com/cann/release-management)。
+    Docker或WebIDE环境默认提供最新商发版本源码，如需获取其他版本源码，可通过如下命令下载，\$\{tag\_version\}需替换为目标分支标签名，分支标签与CANN版本配套关系可参见[release仓库](https://gitcode.com/cann/release-management)。
 
     ```bash
     git clone -b ${tag_version} https://gitcode.com/cann/ops-nn.git
     ```
-    若出现“`fatal: destionation path 'ops-nn' already exists and is not an empty directory.`”说明项目源码已存在，如需刷新项目代码可使用`git pull`命令。
+    若出现“`fatal: destination path 'ops-nn' already exists and is not an empty directory.`”说明项目源码已存在，如需刷新项目代码可使用`git pull`命令。
     
 2. 进入项目根目录，命令如下，请区分Docker和WebIDE场景。
     - Docker场景：
