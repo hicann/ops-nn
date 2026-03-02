@@ -17,7 +17,6 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/make_op_executor.h"
-#include "op_api/op_api_def.h"
 #include "aclnn_kernels/transdata.h"
 
 using namespace op;

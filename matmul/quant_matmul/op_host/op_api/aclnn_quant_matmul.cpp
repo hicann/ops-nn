@@ -367,7 +367,7 @@ inline static aclnnStatus CheckParamsV2(
 }
 
 static const aclTensor* ProcessEmptyTensor(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* out, aclOpExecutor* executor)
+    const aclTensor* x1, const aclTensor* bias, const aclTensor* out, aclOpExecutor* executor)
 {
     // 获取shape信息
     op::Shape outShape = out->GetViewShape();
@@ -392,7 +392,7 @@ static const aclTensor* BuildQuantMatMulGraph(
 {
     // 空tensor 处理
     if (x1->IsEmpty() || x2->IsEmpty()) {
-        auto emptyOut = ProcessEmptyTensor(x1, x2, bias, out, executor);
+        auto emptyOut = ProcessEmptyTensor(x1, bias, out, executor);
         CHECK_RET(emptyOut != nullptr, nullptr);
         return emptyOut;
     }

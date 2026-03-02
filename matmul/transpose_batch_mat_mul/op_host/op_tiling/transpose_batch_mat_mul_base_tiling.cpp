@@ -236,6 +236,8 @@ static void TuneBaseMKN(matmul_v3::MatmulV3RunInfo &runInfo,
 
 void TransposeBatchMatMulBaseTiling::ResetBasicBlock(uint64_t tempBaseM, uint64_t tempBaseN)
 {
+    OP_TILING_CHECK(tempBaseM == 0 && tempBaseN == 0,
+                    OP_LOGW(args_.opName, "tempBaseM == 0 && tempBaseN == 0 is invalid"), return);
     uint64_t baseKAlignNum =
         (!args_.isATrans && args_.isBTrans) ? GetAlignNumWithDataType(BASIC_BLOCK_SIZE_256, args_.aType) : BLOCK_CUBE;
     uint64_t kValueAlign = ops::CeilAlign(static_cast<uint64_t>(args_.kValue), baseKAlignNum);
@@ -266,19 +268,19 @@ void TransposeBatchMatMulBaseTiling::BaseLoadBalance()
         if (mMaxTile < nMaxTile || (mMaxTile == nMaxTile && baseNAlignNum == BLOCK_CUBE)) {
             tempBaseM = ops::CeilAlign(ops::CeilDiv(args_.mValue, mCore), baseMAlignNum);
             mCore = ops::CeilDiv(args_.mValue, tempBaseM);
-            nCore = coreNumMN / mCore;
+            nCore = ops::FloorDiv(coreNumMN, mCore);
             tempBaseN = ops::CeilAlign(ops::CeilDiv(args_.nValue, nCore), baseNAlignNum);
         } else {
             tempBaseN = ops::CeilAlign(ops::CeilDiv(args_.nValue, nCore), baseNAlignNum);
             nCore = ops::CeilDiv(args_.nValue, tempBaseN);
-            mCore = coreNumMN / nCore;
+            mCore = ops::FloorDiv(coreNumMN, nCore);
             tempBaseM = ops::CeilAlign(ops::CeilDiv(args_.mValue, mCore), baseMAlignNum);
         }
 
         while (tempBaseN >= tempBaseM * NUM_TWO && nCore < coreNumMN / NUM_TWO &&
             tempBaseN != baseNAlignNum) {
             nCore *= NUM_TWO;
-            mCore = coreNumMN / nCore;
+            mCore = ops::FloorDiv(coreNumMN, nCore);
             tempBaseM = ops::CeilAlign(ops::CeilDiv(args_.mValue, mCore), baseMAlignNum);
             tempBaseN = ops::CeilAlign(ops::CeilDiv(args_.nValue, nCore), baseNAlignNum);
             mCore = ops::CeilDiv(args_.mValue, static_cast<uint64_t>(tempBaseM));
@@ -288,7 +290,7 @@ void TransposeBatchMatMulBaseTiling::BaseLoadBalance()
         while (tempBaseM >= tempBaseN * NUM_TWO && mCore < coreNumMN / NUM_TWO &&
             tempBaseM != baseMAlignNum) {
             mCore *= NUM_TWO;
-            nCore = coreNumMN / mCore;
+            nCore = ops::FloorDiv(coreNumMN, mCore);
             tempBaseM = ops::CeilAlign(ops::CeilDiv(args_.mValue, mCore), baseMAlignNum);
             tempBaseN = ops::CeilAlign(ops::CeilDiv(args_.nValue, nCore), baseNAlignNum);
             mCore = ops::CeilDiv(args_.mValue, static_cast<uint64_t>(tempBaseM));
