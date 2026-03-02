@@ -133,7 +133,7 @@ aclnnStatus aclnnTransposeBatchMatMul(
         </td>
         <td>INT64、UINT64</td>
         <td>ND</td>
-        <td>2</td>
+        <td>1</td>
         <td>√</td>
       </tr>
       <tr>
