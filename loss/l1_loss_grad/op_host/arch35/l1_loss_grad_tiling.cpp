@@ -225,7 +225,7 @@ static ge::graphStatus TilingPrepareForL1LossGrad(gert::TilingParseContext* cont
 static ge::graphStatus Tiling4L1LossGrad(gert::TilingContext* tilingContextGen)
 {
     OP_LOGD(tilingContextGen->GetNodeName(), "Tiling4L1LossGrad rt2.0 is running.");
-    auto compileInfo = reinterpret_cast<const L1LossGradCompileInfo*>(tilingContextGen->GetCompileInfo());
+    auto compileInfo = static_cast<const L1LossGradCompileInfo*>(tilingContextGen->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(tilingContextGen, compileInfo);
     OP_LOGD(tilingContextGen, "Enter ascendc L1LossGradTiling");
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(tilingContextGen);

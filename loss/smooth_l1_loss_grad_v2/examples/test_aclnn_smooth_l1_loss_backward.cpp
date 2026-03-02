@@ -93,7 +93,7 @@ int main() {
   std::vector<float> gradOutHostData = {1, 1, 1, 1, 1, 1, 1, 1};
   std::vector<float> selfHostData = {0, 1, 2, 3, 4, 5, 6, 7};
   std::vector<float> targetHostData = {1, 1, 1, 1, 1, 1, 1, 1};
-  std::vector<float> gradInputHostData(8, 0);
+  std::vector<float> gradInputHostData = {0, 0, 0, 0, 0, 0, 0, 0};
   // 创建gradOut aclTensor
   ret = CreateAclTensor(gradOutHostData, gradOutShape, &gradOutDeviceAddr, aclDataType::ACL_FLOAT, &gradOut);
   CHECK_RET(ret == ACL_SUCCESS, return ret);

@@ -327,7 +327,7 @@ ge::graphStatus Tiling4KlDivLossGrad(gert::TilingContext* context)
         return ge::GRAPH_FAILED;
     }
 
-    auto compileInfo = reinterpret_cast<const KlDivLossGradCompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = static_cast<const KlDivLossGradCompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     OP_LOGD(context, "Enter ascendc KlDivLossGradTilingAscendC");
     return KlDivLossGradTilingAscendC(context);

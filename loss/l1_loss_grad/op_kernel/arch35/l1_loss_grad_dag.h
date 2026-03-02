@@ -20,10 +20,10 @@
 #include "atvoss/util/placeholder.h"
 #include "atvoss/util/elems.h"
 
-using namespace Ops::Base;
-
 namespace L1LossGradKernel {
 using namespace AscendC;
+using namespace Ops::Base;
+
 const int COMPARE_MODE_LT = 0;
 const int COMPARE_MODE_GT = 1;
 const int SELECT_MODE_SCALAR = 1;

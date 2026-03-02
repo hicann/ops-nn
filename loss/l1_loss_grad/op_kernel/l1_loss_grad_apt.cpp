@@ -34,11 +34,11 @@ using namespace AscendC;
     
     if constexpr (inputGradsIsScalar == static_cast<uint32_t>(ATTR_IS_TRUE)) {
         using OpDag = L1LossGradKernel::L1LossGradScalarCast<DTYPE_PREDICT, float>::OpDag;
-        BroadcastSch<schMode, OpDag> sch(tiling);
+        Ops::Base::BroadcastSch<schMode, OpDag> sch(tiling);
         sch.Process(grads, predict, label, y);
      } else {
         using OpDag = L1LossGradKernel::L1LossGradCast<DTYPE_PREDICT, float>::OpDag;
-        BroadcastSch<schMode, OpDag> sch(tiling);
+        Ops::Base::BroadcastSch<schMode, OpDag> sch(tiling);
         sch.Process(grads, predict, label, y);
      }
  }
