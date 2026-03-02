@@ -32,10 +32,10 @@ aclnnStatus aclnnConvertWeightToINT4PackGetWorkspaceSize(
 ```
 ```Cpp
 aclnnStatus aclnnConvertWeightToINT4Pack(
-  const aclTensor *weight,
-  aclTensor       *weightInt4Pack,
-  uint64_t        *workspaceSize, 
-  aclOpExecutor   **executor)
+  void            *workspace,
+  uint64_t         workspaceSize,
+  aclOpExecutor   *executor, 
+  aclrtStream      stream)
 ```
 
 ## aclnnConvertWeightToINT4PackGetWorkspaceSize
@@ -44,7 +44,7 @@ aclnnStatus aclnnConvertWeightToINT4Pack(
   <table style="undefined;table-layout: fixed; width: 1078px"><colgroup>
   <col style="width: 149px">
   <col style="width: 121px">
-  <col style="width: 264px">
+  <col style="width: 320px">
   <col style="width: 183px">
   <col style="width: 183px">
   <col style="width: 148px">
@@ -108,6 +108,8 @@ aclnnStatus aclnnConvertWeightToINT4Pack(
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
+  第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
   <col style="width: 267px">
