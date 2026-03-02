@@ -16,7 +16,6 @@
 #define MAX_POOL_V3_COMMON_H_
 #if ASC_DEVKIT_MAJOR >=9
 #include "kernel_vec_intf.h"
-#include "kernel_micro_intf.h"
 #else
 #include "kernel_operator.h"
 #endif

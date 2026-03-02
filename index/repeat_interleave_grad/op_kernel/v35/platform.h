@@ -80,10 +80,4 @@ __aicore__ inline constexpr bool IsDataCopyPadSupport()
 
 }
 
-namespace AscendC {
-namespace MicroAPI {
-
-}
-}
-
 #endif  // OPS_BUILT_IN_OP_ASCENDC_PLATFORM_INFO_H_

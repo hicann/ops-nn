@@ -16,7 +16,6 @@
 #endif
 #include "../../utils/underscore.h"
 #include "../../utils/constant.h"
-#include "kernel_micro_datacopy_intf_impl.h"
 namespace Cmct::Prologue::Tile {
 using AscendC::MicroAPI::RegTensor;
 using Gemm::IsRowMajor2D;
