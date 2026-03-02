@@ -61,6 +61,12 @@ using WeightQuantBatchMatmulV2::InvokeKernel;
 using namespace WeightQuantBatchMatmulV2;
 using namespace WeightQuantBatchMatmulV2::Arch35;
 
+constexpr MatmulConfigMode configMode = MatmulConfigMode::CONFIG_NORM;
+constexpr MatmulBatchParams batchParams{false, BatchMode::BATCH_LESS_THAN_L1, false, BatchOutMode::MULTI_BATCH};
+constexpr MatmulConfig MM_CFG_MULTI_BATCH = GetMMConfig<configMode>(batchParams);
+constexpr MatmulBatchParams batchParamsNoBatchOut{false, BatchMode::BATCH_LESS_THAN_L1, false, BatchOutMode::SINGLE_BATCH};
+constexpr MatmulConfig MM_CFG_MULTI_BATCH_NO_BATCH_OUT = GetMMConfig<configMode>(batchParamsNoBatchOut);
+
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
 static constexpr VecAntiQuantConfig VEC_ANTIQUANT_CONFIGS[] = {
     {2, 512},   // idx 0
@@ -282,10 +288,16 @@ __global__ __aicore__ void weight_quant_batch_matmul_v2(
                                             false, QuantType::PER_TENSOR);
     } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ITERATE_BATCH && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR) {
         INVOKE_WEIGHT_QUANT_BMM_ITERBATCH_IMPL(WeightQuantBatchMatmulV2IterBatchKernel, static_cast<bool>(TRANS_A), static_cast<bool>(TRANS_B), QuantType::PER_TENSOR,
-                                            false, QuantType::PER_TENSOR);
+                                            false, QuantType::PER_TENSOR, MM_CFG_MULTI_BATCH);
     } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ITERATE_BATCH && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL) {
         INVOKE_WEIGHT_QUANT_BMM_ITERBATCH_IMPL(WeightQuantBatchMatmulV2IterBatchKernel, static_cast<bool>(TRANS_A), static_cast<bool>(TRANS_B), QuantType::PER_CHANNEL,
-                                            false, QuantType::PER_TENSOR);
+                                            false, QuantType::PER_TENSOR, MM_CFG_MULTI_BATCH);
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ITERATE_BATCH_NO_BATCH_OUT && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR) {
+        INVOKE_WEIGHT_QUANT_BMM_ITERBATCH_IMPL(WeightQuantBatchMatmulV2IterBatchKernel, static_cast<bool>(TRANS_A), static_cast<bool>(TRANS_B), QuantType::PER_TENSOR,
+                                            false, QuantType::PER_TENSOR, MM_CFG_MULTI_BATCH_NO_BATCH_OUT);
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ITERATE_BATCH_NO_BATCH_OUT && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL) {
+        INVOKE_WEIGHT_QUANT_BMM_ITERBATCH_IMPL(WeightQuantBatchMatmulV2IterBatchKernel, static_cast<bool>(TRANS_A), static_cast<bool>(TRANS_B), QuantType::PER_CHANNEL,
+                                            false, QuantType::PER_TENSOR, MM_CFG_MULTI_BATCH_NO_BATCH_OUT);
     }
 #endif
 #endif

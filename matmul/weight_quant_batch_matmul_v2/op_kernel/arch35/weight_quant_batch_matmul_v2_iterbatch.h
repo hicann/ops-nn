@@ -27,11 +27,11 @@
 #include "../weight_quant_batch_matmul_v2_constant.h"
 #include "weight_quant_batch_matmul_v2_arch35_tiling_data.h"
 
-#define LOCAL_TEMPLATE_CLASS_PARAMS                                                                        \
+#define ITERBATCH_LOCAL_TEMPLATE_CLASS_PARAMS                                                              \
     template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans, \
-              QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType>
-#define LOCAL_TEMPLATE_FUNC_PARAMS \
-    xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType
+              QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, const MatmulConfig &mmCfg>
+#define ITERBATCH_LOCAL_TEMPLATE_FUNC_PARAMS \
+    xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, mmCfg
 
 using AscendC::GetBlockIdx;
 using AscendC::GlobalTensor;
@@ -40,13 +40,8 @@ using AscendC::TPosition;
 using matmul::MatmulImpl;
 using matmul::MatmulType;
 namespace WeightQuantBatchMatmulV2::Arch35 {
-constexpr MatmulConfigMode configMode = MatmulConfigMode::CONFIG_NORM;
-constexpr MatmulBatchParams batchParams{false, BatchMode::BATCH_LESS_THAN_L1, false, BatchOutMode::MULTI_BATCH};
-constexpr MatmulConfig MM_CFG_MULTI_BATCH = GetMMConfig<configMode>(batchParams);
-constexpr MatmulBatchParams batchParamsNoBatchOut{false, BatchMode::BATCH_LESS_THAN_L1, false, BatchOutMode::SINGLE_BATCH};
-constexpr MatmulConfig MM_CFG_MULTI_BATCH_NO_BATCH_OUT = GetMMConfig<configMode>(batchParamsNoBatchOut);
 
-LOCAL_TEMPLATE_CLASS_PARAMS
+ITERBATCH_LOCAL_TEMPLATE_CLASS_PARAMS
 class WeightQuantBatchMatmulV2IterBatchKernel {
 public:
     __aicore__ inline WeightQuantBatchMatmulV2IterBatchKernel()
@@ -74,11 +69,11 @@ protected:
     using bType = matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, wType, bTrans, LayoutMode::NORMAL>;
     using cType = matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, yType, false, LayoutMode::NORMAL>;
     using biasMatmulType = matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, biasType>;
-    matmul::MatmulImpl<aType, bType, cType, biasMatmulType, MM_CFG_MULTI_BATCH_NO_BATCH_OUT> mm_;
+    matmul::MatmulImpl<aType, bType, cType, biasMatmulType, mmCfg> mm_;
 };
 
-LOCAL_TEMPLATE_CLASS_PARAMS
-__aicore__ inline void WeightQuantBatchMatmulV2IterBatchKernel<LOCAL_TEMPLATE_FUNC_PARAMS>::Init(
+ITERBATCH_LOCAL_TEMPLATE_CLASS_PARAMS
+__aicore__ inline void WeightQuantBatchMatmulV2IterBatchKernel<ITERBATCH_LOCAL_TEMPLATE_FUNC_PARAMS>::Init(
     GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR quantScale, GM_ADDR quantOffset,
     GM_ADDR bias, GM_ADDR y, GM_ADDR workspace, const void* tilingData, TPipe* tPipe)
 {
@@ -92,8 +87,8 @@ __aicore__ inline void WeightQuantBatchMatmulV2IterBatchKernel<LOCAL_TEMPLATE_FU
     mm_.Init(&tiling_->matmulTiling, tPipe);
 }
 
-LOCAL_TEMPLATE_CLASS_PARAMS
-__aicore__ inline void WeightQuantBatchMatmulV2IterBatchKernel<LOCAL_TEMPLATE_FUNC_PARAMS>::UpdateGlobalAddr(
+ITERBATCH_LOCAL_TEMPLATE_CLASS_PARAMS
+__aicore__ inline void WeightQuantBatchMatmulV2IterBatchKernel<ITERBATCH_LOCAL_TEMPLATE_FUNC_PARAMS>::UpdateGlobalAddr(
     GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR quantScale, GM_ADDR quantOffset,
     GM_ADDR bias, GM_ADDR y, GM_ADDR workspace)
 {
@@ -114,8 +109,8 @@ __aicore__ inline void WeightQuantBatchMatmulV2IterBatchKernel<LOCAL_TEMPLATE_FU
     }
 }
 
-LOCAL_TEMPLATE_CLASS_PARAMS
-__aicore__ inline void WeightQuantBatchMatmulV2IterBatchKernel<LOCAL_TEMPLATE_FUNC_PARAMS>::Process()
+ITERBATCH_LOCAL_TEMPLATE_CLASS_PARAMS
+__aicore__ inline void WeightQuantBatchMatmulV2IterBatchKernel<ITERBATCH_LOCAL_TEMPLATE_FUNC_PARAMS>::Process()
 {
     if ASCEND_IS_AIV {
         return;
@@ -138,8 +133,8 @@ __aicore__ inline void WeightQuantBatchMatmulV2IterBatchKernel<LOCAL_TEMPLATE_FU
     }
 }
 
-LOCAL_TEMPLATE_CLASS_PARAMS
-__aicore__ inline void WeightQuantBatchMatmulV2IterBatchKernel<LOCAL_TEMPLATE_FUNC_PARAMS>::CalcMmWithBatch()
+ITERBATCH_LOCAL_TEMPLATE_CLASS_PARAMS
+__aicore__ inline void WeightQuantBatchMatmulV2IterBatchKernel<ITERBATCH_LOCAL_TEMPLATE_FUNC_PARAMS>::CalcMmWithBatch()
 {
     for (uint64_t loopIndex = 0; loopIndex < block_.params_.loopTimes; loopIndex++) {
         if constexpr(antiQuantType == QuantType::PER_TENSOR) {

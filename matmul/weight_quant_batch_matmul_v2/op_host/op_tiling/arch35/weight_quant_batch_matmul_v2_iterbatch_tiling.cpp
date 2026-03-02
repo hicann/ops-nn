@@ -221,7 +221,15 @@ uint64_t WeightQuantBatchMatmulV2IterbatchTiling::GetTilingKey() const
     constexpr uint64_t subSocVersionType = WQBMMV2_DEFAULT;
     constexpr uint64_t antiquantScenario = WQBMMV2_DEFAULT;
     constexpr uint64_t algorithm = WQBMMV2_ALGO_FIXPIPE_ANTIQUANT;
-    constexpr uint64_t subAlgorithm = static_cast<uint64_t>(OptimizationAlgorithmSubCategory::ITERATE_BATCH);
+    // 开启NBatchOut需满足如下条件：
+    // 1. baseM >= singleCoreM && baseN >= singleCoreN
+    // 2. N/16向上取整应为偶数
+    bool enableBatchOut = basicTiling_.baseM >= basicTiling_.singleCoreM &&
+                          basicTiling_.baseN >= basicTiling_.singleCoreN &&
+                          static_cast<uint64_t>(ops::CeilDiv(matmulInfoPtr_->nSize, CUBE_BLOCK)) % 2 == 0;
+    uint64_t subAlgorithm = enableBatchOut ? 
+        static_cast<uint64_t>(OptimizationAlgorithmSubCategory::ITERATE_BATCH) :
+        static_cast<uint64_t>(OptimizationAlgorithmSubCategory::ITERATE_BATCH_NO_BATCH_OUT);
     constexpr uint64_t templateCustom = static_cast<uint64_t>(Mte2Configuration::MTE2_INNER_SIZE_512_BUF_NUM_2);
     constexpr uint64_t apiConstexpr = 0UL;
     bool transA = matmulInfoPtr_->transA;
