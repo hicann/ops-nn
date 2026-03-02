@@ -350,6 +350,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulGetWorkspaceSize(const aclTensor *x1, con
                                                    bool transposeX1, bool transposeX2,
                                                    float antiquantScale, float antiquantOffset, aclTensor *out,
                                                    uint64_t *workspaceSize, aclOpExecutor **executor) {
+  DEPRECATED_API_WARN_ONCE("aclnnWeightQuantBatchMatmulGetWorkspaceSize", "aclnnWeightQuantBatchMatmulV3GetWorkspaceSize");
   L2_DFX_PHASE_1(aclnnWeightQuantBatchMatmul, DFX_IN(x1, x2, bias, addOffset, mulScale, diagonalMatrix,
                                                                 deqOffset, deqScale, transposeX1,
                                                                 transposeX2, antiquantScale, antiquantOffset), DFX_OUT(out));
@@ -411,6 +412,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulGetWorkspaceSize(const aclTensor *x1, con
 
 aclnnStatus aclnnWeightQuantBatchMatmul(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor,
                              const aclrtStream stream) {
+  DEPRECATED_API_WARN_ONCE("aclnnWeightQuantBatchMatmul", "aclnnWeightQuantBatchMatmulV3");
   L2_DFX_PHASE_2(aclnnWeightQuantBatchMatmul);
   // 固定写法，调用框架能力，完成计算
   return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

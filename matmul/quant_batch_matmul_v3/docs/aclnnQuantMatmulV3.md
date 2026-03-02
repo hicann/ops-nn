@@ -1,5 +1,7 @@
 # aclnnQuantMatmulV3
 
+**须知：该接口后续版本会废弃，请使用最新aclnnQuantMatmulV5接口。**
+
 ## 产品支持情况
 
 | 产品                                                         |  是否支持   |

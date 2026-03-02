@@ -1,6 +1,6 @@
 # aclnnQuantMatmulV2
 
-**该接口后续版本会废弃，请使用最新接口[aclnnQuantMatmulV4](../../quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md)，接口迁移方法参考本文档[约束说明](#约束说明)。**
+**须知：该接口后续版本会废弃，请使用最新aclnnQuantMatmulV5接口。**
 
 
 ## 产品支持情况

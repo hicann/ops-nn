@@ -58,18 +58,6 @@ static const uint64_t INPUT_DIM_MIN_VALUE = 2;
 static constexpr int64_t OUTPUT_INFER_FAIL = -1;
 static const int PENULTIMATE_DIM = 2;
 
-inline static void FirstPrint(bool& isFirstToPrint, const char* interfaceName, bool isExecutorInferface)
-{
-    if (isFirstToPrint) {
-        if (isExecutorInferface) {
-            OP_LOGW("%s is deprecated, use aclnnQuantMatmulV4 instead", interfaceName);
-        } else {
-            OP_LOGW("%s is deprecated, use aclnnQuantMatmulV4GetWorkspaceSize instead", interfaceName);
-        }
-        isFirstToPrint = false;
-    }
-}
-
 inline static bool IsFormatSupport(const aclTensor* input, const std::string& inputName)
 {
     OP_CHECK_NULL(input, return false);
@@ -410,8 +398,7 @@ aclnnStatus aclnnQuantMatmulGetWorkspaceSize(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, float deqScale, aclTensor* out,
     uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    static bool isFirstToPrint = true;
-    FirstPrint(isFirstToPrint, "aclnnQuantMatmulGetWorkspaceSize", false);
+    DEPRECATED_API_WARN_ONCE("aclnnQuantMatmulGetWorkspaceSize", "aclnnQuantMatmulV5GetWorkspaceSize");
     L2_DFX_PHASE_1(aclnnQuantMatmul, DFX_IN(x1, x2, bias, deqScale), DFX_OUT(out));
 
     // 固定写法，创建OpExecutor
@@ -461,8 +448,7 @@ aclnnStatus aclnnQuantMatmulGetWorkspaceSize(
 
 aclnnStatus aclnnQuantMatmul(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
 {
-    static bool isFirstToPrint = true;
-    FirstPrint(isFirstToPrint, "aclnnQuantMatmul", true);
+    DEPRECATED_API_WARN_ONCE("aclnnQuantMatmul", "aclnnQuantMatmulV5");
     L2_DFX_PHASE_2(aclnnQuantMatmul);
     // 固定写法，调用框架能力，完成计算
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
@@ -472,8 +458,7 @@ aclnnStatus aclnnQuantMatmulV2GetWorkspaceSize(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* deqScale, bool adjX1, bool adjX2,
     aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    static bool isFirstToPrint = true;
-    FirstPrint(isFirstToPrint, "aclnnQuantMatmulV2GetWorkspaceSize", false);
+    DEPRECATED_API_WARN_ONCE("aclnnQuantMatmulV2GetWorkspaceSize", "aclnnQuantMatmulV5GetWorkspaceSize");
     L2_DFX_PHASE_1(aclnnQuantMatmulV2, DFX_IN(x1, x2, bias, deqScale, adjX1, adjX2), DFX_OUT(out));
 
     // 固定写法，创建OpExecutor
@@ -517,8 +502,7 @@ aclnnStatus aclnnQuantMatmulV2GetWorkspaceSize(
 aclnnStatus aclnnQuantMatmulV2(
     void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
 {
-    static bool isFirstToPrint = true;
-    FirstPrint(isFirstToPrint, "aclnnQuantMatmulV2", true);
+    DEPRECATED_API_WARN_ONCE("aclnnQuantMatmulV2", "aclnnQuantMatmulV5");
     L2_DFX_PHASE_2(aclnnQuantMatmulV2);
     // 固定写法，调用框架能力，完成计算
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

@@ -1,6 +1,6 @@
 # aclnnWeightQuantBatchMatmul
 
-**该接口后续版本会废弃，请使用[aclnnWeightQuantBatchMatmulV2](../../weight_quant_batch_matmul_v2/docs/aclnnWeightQuantBatchMatmulV2.md)、[aclnnWeightQuantBatchMatmulV3](../../weight_quant_batch_matmul_v2/docs/aclnnWeightQuantBatchMatmulV3.md)接口。**
+**须知：该接口后续版本会废弃，请使用最新aclnnWeightQuantBatchMatmulV3接口。**
 
 ## 产品支持情况
 

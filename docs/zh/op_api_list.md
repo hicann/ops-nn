@@ -293,10 +293,6 @@
 | [aclnnQuantConvolutionWeightNz](../../conv/convolution_forward/docs/aclnnQuantConvolutionWeightNz.md) |完成 per-channel 量化的 3D 卷积计算，weight仅支持FRACTAL_Z_3D格式。|默认确定性实现|
 | [aclnnQuantize](../../quant/quantize/docs/aclnnQuantize.md)|对输入张量进行量化处理。|默认确定性实现|
 | [aclnnQuantizeBatchNorm](../../norm/quantized_batch_norm/docs/aclnnQuantizedBatchNorm.md)|将输入Tensor执行一个反量化的计算，再根据输入的weight、bias、epsilon执行归一化，最后根据输出的outputScale以及outputZeroPoint执行量化。|默认确定性实现|
-| [aclnnQuantMatmul](../../matmul/quant_matmul/docs/aclnnQuantMatmul.md)|完成张量self与张量mat2的矩阵乘计算（支持1维到6维作为输入的矩阵乘）。|默认确定性实现|
-| [aclnnQuantMatmulV2](../../matmul/quant_matmul/docs/aclnnQuantMatmulV2.md)|完成量化的矩阵乘计算，最大支持输入维度为3维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。|默认确定性实现|
-| [aclnnQuantMatmulV3](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV3.md) |完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。|默认确定性实现|
-| [aclnnQuantMatmulV4](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md) |完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。|默认确定性实现|
 | [aclnnQuantMatmulV5](../../matmul/quant_batch_matmul_v4/docs/aclnnQuantMatmulV5.md) |完成量化的矩阵乘计算。|默认确定性实现|
 | [aclnnQuantBatchMatmulInplaceAdd](../../matmul/quant_batch_matmul_inplace_add/docs/aclnnQuantBatchMatmulInplaceAdd.md) |实现量化矩阵乘计算和原地累加加法计算，基本功能为矩阵乘和加法的组合。|-|
 | [aclnnQuantMatmulReduceSumWeightNz](../../matmul/quant_matmul_reduce_sum/docs/aclnnQuantMatmulReduceSumWeightNz.md) |完成量化的分组矩阵计算，然后所有组的矩阵计算结果相加后输出。|默认非确定性实现，支持配置开启。|
@@ -355,7 +351,6 @@
 | [aclnnUnique2](../../index/scatter_elements/docs/aclnnUnique2.md) |对输入张量self进行去重，返回self中的唯一元素。unique功能的增强，新增返回值countsOut，表示valueOut中各元素在输入self中出现的次数，用returnCounts参数控制。|默认确定性实现|
 | [aclnnUniqueConsecutive](../../index/unique_consecutive/docs/aclnnUniqueConsecutive.md) |去除每一个元素后的重复元素。当dim不为空时，去除对应维度上的每一个张量后的重复张量。|默认确定性实现|
 | [aclnnUniqueDim](../../index/unique_with_counts_ext2/docs/aclnnUniqueDim.md) |在某一dim轴上，对输入张量self做去重操作。|默认确定性实现|
-| [aclnnWeightQuantBatchMatmul](../../matmul/weight_quant_batch_matmul/docs/aclnnWeightQuantBatchMatmul.md)|伪量化用于对self * mat2（matmul/batchmatmul）中的mat2进行量化。|-|
 | [aclnnWeightQuantBatchMatmulNz](../../matmul/weight_quant_batch_matmul_v2/docs/aclnnWeightQuantBatchMatmulNz.md) |完成一个输入为伪量化场景的矩阵乘计算，仅支持NZ场景。|默认确定性实现|
 | [aclnnWeightQuantBatchMatmulV2](../../matmul/weight_quant_batch_matmul_v2/docs/aclnnWeightQuantBatchMatmulV2.md) |完成一个输入为伪量化场景的矩阵乘计算，并可以实现对于输出的量化计算。|默认非确定性实现，支持配置开启。|
 | [aclnnWeightQuantBatchMatmulV3](../../matmul/weight_quant_batch_matmul_v2/docs/aclnnWeightQuantBatchMatmulV3.md) |完成一个输入为伪量化场景的矩阵乘计算，并可以实现对于输出的量化计算。|默认非确定性实现，支持配置开启。|
@@ -364,5 +359,7 @@
 |废弃接口|说明|
 |-------|----|
 | [aclnnWeightQuantBatchMatmul](../../matmul/weight_quant_batch_matmul/docs/aclnnWeightQuantBatchMatmul.md)|此接口后续版本会废弃，请使用最新接口[aclnnWeightQuantBatchMatmulV2](../../matmul/weight_quant_batch_matmul_v2/docs/aclnnWeightQuantBatchMatmulV2.md)、[aclnnWeightQuantBatchMatmulV3](../../matmul/weight_quant_batch_matmul_v2/docs/aclnnWeightQuantBatchMatmulV3.md)。 |
-| [aclnnQuantMatmul](../../matmul/quant_matmul/docs/aclnnQuantMatmul.md)|此接口后续版本会废弃，请使用最新接口[aclnnQuantMatmulV4](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md)。 |
-| [aclnnQuantMatmulV2](../../matmul/quant_matmul/docs/aclnnQuantMatmulV2.md)|此接口后续版本会废弃，请使用最新接口[aclnnQuantMatmulV4](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md)。 |
+| [aclnnQuantMatmul](../../matmul/quant_matmul/docs/aclnnQuantMatmul.md)|此接口后续版本会废弃，请使用最新接口[aclnnQuantMatmulV5](../../matmul/quant_batch_matmul_v4/docs/aclnnQuantMatmulV5.md)。 |
+| [aclnnQuantMatmulV2](../../matmul/quant_matmul/docs/aclnnQuantMatmulV2.md)|此接口后续版本会废弃，请使用最新接口[aclnnQuantMatmulV5](../../matmul/quant_batch_matmul_v4/docs/aclnnQuantMatmulV5.md)。 |
+| [aclnnQuantMatmulV3](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV3.md)|此接口后续版本会废弃，请使用最新接口[aclnnQuantMatmulV5](../../matmul/quant_batch_matmul_v4/docs/aclnnQuantMatmulV5.md)。 |
+| [aclnnQuantMatmulV4](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md)|此接口后续版本会废弃，请使用最新接口[aclnnQuantMatmulV5](../../matmul/quant_batch_matmul_v4/docs/aclnnQuantMatmulV5.md)。 |

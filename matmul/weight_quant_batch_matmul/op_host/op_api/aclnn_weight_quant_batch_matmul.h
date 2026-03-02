@@ -21,6 +21,9 @@ extern "C" {
  * @brief aclnnWeightQuantBatchMatmul的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
  */
+__attribute__((deprecated("aclnnWeightQuantBatchMatmulGetWorkspaceSize is scheduled to be deprecated in a post-December 2026 version update, "
+                        "and will be replaced by the aclnnWeightQuantBatchMatmulV3GetWorkspaceSize. "
+                        "We apologize for any inconvenience caused and appreciate your timely migration to the new interface.")))
 ACLNN_API aclnnStatus aclnnWeightQuantBatchMatmulGetWorkspaceSize(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* diagonalMatrix, const aclTensor* deqOffset,
     const aclTensor* deqScale, const aclTensor* addOffset, const aclTensor* mulScale, const aclTensor* bias,
@@ -30,6 +33,9 @@ ACLNN_API aclnnStatus aclnnWeightQuantBatchMatmulGetWorkspaceSize(
 /**
  * @brief aclnnWeightQuantBatchMatmul的第二段接口，用于执行计算。
  */
+__attribute__((deprecated("aclnnWeightQuantBatchMatmul is scheduled to be deprecated in a post-December 2026 version update, "
+                        "and will be replaced by the aclnnWeightQuantBatchMatmulV3. "
+                        "We apologize for any inconvenience caused and appreciate your timely migration to the new interface.")))
 ACLNN_API aclnnStatus aclnnWeightQuantBatchMatmul(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
                                                   const aclrtStream stream);
 
