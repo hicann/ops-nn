@@ -23,6 +23,7 @@ static constexpr uint64_t TILING_KEY_NCHW = 1;
 static constexpr int64_t DOUBLE_BUFFER = 2;
 static constexpr uint64_t FORMAT_NCHW = 0;
 static constexpr int64_t ASCENDC_TOOLS_WORKSPACE = 16 * 1024 * 1024;
+static constexpr int64_t VL_FACTOR = 4;
 
 void AvgPoolV2GradCommonNCHWTiling::InitializationVars()
 {
@@ -97,14 +98,14 @@ uint64_t AvgPoolV2GradCommonNCHWTiling::GetTilingKey() const
 void AvgPoolV2GradCommonNCHWTiling::DoBufferCalculate()
 {
     // The calculation only involves inner.
-    int64_t hInputInner =
+    splitData.hInputInner =
         Ops::Base::CeilDiv(splitData.hOutputInner + inputData.kernelSize[H_DIM] - 1, inputData.stride[H_DIM]);
-    int64_t wInputInner =
+    splitData.wInputInner =
         Ops::Base::CeilDiv(splitData.wOutputInner + inputData.kernelSize[W_DIM] - 1, inputData.stride[W_DIM]);
-    int64_t wInputInnerAligned = Ops::Base::CeilAlign(wInputInner, baseData.dataNumInOneBlock);
+    int64_t wInputInnerAligned = Ops::Base::CeilAlign(splitData.wInputInner, baseData.dataNumInOneBlock);
     int64_t wOutputInnerAligned = Ops::Base::CeilAlign(splitData.wOutputInner, baseData.dataNumInOneBlock);
 
-    int64_t inputPlaneSizeHW = hInputInner * wInputInnerAligned;
+    int64_t inputPlaneSizeHW = splitData.hInputInner * wInputInnerAligned;
     int64_t outputPlaneSizeHW = splitData.hOutputInner * wOutputInnerAligned;
 
     splitData.gradBufferSize = splitData.highAxisInner * inputPlaneSizeHW * baseData.inputBytes;
@@ -415,6 +416,19 @@ void AvgPoolV2GradCommonNCHWTiling::SetTilingData()
 ge::graphStatus AvgPoolV2GradCommonNCHWTiling::DoOpTiling()
 {
     DoUBTiling();
+    int64_t hBatchCnt = std::min(splitData.hInputInner, inputData.gradShape[H_DIM]) / baseData.hProBatchSize;
+    int64_t wBatchCnt = std::min(splitData.wInputInner, inputData.gradShape[W_DIM]) / baseData.wProBatchSize;
+    hBatchCnt = hBatchCnt > 1 ? hBatchCnt : 1;
+    wBatchCnt = wBatchCnt > 1 ? wBatchCnt : 1;
+    int64_t allGatherCnt = hBatchCnt * wBatchCnt * splitData.highAxisInner;
+    OP_CHECK_IF(
+        allGatherCnt <= baseData.vRegSize / VL_FACTOR / sizeof(float),
+        OP_LOGI(
+            context_->GetNodeName(),
+            "nchw template is not capable, allGatherCnt: %ld, hBatchCnt is %ld, wBatchCnt: %ld, highAxisInner:%ld.",
+            allGatherCnt, hBatchCnt, wBatchCnt, splitData.highAxisInner),
+        return ge::GRAPH_PARAM_INVALID);
+
     DoBlockTiling();
     SetTilingData();
     PrintBaseData();

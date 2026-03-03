@@ -72,6 +72,9 @@ struct AvgPoolV2GradNCHWSplitInfo {
     int64_t outputBufferSize{0};
     int64_t gradBufferSize{0};
     int64_t totalBufferSize{0};
+
+    int64_t hInputInner{0};
+    int64_t wInputInner{0};
 };
 
 class AvgPoolV2GradCommonNCHWTiling : public TilingBaseClass {
