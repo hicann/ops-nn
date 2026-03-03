@@ -19,7 +19,7 @@ namespace optiling {
 
 const static uint64_t SIMD_ATOMIC_SUPPORT_KEY = 2000;
 const static uint64_t SIMD_DETERM_KEY = 2002;
-static constexpr int64_t SIMD_INNER_THRES = 1024;
+static constexpr int64_t SIMD_INNER_THRES = 512;
 static constexpr int64_t BLOCK_TILING_THRES = 512;
 static constexpr int64_t INNER_ADD_NUM = 128;
 static constexpr int64_t BASE_BLOCK_ALIGN = 512;
