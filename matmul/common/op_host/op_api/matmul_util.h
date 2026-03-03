@@ -14,13 +14,14 @@
 #include "opdev/common_types.h"
 #include "opdev/platform.h"
 
-#define DEPRECATED_API_WARN_ONCE(oldApiName, newApiName)                                 \
+#define DEPRECATED_API_WARN_ONCE(oldApiName, deprecatedDate, newApiName)                 \
     do {                                                                                 \
         static bool isFirstWarn = true;                                                  \
         if (isFirstWarn){                                                                \
-            OP_LOGW("%s is scheduled to be deprecated in a post-December 2026 version update, "                                                              \
-                        "and will be replaced by the %s. "                                                                                                   \
-                        "We apologize for any inconvenience caused and appreciate your timely migration to the new interface.", (oldApiName), (newApiName)); \
+            OP_LOGW("%s is scheduled to be deprecated in a post-%s version update, "                                            \
+                        "and will be replaced by the %s. "                                                                      \
+                        "We apologize for any inconvenience caused and appreciate your timely migration to the new interface.", \
+                        (oldApiName), (deprecatedDate), (newApiName));                   \
             isFirstWarn = false;                                                         \
         }                                                                                \
     } while(0)

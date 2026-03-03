@@ -1645,7 +1645,7 @@ aclnnStatus aclnnQuantMatmulV3GetWorkspaceSize(const aclTensor *x1, const aclTen
                                                const aclTensor *offset, const aclTensor *bias, bool transposeX1,
                                                bool transposeX2, const aclTensor *out, uint64_t *workspaceSize,
                                                aclOpExecutor **executor) {
-    DEPRECATED_API_WARN_ONCE("aclnnQuantMatmulV3GetWorkspaceSize", "aclnnQuantMatmulV5GetWorkspaceSize");
+    DEPRECATED_API_WARN_ONCE("aclnnQuantMatmulV3GetWorkspaceSize", "December 2026", "aclnnQuantMatmulV5GetWorkspaceSize");
     L2_DFX_PHASE_1(aclnnQuantMatmulV3, DFX_IN(x1, x2, scale, offset, bias), DFX_OUT(out));
     auto uniqueExecutor = CREATE_EXECUTOR();
     const aclTensor *tempPtr = nullptr;
@@ -1666,7 +1666,7 @@ aclnnStatus aclnnQuantMatmulV4GetWorkspaceSize(const aclTensor *x1, const aclTen
                                                const aclTensor *bias, bool transposeX1, bool transposeX2,
                                                const aclTensor *out, uint64_t *workspaceSize,
                                                aclOpExecutor **executor) {
-    DEPRECATED_API_WARN_ONCE("aclnnQuantMatmulV4GetWorkspaceSize", "aclnnQuantMatmulV5GetWorkspaceSize");
+    DEPRECATED_API_WARN_ONCE("aclnnQuantMatmulV4GetWorkspaceSize", "December 2026", "aclnnQuantMatmulV5GetWorkspaceSize");
     L2_DFX_PHASE_1(aclnnQuantMatmulV4, DFX_IN(x1, x2, scale, offset, pertokenScaleOptional, bias), DFX_OUT(out));
     auto uniqueExecutor = CREATE_EXECUTOR();
     const aclTensor *tempYScalePtr = nullptr;
@@ -1921,14 +1921,14 @@ affinity format.");
 
 aclnnStatus aclnnQuantMatmulV3(void *workspace, uint64_t workspaceSize,
                                aclOpExecutor *executor, aclrtStream stream) {
-    DEPRECATED_API_WARN_ONCE("aclnnQuantMatmulV3", "aclnnQuantMatmulV5");
+    DEPRECATED_API_WARN_ONCE("aclnnQuantMatmulV3", "December 2026", "aclnnQuantMatmulV5");
     L2_DFX_PHASE_2(aclnnQuantMatmulV3);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
 aclnnStatus aclnnQuantMatmulV4(void *workspace, uint64_t workspaceSize,
                                aclOpExecutor *executor, aclrtStream stream) {
-    DEPRECATED_API_WARN_ONCE("aclnnQuantMatmulV4", "aclnnQuantMatmulV5");
+    DEPRECATED_API_WARN_ONCE("aclnnQuantMatmulV4", "December 2026", "aclnnQuantMatmulV5");
     L2_DFX_PHASE_2(aclnnQuantMatmulV4);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
