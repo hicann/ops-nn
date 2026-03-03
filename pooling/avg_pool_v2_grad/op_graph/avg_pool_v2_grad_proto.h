@@ -20,14 +20,17 @@ namespace ge {
 * @brief Computes avgpoolv2grad function.
 
 * @par Inputs:
-* @li orig_input_shape: An NHWC tensor of type int32.
-* @li input_grad: An NHWC tensor of type float16, float32, double or bfloat16. \n
+* @li orig_input_shape: An one-dim tensor of type int32, which describes the
+* original input shape [N,C,H,W] or [N,H,W,C] of forward AvgPool.
+* @li input_grad: An NHWC or NCHW tensor of type float16, float32, double or bfloat16. \n
 
 * @par Attributes:
-* @li ksize: A required tuple or list of ints,
+* @li ksize: A required tuple or list of ints, 
 * specifying the size of the window for each dimension of the input tensor.
+* For Ascend 950PR/Ascend 950DT AI Processor: "ksize" length is 1, 2 or 4, must be greater than 0. \n
 * @li strides: A required tuple or list of ints,
 * specifying the stride of the sliding window for each dimension of the input tensor.
+* For Ascend 950PR/Ascend 950DT AI Processor: "strides" length is 1, 2 or 4, must be greater than 0. \n
 * @li padding_mode: An optional string, specifying the type of the padding algorithm to use,
 * either "VALID", "SAME" or "CALCULATED". Default "CALCULATED".
 * With "SAME" means that the outputs will have the same spatial dimensions as its inputs.
@@ -40,6 +43,7 @@ namespace ge {
 * and width. Default False.
 * @li exclusive: An optional bool, whether to exclude padding points. Default is true.
 * @li data_format: An optional string. Defaults to "NCHW". \n
+* For Ascend 950PR/Ascend 950DT AI Processor: support "NCHW" or "NHWC". \n
 * @li divisor_override: An optional int, the default value is zero.
 * if specified, it will be used as divisor, otherwise size of the pooling region will be used.
 
