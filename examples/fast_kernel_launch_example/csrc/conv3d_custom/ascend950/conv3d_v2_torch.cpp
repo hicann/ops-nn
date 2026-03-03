@@ -336,6 +336,9 @@ torch::Tensor Conv3dV2CustomNpu(
     const c10::IntArrayRef& pads, const c10::IntArrayRef& dilations, const c10::IntArrayRef& oriInputShape,
     const c10::IntArrayRef& oriWeightShape, const c10::optional<torch::Tensor>& bias)
 {
+    // OptionalDeviceGuard 确保后续操作在正确的设备上下文执行
+    // 它会记录当前设备状态，执行完作用域代码后自动恢复
+    const c10::OptionalDeviceGuard guard(input.device());
     TORCH_CHECK(torch_npu::utils::is_npu(input), "Input tensor must be on NPU device");
     TORCH_CHECK(torch_npu::utils::is_npu(weight), "Weight tensor must be on NPU device");
     if (bias.has_value()) {
