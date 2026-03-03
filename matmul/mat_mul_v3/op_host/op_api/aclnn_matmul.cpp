@@ -51,7 +51,7 @@ static const int NZ_K0_VALUE_32 = 8;
 static const int NZ_STORAGE_PENULTIMATE_DIM = 16;
 static const size_t MAX_SUPPORT_MATMUL_DIMS_NUMS = 6;
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT16, DataType::DT_BF16};
+    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITHOUT_BF16 = {
     DataType::DT_FLOAT, DataType::DT_FLOAT16};
 inline static bool CheckNotNull(const aclTensor* self, const aclTensor* mat2, const aclTensor* out)
@@ -80,15 +80,6 @@ static bool CheckWeightNzDtype(const aclTensor* self, const aclTensor* mat2)
 {
     if (mat2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
         auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-        // only support fp16|bf16 weightNZ
-        if (self->GetDataType() == DataType::DT_FLOAT || mat2->GetDataType() == DataType::DT_FLOAT) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "Float32 weight NZ is unsupported by the current SOC version [%s], now self is %s, mat2 is %s .",
-                op::ToString(socVersion).GetString(), op::ToString(self->GetDataType()).GetString(),
-                op::ToString(mat2->GetDataType()).GetString());
-            return false;
-        }
         // weightnz暂不支持self,mat2为bfloat16和float16的数据类型推导
         if ((self->GetDataType() == op::DataType::DT_FLOAT16 && mat2->GetDataType() == op::DataType::DT_BF16) ||
             (self->GetDataType() == op::DataType::DT_BF16 && mat2->GetDataType() == op::DataType::DT_FLOAT16)) {

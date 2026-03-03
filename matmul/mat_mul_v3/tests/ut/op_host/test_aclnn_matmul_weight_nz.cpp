@@ -111,7 +111,7 @@ TEST_F(l2_matmulWeightNz_test, ascend950_test_aligned_fp32_out_weight_nz)
     TensorDesc a_desc = TensorDesc({16, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 1, 16, 16});
     TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND);
-    MatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
 }
 
 TEST_F(l2_matmulWeightNz_test, ascend950_test_aligned_fp16_out_weight_nz)
@@ -127,7 +127,7 @@ TEST_F(l2_matmulWeightNz_test, ascend910B2_test_aligned_fp32_not_support_weight_
     TensorDesc a_desc = TensorDesc({16, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 1, 16, 16});
     TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND);
-    MatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
 }
 
 // 接口整改异常用例 - 950
