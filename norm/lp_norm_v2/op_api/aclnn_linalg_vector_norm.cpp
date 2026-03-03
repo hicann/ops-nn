@@ -188,6 +188,10 @@ static float CalculateOrdValue(const aclScalar* ord)
 
 static inline bool CheckOrdValue(const aclScalar* ord)
 {
+    // 950上支持所有float取值
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return true;
+    }
     const std::vector<float> attrPSupportValue = {0.0, 1.0, 2.0, 3.0, INT_MAX_F, INT_MIN_F};
     float pValue = CalculateOrdValue(ord);
     auto it = std::find(attrPSupportValue.cbegin(), attrPSupportValue.cend(), pValue);

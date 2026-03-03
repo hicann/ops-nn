@@ -156,7 +156,7 @@ aclnnStatus aclnnLinalgVectorNorm(
   </table>
 
   - ord：
-    - <term>Ascend 950PR/Ascend 950DT</term>：数值额外支持2147483647.0、-2147483648.0、Inf、-Inf。
+    - <term>Ascend 950PR/Ascend 950DT</term>：数值额外支持Inf、-Inf和其他float取值。
   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：数据类型不支持BFLOAT16。
 
 - **返回值**：
