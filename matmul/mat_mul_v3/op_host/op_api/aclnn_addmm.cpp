@@ -99,7 +99,7 @@ static inline bool CheckWeightNzDtypeValid(
     return true;
 }
 
-static inline bool CheckMatmul(const aclTensor* mat1, const aclTensor* mat2)
+static inline bool CheckMatmul(const aclTensor* self, const aclTensor* mat1, const aclTensor* mat2)
 {
     // check mat1 dims number is 2
     OP_CHECK_WRONG_DIMENSION(mat1, 2, return false);
@@ -109,6 +109,13 @@ static inline bool CheckMatmul(const aclTensor* mat1, const aclTensor* mat2)
 
     if ((mat1->GetViewShape())[1] != (mat2->GetViewShape())[0]) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different.");
+        return false;
+    }
+
+    if (self->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "The formats of self should be ND, but the actual formats are [%s]",
+                op::ToString(self->GetStorageFormat()).GetString());
         return false;
     }
 
@@ -166,8 +173,8 @@ static aclnnStatus CheckInputParams(AclnnAddmmTensor& addmmTensor, int8_t cubeMa
         archRule -> CheckInput(addmmTensor.mat1, addmmTensor.mat2, addmmTensor.self, addmmTensor.out, cubeMathType),
         ACLNN_ERR_PARAM_INVALID);
 
-    // 3. 检查mat1和mat2是否满足matmul条件
-    CHECK_RET(CheckMatmul(addmmTensor.mat1, addmmTensor.mat2), ACLNN_ERR_PARAM_INVALID);
+    // 3. 检查self, mat1和mat2是否满足matmul条件
+    CHECK_RET(CheckMatmul(addmmTensor.self, addmmTensor.mat1, addmmTensor.mat2), ACLNN_ERR_PARAM_INVALID);
 
     // 4. 检查self和mat1@mat2是否能broadcast
     CHECK_RET(CheckBroadcast(addmmTensor.self, addmmTensor.mat1, addmmTensor.mat2), ACLNN_ERR_PARAM_INVALID);
