@@ -22,35 +22,7 @@
 
 #include "quant_batch_matmul_v4_tiling_data.h"
 
-using AscendC::CrossCoreSetFlag;
-using AscendC::CrossCoreWaitFlag;
-using AscendC::DataCopyExtParams;
-using AscendC::DataCopyPadExtParams;
-using AscendC::GetBlockIdx;
-using AscendC::GetTaskRation;
-using AscendC::GlobalTensor;
-using AscendC::int4b_t;
-using AscendC::LocalTensor;
-using AscendC::QuePosition;
-using AscendC::RoundMode;
-using AscendC::TBuf;
-using AscendC::TPipe;
-using AscendC::TPosition;
-using AscendC::TQue;
-using matmul::MatmulType;
-using AscendC::MatmulImpl;
-using AscendC::GetSubBlockIdx;
-using AscendC::SyncAll;
-using AscendC::CacheMode;
-using AscendC::BroadCast;
-using AscendC::PipeBarrier;
-using AscendC::BinaryRepeatParams;
-
-using AscendC::GetBlockNum;
-using AscendC::HardEvent;
-using AscendC::SetFlag;
-using AscendC::WaitFlag;
-
+using namespace AscendC;
 enum class QuantType : std::uint8_t {
     K_C = 5,    //pertoken叠加perchannel
     K_G = 6     //pertoken叠加pergroup
@@ -101,13 +73,11 @@ private:
     TQue<QuePosition::VECIN, 1> vecInQueueX_;
     TQue<QuePosition::VECOUT, 1> vecOutQueueA1_;
     TQue<QuePosition::VECOUT, 1> vecOutQueueA2_;
-    TQue<QuePosition::VECOUT, 1> vecOutQueueA3_;
-    TQue<QuePosition::VECOUT, 1> vecOutQueueA4_;
-    TQue<QuePosition::VECOUT, 1> vecOutQueueA5_;
     TQue<QuePosition::VECOUT, 1> vecOutQueue0F_;
 
     LocalTensor<int8_t> xTensor_;
     LocalTensor<half> xHighHalfTensor_;
+    LocalTensor<half> xHighHalfTensor2_;
     LocalTensor<half> xLowHalfTensor_;
     LocalTensor<half> xLowHalfTensor2_;
     LocalTensor<int4b_t> xHighI4Tensor_;
@@ -115,6 +85,7 @@ private:
     LocalTensor<int16_t> xLowI16Tensor_;
     GlobalTensor<int8_t> xGlobal_;
     GlobalTensor<int8_t> yGlobal_;
+    TBuf<TPosition::VECCALC> tmpBuff_;
 
     uint32_t kSize_;
     uint32_t blockDim_;
@@ -137,9 +108,7 @@ private:
     pipe_->InitBuffer(vecInQueueX_, 1, alignKSize_ * sizeof(int8_t));
     pipe_->InitBuffer(vecOutQueueA1_, 1, alignKSize_ * sizeof(int4b_t));
     pipe_->InitBuffer(vecOutQueueA2_, 1, alignKSize_ * sizeof(int4b_t));
-    pipe_->InitBuffer(vecOutQueueA3_, 1, alignKSize_ * sizeof(half));
-    pipe_->InitBuffer(vecOutQueueA4_, 1, alignKSize_ * sizeof(half));
-    pipe_->InitBuffer(vecOutQueueA5_, 1, alignKSize_ * sizeof(half));
+    pipe_->InitBuffer(tmpBuff_, alignKSize_ * sizeof(half) * 2);
     constexpr int BUFFER_SIZE_256B = AND_ONE_REPEAT_LENGTH * sizeof(int16_t);
     pipe_->InitBuffer(vecOutQueue0F_, 1, BUFFER_SIZE_256B);
     coreIdx_ = GetBlockIdx();
@@ -151,17 +120,16 @@ private:
     xTensor_ = vecInQueueX_.AllocTensor<int8_t>();
     xHighI4Tensor_ = vecOutQueueA1_.AllocTensor<int4b_t>();
     xLowI4Tensor_ = vecOutQueueA2_.AllocTensor<int4b_t>();
-    xHighHalfTensor_ = vecOutQueueA3_.AllocTensor<half>();
-    xLowHalfTensor_ = vecOutQueueA4_.AllocTensor<half>();
-    xLowHalfTensor2_ = vecOutQueueA5_.AllocTensor<half>();
+    xHighHalfTensor_ =  tmpBuff_.GetWithOffset<half>(alignKSize_ * sizeof(half), 0);
+    xHighHalfTensor2_ =  tmpBuff_.GetWithOffset<half>(alignKSize_ * sizeof(half), alignKSize_ * sizeof(half));
+    xLowHalfTensor_ =  tmpBuff_.GetWithOffset<half>(alignKSize_ * sizeof(half), 0);
+    xLowHalfTensor2_ =  tmpBuff_.GetWithOffset<half>(alignKSize_ * sizeof(half), alignKSize_ * sizeof(half));
+
     xLowI16Tensor_ = vecOutQueue0F_.AllocTensor<int16_t>();
     VectorCompute();
     vecInQueueX_.FreeTensor(xTensor_);
     vecOutQueueA1_.FreeTensor(xHighI4Tensor_);
     vecOutQueueA2_.FreeTensor(xLowI4Tensor_);
-    vecOutQueueA3_.FreeTensor(xHighHalfTensor_);
-    vecOutQueueA4_.FreeTensor(xLowHalfTensor_);
-    vecOutQueueA5_.FreeTensor(xLowHalfTensor2_);
     vecOutQueue0F_.FreeTensor(xLowI16Tensor_);
 }
 
@@ -194,10 +162,10 @@ __aicore__ inline void QuantBatchMatmulV4MsdPre::VectorCompute() {
         WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
         Cast(xHighHalfTensor_, xTensor_, AscendC::RoundMode::CAST_NONE, kSize_);
         PipeBarrier<PIPE_V>();
-        Muls(xHighHalfTensor_, xHighHalfTensor_, OneEight, kSize_);
+        Muls(xHighHalfTensor2_, xHighHalfTensor_, OneEight, kSize_);
         PipeBarrier<PIPE_V>();
         WaitFlag<HardEvent::MTE3_V>(EVENT_ID1);
-        Cast(xHighI4Tensor_, xHighHalfTensor_, AscendC::RoundMode::CAST_FLOOR, kSize_);
+        Cast(xHighI4Tensor_, xHighHalfTensor2_, AscendC::RoundMode::CAST_FLOOR, kSize_);
         SetFlag<HardEvent::V_MTE3>(EVENT_ID0);
         WaitFlag<HardEvent::V_MTE3>(EVENT_ID0);
         DataCopyUbToGm(yGlobal_[offset], xHighI4Tensor_.ReinterpretCast<int8_t>());
@@ -214,10 +182,10 @@ __aicore__ inline void QuantBatchMatmulV4MsdPre::VectorCompute() {
         SetFlag<HardEvent::V_MTE2>(EVENT_ID0);
         Cast(xLowHalfTensor2_.ReinterpretCast<half>(), xLowHalfTensor_.ReinterpretCast<int8_t>(), AscendC::RoundMode::CAST_NONE, kSize_);
         PipeBarrier<PIPE_V>();
-        Adds(xHighHalfTensor_, xLowHalfTensor2_, MINUS_EIGHT, kSize_);
+        Adds(xLowHalfTensor_, xLowHalfTensor2_, MINUS_EIGHT, kSize_);
         PipeBarrier<PIPE_V>();
         WaitFlag<HardEvent::MTE3_V>(EVENT_ID0);
-        Cast(xLowI4Tensor_, xHighHalfTensor_.ReinterpretCast<half>(), AscendC::RoundMode::CAST_NONE, kSize_);
+        Cast(xLowI4Tensor_, xLowHalfTensor_.ReinterpretCast<half>(), AscendC::RoundMode::CAST_NONE, kSize_);
         SetFlag<HardEvent::V_MTE3>(EVENT_ID1);
         WaitFlag<HardEvent::V_MTE3>(EVENT_ID1);
         DataCopyUbToGm(yGlobal_[offset + halfKSize], xLowI4Tensor_.ReinterpretCast<int8_t>());
@@ -228,7 +196,7 @@ __aicore__ inline void QuantBatchMatmulV4MsdPre::VectorCompute() {
     WaitFlag<HardEvent::MTE3_V>(EVENT_ID1);
 }
 
-template <typename xType, typename wType, typename scaleType, typename yType, QuantType quantType, bool weightNz = false>
+template <typename xType, typename wType, typename scaleType, typename yType, QuantType quantType, bool bTrans = false, bool weightNz = false>
 class QuantBatchMatmulV4Msd
 {
 public:
@@ -290,15 +258,16 @@ private:
     TPipe *pipe_;
     const QuantBatchMatmulV4MsdTilingData *tilingData_;
     const TCubeTiling* matmulTiling_;
+    static constexpr CubeFormat wFormat_ = weightNz ? CubeFormat::NZ : CubeFormat::ND;
     using inputX1Type = MatmulType<TPosition::GM, CubeFormat::ND, int4b_t, false>;
-    using inputX2Type = MatmulType<TPosition::GM, CubeFormat::ND, int4b_t, false>;
+    using inputX2Type = MatmulType<TPosition::GM, wFormat_, int4b_t, bTrans>;
     using inputBiasType = MatmulType<TPosition::GM, CubeFormat::ND, int32_t, false>;
     using outputYType = MatmulType<TPosition::GM, CubeFormat::ND, half, false>;
     MatmulImpl<inputX1Type, inputX2Type, outputYType, inputBiasType, CFG_MDL> mmObj_;
 };
 
-template <typename xType, typename wType, typename scaleType, typename yType, QuantType quantType, bool weightNz >
-__aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, quantType, weightNz >::Init
+template <typename xType, typename wType, typename scaleType, typename yType, QuantType quantType, bool bTrans, bool weightNz >
+__aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, quantType, bTrans, weightNz >::Init
                             (GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2_scale,
                             GM_ADDR y_scale, GM_ADDR x1_offset, GM_ADDR x2_offset, GM_ADDR y_offset, GM_ADDR y,
                             GM_ADDR workspace, const QuantBatchMatmulV4MsdTilingData* tilingData, TPipe* tPipe) {
@@ -336,8 +305,8 @@ __aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, qua
 }
 
 
-template <typename xType, typename wType, typename scaleType, typename yType, QuantType quantType, bool weightNz >
-__aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, quantType, weightNz >::InitUbBuffer(){
+template <typename xType, typename wType, typename scaleType, typename yType, QuantType quantType, bool bTrans, bool weightNz >
+__aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, quantType, bTrans, weightNz >::InitUbBuffer(){
     if ASCEND_IS_AIC {
         return;
     }
@@ -358,8 +327,8 @@ __aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, qua
     buffer4_ = tmpBuff_.GetWithOffset<float>(tilingData_->ubCalSize, 0);
 }
 
-template <typename xType, typename wType, typename scaleType, typename yType, QuantType quantType, bool weightNz >
-__aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, quantType, weightNz >::Process()
+template <typename xType, typename wType, typename scaleType, typename yType, QuantType quantType, bool bTrans, bool weightNz >
+__aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, quantType, bTrans, weightNz >::Process()
 {
     mmObj_.SetOrgShape(mSize_ * 2 , nSize_, kSize_);
     blockDimN_ = ops::CeilDiv(nSize_, baseN_);
@@ -380,15 +349,28 @@ __aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, qua
     }
 }
 
-template <typename xType, typename wType, typename scaleType, typename yType, QuantType quantType, bool weightNz >
-__aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, quantType, weightNz >::MMCompute(uint32_t mIdx, uint32_t nIdx, uint64_t workSpaceOffset)
+template <typename xType, typename wType, typename scaleType, typename yType, QuantType quantType, bool bTrans, bool weightNz >
+__aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, quantType, bTrans, weightNz >::MMCompute(uint32_t mIdx, uint32_t nIdx, uint64_t workSpaceOffset)
 {
     if ASCEND_IS_AIC {
         uint64_t x1Offset = mIdx * baseM_ * kSize_;
-        uint64_t x2Offset = nIdx * baseN_;
+        uint64_t x2Offset = 0;
+        if constexpr (bTrans == true) {
+            if constexpr (weightNz == true) {
+                x2Offset = nIdx * baseN_ * 64;
+            } else if constexpr (weightNz == false) {
+                x2Offset = nIdx * kSize_ * baseN_;
+            }
+        } else if constexpr (bTrans == false) {
+            if constexpr (weightNz == true) {
+                x2Offset = nIdx * baseN_ * ops::Aligned(kSize_, uint32_t(16));
+            } else if constexpr (weightNz == false) {
+                x2Offset = nIdx * baseN_;
+            }
+        }
         uint32_t curSingleN = baseN_;
         if (nIdx == blockDimN_ - 1) {
-            curSingleN = nSize_ - x2Offset;
+            curSingleN = nSize_ - nIdx * baseN_;
         }
         uint32_t curSingleM = baseM_;
         if (mIdx == blockDimM_ - 1) {
@@ -406,8 +388,8 @@ __aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, qua
             if (blockDimM_ == 1) {
                 weightSlice.SetL2CacheHint(CacheMode::CACHE_MODE_DISABLE);
             }
-            mmObj_.SetTensorB(weightSlice);
-            mmObj_.SetQuantVector(x2ScaleGlobal_[x2Offset]);
+            mmObj_.SetTensorB(weightSlice, bTrans);
+            mmObj_.SetQuantVector(x2ScaleGlobal_[nIdx * baseN_]);
             mmObj_.Iterate();
             mmObj_.GetTensorC(mmOutGlobal_[workSpaceOffset], 0, true);
         } else {
@@ -430,8 +412,8 @@ __aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, qua
     cubeCount++;
 }
 
-template <typename xType, typename wType, typename scaleType, typename yType, QuantType quantType, bool weightNz >
-__aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, quantType, weightNz >::VectorCompute(uint32_t mIdx, uint32_t nIdx, uint64_t workSpaceOffset)
+template <typename xType, typename wType, typename scaleType, typename yType, QuantType quantType, bool bTrans, bool weightNz >
+__aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, quantType, bTrans, weightNz >::VectorCompute(uint32_t mIdx, uint32_t nIdx, uint64_t workSpaceOffset)
 {
     uint32_t curCubeSingleN = baseN_;
     if (nIdx == blockDimN_ - 1) {
@@ -476,8 +458,8 @@ __aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, qua
     CrossCoreSetFlag<2, PIPE_MTE2>(SYNC_AIV_TO_AIC);
 }
 
-template <typename xType, typename wType, typename scaleType, typename yType, QuantType quantType, bool weightNz >
-__aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, quantType, weightNz >::ComputeDequant(uint32_t mIdx,
+template <typename xType, typename wType, typename scaleType, typename yType, QuantType quantType, bool bTrans, bool weightNz >
+__aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, quantType, bTrans, weightNz >::ComputeDequant(uint32_t mIdx,
     uint32_t curVecBaseM, uint32_t alignBaseN, uint32_t curVecBaseN, uint32_t offsetM)
 {
     uint32_t computeSize = curVecBaseM * alignBaseN;
@@ -520,8 +502,8 @@ __aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, qua
     vecOutQueue_.EnQue(yLocalInUb);
 }
 
-template <typename xType, typename wType, typename scaleType, typename yType, QuantType quantType, bool weightNz >
-__aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, quantType, weightNz >::DataCopyYOffset(uint32_t curBaseN, uint32_t alignBaseN, uint64_t yOffset)
+template <typename xType, typename wType, typename scaleType, typename yType, QuantType quantType, bool bTrans, bool weightNz >
+__aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, quantType, bTrans, weightNz >::DataCopyYOffset(uint32_t curBaseN, uint32_t alignBaseN, uint64_t yOffset)
 {
     DataCopyPadExtParams<float> padParams;
     DataCopyExtParams yOffsetParams{1, static_cast<uint32_t>(curBaseN * sizeof(float)), 1, 1, 0};
@@ -531,8 +513,8 @@ __aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, qua
     yOffsetInUb_ = yOffsetInQueue_.DeQue<float>();
 }
 
-template <typename xType, typename wType, typename scaleType, typename yType, QuantType quantType, bool weightNz >
-__aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, quantType, weightNz >::DataCopyX1ScaleAndBrcb(uint32_t mIdx,
+template <typename xType, typename wType, typename scaleType, typename yType, QuantType quantType, bool bTrans, bool weightNz >
+__aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, quantType, bTrans, weightNz >::DataCopyX1ScaleAndBrcb(uint32_t mIdx,
         uint32_t curBaseM, uint32_t alignBaseN, uint32_t offsetM)
 {
     uint64_t x1ScaleOffset = mIdx * baseM_ / 2 + offsetM; //2: m方向两行合并为1行

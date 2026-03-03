@@ -112,11 +112,6 @@ bool QuantBatchMatmulV4MsdTiling::AnalyzeAttrs()
     OP_TILING_CHECK(transposeX2 == nullptr,
                     VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "TransposeX2 false can not be nullptr."),
                     return false);
-    OP_TILING_CHECK(*transposeX2 != false,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Unsupported value [%d] for transposeX2, "
-                                                   "Only transposeX2 = false is supported.", *transposeX2),
-                    return false;
-                    );
     inputParams_.transB = transposeX2 != nullptr && *transposeX2;
     return true;
 }
@@ -152,28 +147,48 @@ bool QuantBatchMatmulV4MsdTiling::AnalyzeDtype()
 
 bool QuantBatchMatmulV4MsdTiling::AnalyzeInputs()
 {
-    auto x1Shape = GetShape(X1_IDX);
-    auto x2Shape = GetShape(X2_IDX);
-    auto x1ShapeLen = x1Shape.GetDimNum();
-    auto x2ShapeLen = x2Shape.GetDimNum();
-    OP_TILING_CHECK(x1ShapeLen !=2 || x2ShapeLen != 2,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Input x1 dimension and x2 dimension should equal to 2, but x1 dimension: %zu, x2 dimension: %zu.",
-                                                   x1ShapeLen, x2ShapeLen), return false);
-    auto x1Inner = x1Shape.GetDim(0);
-    auto x1Outer = x1Shape.GetDim(1);
-    auto x2Inner = x2Shape.GetDim(0);
-    auto x2Outer = x2Shape.GetDim(1);
-    OP_TILING_CHECK(x1Outer != x2Inner,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "The size of k dimension in x1[%ld] is not equal to the size of k dimension in x2[%ld].",
-                                                   x1Outer, x2Inner), return false);
-    inputParams_.mSize = x1Inner;
-    inputParams_.kSize = x1Outer;
-    inputParams_.nSize = x2Outer;
-
     auto aFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetInputDesc(X1_IDX)->GetStorageFormat()));
     OP_TILING_CHECK(aFormat != ge::FORMAT_ND, VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "aFormat Only support Nd"), return false);
     auto bFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetInputDesc(X2_IDX)->GetStorageFormat()));
-    OP_TILING_CHECK(bFormat != ge::FORMAT_ND, VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "bFormat Only support Nd"), return false);
+    if (inputParams_.antiQuantType == QuantBatchMatmulV4QuantType::K_G) {
+        OP_TILING_CHECK(aFormat != ge::FORMAT_ND, VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "aFormat Only support Nd"), return false);
+    }
+    auto x1Shape = GetShape(X1_IDX);
+    auto x1ShapeLen = x1Shape.GetDimNum();
+    OP_TILING_CHECK(x1ShapeLen !=2,
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Input x1 dimension should equal to 2, but x1 dimension: %zu.",
+                                                    x1ShapeLen), return false);
+
+    inputParams_.mSize = x1Shape.GetDim(0);
+    inputParams_.kSize = x1Shape.GetDim(1);
+
+    if (bFormat == ge::FORMAT_FRACTAL_NZ) {
+        inputParams_.weightNz = true;
+        auto x2ScaleShape = GetOptionShape(X2_SCALE_IDX);
+        auto x2ScaleShapeLen = x2ScaleShape.GetDimNum();
+        inputParams_.nSize = x2ScaleShape[x2ScaleShapeLen - 1];
+    } else {
+        inputParams_.weightNz = false;
+        auto x2Shape = GetShape(X2_IDX);
+        auto x2ShapeLen = x2Shape.GetDimNum();
+        OP_TILING_CHECK(x2ShapeLen != 2,
+                        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Inputx2 dimension should equal to 2, but x2 dimension: %zu.",
+                                                        x2ShapeLen), return false);
+        size_t bKSize = 0;
+        size_t bNSize = 0;
+        if (inputParams_.transB) {
+            bKSize = x2Shape.GetDim(1);
+            bNSize = x2Shape.GetDim(0);
+        } else {
+            bKSize = x2Shape.GetDim(0);
+            bNSize = x2Shape.GetDim(1);
+        }
+        OP_TILING_CHECK(inputParams_.kSize != static_cast<uint64_t>(bKSize),
+                        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "The size of k dimension in x1[%ld] is not equal to the size of k dimension in x2[%zu].",
+                                                        inputParams_.kSize, bKSize), return false);
+        inputParams_.nSize = bNSize;                                                        
+    }
+
     return AnalyzeScaleInputs() && AnalyzeYOffsetInputs();
 }
 
@@ -288,7 +303,6 @@ ge::graphStatus QuantBatchMatmulV4MsdTiling::DoOpTiling()
     if(!SetMatmulTiling()) {
         return ge::GRAPH_FAILED;
     }
-
     workspaceSize_ = SYS_WORKSPACE_SIZE + cvParallNum * compileInfo_.aicNum * singleN * singleM * sizeof(int32_t) * EIGHT;
     return ge::GRAPH_SUCCESS;
 }
@@ -313,7 +327,11 @@ bool QuantBatchMatmulV4MsdTiling::SetMatmulTiling()
     InitPlatformInfo(&compileInfo_, platformInfo);
     matmul_tiling::MultiCoreMatmulTiling mm(platformInfo);
     mm.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, matmul_tiling::DataType::DT_INT4, false);
-    mm.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, matmul_tiling::DataType::DT_INT4, false);
+    if (inputParams_.weightNz) {
+        mm.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::NZ, matmul_tiling::DataType::DT_INT4, inputParams_.transB);      
+    } else {
+        mm.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, matmul_tiling::DataType::DT_INT4, inputParams_.transB);        
+    }
     mm.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, matmul_tiling::DataType::DT_FLOAT16);
     mm.SetBias(false);
     mm.SetOrgShape(baseM, inputParams_.nSize, inputParams_.kSize);
@@ -461,8 +479,8 @@ void QuantBatchMatmulV4MsdTiling::PrintMatmulTilingData() const
 
 bool QuantBatchMatmulV4MsdTiling::IsCapable()
 {
-    OP_TILING_CHECK(inputParams_.kSize > 18432 ,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "K should be less than 18432 on the A8W4 scenario,"
+    OP_TILING_CHECK(inputParams_.kSize > 29576 ,
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "K should be less than 29576 on the A8W4 scenario,"
                                                     "but now is %lu", inputParams_.kSize),
                     return false);
     if (inputParams_.antiQuantType == QuantBatchMatmulV4QuantType::K_G) {
