@@ -52,6 +52,7 @@ private:
     bool CheckOnlyL0c2outPertoken() const;
     bool CheckL0c2outAndL0c2ubPertensorPerchannel() const;
     bool CheckL0c2outPertensorPerchannel() const;
+    bool CheckOnlyL0c2ubPertoken() const;
     bool CheckFormat() const;
     bool CheckShape() const;
     bool CheckScaleDimRange() const;

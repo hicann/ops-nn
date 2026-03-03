@@ -46,6 +46,11 @@ const aclTensor* QuantBatchMatmulV3(const aclTensor* x1, const aclTensor* x2, co
         outType = DataType::DT_FLOAT;
     }
     Format format = Format::FORMAT_ND;
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P && pertokenScale != nullptr && !pertokenScale->IsEmpty()) {
+        OP_LOGD("Npu_Arch = 2002 pertoken mode need transData out");
+        format = Format::FORMAT_FRACTAL_NZ;
+    }
+
     auto output = executor->AllocTensor(outType, format, format);
 
     auto ret = INFER_SHAPE(QuantBatchMatmulV3, OP_INPUT(x1, x2, scale, offset, bias, pertokenScale), OP_OUTPUT(output),

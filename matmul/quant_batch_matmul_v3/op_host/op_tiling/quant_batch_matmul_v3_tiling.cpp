@@ -30,6 +30,8 @@
 #include "platform/platform_infos_def.h"
 #include "../../op_kernel/quant_batch_matmul_v3_tiling_key.h"
 #include "platform_util.h"
+#include "quant_batch_matmul_v3_tiling_arch20.h"
+
 
 using AscendC::BLOCK_CUBE;    // uint32_t 16
 using AscendC::ONE_BLK_SIZE;  // uint32_t 32
@@ -1521,7 +1523,9 @@ static ge::graphStatus QuantBatchMatmulV3TilingFunc(gert::TilingContext *context
         std::vector<int32_t> registerList = {3, 4};
         OP_LOGD("NO_OP_NAME", "Adaptive sliding window tiling process.");
         return TilingRegistry::GetInstance().DoTilingImpl(context, registerList);
-    } else {
+    } else if (IsSocVersionArch20Pertoken(context)) {
+        return QuantBatchMatmulPertokenArch20(context).DoTiling();
+    } else {  
         std::vector<int32_t> registerList = {0, 1};
         return TilingRegistry::GetInstance().DoTilingImpl(context, registerList);
     }

@@ -40,5 +40,18 @@ struct HardwareInfo {
     static uint32_t const btBlockSize = 64;
     static uint32_t const fbBlockSize = 128;
 };
+
+template <>
+struct HardwareInfo<ArchType::ASCEND_V200> {
+    static uint32_t const l2BW = 5;
+    static uint32_t const hbmBW = 1;
+    static uint32_t const l1Size = 1024 * 1024;
+    static uint32_t const l0ASize = 64 * 1024;
+    static uint32_t const l0BSize = 64 * 1024;
+    static uint32_t const l0CSize = 128 * 1024;
+    static uint32_t const ubSize = 256 * 1024;
+    static uint32_t const fractalSize = 512;
+    static uint32_t const l1l0BlockSize = 32;
+};
 }
 #endif

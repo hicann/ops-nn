@@ -904,6 +904,11 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput &inp
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P) {
         ret = TransposeAndTransDataForInputs(reformatedX1, reformatedX2, transposeX1, transposeX2, executor);
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        if (x1Scale != nullptr && !x1Scale->IsEmpty()){
+            OP_LOGD("Npu_Arch = 2002 pertoken mode need transData x1");
+            reformatedX1 = l0op::TransData(reformatedX1, Format::FORMAT_FRACTAL_NZ, 0, executor);
+            CHECK_RET(x1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
     } else {
         if (!isA8W4F) {
             reformatedX2 = SetTensorToNDFormat(x2);
@@ -953,6 +958,11 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput &inp
         matmulRet = l0op::QuantBatchMatmulV3(reformatedX1, reformatedX2, castedScale, x2Offset, reformatedBias,
                                              reformatedX1Scale, dtype, transposeX1, transposeX2, groupSizeReal, executor);
     }
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P && x1Scale != nullptr && !x1Scale->IsEmpty()) {
+        OP_LOGD("Npu_Arch = 2002 pertoken mode need transData out");
+        matmulRet = l0op::TransData(matmulRet, Format::FORMAT_ND, 0, executor);
+    }
+
     CHECK_RET(PostMatmulCalcProcess(matmulRet, x1, x2, out, executor) == ACLNN_SUCCESS, ret);
     return ACLNN_SUCCESS;
 }

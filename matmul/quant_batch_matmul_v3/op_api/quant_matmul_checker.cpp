@@ -995,7 +995,11 @@ FLOAT8_E8M0, actual x1Scale is %s, x2Scale is %s.",
 bool QuantMatmulChecker::CheckFormat() const
 {
     auto x2StorageFormat = ge::GetPrimaryFormat(x2_->GetStorageFormat());
-    CHECK_RET(x1_->GetStorageFormat() == op::Format::FORMAT_ND, false);
+    if (x1Scale_ != nullptr && npuArch_ == NpuArch::DAV_2002) {
+        OP_LOGD("QuantMatmul pertoken mode in Arch 2002: x1 should be FORMAT_FRACTAL_NZ");
+    } else {
+        CHECK_RET(x1_->GetStorageFormat() == op::Format::FORMAT_ND, false);
+    }
     if (npuArch_ == NpuArch::DAV_2002) {
         CHECK_RET(x2_->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ, false);
     } else {
@@ -1153,7 +1157,11 @@ aclnnStatus QuantMatmulChecker::CheckDtypeOnlyL0c2ub() const
                 "QuantBatchMatmul support for %s is not implemented in a4w4 senario.",
                 op::ToString(socVersion_).GetString());
     }
-    CHECK_RET(CheckL0c2outAndL0c2ubPertensorPerchannel(), ACLNN_ERR_PARAM_INVALID);
+    if (x1Scale_ != nullptr) {
+ 	    CHECK_RET(CheckOnlyL0c2ubPertoken(), ACLNN_ERR_PARAM_INVALID);
+ 	} else {
+ 	    CHECK_RET(CheckL0c2outAndL0c2ubPertensorPerchannel(), ACLNN_ERR_PARAM_INVALID);
+ 	}
     return ACLNN_SUCCESS;
 }
 
@@ -1374,6 +1382,32 @@ aclnnStatus QuantMatmulChecker::CheckDtypeL0c2outOrL0c2ub() const
     }
     return ACLNN_SUCCESS;
 }
+
+ bool QuantMatmulChecker::CheckOnlyL0c2ubPertoken() const
+ 	 {
+ 	     CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X1_NAME, x1_, op::DataType::DT_INT8), false);
+ 	     CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2_NAME, x2_, op::DataType::DT_INT8), false);
+ 	     CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X1SCALE_NAME, x1Scale_, op::DataType::DT_FLOAT), false);
+ 	     if (outType_ == op::DataType::DT_FLOAT16) {
+ 	         CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2SCALE_NAME,
+ 	                                          x2Scale_, op::DataType::DT_FLOAT), false);
+ 	         if (bias_ != nullptr) {
+ 	             CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, BIAS_NAME,
+ 	                                              bias_,  op::DataType::DT_INT32), false);
+ 	         }
+ 	         if (x2Offset_ != nullptr) {
+ 	             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+ 	                     "When out dtype is FLOAT16, %s must be null, but it is not null.", GetX2OffsetName().c_str());
+ 	             return false;
+ 	             
+ 	         }
+ 	     } else {
+ 	         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When pertokenScaleOptional is not nullptr, out dtype should be FLOAT16, actual dtype is: %s.",
+ 	                 RemoveDtInDtype(op::ToString(outType_).GetString()).c_str());
+ 	         return false;
+ 	     }
+ 	     return true;
+ 	 }
 
 aclnnStatus QuantMatmulChecker::CheckDtype() const
 {
