@@ -134,7 +134,7 @@ TEST_F(mat_mul_v3_test, mat_mul_v3_test_1) {
 
     auto mat_mul_v3_wrapper = [](GM_ADDR x, GM_ADDR w, GM_ADDR bias, GM_ADDR contextGM, GM_ADDR y, GM_ADDR workspace,
                                  GM_ADDR tiling) {
-        ::mat_mul_v3<0, 5, 0, 1, 0>(x, w, bias, contextGM, y, workspace, tiling);
+        ::mat_mul_v3<0, 5, 0, 1, 0, 0>(x, w, bias, contextGM, y, workspace, tiling);
     };
 
     ICPU_RUN_KF(mat_mul_v3_wrapper, 20, aGM, bGM, nullptr, contextGM, output, workspace, tiling);

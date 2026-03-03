@@ -10,5 +10,5 @@
 
 # AddFastOpTestCase(gemm_v3 "ascend950pr_9599")
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCase(gemm_v3 "ascend910B1" "-DDTYPE_A=half -DDTYPE_B=half -DDTYPE_C=half -DDTYPE_BIAS=half -DDTYPE_Y=half" mat_mul_v3)
+    AddOpTestCase(gemm_v3 "ascend910B1" "-DDTYPE_A=half -DDTYPE_B=half -DDTYPE_C=half -DDTYPE_BIAS=half -DDTYPE_Y=half" mat_mul_v3 transpose_batch_mat_mul)
 endif()

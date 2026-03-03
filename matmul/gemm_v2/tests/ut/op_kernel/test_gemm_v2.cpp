@@ -144,7 +144,7 @@ TEST_F(gemm_v2_test, gemm_v2_test_1) {
 
     auto wrapper = [](GM_ADDR aGM, GM_ADDR bGM, GM_ADDR alpha, GM_ADDR beta, GM_ADDR ref_c,
                         GM_ADDR cGM, GM_ADDR workspaceGM, GM_ADDR tilingGM) {
-        ::gemm_v2<0, 0, 0, 1, 0>(aGM, bGM, alpha, beta, ref_c, cGM, workspaceGM, tilingGM);
+        ::gemm_v2<0, 0, 0, 1, 0, 0>(aGM, bGM, alpha, beta, ref_c, cGM, workspaceGM, tilingGM);
     };
     ICPU_RUN_KF(wrapper, 1, aGM, bGM, alphaGM, betaGM, ref_c, output, workspace, tiling);
     AscendC::GmFree((void*)workspace);

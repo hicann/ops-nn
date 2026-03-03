@@ -11,6 +11,7 @@
 #ifndef _TEST_GEMM_V3_TILING_DEF_H_
 #define _TEST_GEMM_V3_TILING_DEF_H_
 
+#include "gemm_v3_tiling_data.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "../mat_mul_v3/mat_mul_v3_tiling_data.h"
 
@@ -19,7 +20,17 @@ inline void InitMatmulTilingData(uint8_t* tiling, MatmulTilingData* const_data)
     memcpy(const_data, tiling, sizeof(MatmulTilingData));
 }
 
+template <class T>
+inline void InitTilingData(uint8_t* tiling, T* const_data)
+{
+    memcpy(const_data, tiling, sizeof(T));
+}
+
 #define GET_TILING_DATA(tiling_data, tiling_arg)                                                        \
     MatmulTilingData tiling_data;                                                 \
     InitMatmulTilingData(tiling_arg, &tiling_data)
+
+#define GET_TILING_DATA_WITH_STRUCT(tiling_struct, tiling_data, tiling_arg)                                            \
+    tiling_struct tiling_data;                                                                                         \
+    InitTilingData<tiling_struct>(tiling_arg, &tiling_data);
 #endif  // FOREACH_MINIMUM_SCALAR_TILING_DEF_H

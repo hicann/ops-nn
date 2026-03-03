@@ -133,7 +133,7 @@ TEST_F(gemm_v3_test, gemm_v3_test_1) {
     tiling_data->l2cacheUseInfo.l2CacheFlag = 0;
     
     auto wrapper = [](GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR yGM, GM_ADDR workspaceGM, GM_ADDR tilingGM) {
-        ::gemm_v3<0, 0, 0, 1, 0>(aGM, bGM, cGM, yGM, workspaceGM, tilingGM);
+        ::gemm_v3<0, 0, 0, 1, 0, 0>(aGM, bGM, cGM, yGM, workspaceGM, tilingGM);
     };
     ICPU_RUN_KF(wrapper, 24, aGM, bGM, cGM, yGM, workspace, tiling);
 
@@ -228,7 +228,7 @@ TEST_F(gemm_v3_test, gemm_v3_test_2) {
     tiling_data->l2cacheUseInfo.l2CacheFlag = 0;
     
     auto wrapper = [](GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR yGM, GM_ADDR workspaceGM, GM_ADDR tilingGM) {
-        ::gemm_v3<0, 0, 0, 0, 0>(aGM, bGM, cGM, yGM, workspaceGM, tilingGM);
+        ::gemm_v3<0, 0, 0, 0, 0, 0>(aGM, bGM, cGM, yGM, workspaceGM, tilingGM);
     };
     ICPU_RUN_KF(wrapper, 24, aGM, bGM, cGM, yGM, workspace, tiling);
 

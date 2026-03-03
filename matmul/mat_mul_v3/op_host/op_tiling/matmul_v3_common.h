@@ -130,12 +130,20 @@ enum class TilingEnableSpecialOpti : int32_t // 互斥flag, 对应不同的优�
     MAX = 10 //模板类别不能超过10个
 };
 
+enum class TilingEnableMemOpt : int32_t // 是否使能GemmV3内存优化
+{
+    FALSE = 0,
+    TRUE = 1,
+    MAX = 10 // 模板类别不能超过10个
+};
+
 struct TilingEnable
 {
     TilingEnableSplitCore tilingEnableSplitCore = TilingEnableSplitCore::BASE; //aoetilingenable的个位
     TilingEnableFullLoad tilingEnableFullLoad = TilingEnableFullLoad::BASE; //aoetilingenable的十位
     TilingEnableFixOpti tilingEnableFixOpti = TilingEnableFixOpti::BASE; //aoetilingenable的千位
     TilingEnableSpecialOpti tilingEnableSpecialOpti = TilingEnableSpecialOpti::BASE;
+    TilingEnableMemOpt tilingMemOptSwitch = TilingEnableMemOpt::FALSE;
 };
 
 struct MatmulV3Args

@@ -37,6 +37,8 @@
 
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
 #include "../mat_mul_v3/mat_mul_multi_core_splitk_kernel.h"
+#include "gemm_v3_tiling_data.h"
+#include "gemm_v3_base_kernel.h"
 #endif
 
 using namespace AscendC;
@@ -188,8 +190,76 @@ constexpr CubeFormat format_y = CubeFormat::ND;
         }                                                                                                            \
     } while (0)
 
+#define INVOKE_GEMM_V3_BASE_KERNEL(transA, transB, swizzleDirect...)                                                   \
+    do {                                                                                                               \
+        using PpMatMulNS::GemmV3BaseKernel;                                                                            \
+        AscendC::SetAtomicNone();                                                                                      \
+        if ASCEND_IS_AIV {                                                                                             \
+            AscendC::SetMaskNorm();                                                                                    \
+            AscendC::SetVectorMask<uint8_t>((uint64_t)-1, (uint64_t)-1);                                               \
+            AscendC::CrossCoreSetFlag<0x2, PIPE_MTE2>(2);                                                              \
+            AscendC::CrossCoreSetFlag<0x2, PIPE_MTE2>(3);                                                              \
+        }                                                                                                              \
+        if ASCEND_IS_AIC {                                                                                             \
+            AscendC::SetLoadDataPaddingValue<uint64_t>((uint64_t)0);                                                   \
+            AscendC::SetFixpipeNz2ndFlag(1, 0, 0);                                                                     \
+        }                                                                                                              \
+        if (transA == 0 && transB == 0) {                                                                              \
+            if (swizzleDirect == 0) {                                                                                  \
+                GemmV3BaseKernel<0, false, false, DTYPE_A, DTYPE_A, float> op;                                         \
+                op.Init(aGM, bGM, cGM, yGM, workspaceGM, tilingData);                                                  \
+                op.RunVector();                                                                                        \
+                op.RunCube();                                                                                          \
+            } else if (swizzleDirect == 1) {                                                                           \
+                GemmV3BaseKernel<1, false, false, DTYPE_A, DTYPE_A, float> op;                                         \
+                op.Init(aGM, bGM, cGM, yGM, workspaceGM, tilingData);                                                  \
+                op.RunVector();                                                                                        \
+                op.RunCube();                                                                                          \
+            }                                                                                                          \
+        } else if (transA == 0 && transB == 1) {                                                                       \
+            if (swizzleDirect == 0) {                                                                                  \
+                GemmV3BaseKernel<0, false, true, DTYPE_A, DTYPE_A, float> op;                                          \
+                op.Init(aGM, bGM, cGM, yGM, workspaceGM, tilingData);                                                  \
+                op.RunVector();                                                                                        \
+                op.RunCube();                                                                                          \
+            } else if (swizzleDirect == 1) {                                                                           \
+                GemmV3BaseKernel<1, false, true, DTYPE_A, DTYPE_A, float> op;                                          \
+                op.Init(aGM, bGM, cGM, yGM, workspaceGM, tilingData);                                                  \
+                op.RunVector();                                                                                        \
+                op.RunCube();                                                                                          \
+            }                                                                                                          \
+        } else if (transA == 1 && transB == 0) {                                                                       \
+            if (swizzleDirect == 0) {                                                                                  \
+                GemmV3BaseKernel<0, false, true, DTYPE_A, DTYPE_A, float> op;                                          \
+                op.Init(aGM, bGM, cGM, yGM, workspaceGM, tilingData);                                                  \
+                op.RunVector();                                                                                        \
+                op.RunCube();                                                                                          \
+            } else if (swizzleDirect == 1) {                                                                           \
+                GemmV3BaseKernel<1, false, true, DTYPE_A, DTYPE_A, float> op;                                          \
+                op.Init(aGM, bGM, cGM, yGM, workspaceGM, tilingData);                                                  \
+                op.RunVector();                                                                                        \
+                op.RunCube();                                                                                          \
+            }                                                                                                          \
+        } else if (transA == 1 && transB == 1) {                                                                       \
+            if (swizzleDirect == 0) {                                                                                  \
+                GemmV3BaseKernel<0, false, true, DTYPE_A, DTYPE_A, float> op;                                          \
+                op.Init(aGM, bGM, cGM, yGM, workspaceGM, tilingData);                                                  \
+                op.RunVector();                                                                                        \
+                op.RunCube();                                                                                          \
+            } else if (swizzleDirect == 1) {                                                                           \
+                GemmV3BaseKernel<1, false, true, DTYPE_A, DTYPE_A, float> op;                                          \
+                op.Init(aGM, bGM, cGM, yGM, workspaceGM, tilingData);                                                  \
+                op.RunVector();                                                                                        \
+                op.RunCube();                                                                                          \
+            }                                                                                                          \
+        }                                                                                                              \
+        if ASCEND_IS_AIC {                                                                                             \
+            AscendC::CrossCoreWaitFlag(2);                                                                             \
+            AscendC::CrossCoreWaitFlag(3);                                                                             \
+        }                                                                                                              \
+    } while (0)
 
-template <int LOADMODE, int SPLITCOREMODE, int FIXOPTI, int MIXND2NZ, int SPECIALOPT>
+template <int LOADMODE, int SPLITCOREMODE, int FIXOPTI, int MIXND2NZ, int SPECIALOPT, int MEMOPT>
 __global__ __aicore__ void gemm_v3(
     GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR yGM, GM_ADDR workspaceGM, GM_ADDR tilingGM)
 {
@@ -322,5 +392,10 @@ __global__ __aicore__ void gemm_v3(
         MMV3_IMPL_ACCU(
             MatMulUnAlignedKernelDeterministicSplitK, CubeFormat::NZ, FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT
         );
+    } else if constexpr (LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
+                         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE &&
+                         MEMOPT == MEM_OPT_ENABLE) {
+        GET_TILING_DATA_WITH_STRUCT(GemmV3TilingData, tilingData, tilingGM);
+        INVOKE_GEMM_V3_BASE_KERNEL(tilingData.transA, tilingData.transB, tilingData.swizzleDirect);
     }
 }
