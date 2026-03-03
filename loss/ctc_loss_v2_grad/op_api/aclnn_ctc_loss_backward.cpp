@@ -88,7 +88,6 @@ static bool CheckDtypeValid(
     bool is910bSocVersion =
         (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
          GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
-    bool is910dSocVersion = Ops::NN::AclnnUtil::IsRegbase();
     int64_t inputN = logProbs->GetViewShape().GetDim(1);
     int64_t inputC = logProbs->GetViewShape().GetDim(CDIM);
     int64_t inputS = (logAlpha->GetViewShape().GetDim(SDIM) - 1) / DOUBLE;
@@ -102,7 +101,7 @@ static bool CheckDtypeValid(
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Not supported now, we will support it later.");
             return false;
         }
-    } else if (is910dSocVersion) {
+    } else if (Ops::NN::AclnnUtil::IsRegbase()) {
         OP_CHECK_DTYPE_NOT_SUPPORT(logProbs, DTYPE_SUPPORT_910_55_LOGPROB_LIST, return false);
     } else {
         OP_CHECK_DTYPE_NOT_SUPPORT(logProbs, DTYPE_SUPPORT_LOGPROB_LIST, return false);
