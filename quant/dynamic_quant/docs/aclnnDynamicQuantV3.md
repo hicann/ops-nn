@@ -62,55 +62,250 @@
       $$
   其中$\max_{t}$/$\min_{t}$代表求最大/最小值的模式，如果quantMode为“pertoken”，则$t=row$，表示对每个token计算最大/最小值；如果quantMode为“pertensor”，则$t=all$，表示求整个tensor的最大/最小值；如果quantMode为“perchannel”，则$t=col$，表示对每个channel求最大/最小值。$DTYPE_{MAX}$是输出类型的最大值，$DTYPE_{MIN}$是输出类型的最小值。
 
-
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnDynamicQuantV3GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDynamicQuantV3”接口执行计算。
 
-* `aclnnStatus aclnnDynamicQuantV3GetWorkspaceSize(const aclTensor* x, const aclTensor* smoothScalesOptional, const aclTensor* groupIndexOptional, int64_t dstType, bool isSymmetrical, const char* quantMode, const aclTensor* yOut, const aclTensor* scaleOut, const aclTensor* offsetOut, uint64_t* workspaceSize, aclOpExecutor** executor)`
-* `aclnnStatus aclnnDynamicQuantV3(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`
+```Cpp
+aclnnStatus aclnnDynamicQuantV3GetWorkspaceSize(
+  const aclTensor *x,
+  const aclTensor *smoothScalesOptional,
+  const aclTensor *groupIndexOptional,
+  int64_t          dstType,
+  bool             isSymmetrical,
+  const char      *quantMode,
+  const aclTensor *yOut,
+  const aclTensor *scaleOut,
+  const aclTensor *offsetOut,
+  uint64_t        *workspaceSize,
+  aclOpExecutor  **executor)
+```
+
+```Cpp
+aclnnStatus aclnnDynamicQuantV3(
+  void          *workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor *executor,
+  aclrtStream    stream)
+```
 
 ## aclnnDynamicQuantV3GetWorkspaceSize
 
 - **参数说明：**
 
-  - x（aclTensor*, 计算输入）：算子输入的Tensor，shape维度要大于1，不超过8。Device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。当对应yOut的数据类型为INT4时，x最后一维的大小必须能被2整除。
-  - smoothScalesOptional（aclTensor*, 计算输入）：算子输入的smoothScales，在pertoken/pertensor场景下，当没有groupIndexOptional时，shape维度是x的最后一维；当有groupIndexOptional时，shape是两维，第一维的大小对应专家数，其值不能超过1024，第二维的大小等于x的最后一维的大小；在perchannel场景下，shape大小是x的倒数第二维的大小。Device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16，并且数据类型要和x保持一致，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  - groupIndexOptional（aclTensor*, 计算输入）：算子输入的groupIndex，Device侧的aclTensor，数据类型支持INT32，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。shape只支持一维，且维度大小等于smoothScalesOptional的第一维。groupIndexOptional非nullptr时，smoothScalesOptional必须非nullptr。
-  - dstType (int64_t, 计算输入)：输出yOut的数据类型对应的枚举值，Host侧的int。
-    - <term>Ascend 950PR/Ascend 950DT</term>：支持取值2、3、29、34、35、36，分别表示INT8、INT32、INT4、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN。INT32实际为8个INT4拼接。
-  - isSymmetrical (bool, 计算输入)：指定是否对称量化，Host侧的bool。
-  - quantMode (char*, 计算输入)：用于指定量化的模式，Host侧的char*。当前支持"pertoken"、"pertensor"和"perchannel"。当quantMode取"pertensor"或"perchannel"时，groupIndexOptional必须是nullptr。
-  - yOut（aclTensor*, 计算输出）：量化后的输出Tensor，类型由dstType指定。数据类型为INT4时，最后一维的大小必须能被2整除；数据类型为INT32时，最后一维是x最后一维的1/8，其他数据类型时shape和x保持一致。Device侧的aclTensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持INT4、INT8、INT32（实际为8个INT4拼接）、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8。
-  - scaleOut（aclTensor*, 计算输出）：量化使用的scale，Device侧的aclTensor，数据类型支持FLOAT，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - quantMode是pertoken时，shape为x的shape剔除最后一维；quantMode是pertensor时，shape为(1,)；quantMode是perchannel时，shape为x的shape剔除倒数第二维。
-  - offsetOut（aclTensor*, 计算输出）：非对称量化使用的offset，shape和scale一致，Device侧的aclTensor，数据类型支持FLOAT，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。仅在isSymmetrical是false时支持，如果isSymmetrical是true，offsetOut需要传nullptr。
-  - workspaceSize（uint64_t\*, 出参）：返回需要在Device侧申请的workspace大小。
-  - executor（aclOpExecutor\*\*, 出参）：返回op执行器，包含了算子计算流程。
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
+  <col style="width: 120px">
+  <col style="width: 271px">
+  <col style="width: 330px">
+  <col style="width: 223px">
+  <col style="width: 101px">
+  <col style="width: 190px">
+  <col style="width: 145px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      <th>使用说明</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+      <th>维度(shape)</th>
+      <th>非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>x（aclTensor*）</td>
+      <td>输入</td>
+      <td>算子输入的Tensor。对应公式中的x。</td>
+      <td><ul><li>当对应yOut的数据类型为INT4时，x最后一维的大小必须能被2整除。</li></ul></td>
+      <td>FLOAT16、BFLOAT16</td>
+      <td>ND</td>
+      <td>2-8</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>smoothScalesOptional（aclTensor*）</td>
+      <td>输入</td>
+      <td>算子输入的smoothScales。对应公式描述中的smoothScalesOptional。</td>
+      <td><ul><li>在pertoken/pertensor场景下，当没有groupIndexOptional时，shape维度是x的最后一维。</li><li>当有groupIndexOptional时，shape是两维，第一维的大小对应专家数，其值不能超过1024，第二维的大小等于x的最后一维的大小。</li><li>在perchannel场景下，shape大小是x的倒数第二维的大小。</li><li>数据类型要和x保持一致。</li></ul></td>
+      <td>FLOAT16、BFLOAT16</td>
+      <td>ND</td>
+      <td>1, 2</td>
+      <td>√</td>
+    </tr>
+       <tr>
+      <td>groupIndexOptional（aclTensor*）</td>
+      <td>输入</td>
+      <td>算子输入的groupIndex。对应公式描述中的groupIndexOptional。</td>
+      <td><ul><li>shape只支持一维，且维度大小等于smoothScalesOptional的第一维。</li><li>groupIndexOptional非nullptr时，smoothScalesOptional必须非nullptr。</li></ul></td>
+      <td>INT32</td>
+      <td>ND</td>
+      <td>1</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>dstType（int64_t）</td>
+      <td>输入</td>
+      <td>表示指定数据转换后yOut的类型，对应公式中的DType。</td>
+      <td><ul><li>输入范围为{2, 3, 29, 34, 35, 36}，分别对应输出yOut的数据类型为{2:INT8, 3:INT32, 29:INT4, 34:HIFLOAT8, 35:FLOAT8_E5M2, 36:FLOAT8_E4M3FN}。</li><li>INT32实际为8个INT4拼接。</li></ul></td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>isSymmetrical（bool）</td>
+      <td>输入</td>
+      <td>定是否对称量化。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>quantMode（char*） </td>
+      <td>输入</td>
+      <td>用于指定量化的模式。</td>
+      <td><ul><li>当前支持"pertoken"、"pertensor"和"perchannel"。</li><li>当quantMode取"pertensor"或"perchannel"时，groupIndexOptional必须是nullptr。</li></ul></td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>yOut（aclTensor*）</td>
+      <td>输出</td>
+      <td>量化后的输出Tensor，类型由dstType指定，对应公式中的yOut。</td>
+      <td><ul><li>数据类型为INT4时，最后一维的大小必须能被2整除。</li><li>数据类型为INT32时，最后一维是x最后一维的1/8。</li><li>其他数据类型时shape和x保持一致。</li><li></li></ul></td>
+      <td>INT4、INT8、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8、INT32</td>
+      <td>ND</td>
+      <td>2-8</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>scaleOut（aclTensor*）</td>
+      <td>输出</td>
+      <td>量化使用的scale。对应公式中的scaleOut。</td>
+      <td><ul><li>quantMode是pertoken时，shape为x的shape剔除最后一维。</li><li>quantMode是pertensor时，shape为(1,)。</li><li>quantMode是perchannel时，shape为x的shape剔除倒数第二维。</li></ul></td>
+      <td>FLOAT32</td>
+      <td>ND</td>
+      <td>1-7</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>offsetOut（aclTensor*）</td>
+      <td>输出</td>
+      <td>非对称量化使用的offset。对应公式中的offsetOut。</td>
+      <td><ul><li>仅在isSymmetrical是false时支持，如果isSymmetrical是true，offsetOut需要传nullptr。</li></ul></td>
+      <td>FLOAT32</td>
+      <td>ND</td>
+      <td>1-7</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>workspaceSize（uint64_t*）</td>
+      <td>输出</td>
+      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>executor（aclOpExecutor**）</td>
+      <td>输出</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+  </tbody>
+  </table>
 
 - **返回值：**
 
-  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
-  ```
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  
   第一段接口完成入参校验，出现以下场景时报错：
-  返回161001 (ACLNN_ERR_PARAM_NULLPTR)：传入的x或输出参数是空指针。
-  返回161002 (ACLNN_ERR_PARAM_INVALID)：参数的数据类型、数据格式、维度等不在支持的范围内。
-  返回561001 (ACLNN_ERR_INNER_CREATE_EXECUTOR)：内部创建aclOpExecutor失败。
-  ```
+
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
+  <col style="width: 140px">
+  <col style="width: 762px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>返回码</th>
+      <th>错误码</th>
+      <th>描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>ACLNN_ERR_PARAM_NULLPTR</td>
+      <td>161001</td>
+      <td>传入的x或输出参数是空指针。</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
+      <td>参数的数据类型、数据格式、维度等不在支持的范围内。</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_INNER_CREATE_EXECUTOR</td>
+      <td>561001</td>
+      <td>内部创建aclOpExecutor失败。</td>
+    </tr>
+  </tbody></table>
 
 ## aclnnDynamicQuantV3
 
-- **参数说明：**
-  - workspace(void \*, 入参)：在Device侧申请的workspace内存地址。
-  - workspaceSize(uint64_t, 入参)：在Device侧申请的workspace大小，由第一段接口aclnnDynamicQuantV3GetWorkspaceSize获取。
-  - executor(aclOpExecutor \*, 入参)：op执行器，包含了算子计算流程。
-  - stream(aclrtStream, 入参)：指定执行任务的Stream。
+  - **参数说明：**
+
+    <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
+    <col style="width: 173px">
+    <col style="width: 112px">
+    <col style="width: 668px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>workspace</td>
+        <td>输入</td>
+        <td>在Device侧申请的workspace内存地址。</td>
+      </tr>
+      <tr>
+        <td>workspaceSize</td>
+        <td>输入</td>
+        <td>在Device侧申请的workspace大小，由第一段接口aclnnDynamicQuantV3GetWorkspaceSize获取。</td>
+      </tr>
+      <tr>
+        <td>executor</td>
+        <td>输入</td>
+        <td>op执行器，包含了算子计算流程。</td>
+      </tr>
+      <tr>
+        <td>stream</td>
+        <td>输入</td>
+        <td>指定执行任务的Stream。</td>
+      </tr>
+    </tbody>
+    </table>
 
 - **返回值：**
 
-  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 

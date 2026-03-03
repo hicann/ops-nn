@@ -1,5 +1,7 @@
 # aclnnInplaceQuantScatterV2
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/quant_update_scatter)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -13,58 +15,257 @@
 
 ## 功能说明
 
-[Quantize](../../../quant/quantize/docs/aclnnQuantize.md)算子和[Scatter](../../scatter/docs/aclnnInplaceScatterUpdate.md)算子的融合，先将updates在quantAxis轴上进行量化：quantScales对updates做缩放操作，quantZeroPoints做偏移。然后将量化后的updates中的值按指定的轴axis，根据索引张量indices逐个更新selfRef中对应位置的值。相比aclnnInplaceQuantScatter多了roundMode输入。
+[Quantize](https://gitcode.com/cann/ops-nn/blob/master/quant/quantize/docs/aclnnQuantize.md)算子和[Scatter](https://gitcode.com/cann/ops-nn/blob/master/index/scatter/docs/aclnnInplaceScatterUpdate.md)算子的融合，先将updates在quantAxis轴上进行量化：quantScales对updates做缩放操作，quantZeroPoints做偏移。然后将量化后的updates中的值按指定的轴axis，根据索引张量indices逐个更新selfRef中对应位置的值。相比aclnnInplaceQuantScatter多了roundMode输入。
 
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnInplaceQuantScatterV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnInplaceQuantScatterV2”接口执行计算。
 
-* `aclnnStatus aclnnInplaceQuantScatterV2GetWorkspaceSize(aclTensor* selfRef, const aclTensor* indices, const aclTensor* updates, const aclTensor* quantScales, const aclTensor* quantZeroPoints, int64_t axis, int64_t quantAxis, int64_t reduction, const char* roundMode, uint64_t* workspaceSize, aclOpExecutor** executor)`
-* `aclnnStatus aclnnInplaceQuantScatterV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)`
+```cpp
+aclnnStatus aclnnInplaceQuantScatterV2GetWorkspaceSize(
+  aclTensor       *selfRef,
+  const aclTensor *indices,
+  const aclTensor *updates,
+  const aclTensor *quantScales,
+  const aclTensor *quantZeroPoints,
+  int64_t          axis,
+  int64_t          quantAxis,
+  int64_t          reduction,
+  const char       *roundMode,
+  uint64_t         *workspaceSize,
+  aclOpExecutor   **executor);
+```
+
+```cpp
+aclnnStatus aclnnInplaceQuantScatterV2(
+  void          *workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor *executor,
+  aclrtStream    stream);
+```
 
 ## aclnnInplaceQuantScatterV2GetWorkspaceSize
 
 - **参数说明**：
-
-  - selfRef（aclTensor*, 计算输入|计算输出）：Device侧的Tensor，源数据张量，数据类型支持INT8、FLOAT8_E4M3FN、FLOAT_E5M2、HIFLOAT8，支持3-8维，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-  - indices（aclTensor*, 计算输入）：Device侧的Tensor，索引张量，数据类型支持INT32、INT64类型，仅支持1维或2维，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。 \
-  当indices shape为1维时，indices的取值范围为[0, selfRef.shape(axis) - updates.shape(axis))； \
-  当indices shape为2维时，indices每项的第0个数据取值范围[0, selfRef.shape(0))，indices每项的第1个数据取值范围[0, selfRef.shape(axis) - updates.shape(axis))。
-  - updates（aclTensor*, 计算输入）：Device侧的Tensor，更新数据张量，数据类型支持BFLOAT16、FLOAT16，updates的维数需要与selfRef的维数一样，其第1维的大小等于indices的第1维的大小，且不大于selfRef的第1维的大小；其axis轴的大小不大于selfRef的axis轴的大小；其余维度的大小要跟selfRef对应维度的大小相等。[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-  - quantScales（aclTensor*, 计算输入）：Device侧的Tensor，量化缩放张量，数据类型支持BFLOAT16、FLOAT32，支持1-8维，quantScales的元素个数需要等于updates在quantAxis轴的大小。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  - quantZeroPoints（aclTensor*, 计算输入）：Device侧的Tensor，量化偏移张量，数据类型支持BFLOAT16、INT32，支持1-8维，quantZeroPoints的元素个数需要等于updates在quantAxis轴的大小。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，可选参数。
-  - axis（int64_t, 计算输入）：updates上用来更新的轴，数据类型为INT64，取值范围[-len(updates.shape) + 1, -1)或者[1, len(updates.shape) - 1)。
-  - quantAxis（int64_t, 计算输入）：updates上用来量化的轴，数据类型为INT64，取值支持-1或者len(updates.shape) - 1。
-  - reduction（int64_t, 计算输入）：指定数据操作方式，数据类型为INT64，取值支持1（update）。
-  - roundMode（char*，计算输入）：Quantize公式中的Round，指定数据转换的模式，支持{"rint", "round", "hybrid"}模式。selfRef的数据类型为INT8/FLOAT8_E4M3FN/FLOAT8_E5M2时，仅支持{"rint"}，数据类型为HIFLOAT8，支持{"round", "hybrid"}。
-  - workspaceSize（uint64_t *，出参）：返回需要在Device侧申请的workspace大小。
-  - executor（aclOpExecutor **，出参）：返回op执行器，包含了算子计算流程。
-
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 180px">
+  <col style="width: 120px">
+  <col style="width: 280px">
+  <col style="width: 320px">
+  <col style="width: 250px">
+  <col style="width: 120px">
+  <col style="width: 140px">
+  <col style="width: 140px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      <th>使用说明</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+      <th>维度(shape)</th>
+      <th>非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>selfRef (aclTensor*)</td>
+      <td>输入|输出</td>
+      <td>源数据张量。</td>
+      <td>支持空Tensor。</td>
+      <td>INT8、FLOAT8_E4M3FN、FLOAT_E5M2、HIFLOAT8</td>
+      <td>ND</td>
+      <td>1,2</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>indices (aclTensor*)</td>
+      <td>输入</td>
+      <td>索引张量。</td>
+      <td><ul><li>当indices shape为1维时，indices的取值范围为[0, selfRef.shape(axis) - updates.shape(axis))</li><li>当indices shape为2维时，indices每项的第0个数据取值范围[0, selfRef.shape(0))，indices每项的第1个数据取值范围[0, selfRef.shape(axis) - updates.shape(axis))</li></ul></td>
+      <td>INT32、INT64</td>
+      <td>ND</td>
+      <td>1,2</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>updates (aclTensor*)</td>
+      <td>输入</td>
+      <td>更新数据张量。</td>
+      <td><ul><li>updates的维数需要与selfRef的维数一样，其第1维的大小等于indices的第1维的大小，且不大于selfRef的第1维的大小</li><li>其axis轴的大小不大于selfRef的axis轴的大小</li><li>其余维度的大小要跟selfRef对应维度的大小相等</li></ul></td>
+      <td>BFLOAT16、FLOAT16</td>
+      <td>ND</td>
+      <td>1,2</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>quantScales (aclTensor*)</td>
+      <td>输入</td>
+      <td>量化缩放张量。</td>
+      <td>quantScales的元素个数需要等于updates在quantAxis轴的大小</td>
+      <td>BFLOAT16、FLOAT32</td>
+      <td>ND</td>
+      <td>1-8</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>quantZeroPoints (aclTensor*)</td>
+      <td>输入</td>
+      <td>量化偏移张量。</td>
+      <td>quantZeroPoints的元素个数需要等于updates在quantAxis轴的大小。</td>
+      <td>BFLOAT16、INT32</td>
+      <td>ND</td>
+      <td>1-8</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>axis (int64_t)</td>
+      <td>输入</td>
+      <td>updates上用来更新的轴。</td>
+      <td>取值范围[-len(updates.shape) + 1, -1)或者[1, len(updates.shape) - 1)。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>quantAxis (int64_t)</td>
+      <td>输入</td>
+      <td>updates上用来量化的轴。</td>
+      <td>取值支持-1或者len(updates.shape) - 1。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>reduction (int64_t)</td>
+      <td>输入</td>
+      <td>指定数据操作方式。</td>
+      <td>当前取值仅支持1。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>roundMode (char*)</td>
+      <td>输入</td>
+      <td>Quantize公式中的Round，指定数据转换的模式。</td>
+      <td><ul><li>支持{"rint", "round", "hybrid"}模式。</li><li>selfRef的数据类型为INT8/FLOAT8_E4M3FN/FLOAT8_E5M2时，仅支持{"rint"}。</li><li>数据类型为HIFLOAT8，支持{"round", "hybrid"}</li></ul></td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输出</td>
+      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输出</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+  </tbody></table>
 
 - **返回值：**
 
-  返回aclnnStatus状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  ```
-  第一段接口完成入参校验，出现以下场景时报错: 
-  161001 (ACLNN_ERR_PARAM_NULLPTR)：如果传入参数是必选输入，输出或者必选属性，且是空指针，则返回161001。
-  161002 (ACLNN_ERR_PARAM_INVALID)：1. selfRef、indices、updates、quantScales、quantZeroPoints数据类型不在支持范围内。
-                                    2. selfRef、indices、updates、quantScales、quantZeroPoints数据类型组合不在支持范围内，具体组合请参考约束说明。
-                                    3. selfRef和updates的维度数不一致。
-                                    4. axis, quantAxis, roundMode不在支持的范围之内。
-                                    5. 不支持的产品型号。
-  ```
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
+  第一段接口完成入参校验，出现以下场景时报错：
+
+  <table style="undefined;table-layout: fixed; width: 1048px"><colgroup>
+  <col style="width: 319px">
+  <col style="width: 108px">
+  <col style="width: 621px">
+  </colgroup>
+  <thead>
+  <tr>
+      <th>返回码</th>
+      <th>错误码</th>
+      <th>描述</th>
+  </tr></thead>
+  <tbody>
+  <tr>
+      <td>ACLNN_ERR_PARAM_NULLPTR</td>
+      <td>161001</td>
+      <td>如果传入参数是必选输入，输出或者必选属性，且是空指针，则返回161001。</td>
+  </tr>
+  <tr>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
+      <td>selfRef、indices、updates、quantScales、quantZeroPoints数据类型不在支持范围内。</td>
+  </tr>
+  <tr>
+    <td>selfRef、indices、updates、quantScales、quantZeroPoints数据类型组合不在支持范围内，具体组合请参考约束说明。</td>
+  </tr>
+  <tr>
+    <td>selfRef和updates的维度数不一致。</td>
+  </tr>
+  <tr>
+    <td>axis, quantAxis, roundMode不在支持的范围之内。</td>
+  </tr>
+  <tr>
+    <td>不支持的产品型号。</td>
+  </tr>
+  </tbody>
+  </table>
 
 ## aclnnInplaceQuantScatterV2
 
-- **参数说明**：
-  * workspace（void*，入参）：在Device侧申请的workspace内存地址。
-  * workspaceSize（uint64_t，入参）：在Device侧申请的workspace大小，由第一段接口aclnnInplaceQuantScatterV2GetWorkspaceSize获取。
-  * executor（aclOpExecutor *，入参）：op执行器，包含了算子计算流程。
-  * stream（aclrtStream，入参）：指定执行任务的Stream。
+- **参数说明：**
 
-- **返回值**：
+  <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
+  <col style="width: 173px">
+  <col style="width: 112px">
+  <col style="width: 668px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnInplaceQuantScatterV2GetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
+  </table>
 
-  返回aclnnStatus状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+- **返回值：**
+
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 

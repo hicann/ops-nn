@@ -20,7 +20,7 @@
 - 计算公式：
   - 将输入x在第0维上先按照groupIndex进行分组，每个group内按k = blocksize个数分组，一组k个数 $\{\{x_i\}_{i=1}^{k}\}$ 计算出这组数对应的量化尺度mxscale_pre, $\{mxscale\_pre, \{P_i\}_{i=1}^{k}\}$, 计算公式为下面公式(1)(2)。
   $$
-  shared\_exp = floor(log_2(max_i(|V_i|))) - emax  \tag{1} 
+  shared\_exp = floor(log_2(max_i(|V_i|))) - emax  \tag{1}
   $$
   $$
   mxscale\_pre = 2^{shared\_exp}  \tag{2}
@@ -30,7 +30,7 @@
   P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize \tag{3}
   $$
   
-  ​	量化后的$P_i$按对应的$x_i$的位置组成输出y，mxscale_pre按对应的groupIndex分组，分组内第一个维度pad为偶数，组成输出mxscale。
+  ​ 量化后的$P_i$按对应的$x_i$的位置组成输出y，mxscale_pre按对应的groupIndex分组，分组内第一个维度pad为偶数，组成输出mxscale。
   
   - emax: 对应数据类型的最大正则数的指数位。
   
@@ -40,49 +40,239 @@
     |  FLOAT8_E5M2  |  15  |
 
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnGroupedDynamicMxQuantGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGroupedDynamicMxQuant”接口执行计算。
 
-- `aclnnStatus aclnnGroupedDynamicMxQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* groupIndex, const char* roundMode, int64_t dstType, int64_t blocksize, aclTensor* y, aclTensor* mxscale, uint64_t* workspaceSize, aclOpExecutor** executor)`
+```cpp
+aclnnStatus aclnnGroupedDynamicMxQuantGetWorkspaceSize(
+  const aclTensor *x, 
+  const aclTensor *groupIndex, 
+  const char      *roundMode, 
+  int64_t          dstType, 
+  int64_t          blocksize, 
+  aclTensor       *y, 
+  aclTensor       *mxscale, 
+  uint64_t        *workspaceSize, 
+  aclOpExecutor   **executor)
+```
 
-- `aclnnStatus aclnnGroupedDynamicMxQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)`
+```cpp
+aclnnStatus aclnnGroupedDynamicMxQuant(
+  void          *workspace, 
+  uint64_t       workspaceSize, 
+  aclOpExecutor *executor, 
+  aclrtStream    stream)
+```
 
 ## aclnnGroupedDynamicMxQuantGetWorkspaceSize
 
 - **参数说明：**
-  
-  - x（aclTensor*，计算输入）：Device侧的aclTensor，计算公式中的输入x。数据类型支持FLOAT16、BFLOAT16，shape仅支持2维，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，支持空Tensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND格式。
-  - groupIndex（aclTensor*，计算输入）：Device侧的aclTensor，量化分组的起始索引。数据类型支持INT32，shape仅支持1维，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，不支持空Tensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND格式。索引要求大于等于0，且非递减，并且最后一个数需要与x的第一个维度大小相等。
-  - roundMode（char*，计算输入）：host侧的string，公式中的round_mode，数据转换的模式，仅支持"rint"模式。
-  - dstType（int64_t，计算输入）：host侧的int64_t，公式中的dst_type，指定数据转换后y的类型，输入范围为{35, 36}，分别对应输出y的数据类型为{35: FLOAT8_E5M2, 36: FLOAT8_E4M3FN}。
-  - blocksize（int64_t，计算输入）：host侧的int64_t，公式中的blocksize，指定每次量化的元素个数，仅支持32。
-  - y（aclTensor*，计算输出）：Device侧的aclTensor，公式中的输出y，输入x量化后的对应结果。数据类型支持FLOAT8_E4M3FN、FLOAT8_E5M2，需与dstType对应，shape仅支持2维，支持空Tensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND格式。Shape和输入x一致。
-  - mxscale（aclTensor*，计算输出）：Device侧的aclTensor，公式中的mxscale_pre组成的输出mxscale，每个分组对应的量化尺度。数据类型支持FLOAT8_E8M0，shape仅支持3维度，支持空Tensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND格式。假设x的shape为 $[m,n]$，groupedIndex的shape为 $[g]$，则mxscale的shape为 $[(m/(blocksize * 2)+g), n, 2]$。
-  - workspaceSize（uint64_t*，出参）：返回需要在Device侧申请的workspace大小。
-  - executor（aclOpExecutor**，出参）：返回op执行器，包含了算子计算流程。
-  
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 180px">
+  <col style="width: 120px">
+  <col style="width: 280px">
+  <col style="width: 320px">
+  <col style="width: 250px">
+  <col style="width: 120px">
+  <col style="width: 140px">
+  <col style="width: 140px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      <th>使用说明</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+      <th>维度(shape)</th>
+      <th>非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>x (aclTensor*)</td>
+      <td>输入</td>
+      <td>表示算子输入的Tensor。计算公式中的输入x。</td>
+      <td>支持空Tensor。</td>
+      <td>FLOAT16、BFLOAT16</td>
+      <td>ND</td>
+      <td>2</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>groupIndex (aclTensor*)</td>
+      <td>输入</td>
+      <td>量化分组的起始索引。</td>
+      <td><ul><li>不支持空Tensor。</li><li>索引要求大于等于0，且非递减，并且最后一个数需要与x的第一个维度大小相等。</li></ul></td>
+      <td>INT32</td>
+      <td>ND</td>
+      <td>1</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>roundMode（char*）</td>
+      <td>输入</td>
+      <td>公式中的round_mode，数据转换的模式。</td>
+      <td>仅支持"rint"模式。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>dstType (int64_t)</td>
+      <td>输入</td>
+      <td>公式中的dst_type，指定数据转换后y的类型。</td>
+      <td>输入范围为{35, 36}，分别对应输出y的数据类型为{35: FLOAT8_E5M2, 36: FLOAT8_E4M3FN}。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>blocksize (int64_t)</td>
+      <td>输入</td>
+      <td>公式中的blocksize，指定每次量化的元素个数。</td>
+      <td>当前取值仅支持32。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>y (aclTensor*)</td>
+      <td>输出</td>
+      <td>表示量化后的输出Tensor。对应公式中的y。</td>
+      <td><ul><li>支持空Tensor。</li><li>shape的维度与x保持一致。</li><li>数据类型支持FLOAT8_E4M3FN、FLOAT8_E5M2，需与dstType对应。</li></ul></td>
+      <td>FLOAT8_E4M3FN、FLOAT8_E5M2</td>
+      <td>ND</td>
+      <td>2</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>mxscale (aclTensor*)</td>
+      <td>输出</td>
+      <td>公式中的mxscale_pre组成的输出mxscale，每个分组对应的量化尺度。</td>
+      <td><ul><li>支持空Tensor。</li><li>假设x的shape为 [m,n]，groupedIndex的shape为 [g]，则mxscale的shape为 [(m/(blocksize∗2)+g),n,2]。</li></ul></td>
+      <td>FLOAT8_E8M0</td>
+      <td>ND</td>
+      <td>3</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输出</td>
+      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输出</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+  </tbody></table>
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
   第一段接口完成入参校验，出现以下场景时报错：
-  返回161001(ACLNN_ERR_PARAM_NULLPTR)：1. 传入的x、groupIndex、y和mxscale是空指针。
-                                      2. 传入的roundMode是空指针。
-  返回161002(ACLNN_ERR_PARAM_INVALID)：1. x、groupIndex、y、mxscale的数据类型不在支持的范围之内。
-                                      2. x、y和mxscale的shape不满足校验条件。
-                                      3. x、groupIndex、y和mxscale的维度不在支持的范围之内。
-                                      4. roundMode、dstType、blocksize不符合当前支持的值。
-                                      5. mxscale不支持非连续的Tensor。
-  返回361001(ACLNN_ERR_RUNTIME_ERROR)：当前平台不在支持的平台范围内。
-  ```
+
+  <table style="undefined;table-layout: fixed; width: 1048px"><colgroup>
+  <col style="width: 319px">
+  <col style="width: 108px">
+  <col style="width: 621px">
+  </colgroup>
+  <thead>
+  <tr>
+      <th>返回码</th>
+      <th>错误码</th>
+      <th>描述</th>
+  </tr></thead>
+  <tbody>
+  <tr>
+      <td rowspan="2">ACLNN_ERR_PARAM_NULLPTR</td>
+      <td rowspan="2">161001</td>
+      <td>如果传入参数是必选输入，输出或者必选属性，且是空指针，则返回161001。</td>
+  </tr>
+  <tr>
+    <td>传入的roundMode是空指针。</td>
+  </tr>
+  <tr>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
+      <td>x、groupIndex、y、mxscale的数据类型不在支持的范围之内。</td>
+  </tr>
+  <tr>
+    <td>x、y和mxscale的shape不满足校验条件。</td>
+  </tr>
+  <tr>
+    <td>approximate、quantMode、roundMode、dstType不在支持的范围之内。</td>
+  </tr>
+  <tr>
+    <td>x、groupIndex、y和mxscale的维度不在支持的范围之内。</td>
+  </tr>
+  <tr>
+    <td>roundMode、dstType、blocksize不符合当前支持的值。</td>
+  </tr>
+  <tr>
+    <td>mxscale不支持非连续的Tensor。</td>
+  </tr>
+  </tbody>
+  <tr>
+    <td>ACLNN_ERR_RUNTIME_ERROR</td>
+    <td>361001</td>
+    <td>当前平台不在支持的平台范围内。</td>
+  </tr>
+  </table>
 
 ## aclnnGroupedDynamicMxQuant
 
 - **参数说明：**
-  - workspace(void*, 入参)：在Device侧申请的workspace内存地址。
-  - workspaceSize(uint64_t, 入参)：在Device侧申请的workspace大小，由第一段接口aclnnGroupedDynamicMxQuantGetWorkspaceSize获取。
-  - executor(aclOpExecutor*, 入参)：op执行器，包含了算子计算流程。
-  - stream(aclrtStream, 入参)：指定执行任务的Stream。
+
+  <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
+  <col style="width: 173px">
+  <col style="width: 112px">
+  <col style="width: 668px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnGroupedDynamicMxQuantGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
+  </table>
 
 - **返回值：**
 
@@ -94,6 +284,7 @@
   - aclnnGroupedDynamicMxQuant默认确定性实现。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
   
 ```Cpp
@@ -229,7 +420,7 @@ int aclnnGroupedDynamicMxQuantTest(int32_t deviceId, aclrtStream& stream)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
 
-    // 调用aclnnDynamicMxQuant第一段接口
+    // 调用aclnnGroupedDynamicMxQuant第一段接口
     ret = aclnnGroupedDynamicMxQuantGetWorkspaceSize(x, groupedIndex, roundModeOptional, dstType, blocksize, yOut, mxscaleOut, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGroupedDynamicMxQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
             return ret);
@@ -241,7 +432,7 @@ int aclnnGroupedDynamicMxQuantTest(int32_t deviceId, aclrtStream& stream)
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
         workspaceAddrPtr.reset(workspaceAddr);
     }
-    // 调用aclnnDynamicMxQuant第二段接口
+    // 调用aclnnGroupedDynamicMxQuant第二段接口
     ret = aclnnGroupedDynamicMxQuant(workspaceAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGroupedDynamicMxQuant failed. ERROR: %d\n", ret); return ret);
 
