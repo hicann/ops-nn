@@ -83,23 +83,22 @@
 
 1. **编译ops-nn包**
 
-    进入项目根目录，执行如下编译命令：
+   进入项目根目录，执行如下编译命令：
 
-    ```bash
-    # 编译除experimental贡献目录外的所有算子
-    bash build.sh --pkg [--jit] --soc=${soc_version}
-    # 编译experimental贡献目录下的所有算子
-    # bash build.sh --pkg --experimental [--jit] --soc=${soc_version}
-    ```
-    - --jit（可选）：设置后表示不编译算子二进制文件，如需使用aclnn调用算子，该选项无需设置。
-    - --soc：\$\{soc\_version\}表示NPU型号。Atlas A2系列产品使用"ascend910b"（默认），Atlas A3系列产品使用"ascend910_93"，Ascend 950PR/Ascend 950DT产品使用"ascend950"。
-    - --experimental（可选）：表示编译experimental贡献目录下的算子。
+   ```bash
+   # 编译除experimental贡献目录外的所有算子
+   bash build.sh --pkg --soc=${soc_version}
+   # 编译experimental贡献目录下的所有算子
+   # bash build.sh --pkg --experimental --soc=${soc_version}
+   ```
+   - --soc：\$\{soc\_version\}表示NPU型号。Atlas A2系列产品使用"ascend910b"（默认），Atlas A3系列产品使用"ascend910_93"，Ascend 950PR/Ascend 950DT产品使用"ascend950"。
+   - --experimental（可选）：表示编译experimental贡献目录下的算子。
 
-    若提示如下信息，说明编译成功。
+   若提示如下信息，说明编译成功。
 
-    ```bash
-    Self-extractable archive "cann-${soc_name}-ops-nn_${cann_version}_linux-${arch}.run" successfully created.
-    ```
+   ```bash
+   Self-extractable archive "cann-${soc_name}-ops-nn_${cann_version}_linux-${arch}.run" successfully created.
+   ```
 
    \$\{soc\_name\}表示NPU型号名称，即\$\{soc\_version\}删除“ascend”后剩余的内容。编译成功后，run包存放于build_out目录下。
 
@@ -270,7 +269,7 @@
 
         ops-nn静态库依赖于ops-legacy静态库和ops-math静态库，将上述静态库准备好，解压并将所有lib64、include目录移动至统一目录\$\{static\_lib\_path\}下。
 
-        > 说明：ops-legacy静态库`cann-${soc_name}-ops-legacy-static_${cann_version}_linux-${arch}.tar.gz`需单击[下载链接](https://mirror-centralrepo.devcloud.cn-north-4.huaweicloud.com/artifactory/cann-run-release/software/9.0.0/)获取， ops-nn静态库、ops-math静态库暂未提供软件包，请通过本地编译生成。
+        > 说明：ops-legacy静态库`cann-${soc_name}-ops-legacy-static_${cann_version}_linux-${arch}.tar.gz`需单击[下载链接](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-release/software/master)获取， ops-nn静态库、ops-math静态库暂未提供软件包，请通过本地编译生成。
 
     2. **创建run.sh**
 

@@ -38,7 +38,7 @@ ops-nn是[CANN](https://hiascend.com/software/cann) （Compute Architecture for 
 3. [算子开发](docs/zh/develop/aicore_develop_guide.md)：基于本项目工程**开发新算子**的指南，提供了创建算子工程、实现Tiling和Kernel核心交付件等指导。
 4. [算子调试调优](docs/zh/debug/op_debug_prof.md)：提供了常见的**算子调试和调优**方法，如DumpTensor、msProf、Simulator等。
 
-除了上述指南，还提供了其他文档介绍，例如算子调用方式和流程、算子基本概念等，全量文档介绍请访问[docs](docs/README.md)。
+除了上述指南，还提供了其他文档例如[算子调用方式](docs/zh/invocation/op_invocation.md)、术语概念、build参数介绍等，全量文档请访问[docs](docs/README.md)。
 
 ## 🔍目录结构
 关键目录如下，详细目录介绍参见[项目目录](./docs/zh/context/dir_structure.md)。
