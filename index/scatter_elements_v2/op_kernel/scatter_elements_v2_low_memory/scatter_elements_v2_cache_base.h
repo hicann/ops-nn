@@ -15,18 +15,11 @@
 
 #ifndef SCATTER_ELEMENTS_CACHE_BASE_H
 #define SCATTER_ELEMENTS_CACHE_BASE_H
-#include "kernel_tiling/kernel_tiling.h"
-#include "kernel_operator.h"
+#include "common.h"
 
 namespace ScatterElementsV2NS {
 using namespace AscendC;
-constexpr uint64_t X_LOCAL_LENGTH = 40000;
-constexpr uint64_t INDICES_LOCAL_LENGTH = 2048; // index is int32
-constexpr uint64_t UINT_32_MAX = 4294967295;
-constexpr uint64_t UINT_16_MAX = 65535;
-constexpr uint64_t BLOCK_SIZE = 32;
-constexpr uint64_t ALL_UB_SIZE = 196000;
-constexpr uint64_t MTE_UPDATES_MODE = 2; // updates dimvalue超过indices，但仍批量搬运
+using namespace std;
 
 template <typename T, typename U>
 class CacheXScatterAddBase {
@@ -44,28 +37,7 @@ public:
         this->updatesLocalTensor = allUbLocal[X_LOCAL_LENGTH * sizeof(T) + INDICES_LOCAL_LENGTH * sizeof(U)].ReinterpretCast<T>();
     }
 
-    __aicore__ inline void SetXInfo(uint64_t xDim0, uint64_t xDim1) {
-        this->xDim0 = xDim0;
-        this->xDim1 = xDim1;
-    }
-
-    __aicore__ inline void SetIndicesInfo(uint64_t indicesDim0, uint64_t indicesDim1) {
-        this->indicesDim0 = indicesDim0;
-        this->indicesDim1 = indicesDim1;
-    }
-
-    __aicore__ inline void SetupdatesInfo(uint64_t updatesDim0, uint64_t updatesDim1) {
-        this->updatesDim0 = updatesDim0;
-        this->updatesDim1 = updatesDim1;
-    }
-
-    __aicore__ inline void SetCoreNums(int32_t coreNums) {
-        this->coreNums = coreNums;
-    }
-
-    __aicore__ inline void SetTranspose(bool needTranspose) {
-        this->needTranspose = needTranspose;
-    }
+    SCATTER_ELEMENTS_SET_INFO_METHODS()
 
 protected:
     __aicore__ inline void GetCoreTasks() {
@@ -73,7 +45,7 @@ protected:
         uint32_t tailCoreNum = 0;
         uint32_t frontCoreTaskNum = 0;
         uint32_t tailCoreTaskNum = 0;
-        uint32_t tasks = this->needTranspose ? this->indicesDim1 : this->indicesDim0; // 需要transpose时任务数为列数。
+        uint32_t tasks = this->indicesDim0; // 任务数为行数。
         tailCoreTaskNum = tasks / this->coreNums;
 
         if (tailCoreTaskNum == 0) {
@@ -120,65 +92,19 @@ protected:
         }
     }
 
-    __aicore__ inline void CopyInXCols(uint64_t startTask, uint64_t tasks) {
-        if (this->xDim1 * sizeof(T) < UINT_32_MAX && this->xDim0 < UINT_16_MAX) { // 可跳搬
-            DataCopyExtParams copyParams{static_cast<uint16_t>(this->xDim0), static_cast<uint32_t>(tasks * sizeof(T)),
-                                        static_cast<uint32_t>(this->xDim1 * sizeof(T) - tasks * sizeof(T)), 0, 0};
-            DataCopyPadExtParams<T> padParams{true, 0, 0, 0};
-            DataCopyPad(this->xLocalTensor, this->xGm[startTask], copyParams, padParams);
-        } else {
-            DataCopyExtParams copyParams{1, static_cast<uint32_t>(tasks * sizeof(T)), 0, 0, 0};
-            DataCopyPadExtParams<T> padParams{true, 0, 0, 0};
-            uint64_t aligned = BLOCK_SIZE / sizeof(T);
-            uint64_t tasksAligned = ((tasks + aligned - 1) / aligned) * aligned;
-            if (tasks == this->aggTasks) {
-                tasksAligned = tasks;
-            }
-
-            for (uint64_t i = 0; i < this->xDim0; i++) {
-                uint64_t src = i * this->xDim1 + startTask;
-                uint64_t dst = i * tasksAligned;
-                DataCopyPad(this->xLocalTensor[dst], this->xGm[src], copyParams, padParams);
-            }
-        }
-        this->PIPE_MTE2_S();
-    }
-
     __aicore__ inline void CopyInXRows(uint64_t startTask, uint64_t tasks) {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(tasks * this->xDim1 * sizeof(T)), 0, 0, 0};
         DataCopyPadExtParams<T> padParams{true, 0, 0, 0};
         uint64_t src = startTask * this->xDim1;
         DataCopyPad(this->xLocalTensor, this->xGm[src], copyParams, padParams);
-        this->PIPE_MTE2_S();
-    }
-
-    __aicore__ inline void CopyOutXCols(uint64_t startTask, uint64_t tasks) {
-        if (this->xDim1 * sizeof(T) < UINT_32_MAX && this->xDim0 < UINT_16_MAX) { // 可跳搬
-            DataCopyExtParams copyParams{static_cast<uint16_t>(this->xDim0), static_cast<uint32_t>(tasks * sizeof(T)),
-                                        0, static_cast<uint32_t>(this->xDim1 * sizeof(T) - tasks * sizeof(T)), 0};
-            DataCopyPad(this->xGm[startTask], this->xLocalTensor, copyParams);
-        } else {
-            DataCopyExtParams copyParams{1, static_cast<uint32_t>(tasks * sizeof(T)), 0, 0, 0};
-            uint64_t aligned = BLOCK_SIZE / sizeof(T);
-            uint64_t tasksAligned = ((tasks + aligned - 1) / aligned) * aligned;
-            if (tasks == this->aggTasks) {
-                tasksAligned = tasks;
-            }
-
-            for (uint64_t i = 0; i < this->xDim0; i++) {
-                uint64_t dst = i * this->xDim1 + startTask;
-                uint64_t src = i * tasksAligned;
-                DataCopyPad(this->xGm[dst], this->xLocalTensor[src], copyParams);
-            }
-        }
-        this->PIPE_MTE3_S();
+        PIPE_MTE2_S();
     }
 
     __aicore__ inline void CopyOutXRows(uint64_t startTask, uint64_t tasks) {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(tasks * this->xDim1 * sizeof(T)), 0, 0, 0};
         uint64_t dst = startTask * this->xDim1;
         DataCopyPad(this->xGm[dst], this->xLocalTensor, copyParams);
-        this->PIPE_MTE3_S();
+        PIPE_MTE3_S();
     }
 
     __aicore__ inline void CopyInIndices(uint64_t mteStart, uint64_t mteNums) { // 入参单位都是元素
@@ -191,45 +117,6 @@ protected:
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(mteNums * sizeof(T)), 0, 0, 0};
         DataCopyPadExtParams<T> padParams{true, 0, 0, 0};
         DataCopyPad(this->updatesLocalTensor, this->updatesGm[mteStart], copyParams, padParams);
-    }
-
-    __aicore__ inline void PIPE_V_S() {
-        event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-        SetFlag<HardEvent::V_S>(eventIDVToS);
-        WaitFlag<HardEvent::V_S>(eventIDVToS);
-    }
-
-    __aicore__ inline void PIPE_MTE2_S() {
-        event_t eventIDMTE2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
-        SetFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
-        WaitFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
-    }
-
-    __aicore__ inline void PIPE_MTE3_S() {
-        event_t eventIDMTE3ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_S));
-        SetFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
-        WaitFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
-    }
-
-    __aicore__ inline void PIPE_S_MTE3() {
-        event_t eventIDSToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
-        SetFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
-        WaitFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
-    }
-
-    __aicore__ inline void PIPE_S_MTE2() {
-        event_t eventIDSToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
-        SetFlag<HardEvent::S_MTE2>(eventIDSToMTE2);
-        WaitFlag<HardEvent::S_MTE2>(eventIDSToMTE2);
-    }
-
-    __aicore__ inline void GetColsXAggParams() {
-        // 由xDim0，决定一次处理多少任务。任务数由索引决定。
-        uint64_t aligned = BLOCK_SIZE / sizeof(T);
-        this->aggTasks = ((X_LOCAL_LENGTH / this->xDim0) / aligned) * aligned; // task要向下对齐，因为要作为1块搬进来。向上对齐会超X_LOCAL_LENGTH
-        this->aggTasks = (this->aggTasks > INDICES_LOCAL_LENGTH ? INDICES_LOCAL_LENGTH : this->aggTasks);
-        this->aggTimes = this->coreTasks / this->aggTasks;
-        this->aggLeftTasks = this->coreTasks - this->aggTimes * this->aggTasks; // left搬入的时候可以向上对齐
     }
 
     __aicore__ inline void GetRowsXAggParams() {
@@ -274,11 +161,31 @@ protected:
     uint64_t updatesDim1 = 0; // updates.shape[1]
     uint64_t coreStartTask = 0; // 核分到的起始任务，每个任务为1行或1列
     uint64_t coreTasks = 0; // 核分到的行数
-    int32_t needTranspose = 0;
     // 索引多行一起搬入时的参数:
     uint64_t aggTasks = 0; // 一次搬入的任务
     uint64_t aggTimes = 0; // coreTasks行，需要聚集多少次
     uint64_t aggLeftTasks = 0; // 剩余的任务行
 };
+
+#define LOAD_CACHE_8(cache, address, offset) \
+    cache[0] = *(address + offset + 0); \
+    cache[1] = *(address + offset + 1); \
+    cache[2] = *(address + offset + 2); \
+    cache[3] = *(address + offset + 3); \
+    cache[4] = *(address + offset + 4); \
+    cache[5] = *(address + offset + 5); \
+    cache[6] = *(address + offset + 6); \
+    cache[7] = *(address + offset + 7);
+
+#define LOAD_CACHE_8_WITH_BASE(cache, address, base, offset) \
+    cache[0] = *(address + base + offset + 0); \
+    cache[1] = *(address + base + offset + 1); \
+    cache[2] = *(address + base + offset + 2); \
+    cache[3] = *(address + base + offset + 3); \
+    cache[4] = *(address + base + offset + 4); \
+    cache[5] = *(address + base + offset + 5); \
+    cache[6] = *(address + base + offset + 6); \
+    cache[7] = *(address + base + offset + 7);
+
 }
 #endif

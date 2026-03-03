@@ -16,7 +16,7 @@
 #include "scatter_elements_v2_310p.h"
 #else
 #include "scatter_elements_v2.h"
-#include "scatter_elements_v2_cache_scatter.h"
+#include "scatter_elements_v2_low_memory/execute_scatter.h"
 #endif
 
 extern "C" __global__ __aicore__ void scatter_elements_v2(
@@ -35,11 +35,11 @@ extern "C" __global__ __aicore__ void scatter_elements_v2(
 #endif
 #else
     if (TILING_KEY_IS(0)) {
-        if constexpr (is_same<DTYPE_VAR, float>::value || is_same<DTYPE_VAR, bool>::value) {
-            ScatterElementsV2NS::ScatterElementsTwoDims<DTYPE_VAR, DTYPE_INDICES> op;
-            op.Init(var, indices, updates, &tiling_data, &pipe);
-            op.Process();
-        }
+        // 显存优化分支
+        GM_ADDR userspace = GetUserWorkspace(workspace);
+        ScatterElementsV2NS::ExecuteScatter<DTYPE_VAR, DTYPE_INDICES> op;
+        op.Init(var, indices, updates, &tiling_data, &pipe, userspace);
+        op.Process();
     } else if (TILING_KEY_IS(1)) {
         KernelScatterElementsV2<DTYPE_VAR, DTYPE_INDICES, 1> op;
         op.Init(tilingDevice, &pipe, var, indices, updates);

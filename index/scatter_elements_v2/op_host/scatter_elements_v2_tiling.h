@@ -57,7 +57,6 @@ TILING_DATA_FIELD_DEF(uint64_t, tailCoreData);
 TILING_DATA_FIELD_DEF(uint64_t, computeMode);
 TILING_DATA_FIELD_DEF(uint64_t, MLeft);
 // 低内存分支参数
-TILING_DATA_FIELD_DEF(int32_t, needTranspose);
 TILING_DATA_FIELD_DEF(int32_t, mode);
 TILING_DATA_FIELD_DEF(int32_t, coreNums);
 TILING_DATA_FIELD_DEF(int32_t, updatesIsScalar);
@@ -67,6 +66,8 @@ TILING_DATA_FIELD_DEF(uint64_t, indicesDim0);
 TILING_DATA_FIELD_DEF(uint64_t, indicesDim1);
 TILING_DATA_FIELD_DEF(uint64_t, updatesDim0);
 TILING_DATA_FIELD_DEF(uint64_t, updatesDim1);
+TILING_DATA_FIELD_DEF(uint64_t, batchSize);
+TILING_DATA_FIELD_DEF(uint64_t, realDim);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(ScatterElementsV2, ScatterElementsV2TilingData)

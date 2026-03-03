@@ -19,6 +19,7 @@
 
 namespace ScatterElementsV2NS {
 using namespace AscendC;
+using namespace std;
 
 template <typename T, typename U>
 class CacheXScatterAdd : public CacheXScatterAddBase<T, U> {
@@ -30,64 +31,7 @@ public:
 private:
     __aicore__ inline void DoScatterAdd() {
         this->GetCoreTasks();
-        if (this->needTranspose) {
-            this->DoColsScatterAdd();
-        } else {
-            this->DoRowsScatterAdd();
-        }
-    }
-
-    __aicore__ inline void DoColsScatterAdd() {
-        this->GetColsXAggParams();
-        for (uint64_t i = 0; i <= this->aggTimes; i++) {
-            if (i == this->aggTimes && this->aggLeftTasks == 0) {
-                break;
-            }
-            uint64_t tasks = (i == this->aggTimes ? this->aggLeftTasks : this->aggTasks);
-            uint64_t startTask = this->coreStartTask + i * this->aggTasks;
-            this->CopyInXCols(startTask, tasks);
-            // 索引直接一行一行搬运即可。因为xDim0不大，tasks就不会很小。完全可以一行一行搬运。
-            for (uint64_t j = 0; j < this->indicesDim0; j++) {
-                // 搬入一行indices及其对应的updates
-                uint64_t mteStart = j * this->indicesDim1 + startTask;
-                this->CopyInIndices(mteStart, tasks);
-                mteStart = j * this->updatesDim1 + startTask;
-                this->CopyInupdates(mteStart, tasks);
-                this->PIPE_MTE2_S();
-                this->ColsScatterAddOneByOne(tasks);
-                this->PIPE_V_S();
-                this->PIPE_S_MTE2();
-            }
-            this->PIPE_V_S();
-            this->PIPE_S_MTE3();
-            this->CopyOutXCols(startTask, tasks);
-        }
-    }
-
-    __aicore__ inline void ColsScatterAddOneByOne(uint64_t tasks) {
-        uint64_t aligned = BLOCK_SIZE / sizeof(T);
-        uint64_t strides = ((tasks + aligned - 1) / aligned) * aligned;
-        if constexpr (is_same<T, float>::value || is_same<T, int32_t>::value) {
-            uint64_t mask[1];
-            for (uint64_t i = 0; i < tasks; i++) {
-                int32_t indexValue = this->indicesLocalTensor.GetValue(i);
-                T value = this->updatesLocalTensor.GetValue(i);
-                int32_t dst = indexValue * strides + i;
-                int32_t dstAligned = (dst / aligned) * aligned;
-                mask[0] = 0b1 << (dst - dstAligned);
-                PipeBarrier<PIPE_V>();
-                Adds(this->xLocalTensor[dstAligned], this->xLocalTensor[dstAligned], value, mask, 1, {1,1,8,8}); // 不支持bool
-                PipeBarrier<PIPE_V>();
-            }
-        } else {
-            for (uint64_t i = 0; i < tasks; i++) {
-                int32_t indexValue = this->indicesLocalTensor.GetValue(i);
-                T value = this->updatesLocalTensor.GetValue(i);
-                int32_t dst = indexValue * strides + i;
-                value += this->xLocalTensor.GetValue(dst);
-                this->xLocalTensor.SetValue(dst, value);
-            }
-        }
+        this->DoRowsScatterAdd();
     }
 
     __aicore__ inline void DoRowsScatterAdd() {
@@ -104,10 +48,11 @@ private:
             } else {
                 this->DoRowsScatterAddAggIndices(startTask, tasks);
             }
-            this->PIPE_V_S();
-            this->PIPE_S_MTE3();
+            PIPE_V_S();
+            PIPE_S_MTE3();
             this->CopyOutXRows(startTask, tasks);
         }
+        PIPE_MTE3_S();
     }
 
     __aicore__ inline void DoRowsScatterAddSliceIndices(uint64_t startTask, uint64_t tasks) {
@@ -125,16 +70,16 @@ private:
                 this->CopyInIndices(mteStart, indicesNums);
                 mteStart = (startTask + j) * this->updatesDim1 + i * INDICES_LOCAL_LENGTH;
                 this->CopyInupdates(mteStart, indicesNums);
-                this->PIPE_MTE2_S();
+                PIPE_MTE2_S();
                 // 处理每个索引
                 this->DoRowsScatterAddSliceOneByOne(indicesNums, j);
-                this->PIPE_S_MTE2();
+                PIPE_S_MTE2();
             }
         }
     }
 
     __aicore__ inline void DoRowsScatterAddSliceOneByOne(uint64_t indicesNums, uint64_t taskId) {
-        if constexpr (is_same<T, float>::value || is_same<T, int32_t>::value) {
+        if constexpr (std::is_same<T, float>::value || std::is_same<T, int32_t>::value || std::is_same<T, half>::value) {
             uint64_t mask[1];
             uint64_t aligned = BLOCK_SIZE / sizeof(T);
             for (uint64_t i = 0; i < indicesNums; i++) {
@@ -175,10 +120,10 @@ private:
             this->CopyInIndices(mteStart, nums * this->indicesDim1);
             mteStart = (startTask + i * mteNums) * this->updatesDim1;
             this->CopyInupdatesRows(mteStart, nums, rowMteMode);
-            this->PIPE_MTE2_S();
+            PIPE_MTE2_S();
             // 处理搬入的索引行
             this->ScatterAddRowsInUb(nums, rowMteMode, i * mteNums);
-            this->PIPE_S_MTE2();
+            PIPE_S_MTE2();
         }
     }
 
@@ -188,13 +133,14 @@ private:
             this->DoRowsScatterAddAggOneByOne(rowNums, this->updatesDim1, xStartRow);
         } else if (rowMteMode == 1) {
             // updates是循环搬运上来的，中间有气泡
-            uint64_t indicesDim1Aligned = ((this->indicesDim1 + 8 - 1) / 8) * 8;
+            uint64_t aligned = 32 / sizeof(T); // todo: 对齐到32字节，之前是按照8字节对齐，bool有个精度问题，需要验证下是否已经解决
+            uint64_t indicesDim1Aligned = ((this->indicesDim1 + aligned - 1) / aligned) * aligned;
             this->DoRowsScatterAddAggOneByOne(rowNums, indicesDim1Aligned, xStartRow);
         }
     }
 
     __aicore__ inline void DoRowsScatterAddAggOneByOne(uint64_t rowNums, uint64_t updatesBlockLengh, uint64_t xStartRow) {
-        if constexpr (is_same<T, float>::value || is_same<T, int32_t>::value) {
+        if constexpr (std::is_same<T, float>::value || std::is_same<T, int32_t>::value || std::is_same<T, half>::value) {
             uint64_t mask[1];
             uint64_t aligned = BLOCK_SIZE / sizeof(T);
             for (uint64_t i = 0; i < rowNums; i++) {
@@ -234,60 +180,7 @@ private:
     __aicore__ inline void DoScatterAddValue() {
         this->updatesValue = this->updatesGm.GetValue(0);
         this->GetCoreTasks();
-        if (this->needTranspose) {
-            this->DoColsScatterAddValue();
-        } else {
-            this->DoRowsScatterAddValue();
-        }
-    }
-
-    __aicore__ inline void DoColsScatterAddValue() {
-        this->GetColsXAggParams();
-        for (uint64_t i = 0; i <= this->aggTimes; i++) {
-            if (i == this->aggTimes && this->aggLeftTasks == 0) {
-                break;
-            }
-            uint64_t trueTasks = (i == this->aggTimes ? this->aggLeftTasks : this->aggTasks);
-            uint64_t startTask = this->coreStartTask + i * this->aggTasks;
-            this->CopyInXCols(startTask, trueTasks);
-            // 索引直接一行一行搬运即可。因为xDim0不大，tasks就不会很小。完全可以一行一行搬运。
-            for (uint64_t j = 0; j < this->indicesDim0; j++) {
-                // 搬入一行indices及其对应的updates
-                uint64_t mteStart = j * this->indicesDim1 + startTask;
-                this->CopyInIndices(mteStart, trueTasks);
-                this->PIPE_MTE2_S();
-                this->ColsScatterAddValueOneByOne(trueTasks);
-                this->PIPE_V_S();
-                this->PIPE_S_MTE2();
-            }
-            this->PIPE_V_S();
-            this->PIPE_S_MTE3();
-            this->CopyOutXCols(startTask, trueTasks);
-        }
-    }
-
-    __aicore__ inline void ColsScatterAddValueOneByOne(uint64_t tasks) {
-        uint64_t aligned = BLOCK_SIZE / sizeof(T);
-        uint64_t strides = ((tasks + aligned - 1) / aligned) * aligned;
-        if constexpr (is_same<T, float>::value || is_same<T, int32_t>::value) {
-            uint64_t mask[1];
-            for (uint64_t i = 0; i < tasks; i++) {
-                int32_t indexValue = this->indicesLocalTensor.GetValue(i);
-                int32_t dst = indexValue * strides + i;
-                int32_t dstAligned = (dst / aligned) * aligned;
-                mask[0] = 0b1 << (dst - dstAligned);
-                PipeBarrier<PIPE_V>();
-                Adds(this->xLocalTensor[dstAligned], this->xLocalTensor[dstAligned], this->updatesValue, mask, 1, {1,1,8,8}); // 不支持bool
-                PipeBarrier<PIPE_V>();
-            }
-        } else {
-            for (uint64_t i = 0; i < tasks; i++) {
-                int32_t indexValue = this->indicesLocalTensor.GetValue(i);
-                int32_t dst = indexValue * strides + i;
-                T value = this->xLocalTensor.GetValue(dst) + this->updatesValue;
-                this->xLocalTensor.SetValue(dst, value);
-            }
-        }
+        this->DoRowsScatterAddValue();
     }
 
     __aicore__ inline void DoRowsScatterAddValue() {
@@ -304,10 +197,11 @@ private:
             } else {
                 this->DoRowsScatterAddValueAggIndices(startTask, tasks);
             }
-            this->PIPE_V_S();
-            this->PIPE_S_MTE3();
+            PIPE_V_S();
+            PIPE_S_MTE3();
             this->CopyOutXRows(startTask, tasks);
         }
+        PIPE_MTE3_S();
     }
 
     __aicore__ inline void DoRowsScatterAddValueSliceIndices(uint64_t startTask, uint64_t tasks) {
@@ -323,16 +217,16 @@ private:
             for (uint64_t j = 0; j < tasks; j++) {
                 uint64_t mteStart = (startTask + j) * this->indicesDim1 + i * INDICES_LOCAL_LENGTH;
                 this->CopyInIndices(mteStart, tasksNums);
-                this->PIPE_MTE2_S();
+                PIPE_MTE2_S();
                 // 处理每个索引
                 this->DoRowsScatterAddValueSliceOneByOne(tasksNums, j);
-                this->PIPE_S_MTE2();
+                PIPE_S_MTE2();
             }
         }
     }
 
     __aicore__ inline void DoRowsScatterAddValueSliceOneByOne(uint64_t indicesNums, uint64_t taskId) {
-        if constexpr (is_same<T, float>::value || is_same<T, int32_t>::value) {
+        if constexpr (std::is_same<T, float>::value || std::is_same<T, int32_t>::value || std::is_same<T, half>::value) {
             uint64_t mask[1];
             uint64_t aligned = BLOCK_SIZE / sizeof(T);
             for (uint64_t i = 0; i < indicesNums; i++) {
@@ -369,10 +263,10 @@ private:
             uint64_t nowNums = (i == mteTimes ? leftNums : mteNums);
             uint64_t mteStart = (startTask + i * mteNums) * this->indicesDim1;
             this->CopyInIndices(mteStart, nowNums * this->indicesDim1);
-            this->PIPE_MTE2_S();
+            PIPE_MTE2_S();
             // 处理搬入的索引行
             this->ScatterAddValueRowsInUb(nowNums, rowMteMode, i * mteNums);
-            this->PIPE_S_MTE2();
+            PIPE_S_MTE2();
         }
     }
 
@@ -388,7 +282,7 @@ private:
     }
 
     __aicore__ inline void DoRowsScatterAddValueAggOneByOne(uint64_t rowNums, uint64_t updatesBlockLengh, uint64_t xStartRow) {
-        if constexpr (is_same<T, float>::value || is_same<T, int32_t>::value) {
+        if constexpr (std::is_same<T, float>::value || std::is_same<T, int32_t>::value || std::is_same<T, half>::value) {
             uint64_t mask[1];
             uint64_t aligned = BLOCK_SIZE / sizeof(T);
             for (uint64_t i = 0; i < rowNums; i++) {
