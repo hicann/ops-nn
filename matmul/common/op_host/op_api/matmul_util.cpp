@@ -114,14 +114,14 @@ static inline bool CheckNpuArchIsSupportBf16(void)
 
 static inline bool CheckMMV3NzNzNdSupport(MmOpInfo& mmOpInfo)
 {
+    // 当前切换场景不支持输入self、mat2、bias混精度场景，且输入类型只支持fp16、bf16、fp32
     if (mmOpInfo.ori_info.self_dtype != mmOpInfo.ori_info.mat2_dtype ||
+        (mmOpInfo.ori_info.bias_dtype <= DataType::DT_MAX &&
+         mmOpInfo.ori_info.self_dtype != mmOpInfo.ori_info.bias_dtype) ||
         ALIGN_UNIT_MAP.find(mmOpInfo.ori_info.self_dtype) == ALIGN_UNIT_MAP.end()) {
         return false;
     }
-    auto it = ALIGN_UNIT_MAP.find(mmOpInfo.ori_info.self_dtype);
-    uint64_t alignUnit = it->second;
-    return (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) &&
-           (mmOpInfo.shapeInfo.nDim % alignUnit == 0);
+    return (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201);
 }
 
 static bool CheckDtypeValid(
