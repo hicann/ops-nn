@@ -48,21 +48,6 @@ namespace{
     }
 }
 
-// 1. vec、out的数据类型要与self一致  2. self的dtype为FP16/BF16/FP32。
-static bool CheckDtype(const aclTensor* self, const aclTensor* vec, const aclTensor* out)
-{
-    // 1. vec、out的数据类型要与self一致
-    // 先校验out和vec dtype一致
-    OP_CHECK_DTYPE_NOT_SAME(out, vec, return false);
-    // self不为空tensor时，校验self和vec dtype一致
-    if (!self->IsEmpty()) {
-        OP_CHECK_DTYPE_NOT_SAME(self, vec, return false);
-        // 2. self的dtype为FP16/BF16/FP32。
-        OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
-    }
-    return true;
-}
-
 // 1. vec、out的数据类型要与self一致
 static bool CheckDtypeSame(const aclTensor* self, const aclTensor* vec, const aclTensor* out)
 {
