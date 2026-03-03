@@ -14,7 +14,7 @@
 ## 功能说明
 
 - 接口功能：完成张量self与张量mat2的矩阵乘计算，mat2仅支持NZ格式，只支持self为2维, mat2为4维。
-  相似接口有aclnnMatmul(mat2仅支持ND) aclnnMm（支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatmul（仅支持3维的矩阵乘，其中第1维为batch）。
+  相似接口有aclnnMatmul（mat2仅支持ND）、 aclnnMm（支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatmul（仅支持3维的矩阵乘，其中第1维为batch）。
 - 计算公式：
 
   $$
@@ -86,7 +86,7 @@ aclnnStatus aclnnMatmulWeightNz(
         当B矩阵不转置时， NZ格式各个维度表示：（n1，k1，k0，n0），其中k0 = 16， n0为16。self shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1, mat2 shape中的n1与out的n满足以下关系: ceil(n, n0) = n1。</br>
         当B矩阵转置时， NZ格式各个维度表示：（k1，n1，n0，k0），其中n0 = 16， k0为16。self shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1, mat2 shape中的n1与out的n满足以下关系: ceil(n, n0) = n1。</br>
         </td>
-        <td>BFLOAT16、FLOAT16</td>
+        <td>BFLOAT16、FLOAT16、FLOAT32</td>
         <td>NZ</td>
         <td>4</td>
         <td>√</td>
@@ -96,7 +96,7 @@ aclnnStatus aclnnMatmulWeightNz(
         <td>输出</td>
         <td>表示矩阵乘的输出矩阵，公式中的out。</td>
         <td>数据类型需要与self与mat2推导之后的数据类型保持一致（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</br> 各个维度表示：（m，n），m与self的m一致，n与mat2的n1以及n0满足ceil(n / n0) = n1的关系。</td>
-        <td>BFLOAT16、FLOAT16</td>
+        <td>BFLOAT16、FLOAT16、FLOAT32</td>
         <td>ND</td>
         <td>2</td>
         <td>-</td>
@@ -243,6 +243,7 @@ aclnnStatus aclnnMatmulWeightNz(
 - 不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。
 - self只支持2维, mat2只支持昇腾私有格式，调用此接口之前，必须完成mat2从ND到昇腾私有格式的转换。
 - 不支持mat2最后两根轴其中一根轴为1，即k=1或者n=1。
+- 建议使用场景：建议在mte2 bound场景下使用，例如M轴较小，A矩阵存在重复搬运，B矩阵无重复搬运的情况。
 
 ## 调用示例
 
