@@ -336,7 +336,7 @@ inline static void SetTilingKeyForTail(DataType inputType, DataType outputType, 
         tenDigit = DIGIT_THREE;
     }
     int64_t digit = 0;
-    if (tilingParam.isTailAxis && tilingParam.blockSize == ATTR_BLOCK_SIZE && inputType == DT_FLOAT16 && 
+    if (tilingParam.isTailAxis && tilingParam.blockSize == ATTR_BLOCK_SIZE && inputType == DT_FLOAT16 &&
         Y_SUPPORT_DTYPE_FP4_SET.count(outputType) != 0 &&
         (tilingParam.roundMode == static_cast<int64_t>(RoundModeList::MODE_RINT) ||
          tilingParam.roundMode == static_cast<int64_t>(RoundModeList::MODE_ROUND))) {
@@ -366,15 +366,15 @@ inline static void CalcTilingKey(DataType inputType, DataType outputType, Dynami
         tenDigit = DIGIT_THREE;
     }
     // 个位数为0、1、2，分别表示reduce尾轴、非尾轴且尾轴大于VL/2、非尾轴且尾轴小于等于VL/2
-    int64_t digit = 0;  
+    int64_t digit = 0;
     int64_t dtypeSize = inputType == DT_FLOAT16 ? DIGIT_FOUR : DIGIT_TWO; // float16需要转化为float32计算
     int64_t vRegSize = static_cast<int64_t>(tilingParam.vfLen) / dtypeSize / DIGIT_TWO;
 
     if (tilingParam.isTailAxis && tilingParam.blockSize == ATTR_BLOCK_SIZE && inputType == DT_FLOAT16 &&
- 	         Y_SUPPORT_DTYPE_FP4_SET.count(outputType) != 0 &&
- 	         (tilingParam.roundMode == static_cast<int64_t>(RoundModeList::MODE_RINT) ||
- 	          tilingParam.roundMode == static_cast<int64_t>(RoundModeList::MODE_ROUND))) {
- 	         digit = DIGIT_FIVE;
+        Y_SUPPORT_DTYPE_FP4_SET.count(outputType) != 0 &&
+        (tilingParam.roundMode == static_cast<int64_t>(RoundModeList::MODE_RINT) ||
+         tilingParam.roundMode == static_cast<int64_t>(RoundModeList::MODE_ROUND))) {
+        digit = DIGIT_FIVE;
     } else {
         digit =
             tilingParam.isTailAxis ?
@@ -382,7 +382,7 @@ inline static void CalcTilingKey(DataType inputType, DataType outputType, Dynami
                 ((tilingParam.postAxisSize > vRegSize || tilingParam.blockSize > OPTIMISE_MAX_BLOCK_SIZE) ? 1 :
                                                                                                             DIGIT_TWO);
     }
- 	
+
     int64_t isOdd = tilingParam.blockSizeNumInAxis % DIGIT_TWO;
     int64_t axisScaleKey = isOdd == 0 && tilingParam.isTailAxis ? 0 : 1;
     tilingParam.tilingKey =
@@ -674,9 +674,14 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, DynamicMxQua
                              tilingParam.blockSize;
     // 计算ubFactor
     SpliteUB(tilingParam, maxUbAvailable);
+    int64_t multiples = 1;
     int64_t spliteCoreData =
         (tilingParam.ubDim == NEW_SHAPE_INDEX_TWO) ? tilingParam.uo * tilingParam.preAxisSize : tilingParam.uo;
-    int64_t multiples = 1;
+
+    OP_CHECK_IF(
+        spliteCoreData == 0, OP_LOGE(context->GetNodeName(), "The divisor cannot be zero, please check"),
+        return ge::GRAPH_FAILED);
+
     if (spliteCoreData <= tilingParam.totalCoreNum / DIGIT_TWO && !IsMinUbFactor(tilingParam, multiples)) {
         if (tilingParam.totalCoreNum % spliteCoreData == 0) {
             maxUbAvailable /= min(multiples, tilingParam.totalCoreNum / spliteCoreData);

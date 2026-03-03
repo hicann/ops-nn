@@ -238,42 +238,34 @@ ge::graphStatus DynamicMxQuantOptimzieTiling::SetTilingParams()
     if (tilingParams.postAxisSize <= N_ALIGN128) { // 小尾轴
         tilingParams.totalGroupNum =
             tilingParams.preAxisSize * tilingParams.mAlignGroupSize * tilingParams.nAlignBlockSize;
-        tilingParams.groupPerCore =
-            (tilingParams.totalGroupNum + tilingParams.totalCoreNum - 1) / tilingParams.totalCoreNum;
+        tilingParams.groupPerCore = Ops::Base::CeilDiv(tilingParams.totalGroupNum, tilingParams.totalCoreNum);
         tilingParams.groupPerTail = tilingParams.totalGroupNum % tilingParams.groupPerCore;
-        tilingParams.usedCoreNum =
-            (tilingParams.totalGroupNum + tilingParams.groupPerCore - 1) / tilingParams.groupPerCore;
+        tilingParams.usedCoreNum = Ops::Base::CeilDiv(tilingParams.totalGroupNum, tilingParams.groupPerCore);
         tilingParams.totalBlockNum = tilingParams.totalGroupNum * BLOCK_PER_GROUP;
 
         if (tilingParams.groupPerUb * NUM_TWO * tilingParams.usedCoreNum < tilingParams.totalBlockNum) {
             tilingParams.blockNumPerTask = tilingParams.groupPerUb * NUM_TWO;
         } else {
-            tilingParams.blockNumPerTask =
-                ((((tilingParams.totalBlockNum + tilingParams.usedCoreNum - 1) / tilingParams.usedCoreNum) + 1) /
-                 BLOCK_PER_GROUP) *
-                BLOCK_PER_GROUP;
+            tilingParams.blockNumPerTask = Ops::Base::CeilAlign(
+                Ops::Base::CeilDiv(tilingParams.totalBlockNum, tilingParams.usedCoreNum), BLOCK_PER_GROUP);
         }
-        tilingParams.totalTaskNum =
-            (tilingParams.totalBlockNum + tilingParams.blockNumPerTask - 1) / tilingParams.blockNumPerTask;
+        tilingParams.totalTaskNum = Ops::Base::CeilDiv(tilingParams.totalBlockNum, tilingParams.blockNumPerTask);
 
         // 尾轴是否需要补
         tilingParams.needPadPostAxis = tilingParams.postAxisSize % nAlignNum != 0;
     } else { // 大尾轴
-        tilingParams.nAlignBlockSize = (tilingParams.postAxisSize + N_ALIGN128 - 1) / N_ALIGN128;
+        tilingParams.nAlignBlockSize = Ops::Base::CeilDiv(tilingParams.postAxisSize, N_ALIGN128);
         tilingParams.mAlignBlockSize =
-            (tilingParams.quantAxisSize + tilingParams.groupPerUb * NUM_TWO * tilingParams.blockSize - 1) /
-            (tilingParams.groupPerUb * NUM_TWO * tilingParams.blockSize);
+            Ops::Base::CeilDiv(tilingParams.quantAxisSize, tilingParams.groupPerUb * NUM_TWO * tilingParams.blockSize);
         tilingParams.totalTaskNum =
             tilingParams.preAxisSize * tilingParams.nAlignBlockSize * tilingParams.mAlignBlockSize;
         tilingParams.usedCoreNum = std::min(tilingParams.totalCoreNum, tilingParams.totalTaskNum);
-        tilingParams.rowPerHeadCore =
-            (tilingParams.totalTaskNum + tilingParams.totalCoreNum - 1) / tilingParams.totalCoreNum;
+        tilingParams.rowPerHeadCore = Ops::Base::CeilDiv(tilingParams.totalTaskNum, tilingParams.totalCoreNum);
         tilingParams.rowPerTailCore = tilingParams.totalTaskNum / tilingParams.totalCoreNum;
     }
 
     // 量化轴是否需要补block
-    tilingParams.quantAxisIsOdd =
-        ((tilingParams.quantAxisSize + tilingParams.blockSize - 1) / tilingParams.blockSize) % NUM_TWO;
+    tilingParams.quantAxisIsOdd = Ops::Base::CeilDiv(tilingParams.quantAxisSize, tilingParams.blockSize) % NUM_TWO;
 
     return ge::GRAPH_SUCCESS;
 }
@@ -281,9 +273,8 @@ ge::graphStatus DynamicMxQuantOptimzieTiling::SetTilingParams()
 ge::graphStatus DynamicMxQuantOptimzieTiling::CalShapeAlign(int64_t& nAlignNum)
 {
     // 量化轴对齐blockSize后元素个数, 量化轴包含的block块个数
-    tilingParams.mAlignSize =
-        ((tilingParams.quantAxisSize + tilingParams.blockSize - 1) / tilingParams.blockSize) * tilingParams.blockSize;
-    tilingParams.mAlignBlockSize = (tilingParams.quantAxisSize + tilingParams.blockSize - 1) / tilingParams.blockSize;
+    tilingParams.mAlignSize = Ops::Base::CeilAlign(tilingParams.quantAxisSize, tilingParams.blockSize);
+    tilingParams.mAlignBlockSize = Ops::Base::CeilDiv(tilingParams.quantAxisSize, tilingParams.blockSize);
 
     auto outputYPtr = context_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputYPtr);
@@ -301,12 +292,11 @@ ge::graphStatus DynamicMxQuantOptimzieTiling::CalShapeAlign(int64_t& nAlignNum)
         nAlignNum = N_ALIGN64;
     }
     // 尾轴对齐之后的元素个数
-    tilingParams.nAlignSize = ((tilingParams.postAxisSize + nAlignNum - 1) / nAlignNum) * nAlignNum;
-    tilingParams.nAlignBlockSize = (tilingParams.postAxisSize + nAlignNum - 1) / nAlignNum;
+    tilingParams.nAlignSize = Ops::Base::CeilAlign(tilingParams.postAxisSize, nAlignNum);
+    tilingParams.nAlignBlockSize = Ops::Base::CeilDiv(tilingParams.postAxisSize, nAlignNum);
 
     // 量化轴可分的group的个数
-    tilingParams.mAlignGroupSize =
-        (tilingParams.quantAxisSize + tilingParams.blockSize * NUM_TWO - 1) / (tilingParams.blockSize * NUM_TWO);
+    tilingParams.mAlignGroupSize = Ops::Base::CeilDiv(tilingParams.quantAxisSize, tilingParams.blockSize * NUM_TWO);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -541,7 +531,7 @@ void DynamicMxQuantOptimzieTiling::CalScaleSize(const gert::Shape& inputShape)
         dimSize = inputShape.GetDim(i);
         if (i == tilingParams.axis) {
             dimSize = Ops::Base::CeilDiv(inputShape.GetDim(i), tilingParams.blockSize);
-            dimSize = (dimSize + DIGIT_TWO - 1) / DIGIT_TWO * DIGIT_TWO;
+            dimSize = Ops::Base::CeilAlign(dimSize, DIGIT_TWO);
         }
         scaleShapeSize = scaleShapeSize * dimSize;
     }
