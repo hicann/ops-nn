@@ -15,7 +15,7 @@
 
 #ifndef CMCT_INCLUDE_EPILOGUE_BLOCK_EPILOGUE_FIXPIPE_H
 #define CMCT_INCLUDE_EPILOGUE_BLOCK_EPILOGUE_FIXPIPE_H
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3101)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
 #else

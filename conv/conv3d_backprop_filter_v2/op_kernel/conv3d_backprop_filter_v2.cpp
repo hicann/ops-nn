@@ -14,7 +14,7 @@
  */
 #if __CCE_AICORE__ == 310
 #include "arch35/conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_key.h"
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
 #include "arch35/conv3d_backprop_filter_v2_arch35.h"
 #endif
 #else
@@ -32,7 +32,7 @@ template <uint32_t conv3DDWTemplateId>
 __global__ __aicore__ void conv3d_backprop_filter_v2(
     GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
 {
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     conv3d_backprop_filter_v2_arch35<conv3DDWTemplateId>(x, filter_size, out_backprop, y, workSpace, tiling);
     return;
 #endif

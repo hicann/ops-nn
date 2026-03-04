@@ -97,7 +97,7 @@ __aicore__ inline void DynamicMxQuantPost::Init(
     if (blockIdx_ > 0) {
         return;
     }
-#if (__NPU_ARCH__ == 3101)
+#if (__NPU_ARCH__ == 3510)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
 #endif
     this->mxScaleGm_.SetGlobalBuffer((__gm__ uint8_t*)(mxScale));

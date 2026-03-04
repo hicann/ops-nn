@@ -22,4 +22,4 @@ set(CONV3D_TILING_SOURCES
     "${COMMOM_TILING_DIR}/conv_api_tiling_util.cpp"
     "${COMMOM_TILING_DIR}/conv_base_numblocks_decision.cpp"
 )
-add_sources("--npu-arch=dav-3101" "${CONV3D_TILING_SOURCES}")
+add_sources("--npu-arch=dav-3510" "${CONV3D_TILING_SOURCES}")

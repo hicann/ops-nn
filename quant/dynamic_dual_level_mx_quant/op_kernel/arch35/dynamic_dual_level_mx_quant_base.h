@@ -150,7 +150,7 @@ template <typename xDtype, AscendC::RoundMode roundMode>
 __aicore__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode>::Init(
     GM_ADDR x, GM_ADDR y, GM_ADDR level0Scale, GM_ADDR level1Scale)
 {
-#if (__NPU_ARCH__ == 3101)
+#if (__NPU_ARCH__ == 3510)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
 #endif
     // init block params

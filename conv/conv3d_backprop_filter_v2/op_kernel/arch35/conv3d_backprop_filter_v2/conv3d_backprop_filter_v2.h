@@ -291,7 +291,7 @@ protected:
     __aicore__ inline void InitTilingData_diff_1971_1982(
         const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
     {
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
         coutG_ = static_cast<uint64_t>(tilingData->dwTiling.cout1G);
         cinG_ = static_cast<uint64_t>(tilingData->dwTiling.cin1G);
         // 判断条件为是否为分组卷积，而不是是否cin和dk分轴
@@ -311,7 +311,7 @@ protected:
 #endif
     }
 
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     __aicore__ inline void CalcBlockOffsetA(uint64_t batchIdx, uint64_t doutIdx, uint32_t groupIdx, uint64_t hoCal)
     {
         uint64_t groupOffsetA = 0;
@@ -581,7 +581,7 @@ protected:
             // 普通卷积，group循环初始化为1，index初始化为0；
             groupCoreIndx_ = 0;
             singleShapeGroup_ = 1;
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
             // 310 普通卷积分支
             // 普通卷积 cin和dk分轴，且nCoreIndx_为cinIndx和dkIndx，各自求取Index
             // 在D轴有padding时，如果dkIndx取余得到（先dk后cin），那么逻辑与计算padding逻辑相反，具体参考上面注释

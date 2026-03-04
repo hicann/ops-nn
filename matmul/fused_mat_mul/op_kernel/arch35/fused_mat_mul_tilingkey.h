@@ -50,7 +50,7 @@ ASCENDC_TPL_ARGS_DECL(
         OPTYPE, ASCENDC_TPL_4_BW, ASCENDC_TPL_UI_LIST, F_OPTYPE_NONE, F_OPTYPE_ADD, F_OPTYPE_MUL, F_OPTYPE_GELU_ERF,
         F_OPTYPE_GELU_TANH, F_OPTYPE_RELU));
 ASCENDC_TPL_SEL(
-#if !defined(__CCE_AICORE__) || defined(__DAV_C310__)
+#if !defined(__CCE_AICORE__) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510))
 #if !defined(__CCE_AICORE__) || defined(A16)
     // [adv api]: gelu_erf, gelu_tanh
     ASCENDC_TPL_ARGS_SEL(

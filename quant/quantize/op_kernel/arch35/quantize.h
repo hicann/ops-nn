@@ -87,7 +87,7 @@ public:
     __aicore__ inline QuantizeBase(){};
     __aicore__ inline void SetFloatOverflowModeForRegbase()
     {
-        #if (__NPU_ARCH__ == 3101)
+        #if (__NPU_ARCH__ == 3510)
             if constexpr (
                 IsSameType<U, hifloat8_t>::value || IsSameType<U, fp8_e5m2_t>::value ||
                 IsSameType<U, fp8_e4m3fn_t>::value) {

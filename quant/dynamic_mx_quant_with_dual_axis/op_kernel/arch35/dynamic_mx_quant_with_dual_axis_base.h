@@ -956,7 +956,7 @@ template <typename xDtype, typename y1Dtype, typename y2Dtype, AscendC::RoundMod
 __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::Init(
     GM_ADDR x, GM_ADDR y1, GM_ADDR mxScale1, GM_ADDR y2, GM_ADDR mxScale2)
 {
-#if (__NPU_ARCH__ == 3101)
+#if (__NPU_ARCH__ == 3510)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
 #endif
     // init block params

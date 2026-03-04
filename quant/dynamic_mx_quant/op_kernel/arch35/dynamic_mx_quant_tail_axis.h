@@ -137,7 +137,7 @@ template <typename T, typename U>
 __aicore__ inline void DynamicMxQuantTailAxis<T, U>::Init(
     GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workspace, const DynamicMxQuantTilingData* tilingData)
 {
-#if (__NPU_ARCH__ == 3101)
+#if (__NPU_ARCH__ == 3510)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
 #endif
     ParseTilingData(tilingData);

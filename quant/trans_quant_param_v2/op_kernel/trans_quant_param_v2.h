@@ -213,7 +213,7 @@ protected:
     template <typename T>
     __aicore__ inline void DataCopyGlobal(const GlobalTensor<T>& dst, const LocalTensor<T>& src, DataCopyParams& params)
     {
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
         DataCopyPad(dst, src, params);
 #elif defined(__CCE_AICORE__) && (__CCE_AICORE__ > 200)
         DataCopyPad(dst, src, {params.blockCount, params.blockLen, 0, 0, 0});

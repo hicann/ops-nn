@@ -41,7 +41,7 @@ template <uint64_t useDb, uint64_t quantMode, uint64_t hasSmooth, uint64_t isSym
 __global__ __aicore__ void dynamic_quant_v2(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR group_index, GM_ADDR y,
                                             GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace, GM_ADDR tiling)
 {
-    #if (__NPU_ARCH__ == 3101)
+    #if (__NPU_ARCH__ == 3510)
         int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
     #endif 
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
@@ -105,7 +105,7 @@ __global__ __aicore__ void dynamic_quant_v2(GM_ADDR x, GM_ADDR smooth_scales, GM
         op.Init(x, smooth_scales, y, scale, offset, usrWorkspace, &tilingData);
         op.Process();
     }
-    #if (__NPU_ARCH__ == 3101)
+    #if (__NPU_ARCH__ == 3510)
         AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
     #endif 
 }

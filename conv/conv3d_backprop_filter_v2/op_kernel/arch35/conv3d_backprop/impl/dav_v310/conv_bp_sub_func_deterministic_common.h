@@ -646,7 +646,7 @@ static __aicore__ inline void GetCutShape(Intf *self, DeterMinisticShape &deterS
     if(self->ctx.tiling_->group == self->ctx.tiling_->realGroup){
         // 默认切2份，L0C不开double buffer时切4份
         DivTwoNumersInHalf(splitedCin1, splitedCout1);
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
         if (self->ctx.tiling_->cl0Pbuffer <= 1) {
             DivTwoNumersInHalf(splitedCin1, splitedCout1);
         }
@@ -687,7 +687,7 @@ static __aicore__ inline void MovOutL0cForDeterministicRefactor(Intf *self, Loca
     if(self->ctx.tiling_->group == self->ctx.tiling_->realGroup){
         // 默认切2份，L0C不开double buffer时切4份
         DivTwoNumersInHalf(splitedCin1, splitedCout1);
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
         if (self->ctx.tiling_->cl0Pbuffer <= 1) {
             DivTwoNumersInHalf(splitedCin1, splitedCout1);
         }
@@ -790,7 +790,7 @@ static __aicore__ inline uint64_t GetRdGmAddr(Intf *self, const uint64_t coreRel
     DeterMinisticShape &deterShape)
 {
     uint64_t cubeUserGmSize = GetBlockNum() * CUBE_WORKSPACE; // cube输出gm总大小
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     return cubeUserGmSize + ((coreRelatedIndexTotal << 1) + GetSubBlockIdx()) * QUARTER_CUBE_WORKSPACE;
 #elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
     uint64_t addCoreRdGmAddr = 0;
@@ -810,7 +810,7 @@ template <class Intf>
 static __aicore__ inline uint64_t GetStGmAddr(Intf *self, const uint64_t cubeUserGmSize)
 {
     uint64_t coreIndexTotal = self->ctx.coreStartIndexTotal_ + self->ctx.deterAddCoreIndex_; // 当前核的索引
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     return cubeUserGmSize + ((coreIndexTotal << 1) + GetSubBlockIdx()) * QUARTER_CUBE_WORKSPACE;
 #elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
     return cubeUserGmSize + ((coreIndexTotal << 1) + self->ctx.subCoreInx_) * HALF_CUBE_WORKSPACE;

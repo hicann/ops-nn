@@ -22,7 +22,7 @@ template <class Intf>
 static __aicore__ inline bool GetIsNeedAddFlag(Intf *self, const uint64_t coreAddCnt,
     const uint64_t coreRelatedIndexTotal)
 {
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     if (GetIsLastPieceOut(self, coreAddCnt, coreRelatedIndexTotal)) {
         return false;
     }
@@ -48,7 +48,7 @@ static __aicore__ inline uint64_t GetRelatedCore(Intf *self, const uint64_t core
     uint64_t coreIndexTotal = self->ctx.coreStartIndexTotal_ + self->ctx.deterAddCoreIndex_;
     uint64_t coreRelatedIndexTotal = 0;
     uint64_t doublecoreAddCnt = (coreAddCnt << 1);
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     if (self->ctx.tiling_->cl0Pbuffer > 1) {
         // pingpong模式下：单次输出2个vec核
         // 首层累加: ping，奇数vec核继续累加，偶数vec核提前输出; pong，偶数vec核继续累加，奇数vec核提前输出。
@@ -104,7 +104,7 @@ static __aicore__ inline void VecAddFunc(Intf *self, const GlobalTensor<typename
         uint64_t coreIndexTotal = self->ctx.coreStartIndexTotal_ + self->ctx.deterAddCoreIndex_; // 当前核的索引
         uint64_t addCoreRdGmAddr1 = coreIndexTotal * CUBE_WORKSPACE + deterShape.addrOffset[self->ctx.subCoreInx_];
         DataCopy(self->ctx.vecOutBuf_, userGm[addCoreRdGmAddr1], intriParams);
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
         if (GetIsLastPieceOut(self, coreAddCnt, coreRelatedIndexTotal)) {
             uint64_t addCoreRdGmAddr2 = coreIndexTotal * CUBE_WORKSPACE +
                 deterShape.addrOffset[self->ctx.subCoreInx_ + RELATED_CORE_NUM];
@@ -142,7 +142,7 @@ static __aicore__ inline void VecAddFunc(Intf *self, const GlobalTensor<typename
 template <class Intf>
 static __aicore__ inline bool IsCoreNonCalc(Intf *self, const uint64_t coreAddCnt, DeterMinisticShape &deterShape)
 {
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     // 超出累加核数量，或者累加核shape为0，通知cube结束。
     // streamk场景会有一些核需要跳过，不参与确定性计算
     return coreAddCnt >= self->ctx.deterAddCoreNum_ ||
@@ -167,7 +167,7 @@ static __aicore__ inline void VecUb2Gm(Intf *self, const GlobalTensor<typename I
     uint64_t cubeUserGmSize = (GetBlockNum() * CUBE_WORKSPACE); // cube输出gm总大小
     uint64_t addCoreStGmAddr = GetStGmAddr(self, cubeUserGmSize);
     DeterministicUb2Gm(self, userGm[addCoreStGmAddr], deterShape);
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     if (GetIsLastPieceOut(self, coreAddCnt, coreRelatedIndexTotal)) {
         uint64_t addCoreStGmAddr2 =
             cubeUserGmSize + ((coreRelatedIndexTotal << 1) + GetSubBlockIdx()) * QUARTER_CUBE_WORKSPACE;
@@ -179,7 +179,7 @@ static __aicore__ inline void VecUb2Gm(Intf *self, const GlobalTensor<typename I
 template <class Intf>
 static __aicore__ inline void InitSubCoreInx(Intf *self)
 {
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     uint64_t isOddCore = (self->ctx.deterAddCoreIndex_ & 1) == 0 ? 0 : 1;    // 标记当前核是否为奇数核
     self->ctx.subCoreInx_ = (isOddCore << 1) + GetSubBlockIdx();
 #elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)

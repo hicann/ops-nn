@@ -58,7 +58,7 @@ public:
     {
         InitTilingData(tilingData);
         enableSplitDk_ = tiling_->singleIterateDk != tiling_->dk;
-#if defined(__DAV_C310__) || defined(__DAV_310R6__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || defined(__DAV_310R6__)
         if constexpr ((kernelSplitMode != TPL_SPLIT_KERNEL_HW) &&
             groupMode == TPL_GROUP_MODE_ORIGIN) {
             if (!enableSplitDk_) {
@@ -83,7 +83,7 @@ public:
         }
 #endif
 
-#if defined(__DAV_C310__) || defined(__DAV_310R6__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || defined(__DAV_310R6__)
         InitMixCoreBuffer(workSpace);
 #endif
     }
@@ -92,7 +92,7 @@ public:
      */
     __aicore__ inline void Process()
     {
-#if defined(__DAV_C310__) || defined(__DAV_310R6__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || defined(__DAV_310R6__)
         if constexpr ((kernelSplitMode != TPL_SPLIT_KERNEL_HW) &&
             groupMode == TPL_GROUP_MODE_ORIGIN) {
             if (!enableSplitDk_) {

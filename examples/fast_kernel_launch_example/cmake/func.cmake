@@ -20,8 +20,8 @@ macro(recursive_add_subdirectory)
     endforeach()
 endmacro()
 
-# usage: add_sources("--npu-arch=dav-3101")
-# usage: add_sources("--npu-arch=dav-3101" "file1.cpp;file2.cpp;file3.cpp")
+# usage: add_sources("--npu-arch=dav-3510")
+# usage: add_sources("--npu-arch=dav-3510" "file1.cpp;file2.cpp;file3.cpp")
 macro(add_sources ARGS)
     # 解析参数
     set(COMPILE_ARGS "${ARGS}")  # 第一个参数为编译参数

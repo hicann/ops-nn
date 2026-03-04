@@ -14,7 +14,7 @@
  */
 #if __CCE_AICORE__ == 310
 #include "conv3d_transpose_v2_arch35_tiling_key.h"
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
 #include "arch35/conv3d_transpose_v2_arch35.h"
 #endif
 #else
@@ -38,7 +38,7 @@ __global__ __aicore__ void conv3d_transpose_v2(
     GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
     GM_ADDR offset_w, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
 {
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     conv3d_transpose_v2_arch35<loadB2Condition, kernelSplitMode, groupConvMode, isBasicBlockTiling,
                                loadB1Condition>(input_size, x, filter, bias, offset_w, y, workSpace, tiling);
     return;

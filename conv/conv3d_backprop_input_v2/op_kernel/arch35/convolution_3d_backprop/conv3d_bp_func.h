@@ -216,7 +216,7 @@ __aicore__ inline void InitC04Params(Intf *self)
 template <class Intf>
 __aicore__ inline void InitParamsPart3(Intf *self)
 {
-#if defined(__DAV_C310__) || defined(__DAV_310R6__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || defined(__DAV_310R6__)
     self->ctx.dstB2Stride_ = 0;
     self->ctx.startAddrOffset_ = 0;
     self->ctx.headWi_ = 0;
@@ -325,7 +325,7 @@ __aicore__ inline void InitParams(Intf *self)
         InitParamsForNormal<Intf>(self);
     }
 
-#if defined(__DAV_C310__) || defined(__DAV_310R6__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || defined(__DAV_310R6__)
     self->ctx.dkHkWk_ = static_cast<uint64_t>(self->ctx.tiling_->dk) * self->ctx.hkWk_;
     self->ctx.hoWo_ = static_cast<uint64_t>(self->ctx.tiling_->ho) * self->ctx.tiling_->wo;
     self->ctx.doHoWo_ = self->ctx.tiling_->dout * self->ctx.hoWo_;

@@ -13,7 +13,7 @@
  * \brief
  */
 
-#if defined(__DAV_C310__) || (__NPU_ARCH__ == 5102)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
 #include "./arch35/fused_mat_mul_tiling_data.h"
 #include "./arch35/fused_mat_mul_tilingkey.h"
 #include "cmct/kernel/kernel_matmul_mix_without_que.h"
@@ -119,7 +119,7 @@ __aicore__ inline constexpr MatmulConfig GetCfgRelu()
 constexpr MatmulConfig MM_CFG_NO_PRELOAD_RELU = GetCfgRelu();
 #endif
 
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
 template <typename LayoutX1, typename LayoutX2>
 __aicore__ void inline FusedEmptyMatMul(
     GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR biasGM, GM_ADDR x3GM, GM_ADDR yGM, GM_ADDR workspaceGM,
@@ -191,7 +191,7 @@ __global__ __aicore__ void fused_mat_mul(
 
     constexpr bool aTran = (TRANS_MODEL == 1 || TRANS_MODEL == 3);
     constexpr bool bTran = (TRANS_MODEL == 2 || TRANS_MODEL == 3);
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     REGISTER_TILING_DEFAULT(FusedMatMulTilingData);
     using aLayout = std::conditional_t<aTran, layout::ColumnMajor, layout::RowMajor>;
     using bLayout = std::conditional_t<bTran, layout::ColumnMajor, layout::RowMajor>;

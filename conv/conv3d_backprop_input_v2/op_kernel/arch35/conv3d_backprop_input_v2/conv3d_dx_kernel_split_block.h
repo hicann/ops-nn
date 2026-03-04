@@ -53,7 +53,7 @@ public:
         this->yGm_.SetGlobalBuffer((__gm__ yType *)y);
         this->dedx_.Init(&(tilingData->conv3DDxTiling));
 
-#if defined(__DAV_C310__) || defined(__DAV_310R6__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || defined(__DAV_310R6__)
         InitMixCoreBuffer(workSpace);
 #endif
     }

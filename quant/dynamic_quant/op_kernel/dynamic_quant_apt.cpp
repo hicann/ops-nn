@@ -32,7 +32,7 @@ using UIntAsBool = std::integral_constant<bool, V != 0>;
 template <uint64_t useDb, uint64_t quantMode, uint64_t hasSmooth, uint64_t isSymmetrical>
 __global__ __aicore__ void dynamic_quant(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR group_index, GM_ADDR y,
                                          GM_ADDR scale, GM_ADDR workSpace, GM_ADDR tiling) {
-    #if (__NPU_ARCH__ == 3101)
+    #if (__NPU_ARCH__ == 3510)
         int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
     #endif 
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
@@ -76,7 +76,7 @@ __global__ __aicore__ void dynamic_quant(GM_ADDR x, GM_ADDR smooth_scales, GM_AD
     } else if constexpr (quantMode == TPL_EMPTY_TENSOR) {
         return ;
     }
-    #if (__NPU_ARCH__ == 3101)
+    #if (__NPU_ARCH__ == 3510)
         AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
     #endif 
 }

@@ -12,7 +12,7 @@
  * \file gemm_v3_apt.cpp
  * \brief
  */
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
 #include "../mat_mul_v3/arch35/mat_mul_tiling_data.h"
 #include "arch35/gemm_v3_tiling_key.h"
 #include "../mat_mul_v3/arch35/mat_mul_asw_kernel.h"
@@ -67,7 +67,7 @@ __global__ __aicore__ void gemm_v3(
     GM_ADDR biasGM = nullptr;
     constexpr bool aTran = (A_TRANS == 1);
     constexpr bool bTran = (B_TRANS == 1);
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     REGISTER_TILING_DEFAULT(BatchMatMulV3TilingData);
     GET_TILING_DATA(tilingData, tilingGM);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIC_ONLY);

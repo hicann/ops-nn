@@ -22,7 +22,7 @@ namespace AscendC {
 using FixpipeParamsNZ = AscendC::FixpipeParamsV220;
 using FixpipeParamsRowMajor = AscendC::FixpipeParamsV220;
 #elif __CCE_AICORE__ == 310
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
 using FixpipeParamsNZ = AscendC::FixpipeParamsC310<CO2Layout::NZ>;
 using FixpipeParamsRowMajor = AscendC::FixpipeParamsC310<CO2Layout::ROW_MAJOR>;
 #endif
@@ -192,7 +192,7 @@ public:
                 rowMajorParams.dstStride = 1;
                 rowMajorParams.quantPre = quantMode;
 #if __CCE_AICORE__ == 310
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
                 rowMajorParams.params.ndNum = 1;
 #endif
 #endif
@@ -226,7 +226,7 @@ public:
         }
         CrossCoreWaitFlag(SYNC_AIC_FLAG);
 #elif __CCE_AICORE__ == 310
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
         AscendC::SyncAll();
 #endif
 #endif

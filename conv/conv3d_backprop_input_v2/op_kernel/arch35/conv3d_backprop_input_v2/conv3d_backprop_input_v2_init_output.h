@@ -19,7 +19,7 @@
 
 namespace AscendC {
 #if __CCE_AICORE__ == 310
-    #if defined(__DAV_C310__) || defined(__DAV_310R6__)
+    #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || defined(__DAV_310R6__)
         constexpr int32_t TOTALL0CSIZE = 262144;
     #endif
 #endif

@@ -24,7 +24,7 @@ static __aicore__ inline uint64_t GetAicBlockIdx()
     if ASCEND_IS_AIV {
 #if defined(__DAV_310R6__)
         int64_t blockIdx = AscendC::GetBlockIdx();
-#elif defined(__DAV_C310__)
+#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
         int64_t blockIdx = AscendC::GetBlockIdx() >> 1;
 #endif
         return blockIdx;

@@ -114,7 +114,7 @@ __aicore__ inline uint64_t Align(uint64_t a, uint64_t b)
  */
 __aicore__ inline uint32_t GetAicAivTaskRation()
 {
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 2201 || __NPU_ARCH__ == 3101)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 2201 || __NPU_ARCH__ == 3510)
     return 2U; // 2: aic:aiv = 1:2
 #else
     return 1U;
@@ -125,7 +125,7 @@ template <typename CType, typename AType>
 __aicore__ inline constexpr static bool IsQuantSenario()
 {
     using L0cT = typename AscendC::GetMmDstType<AType>::Type;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3101)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     if constexpr (
         !AscendC::IsTypeOneOfV<AType, int8_t, hifloat8_t, fp8_e4m3fn_t, fp8_e5m2_t, fp4x2_e2m1_t, fp4x2_e1m2_t> &&
         AscendC::IsTypeOneOfV<CType, half, bfloat16_t>) {

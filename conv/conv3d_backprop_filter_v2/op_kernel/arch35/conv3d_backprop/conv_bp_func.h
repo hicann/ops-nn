@@ -196,7 +196,7 @@ __aicore__ inline void InitParamsPart2(Intf *self)
     self->ctx.nIter_ = 0;
     self->ctx.kIter_ = 0;
 
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     self->ctx.enableStepNIncludeDkNocinhwk_ = false;
     self->ctx.enableStepNTail_ = false;
     self->ctx.isSplitWo_ = false;
@@ -256,7 +256,7 @@ __aicore__ inline void InitParams(Intf *self)
 template <class Intf>
 __aicore__ inline void InitTque(Intf *self)
 {
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     // streamK场景，AIV需要申请UB空间，扩维场景AIC,AIV需要申请UB空间
     self->ctx.pipe_.InitBuffer(self->ctx.vecBuf_, AscendC::TOTAL_UB_SIZE);
 

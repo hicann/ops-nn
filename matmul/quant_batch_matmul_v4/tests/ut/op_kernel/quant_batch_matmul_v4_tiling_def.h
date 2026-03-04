@@ -69,7 +69,7 @@ __inline__ __attribute__((always_inline)) __aicore__ void InitTilingData(const _
     tilingDataInUb.address_.logicPos = static_cast<uint8_t>(AscendC::TPosition::VECIN);
     __ubuf__ uint8_t *tilingdata_in_ub = (__ubuf__ uint8_t *)tilingDataInUb.GetPhyAddr();
     constexpr uint32_t len_burst = (all_bytes + 31) / 32;
-#if defined(__DAV_C310__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     DataCopyPad(tilingDataInUb, tilingDataInGm, {1, len_burst * 32, 0, 0}, {false, 0, 0, 0});
 #else
     DataCopy(tilingDataInUb, tilingDataInGm, {1, len_burst, 0, 0});

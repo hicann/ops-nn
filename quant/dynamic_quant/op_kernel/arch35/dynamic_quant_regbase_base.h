@@ -48,7 +48,7 @@ constexpr float MAX_FLOAT_VALUE = 3.402823466e+38f;
 template <typename yDtype>
 __aicore__ inline void SetFloatOverflowModeForRegbase()
 {
-  #if (__NPU_ARCH__ == 3101)
+  #if (__NPU_ARCH__ == 3510)
       if constexpr (
           IsSameType<yDtype, hifloat8_t>::value || IsSameType<yDtype, fp8_e5m2_t>::value 
           || IsSameType<yDtype, fp8_e4m3fn_t>::value) {

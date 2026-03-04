@@ -82,7 +82,7 @@ template <typename T, typename U, const bool isTail>
 __aicore__ inline void DynamicMxQuantBaseFP8<T, U, isTail>::BaseInit(
     GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workspace, const DynamicMxQuantTilingData* tilingData)
 {
-#if (__NPU_ARCH__ == 3101)
+#if (__NPU_ARCH__ == 3510)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
 #endif
     blockIdx_ = GetBlockIdx();

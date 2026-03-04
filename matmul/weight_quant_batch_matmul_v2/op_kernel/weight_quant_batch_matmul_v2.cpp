@@ -68,7 +68,7 @@ using namespace WeightQuantBatchMatmulV2;
 #define DTYPE_WEIGHT AscendC::int4b_t
 #endif
 
-#if !defined(__DAV_C310__)
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510))
 #define INVOKE_WEIGHT_QUANT_BMM_OP_IMPL(templateClass, ...)                                                      \
     do {                                                                                                         \
         GET_TILING_DATA_WITH_STRUCT(WeightQuantBatchMatmulV2TilingData, tilingDataIn, tiling);                   \

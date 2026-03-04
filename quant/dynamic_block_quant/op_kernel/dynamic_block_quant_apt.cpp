@@ -177,7 +177,7 @@ extern "C" __global__ __aicore__ void dynamic_block_quant(
     TPipe pipe;
     GET_TILING_DATA(tilingData, tiling);
 
-#if (__NPU_ARCH__ == 3101)
+#if (__NPU_ARCH__ == 3510)
     int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
 #endif
 
@@ -185,7 +185,7 @@ extern "C" __global__ __aicore__ void dynamic_block_quant(
     SingleRow(x, y, scale, tilingData, pipe);
     LargeBlockSize(x, y, scale, tilingData, pipe);
 
-#if (__NPU_ARCH__ == 3101)
+#if (__NPU_ARCH__ == 3510)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
 #endif
 }

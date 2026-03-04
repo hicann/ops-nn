@@ -854,7 +854,7 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::ComputeYFromBf16(
 template <typename xDtype, typename yDtype>
 __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR mxScale)
 {
-#if (__NPU_ARCH__ == 3101)
+#if (__NPU_ARCH__ == 3510)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
 #endif
     // init block params

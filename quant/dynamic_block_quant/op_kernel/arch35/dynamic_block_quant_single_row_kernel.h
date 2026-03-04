@@ -95,7 +95,7 @@ __aicore__ inline void DynamicBlockQuantSingleRow<IN_TYPE, OUT_TYPE, ROUND_MODE>
         return;
     }
 
-    #if (__NPU_ARCH__ == 3101)
+    #if (__NPU_ARCH__ == 3510)
         AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
     #endif
     if constexpr (IsSameType<IN_TYPE, half>::value) {
