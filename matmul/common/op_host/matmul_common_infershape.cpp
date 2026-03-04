@@ -25,7 +25,7 @@ constexpr int64_t UNKNOWN_DIM = -1;
 constexpr int64_t UNKNOWN_DIM_NUM = -2;
 constexpr int64_t SWIGLU_CONCAT_DIM_VALUE = 2;
 const int64_t B4_NUMS_IN_B32 = 8;
-constexpr char* FUSED_OP_TYPE_SWIGLU = "swiglu";
+constexpr char FUSED_OP_TYPE_SWIGLU[] = "swiglu";
 
 struct InferShapeBatchTensor {
     const Shape input_shape_a;
