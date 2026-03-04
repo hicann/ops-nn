@@ -153,7 +153,7 @@ aclnnStatus aclnnIndexPutImpl(
     </tbody></table>
 
     - <term>Atlas 训练系列产品</term>：数据类型不支持BFLOAT。
-    - <term>昇腾910_95 AI处理器</term>：当accumulate为False，且indices有重复索引值的时候，结果不保序。
+    - <term>Ascend 950PR/Ascend 950DT</term>：当accumulate为False，且indices有重复索引值的时候，结果不保序。
 
 * **返回值**
 
