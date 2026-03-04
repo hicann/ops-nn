@@ -604,14 +604,25 @@ convolution_backprop@ops-nn:
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_graph
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_host/op_tiling/arch35
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/conv3d_backprop_input_v2_arch35.h
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/conv3d_backprop_input_v2/conv3d_dx_kernel_split_block.h
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/conv3d_backprop_input_v2/conv3d_bp_common_func.h
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/conv3d_backprop_input_v2/conv3d_backprop_input_v2_tiling_data.h
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/conv3d_backprop_input_v2/conv3d_backprop_input_v2.h
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/conv3d_backprop_input_v2/conv3d_backprop_input_v2_init_output.h
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/convolution_3d_backprop/conv3d_bp_util.h
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/convolution_3d_backprop/conv3d_bp_func.h
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2_arch35_tiling_key.h
         - ops/ops-nn/conv/conv3d_transpose_v2/op_graph
         - ops/ops-nn/conv/conv3d_transpose_v2/op_host/op_tiling/arch35
         - ops/ops-nn/conv/conv3d_transpose_v2/op_kernel/conv3d_transpose_v2_arch35_tiling_key.h
+        - ops/ops-nn/conv/conv3d_transpose_v2/op_kernel/arch35/conv3d_transpose_v2_arch35.h
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_graph
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_host/op_tiling/arch35
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35
+        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop/conv_bp_func.h
+        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop/conv_bp_impl_base.h
+        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop/impl/dav_v310/conv_bp_sub_func_deterministic_calculate.h
         - ops/ops-nn/conv/convolution_backward/op_api
         - ops/ops-nn/conv/common/op_host/conv_backprop_infershape.cpp
       opensource_style: null
@@ -1289,6 +1300,7 @@ VC1@ops-nn:
         - ops/ops-nn/quant/dynamic_block_quant/op_kernel/dynamic_block_quant_apt.cpp
         - ops/ops-nn/quant/grouped_dynamic_block_quant/
         - ops/ops-nn/quant/dynamic_mx_quant/
+        - ops/ops-nn/quant/dynamic_mx_quant_with_dual_axis/op_kernel/dynamic_mx_quant_with_dual_axis.cpp
         - ops/ops-nn/quant/dynamic_quant/framework/
         - ops/ops-nn/quant/dynamic_quant/op_graph/
         - ops/ops-nn/quant/dynamic_quant/op_host/config/ascend950/
@@ -1306,8 +1318,10 @@ VC1@ops-nn:
         - ops/ops-nn/quant/dynamic_quant_v2/op_host/dynamic_quant_v2_def.cpp
         - ops/ops-nn/quant/dynamic_quant_v2/op_host/dynamic_quant_v2_infershape.cpp
         - ops/ops-nn/quant/dynamic_quant_v2/op_kernel/dynamic_quant_v2_apt.cpp
+        - ops/ops-nn/quant/dynamic_dual_level_mx_quant/op_kernel/dynamic_dual_level_mx_quant.cpp
         - ops/ops-nn/quant/grouped_dynamic_mx_quant/
         - ops/ops-nn/quant/quantize/
+        - ops/ops-nn/quant/trans_quant_param_v2/op_kernel/trans_quant_param_v2.h
         - ops/ops-nn/index/quant_update_scatter/
       opensource_style: null
       kernel_style: null
