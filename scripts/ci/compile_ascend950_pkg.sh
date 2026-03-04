@@ -224,25 +224,24 @@ echo "related op: ${builtin_ops_name[*]}"
 echo "related experimental op: ${experimental_ops_name[*]}"
 echo "need build all: ${build_all}"
 
-cann_3rd_lib_path="/home/jenkins/opensource"
 a5_soc="ascend950"
 
 if [[ ${#builtin_ops_name[@]} -gt 0 && "$force_jit" = "false" ]]; then
     builtin_ops_str=$(IFS=,; echo "${builtin_ops_name[*]}")
-    build_cmd="bash build.sh --pkg --ops=$builtin_ops_str --soc=$a5_soc -j16 --cann_3rd_lib_path=$cann_3rd_lib_path"
+    build_cmd="bash build.sh --pkg --ops=$builtin_ops_str --soc=$a5_soc -j16 --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH}"
     run_build_command "$build_cmd"
     execute_run_file "custom"
 fi
 
 if [[ ${#experimental_ops_name[@]} -gt 0 && "$force_jit" = "false" ]]; then
     experimental_ops_str=$(IFS=,; echo "${experimental_ops_name[*]}")
-    build_cmd="bash build.sh --pkg --experimental --ops=$experimental_ops_str --soc=$a5_soc -j16 --cann_3rd_lib_path=$cann_3rd_lib_path"
+    build_cmd="bash build.sh --pkg --experimental --ops=$experimental_ops_str --soc=$a5_soc -j16 --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH}"
     run_build_command "$build_cmd"
     execute_run_file "custom"
 fi
 
 if [ ${build_all} -eq 1 ]; then
-    build_cmd="bash build.sh --pkg --jit --soc=$a5_soc -j16 --cann_3rd_lib_path=$cann_3rd_lib_path"
+    build_cmd="bash build.sh --pkg --jit --soc=$a5_soc -j16 --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH}"
     run_build_command "$build_cmd"
     execute_run_file "builtin"
 fi

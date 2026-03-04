@@ -51,7 +51,6 @@ cmake-build-release
 *.tmp
 *.temp
 
-
 # UT report file
 ut_report.txt
 
@@ -64,3 +63,8 @@ makeself
 # tbetoolkits log files
 tbetoolkits-*.log
 *_result.csv
+
+# local build package
+single/
+scripts/ci/tmp/
+pr_filelist.txt

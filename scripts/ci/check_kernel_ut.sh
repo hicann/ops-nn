@@ -39,6 +39,18 @@ do
     fi
 done
 
+cov="--cov"
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --no_cov)
+            cov=""
+            shift
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
 
 #搜索变更文件清单，将存在于valid_dirs清单中的算子保存到ops_name中，路径中需要出现'op_kernel'
 
@@ -83,8 +95,8 @@ for name in "${ops_name[@]}"
 do
     for soc_version in "${supportedSocVersion[@]}"
     do
-        echo "[EXECUTE_COMMAND] bash build.sh -u --opkernel --ops=$name --cov --soc=$soc_version"
-        bash build.sh -u --opkernel --ops=$name --cov --soc=$soc_version --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j16
+        echo "[EXECUTE_COMMAND] bash build.sh -u --opkernel --ops=$name ${cov} --soc=$soc_version"
+        bash build.sh -u --opkernel --ops=$name ${cov} --soc=$soc_version --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j16
         status=$?
         if [ $status -ne 0 ]; then
             echo "${name} kernel ut fail"
