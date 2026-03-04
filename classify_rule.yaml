@@ -493,6 +493,7 @@ conv_backward-c@ops-nn:
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2.cpp
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2_tiling_key.h
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/convolution_3d_backprop/conv3d_bp_common_func.h
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/convolution_3d_backprop/conv3d_bp_impl_base.h
         - ops/ops-nn/conv/conv3d_backprop_input_v2/README.md
         - ops/ops-nn/conv/conv3d_backprop_input_v2/CMakeLists.txt
         - ops/ops-nn/conv/conv3d_transpose_v2/op_graph/
@@ -625,6 +626,7 @@ convolution_backprop@ops-nn:
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop/conv_bp_func.h
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop/conv_bp_impl_base.h
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop/impl/dav_v310/conv_bp_sub_func_deterministic_calculate.h
+        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop_filter_v2/conv3d_backprop_filter_v2.h
         - ops/ops-nn/conv/convolution_backward/op_api
         - ops/ops-nn/conv/common/op_host/conv_backprop_infershape.cpp
       opensource_style: null
