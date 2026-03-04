@@ -30,9 +30,8 @@ enum class QuantType : std::uint8_t {
 
 constexpr uint64_t SYNC_AIV_TO_AIC = 3;
 constexpr uint64_t SYNC_AIC_TO_AIV = 5;
-constexpr uint32_t MM_BASE_BLOCK_OFFSET = 32768;
 constexpr uint32_t UB_BLOCK_SIZE = 32;
-
+constexpr uint32_t INT4_SIZE = 2; // sizeof(int4)的倒数
 template <typename T>
 __aicore__ inline void DataCopyPad2DA8W4(const LocalTensor<T> dst, const GlobalTensor<T> src, uint32_t dim1, uint32_t dim0,
                                      uint32_t srcDim0) {
@@ -106,8 +105,8 @@ private:
     tilingData_ = tilingData;
     pipe_ = tPipe;
     pipe_->InitBuffer(vecInQueueX_, 1, alignKSize_ * sizeof(int8_t));
-    pipe_->InitBuffer(vecOutQueueA1_, 1, alignKSize_ * sizeof(int4b_t));
-    pipe_->InitBuffer(vecOutQueueA2_, 1, alignKSize_ * sizeof(int4b_t));
+    pipe_->InitBuffer(vecOutQueueA1_, 1, ops::CeilDiv(alignKSize_, INT4_SIZE));
+    pipe_->InitBuffer(vecOutQueueA2_, 1, ops::CeilDiv(alignKSize_, INT4_SIZE));
     pipe_->InitBuffer(tmpBuff_, alignKSize_ * sizeof(half) * 2);
     constexpr int BUFFER_SIZE_256B = AND_ONE_REPEAT_LENGTH * sizeof(int16_t);
     pipe_->InitBuffer(vecOutQueue0F_, 1, BUFFER_SIZE_256B);
@@ -335,11 +334,11 @@ __aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, qua
     blockDimM_ = ops::CeilDiv(mSize_ * 2, baseM_);
     uint32_t curCount = blockDimN_ * blockDimM_;
     uint32_t curBlock = coreIdx_;
-
+    uint32_t mmBaseBlockOffset = baseN_ * baseM_;
     while (curBlock < curCount) {
         uint32_t mIdx = curBlock / blockDimN_;
         uint32_t nIdx = curBlock % blockDimN_;
-        workSpaceOffset_ = MM_BASE_BLOCK_OFFSET * (coreIdx_ + (cubeCount % tilingData_->parallNum) * tilingData_->coreNum);
+        workSpaceOffset_ = mmBaseBlockOffset * (coreIdx_ + (cubeCount % tilingData_->parallNum) * tilingData_->coreNum);
         MMCompute(mIdx, nIdx, workSpaceOffset_);
 
         if ASCEND_IS_AIV {
