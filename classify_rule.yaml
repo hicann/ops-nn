@@ -1387,6 +1387,7 @@ VC1@ops-nn:
         - ops/ops-nn/quant/ascend_quant/tests/
         - ops/ops-nn/quant/ascend_quant_v2/examples/
         - ops/ops-nn/quant/ascend_quant_v2/tests/
+        - ops/ops-nn/quant/dynamic_block_quant/docs/
         - ops/ops-nn/quant/dynamic_block_quant/examples/
         - ops/ops-nn/quant/dynamic_block_quant/tests/
         - ops/ops-nn/quant/grouped_dynamic_block_quant/tests/
