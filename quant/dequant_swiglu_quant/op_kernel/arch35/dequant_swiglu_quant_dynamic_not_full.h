@@ -17,7 +17,11 @@
 #define DEQUANT_SWIGLU_QUANT_DYNAMIC_NOT_FULL_H
 
 #include "kernel_tiling/kernel_tiling.h"
-#include "kernel_operator.h"
+#if ASC_DEVKIT_MAJOR >= 9
+    #include "basic_api/kernel_vec_intf.h"
+#else
+    #include "kernel_operator.h"
+#endif
 #include "dequant_swiglu_quant_common.h"
 #include "dequant_swiglu_quant_dynamic_not_full_vf.h"
 

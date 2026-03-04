@@ -16,7 +16,11 @@
 #ifndef DEQUANT_SWIGLU_QUANT_COMMON_H
 #define DEQUANT_SWIGLU_QUANT_COMMON_H
 
-#include "kernel_operator.h"
+#if ASC_DEVKIT_MAJOR >= 9
+    #include "micro_api/kernel_micro_intf.h"
+#else
+    #include "kernel_operator.h"
+#endif
 
 namespace DequantSwigluQuantV35Ops {
 using namespace AscendC;
