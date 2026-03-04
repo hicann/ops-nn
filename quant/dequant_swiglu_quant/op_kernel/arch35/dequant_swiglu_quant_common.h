@@ -17,7 +17,7 @@
 #define DEQUANT_SWIGLU_QUANT_COMMON_H
 
 #if ASC_DEVKIT_MAJOR >= 9
-    #include "micro_api/kernel_micro_intf.h"
+    #include "basic_api/kernel_vec_intf.h"
 #else
     #include "kernel_operator.h"
 #endif
