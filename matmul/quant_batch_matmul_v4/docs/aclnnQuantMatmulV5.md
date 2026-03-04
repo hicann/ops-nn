@@ -611,9 +611,12 @@ aclnnStatus aclnnQuantMatmulV5(
       - transposeX2为true时维度为：（n，k），要求k为偶数。
       - transposeX2为false时维度为：（k，n），要求n为偶数。
     - 数据类型为INT32时，每个INT32数据存放8个INT4数据，
-      - 当前仅支持2维ND格式。
-      - transposeX2为true时维度为：（n，ceil(k / 8)），要求k为8的倍数。
-      - transposeX2为false时维度为：（k，ceil(n / 8)），要求n为8的倍数。
+      - ND格式下：
+        - transposeX2为true时维度为：（n，ceil(k / 8)），要求k为8的倍数。
+        - transposeX2为false时维度为：（k，ceil(n / 8)），要求n为8的倍数。
+      - 当x1为INT8时，支持NZ格式：
+        - transposeX2为true时维度为：（k1，n1，n0，k0），其中k0 = 8，n0 = 16，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 64） = k1。
+        - transposeX2为false时维度为：（n1，k1，k0，n0），其中k0 = 16，n0 = 8，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 16） = k1。
       - 可使用aclnnConvertWeightToINT4Pack接口完成x2从INT32（1个int32在0~3bit位存储1个int4）到INT32（1个int32存储8个int4）或INT4（1个int4表示1个int4）的数据格式转换，具体参见[aclnnConvertWeightToINT4Pack接口](../../convert_weight_to_int4_pack/docs/aclnnConvertWeightToINT4Pack.md)。
   - x1Scale的约束：数据格式支持ND，shape是1维（t，），t = m，其中m与x1的m一致。
   - x2Scale的约束：数据格式支持ND，shape是1维（t，），t = 1或n，其中n与x2的n一致。
