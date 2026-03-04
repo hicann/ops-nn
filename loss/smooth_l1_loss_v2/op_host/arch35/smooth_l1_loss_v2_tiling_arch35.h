@@ -16,16 +16,15 @@
 #define OPS_BUILT_IN_OP_TILING_RUNTIME_SMOOTH_L1_LOSS_V2_TILING_H_
 
 #include <string>
-#include <vector>
 #include "register/tilingdata_base.h"
 #include "atvoss/elewise/elewise_tiling.h"
 #include "../../op_kernel/arch35/smooth_l1_loss_v2_tilingdata.h"
 #include "atvoss/reduce/reduce_tiling.h"
 #include "atvoss/broadcast/broadcast_tiling.h"
 
-using namespace SmoothL1LossV2;
-using namespace Ops::Base;
 namespace optiling {
+
+using namespace Ops::Base;
 
 struct SmoothL1LossV2CompileInfo
 {
@@ -43,7 +42,7 @@ class SmoothL1LossV2Tiling {
 public:
     explicit SmoothL1LossV2Tiling(gert::TilingContext *context) : tilingContext(context){};
     ge::graphStatus RunTiling(const SmoothL1LossV2CompileInfo *compileInfo);
-    SmoothL1LossV2TilingData* tiling = nullptr;
+    SmoothL1LossV2::SmoothL1LossV2TilingData* tiling = nullptr;
 protected:
     ge::graphStatus SetTilingData();
     ge::graphStatus CheckShape();
@@ -53,7 +52,7 @@ private:
     ge::DataType outputDtype;
     gert::TilingContext *tilingContext;
     SmoothL1LossV2TilingKey key;
-    uint32_t reduction;
+    uint32_t reduction = 0;
 };
 } // namespace optiling
 #endif // OPS_BUILT_IN_OP_TILING_RUNTIME_SMOOTH_L1_LOSS_V2_H_

@@ -19,11 +19,9 @@
 #include "atvoss/elewise/elewise_base_struct.h"
 #include "atvoss/reduce/reduce_tiling_data.h"
 
-using namespace Ops::Base;
-
 struct MseLossTilingData {
-    EleBaseTilingData baseTiling;
-    ReduceOpTilingData reduceTiling;
+    Ops::Base::EleBaseTilingData baseTiling;
+    Ops::Base::ReduceOpTilingData reduceTiling;
 };
 
 #endif

@@ -223,7 +223,7 @@ ge::graphStatus NLLLossGradSimtTiling::PostTiling()
 }
 
 static ge::graphStatus NLLLossGradTiling(gert::TilingContext *context) {
-  auto compile_info = reinterpret_cast<const NLLLossGradCompileInfo *>(context->GetCompileInfo());
+  auto compile_info = static_cast<const NLLLossGradCompileInfo *>(context->GetCompileInfo());
   OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
   OP_LOGD(context->GetNodeName(), "Tiling4NLLLossGrad dsl compile_info is Null, running Simt tiling.");
   NLLLossGradSimtTiling tilingObj(context);

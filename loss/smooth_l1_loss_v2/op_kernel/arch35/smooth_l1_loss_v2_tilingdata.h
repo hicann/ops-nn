@@ -18,9 +18,9 @@
 #include "atvoss/elewise/elewise_base_struct.h"
 #include "atvoss/reduce/reduce_tiling_data.h" 
 
-using namespace Ops::Base;
-
 namespace SmoothL1LossV2 {
+
+using namespace Ops::Base;
 
 struct SmoothL1LossV2TilingData {
     EleBaseTilingData baseTiling;

@@ -23,8 +23,9 @@
 #include "./arch35/mse_loss_tiling_def.h"
 #include "atvoss/reduce/reduce_sch.h"
 
-using namespace ReduceOpTmpl;
 using namespace AscendC;
+using namespace Ops::Base;
+using namespace ReduceOpTmpl;
 
 template <REDUCE_TPL_PARAM, uint32_t Reduction, uint32_t Dtype>
 __global__ __aicore__ void mse_loss(GM_ADDR predict, GM_ADDR label, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)

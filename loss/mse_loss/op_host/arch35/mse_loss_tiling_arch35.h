@@ -25,8 +25,9 @@
 #include "atvoss/reduce/reduce_tiling.h"
 #include "mse_loss/op_kernel/arch35/mse_loss_tiling_def.h"
 
-using namespace Ops::Base;
 namespace optiling {
+
+using namespace Ops::Base;
 
 struct MseLossTilingKey {
     ReduceTilingKey ReduceTiling;
@@ -48,8 +49,8 @@ private:
     ge::DataType outputDtype;
     gert::TilingContext* tilingContext;
     MseLossTilingKey key;
-    MseLossTilingData* tiling;
-    uint32_t reduction;
+    MseLossTilingData* tiling = nullptr;
+    uint32_t reduction = 0;
 };
 } // namespace optiling
 #endif // OPS_BUILT_IN_OP_TILING_RUNTIME_MSE_LOSS_H_

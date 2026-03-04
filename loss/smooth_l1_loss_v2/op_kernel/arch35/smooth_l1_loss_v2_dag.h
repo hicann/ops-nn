@@ -20,13 +20,16 @@
 #include "atvoss/util/placeholder.h"
 #include "atvoss/reduce/reduce_operator.h"  
 
-using namespace Ops::Base;
 namespace SmoothL1LossV2 {
+
 using namespace AscendC;
+using namespace Ops::Base;
+
 constexpr int COMPARE_MODE_LT = 0;
 constexpr int SELECT_TENSOR = 2;
 constexpr int SCALAR_INDEX_2 = 2;
 constexpr int SCALAR_INDEX_3 = 3;
+
 template <typename T, typename PromteT = float>
 struct SmoothL1LossV2OpDag {
     // 通过Compute构造计算图
@@ -51,6 +54,7 @@ struct SmoothL1LossV2OpDag {
     // 指定计算顺序
     using OpDag = DAGSch<Outputs>;
 };
+
 template <typename T, typename PromteT>
 struct SmoothL1LossV2SumDag {
     // 通过Compute构造计算图

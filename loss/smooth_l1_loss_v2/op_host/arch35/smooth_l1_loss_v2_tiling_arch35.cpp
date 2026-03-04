@@ -153,7 +153,7 @@ ge::graphStatus SmoothL1LossV2Tiling::RunTiling(const SmoothL1LossV2CompileInfo*
 {
     OP_CHECK_IF(
         CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"), return ge::GRAPH_FAILED);
-    tiling = tilingContext->GetTilingData<SmoothL1LossV2TilingData>();
+    tiling = tilingContext->GetTilingData<SmoothL1LossV2::SmoothL1LossV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, tiling);
     auto attrs = tilingContext->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, attrs);
@@ -195,7 +195,7 @@ ge::graphStatus TilingForSmoothL1LossV2(gert::TilingContext* context)
     OP_LOGD(context->GetNodeName(), "%s begin.", __func__);
     auto predict = context->GetInputShape(INDEX_PREDICT);
     OP_CHECK_NULL_WITH_CONTEXT(context, predict);
-    auto compileInfo = reinterpret_cast<const SmoothL1LossV2CompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = static_cast<const SmoothL1LossV2CompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     // 走新的模板tiling
     OP_LOGD("SmoothL1LossV2Tiling", "Enter new SmoothL1LossV2Tiling");

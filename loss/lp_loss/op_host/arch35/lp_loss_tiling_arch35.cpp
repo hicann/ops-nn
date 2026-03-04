@@ -52,7 +52,7 @@ private:
     gert::TilingContext* tilingContext;
     LpLossTilingKey key;
     LpLossTilingData* tiling = nullptr;
-    uint32_t reduction;
+    uint32_t reduction = 0;
 };
 
 ge::graphStatus LpLossTiling::CheckShape()

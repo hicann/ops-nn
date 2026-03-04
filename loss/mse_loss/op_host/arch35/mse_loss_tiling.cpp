@@ -12,14 +12,12 @@
  * \file mse_loss_tiling.cpp
  * \brief
  */
-#include <cstdint>
+
 #include <vector>
-#include <string>
 #include "register/op_def_registry.h"
 #include "register/tilingdata_base.h"
 #include "op_host/tiling_base.h"
 #include "tiling/tiling_api.h"
-#include "util/math_util.h"
 #include "atvoss/broadcast/broadcast_tiling.h"
 #include "mse_loss_tiling_arch35.h"
 #include "mse_loss_tiling.h"
@@ -28,7 +26,7 @@ namespace optiling {
 ge::graphStatus TilingForMseLoss(gert::TilingContext* context)
 {
     OP_LOGD(context->GetNodeName(), "start tiling");
-    auto compileInfo = reinterpret_cast<const MseLossCompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = static_cast<const MseLossCompileInfo*>(context->GetCompileInfo());
 
     auto predictInputShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, predictInputShape);
@@ -49,6 +47,11 @@ ge::graphStatus TilingForMseLoss(gert::TilingContext* context)
 
 ge::graphStatus TilingPrePareForMseLoss(gert::TilingParseContext* context)
 {
+    if (context == nullptr) {
+        OP_LOGE("TilingPrePareForMseLoss", "Tiling context is nullptr");
+        return ge::GRAPH_FAILED;
+    }
+
     return ge::GRAPH_SUCCESS;
 }
 
