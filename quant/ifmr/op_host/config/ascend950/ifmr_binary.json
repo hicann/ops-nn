@@ -1,0 +1,402 @@
+{
+    "op_type": "IFMR",
+    "op_list": [
+      {
+        "bin_filename": "IFMR_float16_with_offset",
+        "inputs": [
+          {
+            "name": "data",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "data_min",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "data_max",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "cumsum",
+            "index": 3,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "scale",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "offset",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "min_percentile",
+            "dtype": "float32",
+            "value": -1.0
+          },
+          {
+            "name": "max_percentile",
+            "dtype": "float32",
+            "value": -1.0
+          },
+          {
+            "name": "search_range",
+            "dtype": "list_float",
+            "value": [-1.0, -1.0]
+          },
+          {
+            "name": "search_step",
+            "dtype": "float",
+            "value": -1.0
+          },
+          {
+            "name": "with_offset",
+            "dtype": "bool",
+            "value": true
+          },
+          {
+            "name": "quant_bits",
+            "dtype": "int",
+            "value": -1
+          }
+        ]
+      },
+      {
+        "bin_filename": "IFMR_float16_without_offset",
+        "inputs": [
+          {
+            "name": "data",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "data_min",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "data_max",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "cumsum",
+            "index": 3,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "scale",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "offset",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "min_percentile",
+            "dtype": "float32",
+            "value": -1.0
+          },
+          {
+            "name": "max_percentile",
+            "dtype": "float32",
+            "value": -1.0
+          },
+          {
+            "name": "search_range",
+            "dtype": "list_float",
+            "value": [-1.0, -1.0]
+          },
+          {
+            "name": "search_step",
+            "dtype": "float",
+            "value": -1.0
+          },
+          {
+            "name": "with_offset",
+            "dtype": "bool",
+            "value": false
+          },
+          {
+            "name": "quant_bits",
+            "dtype": "int",
+            "value": -1
+          }
+        ]
+      },
+      {
+        "bin_filename": "IFMR_float32_with_offset",
+        "inputs": [
+          {
+            "name": "data",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "data_min",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "data_max",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "cumsum",
+            "index": 3,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "scale",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "offset",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "min_percentile",
+            "dtype": "float32",
+            "value": -1.0
+          },
+          {
+            "name": "max_percentile",
+            "dtype": "float32",
+            "value": -1.0
+          },
+          {
+            "name": "search_range",
+            "dtype": "list_float",
+            "value": [-1.0, -1.0]
+          },
+          {
+            "name": "search_step",
+            "dtype": "float",
+            "value": -1.0
+          },
+          {
+            "name": "with_offset",
+            "dtype": "bool",
+            "value": true
+          },
+          {
+            "name": "quant_bits",
+            "dtype": "int",
+            "value": -1
+          }
+        ]
+      },
+      {
+        "bin_filename": "IFMR_float32_without_offset",
+        "inputs": [
+          {
+            "name": "data",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "data_min",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "data_max",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "cumsum",
+            "index": 3,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "scale",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "offset",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "min_percentile",
+            "dtype": "float32",
+            "value": -1.0
+          },
+          {
+            "name": "max_percentile",
+            "dtype": "float32",
+            "value": -1.0
+          },
+          {
+            "name": "search_range",
+            "dtype": "list_float",
+            "value": [-1.0, -1.0]
+          },
+          {
+            "name": "search_step",
+            "dtype": "float",
+            "value": -1.0
+          },
+          {
+            "name": "with_offset",
+            "dtype": "bool",
+            "value": false
+          },
+          {
+            "name": "quant_bits",
+            "dtype": "int",
+            "value": -1
+          }
+        ]
+      }
+    ]
+  }
+  

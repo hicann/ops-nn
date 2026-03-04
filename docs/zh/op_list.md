@@ -3064,6 +3064,16 @@
     <td>AI Core</td>
     <td>完成量化计算参数scale数据类型的转换，将FLOAT32的数据类型转换为硬件需要的UINT64类型。</td>
   </tr>
+  <tr>
+    <td>quant</td>
+    <td><a href="../../quant/ifmr/README.md">ifmr</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>输入特征图重建的量化方法。</td>
+  </tr>
    <tr>
     <td>rnn</td>
     <td><a href="../../../../rnn/bidirection_lstm/README.md">bidirection_lstm</a></td>
