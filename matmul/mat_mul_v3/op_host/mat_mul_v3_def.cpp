@@ -80,6 +80,7 @@ public:
                 .ExtendCfgInfo("softsync.flag", "true");
         this->AICore().AddConfig("ascend910b", aicConfig);
         this->AICore().AddConfig("ascend910_93", aicConfig);
+
         aicConfig.Input("x1")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16})
@@ -106,6 +107,7 @@ public:
             .Format({ge::FORMAT_FRACTAL_NZ, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_FRACTAL_NZ, ge::FORMAT_ND});
         this->AICore().AddConfig("ascend310p", aicConfig);
+
         aicConfig.Input("x1")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT16,
@@ -147,7 +149,8 @@ public:
                      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-        aicConfig.ExtendCfgInfo("opFile.value", "mat_mul_v3_apt")
+        aicConfig.PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "mat_mul_v3_apt")
             .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
         this->AICore().AddConfig("ascend950", aicConfig);
 

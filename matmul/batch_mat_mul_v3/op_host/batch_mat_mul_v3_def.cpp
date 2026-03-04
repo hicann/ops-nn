@@ -118,7 +118,7 @@ public:
             .DataType({ge::DT_INT8, ge::DT_INT8, ge::DT_INT4, ge::DT_INT8, ge::DT_INT8})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-        aicConfig.ExtendCfgInfo("opFile.value", "batch_mat_mul_v3_apt");
+        aicConfig.PrecisionReduceFlag(true).ExtendCfgInfo("opFile.value", "batch_mat_mul_v3_apt");
         this->AICore().AddConfig("ascend950", aicConfig);
         this->AICore().AddConfig("ascend910_55", aicConfig);
 
