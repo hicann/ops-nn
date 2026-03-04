@@ -478,6 +478,7 @@ conv_backward-c@ops-nn:
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_host/conv3d_backprop_filter_v2_infershape.cpp
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_host/CMakeLists.txt
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch32/
+        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop/impl/dav_v310/conv_bp_sub_func_deterministic_common.h
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/conv3d_backprop_filter_v2.cpp
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/conv3d_backprop_filter_v2_tiling_key.h
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/README.md
@@ -491,6 +492,7 @@ conv_backward-c@ops-nn:
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch32/
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2.cpp
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2_tiling_key.h
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/convolution_3d_backprop/conv3d_bp_common_func.h
         - ops/ops-nn/conv/conv3d_backprop_input_v2/README.md
         - ops/ops-nn/conv/conv3d_backprop_input_v2/CMakeLists.txt
         - ops/ops-nn/conv/conv3d_transpose_v2/op_graph/
@@ -1301,6 +1303,7 @@ VC1@ops-nn:
         - ops/ops-nn/quant/grouped_dynamic_block_quant/
         - ops/ops-nn/quant/dynamic_mx_quant/
         - ops/ops-nn/quant/dynamic_mx_quant_with_dual_axis/op_kernel/dynamic_mx_quant_with_dual_axis.cpp
+        - ops/ops-nn/quant/dynamic_mx_quant_with_dual_axis/op_kernel/arch35/dynamic_mx_quant_with_dual_axis_base.h
         - ops/ops-nn/quant/dynamic_quant/framework/
         - ops/ops-nn/quant/dynamic_quant/op_graph/
         - ops/ops-nn/quant/dynamic_quant/op_host/config/ascend950/
@@ -1319,6 +1322,7 @@ VC1@ops-nn:
         - ops/ops-nn/quant/dynamic_quant_v2/op_host/dynamic_quant_v2_infershape.cpp
         - ops/ops-nn/quant/dynamic_quant_v2/op_kernel/dynamic_quant_v2_apt.cpp
         - ops/ops-nn/quant/dynamic_dual_level_mx_quant/op_kernel/dynamic_dual_level_mx_quant.cpp
+        - ops/ops-nn/quant/dynamic_dual_level_mx_quant/op_kernel/arch35/dynamic_dual_level_mx_quant_base.h
         - ops/ops-nn/quant/grouped_dynamic_mx_quant/
         - ops/ops-nn/quant/quantize/
         - ops/ops-nn/quant/trans_quant_param_v2/op_kernel/trans_quant_param_v2.h
