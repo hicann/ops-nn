@@ -62,11 +62,6 @@ static inline bool CheckSocVersionIsSupportBf16(void)
 
 static inline bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
 {
-    if (!CheckSocVersionIsSupportBf16() && (self->GetDataType() == op::DataType::DT_BF16)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self dtype DT_BF16 not support in current soc version.");
-        return false;
-    }
-
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST, return false);
     return true;
@@ -226,6 +221,21 @@ static aclnnStatus FillScalar(aclTensor* out, float val, aclOpExecutor* executor
     return ACLNN_SUCCESS;
 }
 
+static inline bool CheckOrdValue(const aclScalar* ord)
+{
+    const std::vector<float> attrPSupportValue = {0.0, 1.0, 2.0, 3.0, INT_MAX_F, INT_MIN_F};
+    float pValue = CalculateValP(ord);
+    auto it = std::find(attrPSupportValue.cbegin(), attrPSupportValue.cend(), pValue);
+    std::stringstream sStream;
+    std::for_each(attrPSupportValue.cbegin(), attrPSupportValue.cend(), [&](float value) { sStream << value << ", "; });
+    OP_CHECK(
+        it != attrPSupportValue.cend(),
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ord must one of [inf, -inf, %s], but find %f.", sStream.str().c_str(), pValue),
+        return false);
+    return true;
+}
+
+
 aclnnStatus aclnnNormGetWorkspaceSize(
     const aclTensor* self, const aclScalar* pScalar, const aclIntArray* dim, bool keepdim, aclTensor* out,
     uint64_t* workspaceSize, aclOpExecutor** executor)
@@ -270,7 +280,7 @@ aclnnStatus aclnnNormGetWorkspaceSize(
         // [ViewCopy] 将计算结果拷贝到输出out上，可能是非连续的tensor
         auto viewCopyResult = l0op::ViewCopy(normOut, out, uniqueExecutor.get());
         CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    } else if (CheckSocVersionIsSupportBf16()) {
+    } else if (CheckSocVersionIsSupportBf16() && CheckOrdValue(pScalar)) {
         // [Cast] 将计算结果转化为out的数据类型
         op::DataType promoteType = op::PromoteType(self->GetDataType(), out->GetDataType());
         auto selfContiguousCast = l0op::Cast(selfContiguous, promoteType, uniqueExecutor.get());
