@@ -457,6 +457,7 @@ ge::graphStatus ScatterNdTiling::PostTiling()
   tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(),
                           context_->GetRawTilingData()->GetCapacity());
   context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
+  context_->SetScheduleMode(1);
   return ge::GRAPH_SUCCESS;
 }
 
