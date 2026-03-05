@@ -38,6 +38,7 @@ aclnnStatus aclnnLinalgVectorNormGetWorkspaceSize(
   uint64_t           *workspaceSize,
   aclOpExecutor     **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnLinalgVectorNorm(
   void           *workspace,
@@ -86,7 +87,7 @@ aclnnStatus aclnnLinalgVectorNorm(
       <td>ord（aclTensor*）</td>
       <td>输入</td>
       <td>表示范数的类型。对应公式中的ord。</td>
-      <td>数值支持0.0、1.0、2.0、3.0。</td>
+      <td>-</td>
       <td>FLOAT32</td>
       <td>-</td>
       <td>-</td>
@@ -100,7 +101,7 @@ aclnnStatus aclnnLinalgVectorNorm(
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
-      <td>-</td> 
+      <td>-</td>
     </tr>
     <tr>
       <td>keepDims（bool）</td>
@@ -154,10 +155,6 @@ aclnnStatus aclnnLinalgVectorNorm(
     </tr>
   </tbody>
   </table>
-
-  - ord：
-    - <term>Ascend 950PR/Ascend 950DT</term>：数值额外支持Inf、-Inf和其他float取值。
-  - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：数据类型不支持BFLOAT16。
 
 - **返回值**：
 

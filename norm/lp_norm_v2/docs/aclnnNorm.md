@@ -61,6 +61,7 @@ aclnnStatus aclnnNormGetWorkspaceSize(
   uint64_t            *workspaceSize,
   aclOpExecutor      **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnNorm(
   void*           workspace,
@@ -109,7 +110,7 @@ aclnnStatus aclnnNorm(
       <td>pScalar（aclScalar*）</td>
       <td>输入</td>
       <td>表示范数的类型，公式中的p。</td>
-      <td>支持0/1/2/3范数、无穷范数。</td>
+      <td>-</td>
       <td>FLOAT32</td>
       <td>-</td>
       <td>-</td>
@@ -182,10 +183,6 @@ aclnnStatus aclnnNorm(
     </tr>
   </tbody>
   </table>
-
-  - pScalar：
-    - <term>Ascend 950PR/Ascend 950DT</term>：数值额外支持其他float取值。
-  - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：数据类型不支持BFLOAT16。
 
 - **返回值**：
 
