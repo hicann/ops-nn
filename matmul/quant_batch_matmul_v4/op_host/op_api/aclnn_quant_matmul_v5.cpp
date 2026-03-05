@@ -507,13 +507,11 @@ static inline bool CheckScaleX2Shape(const TupleQuant& quantTensors, int64_t x2N
             }
         }
     } else if (IsMicroScaling(x1Scale, x2Scale)) {
-        // x2Scale: (n, k / groupSize / 2, 2)
-        if (x2Scale->GetViewShape().GetDim(0) != x2NDim || x2Scale->GetViewShape().GetDim(1) != (groupDim / 2UL) ||
-            x2Scale->GetViewShape().GetDim(2) != 2UL) {
+        // 2:x2Scale Shape: (n, groupDim / 2, 2)
+       if (x2ScaleNDim != x2NDim || x2ScaleGroupDim != groupDim / 2 || x2Scale->GetViewShape().GetDim(2) != 2) {
             OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "The x2scale shape must be [%ld, %ld, 2], which are [%ld, %ld, %ld]", x2NDim,
-                (groupDim / 2), x2Scale->GetViewShape().GetDim(0), x2Scale->GetViewShape().GetDim(1),
-                x2Scale->GetViewShape().GetDim(2));
+                ACLNN_ERR_PARAM_INVALID, "The x2scale shape must be [%ld, %ld, 2], which are [%ld, %ld, %ld]",
+                x2NDim, groupDim / 2, x2ScaleNDim, x2ScaleGroupDim, x2Scale->GetViewShape().GetDim(2));
             return false;
         }
     } else {
@@ -783,13 +781,13 @@ static aclnnStatus PreMatmulCalcProcess(TupleInput &inputTensors, TupleQuant &qu
     bool tempTransposeValue = false;
     CHECK_RET(TensorContiguousProcess(x1, transposeX1, executor), ACLNN_ERR_INNER_NULLPTR);
     if (x1Scale != nullptr) {
-        if (IsMicroScaling(x1Scale, x2Scale) && (IsFp4Input(x1, x2) || IsFp8Input(x1, x2))) {
+        if (IsMicroScaling(x1Scale, x2Scale) && (IsFp4Input(x1, x2) || IsFp8Input(x1, x2) || isA8W4Float(x1, x2))) {
             CHECK_RET(MxScaleContiguousProcess(x1Scale, executor), ACLNN_ERR_INNER_NULLPTR);
         } else {
             CHECK_RET(TensorContiguousProcess(x1Scale, tempTransposeValue, executor), ACLNN_ERR_INNER_NULLPTR);
         }
     }
-    if (IsMicroScaling(x1Scale, x2Scale) && (IsFp4Input(x1, x2) || IsFp8Input(x1, x2))) {
+    if (IsMicroScaling(x1Scale, x2Scale) && (IsFp4Input(x1, x2) || IsFp8Input(x1, x2) || isA8W4Float(x1, x2))) {
         CHECK_RET(MxScaleContiguousProcess(x2Scale, executor), ACLNN_ERR_INNER_NULLPTR);
     } else {
         CHECK_RET(TensorContiguousProcess(x2Scale, tempTransposeValue, executor), ACLNN_ERR_INNER_NULLPTR);

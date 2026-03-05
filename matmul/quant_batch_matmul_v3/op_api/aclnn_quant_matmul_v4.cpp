@@ -764,7 +764,7 @@ static inline bool CheckA8W4ScaleX1Shape(
     auto x1Scale = std::get<INDEX_PERTOKEN_IN_OPTIONAL_TUPLE>(optionalTensors);
     auto x2Scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
     if (IsMicroScaling(x1Scale, x2Scale)) {
-        // 2：x1Scale 形状为（m, k / groupSize / 2, 2）
+        // 2：x1Scale 形状为（m, groupDimK / 2, 2）
         if (x1Scale->GetViewShape().GetDim(0) != groupDimM || x1Scale->GetViewShape().GetDim(1) != groupDimK / 2 ||
             x1Scale->GetViewShape().GetDim(2) != 2) {
             OP_LOGE(
@@ -790,7 +790,7 @@ static inline bool CheckA8W4ScaleX2Shape(
         if (x2ScaleNDim != groupDimN || x2ScaleGroupDim != groupDimK / 2 || x2Scale->GetViewShape().GetDim(2) != 2) {
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID, "The x2scale shape must be [%ld, %ld, 2], which are [%ld, %ld, %ld]",
-                groupDimN, groupDimK, x2ScaleNDim, x2ScaleGroupDim, x2Scale->GetViewShape().GetDim(2));
+                groupDimN, groupDimK / 2, x2ScaleNDim, x2ScaleGroupDim, x2Scale->GetViewShape().GetDim(2));
             return false;
         }
     } else if (x2ScaleNDim != groupDimN || x2ScaleGroupDim != groupDimK) {
