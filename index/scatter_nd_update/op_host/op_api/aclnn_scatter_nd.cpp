@@ -138,12 +138,8 @@ aclnnStatus aclnnScatterNdGetWorkspaceSize(const aclTensor *data, const aclTenso
         return ACLNN_SUCCESS;
     }
 
-    // 拷贝data
-    auto copyResult = l0op::ViewCopy(data, out, uniqueExecutor.get());
-    CHECK_RET(copyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
     // 将输入转换成连续的tensor
-    auto dataContiguous = l0op::Contiguous(out, uniqueExecutor.get());
+    auto dataContiguous = l0op::Contiguous(data, uniqueExecutor.get());
     CHECK_RET(dataContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     // 将输入indices转换成连续的tensor
     auto indicesContiguous = l0op::Contiguous(indices, uniqueExecutor.get());
