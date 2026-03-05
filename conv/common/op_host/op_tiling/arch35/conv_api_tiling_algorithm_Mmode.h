@@ -128,6 +128,7 @@ private:
     void GetKL0TilingDecision();
     void UpdateL1DoubelBuffer();
     void CalFormulaicInnerBatch();
+    uint64_t GetBatchLimitFromL0ASize();
      // L0 tiling
     int64_t GetL0Tiling();
     void InitPingPong();

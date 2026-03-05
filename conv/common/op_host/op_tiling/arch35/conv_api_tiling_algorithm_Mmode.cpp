@@ -159,14 +159,20 @@ int64_t ConvTilingAlgorithmMmode::InitCalcL1FullLoadParams()
         TILING_LOG_ERROR("fmap size in l1 is overflow uint64, initcalc l1 params failed!");
         return -1;
     }
-    if (tilingIns_->isC04Flag) {
-        this->l1TilingCalc.fmapFullLoadL1Size = AlignB(this->l1TilingCalc.kAL1FullLoadSize * hiL1FullLoad * tilingIns_->shapeInfo.orgWi * this->fMapDTypeSize 
-                                                        , C0_SIZE)  * tilingIns_->innerBatch;
-    } else {
+    if (!tilingIns_->isC04Flag) {
         this->l1TilingCalc.fmapFullLoadL1Size = tilingIns_->shapeInfo.singlekD * this->l1TilingCalc.kAL1FullLoadSize *
             hiL1FullLoad * tilingIns_->shapeInfo.orgWi * this->fMapDTypeSize * tilingIns_->innerBatch;
+    } else if (tilingIns_->descInfo.fMapType.format == ConvFormat::NHWC && (tilingIns_->shapeInfo.orgkH *
+            tilingIns_->shapeInfo.orgkW == 1)) {
+        this->l1TilingCalc.fmapFullLoadL1Size = AlignB(this->l1TilingCalc.kAL1FullLoadSize * hiL1FullLoad *
+                                                    tilingIns_->shapeInfo.orgWi *
+                                                    this->fMapDTypeSize * tilingIns_->innerBatch, C0_SIZE);
+    } else {
+        this->l1TilingCalc.fmapFullLoadL1Size = AlignB(this->l1TilingCalc.kAL1FullLoadSize * hiL1FullLoad *
+                                                    tilingIns_->shapeInfo.orgWi * this->fMapDTypeSize,
+                                                    C0_SIZE)  * tilingIns_->innerBatch;
     }
-    
+
     if ((tilingIns_->shapeInfo.singlekD * tilingIns_->shapeInfo.singleCi1 * this->l1TilingCalc.ci0HkWk *
         tilingIns_->shapeInfo.singleCo1 * tilingIns_->cubeInfo.n0 * this->weightDTypeSize) / weightDTypeSize !=
         (tilingIns_->shapeInfo.singlekD * tilingIns_->shapeInfo.singleCi1 * this->l1TilingCalc.ci0HkWk *
@@ -862,6 +868,18 @@ void ConvTilingAlgorithmMmode::L0TilingDecision()
     CalFormulaicInnerBatch();
 }
 
+uint64_t ConvTilingAlgorithmMmode::GetBatchLimitFromL0ASize()
+{
+    if (tilingIns_->descInfo.fMapType.format == ConvFormat::NHWC && (tilingIns_->shapeInfo.orgkH *
+        tilingIns_->shapeInfo.orgkW == 1)) {
+        return tilingIns_->platformInfo.l0ASize / (CONST_VALUE_2 * this->fMapDTypeSize *
+                        tilingIns_->shapeInfo.orgWi * tilingIns_->shapeInfo.orgHi * l0TilingParams.kL0);
+    } else {
+        return tilingIns_->platformInfo.l0ASize / (CONST_VALUE_2 * this->fMapDTypeSize *
+                                                l0TilingParams.mL0 * l0TilingParams.kL0);
+    }
+}
+
 void ConvTilingAlgorithmMmode::CalFormulaicInnerBatch()
 {
     if (tilingIns_->attrInfo.groups > 1 || tilingIns_->isDmaFlag ||
@@ -881,8 +899,7 @@ void ConvTilingAlgorithmMmode::CalFormulaicInnerBatch()
     }
     tilingIns_->enableInnerBatch = true;
  
-    uint64_t innerBatchLimit1 = tilingIns_->platformInfo.l0ASize / (CONST_VALUE_2 * this->fMapDTypeSize *
-                                                                    l0TilingParams.mL0 * l0TilingParams.kL0);
+    uint64_t innerBatchLimit1 = GetBatchLimitFromL0ASize();
     uint64_t innerBatchLimit2 = tilingIns_->platformInfo.l0CSize / (l0TilingParams.mL0 * l0TilingParams.nL0 *
                                 DTYPE_SIZE_TAB.at(tilingIns_->cubeInfo.madType) * CONST_VALUE_2);
     uint64_t currentBiasL1Size = tilingIns_->hasBias ?
@@ -907,6 +924,7 @@ void ConvTilingAlgorithmMmode::CalFormulaicInnerBatch()
     }
     tilingIns_->innerBatch = static_cast<uint32_t>(min(min(innerBatchLimit1, innerBatchLimit2),
         min(innerBatchLimit3, innerBatchLimit4)));
+    // Distribute batchs as evenly as possible across each core.
     tilingIns_->innerBatch = min(tilingIns_->innerBatch,
         static_cast<uint32_t>(CeilDiv(static_cast<uint64_t>(tilingIns_->shapeInfo.singleBatch),
         CeilDiv(static_cast<uint64_t>(tilingIns_->shapeInfo.singleBatch), tilingIns_->innerBatch))));
