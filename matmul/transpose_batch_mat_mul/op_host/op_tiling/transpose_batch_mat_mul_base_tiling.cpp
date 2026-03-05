@@ -48,7 +48,7 @@ constexpr uint64_t DEFAULT_SIZE = 32;
 constexpr uint64_t NUM_TWO = 2;
 constexpr uint64_t BASIC_BLOCK_SIZE_128 = 128;
 constexpr uint64_t BASIC_BLOCK_SIZE_256 = 256;
-constexpr uint64_t kSupportedInnerAxis = 65536;
+constexpr int64_t kSupportedInnerAxis = 65536;
 }  // namespace
 
 
