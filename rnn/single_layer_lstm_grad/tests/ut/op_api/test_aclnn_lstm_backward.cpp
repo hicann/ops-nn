@@ -49,9 +49,9 @@ TEST_F(l2_lstm_backward_test, ascend910B2_normal_float)
     vector<bool> output_mask = {false, false, false, false};
     auto output_mask_desc = BoolArrayDesc(output_mask);
 
-    auto input = TensorDesc(x_shape, ACL_FLOAT, ACL_FORMAT_ND);
-    auto init_h = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_ND);
-    auto init_c = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto input = TensorDesc(x_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto init_h = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto init_c = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_NCL);
     auto hx_list = TensorListDesc({init_h, init_c});
 
     auto w_ih = TensorDesc(w_ih_shape, ACL_FLOAT, ACL_FORMAT_ND);
@@ -60,34 +60,34 @@ TEST_F(l2_lstm_backward_test, ascend910B2_normal_float)
     auto b_hh = TensorDesc(b_shape, ACL_FLOAT, ACL_FORMAT_ND);
 
     auto params_list = TensorListDesc({w_ih, w_hh, b_ih, b_hh});
-    auto dy = TensorDesc(y_shape, ACL_FLOAT, ACL_FORMAT_ND);
-    auto dh = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_ND);
-    auto dc = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dy = TensorDesc(y_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto dh = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto dc = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_NCL);
 
-    auto i = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto i = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
     auto i_list = TensorListDesc({i});
 
-    auto j = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto j = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
     auto j_list = TensorListDesc({j});
 
-    auto f = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto f = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
     auto f_list = TensorListDesc({f});
 
-    auto o = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto o = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
     auto o_list = TensorListDesc({o});
 
-    auto h = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto h = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
     auto h_list = TensorListDesc({h});
 
-    auto c = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto c = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
     auto c_list = TensorListDesc({c});
 
-    auto tanhc = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto tanhc = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
     auto tanhc_list = TensorListDesc({tanhc});
 
-    auto dx_out = TensorDesc(x_shape, ACL_FLOAT, ACL_FORMAT_ND);
-    auto dh_prev_out = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_ND);
-    auto dc_prev_out = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dx_out = TensorDesc(x_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto dh_prev_out = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto dc_prev_out = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_NCL);
 
     auto dw_ih = TensorDesc(w_ih_shape, ACL_FLOAT, ACL_FORMAT_ND);
     auto dw_hh = TensorDesc(w_hh_shape, ACL_FLOAT, ACL_FORMAT_ND);
@@ -122,9 +122,9 @@ TEST_F(l2_lstm_backward_test, ascend910B2_normal_float_laryer_2_bid)
     vector<bool> output_mask = {false, false, false, false};
     auto output_mask_desc = BoolArrayDesc(output_mask);
 
-    auto input = TensorDesc(x_shape, ACL_FLOAT, ACL_FORMAT_ND);
-    auto init_h = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_ND);
-    auto init_c = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto input = TensorDesc(x_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto init_h = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto init_c = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_NCL);
     auto hx_list = TensorListDesc({init_h, init_c});
 
     auto w_ih_0 = TensorDesc(w_ih_shape_0, ACL_FLOAT, ACL_FORMAT_ND);
@@ -134,34 +134,34 @@ TEST_F(l2_lstm_backward_test, ascend910B2_normal_float_laryer_2_bid)
     auto b = TensorDesc(b_shape, ACL_FLOAT, ACL_FORMAT_ND);
 
     auto params_list = TensorListDesc({w_ih_0, w_hh_0, b, b, w_ih_0, w_hh_0, b, b, w_ih_1, w_hh_1, b, b, w_ih_1, w_hh_1, b, b});
-    auto dy = TensorDesc(y_shape, ACL_FLOAT, ACL_FORMAT_ND);
-    auto dh = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_ND);
-    auto dc = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dy = TensorDesc(y_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto dh = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto dc = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_NCL);
 
-    auto i = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto i = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
     auto i_list = TensorListDesc({i, i, i, i});
 
-    auto j = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto j = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
     auto j_list = TensorListDesc({j, j, j, j});
 
-    auto f = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto f = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
     auto f_list = TensorListDesc({f, f, f, f});
 
-    auto o = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto o = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
     auto o_list = TensorListDesc({o, o, o, o});
 
-    auto h = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto h = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
     auto h_list = TensorListDesc({h, h, h, h});
 
-    auto c = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto c = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
     auto c_list = TensorListDesc({c, c, c, c});
 
-    auto tanhc = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto tanhc = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
     auto tanhc_list = TensorListDesc({tanhc, tanhc, tanhc, tanhc});
 
-    auto dx_out = TensorDesc(x_shape, ACL_FLOAT, ACL_FORMAT_ND);
-    auto dh_prev_out = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_ND);
-    auto dc_prev_out = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dx_out = TensorDesc(x_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto dh_prev_out = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto dc_prev_out = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_NCL);
 
     auto dw_ih_0 = TensorDesc(w_ih_shape_0, ACL_FLOAT, ACL_FORMAT_ND);
     auto dw_hh_0 = TensorDesc(w_hh_shape_0, ACL_FLOAT, ACL_FORMAT_ND);

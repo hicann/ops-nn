@@ -871,14 +871,39 @@ static bool CheckNotNull(const aclTensor *input,
         CheckTensorListNotNull(dparams);
 }
 
-static bool CheckTensorListFormat(const aclTensorList* tensors, const char* listName)
+static bool CheckTensorListFormat(const aclTensorList* tensors, const char* listName, const ge::Format format)
 {
     for (uint64_t idx = 0; idx < tensors->Size(); idx++) {
-        if ((*tensors)[idx]->GetStorageFormat() != Format::FORMAT_ND) {
+        if ((*tensors)[idx]->GetStorageFormat() != format) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s tensor %lu format only support ND", listName, idx);
             return false;
         }
     }
+    return true;
+}
+
+static bool CheckTensorListsFormat(
+    const aclTensorList* hc,
+    const aclTensorList* params,
+    const aclTensorList* i,
+    const aclTensorList* j,
+    const aclTensorList* f,
+    const aclTensorList* o,
+    const aclTensorList* h,
+    const aclTensorList* c,
+    const aclTensorList* tanhc,
+    const aclTensorList* dparams)
+{
+    if (!CheckTensorListFormat(hc, "hc", Format::FORMAT_NCL)) return false;
+    if (!CheckTensorListFormat(params, "params", Format::FORMAT_ND)) return false;
+    if (!CheckTensorListFormat(i, "i", Format::FORMAT_NCL)) return false;
+    if (!CheckTensorListFormat(j, "j", Format::FORMAT_NCL)) return false;
+    if (!CheckTensorListFormat(f, "f", Format::FORMAT_NCL)) return false;
+    if (!CheckTensorListFormat(o, "o", Format::FORMAT_NCL)) return false;
+    if (!CheckTensorListFormat(h, "h", Format::FORMAT_NCL)) return false;
+    if (!CheckTensorListFormat(c, "c", Format::FORMAT_NCL)) return false;
+    if (!CheckTensorListFormat(tanhc, "tanhc", Format::FORMAT_NCL)) return false;
+    if (!CheckTensorListFormat(dparams, "dparams", Format::FORMAT_ND)) return false;
     return true;
 }
 
@@ -901,48 +926,42 @@ static bool CheckFormatValid(const aclTensor *input,
     const aclTensorList *dparams,
     const aclTensor *batchSizes=nullptr)
 {
-    if (input->GetStorageFormat() != Format::FORMAT_ND) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input format only support ND");
+    auto inputFormat = batchSizes == nullptr ? Format::FORMAT_NCL : Format::FORMAT_ND;
+    if (input->GetStorageFormat() != inputFormat) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input format only support ND/NCL");
         return false;
     }
-    if (dy->GetStorageFormat() != Format::FORMAT_ND) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dy format only support ND");
+    if (dy->GetStorageFormat() != inputFormat) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dy format only support ND/NCL");
         return false;
     }
-    if (dh->GetStorageFormat() != Format::FORMAT_ND) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dh format only support ND");
+    if (dh->GetStorageFormat() != Format::FORMAT_NCL) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dh format only support NCL");
         return false;
     }
-    if (dc->GetStorageFormat() != Format::FORMAT_ND) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dc format only support ND");
+    if (dc->GetStorageFormat() != Format::FORMAT_NCL) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dc format only support NCL");
         return false;
     }
-    if (dx->GetStorageFormat() != Format::FORMAT_ND) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dx format only support ND");
+    if (dx->GetStorageFormat() != inputFormat) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dx format only support ND/NCL");
         return false;
     }
-    if (dhPrev->GetStorageFormat() != Format::FORMAT_ND) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dhPrev format only support ND");
+    if (dhPrev->GetStorageFormat() != Format::FORMAT_NCL) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dhPrev format only support NCL");
         return false;
     }
-    if (dcPrev->GetStorageFormat() != Format::FORMAT_ND) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dcPrev format only support ND");
+    if (dcPrev->GetStorageFormat() != Format::FORMAT_NCL) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dcPrev format only support NCL");
         return false;
     }
     if (batchSizes != nullptr && batchSizes->GetStorageFormat() != Format::FORMAT_ND) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batchSizes only support ND");
         return false;
     }
-    if (!CheckTensorListFormat(hc, "hc")) return false;
-    if (!CheckTensorListFormat(params, "params")) return false;
-    if (!CheckTensorListFormat(i, "i")) return false;
-    if (!CheckTensorListFormat(j, "j")) return false;
-    if (!CheckTensorListFormat(f, "f")) return false;
-    if (!CheckTensorListFormat(o, "o")) return false;
-    if (!CheckTensorListFormat(h, "h")) return false;
-    if (!CheckTensorListFormat(c, "c")) return false;
-    if (!CheckTensorListFormat(tanhc, "tanhc")) return false;
-    if (!CheckTensorListFormat(dparams, "dparams")) return false;
+    if (!CheckTensorListsFormat(hc, params, i, j, f, o, h, c, tanhc, dparams)) {
+        return false;
+    }
     return true;
 }
 
@@ -1038,7 +1057,7 @@ static bool CheckDtypeValid(const aclTensor *input,
 }
 
 static bool ValidateInputShape(const aclTensor *input, std::vector<int64_t>& expected_dims, const char* tensorName) {
-  auto shape = input->GetStorageShape();
+  auto shape = input->GetViewShape();
   if (shape.GetDimNum() != expected_dims.size()) {
       OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor %s has wrong dimension count", tensorName);
       return false;

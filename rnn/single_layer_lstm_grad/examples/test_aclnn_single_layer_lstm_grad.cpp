@@ -47,7 +47,7 @@ int Init(int32_t deviceId, aclrtStream* stream) {
 
 template <typename T>
 int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
-                    aclDataType dataType, aclTensor** tensor) {
+                    aclDataType dataType, aclTensor** tensor, aclFormat format=aclFormat::ACL_FORMAT_ND) {
   auto size = GetShapeSize(shape) * sizeof(T);
   // 调用aclrtMalloc申请device侧内存
   auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -63,7 +63,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
   }
 
   // 调用aclCreateTensor接口创建aclTensor
-  *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+  *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, format,
                             shape.data(), shape.size(), *deviceAddr);
   return 0;
 }
@@ -201,7 +201,7 @@ int main() {
 
 
   // 创建 x aclTensor
-  ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT, &x);
+  ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT, &x, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 创建 params aclTensorList
@@ -221,65 +221,65 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 创建 initH aclTensor
-  ret = CreateAclTensor(initHHostData, initHShape, &initHDeviceAddr, aclDataType::ACL_FLOAT, &initH);
+  ret = CreateAclTensor(initHHostData, initHShape, &initHDeviceAddr, aclDataType::ACL_FLOAT, &initH, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 创建 initC aclTensor
-  ret = CreateAclTensor(initCHostData, initCShape, &initCDeviceAddr, aclDataType::ACL_FLOAT, &initC);
+  ret = CreateAclTensor(initCHostData, initCShape, &initCDeviceAddr, aclDataType::ACL_FLOAT, &initC, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   aclTensor* initHcArray[] = {initH, initC};
   auto initHcList = aclCreateTensorList(initHcArray, 2);
 
   // 创建 h aclTensor
-  ret = CreateAclTensor(hHostData, hShape, &hDeviceAddr, aclDataType::ACL_FLOAT, &h);
+  ret = CreateAclTensor(hHostData, hShape, &hDeviceAddr, aclDataType::ACL_FLOAT, &h, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   aclTensor* hArray[] = {h};
   auto hList = aclCreateTensorList(hArray, 1);
 
   // 创建 c aclTensor
-  ret = CreateAclTensor(cHostData, cShape, &cDeviceAddr, aclDataType::ACL_FLOAT, &c);
+  ret = CreateAclTensor(cHostData, cShape, &cDeviceAddr, aclDataType::ACL_FLOAT, &c, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   aclTensor* cArray[] = {c};
   auto cList = aclCreateTensorList(cArray, 1);
 
   // 创建 dy aclTensor
-  ret = CreateAclTensor(dyHostData, dyShape, &dyDeviceAddr, aclDataType::ACL_FLOAT, &dy);
+  ret = CreateAclTensor(dyHostData, dyShape, &dyDeviceAddr, aclDataType::ACL_FLOAT, &dy, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 创建 dh aclTensor
-  ret = CreateAclTensor(dhHostData, dhShape, &dhDeviceAddr, aclDataType::ACL_FLOAT, &dh);
+  ret = CreateAclTensor(dhHostData, dhShape, &dhDeviceAddr, aclDataType::ACL_FLOAT, &dh, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 创建 dc aclTensor
-  ret = CreateAclTensor(dcHostData, dcShape, &dcDeviceAddr, aclDataType::ACL_FLOAT, &dc);
+  ret = CreateAclTensor(dcHostData, dcShape, &dcDeviceAddr, aclDataType::ACL_FLOAT, &dc, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 创建 i aclTensor
-  ret = CreateAclTensor(iHostData, iShape, &iDeviceAddr, aclDataType::ACL_FLOAT, &i);
+  ret = CreateAclTensor(iHostData, iShape, &iDeviceAddr, aclDataType::ACL_FLOAT, &i, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   aclTensor* iArray[] = {i};
   auto iList = aclCreateTensorList(iArray, 1);
 
   // 创建 j aclTensor
-  ret = CreateAclTensor(jHostData, jShape, &jDeviceAddr, aclDataType::ACL_FLOAT, &j);
+  ret = CreateAclTensor(jHostData, jShape, &jDeviceAddr, aclDataType::ACL_FLOAT, &j, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   aclTensor* jArray[] = {j};
   auto jList = aclCreateTensorList(jArray, 1);
 
   // 创建 f aclTensor
-  ret = CreateAclTensor(fHostData, fShape, &fDeviceAddr, aclDataType::ACL_FLOAT, &f);
+  ret = CreateAclTensor(fHostData, fShape, &fDeviceAddr, aclDataType::ACL_FLOAT, &f, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   aclTensor* fArray[] = {f};
   auto fList = aclCreateTensorList(fArray, 1);
 
   // 创建 o aclTensor
-  ret = CreateAclTensor(oHostData, oShape, &oDeviceAddr, aclDataType::ACL_FLOAT, &o);
+  ret = CreateAclTensor(oHostData, oShape, &oDeviceAddr, aclDataType::ACL_FLOAT, &o, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   aclTensor* oArray[] = {o};
   auto oList = aclCreateTensorList(oArray, 1);
 
   // 创建 tanhCt aclTensor
-  ret = CreateAclTensor(tanhCtHostData, tanhCtShape, &tanhCtDeviceAddr, aclDataType::ACL_FLOAT, &tanhCt);
+  ret = CreateAclTensor(tanhCtHostData, tanhCtShape, &tanhCtDeviceAddr, aclDataType::ACL_FLOAT, &tanhCt, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   aclTensor* tanhCtArray[] = {tanhCt};
   auto tanhCtList = aclCreateTensorList(tanhCtArray, 1);
@@ -287,15 +287,15 @@ int main() {
   // 创建反向传播输出张量
 
   // 创建 dx aclTensor
-  ret = CreateAclTensor(dxHostData, dxShape, &dxDeviceAddr, aclDataType::ACL_FLOAT, &dx);
+  ret = CreateAclTensor(dxHostData, dxShape, &dxDeviceAddr, aclDataType::ACL_FLOAT, &dx, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 创建 dhPrev aclTensor
-  ret = CreateAclTensor(dhPrevHostData, dhPrevShape, &dhPrevDeviceAddr, aclDataType::ACL_FLOAT, &dhPrev);
+  ret = CreateAclTensor(dhPrevHostData, dhPrevShape, &dhPrevDeviceAddr, aclDataType::ACL_FLOAT, &dhPrev, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 创建 dcPrev aclTensor
-  ret = CreateAclTensor(dcPrevHostData, dcPrevShape, &dcPrevDeviceAddr, aclDataType::ACL_FLOAT, &dcPrev);
+  ret = CreateAclTensor(dcPrevHostData, dcPrevShape, &dcPrevDeviceAddr, aclDataType::ACL_FLOAT, &dcPrev, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 创建 dparams aclTensorList
