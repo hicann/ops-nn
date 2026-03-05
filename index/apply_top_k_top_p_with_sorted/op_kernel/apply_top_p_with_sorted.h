@@ -45,6 +45,7 @@ private:
     __aicore__ inline void ProcessPreSingleBatch(uint32_t loopBatch);
     __aicore__ inline void GetSoftmaxSum(uint32_t loopBatch);
     __aicore__ inline void CumsumKoggleStone(uint32_t loopBatch);
+    __aicore__ inline void CopyOutLastValue(uint32_t loopBatch);
     __aicore__ inline void GetPValue(uint32_t batchOffset);
     __aicore__ inline void CumsumParamCompute(uint32_t iterateTime);
     __aicore__ inline void GetMaxValue(int64_t baseGmIdx);
@@ -270,6 +271,7 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::ProcessPreSin
     GetSoftmaxSum(loopBatch);
     GetSoftMaxRes(loopBatch);
     CumsumKoggleStone(loopBatch);
+    CopyOutLastValue(loopBatch);
 }
 
 template <typename inputT, typename calT, typename outputT>
@@ -408,6 +410,19 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::CumsumKoggleS
             MTE3ToMTE2Sync();
         }
     }
+    MTE3ToVSync();
+}
+
+template <typename inputT, typename calT, typename outputT>
+__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::CopyOutLastValue(uint32_t loopBatch) {
+    int64_t lastValueOffset = (static_cast<int64_t>(batchOffset_) + loopBatch + 1) * vocabSize_ - 1;
+    DataCopyPad(scatterLocal, mGmSortedValue_[lastValueOffset],
+                {1, static_cast<uint32_t>(sizeof(inputT)), 0, 0, 0}, {false, 0, 0, 0});
+    MTE2ToSSync();
+    int32_t lineIndex = mGmSortedIndices_.GetValue(lastValueOffset);
+    SToMTE3Sync();
+    DataCopyPad(mGmOut_[(static_cast<int64_t>(batchOffset_) + loopBatch) * vocabSize_ + lineIndex],
+                scatterLocal.template ReinterpretCast<outputT>(), {1, (uint32_t)(1 * sizeof(outputT)), 0, 0, 0});
     MTE3ToVSync();
 }
 

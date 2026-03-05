@@ -46,6 +46,7 @@ namespace {
     constexpr uint32_t ONLY_TOP_P_KEY = 2;
     constexpr uint32_t ONLY_TOP_K_KEY = 1;
     constexpr uint32_t BATCH_MODE = 1;
+    constexpr uint32_t ONLY_TOP_950_MAX_CORENUM = 48;
 } // namespace
 
 namespace optiling {
@@ -93,6 +94,7 @@ private:
     uint32_t onlyTopK_ = 0;
     uint32_t onlyTopP_ = 0;
     uint64_t platformUbSize_ = 0;
+    platform_ascendc::SocVersion socVersion_;
 };
 
 ge::graphStatus ApplyTopKTopPWithSortedTiling::CheckShape() {
@@ -156,6 +158,7 @@ ge::graphStatus ApplyTopKTopPWithSortedTiling::Init() {
     OP_LOGD(opName_, "TilingForApplyTopKTopPWithSorted init.");
     auto platformInfo = platform_ascendc::PlatformAscendC(tilingcontext->GetPlatformInfo());
     coreNum_ = platformInfo.GetCoreNumAiv();
+    socVersion_ = platformInfo.GetSocVersion();
     platformInfo.GetCoreMemSize(platform_ascendc::CoreMemType::UB, platformUbSize_);
     OP_LOGD(opName_, "platformUbSize: %lu.", platformUbSize_);
     uint32_t avaliableUb = static_cast<uint32_t>(platformUbSize_) - SYS_RESERVED_UB - SELECT_RESERVED_UB;
@@ -182,6 +185,9 @@ void ApplyTopKTopPWithSortedTiling::SetTilingKey() {
 
 void ApplyTopKTopPWithSortedTiling::GetUsedCore()
 {
+    if (socVersion_ == platform_ascendc::SocVersion::ASCEND950 && tilingKey_ == ONLY_TOP_P_KEY){
+        coreNum_ = coreNum_ > ONLY_TOP_950_MAX_CORENUM ? ONLY_TOP_950_MAX_CORENUM : coreNum_;
+    }
     if (coreNum_ > 0) {
         batchPerCore_ = coreNum_ == uint32_t(0) ? batchSize_ : batchSize_ / coreNum_;
         tailBatch_ = batchSize_ % coreNum_;
