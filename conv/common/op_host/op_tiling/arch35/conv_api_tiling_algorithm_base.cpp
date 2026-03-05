@@ -127,7 +127,7 @@ bool ConvTilingAlgorithmBase::CheckOptGroupPreload() const
         tilingIns_->shapeInfo.singlekW * tilingIns_->cubeInfo.k0;
     bool kAL1FullloadFlag = tilingIns_->l1TilingInfo.kAL1 == kSize;
     bool kBL1FullloadFlag = tilingIns_->l1TilingInfo.kBL1 == kSize;
-    bool nBL1FullloadFlag = tilingIns_->l1TilingInfo.nBL1 == tilingIns_->shapeInfo.singleCo;
+    bool nBL1FullloadFlag = tilingIns_->l1TilingInfo.nBL1 == static_cast<uint64_t>(tilingIns_->shapeInfo.singleCo);
     bool fullLoadFlag = kAL1FullloadFlag && kBL1FullloadFlag && nBL1FullloadFlag;
 
     bool otherFlag = tilingIns_->l1TilingInfo.iterateMNOrder == IterateMNOrder::ITER_M_FST &&

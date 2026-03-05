@@ -867,7 +867,7 @@ void ConvTilingAlgorithmMmode::CalFormulaicInnerBatch()
     if (tilingIns_->attrInfo.groups > 1 || tilingIns_->isDmaFlag ||
         tilingIns_->descInfo.fMapType.format == ConvFormat::NCDHW ||
         tilingIns_->descInfo.fMapType.format == ConvFormat::NDHWC ||
-        tilingIns_->shapeInfo.singleM > l0TilingParams.mL0) {
+        tilingIns_->shapeInfo.singleM > static_cast<int64_t>(l0TilingParams.mL0)) {
         // tilingIns_->shapeInfo.singleM > l0TilingParams.mL0 ensure full load M
         return;
     }
