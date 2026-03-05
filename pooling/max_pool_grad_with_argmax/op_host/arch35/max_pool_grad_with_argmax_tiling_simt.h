@@ -9,39 +9,37 @@
   */
 
 /*!
- * \file max_pool_grad_with_argmax_nhwc_merge_wc_tiling.h
+ * \file max_pool_grad_with_argmax_tiling_simt.h
  * \brief
  */
+#ifndef MAX_POOL_GRAD_WITH_ARGMAX_TILING_SIMT_H
+#define MAX_POOL_GRAD_WITH_ARGMAX_TILING_SIMT_H
 
-#ifndef MAX_POOL_GRAD_WITH_AGRMAX_NHWC_MERGE_WC_TILING_H_
-#define MAX_POOL_GRAD_WITH_AGRMAX_NHWC_MERGE_WC_TILING_H_
-
+#include <array> 
 #include "max_pool_grad_with_argmax_tiling.h"
-#include "../../max_pool_grad_with_argmax_common/op_host/max_pool_grad_with_argmax_nhwc_tiling_common.h"
+#include "../../../pool_grad_common/op_host/arch35/max_pool_grad_with_argmax_simt_tiling_common.h"
+namespace optiling {
 
-namespace optiling
-{
-class MaxPoolGradWithArgmaxNHWCMergeWcTiling : public MaxPoolGradWithArgmaxBaseTiling
-{
+class MaxPoolGradWithArgmaxTilingSIMT : public MaxPoolGradWithArgmaxBaseTiling {
 public:
-    explicit MaxPoolGradWithArgmaxNHWCMergeWcTiling(gert::TilingContext* context)
+    explicit MaxPoolGradWithArgmaxTilingSIMT(gert::TilingContext* context)
         : MaxPoolGradWithArgmaxBaseTiling(context), 
-          NHWCBase(new MaxPoolGradWithArgmaxNHWCTilingCommon(&inputData))
+          SimtBase(new MaxPoolGradWithArgmaxSIMTTilingCommon(&inputData))
     {
+    }
+    ~MaxPoolGradWithArgmaxTilingSIMT() override
+    {
+        delete SimtBase;
     }
 
-    ~MaxPoolGradWithArgmaxNHWCMergeWcTiling() override
-    {
-        delete NHWCBase;
-    }
 private:
-    MaxPoolGradWithArgmaxNHWCTilingCommon* NHWCBase;
-    uint64_t GetTilingKey() const override;
+    MaxPoolGradWithArgmaxSIMTTilingCommon* SimtBase;
     bool IsCapable() override;
+    uint64_t GetTilingKey() const override;
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus PostTiling() override;
 };
 
 }  // namespace optiling
 
-#endif
+#endif  // CANN_MAX_POOL_GRAD_WITH_ARGMAX_TILING_SIMT_H

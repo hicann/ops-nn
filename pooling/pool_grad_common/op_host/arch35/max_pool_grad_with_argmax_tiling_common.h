@@ -29,6 +29,8 @@
 #include "platform/platform_infos_def.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_info_def.h"
+#include "util.h"
+#include "op_common/op_host/util/platform_util.h"
 
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
@@ -59,13 +61,6 @@ struct MaxPoolGradWithArgmaxInputInfoCommon {
     int64_t isInt32Meet{1};
     ge::Format inputFormat{ge::Format::FORMAT_NHWC};
 };
-
-inline static const gert::Shape &EnsureNotScalar(const gert::Shape &inShape) {
- if (inShape.IsScalar()) {
-   return g_vec_1_shape;
- }
- return inShape;
-}
 
 struct MaxPoolGradWithArgmaxHardwareInfo {
     int64_t coreNum{0};
@@ -100,5 +95,33 @@ public :
     MaxPoolGradWithArgmaxInputInfoCommon inputData;
     MaxPoolGradWithArgmaxHardwareInfo hardwareData;
 };
+ 
+ static bool CheckGradShape(const MaxPoolGradWithArgmaxInputInfoCommon& inputData,const std::string padModeStr)
+ {
+    int64_t tmpHGrad, tmpWGrad;
+    if (padModeStr == "VALID") {
+      tmpHGrad = (inputData.hX - inputData.hKernel + inputData.hStride) / inputData.hStride;
+      tmpWGrad = (inputData.wX - inputData.wKernel + inputData.wStride) / inputData.wStride;
+    } else if (padModeStr == "SAME") {
+      tmpHGrad = (inputData.hX + inputData.hStride -1) / inputData.hStride;
+      tmpWGrad = (inputData.wX + inputData.wStride -1) / inputData.wStride;
+    }
+
+    if (tmpHGrad != inputData.hGrad || tmpWGrad != inputData.wGrad || inputData.nX != inputData.nGrad ||
+        inputData.cX != inputData.cGrad) {
+        std::string s = "MaxPoolGradWithArgmax";
+        OP_LOGE(s, "grad shape expected n:[%ld], c:[%ld], h:[%ld], w:[%ld], but got n:[%ld], c:[%ld], h:[%ld], w:[%ld]",
+                inputData.nX, inputData.cX, tmpHGrad, tmpWGrad, inputData.nGrad, inputData.cGrad, inputData.hGrad,
+                inputData.wGrad);
+        return false;
+    }
+    return true;
+ }
+
+ static inline bool IsGreaterThanInt32MaxNHWC(const MaxPoolGradWithArgmaxInputInfoCommon& inputData)
+ {
+     int64_t planeSize = inputData.hX * inputData.wX * inputData.cX;
+     return planeSize > static_cast<int64_t>(INT32_MAX);
+ }
 }  // namespace optiling
 #endif

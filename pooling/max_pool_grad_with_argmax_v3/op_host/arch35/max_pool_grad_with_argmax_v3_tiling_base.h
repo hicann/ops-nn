@@ -17,8 +17,8 @@
 #define AIR_CXX_RUNTIME_V2_OP_IMPL_MAX_POOL_GRAD_WITH_AGRMAX_V3_TILING_BASE_H_
 
 #include "op_common/op_host/util/platform_util.h"
-#include "../../../max_pool_grad_with_argmax_common/op_host/max_pool_grad_with_argmax_tiling_common.h"
-#include "../../../max_pool_grad_with_argmax_common/op_kernel/max_pool_grad_with_argmax_struct_common.h"
+#include "../../../pool_grad_common/op_host/arch35/max_pool_grad_with_argmax_tiling_common.h"
+#include "../../../pool_grad_common/op_kernel/arch35/max_pool_grad_with_argmax_struct_common.h"
 
 using namespace std;
 

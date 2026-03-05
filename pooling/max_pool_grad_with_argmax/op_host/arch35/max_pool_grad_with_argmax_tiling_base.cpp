@@ -17,6 +17,11 @@
 #include "graph/utils/type_utils.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 
+
+#include "platform/platform_info.h"
+#include "atvoss/broadcast/broadcast_tiling.h"
+#include "op_common/op_host/util/platform_util.h"
+
  using namespace AscendC;
  using namespace ge;
  
@@ -38,45 +43,11 @@ static constexpr int64_t INPUT_GRAD = 1;
 static constexpr int64_t INPUT_ARGMAX = 2;
 static constexpr int64_t DIGIT_TWO = 2;
 
- static bool CheckGradShape(const MaxPoolGradWithArgmaxInputInfoCommon& inputData,const std::string padModeStr)
- {
-    int64_t tmpHGrad = 0, tmpWGrad = 0;
-    if (padModeStr == "VALID") {
-      tmpHGrad = (inputData.hX - inputData.hKernel + inputData.hStride) / inputData.hStride;
-      tmpWGrad = (inputData.wX - inputData.wKernel + inputData.wStride) / inputData.wStride;
-    } else if (padModeStr == "SAME") {
-      tmpHGrad = (inputData.hX + inputData.hStride -1) / inputData.hStride;
-      tmpWGrad = (inputData.wX + inputData.wStride -1) / inputData.wStride;
-    }
-
-    if (tmpHGrad != inputData.hGrad || tmpWGrad != inputData.wGrad || inputData.nX != inputData.nGrad ||
-        inputData.cX != inputData.cGrad) {
-        std::string s = "MaxPoolGradWithArgmax";
-        OP_LOGE(s, "grad shape expected n:[%ld], c:[%ld], h:[%ld], w:[%ld], but got n:[%ld], c:[%ld], h:[%ld], w:[%ld]",
-                inputData.nX, inputData.cX, tmpHGrad, tmpWGrad, inputData.nGrad, inputData.cGrad, inputData.hGrad,
-                inputData.wGrad);
-        return false;
-    }
-    return true;
- }
-  static bool IsInvalidPaddingMode(std::string padMode)
- {
-     const std::set<std::string> supportedPadModeList = {"SAME", "VALID"};
-     bool padModeInValid = (supportedPadModeList.count(padMode) == 0);
-     return padModeInValid;
- }
-
- static inline bool IsGreaterThanInt32Max(const MaxPoolGradWithArgmaxInputInfoCommon& inputData)
- {
-     int64_t planeSize = inputData.hX * inputData.wX * inputData.cX;
-     return planeSize > static_cast<int64_t>(INT32_MAX);
- }
-
  ge::graphStatus MaxPoolGradWithArgmaxBaseTiling::GetShapeAttrsInfo() {
     OP_LOGD("MaxPoolGradWithArgmax", "MaxPoolGradWithArgmaxBaseTiling::GetShapeAttrsInfo()");
      auto inputX = context_->GetInputShape(INPUT_X);
      OPS_CHECK_NULL_WITH_CONTEXT(context_, inputX);
-     auto xShape = EnsureNotScalar(inputX->GetStorageShape());
+     auto xShape = Ops::Base::EnsureNotScalar(inputX->GetStorageShape());
  
      OP_TILING_CHECK(xShape.GetDimNum() != DIMS_FOUR,
                      VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
@@ -101,7 +72,7 @@ static constexpr int64_t DIGIT_TWO = 2;
 
    auto inputGrad = context_->GetInputShape(INPUT_GRAD);
    OPS_CHECK_NULL_WITH_CONTEXT(context_, inputGrad);
-   auto gradShape = EnsureNotScalar(inputGrad->GetStorageShape());
+   auto gradShape = Ops::Base::EnsureNotScalar(inputGrad->GetStorageShape());
 
    OP_TILING_CHECK(gradShape.GetShapeSize() <= 0,
                      VECTOR_INNER_ERR_REPORT_TILIING(
@@ -111,7 +82,7 @@ static constexpr int64_t DIGIT_TWO = 2;
  
    auto inputArgmax = context_->GetInputShape(INPUT_ARGMAX);
    OPS_CHECK_NULL_WITH_CONTEXT(context_, inputArgmax);
-   auto argmaxShape = EnsureNotScalar(inputArgmax->GetStorageShape());
+   auto argmaxShape = Ops::Base::EnsureNotScalar(inputArgmax->GetStorageShape());
    OP_TILING_CHECK(argmaxShape.GetShapeSize() <= 0,
                      VECTOR_INNER_ERR_REPORT_TILIING(
                          context_->GetNodeName(), "MaxPoolGradWithArgmax: argmax shape size %ld less than zero failed",
@@ -136,7 +107,7 @@ static constexpr int64_t DIGIT_TWO = 2;
  
     auto outY = context_->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outY);
-    auto yShape = EnsureNotScalar(outY->GetStorageShape());
+    auto yShape = Ops::Base::EnsureNotScalar(outY->GetStorageShape());
     OP_TILING_CHECK(yShape != xShape,
                     VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
                                                     "MaxPoolGradWithArgmax: output shape is not same as input shape"),
@@ -253,7 +224,7 @@ static constexpr int64_t DIGIT_TWO = 2;
        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "MaxPoolGradWithArgmax: grad shape is invalid"),
        return ge::GRAPH_FAILED);
 
-   if (IsGreaterThanInt32Max(inputData)) {
+   if (IsGreaterThanInt32MaxNHWC(inputData)) {
        inputData.isInt32Meet = 0;
    } else {
        inputData.isInt32Meet = 1;

@@ -16,12 +16,12 @@
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 
-#include "../max_pool_grad_with_argmax_common/max_pool_grad_with_argmax_nhwc_bigc_kernel_common.h"
-#include "../max_pool_grad_with_argmax_common/max_pool_grad_with_argmax_nhwc_merge_hwc_kernel_common.h"
-#include "../max_pool_grad_with_argmax_common/max_pool_grad_with_argmax_nhwc_merge_hwc_int64_kernel_common.h"
-#include "../max_pool_grad_with_argmax_common/max_pool_grad_with_argmax_nhwc_merge_wc_kernel_common.h"
-#include "../max_pool_grad_with_argmax_common/max_pool_grad_with_argmax_struct_common.h"
-#include "../max_pool_grad_with_argmax_common/max_pool_grad_with_argmax_kernel_simt.h"
+#include "../pool_grad_common/arch35/max_pool_grad_with_argmax_nhwc_bigc_kernel_common.h"
+#include "../pool_grad_common/arch35/max_pool_grad_with_argmax_nhwc_merge_hwc_kernel_common.h"
+#include "../pool_grad_common/arch35/max_pool_grad_with_argmax_nhwc_merge_hwc_int64_kernel_common.h"
+#include "../pool_grad_common/arch35/max_pool_grad_with_argmax_nhwc_merge_wc_kernel_common.h"
+#include "../pool_grad_common/arch35/max_pool_grad_with_argmax_struct_common.h"
+#include "../pool_grad_common/arch35/max_pool_grad_with_argmax_kernel_simt.h"
 
 #define NO_CHECK_RANGE_TILING_KEY_NHWC_MERGE_HWC 500
 #define CHECK_RANGE_TILING_KEY_NHWC_MERGE_HWC 501

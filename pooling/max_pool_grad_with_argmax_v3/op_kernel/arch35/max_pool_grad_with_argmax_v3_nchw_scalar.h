@@ -18,8 +18,8 @@
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "../inc/platform.h"
-#include "../max_pool_grad_with_argmax_common/max_pool_grad_with_argmax_base_common.h"
-#include "../max_pool_grad_with_argmax_common/max_pool_grad_with_argmax_struct_common.h"
+#include "../pool_grad_common/arch35/max_pool_grad_with_argmax_base_common.h"
+#include "../pool_grad_common/arch35/max_pool_grad_with_argmax_struct_common.h"
 
 namespace MaxPoolGradWithArgmaxV3NCHWScalarNameSpace {
 constexpr int32_t INVALID_INDEX_VALUE = -1;

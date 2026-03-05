@@ -17,7 +17,7 @@
 #define MAX_POOL_GRAD_WITH_ARGMAX_V3_KSIZE_ONE_H_
 
 #include "kernel_operator.h"
-#include "../max_pool_grad_with_argmax_common/max_pool_grad_with_argmax_struct_common.h"
+#include "../pool_grad_common/arch35/max_pool_grad_with_argmax_struct_common.h"
 
 namespace MaxPoolGradWithArgmaxV3KsizeOneNameSpace {
 using namespace AscendC;

@@ -16,7 +16,7 @@
 #define MAX_POOL_GRAD_WITH_AGRMAX_NHWC_BIGC_TILING_H_
 
 #include "max_pool_grad_with_argmax_tiling.h"
-#include "../../max_pool_grad_with_argmax_common/op_host/max_pool_grad_with_argmax_nhwc_tiling_common.h"
+#include "../../../pool_grad_common/op_host/arch35/max_pool_grad_with_argmax_nhwc_tiling_common.h"
 
 namespace optiling
 {

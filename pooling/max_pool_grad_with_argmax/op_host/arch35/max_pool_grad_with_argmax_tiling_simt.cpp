@@ -25,7 +25,7 @@ using namespace ge;
 namespace optiling {
 
 int64_t outputDataCount = 0;  // total elements in grad_input
-constexpr int64_t MAX_INT32 = 2147483647;
+
 constexpr uint64_t SIMT_NCHW_TILING_KEY_INT32 = 801;
 constexpr uint64_t SIMT_NHWC_TILING_KEY_INT32 = 802;
 constexpr uint64_t SIMT_NCHW_TILING_KEY_INT64 = 803;

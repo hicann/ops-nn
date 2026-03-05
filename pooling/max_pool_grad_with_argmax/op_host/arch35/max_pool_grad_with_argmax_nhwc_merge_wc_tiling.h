@@ -9,32 +9,31 @@
   */
 
 /*!
- * \file max_pool_grad_with_argmax_nhwc_merge_hwc_tiling.h
+ * \file max_pool_grad_with_argmax_nhwc_merge_wc_tiling.h
  * \brief
  */
 
-#ifndef MAX_POOL_GRAD_WITH_AGRMAX_NHWC_TILING_H_
-#define MAX_POOL_GRAD_WITH_AGRMAX_NHWC_TILING_H_
+#ifndef MAX_POOL_GRAD_WITH_AGRMAX_NHWC_MERGE_WC_TILING_H_
+#define MAX_POOL_GRAD_WITH_AGRMAX_NHWC_MERGE_WC_TILING_H_
 
 #include "max_pool_grad_with_argmax_tiling.h"
-#include "../../max_pool_grad_with_argmax_common/op_host/max_pool_grad_with_argmax_nhwc_tiling_common.h"
+#include "../../../pool_grad_common/op_host/arch35/max_pool_grad_with_argmax_nhwc_tiling_common.h"
 
 namespace optiling
 {
-class MaxPoolGradWithArgmaxMergeHWCTiling : public MaxPoolGradWithArgmaxBaseTiling
+class MaxPoolGradWithArgmaxNHWCMergeWcTiling : public MaxPoolGradWithArgmaxBaseTiling
 {
 public:
-    explicit MaxPoolGradWithArgmaxMergeHWCTiling(gert::TilingContext* context)
+    explicit MaxPoolGradWithArgmaxNHWCMergeWcTiling(gert::TilingContext* context)
         : MaxPoolGradWithArgmaxBaseTiling(context), 
           NHWCBase(new MaxPoolGradWithArgmaxNHWCTilingCommon(&inputData))
     {
     }
 
-    ~MaxPoolGradWithArgmaxMergeHWCTiling() override
+    ~MaxPoolGradWithArgmaxNHWCMergeWcTiling() override
     {
         delete NHWCBase;
     }
-    
 private:
     MaxPoolGradWithArgmaxNHWCTilingCommon* NHWCBase;
     uint64_t GetTilingKey() const override;
