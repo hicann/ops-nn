@@ -74,7 +74,7 @@ __aicore__ inline void AvgPool3DGradNormal<T>::InitUbBuffer(GM_ADDR grads, GM_AD
     auto baseDiHiWiAlign16 = CeilDiv(this->baseDi * this->baseHi * this->baseWi, 16) * 16;
 
     if (std::is_same<T, float>::value) {
-        outputGradUbSize = max(baseDoHoWoAlign, baseDiHiWiAlign8) * this->singleCoreNc * sizeof(T);
+        outputGradUbSize = AvgPool3DGradUtils::max(baseDoHoWoAlign, baseDiHiWiAlign8) * this->singleCoreNc * sizeof(T);
         inputGradUbSize = baseDiHiWiAlign8 * this->singleCoreNc * sizeof(T);
         TranUbSize = baseDoHoWoAlign * this->singleCoreNc * sizeof(T);
         this->outputUbNum = outputGradUbSize / sizeof(T);
@@ -86,7 +86,7 @@ __aicore__ inline void AvgPool3DGradNormal<T>::InitUbBuffer(GM_ADDR grads, GM_AD
         inputGradUbSize = baseDiHiWiAlign8 * this->singleCoreNc * sizeof(float);
         this->outputUbNum = outputGradUbSize / sizeof(float);
     } else {
-        outputGradUbSize = max(baseDoHoWoAlign, baseDiHiWiAlign16) * this->singleCoreNc * sizeof(T);
+        outputGradUbSize = AvgPool3DGradUtils::max(baseDoHoWoAlign, baseDiHiWiAlign16) * this->singleCoreNc * sizeof(T);
         TranUbSize = baseDoHoWoAlign * this->singleCoreNc * sizeof(T);
         castUbSize = 2 * this->singleCoreNc * sizeof(float);
         inputGradUbSize = baseDiHiWiAlign16 * this->singleCoreNc * sizeof(T);

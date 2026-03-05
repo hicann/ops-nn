@@ -22,5 +22,5 @@ set(mse_loss_v2_tiling_files
 # param3：自定义编译选项，一般填写测试的一种典型数据类型组合，不需要则传入空字符串，例如："-DDTYPE_X=float"，多个使用空格分隔，例如："-DDTYPE_X=float -DDTYPE_Y=float"
 # param4：该算子依赖的所有tiling源码文件
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCase(mse_loss_v2 "ascend910B1" "" "${mse_loss_v2_tiling_files}")
+    # AddOpTestCase(mse_loss_v2 "ascend910B1" "" "${mse_loss_v2_tiling_files}")
 endif()

@@ -20,7 +20,6 @@
 #define ORIG_DTYPE_START DT_BF16
 #define __CCE_UT_TEST__
 
-#define __aicore__
 
 struct MseLossGradV2TilingData {
     float cof = 1.0;

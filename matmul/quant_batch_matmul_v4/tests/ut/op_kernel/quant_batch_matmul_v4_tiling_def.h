@@ -20,7 +20,9 @@
 #ifdef __CCE_KT_TEST__
 #include "kernel_log.h"
 #else
-#define __aicore__ [aicore]
+#ifndef __aicore__
+#define __aicore__  [aicore]
+#endif
 #endif
 
 

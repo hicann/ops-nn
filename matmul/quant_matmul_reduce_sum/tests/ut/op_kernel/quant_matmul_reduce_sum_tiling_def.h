@@ -20,7 +20,9 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "quant_matmul_reduce_sum_tiling_data.h"
 
+#ifndef __aicore__
 #define __aicore__
+#endif
 
 #pragma pack()
 

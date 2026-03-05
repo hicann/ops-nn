@@ -22,7 +22,6 @@
 
 #define __CCE_UT_TEST__
 
-#define __aicore__
 
 struct HeavisideTilingData {
     int32_t elementNum = 8;

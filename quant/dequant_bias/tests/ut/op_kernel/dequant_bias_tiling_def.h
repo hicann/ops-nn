@@ -31,7 +31,6 @@
 #define DTYPE_WEIGHT_SCALE int
 #endif
 
-#define __aicore__
 
 struct DequantBiasTilingData {
   int64_t M = 40;

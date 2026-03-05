@@ -12,7 +12,6 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 
-#define __aicore__
 
 struct EmbeddingDenseGradV2TilingParam {
     uint32_t coreNum;

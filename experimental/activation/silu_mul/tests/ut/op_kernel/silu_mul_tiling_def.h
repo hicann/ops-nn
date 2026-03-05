@@ -23,7 +23,6 @@
 
 #define __CCE_UT_TEST__
 
-#define __aicore__
 
 struct SiluMulTilingData {
   int32_t lastDimSize = 4;

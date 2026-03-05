@@ -20,8 +20,6 @@
 #define __CCE_UT_TEST__
 
 
-#define __aicore__
-
 struct SquaredReluTilingData {
   int32_t elementNum = 8;
   uint32_t needCoreNum = 1;

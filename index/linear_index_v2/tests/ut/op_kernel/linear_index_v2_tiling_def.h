@@ -16,7 +16,6 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 
-#define __aicore__
 
 struct LinearIndexV2TilingParam {
     uint64_t usedCoreNum = 0;

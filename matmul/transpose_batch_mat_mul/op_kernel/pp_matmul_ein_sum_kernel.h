@@ -19,8 +19,6 @@
 #ifdef __CCE_KT_TEST__
 #include "stub_def.h"
 #include "stub_fun.h"
-#else
-#define __aicore__ [aicore]
 #endif
 #include "utils/common_func.h"
 #include "utils/common.h"

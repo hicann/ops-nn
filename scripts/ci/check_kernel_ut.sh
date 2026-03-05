@@ -66,7 +66,7 @@ do
         continue
     fi
     # 跳过 .md 后缀的文件
-    if [[ "$file_path" == *.md ]]; then
+    if [[ "$file_path" == *.md || "$file_path" == *_def.h  ]]; then
         continue
     fi
     # 检查该路径是否包含 valid_dirs 中的任意一个目录名

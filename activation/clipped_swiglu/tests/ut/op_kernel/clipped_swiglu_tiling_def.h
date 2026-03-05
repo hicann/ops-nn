@@ -16,7 +16,6 @@
 #define DT_BF16 bfloat16_t
 #define ORIG_DTYPE_X DT_BF16
 #define __CCE_UT_TEST__
-#define __aicore__
 
 #pragma pack(1)
 struct ClippedSwigluTilingData {

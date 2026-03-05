@@ -12,7 +12,6 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 
-#define __aicore__
 #define DTYPE_GRADS half
 #define __CCE_UT_TEST__
 #define __CCE_AICORE__ 220

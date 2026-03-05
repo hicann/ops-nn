@@ -17,7 +17,6 @@
 
 #define __CCE_UT_TEST__
 
-#define __aicore__
 
 struct GeluMulTilingData {
   int32_t lastDimSize = 4;

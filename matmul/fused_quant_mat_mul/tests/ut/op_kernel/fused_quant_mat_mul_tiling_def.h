@@ -14,7 +14,6 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "../quant_batch_matmul_v3/quant_batch_matmul_v3_kernel_tiling_data.h"
 
-#define __aicore__
 
 constexpr uint16_t MAX_TENSOR_CONT = 256;
 constexpr uint16_t MAX_CORE_CONT = 64;

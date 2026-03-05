@@ -14,7 +14,6 @@
 #include <cstdint>
 #include "kernel_tiling/kernel_tiling.h"
 
-#define __aicore__
 
 #define DT_BF16 bfloat16_t
 #define ORIG_DTYPE_START DT_BF16

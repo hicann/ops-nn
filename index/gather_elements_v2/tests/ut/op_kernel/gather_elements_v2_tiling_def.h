@@ -18,7 +18,6 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 
-#define __aicore__
 #define DTYPE_X float
 
 struct GatherElementsV2TilingParam {

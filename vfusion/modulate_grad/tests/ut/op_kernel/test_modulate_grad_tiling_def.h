@@ -12,7 +12,6 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 
-#define __aicore__
 
 #pragma pack(1)
 struct ModulateTilingData {

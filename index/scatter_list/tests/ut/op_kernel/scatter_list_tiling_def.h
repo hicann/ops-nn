@@ -17,7 +17,6 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 
-#define __aicore__
 
 struct ScatterListTilingData {
     int64_t dim0Count = 0;

@@ -18,7 +18,6 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 
-#define __aicore__
 
 struct ExpandIntoJaggedPermuteTilingDataDef {
     int64_t realCoreNum = 0;

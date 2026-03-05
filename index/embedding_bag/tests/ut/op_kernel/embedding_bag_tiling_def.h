@@ -12,7 +12,6 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 
-#define __aicore__
 
 struct EmbeddingBagTilingData {
     int64_t formerOffsetNum;

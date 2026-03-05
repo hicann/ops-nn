@@ -18,7 +18,9 @@
 
 #include <cstdint>
 
+#ifndef __aicore__
 #define __aicore__
+#endif
 
 constexpr uint16_t MAX_TENSOR_CONT_NORM = 256;
 constexpr uint16_t MAX_CORE_CONT_NORM = 64;

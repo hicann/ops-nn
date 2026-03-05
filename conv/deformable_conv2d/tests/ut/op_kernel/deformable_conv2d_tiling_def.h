@@ -19,7 +19,6 @@
 #include <cstdint>
 #include "kernel_tiling/kernel_tiling.h"
 
-#define __aicore__
 #define DTYPE_X float_t
 
 struct DeformableConv2dTilingData {

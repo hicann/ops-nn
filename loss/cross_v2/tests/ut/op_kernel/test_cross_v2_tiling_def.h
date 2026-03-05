@@ -25,7 +25,6 @@
 #define ORIG_DTYPE_START DT_BF16
 #define __CCE_UT_TEST__
 
-#define __aicore__
 
 struct CrossV2TilingDataTest {
     uint64_t stepSize;

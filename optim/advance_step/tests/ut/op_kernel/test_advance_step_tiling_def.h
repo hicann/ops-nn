@@ -16,7 +16,6 @@
 #include <cstring>
 
 #define __CCE_UT_TEST__
-#define __aicore__
 
 struct AdvanceStepTilingDataTest {
     int64_t needCoreNum = 40;
