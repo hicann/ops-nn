@@ -252,7 +252,7 @@ bool ConvBase::IsFp32InputFp32Output()
         descInfo_.weightDtype == ge::DataType::DT_FLOAT &&
         descInfo_.outDtype == ge::DataType::DT_FLOAT;
  
-    if (flagInfo_.hasBias) {
+    if (flagInfo_.hasBias && ret) {
         ret = descInfo_.biasDtype == ge::DataType::DT_FLOAT;
     }
     return ret;

@@ -321,7 +321,7 @@ ge::graphStatus Conv2dBaseTiling::CheckEnableHf32Legal()
         descInfo_.weightDtype == ge::DataType::DT_FLOAT &&
         descInfo_.outDtype == ge::DataType::DT_FLOAT;
  
-    if (flagInfo_.hasBias) {
+    if (flagInfo_.hasBias && IsFp32InputFp32OutputFlag) {
         IsFp32InputFp32OutputFlag = descInfo_.biasDtype == ge::DataType::DT_FLOAT;
     }
     bool enbaleHf32 = *enableHf32Ptr;

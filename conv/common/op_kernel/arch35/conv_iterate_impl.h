@@ -85,15 +85,15 @@ template <class Intf, uint32_t ImplType>
 __aicore__ void Iterate<Intf, ImplType>::ReduceOneK(Intf *self)
 {
     if (unlikely(self->ctx.loadAL1Flag)) {
-        LoadAL1Moudle<Intf>(self);
+        LoadAL1Module<Intf>(self);
         self->ctx.al1 = self->ctx.queueAL1.template DeQue<typename Intf::FmapT>();
     }
     if (unlikely(self->ctx.loadBL1Flag)) {
-        LoadBL1Moudle<Intf>(self);
+        LoadBL1Module<Intf>(self);
         self->ctx.bl1 = self->ctx.queueBL1.template DeQue<typename Intf::WeightT>();
     }
 
-    LoadL0Moudle<Intf>(self, self->ctx.kL0FullLoadAl0PingPongFlag, self->ctx.kL0FullLoadBl0PingPongFlag, true);
+    LoadL0Module<Intf>(self, self->ctx.kL0FullLoadAl0PingPongFlag, self->ctx.kL0FullLoadBl0PingPongFlag, true);
 }
 
 template <class Intf, uint32_t ImplType>
@@ -168,7 +168,7 @@ __aicore__ void Iterate<Intf, ImplType>::ReduceKPreloadFmapIter(Intf *self, Temp
                 self->ctx.queueAL1.FreeTensor(self->ctx.al1);
             }
             if (!UpdateItersByFmap(self, tempIters, updateIterByFmapTag)) {
-                LoadAL1BaseMoudle<Intf>(self, tempIters);
+                LoadAL1BaseModule<Intf>(self, tempIters);
             }
         }
         if ((self->ctx.ddr2l0LoopK % self->ctx.multiKAL1 == 0 &&
@@ -194,7 +194,7 @@ __aicore__ void Iterate<Intf, ImplType>::ReduceKPreloadWeightIter(Intf *self, Te
                 self->ctx.queueBL1.FreeTensor(self->ctx.bl1);
             }
             if (!UpdateItersByWeight(self, tempIters, updateIterByFmapTag)) {
-                LoadBL1BaseMoudle<Intf>(self, tempIters);
+                LoadBL1BaseModule<Intf>(self, tempIters);
             }
         }
         if ((self->ctx.ddr2l0LoopK % self->ctx.multiKBL1 == 0 &&
@@ -222,7 +222,7 @@ __aicore__ void Iterate<Intf, ImplType>::ReduceKPreload(Intf *self)
     }
     if (self->ctx.loadAL1Flag || !self->ctx.kAL1fullload) {
         self->ctx.kAL1Iter = 0;
-        LoadAL1BaseMoudle<Intf>(self);
+        LoadAL1BaseModule<Intf>(self);
         if (self->ctx.kAL1fullload) {
             self->ctx.al1 = self->ctx.queueAL1.template DeQue<typename Intf::FmapT>();
             self->ctx.loadAL0Flag = true;
@@ -230,7 +230,7 @@ __aicore__ void Iterate<Intf, ImplType>::ReduceKPreload(Intf *self)
     }
     if (self->ctx.loadBL1Flag || !self->ctx.kBL1fullload) {
         self->ctx.kBL1Iter = 0;
-        LoadBL1BaseMoudle<Intf>(self);
+        LoadBL1BaseModule<Intf>(self);
         if (self->ctx.kBL1fullload) {
             self->ctx.bl1 = self->ctx.queueBL1.template DeQue<typename Intf::WeightT>();
             self->ctx.loadBL0Flag = true;
@@ -246,7 +246,7 @@ __aicore__ void Iterate<Intf, ImplType>::ReduceKPreload(Intf *self)
         ReduceKPreloadFmapIter(self, tempIters, updateIterByFmapTag);
         ReduceKPreloadWeightIter(self, tempIters, updateIterByFmapTag);
 
-        LoadL0Moudle<Intf>(self, al0PingPongFlag, bl0PingPongFlag, isFirst);
+        LoadL0Module<Intf>(self, al0PingPongFlag, bl0PingPongFlag, isFirst);
         isFirst = false;
     }
 }
@@ -263,7 +263,7 @@ __aicore__ void Iterate<Intf, ImplType>::ReduceKFmapPreload(Intf *self)
     }
     if (self->ctx.loadAL1Flag || !self->ctx.kAL1fullload) {
         self->ctx.kAL1Iter = 0;
-        LoadAL1BaseMoudle<Intf>(self);
+        LoadAL1BaseModule<Intf>(self);
         if (self->ctx.kAL1fullload) {
             self->ctx.al1 = self->ctx.queueAL1.template DeQue<typename Intf::FmapT>();
             self->ctx.loadAL0Flag = true;
@@ -279,11 +279,11 @@ __aicore__ void Iterate<Intf, ImplType>::ReduceKFmapPreload(Intf *self)
         ReduceKPreloadFmapIter(self, tempIters, updateIterByFmapTag);
 
         if (self->ctx.loadBL1Flag || self->ctx.kIter % self->ctx.multiKBL1 == 0) {
-            LoadBL1Moudle<Intf>(self);
+            LoadBL1Module<Intf>(self);
             self->ctx.loadBL0Flag = true;
         }
 
-        LoadL0Moudle<Intf>(self, al0PingPongFlag, bl0PingPongFlag, isFirst);
+        LoadL0Module<Intf>(self, al0PingPongFlag, bl0PingPongFlag, isFirst);
         isFirst = false;
     }
 }
@@ -301,13 +301,13 @@ __aicore__ void Iterate<Intf, ImplType>::ReduceK(Intf *self)
             if (self->ctx.kIter != 0) {
                 self->ctx.queueAL1.FreeTensor(self->ctx.al1);
             }
-            LoadAL1Moudle<Intf>(self);
+            LoadAL1Module<Intf>(self);
             self->ctx.al1 = self->ctx.queueAL1.template DeQue<typename Intf::FmapT>();
             self->ctx.loadAL0Flag = true;
         }
         if constexpr (Intf::weightUbTrans) {
             if (self->ctx.loadBL1Flag || self->ctx.kIter % self->ctx.multiKBL1 == 0) {
-                LoadBL1Moudle<Intf>(self);
+                LoadBL1Module<Intf>(self);
                 self->ctx.loadBL0Flag = true;
             }
         } else {
@@ -315,13 +315,13 @@ __aicore__ void Iterate<Intf, ImplType>::ReduceK(Intf *self)
                 if (self->ctx.kIter != 0) {
                     self->ctx.queueBL1.FreeTensor(self->ctx.bl1);
                 }
-                LoadBL1Moudle<Intf>(self);
+                LoadBL1Module<Intf>(self);
                 self->ctx.bl1 = self->ctx.queueBL1.template DeQue<typename Intf::WeightT>();
                 self->ctx.loadBL0Flag = true;
             }
         }
 
-        LoadL0Moudle<Intf>(self, al0PingPongFlag, bl0PingPongFlag, isFirst);
+        LoadL0Module<Intf>(self, al0PingPongFlag, bl0PingPongFlag, isFirst);
         isFirst = false;
     }
 }
@@ -374,7 +374,7 @@ __aicore__ void Iterate<Intf, ImplType>::ReduceGroupOptFmapPreload(Intf *self)
     if (self->ctx.loadAL1Flag && !tempIters.endTag) {
         self->ctx.kAL1Iter = 0;
         self->ctx.mAL1UpdateFlag = true;
-        LoadAL1BaseMoudle<Intf>(self, tempIters);
+        LoadAL1BaseModule<Intf>(self, tempIters);
     }
     self->ctx.al1 = self->ctx.queueAL1.template DeQue<typename Intf::FmapT>();
     self->ctx.loadAL0Flag = true;
@@ -383,11 +383,11 @@ __aicore__ void Iterate<Intf, ImplType>::ReduceGroupOptFmapPreload(Intf *self)
     uint16_t bl0PingPongFlag = 0;
     bool isFirst = true;
     if (self->ctx.loadBL1Flag) {
-        LoadBL1Moudle<Intf>(self);
+        LoadBL1Module<Intf>(self);
         self->ctx.loadBL0Flag = true;
     }
     while (self->ctx.kIter < self->ctx.ddr2l0LoopK) {
-        LoadL0Moudle<Intf>(self, al0PingPongFlag, bl0PingPongFlag, isFirst);
+        LoadL0Module<Intf>(self, al0PingPongFlag, bl0PingPongFlag, isFirst);
         isFirst = false;
     }
 }

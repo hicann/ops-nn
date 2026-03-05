@@ -93,10 +93,10 @@ public:
                             (self_->ctx.mStartPos + self_->ctx.mAL1Iter * self_->ctx.mAL1) % self_->ctx.orgWo;
             xmtmp_ = ((currentML0_ & MASK_16) << MSTEP_OFFSET) | ((posM & MASK_16) << POSM_OFFSET);
             xt_ = ((static_cast<uint64_t>(self_->ctx.convTiling->strideW) & MASK_6) << 0) |
-                  ((static_cast<uint64_t>(self_->ctx.convTiling->strideH) & MASK_6) << STRIDEH_OFFSET) |
                   ((static_cast<uint64_t>(self_->ctx.kernelW) & MASK_8) << KERNELW_OFFSET) |
-                  ((static_cast<uint64_t>(self_->ctx.kernelW) & NINTH_BIT_MASK) << KERNELW_HIGHEST_BIT_OFFSET) |
                   ((static_cast<uint64_t>(self_->ctx.kernelH) & MASK_8) << KERNELH_OFFSET) |
+                  ((static_cast<uint64_t>(self_->ctx.convTiling->strideH) & MASK_6) << STRIDEH_OFFSET) |
+                  ((static_cast<uint64_t>(self_->ctx.kernelW) & NINTH_BIT_MASK) << KERNELW_HIGHEST_BIT_OFFSET) |
                   ((static_cast<uint64_t>(self_->ctx.kernelH) & NINTH_BIT_MASK) << KERNELH_HIGHEST_BIT_OFFSET) |
                   ((static_cast<uint64_t>(self_->ctx.convTiling->dilationW) & MASK_8) << DILATIONW_OFFSET) |
                   ((static_cast<uint64_t>(self_->ctx.convTiling->dilationH) & MASK_8) << DILATIONH_OFFSET) |
@@ -155,16 +155,16 @@ public:
     __aicore__ inline CopyOutToolsMMode()
     {}
 
-    __aicore__ inline void SetParams(Intf *self)
-    {
-        self_ = self;
-        valueHoWo_ = self_->ctx.orgHo * self_->ctx.orgWo;
-    }
-
     __aicore__ inline void SetMN(uint64_t m, uint64_t n)
     {
         currentML0_ = m;
         currentNL0_ = n;
+    }
+
+    __aicore__ inline void SetParams(Intf *self)
+    {
+        self_ = self;
+        valueHoWo_ = self_->ctx.orgHo * self_->ctx.orgWo;
     }
 
     template <template <typename> class TensorTypeT, const FixpipeConfig &config>
@@ -181,10 +181,10 @@ public:
             FixpipeParamsC310<config.format> intriParams;
             if constexpr (Intf::posOutput == TPosition::VECCALC) {
                 SetFixpipeIntriParamsUb<config.format>(intriParams, ubInfo);
-                if (ubInfo->realNUb == 0 || ubInfo->realWUb == 0) {
+                if (ubInfo->realWUb == 0 || ubInfo->realNUb == 0) {
                     return;
                 }
-            } else if constexpr (Intf::formatOutput == ConvFormat::NDHWC || Intf::formatOutput == ConvFormat::NHWC) {
+            } else if constexpr (Intf::formatOutput == ConvFormat::NHWC || Intf::formatOutput == ConvFormat::NDHWC) {
                 SetFixpipeIntriParamsHWC(intriParams);
             } else {
                 SetFixpipeIntriParams(intriParams);
@@ -193,11 +193,11 @@ public:
             if constexpr (Intf::isExtendConv2d) {
                 ExtendConv2DFixpipe<TensorTypeT, config>(output, intriParams, offset);
             } else if constexpr (Intf::isQuantScene) {
-                if (self_->ctx.convTiling->hasScale != 0) {
+                if (self_->ctx.convTiling->hasScale == 0) {
+                    Fixpipe<OutputT, typename Intf::L0cT, config>(output[offset], self_->ctx.cl0, intriParams);
+                } else {
                     Fixpipe<OutputT, typename Intf::L0cT, config>(
                         output[offset], self_->ctx.cl0, self_->ctx.scaleL1[GetScaleL1Addr()], intriParams);
-                } else {
-                    Fixpipe<OutputT, typename Intf::L0cT, config>(output[offset], self_->ctx.cl0, intriParams);
                 }
             } else {
                 Fixpipe<OutputT, typename Intf::L0cT, config>(output[offset], self_->ctx.cl0, intriParams);
@@ -326,6 +326,52 @@ private:
     }
 
     template <CO2Layout format>
+    __aicore__ inline void SetBaseParams(FixpipeParamsC310<format> &intriParams)
+    {
+        intriParams.quantPre = GetQuantPre<Intf, OutputT, FixpipeIdx>(self_);
+        if (self_->ctx.convTiling->hasScale == 0) {
+            intriParams.deqScalar = DEQ_SCALAR_ONE;
+        }
+        if constexpr (Intf::isExtendConv2d) {
+            if constexpr (FixpipeIdx == 0) {
+                intriParams.deqScalar = self_->ctx.deqScalar0;
+                intriParams.reluEn = self_->ctx.convTiling->reluMode0 != 0;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+                intriParams.preReluMode = static_cast<ReluMode>(self_->ctx.convTiling->reluMode0);
+                if (self_->ctx.convTiling->reluMode0 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
+                    intriParams.reluScalar = self_->ctx.preReluScalar0;
+                }
+#endif
+            } else {
+                intriParams.deqScalar = self_->ctx.deqScalar1;
+                intriParams.reluEn = self_->ctx.convTiling->reluMode1 != 0;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+                intriParams.preReluMode = static_cast<ReluMode>(self_->ctx.convTiling->reluMode1);
+                if (self_->ctx.convTiling->reluMode1 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
+                    intriParams.reluScalar = self_->ctx.preReluScalar1;
+                }
+#endif
+            }
+        }
+
+        if constexpr (!Intf::isInnerBatchFlag) {
+            if constexpr (FixpipeIdx == 1) {
+                intriParams.unitFlag = UNIT_FLAG_ENABLE_WITH_FLIP;
+            } else {
+                if constexpr (Intf::isExtendConv2d) {
+                    if (!self_->ctx.convTiling->dualOutput) {
+                        intriParams.unitFlag = UNIT_FLAG_ENABLE_WITH_FLIP;
+                    } else {
+                        intriParams.unitFlag = UNIT_FLAG_ENABLE_ONLY;
+                    }
+                } else {
+                    intriParams.unitFlag = UNIT_FLAG_ENABLE_WITH_FLIP;
+                }
+            }
+        }
+    }
+
+    template <CO2Layout format>
     __aicore__ inline void SetFixpipeIntriParamsUb(FixpipeParamsC310<format> &intriParams, CopyUbInfo* ubInfo = nullptr)
     {
         if (ubInfo == nullptr) {
@@ -376,52 +422,6 @@ private:
         SetBaseParams<format>(intriParams);
     }
 
-    template <CO2Layout format>
-    __aicore__ inline void SetBaseParams(FixpipeParamsC310<format> &intriParams)
-    {
-        intriParams.quantPre = GetQuantPre<Intf, OutputT, FixpipeIdx>(self_);
-        if (self_->ctx.convTiling->hasScale == 0) {
-            intriParams.deqScalar = DEQ_SCALAR_ONE;
-        }
-        if constexpr (Intf::isExtendConv2d) {
-            if constexpr (FixpipeIdx == 0) {
-                intriParams.reluEn = self_->ctx.convTiling->reluMode0 != 0;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-                intriParams.preReluMode = static_cast<ReluMode>(self_->ctx.convTiling->reluMode0);
-                if (self_->ctx.convTiling->reluMode0 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
-                    intriParams.reluScalar = self_->ctx.preReluScalar0;
-                }
-#endif
-                intriParams.deqScalar = self_->ctx.deqScalar0;
-            } else {
-                intriParams.reluEn = self_->ctx.convTiling->reluMode1 != 0;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-                intriParams.preReluMode = static_cast<ReluMode>(self_->ctx.convTiling->reluMode1);
-                if (self_->ctx.convTiling->reluMode1 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
-                    intriParams.reluScalar = self_->ctx.preReluScalar1;
-                }
-#endif
-                intriParams.deqScalar = self_->ctx.deqScalar1;
-            }
-        }
-
-        if constexpr (!Intf::isInnerBatchFlag) {
-            if constexpr (FixpipeIdx == 1) {
-                intriParams.unitFlag = UNIT_FLAG_ENABLE_WITH_FLIP;
-            } else {
-                if constexpr (Intf::isExtendConv2d) {
-                    if (self_->ctx.convTiling->dualOutput) {
-                        intriParams.unitFlag = UNIT_FLAG_ENABLE_ONLY;
-                    } else {
-                        intriParams.unitFlag = UNIT_FLAG_ENABLE_WITH_FLIP;
-                    }
-                } else {
-                    intriParams.unitFlag = UNIT_FLAG_ENABLE_WITH_FLIP;
-                }
-            }
-        }
-    }
-
     __aicore__ inline uint64_t CalcFixpipeOffset()
     {
         uint64_t offset = self_->ctx.batchIter * self_->ctx.outputOneBatchSize;
@@ -450,23 +450,13 @@ private:
         return offset;
     }
 
-    __aicore__ inline uint64_t GetScaleL1Addr()
-    {
-        if constexpr (Intf::isQuantScene) {
-            if (self_->ctx.convTiling->hasScale != 0 && self_->ctx.convTiling->fixpParamsFullLoadFlag) {
-                return self_->ctx.nBL1Iter * self_->ctx.convTiling->nBL1 +
-                       self_->ctx.nL0Iter * self_->ctx.convTiling->nL0;
-            }
-        }
-
-        return 0;
-    }
-
     template <template <typename> class TensorTypeT, const FixpipeConfig &config>
     __aicore__ inline void ExtendConv2DFixpipe(const TensorTypeT<OutputT> &output, 
         FixpipeParamsC310<config.format> &intriParams, uint64_t offset)
     {
-        if (self_->ctx.enableVectorQuant) {
+        if (!self_->ctx.enableVectorQuant) {
+            Fixpipe<OutputT, typename Intf::L0cT, config>(output[offset], self_->ctx.cl0, intriParams);
+        } else {
             if constexpr (FixpipeIdx == 0) {
                 Fixpipe<OutputT, typename Intf::L0cT, config>(
                     output[offset], self_->ctx.cl0, self_->ctx.scaleL1[GetExtendConv2dScaleL1Addr()], intriParams);
@@ -475,9 +465,19 @@ private:
                     output[offset], self_->ctx.cl0,
                     self_->ctx.scaleL1[GetExtendConv2dScaleL1Addr() + self_->ctx.scale1L1offset], intriParams);
             }
-        } else {
-            Fixpipe<OutputT, typename Intf::L0cT, config>(output[offset], self_->ctx.cl0, intriParams);
         }
+    }
+
+    __aicore__ inline uint64_t GetScaleL1Addr()
+    {
+        if constexpr (Intf::isQuantScene) {
+            if (self_->ctx.convTiling->fixpParamsFullLoadFlag && self_->ctx.convTiling->hasScale != 0) {
+                return self_->ctx.nBL1Iter * self_->ctx.convTiling->nBL1 +
+                       self_->ctx.nL0Iter * self_->ctx.convTiling->nL0;
+            }
+        }
+
+        return 0;
     }
 
     __aicore__ inline uint64_t GetExtendConv2dScaleL1Addr()

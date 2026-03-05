@@ -155,7 +155,7 @@ __aicore__ inline void FirstIterateImplHWMode(Intf *self)
     CalcCoDirectionVar<Intf>(self);
 
     if constexpr (Intf::groupOptPreloadFlag) {
-        LoadAL1BaseMoudle<Intf>(self);
+        LoadAL1BaseModule<Intf>(self);
         self->ctx.loadAL1Flag = true;
     }
 }
