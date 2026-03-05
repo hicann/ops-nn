@@ -82,9 +82,9 @@ struct MmOpInfo {
 };
 
 struct TensorInfo {
-  const aclTensor* tensor;
-  op::DataType dataType;
-  op::Format format;
+  const aclTensor* tensor = nullptr;
+  op::DataType dataType = op::DataType::DT_FLOAT;
+  op::Format format = Format::FORMAT_ND;
 };
 
 op::Shape SwapLastTwoDimValue(const op::Shape tensorShape, int64_t last = 1UL, int64_t secondLast = 2UL);
@@ -290,9 +290,9 @@ public:
 
     // 初步推导后的类型及兼容记录
     struct PromoteResult {
-        op::DataType type;
-        bool isError;
-        const char* logMessage;
+        op::DataType type = op::DataType::DT_FLOAT;
+        bool isError = false;
+        const char* logMessage = nullptr;
 
         constexpr PromoteResult(op::DataType dataType, bool err, const char* msg) : type(dataType), isError(err), logMessage(msg) {}
     };

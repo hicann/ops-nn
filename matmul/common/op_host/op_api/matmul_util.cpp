@@ -2197,7 +2197,7 @@ aclnnStatus NpuArchMatMulRuleBase::GetUpperDtype(
 
     PromoteResult result = GetUpperDtypeByLookUpTable(inputCase, cubeMathType);
     // process result
-    if (result.isError) {
+    if (result.logMessage != nullptr && result.isError) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s", result.logMessage);
         return ACLNN_ERR_PARAM_INVALID;
     }
