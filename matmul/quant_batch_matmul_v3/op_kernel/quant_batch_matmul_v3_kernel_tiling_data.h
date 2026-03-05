@@ -107,6 +107,7 @@ struct QuantMatmulPertokenTilingDataArch20 {
     uint32_t swizzlDirect;
     uint32_t swizzlCount;
     bool withBias;
+    bool biasWithBatch;
 };
 #pragma pack(pop)
 

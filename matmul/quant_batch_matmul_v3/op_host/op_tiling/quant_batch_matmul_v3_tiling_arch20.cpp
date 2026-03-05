@@ -32,7 +32,7 @@ bool IsSocVersionArch20Pertoken(gert::TilingContext* context)
     OP_TILING_CHECK(context == nullptr, OP_LOGE("Arch20Pertoken: ", "context is nullptr"), return false);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     auto npuArch = ascendcPlatform.GetCurNpuArch();
-    if (npuArch == NpuArch::DAV_2002 && context->GetInputDesc(3) != nullptr && context->GetInputDesc(5) != nullptr) {
+    if (npuArch == NpuArch::DAV_2002 && context->GetOptionalInputDesc(5) != nullptr) {
         return true;
     }
     return false;
@@ -87,7 +87,12 @@ ge::graphStatus QuantBatchMatmulPertokenArch20::PostTiling()
     }
     context_->GetRawTilingData()->SetDataSize(tilingDataSize);
     context_->SetTilingKey(tilingKey_);
-    context_->SetBlockDim(1);
+    context_->SetBlockDim(qbmmTilingDataArch20_.blockDim);
+
+    size_t sysWorkspaceSize = static_cast<size_t>(16 * 1024 * 1024);  // 24M same as ppmatmul tiling
+    size_t* currentWorkSpace = context_->GetWorkspaceSizes(1);
+
+    currentWorkSpace[0] = sysWorkspaceSize;
 
     return ge::GRAPH_SUCCESS;
 }
@@ -99,8 +104,16 @@ ge::graphStatus QuantBatchMatmulPertokenArch20::DoTiling()
     auto cShape = context_->GetOutputShape(0)->GetOriginShape();
     size_t aDims = aShape.GetDimNum();
     size_t bDims = bShape.GetDimNum();
-    if (context_->GetInputDesc(4) != nullptr && context_->GetInputDesc(3) == nullptr) {
+    if (context_->GetOptionalInputDesc(4) != nullptr && context_->GetOptionalInputDesc(3) == nullptr) {
         qbmmTilingDataArch20_.withBias = true;
+        auto biasShape = context_->GetOptionalInputShape(4)->GetOriginShape();
+        if (biasShape.GetDimNum() == 1){
+            qbmmTilingDataArch20_.biasWithBatch = false;
+        } else if(biasShape.GetDimNum() != 1 && biasShape.GetDimNum() == 3) { 
+            qbmmTilingDataArch20_.biasWithBatch = true;
+        } else{
+            OP_LOGW(context_->GetNodeName(),"Arch20 Pertoken mode bias only support [n] or [b, 1, n]");
+        }
     }
 
     std::vector<int64_t> oriShapeTable;
@@ -133,19 +146,7 @@ ge::graphStatus QuantBatchMatmulPertokenArch20::DoTiling()
     uint64_t IS_PERTOKEN = 1;          // pertoken
     uint64_t OPTION_ATTRS = 0;
     tilingKey_ = GET_TPL_TILING_KEY(TRANS, KERNEL_TEMPLATE_TYPE, IS_PERTOKEN, OPTION_ATTRS);
-    OP_LOGD(
-        context_->GetNodeName(),
-        "batchSize = %ld, m = %ld, k = %ld, n = %ld, \
-        m0 = % ld, \
-        k0 = % ld, n0 = % ld, mLoop = % ld, nLoop = % ld, kLoop = % ld, coreLoop = % ld, blockDim = % ld, \
-        swizzlDirect = % ld, swizzlCount = % ld, withBias = % ld, \
-        Tiling Key is 0x % x ", 
-        qbmmTilingDataArch20_.batchSize,
-        qbmmTilingDataArch20_.m, qbmmTilingDataArch20_.k, qbmmTilingDataArch20_.n, qbmmTilingDataArch20_.m0,
-        qbmmTilingDataArch20_.k0, qbmmTilingDataArch20_.n0, qbmmTilingDataArch20_.mLoop, qbmmTilingDataArch20_.nLoop,
-        qbmmTilingDataArch20_.kLoop, qbmmTilingDataArch20_.coreLoop, qbmmTilingDataArch20_.blockDim,
-        qbmmTilingDataArch20_.swizzlDirect, qbmmTilingDataArch20_.swizzlCount, qbmmTilingDataArch20_.withBias,
-        tilingKey_);
+
     ge::graphStatus ret = PostTiling();
     if (ret != ge::GRAPH_SUCCESS) {
         return ret;

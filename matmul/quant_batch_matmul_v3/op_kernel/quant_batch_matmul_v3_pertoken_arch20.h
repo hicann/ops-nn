@@ -75,26 +75,27 @@ public:
         n_loop_ = tilingData->nLoop;
         core_loop_ = tilingData->coreLoop;
         swizzl_cnt_ = tilingData->swizzlCount;
+        BiasWithBatch = tilingData->biasWithBatch;
 
-        l1_a_ping = buf.GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(0);
-        l1_a_pong = buf.GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(L1_PINGPONG_BUFFER_LEN_INT8);
-        l1_b_ping = buf.GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(L1_PINGPONG_BUFFER_LEN_INT8 * 2);
-        l1_b_pong = buf.GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(L1_PINGPONG_BUFFER_LEN_INT8 * 3);
-        l0_a_ping = buf.GetBuffer<BufferType::ASCEND_L0A, IN_DTYPE>(0);
-        l0_a_pong = buf.GetBuffer<BufferType::ASCEND_L0A, IN_DTYPE>(L0AB_PINGPONG_BUFFER_LEN_INT8);
-        l0_b_ping = buf.GetBuffer<BufferType::ASCEND_L0B, IN_DTYPE>(0);
-        l0_b_pong = buf.GetBuffer<BufferType::ASCEND_L0B, IN_DTYPE>(L0AB_PINGPONG_BUFFER_LEN_INT8);
+        l1_a_ping = buf.template GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(0);
+        l1_a_pong = buf.template GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(L1_PINGPONG_BUFFER_LEN_INT8);
+        l1_b_ping = buf.template GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(L1_PINGPONG_BUFFER_LEN_INT8 * 2);
+        l1_b_pong = buf.template GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(L1_PINGPONG_BUFFER_LEN_INT8 * 3);
+        l0_a_ping = buf.template GetBuffer<BufferType::ASCEND_L0A, IN_DTYPE>(0);
+        l0_a_pong = buf.template GetBuffer<BufferType::ASCEND_L0A, IN_DTYPE>(L0AB_PINGPONG_BUFFER_LEN_INT8);
+        l0_b_ping = buf.template GetBuffer<BufferType::ASCEND_L0B, IN_DTYPE>(0);
+        l0_b_pong = buf.template GetBuffer<BufferType::ASCEND_L0B, IN_DTYPE>(L0AB_PINGPONG_BUFFER_LEN_INT8);
 
-        ub_scale = buf.GetBuffer<BufferType::ASCEND_UB, DESCALE_TYPE>(0);
-        ub_c = buf.GetBuffer<BufferType::ASCEND_UB, half>(0 + 8 * 1024);
-        ub_a_temp = buf.GetBuffer<BufferType::ASCEND_UB, IN_DTYPE>(8 * 1024 + 64 * 1024);
-        ub_c_i32 = buf.GetBuffer<BufferType::ASCEND_UB, int32_t>(8 * 1024 + 64 * 1024);
-        ub_c_fp32 = buf.GetBuffer<BufferType::ASCEND_UB, float>(8 * 1024 + 64 * 1024);
+        ub_scale = buf.template GetBuffer<BufferType::ASCEND_UB, DESCALE_TYPE>(0);
+        ub_c = buf.template GetBuffer<BufferType::ASCEND_UB, half>(0 + 8 * 1024);
+        ub_a_temp = buf.template GetBuffer<BufferType::ASCEND_UB, IN_DTYPE>(8 * 1024 + 64 * 1024);
+        ub_c_i32 = buf.template GetBuffer<BufferType::ASCEND_UB, int32_t>(8 * 1024 + 64 * 1024);
+        ub_c_fp32 = buf.template GetBuffer<BufferType::ASCEND_UB, float>(8 * 1024 + 64 * 1024);
         if constexpr (BiasFlag) {
-            ub_bias = buf.GetBuffer<BufferType::ASCEND_UB, BIAS_TYPE>(8 * 1024 + 192 * 1024);
+            ub_bias = buf.template GetBuffer<BufferType::ASCEND_UB, BIAS_TYPE>(8 * 1024 + 192 * 1024);
         }
-        ub_pertoken_scale = buf.GetBuffer<BufferType::ASCEND_UB, float>(210 * 1024);
-        ub_pertoken_scale_calc = buf.GetBuffer<BufferType::ASCEND_UB, float>(214 * 1024);
+        ub_pertoken_scale = buf.template GetBuffer<BufferType::ASCEND_UB, float>(210 * 1024);
+        ub_pertoken_scale_calc = buf.template GetBuffer<BufferType::ASCEND_UB, float>(214 * 1024);
     }
 
     __aicore__ __force_inline__ void CopyTileA(
@@ -231,8 +232,9 @@ public:
 
             if constexpr (BiasFlag) {
                 WAIT_FLAG(V, MTE2, EVENT_ID0);
+                uint32_t bias_offset = BiasWithBatch ? b_idx * n_ + n_idx * n0_ : n_idx * n0_;
                 gm_to_ub<ArchType::ASCEND_V200, BIAS_TYPE>(
-                    ub_bias, gm_bias[b_idx * n_ + n_idx * n0_],
+                    ub_bias, gm_bias[bias_offset],
                     0,           // sid
                     1,           // nBurst
                     n_round / 8, // lenBurst
@@ -363,7 +365,7 @@ public:
             WAIT_FLAG(V, MTE2, EVENT_ID1);
             // copy x1Scale
             gm_to_ub<ArchType::ASCEND_V200, DESCALE_TYPE>(
-                ub_scale, gm_scale[b_idx * n_ + n_idx * n0_],
+                ub_scale, gm_scale[n_idx * n0_],
                 0,                             // sid
                 1,                             // nBurst
                 n_round / UB_SCALE_BLOCK_SIZE, // lenBurst
@@ -547,23 +549,23 @@ private:
     AscendC::GlobalTensor<DESCALE_TYPE> gm_scale;
     AscendC::GlobalTensor<DESCALE_TYPE> gm_pertoken_scale;
 
-    AscendC::LocalTensor<IN_DTYPE> l1_a_ping = buf.GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(0);
-    AscendC::LocalTensor<IN_DTYPE> l1_a_pong = buf.GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(0);
-    AscendC::LocalTensor<IN_DTYPE> l1_b_ping = buf.GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(0);
-    AscendC::LocalTensor<IN_DTYPE> l1_b_pong = buf.GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(0);
-    AscendC::LocalTensor<IN_DTYPE> l0_a_ping = buf.GetBuffer<BufferType::ASCEND_L0A, IN_DTYPE>(0);
-    AscendC::LocalTensor<IN_DTYPE> l0_a_pong = buf.GetBuffer<BufferType::ASCEND_L0A, IN_DTYPE>(0);
-    AscendC::LocalTensor<IN_DTYPE> l0_b_ping = buf.GetBuffer<BufferType::ASCEND_L0B, IN_DTYPE>(0);
-    AscendC::LocalTensor<IN_DTYPE> l0_b_pong = buf.GetBuffer<BufferType::ASCEND_L0B, IN_DTYPE>(0);
-    AscendC::LocalTensor<int32_t> l0c = buf.GetBuffer<BufferType::ASCEND_L0C, int32_t>(0);
-    AscendC::LocalTensor<half> ub_c = buf.GetBuffer<BufferType::ASCEND_UB, half>(0);
-    AscendC::LocalTensor<float> ub_c_fp32 = buf.GetBuffer<BufferType::ASCEND_UB, float>(0);
-    AscendC::LocalTensor<int32_t> ub_c_i32 = buf.GetBuffer<BufferType::ASCEND_UB, int32_t>(0);
-    AscendC::LocalTensor<IN_DTYPE> ub_a_temp = buf.GetBuffer<BufferType::ASCEND_UB, IN_DTYPE>(0);
-    AscendC::LocalTensor<DESCALE_TYPE> ub_scale = buf.GetBuffer<BufferType::ASCEND_UB, DESCALE_TYPE>(0);
-    AscendC::LocalTensor<BIAS_TYPE> ub_bias = buf.GetBuffer<BufferType::ASCEND_UB, BIAS_TYPE>(0);
-    AscendC::LocalTensor<float> ub_pertoken_scale = buf.GetBuffer<BufferType::ASCEND_UB, float>(0);
-    AscendC::LocalTensor<float> ub_pertoken_scale_calc = buf.GetBuffer<BufferType::ASCEND_UB, float>(0);
+    AscendC::LocalTensor<IN_DTYPE> l1_a_ping = buf.template GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(0);
+    AscendC::LocalTensor<IN_DTYPE> l1_a_pong = buf.template GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(0);
+    AscendC::LocalTensor<IN_DTYPE> l1_b_ping = buf.template GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(0);
+    AscendC::LocalTensor<IN_DTYPE> l1_b_pong = buf.template GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(0);
+    AscendC::LocalTensor<IN_DTYPE> l0_a_ping = buf.template GetBuffer<BufferType::ASCEND_L0A, IN_DTYPE>(0);
+    AscendC::LocalTensor<IN_DTYPE> l0_a_pong = buf.template GetBuffer<BufferType::ASCEND_L0A, IN_DTYPE>(0);
+    AscendC::LocalTensor<IN_DTYPE> l0_b_ping = buf.template GetBuffer<BufferType::ASCEND_L0B, IN_DTYPE>(0);
+    AscendC::LocalTensor<IN_DTYPE> l0_b_pong = buf.template GetBuffer<BufferType::ASCEND_L0B, IN_DTYPE>(0);
+    AscendC::LocalTensor<int32_t> l0c = buf.template GetBuffer<BufferType::ASCEND_L0C, int32_t>(0);
+    AscendC::LocalTensor<half> ub_c = buf.template GetBuffer<BufferType::ASCEND_UB, half>(0);
+    AscendC::LocalTensor<float> ub_c_fp32 = buf.template GetBuffer<BufferType::ASCEND_UB, float>(0);
+    AscendC::LocalTensor<int32_t> ub_c_i32 = buf.template GetBuffer<BufferType::ASCEND_UB, int32_t>(0);
+    AscendC::LocalTensor<IN_DTYPE> ub_a_temp = buf.template GetBuffer<BufferType::ASCEND_UB, IN_DTYPE>(0);
+    AscendC::LocalTensor<DESCALE_TYPE> ub_scale = buf.template GetBuffer<BufferType::ASCEND_UB, DESCALE_TYPE>(0);
+    AscendC::LocalTensor<BIAS_TYPE> ub_bias = buf.template GetBuffer<BufferType::ASCEND_UB, BIAS_TYPE>(0);
+    AscendC::LocalTensor<float> ub_pertoken_scale = buf.template GetBuffer<BufferType::ASCEND_UB, float>(0);
+    AscendC::LocalTensor<float> ub_pertoken_scale_calc = buf.template GetBuffer<BufferType::ASCEND_UB, float>(0);
 
     uint32_t b_{0};
     uint32_t m_{0};
@@ -577,6 +579,7 @@ private:
     uint32_t n_loop_{0};
     uint32_t core_loop_{0};
     uint32_t swizzl_cnt_{0};
+    bool BiasWithBatch{false};
 };
 
 #endif
