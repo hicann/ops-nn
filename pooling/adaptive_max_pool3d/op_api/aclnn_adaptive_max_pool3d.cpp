@@ -342,9 +342,16 @@ static aclnnStatus DoMaxPool3D(
     const aclIntArray* dilation = aclCreateIntArray(dilationArr.data(), dilationArr.size());
     bool ceilMode = false;
     std::string dataFormat = "NCDHW";
-
-    auto [outResult, indicesResult] =
-        l0op::MaxPool3DWithArgmaxV2Ncdhw(self, kernelSize, stride, padding, dilation, ceilMode, dataFormat, executor);
+    const aclTensor* outResult = nullptr;
+    const aclTensor* indicesResult = nullptr;
+    if (Ops::NN::AclnnUtil::IsRegbase()){
+        auto indicesDtype = indices->GetDataType();
+        std::tie(outResult, indicesResult) =
+            l0op::MaxPool3DWithArgmaxV2Ncdhw(self, kernelSize, stride, padding, dilation, ceilMode, dataFormat, executor, indicesDtype);
+    } else {
+        std::tie(outResult, indicesResult) = 
+            l0op::MaxPool3DWithArgmaxV2Ncdhw(self, kernelSize, stride, padding, dilation, ceilMode, dataFormat, executor);
+    }
     CHECK_RET(outResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(indicesResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
