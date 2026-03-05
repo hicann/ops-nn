@@ -18,6 +18,7 @@
 - 算子功能：根据输入的output_size计算每次kernel的大小，对输入x进行3维最大池化操作，输出池化后的值y和索引indices。
 
 - 计算公式：
+
   y tensor中对于DHW轴上每个位置为$(l,m,n)$的元素来说，其计算公式为：
   $$
   H^{m}_{left} = floor((m*H)/H_o)
@@ -64,41 +65,36 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>待进行AdaptiveMaxPool2d计算的入参。H轴W轴2个维度的乘积不能大于int32的最大表示。数据类型与出参`y`的保持一致。</td>
+      <td><ul><li>待进行AdaptiveMaxPool2d计算的入参。H轴W轴2个维度的乘积不能大于int32的最大表示。数据类型与出参y的保持一致。</li><li>shape为[N, C, Hin, Win]。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>output_size</td>
       <td>属性</td>
-      <td>表示输出结果在H，W维度上的空间大小。数据类型与入参`x`的保持一致。</td>
+      <td><ul><li>表示输出结果在H，W维度上的空间大小。数据类型与入参x的保持一致。</li><li>值为[Hout, Wout]。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>待进行AdaptiveMaxPool2d计算的出参。shape与出参`indices`的保持一致，数据类型与入参`x`的保持一致。</td>
+      <td><ul><li>待进行AdaptiveMaxPool2d计算的出参。shape与出参indices的保持一致，数据类型与入参x的保持一致。</li><li>shape为[N, C, Hout, Wout]。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>indices</td>
       <td>输出</td>
-      <td>表示`y`元素在输入`x`中的索引位置。shape与出参`y`的保持一致。</td>
+      <td><ul><li>表示y元素在输入x中的索引位置。shape与出参y的保持一致。</li><li>shape为[N, C, Hout, Wout]。</li></ul></td>
       <td>INT32</td>
       <td>ND</td>
     </tr>
   </tbody></table>
 
-
 ## 约束说明
-Shape描述：
-  - self.shape = (N, C, Hin, Win)
-  - outputSize = [Hout, Wout]
-  - outputOut.shape = (N, C, Hout, Wout)
-  - indicesOut.shape = (N, C, Hout, Wout)
 
+无
 
 ## 调用说明
 

@@ -1,4 +1,4 @@
-`# aclnnAdaptiveMaxPool2d
+# aclnnAdaptiveMaxPool2d
 
 [📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/pooling/adaptive_max_pool3d)
 
@@ -393,4 +393,4 @@ int main() {
   aclFinalize();
   return 0;
 }
-````
+```
