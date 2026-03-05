@@ -15,7 +15,11 @@
 #define QUANT_UPDATE_SCATTER_LARGE_ELE_LITTLE_QUANT_REGBASE_BASE_H_
 
 #include "kernel_tiling/kernel_tiling.h"
+#if ASC_DEVKIT_MAJOR >=9
+#include "basic_api/kernel_vec_intf.h"
+#else
 #include "kernel_operator.h"
+#endif
 
 namespace QuantUpdateScatter {
 using namespace AscendC;

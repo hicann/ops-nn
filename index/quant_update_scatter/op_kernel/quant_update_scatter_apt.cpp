@@ -12,7 +12,11 @@
  * \file quant_update_scatter_apt.cpp
  * \brief quant_update_scatter_apt kernel entry file
  */
+#if ASC_DEVKIT_MAJOR >=9
+#include "basic_api/kernel_vec_intf.h"
+#else
 #include "kernel_operator.h"
+#endif
 #include "arch35/quant_update_scatter_base.h"
 #include "arch35/quant_update_scatter_regbase.h"
 #include "arch35/quant_update_scatter_large_batch_regbase.h"

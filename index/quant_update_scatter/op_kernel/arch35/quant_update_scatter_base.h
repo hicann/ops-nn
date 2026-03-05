@@ -16,7 +16,11 @@
 #define QUANT_UPDATE_SCATTER_BASE_H_
 
 #include "kernel_tiling/kernel_tiling.h"
+#if ASC_DEVKIT_MAJOR >=9
+#include "basic_api/kernel_vec_intf.h"
+#else
 #include "kernel_operator.h"
+#endif
 #include "quant_update_scatter_tpl_def.h"
 
 namespace QuantUpdateScatter

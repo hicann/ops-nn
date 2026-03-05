@@ -16,7 +16,11 @@
 #define QUANT_UPDATE_SCATTER_LARGE_BATCH_LITTLE_QUANT_REGBASE_H_
 
 #include "kernel_tiling/kernel_tiling.h"
+#if ASC_DEVKIT_MAJOR >=9
+#include "basic_api/kernel_vec_intf.h"
+#else
 #include "kernel_operator.h"
+#endif
 
 namespace QuantUpdateScatter {
 using namespace AscendC;
@@ -453,7 +457,8 @@ public:
             axisOffset = iLocal.GetValue(0);
             actualBsIdx = updateDim0Idx * tilingData_.varDim1 + updateDim1Idx;
         }
-        gmVarOffset_ = actualBsIdx * tilingData_.dstBsStride + (axisOffset + innerLoopIdx) * tilingData_.innerLoopEle;
+        gmVarOffset_ = actualBsIdx * tilingData_.dstBsStride + axisOffset * tilingData_.varDim3 + 
+                       innerLoopIdx * tilingData_.innerLoopEle;
         event_t eventIDSToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
         SetFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
         WaitFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
