@@ -23,6 +23,7 @@
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
 #include "dynamic_mx_quant_with_dual_axis_struct.h"
+#include "dynamic_mx_quant_with_dual_axis_tilingdata.h"
 
 namespace DynamicMxQuantWithDualAxis {
 using namespace AscendC;

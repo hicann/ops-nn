@@ -14,6 +14,7 @@
  */
 
 #include "arch35/dynamic_mx_quant_with_dual_axis_base.h"
+#include "arch35/dynamic_mx_quant_with_dual_axis_tilingdata.h"
 
 #define FLOAT_OVERFLOW_MODE_CTRL 60
 
@@ -54,6 +55,7 @@ __global__ __aicore__ void dynamic_mx_quant_with_dual_axis(
     int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
 #endif
 
+    REGISTER_TILING_DEFAULT(DynamicMxQuantWithDualAxisTilingData);
     GET_TILING_DATA_WITH_STRUCT(DynamicMxQuantWithDualAxisTilingData, tilingData, tiling);
     TPipe pipe;
     constexpr AscendC::RoundMode ascendcRoundMode = RoundModeMapper<roundMode>::value;

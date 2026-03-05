@@ -20,38 +20,9 @@
 #include "op_host/tiling_util.h"
 #include "register/op_impl_registry.h"
 #include "op_host/tiling_templates_registry.h"
+#include "../op_kernel/arch35/dynamic_mx_quant_with_dual_axis_tilingdata.h"
 
 namespace optiling {
-BEGIN_TILING_DATA_DEF(DynamicMxQuantWithDualAxisTilingData)
-TILING_DATA_FIELD_DEF(int64_t, totalCoreNum);           // 总核数
-TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);            // 实际使用的核数
-TILING_DATA_FIELD_DEF(int64_t, roundMode);              // 数据类型转换的模式
-TILING_DATA_FIELD_DEF(int64_t, dstType);                // 输出y的数据类型
-TILING_DATA_FIELD_DEF(int64_t, scaleAlg);               // CuBlas实现或OCP实现，默认OCP实现
-TILING_DATA_FIELD_DEF(int64_t, blockSize);              //
-TILING_DATA_FIELD_DEF(int64_t, dim0);                   //
-TILING_DATA_FIELD_DEF(int64_t, dimNeg2);                //
-TILING_DATA_FIELD_DEF(int64_t, dimNeg1);                //
-TILING_DATA_FIELD_DEF(int64_t, blockW);                 // 所切基本块的宽
-TILING_DATA_FIELD_DEF(int64_t, splitBlockH);            // 所切基本块的高
-TILING_DATA_FIELD_DEF(int64_t, tilingKey);              //
-TILING_DATA_FIELD_DEF(int64_t, dimNeg2Tail);            // -2轴方向尾块
-TILING_DATA_FIELD_DEF(int64_t, dimNeg1Tail);            // -1轴方向尾块
-TILING_DATA_FIELD_DEF(int64_t, dimNeg2SplitBlockNum);   // -2轴切分基本块的个数
-TILING_DATA_FIELD_DEF(int64_t, dimNeg1BlockNum);        // 尾轴切分基本块的个数
-TILING_DATA_FIELD_DEF(int64_t, blockPerHeadCore);       // 正常核计算的task数
-TILING_DATA_FIELD_DEF(int64_t, blockPerTailCore);       // 尾核计算的task数
-TILING_DATA_FIELD_DEF(int64_t, headCoreNum);            // 正常核个数
-TILING_DATA_FIELD_DEF(int64_t, dimNeg2IsOdd);           // 量化轴block数是否是奇数
-TILING_DATA_FIELD_DEF(int64_t, dimNeg1IsOdd);           // 尾轴block数是否为奇数
-TILING_DATA_FIELD_DEF(int64_t, dimNeg1IsPad);           // 尾轴是否需要32对齐
-TILING_DATA_FIELD_DEF(int64_t, blockCountPerBatch);     // 一个batch轴切分块数
-TILING_DATA_FIELD_DEF(int64_t, scale1ColCountPerBatch); // 一个batch轴-1轴的scale列数
-TILING_DATA_FIELD_DEF(int64_t, scale2RowCountPerBatch); // 一个batch轴-2轴的scale的行数
-END_TILING_DATA_DEF;
-
-REGISTER_TILING_DATA_CLASS(DynamicMxQuantWithDualAxis, DynamicMxQuantWithDualAxisTilingData)
-
 struct DynamicMxQuantWithDualAxisCompileInfo {
     int64_t coreNum = 0;
     int64_t ubSize = 0;

@@ -28,10 +28,11 @@ constexpr int64_t ALIGN_NUM = 2;
 constexpr size_t MAX_DIM_NUM = 7;
 constexpr int64_t BLOCK_SIZE = 32;
 constexpr int64_t UNKNOWN_DIM_VALUE_ = -1LL;
-constexpr int64_t Y1_OUTTYPE_INDEX = 0;
-constexpr int64_t SCALE1_OUTTYPE_INDEX = 1;
-constexpr int64_t Y2_OUTTYPE_INDEX = 2;
-constexpr int64_t SCALE2_OUTTYPE_INDEX = 3;
+constexpr int64_t INDEX_INPUT_X = 0;
+constexpr int64_t INDEX_OUTPUT_Y1 = 0;
+constexpr int64_t INDEX_OUTPUT_SCALE1 = 1;
+constexpr int64_t INDEX_OUTPUT_Y2 = 2;
+constexpr int64_t INDEX_OUTPUT_SCALE2 = 3;
 
 static const std::initializer_list<ge::DataType> Y_SUPPORT_DTYPE_SET = {
     ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
@@ -39,25 +40,25 @@ static const std::initializer_list<ge::DataType> Y_SUPPORT_DTYPE_SET = {
 graphStatus InferShapeForDynamicMxQuantWithDualAxis(gert::InferShapeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Begin to do InferShapeForDynamicMxQuantWithDualAxis");
-    const gert::Shape* xShape = context->GetInputShape(0);
+    const gert::Shape* xShape = context->GetInputShape(INDEX_INPUT_X);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
 
-    gert::Shape* yShape1 = context->GetOutputShape(0);
+    gert::Shape* yShape1 = context->GetOutputShape(INDEX_OUTPUT_Y1);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape1);
 
-    gert::Shape* scaleShape1 = context->GetOutputShape(1);
+    gert::Shape* scaleShape1 = context->GetOutputShape(INDEX_OUTPUT_SCALE1);
     OP_CHECK_NULL_WITH_CONTEXT(context, scaleShape1);
 
-    gert::Shape* yShape2 = context->GetOutputShape(2);
+    gert::Shape* yShape2 = context->GetOutputShape(INDEX_OUTPUT_Y2);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape2);
 
-    gert::Shape* scaleShape2 = context->GetOutputShape(3);
+    gert::Shape* scaleShape2 = context->GetOutputShape(INDEX_OUTPUT_SCALE2);
     OP_CHECK_NULL_WITH_CONTEXT(context, scaleShape2);
-
-    std::string errMsg = optiling::ConcatString("Input x rank[", xShape->GetDimNum(), "] should be in [2, 7].");
+    
     OP_CHECK_IF(
         xShape->GetDimNum() < 2 || xShape->GetDimNum() > MAX_DIM_NUM,
-        CUBE_INNER_ERR_REPORT(context->GetNodeName(), "%s", errMsg.c_str()), return ge::GRAPH_FAILED);
+        OP_LOGE(context->GetNodeName(), "Input x rank[%lu] should be in [2, 7].", xShape->GetDimNum()),
+        return ge::GRAPH_FAILED);
 
     if (Ops::Base::IsUnknownRank(*xShape)) {
         OP_LOGD(context->GetNodeName(), "x shape is UnknownRank, set y, scale shape to (-2, )");
@@ -129,10 +130,10 @@ ge::graphStatus InferDataTypeForDynamicMxQuantWithDualAxis(gert::InferDataTypeCo
     OP_CHECK_IF(
         std::find(Y_SUPPORT_DTYPE_SET.begin(), Y_SUPPORT_DTYPE_SET.end(), outDtype) == Y_SUPPORT_DTYPE_SET.end(),
         CUBE_INNER_ERR_REPORT(context->GetNodeName(), "%s", errMsg.c_str()), return ge::GRAPH_FAILED);
-    context->SetOutputDataType(Y1_OUTTYPE_INDEX, outDtype);
-    context->SetOutputDataType(SCALE1_OUTTYPE_INDEX, ge::DT_FLOAT8_E8M0);
-    context->SetOutputDataType(Y2_OUTTYPE_INDEX, outDtype);
-    context->SetOutputDataType(SCALE2_OUTTYPE_INDEX, ge::DT_FLOAT8_E8M0);
+    context->SetOutputDataType(INDEX_OUTPUT_Y1, outDtype);
+    context->SetOutputDataType(INDEX_OUTPUT_SCALE1, ge::DT_FLOAT8_E8M0);
+    context->SetOutputDataType(INDEX_OUTPUT_Y2, outDtype);
+    context->SetOutputDataType(INDEX_OUTPUT_SCALE2, ge::DT_FLOAT8_E8M0);
     OP_LOGD(context->GetNodeName(), "End to do InferDataTypeForDynamicMxQuantWithDualAxis");
     return ge::GRAPH_SUCCESS;
 }

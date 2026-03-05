@@ -28,6 +28,11 @@ namespace optiling {
 constexpr int64_t INDEX_ATTR_ROUND_MODE = 0;
 constexpr int64_t INDEX_ATTR_DST_DTYPE = 1;
 constexpr int64_t INDEX_ATTR_SCALE_ALG = 2;
+constexpr int64_t INDEX_INPUT_X = 0;
+constexpr int64_t INDEX_OUTPUT_Y1 = 0;
+constexpr int64_t INDEX_OUTPUT_SCALE1 = 1;
+constexpr int64_t INDEX_OUTPUT_Y2 = 2;
+constexpr int64_t INDEX_OUTPUT_SCALE2 = 3;
 constexpr int64_t N_BUFFER = 2;
 constexpr int64_t DIGIT_TWO = 2;
 constexpr int64_t DIGIT_64 = 64;
@@ -70,7 +75,7 @@ ge::graphStatus DynamicMxQuantWithDualAxisTiling::GetAttr()
     auto* attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
 
-    auto outputYPtr = context_->GetOutputDesc(0);
+    auto outputYPtr = context_->GetOutputDesc(INDEX_OUTPUT_Y1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputYPtr);
     auto yDtype = outputYPtr->GetDataType();
     auto* attrRoundMode = attrs->GetAttrPointer<char>(INDEX_ATTR_ROUND_MODE);
@@ -120,7 +125,7 @@ ge::graphStatus DynamicMxQuantWithDualAxisTiling::GetAttr()
 
 ge::graphStatus DynamicMxQuantWithDualAxisTiling::CheckDtype() const
 {
-    auto inputXPtr = context_->GetInputDesc(0);
+    auto inputXPtr = context_->GetInputDesc(INDEX_INPUT_X);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputXPtr);
     auto xDtype = inputXPtr->GetDataType();
     OP_CHECK_IF(
@@ -131,7 +136,7 @@ ge::graphStatus DynamicMxQuantWithDualAxisTiling::CheckDtype() const
             Ops::Base::ToString(xDtype).c_str()),
         return ge::GRAPH_FAILED);
 
-    auto outputYPtr = context_->GetOutputDesc(0);
+    auto outputYPtr = context_->GetOutputDesc(INDEX_OUTPUT_Y1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputYPtr);
     auto yDtype = outputYPtr->GetDataType();
     OP_CHECK_IF(
@@ -144,14 +149,14 @@ ge::graphStatus DynamicMxQuantWithDualAxisTiling::CheckDtype() const
             Ops::Base::ToString(yDtype).c_str()),
         return ge::GRAPH_FAILED);
 
-    auto outputMxScalePtr = context_->GetOutputDesc(1);
+    auto outputMxScalePtr = context_->GetOutputDesc(INDEX_OUTPUT_SCALE1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputMxScalePtr);
     auto scaleDtype = outputMxScalePtr->GetDataType();
     OP_CHECK_IF(
         OUTPUT_SUPPORT_DTYPE_SET.count(scaleDtype) == 0,
         OP_LOGE(
             context_->GetNodeName(),
-            "Input mxscale's data type only support FLOAT8_E8M0 currently, but scale is [%s], please check.",
+            "Output mxscale's data type only support FLOAT8_E8M0 currently, but scale is [%s], please check.",
             Ops::Base::ToString(scaleDtype).c_str()),
         return ge::GRAPH_FAILED);
 
@@ -160,7 +165,7 @@ ge::graphStatus DynamicMxQuantWithDualAxisTiling::CheckDtype() const
 
 ge::graphStatus DynamicMxQuantWithDualAxisTiling::CheckShape() const
 {
-    auto xShapePtr = context_->GetInputShape(0);
+    auto xShapePtr = context_->GetInputShape(INDEX_INPUT_X);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xShapePtr);
     auto xShape = xShapePtr->GetStorageShape();
 
@@ -172,7 +177,7 @@ ge::graphStatus DynamicMxQuantWithDualAxisTiling::CheckShape() const
             static_cast<int64_t>(xShape.GetDimNum())),
         return ge::GRAPH_FAILED);
 
-    auto outputYPtr = context_->GetOutputDesc(0);
+    auto outputYPtr = context_->GetOutputDesc(INDEX_OUTPUT_Y1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputYPtr);
     auto yDtype = outputYPtr->GetDataType();
 
@@ -183,11 +188,11 @@ ge::graphStatus DynamicMxQuantWithDualAxisTiling::CheckShape() const
             "When output y's data type is FLOAT4_E2M1/FLOAT4_E1M2, the last axis should be even, please check."),
         return ge::GRAPH_FAILED);
 
-    auto y1ShapePtr = context_->GetOutputShape(0);
+    auto y1ShapePtr = context_->GetOutputShape(INDEX_OUTPUT_Y1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, y1ShapePtr);
     auto y1Shape = y1ShapePtr->GetStorageShape();
 
-    auto y2ShapePtr = context_->GetOutputShape(2);
+    auto y2ShapePtr = context_->GetOutputShape(INDEX_OUTPUT_Y2);
     OP_CHECK_NULL_WITH_CONTEXT(context_, y2ShapePtr);
     auto y2Shape = y2ShapePtr->GetStorageShape();
 
@@ -199,11 +204,11 @@ ge::graphStatus DynamicMxQuantWithDualAxisTiling::CheckShape() const
             Shape2String(y1Shape).c_str(), Shape2String(y2Shape).c_str(), Shape2String(xShape).c_str()),
         return ge::GRAPH_FAILED);
 
-    auto mxScale1ShapePtr = context_->GetOutputShape(1);
+    auto mxScale1ShapePtr = context_->GetOutputShape(INDEX_OUTPUT_SCALE1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, mxScale1ShapePtr);
     auto mxScale1Shape = mxScale1ShapePtr->GetStorageShape();
 
-    auto mxScale2ShapePtr = context_->GetOutputShape(3);
+    auto mxScale2ShapePtr = context_->GetOutputShape(INDEX_OUTPUT_SCALE2);
     OP_CHECK_NULL_WITH_CONTEXT(context_, mxScale2ShapePtr);
     auto mxScale2Shape = mxScale2ShapePtr->GetStorageShape();
 
@@ -359,14 +364,17 @@ ge::graphStatus DynamicMxQuantWithDualAxisTiling::DoTiling()
     SetTilingData();
     PrintTilingData();
 
+    uint64_t tilingDataSize = sizeof(tilingData);
     OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
     auto rawTilingData = context_->GetRawTilingData();
-    if (tilingData.GetDataSize() > rawTilingData->GetCapacity()) {
-        OP_LOGD(context_->GetNodeName(), "Tiling DataSize Greater than capacity, please check.");
+    errno_t ret = memcpy_s(
+        rawTilingData->GetData(), rawTilingData->GetCapacity(), reinterpret_cast<void*>(&tilingData), tilingDataSize);
+    if (ret != EOK) {
+        OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;
     }
-    tilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
+
+    context_->GetRawTilingData()->SetDataSize(tilingDataSize);
 
     OP_LOGD(context_->GetNodeName(), "Tiling usedCoreNum is %lu.", tilingParams.usedCoreNum);
     context_->SetBlockDim(tilingParams.usedCoreNum);
@@ -397,31 +405,31 @@ void DynamicMxQuantWithDualAxisTiling::SetTilingKey()
 
 void DynamicMxQuantWithDualAxisTiling::SetTilingData()
 {
-    tilingData.set_totalCoreNum(tilingParams.totalCoreNum);
-    tilingData.set_usedCoreNum(tilingParams.usedCoreNum);
-    tilingData.set_roundMode(tilingParams.roundMode);
-    tilingData.set_dstType(tilingParams.dstType);
-    tilingData.set_scaleAlg(tilingParams.scaleAlg);
-    tilingData.set_blockSize(tilingParams.blockSize);
-    tilingData.set_dim0(tilingParams.dim0);
-    tilingData.set_dimNeg2(tilingParams.dimNeg2);
-    tilingData.set_dimNeg1(tilingParams.dimNeg1);
-    tilingData.set_blockW(tilingParams.blockW);
-    tilingData.set_tilingKey(tilingParams.tilingKey);
-    tilingData.set_splitBlockH(tilingParams.splitBlockH);
-    tilingData.set_dimNeg2Tail(tilingParams.dimNeg2Tail);
-    tilingData.set_dimNeg1Tail(tilingParams.dimNeg1Tail);
-    tilingData.set_dimNeg2SplitBlockNum(tilingParams.dimNeg2SplitBlockNum);
-    tilingData.set_dimNeg1BlockNum(tilingParams.dimNeg1BlockNum);
-    tilingData.set_blockPerHeadCore(tilingParams.blockPerHeadCore);
-    tilingData.set_blockPerTailCore(tilingParams.blockPerTailCore);
-    tilingData.set_headCoreNum(tilingParams.headCoreNum);
-    tilingData.set_dimNeg2IsOdd(tilingParams.dimNeg2IsOdd);
-    tilingData.set_dimNeg1IsOdd(tilingParams.dimNeg1IsOdd);
-    tilingData.set_dimNeg1IsPad(tilingParams.dimNeg1IsPad);
-    tilingData.set_blockCountPerBatch(tilingParams.blockCountPerBatch);
-    tilingData.set_scale1ColCountPerBatch(tilingParams.scale1ColCountPerBatch);
-    tilingData.set_scale2RowCountPerBatch(tilingParams.scale2RowCountPerBatch);
+    tilingData.totalCoreNum = tilingParams.totalCoreNum;
+    tilingData.usedCoreNum = tilingParams.usedCoreNum;
+    tilingData.roundMode = tilingParams.roundMode;
+    tilingData.dstType = tilingParams.dstType;
+    tilingData.scaleAlg = tilingParams.scaleAlg;
+    tilingData.blockSize = tilingParams.blockSize;
+    tilingData.dim0 = tilingParams.dim0;
+    tilingData.dimNeg2 = tilingParams.dimNeg2;
+    tilingData.dimNeg1 = tilingParams.dimNeg1;
+    tilingData.blockW = tilingParams.blockW;
+    tilingData.tilingKey = tilingParams.tilingKey;
+    tilingData.splitBlockH = tilingParams.splitBlockH;
+    tilingData.dimNeg2Tail = tilingParams.dimNeg2Tail;
+    tilingData.dimNeg1Tail = tilingParams.dimNeg1Tail;
+    tilingData.dimNeg2SplitBlockNum = tilingParams.dimNeg2SplitBlockNum;
+    tilingData.dimNeg1BlockNum = tilingParams.dimNeg1BlockNum;
+    tilingData.blockPerHeadCore = tilingParams.blockPerHeadCore;
+    tilingData.blockPerTailCore = tilingParams.blockPerTailCore;
+    tilingData.headCoreNum = tilingParams.headCoreNum;
+    tilingData.dimNeg2IsOdd = tilingParams.dimNeg2IsOdd;
+    tilingData.dimNeg1IsOdd = tilingParams.dimNeg1IsOdd;
+    tilingData.dimNeg1IsPad = tilingParams.dimNeg1IsPad;
+    tilingData.blockCountPerBatch = tilingParams.blockCountPerBatch;
+    tilingData.scale1ColCountPerBatch = tilingParams.scale1ColCountPerBatch;
+    tilingData.scale2RowCountPerBatch = tilingParams.scale2RowCountPerBatch;
 }
 
 void DynamicMxQuantWithDualAxisTiling::PrintTilingData()
@@ -435,14 +443,13 @@ void DynamicMxQuantWithDualAxisTiling::PrintTilingData()
         "blockPerHeadCore: %ld, blockPerTailCore: %ld, headCoreNum: %ld, "
         "dimNeg2IsOdd: %ld, dimNeg1IsOdd: %ld, dimNeg1IsPad: %ld, blockCountPerBatch: %ld, "
         "scale1ColCountPerBatch: %ld, scale2RowCountPerBatch: %ld ",
-        tilingData.get_totalCoreNum(), tilingData.get_usedCoreNum(), tilingData.get_roundMode(),
-        tilingData.get_dstType(), tilingData.get_scaleAlg(), tilingData.get_dim0(), tilingData.get_dimNeg2(),
-        tilingData.get_dimNeg1(), tilingData.get_blockSize(), tilingData.get_blockW(), tilingData.get_tilingKey(),
-        tilingData.get_splitBlockH(), tilingData.get_dimNeg2Tail(), tilingData.get_dimNeg1Tail(),
-        tilingData.get_dimNeg2SplitBlockNum(), tilingData.get_dimNeg1BlockNum(), tilingData.get_blockPerHeadCore(),
-        tilingData.get_blockPerTailCore(), tilingData.get_headCoreNum(), tilingData.get_dimNeg2IsOdd(),
-        tilingData.get_dimNeg1IsOdd(), tilingData.get_dimNeg1IsPad(), tilingData.get_blockCountPerBatch(),
-        tilingData.get_scale1ColCountPerBatch(), tilingData.get_scale2RowCountPerBatch());
+        tilingData.totalCoreNum, tilingData.usedCoreNum, tilingData.roundMode, tilingData.dstType, tilingData.scaleAlg,
+        tilingData.dim0, tilingData.dimNeg2, tilingData.dimNeg1, tilingData.blockSize, tilingData.blockW,
+        tilingData.tilingKey, tilingData.splitBlockH, tilingData.dimNeg2Tail, tilingData.dimNeg1Tail,
+        tilingData.dimNeg2SplitBlockNum, tilingData.dimNeg1BlockNum, tilingData.blockPerHeadCore,
+        tilingData.blockPerTailCore, tilingData.headCoreNum, tilingData.dimNeg2IsOdd, tilingData.dimNeg1IsOdd,
+        tilingData.dimNeg1IsPad, tilingData.blockCountPerBatch, tilingData.scale1ColCountPerBatch,
+        tilingData.scale2RowCountPerBatch);
 }
 
 static ge::graphStatus TilingForDynamicMxQuantWithDualAxis(gert::TilingContext* context)
