@@ -474,7 +474,11 @@ uint64_t ScatterElementsV2AscTiling::GetTilingKey() const
     // 千位 indices dtype
     uint64_t thousandDigit = indicesDtype_ == ge::DT_INT32 ? 0 : 1;
     tilingKey += factorStart * factor * thousandDigit;
-    uint64_t wanDigit = allAxis_ > MAX_INT32_NUM ? 1 : 0;
+    uint64_t wanDigit = 0;
+    if (allAxis_ > MAX_INT32_NUM || dataAxis_ > MAX_INT32_NUM || updatesAxis_ > MAX_INT32_NUM) {
+        wanDigit = 1;
+    }
+
     tilingKey += factorStart * factor * factor * wanDigit;
     return tilingKey;
 }
