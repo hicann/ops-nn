@@ -612,7 +612,6 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::GetShape()
     }
     OP_LOGI(args_.opName, "transA: %lu, transB: %lu", transA_, transB_);
 
-    uint64_t dtypeSize = GetSizeByDataType(args_.aType);
     uint64_t input_batch = batchInfo_.batchC;
     uint64_t input_k = args_.kValue;
     uint64_t input_n = args_.nValue;
