@@ -100,14 +100,6 @@ static aclnnStatus CheckInputOutDims(const QBMMInplaceAdd::QuantBatchMatmulInpla
     return ACLNN_SUCCESS;
 }
 
-static bool IsSpecialTranspose(const aclTensor* const inputTensor)
-{
-    const auto inputShape = inputTensor->GetViewShape();
-    int64_t dim1 = inputShape.GetDimNum() - LAST_FIRST_DIM_INDEX;
-    int64_t dim2 = inputShape.GetDimNum() - LAST_SECOND_DIM_INDEX;
-    return inputShape.GetDim(dim1) == 1 && inputShape.GetDim(dim2) == 1;
-}
-
 static inline bool IsMicroScaling(const aclTensor* x1Scale, const aclTensor* x2Scale)
 {
     if (x1Scale == nullptr) {
@@ -413,7 +405,7 @@ static bool QBMMIAGetTransposeAttrValue(const aclTensor* tensor, bool transpose,
 }
 
 static aclnnStatus aclnnQuantBatchMatmulInplaceAddGetWorkspaceSizeCommon(
-    QBMMInplaceAdd::QuantBatchMatmulInplaceAddParams& params, uint64_t* workspaceSize, aclOpExecutor* executor)
+    QBMMInplaceAdd::QuantBatchMatmulInplaceAddParams& params, aclOpExecutor* executor)
 {
     // torch非连续转连续处理
     params.x2Scale = SetTensorToNDFormat(params.x2Scale);
@@ -484,7 +476,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize(
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     auto executorPtr = uniqueExecutor.get();
-    auto ret = aclnnQuantBatchMatmulInplaceAddGetWorkspaceSizeCommon(params, workspaceSize, executorPtr);
+    auto ret = aclnnQuantBatchMatmulInplaceAddGetWorkspaceSizeCommon(params, executorPtr);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     // Standard syntax, get the size of workspace needed during computation.
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();

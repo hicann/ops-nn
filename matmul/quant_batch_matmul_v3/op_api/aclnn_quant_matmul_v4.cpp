@@ -406,7 +406,7 @@ static inline bool CheckDimRange(const aclTensor *x1, const aclTensor *x2, const
     OP_CHECK_MIN_DIM(out, MIN_DIM_NUM_ND, return false);
     OP_CHECK_MAX_DIM(x1, MAX_DIM_NUM_ND, return false);
     OP_CHECK_MAX_DIM(out, MAX_DIM_NUM_ND, return false);
-    int64_t expectScaleDim = isMxfp8Nz(x1, x2, scale) ? MX_SCALE_DIM_NUM : 1;
+    size_t expectScaleDim = isMxfp8Nz(x1, x2, scale) ? MX_SCALE_DIM_NUM : 1;
     OP_CHECK_WRONG_DIMENSION(scale, expectScaleDim, return false);
     OP_LOGD("QuantMatmul check dim-num range success");
     return true;
