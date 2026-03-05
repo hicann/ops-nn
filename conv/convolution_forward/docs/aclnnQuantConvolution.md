@@ -4,7 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                       |    ×     |
+| <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>       |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>       |    √     |
 |  <term>Atlas 200I/500 A2 推理产品</term>                      |     ×    |
@@ -628,10 +628,7 @@ int aclnnQuantConvolutionTest(int32_t deviceId, aclrtStream& stream, std::vector
 
   return ACL_SUCCESS;
 }
-```
 
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-```
 int main() {
   // 1. （固定写法）device/stream 初始化，参考 acl API 手册
   // 根据自己的实际device填写deviceId
