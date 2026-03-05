@@ -13,7 +13,7 @@ RELEASE_TARGETS=("ophost" "opapi" "onnxplugin" "opgraph")
 
 SUPPORT_COMPUTE_UNIT_SHORT=("ascend031" "ascend035" "ascend310b" "ascend310p" "ascend910_93" "ascend950" "ascend910b" "ascend910" "kirinx90" "kirin9030" "mc62cm12a")
 declare -A SOC_TO_ARCH
-SOC_TO_ARCH=(["ascend310b"]="3002" ["ascend310p"]="2002" ["ascend910_93"]="2201" ["ascend910b"]="2201" 
+SOC_TO_ARCH=(["ascend310b"]="3002" ["ascend310p"]="2002" ["ascend910_93"]="2201" ["ascend910b"]="2201"
             ["ascend950"]="3510" ["ascend910"]="1001" ["mc62cm12a"]="5102")
 # 对SUPPORT_COMPUTE_UNIT_SHORT按字符串长度从长到短排序，避免前缀匹配时出错
 SUPPORT_COMPUTE_UNIT_SHORT=($(printf '%s\n' "${SUPPORT_COMPUTE_UNIT_SHORT[@]}" | awk '{print length($0) " " $0}' | sort -rn | cut -d ' ' -f2-))
@@ -27,7 +27,7 @@ SUPPORTED_LONG_OPTS=(
   "help" "ops=" "soc=" "vendor_name=" "build-type=" "cov" "noexec" "noaicpu" "opkernel" "opkernel_aicpu" "opkernel_aicpu_test" "static"
    "jit" "pkg" "asan" "make_clean_all" "make_clean" "no_force"
   "ophost" "opgraph" "opapi" "run_example" "example_name=" "genop=" "genop_aicpu=" "experimental" "cann_3rd_lib_path=" "oom" "onnxplugin" "dump_cce"
-  "simulator" "bisheng_flags="
+  "simulator" "bisheng_flags=" "kernel_template_input="
 )
 
 source "./install_deps.sh"
@@ -164,6 +164,8 @@ usage() {
         echo "    --dump_cce             Dump kernel precompiled files (.i) for debugging"
         echo "    --bisheng_flags=ccec_g,oom"
         echo "                           Specify bisheng compiler flags (comma-separated for multiple)"
+        echo "    --kernel_template_input="args0=args0;args1=args1;args2=args2;args3=args3""
+        echo "                           Specify kernel template input arguments (semicolon-separated for multiple)"
         echo $dotted_line
         echo "Examples:"
         echo "    bash build.sh --pkg --soc=ascend910b --vendor_name=customize -j16 -O3"
@@ -171,6 +173,7 @@ usage() {
         echo "    bash build.sh --pkg --soc=ascend910b --ops=transpose_batch_mat_mul --oom"
         echo "    bash build.sh --pkg --experimental --soc=ascend910b --ops=\${experimental_op}"
         echo "    bash build.sh --pkg --experimental --soc=ascend910b --ops=\${experimental_op} --bisheng_flags=ccec_g,oom"
+        echo "    bash build.sh --pkg --soc=ascend910b --ops=transpose_batch_mat_mul --kernel_template_input="BATCH_SPLIT=0;PP_MAT_MUL_EINSUM_MODE=0;PERM_X1=2;PERM_X2=0""
         return
         ;;
       opkernel)
@@ -185,11 +188,14 @@ usage() {
         echo "    --bisheng_flags=ccec_g,oom"
         echo "                           Specify bisheng compiler flags (comma-separated for multiple)"
         echo "    --no_force             Don't force dependency installation"
+        echo "    --kernel_template_input="args0=args0;args1=args1;args2=args2;args3=args3""
+        echo "                           Specify kernel template input arguments (semicolon-separated for multiple)"
         echo $dotted_line
         echo "Examples:"
         echo "    bash build.sh --opkernel --soc=ascend310p --ops=transpose_batch_mat_mul,fatrelu_mul"
         echo "    bash build.sh --opkernel --soc=ascend310p --ops=transpose_batch_mat_mul,fatrelu_mul --build-type=Debug"
         echo "    bash build.sh --opkernel --soc=ascend310p --ops=transpose_batch_mat_mul,fatrelu_mul --oom"
+        echo "    bash build.sh --opkernel --soc=ascend910b --ops=transpose_batch_mat_mul --kernel_template_input="BATCH_SPLIT=0;PP_MAT_MUL_EINSUM_MODE=0;PERM_X1=2;PERM_X2=0""
         return
         ;;
       opkernel_aicpu)
@@ -363,6 +369,8 @@ usage() {
   echo "    --oom Build with oom mode on the kernel side, with options: '-g --cce-enable-oom'"
   echo "    --dump_cce Dump kernel precompiled files (.i) for debugging"
   echo "    --bisheng_flags Specify bisheng compiler config, like: --bisheng_flags=ccec_g,oom, use ',' to separate different compiler flags"
+  echo "    --kernel_template_input Specify kernel template input arguments, like: --kernel_template_input="args0=args0;args1=args1;args2=args2;args3=args3""
+  echo "                                                                                                  Use ';' to separate different kernel template args, can only specify a single kernel template input"
   echo "to be continued ..."
 }
 
@@ -463,6 +471,13 @@ check_param() {
   if $(echo ${USE_CMD} | grep -wq "opkernel_aicpu") && $(echo ${USE_CMD} | grep -wq "jit"); then
     echo "[ERROR] --opkernel_aicpu cannot be used with --jit"
     exit 1
+  fi
+
+  if [ -n "$KERNEL_TEMPLATE_INPUT" ]; then
+    if [[ -z "${COMPILED_OPS}" || "$COMPILED_OPS" == *","* ]]; then
+      echo "[ERROR] --kernel_template_input must be used with --ops= and can only specify a single operator"
+      exit 1
+    fi
   fi
 }
 
@@ -601,6 +616,7 @@ checkopts() {
   EXAMPLE_NAME=""
   EXAMPLE_MODE=""
   USE_CMD="$*"
+  KERNEL_TEMPLATE_INPUT=""
 
   BUILD_TYPE="Release"
   ENABLE_MSSANITIZER=FALSE
@@ -813,6 +829,9 @@ checkopts() {
         bisheng_flags=*)
           BISHENG_FLAGS=${OPTARG#*=}
           ;;
+        kernel_template_input=*)
+          KERNEL_TEMPLATE_INPUT=${OPTARG#*=}
+          ;;
         *)
           ## 如果不在RELEASE_TARGETS，不做处理
           if ! in_array "$OPTARG" "${RELEASE_TARGETS[@]}"; then
@@ -961,6 +980,11 @@ assemble_cmake_args() {
     CMAKE_ARGS="$CMAKE_ARGS -UASCEND_COMPUTE_UNIT"
   fi
   CMAKE_ARGS="$CMAKE_ARGS -DCANN_3RD_LIB_PATH=${CANN_3RD_LIB_PATH}"
+  if [[ "x$KERNEL_TEMPLATE_INPUT" != "x" ]]; then
+    CMAKE_ARGS="$CMAKE_ARGS -DKERNEL_TEMPLATE_INPUT=${KERNEL_TEMPLATE_INPUT}"
+    NO_FORCE=TRUE
+    CMAKE_ARGS="$CMAKE_ARGS -DNO_FORCE=${NO_FORCE}"
+  fi
 }
 
 build_static_lib() {
@@ -1282,7 +1306,7 @@ build_example() {
 
   OLDIFS=$IFS
   IFS=$'\n'
-  {  
+  {
     files=($(find ../ -path "*/${OP_NAME}/examples/${pattern}*.cpp" -not -path "*/opgen/template/*" | grep ${grep_word} "experimental"))
   } || {
     files=()

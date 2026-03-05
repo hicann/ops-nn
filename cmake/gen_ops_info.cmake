@@ -1,9 +1,9 @@
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -79,13 +79,13 @@ function(get_op_type_and_validate OP_DIR compute_unit op_name_var op_type_var is
       return()
     endif()
   endif()
-  
+
   set(op_type "")
   set(is_valid FALSE)
   set(${op_type_var} "" PARENT_SCOPE)
   set(${is_valid_var} FALSE PARENT_SCOPE)
   set(binary_json ${OP_DIR}/op_host/config/${compute_unit}/${op_name}_binary.json)
-  
+
   if(EXISTS ${binary_json})
     get_op_type_from_binary_json("${binary_json}" op_type)
     message(STATUS "[INFO] On [${compute_unit}], [${op_name}] compile binary with self config.")
@@ -100,7 +100,7 @@ function(get_op_type_and_validate OP_DIR compute_unit op_name_var op_type_var is
       set(${cache_key} "" CACHE INTERNAL "")
       return()
     endif()
-    
+
     set(check_op_supported_result)
     check_op_supported("${op_name}" "${compute_unit}" check_op_supported_result)
     if(NOT check_op_supported_result)
@@ -110,7 +110,7 @@ function(get_op_type_and_validate OP_DIR compute_unit op_name_var op_type_var is
     endif()
     message(STATUS "[INFO] On [${compute_unit}], [${op_name}] compile binary with def config.")
   endif()
-  
+
   set(is_valid TRUE)
   set(${op_type_var} "${op_type}" PARENT_SCOPE)
   set(${is_valid_var} TRUE PARENT_SCOPE)
@@ -371,7 +371,7 @@ function(prepare_compile_from_config)
     COMMAND ${_ASCENDC_ENV_VAR} bash ${OPS_KERNEL_BINARY_SCRIPT}/build_binary_opc.sh
             ${CONFCMP_OP_TYPE}
             ${CONFCMP_COMPUTE_UNIT}
-            ${CONFCMP_OUT_DIR}/bin ${CMAKE_BUILD_TYPE} ${ENABLE_OOM} ${ENABLE_DUMP_CCE} ${ENABLE_MSSANITIZER} bisheng_flags=${BISHENG_FLAGS}
+            ${CONFCMP_OUT_DIR}/bin ${CMAKE_BUILD_TYPE} ${ENABLE_OOM} ${ENABLE_DUMP_CCE} ${ENABLE_MSSANITIZER} bisheng_flags=${BISHENG_FLAGS} "kernel_template_input=\"${KERNEL_TEMPLATE_INPUT}\""
     WORKING_DIRECTORY ${OPS_KERNEL_BINARY_SCRIPT}
     DEPENDS ${ASCEND_KERNEL_CONF_DST}/aic-${CONFCMP_COMPUTE_UNIT}-ops-info.ini
             ascendc_kernel_src_copy
@@ -569,7 +569,7 @@ function(gen_ops_info_and_python)
       DESTINATION ${IMPL_INSTALL_DIR}/inc
     )
   endif()
-  
+
   set(ascendc_impl_gen_depends ascendc_kernel_src_copy opbuild_custom_gen_aclnn_all common_copy)
   foreach(compute_unit ${ASCEND_ALL_COMPUTE_UNIT})
     # generate aic-${compute_unit}-ops-info.json, operator infos

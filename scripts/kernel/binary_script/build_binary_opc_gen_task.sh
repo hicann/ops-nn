@@ -4,8 +4,8 @@
 # This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
-# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
@@ -94,7 +94,7 @@ main() {
   echo "[INFO] excute file: $0"
   if [ $# -lt 7 ]; then
     echo "[ERROR] input error"
-    echo "[ERROR] bash $0 {op_type} {soc_version} {output_path} {task_path} {enable_debug} {enable_oom} {enable_dump_cce} {enable_mssanitizer} bisheng_flags={bisheng_flags}"
+    echo "[ERROR] bash $0 {op_type} {soc_version} {output_path} {task_path} {enable_debug} {enable_oom} {enable_dump_cce} {enable_mssanitizer} bisheng_flags={bisheng_flags} kernel_template_input={kernel_template_input}"
     exit 1
   fi
   local workdir=$(
@@ -112,7 +112,8 @@ main() {
   local enable_oom=$6
   local enable_dump_cce=$7
   local enable_mssanitizer=$8
-  local bisheng_flags=$9
+  local bisheng_flags="${9#*=}"
+  local kernel_template_input="${10#*=}"
   local is_need_gen_opc_info=TRUE
   local python_arg=${HI_PYTHON}
   if [ "${python_arg}" = "" ]; then
@@ -300,11 +301,15 @@ main() {
               OLD_IFS="${IFS}"
               IFS=','
               cmd="${cmd} --op_debug_config=${op_debug_configs[*]}"
-              IFS="$OLD_IFS" 
+              IFS="$OLD_IFS"
           fi
         fi
         if [[ "$cmd" == *"dump_cce"* ]]; then
-          cmd="${cmd} --debug_dir=${output_path}/kernel_metas/${op_type}_${i}" 
+          cmd="${cmd} --debug_dir=${output_path}/kernel_metas/${op_type}_${i}"
+        fi
+        if [[ -n "$kernel_template_input" ]]; then
+          echo "kernel_template_input is: ${kernel_template_input}"
+          cmd="${cmd} --kernel-template-input=${kernel_template_input}"
         fi
         echo "[INFO] op:${op_type} do opc cmd is ${cmd}"
         echo ${cmd} >> ${opc_task_cmd_file}

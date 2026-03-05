@@ -4,9 +4,9 @@
 build.sh是本项目的构建脚本，默认在项目根目录下，作用是将源代码自动编译、链接和配置，最终生成可执行文件、库文件或其它可供安装或直接运行的目标文件。具体来说，脚本中通过配置不同参数实现多种功能，包含构建多种目标库（如：libophost_nn.so）、编译算子包、执行单元测试等。
 
 
-## 使用方法 
+## 使用方法
 1. **配置环境变量**
-   
+
    参考[环境部署](../context/quick_install.md)完成基础环境搭建。
    ```bash
    # 默认路径安装，以root用户为例
@@ -61,3 +61,4 @@ bash build.sh --help
 | --cann_3rd_lib_path| 可选   | 离线编译场景下第三方库存放的目录。                                                   |
 | --simulator      | 可选     | 与--run_example组合使用，启用仿真器模式执行--run_example任务。仿真模式下，会根据soc_version链接对应的仿真库。          |
 | --bisheng_flags  | 可选     | 指定毕昇编译器编译参数，多个编译参数用英文逗号“,”分隔，不可与--mssanitizer、--oom、--dump_cce同时使用。     |
+| --kernel_template_input    | 可选     | 指定编译kernel时的tilingKey模板，仅支持指定一个模板，与--ops同时使用且只能指定一个算子，不会编译该算子所依赖的其他算子二进制文件。     |
