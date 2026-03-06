@@ -490,3 +490,99 @@ TEST_F(l2_QuantBatchMatmulWeightNz_test, a4w4_weight_nz_case_12)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
+
+TEST_F(l2_QuantBatchMatmulWeightNz_test, a8w4_weight_nz_case_1)
+{
+    // A8W4 msd方案 支持fp16输出
+    TensorDesc x1_desc = TensorDesc({1, 8192}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({8192, 128}, ACL_INT32, ACL_FORMAT_FRACTAL_NZ, {}, 0, {16, 512, 16, 8}).ValueRange(-1, 1); // INT32 = INT4 * 8, 128 = 1024 / 8
+    TensorDesc x1scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2scale_desc = TensorDesc({1024}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc yoffset_desc = TensorDesc({1024}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1scale_desc, x2scale_desc, nullptr, nullptr, nullptr, yoffset_desc, nullptr, false, false, 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_QuantBatchMatmulWeightNz_test, a8w4_weight_nz_case_2)
+{
+    // A8W4 msd方案 支持fp16输出
+    TensorDesc x1_desc = TensorDesc({1, 8192}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({1024, 1024}, ACL_INT32, ACL_FORMAT_FRACTAL_NZ, {}, 0, {128, 64, 16, 8}).ValueRange(-1, 1); // INT32 = INT4 * 8, 128 = 1024 / 8
+    TensorDesc x1scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2scale_desc = TensorDesc({1024}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc yoffset_desc = TensorDesc({1024}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1scale_desc, x2scale_desc, nullptr, nullptr, nullptr, yoffset_desc, nullptr, false, true, 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_QuantBatchMatmulWeightNz_test, a8w4_weight_nz_case_3)
+{
+    // A8W4 msd方案 支持fp16输出
+    TensorDesc x1_desc = TensorDesc({1, 29568}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({8192, 3696}, ACL_INT32, ACL_FORMAT_FRACTAL_NZ, {}, 0, {462, 512, 16, 8}).ValueRange(-1, 1); // INT32 = INT4 * 8, 128 = 1024 / 8
+    TensorDesc x1scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2scale_desc = TensorDesc({8192}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc yoffset_desc = TensorDesc({8192}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({1, 8192}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1scale_desc, x2scale_desc, nullptr, nullptr, nullptr, yoffset_desc, nullptr, false, true, 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_QuantBatchMatmulWeightNz_test, a8w4_weight_nz_case_4)
+{
+    // A8W4 msd方案 支持fp16输出
+    TensorDesc x1_desc = TensorDesc({1, 3448}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({1024, 431}, ACL_INT32, ACL_FORMAT_FRACTAL_NZ, {}, 0, {54, 64, 16, 8}).ValueRange(-1, 1); // INT32 = INT4 * 8, 128 = 1024 / 8
+    TensorDesc x1scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2scale_desc = TensorDesc({1024}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc yoffset_desc = TensorDesc({1024}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1scale_desc, x2scale_desc, nullptr, nullptr, nullptr, yoffset_desc, nullptr, false, true, 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_QuantBatchMatmulWeightNz_test, a8w4_weight_nz_case_5)
+{
+    // A8W4 msd方案 支持fp16输出
+    TensorDesc x1_desc = TensorDesc({8, 8}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({1, 1}, ACL_INT32, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 1, 16, 8}).ValueRange(-1, 1); // INT32 = INT4 * 8, 128 = 1024 / 8
+    TensorDesc x1scale_desc = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2scale_desc = TensorDesc({1}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc yoffset_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({8, 1}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1scale_desc, x2scale_desc, nullptr, nullptr, nullptr, yoffset_desc, nullptr, false, true, 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_QuantBatchMatmulWeightNz_test, a8w4_weight_nz_case_6)
+{
+    // A8W4 msd方案 支持fp16输出
+    TensorDesc x1_desc = TensorDesc({1, 30000}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({30000, 128}, ACL_INT32, ACL_FORMAT_FRACTAL_NZ, {}, 0, {16, 1875, 16, 8}).ValueRange(-1, 1); // INT32 = INT4 * 8, 128 = 1024 / 8
+    TensorDesc x1scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2scale_desc = TensorDesc({1024}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc yoffset_desc = TensorDesc({1024}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1scale_desc, x2scale_desc, nullptr, nullptr, nullptr, yoffset_desc, nullptr, false, false, 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
