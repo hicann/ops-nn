@@ -16,6 +16,7 @@
 - **接口功能**：完成一个输入为伪量化场景的矩阵乘计算。此接口仅支持矩阵乘的右输入矩阵为FRACTAL_NZ格式。
 - **计算公式**：
   - 基础计算公式：
+
     $$
     y = x @ ANTIQUANT(weight) + bias
     $$
@@ -27,6 +28,7 @@
     $$
 
   - 需要对输出进行量化处理时的量化公式：
+
     $$
     \begin{aligned}
     y &= QUANT(x @ ANTIQUANT(weight) + bias) \\
@@ -211,11 +213,10 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  <table style="undefined;table-layout: fixed;width: 1030px">
-    <colgroup>
-      <col style="width: 250px">
-      <col style="width: 130px">
-      <col style="width: 650px">
+  <table style="undefined;table-layout: fixed; width: 1149px"><colgroup>
+  <col style="width: 291px">
+  <col style="width: 135px">
+  <col style="width: 723px">
     </colgroup>
     <thead>
       <tr>
@@ -249,16 +250,40 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
 ## aclnnWeightQuantBatchMatmulNz
 
 - **参数说明**
-  <table>
-    <thead>
-      <tr><th>参数名</th><th>输入/输出</th><th>描述</th></tr>
-    </thead>
-    <tbody>
-      <tr><td>workspace</td><td>输入</td><td>在Device侧申请的workspace内存地址。</td></tr>
-      <tr><td>workspaceSize</td><td>输入</td><td>在Device侧申请的workspace大小，由第一段接口`aclnnWeightQuantBatchMatmulNzGetWorkspaceSize`获取。</td></tr>
-      <tr><td>executor</td><td>输入</td><td>op执行器，包含了算子计算流程。</td></tr>
-      <tr><td>stream</td><td>输入</td><td>指定执行任务的Stream。</td></tr>
-    </tbody>
+
+  <table style="undefined;table-layout: fixed; width: 1151px"><colgroup>
+  <col style="width: 184px">
+  <col style="width: 134px">
+  <col style="width: 833px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnWeightQuantBatchMatmulNzGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
   </table>
 
 - **返回值：**
@@ -267,6 +292,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
 
 
 ## 约束说明
+
   - 确定性说明：aclnnWeightQuantBatchMatmulNz默认确定性实现。
   - 支持的量化模式：perchannel[量化模式](../../../docs/zh/context/量化介绍.md)、pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和mx[量化模式](../../../docs/zh/context/量化介绍.md)。
   - 输入和输出支持以下数据类型和shape组合：
@@ -305,6 +331,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
   仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
 - x为FLOAT16，weight为FLOAT32调用示例，需要调用 `aclnnConvertWeightToINT4Pack` 接口辅助完成调用：
+
   ```Cpp
   #include <iostream>
   #include <memory>

@@ -26,6 +26,7 @@ $$
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 aclnnQuantMatmulGetWorkspaceSize 接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用 aclnnQuantMatmul 接口执行计算。
+
 ```cpp
 aclnnStatus aclnnQuantMatmulGetWorkspaceSize(
   const aclTensor *x1, 
@@ -36,6 +37,7 @@ aclnnStatus aclnnQuantMatmulGetWorkspaceSize(
   uint64_t        *workspaceSize, 
   aclOpExecutor   **executor)
 ```
+
 ```cpp
 aclnnStatus aclnnQuantMatmul(
   void              *workspace, 
@@ -48,14 +50,14 @@ aclnnStatus aclnnQuantMatmul(
 
 - **参数说明**
 
-  <table style="undefined;table-layout: fixed; width: 1587px"><colgroup>
+  <table style="undefined;table-layout: fixed; width: 1435px"><colgroup>
   <col style="width: 159px">
   <col style="width: 127px">
-  <col style="width: 230px">
-  <col style="width: 400px">
-  <col style="width: 249px">
+  <col style="width: 250px">
+  <col style="width: 350px">
+  <col style="width: 149px">
   <col style="width: 117px">
-  <col style="width: 117px">
+  <col style="width: 130px">
   <col style="width: 153px">
   </colgroup>
   <thead>
@@ -74,7 +76,7 @@ aclnnStatus aclnnQuantMatmul(
       <td>x1</td>
       <td>输入</td>
       <td>公式中的输入x1。</td>
-      <td>维度与x2一致，不支持broadcast。数据类型需要与x2满足<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>。</td>
+      <td>维度与x2一致，不支持broadcast。<br>数据类型需要与x2满足<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>。</td>
       <td>INT8</td>
       <td>ND</td>
       <td>2-3</td>
@@ -84,7 +86,7 @@ aclnnStatus aclnnQuantMatmul(
       <td>x2</td>
       <td>输入</td>
       <td>公式中的输入x2。</td>
-      <td>维度与x1一致，不支持broadcast。数据类型需要与x1满足<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>。</td>
+      <td>维度与x1一致，不支持broadcast。<br>数据类型需要与x1满足<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>。</td>
       <td>INT8</td>
       <td>ND</td>
       <td>2-3</td>
@@ -94,7 +96,7 @@ aclnnStatus aclnnQuantMatmul(
       <td>bias</td>
       <td>输入</td>
       <td>公式中的输入bias。</td>
-      <td>shape支持一维(n, )，n与x2的n一致。量化特殊处理过程：biasINT32 = round(round(biasFLOAT16/deqScale) - offsetX * wINT8)。</td>
+      <td>shape支持一维(n, )，n与x2的n一致。<br>量化特殊处理过程：biasINT32 = round(round(biasFLOAT16/deqScale) - offsetX * wINT8)。</td>
       <td>INT32</td>
       <td>ND</td>
       <td>1</td>
@@ -148,10 +150,10 @@ aclnnStatus aclnnQuantMatmul(
 
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed; width: 887px"><colgroup>
-  <col style="width: 300px">
-  <col style="width: 200px">
-  <col style="width: 700px">
+  <table style="undefined;table-layout: fixed; width: 1149px"><colgroup>
+  <col style="width: 291px">
+  <col style="width: 135px">
+  <col style="width: 723px">
   </colgroup>
   <thead>
     <tr>

@@ -18,22 +18,28 @@
 
 ```Cpp
 aclnnStatus aclnnTransSparse4to2Para(
-    const int8_t* weight, aclIntArray* shape, int8_t** sparseWeight, int64_t** sparseWeightDims,
-    uint64_t* sparseWeightDimsNum, uint8_t** index, int64_t** indexDims, uint64_t* indexDimsNum)
+    const int8_t* weight, 
+    aclIntArray*  shape, 
+    int8_t**      sparseWeight, 
+    int64_t**     sparseWeightDims,
+    uint64_t*     sparseWeightDimsNum, 
+    uint8_t**     index, 
+    int64_t**     indexDims, 
+    uint64_t*     indexDimsNum)
 ```
 
 ## aclnnTransSparse4to2Para
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1320px"><colgroup>
-  <col style="width: 101px">
-  <col style="width: 115px">
-  <col style="width: 200px">
-  <col style="width: 240px">
-  <col style="width: 177px">
-  <col style="width: 104px">
-  <col style="width: 238px">
+  <table style="undefined;table-layout: fixed; width: 1505px"><colgroup>
+  <col style="width: 150px">
+  <col style="width: 120px">
+  <col style="width: 350px">
+  <col style="width: 360px">
+  <col style="width: 130px">
+  <col style="width: 120px">
+  <col style="width: 130px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -136,11 +142,12 @@ aclnnStatus aclnnTransSparse4to2Para(
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
-  <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
-  <col style="width: 272px">
-  <col style="width: 103px">
-  <col style="width: 604px">
+    <table style="undefined;table-layout: fixed; width: 1149px"><colgroup>
+    <col style="width: 291px">
+    <col style="width: 135px">
+    <col style="width: 723px">
   </colgroup>
   <thead>
     <tr>

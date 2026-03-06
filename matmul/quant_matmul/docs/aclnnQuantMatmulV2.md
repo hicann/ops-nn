@@ -26,6 +26,7 @@ $$
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 aclnnQuantMatmulV2GetWorkspaceSize 接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用 aclnnQuantMatmulV2 接口执行计算。
+
 ```cpp
 aclnnStatus aclnnQuantMatmulV2GetWorkspaceSize(
   const aclTensor *x1, 
@@ -38,6 +39,7 @@ aclnnStatus aclnnQuantMatmulV2GetWorkspaceSize(
   uint64_t        *workspaceSize, 
   aclOpExecutor   **executor)
 ```
+
 ```cpp
 aclnnStatus aclnnQuantMatmulV2(
   void              *workspace, 
@@ -50,14 +52,14 @@ aclnnStatus aclnnQuantMatmulV2(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1587px"><colgroup>
+  <table style="undefined;table-layout: fixed; width: 1535px"><colgroup>
   <col style="width: 159px">
   <col style="width: 127px">
-  <col style="width: 230px">
-  <col style="width: 400px">
+  <col style="width: 250px">
+  <col style="width: 350px">
   <col style="width: 249px">
   <col style="width: 117px">
-  <col style="width: 117px">
+  <col style="width: 130px">
   <col style="width: 153px">
   </colgroup>
   <thead>
@@ -76,7 +78,7 @@ aclnnStatus aclnnQuantMatmulV2(
       <td>x1</td>
       <td>输入</td>
       <td>公式中的输入x1。</td>
-      <td>在adjX1为false情况下各个维度表示：（batch，m，k），在adjX1为true情况下各个维度表示：（batch，k，m），batch可不存在。</td>
+      <td>在adjX1为false情况下各个维度表示：（batch，m，k）。<br>在adjX1为true情况下各个维度表示：（batch，k，m），batch可不存在。</td>
       <td>INT8</td>
       <td>ND</td>
       <td>2-3</td>
@@ -86,7 +88,7 @@ aclnnStatus aclnnQuantMatmulV2(
       <td>x2</td>
       <td>输入</td>
       <td>公式中的输入x2。</td>
-      <td>在adjX2为false情况下各个维度表示：（batch，k，n），在adjX2为true情况下各个维度表示：（batch，n，k），batch可不存在，其中k与x1的shape中的k一致。</td>
+      <td>在adjX2为false情况下各个维度表示：（batch，k，n）。<br>在adjX2为true情况下各个维度表示：（batch，n，k），batch可不存在，其中k与x1的shape中的k一致。</td>
       <td>INT8</td>
       <td>ND</td>
       <td>2-3</td>
@@ -116,7 +118,7 @@ aclnnStatus aclnnQuantMatmulV2(
       <td>adjX1</td>
       <td>输入</td>
       <td>表示x1的输入shape是否包含transpose。</td>
-      <td>在adjX1为false情况下各个维度表示：（batch，m，k），在adjX1为true情况下各个维度表示：（batch，k，m），batch可不存在。</td>
+      <td>在adjX1为false情况下各个维度表示：（batch，m，k）。<br>在adjX1为true情况下各个维度表示：（batch，k，m），batch可不存在。</td>
       <td>bool</td>
       <td>-</td>
       <td>-</td>
@@ -126,7 +128,7 @@ aclnnStatus aclnnQuantMatmulV2(
       <td>adjX2</td>
       <td>输入</td>
       <td>表示x2的输入shape是否包含transpose。</td>
-      <td>在adjX2为false情况下各个维度表示：（batch，k，n），在adjX2为true情况下各个维度表示：（batch，n，k），batch可不存在。</td>
+      <td>在adjX2为false情况下各个维度表示：（batch，k，n）。<br>在adjX2为true情况下各个维度表示：（batch，n，k），batch可不存在。</td>
       <td>bool</td>
       <td>-</td>
       <td>-</td>
@@ -170,10 +172,10 @@ aclnnStatus aclnnQuantMatmulV2(
 
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed; width: 887px"><colgroup>
-  <col style="width: 300px">
-  <col style="width: 200px">
-  <col style="width: 700px">
+  <table style="undefined;table-layout: fixed; width: 1149px"><colgroup>
+  <col style="width: 291px">
+  <col style="width: 135px">
+  <col style="width: 723px">
   </colgroup>
   <thead>
     <tr>
@@ -264,6 +266,7 @@ aclnnStatus aclnnQuantMatmulV2(
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <memory>
 #include <iostream>

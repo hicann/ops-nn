@@ -94,14 +94,14 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
         <th>数据类型</th>
         <th>数据格式</th>
         <th style="white-space: nowrap">维度(shape)</th>
-        <th>非连续的Tensor</th>
+        <th>非连续Tensor</th>
       </tr>
     </thread>
     <tbody>
       <tr>
         <td>x</td>
         <td>输入</td>
-        <td>矩阵乘的左输入矩阵，公式中的输入<code>x</code>，device侧的aclTensor。</td>
+        <td>矩阵乘的左输入矩阵，公式中的输入<code>x</code>。</td>
         <td>-</td>
         <td>FLOAT16、BFLOAT16</td>
         <td>ND</td>
@@ -111,7 +111,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
       <tr>
         <td>weight</td>
         <td>输入</td>
-        <td>矩阵乘的右输入矩阵，公式中的输入<code>weight</code>，device侧的aclTensor。</td>
+        <td>矩阵乘的右输入矩阵，公式中的输入<code>weight</code>。</td>
         <td>-</td>
         <td>INT8、INT4、FLOAT8_E4M3FN<sup>2</sup>、HIFLOAT8<sup>2</sup>、INT32、FLOAT<sup>2</sup>、FLOAT4_E2M1<sup>2</sup></td>
         <td>ND、FRACTAL_NZ</td>
@@ -131,8 +131,8 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
       <tr>
         <td>antiquantOffsetOptional</td>
         <td>可选输入</td>
-        <td>实现输入反量化计算的反量化offset参数，反量化公式中的<code>antiquantOffset</code>，device侧的aclTensor。</td>
-        <td>可选输入, 当不需要时为空指针。</td>
+        <td>实现输入反量化计算的反量化offset参数，反量化公式中的<code>antiquantOffset</code>。</td>
+        <td>当不需要时为空指针。</td>
         <td>FLOAT16、BFLOAT16、INT32<sup>1</sup></td>
         <td>ND</td>
         <td>要求与<code>antiquantScale</code>一致。</td>
@@ -141,7 +141,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
       <tr>
         <td>quantScaleOptional</td>
         <td>可选输入</td>
-        <td>实现输出量化计算的量化参数，device侧的aclTensor。</td>
+        <td>实现输出量化计算的量化参数。</td>
         <td>由量化公式中的<code>quantScale</code>和<code>quantOffset</code>的数据通过<code>aclnnTransQuantParam</code>接口转化得到。不需要时为空指针。</td>
         <td>UINT64<sup>1</sup></td>
         <td>ND</td>
@@ -151,28 +151,28 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
       <tr>
         <td>quantOffsetOptional</td>
         <td>可选输入</td>
-        <td>实现输出量化计算的量化offset参数，量化公式中的<code>quantOffset</code>，device侧的aclTensor。</td>
-        <td>可选输入, 不需要时为空指针。</td>
+        <td>实现输出量化计算的量化offset参数，量化公式中的<code>quantOffset</code>。</td>
+        <td>不需要时为空指针。</td>
         <td>FLOAT<sup>1</sup></td>
         <td>ND</td>
         <td>要求与<code>quantScaleOptional</code>一致</td>
-        <td>不支持</td>
+        <td>-</td>
       </tr>
       <tr>
         <td>biasOptional</td>
         <td>可选输入</td>
-        <td>偏置输入，公式中的<code>bias</code>，device侧的aclTensor。</td>
-        <td>可选输入, 当不需要时为空指针。</td>
+        <td>偏置输入，公式中的<code>bias</code>。</td>
+        <td> 当不需要时为空指针。</td>
         <td>FLOAT16、FLOAT、BFLOAT16<sup>2</sup></td>
         <td>ND</td>
         <td>1-2维</td>
-        <td>不支持</td>
+        <td>-</td>
       </tr>
       <tr>
         <td>antiquantGroupSize</td>
         <td>输入</td>
         <td>表示在伪量化pergroup和mx<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，对输入<code>weight</code>进行反量化计算的groupSize输入，描述一组反量化参数对应的待反量化数据量在Reduce方向的大小。</td>
-        <td>当伪量化算法不为pergroup和mx<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>时传入0；当伪量化算法为pergroup<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>时传入值的范围为[32, k-1]且值要求是32的倍数；在mx<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>，仅支持32。</td>
+        <td>当伪量化算法不为pergroup和mx<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>时传入0。<br>当伪量化算法为pergroup<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>时传入值的范围为[32, k-1]且值要求是32的倍数。<br>在mx<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>，仅支持32。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -181,12 +181,12 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
       <tr>
         <td>y</td>
         <td>输出</td>
-        <td>计算输出，公式中的<code>y</code>，device侧的aclTensor。</td>
+        <td>公式中的<code>y</code>。</td>
         <td>-</td>
         <td>FLOAT16、BFLOAT16、INT8<sup>1</sup></td>
         <td>ND</td>
         <td>2维</td>
-        <td>不支持</td>
+        <td>-</td>
       </tr>
       <tr>
         <td>workspaceSize</td>
@@ -228,11 +228,10 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  <table style="undefined;table-layout: fixed;width: 1030px">
-    <colgroup>
-        <col style="width: 250px">
-        <col style="width: 130px">
-        <col style="width: 650px">
+  <table style="undefined;table-layout: fixed; width: 1149px"><colgroup>
+  <col style="width: 291px">
+  <col style="width: 135px">
+  <col style="width: 723px">
     </colgroup>
     <thead>
       <tr>
@@ -298,16 +297,40 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
 ## aclnnWeightQuantBatchMatmulV2
 
 - **参数说明**
-  <table>
-    <thead>
-      <tr><th>参数名</th><th>输入/输出</th><th>描述</th></tr>
-    </thead>
-    <tbody>
-      <tr><td>workspace</td><td>输入</td><td>在Device侧申请的workspace内存地址。</td></tr>
-      <tr><td>workspaceSize</td><td>输入</td><td>在Device侧申请的workspace大小，由第一段接口`aclnnWeightQuantBatchMatmulV2GetWorkspaceSize`获取。</td></tr>
-      <tr><td>executor</td><td>输入</td><td>op执行器，包含了算子计算流程。</td></tr>
-      <tr><td>stream</td><td>输入</td><td>指定执行任务的Stream。</td></tr>
-    </tbody>
+
+  <table style="undefined;table-layout: fixed; width: 1151px"><colgroup>
+  <col style="width: 184px">
+  <col style="width: 134px">
+  <col style="width: 833px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnWeightQuantBatchMatmulV2GetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
   </table>
 
 - **返回值：**

@@ -16,6 +16,7 @@
 - 接口功能：完成量化的矩阵乘计算。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。支持T-C、T-T、K-C、K-T、mx[量化模式](../../../docs/zh/context/量化介绍.md)。
 
 - 计算公式：
+
     <details>
     <summary><term>Atlas 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term></summary>
 
@@ -30,6 +31,7 @@
     $$
     out = (x1@x2 + bias) * x2Scale + x2Offset
     $$
+
     </details>
 
     <details>
@@ -64,6 +66,7 @@
     $$
     out = ((x1 @ (x2*x2Scale)) + yOffset) * x1Scale
     $$
+
     </details>
 
     <details>
@@ -372,10 +375,10 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 
     第一段接口完成入参校验，出现以下场景时报错：
 
-    <table style="undefined;table-layout: fixed; width: 1030px"><colgroup>
-    <col style="width: 262px">
-    <col style="width: 121px">
-    <col style="width: 819px">
+    <table style="undefined;table-layout: fixed; width: 1149px"><colgroup>
+    <col style="width: 291px">
+    <col style="width: 135px">
+    <col style="width: 723px">
     </colgroup>
     <thead>
     <tr>
@@ -417,10 +420,10 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1030px"><colgroup>
-    <col style="width: 153px">
-    <col style="width: 121px">
-    <col style="width: 880px">
+    <table style="undefined;table-layout: fixed; width: 1151px"><colgroup>
+    <col style="width: 184px">
+    <col style="width: 134px">
+    <col style="width: 833px">
     </colgroup>
     <thead>
       <tr>
@@ -456,6 +459,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性说明：
   - aclnnQuantMatmulWeightNz默认确定性实现。
 
@@ -483,6 +487,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
   - yOffset的约束：shape支持1维（n）。为计算过程中离线计算的辅助结果，值要求为8 * x2 * x2Scale，并在第1维累加。
 
 </details>
+
 <details>
 <summary><term>Atlas 推理系列产品</term></summary>
 
@@ -496,6 +501,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     | INT8 | INT8 | null    | UINT64/INT64 | null/FLOAT32  | null/INT32 | INT8    |
 
 </details>
+
 <details>
 <summary><term>Ascend 950PR/Ascend 950DT</term></summary>
 
@@ -546,6 +552,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     - mx全量化场景下，当x1与x2数据类型为FLOAT8_E4M3FN时，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致。
 
   - **伪量化场景下dtype和shape要求如下：**
+  
     |量化类型|x1 dtype       |x2 dtype     | x1Scale dtype  |x2Scale dtype |bias dtype   |x1 shape  | x2 shape| x1Scale shape | x2Scale shape     |bias shape | yScale shape| [groupSizeM, groupSizeN, groupSizeK]|
     |---------------| ------------| -------------- |--------------|-------------|--------- | --------| --------------| ------------      |---------- | ------------| ---------------------------------------|-------|
     | mx量化 |FLOAT8_E4M3FN  |FLOAT4_E2M1  |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16|(m, k)  |(n, k)  |(m, k/32)    |(n, k/32)        |(1, n)    | null        | [0, 0, 32] / [1, 1, 32]                |
@@ -563,6 +570,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+
   x2为NZ格式场景下的示例代码如下(transposeX2=false)。
 
   ```Cpp

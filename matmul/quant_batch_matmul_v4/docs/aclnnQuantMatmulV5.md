@@ -16,11 +16,16 @@
 ## 功能说明
 
 - 接口功能：完成量化的矩阵乘计算。
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：兼容aclnnQuantMatmulV3、aclnnQuantMatmulV4接口功能。完成量化的矩阵乘计算，最小支持输入维度为1维，最大支持输入维度为2维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）。
-  - <term>Ascend 950PR/Ascend 950DT</term>：兼容aclnnQuantMatmulV3、aclnnQuantMatmulV4接口功能，在其基础上新增支持G-B、B-B、T-CG、mx[量化模式](../../../docs/zh/context/量化介绍.md)等特性，新增x1，x2输入支持dtype为FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8、FLOAT4_E2M1。完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+
+    兼容aclnnQuantMatmulV3、aclnnQuantMatmulV4接口功能。完成量化的矩阵乘计算，最小支持输入维度为1维，最大支持输入维度为2维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）。
+  - <term>Ascend 950PR/Ascend 950DT</term>：
+
+    兼容aclnnQuantMatmulV3、aclnnQuantMatmulV4接口功能，在其基础上新增支持G-B、B-B、T-CG、mx[量化模式](../../../docs/zh/context/量化介绍.md)等特性，新增x1，x2输入支持dtype为FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8、FLOAT4_E2M1。完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。
 
 - 计算公式：
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+
     支持K-C && K-T、T-C && T-T、G-B、K-G[量化模式](../../../docs/zh/context/量化介绍.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
 
     <details>
@@ -200,6 +205,7 @@ aclnnStatus aclnnQuantMatmulV5GetWorkspaceSize(
   uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
+
 ```c++
 aclnnStatus aclnnQuantMatmulV5(
   void          *workspace,
@@ -215,9 +221,9 @@ aclnnStatus aclnnQuantMatmulV5(
   <table style="undefined;table-layout: fixed; width: 1554px"><colgroup>
   <col style="width: 248px">
   <col style="width: 121px">
-  <col style="width: 170px">
-  <col style="width: 397px">
-  <col style="width: 220px">
+  <col style="width: 210px">
+  <col style="width: 327px">
+  <col style="width: 250px">
   <col style="width: 115px">
   <col style="width: 138px">
   <col style="width: 145px">
@@ -388,11 +394,7 @@ aclnnStatus aclnnQuantMatmulV5(
         <td>groupSize(int64_t)</td>
         <td>可选输入</td>
         <td>用于输入m、n、k方向上的量化分组大小。</td>
-        <td>
-        <ul>
-            <li>由3个方向的groupSizeM，groupSizeN，groupSizeK 三个值拼接组成，每个值占16位，共占用int64_t类型groupSize的低48位（groupSize中的高16位的数值无效），计算公式见表格下方。</li>
-          </ul>
-        </td>
+        <td>由3个方向的groupSizeM，groupSizeN，groupSizeK 三个值拼接组成，每个值占16位，共占用int64_t类型groupSize的低48位（groupSize中的高16位的数值无效），计算公式见表格下方。</td>
         <td>INT64</td>
         <td>-</td>
         <td>-</td>

@@ -24,6 +24,7 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnTransposeBatchMatMulGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnTransposeBatchMatMul”接口执行计算。
+
 ```cpp
 aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(
     const aclTensor    *x1,
@@ -39,6 +40,7 @@ aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(
     uint64_t           *workspaceSize,
     aclOpExecutor      **executor)
 ```
+
 ```cpp
 aclnnStatus aclnnTransposeBatchMatMul(
     void               *workspace,
@@ -46,37 +48,38 @@ aclnnStatus aclnnTransposeBatchMatMul(
     aclOpExecutor      *executor,
     const aclrtStream  stream)
 ```
+
 ## aclnnTransposeBatchMatMulGetWorkSpaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed;width: 1567px"><colgroup>
+  <table style="undefined;table-layout: fixed;width: 1545px"><colgroup>
     <col style="width: 170px">
     <col style="width: 120px">
     <col style="width: 300px">
-    <col style="width: 330px">
-    <col style="width: 212px">
-    <col style="width: 100px">
-    <col style="width: 190px">
+    <col style="width: 350px">
+    <col style="width: 210px">
+    <col style="width: 120px">
+    <col style="width: 130px">
     <col style="width: 145px">
     </colgroup>
     <thead>
       <tr>
         <th>参数名</th>
-        <th style="white-space: nowrap">输入/输出</th>
+        <th>输入/输出</th>
         <th>描述</th>
         <th>使用说明</th>
         <th>数据类型</th>
-        <th><a href="../../../docs/zh/context/数据格式.md" target="_blank">数据格式</a></th>
-        <th style="white-space: nowrap">维度</th>
-        <th><a href="../../../docs/zh/context/非连续的Tensor.md" target="_blank">非连续的Tensor</a></th>
+        <th>数据格式</th>
+        <th>维度(shape)</th>
+        <th>非连续Tensor</th>
       <tr>
     </thead>
     <tbody>
       <tr>
         <td>x1</td>
         <td>输入</td>
-        <td>表示矩阵乘的第一个矩阵，Device侧aclTensor。</td>
+        <td>表示矩阵乘的第一个矩阵。</td>
         <td>
           <ul>
             <li>数据类型需要与x2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
@@ -93,7 +96,7 @@ aclnnStatus aclnnTransposeBatchMatMul(
       <tr>
         <td>x2</td>
         <td>输入</td>
-        <td>表示矩阵乘的第二个矩阵，Device侧aclTensor。</td>
+        <td>表示矩阵乘的第二个矩阵。</td>
         <td>
         <ul>
             <li>数据类型需要与x1满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
@@ -111,7 +114,7 @@ aclnnStatus aclnnTransposeBatchMatMul(
       <tr>
         <td>bias</td>
         <td>输入</td>
-        <td>表示矩阵乘的偏置矩阵，Device侧aclTensor。</td>
+        <td>表示矩阵乘的偏置矩阵。</td>
         <td>
         <ul>
             <li>预留参数，当前暂不支持。</li>
@@ -124,8 +127,8 @@ aclnnStatus aclnnTransposeBatchMatMul(
       </tr>
       <tr>
       <td>scale</td>
-        <td>输入（可选）</td>
-        <td>表示输出矩阵的量化系数，可在输入为FLOAT16且输出为INT8时使能，Device侧aclTensor。</td>
+        <td>可选输入</td>
+        <td>表示输出矩阵的量化系数，可在输入为FLOAT16且输出为INT8时使能。</td>
         <td>
         <ul>
             <li>shape仅支持一维且需要满足且等于[b*n]。</li>
@@ -207,7 +210,7 @@ aclnnStatus aclnnTransposeBatchMatMul(
       <tr>
         <td>out</td>
         <td>输出</td>
-        <td>表示矩阵乘的输出矩阵，公式中的out，Device侧aclTensor。</td>
+        <td>表示矩阵乘的输出矩阵，公式中的out。</td>
         <td>
         <ul>
           <li> 数据类型需要与x1与x2推导之后的数据类型保持一致（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
@@ -232,6 +235,8 @@ aclnnStatus aclnnTransposeBatchMatMul(
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
+  第一段接口会完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1030px"><colgroup>
   <col style="width: 250px">
@@ -275,63 +280,47 @@ aclnnStatus aclnnTransposeBatchMatMul(
 
 - **参数说明：**
 
-  <div style="overflow-x: auto;">
-  <table style="undefined;table-layout: fixed; width: 1508px"><colgroup>
-  <col style="width: 151px">
-  <col style="width: 121px">
-  <col style="width: 301px">
-  <col style="width: 331px">
-  <col style="width: 237px">
-  <col style="width: 111px">
-  <col style="width: 111px">
-  <col style="width: 145px">
+  <table style="undefined;table-layout: fixed; width: 1143px"><colgroup>
+  <col style="width: 184px">
+  <col style="width: 134px">
+  <col style="width: 825px">
   </colgroup>
   <thead>
     <tr>
       <th>参数名</th>
-      <th style="white-space: nowrap">输入/输出</th>
+      <th>输入/输出</th>
       <th>描述</th>
-      <th>使用说明</th>
-      <th>数据类型</th>
     </tr></thead>
   <tbody>
     <tr>
       <td>workspace</td>
-      <td>入参</td>
-      <td>在Device侧申请的workspace内存地址</td>
-      <td>-</td>
-      <td>void</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
     </tr>
     <tr>
       <td>workspaceSize</td>
-      <td>入参</td>
+      <td>输入</td>
       <td>在Device侧申请的workspace大小，由第一段接口aclnnTransposeBatchMatMulGetWorkSpaceSize获取。</td>
-      <td>-</td>
-      <td>uint64_t</td>
     </tr>
     <tr>
       <td>executor</td>
-      <td>入参</td>
+      <td>输入</td>
       <td>op执行器，包含了算子计算流程。</td>
-      <td>-</td>
-      <td>-</td>
     </tr>
     <tr>
       <td>stream</td>
-      <td>入参</td>
+      <td>输入</td>
       <td>指定执行任务的Stream。</td>
-      <td>-</td>
-      <td>-</td>
     </tr>
   </tbody>
   </table>
-  </div>
 
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性说明：aclnnTransposeBatchMatMul默认确定性实现。
 
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
@@ -345,7 +334,9 @@ aclnnStatus aclnnTransposeBatchMatMul(
     - 当scale不为空时，batchSplitFactor只能等于1，且仅支持输入为FLOAT16和输出为INT8的类型推导。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

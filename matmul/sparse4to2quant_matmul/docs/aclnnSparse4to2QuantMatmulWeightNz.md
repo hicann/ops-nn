@@ -22,6 +22,7 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSparse4to2QuantMatmulGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnSparse4to2QuantMatmul”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnSparse4to2QuantMatmulWeightNzGetWorkspaceSize(
     const aclTensor *x, 
@@ -47,14 +48,14 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1320px"><colgroup>
+  <table style="undefined;table-layout: fixed; width: 1465px"><colgroup>
   <col style="width: 101px">
-  <col style="width: 115px">
-  <col style="width: 200px">
-  <col style="width: 240px">
+  <col style="width: 120px">
+  <col style="width: 260px">
+  <col style="width: 400px">
   <col style="width: 177px">
-  <col style="width: 104px">
-  <col style="width: 238px">
+  <col style="width: 124px">
+  <col style="width: 138px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -166,11 +167,12 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
-  <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
-  <col style="width: 272px">
-  <col style="width: 103px">
-  <col style="width: 604px">
+  <table style="undefined;table-layout: fixed; width: 1149px"><colgroup>
+  <col style="width: 291px">
+  <col style="width: 135px">
+  <col style="width: 723px">
   </colgroup>
   <thead>
     <tr>
@@ -196,10 +198,10 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
-  <col style="width: 173px">
-  <col style="width: 112px">
-  <col style="width: 668px">
+  <table style="undefined;table-layout: fixed; width: 1151px"><colgroup>
+  <col style="width: 184px">
+  <col style="width: 134px">
+  <col style="width: 833px">
   </colgroup>
   <thead>
     <tr>
@@ -236,6 +238,7 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 1. x的最后一维即shape的描述中k的值不能超过65535。
 2. 当前只支持sparseWeightScale，xScale均不是nullptr的场景。
 

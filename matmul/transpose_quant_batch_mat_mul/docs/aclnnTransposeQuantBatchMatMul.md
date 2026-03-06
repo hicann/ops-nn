@@ -12,6 +12,7 @@
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
 |  <term>Atlas 推理系列产品 </term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
+
 ## 功能说明
 
 - 接口功能：完成张量x1与张量x2量化的矩阵乘计算，支持K-C[量化模式](../../../docs/zh/context/量化介绍.md)。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的数列进行变更。permX1代表张量x1的转置序列，permX2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。
@@ -22,61 +23,64 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnTransposeQuantBatchMatMulGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnTransposeQuantBatchMatMul”接口执行计算。
+
 ```cpp
 aclnnStatus aclnnTransposeQuantBatchMatMulGetWorkspaceSize(
-    const aclTensor* x1, 
-    const aclTensor* x2, 
-    const aclTensor* bias, 
-    const aclTensor* x1Scale, 
-    const aclTensor* x2Scale,
-    const int32_t dtype, 
-    const int32_t groupSize, 
+    const aclTensor*   x1, 
+    const aclTensor*   x2, 
+    const aclTensor*   bias, 
+    const aclTensor*   x1Scale, 
+    const aclTensor*   x2Scale,
+    const int32_t      dtype, 
+    const int32_t      groupSize, 
     const aclIntArray* permX1, 
     const aclIntArray* permX2,
     const aclIntArray* permY, 
-    const int32_t batchSplitFactor, 
-    aclTensor* out, 
-    uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+    const int32_t      batchSplitFactor, 
+    aclTensor*         out, 
+    uint64_t*          workspaceSize,
+    aclOpExecutor**    executor)
 ```
+
 ```cpp
 aclnnStatus aclnnTransposeQuantBatchMatMul(
     void               *workspace, 
-    uint64_t           workspaceSize,
+    uint64_t            workspaceSize,
     aclOpExecutor      *executor,
-    const aclrtStream  stream)
+    const aclrtStream   stream)
 ```
+
 ## aclnnTransposeQuantBatchMatMulGetWorkSpaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed;width: 1575px"><colgroup>
-    <col style="width: 400px">
-    <col style="width: 100px">
+  <table style="undefined;table-layout: fixed;width: 1545px"><colgroup>
+    <col style="width: 170px">
+    <col style="width: 120px">
     <col style="width: 300px">
-    <col style="width: 300px">
-    <col style="width: 212px">
-    <col style="width: 80px">
-    <col style="width: 107px">
-    <col style="width: 40px">
+    <col style="width: 350px">
+    <col style="width: 210px">
+    <col style="width: 120px">
+    <col style="width: 130px">
+    <col style="width: 145px">
     </colgroup>
     <thead>
       <tr>
         <th>参数名</th>
-        <th style="white-space: nowrap">输入/输出</th>
+        <th>输入/输出</th>
         <th>描述</th>
         <th>使用说明</th>
         <th>数据类型</th>
-        <th><a href="../../../docs/zh/context/数据格式.md" target="_blank">数据格式</a></th>
-        <th style="white-space: nowrap">维度</th>
-        <th><a href="../../../docs/zh/context/非连续的Tensor.md" target="_blank">非连续的Tensor</a></th>
+        <th>数据格式</th>
+        <th>维度(shape)</th>
+        <th>非连续Tensor</th>
       <tr>
     </thead>
     <tbody>
       <tr>
         <td>x1（aclTensor*）</td>
         <td>输入</td>
-        <td>表示矩阵乘的第一个矩阵，Device侧aclTensor。</td>
+        <td>表示矩阵乘的第一个矩阵。</td>
         <td>
           <ul>
             <li>数据类型需要与x2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
@@ -91,7 +95,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
       <tr>
         <td>x2（aclTensor*）</td>
         <td>输入</td>
-        <td>表示矩阵乘的第二个矩阵，Device侧aclTensor。</td>
+        <td>表示矩阵乘的第二个矩阵。</td>
         <td>
         <ul>
             <li>数据类型需要与x1满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
@@ -107,12 +111,8 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
       <tr>
         <td>bias（aclTensor*）</td>
         <td>输入</td>
-        <td>表示矩阵乘的偏置矩阵，Device侧aclTensor。</td>
-        <td>
-        <ul>
-            <li>预留参数，当前暂不支持。</li>
-        </ul>
-        </td>
+        <td>表示矩阵乘的偏置矩阵。</td>
+        <td>预留参数，当前暂不支持。</td>
         <td>BFLOAT16、FLOAT16、FLOAT32</td>
         <td>-</td>
         <td>-</td>
@@ -121,12 +121,8 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
       <tr>
       <td>x1Scale（aclTensor*）</td>
         <td>输入</td>
-        <td>表示左矩阵的量化系数，Device侧aclTensor。</td>
-        <td>
-        <ul>
-            <li>shape仅支持一维且需要满足且等于[m]。</li>
-        </ul>
-        </td>
+        <td>表示左矩阵的量化系数。</td>
+        <td>shape仅支持一维且需要满足且等于[m]。</td>
         <td>FLOAT32</td>
         <td>ND</td>
         <td>1</td>
@@ -135,12 +131,8 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
       <tr>
       <td>x2Scale（aclTensor*）</td>
         <td>输入</td>
-        <td>表示右矩阵的量化系数，Device侧aclTensor。</td>
-        <td>
-        <ul>
-            <li>shape仅支持一维且需要满足且等于[n]。</li>
-        </ul>
-        </td>
+        <td>表示右矩阵的量化系数。</td>
+        <td>shape仅支持一维且需要满足且等于[n]。</td>
         <td>FLOAT32</td>
         <td>ND</td>
         <td>1</td>
@@ -165,11 +157,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>groupSize（int32_t）</td>
         <td>输入</td>
         <td>用于指定量化分组大小，预留参数，当前仅支持配置为0，其他取值不生效。</td>
-        <td>
-        <ul>
-          <li>当前配置非0取值不生效。</li>
-        </ul>
-        </td>
+        <td>当前配置非0取值不生效。</td>
         <td>INT32</td>
         <td>-</td>
         <td>-</td>
@@ -179,11 +167,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>permX1（aclIntArray*）</td>
         <td>输入</td>
         <td>表示矩阵乘的第一个矩阵的转置序列，host侧的aclIntArray。</td>
-        <td>
-        <ul>
-          <li> 支持[1, 0, 2]。</li>
-        </ul>
-        </td>
+        <td>支持[1, 0, 2]。</td>
         <td>INT64</td>
         <td>-</td>
         <td>1</td>
@@ -193,11 +177,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>permX2（aclIntArray*）</td>
         <td>输入</td>
         <td>表示矩阵乘的第二个矩阵的转置序列，host侧的aclIntArray。</td>
-        <td>
-        <ul>
-          <li> 支持[0, 1, 2]。</li>
-        </ul>
-        </td>
+        <td>支持[0, 1, 2]。</td>
         <td>INT64</td>
         <td>-</td>
         <td>1</td>
@@ -207,11 +187,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>permY（aclIntArray*）</td>
         <td>输入</td>
         <td>表示矩阵乘输出矩阵的转置序列，host侧的aclIntArray。</td>
-        <td>
-        <ul>
-            <li>支持[1, 0, 2]。</li>
-        </ul>
-        </td>
+        <td>支持[1, 0, 2]。</td>
         <td>INT64</td>
         <td>-</td>
         <td>1</td>
@@ -221,11 +197,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>batchSplitFactor（int32_t）</td>
         <td>输入</td>
         <td>用于指定矩阵乘输出矩阵中B维的切分大小，Host侧的整型，当前仅支持取值为1。</td>
-        <td>
-        <ul>
-          <li>当前取值仅支持为1。</li>
-        </ul>
-        </td>
+        <td>当前取值仅支持为1。</td>
         <td>INT32</td>
         <td>-</td>
         <td>-</td>
@@ -234,7 +206,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
       <tr>
         <td>out（aclTensor*）</td>
         <td>输出</td>
-        <td>表示矩阵乘的输出矩阵，公式中的out，Device侧aclTensor。</td>
+        <td>表示矩阵乘的输出矩阵，公式中的out。</td>
         <td>
         <ul>
           <li> 数据类型需要与x1与x2推导之后的数据类型保持一致（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
@@ -349,6 +321,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性说明： aclnnTransposeQuantBatchMatMul默认确定性实现。
 
 - <term>Ascend 950PR/Ascend 950DT</term>：
@@ -357,7 +330,9 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
     - out和dtype支持float16和bfloat16。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <memory>
