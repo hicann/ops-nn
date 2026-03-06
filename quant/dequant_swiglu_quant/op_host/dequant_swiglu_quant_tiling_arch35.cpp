@@ -67,6 +67,9 @@ constexpr int64_t BIAS_FACTOR_FOR_NOT_FULL = 10000;
 constexpr int64_t ACTIVATE_FACTOR_FOR_NOT_FULL = 1000;
 constexpr int64_t QUANT_SCALE_FACTOR_FOR_NOT_FULL = 100;
 constexpr int64_t QUANT_OFFSET_FACTOR_FOR_NOT_FULL = 10;
+constexpr int64_t SPECIAL_GROUP_NUM_64 = 64; // groupIndex存在时走特殊分核的group条件
+constexpr int64_t SPECIAL_GROUP_NUM_32 = 32; // groupIndex不存在时走特殊分核的group条件
+constexpr int64_t SPECIAL_GROUP_NUM_16 = 16; // 走特殊分核场景的分组条件
 constexpr float CLAMP_LIMIT_DEFAULT= 7.0;
 constexpr float GLU_ALPHA_DEFAULT = 1.702;
 constexpr float GLU_BIAS_DEFAULT = 1.0;
@@ -697,10 +700,14 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::GetShapeAttrsInfo() {
     int64_t xTotalNum = xShape_.GetShapeSize();
     inDimy_ = xShape_.GetDim(xDimNum_ - 1);
     inDimx_ = xTotalNum / inDimy_;
-    if ((speGroupType_ == 1) && (groupNum_ >= 64) && (inDimx_ / groupNum_ <= 16) && (activateDim_ == static_cast<int64_t>(xDimNum_-1))) {
+    if ((speGroupType_ == 1) && (groupNum_ >= SPECIAL_GROUP_NUM_64) &&
+        (inDimx_ / groupNum_ <= SPECIAL_GROUP_NUM_16) &&
+            (activateDim_ == static_cast<int64_t>(xDimNum_-1))) {
       isSpecialCoreCut_ = 1;
     }
-    if ((speGroupType_ == 0) && (groupNum_ >= 32) && (inDimx_ / groupNum_ <= 16) && (activateDim_ == static_cast<int64_t>(xDimNum_-1)) && (!hasBias_) && (!hasQuantScale_)) {
+    if ((speGroupType_ == 0) && (groupNum_ >= SPECIAL_GROUP_NUM_32) &&
+        (inDimx_ / groupNum_ <= SPECIAL_GROUP_NUM_16) &&
+        (activateDim_ == static_cast<int64_t>(xDimNum_-1)) && (!hasBias_) && (!hasQuantScale_)) {
       isSpecialCoreCut_ = 1;
     }
     auto shapeY = context_->GetOutputShape(0);
