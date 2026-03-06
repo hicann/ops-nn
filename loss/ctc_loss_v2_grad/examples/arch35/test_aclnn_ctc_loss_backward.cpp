@@ -262,11 +262,12 @@ int main()
     ret = CreateAclTensor(targetsHostData, targetsShape, &targetsDeviceAddr, aclDataType::ACL_INT64, &targets);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
+    const int DATA_SIZE = 4;
     std::vector<int64_t> inputLengthsSizeData = {10, 10, 10, 10};
-    inputLengths = aclCreateIntArray(inputLengthsSizeData.data(), 4);
+    inputLengths = aclCreateIntArray(inputLengthsSizeData.data(), DATA_SIZE);
     CHECK_RET(inputLengths != nullptr, return ACL_ERROR_BAD_ALLOC);
     std::vector<int64_t> targetLengthsSizeData = {2, 3, 1, 5};
-    targetLengths = aclCreateIntArray(targetLengthsSizeData.data(), 4);
+    targetLengths = aclCreateIntArray(targetLengthsSizeData.data(), DATA_SIZE);
     CHECK_RET(targetLengths != nullptr, return ACL_ERROR_BAD_ALLOC);
 
     // 创建negLoglikelihood aclTensor

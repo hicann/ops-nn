@@ -205,7 +205,7 @@ ge::graphStatus Tiling4CTCLossV2ForAscendC(gert::TilingContext* context)
 
     // set Local Memory Size and Total Core Num
     uint64_t ubSize = 0;
-    auto compileInfo = reinterpret_cast<const CTCLossV2ForCompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = static_cast<const CTCLossV2ForCompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);

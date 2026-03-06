@@ -88,12 +88,12 @@ private:
     bool InitTargetLengths();
     bool InitNegLogLikelihood();
     bool InitGrad();
-    void InitLogBetaThreadParams(int64_t maxThreadNum);
-    void InitUpdateLcabThreadParams(int64_t maxThreadNum);
-    void InitCalGradThreadParams(int64_t maxThreadNum);
+    void InitLogBetaThreadParams(const int64_t maxThreadNum);
+    void InitUpdateLcabThreadParams(const int64_t maxThreadNum);
+    void InitCalGradThreadParams(const int64_t maxThreadNum);
     void InitGmParams();
     bool IsLargeSize() const;
-    int64_t GetThreadNum();
+    int64_t GetThreadNum() const;
     ge::graphStatus InitSimtParams();
 
 private:
@@ -141,9 +141,9 @@ private:
     int64_t initTempGradGmSizePerBlock = 0;
     int64_t initTempGradGmSizeEndBlock = 0;
 
-    int64_t logBetaThreadNum;
-    int64_t updateLcabThreadNum;
-    int64_t calGradThreadNum;
+    int64_t logBetaThreadNum = 0;
+    int64_t updateLcabThreadNum = 0;
+    int64_t calGradThreadNum = 0;
 };
 
 void CTCLossV2GradTiling4AscendC::InitGmParams()
@@ -201,7 +201,7 @@ bool CTCLossV2GradTiling4AscendC::IsLargeSize() const
            (batchSize * logAlphaT * alphaLength > INT32_MAX);
 }
 
-int64_t CTCLossV2GradTiling4AscendC::GetThreadNum()
+int64_t CTCLossV2GradTiling4AscendC::GetThreadNum() const
 {
     if (IsLargeSize()) {
         return MAX_THREAD_NUM_512;
