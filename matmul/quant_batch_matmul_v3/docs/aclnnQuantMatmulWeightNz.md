@@ -58,6 +58,12 @@
     $$
     out = x1@x2 * x2Scale * x1Scale + bias
     $$
+
+    - x1为INT8，x2为INT32，x1Scale为FLOAT32，x2Scale为UINT64，yOffset为FLOAT32：
+
+    $$
+    out = ((x1 @ (x2*x2Scale)) + yOffset) * x1Scale
+    $$
     </details>
 
     <details>
@@ -156,7 +162,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
               <li>x1 shape中的k和x2 shape中的k1需要满足ceil(k / k0) = k1, </br>x2 shape中的n1与out的n需要满足ceil(n / n0) = n1。</li>
           </ul>
         </td>
-        <td>INT4<sup>1、3</sup>、INT8、FLOAT4_E2M1<sup>1、2</sup>、FLOAT32<sup>1、2</sup>、FLOAT8_E4M3FN<sup>1、2</sup></td>
+        <td>INT4<sup>1、3</sup>、INT8、INT32<sup>1、3</sup>、FLOAT4_E2M1<sup>1、2</sup>、FLOAT32<sup>1、2</sup>、FLOAT8_E4M3FN<sup>1、2</sup></td>
         <td>NZ</td>
         <td>4-8</td>
         <td>✓</td>
@@ -231,13 +237,11 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     <tr>
         <td>yOffset</td>
         <td>输入</td>
-        <td>预留参数。</td>
-        <td>
-            当前版本不支持，需要传入nullptr或者空tensor。
-        </td>
+        <td>公式中的输入yOffset。</td>
         <td>-</td>
-        <td>-</td>
-        <td>-</td>
+        <td>FLOAT32</td>
+        <td>ND</td>
+        <td>1</td>
         <td>-</td>
     </tr>
     <tr>
@@ -462,17 +466,21 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 
   - 输入和输出支持以下数据类型组合：
 
-    | x1   | x2   | x1Scale      | x2Scale          | x2Offset      | bias                        | out      |
-    | ---- | ---- | ------------ | ---------------- | ------------- | --------------------------- | -------- |
-    | INT8 | INT8 | null         | UINT64/INT64     | null          | null/INT32                  | FLOAT16  |
-    | INT8 | INT8 | null         | UINT64/INT64     | null/FLOAT32  | null/INT32                  | INT8     |
-    | INT8 | INT8 | null/FLOAT32 | FLOAT32/BFLOAT16 | null          | null/INT32/BFLOAT16/FLOAT32 | BFLOAT16 |
-    | INT8 | INT8 | FLOAT32      | FLOAT32          | null          | null/INT32/FLOAT16/FLOAT32  | FLOAT16  |
-    | INT8 | INT8 | null         | FLOAT32/BFLOAT16 | null          | null/INT32                  | INT32    |
-    | INT4 | INT4 | null/FLOAT32 | BFLOAT16         | null/FLOAT32  | null/BFLOAT16               | BFLOAT16 |
-    | INT4 | INT4 | null/FLOAT32 | FLOAT32          | null/FLOAT32  | null/BFLOAT16               | BFLOAT16 |
- 	| INT4 | INT4 | null/FLOAT32 | UINT64           | null/FLOAT32  | null/INT32                  | FLOAT16  |
- 	| INT4 | INT4 | null/FLOAT32 | FLOAT32          | null/FLOAT32  | null/INT32                  | FLOAT16  |
+    | x1   | x2    | x1Scale      | x2Scale          | x2Offset      | yOffset | bias                        | out               |
+    | ---- | ----- | ------------ | ---------------- | ------------- | ------- | --------------------------- | ----------------- |
+    | INT8 | INT8  | null         | UINT64/INT64     | null          | null    | null/INT32                  | FLOAT16           |
+    | INT8 | INT8  | null         | UINT64/INT64     | null/FLOAT32  | null    | null/INT32                  | INT8              |
+    | INT8 | INT8  | null/FLOAT32 | FLOAT32/BFLOAT16 | null          | null    | null/INT32/BFLOAT16/FLOAT32 | BFLOAT16          |
+    | INT8 | INT8  | FLOAT32      | FLOAT32          | null          | null    | null/INT32/FLOAT16/FLOAT32  | FLOAT16           |
+    | INT8 | INT8  | null         | FLOAT32/BFLOAT16 | null          | null    | null/INT32                  | INT32             |
+    | INT4 | INT4  | null/FLOAT32 | BFLOAT16         | null/FLOAT32  | null    | null/BFLOAT16               | BFLOAT16          |
+    | INT4 | INT4  | null/FLOAT32 | FLOAT32          | null/FLOAT32  | null    | null/BFLOAT16               | BFLOAT16          |
+ 	| INT4 | INT4  | null/FLOAT32 | UINT64           | null/FLOAT32  | null    | null/INT32                  | FLOAT16           |
+ 	| INT4 | INT4  | null/FLOAT32 | FLOAT32          | null/FLOAT32  | null    | null/INT32                  | FLOAT16           |
+ 	| INT8 | INT32 | UINT64       | FLOAT32          | null          | FLOAT32 | null                        | FLOAT16/BFLOAT16  |
+
+  - x1的约束：当数据类型为INT8时，且x2的数据类型为INT32时，transposeX1为false。维度为：（m，k），要求k为偶数。
+  - yOffset的约束：shape支持1维（n）。为计算过程中离线计算的辅助结果，值要求为8 * x2 * x2Scale，并在第1维累加。
 
 </details>
 <details>

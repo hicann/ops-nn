@@ -605,18 +605,16 @@ aclnnStatus aclnnQuantMatmulV5(
   - x1的约束：
     - 当数据类型为INT4时，transposeX1为false。维度为：（m，k），要求k为偶数。
     - 当数据类型为INT32时，transposeX1为false。每个INT32数据存放8个INT4数据，对应维度表示：（m，ceil(k / 8)），要求k为8的倍数。
+    - 当数据类型为INT8时，且x2的数据类型为INT32时，transposeX1为false。维度为：（m，k），要求k为偶数。
   - x2的约束：
     - 数据类型为INT4时：
       - 当前仅支持2维ND格式。
       - transposeX2为true时维度为：（n，k），要求k为偶数。
       - transposeX2为false时维度为：（k，n），要求n为偶数。
     - 数据类型为INT32时，每个INT32数据存放8个INT4数据，
-      - ND格式下：
-        - transposeX2为true时维度为：（n，ceil(k / 8)），要求k为8的倍数。
-        - transposeX2为false时维度为：（k，ceil(n / 8)），要求n为8的倍数。
-      - 当x1为INT8时，支持NZ格式：
-        - transposeX2为true时维度为：（k1，n1，n0，k0），其中k0 = 8，n0 = 16，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 64） = k1。
-        - transposeX2为false时维度为：（n1，k1，k0，n0），其中k0 = 16，n0 = 8，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 16） = k1。
+       - 当前仅支持2维ND格式。
+       - transposeX2为true时维度为：（n，ceil(k / 8)），要求k为8的倍数。
+       - transposeX2为false时维度为：（k，ceil(n / 8)），要求n为8的倍数。
       - 可使用aclnnConvertWeightToINT4Pack接口完成x2从INT32（1个int32在0~3bit位存储1个int4）到INT32（1个int32存储8个int4）或INT4（1个int4表示1个int4）的数据格式转换，具体参见[aclnnConvertWeightToINT4Pack接口](../../convert_weight_to_int4_pack/docs/aclnnConvertWeightToINT4Pack.md)。
   - x1Scale的约束：数据格式支持ND，shape是1维（t，），t = m，其中m与x1的m一致。
   - x2Scale的约束：数据格式支持ND，shape是1维（t，），t = 1或n，其中n与x2的n一致。
@@ -625,7 +623,7 @@ aclnnStatus aclnnQuantMatmulV5(
       - 数据格式支持ND。shape支持1维（n，）或3维（batch，1，n），n与x2的n一致。
       - 当x1和x2为INT32、INT4时，bias的shape只支持1维（n，）。
       - 当out的shape为2、4、5、6维时，bias的shape只支持1维（n，）。
-  - yOffset的约束：shape支持1维（n）。为计算过程中离线计算的辅助结果，值要求为8*x2*x2Scale，并在第1维累加。
+  - yOffset的约束：shape支持1维（n）。为计算过程中离线计算的辅助结果，值要求为8 * x2 * x2Scale，并在第1维累加。
 
   </details>
 
