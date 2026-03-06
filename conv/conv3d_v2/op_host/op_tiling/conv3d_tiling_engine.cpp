@@ -1685,7 +1685,7 @@ void Conv3dTilingEngine::NumBlocksFactorMix(uint32_t orgDim, std::vector<uint32_
     inputRange.assign(tmpRanges.begin(), tmpRanges.end());
 }
 
-void Conv3dTilingEngine::NumBlocksRangesFilter(uint32_t orgDim, std::vector<uint32_t>& inputRange)
+void Conv3dTilingEngine::NumBlocksRangesFilter(uint32_t orgDim, std::vector<uint32_t>& inputRange) const
 {
     std::vector<uint32_t> tmpSelectRange;
     for (auto numBlocks : inputRange) {
@@ -1700,7 +1700,7 @@ void Conv3dTilingEngine::NumBlocksRangesFilter(uint32_t orgDim, std::vector<uint
     }
 }
 
-void Conv3dTilingEngine::GetNumBlocksRangeforGroupRange(std::vector<uint32_t> &groupRange)
+void Conv3dTilingEngine::GetNumBlocksRangeforGroupRange(std::vector<uint32_t> &groupRange) const
 {
     // groupDim = 1, groupRange = {1}
     groupRange.assign(1, 1);

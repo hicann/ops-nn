@@ -97,7 +97,7 @@ void Conv3dBaseTiling::GetConv3DParasHf32Mode(const uint32_t enableHf32Idx, uint
     return;
 }
 
-bool Conv3dBaseTiling::Is3DFp32InputFp32Output()
+bool Conv3dBaseTiling::Is3DFp32InputFp32Output() const
 {
     // HF32 is only applicable when fmap/weight/output(/bias) are all FP32.
     // Use GE context dtypes directly so this check is valid before descInfo_/flagInfo_ are synced.
@@ -186,7 +186,7 @@ std::vector<int64_t> Conv3dBaseTiling::ExtractOriginOutputShape()
     return shape;
 }
 
-bool Conv3dBaseTiling::ExtractPadList(std::vector<int64_t> &padList)
+bool Conv3dBaseTiling::ExtractPadList(std::vector<int64_t> &padList) const
 {
     auto padPtr = context_->GetAttrs()->GetListInt(ATTR_PAD_INDEX);
     if (padPtr == nullptr) {
@@ -250,7 +250,7 @@ bool Conv3dBaseTiling::ExtractDilationList(std::vector<int64_t> &dilationList)
     return true;
 }
 
-bool Conv3dBaseTiling::ExtractBiasShape(std::vector<int64_t> &biasShape)
+bool Conv3dBaseTiling::ExtractBiasShape(std::vector<int64_t> &biasShape) const
 {
     auto biasShapePtr = context_->GetOptionalInputShape(INPUT_BIAS_INDEX);
     if (biasShapePtr == nullptr) {
@@ -263,7 +263,7 @@ bool Conv3dBaseTiling::ExtractBiasShape(std::vector<int64_t> &biasShape)
     return true;
 }
 
-bool Conv3dBaseTiling::ExtractScaleShape(std::vector<int64_t> &scaleShape)
+bool Conv3dBaseTiling::ExtractScaleShape(std::vector<int64_t> &scaleShape) const
 {
     auto scaleShapePtr = context_->GetOptionalInputShape(INPUT_SCALE_INDEX);
     if (scaleShapePtr == nullptr) {
@@ -276,7 +276,7 @@ bool Conv3dBaseTiling::ExtractScaleShape(std::vector<int64_t> &scaleShape)
     return true;
 }
 
-int64_t Conv3dBaseTiling::ExtractGroups()
+int64_t Conv3dBaseTiling::ExtractGroups() const
 {
     auto groupPtr = context_->GetAttrs()->GetInt(ATTR_GROUP_INDEX);
     return (groupPtr != nullptr) ? *groupPtr : 1;

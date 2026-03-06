@@ -15,8 +15,6 @@
 #ifndef CONV3D_V2_TILING_DATA_H
 #define CONV3D_V2_TILING_DATA_H
 
-#include "kernel_tiling/kernel_tiling.h"
-
 namespace Ops {
 namespace NN {
 namespace Conv3dV2 {

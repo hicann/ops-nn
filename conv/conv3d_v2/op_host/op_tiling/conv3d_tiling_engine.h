@@ -135,8 +135,8 @@ public:
                            uint32_t doDim, uint32_t groupDim);
     void NumBlocksFactorMix(uint32_t orgDim, std::vector<uint32_t> &inputRange,
                            const std::vector<uint32_t> &mixRange);
-    void NumBlocksRangesFilter(uint32_t orgDim, std::vector<uint32_t> &inputRange);
-    void GetNumBlocksRangeforGroupRange(std::vector<uint32_t> &groupRange);
+    void NumBlocksRangesFilter(uint32_t orgDim, std::vector<uint32_t> &inputRange) const;
+    void GetNumBlocksRangeforGroupRange(std::vector<uint32_t> &groupRange) const;
     void GetConv3DRunInfo(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingdata);
 
     // Checks and computations (return bool for success/failure)
