@@ -63,6 +63,7 @@ if(NOT TARGET intf_pub_cxx14)
     -Wl,-z,relro
     -Wl,-z,now
     -Wl,-z,noexecstack
+    $<$<CONFIG:Release>:-s>
     $<$<CONFIG:Release>:-Wl,--build-id=none>
     $<$<BOOL:${ENABLE_ASAN}>:-fsanitize=address -fsanitize=leak -fsanitize-recover=address>
     $<$<BOOL:${ENABLE_COVERAGE}>:-fprofile-arcs -ftest-coverage>
@@ -96,6 +97,7 @@ if(NOT TARGET intf_pub_cxx17)
       -Wl,-z,relro
       -Wl,-z,now
       -Wl,-z,noexecstack
+      $<$<CONFIG:Release>:-s>
       $<$<CONFIG:Release>:-Wl,--build-id=none>
       $<$<BOOL:${ENABLE_ASAN}>:-fsanitize=address -fsanitize=leak -fsanitize-recover=address>
       $<$<BOOL:${ENABLE_COVERAGE}>:-fprofile-arcs -ftest-coverage>
