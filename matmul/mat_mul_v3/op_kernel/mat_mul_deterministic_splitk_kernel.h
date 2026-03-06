@@ -507,9 +507,9 @@ __aicore__ inline void MatMulMultiCoreSplitKDivide(GM_ADDR aGM, GM_ADDR bGM, GM_
     constexpr static MatmulQuantParams quantParams = {false, false};
     constexpr static MatmulBatchParams batchParams = {false, BatchMode::NONE};
     constexpr static MatmulFuncParams funcParamsMK{false, false, false, false, 2, IterateOrder::UNDEF,
-        ScheduleType::INNER_PRODUCT, true, true}; // 2 preload左矩阵
+        ScheduleType::INNER_PRODUCT, true, true}; // 2 N方向preload
     constexpr static MatmulFuncParams funcParamsNK{false, false, false, false, 1, IterateOrder::UNDEF,
-        ScheduleType::INNER_PRODUCT, true, true}; // 1 preload右矩阵
+        ScheduleType::INNER_PRODUCT, true, true}; // 1 M方向preload
     constexpr MatmulConfig mmStaticConfigMK = GetMMConfig<configMode>(shapeParams, quantParams, batchParams, funcParamsMK);
     constexpr MatmulConfig mmStaticConfigNK = GetMMConfig<configMode>(shapeParams, quantParams, batchParams, funcParamsNK);
     constexpr static MatmulApiStaticTiling staticTilingMK =
@@ -1105,9 +1105,9 @@ __aicore__ inline void MatMulMultiCoreSplitKDivideL2cache(GM_ADDR aGM, GM_ADDR b
     constexpr static MatmulQuantParams quantParams = {false, false};
     constexpr static MatmulBatchParams batchParams = {false, BatchMode::NONE};
     constexpr static MatmulFuncParams funcParamsMK{false, false, false, false, 2, IterateOrder::UNDEF,
-        ScheduleType::INNER_PRODUCT, true, true}; // 2 preload左矩阵
+        ScheduleType::INNER_PRODUCT, true, true}; // 2 N方向preload
     constexpr static MatmulFuncParams funcParamsNK{false, false, false, false, 1, IterateOrder::UNDEF,
-        ScheduleType::INNER_PRODUCT, true, true}; // 1 preload右矩阵
+        ScheduleType::INNER_PRODUCT, true, true}; // 1 M方向preload
     constexpr MatmulConfig mmStaticConfigMK = GetMMConfig<configMode>(shapeParams, quantParams, batchParams, funcParamsMK);
     constexpr MatmulConfig mmStaticConfigNK = GetMMConfig<configMode>(shapeParams, quantParams, batchParams, funcParamsNK);
     constexpr static MatmulApiStaticTiling staticTilingMK =
