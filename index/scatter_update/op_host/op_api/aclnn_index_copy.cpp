@@ -229,6 +229,36 @@ static const aclTensor* TransposeBySpecifiedAxis(const aclTensor* self, int64_t 
   return selfTransposed;
 }
 
+static aclnnStatus ContiguousAndReshapeParams(aclTensor* selfRef, int64_t& dim, const aclTensor* index, const aclTensor* source,
+                                                     aclOpExecutor* uniqueExecutor, const aclTensor*& selfContiguous,
+                                                     const aclTensor*& indexContiguous, const aclTensor*& sourceContiguous,
+                                                     const aclTensor*& selfRefReShape, const aclTensor*& indexReShape, const aclTensor*& sourceReShape, const op::Shape& rowVector) {
+    if (selfRef->GetViewShape().IsScalar()) {
+      dim = 0;
+      selfRefReShape = l0op::Reshape(selfContiguous, rowVector, uniqueExecutor);
+    } else {
+      dim = dim >= 0 ? dim : dim + selfRef->GetViewShape().GetDimNum();
+      selfRefReShape = selfContiguous;
+    }
+    OP_CHECK(selfRefReShape != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "selfRefReShape is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
+
+    if (index->GetViewShape().IsScalar()) {
+      indexReShape = l0op::Reshape(indexContiguous, rowVector, uniqueExecutor);
+    } else {
+      indexReShape = indexContiguous;
+    }
+    OP_CHECK(indexReShape != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "indexReShape is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
+
+    if (source->GetViewShape().IsScalar()) {
+      sourceReShape = l0op::Reshape(sourceContiguous, rowVector, uniqueExecutor);
+    } else {
+      sourceReShape = sourceContiguous;
+    }
+    OP_CHECK(sourceReShape != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "sourceReShape is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
+
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus ExecIndexCopyGetWorkspaceSize(aclTensor* selfRef, int64_t dim, const aclTensor* index,
                                           const aclTensor* source, aclTensor* outRef,
                                           uint64_t* workspaceSize, aclOpExecutor** executor) {
@@ -246,65 +276,42 @@ aclnnStatus ExecIndexCopyGetWorkspaceSize(aclTensor* selfRef, int64_t dim, const
     return ACLNN_SUCCESS;
   }
 
-  // 将输入selfRef转换成连续的tensor
-  auto selfContiguous = l0op::Contiguous(selfRef, uniqueExecutor.get());
-  CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // 将输入index转换成连续的tensor
-  auto indexContiguous = l0op::Contiguous(index, uniqueExecutor.get());
-  CHECK_RET(indexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // 将输入source转换成连续的tensor
-  auto sourceContiguous = l0op::Contiguous(source, uniqueExecutor.get());
-  CHECK_RET(sourceContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  op::Shape rowVector;
-  rowVector.AppendDim(-1);
-  // 当前scatterupdate aicpu算子不支持传入0维tensor，需要做reshape处理
+  const aclTensor* selfContiguous = l0op::Contiguous(selfRef, uniqueExecutor.get());
+  OP_CHECK(selfContiguous != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "selfContiguous is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
+  const aclTensor* indexContiguous = l0op::Contiguous(index, uniqueExecutor.get());
+  OP_CHECK(indexContiguous != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "indexContiguous is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
+  const aclTensor* sourceContiguous = l0op::Contiguous(source, uniqueExecutor.get());
+  OP_CHECK(sourceContiguous != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "sourceContiguous is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
   const aclTensor* selfRefReShape = nullptr;
-  if (selfRef->GetViewShape().IsScalar()) {
-    dim = 0;
-    selfRefReShape = l0op::Reshape(selfContiguous, rowVector, uniqueExecutor.get());
-  } else {
-    dim = dim >= 0 ? dim : dim + selfRef->GetViewShape().GetDimNum();
-    selfRefReShape = selfContiguous;
-  }
-
   const aclTensor* indexReShape = nullptr;
-  if (index->GetViewShape().IsScalar()) {
-    indexReShape = l0op::Reshape(indexContiguous, rowVector, uniqueExecutor.get());
-  } else {
-    indexReShape = indexContiguous;
-  }
-
   const aclTensor* sourceReShape = nullptr;
-  if (source->GetViewShape().IsScalar()) {
-    sourceReShape = l0op::Reshape(sourceContiguous, rowVector, uniqueExecutor.get());
-  } else {
-    sourceReShape = sourceContiguous;
-  }
+  op::Shape rowVector = {-1};
+  auto conReshapeRet = ContiguousAndReshapeParams(selfRef, dim, index, source, uniqueExecutor.get(), selfContiguous, indexContiguous, sourceContiguous, selfRefReShape, indexReShape, sourceReShape, rowVector);
+  CHECK_RET(conReshapeRet == ACLNN_SUCCESS, conReshapeRet);
 
   // 当前scatterupdate算子不支持指定dim做copy，需要使用transpose
   const aclTensor* kernelOut = nullptr;
   if (dim == 0) {
     // 调用ScatterUpdate算子
     kernelOut = l0op::ScatterUpdate(selfRefReShape, indexReShape, sourceReShape, uniqueExecutor.get(), false);
-    CHECK_RET(kernelOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    OP_CHECK(kernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "kernelOut is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
   } else {
     // 先做transpose再调用ScatterUpdate算子
     auto selfTransposed = TransposeBySpecifiedAxis(selfRefReShape, dim, uniqueExecutor.get());
+    OP_CHECK(selfTransposed != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "selfTransposed is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
     auto sourceTransposed = TransposeBySpecifiedAxis(sourceReShape, dim, uniqueExecutor.get());
+    OP_CHECK(sourceTransposed != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "sourceTransposed is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
 
-    auto transposedKernelOut =
-        l0op::ScatterUpdate(selfTransposed, indexReShape, sourceTransposed, uniqueExecutor.get(), false);
-    CHECK_RET(transposedKernelOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto transposedKernelOut = l0op::ScatterUpdate(selfTransposed, indexReShape, sourceTransposed, uniqueExecutor.get(), false);
+    OP_CHECK(transposedKernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "transposedKernelOut is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
 
     kernelOut = TransposeBySpecifiedAxis(transposedKernelOut, dim, uniqueExecutor.get());
+    OP_CHECK(kernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "kernelOut is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
   }
 
   // 固定写法，将计算结果拷贝到输出outRef上
   auto viewCopyResult = l0op::ViewCopy(kernelOut, outRef, uniqueExecutor.get());
-  CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  OP_CHECK(viewCopyResult != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "viewCopyResult is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
 
   // 固定写法，获取计算过程中需要使用的workspace大小
   *workspaceSize = uniqueExecutor->GetWorkspaceSize();
