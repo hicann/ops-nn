@@ -57,7 +57,6 @@ public:
         zeroPointsDtypeSize = blockSize / sizeof(T_ZEROPOINTS);
         yDtypeSize = blockSize / sizeof(T_Y);
 
-
         // dtype align
         xGammaAlign = CeilDiv(baseN, static_cast<int64_t>(xDtypeSize)) * static_cast<int64_t>(xDtypeSize);
         scalesAlign = CeilDiv(baseN, static_cast<int64_t>(scalesDtypeSize)) * static_cast<int64_t>(scalesDtypeSize);
@@ -173,7 +172,6 @@ public:
                 outQueueY2.EnQue<T_Y>(y2Local);
             }
             CopyOutY(gmOffset, realM);
-
         }
         inQueueOther.FreeTensor(otherLocal);
     }
@@ -244,7 +242,6 @@ private:
             localOffset = localOffset + zeroPointsAlign * sizeof(T_ZEROPOINTS);
             DataCopyPad(zeroPoints2Local, zeroPoints2Gm, copyInParamszeroPoints, dataCopyPadExtParamszeroPoints);
         }
-
     }
     __aicore__ inline void CopyInXMutiMoveAlign(uint64_t gmOffset, uint32_t realM)
     {
@@ -700,9 +697,7 @@ __aicore__ inline void StoreTensorForDtypeTOut(
                 }
             }
         }
-        
     }
-
 
 private:
     TPipe* pipe_ = nullptr;

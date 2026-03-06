@@ -293,7 +293,6 @@ ge::graphStatus AddRmsNormCastRegbaseTiling::SetTilingParams()
         return ge::GRAPH_SUCCESS;
     }
 
-
     // 1. No cut
     tmpUBSize = CalUBTotalSize(tilingParams.mPerCore, tilingParams.numN);
     if (tmpUBSize < tilingParams.maxUbSize) {

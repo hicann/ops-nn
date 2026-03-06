@@ -200,7 +200,7 @@ public:
     bool CheckOutputDtype();
     ge::graphStatus SetInputParams();
     uint64_t CalUBTotalSize(uint64_t baseM, uint64_t baseN, const uint32_t tilingType);
-    int64_t CalFullLoadBaseM(uint64_t baseM, int64_t& tmpPower);
+    int64_t CalFullLoadBaseM(uint64_t baseN, int64_t& tmpPower);
     uint64_t CalUsedSize(uint64_t baseM, uint64_t baseNB8Align, uint64_t baseNB32Align, int64_t tmpPower, int64_t firstVcaddLength);
     ge::graphStatus SetTilingParams();
     void SetTilingData();

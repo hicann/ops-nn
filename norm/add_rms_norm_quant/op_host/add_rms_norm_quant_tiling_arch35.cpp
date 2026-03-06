@@ -559,11 +559,11 @@ ge::graphStatus AddRmsNormQuantRegbaseTiling::SetTilingParams()
     // 3. Cut n
     tmpUBSize = CalUBTotalSize(1, tilingParams.xReduceAlignNum, TILING_TYPE_SPILT);
     if (tmpUBSize <= tilingParams.maxUbSize) {
-        uint64_t tmpPower = tilingParams.xReduceAlignNum;
-        while (CalUBTotalSize(1, tmpPower * MULTI_FACTOR_2, TILING_TYPE_SPILT) <= tilingParams.maxUbSize) {
-            tmpPower *= MULTI_FACTOR_2;
+        uint64_t tmpPowerSize = tilingParams.xReduceAlignNum;
+        while (CalUBTotalSize(1, tmpPowerSize * MULTI_FACTOR_2, TILING_TYPE_SPILT) <= tilingParams.maxUbSize) {
+            tmpPowerSize *= MULTI_FACTOR_2;
         }
-        tilingParams.powerSplit = tmpPower;
+        tilingParams.powerSplit = tmpPowerSize;
         uint64_t tmpLoop = 1;
         while (tmpLoop * MULTI_FACTOR_2 * tilingParams.powerSplit <= tilingParams.numN) {
             tmpLoop *= MULTI_FACTOR_2;
