@@ -110,7 +110,7 @@
     </tr>
   </tbody></table>
 
-  - <term>Atlas 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：输入参数`x`、`gamma`、`beta`、`scale`的数据类型不支持BFLOAT16。
+  - <term>Atlas 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>、<term>Kirin X90/Kirin 9030 处理器系列产品</term>：输入参数`x`、`gamma`、`beta`、`scale`的数据类型不支持BFLOAT16。
 
 ## 约束说明
 

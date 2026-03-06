@@ -172,6 +172,11 @@
 
   - <term>Ascend 950PR/Ascend 950DT</term>：可选输入beta不支持配置。
 
+- Kirin X90/Kirin 9030处理器系列产品：
+  - x1、x2、gamma、beta和x的数据类型只支持FLOAT16。
+  - scales1和scales2的数据类型只支持FLOAT32。
+  - zero_points1和zero_points2的数据类型只支持INT32。
+  - y1和y2的数据类型只支持INT8。
 ## 约束说明
 
 <term>Atlas 推理系列产品</term>：`x1`、`x2`需要norm的维度数据个数不能小于32。`gamma`、`beta`、`scales1`、`scales2`、`zero_points1`、`zero_points2`的数据个数不能小于32。

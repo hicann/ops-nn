@@ -99,6 +99,7 @@
 
   - <term>Atlas 推理系列产品</term>：参数`x1`、`x2`、`gamma`、`y`、`x`的数据类型不支持BFLOAT16。
 
+- Kirin X90/Kirin 9030处理器系列产品：x1、x2、gamma、y和x的数据类型不支持BFLOAT16。
 ## 约束说明
 
 无

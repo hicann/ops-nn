@@ -146,6 +146,13 @@
   - bias只支持INT32数据类型。
   - y只支持FLOAT16和INT32数据类型。
   - pertoken_scale暂不支持。
+- Kirin X90/Kirin 9030处理器系列产品：
+  - x1、x2只支持INT8数据类型。
+  - scale只支持UINT64、INT64数据类型。
+  - offset只支持FLOAT32数据类型。
+  - bias只支持INT32数据类型。
+  - pertoken_scale只支持FLOAT32数据类型。
+  - y只支持FLOAT16和INT8数据类型。
 ## 约束说明
 
 - 不支持空tensor。

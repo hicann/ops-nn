@@ -79,6 +79,7 @@
   - 当`x`的数据类型为FLOAT16时，`scalar`数据类型支持FLOAT16、FLOAT32。
   - `x`支持包含的最大Tensor个数为50。
 
+- Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
 ## 约束说明
 
 无

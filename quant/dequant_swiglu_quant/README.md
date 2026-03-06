@@ -151,6 +151,11 @@
 
   - DequantSwigluQuant不包含dstType、roundModeOptional和activateDim参数。
 
+- Kirin X90/Kirin 9030 处理器系列产品: 
+ 	- 输入`x`：数据类型不支持BFLOAT16。
+ 	- 输入`biasOptional`：数据类型不支持BFLOAT16。
+ 	- 输入`quantScaleOptional`：数据类型不支持FLOAT16。
+ 	- 输出`y`：数据类型仅支持INT8
 ## 约束说明
 
 - 输入x对应activateDim的维度需要是2的倍数，且x的维数必须大于1维。

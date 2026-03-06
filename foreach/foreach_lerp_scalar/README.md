@@ -79,6 +79,7 @@
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`x1`的shape与入参`x2`、出参`y`的一致。
 - <term>Ascend 950PR/Ascend 950DT</term>：`x1`的shape size与入参`x2`、出参`y`的一致。支持包含的最大Tensor个数为50。
 
+- Kirin X90/Kirin 9030处理器系列产品：x1、x2和y的数据类型不支持BFLOAT16。
 ## 约束说明
 
 无

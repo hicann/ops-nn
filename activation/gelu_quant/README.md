@@ -145,6 +145,7 @@
     </tr>
   </tbody></table>
 
+- Kirin X90/Kirin 9030处理器系列产品：self、inputScaleOptional和inputOffsetOptional的数据类型不支持BFLOAT16。y不支持FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8。
 ## 约束说明
 
 inputScaleOptional的数据类型与self的类型一致，或者在类型不一致时采用精度更高的类型。

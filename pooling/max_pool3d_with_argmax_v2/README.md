@@ -118,7 +118,7 @@
   </tbody></table>
 
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`argmax` 数据类型不支持INT64。输入数据排布不支持NDHWC。
-
+- Kirin X90/Kirin 9030 处理器系列产品: 输入/输出不支持BFLOAT16；`argmax` 数据类型不支持INT64。
 ## 约束说明
 
 无。

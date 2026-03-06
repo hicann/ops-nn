@@ -69,6 +69,7 @@
     </tr>
   </tbody></table>
 
+- Kirin X90/Kirin 9030处理器系列产品：支持FLOAT32、FLOAT16和INT32，不支持BFLOAT16。
 ## 约束说明
 
 无

@@ -11,6 +11,7 @@
 | <term>Atlas 推理系列产品 </term>                             |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    ×   |
 
+
 ## 功能说明
 
 - 算子功能：将多维数组 / 矩阵的元素位置映射为单一整数的索引方式。
@@ -63,6 +64,7 @@
     </tr>
   </tbody></table>
 
+- Kirin X90/Kirin 9030处理器系列产品：value_size和index的数据类型不支持INT64。
 ## 约束说明
 
 无

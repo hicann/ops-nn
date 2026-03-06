@@ -106,7 +106,7 @@
     </tr>
   </tbody></table>
 
-
+- Kirin X90/Kirin 9030处理器系列产品：x1、x2、gamma、y2和x的数据类型不支持BFLOAT16。
 ## 约束说明
 
 无

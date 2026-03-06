@@ -95,6 +95,7 @@
 
 - GeGlu不包含activateLeft参数。
 - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：self、out和outGelu的数据类型支持FLOAT、FLOAT16。
+- Kirin X90/Kirin 9030处理器系列产品：self、out和outGelu的数据类型不支持BFLOAT16。
 
 ## 约束说明
 

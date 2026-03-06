@@ -192,6 +192,7 @@
 
     输出参数`y1`、`y2`的数据类型仅支持INT4、INT8。
 
+- Kirin X90/Kirin 9030处理器系列产品：x1、x2、gamma、smooth_scale1、smooth_scale2、beta和x的数据类型不支持BFLOAT16，y1和y2只支持INT8。
 ## 约束说明
 
 - 当output_mask不为空时，参数smooth_scale1有值时，则output_mask[0]必须为True。参数smooth_scale2有值时，则output_mask[1]必须为True。

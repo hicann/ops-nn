@@ -76,7 +76,7 @@
       <td>ND</td>
   </tbody></table>
 
-  - <term>Atlas 推理系列产品</term>、<term>Kirin X90 处理器系列产品</term>：所有输入参数和输出参数的数据类型不支持BFLOAT16。
+  - <term>Atlas 推理系列产品</term>、<term>Kirin X90/Kirin 9030 处理器系列产品</term>：所有输入参数和输出参数的数据类型不支持BFLOAT16。
 
 ## 约束说明
 

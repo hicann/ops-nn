@@ -67,6 +67,7 @@
     </tr>
   </tbody></table>
 
+- Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
 ## 约束说明
 
 - 输入值为NaN，输出也为NaN，输入是Inf，输出也是Inf。

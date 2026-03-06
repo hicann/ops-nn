@@ -77,6 +77,7 @@
 - Atlas A3 训练系列产品/Atlas A3 推理系列产品：不支持FRACTAL_NZ格式，bias不支持BFLOAT16数据格式。
 - Ascend 950PR/Ascend 950DT：只有输入b支持FRACTAL_NZ格式。
 
+- Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16、FLOAT32。
 ## 约束说明
 
 - 支持空tensor，空tensor场景下不支持bias。

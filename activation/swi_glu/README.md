@@ -68,6 +68,7 @@
 
 - <term>Atlas 推理系列产品</term>：数据类型支持FLOAT16、FLOAT32。
 
+- Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
 ## 约束说明
 
 无

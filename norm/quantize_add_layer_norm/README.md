@@ -151,6 +151,10 @@
     </tr>
   </tbody></table>
 
+- Kirin X90/Kirin 9030处理器系列产品：
+  - 所有输入、输出的数据类型不支持BFLOAT16。
+  - scales的数据类型不支持FLOAT16、BFLOAT16。
+  - zero_points1的数据类型不支持FLOAT16。
 ## 约束说明
 
 无
