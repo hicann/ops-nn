@@ -178,7 +178,7 @@ function(gen_opgraph_symbol)
 endfunction()
 
 function(gen_opapi_symbol)
-  if(NOT TARGET ${OPHOST_NAME}_opapi_obj AND NOT TARGET opbuild_gen_aclnn_all)
+  if((NOT TARGET ${OPHOST_NAME}_opapi_obj AND NOT TARGET opbuild_gen_aclnn_all) OR NO_ACLNN)
     return()
   endif()
   # opapi shared
@@ -205,7 +205,7 @@ function(gen_opapi_symbol)
 endfunction()
 
 function(gen_cust_opapi_symbol)
-  if(NOT TARGET ${OPHOST_NAME}_opapi_obj AND NOT TARGET opbuild_gen_aclnn_all)
+  if((NOT TARGET ${OPHOST_NAME}_opapi_obj AND NOT TARGET opbuild_gen_aclnn_all) OR NO_ACLNN)
     return()
   endif()
   # op_api

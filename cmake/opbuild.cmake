@@ -84,14 +84,19 @@ function(gen_aclnn_classify host_obj prefix ori_out_srcs ori_out_headers opbuild
   set(out_headers)
   if(module_sources)
     foreach(file ${module_sources})
-      get_filename_component(name_without_ext ${file} NAME_WE)
-      string(REGEX REPLACE "_def$" "" _op_name ${name_without_ext})
+      # 用***def.cpp文件的上上级目录名作为_op_name更准确，因为可能出现非标准命名的***def.cpp
+      get_filename_component(PARENT_DIR ${file} DIRECTORY)
+      get_filename_component(PARENT_DIR ${PARENT_DIR} DIRECTORY)
+      get_filename_component(_op_name ${PARENT_DIR} NAME)
       list(APPEND in_srcs ${file})
       file(GLOB out_src_with_ver ${out_src_path}/${file_prefix}_${_op_name}_v*.cpp)
       file(GLOB out_headers_with_ver ${out_src_path}/${file_prefix}_${_op_name}_v*.h)
       list(APPEND out_srcs ${out_src_path}/${file_prefix}_${_op_name}.cpp ${out_src_with_ver})
       list(APPEND out_headers ${out_src_path}/${file_prefix}_${_op_name}.h ${out_headers_with_ver})
     endforeach()
+    # 当一个算子对应多个***def.cpp文件时，out_srcs和out_headers会出现同名元素，因此做去重处理
+    list(REMOVE_DUPLICATES out_srcs)
+    list(REMOVE_DUPLICATES out_headers)
   endif()
   # opbuild_gen_aclnn/opbuild_gen_aclnnInner/opbuild_gen_aclnnExc
   gen_opbuild_target(
@@ -164,7 +169,7 @@ function(gen_aclnn_with_opdef)
   gen_aclnn_master_header(${aclnn_master_header_name} "${aclnn_master_header}" "${opbuild_out_headers}")
 
   # 将头文件安装到packages/vendors/vendor_name/op_api/include
-  if(ENABLE_PACKAGE)
+  if(ENABLE_PACKAGE AND NOT NO_ACLNN)
     install(FILES ${opbuild_out_headers} DESTINATION ${ACLNN_INC_INSTALL_DIR} OPTIONAL)
     install(FILES ${aclnn_master_header} DESTINATION ${ACLNN_INC_INSTALL_DIR} OPTIONAL)
     install(FILES ${opbuild_out_headers} DESTINATION ${ACLNN_OP_INC_INSTALL_DIR} OPTIONAL)

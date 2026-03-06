@@ -2,11 +2,11 @@
 <block name="OpsNNInfO" copy_type="delivery" src_path="lib/" dst_path="" install_path="" install_own="$username:$usergroup" install_mod="550" install_type="all">
     
     <file_info value="aclnn_api" copy_type="delivery" src_path="built-in/op_api" dst_path="built-in/op_impl/ai_core/tbe/op_api/lib/linux/$(ARCH)" install_path="$(TARGET_ENV)/lib64">
-        <file value="libopapi_nn.so" install_mod="555"/>
+        <file value="libopapi_nn.so" optional="true" install_mod="555"/>
     </file_info>
 
     <file_info value="aclnn_inc" copy_type="delivery" src_path="built-in/op_api" dst_path="include" install_path="$(TARGET_ENV)/include">
-        <file value="aclnnop" install_mod="555"/>
+        <file value="aclnnop" optional="true" install_mod="555"/>
     </file_info>
 
     <file_info value="op_graph" copy_type="delivery" src_path="" dst_path="built-in/op_graph/inc" install_path="opp/built-in/op_graph/inc" install_type="all">

@@ -332,7 +332,7 @@ bool AdaptiveSlidingWindowTilingV4::Is4BitInput(ge::DataType dtype, bool isLut) 
 bool AdaptiveSlidingWindowTilingV4::Is8BitInput(ge::DataType dtype, bool isLut) const
 {
     // lut查表逻辑: 原始数据DT_INT2和DT_UINT1，查表后转DT_INT4; 原始数据DT_INT4, 查表后转DT_INT8
-    return (isLut == true && dtype == ge::DT_INT4);
+    return (isLut && dtype == ge::DT_INT4);
 }
 
 uint64_t AdaptiveSlidingWindowTilingV4::GetShapeWithDataType(uint64_t size, ge::DataType dtype, bool isLut) const

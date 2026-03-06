@@ -27,7 +27,7 @@ SUPPORTED_LONG_OPTS=(
   "help" "ops=" "soc=" "vendor_name=" "build-type=" "cov" "noexec" "noaicpu" "opkernel" "opkernel_aicpu" "opkernel_aicpu_test" "static"
    "jit" "pkg" "asan" "make_clean_all" "make_clean" "no_force"
   "ophost" "opgraph" "opapi" "run_example" "example_name=" "genop=" "genop_aicpu=" "experimental" "cann_3rd_lib_path=" "oom" "onnxplugin" "dump_cce"
-  "simulator" "bisheng_flags=" "kernel_template_input="
+  "simulator" "bisheng_flags=" "kernel_template_input=" "module_extension=" "noaclnn"
 )
 
 source "./install_deps.sh"
@@ -659,6 +659,8 @@ checkopts() {
   GENOP_TYPE=""
   GENOP_NAME=""
   GENOP_BASE=${BASE_PATH}
+  MODULE_EXT=""
+  NO_ACLNN=FALSE
 
   if [ $# -eq 0 ]; then
     usage "$SHOW_HELP"
@@ -787,6 +789,10 @@ checkopts() {
         build-type=*)
           BUILD_TYPE=${OPTARG#*=}
           ;;
+        module_extension=*)
+          MODULE_EXT=${OPTARG#*=}
+          ;;
+        noaclnn) NO_ACLNN=TRUE ;;
         mssanitizer) ENABLE_MSSANITIZER=FALSE ;;
         oom) ENABLE_OOM=TRUE ;;
         dump_cce) ENABLE_DUMP_CCE=TRUE ;;
@@ -922,6 +928,10 @@ assemble_cmake_args() {
   CMAKE_ARGS="$CMAKE_ARGS -DENABLE_UT_EXEC=${ENABLE_UT_EXEC}"
   CMAKE_ARGS="$CMAKE_ARGS -DENABLE_CUSTOM=${ENABLE_CUSTOM}"
   CMAKE_ARGS="$CMAKE_ARGS -DENABLE_STATIC=${ENABLE_STATIC}"
+  CMAKE_ARGS="$CMAKE_ARGS -DMODULE_EXT=${MODULE_EXT}"
+  if [[ "$NO_ACLNN" == "TRUE" ]]; then
+    CMAKE_ARGS="$CMAKE_ARGS -DNO_ACLNN=TRUE"
+  fi
   custom_cmake_args
   if [[ "$ENABLE_ASAN" == "TRUE" ]]; then
     set +e
