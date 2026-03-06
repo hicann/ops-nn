@@ -338,20 +338,20 @@ static const aclTensor *GetFirstNanIndices(const aclTensor *sortValues, const ac
                                            aclOpExecutor *executor) {
   // nan的Equal结果是false，非nan的Equal结果是true
   auto equalTensor = l0op::Equal(sortValues, sortValues, executor);
-  OP_CHECK(equalTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Equal return nullptr."), nullptr);
+  OP_CHECK(equalTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Equal return nullptr."), return nullptr);
 
   auto endIndices= sortValues->GetViewShape().GetDim(dim) - 1;
   const aclTensor *endTensor = executor->ConvertToTensor(executor->AllocScalar(endIndices), sortIndices->GetDataType());
-  OP_CHECK(endTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ConvertToTensor return nullptr."), nullptr);
+  OP_CHECK(endTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ConvertToTensor return nullptr."), return nullptr);
 
   auto maskedFillTensor = l0op::MaskedFill(sortIndices, equalTensor, endTensor, executor);
-  OP_CHECK(maskedFillTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MaskedFill return nullptr."), nullptr);
+  OP_CHECK(maskedFillTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MaskedFill return nullptr."), return nullptr);
 
   int64_t appendDim[1] = {dim};
   auto dimArray = executor->AllocIntArray(appendDim, 1);
-  OP_CHECK(dimArray != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AllocIntArray return nullptr."), nullptr);
+  OP_CHECK(dimArray != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AllocIntArray return nullptr."), return nullptr);
   auto reduceMinTensor = l0op::ReduceMin(maskedFillTensor, dimArray, true, executor);
-  OP_CHECK(reduceMinTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ReduceMin return nullptr."), nullptr);
+  OP_CHECK(reduceMinTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ReduceMin return nullptr."), return nullptr);
 
   return reduceMinTensor;
 }
@@ -668,7 +668,7 @@ static int64_t GetTensorSize(const aclTensor *self) {
 static const aclTensor *GetNanMedianDimIndexTensor(const aclTensor *selfReshape, int64_t dim, aclOpExecutor *executor) {
   // nan的Equal结果是false，非nan的Equal结果是true
   auto selfEqualTensor = l0op::Equal(selfReshape, selfReshape, executor);
-  OP_CHECK(selfEqualTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Equal return nullptr."), nullptr);
+  OP_CHECK(selfEqualTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Equal return nullptr."), return nullptr);
 
   auto dimSize = selfReshape->GetStorageShape().GetDim(dim);
 
@@ -682,39 +682,39 @@ static const aclTensor *GetNanMedianDimIndexTensor(const aclTensor *selfReshape,
   } else {
     equalCasted = l0op::Cast(selfEqualTensor, op::DataType::DT_INT32, executor);
   }
-  OP_CHECK(equalCasted != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Cast return nullptr."), nullptr);
+  OP_CHECK(equalCasted != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Cast return nullptr."), return nullptr);
 
   // 通过l0算子ReduceSumOp求非nan元素的个数
   const int64_t reduceDim[] = {dim};
   auto reduceDimArray = executor->AllocIntArray(reduceDim, 1);
   auto reduceSumTensor = l0op::ReduceSumOp(equalCasted, reduceDimArray, true, executor);
-  OP_CHECK(reduceSumTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "reducesumop return nullptr."), nullptr);
+  OP_CHECK(reduceSumTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "reducesumop return nullptr."), return nullptr);
 
   // 减1
   auto one = 1;
   const aclTensor *oneTensor = executor->ConvertToTensor(&one, 1, dtype);
-  OP_CHECK(oneTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ConvertToTensor return nullptr."), nullptr);
+  OP_CHECK(oneTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ConvertToTensor return nullptr."), return nullptr);
 
   auto subOneTensor = l0op::Sub(reduceSumTensor, oneTensor, executor);
-  OP_CHECK(subOneTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Sub return nullptr."), nullptr);
+  OP_CHECK(subOneTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Sub return nullptr."), return nullptr);
   // 调用l0算子将减1的结果除以2
   const aclTensor* resultTensor = nullptr;
   if (dimSize >= MAX_CONVERT_NUM) {
     int64_t rightShiftisor = 1;
     const aclTensor *otherTensor = executor->ConvertToTensor(&rightShiftisor, 1, dtype);
-    OP_CHECK(otherTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ConvertToTensor return nullptr."), nullptr);
+    OP_CHECK(otherTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ConvertToTensor return nullptr."), return nullptr);
 
     // 调用l0算子rightShift计算中位数索引
     resultTensor = l0op::RightShift(subOneTensor, otherTensor, executor);
-    OP_CHECK(resultTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "rightShift return nullptr."), nullptr);
+    OP_CHECK(resultTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "rightShift return nullptr."), return nullptr);
   } else {
     int64_t Divisor = 2;
     const aclTensor *otherTensor = executor->ConvertToTensor(&Divisor, 1, dtype);
-    OP_CHECK(otherTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ConvertToTensor return nullptr."), nullptr);
+    OP_CHECK(otherTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ConvertToTensor return nullptr."), return nullptr);
 
     // 调用l0算子rightShift计算中位数索引
     resultTensor = l0op::Div(subOneTensor, otherTensor, executor);
-    OP_CHECK(resultTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Div return nullptr."), nullptr);
+    OP_CHECK(resultTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Div return nullptr."), return nullptr);
   }
 
   return resultTensor;
