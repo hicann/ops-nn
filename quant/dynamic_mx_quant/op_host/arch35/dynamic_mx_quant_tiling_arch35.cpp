@@ -887,6 +887,11 @@ ge::graphStatus Tiling4DynamicMxQuant(gert::TilingContext* context)
     OP_CHECK_IF(
         DynamicMxQuantSetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
         OP_LOGE(context->GetNodeName(), "DynamicMxQuantSetTilingData set tiling data fail."), return ge::GRAPH_FAILED);
+
+    if (tilingParam.blockSizeNumInAxis % DIGIT_TWO) {
+        context->SetScheduleMode(1); // 设置为batch mode模式，所有核同时启动
+    }
+
     context->SetBlockDim(tilingData.get_usedCoreNum());
     context->SetTilingKey(tilingData.get_tilingKey());
     size_t* workspaces = context->GetWorkspaceSizes(1);

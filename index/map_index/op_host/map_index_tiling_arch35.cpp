@@ -246,6 +246,7 @@ inline static ge::graphStatus SetTilingData(gert::TilingContext *context,
     tilingData.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     context->SetBlockDim(tilingData.get_totalCoreNum());
+    context->SetScheduleMode(1); // 设置为batch mode模式，所有核同时启动
     context->SetTilingKey(1);
     size_t *workspaces = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, workspaces);
