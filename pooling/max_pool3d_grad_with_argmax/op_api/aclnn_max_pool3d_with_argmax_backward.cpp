@@ -24,6 +24,7 @@
 #include "opdev/platform.h"
 #include "opdev/framework_op.h"
 #include "op_api/aclnn_util.h"
+#include "pooling/pool_3d_common/op_api/pool_3d_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -114,10 +115,10 @@ static bool CheckFormat(
         return false;
     }
 
-    if (self->GetViewShape().GetDimNum() != CDHW_DIMS && self->GetViewShape().GetDimNum() != NCDHW_DIMS) {
+    if (gradOutput->GetViewShape().GetDimNum() != CDHW_DIMS && gradOutput->GetViewShape().GetDimNum() != NCDHW_DIMS) {
         OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "4D or 5D tensor expected for self but got dim num:%zu",
-            self->GetViewShape().GetDimNum());
+            ACLNN_ERR_PARAM_INVALID, "4D or 5D tensor expected for gradOutput but got dim num:%zu",
+            gradOutput->GetViewShape().GetDimNum());
         return false;
     }
 
@@ -128,17 +129,17 @@ static bool CheckFormat(
         return false;
     }
 
-    if (gradOutput->GetViewShape().GetDimNum() != CDHW_DIMS && gradOutput->GetViewShape().GetDimNum() != NCDHW_DIMS) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "4D or 5D tensor expected for gradOutput but got dim num:%zu",
-            gradOutput->GetViewShape().GetDimNum());
-        return false;
-    }
-
     if (indices->GetViewShape().GetDimNum() != CDHW_DIMS && indices->GetViewShape().GetDimNum() != NCDHW_DIMS) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "4D or 5D tensor expected for indices but got dim num:%zu",
             indices->GetViewShape().GetDimNum());
+        return false;
+    }
+
+    if (self->GetViewShape().GetDimNum() != CDHW_DIMS && self->GetViewShape().GetDimNum() != NCDHW_DIMS) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "4D or 5D tensor expected for self but got dim num:%zu",
+            self->GetViewShape().GetDimNum());
         return false;
     }
 
@@ -271,34 +272,6 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-static inline const aclTensor* View4Das5D(const aclTensor* input, aclOpExecutor* executor)
-{
-    // CDHW -> unsqueeze -> reformat -> NCDHW
-    // unsqueeze input into 5D
-    const int64_t dim = 0; // Unsqueeze at dimension 0
-    auto unsqueezedInput = l0op::UnsqueezeNd(input, dim, executor);
-    CHECK_RET(unsqueezedInput != nullptr, nullptr);
-    // reformat to NCDHW
-    auto reformatInput = l0op::ReFormat(unsqueezedInput, op::Format::FORMAT_NCDHW);
-    CHECK_RET(reformatInput != nullptr, nullptr);
-
-    return reformatInput;
-}
-
-static inline const aclTensor* View5Das4D(const aclTensor* input, const op::Format& format, aclOpExecutor* executor)
-{
-    // NCDHW -> squeeze -> reformat -> CDHW
-    // squeeze out into 4D
-    const int64_t dim = 0; // Squeeze out dimension 0
-    auto squeezedInput = l0op::SqueezeNd(input, dim, executor);
-    CHECK_RET(squeezedInput != nullptr, nullptr);
-
-    // reformat to CDHW
-    auto reformatInput = l0op::ReFormat(squeezedInput, format);
-    CHECK_RET(reformatInput != nullptr, nullptr);
-    return reformatInput;
-}
-
 aclnnStatus aclnnMaxPool3dWithArgmaxBackwardGetWorkspaceSize(
     const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclIntArray* kernelSize,
     const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation, bool ceilMode,
@@ -325,27 +298,27 @@ aclnnStatus aclnnMaxPool3dWithArgmaxBackwardGetWorkspaceSize(
     }
 
     // Convert the self, gradOutput, indices into consecutive tensor
+    auto indicesContiguous = l0op::Contiguous(indices, uniqueExecutor.get());
+    CHECK_RET(indicesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto gradOutputContiguous = l0op::Contiguous(gradOutput, uniqueExecutor.get());
     CHECK_RET(gradOutputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto indicesContiguous = l0op::Contiguous(indices, uniqueExecutor.get());
-    CHECK_RET(indicesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
     // If it's 4D, it needs to be expanded to 5D before calling the MaxPool3dGradWithArgMax interface.
     const bool isSelf4D = self->GetViewShape().GetDimNum() == CDHW_DIMS;
 
-    auto selfUnsqueezed = isSelf4D ? View4Das5D(selfContiguous, uniqueExecutor.get()) :
+    auto selfUnsqueezed = isSelf4D ? ViewCDHWas5D(selfContiguous, uniqueExecutor.get()) :
                                      l0op::ReFormat(selfContiguous, op::Format::FORMAT_NCDHW, uniqueExecutor.get());
     CHECK_RET(selfUnsqueezed != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto gradOutputUnsqueezed = isSelf4D ? View4Das5D(gradOutputContiguous, uniqueExecutor.get()) :
+    auto gradOutputUnsqueezed = isSelf4D ? ViewCDHWas5D(gradOutputContiguous, uniqueExecutor.get()) :
                                            l0op::ReFormat(gradOutputContiguous, op::Format::FORMAT_NCDHW, uniqueExecutor.get());
     CHECK_RET(gradOutputUnsqueezed != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto indicesUnsqueezed = isSelf4D ? View4Das5D(indicesContiguous, uniqueExecutor.get()) :
+    auto indicesUnsqueezed = isSelf4D ? ViewCDHWas5D(indicesContiguous, uniqueExecutor.get()) :
                                         l0op::ReFormat(indicesContiguous, op::Format::FORMAT_NCDHW, uniqueExecutor.get());
     CHECK_RET(indicesUnsqueezed != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -355,7 +328,7 @@ aclnnStatus aclnnMaxPool3dWithArgmaxBackwardGetWorkspaceSize(
     CHECK_RET(gradInputResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     const op::Format& dstFormat = gradInput->GetStorageFormat();
-    auto gradResultSqueezed = isSelf4D ? View5Das4D(gradInputResult, dstFormat, uniqueExecutor.get()) :
+    auto gradResultSqueezed = isSelf4D ? View5DasCDHW(gradInputResult, dstFormat, uniqueExecutor.get()) :
                                          l0op::ReFormat(gradInputResult, dstFormat, uniqueExecutor.get());
     CHECK_RET(gradResultSqueezed != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(CheckReduceOutShape(gradResultSqueezed, gradInput), ACLNN_ERR_PARAM_INVALID);

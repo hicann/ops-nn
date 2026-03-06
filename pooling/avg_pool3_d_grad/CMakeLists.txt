@@ -8,4 +8,4 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE avg_pool3_d_grad ACLNNTYPE aclnn_exclude DEPENDENCIES avg_pool3_d convolution_backward)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE avg_pool3_d_grad ACLNNTYPE aclnn_exclude DEPENDENCIES avg_pool3_d convolution_backward pool_3d_common)

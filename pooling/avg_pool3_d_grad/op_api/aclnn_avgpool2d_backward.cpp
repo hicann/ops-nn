@@ -43,7 +43,7 @@
 #include "matmul/common/op_host/op_api/matmul_util.h"
 #include "op_api/op_api_def.h"
 #include "avgpool2d_conv2d_backprop_input_util.h"
-
+#include "pooling/pool_3d_common/op_api/pool_3d_util.h"
 using namespace avgpool2d_conv2d_input_util;
 using namespace op;
 namespace op {
@@ -476,22 +476,6 @@ static aclnnStatus CheckParams(
     // 对于输出shape是否合理进行check
     CHECK_RET(CheckOutputShape(self, gradInput), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
-}
-
-static const aclTensor* View3Das4D(const aclTensor* input, aclOpExecutor* executor)
-{
-    // NCL -> unsqueeze -> reformat -> NCHW
-    // unsqueeze input into 4D
-    const int64_t appendDim[] = {0};
-    aclIntArray* dimUnsqueeze = executor->AllocIntArray(appendDim, 1);
-    CHECK_RET(dimUnsqueeze != nullptr, nullptr);
-    auto unsqueezedInput = l0op::UnsqueezeNd(input, dimUnsqueeze, executor);
-    CHECK_RET(unsqueezedInput != nullptr, nullptr);
-    // reformat to NCHW
-    auto reformatInput = l0op::ReFormat(unsqueezedInput, Format::FORMAT_NCHW);
-    CHECK_RET(reformatInput != nullptr, nullptr);
-
-    return reformatInput;
 }
 
 static const aclTensor* View4Das3D(const aclTensor* input, aclOpExecutor* executor)
