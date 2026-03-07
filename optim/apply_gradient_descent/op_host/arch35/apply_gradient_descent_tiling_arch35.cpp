@@ -20,7 +20,6 @@
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 #include "register/tilingdata_base.h"
-//#include "util/bfloat16.h"
 #include "op_host/tiling_util.h"
 #include "../../op_kernel/arch35/apply_gradient_descent_dag.h"
 #include "../../op_kernel/arch35/apply_gradient_descent_tiling_key.h"

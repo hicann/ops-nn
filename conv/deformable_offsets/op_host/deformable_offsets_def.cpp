@@ -13,7 +13,6 @@
  * \brief deformable_offsets_def op_host
  */
 
-#include <cstdint>
 #include "register/op_def_registry.h"
 
 namespace ops {

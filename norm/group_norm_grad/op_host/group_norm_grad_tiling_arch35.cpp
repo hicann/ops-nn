@@ -437,8 +437,7 @@ ge::graphStatus GroupNormGradRegBaseTiling::Stage2Mode2Tiling()
     cBlockFactor = std::max(cBlockFactorBase, cBlockFactor);
     stage2CoreUsed_ = Ops::Base::CeilDiv(C_, cBlockFactor);
     int64_t cTileBlockFactor = C_ - (stage2CoreUsed_ - 1) * cBlockFactor;
-    int64_t cTileNumBase;
-    cTileNumBase = TILE_NUM_BASE_LEN_B32 / dTypeSize;
+    int64_t cTileNumBase = TILE_NUM_BASE_LEN_B32 / dTypeSize;
     if (cTileNumBase > cBlockFactor) {
         cTileNumBase = cBlockFactor;
     }
