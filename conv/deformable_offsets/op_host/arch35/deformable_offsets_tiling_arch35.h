@@ -20,7 +20,6 @@
 
 #include "util/shape_util.h"
 #include "register/tilingdata_base.h"
-#include "op_common/op_host/util/opbase_export.h"
 #include "register/op_impl_registry.h"
 
 namespace optiling {

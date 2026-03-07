@@ -99,7 +99,7 @@ ge::graphStatus CheckDeformableOffsetParams(
 }
 
 ge::graphStatus UpdateStrideAndDilationByFormat(
-    gert::TilingContext* context, const std::string format, DeformableOffsetAttr& deformableOffsetAttrInfo,
+    const gert::TilingContext* context, const std::string& format, DeformableOffsetAttr& deformableOffsetAttrInfo,
     const int64_t* stridesData, const int64_t* dilatesData)
 {
     if (format == "NCHW") {
@@ -141,26 +141,26 @@ ge::graphStatus CheckDeformableOffsetAttrs(gert::TilingContext* context, Deforma
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
     OP_CHECK_IF(strides->GetSize() != DIM_NUM_4D, OP_LOGE("DeformableOffsetTiling", "Not stride support len"),
         return ge::GRAPH_FAILED);
-    const int64_t* stridesData = reinterpret_cast<const int64_t*>(strides->GetData());
+    const int64_t* stridesData = static_cast<const int64_t*>(strides->GetData());
 
     auto pads = attrs->GetAttrPointer<gert::ContinuousVector>(PADS_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, pads);
     OP_CHECK_IF(pads->GetSize() != DIM_NUM_4D, OP_LOGE("DeformableOffsetTiling", "Not pads support len"),
         return ge::GRAPH_FAILED);
-    const int64_t* padsData = reinterpret_cast<const int64_t*>(pads->GetData());
+    const int64_t* padsData = static_cast<const int64_t*>(pads->GetData());
 
     auto ksizes = attrs->GetAttrPointer<gert::ContinuousVector>(KSIZE_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, ksizes);
     OP_CHECK_IF(ksizes->GetSize() != EXCEPTED_KERNEL_SIZE, OP_LOGE("DeformableOffsetTiling", "Not ksize support len"),
         return ge::GRAPH_FAILED);
-    const int64_t* ksizesData = reinterpret_cast<const int64_t*>(ksizes->GetData());
+    const int64_t* ksizesData = static_cast<const int64_t*>(ksizes->GetData());
 
     auto dilates = attrs->GetAttrPointer<gert::ContinuousVector>(DILATIONS_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, dilates);
     OP_CHECK_IF(
         dilates->GetSize() != DIM_NUM_4D, OP_LOGE("DeformableOffsetTiling", "Not dilation support len"),
         return ge::GRAPH_FAILED);
-    const int64_t* dilatesData = reinterpret_cast<const int64_t*>(dilates->GetData());
+    const int64_t* dilatesData = static_cast<const int64_t*>(dilates->GetData());
 
     auto modulatePtr = attrs->GetAttrPointer<bool>(MODULATE_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, modulatePtr);
@@ -190,8 +190,8 @@ ge::graphStatus CheckDeformableOffsetAttrs(gert::TilingContext* context, Deforma
 }
 
 ge::graphStatus CheckOffsetArgs(
-    gert::TilingContext* context, DeformableOffsetsOffset& deformableOffsetsOffset, const gert::Shape inputOffsetShape,
-    const gert::Shape outputShapeInfo, DeformableOffsetAttr deformableOffsetAttrInfo) {
+    const gert::TilingContext* context, DeformableOffsetsOffset& deformableOffsetsOffset, const gert::Shape inputOffsetShape,
+    const gert::Shape outputShapeInfo, const DeformableOffsetAttr& deformableOffsetAttrInfo) {
     // input offset info
     int64_t offsetWidth = inputOffsetShape.GetDim(LIST_INDEX_2);
     int64_t offsetHeight = inputOffsetShape.GetDim(LIST_INDEX_1);
