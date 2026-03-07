@@ -1596,16 +1596,6 @@
   </tr>
   <tr>
     <td>index</td>
-    <td><a href="../../index/scatter/README.md">scatter</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>将tensor updates中的值按指定的轴axis和索引indices逐个更新tensor data中的值。该算子为自定义算子语义，无对应的TensorFlow或PyTorch接口。</td>
-  </tr>
-  <tr>
-    <td>index</td>
     <td><a href="../../index/scatter_add/README.md">scatter_add</a></td>
     <td>✓</td>
     <td>✓</td>
