@@ -175,10 +175,12 @@ void Conv2dBaseTiling::ReSetTilingKeyPara()
     if (fmpTilingResetFlag) {
         tilingKeyPara_.fmpTiling = FMP_OTHER;
     }
-    bool sceneFlag = 
-        flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV && tilingKeyPara_.fmapCppyMode == FMAP_LOAD3D_MODE &&
-        tilingData_.conv2dApiTiling.get_innerBatch() == 1 && flagInfo_.mSplitModeFlag == true &&
+    bool sceneFlag = flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV &&
+        tilingKeyPara_.fmapCppyMode == FMAP_LOAD3D_MODE && tilingData_.conv2dApiTiling.get_innerBatch() == 1 &&
         tilingData_.conv2dApiTiling.get_hoL1() == tilingData_.conv2dApiTiling.get_hoL0();
+    if (!flagInfo_.mSplitModeFlag) {
+        sceneFlag = sceneFlag && tilingData_.conv2dApiTiling.get_woL1() == tilingData_.conv2dApiTiling.get_woL0();
+    }
     bool otherFlag = tilingKeyPara_.iterOrder == 0 && tilingKeyPara_.l1PingPong == L1_PB_ALL_OPEN;
     if (sceneFlag && otherFlag) {
         bool updateFmapTilingFlag = true;

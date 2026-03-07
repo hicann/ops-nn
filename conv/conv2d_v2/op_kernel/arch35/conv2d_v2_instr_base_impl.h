@@ -68,9 +68,14 @@ public:
         Load3DSetPaddingCal(self_->ctx.convTiling->offsetx);
     }
 
-    __aicore__ inline void SetLoad3dFMatrixForOptPreload(uint64_t padLeftL1, uint64_t padRightL1, uint64_t wiLoadL1)
+    __aicore__ inline void SetLoad3dFMatrixForOptPreload()
     {
-        SetLoad3dFMatrix(padLeftL1, padRightL1, padTopL1, hiLoadL1, wiLoadL1);
+        if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
+            SetLoad3dFMatrix(self_->ctx.convTiling->padLeft, self_->ctx.convTiling->padRight,
+                             padTopL1, hiLoadL1, self_->ctx.orgWi);
+        } else {
+            SetLoad3dFMatrix(padLeftL1, padRightL1, padTopL1, hiLoadL1, wiLoadL1);
+        }
     }
 
 public:
@@ -78,6 +83,9 @@ public:
     bool allPadFlag = false;
     int64_t hiLoadL1 = 0;
     int64_t padTopL1 = 0;
+    int64_t padLeftL1 = 0;
+    int64_t padRightL1 = 0;
+    int64_t wiLoadL1 = 0;
     LocalTensor<uint16_t> al1tmp;
     TBuffAddr buffAddr;
 };

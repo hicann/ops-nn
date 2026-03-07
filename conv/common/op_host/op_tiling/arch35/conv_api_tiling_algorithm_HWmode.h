@@ -144,7 +144,6 @@ private:
     int64_t CheckMinL1Tiling();
     uint64_t GetFixpParamsL1FullLoadSize() const;
     uint64_t GetFixpParamsL1MinLoadSize() const;
-    int64_t InferWiL1(uint64_t inputWoL1, int64_t wi) const;
 
     bool CheckBL1FullLoad();
     bool CheckHoWoL1FullLoad() const;

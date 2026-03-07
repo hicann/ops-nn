@@ -51,6 +51,7 @@ protected:
     uint64_t CalcBTSize(uint64_t nL0) const;
     uint64_t CalcFBSize(uint64_t nL0) const;
     uint64_t InferHiL1(uint64_t hoL1, int64_t hi) const;
+    uint64_t InferWiL1(uint64_t woL1, int64_t wi) const;
     void SetPBufferRes();
     void ResetOptGroupDoubleBuffer(bool resetFlag);
     void PrintRanges(std::vector<uint64_t> inputRanges, std::string rangeName) const;

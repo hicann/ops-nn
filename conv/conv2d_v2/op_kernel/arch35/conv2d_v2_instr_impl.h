@@ -72,32 +72,32 @@ public:
         this->padTopL1 = hiTopPadIdx < 0 ? (0 - hiTopPadIdx) : 0;
         hiBottomPadIdx = self_->ctx.hiStartPos > 0 ? hiBottomPadIdx + self_->ctx.hiStartPos : hiBottomPadIdx;
         padBottomL1 = hiBottomPadIdx > self_->ctx.orgHi ? hiBottomPadIdx - self_->ctx.orgHi : 0;
-        padLeftL1 = wiLeftPadIdx < 0 ? (0 - wiLeftPadIdx) : 0;
+        this->padLeftL1 = wiLeftPadIdx < 0 ? (0 - wiLeftPadIdx) : 0;
         wiRightPadIdx = self_->ctx.wiStartPos > 0 ? wiRightPadIdx + self_->ctx.wiStartPos : wiRightPadIdx;
-        padRightL1 = wiRightPadIdx > self_->ctx.orgWi ? (wiRightPadIdx - self_->ctx.orgWi) : 0;
+        this->padRightL1 = wiRightPadIdx > self_->ctx.orgWi ? (wiRightPadIdx - self_->ctx.orgWi) : 0;
         if (this->padTopL1 >= paddingHiAL1 || padBottomL1 >= paddingHiAL1 ||
-            padLeftL1 >= paddingWiAL1 || padRightL1 >= paddingWiAL1) {
+            this->padLeftL1 >= paddingWiAL1 || this->padRightL1 >= paddingWiAL1) {
             this->allPadFlag = true;
             return;
         }
         // Calculate hiAL1, wiAL1
         this->hiLoadL1 = paddingHiAL1 - this->padTopL1 - padBottomL1;
         this->hiLoadL1 = this->hiLoadL1 > self_->ctx.orgHi ? self_->ctx.orgHi : this->hiLoadL1;
-        wiLoadL1 = paddingWiAL1 - padLeftL1 - padRightL1;
+        this->wiLoadL1 = paddingWiAL1 - this->padLeftL1 - this->padRightL1;
     }
 
     __aicore__ inline void SetDn2NzIntriParams(Dn2NzParams &intriParams, uint64_t kAL1Iter)
     {
-        if (likely(wiLoadL1 == self_->ctx.orgWi)) {
+        if (likely(this->wiLoadL1 == self_->ctx.orgWi)) {
             intriParams.dnNum = 1;
-            intriParams.nValue = this->hiLoadL1 * wiLoadL1;
+            intriParams.nValue = this->hiLoadL1 * this->wiLoadL1;
             intriParams.srcDnMatrixStride = 0;
             intriParams.dstNzMatrixStride = 0;
         } else {
             intriParams.dnNum = this->hiLoadL1;
-            intriParams.nValue = wiLoadL1;
+            intriParams.nValue = this->wiLoadL1;
             intriParams.srcDnMatrixStride = self_->ctx.orgWi;
-            intriParams.dstNzMatrixStride = wiLoadL1 * Intf::k0;
+            intriParams.dstNzMatrixStride = this->wiLoadL1 * Intf::k0;
         }
 
         if constexpr (Intf::groupOptFlag) {
@@ -108,14 +108,14 @@ public:
                 self_->ctx.convTiling->cinATailInCore : self_->ctx.convTiling->cinAInCore;
         }
         intriParams.srcDValue = self_->ctx.convTiling->orgHixWi;
-        intriParams.dstNzC0Stride = this->hiLoadL1 * wiLoadL1;
+        intriParams.dstNzC0Stride = this->hiLoadL1 * this->wiLoadL1;
         intriParams.dstNzNStride = 1;
     }
 
     __aicore__ inline void SetDn2NzIntriParamsC04(Dn2NzParams &intriParams)
     {
         intriParams.dnNum = 1;
-        intriParams.nValue = this->hiLoadL1 * wiLoadL1;
+        intriParams.nValue = this->hiLoadL1 * this->wiLoadL1;
         intriParams.dValue = self_->ctx.convTiling->singleCoreCi;
         intriParams.srcDnMatrixStride = 0;
         intriParams.srcDValue = self_->ctx.convTiling->orgHixWi;
@@ -127,7 +127,7 @@ public:
     __aicore__ inline void SetNd2NzIntriParamsC04(Nd2NzParams &intriParams)
     {
         intriParams.ndNum = 1;
-        intriParams.nValue = this->hiLoadL1 * wiLoadL1;
+        intriParams.nValue = this->hiLoadL1 * this->wiLoadL1;
         intriParams.dValue = self_->ctx.convTiling->singleCoreCi;
         intriParams.srcDValue = self_->ctx.convTiling->singleCoreCi;
     }
@@ -135,33 +135,33 @@ public:
     __aicore__ inline void SetNd2NzIntriParams(Nd2NzParams &intriParams, uint64_t kAL1Iter)
     {
         intriParams.ndNum = this->hiLoadL1;
-        intriParams.nValue = wiLoadL1;
+        intriParams.nValue = this->wiLoadL1;
         intriParams.dValue = kAL1Iter == self_->ctx.maxKAL1Iter ?
             self_->ctx.convTiling->cinATailInCore : self_->ctx.convTiling->cinAInCore;
         intriParams.srcNdMatrixStride = self_->ctx.orgWi * self_->ctx.orgCi;
         intriParams.srcDValue = self_->ctx.orgCi;
-        intriParams.dstNzC0Stride = this->hiLoadL1 * wiLoadL1;
+        intriParams.dstNzC0Stride = this->hiLoadL1 * this->wiLoadL1;
         intriParams.dstNzNStride = 1;
-        intriParams.dstNzMatrixStride = wiLoadL1 * Intf::k0;
+        intriParams.dstNzMatrixStride = this->wiLoadL1 * Intf::k0;
     }
 
     __aicore__ inline void SetNd2NzIntriParamsInputHWNC(Nd2NzParams &intriParams, uint64_t kAL1Iter)
     {
         intriParams.ndNum = this->hiLoadL1;
-        intriParams.nValue = wiLoadL1;
+        intriParams.nValue = this->wiLoadL1;
         intriParams.dValue = kAL1Iter == self_->ctx.maxKAL1Iter ?
             self_->ctx.convTiling->cinATailInCore : self_->ctx.convTiling->cinAInCore;
         intriParams.srcNdMatrixStride = self_->ctx.orgWi * self_->ctx.orgCi * self_->ctx.orgBatch;
         intriParams.srcDValue = self_->ctx.orgCi * self_->ctx.orgBatch;
-        intriParams.dstNzC0Stride = this->hiLoadL1 * wiLoadL1;
+        intriParams.dstNzC0Stride = this->hiLoadL1 * this->wiLoadL1;
         intriParams.dstNzNStride = 1;
-        intriParams.dstNzMatrixStride = wiLoadL1 * Intf::k0;
+        intriParams.dstNzMatrixStride = this->wiLoadL1 * Intf::k0;
     }
 
     __aicore__ inline void SetNd2NzIntriParamsC04InputHWNC(Nd2NzParams &intriParams)
     {
         intriParams.ndNum = 1;
-        intriParams.nValue = this->hiLoadL1 * wiLoadL1;
+        intriParams.nValue = this->hiLoadL1 * this->wiLoadL1;
         intriParams.dValue = self_->ctx.orgCi;
         intriParams.srcDValue = self_->ctx.orgCi * self_->ctx.orgBatch;
     }
@@ -234,7 +234,9 @@ public:
         UpdatePaddingHiWiAL1();
         UpdatePadIdxAL1(woAL1Iter, hoAL1Iter);
         UpdateHiWiAL1();
-        this->SetLoad3dFMatrix(padLeftL1, padRightL1, this->padTopL1, this->hiLoadL1, wiLoadL1);
+        if constexpr (!Intf::groupOptPreloadFlag) {
+            this->SetLoad3dFMatrix(this->padLeftL1, this->padRightL1, this->padTopL1, this->hiLoadL1, this->wiLoadL1);
+        }
 
         if (this->allPadFlag) {
             this->SetPadData();
@@ -257,9 +259,6 @@ private:
     int64_t hiBottomPadIdx = 0;
     int64_t wiLeftPadIdx = 0;
     int64_t wiRightPadIdx = 0;
-    int64_t wiLoadL1 = 0;
-    int64_t padLeftL1 = 0;
-    int64_t padRightL1 = 0;
     int64_t paddingHiAL1 = 0;
     int64_t paddingWiAL1 = 0;
     int64_t padBottomL1 = 0;

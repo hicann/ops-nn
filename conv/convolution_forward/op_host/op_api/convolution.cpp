@@ -1019,7 +1019,8 @@ static aclnnStatus ConvTranspose2dWithFlag(const aclTensor *input, const aclTens
     return ACLNN_SUCCESS;
 }
 
-static bool CheckN2HTransposeAttrAvailable(aclIntArray *stride5, aclIntArray *dilation5, aclIntArray *pad5) {
+static bool CheckN2HTransposeAttrAvailable(const aclIntArray *stride5, const aclIntArray *dilation5,
+                                           const aclIntArray *pad5) {
     if (stride5->Size() == conv3dDimNum) {
         auto strideData = stride5->GetData();
         auto strideD = strideData[D_DIM_NCDHW_INDEX];

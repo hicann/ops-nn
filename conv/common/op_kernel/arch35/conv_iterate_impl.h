@@ -367,8 +367,7 @@ __aicore__ void Iterate<Intf, ImplType>::UpdateNextGroupOptIters(Intf *self, Tem
 template <class Intf, uint32_t ImplType>
 __aicore__ void Iterate<Intf, ImplType>::ReduceGroupOptFmapPreload(Intf *self)
 {
-    self->ctx.loadAl1Ins.SetLoad3dFMatrixForOptPreload(self->ctx.convTiling->padLeft, self->ctx.convTiling->padRight,
-                                                       self->ctx.orgWi);
+    self->ctx.loadAl1Ins.SetLoad3dFMatrixForOptPreload();
     TempIters tempIters;
     UpdateNextGroupOptIters(self, tempIters);
     if (self->ctx.loadAL1Flag && !tempIters.endTag) {

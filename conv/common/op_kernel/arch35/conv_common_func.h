@@ -194,7 +194,7 @@ struct ConvPreProcess {
                     self->ctx.biasL1 = self->ctx.queueBiasL1.template AllocTensor<typename Intf::BiasT>();
                     uint64_t biasLoadNum = self->ctx.singleCoreCo;
                     if constexpr (Intf::groupOptPreloadFlag) {
-                        biasLoadNum = self->ctx.singleCoreCo * self->ctx.convTiling->groups;
+                        biasLoadNum = self->ctx.orgCo;
                     }
                     self->ctx.loadBiasL1Ins.LoadChannelWiseL1FullLoad(self->ctx.biasL1, self->ctx.biasgm,
                         biasLoadNum, 0);
@@ -261,7 +261,6 @@ struct IterateAll {
         return IterateAll<Intf, ImplType>::call(self, output, output1, enPartialSum);
     }
 
-    // IterateAll会跳转到这里
     template <bool sync = true>
     static __aicore__ inline bool call(
         Intf *self, const GlobalTensor<typename Intf::OutputT> &output0,
@@ -302,7 +301,7 @@ struct IterateAll {
             }
         }
 
-        ConvPostProcess<Intf, ImplType>::call(self);    // free掉bias的tensor
+        ConvPostProcess<Intf, ImplType>::call(self);
 
         return false;
     }
@@ -436,10 +435,7 @@ __aicore__ inline void InitBuffer(Intf *self)
                 self->ctx.convTiling->nL0 * Intf::sizeOfBias;
             if constexpr (Intf::groupOptPreloadFlag) {
                 if (self->ctx.convTiling->biasFullLoadFlag) {
-                    biasl1Spacesize = AlignB(
-                        self->ctx.singleCoreCo * self->ctx.convTiling->groups * Intf::sizeOfBias,
-                        self->ctx.convTiling->nL0 * Intf::sizeOfBias
-                    );
+                    biasl1Spacesize = AlignB(self->ctx.orgCo * Intf::sizeOfBias, BLOCK_L0_N * Intf::sizeOfBias);
                 }
             }
             uint64_t biasBTSpacesize = self->ctx.convTiling->nL0;

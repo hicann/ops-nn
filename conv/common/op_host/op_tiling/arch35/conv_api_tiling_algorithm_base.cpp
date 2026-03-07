@@ -84,6 +84,21 @@ uint64_t ConvTilingAlgorithmBase::InferHiL1(uint64_t hoL1, int64_t hi) const
     return tmpHiL1;
 }
 
+uint64_t ConvTilingAlgorithmBase::InferWiL1(uint64_t woL1, int64_t wi) const
+{
+    if (woL1 == static_cast<uint64_t>(tilingIns_->shapeInfo.singleWo) && tilingIns_->isC04Flag) {
+        return tilingIns_->shapeInfo.orgWi;
+    }
+
+    int64_t kwDilated = (tilingIns_->shapeInfo.singlekW - 1) * tilingIns_->attrInfo.dilationW + 1;
+    int64_t tmpWiL1 = (woL1 - 1) * tilingIns_->attrInfo.strideW + kwDilated;
+    if (tmpWiL1 > wi) {
+        tmpWiL1 = wi;
+    }
+
+    return tmpWiL1;
+}
+
 void ConvTilingAlgorithmBase::PrintRanges(std::vector<uint64_t> inputRanges, std::string rangeName) const
 {
     std::string res = "";
@@ -99,21 +114,30 @@ void ConvTilingAlgorithmBase::PrintRanges(std::vector<uint64_t> inputRanges, std
 void ConvTilingAlgorithmBase::ResetOptGroupDoubleBuffer(bool resetFlag)
 {
     if (resetFlag) {
-        uint64_t curHoAL1 = min(tilingIns_->cubeInfo.m0 / tilingIns_->shapeInfo.orgWo + CONST_VALUE_2,
-                                tilingIns_->shapeInfo.orgHo);
-        uint64_t curHiAL1 = InferHiL1(curHoAL1, tilingIns_->shapeInfo.orgHi);
-        uint64_t curKAL1 = tilingIns_->cubeInfo.k0;
-        uint64_t curAL1Size = AlignB(curHiAL1 * tilingIns_->shapeInfo.orgWi * curKAL1 * this->fMapDTypeSize, C0_SIZE);
+        uint64_t curAL1Size = 0;
+        if (tilingIns_->outputOrder == static_cast<int8_t>(OutputOrder::M)) {
+            uint64_t curHoAL1 = min(static_cast<uint64_t>(tilingIns_->shapeInfo.orgHo),
+                static_cast<uint64_t>(tilingIns_->l1TilingInfo.mAL1 / tilingIns_->shapeInfo.orgWo + CONST_VALUE_2));
+            uint64_t curHiAL1 = InferHiL1(curHoAL1, tilingIns_->shapeInfo.orgHi);
+            curAL1Size = AlignB(curHiAL1 * tilingIns_->shapeInfo.orgWi * tilingIns_->l1TilingInfo.kAL1 /
+                tilingIns_->shapeInfo.orgkH / tilingIns_->shapeInfo.orgkW * this->fMapDTypeSize, C0_SIZE);
+        } else {
+            uint64_t curHiAL1 = InferHiL1(tilingIns_->l1TilingInfo.hoAL1, tilingIns_->shapeInfo.orgHi);
+            uint64_t curWiAL1 = InferWiL1(tilingIns_->l1TilingInfo.woAL1, tilingIns_->shapeInfo.orgWi);
+            curAL1Size = AlignB(curHiAL1 * curWiAL1 * tilingIns_->l1TilingInfo.kAL1 /
+                tilingIns_->shapeInfo.orgkH / tilingIns_->shapeInfo.orgkW * this->fMapDTypeSize, C0_SIZE);
+        }
 
-        uint64_t curKBL1 = tilingIns_->shapeInfo.singlekH * tilingIns_->shapeInfo.singlekW * tilingIns_->cubeInfo.k0;
-        uint64_t curBL1Size = AlignB(curKBL1 * tilingIns_->cubeInfo.n0 * this->weightDTypeSize, C0_SIZE);
+        uint64_t curBL1Size =
+            AlignB(tilingIns_->l1TilingInfo.kBL1 * tilingIns_->l1TilingInfo.nBL1 * this->weightDTypeSize, C0_SIZE);
 
-        uint64_t curBiasSize = tilingIns_->hasBias ? AlignB(tilingIns_->cubeInfo.n0 * this->biasDTypeSize, C0_SIZE) : 0;
+        uint64_t curBiasSize = tilingIns_->hasBias ?
+            AlignB(tilingIns_->shapeInfo.orgCo * this->biasDTypeSize, C0_SIZE) : 0;
         uint64_t needL1Size = (curAL1Size + curBL1Size) * CONST_VALUE_2 + curBiasSize;
 
         if (needL1Size <= tilingIns_->platformInfo.l1Size) {
-            dbValue.pbBL1 = 2;
-            dbValue.pbAL1 = 2;
+            dbValue.pbBL1 = DOUBLE_BUFFER_NUM;
+            dbValue.pbAL1 = DOUBLE_BUFFER_NUM;
         }
     }
 }
@@ -131,17 +155,15 @@ bool ConvTilingAlgorithmBase::CheckOptGroupPreload() const
     bool fullLoadFlag = kAL1FullloadFlag && kBL1FullloadFlag && nBL1FullloadFlag;
 
     bool otherFlag = tilingIns_->l1TilingInfo.iterateMNOrder == IterateMNOrder::ITER_M_FST &&
-                     tilingIns_->ubTilingInfo.mUb == 0 && tilingIns_->ubTilingInfo.nUb == 0 &&
-                     tilingIns_->outputOrder == static_cast<int8_t>(OutputOrder::M);
+                     tilingIns_->ubTilingInfo.mUb == 0 && tilingIns_->ubTilingInfo.nUb == 0;
 
     bool multiMFlag = tilingIns_->l1TilingInfo.mAL1 == tilingIns_->l0TilingInfo.mL0;
+    if (tilingIns_->outputOrder == static_cast<int8_t>(OutputOrder::HW)) {
+        multiMFlag = tilingIns_->l1TilingInfo.hoAL1 == tilingIns_->l0TilingInfo.hoL0 &&
+                     tilingIns_->l1TilingInfo.woAL1 == tilingIns_->l0TilingInfo.woL0;
+    }
 
-    bool dtypeFlag = tilingIns_->descInfo.fMapType.dtype != ConvDtype::FLOAT8_E4M3FN &&
-                     tilingIns_->descInfo.fMapType.dtype != ConvDtype::HIFLOAT8 &&
-                     tilingIns_->descInfo.fMapType.dtype != ConvDtype::INT8 &&
-                     tilingIns_->descInfo.fMapType.dtype != ConvDtype::UINT8;
-
-    bool resetFlag = sceneFlag && fullLoadFlag && otherFlag && multiMFlag && dtypeFlag;
+    bool resetFlag = sceneFlag && fullLoadFlag && otherFlag && multiMFlag;
 
     return resetFlag;
 }

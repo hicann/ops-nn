@@ -639,21 +639,6 @@ void ConvTilingAlgorithmHWmode::InitABL1TilingMode()
     }
 }
 
-int64_t ConvTilingAlgorithmHWmode::InferWiL1(uint64_t inputWoL1, int64_t wi) const
-{
-    if (inputWoL1 == static_cast<uint64_t>(tilingIns_->shapeInfo.singleWo) && tilingIns_->isC04Flag) {
-        return tilingIns_->shapeInfo.orgWi;
-    }
-
-    int64_t kwDilated = (tilingIns_->shapeInfo.singlekW - 1) * tilingIns_->attrInfo.dilationW + 1;
-    int64_t tmpWiL1 = (inputWoL1 - 1) * tilingIns_->attrInfo.strideW + kwDilated;
-    if (tmpWiL1 > wi) {
-        tmpWiL1 = wi;
-    }
-
-    return tmpWiL1;
-}
-
 void ConvTilingAlgorithmHWmode::RestrictRange(const std::vector<uint64_t> &inputRange,
                                               std::vector<uint64_t> &strictRange,
                                               uint64_t restriction) const
