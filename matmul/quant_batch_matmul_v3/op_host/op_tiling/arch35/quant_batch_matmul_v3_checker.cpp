@@ -330,6 +330,7 @@ pertokenScale are FLOAT8_E8M0, actual scale is %s, pertokenScale is %s.",
                               ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str(),
                               ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str()),
         return false);
+    return true;
 }
 
 bool QuantBatchMatmulV3Checker::CheckDtype() const

@@ -350,13 +350,13 @@ bool QuantBatchMatmulV3TilingBase::CheckStorageShape4WeightNz(const gert::Shape 
         weightStorageLastDims.find(x2StorageShape[x2StorageDim - LAST_FIRST_DIM_INDEX]) == weightStorageLastDims.end(),
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
                               "When format of x2 is FRACTAL_NZ, the last first dim of x2 should be 32 for int8 \
-                              and 64 for int4, actual is %lld.",
+                              and 64 for int4, actual is %ld.",
                               x2StorageShape[x2StorageDim - LAST_FIRST_DIM_INDEX]),
         return false);
     OP_TILING_CHECK(x2StorageShape[x2StorageDim - LAST_SECOND_DIM_INDEX] != WEIGHTNZ_STORAGE_PENULTIMATE_DIM,
                     CUBE_INNER_ERR_REPORT(
                         inputParams_.opName,
-                        "When format of x2 is FRACTAL_NZ, the last second dim of x2 should be 16, actual is %lld.",
+                        "When format of x2 is FRACTAL_NZ, the last second dim of x2 should be 16, actual is %ld.",
                         x2StorageShape[x2StorageDim - LAST_SECOND_DIM_INDEX]),
                     return false);
     auto x2StorageLastThirdDim = static_cast<uint64_t>(x2StorageShape[x2StorageDim - LAST_THIRD_DIM_INDEX]);
