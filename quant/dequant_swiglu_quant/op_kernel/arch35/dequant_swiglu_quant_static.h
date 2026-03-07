@@ -364,7 +364,6 @@ __aicore__ inline void DequantSwigluQuantBaseStatic<TActScale, TQuantScale, TGro
         dataCopyWeightScaleParams.dstStride = 0;
         DataCopyPad(inScaleLocal[0], weightScaleGm_[groupIdx * tl_->inDimy], dataCopyWeightScaleParams, padParams);
       }
-      
     }
 
     // copy_in: quant_scale(G, H)
