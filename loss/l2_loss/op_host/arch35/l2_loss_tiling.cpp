@@ -50,8 +50,8 @@ private:
 ge::graphStatus L2LossTiling::SetTilingData()
 {
     OP_LOGD(tilingContext->GetNodeName(), "Enter SetTilingData");
-    const uint64_t tilingKey =
-        GET_TPL_TILING_KEY(key.ReduceTiling.patternID, key.ReduceTiling.loopARCount, key.ReduceTiling.loopInnerARCount);
+    uint64_t tilingKey;
+    GEN_REDUCE_TILING_KEY(tilingKey, key.ReduceTiling);
     OP_LOGI(tilingContext->GetNodeName(), "patternID:%u, loopARCount:%u, loopInnerARCount:%u, Tiling Key is:%lu",
             key.ReduceTiling.patternID, key.ReduceTiling.loopARCount, key.ReduceTiling.loopInnerARCount, tilingKey);
     tilingContext->SetTilingKey(tilingKey);

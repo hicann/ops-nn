@@ -244,8 +244,8 @@ ge::graphStatus Tiling4RIGIntRepeat(gert::TilingContext* context, const RepeatIn
 
     key.templateNum = RIG::IS_REDUCE_T;
 
-    const uint64_t tilingKey = GET_TPL_TILING_KEY(
-        key.ReduceTiling.patternID, key.ReduceTiling.loopARCount, key.ReduceTiling.loopInnerARCount, key.templateNum);
+    uint64_t tilingKey;
+    GEN_REDUCE_TILING_KEY(tilingKey, key.ReduceTiling, key.templateNum);
     OP_LOGI(
         context, "patternID:%u, loopARCount:%u, loopInnerARCount:%u, Tiling Key is:%lu",
         key.ReduceTiling.patternID, key.ReduceTiling.loopARCount, key.ReduceTiling.loopInnerARCount, tilingKey);

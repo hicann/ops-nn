@@ -234,9 +234,9 @@ ge::graphStatus BinaryCrossEntropyTiling::SetTilingData()
     auto rawTilingData = tilingContext->GetRawTilingData();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, rawTilingData);
 
-    const uint64_t tilingKey = GET_TPL_TILING_KEY(
-        bceTilingKey.reduceTiling.patternID, bceTilingKey.reduceTiling.loopARCount,
-        bceTilingKey.reduceTiling.loopInnerARCount, bceTilingKey.reduction, bceTilingKey.hasWeight, bceTilingKey.dType);
+    uint64_t tilingKey;
+    GEN_REDUCE_TILING_KEY(tilingKey, bceTilingKey.reduceTiling, bceTilingKey.reduction,
+                          bceTilingKey.hasWeight, bceTilingKey.dType);
     OP_LOGI(tilingContext->GetNodeName(),
             "patternID:%u, loopARCount:%u, loopInnerARCount:%u, Tiling Key is:%lu, reduction is : %u, hasWeight is : "
             "%u, Dtype is %u",

@@ -87,9 +87,8 @@ ge::graphStatus LpLossTiling::CheckShape()
 ge::graphStatus LpLossTiling::SetTilingData()
 {
     OP_LOGD(tilingContext->GetNodeName(), "Enter SetTilingData");
-
-    const uint64_t tilingKey = GET_TPL_TILING_KEY(key.ReduceTiling.patternID, key.ReduceTiling.loopARCount,
-                                                  key.ReduceTiling.loopInnerARCount, key.Reduction, key.Dtype);
+    uint64_t tilingKey;
+    GEN_REDUCE_TILING_KEY(tilingKey, key.ReduceTiling, key.Reduction, key.Dtype);
     OP_LOGI(tilingContext->GetNodeName(),
             "patternID:%u, loopARCount:%u, loopInnerARCount:%u, Tiling Key is:%lu, Reducetiong is : %u, Dtype is %u",
             key.ReduceTiling.patternID, key.ReduceTiling.loopARCount, key.ReduceTiling.loopInnerARCount, tilingKey,

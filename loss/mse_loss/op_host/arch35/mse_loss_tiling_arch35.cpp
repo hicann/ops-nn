@@ -72,10 +72,8 @@ ge::graphStatus MseLossTiling::SetTilingData()
     OP_LOGD(tilingContext->GetNodeName(), "Enter SetTilingData");
     auto rawTilingData = tilingContext->GetRawTilingData();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, rawTilingData);
-
-    const uint64_t tilingKey = GET_TPL_TILING_KEY(
-        key.ReduceTiling.patternID, key.ReduceTiling.loopARCount, key.ReduceTiling.loopInnerARCount, key.Reduction,
-        key.Dtype);
+    uint64_t tilingKey;
+    GEN_REDUCE_TILING_KEY(tilingKey, key.ReduceTiling, key.Reduction, key.Dtype);
     OP_LOGI(
         tilingContext->GetNodeName(),
         "patternID:%u, loopARCount:%u, loopInnerARCount:%u, Tiling Key is:%lu, Reduction is : %u, Dtype is %u",
