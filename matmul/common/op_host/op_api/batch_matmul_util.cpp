@@ -1168,8 +1168,12 @@ bool checkFusedmm(
     const aclTensor* bias, const aclTensor* self, const aclTensor* mat2, const aclScalar* alpha, const aclScalar* beta,
     int8_t cubeMathType, bool& isNeedSwapInnerTwoDim)
 {
-    // 都需要存在
+    // 空指针拦截
     if (bias == nullptr || self == nullptr || mat2 == nullptr) {
+        return false;
+    }
+    // 空Tensor拦截
+    if (self->IsEmpty() || mat2->IsEmpty()) {
         return false;
     }
     // alpha=1 beta=1
