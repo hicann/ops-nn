@@ -49,6 +49,42 @@ ACLNN_API aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(const aclTensor*
 ACLNN_API aclnnStatus aclnnTransposeBatchMatMul(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
                                                 const aclrtStream stream);
 
+/**
+ * @brief aclnnTransposeBatchMatMulWeightNz的第一段接口，根据具体的计算流程，计算workspace大小。
+ * @domain aclnn_ops_infer
+ * 算子功能：相对于aclnnTransposeBatchMatmul, mat2为NZ格式。
+ * @param [in] x1: matmul左矩阵，数据类型支持：float16、bfloat16。数据格式支持ND。
+ * @param [in] x2: matmul右矩阵，数据类型支持：float16、bfloat16。数据格式支持NZ。
+ * @param [in] bias: 偏置，当前不支持。
+ * @param [in] scale: 量化参数中的缩放因子，数据类型支持：int64、uint64。
+ * @param [in] permX1: 表示输入x1的shape。
+ * @param [in] permX2: 表示输入x2的shape。
+ * @param [in] permY: 表示输入y的shape。
+ * @param [in] cubeMathType: 用于指定Cube单元的计算逻辑，Host侧的整型。数据类型支持：int8。
+ * @param [in] batchSplitFactor: 是否重新拆分shape。数据类型支持：int32。
+ * @param [out] out: 计算结果，数据类型：float16, bfloat16。数据格式支持ND。
+ * @param [out] workspaceSize: 返回需要在npu device侧申请的workspace大小。
+ * @param [out] executor: 返回op执行器，包含了算子计算流程。
+ * @return aclnnStatus: 返回状态码
+ */
+ACLNN_API aclnnStatus aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize(const aclTensor* x1, const aclTensor* x2,
+                                                                        const aclTensor* bias, const aclTensor* scale,
+                                                                        const aclIntArray* permX1, const aclIntArray* permX2,
+                                                                        const aclIntArray* permY, int8_t cubeMathType,
+                                                                        const int32_t batchSplitFactor, aclTensor* out,
+                                                                        uint64_t* workspaceSize, aclOpExecutor** executor);
+
+/**
+ * @brief aclnnTransposeBatchMatMulWeightNz的第二段接口，用于执行计算。
+ * @param [in] workspace: 在npu device侧申请的workspace内存起址。
+ * @param [in] workspace_size: 在npu device侧申请的workspace大小，由第一段接口aclnnBatchMatMulWeightNzGetWorkspaceSize获取。
+ * @param [in] executor: op执行器，包含了算子计算流程。
+ * @param [in] stream: acl stream流。
+ * @return aclnnStatus: 返回状态码。
+ */
+ACLNN_API aclnnStatus aclnnTransposeBatchMatMulWeightNz(void* workspace, uint64_t workspaceSize,
+                                                        aclOpExecutor* executor, const aclrtStream stream);
+
 #ifdef __cplusplus
 }
 #endif

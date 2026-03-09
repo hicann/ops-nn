@@ -36,11 +36,13 @@ using namespace op;
 using namespace Ops::NN;
 static const std::initializer_list<op::DataType> x1_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
 static const std::initializer_list<op::DataType> x2_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WEIGHTNZ = {op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 static const std::initializer_list<op::DataType> x1_SCALE_SUPPORT_LIST = {DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> x2_SCALE_SUPPORT_LIST = {DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> SCALE_DTYPE_SUPPORT_LIST = {DataType::DT_INT64, DataType::DT_UINT64};
 static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT8};
 static constexpr size_t EXPECTED_DIM = 3;
+static constexpr int EXPECTED_NZ_DIM = 5;
 static constexpr int BLOCK_SIZE = 16;
 static constexpr int SUPPORTED_INNER_AXIS = 65536;
 
@@ -59,6 +61,43 @@ inline static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const 
 inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2,
                                    const aclTensor* scale, const aclTensor* out)
 {
+    if (x1->GetDataType() != x2->GetDataType()) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "x1's dtype [%s] and x2's dtype [%s] are not equal.",
+            op::ToString(x1->GetDataType()).GetString(), op::ToString(x2->GetDataType()).GetString());
+            return false;
+    }
+    // Handle weight NZ format specific checks
+    if (x2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+        auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+        auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+        if (npuArch != NpuArch::DAV_2201) {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "transposebatchmatmulweightnz is unsupported by the current SOC version [%s].",
+                op::ToString(socVersion).GetString());
+            return false;
+        }
+        OP_CHECK_DTYPE_NOT_SUPPORT(x1, DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(x2, DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);
+        if (scale != nullptr) {
+            OP_CHECK_DTYPE_NOT_SUPPORT(scale, SCALE_DTYPE_SUPPORT_LIST, return false);
+            OP_CHECK_DTYPE_NOT_SUPPORT(x1, x1_SCALE_SUPPORT_LIST, return false);
+            OP_CHECK_DTYPE_NOT_SUPPORT(x2, x2_SCALE_SUPPORT_LIST, return false);
+        }
+        if (x1->GetDataType() != out->GetDataType()) {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "x1's dtype [%s] and out's dtype [%s] are not equal.",
+                op::ToString(x1->GetDataType()).GetString(), op::ToString(out->GetDataType()).GetString());
+                return false;
+        }
+        return true;
+    }
+    
+    // Regular ND format checks
     OP_CHECK_DTYPE_NOT_SUPPORT(x1, x1_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(x2, x2_SUPPORT_LIST, return false);
     if (scale != nullptr) {
@@ -172,6 +211,17 @@ static inline bool CheckMathType(const aclTensor* x1, const aclTensor* x2, int8_
     return CheckCubeMathTypeForMm(promoteType, cubeMathType);
 }
 
+static inline bool CheckNzStorageShape(const aclTensor* x2)
+{
+    auto storageShape = x2->GetStorageShape();
+    auto storageShapeDim = storageShape.GetDimNum();
+    OP_CHECK(
+        storageShapeDim == EXPECTED_NZ_DIM,
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Only support x2 storageShapeDim is 5, which are [%zu].", storageShapeDim),
+        return false);
+    return true;
+}
+
 inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale, aclTensor* out,
                                       const aclIntArray* perm_x1, const aclIntArray* perm_x2, const aclIntArray* perm_y,
                                       int8_t cubeMathType, int32_t batch_split_factor)
@@ -206,6 +256,9 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, 
 
     CHECK_RET(CheckDtypeValid(x1, x2, scale, out), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckShapeValid(x1, x2, scale, perm_x1, perm_x2), ACLNN_ERR_PARAM_INVALID);
+    if (x2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+        CHECK_RET(CheckNzStorageShape(x2), ACLNN_ERR_PARAM_INVALID);
+    }
     return ACLNN_SUCCESS;
 }
 
@@ -239,12 +292,53 @@ static const aclTensor* BuildTransposeBatchMatMulGraph(const aclTensor* x1, cons
     if (contiguousScale != nullptr) {
         contiguousScale = l0op::Contiguous(scale, executor);
         OP_CHECK(contiguousScale != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-                 "THe input scale perprocess failed, contiguouse return nullptr."),
+                 "The input scale perprocess failed, contiguouse return nullptr."),
                  return nullptr);
     }
 
     // 构建matmul计算图
     return l0op::TransposeBatchMatMul(reformX1, reformX2, nullptr, contiguousScale, perm_x1, perm_x2,
+                                      perm_y, cubeMathType == USE_HF32, batch_split_factor, executor);
+}
+
+static const aclTensor* BuildTransposeBatchMatMulWeightNzGraph(const aclTensor* x1, const aclTensor* x2,
+                                                               const aclTensor* scale, const aclIntArray* perm_x1,
+                                                               const aclIntArray* perm_x2, const aclIntArray* perm_y,
+                                                               int8_t cubeMathType, int32_t batch_split_factor,
+                                                               aclOpExecutor *executor)
+{
+    // 连续性转换
+    auto contiguousX1 = l0op::Contiguous(x1, executor);
+    OP_CHECK(contiguousX1 != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
+             "The input x1 perprocess failed, contiguouse return nullptr."),
+             return nullptr);
+    auto reformX1 = l0op::ReFormat(contiguousX1, op::Format::FORMAT_ND);
+    OP_CHECK(reformX1 != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
+             "The input x1 perprocess failed, reformat return nullptr."),
+             return nullptr);
+
+    // 原始方法传入
+    auto contiguousX2 = l0op::Contiguous(x2, executor);
+    OP_CHECK(contiguousX2 != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
+             "The input x2 perprocess failed, contiguouse return nullptr."),
+             return nullptr);
+
+    // weightnz storageshape刷新
+    if (x2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
+        contiguousX2->SetStorageShape(x2->GetStorageShape());
+    }
+
+    // scale非连续转连续以及转换dtype
+    auto contiguousScale = scale;
+    if (contiguousScale != nullptr) {
+        contiguousScale = l0op::Contiguous(scale, executor);
+        OP_CHECK(contiguousScale != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
+                 "The input scale perprocess failed, contiguouse return nullptr."),
+                 return nullptr);
+    }
+
+    // 构建matmul计算图
+    return l0op::TransposeBatchMatMul(reformX1, contiguousX2, nullptr, contiguousScale, perm_x1, perm_x2,
                                       perm_y, cubeMathType == USE_HF32, batch_split_factor, executor);
 }
 
@@ -303,6 +397,71 @@ aclnnStatus aclnnTransposeBatchMatMul(void* workspace, uint64_t workspaceSize, a
                                       const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnTransposeBatchMatMul);
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+}
 
+aclnnStatus aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                                              const aclTensor* scale, const aclIntArray* permX1,
+                                                              const aclIntArray* permX2, const aclIntArray* permY,
+                                                              int8_t cubeMathType, const int32_t batchSplitFactor,
+                                                              aclTensor* out, uint64_t* workspaceSize,
+                                                              aclOpExecutor** executor)
+{
+    L2_DFX_PHASE_1(aclnnTransposeBatchMatMulWeightNz,
+        DFX_IN(x1, x2, bias, scale, permX1, permX2, permY, cubeMathType, batchSplitFactor), DFX_OUT(out));
+
+    // 固定写法, 创建OpExecutor
+    auto unique_executor = CREATE_EXECUTOR();
+    CHECK_RET(unique_executor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+
+    // x2 format must be NZ
+    if (ge::GetPrimaryFormat(x2->GetStorageFormat()) != Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "Format of x2 must be FRACTAL_NZ, actual is %s.",
+            op::ToString(x2->GetStorageFormat()).GetString());
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+
+    // 入参检查
+    auto ret = CheckParams(x1, x2, scale, out, permX1, permX2, permY, cubeMathType, batchSplitFactor);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    // 空tensor 处理
+    if (x1->IsEmpty() || x2->IsEmpty()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "aclnnTransposeBatchMatMulWeightNz do not support empty tensor!");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+
+    if (bias != nullptr) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The bias is not support in TBMM.");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+
+    // 构建matmul计算图
+    const aclTensor* tbmmOut = nullptr;
+    tbmmOut = BuildTransposeBatchMatMulWeightNzGraph(x1, x2, scale, permX1, permX2, permY,
+                                                     cubeMathType, batchSplitFactor, unique_executor.get());
+    CHECK_RET(tbmmOut != nullptr, ACLNN_ERR_PARAM_INVALID);
+
+    if (tbmmOut->IsEmpty()) {
+        *workspaceSize = 0;
+        unique_executor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
+
+    tbmmOut = l0op::Cast(tbmmOut, out->GetDataType(), unique_executor.get());
+    CHECK_RET(tbmmOut != nullptr, ACLNN_ERR_PARAM_INVALID);
+    auto viewCopyResult = l0op::ViewCopy(tbmmOut, out, unique_executor.get());
+    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_PARAM_INVALID);
+
+    *workspaceSize = unique_executor->GetWorkspaceSize();
+    unique_executor.ReleaseTo(executor);
+    return ACLNN_SUCCESS;
+}
+
+aclnnStatus aclnnTransposeBatchMatMulWeightNz(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                              const aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnTransposeBatchMatMulWeightNz);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
