@@ -20,8 +20,10 @@
 #include "kernel_tiling/kernel_tiling.h"
 
 #if defined(__CCE_AICORE__)
+#include "../mat_mul_v3/mat_mul_v3_tiling_data.h"
 #include "../batch_mat_mul_v3/batch_mat_mul_v3_tiling_data.h"
 #else
+#include "../../mat_mul_v3/op_kernel/mat_mul_v3_tiling_data.h"
 #include "../../batch_mat_mul_v3/op_kernel/batch_mat_mul_v3_tiling_data.h"
 #endif
 
@@ -49,10 +51,10 @@ struct alignas(8) PpMatmulTilingData
     uint32_t kLoop;
     uint32_t nLoop;
     uint32_t coreLoop;
-    uint32_t swizzlCount;
+    uint32_t swizzleCount;
     uint32_t tilingKey;
     uint32_t blockDim;
-    uint32_t swizzlDirect;
+    uint32_t swizzleDirect;
     uint32_t splitk;
     uint32_t enShuffleK;
 };

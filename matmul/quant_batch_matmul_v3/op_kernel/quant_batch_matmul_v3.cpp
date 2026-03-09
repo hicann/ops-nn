@@ -180,19 +180,19 @@ constexpr CubeFormat format_y = CubeFormat::ND;
 #define INVOKE_QUANT_BATCH_MATMUL_PERTOKEN_ARCH20_IMPL(templateClass)                                                 \
     do {                                                                                                              \
         GET_TILING_DATA_WITH_STRUCT(QuantMatmulPertokenTilingDataArch20, tilingData, tiling); \
-        if (tilingData.swizzlDirect == 0 && tilingData.withBias == false) {               \
+        if (tilingData.swizzleDirect == 0 && tilingData.withBias == false) {               \
             templateClass<0, false> op;                                    \
             op.Init(x1, x2, bias, scale, pertokenScale, y, &tilingData);                                                              \
             op.Process();                                                                                             \
-        } else if (tilingData.swizzlDirect == 0 && tilingData.withBias == true) {         \
+        } else if (tilingData.swizzleDirect == 0 && tilingData.withBias == true) {         \
             templateClass<0, true> op;                                     \
             op.Init(x1, x2, bias, scale, pertokenScale, y, &tilingData);                                                              \
             op.Process();                                                                                             \
-        } else if (tilingData.swizzlDirect == 1 && tilingData.withBias == false) {         \
+        } else if (tilingData.swizzleDirect == 1 && tilingData.withBias == false) {         \
             templateClass<1, false> op;                                     \
             op.Init(x1, x2, bias, scale, pertokenScale, y, &tilingData);                                                              \
             op.Process();                                                                                             \
-        } else if (tilingData.swizzlDirect == 1 && tilingData.withBias == true) {          \
+        } else if (tilingData.swizzleDirect == 1 && tilingData.withBias == true) {          \
             templateClass<1, true> op;                                      \
             op.Init(x1, x2, bias, scale, pertokenScale, y, &tilingData);                                                              \
             op.Process();                                                                                             \

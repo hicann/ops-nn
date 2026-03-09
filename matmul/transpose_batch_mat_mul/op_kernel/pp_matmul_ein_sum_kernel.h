@@ -58,7 +58,7 @@ public:
         tdim.k = tilingData->kLoop;
         tdim.n = tilingData->nLoop;
         core_loop = tilingData->coreLoop;
-        swizzle_cnt = tilingData->swizzlCount;
+        swizzle_cnt = tilingData->swizzleCount;
         en_shuffle_k = tilingData->enShuffleK;
 
         OnChipBuffer<ArchType::ASCEND_V220> buf;

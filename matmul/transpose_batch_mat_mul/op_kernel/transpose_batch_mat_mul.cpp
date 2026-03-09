@@ -54,11 +54,11 @@ constexpr CubeFormat format_y = CubeFormat::ND;
         PpMatMulNS::SetPadding<uint64_t>((uint64_t)0);                                                                  \
         PpMatMulNS::SetNdpara(1, 0, 0);                                                                                 \
         PpMatMulNS::SetAtomicnone();                                                                                    \
-        if (tilingData.swizzlDirect == 0) {                                                                             \
+        if (tilingData.swizzleDirect == 0) {                                                                             \
             templateClass<0, transA, transB, DTYPE_X1, DTYPE_Y, PpMatMulNS::DataFormat::ND> op;                         \
             op.Init(aGM, bGM, cGM, &tilingData);                                                                        \
             op.Process();                                                                                               \
-        } else if (tilingData.swizzlDirect == 1) {                                                                      \
+        } else if (tilingData.swizzleDirect == 1) {                                                                      \
             templateClass<1, transA, transB, DTYPE_X1, DTYPE_Y, PpMatMulNS::DataFormat::ND> op;                         \
             op.Init(aGM, bGM, cGM, &tilingData);                                                                        \
             op.Process();                                                                                               \
