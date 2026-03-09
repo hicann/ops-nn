@@ -153,3 +153,58 @@ TEST_F(Conv3DBackpropFilterV2ProtoTest, 2d_extend_3d_dynamic) {
   auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
   ASSERT_EQ(Ops::Base::ToString(*output), "[3, 1, 3, 128, 256]");
 }
+
+TEST_F(Conv3DBackpropFilterV2ProtoTest, depthwise_2d_extend_3d_dynamic) {
+  vector<int64_t> strides({1, 1, 1, 1, 1});
+  vector<int64_t> pads({1, 1, 1, 1, 1, 1});
+  vector<int64_t> dilations({1, 1, 1, 1, 1});
+  int64_t groups = 1;
+  string data_format("NCDHW");
+  bool enable_hf32 = false;
+  string padding("");
+  int64_t _op_impl_mode_enum = 0L;
+  bool from_depthwise = true;
+
+
+  vector<int64_t> filter_sizes = {7, 5, 3, 3};
+  gert::StorageShape filter_sizes_shape = {{7, 5, 3, 3}, {7, 5, 3, 3}};
+  gert::StorageShape fmap_shape = {{2, 5, 1, 16, 16}, {2, 5, 1, 16, 16}};
+  gert::StorageShape out_backprop_shape = {{2, 35, 1, 16, 16}, {2, 35, 1, 16, 16}};
+  gert::StorageShape output_shape = {{}, {}};
+
+  size_t total_size = 0;
+  auto tensor_holder =
+  gert::Tensor::CreateFollowing(filter_sizes_shape.GetStorageShape().GetDimNum(), ge::DT_INT64, total_size);
+  auto tensor = reinterpret_cast<gert::Tensor *>(tensor_holder.get());
+  tensor->MutableStorageShape().AppendDim(filter_sizes_shape.MutableStorageShape().GetDimNum());
+  tensor->MutableOriginShape().AppendDim(filter_sizes_shape.MutableOriginShape().GetDimNum());
+  tensor->SetOriginFormat(ge::FORMAT_NCDHW);
+  tensor->SetStorageFormat(ge::FORMAT_NCDHW);
+  (void)memcpy_s(tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), filter_sizes.data(),
+                 filter_sizes.size() * sizeof(int64_t));
+
+  auto holder = gert::InferShapeContextFaker()
+                    .NodeIoNum(3, 1)
+                    .IrInstanceNum({1, 1, 1})
+                    .InputShapes({&fmap_shape, tensor, &out_backprop_shape})
+                    .OutputShapes({&output_shape})
+                    .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                                {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
+                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(groups)},
+                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)},
+                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(enable_hf32)},
+                                {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(padding)},
+                                {"_op_impl_mode_enum", Ops::NN::AnyValue::CreateFrom<bool>(_op_impl_mode_enum)},
+                                {"from_depthwise", Ops::NN::AnyValue::CreateFrom<bool>(from_depthwise)}})
+                    .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                    .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                    .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                    .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                    .Build();
+
+  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("Conv3DBackpropFilterV2")->infer_shape;
+  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+  ASSERT_EQ(Ops::Base::ToString(*output), "[35, 1, 1, 3, 3]");
+}
