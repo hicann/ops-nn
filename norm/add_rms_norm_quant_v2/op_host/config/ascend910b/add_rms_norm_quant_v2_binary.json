@@ -49,7 +49,7 @@
             "index": 4,
             "dtype": "float32",
             "format": "ND",
-            "paramType": "required",
+            "paramType": "optional",
             "shape": [
               -2
             ]
@@ -59,7 +59,7 @@
             "index": 5,
             "dtype": "int32",
             "format": "ND",
-            "paramType": "required",
+            "paramType": "optional",
             "shape": [
               -2
             ]
@@ -69,7 +69,7 @@
             "index": 6,
             "dtype": "int32",
             "format": "ND",
-            "paramType": "required",
+            "paramType": "optional",
             "shape": [
               -2
             ]
@@ -79,7 +79,7 @@
             "index": 7,
             "dtype": "float16",
             "format": "ND",
-            "paramType": "required",
+            "paramType": "optional",
             "shape": [
               -2
             ]
@@ -111,7 +111,7 @@
             "index": 2,
             "dtype": "float16",
             "format": "ND",
-            "paramType": "required",
+            "paramType": "optional",
             "shape": [
               -2
             ]
@@ -121,7 +121,7 @@
             "index": 3,
             "dtype": "float16",
             "format": "ND",
-            "paramType": "required",
+            "paramType": "optional",
             "shape": [
               -2
             ]
@@ -193,7 +193,7 @@
             "index": 4,
             "dtype": "bfloat16",
             "format": "ND",
-            "paramType": "required",
+            "paramType": "optional",
             "shape": [
               -2
             ]
@@ -203,7 +203,7 @@
             "index": 5,
             "dtype": "bfloat16",
             "format": "ND",
-            "paramType": "required",
+            "paramType": "optional",
             "shape": [
               -2
             ]
@@ -213,7 +213,7 @@
             "index": 6,
             "dtype": "bfloat16",
             "format": "ND",
-            "paramType": "required",
+            "paramType": "optional",
             "shape": [
               -2
             ]
@@ -223,7 +223,7 @@
             "index": 7,
             "dtype": "bfloat16",
             "format": "ND",
-            "paramType": "required",
+            "paramType": "optional",
             "shape": [
               -2
             ]
@@ -255,7 +255,7 @@
             "index": 2,
             "dtype": "bfloat16",
             "format": "ND",
-            "paramType": "required",
+            "paramType": "optional",
             "shape": [
               -2
             ]
@@ -265,7 +265,7 @@
             "index": 3,
             "dtype": "bfloat16",
             "format": "ND",
-            "paramType": "required",
+            "paramType": "optional",
             "shape": [
               -2
             ]
@@ -337,7 +337,7 @@
             "index": 4,
             "dtype": "float32",
             "format": "ND",
-            "paramType": "required",
+            "paramType": "optional",
             "shape": [
               -2
             ]
@@ -347,7 +347,7 @@
             "index": 5,
             "dtype": "int32",
             "format": "ND",
-            "paramType": "required",
+            "paramType": "optional",
             "shape": [
               -2
             ]
@@ -357,7 +357,7 @@
             "index": 6,
             "dtype": "int32",
             "format": "ND",
-            "paramType": "required",
+            "paramType": "optional",
             "shape": [
               -2
             ]
@@ -367,7 +367,7 @@
             "index": 7,
             "dtype": "bfloat16",
             "format": "ND",
-            "paramType": "required",
+            "paramType": "optional",
             "shape": [
               -2
             ]
@@ -399,7 +399,7 @@
             "index": 2,
             "dtype": "bfloat16",
             "format": "ND",
-            "paramType": "required",
+            "paramType": "optional",
             "shape": [
               -2
             ]
@@ -409,7 +409,7 @@
             "index": 3,
             "dtype": "bfloat16",
             "format": "ND",
-            "paramType": "required",
+            "paramType": "optional",
             "shape": [
               -2
             ]
