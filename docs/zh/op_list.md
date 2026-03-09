@@ -2506,6 +2506,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/layer_norm_quant/README.md">layer_norm_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>算子将LayerNorm归一化输出和下游的量化算子融合起来，减少搬入搬出操作。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/layer_norm_v3/README.md">layer_norm_v3</a></td>
     <td>✓</td>
     <td>✓</td>
