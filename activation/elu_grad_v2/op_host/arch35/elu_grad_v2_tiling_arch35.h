@@ -32,7 +32,7 @@ class EluGradV2Tiling {
 public:
     explicit EluGradV2Tiling(gert::TilingContext *context) : tilingContext(context){};
     ge::graphStatus RunTiling();
-    EluGradV2TilingData *tiling;
+    EluGradV2TilingData *tiling = nullptr;
 
 protected:
     ge::graphStatus SetTilingData(bool is_result);
@@ -44,9 +44,9 @@ private:
     uint64_t dType = 0;
     uint64_t schMode = 0;
     bool isResult = false;
-    ge::DataType gradsDtype;
-    ge::DataType activationsDtype;
-    ge::DataType outputDtype;
+    ge::DataType gradsDtype = ge::DT_UNDEFINED;
+    ge::DataType activationsDtype = ge::DT_UNDEFINED;
+    ge::DataType outputDtype = ge::DT_UNDEFINED;
     gert::TilingContext *tilingContext;
 };
 } // namespace optiling

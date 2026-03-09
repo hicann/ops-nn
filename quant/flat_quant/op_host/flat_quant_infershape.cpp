@@ -30,6 +30,7 @@ static constexpr size_t FLATQUANT_MX_N_OUT_DIM = 2;
 static constexpr size_t FLATQUANT_N_IS_EVEN = 2;
 static constexpr size_t FLATQUANT_DOUBLE_CEIL_SIZE = 64;
 static const size_t ATTR_INDEX_OF_DST_DTYPE = 1;
+constexpr int64_t DIGIT_TWO = 2;
 
 static bool IsFlatQuantMxFp4DavidSupport()
 {
@@ -73,7 +74,7 @@ static ge::graphStatus InferShape4FlatQuant(gert::InferShapeContext* context)
                                 FLATQUANT_DOUBLE_CEIL_SIZE;
                 outShape->SetDimNum(0);
                 outShape->AppendDim(xShape->GetDim(FLATQUANT_K_IDX));
-                outShape->AppendDim(xShape->GetDim(FLATQUANT_M_IDX) * xShape->GetDim(FLATQUANT_N_IDX) / 2);
+                outShape->AppendDim(xShape->GetDim(FLATQUANT_M_IDX) * xShape->GetDim(FLATQUANT_N_IDX) / DIGIT_TWO);
 
                 qScaleShape->SetDimNum(0);
                 qScaleShape->AppendDim(xShape->GetDim(FLATQUANT_K_IDX));

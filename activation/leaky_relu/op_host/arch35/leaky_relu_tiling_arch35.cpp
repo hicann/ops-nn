@@ -50,7 +50,7 @@ protected:
 private:
     uint64_t schMode = 0;
     uint64_t dType = 0;
-    ge::DataType outputDtype;
+    ge::DataType outputDtype = ge::DT_UNDEFINED;
     gert::TilingContext *tilingContext;
 };
 

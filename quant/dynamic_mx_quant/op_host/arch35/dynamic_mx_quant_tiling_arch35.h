@@ -112,7 +112,7 @@ struct DynamicMxQuantTilingParam {
     uint32_t vfLen{0};
     uint32_t workspaceSize{0};
     int64_t axis{0};
-    int64_t roundMode;
+    int64_t roundMode{0};
     int64_t dstType{0};
     int64_t blockSize{0};
     int64_t scaleAlg{0};

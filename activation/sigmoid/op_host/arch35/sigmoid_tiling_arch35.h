@@ -61,10 +61,10 @@ class SigmoidTiling : public Ops::NN::Optiling::TilingBaseClass {
     std::map<uint64_t, Ops::Base::ComputeParams> GetComputeMap(uint64_t opKey_);
 
     SigmoidTilingData tilingData;
-    uint64_t opKey;
-    int64_t coreNum;
-    int64_t ubSize;
-    uint64_t blockNum;
+    uint64_t opKey = 0;
+    int64_t coreNum = 0;
+    int64_t ubSize = 0;
+    uint64_t blockNum = 0;
 };
 
 }  // namespace optiling

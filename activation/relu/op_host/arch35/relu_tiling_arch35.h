@@ -33,7 +33,7 @@ protected:
     ge::graphStatus CalcOutputDtype();
 private:
     gert::TilingContext *tilingContext;
-    ge::DataType outputDtype;
+    ge::DataType outputDtype = ge::DT_UNDEFINED;
 };
 }  // namespace optiling
 #endif  // OPS_BUILD_IN_OP_TILING_RUNTIME_RELU_TILING_H

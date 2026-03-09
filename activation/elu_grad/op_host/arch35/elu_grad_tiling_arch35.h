@@ -40,9 +40,9 @@ protected:
 private:
     uint64_t dType = 0;
     uint64_t schMode = 0;
-    ge::DataType gradsDtype;
-    ge::DataType activationsDtype;
-    ge::DataType outputDtype;
+    ge::DataType gradsDtype = ge::DT_UNDEFINED;
+    ge::DataType activationsDtype = ge::DT_UNDEFINED;
+    ge::DataType outputDtype = ge::DT_UNDEFINED;
     gert::TilingContext *tilingContext;
 };
 

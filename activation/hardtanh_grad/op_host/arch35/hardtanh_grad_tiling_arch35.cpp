@@ -50,9 +50,9 @@ private:
     uint64_t dType = 0;
     uint64_t schMode = 0;
     gert::TilingContext* tilingContext;
-    ge::DataType outputDtype;
-    ge::DataType inputDtype;
-    ge::DataType inputDtype1;
+    ge::DataType outputDtype = ge::DT_UNDEFINED;
+    ge::DataType inputDtype = ge::DT_UNDEFINED;
+    ge::DataType inputDtype1 = ge::DT_UNDEFINED;
 };
 
 ge::graphStatus HardtanhGradTiling::SetTilingData()

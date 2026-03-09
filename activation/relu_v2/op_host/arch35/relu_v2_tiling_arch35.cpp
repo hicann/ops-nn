@@ -44,7 +44,7 @@ class ReluV2Tiling {
 public:
     explicit ReluV2Tiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus RunTiling();
-    ReluV2TilingData* tiling;
+    ReluV2TilingData* tiling = nullptr;
 
 protected:
     ge::graphStatus CalcOutputDtype();
@@ -54,8 +54,8 @@ protected:
 
 private:
     gert::TilingContext* tilingContext;
-    ge::DataType inputDtype;
-    ge::DataType outputDtype;
+    ge::DataType inputDtype = ge::DT_UNDEFINED;
+    ge::DataType outputDtype = ge::DT_UNDEFINED;
 };
 
 ge::graphStatus ReluV2Tiling::SetTilingData()

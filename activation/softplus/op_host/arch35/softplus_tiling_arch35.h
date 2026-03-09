@@ -35,7 +35,7 @@ private:
 
     SoftplusTilingData* tiling = nullptr;
     gert::TilingContext* tilingContext_;
-    ge::DataType outputDtype;
+    ge::DataType outputDtype = ge::DT_UNDEFINED;
 };
 
 } // namespace optiling

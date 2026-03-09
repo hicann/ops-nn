@@ -25,6 +25,7 @@ constexpr size_t INDEX_ATTR_COL_BLOCK_SIZE = 4;
 constexpr size_t INPUT_DIM_ONE = 1;
 constexpr size_t INPUT_DIM_TWO = 2;
 constexpr size_t INPUT_DIM_THREE = 3;
+constexpr size_t SHAPE_INDEX_TWO = 2;
 constexpr int64_t UNKNOWN_DIM_VALUE = -1;
 
 void SetShapeDimTwo(gert::InferShapeContext* context, int64_t groupNum, int64_t rowBlockSize, int64_t colBlockSize)
@@ -65,7 +66,7 @@ void SetShapeDimThree(gert::InferShapeContext* context, int64_t groupNum, int64_
 
     int64_t dim0 = inputXShape->GetDim(0);
     int64_t dim1 = inputXShape->GetDim(1);
-    int64_t dim2 = inputXShape->GetDim(2);
+    int64_t dim2 = inputXShape->GetDim(SHAPE_INDEX_TWO);
 
     OP_LOGD(
         context, "GroupedDynamicBlockQuant input shape is [%s], rowBlockSize is %ld, colBlockSize is %ld",
@@ -88,9 +89,9 @@ void SetShapeDimThree(gert::InferShapeContext* context, int64_t groupNum, int64_
         scaleShape->SetDim(1, dim1 / rowBlockSize + groupNum);
     }
     if (dim2 == UNKNOWN_DIM_VALUE) {
-        scaleShape->SetDim(2, UNKNOWN_DIM_VALUE);
+        scaleShape->SetDim(SHAPE_INDEX_TWO, UNKNOWN_DIM_VALUE);
     } else {
-        scaleShape->SetDim(2, Ops::Base::CeilDiv(dim2, colBlockSize));
+        scaleShape->SetDim(SHAPE_INDEX_TWO, Ops::Base::CeilDiv(dim2, colBlockSize));
     }
 }
 
