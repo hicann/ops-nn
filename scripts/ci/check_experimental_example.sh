@@ -28,7 +28,7 @@ ops=(${ops//;/ })
 cd "${BASE_PATH}"
 
 for op in "${ops[@]}"; do
-    count=$(find -path "*/${op}/examples/test_aclnn*.cpp" -not -path "*/opgen/template/*" | grep "experimental" | wc-l)
+    count=$(find -path "*/${op}/examples/test_aclnn*.cpp" -not -path "*/opgen/template/*" | grep "experimental" | wc -l)
     if [[ ${count} -eq 0 ]]; then
         echo "[WARNING] experimental op: ${op} doesn't have eager examples, skip."
         continue

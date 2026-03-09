@@ -92,25 +92,17 @@ rm -rf $BUILD_PATH
 rm -rf $BASE_PATH/build_out
 
 THREAD_NUM=$(grep -c ^processor /proc/cpuinfo)
-echo "==============================pre build========================================="
-rm -rf build && rm -rf build_out
-echo "exec cmd: [bash build.sh --pkg --ops=fatrelu_mul --vendor_name=fatrelu_mul -j${THREAD_NUM}]"
-bash build.sh --pkg --ops="fatrelu_mul" --vendor_name="fatrelu_mul"
-mkdir -p ${SCRIPT_DIR}/tmp && rm -rf ${script_dir}/tmp/*
-mv build_out/cann-ops-nn-fatrelu_mul*.run ${SCRIPT_DIR}/tmp/cann-ops-nn-fatrelu_mul_linux-aarch64.run
-rm -rf build && rm -rf build_out
-
 echo "==============================build jit============================================="
-echo "exec cmd: [bash build.sh --pkg --jit -j${THREAD_NUM}]"
-bash build.sh --pkg --jit -j ${THREAD_NUM}
+echo "exec cmd: [bash build.sh --pkg --jit -j${THREAD_NUM} --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH}]"
+bash build.sh --pkg --jit -j${THREAD_NUM} --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH}
 rm -rf build && rm -rf build_out
 
 echo "==============================build single op===================================="
 SINGLE_FILE="single.tar.gz"
 need_check_example="false"
 rm -rf single/*
-echo "exec cmd: [bash scripts/ci/check_pkg.sh pr_filelist.txt]"
-bash scripts/ci/check_pkg.sh "pr_filelist.txt"
+echo "exec cmd: [bash scripts/ci/check_pkg.sh pr_filelist.txt -j${THREAD_NUM}]"
+bash scripts/ci/check_pkg.sh "pr_filelist.txt" -j${THREAD_NUM}
 if [[ -f "$SINGLE_FILE" && -s "$SINGLE_FILE" ]]; then
     need_check_example="true"
     rm single.tar.gz
@@ -122,11 +114,11 @@ echo "==============================compile ascend950===========================
 ARCH=$(uname -m)
 # 判断是 x86 还是 ARM
 if [[ "$ARCH" == "x86_64" ]]; then
-    echo "exec cmd: [bash scripts/ci/compile_ascend950_pkg.sh pr_filelist.txt]"
-    bash scripts/ci/compile_ascend950_pkg.sh
+    echo "exec cmd: [bash scripts/ci/compile_ascend950_pkg.sh pr_filelist.txt -j${THREAD_NUM}]"
+    bash scripts/ci/compile_ascend950_pkg.sh -j${THREAD_NUM}
 elif [[ "$ARCH" == "aarch64" ]]; then
-    echo "exec cmd: [bash scripts/ci/compile_ascend950_pkg.sh pr_filelist.txt -force_jit]"
-    bash scripts/ci/compile_ascend950_pkg.sh "-force_jit"
+    echo "exec cmd: [bash scripts/ci/compile_ascend950_pkg.sh pr_filelist.txt -force_jit -j${THREAD_NUM}]"
+    bash scripts/ci/compile_ascend950_pkg.sh -force_jit -j${THREAD_NUM}
 fi
 check_res=$?
 if [[ $check_res -ne 0 ]]; then
@@ -137,15 +129,15 @@ rm -rf build && rm -rf build_out
 
 echo "==============================build utest start======================================"
 echo "--------------------------build ophost ut start-----------------------------------"
-echo "exec cmd: [bash build.sh -u --ophost -f pr_filelist.txt -j${THREAD_NUM}]"
-bash build.sh -u --ophost -f "pr_filelist.txt" -j ${THREAD_NUM}
+echo "exec cmd: [bash build.sh -u --ophost -f pr_filelist.txt --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j${THREAD_NUM}]"
+bash build.sh -u --ophost -f "pr_filelist.txt" --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j${THREAD_NUM}
 echo "--------------------------build opapi ut start------------------------------------"
-echo "exec cmd: [bash build.sh -u --opapi -f pr_filelist.txt -j${THREAD_NUM}]"
-bash build.sh -u --opapi -f "pr_filelist.txt" -j ${THREAD_NUM}
+echo "exec cmd: [bash build.sh -u --opapi -f pr_filelist.txt --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j${THREAD_NUM}]"
+bash build.sh -u --opapi -f "pr_filelist.txt" --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j${THREAD_NUM}
 if [ "$BASE_BRANCH_NAME" = "master" ]; then
     echo "--------------------------build opgraph ut start-----------------------------------"
-    echo "exec cmd: [bash build.sh -u --opgraph -f pr_filelist.txt -j${THREAD_NUM}]"
-    bash build.sh -u --opgraph -f "pr_filelist.txt" -j ${THREAD_NUM}
+    echo "exec cmd: [bash build.sh -u --opgraph -f pr_filelist.txt --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j${THREAD_NUM}]"
+    bash build.sh -u --opgraph -f "pr_filelist.txt" --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j${THREAD_NUM}
     echo "--------------------------build opkernel ut start-----------------------------------"
     echo "exec cmd: [bash scripts/ci/check_kernel_ut.sh pr_filelist.txt --no_cov]"
     bash scripts/ci/check_kernel_ut.sh pr_filelist.txt --no_cov | tee output.txt
@@ -168,10 +160,6 @@ if [[ ${need_check_example} == "true" ]]; then
     # 执行受影响的算子
     echo "exec cmd: [bash scripts/ci/check_example.sh pr_filelist.txt]"
     bash scripts/ci/check_example.sh pr_filelist.txt  2>&1 | tee -a ./run_test.log
-    # 单独执行nn仓的fatrelu_mul
-    chmod +x ${SCRIPT_DIR}/tmp/* && ${SCRIPT_DIR}/tmp/*.run 2>&1 | tee -a ./run_test.log
-    echo "exec cmd: [bash build.sh --run_example fatrelu_mul eager cust --vendor_name=fatrelu_mul]"
-    bash build.sh --run_example fatrelu_mul eager cust --vendor_name=fatrelu_mul 2>&1 | tee -a ./run_test.log
     if grep -w -e "FAIL" -e "errors" -e "fail" -e "failed" -e "error" -e "ERROR:" -e "Error" -e "error:" "./run_test.log"; then
         echo "[error] run test case failed"
         exit 1

@@ -20,6 +20,28 @@ pr_file=$(realpath "${1:-pr_filelist.txt}")
 op_category_list=$(grep -oP 'set\(OP_CATEGORY_LIST\s*\K".*"' $current_dir/$variables_cmake | sed 's/"//g')
 IFS=' ' read -r -a op_categories <<< "$op_category_list"
 
+THREAD_NUM="-j16"
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -j)
+            if [[ ${2+x} && -n "$2" && "$2" != --* ]]; then
+                THREAD_NUM="-j$2"
+                shift
+            else
+                echo "-j use default value: 16"
+            fi
+            shift
+            ;;
+        -j*)
+            THREAD_NUM="$1"
+            shift
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
 valid_dirs=()
 for category in "${op_categories[@]}"
 do
@@ -145,8 +167,8 @@ for name in "${ops_name[@]}"
 do
     rm -rf build
     rm -rf build_out
-    echo "[EXECUTE_COMMAND] bash build.sh --pkg --vendor_name=$name --ops=$name"
-    bash build.sh --pkg --vendor_name=$name --ops=$name --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j16
+    echo "[EXECUTE_COMMAND] bash build.sh --pkg --vendor_name=$name --ops=$name ${THREAD_NUM}"
+    bash build.sh --pkg --vendor_name=$name --ops=$name --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} ${THREAD_NUM}
     status=$?
     if [ $status -ne 0 ]; then
         echo "${name} check pkg fail"
@@ -175,8 +197,8 @@ ls
 #     do
 #         rm -rf build
 #         rm -rf build_out
-#         echo "[EXECUTE_COMMAND] bash build.sh --pkg --vendor_name=$name --ops=$name --soc=ascend950"
-#         bash build.sh --pkg --vendor_name=$name --ops=$name --soc=ascend950 --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j16
+#         echo "[EXECUTE_COMMAND] bash build.sh --pkg --vendor_name=$name --ops=$name --soc=ascend950 ${THREAD_NUM}"
+#         bash build.sh --pkg --vendor_name=$name --ops=$name --soc=ascend950 --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} ${THREAD_NUM}
 #         status=$?
 #         if [ $status -ne 0 ]; then
 #             echo "${name} check ascend950 pkg fail"
