@@ -10,7 +10,7 @@
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √    |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×    |
-| <term>Atlas 推理系列产品</term>                             |    ×    |
+| <term>Atlas 推理系列产品</term>                             |    √    |
 | <term>Atlas 训练系列产品</term>                              |    ×    |
 
 ## 功能说明
@@ -102,6 +102,28 @@
 
         $$
         out = (x1 @ x2) * x1Scale * x2Scale + bias
+        $$
+
+    </details>
+
+  - <term>Atlas 推理系列产品：</term>：
+
+    支持K-C[量化模式](../../../docs/zh/context/量化介绍.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
+
+    <details>
+
+    <summary><term><strong>K-C量化模式</strong></term></summary>
+
+      - x1Scale无bias：
+
+        $$
+        out = x1@x2 * x2Scale * x1Scale
+        $$
+
+      - x1Scale，bias INT32（此场景无offset）：
+
+        $$
+        out = (x1@x2 + bias) * x2Scale * x1Scale
         $$
 
     </details>
@@ -540,6 +562,40 @@ aclnnStatus aclnnQuantMatmulV5(
 
 - 确定性计算：
   - aclnnGroupedMatmulV5默认确定性实现。
+
+<details>
+
+<summary><term>Atlas 推理系列产品</term></summary>
+
+- **公共约束：**
+  <a id="公共约束"></a>
+  - 当前版本不支持yScale、x1Offset、x2Offset、yOffset，需要传入nullptr。
+
+  <details>
+
+  <summary><term><strong>K-C 量化场景约束：</strong></term></summary>
+  <a id="K-C 量化"></a>
+
+  - 输入和输出支持以下数据类型组合：
+  <a id="输入和输出支持以下数据类型组合K-C && K-T"></a>
+
+    | x1         | x2           | x1Scale     | x2Scale      | x1Offset    | x2Offset    | yScale   | yOffset    | bias         | out                |
+    | -----------| ------------ | ----------- | -----------  | ----------- |-----------  | -------  | -----------| ------------ | -------------------|
+    | INT8       | INT8         | FLOAT32     | FLOAT32      | null        | null        | null     | null       | null/INT32   | FLOAT16            |
+  - x1的约束：
+    - x1的最后一维大小不能超过65535，transposeX1仅支持false。
+    - x1仅支持shape为2维（m，k）或3维（b，m，k）。
+  - x2的约束：
+    - x2的最后一维大小不能超过65535，transposeX2仅支持true。
+    - 各个维度表示：（batch，k1，n1，n0，k0），batch可不存在，其中k0 = 32， n0 = 16， x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 32） = k1。
+    - x2需要通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)对format为ND的x2处理得到AI处理器亲和数据排布格式。
+  - x1Scale的约束：数据格式支持ND，shape是1维（t，），t = m，其中m与x1的m一致。
+  - x2Scale的约束：数据格式支持ND，shape是1维（t，），t = n，其中n与x2的n一致。
+  - bias的约束：数据格式支持ND，shape支持1维（n，）或3维（batch，1，n），n与x2的n一致。
+      
+  </details>
+
+</details>
 
 <details>
 
