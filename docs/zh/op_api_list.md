@@ -245,6 +245,7 @@
 | [aclnnL1LossBackward](../../loss/l1_loss_grad/docs/aclnnL1LossBackward.md) | 计算aclnnL1Loss的反向传播。reduction指定损失函数的计算方式。|默认确定性实现|
 | [aclnnLayerNorm&aclnnLayerNormWithImplMode](../../norm/layer_norm_v4/docs/aclnnLayerNorm&aclnnLayerNormWithImplMode.md)|对指定层进行均值为0、标准差为1的归一化计算。|默认确定性实现|
 | [aclnnLayerNormBackward](../../norm/layer_norm_grad_v3/docs/aclnnLayerNormBackward.md)|[aclnnNorm](../../norm/lp_norm_v2/docs/aclnnNorm.md)的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。|默认确定性实现|
+| [aclnnLayerNormQuant](../../norm/layer_norm_quant/docs/aclnnLayerNormQuant.md)|算子将LayerNorm归一化输出和下游的量化算子融合起来，减少搬入搬出操作。| - |
 | [aclnnLeakyRelu&aclnnInplaceLeakyRelu](../../activation/leaky_relu/docs/aclnnLeakyRelu&aclnnInplaceLeakyRelu.md) |激活函数，用于解决Relu函数在输入小于0时输出为0的问题，避免神经元无法更新参数。|默认确定性实现|
 | [aclnnLeakyReluBackward](../../activation/leaky_relu_grad/docs/aclnnLeakyReluBackward.md) |LeakyRelu激活函数反向。|默认确定性实现|
 | [aclnnLinalgVectorNorm](../../norm/lp_norm_v2/docs/aclnnLinalgVectorNorm.md)|计算输入张量的向量范数。|默认非确定性实现，支持配置开启|
