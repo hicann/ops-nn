@@ -22,7 +22,7 @@ namespace GroupNormGrad {
 using namespace AscendC;
 constexpr int OUTPUT_COUNT = 2;
 
-template <int32_t BUFFER_NUM = 2>
+template <typename T, int32_t BUFFER_NUM = 2>
 class EmptyDgamma {
 public:
     __aicore__ inline EmptyDgamma(TPipe *pipe, const GroupNormGradEmptyTilingData *tilingData) : Ppipe_(pipe), tiling_(tilingData)
@@ -45,17 +45,17 @@ public:
 
         gmOffset_ = colsPerCore_ * coreIdx_;
         colsLastCoreDG_ = tiling_->colsLastCoreDG;
-        dgammaGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(dgamma));
-        dbetaGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(dbeta));
-        Ppipe_->InitBuffer(dgammaQueue_, BUFFER_NUM, (colsPerUB_ * sizeof(float)));
+        dgammaGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(dgamma));
+        dbetaGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(dbeta));
+        Ppipe_->InitBuffer(dgammaQueue_, BUFFER_NUM, (colsPerUB_ * sizeof(T)));
     }
 
-    __aicore__ inline void CopyDgammaAndDbetaToGm(uint32_t dgammaGmOffset, LocalTensor<float> outLocal, int32_t curCols,
+    __aicore__ inline void CopyDgammaAndDbetaToGm(uint32_t dgammaGmOffset, LocalTensor<T> outLocal, int32_t curCols,
         int32_t dgammaUBOffset)
     {
         DataCopyExtParams dataCopyParams;
         dataCopyParams.blockCount = 1;
-        dataCopyParams.blockLen = curCols * sizeof(float);
+        dataCopyParams.blockLen = curCols * sizeof(T);
         dataCopyParams.srcStride = 0;
         dataCopyParams.dstStride = 0;
 
@@ -63,18 +63,18 @@ public:
         DataCopyPad(dbetaGm_[dgammaGmOffset], outLocal[dgammaUBOffset], dataCopyParams);
     }
 
-    __aicore__ inline void VFDuplicateRows(LocalTensor<float> &dstAddr, uint32_t currentCols)
+    __aicore__ inline void VFDuplicateRows(LocalTensor<T> &dstAddr, uint32_t currentCols)
     {
-        AscendC::NumericLimits<float>::QuietNaN(dstAddr, currentCols);
+        Duplicate<T>(dstAddr, (T)0, currentCols);
     }
 
     __aicore__ inline void CalcDgamma(uint32_t gmOffset_, uint32_t currentCols)
     {
-        LocalTensor<float> dgammaOutLocal = dgammaQueue_.template AllocTensor<float>();
+        LocalTensor<T> dgammaOutLocal = dgammaQueue_.template AllocTensor<T>();
 
         VFDuplicateRows(dgammaOutLocal, currentCols);
         dgammaQueue_.EnQue(dgammaOutLocal);
-        dgammaOutLocal = dgammaQueue_.template DeQue<float>();
+        dgammaOutLocal = dgammaQueue_.template DeQue<T>();
         CopyDgammaAndDbetaToGm(gmOffset_, dgammaOutLocal, currentCols, 0);
 
         dgammaQueue_.FreeTensor(dgammaOutLocal);
@@ -101,8 +101,8 @@ __aicore__ inline void Process()
 
 private:
 TQue<QuePosition::VECOUT, OUTPUT_COUNT> dgammaQueue_;
-GlobalTensor<float> dgammaGm_;
-GlobalTensor<float> dbetaGm_;
+GlobalTensor<T> dgammaGm_;
+GlobalTensor<T> dbetaGm_;
 uint64_t colsLastCoreDG_;
 uint32_t coreIdx_;
 uint64_t colsPerCore_;

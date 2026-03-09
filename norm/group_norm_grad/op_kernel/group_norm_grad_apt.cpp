@@ -142,7 +142,7 @@ extern "C" __global__ __aicore__ void group_norm_grad(
         GET_TILING_DATA_WITH_STRUCT(GroupNormGradEmptyTilingData, tiling_data_in, tilingdata);
         const GroupNormGradEmptyTilingData* __restrict tiling_data = &tiling_data_in;
         TPipe pipe;
-        EmptyDgamma<2> opDG(&pipe, tiling_data);
+        EmptyDgamma<DTYPE_DY, 2> opDG(&pipe, tiling_data);
         opDG.Init(dgamma, dbeta);
         opDG.Process();
     }
