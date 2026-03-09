@@ -16,6 +16,7 @@
 #include "kernel_operator.h"
 #include "arch35/batch_norm_v3_ra_full_reduce.h"
 #include "arch35/batch_norm_v3_block_split_r.h"
+#include "arch35/batch_norm_v3_rar_block_split_r.h"
 #include "arch35/batch_norm_v3_ra_welford.h"
 #include "arch35/batch_norm_v3.h"
 #include "arch35/batch_norm_v3_welford.h"
@@ -27,6 +28,7 @@ using namespace BatchNormV3Ops;
 
 namespace {
 #define TILINGKEY_FULL_REDUCE 200000
+#define TILINGKEY_RAR_BLOCK_SPLIT_R 250000
 #define TILINGKEY_RA_FULL_REDUCE 400000
 #define TILINGKEY_WELFORD_REDUCE 300000
 #define TILINGKEY_RA_WELFORD 500000
@@ -86,6 +88,12 @@ extern "C" __global__ __aicore__ void batch_norm_v3(
         GET_TILING_DATA_WITH_STRUCT(BatchNormV3BlockSplitRTilingData, tiling_data_in, tiling);
         const BatchNormV3BlockSplitRTilingData* __restrict tilingData = &tiling_data_in;
         BatchNormV3BlockSplitR<DTYPE_X, DTYPE_WEIGHT, DTYPE_RUNNING_MEAN> op(tilingData);
+        op.Init(x, weight, bias, mean, variance, y, mean_out, variance_out, batch_mean, batch_rstd, workspace);
+        op.Process();
+    } else if (TILING_KEY_IS(TILINGKEY_RAR_BLOCK_SPLIT_R)) {
+        GET_TILING_DATA_WITH_STRUCT(BatchNormV3RARBlockSplitRTilingData, tiling_data_in, tiling);
+        const BatchNormV3RARBlockSplitRTilingData* __restrict tilingData = &tiling_data_in;
+        BatchNormV3RARBlockSplitR<DTYPE_X, DTYPE_WEIGHT, DTYPE_RUNNING_MEAN> op(tilingData);
         op.Init(x, weight, bias, mean, variance, y, mean_out, variance_out, batch_mean, batch_rstd, workspace);
         op.Process();
     }

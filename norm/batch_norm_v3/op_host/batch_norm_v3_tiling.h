@@ -133,6 +133,34 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(BatchNormV3_200000, BatchNormV3FullReduceRegbaseTilingData);
 
+BEGIN_TILING_DATA_DEF(BatchNormV3RARBlockSplitRTilingData)
+TILING_DATA_FIELD_DEF(int64_t, patternR1);
+TILING_DATA_FIELD_DEF(int64_t, patternA);
+TILING_DATA_FIELD_DEF(int64_t, patternR0);
+TILING_DATA_FIELD_DEF(int64_t, patternAAlign);
+TILING_DATA_FIELD_DEF(int64_t, blockSplitAxis); // 多核切分轴（多核只切分R轴，从R1到R0）
+TILING_DATA_FIELD_DEF(int64_t, formerBlockOuter); // 多核切分外轴，用于绑多核，绑多核分为formerCore和tailCore，formerBlockOuter表示formerCore的外轴数
+TILING_DATA_FIELD_DEF(int64_t, tailBlockOuter); // 多核切分外轴，用于绑多核，表示tailCore的外轴数
+TILING_DATA_FIELD_DEF(int64_t, blockInner); // 多核切分内轴，在ub切分不够情况下参与ub切分，ub切分足够时，抛for循环
+TILING_DATA_FIELD_DEF(int64_t, ubFactor); // ubFactor
+TILING_DATA_FIELD_DEF(int64_t, formerCoreUbSplitAxis);
+TILING_DATA_FIELD_DEF(int64_t, formerCoreUbOuter);
+TILING_DATA_FIELD_DEF(int64_t, formerCoreUbInner);
+TILING_DATA_FIELD_DEF(int64_t, tailCoreUbSplitAxis);
+TILING_DATA_FIELD_DEF(int64_t, tailCoreUbOuter);
+TILING_DATA_FIELD_DEF(int64_t, tailCoreUbInner);
+TILING_DATA_FIELD_DEF(int64_t, formerCoreBinaryAddQuotient); // 对于formerCore，R轴做二分时，前半部分的大小，例如R=100,该值为64
+TILING_DATA_FIELD_DEF(int64_t, tailCoreBinaryAddQuotient); // 对于tailCore，R轴做二分时，前半部分的大小，例如R=100,该值为64
+TILING_DATA_FIELD_DEF(int64_t, lastBinaryAddQuotient);
+TILING_DATA_FIELD_DEF(int64_t, lastBinaryAddK);
+TILING_DATA_FIELD_DEF(int64_t, lastBinaryAddLast);
+TILING_DATA_FIELD_DEF(float, epsilon);
+TILING_DATA_FIELD_DEF(float, momentum);
+TILING_DATA_FIELD_DEF(float, momentumReverse);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(BatchNormV3_250000, BatchNormV3RARBlockSplitRTilingData)
+
 BEGIN_TILING_DATA_DEF(BatchNormV3WelfordRegbaseTilingData)
 TILING_DATA_FIELD_DEF(int64_t, r1);
 TILING_DATA_FIELD_DEF(int64_t, r0);
@@ -380,7 +408,11 @@ protected:
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus DoLibApiTiling() override;
     ge::graphStatus CheckInputValid();
+    ge::graphStatus CheckOutputValid();
+    ge::graphStatus CheckOutputShapeValid();
+    ge::graphStatus CheckOutputDtypeValid();
     ge::graphStatus CheckOneInputShape(int64_t idx);
+    ge::graphStatus CheckOneOutputShape(int64_t idx);
     ge::graphStatus CheckShapeAllPositive(gert::Shape& shape);
 
 protected:
