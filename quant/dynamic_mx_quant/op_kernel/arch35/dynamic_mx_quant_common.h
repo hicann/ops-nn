@@ -37,6 +37,7 @@ constexpr int64_t DIGIT_FOUR = 4;
 constexpr int64_t DIGIT_SIXTY_THREE = 63;
 constexpr int64_t OUT_ELE_NUM_ONE_BLK = 64;
 constexpr int64_t OUT_ELE_NUM_ONE_BLK_FP8 = 32;
+constexpr int64_t OUT_ALL = 256;
 constexpr uint16_t NAN_CUSTOMIZATION = 0x7f81;
 constexpr uint32_t NAN_CUSTOMIZATION_FP32 = 0x7f810000;
 constexpr uint16_t MAX_EXP_FOR_BF16 = 0x7f80;
