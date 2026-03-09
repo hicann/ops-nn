@@ -87,7 +87,7 @@ bool FusedQuantMatMulASWTiling::CheckDtype() const {
     return true;
 }
 
-bool FusedQuantMatMulASWTiling::AnalyzeX2TableAttr(const gert::StorageShape *x2TableShape) {
+bool FusedQuantMatMulASWTiling::AnalyzeX2TableAttr(const gert::StorageShape *x2TableShape) const {
     if (x2TableShape != nullptr) {
         OP_TILING_CHECK(!compileInfo_.supportMmadS8S4,
                         CUBE_INNER_ERR_REPORT(inputParams_.opName, "x2Table only support soc with MmadS8S4."),

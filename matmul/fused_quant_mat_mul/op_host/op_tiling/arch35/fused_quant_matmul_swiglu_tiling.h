@@ -54,9 +54,9 @@ protected:
     uint32_t GetX3Idx() const;
     uint32_t GetYScaleIdx() const;
 
-    bool IsFusedSwigluType();
+    bool IsFusedSwigluType() const;
 
-    void SetFormat();
+    void SetFormat() const;
     void PrintMatmulTilingData();
     void PrintBaseParamsTilingData();
     ge::graphStatus InitTilingData();

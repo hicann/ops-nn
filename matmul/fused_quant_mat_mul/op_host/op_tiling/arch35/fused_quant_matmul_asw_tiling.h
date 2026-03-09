@@ -48,7 +48,7 @@ protected:
     bool CheckShape(const std::vector<gert::Shape *> &mandtoryShape,
                     const std::vector<const gert::StorageShape *> &optionalInputShape,
                     const std::vector<int64_t> &dimValueOfMKN) const;
-    bool AnalyzeX2TableAttr(const gert::StorageShape *x2TableShape);
+    bool AnalyzeX2TableAttr(const gert::StorageShape *x2TableShape) const;
     bool CheckUnsupportedOptionInputs();
     ge::graphStatus CheckContext() override;
     bool AnalyzeDtype() override;

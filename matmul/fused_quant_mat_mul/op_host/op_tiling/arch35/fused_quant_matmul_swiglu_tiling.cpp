@@ -82,9 +82,9 @@ uint32_t FusedQuantMatMulSwigluTiling::GetYScaleIdx() const
     return Y_SCALE_INDEX_FQMM;
 }
 
-bool FusedQuantMatMulSwigluTiling::IsFusedSwigluType()
+bool FusedQuantMatMulSwigluTiling::IsFusedSwigluType() const
 {
-    return fusedOpType_ == (uint64_t)FQMMFusedOpType::SWIGLU;
+    return fusedOpType_ == static_cast<uint64_t>(FQMMFusedOpType::SWIGLU);
 }
 
 ge::graphStatus FusedQuantMatMulSwigluTiling::GetShapeAttrsInfo()
@@ -120,7 +120,7 @@ bool FusedQuantMatMulSwigluTiling::IsCapable()
     return true;
 }
 
-void FusedQuantMatMulSwigluTiling::SetFormat()
+void FusedQuantMatMulSwigluTiling::SetFormat() const
 {
     inputParams_.aFormat = ge::FORMAT_ND;
     inputParams_.bFormat = ge::FORMAT_ND;
@@ -286,13 +286,13 @@ void FusedQuantMatMulSwigluTiling::SetBaseBlockTiling()
         mLoops = basicTiling_.usedCoreNum;
     }
     singleCoreM = (inputParams_.mSize + mLoops - 1) / mLoops;
-    singleCoreM = ops::CeilAlign(singleCoreM, (uint64_t)ALIGN_M);
+    singleCoreM = ops::CeilAlign(singleCoreM, static_cast<uint64_t>(ALIGN_M));
     singleCoreM = singleCoreM > baseM ? singleCoreM : baseM;
     mLoops = ops::CeilDiv(inputParams_.mSize, singleCoreM);
 
     nLoops = basicTiling_.usedCoreNum / mLoops;
     singleCoreN = ops::CeilDiv(inputParams_.nSize, nLoops);
-    singleCoreN = ops::CeilAlign(singleCoreN, (uint64_t)ALIGN_N);
+    singleCoreN = ops::CeilAlign(singleCoreN, static_cast<uint64_t>(ALIGN_N));
     while (baseN > MIN_SHAPE_N && baseN > singleCoreN) {
         baseN = baseN >> 1;
     }
