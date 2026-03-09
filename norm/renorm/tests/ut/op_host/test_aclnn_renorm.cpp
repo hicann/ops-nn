@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -11,7 +11,7 @@
 #include <array>
 #include "gtest/gtest.h"
 
-#include "../../../op_host/op_api/aclnn_renorm.h"
+#include "../../../op_api/aclnn_renorm.h"
 
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
@@ -283,7 +283,7 @@ TEST_F(l2_renorm_test, case_p_support)
 
     uint64_t workspace_size1 = 0;
     aclnnStatus aclRet1 = ut1.TestGetWorkspaceSize(&workspace_size1);
-    EXPECT_EQ(aclRet1, ACL_SUCCESS);
+    EXPECT_EQ(aclRet1, ACLNN_ERR_PARAM_INVALID);
 
     auto ut2 = OP_API_UT(aclnnRenorm, INPUT(self, p2, dim, maxNorm), OUTPUT(out));
 

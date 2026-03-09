@@ -1,0 +1,143 @@
+{
+  "op_type": "Renorm",
+  "op_list": [
+    {
+      "bin_filename": "Renorm_dda2f6716e52355cb0d94d7dbc514d84",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "p",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "dim",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "maxnorm",
+          "dtype": "float",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "Renorm_9b7966e936873ea64320fa5b115c7b56",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "p",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "dim",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "maxnorm",
+          "dtype": "float",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "Renorm_1256fb427252eee2462eaada54e75499",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "p",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "dim",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "maxnorm",
+          "dtype": "float",
+          "value": 0.0
+        }
+      ]
+    }
+  ]
+}
