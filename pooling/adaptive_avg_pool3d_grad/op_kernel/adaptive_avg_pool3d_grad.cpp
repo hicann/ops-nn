@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -12,13 +12,42 @@
  * \file adaptive_avg_pool3d_grad.cpp
  * \brief
  */
-
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
+#include "arch35/adaptive_avg_pool3d_grad_simt.h"
+#include "arch35/adaptive_avg_pool3d_grad_struct.h"
+#else
 #include "adaptive_avg_pool3d_grad_float.h"
 #include "adaptive_avg_pool3d_grad_cast.h"
 #include "adaptive_avg_pool3d_grad_nc_large_cast.h"
 #include "adaptive_avg_pool3d_grad_nc_large_float.h"
+#endif
 using namespace AscendC;
-
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
+using namespace AdaptiveAvgPool3dGradOp;
+template <uint64_t INDEX_DTYPE = TPL_INT32, uint64_t IS_SIMT = 0, uint64_t IS_CHANNEL_LAST = 0, uint64_t IS_CHECK_RANGE = 0>
+__global__ __aicore__ void adaptive_avg_pool3d_grad(
+    GM_ADDR y_grad, GM_ADDR x, GM_ADDR x_grad, GM_ADDR workspace, GM_ADDR tiling)
+{
+    if (workspace == nullptr || GetUserWorkspace(workspace) == nullptr || g_coreType == AIC) {
+        return;
+    }
+    TPipe pipe;
+    if constexpr (INDEX_DTYPE == TPL_INT32 && IS_SIMT == 1) {
+        REGISTER_TILING_DEFAULT(AdaptiveAvgPool3dGradTilingDataV35);
+        GET_TILING_DATA_WITH_STRUCT(AdaptiveAvgPool3dGradTilingDataV35, tilingData, tiling);
+        AdaptiveAvgPool3dGradSimt<DTYPE_X, int32_t, IS_CHANNEL_LAST> op(&pipe, &tilingData);
+        op.Init(y_grad, x_grad);
+        op.Process();
+    } 
+    else if constexpr (INDEX_DTYPE == TPL_INT64 && IS_SIMT == 1) {
+        REGISTER_TILING_DEFAULT(AdaptiveAvgPool3dGradTilingDataV35);
+        GET_TILING_DATA_WITH_STRUCT(AdaptiveAvgPool3dGradTilingDataV35, tilingData, tiling);
+        AdaptiveAvgPool3dGradSimt<DTYPE_X, int64_t, IS_CHANNEL_LAST> op(&pipe, &tilingData);
+        op.Init(y_grad, x_grad);
+        op.Process();
+    }
+}
+#else
 extern "C" __global__ __aicore__ void adaptive_avg_pool3d_grad(
     GM_ADDR y_grad, GM_ADDR x, GM_ADDR x_grad, GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -79,3 +108,4 @@ extern "C" __global__ __aicore__ void adaptive_avg_pool3d_grad(
         op.ReleaseEventID();
     }
 }
+#endif

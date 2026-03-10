@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -11,8 +11,13 @@
 /*!
  * \file adaptive_avg_pool3d_grad_tiling.cpp
  * \brief
- *
  */
+
+#include "adaptive_avg_pool3d_grad_tiling.h"
+#include <iostream>
+#include "op_host/tiling_util.h"
+
+using Ops::NN::Optiling::TilingRegistry;
 
 #include "adaptive_avg_pool3d_grad_tiling.h"
 #include <iostream>
@@ -273,35 +278,49 @@ ge::graphStatus TilingPrepare4AdaptiveAvgPool3dGrad(gert::TilingParseContext* co
 {
     auto nodeName = context->GetNodeName();
     OP_LOGD(nodeName, "TilingPrepare4AdaptiveAvgPool3dGrad start.");
+
     auto compileInfo = context->GetCompiledInfo<AdaptiveAvgPool3dGradCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(nodeName, "Failed to get core num."), return ge::GRAPH_FAILED);
-    compileInfo->sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    uint64_t ubSizePlatForm;
-    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
-    compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0), OP_LOGE(nodeName, "Failed to get ub size."), return ge::GRAPH_FAILED);
-    OP_LOGD(nodeName, "TilingPrepare4AdaptiveAvgPool3dGrad end.");
+    OP_CHECK_IF((compileInfo->coreNum <= 0),
+        OP_LOGE(nodeName, "Failed to get core num."),
+        return ge::GRAPH_FAILED);
 
+    compileInfo->sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
+
+    uint64_t ubSizePlatForm = 0;
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
+    compileInfo->ubSizePlatForm = ubSizePlatForm;
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0),
+        OP_LOGE(nodeName, "Failed to get ub size."),
+        return ge::GRAPH_FAILED);
+
+    OP_LOGD(nodeName, "TilingPrepare4AdaptiveAvgPool3dGrad end.");
     return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus TilingFunc4AdaptiveAvgPool3dGrad(gert::TilingContext* context)
 {
-    AdaptiveAvgPool3dGradTiling tilingObject(context);
-    if (tilingObject.Init() != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context, "Init failed!");
-        return ge::GRAPH_FAILED;
+    if (!Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
+        AdaptiveAvgPool3dGradTiling tilingObject(context);
+        if (tilingObject.Init() != ge::GRAPH_SUCCESS) {
+            OP_LOGE(context, "Init failed!");
+            return ge::GRAPH_FAILED;
+        }
+        return tilingObject.RunKernelTiling();
+    } else {
+        return TilingRegistry::GetInstance().DoTilingImpl(context);
     }
-    return tilingObject.RunKernelTiling();
+    
 }
 
 IMPL_OP_OPTILING(AdaptiveAvgPool3dGrad)
     .Tiling(TilingFunc4AdaptiveAvgPool3dGrad)
     .TilingParse<AdaptiveAvgPool3dGradCompileInfo>(TilingPrepare4AdaptiveAvgPool3dGrad);
-} // namespace optiling
+
+}  // namespace optiling

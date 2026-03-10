@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -74,7 +74,7 @@ static bool CheckInputOutDims(const aclTensor* gradOutput, const aclTensor* self
         return false;
     }
 
-    for (size_t i = 0; i < selfDimNum; i++) {
+    for (size_t i = Ops::NN::AclnnUtil::IsRegbase() ? 1 : 0; i < selfDimNum; i++) {
         if (selfShape.GetDim(i) <= 0) {
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID, "self'dims is invalid, self No.[%lu] dim is not bigger than [%d].", i + 1, 0);
@@ -164,6 +164,7 @@ static bool CheckFormat(const aclTensor* gradOutput, const aclTensor* self, cons
     }
     // 如果输入格式是私有格式，记录日志，直接报错
     if (op::IsPrivateFormat(gradOutput->GetStorageFormat())) {
+        printf("wyh invalid format\n");
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support NCDHW、ND.");
         return false;
     }
@@ -313,6 +314,16 @@ static aclnnStatus DoCommonAdaptiveAvgPool3dBackward(
     return ACLNN_SUCCESS;
 }
 
+
+static aclnnStatus Do950CommonAdaptiveAvgPool3dBackward(
+    const aclTensor* gradOutput, const aclTensor* self, aclTensor* out, aclOpExecutor* executor)
+{
+    auto poolResult = l0op::AdaptiveAvgPool3dGrad(gradOutput, self, executor);
+    CHECK_RET(poolResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto viewCopyResult = l0op::ViewCopy(poolResult, out, executor);
+    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
+}
 static aclnnStatus SelectAdaptiveAvgPool3dBackward(
     const aclTensor* gradOutput, const aclTensor* self, aclTensor* out, aclOpExecutor* executor)
 {
@@ -324,6 +335,9 @@ static aclnnStatus SelectAdaptiveAvgPool3dBackward(
     if (dValue == 1 && hValue == 1 && wValue == 1) {
         return DoAllOneAdapativeAvgPool3dBackward(gradOutput, self, out, executor);
     }
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return Do950CommonAdaptiveAvgPool3dBackward(gradOutput, self, out, executor);
+    } 
     return DoCommonAdaptiveAvgPool3dBackward(gradOutput, self, out, executor);
 }
 
@@ -355,7 +369,10 @@ aclnnStatus aclnnAdaptiveAvgPool3dBackwardGetWorkspaceSize(
     // 固定写法，将输入self转换成连续的tensor
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    op::Shape outShape = gradOutput->GetViewShape();
 
+    op::Shape selfShape = self->GetViewShape();
+    size_t dimNum = selfShape.GetDimNum();
     auto rets = SelectAdaptiveAvgPool3dBackward(gradOutputContiguous, selfContiguous, out, uniqueExecutor.get());
     CHECK_RET(rets == ACLNN_SUCCESS, rets);
 

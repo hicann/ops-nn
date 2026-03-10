@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
+#include "op_api/aclnn_util.h"
 using namespace op;
 
 namespace l0op {
@@ -24,14 +25,16 @@ static constexpr size_t DIM_W = 1;
 static constexpr size_t DIM_0 = 0;
 static constexpr size_t DIM_1 = 1;
 static constexpr size_t DIM_2 = 2;
+static constexpr size_t DIM_3 = 3;
+static constexpr size_t DIM_4 = 4;
 
 static const aclTensor* AdaptiveAvgPool3dGradAiCore(
     const aclTensor* gradOutput, const aclTensor* self, aclTensor* out, aclOpExecutor* executor)
 {
     L0_DFX(AdaptiveAvgPool3dGradAiCore, gradOutput, self, out);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AdaptiveAvgPool3dGrad, OP_INPUT(gradOutput, self), OP_OUTPUT(out));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
+    std::string dataFormat = Ops::NN::AclnnUtil::IsRegbase() ? "NCDHW" : "NDHWC";
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AdaptiveAvgPool3dGrad, OP_INPUT(gradOutput, self), OP_OUTPUT(out), OP_ATTR(dataFormat));
+    OP_CHECK(ret == ACLNN_SUCCESS, 
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AdaptiveAvgPool3dGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
         return nullptr);
     return out;
@@ -43,9 +46,20 @@ const aclTensor* AdaptiveAvgPool3dGrad(const aclTensor* gradOutput, const aclTen
     op::Shape outShape = gradOutput->GetViewShape();
     op::Shape selfShape = self->GetViewShape();
     size_t dimNum = selfShape.GetDimNum();
-    outShape.SetDim(DIM_0, selfShape.GetDim(dimNum - DIM_D));
-    outShape.SetDim(DIM_1, selfShape.GetDim(dimNum - DIM_H));
-    outShape.SetDim(DIM_2, selfShape.GetDim(dimNum - DIM_W));
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        outShape.SetDim(DIM_1, selfShape.GetDim(DIM_1));
+        outShape.SetDim(DIM_2, selfShape.GetDim(DIM_2));
+        outShape.SetDim(DIM_3, selfShape.GetDim(DIM_3));
+        outShape.SetDim(DIM_4, selfShape.GetDim(DIM_4));
+        if (dimNum == 5) {
+            outShape.SetDim(DIM_0, selfShape.GetDim(DIM_0));
+        }
+    } else {
+        outShape.SetDim(DIM_0, selfShape.GetDim(dimNum - DIM_D));
+        outShape.SetDim(DIM_1, selfShape.GetDim(dimNum - DIM_H));
+        outShape.SetDim(DIM_2, selfShape.GetDim(dimNum - DIM_W));
+    }
+    
     auto out = executor->AllocTensor(outShape, gradOutput->GetDataType(), gradOutput->GetStorageFormat());
     if (out == nullptr) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "out is nullptr.");

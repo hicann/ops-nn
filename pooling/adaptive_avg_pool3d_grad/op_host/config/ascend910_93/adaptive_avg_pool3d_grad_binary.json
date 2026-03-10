@@ -36,6 +36,13 @@
               -2
             ]
           }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": "NDHWC"
+          }
         ]
       },
       {
@@ -73,6 +80,13 @@
               -2
             ]
           }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": "NDHWC"
+          }
         ]
       },
       {
@@ -109,6 +123,13 @@
             "shape": [
               -2
             ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": "NDHWC"
           }
         ]
       }
