@@ -225,6 +225,42 @@ struct IndexBuffer {
     }
 };
 
+template <typename T, int32_t QUEUE_DEPTH>
+struct PoolMem {
+    TPipe* pipe;
+    TQue<QuePosition::VECIN, QUEUE_DEPTH> inputQueue;
+    TQue<QuePosition::VECOUT, QUEUE_DEPTH> outputQueue;
+
+    TBuf<QuePosition::VECCALC> tmpPattern;
+    TBuf<TPosition::VECCALC> sumBuf;
+    LocalTensor<float> sumBufLocal;
+
+    GlobalTensor<T> inputGlobal;
+    GlobalTensor<T> outputGlobal;
+
+    TQue<QuePosition::VECIN, QUEUE_DEPTH> syncWorkQueue;
+    GlobalTensor<int32_t> syncTensorsGM;
+    TBuf<TPosition::VECCALC> clearTensorBuff;
+
+    int64_t inC;
+    int64_t alignC;
+    int64_t outputPointNum;
+    int64_t outputPointOffset;
+    int64_t lastPointOffset;
+    int64_t atomicAddNum;
+    int64_t nextCoreAddrOffset;
+    uint32_t inputBufLen;
+
+    PoolShape inputShape;
+    PoolShape outputShape;
+    int64_t indexBufLen;
+    IndexBuffer indexBuf;
+    PoolParameter poolParam;
+    uint32_t numPerBlock;
+    int32_t validTailLen;
+    uint32_t usedCoreNum;
+};
+
 __aicore__ inline void SToMTE2Sync() {
     event_t eventIDSToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
     SetFlag<HardEvent::S_MTE2>(eventIDSToMTE2);
@@ -272,6 +308,144 @@ __aicore__ inline void MTE3ToMTE2Sync()
     event_t eventIDMTE3ToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
     SetFlag<HardEvent::MTE3_MTE2>(eventIDMTE3ToMTE2);
     WaitFlag<HardEvent::MTE3_MTE2>(eventIDMTE3ToMTE2);
+}
+
+template <typename T, int32_t QUEUE_DEPTH>
+__aicore__ inline void HandleTailMask( LocalTensor<T>& outputLocal, int64_t gatherOffset, PoolMem<T, QUEUE_DEPTH>& poolMem, uint32_t mask) {
+    MTE3ToVSync();
+    int32_t lastLeftShift = poolMem.validTailLen;
+    uint64_t rsvdCnt = 0;
+    if constexpr (std::is_same_v<T, float>) {
+        LocalTensor<uint32_t> bufPattern = poolMem.tmpPattern.template Get<uint32_t>();
+        int32_t preLeftShift = poolMem.numPerBlock + lastLeftShift;
+
+        bufPattern.SetValue(0, (1u << preLeftShift) - (1u << lastLeftShift));
+        SToVSync();
+        GatherMask(outputLocal[gatherOffset], outputLocal[gatherOffset], bufPattern, true, mask, {1, 1, 8, 8}, rsvdCnt);
+    } else {
+        LocalTensor<uint16_t> bufPattern = poolMem.tmpPattern.template Get<uint16_t>();
+        int32_t preLeftShift = poolMem.numPerBlock - lastLeftShift;
+
+        bufPattern.SetValue(0, ((1u << preLeftShift) - 1u) << lastLeftShift);
+        bufPattern.SetValue(1, (1u << lastLeftShift) - 1u);
+        SToVSync();
+        GatherMask(outputLocal[gatherOffset], outputLocal[gatherOffset], bufPattern, true, mask, {1, 1, 8, 8}, rsvdCnt);
+    }
+    VToMTE3Sync();
+}
+
+template <typename T, int32_t QUEUE_DEPTH>
+__aicore__ inline void CastAndEnqueueOutput(
+    PoolMem<T, QUEUE_DEPTH>& poolMem, int64_t count, float factor) {
+    Muls(poolMem.sumBufLocal, poolMem.sumBufLocal, factor, count);
+
+    LocalTensor<T> outputLocal = poolMem.outputQueue.template AllocTensor<T>();
+    if constexpr (std::is_same_v<T, float>) {
+#if __CCE_AICORE__ < 220
+        Adds(outputLocal, poolMem.sumBufLocal, 0.0f, AlignUp(count, poolMem.numPerBlock));
+#else
+        DataCopy(outputLocal, poolMem.sumBufLocal, AlignUp(count, poolMem.numPerBlock));
+#endif
+    } else if constexpr (std::is_same_v<T, half>) {
+        Cast(outputLocal, poolMem.sumBufLocal, RoundMode::CAST_NONE, count);
+    } else {
+        Cast(outputLocal, poolMem.sumBufLocal, RoundMode::CAST_RINT, count);
+    }
+    poolMem.outputQueue.EnQue(outputLocal);
+}
+
+template <typename T, int32_t QUEUE_DEPTH>
+__aicore__ inline void InitCommonBuffers(
+    PoolMem<T, QUEUE_DEPTH>& poolMem, GM_ADDR workspace) {
+#if __CCE_AICORE__ < 220
+    if (poolMem.atomicAddNum) {
+        poolMem.pipe->InitBuffer(poolMem.tmpPattern, poolMem.numPerBlock * sizeof(T));
+
+        poolMem.pipe->InitBuffer(poolMem.syncWorkQueue, QUEUE_DEPTH, 8 * 32 * sizeof(int32_t));
+        poolMem.syncTensorsGM.SetGlobalBuffer((__gm__ int32_t *)workspace, poolMem.usedCoreNum * 8 * 32);
+        poolMem.pipe->InitBuffer(poolMem.clearTensorBuff, DEFAULT_CLEAR_UB_SIZE * sizeof(T));
+    } else if (poolMem.validTailLen != 0) {
+        poolMem.pipe->InitBuffer(poolMem.tmpPattern, poolMem.numPerBlock * sizeof(T));
+    }
+#endif
+}
+
+template <typename T, int32_t QUEUE_DEPTH>
+__aicore__ inline void CopyInTemplate(PoolMem<T, QUEUE_DEPTH>& poolMem, int64_t offset, uint16_t blockCount, uint32_t blockLen, uint8_t rightPadding) {
+    LocalTensor<T> inputLocal = poolMem.inputQueue.template AllocTensor<T>();
+#if __CCE_AICORE__ < 220
+    if constexpr (std::is_same_v<T, float>) {
+        if (blockLen == poolMem.alignC) {
+            DataCopyParams copyParams{blockCount, static_cast<uint16_t>(blockLen / poolMem.numPerBlock), 0, 0};
+            DataCopy(inputLocal, poolMem.inputGlobal[offset], copyParams);
+        } else {
+            for (int i = 0; i < blockCount; i++) {
+                DataCopy(inputLocal[i * poolMem.alignC], poolMem.inputGlobal[offset + i * blockLen], poolMem.alignC);
+            }
+        }
+    } else {
+        if (blockLen == poolMem.alignC) {
+            DataCopyParams copyParams{blockCount, static_cast<uint16_t>(blockLen / poolMem.numPerBlock), 0, 0};
+            DataCopy(inputLocal[poolMem.inputBufLen], poolMem.inputGlobal[offset], copyParams);
+        } else {
+            for (int i = 0; i < blockCount; i++) {
+                DataCopy(inputLocal[poolMem.inputBufLen + i * poolMem.alignC], poolMem.inputGlobal[offset + i * blockLen], poolMem.alignC);
+            }
+        }
+    }
+#else
+    DataCopyExtParams copyParams{blockCount, static_cast<uint32_t>(blockLen * sizeof(T)), 0, 0, 0};
+    DataCopyPadExtParams<T> padParams{true, 0, rightPadding, 0};
+    if constexpr (std::is_same_v<T, float>) {
+        DataCopyPad(inputLocal, poolMem.inputGlobal[offset], copyParams, padParams);
+    } else {
+        DataCopyPad(inputLocal[poolMem.inputBufLen], poolMem.inputGlobal[offset], copyParams, padParams);
+    }
+#endif
+    poolMem.inputQueue.EnQue(inputLocal);
+}
+
+template <typename T, int32_t QUEUE_DEPTH>
+__aicore__ inline void HandleAtomicAdd(
+    PoolMem<T, QUEUE_DEPTH>& poolMem) {
+#if __CCE_AICORE__ < 220
+    if (poolMem.atomicAddNum) {
+        LocalTensor<T> clearUb = poolMem.clearTensorBuff.template Get<T>();
+        Duplicate(clearUb, (T)0, DEFAULT_CLEAR_UB_SIZE);
+
+        VToMTE3Sync();
+        int64_t curOutputPointIdx = poolMem.lastPointOffset;
+        for (int i = 0; i < poolMem.atomicAddNum; i++, curOutputPointIdx--) {
+            DataCopy<T>(poolMem.outputGlobal[curOutputPointIdx * poolMem.inC], clearUb, poolMem.numPerBlock);
+        }
+
+        DataCopy(poolMem.syncTensorsGM[0], clearUb.template ReinterpretCast<int32_t>(), poolMem.usedCoreNum * 8 * 32);
+        LocalTensor<int32_t> syncLocalTensor = poolMem.syncWorkQueue.template AllocTensor<int32_t>();
+        AscendC::SyncAll(poolMem.syncTensorsGM, syncLocalTensor, int32_t(poolMem.usedCoreNum));
+        poolMem.syncWorkQueue.FreeTensor(syncLocalTensor);
+    }
+#endif
+}
+
+template <typename T, int32_t QUEUE_DEPTH>
+__aicore__ inline void HandleAtomicAddWithTail(
+    PoolMem<T, QUEUE_DEPTH>& poolMem, int64_t curOutputPointIdx, int64_t tailLength) {
+#if __CCE_AICORE__ < 220
+    if (poolMem.atomicAddNum) {
+        LocalTensor<T> clearUb = poolMem.clearTensorBuff.template Get<T>();
+        Duplicate(clearUb, (T)0, DEFAULT_CLEAR_UB_SIZE);
+
+        VToMTE3Sync();
+        for (int i = 0; i < poolMem.atomicAddNum; i++, curOutputPointIdx--) {
+            DataCopy<T>(poolMem.outputGlobal[curOutputPointIdx * tailLength], clearUb, poolMem.numPerBlock);
+        }
+
+        DataCopy(poolMem.syncTensorsGM[0], clearUb.template ReinterpretCast<int32_t>(), poolMem.usedCoreNum * 8 * 32);
+        LocalTensor<int32_t> syncLocalTensor = poolMem.syncWorkQueue.template AllocTensor<int32_t>();
+        AscendC::SyncAll(poolMem.syncTensorsGM, syncLocalTensor, int32_t(poolMem.usedCoreNum));
+        poolMem.syncWorkQueue.FreeTensor(syncLocalTensor);
+    }
+#endif
 }
 
 } // namespace AvgPool3d

@@ -18,6 +18,7 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
+#include "../pool_3d_common/arch32/pool_3d_memory_optimized_utils.h"
 
 using namespace AscendC;
 
@@ -52,8 +53,6 @@ private:
         int64_t curDoFactor, int64_t curHoFactor, int64_t curWoFactor, int64_t UbIdxOffset);
     __aicore__ inline void CopyOutAndIdx(
         int64_t curNcFactor, int64_t curDoFactor, int64_t curHoFactor, int64_t curWoFactor, int64_t yGmOffset);
-    __aicore__ inline void OutTranspose(
-        LocalTensor<float> xLocalTrans, LocalTensor<float> xLocal, int32_t rowNum, int32_t colNum);
 
     TQue<QuePosition::VECIN, 1> inputQue;
     TQue<QuePosition::VECOUT, 1> maxQue;
@@ -69,43 +68,7 @@ private:
     GlobalTensor<T> xGm, maxGm;
     GlobalTensor<int32_t> indicesGm;
 
-    uint32_t cBlockIdx = 0;
-
-    int64_t N = 1;
-    int64_t C = 1;
-    int64_t Di = 1;
-    int64_t Hi = 1;
-    int64_t Wi = 1;
-    int64_t Do = 1;
-    int64_t Ho = 1;
-    int64_t Wo = 1;
-    int64_t DiHiWi = 1;
-    int64_t HiWi = 1;
-    const int32_t VL_NUM = 64; // Vector calculate length / float size
-
-    // 多核切分的整尾块
-    int64_t ncFactor = 0;
-    int64_t doFactor = 0;
-    int64_t hoFactor = 0;
-    int64_t woFactor = 0;
-    int64_t ncTail = 0;
-    int64_t doTail = 0;
-    int64_t hoTail = 0;
-    int64_t woTail = 0;
-
-    // 多核切分的数量
-    int64_t ncOuter = 0;
-    int64_t doOuter = 0;
-    int64_t hoOuter = 0;
-    int64_t woOuter = 0;
-
-    int64_t totalIdx = 0;    // 总UB计算块
-    int64_t blockFactor = 0; // 每个核最多计算的UB块
-    int64_t useCoreNum = 0;  // 使用核数
-    int64_t blockTail = 0;   // 多核尾块
-
-    int64_t beginIdx = 0; // 当前核计算块起始id
-    int64_t endIdx = 0;   // 当前核计算块终止id
+    Pool3dMemCommon::PoolVars poolVars;
 
     SELMODE selMode = SELMODE::VSEL_TENSOR_TENSOR_MODE;
 };
@@ -114,30 +77,16 @@ template <typename T>
 __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::InitTiling(
     const AdaptiveMaxPool3dSmallPoolTilingData* __restrict__ tiling)
 {
-    useCoreNum = tiling->useCoreNum;
-    N = tiling->N;
-    C = tiling->C;
-    Di = tiling->Di;
-    Hi = tiling->Hi;
-    Wi = tiling->Wi;
-    Do = tiling->Do;
-    Ho = tiling->Ho;
-    Wo = tiling->Wo;
-    totalIdx = tiling->totalIdx;
-    blockFactor = tiling->blockFactor;
-    blockTail = tiling->blockTail;
-    ncFactor = tiling->ncFactor;
-    woFactor = tiling->woFactor;
-    hoFactor = tiling->hoFactor;
-    doFactor = tiling->doFactor;
-    doOuter = tiling->doOuter;
-    doTail = tiling->doTail;
-    hoOuter = tiling->hoOuter;
-    hoTail = tiling->hoTail;
-    woOuter = tiling->woOuter;
-    woTail = tiling->woTail;
-    ncOuter = tiling->ncOuter;
-    ncTail = tiling->ncTail;
+    poolVars.useCoreNum = tiling->useCoreNum;
+    poolVars.N = tiling->N;
+    poolVars.C = tiling->C;
+    poolVars.Di = tiling->Di;
+    poolVars.Hi = tiling->Hi;
+    poolVars.Wi = tiling->Wi;
+    poolVars.Do = tiling->Do;
+    poolVars.Ho = tiling->Ho;
+    poolVars.Wo = tiling->Wo;
+    Pool3dMemCommon::InitPoolVars(poolVars, tiling);
 }
 
 template <typename T>
@@ -147,19 +96,19 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::Init(
 {
     InitTiling(tiling);
 
-    cBlockIdx = GetBlockIdx();
-    if (cBlockIdx >= useCoreNum) {
+    poolVars.cBlockIdx = GetBlockIdx();
+    if (poolVars.cBlockIdx >= poolVars.useCoreNum) {
         return;
     }
 
-    DiHiWi = Di * Hi * Wi;
-    HiWi = Hi * Wi;
-    int64_t calBlockNum = blockFactor;
-    if (cBlockIdx == useCoreNum - 1) {
-        calBlockNum = blockTail;
+    poolVars.DiHiWi = poolVars.Di * poolVars.Hi * poolVars.Wi;
+    poolVars.HiWi = poolVars.Hi * poolVars.Wi;
+    int64_t calBlockNum = poolVars.blockFactor;
+    if (poolVars.cBlockIdx == poolVars.useCoreNum - 1) {
+        calBlockNum = poolVars.blockTail;
     }
-    beginIdx = cBlockIdx * blockFactor;
-    endIdx = cBlockIdx * blockFactor + calBlockNum;
+    poolVars.beginIdx = poolVars.cBlockIdx * poolVars.blockFactor;
+    poolVars.endIdx = poolVars.cBlockIdx * poolVars.blockFactor + calBlockNum;
 
     xGm.SetGlobalBuffer((__gm__ T*)x);
     maxGm.SetGlobalBuffer((__gm__ T*)y);
@@ -182,61 +131,6 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::Init(
 }
 
 template <typename T>
-__aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::OutTranspose(
-    LocalTensor<float> xLocalTrans, LocalTensor<float> xLocal, int32_t rowNum, int32_t colNum)
-{
-    LocalTensor<float> dstList[16];
-    LocalTensor<float> srcList[16];
-
-    event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-    event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
-
-    TransDataTo5HDParams transDataParams;
-    transDataParams.dstHighHalf = false;
-    transDataParams.srcHighHalf = false;
-    if (colNum == 8) {
-        transDataParams.repeatTimes = rowNum / 16;
-        transDataParams.dstRepStride = 2;
-        transDataParams.srcRepStride = 16;
-
-        for (int32_t i = 0; i < 16; i++) {
-            srcList[i] = xLocal[i * 8];
-        }
-
-        for (int32_t i = 0; i < 8; i++) {
-            dstList[i * 2] = xLocalTrans[i * rowNum];
-            dstList[i * 2 + 1] = xLocalTrans[i * rowNum + 8];
-        }
-
-        SetFlag<HardEvent::S_V>(eventSV);
-        WaitFlag<HardEvent::S_V>(eventSV);
-        TransDataTo5HD<float>(dstList, srcList, transDataParams);
-        SetFlag<HardEvent::V_S>(eventVS);
-        WaitFlag<HardEvent::V_S>(eventVS);
-    } else {
-        transDataParams.repeatTimes = colNum / 8;
-        transDataParams.dstRepStride = rowNum;
-        transDataParams.srcRepStride = 1;
-        for (int32_t j = 0; j < rowNum / 16; j++) {
-            for (int32_t i = 0; i < 16; i++) {
-                srcList[i] = xLocal[i * colNum + j * 16 * colNum];
-            }
-
-            for (int32_t i = 0; i < 8; i++) {
-                dstList[i * 2] = xLocalTrans[i * rowNum + j * 16];
-                dstList[i * 2 + 1] = xLocalTrans[i * rowNum + 8 + j * 16];
-            }
-
-            SetFlag<HardEvent::S_V>(eventSV);
-            WaitFlag<HardEvent::S_V>(eventSV);
-            TransDataTo5HD<float>(dstList, srcList, transDataParams);
-            SetFlag<HardEvent::V_S>(eventVS);
-            WaitFlag<HardEvent::V_S>(eventVS);
-        }
-    }
-}
-
-template <typename T>
 __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::InitReset()
 {
     int32_t inputVal(0);
@@ -251,11 +145,11 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::CalReset(const uint8_t diF
     LocalTensor<int32_t> resetIdx = resetIndexBuf.Get<int32_t>();
 
     for (int i = 1; i < hiFactor; i++) {
-        Adds(resetIdx[VL_NUM * i], resetIdx, (int32_t)(Wi * i), VL_NUM);
+        Adds(resetIdx[poolVars.VL_NUM * i], resetIdx, (int32_t)(poolVars.Wi * i), poolVars.VL_NUM);
     }
     PipeBarrier<PIPE_V>();
     for (int i = 1; i < diFactor; i++) {
-        Adds(resetIdx[VL_NUM * hiFactor * i], resetIdx, (int32_t)(Wi * Hi * i), VL_NUM * hiFactor);
+        Adds(resetIdx[poolVars.VL_NUM * hiFactor * i], resetIdx, (int32_t)(poolVars.Wi * poolVars.Hi * i), poolVars.VL_NUM * hiFactor);
     }
     PipeBarrier<PIPE_V>();
 }
@@ -263,56 +157,30 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::CalReset(const uint8_t diF
 template <typename T>
 __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::CopyIn(int64_t curIdx)
 {
-    auto curNcIdx = curIdx / (doOuter * hoOuter * woOuter);
-    auto curNcFactor = curNcIdx == (ncOuter - 1) ? ncTail : ncFactor;
-    auto tmpIdx = curIdx % (doOuter * hoOuter * woOuter);
-    auto curDoIdx = tmpIdx / (hoOuter * woOuter);
-    auto curDoFactor = curDoIdx == (doOuter - 1) ? doTail : doFactor;
-    tmpIdx = tmpIdx % (hoOuter * woOuter);
-    auto curHoIdx = tmpIdx / woOuter;
-    auto curHoFactor = curHoIdx == (hoOuter - 1) ? hoTail : hoFactor;
-    auto curWoIdx = tmpIdx % woOuter;
-    auto curWoFactor = curWoIdx == (woOuter - 1) ? woTail : woFactor;
+    auto blockVar = Pool3dMemCommon::CalcBlockVar(curIdx, poolVars);
 
-    int32_t kerDStartIdxTotal = ((curDoIdx * doFactor) * Di) / Do;
-    int32_t kerHStartIdxTotal = ((curHoIdx * hoFactor) * Hi) / Ho;
-    int32_t kerWStartIdxTotal = ((curWoIdx * woFactor) * Wi) / Wo;
-    int32_t kerDEndIdxTotal = Ceil((curDoFactor + curDoIdx * doFactor) * Di, Do);
-    int32_t kerHEndIdxTotal = Ceil((curHoFactor + curHoIdx * hoFactor) * Hi, Ho);
-    int32_t kerWEndIdxTotal = Ceil((curWoFactor + curWoIdx * woFactor) * Wi, Wo);
+    int32_t kerDStartIdxTotal = ((blockVar.curDoIdx * poolVars.doFactor) * poolVars.Di) / poolVars.Do;
+    int32_t kerHStartIdxTotal = ((blockVar.curHoIdx * poolVars.hoFactor) * poolVars.Hi) / poolVars.Ho;
+    int32_t kerWStartIdxTotal = ((blockVar.curWoIdx * poolVars.woFactor) * poolVars.Wi) / poolVars.Wo;
+    int32_t kerDEndIdxTotal = Ceil((blockVar.curDoFactor + blockVar.curDoIdx * poolVars.doFactor) * poolVars.Di, poolVars.Do);
+    int32_t kerHEndIdxTotal = Ceil((blockVar.curHoFactor + blockVar.curHoIdx * poolVars.hoFactor) * poolVars.Hi, poolVars.Ho);
+    int32_t kerWEndIdxTotal = Ceil((blockVar.curWoFactor + blockVar.curWoIdx * poolVars.woFactor) * poolVars.Wi, poolVars.Wo);
 
     const uint8_t diFactor = kerDEndIdxTotal - kerDStartIdxTotal;
     const uint8_t hiFactor = kerHEndIdxTotal - kerHStartIdxTotal;
     const uint8_t wiFactor = kerWEndIdxTotal - kerWStartIdxTotal;
 
-    auto xGmOffset =
-        curNcIdx * ncFactor * DiHiWi + kerDStartIdxTotal * HiWi + kerHStartIdxTotal * Wi + kerWStartIdxTotal;
+    auto xGmOffset = 
+        blockVar.curNcIdx * poolVars.ncFactor * poolVars.DiHiWi + kerDStartIdxTotal * poolVars.HiWi + kerHStartIdxTotal * poolVars.Wi + kerWStartIdxTotal;
 
-    CopyInput(curNcFactor, diFactor, hiFactor, wiFactor, xGmOffset);
+    CopyInput(blockVar.curNcFactor, diFactor, hiFactor, wiFactor, xGmOffset);
 }
 
 template <typename T>
 __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::CopyInput(
     int64_t curNcFactor, const uint8_t diFactor, const uint8_t hiFactor, const uint8_t wiFactor, int64_t xGmOffset)
 {
-    LocalTensor<T> xLocal = inputQue.AllocTensor<T>();
-
-    const uint8_t wiFactor16Align = Ceil(wiFactor, 32 / sizeof(T)) * 32 / sizeof(T);
-
-    DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
-    DataCopyExtParams paramsIn;
-    paramsIn.blockCount = hiFactor;
-    paramsIn.blockLen = wiFactor * sizeof(T);
-    paramsIn.srcStride = (Wi - wiFactor) * sizeof(T);
-    paramsIn.dstStride = 0;
-    for (int64_t ncCopyi = 0; ncCopyi < curNcFactor; ncCopyi++) {
-        for (int64_t dCopyi = 0; dCopyi < diFactor; dCopyi++) {
-            auto srcAddr = xGmOffset + ncCopyi * DiHiWi + dCopyi * HiWi;
-            auto dstAddr = (ncCopyi * diFactor + dCopyi) * hiFactor * wiFactor16Align;
-            DataCopyPad(xLocal[dstAddr], xGm[srcAddr], paramsIn, padParams);
-        }
-    }
-    inputQue.EnQue(xLocal);
+    Pool3dMemCommon::CopyInputData<T, 1>(inputQue, xGm, curNcFactor, diFactor, hiFactor, wiFactor, xGmOffset, poolVars);
 }
 
 /*
@@ -322,30 +190,7 @@ template <typename T>
 __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::TransInput(
     int64_t curNcFactor, const uint8_t diFactor, const uint8_t hiFactor, const uint8_t wiFactor)
 {
-    const uint8_t wiFactor16Align = Ceil(wiFactor, 32 / sizeof(T)) * 32 / sizeof(T);
-    const uint8_t wiFactorAlign = Ceil(wiFactor, 8) * 8;
-    LocalTensor<T> xLocal = inputQue.DeQue<T>();
-    LocalTensor<float> xLocalTransVL = inputTransBuffer.Get<float>();
-    if constexpr (IsSameType<T, float>::value) {
-        OutTranspose(xLocalTransVL, xLocal, VL_NUM, diFactor * hiFactor * wiFactorAlign);
-    } else {
-        LocalTensor<float> xLocalCast = mulWBuffer.Get<float>();
-        UnaryRepeatParams repeatCastParams{
-            (uint16_t)(wiFactorAlign / 8), (uint16_t)(wiFactor16Align / 8),
-            (uint8_t)(wiFactorAlign / 8 * Ceil(diFactor * hiFactor, 2)),
-            (uint8_t)(wiFactor16Align / 8 * Ceil(diFactor * hiFactor, 2))};
-
-        Cast(xLocalCast, xLocal, RoundMode::CAST_NONE, wiFactor16Align * curNcFactor * diFactor * hiFactor);
-        PipeBarrier<PIPE_V>();
-        Adds(
-            xLocalCast, xLocalCast, float(0.0), uint8_t(wiFactorAlign * Ceil(diFactor * hiFactor, 2)), curNcFactor * 2,
-            repeatCastParams);
-
-        PipeBarrier<PIPE_V>();
-        OutTranspose(xLocalTransVL, xLocalCast, VL_NUM, diFactor * hiFactor * wiFactorAlign);
-    }
-    PipeBarrier<PIPE_V>();
-    inputQue.FreeTensor(xLocal);
+    Pool3dMemCommon::TransposeInput<T, 1>(inputQue, inputTransBuffer, mulWBuffer, curNcFactor, diFactor, hiFactor, wiFactor, poolVars);
 }
 
 template <typename T>
@@ -358,7 +203,7 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::MaxPoolW(
 
     const uint8_t wiFactorAlign = Ceil(wiFactor, 8) * 8;
 
-    int32_t kerWStartIdxTotal = ((curWoIdx * woFactor) * Wi) / Wo;
+    int32_t kerWStartIdxTotal = ((curWoIdx * poolVars.woFactor) * poolVars.Wi) / poolVars.Wo;
 
     LocalTensor<int32_t> cmpIdx = nextCmpBuffer.Get<int32_t>();
     auto cmpIdxTmp = cmpIdx.ReinterpretCast<float>();
@@ -367,7 +212,7 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::MaxPoolW(
     LocalTensor<uint16_t> cmpMask2 = cmpNanMaskBuffer.Get<uint16_t>();
     uint64_t mask = 256 / sizeof(float);
     auto repeat = hiFactor * diFactor;
-    UnaryRepeatParams repeatCopyParams{1, 1, 8, (uint8_t)(VL_NUM / 8 * wiFactorAlign)};
+    UnaryRepeatParams repeatCopyParams{1, 1, 8, (uint8_t)(poolVars.VL_NUM / 8 * wiFactorAlign)};
     BinaryRepeatParams repeatParams{1, 1, 1, 8, (uint8_t)(8 * wiFactorAlign), 8};
     BinaryRepeatParams repeatParams2{1, 1, 1, 8, (uint8_t)(8 * wiFactorAlign), (uint8_t)(8 * wiFactorAlign)};
 
@@ -376,17 +221,17 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::MaxPoolW(
     auto mulWIdxCastUb = mulWIdxUb.ReinterpretCast<float>();
 
     for (int kernelIdx = 0; kernelIdx < curWoFactor; kernelIdx++) {
-        int32_t kerWStartIdx = ((kernelIdx + curWoIdx * woFactor) * Wi) / Wo;
-        int32_t kerWEndIdx = Ceil((kernelIdx + curWoIdx * woFactor + 1) * Wi, Wo);
-        auto mulWOffset = kernelIdx * diFactor * hiFactor * VL_NUM;
-        auto inputOffset = VL_NUM * (kerWStartIdx - kerWStartIdxTotal);
+        int32_t kerWStartIdx = ((kernelIdx + curWoIdx * poolVars.woFactor) * poolVars.Wi) / poolVars.Wo;
+        int32_t kerWEndIdx = Ceil((kernelIdx + curWoIdx * poolVars.woFactor + 1) * poolVars.Wi, poolVars.Wo);
+        auto mulWOffset = kernelIdx * diFactor * hiFactor * poolVars.VL_NUM;
+        auto inputOffset = poolVars.VL_NUM * (kerWStartIdx - kerWStartIdxTotal);
 
-        Adds(mulWUb[mulWOffset], xLocalTransVL[inputOffset], (float)0.0, VL_NUM, repeat, repeatCopyParams);
-        Adds(mulWIdxUb[mulWOffset], resetIdx, (kerWStartIdx - kerWStartIdxTotal), VL_NUM * repeat);
+        Adds(mulWUb[mulWOffset], xLocalTransVL[inputOffset], (float)0.0, poolVars.VL_NUM, repeat, repeatCopyParams);
+        Adds(mulWIdxUb[mulWOffset], resetIdx, (kerWStartIdx - kerWStartIdxTotal), poolVars.VL_NUM * repeat);
         PipeBarrier<PIPE_V>();
         for (int i = kerWStartIdx + 1; i < kerWEndIdx; i++) {
-            Adds(cmpIdx, resetIdx, (i - kerWStartIdxTotal), VL_NUM * repeat);
-            auto nexCmpOffset = VL_NUM * (i - kerWStartIdxTotal);
+            Adds(cmpIdx, resetIdx, (i - kerWStartIdxTotal), poolVars.VL_NUM * repeat);
+            auto nexCmpOffset = poolVars.VL_NUM * (i - kerWStartIdxTotal);
             Compare(cmpMask, xLocalTransVL[nexCmpOffset], mulWUb[mulWOffset], CMPMODE::GT, mask, repeat, repeatParams);
             Compare(
                 cmpMask2, xLocalTransVL[nexCmpOffset], xLocalTransVL[nexCmpOffset], CMPMODE::EQ, mask, repeat,
@@ -399,7 +244,7 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::MaxPoolW(
             Select(
                 mulWUb[mulWOffset], cmpMask, xLocalTransVL[nexCmpOffset], mulWUb[mulWOffset], selMode, mask, repeat,
                 repeatParams);
-            Select(mulWIdxCastUb[mulWOffset], cmpMask, cmpIdxTmp, mulWIdxCastUb[mulWOffset], selMode, VL_NUM * repeat);
+            Select(mulWIdxCastUb[mulWOffset], cmpMask, cmpIdxTmp, mulWIdxCastUb[mulWOffset], selMode, poolVars.VL_NUM * repeat);
             PipeBarrier<PIPE_V>();
         }
     }
@@ -411,14 +256,14 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::MaxPoolH(
 {
     auto woFactorAlign = Ceil(curWoFactor, 8) * 8;
 
-    int32_t kerHStartIdxTotal = ((curHoIdx * hoFactor) * Hi) / Ho;
+    int32_t kerHStartIdxTotal = ((curHoIdx * poolVars.hoFactor) * poolVars.Hi) / poolVars.Ho;
     LocalTensor<int32_t> cmpIdx = nextCmpBuffer.Get<int32_t>();
     auto cmpIdxTmp = cmpIdx.ReinterpretCast<float>();
     LocalTensor<uint16_t> cmpMask = cmpMaskBuffer.Get<uint16_t>();
     LocalTensor<uint16_t> cmpMask2 = cmpNanMaskBuffer.Get<uint16_t>();
     uint64_t mask = 256 / sizeof(float);
     auto repeat = woFactorAlign * diFactor;
-    UnaryRepeatParams repeatCopyParams{1, 1, 8, (uint8_t)(VL_NUM / 8 * hiFactor)};
+    UnaryRepeatParams repeatCopyParams{1, 1, 8, (uint8_t)(poolVars.VL_NUM / 8 * hiFactor)};
     BinaryRepeatParams repeatParams{1, 1, 1, 8, (uint8_t)(8 * hiFactor), 8};
     BinaryRepeatParams repeatParams2{1, 1, 1, 8, (uint8_t)(8 * hiFactor), (uint8_t)(8 * hiFactor)};
     LocalTensor<float> mulWUb = mulWBuffer.Get<float>();
@@ -430,16 +275,16 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::MaxPoolH(
     auto mulHIdxCastUb = mulHIdxUb.ReinterpretCast<float>();
 
     for (int kernelIdx = 0; kernelIdx < curHoFactor; kernelIdx++) {
-        int32_t kerHStartIdx = ((kernelIdx + curHoIdx * hoFactor) * Hi) / Ho;
-        int32_t kerHEndIdx = Ceil((kernelIdx + curHoIdx * hoFactor + 1) * Hi, Ho);
-        auto mulHOffset = kernelIdx * repeat * VL_NUM;
-        auto mulWOffset = VL_NUM * (kerHStartIdx - kerHStartIdxTotal);
+        int32_t kerHStartIdx = ((kernelIdx + curHoIdx * poolVars.hoFactor) * poolVars.Hi) / poolVars.Ho;
+        int32_t kerHEndIdx = Ceil((kernelIdx + curHoIdx * poolVars.hoFactor + 1) * poolVars.Hi, poolVars.Ho);
+        auto mulHOffset = kernelIdx * repeat * poolVars.VL_NUM;
+        auto mulWOffset = poolVars.VL_NUM * (kerHStartIdx - kerHStartIdxTotal);
 
-        Adds(mulHUb[mulHOffset], mulWUb[mulWOffset], (float)0.0, VL_NUM, repeat, repeatCopyParams);
-        Adds(mulHIdxUb[mulHOffset], mulWIdxUb[mulWOffset], (int32_t)0, VL_NUM, repeat, repeatCopyParams);
+        Adds(mulHUb[mulHOffset], mulWUb[mulWOffset], (float)0.0, poolVars.VL_NUM, repeat, repeatCopyParams);
+        Adds(mulHIdxUb[mulHOffset], mulWIdxUb[mulWOffset], (int32_t)0, poolVars.VL_NUM, repeat, repeatCopyParams);
         PipeBarrier<PIPE_V>();
         for (int i = kerHStartIdx + 1; i < kerHEndIdx; i++) {
-            auto nexCmpOffset = VL_NUM * (i - kerHStartIdxTotal);
+            auto nexCmpOffset = poolVars.VL_NUM * (i - kerHStartIdxTotal);
             Compare(cmpMask, mulWUb[nexCmpOffset], mulHUb[mulHOffset], CMPMODE::GT, mask, repeat, repeatParams);
             Compare(cmpMask2, mulWUb[nexCmpOffset], mulWUb[nexCmpOffset], CMPMODE::EQ, mask, repeat, repeatParams2);
             PipeBarrier<PIPE_V>();
@@ -464,14 +309,14 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::MaxPoolD(
 {
     auto woFactorAlign = Ceil(curWoFactor, 8) * 8;
 
-    int32_t kerDStartIdxTotal = ((curDoIdx * doFactor) * Di) / Do;
+    int32_t kerDStartIdxTotal = ((curDoIdx * poolVars.doFactor) * poolVars.Di) / poolVars.Do;
     LocalTensor<int32_t> cmpIdx = nextCmpBuffer.Get<int32_t>();
     auto cmpIdxTmp = cmpIdx.ReinterpretCast<float>();
     LocalTensor<uint16_t> cmpMask = cmpMaskBuffer.Get<uint16_t>();
     LocalTensor<uint16_t> cmpMask2 = cmpNanMaskBuffer.Get<uint16_t>();
     uint64_t mask = 256 / sizeof(float);
-    auto repeat = hoFactor * woFactorAlign;
-    UnaryRepeatParams repeatCopyParams{1, 1, 8, (uint8_t)(VL_NUM / 8 * diFactor)};
+    auto repeat = poolVars.hoFactor * woFactorAlign;
+    UnaryRepeatParams repeatCopyParams{1, 1, 8, (uint8_t)(poolVars.VL_NUM / 8 * diFactor)};
     BinaryRepeatParams repeatParams{1, 1, 1, 8, (uint8_t)(8 * diFactor), 8};
     BinaryRepeatParams repeatParams2{1, 1, 1, 8, (uint8_t)(8 * diFactor), (uint8_t)(8 * diFactor)};
     LocalTensor<float> mulHUb = inputTransBuffer.Get<float>();
@@ -484,16 +329,16 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::MaxPoolD(
     auto mulDIdxCastUb = mulDIdxUb.ReinterpretCast<float>();
 
     for (int kernelIdx = 0; kernelIdx < curDoFactor; kernelIdx++) {
-        int32_t kerDStartIdx = ((kernelIdx + curDoIdx * doFactor) * Di) / Do;
-        int32_t kerDEndIdx = Ceil((kernelIdx + curDoIdx * doFactor + 1) * Di, Do);
-        auto mulDOffset = kernelIdx * repeat * VL_NUM;
-        auto mulHOffset = VL_NUM * (kerDStartIdx - kerDStartIdxTotal);
+        int32_t kerDStartIdx = ((kernelIdx + curDoIdx * poolVars.doFactor) * poolVars.Di) / poolVars.Do;
+        int32_t kerDEndIdx = Ceil((kernelIdx + curDoIdx * poolVars.doFactor + 1) * poolVars.Di, poolVars.Do);
+        auto mulDOffset = kernelIdx * repeat * poolVars.VL_NUM;
+        auto mulHOffset = poolVars.VL_NUM * (kerDStartIdx - kerDStartIdxTotal);
 
-        Adds(mulDUb[mulDOffset], mulHUb[mulHOffset], (float)0.0, VL_NUM, repeat, repeatCopyParams);
-        Adds(mulDIdxUb[mulDOffset], mulHIdxUb[mulHOffset], (int32_t)0.0, VL_NUM, repeat, repeatCopyParams);
+        Adds(mulDUb[mulDOffset], mulHUb[mulHOffset], (float)0.0, poolVars.VL_NUM, repeat, repeatCopyParams);
+        Adds(mulDIdxUb[mulDOffset], mulHIdxUb[mulHOffset], (int32_t)0.0, poolVars.VL_NUM, repeat, repeatCopyParams);
         PipeBarrier<PIPE_V>();
         for (int i = kerDStartIdx + 1; i < kerDEndIdx; i++) {
-            auto nexCmpOffset = VL_NUM * (i - kerDStartIdxTotal);
+            auto nexCmpOffset = poolVars.VL_NUM * (i - kerDStartIdxTotal);
             Compare(cmpMask, mulHUb[nexCmpOffset], mulDUb[mulDOffset], CMPMODE::GT, mask, repeat, repeatParams);
             Compare(cmpMask2, mulHUb[nexCmpOffset], mulHUb[nexCmpOffset], CMPMODE::EQ, mask, repeat, repeatParams2);
             PipeBarrier<PIPE_V>();
@@ -524,7 +369,7 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::TransOutAndIdx(
     auto curWoFactorAlign16 = Ceil(curWoFactor, 32 / sizeof(T)) * 32 / sizeof(T);
     LocalTensor<int32_t> mulDIdxUb = mulWIdxBuffer.Get<int32_t>();
     auto mulDIdxCastUb = mulDIdxUb.ReinterpretCast<float>();
-    Adds(mulDIdxUb, mulDIdxUb, (int32_t)UbIdxOffset, hoFactor * curWoFactorAlign * doFactor * VL_NUM);
+    Adds(mulDIdxUb, mulDIdxUb, (int32_t)UbIdxOffset, poolVars.hoFactor * curWoFactorAlign * poolVars.doFactor * poolVars.VL_NUM);
     LocalTensor<int32_t> indexLocal = indexQue.AllocTensor<int32_t>();
     LocalTensor<float> indexLocalTmp = indexLocal.ReinterpretCast<float>();
 
@@ -533,30 +378,29 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::TransOutAndIdx(
     LocalTensor<float> mulDUb = mulWBuffer.Get<float>();
     LocalTensor<float> mulHUb = inputTransBuffer.Get<float>();
     if constexpr (IsSameType<T, float>::value) {
-        OutTranspose(yLocal, mulDUb, Ceil(curDoFactor * curHoFactor * curWoFactorAlign, 16) * 16, VL_NUM);
-
+        Pool3dMemCommon::OutTranspose<T>(yLocal, mulDUb, Ceil(curDoFactor * curHoFactor * curWoFactorAlign, 16) * 16, poolVars.VL_NUM);
     } else {
         if (curWoFactorAlign == curWoFactorAlign16) {
-            OutTranspose(mulHUb, mulDUb, Ceil(curDoFactor * curHoFactor * curWoFactorAlign, 16) * 16, VL_NUM);
+            Pool3dMemCommon::OutTranspose<T>(mulHUb, mulDUb, Ceil(curDoFactor * curHoFactor * curWoFactorAlign, 16) * 16, poolVars.VL_NUM);
         } else {
             UnaryRepeatParams repeatCastParams2{
                 (uint16_t)(curWoFactorAlign16 / 8), (uint16_t)(curWoFactorAlign / 8),
                 (uint8_t)(Ceil(curDoFactor * curHoFactor * curWoFactorAlign16, 16) * 2),
                 (uint8_t)(Ceil(curDoFactor * curHoFactor * curWoFactorAlign, 16) * 2)};
-            OutTranspose(mulHUb[4096], mulDUb, Ceil(curDoFactor * curHoFactor * curWoFactorAlign, 16) * 16, VL_NUM);
+            Pool3dMemCommon::OutTranspose<T>(mulHUb[4096], mulDUb, Ceil(curDoFactor * curHoFactor * curWoFactorAlign, 16) * 16, poolVars.VL_NUM);
             PipeBarrier<PIPE_V>();
 
             Adds(
-                mulHUb, mulHUb[4096], (float)0.0, (uint8_t)(curWoFactorAlign * curDoFactor * curHoFactor), VL_NUM,
+                mulHUb, mulHUb[4096], (float)0.0, (uint8_t)(curWoFactorAlign * curDoFactor * curHoFactor), poolVars.VL_NUM,
                 repeatCastParams2);
         }
         PipeBarrier<PIPE_V>();
 
-        Cast(yLocal, mulHUb, RoundMode::CAST_ROUND, VL_NUM * curWoFactorAlign16 * curDoFactor * curHoFactor);
+        Cast(yLocal, mulHUb, RoundMode::CAST_ROUND, poolVars.VL_NUM * curWoFactorAlign16 * curDoFactor * curHoFactor);
     }
     maxQue.EnQue(yLocal);
 
-    OutTranspose(indexLocalTmp, mulDIdxCastUb, Ceil(curDoFactor * curHoFactor * curWoFactorAlign, 16) * 16, VL_NUM);
+    Pool3dMemCommon::OutTranspose<T>(indexLocalTmp, mulDIdxCastUb, Ceil(curDoFactor * curHoFactor * curWoFactorAlign, 16) * 16, poolVars.VL_NUM);
     indexQue.EnQue(indexLocal);
 }
 
@@ -572,14 +416,12 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::CopyOutAndIdx(
 
     LocalTensor<T> yLocal = maxQue.DeQue<T>();
 
-    DataCopyExtParams paramsOut2;
-    paramsOut2.blockCount = curHoFactor;
-    paramsOut2.blockLen = curWoFactor * sizeof(T);
-    paramsOut2.srcStride = 0;
-    paramsOut2.dstStride = (Wo - curWoFactor) * sizeof(T);
+    DataCopyExtParams paramsOut2 = {
+        static_cast<uint16_t>(curHoFactor), static_cast<uint32_t>(curWoFactor * sizeof(T)), static_cast<uint32_t>(0),
+        static_cast<uint32_t>((poolVars.Wo - curWoFactor) * sizeof(T)), static_cast<uint32_t>(0)};
     for (int64_t ncCopyi = 0; ncCopyi < curNcFactor; ncCopyi++) {
         for (int64_t dCopyi = 0; dCopyi < curDoFactor; dCopyi++) {
-            auto dstAddr = yGmOffset + ncCopyi * Do * Ho * Wo + dCopyi * Ho * Wo;
+            auto dstAddr = yGmOffset + ncCopyi * poolVars.Do * poolVars.Ho * poolVars.Wo + dCopyi * poolVars.Ho * poolVars.Wo;
             auto srcAddr = ncCopyi * Ceil(curDoFactor * curHoFactor * curWoFactorAlign16, 16) * 16 +
                            dCopyi * curHoFactor * curWoFactorAlign16;
             DataCopyPad(maxGm[dstAddr], yLocal[srcAddr], paramsOut2);
@@ -588,11 +430,11 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::CopyOutAndIdx(
     maxQue.FreeTensor(yLocal);
 
     paramsOut2.blockLen = curWoFactor * sizeof(int32_t);
-    paramsOut2.dstStride = (Wo - curWoFactor) * sizeof(int32_t);
+    paramsOut2.dstStride = (poolVars.Wo - curWoFactor) * sizeof(int32_t);
     LocalTensor<int32_t> indexLocal = indexQue.DeQue<int32_t>();
     for (int64_t ncCopyi = 0; ncCopyi < curNcFactor; ncCopyi++) {
         for (int64_t dCopyi = 0; dCopyi < curDoFactor; dCopyi++) {
-            auto dstAddr = yGmOffset + ncCopyi * Do * Ho * Wo + dCopyi * Ho * Wo;
+            auto dstAddr = yGmOffset + ncCopyi * poolVars.Do * poolVars.Ho * poolVars.Wo + dCopyi * poolVars.Ho * poolVars.Wo;
             auto srcAddr = ncCopyi * Ceil(curDoFactor * curHoFactor * curWoFactorAlign, 16) * 16 +
                            dCopyi * curHoFactor * curWoFactorAlign;
             DataCopyPad(indicesGm[dstAddr], indexLocal[srcAddr], paramsOut2);
@@ -604,61 +446,53 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::CopyOutAndIdx(
 template <typename T>
 __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::Process()
 {
-    if (cBlockIdx >= useCoreNum) {
+    if (poolVars.cBlockIdx >= poolVars.useCoreNum) {
         return;
     }
 
     InitReset();
-    for (auto curIdx = beginIdx; curIdx < endIdx; curIdx++) {
+    for (auto curIdx = poolVars.beginIdx; curIdx < poolVars.endIdx; curIdx++) {
         // 按照outer切分，当前在[NC, Doo, Hoo, Woo]上的第几个UB块和当前计算多少块kernel
-        auto curNcIdx = curIdx / (doOuter * hoOuter * woOuter);
-        auto curNcFactor = curNcIdx == (ncOuter - 1) ? ncTail : ncFactor;
-        auto tmpIdx = curIdx % (doOuter * hoOuter * woOuter);
-        auto curDoIdx = tmpIdx / (hoOuter * woOuter);
-        auto curDoFactor = curDoIdx == (doOuter - 1) ? doTail : doFactor;
-        tmpIdx = tmpIdx % (hoOuter * woOuter);
-        auto curHoIdx = tmpIdx / woOuter;
-        auto curHoFactor = curHoIdx == (hoOuter - 1) ? hoTail : hoFactor;
-        auto curWoIdx = tmpIdx % woOuter;
-        auto curWoFactor = curWoIdx == (woOuter - 1) ? woTail : woFactor;
+        auto blockVar = Pool3dMemCommon::CalcBlockVar(curIdx, poolVars);
         // 按照inner切分，计算当前起始和终止位置
-        int32_t kerDStartIdxTotal = ((curDoIdx * doFactor) * Di) / Do;
-        int32_t kerHStartIdxTotal = ((curHoIdx * hoFactor) * Hi) / Ho;
-        int32_t kerWStartIdxTotal = ((curWoIdx * woFactor) * Wi) / Wo;
-        int32_t kerDEndIdxTotal = Ceil((curDoFactor + curDoIdx * doFactor) * Di, Do);
-        int32_t kerHEndIdxTotal = Ceil((curHoFactor + curHoIdx * hoFactor) * Hi, Ho);
-        int32_t kerWEndIdxTotal = Ceil((curWoFactor + curWoIdx * woFactor) * Wi, Wo);
+        int32_t kerDStartIdxTotal = ((blockVar.curDoIdx * poolVars.doFactor) * poolVars.Di) / poolVars.Do;
+        int32_t kerDEndIdxTotal = Ceil((blockVar.curDoFactor + blockVar.curDoIdx * poolVars.doFactor) * poolVars.Di, poolVars.Do);
+        int32_t kerHStartIdxTotal = ((blockVar.curHoIdx * poolVars.hoFactor) * poolVars.Hi) / poolVars.Ho;
+        int32_t kerHEndIdxTotal = Ceil((blockVar.curHoFactor + blockVar.curHoIdx * poolVars.hoFactor) * poolVars.Hi, poolVars.Ho);
+        int32_t kerWStartIdxTotal = ((blockVar.curWoIdx * poolVars.woFactor) * poolVars.Wi) / poolVars.Wo;
+        int32_t kerWEndIdxTotal = Ceil((blockVar.curWoFactor + blockVar.curWoIdx * poolVars.woFactor) * poolVars.Wi, poolVars.Wo);
 
         const uint8_t diFactor = kerDEndIdxTotal - kerDStartIdxTotal;
         const uint8_t hiFactor = kerHEndIdxTotal - kerHStartIdxTotal;
         const uint8_t wiFactor = kerWEndIdxTotal - kerWStartIdxTotal;
 
         // 搬入搬出和ub内index相对gm的偏移
-        auto xGmOffset =
-            curNcIdx * ncFactor * DiHiWi + kerDStartIdxTotal * HiWi + kerHStartIdxTotal * Wi + kerWStartIdxTotal;
-        auto yGmOffset = curNcIdx * ncFactor * Do * Ho * Wo + curDoIdx * doFactor * Ho * Wo + curHoIdx * hoFactor * Wo +
-                         curWoIdx * woFactor;
-        int64_t UbIdxOffset = kerDStartIdxTotal * HiWi + kerHStartIdxTotal * Wi + kerWStartIdxTotal;
-        if (curIdx == beginIdx) {
-            CopyInput(curNcFactor, diFactor, hiFactor, wiFactor, xGmOffset);
+        auto xGmOffset = blockVar.curNcIdx * poolVars.ncFactor * poolVars.DiHiWi + kerDStartIdxTotal * poolVars.HiWi + 
+                        kerHStartIdxTotal * poolVars.Wi + kerWStartIdxTotal;
+        auto yGmOffset = blockVar.curNcIdx * poolVars.ncFactor * poolVars.Do * poolVars.Ho * poolVars.Wo + 
+                    blockVar.curDoIdx * poolVars.doFactor * poolVars.Ho * poolVars.Wo + 
+                    blockVar.curHoIdx * poolVars.hoFactor * poolVars.Wo + blockVar.curWoIdx * poolVars.woFactor;
+        int64_t UbIdxOffset = kerDStartIdxTotal * poolVars.HiWi + kerHStartIdxTotal * poolVars.Wi + kerWStartIdxTotal;
+        if (curIdx == poolVars.beginIdx) {
+            CopyInput(blockVar.curNcFactor, diFactor, hiFactor, wiFactor, xGmOffset);
         }
         // [VL_NUM, diFactor, hiFactor, wiFactorAlign] => [diFactor, hiFactor, wiFactorAlign, VL_NUM]
-        TransInput(curNcFactor, diFactor, hiFactor, wiFactor);
+        TransInput(blockVar.curNcFactor, diFactor, hiFactor, wiFactor);
 
-        if (curIdx != endIdx - 1) {
+        if (curIdx != poolVars.endIdx - 1) {
             CopyIn(curIdx + 1);
         }
 
         CalReset(diFactor, hiFactor);
         // [diFactor, hiFactor, wiFactorAlign, VL_NUM] => [woFactorAlign, diFactor, hiFactor, VL_NUM]
-        MaxPoolW(diFactor, hiFactor, wiFactor, curWoIdx, curWoFactor);
+        MaxPoolW(diFactor, hiFactor, wiFactor, blockVar.curWoIdx, blockVar.curWoFactor);
         // [woFactorAlign, diFactor, hiFactor, VL_NUM] => [hoFactor, woFactorAlign, diFactor, VL_NUM]
-        MaxPoolH(diFactor, hiFactor, curWoFactor, curHoIdx, curHoFactor);
-        // [hoFactor, woFactorAlign, diFactor, VL_NUM] => [doFactor, hoFactor, woFactorAlign, VL_NUM]
-        MaxPoolD(diFactor, hiFactor, curWoFactor, curDoIdx, curDoFactor);
-        // [doFactor, hoFactor, woFactorAlign, VL_NUM] => [VL_NUM, doFactor, hoFactor, woFactorAlign]
-        TransOutAndIdx(curDoFactor, curHoFactor, curWoFactor, UbIdxOffset);
-        CopyOutAndIdx(curNcFactor, curDoFactor, curHoFactor, curWoFactor, yGmOffset);
+        MaxPoolH(diFactor, hiFactor, blockVar.curWoFactor, blockVar.curHoIdx, blockVar.curHoFactor);
+        // [hoFactor, woFactorAlign, diFactor, hiFactor, VL_NUM] => [doFactor, hoFactor, woFactorAlign, diFactor, VL_NUM]
+        MaxPoolD(diFactor, hiFactor, blockVar.curWoFactor, blockVar.curDoIdx, blockVar.curDoFactor);
+        // [doFactor, hoFactor, woFactorAlign, diFactor, VL_NUM] => [VL_NUM, doFactor, hoFactor, woFactorAlign, diFactor]
+        TransOutAndIdx(blockVar.curDoFactor, blockVar.curHoFactor, blockVar.curWoFactor, UbIdxOffset);
+        CopyOutAndIdx(blockVar.curNcFactor, blockVar.curDoFactor, blockVar.curHoFactor, blockVar.curWoFactor, yGmOffset);
     }
 }
 #endif // ADAPTIVE_MAX_POOL3D_SAMLL_POOL_H_

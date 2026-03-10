@@ -19,6 +19,7 @@
  #include "kernel_operator.h"
  #include "kernel_tiling/kernel_tiling.h"
  #include "avg_pool3d_common.h"
+ #include "../pool_3d_common/arch32/pool_3d_memory_optimized_utils.h"
 
 namespace AvgPool3d {
 template <typename T>
@@ -44,8 +45,6 @@ private:
     __aicore__ inline void TransOut(int64_t curDoFactor, int64_t curHoFactor, int64_t curWoFactor);
     __aicore__ inline void CopyOut(
         int64_t curNcFactor, int64_t curDoFactor, int64_t curHoFactor, int64_t curWoFactor, int64_t yGmOffset);
-    __aicore__ inline void OutTranspose(
-        LocalTensor<float> xLocalTrans, LocalTensor<float> xLocal, int32_t rowNum, int32_t colNum);
 
     TQue<QuePosition::VECIN, 1> inputQue;
     TQue<QuePosition::VECOUT, 1> yQue;
@@ -53,42 +52,7 @@ private:
     TBuf<> mulWBuffer;
     GlobalTensor<T> xGm;
     GlobalTensor<T> yGm;
-    uint32_t cBlockIdx = 0;
-
-    int64_t N = 1;
-    int64_t C = 1;
-    int64_t Di = 1;
-    int64_t Hi = 1;
-    int64_t Wi = 1;
-    int64_t Do = 1;
-    int64_t Ho = 1;
-    int64_t Wo = 1;
-    int64_t DiHiWi = 1;
-    int64_t HiWi = 1;
-    const int32_t VL_NUM = 64;  // Vector calculate length / float size
-
-    // 多核切分的整尾块
-    int64_t ncFactor = 0;
-    int64_t doFactor = 0;
-    int64_t hoFactor = 0;
-    int64_t woFactor = 0;
-    int64_t ncTail = 0;
-    int64_t doTail = 0;
-    int64_t hoTail = 0;
-    int64_t woTail = 0;
-
-    // 多核切分的数量
-    int64_t ncOuter = 0;
-    int64_t doOuter = 0;
-    int64_t hoOuter = 0;
-    int64_t woOuter = 0;
-
-    int64_t totalIdx = 0;     // 总UB计算块
-    int64_t blockFactor = 0;  // 每个核最多计算的UB块
-    int64_t useCoreNum = 0;   // 使用核数
-    int64_t blockTail = 0;    // 多核尾块
-    int64_t beginIdx = 0;  // 当前核计算块起始id
-    int64_t endIdx = 0;    // 当前核计算块终止id
+    Pool3dMemCommon::PoolVars poolVars;
     int64_t kernelsize = 0;
     int64_t kW = 0;
     int64_t kH = 0;
@@ -116,30 +80,16 @@ private:
 
 template <typename T>
 __aicore__ inline void AvgPool3dNormal<T>::InitTiling(const AvgPool3DTilingData* __restrict__ tiling) {
-    useCoreNum = tiling->useCoreNum;
-    N = tiling->inN;
-    C = tiling->inC;
-    Di = tiling->inD;
-    Hi = tiling->inH;
-    Wi = tiling->inW;
-    Do = tiling->outD;
-    Ho = tiling->outH;
-    Wo = tiling->outW;
-    totalIdx = tiling->totalIdx;
-    blockFactor = tiling->blockFactor;
-    blockTail = tiling->blockTail;
-    ncFactor = tiling->ncFactor;
-    woFactor = tiling->woFactor;
-    hoFactor = tiling->hoFactor;
-    doFactor = tiling->doFactor;
-    doOuter = tiling->doOuter;
-    doTail = tiling->doTail;
-    hoOuter = tiling->hoOuter;
-    hoTail = tiling->hoTail;
-    woOuter = tiling->woOuter;
-    woTail = tiling->woTail;
-    ncOuter = tiling->ncOuter;
-    ncTail = tiling->ncTail;
+    poolVars.useCoreNum = tiling->useCoreNum;
+    poolVars.N = tiling->inN;
+    poolVars.C = tiling->inC;
+    poolVars.Di = tiling->inD;
+    poolVars.Hi = tiling->inH;
+    poolVars.Wi = tiling->inW;
+    poolVars.Do = tiling->outD;
+    poolVars.Ho = tiling->outH;
+    poolVars.Wo = tiling->outW;
+    Pool3dMemCommon::InitPoolVars(poolVars, tiling);
     kernelsize = tiling->kD * tiling->kH * tiling->kW;
     kW = tiling->kW;
     kD = tiling->kD;
@@ -162,110 +112,33 @@ __aicore__ inline void AvgPool3dNormal<T>::Init(
     GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const AvgPool3DTilingData* __restrict__ tiling, TPipe* pipe) {
     InitTiling(tiling);
 
-    cBlockIdx = GetBlockIdx();
-    if (cBlockIdx >= useCoreNum) {
+    poolVars.cBlockIdx = GetBlockIdx();
+    if (poolVars.cBlockIdx >= poolVars.useCoreNum) {
         return;
     }
 
-    DiHiWi = Di * Hi * Wi;
-    HiWi = Hi * Wi;
-    int64_t calBlockNum = blockFactor;
-    if (cBlockIdx == useCoreNum - 1) {
-        calBlockNum = blockTail;
-    }
-    beginIdx = cBlockIdx * blockFactor;
-    endIdx = cBlockIdx * blockFactor + calBlockNum;
+    poolVars.DiHiWi = poolVars.Di * poolVars.Hi * poolVars.Wi;
+    poolVars.HiWi = poolVars.Hi * poolVars.Wi;
+    int64_t calBlockNum = (poolVars.cBlockIdx == poolVars.useCoreNum - 1) ? poolVars.blockTail : poolVars.blockFactor;
+    poolVars.beginIdx = poolVars.cBlockIdx * poolVars.blockFactor;
+    poolVars.endIdx = poolVars.cBlockIdx * poolVars.blockFactor + calBlockNum;
     xGm.SetGlobalBuffer((__gm__ T*)x);
     yGm.SetGlobalBuffer((__gm__ T*)y);
 
     // 初始化que
-    pipe->InitBuffer(inputQue, 1, 32 * 1024);  // VL_NUM*diFactor*hiFactor*wiFactorAlign*sizeof(T) 有问题？
+    pipe->InitBuffer(inputQue, 1, 32 * 1024);  // VL_NUM*diFactor*hiFactor*wiFactorAlign*sizeof(T)
     pipe->InitBuffer(yQue, 1, 8 * 1024);     // VL_NUM*doFactor*hoFactor*woFactorAlign*sizeof(T)
     pipe->InitBuffer(inputTransBuffer, 64 * 1024);  // VL_NUM*diFactor*hiFactor*wiFactorAlign*sizeof(float)
     pipe->InitBuffer(mulWBuffer, 64 * 1024);        // VL_NUM*diFactor*hiFactor*wiFactor16Align*sizeof(float)
 }
 
-template <typename T>
-__aicore__ inline void AvgPool3dNormal<T>::OutTranspose(
-    LocalTensor<float> xLocalTrans, LocalTensor<float> xLocal, int32_t rowNum, int32_t colNum) {
-    LocalTensor<float> dstList[16];
-    LocalTensor<float> srcList[16];
-
-    event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-    event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
-
-    TransDataTo5HDParams transDataParams;
-    transDataParams.dstHighHalf = false;
-    transDataParams.srcHighHalf = false;
-    if (colNum == 8) {
-        transDataParams.repeatTimes = rowNum / 16;
-        transDataParams.dstRepStride = 2;
-        transDataParams.srcRepStride = 16;
-
-        for (int32_t i = 0; i < 16; i++) {
-            srcList[i] = xLocal[i * 8];
-        }
-
-        for (int32_t i = 0; i < 8; i++) {
-            dstList[i * 2] = xLocalTrans[i * rowNum];
-            dstList[i * 2 + 1] = xLocalTrans[i * rowNum + 8];
-        }
-
-        SetFlag<HardEvent::S_V>(eventSV);
-        WaitFlag<HardEvent::S_V>(eventSV);
-        TransDataTo5HD<float>(dstList, srcList, transDataParams);
-        SetFlag<HardEvent::V_S>(eventVS);
-        WaitFlag<HardEvent::V_S>(eventVS);
-    } else {
-        transDataParams.repeatTimes = colNum / 8;
-        transDataParams.dstRepStride = rowNum;
-        transDataParams.srcRepStride = 1;
-        for (int32_t j = 0; j < rowNum / 16; j++) {
-            for (int32_t i = 0; i < 16; i++) {
-                srcList[i] = xLocal[i * colNum + j * 16 * colNum];
-            }
-
-            for (int32_t i = 0; i < 8; i++) {
-                dstList[i * 2] = xLocalTrans[i * rowNum + j * 16];
-                dstList[i * 2 + 1] = xLocalTrans[i * rowNum + 8 + j * 16];
-            }
-
-            SetFlag<HardEvent::S_V>(eventSV);
-            WaitFlag<HardEvent::S_V>(eventSV);
-            TransDataTo5HD<float>(dstList, srcList, transDataParams);
-            SetFlag<HardEvent::V_S>(eventVS);
-            WaitFlag<HardEvent::V_S>(eventVS);
-        }
-    }
-}
 /*
 * 功能：input类型转换 <T> -> <fp32>类型, 并转置，把[VL, D, H, W] 转为[D, H, W, VL]
 */
 template <typename T>
 __aicore__ inline void AvgPool3dNormal<T>::TransInput(
     int64_t curNcFactor, const uint8_t diFactor, const uint8_t hiFactor, const uint8_t wiFactor) {
-    const uint8_t wiFactor16Align = Ceil(wiFactor, 32 / sizeof(T)) * 32 / sizeof(T);
-    const uint8_t wiFactorAlign = Ceil(wiFactor, 8) * 8;
-    LocalTensor<T> xLocal = inputQue.DeQue<T>();
-    LocalTensor<float> xLocalTransVL = inputTransBuffer.Get<float>();
-    if constexpr (IsSameType<T, float>::value) {
-        OutTranspose(xLocalTransVL, xLocal, VL_NUM, diFactor * hiFactor * wiFactorAlign);
-    } else {
-        LocalTensor<float> xLocalCast = mulWBuffer.Get<float>();
-        UnaryRepeatParams repeatCastParams{(uint16_t)(wiFactorAlign / 8), (uint16_t)(wiFactor16Align / 8),
-                                           (uint8_t)(wiFactorAlign / 8 * Ceil(diFactor * hiFactor, 2)),
-                                           (uint8_t)(wiFactor16Align / 8 * Ceil(diFactor * hiFactor, 2))};
-
-        Cast(xLocalCast, xLocal, RoundMode::CAST_NONE, wiFactor16Align * curNcFactor * diFactor * hiFactor);
-        AscendC::PipeBarrier<PIPE_V>();
-        Adds(xLocalCast, xLocalCast, float(0.0), uint8_t(wiFactorAlign * Ceil(diFactor * hiFactor, 2)), curNcFactor * 2,
-             repeatCastParams);
-
-        AscendC::PipeBarrier<PIPE_V>();
-        OutTranspose(xLocalTransVL, xLocalCast, VL_NUM, diFactor * hiFactor * wiFactorAlign);
-    }
-    AscendC::PipeBarrier<PIPE_V>();
-    inputQue.FreeTensor(xLocal);
+    Pool3dMemCommon::TransposeInput<T, 1>(inputQue, inputTransBuffer, mulWBuffer, curNcFactor, diFactor, hiFactor, wiFactor, poolVars);
 }
 
 /*
@@ -282,23 +155,23 @@ __aicore__ inline void AvgPool3dNormal<T>::TransOut(int64_t curDoFactor, int64_t
     LocalTensor<float> mulDUb = mulWBuffer.Get<float>();
     LocalTensor<float> mulHUb = inputTransBuffer.Get<float>();
     if constexpr (IsSameType<T, float>::value) {
-        OutTranspose(yLocal, mulDUb, Ceil(curDoFactor * curHoFactor * curWoFactorAlign, 16) * 16, VL_NUM);
+        Pool3dMemCommon::OutTranspose<T>(yLocal, mulDUb, Ceil(curDoFactor * curHoFactor * curWoFactorAlign, 16) * 16, poolVars.VL_NUM);
     } else {
         if (curWoFactorAlign == curWoFactorAlign16) {
-            OutTranspose(mulHUb, mulDUb, Ceil(curDoFactor * curHoFactor * curWoFactorAlign, 16) * 16, VL_NUM);
+            Pool3dMemCommon::OutTranspose<T>(mulHUb, mulDUb, Ceil(curDoFactor * curHoFactor * curWoFactorAlign, 16) * 16, poolVars.VL_NUM);
         } else {
             UnaryRepeatParams repeatCastParams2{(uint16_t)(curWoFactorAlign16 / 8), (uint16_t)(curWoFactorAlign / 8),
                                                 (uint8_t)(Ceil(curDoFactor * curHoFactor * curWoFactorAlign16, 16) * 2),
                                                 (uint8_t)(Ceil(curDoFactor * curHoFactor * curWoFactorAlign, 16) * 2)};
-            OutTranspose(mulHUb[4096], mulDUb, Ceil(curDoFactor * curHoFactor * curWoFactorAlign, 16) * 16, VL_NUM);
+            Pool3dMemCommon::OutTranspose<T>(mulHUb[4096], mulDUb, Ceil(curDoFactor * curHoFactor * curWoFactorAlign, 16) * 16, poolVars.VL_NUM);
             AscendC::PipeBarrier<PIPE_V>();
 
-            Adds(mulHUb, mulHUb[4096], (float)0.0, (uint8_t)(curWoFactorAlign * curDoFactor * curHoFactor), VL_NUM,
+            Adds(mulHUb, mulHUb[4096], (float)0.0, (uint8_t)(curWoFactorAlign * curDoFactor * curHoFactor), poolVars.VL_NUM,
                  repeatCastParams2);
         }
         AscendC::PipeBarrier<PIPE_V>();
 
-        Cast(yLocal, mulHUb, RoundMode::CAST_ROUND, VL_NUM * curWoFactorAlign16 * curDoFactor * curHoFactor);
+        Cast(yLocal, mulHUb, RoundMode::CAST_ROUND, poolVars.VL_NUM * curWoFactorAlign16 * curDoFactor * curHoFactor);
     }
     yQue.EnQue(yLocal);
 }
@@ -307,17 +180,14 @@ template <typename T>
 __aicore__ inline void AvgPool3dNormal<T>::CopyOut(
     int64_t curNcFactor, int64_t curDoFactor, int64_t curHoFactor, int64_t curWoFactor, int64_t yGmOffset) {
     auto curWoFactorAlign16 = Ceil(curWoFactor, 32 / sizeof(T)) * 32 / sizeof(T);
-
     LocalTensor<T> yLocal = yQue.DeQue<T>();
 
-    DataCopyExtParams paramsOut2;
-    paramsOut2.blockCount = curHoFactor;
-    paramsOut2.blockLen = curWoFactor * sizeof(T);
-    paramsOut2.srcStride = 0;
-    paramsOut2.dstStride = (Wo - curWoFactor) * sizeof(T);
+    DataCopyExtParams paramsOut2 = {
+        static_cast<uint16_t>(curHoFactor), static_cast<uint32_t>(curWoFactor * sizeof(T)), static_cast<uint32_t>(0),
+        static_cast<uint32_t>((poolVars.Wo - curWoFactor) * sizeof(T)), static_cast<uint32_t>(0)};
     for (int64_t ncCopyi = 0; ncCopyi < curNcFactor; ncCopyi++) {
         for (int64_t dCopyi = 0; dCopyi < curDoFactor; dCopyi++) {
-            auto dstAddr = yGmOffset + ncCopyi * Do * Ho * Wo + dCopyi * Ho * Wo;
+            auto dstAddr = yGmOffset + ncCopyi * poolVars.Do * poolVars.Ho * poolVars.Wo + dCopyi * poolVars.Ho * poolVars.Wo;
             auto srcAddr = ncCopyi * Ceil(curDoFactor * curHoFactor * curWoFactorAlign16, 16) * 16 +
                            dCopyi * curHoFactor * curWoFactorAlign16;
             DataCopyPad(yGm[dstAddr], yLocal[srcAddr], paramsOut2);
@@ -335,12 +205,12 @@ __aicore__ inline void AvgPool3dNormal<T>::AvgPoolW(
     const uint8_t wiFactorAlign = Ceil(wiFactor, 8) * 8;
     uint64_t mask = 256 / sizeof(float);
     auto repeat = hiFactor * diFactor;
-    UnaryRepeatParams repeatCopyParams{1, 1, 8, (uint8_t)(VL_NUM / 8 * wiFactorAlign)};
+    UnaryRepeatParams repeatCopyParams{1, 1, 8, (uint8_t)(poolVars.VL_NUM / 8 * wiFactorAlign)};
     BinaryRepeatParams repeatParams{1, 1, 1, 8, 8, (uint8_t)(8 * wiFactorAlign)};
     LocalTensor<float> mulWUb = mulWBuffer.Get<float>();
 
     for (int kernelIdx = 0; kernelIdx < curWoFactor; kernelIdx++) {
-        int32_t kerWEndIdx = Min(Wi, wEnd + kernelIdx * dW);
+        int32_t kerWEndIdx = Min(poolVars.Wi, wEnd + kernelIdx * dW);
         int32_t kerWStartIdx = Max(wStart + kernelIdx * dW, kerWEndIdx - kW);
         if (wStart == 0) {
             kerWStartIdx = Max(wStart, wEnd + kernelIdx * dW - kW);
@@ -349,19 +219,19 @@ __aicore__ inline void AvgPool3dNormal<T>::AvgPoolW(
             if(wStart == 0) {
                 kerWStartIdx = Max(wEnd + kernelIdx * dW - kW, 0);
             } else {
-                kerWStartIdx = Min(wStart + kernelIdx * dW, Wi);
+                kerWStartIdx = Min(wStart + kernelIdx * dW, poolVars.Wi);
             }
             if(curWoFactor == 1) {
                 kerWEndIdx = wEnd;
                 kerWStartIdx = wStart;
             }
         }
-        auto mulWOffset = kernelIdx * diFactor * hiFactor * VL_NUM;
-        auto inputOffset = VL_NUM * (kerWStartIdx - wStart);
-        Adds(mulWUb[mulWOffset], xLocalTransVL[inputOffset], (float)0.0, VL_NUM, repeat, repeatCopyParams);
+        auto mulWOffset = kernelIdx * diFactor * hiFactor * poolVars.VL_NUM;
+        auto inputOffset = poolVars.VL_NUM * (kerWStartIdx - wStart);
+        Adds(mulWUb[mulWOffset], xLocalTransVL[inputOffset], (float)0.0, poolVars.VL_NUM, repeat, repeatCopyParams);
         AscendC::PipeBarrier<PIPE_V>();
         for (int i = kerWStartIdx + 1; i < kerWEndIdx; i++) {
-            auto nexAddOffset = VL_NUM * (i - wStart);
+            auto nexAddOffset = poolVars.VL_NUM * (i - wStart);
             Add(mulWUb[mulWOffset], mulWUb[mulWOffset], xLocalTransVL[nexAddOffset], mask, repeat, repeatParams);
             AscendC::PipeBarrier<PIPE_V>();
         }
@@ -375,13 +245,13 @@ __aicore__ inline void AvgPool3dNormal<T>::AvgPoolH(
 
     uint64_t mask = 256 / sizeof(float);
     auto repeat = woFactorAlign * diFactor;
-    UnaryRepeatParams repeatCopyParams{1, 1, 8, (uint8_t)(VL_NUM / 8 * hiFactor)};
+    UnaryRepeatParams repeatCopyParams{1, 1, 8, (uint8_t)(poolVars.VL_NUM / 8 * hiFactor)};
     BinaryRepeatParams repeatParams{1, 1, 1, 8, 8, (uint8_t)(8 * hiFactor)};
     LocalTensor<float> mulWUb = mulWBuffer.Get<float>();
     LocalTensor<float> mulHUb = inputTransBuffer.Get<float>();
 
     for (int kernelIdx = 0; kernelIdx < curHoFactor; kernelIdx++) {
-        int32_t kerHEndIdx = Min(Hi, hEnd + kernelIdx * dH);
+        int32_t kerHEndIdx = Min(poolVars.Hi, hEnd + kernelIdx * dH);
         int32_t kerHStartIdx = Max(hStart + kernelIdx * dH, kerHEndIdx - kH);
         if (hStart == 0) {
             kerHStartIdx = Max(hStart, hEnd + kernelIdx * dH -kH);
@@ -390,19 +260,19 @@ __aicore__ inline void AvgPool3dNormal<T>::AvgPoolH(
             if(hStart == 0) {
                 kerHStartIdx = Max(hEnd + kernelIdx * dH - kH, 0);
             } else {
-                kerHStartIdx = Min(hStart + kernelIdx * dH, Hi);
+                kerHStartIdx = Min(hStart + kernelIdx * dH, poolVars.Hi);
             }
             if(curHoFactor == 1) {
                 kerHEndIdx = hEnd;
                 kerHStartIdx = hStart;
             }
         }
-        auto mulHOffset = kernelIdx * repeat * VL_NUM;
-        auto mulWOffset = VL_NUM * (kerHStartIdx - hStart);
-        Adds(mulHUb[mulHOffset], mulWUb[mulWOffset], (float)0.0, VL_NUM, repeat, repeatCopyParams);
+        auto mulHOffset = kernelIdx * repeat * poolVars.VL_NUM;
+        auto mulWOffset = poolVars.VL_NUM * (kerHStartIdx - hStart);
+        Adds(mulHUb[mulHOffset], mulWUb[mulWOffset], (float)0.0, poolVars.VL_NUM, repeat, repeatCopyParams);
         AscendC::PipeBarrier<PIPE_V>();
         for (int i = kerHStartIdx + 1; i < kerHEndIdx; i++) {
-            auto nexAddOffset = VL_NUM * (i - hStart);
+            auto nexAddOffset = poolVars.VL_NUM * (i - hStart);
             Add(mulHUb[mulHOffset], mulHUb[mulHOffset], mulWUb[nexAddOffset], mask, repeat, repeatParams);
             AscendC::PipeBarrier<PIPE_V>();
         }
@@ -416,7 +286,7 @@ __aicore__ inline void AvgPool3dNormal<T>::AvgPoolD(
 
     uint64_t mask = 256 / sizeof(float);
     auto repeat = curHoFactor * woFactorAlign;
-    UnaryRepeatParams repeatCopyParams{1, 1, 8, (uint8_t)(VL_NUM / 8 * diFactor)};
+    UnaryRepeatParams repeatCopyParams{1, 1, 8, (uint8_t)(poolVars.VL_NUM / 8 * diFactor)};
     BinaryRepeatParams repeatParams{1, 1, 1, 8, 8, (uint8_t)(8 * diFactor)};
     LocalTensor<float> mulHUb = inputTransBuffer.Get<float>();
     LocalTensor<float> mulDUb = mulWBuffer.Get<float>();
@@ -424,10 +294,10 @@ __aicore__ inline void AvgPool3dNormal<T>::AvgPoolD(
     int32_t kerDEndIdx = dEnd;
     auto mulDOffset = 0;
     auto mulHOffset = 0;
-    Adds(mulDUb[mulDOffset], mulHUb[mulHOffset], (float)0.0, VL_NUM, repeat, repeatCopyParams);
+    Adds(mulDUb[mulDOffset], mulHUb[mulHOffset], (float)0.0, poolVars.VL_NUM, repeat, repeatCopyParams);
     AscendC::PipeBarrier<PIPE_V>();
     for (int i = 1; i < kerDEndIdx - kerDStartIdx; i++) {
-        auto nexAddOffset = VL_NUM * i;
+        auto nexAddOffset = poolVars.VL_NUM * i;
         Add(mulDUb[mulDOffset], mulDUb[mulDOffset], mulHUb[nexAddOffset], mask, repeat, repeatParams);
         AscendC::PipeBarrier<PIPE_V>();
     }
@@ -438,26 +308,26 @@ __aicore__ inline void AvgPool3dNormal<T>::AvgPoolD(
 
 template <typename T>
 __aicore__ inline void AvgPool3dNormal<T>::CalcIndex(int64_t index,int64_t baseW, int64_t baseH) {
-    auto indexD = (index / (Ho * Wo)) % Do;
-    auto indexH = (index / Wo) % Ho;
-    auto indexW = index % Wo;
+    auto indexD = (index / (poolVars.Ho * poolVars.Wo)) % poolVars.Do;
+    auto indexH = (index / poolVars.Wo) % poolVars.Ho;
+    auto indexW = index % poolVars.Wo;
     dStart = indexD * dD -padD;
     hStart = indexH * dH -padH;
     wStart = indexW * dW -padW;
-    dEnd = Min(dStart + kD, Di + padD);
-    hEnd = Min(hStart + kH, Hi + padH);
-    wEnd = Min(wStart + kW, Wi + padW);
+    dEnd = Min(dStart + kD, poolVars.Di + padD);
+    hEnd = Min(hStart + kH, poolVars.Hi + padH);
+    wEnd = Min(wStart + kW, poolVars.Wi + padW);
     auto poolSize = (dEnd - dStart) * (hEnd - hStart) * (wEnd - wStart);
     dStart = Max(dStart , 0);
     hStart = Max(hStart , 0);
     wStart = Max(wStart , 0);
-    dEnd = Min(dEnd, Di);
-    hEnd = Min(hEnd, Hi);
-    wEnd = Min(wEnd, Wi);
+    dEnd = Min(dEnd, poolVars.Di);
+    hEnd = Min(hEnd, poolVars.Hi);
+    wEnd = Min(wEnd, poolVars.Wi);
     kernelsize = (dEnd - dStart) * (hEnd - hStart) * (wEnd - wStart);
     diFactor = dEnd - dStart;
-    hiFactor = Min(Hi, ((hEnd - hStart) + (baseH - 1) * dH));
-    wiFactor = Min(Wi, ((wEnd - wStart) + (baseW - 1) * dW));
+    hiFactor = Min(poolVars.Hi, ((hEnd - hStart) + (baseH - 1) * dH));
+    wiFactor = Min(poolVars.Wi, ((wEnd - wStart) + (baseW - 1) * dW));
     if (divisorOverride) {
         mulsFactor = (float)1.0 / static_cast<float>(divisorOverride);
     } else if (countIncludePad) {
@@ -469,73 +339,49 @@ __aicore__ inline void AvgPool3dNormal<T>::CalcIndex(int64_t index,int64_t baseW
 
 template <typename T>
 __aicore__ inline void AvgPool3dNormal<T>::CopyInX(int64_t curNcFactor,int64_t xGmOffset) {
-    LocalTensor<T> xLocal = inputQue.AllocTensor<T>();
-    const uint8_t wiFactor16Align = Ceil(wiFactor, 32 / sizeof(T)) * 32 / sizeof(T);
-    DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
-    DataCopyExtParams paramsIn;
-    paramsIn.blockCount = hiFactor;
-    paramsIn.blockLen = wiFactor * sizeof(T);
-    paramsIn.srcStride = (Wi - wiFactor) * sizeof(T);
-    paramsIn.dstStride = 0;
-    for (int64_t ncCopyi = 0; ncCopyi < curNcFactor; ncCopyi++) {
-        for (int64_t dCopyi = 0; dCopyi < diFactor; dCopyi++) {
-            auto srcAddr = xGmOffset + ncCopyi * DiHiWi + dCopyi * HiWi;
-            auto dstAddr = (ncCopyi * diFactor + dCopyi) * hiFactor * wiFactor16Align;
-            DataCopyPad(xLocal[dstAddr], xGm[srcAddr], paramsIn, padParams);
-        }
-    }
-    inputQue.EnQue(xLocal);
+    Pool3dMemCommon::CopyInputData<T, 1>(inputQue, xGm, curNcFactor, diFactor, hiFactor, wiFactor, xGmOffset, poolVars);
 }
 
 template <typename T>
 __aicore__ inline void AvgPool3dNormal<T>::Process() {
-    if (cBlockIdx >= useCoreNum) {
+    if (poolVars.cBlockIdx >= poolVars.useCoreNum) {
       return;
     }
-    for (auto curIdx = beginIdx; curIdx < endIdx; curIdx++) {
-        auto curNcIdx = curIdx / (doOuter * hoOuter * woOuter);
-        auto curNcFactor = curNcIdx == (ncOuter - 1) ? ncTail : ncFactor;
-        auto tmpIdx = curIdx % (doOuter * hoOuter * woOuter);
-        auto curDoIdx = tmpIdx / (hoOuter * woOuter);
-        auto curDoFactor = curDoIdx == (doOuter - 1) ? doTail : doFactor;
-        tmpIdx = tmpIdx % (hoOuter * woOuter);
-        auto curHoIdx = tmpIdx / woOuter;
-        auto curHoFactor = curHoIdx == (hoOuter - 1) ? hoTail : hoFactor;
-        auto curWoIdx = tmpIdx % woOuter;
-        auto curWoFactor = curWoIdx == (woOuter - 1) ? woTail : woFactor;
+    for (auto curIdx = poolVars.beginIdx; curIdx < poolVars.endIdx; curIdx++) {
+        auto blockVar = Pool3dMemCommon::CalcBlockVar(curIdx, poolVars);
         auto kernelWMaxAlign = (kD * kH <= 8) ? 16 : 8;
         auto baseW = ((kernelWMaxAlign - kW) / dW) + 1;
         auto baseH = ((128 / kD / kernelWMaxAlign) - kH) / dH + 1;
         auto baseD = 1;
-        auto ncCoreIdx = curNcIdx * ncFactor;
-        auto doCoreIdx = curDoIdx * doFactor;
-        auto hoCoreIdx = curHoIdx * hoFactor;
-        auto woCoreIdx = curWoIdx * woFactor;
-        auto incoreDCnt = CeilDiv(curDoFactor, baseD);
-        auto incoreHCnt = CeilDiv(curHoFactor, baseH);
-        auto incoreWCnt = CeilDiv(curWoFactor, baseW);
+        auto ncCoreIdx = blockVar.curNcIdx * poolVars.ncFactor;
+        auto doCoreIdx = blockVar.curDoIdx * poolVars.doFactor;
+        auto hoCoreIdx = blockVar.curHoIdx * poolVars.hoFactor;
+        auto woCoreIdx = blockVar.curWoIdx * poolVars.woFactor;
+        auto incoreDCnt = CeilDiv(blockVar.curDoFactor, baseD);
+        auto incoreHCnt = CeilDiv(blockVar.curHoFactor, baseH);
+        auto incoreWCnt = CeilDiv(blockVar.curWoFactor, baseW);
         event_t eventIDMTE3ToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
           for (auto doLoop = 0; doLoop < incoreDCnt; doLoop++) {
             auto doBlockIdx = doCoreIdx + doLoop;
             for (auto hoLoop = 0; hoLoop < incoreHCnt; hoLoop++) {
                 auto nowH = baseH;
                 auto hoBlockIdx = hoCoreIdx + hoLoop * nowH;
-                nowH = (hoLoop == incoreHCnt - 1) ? (curHoFactor - hoLoop * baseH) : baseH;
+                nowH = (hoLoop == incoreHCnt - 1) ? (blockVar.curHoFactor - hoLoop * baseH) : baseH;
                 auto nowW = baseW;
                 for(auto woLoop = 0; woLoop < incoreWCnt; woLoop++) {
                     auto woBlockIdx = woCoreIdx + woLoop * nowW;
-                    auto BlockIdx = doBlockIdx * Ho * Wo + hoBlockIdx * Wo +woBlockIdx;
-                    auto yGmOffset = ncCoreIdx * Do * Ho * Wo + BlockIdx;
-                    nowW = (woLoop == incoreWCnt - 1) ? (curWoFactor - woLoop * baseW) : baseW;
+                    auto BlockIdx = doBlockIdx * poolVars.Ho * poolVars.Wo + hoBlockIdx * poolVars.Wo +woBlockIdx;
+                    auto yGmOffset = ncCoreIdx * poolVars.Do * poolVars.Ho * poolVars.Wo + BlockIdx;
+                    nowW = (woLoop == incoreWCnt - 1) ? (blockVar.curWoFactor - woLoop * baseW) : baseW;
                     CalcIndex(yGmOffset, nowW, nowH);
-                    auto xGmOffset = ncCoreIdx * DiHiWi + dStart * HiWi + hStart * Wi + wStart;
-                    CopyInX(curNcFactor, xGmOffset);
-                    TransInput(curNcFactor, diFactor, hiFactor, wiFactor);
+                    auto xGmOffset = ncCoreIdx * poolVars.DiHiWi + dStart * poolVars.HiWi + hStart * poolVars.Wi + wStart;
+                    CopyInX(blockVar.curNcFactor, xGmOffset);
+                    TransInput(blockVar.curNcFactor, diFactor, hiFactor, wiFactor);
                     AvgPoolW(diFactor, hiFactor, wiFactor, nowW);
                     AvgPoolH(diFactor, hiFactor, nowW, nowH);
                     AvgPoolD(diFactor, hiFactor, nowW, nowH);
                     TransOut(baseD, nowH, nowW);
-                    CopyOut(curNcFactor, baseD, nowH, nowW, yGmOffset);
+                    CopyOut(blockVar.curNcFactor, baseD, nowH, nowW, yGmOffset);
                     SetFlag<HardEvent::MTE3_MTE2>(eventIDMTE3ToMTE2);
                     WaitFlag<HardEvent::MTE3_MTE2>(eventIDMTE3ToMTE2);
                 }
