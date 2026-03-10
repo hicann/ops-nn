@@ -182,6 +182,10 @@ static aclnnStatus CheckInputParams(AclnnAddmmTensor& addmmTensor, int8_t cubeMa
     // 5. 检查out必须和mat1@mat2的shape一致
     CHECK_RET(CheckOutShape(addmmTensor.mat1, addmmTensor.mat2, addmmTensor.out), ACLNN_ERR_PARAM_INVALID);
 
+    // 6. 检查是否满足GemmV3BaseKernel条件。
+    CHECK_RET(
+        CheckCubeMathTypeForAddMm(addmmTensor.mat1, addmmTensor.mat2, addmmTensor.self, addmmTensor.out, cubeMathType),
+        ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
@@ -494,6 +498,12 @@ public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
     aclnnStatus Impl() override{
+        if (CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType)) {
+            auto outGemmV3 = ExecGemmV3WithAlphaBetaOp(bias, matA, matB, alpha, beta, executor);
+            CHECK_RET(outGemmV3 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            convOut = outGemmV3;
+            return ACLNN_SUCCESS;
+        }
         // 执行 Muls: out1 = beta * bias
         const aclTensor* out1 = MulsProcess(bias, beta, executor);
         CHECK_RET(out1 != nullptr, ACLNN_ERR_INNER_NULLPTR);

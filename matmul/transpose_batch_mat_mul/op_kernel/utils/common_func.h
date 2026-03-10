@@ -13,8 +13,8 @@
  * \brief
  */
 
-#ifndef INCLUDE_COMMON_FUNC_H
-#define INCLUDE_COMMON_FUNC_H
+#ifndef INCLUDE_KERNEL_UTILS_COMMON_FUNC_H
+#define INCLUDE_KERNEL_UTILS_COMMON_FUNC_H
 
 #include <limits>
 #include <type_traits>

@@ -164,7 +164,7 @@ constexpr CubeFormat format_y = CubeFormat::ND;
         op.Process();                                                                                                \
     } while (0)
 
-template <int LOADMODE, int SPLITCOREMODE, int FIXOPTI, int MIXND2NZ, int SPECIALOPT, int MEMOPT>
+template <int LOADMODE, int SPLITCOREMODE, int FIXOPTI, int MIXND2NZ, int SPECIALOPT, int FP32ADDMM>
 __global__ __aicore__ void mat_mul_v3(
     GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR cGM, GM_ADDR workspaceGM, GM_ADDR tilingGM)
 {

@@ -83,13 +83,16 @@ bool CheckCubeMathType(const op::DataType cubeTensorDtype, int8_t cubeMathType) 
         case FORCE_GRP_ACC_FOR_FP32:
             OP_LOGD("The cubeMathType is FORCE_GRP_ACC_FOR_FP32.");
             return CheckSocSupportDtype(cubeTensorDtype, false);
+        case USE_FP32_ADDMM:
+            OP_LOGD("The cubeMathType is USE_FP32_ADDMM.");
+            return true;
         case USE_HIGH_PREC_MODE:
             OP_LOGD("The cubeMathType is USE_HIGH_PREC_MODE.");
             return true;
         default:
           OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                   "The value of cubeMathType only support {0: KEEP_DTYPE, 1: "
-                  "ALLOW_FP32_DOWN_PRECISION, 2: USE_FP16, 3: USE_HF32, 4: FORCE_GRP_ACC_FOR_FP32, 5: USE_HIGH_PREC_MODE}, but got %d",
+                  "ALLOW_FP32_DOWN_PRECISION, 2: USE_FP16, 3: USE_HF32, 4: FORCE_GRP_ACC_FOR_FP32, 5: USE_FP32_ADDMM, 6: USE_HIGH_PREC_MODE}, but got %d",
                   cubeMathType);
           return false;
     }
@@ -113,6 +116,22 @@ bool CheckCubeMathTypeForMm(const op::DataType cubeTensorDtype, int8_t cubeMathT
     } else {
         return CheckCubeMathType(cubeTensorDtype, cubeMathType);
     }
+}
+
+bool CheckCubeMathTypeForAddMm(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias,
+    const aclTensor* out, int8_t cubeMathType)
+{   
+    if (cubeMathType != USE_FP32_ADDMM) {
+        return true;
+    }
+    // 平台校验
+    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_2201) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "current platform not support cubeMathType = 5: USE_FP32_ADDMM.");
+        return false;
+    }
+    return true;
 }
 
 // 根据promote type + cubemathtype的组合算出最终算子应用的dtype

@@ -810,7 +810,8 @@ void MatmulV3BaseTiling::OptimizeBasicKernelStepK()
         static_cast<uint64_t>(tilingEnable_.tilingEnableFullLoad),
         static_cast<uint64_t>(tilingEnable_.tilingEnableSplitCore),
         static_cast<uint64_t>(tilingEnable_.tilingEnableFixOpti), disableMixNd2nz,
-        static_cast<uint64_t>(TilingEnableSpecialOpti::BASE));
+        static_cast<uint64_t>(TilingEnableSpecialOpti::BASE),
+        static_cast<uint64_t>(TilingEnableFp32Addmm::FALSE));
     if (tilingEnable_.tilingEnableFullLoad == TilingEnableFullLoad::BASE &&
         tilingEnable_.tilingEnableSplitCore == TilingEnableSplitCore::BASE &&
         tilingEnable_.tilingEnableFixOpti == TilingEnableFixOpti::BASE && GetMixNd2nzType() == MixNd2NzType::NO_ND2NZ &&
@@ -2743,7 +2744,8 @@ void MatmulV3BaseTiling::DoTilingKey()
         static_cast<uint64_t>(tilingEnable_.tilingEnableFullLoad),
         static_cast<uint64_t>(tilingEnable_.tilingEnableSplitCore),
         static_cast<uint64_t>(tilingEnable_.tilingEnableFixOpti), disableMixNd2nz,
-        static_cast<uint64_t>(tilingEnable_.tilingEnableSpecialOpti));
+        static_cast<uint64_t>(tilingEnable_.tilingEnableSpecialOpti),
+        static_cast<uint64_t>(TilingEnableFp32Addmm::FALSE));
     OP_LOGI(args_.opName, "Tiling Key is 0x%x", tilingKey_);
 }
 

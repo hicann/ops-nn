@@ -15,6 +15,9 @@
 
 #ifndef INCLUDE_HARDWARE_H
 #define INCLUDE_HARDWARE_H
+
+#include <cstdint>
+
 namespace PpMatMulNS {
 enum class ArchType : uint32_t {
     ASCEND_V220,

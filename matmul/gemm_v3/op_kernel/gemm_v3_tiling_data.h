@@ -21,7 +21,8 @@
 #pragma pack(push, 8)
 // 8 means 8 bytes aligned
 struct alignas(8) GemmV3TilingData {
-    uint32_t numBatch{0};
+    uint32_t numBatchA{0};
+    uint32_t numBatchB{0};
     uint32_t m{0};
     uint32_t k{0};
     uint32_t n{0};

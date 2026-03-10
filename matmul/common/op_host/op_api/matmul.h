@@ -64,6 +64,17 @@ const aclTensor* GemmV3Nd(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* c, bool transposeX1, bool transposeX2, bool enableHf32,
     aclOpExecutor* executor);
 
+// 输入ND
+const aclTensor* GemmV3NdWithAlphaBeta(const aclTensor* x1,
+                                       const aclTensor* x2,
+                                       const aclTensor* self,
+                                       float alpha,
+                                       float beta,
+                                       bool transposeX1,
+                                       bool transposeX2,
+                                       bool enableHf32,
+                                       aclOpExecutor* executor);
+
 } // namespace l0op
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_MATMUL_OP_H_

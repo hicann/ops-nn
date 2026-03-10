@@ -86,7 +86,7 @@ void PpMatmulDefaultTilingData::End(const MatMulInfo &mmInfo, bool isAscend310P)
         uint64_t k0Max = shapeSum == 0UL
                         ? L1AB_PINGPONG_BUFFER_SIZE
                         : static_cast<uint64_t>(static_cast<float>(L1AB_PINGPONG_BUFFER_SIZE)
-                            / (shapeSum * mmInfo.inDtype));
+                            / (shapeSum * mmInfo.sizeInDtype));
         opShape.k0 = k0Max < CUBE_BLOCK_SIZE ? RoundDown(k0Max, BLOCK_SIZE) : RoundDown(k0Max, CUBE_BLOCK_SIZE);
         if (opShape.k0 > CONST_512) {
             opShape.k0 = RoundDown(opShape.k0, CONST_512);
