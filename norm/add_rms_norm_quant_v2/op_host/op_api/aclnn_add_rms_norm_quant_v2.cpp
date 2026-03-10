@@ -634,7 +634,7 @@ const aclTensor* GetTensorContiguousV2(const aclTensor* opt, aclOpExecutor* exec
     return l0op::Contiguous(opt, executor);
 }
 
-bool CheckSupportV2(AddRmsNormQuantV2InputTensor& inputTensor, AddRmsNormQuantV2OutputTensor& outputTensor, ParamStruct& paramStruct)
+bool CheckSupportV2(const AddRmsNormQuantV2InputTensor& inputTensor, const AddRmsNormQuantV2OutputTensor& outputTensor, const ParamStruct& paramStruct)
 {
     if ((GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B) &&
         (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93) &&

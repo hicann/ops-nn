@@ -135,7 +135,6 @@ int64_t BatchNormV3RARBlockSplitRTiling::UbSplit(int64_t r1BlockInner, int64_t r
                                                  int64_t& ubSplitAxis, int64_t& ubOuter, int64_t& ubInner, int64_t eleNumPerBlock)
 {
     int64_t r0BlockInnerAlign = Ops::Base::CeilAlign(r0BlockInner, eleNumPerBlock);
-
     if (ubFactor <= r0BlockInnerAlign) {
         // 1. ub只切分到R0轴
 

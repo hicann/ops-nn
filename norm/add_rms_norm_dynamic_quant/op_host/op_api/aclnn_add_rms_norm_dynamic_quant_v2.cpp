@@ -225,7 +225,6 @@ aclnnStatus ComputeAddRmsNormDynamicQuantV2(
     // 不支持空Tensor
     CHECK_RET(y1ComputeOut != nullptr && y2ComputeOut != nullptr && xComputeOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     if (yType == op::DataType::DT_INT4) {
-
         bool processOut1 = (outputMask == nullptr) || (*outputMask)[0];
         bool processOut2 = (outputMask == nullptr) || (*outputMask)[1];
 
