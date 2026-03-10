@@ -181,8 +181,8 @@ aclnnStatus aclnnConvTbcBackward(
        <ul>
        <li>0：KEEP_DTYPE，保持输入的数据类型进行计算。</li>
        <li>1：ALLOW_FP32_DOWN_PRECISION，允许将输入数据降精度计算。</li>
-       <li>2：USE_FP16，允许转换为数据类型FLOAT16进行计算。</li>
-       <li>3：USE_HF32，允许转换为数据类型HFLOAT32计算。</li>
+       <li>2：USE_FP16，允许转换为数据类型FLOAT16进行计算。当输入数据类型是FLOAT，转换为FLOAT16计算。</li>
+       <li>3：USE_HF32，允许转换为数据类型HFLOAT32计算。当输入是FLOAT16，仍使用FLOAT16计算。</li>
        </ul>
      </td>
      <td>-</td>
@@ -438,8 +438,8 @@ aclnnStatus aclnnConvTbcBackward(
      <td>
         <ul>
         <li>枚举值为1：当输入是FLOAT，处理器转换为HFLOAT32计算。当输入为其他数据类型时不做处理。</li>
-        <li>枚举值为2：当输入是BFLOAT16时不支持该选项。</li>
-        <li>枚举值为3：当输入是FLOAT，转换为HFLOAT32计算。当输入为其他数据类型时不支持该选项。</li>
+        <li>枚举值为2：当输入是BFLOAT16时不支持该选项。当输入为其他数据类型时不做处理。</li>
+        <li>枚举值为3：当输入是FLOAT，转换为HFLOAT32计算。当输入为其他数据类型时不做处理。</li>
         </ul>
      </td>
      <td>
