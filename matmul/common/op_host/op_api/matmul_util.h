@@ -108,8 +108,17 @@ bool IsTransposeNonContiguous(const aclTensor* tensor, bool& isNeedSwapInnerTwoD
 
 bool CheckNonContiguousShapeSupport(MmOpInfo& mmOpInfo);
 
+bool CheckGemmV3WithAlphaBeta(const aclTensor* bias, const aclTensor* self, const aclTensor* mat2, int8_t cubeMathType);
+
 const aclTensor* ExecGemmV3Op(const aclTensor* self, const aclTensor* mat2, const aclTensor* c, MmOpInfo& mmOpInfo,
                               aclOpExecutor* executor);
+
+const aclTensor* ExecGemmV3WithAlphaBetaOp(const aclTensor* bias,
+                                           const aclTensor* self,
+                                           const aclTensor* mat2,
+                                           const aclScalar* alpha,
+                                           const aclScalar* beta,
+                                           aclOpExecutor* executor);
 
 const aclTensor* ExecMmOp(const aclTensor* self, const aclTensor* mat2, int8_t cubeMathType, aclOpExecutor* executor);
 

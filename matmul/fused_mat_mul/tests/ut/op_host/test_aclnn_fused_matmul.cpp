@@ -109,7 +109,7 @@ TEST_F(l2_fusedmatmul_test, ascend950_test_middle_shape_fp16_failed_1)
     TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc c_desc = TensorDesc({4, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc out_desc = TensorDesc({4, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
-    int8_t cubeMathType = 6;
+    int8_t cubeMathType = 7;
     auto ut = OP_API_UT(aclnnFusedMatmul, INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, c_desc, "add", cubeMathType),
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;

@@ -781,6 +781,26 @@ bool CheckNonContiguousShapeSupport(MmOpInfo& mmOpInfo)
     return true;
 }
 
+bool CheckGemmV3WithAlphaBeta(const aclTensor* bias,
+                              const aclTensor* self,
+                              const aclTensor* mat2,
+                              int8_t cubeMathType)
+{
+    // cubeMathType需要为USE_FP32_ADDMM
+    if (cubeMathType != USE_FP32_ADDMM) {
+        return false;
+    }
+    // 仅支持fp16、bf16输入
+    if (!(bias->GetDataType() != op::DataType::DT_FLOAT16 && self->GetDataType() != op::DataType::DT_FLOAT16 &&
+          mat2->GetDataType() != op::DataType::DT_FLOAT16) &&
+        !(bias->GetDataType() != op::DataType::DT_BF16 && self->GetDataType() != op::DataType::DT_BF16 &&
+          mat2->GetDataType() != op::DataType::DT_BF16)) {
+        return false;
+    }
+    OP_LOGI("Check GemmV3WithAlphaBeta success.");
+    return true;
+}
+
 /*
    判断是否满足左矩阵非连续Slice
 */
@@ -2448,5 +2468,60 @@ std::shared_ptr<NpuArchMatMulRuleBase> NpuArchMatMulRule::BuildRule() {
         }
 }
 
+const aclTensor* ExecGemmV3WithAlphaBetaOp(const aclTensor* bias,
+                                           const aclTensor* self,
+                                           const aclTensor* mat2,
+                                           const aclScalar* alpha,
+                                           const aclScalar* beta,
+                                           aclOpExecutor* executor)
+{
+    auto transposeSelf = Ops::NN::IsTransposeLastTwoDims(self);
+    auto transposeMat2 = Ops::NN::IsTransposeLastTwoDims(mat2);
+    // reformat, 转成ND
+    auto reformatSelf = self;
+    reformatSelf = l0op::ReFormat(self, op::Format::FORMAT_ND);
+    // 左输入非连续转连续
+    auto contiguousSelf = reformatSelf;
+    if (transposeSelf) {
+        contiguousSelf = executor->CreateView(
+            reformatSelf, SwapLastTwoDimValue(reformatSelf->GetViewShape()), reformatSelf->GetViewOffset());
+    } else {
+        contiguousSelf = l0op::Contiguous(reformatSelf, executor);
+    }
+    CHECK_RET(contiguousSelf != nullptr, nullptr);
+    // reformat, 转成ND
+    auto reformatMat2 = mat2;
+    reformatMat2 = l0op::ReFormat(mat2, op::Format::FORMAT_ND);
+    // 右输入非连续转连续
+    auto contiguousMat2 = reformatMat2;
+    if (transposeMat2) {
+        contiguousMat2 = executor->CreateView(
+            reformatMat2, SwapLastTwoDimValue(reformatMat2->GetViewShape()), reformatMat2->GetViewOffset());
+    } else {
+        contiguousMat2 = l0op::Contiguous(reformatMat2, executor);
+    }
+    CHECK_RET(contiguousMat2 != nullptr, nullptr);
+
+    // bias非连续转连续
+    // reformat, 转成ND
+    auto reformatBias = bias;
+    reformatBias = l0op::ReFormat(bias, op::Format::FORMAT_ND);
+    auto contiguousBias = reformatBias;
+    contiguousBias = l0op::Contiguous(reformatBias, executor);
+    CHECK_RET(contiguousBias != nullptr, nullptr);
+
+    // 执行GemmV3NdWithAlphaBeta l0接口
+    OP_LOGI("Entering l0op::GemmV3NdWithAlphaBeta.");
+    const aclTensor* gemmV3OpOut = l0op::GemmV3NdWithAlphaBeta(contiguousSelf,
+                                                               contiguousMat2,
+                                                               contiguousBias,
+                                                               alpha->ToFloat(),
+                                                               beta->ToFloat(),
+                                                               transposeSelf,
+                                                               transposeMat2,
+                                                               false,
+                                                               executor);
+    return gemmV3OpOut;
+}
 } // namespace NN
 } // namespace Ops

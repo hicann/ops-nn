@@ -24,6 +24,10 @@ bool CheckCubeMathType(const op::DataType cubeTensorDtype, int8_t cubeMathType);
 // 校验针对mm算子 tensor的dtype，cubeMathType的值是否符合预期
 bool CheckCubeMathTypeForMm(const op::DataType cubeTensorDtype, int8_t cubeMathType);
 
+// 校验针对Addmm算子的cubeMathType和平台是否符合预期
+bool CheckCubeMathTypeForAddMm(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias,
+    const aclTensor* out, int8_t cubeMathType);
+
 // 返回芯片对应支持的数据类型
 const std::initializer_list<op::DataType>& GetDtypeSupportListBySocVersion();
 const std::initializer_list<op::DataType>& GetDtypeSupportListBySocVersion4ConvBackward(bool transposed);

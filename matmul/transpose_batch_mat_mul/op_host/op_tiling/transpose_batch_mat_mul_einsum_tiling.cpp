@@ -36,7 +36,7 @@ namespace transpose_batch_mat_mul {
 void TransposeBatchMatMulEinsumTiling::DoTiling()
 {
     auto inputDType = context_->GetInputDesc(0)->GetDataType();
-    matMulInfo_.inDtype = ge::GetSizeByDataType(inputDType);
+    matMulInfo_.sizeInDtype = ge::GetSizeByDataType(inputDType);
     GetHardwareInfo();
     (void)GetMatMulInfo();
     (void)GetTilingKey();

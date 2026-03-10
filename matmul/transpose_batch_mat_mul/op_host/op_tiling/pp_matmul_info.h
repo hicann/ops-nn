@@ -24,6 +24,7 @@
 namespace optiling {
 namespace pp_matmul {
 struct MatMulInfo {
+    const char *opName = nullptr;
     uint64_t batchSize{0};
     uint64_t m{0}; // 实际输入的 m
     uint64_t n{0}; // 实际输入的 n
@@ -37,9 +38,9 @@ struct MatMulInfo {
     uint64_t transA{0}; 
     uint64_t transB{0}; 
     bool biasFlag{0}; // false: 0, true: 1
-    bool isInt8{0}; // 是否shi int8融合
-    float inDtype{0};
-    float outDtype{0};
+    bool isInt8{0};
+    float sizeInDtype{0};
+    float sizeOutDtype{0};
 };
 
 struct HardwareInfo {

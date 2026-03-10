@@ -149,10 +149,10 @@ inline float CostFunc(const HardwareType &hwInfor, OpShapeType &shape, const Mat
     uint64_t blockDim = std::min(coreNeed, hwInfor.coreNum);
     uint64_t mOnce = blockDim < nLoop ? shape.m0 : blockDim / nLoop * shape.m0;
     uint64_t nOnce = blockDim < nLoop ? hwInfor.coreNum * shape.n0 : shape.n;
-    if (mOnce * shape.k * mmInfo.inDtype > hwInfor.l2Size) {
+    if (mOnce * shape.k * mmInfo.sizeInDtype > hwInfor.l2Size) {
         aCoef = bwCoef;
     }
-    if (nOnce * shape.k * mmInfo.inDtype > hwInfor.l2Size) {
+    if (nOnce * shape.k * mmInfo.sizeInDtype > hwInfor.l2Size) {
         bCoef = bwCoef;
     }
     return 1 / (aCoef * static_cast<float>(shape.n0)) + 1 / (bCoef * static_cast<float>(shape.m0));
@@ -170,7 +170,7 @@ void TilingFunc(OpShareType &opShape, TilingType &tilingParam, const HardwareTyp
         static_cast<uint64_t>(pow(2, ceil(log(CeilDiv(PRI_FLAG ? opShape.n : opShape.m, CONST_16)))) * CONST_16);
     uint64_t priAxes = RoundUp(PRI_FLAG ? opShape.m : opShape.n, CONST_16);
     uint64_t axes = RoundUp(PRI_FLAG ? opShape.n : opShape.m, roundBase);
-    float axes0Max = static_cast<float>(AXES_ALIGN_SIZE) / mmInfo.inDtype;
+    float axes0Max = static_cast<float>(AXES_ALIGN_SIZE) / mmInfo.sizeInDtype;
     auto platformType = hwInfor.socVersion;
     if (mmInfo.isInt8 && (platformType == platform_ascendc::SocVersion::ASCEND310P || platformType == platform_ascendc::SocVersion::ASCEND910)) {
         axes0Max /= CONST_2;

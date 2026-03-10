@@ -26,9 +26,15 @@ inline void InitTilingData(uint8_t* tiling, T* const_data)
     memcpy(const_data, tiling, sizeof(T));
 }
 
-#define GET_TILING_DATA(tiling_data, tiling_arg)                                                        \
-    MatmulTilingData tiling_data;                                                 \
+#if (defined(ORIG_DTYPE_C) && (ORIG_DTYPE_C == DT_FLOAT))
+#define GET_TILING_DATA(tiling_data, tiling_arg)                                                                       \
+    MatmulTilingData tiling_data;                                                                                      \
     InitMatmulTilingData(tiling_arg, &tiling_data)
+#else
+#define GET_TILING_DATA(tiling_data, tiling_arg)                                                                       \
+    GemmV3TilingData tiling_data;                                                                                      \
+    InitTilingData<GemmV3TilingData>(tiling_arg, &tiling_data)
+#endif
 
 #define GET_TILING_DATA_WITH_STRUCT(tiling_struct, tiling_data, tiling_arg)                                            \
     tiling_struct tiling_data;                                                                                         \

@@ -26,8 +26,10 @@
 #include "register/op_def_registry.h"
 #include "op_host/tiling_templates_registry.h"
 #include "arch35/gemmv3_tiling.h"
+#include "gemm_v3_base_tiling.h"
 
 using namespace optiling::matmul_v3;
+using optiling::gemm_v3::GemmV3BaseTiling;
 using Ops::NN::Optiling::TilingRegistry;
 using Ops::NN::TilingPrepareForOpCache;
 
@@ -37,11 +39,14 @@ static const size_t MAX_LEN_SIMPLIFIED_KEY = 256;
 static const int32_t INPUT0_INDEX = 0;
 static const int32_t INPUT1_INDEX = 1;
 static const int32_t BIAS_INDEX = 2;
+static const int32_t GEMMV3_BASE_TILING_PRIORITY = 0;
+static const int32_t MATMUL_V3_BASE_TILING_PRIORITY = 1;
 }
 
 namespace optiling {
 
-REGISTER_TILING_TEMPLATE("GemmV3", MatmulV3BaseTiling, 0);
+REGISTER_TILING_TEMPLATE("GemmV3", GemmV3BaseTiling, GEMMV3_BASE_TILING_PRIORITY);
+REGISTER_TILING_TEMPLATE("GemmV3", MatmulV3BaseTiling, MATMUL_V3_BASE_TILING_PRIORITY);
 
 static ge::graphStatus GemmV3TilingFunc(gert::TilingContext *context) {
   OP_TILING_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT("GemmV3", "context is null"), return ge::GRAPH_FAILED);

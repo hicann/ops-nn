@@ -13,8 +13,8 @@
  * \brief
  */
 
-#ifndef INCLUDE_COMMON_H
-#define INCLUDE_COMMON_H
+#ifndef INCLUDE_KERNEL_UTILS_COMMON_H
+#define INCLUDE_KERNEL_UTILS_COMMON_H
 
 #define CONST_2 2
 
@@ -26,4 +26,4 @@
 #define FORCE_INLINE inline __attribute__((always_inline))
 #endif
 
-#endif
+#endif // INCLUDE_KERNEL_UTILS_COMMON_H
