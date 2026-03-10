@@ -13,7 +13,7 @@
  * \brief
  */
 #include "kernel_operator.h"
-#include "./arch35/utils.h"
+#include "layer_norm_quant_helper.h"
 
 
 static constexpr uint32_t BLOCK_NUM = 16;
