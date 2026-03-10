@@ -18,11 +18,12 @@ namespace AddLayerNormGrad {
 using namespace AscendC;
 constexpr int64_t DOUBLE_BUFFER = 2;
 constexpr int64_t ROW_TEMPLATE = 180;
-constexpr int64_t COL_TEMPLATE = 64;  // 因为Add mask的原因不太好调整
+constexpr int64_t COL_TEMPLATE = 64;
 constexpr int64_t UB_SIZE = 180 * 1024 + 2 * DOUBLE_BUFFER * COL_TEMPLATE * sizeof(float);
 constexpr int64_t FLOAT_ALIGN = 8;
 constexpr int64_t MAX_REPEAT_TIMES = 255;
 constexpr uint64_t B32_REPEAT_STRIDE = 8;
+constexpr uint64_t UINT16_MAX_VALUE = 65535;
 
 class AddLayerNormGradDeterminsticCompute {
 public:
@@ -78,33 +79,89 @@ public:
     queueBetaOut_.FreeTensor(buffer4_);
   }
 
-  __aicore__ inline void copyIn(int64_t colIndex,int64_t rowIndex, int64_t colSize, int64_t rowSize) {
+  __aicore__ inline void copyIn(int64_t colIndex, int64_t rowIndex, int64_t colSize, int64_t rowSize) {
     uint8_t rightPad = 0;
-    bool isPad = false;
     int64_t colSizeMod = colSize % FLOAT_ALIGN;
-    // 尾核补齐对齐
     if (colSizeMod != 0) {
         rightPad = FLOAT_ALIGN - colSizeMod;
-        isPad = true;
     }
+    
+    int64_t srcStrideValue = (colAlignV_ * workspaceNum_ - colSize) / FLOAT_ALIGN;
+    int64_t dstStrideValue = (COL_TEMPLATE - (colSize + rightPad)) / FLOAT_ALIGN;
+    int64_t offset = (colIndex * COL_TEMPLATE) + rowIndex * colAlignV_ * workspaceNum_ * ROW_TEMPLATE;
+
 #if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
     if ASCEND_IS_AIV {
-#endif
-      DataCopyParams intriParams;
-      intriParams.blockCount = rowSize;
-      intriParams.blockLen   = (colSize + FLOAT_ALIGN - 1) / FLOAT_ALIGN;
-      intriParams.srcStride  = (colAlignV_ * workspaceNum_ - colSize) / FLOAT_ALIGN;
-      intriParams.dstStride  = (COL_TEMPLATE - (colSize + rightPad)) / FLOAT_ALIGN;
-      TEventID eventID = GetTPipePtr()->AllocEventID<HardEvent::V_MTE2>();
-      SetFlag<HardEvent::V_MTE2>(eventID);
-      WaitFlag<HardEvent::V_MTE2>(eventID);
-      GetTPipePtr()->ReleaseEventID<HardEvent::V_MTE2>(eventID);
-      int64_t offset = (colIndex * COL_TEMPLATE) + rowIndex * colAlignV_ * workspaceNum_ * ROW_TEMPLATE;
-      DataCopy(buffer1_, workspaceGM_[offset], intriParams);
-      DataCopy(buffer3_, workspaceGM_[offset + colAlignV_], intriParams);
-#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
+      copyInWithPad(offset, colSize, rowSize, rightPad, dstStrideValue);
+    }
+#else
+    if (static_cast<uint64_t>(srcStrideValue) <= UINT16_MAX_VALUE && 
+        static_cast<uint64_t>(dstStrideValue) <= UINT16_MAX_VALUE) {
+      copyInWithParams(offset, colSize, rowSize, srcStrideValue, dstStrideValue);
+    } else {
+      copyInByRow(offset, colSize, rowSize, rightPad);
     }
 #endif
+  }
+
+  __aicore__ inline void copyInWithPad(int64_t offset, int64_t colSize, int64_t rowSize, uint8_t rightPad, int64_t dstStrideValue) {
+    TEventID eventID = GetTPipePtr()->AllocEventID<HardEvent::V_MTE2>();
+    SetFlag<HardEvent::V_MTE2>(eventID);
+    WaitFlag<HardEvent::V_MTE2>(eventID);
+    GetTPipePtr()->ReleaseEventID<HardEvent::V_MTE2>(eventID);
+    
+    DataCopyExtParams intriParams;
+    intriParams.blockCount = static_cast<uint16_t>(rowSize);
+    intriParams.blockLen = static_cast<uint32_t>(colSize * sizeof(float));
+    intriParams.srcStride = static_cast<uint32_t>((colAlignV_ * workspaceNum_ - colSize) * sizeof(float));
+    intriParams.dstStride = static_cast<uint32_t>(dstStrideValue);
+    intriParams.rsv = 0;
+    DataCopyPadExtParams<float> padParams;
+    padParams.isPad = false;
+    padParams.leftPadding = 0;
+    padParams.rightPadding = rightPad;
+    padParams.paddingValue = 0.0f;
+    DataCopyPad(buffer1_, workspaceGM_[offset], intriParams, padParams);
+    DataCopyPad(buffer3_, workspaceGM_[offset + colAlignV_], intriParams, padParams);
+  }
+
+  __aicore__ inline void copyInWithParams(int64_t offset, int64_t colSize, int64_t rowSize, int64_t srcStrideValue, int64_t dstStrideValue) {
+    DataCopyParams intriParams;
+    intriParams.blockCount = static_cast<uint16_t>(rowSize);
+    intriParams.blockLen = static_cast<uint16_t>((colSize + FLOAT_ALIGN - 1) / FLOAT_ALIGN);
+    intriParams.srcStride = static_cast<uint16_t>(srcStrideValue);
+    intriParams.dstStride = static_cast<uint16_t>(dstStrideValue);
+    TEventID eventID = GetTPipePtr()->AllocEventID<HardEvent::V_MTE2>();
+    SetFlag<HardEvent::V_MTE2>(eventID);
+    WaitFlag<HardEvent::V_MTE2>(eventID);
+    GetTPipePtr()->ReleaseEventID<HardEvent::V_MTE2>(eventID);
+    DataCopy(buffer1_, workspaceGM_[offset], intriParams);
+    DataCopy(buffer3_, workspaceGM_[offset + colAlignV_], intriParams);
+  }
+
+  __aicore__ inline void copyInByRow(int64_t baseOffset, int64_t colSize, int64_t rowSize, uint8_t rightPad) {
+    int64_t rowStride = colAlignV_ * workspaceNum_;
+    TEventID eventID = GetTPipePtr()->AllocEventID<HardEvent::V_MTE2>();
+    SetFlag<HardEvent::V_MTE2>(eventID);
+    WaitFlag<HardEvent::V_MTE2>(eventID);
+    GetTPipePtr()->ReleaseEventID<HardEvent::V_MTE2>(eventID);
+    for (int64_t row = 0; row < rowSize; row++) {
+      int64_t srcOffset = baseOffset + row * rowStride;
+      int64_t dstOffset = row * COL_TEMPLATE;
+      
+      if (colSize % FLOAT_ALIGN == 0 && rightPad == 0) {
+        DataCopy(buffer1_[dstOffset], workspaceGM_[srcOffset], colSize);
+        DataCopy(buffer3_[dstOffset], workspaceGM_[srcOffset + colAlignV_], colSize);
+      } else {
+        DataCopyParams rowParams;
+        rowParams.blockCount = 1;
+        rowParams.blockLen = static_cast<uint16_t>((colSize + FLOAT_ALIGN - 1) / FLOAT_ALIGN);
+        rowParams.srcStride = 0;
+        rowParams.dstStride = static_cast<uint16_t>((COL_TEMPLATE - colSize - rightPad) / FLOAT_ALIGN);
+        DataCopy(buffer1_[dstOffset], workspaceGM_[srcOffset], rowParams);
+        DataCopy(buffer3_[dstOffset], workspaceGM_[srcOffset + colAlignV_], rowParams);
+      }
+    }
   }
 
   __aicore__ inline void compute(int64_t colIndex,int64_t rowIndex, int64_t colSize, int64_t rowSize) {
