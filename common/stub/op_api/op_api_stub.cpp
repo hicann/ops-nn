@@ -38,6 +38,7 @@
 #include "level0/dot.h"
 #include "level0/dsa_random_uniform.h"
 #include "level0/equal.h"
+#include "level0/exp.h"
 #include "level0/expand.h"
 #include "level0/fault_injection.h"
 #include "level0/fill.h"
@@ -50,6 +51,7 @@
 #include "level0/index_put_with_sort_v2.h"
 #include "level0/inplace_index_add.h"
 #include "level0/less.h"
+#include "level0/log.h"
 #include "level0/logical_and.h"
 #include "level0/logical_or.h"
 #include "level0/lp_norm_reduce_v2.h"
@@ -319,6 +321,16 @@ const aclTensor* ReduceMean(
 }
 
 const aclTensor* ReduceAny(const aclTensor* self, const aclIntArray* /*dim*/, bool /*keepDim*/, aclOpExecutor* /*executor*/)
+{
+    return self;
+}
+
+const aclTensor *Log(const aclTensor *self, const float /*base*/, const float /*scale*/, const float /*shift*/, aclOpExecutor* /*executor*/)
+{
+    return self;
+}
+
+const aclTensor* Exp(const aclTensor* self, aclOpExecutor* /*executor*/)
 {
     return self;
 }
