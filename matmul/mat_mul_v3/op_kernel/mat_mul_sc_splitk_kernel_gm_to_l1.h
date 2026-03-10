@@ -123,7 +123,7 @@ private:
     __aicore__ inline void GetEvent();
     __aicore__ inline void VectorProcess(uint64_t innerMIndex, GM_ADDR cGM, GM_ADDR srcAddr, TBuf<TPosition::VECCALC> &ubBuf);
     __aicore__ inline void ProcessBaseMNK(bool lastK, int32_t realK, int32_t nextRealK, uint64_t kIndex);
-    __aicore__ inline void UnAlignedProcessBaseMNK(bool lastK, int32_t realK, int32_t realKb, int32_t nextRealK, uint64_t kIndex);
+    __aicore__ inline void UnAlignedProcessBaseMNK(bool lastK, int32_t realK, int32_t nextRealK, uint64_t kIndex);
     __aicore__ inline void SetEventFlag();
     __aicore__ inline void WaitEventFlag();
     __aicore__ inline void SetOrgShape();
@@ -756,19 +756,16 @@ MatMulBaseKernelSingleCoreSplitKGmToL1<A_TYPE, B_TYPE, L0C_TYPE, OUTPUT_TYPE, BI
             nmloop_ = MMV3DivCeil(block_.params_.innerSingleCoreM, M0);
             nnloop_ = MMV3DivCeil(block_.params_.innerSingleCoreN, N0);
             CopyInAl1(M_0, k0, K_INDEX_0, k0);
-            if (nmloop_-1 >= M_1) {
+            if (nmloop_ - 1 >= M_1) {
                 CopyInAl1(M_1, k0, K_INDEX_0, k0);
             }
-            int32_t nPingReal = N_INDEX_0 == nnloop_ - 1 ? MMV3CeilAlign(block_.params_.innerSingleCoreN, ALIGNED_H) : N0;
+            int32_t nPingReal = (N_INDEX_0 == nnloop_ - 1) ? block_.params_.innerSingleCoreN : N0;
             CopyInBl1(bpingflag, k0, K_INDEX_0, nPingReal, N_INDEX_0);
             for (int kIndex = 0; kIndex < block_.params_.loopK; ++kIndex) {
                 bool lastK = kIndex == block_.params_.loopK - 1;
-                int32_t realK = lastK ? MMV3CeilAlign(block_.matmulTilingData_->matmulTiling.Ka - kIndex * k0, block_.params_.c0Size) : k0;
-                int32_t realKb = realK;
-                if (B_TYPE::format == CubeFormat::ND && lastK) {
-                    realKb = block_.matmulTilingData_->matmulTiling.Ka - kIndex * k0;
-                }
-                int32_t nextRealK =  kIndex ==  block_.params_.loopK - 2 ? MMV3CeilAlign(block_.matmulTilingData_->matmulTiling.Ka - (kIndex + 1) * k0, block_.params_.c0Size) : k0;
+                bool secLastK = kIndex == block_.params_.loopK - 2;
+                int32_t realK = lastK ? (block_.matmulTilingData_->matmulTiling.Ka - kIndex * k0) : k0;
+                int32_t nextRealK = secLastK ? (block_.matmulTilingData_->matmulTiling.Ka - (kIndex + 1) * k0) : k0;
                 block_.UpdateBlockParamsMk(innerMIndex, kIndex);
                 if (kIndex != 0) {
                     SetAtomicAdd<float>();
@@ -780,7 +777,8 @@ MatMulBaseKernelSingleCoreSplitKGmToL1<A_TYPE, B_TYPE, L0C_TYPE, OUTPUT_TYPE, BI
                     }
                 }
                 for (uint64_t innerNIndex = 0; innerNIndex < block_.params_.innerLoopN; ++innerNIndex) {
-                    block_.template CalcGMOffset<A_TYPE, B_TYPE, L0C_TYPE, BIAS_TYPE>(innerMIndex, kIndex, innerNIndex, false);
+                    block_.template CalcGMOffset<A_TYPE, B_TYPE, L0C_TYPE, BIAS_TYPE>(
+                        innerMIndex, kIndex, innerNIndex, false);
                     nmloop_ = MMV3DivCeil(block_.params_.innerSingleCoreM, M0);
                     nkloop_ = MMV3DivCeil(block_.params_.kCoreUse, k0);
                     nnloop_ = MMV3DivCeil(block_.params_.innerSingleCoreN, N0);
@@ -788,10 +786,12 @@ MatMulBaseKernelSingleCoreSplitKGmToL1<A_TYPE, B_TYPE, L0C_TYPE, OUTPUT_TYPE, BI
                         CopyInAl1(M_2, realK, K_INDEX_0, k0);
                     }
                     if (nnloop_ > 1) {
-                        int32_t nPongReal = N_INDEX_0 + 1 == nnloop_ - 1 ? MMV3CeilAlign(block_.params_.innerSingleCoreN - (N_INDEX_0 + 1) * N0, ALIGNED_H): N0;
-                        CopyInBl1(!bpingflag, realKb, K_INDEX_0, nPongReal, N_INDEX_0 + 1);
+                        int32_t nPongReal = (N_INDEX_0 + 1 == nnloop_ - 1)
+                                                ? (block_.params_.innerSingleCoreN - (N_INDEX_0 + 1) * N0)
+                                                : N0;
+                        CopyInBl1(!bpingflag, realK, K_INDEX_0, nPongReal, N_INDEX_0 + 1);
                     }
-                   UnAlignedProcessBaseMNK(lastK, realK, realKb, nextRealK, kIndex);
+                    UnAlignedProcessBaseMNK(lastK, realK, nextRealK, kIndex);
                 }
             }
         }
@@ -809,22 +809,18 @@ template <class A_TYPE, class B_TYPE, class L0C_TYPE, class OUTPUT_TYPE, class B
     const MatmulConfig &MM_CFG>
 __aicore__ inline void
 MatMulBaseKernelSingleCoreSplitKGmToL1<A_TYPE, B_TYPE, L0C_TYPE, OUTPUT_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::UnAlignedProcessBaseMNK(
-    bool lastK, int32_t realK, int32_t realKb, int32_t nextRealK, uint64_t kIndex)
+    bool lastK, int32_t realK, int32_t nextRealK, uint64_t kIndex)
 {
-    int32_t nextRealKb = nextRealK;
-    if (B_TYPE::format == CubeFormat::ND && kIndex ==  block_.params_.loopK - 2) {
-        nextRealKb = block_.matmulTilingData_->matmulTiling.Ka - (kIndex + 1) * k0;
-    }
     for (int32_t nloop = 0; nloop < nnloop_; nloop++) {
         bool lastN = nloop == nnloop_ - 1;
         bool firstN = nloop == 0;
-        int32_t realN = lastN ? MMV3CeilAlign(block_.params_.innerSingleCoreN - nloop * N0, ALIGNED_H) : N0;
+        int32_t realN = lastN ? block_.params_.innerSingleCoreN - nloop * N0 : N0;
         if (!lastN && !firstN) {
-            int32_t nextRealN = nloop ==  nnloop_ - 2  ? MMV3CeilAlign(block_.params_.innerSingleCoreN - (nloop+1) * N0,ALIGNED_H) : N0;
-            CopyInBl1(!bpingflag, realKb, K_INDEX_0, nextRealN, nloop + 1);
+            int32_t nextRealN = (nloop == nnloop_ - 2) ? (block_.params_.innerSingleCoreN - (nloop + 1) * N0) : N0;
+            CopyInBl1(!bpingflag, realK, K_INDEX_0, nextRealN, nloop + 1);
         }
         if (lastN && !lastK) {
-            CopyInBl1(!bpingflag, nextRealKb, K_INDEX_0 + 1, N0, N_INDEX_0);
+            CopyInBl1(!bpingflag, nextRealK, K_INDEX_0 + 1, N0, N_INDEX_0);
         }
         if (nmloop_ - 1 >= M_0) {
             AMatMulB(bpingflag, nloop, realK, realN, kIndex, aL1Ping, eventIdAPingMte2Mte1, M_0);
