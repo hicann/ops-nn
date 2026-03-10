@@ -20,6 +20,8 @@
 #include "pooling/pool_3d_common/op_api/pool_3d_util.h"
 #include "adaptive_max_pool_common.h"
 using namespace op;
+using namespace AdaptiveMaxPoolCommon;
+using namespace Pool3DCommon;
 #ifdef __cplusplus
 extern "C" {
 #endif

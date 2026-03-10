@@ -37,6 +37,7 @@
 #include "aclnn_kernels/common/op_error_check.h"
 #include "pooling/pool_3d_common/op_api/pool_3d_util.h"
 using namespace op;
+using namespace Pool3DCommon;
 #ifdef __cplusplus
 extern "C" {
 #endif

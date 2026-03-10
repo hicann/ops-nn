@@ -27,10 +27,7 @@
 #include "adaptive_max_pool_common.h"
 using namespace op;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+namespace AdaptiveMaxPoolCommon {
 static const std::initializer_list<DataType> NULL_DTYPE_SUPPORT_LIST = {};
 static const std::initializer_list<DataType> GRAD_DTYPE_SUPPORT_LIST = {
     DataType::DT_BF16, DataType::DT_FLOAT16, DataType::DT_FLOAT};
@@ -57,8 +54,7 @@ bool CheckNotNullPtr(
     OP_CHECK_NULL(gradInput, return false);
     return true;
 }
-
-static const std::initializer_list<op::DataType> GetDtypeSupportListBySocVersion()
+const std::initializer_list<op::DataType> GetDtypeSupportListBySocVersion()
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     switch (socVersion) {
@@ -107,7 +103,7 @@ bool CheckShapeSame(
     return true;
 }
 
-static bool CheckDtypeValid(
+bool CheckDtypeValid(
     const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclTensor* gradInput)
 {
     OP_CHECK_DTYPE_NOT_SAME(self, gradOutput, return false);
@@ -183,7 +179,5 @@ const aclTensor* selectLevelZeroOperation(
 
     return nullptr;
 }
-
-#ifdef __cplusplus
 }
-#endif
+

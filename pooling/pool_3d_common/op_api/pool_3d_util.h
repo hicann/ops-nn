@@ -15,10 +15,7 @@
 #include "opdev/platform.h"
 #include "opdev/format_utils.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+namespace Pool3DCommon {
 const aclTensor* View3Das5D(const aclTensor* input, aclOpExecutor* executor);
 const aclTensor* View4Das5D(const aclTensor* input, aclOpExecutor* executor);
 const aclTensor* View5Das3D(const aclTensor* input, const op::Format& format, aclOpExecutor* executor);
@@ -26,8 +23,7 @@ const aclTensor* View5Das4D(const aclTensor* input, const op::Format& format, ac
 const aclTensor* View3Das4D(const aclTensor* input, aclOpExecutor* executor);
 const aclTensor* ViewCDHWas5D(const aclTensor* input, aclOpExecutor* executor);
 const aclTensor* View5DasCDHW(const aclTensor* input, const op::Format& format, aclOpExecutor* executor);
-#ifdef __cplusplus
 }
-#endif
+
 
 #endif
