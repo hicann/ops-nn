@@ -302,11 +302,36 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::ComputeCDF(
     LocalTensor<float>& y, LocalTensor<float>& x, const int64_t& realProcCount)
 {
     LocalTensor<float> t1 = resultTempBuf2.Get<float>();
+    LocalTensor<float> t2 = resultTempBuf4.Get<float>();
 
-    Muls(t1, x, COEFFICIENT_1, realProcCount);
+    Muls(y, x, COEFFICIENT_1, realProcCount);
 
-    static constexpr ErfConfig config = {ErfAlgo::SUBSECTION_POLYNOMIAL_APPROXIMATION};
-    Erf<float, false, config>(y, t1, realProcCount);
+    Mins(y, y, TH_MAX, realProcCount);
+    Maxs(y, y, TH_MIN, realProcCount);
+    Mul(t1, y, y, realProcCount);
+    Muls(t2, t1, COEFFICIENT_3, realProcCount);
+    Adds(t2, t2, COEFFICIENT_4, realProcCount);
+    Mul(t2, t2, t1, realProcCount);
+    Adds(t2, t2, COEFFICIENT_5, realProcCount);
+    Mul(t2, t2, t1, realProcCount);
+    Adds(t2, t2, COEFFICIENT_6, realProcCount);
+    Mul(t2, t2, t1, realProcCount);
+    Adds(t2, t2, COEFFICIENT_7, realProcCount);
+    Mul(t2, t2, t1, realProcCount);
+    Adds(t2, t2, COEFFICIENT_8, realProcCount);
+    Mul(t2, t2, y, realProcCount);
+
+    Adds(y, t1, COEFFICIENT_9, realProcCount);
+    Mul(y, y, t1, realProcCount);
+    Adds(y, y, COEFFICIENT_10, realProcCount);
+    Mul(y, y, t1, realProcCount);
+    Adds(y, y, COEFFICIENT_11, realProcCount);
+    Mul(y, y, t1, realProcCount);
+    Adds(y, y, COEFFICIENT_12, realProcCount);
+    Mul(y, y, t1, realProcCount);
+    Adds(y, y, COEFFICIENT_13, realProcCount);
+
+    Div(y, t2, y, realProcCount);
 
     Muls(y, y, POS_HALF, realProcCount);
     Adds(y, y, POS_HALF, realProcCount);
