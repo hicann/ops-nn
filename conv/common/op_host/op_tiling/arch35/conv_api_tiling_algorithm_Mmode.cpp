@@ -915,8 +915,10 @@ void ConvTilingAlgorithmMmode::CalFormulaicInnerBatch()
     } else {
         currentFmapK = static_cast<uint64_t>(tilingIns_->shapeInfo.orgWi * tilingIns_->shapeInfo.orgHi) * l0TilingParams.kL0 * this->fMapDTypeSize * CONST_VALUE_2;
     }
-    uint64_t innerBatchLimit3 = (tilingIns_->platformInfo.l1Size - currentBiasL1Size - currentWeightL1Size) / currentFmapK;
-    
+    bool isL1SizeOverFlow = currentBiasL1Size + currentWeightL1Size > tilingIns_->platformInfo.l1Size;
+    uint64_t innerBatchLimit3 = isL1SizeOverFlow ? 0 :
+        (tilingIns_->platformInfo.l1Size - currentBiasL1Size - currentWeightL1Size) / currentFmapK;
+
     uint64_t innerBatchLimit4 = tilingIns_->shapeInfo.singleBatch;
     if (innerBatchLimit1 == 0 || innerBatchLimit2 == 0 || innerBatchLimit3 == 0 || innerBatchLimit4 == 0) {
         tilingIns_->enableInnerBatch = false;

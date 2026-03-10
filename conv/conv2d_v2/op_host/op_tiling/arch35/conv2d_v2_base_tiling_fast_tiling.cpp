@@ -157,6 +157,9 @@ ge::graphStatus Conv2dBaseTiling::GetTilingSplitMode()
 
 void Conv2dBaseTiling::SelectMModeAlgorithm()
 {
+    if (shapeInfo_.hi <= CONST_VALUE_2) {
+        return;
+    }
     flagInfo_.mBasicBlockFlag = false;
     uint64_t basicBlockM = 0;
     uint64_t basicBlockN = 0;

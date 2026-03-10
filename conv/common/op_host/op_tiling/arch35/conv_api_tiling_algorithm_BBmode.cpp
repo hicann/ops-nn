@@ -986,7 +986,7 @@ int64_t ConvTilingAlgorithmBBmode::KAllSplit::GetCinL1(ConvTilingAlgorithmBBmode
 }
 
 bool ConvTilingAlgorithmBBmode::KAllSplit::MultiLoadKAllSplit(ConvTilingAlgorithmBBmode* bbPtr,
-    const Kl1MultiAxis& kL1MultiAxis)
+    const Kl1MultiAxis& kL1MultiAxis) const
 {
     bool ret = false;
     if (kL1MultiAxis == Kl1MultiAxis::KAL1) {
