@@ -124,8 +124,12 @@ static inline bool CheckMatmul(const aclTensor* self, const aclTensor* mat1, con
 
 static inline bool CheckBroadcast(const aclTensor* self, const aclTensor* mat1, const aclTensor* mat2)
 {
-    if (self->GetViewShape().GetDimNum() != 1 && self->GetViewShape().GetDimNum() != 2) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dim of self should be 1 or 2.");
+    if (self->GetViewShape().GetDimNum() > 2) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dim of self should be less than 3.");
+        return false;
+    }
+    if (self->GetStorageShape().GetDimNum() < 1) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self can not be empty.");
         return false;
     }
     op::Shape matmulShape = {(mat1->GetViewShape())[0], (mat2->GetViewShape())[1]};
