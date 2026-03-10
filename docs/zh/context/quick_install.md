@@ -104,7 +104,7 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
 
 - 场景1：如果您想体验**官网正式发布的CANN包**能力，访问[CANN官网下载中心](https://www.hiascend.com/cann/download)，选择对应版本CANN软件包（仅支持CANN 8.5.0及后续版本），安装指导详见《[CANN 软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstSoftware)》。
 
-- 场景2：如果您想体验**master分支最新能力**，单击[下载链接](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-release/software/master)获取。
+- 场景2：如果您想体验**master分支最新能力**，单击[下载链接](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-mirror/software/master)获取。
 
 注意产品型号和环境架构需与真实环境对应，此外ops包是运行态依赖，若仅编译算子，可以不安装此包。
 
