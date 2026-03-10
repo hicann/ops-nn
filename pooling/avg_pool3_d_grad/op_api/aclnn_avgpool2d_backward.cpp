@@ -46,6 +46,7 @@
 #include "pooling/pool_3d_common/op_api/pool_3d_util.h"
 using namespace avgpool2d_conv2d_input_util;
 using namespace op;
+using namespace Pool3DCommon;
 namespace op {
 static aclnnStatus CheckArrayDataAvgPoolBackWard(
     const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding)

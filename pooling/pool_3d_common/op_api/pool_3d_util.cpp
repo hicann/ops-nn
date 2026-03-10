@@ -22,9 +22,7 @@
 #include "opdev/platform.h"
 #include "pool_3d_util.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace Pool3DCommon {
 const aclTensor* View3Das5D(const aclTensor* input, aclOpExecutor* executor)
 {
     // CHW -> unsqueeze -> reformat -> NCDHW
@@ -128,6 +126,4 @@ const aclTensor* View5DasCDHW(const aclTensor* input, const op::Format& format, 
      return reformatInput; 
  }
 
-#ifdef __cplusplus
 }
-#endif

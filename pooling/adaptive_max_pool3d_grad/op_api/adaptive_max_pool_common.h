@@ -16,17 +16,13 @@
 #include "opdev/make_op_executor.h"
 #include "opdev/framework_op.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace AdaptiveMaxPoolCommon {
 bool CheckNotNullPtr(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, aclTensor* gradInput);
-static const std::initializer_list<op::DataType> GetDtypeSupportListBySocVersion();
+const std::initializer_list<op::DataType> GetDtypeSupportListBySocVersion();
 bool CheckShapeSame(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclTensor* gradInput);
-static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclTensor* gradInput);
+bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclTensor* gradInput);
 aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, aclTensor* gradInput);
 const aclTensor* selectLevelZeroOperation(
     const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, aclTensor* /* gradInput */,
     aclOpExecutor* executor);
-#ifdef __cplusplus
 }
-#endif

@@ -25,7 +25,7 @@
 #include "opdev/framework_op.h"
 #include "op_api/aclnn_util.h"
 #include "pooling/pool_3d_common/op_api/pool_3d_util.h"
-
+using namespace Pool3DCommon;
 using namespace op;
 #ifdef __cplusplus
 extern "C" {
