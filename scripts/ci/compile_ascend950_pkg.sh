@@ -168,7 +168,7 @@ done
 
 builtin_ops_name=()
 experimental_ops_name=()
-build_all=${build_all:-0}
+build_all=${build_all:-"false"}
 
 mapfile -t lines < ${pr_file}
 
@@ -230,7 +230,7 @@ do
     done
     # 如果被修改的文件在common或cmake目录下 则触发整仓jit编译
     if [[ "$file_path" == "common/"* || "$file_path" == "cmake/"* ]]; then
-        build_all=1
+        build_all="true"
     fi
 done
 
@@ -254,7 +254,7 @@ if [[ ${#experimental_ops_name[@]} -gt 0 && "$force_jit" = "false" ]]; then
     execute_run_file "custom"
 fi
 
-if [ ${build_all} -eq 1 ]; then
+if [ "${build_all}" == "true" ]; then
     build_cmd="bash build.sh --pkg --jit --soc=$a5_soc ${THREAD_NUM} --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH}"
     run_build_command "$build_cmd"
     execute_run_file "builtin"

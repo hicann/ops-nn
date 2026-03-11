@@ -13,7 +13,7 @@ export BUILD_PATH="${BASE_PATH}/build"
 pr_file=$(realpath "${1:-pr_filelist.txt}")
 
 mkdir -p "${BUILD_PATH}"
-cd "${BUILD_PATH}" && rm -f CMakeCache.txt && cmake -DENABLE_EXPERIMENTAL=TRUE -DPREPROCESS_ONLY=ON ..
+cd "${BUILD_PATH}" && rm -f CMakeCache.txt && cmake -DENABLE_EXPERIMENTAL=TRUE -DPREPROCESS_ONLY=ON .. &>/dev/null
 
 cd "${BASE_PATH}"
 {
