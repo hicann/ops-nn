@@ -292,8 +292,11 @@ __aicore__ inline void StoreTensorForDtypeTOut(
     } else if constexpr (IsSameType<T_OUT, int8_t>::value) {
         RegTensor<T_OUT> xOut;
         RegTensor<half> xRegFp16;
+        RegTensor<int32_t> xRegInt32;
+        Cast<int32_t, float, castTraitFp322Int32>(xRegInt32, xRegFp32, preg);
+        Cast<float, int32_t, castTraitInt322Fp32>(xRegFp32, xRegInt32, preg);
         Cast<half, float, castTraitFp322Fp16>(xRegFp16, xRegFp32, preg);
-        Cast<int8_t, half, castTraitFp162Int8>(xOut, xRegFp16, preg);
+        Cast<T_OUT, half, castTraitFp162Int8>(xOut, xRegFp16, preg);
         DataCopy<T_OUT, StoreDist::DIST_PACK4_B32>(dst + offset, xOut, preg);
     } else if constexpr (IsSameType<T_OUT, fp8_e4m3fn_t>::value || IsSameType<T_OUT, fp8_e5m2_t>::value) {
         RegTensor<T_OUT> xOut;
