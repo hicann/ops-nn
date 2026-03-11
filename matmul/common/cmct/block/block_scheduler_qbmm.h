@@ -24,7 +24,7 @@ namespace Cmct {
 namespace Gemm {
 namespace Block {
 
-template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_>
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_, uint64_t FullLoadMode_, bool TransA_, bool TransB_>
 class BlockSchedulerQuantBatchMatmulV3 {
 public:
     int64_t m_{0};
@@ -59,6 +59,8 @@ public:
     using BlockShape = AscendC::Shape<int64_t, int64_t, int64_t, int64_t>;
     using BlockCoord = AscendC::Coord<int64_t, int64_t, int64_t, int64_t>;
     using ProblemShape = ProblemShape_;
+
+    constexpr static uint64_t A_FULL_LOAD_MODE = 1;
 
     struct Params {
         int64_t baseM;
@@ -222,7 +224,12 @@ public:
         }
 
         int64_t mSplitIdx = (blockIdx_ % totalTailTile_) % mTailTile_;
-        int64_t nSplitIdx = (blockIdx_ % totalTailTile_) / mTailTile_;
+        int64_t nSplitIdx = 0;
+        if constexpr (FullLoadMode_ == A_FULL_LOAD_MODE) {
+            nSplitIdx = blockIdx_ / mCnt_ % nTailTile_;
+        } else {
+            nSplitIdx = (blockIdx_ % totalTailTile_) / mTailTile_;
+        }
         mSplitAddrOffset_ = mSplitIdx * singleCoreMSplit;
         nSplitAddrOffset_ = nSplitIdx * singleCoreNSplit;
         if (mSplitAddrOffset_ >= singleCoreM || nSplitAddrOffset_ >= singleCoreN) {
@@ -261,6 +268,13 @@ public:
 
         int64_t newBlockIdx = (roundIdx_ == round_ - 1) ? blockIdx_ / totalTailTile_ : blockIdx_;
         int64_t tileIdx = newBlockIdx + roundIdx_ * blockNum_;
+        if constexpr (FullLoadMode_ == A_FULL_LOAD_MODE) {
+            Get<MNK_M>(blockCoord) = blockIdx_ % mCnt_;
+            int64_t curNTailTile = (roundIdx_ == round_ - 1) ? nTailTile_ : 1;
+            Get<MNK_N>(blockCoord) = roundIdx_ * blockNum_ / mCnt_ % nCnt_ + blockIdx_ / mCnt_ / curNTailTile;
+            roundIdx_++;
+            return true;
+        }
         if (blockIdx_ < startBlockIdx_) {
             tileIdx += blockNum_ - startBlockIdx_;
         } else if (endBlockIdx_ + 1 >= totalTailTile_ * totalCnt_) {
@@ -287,9 +301,15 @@ public:
 };
 
 template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_>
-struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::QuantBatchMatmulV3Scheduler,
+struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::QuantBatchMatmulV3Scheduler<>,
                               TransA_, TransB_> {
-    using SchedulerOp = BlockSchedulerQuantBatchMatmulV3<ProblemShape_, L1TileShape_, L0TileShape_, TransA_, TransB_>;
+    using SchedulerOp = BlockSchedulerQuantBatchMatmulV3<ProblemShape_, L1TileShape_, L0TileShape_, 0, TransA_, TransB_>;
+};
+
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_>
+struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::QuantBatchMatmulV3Scheduler<A_FULL_LOAD_MODE>,
+                              TransA_, TransB_> {
+    using SchedulerOp = BlockSchedulerQuantBatchMatmulV3<ProblemShape_, L1TileShape_, L0TileShape_, A_FULL_LOAD_MODE, TransA_, TransB_>;
 };
 }  // namespace Block
 }  // namespace Gemm

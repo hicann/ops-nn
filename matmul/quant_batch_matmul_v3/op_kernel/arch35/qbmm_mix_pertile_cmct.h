@@ -45,7 +45,7 @@ __aicore__ inline void QbmmCmctPertileKernel(
     using LayoutBias = yLayout;
 
     using ProblemShape = Cmct::Gemm::MatmulShape;
-    using BlockScheduler = Cmct::Gemm::QuantBatchMatmulV3Scheduler;
+    using BlockScheduler = Cmct::Gemm::QuantBatchMatmulV3Scheduler<>;
     using BlockMmadPolicy = Cmct::Gemm::MmadCAccOnUb<>;
     using BlockMmad = Cmct::Gemm::Block::BlockMmadPertile<
         BlockMmadPolicy, AType, LayoutA, BType, LayoutB, CType, LayoutC, biasType, LayoutBias, L1Tileshape,

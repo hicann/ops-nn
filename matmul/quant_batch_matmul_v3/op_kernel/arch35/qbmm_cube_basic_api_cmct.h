@@ -45,7 +45,7 @@ __aicore__ inline void QbmmCubeBasicApiKernel(
     using ProblemShape = MatmulShape;
 
     // 定义scheduler类型 来自block_scheduler_policy.h
-    using BlockScheduler = Cmct::Gemm::QuantBatchMatmulV3Scheduler;
+    using BlockScheduler = Cmct::Gemm::QuantBatchMatmulV3Scheduler<FULL_LOAD_MODE>;
 
     // 定义MMAD类型
     using DispatchPolicy = MatmulWithScale<AscendC::Shape<_0, _0, _0, _0>, FULL_LOAD_MODE>;
