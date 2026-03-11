@@ -561,7 +561,7 @@ aclnnStatus aclnnQuantMatmulV5(
 ## 约束说明
 
 - 确定性计算：
-  - aclnnGroupedMatmulV5默认确定性实现。
+  - aclnnQuantMatmulV5默认确定性实现。
 
 <details>
 
@@ -613,6 +613,18 @@ aclnnStatus aclnnQuantMatmulV5(
   - 当前版本不支持yScale，需要传入nullptr。
   - x2Offset仅当out数据类型为INT8时支持，数据类型支持FLOAT32。其他输入类型需要传入nullptr。
   - out的shape支持2~6维，（batch，m，n），batch可不存在。数据类型支持FLOAT16、INT8、BFLOAT16、INT32。
+  - x1，x2为INT8，out为INT32，bias为INT32或nullptr时，各scale实际不参与计算，计算公式如下：
+    - bias INT32
+
+        $$
+        out = x1@x2 + bias
+        $$
+
+    - 无bias
+
+        $$
+        out = x1@x2
+        $$
 
   <details>
 
@@ -743,6 +755,18 @@ aclnnStatus aclnnQuantMatmulV5(
     $$
 
   - out的shape支持2~6维，(batch, m, n)，batch可不存在，支持x1与x2的batch维度broadcast，输出batch与broadcast之后的batch一致，m与x1的m一致，n与x2的n一致。
+  - x1，x2为INT8，out为INT32，bias为INT32或nullptr时，各scale实际不参与计算，计算公式如下：
+    - bias INT32
+
+        $$
+        out = x1@x2 + bias
+        $$
+
+    - 无bias
+
+        $$
+        out = x1@x2
+        $$
 
   <details>
 
