@@ -29,6 +29,8 @@ struct BlockEpilogueSelector {
     using type = Block::BlockEpilogueEmpty;
 };
 
+// supportMmadS8S4平台暂不支持BlockEplogueIterbatch
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
 template <class OutType, class InType>
 struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType, InType, OP_TYPE_EMPTY> {
     using type = Block::BlockEpilogueIterbatch<OutType, InType, Block::DefaultFusion<OutType, InType>>;
@@ -38,6 +40,7 @@ template <class OutType, class InType>
 struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType, InType, OP_TYPE_ADD> {
     using type = Block::BlockEpilogueIterbatch<OutType, InType, Block::FusionAdd<OutType, InType>>;
 };
+#endif
 
 template <
     class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,

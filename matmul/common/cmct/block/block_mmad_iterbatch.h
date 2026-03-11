@@ -29,9 +29,18 @@ template <
 class BlockMmad<
     DispatchPolicy_, L1TileShape_, L0TileShape_, AType_, BType_, CType_, BiasType_, TileCopy_,
     AscendC::Std::enable_if_t<
-        AscendC::Std::is_base_of_v<MatmulIterBatch<>, DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2>, DispatchPolicy_>>> {
+        AscendC::Std::is_base_of_v<MatmulIterBatch<>, DispatchPolicy_>
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+        || AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2>, DispatchPolicy_>
+#endif
+        >> {
 public:
+// supportMmadS8S4平台L0c和biasBt的dtype为int32_t
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+    using L0cType = int32_t;
+#else
+    using L0cType = float;
+#endif
     using AType = AType_;
     using BType = BType_;
     using CType = CType_;
@@ -56,7 +65,7 @@ public:
     uint64_t biasEventID_{0};
     uint64_t l0AOffset_ = AscendC::TOTAL_L0A_SIZE / BUFFER_NUM / sizeof(A_T);
     uint64_t l0BOffset_ = AscendC::TOTAL_L0B_SIZE / BUFFER_NUM / sizeof(B_T);
-    uint64_t l0COffset_ = AscendC::TOTAL_L0C_SIZE / BUFFER_NUM / sizeof(float);
+    uint64_t l0COffset_ = AscendC::TOTAL_L0C_SIZE / BUFFER_NUM / sizeof(L0cType);
     uint64_t innerBatch_{0};
 
     __aicore__ inline BlockMmad()
@@ -248,7 +257,7 @@ public:
         }
     }
 
-    __aicore__ inline void CopyInC2(const AscendC::LocalTensor<float>& biasBt,
+    __aicore__ inline void CopyInC2(const AscendC::LocalTensor<L0cType>& biasBt,
                                     const AscendC::LocalTensor<Bias_T>& biasL1Local, uint64_t alignedNL0, bool needBias)
     {
         if (!needBias) {
@@ -263,7 +272,7 @@ public:
     }
 
     __aicore__ inline void Mmad(const AscendC::LocalTensor<A_T>& l0a, const AscendC::LocalTensor<B_T>& l0b,
-                                const AscendC::LocalTensor<float>& l0c, const AscendC::LocalTensor<float>& biasBt,
+                                const AscendC::LocalTensor<L0cType>& l0c, const AscendC::LocalTensor<L0cType>& biasBt,
                                 const uint64_t mInGM, const uint64_t nInGM, const uint64_t kInGM, const uint64_t mInL0a,
                                 const uint64_t kaInL0a, const uint64_t kbInL0b, const uint64_t nInL0b,
                                 const uint64_t mInL0c, const uint64_t nInL0c, const uint64_t curIterBatchL0,
@@ -291,9 +300,29 @@ public:
     }
 
     __aicore__ inline void CopyOut(
-        const AscendC::GlobalTensor<C_T>& cGlobal, const AscendC::LocalTensor<float>& l0c, const uint64_t mInGM,
+        const AscendC::GlobalTensor<C_T>& cGlobal, const AscendC::LocalTensor<L0cType>& l0c, const uint64_t mInGM,
         const uint64_t nInGM, const uint64_t curIterBatchL0)
-    {	
+    {
+// supportMmadS8S4平台兼容
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+        AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
+        fixpipeParams.nSize = static_cast<uint16_t>(nInGM);
+        fixpipeParams.mSize = static_cast<uint16_t>(mInGM);
+        fixpipeParams.dstStride = n_;
+        fixpipeParams.srcStride = CeilAlign(mInGM, AscendC::BLOCK_CUBE);
+        fixpipeParams.params = {1, static_cast<uint16_t>(mInGM), static_cast<uint16_t>(nInGM)};
+        fixpipeParams.quantPre = QuantMode_t::DEQF16;
+        constexpr float FIX_VAL_RECIPROCAL = 1.0f / (1 << 16);
+        const uint64_t quantScalar =
+            static_cast<const uint64_t>(*reinterpret_cast<const int32_t*>(&FIX_VAL_RECIPROCAL));
+        fixpipeParams.deqScalar = quantScalar;
+        fixpipeParams.unitFlag = 0;
+        fixpipeParams.params.ndNum = curIterBatchL0;
+        fixpipeParams.params.srcNdStride =
+            Align(mInGM, AscendC::BLOCK_CUBE) * Align(nInGM, AscendC::BLOCK_CUBE) / AscendC::BLOCK_CUBE;
+        fixpipeParams.params.dstNdStride = mInGM * nInGM;
+        AscendC::Fixpipe<C_T, L0cType, AscendC::CFG_ROW_MAJOR>(cGlobal, l0c, fixpipeParams);
+#else
         AscendC::DataCopyCO12DstParams intriParams;	
         intriParams.nSize = nInGM;	
         intriParams.mSize = mInGM;	
@@ -311,10 +340,11 @@ public:
         AscendC::SetFixpipeNz2ndFlag(curIterBatchL0, Align(mInGM, AscendC::BLOCK_CUBE) *	
                                      Align(nInGM, AscendC::BLOCK_CUBE) / AscendC::BLOCK_CUBE, mInGM * nInGM);	
         AscendC::DataCopy(cGlobal, l0c, intriParams);
+#endif
     }
 
     __aicore__ inline void CopyOut(
-        const AscendC::LocalTensor<C_T>& dstLocal, const AscendC::LocalTensor<float>& l0c, const uint64_t mInGM,
+        const AscendC::LocalTensor<C_T>& dstLocal, const AscendC::LocalTensor<L0cType>& l0c, const uint64_t mInGM,
         const uint64_t nInGM, const uint64_t curIterBatchL0)
     {
         AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
@@ -333,7 +363,7 @@ public:
             Align(mInGM, AscendC::BLOCK_CUBE) * Align(nInGM, AscendC::BLOCK_CUBE) / AscendC::BLOCK_CUBE;
         fixpipeParams.params.dstNdStride = mInGM * Align(nInGM, AscendC::BLOCK_CUBE);
         fixpipeParams.subBlockId = (l0CEventID_ & 0x1);
-        AscendC::Fixpipe<C_T, float, AscendC::Impl::CFG_ROW_MAJOR_UB>(dstLocal, l0c, fixpipeParams);
+        AscendC::Fixpipe<C_T, L0cType, AscendC::Impl::CFG_ROW_MAJOR_UB>(dstLocal, l0c, fixpipeParams);
     }
 
     template <typename T>
@@ -458,6 +488,8 @@ public:
                     AscendC::SetFlag<AscendC::HardEvent::M_FIX>(l0CEventID_ & 0x1);
 
                     AscendC::WaitFlag<AscendC::HardEvent::M_FIX>(l0CEventID_ & 0x1);
+// supportMmadS8S4未定义AIC_SYNC_AIV_MODE_4
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
                     if constexpr (DispatchPolicy::enableSync == MatMulL0C2Out::ND_FIXPIPE_1_2) {
                         if (l0CEventID_ > 1) {
                             AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(
@@ -466,11 +498,14 @@ public:
                         CopyOut(cTensor, l0c_[l0COffset_ * (l0CEventID_ & 0x1)], curML0, curNL0, curIterBatchL0);
                         AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>((l0CEventID_ & 0x1) * FLAG_ID_MAX);
                     } else {
+#endif
                         uint64_t offsetCGMOfCopyOut =
                             iter1 * mainIterBatchL0 * m_ * n_ + iterML0 * baseM * n_ + iterNL0 * baseN;
                         CopyOut(cTensor[offsetCGMOfCopyOut], l0c_[l0COffset_ * (l0CEventID_ & 0x1)], curML0, curNL0,
                             curIterBatchL0);
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
                     }
+#endif
                     AscendC::SetFlag<AscendC::HardEvent::FIX_M>(l0CEventID_ & 0x1);
                     l0CEventID_++;
                 }
@@ -498,8 +533,8 @@ private:
     AscendC::LocalTensor<A_T> l1Local_{AscendC::TPosition::A1, 0, AscendC::TOTAL_L1_SIZE};
     AscendC::LocalTensor<A_T> l0a_{AscendC::TPosition::A2, 0, AscendC::TOTAL_L0A_SIZE};
     AscendC::LocalTensor<B_T> l0b_{AscendC::TPosition::B2, 0, AscendC::TOTAL_L0B_SIZE};
-    AscendC::LocalTensor<float> l0c_{AscendC::TPosition::CO1, 0, AscendC::TOTAL_L0C_SIZE};
-    AscendC::LocalTensor<float> biasBt_{AscendC::TPosition::C2, 0, BT_SIZE};
+    AscendC::LocalTensor<L0cType> l0c_{AscendC::TPosition::CO1, 0, AscendC::TOTAL_L0C_SIZE};
+    AscendC::LocalTensor<L0cType> biasBt_{AscendC::TPosition::C2, 0, BT_SIZE};
 };
 } // namespace Block
 } // namespace Gemm

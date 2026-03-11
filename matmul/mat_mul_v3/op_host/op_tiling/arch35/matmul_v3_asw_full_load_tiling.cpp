@@ -51,6 +51,7 @@ using namespace strategy;
 
 // 注册FULL_LOAD_BASE作为高阶API实现的全载模板策略
 MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3AswFullLoadTiling, DAV_3510, FULL_LOAD_BASE);
+MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3AswFullLoadTiling, DAV_RESV, FULL_LOAD_BASE); // supportMmadS8S4平台
 
 void MatMulV3AswFullLoadTiling::FullLoadPre()
 {

@@ -24,6 +24,7 @@ namespace batch_matmul_v3_advanced {
 using namespace strategy;
 using StrideIndexPairs = std::vector<std::pair<int64_t, std::pair<int64_t, int64_t>>>;
 MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3AswBasicTiling, DAV_3510, ASW_BASIC);
+MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3AswBasicTiling, DAV_RESV, ASW_BASIC); //supportMmadS8S4平台
 
 bool BatchMatMulV3AswBasicTiling::IsContiguousStride(StrideIndexPairs& strideIndexPairs) const
 {

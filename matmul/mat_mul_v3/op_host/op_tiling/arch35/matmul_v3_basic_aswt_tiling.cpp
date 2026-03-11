@@ -25,6 +25,7 @@ using namespace strategy;
 
 // 注册BASIC_ASWT作为基础API实现的模板策略
 MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3BasicAswtTiling, DAV_3510, BASIC_ASWT);
+MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3BasicAswtTiling, DAV_RESV, BASIC_ASWT); // supportMmadS8S4平台
 
 bool MatMulV3BasicAswtTiling::IsCapable()
 {

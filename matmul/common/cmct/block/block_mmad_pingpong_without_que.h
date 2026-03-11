@@ -52,6 +52,12 @@ class BlockMmad<
             MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, A_FULL_LOAD_MODE, OP_TYPE_RELU>,
             DispatchPolicy_>>> {
 public:
+// supportMmadS8S4平台L0c和biasBt的dtype为int32_t
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+    using L0cType = int32_t;
+#else
+    using L0cType = float;
+#endif
     using AType = AType_;
     using BType = BType_;
     using CType = CType_;
@@ -86,7 +92,7 @@ public:
     constexpr static uint64_t BUFFER_NUM = 2;
     constexpr static uint64_t SPLIT_M_ALIGN = 2;
     constexpr static uint64_t HALF_L0_SIZE = L0A_SIZE / DOUBLE_BUFFER_COUNT / sizeof(A_T);
-    constexpr static uint64_t HALF_L0C_SIZE = AscendC::TOTAL_L0C_SIZE / DOUBLE_BUFFER_COUNT / sizeof(float);
+    constexpr static uint64_t HALF_L0C_SIZE = AscendC::TOTAL_L0C_SIZE / DOUBLE_BUFFER_COUNT / sizeof(L0cType);
     // C0_SIZE equals 8 in order to adapt to the fp32 matrix
     constexpr static int32_t C0_SIZE = AscendC::AuxGetC0Size<typename AType::T>();
     constexpr static int32_t BIAS_C0 = AscendC::AuxGetC0Size<typename BiasType::T>();
@@ -104,7 +110,10 @@ public:
 
     __aicore__ inline BlockMmad()
     {
+// supportMmadS8S4平台未定义ASCEND_IS_AIC
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
         if ASCEND_IS_AIC {
+#endif
             AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(ZERO_FLAG);
             AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(FIRST_FLAG);
             AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(SECOND_FLAG);
@@ -113,12 +122,17 @@ public:
             AscendC::SetFlag<AscendC::HardEvent::FIX_M>(FIRST_FLAG);
             AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(SIXTH_FLAG);
             AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(SEVENTH_FLAG);
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
         }
+#endif
     }
 
     __aicore__ inline ~BlockMmad()
     {
+// supportMmadS8S4平台未定义ASCEND_IS_AIC
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
         if ASCEND_IS_AIC {
+#endif
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(ZERO_FLAG);
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(FIRST_FLAG);
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(SECOND_FLAG);
@@ -127,7 +141,9 @@ public:
             AscendC::WaitFlag<AscendC::HardEvent::FIX_M>(FIRST_FLAG);
             AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(SIXTH_FLAG);
             AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(SEVENTH_FLAG);
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
         }
+#endif
     }
 
 public:
@@ -304,7 +320,7 @@ public:
     }
 
     __aicore__ inline void CopyInC2(const AscendC::LocalTensor<Bias_T> &biasL1Local,
-        const AscendC::LocalTensor<float> &biasBt, uint64_t nl1Align, bool needBias)
+        const AscendC::LocalTensor<L0cType> &biasBt, uint64_t nl1Align, bool needBias)
     {
         if (!needBias) {
             return;
@@ -401,8 +417,28 @@ public:
     }
 
     __aicore__ inline void CopyOut(
-        const AscendC::GlobalTensor<C_T> &cGlobal, AscendC::LocalTensor<float> &c1Local, uint64_t baseM, uint64_t baseN)
+        const AscendC::GlobalTensor<C_T>& cGlobal, AscendC::LocalTensor<L0cType>& c1Local, uint64_t baseM,
+        uint64_t baseN)
     {
+// supportMmadS8S4平台兼容
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+        AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
+        fixpipeParams.nSize = static_cast<uint16_t>(baseN);
+        fixpipeParams.mSize = static_cast<uint16_t>(baseM);
+        fixpipeParams.dstStride = n_;
+        fixpipeParams.srcStride = CeilAlign(baseM, BLOCK_CUBE);
+        fixpipeParams.params = {1, static_cast<uint16_t>(baseM), static_cast<uint16_t>(baseN)};
+        fixpipeParams.quantPre = QuantMode_t::DEQF16;
+        const float FIX_VAL_RECIPROCAL = 1.0f / (1 << 16);
+        const uint64_t quantScalar =
+            static_cast<const uint64_t>(*reinterpret_cast<const int32_t*>(&FIX_VAL_RECIPROCAL));
+        fixpipeParams.deqScalar = quantScalar;
+        fixpipeParams.unitFlag = enableL0cPingPong_ ? 0 : FINAL_ACCUMULATION; // 3 unitflag
+        fixpipeParams.params.ndNum = 1;
+        fixpipeParams.params.srcNdStride = 1;
+        fixpipeParams.params.dstNdStride = 1;
+        AscendC::Fixpipe<C_T, L0cType, AscendC::CFG_ROW_MAJOR>(cGlobal, c1Local, fixpipeParams);
+#else
         if (isSplitSingleK_ && !isFirstSplitK_) {
             AscendC::SetAtomicAdd<float>();
         }
@@ -431,11 +467,13 @@ public:
         if (isSplitSingleK_ && isEndSplitK_) {
             AscendC::DisableDmaAtomic();
         }
+#endif
     }
 
     // fixpipe CopyOut实现c01拷贝到UB
     __aicore__ inline void CopyOut(
-        const AscendC::LocalTensor<C_T>& dstLocal, AscendC::LocalTensor<float>& c1Local, uint64_t baseM, uint64_t baseN)
+        const AscendC::LocalTensor<C_T>& dstLocal, AscendC::LocalTensor<L0cType>& c1Local, uint64_t baseM,
+        uint64_t baseN)
     {
         AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams; // ROW_MAJOR默认使能NZ2ND
         uint64_t c0 = AscendC::AuxGetC0Size<C_T>();
@@ -457,14 +495,14 @@ public:
         fixpipeParams.params.ndNum = 1;                                       // ndNum
         fixpipeParams.params.srcNdStride = 1;                                 // srcNdStride
         fixpipeParams.params.dstNdStride = 1;                                 // dstNdStride
-        AscendC::Fixpipe<C_T, float, AscendC::Impl::CFG_ROW_MAJOR_UB>(dstLocal, c1Local, fixpipeParams);
+        AscendC::Fixpipe<C_T, L0cType, AscendC::Impl::CFG_ROW_MAJOR_UB>(dstLocal, c1Local, fixpipeParams);
     }
     
     // 重载GlobalTensor
     __aicore__ inline void DoubleCopyOut(
         const AscendC::GlobalTensor<C_T>& cGlobal, uint64_t l0cOffset, uint64_t baseM, uint64_t baseN)
     {
-        AscendC::LocalTensor<float> c1Local = c1Local_[l0cOffset];
+        AscendC::LocalTensor<L0cType> c1Local = c1Local_[l0cOffset];
         return CopyOut(cGlobal, c1Local, baseM, baseN);
     }
 
@@ -472,7 +510,7 @@ public:
     __aicore__ inline void DoubleCopyOut(
         const AscendC::LocalTensor<C_T> &dstLocal, uint64_t l0cOffset, uint64_t baseM, uint64_t baseN)
     {
-        AscendC::LocalTensor<float> c1Local = c1Local_[l0cOffset];
+        AscendC::LocalTensor<L0cType> c1Local = c1Local_[l0cOffset];
         AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;  // ROW_MAJOR默认使能NZ2ND
         uint64_t c0 = AscendC::AuxGetC0Size<C_T>();
         uint64_t halfBaseM = Cmct::Gemm::CeilDiv(baseM, SPLIT_M_ALIGN);
@@ -494,17 +532,17 @@ public:
         fixpipeParams.params.ndNum = 1;                                        // ndNum
         fixpipeParams.params.srcNdStride = 1;                                  // srcNdStride
         fixpipeParams.params.dstNdStride = 1;                                  // dstNdStride
-        AscendC::Fixpipe<C_T, float, AscendC::Impl::CFG_ROW_MAJOR_UB>(dstLocal, c1Local, fixpipeParams);
+        AscendC::Fixpipe<C_T, L0cType, AscendC::Impl::CFG_ROW_MAJOR_UB>(dstLocal, c1Local, fixpipeParams);
 
         // 第二条Fixpipe指令
         if (baseM == 1) {
             return;
         }
         // LOC偏移[M/2*16]
-        AscendC::LocalTensor<float> c1LocalNext = c1Local_[l0cOffset + halfBaseM * AscendC::BLOCK_CUBE];
+        AscendC::LocalTensor<L0cType> c1LocalNext = c1Local_[l0cOffset + halfBaseM * AscendC::BLOCK_CUBE];
         fixpipeParams.mSize = baseM - halfBaseM;    // baseM - baseM/2
         fixpipeParams.subBlockId = 1;               // aiv1
-        AscendC::Fixpipe<C_T, float, AscendC::Impl::CFG_ROW_MAJOR_UB>(dstLocal, c1LocalNext, fixpipeParams);
+        AscendC::Fixpipe<C_T, L0cType, AscendC::Impl::CFG_ROW_MAJOR_UB>(dstLocal, c1LocalNext, fixpipeParams);
     }
 
     template <typename T, CubeFormat LayoutB = CubeFormat::ND>
@@ -762,7 +800,7 @@ public:
             AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(l1BufId);
             abL1LoopCnt_++;
         }
-        AscendC::LocalTensor<float> c1Local = c1Local_[l0cOffset];
+        AscendC::LocalTensor<L0cType> c1Local = c1Local_[l0cOffset];
         if (enableL0cPingPong_) {
             AscendC::SetFlag<AscendC::HardEvent::M_FIX>(l0cPingPong_ & 0x1);
             AscendC::WaitFlag<AscendC::HardEvent::M_FIX>(l0cPingPong_ & 0x1);
@@ -876,7 +914,7 @@ public:
             abL1LoopCnt_++;
         }
 
-        AscendC::LocalTensor<float> c1Local = c1Local_[l0cOffset];
+        AscendC::LocalTensor<L0cType> c1Local = c1Local_[l0cOffset];
         if (enableL0cPingPong_) {
             AscendC::SetFlag<AscendC::HardEvent::M_FIX>(l0cPingPong_ & 0x1);
             AscendC::WaitFlag<AscendC::HardEvent::M_FIX>(l0cPingPong_ & 0x1);
@@ -935,8 +973,8 @@ private:
     uint64_t bL1OneBuffer_ = 0;
     AscendC::LocalTensor<A_T> l0aLocal_{AscendC::TPosition::A2, 0, L0A_SIZE};
     AscendC::LocalTensor<B_T> l0bLocal_{AscendC::TPosition::B2, 0, L0B_SIZE};
-    AscendC::LocalTensor<float> c1Local_{AscendC::TPosition::CO1, 0, AscendC::TOTAL_L0C_SIZE};
-    AscendC::LocalTensor<float> biasBt_{AscendC::TPosition::C2, 0, BT_SIZE};
+    AscendC::LocalTensor<L0cType> c1Local_{AscendC::TPosition::CO1, 0, AscendC::TOTAL_L0C_SIZE};
+    AscendC::LocalTensor<L0cType> biasBt_{AscendC::TPosition::C2, 0, BT_SIZE};
     AscendC::LocalTensor<A_T> l1Local_{AscendC::TPosition::A1, 0, AscendC::TOTAL_L1_SIZE};
 };
 }  // namespace Block
