@@ -168,6 +168,31 @@ aclnnStatus ConvTbcBackwardChecker::CheckTbcParams() {
        // 检查pad是否在[0, 255]之间
       OP_CHECK(params_.pad >= 0 && params_.pad <= 255, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "pad value [%ld] is invalid, support range [0, 255].", params_.pad),
                return ACLNN_ERR_PARAM_INVALID);
+
+      // 检查输入输出是否类型一致
+      OP_CHECK(
+          outputTensor_.gradInput->GetDataType() == inputTensor_.input->GetDataType(),
+          OP_LOGE(
+              ACLNN_ERR_INNER_NULLPTR, "gradInput data type[%s] should be equal to input data type[%s]",
+              op::ToString(outputTensor_.gradInput->GetDataType()).GetString(),
+              op::ToString(inputTensor_.input->GetDataType()).GetString()),
+          return ACLNN_ERR_PARAM_INVALID);
+
+      OP_CHECK(
+          outputTensor_.gradWeight->GetDataType() == inputTensor_.weight->GetDataType(),
+          OP_LOGE(
+              ACLNN_ERR_INNER_NULLPTR, "gradWeight data type[%s] should be equal to weight data type[%s]",
+              op::ToString(outputTensor_.gradWeight->GetDataType()).GetString(),
+              op::ToString(inputTensor_.weight->GetDataType()).GetString()),
+          return ACLNN_ERR_PARAM_INVALID);
+
+      OP_CHECK(
+          outputTensor_.gradBias->GetDataType() == inputTensor_.bias->GetDataType(),
+          OP_LOGE(
+              ACLNN_ERR_INNER_NULLPTR, "gradBias data type[%s] should be equal to bias data type[%s]",
+              op::ToString(outputTensor_.gradBias->GetDataType()).GetString(),
+              op::ToString(inputTensor_.bias->GetDataType()).GetString()),
+          return ACLNN_ERR_PARAM_INVALID);
     }
     return ACLNN_SUCCESS;
 }
