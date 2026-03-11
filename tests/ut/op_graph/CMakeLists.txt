@@ -10,6 +10,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 if(UT_TEST_ALL OR OP_GRAPH_UT)
+    merge_graph_headers(TARGET merge_ops_proto_${PKG_NAME} OUT_DIR ${ASCEND_GRAPH_CONF_DST})
     gen_es_nn_lib_ready()
     if(TARGET ${OP_GRAPH_MODULE_NAME}_cases_obj)
         add_dependencies(${OP_GRAPH_MODULE_NAME}_cases_obj json build_es_math build_es_nn)
