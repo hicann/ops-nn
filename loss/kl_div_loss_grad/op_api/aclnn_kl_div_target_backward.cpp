@@ -142,11 +142,21 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
+static aclIntArray* ComputeBroadcastShapeLossBackward(const op::Shape broadcastShape, aclOpExecutor* executor)
+{
+    int64_t tensorSize = (int64_t)(broadcastShape.GetDimNum());
+    std::vector<int64_t> tensorShape(tensorSize);
+    for (int i = 0; i < tensorSize; i++) {
+        tensorShape[i] = broadcastShape[i];
+    }
+    return executor->AllocIntArray(tensorShape.data(), tensorSize);
+}
+
 static const aclTensor* BroadcastTensor(const aclTensor* self, const op::Shape broadcastShape, aclOpExecutor* executor)
 {
     // 如果self的shape与broadcast的不一致，进行BroadcastTo
     if (self->GetViewShape() != broadcastShape) {
-        auto broadcastShapeIntArray = GetBroadcastShapeLossBackward(broadcastShape, executor);
+        auto broadcastShapeIntArray = ComputeBroadcastShapeLossBackward(broadcastShape, executor);
         if (broadcastShapeIntArray != nullptr) {
             return l0op::BroadcastTo(self, broadcastShapeIntArray, executor);
         }
@@ -175,20 +185,10 @@ static const aclTensor* ReduceSumTensor(const aclTensor* grad, const op::Shape g
         auto axes = executor->AllocIntArray(appendDim.data(), dimIdx);
         auto gradTarget = l0op::ReduceSumOp(grad, axes, true, executor);
         CHECK_RET(gradTarget != nullptr, nullptr);
-        auto gradTargetShapeIntArray = GetBroadcastShapeLossBackward(gradTargetShape, executor);
+        auto gradTargetShapeIntArray = ComputeBroadcastShapeLossBackward(gradTargetShape, executor);
         return l0op::Reshape(gradTarget, gradTargetShapeIntArray, executor);
     }
     return grad;
-}
-
-static aclIntArray* GetBroadcastShapeLossBackward(const op::Shape broadcastShape, aclOpExecutor* executor)
-{
-    int64_t tensorSize = (int64_t)(broadcastShape.GetDimNum());
-    std::vector<int64_t> tensorShape(tensorSize);
-    for (int i = 0; i < tensorSize; i++) {
-        tensorShape[i] = broadcastShape[i];
-    }
-    return executor->AllocIntArray(tensorShape.data(), tensorSize);
 }
 
 static const aclTensor* ComputeGradForKlDiv(
