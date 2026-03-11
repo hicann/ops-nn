@@ -1738,6 +1738,15 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(
     CHECK_RET(socRes == ACLNN_SUCCESS, socRes);
     CHECK_RET(CheckNotNull(x, weight, antiquantScale, y), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckOptionalNotNull(quantScaleOptional, quantOffsetOptional), ACLNN_ERR_PARAM_NULLPTR);
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+        OP_CHECK(
+            weight->GetStorageFormat() == op::Format::FORMAT_ND,
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "In DAV_3510, aclnnWeightQuantBatchMatmulV2 not support FORMAT_FRACTAL_NZ and only support "
+                "FORMAT_ND."),
+            return ACLNN_ERR_PARAM_INVALID);
+    }
     const aclTensor* tensorWeight = weight;
     const aclTensor* antiquantScaleRef = antiquantScale;
     const aclTensor* tensorQuantScaleOptional = quantScaleOptional;

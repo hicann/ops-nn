@@ -118,6 +118,12 @@ static inline bool IsPerblock(const aclTensor *x1, const aclTensor *x2, const ac
             x2Scale->GetDataType() == op::DataType::DT_FLOAT);
 }
 
+static inline bool IsFormatNZ(const aclTensor* tensor) {
+    return ge::GetPrimaryFormat(tensor->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ ||
+           ge::GetPrimaryFormat(tensor->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ_C0_4 ||
+           ge::GetPrimaryFormat(tensor->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ_C0_32;
+}
+
 static inline bool IsA8W8Perblock(const aclTensor *x1, const aclTensor *x2, const aclTensor *x1Scale,
                               const aclTensor *x2Scale)
 {
@@ -472,8 +478,8 @@ static inline bool CheckScaleX1Shape(const TupleQuant& quantTensors, int64_t x1M
         }
     } else if (IsMicroScaling(x1Scale, x2Scale)) {
         // 2: x1Scale (m, k / GroupSize / 2, 2)
-        if (x1Scale->GetViewShape().GetDim(0) != x1MDim || x1Scale->GetViewShape().GetDim(1) != (groupDim / 2UL) ||
-            x1Scale->GetViewShape().GetDim(2) != 2UL) {
+        if (x1Scale->GetViewShape().GetDim(0) != x1MDim || x1Scale->GetViewShape().GetDim(1) != (groupDim / 2) ||
+            x1Scale->GetViewShape().GetDim(2) != 2) {
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID, "The x1Scale shape must be [%ld, %ld, 2] for MxA8W4,which are [%ld, %ld, %ld]",
                 x1MDim, (groupDim / 2), x1Scale->GetViewShape().GetDim(0), x1Scale->GetViewShape().GetDim(1),
@@ -979,6 +985,14 @@ aclnnStatus aclnnQuantMatmulV5GetWorkspaceSize(const aclTensor *x1, const aclTen
                    DFX_IN(x1, x2, x1Scale, x2Scale, yScale, x1Offset, x2Offset, yOffset, bias, transposeX1, transposeX2,
                           groupSize),
                    DFX_OUT(out));
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+        OP_CHECK(
+            x2 != nullptr && !IsFormatNZ(x2),
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "In DAV_3510, aclnnQuantMatmulV5 not support FORMAT_FRACTAL_NZ and only support FORMAT_ND."),
+            return ACLNN_ERR_PARAM_INVALID);
+    }
     auto uniqueExecutor = CREATE_EXECUTOR();
     TupleInput inputTuple = std::tie(x1, x2);
     // 5 represents the aclnnQuantMatmulV5 interface

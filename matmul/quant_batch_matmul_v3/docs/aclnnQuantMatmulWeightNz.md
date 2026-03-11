@@ -555,8 +555,8 @@ aclnnStatus aclnnQuantMatmulWeightNz(
   
     |量化类型|x1 dtype       |x2 dtype     | x1Scale dtype  |x2Scale dtype |bias dtype   |x1 shape  | x2 shape| x1Scale shape | x2Scale shape     |bias shape | yScale shape| [groupSizeM, groupSizeN, groupSizeK]|
     |---------------| ------------| -------------- |--------------|-------------|--------- | --------| --------------| ------------      |---------- | ------------| ---------------------------------------|-------|
-    | mx量化 |FLOAT8_E4M3FN  |FLOAT4_E2M1  |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16|(m, k)  |(n, k)  |(m, k/32)    |(n, k/32)        |(1, n)    | null        | [0, 0, 32] / [1, 1, 32]                |
-    | mx量化 |FLOAT8_E4M3FN  |FLOAT32      |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16|(m, k)  |(n, k/8)|(m, k/32)    |(n, k/32)        |(1, n)    | null        | [0, 0, 32] / [1, 1, 32]                |
+    | mx量化 |FLOAT8_E4M3FN  |FLOAT4_E2M1  |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16|(m, k)  |(n, k)  |(m, k/64, 2)    |(n, k/64, 2)        |(1, n)    | null        | [0, 0, 32] / [1, 1, 32]                |
+    | mx量化 |FLOAT8_E4M3FN  |FLOAT32      |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16|(m, k)  |(n, k/8)|(m, k/64, 2)    |(n, k/64, 2)        |(1, n)    | null        | [0, 0, 32] / [1, 1, 32]                |
     | T-CG量化 |FLOAT8_E4M3FN  |FLOAT4_E2M1  |null            |BFLOAT16      |null         |(m, k)  |(k, n)  |null           |(k/32, n)        |null       |(1, n)      | [0, 0, 32] / [1, 1, 32]                |
     | T-CG量化 |FLOAT8_E4M3FN  |FLOAT32      |null            |BFLOAT16      |null         |(m, k)  |(k, n/8)|null           |(k/32, n)        |null       |(1, n)      | [0, 0, 32] / [1, 1, 32]                |
     - 约束说明：

@@ -14,7 +14,7 @@
 #include "acl/acl.h"
 #include "aclnnop/aclnn_cast.h"
 #include "aclnnop/aclnn_npu_format_cast.h"
-#include "aclnnop/aclnn_weight_quant_batch_matmul_v2.h"
+#include "aclnnop/aclnn_weight_quant_batch_matmul_nz.h"
 
 #define CHECK_RET(cond, return_expr) \
     do {                             \
@@ -176,7 +176,7 @@ void Finalize(int32_t deviceId, aclrtStream stream)
     aclFinalize();
 }
 
-int AclnnWeightQuantBatchMatmulV2Test(int32_t deviceId, aclrtStream& stream)
+int AclnnWeightQuantBatchMatmulNzTest(int32_t deviceId, aclrtStream& stream)
 {
     auto ret = Init(deviceId, &stream);
     aclDataType weightPackedDtype = aclDataType::ACL_FLOAT; // 可选：ACL_FLOAT类型
@@ -274,13 +274,13 @@ int AclnnWeightQuantBatchMatmulV2Test(int32_t deviceId, aclrtStream& stream)
     ret = aclnnConvertWeightToINT4Pack(workspacePackAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnConvertWeightToINT4Pack failed. ERROR: %d\n", ret); return ret);
 
-    // 调用aclnnWeightQuantBatchMatmulV2第一段接口
+    // 调用aclnnWeightQuantBatchMatmulNz第一段接口
     workspaceSize = 0;
     executor = nullptr;
-    ret = aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(
+    ret = aclnnWeightQuantBatchMatmulNzGetWorkspaceSize(
         x, weightPacked, antiquantScale, nullptr, nullptr, nullptr, nullptr, groupSize, yFp16, &workspaceSize,
         &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnWeightQuantBatchMatmulV2GetWorkspaceSize failed. ERROR: %d\n", ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnWeightQuantBatchMatmulNzGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
@@ -290,9 +290,9 @@ int AclnnWeightQuantBatchMatmulV2Test(int32_t deviceId, aclrtStream& stream)
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
         workspaceAddrPtr.reset(workspaceAddr);
     }
-    // 调用aclnnWeightQuantBatchMatmulV2第二段接口
-    ret = aclnnWeightQuantBatchMatmulV2(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnWeightQuantBatchMatmulV2 failed. ERROR: %d\n", ret); return ret);
+    // 调用aclnnWeightQuantBatchMatmulNz第二段接口
+    ret = aclnnWeightQuantBatchMatmulNz(workspaceAddr, workspaceSize, executor, stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnWeightQuantBatchMatmulNz failed. ERROR: %d\n", ret); return ret);
 
     // 4. （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
@@ -334,8 +334,8 @@ int main()
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;
-    auto ret = AclnnWeightQuantBatchMatmulV2Test(deviceId, stream);
-    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("AclnnWeightQuantBatchMatmulV2Test failed. ERROR: %d\n", ret);
+    auto ret = AclnnWeightQuantBatchMatmulNzTest(deviceId, stream);
+    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("AclnnWeightQuantBatchMatmulNzTest failed. ERROR: %d\n", ret);
                    return ret);
 
     Finalize(deviceId, stream);

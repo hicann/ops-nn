@@ -15,7 +15,7 @@
 #include "acl/acl.h"
 #include "aclnnop/aclnn_cast.h"
 #include "aclnnop/aclnn_npu_format_cast.h"
-#include "aclnnop/aclnn_quant_matmul_v5.h"
+#include "aclnnop/aclnn_quant_matmul_weight_nz.h"
 
 #define CHECK_RET(cond, return_expr) \
     do {                             \
@@ -128,7 +128,7 @@ int CreateAclTensorWithFormat(
     return 0;
 }
 
-int AclnnQuantMatmulV5Test(int32_t deviceId, aclrtStream& stream)
+int AclnnQuantMatmulWeightNzTest(int32_t deviceId, aclrtStream& stream)
 {
     auto ret = Init(deviceId, &stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
@@ -142,8 +142,8 @@ int AclnnQuantMatmulV5Test(int32_t deviceId, aclrtStream& stream)
     int64_t groupSize = 32;
     std::vector<int64_t> x1Shape = {m, k};
     std::vector<int64_t> x2Shape = {n, k};
-    std::vector<int64_t> x1ScaleShape = {m, k / groupSize};
-    std::vector<int64_t> x2ScaleShape = {n, k / groupSize};
+    std::vector<int64_t> x1ScaleShape = {m, k / groupSize / 2, 2}; // MxA8W4 x1Scale:(m, k/64, 2)
+    std::vector<int64_t> x2ScaleShape = {n, k / groupSize / 2, 2}; // MxA8W4 x2Scale:(n, k/64, 2)
     std::vector<int64_t> outShape = {m, n};
     void* x1DeviceAddr = nullptr;
     void* x2DeviceAddr = nullptr;
@@ -259,13 +259,13 @@ int AclnnQuantMatmulV5Test(int32_t deviceId, aclrtStream& stream)
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-    // 调用aclnnQuantMatmulV5第一段接口
+    // 调用aclnnQuantMatmulWeightNz第一段接口
     workspaceSize = 0;
     executor = nullptr;
-    ret = aclnnQuantMatmulV5GetWorkspaceSize(
+    ret = aclnnQuantMatmulWeightNzGetWorkspaceSize(
         x1, x2NzFp4, x1Scale, x2Scale, nullptr, nullptr, nullptr, nullptr, bias, transposeX1, transposeX2, groupSize,
         out, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulV5GetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulWeightNzGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
     std::unique_ptr<void, aclError (*)(void*)> workspaceAddrPtr(nullptr, aclrtFree);
@@ -274,9 +274,9 @@ int AclnnQuantMatmulV5Test(int32_t deviceId, aclrtStream& stream)
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
         workspaceAddrPtr.reset(workspaceAddr);
     }
-    // 调用aclnnQuantMatmulV5第二段接口
-    ret = aclnnQuantMatmulV5(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulV5 failed. ERROR: %d\n", ret); return ret);
+    // 调用aclnnQuantMatmulWeightNz第二段接口
+    ret = aclnnQuantMatmulWeightNz(workspaceAddr, workspaceSize, executor, stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulWeightNz failed. ERROR: %d\n", ret); return ret);
 
     // 4. （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
@@ -302,8 +302,8 @@ int main()
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;
-    auto ret = AclnnQuantMatmulV5Test(deviceId, stream);
-    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("AclnnQuantMatmulV5Test failed. ERROR: %d\n", ret); return ret);
+    auto ret = AclnnQuantMatmulWeightNzTest(deviceId, stream);
+    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("AclnnQuantMatmulWeightNzTest failed. ERROR: %d\n", ret); return ret);
 
     Finalize(deviceId, stream);
     return 0;

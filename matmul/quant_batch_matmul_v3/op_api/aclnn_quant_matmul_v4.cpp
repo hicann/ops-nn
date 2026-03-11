@@ -825,11 +825,11 @@ static inline bool CheckA8W4ScaleX1Shape(
     if (IsMicroScaling(x1Scale, x2Scale)) {
         // 2：x1Scale 形状为（m, groupDimK / 2, 2）
         if (x1Scale->GetViewShape().GetDim(0) != groupDimM || x1Scale->GetViewShape().GetDim(1) != groupDimK / 2 ||
-            x1Scale->GetViewShape().GetDim(2) != 2) {
+            x1Scale->GetViewShape().GetDim(2) != 2) { // 2: 最后一维为2
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID, "The x1scale shape must be [%ld, %ld, 2], which are [%ld, %ld, %d]", groupDimM,
-                groupDimK, x1Scale->GetViewShape().GetDim(0), x1Scale->GetViewShape().GetDim(1),
-                x1Scale->GetViewShape().GetDim(2));
+                groupDimK / 2, x1Scale->GetViewShape().GetDim(0), x1Scale->GetViewShape().GetDim(1), // 2: x1Scale的第二维为 groupDimK / 2
+                x1Scale->GetViewShape().GetDim(2)); // 2: 获取最后一维
             return false;
         }
     }
@@ -845,11 +845,11 @@ static inline bool CheckA8W4ScaleX2Shape(
     int64_t x2ScaleNDim = transposeX2 ? x2Scale->GetViewShape().GetDim(0) : x2Scale->GetViewShape().GetDim(1);
     int64_t x2ScaleGroupDim = transposeX2 ? x2Scale->GetViewShape().GetDim(1) : x2Scale->GetViewShape().GetDim(0);
     if (IsMicroScaling(x1Scale, x2Scale)) {
-        // 2： x2Scale形状：（n, k / 32 / 2, 2）
+        // 2： x2Scale形状：（n, groupDimK / 2, 2）
         if (x2ScaleNDim != groupDimN || x2ScaleGroupDim != groupDimK / 2 || x2Scale->GetViewShape().GetDim(2) != 2) {
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID, "The x2scale shape must be [%ld, %ld, 2], which are [%ld, %ld, %ld]",
-                groupDimN, groupDimK / 2, x2ScaleNDim, x2ScaleGroupDim, x2Scale->GetViewShape().GetDim(2));
+                groupDimN, groupDimK / 2, x2ScaleNDim, x2ScaleGroupDim, x2Scale->GetViewShape().GetDim(2)); // 2：x2Scale形状：（n, GroupDimK / 2, 2）
             return false;
         }
     } else if (x2ScaleNDim != groupDimN || x2ScaleGroupDim != groupDimK) {
