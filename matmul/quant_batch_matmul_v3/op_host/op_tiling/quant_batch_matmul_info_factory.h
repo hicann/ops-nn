@@ -16,8 +16,8 @@
 #define QUANT_BATCH_MATMUL_INFO_FACTORY_H
 
 #include <pthread.h>
+#include <shared_mutex>
 
-#include "common/op_host/op_tiling/lock.h"
 #include "quant_batch_matmul_v3_tiling.h"
 
 namespace optiling {
@@ -30,23 +30,27 @@ public:
     {
         QuantBatchMatmulInfo *ptr = nullptr;
         auto threadId = pthread_self();
-        lock_.rdlock();
+        {
+            std::shared_lock<std::shared_mutex> read_lock(mutex_);
+            auto it = inst_.find(threadId);
+            if (it != inst_.end()) {
+                return &(it->second); 
+            }
+        } 
+        // Not found: acquire write lock and double-check
+        std::unique_lock<std::shared_mutex> write_lock(mutex_);
         auto it = inst_.find(threadId);
         if (it == inst_.end()) {
-            lock_.unlock();
-            lock_.wrlock();
             ptr = &(inst_[threadId]);
         } else {
             ptr = &(it->second);
         }
-
-        lock_.unlock();
         return ptr;
     }
 
 private:
     std::map<pthread_t, QuantBatchMatmulInfo> inst_;
-    Ops::NN::optiling::RWLock lock_;
+    std::shared_mutex mutex_;
 };
 
 }  // namespace optiling
