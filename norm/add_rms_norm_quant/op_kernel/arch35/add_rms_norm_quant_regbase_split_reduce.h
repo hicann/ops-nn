@@ -287,9 +287,11 @@ private:
             ComputeFormerHandle(tempLocal, offset, 1, tail, powerSplitHalf);
             offset += tail;
         }
-        RmsNorm::ComputeSum(level1Local, tempLocal, level1, SUM_COUNT);
-        level1 += 1;
-        RmsNorm::ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1, level2, level3);
+        if (tail > 0) {
+            RmsNorm::ComputeSum(level1Local, tempLocal, level1, SUM_COUNT);
+            level1 += 1;
+            RmsNorm::ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1, level2, level3);
+        }
         // Stage3: Cal MasterLoop
         for (uint32_t repeat = 0; repeat < masterLoop; repeat++) {
             ComputeFormerHandle(level1Local, offset, level1, powerSplit_, powerSplit_);
