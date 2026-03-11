@@ -24,6 +24,11 @@ static constexpr uint32_t INPUT_SEGMENT_IDS_INDEX = 1;
 static constexpr uint32_t INPUT_NUM_SEGMENTS_INDEX = 2;
 static constexpr uint32_t OUTPUT_DATA_INDEX = 0;
 constexpr uint64_t ASCENDC_WORKSPACE = static_cast<uint64_t>(16) * 1024 * 1024;
+static constexpr uint64_t CAST_INT32_TO_INT16 = 1;   // int32 Cast int16
+static constexpr uint64_t CAST_INT64_TO_INT32 = 2;   // int64 Cast int32
+static constexpr uint64_t CAST_INT64_TO_INT16 = 3;   // int64 Cast int16
+static constexpr uint64_t CAST_INT32_TO_UINT8 = 4;   // int32 Cast uint8
+static constexpr uint64_t CAST_INT64_TO_UINT8 = 5;   // int64 Cast uint8
 
 static const std::set<ge::DataType> DATA_TYPE_SUPPORT = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
                                                         ge::DT_INT32, ge::DT_INT64, ge::DT_UINT32,
@@ -40,6 +45,37 @@ static std::string ToString(std::set<ge::DataType> supportDtypes)
 
     return ss.str();
 }
+
+void UnsortedSegmentBaseTiling::GetCastTypeForSort()
+{
+    idCastDtype_ = idType_;
+
+    if (idType_ == ge::DT_INT32) {
+        if (outputOuterDim_ < UINT8_MAX) {
+            idCastMode_ = CAST_INT32_TO_UINT8;          // int32 Cast uint8
+            idCastDtype_ = ge::DT_UINT8;
+        } else if (outputOuterDim_ < INT16_MAX) {
+            idCastMode_ = CAST_INT32_TO_INT16;          // int32 Cast int16
+            idCastDtype_ = ge::DT_INT16;
+        }
+    } else {
+        if (outputOuterDim_ < UINT8_MAX) {
+            idCastMode_ = CAST_INT64_TO_UINT8;          // int64 Cast uint8
+            idCastDtype_ = ge::DT_UINT8;
+        } else if (outputOuterDim_ < INT16_MAX) {
+            idCastMode_ = CAST_INT64_TO_INT16;          // int64 Cast int16
+            idCastDtype_ = ge::DT_INT16;
+        } else if (outputOuterDim_ < INT32_MAX) {
+            idCastMode_ = CAST_INT64_TO_INT32;          // int64 Cast int32
+            idCastDtype_ = ge::DT_INT32;
+        }
+    }
+
+    if (idCastMode_ != 0) {
+        idCastDtypeSize_ = ge::GetSizeByDataType(idCastDtype_);
+    }
+}
+
 
 ge::graphStatus UnsortedSegmentBaseTiling::GetPlatformInfo()
 {
@@ -80,7 +116,7 @@ std::tuple<int64_t, int64_t> UnsortedSegmentBaseTiling::FlatInput(const gert::Sh
     return std::make_tuple(outer, inner);
 }
 
-uint32_t UnsortedSegmentBaseTiling::GetSortTmpSize(uint32_t lastAxisNum, bool isDescend)
+uint32_t UnsortedSegmentBaseTiling::GetSortTmpSize(ge::DataType dataType, uint32_t lastAxisNum, bool isDescend)
 {
     std::vector<int64_t> shapeVec = {lastAxisNum};
     ge::Shape srcShape(shapeVec);
@@ -91,7 +127,7 @@ uint32_t UnsortedSegmentBaseTiling::GetSortTmpSize(uint32_t lastAxisNum, bool is
     config.hasDstIndex = true;
     uint32_t maxValue = 0;
     uint32_t minValue = 0;
-    AscendC::GetSortMaxMinTmpSize(srcShape, idType_, ge::DT_UINT32, false, config, maxValue, minValue);
+    AscendC::GetSortMaxMinTmpSize(srcShape, dataType, ge::DT_UINT32, false, config, maxValue, minValue);
     return maxValue;
 }
 
@@ -236,7 +272,7 @@ std::tuple<uint64_t, uint64_t> UnsortedSegmentBaseTiling::AutoTiling(
             allTiling.begin(), allTiling.end(), [](const std::vector<uint64_t>& a, const std::vector<uint64_t>& b) {
                 constexpr int NIndex = 1;
                 constexpr int DeltaIndex = 3;
-                return std::make_pair(a[DeltaIndex], a[NIndex]) < std::make_pair(b[DeltaIndex], b[NIndex]);
+                return std::make_pair(a[NIndex], a[DeltaIndex]) < std::make_pair(b[NIndex], b[DeltaIndex]);
             });
     } else {
         std::sort(

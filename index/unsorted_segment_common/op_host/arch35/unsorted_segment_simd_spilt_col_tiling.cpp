@@ -24,7 +24,7 @@ static constexpr uint64_t RATIO_BY_SORT = 5;
 
 bool UnsortedSegmentSimdSplitColTiling::IsCapable()
 {
-    if (innerDim_ * dataTypeBytes_ > totalCoreNum_ * LAST_DIM_SIMD_COND && ratio_ > RATIO_BY_SORT) {
+    if (innerDim_ * dataTypeBytes_ > totalCoreNum_ * LAST_DIM_SIMD_COND && ratio_ < RATIO_BY_SORT) {
         return IsFullLoad();
     }
     return false;

@@ -66,7 +66,8 @@ protected:
     ge::graphStatus CheckInputDtype();
     bool ShapeStartsWith(const gert::Shape shape, const gert::Shape prefix);
     std::tuple<int64_t, int64_t> FlatInput(const gert::Shape shape, const gert::Shape prefix);
-    uint32_t GetSortTmpSize(uint32_t lastAxisNum, bool isDescend);
+    uint32_t GetSortTmpSize(ge::DataType dataType, uint32_t lastAxisNum, bool isDescend);
+    void GetCastTypeForSort();
     std::set<uint64_t> FindUniqueCut(uint64_t usedCoreNum);
     std::tuple<uint64_t, uint64_t> AutoTiling(
         uint64_t usedCoreNum, uint64_t colNumAlign, uint64_t colLimitSize, bool colTileNumMin = false);
@@ -86,8 +87,12 @@ public:
     uint64_t idTypeBytes_ = 0;
     uint64_t dataShapeSize_ = 0;
     uint64_t ratio_ = 0;
+    uint64_t idCastMode_ = 0;  // 0: 不Cast; 1：int32 Cast int16; 2：int64 Cast int32; 3：int64 Cast int16; 4:int32 Cast uint8; 5:int64 Cast uint8.
+    int64_t idCastDtypeSize_ = 0;
+
     ge::DataType dataType_ = ge::DT_UNDEFINED;
-    ge::DataType idType_ = ge::DT_UNDEFINED;  
+    ge::DataType idType_ = ge::DT_UNDEFINED;
+    ge::DataType idCastDtype_ = ge::DT_UNDEFINED;  
 };
 } // namespace optiling
 #endif // UNSORTED_SEGMENT_COMMON_TILING_H

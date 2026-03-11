@@ -52,7 +52,7 @@ ge::graphStatus UnsortedSegmentSortSimtTiling::CalcTiling()
         int64_t totalIndexSize = Ops::Base::CeilAlign(mid * idTypeBytes_, ubBlockSize_) * DOUBLE +
                                  Ops::Base::CeilAlign(mid * idTypeBytes_, ubBlockSize_) + ubBlockSize_ * DOUBLE +
                                  Ops::Base::CeilAlign(mid * sizeof(uint32_t), ubBlockSize_);
-        sortTmpSize = GetSortTmpSize(mid, false);
+        sortTmpSize = GetSortTmpSize(idType_, mid, false);
         sortTmpSize = Ops::Base::CeilAlign(sortTmpSize, static_cast<int64_t>(ubBlockSize_));
         int64_t tmpTotalSize =
             totalIndexSize + sortTmpSize + Ops::Base::CeilAlign(mid * innerDim_ * dataTypeBytes_, ubBlockSize_) * DOUBLE;

@@ -32,6 +32,40 @@ using namespace UnsortedSegment;
 #define TEMPLATE_SORT_SIMT 4100
 constexpr uint8_t MODE_FLAGE = 0; // 0:unsorted_segment_min;
 
+template <typename X_T, typename SEGMENT_IDS_T, uint8_t MODE>
+ __aicore__ inline void KernelSimdDynSortWithCast(
+    GM_ADDR x, GM_ADDR segment_ids, GM_ADDR num_segments, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling, TPipe &pipe)
+{
+    REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 7000", UnsortedSegmentSimdDynSortTilingData);
+    GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSimdDynSortTilingData, tilingData, tiling);
+    uint32_t cast_mode = tilingData.idCastMode;
+    if (cast_mode == CAST_1) {
+        UnsortedSegment::KernelSimdDynSort<X_T, SEGMENT_IDS_T, MODE, CAST_1> op(&tilingData, &pipe);
+        op.Init(x, segment_ids, output);
+        op.Process();
+    } else if (cast_mode == CAST_2) {
+        UnsortedSegment::KernelSimdDynSort<X_T, SEGMENT_IDS_T, MODE, CAST_2> op(&tilingData, &pipe);
+        op.Init(x, segment_ids, output);
+        op.Process();
+    } else if (cast_mode == CAST_3) {
+        UnsortedSegment::KernelSimdDynSort<X_T, SEGMENT_IDS_T, MODE, CAST_3> op(&tilingData, &pipe);
+        op.Init(x, segment_ids, output);
+        op.Process();
+    } else if (cast_mode == CAST_4) {
+        UnsortedSegment::KernelSimdDynSort<X_T, SEGMENT_IDS_T, MODE, CAST_4> op(&tilingData, &pipe);
+        op.Init(x, segment_ids, output);
+        op.Process();
+    } else if (cast_mode == CAST_5) {
+        UnsortedSegment::KernelSimdDynSort<X_T, SEGMENT_IDS_T, MODE, CAST_5> op(&tilingData, &pipe);
+        op.Init(x, segment_ids, output);
+        op.Process();
+    } else {
+        UnsortedSegment::KernelSimdDynSort<X_T, SEGMENT_IDS_T, MODE, CAST_0> op(&tilingData, &pipe);
+        op.Init(x, segment_ids, output);
+        op.Process();
+    }
+}
+
 extern "C" __global__ __aicore__ void unsorted_segment_min(GM_ADDR x, GM_ADDR segment_ids, GM_ADDR num_segments,
     GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -69,11 +103,7 @@ extern "C" __global__ __aicore__ void unsorted_segment_min(GM_ADDR x, GM_ADDR se
             std::is_same<int64_t, DTYPE_X>::value) {
             return;
         } else {
-            REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 7000", UnsortedSegmentSimdDynSortTilingData);
-            GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSimdDynSortTilingData, tilingData, tiling);
-            UnsortedSegment::KernelSimdDynSort<DTYPE_X, DTYPE_SEGMENT_IDS, MODE_FLAGE> op(&tilingData, &pipe);
-            op.Init(x, segment_ids, output);
-            op.Process();
+            KernelSimdDynSortWithCast<DTYPE_X, DTYPE_SEGMENT_IDS, MODE_FLAGE>(x, segment_ids, num_segments, output, workspace, tiling, pipe);
         }
     } else if (TILING_KEY_IS(TEMPLATE_ADD_TILING_KEY)) {
         REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 4000", UnsortedSegmentOutFlTilingData);

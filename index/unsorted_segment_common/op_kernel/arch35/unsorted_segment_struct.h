@@ -75,6 +75,7 @@ struct UnsortedSegmentSimdDynSortTilingData{
     uint64_t sortBaseS;
     uint64_t sortBaseA;
     int64_t sortSharedBufSize;
+    uint64_t idCastMode;
 };
 
 struct UnsortedSegmentOutFlTilingData{
