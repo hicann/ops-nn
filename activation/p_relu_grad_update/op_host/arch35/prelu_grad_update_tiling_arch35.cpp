@@ -124,11 +124,6 @@ ge::graphStatus PReluGradUpdateTiling::CheckAndInferShape(std::vector<gert::Shap
     auto inputStorageGradientShape = context_->GetInputShape(INPUT_GRADIENT_INDEX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputStorageGradientShape);
     const gert::Shape& inputGradientShape = Ops::Base::EnsureNotScalar(inputStorageGradientShape->GetStorageShape());
-
-    OPS_ERR_IF(featureDimNum <= 1,
-       VECTOR_INNER_ERR_REPORT_TILIING(
-                context_->GetNodeName(), "feature don't support 1D or 0D shape"),
-            return ge::GRAPH_FAILED);
     
     //检查weight的元素个数是否等于1或者features的通道数
     int64_t weightSize = inputWeightShape.GetShapeSize();
