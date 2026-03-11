@@ -229,6 +229,7 @@ REGISTER_CPU_KERNEL(kAddExample, AddExampleCpuKernel);
 验证算子前需确保已配置了环境变量，命令如下：
 ```bash
 export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}_nn/op_api/lib:${LD_LIBRARY_PATH}
+export ASCEND_CUSTOM_OPP_PATH=${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}_nn
 ```
 - **UT验证**
 
