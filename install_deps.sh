@@ -349,6 +349,32 @@ install_dos2unix() {
     fi
 }
 
+install_patch() {
+    echo -e "\n==== Checking patch ===="
+
+    if command -v patch &> /dev/null; then
+        echo "patch has been installed"
+        return
+    fi
+
+    echo "Installing patch..."
+    case "$OS" in
+        debian|rhel)
+            run_command sudo $PKG_MANAGER install -y patch
+            ;;
+        macos)
+            run_command brew install patch
+            ;;
+    esac
+
+    if command -v patch &> /dev/null; then
+        echo "patch installed successfully"
+    else
+        echo "patch installation failed"
+        exit 1
+    fi
+}
+
 check_dependencies_silent() {
     local args=("$@")
     local check_pkgz="false"
@@ -451,6 +477,7 @@ main() {
     install_cmake
     install_pigz
     install_dos2unix
+    install_patch
 
     echo -e "===================================================="
     echo "All dependencies installed successfully!"
