@@ -251,10 +251,6 @@ public:
         dyLocal = dyInQue_.template DeQue<DY_TYPE>();
 
         CalcDbeta(dyLocal, dBetaCacheLocal_, binaryAddTensor_, basicBlockIdx, r1Factor * r0Dim_, binaryAddParam_);
-        if (ni > 0 && basicBlockIdx < BUFFER_NUM) {
-            uint32_t bufferIdx = basicBlockIdx % BUFFER_NUM;
-            WaitFlag<HardEvent::MTE3_MTE2>(MTE3_MTE2_EVENT + bufferIdx);
-        }
         LocalTensor<DY_TYPE> xLocal = xInQue_.template AllocTensor<DY_TYPE>();
         PrepareInX(xLocal, 0, offset, r1Factor);
         xInQue_.EnQue(xLocal);
@@ -280,10 +276,6 @@ public:
 
         CalcDbetaFold(dyLocal, dBetaCacheLocal_, binaryAddTensor_, basicBlockIdx, r1Factor * r0Dim_,
             r1TailFactor * r0Dim_, tailBinaryAddParam_);
-        if (ni > 0 && basicBlockIdx == 0) {
-            WaitFlag<HardEvent::MTE3_MTE2>(MTE3_MTE2_EVENT + 0);
-            WaitFlag<HardEvent::MTE3_MTE2>(MTE3_MTE2_EVENT + 1);
-        }
         LocalTensor<DY_TYPE> xLocal = xInQue_.template AllocTensor<DY_TYPE>();
         PrepareInX(xLocal, 0, offset, r1Factor);
         PrepareInX(xLocal, halfXBufOffset_, tailOffset, r1TailFactor);
@@ -330,9 +322,6 @@ public:
         LocalTensor<DY_TYPE> dyLocal = dyInQue_.template AllocTensor<DY_TYPE>();
         PrepareInDy(dyLocal, 0, offset, r1Factor);
         dyInQue_.EnQue(dyLocal);
-        if (basicBlockIdx >= BUFFER_NUM) {
-            WaitFlag<HardEvent::MTE3_MTE2>(MTE3_MTE2_EVENT + bufferIdx);
-        }
         LocalTensor<DY_TYPE> xLocal = xInQue_.template AllocTensor<DY_TYPE>();
         PrepareInX(xLocal, 0, offset, r1Factor);
         xInQue_.EnQue(xLocal);
@@ -346,9 +335,8 @@ public:
         SetFlag<HardEvent::V_MTE3>(V_MTE3_EVENT + bufferIdx);
         WaitFlag<HardEvent::V_MTE3>(V_MTE3_EVENT + bufferIdx);
         CopyOutDx(xLocal, offset, r1Factor);
-        if (ni < aDimLoopNum_ - 1 || basicBlockIdx < ubRDimLoopNum_ + ubRDimTailLoopNum_ - BUFFER_NUM) {
-            SetFlag<HardEvent::MTE3_MTE2>(MTE3_MTE2_EVENT + bufferIdx);
-        }
+        SetFlag<HardEvent::MTE3_MTE2>(MTE3_MTE2_EVENT + bufferIdx);
+        WaitFlag<HardEvent::MTE3_MTE2>(MTE3_MTE2_EVENT + bufferIdx);
         dyInQue_.FreeTensor(dyLocal);
         xInQue_.FreeTensor(xLocal);
     }
