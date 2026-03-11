@@ -16,7 +16,7 @@
 #define OPS_BUILT_IN_OP_TILING_CUBE_ALGORITHM_HASH_TILING_CACHE_H_
 
 #include <map>
-#include "lock.h"
+#include <shared_mutex>
 
 namespace Ops {
 namespace NN {
@@ -27,27 +27,23 @@ class TilingCache {
  public:
   void Add(uint32_t key, [[maybe_unused]] const HashInput &hash_input, const HashItem &value) {
     //hash_input 暂时没有用到，但编译不进行告警
-    rwlock_.wrlock();
+    std::unique_lock<std::shared_mutex> lock(mutex_);
     if (size_ >= kMaxTilingCacheEntryNum) {
-      rwlock_.unlock();
       return;
     }
 
     if (map_.find(key) != map_.end()) {
-      rwlock_.unlock();
       return;
     }
 
     map_.emplace(key, value);
     size_++;
-    rwlock_.unlock();
     return;
   }
 
   void Replace(uint32_t key, const HashInput &hash_input, const HashItem &value) {
-    rwlock_.wrlock();
+    std::unique_lock<std::shared_mutex> lock(mutex_);
     if (size_ >= kMaxTilingCacheEntryNum) {
-      rwlock_.unlock();
       return;
     }
 
@@ -56,32 +52,28 @@ class TilingCache {
     }
     map_.erase(key);
     map_.emplace(key, value);
-    rwlock_.unlock();
     return;
   }
 
   bool Get(uint32_t key, const HashInput &hash_input, HashItem &value) {
-    rwlock_.rdlock();
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     auto iter = map_.find(key);
     if (iter == map_.end()) {
-      rwlock_.unlock();
       return false;
     }
     if (!(hash_input == iter->second.input())) {
-      rwlock_.unlock();
       OP_LOGD("CUBE", "inconsistent input data");
       return false;
     }
 
     value = iter->second;
-    rwlock_.unlock();
     return true;
   }
 
  private:
   std::map<uint32_t, HashItem> map_;
   uint32_t size_ = 0;
-  Ops::NN::optiling::RWLock rwlock_;
+  std::shared_mutex mutex_;
 };
 }  // namespace NN
 }  // namespace Ops
