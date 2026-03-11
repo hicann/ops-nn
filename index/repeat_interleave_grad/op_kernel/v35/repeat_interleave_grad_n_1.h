@@ -69,6 +69,7 @@ public:
     constexpr static int32_t ELEMENT_ONE_REPEAT_ORI = VL_LENGTH_B / sizeof(DataT);
     constexpr static int32_t ELEMENT_ONE_REPEAT_COMPUTE = VL_LENGTH_B / sizeof(PromoteDataT);
     constexpr static int32_t ELEMENT_ONE_BLOCK_SIZE = BLOCK_SIZE_BYTE / sizeof(PromoteDataT);
+    constexpr static float INIT_FLOAT_VALUE = 0.0;
 
 public:
     __aicore__ inline RepeatInterleaveGradDimNOneDavid(TPipe& pipe) : pipe_(pipe)
@@ -142,6 +143,14 @@ public:
     }
 
 private:
+    __aicore__ inline void ProcessZeroR(int64_t outputDataOffset, int32_t dimA)
+    {
+        Duplicate<PromoteDataT>(computeRes_, INIT_FLOAT_VALUE, dimA);
+        CopyOut(yGm_[outputDataOffset], computeRes_, dimA);
+        SetFlag<HardEvent::MTE3_V>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+        WaitFlag<HardEvent::MTE3_V>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));    
+    }
+
     __aicore__ inline void ProcessRepeatBlock(int32_t repeatFactor, LocalTensor<IndexT>& repeatTensor)
     {
         int32_t mCount = 0;
@@ -177,6 +186,19 @@ private:
             int64_t inputDataOffset = 0;
             int64_t outputDataOffset = 0;
             r = repeatTensor.GetValue(k);
+
+            if (r == 0) {
+                for (int32_t m = 0; m < mCount - 1; m++) {
+                    mOffset = m * mFactor;
+                    outputDataOffset = mOutputOffset_ + rOffset + mOffset * tiling_->lenR;
+                    ProcessZeroR(outputDataOffset, mFactor);
+                }
+                mOffset = (mCount - 1) * mFactor;
+                outputDataOffset = mOutputOffset_ + rOffset + mOffset * tiling_->lenR;
+                ProcessZeroR(outputDataOffset, mTailFactor);
+                continue;
+            }
+
             if (r == 1) {
                 for (int32_t m = 0; m < mCount - 1; m++) {
                     mOffset = m * mFactor;

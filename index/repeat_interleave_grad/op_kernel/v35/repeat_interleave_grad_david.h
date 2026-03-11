@@ -32,6 +32,7 @@ public:
     constexpr static uint64_t MAX_NUM_PER_RES = 2 * 1024;
     constexpr static int32_t ELEMENT_ONE_REPEAT_ORI = platform::GetVRegSize() / sizeof(DataT);
     constexpr static int32_t ELEMENT_ONE_REPEAT_COMPUTE = platform::GetVRegSize() / sizeof(PromoteDataT);
+    constexpr static float INIT_FLOAT_VALUE = 0.0;
 
     __aicore__ inline RepeatInterleaveGradDavid(TPipe& pipe) : pipe_(pipe)
     {}
@@ -61,6 +62,8 @@ private:
         int32_t dim0, int32_t dim1);
 
     __aicore__ inline void UpdateCacheAux(const int64_t cacheID, const int64_t stride, const int64_t count);
+
+    __aicore__ inline void ProcessZeroR(int64_t outputDataOffset, int32_t dimA);
 
 private:
     const RepeatInterleaveGradDavidTilingData* tiling_;
@@ -169,6 +172,17 @@ __aicore__ inline void RepeatInterleaveGradDavid<DataT, PromoteDataT, IndexT>::P
     }
 }
 
+
+template <typename DataT, typename PromoteDataT, typename IndexT>
+__aicore__ inline void RepeatInterleaveGradDavid<DataT, PromoteDataT, IndexT>::ProcessZeroR(
+    int64_t outputDataOffset, int32_t dimA)
+{
+    Duplicate<PromoteDataT>(computeRes_, INIT_FLOAT_VALUE, dimA);
+    CopyOut(yGm_[outputDataOffset], computeRes_, dimA);
+    SetFlag<HardEvent::MTE3_V>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+    WaitFlag<HardEvent::MTE3_V>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));    
+}
+
 template <typename DataT, typename PromoteDataT, typename IndexT>
 __aicore__ inline void RepeatInterleaveGradDavid<DataT, PromoteDataT, IndexT>::ProcessRepeatBlock(
     int32_t repeatFactor, LocalTensor<IndexT>& curRepeat, LocalTensor<IndexT>& preRepeat)
@@ -192,6 +206,28 @@ __aicore__ inline void RepeatInterleaveGradDavid<DataT, PromoteDataT, IndexT>::P
         int64_t pOffset = lastRepeatCumsumVal_ * tiling_->lenN;
         int64_t rOffset = lastRepeatCount_ * tiling_->lenN;
         r = curRepeat.GetValue(k);
+
+        if (r == 0) {
+            int32_t nBaseFactor = tiling_->basicBlockSize / BLOCK_SIZE_BYTE * BLOCK_SIZE_BYTE / sizeof(DataT);
+            if (nBaseFactor > MAX_NUM_PER_RES) {
+                nBaseFactor = MAX_NUM_PER_RES;
+            }
+            UbParaUnit newSplitN;
+            __RIGUtil::DoUbSplit(tiling_->lenN, nBaseFactor, newSplitN);
+            int32_t nFactor = newSplitN.ubFactor;
+            int64_t outputDataOffset = 0;
+            int64_t nOffset = 0;
+            for (int32_t n = 0; n < newSplitN.ubCount - 1; n++) { // 重新切分的整块
+                nOffset = n * nFactor;
+                outputDataOffset = mOutputOffset_ + rOffset + nOffset;
+                ProcessZeroR(outputDataOffset, nFactor);
+            }
+            // 重新切分的尾块
+            nOffset = (newSplitN.ubCount - 1) * nFactor;
+            outputDataOffset = mOutputOffset_ + rOffset + nOffset;
+            ProcessZeroR(outputDataOffset, newSplitN.ubTailFactor);
+            continue;
+        }
 
         // r * lenN_ <= tiling_->basicBlockSize  -> 正常计算，实际调用的也是AscendC的接口，不作区分
         if (r < tiling_->rFactor) {
