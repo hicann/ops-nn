@@ -409,10 +409,10 @@ aclnnStatus aclnnQuantMatmulV5(
             <li>不支持空Tensor。</li>
           </ul>
         </td>
-        <td>FLOAT16、INT8、BFLOAT16、INT32</td>
+        <td>FLOAT16、INT8、BFLOAT16、INT32、FLOAT32</td>
         <td>ND</td>
         <td>2</td>
-        <td>✓</td>
+        <td>-</td>
       </tr>
       <tr>
         <td>workspaceSize(uint64_t)</td>
@@ -539,7 +539,7 @@ aclnnStatus aclnnQuantMatmulV5(
 ## 约束说明
 
 - 确定性计算：
-  - aclnnGroupedMatmulV5默认确定性实现。
+  - aclnnQuantMatmulV5默认确定性实现。
 
 <details>
 
