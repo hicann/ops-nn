@@ -37,6 +37,9 @@ class BatchNormV3RARBlockSplitR {
     static constexpr int32_t INDEXFOUR = 4;
     static constexpr int32_t INDEXEIGHT = 8;
     static constexpr int32_t INDEXSIXTEEN = 16;
+    static constexpr int32_t UB_SPLIT_AXIS_R1 = 0;
+    static constexpr int32_t UB_SPLIT_AXIS_A = 1;
+    static constexpr int32_t UB_SPLIT_AXIS_R0 = 2;
 public:
     __aicore__ inline uint64_t CEIL_DIV(uint64_t x, uint64_t y)
     {
@@ -178,7 +181,7 @@ public:
         CaculateCountBuf(countTensor1, countTensor2);
         int64_t xGmOffset = 0;
         uint64_t formerRAlignNum = 0;
-        if (ubSplitAxis == 0) {
+        if (ubSplitAxis == UB_SPLIT_AXIS_R1) {
             // RAR
             formerRAlignNum = CEIL_ALIGN(r0BlockInner * ubInner, T_BLOCK_ALIGN_SIZE);
             uint64_t calcLen = tilingData->patternA * formerRAlignNum;
@@ -214,7 +217,7 @@ public:
             DataCopy(varWsp[0], localVarTensor, currentAAlign);
             batchMeanQueue.FreeTensor(localMeanTensor);
             batchRstdQueue.FreeTensor(localVarTensor);
-        } else if (ubSplitAxis == 1) {
+        } else if (ubSplitAxis == UB_SPLIT_AXIS_A) {
             // AR
             formerRAlignNum = CEIL_ALIGN(r0BlockInner, T_BLOCK_ALIGN_SIZE);
             uint64_t calcLen = ubInner * formerRAlignNum;
@@ -258,7 +261,7 @@ public:
                 batchMeanQueue.FreeTensor(localMeanTensor);
                 batchRstdQueue.FreeTensor(localVarTensor);
             }
-        } else if (ubSplitAxis == 2) {
+        } else if (ubSplitAxis == UB_SPLIT_AXIS_R0) {
             // R
             formerRAlignNum = CEIL_ALIGN(ubInner, T_BLOCK_ALIGN_SIZE);
             for (uint64_t aIdx = 0; aIdx < tilingData->patternA; aIdx += 1) {
@@ -522,7 +525,6 @@ private:
             DataCopy(dst, ((__local_mem__ float*)(input) + (offset)));
         }
     }
-
 
     __aicore__ inline void CopyInXAR(LocalTensor<T>& xInUb, int64_t offset, uint64_t processANum, uint64_t processR0Num)
     {
@@ -1243,7 +1245,7 @@ private:
     {
         int64_t xyGmOffset = 0;
         uint64_t formerRAlignNum = 0;
-        if (ubSplitAxis == 0) {
+        if (ubSplitAxis == UB_SPLIT_AXIS_R1) {
             // RAR
             formerRAlignNum = CEIL_ALIGN(r0BlockInner * ubInner, T_BLOCK_ALIGN_SIZE);
             for (uint64_t r1Idx = r1StartIdx; r1Idx < r1EndIdx; r1Idx += ubInner) {
@@ -1270,7 +1272,7 @@ private:
                 CopyOutYRAR(yTensor, xyGmOffset, tilingData->patternA, r0BlockInner, processR1Num);
                 yQueue.FreeTensor(yTensor);
             }
-        } else if (ubSplitAxis == 1) {
+        } else if (ubSplitAxis == UB_SPLIT_AXIS_A) {
             // AR
             formerRAlignNum = CEIL_ALIGN(r0BlockInner, T_BLOCK_ALIGN_SIZE);
             for (uint64_t aIdx = 0; aIdx < ubOuter; aIdx += 1) {
@@ -1300,7 +1302,7 @@ private:
                     yQueue.FreeTensor(yTensor);
                 }
             }
-        } else if (ubSplitAxis == 2) {
+        } else if (ubSplitAxis == UB_SPLIT_AXIS_R0) {
             // R
             formerRAlignNum = CEIL_ALIGN(ubInner, T_BLOCK_ALIGN_SIZE);
             for (uint64_t aIdx = 0; aIdx < tilingData->patternA; aIdx += 1) {
