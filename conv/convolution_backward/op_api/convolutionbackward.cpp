@@ -1977,7 +1977,7 @@ const aclTensor *Conv3DBackpropFilter(ConvolutionBackwardInputTensor &inputTenso
 OP_TYPE_REGISTER(Conv3DBackpropInput);
 OP_TYPE_REGISTER(Conv3DBackpropInputV2);
 
-static bool CheckN2HAttrAvailable(const aclIntArray *stride5, aclIntArray *dilation5, aclIntArray *pad6) {
+static bool CheckN2HAttrAvailable(const aclIntArray *stride5, const aclIntArray *dilation5, const aclIntArray *pad6) {
   if (stride5 == nullptr) {
     return false;
   }
