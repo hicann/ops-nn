@@ -15,57 +15,221 @@
 
 ## 功能说明
 
-接口功能：返回输入Tensor在指定维度上的第k个最小值及索引。
+返回输入Tensor在指定维度上的第k个最小值及索引。
 
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnKthvalueGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnKthvalue”接口执行计算。
 
-* `aclnnStatus aclnnKthvalueGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t dim, bool keepdim, aclTensor *valuesOut, aclTensor *indicesOut, uint64_t *workspaceSize, aclOpExecutor **executor)`
-* `aclnnStatus aclnnKthvalue(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, const aclrtStream stream)`
+```Cpp
+aclnnStatus aclnnKthvalueGetWorkspaceSize(
+ const aclTensor*     self,
+ int64_t              k,
+ int64_t              dim,
+ bool                 keepdim,
+ aclTensor*           valuesOut,
+ aclTensor*           indicesOut,
+ uint64_t*            workspaceSize,
+ aclOpExecutor**      executor)
+```
+
+```Cpp
+aclnnStatus aclnnKthvalue(
+ void*             workspace,
+ uint64_t          workspaceSize,
+ aclOpExecutor*    executor,
+ const aclrtStream stream)
+```
 
 ## aclnnKthvalueGetWorkspaceSize
 
-- **参数说明：**
+* **参数说明**
 
-  - self（aclTensor\*, 计算输入）：Device侧的aclTensor。shape支持1-8维度，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
+    <table style="undefined;table-layout: fixed; width: 1477px"><colgroup>
+    <col style="width: 147px">
+    <col style="width: 120px">
+    <col style="width: 233px">
+    <col style="width: 277px">
+    <col style="width: 270px">
+    <col style="width: 121px">
+    <col style="width: 164px">
+    <col style="width: 145px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+        <th>使用说明</th>
+        <th>数据类型</th>
+        <th>数据格式</th>
+        <th>维度(shape)</th>
+        <th>非连续Tensor</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>self</td>
+        <td>输入</td>
+        <td>-</td>
+        <td>-</td>
+        <td>BFLOAT16、FLOAT16、FLOAT32、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64</td>
+        <td>ND</td>
+        <td>1-8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>k</td>
+        <td>输入</td>
+        <td>Host侧的整型，表示取指定维度上第k个最小值。</td>
+        <td><ul><li>取值范围为[0, self.size(dim)]。</li></ul></td>
+        <td>INT64</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>dim</td>
+        <td>输入</td>
+        <td>Host侧的整型，表示取输入张量的指定维度。</td>
+        <td><ul><li>取值范围为[-self.dim(), self.dim())。</li></ul></td>
+        <td>INT64</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>keepdim</td>
+        <td>输入</td>
+        <td>bool类型数据，表示输出张量是否保留了dim。</td>
+        <td><ul><li>True表示valuesOut和indicesOut张量的大小都与self相同；</li><li>False表示dim将被压缩，得到的张量维数比input少1。</li></ul></td>
+        <td>BOOL</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>valuesOut</td>
+        <td>输出</td>
+        <td>Device侧的aclTensor，数据类型与self保持一致。</td>
+        <td>shape排序轴为1，非排序轴与self一致。</td>
+        <td>与self一致</td>
+        <td>ND</td>
+        <td>1-8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>indicesOut</td>
+        <td>输出</td>
+        <td>Device侧的aclTensor，表示原始输入张量中沿dim维的第k个最小值的下标。</td>
+        <td>shape排序轴为1，非排序轴与self一致。</td>
+        <td>INT64</td>
+        <td>ND</td>
+        <td>1-8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>workspaceSize</td>
+        <td>输出</td>
+        <td>返回需要在Device侧申请的workspace大小。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>executor</td>
+        <td>输出</td>
+        <td>返回op执行器，包含了算子计算流程。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+    </tbody></table>
+
     - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32、INT8、INT16、INT32、INT64、UINT8。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32、INT8、INT16、INT32、INT64、UINT8。
     - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64。
-  - k（int64_t, 计算输入）：Host侧的整型。表示取指定维度上第k个最小值。取值范围为[0, self.size(dim)]。
-  - dim（int64_t, 计算输入）：Host侧的整型。表示取输入张量的指定维度。取值范围为[-self.dim(), self.dim())。
-  - keepdim（bool, 计算输入）：bool类型数据，表示输出张量是否保留了dim。True表示valuesOut和indicesOut张量的大小都与self相同，False表示dim将被压缩，得到的张量维数比input少1。
-  - valuesOut（aclTensor\*, 计算输出）：Device侧的aclTensor，数据类型与self保持一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。shape排序轴为1，非排序轴与self一致。
-    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32、INT8、INT16、INT32、INT64、UINT8。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32、INT8、INT16、INT32、INT64、UINT8。
-    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64。
-  - indicesOut（aclTensor\*, 计算输出）：Device侧的aclTensor，数据类型支持INT64。表示原始输入张量中沿dim维的第k个最小值的下标。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。shape排序轴为1，非排序轴与self一致。
-  - workspaceSize（uint64_t\*, 出参）：返回需要在Device侧申请的workspace大小。
-  - executor（aclOpExecutor\**, 出参）：返回op执行器，包含了算子计算流程。
 
-- **返回值：**
+* **返回值**
 
-	aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
-  ```
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  
   第一段接口完成入参校验，出现以下场景时报错：
-  161001 (ACLNN_ERR_PARAM_NULLPTR):  传入的self、valuesOut或indicesOut是空指针。
-  161002 (ACLNN_ERR_PARAM_INVALID):  1. self、valuesOut或indicesOut的数据类型不在支持的范围之内, 或shape不相互匹配。
-                                     2. dim的取值不在输入tensor self的维度范围中。
-                                     3. k小于0或者k大于输入self在dim维度上的size大小。
-  ```
+  <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+    <col style="width: 276px">
+    <col style="width: 132px">
+    <col style="width: 836px">
+    </colgroup>
+    <thead>
+      <tr>
+      <th>返回值</th>
+      <th>错误码</th>
+      <th>描述</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+      <td>ACLNN_ERR_PARAM_NULLPTR</td>
+      <td>161001</td>
+      <td>传入的self、valuesOut或indicesOut是空指针。</td>
+      </tr>
+      <tr>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
+      <td>self、valuesOut或indicesOut的数据类型不在支持的范围之内, 或shape不相互匹配。</td>
+      </tr>
+      <tr>
+      <td>dim的取值不在输入tensor self的维度范围中。</td>
+      </tr>
+      <tr>
+      <td>k小于0或者k大于输入self在dim维度上的size大小。</td>
+      </tr>
+    </tbody>
+    </table>
 
 ## aclnnKthvalue
 
-- **参数说明：**
+- **参数说明**
+  <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+      <col style="width: 200px">
+      <col style="width: 162px">
+      <col style="width: 882px">
+      </colgroup>
+      <thead>
+      <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      </tr></thead>
+      <tbody>
+      <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+      </tr>
+      <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnKthvalueGetWorkspaceSize获取。</td>
+      </tr>
+      <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+      </tr>
+      <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+      </tr>
+      </tbody>
+    </table>
 
-  - workspace（void*, 入参）：在Device侧申请的workspace内存地址。
-  - workspaceSize（uint64_t, 入参）：在Device侧申请的workspace大小，由第一段接口aclnnKthvalueGetWorkspaceSize获取。
-  - executor（aclOpExecutor*, 入参）：op执行器，包含了算子计算流程。
-  - stream（aclrtStream, 入参）：指定执行任务的Stream。
-
-- **返回值：**
-
- 	aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+- **返回值**
+  
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
@@ -73,7 +237,9 @@
   - aclnnKthvalue默认确定性实现。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

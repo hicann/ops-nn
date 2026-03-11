@@ -1,5 +1,7 @@
 # aclnnFlip
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/reverse_v2)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -13,56 +15,192 @@
 
 ## 功能说明
 
-对n维张量的指定维度进行反转（倒序），dims中指定的每个轴的计算公式：
+- 接口功能：对n维张量的指定维度进行反转（倒序）。
+- 计算公式：
 
-$$
-\operatorname{out}(i_0, i_1,
-\ldots, i_{n-1}) = \operatorname{input}(j_0, j_1, \ldots, j_{n-1})
-$$
+  $$
+  \operatorname{out}(i_0, i_1, \ldots, i_{n-1}) = \operatorname{input}(j_0, j_1, \ldots, j_{n-1})
+  $$
 
-其中，$n$是输入张量的维度，$ j_k$ = $\operatorname{dimSize}(k)$ -1 - $i_k$，$\operatorname{dimSize}(k)$表示第$k$个轴的长度。
+  其中，$n$是输入张量的维度，$j_k = \operatorname{dimSize}(k) - 1 - i_k$，$\operatorname{dimSize}(k)$表示第$k$个轴的长度。
 
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnFlipGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnFlip”接口执行计算。
 
-- `aclnnStatus aclnnFlipGetWorkspaceSize(const aclTensor *self, const aclIntArray *dims, aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor)`
-- `aclnnStatus aclnnFlip(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`
+```Cpp
+aclnnStatus aclnnFlipGetWorkspaceSize(
+ const aclTensor*     self,
+ const aclIntArray*   dims,
+ aclTensor*           out,
+ uint64_t*            workspaceSize,
+ aclOpExecutor**      executor)
+```
+
+```Cpp
+aclnnStatus aclnnFlip(
+ void*             workspace,
+ uint64_t          workspaceSize,
+ aclOpExecutor*    executor,
+ const aclrtStream stream)
+```
 
 ## aclnnFlipGetWorkspaceSize
 
-- **参数说明：**
+* **参数说明**
 
-  - self(aclTensor*, 计算输入)：Device侧的aclTensor。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。支持[1, 8]维。
-     * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT、INT32、INT16、INT64、BOOL、INT8、UINT8、FLOAT64、COMPLEX64、COMPLEX128、BFLOAT16
-  - dims(aclIntArray*, 计算输入)：aclIntArray类型，数值类型支持INT64，表示需要翻转的轴，取值范围为[-self.dim(), self.dim())。
-  - out(aclTensor*, 计算输出)：Device侧的aclTensor，执行翻转后的tensor。维度与输入一致，shape和dtype与输入一致。
-    * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT、INT32、INT16、INT64、BOOL、INT8、UINT8、FLOAT64、COMPLEX64、COMPLEX128、BFLOAT16
-  - workspaceSize(uint64_t*, 出参)：返回需要在Device侧申请的workspace大小。
-  - executor(aclOpExecutor**, 出参)：返回op执行器，包含了算子计算流程。
+    <table style="undefined;table-layout: fixed; width: 1477px"><colgroup>
+    <col style="width: 147px">
+    <col style="width: 120px">
+    <col style="width: 233px">
+    <col style="width: 277px">
+    <col style="width: 270px">
+    <col style="width: 121px">
+    <col style="width: 164px">
+    <col style="width: 145px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+        <th>使用说明</th>
+        <th>数据类型</th>
+        <th>数据格式</th>
+        <th>维度(shape)</th>
+        <th>非连续Tensor</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>self</td>
+        <td>输入</td>
+        <td>-</td>
+        <td>-</td>
+        <td>FLOAT16、FLOAT、INT32、INT16、INT64、BOOL、INT8、UINT8、FLOAT64、COMPLEX64、COMPLEX128、BFLOAT16</td>
+        <td>ND</td>
+        <td>1-8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>dims</td>
+        <td>输入</td>
+        <td>aclIntArray类型，表示需要翻转的轴。</td>
+        <td>取值范围为[-self.dim(), self.dim())。</ul></td>
+        <td>INT64</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>out</td>
+        <td>输出</td>
+        <td>执行翻转后的tensor。</td>
+        <td>维度与输入一致，shape和dtype与输入一致。</td>
+        <td>与self一致</td>
+        <td>ND</td>
+        <td>1-8</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>workspaceSize</td>
+        <td>输出</td>
+        <td>返回需要在Device侧申请的workspace大小。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>executor</td>
+        <td>输出</td>
+        <td>返回op执行器，包含了算子计算流程。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+    </tbody></table>
 
-- **返回值：**
+    - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：不支持BFLOAT16数据类型。
+
+* **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
-  ```
+  
   第一段接口完成入参校验，出现以下场景时报错：
-  161001 ACLNN_ERR_PARAM_NULLPTR：1. 传入的self或out是空指针。
-  161002 ACLNN_ERR_PARAM_INVALID：1. self和out的数据类型和数据格式不在支持的范围之内。
-                                  2. self和out数据类型不一致。
-                                  3. self和out的shape不一致。
-  ```
+  <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+    <col style="width: 276px">
+    <col style="width: 132px">
+    <col style="width: 836px">
+    </colgroup>
+    <thead>
+      <tr>
+      <th>返回值</th>
+      <th>错误码</th>
+      <th>描述</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+      <td>ACLNN_ERR_PARAM_NULLPTR</td>
+      <td>161001</td>
+      <td>传入的self或out是空指针。</td>
+      </tr>
+      <tr>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
+      <td>self和out的数据类型和数据格式不在支持的范围之内。</td>
+      </tr>
+      <tr>
+      <td>self和out数据类型不一致。</td>
+      </tr>
+      <tr>
+      <td>self和out的shape不一致。</td>
+      </tr>
+    </tbody>
+    </table>
 
 ## aclnnFlip
-- **参数说明：**
 
-  - workspace(void*, 入参)：在Device侧申请的workspace内存地址。
-  - workspaceSize(uint64_t, 入参)：在Device侧申请的workspace大小，由第一段接口aclnnFlipGetWorkspaceSize获取。
-  - stream(aclrtStream, 入参)：指定执行任务的Stream。
-  - executor(OpExecutor*, 入参)：op执行器，包含了算子计算流程。
+- **参数说明**
+  <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+      <col style="width: 200px">
+      <col style="width: 162px">
+      <col style="width: 882px">
+      </colgroup>
+      <thead>
+      <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      </tr></thead>
+      <tbody>
+      <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+      </tr>
+      <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnFlipGetWorkspaceSize获取。</td>
+      </tr>
+      <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+      </tr>
+      <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+      </tr>
+      </tbody>
+    </table>
 
-- **返回值：**
-
+- **返回值**
+  
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
