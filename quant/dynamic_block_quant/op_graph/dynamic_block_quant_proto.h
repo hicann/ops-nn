@@ -22,7 +22,7 @@ namespace ge {
 * @brief Online quantizes the input tensor per block.
 
 * @par Inputs:
-- x: A tensor of type float16 or bfloat16. Shape must be 2-dimensional.
+- x: A tensor of type float16 or bfloat16. Shape must be 2-dimensional or 3-dimensional.
 
 * @par Attributes:
 - min_scale: (Optional) Minimum scale value for quantization. Must be a positive float.
@@ -36,14 +36,14 @@ namespace ge {
 *   - 35: FLOAT8_E5M2
 *   - 36: FLOAT8_E4M3FN
 *   Defaults to 35 (FLOAT8_E5M2).
-- row_block_size: (Optional) Number of elements per block in row dimension.
+- row_block_size: (Optional) Number of elements per block in -2 dimension.
 * Only support 1, 128, 256, 512. Defaults to 1.
-- col_block_size: (Optional) Number of elements per block in column dimension.
+- col_block_size: (Optional) Number of elements per block in -1 dimension.
 * Only support 64, 128, 192, 256. Defaults to 128.
 
 * @par Outputs:
 - y: Quantized tensor with same shape as input x. Data type depends on dst_type.
-- scale: Scale tensor of type float. Shape is [ceil(x.rows/row_block_size), ceil(x.cols/col_block_size)].
+- scale: Scale tensor of type float. Shape is [ceil(x.rows/row_block_size), ceil(x.cols/col_block_size)] or [B, ceil(x.rows/row_block_size), ceil(x.cols/col_block_size)].
 
 * @par Third-party framework compatibility:
 * Custom operator with no direct mapping in Caffe/ONNX/TensorFlow/PyTorch.

@@ -12,10 +12,9 @@
  * \file dynamic_block_quant_apt.cpp
  * \brief
  */
-#include "arch35/dynamic_block_quant_b8_kernel.h"
-#include "arch35/dynamic_block_quant_bf16_b8_kernel.h"
 #include "arch35/dynamic_block_quant_single_row_kernel.h"
 #include "arch35/dynamic_block_quant_large_blocksize_kernel.h"
+#include "arch35/dynamic_block_quant_small_blocksize_kernel.h"
 
 #define FLOAT_OVERFLOW_MODE_CTRL 60
 
@@ -60,35 +59,35 @@ __aicore__ inline void SingleUB(
     GM_ADDR x, GM_ADDR y, GM_ADDR scale, const DynamicBlockQuantTilingData& tilingData, TPipe& pipe)
 {
     if (TILING_KEY_IS(TILING_KEY_RINT_FP16_FP8E5M2_NORMAL)) {
-        DynamicBlockQuant::DynamicBlockQuantB8<half, fp8_e5m2_t, MODE_RINT> op(&pipe);
+        DynamicBlockQuant::DynamicBlockQuantSmallBlockSize<half, fp8_e5m2_t, MODE_RINT> op(&pipe);
         op.Init(x, y, scale, tilingData);
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_RINT_BF16_FP8E5M2_NORMAL)) {
-        DynamicBlockQuant::DynamicBlockQuantBF16B8<bfloat16_t, fp8_e5m2_t, MODE_RINT> op(&pipe);
+        DynamicBlockQuant::DynamicBlockQuantSmallBlockSize<bfloat16_t, fp8_e5m2_t, MODE_RINT> op(&pipe);
         op.Init(x, y, scale, tilingData);
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_RINT_FP16_FP8E4M3_NORMAL)) {
-        DynamicBlockQuant::DynamicBlockQuantB8<half, fp8_e4m3fn_t, MODE_RINT> op(&pipe);
+        DynamicBlockQuant::DynamicBlockQuantSmallBlockSize<half, fp8_e4m3fn_t, MODE_RINT> op(&pipe);
         op.Init(x, y, scale, tilingData);
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_RINT_BF16_FP8E4M3_NORMAL)) {
-        DynamicBlockQuant::DynamicBlockQuantBF16B8<bfloat16_t, fp8_e4m3fn_t, MODE_RINT> op(&pipe);
+        DynamicBlockQuant::DynamicBlockQuantSmallBlockSize<bfloat16_t, fp8_e4m3fn_t, MODE_RINT> op(&pipe);
         op.Init(x, y, scale, tilingData);
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_ROUND_FP16_FIFLOAT8_NORMAL)) {
-        DynamicBlockQuant::DynamicBlockQuantB8<half, hifloat8_t, MODE_ROUND> op(&pipe);
+        DynamicBlockQuant::DynamicBlockQuantSmallBlockSize<half, hifloat8_t, MODE_ROUND> op(&pipe);
         op.Init(x, y, scale, tilingData);
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_ROUND_BF16_FIFLOAT8_NORMAL)) {
-        DynamicBlockQuant::DynamicBlockQuantBF16B8<bfloat16_t, hifloat8_t, MODE_ROUND> op(&pipe);
+        DynamicBlockQuant::DynamicBlockQuantSmallBlockSize<bfloat16_t, hifloat8_t, MODE_ROUND> op(&pipe);
         op.Init(x, y, scale, tilingData);
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_HYBRID_FP16_FIFLOAT8_NORMAL)) {
-        DynamicBlockQuant::DynamicBlockQuantB8<half, hifloat8_t, MODE_HYBRID> op(&pipe);
+        DynamicBlockQuant::DynamicBlockQuantSmallBlockSize<half, hifloat8_t, MODE_HYBRID> op(&pipe);
         op.Init(x, y, scale, tilingData);
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_HYBRID_BF16_FIFLOAT8_NORMAL)) {
-        DynamicBlockQuant::DynamicBlockQuantBF16B8<bfloat16_t, hifloat8_t, MODE_HYBRID> op(&pipe);
+        DynamicBlockQuant::DynamicBlockQuantSmallBlockSize<bfloat16_t, hifloat8_t, MODE_HYBRID> op(&pipe);
         op.Init(x, y, scale, tilingData);
         op.Process();
     }

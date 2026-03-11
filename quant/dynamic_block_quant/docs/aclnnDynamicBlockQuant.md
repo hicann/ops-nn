@@ -194,7 +194,7 @@ aclnnStatus aclnnDynamicBlockQuant(
     - 参数`rowBlockSize`仅支持取值1。
     - 参数`yOut`的数据类型仅支持INT8。
   - <term>Ascend 950PR/Ascend 950DT</term>：
-    - 参数`x`、`yOut`、`scaleOut`的shape仅支持2维。
+    - 参数`x`、`yOut`、`scaleOut`的shape仅支持2维或3维。
     - 参数`roundModeOptional`的取值与参数`yOut`的数据类型存在对应关系：
       - 当输出`yOut`的数据类型是HIFLOAT8时，参数`roundModeOptional`支持设置为round。
       - 当输出`yOut`的数据类型是FLOAT8_E4M3FN、FLOAT8_E5M2时，参数`roundModeOptional`支持设置为rint。

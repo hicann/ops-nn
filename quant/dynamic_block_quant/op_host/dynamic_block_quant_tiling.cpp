@@ -44,7 +44,7 @@ constexpr int64_t N_BUFFER = 2;
 constexpr int64_t EXIST_NODE_NUM = 3;
 constexpr int64_t AXIS_NUM_AFTER_MERGE = 3;
 constexpr int64_t NEW_SHAPE_INDEX_TWO = 2;
-constexpr int64_t WORKSPACE_SIZE = 32;
+constexpr int64_t WORKSPACE_SIZE = 0;
 const std::set<ge::DataType> INPUT_SUPPORT_DTYPE_SET = {ge::DT_FLOAT16, ge::DT_BF16};
 const std::set<int64_t> DST_SUPPORT_DTYPE_SET = {34, 35, 36};
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_HIFLOAT8, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
@@ -85,7 +85,7 @@ inline static void PrintTilingData(const gert::TilingContext* context, DynamicBl
 roundMode:%ld, dstType:%ld, blockSizeRow:%ld, blockSizeCol:%ld, rowNum:%ld, colNum:%ld, rowBlockLoopNum:%ld, \
 colBlockLoopNum:%ld, rowUbBlockLoopNum:%ld, colUbBlockLoopNum:%ld, rowUbFactor:%ld, colUbFactor:%ld, \
 usedCoreNum:%ld, rowTileNum:%ld, colTileNum:%ld, normalCoreRowTileNum:%ld, \
-normalCoreColTileNum:%ld, tailCoreRowTileNum:%ld, tailCoreColTileNum:%ld",
+normalCoreColTileNum:%ld, tailCoreRowTileNum:%ld, tailCoreColTileNum:%ld, batchNum:%ld, singleBatchRowBlockLoopNum:%ld",
         tilingData.get_totalCoreNum(), tilingData.get_ubSize(), tilingData.get_vfLen(), tilingData.get_minScale(),
         tilingData.get_roundMode(), tilingData.get_dstType(), tilingData.get_blockSizeRow(),
         tilingData.get_blockSizeCol(), tilingData.get_rowNum(), tilingData.get_colNum(),
@@ -93,7 +93,7 @@ normalCoreColTileNum:%ld, tailCoreRowTileNum:%ld, tailCoreColTileNum:%ld",
         tilingData.get_colUbBlockLoopNum(), tilingData.get_rowUbFactor(), tilingData.get_colUbFactor(),
         tilingData.get_usedCoreNum(), tilingData.get_normalCoreRowTileNum(), tilingData.get_rowTileNum(),
         tilingData.get_colTileNum(), tilingData.get_normalCoreColTileNum(), tilingData.get_tailCoreRowTileNum(),
-        tilingData.get_tailCoreColTileNum());
+        tilingData.get_tailCoreColTileNum(), tilingData.get_batchNum(), tilingData.get_singleBatchRowBlockLoopNum());
 }
 
 static RoundModeList GetRoundMode(const std::string& roundMode)
@@ -222,19 +222,37 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Dyna
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
-        static_cast<int64_t>(xShape.GetDimNum()) != 2,
-        OP_LOGE(context, "The shape of x dim should be 2, please check."), return ge::GRAPH_FAILED);
+        static_cast<int64_t>(xShape.GetDimNum()) != 2 && static_cast<int64_t>(xShape.GetDimNum()) != 3,
+        OP_LOGE(context, "The shape of x dim should be 2 or 3, please check."), return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
-        (static_cast<int64_t>(scaleShape.GetDim(0)) !=
-         Ops::Base::CeilDiv(xShape.GetDim(0), tilingParam.blockSizeRow)) ||
-            (static_cast<int64_t>(scaleShape.GetDim(1)) !=
-             Ops::Base::CeilDiv(xShape.GetDim(1), tilingParam.blockSizeCol)),
+        static_cast<int64_t>(scaleShape.GetDimNum()) != 2 && static_cast<int64_t>(scaleShape.GetDimNum()) != 3,
+        OP_LOGE(context, "The shape of output scale dim should be 2 or 3, please check."), return ge::GRAPH_FAILED);
+
+    if (xShape.GetDimNum() == 2) {
+        OP_CHECK_IF(
+            (static_cast<int64_t>(scaleShape.GetDim(0)) !=
+            Ops::Base::CeilDiv(xShape.GetDim(0), tilingParam.blockSizeRow)) ||
+                (static_cast<int64_t>(scaleShape.GetDim(1)) !=
+                Ops::Base::CeilDiv(xShape.GetDim(1), tilingParam.blockSizeCol)),
         OP_LOGE(
             context,
-            "The shape of output scale must be same with [ceil(x.rows/row_block_size), ceil(x.cols/col_block_size)], "
+            "When the shape dim of x is 2, The shape of output scale must be same with [ceil(x.rows/row_block_size), ceil(x.cols/col_block_size)], "
             "please check."),
         return ge::GRAPH_FAILED);
+    } else if (xShape.GetDimNum() == 3) {
+        OP_CHECK_IF(
+            (static_cast<int64_t>(scaleShape.GetDim(0)) != static_cast<int64_t>(xShape.GetDim(0))) ||
+            (static_cast<int64_t>(scaleShape.GetDim(1)) !=
+            Ops::Base::CeilDiv(xShape.GetDim(1), tilingParam.blockSizeRow)) ||
+                (static_cast<int64_t>(scaleShape.GetDim(2)) !=
+                Ops::Base::CeilDiv(xShape.GetDim(2), tilingParam.blockSizeCol)),
+        OP_LOGE(
+            context,
+            "When the shape dim of x is 3, The shape of output scale must be same with [x.batch, ceil(x.rows/row_block_size), ceil(x.cols/col_block_size)], "
+            "please check."),
+        return ge::GRAPH_FAILED);
+    }
 
     return ge::GRAPH_SUCCESS;
 }
@@ -266,12 +284,18 @@ inline static void CalcTilingKey(DataType inputType, DataType outputType, Dynami
 
 static void CalcAxisSize(DynamicBlockQuantTilingParam& tilingParam, const gert::Shape& xShape)
 {
-    tilingParam.rowNum = 1;
-    for (size_t i = 0; i < xShape.GetDimNum() - 1; i++) {
-        tilingParam.rowNum *= xShape.GetDim(i);
+    if (xShape.GetDimNum() == 2) {
+        tilingParam.batchNum = 1;
+        tilingParam.rowNum = xShape.GetDim(0);
+        tilingParam.colNum = xShape.GetDim(xShape.GetDimNum() - 1);
     }
-    tilingParam.colNum = xShape.GetDim(xShape.GetDimNum() - 1);
-    tilingParam.rowBlockLoopNum = Ops::Base::CeilDiv(tilingParam.rowNum, tilingParam.blockSizeRow);
+    else {
+        tilingParam.batchNum = xShape.GetDim(0);
+        tilingParam.rowNum = xShape.GetDim(1);
+        tilingParam.colNum = xShape.GetDim(2);
+    }
+    tilingParam.singleBatchRowBlockLoopNum = Ops::Base::CeilDiv(tilingParam.rowNum, tilingParam.blockSizeRow);
+    tilingParam.rowBlockLoopNum = tilingParam.singleBatchRowBlockLoopNum * tilingParam.batchNum;
     tilingParam.colBlockLoopNum = Ops::Base::CeilDiv(tilingParam.colNum, tilingParam.blockSizeCol);
 }
 
@@ -281,24 +305,10 @@ inline static int64_t CalcPerBlockUbSize(DataType inputType, DynamicBlockQuantTi
 
     // 每个block需要的ub大小
     int64_t perBlockUbSize = 0;
-    if (tilingParam.blockSizeRow == 1) {
-        // input and output size
-        perBlockTmpUbSize += tilingParam.blockSizeRow * tilingParam.blockSizeCol * (BYTES_OF_INPUT_TYPE + BYTES_OF_OUTPUT_TYPE);
-        // scale size
-        perBlockUbSize = perBlockTmpUbSize + BLOCK_SIZE;
-    }
-    else if (inputType == DT_FLOAT16) {
-        // input and output size
-        perBlockTmpUbSize += tilingParam.blockSizeRow * tilingParam.blockSizeCol * (BYTES_OF_INPUT_TYPE * DIGIT_TWO + BYTES_OF_OUTPUT_TYPE);
-        // scale size
-        perBlockUbSize = perBlockTmpUbSize + BLOCK_SIZE / BYTES_OF_INPUT_TYPE * BYTES_OF_FLOAT_TYPE + BLOCK_SIZE;
-    }
-    else {
-        // input and output size
-        perBlockTmpUbSize += tilingParam.blockSizeRow * tilingParam.blockSizeCol * (BYTES_OF_INPUT_TYPE + BYTES_OF_OUTPUT_TYPE + BYTES_OF_FLOAT_TYPE);
-        // scale size
-        perBlockUbSize = perBlockTmpUbSize + BLOCK_SIZE * DIGIT_TWO;
-    }
+    // input and output size
+    perBlockTmpUbSize += tilingParam.blockSizeRow * tilingParam.blockSizeCol * (BYTES_OF_INPUT_TYPE + BYTES_OF_OUTPUT_TYPE);
+    // scale size
+    perBlockUbSize = perBlockTmpUbSize + BLOCK_SIZE;
 
     return perBlockUbSize;
 }
@@ -459,8 +469,10 @@ inline static void SetTilingData(
     tilingData.set_dstType(tilingParam.dstType);
     tilingData.set_blockSizeRow(tilingParam.blockSizeRow);
     tilingData.set_blockSizeCol(tilingParam.blockSizeCol);
+    tilingData.set_batchNum(tilingParam.batchNum);
     tilingData.set_rowNum(tilingParam.rowNum);
     tilingData.set_colNum(tilingParam.colNum);
+    tilingData.set_singleBatchRowBlockLoopNum(tilingParam.singleBatchRowBlockLoopNum);
     tilingData.set_rowBlockLoopNum(tilingParam.rowBlockLoopNum);
     tilingData.set_colBlockLoopNum(tilingParam.colBlockLoopNum);
     tilingData.set_rowUbBlockLoopNum(tilingParam.rowUbBlockLoopNum);

@@ -22,8 +22,68 @@ namespace ops {
 constexpr size_t INDEX_ATTR_DST_TYPE = 2;
 constexpr size_t INDEX_ATTR_ROW_BLOCK_SIZE = 3;
 constexpr size_t INDEX_ATTR_COL_BLOCK_SIZE = 4;
-constexpr size_t INPUT_DIM_NUM = 2;
+constexpr size_t INPUT_DIM_NUM_TOW = 2;
+constexpr size_t INPUT_DIM_NUM_THREE = 3;
 constexpr int64_t UNKNOWN_DIM_VALUE = -1;
+
+graphStatus CheckShape(gert::InferShapeContext* context, const gert::Shape* inputXShape, gert::Shape* scaleShape,
+    gert::Shape* outputShape, const int32_t* rowBlockSize, const int32_t* colBlockSize) {
+    if (inputXShape->GetDimNum() == INPUT_DIM_NUM_TOW) {
+        int64_t dim0 = inputXShape->GetDim(0);
+        int64_t dim1 = inputXShape->GetDim(1);
+
+        OP_LOGD(
+            context, "DynamicBlockQuant input shape is (%ld, %ld), rowBlockSize is %d, colBlockSize is %d",
+            dim0, dim1, *rowBlockSize, *colBlockSize);
+    
+        *outputShape = *inputXShape;
+        scaleShape->SetDimNum(INPUT_DIM_NUM_TOW);
+        if (dim0 == UNKNOWN_DIM_VALUE) {
+            scaleShape->SetDim(0, UNKNOWN_DIM_VALUE);
+        } else {
+            scaleShape->SetDim(0, Ops::Base::CeilDiv(dim0, static_cast<int64_t>(*rowBlockSize)));
+        }
+        if (dim1 == UNKNOWN_DIM_VALUE) {
+            scaleShape->SetDim(1, UNKNOWN_DIM_VALUE);
+        } else {
+            scaleShape->SetDim(1, Ops::Base::CeilDiv(dim1, static_cast<int64_t>(*colBlockSize)));
+        }
+    } else if (inputXShape->GetDimNum() == INPUT_DIM_NUM_THREE) {
+        int64_t dim0 = inputXShape->GetDim(0);
+        int64_t dim1 = inputXShape->GetDim(1);
+        int64_t dim2 = inputXShape->GetDim(2);
+        OP_LOGD(
+            context, "DynamicBlockQuant input shape is (%ld, %ld, %ld), rowBlockSize is %d, colBlockSize is %d",
+            dim0, dim1, dim2, *rowBlockSize, *colBlockSize);
+        
+        *outputShape = *inputXShape;
+        scaleShape->SetDimNum(INPUT_DIM_NUM_THREE);
+        
+        if (dim0 == UNKNOWN_DIM_VALUE) {
+            scaleShape->SetDim(0, UNKNOWN_DIM_VALUE);
+        } else {
+            scaleShape->SetDim(0, dim0);
+        }
+
+        if (dim1 == UNKNOWN_DIM_VALUE) {
+            scaleShape->SetDim(1, UNKNOWN_DIM_VALUE);
+        } else {
+            scaleShape->SetDim(1, Ops::Base::CeilDiv(dim1, static_cast<int64_t>(*rowBlockSize)));
+        }
+
+        if (dim2 == UNKNOWN_DIM_VALUE) {
+            scaleShape->SetDim(2, UNKNOWN_DIM_VALUE);
+        } else {
+            scaleShape->SetDim(2, Ops::Base::CeilDiv(dim2, static_cast<int64_t>(*colBlockSize)));
+        }
+    } else {
+        OP_LOGE(context, "only support input dim num is 2 or 3, infershape failed");
+        return ge::GRAPH_FAILED;
+    }
+
+    OP_LOGD(context, "End to do InferShapeForDynamicBlockQuant");
+    return ge::GRAPH_SUCCESS;
+}
 
 graphStatus InferShapeForDynamicBlockQuant(gert::InferShapeContext* context)
 {
@@ -41,6 +101,16 @@ graphStatus InferShapeForDynamicBlockQuant(gert::InferShapeContext* context)
     gert::Shape* scaleShape = context->GetOutputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, scaleShape);
 
+    if (rowBlockSize == nullptr || colBlockSize == nullptr) {
+        OP_LOGD(context, "rowBlockSize or colBlockSize is nullptr, please check!");
+        return ge::GRAPH_FAILED;
+    }
+
+    if ((*rowBlockSize) <= 0 || (*colBlockSize) <= 0) {
+        OP_LOGD(context, "rowBlockSize or colBlockSize is invalid, please check!");
+        return ge::GRAPH_FAILED;
+    }
+    
     if (Ops::Base::IsUnknownRank(*inputXShape)) {
         OP_LOGD(context, "input shape is UnknownRank, set y, scale shape to (-2, )");
         Ops::Base::SetUnknownRank(*outputShape);
@@ -48,33 +118,7 @@ graphStatus InferShapeForDynamicBlockQuant(gert::InferShapeContext* context)
         return ge::GRAPH_SUCCESS;
     }
 
-    if (inputXShape->GetDimNum() != INPUT_DIM_NUM) {
-        OP_LOGE(context, "only support input dim num is 2, infershape failed");
-        return ge::GRAPH_FAILED;
-    }
-
-    int64_t dim0 = inputXShape->GetDim(0);
-    int64_t dim1 = inputXShape->GetDim(1);
-
-    OP_LOGD(
-        context, "DynamicBlockQuant input shape is (%ld, %ld), rowBlockSize is %d, colBlockSize is %d",
-        dim0, dim1, *rowBlockSize, *colBlockSize);
-
-    *outputShape = *inputXShape;
-    scaleShape->SetDimNum(INPUT_DIM_NUM);
-    if (dim0 == UNKNOWN_DIM_VALUE) {
-        scaleShape->SetDim(0, UNKNOWN_DIM_VALUE);
-    } else {
-        scaleShape->SetDim(0, Ops::Base::CeilDiv(dim0, static_cast<int64_t>(*rowBlockSize)));
-    }
-    if (dim1 == UNKNOWN_DIM_VALUE) {
-        scaleShape->SetDim(1, UNKNOWN_DIM_VALUE);
-    } else {
-        scaleShape->SetDim(1, Ops::Base::CeilDiv(dim1, static_cast<int64_t>(*colBlockSize)));
-    }
-
-    OP_LOGD(context, "End to do InferShapeForDynamicBlockQuant");
-    return ge::GRAPH_SUCCESS;
+    return CheckShape(context, inputXShape, scaleShape, outputShape, rowBlockSize, colBlockSize);
 }
 
 ge::graphStatus InferDataTypeForDynamicBlockQuant(gert::InferDataTypeContext* context)
