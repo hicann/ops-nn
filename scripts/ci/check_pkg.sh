@@ -179,7 +179,7 @@ do
         if [[ "$dir" == "$name" ]]; then
             echo "--------------------------------"
             mkdir -p ${WORKSPACE}/single
-            cp build_out/cann-ops-nn-${name}-linux.*.run ${WORKSPACE}/single/
+            cp build_out/cann-ops-nn-${name}*.run ${WORKSPACE}/single/
             break
         fi
     done
@@ -209,7 +209,7 @@ ls
 #             if [[ "$dir" == "$name" ]]; then
 #                 echo "--------------------------------"
 #                 mkdir -p ${WORKSPACE}/single
-#                 cp build_out/cann-ops-nn-${name}-linux.*.run ${WORKSPACE}/single/
+#                 cp build_out/cann-ops-nn-${name}*.run ${WORKSPACE}/single/
 #                 break
 #             fi
 #         done

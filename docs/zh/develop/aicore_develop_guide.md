@@ -384,14 +384,14 @@ __aicore__ inline void AddExample<T>::Process()
     若提示如下信息，说明编译成功：
 
     ```bash
-    Self-extractable archive "cann-ops-nn-${vendor_name}-linux.${arch}.run" successfully created.
+    Self-extractable archive "cann-ops-nn-${vendor_name}_linux-${arch}.run" successfully created.
     ```
 
 3. **安装自定义算子包。**
 
     ```bash
     # 安装run包
-    ./build_out/cann-ops-nn-${vendor_name}-linux.${arch}.run
+    ./build_out/cann-ops-nn-${vendor_name}_linux-${arch}.run
     ```
     自定义算子包安装在```${ASCEND_HOME_PATH}/opp/vendors```路径中，```${ASCEND_HOME_PATH}```表示CANN软件安装目录，可提前在环境变量中配置。
 

@@ -60,14 +60,14 @@
 
     若\$\{vendor\_name\}和\$\{op\_list\}都不传入编译的是ops-nn包；若编译所有算子的自定义算子包，需传入\$\{vendor\_name\}。当提示如下信息，说明编译成功。
     ```bash
-    Self-extractable archive "cann-ops-nn-${vendor_name}-linux.${arch}.run" successfully created.
+    Self-extractable archive "cann-ops-nn-${vendor_name}_linux-${arch}.run" successfully created.
     ```
     编译成功后，run包存放于项目根目录的build_out目录下。
 
 2. **安装自定义算子包**
 
     ```bash
-    ./cann-ops-nn-${vendor_name}-linux.${arch}.run
+    ./cann-ops-nn-${vendor_name}_linux-${arch}.run
     ```
 
     自定义算子包安装路径为`${ASCEND_HOME_PATH}/opp/vendors`，\$\{ASCEND\_HOME\_PATH\}已通过环境变量配置，表示CANN toolkit包安装路径，一般为\$\{install\_path\}/cann。

@@ -82,7 +82,7 @@ if(ENABLE_CUSTOM)
   set(ES_INC_INSTALL_DIR              packages/vendors/${VENDOR_PACKAGE_NAME}/op_proto/es/include)
  	set(ES_LIB_INSTALL_DIR              packages/vendors/${VENDOR_PACKAGE_NAME}/op_proto/es/lib/linux/${CMAKE_SYSTEM_PROCESSOR})
   set(VERSION_INFO_INSTALL_DIR        packages/vendors/${VENDOR_PACKAGE_NAME}/)
-  set(PACK_CUSTOM_NAME                "cann-ops-nn-${VENDOR_NAME}-linux.${ARCH}")
+  set(PACK_CUSTOM_NAME                "cann-ops-nn-${VENDOR_NAME}_linux-${ARCH}")
 else()
   # built-in package install path
   set(ACLNN_INC_INSTALL_DIR           opp/include/aclnnop)

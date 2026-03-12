@@ -102,8 +102,7 @@ if(UT_TEST_ALL OR OP_API_UT)
               TARGET ${OP_API_UT_EXE}
               POST_BUILD
               COMMAND
-              env LD_PRELOAD=${API_PATH}
-              ${CMAKE_COMMAND} -E env LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH} ./${OP_API_UT_EXE}
+              ${CMAKE_COMMAND} -E env LD_PRELOAD=${API_PATH} LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH} ./${OP_API_UT_EXE}
               COMMENT "Run ops op_api utest"
       )
     endif()
