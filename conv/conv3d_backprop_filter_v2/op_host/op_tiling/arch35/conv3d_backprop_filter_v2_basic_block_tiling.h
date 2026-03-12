@@ -197,6 +197,8 @@ protected:
 
     void PrintBasickBlockTilingData();
 
+    bool PrintInputsAttrs(conv_bp_v2_kernel::TConv3DDwTiling& tiling);
+
     void SetBasicBlockAttrsTiling();
 
     void ShrinkBaseBlock();

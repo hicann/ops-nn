@@ -25,6 +25,7 @@
 #include "common/op_host/op_tiling/math_util.h"
 #include "conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_data.h"
 #include "conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_key.h"
+#include "conv/common/op_host/op_tiling/convbp_tiling_debug_util.h"
 
 using Ops::NN::Optiling::RecursiveSum;
 
@@ -32,6 +33,14 @@ namespace {
 constexpr size_t Y_INDEX = 2;
 constexpr size_t FILTER_INDEX = 0;
 constexpr size_t OUTPUT_BP_INDEX = 0;
+constexpr size_t FILTER_SIZE_INDEX = 1;
+const int32_t kFilterSizeDim = 1;
+const int32_t kConv3DbpDim = 5;
+const int32_t kPadsDim = 6;
+const int32_t strideIndex = 0;
+const int32_t dilationIndex = 2;
+const int32_t groupIndex = 3;
+const int32_t enabelHF32Index = 3;
 } // namespace
 
 namespace Ops {
@@ -1129,18 +1138,10 @@ void Conv3DDWV2BasicBlockTilingArch35::PrintTilingData()
 {
     conv_bp_v2_kernel::TConv3DDwTiling& tiling = tilingData_.dwTiling;
     std::stringstream ss;
+    // 删除shape stride dilation 相关打印 pads下移
     ss << "batch: " << tiling.batch << " cin: " << tiling.cin << " cout: " << tiling.cout
         << " cin1G: " << tiling.cin1G << " cout1G: " << tiling.cout1G
-        << " dout: " << tiling.dout << " ho: " << tiling.ho << " wo: " << tiling.wo
-        << " di: " << tiling.di << " hi: " << tiling.hi << " wi: " << tiling.wi
-        << " dk: " << tiling.dk << " hk: " << tiling.hk << " wk: " << tiling.wk
         << " group: " << tiling.group << " realGroup: " << tiling.realGroup
-        << " strideD: " << tiling.strideD << " strideH: " << tiling.strideH
-        << " strideW: " << tiling.strideW << " padFront: " << tiling.padFront
-        << " padBack: " << tiling.padBack << " padUp: " << tiling.padUp
-        << " padDown: " << tiling.padDown << " padLeft: " << tiling.padLeft
-        << " padRight: " << tiling.padRight << " dilationD: " << tiling.dilationD
-        << " dilationH: " << tiling.dilationH << " dilationW: " << tiling.dilationW
         << " channelSize: " << tiling.channelSize << " al0Pbuffer: " << tiling.al0Pbuffer
         << " bl0Pbuffer: " << tiling.bl0Pbuffer << " cl0Pbuffer: " << tiling.cl0Pbuffer
         << " al1Pbuffer: " << tiling.al1Pbuffer << " bl1Pbuffer: " << tiling.bl1Pbuffer
@@ -1154,6 +1155,41 @@ void Conv3DDWV2BasicBlockTilingArch35::PrintTilingData()
         << " splitWoSize: " << tiling.splitWo << " isSplitKernelHW: " << tiling.isSplitKernelHW
         << " singleCoreBatch: " << tiling.singleCoreBatch << " singleCoreCin: " << tiling.singleCoreCin;
     OP_LOGI(opName_, "api tiling: %s", ss.str().c_str());
+    PrintInputsAttrs(tiling);
+}
+
+bool Conv3DDWV2BasicBlockTilingArch35::PrintInputsAttrs(conv_bp_v2_kernel::TConv3DDwTiling& tiling){
+    const auto op_name = context_->GetNodeName();
+    auto inputInfo = GetTensorInfo(context_, OUTPUT_BP_INDEX, true, kConv3DbpDim);
+    auto filterSizesInfo = GetTensorInfo(context_, FILTER_SIZE_INDEX, true, kFilterSizeDim); // dw filter_size dim 1
+    auto outBackpropInfo = GetTensorInfo(context_, Y_INDEX, true, kConv3DbpDim);
+    auto outputInfo = GetTensorInfo(context_, FILTER_INDEX, false, kConv3DbpDim);
+
+    OP_LOGD(op_name, "input shape: %s, format: %s, dtype: %s; filter_sizes shape: %s, format: %s, dtype: %s; out_backprop shape: %s, format: %s, dtype: %s; output shape: %s, format: %s, dtype: %s;", 
+            DebugString(inputInfo.shape).c_str(), ge::TypeUtils::FormatToSerialString(inputInfo.format).c_str(), 
+            ge::TypeUtils::DataTypeToSerialString(inputInfo.dtype).c_str(),
+            DebugString(filterSizesInfo.shape).c_str(), ge::TypeUtils::FormatToSerialString(filterSizesInfo.format).c_str(), 
+            ge::TypeUtils::DataTypeToSerialString(filterSizesInfo.dtype).c_str(),
+            DebugString(outBackpropInfo.shape).c_str(), ge::TypeUtils::FormatToSerialString(outBackpropInfo.format).c_str(), 
+            ge::TypeUtils::DataTypeToSerialString(outBackpropInfo.dtype).c_str(),
+            DebugString(outputInfo.shape).c_str(), ge::TypeUtils::FormatToSerialString(outputInfo.format).c_str(), 
+            ge::TypeUtils::DataTypeToSerialString(outputInfo.dtype).c_str()
+            );
+
+    auto stridesShape = GetAttrVector(context_, strideIndex, kConv3DbpDim, "strides"); // stride idx 0
+    // pads打印需要修改，可能从padding获取
+    std::vector<int64_t> padsShape{tiling.padFront, tiling.padBack, tiling.padUp, tiling.padDown, tiling.padLeft, tiling.padRight};
+    auto dilationsShape = GetAttrVector(context_, dilationIndex, kConv3DbpDim, "dilations"); // dilation idx 2
+
+    auto attrs = context_->GetAttrs();
+    const auto groups = attrs->GetAttrPointer<int64_t>(groupIndex); // groups idx 3
+    const auto enableHf32 = attrs->GetAttrPointer<bool>(enabelHF32Index); // enable_hf32 idx 5
+    OP_CHECK_IF(groups == nullptr, OP_LOGE(op_name, "get groups from context fail."), return false);
+
+    OP_LOGD(op_name, "Attrs stride: %s, pads: %s, dilation: %s, groups: %ld, enable_hf32: %d.", 
+            DebugString(stridesShape).c_str(), DebugString(padsShape).c_str(), DebugString(dilationsShape).c_str(), 
+            *groups, *enableHf32);
+    return true;
 }
 
 void Conv3DDWV2BasicBlockTilingArch35::PrintBasickBlockTilingData()

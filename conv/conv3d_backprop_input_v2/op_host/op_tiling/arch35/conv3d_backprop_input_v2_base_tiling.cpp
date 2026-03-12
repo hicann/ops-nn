@@ -28,6 +28,7 @@
 #include "error_util.h"
 #include "conv/conv3d_backprop_input_v2/op_kernel/arch35/conv3d_backprop_input_v2/conv3d_backprop_input_v2_tiling_data.h"
 #include "conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2_arch35_tiling_key.h"
+#include "conv/common/op_host/op_tiling/convbp_tiling_debug_util.h"
 
 using Ops::NN::Optiling::RecursiveSum;
 
@@ -42,6 +43,12 @@ constexpr int32_t BUFFER_NUM_L1 = 4;
 constexpr float CORE_USED_THRESHOLD = 0.6f;
 constexpr uint64_t MAX_UINT16 = 65535;
 const int32_t FP32_FIXPIPE_BOUND_K_LIMIT = 528; // 理论值,输出fp32时,当 K >= 528 时才能不fixpipe bound
+const int32_t kInputSizeDim = 1;
+const int32_t kConv3DbpDim = 5;
+const int32_t kPadsDim = 6;
+const int32_t strideIndex = 0;
+const int32_t dilationIndex = 2;
+const int32_t groupIndex = 3;
 
 // 0: best base block; 1: threshold base block
 constexpr uint32_t BASE_BLOCK_TYPE_BEST = 0;
@@ -212,6 +219,52 @@ ge::graphStatus Conv3DBackpropInputV2TilingArch35::DoOpTiling()
     dtypeByteL0c_ = runInfo_.c_dtype_bytes;
 
     return ge::GRAPH_SUCCESS;
+}
+
+bool Conv3DBackpropInputV2TilingArch35::PrintInputsAttrs(conv_bp_v2_kernel::TConv3DInputV2Tiling& tiling){
+    const auto op_name = context_->GetNodeName();
+    size_t weight_index = (opType_ == optiling::OpTypeV2::kConv3DTransposeV2) ? TRANSPOSE_FILTER_INDEX : FILTER_INDEX; // dx filter idx 1 | transpose filter idx 2
+    size_t dedy_x_index = (opType_ == optiling::OpTypeV2::kConv3DTransposeV2) ? TRANSPOSE_X_INDEX : OUTPUT_BP_INDEX; // dx dedy idx 2 | transpose x idx 1
+    auto inputSizeInfo = GetTensorInfo(context_, INPUT_SIZE_INDEX, true, kInputSizeDim); // input_size dim=1
+    auto weightInfo = GetTensorInfo(context_, weight_index, true, kConv3DbpDim);
+    auto dedyInfo = GetTensorInfo(context_, dedy_x_index, true, kConv3DbpDim);
+    auto outputInfo = GetTensorInfo(context_, Y_INDEX, false, kConv3DbpDim);
+
+    OP_LOGD(op_name, "input_size shape: %s, format: %s, dtype: %s; filter shape: %s, format: %s, dtype: %s; out_backprop/x shape: %s, format: %s, dtype: %s; y shape: %s, format: %s, dtype: %s;", 
+            DebugString(inputSizeInfo.shape).c_str(), ge::TypeUtils::FormatToSerialString(inputSizeInfo.format).c_str(), 
+            ge::TypeUtils::DataTypeToSerialString(inputSizeInfo.dtype).c_str(),
+            DebugString(weightInfo.shape).c_str(), ge::TypeUtils::FormatToSerialString(weightInfo.format).c_str(), 
+            ge::TypeUtils::DataTypeToSerialString(weightInfo.dtype).c_str(),
+            DebugString(dedyInfo.shape).c_str(), ge::TypeUtils::FormatToSerialString(dedyInfo.format).c_str(), 
+            ge::TypeUtils::DataTypeToSerialString(dedyInfo.dtype).c_str(),
+            DebugString(outputInfo.shape).c_str(), ge::TypeUtils::FormatToSerialString(outputInfo.format).c_str(), 
+            ge::TypeUtils::DataTypeToSerialString(outputInfo.dtype).c_str()
+    );
+    
+    auto stridesShape = GetAttrVector(context_, strideIndex, kConv3DbpDim, "strides");
+    // pads打印需要修改，可能从padding获取
+    std::vector<int64_t> padsShape{tiling.padFront, tiling.padBack, tiling.padUp, tiling.padDown, tiling.padLeft, tiling.padRight};
+    auto dilationsShape = GetAttrVector(context_, dilationIndex, kConv3DbpDim, "dilations");
+    
+    auto attrs = context_->GetAttrs();
+    const auto groups = attrs->GetAttrPointer<int64_t>(groupIndex);
+    size_t enable_hf32_index = (opType_ == optiling::OpTypeV2::kConv3DTransposeV2) ? TRANSPOSE_ENABLE_HF32_INDEX : ENABLE_HF32_INDEX; // dx hf32 idx 5 | transpose hf32 idx 7
+    const auto enableHf32 = attrs->GetAttrPointer<bool>(enable_hf32_index);
+    OP_CHECK_IF(groups == nullptr, OP_LOGE(op_name, "get groups from context fail."), return false);
+    if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2){
+        auto output_paddingShape = GetAttrVector(context_, OUTPUT_PADDING_INDEX, kConv3DbpDim, "output_padding");
+        const auto offset = attrs->GetAttrPointer<bool>(OFFSET_X_INDEX);
+        OP_LOGD(op_name, "Attrs stride: %s, pads: %s, dilation: %s, groups: %ld, enable_hf32: %d, output_padding: %s, offset_x: %ld", 
+        DebugString(stridesShape).c_str(), DebugString(padsShape).c_str(), DebugString(dilationsShape).c_str(), 
+        *groups, *enableHf32, DebugString(output_paddingShape).c_str(), *offset);
+
+    } else {
+        OP_LOGD(op_name, "Attrs stride: %s, pads: %s, dilation: %s, groups: %ld, enable_hf32: %d.", 
+        DebugString(stridesShape).c_str(), DebugString(padsShape).c_str(), DebugString(dilationsShape).c_str(), 
+        *groups, *enableHf32);
+    }
+
+    return true;
 }
 
 ge::graphStatus Conv3DBackpropInputV2TilingArch35::DoLibApiTiling()
@@ -1029,6 +1082,7 @@ void Conv3DBackpropInputV2TilingArch35::PrintTilingData()
     conv_bp_v2_kernel::Conv3DBackpropInputV2Params& params = tilingData_.params;
     conv_bp_v2_kernel::TConv3DInputV2KSTiling& ksTiling = tilingData_.conv3DDxKSTiling;
     std::stringstream ss;
+    // 删除shape stride dilation 相关打印 pads下移
     ss << "batchDim: " << params.batchDim << " groupDim: " << params.groupDim
        << " mDim: " << params.mDim << " kDim: " << params.kDim << " nDim: " << params.nDim
        << " dDim: " << params.dDim << " coreNum: " << params.coreNum
@@ -1043,22 +1097,14 @@ void Conv3DBackpropInputV2TilingArch35::PrintTilingData()
        << " enlarge: " << static_cast<uint32_t>(tiling.enlarge)
        << " hf32Flag: " << static_cast<uint32_t>(tiling.hf32Flag)
        << " initOutputFlag: " << static_cast<uint32_t>(tiling.initOutputFlag)
-       << " isBiasFullLoad: " << static_cast<uint32_t>(tiling.isBiasFullLoad) << " batch: " << tiling.batch
+       << " isBiasFullLoad: " << static_cast<uint32_t>(tiling.isBiasFullLoad)
        << " cin: " << tiling.cin << " cout: " << tiling.cout << " cinG: " << tiling.cinG
        << " coutG: " << tiling.coutG << " cout1: " << tiling.cout1 << " cin1: " << tiling.cin1
-       << " cout1G: " << tiling.cout1G << " cin1G: " << tiling.cin1G << " dout: " << tiling.dout
-       << " ho: " << tiling.ho << " wo: " << tiling.wo << " di: " << tiling.di
-       << " hi: " << tiling.hi << " wi: " << tiling.wi << " dk: " << tiling.dk
-       << " hk: " << tiling.hk << " wk: " << tiling.wk << " group: " << tiling.group
-       << " oriGroup: " << tiling.oriGroup << " strideD: " << tiling.strideD
-       << " strideH: " << tiling.strideH << " strideW: " << tiling.strideW
-       << " padFront: " << tiling.padFront << " padBack: " << tiling.padBack
-       << " padUp: " << tiling.padUp << " padDown: " << tiling.padDown
-       << " padLeft: " << tiling.padLeft << " padRight: " << tiling.padRight
+       << " cout1G: " << tiling.cout1G << " cin1G: " << tiling.cin1G  
+       << " group: " << tiling.group << " oriGroup: " << tiling.oriGroup
        << " backpropPadTail: " << tiling.backpropPadTail << " backpropPadUp: " << tiling.backpropPadUp
        << " backpropPadDown: " << tiling.backpropPadDown << " backpropPadLeft: " << tiling.backpropPadLeft
-       << " backpropPadRight: " << tiling.backpropPadRight << " dilationD: " << tiling.dilationD
-       << " dilationH: " << tiling.dilationH << " dilationW: " << tiling.dilationW
+       << " backpropPadRight: " << tiling.backpropPadRight
        << " singleCoreGroup: " << tiling.singleCoreGroup << " singleCoreCout: " << tiling.singleCoreCout
        << " singleCoreCin: " << tiling.singleCoreCin << " singleCoreDin: " << tiling.singleCoreDin
        << " baseM: " << tiling.baseM << " baseK: " << tiling.baseK << " baseN: " << tiling.baseN
@@ -1068,6 +1114,7 @@ void Conv3DBackpropInputV2TilingArch35::PrintTilingData()
        << " enableVecTrans: " << static_cast<uint32_t>(tiling.enableVecTrans)
        << " kSCoutFullLoad: " << ksTiling.kSCoutFullLoad << " kSUseWorkSpace: " << ksTiling.kSUseWorkSpace;
     OP_LOGD(opName_, "api tiling: %s", ss.str().c_str());
+    PrintInputsAttrs(tiling);
 }
 
 REGISTER_TILING_TEMPLATE("Conv3DBackpropInputV2", Conv3DBackpropInputV2TilingArch35, 102);

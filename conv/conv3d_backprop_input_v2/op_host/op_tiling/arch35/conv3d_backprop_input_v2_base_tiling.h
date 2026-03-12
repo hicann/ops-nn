@@ -46,11 +46,15 @@ const size_t Y_INDEX = 0;
 const size_t INPUT_SIZE_INDEX = 0;
 const size_t FILTER_INDEX = 1;
 const size_t OUTPUT_BP_INDEX = 2;
+const size_t TRANSPOSE_X_INDEX = 1;
+const size_t TRANSPOSE_FILTER_INDEX = 2;
 const size_t BAIS_INDEX = 3;
 const size_t SCALE_INDEX = 4;
 const size_t OFFSET_W_INDEX = 4;
+const size_t ENABLE_HF32_INDEX = 5;
 const size_t OUTPUT_PADDING_INDEX = 5;
 const size_t OFFSET_X_INDEX = 6;
+const size_t TRANSPOSE_ENABLE_HF32_INDEX = 5;
 
 struct TilingValueDavid {
     uint64_t coreNum;
@@ -287,6 +291,7 @@ private:
     bool AnalyzeFuseDtype(const bool f16flag, const ge::DataType outputBackpropDtype,
         const ge::DataType filterDtype, const ge::DataType yDtype) const;
     bool CheckL0Size(uint32_t baseM, uint32_t baseN, uint32_t baseK, uint32_t l0Pbuffer = DB_ON);
+    bool PrintInputsAttrs(conv_bp_v2_kernel::TConv3DInputV2Tiling& tiling);
 };
 
 } // namespace Conv
