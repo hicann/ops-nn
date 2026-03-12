@@ -96,11 +96,15 @@ static bool CheckInputNotNull(
     return true;
 }
 
-static bool CheckOutputNotNull(aclTensor* y1Out, aclTensor* y2Out, const aclTensor* xOut)
+static bool CheckOutputNotNull(aclTensor* y1Out, aclTensor* y2Out, const aclTensor* xOut, const aclTensor* resOut)
 {
     OP_CHECK_NULL(y1Out, return false);
     OP_CHECK_NULL(y2Out, return false);
     OP_CHECK_NULL(xOut, return false);
+    if (nullptr != resOut) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The rmsNormOut tensor's should be nullptr in computeV1.");
+        return false;
+    }
     return true;
 }
 
@@ -330,7 +334,7 @@ static aclnnStatus CheckParams(
     CHECK_RET(CheckInputNotNull(inputTensor.x1, inputTensor.x2, inputTensor.gamma, inputTensor.scales1),
     ACLNN_ERR_PARAM_NULLPTR);
 
-    CHECK_RET(CheckOutputNotNull(outputTensor.y1Out, outputTensor.y2Out, outputTensor.xOut),
+    CHECK_RET(CheckOutputNotNull(outputTensor.y1Out, outputTensor.y2Out, outputTensor.xOut, outputTensor.resOut),
     ACLNN_ERR_PARAM_NULLPTR);
 
     // 3. 检查输入/输出的shape大小
@@ -630,7 +634,7 @@ const aclTensor* GetTensorContiguousV2(const aclTensor* opt, aclOpExecutor* exec
     return l0op::Contiguous(opt, executor);
 }
 
-bool CheckSupportV2(AddRmsNormQuantV2InputTensor& inputTensor, AddRmsNormQuantV2OutputTensor& outputTensor)
+bool CheckSupportV2(const AddRmsNormQuantV2InputTensor& inputTensor, const AddRmsNormQuantV2OutputTensor& outputTensor, const ParamStruct& paramStruct)
 {
     if ((GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B) &&
         (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93) &&
@@ -638,14 +642,38 @@ bool CheckSupportV2(AddRmsNormQuantV2InputTensor& inputTensor, AddRmsNormQuantV2
         return false;
     }
 
-    if (inputTensor.gamma->GetViewShape().GetDimNum() == 1 && inputTensor.gamma->GetViewShape().GetDim(0) == 1 && inputTensor.betaOptional == nullptr &&
-            outputTensor.resOut == nullptr) {
+    // V2不支持传入s2和z2，不支持divMode为false
+    if (inputTensor.zeroPoints2Optional != nullptr || inputTensor.scales2Optional != nullptr || paramStruct.divMode == false) {
+        OP_LOGD("Go addRmsNormQuantV1 because z2/s2/divMode are not supported.");
         return false;
     }
-    if (inputTensor.zeroPoints1Optional != nullptr && inputTensor.zeroPoints1Optional->GetViewShape().GetDimNum() == 1 && inputTensor.zeroPoints1Optional->GetViewShape().GetDim(0) == 1 &&
-            inputTensor.scales1->GetViewShape().GetDimNum() == 1 && inputTensor.scales1->GetViewShape().GetDim(0) == 1 && ((inputTensor.gamma->GetViewShape().GetDimNum() == DIM_TWO &&
-            inputTensor.gamma->GetViewShape().GetDim(0) == 1 && inputTensor.gamma->GetViewShape().GetDim(1) == inputTensor.x1->GetViewShape().GetDim(inputTensor.x1->GetViewShape().GetDimNum() - 1)) ||
-            (inputTensor.gamma->GetViewShape().GetDimNum() == 1 && inputTensor.gamma->GetViewShape().GetDim(0) == inputTensor.x1->GetViewShape().GetDim(inputTensor.x1->GetViewShape().GetDimNum() - 1)))) {
+
+    if (inputTensor.gamma->GetViewShape().GetDimNum() == 1 && inputTensor.gamma->GetViewShape().GetDim(0) == 1 && inputTensor.betaOptional == nullptr &&
+            outputTensor.resOut == nullptr) {
+        OP_LOGD("Go addRmsNormQuantV1 because gamma/beta/rmsNormOut are not supported.");
+        return false;
+    }
+    bool isGammaOk = ((
+        inputTensor.gamma->GetViewShape().GetDimNum() == DIM_TWO && 
+        inputTensor.gamma->GetViewShape().GetDim(0) == 1 && 
+        inputTensor.gamma->GetViewShape().GetDim(1) == inputTensor.x1->GetViewShape().GetDim(inputTensor.x1->GetViewShape().GetDimNum() - 1)
+    ) || (
+        inputTensor.gamma->GetViewShape().GetDimNum() == 1 && 
+        inputTensor.gamma->GetViewShape().GetDim(0) == inputTensor.x1->GetViewShape().GetDim(inputTensor.x1->GetViewShape().GetDimNum() - 1)
+    ));
+    bool isScales1OK = inputTensor.scales1->GetViewShape().GetDimNum() == 1 && 
+                       inputTensor.scales1->GetViewShape().GetDim(0) == 1;
+    bool iszeroPoints1OK = inputTensor.zeroPoints1Optional != nullptr && 
+                           inputTensor.zeroPoints1Optional->GetViewShape().GetDimNum() == 1 && 
+                           inputTensor.zeroPoints1Optional->GetViewShape().GetDim(0) == 1;
+    bool isBetaOk = (inputTensor.betaOptional == nullptr && 
+                     outputTensor.resOut != nullptr && 
+                     outputTensor.xOut == nullptr) || 
+                    (inputTensor.betaOptional != nullptr && 
+                     outputTensor.resOut == nullptr && 
+                     outputTensor.xOut != nullptr
+                    );
+    if (isGammaOk && isScales1OK && iszeroPoints1OK && isBetaOk) {
         return true;
     }
     return false;
@@ -715,10 +743,12 @@ aclnnStatus aclnnAddRmsNormQuantV2GetWorkspaceSize(
     AddRmsNormQuantV2ACLNN::AddRmsNormQuantV2InputTensor inputTensor = {x1Cont, x2Cont, gammaCont, biasCont, s1Cont, s2Cont, z1Cont, z2Cont};
     AddRmsNormQuantV2ACLNN::ParamStruct paramStruct = {axis, epsilon, divMode};
 
-    if (AddRmsNormQuantV2ACLNN::CheckSupportV2(inputTensor, outputTensor)) {
+    if (AddRmsNormQuantV2ACLNN::CheckSupportV2(inputTensor, outputTensor, paramStruct)) {
+        OP_LOGD("Enter ComputeAddRmsNormQuantV2 ...");
         ret = AddRmsNormQuantV2ACLNN::ComputeAddRmsNormQuantV2(inputTensor, outputTensor, paramStruct, uniqueExecutorForV2.get());
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
     } else if (outputTensor.xOut != nullptr) {
+        OP_LOGD("Enter ComputeAddRmsNormQuantV1 ...");
         ret = AddRmsNormQuantV2ACLNN::ComputeAddRmsNormQuantV1(inputTensor, outputTensor, paramStruct, uniqueExecutorForV2.get());
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
     } else {
