@@ -476,7 +476,7 @@ x2 need to satisfy the relationship: ceil(k_x2, 128) == k_x2Scale, actual k_x2 i
     return true;
 }
 
-bool QuantMatmulChecker::ReCalcGroupSize(int64_t inputSize, int64_t scaleSize, int64_t &groupSize,
+bool QuantMatmulChecker::ReCalcGroupSize(int64_t inputSize, int64_t scaleSize, uint64_t &groupSize,
                                          const char *dimensionName) const
 {
     if (scaleSize == 0ULL) {
@@ -519,9 +519,9 @@ bool QuantMatmulChecker::InferGroupSize(int64_t &groupSize)
     auto x2ScaleDimNum = x2Scale->GetViewShape().GetDimNum();
     auto transX1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(boolsTrans_);
     auto transX2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(boolsTrans_);
-    int64_t groupSizeK = static_cast<int64_t>(static_cast<uint64_t>(groupSize) & GROUP_MNK_BIT_SIZE);
-    int64_t groupSizeN = static_cast<int64_t>((static_cast<uint64_t>(groupSize) >> GROUP_N_OFFSET) & GROUP_MNK_BIT_SIZE);
-    int64_t groupSizeM = static_cast<int64_t>((static_cast<uint64_t>(groupSize) >> GROUP_M_OFFSET) & GROUP_MNK_BIT_SIZE);
+    uint64_t groupSizeK = static_cast<uint64_t>(groupSize) & GROUP_MNK_BIT_SIZE;
+    uint64_t groupSizeN = (static_cast<uint64_t>(groupSize) >> GROUP_N_OFFSET) & GROUP_MNK_BIT_SIZE;
+    uint64_t groupSizeM = (static_cast<uint64_t>(groupSize) >> GROUP_M_OFFSET) & GROUP_MNK_BIT_SIZE;
     auto inputSizeM = transX1 ? x1->GetViewShape().GetDim(x1DimNum - 1) : x1->GetViewShape().GetDim(x1DimNum - PENULTIMATE_DIM);
     auto scaleSizeM = 0;
     if (IsMicroScaling(x1Scale, x2Scale)) {

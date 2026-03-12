@@ -74,7 +74,7 @@ private:
     std::string GetX1ScaleName() const;
     std::string GetX2ScaleName() const;
     std::string GetX2OffsetName() const;
-    bool ReCalcGroupSize(int64_t inputSize, int64_t scaleSize, int64_t &groupSize, const char *dimensionName) const;
+    bool ReCalcGroupSize(int64_t inputSize, int64_t scaleSize, uint64_t &groupSize, const char *dimensionName) const;
 
 public:
     const TupleInput inputTensors_;
