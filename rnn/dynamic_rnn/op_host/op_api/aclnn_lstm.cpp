@@ -1246,6 +1246,13 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
+    // 空tensor处理
+    if (input->IsEmpty()) {
+        *workspaceSize = 0;
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
+
     // 固定写法，参数检查
     auto ret = CheckParams(input, params, hx, has_biases, numLayers, train, bidirectional, batch_first, output, hy, cy,
             iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut);
