@@ -15,7 +15,8 @@
 
 ## 功能说明
 
-接口功能：完成[aclnnPreluBackward](../../p_relu_grad_update/docs/aclnnPreluBackward.md)的反向函数。
+接口功能：完成[aclnnPreluBackward](../../p_relu_grad_update/docs/aclnnPreluBackward.md)的反向计算。
+
 gradInput的计算公式如下：
 
 $$
@@ -202,7 +203,7 @@ aclnnStatus aclnnPreluBackward(
       <td>weight的元素个数为1时，gradWeight的shape与weight不相同。</td>
     </tr>
     <tr>
-      <td>gradOutput和self的shape不满足条件（支持broadcast同时broadcastshape等于self, 即单向broadcast）。</td>
+      <td>gradOutput和self的shape不满足条件broadcastshape条件。</td>
     </tr>
   </tbody></table>
 
