@@ -96,7 +96,7 @@ inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2,
         }
         return true;
     }
-    
+
     // Regular ND format checks
     OP_CHECK_DTYPE_NOT_SUPPORT(x1, x1_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(x2, x2_SUPPORT_LIST, return false);
@@ -116,7 +116,8 @@ inline static bool CheckScaleValid(const aclTensor* scale, int64_t batchN)
         auto dimTensorScale = scale->GetViewShape().GetDimNum();
         int64_t scaleDim = scale->GetViewShape().GetDim(0);
         if ((dimTensorScale != 1) || (scaleDim != batchN)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dimTensorScale[%zu] != 1 or Scale dim != batch mul N", dimTensorScale);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "dimTensorScale[%zu] != 1 or the length of the first dim of scale != batch mul N", dimTensorScale);
             return false;
         }
         if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510 && scaleDim >= SUPPORTED_INNER_AXIS) {
