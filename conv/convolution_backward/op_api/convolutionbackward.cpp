@@ -38,6 +38,7 @@ const int64_t H_DIM_NCDHW_INDEX = 3;
 const int64_t W_DIM_NCDHW_INDEX = 4;
 const FVector<int64_t> OUTPUT_BACKPROP_N2H_SHAPE_DIMS = {3, 2, 0, 4, 1};
 const FVector<int64_t> WEIGHT_N2H_SHAPE_DIMS = {0, 2, 3, 4, 1};
+const FVector<int64_t> WEIGHT_TRANSPOSE_SHAPE_DIMS = {0, 2, 3, 4, 1};
 constexpr int64_t C1_DIM_NDC1HWC0_INDEX = 2;
 constexpr int64_t C0_DIM_NDC1HWC0_INDEX = 5;
 constexpr uint32_t BASIC_BLOCK_SIZE_128 = 128;
@@ -57,6 +58,9 @@ constexpr int64_t W_IN_TRANSPOSE_N2H_RULE_MAX = 64;
 constexpr int64_t W_K_TRANSPOSE_N2H_RULE_MAX = 10;
 constexpr int64_t N2H_W_IN_SIXTY = 60;
 constexpr int64_t N2H_W_IN_FORTY = 40;
+constexpr int64_t C_IN_TRANSPOSE_LIMIT_MIN = 16;
+constexpr int64_t C_IN_TRANSPOSE_LIMIT_MAX = 32;
+constexpr float MAX_CIN_MULTIPLIER = 1.5f;
 
 const vector<vector<int64_t>> CONV2D_BACKPROP_INPUT_CAST_WHITE_LIST =
 {
@@ -2063,6 +2067,40 @@ static bool CheckN2HEnable(const aclTensor *weight, aclTensor *&output,
     return CheckN2HNativeAttrAvailable(weight, output);
 }
 
+static bool CheckWeightPreTransposeEnable(const aclTensor *weight, int groups) {
+    OP_LOGD("Enter CheckWeightPreTransposeEnable.");
+    
+    if (groups > 1 || weight->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
+        return false;
+    }
+
+    auto dataType = weight->GetDataType();
+    if (dataType != op::DataType::DT_FLOAT && dataType != op::DataType::DT_FLOAT16 && dataType != op::DataType::DT_BF16) {
+        return false;
+    }
+
+    auto weightShape = weight->GetOriginalShape();
+    for (size_t i = 0; i < weightShape.GetDimNum(); i++) {
+        if (weightShape[i] <= 0) {
+            return false;
+        }
+    }
+
+    uint64_t cout = weightShape[N_DIM_NCDHW_INDEX];
+    uint64_t cin = weightShape[C_DIM_NCDHW_INDEX];
+    uint64_t dk = weightShape[D_DIM_NCDHW_INDEX];
+    uint64_t hk = weightShape[H_DIM_NCDHW_INDEX];
+    uint64_t wk = weightShape[W_DIM_NCDHW_INDEX];
+    if (dk * hk * wk <= 1) {
+        return false;
+    }
+
+    if ((cin != C_IN_TRANSPOSE_LIMIT_MIN && cin < C_IN_TRANSPOSE_LIMIT_MAX) || cin <= dk * hk * wk) {
+        return false;
+    }
+    return (cout > cin) ? (cout < MAX_CIN_MULTIPLIER * cin) : (cin < MAX_CIN_MULTIPLIER * cout);
+}
+
 static aclnnStatus N2HOptimize(const aclTensor *&weight, const aclTensor *&outBackprop,
                                aclTensor *&output, aclIntArray *&stride5, aclOpExecutor *executor) {
     OP_LOGD("Enable N2H optimize.");
@@ -2147,6 +2185,21 @@ static aclnnStatus Conv3DBackpropInputWithFlag(const aclTensor *input, const acl
           return ACLNN_ERR_INNER_NULLPTR;
       }
   }
+
+  if (CheckWeightPreTransposeEnable(weight, groups)) {
+      OP_LOGD("Conv3d backpropInput v2 support weight pre transpose.");
+      // transpose weight NCDHW -> NDHWC
+      auto permAfter = executor->AllocIntArray(WEIGHT_TRANSPOSE_SHAPE_DIMS.data(), WEIGHT_TRANSPOSE_SHAPE_DIMS.size());
+      CHECK_RET(permAfter != nullptr, ACLNN_ERR_INNER_NULLPTR);
+      weight = l0op::Transpose(weight, permAfter, executor);
+
+      // change weight format
+      CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
+      const_cast<aclTensor*>(weight)->SetOriginalFormat(Format::FORMAT_NDHWC);
+      const_cast<aclTensor*>(weight)->SetStorageFormat(Format::FORMAT_NDHWC);
+      const_cast<aclTensor*>(weight)->SetViewFormat(Format::FORMAT_NDHWC);
+  }
+
   L0_DFX(Conv3DBackpropInputWithFlag, input, weight, outBackprop, stride, padding, dilation, groups, useHf32Flag, output);
   if (useV2Flag) {
     bool enableHf32 = (outBackprop->GetDataType() == DataType::DT_FLOAT) && (useHf32Flag == 0x40);

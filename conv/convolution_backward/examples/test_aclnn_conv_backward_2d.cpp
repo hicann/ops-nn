@@ -116,8 +116,8 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
     // 2. 构造输入与输出，需要根据API的接口自定义构造
     std::vector<int64_t> gradOutputShape = {4, 320, 80, 80};
-    std::vector<int64_t> inputShape = {4, 320, 80, 80};
-    std::vector<int64_t> weightShape = {320, 320, 3, 3};
+    std::vector<int64_t> inputShape = {4, 30, 80, 80};
+    std::vector<int64_t> weightShape = {320, 30, 3, 3};
     std::vector<int64_t> biasSize = {320};
     std::vector<int64_t> stride = {1, 1};
     std::vector<int64_t> padding = {1,1};
@@ -128,8 +128,8 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
     bool outputMask[3] = {true, true, true};
     int8_t cubeMathType = 1;
 
-    std::vector<int64_t> gradInputShape = {4, 320, 80, 80};
-    std::vector<int64_t> gradWeightShape = {320, 320, 3, 3};
+    std::vector<int64_t> gradInputShape = {4, 30, 80, 80};
+    std::vector<int64_t> gradWeightShape = {320, 30, 3, 3};
     std::vector<int64_t> gradBiasShape = {320};
 
     // 创建gradOutput aclTensor

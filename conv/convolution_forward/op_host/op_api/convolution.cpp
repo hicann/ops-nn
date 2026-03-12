@@ -1117,7 +1117,7 @@ static bool CheckPreTransposeEnable(const aclTensor *weight, int groups) {
     }
 
     auto dataType = weight->GetDataType();
-    if (dataType != op::DataType::DT_FLOAT && dataType != op::DataType::DT_FLOAT16) {
+    if (dataType != op::DataType::DT_FLOAT && dataType != op::DataType::DT_FLOAT16 && dataType != op::DataType::DT_BF16) {
         return false;
     }
 
