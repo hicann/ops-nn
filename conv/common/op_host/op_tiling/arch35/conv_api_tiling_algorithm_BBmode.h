@@ -116,7 +116,7 @@ public:
     public:
         bool GetL1LoadStrategy(ConvTilingAlgorithmBBmode* bbPtr) override;
         bool GetL1LoadTilingParams(ConvTilingAlgorithmBBmode* bbPtr) override;
-        bool MultiLoadKAllSplit(ConvTilingAlgorithmBBmode* bbPtr);
+        bool MultiLoadKAllSplit(ConvTilingAlgorithmBBmode* bbPtr) const;
         bool MultiLoadKAllSplit(ConvTilingAlgorithmBBmode* bbPtr, const Kl1MultiAxis& kL1MultiAxis) const;
         int64_t GetCinL1(ConvTilingAlgorithmBBmode* bbPtr) const;
     };
