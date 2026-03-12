@@ -312,7 +312,7 @@ __aicore__ inline void KernelAvgPool3dMultiW<T, QUEUE_DEPTH>::Init(
 template <typename T, int32_t QUEUE_DEPTH>
 __aicore__ inline void KernelAvgPool3dMultiW<T, QUEUE_DEPTH>::Process() {
 #if __CCE_AICORE__ < 220
-    AvgPool3d::HandleAtomicAdd(pool);
+    AvgPool3d::HandleAtomicAdd(poolMem);
 #endif
     int64_t curWindowWNum = windowWNum;
     for (int64_t outputPointIdx = poolMem.outputPointOffset, count = 0;
