@@ -1214,10 +1214,12 @@ norm-c@ops-nn:
       kernel_style: null
     unrelease:
       test_code:
+        - ops/ops-nn/norm/*/docs/
         - ops/ops-nn/norm/*/examples/
         - ops/ops-nn/norm/*/tests/
         - ops/ops-nn/conv/deformable_conv2d/examples/
         - ops/ops-nn/conv/deformable_conv2d/tests/
+        - ops/ops-nn/conv/deformable_conv2d/docs/
       non_delivery: null
       open_source: null
 
