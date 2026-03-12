@@ -202,7 +202,7 @@ aclnnStatus aclnnGeGluV3(
       <td>self、out、outGelu的维数大于8。</td>
     </tr>
     <tr>
-      <td>当self.dim()=0时，dim的取值不在[-1, 0]范围内或者out、outGelu不为标量Tensor；当self.dim()>0时，dim取值不在[-self.dim, self.dim()-1]范围内。</td>
+      <td>当self.dim()=0时，dim的取值不在[-1, 0]范围内；当self.dim()>0时，dim取值不在[-self.dim, self.dim()-1]范围内。</td>
     </tr>
     <tr>
       <td>out、outGelu的shape跟self的shape除了dim指定的轴外需要保持一致，dim指定的轴为self的shape对应轴的一半。</td>
