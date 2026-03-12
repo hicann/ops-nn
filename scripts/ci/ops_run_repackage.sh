@@ -111,7 +111,7 @@ log "Working in temporary directory: $(pwd)"
 
 # 2. 拷贝 xx/kernel 下所有 .run 文件（重命名防重名）
 counter=1
-find "$RUN_PACKAGE_SAVE_AB_PATH" -name "cann-*-custom_operator_group*.run" -type f | while read -r runfile; do
+find "$RUN_PACKAGE_SAVE_AB_PATH" -name "cann-*custom_operator_group*.run" -type f | while read -r runfile; do
      # 获取父级目录名（basename of dirname）
     parent_dir=$(basename "$(dirname "$runfile")")
 
