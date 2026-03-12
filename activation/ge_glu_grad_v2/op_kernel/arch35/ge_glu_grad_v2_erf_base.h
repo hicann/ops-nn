@@ -173,6 +173,7 @@ protected:
     TBuf<QuePosition::VECCALC> resultTempBuf1;
     TBuf<QuePosition::VECCALC> resultTempBuf2;
     TBuf<QuePosition::VECCALC> resultTempBuf4;
+    TBuf<QuePosition::VECCALC> resultTempBuf5;
 
     int32_t perBlockCount = 0;
     int32_t dtypeSize = 0;
@@ -302,7 +303,7 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::ComputeCDF(
     LocalTensor<float>& y, LocalTensor<float>& x, const int64_t& realProcCount)
 {
     LocalTensor<float> t1 = resultTempBuf2.Get<float>();
-    LocalTensor<float> t2 = resultTempBuf4.Get<float>();
+    LocalTensor<float> t2 = resultTempBuf5.Get<float>();
 
     Muls(y, x, COEFFICIENT_1, realProcCount);
 

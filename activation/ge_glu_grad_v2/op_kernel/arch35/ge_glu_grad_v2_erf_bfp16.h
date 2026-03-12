@@ -67,6 +67,7 @@ __aicore__ inline void GeGluGradV2ErfBFP16::Init()
     pipe->InitBuffer(resultTempBuf1, maxProcCount * sizeof(float));
     pipe->InitBuffer(resultTempBuf2, maxProcCount * sizeof(float));
     pipe->InitBuffer(resultTempBuf4, maxProcCount * sizeof(float));
+    pipe->InitBuffer(resultTempBuf5, maxProcCount * sizeof(float));
 }
 
 __aicore__ inline void GeGluGradV2ErfBFP16::ComputeLeftHalf(const int64_t& realProcCount)
