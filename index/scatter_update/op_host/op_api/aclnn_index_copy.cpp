@@ -229,7 +229,7 @@ static const aclTensor* TransposeBySpecifiedAxis(const aclTensor* self, int64_t 
   return selfTransposed;
 }
 
-static aclnnStatus ContiguousAndReshapeParams(aclTensor* selfRef, int64_t& dim, const aclTensor* index, const aclTensor* source,
+static aclnnStatus ContiguousAndReshapeParams(const aclTensor* selfRef, int64_t& dim, const aclTensor* index, const aclTensor* source,
                                                      aclOpExecutor* uniqueExecutor, const aclTensor*& selfContiguous,
                                                      const aclTensor*& indexContiguous, const aclTensor*& sourceContiguous,
                                                      const aclTensor*& selfRefReShape, const aclTensor*& indexReShape, const aclTensor*& sourceReShape, const op::Shape& rowVector) {
