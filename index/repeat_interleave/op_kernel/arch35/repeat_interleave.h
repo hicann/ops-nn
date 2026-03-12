@@ -220,12 +220,12 @@ __aicore__ inline void RepeatInterleaveImpl<T, U>::CopyXToMatchOut(int64_t start
             xOutLocal = xOutQueue_.AllocTensor<T>();
             xOutQueue_.EnQue(xOutLocal);
         }
-        if (copyToMatchOutNum_ > tilingData_.ubFactor - tailRepeatTimes * tilingData_.mergedDims[2]) {
-            CopyMatchOutToY();
+        CopyOneCpToRepeatOut(xInLocal, tailRepeatTimes);
+        CopyMatchOutToY();
+        if (likely(repeatDimIdx < cpCount - 1)) {
             xOutLocal = xOutQueue_.AllocTensor<T>();
             xOutQueue_.EnQue(xOutLocal);
         }
-        CopyOneCpToRepeatOut(xInLocal, tailRepeatTimes);
         copyFromXNum_ += tilingData_.mergedDims[2];
     }
     xInQueue_.FreeTensor(xInLocal);
@@ -316,12 +316,10 @@ __aicore__ inline void RepeatInterleaveImpl<T, U>::ProcessCpMatchToUb(int64_t st
         handleStartCpIdx = startCpIdx + loopIdx * mainCpNum;
         CopyInX(handleStartCpIdx, 0, mainCpNum * tilingData_.mergedDims[2]);
         CopyXToMatchOut(handleStartCpIdx, mainCpNum);
-        CopyMatchOutToY();
     }
     handleStartCpIdx = startCpIdx + (loopSize - 1) * mainCpNum;
     CopyInX(handleStartCpIdx, 0, tailCpNum * tilingData_.mergedDims[2]);
     CopyXToMatchOut(handleStartCpIdx, tailCpNum);
-    CopyMatchOutToY();
 }
 
 template <typename T, typename U>
