@@ -197,7 +197,7 @@ __global__ __aicore__ void fused_mat_mul(
     using bLayout = std::conditional_t<bTran, layout::ColumnMajor, layout::RowMajor>;
 
     if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL) { // 基础API
-        if constexpr (OPTYPE == F_OPTYPE_NONE) {
+        if constexpr (OPTYPE == F_OPTYPE_NONE) { // opType=empty
             if constexpr (BATCH_ITER_MODEL == MAT_MUL_ITER_BATCH_SINGLE_BIAS) {
                 if constexpr (L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
                     GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3IterBatchBasicTilingData, tilingData, tilingGM);
@@ -270,7 +270,67 @@ __global__ __aicore__ void fused_mat_mul(
             } else {
                 static_assert(AscendC::Std::always_false_v<decltype(MODEL)>, "not support yet");
             }
-        } else if constexpr (OPTYPE == F_OPTYPE_RELU) {
+        } else if constexpr (OPTYPE == F_OPTYPE_16CAST32) { // 新增opType=16cast32场景 kernel同opType=empty
+            if constexpr (MODEL == MAT_MUL_BASIC) {
+                if constexpr (FULL_LOAD == MAT_MUL_NO_FULL_LOAD) {
+                    if constexpr (L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
+                        GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
+                        MatmulV3Advanced::MatMulActKernel<
+                            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
+                            MAT_MUL_NO_FULL_LOAD, OP_TYPE_EMPTY>(x1GM, x2GM, biasGM, yGM, nullptr, tilingData);
+                    } else if constexpr (L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
+                        GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
+                        MatmulV3Advanced::MatMulFixpipeOptiActKernel<
+                            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
+                            MAT_MUL_NO_FULL_LOAD, OP_TYPE_EMPTY>(x1GM, x2GM, biasGM, yGM, workspaceGM, tilingData);
+                    } else {
+                        static_assert(AscendC::Std::always_false_v<decltype(L0C2OUT_MODEL)>, "not support yet");
+                    }
+                } else if constexpr (FULL_LOAD == MAT_MUL_A_FULL_LOAD) {
+                    // 仅支持 on the fly
+                    if constexpr (L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
+                        GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
+                        MatmulV3Advanced::MatMulActKernel<
+                            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
+                            A_FULL_LOAD_MODE, OP_TYPE_EMPTY>(x1GM, x2GM, biasGM, yGM, nullptr, tilingData);
+                    } else {
+                        static_assert(AscendC::Std::always_false_v<decltype(L0C2OUT_MODEL)>, "not support yet");
+                    }
+                } else if constexpr (FULL_LOAD == MAT_MUL_B_FULL_LOAD) {
+                    if constexpr (L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
+                        GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
+                        MatmulV3Advanced::MatMulActKernel<
+                            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
+                            B_FULL_LOAD_MODE, OP_TYPE_EMPTY>(x1GM, x2GM, biasGM, yGM, nullptr, tilingData);
+                    } else if constexpr (L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
+                        GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
+                        MatmulV3Advanced::MatMulFixpipeOptiActKernel<
+                            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
+                            B_FULL_LOAD_MODE, OP_TYPE_EMPTY>(x1GM, x2GM, biasGM, yGM, workspaceGM, tilingData);
+                    } else {
+                        static_assert(AscendC::Std::always_false_v<decltype(L0C2OUT_MODEL)>, "not support yet");
+                    }
+                } else {
+                    static_assert(AscendC::Std::always_false_v<decltype(FULL_LOAD)>, "not support yet");
+                }
+            } else if constexpr (MODEL == MAT_MUL_STREAM_K) {
+                if constexpr (L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
+                    GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
+                    MatMulStreamKActKernel<
+                        DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
+                        MatMulL0C2Out::ON_THE_FLY, OP_TYPE_EMPTY>(x1GM, x2GM, biasGM, yGM, workspaceGM, tilingData);
+                } else if constexpr (L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
+                    GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
+                    MatMulStreamKActKernel<
+                        DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
+                        MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_EMPTY>(x1GM, x2GM, biasGM, yGM, workspaceGM, tilingData);
+                } else {
+                    static_assert(AscendC::Std::always_false_v<decltype(L0C2OUT_MODEL)>, "not support yet");
+                }
+            } else {
+                static_assert(AscendC::Std::always_false_v<decltype(MODEL)>, "not support yet");
+            }
+        } else if constexpr (OPTYPE == F_OPTYPE_RELU) { // Relu
             if constexpr (MODEL == MAT_MUL_BASIC) {
                 if constexpr (FULL_LOAD == MAT_MUL_NO_FULL_LOAD) {
                     if constexpr (L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
@@ -330,7 +390,7 @@ __global__ __aicore__ void fused_mat_mul(
             } else {
                 static_assert(AscendC::Std::always_false_v<decltype(MODEL)>, "not support yet");
             }
-        } else if constexpr (OPTYPE == F_OPTYPE_ADD) {
+        } else if constexpr (OPTYPE == F_OPTYPE_ADD) { // Add
             if constexpr (BATCH_ITER_MODEL == MAT_MUL_ITER_BATCH_SINGLE_BIAS) {
                 if constexpr (L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
                     GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3IterBatchBasicTilingData, tilingData, tilingGM);
@@ -355,7 +415,7 @@ __global__ __aicore__ void fused_mat_mul(
             } else { // 不支持非Basic
                 static_assert(AscendC::Std::always_false_v<decltype(MODEL)>, "not support yet");
             }
-        } else if constexpr (OPTYPE == F_OPTYPE_MUL) {
+        } else if constexpr (OPTYPE == F_OPTYPE_MUL) { // Mul
             if constexpr (MODEL == MAT_MUL_BASIC) {
                 if constexpr (
                     L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY || L0C2OUT_MODEL == MAT_MUL_1V1_ND_ALIG_FIXPIPE ||

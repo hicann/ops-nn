@@ -36,23 +36,33 @@ const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_BUILT_IN = {
 static constexpr size_t DIM_LEN_MIN = 2;
 static constexpr size_t DIM_LEN_MAX = 3;
 
-bool IsBuiltInScene(const char* fusedOpType)
-{
-    return std::strcmp(fusedOpType, "") == 0 || std::strcmp(fusedOpType, "relu") == 0 ||
-           std::strcmp(fusedOpType, "add") == 0 || std::strcmp(fusedOpType, "mul") == 0;
+static const std::vector<const char*> kAllSupportedOpTypes = {"", "16cast32", "add", "mul", "gelu_erf", 
+    "gelu_tanh", "relu"};
+static const std::vector<const char*> kSupportedBiasOpTypes = {"", "16cast32", "relu", "add", "mul"};
+static const std::vector<const char*> kSupportedFp32OpTypes = {"", "relu", "add", "mul"};
+static const std::vector<const char*> kSupportedX3OpTypes = {"add", "mul"};
+static const std::vector<const char*> kSupportedIn16CastOut32OpTypes = {"16cast32"};
+
+bool IsInSupportedOpTypes(const char* fusedOpType, const std::vector<const char*>& types) {
+    for (const auto& type : types) {
+        if (type && fusedOpType && strcmp(fusedOpType, type) == 0) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // 校验fusedOpType是否合法
 bool CheckFusedOpType(const char* fusedOpType)
 {
-    if (std::strcmp(fusedOpType, "") != 0 && std::strcmp(fusedOpType, "add") != 0 &&
-        std::strcmp(fusedOpType, "mul") != 0 && std::strcmp(fusedOpType, "gelu_erf") != 0 &&
-        std::strcmp(fusedOpType, "gelu_tanh") != 0 && std::strcmp(fusedOpType, "relu") != 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "fusedOpType must be in the type of /add/mul/gelu_erf/gelu_tanh/relu");
+    if (!IsInSupportedOpTypes(fusedOpType, kAllSupportedOpTypes)) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "fusedOpType must be in the type of /16cast32/add/mul/gelu_erf/gelu_tanh/relu");
         return false;
     }
     return true;
 }
+
 // 校验是否为空指针
 bool CheckNotNull(
     const aclTensor* x, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3, const char* fusedOpType,
@@ -60,11 +70,11 @@ bool CheckNotNull(
 {
     OP_CHECK_NULL(x, return false);
     OP_CHECK_NULL(x2, return false);
-    if (bias != nullptr && !IsBuiltInScene(fusedOpType)) {
+    if (bias != nullptr && !IsInSupportedOpTypes(fusedOpType, kSupportedBiasOpTypes)) {
         OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "bias is not supported right now");
         return false;
     }
-    if (std::strcmp(fusedOpType, "add") == 0 || std::strcmp(fusedOpType, "mul") == 0) {
+    if (IsInSupportedOpTypes(fusedOpType, kSupportedX3OpTypes)) {
         OP_CHECK_NULL(x3, return false);
     }
     OP_CHECK_NULL(y, return false);
@@ -72,7 +82,7 @@ bool CheckNotNull(
 }
 
 static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, int8_t cubeMathType)
-{
+{   
     bool selfFloat = self->GetDataType() == DataType::DT_FLOAT;
     bool mat2Float = mat2->GetDataType() == DataType::DT_FLOAT;
     auto promoteType = selfFloat || mat2Float ? DataType::DT_FLOAT : self->GetDataType();
@@ -114,18 +124,24 @@ static bool CheckDtypeValid(
     const aclTensor* x, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3, const char* fusedOpType,
     const aclTensor* y)
 {
-    auto dtypeSupportList = IsBuiltInScene(fusedOpType) ? DTYPE_SUPPORT_LIST_BUILT_IN : DTYPE_SUPPORT_LIST;
+    auto dtypeSupportList =
+        IsInSupportedOpTypes(fusedOpType, kSupportedFp32OpTypes) ? DTYPE_SUPPORT_LIST_BUILT_IN : DTYPE_SUPPORT_LIST;
     // 检查x的数据类型是否在fusedmatmul算子的支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(x, dtypeSupportList, return false);
     // 检查x2的数据类型是否在fusedmatmul算子的支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(x2, dtypeSupportList, return false);
-    // 检查y的数据类型是否在fusedmatmul算子的支持列表内
-    OP_CHECK_DTYPE_NOT_SUPPORT(y, dtypeSupportList, return false);
-
     // x和x2数据类型必须一样
     OP_CHECK_DTYPE_NOT_MATCH(x2, x->GetDataType(), return false);
-    // x和y数据类型必须一样
-    OP_CHECK_DTYPE_NOT_MATCH(y, x->GetDataType(), return false);
+    if (IsInSupportedOpTypes(fusedOpType, kSupportedIn16CastOut32OpTypes)) {
+        // y fp32 x1=x2=fp16|bf16
+        std::initializer_list<op::DataType> yDtypeSupportList{op::DataType::DT_FLOAT};
+        OP_CHECK_DTYPE_NOT_SUPPORT(y, yDtypeSupportList, return false);
+    } else {
+        // 检查y的数据类型是否在fusedmatmul算子的支持列表内
+        OP_CHECK_DTYPE_NOT_SUPPORT(y, dtypeSupportList, return false);
+        // x和y数据类型必须一样
+        OP_CHECK_DTYPE_NOT_MATCH(y, x->GetDataType(), return false);
+    }
     if (bias != nullptr) {
         std::initializer_list<op::DataType> biasDtypeSupportList{x->GetDataType(), op::DataType::DT_FLOAT};
         OP_CHECK_DTYPE_NOT_SUPPORT(bias, biasDtypeSupportList, return false);
@@ -153,7 +169,8 @@ static inline bool CheckShape(const aclTensor* x, const aclTensor* x2, const acl
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
             "x dimension and x2 dimension should be the same, but x dimension is %d, x2 dimension is %d.",
-            x3->GetViewShape().GetDimNum(), y->GetViewShape().GetDimNum());
+            x->GetViewShape().GetDimNum(), x2->GetViewShape().GetDimNum());
+        return false;
     }
 
     // check dimensions of x and y must be same
@@ -161,7 +178,8 @@ static inline bool CheckShape(const aclTensor* x, const aclTensor* x2, const acl
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
             "x dimension and x2 dimension should be the same, but x dimension is %d, y dimension is %d.",
-            x3->GetViewShape().GetDimNum(), y->GetViewShape().GetDimNum());
+            x->GetViewShape().GetDimNum(), y->GetViewShape().GetDimNum());
+        return false;
     }
 
     if (x3 != nullptr) {
@@ -238,6 +256,10 @@ static const aclTensor* BuildFusedMatMulGraph(
     }
     // 解析当前规格matmulop支持的dtype、format能力
     MmOpInfo mmOpInfo = GetMatmulOpInfo(x, x2, cubeMathType);
+    // 输出fp32
+    if (IsInSupportedOpTypes(fusedOpType, kSupportedIn16CastOut32OpTypes)) {
+        mmOpInfo.ori_info.output_dtype = DataType::DT_FLOAT;
+    }
     // 左输入非连续转连续
     auto selfCastOut = x;
     bool selfCastRes =
@@ -260,9 +282,16 @@ static const aclTensor* BuildFusedMatMulGraph(
         contiguousX3 = l0op::Contiguous(x3, executor);
         CHECK_RET(contiguousX3 != nullptr, nullptr);
     }
-    const aclTensor* mmOut = l0op::FusedMatMulNd(
-        selfCastOut, mat2CastOut, contiguousBias, contiguousX3, mmOpInfo.shapeInfo.transposeX1,
-        mmOpInfo.shapeInfo.transposeX2, mmOpInfo.enableHf32, fusedOpType, executor);
+    const aclTensor* mmOut = nullptr;
+    if (std::strcmp(fusedOpType, "16cast32") == 0) {
+        mmOut = l0op::FusedMatMul16Cast32(
+            selfCastOut, mat2CastOut, contiguousBias, contiguousX3, mmOpInfo.shapeInfo.transposeX1,
+            mmOpInfo.shapeInfo.transposeX2, mmOpInfo.enableHf32, fusedOpType, executor);
+    } else {
+        mmOut = l0op::FusedMatMulNd(
+            selfCastOut, mat2CastOut, contiguousBias, contiguousX3, mmOpInfo.shapeInfo.transposeX1,
+            mmOpInfo.shapeInfo.transposeX2, mmOpInfo.enableHf32, fusedOpType, executor);
+    }
     CHECK_RET(mmOut != nullptr, nullptr);
     // output cast
     auto castOut = l0op::Cast(mmOut, mmOpInfo.ori_info.output_dtype, executor);

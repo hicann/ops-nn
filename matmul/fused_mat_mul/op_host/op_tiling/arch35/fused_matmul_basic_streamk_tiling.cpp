@@ -31,8 +31,8 @@ bool FusedMatMulStreamKTiling::IsCapable()
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
-    // Only relu and "" support streamK
-    if (opType != "relu" && opType != "") {
+    // Only relu and "" and 16cast32 support streamK
+    if (FusedOpTypeSupportStreamK.find(opType) == FusedOpTypeSupportStreamK.end()) {
         return false;
     }
     return MatMulV3BasicStreamKTiling::IsCapable();

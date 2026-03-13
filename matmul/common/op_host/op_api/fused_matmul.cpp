@@ -53,4 +53,15 @@ const aclTensor* FusedMatMulNd(
         x1, x2, bias, x3, x1->GetDataType(), Format::FORMAT_ND, Format::FORMAT_ND, transposeX1, transposeX2, enableHf32,
         fusedOpType, executor);
 };
+
+const aclTensor* FusedMatMul16Cast32(
+    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3, bool transposeX1,
+    bool transposeX2, bool enableHf32, const char* fusedOpType, aclOpExecutor* executor)
+{
+    L0_DFX(FusedMatMul16Cast32);
+    // output dtype FP32
+    return FusedMatMulCommon(
+        x1, x2, bias, x3, DataType::DT_FLOAT, Format::FORMAT_ND, Format::FORMAT_ND, transposeX1, transposeX2,
+        enableHf32, fusedOpType, executor);
+};
 } // namespace l0op

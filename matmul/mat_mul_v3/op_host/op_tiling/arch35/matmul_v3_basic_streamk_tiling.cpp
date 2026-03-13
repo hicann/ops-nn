@@ -241,7 +241,6 @@ ge::graphStatus MatMulV3BasicStreamKTiling::GetTilingData(TilingResult& tiling) 
         return GetTilingDataImpl<MatMulV3BasicTilingData>(tiling);
     }
     return ge::GRAPH_FAILED;
-    ;
 }
 } // namespace matmul_v3
 } // namespace optiling

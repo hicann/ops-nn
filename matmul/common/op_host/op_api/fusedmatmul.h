@@ -17,6 +17,10 @@ const aclTensor* FusedMatMulNd(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3, bool transposeX1,
     bool transposeX2, bool enableHf32, const char* fusedOpType, aclOpExecutor* executor);
 
+const aclTensor* FusedMatMul16Cast32(
+    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3, bool transposeX1,
+    bool transposeX2, bool enableHf32, const char* fusedOpType, aclOpExecutor* executor);
+
 } // namespace l0op
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_FUSEDMATMUL_OP_H_

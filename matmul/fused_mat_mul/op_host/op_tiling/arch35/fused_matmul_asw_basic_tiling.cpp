@@ -55,6 +55,7 @@ ge::graphStatus FusedMatMulAswBasicApiTiling::DoOpTiling() {
         runInfo_.depthB1 = runInfo_.stepKb * DB_SIZE;
         return ge::GRAPH_SUCCESS;
     }
+    // 16cast32 "" 等支持基础API全载模板
     ge::graphStatus status = MatMulV3BasicAswtTiling::DoOpTiling();
     if (l0C2Out_ == MatMulV3L0C2Out::ND_FIXPIPE_1_1) {
         l0C2Out_ = MatMulV3L0C2Out::ON_THE_FLY;

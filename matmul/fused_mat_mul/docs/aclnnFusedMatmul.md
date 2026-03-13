@@ -248,7 +248,7 @@ aclnnStatus aclnnFusedMatmul(
         <td>fusedOpType为add、mul时，x3的shape不跟输出shape保持一致。</td>
       </tr>
       <tr>
-        <td>传入的fusedOpType不属于""、"add"、"mul"、"gelu_tanh"、"gelu_erf"以及"relu"中的一种。</td>
+        <td>传入的fusedOpType不属于""、"16cast32"、"add"、"mul"、"gelu_tanh"、"gelu_erf"以及"relu"中的一种。</td>
       </tr>
       <tr>
         <td>x1和x2无法做数据类型推导。</td>
@@ -305,6 +305,7 @@ aclnnStatus aclnnFusedMatmul(
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnFusedMatmul默认确定性实现。
 
 - 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2、x3的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"、"add"、"mul"时, x1、x2、x3的数据类型必须为FLOAT32(cubeMathType只支持3)、BFLOAT16、FLOAT16。
+- 当fusedOpType取值为"16cast32"时，输出y的数据类型必须为FLOAT32。
 
 ## 调用示例
 

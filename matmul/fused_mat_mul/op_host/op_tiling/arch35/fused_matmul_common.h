@@ -15,6 +15,7 @@
 #ifndef __OP_HOST_FUSED_MATMUL_COMMON_H__
 #define __OP_HOST_FUSED_MATMUL_COMMON_H__
 #include <map>
+#include <set>
 #include "matmul/fused_mat_mul/op_kernel/arch35/fused_mat_mul_tilingkey.h"
 
 namespace optiling {
@@ -48,6 +49,7 @@ enum class FusedOpType : std::uint8_t
     GELU_ERF = F_OPTYPE_GELU_ERF,
     GELU_TANH = F_OPTYPE_GELU_TANH,
     RELU = F_OPTYPE_RELU,
+    CAST32 = F_OPTYPE_16CAST32,
 };
 
 const std::map<std::string, FusedOpType> FUSED_OP_TYPE_MAP = {
@@ -56,7 +58,10 @@ const std::map<std::string, FusedOpType> FUSED_OP_TYPE_MAP = {
     {"mul", FusedOpType::MUL},
     {"gelu_erf", FusedOpType::GELU_ERF},
     {"gelu_tanh", FusedOpType::GELU_TANH},
-    {"relu", FusedOpType::RELU}};
+    {"relu", FusedOpType::RELU},
+    {"16cast32", FusedOpType::CAST32}};
+
+const std::set<std::string> FusedOpTypeSupportStreamK = {"", "relu", "16cast32"};
 
 } // namespace optiling
 #endif // __OP_HOST_FUSED_MATMUL_COMMON_H__

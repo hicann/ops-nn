@@ -44,6 +44,13 @@ static const std::vector<std::vector<ge::DataType>> DTYPE_SUPPORT_LIST_DAV_3510 
     {ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16},
     {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT}};
 
+static const std::vector<std::vector<ge::DataType>> CAST32_DTYPE_SUPPORT_LIST = {
+    // x1,              x2,             y,               bias            x3
+    {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT16},
+    {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16},
+    {ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_BF16},
+    {ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_BF16}};
+
 inline void GetDtype(const gert::TilingContext& context, MatMulV3Args& args, NpuArch npuArch)
 {
     args.aType = context.GetInputDesc(0)->GetDataType();
@@ -65,7 +72,7 @@ inline void GetDtype(const gert::TilingContext& context, MatMulV3Args& args, Npu
     }
 }
 
-ge::graphStatus IsValidDtype(const MatMulV3Args& args, NpuArch npuArch)
+ge::graphStatus IsValidDtype(const gert::TilingContext& context, const MatMulV3Args& args, NpuArch npuArch)
 {
     std::vector<ge::DataType> dtype = {args.aType, args.bType, args.cType};
     if (args.hasBias) {
@@ -76,8 +83,13 @@ ge::graphStatus IsValidDtype(const MatMulV3Args& args, NpuArch npuArch)
         dtype.push_back(args.x3Type);
     }
 
+    auto attrs = context.GetAttrs();
+    std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
     // check dtype
     auto supportList = (npuArch == NpuArch::DAV_3510) ? DTYPE_SUPPORT_LIST_DAV_3510 : DTYPE_SUPPORT_LIST_RESERVED;
+    if (opType == "16cast32") {
+        supportList = CAST32_DTYPE_SUPPORT_LIST;
+    }
     for (auto& supported : supportList) {
         if (std::equal(dtype.begin(), dtype.end(), supported.begin())) {
             return ge::GRAPH_SUCCESS;
@@ -147,7 +159,7 @@ ge::graphStatus OpSpecificCheck(
     }
 
     // dtype check
-    return IsValidDtype(args, npuArch);
+    return IsValidDtype(context, args, npuArch);
 }
 } // namespace
 

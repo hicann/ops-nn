@@ -46,7 +46,7 @@ inline ge::graphStatus GenSimplifiedKey(gert::TilingContext* context, ge::char_t
     auto yDataType = context->GetOutputDesc(0)->GetDataType();
     auto biasDataType = x1DataType;
     auto x3Format = yFormat;
-    auto x3DataType = yDataType;
+    auto x3DataType = x1DataType;
     // 二进制发布json有无bias场景合并为同一个json发布，当无法获取bias信息时，当前约定使用input0的信息代替
     if (context->GetOptionalInputDesc(BIAS_INDEX) != nullptr) {
         biasDataType = context->GetOptionalInputDesc(BIAS_INDEX)->GetDataType();

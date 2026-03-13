@@ -27,6 +27,20 @@ const int kMatmulV2MaxShapeSize = 3;
 const int kFusedMatMulX3Idx = 3;
 const int kOutputIdx = 0;
 
+const std::vector<const char*> kAllSupportedOpTypes = {"", "16cast32", "add", "mul", "gelu_erf", 
+    "gelu_tanh", "relu"};
+const std::vector<const char*> kSupportedBiasOpTypes = {"", "16cast32", "relu", "add", "mul"};
+const std::vector<const char*> kSupportedX3OpTypes = {"add", "mul"};
+
+bool IsInSupportedOpTypes(const char* fusedOpType, const std::vector<const char*>& types) {
+    for (const auto& type : types) {
+        if (type && fusedOpType && strcmp(fusedOpType, type) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 ge::graphStatus InferShapeForFusedMatMul(InferShapeContext* context)
 {
     OP_CHECK_IF(context == nullptr, CUBE_INNER_ERR_REPORT("FusedMatmul", "context is null"), return ge::GRAPH_FAILED);
@@ -57,32 +71,31 @@ ge::graphStatus InferShapeForFusedMatMul(InferShapeContext* context)
         dtype == ge::DT_FLOAT && !(*enable_hf32),
         CUBE_INNER_ERR_REPORT(op_name, "fusedmatmul is only supported bf16/fp16/hf32, do not surrport fp32."),
         return ge::GRAPH_FAILED);
+    // OpType合法性校验
     OP_CHECK_IF(
-        (strcmp(fused_op_type, "") != 0 && strcmp(fused_op_type, "add") != 0 && strcmp(fused_op_type, "mul") != 0 &&
-         strcmp(fused_op_type, "gelu_erf") != 0 && strcmp(fused_op_type, "gelu_tanh") != 0 &&
-         strcmp(fused_op_type, "relu") != 0),
-        CUBE_INNER_ERR_REPORT(op_name, "fusedOpType must be in the type of /add/mul/gelu_erf/gelu_tanh/relu"),
+        !IsInSupportedOpTypes(fused_op_type, kAllSupportedOpTypes),
+        CUBE_INNER_ERR_REPORT(
+            op_name, "fusedOpType must be in the type of ''/16cast32/add/mul/gelu_erf/gelu_tanh/relu"),
         return ge::GRAPH_FAILED);
-    // bias拦截
-    if (strcmp(fused_op_type, "") != 0 && strcmp(fused_op_type, "relu") != 0 && strcmp(fused_op_type, "add") != 0 &&
-        strcmp(fused_op_type, "mul") != 0) {
+    // 不支持bias的OpType拦截bias
+    if (!IsInSupportedOpTypes(fused_op_type, kSupportedBiasOpTypes)) {
         OP_CHECK_IF(
             shape_bias != nullptr && shape_bias->GetDimNum() != 0,
             CUBE_INNER_ERR_REPORT(op_name, "not support bias in fused_op_type gelu_erf/gelu_tanh"),
             return ge::GRAPH_FAILED);
     }
-    // x3输入拦截
-    if (strcmp(fused_op_type, "add") == 0 || strcmp(fused_op_type, "mul") == 0) {
+    // 支持x3输入的OpType拦截x3为空
+    if (IsInSupportedOpTypes(fused_op_type, kSupportedX3OpTypes)) {
         OP_CHECK_IF(
             shape_c == nullptr || (shape_c != nullptr && shape_c->GetDimNum() == 0),
-            CUBE_INNER_ERR_REPORT(op_name, "shape or attrs is null"), return ge::GRAPH_FAILED);
-    }
-    if (strcmp(fused_op_type, "") == 0 || strcmp(fused_op_type, "gelu_tanh") == 0 ||
-        strcmp(fused_op_type, "gelu_erf") == 0 || strcmp(fused_op_type, "relu") == 0) {
+            CUBE_INNER_ERR_REPORT(op_name, "shape c must be valid when fused_op_type is add/mul"),
+            return ge::GRAPH_FAILED);
+    } else {
+        // 不支持x3输入的OpType拦截x3为非空
         OP_CHECK_IF(
             shape_c != nullptr && shape_c->GetDimNum() != 0,
             CUBE_INNER_ERR_REPORT(
-                op_name, "shape c must have no data when fused_op_type is '', gelu_tanh, gelu_erf or relu"),
+                op_name, "shape c must have no data when fused_op_type is ''/16cast32/gelu_tanh/gelu_erf/relu"),
             return ge::GRAPH_FAILED);
     }
 

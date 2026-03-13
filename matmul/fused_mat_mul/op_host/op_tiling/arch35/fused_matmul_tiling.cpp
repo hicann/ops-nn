@@ -39,7 +39,8 @@ constexpr uint64_t WORKSPACE_SIZE = 1024;
 const std::unordered_map<NpuArch, std::array<std::vector<std::string>, 2>> NpuArchFusedOpSupport = {
     {NpuArch::DAV_3510,
      std::array<std::vector<std::string>, 2>{
-         std::vector<std::string>{"", "relu", "add", "mul",}, std::vector<std::string>{"gelu_erf", "gelu_tanh"}}},
+         std::vector<std::string>{"", "relu", "add", "mul", "16cast32"},
+         std::vector<std::string>{"gelu_erf", "gelu_tanh"}}},
     {NpuArch::DAV_RESV,
      std::array<std::vector<std::string>, 2>{std::vector<std::string>{"relu"}, std::vector<std::string>{}}}};
 
@@ -295,10 +296,11 @@ ge::graphStatus FusedMatMulTilingFunc(gert::TilingContext* context)
     OP_TILING_CHECK(
         BuiltInTilingCheck(context, useBuiltInTiling) != ge::GRAPH_SUCCESS,
         CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to check built-in tiling"), return ge::GRAPH_FAILED);
-    // 继承BMM Tiling
+    // 继承BMM Tiling（基础API）
     if (useBuiltInTiling) {
         return fused_matmul::FusedMatMulBuiltInTiling(context).DoTiling();
     }
+    // FusedMatmul最原始的OpTiling方法 (非基础API)
     return fused_matmul::FusedMatMulTiling(context).DoTiling();
 }
 
