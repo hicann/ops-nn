@@ -1,5 +1,7 @@
 # aclnnIndexAdd
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/inplace_scatter_add)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -67,9 +69,9 @@ aclnnStatus aclnnIndexAdd(
       </tr></thead>
     <tbody>
       <tr>
-        <td>self</td>
+        <td>self（aclTensor*）</td>
         <td>输入</td>
-        <td>输入张量</td>
+        <td>输入张量。</td>
         <td>-</td>
         <td>FLOAT、FLOAT16、INT32、INT16、INT8、UINT8、DOUBLE、INT64、BOOL、BFLOAT16</td>
         <td>ND</td>
@@ -77,7 +79,7 @@ aclnnStatus aclnnIndexAdd(
         <td>√</td>
       </tr>
       <tr>
-        <td>dim</td>
+        <td>dim（int64_t）</td>
         <td>输入</td>
         <td>指定的维度。</td>
         <td>取值范围为[-self.dim(), self.dim()-1]。</td>
@@ -87,7 +89,7 @@ aclnnStatus aclnnIndexAdd(
         <td>-</td>
       </tr>
       <tr>
-        <td>index</td>
+        <td>index（aclTensor*）</td>
         <td>输入</td>
         <td>索引。</td>
         <td>index的shape大小和source在dim维度上的shape值需要相等。</td>
@@ -97,9 +99,9 @@ aclnnStatus aclnnIndexAdd(
         <td>√</td>
       </tr>
       <tr>
-        <td>source</td>
+        <td>source（aclTensor*）</td>
         <td>输入</td>
-        <td>源张量</td>
+        <td>源张量。</td>
         <td>source的shape除dim维度之外，其他维度的值需要与self的shape相等。</td>
         <td>与self一致</td>
         <td>-</td>
@@ -107,9 +109,9 @@ aclnnStatus aclnnIndexAdd(
         <td>-</td>
       </tr>
       <tr>
-        <td>alpha</td>
+        <td>alpha（aclScalar*）</td>
         <td>输入</td>
-        <td>输入aclTensor。</td>
+        <td>缩放因子。</td>
         <td>数据类型可转换成self与source推导后的数据类型。</td>
         <td>-</td>
         <td>与self一致</td>
@@ -117,7 +119,7 @@ aclnnStatus aclnnIndexAdd(
         <td>-</td>
       </tr>
       <tr>
-        <td>out</td>
+        <td>out（aclTensor*）</td>
         <td>输出</td>
         <td>输出aclTensor。</td>
         <td>-</td>
@@ -127,7 +129,7 @@ aclnnStatus aclnnIndexAdd(
         <td>√</td>
       </tr>
       <tr>
-        <td>workspaceSize</td>
+        <td>workspaceSize（uint64_t*）</td>
         <td>输出</td>
         <td>返回需要在Device侧申请的workspace大小。</td>
         <td>-</td>
@@ -137,7 +139,7 @@ aclnnStatus aclnnIndexAdd(
         <td>-</td>
       </tr>
       <tr>
-        <td>executor</td>
+        <td>executor（aclOpExecutor**）</td>
         <td>输出</td>
         <td>返回op执行器，包含了算子计算流程。</td>
         <td>-</td>
@@ -247,8 +249,8 @@ aclnnStatus aclnnIndexAdd(
 
 - 确定性计算：
   - aclnnIndexAdd默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
-
-index输入取值范围在[0，self.shape[dim])范围内，即索引值输入范围为self在dim维度上的shape大小。
+- index取值范围
+  - index输入取值范围在[0，self.shape[dim])范围内，即索引值输入范围为self在dim维度上的shape大小。
 
 ## 调用示例
 
