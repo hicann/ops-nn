@@ -240,6 +240,7 @@
 | [aclnnInplaceUpdateScatter](../../index/quant_update_scatter/docs/aclnnInplaceQuantScatter.md) |先将updates在quantAxis轴上进行量化：quantScales对updates做缩放操作，quantZeroPoints做偏移。然后将量化后的updates中的值按指定的轴axis，根据索引张量indices逐个更新selfRef中对应位置的值。|默认确定性实现|
 | [aclnnInstanceNorm](../../norm/instance_norm_v3/docs/aclnnInstanceNorm.md)|用于执行Instance Normalization（实例归一化）操作。|默认确定性实现|
 | [aclnnKlDivBackward](../../loss/kl_div_loss_grad/docs/aclnnKlDivBackward.md) | 进行aclnnKlDiv api的结果的反向计算。|默认确定性实现|
+| [aclnnKlDivTargetBackward](../../loss/kl_div_loss_grad/docs/aclnnKlDivTargetBackward.md) | 进行aclnnKlDiv api的结果的target反向计算。|默认确定性实现|
 | [aclnnKthvalue](../../index/gather_v2/docs/aclnnKthvalue.md) | 返回输入Tensor在指定维度上的第k个最小值及索引。|默认确定性实现|
 | [aclnnL1Loss](../../loss/lp_loss/docs/aclnnL1Loss.md) | 计算输入self和目标target中每个元素之间的平均绝对误差（Mean Absolute Error，简称MAE）。|默认确定性实现|
 | [aclnnL1LossBackward](../../loss/l1_loss_grad/docs/aclnnL1LossBackward.md) | 计算aclnnL1Loss的反向传播。reduction指定损失函数的计算方式。|默认确定性实现|
