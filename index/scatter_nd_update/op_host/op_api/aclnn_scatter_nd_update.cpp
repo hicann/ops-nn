@@ -19,7 +19,6 @@
 #include "aclnn_kernels/contiguous.h"
 #include "level0/squeeze.h"
 #include "level0/unsqueeze.h"
-
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
@@ -36,8 +35,8 @@ static const std::initializer_list<op::DataType> ASCEND910_DTYPE_DTYPE_SUPPORT_L
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BOOL};
 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BOOL,
-    op::DataType::DT_BF16, op::DataType::DT_INT64, op::DataType::DT_INT8};
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BOOL, op::DataType::DT_INT16,
+    op::DataType::DT_BF16, op::DataType::DT_INT64, op::DataType::DT_INT8, op::DataType::DT_INT32};
 
 static const std::initializer_list<op::DataType> ASCEND950_DTYPE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BOOL,
@@ -103,6 +102,17 @@ aclnnStatus aclnnScatterNdUpdateGetWorkspaceSize(aclTensor *varRef, const aclTen
   // 固定写法，参数检查
   auto ret = CheckParams(varRef, indices, updates);
   CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+  uint64_t varRefDimNum = varRef->GetViewShape().GetDimNum();
+  uint64_t indicesDimNum = indices->GetViewShape().GetDimNum();
+  uint64_t updatesDimNum = updates->GetViewShape().GetDimNum();
+
+  // 检查维度数是否超过8维
+  constexpr uint64_t MAX_DIM_NUM = 8;
+  if (varRefDimNum > MAX_DIM_NUM || indicesDimNum > MAX_DIM_NUM || updatesDimNum > MAX_DIM_NUM) {
+    OP_LOGW("varRef/indices/updates dim num(%lu, %lu, %lu) exceeds max limit %lu.",
+            varRefDimNum, indicesDimNum, updatesDimNum, MAX_DIM_NUM);
+  }
 
   if (varRef->IsEmpty() || indices->IsEmpty() || updates->IsEmpty()) {
     *workspaceSize = 0;
