@@ -29,7 +29,7 @@
 
   $$
   \begin{aligned}
-  \frac {\partial y}{\partial x} &= -weight \cdot \frac {\partial ((target_i \cdot ln(x_i) + (1-target_i) \cdot ln(1-x_i))}{\partial x} \\
+  \frac {\partial y}{\partial x} &= -weight \cdot \frac {\partial (target_i \cdot ln(x_i) + (1-target_i) \cdot ln(1-x_i))}{\partial x} \\
   &= -weight \cdot (\frac {\partial (target \cdot ln(x))}{\partial x} + \frac {\partial ((1-target) \cdot ln(1-x))}{\partial x}) \\
   &= -weight \cdot (\frac {target}{x} - \frac {(1-target)}{1-x}) \\
   &= -weight \cdot \frac {target(1-x)-x(1-target)}{x(1-x)} \\
@@ -40,7 +40,7 @@
 
   $$
   out = grad\_output \cdot weight \cdot \frac {x-target}{x(1-x)} \\
-  out = mean(grad\_input) \ if \ reduction = mean
+  out = mean(grad\_output) \ if \ reduction = mean
   $$
 
 ## 函数原型

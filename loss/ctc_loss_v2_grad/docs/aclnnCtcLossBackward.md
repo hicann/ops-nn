@@ -95,7 +95,7 @@ aclnnStatus aclnnCtcLossBackward(
       <td>targets（aclTensor*）</td>
       <td>输入</td>
       <td>表示包含目标序列的标签。</td>
-      <td>当shape为(N,S)，S为不小于targetLengths中的最大值的值；或者shape为(SUM(targetLengths))，假设targets是未填充的而且在1维内级联的。数值必须小于C大于等于0。</td>
+      <td>当shape为(N,S)，S为不小于targetLengths中的最大值的值；或者shape为(SUM(targetLengths))，假设targets是未填充的而且在1维内级联的。数值必须小于C且大于等于0。</td>
       <td>INT64、INT32</td>
       <td>ND</td>
       <td>-</td>

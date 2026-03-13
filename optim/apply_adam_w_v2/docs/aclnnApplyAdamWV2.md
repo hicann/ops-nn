@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能： 实现adamW优化器功能。
+- 接口功能： 实现AdamW优化器功能。
 
 - 计算公式：
 
@@ -109,7 +109,7 @@ aclnnStatus aclnnApplyAdamWV2(
       <tr>
         <td>mRef（aclTensor*）</td>
         <td>输入/输出</td>
-        <td>adamw优化器中m参数，公式中的m。</td>
+        <td>AdamW优化器中m参数，公式中的m。</td>
         <td>-</td>
         <td>与“varRef”参数一致。</td>
         <td>ND</td>
@@ -119,7 +119,7 @@ aclnnStatus aclnnApplyAdamWV2(
       <tr>
         <td>vRef（aclTensor*）</td>
         <td>输入/输出</td>
-        <td>adamw优化器中v参数，公式中的v。</td>
+        <td>AdamW优化器中v参数，公式中的v，不能为负数。</td>
         <td>-</td>
         <td>与“varRef”参数一致。</td>
         <td>ND</td>
@@ -129,7 +129,7 @@ aclnnStatus aclnnApplyAdamWV2(
       <tr>
         <td>maxGradNormOptionalRef（aclTensor*）</td>
         <td>输入/输出</td>
-        <td>输入maxGradNormOptionalRef与更新后的vRef比较后，得到的最大值，在maxGradNormOptionalRef输出。</td>
+        <td>输入maxGradNormOptionalRef与更新后的vRef比较后，得到的最大值输出到maxGradNormOptionalRef。</td>
         <td>此参数在amsgrad参数为true时必选，在amsgrad参数为false时可选。</td>
         <td>与“varRef”参数一致。</td>
         <td>ND</td>
@@ -149,7 +149,7 @@ aclnnStatus aclnnApplyAdamWV2(
       <tr>
         <td>step（aclTensor*）</td>
         <td>输入</td>
-        <td>迭代次数，公式中的t。</td>
+        <td>迭代次数，公式中的t，需要大于0。</td>
         <td>元素个数为1。</td>
         <td>INT64、FLOAT32</td>
         <td>ND</td>
@@ -157,7 +157,7 @@ aclnnStatus aclnnApplyAdamWV2(
         <td>x</td>
       </tr>
       <tr>
-        <td>lr（double）</td>
+        <td>lr（float）</td>
         <td>输入</td>
         <td>学习率，公式中的η。</td>
         <td>-</td>
@@ -167,7 +167,7 @@ aclnnStatus aclnnApplyAdamWV2(
         <td>-</td>
       </tr>
       <tr>
-        <td>beta1（double）</td>
+        <td>beta1（float）</td>
         <td>输入</td>
         <td>β<sub>1</sub>参数。</td>
         <td>-</td>
@@ -177,7 +177,7 @@ aclnnStatus aclnnApplyAdamWV2(
         <td>-</td>
       </tr>
       <tr>
-        <td>beta2（double）</td>
+        <td>beta2（float）</td>
         <td>输入</td>
         <td>β<sub>2</sub>参数。</td>
         <td>-</td>
@@ -187,9 +187,9 @@ aclnnStatus aclnnApplyAdamWV2(
         <td>-</td>
       </tr>
       <tr>
-        <td>weightDecay（double）</td>
+        <td>weightDecay（float）</td>
         <td>输入</td>
-        <td>权重衰减系数。</td>
+        <td>权重衰减系数，公式中的λ。</td>
         <td>-</td>
         <td>FLOAT</td>
         <td>-</td>
@@ -197,7 +197,7 @@ aclnnStatus aclnnApplyAdamWV2(
         <td>-</td>
       </tr>
       <tr>
-        <td>eps（double）</td>
+        <td>eps（float）</td>
         <td>输入</td>
         <td>防止除数为0。</td>
         <td>-</td>

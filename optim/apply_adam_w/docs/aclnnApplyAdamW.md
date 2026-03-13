@@ -16,14 +16,14 @@
 
 ## 功能说明
 
-- **接口功能：** 实现adamW优化器功能。
+- **接口功能：** 实现AdamW优化器功能。
 
 - **计算公式：**
 
   $$
   g_t=\begin{cases}-g_t
-  & \text{ if } maxmize= true\\
-  g_t  & \text{ if } maxmize=false
+  & \text{ if } maximize= true\\
+  g_t  & \text{ if } maximize=false
   \end{cases}
   $$
 
@@ -134,7 +134,7 @@ aclnnStatus aclnnApplyAdamW(
     <tr>
       <td class="tg-0lax">mRef（aclTensor*）</td>
       <td class="tg-0lax">输入/输出</td>
-      <td class="tg-0lax">adamw优化器中m参数，公式中的m。</td>
+      <td class="tg-0lax">AdamW优化器中m参数，公式中的m。</td>
       <td class="tg-0lax">shape要求与输入varRef保持一致。</td>
       <td class="tg-0lax">与varRef保持一致</td>
       <td class="tg-0lax">ND</td>
@@ -144,7 +144,7 @@ aclnnStatus aclnnApplyAdamW(
     <tr>
       <td class="tg-0pky">vRef（aclTensor*）</td>
       <td class="tg-0pky">输入/输出</td>
-      <td class="tg-0pky">adamw优化器中v参数，公式中的v。</td>
+      <td class="tg-0pky">AdamW优化器中v参数，公式中的v。</td>
       <td class="tg-0pky">shape要求与输入varRef保持一致。</td>
       <td class="tg-0pky">与varRef保持一致</td>
       <td class="tg-0pky">ND</td>
@@ -174,7 +174,7 @@ aclnnStatus aclnnApplyAdamW(
     <tr>
       <td class="tg-0pky">lr（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
-      <td class="tg-0pky">学习率，公式中的η，通常情况下为1-e3、1-恶、1-e9。</td>
+      <td class="tg-0pky">学习率，公式中的η，通常情况下为1e-3、1e-6、1-e9。</td>
       <td class="tg-0pky">shape要求为[1]。</td>
       <td class="tg-0pky">与varRef保持一致</td>
       <td class="tg-0pky">ND</td>

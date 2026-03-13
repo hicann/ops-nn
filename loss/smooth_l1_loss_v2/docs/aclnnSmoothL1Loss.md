@@ -105,7 +105,7 @@ aclnnStatus aclnnSmoothL1Loss(
     <tr>
       <td class="tg-0pky">target（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
-      <td class="tg-0pky">真是标签，公式中的输入y。</td>
+      <td class="tg-0pky">真实标签，公式中的输入y。</td>
       <td class="tg-0pky">shape需要与self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>数据类型需满足与self数据类型推导规则（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND、NCL、NCHW、NHWC</td>
@@ -136,7 +136,7 @@ aclnnStatus aclnnSmoothL1Loss(
       <td class="tg-0lax">result（aclTensor*）</td>
       <td class="tg-0lax">输出</td>
       <td class="tg-0lax">公式中输出的损失函数ℓ(self,target)。</td>
-      <td class="tg-0lax">当reduction为none时，shape与self和target的<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>结果一致，当reduction为mean或sum时为[ ]，数据类型时self和target推导后可转换的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）</td>
+      <td class="tg-0lax">当reduction为none时，shape与self和target的<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>结果一致，当reduction为mean或sum时为[1]，数据类型为self和target推导后可转换的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）</td>
       <td class="tg-0lax">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0lax">ND、NCL、NCHW、NHWC</td>
       <td class="tg-0lax">1-8</td>

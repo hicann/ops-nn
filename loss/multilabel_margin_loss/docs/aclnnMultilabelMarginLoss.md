@@ -112,7 +112,7 @@ aclnnStatus aclnnMultilabelMarginLoss(
     <tr>
       <td class="tg-0pky">target（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
-      <td class="tg-0pky">真是标签，公式中的输入y。</td>
+      <td class="tg-0pky">真实标签，公式中的输入y。</td>
       <td class="tg-0pky">shape为(N，C) 或者(C)，其中每个元素的取值范围是[-1, C - 1]，用-1填充，即首个-1之前的标签代表样本所属真实标签。</td>
       <td class="tg-0pky">INT32、INT64</td>
       <td class="tg-0pky">ND</td>
@@ -133,7 +133,7 @@ aclnnStatus aclnnMultilabelMarginLoss(
       <td class="tg-0lax">out（aclTensor*）</td>
       <td class="tg-0lax">输出</td>
       <td class="tg-0lax">输出的loss，公式中的ℓ(x,y)。</td>
-      <td class="tg-0lax">shape(N)为或者()</td>
+      <td class="tg-0lax">shape为(N)为或者()</td>
       <td class="tg-0lax">与self、isTarget保持一致</td>
       <td class="tg-0lax">ND</td>
       <td class="tg-0lax">0、1</td>

@@ -24,7 +24,7 @@
   - ChamferDistance（倒角距离）正向算子计算公式为：
 
     $dist1_i=Min((x_{1_i}−x_2)^2+(y_{1_i}−y_2)^2)，x_2, y_2∈xyz2$
-    $dist2_i=Min((x_{2_i}-x_1)^2+(y_{2_i}-y_1)^2)，x_1,y_1∈xyz1$
+    $dist2_i=Min((x_{2_i}-x_1)^2+(y_{2_i}-y_1)^2)，x_1, y_1∈xyz1$
 
   - 反向算子即为对该公式求导，计算公式为：
     - $dist1_i$ 对$x_{1_i}$ 的导数 $=2*grad\_dist1*(x_{1_i}-x_2)$
@@ -35,25 +35,25 @@
 
       其中$y_{1_i}∈xyz1$，$y_2$是根据正向输出的id1的索引值从xyz2中取出距离最小的点的纵坐标，单点求导公式如上，因为单点梯度更新的位置是连续的，所以也可以考虑多点并行计算。
 
-    - $dist1_i$ 对 $x_2$的导数 $=-2*grad\_dist1*(x_{1_i}-x_2)$
+    - $dist1_i$ 对 $x_2$的导数 $=-2*grad\_dist1*(x_1-x_{2_i})$
 
-      其中$x_{1_i}∈xyz1，x_2$是根据正向输出的id1的索引值从xyz2中取出距离最小的点的横坐标，单点求导公式如上，因为单点梯度需要根据最小距离值对应的索引值去更新，所以这块无法并行只能单点计算。
+      其中$x_{2_i}∈xyz2，x_1$是根据正向输出的id1的索引值从xyz2中取出距离最小的点的横坐标，单点求导公式如上，因为单点梯度需要根据最小距离值对应的索引值去更新，所以这块无法并行只能单点计算。
 
-    - $dist1_i$ 对$y_2$的导数$=-2*grad\_dist1*(y_{1_i}-y_2)$
+    - $dist1_i$ 对$y_2$的导数$=-2*grad\_dist1*(y_1-y_{2_i})$
 
-      其中$y_{1_i}∈xyz1$，$y_2$是根据正向输出的id1的索引值从xyz2中取出距离最小的点的纵坐标，单点求导公式如上，因为单点梯度需要根据最小值对应的索引值去更新，所以这块也无法并行只能单点计算。
+      其中$y_{2_i}∈xyz2$，$y_1$是根据正向输出的id1的索引值从xyz2中取出距离最小的点的纵坐标，单点求导公式如上，因为单点梯度需要根据最小值对应的索引值去更新，所以这块也无法并行只能单点计算。
 
   对应$dist2_i$对$x_{2_i}$ 、$x_1$、$y_{2_i}$ 、$y_1$的导数和上述过程类似，这里不再赘述。
 
   最终计算公式如下，i∈[0,n)：
 
-  $grad_xyz1[2*i] = 2*grad\_dist_1*(x_{1_i}-x_2) - 2*grad\_dist_1*(x_{1_i}-x_2)$
+  $grad_xyz1[2*i] = 2*grad\_dist1*(x_{1_i}-x_2) - 2*grad\_dist1*(x_1-x_{2_i})$
 
-  $grad_xyz1[2*i+1] = 2*grad\_dist1*(y_{1_i}-y_2) - 2*grad\_dist1*(y_{1_i}-y_2)$
+  $grad_xyz1[2*i+1] = 2*grad\_dist1*(y_{1_i}-y_2) - 2*grad\_dist1*(y_1-y_{2_i})$
 
-  $grad_xyz2[2*i] = 2*grad\_dist2*(x_{1_i}-x_2) - 2*grad\_dist2*(x_{1_i}-x_2)$
+  $grad_xyz2[2*i] = 2*grad\_dist2*(x_{1_i}-x_2) - 2*grad\_dist2*(x_1-x_{2_i})$
 
-  $grad_xyz2[2*i+1] = 2*grad\_dist2*(y_{1_i}-y_2) - 2*grad\_dist2*(y_{1_i}-y_2)$
+  $grad_xyz2[2*i+1] = 2*grad\_dist2*(y_{1_i}-y_2) - 2*grad\_dist2*(y_1-y_{2_i})$
 
 ## 函数原型
 
@@ -122,7 +122,7 @@ aclnnStatus aclnnChamferDistanceBackward(
       <td class="tg-0pky">xyz2（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">算子正向输入的点集2的坐标。</td>
-      <td class="tg-0pky">shape为(B,N,2)。</td>
+      <td class="tg-0pky">shape为(B,M,2)。</td>
       <td class="tg-0pky">FLOAT、FLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">3</td>

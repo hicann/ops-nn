@@ -96,7 +96,7 @@ aclnnStatus aclnnNLLLoss2d(
         <td>输入公式中的x，shape为4维，第2维是C，C表示类别数。</td>
         <td>FLOAT、FLOAT16、BFLOAT16</td>
         <td>ND</td>
-        <td>-</td>
+        <td>4</td>
         <td>√</td>
       </tr>
       <tr>
@@ -106,7 +106,7 @@ aclnnStatus aclnnNLLLoss2d(
         <td><ul><li>公式中的y，shape为3维</li><li>target的第1维与self的第1维相等、target的第2维与self的第3维相等、target的第3维与self的第4维相等</li><li>其中每个元素的取值范围是[0, C - 1]</li></ul></td>
         <td>INT64、UINT8、INT32</td>
         <td>ND</td>
-        <td>-</td>
+        <td>3</td>
         <td>√</td>
       </tr>
       <tr>
