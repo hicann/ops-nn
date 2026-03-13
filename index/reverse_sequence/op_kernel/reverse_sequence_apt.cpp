@@ -25,75 +25,63 @@ __global__ __aicore__ void reverse_sequence(GM_ADDR x, GM_ADDR seq_lengths, GM_A
 {
     AscendC::TPipe pipeBase;
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
-    REGISTER_TILING_DEFAULT(ReverseSequenceSimtTilingData4RegBase);
+    REGISTER_TILING_DEFAULT(ReverseSequenceTilingData);
     if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DYTPE_MODE == TPL_MODE_DTYPE_B8 && ADDR_MODE == TPL_MODE_ADDR_INT32) {
-        REGISTER_TILING_FOR_TILINGKEY("TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DYTPE_MODE == TPL_MODE_DTYPE_B8 && ADDR_MODE == TPL_MODE_ADDR_INT32", ReverseSequenceSimtTilingData4RegBase);
         GET_TILING_DATA_WITH_STRUCT(ReverseSequenceSimtTilingData4RegBase, tilingData, tiling);
         ReverseSequenceSimt<int8_t, DTYPE_SEQ_LENGTHS, uint32_t> op(&pipeBase, &tilingData);
         op.Init(x, seq_lengths, y);
         op.Process();
     } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DYTPE_MODE == TPL_MODE_DTYPE_B8 && ADDR_MODE == TPL_MODE_ADDR_INT64) {
-        REGISTER_TILING_FOR_TILINGKEY("TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DYTPE_MODE == TPL_MODE_DTYPE_B8 && ADDR_MODE == TPL_MODE_ADDR_INT64", ReverseSequenceSimtTilingData4RegBase);
         GET_TILING_DATA_WITH_STRUCT(ReverseSequenceSimtTilingData4RegBase, tilingData, tiling);
         ReverseSequenceSimt<int8_t, DTYPE_SEQ_LENGTHS, uint64_t> op(&pipeBase, &tilingData);
         op.Init(x, seq_lengths, y);
         op.Process();
     } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DYTPE_MODE == TPL_MODE_DTYPE_B16 && ADDR_MODE == TPL_MODE_ADDR_INT32) {
-        REGISTER_TILING_FOR_TILINGKEY("TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DYTPE_MODE == TPL_MODE_DTYPE_B16 && ADDR_MODE == TPL_MODE_ADDR_INT32", ReverseSequenceSimtTilingData4RegBase);
         GET_TILING_DATA_WITH_STRUCT(ReverseSequenceSimtTilingData4RegBase, tilingData, tiling);
         ReverseSequenceSimt<int16_t, DTYPE_SEQ_LENGTHS, uint32_t> op(&pipeBase, &tilingData);
         op.Init(x, seq_lengths, y);
         op.Process();
     } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DYTPE_MODE == TPL_MODE_DTYPE_B16 && ADDR_MODE == TPL_MODE_ADDR_INT64) {
-        REGISTER_TILING_FOR_TILINGKEY("TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DYTPE_MODE == TPL_MODE_DTYPE_B16 && ADDR_MODE == TPL_MODE_ADDR_INT64", ReverseSequenceSimtTilingData4RegBase);
         GET_TILING_DATA_WITH_STRUCT(ReverseSequenceSimtTilingData4RegBase, tilingData, tiling);
         ReverseSequenceSimt<int16_t, DTYPE_SEQ_LENGTHS, uint64_t> op(&pipeBase, &tilingData);
         op.Init(x, seq_lengths, y);
         op.Process();
     } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DYTPE_MODE == TPL_MODE_DTYPE_B32 && ADDR_MODE == TPL_MODE_ADDR_INT32) {
-        REGISTER_TILING_FOR_TILINGKEY("TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DYTPE_MODE == TPL_MODE_DTYPE_B32 && ADDR_MODE == TPL_MODE_ADDR_INT32", ReverseSequenceSimtTilingData4RegBase);
         GET_TILING_DATA_WITH_STRUCT(ReverseSequenceSimtTilingData4RegBase, tilingData, tiling);
         ReverseSequenceSimt<int32_t, DTYPE_SEQ_LENGTHS, uint32_t> op(&pipeBase, &tilingData);
         op.Init(x, seq_lengths, y);
         op.Process();
     } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DYTPE_MODE == TPL_MODE_DTYPE_B32 && ADDR_MODE == TPL_MODE_ADDR_INT64) {
-        REGISTER_TILING_FOR_TILINGKEY("TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DYTPE_MODE == TPL_MODE_DTYPE_B32 && ADDR_MODE == TPL_MODE_ADDR_INT64", ReverseSequenceSimtTilingData4RegBase);
         GET_TILING_DATA_WITH_STRUCT(ReverseSequenceSimtTilingData4RegBase, tilingData, tiling);
         ReverseSequenceSimt<int32_t, DTYPE_SEQ_LENGTHS, uint64_t> op(&pipeBase, &tilingData);
         op.Init(x, seq_lengths, y);
         op.Process();
     } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DYTPE_MODE == TPL_MODE_DTYPE_B64 && ADDR_MODE == TPL_MODE_ADDR_INT32) {
-        REGISTER_TILING_FOR_TILINGKEY("TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DYTPE_MODE == TPL_MODE_DTYPE_B64 && ADDR_MODE == TPL_MODE_ADDR_INT32", ReverseSequenceSimtTilingData4RegBase);
         GET_TILING_DATA_WITH_STRUCT(ReverseSequenceSimtTilingData4RegBase, tilingData, tiling);
         ReverseSequenceSimt<int64_t, DTYPE_SEQ_LENGTHS, uint32_t> op(&pipeBase, &tilingData);
         op.Init(x, seq_lengths, y);
         op.Process();
     } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DYTPE_MODE == TPL_MODE_DTYPE_B64 && ADDR_MODE == TPL_MODE_ADDR_INT64) {
-        REGISTER_TILING_FOR_TILINGKEY("TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DYTPE_MODE == TPL_MODE_DTYPE_B64 && ADDR_MODE == TPL_MODE_ADDR_INT64", ReverseSequenceSimtTilingData4RegBase);
         GET_TILING_DATA_WITH_STRUCT(ReverseSequenceSimtTilingData4RegBase, tilingData, tiling);
         ReverseSequenceSimt<int64_t, DTYPE_SEQ_LENGTHS, uint64_t> op(&pipeBase, &tilingData);
         op.Init(x, seq_lengths, y);
         op.Process();
     } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_BSA && DYTPE_MODE == TPL_MODE_DTYPE_B64 && ADDR_MODE == TPL_MODE_ADDR_INT64) {
-        REGISTER_TILING_FOR_TILINGKEY("TEMPLATE_MODE == TPL_MODE_TEMPLATE_BSA && DYTPE_MODE == TPL_MODE_DTYPE_B64 && ADDR_MODE == TPL_MODE_ADDR_INT64", ReverseSequenceBSATilingData);
         GET_TILING_DATA_WITH_STRUCT(ReverseSequenceBSATilingData, tilingData, tiling);
         ReverseSequenceBSA<int64_t, DTYPE_SEQ_LENGTHS> op(&pipeBase, &tilingData);
         op.Init(x, seq_lengths, y);
         op.Process();
     } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_BSA && DYTPE_MODE == TPL_MODE_DTYPE_B32 && ADDR_MODE == TPL_MODE_ADDR_INT64) {
-        REGISTER_TILING_FOR_TILINGKEY("TEMPLATE_MODE == TPL_MODE_TEMPLATE_BSA && DYTPE_MODE == TPL_MODE_DTYPE_B32 && ADDR_MODE == TPL_MODE_ADDR_INT64", ReverseSequenceBSATilingData);
         GET_TILING_DATA_WITH_STRUCT(ReverseSequenceBSATilingData, tilingData, tiling);
         ReverseSequenceBSA<int32_t, DTYPE_SEQ_LENGTHS> op(&pipeBase, &tilingData);
         op.Init(x, seq_lengths, y);
         op.Process();
     } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_BSA && DYTPE_MODE == TPL_MODE_DTYPE_B16 && ADDR_MODE == TPL_MODE_ADDR_INT64) {
-        REGISTER_TILING_FOR_TILINGKEY("TEMPLATE_MODE == TPL_MODE_TEMPLATE_BSA && DYTPE_MODE == TPL_MODE_DTYPE_B16 && ADDR_MODE == TPL_MODE_ADDR_INT64", ReverseSequenceBSATilingData);
         GET_TILING_DATA_WITH_STRUCT(ReverseSequenceBSATilingData, tilingData, tiling);
         ReverseSequenceBSA<int16_t, DTYPE_SEQ_LENGTHS> op(&pipeBase, &tilingData);
         op.Init(x, seq_lengths, y);
         op.Process();
     } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_BSA && DYTPE_MODE == TPL_MODE_DTYPE_B8 && ADDR_MODE == TPL_MODE_ADDR_INT64) {
-        REGISTER_TILING_FOR_TILINGKEY("TEMPLATE_MODE == TPL_MODE_TEMPLATE_BSA && DYTPE_MODE == TPL_MODE_DTYPE_B8 && ADDR_MODE == TPL_MODE_ADDR_INT64", ReverseSequenceBSATilingData);
         GET_TILING_DATA_WITH_STRUCT(ReverseSequenceBSATilingData, tilingData, tiling);
         ReverseSequenceBSA<int8_t, DTYPE_SEQ_LENGTHS> op(&pipeBase, &tilingData);
         op.Init(x, seq_lengths, y);
