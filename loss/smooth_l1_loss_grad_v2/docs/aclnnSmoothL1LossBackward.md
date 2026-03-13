@@ -129,7 +129,7 @@ aclnnStatus aclnnSmoothL1LossBackward(
       <td class="tg-0pky">√</td>
     </tr>
     <tr>
-      <td class="tg-0pky">beta（bool）</td>
+      <td class="tg-0pky">beta（float）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">计算属性，指定在L1和L2损失之间更改的数值。</td>
       <td class="tg-0pky">该值必须是非负的。</td>
@@ -139,7 +139,7 @@ aclnnStatus aclnnSmoothL1LossBackward(
       <td class="tg-0pky">-</td>
     </tr>
     <tr>
-      <td class="tg-0pky">gradinput（aclTensor*）</td>
+      <td class="tg-0pky">gradInput（aclTensor*）</td>
       <td class="tg-0pky">输出</td>
       <td class="tg-0pky">计算输出。</td>
       <td class="tg-0pky">shape为gradOut，self，target的<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>结果</td>
@@ -206,7 +206,7 @@ aclnnStatus aclnnSmoothL1LossBackward(
       <td class="tg-0pky">reduction不符合约束。</td>
     </tr>
     <tr>
-      <td class="tg-0pky">self、target、isTarget的shape不满足参数说明中的要求。</td>
+      <td class="tg-0pky">self、target、gradOutput的shape不满足参数说明中的要求。</td>
     </tr>
   </tbody>
   </table>

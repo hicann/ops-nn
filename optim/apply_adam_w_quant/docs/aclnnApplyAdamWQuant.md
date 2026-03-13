@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- **接口功能：** 对优化器输入的m和v作为索引，取出各自qmap中的值，乘以每个blockSize对应的absmax进行反量化，而后实现adamW优化器功能，更新后的m和v每blockSize中取一个最大值，每blockSize个m和v对应一个absmax，进行一次norm归一化，利用二分法找到对应m和v对应qmap中的索引作为输出，absmax也作为下一轮量化的输入。
+- **接口功能：** 对优化器输入的m和v作为索引，取出各自qmap中的值，乘以每个blockSize对应的absmax进行反量化，而后实现AdamW优化器功能，更新后的m和v每blockSize中取一个最大值，每blockSize个m和v对应一个absmax，进行一次norm归一化，利用二分法找到对应m和v对应qmap中的索引作为输出，absmax也作为下一轮量化的输入。
 
 - **优化器计算公式：**
 
@@ -128,9 +128,9 @@ aclnnStatus aclnnApplyAdamWQuant(
     <tr>
       <td class="tg-0pky">mRef（aclTensor*）</td>
       <td class="tg-0pky">输入/输出</td>
-      <td class="tg-0pky">adamw优化器公式中m参数量化前的索引值，根据索引导出qmapM中具体的值。</td>
+      <td class="tg-0pky">AdamW优化器公式中m参数量化前的索引值，根据索引导出qmapM中具体的值。</td>
       <td class="tg-0pky">shape要求与输入varRef保持一致。</td>
-      <td class="tg-0pky">uin8_t</td>
+      <td class="tg-0pky">uint8_t</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
       <td class="tg-0pky">x</td>
@@ -138,9 +138,9 @@ aclnnStatus aclnnApplyAdamWQuant(
     <tr>
       <td class="tg-0pky">vRef（aclTensor*）</td>
       <td class="tg-0pky">输入/输出</td>
-      <td class="tg-0pky">adamw优化器公式中v参数量化前的索引值，根据索引导出qmapV中具体的值。</td>
+      <td class="tg-0pky">AdamW优化器公式中v参数量化前的索引值，根据索引导出qmapV中具体的值。</td>
       <td class="tg-0pky">shape要求与输入varRef保持一致。</td>
-      <td class="tg-0pky">uin8_t</td>
+      <td class="tg-0pky">uint8_t</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
       <td class="tg-0pky">x</td>
@@ -149,7 +149,7 @@ aclnnStatus aclnnApplyAdamWQuant(
       <td class="tg-0pky">qmapM（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">量化映射表升序排列，每个m根据mRef中的索引值进行选择。</td>
-      <td class="tg-0pky">shape要求时[256,]。</td>
+      <td class="tg-0pky">shape要求是[256,]。</td>
       <td class="tg-0pky">FLOAT32</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1</td>
@@ -159,7 +159,7 @@ aclnnStatus aclnnApplyAdamWQuant(
       <td class="tg-0pky">qmapV（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">量化映射表升序排列，每个v根据vRef中的索引值进行选择。</td>
-      <td class="tg-0pky">shape要求时[256,]。</td>
+      <td class="tg-0pky">shape要求是[256,]。</td>
       <td class="tg-0pky">FLOAT32</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1</td>
@@ -168,7 +168,7 @@ aclnnStatus aclnnApplyAdamWQuant(
     <tr>
       <td class="tg-0pky">absmaxMRef（aclTensor*）</td>
       <td class="tg-0pky">输入/输出</td>
-      <td class="tg-0pky">每blockSize(256)个vRef对应一个最大值，对于用于对mRef索引选择qmapM中的值乘以对应的absmaxMRef进行反量化。再通过更新后的mRef每blockSize(256)个选择出一个最大值，作为absmaxMRef的输出。</td>
+      <td class="tg-0pky">每blockSize(256)个vRef对应一个最大值，用于对mRef索引选择qmapM中的值乘以对应的absmaxMRef进行反量化。再通过更新后的mRef每blockSize(256)个选择出一个最大值，作为absmaxMRef的输出。</td>
       <td class="tg-0pky">shape要求为“absmaxMRef.size = mRef.size/blockSize”。</td>
       <td class="tg-0pky">FLOAT32</td>
       <td class="tg-0pky">ND</td>
@@ -178,7 +178,7 @@ aclnnStatus aclnnApplyAdamWQuant(
     <tr>
       <td class="tg-0pky">absmaxVRef（aclTensor*）</td>
       <td class="tg-0pky">输入/输出</td>
-      <td class="tg-0pky">每blockSize(256)个vRef对应一个最大值，对于用于对vRef索引选择qmapV中的值乘以对应的absmaxVRef进行反量化。再通过更新后的vRef每blockSize(256)个选择出一个最大值，作为absmaxVRef的输出。</td>
+      <td class="tg-0pky">每blockSize(256)个vRef对应一个最大值，用于对vRef索引选择qmapV中的值乘以对应的absmaxVRef进行反量化。再通过更新后的vRef每blockSize(256)个选择出一个最大值，作为absmaxVRef的输出。</td>
       <td class="tg-0pky">shape要求为“absmaxVRef.size = vRef.size/blockSize”。</td>
       <td class="tg-0pky">FLOAT32</td>
       <td class="tg-0pky">ND</td>
@@ -188,7 +188,7 @@ aclnnStatus aclnnApplyAdamWQuant(
     <tr>
       <td class="tg-0pky">step（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
-      <td class="tg-0pky">公式中的t，迭代次数。</td>
+      <td class="tg-0pky">公式中的t，迭代次数，大于0。</td>
       <td class="tg-0pky">shape要求为[1]。</td>
       <td class="tg-0pky">INT64</td>
       <td class="tg-0pky">ND</td>
@@ -208,7 +208,7 @@ aclnnStatus aclnnApplyAdamWQuant(
     <tr>
       <td class="tg-0pky">beta1（double）</td>
       <td class="tg-0pky">输入</td>
-      <td class="tg-0pky">adamw优化器公式中beta1参数，推荐0.9，范围0~1。</td>
+      <td class="tg-0pky">AdamW优化器公式中beta1参数，推荐0.9，范围0~1。</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">DOUBLE</td>
       <td class="tg-0pky">-</td>
@@ -218,7 +218,7 @@ aclnnStatus aclnnApplyAdamWQuant(
     <tr>
       <td class="tg-0pky">beta2（double）</td>
       <td class="tg-0pky">输入</td>
-      <td class="tg-0pky">adamw优化器公式中beta2参数，推荐0.999，范围0~1。</td>
+      <td class="tg-0pky">AdamW优化器公式中beta2参数，推荐0.999，范围0~1。</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">DOUBLE</td>
       <td class="tg-0pky">-</td>
@@ -226,9 +226,9 @@ aclnnStatus aclnnApplyAdamWQuant(
       <td class="tg-0pky">-</td>
     </tr>
     <tr>
-      <td class="tg-0pky">weightDeacy（double）</td>
+      <td class="tg-0pky">weightDecay（double）</td>
       <td class="tg-0pky">输入</td>
-      <td class="tg-0pky">权重衰减系数，adamw优化器公式中λ参数，推荐0.999，范围0~1。</td>
+      <td class="tg-0pky">权重衰减系数，AdamW优化器公式中λ参数，推荐0.999，范围0~1。</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">DOUBLE</td>
       <td class="tg-0pky">-</td>
@@ -547,7 +547,7 @@ CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnApplyAdamWQuantGetWorkspaceSize fa
 void* workspaceAddr = nullptr;
 if (workspaceSize > 0) {
 ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret;);
+CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
 }
 // 调用aclnnApplyAdamWQuant第二段接口
 ret = aclnnApplyAdamWQuant(workspaceAddr, workspaceSize, executor, stream);

@@ -19,7 +19,7 @@
 - **计算公式**：
 
   $$
-  (correction_{\beta_1},correction_{\beta_2},)=\begin{cases}
+  (correction_{\beta_1},correction_{\beta_2})=\begin{cases}
   (1,1),&biasCorrection=False\\
   (1-\beta_1^{step},1-\beta_2^{step}),&biasCorrection=True
   \end{cases}
@@ -218,7 +218,7 @@ aclnnStatus aclnnApplyFusedEmaAdam(
     <tr>
       <td class="tg-0pky">beta2（double）</td>
       <td class="tg-0pky">输入</td>
-      <td class="tg-0pky">计算二阶动量的系数，公式中beta1参数，推荐0.9，范围0~1。</td>
+      <td class="tg-0pky">计算二阶动量的系数，公式中beta2参数，推荐0.9，范围0~1。</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">DOUBLE</td>
       <td class="tg-0pky">-</td>
@@ -474,9 +474,9 @@ int main() {
   std::vector<float> mHostData = {1, 2, 3, 4, 5, 6, 7, 8};
   std::vector<float> vHostData = {1, 2, 3, 4, 5, 6, 7, 8};
   std::vector<float> sHostData = {1, 2, 3, 4, 5, 6, 7, 8};
-  std::vector<float> stepHostData = {10, 10, 10, 10};
+  std::vector<int64_t> stepHostData = {10};
   std::vector<int64_t> inputShape = {2, 2, 2};
-  std::vector<int64_t> stepShape = {2, 2};
+  std::vector<int64_t> stepShape = {1,};
   void *gradDeviceAddr = nullptr;
   void *varDeviceAddr = nullptr;
   void *mDeviceAddr = nullptr;

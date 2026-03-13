@@ -197,7 +197,7 @@ aclnnStatus aclnnCtcLoss(
     </tbody></table>
 
   - logAlphaOut：
-     - <term>Ascend 950PR/Ascend 950DT</term>、<term>Atlas A2 训练系列产/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：shape为($N, T, (2*max(targetLengths)+8)/8*8$)。
+     - <term>Ascend 950PR/Ascend 950DT</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：shape为($N, T, (2*max(targetLengths)+8)/8*8$)。
      
 - **返回值：**
 
@@ -530,7 +530,7 @@ aclnnStatus aclnnCtcLoss(
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
       ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret;);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
     }
     // 调用aclnnCtcLoss第二段接口
     ret = aclnnCtcLoss(workspaceAddr, workspaceSize, executor, stream);
@@ -816,7 +816,7 @@ aclnnStatus aclnnCtcLoss(
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
       ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret;);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
     }
     // 调用aclnnCtcLoss第二段接口
     ret = aclnnCtcLoss(workspaceAddr, workspaceSize, executor, stream);

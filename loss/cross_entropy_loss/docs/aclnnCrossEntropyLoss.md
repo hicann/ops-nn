@@ -41,7 +41,7 @@
   zloss计算公式为：
 
   $$
-  zloss_n = lseSquareScaleForZloss * （lse_n）^2 
+  zloss_n = lseSquareScaleForZloss * (lse_n)^2 
   $$
 
   其中，N为batch数，C为标签数。

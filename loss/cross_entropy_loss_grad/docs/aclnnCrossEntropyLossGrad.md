@@ -481,14 +481,14 @@ int main() {
   std::vector<float> weightHostData = {1.0, 1.0, 1.0};
   std::vector<float> xGradOutHostData = {-0.0091, 0.0409, 0.0409, -0.0091, 0.0409, 0.0409};
   int64_t ignoreIndex = -100;
-  float labelSmoothing = 0.0;
-  float lseSquareScaleForZloss = 0.0;
+  double labelSmoothing = 0.0;
+  double lseSquareScaleForZloss = 0.0;
 
   // 创建gradLoss aclTensor
-  ret = CreateAclTensor(gradLossHostData, gradLossShape, &gradLossDeviceAddr, aclDataType::ACL_BF16, &gradLoss);
+  ret = CreateAclTensor(gradLossHostData, gradLossShape, &gradLossDeviceAddr, aclDataType::ACL_FLOAT, &gradLoss);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建logProb aclTensor
-  ret = CreateAclTensor(logProbHostData, logProbShape, &logProbDeviceAddr, aclDataType::ACL_BF16, &logProb);
+  ret = CreateAclTensor(logProbHostData, logProbShape, &logProbDeviceAddr, aclDataType::ACL_FLOAT, &logProb);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建target aclTensor
   ret = CreateAclTensor(targetHostData, targetShape, &targetDeviceAddr, aclDataType::ACL_INT64, &target);
@@ -497,7 +497,7 @@ int main() {
   ret = CreateAclTensor(weightHostData, weightShape, &weightDeviceAddr, aclDataType::ACL_FLOAT, &weight);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建xGradOut aclTensor
-  ret = CreateAclTensor(xGradOutHostData, xGradShape, &xGradOutDeviceAddr, aclDataType::ACL_BF16, &xGradOut);
+  ret = CreateAclTensor(xGradOutHostData, xGradShape, &xGradOutDeviceAddr, aclDataType::ACL_FLOAT, &xGradOut);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   uint64_t workspaceSize = 0;
