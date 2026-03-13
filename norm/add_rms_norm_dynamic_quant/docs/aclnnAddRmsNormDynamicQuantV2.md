@@ -135,7 +135,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>x1（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x1`。</td>
-      <td>不支持空Tensor。</td>
+      <td>支持空Tensor。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
@@ -145,7 +145,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>x2（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x2`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape和数据类型需要与`x1`保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape和数据类型需要与`x1`保持一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
@@ -155,7 +155,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的权重张量。对应公式中的`gamma`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型需要与`x1`保持一致。</li><li>shape需要与`x1`最后一维一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型需要与`x1`保持一致。</li><li>shape需要与`x1`最后一维一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -165,7 +165,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>smoothScale1Optional（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到`y1Out`使用的smoothScale张量。对应公式中的`smoothScale1Optional`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -175,7 +175,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>smoothScale2Optional（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到`y2Out`使用的smoothScale张量。对应公式中的`smoothScale2Optional`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -185,7 +185,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>betaOptional（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的偏置项。对应公式中的`beta`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -215,7 +215,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>y1Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y1Out`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape需要与输入`x1`保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape需要与输入`x1`保持一致。</li></ul></td>
       <td>INT8、INT4</td>
       <td>ND</td>
       <td>2-8</td>
@@ -225,7 +225,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>y2Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y2Out`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>如果`y2Out`为有效输出时，shape需要与`y1Out`保持一致；如果`y2Out`为无效输出时，shape为[1]。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>如果`y2Out`为有效输出时，shape需要与`y1Out`保持一致；如果`y2Out`为无效输出时，shape为[1]。</li></ul></td>
       <td>INT8、INT4</td>
       <td>ND</td>
       <td>2-8</td>
@@ -235,7 +235,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>xOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示x1和x2的和，对应公式中的`x`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape和数据类型需要与输入`x1`/`x2`一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape和数据类型需要与输入`x1`/`x2`一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
@@ -245,7 +245,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>scale1Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示第一路量化的输出，对应公式中的`scale1Out`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape需要与输入`x1`除了最后一维后的shape一致，或者与`x1`除了最后一维的乘积一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape需要与输入`x1`除了最后一维后的shape一致，或者与`x1`除了最后一维的乘积一致。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
@@ -255,7 +255,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>scale2Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示第二路量化的输出，对应公式中的`scale2Out`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>当smoothScale2Optional不存在时，此输出无意义。</li><li>shape需要与`scale1Out`一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当smoothScale2Optional不存在时，此输出无意义。</li><li>shape需要与`scale1Out`一致。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>

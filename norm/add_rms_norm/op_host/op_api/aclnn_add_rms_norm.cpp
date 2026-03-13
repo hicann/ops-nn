@@ -221,6 +221,15 @@ aclnnStatus aclnnAddRmsNormGetWorkspaceSize(
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
+    // 支持空tensor
+    bool anyEmptyTensor = x1->IsEmpty() || gamma->IsEmpty() || rstdOut->IsEmpty();
+    if (anyEmptyTensor) {
+        OP_LOGW("Got empty tensor in aclnnAddRmsNorm!");
+        *workspaceSize = 0;
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
+
     // 参数检查
     AddRmsNormACLNN::AddRmsNormInputTensor inputTensorOri = {x1, x2, gamma};
     AddRmsNormACLNN::AddRmsNormOutputTensor outputTensor = {yOut, rstdOut, xOut};
