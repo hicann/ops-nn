@@ -560,7 +560,7 @@ __aicore__ inline void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::CopyRValueAndI
     LocalTensor<float> rValueLocal = rValueQue_.AllocTensor<float>();  
     LocalTensor<int32_t> sumQuanToIntLocal = sumQuanToIntQue_.AllocTensor<int32_t>();
 
-    int64_t outOfset = rowIdx * tilingData_.ubQuantaIndxFactor;
+    int64_t outOfset = rowIdx * tilingData_.ubVarOptiFactor;
     CopyIn<IDX_T>(sumIdxLocal, updateSumIdxWsGm_[outOfset], rowLen);         
     event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
     SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
@@ -681,6 +681,10 @@ __aicore__ void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::CopyInverseQuantizedV
                                     static_cast<uint32_t>(0),
                                     static_cast<uint32_t>(0)};
     Muls(inverseQuantData, inverseQuantData, alphaValue_, rowLen * afterAxisAlignSize_);
+    event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+    SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+    WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+    
     SetAtomicAdd<VAR_T>();
     DataCopyPad(var_[outOfset], inverseQuantData, copyParams);
     SetAtomicNone();
@@ -791,7 +795,7 @@ __aicore__ inline void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::ProcessThirdSt
     pipe_.InitBuffer(sumQuanToIntQue_, DOUBLE_BUFFER, rowMainDataLen * afterAxisAlignFp32_ * sizeof(int32_t));
     pipe_.InitBuffer(rValueQue_, DOUBLE_BUFFER, rowMainDataLen * afterAxisAlignFp32_ * sizeof(float));
     pipe_.InitBuffer(invQuanDataQue_, DOUBLE_BUFFER, rowMainDataLen * afterAxisAlignSize_ * sizeof(VAR_T));
-    pipe_.InitBuffer(sumIdxQue_, DOUBLE_BUFFER, rowMainDataLen * afterAxisAlignSize_ * sizeof(IDX_T));
+    pipe_.InitBuffer(sumIdxQue_, DOUBLE_BUFFER, rowMainDataLen * sizeof(IDX_T));
     for (uint64_t rowIdx = 0; rowIdx < rowLoopNum - 1; rowIdx++) {
         CopyRValueAndIntWsAndIndexInOpti(preAxisIdx, rowIdx, 0, rowMainDataLen, tilingData_.afterAxis);
         InverseQuantize(uniqueSumIdNum_, tilingData_.afterAxis);
