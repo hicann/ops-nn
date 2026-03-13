@@ -56,7 +56,7 @@ aclnnStatus aclnnFusedCrossEntropyLossWithMaxSum(
 
 ## aclnnFusedCrossEntropyLossWithMaxSumGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   </style>
   <table class="tg" style="undefined;table-layout: fixed; width: 1447px"><colgroup>
@@ -85,7 +85,7 @@ aclnnStatus aclnnFusedCrossEntropyLossWithMaxSum(
       <td class="tg-0pky">logitsMax（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">matmul计算后各行的最大值，公式中的logitsMax。</td>
-      <td class="tg-0pky">数据维度支持1维。</td>
+      <td class="tg-0pky">-</td>
       <td class="tg-0pky">FLOAT</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1</td>
@@ -95,7 +95,7 @@ aclnnStatus aclnnFusedCrossEntropyLossWithMaxSum(
       <td class="tg-0pky">sumExpLogits（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">matmul计算结果与其各行的最大值作差后exp的结果，公式中的sumExpLogits。</td>
-      <td class="tg-0pky">数据维度支持1维，shape与logitsMax一致。</td>
+      <td class="tg-0pky">shape与logitsMax一致。</td>
       <td class="tg-0pky">FLOAT</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1</td>
@@ -105,7 +105,7 @@ aclnnStatus aclnnFusedCrossEntropyLossWithMaxSum(
       <td class="tg-0pky">predictedLogits（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">表示matmul计算结果与其各行的最大值作差后maskedTargetOut筛选后的结果，公式中的predictedLogits。</td>
-      <td class="tg-0pky">数据维度支持1维，shape与logitsMax一致。</td>
+      <td class="tg-0pky">shape与logitsMax一致。</td>
       <td class="tg-0pky">FLOAT</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1</td>
@@ -145,7 +145,7 @@ aclnnStatus aclnnFusedCrossEntropyLossWithMaxSum(
       <td class="tg-0pky">vocabParallelLogitsOptional（aclTensor*）</td>
       <td class="tg-0pky">输出</td>
       <td class="tg-0pky">matmul计算结果，公式中的vocabParallelLogits。</td>
-      <td class="tg-0pky">数据维度支持2维，shape第1维需要与logitsMax第1维一致。</td>
+      <td class="tg-0pky">shape第1维需要与logitsMax第1维一致。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">2</td>
@@ -193,7 +193,7 @@ aclnnStatus aclnnFusedCrossEntropyLossWithMaxSum(
     </tr>
   </tbody></table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -272,9 +272,9 @@ aclnnStatus aclnnFusedCrossEntropyLossWithMaxSum(
         </tr>
       </tbody>
     </table>
-
-- **返回值：**
-
+ 
+- **返回值**
+  
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
@@ -484,4 +484,3 @@ int main() {
   return 0;
 }
 ```
-

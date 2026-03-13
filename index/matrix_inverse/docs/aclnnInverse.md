@@ -1,68 +1,198 @@
 # aclnnInverse
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/matrix_inverse)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                          |    ×  |
+| <term>Ascend 950PR/Ascend 950DT</term>                          |    ×     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
 | <term>Atlas 推理系列产品 </term>                             |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    ×   |
 ## 功能说明
 
-- 算子功能：取方阵的逆矩阵。
+- 接口功能：计算输入方阵的逆矩阵。
 - 计算公式：
 
   $$
   {A}^{-1}A = A{A}^{-1} = {I}_{n}
   $$
 
-  其中A是输入张量，${A}^{-1}$是A的逆，${I}_{n}$是n维的单位矩阵。
+  其中$A$是输入张量，$A^{-1}$是$A$的逆，$I_n$是$n$维的单位矩阵。
 
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnInverseGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnInverse”接口执行计算。
 
-- `aclnnStatus aclnnInverseGetWorkspaceSize(const aclTensor *self, aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor)`
-- `aclnnStatus aclnnInverse(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`
+```Cpp
+aclnnStatus aclnnInverseGetWorkspaceSize(
+    const aclTensor* self,
+    aclTensor*       out,
+    uint64_t*        workspaceSize,
+    aclOpExecutor**  executor)
+```
+
+```Cpp
+aclnnStatus aclnnInverse(
+    void*          workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor* executor,
+    aclrtStream    stream)
+```
 
 ## aclnnInverseGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
-  - self(aclTensor*,计算输入): Device侧的aclTensor，数据类型支持FLOAT、DOUBLE、COMPLEX64、COMPLEX128、FLOAT16，shape至少是2维，且最后两维的大小必须相同，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，数据维度不支持8维以上。
-  - out(aclTensor \*，计算输出): Device侧的aclTensor，数据类型支持FLOAT、DOUBLE、COMPLEX64、COMPLEX128、FLOAT16，且数据类型需要是self可转换的数据类型，shape需要与self的shape一致，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，数据维度不支持8维以上。
-  - workspaceSize(uint64_t \*，出参): 返回需要在Device侧申请的workspace大小。
-  - executor(aclOpExecutor \*\*，出参): 返回op执行器，包含了算子计算流程。
+    <table style="undefined;table-layout: fixed; width: 1477px"><colgroup>
+    <col style="width: 147px">
+    <col style="width: 120px">
+    <col style="width: 233px">
+    <col style="width: 277px">
+    <col style="width: 270px">
+    <col style="width: 121px">
+    <col style="width: 164px">
+    <col style="width: 145px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+        <th>使用说明</th>
+        <th>数据类型</th>
+        <th>数据格式</th>
+        <th>维度(shape)</th>
+        <th>非连续Tensor</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>self（aclTensor*）</td>
+        <td>输入</td>
+        <td>输入方阵。</td>
+        <td>最后两个维度必须相等，不支持空Tensor。</td>
+        <td>FLOAT、FLOAT16、DOUBLE</td>
+        <td>ND</td>
+        <td>2-8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>out（aclTensor*）</td>
+        <td>输出</td>
+        <td>输出逆矩阵。</td>
+        <td>数据类型和shape需要与self一致。</td>
+        <td>FLOAT、FLOAT16、DOUBLE</td>
+        <td>ND</td>
+        <td>2-8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>workspaceSize（uint64_t*）</td>
+        <td>输出</td>
+        <td>返回需要在Device侧申请的workspace大小。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>executor（aclOpExecutor**）</td>
+        <td>输出</td>
+        <td>返回op执行器，包含了算子计算流程。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+    </tbody></table>
 
-- **返回值：**
+    - <term>Atlas 训练系列产品</term>：数据类型不支持FLOAT16。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型不支持DOUBLE。
+
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
   第一段接口完成入参校验，出现以下场景时报错：
-  161001(ACLNN_ERR_PARAM_NULLPTR): 1. 参数self、out是空指针。
-  161002(ACLNN_ERR_PARAM_INVALID): 1. 参数self的数据类型不在支持的范围内。
-                                   2. 参数self的数据类型不能转换为out的数据类型。
-                                   3. 参数self的shape小于2维。
-                                   4. 参数self最后两维的大小不一致。
-                                   5. 参数self和out的shape不一致。
-                                   6. 参数self、out的维度大于8。
-  ```
+  <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+    <col style="width: 276px">
+    <col style="width: 132px">
+    <col style="width: 836px">
+    </colgroup>
+    <thead>
+      <tr>
+      <th>返回值</th>
+      <th>错误码</th>
+      <th>描述</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+      <td>ACLNN_ERR_PARAM_NULLPTR</td>
+      <td>161001</td>
+      <td>传入的self或out是空指针。</td>
+      </tr>
+      <tr>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
+      <td>self或out的数据类型不在支持范围内。</td>
+      </tr>
+      <tr>
+      <td>self和out的数据类型不同。</td>
+      </tr>
+      <tr>
+      <td>self和out的shape不一致。</td>
+      </tr>
+      <tr>
+      <td>self最后两个维度不相等。</td>
+      </tr>
+    </tbody>
+    </table>
 
 ## aclnnInverse
 
-- **参数说明：**
-
-  - workspace(void \*，入参): 在Device侧申请的workspace内存地址。
-  - workspaceSize(uint64_t，入参): 在Device侧申请的workspace大小，由第一段接口aclnnInverseGetWorkspaceSize获取。
-  - executor(aclOpExecutor \*，入参): op执行器，包含了算子计算流程。
-  - stream(aclrtStream，入参): 指定执行任务的Stream。
-
-- **返回值：**
-
+- **参数说明**
+  <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+      <col style="width: 200px">
+      <col style="width: 162px">
+      <col style="width: 882px">
+      </colgroup>
+      <thead>
+      <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      </tr></thead>
+      <tbody>
+      <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+      </tr>
+      <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnInverseGetWorkspaceSize获取。</td>
+      </tr>
+      <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+      </tr>
+      <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+      </tr>
+      </tbody>
+    </table>
+ 
+- **返回值**
+  
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
@@ -204,4 +334,3 @@ int main() {
   return 0;
 }
 ```
-
