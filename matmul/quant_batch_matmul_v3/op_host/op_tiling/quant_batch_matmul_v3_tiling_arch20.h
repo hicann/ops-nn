@@ -22,7 +22,7 @@
 
 namespace optiling {
 
-bool IsSocVersionArch20Pertoken(gert::TilingContext* context);
+bool IsSocVersionArch20Pertoken(const gert::TilingContext* context);
 
 class QuantBatchMatmulPertokenArch20 {
 public:

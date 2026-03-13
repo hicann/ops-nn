@@ -58,7 +58,7 @@ public:
         tdim.k = tilingData->kLoop;
         tdim.n = tilingData->nLoop;
         core_loop = tilingData->coreLoop;
-        swizzle_cnt = tilingData->swizzlCount;
+        swizzle_cnt = tilingData->swizzleCount;
         en_shuffle_k = tilingData->enShuffleK;
 
         OnChipBuffer<ArchType::ASCEND_V220> buf;
@@ -85,7 +85,7 @@ public:
             }
             tidx.m = tile_block_idx * swizzle_cnt + in_tile_block_idx % n_row;
             tidx.n = in_tile_block_idx / n_row;
-            if (tile_block_idx % 2 != 0) {
+            if (tile_block_idx % CONST_2 != 0) {
                 tidx.n = tdim.n - tidx.n - 1;
             }
         } else if constexpr (SwizzleDirect == 1) { // Nz
@@ -99,8 +99,117 @@ public:
             }
             tidx.m = in_tile_block_idx / n_col;
             tidx.n = tile_block_idx * swizzle_cnt + in_tile_block_idx % n_col;
-            if (tile_block_idx % 2 != 0) {
+            if (tile_block_idx % CONST_2 != 0) {
                 tidx.m = tdim.m - tidx.m - 1;
+            }
+        }
+    }
+
+    __aicore__ FORCE_INLINE uint64_t GetOffsetA(const uint64_t batchIdx, const uint64_t mIdx, const uint64_t kIdx)
+    {
+        if (TA) {
+            return kIdx * k0 * m * batch_size + batchIdx * m + mIdx * m0;
+        } else {
+            return mIdx * m0 * batch_size * k + batchIdx * k + kIdx * k0;
+        }
+    }
+
+    __aicore__ FORCE_INLINE uint64_t GetOffsetB(const uint64_t batchIdx, const uint64_t kIdx, const uint64_t nIdx)
+    {
+        if (TB) {
+            if constexpr (FormatB != DataFormat::NZ) {
+                return batchIdx * k * n + nIdx * n0 * k + kIdx * k0;
+            } else {
+                return batchIdx * RoundUp16(k) * RoundUp16(n) + nIdx * n0 * BLOCK_SIZE_16 + kIdx * k0 * RoundUp16(n);
+            }
+        } else {
+            if constexpr (FormatB != DataFormat::NZ) {
+                return batchIdx * k * n + kIdx * k0 * n + nIdx * n0;
+            } else {
+                return batchIdx * RoundUp16(k) * RoundUp16(n) + kIdx * k0 * BLOCK_SIZE_16 + nIdx * n0 * RoundUp16(k);
+            }
+        }
+    }
+
+    __aicore__ FORCE_INLINE void CopyTileA(
+ 	    AscendC::LocalTensor<InDtype>& dstTensor, const AscendC::GlobalTensor<InDtype>& srcTensor,
+ 	    const uint64_t m_actual, const uint64_t m_round, const uint64_t k_actual, const uint64_t k_round)
+    {
+        if ((m == 1) || (m_actual == 1 && !TA)) {
+            CopyGmToCbuf<DataFormat::ND, DataFormat::ND>(dstTensor,       // dst
+                         srcTensor, // src
+                         1,              // nTileActual
+                         CONST_16,       // nTileCeil
+                         1,              // nVal
+                         k_actual,       // kTileActual
+                         k_round,        // kTileCeil
+                         k);             // dVal
+        } else {
+            if (TA) {
+                CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(dstTensor,        // dst
+                                  srcTensor,  // src
+                                  k_actual,        // nTileActual
+                                  k_round,         // nTileCeil
+                                  k,               // nVal
+                                  m_actual,        // dTileActual
+                                  m_round,         // dTileCeil
+                                  m * batch_size); // dVal
+            } else {
+                CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(dstTensor,        // dst
+                                  srcTensor,  // src
+                                  m_actual,        // nTileActual
+                                  m_round,         // nTileCeil
+                                  m,               // nVal
+                                  k_actual,        // dTileActual
+                                  k_round,         // dTileCeil
+                                  k * batch_size); // dVal
+            }
+        }
+    }
+
+    __aicore__ FORCE_INLINE void CopyTileB(
+ 	    AscendC::LocalTensor<InDtype>& dstTensor, const AscendC::GlobalTensor<InDtype>& srcTensor,
+ 	    const uint64_t k_actual, const uint64_t k_round, const uint64_t n_actual, const uint64_t n_round)
+    {
+        if constexpr (FormatB != DataFormat::NZ) {
+            if (TB) {
+                CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(dstTensor,       // dst
+                                srcTensor, // src
+                                n_actual,       // nTileActual
+                                n_round,        // nTileCeil
+                                n,              // nVal
+                                k_actual,       // dTileActual
+                                k_round,        // dTileCeil
+                                k);             // dVal
+            } else {
+                CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(dstTensor,       // dst
+                                srcTensor, // src
+                                k_actual,       // nTileActual
+                                k_round,        // nTileCeil
+                                k,              // nVal
+                                n_actual,       // dTileActual
+                                n_round,        // dTileCeil
+                                n);             // dVal
+            }
+        } else {
+            if (TB) {
+                CopyGmToCbuf<DataFormat::NZ, DataFormat::NZ>(dstTensor,       // dst
+                                srcTensor, // src
+                                n_actual,       // nTileActual
+                                n_round,        // nTileCeil
+                                RoundUp16(n),              // nVal
+                                k_actual,       // dTileActual
+                                k_round,        // dTileCeil
+                                RoundUp16(k));             // dVal
+            } else {
+                CopyGmToCbuf<DataFormat::NZ, DataFormat::NZ>(dstTensor,       // dst
+                                srcTensor, // src
+                                k_actual,       // nTileActual
+                                k_round,        // nTileCeil
+                                RoundUp16(k),              // nVal
+                                n_actual,       // dTileActual
+                                n_round,        // dTileCeil
+                                RoundUp16(n));             // dVal
             }
         }
     }
@@ -132,26 +241,8 @@ public:
             uint64_t mn_max = m_round > n_round ? m_round : n_round;
             uint64_t k_part_len = L0_PINGPONG_BUFFER_SIZE / mn_max / CONST_16 * CONST_16;
             uint64_t shuffle_k = en_shuffle_k ? (core_idx % tdim.k) : 0;
-            if (TA) {
-                offset_a = shuffle_k * k0 * m * batch_size + batch_idx * m + tidx.m * m0;
-            } else {
-                offset_a = tidx.m * m0 * batch_size * k + batch_idx * k + shuffle_k * k0;
-            }
-
-            if (TB) {
-                if constexpr (FormatB != DataFormat::NZ) {
-                    offset_b = batch_idx * k * n + tidx.n * n0 * k + shuffle_k * k0;
-                } else {
-                    offset_b = batch_idx * RoundUp16(k) * RoundUp16(n) + tidx.n * n0 * BLOCK_SIZE_16 + shuffle_k * k0 * RoundUp16(n);
-                }
-            } else {
-                if constexpr (FormatB != DataFormat::NZ) {
-                    offset_b = batch_idx * k * n + shuffle_k * k0 * n + tidx.n * n0;
-                } else {
-                    offset_b = batch_idx * RoundUp16(k) * RoundUp16(n) + shuffle_k * k0 * BLOCK_SIZE_16 + tidx.n * n0 * RoundUp16(k);
-                }
-            }
-
+            offset_a = GetOffsetA(batch_idx, tidx.m, shuffle_k);
+            offset_b = GetOffsetB(batch_idx, shuffle_k, tidx.n);
             uint64_t k_actual = (shuffle_k == tdim.k - 1) ? k - shuffle_k * k0 : k0;
             uint64_t k_round = RoundUp<K_ROUND_CONST>(k_actual);
 
@@ -164,81 +255,13 @@ public:
             if (loop_idx == core_idx) {
                 WAIT_FLAG(MTE1, MTE2, event_id);
                 // *** load matrix A to L1
-                if ((m == 1) || (m_actual == 1 && !TA)) {
-                    CopyGmToCbuf<DataFormat::ND, DataFormat::ND>(l1_buf_a,       // dst
-                                 gm_a[offset_a], // src
-                                 1,              // nTileActual
-                                 16,             // nTileCeil
-                                 1,              // nVal
-                                 k_actual,       // kTileActual
-                                 k_round,        // kTileCeil
-                                 k);             // dVal
-                } else {
-                    if (TA) {
-                        CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(l1_buf_a,        // dst
-                                          gm_a[offset_a],  // src
-                                          k_actual,        // nTileActual
-                                          k_round,         // nTileCeil
-                                          k,               // nVal
-                                          m_actual,        // dTileActual
-                                          m_round,         // dTileCeil
-                                          m * batch_size); // dVal
-                    } else {
-                        CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(l1_buf_a,        // dst
-                                          gm_a[offset_a],  // src
-                                          m_actual,        // nTileActual
-                                          m_round,         // nTileCeil
-                                          m,               // nVal
-                                          k_actual,        // dTileActual
-                                          k_round,         // dTileCeil
-                                          k * batch_size); // dVal
-                    }
-                }
+                CopyTileA(l1_buf_a, gm_a[offset_a], m_actual, m_round, k_actual, k_round);
                 SET_FLAG(MTE2, MTE1, event_id);
+                
+                WaitFlag<HardEvent::MTE1_MTE2>(event_id + CONST_2);
                 // *** load matrix B to L1
-                WaitFlag<HardEvent::MTE1_MTE2>(event_id + 2);
-                if constexpr (FormatB != DataFormat::NZ) {
-                    if (TB) {
-                        CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(l1_buf_b,       // dst
-                                        gm_b[offset_b], // src
-                                        n_actual,       // nTileActual
-                                        n_round,        // nTileCeil
-                                        n,              // nVal
-                                        k_actual,       // dTileActual
-                                        k_round,        // dTileCeil
-                                        k);             // dVal
-                    } else {
-                        CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(l1_buf_b,       // dst
-                                        gm_b[offset_b], // src
-                                        k_actual,       // nTileActual
-                                        k_round,        // nTileCeil
-                                        k,              // nVal
-                                        n_actual,       // dTileActual
-                                        n_round,        // dTileCeil
-                                        n);             // dVal
-                    }
-                } else {
-                    if (TB) {
-                        CopyGmToCbuf<DataFormat::NZ, DataFormat::NZ>(l1_buf_b,       // dst
-                                        gm_b[offset_b], // src
-                                        n_actual,       // nTileActual
-                                        n_round,        // nTileCeil
-                                        RoundUp16(n),              // nVal
-                                        k_actual,       // dTileActual
-                                        k_round,        // dTileCeil
-                                        RoundUp16(k));             // dVal
-                    } else {
-                        CopyGmToCbuf<DataFormat::NZ, DataFormat::NZ>(l1_buf_b,       // dst
-                                        gm_b[offset_b], // src
-                                        k_actual,       // nTileActual
-                                        k_round,        // nTileCeil
-                                        RoundUp16(k),              // nVal
-                                        n_actual,       // dTileActual
-                                        n_round,        // dTileCeil
-                                        RoundUp16(n));             // dVal
-                    }
-                }
-                SET_FLAG(MTE2, MTE1, event_id + 2);
+                CopyTileB(l1_buf_b, gm_b[offset_b], k_actual, k_round, n_actual, n_round);
+                SET_FLAG(MTE2, MTE1, event_id + CONST_2);
             }
 
             for (tidx.k = 0; tidx.k < tdim.k; ++tidx.k) {
@@ -253,26 +276,8 @@ public:
 
                 if (tidx.k < tdim.k - 1) {
                     uint64_t shuffle_k_next = en_shuffle_k ? (core_idx + tidx.k + 1) % tdim.k : (tidx.k + 1);
-                    if (TA) {
-                        offset_a_next = shuffle_k_next * k0 * m * batch_size + batch_idx * m + tidx.m * m0;
-                    } else {
-                        offset_a_next = tidx.m * m0 * batch_size * k + batch_idx * k + shuffle_k_next * k0;
-                    }
-
-                    if (TB) {
-                        if constexpr (FormatB != DataFormat::NZ) {
-                            offset_b_next = batch_idx * k * n + tidx.n * n0 * k + shuffle_k_next * k0;
-                        } else {
-                            offset_b_next = batch_idx * RoundUp16(k) * RoundUp16(n) + tidx.n * n0 * BLOCK_SIZE_16 + shuffle_k_next * k0 * RoundUp16(n);
-                        }
-                    } else {
-                        if constexpr (FormatB != DataFormat::NZ) {
-                            offset_b_next = batch_idx * k * n + shuffle_k_next * k0 * n + tidx.n * n0;
-                        } else {
-                            offset_b_next = batch_idx * RoundUp16(k) * RoundUp16(n) + shuffle_k_next * k0 * BLOCK_SIZE_16 + tidx.n * n0 * RoundUp16(k);
-                        }
-                    }
-
+                    offset_a_next = GetOffsetA(batch_idx, tidx.m, shuffle_k_next);
+                    offset_b_next = GetOffsetB(batch_idx, shuffle_k_next, tidx.n);
                     uint64_t k_actual_next = (shuffle_k_next == (tdim.k - 1)) ? (k - shuffle_k_next * k0) : k0;
                     uint64_t k_round_next = RoundUp<K_ROUND_CONST>(k_actual_next);
 
@@ -282,82 +287,13 @@ public:
 
                     WAIT_FLAG(MTE1, MTE2, event_id_next);
                     // *** load matrix A to L1
-                    if ((m == 1) || (m_actual == 1 && !TA)) {
-                        CopyGmToCbuf<DataFormat::ND, DataFormat::ND>(l1_buf_a_next,       // dst
-                                     gm_a[offset_a_next], // src
-                                     m_actual,            // nTileActual
-                                     m_round,             // nTileCeil
-                                     m,                   // nVal
-                                     k_actual_next,       // kTileActual
-                                     k_round_next,        // kTileCeil
-                                     k);                  // dVal
-                    } else {
-                        if (TA) {
-                            CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(l1_buf_a_next,       // dst
-                                              gm_a[offset_a_next], // src
-                                              k_actual_next,       // nTileActual
-                                              k_round_next,        // nTileCeil
-                                              k,                   // nVal
-                                              m_actual,            // dTileActual
-                                              m_round,             // dTileCeil
-                                              m * batch_size);     // dVal
-                        } else {
-                            CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(l1_buf_a_next,       // dst
-                                              gm_a[offset_a_next], // src
-                                              m_actual,            // nTileActual
-                                              m_round,             // nTileCeil
-                                              m,                   // nVal
-                                              k_actual_next,       // dTileActual
-                                              k_round_next,        // dTileCeil
-                                              k * batch_size);     // dVal
-                        }
-                    }
+                    CopyTileA(l1_buf_a_next, gm_a[offset_a_next], m_actual, m_round, k_actual_next, k_round_next);
                     SET_FLAG(MTE2, MTE1, event_id_next);
 
+                    WaitFlag<HardEvent::MTE1_MTE2>(event_id_next + CONST_2);
                     // *** load matrix B to L1
-                    WaitFlag<HardEvent::MTE1_MTE2>(event_id_next + 2);
-                    if constexpr (FormatB != DataFormat::NZ) {
-                        if (TB) {
-                            CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(l1_buf_b_next,       // dst
-                                            gm_b[offset_b_next], // src
-                                            n_actual,            // nTileActual
-                                            n_round,             // nTileCeil
-                                            n,                   // nVal
-                                            k_actual_next,       // dTileActual
-                                            k_round_next,        // dTileCeil
-                                            k);                  // dVal
-                        } else {
-                            CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(l1_buf_b_next,       // dst
-                                            gm_b[offset_b_next], // src
-                                            k_actual_next,       // nTileActual
-                                            k_round_next,        // nTileCeil
-                                            k,                   // nVal
-                                            n_actual,            // dTileActual
-                                            n_round,             // dTileCeil
-                                            n);                  // dVal
-                        }
-                    } else {
-                        if (TB) {
-                            CopyGmToCbuf<DataFormat::NZ, DataFormat::NZ>(l1_buf_b_next,       // dst
-                                            gm_b[offset_b_next], // src
-                                            n_actual,            // nTileActual
-                                            n_round,             // nTileCeil
-                                            RoundUp16(n),                   // nVal
-                                            k_actual_next,       // dTileActual
-                                            k_round_next,        // dTileCeil
-                                            RoundUp16(k));                  // dVal
-                        } else {
-                            CopyGmToCbuf<DataFormat::NZ, DataFormat::NZ>(l1_buf_b_next,       // dst
-                                            gm_b[offset_b_next], // src
-                                            k_actual_next,       // nTileActual
-                                            k_round_next,        // nTileCeil
-                                            RoundUp16(k),                   // nVal
-                                            n_actual,            // dTileActual
-                                            n_round,             // dTileCeil
-                                            RoundUp16(n));                  // dVal
-                        }
-                    }
-                    SET_FLAG(MTE2, MTE1, event_id_next + 2);
+                    CopyTileB(l1_buf_b_next, gm_b[offset_b_next], k_actual_next, k_round_next, n_actual, n_round);
+                    SET_FLAG(MTE2, MTE1, event_id_next + CONST_2);
                 }
 
                 if (tidx.k == tdim.k - 1 && loop_idx + num_core < core_loop) {
@@ -371,108 +307,21 @@ public:
                     uint64_t n_round_next = (n_actual_next + CONST_16 - 1) / CONST_16 * CONST_16;
                     uint64_t k_actual_next = (shuffle_k_next == (tdim.k - 1)) ? (k - shuffle_k_next * k0) : k0;
                     uint64_t k_round_next = RoundUp<K_ROUND_CONST>(k_actual_next);
-                    if (TA) {
-                        offset_a_next = shuffle_k_next * k0 * m * batch_size + b_idx_next * m + tidx.m * m0;
-                    } else {
-                        offset_a_next = tidx.m * m0 * batch_size * k + b_idx_next * k + shuffle_k_next * k0;
-                    }
-
-                    if (TB) {
-                        if constexpr (FormatB != DataFormat::NZ) {
-                            offset_b_next = b_idx_next * k * n + tidx.n * n0 * k + shuffle_k_next * k0;
-                        } else {
-                            offset_b_next = b_idx_next * RoundUp16(k) * RoundUp16(n) + tidx.n * n0 * BLOCK_SIZE_16 + shuffle_k_next * k0 * RoundUp16(n);
-                        }
-                    } else {
-                        if constexpr (FormatB != DataFormat::NZ) {
-                            offset_b_next = b_idx_next * k * n + shuffle_k_next * k0 * n + tidx.n * n0;
-                        } else {
-                            offset_b_next = b_idx_next * RoundUp16(k) * RoundUp16(n) + shuffle_k_next * k0 * BLOCK_SIZE_16 + tidx.n * n0 * RoundUp16(k);
-                        }
-                    }
-
+                    offset_a_next = GetOffsetA(b_idx_next, tidx.m, shuffle_k_next);
+                    offset_b_next = GetOffsetB(b_idx_next, shuffle_k_next, tidx.n);
                     LocalTensor l1_buf_a_next = (1 - ping_flag) ? l1_base_a : l1_base_a[L1_PINGPONG_BUFFER_SIZE];
                     LocalTensor l1_buf_b_next = (1 - ping_flag) ? l1_base_b : l1_base_b[L1_PINGPONG_BUFFER_SIZE];
                     event_t event_id_next = (1 - ping_flag) ? EVENT_ID0 : EVENT_ID1;
 
                     WAIT_FLAG(MTE1, MTE2, event_id_next);
                     // *** load matrix A to L1
-                    if (m == 1 || m_actual_next == 1 && !TA) {
-                        CopyGmToCbuf<DataFormat::ND, DataFormat::ND>(l1_buf_a_next,       // dst
-                                     gm_a[offset_a_next], // src
-                                     m_actual_next,       // nTileActual
-                                     m_round_next,        // nTileCeil
-                                     m,                   // nVal
-                                     k_actual_next,       // kTileActual
-                                     k_round_next,        // kTileCeil
-                                     k);                  // dVal
-                    } else {
-                        if (TA) {
-                            CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(l1_buf_a_next,       // dst
-                                              gm_a[offset_a_next], // src
-                                              k_actual_next,       // nTileActual
-                                              k_round_next,        // nTileCeil
-                                              k,                   // nVal
-                                              m_actual_next,       // dTileActual
-                                              m_round_next,        // dTileCeil
-                                              m * batch_size);     // dVal
-                        } else {
-                            CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(l1_buf_a_next,       // dst
-                                              gm_a[offset_a_next], // src
-                                              m_actual_next,       // nTileActual
-                                              m_round_next,        // nTileCeil
-                                              m,                   // nVal
-                                              k_actual_next,       // dTileActual
-                                              k_round_next,        // dTileCeil
-                                              k * batch_size);     // dVal
-                        }
-                    }
+                    CopyTileA(l1_buf_a_next, gm_a[offset_a_next], m_actual_next, m_round_next, k_actual_next, k_round_next);
                     SET_FLAG(MTE2, MTE1, event_id_next);
 
+                    WaitFlag<HardEvent::MTE1_MTE2>(event_id_next + CONST_2);
                     // *** load matrix B to L1
-                    WaitFlag<HardEvent::MTE1_MTE2>(event_id_next + 2);
-                    if constexpr (FormatB != DataFormat::NZ) {
-                        if (TB) {
-                            CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(l1_buf_b_next,       // dst
-                                            gm_b[offset_b_next], // src
-                                            n_actual_next,       // nTileActual
-                                            n_round_next,        // nTileCeil
-                                            n,                   // nVal
-                                            k_actual_next,       // dTileActual
-                                            k_round_next,        // dTileCeil
-                                            k);                  // dVal
-                        } else {
-                            CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(l1_buf_b_next,       // dst
-                                            gm_b[offset_b_next], // src
-                                            k_actual_next,       // nTileActual
-                                            k_round_next,        // nTileCeil
-                                            k,                   // nVal
-                                            n_actual_next,       // dTileActual
-                                            n_round_next,        // dTileCeil
-                                            n);                  // dVal
-                        }
-                    } else {
-                        if (TB) {
-                            CopyGmToCbuf<DataFormat::NZ, DataFormat::NZ>(l1_buf_b_next,       // dst
-                                            gm_b[offset_b_next], // src
-                                            n_actual_next,       // nTileActual
-                                            n_round_next,        // nTileCeil
-                                            RoundUp16(n),                   // nVal
-                                            k_actual_next,       // dTileActual
-                                            k_round_next,        // dTileCeil
-                                            RoundUp16(k));                  // dVal
-                        } else {
-                            CopyGmToCbuf<DataFormat::NZ, DataFormat::NZ>(l1_buf_b_next,       // dst
-                                            gm_b[offset_b_next], // src
-                                            k_actual_next,       // nTileActual
-                                            k_round_next,        // nTileCeil
-                                            RoundUp16(k),                   // nVal
-                                            n_actual_next,       // dTileActual
-                                            n_round_next,        // dTileCeil
-                                            RoundUp16(n));                  // dVal
-                        }
-                    }
-                    SET_FLAG(MTE2, MTE1, event_id_next + 2);
+                    CopyTileB(l1_buf_b_next, gm_b[offset_b_next], k_actual_next, k_round_next, n_actual_next, n_round_next);
+                    SET_FLAG(MTE2, MTE1, event_id_next + CONST_2);
                 }
 
                 MatCoord fidx{0};
@@ -527,7 +376,7 @@ public:
 
                     // *** load matrix B from L1 to L0B
                     if (fidx.k == 0) {
-                        WAIT_FLAG(MTE2, MTE1, event_id + 2);
+                        WAIT_FLAG(MTE2, MTE1, event_id + CONST_2);
                     }
                     if (TB) {
                         LoadCbufToCb(l0b_buf,                                 // l0Tensor
@@ -563,7 +412,7 @@ public:
                         }
                     }
                     if (fidx.k == fdim.k - 1) {
-                        SET_FLAG(MTE1, MTE2, event_id + 2);
+                        SET_FLAG(MTE1, MTE2, event_id + CONST_2);
                     }
 
                     SET_FLAG(MTE1, M, mte1_mad_event_id);

@@ -24,25 +24,36 @@ using Ops::NN::MathUtil;
 
 namespace optiling {
 
+constexpr uint32_t X1_IDX = 0;
+constexpr uint32_t X2_IDX = 1;
+constexpr uint32_t SCALE_IDX = 2;
+constexpr uint32_t OFFSET_IDX = 3;
+constexpr uint32_t BIAS_IDX = 4;
+constexpr uint32_t PERTOKEN_IDX = 5;
+constexpr uint32_t CONST_ZERO = 0;
+constexpr uint32_t CONST_ONE = 1;
+constexpr uint32_t CONST_TWO = 2;
+constexpr uint32_t CONST_THREE = 3;
+
 constexpr uint32_t CONST_128 = 128;
 constexpr uint32_t CONST_256 = 256;
 
-bool IsSocVersionArch20Pertoken(gert::TilingContext* context)
+bool IsSocVersionArch20Pertoken(const gert::TilingContext* context)
 {
     OP_TILING_CHECK(context == nullptr, OP_LOGE("Arch20Pertoken: ", "context is nullptr"), return false);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     auto npuArch = ascendcPlatform.GetCurNpuArch();
-    if (npuArch == NpuArch::DAV_2002 && context->GetOptionalInputDesc(5) != nullptr) {
+    if (npuArch == NpuArch::DAV_2002 && context->GetOptionalInputDesc(PERTOKEN_IDX) != nullptr) {
         return true;
     }
     return false;
 }
 
 template <typename PpTilingDataType>
-uint64_t Swizzl(PpTilingDataType& tilingData)
+uint64_t Swizzle(PpTilingDataType& tilingData)
 {
-    uint64_t swizzlDirect = 0UL;
-    uint64_t swizzlCount = 1UL;
+    uint64_t swizzleDirect = 0UL;
+    uint64_t swizzleCount = 1UL;
     float m0 = tilingData.m0;
     float n0 = tilingData.n0;
     float m = tilingData.m;
@@ -55,24 +66,24 @@ uint64_t Swizzl(PpTilingDataType& tilingData)
         float cost;
         // B0 + A < A0 + B
         if (i * n0 + m < m0 * c + n) {
-            swizzlDirect = 1UL; // Nz
+            swizzleDirect = 1UL; // Nz
             cost = n0 * i + m0 * c;
             if (cost <= mincost) {
                 mincost = cost;
-                swizzlCount = i;
+                swizzleCount = i;
             }
         } else {
-            swizzlDirect = 0UL; // Zn
+            swizzleDirect = 0UL; // Zn
             cost = m0 * i + n0 * c;
             if (cost < mincost) {
                 mincost = cost;
-                swizzlCount = i;
+                swizzleCount = i;
             }
         }
     }
-    tilingData.swizzlDirect = swizzlDirect;
-    tilingData.swizzlCount = swizzlCount;
-    return swizzlDirect;
+    tilingData.swizzleDirect = swizzleDirect;
+    tilingData.swizzleCount = swizzleCount;
+    return swizzleDirect;
 }
 
 ge::graphStatus QuantBatchMatmulPertokenArch20::PostTiling()
@@ -99,14 +110,14 @@ ge::graphStatus QuantBatchMatmulPertokenArch20::PostTiling()
 
 ge::graphStatus QuantBatchMatmulPertokenArch20::DoTiling()
 {
-    auto aShape = context_->GetInputShape(0)->GetOriginShape();
-    auto bShape = context_->GetInputShape(1)->GetOriginShape();
-    auto cShape = context_->GetOutputShape(0)->GetOriginShape();
+    auto aShape = context_->GetInputShape(X1_IDX)->GetOriginShape();
+    auto bShape = context_->GetInputShape(X2_IDX)->GetOriginShape();
+    auto cShape = context_->GetOutputShape(X1_IDX)->GetOriginShape();
     size_t aDims = aShape.GetDimNum();
     size_t bDims = bShape.GetDimNum();
-    if (context_->GetOptionalInputDesc(4) != nullptr && context_->GetOptionalInputDesc(3) == nullptr) {
+    if (context_->GetOptionalInputDesc(BIAS_IDX) != nullptr && context_->GetOptionalInputDesc(OFFSET_IDX) == nullptr) {
         qbmmTilingDataArch20_.withBias = true;
-        auto biasShape = context_->GetOptionalInputShape(4)->GetOriginShape();
+        auto biasShape = context_->GetOptionalInputShape(BIAS_IDX)->GetOriginShape();
         if (biasShape.GetDimNum() == 1){
             qbmmTilingDataArch20_.biasWithBatch = false;
         } else if(biasShape.GetDimNum() != 1 && biasShape.GetDimNum() == 3) { 
@@ -118,15 +129,15 @@ ge::graphStatus QuantBatchMatmulPertokenArch20::DoTiling()
 
     std::vector<int64_t> oriShapeTable;
     if (bDims > 2 && aDims > 2) { // Input dimsize greater than 2
-        oriShapeTable = {aShape[aDims - 3], aShape[aDims - 2], aShape[aDims - 1], bShape[bDims - 2]}; // NT
+        oriShapeTable = {aShape[aDims - CONST_THREE], aShape[aDims - CONST_TWO], aShape[aDims - CONST_ONE], bShape[bDims - CONST_TWO]}; // NT
     } else {
-        oriShapeTable = {1, aShape[aDims - 2], aShape[aDims - 1], bShape[bDims - 2]}; // NT
+        oriShapeTable = {1, aShape[aDims - CONST_TWO], aShape[aDims - CONST_ONE], bShape[bDims - CONST_TWO]}; // NT
     }
 
-    qbmmTilingDataArch20_.batchSize = oriShapeTable.at(0);
-    qbmmTilingDataArch20_.m = oriShapeTable.at(1);
-    qbmmTilingDataArch20_.k = oriShapeTable.at(2);
-    qbmmTilingDataArch20_.n = oriShapeTable.at(3);
+    qbmmTilingDataArch20_.batchSize = oriShapeTable.at(CONST_ZERO);
+    qbmmTilingDataArch20_.m = oriShapeTable.at(CONST_ONE);
+    qbmmTilingDataArch20_.k = oriShapeTable.at(CONST_TWO);
+    qbmmTilingDataArch20_.n = oriShapeTable.at(CONST_THREE);
     qbmmTilingDataArch20_.m0 = CONST_256;
     qbmmTilingDataArch20_.k0 = CONST_256;
     qbmmTilingDataArch20_.n0 = CONST_128;
@@ -140,13 +151,12 @@ ge::graphStatus QuantBatchMatmulPertokenArch20::DoTiling()
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
 
     qbmmTilingDataArch20_.blockDim = std::min(qbmmTilingDataArch20_.coreLoop, static_cast<uint32_t>(ascendcPlatform.GetCoreNumAic()));
-    Swizzl<QuantMatmulPertokenTilingDataArch20>(qbmmTilingDataArch20_);
+    Swizzle<QuantMatmulPertokenTilingDataArch20>(qbmmTilingDataArch20_);
     uint64_t TRANS = 1;                // B trans
     uint64_t KERNEL_TEMPLATE_TYPE = 1; // basic
     uint64_t IS_PERTOKEN = 1;          // pertoken
-    uint64_t OPTION_ATTRS = 0;
+    uint64_t OPTION_ATTRS = 0;         // option_none
     tilingKey_ = GET_TPL_TILING_KEY(TRANS, KERNEL_TEMPLATE_TYPE, IS_PERTOKEN, OPTION_ATTRS);
-
     ge::graphStatus ret = PostTiling();
     if (ret != ge::GRAPH_SUCCESS) {
         return ret;

@@ -28,6 +28,7 @@ enum class QuantType : std::uint8_t {
     K_G = 6     //pertoken叠加pergroup
 };
 
+constexpr uint32_t CONST_2 = 2;
 constexpr uint64_t SYNC_AIV_TO_AIC = 3;
 constexpr uint64_t SYNC_AIC_TO_AIV = 5;
 constexpr uint32_t UB_BLOCK_SIZE = 32;
@@ -107,7 +108,7 @@ private:
     pipe_->InitBuffer(vecInQueueX_, 1, alignKSize_ * sizeof(int8_t));
     pipe_->InitBuffer(vecOutQueueA1_, 1, ops::CeilDiv(alignKSize_, INT4_SIZE));
     pipe_->InitBuffer(vecOutQueueA2_, 1, ops::CeilDiv(alignKSize_, INT4_SIZE));
-    pipe_->InitBuffer(tmpBuff_, alignKSize_ * sizeof(half) * 2);
+    pipe_->InitBuffer(tmpBuff_, alignKSize_ * sizeof(half) * CONST_2); 
     constexpr int BUFFER_SIZE_256B = AND_ONE_REPEAT_LENGTH * sizeof(int16_t);
     pipe_->InitBuffer(vecOutQueue0F_, 1, BUFFER_SIZE_256B);
     coreIdx_ = GetBlockIdx();

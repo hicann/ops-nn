@@ -72,10 +72,10 @@ struct PpMatmulDefaultTilingData {
     uint64_t kLoop{1};
     uint64_t nLoop{1};
     uint64_t coreLoop{1};
-    uint64_t swizzlCount{1};
+    uint64_t swizzleCount{1};
     uint32_t tilingKey{0};
     uint64_t blockDim{1};
-    uint64_t swizzlDirect{0};
+    uint64_t swizzleDirect{0};
     uint64_t splitk{0};
     uint64_t enShuffleK{0};
 

@@ -178,9 +178,9 @@ ge::graphStatus GemmV3BaseTiling::PostTiling()
     tilingPtr->kLoop = tilingData_.kLoop;
     tilingPtr->nLoop = tilingData_.nLoop;
     tilingPtr->coreLoop = tilingData_.coreLoop;
-    tilingPtr->swizzleCount = tilingData_.swizzlCount;
+    tilingPtr->swizzleCount = tilingData_.swizzleCount;
     tilingPtr->blockDim = tilingData_.blockDim;
-    tilingPtr->swizzleDirect = tilingData_.swizzlDirect;
+    tilingPtr->swizzleDirect = tilingData_.swizzleDirect;
     tilingPtr->splitk = tilingData_.splitk;
     tilingPtr->enShuffleK = tilingData_.enShuffleK;
     tilingPtr->alpha = alpha_;

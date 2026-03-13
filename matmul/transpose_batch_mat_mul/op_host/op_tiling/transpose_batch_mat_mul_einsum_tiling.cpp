@@ -111,10 +111,10 @@ ge::graphStatus TransposeBatchMatMulEinsumTiling::PostTiling()
     tilingData.kLoop = ppMatmulDefaultTilingData_.kLoop;
     tilingData.nLoop = ppMatmulDefaultTilingData_.nLoop;
     tilingData.coreLoop = ppMatmulDefaultTilingData_.coreLoop;
-    tilingData.swizzlCount = ppMatmulDefaultTilingData_.swizzlCount;
+    tilingData.swizzleCount = ppMatmulDefaultTilingData_.swizzleCount;
     tilingData.tilingKey = ppMatmulDefaultTilingData_.tilingKey;
     tilingData.blockDim = ppMatmulDefaultTilingData_.blockDim;
-    tilingData.swizzlDirect = ppMatmulDefaultTilingData_.swizzlDirect;
+    tilingData.swizzleDirect = ppMatmulDefaultTilingData_.swizzleDirect;
     tilingData.splitk = ppMatmulDefaultTilingData_.splitk;
     tilingData.enShuffleK = ppMatmulDefaultTilingData_.enShuffleK;
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
