@@ -320,5 +320,3 @@ private:
     float inputScale{0};
     float inputOffset{0};
 };
-
-

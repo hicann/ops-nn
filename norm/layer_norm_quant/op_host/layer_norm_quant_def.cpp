@@ -143,7 +143,6 @@ class LayerNormQuant : public OpDef {
             .DynamicShapeSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "layer_norm_quant_apt");
         this->AICore().AddConfig("ascend950", config_950);
-
     }
 };
 OP_ADD(LayerNormQuant);

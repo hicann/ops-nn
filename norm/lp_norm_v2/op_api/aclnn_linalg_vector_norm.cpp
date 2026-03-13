@@ -263,9 +263,7 @@ static aclnnStatus aclnnLinalgVectorA3(const aclTensor* selfContiguous, InputPar
 
         normOut = l0op::Cast(updateOut, inputParams.out->GetDataType(), executor);
         CHECK_RET(normOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
     }
-    
 
     auto viewCopyResult = l0op::ViewCopy(normOut, inputParams.out, executor);
     CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);

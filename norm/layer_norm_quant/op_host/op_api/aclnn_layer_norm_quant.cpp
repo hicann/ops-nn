@@ -12,7 +12,6 @@
 #include "layer_norm_quant.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
-#include "op_api/op_api_def.h"
 #include "aclnn/aclnn_base.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/common_types.h"
@@ -97,7 +96,7 @@ static inline bool CheckOptInputDtype(const aclTensor* tensorPtr, op::DataType d
 
 static bool CheckDtype(
     const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* scale,
-    const aclTensor* zeroPointsOptional, aclTensor* res)
+    const aclTensor* zeroPointsOptional, const aclTensor* res)
 {
     // 检查 x 的数据类型是否在 AddLayerNormQuant 算子的支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(x, DTYPE_SUPPORT_REGBASE_LIST, return false);
@@ -113,7 +112,7 @@ static bool CheckDtype(
 
 static bool CheckShape(
     const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* scale,
-    const aclTensor* zeroPointsOptional, int quantMode, aclTensor* res)
+    const aclTensor* zeroPointsOptional, int quantMode, const aclTensor* res)
 {
     OP_CHECK_MAX_DIM(x, MAX_DIM_LEN, return false);
     OP_CHECK_MAX_DIM(gamma, GAMMA_STATIC_DIM, return false);
@@ -135,7 +134,7 @@ static bool CheckShape(
     size_t scaleDimNums = scale->GetViewShape().GetDimNum();
     size_t zeroPointsOptionalDimNums = zeroPointsOptional->GetViewShape().GetDimNum();
     OP_CHECK(
-        (scaleDimNums == 1 && scale->GetViewShape().GetDim(0)),
+        (scaleDimNums == 1 && scale->GetViewShape().GetDim(0) == 1),
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of scale should be equal to [1]"), return false);
     OP_CHECK(
         (scaleDimNums == zeroPointsOptionalDimNums),
