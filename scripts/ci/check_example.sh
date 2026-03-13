@@ -80,7 +80,7 @@ do
         activation_ops_910b=("ge_glu_v2" "ge_glu_grad_v2")
         loss_ops_910b=("logit" "logit_grad")
         optim_ops_910b=("apply_adam_w_v2" "apply_fused_ema_adam")
-        norm_ops_910b=("rms_norm" "add_layer_norm_grad")
+        norm_ops_910b=("rms_norm" "add_layer_norm" "add_layer_norm_grad")
         quant_ops_910b=("flat_quant" "dynamic_quant")
         matmul_ops_910b=("addmv" "batch_mat_mul_v3" "fused_linear_cross_entropy_loss_grad" "fused_linear_online_max_sum" "fused_quant_mat_mul" "gemm" "mat_mul_v3" "mv" "quant_batch_matmul_v3" "weight_quant_batch_matmul_v2")
         conv_ops_910b=("conv2d_v2" "conv3d_v2")
