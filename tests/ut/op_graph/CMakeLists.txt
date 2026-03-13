@@ -67,6 +67,7 @@ if(UT_TEST_ALL OR OP_GRAPH_UT)
         gtest
         graph
         platform
+        ge_common
         register
         opp_registry
         rt2_registry

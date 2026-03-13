@@ -1366,6 +1366,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/broadcast_gradient_args/README.md">broadcast_gradient_args</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>接收两个输入shape，并输出两个整数向量，通过广播机制，分别得出两个输入shape在梯度计算时需要在哪些维度上进行聚合。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/embedding_bag/README.md">embedding_bag</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -2483,6 +2493,16 @@
     <td>✗</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
+    <td><a href="../../norm/layer_norm/README.md">layer_norm</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对指定层进行均值为0、标准差为1的归一化计算。</td>
   </tr>
   <tr>
     <td>norm</td>

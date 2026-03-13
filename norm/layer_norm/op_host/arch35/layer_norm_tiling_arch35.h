@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -9,15 +9,14 @@
  */
 
 /*!
- * /file layer_norm.h
+ * \file layer_norm_tiling_arch35.h
  * \brief
  */
-#ifndef LAYER_NORM_H_
-#define LAYER_NORM_H_
-#include <string>
-#include <vector>
 
-#include "layer_norm_v3_tiling.h"
+#ifndef LAYER_NORM_TILING_ARCH35_H_
+#define LAYER_NORM_TILING_ARCH35_H_
+
+#include "norm/layer_norm_v3/op_host/arch35/layer_norm_v3_tiling.h"
 
 namespace optiling {
 struct LayerNormOpInfo {
@@ -46,5 +45,5 @@ struct LayerNormOpInfo {
     LayerNormV3CompileInfo regbaseCompileInfo;
     bool is_regbase = true;
 };
-} // namespace optiling
-#endif // LAYER_NORM_H_
+}  // namespace optiling
+#endif  // LAYER_NORM_TILING_ARCH35_H_

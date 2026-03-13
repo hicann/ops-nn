@@ -15,7 +15,7 @@
 
 #include "layer_norm_v3_tiling.h"
 #include "layer_norm_v3_tiling_arch35.h"
-#include "layer_norm.h"
+#include "norm/layer_norm/op_host/arch35/layer_norm_tiling_arch35.h"
 
 namespace optiling {
 constexpr size_t INPUT_IDX_X = 0;
