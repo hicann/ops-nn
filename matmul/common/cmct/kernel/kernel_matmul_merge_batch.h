@@ -34,6 +34,7 @@
 #include "../block/block_mmad_builder.h"
 #include "../block/block_scheduler_utils.h"
 #include "../block/block_scheduler_policy.h"
+#include "../epilogue/block_epilogue_empty.h"
 namespace Cmct {
 namespace Gemm {
 namespace Kernel {

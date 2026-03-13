@@ -159,6 +159,22 @@ struct BatchMatMulToMulBasicTilingData{
 };
 #pragma pack(pop)
 
+#pragma pack(push, 8) 
+struct BatchMatMulV3MergeBatchBasicTilingData { 
+    uint32_t m = 1; 
+    uint32_t n = 1; 
+    uint32_t k = 1; 
+    uint32_t b = 1; 
+    uint32_t batchAL1 = 1; 
+    uint32_t batchBL1 = 1; 
+    uint32_t batchL0 = 1; 
+    uint32_t kL1 = 1; 
+    uint32_t baseK = 16; 
+    uint32_t isHf32 = 0;
+    L2CacheMode l2CacheDisable = L2CacheMode::L2_CACHE_DEFAULT;
+}; 
+#pragma pack(pop)
+
 #pragma pack(push, 8)
 struct MatMulV3KEqZeroBasicTilingData {
     uint64_t totalDataAmount = 1;

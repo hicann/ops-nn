@@ -410,6 +410,24 @@ protected:
         return ge::GRAPH_SUCCESS;
     };
 
+    virtual ge::graphStatus GetTilingDataProcess(
+        BatchMatMulV3MergeBatchBasicTilingData &mergebatchTilingBasicData) const
+    {
+        mergebatchTilingBasicData.m = args_.mValue;
+        mergebatchTilingBasicData.n = args_.nValue;
+        mergebatchTilingBasicData.k = args_.kValue;
+        mergebatchTilingBasicData.b = batchInfo_->batchC;
+        mergebatchTilingBasicData.batchAL1 = runInfo_.mergeBatchAL1;
+        mergebatchTilingBasicData.batchBL1 = runInfo_.mergeBatchBL1;
+        mergebatchTilingBasicData.batchL0 = runInfo_.mergeBatchL0;
+        mergebatchTilingBasicData.baseK = runInfo_.baseK;
+        mergebatchTilingBasicData.kL1 = runInfo_.stepKa * runInfo_.baseK;
+        mergebatchTilingBasicData.isHf32 = args_.isHf32;
+        mergebatchTilingBasicData.l2CacheDisable =
+            SetDisableL2cache(args_.mValue, mergebatchTilingBasicData.kL1, mergebatchTilingBasicData.kL1, args_.nValue);
+        return ge::GRAPH_SUCCESS; 
+    };
+
     virtual ge::graphStatus GetTilingDataProcess(BatchMatMulToMulBasicTilingData &matmulToMulBasicData) const
     {
         matmulToMulBasicData.m = runInfo_.toMulInfo.m;

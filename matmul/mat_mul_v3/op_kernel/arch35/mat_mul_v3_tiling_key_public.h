@@ -25,6 +25,7 @@
 #define MAT_MUL_FOR_BATCH 0
 #define MAT_MUL_ITER_BATCH_SINGLE_BIAS 1
 #define MAT_MUL_BATCH_MATMUL_TO_MUL 2
+#define MAT_MUL_MERGE_BATCH 3
 
 #define MAT_MUL_BASIC 0
 #define MAT_MUL_STREAM_K 1
@@ -61,7 +62,8 @@ enum class MatMulV3BatchModel : std::uint8_t
 {
     BATCH_MODEL = MAT_MUL_FOR_BATCH,
     SINGLE_BIAS_MODEL = MAT_MUL_ITER_BATCH_SINGLE_BIAS,
-    BATCH_MATMUL_TO_MUL = MAT_MUL_BATCH_MATMUL_TO_MUL
+    BATCH_MATMUL_TO_MUL = MAT_MUL_BATCH_MATMUL_TO_MUL,
+    MERGE_BATCH_MODEL = MAT_MUL_MERGE_BATCH
 };
 
 enum class MatMulV3Model : std::uint8_t
@@ -71,7 +73,7 @@ enum class MatMulV3Model : std::uint8_t
     K_EQUAL_ZERO = MAT_MUL_K_EQUAL_ZERO
 };
 
-enum class MatMulV3FullLoad : std::uint8_t
+enum class MatMulV3FullLoad : std::uint8_t 
 {
     NONE_FULL_LOAD = MAT_MUL_NO_FULL_LOAD,
     A_FULL_LOAD = MAT_MUL_A_FULL_LOAD,

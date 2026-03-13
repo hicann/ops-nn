@@ -28,18 +28,19 @@ namespace batch_matmul_v3_advanced {
 namespace strategy {
 constexpr int32_t BATCH_MATMUL_INPUT_K_EQUAL_ZERO = 0;
 constexpr int32_t BATCH_MATMUL_TO_MUL = 1;
-constexpr int32_t ITER_BATCH_BASICAPI = 2;
-constexpr int32_t ITER_BATCH = 3;
-constexpr int32_t AL1_FULL_LOAD_BASIC = 4;
-constexpr int32_t BL1_FULL_LOAD_BASIC = 5;
-constexpr int32_t ASW_BASIC = 6;
+constexpr int32_t MERGE_BATCH_BASICAPI = 2;
+constexpr int32_t ITER_BATCH_BASICAPI = 3;
+constexpr int32_t ITER_BATCH = 4;
+constexpr int32_t AL1_FULL_LOAD_BASIC = 5;
+constexpr int32_t BL1_FULL_LOAD_BASIC = 6;
+constexpr int32_t ASW_BASIC = 7;
 constexpr int32_t BASE = 999;
 
 const static std::map<NpuArch, std::vector<int32_t>> BatchMatMulV3PrioritiesMap = {
     {NpuArch::DAV_3510,
-     {strategy::BATCH_MATMUL_INPUT_K_EQUAL_ZERO, strategy::BATCH_MATMUL_TO_MUL, strategy::ITER_BATCH_BASICAPI,
-      strategy::ITER_BATCH, strategy::AL1_FULL_LOAD_BASIC, strategy::BL1_FULL_LOAD_BASIC, strategy::ASW_BASIC,
-      strategy::BASE}},
+     {strategy::BATCH_MATMUL_INPUT_K_EQUAL_ZERO, strategy::BATCH_MATMUL_TO_MUL, strategy::MERGE_BATCH_BASICAPI,
+      strategy::ITER_BATCH_BASICAPI, strategy::ITER_BATCH, strategy::AL1_FULL_LOAD_BASIC,
+      strategy::BL1_FULL_LOAD_BASIC, strategy::ASW_BASIC, strategy::BASE}},
     {NpuArch::DAV_RESV,
      {strategy::ITER_BATCH_BASICAPI, strategy::AL1_FULL_LOAD_BASIC, strategy::BL1_FULL_LOAD_BASIC, strategy::ASW_BASIC,
       strategy::BASE}}, // supportMmadS8S4平台
