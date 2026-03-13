@@ -125,6 +125,12 @@ struct BatchMatMulV3ToMulInfo {
     uint64_t alignNum = 1UL;
 };
 
+struct MatMulV3MNEqualOneInfo {
+    uint64_t useAllCoreNum = 1UL;
+    uint64_t loopK = 1UL;
+    uint64_t tailMN = 0UL;
+};
+
 struct MatMulV3RunInfo {
     uint64_t usedCoreNum = 1UL;
     uint64_t singleCoreM = 1UL;
@@ -158,6 +164,7 @@ struct MatMulV3RunInfo {
     BatchMatMulV3RunInfo bmmRunInfo;
     MatMulV3MixInfo mixInfo;
     BatchMatMulV3ToMulInfo toMulInfo;
+    MatMulV3MNEqualOneInfo oneInfo;
 };
 }
 }

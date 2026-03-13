@@ -34,6 +34,7 @@ template <uint64_t fullLoadMode = 0>
 struct QuantBatchMatmulV3Scheduler {
     static constexpr uint64_t FULL_LOAD_MODE = fullLoadMode;
 };
+struct BuiltInOneScheduler {};
 } // namespace Gemm
 } // namespace Cmct
 #endif

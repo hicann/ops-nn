@@ -86,7 +86,8 @@ class BlockMmadBuilder<
             MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_RELU>, BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<
             MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_RELU>, BlockMatmulPolicy_> ||
-        AscendC::Std::is_base_of_v<BatchMatmulToMul<>, BlockMatmulPolicy_>>> {
+        AscendC::Std::is_base_of_v<BatchMatmulToMul<>, BlockMatmulPolicy_> || 
+        AscendC::Std::is_base_of_v<MatmulMNEqualOne<>, BlockMatmulPolicy_>>> {
 public:
     using AType = AType_;
     using BType = BType_;

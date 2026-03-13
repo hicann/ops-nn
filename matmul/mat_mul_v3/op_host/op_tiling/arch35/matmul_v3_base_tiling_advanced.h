@@ -450,6 +450,19 @@ protected:
         return ge::GRAPH_SUCCESS;
     }
 
+    virtual ge::graphStatus GetTilingDataProcess(MatMulV3MNEqOneBasicTilingData &mnEqOneBasicTilingData) const
+    {
+        mnEqOneBasicTilingData.m = args_.mValue;
+        mnEqOneBasicTilingData.n = args_.nValue;
+        mnEqOneBasicTilingData.k = args_.kValue;
+        mnEqOneBasicTilingData.useAllCoreNum = runInfo_.oneInfo.useAllCoreNum;
+        mnEqOneBasicTilingData.usedCoreNum = runInfo_.usedCoreNum;
+        mnEqOneBasicTilingData.tailMN = runInfo_.oneInfo.tailMN;
+        mnEqOneBasicTilingData.loopK = runInfo_.oneInfo.loopK;
+        mnEqOneBasicTilingData.hasBias = args_.hasBias;
+        return ge::GRAPH_SUCCESS;
+    }
+
 protected:
     const MatmulV3CompileInfo &compileInfo_;
     const MatMulV3Args &args_;

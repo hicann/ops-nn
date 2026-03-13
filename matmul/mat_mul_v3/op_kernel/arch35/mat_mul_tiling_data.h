@@ -181,4 +181,18 @@ struct MatMulV3KEqZeroBasicTilingData {
     uint64_t aivNum = 1;
 };
 #pragma pack(pop)
+
+#pragma pack(push, 8)
+struct MatMulV3MNEqOneBasicTilingData{
+    uint32_t m = 1;
+    uint32_t n = 1;
+    uint32_t k = 1;
+    uint32_t useAllCoreNum = 1;
+    uint32_t usedCoreNum = 1;
+    uint32_t loopK = 1;
+    uint32_t tailMN = 0;
+    bool hasBias = false;
+};
+#pragma pack(pop)
+
 #endif // __OP_KERNEL_MATMUL_TILING_DATA_H__

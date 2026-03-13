@@ -27,15 +27,16 @@ namespace optiling {
 namespace matmul_v3_advanced {
 namespace strategy {
 constexpr int32_t MATMUL_INPUT_K_EQUAL_ZERO = 0;
-constexpr int32_t BASIC_STREAM_K = 1;
-constexpr int32_t STREAM_K = 2;
-constexpr int32_t BASIC_ASWT = 3;
-constexpr int32_t FULL_LOAD_BASE = 4;
+constexpr int32_t MN_EQUAL_ONE = 1;
+constexpr int32_t BASIC_STREAM_K = 2;
+constexpr int32_t STREAM_K = 3;
+constexpr int32_t BASIC_ASWT = 4;
+constexpr int32_t FULL_LOAD_BASE = 5;
 constexpr int32_t BASE = 999;
 
 const static std::map<NpuArch, std::vector<int32_t>> MatMulV3PrioritiesMap = {
     {NpuArch::DAV_3510,
-     {strategy::MATMUL_INPUT_K_EQUAL_ZERO, strategy::BASIC_STREAM_K, strategy::STREAM_K, strategy::BASIC_ASWT,
+     {strategy::MATMUL_INPUT_K_EQUAL_ZERO, strategy::MN_EQUAL_ONE, strategy::BASIC_STREAM_K, strategy::STREAM_K, strategy::BASIC_ASWT,
       strategy::FULL_LOAD_BASE}},
     {NpuArch::DAV_RESV, {strategy::BASIC_ASWT, strategy::FULL_LOAD_BASE}}, // supportMmadS8S4平台
 };
