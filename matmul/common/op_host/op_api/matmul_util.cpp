@@ -2317,14 +2317,14 @@ NpuArchMatMulRuleBase::PromoteResult Dav2201MatMulRule::GetUpperDtypeByLookUpTab
             }
         }
 
-        static constexpr NpuArchMatMulRuleBase::PromoteResult promoteResultTable[][6] = {
-            /* cubeMathType:   KEEP_DTYPE,            ALLOW_FP32_DOWN_P,    USE_FP16,              USE_HF32,            FORCE_GRP_ACC_FOR_FP32,  USE_HIGH_PREC_MODE */
-            /*0: FP32+FP32*/ {{FP32, false, ""},     {FP32, false, ""},    {FP16, false, ""},     {FP32, false, ""},    {FP32, false, ""},       {FP32, false, ""}},
-            /*1: FP32+FP16*/ {{FP32, false, ""},     {FP32, false, ""},    {FP16, false, ""},     {FP32, false, ""},    {FP32, false, ""},       {FP32, false, ""}},
-            /*2: FP16+FP16*/ {{FP16, false, ""},     {FP16, false, ""},    {FP16, false, ""},     {FP16, false, WARN0}, {FP16, false, ""},       {FP16, false, ""}},
-            /*3: FP32+BF16*/ {{FP32, false, ""},     {FP32, false, ""},    {FP16, false, WARN6},  {FP32, false, ""},    {FP32, false, ""},       {FP32, false, ""}},
-            /*4: FP16+BF16*/ {{FP32, false, WARN1},  {FP32, false, WARN5}, {FP16, false, WARN3},  {FP32, false, WARN4}, {FP32, false, ""},       {FP32, false, ""}},
-            /*5: BF16+BF16*/ {{BF16, false, ""},     {BF16, false, ""},    {BF16, false, WARN2},  {BF16, false, WARN0}, {BF16, false, ""},       {BF16, false, ""}}
+        static constexpr NpuArchMatMulRuleBase::PromoteResult promoteResultTable[][7] = {
+            /* cubeMathType:   KEEP_DTYPE,            ALLOW_FP32_DOWN_P,    USE_FP16,              USE_HF32,            FORCE_GRP_ACC_FOR_FP32,   USE_FP32_ADDMM,       USE_HIGH_PREC_MODE */
+            /*0: FP32+FP32*/ {{FP32, false, ""},     {FP32, false, ""},    {FP16, false, ""},     {FP32, false, ""},    {FP32, false, ""},       {FP32, false, ""},     {FP32, false, ""}},
+            /*1: FP32+FP16*/ {{FP32, false, ""},     {FP32, false, ""},    {FP16, false, ""},     {FP32, false, ""},    {FP32, false, ""},       {FP32, false, ""},     {FP32, false, ""}},
+            /*2: FP16+FP16*/ {{FP16, false, ""},     {FP16, false, ""},    {FP16, false, ""},     {FP16, false, WARN0}, {FP16, false, ""},       {FP16, false, ""},     {FP16, false, ""}},
+            /*3: FP32+BF16*/ {{FP32, false, ""},     {FP32, false, ""},    {FP16, false, WARN6},  {FP32, false, ""},    {FP32, false, ""},       {FP32, false, ""},     {FP32, false, ""}},
+            /*4: FP16+BF16*/ {{FP32, false, WARN1},  {FP32, false, WARN5}, {FP16, false, WARN3},  {FP32, false, WARN4}, {FP32, false, ""},       {FP32, false, ""},     {FP32, false, ""}},
+            /*5: BF16+BF16*/ {{BF16, false, ""},     {BF16, false, ""},    {BF16, false, WARN2},  {BF16, false, WARN0}, {BF16, false, ""},       {BF16, false, ""},     {BF16, false, ""}}
         };
 
         return promoteResultTable[inputCase][cubeMathType];
