@@ -81,11 +81,11 @@
 | [aclnnCelu&aclnnInplaceCelu](../../activation/celu_v2/docs/aclnnCelu&aclnnInplaceCelu.md) | aclnnCelu对输入张量self中的每个元素x调用连续可微指数线性单元激活函数CELU，并将得到的结果存入输出张量out中。 | 默认确定性实现 |   |
 | [aclnnChamferDistanceBackward](../../loss/chamfer_distance_grad/docs/aclnnChamferDistanceBackward.md) | ChamferDistance（倒角距离）的反向算子，根据正向的输入对输出的贡献及初始梯度求出输入对应的梯度。 | 默认非确定性实现，支持配置开启 |   |
 | [aclnnConvolution](../../conv/convolution_forward/docs/aclnnConvolution.md) | 实现卷积功能，支持1D/2D/3D、转置卷积、空洞卷积、分组卷积。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnConvolutionBackward](../../conv/convolution_backward/docs/aclnnConvolutionBackward.md) | 实现卷积的反向传播。 | 默认非确定性实现，支持配置开启。 |   |
+| [aclnnConvolutionBackward](../../conv/convolution_backward/docs/aclnnConvolutionBackward.md) | 实现卷积的反向传播。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
 | [aclnnConvDepthwise2d](../../conv/convolution_forward/docs/aclnnConvDepthwise2d.md) | 实现二维深度卷积（DepthwiseConv2D）计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnConvertWeightToINT4Pack](../../matmul/convert_weight_to_int4_pack/docs/aclnnConvertWeightToINT4Pack.md) | 对输入weight数据做预处理，实现低比特数据由稀疏存储到紧密存储的排布转换。输出weightInt4Pack的[数据格式](../../docs/zh/context/数据格式.md)声明为FRACTAL_NZ时，该算子将[数据格式](../../docs/zh/context/数据格式.md)从ND转为FRACTAL_NZ。 | 默认确定性实现 |   |
 | [aclnnConvTbc](../../conv/convolution_forward/docs/aclnnConvTbc.md) | 实现时序（TBC）一维卷积。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnConvTbcBackward](../../conv/convolution_backward/docs/aclnnConvTbcBackward.md) | 用于计算时序卷积的反向传播。 | 默认确定性实现 |   |
+| [aclnnConvTbcBackward](../../conv/convolution_backward/docs/aclnnConvTbcBackward.md) | 用于计算时序卷积的反向传播。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnCrossEntropyLoss](../../loss/cross_entropy_loss/docs/aclnnCrossEntropyLoss.md) | 计算输入的交叉熵损失。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnCtcLoss](../../loss/ctc_loss_v2/docs/aclnnCtcLoss.md) | 计算连接时序分类损失值。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
 | [aclnnCtcLossBackward](../../loss/ctc_loss_v2_grad/docs/aclnnCtcLossBackward.md) | 连接时序分类损失值反向传播。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
