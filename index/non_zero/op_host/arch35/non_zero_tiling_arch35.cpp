@@ -395,7 +395,7 @@ void NonZeroAscendCTilingImpl::CalcUbSizeInfoSmallMask()
     inputUbSize_ = FloorDiv(((ubSize_ - TMP_UB_SIZE_BIG - maskUbSize_) / DIV_NUM), static_cast<uint64_t>(ALIGN_UB_32)) * ALIGN_UB_32;
     int32_t inputDimsNew = inputDims_;
     // 输出是int32且需要转置场景
-    if ((inputDims_ != 1) && outputDtypeSize_ == B32_BYTES && needTranspose_) {
+    if ((inputDims_ != 1) && outputDtypeSize_ == B32_BYTES && (needTranspose_ == 1)) {
         inputDimsNew = inputDims_ + 1;
     }
 
@@ -418,7 +418,7 @@ void NonZeroAscendCTilingImpl::CalcUbSizeInfoSmallMask()
     if ((inputDims_ != 1) && outputDtypeSize_ == B64_BYTES) {
         offsetInt64_ = TmpBeforeNumO * inputDims_;
         offsetInt32Trans_ = 0;
-    } else if ((inputDims_ != 1) && (outputDtypeSize_ == B32_BYTES) && (needTranspose_)) {
+    } else if ((inputDims_ != 1) && (outputDtypeSize_ == B32_BYTES) && (needTranspose_ == 1)) {
         offsetInt64_ = 0;
         offsetInt32Trans_ = TmpBeforeNumO * inputDims_;
     } else if (inputDims_ == 1 && outputDtypeSize_ == B64_BYTES) {
