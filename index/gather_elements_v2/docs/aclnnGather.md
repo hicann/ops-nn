@@ -1,5 +1,7 @@
 # aclnnGather
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/gather_elements_v2)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -92,17 +94,17 @@ aclnnStatus aclnnGather(
       </tr></thead>
     <tbody>
       <tr>
-        <td>self</td>
+        <td>self（aclTensor*）</td>
         <td>输入</td>
         <td>公式中的self。</td>
-        <td>数据类型需要与out一致，shape支持0-8维，维度数需要与index一致。</td>
+        <td>数据类型需要与out一致，维度数需要与index一致。</td>
         <td>DOUBLE、FLOAT16、BFLOAT16、FLOAT32、INT32、UINT32、INT64、UINT64、INT16、UINT16、INT8、UINT8、BOOL</td>
         <td>-</td>
         <td>0-8</td>
         <td>√</td>
       </tr>
       <tr>
-        <td>dim</td>
+        <td>dim（int64_t）</td>
         <td>输入</td>
         <td>公式中的d。</td>
         <td>取值范围[-self.dim(), self.dim() - 1]</td>
@@ -112,27 +114,28 @@ aclnnStatus aclnnGather(
         <td>-</td>
       </tr>
       <tr>
-        <td>index</td>
+        <td>index（aclTensor*）</td>
         <td>输入</td>
         <td>公式中的index。</td>
-        <td>维度数需要与self一致，且shape需要与out一致，除dim指定的维度外，其他维度的size需要小于等于self对应维度的size。</td>
+        <td>维度数需要与self一致，且shape需要与out一致，除dim指定的维度外，其他维度的size需要小于等于self对应维度的size。<br>
+index中的具体数值代表self对应dim轴上的下标，取值范围[-self.shape[dim], self.shape[dim] - 1]，index中的索引不支持越界。</td>
         <td>INT32、IND64</td>
         <td>-</td>
         <td>0-8</td>
         <td>√</td>
       </tr>
       <tr>
-        <td>out</td>
+        <td>out（aclTensor*）</td>
         <td>输出</td>
         <td>输出aclTensor*。</td>
-        <td>数据类型需要与self一致，shape支持0-8维，且shape需要与index一致。</td>
+        <td>数据类型需要与self一致，且shape需要与index一致。</td>
         <td>与self一致</td>
         <td>-</td>
         <td>与index一致</td>
         <td>√</td>
       </tr>
       <tr>
-        <td>workspaceSize</td>
+        <td>workspaceSize（uint64_t*）</td>
         <td>输出</td>
         <td>返回需要在Device侧申请的workspace大小。</td>
         <td>-</td>
@@ -142,7 +145,7 @@ aclnnStatus aclnnGather(
         <td>-</td>
       </tr>
       <tr>
-        <td>executor</td>
+        <td>executor（aclOpExecutor**）</td>
         <td>输出</td>
         <td>返回op执行器，包含了算子计算流程。</td>
         <td>-</td>
