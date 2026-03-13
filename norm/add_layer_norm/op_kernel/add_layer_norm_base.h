@@ -39,17 +39,17 @@ constexpr uint32_t LAYER_NUM_TWO = 2;
 #define SUPPORT_BF16 0
 #endif
 
-template <typename Tp, Tp v>
+template <typename Tp2, Tp2 v>
 struct integral_constant {
-    static constexpr Tp value = v;
+    static constexpr Tp2 value = v;
 };
 using true_type = integral_constant<bool, true>;
 using false_type = integral_constant<bool, false>;
 template <typename, typename>
 struct is_same : public false_type {
 };
-template <typename Tp>
-struct is_same<Tp, Tp> : public true_type {
+template <typename Tp3>
+struct is_same<Tp3, Tp3> : public true_type {
 };
 
 template <typename T, template <typename U> typename R, template <typename U> typename S>
@@ -325,53 +325,53 @@ __aicore__ inline void Level0AddFp32Short(
     const LocalTensor<float>& dstLocal, const LocalTensor<float>& src0Local, const LocalTensor<float>& src1Local,
     uint32_t alignElem, uint32_t repeat, uint32_t processElem)
 {
-    uint32_t maxElemFp32 = ELEM_PER_REP_FP32;
-    uint8_t repStride = alignElem / FLOAT_BLOCK_ELEM;
-    uint32_t tailCount = processElem % maxElemFp32;
+    uint32_t addMaxElemFp32 = ELEM_PER_REP_FP32;
+    uint8_t addRepStride = alignElem / FLOAT_BLOCK_ELEM;
+    uint32_t addTailCount = processElem % addMaxElemFp32;
 
-    uint32_t repeatTimes = repeat / MAX_REP_NUM;
+    uint32_t addRepeatTimes = repeat / MAX_REP_NUM;
 
-    uint32_t index = 0;
-    uint32_t elemIndex = 0;
-    if (likely(repeatTimes == 0)) {
-        elemIndex = 0;
-        for (; elemIndex + maxElemFp32 <= processElem; elemIndex += maxElemFp32) {
-            Add(dstLocal[elemIndex], src0Local[elemIndex], src1Local[elemIndex], maxElemFp32, repeat,
-                {1, 1, 1, repStride, 0, repStride});
+    uint32_t addIndex = 0;
+    uint32_t addElemIndex = 0;
+    if (likely(addRepeatTimes == 0)) {
+        addElemIndex = 0;
+        for (; addElemIndex + addMaxElemFp32 <= processElem; addElemIndex += addMaxElemFp32) {
+            Add(dstLocal[addElemIndex], src0Local[addElemIndex], src1Local[addElemIndex], addMaxElemFp32, repeat,
+                {1, 1, 1, addRepStride, 0, addRepStride});
         }
-        if (tailCount != 0) {
-            Add(dstLocal[elemIndex], src0Local[elemIndex], src1Local[elemIndex], tailCount, repeat,
-                {1, 1, 1, repStride, 0, repStride});
+        if (addTailCount != 0) {
+            Add(dstLocal[addElemIndex], src0Local[addElemIndex], src1Local[addElemIndex], addTailCount, repeat,
+                {1, 1, 1, addRepStride, 0, addRepStride});
         }
     } else {
-        uint32_t repTailNum = repeat % MAX_REP_NUM;
-        uint32_t repIndex = 0;
-        uint32_t repElem;
-        for (; repIndex + MAX_REP_NUM <= repeat; repIndex += MAX_REP_NUM) {
-            elemIndex = 0;
-            repElem = repIndex * alignElem;
-            for (; elemIndex + maxElemFp32 <= processElem; elemIndex += maxElemFp32) {
-                index = repElem + elemIndex;
-                Add(dstLocal[elemIndex], src0Local[index], src1Local[elemIndex], maxElemFp32, MAX_REP_NUM,
-                    {1, 1, 1, repStride, 0, repStride});
+        uint32_t addRepTailNum = repeat % MAX_REP_NUM;
+        uint32_t addRepIndex = 0;
+        uint32_t addRepElem;
+        for (; addRepIndex + MAX_REP_NUM <= repeat; addRepIndex += MAX_REP_NUM) {
+            addElemIndex = 0;
+            addRepElem = addRepIndex * alignElem;
+            for (; addElemIndex + addMaxElemFp32 <= processElem; addElemIndex += addMaxElemFp32) {
+                addIndex = addRepElem + addElemIndex;
+                Add(dstLocal[addElemIndex], src0Local[addIndex], src1Local[addElemIndex], addMaxElemFp32, MAX_REP_NUM,
+                    {1, 1, 1, addRepStride, 0, addRepStride});
             }
-            if (tailCount != 0) {
-                index = repElem + elemIndex;
-                Add(dstLocal[elemIndex], src0Local[index], src1Local[elemIndex], tailCount, MAX_REP_NUM,
-                    {1, 1, 1, repStride, 0, repStride});
+            if (addTailCount != 0) {
+                addIndex = addRepElem + addElemIndex;
+                Add(dstLocal[addElemIndex], src0Local[addIndex], src1Local[addElemIndex], addTailCount, MAX_REP_NUM,
+                    {1, 1, 1, addRepStride, 0, addRepStride});
             }
         }
-        if (repTailNum != 0) {
-            elemIndex = 0;
-            for (; elemIndex + maxElemFp32 <= processElem; elemIndex += maxElemFp32) {
-                index = repElem + elemIndex;
-                Add(dstLocal[elemIndex], src0Local[index], src1Local[elemIndex], maxElemFp32, repTailNum,
-                    {1, 1, 1, repStride, 0, repStride});
+        if (addRepTailNum != 0) {
+            addElemIndex = 0;
+            for (; addElemIndex + addMaxElemFp32 <= processElem; addElemIndex += addMaxElemFp32) {
+                addIndex = addRepElem + addElemIndex;
+                Add(dstLocal[addElemIndex], src0Local[addIndex], src1Local[addElemIndex], addMaxElemFp32, addRepTailNum,
+                    {1, 1, 1, addRepStride, 0, addRepStride});
             }
-            if (tailCount != 0) {
-                index = repElem + elemIndex;
-                Add(dstLocal[elemIndex], src0Local[index], src1Local[elemIndex], tailCount, repTailNum,
-                    {1, 1, 1, repStride, 0, repStride});
+            if (addTailCount != 0) {
+                addIndex = addRepElem + addElemIndex;
+                Add(dstLocal[addElemIndex], src0Local[addIndex], src1Local[addElemIndex], addTailCount, addRepTailNum,
+                    {1, 1, 1, addRepStride, 0, addRepStride});
             }
         }
     }

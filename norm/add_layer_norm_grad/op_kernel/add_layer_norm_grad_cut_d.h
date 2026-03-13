@@ -557,8 +557,8 @@ private:
     GlobalTensor<T> x1Gm;
     GlobalTensor<T> x2Gm;
     GlobalTensor<T> gammaGm;
-    GlobalTensor<T> dXGm;
     GlobalTensor<T> dSumGm;
+    GlobalTensor<T> dXGm;
     GlobalTensor<int32_t> syncGlobal_;
     GlobalTensor<int32_t> syncGlobal1_;
 

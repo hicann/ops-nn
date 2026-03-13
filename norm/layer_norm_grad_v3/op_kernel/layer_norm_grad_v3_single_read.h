@@ -138,27 +138,27 @@ private:
     {
         // copy_in dy to buffer1
         buffer1 = queue1.AllocTensor<float>();
-        DataCopyPadParams padParams{false, 0, 0, 0};
-        DataCopyParams intriParams;
+        DataCopyPadParams singleReadPadParams{false, 0, 0, 0};
+        DataCopyParams singleReadIntriParams;
         if (likely(tilingData->colAlignV == tilingData->col)) {
-            intriParams.blockCount = 1;
-            intriParams.blockLen = curRowsNum * tilingData->col * sizeof(T);
+            singleReadIntriParams.blockCount = 1;
+            singleReadIntriParams.blockLen = curRowsNum * tilingData->col * sizeof(T);
         } else {
-            intriParams.blockCount = curRowsNum;
-            intriParams.blockLen = tilingData->col * sizeof(T);
-            padParams.isPad = true;
-            padParams.rightPadding = tilingData->colAlignM - tilingData->col;
+            singleReadIntriParams.blockCount = curRowsNum;
+            singleReadIntriParams.blockLen = tilingData->col * sizeof(T);
+            singleReadPadParams.isPad = true;
+            singleReadPadParams.rightPadding = tilingData->colAlignM - tilingData->col;
         }
-        intriParams.srcStride = 0;
-        intriParams.dstStride = 0;
+        singleReadIntriParams.srcStride = 0;
+        singleReadIntriParams.dstStride = 0;
         if constexpr (IsSameType<T, float>::value) {
             DataCopyPad(
                 buffer1.ReinterpretCast<T>(), dyInTensorGM[tilingData->ubFormer * tilingData->col * outerIdx],
-                intriParams, padParams);
+                singleReadIntriParams, singleReadPadParams);
         } else {
             DataCopyPad(
                 buffer1.ReinterpretCast<T>()[tilingData->bufferElemNums],
-                dyInTensorGM[tilingData->ubFormer * tilingData->col * outerIdx], intriParams, padParams);
+                dyInTensorGM[tilingData->ubFormer * tilingData->col * outerIdx], singleReadIntriParams, singleReadPadParams);
         }
         queue1.EnQue(buffer1);
     }
@@ -183,25 +183,25 @@ private:
     {
         // copy_in x to buffer0
         buffer0 = queue0.AllocTensor<float>();
-        DataCopyPadParams padParams{false, 0, 0, 0};
-        DataCopyParams intriParams;
+        DataCopyPadParams singleReadPadParams2{false, 0, 0, 0};
+        DataCopyParams singleReadIntriParams2;
         if (likely(tilingData->colAlignV == tilingData->col)) {
-            intriParams.blockCount = 1;
-            intriParams.blockLen = curRowsNum * tilingData->col * sizeof(T);
+            singleReadIntriParams2.blockCount = 1;
+            singleReadIntriParams2.blockLen = curRowsNum * tilingData->col * sizeof(T);
         } else {
-            intriParams.blockCount = curRowsNum;
-            intriParams.blockLen = tilingData->col * sizeof(T);
+            singleReadIntriParams2.blockCount = curRowsNum;
+            singleReadIntriParams2.blockLen = tilingData->col * sizeof(T);
         }
-        intriParams.srcStride = 0;
-        intriParams.dstStride = 0;
+        singleReadIntriParams2.srcStride = 0;
+        singleReadIntriParams2.dstStride = 0;
         if constexpr (IsSameType<T, float>::value) {
             DataCopyPad(
                 buffer0.ReinterpretCast<T>(), xInTensorGM[tilingData->ubFormer * tilingData->col * outerIdx],
-                intriParams, padParams);
+                singleReadIntriParams2, singleReadPadParams2);
         } else {
             DataCopyPad(
                 buffer0.ReinterpretCast<T>()[tilingData->bufferElemNums],
-                xInTensorGM[tilingData->ubFormer * tilingData->col * outerIdx], intriParams, padParams);
+                xInTensorGM[tilingData->ubFormer * tilingData->col * outerIdx], singleReadIntriParams2, singleReadPadParams2);
         }
         queue0.EnQue(buffer0);
     }
@@ -375,17 +375,17 @@ private:
     {
         // copy_out mul_2 from buffer2 and do atomic
         buffer2 = queue2.DeQue<float>();
-        DataCopyParams intriParams;
-        intriParams.blockCount = 1;
-        intriParams.blockLen = tilingData->colAlignV * sizeof(float);
-        intriParams.srcStride = 0;
-        intriParams.dstStride = 0;
+        DataCopyParams intriParamsPhase1;
+        intriParamsPhase1.blockCount = 1;
+        intriParamsPhase1.blockLen = tilingData->colAlignV * sizeof(float);
+        intriParamsPhase1.srcStride = 0;
+        intriParamsPhase1.dstStride = 0;
         SetAtomicAdd<float>();
         for (int64_t i = 0; i < curRowsNum; i++) {
             if constexpr (isDeterministic) {
                 PipeBarrier<PIPE_MTE3>();
             }
-            DataCopyPad(workspaceGM, buffer2[tilingData->colAlignV * i], intriParams);
+            DataCopyPad(workspaceGM, buffer2[tilingData->colAlignV * i], intriParamsPhase1);
         }
         queue2.FreeTensor(buffer2);
         SetAtomicNone();
@@ -396,19 +396,19 @@ private:
     {
         // copy_out mul_10 to pdX
         buffer3 = queue3.DeQue<float>();
-        DataCopyParams intriParams;
+        DataCopyParams singleReadIntriParams3;
         if (likely(tilingData->colAlignV == tilingData->col)) {
-            intriParams.blockCount = 1;
-            intriParams.blockLen = curRowsNum * tilingData->col * sizeof(T);
+            singleReadIntriParams3.blockCount = 1;
+            singleReadIntriParams3.blockLen = curRowsNum * tilingData->col * sizeof(T);
         } else {
-            intriParams.blockCount = curRowsNum;
-            intriParams.blockLen = tilingData->col * sizeof(T);
+            singleReadIntriParams3.blockCount = curRowsNum;
+            singleReadIntriParams3.blockLen = tilingData->col * sizeof(T);
         }
-        intriParams.srcStride = 0;
-        intriParams.dstStride = 0;
+        singleReadIntriParams3.srcStride = 0;
+        singleReadIntriParams3.dstStride = 0;
         DataCopyPad(
             pdXOutTensorGM[tilingData->ubFormer * tilingData->col * outerIdx], buffer3.ReinterpretCast<T>(),
-            intriParams);
+            singleReadIntriParams3);
         queue3.FreeTensor(buffer3);
     }
 

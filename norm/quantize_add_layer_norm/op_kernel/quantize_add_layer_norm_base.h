@@ -30,17 +30,17 @@ static constexpr float ZERO = 0;
 #define SUPPORT_BF16 0
 #endif
 
-template <typename Tp, Tp v>
+template <typename TypeParam, TypeParam val>
 struct integral_constant {
-    static constexpr Tp value = v;
+    static constexpr TypeParam value = val;
 };
 using true_type = integral_constant<bool, true>;
 using false_type = integral_constant<bool, false>;
 template <typename, typename>
 struct is_same : public false_type {
 };
-template <typename Tp>
-struct is_same<Tp, Tp> : public true_type {
+template <typename TypeParam>
+struct is_same<TypeParam, TypeParam> : public true_type {
 };
 
 template <typename T, template <typename U> typename R, template <typename U> typename S>

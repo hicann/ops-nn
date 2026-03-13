@@ -36,23 +36,23 @@ public:
         this->rowFactor = tiling->row_factor;
         this->ubFactor = tiling->ub_factor;
         this->epsilon = tiling->epsilon;
-        this->avgFactor = (numCol != 0) ? (float)1.0 / numCol : 0;
+        this->avgFactor = (this->numCol != 0) ? (float)1.0 / this->numCol : 0;
 
         blockIdx_ = GetBlockIdx();
         if (blockIdx_ < GetBlockNum() - 1) {
-            this->rowWork = blockFactor;
+            this->rowWork = this->blockFactor;
         } else if (blockIdx_ == GetBlockNum() - 1) {
-            this->rowWork = numRow - (GetBlockNum() - 1) * blockFactor;
+            this->rowWork = this->numRow - (GetBlockNum() - 1) * this->blockFactor;
         } else {
         }
         // get start index for current core, core parallel
-        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        gammaGm.SetGlobalBuffer((__gm__ T*)gamma, numCol);
-        yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
+        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
+        gammaGm.SetGlobalBuffer((__gm__ T*)gamma, this->numCol);
+        yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
         if constexpr (MODE == ADD_RMS_NORM_MODE) {
-            rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * blockFactor, blockFactor);
-            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+            rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * this->blockFactor, this->blockFactor);
+            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
         }
         if constexpr (MODE == PRE_RMS_NORM_MODE) {
             xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
@@ -118,51 +118,51 @@ public:
 private:
     __aicore__ inline void CopyInAndAdd(uint32_t i_idx, uint32_t j_idx, uint32_t num)
     {
-        LocalTensor<T> x1x2_in = inQueueX.AllocTensor<T>();
-        LocalTensor<T> x1_in = x1x2_in[0];
-        LocalTensor<T> x2_in = x1x2_in[ubFactor];
-        DataCopyCustom<T>(x1_in, x1Gm[i_idx * numCol + j_idx * ubFactor], num);
-        DataCopyCustom<T>(x2_in, x2Gm[i_idx * numCol + j_idx * ubFactor], num);
-        inQueueX.EnQue(x1x2_in);
-        LocalTensor<T> x1x2Local = inQueueX.DeQue<T>();
+        LocalTensor<T> splitX1X2In = inQueueX.AllocTensor<T>();
+        LocalTensor<T> splitX1In = splitX1X2In[0];
+        LocalTensor<T> splitX2In = splitX1X2In[this->ubFactor];
+        DataCopyCustom<T>(splitX1In, x1Gm[i_idx * this->numCol + j_idx * this->ubFactor], num);
+        DataCopyCustom<T>(splitX2In, x2Gm[i_idx * this->numCol + j_idx * this->ubFactor], num);
+        inQueueX.EnQue(splitX1X2In);
+        LocalTensor<T> splitX1X2Local = inQueueX.DeQue<T>();
 
-        auto x1Local = x1x2Local[0];
-        auto x2Local = x1x2Local[ubFactor];
+        auto splitX1Local = splitX1X2Local[0];
+        auto splitX2Local = splitX1X2Local[this->ubFactor];
 
-        LocalTensor<T> xLocal = outQueueY.AllocTensor<T>();
+        LocalTensor<T> splitXLocal = outQueueY.AllocTensor<T>();
 
         if constexpr (is_same<T, half>::value) {
-            LocalTensor<float> x1_fp32 = xFp32Buf.Get<float>();
+            LocalTensor<float> splitX1Fp32 = xFp32Buf.Get<float>();
 
-            Add(xLocal, x1Local, x2Local, num);
+            Add(splitXLocal, splitX1Local, splitX2Local, num);
             PipeBarrier<PIPE_V>();
-            Cast(x1_fp32, xLocal, RoundMode::CAST_NONE, num);
+            Cast(splitX1Fp32, splitXLocal, RoundMode::CAST_NONE, num);
             PipeBarrier<PIPE_V>();
             // x1+x2 saved in x1_fp32
         } else if constexpr (is_same<T, bfloat16_t>::value) {
             LocalTensor<float> x1_fp32 = xFp32Buf.Get<float>();
-            LocalTensor<float> x2_fp32 = x1x2Local.template ReinterpretCast<float>();
+            LocalTensor<float> x2_fp32 = splitX1X2Local.template ReinterpretCast<float>();
 
-            Cast(x1_fp32, x1Local, RoundMode::CAST_NONE, num);
+            Cast(x1_fp32, splitX1Local, RoundMode::CAST_NONE, num);
             PipeBarrier<PIPE_V>();
-            Cast(x2_fp32, x2Local, RoundMode::CAST_NONE, num);
+            Cast(x2_fp32, splitX2Local, RoundMode::CAST_NONE, num);
             PipeBarrier<PIPE_V>();
 
             Add(x1_fp32, x1_fp32, x2_fp32, num);
             PipeBarrier<PIPE_V>();
-            Cast(xLocal, x1_fp32, RoundMode::CAST_RINT, num);
+            Cast(splitXLocal, x1_fp32, RoundMode::CAST_RINT, num);
             PipeBarrier<PIPE_V>();
             // x1+x2 saved in x1_fp32
         } else {
-            Add(x1Local, x1Local, x2Local, num);
+            Add(splitX1Local, splitX1Local, splitX2Local, num);
             PipeBarrier<PIPE_V>();
-            Adds(xLocal, x1Local, (float)0.0, num);
+            Adds(splitXLocal, splitX1Local, (float)0.0, num);
             // x1+x2 saved in inQueueX
         }
-        inQueueX.FreeTensor(x1x2Local);
+        inQueueX.FreeTensor(splitX1X2Local);
 
         // copy out to workspace && x_out
-        outQueueY.EnQue(xLocal);
+        outQueueY.EnQue(splitXLocal);
         auto x_out = outQueueY.DeQue<T>();
         if constexpr (MODE == ADD_RMS_NORM_MODE || MODE == PRE_RMS_NORM_MODE) {
             DataCopyCustom<T>(xGm[i_idx * numCol + j_idx * ubFactor], x_out, num);
@@ -209,13 +209,13 @@ private:
 
     __aicore__ inline void ComputeRstd(LocalTensor<float> rstdLocal, uint32_t num)
     {
-        LocalTensor<float> reduce_buf_local = reduceFp32Buf.Get<float>();
-        Adds(rstdLocal, rstdLocal, epsilon, num);
+        LocalTensor<float> splitReduceBufLocal = reduceFp32Buf.Get<float>();
+        Adds(rstdLocal, rstdLocal, this->epsilon, num);
         PipeBarrier<PIPE_V>();
         Sqrt(rstdLocal, rstdLocal, num);
-        Duplicate(reduce_buf_local, ONE, num);
+        Duplicate(splitReduceBufLocal, ONE, num);
         PipeBarrier<PIPE_V>();
-        Div(rstdLocal, reduce_buf_local, rstdLocal, num);
+        Div(rstdLocal, splitReduceBufLocal, rstdLocal, num);
         PipeBarrier<PIPE_V>();
     }
 
@@ -223,13 +223,13 @@ private:
         uint32_t i_o_idx, uint32_t calc_row_num, uint32_t j_idx, LocalTensor<float>& rstdLocal, uint32_t num)
     {
         CopyInGamma(j_idx, num);
-        LocalTensor<T> gammaLocal = inQueueGamma.DeQue<T>();
+        LocalTensor<T> splitGammaLocal = inQueueGamma.DeQue<T>();
         for (uint32_t i_i = 0; i_i < calc_row_num; i_i++) {
             CopyInX(i_o_idx * rowFactor + i_i, j_idx, num);
-            ComputeY(i_i, gammaLocal, rstdLocal, num);
+            ComputeY(i_i, splitGammaLocal, rstdLocal, num);
             CopyOutY(i_o_idx * rowFactor + i_i, j_idx, num);
         }
-        inQueueGamma.FreeTensor(gammaLocal);
+        inQueueGamma.FreeTensor(splitGammaLocal);
     }
 
     __aicore__ inline void CopyInGamma(uint32_t j_idx, uint32_t num)
@@ -250,35 +250,35 @@ private:
         }
         inQueueX.EnQue<T>(xLocal);
         if constexpr (is_same<T, half>::value || is_same<T, bfloat16_t>::value) {
-            LocalTensor<float> x_fp32 = xFp32Buf.Get<float>();
-            LocalTensor<T> xLocal = inQueueX.DeQue<T>();
-            Cast(x_fp32, xLocal, RoundMode::CAST_NONE, num);
+            LocalTensor<float> splitXFp32 = xFp32Buf.Get<float>();
+            LocalTensor<T> splitXLocalDeq = inQueueX.DeQue<T>();
+            Cast(splitXFp32, splitXLocalDeq, RoundMode::CAST_NONE, num);
             PipeBarrier<PIPE_V>();
-            inQueueX.FreeTensor(xLocal);
+            inQueueX.FreeTensor(splitXLocalDeq);
         }
     }
 
     __aicore__ inline void ComputeY(
-        uint32_t i_i_idx, LocalTensor<half>& gammaLocal, LocalTensor<float>& rstdLocal, uint32_t num)
+        uint32_t i_i_idx, LocalTensor<half>& splitGammaLocal, LocalTensor<float>& splitRstdLocal, uint32_t num)
     {
-        LocalTensor<float> x_fp32 = xFp32Buf.Get<float>();
-        LocalTensor<float> sqx = sqxBuf.Get<float>();
-        event_t event_v_s = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-        SetFlag<HardEvent::V_S>(event_v_s);
-        WaitFlag<HardEvent::V_S>(event_v_s);
-        float rstdValue = rstdLocal.GetValue(i_i_idx);
-        event_t event_s_v = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
-        SetFlag<HardEvent::S_V>(event_s_v);
-        WaitFlag<HardEvent::S_V>(event_s_v);
+        LocalTensor<float> splitXFp32 = xFp32Buf.Get<float>();
+        LocalTensor<float> splitSqx = sqxBuf.Get<float>();
+        event_t splitEventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+        SetFlag<HardEvent::V_S>(splitEventVS);
+        WaitFlag<HardEvent::V_S>(splitEventVS);
+        float splitRstdValue = splitRstdLocal.GetValue(i_i_idx);
+        event_t splitEventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+        SetFlag<HardEvent::S_V>(splitEventSV);
+        WaitFlag<HardEvent::S_V>(splitEventSV);
         PipeBarrier<PIPE_V>();
-        Muls(x_fp32, x_fp32, rstdValue, num);
+        Muls(splitXFp32, splitXFp32, splitRstdValue, num);
         PipeBarrier<PIPE_V>();
-        LocalTensor<half> yLocal = outQueueY.AllocTensor<half>();
-        Cast(yLocal, x_fp32, RoundMode::CAST_NONE, num);
+        LocalTensor<half> splitYLocal = outQueueY.AllocTensor<half>();
+        Cast(splitYLocal, splitXFp32, RoundMode::CAST_NONE, num);
         PipeBarrier<PIPE_V>();
-        Mul(yLocal, gammaLocal, yLocal, num);
+        Mul(splitYLocal, splitGammaLocal, splitYLocal, num);
         PipeBarrier<PIPE_V>();
-        outQueueY.EnQue<half>(yLocal);
+        outQueueY.EnQue<half>(splitYLocal);
     }
 
     __aicore__ inline void ComputeY(
@@ -305,54 +305,54 @@ private:
     __aicore__ inline void ComputeY(
         uint32_t i_i_idx, LocalTensor<bfloat16_t>& gammaLocal, LocalTensor<float>& rstdLocal, uint32_t num)
     {
-        LocalTensor<float> x_fp32 = xFp32Buf.Get<float>();
-        LocalTensor<float> sqx = sqxBuf.Get<float>();
-        event_t event_v_s = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-        SetFlag<HardEvent::V_S>(event_v_s);
-        WaitFlag<HardEvent::V_S>(event_v_s);
-        float rstdValue = rstdLocal.GetValue(i_i_idx);
-        event_t event_s_v = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
-        SetFlag<HardEvent::S_V>(event_s_v);
-        WaitFlag<HardEvent::S_V>(event_s_v);
+        LocalTensor<float> splitXFp32Bf16 = xFp32Buf.Get<float>();
+        LocalTensor<float> splitSqxBf16 = sqxBuf.Get<float>();
+        event_t splitEventVSBf16 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+        SetFlag<HardEvent::V_S>(splitEventVSBf16);
+        WaitFlag<HardEvent::V_S>(splitEventVSBf16);
+        float splitRstdValueBf16 = rstdLocal.GetValue(i_i_idx);
+        event_t splitEventSVBf16 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+        SetFlag<HardEvent::S_V>(splitEventSVBf16);
+        WaitFlag<HardEvent::S_V>(splitEventSVBf16);
         PipeBarrier<PIPE_V>();
-        Muls(x_fp32, x_fp32, rstdValue, num);
+        Muls(splitXFp32Bf16, splitXFp32Bf16, splitRstdValueBf16, num);
         PipeBarrier<PIPE_V>();
-        LocalTensor<bfloat16_t> yLocal = outQueueY.AllocTensor<bfloat16_t>();
-        Cast(yLocal, x_fp32, RoundMode::CAST_RINT, num);
+        LocalTensor<bfloat16_t> splitYLocalBf16 = outQueueY.AllocTensor<bfloat16_t>();
+        Cast(splitYLocalBf16, splitXFp32Bf16, RoundMode::CAST_RINT, num);
         PipeBarrier<PIPE_V>();
-        Cast(x_fp32, yLocal, RoundMode::CAST_NONE, num);
+        Cast(splitXFp32Bf16, splitYLocalBf16, RoundMode::CAST_NONE, num);
         PipeBarrier<PIPE_V>();
-        Cast(sqx, gammaLocal, RoundMode::CAST_NONE, num);
+        Cast(splitSqxBf16, gammaLocal, RoundMode::CAST_NONE, num);
         PipeBarrier<PIPE_V>();
-        Mul(x_fp32, x_fp32, sqx, num);
+        Mul(splitXFp32Bf16, splitXFp32Bf16, splitSqxBf16, num);
         PipeBarrier<PIPE_V>();
-        Cast(yLocal, x_fp32, RoundMode::CAST_RINT, num);
+        Cast(splitYLocalBf16, splitXFp32Bf16, RoundMode::CAST_RINT, num);
         PipeBarrier<PIPE_V>();
-        outQueueY.EnQue<bfloat16_t>(yLocal);
+        outQueueY.EnQue<bfloat16_t>(splitYLocalBf16);
     }
 
     __aicore__ inline void CopyOutY(uint32_t i_idx, uint32_t j_idx, uint32_t num)
     {
-        LocalTensor<T> yLocal = outQueueY.DeQue<T>();
-        DataCopyCustom<T>(yGm[i_idx * numCol + j_idx * ubFactor], yLocal, num);
-        outQueueY.FreeTensor(yLocal);
+        LocalTensor<T> splitYLocalOut = outQueueY.DeQue<T>();
+        DataCopyCustom<T>(yGm[i_idx * this->numCol + j_idx * this->ubFactor], splitYLocalOut, num);
+        outQueueY.FreeTensor(splitYLocalOut);
     }
 
     __aicore__ inline void CopyOutRstd(uint32_t i_o_idx, uint32_t num)
     {
-        LocalTensor<float> rstdLocal = outQueueRstd.DeQue<float>();
+        LocalTensor<float> splitRstdLocal = outQueueRstd.DeQue<float>();
 #if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
-        DataCopyCustom<float>(rstdGm[i_o_idx * rowFactor], rstdLocal, num);
+        DataCopyCustom<float>(rstdGm[i_o_idx * this->rowFactor], splitRstdLocal, num);
 #endif
-        outQueueRstd.FreeTensor(rstdLocal);
+        outQueueRstd.FreeTensor(splitRstdLocal);
     }
 
 private:
     TPipe* Ppipe = nullptr;
-    // create queues for input, in this case depth is equal to buffer num
+    // create input queues for split_d
     TQue<QuePosition::VECIN, BUFFER_NUM> inQueueX;
     TQue<QuePosition::VECIN, BUFFER_NUM> inQueueGamma;
-    // create queues for output, in this case depth is equal to buffer num
+    // create output queues for split_d
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueY;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueRstd;
     TBuf<TPosition::VECCALC> xFp32Buf;
@@ -370,7 +370,7 @@ private:
 
     uint32_t numRow;
     uint32_t numCol;
-    uint32_t blockFactor; // number of calculations rows on each core
+    uint32_t blockFactor;
     uint32_t rowFactor;
     uint32_t ubFactor;
     float epsilon;

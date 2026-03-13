@@ -43,14 +43,14 @@ public:
         return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE;
     }
 
-    __aicore__ inline uint32_t MIN(uint32_t x, uint32_t y)
-    {
-        return x < y ? x : y;
-    }
-
     __aicore__ inline uint32_t MAX(uint32_t x, uint32_t y)
     {
         return x > y ? x : y;
+    }
+
+    __aicore__ inline uint32_t MIN(uint32_t x, uint32_t y)
+    {
+        return x < y ? x : y;
     }
 
     __aicore__ inline void InitVar(
@@ -125,16 +125,16 @@ public:
         }
 
 #if OUTPUT_MEAN_RSTD == 1
-        Ppipe->InitBuffer(meanQue, BUFFER_NUM, ROUND_UP32(rowStep * sizeof(float)));
         Ppipe->InitBuffer(rstdQue, BUFFER_NUM, ROUND_UP32(rowStep * sizeof(float)));
+        Ppipe->InitBuffer(meanQue, BUFFER_NUM, ROUND_UP32(rowStep * sizeof(float)));
 #endif
     }
 
     __aicore__ inline void Process()
     {
+        DataCopyPadParams padParams;
         int32_t rowMoveCnt = CEIL_DIV(rowWork, rowStep);
 
-        DataCopyPadParams padParams;
         if (lastDimPad) {
             padParams.isPad = true;
             padParams.paddingValue = 0;
@@ -224,29 +224,29 @@ private:
         int32_t procId, int32_t rowCount, LocalTensor<T>& biasLocal, LocalTensor<T>& x1x2Local, uint32_t elementCount)
     {
         LocalTensor<float> addBufLocal = xBufFp32.Get<float>();
-        LocalTensor<float> yBufLocal = yBufFp32.Get<float>();
+        LocalTensor<float> yBufLocalSpecial = yBufFp32.Get<float>();
 
-        auto x1Local = x1x2Local[0];
-        auto x2Local = x1x2Local[elementCount];
+        auto x1LocalSpecial = x1x2Local[0];
+        auto x2LocalSpecial = x1x2Local[elementCount];
 
         // Use add as
         if constexpr (is_same<float, T>::value) {
-            Add(addBufLocal, x2Local, x1Local, elementCount);
+            Add(addBufLocal, x2LocalSpecial, x1LocalSpecial, elementCount);
             PipeBarrier<PIPE_V>();
             for (int i = 0; i < rowCount; i++) {
                 Add(addBufLocal[i * numLastDimAligned], biasLocal, addBufLocal[i * numLastDimAligned], numLastDim);
             }
             PipeBarrier<PIPE_V>();
         } else {
-            Cast(addBufLocal, x1Local, RoundMode::CAST_NONE, elementCount);
-            Cast(yBufLocal, x2Local, RoundMode::CAST_NONE, elementCount);
+            Cast(addBufLocal, x1LocalSpecial, RoundMode::CAST_NONE, elementCount);
+            Cast(yBufLocalSpecial, x2LocalSpecial, RoundMode::CAST_NONE, elementCount);
             PipeBarrier<PIPE_V>();
-            Add(yBufLocal, addBufLocal, yBufLocal, elementCount);
+            Add(yBufLocalSpecial, addBufLocal, yBufLocalSpecial, elementCount);
             Cast(x1x2Local.template ReinterpretCast<float>(), biasLocal, RoundMode::CAST_NONE, numLastDim);
             PipeBarrier<PIPE_V>();
             for (int i = 0; i < rowCount; i++) {
                 Add(addBufLocal[i * numLastDimAligned], x1x2Local.template ReinterpretCast<float>(),
-                    yBufLocal[i * numLastDimAligned], numLastDim);
+                    yBufLocalSpecial[i * numLastDimAligned], numLastDim);
             }
             PipeBarrier<PIPE_V>();
         }
@@ -346,23 +346,23 @@ private:
     __aicore__ inline void CopyOutAdditionalOutput(int32_t procId, int32_t rowCount)
     {
         if constexpr (IS_ADDITIONAL_OUTPUT_ENABLE) {
-            LocalTensor<float> addBufLocal = xBufFp32.Get<float>();
-            uint32_t gmOffset = procId * rowStep * numLastDim;
-            auto elementCount = numLastDimAligned * rowCount;
-            auto xLocal = yQue.template AllocTensor<T>();
+            LocalTensor<float> addBufLocalSpecial = xBufFp32.Get<float>();
+            uint32_t gmOffsetSpecial = procId * rowStep * numLastDim;
+            auto elementCountSpecial = numLastDimAligned * rowCount;
+            auto xLocalSpecial = yQue.template AllocTensor<T>();
             if constexpr (is_same<T, float>::value) {
-                Adds(xLocal, addBufLocal, ZERO, elementCount);
+                Adds(xLocalSpecial, addBufLocalSpecial, ZERO, elementCountSpecial);
             } else if constexpr (is_same<T, half>::value) {
-                Cast(xLocal, addBufLocal, RoundMode::CAST_NONE, elementCount);
+                Cast(xLocalSpecial, addBufLocalSpecial, RoundMode::CAST_NONE, elementCountSpecial);
             } else {
-                Cast(xLocal, addBufLocal, RoundMode::CAST_RINT, elementCount);
+                Cast(xLocalSpecial, addBufLocalSpecial, RoundMode::CAST_RINT, elementCountSpecial);
             }
             PipeBarrier<PIPE_V>();
-            yQue.template EnQue<T>(xLocal);
-            auto x = yQue.template DeQue<T>();
+            yQue.template EnQue<T>(xLocalSpecial);
+            auto xSpecial = yQue.template DeQue<T>();
 
-            DataCopyEx(xGm[gmOffset], x, numLastDim, rowCount);
-            yQue.FreeTensor(x);
+            DataCopyEx(xGm[gmOffsetSpecial], xSpecial, numLastDim, rowCount);
+            yQue.FreeTensor(xSpecial);
         }
     }
 

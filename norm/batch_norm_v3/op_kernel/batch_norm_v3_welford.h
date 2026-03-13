@@ -57,6 +57,7 @@ public:
         this->batchVarScale = tilingData->batchVarScale;
         dichotomizeAddDiffSize = tilingData->dichotomizeAddDiffSize;
 
+        // welford algorithm: compute global memory offsets
         uint64_t aGmBlockOffset =
             static_cast<uint64_t>(this->blockIdx) * static_cast<uint64_t>(tilingData->blockFactor);
         uint64_t aR0GmBlockOffset = aGmBlockOffset * patternR0;
@@ -635,6 +636,7 @@ private:
     }
 
 private:
+    // welford algorithm constants
     constexpr static uint32_t BLOCK_SIZE = 32;
     constexpr static uint32_t X_NUM_PER_BLOCK = BLOCK_SIZE / sizeof(T1);
     constexpr static uint32_t FLOAT_SIZE = 4;
@@ -644,6 +646,7 @@ private:
     constexpr static uint32_t BLOCK_NUM_PER_REP = 8;
     constexpr static uint32_t B32_BLOCK_ALIGN_NUM = 8;
     constexpr static uint32_t UINT8_MAX_NUM = 255;
+    // welford specific modes
     constexpr static int R0_SPLIT_NOT_ALIGN_MODE = 0;
     constexpr static int R0_SPLIT_ALIGN_MODE = 1;
     constexpr static int R1_SPLIT_NOT_ALIGN_MODE = 2;
@@ -681,7 +684,7 @@ private:
     float finalVar = 0.0;
     float weightValue = 0.0;
     float biasValue = 0.0;
-    /* ascendc variable */
+    /* welford ascendc queues and buffers */
     TQue<QuePosition::VECIN, 1> xQueue;
     TQue<QuePosition::VECIN, 1> weightQueue;
     TQue<QuePosition::VECIN, 1> biasQueue;
@@ -693,6 +696,7 @@ private:
     TQue<QuePosition::VECOUT, 1> saveVarQueue;
     TQue<QuePosition::VECOUT, 1> runningMeanOutQueue;
     TQue<QuePosition::VECOUT, 1> runningVarOutQueue;
+    // welford temp buffers
     TBuf<TPosition::VECCALC> tmpBuf0;
     TBuf<TPosition::VECCALC> tmpBuf3;
     TBuf<TPosition::VECCALC> tmpBuf4;

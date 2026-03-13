@@ -211,10 +211,10 @@ ge::graphStatus LayerNormGradV3RecomputeTiling::DoOpTiling()
     td_.set_pdxIsRequire(static_cast<int32_t>(commonParams.pdxIsRequire));
     td_.set_pdgammaIsRequire(static_cast<int32_t>(commonParams.pdgammaIsRequire));
     td_.set_pdbetaIsRequire(static_cast<int32_t>(commonParams.pdbetaIsRequire));
-    ge::graphStatus statusGammaBeta = GammaBetaKernelTiling();
-    OP_TILING_CHECK(statusGammaBeta != ge::GRAPH_SUCCESS, , return statusGammaBeta);
-    ge::graphStatus statusBackward = BackwardKernelTiling();
-    OP_TILING_CHECK(statusBackward != ge::GRAPH_SUCCESS, , return statusBackward);
+    ge::graphStatus recomputeStatusGammaBeta = GammaBetaKernelTiling();
+    OP_TILING_CHECK(recomputeStatusGammaBeta != ge::GRAPH_SUCCESS, , return recomputeStatusGammaBeta);
+    ge::graphStatus recomputeStatusBackward = BackwardKernelTiling();
+    OP_TILING_CHECK(recomputeStatusBackward != ge::GRAPH_SUCCESS, , return recomputeStatusBackward);
     return ge::GRAPH_SUCCESS;
 }
 

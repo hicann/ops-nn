@@ -36,12 +36,12 @@ constexpr uint32_t MODE_SPLIT_D = 1;
 constexpr uint32_t MODE_MERGE_N = 2;
 constexpr uint32_t MODE_SINGLE_N = 3;
 constexpr uint32_t MODE_MULTI_N = 4;
-constexpr int32_t INPUT_X1_INDEX = 0;
-constexpr int32_t INPUT_X2_INDEX = 1;
-constexpr int32_t INPUT_GAMMA_INDEX = 2;
-constexpr int32_t OUTPUT_Y_INDEX = 0;
-constexpr int32_t OUTPUT_RSTD_INDEX = 1;
-constexpr int32_t OUTPUT_X_INDEX = 2;
+constexpr int32_t RMS_INPUT_X1_INDEX = 0;
+constexpr int32_t RMS_INPUT_X2_INDEX = 1;
+constexpr int32_t RMS_INPUT_GAMMA_INDEX = 2;
+constexpr int32_t RMS_OUTPUT_Y_INDEX = 0;
+constexpr int32_t RMS_OUTPUT_RSTD_INDEX = 1;
+constexpr int32_t RMS_OUTPUT_X_INDEX = 2;
 constexpr size_t MAX_DIM_NUM = 8;
 constexpr size_t MIN_DIM_X = 1;
 constexpr size_t MIN_DIM_GAMMA = 1;
@@ -102,12 +102,12 @@ static void SetByDtype(ge::DataType dataType, uint32_t& dtypeKey, uint32_t& data
 }
 static bool CheckNullptr(const gert::TilingContext* context)
 {
-    const gert::StorageShape* x1_shape = context->GetInputShape(INPUT_X1_INDEX);
-    const gert::StorageShape* x2_shape = context->GetInputShape(INPUT_X2_INDEX);
-    const gert::StorageShape* gamma_shape = context->GetInputShape(INPUT_GAMMA_INDEX);
-    const gert::StorageShape* y_shape = context->GetOutputShape(OUTPUT_Y_INDEX);
-    const gert::StorageShape* rstd_shape = context->GetOutputShape(OUTPUT_RSTD_INDEX);
-    const gert::StorageShape* x_shape = context->GetOutputShape(OUTPUT_X_INDEX);
+    const gert::StorageShape* x1_shape = context->GetInputShape(RMS_INPUT_X1_INDEX);
+    const gert::StorageShape* x2_shape = context->GetInputShape(RMS_INPUT_X2_INDEX);
+    const gert::StorageShape* gamma_shape = context->GetInputShape(RMS_INPUT_GAMMA_INDEX);
+    const gert::StorageShape* y_shape = context->GetOutputShape(RMS_OUTPUT_Y_INDEX);
+    const gert::StorageShape* rstd_shape = context->GetOutputShape(RMS_OUTPUT_RSTD_INDEX);
+    const gert::StorageShape* x_shape = context->GetOutputShape(RMS_OUTPUT_X_INDEX);
 
     norm_key = RMS_NORM_KEY;
     if(rstd_shape->GetOriginShape().GetShapeSize() <= 0 && x_shape->GetOriginShape().GetShapeSize() <= 0){
@@ -131,12 +131,12 @@ static bool CheckNullptr(const gert::TilingContext* context)
 }
 static bool CheckInputOutputDim(const gert::TilingContext* context)
 {
-    const gert::StorageShape* x1_shape = context->GetInputShape(INPUT_X1_INDEX);
-    const gert::StorageShape* x2_shape = context->GetInputShape(INPUT_X2_INDEX);
-    const gert::StorageShape* gamma_shape = context->GetInputShape(INPUT_GAMMA_INDEX);
-    const gert::StorageShape* y_shape = context->GetOutputShape(OUTPUT_Y_INDEX);
-    const gert::StorageShape* rstd_shape = context->GetOutputShape(OUTPUT_RSTD_INDEX);
-    const gert::StorageShape* x_shape = context->GetOutputShape(OUTPUT_X_INDEX);
+    const gert::StorageShape* x1_shape = context->GetInputShape(RMS_INPUT_X1_INDEX);
+    const gert::StorageShape* x2_shape = context->GetInputShape(RMS_INPUT_X2_INDEX);
+    const gert::StorageShape* gamma_shape = context->GetInputShape(RMS_INPUT_GAMMA_INDEX);
+    const gert::StorageShape* y_shape = context->GetOutputShape(RMS_OUTPUT_Y_INDEX);
+    const gert::StorageShape* rstd_shape = context->GetOutputShape(RMS_OUTPUT_RSTD_INDEX);
+    const gert::StorageShape* x_shape = context->GetOutputShape(RMS_OUTPUT_X_INDEX);
 
     size_t x1DimNum = x1_shape->GetStorageShape().GetDimNum();
     size_t x2DimNum = x2_shape->GetStorageShape().GetDimNum();
@@ -174,12 +174,12 @@ static bool CheckInputOutputDim(const gert::TilingContext* context)
 static bool CheckInputOutputShape(const gert::TilingContext* context)
 {
     OP_CHECK_IF(!CheckInputOutputDim(context), OP_LOGE(context, "Input Dim invalid."), return false);
-    const gert::StorageShape* x1_shape = context->GetInputShape(INPUT_X1_INDEX);
-    const gert::StorageShape* x2_shape = context->GetInputShape(INPUT_X2_INDEX);
-    const gert::StorageShape* gamma_shape = context->GetInputShape(INPUT_GAMMA_INDEX);
-    const gert::StorageShape* y_shape = context->GetOutputShape(OUTPUT_Y_INDEX);
-    const gert::StorageShape* rstd_shape = context->GetOutputShape(OUTPUT_RSTD_INDEX);
-    const gert::StorageShape* x_shape = context->GetOutputShape(OUTPUT_X_INDEX);
+    const gert::StorageShape* x1_shape = context->GetInputShape(RMS_INPUT_X1_INDEX);
+    const gert::StorageShape* x2_shape = context->GetInputShape(RMS_INPUT_X2_INDEX);
+    const gert::StorageShape* gamma_shape = context->GetInputShape(RMS_INPUT_GAMMA_INDEX);
+    const gert::StorageShape* y_shape = context->GetOutputShape(RMS_OUTPUT_Y_INDEX);
+    const gert::StorageShape* rstd_shape = context->GetOutputShape(RMS_OUTPUT_RSTD_INDEX);
+    const gert::StorageShape* x_shape = context->GetOutputShape(RMS_OUTPUT_X_INDEX);
 
     size_t x1DimNum = x1_shape->GetStorageShape().GetDimNum();
     size_t gammaDimNum = gamma_shape->GetStorageShape().GetDimNum();

@@ -32,7 +32,8 @@ OP_TYPE_REGISTER(RmsNormQuant);
 OP_TYPE_REGISTER(RmsNormQuantV2);
 
 const aclTensor* RmsNormQuant(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* scale, const aclTensor* offset,
+    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* scale,
+    const aclTensor* offset,
     double epsilon, int32_t dstType, aclOpExecutor* executor)
 {
     L0_DFX(RmsNormQuant, x, gamma, beta, scale, offset, epsilon, dstType);

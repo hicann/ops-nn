@@ -45,7 +45,7 @@ void BatchNormGradV3InferBase::Reset()
     weightDimLen_ = 0;
     runningVarDimLen_ = 0;
 
-    epsilon_ = DEFAULT_EPSILON;
+    epsilon_ = DEFAULT_EPSILON_VAL;
 }
 
 void BatchNormGradV3InferBase::CalcBasicInfo()
@@ -58,16 +58,16 @@ void BatchNormGradV3InferBase::CalcBasicInfo()
         aTileBase_ = vlFp16_;
     }
 
-    if (weightDtype_ == ge::DT_FLOAT) {
-        bytesPerWeight_ = FLOAT32_BYTES;
-    } else {
-        bytesPerWeight_ = FLOAT16_BYTES;
-    }
-
     if (runningVarDtype_ == ge::DT_FLOAT) {
         bytesPerRunningVar_ = FLOAT32_BYTES;
     } else {
         bytesPerRunningVar_ = FLOAT16_BYTES;
+    }
+
+    if (weightDtype_ == ge::DT_FLOAT) {
+        bytesPerWeight_ = FLOAT32_BYTES;
+    } else {
+        bytesPerWeight_ = FLOAT16_BYTES;
     }
 
     OP_LOGD(
@@ -116,11 +116,10 @@ ge::graphStatus BatchNormGradV3InferBase::GetShapeAttrsInfo()
         return ge::GRAPH_PARAM_INVALID);
 
     const float* epsilonPtr = attrs->GetFloat(PARAM_ATTRS_EPSILON_INDEX);
-    epsilon_ = (epsilonPtr == nullptr) ? DEFAULT_EPSILON : *epsilonPtr;
+    epsilon_ = (epsilonPtr == nullptr) ? DEFAULT_EPSILON_VAL : *epsilonPtr;
 
     auto ret = GetDyInfo();
-    OP_TILING_CHECK(
-        ret != ge::GRAPH_SUCCESS, OP_LOGW(context_->GetNodeName(), "GetShapeAttrsInfo failed."), return ret);
+    OP_TILING_CHECK(ret != ge::GRAPH_SUCCESS, OP_LOGW(context_->GetNodeName(), "GetShapeAttrsInfo failed."), return ret);
 
     OP_TILING_CHECK(
         GetWeightRunningVarDxInfo() != ge::GRAPH_SUCCESS,
@@ -161,16 +160,14 @@ ge::graphStatus BatchNormGradV3InferBase::GetDyInfo()
                       dyStorageShape.GetDim(DIM_3);
         fusedB1Len_ = 1;
     } else if (dyFormat_ == FORMAT_NCHW) {
-        OP_TILING_CHECK(
-            dyDimNum_ != DIM_NUM_4,
+        OP_TILING_CHECK(dyDimNum_ != DIM_NUM_4,
             VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Dims should be 4 with NCHW format."),
             return ge::GRAPH_FAILED);
         fusedB0Len_ = dyStorageShape.GetDim(DIM_0);
         fusedALen_ = dyStorageShape.GetDim(DIM_1);
         fusedB1Len_ = dyStorageShape.GetDim(DIM_2) * dyStorageShape.GetDim(DIM_3);
     } else if (dyFormat_ == FORMAT_NCDHW) {
-        OP_TILING_CHECK(
-            dyDimNum_ != DIM_NUM_5,
+        OP_TILING_CHECK(dyDimNum_ != DIM_NUM_5,
             VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Dims should be 5 with NCDHW format."),
             return ge::GRAPH_FAILED);
         fusedB0Len_ = dyStorageShape.GetDim(DIM_0);
@@ -192,31 +189,31 @@ ge::graphStatus BatchNormGradV3InferBase::GetDyInfo()
 
 ge::graphStatus BatchNormGradV3InferBase::GetWeightRunningVarDxInfo()
 {
-    auto weightDesc = context_->GetInputDesc(PARAM_INPUT_WEIGHT_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, weightDesc);
-    weightDtype_ = weightDesc->GetDataType();
-    auto weightShape = context_->GetInputShape(PARAM_INPUT_WEIGHT_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, weightShape);
-    auto weightStorageShape = weightShape->GetStorageShape();
-    weightDimNum_ = weightStorageShape.GetDimNum();
-    weightDimLen_ = weightStorageShape.GetDim(0);
+    auto weightTensorDesc = context_->GetInputDesc(PARAM_INPUT_WEIGHT_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, weightTensorDesc);
+    weightDtype_ = weightTensorDesc->GetDataType();
+    auto weightTensorShape = context_->GetInputShape(PARAM_INPUT_WEIGHT_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, weightTensorShape);
+    auto weightTensorStorageShape = weightTensorShape->GetStorageShape();
+    weightDimNum_ = weightTensorStorageShape.GetDimNum();
+    weightDimLen_ = weightTensorStorageShape.GetDim(0);
 
-    auto runningVarDesc = context_->GetInputDesc(PARAM_INPUT_RUNNINGVAR_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, runningVarDesc);
-    runningVarDtype_ = runningVarDesc->GetDataType();
-    auto runningVarShape = context_->GetInputShape(PARAM_INPUT_RUNNINGVAR_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, runningVarShape);
-    auto runningVarStorageShape = runningVarShape->GetStorageShape();
-    runningVarDimNum_ = runningVarStorageShape.GetDimNum();
-    runningVarDimLen_ = runningVarStorageShape.GetDim(0);
+    auto runningVarTensorDesc = context_->GetInputDesc(PARAM_INPUT_RUNNINGVAR_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, runningVarTensorDesc);
+    runningVarDtype_ = runningVarTensorDesc->GetDataType();
+    auto runningVarTensorShape = context_->GetInputShape(PARAM_INPUT_RUNNINGVAR_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, runningVarTensorShape);
+    auto runningVarTensorStorageShape = runningVarTensorShape->GetStorageShape();
+    runningVarDimNum_ = runningVarTensorStorageShape.GetDimNum();
+    runningVarDimLen_ = runningVarTensorStorageShape.GetDim(0);
 
-    auto dxDesc = context_->GetOutputDesc(PARAM_OUTPUT_DX_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, dxDesc);
-    dxDtype_ = dxDesc->GetDataType();
-    auto dxShape = context_->GetOutputShape(PARAM_OUTPUT_DX_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, dxShape);
-    auto dxStorageShape = dxShape->GetStorageShape();
-    dxDimNum_ = dxStorageShape.GetDimNum();
+    auto dxTensorDesc = context_->GetOutputDesc(PARAM_OUTPUT_DX_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, dxTensorDesc);
+    dxDtype_ = dxTensorDesc->GetDataType();
+    auto dxTensorShape = context_->GetOutputShape(PARAM_OUTPUT_DX_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, dxTensorShape);
+    auto dxTensorStorageShape = dxTensorShape->GetStorageShape();
+    dxDimNum_ = dxTensorStorageShape.GetDimNum();
 
     return ge::GRAPH_SUCCESS;
 }
@@ -230,29 +227,29 @@ ge::graphStatus BatchNormGradV3InferBase::CheckInputValid()
             dxDtype_),
         return ge::GRAPH_FAILED);
 
-    bool dtypeValid = false;
+    bool inputDtypeValid = false;
     for (uint32_t i = 0; i < validInputDtypes.size(); i++) {
         if (dyDtype_ == validInputDtypes[i][DTYPE_DX_OFFSET] &&
             weightDtype_ == validInputDtypes[i][DTYPE_WEIGHT_OFFSET] &&
             runningVarDtype_ == validInputDtypes[i][DTYPE_RUNNINGVAR_OFFSET]) {
-            dtypeValid = true;
+            inputDtypeValid = true;
             break;
         }
     }
 
     OP_TILING_CHECK(
-        !dtypeValid,
+        !inputDtypeValid,
         VECTOR_INNER_ERR_REPORT_TILIING(
             context_->GetNodeName(),
             "input dtypes are not supported, dyDtype_: %d, weightDtype_: %d, runningVarDtype: %d.", dyDtype_,
             weightDtype_, runningVarDtype_),
         return ge::GRAPH_FAILED);
 
-    bool shapeValid = weightDimNum_ == runningVarDimNum_ && dyDimNum_ == dxDimNum_ && weightDimNum_ == 1 &&
+    bool inputShapeValid = weightDimNum_ == runningVarDimNum_ && dyDimNum_ == dxDimNum_ && weightDimNum_ == 1 &&
                       weightDimLen_ == runningVarDimLen_ && weightDimLen_ == fusedALen_;
 
     OP_TILING_CHECK(
-        !shapeValid,
+        !inputShapeValid,
         VECTOR_INNER_ERR_REPORT_TILIING(
             context_->GetNodeName(),
             "input shapes are not supported, dy dims: %ld, weight dims: %ld, runningvar dims: %ld, dx dims: %ld, "

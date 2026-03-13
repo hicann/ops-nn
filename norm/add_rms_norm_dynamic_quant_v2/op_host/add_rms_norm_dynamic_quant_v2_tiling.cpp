@@ -136,7 +136,7 @@ bool AddRmsNormDynamicQuantV2TilingHelper::DoBlockTiling()
     this->firstDimPerCore_ = Ops::Base::CeilDiv(this->numFirstDim_, this->useCore_);
     this->firstDimPerCoreTail_ = this->numFirstDim_ - this->firstDimPerCore_ * (this->useCore_ - 1);
     OP_LOGI(
-        "DoBlockTiling", "BlockTiling Factor: useCore_: %lu, firstDimPerCore_: %lu, firstDimPerCoreTail_: %lu",
+        "DoBlockTiling", "BlockTiling Factor: useCore_ is : %lu, firstDimPerCore_ is : %lu, firstDimPerCoreTail_ is : %lu",
         this->useCore_, this->firstDimPerCore_, this->firstDimPerCoreTail_);
     return true;
 }
@@ -203,17 +203,17 @@ bool AddRmsNormDynamicQuantV2TilingHelper::GetShapeInfo()
         (smooth2Exist && smooth2Shape->GetStorageShape() != gammaShape),
         OP_LOGE(context_->GetNodeName(), "GammaShape is not same to smooth2Shape."), return false);
 
-    uint64_t numRow = 1;
-    uint64_t numCol = 1;
+    uint64_t numRowV2 = 1;
+    uint64_t numColV2 = 1;
     for (size_t i = 0; i < xDimNum - gammaDimNum; i++) {
-        numRow *= xShape.GetDim(i);
+        numRowV2 *= xShape.GetDim(i);
     }
     for (size_t i = 0; i < gammaDimNum; i++) {
-        numCol *= gammaShape.GetDim(i);
+        numColV2 *= gammaShape.GetDim(i);
     }
-    this->numFirstDim_ = numRow;
-    this->numLastDim_ = numCol;
-    this->numLastDimAligned_ = Ops::Base::CeilDiv(numCol, static_cast<uint64_t>(BLOCK_SIZE)) * BLOCK_SIZE;
+    this->numFirstDim_ = numRowV2;
+    this->numLastDim_ = numColV2;
+    this->numLastDimAligned_ = Ops::Base::CeilDiv(numColV2, static_cast<uint64_t>(BLOCK_SIZE)) * BLOCK_SIZE;
     this->avgFactor_ = 1.0 / ((float)this->numLastDim_);
 
     OP_LOGI("GetShapeInfo", "[N, D] = [%lu, %lu]", this->numFirstDim_, this->numLastDim_);

@@ -53,12 +53,12 @@ public:
         return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE;
     }
 
-    __aicore__ inline uint32_t MIN(uint32_t x, uint32_t y)
+    __aicore__ inline uint32_t MIN_KERNEL(uint32_t x, uint32_t y)
     {
         return x < y ? x : y;
     }
 
-    __aicore__ inline uint32_t MAX(uint32_t x, uint32_t y)
+    __aicore__ inline uint32_t MAX_KERNEL(uint32_t x, uint32_t y)
     {
         return x > y ? x : y;
     }
@@ -86,7 +86,7 @@ public:
             row_step = first_dim_per_time;
         } else {
             row_work = l_first_dim_per_core;
-            row_step = MIN(first_dim_per_time, row_work);
+            row_step = MIN_KERNEL(first_dim_per_time, row_work);
         }
         row_tail_ = (row_work % row_step == 0) ? row_step : (row_work % row_step);
         gm_offset_ = nl_first_dim_per_core * num_last_dim;
@@ -362,25 +362,25 @@ public:
                 ave_tmp += y_local_fp32.GetValue(0);
             }
             // 2. Reduce Var
-            float var_tmp = 0;
-            for (int32_t col_idx = 0; col_idx < col_move_cnt; ++col_idx) {
-                auto col_offset = col_idx * last_dim_per_time;
-                int process_count = col_idx < col_move_cnt - 1 ? last_dim_per_time : col_tail;
-                Adds(x_local_fp32[col_offset], x_local_fp32[col_offset], -1 * ave_tmp, process_count);
+            float var_tmp_2 = 0;
+            for (int32_t col_idx_2 = 0; col_idx_2 < col_move_cnt; ++col_idx_2) {
+                auto col_offset_2 = col_idx_2 * last_dim_per_time;
+                int process_count_2 = col_idx_2 < col_move_cnt - 1 ? last_dim_per_time : col_tail;
+                Adds(x_local_fp32[col_offset_2], x_local_fp32[col_offset_2], -1 * ave_tmp, process_count_2);
                 PipeBarrier<PIPE_V>();
-                Mul(y_local_fp32, x_local_fp32[col_offset], x_local_fp32[col_offset], process_count);
+                Mul(y_local_fp32, x_local_fp32[col_offset_2], x_local_fp32[col_offset_2], process_count_2);
                 PipeBarrier<PIPE_V>();
-                Muls(y_local_fp32, y_local_fp32, aveNum, process_count);
+                Muls(y_local_fp32, y_local_fp32, aveNum, process_count_2);
                 PipeBarrier<PIPE_V>();
-                ReduceSum(y_local_fp32, y_local_fp32, y_local_fp32, process_count);
+                ReduceSum(y_local_fp32, y_local_fp32, y_local_fp32, process_count_2);
                 SetFlag<HardEvent::V_S>(EVENT_ID0);
                 WaitFlag<HardEvent::V_S>(EVENT_ID0);
-                var_tmp += y_local_fp32.GetValue(0);
+                var_tmp_2 += y_local_fp32.GetValue(0);
             }
-            float rstd_tmp = 1 / sqrt(var_tmp + eps);
+            float rstd_tmp_2 = 1 / sqrt(var_tmp_2 + eps);
 #if OUTPUT_MEAN_RSTD == 1
             mean_local.SetValue(0, ave_tmp);
-            rstd_local.SetValue(0, rstd_tmp);
+            rstd_local.SetValue(0, rstd_tmp_2);
 #endif
             // 3. Compute result
             for (int32_t col_idx = 0; col_idx < col_move_cnt; ++col_idx) {
@@ -388,7 +388,7 @@ public:
                 int process_count = col_idx < col_move_cnt - 1 ? last_dim_per_time : col_tail;
                 LocalTensor<T> y_local = y_que.template AllocTensor<T>();
                 // x_local_fp32[col_offset] = (x - ave)
-                Muls(y_local_fp32, x_local_fp32[col_offset], rstd_tmp, process_count);
+                Muls(y_local_fp32, x_local_fp32[col_offset], rstd_tmp_2, process_count);
                 PipeBarrier<PIPE_V>();
                 if constexpr (IS_BETAGAMMA_NEEDCAST) {
                     if constexpr (is_same<T, float>::value) {
@@ -447,49 +447,49 @@ public:
     __aicore__ inline void CopyInAddSlice(int32_t row_idx, int32_t process_count, int32_t col_offset)
     {
         LocalTensor<float> x_local_fp32 = x_buf_fp32.Get<float>();
-        LocalTensor<float> y_local_fp32 = y_buf_fp32.Get<float>();
-        LocalTensor<float> z_local_fp32 = z_buf_fp32.Get<float>();
+        LocalTensor<float> y_local_fp32_2 = y_buf_fp32.Get<float>();
+        LocalTensor<float> z_local_fp32_2 = z_buf_fp32.Get<float>();
         CopyInSlicePhase1(row_idx, process_count, col_offset);
-        LocalTensor<T> x1_local = x1_que.template DeQue<T>();
-        LocalTensor<T> x2_local = x2_que.template DeQue<T>();
+        LocalTensor<T> x1_local_2 = x1_que.template DeQue<T>();
+        LocalTensor<T> x2_local_2 = x2_que.template DeQue<T>();
         if constexpr (is_same<T, float>::value) {
             if constexpr (IS_X1_NEEDCAST) {
-                auto y_local_buffer = y_local_fp32.template ReinterpretCast<T_X1>();
-                Cast(x1_local, y_local_buffer, RoundMode::CAST_NONE, process_count);
+                auto y_local_buffer_2 = y_local_fp32_2.template ReinterpretCast<T_X1>();
+                Cast(x1_local_2, y_local_buffer_2, RoundMode::CAST_NONE, process_count);
                 PipeBarrier<PIPE_V>();
             }
             if constexpr (IS_X2_NEEDCAST) {
-                auto y_local_buffer = y_local_fp32.template ReinterpretCast<T_X2>();
-                Cast(x2_local, y_local_buffer, RoundMode::CAST_NONE, process_count);
+                auto y_local_buffer_2 = y_local_fp32_2.template ReinterpretCast<T_X2>();
+                Cast(x2_local_2, y_local_buffer_2, RoundMode::CAST_NONE, process_count);
                 PipeBarrier<PIPE_V>();
             }
-            Add(x_local_fp32, x1_local, x2_local, process_count);
+            Add(x_local_fp32, x1_local_2, x2_local_2, process_count);
             PipeBarrier<PIPE_V>();
         } else {
-            Cast(x_local_fp32, x1_local, RoundMode::CAST_NONE, process_count);
-            Cast(y_local_fp32, x2_local, RoundMode::CAST_NONE, process_count);
+            Cast(x_local_fp32, x1_local_2, RoundMode::CAST_NONE, process_count);
+            Cast(y_local_fp32_2, x2_local_2, RoundMode::CAST_NONE, process_count);
             PipeBarrier<PIPE_V>();
-            Add(x_local_fp32, x_local_fp32, y_local_fp32, process_count);
+            Add(x_local_fp32, x_local_fp32, y_local_fp32_2, process_count);
             PipeBarrier<PIPE_V>();
         }
-        x1_que.FreeTensor(x1_local);
-        x2_que.FreeTensor(x2_local);
+        x1_que.FreeTensor(x1_local_2);
+        x2_que.FreeTensor(x2_local_2);
         if constexpr (IS_BIAS_PRESENT) {
-            LocalTensor<T> x3_in = x1_que.template AllocTensor<T>();
-            uint32_t gm_offset = row_idx * row_step * num_last_dim + col_offset;
-            DataCopyEx(x3_in, bias_gm[gm_offset], process_count);
-            x1_que.EnQue(x3_in);
-            auto x3_local = x1_que.template DeQue<T>();
+            LocalTensor<T> x3_in_2 = x1_que.template AllocTensor<T>();
+            uint32_t gm_offset_2 = row_idx * row_step * num_last_dim + col_offset;
+            DataCopyEx(x3_in_2, bias_gm[gm_offset_2], process_count);
+            x1_que.EnQue(x3_in_2);
+            auto x3_local_2 = x1_que.template DeQue<T>();
             if constexpr (is_same<T, float>::value) {
-                Add(x_local_fp32, x3_local, x_local_fp32, process_count);
+                Add(x_local_fp32, x3_local_2, x_local_fp32, process_count);
                 PipeBarrier<PIPE_V>();
             } else {
-                Cast(y_local_fp32, x3_local, RoundMode::CAST_NONE, process_count);
+                Cast(y_local_fp32_2, x3_local_2, RoundMode::CAST_NONE, process_count);
                 PipeBarrier<PIPE_V>();
-                Add(x_local_fp32, y_local_fp32, x_local_fp32, process_count);
+                Add(x_local_fp32, y_local_fp32_2, x_local_fp32, process_count);
                 PipeBarrier<PIPE_V>();
             }
-            x1_que.FreeTensor(x3_local);
+            x1_que.FreeTensor(x3_local_2);
         } else if constexpr (IS_BIAS_BROADCAST) {
             LocalTensor<T> bias_local_in = bias_que.template AllocTensor<T>();
             DataCopyEx(bias_local_in, bias_gm[col_offset], process_count);
@@ -499,9 +499,9 @@ public:
                 Add(x_local_fp32, bias_local, x_local_fp32, process_count);
                 PipeBarrier<PIPE_V>();
             } else {
-                Cast(y_local_fp32, bias_local, RoundMode::CAST_NONE, process_count);
+                Cast(y_local_fp32_2, bias_local, RoundMode::CAST_NONE, process_count);
                 PipeBarrier<PIPE_V>();
-                Add(x_local_fp32, y_local_fp32, x_local_fp32, process_count);
+                Add(x_local_fp32, y_local_fp32_2, x_local_fp32, process_count);
                 PipeBarrier<PIPE_V>();
             }
             bias_que.FreeTensor(bias_local);
@@ -936,22 +936,22 @@ private:
                 DataCopyEx(x2_local_in, x2_gm[gm_offset], size);
             }
             x2_que.EnQue(x2_local_in);
-            auto x2_local = x2_que.template DeQue<T>();
+            auto x2_local_2 = x2_que.template DeQue<T>();
             if constexpr (is_same<float, T>::value) {
                 if constexpr (IS_X2_NEEDCAST) {
-                    auto y_local_buffer = y_buf_local.template ReinterpretCast<T_X2>();
-                    Cast(x2_local, y_local_buffer, RoundMode::CAST_NONE, size);
+                    auto y_local_buffer_2 = y_buf_local.template ReinterpretCast<T_X2>();
+                    Cast(x2_local_2, y_local_buffer_2, RoundMode::CAST_NONE, size);
                     PipeBarrier<PIPE_V>();
                 }
-                Add(add_buf_local, x2_local, add_buf_local, size);
+                Add(add_buf_local, x2_local_2, add_buf_local, size);
                 PipeBarrier<PIPE_V>();
             } else {
-                Cast(y_buf_local, x2_local, RoundMode::CAST_NONE, size);
+                Cast(y_buf_local, x2_local_2, RoundMode::CAST_NONE, size);
                 PipeBarrier<PIPE_V>();
                 Add(add_buf_local, y_buf_local, add_buf_local, size);
                 PipeBarrier<PIPE_V>();
             }
-            x2_que.FreeTensor(x2_local);
+            x2_que.FreeTensor(x2_local_2);
         }
 
         if constexpr (IS_BIAS_PRESENT || IS_BIAS_BROADCAST) {

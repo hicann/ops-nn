@@ -41,10 +41,10 @@ __aicore__ inline constexpr uint32_t GetVRegSize()
 #define bfloat16_t int16_t
 #endif
 constexpr int32_t BUFFER_NUM = 1; // tensor num for each queue
-constexpr int32_t DOUBLE_BUFFER_NUM = 2;
-constexpr int32_t UNROLL_NUM = 2;
 constexpr int32_t NUM_PER_REP_FP32 = 64; // ONE_REPEAT_BYTE_SIZE / sizeof(float);
 constexpr int32_t NUM_PER_BLK_FP32 = 8;
+constexpr int32_t DOUBLE_BUFFER_NUM = 2;
+constexpr int32_t UNROLL_NUM = 2;
 constexpr int32_t FLOAT_BTYPE_SIZE = 4;
 constexpr int32_t NUM_PER_BLK_FP16 = 16;
 constexpr int32_t CONTINUE_STRIDE = 8;

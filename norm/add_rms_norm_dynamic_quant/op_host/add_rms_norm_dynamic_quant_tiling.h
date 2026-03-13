@@ -244,8 +244,8 @@ protected:
     // Order: GetShapeAttrsInfo->GetPlatformInfo->
     //        IsCapable->DoOpTiling->DoLibApiTiling->
     //        GetWorkspaceSize->PostTiling->GetTilingKey
-    ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus GetPlatformInfo() override;
+    ge::graphStatus GetShapeAttrsInfo() override;
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus DoLibApiTiling() override;

@@ -39,17 +39,17 @@ public:
         this->rowFactor = tiling->row_factor;
         this->ubFactor = tiling->ub_factor;
         this->epsilon = tiling->epsilon;
-        this->avgFactor = (numCol != 0) ? (float)1.0 / numCol : 0;
+        this->avgFactor = (this->numCol != 0) ? (float)1.0 / this->numCol : 0;
 
         blockIdx_ = GetBlockIdx();
         if (blockIdx_ < GetBlockNum() - 1) {
-            this->rowWork = blockFactor;
+            this->rowWork = this->blockFactor;
         } else if (blockIdx_ == GetBlockNum() - 1) {
-            this->rowWork = numRow - (GetBlockNum() - 1) * blockFactor;
+            this->rowWork = this->numRow - (GetBlockNum() - 1) * this->blockFactor;
         }
         // get start index for current core, core parallel
-        uint64_t calcOffset = blockIdx_ * blockFactor * numCol;
-        uint64_t calcNum = rowWork * numCol;
+        uint64_t calcOffset = blockIdx_ * this->blockFactor * this->numCol;
+        uint64_t calcNum = this->rowWork * this->numCol;
         x1Gm.SetGlobalBuffer((__gm__ T*)x1 + calcOffset, calcNum);
         x2Gm.SetGlobalBuffer((__gm__ T*)x2 + calcOffset, calcNum);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma, numCol);
@@ -195,61 +195,61 @@ private:
 
     __aicore__ inline void Computefp16(uint32_t outer_progress, uint32_t inner_progress, uint32_t progress)
     {
-        LocalTensor<float> xFp32 = xFp32Buf.Get<float>();
-        LocalTensor<float> sqx = sqxBuf.Get<float>();
-        LocalTensor<float> reduceBufLocal = reduceFp32Buf.Get<float>();
-        LocalTensor<float> resFp32 = tmpBuf2.Get<float>();
-        LocalTensor<T> gammaLocal = resFp32.template ReinterpretCast<T>()[ubFactor * 2];
+        LocalTensor<float> xFp32Local = xFp32Buf.Get<float>();
+        LocalTensor<float> sqxLocal = sqxBuf.Get<float>();
+        LocalTensor<float> reduceBufLocalFp16 = reduceFp32Buf.Get<float>();
+        LocalTensor<float> resFp32Local = tmpBuf2.Get<float>();
+        LocalTensor<T> gammaLocalFp16 = resFp32Local.template ReinterpretCast<T>()[ubFactor * 2];
         if (inner_progress == 0) {
-            DataCopyCustom<T>(gammaLocal, gammaGm, numCol);
+            DataCopyCustom<T>(gammaLocalFp16, gammaGm, numCol);
         }
-        event_t eventMte2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
-        SetFlag<HardEvent::MTE2_V>(eventMte2V);
+        event_t eventMte2VFp16 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+        SetFlag<HardEvent::MTE2_V>(eventMte2VFp16);
 
-        Mul(sqx, xFp32, xFp32, numCol);
+        Mul(sqxLocal, xFp32Local, xFp32Local, numCol);
         PipeBarrier<PIPE_V>();
 
-        Muls(sqx, sqx, avgFactor, numCol);
+        Muls(sqxLocal, sqxLocal, avgFactor, numCol);
         PipeBarrier<PIPE_V>();
 
-        ReduceSumCustom(sqx, sqx, reduceBufLocal, numCol);
+        ReduceSumCustom(sqxLocal, sqxLocal, reduceBufLocalFp16, numCol);
         PipeBarrier<PIPE_V>();
 
-        Adds(sqx, sqx, epsilon, 1);
+        Adds(sqxLocal, sqxLocal, epsilon, 1);
         PipeBarrier<PIPE_V>();
 
-        Sqrt(sqx, sqx, 1);
-        Duplicate(reduceBufLocal, ONE, 1);
+        Sqrt(sqxLocal, sqxLocal, 1);
+        Duplicate(reduceBufLocalFp16, ONE, 1);
         PipeBarrier<PIPE_V>();
-        Div(sqx, reduceBufLocal, sqx, 1);
+        Div(sqxLocal, reduceBufLocalFp16, sqxLocal, 1);
         PipeBarrier<PIPE_V>();
         event_t eventVMte31 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventVMte31);
         WaitFlag<HardEvent::V_MTE3>(eventVMte31);
-        Brcb(reduceBufLocal, sqx, 1, {1, 8});
-        DataCopyCustom<float>(rstdGm[outer_progress * rowFactor + inner_progress], sqx, 1);
+        Brcb(reduceBufLocalFp16, sqxLocal, 1, {1, 8});
+        DataCopyCustom<float>(rstdGm[outer_progress * rowFactor + inner_progress], sqxLocal, 1);
         event_t eventMte3V1 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
         SetFlag<HardEvent::MTE3_V>(eventMte3V1);
         PipeBarrier<PIPE_V>();
         uint32_t repeat = (numCol + VL - 1) / VL;
         uint64_t mask = VL;
-        Mul(xFp32, xFp32, reduceBufLocal, mask, repeat, {1, 1, 0, 8, 8, 0});
+        Mul(xFp32Local, xFp32Local, reduceBufLocalFp16, mask, repeat, {1, 1, 0, 8, 8, 0});
         PipeBarrier<PIPE_V>();
 
         LocalTensor<half> yLocal = outQueueY.AllocTensor<half>();
-        Cast(yLocal, xFp32, RoundMode::CAST_NONE, numCol);
+        Cast(yLocal, xFp32Local, RoundMode::CAST_NONE, numCol);
         PipeBarrier<PIPE_V>();
-        WaitFlag<HardEvent::MTE2_V>(eventMte2V);
+        WaitFlag<HardEvent::MTE2_V>(eventMte2VFp16);
 
-        Mul(yLocal, gammaLocal, yLocal, numCol);
+        Mul(yLocal, gammaLocalFp16, yLocal, numCol);
         PipeBarrier<PIPE_V>();
         outQueueY.EnQue<half>(yLocal);
-        Cast(resFp32, yLocal, RoundMode::CAST_NONE, numCol);
+        Cast(resFp32Local, yLocal, RoundMode::CAST_NONE, numCol);
         PipeBarrier<PIPE_V>();
         event_t event_v_mte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(event_v_mte3);
         WaitFlag<HardEvent::V_MTE3>(event_v_mte3);
-        DataCopyCustom<float>(y1Gm[progress], resFp32, numCol);
+        DataCopyCustom<float>(y1Gm[progress], resFp32Local, numCol);
         WaitFlag<HardEvent::MTE3_V>(eventMte3V1);
     }
 
@@ -290,8 +290,8 @@ private:
     GlobalTensor<float> rstdGm;
     GlobalTensor<T> xGm;
 
-    uint32_t numRow;
     uint32_t numCol;
+    uint32_t numRow;
     uint32_t blockFactor; // number of calculations rows on each core
     uint32_t rowFactor;
     uint32_t ubFactor;

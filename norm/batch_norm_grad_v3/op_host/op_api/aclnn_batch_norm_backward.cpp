@@ -206,15 +206,15 @@ static bool CheckFormat(
 static bool CheckShape(
     const aclTensor* gradOut, const aclTensor* input, const aclTensor* gradInput, const aclBoolArray* outputMask)
 {
-    const int max_check_nums = 8;
-    OP_CHECK_MAX_DIM(input, max_check_nums, return false);
+    const int max_dim_check = 8;
+    OP_CHECK_MAX_DIM(input, max_dim_check, return false);
     OP_CHECK_MIN_DIM(input, MIN_BN_DIMS, return false);
-    OP_CHECK_MAX_DIM(gradOut, max_check_nums, return false);
+    OP_CHECK_MAX_DIM(gradOut, max_dim_check, return false);
     OP_CHECK_MIN_DIM(gradOut, MIN_BN_DIMS, return false);
     OP_CHECK_SHAPE_NOT_EQUAL(gradOut, input, return false);
 
     if ((*outputMask)[0]) {
-        OP_CHECK_MAX_DIM(gradInput, max_check_nums, return false);
+        OP_CHECK_MAX_DIM(gradInput, max_dim_check, return false);
         OP_CHECK_MIN_DIM(gradInput, MIN_BN_DIMS, return false);
         OP_CHECK_SHAPE_NOT_EQUAL(gradInput, gradOut, return false);
     }
@@ -225,23 +225,20 @@ static bool CheckOtherShape(
     int dimC, const aclTensor* weight, const aclTensor* runningMean, const aclTensor* runningVar)
 {
     if (weight != nullptr && (weight->GetViewShape().GetDimNum() != 1 || weight->GetViewShape()[0] != dimC)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Dim of weight should be one and shape is channel num of input[%d], but got [%s].",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim of weight should be one and shape is channel num of input[%d], but got [%s].",
             dimC, op::ToString(weight->GetViewShape()).GetString());
         return false;
     }
     if (runningMean != nullptr &&
         (runningMean->GetViewShape().GetDimNum() != 1 || runningMean->GetViewShape()[0] != dimC)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
             "Dim of runningMean should be one and shape is channel num of input[%d], but got [%s].", dimC,
             op::ToString(runningMean->GetViewShape()).GetString());
         return false;
     }
     if (runningVar != nullptr &&
         (runningVar->GetViewShape().GetDimNum() != 1 || runningVar->GetViewShape()[0] != dimC)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
             "Dim of runningVar should be one and shape is channel num of input[%d], but got [%s].", dimC,
             op::ToString(runningVar->GetViewShape()).GetString());
         return false;
@@ -300,6 +297,7 @@ static bool CheckGradWeightGradBiasShape(
     return true;
 }
 
+// batch norm backward: get channel dimension from input tensor
 static int64_t GetDimC(const aclTensor* input)
 {
     auto viewShape = input->GetViewShape();
@@ -409,12 +407,12 @@ aclnnStatus BatchNormPost(op::Shape& inputShape, aclTensor* bnGradInput, aclTens
 {
     auto inputDims = inputShape.GetDimNum();
     if (inputDims > MAX_BN_DIMS) {
-        int64_t originShapes[inputDims];
+        int64_t batchNormOriginShapes[inputDims];
         for (size_t i = 0; i < inputDims; ++i) {
-            originShapes[i] = inputShape[i];
+            batchNormOriginShapes[i] = inputShape[i];
         }
-        aclIntArray* originShapeArray = executor->AllocIntArray(originShapes, inputDims);
-        auto bnGradInputReshape = l0op::Reshape(bnGradInput, originShapeArray, executor);
+        aclIntArray* batchNormOriginShapeArray = executor->AllocIntArray(batchNormOriginShapes, inputDims);
+        auto bnGradInputReshape = l0op::Reshape(bnGradInput, batchNormOriginShapeArray, executor);
         auto bnGradInputReformat = l0op::ReFormat(bnGradInputReshape, Format::FORMAT_ND);
         auto viewCopyResult = l0op::ViewCopy(bnGradInputReformat, gradInput, executor);
         CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -437,18 +435,18 @@ aclnnStatus BatchNormBackwardProc(
 
     std::array<aclTensor*, UPDATE_GRAD_RESULT_CNT> grad;
     if (!training) {
-        auto runningMeanResize = op::ResizeFrom1D(runningMean, input, isSupportNcdhw, executor);
-        CHECK_RET(runningMeanResize != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto batchNormRunningMeanResize = op::ResizeFrom1D(runningMean, input, isSupportNcdhw, executor);
+        CHECK_RET(batchNormRunningMeanResize != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        auto runningVarResize = op::ResizeFrom1D(runningVar, input, isSupportNcdhw, executor);
-        CHECK_RET(runningVarResize != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto batchNormRunningVarResize = op::ResizeFrom1D(runningVar, input, isSupportNcdhw, executor);
+        CHECK_RET(batchNormRunningVarResize != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        grad = l0op::BNTrainingUpdateGrad(gradOut, input, runningMeanResize, runningVarResize, eps, executor);
+        grad = l0op::BNTrainingUpdateGrad(gradOut, input, batchNormRunningMeanResize, batchNormRunningVarResize, eps, executor);
 
-        auto reduceGrad = l0op::BNInferGrad(gradOut, weightResize, runningVarResize, eps, executor);
-        CHECK_RET(reduceGrad != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto batchNormReduceGrad = l0op::BNInferGrad(gradOut, weightResize, batchNormRunningVarResize, eps, executor);
+        CHECK_RET(batchNormReduceGrad != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        *gradInput = const_cast<aclTensor*>(reduceGrad);
+        *gradInput = const_cast<aclTensor*>(batchNormReduceGrad);
     } else {
         auto saveMeanResize = op::ResizeFrom1D(saveMean, input, isSupportNcdhw, executor);
         CHECK_RET(saveMeanResize != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -472,16 +470,16 @@ aclnnStatus BatchNormBackwardProc(
             *gradInput = const_cast<aclTensor*>(resultNcdhw);
         } else if (input->GetViewShape().GetDimNum() == MAX_BN_DIMS) {
             grad = l0op::BN3DTrainingUpdateGrad(gradOut, input, saveMeanResize, saveInvstdResize, eps, executor);
-            auto reduceGrad = l0op::BN3DTrainingReduceGrad(
+            auto batchNormReduceGrad = l0op::BN3DTrainingReduceGrad(
                 gradOut, input, grad[0], grad[1], weightResize, saveMeanResize, saveInvstdResize, eps, executor);
-            CHECK_RET(reduceGrad != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            *gradInput = const_cast<aclTensor*>(reduceGrad);
+            CHECK_RET(batchNormReduceGrad != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            *gradInput = const_cast<aclTensor*>(batchNormReduceGrad);
         } else {
             grad = l0op::BNTrainingUpdateGrad(gradOut, input, saveMeanResize, saveInvstdResize, eps, executor);
-            auto reduceGrad = l0op::BNTrainingReduceGrad(
+            auto batchNormReduceGrad = l0op::BNTrainingReduceGrad(
                 gradOut, input, grad[0], grad[1], weightResize, saveMeanResize, saveInvstdResize, eps, executor);
-            CHECK_RET(reduceGrad != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            *gradInput = const_cast<aclTensor*>(reduceGrad);
+            CHECK_RET(batchNormReduceGrad != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            *gradInput = const_cast<aclTensor*>(batchNormReduceGrad);
         }
     }
     *gradWeight = grad[0];
@@ -494,59 +492,60 @@ aclnnStatus BatchNormBackward(
     const aclTensor* runningVar, const aclTensor* saveMean, const aclTensor* saveInvstd, bool training, float eps,
     aclTensor** gradInput, aclTensor** gradWeight, aclTensor** gradBias, aclOpExecutor* executor)
 {
-    size_t dimC = input->GetViewShape()[1];
+    // batch norm backward: prepare default values for optional tensors
+    size_t batchNormDimC = input->GetViewShape()[1];
     if (runningMean == nullptr) {
-        runningMean = op::FillScalar(dimC, 0, executor);
+        runningMean = op::FillScalar(batchNormDimC, 0, executor);
         CHECK_RET(runningMean != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     if (runningVar == nullptr) {
-        runningVar = op::FillScalar(dimC, 1, executor);
+        runningVar = op::FillScalar(batchNormDimC, 1, executor);
         CHECK_RET(runningVar != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     if (weight == nullptr) {
-        weight = op::FillScalar(dimC, 1, executor);
+        weight = op::FillScalar(batchNormDimC, 1, executor);
         CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     if (saveMean == nullptr) {
-        saveMean = op::FillScalar(dimC, 0, executor);
+        saveMean = op::FillScalar(batchNormDimC, 0, executor);
         CHECK_RET(saveMean != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     if (saveInvstd == nullptr) {
-        saveInvstd = op::FillScalar(dimC, 1, executor);
+        saveInvstd = op::FillScalar(batchNormDimC, 1, executor);
         CHECK_RET(saveInvstd != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
     size_t dimNum = input->GetViewShape().GetDimNum();
-    auto gradOutPre = gradOut;
-    auto inputPre = input;
+    auto batchNormGradOutPre = gradOut;
+    auto batchNormInputPre = input;
     if (dimNum < BN2D_INPUT_DIMS) {
-        gradOutPre = op::ResizeFromND(gradOut, executor);
-        CHECK_RET(gradOutPre != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        batchNormGradOutPre = op::ResizeFromND(gradOut, executor);
+        CHECK_RET(batchNormGradOutPre != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        inputPre = op::ResizeFromND(input, executor);
-        CHECK_RET(inputPre != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        batchNormInputPre = op::ResizeFromND(input, executor);
+        CHECK_RET(batchNormInputPre != nullptr, ACLNN_ERR_INNER_NULLPTR);
     } else if (!training && dimNum == MAX_BN_DIMS) {
-        gradOutPre = op::ResizeFrom5D(gradOut, executor);
-        CHECK_RET(gradOutPre != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        batchNormGradOutPre = op::ResizeFrom5D(gradOut, executor);
+        CHECK_RET(batchNormGradOutPre != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        inputPre = op::ResizeFrom5D(input, executor);
-        CHECK_RET(inputPre != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        batchNormInputPre = op::ResizeFrom5D(input, executor);
+        CHECK_RET(batchNormInputPre != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
-    aclTensor* result = nullptr;
+    aclTensor* batchNormResult = nullptr;
     auto bnResult = BatchNormBackwardProc(
-        gradOutPre, inputPre, weight, runningMean, runningVar, saveMean, saveInvstd, training, eps, &result, gradWeight,
+        batchNormGradOutPre, batchNormInputPre, weight, runningMean, runningVar, saveMean, saveInvstd, training, eps, &batchNormResult, gradWeight,
         gradBias, executor);
     CHECK_RET(bnResult == ACLNN_SUCCESS, bnResult);
 
-    *gradInput = result;
+    *gradInput = batchNormResult;
     if (dimNum < BN2D_INPUT_DIMS) {
-        auto outputFormat = op::ResizeToND(result, input, executor);
+        auto outputFormat = op::ResizeToND(batchNormResult, input, executor);
         CHECK_RET(outputFormat != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         *gradInput = const_cast<aclTensor*>(outputFormat);
     } else if (!training && dimNum == MAX_BN_DIMS) {
-        auto outputTranspose = op::ResizeTo5D(result, input, executor);
+        auto outputTranspose = op::ResizeTo5D(batchNormResult, input, executor);
         CHECK_RET(outputTranspose != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         *gradInput = const_cast<aclTensor*>(outputTranspose);
@@ -763,18 +762,18 @@ aclnnStatus BatchNormBackwardDavid(
     }
 
     size_t dimNum = input->GetViewShape().GetDimNum();
-    auto gradOutPre = gradOut;
-    auto inputPre = input;
+    auto batchNormGradOutPre2 = gradOut;
+    auto batchNormInputPre2 = input;
     if (dimNum < BN2D_INPUT_DIMS) {
-        gradOutPre = op::ResizeFromND(gradOut, executor);
-        CHECK_RET(gradOutPre != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        batchNormGradOutPre2 = op::ResizeFromND(gradOut, executor);
+        CHECK_RET(batchNormGradOutPre2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        inputPre = op::ResizeFromND(input, executor);
-        CHECK_RET(inputPre != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        batchNormInputPre2 = op::ResizeFromND(input, executor);
+        CHECK_RET(batchNormInputPre2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     aclTensor* result = nullptr;
     auto bnResult = BatchNormBackwardProcDavid(
-        gradOutPre, inputPre, weight, runningMean, runningVar, saveMean, saveInvstd, training, eps, outputMask, &result,
+        batchNormGradOutPre2, batchNormInputPre2, weight, runningMean, runningVar, saveMean, saveInvstd, training, eps, outputMask, &result,
         gradWeight, gradBias, executor);
     CHECK_RET(bnResult == ACLNN_SUCCESS, bnResult);
 
@@ -800,15 +799,15 @@ aclnnStatus aclnnBatchNormBackwardGetWorkspaceSize(
         DFX_IN(gradOut, input, weight, runningMean, runningVar, saveMean, saveInvstd, training, eps, outputMask),
         DFX_OUT(gradInput, gradWeight, gradBias));
 
-    // 固定写法，创建OpExecutor
-    auto uniqueExecutor = CREATE_EXECUTOR();
-    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+    // batch norm backward: 创建OpExecutor
+    auto batchNormUniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(batchNormUniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     CHECK_RET(CheckInputNotNull(gradOut, input), ACLNN_ERR_PARAM_NULLPTR);
 
     if (input->IsEmpty() || gradOut->IsEmpty()) {
         *workspaceSize = 0UL;
-        uniqueExecutor.ReleaseTo(executor);
+        batchNormUniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
 
@@ -821,23 +820,23 @@ aclnnStatus aclnnBatchNormBackwardGetWorkspaceSize(
       !(*outputMask)[0] && !(*outputMask)[GRAD_WEIGHT_INDEX] && !(*outputMask)[GRAD_BIAS_INDEX];
     if (canEarlyReturn) {
         *workspaceSize = 0UL;
-        uniqueExecutor.ReleaseTo(executor);
+        batchNormUniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
 
-    auto inputContiguous = l0op::Contiguous(input, uniqueExecutor.get());
-    CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto gradOutContigous = l0op::Contiguous(gradOut, uniqueExecutor.get());
-    CHECK_RET(gradOutContigous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto batchNormInputContiguous = l0op::Contiguous(input, batchNormUniqueExecutor.get());
+    CHECK_RET(batchNormInputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto batchNormGradOutContigous = l0op::Contiguous(gradOut, batchNormUniqueExecutor.get());
+    CHECK_RET(batchNormGradOutContigous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto inputShape = input->GetViewShape();
     if (inputShape.GetDimNum() > MAX_BN_DIMS) {
-        const int64_t shapes[5] = {inputShape[0], inputShape[1], inputShape[2], inputShape[3], -1};
-        aclIntArray* shapeArray = uniqueExecutor.get()->AllocIntArray(shapes, 5);
-        inputContiguous = l0op::Reshape(inputContiguous, shapeArray, uniqueExecutor.get());
-        inputContiguous = l0op::ReFormat(inputContiguous, Format::FORMAT_NCDHW);
-        gradOutContigous = l0op::Reshape(gradOutContigous, shapeArray, uniqueExecutor.get());
-        gradOutContigous = l0op::ReFormat(gradOutContigous, Format::FORMAT_NCDHW);
+        const int64_t batchNormShapes[5] = {inputShape[0], inputShape[1], inputShape[2], inputShape[3], -1};
+        aclIntArray* batchNormShapeArray = batchNormUniqueExecutor.get()->AllocIntArray(batchNormShapes, 5);
+        batchNormInputContiguous = l0op::Reshape(batchNormInputContiguous, batchNormShapeArray, batchNormUniqueExecutor.get());
+        batchNormInputContiguous = l0op::ReFormat(batchNormInputContiguous, Format::FORMAT_NCDHW);
+        batchNormGradOutContigous = l0op::Reshape(batchNormGradOutContigous, batchNormShapeArray, batchNormUniqueExecutor.get());
+        batchNormGradOutContigous = l0op::ReFormat(batchNormGradOutContigous, Format::FORMAT_NCDHW);
     }
 
     aclTensor* bnGradInput = nullptr;
@@ -846,56 +845,56 @@ aclnnStatus aclnnBatchNormBackwardGetWorkspaceSize(
     aclnnStatus bnResult;
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         bnResult = BatchNormBackwardDavid(
-            gradOutContigous, inputContiguous, weight, runningMean, runningVar, saveMean, saveInvstd, training, eps,
-            outputMask, &bnGradInput, &bnGradWeight, &bnGradBias, uniqueExecutor.get());
+            batchNormGradOutContigous, batchNormInputContiguous, weight, runningMean, runningVar, saveMean, saveInvstd, training, eps,
+            outputMask, &bnGradInput, &bnGradWeight, &bnGradBias, batchNormUniqueExecutor.get());
         CHECK_RET(bnResult == ACLNN_SUCCESS, bnResult);
 
         if ((*outputMask)[GRAD_WEIGHT_INDEX]) {
             CHECK_RET(bnGradWeight != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto gradWeightCast = l0op::Cast(bnGradWeight, gradWeight->GetDataType(), uniqueExecutor.get());
+            auto gradWeightCast = l0op::Cast(bnGradWeight, gradWeight->GetDataType(), batchNormUniqueExecutor.get());
             CHECK_RET(gradWeightCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto gradWeightResult = l0op::ViewCopy(gradWeightCast, gradWeight, uniqueExecutor.get());
+            auto gradWeightResult = l0op::ViewCopy(gradWeightCast, gradWeight, batchNormUniqueExecutor.get());
             CHECK_RET(gradWeightResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
 
         if ((*outputMask)[GRAD_BIAS_INDEX]) {
             CHECK_RET(bnGradBias != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto gradBiasCast = l0op::Cast(bnGradBias, gradBias->GetDataType(), uniqueExecutor.get());
+            auto gradBiasCast = l0op::Cast(bnGradBias, gradBias->GetDataType(), batchNormUniqueExecutor.get());
             CHECK_RET(gradBiasCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto gradBiasResult = l0op::ViewCopy(gradBiasCast, gradBias, uniqueExecutor.get());
+            auto gradBiasResult = l0op::ViewCopy(gradBiasCast, gradBias, batchNormUniqueExecutor.get());
             CHECK_RET(gradBiasResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
 
         if ((*outputMask)[0]) {
             CHECK_RET(bnGradInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto viewCopyInput = BatchNormPost(inputShape, bnGradInput, gradInput, uniqueExecutor.get());
+            auto viewCopyInput = BatchNormPost(inputShape, bnGradInput, gradInput, batchNormUniqueExecutor.get());
             CHECK_RET(viewCopyInput == ACLNN_SUCCESS, viewCopyInput);
         }
     } else {
         bnResult = BatchNormBackward(
-            gradOutContigous, inputContiguous, weight, runningMean, runningVar, saveMean, saveInvstd, training, eps,
-            &bnGradInput, &bnGradWeight, &bnGradBias, uniqueExecutor.get());
+            batchNormGradOutContigous, batchNormInputContiguous, weight, runningMean, runningVar, saveMean, saveInvstd, training, eps,
+            &bnGradInput, &bnGradWeight, &bnGradBias, batchNormUniqueExecutor.get());
         CHECK_RET(bnResult == ACLNN_SUCCESS, bnResult);
         if ((*outputMask)[GRAD_WEIGHT_INDEX]) {
             auto viewCopyWeight =
-                op::ResizeTo1D(bnGradWeight, gradWeight, isBatchNormSupportNcdhw(), uniqueExecutor.get());
+                op::ResizeTo1D(bnGradWeight, gradWeight, isBatchNormSupportNcdhw(), batchNormUniqueExecutor.get());
             CHECK_RET(viewCopyWeight != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
 
         if ((*outputMask)[GRAD_BIAS_INDEX]) {
-            auto viewCopyBias = op::ResizeTo1D(bnGradBias, gradBias, isBatchNormSupportNcdhw(), uniqueExecutor.get());
+            auto viewCopyBias = op::ResizeTo1D(bnGradBias, gradBias, isBatchNormSupportNcdhw(), batchNormUniqueExecutor.get());
             CHECK_RET(viewCopyBias != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
 
         if ((*outputMask)[0]) {
-            auto viewCopyInput = BatchNormPost(inputShape, bnGradInput, gradInput, uniqueExecutor.get());
+            auto viewCopyInput = BatchNormPost(inputShape, bnGradInput, gradInput, batchNormUniqueExecutor.get());
             CHECK_RET(viewCopyInput == ACLNN_SUCCESS, viewCopyInput);
         }
     }
 
     // 固定写法，获取计算过程中需要使用的workspace大小
-    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-    uniqueExecutor.ReleaseTo(executor);
+    *workspaceSize = batchNormUniqueExecutor->GetWorkspaceSize();
+    batchNormUniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
 }
 

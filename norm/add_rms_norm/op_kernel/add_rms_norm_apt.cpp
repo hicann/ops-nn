@@ -23,16 +23,16 @@ extern "C" __global__ __aicore__ void add_rms_norm(
     GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
-    TPipe pipe;
+    TPipe aptPipe;
     if (TILING_KEY_IS(1000)) {
-        GET_TILING_DATA_WITH_STRUCT(AddRMSNormRegbaseRFullLoadTilingData, tilingDataIn, tiling);
-        KernelAddRmsNormRegBase<DTYPE_X1> op(&pipe);
-        op.Init(x1, x2, gamma, y, rstd, x, &tilingDataIn);
+        GET_TILING_DATA_WITH_STRUCT(AddRMSNormRegbaseRFullLoadTilingData, aptTilingDataIn, tiling);
+        KernelAddRmsNormRegBase<DTYPE_X1> op(&aptPipe);
+        op.Init(x1, x2, gamma, y, rstd, x, &aptTilingDataIn);
         op.Process();
     } else if (TILING_KEY_IS(2000)) {
-        GET_TILING_DATA_WITH_STRUCT(AddRMSNormRegbaseTilingData, tilingDataIn, tiling);
-        KernelAddRmsNormRegBaseSplitD<DTYPE_X1> op(&pipe);
-        op.Init(x1, x2, gamma, y, rstd, x, &tilingDataIn);
+        GET_TILING_DATA_WITH_STRUCT(AddRMSNormRegbaseTilingData, aptTilingDataIn, tiling);
+        KernelAddRmsNormRegBaseSplitD<DTYPE_X1> op(&aptPipe);
+        op.Init(x1, x2, gamma, y, rstd, x, &aptTilingDataIn);
         op.Process();
     }
 }

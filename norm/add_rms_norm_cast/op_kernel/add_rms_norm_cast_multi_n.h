@@ -31,8 +31,8 @@ public:
         const AddRMSNormCastTilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
-        this->numRow = tiling->num_row;
         this->numCol = tiling->num_col;
+        this->numRow = tiling->num_row;
         uint32_t numPerBlock = ONE_BLK_SIZE / sizeof(T);
         this->numColAlign = AlignUp(numCol, numPerBlock);
         this->blockFactor = tiling->block_factor;
@@ -277,8 +277,8 @@ private:
     GlobalTensor<float> rstdGm;
     GlobalTensor<T> xGm;
 
-    uint32_t numRow;
     uint32_t numCol;
+    uint32_t numRow;
     uint32_t blockFactor; // number of calculations rows on each core
     uint32_t rowFactor;
     uint32_t ubFactor;

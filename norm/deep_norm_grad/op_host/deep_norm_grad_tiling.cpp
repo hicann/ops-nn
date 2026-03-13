@@ -112,16 +112,18 @@ inline void CalMergeCountValue(
          (tensorNDNum * elemWithDInUB + tensorJustNNum * elemWithoutDInUB));
 }
 
+// SetFp32Config: configure tiling parameters for FP32 data type
 inline void SetFp32Config(
     DeepNormGradTilingData& tiling, uint32_t& ubElemNum, uint32_t& elemWithDInUB, uint32_t& elemWithoutDInUB,
     uint32_t& blockElem, uint32_t& dDimNum, uint32_t& cutDKey)
 {
-    uint32_t cutStageMergeN;
     uint32_t mergeCountMergeN;
+    uint32_t cutStageMergeN;
 
+    // fp32 tensor counts for small D stage
+    uint32_t tensorJustDNum;
     uint32_t tensorJustNNum;
     uint32_t tensorNDNum;
-    uint32_t tensorJustDNum;
     uint32_t otherTensorJustDNum;
 
     if (dDimNum < SMALL_D_STAGE) {
@@ -150,9 +152,9 @@ inline void SetFp32Config(
         // (5*mergeNCount+3)*elemWithDInUB+(2*mergeNCount)*elemWithoutDInUB(8)=ubElemNum
         // when mergeNCount=1, elemWithDInUB=(ubElemNum-2*elemWithoutDInUB)/8
         tensorJustNNum = 2;      // mean\rstd
+        otherTensorJustDNum = 0; // not use brcb
         tensorNDNum = CONST_5;         // dy\x\gx\dx\dgx
         tensorJustDNum = CONST_3;      // gamma\dbeta\dgamma
-        otherTensorJustDNum = 0; // not use brcb
 
         CalCutStageValue(
             cutStageMergeN, ubElemNum, tensorJustNNum, elemWithoutDInUB,
@@ -165,20 +167,20 @@ inline void SetFp32Config(
     // == merge N ==
     uint32_t mergeNCount;
     if (dDimNum < SMALL_D_STAGE) {
+        mergeNCount = mergeCountMergeN;
         cutDKey = KEY_LARGE_N_SMALL_D;
-        mergeNCount = mergeCountMergeN;
     } else if (dDimNum <= cutStageMergeN) {
-        cutDKey = KEY_MERGE_N;
         mergeNCount = mergeCountMergeN;
+        cutDKey = KEY_MERGE_N;
     } else {
-        cutDKey = KEY_CUT_D;
         mergeNCount = 1;
+        cutDKey = KEY_CUT_D;
     }
 
     // == cut D ==
     uint32_t cutStageCutD;
-    uint32_t cutDTime;
     uint32_t cutDPerTime;
+    uint32_t cutDTime;
     uint32_t cutDLastTime;
     if (cutDKey == KEY_CUT_D) {
         // fp32 cutD
@@ -188,39 +190,41 @@ inline void SetFp32Config(
         // 7*elemWithDInUB+4*elemWithoutDInUB(8)=ubElemNum
         tensorJustNNum = 4;      // mean\rstd\tmp_mean_pd_buf\tmp_var_pd_buf
         tensorNDNum = CONST_5;         // dy\x\gx\dx\dgx
-        tensorJustDNum = CONST_3;      // gamma\dgamma\dbeta
         otherTensorJustDNum = 0; // not use brcb
+        tensorJustDNum = CONST_3;      // gamma\dgamma\dbeta
 
         CalCutStageValue(
             cutStageCutD, ubElemNum, tensorJustNNum, elemWithoutDInUB,
             tensorNDNum + tensorJustDNum + otherTensorJustDNum, blockElem);
 
-        cutDTime = Ops::Base::CeilDiv(dDimNum, cutStageCutD);
         cutDPerTime = cutStageCutD;
+        cutDTime = Ops::Base::CeilDiv(dDimNum, cutStageCutD);
         cutDLastTime = dDimNum - cutStageCutD * (cutDTime - 1);
     } else {
-        cutDTime = 1;
         cutDPerTime = dDimNum;
+        cutDTime = 1;
         cutDLastTime = dDimNum;
     }
 
-    tiling.set_mergeNCount(mergeNCount);
     tiling.set_cutDTime(cutDTime);
+    tiling.set_mergeNCount(mergeNCount);
     tiling.set_cutDPerTime(cutDPerTime);
     tiling.set_cutDLastTime(cutDLastTime);
 }
 
+// SetFp16Bf16Config: configure tiling parameters for FP16/BF16 data types
 inline void SetFp16Bf16Config(
     DeepNormGradTilingData& tiling, uint32_t& ubElemNum, uint32_t& elemWithDInUB, uint32_t& elemWithoutDInUB,
     uint32_t& blockElem, uint32_t& dDimNum, uint32_t& cutDKey)
 {
-    uint32_t cutStageMergeN;
     uint32_t mergeCountMergeN;
+    uint32_t cutStageMergeN;
 
+    // fp16/bf16 tensor counts for small D stage
+    uint32_t otherTensorJustDNum;
     uint32_t tensorJustNNum;
     uint32_t tensorNDNum;
     uint32_t tensorJustDNum;
-    uint32_t otherTensorJustDNum;
 
     if (dDimNum < SMALL_D_STAGE) {
         // fp16 smallD
@@ -244,6 +248,7 @@ inline void SetFp16Bf16Config(
             mergeCountMergeN, ubElemNum, tensorJustDNum + otherTensorJustDNum, elemWithDInUB, tensorNDNum,
             tensorJustNNum, elemWithoutDInUB);
     } else {
+        // fp32 large D stage
         tensorJustNNum = CONST_4;      // mean\rstd
         tensorNDNum = CONST_5;         // dy\x\gx\dx\dgx
         tensorJustDNum = CONST_17;     // gamma\dbeta(fp32)\dgamma(fp32)\dy_t(fp32)\x_t(fp32)\gx_t(fp32)
@@ -258,7 +263,7 @@ inline void SetFp16Bf16Config(
             tensorJustNNum, elemWithoutDInUB);
     }
 
-    // == merge N ==
+    // == merge N for fp16/bf16 ==
     uint32_t mergeNCount;
     if (dDimNum < SMALL_D_STAGE) {
         cutDKey = KEY_LARGE_N_SMALL_D;
@@ -271,7 +276,7 @@ inline void SetFp16Bf16Config(
         mergeNCount = 1;
     }
 
-    // == cut D ==
+    // == cut D for fp16/bf16 ==
     uint32_t cutStageCutD;
     uint32_t cutDTime;
     uint32_t cutDPerTime;
@@ -283,6 +288,7 @@ inline void SetFp16Bf16Config(
         //                    dgamma(fp32)\dbeta(fp32)    gamma_t(fp32)\dx_t(fp32)\dgx_t(fp32)
         // tensor(without D): mean(fp32)\rstd(fp32)       tmp_mean_pd_buf(fp32)\tmp_var_pd_buf(fp32)
         // 20*elemWithDInUB+8*elemWithoutDInUB(16)=ubElemNum
+        // fp16/bf16 cutD tensor counts
         tensorJustNNum = 8;      // mean(fp32)\rstd(fp32)\tmp_mean_pd_buf(fp32)\tmp_var_pd_buf(fp32)
         tensorNDNum = CONST_17;        // dy\x\gx\dx\dgx\dy_t(fp32)\x_t(fp32)\gx_t(fp32)
                                  // gamma_t(fp32)\dx_t(fp32)\dgx_t(fp32)
@@ -297,6 +303,7 @@ inline void SetFp16Bf16Config(
         cutDPerTime = cutStageCutD;
         cutDLastTime = dDimNum - cutStageCutD * (cutDTime - 1);
     } else {
+        // fp16/bf16 no cutD
         cutDTime = 1;
         cutDPerTime = dDimNum;
         cutDLastTime = dDimNum;
@@ -310,16 +317,16 @@ inline void SetFp16Bf16Config(
 
 static ge::graphStatus CheckInputOutputShapeNull(const gert::TilingContext* context)
 {
-    const gert::StorageShape* dyShape = context->GetInputShape(INPUT_DY_INDEX);
     const gert::StorageShape* xShape = context->GetInputShape(INPUT_X_INDEX);
-    const gert::StorageShape* gxShape = context->GetInputShape(INPUT_GX_INDEX);
+    const gert::StorageShape* dyShape = context->GetInputShape(INPUT_DY_INDEX);
     const gert::StorageShape* gammaShape = context->GetInputShape(INPUT_GAMMA_INDEX);
-    const gert::StorageShape* meanShape = context->GetInputShape(INPUT_MEAN_INDEX);
+    const gert::StorageShape* gxShape = context->GetInputShape(INPUT_GX_INDEX);
     const gert::StorageShape* rstdShape = context->GetInputShape(INPUT_RSTD_INDEX);
-    const gert::StorageShape* dxShape = context->GetOutputShape(OUTPUT_DX_INDEX);
+    const gert::StorageShape* meanShape = context->GetInputShape(INPUT_MEAN_INDEX);
     const gert::StorageShape* dgxShape = context->GetOutputShape(OUTPUT_DGX_INDEX);
-    const gert::StorageShape* dbetaShape = context->GetOutputShape(OUTPUT_DBETA_INDEX);
+    const gert::StorageShape* dxShape = context->GetOutputShape(OUTPUT_DX_INDEX);
     const gert::StorageShape* dgammaShape = context->GetOutputShape(OUTPUT_DGAMMA_INDEX);
+    const gert::StorageShape* dbetaShape = context->GetOutputShape(OUTPUT_DBETA_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, dyShape);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
     OP_CHECK_NULL_WITH_CONTEXT(context, gxShape);
@@ -335,6 +342,7 @@ static ge::graphStatus CheckInputOutputShapeNull(const gert::TilingContext* cont
 
 static bool CheckInputOutputShapeDim(const gert::TilingContext* context)
 {
+    // check input/output shape dimensions
     const gert::StorageShape* dyShape = context->GetInputShape(INPUT_DY_INDEX);
     const gert::StorageShape* xShape = context->GetInputShape(INPUT_X_INDEX);
     const gert::StorageShape* gxShape = context->GetInputShape(INPUT_GX_INDEX);

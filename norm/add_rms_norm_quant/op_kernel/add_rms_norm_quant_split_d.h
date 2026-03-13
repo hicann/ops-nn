@@ -34,16 +34,16 @@ public:
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
         this->numRow = tilingData->numRow;
         this->numCol = tilingData->numCol;
-        this->blockFactor = tilingData->blockFactor;
         this->rowFactor = tilingData->rowFactor;
-        this->ubFactor = tilingData->ubFactor;
+        this->blockFactor = tilingData->blockFactor;
         this->epsilon = tilingData->epsilon;
-        this->avgFactor = (float)1.0 / numCol;
+        this->ubFactor = tilingData->ubFactor;
         this->hasZeroPoints1 = tilingData->hasZeroPoints1;
-        this->hasBeta = tilingData->hasBeta;
+        this->avgFactor = (float)1.0 / numCol;
         this->divMode = tilingData->divMode;
-        this->hasScales2 = tilingData->hasScales2 && !PT;
+        this->hasBeta = tilingData->hasBeta;
         this->hasZeroPoints2 = tilingData->hasZeroPoints2 && !PT;
+        this->hasScales2 = tilingData->hasScales2 && !PT;
 
         blockIdx_ = GetBlockIdx();
         if (blockIdx_ < GetBlockNum() - 1) {
@@ -82,7 +82,7 @@ public:
         }
         Ppipe->InitBuffer(sqxBuf, ubFactor * sizeof(float));
 
-        Ppipe->InitBuffer(sumBuf, rowFactor * NUM_PER_BLK_FP32 * sizeof(float));
+        Ppipe->InitBuffer(sumBufSplit, rowFactor * NUM_PER_BLK_FP32 * sizeof(float));
         Ppipe->InitBuffer(reduceFp32Buf, NUM_PER_REP_FP32 * sizeof(float));
         Ppipe->InitBuffer(rstdBuf, rowFactor * sizeof(float));
         initOptionalParams(scales2, zero_points1, zero_points2, beta);
@@ -99,7 +99,7 @@ public:
             scales2Gm.SetGlobalBuffer((__gm__ TScale*)scales2, numCol);
             Ppipe->InitBuffer(outQueueY2, BUFFER_NUM, ubFactor * sizeof(TX));
             Ppipe->InitBuffer(scales2Buf, ubFactor * sizeof(float));
-            Ppipe->InitBuffer(tmpBuf, ubFactor * sizeof(float));
+            Ppipe->InitBuffer(tmpBufSplit, ubFactor * sizeof(float));
             if (hasZeroPoints2) {
                 zeroPoints2Gm.SetGlobalBuffer((__gm__ TOffset*)zero_points2, numCol);
                 Ppipe->InitBuffer(zeroPoints2Buf, ubFactor * sizeof(int32_t));
@@ -121,7 +121,7 @@ public:
 
     __aicore__ inline void SubProcess(uint32_t iO, uint32_t calcRowNum, uint32_t jMax, uint32_t colTail)
     {
-        LocalTensor<float> sumLocal = sumBuf.Get<float>();
+        LocalTensor<float> sumLocal = sumBufSplit.Get<float>();
 
         LocalTensor<float> rstdLocal = rstdBuf.Get<float>();
         Duplicate(rstdLocal, (float)0.0, calcRowNum);
@@ -359,7 +359,7 @@ private:
     __aicore__ inline void doQuant(LocalTensor<float> xFp32Local, uint32_t num)
     {
         if (hasScales2) {
-            LocalTensor<float> tmpFp32 = tmpBuf.Get<float>();
+            LocalTensor<float> tmpFp32 = tmpBufSplit.Get<float>();
             AddRmsNormQuantBase::doScales(tmpFp32, xFp32Local, scales2Buf, divMode, num);
             AddRmsNormQuantBase::doZeroPoints(tmpFp32, zeroPoints2Buf, num, hasZeroPoints2);
             LocalTensor<int8_t> y2Local = outQueueY2.AllocTensor<int8_t>();
@@ -425,8 +425,8 @@ private:
     TBuf<TPosition::VECCALC> zeroPoints1Buf;
     TBuf<TPosition::VECCALC> xFp32Buf;
     TBuf<TPosition::VECCALC> sqxBuf;
-    TBuf<TPosition::VECCALC> tmpBuf;
-    TBuf<TPosition::VECCALC> sumBuf;
+    TBuf<TPosition::VECCALC> tmpBufSplit;
+    TBuf<TPosition::VECCALC> sumBufSplit;
     TBuf<TPosition::VECCALC> reduceFp32Buf;
     TBuf<TPosition::VECCALC> rstdBuf;
     TBuf<TPosition::VECCALC> scales2Buf;

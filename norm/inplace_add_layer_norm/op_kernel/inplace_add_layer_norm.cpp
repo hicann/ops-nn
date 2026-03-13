@@ -23,14 +23,14 @@ extern "C" __global__ __aicore__ void inplace_add_layer_norm(
     GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipe;
-    GET_TILING_DATA(tiling_data, tiling);
+    GET_TILING_DATA(inplaceTilingData, tiling);
 
-#define INIT_AND_PROCESS                                                                                     \
-    op.Init(                                                                                                 \
-        x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace, tiling_data.numCore, tiling_data.numLastDim, \
-        tiling_data.numFirstDim, tiling_data.firstDimPerCore, tiling_data.firstDimPerCoreTail,               \
-        tiling_data.firstDimPerTime, tiling_data.lastDimPerTime, tiling_data.eps, tiling_data.aveFactor,     \
-        tiling_data.colMoveCnt, tiling_data.colTail, tiling_data.workspaceSize);                             \
+#define INIT_AND_PROCESS                                                                                      \
+    op.Init(                                                                                                  \
+        x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace, inplaceTilingData.numCore, inplaceTilingData.numLastDim, \
+        inplaceTilingData.numFirstDim, inplaceTilingData.firstDimPerCore, inplaceTilingData.firstDimPerCoreTail,                \
+        inplaceTilingData.firstDimPerTime, inplaceTilingData.lastDimPerTime, inplaceTilingData.eps, inplaceTilingData.aveFactor,      \
+        inplaceTilingData.colMoveCnt, inplaceTilingData.colTail, inplaceTilingData.workspaceSize);                              \
     op.Process()
     if (TILING_KEY_IS(0)) {
         KernelAddLayerNorm<DTYPE_X1, DTYPE_X2, DTYPE_GAMMA, DTYPE_X1, 0> op(&pipe);
@@ -140,35 +140,35 @@ extern "C" __global__ __aicore__ void inplace_add_layer_norm(
     } else if (TILING_KEY_IS(152)) {
         KernelAddLayerNorm<DTYPE_X1, DTYPE_X2, DTYPE_GAMMA, DTYPE_X1, 152> op(&pipe);
         INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(62)) { // Better UB begin
-        KernelAddLayerNormBetterUB<half, half, half, half, 62> op(&pipe);
-        INIT_AND_PROCESS;
     } else if (TILING_KEY_IS(162)) {
         KernelAddLayerNormBetterUB<half, half, half, half, 162> op(&pipe);
         INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(70)) { // Normal Special Reduce begin
-        KernelAddLayerNormNormalSpecialReduce<half, half, half, half, 70> op(&pipe);
+    } else if (TILING_KEY_IS(62)) { // Better UB begin
+        KernelAddLayerNormBetterUB<half, half, half, half, 62> op(&pipe);
         INIT_AND_PROCESS;
     } else if (TILING_KEY_IS(170)) {
         KernelAddLayerNormNormalSpecialReduce<half, half, half, half, 170> op(&pipe);
         INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(80)) {
-        KernelAddLayerNormNormalSpecialReduce<half, half, half, half, 80> op(&pipe);
+    } else if (TILING_KEY_IS(70)) { // Normal Special Reduce begin
+        KernelAddLayerNormNormalSpecialReduce<half, half, half, half, 70> op(&pipe);
         INIT_AND_PROCESS;
     } else if (TILING_KEY_IS(180)) {
         KernelAddLayerNormNormalSpecialReduce<half, half, half, half, 180> op(&pipe);
         INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(72)) {
-        KernelAddLayerNormNormalSpecialReduce<half, half, half, half, 72> op(&pipe);
+    } else if (TILING_KEY_IS(80)) {
+        KernelAddLayerNormNormalSpecialReduce<half, half, half, half, 80> op(&pipe);
         INIT_AND_PROCESS;
     } else if (TILING_KEY_IS(172)) {
         KernelAddLayerNormNormalSpecialReduce<half, half, half, half, 172> op(&pipe);
         INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(82)) {
-        KernelAddLayerNormNormalSpecialReduce<half, half, half, half, 82> op(&pipe);
+    } else if (TILING_KEY_IS(72)) {
+        KernelAddLayerNormNormalSpecialReduce<half, half, half, half, 72> op(&pipe);
         INIT_AND_PROCESS;
     } else if (TILING_KEY_IS(182)) {
         KernelAddLayerNormNormalSpecialReduce<half, half, half, half, 182> op(&pipe);
+        INIT_AND_PROCESS;
+    } else if (TILING_KEY_IS(82)) {
+        KernelAddLayerNormNormalSpecialReduce<half, half, half, half, 82> op(&pipe);
         INIT_AND_PROCESS;
     } else if (TILING_KEY_IS(190)) { // Single Row Less Tensor begin
         KernelAddLayerNormSingleRowLessTensor<DTYPE_X1, DTYPE_X2, float, DTYPE_X1, 190> op(&pipe);

@@ -107,15 +107,15 @@ __aicore__ inline void ReduceSumHalfInterval(
     const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local, int32_t count)
 {
     if (likely(count > ELEM_PER_REP_FP32)) {
-        int32_t bodyCount = findPowerTwo(count);
-        int32_t tailCount = count - bodyCount;
-        if (tailCount > 0) {
-            Add(src_local, src_local, src_local[bodyCount], tailCount);
+        int32_t bodyCountReduce = findPowerTwo(count);
+        int32_t tailCountReduce = count - bodyCountReduce;
+        if (tailCountReduce > 0) {
+            Add(src_local, src_local, src_local[bodyCountReduce], tailCountReduce);
             PipeBarrier<PIPE_V>();
         }
-        while (bodyCount > ELEM_PER_REP_FP32) {
-            bodyCount = bodyCount / HALf_INTERVAL;
-            Add(src_local, src_local, src_local[bodyCount], bodyCount);
+        while (bodyCountReduce > ELEM_PER_REP_FP32) {
+            bodyCountReduce = bodyCountReduce / HALf_INTERVAL;
+            Add(src_local, src_local, src_local[bodyCountReduce], bodyCountReduce);
             PipeBarrier<PIPE_V>();
         }
 

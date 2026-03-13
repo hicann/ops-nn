@@ -30,14 +30,14 @@ public:
   __aicore__ inline AddLayerNormGradDeterminsticCompute(){};
   __aicore__ inline void initBuffer(TPipe& pipe,GlobalTensor<float>& pdGammaOutTensorGM,GlobalTensor<float>& pdBetaOutTensorGM,GlobalTensor<float>& workspaceGM,int64_t workspaceNum) {
     pipe_ = pipe;
-    pipe_.InitBuffer(queueGammaIn_, DOUBLE_BUFFER, ROW_TEMPLATE * COL_TEMPLATE * sizeof(float));
     pipe_.InitBuffer(queueGammaOut_, DOUBLE_BUFFER, COL_TEMPLATE * sizeof(float));
-    pipe_.InitBuffer(queueBetaIn_, DOUBLE_BUFFER, ROW_TEMPLATE * COL_TEMPLATE * sizeof(float));
+    pipe_.InitBuffer(queueGammaIn_, DOUBLE_BUFFER, ROW_TEMPLATE * COL_TEMPLATE * sizeof(float));
     pipe_.InitBuffer(queueBetaOut_, DOUBLE_BUFFER, COL_TEMPLATE * sizeof(float));
-    pdGammaOutTensorGM_ = pdGammaOutTensorGM;
+    pipe_.InitBuffer(queueBetaIn_, DOUBLE_BUFFER, ROW_TEMPLATE * COL_TEMPLATE * sizeof(float));
     pdBetaOutTensorGM_ = pdBetaOutTensorGM;
-    workspaceGM_ = workspaceGM;
+    pdGammaOutTensorGM_ = pdGammaOutTensorGM;
     workspaceNum_ = workspaceNum;
+    workspaceGM_ = workspaceGM;
   }
 
   __aicore__ inline void FinalProcessDeterministic(int64_t tcolAlignV, int64_t tblockNum, int64_t tcol) {
@@ -48,20 +48,20 @@ public:
     buffer2_ = queueGammaOut_.AllocTensor<float>();
     buffer3_ = queueBetaIn_.AllocTensor<float>();
     buffer4_ = queueBetaOut_.AllocTensor<float>();
-    int64_t colcycleCount = (colAlignV_ + COL_TEMPLATE - 1) / COL_TEMPLATE;
-    int64_t colcyclePerBlockCount = (colcycleCount + GetBlockNum() - 1) / GetBlockNum();
-    int64_t rowcycleCount = (row_ + ROW_TEMPLATE - 1) / ROW_TEMPLATE;
+    int64_t colCycleCount = (colAlignV_ + COL_TEMPLATE - 1) / COL_TEMPLATE;
+    int64_t colCyclePerBlockCount = (colCycleCount + GetBlockNum() - 1) / GetBlockNum();
+    int64_t rowCycleCount = (row_ + ROW_TEMPLATE - 1) / ROW_TEMPLATE;
     int64_t colSize = COL_TEMPLATE;
     int64_t rowSize = ROW_TEMPLATE;
     int64_t taskId = 0;
-    for (int64_t blocktaskId = 0; blocktaskId < colcyclePerBlockCount; blocktaskId++) {
+    for (int64_t blocktaskId = 0; blocktaskId < colCyclePerBlockCount; blocktaskId++) {
         taskId = blocktaskId * GetBlockNum() + GetBlockIdx();
-        if (taskId < colcycleCount) {
-            if (taskId == colcycleCount - 1) {
+        if (taskId < colCycleCount) {
+            if (taskId == colCycleCount - 1) {
                 colSize = col_ - COL_TEMPLATE * taskId;
             }
-            for(int64_t i = 0; i < rowcycleCount; i++) {
-                if (i == rowcycleCount - 1) {
+            for(int64_t i = 0; i < rowCycleCount; i++) {
+                if (i == rowCycleCount - 1) {
                     rowSize = row_ - ROW_TEMPLATE * i;
                 }
                 copyIn(taskId,i,colSize,rowSize);
@@ -73,10 +73,10 @@ public:
             break;
         }
     }
-    queueGammaIn_.FreeTensor(buffer1_);
     queueGammaOut_.FreeTensor(buffer2_);
-    queueBetaIn_.FreeTensor(buffer3_);
+    queueGammaIn_.FreeTensor(buffer1_);
     queueBetaOut_.FreeTensor(buffer4_);
+    queueBetaIn_.FreeTensor(buffer3_);
   }
 
   __aicore__ inline void copyIn(int64_t colIndex, int64_t rowIndex, int64_t colSize, int64_t rowSize) {
@@ -171,14 +171,14 @@ public:
     if (colSizeMod != 0) {
         colSizeAlign += FLOAT_ALIGN - colSizeMod;
     }
-    TEventID eventID = GetTPipePtr()->AllocEventID<HardEvent::MTE2_V>();
-    SetFlag<HardEvent::MTE2_V>(eventID);
-    WaitFlag<HardEvent::MTE2_V>(eventID);
-    GetTPipePtr()->ReleaseEventID<HardEvent::MTE2_V>(eventID);
-    TEventID eventID1 = GetTPipePtr()->AllocEventID<HardEvent::MTE3_V>();
-    SetFlag<HardEvent::MTE3_V>(eventID1);
-    WaitFlag<HardEvent::MTE3_V>(eventID1);
-    GetTPipePtr()->ReleaseEventID<HardEvent::MTE3_V>(eventID1);
+    TEventID eventId = GetTPipePtr()->AllocEventID<HardEvent::MTE2_V>();
+    SetFlag<HardEvent::MTE2_V>(eventId);
+    WaitFlag<HardEvent::MTE2_V>(eventId);
+    GetTPipePtr()->ReleaseEventID<HardEvent::MTE2_V>(eventId);
+    TEventID eventId1 = GetTPipePtr()->AllocEventID<HardEvent::MTE3_V>();
+    SetFlag<HardEvent::MTE3_V>(eventId1);
+    WaitFlag<HardEvent::MTE3_V>(eventId1);
+    GetTPipePtr()->ReleaseEventID<HardEvent::MTE3_V>(eventId1);
     Duplicate(buffer2_, static_cast<float>(0.0), COL_TEMPLATE);
     Duplicate(buffer4_, static_cast<float>(0.0), COL_TEMPLATE);
     PipeBarrier<PIPE_V>();
@@ -236,8 +236,8 @@ private:
   TPipe pipe_;
   TQue<QuePosition::VECOUT, DOUBLE_BUFFER> queueGammaOut_;
   TQue<QuePosition::VECOUT, DOUBLE_BUFFER> queueBetaOut_;
-  TQue<QuePosition::VECIN, DOUBLE_BUFFER> queueGammaIn_;
   TQue<QuePosition::VECIN, DOUBLE_BUFFER> queueBetaIn_;
+  TQue<QuePosition::VECIN, DOUBLE_BUFFER> queueGammaIn_;
   LocalTensor<float> buffer1_;
   LocalTensor<float> buffer2_;
   LocalTensor<float> buffer3_;

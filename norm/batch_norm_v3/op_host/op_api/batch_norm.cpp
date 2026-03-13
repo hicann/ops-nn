@@ -155,22 +155,22 @@ const std::array<aclTensor*, 3> BatchNormV3(
 {
     L0_DFX(BatchNormV3, x, weight, bias, running_mean, running_var, momentum, eps, training);
 
-    auto y = executor->AllocTensor(
+    auto bnY = executor->AllocTensor(
         x->GetStorageShape(), x->GetOriginalShape(), x->GetDataType(), x->GetStorageFormat(), x->GetOriginalFormat());
-    auto batchMean = executor->AllocTensor(
+    auto bnBatchMean = executor->AllocTensor(
         running_mean->GetStorageShape(), running_mean->GetOriginalShape(), DataType::DT_FLOAT,
         running_mean->GetStorageFormat(), running_mean->GetOriginalFormat());
-    auto batchVar = executor->AllocTensor(
+    auto bnBatchVar = executor->AllocTensor(
         running_var->GetStorageShape(), running_var->GetOriginalShape(), DataType::DT_FLOAT,
         running_var->GetStorageFormat(), running_var->GetOriginalFormat());
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
         BatchNormV3, OP_INPUT(x, weight, bias, running_mean, running_var),
-        OP_OUTPUT(y, running_mean, running_var, batchMean, batchVar), OP_ATTR(eps, momentum, training));
+        OP_OUTPUT(bnY, running_mean, running_var, bnBatchMean, bnBatchVar), OP_ATTR(eps, momentum, training));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "BatchNormV3 ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return {nullptr, nullptr, nullptr};
     }
-    return {y, batchMean, batchVar};
+    return {bnY, bnBatchMean, bnBatchVar};
 }
 } // namespace l0op

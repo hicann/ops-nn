@@ -97,16 +97,16 @@ bool BatchNormV3TilingBase::CheckInputShape()
     auto xStorageShape = xShape->GetStorageShape();
     auto weightShape = context_->GetInputShape(WEIGHT_INPUT_IDX);
     OP_CHECK_IF(weightShape == nullptr, OP_LOGE("BatchNormV3TilingBase", "weightShape is null"), return false);
-    auto weightStorageShape = weightShape->GetStorageShape();
-    auto biasShape = context_->GetInputShape(BIAS_INPUT_IDX);
-    OP_CHECK_IF(biasShape == nullptr, OP_LOGE("BatchNormV3TilingBase", "biasShape is null"), return false);
-    auto biasStorageShape = biasShape->GetStorageShape();
-    auto meanShape = context_->GetInputShape(MEAN_INPUT_IDX);
-    OP_CHECK_IF(meanShape == nullptr, OP_LOGE("BatchNormV3TilingBase", "meanShape is null"), return false);
-    auto meanStorageShape = meanShape->GetStorageShape();
-    auto varShape = context_->GetInputShape(VAR_INPUT_IDX);
-    OP_CHECK_IF(varShape == nullptr, OP_LOGE("BatchNormV3TilingBase", "varShape is null"), return false);
-    auto varStorageShape = varShape->GetStorageShape();
+    auto bnWeightStorageShape = weightShape->GetStorageShape();
+    auto bnBiasShape = context_->GetInputShape(BIAS_INPUT_IDX);
+    OP_CHECK_IF(bnBiasShape == nullptr, OP_LOGE("BatchNormV3TilingBase", "biasShape is null"), return false);
+    auto bnBiasStorageShape = bnBiasShape->GetStorageShape();
+    auto bnMeanShape = context_->GetInputShape(MEAN_INPUT_IDX);
+    OP_CHECK_IF(bnMeanShape == nullptr, OP_LOGE("BatchNormV3TilingBase", "meanShape is null"), return false);
+    auto bnMeanStorageShape = bnMeanShape->GetStorageShape();
+    auto bnVarShape = context_->GetInputShape(VAR_INPUT_IDX);
+    OP_CHECK_IF(bnVarShape == nullptr, OP_LOGE("BatchNormV3TilingBase", "varShape is null"), return false);
+    auto bnVarStorageShape = bnVarShape->GetStorageShape();
     auto xDesc = context_->GetInputDesc(X_INPUT_IDX);
     auto format = xDesc->GetFormat().GetStorageFormat();
     if (format == FORMAT_NCHW) {
@@ -138,28 +138,28 @@ bool BatchNormV3TilingBase::CheckInputShape()
         commonParams.patternR0 <= 0, OP_LOGE(commonParams.nodeName, "x shape dim_2 * dim_3 should be more than zero."),
         return false);
     OP_CHECK_IF(
-        weightStorageShape.GetShapeSize() != commonParams.patternA,
+        bnWeightStorageShape.GetShapeSize() != commonParams.patternA,
         OP_LOGE(
             commonParams.nodeName, "weight ShapeSize: %ld should equal x shape C dim: %ld",
-            weightStorageShape.GetShapeSize(), commonParams.patternA),
+            bnWeightStorageShape.GetShapeSize(), commonParams.patternA),
         return false);
     OP_CHECK_IF(
-        biasStorageShape.GetShapeSize() != commonParams.patternA,
+        bnBiasStorageShape.GetShapeSize() != commonParams.patternA,
         OP_LOGE(
             commonParams.nodeName, "bias ShapeSize: %ld should equal x shape C dim: %ld",
-            biasStorageShape.GetShapeSize(), commonParams.patternA),
+            bnBiasStorageShape.GetShapeSize(), commonParams.patternA),
         return false);
     OP_CHECK_IF(
-        meanStorageShape.GetShapeSize() != commonParams.patternA,
+        bnMeanStorageShape.GetShapeSize() != commonParams.patternA,
         OP_LOGE(
             commonParams.nodeName, "running_mean ShapeSize: %ld should equal x shape C dim: %ld",
-            meanStorageShape.GetShapeSize(), commonParams.patternA),
+            bnMeanStorageShape.GetShapeSize(), commonParams.patternA),
         return false);
     OP_CHECK_IF(
-        varStorageShape.GetShapeSize() != commonParams.patternA,
+        bnVarStorageShape.GetShapeSize() != commonParams.patternA,
         OP_LOGE(
             commonParams.nodeName, "running_var ShapeSize: %ld should equal x shape C dim: %ld",
-            varStorageShape.GetShapeSize(), commonParams.patternA),
+            bnVarStorageShape.GetShapeSize(), commonParams.patternA),
         return false);
     return true;
 }
@@ -202,10 +202,10 @@ ge::graphStatus BatchNormV3TilingBase::GetPlatformInfo()
         commonParams.ubSizePlatForm = compileInfoPtr->ubSize;
     }
     OP_CHECK_IF(
-        commonParams.coreNum == 0, OP_LOGE(commonParams.nodeName, "numBlocks should not be equal to zero."),
+        commonParams.coreNum == 0, OP_LOGE(commonParams.nodeName, "coreNum should not be equal to zero."),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
-        commonParams.ubSizePlatForm == 0, OP_LOGE(commonParams.nodeName, "ubSize should not be equal to zero."),
+        commonParams.ubSizePlatForm == 0, OP_LOGE(commonParams.nodeName, "ubSizePlatForm should not be equal to zero."),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

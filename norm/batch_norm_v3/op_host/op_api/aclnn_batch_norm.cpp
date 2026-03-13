@@ -158,23 +158,25 @@ static bool CheckOtherDtypeValid(
 
 static bool CheckFormat(const aclTensor* input, const aclTensor* out)
 {
-    if (input->GetStorageFormat() != out->GetStorageFormat()) {
+    auto inputFormat = input->GetStorageFormat();
+    auto outputFormat = out->GetStorageFormat();
+    if (inputFormat != outputFormat) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "Format of input and output should be equal, input [%s], output [%s].",
-            op::ToString(input->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
+            op::ToString(inputFormat).GetString(), op::ToString(outputFormat).GetString());
         return false;
     }
 
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         if ((input->GetViewShape().GetDimNum() == MAX_BN_DIMS) &&
-            ((input->GetStorageFormat() != Format::FORMAT_NCDHW) &&
-             (input->GetStorageFormat() != Format::FORMAT_NDHWC))) {
+            ((inputFormat != Format::FORMAT_NCDHW) &&
+             (inputFormat != Format::FORMAT_NDHWC))) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input should be NCDWH or NDWHC, when input dim is 5.");
             return false;
         }
 
         if ((out->GetViewShape().GetDimNum() == MAX_BN_DIMS) &&
-            ((out->GetStorageFormat() != Format::FORMAT_NCDHW) && (out->GetStorageFormat() != Format::FORMAT_NDHWC))) {
+            ((outputFormat != Format::FORMAT_NCDHW) && (outputFormat != Format::FORMAT_NDHWC))) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of output should be NCDWH or NDWHC, when input dim is 5.");
             return false;
         }
@@ -233,7 +235,7 @@ static bool CheckOtherShape(
     return true;
 }
 
-static int64_t GetDimC(const aclTensor* input)
+static int64_t GetBatchNormDimC(const aclTensor* input)
 {
     auto viewShape = input->GetViewShape();
     if (Ops::NN::AclnnUtil::IsRegbase()) {
@@ -255,7 +257,7 @@ static aclnnStatus CheckParams(
     CHECK_RET(CheckFormat(input, output), ACLNN_ERR_PARAM_INVALID);
 
     CHECK_RET(CheckShape(input, output), ACLNN_ERR_PARAM_INVALID);
-    int64_t dimC = GetDimC(input);
+    int64_t dimC = GetBatchNormDimC(input);
     CHECK_RET(CheckOtherShape(dimC, weight, bias, runningMean, runningVar), ACLNN_ERR_PARAM_INVALID);
 
     if (training) {
@@ -325,12 +327,12 @@ aclnnStatus aclnnBatchNormGetWorkspaceSize(
     CHECK_RET(bnResult == ACLNN_SUCCESS, bnResult);
 
     if (inputDims > MAX_BN_DIMS) {
-        int64_t originShapes[inputDims];
-        for (size_t i = 0; i < inputDims; ++i) {
-            originShapes[i] = inputShape[i];
+        int64_t originShapesBn[inputDims];
+        for (size_t idxBn = 0; idxBn < inputDims; ++idxBn) {
+            originShapesBn[idxBn] = inputShape[idxBn];
         }
-        aclIntArray* originShapeArray = uniqueExecutor.get()->AllocIntArray(originShapes, inputDims);
-        auto bnOutputReshape = l0op::Reshape(bnOutput, originShapeArray, uniqueExecutor.get());
+        aclIntArray* originShapeArrayBn = uniqueExecutor.get()->AllocIntArray(originShapesBn, inputDims);
+        auto bnOutputReshape = l0op::Reshape(bnOutput, originShapeArrayBn, uniqueExecutor.get());
         auto bnOutputReformat = l0op::ReFormat(bnOutputReshape, Format::FORMAT_ND);
         auto viewCopyResult = l0op::ViewCopy(bnOutputReformat, output, uniqueExecutor.get());
         CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -554,17 +556,17 @@ aclnnStatus BatchNormProcDavid(
 
     if (training) {
         if (!runningMean->IsFromWorkspace()) {
-            auto runningMeanResCast = l0op::Cast(runningMeanOut, runningMean->GetDataType(), executor);
-            CHECK_RET(runningMeanResCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto runningMeanResViewCopy = l0op::ViewCopy(runningMeanResCast, runningMean, executor);
-            CHECK_RET(runningMeanResViewCopy != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            auto bnRunningMeanCast = l0op::Cast(runningMeanOut, runningMean->GetDataType(), executor);
+            CHECK_RET(bnRunningMeanCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            auto bnRunningMeanViewCopy = l0op::ViewCopy(bnRunningMeanCast, runningMean, executor);
+            CHECK_RET(bnRunningMeanViewCopy != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
 
         if (!runningVar->IsFromWorkspace()) {
-            auto runningVarResCast = l0op::Cast(runningVarOut, runningVar->GetDataType(), executor);
-            CHECK_RET(runningVarResCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto runningVarResViewCopy = l0op::ViewCopy(runningVarResCast, runningVar, executor);
-            CHECK_RET(runningVarResViewCopy != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            auto bnRunningVarCast = l0op::Cast(runningVarOut, runningVar->GetDataType(), executor);
+            CHECK_RET(bnRunningVarCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            auto bnRunningVarViewCopy = l0op::ViewCopy(bnRunningVarCast, runningVar, executor);
+            CHECK_RET(bnRunningVarViewCopy != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
     }
 
@@ -606,7 +608,7 @@ aclnnStatus BatchNorm(
     aclTensor* runningVar, bool training, float momentum, float eps, aclTensor** output, aclTensor* saveMean,
     aclTensor* saveInvstd, aclOpExecutor* executor)
 {
-    size_t dimC = GetDimC(input);
+    size_t dimC = GetBatchNormDimC(input);
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (runningMean == nullptr) {
         runningMean =

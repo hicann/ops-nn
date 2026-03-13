@@ -84,8 +84,8 @@ private:
 
     uint64_t useCore_{1};
     uint64_t numFirstDim_{1};
-    uint64_t numLastDim_{1};
     uint64_t numLastDimAligned_{1};
+    uint64_t numLastDim_{1};
     uint64_t firstDimPerCore_{1};
     uint64_t firstDimPerCoreTail_{1};
     uint64_t firstDimPerLoop_{1};
