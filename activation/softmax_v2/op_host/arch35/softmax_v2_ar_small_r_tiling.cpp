@@ -25,7 +25,9 @@ namespace optiling
 {
 bool SoftmaxV2TilingArSmallR::IsCapable()
 {
-    OP_CHECK_IF((a0_ != DIM_NUM_ONE) || (r_ > DATA_BLOCK_COUNT) || (a1_ <= static_cast<int64_t>(aicoreParams_.numBlocks) * SMALL_A_LEN), OP_LOGI(context_->GetNodeName(), "AR small r template is not capable."),
+    OP_CHECK_IF((a0_ != DIM_NUM_ONE) || (r_ > DATA_BLOCK_COUNT) || 
+        (a1_ >= static_cast<int64_t>(aicoreParams_.numBlocks) * MIN_A_LEN && a1_ <= static_cast<int64_t>(aicoreParams_.numBlocks) * MAX_A_LEN),
+        OP_LOGI(context_->GetNodeName(), "AR small r template is not capable."),
                     return false);
     return true;
 }
