@@ -236,6 +236,8 @@ public:
         UpdateHiWiAL1();
         if constexpr (!Intf::groupOptPreloadFlag) {
             this->SetLoad3dFMatrix(this->padLeftL1, this->padRightL1, this->padTopL1, this->hiLoadL1, this->wiLoadL1);
+            // In non-groupOptPreload scenarios, groupOptIter has been adapted on the operator side
+            groupOptIter = 0;
         }
 
         if (this->allPadFlag) {
@@ -295,6 +297,11 @@ public:
         if (this->allPadFlag) {
             this->SetPadData();
             return;
+        }
+
+        // In non-groupOptPreload scenarios, groupOptIter has been adapted on the operator side
+        if constexpr (!Intf::groupOptPreloadFlag) {
+            groupOptIter = 0;
         }
 
         if constexpr (Intf::disContinuousFlag) {
