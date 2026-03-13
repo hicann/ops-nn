@@ -1399,7 +1399,6 @@ aclnnStatus QuantMatmulChecker::CheckDtypeL0c2outOrL0c2ub() const
  	             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
  	                     "When out dtype is FLOAT16, %s must be null, but it is not null.", GetX2OffsetName().c_str());
  	             return false;
- 	             
  	         }
  	     } else {
  	         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When pertokenScaleOptional is not nullptr, out dtype should be FLOAT16, actual dtype is: %s.",

@@ -21,12 +21,26 @@
 namespace PpMatMulNS {
 
 constexpr uint32_t L0AB_PINGPONG_BUFFER_LEN_INT8 = 32768;
+constexpr uint32_t CONST_2 = 2;
+constexpr uint32_t CONST_3 = 3;
+constexpr uint32_t CONST_4 = 4;
 constexpr uint32_t CONST_8 = 8;
+constexpr uint32_t CONST_16 = 16;
+constexpr uint32_t CONST_64 = 64;
+constexpr uint32_t CONST_512 = 512;
+constexpr uint32_t MAX_REPEAT_TIMES = 255;
 constexpr uint32_t BLOCK_SIZE_16 = 16;
 constexpr uint32_t BLOCK_SIZE_32 = 32;
 constexpr uint32_t L1_PINGPONG_BUFFER_LEN_INT8 = 131072;
 constexpr uint32_t MAX_NUMEL_INST_B32 = 255 * 64;
 constexpr uint32_t UB_SCALE_BLOCK_SIZE = 8;
+
+
+constexpr uint32_t UB_C_OFFSET = 8 * 1024;
+constexpr uint32_t UB_C_TEMP_OFFSET = 8 * 1024 + 64 * 1024;
+constexpr uint32_t UB_BIAS_OFFSET = 8 * 1024 + 192 * 1024;
+constexpr uint32_t UB_PERTOKEN_SCALE_OFFSET = 210 * 1024;
+constexpr uint32_t UB_PERTOKEN_SCALE_CALC_OFFSET = 214 * 1024;
 
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
 
@@ -70,23 +84,22 @@ public:
 
         l1_a_ping = buf.template GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(0);
         l1_a_pong = buf.template GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(L1_PINGPONG_BUFFER_LEN_INT8);
-        l1_b_ping = buf.template GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(L1_PINGPONG_BUFFER_LEN_INT8 * 2);
-        l1_b_pong = buf.template GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(L1_PINGPONG_BUFFER_LEN_INT8 * 3);
+        l1_b_ping = buf.template GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(L1_PINGPONG_BUFFER_LEN_INT8 * CONST_2);
+        l1_b_pong = buf.template GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(L1_PINGPONG_BUFFER_LEN_INT8 * CONST_3);
         l0_a_ping = buf.template GetBuffer<BufferType::ASCEND_L0A, IN_DTYPE>(0);
         l0_a_pong = buf.template GetBuffer<BufferType::ASCEND_L0A, IN_DTYPE>(L0AB_PINGPONG_BUFFER_LEN_INT8);
         l0_b_ping = buf.template GetBuffer<BufferType::ASCEND_L0B, IN_DTYPE>(0);
         l0_b_pong = buf.template GetBuffer<BufferType::ASCEND_L0B, IN_DTYPE>(L0AB_PINGPONG_BUFFER_LEN_INT8);
 
         ub_scale = buf.template GetBuffer<BufferType::ASCEND_UB, DESCALE_TYPE>(0);
-        ub_c = buf.template GetBuffer<BufferType::ASCEND_UB, half>(0 + 8 * 1024);
-        ub_a_temp = buf.template GetBuffer<BufferType::ASCEND_UB, IN_DTYPE>(8 * 1024 + 64 * 1024);
-        ub_c_i32 = buf.template GetBuffer<BufferType::ASCEND_UB, int32_t>(8 * 1024 + 64 * 1024);
-        ub_c_fp32 = buf.template GetBuffer<BufferType::ASCEND_UB, float>(8 * 1024 + 64 * 1024);
+        ub_c = buf.template GetBuffer<BufferType::ASCEND_UB, half>(UB_C_OFFSET);
+        ub_c_i32 = buf.template GetBuffer<BufferType::ASCEND_UB, int32_t>(UB_C_TEMP_OFFSET);
+        ub_c_fp32 = buf.template GetBuffer<BufferType::ASCEND_UB, float>(UB_C_TEMP_OFFSET);
         if constexpr (BiasFlag) {
-            ub_bias = buf.template GetBuffer<BufferType::ASCEND_UB, BIAS_TYPE>(8 * 1024 + 192 * 1024);
+            ub_bias = buf.template GetBuffer<BufferType::ASCEND_UB, BIAS_TYPE>(UB_BIAS_OFFSET);
         }
-        ub_pertoken_scale = buf.template GetBuffer<BufferType::ASCEND_UB, float>(210 * 1024);
-        ub_pertoken_scale_calc = buf.template GetBuffer<BufferType::ASCEND_UB, float>(214 * 1024);
+        ub_pertoken_scale = buf.template GetBuffer<BufferType::ASCEND_UB, float>(UB_PERTOKEN_SCALE_OFFSET);
+        ub_pertoken_scale_calc = buf.template GetBuffer<BufferType::ASCEND_UB, float>(UB_PERTOKEN_SCALE_CALC_OFFSET);
     }
 
     __aicore__ FORCE_INLINE void CopyTileA(
@@ -228,7 +241,7 @@ public:
                     ub_bias, gm_bias[bias_offset],
                     0,           // sid
                     1,           // nBurst
-                    n_round / 8, // lenBurst
+                    n_round / CONST_8, // lenBurst
                     0,           // srcStride
                     0            // dstStride
                 );
@@ -288,7 +301,7 @@ public:
                 for (uint32_t k_part_idx = 0; k_part_idx < k_part_loop; ++k_part_idx) {
                     uint32_t k0_round = k_part_idx < k_part_loop - 1 ? k_part_len : k_round - k_part_idx * k_part_len;
                     uint32_t k0_actual = k_part_idx < k_part_loop - 1 ? k_part_len : k_actual - k_part_idx * k_part_len;
-                    uint32_t l0_ping_pong = 1 - k_part_idx % 2;
+                    uint32_t l0_ping_pong = 1 - k_part_idx % CONST_2;
                     event_t l0_event = l0_ping_pong ? EVENT_ID0 : EVENT_ID1;
                     AscendC::LocalTensor<IN_DTYPE> l0_a = l0_ping_pong ? l0_a_ping : l0_a_pong;
                     AscendC::LocalTensor<IN_DTYPE> l0_b = l0_ping_pong ? l0_b_ping : l0_b_pong;
@@ -297,8 +310,8 @@ public:
                     }
                     WAIT_FLAG(M, MTE1, l0_event);
                     l1_to_l0_a<ArchType::ASCEND_V200, IN_DTYPE, false, DataFormat::ZN, DataFormat::ZZ>(
-                        l0_a, l1_a[k_part_idx * k_part_len * m_round], m_round, k0_round, 1, m_round / 16,
-                        k0_round / 32, 1);
+                        l0_a, l1_a[k_part_idx * k_part_len * m_round], m_round, k0_round, 1, m_round / BLOCK_SIZE_16,
+                        k0_round / BLOCK_SIZE_32, 1);
                     if (k_part_idx == k_part_loop - 1) {
                         SET_FLAG(MTE1, MTE2, l1_a_event);
                     }
@@ -310,7 +323,7 @@ public:
                         l0_b,                                    // dst
                         l1_b[k_part_idx * k_part_len * n_round], // src
                         0,
-                        k0_round * n_round / 512, // repeat
+                        k0_round * n_round / CONST_512, // repeat
                         0,
                         1, // srcStride
                         0,
@@ -376,9 +389,9 @@ public:
             WAIT_FLAG(MTE2, V, EVENT_ID0);
 
             // broc x2Scale
-            Brcb(ub_pertoken_scale_calc, ub_pertoken_scale, CeilDiv<CONST_8>(m_round), {2, 16});
+            Brcb(ub_pertoken_scale_calc, ub_pertoken_scale, CeilDiv<CONST_8>(m_round), {CONST_2, CONST_16});
             AscendC::DataCopy(
-                ub_pertoken_scale_calc[8], ub_pertoken_scale_calc, AscendC::DataCopyParams(m_round, 1, 1, 1));
+                ub_pertoken_scale_calc[CONST_8], ub_pertoken_scale_calc, AscendC::DataCopyParams(m_round, 1, 1, 1));
 
             SET_FLAG(M, V, EVENT_ID0);
             WAIT_FLAG(M, V, EVENT_ID0);
@@ -398,16 +411,16 @@ public:
 
             // cast int32->fp32
             SetVectorMask<int8_t>((uint64_t)-1, (uint64_t)-1);
-            uint32_t repeat_count = (m_round * n_round / 64) / 255;
-            uint32_t repeat_remainder = (m_round * n_round / 64) % 255;
+            uint32_t repeat_count = (m_round * n_round / CONST_64) / MAX_REPEAT_TIMES;
+            uint32_t repeat_remainder = (m_round * n_round / CONST_64) % MAX_REPEAT_TIMES;
             for (uint32_t i = 0; i < repeat_count; ++i) {
                 AscendC::Cast<float, int32_t, false>(
                     ub_c_fp32[i * MAX_NUMEL_INST_B32],       // dst
                     ub_c_i32[i * MAX_NUMEL_INST_B32],        // src
                     AscendC::RoundMode::CAST_NONE,           // roundMode
                     (uint64_t)0,                             // count(unuse)
-                    255,                                     // repeatTime
-                    AscendC::UnaryRepeatParams(1, 1, 8, 8)); // repeatParams
+                    MAX_REPEAT_TIMES,                                     // repeatTime
+                    AscendC::UnaryRepeatParams(1, 1, CONST_8, CONST_8)); // repeatParams
             }
             AscendC::Cast<float, int32_t, false>(
                 ub_c_fp32[repeat_count * MAX_NUMEL_INST_B32], // dst
@@ -415,45 +428,45 @@ public:
                 AscendC::RoundMode::CAST_NONE,                // roundMode
                 (uint64_t)0,                                  // count(unuse)
                 repeat_remainder,                             // repeatTime
-                AscendC::UnaryRepeatParams(1, 1, 8, 8));      // repeatParams
+                AscendC::UnaryRepeatParams(1, 1, CONST_8, CONST_8));      // repeatParams
 
             AscendC::PipeBarrier<PIPE_V>();
 
             // dequant x1 scale perChannel
-            uint32_t count = n_round / 16;
-            uint32_t m_repeat_count = m_round / 255;
-            uint32_t m_repeat_remainder = m_round % 255;
+            uint32_t count = n_round / BLOCK_SIZE_16;
+            uint32_t m_repeat_count = m_round / MAX_REPEAT_TIMES;
+            uint32_t m_repeat_remainder = m_round % MAX_REPEAT_TIMES;
             SetVectorMask<int8_t>((uint64_t)0x0, (uint64_t)0xffff);
             for (uint32_t i = 0; i < count; ++i) {
                 if (m_repeat_count > 0) { // m_round 为 256时的处理，由于UB最大只能处理128K数据，max(m_round) = 256
                     AscendC::Mul<float, false>(
-                        ub_c_fp32[i * m_round * 16], // dst
-                        ub_c_fp32[i * m_round * 16], // src0
-                        ub_scale[i * 16],            // src1
+                        ub_c_fp32[i * m_round * BLOCK_SIZE_16], // dst
+                        ub_c_fp32[i * m_round * BLOCK_SIZE_16], // src0
+                        ub_scale[i * BLOCK_SIZE_16],            // src1
                         (uint64_t)0,                 // count(unuse)
-                        255,                         // repeatTime
+                        MAX_REPEAT_TIMES,                         // repeatTime
                         AscendC::BinaryRepeatParams(
-                            1,   // dstBlockStride
-                            1,   // src0BlockStride
-                            1,   // src1BlockStride
-                            2,   // dstRepeatStride
-                            2,   // src0RepeatStride
-                            0)); // src1RepeatStride
+                            1,       // dstBlockStride
+                            1,       // src0BlockStride
+                            1,       // src1BlockStride
+                            CONST_2, // dstRepeatStride
+                            CONST_2, // src0RepeatStride
+                            0));     // src1RepeatStride
                 }
 
                 // m_repeat_count为0时，等同于repeat计算m_round轮
                 AscendC::Mul<float, false>(
-                    ub_c_fp32[i * m_round * 16 + m_repeat_count * 255 * 16], // dst
-                    ub_c_fp32[i * m_round * 16 + m_repeat_count * 255 * 16], // src0
-                    ub_scale[i * 16],                                        // src1
+                    ub_c_fp32[i * m_round * BLOCK_SIZE_16 + m_repeat_count * MAX_REPEAT_TIMES * BLOCK_SIZE_16], // dst
+                    ub_c_fp32[i * m_round * BLOCK_SIZE_16 + m_repeat_count * MAX_REPEAT_TIMES * BLOCK_SIZE_16], // src0
+                    ub_scale[i * BLOCK_SIZE_16],                                        // src1
                     (uint64_t)0,                                             // count(unuse)
                     m_repeat_remainder,                                      // repeatTime
                     AscendC::BinaryRepeatParams(
                         1,   // dstBlockStride
                         1,   // src0BlockStride
                         1,   // src1BlockStride
-                        2,   // dstRepeatStride
-                        2,   // src0RepeatStride
+                        CONST_2,   // dstRepeatStride
+                        CONST_2,   // src0RepeatStride
                         0)); // src1RepeatStride
             }
             AscendC::PipeBarrier<PIPE_V>();
@@ -462,18 +475,18 @@ public:
             SetVectorMask<int8_t>((uint64_t)-1, (uint64_t)-1);
             for (uint32_t i = 0; i < count; ++i) {
                 AscendC::Mul<float, false>(
-                    ub_c_fp32[i * m_round * 16], // dst
-                    ub_c_fp32[i * m_round * 16], // src0
+                    ub_c_fp32[i * m_round * BLOCK_SIZE_16], // dst
+                    ub_c_fp32[i * m_round * BLOCK_SIZE_16], // src0
                     ub_pertoken_scale_calc,      // src1
                     (uint64_t)0,                 // count(unuse)
-                    m_round / 4,                 // repeatTime
+                    m_round / CONST_4,                 // repeatTime
                     AscendC::BinaryRepeatParams(
                         1,   // dstBlockStride
                         1,   // src0BlockStride
                         1,   // src1BlockStride
-                        8,   // dstRepeatStride
-                        8,   // src0RepeatStride
-                        8)); // src1RepeatStride
+                        CONST_8,   // dstRepeatStride
+                        CONST_8,   // src0RepeatStride
+                        CONST_8)); // src1RepeatStride
             }
 
             AscendC::PipeBarrier<PIPE_V>();
@@ -486,8 +499,8 @@ public:
                     ub_c_fp32[i * MAX_NUMEL_INST_B32],       // src
                     AscendC::RoundMode::CAST_NONE,           // roundMode
                     (uint64_t)0,                             // count(unuse)
-                    255,                                     // repeatTime
-                    AscendC::UnaryRepeatParams(1, 1, 4, 8)); // repeatParams
+                    MAX_REPEAT_TIMES,                                     // repeatTime
+                    AscendC::UnaryRepeatParams(1, 1, CONST_4, CONST_8)); // repeatParams
             }
             AscendC::Cast<half, float, false>(
                 ub_c[repeat_count * MAX_NUMEL_INST_B32],      // dst
@@ -495,7 +508,7 @@ public:
                 AscendC::RoundMode::CAST_NONE,                // roundMode
                 (uint64_t)0,                                  // count(unuse)
                 repeat_remainder,                             // repeatTime
-                AscendC::UnaryRepeatParams(1, 1, 4, 8));      // repeatParams
+                AscendC::UnaryRepeatParams(1, 1, CONST_4, CONST_8));      // repeatParams
 
             SET_FLAG(V, MTE2, EVENT_ID1);
             if (m_actual == 1) {
@@ -509,7 +522,7 @@ public:
                         zero,                                    // src1
                         (uint64_t)0,                             // count(unuse)
                         1,                                       // repeatTime
-                        AscendC::UnaryRepeatParams(1, 1, 2, 2)); // repeatParams
+                        AscendC::UnaryRepeatParams(1, 1, CONST_2, CONST_2)); // repeatParams
                 }
             }
             SET_FLAG(V, M, EVENT_ID0);
@@ -521,7 +534,7 @@ public:
                 AscendC::DataCopy(
                     gm_c[dst_offset], ub_c, AscendC::Nz2NdParamsFull(1, m_round, n_round, 0, m_round, n_, 0));
             } else {
-                dst_offset = b_idx * m_org_up * n_org_up + n_idx * n0_ * m_org_up + m_idx * m0_ * 16;
+                dst_offset = b_idx * m_org_up * n_org_up + n_idx * n0_ * m_org_up + m_idx * m0_ * BLOCK_SIZE_16;
                 ub_to_gm<ArchType::ASCEND_V200, OUT_TYPE, DataFormat::NZ, DataFormat::NZ>(
                     gm_c[dst_offset], ub_c, m_round, m_round, m_org_up, n_round, n_round, n_org_up);
             }
@@ -564,7 +577,6 @@ private:
     AscendC::LocalTensor<half> ub_c = buf.template GetBuffer<BufferType::ASCEND_UB, half>(0);
     AscendC::LocalTensor<float> ub_c_fp32 = buf.template GetBuffer<BufferType::ASCEND_UB, float>(0);
     AscendC::LocalTensor<int32_t> ub_c_i32 = buf.template GetBuffer<BufferType::ASCEND_UB, int32_t>(0);
-    AscendC::LocalTensor<IN_DTYPE> ub_a_temp = buf.template GetBuffer<BufferType::ASCEND_UB, IN_DTYPE>(0);
     AscendC::LocalTensor<DESCALE_TYPE> ub_scale = buf.template GetBuffer<BufferType::ASCEND_UB, DESCALE_TYPE>(0);
     AscendC::LocalTensor<BIAS_TYPE> ub_bias = buf.template GetBuffer<BufferType::ASCEND_UB, BIAS_TYPE>(0);
     AscendC::LocalTensor<float> ub_pertoken_scale = buf.template GetBuffer<BufferType::ASCEND_UB, float>(0);
