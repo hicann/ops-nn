@@ -215,7 +215,10 @@ protected:
     void Convert2AscendCTiling(const CacheTilingData &tbeTiling, TCubeTiling &matmulTiling);
     MatrixTraverse GetIteratorOrder(const CacheTilingData &tbeTiling, int32_t singleCoreM, int32_t singleCoreN,
                                     int32_t singleCoreK) const;
-
+    virtual bool CheckCoreNum() const
+    {
+        return true;
+    }
     matmul_v4::QuantBatchMatmulInfo inputParams_;
     uint64_t cubeBaseN_;
     int32_t templateId_ = -1;
@@ -279,6 +282,7 @@ protected:
     uint64_t GetBubSize(uint64_t bubN, uint64_t bubD, bool isWeightNz) const;
     void PrintCVTilingData(const bool debugLevel) const;
     ge::graphStatus PostTiling() override;
+    bool CheckCoreNum() const override;
 
     QuantBatchMatmulV4BasicBlockTiling tilingSolver_;
 };

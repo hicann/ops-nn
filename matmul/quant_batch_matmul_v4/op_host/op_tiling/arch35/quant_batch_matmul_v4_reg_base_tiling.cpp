@@ -26,6 +26,11 @@
 using AscendC::BLOCK_CUBE;    // uint32_t
 using AscendC::ONE_BLK_SIZE;  // uint32_t
 
+namespace {
+// aiv和aic核数比例
+constexpr uint32_t CORE_RATIO = 2U;
+}  // namespace
+
 namespace optiling {
 using namespace matmul_v4;
 
@@ -89,6 +94,15 @@ bool QuantBatchMatmulV4RegBase::CustomCheck() const
     return true;
 }
 
+bool QuantBatchMatmulV4RegBase::CheckCoreNum() const
+{
+    if (aivNum_ != CORE_RATIO * aicNum_) {
+        OP_LOGE(inputParams_.opName, "aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.", aicNum_, aivNum_);
+        return false;
+    }
+    return true;
+}
+
 ge::graphStatus QuantBatchMatmulV4RegBase::DoOpTiling()
 {
     OP_TILING_CHECK(InstantiateTilingData() == ge::GRAPH_FAILED,
@@ -96,6 +110,12 @@ ge::graphStatus QuantBatchMatmulV4RegBase::DoOpTiling()
                     return ge::GRAPH_FAILED);
     OP_CHECK_IF(!CustomCheck(), VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Custom check failed."),
              return ge::GRAPH_FAILED);
+
+    if (!CheckCoreNum()) {
+        OP_LOGE(inputParams_.opName, "Check CoreNum fail.");
+        return ge::GRAPH_FAILED;
+    }
+
     uint64_t weightBlockAlignSize = GetBlockAlignSizeByDataType(inputParams_.bDtype);
     // transB的场景
     tilingData_->kAlign = ops::CeilAlign(inputParams_.kSize, weightBlockAlignSize);

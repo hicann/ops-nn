@@ -285,6 +285,7 @@ static WeightQuantBatchMatmulV2TilingRegBaseTestParam casesParams[] = {
     {"davidCase_624_192_1344_1_0_0_0_0_0_64_BF16_INT4_UINT64_BF16_32_64_0_0", 32, 4345319426UL},
     {"davidCase_624_192_1344_1_0_0_0_0_0_64_FLOAT16_INT8_UINT64_FLOAT16_32_64_0_0", 32, 4345319426UL},
     {"davidCase_1_176_1040_0_0_0_0_0_0_32_FLOAT16_FLOAT4E2M1_UINT64_FLOAT16_32_64_1_0", 22, 34410090498UL},
+    {"davidCase-error-core-ratio_1_8192_2560_0_0_0_0_0_0_32_FLOAT16_FLOAT4E2M1_UINT64_FLOAT16_32_32_1_1", 0, 0UL},
 };
 
 INSTANTIATE_TEST_CASE_P(MM, TestWeightQuantBatchMatmulV2RegBaseTiling, testing::ValuesIn(casesParams));

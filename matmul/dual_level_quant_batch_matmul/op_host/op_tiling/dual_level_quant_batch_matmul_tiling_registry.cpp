@@ -23,6 +23,11 @@
 using Ops::NN::TilingPrepareForOpCache;
 using Ops::NN::Optiling::TilingRegistry;
 
+namespace {
+// aiv和aic核数比例
+constexpr uint32_t CORE_RATIO = 2U;
+}  // namespace
+
 namespace optiling {
 using dual_level_quant_batch_matmul::DualLevelQuantBatchMatmulTilingASW;
 
@@ -35,17 +40,9 @@ static ge::graphStatus DualLevelQuantBatchMatmulTilingFunc(gert::TilingContext* 
     OP_LOGD("DualLevelQuantBatchMatmul TilingFunc called");
     OP_LOGE_IF(context == nullptr, ge::GRAPH_FAILED, "DualLevelQuantBatchMatmul", "tilingContext is null");
 
-    NpuArch npuArch = NpuArch::DAV_RESV;
-
     auto* compileInfoPtr = reinterpret_cast<const DualLevelQuantBatchMatmulCompileInfo*>(context->GetCompileInfo());
-    if (compileInfoPtr == nullptr) {
-        auto platformInfoPtr = context->GetPlatformInfo();
-        OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "platformInfoPtr is null");
-        auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
-        npuArch = ascendcPlatform.GetCurNpuArch();
-    } else {
-        npuArch = compileInfoPtr->npuArch;
-    }
+    OP_LOGE_IF(compileInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "compileInfoPtr is null");
+    NpuArch npuArch = compileInfoPtr->npuArch;
     OP_LOGE_IF(npuArch != NpuArch::DAV_3510, ge::GRAPH_FAILED, context->GetNodeName(), "Platform not supported");
     return TilingRegistry::GetInstance().DoTilingImpl(context);
 }
@@ -63,6 +60,11 @@ static ge::graphStatus TilingParseForDualLevelQuantBatchMatmul(gert::TilingParse
     compileInfoPtr->aivNum = ascendcPlatform.GetCoreNumAiv();
     compileInfoPtr->aicNum = ascendcPlatform.GetCoreNumAic();
     OP_LOGE_IF(compileInfoPtr->aicNum == 0, ge::GRAPH_FAILED, context->GetNodeName(), "aicNum is 0");
+    OP_LOGE_IF(compileInfoPtr->aivNum == 0, ge::GRAPH_FAILED, context->GetNodeName(), "aivNum is 0");
+    OP_LOGE_IF(compileInfoPtr->aivNum != CORE_RATIO * compileInfoPtr->aicNum, ge::GRAPH_FAILED, context->GetNodeName(),
+               "aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.", compileInfoPtr->aicNum,
+               compileInfoPtr->aivNum);
+
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->ubSize);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L1, compileInfoPtr->l1Size);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_C, compileInfoPtr->l0cSize);

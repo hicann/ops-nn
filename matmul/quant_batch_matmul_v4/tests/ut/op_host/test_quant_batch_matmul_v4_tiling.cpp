@@ -398,6 +398,8 @@ static QuantBatchMatmulV4TilingTestParam casesParams[] = {
     {"UT-A8W4-PerGroup-NZ-Testcase-error-14_Ascend950_16_64_64_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_BF16_NULL_BF16_UINT64_NULL_FP16_32_64", 32, ge::GRAPH_FAILED, 268UL},
     // x2 NZ不支持转置
     {"UT-A8W4-PerGroup-NZ-Testcase-error-15_Ascend950_16_64_64_0_1_32_ND_NZ_FP8-E4M3_FP4-E2M1_BF16_NULL_BF16_UINT64_NULL_BF16_32_64", 32, ge::GRAPH_FAILED, 268UL},
+    // aic:aiv != 1:2
+    {"UT-A8W4-PerGroup-NZ-Testcase-error-16_Ascend950_192_3648_64_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_NULL_NULL_BF16_UINT64_NULL_BF16_32_32", 12, ge::GRAPH_FAILED, 268UL},
 
     // MX NZ ERROR
     // X2: dtype != FP4-E2M1

@@ -22,6 +22,11 @@
 
 using Ops::NN::TilingPrepareForOpCache;
 
+namespace {
+// aiv和aic核数比例
+constexpr uint32_t CORE_RATIO = 2U;
+}  // namespace
+
 namespace optiling {
 
 constexpr size_t BIAS_INDEX = 6UL;
@@ -943,8 +948,29 @@ bool CheckAttr(gert::TilingContext* context, WeightQuantBatchMatmulInfo* inputPa
     return true;
 }
 
-bool CheckTempLimit(WeightQuantBatchMatmulInfo* inputParams)
+bool CheckCoreNum(const WeightQuantBatchMatmulInfo* inputParams, const gert::TilingContext* context)
 {
+    auto platformInfoPtr = context->GetPlatformInfo();
+    OP_LOGE_IF(platformInfoPtr == nullptr, false, inputParams->opName, "platformInfoPtr is null");
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+    auto aivNum = ascendcPlatform.GetCoreNumAiv();
+    auto aicNum = ascendcPlatform.GetCoreNumAic();
+    OP_TILING_CHECK(
+        aivNum != CORE_RATIO * aicNum,
+        VECTOR_INNER_ERR_REPORT_TILIING(
+            inputParams->opName, "aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.", aicNum, aivNum),
+        return false);
+
+    return true;
+}
+
+bool CheckTempLimit(WeightQuantBatchMatmulInfo* inputParams, const gert::TilingContext* context)
+{
+    // check aic and aiv core num
+    OP_TILING_CHECK(
+        !CheckCoreNum(inputParams, context), VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName, "Check CoreNum fail."),
+        return false);
+
     // not support transposeA and int8 out
     OP_TILING_CHECK(
         inputParams->transA, VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName, "Only support TransposeA false"),
@@ -1093,7 +1119,7 @@ ge::graphStatus CheckPara(gert::TilingContext* context, platform_ascendc::SocVer
     }
     if (npuArch == NpuArch::DAV_3510) {
         OP_TILING_CHECK(
-            !CheckTempLimit(&inputParams),
+            !CheckTempLimit(&inputParams, context),
             VECTOR_INNER_ERR_REPORT_TILIING(inputParams.opName, "Input cannot meet the condition of this version"),
             return ge::GRAPH_FAILED);
     }

@@ -54,7 +54,8 @@ public:
     std::string caseName;
     bool enable;
     std::string prefix;
-    uint64_t coreNum;
+    uint64_t aicNum;
+    uint64_t aivNum;
 
     uint64_t m;
     uint64_t n;
@@ -77,6 +78,7 @@ public:
 
     // output
     bool result; // false means tiling fail
+    bool tilingParseResult; // false means tiling parse fail
     uint64_t blockDim;
     uint64_t tilingKey;
     std::string tilingData;
@@ -188,7 +190,8 @@ static void SetNpuArch(DualLevelQuantBatchMatmulCompileInfo& compileInfo, const 
 }
 
 static void InitPlatformInfo(
-    const std::string& npuArch, gert::TilingContext* tilingContext, string& compileInfoStr, int64_t coreNum = -1)
+    const std::string& npuArch, gert::TilingContext* tilingContext, string& compileInfoStr, int64_t aicNum = -1,
+    int64_t aivNum = -1)
 {
     map<string, string> npuArchInfos = {
         {"SoC_version", npuArch},
@@ -221,10 +224,14 @@ static void InitPlatformInfo(
     GetPlatFormInfos(compileInfoStr.c_str(), socInfos, aicoreSpec, intrinsics, npuArchInfos);
     aicoreSpec["cube_freq"] = "1650";
 
-    if (coreNum > 0) {
-        socInfos["ai_core_cnt"] = std::to_string(coreNum);
-        socInfos["cube_core_cnt"] = std::to_string(coreNum);
-        socInfos["vector_core_cnt"] = std::to_string(coreNum * 2);
+    if (aicNum > 0) {
+        socInfos["ai_core_cnt"] = std::to_string(aicNum);
+        socInfos["cube_core_cnt"] = std::to_string(aicNum);
+        if (aivNum > 0) {
+            socInfos["vector_core_cnt"] = std::to_string(aivNum);
+        } else {
+            socInfos["vector_core_cnt"] = std::to_string(aicNum * 2);
+        }
     }
 
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
@@ -281,11 +288,18 @@ static std::vector<DualLevelQuantBatchMatmulTilingTestParam> GetParams(const std
             continue;
         }
         param.prefix = testParam[idx++];
-        auto coreNum = testParam[idx++];
-        if (coreNum.empty()) {
-            param.coreNum = -1;
+        auto aicNum = testParam[idx++];
+        if (aicNum.empty()) {
+            param.aicNum = -1;
         } else {
-            param.coreNum = stol(coreNum);
+            param.aicNum = stol(aicNum);
+        }
+
+        auto aivNum = testParam[idx++];
+        if (aivNum.empty()) {
+            param.aivNum = 0;
+        } else {
+            param.aivNum = stol(aivNum);
         }
 
         param.m = stol(testParam[idx++]);
@@ -306,6 +320,7 @@ static std::vector<DualLevelQuantBatchMatmulTilingTestParam> GetParams(const std
         param.hasBias = testParam[idx++] == "true";
         param.weightNz = testParam[idx++] == "true";
         param.result = (strcasecmp(testParam[idx++].c_str(), "true") == 0);
+        param.tilingParseResult = (strcasecmp(testParam[idx++].c_str(), "true") == 0);
         param.blockDim = stol(testParam[idx++]);
         param.tilingKey = stol(testParam[idx++]);
         param.tilingData = testParam[idx++];
@@ -392,7 +407,7 @@ void DualLevelQuantBatchMatmulTilingTestParam::Prepare(DualLevelQuantBatchMatmul
 
     string compileInfoStr;
     gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
-    InitPlatformInfo(npuArch, tilingContext, compileInfoStr, coreNum);
+    InitPlatformInfo(npuArch, tilingContext, compileInfoStr, aicNum, aivNum);
 
     auto kernelHold = gert::KernelRunContextFaker()
                           .KernelIONum(2, 1)
@@ -402,7 +417,11 @@ void DualLevelQuantBatchMatmulTilingTestParam::Prepare(DualLevelQuantBatchMatmul
 
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
     ASSERT_NE(tilingParseFunc, nullptr);
-    ASSERT_EQ(tilingParseFunc(kernelHold.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+    if (tilingParseResult) {
+        ASSERT_EQ(tilingParseFunc(kernelHold.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+    } else {
+        ASSERT_EQ(tilingParseFunc(kernelHold.GetContext<gert::KernelContext>()), ge::GRAPH_FAILED);
+    }
 }
 
 void DualLevelQuantBatchMatmulTilingTestParam::InvokeTilingFunc(DualLevelQuantBatchMatmulCompileInfo& compileInfo) const
@@ -485,7 +504,7 @@ void DualLevelQuantBatchMatmulTilingTestParam::InvokeTilingFunc(DualLevelQuantBa
 
     string compileInfoStr;
     gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
-    InitPlatformInfo(npuArch, tilingContext, compileInfoStr, coreNum);
+    InitPlatformInfo(npuArch, tilingContext, compileInfoStr, aicNum, aivNum);
 
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
     ASSERT_NE(tilingFunc, nullptr);
@@ -513,7 +532,9 @@ void DualLevelQuantBatchMatmulTilingTestParam::Test() const
 {
     DualLevelQuantBatchMatmulCompileInfo compileInfo;
     Prepare(compileInfo);
-    InvokeTilingFunc(compileInfo);
+    if (tilingParseResult) {
+        InvokeTilingFunc(compileInfo);
+    }
 }
 
 static void ThreadFunc(
