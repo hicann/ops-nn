@@ -25,12 +25,15 @@ constexpr size_t INDEX_ATTR_COL_BLOCK_SIZE = 4;
 constexpr size_t INPUT_DIM_NUM_TOW = 2;
 constexpr size_t INPUT_DIM_NUM_THREE = 3;
 constexpr int64_t UNKNOWN_DIM_VALUE = -1;
+constexpr int64_t DIGIT_ZERO = 0;
+constexpr int64_t DIGIT_ONE = 1;
+constexpr int64_t DIGIT_TWO = 2;
 
 graphStatus CheckShape(gert::InferShapeContext* context, const gert::Shape* inputXShape, gert::Shape* scaleShape,
     gert::Shape* outputShape, const int32_t* rowBlockSize, const int32_t* colBlockSize) {
     if (inputXShape->GetDimNum() == INPUT_DIM_NUM_TOW) {
-        int64_t dim0 = inputXShape->GetDim(0);
-        int64_t dim1 = inputXShape->GetDim(1);
+        int64_t dim0 = inputXShape->GetDim(DIGIT_ZERO);
+        int64_t dim1 = inputXShape->GetDim(DIGIT_ONE);
 
         OP_LOGD(
             context, "DynamicBlockQuant input shape is (%ld, %ld), rowBlockSize is %d, colBlockSize is %d",
@@ -39,19 +42,19 @@ graphStatus CheckShape(gert::InferShapeContext* context, const gert::Shape* inpu
         *outputShape = *inputXShape;
         scaleShape->SetDimNum(INPUT_DIM_NUM_TOW);
         if (dim0 == UNKNOWN_DIM_VALUE) {
-            scaleShape->SetDim(0, UNKNOWN_DIM_VALUE);
+            scaleShape->SetDim(DIGIT_ZERO, UNKNOWN_DIM_VALUE);
         } else {
-            scaleShape->SetDim(0, Ops::Base::CeilDiv(dim0, static_cast<int64_t>(*rowBlockSize)));
+            scaleShape->SetDim(DIGIT_ZERO, Ops::Base::CeilDiv(dim0, static_cast<int64_t>(*rowBlockSize)));
         }
         if (dim1 == UNKNOWN_DIM_VALUE) {
-            scaleShape->SetDim(1, UNKNOWN_DIM_VALUE);
+            scaleShape->SetDim(DIGIT_ONE, UNKNOWN_DIM_VALUE);
         } else {
-            scaleShape->SetDim(1, Ops::Base::CeilDiv(dim1, static_cast<int64_t>(*colBlockSize)));
+            scaleShape->SetDim(DIGIT_ONE, Ops::Base::CeilDiv(dim1, static_cast<int64_t>(*colBlockSize)));
         }
     } else if (inputXShape->GetDimNum() == INPUT_DIM_NUM_THREE) {
-        int64_t dim0 = inputXShape->GetDim(0);
-        int64_t dim1 = inputXShape->GetDim(1);
-        int64_t dim2 = inputXShape->GetDim(2);
+        int64_t dim0 = inputXShape->GetDim(DIGIT_ZERO);
+        int64_t dim1 = inputXShape->GetDim(DIGIT_ONE);
+        int64_t dim2 = inputXShape->GetDim(DIGIT_ZERO);
         OP_LOGD(
             context, "DynamicBlockQuant input shape is (%ld, %ld, %ld), rowBlockSize is %d, colBlockSize is %d",
             dim0, dim1, dim2, *rowBlockSize, *colBlockSize);
@@ -60,21 +63,21 @@ graphStatus CheckShape(gert::InferShapeContext* context, const gert::Shape* inpu
         scaleShape->SetDimNum(INPUT_DIM_NUM_THREE);
         
         if (dim0 == UNKNOWN_DIM_VALUE) {
-            scaleShape->SetDim(0, UNKNOWN_DIM_VALUE);
+            scaleShape->SetDim(DIGIT_ZERO, UNKNOWN_DIM_VALUE);
         } else {
-            scaleShape->SetDim(0, dim0);
+            scaleShape->SetDim(DIGIT_ZERO, dim0);
         }
 
         if (dim1 == UNKNOWN_DIM_VALUE) {
-            scaleShape->SetDim(1, UNKNOWN_DIM_VALUE);
+            scaleShape->SetDim(DIGIT_ONE, UNKNOWN_DIM_VALUE);
         } else {
-            scaleShape->SetDim(1, Ops::Base::CeilDiv(dim1, static_cast<int64_t>(*rowBlockSize)));
+            scaleShape->SetDim(DIGIT_ONE, Ops::Base::CeilDiv(dim1, static_cast<int64_t>(*rowBlockSize)));
         }
 
         if (dim2 == UNKNOWN_DIM_VALUE) {
-            scaleShape->SetDim(2, UNKNOWN_DIM_VALUE);
+            scaleShape->SetDim(DIGIT_TWO, UNKNOWN_DIM_VALUE);
         } else {
-            scaleShape->SetDim(2, Ops::Base::CeilDiv(dim2, static_cast<int64_t>(*colBlockSize)));
+            scaleShape->SetDim(DIGIT_TWO, Ops::Base::CeilDiv(dim2, static_cast<int64_t>(*colBlockSize)));
         }
     } else {
         OP_LOGE(context, "only support input dim num is 2 or 3, infershape failed");

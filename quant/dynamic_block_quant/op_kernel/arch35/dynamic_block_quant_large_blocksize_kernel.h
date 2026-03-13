@@ -134,7 +134,6 @@ private:
     int64_t preSingleBatchBlock_ = 0;
     // 行尾块行数
     int64_t tailBlockSizeRow_ = 0;
-
 };
 
 template <typename T, typename U, int64_t RMode>

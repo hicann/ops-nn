@@ -36,6 +36,8 @@ constexpr int64_t INDEX_ATTR_BLOCK_SIZE_COL = 4;
 constexpr int64_t BYTES_OF_INPUT_TYPE = 2;
 constexpr int64_t BYTES_OF_FLOAT_TYPE = 4;
 constexpr int64_t BYTES_OF_OUTPUT_TYPE = 1;
+constexpr int64_t DIGIT_ZERO = 0;
+constexpr int64_t DIGIT_ONE = 1;
 constexpr int64_t DIGIT_TWO = 2;
 constexpr int64_t DIGIT_THOUSAND = 1000;
 constexpr int64_t DIGIT_HUNDRED = 100;
@@ -62,6 +64,8 @@ constexpr int64_t BLOCK_SIZE_512 = 512;
 constexpr int64_t KERNEL_TYPE_NORMAL = 0;
 constexpr int64_t KERNEL_TYPE_SINGLE = 1;
 constexpr int64_t KERNEL_TYPE_LARGE = 2;
+constexpr int64_t INPUT_DIM_NUM_TOW = 2;
+constexpr int64_t INPUT_DIM_NUM_THREE = 3;
 const std::set<int64_t> ROW_BLOCK_SIZE_SUPPORT_DTYPE = {BLOCK_SIZE_1, BLOCK_SIZE_128, BLOCK_SIZE_256, BLOCK_SIZE_512};
 const std::set<int64_t> COL_BLOCK_SIZE_SUPPORT_DTYPE = {BLOCK_SIZE_64, BLOCK_SIZE_128, BLOCK_SIZE_192, BLOCK_SIZE_256};
 constexpr int64_t RESERVED_UB_SIZE = 1024; // 预留空间
@@ -229,7 +233,7 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Dyna
         static_cast<int64_t>(scaleShape.GetDimNum()) != 2 && static_cast<int64_t>(scaleShape.GetDimNum()) != 3,
         OP_LOGE(context, "The shape of output scale dim should be 2 or 3, please check."), return ge::GRAPH_FAILED);
 
-    if (xShape.GetDimNum() == 2) {
+    if (xShape.GetDimNum() == INPUT_DIM_NUM_TOW) {
         OP_CHECK_IF(
             (static_cast<int64_t>(scaleShape.GetDim(0)) !=
             Ops::Base::CeilDiv(xShape.GetDim(0), tilingParam.blockSizeRow)) ||
@@ -240,7 +244,7 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Dyna
             "When the shape dim of x is 2, The shape of output scale must be same with [ceil(x.rows/row_block_size), ceil(x.cols/col_block_size)], "
             "please check."),
         return ge::GRAPH_FAILED);
-    } else if (xShape.GetDimNum() == 3) {
+    } else if (xShape.GetDimNum() == INPUT_DIM_NUM_THREE) {
         OP_CHECK_IF(
             (static_cast<int64_t>(scaleShape.GetDim(0)) != static_cast<int64_t>(xShape.GetDim(0))) ||
             (static_cast<int64_t>(scaleShape.GetDim(1)) !=
@@ -284,22 +288,22 @@ inline static void CalcTilingKey(DataType inputType, DataType outputType, Dynami
 
 static void CalcAxisSize(DynamicBlockQuantTilingParam& tilingParam, const gert::Shape& xShape)
 {
-    if (xShape.GetDimNum() == 2) {
+    if (xShape.GetDimNum() == DIGIT_TWO) {
         tilingParam.batchNum = 1;
         tilingParam.rowNum = xShape.GetDim(0);
         tilingParam.colNum = xShape.GetDim(xShape.GetDimNum() - 1);
     }
     else {
-        tilingParam.batchNum = xShape.GetDim(0);
-        tilingParam.rowNum = xShape.GetDim(1);
-        tilingParam.colNum = xShape.GetDim(2);
+        tilingParam.batchNum = xShape.GetDim(DIGIT_ZERO);
+        tilingParam.rowNum = xShape.GetDim(DIGIT_ONE);
+        tilingParam.colNum = xShape.GetDim(DIGIT_TWO);
     }
     tilingParam.singleBatchRowBlockLoopNum = Ops::Base::CeilDiv(tilingParam.rowNum, tilingParam.blockSizeRow);
     tilingParam.rowBlockLoopNum = tilingParam.singleBatchRowBlockLoopNum * tilingParam.batchNum;
     tilingParam.colBlockLoopNum = Ops::Base::CeilDiv(tilingParam.colNum, tilingParam.blockSizeCol);
 }
 
-inline static int64_t CalcPerBlockUbSize(DataType inputType, DynamicBlockQuantTilingParam& tilingParam) {
+inline static int64_t CalcPerBlockUbSize(DynamicBlockQuantTilingParam& tilingParam) {
     // 每个block需要的临时ub大小
     int64_t perBlockTmpUbSize = 0;
 
@@ -353,19 +357,22 @@ static void AutoTiling(DynamicBlockQuantTilingParam& tilingParam)
 
     // 行方向切分，枚举 m 的取值
     for (int64_t m : cutSet) {
-        if (m > tilingParam.rowBlockLoopNum) {
+        if (m > tilingParam.rowBlockLoopNum || m == DIGIT_ZERO) {
             continue;
         }
 
         int64_t n = tilingParam.usedCoreNum / m;
         n = n < 1 ? 1 : n;
-        if (n > tilingParam.colBlockLoopNum) {
+        if (n > tilingParam.colBlockLoopNum || n == DIGIT_ZERO) {
             continue;
         }
 
         int64_t rowNormalBlock = Ops::Base::CeilDiv(tilingParam.rowBlockLoopNum, m);
         int64_t colNormalBlock = Ops::Base::CeilDiv(tilingParam.colBlockLoopNum, n);
 
+        if (rowNormalBlock == DIGIT_ZERO || colNormalBlock == DIGIT_ZERO) {
+            continue;
+        }
         int64_t delta = rowNormalBlock * colNormalBlock;
         if (m * n == static_cast<int64_t>(tilingParam.usedCoreNum)) {
             if (tilingParam.rowBlockLoopNum % m == 0 && tilingParam.colBlockLoopNum % n == 0) {
@@ -436,7 +443,7 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, DynamicBlock
     tilingParam.colTailCoreNum = tilingParam.colTileNum - tilingParam.colNormalCoreNum;
 
     // 每个block需要的ub大小
-    int64_t perBlockUbSize = CalcPerBlockUbSize(inDtype, tilingParam);
+    int64_t perBlockUbSize = CalcPerBlockUbSize(tilingParam);
     perBlockUbSize = perBlockUbSize != 0 ? perBlockUbSize : 1;
     
     // 计算ub可以放下的block块数量
