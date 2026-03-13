@@ -21,7 +21,6 @@
 namespace PpMatMulNS {
 
 constexpr uint32_t L0AB_PINGPONG_BUFFER_LEN_INT8 = 32768;
-constexpr uint32_t CONST_2 = 2;
 constexpr uint32_t CONST_3 = 3;
 constexpr uint32_t CONST_4 = 4;
 constexpr uint32_t CONST_8 = 8;
