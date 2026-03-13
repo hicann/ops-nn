@@ -147,7 +147,6 @@ void AdaptiveAvgPool3dGradTilingBaseV35::SetOtherInputParams()
 
 ge::graphStatus AdaptiveAvgPool3dGradTilingBaseV35::GetShapeAttrsInfo()
 {
-    
     auto platformInfo = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     if (!Ops::NN::OpTiling::IsRegbaseSocVersion(context_)) {
@@ -186,7 +185,7 @@ ge::graphStatus AdaptiveAvgPool3dGradTilingBaseV35::GetPlatformInfo()
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr == nullptr) {
         auto compileInfoPtr =
-            reinterpret_cast<const AdaptiveAvgPool3dGradCompileInfo*>(context_->GetCompileInfo());
+            static_cast<const AdaptiveAvgPool3dGradCompileInfo*>(context_->GetCompileInfo());
         OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
                     return ge::GRAPH_FAILED);
         coreNum_ = compileInfoPtr->coreNum;

@@ -61,11 +61,11 @@ struct AvgPoolV2GradInputInfo {
     int64_t hasDivisor = 0;
 };
 
-static const gert::Shape& EnsureNotScalar(const gert::Shape& inShape) {
- if (inShape.IsScalar()) {
-   return g_vec_1_shape;
- }
- return inShape;
+static inline const gert::Shape& EnsureNotScalar(const gert::Shape& inShape) {
+if (inShape.IsScalar()) {
+  return g_vec_1_shape;
+}
+  return inShape;
 }
 } // namespace optiling
 

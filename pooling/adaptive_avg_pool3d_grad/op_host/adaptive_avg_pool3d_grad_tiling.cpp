@@ -316,7 +316,6 @@ static ge::graphStatus TilingFunc4AdaptiveAvgPool3dGrad(gert::TilingContext* con
     } else {
         return TilingRegistry::GetInstance().DoTilingImpl(context);
     }
-    
 }
 
 IMPL_OP_OPTILING(AdaptiveAvgPool3dGrad)

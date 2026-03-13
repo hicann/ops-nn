@@ -29,9 +29,8 @@
 #include "atvoss/broadcast/broadcast_tiling.h"
 #include "op_common/op_host/util/platform_util.h"
 
-using namespace std;
-
 namespace optiling {
+using namespace std;
 const int HW_DIMS = 2;
 const int HW_PAD_DIMS = 5;
 const int MAX_CORE_NUM = 64;

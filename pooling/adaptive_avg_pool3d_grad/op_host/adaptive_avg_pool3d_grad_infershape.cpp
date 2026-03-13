@@ -37,7 +37,7 @@ constexpr size_t CDHW_DIM_NUM = 4;
  * @param dataFormatStr 数据格式字符串（NCDHW/NDHWC）
  * @return ge::GRAPH_SUCCESS 校验通过；ge::GRAPH_FAILED 校验失败（含详细日志）
  */
-static ge::graphStatus CheckInputValidity(gert::InferShapeContext* context, 
+static ge::graphStatus CheckInputValidity(const gert::InferShapeContext* context, 
                                          const gert::Shape* gradShape, 
                                          const gert::Shape* xShape, 
                                          const std::string& dataFormatStr) {

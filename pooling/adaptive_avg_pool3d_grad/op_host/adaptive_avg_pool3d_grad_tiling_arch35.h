@@ -23,10 +23,9 @@
 #include "util/math_util.h"
 #include "../op_kernel/arch35/adaptive_avg_pool3d_grad_struct.h"
 
-using namespace AdaptiveAvgPool3dGradOp;
-
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
+using namespace AdaptiveAvgPool3dGradOp;
 
 struct AdaptiveAvgPool3dGradInputInfo {
     int64_t nX{1};
