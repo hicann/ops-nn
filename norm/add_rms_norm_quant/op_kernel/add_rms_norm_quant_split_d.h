@@ -31,9 +31,9 @@ public:
         GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR res_out,
         const AddRMSNormQuantTilingData* tilingData)
     {
-        ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
-        this->numRow = tilingData->numRow;
+        ASSERT(GetBlockNum() != 0 && "Block dim1 can not be zero!");
         this->numCol = tilingData->numCol;
+        this->numRow = tilingData->numRow;
         this->rowFactor = tilingData->rowFactor;
         this->blockFactor = tilingData->blockFactor;
         this->epsilon = tilingData->epsilon;
@@ -45,27 +45,27 @@ public:
         this->hasZeroPoints2 = tilingData->hasZeroPoints2 && !PT;
         this->hasScales2 = tilingData->hasScales2 && !PT;
 
-        blockIdx_ = GetBlockIdx();
-        if (blockIdx_ < GetBlockNum() - 1) {
+        blockIdx_v1 = GetBlockIdx();
+        if (blockIdx_v1 < GetBlockNum() - 1) {
             this->rowWork = blockFactor;
-        } else if (blockIdx_ == GetBlockNum() - 1) {
+        } else if (blockIdx_v1 == GetBlockNum() - 1) {
             this->rowWork = numRow - (GetBlockNum() - 1) * blockFactor;
         } else {
         }
         // get start index for current core, core parallel
-        x1Gm.SetGlobalBuffer((__gm__ TX*)x1 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        x2Gm.SetGlobalBuffer((__gm__ TX*)x2 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        x1Gm.SetGlobalBuffer((__gm__ TX*)x1 + blockIdx_v1 * blockFactor * numCol, rowWork * numCol);
+        x2Gm.SetGlobalBuffer((__gm__ TX*)x2 + blockIdx_v1 * blockFactor * numCol, rowWork * numCol);
         gammaGm.SetGlobalBuffer((__gm__ TX*)gamma, numCol);
         scales1Gm.SetGlobalBuffer((__gm__ TScale*)scales1, numCol);
         if (hasZeroPoints1) {
             zeroPoints1Gm.SetGlobalBuffer((__gm__ TOffset*)zero_points1, numCol);
         }
         // out
-        y1Gm.SetGlobalBuffer((__gm__ int8_t*)y1 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        y2Gm.SetGlobalBuffer((__gm__ int8_t*)y2 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        xGm.SetGlobalBuffer((__gm__ TX*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        y1Gm.SetGlobalBuffer((__gm__ int8_t*)y1 + blockIdx_v1 * blockFactor * numCol, rowWork * numCol);
+        y2Gm.SetGlobalBuffer((__gm__ int8_t*)y2 + blockIdx_v1 * blockFactor * numCol, rowWork * numCol);
+        xGm.SetGlobalBuffer((__gm__ TX*)x + blockIdx_v1 * blockFactor * numCol, rowWork * numCol);
         if constexpr (RN) {
-            resOutGm.SetGlobalBuffer((__gm__ TX*)res_out + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+            resOutGm.SetGlobalBuffer((__gm__ TX*)res_out + blockIdx_v1 * blockFactor * numCol, rowWork * numCol);
         }
 
         // pipe alloc memory to queue, the unit is Bytes.
@@ -414,16 +414,16 @@ private:
 private:
     TPipe* Ppipe = nullptr;
     // create queues for input, in this case depth is equal to buffer num
-    TQue<QuePosition::VECIN, BUFFER_NUM> inQueueX;
     TQue<QuePosition::VECIN, BUFFER_NUM> inQueueGamma;
+    TQue<QuePosition::VECIN, BUFFER_NUM> inQueueX;
     TQue<QuePosition::VECIN, BUFFER_NUM> inQueueBeta;
     // create queues for output, in this case depth is equal to buffer num
-    TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueY1;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueY2;
+    TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueY1;
 
     TBuf<TPosition::VECCALC> scales1Buf;
-    TBuf<TPosition::VECCALC> zeroPoints1Buf;
     TBuf<TPosition::VECCALC> xFp32Buf;
+    TBuf<TPosition::VECCALC> zeroPoints1Buf;
     TBuf<TPosition::VECCALC> sqxBuf;
     TBuf<TPosition::VECCALC> tmpBufSplit;
     TBuf<TPosition::VECCALC> sumBufSplit;
@@ -432,32 +432,32 @@ private:
     TBuf<TPosition::VECCALC> scales2Buf;
     TBuf<TPosition::VECCALC> zeroPoints2Buf;
 
-    GlobalTensor<TX> x1Gm;
     GlobalTensor<TX> x2Gm;
+    GlobalTensor<TX> x1Gm;
     GlobalTensor<TX> gammaGm;
     GlobalTensor<TX> betaGm;
-    GlobalTensor<TScale> scales1Gm;
     GlobalTensor<TScale> scales2Gm;
+    GlobalTensor<TScale> scales1Gm;
     GlobalTensor<TOffset> zeroPoints1Gm;
-    GlobalTensor<TOffset> zeroPoints2Gm;
     GlobalTensor<int8_t> y1Gm;
+    GlobalTensor<TOffset> zeroPoints2Gm;
     GlobalTensor<int8_t> y2Gm;
     GlobalTensor<TX> xGm;
     GlobalTensor<TX> resOutGm;
 
-    uint32_t numRow;
     uint32_t numCol;
+    uint32_t numRow;
     uint32_t blockFactor; // number of calculations rows on each core
-    uint32_t rowFactor;
     uint32_t ubFactor;
+    uint32_t rowFactor;
     float epsilon;
     float avgFactor;
     uint32_t hasZeroPoints1 = 0;
     uint32_t hasBeta = 0;
-    uint32_t divMode = 1;
     uint32_t hasScales2 = 0;
+    uint32_t divMode = 1;
     uint32_t hasZeroPoints2 = 0;
-    int32_t blockIdx_;
+    int32_t blockIdx_v1;
     uint32_t rowWork = 1;
 
     int tempbufNum;

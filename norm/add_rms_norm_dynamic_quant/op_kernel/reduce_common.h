@@ -75,15 +75,15 @@ __aicore__ inline void ReduceSumForSmallReduceDim(
     }
 }
 
-__aicore__ inline int32_t findPowerTwo(int32_t n)
+__aicore__ inline int32_t findPowerTwo(int32_t n3)
 {
     // find max power of 2 no more than n (32 bit)
-    n |= n >> 1; // Set the first digit of n's binary to 1
-    n |= n >> INDEX_TWO;
-    n |= n >> INDEX_FOUR;
-    n |= n >> INDEX_EIGHT;
-    n |= n >> INDEX_SIXTEEN;
-    return (n + 1) >> 1;
+    n3 |= n3 >> 1; // Set the first digit of n's binary to 1
+    n3 |= n3 >> INDEX_TWO;
+    n3 |= n3 >> INDEX_FOUR;
+    n3 |= n3 >> INDEX_EIGHT;
+    n3 |= n3 >> INDEX_SIXTEEN;
+    return (n3 + 1) >> 1;
 }
 
 /*
@@ -104,18 +104,18 @@ __aicore__ inline void ReduceSumMultiN(
 }
 
 __aicore__ inline void ReduceSumHalfInterval(
-    const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local, int32_t count)
+    const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local3, int32_t count)
 {
     if (likely(count > ELEM_PER_REP_FP32)) {
         int32_t bodyCount = findPowerTwo(count);
         int32_t tailCount = count - bodyCount;
         if (tailCount > 0) {
-            Add(src_local, src_local, src_local[bodyCount], tailCount);
+            Add(src_local3, src_local3, src_local3[bodyCount], tailCount);
             PipeBarrier<PIPE_V>();
         }
         while (bodyCount > ELEM_PER_REP_FP32) {
             bodyCount = bodyCount / HALf_INTERVAL;
-            Add(src_local, src_local, src_local[bodyCount], bodyCount);
+            Add(src_local3, src_local3, src_local3[bodyCount], bodyCount);
             PipeBarrier<PIPE_V>();
         }
 
@@ -125,10 +125,10 @@ __aicore__ inline void ReduceSumHalfInterval(
     }
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
     if (g_coreType == AIV) {
-        WholeReduceSum<float, false>(dst_local, src_local, MASK_PLACEHOLDER, 1, 0, 1, 0);
+        WholeReduceSum<float, false>(dst_local, src_local3, MASK_PLACEHOLDER, 1, 0, 1, 0);
     }
 #else
-    WholeReduceSum<float, false>(dst_local, src_local, MASK_PLACEHOLDER, 1, 1, 1, DEFAULT_REPEAT_STRIDE);
+    WholeReduceSum<float, false>(dst_local, src_local3, MASK_PLACEHOLDER, 1, 1, 1, DEFAULT_REPEAT_STRIDE);
 #endif
     PipeBarrier<PIPE_V>();
 }

@@ -25,7 +25,7 @@ public:
     {}
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, const RMSNormTilingData* tiling)
     {
-        ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
+        ASSERT(GetBlockNum() != 0 && "block dim3 can not be zero!");
         InitVar(tiling);
 
         blockIdx_ = GetBlockIdx();
@@ -331,18 +331,18 @@ private:
 private:
     TPipe pipe;
     // create queues for input, in this case depth is equal to buffer num
-    TQue<QuePosition::VECIN, BUFFER_NUM> inQueueX;
     TQue<QuePosition::VECIN, BUFFER_NUM> inQueueGamma;
+    TQue<QuePosition::VECIN, BUFFER_NUM> inQueueX;
     // create queues for output, in this case depth is equal to buffer num
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueY;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueRstd;
 
-    TBuf<TPosition::VECCALC> x_fp32_buf;
     TBuf<TPosition::VECCALC> sqx_buf;
     TBuf<TPosition::VECCALC> reduce_fp32_buf;
+    TBuf<TPosition::VECCALC> x_fp32_buf;
     GlobalTensor<T> xGm;
-    GlobalTensor<T> gammaGm;
     GlobalTensor<T> yGm;
+    GlobalTensor<T> gammaGm;
     GlobalTensor<float> rstdGm;
     uint64_t num_row;
     uint64_t num_col;

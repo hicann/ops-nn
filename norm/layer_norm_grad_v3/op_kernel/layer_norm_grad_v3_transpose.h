@@ -36,14 +36,14 @@ public:
         col = tilingData->col;
         row = tilingData->row;
         coff = tilingData->coefficient;
-        numBlocks = tilingData->numBlocks;
         blockFormer = tilingData->blockFormer;
         blockTail = tilingData->blockTail;
+        ubLoopOfTailBlock = tilingData->ubLoopOfTailBlock;
         ubFormer = tilingData->ubFormer;
         bFormer = tilingData->bFormer;
+        numBlocks = tilingData->numBlocks;
         dichotomizeAddDiffSize = tilingData->dichotomizeAddDiffSize;
         ubLoopOfFormerBlock = tilingData->ubLoopOfFormerBlock;
-        ubLoopOfTailBlock = tilingData->ubLoopOfTailBlock;
         ubTailOfFormerBlock = tilingData->ubTailOfFormerBlock;
         ubTailOfTailBlock = tilingData->ubTailOfTailBlock;
 
@@ -945,15 +945,15 @@ private:
     LocalTensor<float> pdBetaOut;
     uint64_t row;
     uint64_t col;
-    uint64_t numBlocks;
     uint64_t blockFormer;
     uint64_t blockTail;
+    uint64_t ubTailOfFormerBlock;
     uint64_t ubFormer;
     uint64_t bFormer;
+    uint64_t numBlocks;
     uint64_t dichotomizeAddDiffSize;
     uint64_t ubLoopOfFormerBlock;
     uint64_t ubLoopOfTailBlock;
-    uint64_t ubTailOfFormerBlock;
     uint64_t ubTailOfTailBlock;
     float coff;
 };

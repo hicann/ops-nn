@@ -36,7 +36,7 @@ public:
         this->numCol = tiling->num_col;
         this->blockFactor = 1; // in this case, blockFactor = 1
         this->ubFactor = tiling->ub_factor;
-        this->epsilon = tiling->epsilon;
+        this->epsilonVal = tiling->epsilon;
         this->avgFactor = (numCol != 0) ? (float)1.0 / numCol : 0;
 
         this->rowWork = 1;
@@ -96,9 +96,9 @@ private:
         SetFlag<HardEvent::MTE2_V>(eventMTE2V3);
 
         // copy x out
-        event_t eventVMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-        SetFlag<HardEvent::V_MTE3>(eventVMTE3);
-        WaitFlag<HardEvent::V_MTE3>(eventVMTE3);
+        event_t eventVMTE3V1 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+        SetFlag<HardEvent::V_MTE3>(eventVMTE3V1);
+        WaitFlag<HardEvent::V_MTE3>(eventVMTE3V1);
         DataCopyCustom<T>(xGm, x1Local, numCol);
         event_t eventMTE3V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
         SetFlag<HardEvent::MTE3_V>(eventMTE3V);
@@ -111,7 +111,7 @@ private:
         PipeBarrier<PIPE_V>();
         ReduceSumCustom(sqxLocal, sqxLocal, tmpLocal, numCol);
         PipeBarrier<PIPE_V>();
-        Adds(sqxLocal, sqxLocal, epsilon, 1);
+        Adds(sqxLocal, sqxLocal, epsilonVal, 1);
         PipeBarrier<PIPE_V>();
         Sqrt(sqxLocal, sqxLocal, 1);
         Duplicate(tmpLocal, ONE, 1);
@@ -121,8 +121,8 @@ private:
 
         // copyout rstd
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
-        SetFlag<HardEvent::V_MTE3>(eventVMTE3);
-        WaitFlag<HardEvent::V_MTE3>(eventVMTE3);
+        SetFlag<HardEvent::V_MTE3>(eventVMTE3V1);
+        WaitFlag<HardEvent::V_MTE3>(eventVMTE3V1);
         DataCopyCustom<float>(rstdGm, sqxLocal, 1);
 #endif
         event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
@@ -142,12 +142,12 @@ private:
         GetTPipePtr()->ReleaseEventID<HardEvent::MTE2_V>(eventMTE2V3);
         Mul(x1Local, x1Local, x2Local, numCol);
         PipeBarrier<PIPE_V>();
-        SetFlag<HardEvent::V_MTE3>(eventVMTE3);
-        WaitFlag<HardEvent::V_MTE3>(eventVMTE3);
+        SetFlag<HardEvent::V_MTE3>(eventVMTE3V1);
+        WaitFlag<HardEvent::V_MTE3>(eventVMTE3V1);
         DataCopyCustom<T>(y2Gm, x1Local, numCol);
         Cast(xFp32Local, x1Local, RoundMode::CAST_NONE, numCol);
-        SetFlag<HardEvent::V_MTE3>(eventVMTE3);
-        WaitFlag<HardEvent::V_MTE3>(eventVMTE3);
+        SetFlag<HardEvent::V_MTE3>(eventVMTE3V1);
+        WaitFlag<HardEvent::V_MTE3>(eventVMTE3V1);
         DataCopyCustom<float>(y1Gm, xFp32Local, numCol);
     }
 
@@ -201,7 +201,7 @@ private:
         PipeBarrier<PIPE_V>();
         ReduceSumCustom(sqxLocalBf16, sqxLocalBf16, tmpLocalBf16, numCol);
         PipeBarrier<PIPE_V>();
-        Adds(sqxLocalBf16, sqxLocalBf16, epsilon, 1);
+        Adds(sqxLocalBf16, sqxLocalBf16, epsilonVal, 1);
         PipeBarrier<PIPE_V>();
         Sqrt(sqxLocalBf16, sqxLocalBf16, 1);
         Duplicate(tmpLocalBf16, ONE, 1);
@@ -257,14 +257,14 @@ private:
     GlobalTensor<T> gammaGm;
     GlobalTensor<float> y1Gm;
     GlobalTensor<T> y2Gm;
-    GlobalTensor<float> rstdGm;
     GlobalTensor<T> xGm;
+    GlobalTensor<float> rstdGm;
 
     uint32_t numRow;
     uint32_t numCol;
-    uint32_t blockFactor; // number of calculations rows on each core
     uint32_t ubFactor;
-    float epsilon;
+    uint32_t blockFactor; // number of calculations rows on each core
+    float epsilonVal;
     float avgFactor;
     int32_t blockIdx_;
     uint32_t rowWork = 1;

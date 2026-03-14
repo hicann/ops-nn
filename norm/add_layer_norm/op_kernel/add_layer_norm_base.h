@@ -114,34 +114,34 @@ __aicore__ inline float ReduceSumFP32(const LocalTensor<float>& src_local, int32
 }
 
 __aicore__ inline void ReduceSumShort(
-    const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local, const LocalTensor<float>& tmp_local,
+    const LocalTensor<float>& dst_local3, const LocalTensor<float>& src_local, const LocalTensor<float>& tmp_local,
     int32_t align_len, int32_t data_len, int32_t repeat)
 {
     int32_t elementNum = ONE_BLK_SIZE / sizeof(float);
     int32_t maxRepeat = ELEM_PER_REP_FP32;
     int32_t tailCount = data_len % elementNum;
-    uint32_t index = 0;
+    uint32_t index1 = 0;
     uint8_t repStride = align_len / ONE_BLK_FLOAT_NUM;
 
-    int32_t repeatTimes = repeat / elementNum;
-    int32_t bodyCount = repeatTimes * elementNum;
+    int32_t repeatTimesV1 = repeat / elementNum;
+    int32_t bodyCount = repeatTimesV1 * elementNum;
     int32_t repeatTail = repeat % elementNum * elementNum;
 
     Duplicate<float>(tmp_local, ZERO, repeat * elementNum);
     PipeBarrier<PIPE_V>();
-    for (index = 0; index + elementNum <= data_len; index += elementNum) {
-        Add(tmp_local, tmp_local, src_local[index], elementNum, repeat, {1, 1, 1, 1, 1, repStride});
+    for (index1 = 0; index1 + elementNum <= data_len; index1 += elementNum) {
+        Add(tmp_local, tmp_local, src_local[index1], elementNum, repeat, {1, 1, 1, 1, 1, repStride});
         PipeBarrier<PIPE_V>();
     }
     if (unlikely(tailCount != 0)) {
-        Add(tmp_local, tmp_local, src_local[index], tailCount, repeat, {1, 1, 1, 1, 1, repStride});
+        Add(tmp_local, tmp_local, src_local[index1], tailCount, repeat, {1, 1, 1, 1, 1, repStride});
     }
     PipeBarrier<PIPE_V>();
-    if (repeatTimes != 0) {
-        BlockReduceSum<float>(dst_local, tmp_local, repeatTimes, maxRepeat, 1, 1, elementNum);
+    if (repeatTimesV1 != 0) {
+        BlockReduceSum<float>(dst_local3, tmp_local, repeatTimesV1, maxRepeat, 1, 1, elementNum);
     }
     if (repeatTail != 0) {
-        BlockReduceSum<float>(dst_local[bodyCount], tmp_local[bodyCount * elementNum], 1, repeatTail, 1, 1, elementNum);
+        BlockReduceSum<float>(dst_local3[bodyCount], tmp_local[bodyCount * elementNum], 1, repeatTail, 1, 1, elementNum);
     }
 }
 
@@ -170,26 +170,26 @@ __aicore__ inline void ReduceSumForSmallReduceDimPreRepeat(
  * this reduce sum is for small reduce dim.
  */
 __aicore__ inline void ReduceSumForSmallReduceDim(
-    const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal, const LocalTensor<float>& tmpLocal,
+    const LocalTensor<float>& dstLocal1, const LocalTensor<float>& srcLocal, const LocalTensor<float>& tmpLocal,
     const uint32_t numLastDimAligned, const uint32_t numLastDim, const uint32_t tailCount, const uint32_t repeat,
     const uint8_t repStride)
 {
     uint32_t repeatTimes = repeat / MAX_REP_NUM;
     if (repeatTimes == 0) {
         ReduceSumForSmallReduceDimPreRepeat(
-            dstLocal, srcLocal, tmpLocal, ELEM_PER_REP_FP32, numLastDim, tailCount, repeat, repStride);
+            dstLocal1, srcLocal, tmpLocal, ELEM_PER_REP_FP32, numLastDim, tailCount, repeat, repStride);
     } else {
         uint32_t repTailNum = repeat % MAX_REP_NUM;
         uint32_t repIndex = 0;
         uint32_t repElem;
         for (; repIndex + MAX_REP_NUM <= repeat; repIndex += MAX_REP_NUM) {
             ReduceSumForSmallReduceDimPreRepeat(
-                dstLocal[repIndex], srcLocal[repIndex * numLastDimAligned], tmpLocal[repIndex * ELEM_PER_REP_FP32],
+                dstLocal1[repIndex], srcLocal[repIndex * numLastDimAligned], tmpLocal[repIndex * ELEM_PER_REP_FP32],
                 ELEM_PER_REP_FP32, numLastDim, tailCount, MAX_REP_NUM, repStride);
         }
         if (repTailNum != 0) {
             ReduceSumForSmallReduceDimPreRepeat(
-                dstLocal[repIndex], srcLocal[repIndex * numLastDimAligned], tmpLocal[repIndex * ELEM_PER_REP_FP32],
+                dstLocal1[repIndex], srcLocal[repIndex * numLastDimAligned], tmpLocal[repIndex * ELEM_PER_REP_FP32],
                 ELEM_PER_REP_FP32, numLastDim, tailCount, repTailNum, repStride);
         }
     }

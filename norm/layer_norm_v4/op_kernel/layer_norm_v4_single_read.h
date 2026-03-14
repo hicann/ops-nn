@@ -38,19 +38,19 @@ public:
         const LayerNormV4TilingDataSingleRead* __restrict tilingData)
     {
         // load tiling data
-        numBlocks = tilingData->numBlocks;
         colSize = tilingData->colSize;
         rowSize = tilingData->rowSize;
+        numBlocks = tilingData->numBlocks;
         eps = tilingData->eps;
-        coefficient = tilingData->coefficient;
         rowAlign = tilingData->rowAlign;
         nRow = tilingData->nRow;
+        coefficient = tilingData->coefficient;
         tailNRow = tilingData->tailNRow;
-        loopCount = tilingData->loopCount;
         tailLoop = tilingData->tailLoop;
+        loopCount = tilingData->loopCount;
         tileLength = tilingData->tileLength;
-        blockLength = tilingData->blockLength;
         nullptrGamma = tilingData->nullptrGamma;
+        blockLength = tilingData->blockLength;
         nullptrBeta = tilingData->nullptrBeta;
 
         // calculate xGm and paramGm offset and size
@@ -248,14 +248,14 @@ private:
 
         // store rstdLocal to rstdGm
         {
-            event_t eventIdSToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
-            SetFlag<HardEvent::S_MTE3>(eventIdSToMte3);
-            WaitFlag<HardEvent::S_MTE3>(eventIdSToMte3);
+            event_t eventIdSToMte3V1 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
+            SetFlag<HardEvent::S_MTE3>(eventIdSToMte3V1);
+            WaitFlag<HardEvent::S_MTE3>(eventIdSToMte3V1);
             DataCopyExtParams dataCopyParams;
-            dataCopyParams.blockCount = 1;
+            dataCopyParams.dstStride = 0;
             dataCopyParams.blockLen = nRow * sizeof(float);
             dataCopyParams.srcStride = 0;
-            dataCopyParams.dstStride = 0;
+            dataCopyParams.blockCount = 1;
             DataCopyPad(rstdGm[currentParamOffset], rstdLocal, dataCopyParams);
         }
         outQueueRstd.FreeTensor(rstdLocal);
@@ -334,15 +334,15 @@ private:
     TQue<QuePosition::VECIN, 1> inQueueX;
     TQue<QuePosition::VECOUT, 1> outQueueY, outQueueMean, outQueueRstd;
 
-    GlobalTensor<Tfm> xGm;
     GlobalTensor<Tfm> yGm;
+    GlobalTensor<Tfm> xGm;
+    GlobalTensor<float> rstdGm;
     GlobalTensor<Tweight> gammaGm;
     GlobalTensor<Tweight> betaGm;
     GlobalTensor<float> meanGm;
-    GlobalTensor<float> rstdGm;
 
-    uint64_t acc_val = 0;
     float value = 0.0;
+    uint64_t acc_val = 0;
 
     // tilingData
     uint32_t numBlocks = 0;

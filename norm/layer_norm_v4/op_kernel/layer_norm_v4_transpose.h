@@ -32,30 +32,30 @@ public:
         const LayerNormV4TilingDataTranspose* __restrict tilingData)
     {
         // load tiling data
-        col = tilingData->col;
         row = tilingData->row;
+        col = tilingData->col;
         numBlocks = tilingData->numBlocks;
-        blockFormer = tilingData->blockFormer;
         blockTail = tilingData->blockTail;
         ubFormer = tilingData->ubFormer;
         bFormer = tilingData->bFormer;
-        dichotomizeAddDiffSize = tilingData->dichotomizeAddDiffSize;
-        ubLoopOfFormerBlock = tilingData->ubLoopOfFormerBlock;
+        blockFormer = tilingData->blockFormer;
         ubLoopOfTailBlock = tilingData->ubLoopOfTailBlock;
         ubTailOfFormerBlock = tilingData->ubTailOfFormerBlock;
+        dichotomizeAddDiffSize = tilingData->dichotomizeAddDiffSize;
         ubTailOfTailBlock = tilingData->ubTailOfTailBlock;
+        ubLoopOfFormerBlock = tilingData->ubLoopOfFormerBlock;
         eps = tilingData->eps;
-        coefficient = tilingData->coefficient;
         nullptrGamma = tilingData->nullptrGamma;
         nullptrBeta = tilingData->nullptrBeta;
+        coefficient = tilingData->coefficient;
         // set global buffer
         xGm.SetGlobalBuffer((__gm__ Tfm*)x + blockIdx * blockFormer * row);
-        gammaGm.SetGlobalBuffer((__gm__ Tweight*)gamma);
         betaGm.SetGlobalBuffer((__gm__ Tweight*)beta);
+        gammaGm.SetGlobalBuffer((__gm__ Tweight*)gamma);
 
         yGm.SetGlobalBuffer((__gm__ Tfm*)y + blockIdx * blockFormer * row);
-        meanGm.SetGlobalBuffer((__gm__ float*)mean + blockIdx * blockFormer);
         rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx * blockFormer);
+        meanGm.SetGlobalBuffer((__gm__ float*)mean + blockIdx * blockFormer);
 
         // pipe init buffer
         uint64_t inQueueXSize = (bFormer * row + B16_BLOCK_ALIGN_NUM - 1) / B16_BLOCK_ALIGN_NUM * B16_BLOCK_ALIGN_NUM *
@@ -107,12 +107,12 @@ private:
     __aicore__ inline void CalcGeneralParams()
     {
         bFormerFactor = (colLength + TRANSPOSE_C0_SIZE - 1) / TRANSPOSE_C0_SIZE;
-        rFormerAxisAlign = (bFormerFactor * row + X_NUM_PER_BLOCK - 1) / X_NUM_PER_BLOCK * X_NUM_PER_BLOCK;
-        bTailFactor = bFormerFactor - 1;
-        rTailAxisAlign = (bTailFactor * row + X_NUM_PER_BLOCK - 1) / X_NUM_PER_BLOCK * X_NUM_PER_BLOCK;
         formerLoops = colLength - TRANSPOSE_C0_SIZE * (bFormerFactor - 1);
         calcXElements = row * bFormerFactor * TRANSPOSE_C0_SIZE;
         rowLineElements = bFormerFactor * TRANSPOSE_C0_SIZE;
+        rFormerAxisAlign = (bFormerFactor * row + X_NUM_PER_BLOCK - 1) / X_NUM_PER_BLOCK * X_NUM_PER_BLOCK;
+        bTailFactor = bFormerFactor - 1;
+        rTailAxisAlign = (bTailFactor * row + X_NUM_PER_BLOCK - 1) / X_NUM_PER_BLOCK * X_NUM_PER_BLOCK;
     }
 
     template <typename T_COPY>
@@ -297,14 +297,14 @@ private:
             copyParams.blockLen = lineBlockNum;
             copyParams.srcStride = (row - 1) * copyParams.blockLen;
             copyParams.dstStride = 0;
-            for (uint32_t i = 0; i < row; i++) {
+            for (uint32_t i1 = 0; i1 < row; i1++) {
                 DataCopy(
-                    dstTensor[i * bFormerFactor * TRANSPOSE_C0_SIZE], srcTensor[i * TRANSPOSE_C0_SIZE], copyParams);
+                    dstTensor[i1 * bFormerFactor * TRANSPOSE_C0_SIZE], srcTensor[i1 * TRANSPOSE_C0_SIZE], copyParams);
             }
         }
     }
 
-    __aicore__ inline void DoReduce(LocalTensor<float>& dstTensor, LocalTensor<float>& srcTensor)
+    __aicore__ inline void DoReduce(LocalTensor<float>& dstTensor1, LocalTensor<float>& srcTensor1)
     {
         /*
         srcTensor为reduce之前的Tensor: row * rowLineElements
@@ -312,13 +312,13 @@ private:
         */
         uint64_t nowRows = row;
         if (nowRows == 1) {
-            Adds<float>(dstTensor, srcTensor, 0, rowLineElements);
+            Adds<float>(dstTensor1, srcTensor1, 0, rowLineElements);
             PipeBarrier<PIPE_V>();
             return;
         }
         // row为非二次幂，先将二次幂差值行加到前面
         if (dichotomizeAddDiffSize != 0) {
-            Add(srcTensor, srcTensor, srcTensor[(nowRows - dichotomizeAddDiffSize) * rowLineElements],
+            Add(srcTensor1, srcTensor1, srcTensor1[(nowRows - dichotomizeAddDiffSize) * rowLineElements],
                 dichotomizeAddDiffSize * rowLineElements);
             PipeBarrier<PIPE_V>();
             nowRows = nowRows - dichotomizeAddDiffSize;
@@ -326,15 +326,15 @@ private:
         while (nowRows > 1) {
             nowRows = nowRows / TWO_NUM;
             if (nowRows == 1) {
-                Add(dstTensor, srcTensor, srcTensor[rowLineElements], rowLineElements);
+                Add(dstTensor1, srcTensor1, srcTensor1[rowLineElements], rowLineElements);
             } else {
-                Add(srcTensor, srcTensor, srcTensor[nowRows * rowLineElements], nowRows * rowLineElements);
+                Add(srcTensor1, srcTensor1, srcTensor1[nowRows * rowLineElements], nowRows * rowLineElements);
             }
             PipeBarrier<PIPE_V>();
         }
     }
 
-    __aicore__ inline void DoSub(LocalTensor<float>& dstTensor, LocalTensor<float>& src1Tensor)
+    __aicore__ inline void DoSub(LocalTensor<float>& dstTensor1, LocalTensor<float>& src1Tensor1)
     {
         /*
         dst复用src0，大小为row * rowLineElements
@@ -343,46 +343,46 @@ private:
         */
         if (((rowLineElements / ELEM_PER_REP_FP32) < row) && (rowLineElements < (MAX_REP_NUM * BLOCK_NUM_PER_REP))) {
             for (uint32_t i = 0; i < (rowLineElements / ELEM_PER_REP_FP32); i++) {
-                Sub(dstTensor[i * ELEM_PER_REP_FP32], dstTensor[i * ELEM_PER_REP_FP32],
-                    src1Tensor[i * ELEM_PER_REP_FP32], ELEM_PER_REP_FP32, row,
+                Sub(dstTensor1[i * ELEM_PER_REP_FP32], dstTensor1[i * ELEM_PER_REP_FP32],
+                    src1Tensor1[i * ELEM_PER_REP_FP32], ELEM_PER_REP_FP32, row,
                     {1, 1, 1, (uint8_t)(rowLineElements / BLOCK_NUM_PER_REP),
                      (uint8_t)(rowLineElements / BLOCK_NUM_PER_REP), 0});
             }
             if (rowLineElements % ELEM_PER_REP_FP32 > 0) {
-                Sub(dstTensor[rowLineElements / ELEM_PER_REP_FP32 * ELEM_PER_REP_FP32],
-                    dstTensor[rowLineElements / ELEM_PER_REP_FP32 * ELEM_PER_REP_FP32],
-                    src1Tensor[rowLineElements / ELEM_PER_REP_FP32 * ELEM_PER_REP_FP32],
+                Sub(dstTensor1[rowLineElements / ELEM_PER_REP_FP32 * ELEM_PER_REP_FP32],
+                    dstTensor1[rowLineElements / ELEM_PER_REP_FP32 * ELEM_PER_REP_FP32],
+                    src1Tensor1[rowLineElements / ELEM_PER_REP_FP32 * ELEM_PER_REP_FP32],
                     rowLineElements % ELEM_PER_REP_FP32, row,
                     {1, 1, 1, (uint8_t)(rowLineElements / BLOCK_NUM_PER_REP),
                      (uint8_t)(rowLineElements / BLOCK_NUM_PER_REP), 0});
             }
         } else {
             for (uint64_t i = 0; i < row; i++) {
-                Sub(dstTensor[i * rowLineElements], dstTensor[i * rowLineElements], src1Tensor, rowLineElements);
+                Sub(dstTensor1[i * rowLineElements], dstTensor1[i * rowLineElements], src1Tensor1, rowLineElements);
             }
         }
     }
 
     __aicore__ inline void DoDiv(
-        LocalTensor<float>& dstTensor, LocalTensor<float>& src0Tensor, LocalTensor<float>& src1Tensor)
+        LocalTensor<float>& dstTensor, LocalTensor<float>& src0Tensor, LocalTensor<float>& src1Tensor1)
     {
         /*
         src0Tensor为置1的一个block的tensor
-        src1Tensor和dstTensor大小为rowLineElements
+        src1Tensor1和dstTensor大小为rowLineElements
         */
         uint64_t repeatTimes = rowLineElements / ELEM_PER_REP_FP32;
         uint64_t repeatRemain = rowLineElements % ELEM_PER_REP_FP32;
         if (repeatTimes > 0) {
-            Div(dstTensor, src0Tensor, src1Tensor, ELEM_PER_REP_FP32, repeatTimes,
+            Div(dstTensor, src0Tensor, src1Tensor1, ELEM_PER_REP_FP32, repeatTimes,
                 {1, 0, 1, BLOCK_NUM_PER_REP, 0, BLOCK_NUM_PER_REP});
         }
         if (repeatRemain > 0) {
-            Div(dstTensor[ELEM_PER_REP_FP32 * repeatTimes], src0Tensor, src1Tensor[ELEM_PER_REP_FP32 * repeatTimes],
+            Div(dstTensor[ELEM_PER_REP_FP32 * repeatTimes], src0Tensor, src1Tensor1[ELEM_PER_REP_FP32 * repeatTimes],
                 repeatRemain, 1, {1, 0, 1, 0, 0, 0});
         }
     }
 
-    __aicore__ inline void DoMul(LocalTensor<float>& dstTensor, LocalTensor<float>& src1Tensor)
+    __aicore__ inline void DoMul(LocalTensor<float>& dstTensor1, LocalTensor<float>& src1Tensor1)
     {
         /*
         dst复用src0，大小为row * rowLineElements
@@ -391,46 +391,46 @@ private:
         */
         if (((rowLineElements / ELEM_PER_REP_FP32) < row) && (rowLineElements < (MAX_REP_NUM * BLOCK_NUM_PER_REP))) {
             for (uint32_t i = 0; i < (rowLineElements / ELEM_PER_REP_FP32); i++) {
-                Mul(dstTensor[i * ELEM_PER_REP_FP32], dstTensor[i * ELEM_PER_REP_FP32],
-                    src1Tensor[i * ELEM_PER_REP_FP32], ELEM_PER_REP_FP32, row,
+                Mul(dstTensor1[i * ELEM_PER_REP_FP32], dstTensor1[i * ELEM_PER_REP_FP32],
+                    src1Tensor1[i * ELEM_PER_REP_FP32], ELEM_PER_REP_FP32, row,
                     {1, 1, 1, (uint8_t)(rowLineElements / BLOCK_NUM_PER_REP),
                      (uint8_t)(rowLineElements / BLOCK_NUM_PER_REP), 0});
             }
             if (rowLineElements % ELEM_PER_REP_FP32 > 0) {
-                Mul(dstTensor[rowLineElements / ELEM_PER_REP_FP32 * ELEM_PER_REP_FP32],
-                    dstTensor[rowLineElements / ELEM_PER_REP_FP32 * ELEM_PER_REP_FP32],
-                    src1Tensor[rowLineElements / ELEM_PER_REP_FP32 * ELEM_PER_REP_FP32],
+                Mul(dstTensor1[rowLineElements / ELEM_PER_REP_FP32 * ELEM_PER_REP_FP32],
+                    dstTensor1[rowLineElements / ELEM_PER_REP_FP32 * ELEM_PER_REP_FP32],
+                    src1Tensor1[rowLineElements / ELEM_PER_REP_FP32 * ELEM_PER_REP_FP32],
                     rowLineElements % ELEM_PER_REP_FP32, row,
                     {1, 1, 1, (uint8_t)(rowLineElements / BLOCK_NUM_PER_REP),
                      (uint8_t)(rowLineElements / BLOCK_NUM_PER_REP), 0});
             }
         } else {
             for (uint64_t i = 0; i < row; i++) {
-                Mul(dstTensor[i * rowLineElements], dstTensor[i * rowLineElements], src1Tensor, rowLineElements);
+                Mul(dstTensor1[i * rowLineElements], dstTensor1[i * rowLineElements], src1Tensor1, rowLineElements);
             }
         }
     }
 
-    __aicore__ inline void DoMulGamma(LocalTensor<float>& dstTensor)
+    __aicore__ inline void DoMulGamma(LocalTensor<float>& dstTensor1)
     {
         if (nullptrGamma == 1) {
             return;
         }
         for (uint64_t i = 0; i < row; i++) {
             float gammaValue = gammaFp32.GetValue(i);
-            Muls(dstTensor[i * rowLineElements], dstTensor[i * rowLineElements], gammaValue, rowLineElements);
+            Muls(dstTensor1[i * rowLineElements], dstTensor1[i * rowLineElements], gammaValue, rowLineElements);
         }
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void DoAddBeta(LocalTensor<float>& dstTensor)
+    __aicore__ inline void DoAddBeta(LocalTensor<float>& dstTensor1)
     {
         if (nullptrBeta == 1) {
             return;
         }
         for (uint64_t i = 0; i < row; i++) {
             float betaValue = betaFp32.GetValue(i);
-            Adds(dstTensor[i * rowLineElements], dstTensor[i * rowLineElements], betaValue, rowLineElements);
+            Adds(dstTensor1[i * rowLineElements], dstTensor1[i * rowLineElements], betaValue, rowLineElements);
         }
         PipeBarrier<PIPE_V>();
     }
@@ -557,14 +557,14 @@ private:
         }
     }
 
-    __aicore__ inline void DoMeanOrRstdTranspose(LocalTensor<float>& dstTensor, LocalTensor<float>& srcTensor)
+    __aicore__ inline void DoMeanOrRstdTranspose(LocalTensor<float>& dstTensor1, LocalTensor<float>& srcTensor)
     {
         /*
         tiling限制repeat不大于255
         只支持fp32
         */
         __ubuf__ float* srcAddr = (__ubuf__ float*)srcTensor.GetPhyAddr();
-        __ubuf__ float* dstAddr = (__ubuf__ float*)dstTensor.GetPhyAddr();
+        __ubuf__ float* dstAddr = (__ubuf__ float*)dstTensor1.GetPhyAddr();
         __ubuf__ float* srcLocalList[TRANSPOSE_C0_SIZE];
         __ubuf__ float* dstLocalList[TRANSPOSE_C0_SIZE];
         struct TransDataTo5HDParams transDataParams;
@@ -576,17 +576,17 @@ private:
             transDataParams.dstRepStride = 0;
         }
         // fp32数据需要处理上下两部分
-        for (uint32_t i = 0; i < (FLOAT_SIZE / HALF_SIZE); i++) {
+        for (uint32_t i2 = 0; i2 < (FLOAT_SIZE / HALF_SIZE); i2++) {
             for (uint32_t j = 0; j < TRANSPOSE_C0_SIZE; j++) {
-                srcLocalList[j] = srcAddr + FP32_TRANSPOSE_DST_SIZE * i + TRANSPOSE_C0_SIZE * j;
+                srcLocalList[j] = srcAddr + FP32_TRANSPOSE_DST_SIZE * i2 + TRANSPOSE_C0_SIZE * j;
             }
             for (uint32_t k = 0; k < FP32_TRANSPOSE_DST_SIZE; k++) {
                 dstLocalList[(FLOAT_SIZE / HALF_SIZE) * k] =
                     dstAddr + transDataParams.repeatTimes * TRANSPOSE_C0_SIZE * k +
-                    transDataParams.repeatTimes * TRANSPOSE_C0_SIZE * FP32_TRANSPOSE_DST_SIZE * i;
+                    transDataParams.repeatTimes * TRANSPOSE_C0_SIZE * FP32_TRANSPOSE_DST_SIZE * i2;
                 dstLocalList[(FLOAT_SIZE / HALF_SIZE) * k + 1] =
                     dstAddr + transDataParams.repeatTimes * TRANSPOSE_C0_SIZE * k + FP32_TRANSPOSE_DST_SIZE +
-                    transDataParams.repeatTimes * TRANSPOSE_C0_SIZE * FP32_TRANSPOSE_DST_SIZE * i;
+                    transDataParams.repeatTimes * TRANSPOSE_C0_SIZE * FP32_TRANSPOSE_DST_SIZE * i2;
             }
             TransDataTo5HDImpl(dstLocalList, srcLocalList, transDataParams);
         }
@@ -699,60 +699,60 @@ private:
             PipeBarrier<PIPE_V>();
         }
 
-        LocalTensor<float> mulTempTensor = tmpBuf.Get<float>();
+        LocalTensor<float> mulTempTensor1 = tmpBuf.Get<float>();
         // xLocalFp32需要驻留
-        Muls(mulTempTensor, xLocalFp32, coefficient, calcXElements);
+        Muls(mulTempTensor1, xLocalFp32, coefficient, calcXElements);
         PipeBarrier<PIPE_V>();
         LocalTensor<float> outTempTensor = outQueueRstd.AllocTensor<float>();
-        DoReduce(outTempTensor, mulTempTensor);
+        DoReduce(outTempTensor, mulTempTensor1);
         PipeBarrier<PIPE_V>();
 
         DoSub(xLocalFp32, outTempTensor);
-        LocalTensor<float> outMeanTensor = outQueueMean.AllocTensor<float>();
-        DoMeanOrRstdTranspose(outMeanTensor, outTempTensor);
+        LocalTensor<float> outMeanTensor1 = outQueueMean.AllocTensor<float>();
+        DoMeanOrRstdTranspose(outMeanTensor1, outTempTensor);
         outQueueRstd.FreeTensor(outTempTensor);
-        outQueueMean.EnQue(outMeanTensor);
+        outQueueMean.EnQue(outMeanTensor1);
         outQueueMean.DeQue<float>();
-        CopyOutMeanOrRstd(meanGm, outMeanTensor);
-        outQueueMean.FreeTensor(outMeanTensor);
+        CopyOutMeanOrRstd(meanGm, outMeanTensor1);
+        outQueueMean.FreeTensor(outMeanTensor1);
 
         // do mul2, xLocalFp32需要驻留
-        LocalTensor<float> mul2TempTensor = tmpBuf.Get<float>();
-        Mul(mul2TempTensor, xLocalFp32, xLocalFp32, calcXElements);
+        LocalTensor<float> mul2TempTensor1 = tmpBuf.Get<float>();
+        Mul(mul2TempTensor1, xLocalFp32, xLocalFp32, calcXElements);
         PipeBarrier<PIPE_V>();
-        Muls(mul2TempTensor, mul2TempTensor, coefficient, calcXElements);
+        Muls(mul2TempTensor1, mul2TempTensor1, coefficient, calcXElements);
         PipeBarrier<PIPE_V>();
 
         // do reduce1
         LocalTensor<float> outMTensor = outQueueMean.AllocTensor<float>();
-        DoReduce(outMTensor, mul2TempTensor);
+        DoReduce(outMTensor, mul2TempTensor1);
         PipeBarrier<PIPE_V>();
 
-        LocalTensor<float> tempTensor = tmpBuf.Get<float>();
-        Adds(tempTensor, outMTensor, eps, rowLineElements);
+        LocalTensor<float> tempTensor1 = tmpBuf.Get<float>();
+        Adds(tempTensor1, outMTensor, eps, rowLineElements);
         PipeBarrier<PIPE_V>();
 
-        Sqrt(tempTensor, tempTensor, rowLineElements);
+        Sqrt(tempTensor1, tempTensor1, rowLineElements);
         PipeBarrier<PIPE_V>();
 
         LocalTensor<float> oneTensor = outQueueY.AllocTensor<float>();
         Duplicate<float>(oneTensor, 1, B32_BLOCK_ALIGN_NUM);
         PipeBarrier<PIPE_V>();
 
-        DoDiv(outMTensor, oneTensor, tempTensor);
+        DoDiv(outMTensor, oneTensor, tempTensor1);
         PipeBarrier<PIPE_V>();
         outQueueY.FreeTensor(oneTensor);
 
         DoMul(xLocalFp32, outMTensor);
         PipeBarrier<PIPE_V>();
         // output rstd
-        LocalTensor<float> outRstdTensor = outQueueRstd.AllocTensor<float>();
-        DoMeanOrRstdTranspose(outRstdTensor, outMTensor);
+        LocalTensor<float> outRstdTensor1 = outQueueRstd.AllocTensor<float>();
+        DoMeanOrRstdTranspose(outRstdTensor1, outMTensor);
         outQueueMean.FreeTensor(outMTensor);
-        outQueueRstd.EnQue(outRstdTensor);
+        outQueueRstd.EnQue(outRstdTensor1);
         outQueueRstd.DeQue<float>();
-        CopyOutMeanOrRstd(rstdGm, outRstdTensor);
-        outQueueRstd.FreeTensor(outRstdTensor);
+        CopyOutMeanOrRstd(rstdGm, outRstdTensor1);
+        outQueueRstd.FreeTensor(outRstdTensor1);
 
         DoMulGamma(xLocalFp32);
 
@@ -795,13 +795,13 @@ private:
     }
 
 private:
-    constexpr static uint32_t BLOCK = 32;
-    constexpr static uint32_t X_NUM_PER_BLOCK = BLOCK / sizeof(Tfm);
-    constexpr static uint32_t GAMMA_NUM_PER_BLOCK = BLOCK / sizeof(Tweight);
     constexpr static uint32_t QUEUE_DEPTH = 2;
     constexpr static uint32_t FLOAT_SIZE = 4;
     constexpr static uint32_t HALF_SIZE = 2;
     constexpr static uint32_t TRANSPOSE_C0_SIZE = 16;
+    constexpr static uint32_t BLOCK = 32;
+    constexpr static uint32_t X_NUM_PER_BLOCK = BLOCK / sizeof(Tfm);
+    constexpr static uint32_t GAMMA_NUM_PER_BLOCK = BLOCK / sizeof(Tweight);
     constexpr static uint32_t MAX_REP_NUM = 255;
     constexpr static uint32_t ELEM_PER_REP_FP32 = 64;
     constexpr static uint32_t ELEM_PER_REP_FP16 = 128;
@@ -817,56 +817,56 @@ private:
     TQue<QuePosition::VECOUT, 1> outQueueY, outQueueMean, outQueueRstd;
     TBuf<TPosition::VECCALC> tmpBuf;
 
-    GlobalTensor<Tfm> xGm;
     GlobalTensor<Tfm> yGm;
-    GlobalTensor<Tweight> gammaGm;
+    GlobalTensor<Tfm> xGm;
     GlobalTensor<Tweight> betaGm;
-    GlobalTensor<float> meanGm;
+    GlobalTensor<Tweight> gammaGm;
     GlobalTensor<float> rstdGm;
+    GlobalTensor<float> meanGm;
 
     uint32_t blockIdx = GetBlockIdx();
 
     // calculate xGm and meanGm offset for ub loop
-    uint64_t xGmOffset = 0;
     uint64_t meanGmOffset = 0;
+    uint64_t xGmOffset = 0;
     // in ub loop col size
     uint64_t colLength = 0;
 
-    // x搬入时整块的借轴因子
-    uint32_t bFormerFactor = 0;
     // x搬入时一行整块的对齐长度
     uint32_t rFormerAxisAlign = 0;
     // x搬入时尾块的借轴因子
     uint32_t bTailFactor = 0;
-    // x搬入时一行尾块的对齐长度
-    uint32_t rTailAxisAlign = 0;
     // 整块搬入的循环次数
     uint32_t formerLoops = 0;
+    // x搬入时一行尾块的对齐长度
+    uint32_t rTailAxisAlign = 0;
     // 重排后x基本块的元素个数
     uint64_t calcXElements;
     // 重排后x做row Reduce后的元素个数
     uint64_t rowLineElements;
+    // x搬入时整块的借轴因子
+    uint32_t bFormerFactor = 0;
 
-    LocalTensor<float> gammaFp32;
     LocalTensor<float> betaFp32;
+    LocalTensor<float> gammaFp32;
     LocalTensor<float> xLocalFp32;
     // tilingData
-    uint64_t col;
     uint64_t row;
     uint64_t numBlocks;
     uint64_t blockFormer;
-    uint64_t blockTail;
     uint64_t ubFormer;
-    uint64_t bFormer;
-    uint64_t dichotomizeAddDiffSize;
-    uint64_t ubLoopOfFormerBlock;
-    uint64_t ubLoopOfTailBlock;
+    uint64_t col;
+    uint64_t blockTail;
     uint64_t ubTailOfFormerBlock;
+    uint64_t dichotomizeAddDiffSize;
+    uint64_t bFormer;
+    uint64_t ubLoopOfTailBlock;
+    uint64_t ubLoopOfFormerBlock;
     uint64_t ubTailOfTailBlock;
-    float eps = 0.0;
     float coefficient = 0.0;
-    uint32_t nullptrGamma;
+    float eps = 0.0;
     uint32_t nullptrBeta;
+    uint32_t nullptrGamma;
 };
 
 } // namespace LayerNormV4

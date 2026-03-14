@@ -26,7 +26,7 @@ public:
     {}
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, const RMSNormTilingData* tiling)
     {
-        ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
+        ASSERT(GetBlockNum() != 0 && "block dim2 can not be zero!");
         InitVar(tiling);
 
         blockIdx_ = GetBlockIdx();
@@ -34,7 +34,6 @@ public:
             this->row_work = block_factor;
         } else if (blockIdx_ == GetBlockNum() - 1) {
             this->row_work = num_row - (GetBlockNum() - 1) * block_factor;
-        } else {
         }
         // get start index for current core, core parallel
         xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * block_factor * num_col, row_work * num_col);

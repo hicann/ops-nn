@@ -91,15 +91,15 @@ void AddRmsNormDynamicQuantTilingHelper::SetTilingDataAndTilingKeyAndWorkSpace(A
 {
     context_->SetBlockDim(this->useCore_);
     tiling->set_useCore(this->useCore_);
-    tiling->set_numFirstDim(this->numFirstDim_);
     tiling->set_numLastDim(this->numLastDim_);
-    tiling->set_numLastDimAligned(this->numLastDimAligned_);
+    tiling->set_numFirstDim(this->numFirstDim_);
     tiling->set_firstDimPerCore(this->firstDimPerCore_);
+    tiling->set_numLastDimAligned(this->numLastDimAligned_);
     tiling->set_firstDimPerCoreTail(this->firstDimPerCoreTail_);
     tiling->set_firstDimPerLoop(this->firstDimPerLoop_);
-    tiling->set_lastDimSliceLen(this->lastDimSliceLen_);
     tiling->set_lastDimLoopNum(this->lastDimLoopNum_);
     tiling->set_lastDimSliceLenTail(this->lastDimSliceLenTail_);
+    tiling->set_lastDimSliceLen(this->lastDimSliceLen_);
     tiling->set_smoothNum1(this->smoothNum1_);
     tiling->set_smoothNum2(this->smoothNum2_);
     tiling->set_epsilon(this->eps_);
@@ -134,19 +134,19 @@ void AddRmsNormDynamicQuantTilingHelper::SetTilingDataAndTilingKeyAndWorkSpace(A
         "SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata useCore_: %lu, smoothNum1_: %u, smoothNum2_: %u",
         this->useCore_, this->smoothNum1_, this->smoothNum2_);
     OP_LOGI(
-        "SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata N: %lu, D:%lu, DAligned: %lu", numFirstDim_, numLastDim_,
+        "Set TilingDataAndTilingKeyAndWorkSpace", "Tilingdata N: %lu, D:%lu, DAligned: %lu", numFirstDim_, numLastDim_,
         numLastDimAligned_);
     OP_LOGI(
-        "SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata firstDimPerCore_: %lu, firstDimPerCoreTail_: %lu",
+        "Set TilingDataAndTilingKeyAndWorkSpace", "Tilingdata firstDimPerCore_: %lu, firstDimPerCoreTail_: %lu",
         firstDimPerCore_, firstDimPerCoreTail_);
     OP_LOGI("SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata firstDimPerLoop_: %lu", firstDimPerLoop_);
     OP_LOGI(
-        "SetTilingDataAndTilingKeyAndWorkSpace",
+        "Set TilingDataAndTilingKeyAndWorkSpace",
         "Tilingdata lastDimSliceLen_: %lu, lastDimLoopNum_: %lu, lastDimSliceLenTail_: %lu", lastDimSliceLen_,
         lastDimLoopNum_, lastDimSliceLenTail_);
     OP_LOGI("SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata eps_: %f, avgFactor_: %f", eps_, avgFactor_);
     OP_LOGI(
-        "SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata tilingKey = %u, usr Workspace: %zu", tilingKey, usrSize);
+        "Set TilingDataAndTilingKeyAndWorkSpace", "Tilingdata tilingKey = %u, usr Workspace: %zu", tilingKey, usrSize);
 }
 
 bool AddRmsNormDynamicQuantTilingHelper::DoTiling()
@@ -377,18 +377,18 @@ bool AddRmsNormDynamicQuantTilingHelper::CheckUbNormalTiling()
     } else {
         ubConst = this->numLastDimAligned_ * this->dtSize_ * NUM_WITHOUT_BETA + UB_RESERVED_BYTE;
     }
-    int64_t ubAvaliable = this->ubSize_ - ubConst;
+    int64_t ubAvaliable1 = this->ubSize_ - ubConst;
     // 2 rows for tmpBuffer.
     int64_t coexistingRowsNum = 2 * (this->dtSize_) + 2 * (this->dtSize_) + 1 * sizeof(float) + 1 * sizeof(float);
     // 2 buffers for out_scale.
     int64_t rowCommons = coexistingRowsNum * this->numLastDimAligned_ + 2 * sizeof(float);
-    int64_t rowStep = ubAvaliable / rowCommons;
+    int64_t rowStep = ubAvaliable1 / rowCommons;
     bool ret = (rowStep >= 1);
     OP_LOGI(
         this->context_->GetNodeName(),
         "CheckUbNormalTiling, ret:%d, ubConst: %ld, ubAvaliable=%ld, coexistingRowsNum: %ld, rowStep: %ld, "
         "rowCommons: %ld",
-        ret, ubConst, ubAvaliable, coexistingRowsNum, rowStep, rowCommons);
+        ret, ubConst, ubAvaliable1, coexistingRowsNum, rowStep, rowCommons);
     if (ret) {
         // No mutilN now. max RowStep = 16
         this->firstDimPerLoop_ = (rowStep <= MAX_ROW_STEP) ? rowStep : MAX_ROW_STEP;
@@ -405,16 +405,16 @@ bool AddRmsNormDynamicQuantTilingHelper::CheckUbSingleRowTiling()
     // 2 tmp buffer, 2 rows copy in and 1 rows copy out
     int64_t ubRequired = ((2 + 1 + 1) * this->dtSize_ + 2 * sizeof(float)) * this->numLastDimAligned_;
     ubRequired = ubRequired + 2L * ROW_FACTOR * sizeof(float);
-    bool ret = (((int64_t)this->ubSize_) >= ubRequired);
-    OP_LOGI(this->context_->GetNodeName(), "CheckUbSingleRowTiling, ret:%d, ubRequired: %ld", ret, ubRequired);
-    if (ret) {
+    bool ret1 = (((int64_t)this->ubSize_) >= ubRequired);
+    OP_LOGI(this->context_->GetNodeName(), "CheckUbSingleRowTiling, ret:%d, ubRequired: %ld", ret1, ubRequired);
+    if (ret1) {
         this->firstDimPerLoop_ = 1;
         this->lastDimSliceLen_ = this->numLastDimAligned_;
         this->lastDimLoopNum_ = 1;
         this->lastDimSliceLenTail_ = 0;
         this->ubTilingPolicy_ = UB_TILING_POLICY::SINGLE_ROW;
     }
-    return ret;
+    return ret1;
 }
 
 bool AddRmsNormDynamicQuantTilingHelper::CheckUbSliceDTiling()

@@ -53,26 +53,26 @@ __aicore__ inline void ReduceSumForSmallReduceDimPreRepeat(
  * this reduce sum is for small reduce dim.
  */
 __aicore__ inline void ReduceSumForSmallReduceDim(
-    const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal, const LocalTensor<float>& tmpLocal,
+    const LocalTensor<float>& dstLocal4, const LocalTensor<float>& srcLocal, const LocalTensor<float>& tmpLocal,
     const uint32_t numLastDimAligned, const uint32_t numLastDim, const uint32_t tailCount, const uint32_t repeat,
     const uint8_t repStride)
 {
     uint32_t repeatTimes = repeat / MAX_REP_NUM;
     if (repeatTimes == 0) {
         ReduceSumForSmallReduceDimPreRepeat(
-            dstLocal, srcLocal, tmpLocal, ELEM_PER_REP_FP32, numLastDim, tailCount, repeat, repStride);
+            dstLocal4, srcLocal, tmpLocal, ELEM_PER_REP_FP32, numLastDim, tailCount, repeat, repStride);
     } else {
         uint32_t repTailNum = repeat % MAX_REP_NUM;
         uint32_t repIndex = 0;
         uint32_t repElem;
         for (; repIndex + MAX_REP_NUM <= repeat; repIndex += MAX_REP_NUM) {
             ReduceSumForSmallReduceDimPreRepeat(
-                dstLocal[repIndex], srcLocal[repIndex * numLastDimAligned], tmpLocal[repIndex * ELEM_PER_REP_FP32],
+                dstLocal4[repIndex], srcLocal[repIndex * numLastDimAligned], tmpLocal[repIndex * ELEM_PER_REP_FP32],
                 ELEM_PER_REP_FP32, numLastDim, tailCount, MAX_REP_NUM, repStride);
         }
         if (repTailNum != 0) {
             ReduceSumForSmallReduceDimPreRepeat(
-                dstLocal[repIndex], srcLocal[repIndex * numLastDimAligned], tmpLocal[repIndex * ELEM_PER_REP_FP32],
+                dstLocal4[repIndex], srcLocal[repIndex * numLastDimAligned], tmpLocal[repIndex * ELEM_PER_REP_FP32],
                 ELEM_PER_REP_FP32, numLastDim, tailCount, repTailNum, repStride);
         }
     }
@@ -84,15 +84,15 @@ __aicore__ inline void ReduceSumForSmallReduceDim(
  * size of tmpLocal: (N, 64)
  */
 __aicore__ inline void ReduceSumMultiN(
-    const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal, const LocalTensor<float>& tmpLocal,
+    const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal, const LocalTensor<float>& tmpLocal1,
     const uint32_t numRow, const uint32_t numCol, const uint32_t numColAlign)
 {
     const uint32_t tailCount = numCol % ELEM_PER_REP_FP32;
     const uint32_t repeat = numRow;
     const uint8_t repStride = numColAlign / ELEM_PER_BLK_FP32;
-    Duplicate(tmpLocal, ZERO, numRow * ELEM_PER_REP_FP32);
+    Duplicate(tmpLocal1, ZERO, numRow * ELEM_PER_REP_FP32);
     PipeBarrier<PIPE_V>();
-    ReduceSumForSmallReduceDim(dstLocal, srcLocal, tmpLocal, numColAlign, numCol, tailCount, repeat, repStride);
+    ReduceSumForSmallReduceDim(dstLocal, srcLocal, tmpLocal1, numColAlign, numCol, tailCount, repeat, repStride);
 }
 
 #endif // _REDUCE_COMMON_H_

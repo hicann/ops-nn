@@ -26,26 +26,26 @@ public:
 
     __aicore__ inline void InitBaseParams(const AddRmsNormDynamicQuantTilingData* tiling)
     {
-        this->numCore = tiling->useCore;
         this->numFirstDim = tiling->numFirstDim;
-        this->numLastDim = tiling->numLastDim;
+        this->numCore = tiling->useCore;
         this->numLastDimAligned = tiling->numLastDimAligned; // Quantize better be aligned to 32 elements
+        this->numLastDim = tiling->numLastDim;
 
         this->firstDimPerCore = tiling->firstDimPerCore;
         this->firstDimPerCoreTail = tiling->firstDimPerCoreTail;
         this->firstDimPerLoop = tiling->firstDimPerLoop;
 
-        this->lastDimSliceLen = tiling->lastDimSliceLen;
         this->lastDimLoopNum = tiling->lastDimLoopNum;
+        this->lastDimSliceLen = tiling->lastDimSliceLen;
         this->lastDimSliceLenTail = tiling->lastDimSliceLenTail;
         this->betaFlag = tiling->betaFlag;
-        this->eps = tiling->epsilon;
         this->aveNum = tiling->avgFactor;
+        this->eps = tiling->epsilon;
 
         blockIdx_ = GetBlockIdx();
         if (blockIdx_ != this->numCore - 1) {
-            this->rowWork = this->firstDimPerCore;
             this->rowStep = this->firstDimPerLoop;
+            this->rowWork = this->firstDimPerCore;
         } else {
             this->rowWork = this->firstDimPerCoreTail;
             this->rowStep = TWO_NUMS_MIN(this->firstDimPerLoop, this->rowWork);
@@ -94,18 +94,18 @@ public:
         y1Gm.SetGlobalBuffer((__gm__ T_Y*)(y1) + yBufferSize);
         y2Gm.SetGlobalBuffer((__gm__ T_Y*)(y2) + yBufferSize);
         xGm.SetGlobalBuffer((__gm__ T*)(x) + blockIdx_ * this->gmOffset_);
-        outScale1Gm.SetGlobalBuffer((__gm__ float*)outScale1 + blockIdx_ * this->firstDimPerCore);
         outScale2Gm.SetGlobalBuffer((__gm__ float*)outScale2 + blockIdx_ * this->firstDimPerCore);
+        outScale1Gm.SetGlobalBuffer((__gm__ float*)outScale1 + blockIdx_ * this->firstDimPerCore);
     }
 
     __aicore__ inline void InitWorkSpaceGlobalTensors(GM_ADDR workspace)
     {}
 
 protected:
-    GlobalTensor<T> x1Gm;
     GlobalTensor<T> x2Gm;
-    GlobalTensor<T> gammaGm;
+    GlobalTensor<T> x1Gm;
     GlobalTensor<T> smooth1Gm;
+    GlobalTensor<T> gammaGm;
     GlobalTensor<T> smooth2Gm;
     GlobalTensor<T> betaGm;
     GlobalTensor<T_Y> y1Gm;
@@ -115,22 +115,22 @@ protected:
     GlobalTensor<float> outScale2Gm;
 
     uint32_t betaFlag;
-    uint64_t numCore;
     uint64_t numFirstDim;
+    uint64_t numCore;
     uint64_t numLastDim;
-    uint64_t numLastDimAligned;
     uint64_t firstDimPerCore;
+    uint64_t numLastDimAligned;
     uint64_t firstDimPerCoreTail;
     uint64_t firstDimPerLoop;
-    uint64_t lastDimSliceLen;
     uint64_t lastDimLoopNum;
+    uint64_t lastDimSliceLen;
     uint64_t lastDimSliceLenTail;
 
-    float eps;
     float aveNum;
+    float eps;
 
-    uint64_t blockIdx_;
     uint64_t gmOffset_;
+    uint64_t blockIdx_;
     uint64_t rowTail_;
     uint64_t rowStep;
     uint64_t rowWork;

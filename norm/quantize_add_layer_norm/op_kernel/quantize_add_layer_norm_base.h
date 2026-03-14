@@ -110,7 +110,7 @@ __aicore__ inline float ReduceSumFP32(const LocalTensor<float>& src_local, int32
 }
 
 __aicore__ inline void ReduceSumShort(
-    const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local, const LocalTensor<float>& tmp_local,
+    const LocalTensor<float>& dst_local2, const LocalTensor<float>& src_local, const LocalTensor<float>& tmp_local,
     int32_t align_len, int32_t data_len, int32_t repeat)
 {
     int32_t elementNum = ONE_BLK_SIZE / sizeof(float);
@@ -134,10 +134,10 @@ __aicore__ inline void ReduceSumShort(
     }
     PipeBarrier<PIPE_V>();
     if (repeatTimes != 0) {
-        BlockReduceSum<float>(dst_local, tmp_local, repeatTimes, maxRepeat, 1, 1, elementNum);
+        BlockReduceSum<float>(dst_local2, tmp_local, repeatTimes, maxRepeat, 1, 1, elementNum);
     }
     if (repeatTail != 0) {
-        BlockReduceSum<float>(dst_local[bodyCount], tmp_local[bodyCount * elementNum], 1, repeatTail, 1, 1, elementNum);
+        BlockReduceSum<float>(dst_local2[bodyCount], tmp_local[bodyCount * elementNum], 1, repeatTail, 1, 1, elementNum);
     }
 }
 

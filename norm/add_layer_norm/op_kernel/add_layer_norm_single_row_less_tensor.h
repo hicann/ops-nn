@@ -38,10 +38,10 @@ public:
         Ppipe = pipe;
     }
 
-    __aicore__ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y)
+    __aicore__ inline uint32_t CEIL_DIV(uint32_t x3, uint32_t y)
     {
         if (y > 0) {
-            return (x + y - 1) / y;
+            return (x3 + y - 1) / y;
         }
         return 0;
     }

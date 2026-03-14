@@ -59,62 +59,62 @@ public:
             DataCopyEx(smooth1Local, this->smooth1Gm, this->numLastDim);
         }
 
-        int32_t outLoopCount = this->rowWork / ROW_FACTOR;
         int32_t outLoopTail = this->rowWork % ROW_FACTOR;
+        int32_t outLoopCount = this->rowWork / ROW_FACTOR;
         uint32_t gmOffset = 0;
         uint32_t gmOffsetReduce = 0;
 
-        LocalTensor<float> scalesLocalOut;
+        LocalTensor<float> scalesLocalOut1;
 
         for (int32_t loopIdx = 0; loopIdx < outLoopCount; ++loopIdx) {
-            scalesLocalOut = scalesQue.template AllocTensor<float>();
+            scalesLocalOut1 = scalesQue.template AllocTensor<float>();
             for (int32_t innerIdx = 0; innerIdx < ROW_FACTOR; ++innerIdx) {
                 CopyInX1X2(gmOffset);
                 AddSingleRow(gmOffset);
                 CopyInGamma();
                 ComputeRmsNorm(gmOffset);
                 CopyInSmooth();
-                ComputeDynamicQuant(innerIdx, scalesLocalOut, gmOffset);
+                ComputeDynamicQuant(innerIdx, scalesLocalOut1, gmOffset);
                 CopyOut(gmOffset);
                 gmOffset += this->numLastDim;
             }
-            scalesQue.EnQue(scalesLocalOut);
+            scalesQue.EnQue(scalesLocalOut1);
             CopyOutScale(gmOffsetReduce, ROW_FACTOR);
             gmOffsetReduce += ROW_FACTOR;
         }
         {
-            scalesLocalOut = scalesQue.template AllocTensor<float>();
-            for (int32_t innerIdx = 0; innerIdx < outLoopTail; ++innerIdx) {
+            scalesLocalOut1 = scalesQue.template AllocTensor<float>();
+            for (int32_t innerIdx1 = 0; innerIdx1 < outLoopTail; ++innerIdx1) {
                 CopyInX1X2(gmOffset);
                 AddSingleRow(gmOffset);
                 CopyInGamma();
                 ComputeRmsNorm(gmOffset);
                 CopyInSmooth();
-                ComputeDynamicQuant(innerIdx, scalesLocalOut, gmOffset);
+                ComputeDynamicQuant(innerIdx1, scalesLocalOut1, gmOffset);
                 CopyOut(gmOffset);
                 gmOffset += this->numLastDim;
             }
-            scalesQue.EnQue(scalesLocalOut);
+            scalesQue.EnQue(scalesLocalOut1);
             CopyOutScale(gmOffsetReduce, outLoopTail);
         }
     }
 
 private:
-    __aicore__ inline void AddSingleRow(int32_t gmOffset)
+    __aicore__ inline void AddSingleRow(int32_t gmOffset1)
     {
         auto x1x2Local = inRowsQue.template DeQue<T>();
         auto x1Local = x1x2Local[0];
         auto x2Local = x1x2Local[this->numLastDimAligned];
 
         auto xBufLocal = xBufFp32.Get<float>();
-        auto yBufLocal = yBufFp32.Get<float>();
+        auto yBufLocal1 = yBufFp32.Get<float>();
 
         // never have fp32 input here. All fp16/bf16 should cast to fp32 before Add
         Cast(xBufLocal, x1Local, RoundMode::CAST_NONE, this->numLastDim);
-        Cast(yBufLocal, x2Local, RoundMode::CAST_NONE, this->numLastDim);
+        Cast(yBufLocal1, x2Local, RoundMode::CAST_NONE, this->numLastDim);
         inRowsQue.FreeTensor(x1x2Local);
         PipeBarrier<PIPE_V>();
-        Add(xBufLocal, yBufLocal, xBufLocal, this->numLastDim);
+        Add(xBufLocal, yBufLocal1, xBufLocal, this->numLastDim);
         PipeBarrier<PIPE_V>();
         auto xLocal = yQue.template AllocTensor<T>();
         Cast(xLocal, xBufLocal, RoundMode::CAST_RINT, this->numLastDim);
@@ -122,20 +122,20 @@ private:
 
         PipeBarrier<PIPE_V>();
         auto x = yQue.template DeQue<T>();
-        DataCopyEx(this->xGm[gmOffset], x, this->numLastDim);
+        DataCopyEx(this->xGm[gmOffset1], x, this->numLastDim);
         yQue.FreeTensor(x);
     }
 
-    __aicore__ inline void ComputeRmsNorm(int32_t gmOffset)
+    __aicore__ inline void ComputeRmsNorm(int32_t gmOffset2)
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();
-        LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
+        LocalTensor<float> yLocalFp32V1 = yBufFp32.Get<float>();
         LocalTensor<T> yLocalB16 = yBufFp32.Get<T>();
 
-        Mul(yLocalFp32, xLocalFp32, xLocalFp32, this->numLastDim); // yLocalFp32 <- x ** 2
+        Mul(yLocalFp32V1, xLocalFp32, xLocalFp32, this->numLastDim); // yLocalFp32 <- x ** 2
         PipeBarrier<PIPE_V>();
 
-        float squareSumTemp = ReduceSumHalfInterval(yLocalFp32, this->numLastDim);
+        float squareSumTemp = ReduceSumHalfInterval(yLocalFp32V1, this->numLastDim);
         float rstdLocalTemp = 1 / sqrt(squareSumTemp * this->aveNum + this->eps);
         event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
         SetFlag<HardEvent::S_V>(eventSV);
@@ -144,16 +144,16 @@ private:
         PipeBarrier<PIPE_V>();
         LocalTensor<T> gammaLocal = inRowsQue.template DeQue<T>();
 
-        Cast(yLocalFp32, gammaLocal, RoundMode::CAST_NONE, this->numLastDim); // yLocalB16 <- Cast(gamma)
+        Cast(yLocalFp32V1, gammaLocal, RoundMode::CAST_NONE, this->numLastDim); // yLocalB16 <- Cast(gamma)
         inRowsQue.FreeTensor(gammaLocal);
-        Mul(xLocalFp32, xLocalFp32, yLocalFp32, this->numLastDim); // xLocalFp32 <- x * rstd * gamma
+        Mul(xLocalFp32, xLocalFp32, yLocalFp32V1, this->numLastDim); // xLocalFp32 <- x * rstd * gamma
         PipeBarrier<PIPE_V>();
         if (this->betaFlag == 1) {
             CopyInBeta();
             LocalTensor<T> betaLocal = inRowsQue.template DeQue<T>();
-            Cast(yLocalFp32, betaLocal, RoundMode::CAST_NONE, this->numLastDim); // yLocalB16 <- Cast(beta)
+            Cast(yLocalFp32V1, betaLocal, RoundMode::CAST_NONE, this->numLastDim); // yLocalB16 <- Cast(beta)
             PipeBarrier<PIPE_V>();
-            Add(xLocalFp32, xLocalFp32, yLocalFp32, this->numLastDim);
+            Add(xLocalFp32, xLocalFp32, yLocalFp32V1, this->numLastDim);
             PipeBarrier<PIPE_V>();
             inRowsQue.FreeTensor(betaLocal);
         }
@@ -210,15 +210,15 @@ private:
 
     // srcTensor <- srcTensor / max(abs(srcTensor))
     __aicore__ inline void ScaleTensor(
-        LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor, LocalTensor<float>& scaleTensor, int32_t idx)
+        LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor1, LocalTensor<float>& scaleTensor, int32_t idx)
     {
-        Abs(tmpTensor, srcTensor, this->numLastDim); // tmpLocal <-- |y * smooth|
+        Abs(tmpTensor1, srcTensor, this->numLastDim); // tmpLocal <-- |y * smooth|
         PipeBarrier<PIPE_V>();
-        ReduceMaxInplace(tmpTensor, this->numLastDim);
+        ReduceMaxInplace(tmpTensor1, this->numLastDim);
         event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
         SetFlag<HardEvent::V_S>(eventVS);
         WaitFlag<HardEvent::V_S>(eventVS);
-        float maxTemp = tmpTensor.GetValue(0);
+        float maxTemp = tmpTensor1.GetValue(0);
         float scaleTemp = this->quantMaxVal / maxTemp;
         scaleTensor.SetValue(idx, 1 / scaleTemp);
         event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
@@ -257,28 +257,28 @@ private:
         scalesQue.FreeTensor(outScalesLocal);
     }
 
-    __aicore__ inline void CopyInX1X2(int32_t gmOffset)
+    __aicore__ inline void CopyInX1X2(int32_t gmOffset1)
     {
         LocalTensor<T> x1x2LocalIn = inRowsQue.template AllocTensor<T>();
-        DataCopyEx(x1x2LocalIn[0], this->x1Gm[gmOffset], this->numLastDim);
-        DataCopyEx(x1x2LocalIn[this->numLastDimAligned], this->x2Gm[gmOffset], this->numLastDim);
+        DataCopyEx(x1x2LocalIn[0], this->x1Gm[gmOffset1], this->numLastDim);
+        DataCopyEx(x1x2LocalIn[this->numLastDimAligned], this->x2Gm[gmOffset1], this->numLastDim);
         inRowsQue.EnQue(x1x2LocalIn);
     }
 
     __aicore__ inline void CopyInSmooth()
     {
         if (this->oldDouble || this->newSingleSecond) {
-            LocalTensor<T> smoothCopyIn = inRowsQue.template AllocTensor<T>();
-            DataCopyEx(smoothCopyIn[0], this->smooth2Gm, this->numLastDim);
-            inRowsQue.EnQue(smoothCopyIn);
+            LocalTensor<T> smoothCopyIn1 = inRowsQue.template AllocTensor<T>();
+            DataCopyEx(smoothCopyIn1[0], this->smooth2Gm, this->numLastDim);
+            inRowsQue.EnQue(smoothCopyIn1);
         }
     }
 
     __aicore__ inline void CopyInGamma()
     {
-        LocalTensor<T> gammaCopyIn = inRowsQue.template AllocTensor<T>();
-        DataCopyEx(gammaCopyIn[0], this->gammaGm, this->numLastDim);
-        inRowsQue.EnQue(gammaCopyIn);
+        LocalTensor<T> gammaCopyIn1 = inRowsQue.template AllocTensor<T>();
+        DataCopyEx(gammaCopyIn1[0], this->gammaGm, this->numLastDim);
+        inRowsQue.EnQue(gammaCopyIn1);
     }
 
     __aicore__ inline void CopyInBeta()

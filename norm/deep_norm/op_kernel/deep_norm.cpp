@@ -47,7 +47,7 @@ public:
     }
 
     __aicore__ inline void ReduceSumShort(
-        const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local, const LocalTensor<float>& tmp_local,
+        const LocalTensor<float>& dst_local1, const LocalTensor<float>& src_local, const LocalTensor<float>& tmp_local,
         int32_t len, int32_t repeat)
     {
         int32_t elementNum = BLOCK_SIZE / sizeof(float);
@@ -71,11 +71,11 @@ public:
         }
         PipeBarrier<PIPE_V>();
         if (repeatTimes != 0) {
-            BlockReduceSum<float>(dst_local, tmp_local, repeatTimes, maxRepeat, 1, 1, elementNum);
+            BlockReduceSum<float>(dst_local1, tmp_local, repeatTimes, maxRepeat, 1, 1, elementNum);
         }
         if (repeatTail != 0) {
             BlockReduceSum<float>(
-                dst_local[bodyCount], tmp_local[bodyCount * elementNum], 1, repeatTail, 1, 1, elementNum);
+                dst_local1[bodyCount], tmp_local[bodyCount * elementNum], 1, repeatTail, 1, 1, elementNum);
         }
     }
 

@@ -176,13 +176,13 @@ __aicore__ inline void ReduceSumFP32(
 }
 
 __aicore__ inline void ReduceSumCustom(
-    const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local, const LocalTensor<float>& work_local,
+    const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local, const LocalTensor<float>& work_local_v1,
     int32_t count)
 {
-    ReduceSumFP32(dst_local, src_local, work_local, count);
+    ReduceSumFP32(dst_local, src_local, work_local_v1, count);
 }
 __aicore__ inline void ReduceSumFP32ToBlock(
-    const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local, const LocalTensor<float>& work_local,
+    const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local, const LocalTensor<float>& work_local_v1,
     int32_t count)
 {
     // count need smaller than 255 repeat
@@ -192,27 +192,27 @@ __aicore__ inline void ReduceSumFP32ToBlock(
     int32_t bodyCount = repeatTimes * NUM_PER_REP_FP32;
     BinaryRepeatParams repeatParams;
     repeatParams.src0RepStride = ONCE_VECTOR_SIZE / BLOCK_SIZE;
+    repeatParams.dstBlkStride = 1;
     repeatParams.src0BlkStride = 1;
     repeatParams.src1RepStride = 0;
     repeatParams.src1BlkStride = 1;
     repeatParams.dstRepStride = 0;
-    repeatParams.dstBlkStride = 1;
-    Duplicate(work_local, ZERO, NUM_PER_REP_FP32);
+    Duplicate(work_local_v1, ZERO, NUM_PER_REP_FP32);
     PipeBarrier<PIPE_V>();
     if (likely(repeatTimes > 0)) {
-        Add(work_local, src_local, work_local, mask, repeatTimes, repeatParams);
+        Add(work_local_v1, src_local, work_local_v1, mask, repeatTimes, repeatParams);
         PipeBarrier<PIPE_V>();
     }
     if (unlikely(tailCount != 0)) {
-        Add(work_local, src_local[bodyCount], work_local, tailCount, 1, repeatParams);
+        Add(work_local_v1, src_local[bodyCount], work_local_v1, tailCount, 1, repeatParams);
         PipeBarrier<PIPE_V>();
     }
-    BlockReduceSum(dst_local, work_local, 1, mask, 1, 1, DEFAULT_REPEAT_STRIDE);
+    BlockReduceSum(dst_local, work_local_v1, 1, mask, 1, 1, DEFAULT_REPEAT_STRIDE);
     PipeBarrier<PIPE_V>();
 }
 
 __aicore__ inline void BlockReduceSumFP32(
-    const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local, int32_t count)
+    const LocalTensor<float>& dst_local_v1, const LocalTensor<float>& src_local, int32_t count)
 {
     // count need multiple of 8
     int32_t repeatTimes = count / NUM_PER_REP_FP32;
@@ -220,17 +220,17 @@ __aicore__ inline void BlockReduceSumFP32(
     int32_t dstAddr = repeatTimes * 8;
     int32_t srcAddr = repeatTimes * NUM_PER_REP_FP32;
     if (likely(repeatTimes > 0)) {
-        BlockReduceSum(dst_local, src_local, repeatTimes, NUM_PER_REP_FP32, 1, 1, DEFAULT_REPEAT_STRIDE);
+        BlockReduceSum(dst_local_v1, src_local, repeatTimes, NUM_PER_REP_FP32, 1, 1, DEFAULT_REPEAT_STRIDE);
         PipeBarrier<PIPE_V>();
     }
     if (tailCount != 0) {
-        BlockReduceSum(dst_local[dstAddr], src_local[srcAddr], 1, tailCount, 1, 1, DEFAULT_REPEAT_STRIDE);
+        BlockReduceSum(dst_local_v1[dstAddr], src_local[srcAddr], 1, tailCount, 1, 1, DEFAULT_REPEAT_STRIDE);
         PipeBarrier<PIPE_V>();
     }
 }
 
 template <typename T, typename U, typename R>
-__aicore__ inline void DataCopyCustom(const U& dstTensor, const R& srcTensor, const uint32_t count)
+__aicore__ inline void DataCopyCustom(const U& dstTensorV1, const R& srcTensor, const uint32_t count)
 {
 #if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     DataCopyParams copyParams;
@@ -238,25 +238,25 @@ __aicore__ inline void DataCopyCustom(const U& dstTensor, const R& srcTensor, co
     copyParams.blockCount = 1;
     if constexpr (is_same<U, AscendC::LocalTensor<T>>::value) {
         DataCopyPadParams padParams;
-        DataCopyPad(dstTensor, srcTensor, copyParams, padParams);
+        DataCopyPad(dstTensorV1, srcTensor, copyParams, padParams);
     } else {
-        DataCopyPad(dstTensor, srcTensor, copyParams);
+        DataCopyPad(dstTensorV1, srcTensor, copyParams);
     }
 #else
     // only support count greater than 32byte
     int32_t numPerBlock = ONE_BLK_SIZE / sizeof(T);
     if (count % numPerBlock == 0) {
-        DataCopy(dstTensor, srcTensor, count);
+        DataCopy(dstTensorV1, srcTensor, count);
     } else {
         if constexpr (is_same<U, AscendC::LocalTensor<T>>::value) {
             int32_t num = AlignUp(count, numPerBlock);
-            DataCopy(dstTensor, srcTensor, num);
+            DataCopy(dstTensorV1, srcTensor, num);
         } else {
             if (count < numPerBlock) {
-                DataCopy(dstTensor, srcTensor, numPerBlock);
+                DataCopy(dstTensorV1, srcTensor, numPerBlock);
             } else {
                 int32_t num = count / numPerBlock * numPerBlock;
-                DataCopy(dstTensor, srcTensor, num);
+                DataCopy(dstTensorV1, srcTensor, num);
                 SetFlag<HardEvent::MTE3_S>(EVENT_ID0);
                 WaitFlag<HardEvent::MTE3_S>(EVENT_ID0);
                 for (int32_t i = 0; i < numPerBlock; i++) {
@@ -265,7 +265,7 @@ __aicore__ inline void DataCopyCustom(const U& dstTensor, const R& srcTensor, co
                 }
                 SetFlag<HardEvent::S_MTE3>(EVENT_ID0);
                 WaitFlag<HardEvent::S_MTE3>(EVENT_ID0);
-                DataCopy(dstTensor[count - numPerBlock], srcTensor, numPerBlock);
+                DataCopy(dstTensorV1[count - numPerBlock], srcTensor, numPerBlock);
             }
         }
     }
@@ -297,7 +297,7 @@ __aicore__ inline void DataCopyCustom(
 #endif
 }
 
-__aicore__ inline void RoundFloat2Int8(LocalTensor<int8_t>& dstTensor, LocalTensor<float>& srcTensor, int32_t size)
+__aicore__ inline void RoundFloat2Int8(LocalTensor<int8_t>& dstTensorV1, LocalTensor<float>& srcTensor, int32_t size)
 {
     Cast(srcTensor.ReinterpretCast<int32_t>(), srcTensor, RoundMode::CAST_RINT, size);
     PipeBarrier<PIPE_V>();
@@ -305,7 +305,7 @@ __aicore__ inline void RoundFloat2Int8(LocalTensor<int8_t>& dstTensor, LocalTens
     PipeBarrier<PIPE_V>();
     Cast(srcTensor.ReinterpretCast<half>(), srcTensor.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE, size);
     PipeBarrier<PIPE_V>();
-    Cast(dstTensor, srcTensor.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, size);
+    Cast(dstTensorV1, srcTensor.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, size);
 }
 
 __aicore__ inline uint32_t ROUND_UP(uint32_t x, uint32_t block_number)

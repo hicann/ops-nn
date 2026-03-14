@@ -133,18 +133,18 @@ __aicore__ inline void ReduceSumHalfInterval(
     PipeBarrier<PIPE_V>();
 }
 
-__aicore__ inline float ReduceSumHalfInterval(const LocalTensor<float>& src_local, int32_t count)
+__aicore__ inline float ReduceSumHalfInterval(const LocalTensor<float>& src_local7, int32_t count)
 {
     if (likely(count > ELEM_PER_REP_FP32)) {
         int32_t bodyCount = findPowerTwo(count);
         int32_t tailCount = count - bodyCount;
         if (tailCount > 0) {
-            Add(src_local, src_local, src_local[bodyCount], tailCount);
+            Add(src_local7, src_local7, src_local7[bodyCount], tailCount);
             PipeBarrier<PIPE_V>();
         }
         while (bodyCount > ELEM_PER_REP_FP32) {
             bodyCount = bodyCount / HALf_INTERVAL;
-            Add(src_local, src_local, src_local[bodyCount], bodyCount);
+            Add(src_local7, src_local7, src_local7[bodyCount], bodyCount);
             PipeBarrier<PIPE_V>();
         }
 
@@ -154,14 +154,14 @@ __aicore__ inline float ReduceSumHalfInterval(const LocalTensor<float>& src_loca
     }
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
     if (g_coreType == AIV) {
-        WholeReduceSum<float, false>(src_local, src_local, MASK_PLACEHOLDER, 1, 0, 1, 0);
+        WholeReduceSum<float, false>(src_local7, src_local7, MASK_PLACEHOLDER, 1, 0, 1, 0);
     }
 #else
-    WholeReduceSum<float, false>(src_local, src_local, MASK_PLACEHOLDER, 1, 1, 1, DEFAULT_REPEAT_STRIDE);
+    WholeReduceSum<float, false>(src_local7, src_local7, MASK_PLACEHOLDER, 1, 1, 1, DEFAULT_REPEAT_STRIDE);
 #endif
     event_t event_v_s = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(event_v_s);
     WaitFlag<HardEvent::V_S>(event_v_s);
-    return src_local.GetValue(0);
+    return src_local7.GetValue(0);
 }
 #endif // _REDUCE_COMMON_H_

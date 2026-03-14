@@ -35,13 +35,13 @@ public:
 
         this->numCol = tilingData->numCol;
         this->numRow = tilingData->numRow;
-        this->blockFactor = tilingData->blockFactor;
         this->rowFactor = tilingData->rowFactor;
         this->ubFactor = tilingData->ubFactor;
+        this->blockFactor = tilingData->blockFactor;
         this->epsilon = tilingData->epsilon;
         this->avgFactor = (float)1.0 / numCol;
-        this->hasZeroPoints1 = tilingData->hasZeroPoints1;
         this->hasBeta = tilingData->hasBeta;
+        this->hasZeroPoints1 = tilingData->hasZeroPoints1;
         this->divMode = tilingData->divMode;
         this->hasScales2 = tilingData->hasScales2 && !PT;
         this->hasZeroPoints2 = tilingData->hasZeroPoints2 && !PT;
@@ -454,30 +454,30 @@ private:
     TQue<QuePosition::VECIN, BUFFER_NUM> inQueueBeta;
     TBuf<TPosition::VECCALC> zeroPoints2Buf;
     TBuf<TPosition::VECCALC> scales2Buf;
-    GlobalTensor<TX> x1Gm;
     GlobalTensor<TX> x2Gm;
     GlobalTensor<TX> gammaGm;
     GlobalTensor<TX> betaGm;
-    GlobalTensor<TScale> scales1Gm;
+    GlobalTensor<TX> x1Gm;
     GlobalTensor<TScale> scales2Gm;
     GlobalTensor<TOffset> zeroPoints1Gm;
+    GlobalTensor<TX> resOutGm;
+    GlobalTensor<TScale> scales1Gm;
     GlobalTensor<TOffset> zeroPoints2Gm;
     GlobalTensor<int8_t> y1Gm;
     GlobalTensor<int8_t> y2Gm;
     GlobalTensor<TX> xGm;
-    GlobalTensor<TX> resOutGm;
 
-    uint32_t numRow;
-    uint32_t numCol;
     uint32_t blockFactor; // number of calculations rows on each core
     uint32_t rowFactor;
-    uint32_t ubFactor;
+    uint32_t numCol;
     float epsilon;
+    uint32_t numRow;
+    uint32_t ubFactor;
     float avgFactor;
     uint32_t hasZeroPoints1 = 0;
     uint32_t hasBeta = 0;
-    uint32_t divMode = 1;
     uint32_t hasScales2 = 0;
+    uint32_t divMode = 1;
     uint32_t hasZeroPoints2 = 0;
     int32_t blockIdx_;
     uint32_t rowWork = 1;

@@ -31,38 +31,37 @@ public:
         this->numRow = tiling->num_row;
         this->blockFactor = tiling->block_factor;
         this->rowFactor = tiling->row_factor;
-        this->ubFactor = tiling->ub_factor;
         this->epsilon = tiling->epsilon;
+        this->ubFactor = tiling->ub_factor;
+        blockIdx_ = GetBlockIdx();
         this->avgFactor = (numCol != 0) ? (float)1.0 / numCol : 0;
 
-        blockIdx_ = GetBlockIdx();
         if (blockIdx_ < GetBlockNum() - 1) {
             this->rowWork = blockFactor;
         } else if (blockIdx_ == GetBlockNum() - 1) {
             this->rowWork = numRow - (GetBlockNum() - 1) * blockFactor;
-        } else {
         }
         // get start index for current core, core parallel
-        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
         x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma, numCol);
-        y1Gm.SetGlobalBuffer((__gm__ float*)y1 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
         y2Gm.SetGlobalBuffer((__gm__ T*)y2 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        y1Gm.SetGlobalBuffer((__gm__ float*)y1 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
         rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * blockFactor, blockFactor);
         xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
 
         // pipe alloc memory to queue, the unit is Bytes.
         // We need 2 buffers here for both x1 and x2.
-        Ppipe->InitBuffer(inQueueX, BUFFER_NUM, 2 * ubFactor * sizeof(T));
         Ppipe->InitBuffer(inQueueGamma, BUFFER_NUM, ubFactor * sizeof(T));
-        Ppipe->InitBuffer(outQueueY, BUFFER_NUM, ubFactor * sizeof(T));
+        Ppipe->InitBuffer(inQueueX, BUFFER_NUM, 2 * ubFactor * sizeof(T));
         Ppipe->InitBuffer(outQueueRstd, BUFFER_NUM, rowFactor * sizeof(float));
+        Ppipe->InitBuffer(outQueueY, BUFFER_NUM, ubFactor * sizeof(T));
 
         if constexpr (is_same<T, half>::value || is_same<T, bfloat16_t>::value) {
             Ppipe->InitBuffer(xFp32Buf, ubFactor * sizeof(float));
         }
-        Ppipe->InitBuffer(sqxBuf, ubFactor * sizeof(float));
         Ppipe->InitBuffer(sumBuf, rowFactor * NUM_PER_BLK_FP32 * sizeof(float));
+        Ppipe->InitBuffer(sqxBuf, ubFactor * sizeof(float));
         Ppipe->InitBuffer(reduceFp32Buf, NUM_PER_REP_FP32 * sizeof(float));
     }
 
@@ -339,12 +338,12 @@ private:
 
     uint32_t numRow;
     uint32_t numCol;
-    uint32_t blockFactor; // number of calculations rows on each core
     uint32_t rowFactor;
+    uint32_t blockFactor; // number of calculations rows on each core
     uint32_t ubFactor;
     float epsilon;
-    float avgFactor;
     int32_t blockIdx_;
+    float avgFactor;
     uint32_t rowWork = 1;
 
     int tempbufNum;
