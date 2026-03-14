@@ -54,12 +54,7 @@ graphStatus InferShapeForDynamicMxQuantWithDualAxis(gert::InferShapeContext* con
 
     gert::Shape* scaleShape2 = context->GetOutputShape(INDEX_OUTPUT_SCALE2);
     OP_CHECK_NULL_WITH_CONTEXT(context, scaleShape2);
-    
-    OP_CHECK_IF(
-        xShape->GetDimNum() < 2 || xShape->GetDimNum() > MAX_DIM_NUM,
-        OP_LOGE(context->GetNodeName(), "Input x rank[%lu] should be in [2, 7].", xShape->GetDimNum()),
-        return ge::GRAPH_FAILED);
-
+ 
     if (Ops::Base::IsUnknownRank(*xShape)) {
         OP_LOGD(context->GetNodeName(), "x shape is UnknownRank, set y, scale shape to (-2, )");
         Ops::Base::SetUnknownRank(*yShape1);
@@ -68,6 +63,11 @@ graphStatus InferShapeForDynamicMxQuantWithDualAxis(gert::InferShapeContext* con
         Ops::Base::SetUnknownRank(*scaleShape2);
         return ge::GRAPH_SUCCESS;
     }
+
+    OP_CHECK_IF(
+        xShape->GetDimNum() < 2 || xShape->GetDimNum() > MAX_DIM_NUM,
+        OP_LOGE(context->GetNodeName(), "Input x rank[%lu] should be in [2, 7].", xShape->GetDimNum()),
+        return ge::GRAPH_FAILED);
 
     *yShape1 = *xShape;
     *yShape2 = *xShape;
