@@ -1657,6 +1657,7 @@ VC1@ops-nn:
         - ops/ops-nn/quant/dynamic_mx_quant/
         - ops/ops-nn/quant/dynamic_mx_quant_with_dual_axis/op_kernel/dynamic_mx_quant_with_dual_axis.cpp
         - ops/ops-nn/quant/dynamic_mx_quant_with_dual_axis/op_kernel/arch35/dynamic_mx_quant_with_dual_axis_base.h
+        - ops/ops-nn/quant/dynamic_mx_quant_with_dual_axis/op_host/dynamic_mx_quant_with_dual_axis_tiling.cpp
         - ops/ops-nn/quant/dynamic_quant/framework/
         - ops/ops-nn/quant/dynamic_quant/op_graph/
         - ops/ops-nn/quant/dynamic_quant/op_host/config/ascend950/
