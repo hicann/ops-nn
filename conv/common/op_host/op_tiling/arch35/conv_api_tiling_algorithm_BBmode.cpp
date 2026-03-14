@@ -906,7 +906,8 @@ bool ConvTilingAlgorithmBBmode::WeightKFullLoad::GetL1LoadTilingParams(ConvTilin
     return ret;
 }
 
-bool ConvTilingAlgorithmBBmode::KAllSplit::MultiLoadKAllSplit(ConvTilingAlgorithmBBmode* bbPtr) {
+bool ConvTilingAlgorithmBBmode::KAllSplit::MultiLoadKAllSplit(ConvTilingAlgorithmBBmode* bbPtr) const
+{
     bool ret = false;
     if (bbPtr->conv2DBasicBlockInfoPtr->nBl1FullLoad) {
         ret = MultiLoadKAllSplit(bbPtr, Kl1MultiAxis::KBL1);
@@ -986,7 +987,7 @@ int64_t ConvTilingAlgorithmBBmode::KAllSplit::GetCinL1(ConvTilingAlgorithmBBmode
 }
 
 bool ConvTilingAlgorithmBBmode::KAllSplit::MultiLoadKAllSplit(ConvTilingAlgorithmBBmode* bbPtr,
-    const Kl1MultiAxis& kL1MultiAxis)
+    const Kl1MultiAxis& kL1MultiAxis) const
 {
     bool ret = false;
     if (kL1MultiAxis == Kl1MultiAxis::KAL1) {
