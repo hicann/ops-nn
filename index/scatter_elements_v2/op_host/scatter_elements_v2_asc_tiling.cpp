@@ -338,9 +338,19 @@ void ScatterElementsV2AscTiling::GetCastTypeSize()
     }
 }
 
-uint32_t ScatterElementsV2AscTiling::GetMaxSortTmpBuf([[maybe_unused]] int64_t sortDim)
+uint32_t ScatterElementsV2AscTiling::GetMaxSortTmpBuf(int64_t sortDim)
 {
-    return MAX_SORT_SPACE;
+    std::vector<int64_t> shapeVec = {sortDim};
+    ge::Shape srcShape(shapeVec);
+    AscendC::SortConfig config;
+    config.type = AscendC::SortType::RADIX_SORT;
+    config.isDescend = false;
+    config.hasSrcIndex = false;
+    config.hasDstIndex = true;
+    uint32_t maxValue = 0;
+    uint32_t minValue = 0;
+    GetSortMaxMinTmpSize(srcShape, indicesDtype_, ge::DT_UINT32, false, config, maxValue, minValue);
+    return maxValue;
 }
 
 /**
