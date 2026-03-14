@@ -1,9 +1,9 @@
 # 算子调用
 ## 前提条件
 
-- 环境部署：调用算子之前，请先参考[环境部署](../context/quick_install.md)完成基础环境搭建。
+- 环境部署：调用项目算子之前，请先参考[环境部署](../install/quick_install.md)完成基础环境搭建。
 - 调用算子列表：项目可调用的算子参见[算子列表](../op_list.md)，算子对应的aclnn接口参见[aclnn列表](../op_api_list.md)。
-- build.sh：算子调用依赖根目录build.sh脚本，可通过`bash build.sh --help`命令查看功能，参数介绍参考[build参数说明](../context/build.md)。
+- build.sh：算子调用依赖根目录build.sh脚本，可通过`bash build.sh --help`命令查看功能，参数介绍参考[build参数说明](../install/build.md)。
 
 ## 源码编译
 
@@ -164,7 +164,7 @@
 
 1. **检查基础环境是否完备**
 
-    请确保已按[环境部署](../context/quick_install.md)完成基础环境搭建，包括CANN包安装、源码下载等。
+    请确保已按[环境部署](../install/quick_install.md)完成基础环境搭建，包括CANN包安装、源码下载等。
 
     - 在联网环境中，进入[本项目主页](https://gitcode.com/cann/ops-nn)，通过`下载ZIP`或`clone`按钮，根据指导完成源码下载。
     - 连接离线环境，上传源码至您指定的目录下。若下载的是源码压缩包，请先进行解压。

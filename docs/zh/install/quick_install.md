@@ -1,6 +1,6 @@
 # 环境部署
 
-基于本项目进行[算子调用](../invocation/quick_op_invocation.md)或[算子开发](../develop/aicore_develop_guide.md)之前，请您先参考下面步骤完成基础环境搭建。
+请您在学习QuickStart或各类教程操作之前，请先参考下面步骤完成基础环境搭建。
 
 注意本文提到的编译态和运行态场景含义如下，请按需安装：
 
@@ -9,11 +9,9 @@
 
 ## 前提条件
 
-使用本项目前，请确保如下基础依赖、NPU驱动和固件已安装。
+编译本项目前，请确保编译环境的基础库依赖、NPU驱动和固件已安装。
 
 1. **安装依赖**
-
-   本项目源码编译用到的依赖如下，请注意版本要求。
 
    - python >= 3.7.0（建议版本 <= 3.10）
    - gcc >= 7.3.0
@@ -24,12 +22,12 @@
    - patch
    - make
 
-   上述依赖包可通过项目根目录install\_deps.sh安装，命令如下，若遇到不支持系统，请参考该文件自行适配。
+   上述依赖包请注意版本号，也可通过项目根目录install\_deps.sh一键安装，命令如下，若遇到不支持系统，请参考该文件自行适配。
    ```bash
    bash install_deps.sh
    ```
 
-2. **安装驱动与固件（运行态依赖）**
+2. **安装驱动与固件**（运行态依赖）
 
    运行算子时必须安装驱动与固件，若仅编译算子，可跳过本操作。
 
@@ -37,16 +35,19 @@
 
    安装指导详见《[CANN 软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstSoftware)》。
 
-## 环境准备（三选一）
+## 环境准备
 
-本项目提供了多种部署CANN包的方式，请按需选择。
+本项目提供了多种CANN包（`Ascend-cann-toolkit`和`Ascend-cann-ops`）安装方式，请按需选择。
 
-- WebIDE和Docker环境：提供极简环境搭建，**默认安装最新商发版CANN软件包**（目前是CANN 8.5.0）。
-- 手动安装CANN包：如果您想体验手动安装CANN包或体验最新master分支能力，推荐手动安装。
+| CANN安装方式 | 说明 |使用场景|
+| :--- | :--- | :--- |
+| WebIDE | 一站式开发平台，提供了在线直接运行的昇腾环境。当前可提供单机算力，**默认安装最新商发版CANN软件包**（目前是CANN 8.5.0）。 | 适用于没有昇腾设备的开发者。|
+| Docker | Docker镜像是一种高效部署方式，目前仅适用于Atlas A2系列产品，OS仅支持Ubuntu操作系统。**默认安装最新商发版CANN软件包**（目前是CANN 8.5.0） |适用有昇腾设备，需要快速搭建环境的开发者。|
+| 手动安装 | - |适用有昇腾设备，想体验手动安装CANN包或体验最新master分支能力的开发者。|
 
-### 使用WebIDE环境
+### 方式1：WebIDE环境
 
-对于无环境的用户，可直接使用WebIDE开发平台，即“**算子一站式开发平台**”，该平台为您提供在线可直接运行的昇腾环境，环境中已安装必备的软件包，无需手动安装。更多关于开发平台的介绍请参考[LINK](https://gitcode.com/org/cann/discussions/54)。
+对于无昇腾设备的开发者，可直接使用WebIDE开发平台，即“**算子一站式开发平台**”，该平台为您提供在线可直接运行的昇腾环境，环境中已安装必备的软件包，无需手动安装。更多关于开发平台的介绍请参考[LINK](https://gitcode.com/org/cann/discussions/54)。
 
 1. 进入开源项目，单击“`云开发`”按钮，使用已认证过的华为云账号登录。若未注册或认证，请根据页面提示进行注册和认证。
 
@@ -57,16 +58,18 @@
    <img src="../figures/webIDE.png" alt="云平台"  width="1000px" height="150px">
 
 
-### 使用Docker部署
+### 方式2：Docker部署
 
-> **说明：**
-> - Docker镜像是一种高效部署方式，目前仅适用于Atlas A2系列产品，且目前仅适配Ubuntu操作系统。
-> - 镜像文件比较大，下载需要一定时间，请您耐心等待。
+对于有昇腾设备的开发者，若您想快速搭建昇腾环境，可使用Docker镜像部署。
 
-#### 1. 下载镜像
 
-1.  以root用户登录宿主机。确保宿主机已安装Docker引擎（版本1.11.2及以上）。
-2.  从[昇腾镜像仓库](https://www.hiascend.com/developer/ascendhub/detail/17da20d1c2b6493cb38765adeba85884)拉取已预集成CANN软件包及`ops-nn`所需依赖的镜像。命令如下，根据实际架构选择：
+
+> **说明**：镜像文件比较大，下载需要一定时间，请您耐心等待。
+
+1.**下载镜像**
+
+- 步骤1：以root用户登录宿主机。确保宿主机已安装Docker引擎（版本1.11.2及以上）。
+- 步骤2：从[昇腾镜像仓库](https://www.hiascend.com/developer/ascendhub/detail/17da20d1c2b6493cb38765adeba85884)拉取已预集成CANN软件包及`ops-nn`所需依赖的镜像。命令如下，根据实际架构选择：
 
     ```bash
     # 示例：拉取ARM架构的CANN开发镜像
@@ -75,7 +78,7 @@
     docker pull --platform=amd64 swr.cn-south-1.myhuaweicloud.com/ascendhub/cann:8.5.0-910b-ubuntu22.04-py3.10-ops
     ```
 
-#### 2. 运行Docker
+2.**运行Docker**
 拉取镜像后，需要以特定参数启动容器，以便容器内能访问宿主的昇腾设备。
 
 ```bash
@@ -97,34 +100,34 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
 | `swr.cn-south-1.myhuaweicloud.com/ascendhub/cann:8.5.0-910b-ubuntu22.04-py3.10-ops` | 指定要运行的Docker镜像。 |请确保此镜像名和标签（tag）与你通过`docker pull`拉取的镜像完全一致。 |
 | `bash` | 容器启动后立即执行的命令。 | |
 
-### 手动安装CANN包
+### 方式3：手动安装CANN
 
-#### 1. 下载软件包
+对于有昇腾设备的开发者，若您想手动安装CANN包，请根据下述描述，选择对应的安装指导。
 
-请根据下述场景，按需获取`Ascend-cann-toolkit_${cann_version}_linux-${arch}.run`、`Ascend-cann-${soc_name}-ops_${cann_version}_linux-${arch}.run`。
+**场景1：已发布版本**
 
-- 场景1：如果您想体验**官网正式发布的CANN包**能力，访问[CANN官网下载中心](https://www.hiascend.com/cann/download)，选择对应版本CANN软件包（仅支持CANN 8.5.0及后续版本），安装指导详见《[CANN 软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstSoftware)》。
+若您想体验**官网正式发布的CANN包**能力，请访问[CANN官网下载中心](https://www.hiascend.com/cann/download)，根据产品和环境架构选择对应版本的软件包（仅支持CANN 8.5.0及后续版本）进行安装。
 
-- 场景2：如果您想体验**master分支最新能力**，单击[下载链接](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-mirror/software/master)获取。
 
-注意产品型号和环境架构需与真实环境对应，此外ops包是运行态依赖，若仅编译算子，可以不安装此包。
+**场景2：master版本**
 
-#### 2. 安装软件包
-1. **安装社区CANN toolkit包**
+若您想体验**master分支最新能力**，请单击[下载链接](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-mirror/software/master/)，根据产品和环境架构选择对应版本的软件包，关键安装命令如下，更多安装指导参考《[CANN软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstWizard)》。
+
+1. 安装CANN toolkit包。
 
     ```bash
     # 确保安装包具有可执行权限
     chmod +x Ascend-cann-toolkit_${cann_version}_linux-${arch}.run
     # 安装命令
-    ./Ascend-cann-toolkit_${cann_version}_linux-${arch}.run --install --force --install-path=${install_path}
+    ./Ascend-cann-toolkit_${cann_version}_linux-${arch}.run --install --install-path=${install_path}
     ```
     - \$\{cann\_version\}：表示CANN包版本号。
     - \$\{arch\}：表示CPU架构，如aarch64、x86_64。
     - \$\{install\_path\}：表示指定安装路径，默认安装在`/usr/local/Ascend`目录。
 
-2. **安装社区版CANN ops包（运行态依赖）**
+2. 安装CANN ops包（运行态依赖）。
 
-    运行算子时必须安装本包，若仅编译算子，可跳过本操作。
+ 	ops包是运行态依赖，若仅编译算子，可以不安装此包。
 
     ```bash
     # 确保安装包具有可执行权限
@@ -133,19 +136,23 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
     ./Ascend-cann-${soc_name}-ops_${cann_version}_linux-${arch}.run --install --install-path=${install_path}
     ```
 
+    - \$\{cann\_version\}：表示CANN包版本号。
+    - \$\{arch\}：表示CPU架构，如aarch64、x86_64。
     - \$\{soc\_name\}：表示NPU型号名称。
-    - \$\{install\_path\}：表示指定安装路径，需要与toolkit包安装在相同路径，默认安装在`/usr/local/Ascend`目录。
+    - \$\{install\_path\}：表示指定安装路径，ops包需与toolkit包安装在相同路径，root用户默认安装在`/usr/local/Ascend`目录。
 
 ## 环境验证
 
 安装完CANN包后，需验证环境和驱动是否正常。
 
--   **检查NPU设备**：
+-   **检查NPU设备**
+
     ```bash
     # 运行npu-smi，若能正常显示设备信息，则驱动正常
     npu-smi info
     ```
--   **检查CANN安装**：
+-   **检查CANN安装**
+
     ```bash
     # 查看CANN Toolkit版本信息（默认路径安装）
     cat /usr/local/Ascend/ascend-toolkit/latest/opp/version.info
@@ -163,18 +170,23 @@ source /usr/local/Ascend/cann/set_env.sh
 
 ## 源码下载
 
-通过如下命令下载项目源码，同时安装其他依赖。\$\{tag\_version\}请替换为分支标签名，本源码仓与CANN版本配套关系可参见[release仓库](https://gitcode.com/cann/release-management)。
+通过如下命令下载项目源码，\$\{tag\_version\}请替换为版本分支标签名，源码版本与CANN版本配套关系参见[release仓库](https://gitcode.com/cann/release-management)。
 
 ```bash
 # 下载项目对应分支源码
 git clone -b ${tag_version} https://gitcode.com/cann/ops-nn.git
+```
+
+对于WebIDE或Docker环境，已默认提供最新商发版本的项目源码，如需获取其他版本的源码，也需通过上述命令下载源码。
+
+对于手动安装CANN场景，安装CANN包和下载源码后，还需额外安装python基础库依赖。
+
+```bash
 # 安装根目录requirements.txt依赖
 cd ops-nn
 pip3 install -r requirements.txt
 ```
 > [!NOTE] 注意
-> gitcode平台在使用HTTPS协议的时候要配置并使用个人访问令牌代替登录密码进行克隆，推送等操作。
-
-若您的编译环境无法访问网络，无法通过`git`指令下载代码，需要在联网环境中下载源码后，手动上传至目标环境。
-- 在联网环境中， 进入[本项目主页](https://gitcode.com/cann/ops-nn)，通过`下载ZIP`或`clone`按钮，根据指导，完成源码下载。
-- 连接至离线环境中，上传源码至您指定的目录下。若下载的为源码压缩包，还需进行解压。
+>
+> - gitcode平台在使用HTTPS协议的时候要配置并使用个人访问令牌代替登录密码进行克隆，推送等操作。
+> - 若您的编译环境无法访问网络，无法通过git指令下载代码，请先在联网环境中下载源码，再手动上传至目标环境。

@@ -6,7 +6,7 @@
 >
 > 1. 算子开发过程中涉及的基本概念、AI CPU接口等，详细介绍请参考[《TBE&AI CPU算子开发》](https://hiascend.com/document/redirect/CannCommunityOpdevWizard)。
 > 2. AI CPU算子是使用C++语言开发，运行在AI CPU硬件单元的算子。
-> 3. build.sh：算子开发过程中涉及的命令可通过`bash build.sh --help`查看，功能参数介绍参考[build参数说明](../context/build.md)。
+> 3. build.sh：算子开发过程中涉及的命令可通过`bash build.sh --help`查看，功能参数介绍参考[build参数说明](../install/build.md)。
 
 开发指南以`AddExample`算子开发为例，介绍新算子开发流程以及涉及的交付件，完整样例代码请访问项目`examples`目录。
 
@@ -20,12 +20,12 @@
 
 5. [编译部署](#编译部署)：通过工程编译脚本完成自定义算子的编译和安装。
 
-6. [算子验证](#算子验证)：通过常见算子调用方式，验证自定义算子功能。  
+6. [算子验证](#算子验证)：通过常见算子调用方式，验证自定义算子功能。
 
 ##  工程创建
 **1. 环境部署**
 
-开发算子前，请先参考[环境部署](../context/quick_install.md)完成基础环境搭建。
+开发算子前，请先参考[环境部署](../install/quick_install.md)完成基础环境搭建。
 
 **2. 目录创建**
 
@@ -201,13 +201,13 @@ REGISTER_CPU_KERNEL(kAddExample, AddExampleCpuKernel);
    - --vendor_name（可选）：\$\{vendor\_name\}表示构建的自定义算子包名，默认名为custom。
    - --ops（可选）：\$\{op\_list\}表示待编译算子，不指定时默认编译所有算子。格式形如"--ops=add_example"。
    - --experimental（可选）：若编译的算子为贡献算子，需配置--experimental。
-   
+
     若提示如下信息，说明编译成功：
-   
+
     ```bash
     Self-extractable archive "cann-ops-nn-${vendor_name}_linux-${arch}.run" successfully created.
     ```
-   
+
 3. **安装自定义算子包。**
 
     ```bash
@@ -215,11 +215,11 @@ REGISTER_CPU_KERNEL(kAddExample, AddExampleCpuKernel);
     ./build_out/cann-ops-nn-${vendor_name}_linux-${arch}.run
     ```
     自定义算子包安装在```${ASCEND_HOME_PATH}/opp/vendors```路径中，```${ASCEND_HOME_PATH}```表示CANN软件安装目录，可提前在环境变量中配置。
-    
+
 4. **（可选）卸载自定义算子包。**
 
     自定义算子包安装后在```${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}_nn/scripts```目录会生成`uninstall.sh`，通过该脚本可卸载自定义算子包，命令如下：
-    
+
     ```bash
     bash ${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}_nn/scripts/uninstall.sh
     ```

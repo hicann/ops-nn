@@ -1,0 +1,221 @@
+# 快速入门：基于ops-nn仓
+
+## 使用须知
+
+本指南旨在帮助您快速上手CANN和`ops-nn`算子仓的使用。为方便快速了解算子开发全流程，将以**AddExample**算子为实践对象，其源文件位于`ops-nn/examples/add_example`，具体操作流程如下：
+
+1. **[环境部署](zh/install/quick_install.md)**：参考环境部署章节完成软件包安装和源码下载，此处不赘述。**推荐WebIDE或Docker环境**，安装操作简单。
+
+> **说明**：当前WebIDE或Docker环境默认最新商发版CANN包；如需体验master分支最新能力，可手动安装CANN包，注意软件与源码版本配套。
+
+2. **[编译运行](#一编译运行)**：编译自定义算子包并安装，实现快速调用算子。
+
+3. **[算子开发](#二算子开发)**：通过修改现有算子Kernel，体验开发、编译、验证的完整闭环。
+
+4. **[算子调试](#三算子调试)**：掌握算子打印和性能采集方法。
+
+5. **[算子验证](#四算子验证)**：学习如何修改算子example样例，以验证算子在不同输入下的功能正确性。
+
+## 一、编译运行
+
+本阶段目的是**快速体验项目标准流程**，验证环境能否成功进行算子源码编译、打包、安装和运行。
+
+### 1. 编译AddExample算子
+
+环境准备好后（注意软件与源码版本配套），进入环境并访问项目源码根目录，编译指定算子。
+
+通用编译命令格式：`bash build.sh --pkg --soc=<芯片版本> --ops=<算子名>`。以AddExample算子为例，编译命令如下：
+
+```bash
+bash build.sh --pkg --soc=ascend910b --ops=add_example -j16
+```
+
+若提示如下信息，说明编译成功。
+```bash
+Self-extractable archive "cann-ops-nn-custom-linux.${arch}.run" successfully created.
+```
+编译成功后，run包存放于项目根目录的build_out目录下。
+
+### 2. 安装AddExample算子包
+```bash
+./build_out/cann-ops-nn-*linux*.run
+```
+`AddExample`安装在```${ASCEND_HOME_PATH}/opp/vendors```路径中，```${ASCEND_HOME_PATH}```表示CANN软件安装目录。
+
+### 3. 配置环境变量
+
+将自定义算子包的路径加入环境变量，确保运行时能够找到。
+```bash
+export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/opp/vendors/custom_nn/op_api/lib:${LD_LIBRARY_PATH}
+```
+
+### 4. 快速验证：运行算子样例
+
+通用的运行命令格式：`bash build.sh --run_example <算子名> <运行模式> <包模式>`。
+
+以AddExample为例，其提供了简单算子样例`add_example/examples/test_aclnn_add_example.cpp`，运行该样例验证算子功能是否正常。
+
+```bash
+bash build.sh --run_example add_example eager cust --vendor_name=custom
+```
+预期输出：打印算子`AddExample`的加法计算结果，表明算子已成功部署并正确执行。
+
+```
+add_example first input[0] is: 1.000000, second input[0] is: 1.000000, result[0] is: 2.000000
+add_example first input[1] is: 1.000000, second input[1] is: 1.000000, result[1] is: 2.000000
+add_example first input[2] is: 1.000000, second input[2] is: 1.000000, result[2] is: 2.000000
+add_example first input[3] is: 1.000000, second input[3] is: 1.000000, result[3] is: 2.000000
+add_example first input[4] is: 1.000000, second input[4] is: 1.000000, result[4] is: 2.000000
+add_example first input[5] is: 1.000000, second input[5] is: 1.000000, result[5] is: 2.000000
+add_example first input[6] is: 1.000000, second input[6] is: 1.000000, result[6] is: 2.000000
+add_example first input[7] is: 1.000000, second input[7] is: 1.000000, result[7] is: 2.000000
+...
+```
+
+## 二、算子开发
+
+本阶段目的是对已成功运行的AddExample算子尝试**修改核函数代码**。
+
+### 1. 修改Kernel实现
+找到AddExample算子的核心kernel实现文件`ops-nn/examples/add_example/op_kernel/add_example.h`，尝试将算子中的Add操作改为Mul操作：
+
+```cpp
+__aicore__ inline void AddExample<T>::Compute(int32_t progress)
+{
+    AscendC::LocalTensor<T> xLocal = inputQueueX.DeQue<T>();
+    AscendC::LocalTensor<T> yLocal = inputQueueY.DeQue<T>();
+    AscendC::LocalTensor<T> zLocal = outputQueueZ.AllocTensor<T>();
+    // === 在此处将Add替换为Mul ===
+    // AscendC::Add(zLocal, xLocal, yLocal, tileLength_);
+    AscendC::Mul(zLocal, xLocal, yLocal, tileLength_);
+    outputQueueZ.EnQue<T>(zLocal);
+    inputQueueX.FreeTensor(xLocal);
+    inputQueueY.FreeTensor(yLocal);
+}
+```
+
+### 2. 编译与验证
+
+重复[编译运行](#一编译运行)章节中的步骤：
+
+1. **重新编译**：
+    先回到项目根目录，编译命令如下：
+
+    ```bash
+    bash build.sh --pkg --soc=ascend910b --ops=add_example -j16
+    ```
+
+2. **重新安装**：
+    ```bash
+    ./build_out/cann-ops-nn-*linux*.run
+    ```
+
+3. **重新验证**：
+    ```bash
+    bash build.sh --run_example add_example eager cust --vendor_name=custom
+    ```
+
+4. **成功标志**：输出结果变成乘法结果。
+    ```
+    add_example first input[0] is: 1.000000, second input[0] is: 1.000000, result[0] is: 1.000000
+    add_example first input[1] is: 1.000000, second input[1] is: 1.000000, result[1] is: 1.000000
+    add_example first input[2] is: 1.000000, second input[2] is: 1.000000, result[2] is: 1.000000
+    add_example first input[3] is: 1.000000, second input[3] is: 1.000000, result[3] is: 1.000000
+    add_example first input[4] is: 1.000000, second input[4] is: 1.000000, result[4] is: 1.000000
+    add_example first input[5] is: 1.000000, second input[5] is: 1.000000, result[5] is: 1.000000
+    add_example first input[6] is: 1.000000, second input[6] is: 1.000000, result[6] is: 1.000000
+    add_example first input[7] is: 1.000000, second input[7] is: 1.000000, result[7] is: 1.000000
+    ...
+    ```
+
+## 三、算子调试
+本阶段以AddExample为例，在算子中添加打印并采集算子性能数据，以便后续问题分析定位。
+
+### 1. 打印
+算子如果出现执行失败、精度异常等问题，添加打印进行问题分析和定位。
+
+请在`examples/add_example/op_kernel/add_example.h`中进行代码修改。
+
+* **printf**
+
+该接口支持打印Scalar类型数据，如整数、字符型、布尔型等，详细介绍请参见[《Ascend C API》](https://hiascend.com/document/redirect/CannCommunityAscendCApi)中“算子调测API > printf”。
+
+```c++
+blockLength_ = (tilingData->totalLength + AscendC::GetBlockNum() - 1) / AscendC::GetBlockNum();
+tileNum_ = tilingData->tileNum;
+tileLength_ = ((blockLength_ + tileNum_ - 1) / tileNum_ / BUFFER_NUM) ?
+        ((blockLength_ + tileNum_ - 1) / tileNum_ / BUFFER_NUM) : 1;
+// 打印当前核计算Block长度
+AscendC::PRINTF("Tiling blockLength is %llu\n", blockLength_);
+```
+* **DumpTensor**
+
+该接口支持Dump指定Tensor的内容，同时支持打印自定义附加信息，比如当前行号等，详细介绍请参见[《Ascend C API》](https://hiascend.com/document/redirect/CannCommunityAscendCApi)中“算子调测API > DumpTensor”。
+
+```c++
+AscendC::LocalTensor<T> zLocal = outputQueueZ.DeQue<T>();
+// 打印zLocal Tensor信息
+DumpTensor(zLocal, 0, 128);
+```
+### 2. 性能采集
+
+当算子功能验证正确后，可通过`msprof`工具采集算子性能数据。
+
+-  **生成可执行文件**
+
+    调用AddExample算子的example样例，生成可执行文件（test_aclnn_add_example），该文件位于项目`ops-nn/build`目录。
+    ```bash
+    bash build.sh --run_example add_example eager cust --vendor_name=custom
+    ```
+
+-  **采集性能数据**
+
+    进入AddExample算子可执行文件目录`ops-nn/build/`，执行如下命令：
+
+    ```bash
+    msprof --application="./test_aclnn_add_example"
+    ```
+采集结果在项目`ops-nn/build/`目录，msprof命令执行完后会自动解析并导出性能数据结果文件，详细内容请参见[msprof](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/T&ITools/Profiling/atlasprofiling_16_0110.html#ZH-CN_TOPIC_0000002504160251)。
+
+## 四、算子验证
+
+本阶段通过修改AddExample算子example样例中的输入数据，验证该算子在多种场景下的功能正确性。
+
+### 1. 修改测试输入
+找到并编辑`AddExample`的`ops-nn/examples/add_example/examples/test_aclnn_add_example.cpp`，修改输入张量的形状和数值。
+
+**修改输入/输出数据**：修改输入、输出的shape信息，以及初始化数据，构造相应的输入、输出tensor。
+
+```c++
+int main() {
+    // ... 初始化代码 ...
+
+    // === ① 修改selfX的输入 ===
+    // 修改前：shape = {32, 4, 4, 4}, 数值全为1
+    // 修改后：将输入shape改为 {8, 8, 8, 8}，并填充不同的测试数据
+    std::vector<int64_t> selfXShape = {8, 8, 8, 8};
+    std::vector<float> selfXHostData(4096); // 4096 = 8 * 8 * 8 *8
+    // 可使用循环填充更有区分度的数据，例如递增序列
+    for (int i = 0; i < 4096; ++i) {
+        selfXHostData[i] = static_cast<float>(i % 10); // 填充0-9的循环值
+    }
+    // === ② 参考selfX，同理修改selfY、selfZ的输入 ===
+
+    // ... 后续执行代码 ...
+}
+```
+### 2. 重新编译并验证
+
+1. 由于只修改了example测试代码，无需重新编译算子包。
+
+2. 重新执行验证命令：
+
+    ```bash
+    bash build.sh --run_example add_example eager cust --vendor_name=custom
+    ```
+
+3. 观察算子输出结果是否符合预期。
+
+## 结语
+
+体验完上述流程后，您已基本完成一个算子开发，如果您想贡献算子或学习更多高阶技能，请访问本项目README，进一步了解[学习教程](../README.md#学习教程)和[贡献指南](../README.md#相关信息)等。
