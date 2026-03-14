@@ -1249,10 +1249,12 @@ static aclTensor* ConvertTensorToInt4(const aclTensor* input, aclOpExecutor* exe
     viewShape[viewShapeDim - 1] = viewShape[viewShapeDim - 1] * INT4_NUMS_IN_INT32;
     auto inputTemp = executor->CreateView(input, viewShape, input->GetViewOffset());
     inputTemp->SetDataType(DataType::DT_INT4);
-    storageShape[storageShape.GetDimNum() - 1] = NZ_K0_VALUE_INT4_TRANS;
-    storageShape[storageShape.GetDimNum() - MIN_DIM_NUM_NZ] = (viewShape[viewShapeDim - 1] +
-        NZ_K0_VALUE_INT4_TRANS - 1) / NZ_K0_VALUE_INT4_TRANS;
-    inputTemp->SetStorageShape(storageShape);
+    if (input->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
+        storageShape[storageShape.GetDimNum() - 1] = NZ_K0_VALUE_INT4_TRANS;
+        storageShape[storageShape.GetDimNum() - MIN_DIM_NUM_NZ] = (viewShape[viewShapeDim - 1] +
+            NZ_K0_VALUE_INT4_TRANS - 1) / NZ_K0_VALUE_INT4_TRANS;
+        inputTemp->SetStorageShape(storageShape);
+    }
     OP_LOGD("The conversion from int32 to int4 is completed.");
     return inputTemp;
 }
