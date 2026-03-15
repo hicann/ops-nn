@@ -78,6 +78,7 @@ struct PpMatmulDefaultTilingData {
     uint64_t swizzleDirect{0};
     uint64_t splitk{0};
     uint64_t enShuffleK{0};
+    bool isQuantBatchMatmulV3{false};
 
     void SetBaseShape(uint64_t batchSize, uint64_t m, uint64_t k, uint64_t n);
     void SetBaseOp(uint64_t coreNum, uint64_t l0cSize, uint64_t mBase, uint64_t nBase, const MatMulInfo &mmInfo, bool isAscend310P);

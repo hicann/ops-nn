@@ -1613,19 +1613,20 @@ static aclnnStatus SetReformtedX2(const aclTensor *&reformatedX1, const aclTenso
     return ACLNN_SUCCESS;
 }
 
-static inline aclnnStatus TransdataX1Process(bool isX1TransdataFlag, const aclTensor *&reformatedX1, aclOpExecutor* executor) {
+static inline aclnnStatus TransdataX1Process(bool isX1TransdataFlag, const aclTensor *&reformatedX1,
+                                             aclOpExecutor *executor, bool isPpMatmul)
+{
     auto socLongVersion = GetCurrentPlatformInfo().GetSocLongVersion();
     bool checkSocLongVersion =
         (socLongVersion == "Ascend910B3" || socLongVersion == "Ascend910B4" || socLongVersion == "Ascend910B4-1");
     auto coreNum = static_cast<int32_t>(GetCurrentPlatformInfo().GetCubeCoreNum());
-    if (isX1TransdataFlag && checkSocLongVersion && coreNum == CORE_NUM_20) {
+    if ((isX1TransdataFlag && checkSocLongVersion && coreNum == CORE_NUM_20) || isPpMatmul) {
         auto ret = TransdataForX1(reformatedX1, executor);
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
     }
 
     return ACLNN_SUCCESS;
 }
-
 
 static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor mandatoryTensors,
                                                                  TupleOptional optionalTensors,
@@ -1688,7 +1689,11 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor man
     int64_t dtype = 0;
     GetDtypeAndTranspose(std::tie(reformatedX1, reformatedX2, out), dtype, transposeX1, transposeX2);
     bool isX1TransdataFlag = IsX1Transdata(reformatedX1, reformatedX2, dtype, transposeX1, transposeX2);
-    ret = TransdataX1Process(isX1TransdataFlag, reformatedX1, executor);
+    auto inputAShape = reformatedX1->GetViewShape();
+    uint32_t M = inputAShape.GetDimNum() == 2 ? inputAShape[0] : inputAShape[1];
+    auto socLongVersion = GetCurrentPlatformInfo().GetSocLongVersion();
+    bool isPpMatmul = (socLongVersion == "Ascend310P3" && M >= 1024);
+    ret = TransdataX1Process(isX1TransdataFlag, reformatedX1, executor, isPpMatmul);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     
     const aclTensor *matmulRet = nullptr;
@@ -1704,7 +1709,15 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor man
                                             groupSize, executor);
     }
 
-    CHECK_RET(PostMatmulCalcProcess(matmulRet, std::tie(x1, x2, out), executor) == ACLNN_SUCCESS, ret);
+    if (isPpMatmul) {
+        CHECK_RET(matmulRet != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        const aclTensor *matmulNdRet = nullptr;
+        matmulNdRet = l0op::TransData(matmulRet, Format::FORMAT_ND, 0, executor);
+
+        CHECK_RET(PostMatmulCalcProcess(matmulNdRet, std::tie(x1, x2, out), executor) == ACLNN_SUCCESS, ret);
+    } else {
+        CHECK_RET(PostMatmulCalcProcess(matmulRet, std::tie(x1, x2, out), executor) == ACLNN_SUCCESS, ret);
+    }
     return ACLNN_SUCCESS;
 }
 }

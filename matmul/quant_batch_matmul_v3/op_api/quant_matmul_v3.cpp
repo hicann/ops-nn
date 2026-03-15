@@ -50,6 +50,12 @@ const aclTensor* QuantBatchMatmulV3(const aclTensor* x1, const aclTensor* x2, co
         OP_LOGD("Npu_Arch = 2002 pertoken mode need transData out");
         format = Format::FORMAT_FRACTAL_NZ;
     }
+    auto inputAShape = x1->GetViewShape();
+    uint32_t M = inputAShape.GetDimNum() == 2 ? inputAShape[0] : inputAShape[1];
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P && M >= 1024) {
+        OP_LOGD("Using PpMatmul mode need transData out");
+        format = Format::FORMAT_FRACTAL_NZ;
+    }
 
     auto output = executor->AllocTensor(outType, format, format);
 
