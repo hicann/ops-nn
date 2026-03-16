@@ -12,3 +12,22 @@
  * \file reverse_sequence_infershape.cpp
  * \brief
  */
+#include "log/log.h"
+#include "util/shape_util.h"
+#include "register/op_impl_registry.h"
+#include "op_host/infershape_elewise_util.h"
+
+using namespace ge;
+namespace ops
+{
+static graphStatus InferDataType4ReverseSequence(gert::InferDataTypeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "InferDataType4ReverseSequence enter");
+    auto input_x_dtype = context->GetInputDataType(0);
+    context->SetOutputDataType(0, input_x_dtype);
+    OP_LOGD(context->GetNodeName(), "InferDataType4ReverseSequence end");
+    return GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(ReverseSequence).InferShape(Ops::Base::InferShape4Elewise).InferDataType(InferDataType4ReverseSequence);
+}  // namespace ops
