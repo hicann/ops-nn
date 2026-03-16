@@ -2481,6 +2481,732 @@ constexpr int weight_DMA = 511;
 constexpr int CONV_2D_DIMS_NUM = 4;
 constexpr uint32_t CONV_1D_DIMS = 3;
 constexpr uint32_t CONV_2D_DIMS = 4;
+const size_t CONV2D_WHITE_LIST_CASE_SIZE = 16;
+
+struct Conv2DParams {
+  const aclTensor *input;
+  const aclTensor *weight;
+  const aclIntArray *padding;
+  const aclIntArray *dilation;
+  int64_t groups;
+};
+
+const vector<vector<int64_t>> CONV2D_WHITE_LIST =
+{
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 1600, 3840,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 1600, 4000,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 1760, 4000,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 1600, 4160,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 1920, 4160,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 2048, 4160,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 2144, 4160,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 3520, 4736,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 2144, 4672,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 2592, 6368,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 2912, 5696,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 2880, 3840,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 1280, 3264,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 1760, 2336,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 2048, 2048,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 2016, 2016,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 960, 4288,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 2720, 1504,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 2720, 1536,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 832, 4928,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 1568, 2624,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 1536, 2720,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 2336, 1760,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 1440, 2880,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 2048, 2016,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 3, 1088, 3744,     // input shape
+    64, 3, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 896, 656,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1008, 784,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 640, 1200,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 688, 1056,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 352, 304,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1024, 2496,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1072, 2096,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 512, 1504,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 2304, 1056,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 784, 496,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1472, 944,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1456, 1936,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 256, 112,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 480, 240,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 320, 320,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1632, 1152,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 816, 1888,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 512, 1088,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 288, 80,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 656, 304,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 432, 752,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1072, 736,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1712, 592,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1056, 848,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1200, 1968,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1168, 1936,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 2192, 1232,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 416, 752,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 624, 1488,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 2144, 1264,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 80, 256,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1280, 3248,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 176, 1456,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1456, 1248,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 208, 496,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 272, 240,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 736, 2720,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1248, 560,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 384, 944,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 608, 960,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 960, 656,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 640, 496,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 832, 1056,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1728, 1200,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 512, 688,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1376, 592,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1680, 1280,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1008, 1968,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 768, 1696,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 784, 1136,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1616, 1008,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 976, 944,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 752, 1104,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 992, 3008,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 512, 800,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1760, 432,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 896, 784,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 656, 480,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 2336, 1312,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 1088, 560,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 432, 1104,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 512, 704,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  },
+  {
+    DataType::DT_BF16, // input data type
+    1, 256, 592, 880,     // input shape
+    256, 256, 3, 3,        // filter shape
+    1, 1, 1, 1,         // padding
+    1, 1,               // dilation
+    1,                  // groups
+  }
+};
+
 static bool isNotDMAFromPad(bool isDMASpec, const aclIntArray* padding)
 {
     if (padding->Size() == CONV_2D_PAD_DIM) {
@@ -2653,6 +3379,51 @@ void GetConvolutionOpFormatC04(struct ConvolutionOpInfo& opInfo)
     opInfo.biasFormat = Format::FORMAT_ND;
 }
 
+static void AddAclIntArrayToCaseInfo(const aclIntArray &seg, vector<int64_t> &caseInfo)
+{
+  size_t len = seg.Size();
+  for (size_t i = 0; i < len; i++) {
+    caseInfo.push_back(seg[i]);
+  }
+}
+
+static void AddTensorShapeToCaseInfo(const aclTensor &seg, vector<int64_t> &caseInfo)
+{
+  auto segShape = seg.GetViewShape();
+  size_t dimNum = segShape.GetDimNum();
+  for (size_t i=0; i < dimNum; i++) {
+    caseInfo.push_back(segShape.GetDim(i));
+  }
+}
+
+static void ConstructCaseInfo(const Conv2DParams &params, vector<int64_t> &caseInfo)
+{
+  caseInfo.reserve(CONV2D_WHITE_LIST_CASE_SIZE);
+  auto inputDataType = params.input->GetDataType();
+  caseInfo.push_back(static_cast<int64_t>(inputDataType));
+  AddTensorShapeToCaseInfo(*(params.input), caseInfo);
+  AddTensorShapeToCaseInfo(*(params.weight), caseInfo);
+  AddAclIntArrayToCaseInfo(*(params.padding), caseInfo);
+  AddAclIntArrayToCaseInfo(*(params.dilation), caseInfo);
+  caseInfo.push_back(params.groups);
+}
+
+static bool IsConv2DWhiteListCase(const vector<int64_t> &caseInfo, const vector<vector<int64_t>> &whiteList, const aclIntArray &stride)
+{
+  if (stride.Size() != 2) {
+    return false;
+  }
+  int64_t h = stride[0];
+  int64_t w = stride[1];
+  bool isStrideRight = (h == 1 && w == 1) || (h == 2 && w == 2);
+  for (auto it = whiteList.begin(); it != whiteList.end(); ++it) {
+    if (*it == caseInfo) {
+      return isStrideRight;
+    }
+  }
+  return false;
+}
+
 // 更新convolution所需要的dtype format
 void GetConvOpInfo(
     const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* output,
@@ -2663,12 +3434,18 @@ void GetConvOpInfo(
     // 支持C04 + NCHW + 非transposed的场景
     op::Shape inputSpecialShape = op::Shape({320, 3, 224, 224}); // 客户专用场景
     op::Shape weightSpecialShape = op::Shape({768, 3, 32, 32});  // 客户专用场景
-    if ((weight->GetViewShape() == weightSpecialShape) && (input->GetViewShape() == inputSpecialShape) &&
+    vector<int64_t> caseInfo2d;
+    Conv2DParams params = {input, weight, padding, dilation, static_cast<int>(groups)};
+    ConstructCaseInfo(params, caseInfo2d);
+    bool isConv2DWhiteListCase = IsConv2DWhiteListCase(caseInfo2d, CONV2D_WHITE_LIST, *stride);
+    if (!isConv2DWhiteListCase && (weight->GetViewShape() == weightSpecialShape) &&
+        (input->GetViewShape() == inputSpecialShape) &&
         CanSwitchC04InF16Scene(opInfo) &&
         CanSwitchC04(input, weight, bias, output, stride, padding, dilation, groups, transposed)) {
         OP_LOGD("Entering float16 C04 branch");
         GetConvolutionOpFormatC04(opInfo);
     } else if (
+        !isConv2DWhiteListCase &&
         CanSwitchC04InBF16Scene(opInfo) &&
         CanSwitchC04(input, weight, bias, output, stride, padding, dilation, groups, transposed)) {
         OP_LOGD("Entering bfloat16 C04 branch");
@@ -2676,7 +3453,7 @@ void GetConvOpInfo(
     } else {
         Conv2DSplitWInfo conv2dInfo;
         conv2dInfo.InitConv2DSplitWInfo(input, weight, stride, padding, dilation);
-        if (conv2dInfo.CanSwitchSplitW(bias, output, groups, opInfo)) {
+        if (isConv2DWhiteListCase || conv2dInfo.CanSwitchSplitW(bias, output, groups, opInfo)) {
             OP_LOGD("Entering splitW branch");
             GetConvolution3dOpFormat(opInfo, input, weight, output);
         } else {
