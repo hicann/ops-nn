@@ -1,75 +1,213 @@
 # aclnnRepeatInterleaveInt
 
+📄 [查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/repeat_interleave)
+
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                          |    √  |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品 </term>                             |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    ×   |
+| 产品 | 是否支持 |
+| :--- | :---: |
+| <term>Ascend 950PR/Ascend 950DT</term> | √ |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
+| <term>Atlas 200I/500 A2 推理产品</term> | × |
+| <term>Atlas 推理系列产品</term> | × |
+| <term>Atlas 训练系列产品</term> | × |
 
 ## 功能说明
-  - 算子功能：将tensor self进行flatten后，每个元素重复repeats的相应次数。
 
-  - 示例：
-    假设input tensor是 ([[a, b], [c, d], [e, f]]), repeats为2。
-    那么最后生成的tensor为 tensor([a, a, b, b, c, c, d, d, e, e, f, f])。
-    将tensor进行flatten后，input转变为 ([a, b, c, d, e, f])。该tensor中的每个元素复制repeats次数，也就是每个元素复制2次。
+- 接口功能：将tensor self进行flatten后，每个元素重复repeats的相应次数。
+
+- 示例：
+  假设input tensor是 ([[a, b], [c, d], [e, f]]), repeats为2。
+  那么最后生成的tensor为 tensor([a, a, b, b, c, c, d, d, e, e, f, f])。
+  将tensor进行flatten后，input转变为 ([a, b, c, d, e, f])。该tensor中的每个元素复制repeats次数，也就是每个元素复制2次。
 
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnRepeatInterleaveIntGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnRepeatInterleaveInt”接口执行计算。
 
-  - `aclnnStatus aclnnRepeatInterleaveIntGetWorkspaceSize(const aclTensor* self, int64_t repeats, int64_t outputSize, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)`
-  - `aclnnStatus aclnnRepeatInterleaveInt(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)`
+```Cpp
+aclnnStatus aclnnRepeatInterleaveIntGetWorkspaceSize(
+  const aclTensor* self,
+  int64_t          repeats,
+  int64_t          outputSize,
+  aclTensor*       out,
+  uint64_t*        workspaceSize,
+  aclOpExecutor**  executor)
+```
+
+```Cpp
+aclnnStatus aclnnRepeatInterleaveInt(
+  void*          workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor* executor,
+  aclrtStream    stream)
+```
 
 ## aclnnRepeatInterleaveIntGetWorkspaceSize
 
 - **参数说明：**
 
-  - self(aclTensor*, 计算输入)：Device侧的aclTensor，功能说明中待被数据复制的输入tensor。支持空tensor, 支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持ND，shape支持0-8维。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、BFLOAT16、FLOAT类型。
-
-  - repeats(int64_t, 计算输入)：重复的次数。Host侧的int64_t类型。repeats的值必须为非负数。
-
-  - outputSize(int64_t, 计算输入)：进行重复后的tensor最终大小。Host侧的int64_t类型。outputSize必须等于self的元素个数 * repeats的值。
-
-  - out(aclTensor*, 计算输出)：Device侧的aclTensor，功能说明中数据复制完成的输出tensor。数据类型需要与self一致，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，shape为1D Tensor，shape大小与outputSize相同。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、BFLOAT16、FLOAT类型。
-
-  - workspaceSize(uint64_t*, 出参)：返回需要在Device侧申请的workspace大小。
-
-  - executor(aclOpExecutor**, 出参)：返回op执行器，包含了算子计算流程。
-
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+    <col style="width: 180px">
+    <col style="width: 120px">
+    <col style="width: 280px">
+    <col style="width: 320px">
+    <col style="width: 250px">
+    <col style="width: 120px">
+    <col style="width: 140px">
+    <col style="width: 140px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+        <th>使用说明</th>
+        <th>数据类型</th>
+        <th>数据格式</th>
+        <th>维度(shape)</th>
+        <th>非连续Tensor</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>self（aclTensor*）</td>
+        <td>输入</td>
+        <td>功能说明中待被数据复制的输入tensor。</td>
+        <td>支持空Tensor。</td>
+        <td>UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、BFLOAT16、FLOAT</td>
+        <td>ND</td>
+        <td>0-8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>repeats（int64_t）</td>
+        <td>输入</td>
+        <td>重复的次数。</td>
+        <td>repeats的值必须为非负数。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>outputSize（int64_t）</td>
+        <td>输入</td>
+        <td>进行重复后的tensor最终大小。</td>
+        <td>outputSize必须等于self的元素个数 * repeats的值。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>out（aclTensor*）</td>
+        <td>输出</td>
+        <td>功能说明中数据复制完成的输出tensor。</td>
+        <td>支持空Tensor。<br>数据类型需要与self一致。<br>shape为1D Tensor，shape大小与outputSize相同。</td>
+        <td>UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、BFLOAT16、FLOAT</td>
+        <td>ND</td>
+        <td>1</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>workspaceSize（uint64_t*）</td>
+        <td>输出</td>
+        <td>返回需要在Device侧申请的workspace大小。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>executor（aclOpExecutor**）</td>
+        <td>输出</td>
+        <td>返回op执行器，包含了算子计算流程。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+    </tbody></table>
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
   第一段接口完成入参校验，出现以下场景时报错：
-  返回161001 (ACLNN_ERR_PARAM_NULLPTR): 1. 传入的self或out是空指针。
-  返回161002 (ACLNN_ERR_PARAM_INVALID): 1. self的数据类型不在支持范围内。
-                                        2. self、out的数据类型不一致。
-                                        3. repeats不为自然数。
-                                        4. self的维度数超过8。
-  ```
+
+  <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+    <col style="width: 300px">
+    <col style="width: 134px">
+    <col style="width: 716px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>返回值</th>
+        <th>错误码</th>
+        <th>描述</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>ACLNN_ERR_PARAM_NULLPTR</td>
+        <td>161001</td>
+        <td>self或out存在空指针。</td>
+      </tr>
+      <tr>
+        <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="4">161002</td>
+        <td>self的数据类型不在支持范围内。</td>
+      </tr>
+      <tr>
+        <td>self、out的数据类型不一致。</td>
+      </tr>
+      <tr>
+        <td>repeats不为自然数。</td>
+      </tr>
+      <tr>
+        <td>self的维度数超过8。</td>
+      </tr>
+    </tbody></table>
 
 ## aclnnRepeatInterleaveInt
 
 - **参数说明：**
 
-  - workspace(void*, 入参)：在Device侧申请的workspace内存地址。
-
-  - workspaceSize(uint64_t, 入参)：在Device侧申请的workspace大小，由第一段接口aclnnRepeatInterleaveIntGetWorkspaceSize获取。
-
-  - executor(aclOpExecutor*, 入参)：op执行器，包含了算子计算流程。
-
-  - stream(aclrtStream, 入参)：指定执行任务的Stream。
-
+  <table style="undefined;table-layout: fixed; width: 1100px"><colgroup>
+    <col style="width: 200px">
+    <col style="width: 130px">
+    <col style="width: 770px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>workspace</td>
+        <td>输入</td>
+        <td>在Device侧申请的workspace内存地址。</td>
+      </tr>
+      <tr>
+        <td>workspaceSize</td>
+        <td>输入</td>
+        <td>在Device侧申请的workspace大小，由第一段接口aclnnRepeatInterleaveIntGetWorkspaceSize获取。</td>
+      </tr>
+      <tr>
+        <td>executor</td>
+        <td>输入</td>
+        <td>op执行器，包含了算子计算流程。</td>
+      </tr>
+      <tr>
+        <td>stream</td>
+        <td>输入</td>
+        <td>指定执行任务的Stream。</td>
+      </tr>
+    </tbody></table>
 
 - **返回值：**
 
@@ -79,8 +217,7 @@
 
 - 确定性计算：
   - aclnnRepeatInterleaveInt默认确定性实现。
-
-在计算时需要满足要求：outputSize的值必须等于 repeats的值 * 元素个数。
+- 其他限制：outputSize的值必须等于 repeats的值 * 元素个数。
 
 ## 调用示例
 
