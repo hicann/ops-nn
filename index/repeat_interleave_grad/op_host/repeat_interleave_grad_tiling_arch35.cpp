@@ -234,8 +234,9 @@ ge::graphStatus RIGDavidTilingImpl::DoTiling(gert::TilingContext* context)
 
     context_->SetBlockDim(realCoreNum_);
 
-    const uint64_t tilingKey = GET_TPL_TILING_KEY(0, 0, 0, templateNum_);
-
+    repeatInterleaveGradTilingKey key;
+    uint64_t tilingKey;
+    GEN_REDUCE_TILING_KEY(tilingKey, key.ReduceTiling, templateNum_);
     context_->SetTilingKey(tilingKey);
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
