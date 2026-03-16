@@ -1870,8 +1870,11 @@ VC8@ops-nn:
       style:
         - ops/ops-nn/index/scatter_elements/op_host/arch35/
         - ops/ops-nn/index/scatter_elements/op_kernel/arch35/
-        - ops/ops-nn/index/scatter_elements_v2/op_host/
-        - ops/ops-nn/index/scatter_elements_v2/op_kernel/
+        - ops/ops-nn/index/scatter_elements_v2/op_host/scatter_elements_v2_asc_tiling.cpp
+        - ops/ops-nn/index/scatter_elements_v2/op_host/scatter_elements_v2_asc_tiling.h
+        - ops/ops-nn/index/scatter_elements_v2/op_kernel/scatter_elements_deterministic.h
+        - ops/ops-nn/index/scatter_elements_v2/op_kernel/scatter_elements_v2_apt.cpp
+        - ops/ops-nn/index/scatter_elements_v2/op_kernel/scatter_elements.h
         - ops/ops-nn/index/masked_scatter/op_host/arch35/
         - ops/ops-nn/index/masked_scatter/op_kernel/arch35/
         - ops/ops-nn/index/scatter_nd_add/op_host/arch35/
