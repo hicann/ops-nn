@@ -1849,6 +1849,8 @@ VC7@ops-nn:
         - ops/ops-nn/pooling/pool_grad_common/op_kernel/
         - ops/ops-nn/pooling/adaptive_pool3d_common/op_host/
         - ops/ops-nn/pooling/adaptive_pool3d_common/op_kernel/
+        - ops/ops-nn/pooling/max_pool3d_grad/op_host/
+        - ops/ops-nn/pooling/max_pool3d_grad/op_kernel/
       opensource_style: null
       kernel_style: null
     unrelease:

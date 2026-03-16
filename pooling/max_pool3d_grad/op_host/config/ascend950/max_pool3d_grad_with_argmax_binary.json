@@ -1,0 +1,239 @@
+{
+    "op_type": "MaxPool3DGrad",
+    "op_list": [
+        {
+            "bin_filename": "MaxPool3DGrad_fp32",
+            "inputs": [
+                {
+                    "name": "orig_x",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "orig_y",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "grads",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "ksize",
+                    "dtype": "list_int",
+                    "value": null
+                },
+                {
+                    "name": "strides",
+                    "dtype": "list_int",
+                    "value": null
+                },
+                {
+                    "name": "padding",
+                    "dtype": "string",
+                    "value": "SAME"
+                },
+                {
+                    "name": "pads",
+                    "dtype": "list_int",
+                    "value": null
+                },
+                {
+                    "name": "data_format",
+                    "dtype": "string",
+                    "value": "NCDHW"
+                }
+            ]
+        },
+        {
+            "bin_filename": "MaxPool3DGrad_fp16",
+            "inputs": [
+                {
+                    "name": "orig_x",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "orig_y",
+                    "index": 1,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "grads",
+                    "index": 2,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "ksize",
+                    "dtype": "list_int",
+                    "value": null
+                },
+                {
+                    "name": "strides",
+                    "dtype": "list_int",
+                    "value": null
+                },
+                {
+                    "name": "padding",
+                    "dtype": "string",
+                    "value": "SAME"
+                },
+                {
+                    "name": "pads",
+                    "dtype": "list_int",
+                    "value": null
+                },
+                {
+                    "name": "data_format",
+                    "dtype": "string",
+                    "value": "NCDHW"
+                }
+            ]
+        },
+        {
+            "bin_filename": "MaxPool3DGrad_bf16",
+            "inputs": [
+                {
+                    "name": "orig_x",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "orig_y",
+                    "index": 1,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "grads",
+                    "index": 2,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "ksize",
+                    "dtype": "list_int",
+                    "value": null
+                },
+                {
+                    "name": "strides",
+                    "dtype": "list_int",
+                    "value": null
+                },
+                {
+                    "name": "padding",
+                    "dtype": "string",
+                    "value": "SAME"
+                },
+                {
+                    "name": "pads",
+                    "dtype": "list_int",
+                    "value": null
+                },
+                {
+                    "name": "data_format",
+                    "dtype": "string",
+                    "value": "NCDHW"
+                }
+            ]
+        }
+    ]
+}
