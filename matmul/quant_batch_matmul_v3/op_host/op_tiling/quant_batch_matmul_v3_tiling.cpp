@@ -26,7 +26,7 @@
 #include "arch35/adaptive_sliding_window_tiling.h"
 #include "arch35/adaptive_sliding_window_basic_api_tiling.h"
 #include "arch35/quant_batch_matmul_v3_iterbatch_tiling.h"
-#include "arch310p/pp_matmul_int8_tiling.h"
+#include "arch20/pp_matmul_int8_tiling.h"
 #include "error_util.h"
 #include "platform/platform_infos_def.h"
 #include "../../op_kernel/quant_batch_matmul_v3_tiling_key.h"

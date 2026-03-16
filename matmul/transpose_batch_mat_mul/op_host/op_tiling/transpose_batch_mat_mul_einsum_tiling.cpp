@@ -30,6 +30,10 @@
 
 using namespace optiling::transpose_batch_mat_mul;
 
+namespace {
+constexpr uint64_t NO_BATCH_DIM_SUM = 2;
+}  // namespace
+
 namespace optiling {
 namespace transpose_batch_mat_mul {
 
@@ -38,10 +42,10 @@ void TransposeBatchMatMulEinsumTiling::DoTiling()
     auto inputDType = context_->GetInputDesc(0)->GetDataType();
     matMulInfo_.sizeInDtype = ge::GetSizeByDataType(inputDType);
     matMulInfo_.isInt8 = isQuantBatchMatmulV3_;
+    matMulInfo_.isQuantBatchMatmulV3 = isQuantBatchMatmulV3_;
     GetHardwareInfo();
     (void)GetMatMulInfo();
     (void)GetTilingKey();
-    ppMatmulDefaultTilingData_.isQuantBatchMatmulV3 = isQuantBatchMatmulV3_;
     (void)GetMatMulTilingData();
     PrintTiling();
 }
@@ -62,7 +66,7 @@ bool TransposeBatchMatMulEinsumTiling::GetMatMulInfo()
                                                        context_->GetOutputShape(idxC)->GetStorageShape();
 
     if (isQuantBatchMatmulV3_) {
-        if (inputAStorageShape.GetDimNum() == 2) {
+        if (inputAStorageShape.GetDimNum() == NO_BATCH_DIM_SUM) {
             matMulInfo_.batchSize = 1;
             matMulInfo_.m = static_cast<uint32_t>(inputAStorageShape[0]);
             matMulInfo_.k = static_cast<uint32_t>(inputAStorageShape[1]);
@@ -71,7 +75,7 @@ bool TransposeBatchMatMulEinsumTiling::GetMatMulInfo()
             matMulInfo_.batchSize = static_cast<uint32_t>(inputAStorageShape[0]);
             ;
             matMulInfo_.m = static_cast<uint32_t>(inputAStorageShape[1]);
-            matMulInfo_.k = static_cast<uint32_t>(inputAStorageShape[2]);
+            matMulInfo_.k = static_cast<uint32_t>(inputAStorageShape[NO_BATCH_DIM_SUM]);
             matMulInfo_.n = static_cast<uint32_t>(outputCStorageShape[1]);
         }
     } else {

@@ -31,7 +31,7 @@
 #include "quant_batch_matmul_v3_kernel_tiling_data.h"
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
 #include "quant_batch_matmul_v3_pertoken_arch20.h"
-#include "arch310p/pp_matmul_kernel.h"
+#include "arch20/pp_matmul_kernel.h"
 #endif
 
 // if run with ttk without bias, can't get DTYPE_BIAS macro

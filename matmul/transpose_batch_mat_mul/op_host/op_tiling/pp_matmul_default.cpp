@@ -66,7 +66,7 @@ void PpMatmulDefaultTilingData::SetBaseOp(uint64_t coreNum, uint64_t l0cSize, ui
     mLoop = CeilDiv(opShape.m, opShape.m0);
     nLoop = CeilDiv(opShape.n, opShape.n0);
     coreLoop = opShape.batchSize * mLoop * nLoop;
-    if (isQuantBatchMatmulV3) {
+    if (mmInfo.isQuantBatchMatmulV3) {
         bool transB = tilingKey & TRANS_B_MASK;
         if (mLoop == 1 && (0 == 0) && transB && coreLoop % coreNum < coreNum / CONST_4 * CONST_3) {
             uint32_t x = CeilDiv(opShape.n, coreNum);
@@ -102,7 +102,7 @@ void PpMatmulDefaultTilingData::SetBaseOp(uint64_t coreNum, uint64_t l0cSize, ui
 }
 
 void PpMatmulDefaultTilingData::End(const MatMulInfo &mmInfo, bool isAscend310P) {
-    if (isQuantBatchMatmulV3) {
+    if (mmInfo.isQuantBatchMatmulV3) {
         uint32_t l1AbPpBuffLen = L0AB_PINGPONG_BUFFER_LEN_FP16;
         uint32_t shapeCount = opShape.m0 + opShape.n0;
         uint32_t k0Max = (shapeCount == 0) ? l1AbPpBuffLen : (l1AbPpBuffLen / shapeCount);
