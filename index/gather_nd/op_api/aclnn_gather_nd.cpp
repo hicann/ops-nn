@@ -131,6 +131,10 @@ static inline bool CheckOutShape(const aclTensor *self, const aclTensor *indices
     outShape.AppendDim(self->GetViewShape().GetDim(i));
   }
 
+  if (self->GetStorageFormat() != Format::FORMAT_ND || indices->GetStorageFormat() != Format::FORMAT_ND) {
+    OP_LOGW("Only support ND storage format for self and indices in GatherNd");
+  }
+
   // 判断out的shape与推导出的输出shape是否相等
   OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(out, outShape, return false);
 
