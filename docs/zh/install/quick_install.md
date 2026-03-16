@@ -126,8 +126,8 @@ pip3 install -r requirements.txt
             # 确保安装包具有可执行权限
             chmod +x Ascend-cann-toolkit_${cann_version}_linux-${arch}.run
             # 安装命令
-        ./Ascend-cann-toolkit_${cann_version}_linux-${arch}.run --install --install-path=${install_path}
-        ```
+           ./Ascend-cann-toolkit_${cann_version}_linux-${arch}.run --install --install-path=${install_path}
+           ```
 
         2. **安装CANN ops包（运行态依赖）**
 
