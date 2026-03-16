@@ -85,19 +85,19 @@ bool QuantBatchMatmulV4PerblockTiling::AnalyzeAttrs()
                     return false);
     inputParams_.groupSize = static_cast<uint64_t>(*groupSizePtr);
     inputParams_.groupSizeM = (static_cast<uint64_t>(inputParams_.groupSize) >> GROUP_M_OFFSET) & GROUP_MNK_BIT_SIZE;
-    inputParams_.groupSizeK = (static_cast<uint64_t>(inputParams_.groupSize) >> GROUP_N_OFFSET) & GROUP_MNK_BIT_SIZE;
-    inputParams_.groupSizeN = static_cast<uint64_t>(inputParams_.groupSize) & GROUP_MNK_BIT_SIZE;
+    inputParams_.groupSizeN = (static_cast<uint64_t>(inputParams_.groupSize) >> GROUP_N_OFFSET) & GROUP_MNK_BIT_SIZE;
+    inputParams_.groupSizeK = static_cast<uint64_t>(inputParams_.groupSize) & GROUP_MNK_BIT_SIZE;
     OP_TILING_CHECK(inputParams_.groupSize == 0,
                     VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Group size cannot be 0."),
                     return false);
     OP_TILING_CHECK(inputParams_.groupSizeM == 0,
                     VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Group size M cannot be 0."),
                     return false);
-    OP_TILING_CHECK(inputParams_.groupSizeK == 0,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Group size K cannot be 0."),
+    OP_TILING_CHECK(inputParams_.groupSizeK != 128,
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Group size K should be 128."),
                     return false);
-    OP_TILING_CHECK(inputParams_.groupSizeN == 0,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Group size N cannot be 0."),
+    OP_TILING_CHECK(inputParams_.groupSizeN != 128,
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Group size N should be 128."),
                     return false);
 
     // check transposeX1
