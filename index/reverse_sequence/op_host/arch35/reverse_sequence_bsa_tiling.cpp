@@ -271,7 +271,6 @@ uint64_t ReverseSequenceBSATiling::GetTilingKey() const
     OP_LOGD("ReverseSequenceBSATiling::GetTilingKey begin");
     const uint64_t tilingKey = GET_TPL_TILING_KEY(TEMPLATE_MODE, inputData_.xDtypeSize, 1);
     OP_LOGD(context_->GetNodeName(), "tilingKey is: [%lu]", tilingKey);
-    printf("tiling key is :%ld", tilingKey);
     return tilingKey;
 }
 

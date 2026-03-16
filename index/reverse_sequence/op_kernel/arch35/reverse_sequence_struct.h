@@ -16,6 +16,16 @@
 #ifndef REVERSE_SEQUENCE_STRUCT_H
 #define REVERSE_SEQUENCE_STRUCT_H
 namespace ReverseSequence {
+
+class ReverseSequenceTilingData {
+public:
+    int64_t batchDim;
+    int64_t seqDim;
+    int64_t batchSize;
+    int64_t reverseSize;
+    int64_t perCoreHandleNums;
+};
+
 class ReverseSequenceSimtTilingData4RegBase {
 public:
     int64_t batchDim;
@@ -32,7 +42,7 @@ public:
 };
 
 class ReverseSequenceBSATilingData{
-    public:
+public:
     int64_t bDim;
     int64_t sDim;
     int64_t aDim;
