@@ -58,7 +58,7 @@ public:
 
     __aicore__ inline void Process()
     {
-        int32_t rowMoveCnt = CEIL_DIV(this->rowWork, this->rowStep);
+        int32_t rowMoveCnt1 = CEIL_DIV(this->rowWork, this->rowStep);
         CopyInWeights();
 
         LocalTensor<T> gammaLocal = weightBuf01.template Get<T>();
@@ -67,7 +67,7 @@ public:
         int32_t gmOffsetScale = 0;
         int32_t elementCount = this->numLastDimAligned * this->rowStep;
 
-        for (int32_t rowIdx = 0; rowIdx < rowMoveCnt - 1; ++rowIdx) {
+        for (int32_t rowIdx1 = 0; rowIdx1 < rowMoveCnt1 - 1; ++rowIdx1) {
             CopyInX1X2(gmOffset, this->rowStep, elementCount);
             AddX1X2(gmOffset, elementCount);
             CopyOutX(gmOffset, this->rowStep, elementCount);
@@ -79,7 +79,7 @@ public:
         }
         {
             elementCount = this->numLastDimAligned * this->rowTail_;
-            int32_t rowIdx = rowMoveCnt - 1;
+            int32_t rowIdx1 = rowMoveCnt1 - 1;
             CopyInX1X2(gmOffset, this->rowTail_, elementCount);
             AddX1X2(gmOffset, elementCount);
             CopyOutX(gmOffset, this->rowTail_, elementCount);
@@ -98,31 +98,31 @@ private:
         inRowsQue.EnQue(x1x2LocalIn);
     }
 
-    __aicore__ inline void AddX1X2(int32_t gmOffset, int32_t elementCount)
+    __aicore__ inline void AddX1X2(int32_t gmOffset, int32_t elementCount1)
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
 
         LocalTensor<T> x1x2Local = inRowsQue.template DeQue<T>();
-        auto x1Local = x1x2Local[elementCount];
+        auto x1Local = x1x2Local[elementCount1];
         auto x2Local = x1x2Local[0];
         // never have fp32 input here. All fp16/bf16 should cast to fp32 before Add
-        Cast(xLocalFp32, x1Local, RoundMode::CAST_NONE, elementCount);
-        Cast(yLocalFp32, x2Local, RoundMode::CAST_NONE, elementCount);
+        Cast(xLocalFp32, x1Local, RoundMode::CAST_NONE, elementCount1);
+        Cast(yLocalFp32, x2Local, RoundMode::CAST_NONE, elementCount1);
         inRowsQue.FreeTensor(x1x2Local);
         PipeBarrier<PIPE_V>();
-        Add(xLocalFp32, xLocalFp32, yLocalFp32, elementCount);
+        Add(xLocalFp32, xLocalFp32, yLocalFp32, elementCount1);
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void CopyOutX(int32_t gmOffset, int32_t rowCount, int32_t elementCount)
+    __aicore__ inline void CopyOutX(int32_t gmOffset, int32_t rowCount, int32_t elementCount2)
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();
         LocalTensor<T> xOut = outRowsQue.template AllocTensor<T>();
         if constexpr (is_same<T, half>::value) {
-            Cast(xOut, xLocalFp32, RoundMode::CAST_NONE, elementCount);
+            Cast(xOut, xLocalFp32, RoundMode::CAST_NONE, elementCount2);
         } else { // BF16
-            Cast(xOut, xLocalFp32, RoundMode::CAST_RINT, elementCount);
+            Cast(xOut, xLocalFp32, RoundMode::CAST_RINT, elementCount2);
         }
         PipeBarrier<PIPE_V>();
         outRowsQue.EnQue(xOut);
@@ -131,16 +131,16 @@ private:
         outRowsQue.FreeTensor(x);
     }
 
-    __aicore__ inline void CopyOutY(int32_t gmOffset, int32_t rowCount, int32_t elementCount)
+    __aicore__ inline void CopyOutY(int32_t gmOffset, int32_t rowCount, int32_t elementCount3)
     {
         PipeBarrier<PIPE_ALL>();
         LocalTensor<float> yLocal = xBufFp32.Get<float>();
         LocalTensor<T> yOut = yBufFp32.Get<T>();
         PipeBarrier<PIPE_ALL>();
         if constexpr (is_same<T, half>::value) {
-            Cast(yOut, yLocal, RoundMode::CAST_NONE, elementCount);
+            Cast(yOut, yLocal, RoundMode::CAST_NONE, elementCount3);
         } else { // BF16
-            Cast(yOut, yLocal, RoundMode::CAST_RINT, elementCount);
+            Cast(yOut, yLocal, RoundMode::CAST_RINT, elementCount3);
         }
         PipeBarrier<PIPE_ALL>();
         DataCopyExStride(this->xGm[gmOffset], yOut, this->numLastDim, rowCount, this->ubAligned);
@@ -165,16 +165,16 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeRmsNorm(int32_t nums, int32_t elementCount, LocalTensor<T>& gammaLocal)
+    __aicore__ inline void ComputeRmsNorm(int32_t nums1, int32_t elementCount2, LocalTensor<T>& gammaLocal)
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>(); // xLocalFp32 <-- x1 + x2
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
 
-        Mul(yLocalFp32, xLocalFp32, xLocalFp32, elementCount); // yLocalFp32 <- x ** 2
+        Mul(yLocalFp32, xLocalFp32, xLocalFp32, elementCount2); // yLocalFp32 <- x ** 2
         PipeBarrier<PIPE_V>();
 
         // reduce#1 for mean
-        for (int32_t rid = 0; rid < nums; ++rid) {
+        for (int32_t rid = 0; rid < nums1; ++rid) {
             auto roundOffset = rid * this->numLastDimAligned;
             float squareSumTemp =
                 ReduceSumHalfInterval(yLocalFp32[roundOffset], this->numLastDim); // aveLocalTemp <-- E(x**2)
@@ -190,7 +190,7 @@ private:
 
         Cast(yLocalFp32, gammaLocal, RoundMode::CAST_NONE, this->numLastDim); // yLocalFp32 <- gamma
         PipeBarrier<PIPE_V>();
-        for (int32_t rid = 0; rid < nums; ++rid) {
+        for (int32_t rid = 0; rid < nums1; ++rid) {
             auto roundOffset = rid * this->numLastDimAligned;
             Mul(xLocalFp32[roundOffset], xLocalFp32[roundOffset], yLocalFp32,
                 this->numLastDim); // xLocalFp32 <- x * rstd * gamma
@@ -200,7 +200,7 @@ private:
         if (this->betaFlag == 1) {
             LocalTensor<T> betaLocal = weightBuf04.template Get<T>();
             Cast(yLocalFp32, betaLocal, RoundMode::CAST_NONE, this->numLastDim); // yLocalFp32 <- gamma
-            for (int32_t rid = 0; rid < nums; ++rid) {
+            for (int32_t rid = 0; rid < nums1; ++rid) {
                 auto roundOffset = rid * this->numLastDimAligned;
                 PipeBarrier<PIPE_V>();
                 Add(xLocalFp32[roundOffset], xLocalFp32[roundOffset], yLocalFp32, this->numLastDim);
@@ -327,14 +327,14 @@ private:
     }
 
     __aicore__ inline void ScaleTensor(
-        LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor, LocalTensor<float>& scaleTensor, int32_t size,
+        LocalTensor<float>& srcTensor1, LocalTensor<float>& tmpTensor, LocalTensor<float>& scaleTensor, int32_t size,
         int32_t nums)
     {
-        float maxTemp;
         float scaleTemp;
+        float maxTemp;
         event_t eventVS;
         event_t eventSV;
-        Abs(tmpTensor, srcTensor, size); // tmpLocal <-- |y * smooth1|
+        Abs(tmpTensor, srcTensor1, size); // tmpLocal <-- |y * smooth1|
         PipeBarrier<PIPE_V>();
         for (int32_t rid = 0; rid < nums; ++rid) {
             ReduceMaxInplace(tmpTensor[rid * this->numLastDimAligned], this->numLastDim);
@@ -347,22 +347,22 @@ private:
             eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
             SetFlag<HardEvent::S_V>(eventSV);
             WaitFlag<HardEvent::S_V>(eventSV);
-            auto srcSlice = srcTensor[rid * this->numLastDimAligned];
+            auto srcSlice = srcTensor1[rid * this->numLastDimAligned];
             Muls(srcSlice, srcSlice, scaleTemp, this->numLastDim);
         }
     }
 
 private:
     TPipe* Ppipe = nullptr;
-    TQue<QuePosition::VECIN, BUFFER_NUM> inRowsQue;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outRowsQue;
+    TQue<QuePosition::VECIN, BUFFER_NUM> inRowsQue;
 
-    TBuf<TPosition::VECCALC> xBufFp32;
     TBuf<TPosition::VECCALC> yBufFp32;
+    TBuf<TPosition::VECCALC> xBufFp32;
 
     TBuf<TPosition::VECCALC> weightBuf01;
-    TBuf<TPosition::VECCALC> weightBuf02;
     TBuf<TPosition::VECCALC> weightBuf03;
+    TBuf<TPosition::VECCALC> weightBuf02;
     TBuf<TPosition::VECCALC> weightBuf04;
     TBuf<TPosition::VECCALC> scalesBuf;
 

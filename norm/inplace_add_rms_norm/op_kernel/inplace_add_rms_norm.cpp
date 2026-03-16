@@ -22,16 +22,16 @@ using namespace AscendC;
 
 #define GENERAL_OP_IMPL(templateClass, ...)              \
     do {                                                 \
-        templateClass<__VA_ARGS__> op(&pipe);            \
-        op.Init(x1, x2, gamma, y, rstd, x, workspace, &tilingData); \
+        templateClass<__VA_ARGS__> op(&inplacePipe);            \
+        op.Init(x1, x2, gamma, y, rstd, x, workspace, &inplaceTilingData); \
         op.Process();                                    \
     } while (0)
 
 extern "C" __global__ __aicore__ void inplace_add_rms_norm(
     GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace, GM_ADDR tiling)
 {
-    TPipe pipe;
-    GET_TILING_DATA(tilingData, tiling);
+    TPipe inplacePipe;
+    GET_TILING_DATA(inplaceTilingData, tiling);
     if (TILING_KEY_IS(10)) {
         GENERAL_OP_IMPL(KernelAddRmsNorm, half, 1);
     } else if (TILING_KEY_IS(20)) {

@@ -30,17 +30,17 @@ public:
         Ppipe = pipe;
     }
 
+    __aicore__ inline uint32_t ROUND_UP32(uint32_t x)
+    {
+        return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE;
+    }
+
     __aicore__ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y)
     {
         if (y > 0) {
             return (x + y - 1) / y;
         }
         return 0;
-    }
-
-    __aicore__ inline uint32_t ROUND_UP32(uint32_t x)
-    {
-        return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE;
     }
 
     __aicore__ inline uint32_t BlockAlign(uint32_t x, uint32_t blockElem)
@@ -51,14 +51,14 @@ public:
         return 0;
     }
 
-    __aicore__ inline uint32_t MIN(uint32_t x, uint32_t y)
+    __aicore__ inline uint32_t MIN(uint32_t a, uint32_t b)
     {
-        return x < y ? x : y;
+        return a < b ? a : b;
     }
 
-    __aicore__ inline uint32_t MAX(uint32_t x, uint32_t y)
+    __aicore__ inline uint32_t MAX(uint32_t a, uint32_t b)
     {
-        return x > y ? x : y;
+        return a > b ? a : b;
     }
 
     __aicore__ inline void Init(
@@ -150,15 +150,15 @@ public:
             padParams.rightPadding = numLastDimAligned - numLastDim;
         }
 
-        LocalTensor<float> betaLocal = betaBuf.template Get<float>();
-        LocalTensor<float> gammaLocal = gammaBuf.template Get<float>();
+        LocalTensor<float> betaLocalReduce = betaBuf.template Get<float>();
+        LocalTensor<float> gammaLocalReduce = gammaBuf.template Get<float>();
 
         if constexpr (is_same<float, T>::value) {
-            DataCopyEx(betaLocal, betaGm, numLastDim);
-            DataCopyEx(gammaLocal, gammaGm, numLastDim);
+            DataCopyEx(betaLocalReduce, betaGm, numLastDim);
+            DataCopyEx(gammaLocalReduce, gammaGm, numLastDim);
         } else {
-            auto betaLocalHalf = betaLocal.ReinterpretCast<T>();
-            auto gammaLocalHalf = gammaLocal.ReinterpretCast<T>();
+            auto betaLocalHalf = betaLocalReduce.ReinterpretCast<T>();
+            auto gammaLocalHalf = gammaLocalReduce.ReinterpretCast<T>();
             DataCopyEx(betaLocalHalf[numLastDimAligned], betaGm, numLastDim);
             DataCopyEx(gammaLocalHalf[numLastDimAligned], gammaGm, numLastDim);
         }
@@ -180,8 +180,8 @@ public:
             auto x1x2Local = x1x2Que.template DeQue<T>();
 
             if constexpr (!is_same<T, float>::value) {
-                Cast(gammaLocal, gammaLocal.ReinterpretCast<T>()[numLastDimAligned], RoundMode::CAST_NONE, numLastDim);
-                Cast(betaLocal, betaLocal.ReinterpretCast<T>()[numLastDimAligned], RoundMode::CAST_NONE, numLastDim);
+                Cast(gammaLocalReduce, gammaLocalReduce.ReinterpretCast<T>()[numLastDimAligned], RoundMode::CAST_NONE, numLastDim);
+                Cast(betaLocalReduce, betaLocalReduce.ReinterpretCast<T>()[numLastDimAligned], RoundMode::CAST_NONE, numLastDim);
             }
 
             if constexpr (IS_BIAS_BROADCAST) {
@@ -191,9 +191,9 @@ public:
             }
             CopyOutAdditionalOutput(0, rowStep);
             if constexpr (IS_NORMAL_SPECIAL_REDUCE_BIG_N_CASE) {
-                PrecisionComputeBigN(rowStep, gammaLocal, betaLocal);
+                PrecisionComputeBigN(rowStep, gammaLocalReduce, betaLocalReduce);
             } else {
-                PrecisionCompute(rowStep, gammaLocal, betaLocal, elementCount);
+                PrecisionCompute(rowStep, gammaLocalReduce, betaLocalReduce, elementCount);
             }
             CopyOut(0, rowStep);
             gmOffset += rowStep * numLastDim;
@@ -212,9 +212,9 @@ public:
 
             CopyOutAdditionalOutput(rowIdx, rowStep);
             if constexpr (IS_NORMAL_SPECIAL_REDUCE_BIG_N_CASE) {
-                PrecisionComputeBigN(rowStep, gammaLocal, betaLocal);
+                PrecisionComputeBigN(rowStep, gammaLocalReduce, betaLocalReduce);
             } else {
-                PrecisionCompute(rowStep, gammaLocal, betaLocal, elementCount);
+                PrecisionCompute(rowStep, gammaLocalReduce, betaLocalReduce, elementCount);
             }
             CopyOut(rowIdx, rowStep);
             gmOffset += rowStep * numLastDim;
@@ -237,9 +237,9 @@ public:
 
                 CopyOutAdditionalOutput(rowIdx, rowTail_);
                 if constexpr (IS_NORMAL_SPECIAL_REDUCE_BIG_N_CASE) {
-                    PrecisionComputeBigN(rowTail_, gammaLocal, betaLocal);
+                    PrecisionComputeBigN(rowTail_, gammaLocalReduce, betaLocalReduce);
                 } else {
-                    PrecisionCompute(rowTail_, gammaLocal, betaLocal, elementCount);
+                    PrecisionCompute(rowTail_, gammaLocalReduce, betaLocalReduce, elementCount);
                 }
                 CopyOut(rowIdx, rowTail_);
             }
@@ -622,7 +622,7 @@ private:
         PipeBarrier<PIPE_V>();
 
         // 8. y = (x - mean) / rstd * beta + gamma
-        LocalTensor<T> yLocal = yQue.template AllocTensor<T>();
+        LocalTensor<T> yLocalBigN = yQue.template AllocTensor<T>();
         if constexpr (!is_same<T, float>::value) {
             Level0MulFp32Short(zLocalFp32, gammaLocal, zLocalFp32, numLastDimAligned, nums, numLastDim);
             PipeBarrier<PIPE_V>();
@@ -630,39 +630,39 @@ private:
             PipeBarrier<PIPE_V>();
 
             if constexpr (is_same<T, half>::value) {
-                Cast(yLocal, zLocalFp32, RoundMode::CAST_NONE, elementNum);
+                Cast(yLocalBigN, zLocalFp32, RoundMode::CAST_NONE, elementNum);
             } else {
-                Cast(yLocal, zLocalFp32, RoundMode::CAST_RINT, elementNum);
+                Cast(yLocalBigN, zLocalFp32, RoundMode::CAST_RINT, elementNum);
             }
             PipeBarrier<PIPE_V>();
         } else {
-            Level0MulFp32Short(yLocal, gammaLocal, zLocalFp32, numLastDimAligned, nums, numLastDim);
+            Level0MulFp32Short(yLocalBigN, gammaLocal, zLocalFp32, numLastDimAligned, nums, numLastDim);
             PipeBarrier<PIPE_V>();
-            Level0AddFp32Short(yLocal, betaLocal, yLocal, numLastDimAligned, nums, numLastDim);
+            Level0AddFp32Short(yLocalBigN, betaLocal, yLocalBigN, numLastDimAligned, nums, numLastDim);
             PipeBarrier<PIPE_V>();
         }
 
         meanQue.EnQue(meanLocal);
         rstdQue.EnQue(rstdLocal);
-        yQue.EnQue(yLocal);
+        yQue.EnQue(yLocalBigN);
     }
 #endif
 
     __aicore__ inline void CopyOut(int32_t rowIdx, int32_t rowCount)
     {
-        LocalTensor<T> res = yQue.template DeQue<T>();
-        uint32_t gmOffset = rowIdx * rowStep * numLastDim;
-        DataCopyEx(yGm[gmOffset], res, numLastDim, rowCount);
-        yQue.FreeTensor(res);
+        LocalTensor<T> resReduce = yQue.template DeQue<T>();
+        uint32_t gmOffsetReduce = rowIdx * rowStep * numLastDim;
+        DataCopyEx(yGm[gmOffsetReduce], resReduce, numLastDim, rowCount);
+        yQue.FreeTensor(resReduce);
 
 #if OUTPUT_MEAN_RSTD == 1
-        uint32_t gmOffsetMean = rowIdx * rowStep;
-        LocalTensor<float> mean = meanQue.template DeQue<float>();
-        LocalTensor<float> rstd = rstdQue.template DeQue<float>();
-        DataCopyEx(meanGm[gmOffsetMean], mean, rowCount);
-        DataCopyEx(rstdGm[gmOffsetMean], rstd, rowCount);
-        meanQue.FreeTensor(mean);
-        rstdQue.FreeTensor(rstd);
+        uint32_t gmOffsetMeanReduce = rowIdx * rowStep;
+        LocalTensor<float> meanReduce = meanQue.template DeQue<float>();
+        LocalTensor<float> rstdReduce = rstdQue.template DeQue<float>();
+        DataCopyEx(meanGm[gmOffsetMeanReduce], meanReduce, rowCount);
+        DataCopyEx(rstdGm[gmOffsetMeanReduce], rstdReduce, rowCount);
+        meanQue.FreeTensor(meanReduce);
+        rstdQue.FreeTensor(rstdReduce);
 #endif
     }
 
@@ -697,8 +697,8 @@ private:
     GlobalTensor<float> rstdGm;
     GlobalTensor<float> workspaceGm;
     uint32_t numCore;
-    uint32_t numFirstDim;
     uint32_t numLastDim;
+    uint32_t numFirstDim;
     uint32_t rowStep;
     uint32_t rowWork;
     uint32_t gmOffset_;

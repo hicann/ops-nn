@@ -41,39 +41,39 @@ public:
         }
         // get start index for current core, core parallel
         xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * block_factor * num_col, row_work * num_col);
-        gammaGm.SetGlobalBuffer((__gm__ T_GAMMA*)gamma, num_col);
         yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * block_factor * num_col, row_work * num_col);
+        gammaGm.SetGlobalBuffer((__gm__ T_GAMMA*)gamma, num_col);
         rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * block_factor, block_factor);
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
         InitRstdData();
 #endif
 
         // pipe alloc memory to queue, the unit is Bytes
-        pipe.InitBuffer(inQueueX, BUFFER_NUM, ub_factor * sizeof(T));
         pipe.InitBuffer(inQueueGamma, BUFFER_NUM, ub_factor * sizeof(T_GAMMA));
-        pipe.InitBuffer(outQueueY, BUFFER_NUM, ub_factor * sizeof(T));
+        pipe.InitBuffer(inQueueX, BUFFER_NUM, ub_factor * sizeof(T));
         pipe.InitBuffer(outQueueRstd, BUFFER_NUM, row_factor * sizeof(float));
+        pipe.InitBuffer(outQueueY, BUFFER_NUM, ub_factor * sizeof(T));
 
         if (std::is_same<T, half>::value || std::is_same<T, bfloat16_t>::value || is_gemma == 1) {
             pipe.InitBuffer(x_fp32_buf, ub_factor * sizeof(float));
         }
-        pipe.InitBuffer(sqx_buf, ub_factor * sizeof(float));
         pipe.InitBuffer(sum_buf, row_factor * NUM_PER_BLK_FP32 * sizeof(float));
+        pipe.InitBuffer(sqx_buf, ub_factor * sizeof(float));
         pipe.InitBuffer(reduce_fp32_buf, NUM_PER_REP_FP32 * sizeof(float));
     }
 
     __aicore__ inline void InitRstdData()
     {
-        uint32_t row_factor_align = ROUND_UP(row_factor, NUM_PER_BLK_FP32);
-        pipe.InitBuffer(outTmpZeroBuf, row_factor_align * sizeof(float));
+        uint32_t row_factor_align_v1 = ROUND_UP(row_factor, NUM_PER_BLK_FP32);
+        pipe.InitBuffer(outTmpZeroBuf, row_factor_align_v1 * sizeof(float));
         LocalTensor<float> temp_zero_tensor = outTmpZeroBuf.Get<float>();
-        Duplicate(temp_zero_tensor, (float)0.0, row_factor_align);
+        Duplicate(temp_zero_tensor, (float)0.0, row_factor_align_v1);
 
         PipeBarrier<PIPE_ALL>();
         uint32_t i_o_max = CeilDiv(row_work, row_factor);
         uint32_t row_tail = row_work - (i_o_max - 1) * row_factor;
         for (uint32_t i_o = 0; i_o < i_o_max - 1; i_o++) {
-            DataCopy(rstdGm[i_o * row_factor], temp_zero_tensor, row_factor_align);
+            DataCopy(rstdGm[i_o * row_factor], temp_zero_tensor, row_factor_align_v1);
         }
         DataCopy(rstdGm[(i_o_max - 1) * row_factor], temp_zero_tensor, ROUND_UP(row_tail, NUM_PER_BLK_FP32));
         PipeBarrier<PIPE_ALL>();
@@ -398,21 +398,21 @@ private:
 private:
     TPipe pipe;
     // create queues for input, in this case depth is equal to buffer num
-    TQue<QuePosition::VECIN, BUFFER_NUM> inQueueX;
     TQue<QuePosition::VECIN, BUFFER_NUM> inQueueGamma;
+    TQue<QuePosition::VECIN, BUFFER_NUM> inQueueX;
     // create queues for output, in this case depth is equal to buffer num
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueY;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueRstd;
     TBuf<TPosition::VECCALC> x_fp32_buf;
-    TBuf<TPosition::VECCALC> sqx_buf;
-    TBuf<TPosition::VECCALC> sum_buf;
-    TBuf<TPosition::VECCALC> reduce_fp32_buf;
     TBuf<TPosition::VECCALC> outTmpZeroBuf;
+    TBuf<TPosition::VECCALC> sqx_buf;
+    TBuf<TPosition::VECCALC> reduce_fp32_buf;
+    TBuf<TPosition::VECCALC> sum_buf;
 
     GlobalTensor<T> xGm;
+    GlobalTensor<float> rstdGm;
     GlobalTensor<T_GAMMA> gammaGm;
     GlobalTensor<T> yGm;
-    GlobalTensor<float> rstdGm;
 
     uint64_t num_row;
     uint64_t num_col;

@@ -47,27 +47,27 @@ public:
               + 3 * colFactor * sizeof(float)
               + 256B_for_reduce + 64B_for_scale
         */
-        Ppipe->InitBuffer(inRowsQue, BUFFER_NUM, 2 * this->lastDimSliceLen * sizeof(T)); // 2 * D * 2
         Ppipe->InitBuffer(outRowQue, BUFFER_NUM, this->lastDimSliceLen * sizeof(T));     // D * 2
+        Ppipe->InitBuffer(inRowsQue, BUFFER_NUM, 2 * this->lastDimSliceLen * sizeof(T)); // 2 * D * 2
         Ppipe->InitBuffer(tmpOutQue, BUFFER_NUM, this->lastDimSliceLen * sizeof(float)); // D * 4
-        Ppipe->InitBuffer(xBufFp32, this->lastDimSliceLen * sizeof(float));              // D * 4
         Ppipe->InitBuffer(yBufFp32, this->lastDimSliceLen * sizeof(float));              // D * 4
         Ppipe->InitBuffer(zBufFp32, this->lastDimSliceLen * sizeof(float));              // D * 4
+        Ppipe->InitBuffer(xBufFp32, this->lastDimSliceLen * sizeof(float));              // D * 4
         // 2 dynamic quant operator required 2 scale buffer.
         Ppipe->InitBuffer(scalesQue, BUFFER_NUM, 2 * ELEM_PER_BLK_FP32 * sizeof(float));
     }
 
     __aicore__ inline void Process()
     {
-        uint32_t baseGmOffset = 0;
         uint32_t rowGmOffset = 0;
+        uint32_t baseGmOffset1 = 0;
         for (int32_t rowIdx = 0; rowIdx < this->rowWork; ++rowIdx) {
             rowGmOffset = 0;
             this->localSum = ZERO;
             this->localMax1 = ZERO;
             this->localMax2 = ZERO;
             for (int32_t colIdx = 0; colIdx < this->lastDimLoopNum; ++colIdx) {
-                ComputeSliceAdd(baseGmOffset, rowGmOffset, this->lastDimSliceLen);
+                ComputeSliceAdd(baseGmOffset1, rowGmOffset, this->lastDimSliceLen);
 
                 this->localSum += ReduceSquareSumSlice(this->lastDimSliceLen);
                 PipeBarrier<PIPE_V>();
@@ -75,7 +75,7 @@ public:
             }
 
             {
-                ComputeSliceAdd(baseGmOffset, rowGmOffset, this->lastDimSliceLenTail);
+                ComputeSliceAdd(baseGmOffset1, rowGmOffset, this->lastDimSliceLenTail);
                 this->localSum += ReduceSquareSumSlice(this->lastDimSliceLenTail);
                 PipeBarrier<PIPE_V>();
             }
@@ -103,12 +103,12 @@ public:
             rowGmOffset = 0;
             for (int32_t colIdx = 0; colIdx < this->lastDimLoopNum; ++colIdx) {
                 ComputeDynamicQuant(rowGmOffset, this->lastDimSliceLen);
-                CopyOutQuant(baseGmOffset, rowGmOffset, this->lastDimSliceLen);
+                CopyOutQuant(baseGmOffset1, rowGmOffset, this->lastDimSliceLen);
                 rowGmOffset += this->lastDimSliceLen;
             }
             {
                 ComputeDynamicQuant(rowGmOffset, this->lastDimSliceLenTail);
-                CopyOutQuant(baseGmOffset, rowGmOffset, this->lastDimSliceLenTail);
+                CopyOutQuant(baseGmOffset1, rowGmOffset, this->lastDimSliceLenTail);
             }
             LocalTensor<float> scalesTensor = scalesQue.template AllocTensor<float>();
             if (this->isOld || this->outQuant1Flag == 1) {
@@ -120,7 +120,7 @@ public:
             scalesQue.EnQue(scalesTensor);
             CopyOutScale(rowIdx);
 
-            baseGmOffset += this->numLastDim;
+            baseGmOffset1 += this->numLastDim;
         }
     }
 
@@ -158,7 +158,7 @@ private:
     __aicore__ inline void CopyOutScale(int32_t idx)
     {
         LocalTensor<float> scalesOut = scalesQue.template DeQue<float>();
-        if (this->isOld || this->outQuant1Flag == 1) {
+        if (this->outQuant1Flag == 1 || this->isOld) {
             DataCopyEx(this->outScale1Gm[idx], scalesOut[0], 1);
         }
 
@@ -169,14 +169,14 @@ private:
     }
 
     __aicore__ inline void CopyInSmoothNorm(
-        LocalTensor<float>& dstLocal, int32_t workspaceOffset, int32_t rowGmOffset, int32_t elementCount,
+        LocalTensor<float>& dstLocal1, int32_t workspaceOffset, int32_t rowGmOffset, int32_t elementCount,
         float scaleNum)
     {
         LocalTensor<float> smoothYLocalIn = inRowsQue.template AllocTensor<float>();
         DataCopyEx(smoothYLocalIn, this->workspaceGm[workspaceOffset + rowGmOffset], elementCount);
         inRowsQue.EnQue(smoothYLocalIn);
         LocalTensor<float> smoothYLocal = inRowsQue.template DeQue<float>();
-        Muls(dstLocal, smoothYLocal, scaleNum, elementCount);
+        Muls(dstLocal1, smoothYLocal, scaleNum, elementCount);
         PipeBarrier<PIPE_V>();
         inRowsQue.FreeTensor(smoothYLocal);
     }
@@ -196,11 +196,11 @@ private:
         UpdateLocalMax(elementCount);
     }
 
-    __aicore__ inline void CopyInTmpX(int32_t rowGmOffset, int32_t elementCount, float rstdLocalTemp)
+    __aicore__ inline void CopyInTmpX(int32_t rowGmOffset1, int32_t elementCount, float rstdLocalTemp)
     {
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
         LocalTensor<float> xLocalIn = inRowsQue.template AllocTensor<float>();
-        DataCopyEx(xLocalIn, this->workspaceGm[rowGmOffset], elementCount);
+        DataCopyEx(xLocalIn, this->workspaceGm[rowGmOffset1], elementCount);
         inRowsQue.EnQue(xLocalIn);
         LocalTensor<float> xLocal = inRowsQue.template DeQue<float>();
         Muls(yLocalFp32, xLocal, rstdLocalTemp, elementCount);
@@ -208,11 +208,11 @@ private:
         inRowsQue.FreeTensor(xLocal);
     }
 
-    __aicore__ inline void CopyInGamma(int32_t rowGmOffset, int32_t elementCount)
+    __aicore__ inline void CopyInGamma(int32_t rowGmOffset2, int32_t elementCount)
     {
         LocalTensor<float> zLocalFp32 = zBufFp32.Get<float>();
         LocalTensor<T> gammaLocalIn = inRowsQue.template AllocTensor<T>();
-        DataCopyEx(gammaLocalIn, this->gammaGm[rowGmOffset], elementCount);
+        DataCopyEx(gammaLocalIn, this->gammaGm[rowGmOffset2], elementCount);
         inRowsQue.EnQue(gammaLocalIn);
         LocalTensor<T> gammaLocal = inRowsQue.template DeQue<T>();
         Cast(zLocalFp32, gammaLocal, RoundMode::CAST_NONE, elementCount); // xLocalFp32 <- gammaFp32
@@ -269,15 +269,15 @@ private:
     }
 
     __aicore__ inline void ComputeSmoothWithFlag(
-        LocalTensor<float> yLocalFp32, LocalTensor<float> zLocalFp32, LocalTensor<float> xLocalFp32,
-        int32_t rowGmOffset, int32_t elementCount)
+        LocalTensor<float> yLocalFp32V1, LocalTensor<float> zLocalFp32, LocalTensor<float> xLocalFp32,
+        int32_t rowGmOffset1, int32_t elementCount)
     {
         if (this->newSingleFirst || this->newSingleSecond ||
             (this->isOld && (this->smooth1Exist || this->smooth2Exist))) {
             LocalTensor<T> smooth12Local = inRowsQue.template DeQue<T>();
             if (this->newSingleFirst || (this->isOld && this->smooth1Exist)) {
                 LocalTensor<T> smooth1Local = smooth12Local[0];
-                Cast(yLocalFp32, smooth1Local, RoundMode::CAST_NONE, elementCount); // yLocalFp32 <- smooth1
+                Cast(yLocalFp32V1, smooth1Local, RoundMode::CAST_NONE, elementCount); // yLocalFp32V1 <- smooth1
             }
             if (this->newSingleSecond || this->oldDouble) {
                 LocalTensor<T> smooth2Local = smooth12Local[this->lastDimSliceLen];
@@ -288,12 +288,12 @@ private:
         }
         if (this->outQuant1Flag == 1 || this->isOld) {
             if (this->smooth1Exist) {
-                Mul(yLocalFp32, xLocalFp32, yLocalFp32, elementCount); // yLocalFp32 <- norm * smooth1
+                Mul(yLocalFp32V1, xLocalFp32, yLocalFp32V1, elementCount); // yLocalFp32V1 <- norm * smooth1
             } else {
-                Muls(yLocalFp32, xLocalFp32, 1.0f, elementCount); // yLocalFp32 <- norm * smooth1
+                Muls(yLocalFp32V1, xLocalFp32, 1.0f, elementCount); // yLocalFp32V1 <- norm * smooth1
             }
             PipeBarrier<PIPE_V>();
-            CopyOutSmoothNorm(yLocalFp32, 0, rowGmOffset, elementCount);
+            CopyOutSmoothNorm(yLocalFp32V1, 0, rowGmOffset1, elementCount);
         }
         if (this->outQuant2Flag == 1 || this->oldDouble) {
             if (this->smooth2Exist) {
@@ -302,56 +302,56 @@ private:
                 Muls(zLocalFp32, xLocalFp32, 1.0f, elementCount); // zLocalFp32 <- norm * smooth2
             }
             PipeBarrier<PIPE_V>();
-            CopyOutSmoothNorm(zLocalFp32, this->numLastDim, rowGmOffset, elementCount);
+            CopyOutSmoothNorm(zLocalFp32, this->numLastDim, rowGmOffset1, elementCount);
         }
     }
 
-    __aicore__ inline void UpdateLocalMax(int32_t elementCount)
+    __aicore__ inline void UpdateLocalMax(int32_t elementCount1)
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
         LocalTensor<float> zLocalFp32 = zBufFp32.Get<float>();
         if (this->outQuant2Flag == 1 || this->oldDouble) {
-            float tmpMax2 = FindSliceMax(zLocalFp32, xLocalFp32, elementCount);
+            float tmpMax2 = FindSliceMax(zLocalFp32, xLocalFp32, elementCount1);
             this->localMax2 = (tmpMax2 > this->localMax2) ? tmpMax2 : localMax2;
         }
         if (this->outQuant1Flag == 1 || (this->isOld)) {
-            float tmpMax1 = FindSliceMax(yLocalFp32, xLocalFp32, elementCount);
+            float tmpMax1 = FindSliceMax(yLocalFp32, xLocalFp32, elementCount1);
             this->localMax1 = (tmpMax1 > this->localMax1) ? tmpMax1 : localMax1;
         }
     }
 
     __aicore__ inline float FindSliceMax(
-        LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor, int32_t elementCount)
+        LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor, int32_t elementCount2)
     {
-        Abs(tmpTensor, srcTensor, elementCount); // tmpLocal <-- |y * smooth|
+        Abs(tmpTensor, srcTensor, elementCount2); // tmpLocal <-- |y * smooth|
         PipeBarrier<PIPE_V>();
-        ReduceMaxInplace(tmpTensor, elementCount);
+        ReduceMaxInplace(tmpTensor, elementCount2);
         PIPE_V_S();
         float maxTemp = tmpTensor.GetValue(0);
         return maxTemp;
     }
 
     __aicore__ inline void CopyOutSmoothNorm(
-        LocalTensor<float>& smoothNormTensor, int32_t workspaceOffset, int32_t rowGmOffset, int32_t elementCount)
+        LocalTensor<float>& smoothNormTensor, int32_t workspaceOffset, int32_t rowGmOffset, int32_t elementCount3)
     {
         LocalTensor<float> ySmoothLocal = tmpOutQue.template AllocTensor<float>();
-        Adds(ySmoothLocal, smoothNormTensor, ZERO, elementCount);
+        Adds(ySmoothLocal, smoothNormTensor, ZERO, elementCount3);
         tmpOutQue.template EnQue<float>(ySmoothLocal);
         LocalTensor<float> ySmooth = tmpOutQue.template DeQue<float>();
-        DataCopyEx(this->workspaceGm[workspaceOffset + rowGmOffset], ySmooth, elementCount);
+        DataCopyEx(this->workspaceGm[workspaceOffset + rowGmOffset], ySmooth, elementCount3);
         tmpOutQue.FreeTensor(ySmooth);
     }
 
-    __aicore__ inline void CopyInX1X2(int32_t baseGmOffset, int32_t rowGmOffset, int32_t elementCount)
+    __aicore__ inline void CopyInX1X2(int32_t baseGmOffset, int32_t rowGmOffset, int32_t elementCount4)
     {
         LocalTensor<T> x1x2LocalIn = inRowsQue.template AllocTensor<T>();
-        DataCopyEx(x1x2LocalIn[0], this->x1Gm[baseGmOffset + rowGmOffset], elementCount);
-        DataCopyEx(x1x2LocalIn[this->lastDimSliceLen], this->x2Gm[baseGmOffset + rowGmOffset], elementCount);
+        DataCopyEx(x1x2LocalIn[0], this->x1Gm[baseGmOffset + rowGmOffset], elementCount4);
+        DataCopyEx(x1x2LocalIn[this->lastDimSliceLen], this->x2Gm[baseGmOffset + rowGmOffset], elementCount4);
         inRowsQue.EnQue(x1x2LocalIn);
     }
 
-    __aicore__ inline void AddX1X2Slice(int32_t rowGmOffset, int32_t elementCount)
+    __aicore__ inline void AddX1X2Slice(int32_t rowGmOffset, int32_t elementCount5)
     {
         LocalTensor<T> x1x2Local = inRowsQue.template DeQue<T>();
         auto x1Local = x1x2Local[0];
@@ -362,82 +362,82 @@ private:
         LocalTensor<float> zLocalFp32 = zBufFp32.Get<float>();
 
         // never have fp32 input here. All fp16/bf16 should cast to fp32 before Add
-        Cast(yLocalFp32, x1Local, RoundMode::CAST_NONE, elementCount);
-        Cast(zLocalFp32, x2Local, RoundMode::CAST_NONE, elementCount);
+        Cast(yLocalFp32, x1Local, RoundMode::CAST_NONE, elementCount5);
+        Cast(zLocalFp32, x2Local, RoundMode::CAST_NONE, elementCount5);
         inRowsQue.FreeTensor(x1x2Local);
         PipeBarrier<PIPE_V>();
-        Add(xLocalFp32, yLocalFp32, zLocalFp32, elementCount);
+        Add(xLocalFp32, yLocalFp32, zLocalFp32, elementCount5);
         PipeBarrier<PIPE_V>();
 
         LocalTensor<T> xLocal = outRowQue.template AllocTensor<T>();
         LocalTensor<float> xLocalToWorkSpace = tmpOutQue.template AllocTensor<float>();
         if constexpr (is_same<T, half>::value) {
-            Cast(xLocal, xLocalFp32, RoundMode::CAST_NONE, elementCount);
+            Cast(xLocal, xLocalFp32, RoundMode::CAST_NONE, elementCount5);
         } else { // BF16
-            Cast(xLocal, xLocalFp32, RoundMode::CAST_RINT, elementCount);
+            Cast(xLocal, xLocalFp32, RoundMode::CAST_RINT, elementCount5);
         }
         outRowQue.template EnQue<T>(xLocal);
-        Adds(xLocalToWorkSpace, xLocalFp32, ZERO, elementCount);
+        Adds(xLocalToWorkSpace, xLocalFp32, ZERO, elementCount5);
         tmpOutQue.template EnQue<float>(xLocalToWorkSpace);
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void CopyOutX(int32_t baseGmOffset, int32_t rowGmOffset, int32_t elementCount)
+    __aicore__ inline void CopyOutX(int32_t baseGmOffset, int32_t rowGmOffset, int32_t elementCount6)
     {
         LocalTensor<T> x = outRowQue.template DeQue<T>();
-        DataCopyEx(this->xGm[baseGmOffset + rowGmOffset], x, elementCount);
+        DataCopyEx(this->xGm[baseGmOffset + rowGmOffset], x, elementCount6);
         outRowQue.FreeTensor(x);
         LocalTensor<float> xFp32 = tmpOutQue.template DeQue<float>();
-        DataCopyEx(this->workspaceGm[rowGmOffset], xFp32, elementCount);
+        DataCopyEx(this->workspaceGm[rowGmOffset], xFp32, elementCount6);
         tmpOutQue.FreeTensor(xFp32);
     }
 
-    __aicore__ inline float ReduceSquareSumSlice(int32_t elementCount)
+    __aicore__ inline float ReduceSquareSumSlice(int32_t elementCount7)
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
-        Mul(yLocalFp32, xLocalFp32, xLocalFp32, elementCount); // yLocalFp32 <- x ** 2
+        Mul(yLocalFp32, xLocalFp32, xLocalFp32, elementCount7); // yLocalFp32 <- x ** 2
         PipeBarrier<PIPE_V>();
-        return ReduceSumHalfInterval(yLocalFp32, elementCount); // aveLocalTemp <-- E(x**2)
+        return ReduceSumHalfInterval(yLocalFp32, elementCount7); // aveLocalTemp <-- E(x**2)
     }
 
     __aicore__ inline void PIPE_MTE3_MTE2()
     {
-        event_t eventMTE3MTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
-        SetFlag<HardEvent::MTE3_MTE2>(eventMTE3MTE2);
-        WaitFlag<HardEvent::MTE3_MTE2>(eventMTE3MTE2);
+        event_t eventMTE3MTE2V1 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
+        SetFlag<HardEvent::MTE3_MTE2>(eventMTE3MTE2V1);
+        WaitFlag<HardEvent::MTE3_MTE2>(eventMTE3MTE2V1);
     }
 
     __aicore__ inline void PIPE_S_V()
     {
-        event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
-        SetFlag<HardEvent::S_V>(eventSV);
-        WaitFlag<HardEvent::S_V>(eventSV);
+        event_t eventSV1 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+        SetFlag<HardEvent::S_V>(eventSV1);
+        WaitFlag<HardEvent::S_V>(eventSV1);
     }
 
     __aicore__ inline void PIPE_V_S()
     {
-        event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-        SetFlag<HardEvent::V_S>(eventVS);
-        WaitFlag<HardEvent::V_S>(eventVS);
+        event_t eventVS1 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+        SetFlag<HardEvent::V_S>(eventVS1);
+        WaitFlag<HardEvent::V_S>(eventVS1);
     }
 
 private:
     TPipe* Ppipe = nullptr;
     GlobalTensor<float> workspaceGm;
 
-    TQue<QuePosition::VECIN, BUFFER_NUM> inRowsQue;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outRowQue;
-    TQue<QuePosition::VECOUT, BUFFER_NUM> tmpOutQue;
+    TQue<QuePosition::VECIN, BUFFER_NUM> inRowsQue;
     TQue<QuePosition::VECOUT, BUFFER_NUM> scalesQue;
+    TQue<QuePosition::VECOUT, BUFFER_NUM> tmpOutQue;
 
-    TBuf<TPosition::VECCALC> xBufFp32;
     TBuf<TPosition::VECCALC> yBufFp32;
-    TBuf<TPosition::VECCALC> zBufFp32;
+    TBuf<TPosition::VECCALC> xBufFp32;
     TBuf<TPosition::VECCALC> reduceBuf;
+    TBuf<TPosition::VECCALC> zBufFp32;
 
-    float localMax1;
     float localMax2;
+    float localMax1;
     float localSum;
 };
 

@@ -165,10 +165,10 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(BatchNormGradV3_50000000, BatchNormGradV3RASplitRTilingData);
 
-// inference
+// inference - channel last format tiling data (NHWC format)
 BEGIN_TILING_DATA_DEF(BatchNormGradV3InferChannelLastTilingData)
-TILING_DATA_FIELD_DEF(int64_t, totalTiles);
-TILING_DATA_FIELD_DEF(int64_t, tilesPerCore);
+TILING_DATA_FIELD_DEF(int64_t, totalTiles);        // total tile count for grad
+TILING_DATA_FIELD_DEF(int64_t, tilesPerCore);      // tiles per core for grad
 TILING_DATA_FIELD_DEF(int64_t, usedCoreNums);
 TILING_DATA_FIELD_DEF(int64_t, totalALen);
 TILING_DATA_FIELD_DEF(int64_t, aOuter);
@@ -183,9 +183,10 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(BatchNormGradV3_900000, BatchNormGradV3InferChannelLastTilingData);
 
+// BatchNormGradV3 inference tiling data for NCHW/NCDHW format
 BEGIN_TILING_DATA_DEF(BatchNormGradV3InferTilingData)
-TILING_DATA_FIELD_DEF(int64_t, totalTiles);
-TILING_DATA_FIELD_DEF(int64_t, tilesPerCore);
+TILING_DATA_FIELD_DEF(int64_t, totalTiles);        // grad total tile count
+TILING_DATA_FIELD_DEF(int64_t, tilesPerCore);      // grad tiles per core
 TILING_DATA_FIELD_DEF(int64_t, usedCoreNums);
 TILING_DATA_FIELD_DEF(int64_t, totalB0Len);
 TILING_DATA_FIELD_DEF(int64_t, totalALen);
@@ -485,8 +486,9 @@ private:
     void SetBlockFactors(int64_t aDim_, int64_t dtypeSize);
 
 private:
-    int64_t reservUbSizeForAlign{0};
+    // member variables for RA recompute tiling
     int64_t binaryAddUbNeed{0};
+    int64_t reservUbSizeForAlign{0};
     int64_t binaryAddQuotient{0};
     BatchNormGradV3RARecomputeTilingData tilingData;
 };

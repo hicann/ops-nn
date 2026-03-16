@@ -21,17 +21,17 @@
 
 using namespace AscendC;
 
-template <typename Tp, Tp v>
+template <typename Tp1, Tp1 v>
 struct integral_constant {
-    static constexpr Tp value = v;
+    static constexpr Tp1 value = v;
 };
 using true_type = integral_constant<bool, true>;
 using false_type = integral_constant<bool, false>;
 template <typename, typename>
 struct is_same : public false_type {
 };
-template <typename Tp>
-struct is_same<Tp, Tp> : public true_type {
+template <typename Tp2>
+struct is_same<Tp2, Tp2> : public true_type {
 };
 
 constexpr uint32_t BUFFER_NUM = 1;
@@ -40,14 +40,14 @@ constexpr uint32_t REDUCE_REP_STRIDE = 8;
 constexpr uint32_t FLOAT_BLOCK_ELEM = 8;
 constexpr uint32_t BRCB_ONCE_ELEM = 8;
 constexpr uint32_t MAX_REP_NUM = 255;
-constexpr uint32_t MAX_COPY_LENTH = 2000;
 constexpr uint32_t USE_INT_TOW = 2;
+constexpr uint32_t MAX_COPY_LENTH = 2000;
 
 inline volatile __gm__ uint32_t g_FixedOutputSync[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 __aicore__ inline constexpr bool IsDataCopyPadSupport()
 {
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003) || __CCE_AICORE__ == 220
     return true;
 #else
     return false;
@@ -76,9 +76,9 @@ __aicore__ inline void SafeDataCopy(
                 return; // �˴���Ȼ���ڴ��̤
             }
             DataCopy(dstGlobal, srcLocal, numAlignedBlocks);
-            event_t eventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_S));
-            AscendC::SetFlag<AscendC::HardEvent::MTE3_S>(eventID);
-            AscendC::WaitFlag<AscendC::HardEvent::MTE3_S>(eventID);
+            event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_S));
+            AscendC::SetFlag<AscendC::HardEvent::MTE3_S>(eventId);
+            AscendC::WaitFlag<AscendC::HardEvent::MTE3_S>(eventId);
             const int rollbackEleCount = calCount - numAlignedBlocks;          // ������Ҫ���˴���byte��
             const size_t rollbackDstIdx = numAlignedBlocks - numElemsPerBlock; // �������˵�blockԪ������
             const size_t rollbackSrcIdx = rollbackDstIdx + rollbackEleCount;   // ������ԴԪ������
@@ -99,9 +99,9 @@ __aicore__ inline void SafeDataCopy(
             }
             DataCopy(dstGlobal[calCount - numElemsPerBlock], srcLocal[rollbackDstIdx], numElemsPerBlock);
             if (recoverUbTailFormat) { // ��ԭ�ع��ֳ�
-                event_t eventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
-                AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(eventID);
-                AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(eventID);
+                event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
+                AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(eventId);
+                AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(eventId);
                 DataCopy(
                     srcLocal[rollbackDstIdx], dstGlobal[rollbackDstIdx],
                     numElemsPerBlock); // ��ԭ���ڻ��˵�block����
@@ -131,9 +131,9 @@ public:
     __aicore__ inline float ReduceSumCustom(const LocalTensor<float>& src_local, int32_t count)
     {
         ReduceSum(src_local, src_local, src_local, count);
-        event_t event_v_s = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-        SetFlag<HardEvent::V_S>(event_v_s);
-        WaitFlag<HardEvent::V_S>(event_v_s);
+        event_t eventVs = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+        SetFlag<HardEvent::V_S>(eventVs);
+        WaitFlag<HardEvent::V_S>(eventVs);
         float rstd_value = src_local.GetValue(0);
         return rstd_value;
     }

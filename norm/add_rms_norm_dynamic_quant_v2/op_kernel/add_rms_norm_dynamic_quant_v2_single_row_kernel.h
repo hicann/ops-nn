@@ -85,14 +85,14 @@ public:
         }
         {
             scalesLocalOut = scalesQue.template AllocTensor<float>();
-            for (int32_t innerIdx = 0; innerIdx < outLoopTail; ++innerIdx) {
+            for (int32_t innerIdxTail = 0; innerIdxTail < outLoopTail; ++innerIdxTail) {
                 CopyInX1X2(gmOffset);
                 AddSingleRow(gmOffset);
                 CopyInGamma();
                 ComputeRmsNorm(gmOffset);
                 CopyOutRmsNormAndCast(gmOffset);
                 CopyInSmooth();
-                ComputeDynamicQuant(innerIdx, scalesLocalOut, gmOffset);
+                ComputeDynamicQuant(innerIdxTail, scalesLocalOut, gmOffset);
                 CopyOut(gmOffset);
                 gmOffset += this->numLastDim;
             }

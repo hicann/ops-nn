@@ -23,13 +23,13 @@
 #include "aclnn/aclnn_base.h"
 #include "op_api/op_api_def.h"
 #include "aclnn_kernels/common/op_error_check.h"
-#include "opdev/common_types.h"
-#include "opdev/data_type_utils.h"
-#include "opdev/format_utils.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/tensor_view_utils.h"
+#include "opdev/common_types.h"
+#include "opdev/data_type_utils.h"
+#include "opdev/format_utils.h"
 #include "aclnn_batch_norm_gather_stats_with_counts.h"
 
 namespace op {

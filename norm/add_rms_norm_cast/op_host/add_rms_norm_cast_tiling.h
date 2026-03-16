@@ -37,18 +37,18 @@ TILING_DATA_FIELD_DEF(float, avg_factor);
 END_TILING_DATA_DEF;
 
 BEGIN_TILING_DATA_DEF(AddRmsNormCastRegbaseTilingData)
-TILING_DATA_FIELD_DEF(uint64_t, numM);
 TILING_DATA_FIELD_DEF(uint64_t, numN);
-TILING_DATA_FIELD_DEF(uint64_t, baseM);
+TILING_DATA_FIELD_DEF(uint64_t, numM);
 TILING_DATA_FIELD_DEF(uint64_t, baseN);
-TILING_DATA_FIELD_DEF(uint64_t, baseNDtypeAlign);
+TILING_DATA_FIELD_DEF(uint64_t, baseM);
 TILING_DATA_FIELD_DEF(uint64_t, baseNReduceAlign);
-TILING_DATA_FIELD_DEF(uint64_t, powerSplit);
+TILING_DATA_FIELD_DEF(uint64_t, baseNDtypeAlign);
 TILING_DATA_FIELD_DEF(uint64_t, powerLoop);
-TILING_DATA_FIELD_DEF(uint64_t, mPerCore);
+TILING_DATA_FIELD_DEF(uint64_t, powerSplit);
 TILING_DATA_FIELD_DEF(uint64_t, mLastCore);
-TILING_DATA_FIELD_DEF(float, epsilon);
+TILING_DATA_FIELD_DEF(uint64_t, mPerCore);
 TILING_DATA_FIELD_DEF(float, avgFactor);
+TILING_DATA_FIELD_DEF(float, epsilon);
 TILING_DATA_FIELD_DEF(uint32_t, isNddma);
 END_TILING_DATA_DEF;
 
@@ -76,18 +76,18 @@ REGISTER_TILING_DATA_CLASS(AddRmsNormCast_199, AddRmsNormCastRegbaseTilingData)
 
 struct AddRmsNormCastRegbaseTilingParams {
     // Platform
-    uint64_t maxUbSize{0};
     uint64_t totalCoreNum{0};
+    uint64_t maxUbSize{0};
     uint64_t vecLength{0};
     // Input Info
-    uint64_t numM{0};
     uint64_t numN{0};
+    uint64_t numM{0};
     uint64_t xDtypeSize{0};
     uint64_t xDtypeAlignNum{0};
     uint64_t xReduceAlignNum{0};
     // Cal params
-    uint64_t baseM{0};
     uint64_t baseN{0};
+    uint64_t baseM{0};
     uint64_t baseNDtypeAlign{0};
     uint64_t baseNReduceAlign{0};
     uint64_t powerSplit{0};
@@ -133,11 +133,11 @@ protected:
     // Order: GetShapeAttrsInfo->GetPlatformInfo->
     //        IsCapable->DoOpTiling->DoLibApiTiling->
     //        GetWorkspaceSize->PostTiling->GetTilingKey
-    ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus GetPlatformInfo() override;
+    ge::graphStatus GetShapeAttrsInfo() override;
     bool IsCapable() override;
-    ge::graphStatus DoOpTiling() override;
     ge::graphStatus DoLibApiTiling() override;
+    ge::graphStatus DoOpTiling() override;
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
     uint64_t GetTilingKey() const override;

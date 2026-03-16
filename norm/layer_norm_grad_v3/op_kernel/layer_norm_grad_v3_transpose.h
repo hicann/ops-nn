@@ -36,14 +36,14 @@ public:
         col = tilingData->col;
         row = tilingData->row;
         coff = tilingData->coefficient;
-        numBlocks = tilingData->numBlocks;
         blockFormer = tilingData->blockFormer;
         blockTail = tilingData->blockTail;
+        ubLoopOfTailBlock = tilingData->ubLoopOfTailBlock;
         ubFormer = tilingData->ubFormer;
         bFormer = tilingData->bFormer;
+        numBlocks = tilingData->numBlocks;
         dichotomizeAddDiffSize = tilingData->dichotomizeAddDiffSize;
         ubLoopOfFormerBlock = tilingData->ubLoopOfFormerBlock;
-        ubLoopOfTailBlock = tilingData->ubLoopOfTailBlock;
         ubTailOfFormerBlock = tilingData->ubTailOfFormerBlock;
         ubTailOfTailBlock = tilingData->ubTailOfTailBlock;
 
@@ -319,19 +319,19 @@ private:
                 dstLocalList[i] = dstAddr + B16_BLOCK_ALIGN_NUM * i;
             }
         }
-        struct TransDataTo5HDParams transDataParams;
+        struct TransDataTo5HDParams gradTransDataParams;
         if constexpr (std::is_same<T_TRANS, float>::value) {
-            transDataParams.repeatTimes = lineAlignSize / B32_BLOCK_ALIGN_NUM;
+            gradTransDataParams.repeatTimes = lineAlignSize / B32_BLOCK_ALIGN_NUM;
         } else {
-            transDataParams.repeatTimes = lineAlignSize / B16_BLOCK_ALIGN_NUM;
+            gradTransDataParams.repeatTimes = lineAlignSize / B16_BLOCK_ALIGN_NUM;
         }
-        transDataParams.srcRepStride = 1;
-        transDataParams.dstRepStride = TRANSPOSE_C0_SIZE;
-        if (transDataParams.repeatTimes == 1) {
-            transDataParams.srcRepStride = 0;
-            transDataParams.dstRepStride = 0;
+        gradTransDataParams.srcRepStride = 1;
+        gradTransDataParams.dstRepStride = TRANSPOSE_C0_SIZE;
+        if (gradTransDataParams.repeatTimes == 1) {
+            gradTransDataParams.srcRepStride = 0;
+            gradTransDataParams.dstRepStride = 0;
         }
-        TransDataTo5HDImpl(dstLocalList, srcLocalList, transDataParams);
+        TransDataTo5HDImpl(dstLocalList, srcLocalList, gradTransDataParams);
     }
 
     template <typename T_RESHAPE>
@@ -344,39 +344,39 @@ private:
         // 一个repeat处理（128 / IN_NUM_PER_BLOCK）行数据
         uint32_t repeatTimes = lastAxisSize / BLOCK_NUM_PER_REP;
         uint32_t remainRepeat = lastAxisSize % BLOCK_NUM_PER_REP;
-        uint32_t mask = 0;
-        uint32_t lineBlockNum = 0;
+        uint32_t gradMask = 0;
+        uint32_t gradLineBlockNum = 0;
         if constexpr (std::is_same<T_RESHAPE, float>::value) {
-            mask = B32_BLOCK_ALIGN_NUM * BLOCK_NUM_PER_REP;
-            lineBlockNum = TRANSPOSE_C0_SIZE / B32_BLOCK_ALIGN_NUM;
+            gradMask = B32_BLOCK_ALIGN_NUM * BLOCK_NUM_PER_REP;
+            gradLineBlockNum = TRANSPOSE_C0_SIZE / B32_BLOCK_ALIGN_NUM;
         } else {
-            mask = B16_BLOCK_ALIGN_NUM * BLOCK_NUM_PER_REP;
-            lineBlockNum = TRANSPOSE_C0_SIZE / B16_BLOCK_ALIGN_NUM;
+            gradMask = B16_BLOCK_ALIGN_NUM * BLOCK_NUM_PER_REP;
+            gradLineBlockNum = TRANSPOSE_C0_SIZE / B16_BLOCK_ALIGN_NUM;
         }
-        if ((bFormerFactor * BLOCK_NUM_PER_REP * lineBlockNum) < MAX_REP_NUM) {
+        if ((bFormerFactor * BLOCK_NUM_PER_REP * gradLineBlockNum) < MAX_REP_NUM) {
             if (repeatTimes) {
                 for (uint32_t i = 0; i < bFormerFactor; i++) {
                     Copy(
-                        dstTensor[i * TRANSPOSE_C0_SIZE], srcTensor[i * TRANSPOSE_C0_SIZE * lastAxisSize], mask,
+                        dstTensor[i * TRANSPOSE_C0_SIZE], srcTensor[i * TRANSPOSE_C0_SIZE * lastAxisSize], gradMask,
                         repeatTimes,
-                        {(uint16_t)(bFormerFactor * lineBlockNum), (uint16_t)lineBlockNum,
-                         (uint8_t)(BLOCK_NUM_PER_REP * bFormerFactor * lineBlockNum),
-                         (uint8_t)(BLOCK_NUM_PER_REP * lineBlockNum)});
+                        {(uint16_t)(bFormerFactor * gradLineBlockNum), (uint16_t)gradLineBlockNum,
+                         (uint8_t)(BLOCK_NUM_PER_REP * bFormerFactor * gradLineBlockNum),
+                         (uint8_t)(BLOCK_NUM_PER_REP * gradLineBlockNum)});
                     if constexpr (std::is_same<T_RESHAPE, float>::value) {
                         Copy(
                             dstTensor[i * TRANSPOSE_C0_SIZE + B32_BLOCK_ALIGN_NUM],
-                            srcTensor[i * TRANSPOSE_C0_SIZE * lastAxisSize + B32_BLOCK_ALIGN_NUM], mask, repeatTimes,
-                            {(uint16_t)(bFormerFactor * lineBlockNum), (uint16_t)lineBlockNum,
-                             (uint8_t)(BLOCK_NUM_PER_REP * bFormerFactor * lineBlockNum),
-                             (uint8_t)(BLOCK_NUM_PER_REP * lineBlockNum)});
+                            srcTensor[i * TRANSPOSE_C0_SIZE * lastAxisSize + B32_BLOCK_ALIGN_NUM], gradMask, repeatTimes,
+                            {(uint16_t)(bFormerFactor * gradLineBlockNum), (uint16_t)gradLineBlockNum,
+                             (uint8_t)(BLOCK_NUM_PER_REP * bFormerFactor * gradLineBlockNum),
+                             (uint8_t)(BLOCK_NUM_PER_REP * gradLineBlockNum)});
                     }
                 }
             }
             if (remainRepeat) {
                 if constexpr (std::is_same<T_RESHAPE, float>::value) {
-                    mask = remainRepeat * B32_BLOCK_ALIGN_NUM;
+                    gradMask = remainRepeat * B32_BLOCK_ALIGN_NUM;
                 } else {
-                    mask = remainRepeat * B16_BLOCK_ALIGN_NUM;
+                    gradMask = remainRepeat * B16_BLOCK_ALIGN_NUM;
                 }
                 for (uint32_t i = 0; i < bFormerFactor; i++) {
                     Copy(
@@ -386,7 +386,7 @@ private:
                         srcTensor
                             [i * TRANSPOSE_C0_SIZE * lastAxisSize +
                              repeatTimes * TRANSPOSE_C0_SIZE * BLOCK_NUM_PER_REP],
-                        mask, 1, {(uint16_t)(bFormerFactor * lineBlockNum), (uint16_t)lineBlockNum, 0, 0});
+                        gradMask, 1, {(uint16_t)(bFormerFactor * gradLineBlockNum), (uint16_t)gradLineBlockNum, 0, 0});
                     if constexpr (std::is_same<T_RESHAPE, float>::value) {
                         Copy(
                             dstTensor
@@ -395,14 +395,14 @@ private:
                             srcTensor
                                 [i * TRANSPOSE_C0_SIZE * lastAxisSize + B32_BLOCK_ALIGN_NUM +
                                  repeatTimes * TRANSPOSE_C0_SIZE * BLOCK_NUM_PER_REP],
-                            mask, 1, {(uint16_t)(bFormerFactor * lineBlockNum), (uint16_t)lineBlockNum, 0, 0});
+                            gradMask, 1, {(uint16_t)(bFormerFactor * gradLineBlockNum), (uint16_t)gradLineBlockNum, 0, 0});
                     }
                 }
             }
         } else {
             DataCopyParams copyParams;
             copyParams.blockCount = bFormerFactor;
-            copyParams.blockLen = lineBlockNum;
+            copyParams.blockLen = gradLineBlockNum;
             copyParams.srcStride = (lastAxisSize - 1) * copyParams.blockLen;
             copyParams.dstStride = 0;
             for (uint32_t i = 0; i < lastAxisSize; i++) {
@@ -545,38 +545,38 @@ private:
         // 一个repeat处理（128 / IN_NUM_PER_BLOCK）行数据
         uint32_t repeatTimes = col / BLOCK_NUM_PER_REP;
         uint32_t remainRepeat = col % BLOCK_NUM_PER_REP;
-        uint32_t mask = 0;
-        uint32_t lineBlockNum = 0;
+        uint32_t postMask = 0;
+        uint32_t postLineBlockNum = 0;
         if constexpr (std::is_same<T_POST_RESHAPE, float>::value) {
-            mask = B32_BLOCK_ALIGN_NUM * BLOCK_NUM_PER_REP;
-            lineBlockNum = TRANSPOSE_C0_SIZE / B32_BLOCK_ALIGN_NUM;
+            postMask = B32_BLOCK_ALIGN_NUM * BLOCK_NUM_PER_REP;
+            postLineBlockNum = TRANSPOSE_C0_SIZE / B32_BLOCK_ALIGN_NUM;
         } else {
-            mask = B16_BLOCK_ALIGN_NUM * BLOCK_NUM_PER_REP;
-            lineBlockNum = TRANSPOSE_C0_SIZE / B16_BLOCK_ALIGN_NUM;
+            postMask = B16_BLOCK_ALIGN_NUM * BLOCK_NUM_PER_REP;
+            postLineBlockNum = TRANSPOSE_C0_SIZE / B16_BLOCK_ALIGN_NUM;
         }
-        if ((bFormerFactor * BLOCK_NUM_PER_REP * lineBlockNum) < MAX_REP_NUM) {
+        if ((bFormerFactor * BLOCK_NUM_PER_REP * postLineBlockNum) < MAX_REP_NUM) {
             if (repeatTimes) {
                 for (uint32_t i = 0; i < bFormerFactor; i++) {
                     Copy(
-                        dstTensor[i * TRANSPOSE_C0_SIZE * col], srcTensor[i * TRANSPOSE_C0_SIZE], mask, repeatTimes,
-                        {(uint16_t)lineBlockNum, (uint16_t)(bFormerFactor * lineBlockNum),
-                         (uint8_t)(BLOCK_NUM_PER_REP * lineBlockNum),
-                         (uint8_t)(BLOCK_NUM_PER_REP * bFormerFactor * lineBlockNum)});
+                        dstTensor[i * TRANSPOSE_C0_SIZE * col], srcTensor[i * TRANSPOSE_C0_SIZE], postMask, repeatTimes,
+                        {(uint16_t)postLineBlockNum, (uint16_t)(bFormerFactor * postLineBlockNum),
+                         (uint8_t)(BLOCK_NUM_PER_REP * postLineBlockNum),
+                         (uint8_t)(BLOCK_NUM_PER_REP * bFormerFactor * postLineBlockNum)});
                     if constexpr (std::is_same<T_POST_RESHAPE, float>::value) {
                         Copy(
                             dstTensor[i * TRANSPOSE_C0_SIZE * col + B32_BLOCK_ALIGN_NUM],
-                            srcTensor[i * TRANSPOSE_C0_SIZE + B32_BLOCK_ALIGN_NUM], mask, repeatTimes,
-                            {(uint16_t)lineBlockNum, (uint16_t)(bFormerFactor * lineBlockNum),
-                             (uint8_t)(BLOCK_NUM_PER_REP * lineBlockNum),
-                             (uint8_t)(BLOCK_NUM_PER_REP * bFormerFactor * lineBlockNum)});
+                            srcTensor[i * TRANSPOSE_C0_SIZE + B32_BLOCK_ALIGN_NUM], postMask, repeatTimes,
+                            {(uint16_t)postLineBlockNum, (uint16_t)(bFormerFactor * postLineBlockNum),
+                             (uint8_t)(BLOCK_NUM_PER_REP * postLineBlockNum),
+                             (uint8_t)(BLOCK_NUM_PER_REP * bFormerFactor * postLineBlockNum)});
                     }
                 }
             }
             if (remainRepeat) {
                 if constexpr (std::is_same<T_POST_RESHAPE, float>::value) {
-                    mask = remainRepeat * B32_BLOCK_ALIGN_NUM;
+                    postMask = remainRepeat * B32_BLOCK_ALIGN_NUM;
                 } else {
-                    mask = remainRepeat * B16_BLOCK_ALIGN_NUM;
+                    postMask = remainRepeat * B16_BLOCK_ALIGN_NUM;
                 }
                 for (uint32_t i = 0; i < bFormerFactor; i++) {
                     Copy(
@@ -584,7 +584,7 @@ private:
                         srcTensor
                             [i * TRANSPOSE_C0_SIZE +
                              repeatTimes * TRANSPOSE_C0_SIZE * BLOCK_NUM_PER_REP * bFormerFactor],
-                        mask, 1, {(uint16_t)lineBlockNum, (uint16_t)(bFormerFactor * lineBlockNum), 0, 0});
+                        postMask, 1, {(uint16_t)postLineBlockNum, (uint16_t)(bFormerFactor * postLineBlockNum), 0, 0});
                     if constexpr (std::is_same<T_POST_RESHAPE, float>::value) {
                         Copy(
                             dstTensor
@@ -593,19 +593,19 @@ private:
                             srcTensor
                                 [i * TRANSPOSE_C0_SIZE + B32_BLOCK_ALIGN_NUM +
                                  repeatTimes * TRANSPOSE_C0_SIZE * BLOCK_NUM_PER_REP * bFormerFactor],
-                            mask, 1, {(uint16_t)lineBlockNum, (uint16_t)(bFormerFactor * lineBlockNum), 0, 0});
+                            postMask, 1, {(uint16_t)postLineBlockNum, (uint16_t)(bFormerFactor * postLineBlockNum), 0, 0});
                     }
                 }
             }
         } else {
-            DataCopyParams copyParams;
-            copyParams.blockCount = bFormerFactor;
-            copyParams.blockLen = lineBlockNum;
-            copyParams.srcStride = 0;
-            copyParams.dstStride = (col - 1) * copyParams.blockLen;
+            DataCopyParams postCopyParams;
+            postCopyParams.blockCount = bFormerFactor;
+            postCopyParams.blockLen = postLineBlockNum;
+            postCopyParams.srcStride = 0;
+            postCopyParams.dstStride = (col - 1) * postCopyParams.blockLen;
             for (uint32_t i = 0; i < col; i++) {
                 DataCopy(
-                    dstTensor[i * TRANSPOSE_C0_SIZE], srcTensor[i * bFormerFactor * TRANSPOSE_C0_SIZE], copyParams);
+                    dstTensor[i * TRANSPOSE_C0_SIZE], srcTensor[i * bFormerFactor * TRANSPOSE_C0_SIZE], postCopyParams);
             }
         }
     }
@@ -621,40 +621,40 @@ private:
         // 每行数据对齐后的size
         uint32_t lineAlignSize = 0;
         lineAlignSize = (bFormerFactor * col + TRANSPOSE_C0_SIZE - 1) / TRANSPOSE_C0_SIZE * TRANSPOSE_C0_SIZE;
-        __ubuf__ T_POST_TRANS* srcAddr = (__ubuf__ T_POST_TRANS*)srcTensor.GetPhyAddr();
-        __ubuf__ T_POST_TRANS* dstAddr = (__ubuf__ T_POST_TRANS*)dstTensor.GetPhyAddr();
-        __ubuf__ T_POST_TRANS* srcLocalList[TRANSPOSE_C0_SIZE];
-        __ubuf__ T_POST_TRANS* dstLocalList[TRANSPOSE_C0_SIZE];
+        __ubuf__ T_POST_TRANS* postSrcAddr = (__ubuf__ T_POST_TRANS*)srcTensor.GetPhyAddr();
+        __ubuf__ T_POST_TRANS* postDstAddr = (__ubuf__ T_POST_TRANS*)dstTensor.GetPhyAddr();
+        __ubuf__ T_POST_TRANS* postSrcLocalList[TRANSPOSE_C0_SIZE];
+        __ubuf__ T_POST_TRANS* postDstLocalList[TRANSPOSE_C0_SIZE];
         for (uint32_t i = 0; i < TRANSPOSE_C0_SIZE; i++) {
-            srcLocalList[i] = srcAddr + TRANSPOSE_C0_SIZE * i;
+            postSrcLocalList[i] = postSrcAddr + TRANSPOSE_C0_SIZE * i;
             if constexpr (std::is_same<T_POST_TRANS, float>::value) {
-                dstLocalList[i] = dstAddr + lineAlignSize * (i / TWO_NUM) + B32_BLOCK_ALIGN_NUM * (i % TWO_NUM);
+                postDstLocalList[i] = postDstAddr + lineAlignSize * (i / TWO_NUM) + B32_BLOCK_ALIGN_NUM * (i % TWO_NUM);
             } else {
-                dstLocalList[i] = dstAddr + lineAlignSize * i;
+                postDstLocalList[i] = postDstAddr + lineAlignSize * i;
             }
         }
-        struct TransDataTo5HDParams transDataParams;
+        struct TransDataTo5HDParams postTransDataParams;
         if constexpr (std::is_same<T_POST_TRANS, float>::value) {
-            transDataParams.repeatTimes = lineAlignSize / B32_BLOCK_ALIGN_NUM / TWO_NUM;
-            transDataParams.srcRepStride = TRANSPOSE_C0_SIZE * TWO_NUM;
-            transDataParams.dstRepStride = TWO_NUM;
+            postTransDataParams.repeatTimes = lineAlignSize / B32_BLOCK_ALIGN_NUM / TWO_NUM;
+            postTransDataParams.srcRepStride = TRANSPOSE_C0_SIZE * TWO_NUM;
+            postTransDataParams.dstRepStride = TWO_NUM;
         } else {
-            transDataParams.repeatTimes = lineAlignSize / B16_BLOCK_ALIGN_NUM;
-            transDataParams.srcRepStride = TRANSPOSE_C0_SIZE;
-            transDataParams.dstRepStride = 1;
+            postTransDataParams.repeatTimes = lineAlignSize / B16_BLOCK_ALIGN_NUM;
+            postTransDataParams.srcRepStride = TRANSPOSE_C0_SIZE;
+            postTransDataParams.dstRepStride = 1;
         }
-        if (transDataParams.repeatTimes == 1) {
-            transDataParams.srcRepStride = 0;
-            transDataParams.dstRepStride = 0;
+        if (postTransDataParams.repeatTimes == 1) {
+            postTransDataParams.srcRepStride = 0;
+            postTransDataParams.dstRepStride = 0;
         }
-        TransDataTo5HDImpl(dstLocalList, srcLocalList, transDataParams);
+        TransDataTo5HDImpl(postDstLocalList, postSrcLocalList, postTransDataParams);
         if constexpr (std::is_same<T_POST_TRANS, float>::value) {
             for (uint32_t i = 0; i < TRANSPOSE_C0_SIZE; i++) {
-                srcLocalList[i] = srcAddr + TRANSPOSE_C0_SIZE * i + B32_BLOCK_ALIGN_NUM;
-                dstLocalList[i] = dstAddr + B32_BLOCK_ALIGN_NUM * lineAlignSize + lineAlignSize * (i / TWO_NUM) +
+                postSrcLocalList[i] = postSrcAddr + TRANSPOSE_C0_SIZE * i + B32_BLOCK_ALIGN_NUM;
+                postDstLocalList[i] = postDstAddr + B32_BLOCK_ALIGN_NUM * lineAlignSize + lineAlignSize * (i / TWO_NUM) +
                                   B32_BLOCK_ALIGN_NUM * (i % TWO_NUM);
             }
-            TransDataTo5HDImpl(dstLocalList, srcLocalList, transDataParams);
+            TransDataTo5HDImpl(postDstLocalList, postSrcLocalList, postTransDataParams);
         }
     }
 
@@ -943,18 +943,17 @@ private:
     LocalTensor<float> xLocalFp32;
     LocalTensor<float> pdGammaOut;
     LocalTensor<float> pdBetaOut;
-    // tilingData
-    uint64_t col;
     uint64_t row;
-    uint64_t numBlocks;
+    uint64_t col;
     uint64_t blockFormer;
     uint64_t blockTail;
+    uint64_t ubTailOfFormerBlock;
     uint64_t ubFormer;
     uint64_t bFormer;
+    uint64_t numBlocks;
     uint64_t dichotomizeAddDiffSize;
     uint64_t ubLoopOfFormerBlock;
     uint64_t ubLoopOfTailBlock;
-    uint64_t ubTailOfFormerBlock;
     uint64_t ubTailOfTailBlock;
     float coff;
 };

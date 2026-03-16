@@ -18,7 +18,6 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
-#include "kernel_utils.h"
 #include "batch_norm_grad_v3_base_common.h"
 #include "batch_norm_grad_v3_splitLoad_common.h"
 #include "batch_norm_grad_v3_train_splitLoad.h"

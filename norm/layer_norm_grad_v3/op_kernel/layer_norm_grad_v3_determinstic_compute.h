@@ -151,33 +151,33 @@ public:
 
     __aicore__ inline void copyOut(int64_t colIndex, int64_t colSize)
     {
-        DataCopyParams intriParams;
-        intriParams.blockCount = 1;
-        intriParams.blockLen = colSize * sizeof(float);
-        intriParams.srcStride = 0;
-        intriParams.dstStride = 0;
+        DataCopyParams deterministicIntriParams;
+        deterministicIntriParams.blockCount = 1;
+        deterministicIntriParams.blockLen = colSize * sizeof(float);
+        deterministicIntriParams.srcStride = 0;
+        deterministicIntriParams.dstStride = 0;
         TEventID eventID = GetTPipePtr()->AllocEventID<HardEvent::V_MTE3>();
         SetFlag<HardEvent::V_MTE3>(eventID);
         WaitFlag<HardEvent::V_MTE3>(eventID);
         GetTPipePtr()->ReleaseEventID<HardEvent::V_MTE3>(eventID);
         int64_t offset = colIndex * COL_TEMPLATE;
-        DataCopyPad(pdGammaOutTensorGM_[offset], buffer2_, intriParams);
-        DataCopyPad(pdBetaOutTensorGM_[offset], buffer4_, intriParams);
+        DataCopyPad(pdGammaOutTensorGM_[offset], buffer2_, deterministicIntriParams);
+        DataCopyPad(pdBetaOutTensorGM_[offset], buffer4_, deterministicIntriParams);
     }
 
 private:
     TPipe pipe_;
     TQue<QuePosition::VECOUT, DOUBLE_BUFFER> queueGammaOut_;
     TQue<QuePosition::VECOUT, DOUBLE_BUFFER> queueBetaOut_;
-    TQue<QuePosition::VECIN, DOUBLE_BUFFER> queueGammaIn_;
     TQue<QuePosition::VECIN, DOUBLE_BUFFER> queueBetaIn_;
-    LocalTensor<float> buffer1_;
+    TQue<QuePosition::VECIN, DOUBLE_BUFFER> queueGammaIn_;
     LocalTensor<float> buffer2_;
     LocalTensor<float> buffer3_;
     LocalTensor<float> buffer4_;
+    LocalTensor<float> buffer1_;
 
-    GlobalTensor<float> pdGammaOutTensorGM_;
     GlobalTensor<float> pdBetaOutTensorGM_;
+    GlobalTensor<float> pdGammaOutTensorGM_;
     GlobalTensor<float> workspaceGM_;
 
     int64_t workspaceNum_;

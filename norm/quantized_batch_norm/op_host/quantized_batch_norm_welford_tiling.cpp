@@ -129,15 +129,17 @@ ge::graphStatus QuantizedBatchNormWelfordTiling::PostTiling()
     td_.set_patternR0Align(commonParams.patternR0Align);
     td_.set_epsilon(commonParams.epsilon);
     context_->SetBlockDim(usedCoreNum);
-    auto rawTilingData = context_->GetRawTilingData();
+    
+    // Save tiling data for quantized batch norm
+    auto quantRawTilingData = context_->GetRawTilingData();
     OP_CHECK_IF(
-        td_.GetDataSize() > rawTilingData->GetCapacity(),
+        td_.GetDataSize() > quantRawTilingData->GetCapacity(),
         OP_LOGE(
             commonParams.nodeName, "actual tiling data size %zu > context tiling data size %zu", td_.GetDataSize(),
-            rawTilingData->GetCapacity()),
+            quantRawTilingData->GetCapacity()),
         return ge::GRAPH_FAILED);
-    td_.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
-    rawTilingData->SetDataSize(td_.GetDataSize());
+    td_.SaveToBuffer(quantRawTilingData->GetData(), quantRawTilingData->GetCapacity());
+    quantRawTilingData->SetDataSize(td_.GetDataSize());
 
     return ge::GRAPH_SUCCESS;
 }

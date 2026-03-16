@@ -31,8 +31,8 @@ public:
         const AddRMSNormCastTilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
-        this->numRow = tiling->num_row;
         this->numCol = tiling->num_col;
+        this->numRow = tiling->num_row;
         uint32_t numPerBlock = ONE_BLK_SIZE / sizeof(T);
         this->numColAlign = AlignUp(numCol, numPerBlock);
         this->blockFactor = tiling->block_factor;
@@ -269,19 +269,19 @@ private:
     TBuf<TPosition::VECCALC> sqxBuf;
     TBuf<TPosition::VECCALC> reduceFp32Buf;
     TBuf<TPosition::VECCALC> offsetBuf;
-    GlobalTensor<T> x1Gm;
     GlobalTensor<T> x2Gm;
+    GlobalTensor<T> x1Gm;
     GlobalTensor<T> gammaGm;
-    GlobalTensor<float> y1Gm;
     GlobalTensor<T> y2Gm;
-    GlobalTensor<float> rstdGm;
+    GlobalTensor<float> y1Gm;
     GlobalTensor<T> xGm;
+    GlobalTensor<float> rstdGm;
 
-    uint32_t numRow;
     uint32_t numCol;
+    uint32_t numRow;
     uint32_t blockFactor; // number of calculations rows on each core
-    uint32_t rowFactor;
     uint32_t ubFactor;
+    uint32_t rowFactor;
     float epsilon;
     float avgFactor;
     uint32_t numColAlign;

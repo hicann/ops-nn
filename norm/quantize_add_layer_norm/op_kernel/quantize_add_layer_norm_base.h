@@ -30,17 +30,17 @@ static constexpr float ZERO = 0;
 #define SUPPORT_BF16 0
 #endif
 
-template <typename Tp, Tp v>
+template <typename TypeParam, TypeParam val>
 struct integral_constant {
-    static constexpr Tp value = v;
+    static constexpr TypeParam value = val;
 };
 using true_type = integral_constant<bool, true>;
 using false_type = integral_constant<bool, false>;
 template <typename, typename>
 struct is_same : public false_type {
 };
-template <typename Tp>
-struct is_same<Tp, Tp> : public true_type {
+template <typename TypeParam>
+struct is_same<TypeParam, TypeParam> : public true_type {
 };
 
 template <typename T, template <typename U> typename R, template <typename U> typename S>
@@ -110,7 +110,7 @@ __aicore__ inline float ReduceSumFP32(const LocalTensor<float>& src_local, int32
 }
 
 __aicore__ inline void ReduceSumShort(
-    const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local, const LocalTensor<float>& tmp_local,
+    const LocalTensor<float>& dst_local2, const LocalTensor<float>& src_local, const LocalTensor<float>& tmp_local,
     int32_t align_len, int32_t data_len, int32_t repeat)
 {
     int32_t elementNum = ONE_BLK_SIZE / sizeof(float);
@@ -134,10 +134,10 @@ __aicore__ inline void ReduceSumShort(
     }
     PipeBarrier<PIPE_V>();
     if (repeatTimes != 0) {
-        BlockReduceSum<float>(dst_local, tmp_local, repeatTimes, maxRepeat, 1, 1, elementNum);
+        BlockReduceSum<float>(dst_local2, tmp_local, repeatTimes, maxRepeat, 1, 1, elementNum);
     }
     if (repeatTail != 0) {
-        BlockReduceSum<float>(dst_local[bodyCount], tmp_local[bodyCount * elementNum], 1, repeatTail, 1, 1, elementNum);
+        BlockReduceSum<float>(dst_local2[bodyCount], tmp_local[bodyCount * elementNum], 1, repeatTail, 1, 1, elementNum);
     }
 }
 

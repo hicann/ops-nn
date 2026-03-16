@@ -63,21 +63,21 @@ public:
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
         this->InitParams(tiling);
         // get start index for current core, core parallel
-        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        gammaGm.SetGlobalBuffer((__gm__ T*)gamma, numCol);
-        yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
+        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
+        gammaGm.SetGlobalBuffer((__gm__ T*)gamma, this->numCol);
+        yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
         if constexpr (MODE == ADD_RMS_NORM_MODE) {
-            rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * blockFactor, blockFactor);
-            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+            rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * this->blockFactor, this->blockFactor);
+            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
         }
         if constexpr (MODE == PRE_RMS_NORM_MODE) {
-            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
         }
 
         // pipe alloc memory to queue, the unit is Bytes
-        Ppipe->InitBuffer(inQueueX, DOUBLE_BUFFER_NUM, ubFactor * sizeof(T));
-        Ppipe->InitBuffer(inQueueGamma, BUFFER_NUM, ubFactor * sizeof(T));
+        Ppipe->InitBuffer(inQueueX, DOUBLE_BUFFER_NUM, this->ubFactor * sizeof(T));
+        Ppipe->InitBuffer(inQueueGamma, BUFFER_NUM, this->ubFactor * sizeof(T));
         Ppipe->InitBuffer(outQueueY, DOUBLE_BUFFER_NUM, ubFactor * sizeof(T));
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         Ppipe->InitBuffer(outQueueRstd, BUFFER_NUM, rowFactor * sizeof(float));
@@ -383,7 +383,7 @@ private:
     uint32_t numRow;
     uint32_t numCol;
     uint32_t numColAlign;
-    uint32_t blockFactor; // number of calculations rows on each core
+    uint32_t blockFactor;
     uint32_t rowFactor;
     uint32_t ubFactor;
     float epsilon;

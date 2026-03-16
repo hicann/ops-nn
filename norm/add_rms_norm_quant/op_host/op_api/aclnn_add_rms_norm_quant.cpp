@@ -31,13 +31,13 @@ using namespace op;
 extern "C" {
 #endif
 
-constexpr int IDX_INT8 = 2;
-constexpr int IDX_HIFLOAT8 = 34;
-constexpr int IDX_FLOAT8_E5M2 = 35;
-constexpr int IDX_FLOAT8_E4M3FN = 36;
-static std::map<op::DataType, int> dstTypeMap = {{op::DataType::DT_INT8, IDX_INT8}, 
-       {op::DataType::DT_HIFLOAT8, IDX_HIFLOAT8}, {op::DataType::DT_FLOAT8_E5M2, IDX_FLOAT8_E5M2}, 
-       {op::DataType::DT_FLOAT8_E4M3FN, IDX_FLOAT8_E4M3FN}};
+constexpr int IDX_INT8_QUANT = 2;
+constexpr int IDX_HIFLOAT8_QUANT = 34;
+constexpr int IDX_FLOAT8_E5M2_QUANT = 35;
+constexpr int IDX_FLOAT8_E4M3FN_QUANT = 36;
+static std::map<op::DataType, int> dstTypeMapQuant = {{op::DataType::DT_INT8, IDX_INT8_QUANT}, 
+       {op::DataType::DT_HIFLOAT8, IDX_HIFLOAT8_QUANT}, {op::DataType::DT_FLOAT8_E5M2, IDX_FLOAT8_E5M2_QUANT}, 
+       {op::DataType::DT_FLOAT8_E4M3FN, IDX_FLOAT8_E4M3FN_QUANT}};
 namespace AddRmsNormQuantACLNN {
 constexpr int IDX_0 = 0;
 constexpr int IDX_1 = 1;
@@ -177,7 +177,7 @@ aclnnStatus ComputeAddRmsNormQuant(
     aclTensor* xComputeOut = nullptr;
     bool isDual = (nullptr != scales2Optional);
     
-    int dstType = dstTypeMap[y1Out->GetDataType()];
+    int dstType = dstTypeMapQuant[y1Out->GetDataType()];
 
     auto addRmsNormQuantOuts = l0op::AddRmsNormQuant(
         x1, x2, gamma, scales1, scales2Optional, zeroPoints1Optional, zeroPoints2Optional, nullptr, axis, epsilon,
@@ -245,13 +245,13 @@ aclnnStatus aclnnAddRmsNormQuantGetWorkspaceSize(
     }
 
     // 固定写法，将输入转换成连续的tensor，可选输入不做判空校验
-    auto x1Cont = l0op::Contiguous(x1, uniqueExecutor.get());
-    auto x2Cont = l0op::Contiguous(x2, uniqueExecutor.get());
-    auto gammaCont = l0op::Contiguous(gamma, uniqueExecutor.get());
+    auto x1ContQuant = l0op::Contiguous(x1, uniqueExecutor.get());
+    auto x2ContQuant = l0op::Contiguous(x2, uniqueExecutor.get());
+    auto gammaContQuant = l0op::Contiguous(gamma, uniqueExecutor.get());
 
-    CHECK_RET(x1Cont != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    CHECK_RET(x2Cont != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    CHECK_RET(gammaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(x1ContQuant != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(x2ContQuant != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(gammaContQuant != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto s1Cont = GetTensorContiguous(scales1, uniqueExecutor.get());
     auto s2Cont = GetTensorContiguous(scales2Optional, uniqueExecutor.get());
@@ -259,7 +259,7 @@ aclnnStatus aclnnAddRmsNormQuantGetWorkspaceSize(
     auto z2Cont = GetTensorContiguous(zeroPoints2Optional, uniqueExecutor.get());
 
     ret = ComputeAddRmsNormQuant(
-        x1Cont, x2Cont, gammaCont, s1Cont, s2Cont, z1Cont, z2Cont, axis, epsilon, divMode, y1Out, y2Out, xOut,
+        x1ContQuant, x2ContQuant, gammaContQuant, s1Cont, s2Cont, z1Cont, z2Cont, axis, epsilon, divMode, y1Out, y2Out, xOut,
         uniqueExecutor.get());
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 

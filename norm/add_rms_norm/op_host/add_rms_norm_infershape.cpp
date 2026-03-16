@@ -58,11 +58,11 @@ static ge::graphStatus InferShape4AddRmsNorm(gert::InferShapeContext* context)
         return GRAPH_FAILED);
 
     rstdShape->SetDimNum(xDimNum);
-    for (size_t i = 0; i < xDimNum; i++) {
-        if (i < xDimNum - gammaDimNum) {
-            rstdShape->SetDim(i, x1Shape->GetDim(i));
+    for (size_t rmsIdx = 0; rmsIdx < xDimNum; rmsIdx++) {
+        if (rmsIdx < xDimNum - gammaDimNum) {
+            rstdShape->SetDim(rmsIdx, x1Shape->GetDim(rmsIdx));
         } else {
-            rstdShape->SetDim(i, 1);
+            rstdShape->SetDim(rmsIdx, 1);
         }
     }
 

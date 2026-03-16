@@ -63,7 +63,7 @@ constexpr int64_t PARAM_INPUT_RUNNINGVAR_INDEX = 4;
 constexpr int64_t PARAM_OUTPUT_DX_INDEX = 0;
 constexpr int64_t PARAM_ATTRS_EPSILON_INDEX = 1;
 
-constexpr float DEFAULT_EPSILON = 1e-5;
+constexpr float DEFAULT_EPSILON_VAL = 1e-5;
 
 // 框架侧占位可以只预留32B（ttk正常），debugTool执行时需要预留16M
 constexpr uint32_t MINIMAL_WORKSPACE = 16 * 1024 * 1024;
@@ -117,6 +117,7 @@ protected:
     ge::graphStatus GetDyInfo();
     ge::graphStatus GetWeightRunningVarDxInfo();
     ge::graphStatus CheckInputValid();
+    // infer base class - no GetAlignValue method
 
 protected:
     const char* opName_ = "BatchNormGradV3InferBase";

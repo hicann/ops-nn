@@ -45,14 +45,14 @@ protected:
 
 TEST_F(layer_norm_v4_test, test_case_0003)
 {
-    size_t xByteSize = 64 * 2 * sizeof(float);
+    size_t xByteSize = 48 * 2 * sizeof(float);
     size_t gammaByteSize = 2 * sizeof(float);
     size_t betaByteSize = 2 * sizeof(float);
-    size_t yByteSize = 64 * 2 * sizeof(float);
-    size_t meanByteSize = 64 * sizeof(float);
-    size_t rstdByteSize = 64 * sizeof(float);
+    size_t yByteSize = 48 * 2 * sizeof(float);
+    size_t meanByteSize = 48 * sizeof(float);
+    size_t rstdByteSize = 48 * sizeof(float);
     size_t tiling_data_size = sizeof(LayerNormV4TilingDataWelford);
-    uint32_t numBlocks = 64;
+    uint32_t numBlocks = 48;
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);

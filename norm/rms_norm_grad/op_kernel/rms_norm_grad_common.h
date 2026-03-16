@@ -245,17 +245,17 @@ __aicore__ inline void dCompute(int64_t colIndex, int64_t rowIndex, int64_t colS
     if (colSizeMod != 0) {
         colSizeAlign += FLOAT_ALIGN - colSizeMod;
     } 
-    TEventID eventID = GetTPipePtr()->AllocEventID<HardEvent::MTE2_V>();
-    SetFlag<HardEvent::MTE2_V>(eventID);
-    WaitFlag<HardEvent::MTE2_V>(eventID);
-    GetTPipePtr()->ReleaseEventID<HardEvent::MTE2_V>(eventID);
-    TEventID eventID1 = GetTPipePtr()->AllocEventID<HardEvent::MTE3_V>();
-    SetFlag<HardEvent::MTE3_V>(eventID1);
-    WaitFlag<HardEvent::MTE3_V>(eventID1);
-    GetTPipePtr()->ReleaseEventID<HardEvent::MTE3_V>(eventID1);
+    TEventID eventId = GetTPipePtr()->AllocEventID<HardEvent::MTE2_V>();
+    SetFlag<HardEvent::MTE2_V>(eventId);
+    WaitFlag<HardEvent::MTE2_V>(eventId);
+    GetTPipePtr()->ReleaseEventID<HardEvent::MTE2_V>(eventId);
+    TEventID eventId1 = GetTPipePtr()->AllocEventID<HardEvent::MTE3_V>();
+    SetFlag<HardEvent::MTE3_V>(eventId1);
+    WaitFlag<HardEvent::MTE3_V>(eventId1);
+    GetTPipePtr()->ReleaseEventID<HardEvent::MTE3_V>(eventId1);
     Duplicate(deterministicStruct.buffer2_, static_cast<float>(0.0), COL_TEMPLATE);
     PipeBarrier<PIPE_V>();
-    uint64_t mask = colSize;
+    uint64_t maskVal = colSize;
     uint8_t repeatTimes = MAX_REPEAT_TIMES;
     BinaryRepeatParams binaryRepeatParams;
     binaryRepeatParams.dstBlkStride = 1;
@@ -269,7 +269,7 @@ __aicore__ inline void dCompute(int64_t colIndex, int64_t rowIndex, int64_t colS
         if (i == rowRepeatTimes - 1) {
             repeatTimes = rowSize - (rowRepeatTimes - 1) * MAX_REPEAT_TIMES;
         }
-        Add(deterministicStruct.buffer2_,deterministicStruct.buffer1_[i * MAX_REPEAT_TIMES],deterministicStruct.buffer2_,mask,repeatTimes,binaryRepeatParams);
+        Add(deterministicStruct.buffer2_,deterministicStruct.buffer1_[i * MAX_REPEAT_TIMES],deterministicStruct.buffer2_,maskVal,repeatTimes,binaryRepeatParams);
         PipeBarrier<PIPE_V>();
     }
 }

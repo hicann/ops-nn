@@ -15,39 +15,39 @@
 #include "kernel_operator.h"
 using namespace AscendC;
 
-constexpr uint32_t MAX_REP_NUM = 255;
-constexpr uint32_t ELEM_PER_REP_FP32 = 64;
 constexpr uint32_t ELEM_PER_BLK_FP32 = 8;
+constexpr uint32_t ELEM_PER_REP_FP32 = 64;
+constexpr uint32_t MAX_REP_NUM = 255;
+constexpr int32_t INDEX_EIGHT = 8;
 constexpr float ZERO = 0;
 constexpr int32_t HALf_INTERVAL = 2;
+constexpr int32_t INDEX_SIXTEEN = 16;
 constexpr int32_t INDEX_TWO = 2;
 constexpr int32_t INDEX_FOUR = 4;
-constexpr int32_t INDEX_EIGHT = 8;
-constexpr int32_t INDEX_SIXTEEN = 16;
 
 __aicore__ inline void ReduceSumForSmallReduceDimPreRepeat(
     const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal, const LocalTensor<float>& tmpLocal,
-    const uint32_t elemNum, const uint32_t numLastDim, const uint32_t tailCount, const uint32_t repeat,
+    const uint32_t elemNum, const uint32_t numLastDim, const uint32_t tailCount, const uint32_t repeat2,
     const uint8_t repStride)
 {
     uint32_t elemIndex = 0;
     for (; elemIndex + ELEM_PER_REP_FP32 <= numLastDim; elemIndex += ELEM_PER_REP_FP32) {
-        Add(tmpLocal, srcLocal[elemIndex], tmpLocal, elemNum, repeat,
+        Add(tmpLocal, srcLocal[elemIndex], tmpLocal, elemNum, repeat2,
             {1, 1, 1, ELEM_PER_BLK_FP32, repStride, ELEM_PER_BLK_FP32});
         PipeBarrier<PIPE_V>();
     }
     if (unlikely(tailCount != 0)) {
-        Add(tmpLocal, srcLocal[elemIndex], tmpLocal, tailCount, repeat,
+        Add(tmpLocal, srcLocal[elemIndex], tmpLocal, tailCount, repeat2,
             {1, 1, 1, ELEM_PER_BLK_FP32, repStride, ELEM_PER_BLK_FP32});
     }
     PipeBarrier<PIPE_V>();
     AscendCUtils::SetMask<float>(ELEM_PER_REP_FP32); // set mask = 64
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
     if ASCEND_IS_AIV {
-        WholeReduceSum<float, false>(dstLocal, tmpLocal, MASK_PLACEHOLDER, repeat, 1, 1, ELEM_PER_BLK_FP32);
+        WholeReduceSum<float, false>(dstLocal, tmpLocal, MASK_PLACEHOLDER, repeat2, 1, 1, ELEM_PER_BLK_FP32);
     }
 #else
-    WholeReduceSum<float, false>(dstLocal, tmpLocal, MASK_PLACEHOLDER, repeat, 1, 1, ELEM_PER_BLK_FP32);
+    WholeReduceSum<float, false>(dstLocal, tmpLocal, MASK_PLACEHOLDER, repeat2, 1, 1, ELEM_PER_BLK_FP32);
 #endif
 }
 
@@ -58,12 +58,12 @@ __aicore__ inline void ReduceSumForSmallReduceDimPreRepeat(
 __aicore__ inline void ReduceSumForSmallReduceDim(
     const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal, const LocalTensor<float>& tmpLocal,
     const uint32_t numLastDimAligned, const uint32_t numLastDim, const uint32_t tailCount, const uint32_t repeat,
-    const uint8_t repStride)
+    const uint8_t repStride1)
 {
     uint32_t repeatTimes = repeat / MAX_REP_NUM;
     if (repeatTimes == 0) {
         ReduceSumForSmallReduceDimPreRepeat(
-            dstLocal, srcLocal, tmpLocal, ELEM_PER_REP_FP32, numLastDim, tailCount, repeat, repStride);
+            dstLocal, srcLocal, tmpLocal, ELEM_PER_REP_FP32, numLastDim, tailCount, repeat, repStride1);
     } else {
         uint32_t repTailNum = repeat % MAX_REP_NUM;
         uint32_t repIndex = 0;
@@ -71,12 +71,12 @@ __aicore__ inline void ReduceSumForSmallReduceDim(
         for (; repIndex + MAX_REP_NUM <= repeat; repIndex += MAX_REP_NUM) {
             ReduceSumForSmallReduceDimPreRepeat(
                 dstLocal[repIndex], srcLocal[repIndex * numLastDimAligned], tmpLocal[repIndex * ELEM_PER_REP_FP32],
-                ELEM_PER_REP_FP32, numLastDim, tailCount, MAX_REP_NUM, repStride);
+                ELEM_PER_REP_FP32, numLastDim, tailCount, MAX_REP_NUM, repStride1);
         }
         if (repTailNum != 0) {
             ReduceSumForSmallReduceDimPreRepeat(
                 dstLocal[repIndex], srcLocal[repIndex * numLastDimAligned], tmpLocal[repIndex * ELEM_PER_REP_FP32],
-                ELEM_PER_REP_FP32, numLastDim, tailCount, repTailNum, repStride);
+                ELEM_PER_REP_FP32, numLastDim, tailCount, repTailNum, repStride1);
         }
     }
 }
@@ -87,7 +87,7 @@ __aicore__ inline void ReduceSumForSmallReduceDim(
  * size of tmpLocal: (N, 64)
  */
 __aicore__ inline void ReduceSumMultiN(
-    const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal, const LocalTensor<float>& tmpLocal,
+    const LocalTensor<float>& dstLocal1, const LocalTensor<float>& srcLocal, const LocalTensor<float>& tmpLocal,
     const uint32_t numRow, const uint32_t numCol, const uint32_t numColAlign)
 {
     const uint32_t tailCount = numCol % ELEM_PER_REP_FP32;
@@ -95,33 +95,33 @@ __aicore__ inline void ReduceSumMultiN(
     const uint8_t repStride = numColAlign / ELEM_PER_BLK_FP32;
     Duplicate(tmpLocal, ZERO, numRow * ELEM_PER_REP_FP32);
     PipeBarrier<PIPE_V>();
-    ReduceSumForSmallReduceDim(dstLocal, srcLocal, tmpLocal, numColAlign, numCol, tailCount, repeat, repStride);
+    ReduceSumForSmallReduceDim(dstLocal1, srcLocal, tmpLocal, numColAlign, numCol, tailCount, repeat, repStride);
 }
 
-__aicore__ inline int32_t findPowerTwo(int32_t n)
+__aicore__ inline int32_t findPowerTwo(int32_t n2)
 {
     // find max power of 2 no more than n (32 bit)
-    n |= n >> 1; // Set the first digit of n's binary to 1
-    n |= n >> INDEX_TWO;
-    n |= n >> INDEX_FOUR;
-    n |= n >> INDEX_EIGHT;
-    n |= n >> INDEX_SIXTEEN;
-    return (n + 1) >> 1;
+    n2 |= n2 >> 1; // Set the first digit of n's binary to 1
+    n2 |= n2 >> INDEX_TWO;
+    n2 |= n2 >> INDEX_FOUR;
+    n2 |= n2 >> INDEX_EIGHT;
+    n2 |= n2 >> INDEX_SIXTEEN;
+    return (n2 + 1) >> 1;
 }
 
 __aicore__ inline void ReduceSumHalfInterval(
     const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local, int32_t count)
 {
     if (likely(count > ELEM_PER_REP_FP32)) {
-        int32_t bodyCount = findPowerTwo(count);
-        int32_t tailCount = count - bodyCount;
-        if (tailCount > 0) {
-            Add(src_local, src_local, src_local[bodyCount], tailCount);
+        int32_t bodyCountHalf = findPowerTwo(count);
+        int32_t tailCountHalf = count - bodyCountHalf;
+        if (tailCountHalf > 0) {
+            Add(src_local, src_local, src_local[bodyCountHalf], tailCountHalf);
             PipeBarrier<PIPE_V>();
         }
-        while (bodyCount > ELEM_PER_REP_FP32) {
-            bodyCount = bodyCount / HALf_INTERVAL;
-            Add(src_local, src_local, src_local[bodyCount], bodyCount);
+        while (bodyCountHalf > ELEM_PER_REP_FP32) {
+            bodyCountHalf = bodyCountHalf / HALf_INTERVAL;
+            Add(src_local, src_local, src_local[bodyCountHalf], bodyCountHalf);
             PipeBarrier<PIPE_V>();
         }
 
@@ -139,18 +139,18 @@ __aicore__ inline void ReduceSumHalfInterval(
     PipeBarrier<PIPE_V>();
 }
 
-__aicore__ inline float ReduceSumHalfInterval(const LocalTensor<float>& src_local, int32_t count)
+__aicore__ inline float ReduceSumHalfInterval(const LocalTensor<float>& src_local_v2, int32_t count)
 {
     if (likely(count > ELEM_PER_REP_FP32)) {
         int32_t bodyCount = findPowerTwo(count);
         int32_t tailCount = count - bodyCount;
         if (tailCount > 0) {
-            Add(src_local, src_local, src_local[bodyCount], tailCount);
+            Add(src_local_v2, src_local_v2, src_local_v2[bodyCount], tailCount);
             PipeBarrier<PIPE_V>();
         }
         while (bodyCount > ELEM_PER_REP_FP32) {
             bodyCount = bodyCount / HALf_INTERVAL;
-            Add(src_local, src_local, src_local[bodyCount], bodyCount);
+            Add(src_local_v2, src_local_v2, src_local_v2[bodyCount], bodyCount);
             PipeBarrier<PIPE_V>();
         }
 
@@ -160,14 +160,14 @@ __aicore__ inline float ReduceSumHalfInterval(const LocalTensor<float>& src_loca
     }
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
     if (g_coreType == AIV) {
-        WholeReduceSum<float, false>(src_local, src_local, MASK_PLACEHOLDER, 1, 0, 1, 0);
+        WholeReduceSum<float, false>(src_local_v2, src_local_v2, MASK_PLACEHOLDER, 1, 0, 1, 0);
     }
 #else
-    WholeReduceSum<float, false>(src_local, src_local, MASK_PLACEHOLDER, 1, 1, 1, DEFAULT_REPEAT_STRIDE);
+    WholeReduceSum<float, false>(src_local_v2, src_local_v2, MASK_PLACEHOLDER, 1, 1, 1, DEFAULT_REPEAT_STRIDE);
 #endif
     event_t event_v_s = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(event_v_s);
     WaitFlag<HardEvent::V_S>(event_v_s);
-    return src_local.GetValue(0);
+    return src_local_v2.GetValue(0);
 }
 #endif // _REDUCE_COMMON_H_

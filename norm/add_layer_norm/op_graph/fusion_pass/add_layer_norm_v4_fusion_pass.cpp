@@ -224,16 +224,16 @@ bool IsGammaBetaTensorDescAsExpect(const GNode& layer_norm_v4_node, const Shape&
 
 bool IsAllInputShapeDtypeRight(const std::unique_ptr<MatchResult>& match_result)
 {
-    NodeIo add1_output_0;
-    NodeIo add2_output_0;
+    NodeIo add1OutNode;
+    NodeIo add2OutNode;
     OP_LOGE_IF(
-        match_result->GetCapturedTensor(kAdd1CaptureIdx, add1_output_0)!= SUCCESS, false, kPassName,
+        match_result->GetCapturedTensor(kAdd1CaptureIdx, add1OutNode)!= SUCCESS, false, kPassName,
         "Failed to GetCaptrue tensor");
     OP_LOGE_IF(
-        match_result->GetCapturedTensor(kAdd2CaptureIdx, add2_output_0) != SUCCESS, false, kPassName,
+        match_result->GetCapturedTensor(kAdd2CaptureIdx, add2OutNode) != SUCCESS, false, kPassName,
         "Failed to GetCaptrue tensor");
-    auto add1_node = add1_output_0.node;
-    auto add2_node = add2_output_0.node;
+    auto add1_node = add1OutNode.node;
+    auto add2_node = add2OutNode.node;
     AscendString add1_node_name;
     add1_node.GetName(add1_node_name);
     AscendString add2_node_name;

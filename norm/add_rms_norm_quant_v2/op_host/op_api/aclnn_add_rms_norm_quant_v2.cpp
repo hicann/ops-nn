@@ -25,8 +25,8 @@
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/reshape.h"
 
-#include "norm/add_rms_norm_quant/op_host/op_api/add_rms_norm_quant.h"
 #include "aclnn_add_rms_norm_quant_v2.h"
+#include "norm/add_rms_norm_quant/op_host/op_api/add_rms_norm_quant.h"
 
 using namespace op;
 #ifdef __cplusplus

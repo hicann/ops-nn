@@ -31,41 +31,41 @@ public:
         GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR res_out,
         const AddRMSNormQuantTilingData* tilingData)
     {
-        ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
-        this->numRow = tilingData->numRow;
+        ASSERT(GetBlockNum() != 0 && "Block dim1 can not be zero!");
         this->numCol = tilingData->numCol;
-        this->blockFactor = tilingData->blockFactor;
+        this->numRow = tilingData->numRow;
         this->rowFactor = tilingData->rowFactor;
-        this->ubFactor = tilingData->ubFactor;
+        this->blockFactor = tilingData->blockFactor;
         this->epsilon = tilingData->epsilon;
-        this->avgFactor = (float)1.0 / numCol;
+        this->ubFactor = tilingData->ubFactor;
         this->hasZeroPoints1 = tilingData->hasZeroPoints1;
-        this->hasBeta = tilingData->hasBeta;
+        this->avgFactor = (float)1.0 / numCol;
         this->divMode = tilingData->divMode;
-        this->hasScales2 = tilingData->hasScales2 && !PT;
+        this->hasBeta = tilingData->hasBeta;
         this->hasZeroPoints2 = tilingData->hasZeroPoints2 && !PT;
+        this->hasScales2 = tilingData->hasScales2 && !PT;
 
-        blockIdx_ = GetBlockIdx();
-        if (blockIdx_ < GetBlockNum() - 1) {
+        blockIdx_v1 = GetBlockIdx();
+        if (blockIdx_v1 < GetBlockNum() - 1) {
             this->rowWork = blockFactor;
-        } else if (blockIdx_ == GetBlockNum() - 1) {
+        } else if (blockIdx_v1 == GetBlockNum() - 1) {
             this->rowWork = numRow - (GetBlockNum() - 1) * blockFactor;
         } else {
         }
         // get start index for current core, core parallel
-        x1Gm.SetGlobalBuffer((__gm__ TX*)x1 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        x2Gm.SetGlobalBuffer((__gm__ TX*)x2 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        x1Gm.SetGlobalBuffer((__gm__ TX*)x1 + blockIdx_v1 * blockFactor * numCol, rowWork * numCol);
+        x2Gm.SetGlobalBuffer((__gm__ TX*)x2 + blockIdx_v1 * blockFactor * numCol, rowWork * numCol);
         gammaGm.SetGlobalBuffer((__gm__ TX*)gamma, numCol);
         scales1Gm.SetGlobalBuffer((__gm__ TScale*)scales1, numCol);
         if (hasZeroPoints1) {
             zeroPoints1Gm.SetGlobalBuffer((__gm__ TOffset*)zero_points1, numCol);
         }
         // out
-        y1Gm.SetGlobalBuffer((__gm__ int8_t*)y1 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        y2Gm.SetGlobalBuffer((__gm__ int8_t*)y2 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        xGm.SetGlobalBuffer((__gm__ TX*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        y1Gm.SetGlobalBuffer((__gm__ int8_t*)y1 + blockIdx_v1 * blockFactor * numCol, rowWork * numCol);
+        y2Gm.SetGlobalBuffer((__gm__ int8_t*)y2 + blockIdx_v1 * blockFactor * numCol, rowWork * numCol);
+        xGm.SetGlobalBuffer((__gm__ TX*)x + blockIdx_v1 * blockFactor * numCol, rowWork * numCol);
         if constexpr (RN) {
-            resOutGm.SetGlobalBuffer((__gm__ TX*)res_out + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+            resOutGm.SetGlobalBuffer((__gm__ TX*)res_out + blockIdx_v1 * blockFactor * numCol, rowWork * numCol);
         }
 
         // pipe alloc memory to queue, the unit is Bytes.
@@ -82,7 +82,7 @@ public:
         }
         Ppipe->InitBuffer(sqxBuf, ubFactor * sizeof(float));
 
-        Ppipe->InitBuffer(sumBuf, rowFactor * NUM_PER_BLK_FP32 * sizeof(float));
+        Ppipe->InitBuffer(sumBufSplit, rowFactor * NUM_PER_BLK_FP32 * sizeof(float));
         Ppipe->InitBuffer(reduceFp32Buf, NUM_PER_REP_FP32 * sizeof(float));
         Ppipe->InitBuffer(rstdBuf, rowFactor * sizeof(float));
         initOptionalParams(scales2, zero_points1, zero_points2, beta);
@@ -99,7 +99,7 @@ public:
             scales2Gm.SetGlobalBuffer((__gm__ TScale*)scales2, numCol);
             Ppipe->InitBuffer(outQueueY2, BUFFER_NUM, ubFactor * sizeof(TX));
             Ppipe->InitBuffer(scales2Buf, ubFactor * sizeof(float));
-            Ppipe->InitBuffer(tmpBuf, ubFactor * sizeof(float));
+            Ppipe->InitBuffer(tmpBufSplit, ubFactor * sizeof(float));
             if (hasZeroPoints2) {
                 zeroPoints2Gm.SetGlobalBuffer((__gm__ TOffset*)zero_points2, numCol);
                 Ppipe->InitBuffer(zeroPoints2Buf, ubFactor * sizeof(int32_t));
@@ -121,7 +121,7 @@ public:
 
     __aicore__ inline void SubProcess(uint32_t iO, uint32_t calcRowNum, uint32_t jMax, uint32_t colTail)
     {
-        LocalTensor<float> sumLocal = sumBuf.Get<float>();
+        LocalTensor<float> sumLocal = sumBufSplit.Get<float>();
 
         LocalTensor<float> rstdLocal = rstdBuf.Get<float>();
         Duplicate(rstdLocal, (float)0.0, calcRowNum);
@@ -359,7 +359,7 @@ private:
     __aicore__ inline void doQuant(LocalTensor<float> xFp32Local, uint32_t num)
     {
         if (hasScales2) {
-            LocalTensor<float> tmpFp32 = tmpBuf.Get<float>();
+            LocalTensor<float> tmpFp32 = tmpBufSplit.Get<float>();
             AddRmsNormQuantBase::doScales(tmpFp32, xFp32Local, scales2Buf, divMode, num);
             AddRmsNormQuantBase::doZeroPoints(tmpFp32, zeroPoints2Buf, num, hasZeroPoints2);
             LocalTensor<int8_t> y2Local = outQueueY2.AllocTensor<int8_t>();
@@ -414,50 +414,50 @@ private:
 private:
     TPipe* Ppipe = nullptr;
     // create queues for input, in this case depth is equal to buffer num
-    TQue<QuePosition::VECIN, BUFFER_NUM> inQueueX;
     TQue<QuePosition::VECIN, BUFFER_NUM> inQueueGamma;
+    TQue<QuePosition::VECIN, BUFFER_NUM> inQueueX;
     TQue<QuePosition::VECIN, BUFFER_NUM> inQueueBeta;
     // create queues for output, in this case depth is equal to buffer num
-    TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueY1;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueY2;
+    TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueY1;
 
     TBuf<TPosition::VECCALC> scales1Buf;
-    TBuf<TPosition::VECCALC> zeroPoints1Buf;
     TBuf<TPosition::VECCALC> xFp32Buf;
+    TBuf<TPosition::VECCALC> zeroPoints1Buf;
     TBuf<TPosition::VECCALC> sqxBuf;
-    TBuf<TPosition::VECCALC> tmpBuf;
-    TBuf<TPosition::VECCALC> sumBuf;
+    TBuf<TPosition::VECCALC> tmpBufSplit;
+    TBuf<TPosition::VECCALC> sumBufSplit;
     TBuf<TPosition::VECCALC> reduceFp32Buf;
     TBuf<TPosition::VECCALC> rstdBuf;
     TBuf<TPosition::VECCALC> scales2Buf;
     TBuf<TPosition::VECCALC> zeroPoints2Buf;
 
-    GlobalTensor<TX> x1Gm;
     GlobalTensor<TX> x2Gm;
+    GlobalTensor<TX> x1Gm;
     GlobalTensor<TX> gammaGm;
     GlobalTensor<TX> betaGm;
-    GlobalTensor<TScale> scales1Gm;
     GlobalTensor<TScale> scales2Gm;
+    GlobalTensor<TScale> scales1Gm;
     GlobalTensor<TOffset> zeroPoints1Gm;
-    GlobalTensor<TOffset> zeroPoints2Gm;
     GlobalTensor<int8_t> y1Gm;
+    GlobalTensor<TOffset> zeroPoints2Gm;
     GlobalTensor<int8_t> y2Gm;
     GlobalTensor<TX> xGm;
     GlobalTensor<TX> resOutGm;
 
-    uint32_t numRow;
     uint32_t numCol;
+    uint32_t numRow;
     uint32_t blockFactor; // number of calculations rows on each core
-    uint32_t rowFactor;
     uint32_t ubFactor;
+    uint32_t rowFactor;
     float epsilon;
     float avgFactor;
     uint32_t hasZeroPoints1 = 0;
     uint32_t hasBeta = 0;
-    uint32_t divMode = 1;
     uint32_t hasScales2 = 0;
+    uint32_t divMode = 1;
     uint32_t hasZeroPoints2 = 0;
-    int32_t blockIdx_;
+    int32_t blockIdx_v1;
     uint32_t rowWork = 1;
 
     int tempbufNum;

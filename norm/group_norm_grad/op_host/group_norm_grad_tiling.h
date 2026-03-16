@@ -26,8 +26,8 @@
 #include "platform/platform_infos_def.h"
 #include "op_host/tiling_base.h"
 #include "op_common/op_host/util/platform_util.h"
-#include "op_host/tiling_templates_registry.h"
 #include "error_util.h"
+#include "op_host/tiling_templates_registry.h"
 
 namespace optiling {
 BEGIN_TILING_DATA_DEF(GroupNormGradTilingData)

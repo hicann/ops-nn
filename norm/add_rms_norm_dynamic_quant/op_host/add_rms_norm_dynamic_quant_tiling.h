@@ -27,10 +27,10 @@ namespace optiling {
 BEGIN_TILING_DATA_DEF(AddRmsNormDynamicQuantTilingData)
 TILING_DATA_FIELD_DEF(uint64_t, useCore);
 TILING_DATA_FIELD_DEF(uint64_t, numFirstDim);
-TILING_DATA_FIELD_DEF(uint64_t, numLastDim);
 TILING_DATA_FIELD_DEF(uint64_t, numLastDimAligned);
-TILING_DATA_FIELD_DEF(uint64_t, firstDimPerCore);
+TILING_DATA_FIELD_DEF(uint64_t, numLastDim);
 TILING_DATA_FIELD_DEF(uint64_t, firstDimPerCoreTail);
+TILING_DATA_FIELD_DEF(uint64_t, firstDimPerCore);
 TILING_DATA_FIELD_DEF(uint64_t, firstDimPerLoop);
 TILING_DATA_FIELD_DEF(uint64_t, lastDimLoopNum);
 TILING_DATA_FIELD_DEF(uint64_t, lastDimSliceLen);
@@ -244,8 +244,8 @@ protected:
     // Order: GetShapeAttrsInfo->GetPlatformInfo->
     //        IsCapable->DoOpTiling->DoLibApiTiling->
     //        GetWorkspaceSize->PostTiling->GetTilingKey
-    ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus GetPlatformInfo() override;
+    ge::graphStatus GetShapeAttrsInfo() override;
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus DoLibApiTiling() override;

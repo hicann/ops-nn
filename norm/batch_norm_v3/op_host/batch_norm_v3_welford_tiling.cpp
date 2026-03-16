@@ -37,13 +37,13 @@ uint32_t BatchNormV3WelfordTiling::FindDichotomizeAddDiffSize(uint32_t parallelN
 {
     // 找到parallelN与小于parallelN的最近二次幂的差值 例如：parallelN = 15，结果为15 - 8 = 7
     if ((parallelN & (parallelN - 1)) != 0) {
-        uint32_t temp = parallelN - 1;
-        temp |= temp >> 1;
-        temp |= temp >> TWO_POWER_ONE;
-        temp |= temp >> TWO_POWER_TWO;
-        temp |= temp >> TWO_POWER_THREE;
-        temp |= temp >> TWO_POWER_FOUR;
-        return (parallelN - ((temp + 1) / TWO_POWER_ONE));
+        uint32_t welfordTemp = parallelN - 1;
+        welfordTemp |= welfordTemp >> 1;
+        welfordTemp |= welfordTemp >> TWO_POWER_ONE;
+        welfordTemp |= welfordTemp >> TWO_POWER_TWO;
+        welfordTemp |= welfordTemp >> TWO_POWER_THREE;
+        welfordTemp |= welfordTemp >> TWO_POWER_FOUR;
+        return (parallelN - ((welfordTemp + 1) / TWO_POWER_ONE));
     } else {
         return 0;
     }
@@ -83,36 +83,36 @@ ge::graphStatus BatchNormV3WelfordTiling::DoOpTiling()
     usedCoreNum = Ops::Base::CeilDiv(commonParams.patternA, blockFactor);
     td_.set_blockFactor(blockFactor);
     td_.set_tailCoreBlockFactor(commonParams.patternA - (usedCoreNum - 1) * blockFactor);
-    float batchVarScale = (commonParams.patternR0 * commonParams.patternR1 == 1) ?
-                              1.0 :
-                              static_cast<float>(
-                                  static_cast<double>(commonParams.patternR0 * commonParams.patternR1) /
-                                  static_cast<double>(commonParams.patternR0 * commonParams.patternR1 - 1));
-    td_.set_batchVarScale(batchVarScale);
-    int64_t aUbFactor = 1;
-    int64_t r0UbFactor = 1;
-    DoUbTiling(aUbFactor, r0UbFactor);
-    td_.set_aUbFactor(aUbFactor);
-    td_.set_r0UbFactor(r0UbFactor);
-    td_.set_aUbLoop(Ops::Base::CeilDiv(blockFactor, aUbFactor));
-    td_.set_aUbTail(blockFactor - (td_.get_aUbLoop() - 1) * aUbFactor);
-    td_.set_tailCoreAUbLoop(Ops::Base::CeilDiv(td_.get_tailCoreBlockFactor(), aUbFactor));
-    td_.set_tailCoreAUbTail(td_.get_tailCoreBlockFactor() - (td_.get_tailCoreAUbLoop() - 1) * aUbFactor);
-    td_.set_r0UbLoop(Ops::Base::CeilDiv(commonParams.patternR0, r0UbFactor));
-    td_.set_r0UbTail(commonParams.patternR0 - (td_.get_r0UbLoop() - 1) * r0UbFactor);
+    // Calculate batch variance scale for Welford algorithm
+    float welfordBatchVarScale = (commonParams.patternR0 * commonParams.patternR1 == 1) ?
+                                     1.0 :
+                                     static_cast<float>(
+                                         static_cast<double>(commonParams.patternR0 * commonParams.patternR1) /
+                                         static_cast<double>(commonParams.patternR0 * commonParams.patternR1 - 1));
+    td_.set_batchVarScale(welfordBatchVarScale);
+    int64_t bnAUbFactor = 1;
+    int64_t bnR0UbFactor = 1;
+    DoUbTiling(bnAUbFactor, bnR0UbFactor);
+    td_.set_aUbFactor(bnAUbFactor);
+    td_.set_r0UbFactor(bnR0UbFactor);
+    td_.set_aUbLoop(Ops::Base::CeilDiv(blockFactor, bnAUbFactor));
+    td_.set_aUbTail(blockFactor - (td_.get_aUbLoop() - 1) * bnAUbFactor);
+    td_.set_tailCoreAUbLoop(Ops::Base::CeilDiv(td_.get_tailCoreBlockFactor(), bnAUbFactor));
+    td_.set_tailCoreAUbTail(td_.get_tailCoreBlockFactor() - (td_.get_tailCoreAUbLoop() - 1) * bnAUbFactor);
+    td_.set_r0UbLoop(Ops::Base::CeilDiv(commonParams.patternR0, bnR0UbFactor));
+    td_.set_r0UbTail(commonParams.patternR0 - (td_.get_r0UbLoop() - 1) * bnR0UbFactor);
     td_.set_procNR0(1);
     td_.set_nR0Loop(commonParams.patternR1);
     td_.set_lastLoopNR0(1);
     uint32_t parallelN =
-        (td_.get_r0UbLoop() == 1) ? static_cast<uint32_t>(commonParams.patternR0) : static_cast<uint32_t>(r0UbFactor);
+        (td_.get_r0UbLoop() == 1) ? static_cast<uint32_t>(commonParams.patternR0) : static_cast<uint32_t>(bnR0UbFactor);
     if ((td_.get_r0UbLoop() == 1) || (td_.get_r0UbFactor() == td_.get_r0UbTail())) {
         welfordTilingkey = BNV3_WELFORD_R0_SPLIT_ALIGN_TILING_KEY;
     } else {
         welfordTilingkey = BNV3_WELFORD_R0_SPLIT_NOT_ALIGN_TILING_KEY;
     }
-    // R0不切分，R1补充切分
-    if ((commonParams.patternR0Align <= (r0UbFactor / TWO_NUM)) && commonParams.patternR1 > 1) {
-        int64_t procNR0 = Ops::Base::FloorDiv(r0UbFactor, commonParams.patternR0Align);
+    if ((commonParams.patternR0Align <= (bnR0UbFactor / TWO_NUM)) && commonParams.patternR1 > 1) {
+        int64_t procNR0 = Ops::Base::FloorDiv(bnR0UbFactor, commonParams.patternR0Align);
         int64_t nR0Loop = Ops::Base::CeilDiv(commonParams.patternR1, procNR0);
         int64_t lastLoopNR0 = commonParams.patternR1 - (nR0Loop - 1) * procNR0;
         td_.set_procNR0(procNR0);
@@ -133,6 +133,7 @@ ge::graphStatus BatchNormV3WelfordTiling::DoOpTiling()
 
 ge::graphStatus BatchNormV3WelfordTiling::PostTiling()
 {
+    // Set tiling parameters for Welford algorithm
     td_.set_patternR1(commonParams.patternR1);
     td_.set_patternR0(commonParams.patternR0);
     td_.set_patternA(commonParams.patternA);
@@ -141,15 +142,17 @@ ge::graphStatus BatchNormV3WelfordTiling::PostTiling()
     td_.set_momentum(commonParams.momentum);
     td_.set_momentumReverse(commonParams.momentumReverse);
     context_->SetBlockDim(usedCoreNum);
-    auto rawTilingData = context_->GetRawTilingData();
+    
+    // Save tiling data to context
+    auto welfordRawTilingData = context_->GetRawTilingData();
     OP_CHECK_IF(
-        td_.GetDataSize() > rawTilingData->GetCapacity(),
+        td_.GetDataSize() > welfordRawTilingData->GetCapacity(),
         OP_LOGE(
             commonParams.nodeName, "actual tiling data size %zu > context tiling data size %zu", td_.GetDataSize(),
-            rawTilingData->GetCapacity()),
+            welfordRawTilingData->GetCapacity()),
         return ge::GRAPH_FAILED);
-    td_.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
-    rawTilingData->SetDataSize(td_.GetDataSize());
+    td_.SaveToBuffer(welfordRawTilingData->GetData(), welfordRawTilingData->GetCapacity());
+    welfordRawTilingData->SetDataSize(td_.GetDataSize());
 
     return ge::GRAPH_SUCCESS;
 }

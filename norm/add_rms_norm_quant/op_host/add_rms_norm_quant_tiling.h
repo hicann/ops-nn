@@ -47,14 +47,14 @@ TILING_DATA_FIELD_DEF(uint64_t, numM);  //A
 TILING_DATA_FIELD_DEF(uint64_t, numN);  //R
 TILING_DATA_FIELD_DEF(uint64_t, baseM);  //ubfactor ub处理a的大小
 TILING_DATA_FIELD_DEF(uint64_t, baseN);  //全载时=R
-TILING_DATA_FIELD_DEF(uint64_t, baseNDtypeAlign);  //R对32B对齐的个数
 TILING_DATA_FIELD_DEF(uint64_t, baseNReduceAlign);
-TILING_DATA_FIELD_DEF(uint64_t, powerSplit);  //binaryAdd 二分折叠点
+TILING_DATA_FIELD_DEF(uint64_t, baseNDtypeAlign);  //R对32B对齐的个数
 TILING_DATA_FIELD_DEF(uint64_t, powerLoop);
+TILING_DATA_FIELD_DEF(uint64_t, powerSplit);  //binaryAdd 二分折叠点
 TILING_DATA_FIELD_DEF(uint64_t, mPerCore); //blockFactor 单核处理a的大小
 TILING_DATA_FIELD_DEF(uint64_t, mLastCore); //blockTail 尾核处理a的大小
-TILING_DATA_FIELD_DEF(float, epsilon);
 TILING_DATA_FIELD_DEF(float, avgFactor);
+TILING_DATA_FIELD_DEF(float, epsilon);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(AddRmsNormQuant, AddRMSNormQuantTilingData)
@@ -156,8 +156,8 @@ struct AddRmsNormQuantRegbaseTilingParams {
     uint64_t baseNQuantAlign{0};
     uint64_t baseNReduceAlign{0};
     uint64_t reduceBufLenAlign{0};
-    uint64_t powerSplit{0};
     uint64_t powerLoop{0};
+    uint64_t powerSplit{0};
     uint64_t mPerCore{0};
     uint64_t mLastCore{0};
     uint64_t usedCoreNum{0};
@@ -166,8 +166,8 @@ struct AddRmsNormQuantRegbaseTilingParams {
     // Tiling key parmas
     uint64_t tilingType{0};
 
-    float epsilon{0};
     float avgFactor{0};
+    float epsilon{0};
     uint32_t quantBufCnt{0};
     bool divMode{false};
     bool hasScales2{false};

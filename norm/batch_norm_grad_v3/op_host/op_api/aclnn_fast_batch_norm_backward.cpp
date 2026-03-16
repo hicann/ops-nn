@@ -40,6 +40,7 @@ using namespace op;
 extern "C" {
 #endif
 
+// batch norm backward constants
 constexpr size_t GRAD_WEIGHT_INDEX = 1;
 constexpr size_t GRAD_BIAS_INDEX = 2;
 constexpr size_t MIN_BN_DIMS = 2;
@@ -89,6 +90,7 @@ static inline bool isBatchNormSupportAscendC(void)
 static bool CheckMaskNotNull(
     const aclTensor* gradInput, const aclTensor* gradWeight, const aclTensor* gradBias, const aclBoolArray* outputMask)
 {
+    // fast batch norm backward: check output mask validity
     OP_CHECK_NULL(outputMask, return false);
     if (outputMask->Size() < GRAD_WEIGHT_INDEX) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outputMask size should not less than 1.");
@@ -267,12 +269,12 @@ aclnnStatus FastBatchNormPost(
 {
     auto inputDims = inputShape.GetDimNum();
     if (inputDims > MAX_BN_DIMS) {
-        int64_t originShapes[inputDims];
+        int64_t fastOriginShapes[inputDims];
         for (size_t i = 0; i < inputDims; ++i) {
-            originShapes[i] = inputShape[i];
+            fastOriginShapes[i] = inputShape[i];
         }
-        aclIntArray* originShapeArray = executor->AllocIntArray(originShapes, inputDims);
-        auto bnGradInputReshape = l0op::Reshape(bnGradInput, originShapeArray, executor);
+        aclIntArray* fastOriginShapeArray = executor->AllocIntArray(fastOriginShapes, inputDims);
+        auto bnGradInputReshape = l0op::Reshape(bnGradInput, fastOriginShapeArray, executor);
         auto bnGradInputReformat = l0op::ReFormat(bnGradInputReshape, Format::FORMAT_ND);
         auto viewCopyResult = l0op::ViewCopy(bnGradInputReformat, gradInput, executor);
         CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -315,12 +317,14 @@ aclnnStatus FastBatchNormBackwardProc(
         CHECK_RET(saveInvstdResize != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         if (input->GetViewShape().GetDimNum() == MAX_BN_DIMS) {
+            // fast batch norm: 3D training update grad
             grad = l0op::BN3DTrainingUpdateGrad(gradOut, input, saveMeanResize, saveInvstdResize, eps, executor);
             auto reduceGrad = l0op::BN3DTrainingReduceGrad(
                 gradOut, input, grad[0], grad[1], weightResize, saveMeanResize, saveInvstdResize, eps, executor);
             CHECK_RET(reduceGrad != nullptr, ACLNN_ERR_INNER_NULLPTR);
             *gradInput = const_cast<aclTensor*>(reduceGrad);
         } else {
+            // fast batch norm: 2D training update grad
             grad = l0op::BNTrainingUpdateGrad(gradOut, input, saveMeanResize, saveInvstdResize, eps, executor);
             auto reduceGrad = l0op::BNTrainingReduceGrad(
                 gradOut, input, grad[0], grad[1], weightResize, saveMeanResize, saveInvstdResize, eps, executor);
@@ -485,6 +489,7 @@ aclnnStatus FastBatchNormBackwardPrepare(
     const aclTensor* input, const aclTensor*& weight, const aclTensor*& runningMean, const aclTensor*& runningVar,
     const aclTensor*& saveMean, const aclTensor*& saveInvstd, aclOpExecutor* executor)
 {
+    // fast batch norm backward: prepare default values for optional tensors
     size_t dimC = input->GetViewShape()[1];
     if (runningMean == nullptr) {
         runningMean = op::FillScalar(dimC, 0, executor);
@@ -519,6 +524,7 @@ aclnnStatus FastBatchNormBackward(
     CHECK_RET(bnPrepareResp == ACLNN_SUCCESS, bnPrepareResp);
 
     size_t dimNum = input->GetViewShape().GetDimNum();
+    // fast batch norm: prepare input tensors for processing
     auto gradOutPre = gradOut;
     auto inputPre = input;
     if (dimNum < BN2D_INPUT_DIMS) {
@@ -529,6 +535,7 @@ aclnnStatus FastBatchNormBackward(
         CHECK_RET(inputPre != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
+    // fast batch norm: process backward computation
     aclTensor* result = nullptr;
     if (isBatchNormSupportAscendC()) {
         auto bnResult = FastBatchNormBackwardProcForAscendC(

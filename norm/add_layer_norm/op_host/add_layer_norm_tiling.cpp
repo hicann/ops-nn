@@ -299,15 +299,15 @@ inline TILING_TYPE AddLayerNormTilingImpl(
         }
     }
 
-    // when x1/x2: fp16/bf16 beta/gamma:fp32.
+    // when x1/x2: fp16/bf16 beta/gamma:fp32 - case 2
     bool isSingleRowLessTensor2 = (!is310P) && (isNoBias || isBroadcastBias) && isXB16GammaB32 && enableXOut;
     if (isSingleRowLessTensor2) {
-        auto oneRowX1X2YBufSize = dtSize * 1 * numCol + 4 * 1 * numCol;
-        auto oneRowMeanRstdBufSize = 4 * 1 * 2;
-        auto oneRowTmpBufSize = 4 * 2 * numCol;
-        auto oneRowReduceBufSize = 4 * 64;
+        auto oneRowX1X2YBufSize2 = dtSize * 1 * numCol + 4 * 1 * numCol;
+        auto oneRowMeanRstdBufSize2 = 4 * 1 * 2;
+        auto oneRowTmpBufSize2 = 4 * 2 * numCol;
+        auto oneRowReduceBufSize2 = 4 * 64;
         tmpUbSize = static_cast<uint32_t>(
-            oneRowX1X2YBufSize + oneRowMeanRstdBufSize + oneRowTmpBufSize + oneRowReduceBufSize + UB_RESERVED_BYTE);
+            oneRowX1X2YBufSize2 + oneRowMeanRstdBufSize2 + oneRowTmpBufSize2 + oneRowReduceBufSize2 + UB_RESERVED_BYTE);
         if (tmpUbSize < maxUbSize) {
             rowPerTime = 1U;
             colPerTime = numCol;

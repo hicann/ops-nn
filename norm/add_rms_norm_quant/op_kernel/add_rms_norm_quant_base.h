@@ -30,12 +30,12 @@ __aicore__ inline constexpr uint32_t GetVRegSize()
 #endif
 }
 
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ != 220 && __CCE_AICORE__ != 220 && __CCE_AICORE__ != 310
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ != 220 && __CCE_AICORE__ != 310 && __CCE_AICORE__ != 220
 #define bfloat16_t int16_t
 #endif
+constexpr int32_t NUM_PER_BLK_FP32 = 8;
 constexpr int32_t BUFFER_NUM = 1;        // tensor num for each queue
 constexpr int32_t NUM_PER_REP_FP32 = 64; // ONE_REPEAT_BYTE_SIZE / sizeof(float);
-constexpr int32_t NUM_PER_BLK_FP32 = 8;
 constexpr int32_t BLOCK_SIZE = 32;
 constexpr uint32_t ONCE_VECTOR_SIZE = 256;
 constexpr float ONE = 1;
@@ -54,9 +54,9 @@ __aicore__ inline T CeilDiv(T x, T y)
     return y == 0 ? x : (x + y - 1) / y;
 }
 
-template <typename Tp, Tp v>
+template <typename Tp4, Tp4 v>
 struct integral_constant {
-    static constexpr Tp value = v;
+    static constexpr Tp4 value = v;
 };
 using true_type = integral_constant<bool, true>;
 using false_type = integral_constant<bool, false>;
@@ -66,29 +66,29 @@ template <typename Tp>
 struct is_same<Tp, Tp> : public true_type {};
 
 __aicore__ inline void ReduceSumFP32(
-    const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local, const LocalTensor<float>& work_local,
+    const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local_v1, const LocalTensor<float>& work_local,
     int32_t count)
 {
     // count need smaller than 255 repeat
     uint64_t mask = NUM_PER_REP_FP32;
-    int32_t repeatTimes = count / NUM_PER_REP_FP32;
     int32_t tailCount = count % NUM_PER_REP_FP32;
+    int32_t repeatTimes = count / NUM_PER_REP_FP32;
     int32_t bodyCount = repeatTimes * NUM_PER_REP_FP32;
     BinaryRepeatParams repeatParams;
     repeatParams.src0RepStride = ONE_REPEAT_BYTE_SIZE / ONE_BLK_SIZE;
+    repeatParams.src1BlkStride = 1;
     repeatParams.src0BlkStride = 1;
     repeatParams.src1RepStride = 0;
-    repeatParams.src1BlkStride = 1;
     repeatParams.dstRepStride = 0;
     repeatParams.dstBlkStride = 1;
     Duplicate(work_local, ZERO, NUM_PER_REP_FP32);
     PipeBarrier<PIPE_V>();
     if (likely(repeatTimes > 0)) {
-        Add(work_local, src_local, work_local, mask, repeatTimes, repeatParams);
+        Add(work_local, src_local_v1, work_local, mask, repeatTimes, repeatParams);
         PipeBarrier<PIPE_V>();
     }
     if (unlikely(tailCount != 0)) {
-        Add(work_local, src_local[bodyCount], work_local, tailCount, 1, repeatParams);
+        Add(work_local, src_local_v1[bodyCount], work_local, tailCount, 1, repeatParams);
         PipeBarrier<PIPE_V>();
     }
     AscendCUtils::SetMask<float>(NUM_PER_REP_FP32);
