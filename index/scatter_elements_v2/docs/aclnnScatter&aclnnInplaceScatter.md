@@ -1,21 +1,24 @@
 # aclnnScatter&aclnnInplaceScatter
 
+📄 [查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/scatter_elements_v2)
+
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                          |    √  |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品 </term>                             |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    ×   |
+| 产品 | 是否支持 |
+| :--- | :---: |
+| <term>Ascend 950PR/Ascend 950DT</term> | √ |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
+| <term>Atlas 200I/500 A2 推理产品</term> | × |
+| <term>Atlas 推理系列产品</term> | × |
+| <term>Atlas 训练系列产品</term> | × |
 
 ## 功能说明
-- 算子功能: 将tensor src中的值按指定的轴和方向和对应的位置关系逐个替换/累加/累乘至tensor self中。
+
+- 接口功能：将tensor src中的值按指定的轴和方向和对应的位置关系逐个替换/累加/累乘至tensor self中。
 
 - 示例：
-  对于一个3D tensor， self会按照如下的规则进行更新：
+  对于一个3D tensor，self会按照如下的规则进行更新：
 
   ```
   self[index[i][j][k]][j][k] += src[i][j][k] # 如果 dim == 0 && reduction == 1
@@ -23,80 +26,255 @@
   self[i][j][index[i][j][k]] = src[i][j][k]  # 如果 dim == 2 && reduction == 0
   ```
 
-  在计算时需要满足以下要求：
+- 在计算时需要满足以下要求：
   - self、index和src的维度数量必须相同。
   - 对于每一个维度d，有index.size(d) <= src.size(d)的限制。
-  - 对于每一个维度d，如果d != dim, 有index.size(d) <= self.size(d)的限制。
+  - 对于每一个维度d，如果d != dim，有index.size(d) <= self.size(d)的限制。
   - dim的值的大小必须在 [-self的维度数量, self的维度数量-1] 之间。
   - self的维度数应该小于等于8。
   - index中对应维度dim的值大小必须在[0, self.size(dim)-1]之间。
 
 ## 函数原型
 
-- aclnnScatter和aclnnInplaceScatter实现相同的功能，使用区别如下，请根据自身实际场景选择合适的算子。
+aclnnScatter和aclnnInplaceScatter实现相同的功能，使用区别如下，请根据自身实际场景选择合适的算子。
 
-  - aclnnScatter：需新建一个输出张量对象存储计算结果。
-  - aclnnInplaceScatter：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
+- aclnnScatter：需新建一个输出张量对象存储计算结果。
+- aclnnInplaceScatter：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
 
-- 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnScatterGetWorkspaceSize”或者“aclnnInplaceScatterGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnScatter”或者“aclnnInplaceScatter”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnScatterGetWorkspaceSize”或者“aclnnInplaceScatterGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnScatter”或者“aclnnInplaceScatter”接口执行计算。
 
-  - `aclnnStatus aclnnScatterGetWorkspaceSize(const aclTensor* self, int64_t dim, const aclTensor* index, const aclTensor* src, int64_t reduce, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)`
-  - `aclnnStatus aclnnScatter(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)`
-  - `aclnnStatus aclnnInplaceScatterGetWorkspaceSize(aclTensor* selfRef, int64_t dim, const aclTensor* index, const aclTensor* src, int64_t reduce, uint64_t* workspaceSize, aclOpExecutor** executor)`
-  - `aclnnStatus aclnnInplaceScatter(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)`
+```Cpp
+aclnnStatus aclnnScatterGetWorkspaceSize(
+  const aclTensor* self,
+  int64_t          dim,
+  const aclTensor* index,
+  const aclTensor* src,
+  int64_t          reduce,
+  aclTensor*       out,
+  uint64_t*        workspaceSize,
+  aclOpExecutor**  executor)
+```
+
+```Cpp
+aclnnStatus aclnnScatter(
+  void*          workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor* executor,
+  aclrtStream    stream)
+```
+
+```Cpp
+aclnnStatus aclnnInplaceScatterGetWorkspaceSize(
+  aclTensor*       selfRef,
+  int64_t          dim,
+  const aclTensor* index,
+  const aclTensor* src,
+  int64_t          reduce,
+  uint64_t*        workspaceSize,
+  aclOpExecutor**  executor)
+```
+
+```Cpp
+aclnnStatus aclnnInplaceScatter(
+  void*          workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor* executor,
+  aclrtStream    stream)
+```
 
 ## aclnnScatterGetWorkspaceSize
 
 - **参数说明：**
 
-  - self(aclTensor*, 计算输入)：公式中的`self`，Device侧的aclTensor。self的维度数量需要与index、src相同，shape支持0-8维。self的数据类型需要与src一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16。
-  - dim(int64_t, 计算输入)：用来scatter的维度，数据类型为INT64。范围为[-self的维度数量, self的维度数量-1]。
-
-  - index(aclTensor*, 计算输入)：公式中的`index`，Device侧的aclTensor。索引张量，数据类型支持INT32、INT64。index的维度数量需要与self、src相同，shape支持0-8维。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-
-  - src(aclTensor*, 计算输入)：公式中的`src`，Device侧的aclTensor。src的维度数量需要与self、index相同，shape支持0-8维。src的数据类型需要与self一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16。
-  - reduce(int64_t, 计算输入)：Host侧的整型，选择应用的reduction操作。可选的操作选项以及对应的int值为 (add, 1)，(mul, 2)，(none, 0)。具体操作含义如下：
-    0：表示替换操作，将src中的对应位置的值按照index替换到out中的对应位置。
-    1：表示累加操作，将src中的对应位置的值按照index累加到out中的对应位置。
-    2：表示累乘操作，将src中的对应位置的值按照index累乘到out的对应位置。
-  - out(aclTensor*, 计算输出)：数据类型与self的数据类型一致。shape需要与self一致。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16。
-
-  - workspaceSize(uint64_t*，出参)：返回需要在Device侧申请的workspace大小。
-
-  - executor(aclOpExecutor**，出参)：返回op执行器，包含了算子计算流程。
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+    <col style="width: 180px">
+    <col style="width: 120px">
+    <col style="width: 280px">
+    <col style="width: 320px">
+    <col style="width: 250px">
+    <col style="width: 120px">
+    <col style="width: 140px">
+    <col style="width: 140px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+        <th>使用说明</th>
+        <th>数据类型</th>
+        <th>数据格式</th>
+        <th>维度(shape)</th>
+        <th>非连续Tensor</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>self（aclTensor*）</td>
+        <td>输入</td>
+        <td>公式中的`self`。</td>
+        <td>数据类型需要与src一致。<br>维度数量需要与index、src相同。</td>
+        <td>UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16</td>
+        <td>ND</td>
+        <td>0-8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>dim（int64_t）</td>
+        <td>输入</td>
+        <td>用来scatter的维度。</td>
+        <td>范围为[-self的维度数量, self的维度数量-1]。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>index（aclTensor*）</td>
+        <td>输入</td>
+        <td>索引张量。</td>
+        <td>维度数量需要与self、src相同。</td>
+        <td>INT32、INT64</td>
+        <td>ND</td>
+        <td>0-8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>src（aclTensor*）</td>
+        <td>输入</td>
+        <td>公式中的`src`。</td>
+        <td>数据类型需要与self一致。<br>维度数量需要与self、index相同。</td>
+        <td>UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16</td>
+        <td>ND</td>
+        <td>0-8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>reduce（int64_t）</td>
+        <td>输入</td>
+        <td>选择应用的reduction操作。</td>
+        <td>可选的操作选项以及对应的int值为 (add, 1)，(mul, 2)，(none, 0)。<br>具体操作含义如下：0表示替换，1表示累加，2表示累乘。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>out（aclTensor*）</td>
+        <td>输出</td>
+        <td>计算结果。</td>
+        <td>数据类型需要与self一致。<br>shape需要与self一致。</td>
+        <td>UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16</td>
+        <td>ND</td>
+        <td>0-8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>workspaceSize（uint64_t*）</td>
+        <td>输出</td>
+        <td>返回需要在Device侧申请的workspace大小。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>executor（aclOpExecutor**）</td>
+        <td>输出</td>
+        <td>返回op执行器，包含了算子计算流程。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+    </tbody></table>
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
   第一段接口完成入参校验，出现以下场景时报错：
-  返回161001 (ACLNN_ERR_PARAM_NULLPTR): 1. 传入的self、index、src或out是空指针。
-  返回161002 (ACLNN_ERR_PARAM_INVALID): 1. self、index、src或out的数据类型不在支持范围内。
-                                        2. self、src、out的数据类型不一样。
-                                        3. self、index、src的维度数不一致。
-                                        4. self和out的shape不一致。
-                                        5. self、index、src的shape不符合以下限制：
-                                          对于每一个维度d，有index.size(d) <= src.size(d)的限制。
-                                          对于每一个维度d，如果d != dim, 有index.size(d) <= self.size(d)的限制。
-                                        6. dim的值不在[-self的维度数量， self的维度数量-1]之间。
-                                        7. self的维度数超过8。
-  ```
+
+  <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+    <col style="width: 300px">
+    <col style="width: 134px">
+    <col style="width: 716px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>返回值</th>
+        <th>错误码</th>
+        <th>描述</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>ACLNN_ERR_PARAM_NULLPTR</td>
+        <td>161001</td>
+        <td>self、index、src或out存在空指针。</td>
+      </tr>
+      <tr>
+        <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="7">161002</td>
+        <td>self、index、src或out的数据类型不在支持范围内。</td>
+      </tr>
+      <tr>
+        <td>self、src、out的数据类型不一样。</td>
+      </tr>
+      <tr>
+        <td>self、index、src的维度数不一致。</td>
+      </tr>
+      <tr>
+        <td>self和out的shape不一致。</td>
+      </tr>
+      <tr>
+        <td>dim的值不在[-self的维度数量， self的维度数量-1]之间。</td>
+      </tr>
+      <tr>
+        <td>self的维度数超过8。</td>
+      </tr>
+      <tr>
+        <td>self、index、src的shape不符合限制：对于每一个维度d，有index.size(d) <= src.size(d)；且d != dim时，index.size(d) <= self.size(d)。</td>
+      </tr>
+    </tbody></table>
 
 ## aclnnScatter
 
 - **参数说明：**
 
-  - workspace(void*，入参)：在Device侧申请的workspace内存地址。
-
-  - workspaceSize(uint64_t，入参)：在Device侧申请的workspace大小，由第一段接口aclnnScatterGetWorkspaceSize获取。
-
-  - executor(aclOpExecutor*，入参)：op执行器，包含了算子计算流程。
-
-  - stream(aclrtStream，入参)：指定执行任务的Stream。
+  <table style="undefined;table-layout: fixed; width: 1100px"><colgroup>
+    <col style="width: 200px">
+    <col style="width: 130px">
+    <col style="width: 770px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>workspace</td>
+        <td>输入</td>
+        <td>在Device侧申请的workspace内存地址。</td>
+      </tr>
+      <tr>
+        <td>workspaceSize</td>
+        <td>输入</td>
+        <td>在Device侧申请的workspace大小，由第一段接口aclnnScatterGetWorkspaceSize获取。</td>
+      </tr>
+      <tr>
+        <td>executor</td>
+        <td>输入</td>
+        <td>op执行器，包含了算子计算流程。</td>
+      </tr>
+      <tr>
+        <td>stream</td>
+        <td>输入</td>
+        <td>指定执行任务的Stream。</td>
+      </tr>
+    </tbody></table>
 
 - **返回值：**
 
@@ -106,43 +284,182 @@
 
 - **参数说明：**
 
-  - selfRef(aclTensor*, 计算输入|计算输出)：scatter的目标张量，公式中的`self`，Device侧的aclTensor。shape支持0-8维，且shape需要与index和src的维度数量相同。数据类型与src的数据类型一致。支持空tensor， 支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16。
-  - dim(int64_t, 计算输入)：指定沿哪个维度进行scatter操作，数据类型为INT64，host侧整型。范围为[-selfRef的维度数量, selfRef的维度数量-1]。
-  - index(aclTensor*, 计算输入)：索引张量，用于指定src张量中散布到self张量中的位置，Device侧的aclTensor。数据类型支持INT32、INT64。index的维度数量需要与selfRef、src相同，shape支持0-8维。对于每一个维度d，需保证index.size(d) <= src.size(d)，如果d != dim, 需要保证index.size(d) <= selfRef.size(d)。支持空tensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  - src(aclTensor*, 计算输入)：公式中的`src`，Device侧的aclTensor。源张量，其中的值将根据index张量指定的位置散布到self中,src的维度数量需要与selfRef、index相同，shape支持0-8维。src的数据类型需要与selfRef一致。支持空tensor， 支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16。
-  - reduce(int64_t, 计算输入)：选择应用的reduction操作。可选的操作选项以及对应的int值为 (add, 1), (mul, 2)，(none, 0)。具体操作含义如下：
-    0：表示替换操作，将src中的对应位置的值按照index替换到selfRef中的对应位置
-    1：表示累加操作，将src中的对应位置的值按照index累加到selfRef中的对应位置
-    2：表示累乘操作，将src中的对应位置的值按照index累乘到selfRef的对应位置
-  - workspaceSize(uint64_t*，出参)：返回需要在Device侧申请的workspace大小。
-  - executor(aclOpExecutor**，出参)：返回op执行器，包含了算子计算流程。
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+    <col style="width: 180px">
+    <col style="width: 120px">
+    <col style="width: 280px">
+    <col style="width: 320px">
+    <col style="width: 250px">
+    <col style="width: 120px">
+    <col style="width: 140px">
+    <col style="width: 140px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+        <th>使用说明</th>
+        <th>数据类型</th>
+        <th>数据格式</th>
+        <th>维度(shape)</th>
+        <th>非连续Tensor</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>selfRef（aclTensor*）</td>
+        <td>输入/输出</td>
+        <td>scatter的目标张量。</td>
+        <td>shape需要与index和src的维度数量相同。<br>数据类型与src的数据类型一致。<br>支持空Tensor。</td>
+        <td>UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16</td>
+        <td>ND</td>
+        <td>0-8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>dim（int64_t）</td>
+        <td>输入</td>
+        <td>指定沿哪个维度进行scatter操作。</td>
+        <td>范围为[-selfRef的维度数量, selfRef的维度数量-1]。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>index（aclTensor*）</td>
+        <td>输入</td>
+        <td>索引张量。</td>
+        <td>用于指定src张量中散布到self张量中的位置。<br>支持空Tensor。</td>
+        <td>INT32、INT64</td>
+        <td>ND</td>
+        <td>0-8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>src（aclTensor*）</td>
+        <td>输入</td>
+        <td>源张量。</td>
+        <td>数据类型需要与selfRef一致。<br>支持空Tensor。</td>
+        <td>UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16</td>
+        <td>ND</td>
+        <td>0-8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>reduce（int64_t）</td>
+        <td>输入</td>
+        <td>选择应用的reduction操作。</td>
+        <td>可选操作：0表示替换，1表示累加，2表示累乘。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>workspaceSize（uint64_t*）</td>
+        <td>输出</td>
+        <td>返回需要在Device侧申请的workspace大小。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>executor（aclOpExecutor**）</td>
+        <td>输出</td>
+        <td>返回op执行器，包含了算子计算流程。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+    </tbody></table>
 
-- **返回值:**
+- **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
   第一段接口完成入参校验，出现以下场景时报错：
-  返回161001 (ACLNN_ERR_PARAM_NULLPTR): 1. 传入的selfRef、index、src是空指针。
-  返回161002 (ACLNN_ERR_PARAM_INVALID): 1. selfRef、index、src数据类型不在支持范围内。
-                                        2. selfRef、src数据类型不一样。
-                                        3. selfRef、index、src的维度数不一致
-                                        4. selfRef、index、src的shape不符合以下限制：
-                                          对于每一个维度d，有index.size(d) <= src.size(d)的限制。
-                                          对于每一个维度d，如果d != dim, 有index.size(d) <= selfRef.size(d)的限制。
-                                        5. dim的值不在[-selfRef的维度数量， selfRef的维度数量-1]之间。
-                                        6. selfRef的维度数超过8。
-  ```
+
+  <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+    <col style="width: 300px">
+    <col style="width: 134px">
+    <col style="width: 716px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>返回值</th>
+        <th>错误码</th>
+        <th>描述</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>ACLNN_ERR_PARAM_NULLPTR</td>
+        <td>161001</td>
+        <td>selfRef、index、src存在空指针。</td>
+      </tr>
+      <tr>
+        <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="6">161002</td>
+        <td>selfRef、index、src数据类型不在支持范围内。</td>
+      </tr>
+      <tr>
+        <td>selfRef、src数据类型不一样。</td>
+      </tr>
+      <tr>
+        <td>selfRef、index、src的维度数不一致。</td>
+      </tr>
+      <tr>
+        <td>dim的值不在[-selfRef的维度数量, selfRef的维度数量-1]之间。</td>
+      </tr>
+      <tr>
+        <td>selfRef的维度数超过8。</td>
+      </tr>
+      <tr>
+        <td>shape不符合限制：对于每一个维度d，有index.size(d) <= src.size(d)；且d != dim时，index.size(d) <= selfRef.size(d)。</td>
+      </tr>
+    </tbody></table>
 
 ## aclnnInplaceScatter
 
 - **参数说明：**
-  - workspace(void*，入参)：在Device侧申请的workspace内存地址。
-  - workspaceSize(uint64_t，入参)：在Device侧申请的workspace大小，由第一段接口aclnnInplaceScatterGetWorkspaceSize获取。
-  - executor(aclOpExecutor*，入参)：op执行器，包含了算子计算流程。
-  - stream(aclrtStream，入参)：指定执行任务的Stream。
+
+  <table style="undefined;table-layout: fixed; width: 1100px"><colgroup>
+    <col style="width: 200px">
+    <col style="width: 130px">
+    <col style="width: 770px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>workspace</td>
+        <td>输入</td>
+        <td>在Device侧申请的workspace内存地址。</td>
+      </tr>
+      <tr>
+        <td>workspaceSize</td>
+        <td>输入</td>
+        <td>在Device侧申请的workspace大小，由第一段接口aclnnInplaceScatterGetWorkspaceSize获取。</td>
+      </tr>
+      <tr>
+        <td>executor</td>
+        <td>输入</td>
+        <td>op执行器，包含了算子计算流程。</td>
+      </tr>
+      <tr>
+        <td>stream</td>
+        <td>输入</td>
+        <td>指定执行任务的Stream。</td>
+      </tr>
+    </tbody></table>
 
 - **返回值：**
 
