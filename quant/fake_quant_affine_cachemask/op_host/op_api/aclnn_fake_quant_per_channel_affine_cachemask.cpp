@@ -15,20 +15,12 @@
 
 #include "aclnn_fake_quant_per_channel_affine_cachemask.h"
 #include "fake_quant_affine_cachemask.h"
-#include "aclnn_kernels/cast.h"
-#include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/transpose.h"
-#include "aclnn_kernels/common/op_error_check.h"
-#include "aclnn/aclnn_base.h"
-#include "opdev/common_types.h"
-#include "opdev/data_type_utils.h"
-#include "opdev/format_utils.h"
-#include "opdev/op_dfx.h"
-#include "opdev/op_executor.h"
-#include "opdev/op_log.h"
 #include "opdev/tensor_view_utils.h"
+#include "fake_quant_common.h"
 
 using namespace op;
+using namespace FakeQuantCommon;
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -195,30 +187,20 @@ aclnnStatus aclnnFakeQuantPerChannelAffineCachemaskGetWorkspaceSize(
         return ACLNN_SUCCESS;
     }
 
-    auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
-    CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const auto& [selfContiguous, scaleContiguous, zeroPointContiguous] = GetContiguousInput(self, scale, zeroPoint, uniqueExecutor.get());
+    CHECK_RET(selfContiguous != nullptr && scaleContiguous!= nullptr && zeroPointContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto promoteType = op::PromoteType(self->GetDataType(), scale->GetDataType());
-    // 将输入self的数据类型转换成隐式数据类型，根据具体算子语义按需调用
-    auto selfCasted = l0op::Cast(selfContiguous, promoteType, uniqueExecutor.get());
-    CHECK_RET(selfCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // 将输入other的数据类型转换成隐式数据类型，根据具体算子语义按需调用
-    auto scaleCasted = l0op::Cast(scale, promoteType, uniqueExecutor.get());
-    CHECK_RET(scaleCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    aclTensor* fakeQuantOut = nullptr;
-    aclTensor* fakeQuantMask = nullptr;
+    aclTensor* fakeQuantOut = nullptr, *fakeQuantMask = nullptr;
     if (axis != 0) {
-        aclIntArray* axes = GetTransposeArray(selfCasted, axis, uniqueExecutor.get());
+        aclIntArray* axes = GetTransposeArray(selfContiguous, axis, uniqueExecutor.get());
         CHECK_RET(axes != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         // 对self进行transpose
-        auto selfTranspose = const_cast<aclTensor*>(l0op::Transpose(selfCasted, axes, uniqueExecutor.get()));
+        auto selfTranspose = const_cast<aclTensor*>(l0op::Transpose(selfContiguous, axes, uniqueExecutor.get()));
         CHECK_RET(selfTranspose != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         auto result = l0op::FakeQuantAffineCachemask(
-            selfTranspose, scaleCasted, zeroPoint, quantMin, quantMax, uniqueExecutor.get());
+            selfTranspose, scaleContiguous, zeroPointContiguous, quantMin, quantMax, uniqueExecutor.get());
         auto fakeOut = std::get<0>(result);
         auto maskOut = std::get<1>(result);
         CHECK_RET(fakeOut != nullptr && maskOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -230,7 +212,7 @@ aclnnStatus aclnnFakeQuantPerChannelAffineCachemaskGetWorkspaceSize(
         fakeQuantMask = const_cast<aclTensor*>(l0op::Transpose(maskOut, axes, uniqueExecutor.get()));
     } else {
         auto result = l0op::FakeQuantAffineCachemask(
-            selfCasted, scaleCasted, zeroPoint, quantMin, quantMax, uniqueExecutor.get());
+            selfContiguous, scaleContiguous, zeroPointContiguous, quantMin, quantMax, uniqueExecutor.get());
         fakeQuantOut = std::get<0>(result);
         fakeQuantMask = std::get<1>(result);
     }
