@@ -43,6 +43,11 @@ constexpr uint32_t FORMAT_BIT_COUNT = 1;
 constexpr uint32_t COMPUTE_TYPE_BIT_COUNT = 3;
 constexpr uint32_t MAX_ATTRS_NUM = 4;
 constexpr uint32_t EN_SHUFFFLE_IDX_ATB = 7;
+
+constexpr uint32_t ALIGNMENT_16 = 16;
+constexpr uint32_t ALIGNMENT_256 = 256;
+constexpr uint32_t L0AB_PINGPONG_BUFFER_LEN_FP16 = 131072;
+constexpr uint32_t TRANS_B_MASK = 0b001000;
 }
 
 namespace optiling {
@@ -61,6 +66,22 @@ void PpMatmulDefaultTilingData::SetBaseOp(uint64_t coreNum, uint64_t l0cSize, ui
     mLoop = CeilDiv(opShape.m, opShape.m0);
     nLoop = CeilDiv(opShape.n, opShape.n0);
     coreLoop = opShape.batchSize * mLoop * nLoop;
+    if (mmInfo.isQuantBatchMatmulV3) {
+        bool transB = tilingKey & TRANS_B_MASK;
+        if (mLoop == 1 && (0 == 0) && transB && coreLoop % coreNum < coreNum / CONST_4 * CONST_3) {
+            uint32_t x = CeilDiv(opShape.n, coreNum);
+            uint32_t y = CeilDiv(x, CONST_256);
+            nBase = RoundUp(CeilDiv(x, y), CONST_16);
+            uint32_t baseLimitSize = l0cSize;
+            if (mBase * nBase * sizeof(float) < baseLimitSize) {
+                opShape.n0 = nBase;
+                nLoop = CeilDiv(opShape.n, opShape.n0);
+                coreLoop = opShape.batchSize * nLoop;
+            }
+        }
+        blockDim = std::min(coreLoop, coreNum);
+        return;
+    }
     if (!isAscend310P && mLoop == 1UL && mmInfo.transB && static_cast<uint64_t>(coreLoop % coreNum) <
         static_cast<uint64_t>(coreNum / CONST_4) * CONST_3) {
         mBase = RoundUp(opShape.m, CONST_16);
@@ -81,6 +102,15 @@ void PpMatmulDefaultTilingData::SetBaseOp(uint64_t coreNum, uint64_t l0cSize, ui
 }
 
 void PpMatmulDefaultTilingData::End(const MatMulInfo &mmInfo, bool isAscend310P) {
+    if (mmInfo.isQuantBatchMatmulV3) {
+        uint32_t l1AbPpBuffLen = L0AB_PINGPONG_BUFFER_LEN_FP16;
+        uint32_t shapeCount = opShape.m0 + opShape.n0;
+        uint32_t k0Max = (shapeCount == 0) ? l1AbPpBuffLen : (l1AbPpBuffLen / shapeCount);
+        uint32_t k0Init = ALIGNMENT_256;
+        opShape.k0 = k0Max < k0Init ? k0Max / ALIGNMENT_16 * ALIGNMENT_16 : k0Max / k0Init * k0Init;
+        kLoop = CeilDiv(opShape.k, opShape.k0);
+        return;
+    }
     uint64_t shapeSum = opShape.m0 + opShape.n0;
     if (!isAscend310P) {
         uint64_t k0Max = shapeSum == 0UL

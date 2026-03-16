@@ -91,6 +91,8 @@ static const uint64_t GROUP_MNK_BIT_SIZE = 0xFFFF;
 static const size_t MX_SCALE_MAX_DIM = 3;
 static const size_t MX_SCALE_DIM_NUM = 3;
 static const int64_t MAX_SHAPE_SIZE_A8W4_INT = 29576;
+static const int64_t PPMATMUL_PRIORITY_M = 1024;
+static const int64_t NO_BATCH_DIM_SUM = 2;
 
 static const std::initializer_list<op::DataType> IN_TYPE_SUPPORT_LIST = {op::DataType::DT_INT4,
                                                                          op::DataType::DT_INT8};
@@ -1613,12 +1615,14 @@ static aclnnStatus SetReformtedX2(const aclTensor *&reformatedX1, const aclTenso
     return ACLNN_SUCCESS;
 }
 
-static inline aclnnStatus TransdataX1Process(bool isX1TransdataFlag, const aclTensor *&reformatedX1, aclOpExecutor* executor) {
+static inline aclnnStatus TransdataX1Process(bool isX1TransdataFlag, const aclTensor *&reformatedX1,
+                                             aclOpExecutor *executor, bool isPpMatmul)
+{
     auto socLongVersion = GetCurrentPlatformInfo().GetSocLongVersion();
     bool checkSocLongVersion =
         (socLongVersion == "Ascend910B3" || socLongVersion == "Ascend910B4" || socLongVersion == "Ascend910B4-1");
     auto coreNum = static_cast<int32_t>(GetCurrentPlatformInfo().GetCubeCoreNum());
-    if (isX1TransdataFlag && checkSocLongVersion && coreNum == CORE_NUM_20) {
+    if ((isX1TransdataFlag && checkSocLongVersion && coreNum == CORE_NUM_20) || isPpMatmul) {
         auto ret = TransdataForX1(reformatedX1, executor);
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
     }
@@ -1688,9 +1692,14 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor man
     int64_t dtype = 0;
     GetDtypeAndTranspose(std::tie(reformatedX1, reformatedX2, out), dtype, transposeX1, transposeX2);
     bool isX1TransdataFlag = IsX1Transdata(reformatedX1, reformatedX2, dtype, transposeX1, transposeX2);
-    ret = TransdataX1Process(isX1TransdataFlag, reformatedX1, executor);
+    auto inputAShape = reformatedX1->GetViewShape();
+    uint32_t M = inputAShape.GetDimNum() == NO_BATCH_DIM_SUM ? inputAShape[0] : inputAShape[1];
+    auto socLongVersion = GetCurrentPlatformInfo().GetSocLongVersion();
+    bool isPpMatmul = (socLongVersion == "Ascend310P3" && M >= PPMATMUL_PRIORITY_M && bias != nullptr && !transposeX1 &&
+                       transposeX2 && dtype != DataType::DT_BF16);
+    ret = TransdataX1Process(isX1TransdataFlag, reformatedX1, executor, isPpMatmul);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    
+
     const aclTensor *matmulRet = nullptr;
     if (isA8W4F || isA8W4I) {
         // 调用l0算子QuantBatchMatmulV4进行计算
@@ -1700,11 +1709,19 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor man
     } else {
         // 调用l0算子QuantBatchMatmulV3进行计算
         matmulRet = l0op::QuantBatchMatmulV3(reformatedX1, reformatedX2, castedScale, offset, reformatedBias,
-                                            reformatedpertokenScaleOptional, dtype, transposeX1, transposeX2,
-                                            groupSize, executor);
+                                             reformatedpertokenScaleOptional, dtype, transposeX1, transposeX2,
+                                             groupSize, executor);
     }
 
-    CHECK_RET(PostMatmulCalcProcess(matmulRet, std::tie(x1, x2, out), executor) == ACLNN_SUCCESS, ret);
+    if (isPpMatmul) {
+        CHECK_RET(matmulRet != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        const aclTensor *matmulNdRet = nullptr;
+        matmulNdRet = l0op::TransData(matmulRet, Format::FORMAT_ND, 0, executor);
+
+        CHECK_RET(PostMatmulCalcProcess(matmulNdRet, std::tie(x1, x2, out), executor) == ACLNN_SUCCESS, ret);
+    } else {
+        CHECK_RET(PostMatmulCalcProcess(matmulRet, std::tie(x1, x2, out), executor) == ACLNN_SUCCESS, ret);
+    }
     return ACLNN_SUCCESS;
 }
 }

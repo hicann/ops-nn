@@ -29,6 +29,8 @@ constexpr int64_t TYPE_INT32 = 3;
 constexpr int64_t TYPE_HIF8 = 34;
 constexpr int64_t TYPE_FP8_E4M3FN = 36;
 constexpr int64_t TYPE_FP32 = 0;
+constexpr int64_t PPMATMUL_PRIORITY_M = 1024;
+constexpr int64_t NO_BATCH_DIM_SUM = 2;
 
 const aclTensor* QuantBatchMatmulV3(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale,
                                     const aclTensor* offset, const aclTensor* bias, const aclTensor* pertokenScale,
@@ -48,6 +50,13 @@ const aclTensor* QuantBatchMatmulV3(const aclTensor* x1, const aclTensor* x2, co
     Format format = Format::FORMAT_ND;
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P && pertokenScale != nullptr && !pertokenScale->IsEmpty()) {
         OP_LOGD("Npu_Arch = 2002 pertoken mode need transData out");
+        format = Format::FORMAT_FRACTAL_NZ;
+    }
+    auto inputAShape = x1->GetViewShape();
+    uint32_t M = inputAShape.GetDimNum() == NO_BATCH_DIM_SUM ? inputAShape[0] : inputAShape[1];
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P && M >= PPMATMUL_PRIORITY_M &&
+        bias != nullptr && !transposeX1 && transposeX2 && dtype != DataType::DT_BF16) {
+        OP_LOGD("Using PpMatmul mode need transData out");
         format = Format::FORMAT_FRACTAL_NZ;
     }
 

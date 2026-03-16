@@ -36,6 +36,11 @@ class TransposeBatchMatMulEinsumTiling : public pp_matmul::PpMatMulDefault
 public:
     explicit TransposeBatchMatMulEinsumTiling(gert::TilingContext* context)
        : PpMatMulDefault(context) {}
+    TransposeBatchMatMulEinsumTiling(gert::TilingContext *context, bool isQuantBatchMatmulV3)
+        : PpMatMulDefault(context),
+          isQuantBatchMatmulV3_(isQuantBatchMatmulV3)
+    {
+    }
     ~TransposeBatchMatMulEinsumTiling() override = default;
 
     void DoTiling();
@@ -46,6 +51,7 @@ public:
 private:
     const gert::ContinuousVector *aPermList_ = nullptr;
     const gert::ContinuousVector *bPermList_ = nullptr;
+    bool isQuantBatchMatmulV3_ = false;
 };
 } // namespace transpose_batch_mat_mul
 } // namespace optiling

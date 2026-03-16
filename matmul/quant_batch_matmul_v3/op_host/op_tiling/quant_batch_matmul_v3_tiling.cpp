@@ -26,6 +26,7 @@
 #include "arch35/adaptive_sliding_window_tiling.h"
 #include "arch35/adaptive_sliding_window_basic_api_tiling.h"
 #include "arch35/quant_batch_matmul_v3_iterbatch_tiling.h"
+#include "arch20/pp_matmul_int8_tiling.h"
 #include "error_util.h"
 #include "platform/platform_infos_def.h"
 #include "../../op_kernel/quant_batch_matmul_v3_tiling_key.h"
@@ -1506,27 +1507,28 @@ bool QuantBatchMatmulV3Tiling::NeedAtomiClean() const {
     }
 }
 
-REGISTER_TILING_TEMPLATE("QuantBatchMatmulV3", QuantBatchMatmulV3Tiling, 1);
-REGISTER_TILING_TEMPLATE("QuantBatchMatmulV3", QuantBatchMatmulV3IterbatchTiling, 2);
-REGISTER_TILING_TEMPLATE("QuantBatchMatmulV3", AdaptiveSlidingWindowBasicAPITiling, 3);
-REGISTER_TILING_TEMPLATE("QuantBatchMatmulV3", AdaptiveSlidingWindowTiling, 4);
+REGISTER_TILING_TEMPLATE("QuantBatchMatmulV3", PpMatmulInt8Tiling, 1);
+REGISTER_TILING_TEMPLATE("QuantBatchMatmulV3", QuantBatchMatmulV3Tiling, 2);
+REGISTER_TILING_TEMPLATE("QuantBatchMatmulV3", QuantBatchMatmulV3IterbatchTiling, 3);
+REGISTER_TILING_TEMPLATE("QuantBatchMatmulV3", AdaptiveSlidingWindowBasicAPITiling, 4);
+REGISTER_TILING_TEMPLATE("QuantBatchMatmulV3", AdaptiveSlidingWindowTiling, 5);
 
 static ge::graphStatus QuantBatchMatmulV3TilingFunc(gert::TilingContext *context)
 {
     OP_LOGE_IF(context == nullptr, ge::GRAPH_FAILED, "QuantBatchMatmulV3", "TilingContext is null!");
     auto compileInfoPtr = context->GetCompileInfo<QuantBatchMatmulV3CompileInfo>();
      if (compileInfoPtr->supportMmadS8S4) {
-        vector<int32_t> registerList = {2, 4};
+        vector<int32_t> registerList = {3, 5};
         OP_LOGD("NO_OP_NAME", "Platform support mmad_s8s4.");
         return TilingRegistry::GetInstance().DoTilingImpl(context, registerList);
     } else if (compileInfoPtr->supportL12BtBf16) {
-        std::vector<int32_t> registerList = {3, 4};
+        std::vector<int32_t> registerList = {4, 5};
         OP_LOGD("NO_OP_NAME", "Adaptive sliding window tiling process.");
         return TilingRegistry::GetInstance().DoTilingImpl(context, registerList);
     } else if (IsSocVersionArch20Pertoken(context)) {
         return QuantBatchMatmulPertokenArch20(context).DoTiling();
     } else {  
-        std::vector<int32_t> registerList = {0, 1};
+        std::vector<int32_t> registerList = {0, 1, 2};
         return TilingRegistry::GetInstance().DoTilingImpl(context, registerList);
     }
 }

@@ -31,6 +31,7 @@
 #include "quant_batch_matmul_v3_kernel_tiling_data.h"
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
 #include "quant_batch_matmul_v3_pertoken_arch20.h"
+#include "arch20/pp_matmul_kernel.h"
 #endif
 
 // if run with ttk without bias, can't get DTYPE_BIAS macro
@@ -213,31 +214,40 @@ __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x2, GM_ADDR
         return;
     }
     REGISTER_TILING_DEFAULT(QuantBatchMatmulV3TilingData);
-    
-
 // 6bit from hight to low: needClean, pertoken, opt, basic, transX1, transX2
 #if (ORIG_DTYPE_Y == DT_FLOAT16 || ORIG_DTYPE_Y == DT_INT8 || ORIG_DTYPE_Y == DT_INT32)  // fp16, int8, int32
 #if (ORIG_DTYPE_SCALE != DT_FLOAT || ORIG_DTYPE_Y == DT_INT32)
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
-    if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false true
-        GET_TILING_DATA(tilingData, tiling);
-        BmmDequant<DTYPE_X1, DTYPE_X2, FORMAT_X1, FORMAT_X2, int32_t, uint64_t, DTYPE_Y, false, true> op;
-        op.Init(x1, x2, bias, scale, y, user1, &tilingData, &tPipe);
-        op.Process();
-    }
-    if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_NEED_ATOMICLEAN) {  // false true
-        GET_TILING_DATA(tilingData, tiling);
-        BmmDequantInitOutput<DTYPE_Y> clearOp;
-        clearOp.Init(y, user1, &tilingData, &tPipe);
-        clearOp.Process();
-        tPipe.Destroy();
+    if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_PPMATMUL &&
+            PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 13", PpMatmulTilingData);
+        GET_TILING_DATA_WITH_STRUCT(PpMatmulTilingData, tilingData, tiling);
+        PpMatmul<0, false, true, false, int8_t, uint64_t, int32_t, half> kernel;
+        SET_FLAG(MTE2, S, EVENT_ID0);
+        WAIT_FLAG(MTE2, S, EVENT_ID0);
+        kernel.Init(x1, x2, bias, scale, y, &(tilingData));
+        kernel.Process();
+    } else {
+        if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+            PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false true
+            GET_TILING_DATA(tilingData, tiling);
+            BmmDequant<DTYPE_X1, DTYPE_X2, FORMAT_X1, FORMAT_X2, int32_t, uint64_t, DTYPE_Y, false, true> op;
+            op.Init(x1, x2, bias, scale, y, user1, &tilingData, &tPipe);
+            op.Process();
+        }
+        if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+            PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_NEED_ATOMICLEAN) {  // false true
+            GET_TILING_DATA(tilingData, tiling);
+            BmmDequantInitOutput<DTYPE_Y> clearOp;
+            clearOp.Init(y, user1, &tilingData, &tPipe);
+            clearOp.Process();
+            tPipe.Destroy();
 
-        TPipe tPipeOp;
-        BmmDequant<DTYPE_X1, DTYPE_X2, FORMAT_X1, FORMAT_X2, int32_t, uint64_t, DTYPE_Y, false, true> op;
-        op.Init(x1, x2, bias, scale, y, user1, &tilingData, &tPipeOp);
-        op.Process();
+            TPipe tPipeOp;
+            BmmDequant<DTYPE_X1, DTYPE_X2, FORMAT_X1, FORMAT_X2, int32_t, uint64_t, DTYPE_Y, false, true> op;
+            op.Init(x1, x2, bias, scale, y, user1, &tilingData, &tPipeOp);
+            op.Process();
+        }
     }
 #endif
 #endif
