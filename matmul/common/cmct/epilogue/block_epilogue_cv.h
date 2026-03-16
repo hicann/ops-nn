@@ -99,20 +99,21 @@ public:
         int64_t loop = 0;
         int64_t stageOffset = 0;
         int64_t N = Get<MNK_N>(problemShape_);
+        int64_t M = Get<MNK_M>(problemShape_);
         while (stageOffset < inputSize) {
             int64_t offset = dstOffset + loop * stageSize / blockShapeNAlign * N;
             // aiv1需要多偏移aiv0所处理的数据
             offset += AscendC::GetSubBlockIdx() * halfBlockShapeM * N;
             stageSize = AscendC::Std::min(stageSize, inputSize - stageOffset);
             // Do add or mul in ub: x3 + cLocal_[stageOffset] -> cLocal_  in stage 1
-            fusionOp_(offset, stageSize / blockShapeNAlign, blockShapeN, N, blockShapeNAlign,
+            fusionOp_(offset, stageSize / blockShapeNAlign, blockShapeN, N, M, blockShapeNAlign,
                 stageSize, stageOffset, 1);
             if (stageOffset + stageSize >= inputSize) {
                 // Notify aic
                 AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_V>(flagId);
             }
             // CopyOut in stage 2
-            fusionOp_(offset, stageSize / blockShapeNAlign, blockShapeN, N, blockShapeNAlign,
+            fusionOp_(offset, stageSize / blockShapeNAlign, blockShapeN, N, M, blockShapeNAlign,
                 stageSize, stageOffset, 2);
             stageOffset += stageSize;
             loop++;
