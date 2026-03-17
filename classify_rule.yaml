@@ -397,6 +397,13 @@ HPTG1@ops-nn:
                 - ops/ops-nn/norm/group_norm_grad/op_host/group_norm_grad_empty_tiling_arch35.cpp
                 - ops/ops-nn/norm/group_norm_grad/op_kernel/arch35/
                 - ops/ops-nn/norm/group_norm_grad/op_kernel/group_norm_grad_apt.cpp
+                - ops/ops-nn/norm/group_norm_v2/op_host/arch35/group_norm_v2_tiling_arch35.cpp
+                - ops/ops-nn/norm/layer_norm_v3/op_host/arch35/layer_norm_v3_tiling_arch35.cpp
+                - ops/ops-nn/norm/layer_norm_v3/op_host/arch35/layer_norm_v3_tiling_base.cpp
+                - ops/ops-nn/norm/lp_norm_v2/op_host/arch35/lp_norm_v2_tiling_arch35.cpp
+                - ops/ops-nn/norm/lp_norm_v2/op_host/arch35/lp_norm_v2_tiling_arch35.h
+                - ops/ops-nn/norm/lp_norm_v2/op_kernel/arch35/lp_norm_v2_dag.h
+                - ops/ops-nn/norm/lp_norm_v2/op_kernel/arch35/lp_norm_v2_tiling_struct.h
                 - ops/ops-nn/norm/layer_norm_v4/op_host/config/ascend950/
                 - ops/ops-nn/norm/layer_norm_v4/op_host/layer_norm_v4_regbase_two_pass_perf_tiling.cpp
                 - ops/ops-nn/norm/layer_norm_v4/op_host/layer_norm_v4_welford_tiling.cpp
