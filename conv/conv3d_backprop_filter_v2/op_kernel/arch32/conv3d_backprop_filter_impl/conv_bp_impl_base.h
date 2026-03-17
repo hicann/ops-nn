@@ -19,7 +19,6 @@
 #include "conv_bp_config_base.h"
 #include "conv_bp_func.h"
 #include "conv_bp_util.h"
-#include "kernel_utils.h"
 #include "kernel_operator.h"
 #include "../conv3d_backprop_filter_v2_tiling_data.h"
 namespace ConvolutionBackprop {
