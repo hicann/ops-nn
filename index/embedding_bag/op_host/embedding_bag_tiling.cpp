@@ -160,7 +160,7 @@ ge::graphStatus EmbeddingBagTiling::Init()
     OP_CHECK_IF(
         (numOffset_ == 0), OP_LOGE(tilingContext_, "If include_last_offset is true, offset size should greater than 1"),
         return ge::GRAPH_FAILED);
-    paddingIdx_ = *attrs->GetAttrPointer<int>(PADDING_IDX_INDEX);
+    paddingIdx_ = *attrs->GetAttrPointer<int64_t>(PADDING_IDX_INDEX);
     GetUsedCore();
 
     ge::DataType weightDatatype = tilingContext_->GetInputDesc(WEIGHT_INPUT_INDEX)->GetDataType();
