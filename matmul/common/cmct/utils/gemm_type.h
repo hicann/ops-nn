@@ -16,7 +16,7 @@
 #ifndef CMCT_INCLUDE_UTILS_GEMM_TYPE_H
 #define CMCT_INCLUDE_UTILS_GEMM_TYPE_H
 
-#include "kernel_event.h"
+#include "kernel_operator_block_sync_intf.h"
 
 namespace Cmct::Gemm {
 template <class Element_, class Layout_, AscendC::TPosition POSITION_ = AscendC::TPosition::GM>

@@ -15,13 +15,11 @@
 #ifndef TOOL_H
 #define TOOL_H
 
-#include "kernel_log.h"
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
 #else
 #include "kernel_operator.h"
 #endif
-#include "kernel_utils.h"
 
 using AscendC::AIC;
 using AscendC::DataCopyExtParams;

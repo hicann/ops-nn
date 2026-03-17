@@ -18,7 +18,7 @@
 #include "quant_batch_matmul_v4_tiling_data.h"
 
 #ifdef __CCE_KT_TEST__
-#include "kernel_log.h"
+#include "kernel_operator_dump_tensor_intf.h"
 #else
 #ifndef __aicore__
 #define __aicore__  [aicore]
