@@ -20,13 +20,13 @@ def gen_golden_data(x_shape, x_dtype, x_format, bias_shape, epsilon):
 
     x = np.random.uniform(2, 2, x_shape).astype(x_dtype)
     mean = np.random.uniform(1, 1, bias_shape).astype(np.float32)
-    var = np.random.uniform(1, 1, bias_shape).astype(np.float32);
-    bias = np.random.uniform(2, 2, bias_shape).astype(np.float32);
-    weight = np.random.uniform(2, 2, bias_shape).astype(np.float32);
-    input_scale = np.random.uniform(2, 2, (1)).astype(np.float32);
-    input_zero_point = np.random.uniform(2, 2, (1)).astype(np.int32);
-    output_scale = np.random.uniform(2, 2, (1)).astype(np.float32);
-    output_zero_point = np.random.uniform(2, 2, (1))).astype(np.int32);
+    var = np.random.uniform(1, 1, bias_shape).astype(np.float32)
+    bias = np.random.uniform(2, 2, bias_shape).astype(np.float32)
+    weight = np.random.uniform(2, 2, bias_shape).astype(np.float32)
+    input_scale = np.random.uniform(2, 2, (1)).astype(np.float32)
+    input_zero_point = np.random.uniform(2, 2, (1)).astype(np.int32)
+    output_scale = np.random.uniform(2, 2, (1)).astype(np.float32)
+    output_zero_point = np.random.uniform(2, 2, (1)).astype(np.int32)
 
     x.tofile("./x.bin")
     mean.tofile("./mean.bin")
