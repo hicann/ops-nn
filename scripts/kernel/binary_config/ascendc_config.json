@@ -285,6 +285,7 @@
     {"name":"CTCLossV3Grad", "compute_units": ["ascend910_93", "ascend910b"], "auto_sync" : true},
     {"name":"CTCLossV3", "compute_units": ["ascend910_93", "ascend910b"], "auto_sync" : true},
     {"name":"CTCLossV2Grad", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
+    {"name":"Embedding", "compute_units": ["ascend950"], "auto_sync" : true},
     {"name":"EmbeddingBag", "compute_units": ["ascend910_93", "ascend950", "ascend910b", "ascend910", "ascend310p", "kirinx90", "kirin9030"], "auto_sync" : true},
     {"name":"ChamferDistanceGrad", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
     {"name":"IndexPutWithSort", "compute_units": ["ascend910_93", "ascend910b"], "auto_sync" : true},

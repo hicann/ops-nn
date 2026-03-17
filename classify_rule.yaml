@@ -112,6 +112,9 @@ ops-nn:
       - activation/ge_glu_v2/op_kernel/ge_glu_v2.cpp
       - index/index/op_kernel
       - index/index/op_host
+      - index/embedding/op_host/**/arch35
+      - index/embedding/op_host/*.cpp
+      - index/embedding/op_kernel
       - index/embedding_bag/op_kernel/arch35/embedding_bag_regbase_common.h
       - index/embedding_bag/op_kernel/arch35/embedding_bag_regbase_1d_sum.h
       - index/embedding_bag/op_kernel/arch35/embedding_bag_regbase_1d_mean.h
@@ -1904,6 +1907,8 @@ VC8@ops-nn:
         - ops/ops-nn/index/gather_v2/op_host/arch35/gather_v2_tiling.cpp
         - ops/ops-nn/index/gather_v2/op_host/arch35/gather_v2_tiling.h
         - ops/ops-nn/index/gather_v2/op_kernel/arch35/
+        - ops/ops-nn/index/embedding/op_host/arch35/
+        - ops/ops-nn/index/embedding/op_kernel/arch35/
         - ops/ops-nn/index/scatter/op_host/
         - ops/ops-nn/index/scatter_nd/op_host/arch35/
         - ops/ops-nn/index/scatter_nd/op_kernel/arch35/
@@ -1931,6 +1936,8 @@ VC8@ops-nn:
         - ops/ops-nn/index/index_fill_d/tests/
         - ops/ops-nn/index/gather_v2/examples/
         - ops/ops-nn/index/gather_v2/tests/
+        - ops/ops-nn/index/embedding/examples/
+        - ops/ops-nn/index/embedding/tests/
         - ops/ops-nn/index/scatter_nd/examples/
         - ops/ops-nn/index/scatter_nd/tests/
         - ops/ops-nn/index/scatter_add/examples/

@@ -1,6 +1,6 @@
 # aclnnEmbedding
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/gather_v2)
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/embeddiing)
 
 ## 产品支持情况
 
@@ -10,12 +10,12 @@
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    √    |
-| <term>Atlas 推理系列产品 </term>                             |    √     |
+| <term>Atlas 推理系列产品</term>                             |    √     |
 | <term>Atlas 训练系列产品</term>                              |    √   |
 
 ## 功能说明
 
-把数据集合映射到向量空间，进而将数据进行量化。embedding的二维权重张量为weight(m+1行，n列)，对于任意输入索引张量indices（如1行3列），输出out是一个3行n列的张量，如下所示：
+- **接口说明：**把数据集合映射到向量空间，进而将数据进行量化。embedding的二维权重张量为weight(m+1行，n列)，对于任意输入索引张量indices（如1行3列），输出out是一个3行n列的张量，如下所示：
 
 $$
 \begin{aligned}
@@ -61,8 +61,8 @@ aclnnStatus aclnnEmbedding(
 ## aclnnEmbeddingGetWorkspaceSize
 
 - **参数说明：**
-
-    <table style="undefined;table-layout: fixed; width: 1496px"><colgroup>
+  
+  <table style="undefined;table-layout: fixed; width: 1496px"><colgroup>
     <col style="width: 146px">
     <col style="width: 121px">
     <col style="width: 275px">
@@ -108,7 +108,7 @@ aclnnStatus aclnnEmbedding(
         <td>out</td>
         <td>输出</td>
         <td>嵌入矩阵检索后的结果。</td>
-        <td>dtype需要与weight相同</td>
+        <td>dtype需要与weight相同。</td>
         <td>BFLOAT16、FLOAT、FLOAT16、INT64、INT32、INT16、INT8、UINT8、BOOL、DOUBLE、COMPLEX64、COMPLEX128</td>
         <td>ND</td>
         <td>-</td>
@@ -135,16 +135,15 @@ aclnnStatus aclnnEmbedding(
         <td>-</td>
       </tr>
     </tbody></table>
-
-    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：数据类型不支持BFLOAT16。
-    
+  
+  - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：数据类型不支持BFLOAT16。
 - **返回值：**
-
+  
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
+  
   第一段接口完成入参校验，出现以下场景时报错：
-
-    <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+  
+  <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
     <col style="width: 276px">
     <col style="width: 132px">
     <col style="width: 836px">
@@ -181,8 +180,8 @@ aclnnStatus aclnnEmbedding(
 ## aclnnEmbedding
 
 - **参数说明：**
-
-    <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+  
+  <table style="undefined;table-layout: fixed; width: 1100px"><colgroup>
       <col style="width: 200px">
       <col style="width: 162px">
       <col style="width: 882px">
@@ -216,9 +215,8 @@ aclnnStatus aclnnEmbedding(
       </tr>
       </tbody>
     </table>
-
 - **返回值：**
-
+  
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
