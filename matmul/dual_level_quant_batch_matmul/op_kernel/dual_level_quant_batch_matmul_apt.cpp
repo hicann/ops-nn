@@ -21,7 +21,6 @@
 #else
 #include "kernel_operator.h"
 #endif
-#include "kernel_utils.h"
 
 #ifndef DTYPE_BIAS
 #define DTYPE_BIAS DTYPE_Y

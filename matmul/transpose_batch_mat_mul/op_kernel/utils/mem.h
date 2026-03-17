@@ -17,8 +17,7 @@
 #define INCLUDE_MEM_H
 
 #include "hardware.h"
-#include "kernel_event.h"
-#include "kernel_tensor.h"
+#include "kernel_operator_block_sync_intf.h"
 
 namespace PpMatMulNS {
 enum class BufferType : uint32_t

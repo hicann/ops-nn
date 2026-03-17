@@ -23,7 +23,6 @@
 #else
 #include "kernel_operator.h"
 #endif
-#include "kernel_utils.h"
 #include "op_kernel/math_util.h"
 #include "lib/matmul_intf.h"
 
