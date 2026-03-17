@@ -430,6 +430,11 @@ HPTG1@ops-nn:
                 - ops/ops-nn/norm/add_layer_norm_quant/op_kernel/arch35/
                 - ops/ops-nn/norm/add_rms_norm/op_host/add_rms_norm_tiling_arch35.h
                 - ops/ops-nn/norm/add_rms_norm/op_kernel/arch35/
+                - ops/ops-nn/norm/group_norm_swish/op_kernel/arch35
+                - ops/ops-nn/norm/group_norm_swish/op_kernel/group_norm_swish_apt.cpp
+                - ops/ops-nn/norm/group_norm_swish/op_host/config/ascend950/
+                - ops/ops-nn/norm/group_norm_swish/op_host/group_norm_swish_def.cpp
+                - ops/ops-nn/norm/group_norm_swish/README.md
             opensource_style: null
             kernel_style: null
         unrelease:
