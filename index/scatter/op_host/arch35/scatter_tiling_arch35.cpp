@@ -89,7 +89,8 @@ constexpr int64_t IN_DTYPE_B64 = 8;
 
 static map<const ge::DataType, const int32_t> g_dtypeLen = {{ge::DT_INT8, 1}, {ge::DT_UINT8, 1}, {ge::DT_FLOAT16, 2},
                                                             {ge::DT_FLOAT, 4}, {ge::DT_INT32, 4}, {ge::DT_BF16, 2},
-                                                            {ge::DT_FLOAT8_E4M3FN, 1}, {ge::DT_FLOAT8_E5M2, 1}, {ge::DT_FLOAT8_E8M0, 1}};
+                                                            {ge::DT_FLOAT8_E4M3FN, 1}, {ge::DT_FLOAT8_E5M2, 1}, {ge::DT_FLOAT8_E8M0, 1},
+                                                            {ge::DT_HIFLOAT8, 1}};
 
 std::map<std::tuple<bool, ge::DataType, ge::DataType>, int32_t> tilingKeyMap;
 
@@ -120,7 +121,7 @@ ge::graphStatus ScatterTiling::GetShapeAttrsInfo() {
       inputDtype != ge::DataType::DT_BF16 && inputDtype != ge::DataType::DT_INT8 &&
       inputDtype != ge::DataType::DT_UINT8 && inputDtype != ge::DataType::DT_INT32 &&
       inputDtype != ge::DataType::DT_FLOAT8_E4M3FN && inputDtype != ge::DataType::DT_FLOAT8_E5M2 &&
-      inputDtype != ge::DataType::DT_FLOAT8_E8M0) {
+      inputDtype != ge::DataType::DT_FLOAT8_E8M0 && inputDtype != ge::DataType::DT_HIFLOAT8) {
     OP_LOGE("Scatter", "invalid input dtype.");
     return ge::GRAPH_FAILED;
   }
@@ -140,7 +141,7 @@ ge::graphStatus ScatterTiling::GetShapeAttrsInfo() {
       updatesDtype != ge::DataType::DT_BF16 && updatesDtype != ge::DataType::DT_INT8 &&
       updatesDtype != ge::DataType::DT_UINT8 && updatesDtype != ge::DataType::DT_INT32 &&
       updatesDtype != ge::DataType::DT_FLOAT8_E4M3FN && updatesDtype != ge::DataType::DT_FLOAT8_E5M2 &&
-      updatesDtype != ge::DataType::DT_FLOAT8_E8M0) {
+      updatesDtype != ge::DataType::DT_FLOAT8_E8M0 && updatesDtype != ge::DataType::DT_HIFLOAT8) {
     OP_LOGE("Scatter", "invalid updates dtype.");
     return ge::GRAPH_FAILED;
   }
@@ -468,6 +469,7 @@ void ScatterTiling::InitTilingKeyMap() {
   tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT8_E5M2)] = TILING_KEY_INT32_INT8;
   tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT8_E4M3FN)] = TILING_KEY_INT32_INT8;
   tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT8_E8M0)] = TILING_KEY_INT32_INT8;
+  tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_HIFLOAT8)] = TILING_KEY_INT32_INT8;
   tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_UINT8)] = TILING_KEY_INT32_UINT8;
   tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT16)] = TILING_KEY_INT32_FLOAT16;
   tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_BF16)] = TILING_KEY_INT32_BF16;
@@ -478,6 +480,7 @@ void ScatterTiling::InitTilingKeyMap() {
   tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_FLOAT8_E5M2)] = TILING_KEY_INT64_INT8;
   tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_FLOAT8_E4M3FN)] = TILING_KEY_INT64_INT8;
   tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_FLOAT8_E8M0)] = TILING_KEY_INT64_INT8;
+  tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_HIFLOAT8)] = TILING_KEY_INT64_INT8;
   tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_UINT8)] = TILING_KEY_INT64_UINT8;
   tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_FLOAT16)] = TILING_KEY_INT64_FLOAT16;
   tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_BF16)] = TILING_KEY_INT64_BF16;
@@ -488,6 +491,7 @@ void ScatterTiling::InitTilingKeyMap() {
   tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT8_E5M2)] = TILING_KEY_UINT64_INT32_INT8;
   tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT8_E4M3FN)] = TILING_KEY_UINT64_INT32_INT8;
   tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT8_E8M0)] = TILING_KEY_UINT64_INT32_INT8;
+  tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_HIFLOAT8)] = TILING_KEY_UINT64_INT32_INT8;
   tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_UINT8)] = TILING_KEY_UINT64_INT32_UINT8;
   tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT16)] = TILING_KEY_UINT64_INT32_FLOAT16;
   tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_BF16)] = TILING_KEY_UINT64_INT32_BF16;
@@ -498,6 +502,7 @@ void ScatterTiling::InitTilingKeyMap() {
   tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_FLOAT8_E5M2)] = TILING_KEY_UINT64_INT64_INT8;
   tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_FLOAT8_E4M3FN)] = TILING_KEY_UINT64_INT64_INT8;
   tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_FLOAT8_E8M0)] = TILING_KEY_UINT64_INT64_INT8;
+  tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_HIFLOAT8)] = TILING_KEY_UINT64_INT64_INT8;
   tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_UINT8)] = TILING_KEY_UINT64_INT64_UINT8;
   tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_FLOAT16)] = TILING_KEY_UINT64_INT64_FLOAT16;
   tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_BF16)] = TILING_KEY_UINT64_INT64_BF16;
