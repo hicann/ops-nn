@@ -1,0 +1,302 @@
+{
+  "op_type": "DeformableOffsetsGrad",
+  "op_list": [
+    {
+      "bin_filename": "DeformableOffsetsGrad_f50e812360fb5a80deaf4bcfc64a6dd7",
+      "inputs": [
+        {
+          "name": "grad",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "x",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "offsets",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "grad_x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "grad_offsets",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "ksize",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": "ALL"
+        },
+        {
+          "name": "deformable_groups",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "modulated",
+          "dtype": "bool",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "DeformableOffsetsGrad_e0f33dbf4cacedb8080e0a61cbc85716",
+      "inputs": [
+        {
+          "name": "grad",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "x",
+          "index": 1,
+          "dtype": "float16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "offsets",
+          "index": 2,
+          "dtype": "float16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "grad_x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "grad_offsets",
+          "index": 1,
+          "dtype": "float16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "ksize",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": "ALL"
+        },
+        {
+          "name": "deformable_groups",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "modulated",
+          "dtype": "bool",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "DeformableOffsetsGrad_ec80cf290b965ddcb99c7aef81c03d9b",
+      "inputs": [
+        {
+          "name": "grad",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "x",
+          "index": 1,
+          "dtype": "float32",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "offsets",
+          "index": 2,
+          "dtype": "float32",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "grad_x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "grad_offsets",
+          "index": 1,
+          "dtype": "float32",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "ksize",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": "ALL"
+        },
+        {
+          "name": "deformable_groups",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "modulated",
+          "dtype": "bool",
+          "value": null
+        }
+      ]
+    }
+  ]
+}
