@@ -176,6 +176,18 @@ __aicore__ inline void FilterMask(
     AscendC::MicroAPI::MaskAnd(preg, preg, gtMask, allMask);
 }
 
+__aicore__ inline void FilterMaskForMergeW(
+    MicroAPI::MaskReg& preg, MicroAPI::RegTensor<int32_t>& wIndexReg, MicroAPI::RegTensor<int32_t>& zeroConstReg,
+    MicroAPI::RegTensor<int32_t>& wMaxReg)
+{
+    AscendC::MicroAPI::MaskReg gtMask = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+    AscendC::MicroAPI::MaskReg allMask = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+
+    AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(gtMask, wIndexReg, zeroConstReg, gtMask);
+    AscendC::MicroAPI::Compare<int32_t, CMPMODE::GT>(gtMask, wMaxReg, wIndexReg, gtMask);
+    AscendC::MicroAPI::MaskAnd(preg, preg, gtMask, allMask);
+}
+
 template <typename T>
 __aicore__ inline void GradientAcc(
     __local_mem__ computeType* yAddr, MicroAPI::RegTensor<computeType>& gradReg,

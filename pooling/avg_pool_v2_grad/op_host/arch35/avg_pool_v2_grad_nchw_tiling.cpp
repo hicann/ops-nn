@@ -24,6 +24,8 @@ static constexpr int64_t DOUBLE_BUFFER = 2;
 static constexpr uint64_t FORMAT_NCHW = 0;
 static constexpr int64_t ASCENDC_TOOLS_WORKSPACE = 16 * 1024 * 1024;
 static constexpr int64_t VL_FACTOR = 4;
+static constexpr int64_t DOUBLE = 2;
+static constexpr int64_t BANK_FACTOR = 128;
 
 void AvgPoolV2GradCommonNCHWTiling::InitializationVars()
 {
@@ -416,17 +418,30 @@ void AvgPoolV2GradCommonNCHWTiling::SetTilingData()
 ge::graphStatus AvgPoolV2GradCommonNCHWTiling::DoOpTiling()
 {
     DoUBTiling();
-    int64_t hBatchCnt = std::min(splitData.hInputInner, inputData.gradShape[H_DIM]) / baseData.hProBatchSize;
     int64_t wBatchCnt = std::min(splitData.wInputInner, inputData.gradShape[W_DIM]) / baseData.wProBatchSize;
-    hBatchCnt = hBatchCnt > 1 ? hBatchCnt : 1;
     wBatchCnt = wBatchCnt > 1 ? wBatchCnt : 1;
-    int64_t allGatherCnt = hBatchCnt * wBatchCnt * splitData.highAxisInner;
+    int64_t vlLen = baseData.vRegSize / sizeof(float);
+    if (wBatchCnt <= vlLen / DOUBLE) {
+        OP_CHECK_IF(
+            baseData.isOverlap, OP_LOGI(context_->GetNodeName(), "nchw template is not capable for overlap case."),
+            return ge::GRAPH_PARAM_INVALID);
+
+        int64_t hBatchCnt = std::min(splitData.hInputInner, inputData.gradShape[H_DIM]) / baseData.hProBatchSize;
+        hBatchCnt = hBatchCnt > 1 ? hBatchCnt : 1;
+        int64_t allGatherCnt = hBatchCnt * wBatchCnt * splitData.highAxisInner;
+        OP_CHECK_IF(
+            allGatherCnt <= vlLen / VL_FACTOR,
+            OP_LOGI(
+                context_->GetNodeName(),
+                "nchw template is not capable, allGatherCnt: %ld, hBatchCnt is %ld, wBatchCnt: %ld, highAxisInner:%ld.",
+                allGatherCnt, hBatchCnt, wBatchCnt, splitData.highAxisInner),
+            return ge::GRAPH_PARAM_INVALID);
+    }
+    bool bankConfilictGrad = (baseData.wProBatchSize * baseData.inputBytes) % BANK_FACTOR == 0;
+    bool bankConfilictOut = (baseData.wProBatchSize * inputData.stride[W_DIM] * sizeof(float)) % BANK_FACTOR == 0;
     OP_CHECK_IF(
-        allGatherCnt <= baseData.vRegSize / VL_FACTOR / sizeof(float),
-        OP_LOGI(
-            context_->GetNodeName(),
-            "nchw template is not capable, allGatherCnt: %ld, hBatchCnt is %ld, wBatchCnt: %ld, highAxisInner:%ld.",
-            allGatherCnt, hBatchCnt, wBatchCnt, splitData.highAxisInner),
+        bankConfilictGrad || bankConfilictOut,
+        OP_LOGI(context_->GetNodeName(), "nchw template is not capable because of bank Confilict."),
         return ge::GRAPH_PARAM_INVALID);
 
     DoBlockTiling();

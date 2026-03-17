@@ -249,7 +249,7 @@ TEST_F(AvgPoolV2GradTiling, AvgPoolV2GradTiling_Test_nchw_tiling_4)
     bool ceil_mode = false;
     bool exclusive = false;
     int32_t divisor_override = 0;
-    uint64_t except_tilingkey = 3328;
+    uint64_t except_tilingkey = 2306;
     int shape_data[4] = {64, 94, 31, 55};
 
     ExecuteTestCase(

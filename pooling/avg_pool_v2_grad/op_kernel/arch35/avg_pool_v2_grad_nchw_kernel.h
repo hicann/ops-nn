@@ -75,6 +75,48 @@ __aicore__ inline void DoSingleNCNchw(
     MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
 }
 
+template <typename T1, const uint32_t IS_CHECK_RANGE>
+__aicore__ inline void DoSingleNCNchwForMergeW(
+    __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, MicroAPI::RegTensor<uint32_t>& parallelRegIndex,
+    uint32_t gradMaskCount, int32_t wOutputAligned, int32_t highOutputOffset,
+    MicroAPI::RegTensor<int32_t>& zeroConstReg, MicroAPI::RegTensor<int32_t>& wMaxReg,
+    uint16_t kW, MicroAPI::RegTensor<int32_t>& divisorReg,
+    MicroAPI::RegTensor<int32_t>& wIndexReg, int32_t hIndex, int32_t kHStart, int32_t kHEnd)
+{
+    AscendC::MicroAPI::RegTensor<computeType> gradReg;
+    AscendC::MicroAPI::RegTensor<int32_t> scatterStartIdxReg;
+    AscendC::MicroAPI::RegTensor<int32_t> scatterIndexReg;
+
+    uint32_t maskT1 = gradMaskCount;
+    AscendC::MicroAPI::MaskReg pregT1 = AscendC::MicroAPI::UpdateMask<T1>(maskT1);
+    uint32_t maskI32 = gradMaskCount;
+    AscendC::MicroAPI::MaskReg pregI32 = AscendC::MicroAPI::UpdateMask<int32_t>(maskI32);
+    GetConCurrentInput<T1>(gradReg, gradAddr, parallelRegIndex, pregT1);
+
+    int32_t scatterStartIdx = hIndex * wOutputAligned;
+    AscendC::MicroAPI::Adds(scatterStartIdxReg, wIndexReg, scatterStartIdx, pregI32);
+    for (uint16_t hIdx = kHStart; hIdx < kHEnd; hIdx++) {
+        int32_t hKernelOffset = hIdx * wOutputAligned;
+
+        for (uint16_t wIdx = 0; wIdx < kW; wIdx++) {
+            uint32_t gradMask = gradMaskCount;
+            AscendC::MicroAPI::MaskReg pregRes = AscendC::MicroAPI::UpdateMask<int32_t>(gradMask);
+
+            int32_t scatterIndexOffsetTotal = highOutputOffset + hKernelOffset + wIdx;
+            AscendC::MicroAPI::Adds(scatterIndexReg, scatterStartIdxReg, scatterIndexOffsetTotal, pregRes);
+
+            if constexpr (IS_CHECK_RANGE == 1) {
+                AscendC::MicroAPI::RegTensor<int32_t> wCurIndexReg;
+                AscendC::MicroAPI::Adds(wCurIndexReg, wIndexReg, static_cast<int32_t>(wIdx), pregRes);
+                FilterMaskForMergeW(pregRes, wCurIndexReg, zeroConstReg, wMaxReg);
+            }
+
+            GradientAcc(yAddr, gradReg, scatterIndexReg, divisorReg, pregRes);
+        }
+    }
+    MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
+}
+
 template <typename T, const MicroAPI::RegTrait& Trait = MicroAPI::RegTraitNumOne>
 __aicore__ inline void ComputeOutRegStart(
     MicroAPI::RegTensor<T, Trait>& outRegStart, MicroAPI::RegTensor<T, Trait>& initialRegIndex, T wGradOffset,
@@ -101,6 +143,18 @@ __aicore__ inline void ComputeOutWHIndex(
     AscendC::MicroAPI::Adds(hIndexRegTwo, outHStart, static_cast<T>(-curHIndex - padH), maskT);
     wIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)wIndexRegTwo.reg[0];
     hIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)hIndexRegTwo.reg[0];
+}
+
+template <typename T, const MicroAPI::RegTrait& Trait = MicroAPI::RegTraitNumOne>
+__aicore__ inline void ComputeOutWIndex(
+    MicroAPI::RegTensor<int32_t>& wIndexReg, MicroAPI::RegTensor<T, Trait>& outWStart, T curWIndex, uint16_t padW,
+    uint32_t count)
+{
+    AscendC::MicroAPI::RegTensor<T, Trait> wIndexRegTwo;
+    uint32_t numT = count;
+    AscendC::MicroAPI::MaskReg maskT = AscendC::MicroAPI::UpdateMask<T, Trait>(numT);
+    AscendC::MicroAPI::Adds(wIndexRegTwo, outWStart, static_cast<T>(-curWIndex - padW), maskT);
+    wIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)wIndexRegTwo.reg[0];
 }
 
 template <typename T, const MicroAPI::RegTrait& Trait = MicroAPI::RegTraitNumOne>
@@ -554,17 +608,14 @@ __aicore__ inline void AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
             {
                 AscendC::MicroAPI::RegTensor<int32_t> zeroConstReg;
                 AscendC::MicroAPI::RegTensor<int32_t> wMaxReg;
-                AscendC::MicroAPI::RegTensor<int32_t> hMaxReg;
                 AscendC::MicroAPI::Duplicate(zeroConstReg, static_cast<int32_t>(0));
                 if constexpr (IS_CHECK_RANGE == 1) {
                     AscendC::MicroAPI::Duplicate(wMaxReg, static_cast<int32_t>(wOutputActual));
-                    AscendC::MicroAPI::Duplicate(hMaxReg, static_cast<int32_t>(hOutputActual));
                 }
 
                 AscendC::MicroAPI::RegTensor<uint32_t> initialRegIndex;
                 AscendC::MicroAPI::RegTensor<uint32_t> parallelRegIndex;
                 AscendC::MicroAPI::RegTensor<int32_t> wIndexReg;
-                AscendC::MicroAPI::RegTensor<int32_t> hIndexReg;
                 AscendC::MicroAPI::RegTensor<int32_t> divisorReg;
 
                 AscendC::MicroAPI::RegTensor<T3, Trait> initialWRegIdx;
@@ -582,6 +633,9 @@ __aicore__ inline void AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
 
                 T3 hGradOffset = hIdx + hGradActualStart;
                 AscendC::MicroAPI::Duplicate(outHStart, static_cast<T3>(hGradOffset * strideH));
+                int32_t hIndex = hGradOffset * strideH - curHIndex - padH;
+                int32_t hkStart = hIndex >= 0 ? 0 : (-hIndex);
+                int32_t hkEnd = (hOutputActual - hIndex) > kH ? kH : (hOutputActual - hIndex);
                 for (uint16_t wRepeatIdx = 0; wRepeatIdx < repeatimes; wRepeatIdx++) {
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                         T3 wGradOffset = wBatchIdx + wRepeatIdx * computeSizeFp32 * wProBatchSize + wGradActualStart;
@@ -590,14 +644,13 @@ __aicore__ inline void AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
                         AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
 
                         ComputeOutRegStart<T3, Trait>(outWStart, initialWRegIdx, wGradOffset, strideW);
-                        ComputeOutWHIndex<T3, Trait>(
-                            wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex, padH, padW, all);
+                        ComputeOutWIndex<T3, Trait>(wIndexReg, outWStart, curWIndex, padW, all);
                         GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
                             divisorReg, outWStart, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH,
                             padRightW, kH, kW, divisorOverride, all);
-                        DoSingleNCNchw<T1, IS_CHECK_RANGE>(
+                        DoSingleNCNchwForMergeW<T1, IS_CHECK_RANGE>(
                             yAddr, gradAddr, parallelRegIndex, all, wOutputAligned, highOutputOffset, zeroConstReg,
-                            wMaxReg, hMaxReg, kH, kW, divisorReg, wIndexReg, hIndexReg, zeroConstReg);
+                            wMaxReg, kW, divisorReg, wIndexReg, hIndex, hkStart, hkEnd);
                     }
                 }
                 // 尾段整batch  用不满mask
@@ -608,15 +661,13 @@ __aicore__ inline void AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
                     AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
 
                     ComputeOutRegStart<T3, Trait>(outWStart, initialWRegIdx, wGradOffset, strideW);
-                    ComputeOutWHIndex<T3, Trait>(
-                        wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex, padH, padW,
-                        wRemainBatchCount);
+                    ComputeOutWIndex<T3, Trait>(wIndexReg, outWStart, curWIndex, padW, all);
                     GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
                         divisorReg, outWStart, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH,
                         padRightW, kH, kW, divisorOverride, wRemainBatchCount);
-                    DoSingleNCNchw<T1, IS_CHECK_RANGE>(
+                    DoSingleNCNchwForMergeW<T1, IS_CHECK_RANGE>(
                         yAddr, gradAddr, parallelRegIndex, wRemainBatchCount, wOutputAligned, highOutputOffset,
-                        zeroConstReg, wMaxReg, hMaxReg, kH, kW, divisorReg, wIndexReg, hIndexReg, zeroConstReg);
+                        zeroConstReg, wMaxReg, kW, divisorReg, wIndexReg, hIndex, hkStart, hkEnd);
                 }
 
                 // 尾段零散点
@@ -629,14 +680,13 @@ __aicore__ inline void AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
                     AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
 
                     ComputeOutRegStart<T3, Trait>(outWStart, initialWRegIdx, wGradOffset, strideW);
-                    ComputeOutWHIndex<T3, Trait>(
-                        wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex, padH, padW, one);
+                    ComputeOutWIndex<T3, Trait>(wIndexReg, outWStart, curWIndex, padW, all);
                     GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
                         divisorReg, outWStart, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH,
                         padRightW, kH, kW, divisorOverride, one);
-                    DoSingleNCNchw<T1, IS_CHECK_RANGE>(
+                    DoSingleNCNchwForMergeW<T1, IS_CHECK_RANGE>(
                         yAddr, gradAddr, parallelRegIndex, one, wOutputAligned, highOutputOffset, zeroConstReg, wMaxReg,
-                        hMaxReg, kH, kW, divisorReg, wIndexReg, hIndexReg, zeroConstReg);
+                        kW, divisorReg, wIndexReg, hIndex, hkStart, hkEnd);
                 }
             }
         }
