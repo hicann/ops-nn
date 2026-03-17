@@ -153,7 +153,7 @@ __aicore__ inline void SoftmaxCrossEntropyWithLogitsFullLoad<T, schId, featuresB
 
     if (schId == 2) {
         int64_t processNumA;
-        if (blockIdx_ < realCoreNum_ - 1) {
+        if (blockIdx_ < realCoreNum_) {
             processNumA = blockFactor_;
         } else {
             processNumA = tailBlockFactor_;

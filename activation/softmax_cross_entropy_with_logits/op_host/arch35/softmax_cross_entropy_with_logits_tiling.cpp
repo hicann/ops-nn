@@ -407,6 +407,9 @@ ge::graphStatus SoftmaxCrossEntropyWithLogitsRegbaseTiling::DoTiling()
     OP_CHECK_IF(
         CheckInputShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "CheckInputShapes is failed"),
         return ge::GRAPH_FAILED);
+    auto featureShape = context_->GetInputShape(INPUT_LABELS_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, featureShape);
+    auto featureStorageShape = featureShape->GetStorageShape();
     if (featuresBroc == NEED_BROC || labelsBroc == NEED_BROC) {
         OP_CHECK_IF(
             DoDimCollapse() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "DoDimCollapse is failed"),
@@ -417,7 +420,14 @@ ge::graphStatus SoftmaxCrossEntropyWithLogitsRegbaseTiling::DoTiling()
         auto outputShape = output->GetStorageShape();
         auto outputDimNum = outputShape.GetDimNum();
         baseTiling_.r = outputShape.GetDim(outputDimNum - 1);
-        baseTiling_.a = baseTiling_.r == 0 ? 0 : outputShape.GetShapeSize() / baseTiling_.r;
+        if (baseTiling_.r != 0) {
+            baseTiling_.a = outputShape.GetShapeSize() / baseTiling_.r;
+        } else {
+            baseTiling_.a = 1;
+            for (size_t i = 0; i < featureStorageShape.GetDimNum() - 1; i++) {
+                baseTiling_.a *= featureStorageShape.GetDim(i);
+            }
+        }
     }
     OP_CHECK_IF(
         CalTilingData() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Calculate TilingData failed"),
