@@ -107,7 +107,7 @@ ge::graphStatus LinearIndexTiling::Init()
 
     // 输入是二维时，indices会被slice成一维
     // 输入是三维时，indices会被slice成二维
-    int dim = *(attrs->GetAttrPointer<int>(0));
+    int64_t dim = *(attrs->GetAttrPointer<int64_t>(0));
     bool combine = *(attrs->GetAttrPointer<bool>(1));
     if (dim < 0) {
         dim += varShapeSize;

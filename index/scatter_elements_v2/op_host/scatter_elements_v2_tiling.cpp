@@ -151,7 +151,7 @@ ge::graphStatus ScatterElementsV2Tiling310P::Init() {
     const gert::StorageShape* updatesShape = context->GetInputShape(2);
     auto attrs = context->GetAttrs();
 
-    int axis = *(attrs->GetAttrPointer<int>(0));
+    int64_t axis = *(attrs->GetAttrPointer<int64_t>(0));
     const char* reduce = attrs->GetAttrPointer<char>(1);
     if (strcmp(reduce, "none") == 0) {
         tilingData.computeMode = 0;
@@ -338,7 +338,7 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
     uint32_t inputDataAlign = dataAlign / inputSize;
     uint32_t indexDataAlign = dataAlign / indicesSize;
 
-    const int* dim = (attrs->GetAttrPointer<int>(0));
+    const int64_t* dim = (attrs->GetAttrPointer<int64_t>(0));
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, dim);
     const char* reduce = attrs->GetAttrPointer<char>(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, reduce);
@@ -580,7 +580,7 @@ bool ScatterElementsV2Tiling::CacheOpSupport() {
     auto attrs = tilingContext->GetAttrs();
     auto inputDtype = tilingContext->GetInputDesc(INPUT_0)->GetDataType();
 
-    const int* dim = (attrs->GetAttrPointer<int>(0));
+    const int64_t* dim = (attrs->GetAttrPointer<int64_t>(0));
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, dim);
     auto inputShape = tilingContext->GetInputShape(INPUT_0)->GetStorageShape();
     auto inputDimNum = inputShape.GetDimNum();
@@ -754,7 +754,7 @@ ge::graphStatus ScatterElementsV2Tiling::RunCacheOpTiling() {
     
     auto inputDimNum = inputShape.GetDimNum();
     auto attrs = tilingContext->GetAttrs();
-    const int* dim = (attrs->GetAttrPointer<int>(0));
+    const int64_t* dim = (attrs->GetAttrPointer<int64_t>(0));
     realDim = (*dim < 0 ? *dim + inputDimNum : *dim);
     
     SetDimsByAxisType(inputShape, indicesShape, updatesShape, inputDimNum);

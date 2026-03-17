@@ -102,7 +102,7 @@ ge::graphStatus InferDataType4NonZero(gert::InferDataTypeContext* context)
     OP_LOGD(context->GetNodeName(), "InferDtype4NonZero enter");
     auto attrsPtr = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrsPtr);
-    const int32_t* dstDtype = attrsPtr->GetAttrPointer<int32_t>(1);
+    const int64_t* dstDtype = attrsPtr->GetAttrPointer<int64_t>(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, dstDtype);
     ge::DataType outDtype = static_cast<ge::DataType>(*dstDtype);
     OP_LOGI(context->GetNodeName(), "set output dtype: %s", ToString(outDtype).c_str());
