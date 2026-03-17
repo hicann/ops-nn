@@ -1890,12 +1890,14 @@ VC8@ops-nn:
         - ops/ops-nn/index/index_fill_d/op_host/arch35/
         - ops/ops-nn/index/index_fill_d/op_kernel/arch35/
         - ops/ops-nn/index/gather_nd/op_host/
-        - ops/ops-nn/index/gather_v2/op_host/arch35/
+        - ops/ops-nn/index/gather_v2/op_host/arch35/gather_v2_tiling.cpp
+        - ops/ops-nn/index/gather_v2/op_host/arch35/gather_v2_tiling.h
         - ops/ops-nn/index/gather_v2/op_kernel/arch35/
         - ops/ops-nn/index/scatter/op_host/
         - ops/ops-nn/index/scatter_nd/op_host/arch35/
         - ops/ops-nn/index/scatter_nd/op_kernel/arch35/
-        - ops/ops-nn/index/scatter_add/op_host/arch35/
+        - ops/ops-nn/index/scatter_add/op_host/arch35/scatter_add_tiling_base.cpp
+        - ops/ops-nn/index/scatter_add/op_host/arch35/scatter_add_tiling_base.h
         - ops/ops-nn/index/scatter_add/op_kernel/arch35/
         - ops/ops-nn/index/inplace_index_add/op_host/
         - ops/ops-nn/index/scatter_nd_update/op_host/
