@@ -163,7 +163,7 @@ static ge::graphStatus NormCommonTiling(gert::TilingContext* context, PrePostTyp
 
     // calculate numRow
     int64_t numRow = 1;
-    for (size_t i = 0; i < xShape.GetDimNum() - 1; ++i) {
+    for (size_t i = 0; i < xShape.GetDimNum(); ++i) {
         uint32_t dim = xShape.GetDim(i);
         OP_CHECK_IF(dim <= 0, OP_LOGD(opName, "In tensor X dim %d is invalid", i), return ge::GRAPH_PARAM_OUT_OF_RANGE);
         OP_CHECK_IF(
@@ -171,9 +171,18 @@ static ge::graphStatus NormCommonTiling(gert::TilingContext* context, PrePostTyp
             OP_LOGD(opName, "At dim %d, tmpNumRow is overflowed", i), return ge::GRAPH_FAILED);
         numRow *= dim;
     }
+    // get gamma shape
+    gert::Shape gammaShape = context->GetInputShape(static_cast<int>(NormInputIndex::GAMMA))->GetOriginShape();
+    
+    int64_t gammaSize = 1;
+    for (size_t i = 0; i < gammaShape.GetDimNum(); ++i) {
+        uint32_t dim = gammaShape.GetDim(i);
+        gammaSize *= dim;
+    }
+    numRow = numRow / gammaSize;
     tilingData.set_numRow(static_cast<uint32_t>(numRow)); // 修改
     // check numCol
-    uint32_t numCol = xShape.GetDim(xShape.GetDimNum() - 1);
+    uint32_t numCol = gammaSize;
     OP_CHECK_IF(
         numCol > std::numeric_limits<uint32_t>::max(), OP_LOGD(opName, "numCol is overflowed"),
         return ge::GRAPH_PARAM_OUT_OF_RANGE);
