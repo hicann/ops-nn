@@ -16,7 +16,7 @@
 
 namespace optiling {
 static constexpr uint32_t IN_OUT_RATE_THRESHOLD = 5;
-static constexpr uint32_t INNER_DIM_THRESHOLD = 128;
+static constexpr uint32_t INNER_DIM_THRESHOLD = 512;
 static constexpr uint64_t DCACHE_SIZE = static_cast<uint64_t>(32 * 1024);
 static constexpr uint32_t MAX_INDEX_NUM = 1024;
 static constexpr int64_t DOUBLE = 2;
@@ -25,7 +25,7 @@ static constexpr uint32_t ALIGN_SIZE = 128;
 
 bool UnsortedSegmentSortSimtTiling::IsCapable() 
 {
-    if (inputOuterDim_ / outputOuterDim_ >= IN_OUT_RATE_THRESHOLD && innerDim_ * dataTypeBytes_ < INNER_DIM_THRESHOLD) {
+    if (inputOuterDim_ / outputOuterDim_ >= IN_OUT_RATE_THRESHOLD && innerDim_ < INNER_DIM_THRESHOLD) {
         return true;
     }
     return false;
