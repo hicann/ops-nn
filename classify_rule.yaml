@@ -668,6 +668,7 @@ activation-c@ops-nn:
     release:
       style:
         - ops/ops-nn/activation/
+        - ops/ops-nn/rnn/bidirection_lstm/op_host/bidirection_lstm_tiling.cpp
       opensource_style: null
       kernel_style: null
     unrelease:
