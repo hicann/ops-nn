@@ -48,9 +48,8 @@ inline bool IsNotEmptyShape(const gert::StorageShape* storageShape)
 
 inline bool IsFormatNZ(ge::Format format)
 {
-    return format == ge::FORMAT_FRACTAL_NZ || 
-           format == ge::FORMAT_FRACTAL_NZ_C0_4 ||
-           format == ge::FORMAT_FRACTAL_NZ_C0_32;
+    return format == ge::FORMAT_FRACTAL_NZ || format == ge::FORMAT_FRACTAL_NZ_C0_4;
+
 }
 
 void QuantBatchMatmulV4TilingBase::InitCompileInfo()
