@@ -136,9 +136,9 @@ static ge::graphStatus GetStrideInfo(gert::TilingContext* context, const gert::R
     auto stride = runtimeAttrs->GetListInt(STRIDE_POS);
     OPS_CHECK_NULL_WITH_CONTEXT(context, stride);
     auto strideDim = stride->GetSize();
-    OP_TILING_CHECK(strideDim != ONE_DIMS && strideDim != HW_DIMS && strideDim != NCHW_DIMS,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context, "AvgPoolV2Grad: stride must have %d, %d, or %d elements ",
-                                                    ONE_DIMS, HW_DIMS, NCHW_DIMS),
+    OP_TILING_CHECK(strideDim != ZERO_DIMS &&strideDim != ONE_DIMS && strideDim != HW_DIMS && strideDim != NCHW_DIMS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context, "AvgPoolV2Grad: stride must have %d, %d, %d, or %d elements ",
+                                                    ZERO_DIMS, ONE_DIMS, HW_DIMS, NCHW_DIMS),
                     return ge::GRAPH_FAILED);
 
     int64_t hStride = ONE;
@@ -152,6 +152,9 @@ static ge::graphStatus GetStrideInfo(gert::TilingContext* context, const gert::R
     } else if (strideDim == NCHW_DIMS) {
         hStride = stride->GetData()[commInfo.hDim];
         wStride = stride->GetData()[commInfo.wDim];
+    } else if (strideDim == ZERO_DIMS) {
+        hStride = inputData.kernelSize[H_DIM];
+        wStride = inputData.kernelSize[W_DIM];
     }
     inputData.stride = {hStride, wStride};
     OP_TILING_CHECK(hStride <= 0 || wStride <= 0,
