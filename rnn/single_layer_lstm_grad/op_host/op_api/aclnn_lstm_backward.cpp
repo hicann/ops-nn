@@ -38,6 +38,7 @@
 #include "level0/squeeze.h"
 #include "aclnn_kernels/transpose.h"
 #include "level0/add.h"
+#include "level0/zero_op.h"
 using namespace op;
 #ifdef __cplusplus
 extern "C" {
@@ -130,6 +131,16 @@ struct LSTMContinuousTensors {
     const aclTensorList* cContiguous = nullptr;
     const aclTensorList* tanhcContiguous = nullptr;
     const aclTensor* batchSizesContiguous = nullptr;
+};
+
+struct SingleTensorItem {
+    const char* name;
+    const aclTensor* tensor;
+};
+
+struct TensorListItem {
+    const char* name;
+    const aclTensorList* list;
 };
 
 static const aclTensor* SplitToConcat(std::vector<const aclTensor*> tensorListA, int64_t dim, aclOpExecutor* executor)
@@ -806,9 +817,6 @@ static bool CheckTensorListNotNull(const aclTensorList *tensorList)
 static bool CheckNotNull(const aclTensor *input,
     const aclTensorList *hc,
     const aclTensorList *params,
-    const aclTensor *dy,
-    const aclTensor *dh,
-    const aclTensor *dc,
     const aclTensorList *i,
     const aclTensorList *j,
     const aclTensorList *f,
@@ -827,9 +835,6 @@ static bool CheckNotNull(const aclTensor *input,
     OP_CHECK_NULL(input, return false);
     OP_CHECK_NULL(hc, return false);
     OP_CHECK_NULL(params, return false);
-    OP_CHECK_NULL(dy, return false);
-    OP_CHECK_NULL(dh, return false);
-    OP_CHECK_NULL(dc, return false);
     OP_CHECK_NULL(i, return false);
     OP_CHECK_NULL(j, return false);
     OP_CHECK_NULL(f, return false);
@@ -931,15 +936,15 @@ static bool CheckFormatValid(const aclTensor *input,
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input format only support ND/NCL");
         return false;
     }
-    if (dy->GetStorageFormat() != inputFormat) {
+    if (dy != nullptr && dy->GetStorageFormat() != inputFormat) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dy format only support ND/NCL");
         return false;
     }
-    if (dh->GetStorageFormat() != Format::FORMAT_NCL) {
+    if (dh != nullptr && dh->GetStorageFormat() != Format::FORMAT_NCL) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dh format only support NCL");
         return false;
     }
-    if (dc->GetStorageFormat() != Format::FORMAT_NCL) {
+    if (dc != nullptr && dc->GetStorageFormat() != Format::FORMAT_NCL) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dc format only support NCL");
         return false;
     }
@@ -1024,39 +1029,39 @@ static bool CheckDtypeValid(const aclTensor *input,
     const aclTensor *dhPrev,
     const aclTensor *dcPrev,
     const aclTensorList *dparams,
-    const aclTensor *batchSizes=nullptr)
+    const aclTensor *batchSizes = nullptr)
 {
     ge::DataType baseDtype = input->GetDataType();
-    // 检查所有单个张量
-    if (!CheckSingleTensorDtype(dy, "dy", baseDtype)) return false;
-    if (!CheckSingleTensorDtype(dh, "dh", baseDtype)) return false;
-    if (!CheckSingleTensorDtype(dc, "dc", baseDtype)) return false;
-    if (!CheckSingleTensorDtype(dx, "dx", baseDtype)) return false;
-    if (!CheckSingleTensorDtype(dhPrev, "dhPrev", baseDtype)) return false;
-    if (!CheckSingleTensorDtype(dcPrev, "dcPrev", baseDtype)) return false;
+    const SingleTensorItem singleTensors[] = {
+        {"dy", dy}, {"dh", dh}, {"dc", dc}, {"dx", dx},
+        {"dhPrev", dhPrev}, {"dcPrev", dcPrev}
+    };
+    const TensorListItem listTensors[] = {
+        {"hc", hc}, {"params", params}, {"i", i}, {"j", j},
+        {"f", f}, {"o", o}, {"h", h}, {"c", c},
+        {"tanhc", tanhc}, {"dparams", dparams}
+    };
+    for (const auto& item : singleTensors) {
+        if (item.tensor != nullptr && !CheckSingleTensorDtype(item.tensor, item.name, baseDtype)) {
+            return false;
+        }
+    }
     if (batchSizes != nullptr && batchSizes->GetDataType() != op::DataType::DT_INT64) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, 
-            "batchSizes tensor dtype inconsistent, expected: %s, actual: %s.", 
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+            "batchSizes tensor dtype inconsistent, expected: %s, actual: %s.",
             op::ToString(op::DataType::DT_INT64).GetString(),
             op::ToString(batchSizes->GetDataType()).GetString());
         return false;
-    };
-
-    // 检查所有张量列表
-    if (!CheckTensorListDtype(hc, "hc", baseDtype)) return false;
-    if (!CheckTensorListDtype(params, "params", baseDtype)) return false;
-    if (!CheckTensorListDtype(i, "i", baseDtype)) return false;
-    if (!CheckTensorListDtype(j, "j", baseDtype)) return false;
-    if (!CheckTensorListDtype(f, "f", baseDtype)) return false;
-    if (!CheckTensorListDtype(o, "o", baseDtype)) return false;
-    if (!CheckTensorListDtype(h, "h", baseDtype)) return false;
-    if (!CheckTensorListDtype(c, "c", baseDtype)) return false;
-    if (!CheckTensorListDtype(tanhc, "tanhc", baseDtype)) return false;
-    if (!CheckTensorListDtype(dparams, "dparams", baseDtype)) return false;
+    }
+    for (const auto& item : listTensors) {
+        if (!CheckTensorListDtype(item.list, item.name, baseDtype)) {
+            return false;
+        }
+    }
     return true;
 }
 
-static bool ValidateInputShape(const aclTensor *input, std::vector<int64_t>& expected_dims, const char* tensorName) {
+static bool ValidateInputShape(const aclTensor *input, const std::vector<int64_t>& expected_dims, const char* tensorName) {
   auto shape = input->GetViewShape();
   if (shape.GetDimNum() != expected_dims.size()) {
       OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor %s has wrong dimension count", tensorName);
@@ -1071,6 +1076,131 @@ static bool ValidateInputShape(const aclTensor *input, std::vector<int64_t>& exp
   }
   return true;
 };
+
+static bool ValidateLayerWithBiasAndBidir(
+    const aclTensorList* params,
+    const aclTensorList* dparams,
+    int64_t layerIdx,
+    const std::vector<int64_t>& weightInputDim,
+    const std::vector<int64_t>& weightHiddenDim,
+    const std::vector<int64_t>& biasDim)
+{
+    const int64_t stride = NUM_WITH_B_AND_BID; // 每层张量数（含bias和双向）
+    const int64_t half = stride / BI_DIRECTION; // 每个方向的张量数
+    // 前向方向 (索引 0~half-1)
+    bool ok = ValidateInputShape((*params)[stride * layerIdx + WEIGHT_INPUT_INDEX], weightInputDim, "wi") &&
+              ValidateInputShape((*params)[stride * layerIdx + WEIGHT_HIDDEN_INDEX], weightHiddenDim, "wh") &&
+              ValidateInputShape((*params)[stride * layerIdx + BIAS_INPUT_INDEX], biasDim, "bi") &&
+              ValidateInputShape((*params)[stride * layerIdx + BIAS_HIDDEN_INDEX], biasDim, "bh") &&
+              ValidateInputShape((*dparams)[stride * layerIdx + WEIGHT_INPUT_INDEX], weightInputDim, "dwi") &&
+              ValidateInputShape((*dparams)[stride * layerIdx + WEIGHT_HIDDEN_INDEX], weightHiddenDim, "dwh") &&
+              ValidateInputShape((*dparams)[stride * layerIdx + BIAS_INPUT_INDEX], biasDim, "dbi") &&
+              ValidateInputShape((*dparams)[stride * layerIdx + BIAS_HIDDEN_INDEX], biasDim, "dbh");
+    // 反向方向 (索引 half~stride-1)
+    ok = ok &&
+         ValidateInputShape((*params)[stride * layerIdx + half + WEIGHT_INPUT_INDEX], weightInputDim, "wi") &&
+         ValidateInputShape((*params)[stride * layerIdx + half + WEIGHT_HIDDEN_INDEX], weightHiddenDim, "wh") &&
+         ValidateInputShape((*params)[stride * layerIdx + half + BIAS_INPUT_INDEX], biasDim, "bi") &&
+         ValidateInputShape((*params)[stride * layerIdx + half + BIAS_HIDDEN_INDEX], biasDim, "bh") &&
+         ValidateInputShape((*dparams)[stride * layerIdx + half + WEIGHT_INPUT_INDEX], weightInputDim, "dwi") &&
+         ValidateInputShape((*dparams)[stride * layerIdx + half + WEIGHT_HIDDEN_INDEX], weightHiddenDim, "dwh") &&
+         ValidateInputShape((*dparams)[stride * layerIdx + half + BIAS_INPUT_INDEX], biasDim, "dbi") &&
+         ValidateInputShape((*dparams)[stride * layerIdx + half + BIAS_HIDDEN_INDEX], biasDim, "dbh");
+    return ok;
+}
+
+static bool ValidateLayerWithBiasOnly(
+    const aclTensorList* params,
+    const aclTensorList* dparams,
+    int64_t layerIdx,
+    const std::vector<int64_t>& weightInputDim,
+    const std::vector<int64_t>& weightHiddenDim,
+    const std::vector<int64_t>& biasDim)
+{
+    const int64_t stride = NUM_WITH_B_OR_BID; // 每层张量数（含bias，单向）
+    return ValidateInputShape((*params)[stride * layerIdx + WEIGHT_INPUT_INDEX], weightInputDim, "wi") &&
+           ValidateInputShape((*params)[stride * layerIdx + WEIGHT_HIDDEN_INDEX], weightHiddenDim, "wh") &&
+           ValidateInputShape((*params)[stride * layerIdx + BIAS_INPUT_INDEX], biasDim, "bi") &&
+           ValidateInputShape((*params)[stride * layerIdx + BIAS_HIDDEN_INDEX], biasDim, "bh") &&
+           ValidateInputShape((*dparams)[stride * layerIdx + WEIGHT_INPUT_INDEX], weightInputDim, "dwi") &&
+           ValidateInputShape((*dparams)[stride * layerIdx + WEIGHT_HIDDEN_INDEX], weightHiddenDim, "dwh") &&
+           ValidateInputShape((*dparams)[stride * layerIdx + BIAS_INPUT_INDEX], biasDim, "dbi") &&
+           ValidateInputShape((*dparams)[stride * layerIdx + BIAS_HIDDEN_INDEX], biasDim, "dbh");
+}
+
+static bool ValidateLayerWithBidirOnly(
+    const aclTensorList* params,
+    const aclTensorList* dparams,
+    int64_t layerIdx,
+    const std::vector<int64_t>& weightInputDim,
+    const std::vector<int64_t>& weightHiddenDim)
+{
+    const int64_t stride = NUM_WITH_B_OR_BID; // 无bias时每层张量数（两个方向）
+    const int64_t half = stride / BI_DIRECTION;
+    bool ok = ValidateInputShape((*params)[stride * layerIdx + WEIGHT_INPUT_INDEX], weightInputDim, "wi") &&
+              ValidateInputShape((*params)[stride * layerIdx + WEIGHT_HIDDEN_INDEX], weightHiddenDim, "wh") &&
+              ValidateInputShape((*dparams)[stride * layerIdx + WEIGHT_INPUT_INDEX], weightInputDim, "dwi") &&
+              ValidateInputShape((*dparams)[stride * layerIdx + WEIGHT_HIDDEN_INDEX], weightHiddenDim, "dwh");
+    ok = ok &&
+         ValidateInputShape((*params)[stride * layerIdx + half + WEIGHT_INPUT_INDEX], weightInputDim, "wi") &&
+         ValidateInputShape((*params)[stride * layerIdx + half + WEIGHT_HIDDEN_INDEX], weightHiddenDim, "wh") &&
+         ValidateInputShape((*dparams)[stride * layerIdx + half + WEIGHT_INPUT_INDEX], weightInputDim, "dwi") &&
+         ValidateInputShape((*dparams)[stride * layerIdx + half + WEIGHT_HIDDEN_INDEX], weightHiddenDim, "dwh");
+    return ok;
+}
+
+static bool ValidateLayerNoBiasNoBidir(
+    const aclTensorList* params,
+    const aclTensorList* dparams,
+    int64_t layerIdx,
+    const std::vector<int64_t>& weightInputDim,
+    const std::vector<int64_t>& weightHiddenDim)
+{
+    const int64_t stride = NUM_NO_B_NO_BIDIR; // 每层张量数（无bias，单向）
+    return ValidateInputShape((*params)[stride * layerIdx + WEIGHT_INPUT_INDEX], weightInputDim, "wi") &&
+           ValidateInputShape((*params)[stride * layerIdx + WEIGHT_HIDDEN_INDEX], weightHiddenDim, "wh") &&
+           ValidateInputShape((*dparams)[stride * layerIdx + WEIGHT_INPUT_INDEX], weightInputDim, "dwi") &&
+           ValidateInputShape((*dparams)[stride * layerIdx + WEIGHT_HIDDEN_INDEX], weightHiddenDim, "dwh");
+}
+
+static bool CheckGateTensorsForIndex(
+    const aclTensorList* i, const aclTensorList* j, const aclTensorList* f,
+    const aclTensorList* o, const aclTensorList* h, const aclTensorList* c,
+    const aclTensorList* tanhc, int64_t idx, const std::vector<int64_t>& hiddenDim)
+{
+    if (!ValidateInputShape((*i)[idx], hiddenDim, "i")) return false;
+    if (!ValidateInputShape((*j)[idx], hiddenDim, "j")) return false;
+    if (!ValidateInputShape((*f)[idx], hiddenDim, "f")) return false;
+    if (!ValidateInputShape((*o)[idx], hiddenDim, "o")) return false;
+    if (!ValidateInputShape((*h)[idx], hiddenDim, "h")) return false;
+    if (!ValidateInputShape((*c)[idx], hiddenDim, "c")) return false;
+    if (!ValidateInputShape((*tanhc)[idx], hiddenDim, "tanhc")) return false;
+    return true;
+}
+
+static bool ValidateCoreShapes(
+    int64_t numLayers,
+    const aclTensor* input, const std::vector<int64_t>& inputDim,
+    const aclTensorList* hc, const std::vector<int64_t>& inithDim,
+    const aclTensor* dx,
+    const aclTensor* dhPrev,
+    const aclTensor* dcPrev,
+    const aclTensor* dy, const std::vector<int64_t>& outHiddenDim,
+    const aclTensor* dh,
+    const aclTensor* dc)
+{
+    if (numLayers <= 0) return false;
+    if (!ValidateInputShape(input, inputDim, "input") || !ValidateInputShape((*hc)[0], inithDim, "inith") ||
+        !ValidateInputShape((*hc)[1], inithDim, "initc") || !ValidateInputShape(dx, inputDim, "dx") ||
+        !ValidateInputShape(dhPrev, inithDim, "dhPrev") || !ValidateInputShape(dcPrev, inithDim, "dcPrev")) {
+        return false;
+    }
+    if (dy && !ValidateInputShape(dy, outHiddenDim, "dy")) return false;
+    if (dh && !ValidateInputShape(dh, inithDim, "dh")) return false;
+    if (dc && !ValidateInputShape(dc, inithDim, "dc")) return false;
+
+    return true;
+}
 
 static bool CheckShapeValid(const aclTensor *input,
     const aclTensorList *hc,
@@ -1095,147 +1225,54 @@ static bool CheckShapeValid(const aclTensor *input,
     bool batchFirst,
     const aclTensor *batchSizes=nullptr)
 {
-    OP_CHECK_WRONG_DIMENSION(dh, DIM_THREE, return false);
+    OP_CHECK_WRONG_DIMENSION((*i)[0], DIM_THREE, return false);
     bool hasSeqlength = batchSizes != nullptr;
     size_t inputDimsNum = hasSeqlength ? DIM_TWO : DIM_THREE;
     OP_CHECK_WRONG_DIMENSION(input, inputDimsNum, return false);
     if (hasSeqlength) {
         OP_CHECK_WRONG_DIMENSION(batchSizes, DIM_ONE, return false);
     }
-    auto dhShape = dh->GetViewShape();
+    auto iShape = (*i)[0]->GetViewShape();
     auto inputShape = input->GetViewShape();
     int64_t inputSize = inputShape[inputDimsNum - 1];
-    int64_t hiddenSize = dhShape[HIDDEN_DIM];
-    int64_t batch = dhShape[BATCH_DIM];
+    int64_t hiddenSize = iShape[HIDDEN_DIM];
+    int64_t batch = iShape[BATCH_DIM];
     
     int64_t timeStep = hasSeqlength ? batchSizes->GetViewShape()[SEQUENCE_DIM] :
                        batchFirst ? inputShape[BATCH_DIM] : inputShape[SEQUENCE_DIM];
     int64_t bid = bidirectional ? BI_DIRECTION : SINGLE_DIRECTION;
     
-    std::vector<int64_t> biasDim = {GATE_COUNT * hiddenSize};
-    std::vector<int64_t> inithDim = {numLayers * bid, batch, hiddenSize};
-    std::vector<int64_t> hiddenDim = {timeStep, batch, hiddenSize};
-    std::vector<int64_t> outHiddenDim = hasSeqlength
+    const std::vector<int64_t> biasDim = {GATE_COUNT * hiddenSize};
+    const std::vector<int64_t> inithDim = {numLayers * bid, batch, hiddenSize};
+    const std::vector<int64_t> hiddenDim = {timeStep, batch, hiddenSize};
+    const std::vector<int64_t> outHiddenDim = hasSeqlength
                                         ? std::vector<int64_t>{timeStep * batch, hiddenSize * bid}
                                         : batchFirst ? std::vector<int64_t>{batch, timeStep, hiddenSize * bid} :
                                         std::vector<int64_t>{timeStep, batch, hiddenSize * bid};
-    std::vector<int64_t> weightHiddenDim = {GATE_COUNT * hiddenSize, hiddenSize};
+    const std::vector<int64_t> weightHiddenDim = {GATE_COUNT * hiddenSize, hiddenSize};
     std::vector<int64_t> inputDim = hasSeqlength
                                     ? std::vector<int64_t>{timeStep * batch, inputSize}
                                     : batchFirst ? std::vector<int64_t>{batch, timeStep, inputSize} :
                                     std::vector<int64_t>{timeStep, batch, inputSize};
-    bool ret = numLayers > 0 &&
-                ValidateInputShape(input, inputDim, "input") &&
-                ValidateInputShape((*hc)[0], inithDim, "inith") &&
-                ValidateInputShape((*hc)[1], inithDim, "initc") &&
-                ValidateInputShape(dy, outHiddenDim, "dy") &&
-                ValidateInputShape(dh, inithDim, "dh") &&
-                ValidateInputShape(dc, inithDim, "dc") &&
-                ValidateInputShape(dx, inputDim, "dx") &&
-                ValidateInputShape(dhPrev, inithDim, "dhPrev") &&
-                ValidateInputShape(dcPrev, inithDim, "dcPrev");
-    
-    for (int64_t layerIdx = 0; layerIdx < numLayers; layerIdx++) {
-        inputSize = layerIdx == 0 ? inputSize : bid * hiddenSize;
-        std::vector<int64_t> weightInputDim = {GATE_COUNT * hiddenSize, inputSize};
-        if (hasBias && bidirectional) {
-            ret = ret && ValidateInputShape(
-                (*params)[NUM_WITH_B_AND_BID * layerIdx + WEIGHT_INPUT_INDEX], weightInputDim, "wi");
-            ret = ret && ValidateInputShape(
-                (*params)[NUM_WITH_B_AND_BID * layerIdx + WEIGHT_HIDDEN_INDEX], weightHiddenDim, "wh");
-            ret = ret && ValidateInputShape((*params)[NUM_WITH_B_AND_BID * layerIdx + BIAS_INPUT_INDEX], biasDim, "bi");
-            ret = ret && ValidateInputShape(
-                (*params)[NUM_WITH_B_AND_BID * layerIdx + BIAS_HIDDEN_INDEX], biasDim, "bh");
-            ret = ret && ValidateInputShape(
-                (*params)[NUM_WITH_B_AND_BID * layerIdx + NUM_WITH_B_AND_BID / BI_DIRECTION + WEIGHT_INPUT_INDEX], weightInputDim,
-                "wi");
-            ret = ret && ValidateInputShape(
-                (*params)[NUM_WITH_B_AND_BID * layerIdx + NUM_WITH_B_AND_BID / BI_DIRECTION + WEIGHT_HIDDEN_INDEX],
-                weightHiddenDim, "wh");
-            ret = ret && ValidateInputShape(
-                (*params)[NUM_WITH_B_AND_BID * layerIdx + NUM_WITH_B_AND_BID / BI_DIRECTION + BIAS_INPUT_INDEX], biasDim, "bi");
-            ret = ret && ValidateInputShape(
-                (*params)[NUM_WITH_B_AND_BID * layerIdx + NUM_WITH_B_AND_BID / BI_DIRECTION + BIAS_HIDDEN_INDEX], biasDim, "bh");
-
-            ret = ret && ValidateInputShape(
-                (*dparams)[NUM_WITH_B_AND_BID * layerIdx + WEIGHT_INPUT_INDEX], weightInputDim, "dwi");
-            ret = ret && ValidateInputShape(
-                (*dparams)[NUM_WITH_B_AND_BID * layerIdx + WEIGHT_HIDDEN_INDEX], weightHiddenDim, "dwh");
-            ret = ret && ValidateInputShape(
-                (*dparams)[NUM_WITH_B_AND_BID * layerIdx + BIAS_INPUT_INDEX], biasDim, "dbi");
-            ret = ret && ValidateInputShape(
-                (*dparams)[NUM_WITH_B_AND_BID * layerIdx + BIAS_HIDDEN_INDEX], biasDim, "dbh");
-            ret = ret && ValidateInputShape(
-                (*dparams)[NUM_WITH_B_AND_BID * layerIdx + NUM_WITH_B_AND_BID / BI_DIRECTION + WEIGHT_INPUT_INDEX], weightInputDim,
-                "dwi");
-            ret = ret && ValidateInputShape(
-                (*dparams)[NUM_WITH_B_AND_BID * layerIdx + NUM_WITH_B_AND_BID / BI_DIRECTION + WEIGHT_HIDDEN_INDEX],
-                weightHiddenDim, "dwh");
-            ret = ret && ValidateInputShape(
-                (*dparams)[NUM_WITH_B_AND_BID * layerIdx + NUM_WITH_B_AND_BID / BI_DIRECTION + BIAS_INPUT_INDEX], biasDim, "dbi");
-            ret = ret && ValidateInputShape(
-                (*dparams)[NUM_WITH_B_AND_BID * layerIdx + NUM_WITH_B_AND_BID / BI_DIRECTION + BIAS_HIDDEN_INDEX], biasDim, "dbh");
-        } else if (hasBias && !bidirectional) {
-            ret = ret && ValidateInputShape((*params)[NUM_WITH_B_OR_BID * layerIdx + WEIGHT_INPUT_INDEX],
-                weightInputDim, "wi");
-            ret = ret && ValidateInputShape((*params)[NUM_WITH_B_OR_BID * layerIdx + WEIGHT_HIDDEN_INDEX],
-                weightHiddenDim, "wh");
-            ret = ret && ValidateInputShape((*params)[NUM_WITH_B_OR_BID * layerIdx + BIAS_INPUT_INDEX], biasDim, "bi");
-            ret = ret && ValidateInputShape((*params)[NUM_WITH_B_OR_BID * layerIdx + BIAS_HIDDEN_INDEX], biasDim, "bh");
-
-            ret = ret && ValidateInputShape((*dparams)[NUM_WITH_B_OR_BID * layerIdx + WEIGHT_INPUT_INDEX],
-                weightInputDim, "dwi");
-            ret = ret && ValidateInputShape((*dparams)[NUM_WITH_B_OR_BID * layerIdx + WEIGHT_HIDDEN_INDEX],
-                weightHiddenDim, "dwh");
-            ret = ret && ValidateInputShape(
-                (*dparams)[NUM_WITH_B_OR_BID * layerIdx + BIAS_INPUT_INDEX], biasDim, "dbi");
-            ret = ret && ValidateInputShape(
-                (*dparams)[NUM_WITH_B_OR_BID * layerIdx + BIAS_HIDDEN_INDEX], biasDim, "dbh");
-        } else if (!hasBias && bidirectional) {
-            ret = ret && ValidateInputShape(
-                (*params)[NUM_WITH_B_OR_BID * layerIdx + WEIGHT_INPUT_INDEX], weightInputDim, "wi");
-            ret = ret && ValidateInputShape(
-                (*params)[NUM_WITH_B_OR_BID * layerIdx + WEIGHT_HIDDEN_INDEX], weightHiddenDim, "wh");
-            ret = ret && ValidateInputShape(
-                (*params)[NUM_WITH_B_OR_BID * layerIdx + NUM_WITH_B_OR_BID / BI_DIRECTION + WEIGHT_INPUT_INDEX], weightInputDim,
-                "wi");
-            ret = ret && ValidateInputShape(
-                (*params)[NUM_WITH_B_OR_BID * layerIdx + NUM_WITH_B_OR_BID / BI_DIRECTION + WEIGHT_HIDDEN_INDEX], weightHiddenDim,
-                "wh");
-
-            ret = ret && ValidateInputShape(
-                (*dparams)[NUM_WITH_B_OR_BID * layerIdx + WEIGHT_INPUT_INDEX], weightInputDim, "dwi");
-            ret = ret && ValidateInputShape(
-                (*dparams)[NUM_WITH_B_OR_BID * layerIdx + WEIGHT_HIDDEN_INDEX], weightHiddenDim, "dwh");
-            ret = ret && ValidateInputShape(
-                (*dparams)[NUM_WITH_B_OR_BID * layerIdx + NUM_WITH_B_OR_BID / BI_DIRECTION + WEIGHT_INPUT_INDEX], weightInputDim,
-                "dwi");
-            ret = ret && ValidateInputShape(
-                (*dparams)[NUM_WITH_B_OR_BID * layerIdx + NUM_WITH_B_OR_BID / BI_DIRECTION + WEIGHT_HIDDEN_INDEX], weightHiddenDim,
-                "dwh");
-        } else {
-            ret = ret && ValidateInputShape(
-                (*params)[NUM_NO_B_NO_BIDIR * layerIdx + WEIGHT_INPUT_INDEX], weightInputDim, "wi");
-            ret = ret && ValidateInputShape(
-                (*params)[NUM_NO_B_NO_BIDIR * layerIdx + WEIGHT_HIDDEN_INDEX], weightHiddenDim, "wh");
-            ret = ret && ValidateInputShape(
-                (*dparams)[NUM_NO_B_NO_BIDIR * layerIdx + WEIGHT_INPUT_INDEX], weightInputDim, "dwi");
-            ret = ret && ValidateInputShape(
-                (*dparams)[NUM_NO_B_NO_BIDIR * layerIdx + WEIGHT_HIDDEN_INDEX], weightHiddenDim, "dwh");
+    if (!ValidateCoreShapes(numLayers, input, inputDim, hc, inithDim, dx, dhPrev, dcPrev, dy, outHiddenDim, dh, dc)) return false;
+    int typeIdx = (hasBias ? 2 : 0) + (bidirectional ? 1 : 0);
+    for (int64_t layerIdx = 0; layerIdx < numLayers; ++layerIdx) {
+        int64_t curInputSize = (layerIdx == 0) ? inputSize : bid * hiddenSize;
+        const std::vector<int64_t> weightInputDim = {GATE_COUNT * hiddenSize, curInputSize};
+        bool ok = true;
+        switch (typeIdx) {
+            case 0: ok = ValidateLayerNoBiasNoBidir(params, dparams, layerIdx, weightInputDim, weightHiddenDim); break;
+            case 1: ok = ValidateLayerWithBidirOnly(params, dparams, layerIdx, weightInputDim, weightHiddenDim); break;
+            case 2: ok = ValidateLayerWithBiasOnly(params, dparams, layerIdx, weightInputDim, weightHiddenDim, biasDim); break;
+            case 3: ok = ValidateLayerWithBiasAndBidir(params, dparams, layerIdx, weightInputDim, weightHiddenDim, biasDim); break;
         }
+        if (!ok) return false;
     }
 
     for (int64_t gateIdx = 0; gateIdx < numLayers * bid; gateIdx++) {
-        ret = ret && ValidateInputShape((*i)[gateIdx], hiddenDim, "i");
-        ret = ret && ValidateInputShape((*j)[gateIdx], hiddenDim, "j");
-        ret = ret && ValidateInputShape((*f)[gateIdx], hiddenDim, "f");
-        ret = ret && ValidateInputShape((*o)[gateIdx], hiddenDim, "o");
-        ret = ret && ValidateInputShape((*h)[gateIdx], hiddenDim, "h");
-        ret = ret && ValidateInputShape((*c)[gateIdx], hiddenDim, "c");
-        ret = ret && ValidateInputShape((*tanhc)[gateIdx], hiddenDim, "tanhc");
+        if (!CheckGateTensorsForIndex(i, j, f, o, h, c, tanhc, gateIdx, hiddenDim)) return false;
     }
-
-    return ret;
+    return true;
 }
 
 static aclnnStatus CheckParams(const aclTensor *input,
@@ -1262,17 +1299,14 @@ static aclnnStatus CheckParams(const aclTensor *input,
     const aclTensor *batchSizes=nullptr)
 {
     // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(input, hc, params, dy, dh, dc, i, j, f, o, h, c, tanhc, dx, dhPrev, dcPrev, dparams, hasBias,
+    CHECK_RET(CheckNotNull(input, hc, params, i, j, f, o, h, c, tanhc, dx, dhPrev, dcPrev, dparams, hasBias,
                            numLayers, bidirectional), ACLNN_ERR_PARAM_NULLPTR);
-
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(CheckDtypeValid(input, hc, params, dy, dh, dc, i, j, f, o, h, c, tanhc, dx, dhPrev, dcPrev, dparams, batchSizes),
                               ACLNN_ERR_PARAM_INVALID);
-
     // 3. 检查shape是否满足约束
     CHECK_RET(CheckShapeValid(input, hc, params, dy, dh, dc, i, j, f, o, h, c, tanhc, dx, dhPrev, dcPrev, dparams,
                               hasBias, numLayers, bidirectional, batchFirst, batchSizes), ACLNN_ERR_PARAM_INVALID);
-
     // 4. 检查format是否满足约束
     CHECK_RET(CheckFormatValid(input, hc, params, dy, dh, dc, i, j, f, o, h, c, tanhc, dx, dhPrev, dcPrev, dparams,
                                batchSizes), ACLNN_ERR_PARAM_INVALID);
@@ -1671,6 +1705,59 @@ static aclnnStatus ExecLstmDataBackward(
                                    numLayers, paramNumPerLayer, executor);;
 }
 
+const aclTensor* ResetAndReshapeTensor(const aclTensor* srcTensor,
+                                       const FVector<int64_t>& shape,
+                                       aclOpExecutor* executor) {
+    const aclTensor* zeroTensor = l0op::ZerosLike(srcTensor, executor);
+    OP_CHECK_NULL(zeroTensor, return nullptr);
+    aclIntArray* reshapeArray = executor->AllocIntArray(shape.data(), shape.size());
+    OP_CHECK_NULL(reshapeArray, return nullptr);
+    const aclTensor* reshapedTensor = l0op::Reshape(zeroTensor, reshapeArray, executor);
+    OP_CHECK_NULL(reshapedTensor, return nullptr);
+    return reshapedTensor;
+}
+
+aclnnStatus PrepareLSTMBackwardNoneInputs(
+    const aclTensor* input,
+    const aclTensorList* hx,
+    const aclTensor* dh,
+    const aclTensor* dc,
+    const aclTensor* dy,
+    bool bidirectional,
+    aclOpExecutor *executor,
+    const aclTensor*& dhOut,
+    const aclTensor*& dcOut,
+    const aclTensor*& dyOut)
+{
+    dhOut = dh;
+    dcOut = dc;
+    dyOut = dy;
+
+    auto dhShape = (*hx)[0]->GetViewShape();
+    if (dh == nullptr) {
+        FVector<int64_t> dhReshapeVec{dhShape[0], dhShape[1], dhShape[2]};
+        dhOut = ResetAndReshapeTensor((*hx)[0], dhReshapeVec, executor);
+        CHECK_RET(dhOut != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+    }
+    if (dc == nullptr) {
+        FVector<int64_t> dcReshapeVec{dhShape[0], dhShape[1], dhShape[2]};
+        dcOut = ResetAndReshapeTensor((*hx)[0], dcReshapeVec, executor);
+        CHECK_RET(dcOut != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+    }
+    if (dy == nullptr) {
+        auto dyShape = input->GetViewShape();
+        auto dyType = input->GetDataType();
+        dyShape[2] = bidirectional ? dhShape[2] * 2 : dhShape[2];
+        const aclTensor* dyAlloc = executor->AllocTensor(dyShape, dyType, Format::FORMAT_ND);
+        CHECK_RET(dyAlloc != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+        FVector<int64_t> dyReshapeVec{dyShape[0], dyShape[1], dyShape[2]};
+        dyOut = ResetAndReshapeTensor(dyAlloc, dyReshapeVec, executor);
+        CHECK_RET(dyOut != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+    }
+
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnLstmBackwardGetWorkspaceSize(
     const aclTensor *input,
     const aclTensorList *hx,
@@ -1692,7 +1779,7 @@ aclnnStatus aclnnLstmBackwardGetWorkspaceSize(
     bool train,
     bool bidirectional,
     bool batchFirst,
-    const aclBoolArray *outputMask,
+    [[maybe_unused]] const aclBoolArray *outputMask,
     aclTensor *dxOut,
     aclTensor *dhPrevOut,
     aclTensor *dcPrevOut,
@@ -1703,20 +1790,27 @@ aclnnStatus aclnnLstmBackwardGetWorkspaceSize(
     L2_DFX_PHASE_1(aclnnLstmBackward,
         DFX_IN(input, hx, params, dy, dh, dc, i, g, f, o, h, c, tanhc, batchSizesOptional, hasBias, numLayers, dropout, train,
                bidirectional, batchFirst),
-        DFX_OUT(outputMask, dxOut, dhPrevOut, dcPrevOut, dparamsOut));
+        DFX_OUT(dxOut, dhPrevOut, dcPrevOut, dparamsOut));
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     auto ret = CheckParams(input, hx, params, dy, dh, dc, i, g, f, o, h, c, tanhc, dxOut, dhPrevOut, dcPrevOut,
                            dparamsOut, hasBias, numLayers, bidirectional, batchFirst, batchSizesOptional);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    if (!EmptyCheck(input, hx, params, dy, dh, dc, i, g, f, o, h, c, tanhc)) {
+    const aclTensor* dhInput = nullptr;
+    const aclTensor* dcInput = nullptr;
+    const aclTensor* dyInput = nullptr;
+    ret = PrepareLSTMBackwardNoneInputs(
+        input, hx, dh, dc, dy, bidirectional,
+        uniqueExecutor.get(), dhInput, dcInput, dyInput);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    if (!EmptyCheck(input, hx, params, dyInput, dhInput, dcInput, i, g, f, o, h, c, tanhc)) {
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
 
     LSTMContinuousTensors allInputContiguous;
-    CHECK_RET(CreateContiguousTensors(input, hx, params, dy, dh, dc, i, g, f, o, h, c, tanhc, uniqueExecutor.get(),
+    CHECK_RET(CreateContiguousTensors(input, hx, params, dyInput, dhInput, dcInput, i, g, f, o, h, c, tanhc, uniqueExecutor.get(),
                             &allInputContiguous, batchSizesOptional) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_NULLPTR);
     
     if (batchSizesOptional == nullptr) {
