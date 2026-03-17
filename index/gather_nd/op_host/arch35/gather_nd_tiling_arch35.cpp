@@ -270,7 +270,7 @@ ge::graphStatus GatherNdSimtTiling::GetShapeAttrsInfo() {
 }
 
 
-bool GatherNdSimtTiling::IsGaAllLoad() {
+bool GatherNdSimtTiling::IsGaAllLoad() const {
   int64_t ubBlockSize = static_cast<int64_t>(GetUbBlockSize(context_));
   int64_t ubSize = static_cast<int64_t>(ubSize_) + static_cast<int64_t>(DCACHE_SIZE);
   int64_t aSize = static_cast<int64_t>(gatherSize_) * static_cast<int64_t>(xDtypeSize_);

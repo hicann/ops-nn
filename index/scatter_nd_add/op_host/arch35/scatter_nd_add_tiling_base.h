@@ -91,7 +91,7 @@ protected:
     {
         return true;
     }
-    ge::graphStatus GetPlatformInfo();
+    ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
     uint32_t GetSortTmpSize(ge::DataType dataType, uint32_t lastAxisNum, bool isDescend);
     int64_t GetRestAvailableSize(int64_t sampleNum, int64_t valueTypeBytes,
