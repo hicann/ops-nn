@@ -809,7 +809,7 @@ __aicore__ inline void ScatterNdDeterministicImpl<T,  U>::ComputeRValueAndDeQuan
     for (int64_t i = 0; i < dataLen; i++) {
         int64_t curIdx = updateSumIdxLocal(i);
         if(curIdx < 0 || curIdx >= static_cast<U>(tilingData_.rankFusedAxis)){
-            break;
+            continue;
         }
         uint64_t wspRValueOffset = curIdx * tilingData_.afterAxis;
         uint64_t RCountsOffset = curIdx;

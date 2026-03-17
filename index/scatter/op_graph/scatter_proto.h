@@ -25,7 +25,7 @@ namespace ge {
 
 * @par Inputs:
 * @li var: The rewritten tensor. Format is ND. Support 2D ~ 8D, when axis is -1 the last dim of var should be 32B align.
-* Must be one of the following types:float16, float32, int32, int8, uint8, bfloat16.
+* Must be one of the following types:float16, float32, int32, int8, uint8, bfloat16, float8_e4m3fn, float8_e5m2, float8_e8m0, hifloat8.
 * @li indices: The index tensor. Format is ND. Support 1D ~ 2D, when discrete, 1-dim of indices should be 2.
 * Must be one of the following types: int32, int64.
 * Index out of bounds is not supported.
@@ -44,10 +44,10 @@ namespace ge {
 * Compatible with the Mindspore operator Scatter.
 */
 REG_OP(Scatter)
-    .INPUT(var, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_FLOAT8_E8M0}))
+    .INPUT(var, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_FLOAT8_E8M0, DT_HIFLOAT8}))
     .INPUT(indices, TensorType::IndexNumberType())
-    .INPUT(updates, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_FLOAT8_E8M0}))
-    .OUTPUT(var, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_FLOAT8_E8M0}))
+    .INPUT(updates, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_FLOAT8_E8M0, DT_HIFLOAT8}))
+    .OUTPUT(var, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_FLOAT8_E8M0, DT_HIFLOAT8}))
     .REQUIRED_ATTR(reduce, String)
     .ATTR(axis, Int, -1)
     .OP_END_FACTORY_REG(Scatter)
