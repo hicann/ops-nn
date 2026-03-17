@@ -1511,9 +1511,7 @@ loss-c@ops-nn:
         - ops/ops-nn/loss/cross_entropy_loss_grad/tests/
         - ops/ops-nn/loss/cross_v2/examples/
         - ops/ops-nn/loss/cross_v2/tests/
-        - ops/ops-nn/loss/ctc_loss_v2/examples/
         - ops/ops-nn/loss/ctc_loss_v2/tests/
-        - ops/ops-nn/loss/ctc_loss_v2_grad/examples/
         - ops/ops-nn/loss/ctc_loss_v2_grad/tests/
         - ops/ops-nn/loss/ctc_loss_v3/examples/
         - ops/ops-nn/loss/ctc_loss_v3/tests/
@@ -1533,7 +1531,6 @@ loss-c@ops-nn:
         - ops/ops-nn/loss/logit_grad/tests/
         - ops/ops-nn/loss/lp_loss/examples/
         - ops/ops-nn/loss/lp_loss/tests/
-        - ops/ops-nn/loss/mse_loss/examples/
         - ops/ops-nn/loss/mse_loss/tests/
         - ops/ops-nn/loss/mse_loss_grad/examples/
         - ops/ops-nn/loss/mse_loss_grad/tests/
@@ -1559,7 +1556,6 @@ loss-c@ops-nn:
         - ops/ops-nn/loss/soft_margin_loss/tests/
         - ops/ops-nn/loss/soft_margin_loss_grad/examples/
         - ops/ops-nn/loss/soft_margin_loss_grad/tests/
-        - ops/ops-nn/loss/sparse_softmax_cross_entropy_with_logits/tests/
         - ops/ops-nn/optim/apply_adam_w_quant/examples/
         - ops/ops-nn/optim/apply_adam_w_quant/tests/
         - ops/ops-nn/optim/apply_adam_w_v2/examples/
