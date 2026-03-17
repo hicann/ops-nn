@@ -144,14 +144,12 @@ aclnnStatus aclnnBinaryCrossEntropyGetWorkspaceSize(const aclTensor *self, const
     auto targetContiguous = l0op::Contiguous(target, uniqueExecutor.get());
     CHECK_RET(targetContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // if weight is null, give ones
+    // if weight is null, give null. if weight is not null, contiguous weight
     const aclTensor *weightContiguous = nullptr;
-    if (weight == nullptr) {
-      weightContiguous = l0op::OnesLike(selfContiguous, uniqueExecutor.get());
-    } else {
+    if (weight != nullptr) {
       weightContiguous = l0op::Contiguous(weight, uniqueExecutor.get());
+      CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
-    CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     static const std::string reductionStr[] = {"none", "mean", "sum"};
     binaryCrossEntropyOut = l0op::BinaryCrossEntropy(selfContiguous, targetContiguous,
