@@ -87,7 +87,7 @@ aclnnStatus aclnnThresholdBackward(
     <tr>
       <td>self（aclTensor*）</td>
       <td>输入</td>
-      <td>公式中的threshold。</td>
+      <td>公式中的self。</td>
       <td>数据类型与gradOutput的数据类型满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</td>
       <td>FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8、INT64</td>
       <td>ND</td>
@@ -97,7 +97,7 @@ aclnnStatus aclnnThresholdBackward(
       <tr>
       <td>threshold（aclScalar*）</td>
       <td>输入</td>
-      <td>公式中的self。</td>
+      <td>公式中的threshold。</td>
       <td><ul><li>支持空Tensor。</li><li>dtype需要与gradOutput保持一致。</li><li>shape需要与gradOutput满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系。</a></li></ul></td>
       <td>FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8、INT64</td>
       <td>ND</td>
