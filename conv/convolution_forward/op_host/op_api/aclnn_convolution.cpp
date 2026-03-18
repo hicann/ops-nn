@@ -2482,6 +2482,7 @@ constexpr int CONV_2D_DIMS_NUM = 4;
 constexpr uint32_t CONV_1D_DIMS = 3;
 constexpr uint32_t CONV_2D_DIMS = 4;
 const size_t CONV2D_WHITE_LIST_CASE_SIZE = 16;
+constexpr int STRIDE_WHITE_LIST_SIZE = 2;
 
 struct Conv2DParams {
   const aclTensor *input;
@@ -3410,7 +3411,7 @@ static void ConstructCaseInfo(const Conv2DParams &params, vector<int64_t> &caseI
 
 static bool IsConv2DWhiteListCase(const vector<int64_t> &caseInfo, const vector<vector<int64_t>> &whiteList, const aclIntArray &stride)
 {
-  if (stride.Size() != 2) {
+  if (stride.Size() != STRIDE_WHITE_LIST_SIZE) {
     return false;
   }
   int64_t h = stride[0];
@@ -3438,7 +3439,6 @@ void GetConvOpInfo(
     Conv2DParams params = {input, weight, padding, dilation, static_cast<int>(groups)};
     ConstructCaseInfo(params, caseInfo2d);
     bool isConv2DWhiteListCase = IsConv2DWhiteListCase(caseInfo2d, CONV2D_WHITE_LIST, *stride);
-
     if (!isConv2DWhiteListCase && (weight->GetViewShape() == weightSpecialShape) &&
         (input->GetViewShape() == inputSpecialShape) &&
         CanSwitchC04InF16Scene(opInfo) &&
