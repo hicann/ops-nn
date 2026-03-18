@@ -719,7 +719,7 @@ static inline bool MxScaleContiguousProcess(const aclTensor *&mxScaleTensor, acl
 // 二维及以上的tensor都需要调
 static inline bool TensorContiguousProcess(const aclTensor *&contiguousTensor, bool &transpose,
                                            aclOpExecutor *executor) {
-    if (contiguousTensor == nullptr || contiguousTensor->GetViewShape().GetDimNum() == 1) {
+    if (contiguousTensor == nullptr) {
         OP_LOGD("QuantMatmul no need to do contiguous process.");
         return true;
     }

@@ -1056,6 +1056,12 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor man
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     bool biasTransposeValue = false;
     CHECK_RET(TensorContiguousProcess(bias, biasTransposeValue, executor), ACLNN_ERR_INNER_NULLPTR);
+    bool scaleTransposeValue = false;
+ 	CHECK_RET(TensorContiguousProcess(scale, scaleTransposeValue, executor), ACLNN_ERR_INNER_NULLPTR);
+ 	bool offsetTransposeValue = false;
+ 	CHECK_RET(TensorContiguousProcess(offset, offsetTransposeValue, executor), ACLNN_ERR_INNER_NULLPTR);
+ 	bool perTokenScaleTransposeValue = false;
+ 	CHECK_RET(TensorContiguousProcess(pertokenScaleOptional, perTokenScaleTransposeValue, executor), ACLNN_ERR_INNER_NULLPTR);
     auto reformatedX1 = SetTensorToNDFormat(x1);
     const aclTensor* reformatedX2 = x2;
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P) {
