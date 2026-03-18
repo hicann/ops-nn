@@ -128,6 +128,13 @@ protected:
         WaitFlag<HardEvent::V_MTE2>(eventIDVToMTE2);
     }
 
+    __aicore__ inline void MTE3ToVSync()
+    {
+        event_t eventIDMTE3ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+        SetFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
+        WaitFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
+    }
+
     template <typename T>
     __aicore__ inline T Min(T a, T b)
     {
