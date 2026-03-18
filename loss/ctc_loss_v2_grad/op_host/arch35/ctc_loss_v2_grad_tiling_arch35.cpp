@@ -40,6 +40,8 @@ constexpr int64_t INPUT_LOSS_IDX = 5;
 constexpr int64_t INPUT_LOG_ALPHA_IDX = 6;
 constexpr int64_t LOSS_DIM_NUM = 1;
 constexpr int64_t GRAD_DIM_NUM = 3;
+constexpr int64_t ATTR_BLANK_IDX = 0;
+constexpr int64_t ATTR_ZERO_INFINITY_IDX = 2;
 
 constexpr int64_t FLOAT_DSIZE = 4;
 
@@ -318,16 +320,16 @@ ge::graphStatus CTCLossV2GradTiling4AscendC::Init()
 
     auto* attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
-    const auto* blankPtr = attrs->GetAttrPointer<int64_t>(0);
+    const auto* blankPtr = attrs->GetAttrPointer<int64_t>(ATTR_BLANK_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, blankPtr);
     BLANK = *blankPtr;
     OP_CHECK_IF(
         BLANK < 0 || BLANK >= symbolSet,
         OP_LOGE(context_->GetNodeName(), "BLANK is out of the range, please input the right value."),
         return ge::GRAPH_FAILED);
-    const auto* zeroInfinityPtr = attrs->GetAttrPointer<int64_t>(2);
+    const auto* zeroInfinityPtr = attrs->GetAttrPointer<bool>(ATTR_ZERO_INFINITY_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, zeroInfinityPtr);
-    zeroInfinity = *zeroInfinityPtr;
+    zeroInfinity = (*zeroInfinityPtr) ? 1 : 0;
     return InitSimtParams();
 }
 
