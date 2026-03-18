@@ -99,7 +99,7 @@ getinstallpath() {
 }
 
 unsetenv() {
-    logandprint "[INFO]: Unset the environment path [ export ASCEND_OPS_NN_PATH=${relative_path_val}/${ops_nn_platform_dir} ]."
+    logandprint "[INFO]: Unset the environment path [ export ASCEND_OPS_NN_PATH=${relative_path_val}/opp ]."
     target_username=$(getinstalledinfo "${KEY_INSTALLED_UNAME}")
     target_usergroup=$(getinstalledinfo "${KEY_INSTALLED_UGROUP}")
     if [ "${is_docker_install}" = y ] ; then
