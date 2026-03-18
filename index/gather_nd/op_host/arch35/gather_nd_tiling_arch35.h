@@ -102,7 +102,7 @@ class GatherNdSimtTiling : public Ops::NN::Optiling::TilingBaseClass {
   ge::graphStatus DoNormOpTiling();
   ge::graphStatus DoMixKernelOpTiling();
   void CalcSimdTiling();
-  bool IsGaAllLoad();
+  bool IsGaAllLoad() const;
   ge::graphStatus GaAllLoadTiling();
 
  private:

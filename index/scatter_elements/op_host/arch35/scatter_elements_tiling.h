@@ -12,12 +12,13 @@
  * \file scatter_elements_tiling.h
  * \brief
  */
-#include "register/tilingdata_base.h"
-#include "register/op_impl_registry.h"
-#include "log/log.h"
 
 #ifndef AIR_CXX_RUNTIME_V2_OP_IMPL_SCATTER_ELEMENTS_RUNTIME2_H
 #define AIR_CXX_RUNTIME_V2_OP_IMPL_SCATTER_ELEMENTS_RUNTIME2_H
+
+#include "register/tilingdata_base.h"
+#include "register/op_impl_registry.h"
+#include "log/log.h"
 
 namespace optiling {
 struct ScatterElementsCompileInfo {

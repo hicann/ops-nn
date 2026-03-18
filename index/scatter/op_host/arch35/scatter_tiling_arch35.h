@@ -24,9 +24,9 @@
 #include "atvoss/broadcast/broadcast_tiling.h"
 #include "register/tilingdata_base.h"
 
+namespace optiling {
 using namespace Ops::NN::Optiling;
 
-namespace optiling {
 BEGIN_TILING_DATA_DEF(ScatterTilingData)
 
 TILING_DATA_FIELD_DEF(uint32_t, tilingKey);
@@ -110,12 +110,12 @@ class ScatterTiling : public TilingBaseClass {
   int64_t loopLength = 0;
   int64_t indicesUbSize = 0;
   uint64_t simdTemp = 0;
-  int32_t axis;
-  int32_t indicesDim;
-  int32_t dtypeSize;
-  ge::DataType inputDtype;
-  ge::DataType indicesDtype;
-  ge::DataType updatesDtype;
+  int32_t axis = 1;
+  int32_t indicesDim = 0;
+  int32_t dtypeSize = 0;
+  ge::DataType inputDtype = ge::DT_UNDEFINED;
+  ge::DataType indicesDtype = ge::DT_UNDEFINED;
+  ge::DataType updatesDtype = ge::DT_UNDEFINED;
   gert::Shape inputOriginShape;
   gert::Shape indicesOriginShape;
   gert::Shape updatesOriginShape;

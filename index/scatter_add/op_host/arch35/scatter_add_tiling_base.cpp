@@ -107,7 +107,7 @@ static std::string ToString(const T* value, size_t size) {
   return r;
 }
 
-uint64_t ScatterAddTiling::GetSortTmpSize(ge::DataType dataType, uint32_t lastAxisNum, bool isDescend)
+uint64_t ScatterAddTiling::GetSortTmpSize(ge::DataType dataType, uint32_t lastAxisNum, bool isDescend) const
 {
     std::vector<int64_t> shapeVec = { lastAxisNum };
     ge::Shape srcShape(shapeVec);
@@ -150,7 +150,7 @@ ge::graphStatus ScatterAddTiling::GetPlatformInfo()
     // UB Size Need reserve space for Dcache / CCEC Compile Stack.
     ubSize_ = ubSizePlatForm;
     if (isSimt_) {
-        if (isSort_) {
+        if (isSort_ == 1) {
             ubSize_ = ubSizePlatForm - DCACHE_SIZE1 - SIMD_RESERVED_SIZE;
         } else {
             OP_CHECK_IF((ubSizePlatForm <= DCACHE_SIZE),
@@ -205,7 +205,7 @@ ge::graphStatus ScatterAddTiling::GetShapeAttrsInfo()
         }
     }
 
-    if (context_->GetDeterministic() && !isUpdateScalar_ &&
+    if (context_->GetDeterministic() == 1 && isUpdateScalar_ == 0 &&
         scatterAddDeterminsiticType.find(varDtype_) != scatterAddDeterminsiticType.end()) {
         isDeterminTemplate_ = 1;
         isSort_ = 0;
@@ -254,7 +254,7 @@ ge::graphStatus ScatterAddTiling::CheckInputDtype()
 }
 
 ge::graphStatus ScatterAddTiling::CheckUpdatesShape(const gert::Shape& varShape, const gert::Shape& indicesShape,
-                                                    const gert::Shape& updatesShape)
+                                                    const gert::Shape& updatesShape) const
 {
     uint64_t varDimNum = static_cast<uint64_t>(varShape.GetDimNum());
     uint64_t indicesDimNum = static_cast<uint64_t>(indicesShape.GetDimNum());
@@ -282,7 +282,7 @@ ge::graphStatus ScatterAddTiling::CheckUpdatesShape(const gert::Shape& varShape,
     return ge::GRAPH_SUCCESS;
 }
 
-std::set<uint64_t> ScatterAddTiling::FindUniqueCut(uint64_t usedCoreNum)
+std::set<uint64_t> ScatterAddTiling::FindUniqueCut(uint64_t usedCoreNum) const
 {
     std::set<uint64_t> result;
     uint64_t upbound = std::ceil(std::sqrt(usedCoreNum) + 1);
@@ -830,7 +830,7 @@ ge::graphStatus ScatterAddTiling::DoOpTiling()
         return ge::GRAPH_SUCCESS;
     }
 
-    if (isDeterminTemplate_) {
+    if (isDeterminTemplate_ == 1) {
         OP_CHECK_IF(ScatterAddDeterministicTiling() != ge::GRAPH_SUCCESS,
                     OP_LOGE(opName, "ScatterAddDeterministicTiling fail."), return ge::GRAPH_FAILED);
         SetTilingData();
@@ -853,7 +853,7 @@ ge::graphStatus ScatterAddTiling::DoOpTiling()
                             OP_LOGE(opName, "TilingSimdNotSupportAtomicAddCompute fail."),
                             return ge::GRAPH_FAILED);
         } else {
-            if (isSort_) {
+            if (isSort_ == 1) {
                 OP_CHECK_IF(TilingSimdSupportAtomicAddSortCompute() != ge::GRAPH_SUCCESS,
                                 OP_LOGE(opName, "TilingSimdSupportAtomicAddSortCompute fail."),
                                 return ge::GRAPH_FAILED);
@@ -864,7 +864,7 @@ ge::graphStatus ScatterAddTiling::DoOpTiling()
             }
         }
     } else {
-        if (isSort_) {
+        if (isSort_ == 1) {
             OP_CHECK_IF(TilingSimtSort() != ge::GRAPH_SUCCESS,
                             OP_LOGE(opName, "TilingSimtSort fail."),
                             return ge::GRAPH_FAILED);
@@ -902,13 +902,13 @@ uint64_t ScatterAddTiling::GetTilingKey() const
 ge::graphStatus ScatterAddTiling::GetWorkspaceSize()
 {
     workspaceSize_ = ASCENDC_TOOLS_WORKSPACE;
-    if(!isSort_) {
+    if(isSort_ == 0) {
         if ((isSimt_ && varDtype_ == ge::DT_INT8) || varDtype_ == ge::DT_UINT8) {
             workspaceSize_ += castTypeSize_ * varSize_;
         }
     }
 
-    if (isDeterminTemplate_ && isDeterministic_) {
+    if (isDeterminTemplate_ == 1 && isDeterministic_ == 1) {
         uint64_t postVarAlignSize = Ops::Base::CeilAlign(varShape_[1] * sizeof(float), static_cast<uint64_t>(Ops::Base::GetUbBlockSize(context_))) / sizeof(float);
         workspaceSize_ += logicCoreNum_ * perCoreHandleIndices_ * indicesDtypeSize_ + logicCoreNum_ * perCoreHandleIndices_ * postVarAlignSize * FLOAT_BYTES + 
             varSize_ * DOUBLE * UINT32_BYTES + varShape_[0] * UINT32_BYTES;
@@ -925,10 +925,10 @@ ge::graphStatus ScatterAddTiling::PostTiling()
     context_->SetTilingKey(tilingKey_);
 
     if (varShape_[0] * varShape_[1] * indicesNum_ != 0) {
-        if (!isSort_) {
+        if (isSort_ == 0) {
             usedCoreNum_ = totalCoreNum_;
         }
-        if (!isSimt_ && !isDeterminTemplate_) {
+        if (isSimt_ == 0 && isDeterminTemplate_ == 0) {
             usedCoreNum_ = copyCoreNum_ > atomicAddCoreNum_ ? copyCoreNum_ : atomicAddCoreNum_;
         }
     }
