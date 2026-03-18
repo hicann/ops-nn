@@ -100,7 +100,7 @@ const aclTensor *SetTensorToNZFormat(const aclTensor *input, op::Shape &shape, a
 // 二维及以上的tensor都需要调
 inline bool TensorContiguousProcess(const aclTensor *&contiguousTensor, bool &transpose,
                                            aclOpExecutor *executor) {
-    if (contiguousTensor == nullptr || contiguousTensor->GetViewShape().GetDimNum() == 1) {
+    if (contiguousTensor == nullptr) {
         OP_LOGD("QuantMatmul no need to do contiguous process.");
         return true;
     }
