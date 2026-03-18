@@ -4,13 +4,42 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品</term>                             |    ×     |
+| <term>Atlas 训练系列产品</term>                              |    ×     |
 
 ## 功能说明
 
 - 算子功能：[aclnnGroupNormSwish](../../norm/group_norm_swish/docs/aclnnGroupNormSwish.md)的反向操作。
 
+- 计算公式：
+
+$$
+dYTemp_i = \hat{x_i} \cdot gamma + beta
+$$
+
+$$
+dSwishTemp_i = dYTemp_i  - \frac{dYTemp_i}{ \exp {dYTemp_i * (-swishScale)} + 1} + 1
+$$
+
+$$
+dYNew_i = \frac{dSwishTemp_i}{ \exp (- dYTemp_i * swishScale) + 1} * dy
+$$
+
+$$
+dBeta = \sum_{i=1}^n dYNew_i
+$$
+
+$$
+dGamma = \sum_{i=1}^n (dYNew_i \cdot \hat{x_i})
+$$
+
+$$
+dx = rstd \cdot (dYNew * gamma - \hat{x} * (\sum_{i=1}^n gamma_i * dGamma) - (\sum_{i=1}^n gamma_i * dBeta))
+$$
 
 ## 参数说明
 

@@ -85,6 +85,13 @@ public:
             .DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend910b", aicore_config);
         this->AICore().AddConfig("ascend910_93", aicore_config);
+
+        OpAICoreConfig config_910_95;
+ 	         config_910_95.DynamicCompileStaticFlag(true)
+ 	             .DynamicRankSupportFlag(true)
+ 	             .DynamicShapeSupportFlag(true)
+ 	             .ExtendCfgInfo("opFile.value", "group_norm_swish_grad_apt");
+ 	         this->AICore().AddConfig("ascend950", config_910_95);
     }
 };
 
