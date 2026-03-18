@@ -26,6 +26,7 @@
 | 接口名 | 说明 | 确定性说明（A2/A3） | 确定性说明（Ascend 950） |
 |---|---|---|---|
 | [aclnnAdaLayerNorm](../../norm/ada_layer_norm/docs/aclnnAdaLayerNorm.md) | 将LayerNorm和下游的Add、Mul融合起来，通过自适应参数scale和shift来调整归一化过程。 | 默认确定性实现 |   |
+| [aclnnAdaLayerNormBackward](../../norm/ada_layer_norm_grad/docs/aclnnAdaLayerNormBackward.md) | aclnnAdaLayerNormV2的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。 | 默认确定性实现 | - |
 | [aclnnAdaLayerNormQuant](../../norm/ada_layer_norm_quant/docs/aclnnAdaLayerNormQuant.md) | 算子将AdaLayerNorm和下游的量化（目前仅支持DynamicQuant）融合起来。该算子主要是用于执行自适应层归一化的量化操作，即将输入数据进行归一化处理，并将其量化为低精度整数，以提高计算效率和减少内存占用。 | 默认确定性实现 |   |
 | [aclnnAdaLayerNormV2](../../norm/ada_layer_norm_v2/docs/aclnnAdaLayerNormV2.md) | 算子将LayerNorm和下游的Add、Mul融合起来，通过自适应参数scale和shift来调整归一化过程。相比AdaLayerNorm算子，输出新增2个参数（输入的均值和输入的标准差的倒数）；weight和bias支持的数据类型增加对应约束。 | 默认确定性实现 |   |
 | [aclnnAdaptiveAvgPool2d](../../pooling/adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool2d.md) | 在指定二维输出shape信息（outputSize）的情况下，完成张量self的2D自适应平均池化计算。 | 默认确定性实现 | - |

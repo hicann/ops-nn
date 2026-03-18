@@ -2205,6 +2205,16 @@
     <td>AdaLayerNorm算子将LayerNorm和下游的Add、Mul融合起来，通过自适应参数scale和shift来调整归一化过程。</td>
   </tr>
   <tr>
+ 	  <td>norm</td>
+ 	  <td><a href="../../norm/ada_layer_norm_grad/README.md">ada_layer_norm_grad</a></td>
+ 	  <td>✓</td>
+ 	  <td>✓</td>
+ 	  <td>✓</td>
+ 	  <td>✓</td>
+ 	  <td>AI Core</td>
+ 	  <td>AdaLayerNormV2的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。</td>
+ 	</tr>
+  <tr>
     <td>norm</td>
     <td><a href="../../norm/ada_layer_norm_quant/README.md">ada_layer_norm_quant</a></td>
     <td>✓</td>
