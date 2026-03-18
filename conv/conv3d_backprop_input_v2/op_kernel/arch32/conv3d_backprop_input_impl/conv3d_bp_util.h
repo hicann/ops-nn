@@ -16,7 +16,7 @@
 #ifndef CONV3D_BP_UTIL_H
 #define CONV3D_BP_UTIL_H
 
-#include "kernel_utils.h"
+#include "kernel_common.h"
 
 static __aicore__ inline uint64_t ShiftCeilBlockCube(uint64_t a)
 {

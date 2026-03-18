@@ -16,7 +16,7 @@
 #ifndef CONV_BP_UTIL_H
 #define CONV_BP_UTIL_H
 
-#include "kernel_utils.h"
+#include "kernel_common.h"
 
 const uint32_t STEP_2 = 2;
 

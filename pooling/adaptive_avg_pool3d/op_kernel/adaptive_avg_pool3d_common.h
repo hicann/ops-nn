@@ -17,7 +17,6 @@
 #define ADAPTIVE_AVG_POOL3D_COMMON_H_
 
 #include "kernel_operator.h"
-#include "kernel_log.h"
 
 namespace AdaptiveAvgPool3d {
 using namespace AscendC;
