@@ -121,11 +121,7 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Proces
 
     int64_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(VAR_T), UB_AGLIN_VALUE) / sizeof(VAR_T);
     int64_t rowLen = preLen * tilingData_.updatesInAxis;
-
     CopyIn<IDX_T>(indicesLocal, indices_, tilingData_.updatesInAxis);
-    event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
-    SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
-    WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
 
     DataCopyExtParams copyParams = {static_cast<uint16_t>(rowLen),
                                     static_cast<uint32_t>(colLen * sizeof(VAR_T)),
@@ -137,21 +133,24 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Proces
     int64_t rowOfset = (startPreAxis * tilingData_.updatesInAxis) * tilingData_.afterAxis;
     int64_t updatesOfset = rowOfset + colIdx * tilingData_.afterAxisFactor;
     DataCopyPad(updatesLocal, updates_[updatesOfset], copyParams, padParams);
-    event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
-    SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
-    WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+    updatesQue_.EnQue(updatesLocal);
+
+    updatesLocal = updatesQue_.DeQue<VAR_T>();
     if (tilingData_.isWithAlpha) {
-        AscendC::Muls(updatesLocal, updatesLocal, alphaValue_, rowLen * colLenAlignSize);
+        AscendC::Muls(updateOutLocal, updatesLocal, alphaValue_, rowLen * colLenAlignSize);
+    } else {
+        auto inAddr = reinterpret_cast<__local_mem__ int8_t*>(updatesLocal.GetPhyAddr());
+        auto outAddr = reinterpret_cast<__local_mem__ int8_t*>(updateOutLocal.GetPhyAddr());
+        CopyXToOut(inAddr, outAddr, rowLen * colLenAlignSize);
     }
+    updatesCastQue_.EnQue(updateOutLocal);
 
-    auto inAddr = reinterpret_cast<__local_mem__ int8_t*>(updatesLocal.GetPhyAddr());
-    auto outAddr = reinterpret_cast<__local_mem__ int8_t*>(updateOutLocal.GetPhyAddr());
-    CopyXToOut(inAddr, outAddr, rowLen * colLenAlignSize);
-
-    event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-    SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
-    WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
-
+    updateOutLocal = updatesCastQue_.DeQue<VAR_T>();
+    event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
+    SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
+    WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
+    
+    SetAtomicAdd<VAR_T>();
     for (int64_t preAxisIdx = 0; preAxisIdx < preLen; preAxisIdx++) {
         int64_t rowLocalOfset = preAxisIdx * tilingData_.updatesInAxis;
         for (int64_t i = 0; i < tilingData_.updatesInAxis; i++) {
@@ -159,12 +158,11 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Proces
                                     tilingData_.afterAxis;
             int64_t outOfset = rowOutOfset + colIdx * tilingData_.afterAxisFactor;
             int64_t localOfset = (rowLocalOfset + i) * colLenAlignSize;
-            SetAtomicAdd<VAR_T>();
             CopyOut<VAR_T>(var_[outOfset], updateOutLocal[localOfset], colLen);
-            SetAtomicNone();
+            PipeBarrier<PIPE_MTE3>();
         }
     }
-
+    SetAtomicNone();
     updatesQue_.FreeTensor(updatesLocal);
     updatesCastQue_.FreeTensor(updateOutLocal);
     indicesQue_.FreeTensor(indicesLocal);
@@ -175,53 +173,49 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Proces
     int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen)
 {
     LocalTensor<IDX_T> indicesLocal = indicesQue_.AllocTensor<IDX_T>();
-    LocalTensor<VAR_T> updatesLocal = updatesQue_.AllocTensor<VAR_T>();
-    LocalTensor<VAR_T> updateOutLocal = updatesCastQue_.AllocTensor<VAR_T>();
-
     int64_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(VAR_T), UB_AGLIN_VALUE) / sizeof(VAR_T);
     int64_t indicesOfset = rowIdx * tilingData_.ubIndexFactor;
     CopyIn<IDX_T>(indicesLocal, indices_[indicesOfset], rowLen);
-    event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
-    SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
-    WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
 
     DataCopyExtParams copyParams = {static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen * sizeof(VAR_T)),
                                     static_cast<uint32_t>((tilingData_.afterAxis - colLen) * sizeof(VAR_T)),
                                     static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
     DataCopyPadExtParams<VAR_T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<VAR_T>(0)};
-
+    event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
+    SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
+    WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
+    
+    SetAtomicAdd<VAR_T>();
     int64_t startPreAxis = GetBlockIdx() * tilingData_.eachCorePreAxisCount;
     for (int64_t preAxisIdx = startPreAxis; preAxisIdx < startPreAxis + curPreAxisCount_; preAxisIdx++) {
         int64_t rowOfset = (preAxisIdx * tilingData_.updatesInAxis + indicesOfset) * tilingData_.afterAxis;
         int64_t updatesOfset = rowOfset + colIdx * tilingData_.afterAxisFactor;
-        event_t eventIdMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
-        SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
-        WaitFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
+        LocalTensor<VAR_T> updatesLocal = updatesQue_.AllocTensor<VAR_T>();
         DataCopyPad(updatesLocal, updates_[updatesOfset], copyParams, padParams);
-        event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
-        SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
-        WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+        updatesQue_.EnQue(updatesLocal);
+
+        updatesLocal = updatesQue_.DeQue<VAR_T>();
+        LocalTensor<VAR_T> updateOutLocal = updatesCastQue_.AllocTensor<VAR_T>();
         if (tilingData_.isWithAlpha) {
-            AscendC::Muls(updatesLocal, updatesLocal, alphaValue_, rowLen * colLenAlignSize);
+            AscendC::Muls(updateOutLocal, updatesLocal, alphaValue_, rowLen * colLenAlignSize);
+        } else {
+            auto inAddr = reinterpret_cast<__local_mem__ int8_t*>(updatesLocal.GetPhyAddr());
+            auto outAddr = reinterpret_cast<__local_mem__ int8_t*>(updateOutLocal.GetPhyAddr());
+            CopyXToOut(inAddr, outAddr, rowLen * colLenAlignSize);
         }
+        updatesCastQue_.EnQue(updateOutLocal);
+        updatesQue_.FreeTensor(updatesLocal);
 
-        auto inAddr = reinterpret_cast<__local_mem__ int8_t*>(updatesLocal.GetPhyAddr());
-        auto outAddr = reinterpret_cast<__local_mem__ int8_t*>(updateOutLocal.GetPhyAddr());
-        CopyXToOut(inAddr, outAddr, rowLen * colLenAlignSize);
-
-        event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-        SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
-        WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+        updateOutLocal = updatesCastQue_.DeQue<VAR_T>();
         for (int64_t i = 0; i < rowLen; i++) {
             rowOfset = (preAxisIdx * tilingData_.varInAxis + indicesLocal(i)) * tilingData_.afterAxis;
             int64_t outOfset = rowOfset + colIdx * tilingData_.afterAxisFactor;
-            SetAtomicAdd<VAR_T>();
             CopyOut<VAR_T>(var_[outOfset], updateOutLocal[i * colLenAlignSize], colLen);
-            SetAtomicNone();
+            PipeBarrier<PIPE_MTE3>();
         }
+        updatesCastQue_.FreeTensor(updateOutLocal);
     }
-    updatesQue_.FreeTensor(updatesLocal);
-    updatesCastQue_.FreeTensor(updateOutLocal);
+    SetAtomicNone();
     indicesQue_.FreeTensor(indicesLocal);
 }
 
@@ -279,55 +273,55 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Proces
     int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen)
 {
     LocalTensor<IDX_T> indicesLocal = indicesQue_.AllocTensor<IDX_T>();
-    LocalTensor<VAR_T> updatesLocal = updatesQue_.AllocTensor<VAR_T>();
-    LocalTensor<VAR_T> updateOutLocal = updatesCastQue_.AllocTensor<VAR_T>();
     int64_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(VAR_T), UB_AGLIN_VALUE) / sizeof(VAR_T);
     int64_t indicesOfset = rowIdx * tilingData_.ubIndexFactor;
     CopyIn<IDX_T>(indicesLocal, indices_[indicesOfset], rowLen);
-    event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
-    SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
-    WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
 
     DataCopyExtParams copyParams = {static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen * sizeof(VAR_T)),
                                     static_cast<uint32_t>((tilingData_.afterAxis - colLen) * sizeof(VAR_T)),
                                     static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
     DataCopyPadExtParams<VAR_T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<VAR_T>(0)};
-    this->ComputeIdxCount(indicesLocal, rowLen, uniqueIdNumDuplicateIdx_);
+    indicesQue_.EnQue(indicesLocal);
 
+    indicesLocal = indicesQue_.DeQue<IDX_T>();
+    this->ComputeIdxCount(indicesLocal, rowLen, uniqueIdNumDuplicateIdx_);
+    event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
+    SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
+    WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
+    
+    SetAtomicAdd<VAR_T>();
     for (int64_t preAxisIdx = 0; preAxisIdx < tilingData_.preAxis; preAxisIdx++) {
         int64_t rowOfset = (preAxisIdx * tilingData_.updatesInAxis + indicesOfset) * tilingData_.afterAxis;
         int64_t updatesOfset = rowOfset + GetBlockIdx() * tilingData_.eachCoreAfterAxisCount + colIdx * tilingData_.afterAxisFactor;
-        event_t eventIdMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
-        SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
-        WaitFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
+        LocalTensor<VAR_T> updatesLocal = updatesQue_.AllocTensor<VAR_T>();
         DataCopyPad(updatesLocal, updates_[updatesOfset], copyParams, padParams);
+        updatesQue_.EnQue(updatesLocal);
 
-        event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
-        SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
-        WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+        updatesLocal = updatesQue_.DeQue<VAR_T>();
+        LocalTensor<VAR_T> updateOutLocal = updatesCastQue_.AllocTensor<VAR_T>();
         if (tilingData_.isWithAlpha) {
-            AscendC::Muls(updatesLocal, updatesLocal, alphaValue_, rowLen * colLenAlignSize);
+            AscendC::Muls(updateOutLocal, updatesLocal, alphaValue_, rowLen * colLenAlignSize);
+        } else {
+            auto inAddr = reinterpret_cast<__local_mem__ int8_t*>(updatesLocal.GetPhyAddr());
+            auto outAddr = reinterpret_cast<__local_mem__ int8_t*>(updateOutLocal.GetPhyAddr());
+            CopyXToOut(inAddr, outAddr, rowLen * colLenAlignSize);
         }
-        auto inAddr = reinterpret_cast<__local_mem__ int8_t*>(updatesLocal.GetPhyAddr());
-        auto outAddr = reinterpret_cast<__local_mem__ int8_t*>(updateOutLocal.GetPhyAddr());
-        CopyXToOut(inAddr, outAddr, rowLen * colLenAlignSize);
-        event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-        SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
-        WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+        updatesCastQue_.EnQue(updateOutLocal);
+        updatesQue_.FreeTensor(updatesLocal);
+
+        updateOutLocal = updatesCastQue_.DeQue<VAR_T>();
         for (int64_t i = 0; i < rowLen; i++) {
             rowOfset = (preAxisIdx * tilingData_.varInAxis + indicesLocal(i)) * tilingData_.afterAxis;
             int64_t outOfset = rowOfset + GetBlockIdx() * tilingData_.eachCoreAfterAxisCount + colIdx * tilingData_.afterAxisFactor;
-
+            
             if (uniqueIdNumDuplicateIdx_ != rowLen) {
                 PipeBarrier<PIPE_MTE3>();
             }
-            SetAtomicAdd<VAR_T>();
             CopyOut<VAR_T>(var_[outOfset], updateOutLocal[i * colLenAlignSize], colLen);
-            SetAtomicNone();
         }
+        updatesCastQue_.FreeTensor(updateOutLocal);
     }
-    updatesQue_.FreeTensor(updatesLocal);
-    updatesCastQue_.FreeTensor(updateOutLocal);
+    SetAtomicNone();
     indicesQue_.FreeTensor(indicesLocal);
 }
 
