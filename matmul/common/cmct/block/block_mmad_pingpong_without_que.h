@@ -439,8 +439,11 @@ public:
         fixpipeParams.params.dstNdStride = 1;
         AscendC::Fixpipe<C_T, L0cType, AscendC::CFG_ROW_MAJOR>(cGlobal, c1Local, fixpipeParams);
 #else
-        if (isSplitSingleK_ && !isFirstSplitK_) {
-            AscendC::SetAtomicAdd<float>();
+        if (isSplitSingleK_) {
+            PipeBarrier<PIPE_FIX>();
+            if (!isFirstSplitK_) {
+                AscendC::SetAtomicAdd<float>();
+            }
         }
         AscendC::DataCopyCO12DstParams intriParams;
         intriParams.nSize = baseN;
@@ -497,7 +500,7 @@ public:
         fixpipeParams.params.dstNdStride = 1;                                 // dstNdStride
         AscendC::Fixpipe<C_T, L0cType, AscendC::Impl::CFG_ROW_MAJOR_UB>(dstLocal, c1Local, fixpipeParams);
     }
-    
+
     // 重载GlobalTensor
     __aicore__ inline void DoubleCopyOut(
         const AscendC::GlobalTensor<C_T>& cGlobal, uint64_t l0cOffset, uint64_t baseM, uint64_t baseN)
@@ -935,7 +938,7 @@ private:
             return isBias_ && kIter0 == 0 && kIter1 == 0 && isFirstSplitK_;
         } else {
             return isBias_ && kIter0 == 0 && kIter1 == 0;
-        } 
+        }
     }
 
     __aicore__ inline void Mmad(
