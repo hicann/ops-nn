@@ -20,7 +20,7 @@
 #include "conv3d_bp_func.h"
 #include "conv3d_bp_util.h"
 #include "basic_api/kernel_basic_intf.h"
-#include "kernel_utils.h"
+#include "kernel_common.h"
 #include "../conv3d_backprop_input_v2/conv3d_backprop_input_v2_tiling_data.h"
 
 using AscendC::TQue;

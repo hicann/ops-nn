@@ -20,7 +20,7 @@
 #include "../convolution_3d_backprop/conv3d_bp_impl_base.h"
 #include "../convolution_3d_backprop/conv3d_bp_util.h"
 #include "conv3d_bp_input_config.h"
-#include "kernel_utils.h"
+#include "kernel_common.h"
 
 namespace Convolution3DBackprop {
 template <typename Intf_, class Config_>

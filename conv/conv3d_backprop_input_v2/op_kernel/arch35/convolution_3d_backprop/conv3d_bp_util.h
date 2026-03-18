@@ -16,7 +16,7 @@
 #ifndef CONV3D_BP_UTIL_ADVANCE_H
 #define CONV3D_BP_UTIL_ADVANCE_H
 
-#include "kernel_utils.h"
+#include "kernel_common.h"
 #include "basic_api/kernel_basic_intf.h"
 
 static __aicore__ inline uint64_t GetAicBlockIdx()

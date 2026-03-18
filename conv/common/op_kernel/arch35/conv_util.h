@@ -16,7 +16,7 @@
 #ifndef CONV_UTIL_H
 #define CONV_UTIL_H
 
-#include "kernel_utils.h"
+#include "kernel_common.h"
 
 namespace conv {
 using namespace AscendC;

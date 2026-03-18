@@ -18,7 +18,7 @@
 
 #include "kernel_basic_intf.h"
 #include "kernel_tiling/kernel_tiling.h"
-#include "kernel_utils.h"
+#include "kernel_common.h"
 #include "conv_util.h"
 
 namespace conv {

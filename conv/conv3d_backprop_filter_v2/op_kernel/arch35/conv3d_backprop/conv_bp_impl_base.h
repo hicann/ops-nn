@@ -19,7 +19,7 @@
 #include "conv_bp_config_base.h"
 #include "conv_bp_func.h"
 #include "conv_bp_util.h"
-#include "kernel_utils.h"
+#include "kernel_common.h"
 #include "basic_api/kernel_basic_intf.h"
 #include "../conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_data.h"
 
