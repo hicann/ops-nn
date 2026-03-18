@@ -256,6 +256,7 @@ private:
                 GatherInUb(this->xGatherDim_, gatherParam_.idxGatherDimSlice);
                 this->VToMTE2Sync();
                 CopyOutY2Workspace(idxWorkspaceOffset, gatherParam_.idxGatherDimSlice);
+                this->MTE3ToVSync();
             }
             // tail
             if (gatherParam_.idxGatherDimTail) {
