@@ -250,13 +250,11 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_95_FP16_OK)
     layernorm.y.GetProducer()->UpdateInputDesc(3, layernorm_input_3_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "graph_for_lnv4_test1");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
 
     EXPECT_EQ(status, SUCCESS);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test1");
     bool findAddLayerNorm = false;
     int node_count = 0;
     for (auto node : graph->GetAllNodes()) {
@@ -327,12 +325,10 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_95_BF16_OK)
     layernorm.y.GetProducer()->UpdateInputDesc(3, layernorm_input_3_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "graph_for_lnv4_test2");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
     EXPECT_EQ(status, SUCCESS);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test2");
     bool findAddLayerNorm = false;
     int node_count = 0;
     for (auto node : graph->GetAllNodes()) {
@@ -391,12 +387,10 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_95_FP16_noBeta_OK)
     layernorm.y.GetProducer()->UpdateInputDesc(2, layernorm_input_2_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "graph_for_lnv4_test3");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
     EXPECT_EQ(status, SUCCESS);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test3");
     bool findAddLayerNorm = false;
     bool findFill = false;
     int node_count = 0;
@@ -446,12 +440,10 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_95_FP16_noGammaBeta
         x1, x2, bias, normalized_shape, add1, add2, cast1, layernorm, cast2);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "graph_for_lnv4_test4");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
     EXPECT_EQ(status, SUCCESS);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test4");
     bool findAddLayerNorm = false;
     bool findFill = false;
     int node_count = 0;
@@ -514,12 +506,10 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_95_FP16_noGamma_OK)
     layernorm.y.GetProducer()->UpdateInputDesc(3, layernorm_input_3_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "graph_for_lnv4_test5");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
     EXPECT_EQ(status, SUCCESS);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test5");
     bool findAddLayerNorm = false;
     bool findFill = false;
     int node_count = 0;
@@ -602,11 +592,9 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_platform_not_95_Fai
     layernorm.y.GetProducer()->UpdateInputDesc(3, layernorm_input_3_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "graph_for_lnv4_test6");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test6");
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
@@ -673,11 +661,9 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_BegiNnormAxis_wrong
     layernorm.y.GetProducer()->UpdateInputDesc(3, layernorm_input_3_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "graph_for_lnv4_test7");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test7");
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
@@ -736,11 +722,9 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_AddInputShapeIsDyna
     layernorm.y.GetProducer()->UpdateInputDesc(3, layernorm_input_3_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "graph_for_lnv4_test8");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test8");
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
@@ -799,11 +783,9 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_AddInputIsScaler_Fa
     layernorm.y.GetProducer()->UpdateInputDesc(3, layernorm_input_3_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "graph_for_lnv4_test9");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test9");
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
@@ -862,11 +844,9 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_Add1InputsShapeLast
     layernorm.y.GetProducer()->UpdateInputDesc(3, layernorm_input_3_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "graph_for_lnv4_test10");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test10");
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
@@ -925,11 +905,9 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_BiasDimBiggerThanXD
     layernorm.y.GetProducer()->UpdateInputDesc(3, layernorm_input_3_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "graph_for_lnv4_test11");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test11");
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
@@ -1000,11 +978,9 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_Add1InputsDtypeInva
     layernorm.y.GetProducer()->UpdateInputDesc(3, layernorm_input_3_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "graph_for_lnv4_test12");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test12");
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
@@ -1076,11 +1052,9 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_Add1InputsDtypeNotS
     layernorm.y.GetProducer()->UpdateInputDesc(3, layernorm_input_3_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "pass_graph_for_lnv4_test13");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test13");
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
@@ -1151,11 +1125,9 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_x1DtypeNotSameWithx
     layernorm.y.GetProducer()->UpdateInputDesc(3, layernorm_input_3_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "pass_graph_for_lnv4_test14");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test14");
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
@@ -1228,11 +1200,9 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_x1ShapeNotSameWithx
     layernorm.y.GetProducer()->UpdateInputDesc(3, layernorm_input_3_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "pass_graph_for_lnv4_test15");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test15");
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
@@ -1293,11 +1263,9 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_Cast1HaveCtrlEdge_F
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
     graph->AddControlEdge(*add2.GetProducer(), *cast1.GetProducer());
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "pass_graph_for_lnv4_test16");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test16");
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
@@ -1359,12 +1327,10 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_S2_95_FP16_OK)
     layernorm.y.GetProducer()->UpdateInputDesc(3, layernorm_input_3_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "pass_graph_for_lnv4_test17");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
     EXPECT_EQ(status, SUCCESS);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test17");
     bool findAddLayerNorm = false;
     int node_count = 0;
     for (auto node : graph->GetAllNodes()) {
@@ -1437,12 +1403,10 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_S2_95_BF16_OK)
     layernorm.y.GetProducer()->UpdateInputDesc(3, layernorm_input_3_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "pass_graph_for_lnv4_test18");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
     EXPECT_EQ(status, SUCCESS);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test18");
     bool findAddLayerNorm = false;
     int node_count = 0;
     for (auto node : graph->GetAllNodes()) {
@@ -1503,12 +1467,10 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_S2_95_FP16_noBeta_O
     layernorm.y.GetProducer()->UpdateInputDesc(2, layernorm_input_2_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "pass_graph_for_lnv4_test19");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
     EXPECT_EQ(status, SUCCESS);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test19");
     bool findAddLayerNorm = false;
     bool findFill = false;
     int node_count = 0;
@@ -1559,12 +1521,10 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_S2_95_FP16_noGammaB
         x1, x2, bias, normalized_shape, add1, add2, cast1, layernorm, cast2);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "pass_graph_for_lnv4_test20");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
     EXPECT_EQ(status, SUCCESS);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test20");
     bool findAddLayerNorm = false;
     bool findFill = false;
     int node_count = 0;
@@ -1628,12 +1588,10 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_95_S2_FP16_noGamma_
     layernorm.y.GetProducer()->UpdateInputDesc(3, layernorm_input_3_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "pass_graph_for_lnv4_test21");
     CustomPassContext pass_contex;
     ops::AddLayerNormV4FusionPass pass;
     Status status = pass.Run(graph, pass_contex);
     EXPECT_EQ(status, SUCCESS);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "after_pass_graph_for_lnv4_test21");
     bool findAddLayerNorm = false;
     bool findFill = false;
     int node_count = 0;
@@ -1651,4 +1609,275 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_95_S2_FP16_noGamma_
     }
     EXPECT_EQ(findAddLayerNorm && findFill, true);
     EXPECT_EQ(node_count, 11);
+}
+
+TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_MultiQuoteAdd2_95_FP16_OK)
+{
+    std::vector<int64_t> dims_x{1, 128, 128, 256};
+    std::vector<int64_t> dims_gamma{256};
+    std::vector<int64_t> dims_bias{128, 256};
+    std::vector<int64_t> dims_normalized{1};
+    Shape shape_x(dims_x);
+    Shape shape_gamma(dims_gamma);
+    Shape shape_bias(dims_bias);
+    Shape shape_normalized_shape({1});
+
+    auto graph_builder = es::EsGraphBuilder("add_layer_norm_v4_fusion_test22_graph");
+    auto x1 = graph_builder.CreateInput(0, "x1", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
+    auto x2 = graph_builder.CreateInput(1, "x2", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
+    auto bias = graph_builder.CreateInput(2, "bias", DT_FLOAT16, FORMAT_ND, shape_bias.GetDims());
+    auto normalized_shape = graph_builder.CreateInput(
+        3, "normalized_shape", DT_INT32, FORMAT_ND, shape_normalized_shape.GetDims());
+    auto gamma = graph_builder.CreateInput(4, "gamma", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
+    auto beta = graph_builder.CreateInput(5, "beta", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
+
+    auto add1 = x2 + bias;
+    auto add2 = x1 + add1;
+    auto cast1 = es::Cast(add2, DT_FLOAT);
+    auto multiquote = es::Add(add2, add2);
+    auto layernorm = es::LayerNormV4(cast1, normalized_shape, gamma, beta);
+    auto cast2 = es::Cast(layernorm.y, DT_FLOAT16);
+
+    InferShapeForTest(
+        DT_FLOAT16, shape_x, shape_gamma, shape_bias, shape_normalized_shape,
+        x1, x2, bias, normalized_shape, add1, add2, cast1, layernorm, cast2);
+
+    //gamma
+    TensorDesc gamma_output_desc;
+    gamma.GetProducer()->GetOutputDesc(0, gamma_output_desc);
+    gamma_output_desc.SetDataType(DT_FLOAT);
+    gamma_output_desc.SetShape(shape_gamma);
+    gamma.GetProducer()->UpdateOutputDesc(0, gamma_output_desc);
+    //beta
+    TensorDesc beta_output_desc;
+    beta.GetProducer()->GetOutputDesc(0, beta_output_desc);
+    beta_output_desc.SetDataType(DT_FLOAT);
+    beta_output_desc.SetShape(shape_gamma);
+    beta.GetProducer()->UpdateOutputDesc(0, beta_output_desc);
+    //layernorm
+    TensorDesc layernorm_input_2_desc;
+    layernorm.y.GetProducer()->GetInputDesc(2, layernorm_input_2_desc);
+    layernorm_input_2_desc.SetDataType(DT_FLOAT);
+    layernorm_input_2_desc.SetShape(shape_gamma);
+    layernorm.y.GetProducer()->UpdateInputDesc(2, layernorm_input_2_desc);
+    TensorDesc layernorm_input_3_desc;
+    layernorm.y.GetProducer()->GetInputDesc(3, layernorm_input_3_desc);
+    layernorm_input_3_desc.SetDataType(DT_FLOAT);
+    layernorm_input_3_desc.SetShape(shape_gamma);
+    layernorm.y.GetProducer()->UpdateInputDesc(3, layernorm_input_3_desc);
+
+    std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
+    CustomPassContext pass_contex;
+    ops::AddLayerNormV4FusionPass pass;
+    Status status = pass.Run(graph, pass_contex);
+    EXPECT_EQ(status, SUCCESS);
+    bool findAddLayerNorm = false;
+    int node_count = 0;
+    for (auto node : graph->GetAllNodes()) {
+        node_count++;
+        AscendString type;
+        node.GetType(type);
+        if (type == "AddLayerNorm" && IsAddLayerNormInputRight(
+                node, shape_x, shape_gamma, shape_bias, DT_FLOAT16, false, false)) {
+            findAddLayerNorm = true;
+        }
+    }
+    EXPECT_EQ(findAddLayerNorm, true);
+}
+
+TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_ReverseAddOrder_95_FP16_OK)
+{
+    std::vector<int64_t> dims_x{1, 128, 128, 256};
+    std::vector<int64_t> dims_gamma{256};
+    std::vector<int64_t> dims_bias{128, 256};
+    std::vector<int64_t> dims_normalized{1};
+    Shape shape_x(dims_x);
+    Shape shape_gamma(dims_gamma);
+    Shape shape_bias(dims_bias);
+    Shape shape_normalized_shape({1});
+
+    auto graph_builder = es::EsGraphBuilder("add_layer_norm_v4_fusion_test23_graph");
+    auto x1 = graph_builder.CreateInput(0, "x1", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
+    auto x2 = graph_builder.CreateInput(1, "x2", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
+    auto bias = graph_builder.CreateInput(2, "bias", DT_FLOAT16, FORMAT_ND, shape_bias.GetDims());
+    auto normalized_shape = graph_builder.CreateInput(
+        3, "normalized_shape", DT_INT32, FORMAT_ND, shape_normalized_shape.GetDims());
+    auto gamma = graph_builder.CreateInput(4, "gamma", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
+    auto beta = graph_builder.CreateInput(5, "beta", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
+
+    auto add1 = bias + x2;
+    auto add2 = add1 + x1;
+    auto cast1 = es::Cast(add2, DT_FLOAT);
+    auto layernorm = es::LayerNormV4(cast1, normalized_shape, gamma, beta);
+    auto cast2 = es::Cast(layernorm.y, DT_FLOAT16);
+
+    InferShapeForTest(
+        DT_FLOAT16, shape_x, shape_gamma, shape_bias, shape_normalized_shape,
+        x1, x2, bias, normalized_shape, add1, add2, cast1, layernorm, cast2);
+
+    //gamma
+    TensorDesc gamma_output_desc;
+    gamma.GetProducer()->GetOutputDesc(0, gamma_output_desc);
+    gamma_output_desc.SetDataType(DT_FLOAT);
+    gamma_output_desc.SetShape(shape_gamma);
+    gamma.GetProducer()->UpdateOutputDesc(0, gamma_output_desc);
+    //beta
+    TensorDesc beta_output_desc;
+    beta.GetProducer()->GetOutputDesc(0, beta_output_desc);
+    beta_output_desc.SetDataType(DT_FLOAT);
+    beta_output_desc.SetShape(shape_gamma);
+    beta.GetProducer()->UpdateOutputDesc(0, beta_output_desc);
+    //layernorm
+    TensorDesc layernorm_input_2_desc;
+    layernorm.y.GetProducer()->GetInputDesc(2, layernorm_input_2_desc);
+    layernorm_input_2_desc.SetDataType(DT_FLOAT);
+    layernorm_input_2_desc.SetShape(shape_gamma);
+    layernorm.y.GetProducer()->UpdateInputDesc(2, layernorm_input_2_desc);
+    TensorDesc layernorm_input_3_desc;
+    layernorm.y.GetProducer()->GetInputDesc(3, layernorm_input_3_desc);
+    layernorm_input_3_desc.SetDataType(DT_FLOAT);
+    layernorm_input_3_desc.SetShape(shape_gamma);
+    layernorm.y.GetProducer()->UpdateInputDesc(3, layernorm_input_3_desc);
+
+    std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
+    CustomPassContext pass_contex;
+    ops::AddLayerNormV4FusionPass pass;
+    Status status = pass.Run(graph, pass_contex);
+    EXPECT_EQ(status, SUCCESS);
+    bool findAddLayerNorm = false;
+    int node_count = 0;
+    for (auto node : graph->GetAllNodes()) {
+        node_count++;
+        AscendString type;
+        node.GetType(type);
+        if (type == "AddLayerNorm" && IsAddLayerNormInputRight(
+                node, shape_x, shape_gamma, shape_bias, DT_FLOAT16, false, false)) {
+            findAddLayerNorm = true;
+        }
+    }
+    EXPECT_EQ(findAddLayerNorm, true);
+}
+
+TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_AddLayerNormFirstOutputMultiQuote_95_FP16_Fail)
+{
+    std::vector<int64_t> dims_x{1, 128, 128, 256};
+    std::vector<int64_t> dims_gamma{256};
+    std::vector<int64_t> dims_bias{128, 256};
+    std::vector<int64_t> dims_normalized{1};
+    Shape shape_x(dims_x);
+    Shape shape_gamma(dims_gamma);
+    Shape shape_bias(dims_bias);
+    Shape shape_normalized_shape({1});
+
+    auto graph_builder = es::EsGraphBuilder("add_layer_norm_v4_fusion_test24_graph");
+    auto x1 = graph_builder.CreateInput(0, "x1", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
+    auto x2 = graph_builder.CreateInput(1, "x2", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
+    auto bias = graph_builder.CreateInput(2, "bias", DT_FLOAT16, FORMAT_ND, shape_bias.GetDims());
+    auto normalized_shape = graph_builder.CreateInput(
+        3, "normalized_shape", DT_INT32, FORMAT_ND, shape_normalized_shape.GetDims());
+    auto gamma = graph_builder.CreateInput(4, "gamma", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
+    auto beta = graph_builder.CreateInput(5, "beta", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
+
+    auto add1 = x2 + bias;
+    auto add2 = x1 + add1;
+    auto cast1 = es::Cast(add2, DT_FLOAT);
+    auto layernorm = es::LayerNormV4(cast1, normalized_shape, gamma, beta);
+    auto cast2 = es::Cast(layernorm.y, DT_FLOAT16);
+    auto multiquote_y = es::Add(layernorm.y, layernorm.y);
+
+    InferShapeForTest(
+        DT_FLOAT16, shape_x, shape_gamma, shape_bias, shape_normalized_shape,
+        x1, x2, bias, normalized_shape, add1, add2, cast1, layernorm, cast2);
+
+    //gamma
+    TensorDesc gamma_output_desc;
+    gamma.GetProducer()->GetOutputDesc(0, gamma_output_desc);
+    gamma_output_desc.SetDataType(DT_FLOAT);
+    gamma_output_desc.SetShape(shape_gamma);
+    gamma.GetProducer()->UpdateOutputDesc(0, gamma_output_desc);
+    //beta
+    TensorDesc beta_output_desc;
+    beta.GetProducer()->GetOutputDesc(0, beta_output_desc);
+    beta_output_desc.SetDataType(DT_FLOAT);
+    beta_output_desc.SetShape(shape_gamma);
+    beta.GetProducer()->UpdateOutputDesc(0, beta_output_desc);
+    //layernorm
+    TensorDesc layernorm_input_2_desc;
+    layernorm.y.GetProducer()->GetInputDesc(2, layernorm_input_2_desc);
+    layernorm_input_2_desc.SetDataType(DT_FLOAT);
+    layernorm_input_2_desc.SetShape(shape_gamma);
+    layernorm.y.GetProducer()->UpdateInputDesc(2, layernorm_input_2_desc);
+    TensorDesc layernorm_input_3_desc;
+    layernorm.y.GetProducer()->GetInputDesc(3, layernorm_input_3_desc);
+    layernorm_input_3_desc.SetDataType(DT_FLOAT);
+    layernorm_input_3_desc.SetShape(shape_gamma);
+    layernorm.y.GetProducer()->UpdateInputDesc(3, layernorm_input_3_desc);
+
+    std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
+    CustomPassContext pass_contex;
+    ops::AddLayerNormV4FusionPass pass;
+    Status status = pass.Run(graph, pass_contex);
+    EXPECT_EQ(status, GRAPH_NOT_CHANGED);
+}
+
+TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_Add1MultiQuote_95_FP16_Fail)
+{
+    std::vector<int64_t> dims_x{1, 128, 128, 256};
+    std::vector<int64_t> dims_gamma{256};
+    std::vector<int64_t> dims_bias{128, 256};
+    std::vector<int64_t> dims_normalized{1};
+    Shape shape_x(dims_x);
+    Shape shape_gamma(dims_gamma);
+    Shape shape_bias(dims_bias);
+    Shape shape_normalized_shape({1});
+
+    auto graph_builder = es::EsGraphBuilder("add_layer_norm_v4_fusion_test25_graph");
+    auto x1 = graph_builder.CreateInput(0, "x1", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
+    auto x2 = graph_builder.CreateInput(1, "x2", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
+    auto bias = graph_builder.CreateInput(2, "bias", DT_FLOAT16, FORMAT_ND, shape_bias.GetDims());
+    auto normalized_shape = graph_builder.CreateInput(
+        3, "normalized_shape", DT_INT32, FORMAT_ND, shape_normalized_shape.GetDims());
+    auto gamma = graph_builder.CreateInput(4, "gamma", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
+    auto beta = graph_builder.CreateInput(5, "beta", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
+
+    auto add1 = x2 + bias;
+    auto multiquote_add1 = es::Add(add1, add1);
+    auto add2 = x1 + add1;
+    auto cast1 = es::Cast(add2, DT_FLOAT);
+    auto layernorm = es::LayerNormV4(cast1, normalized_shape, gamma, beta);
+    auto cast2 = es::Cast(layernorm.y, DT_FLOAT16);
+
+    InferShapeForTest(
+        DT_FLOAT16, shape_x, shape_gamma, shape_bias, shape_normalized_shape,
+        x1, x2, bias, normalized_shape, add1, add2, cast1, layernorm, cast2);
+
+    //gamma
+    TensorDesc gamma_output_desc;
+    gamma.GetProducer()->GetOutputDesc(0, gamma_output_desc);
+    gamma_output_desc.SetDataType(DT_FLOAT);
+    gamma_output_desc.SetShape(shape_gamma);
+    gamma.GetProducer()->UpdateOutputDesc(0, gamma_output_desc);
+    //beta
+    TensorDesc beta_output_desc;
+    beta.GetProducer()->GetOutputDesc(0, beta_output_desc);
+    beta_output_desc.SetDataType(DT_FLOAT);
+    beta_output_desc.SetShape(shape_gamma);
+    beta.GetProducer()->UpdateOutputDesc(0, beta_output_desc);
+    //layernorm
+    TensorDesc layernorm_input_2_desc;
+    layernorm.y.GetProducer()->GetInputDesc(2, layernorm_input_2_desc);
+    layernorm_input_2_desc.SetDataType(DT_FLOAT);
+    layernorm_input_2_desc.SetShape(shape_gamma);
+    layernorm.y.GetProducer()->UpdateInputDesc(2, layernorm_input_2_desc);
+    TensorDesc layernorm_input_3_desc;
+    layernorm.y.GetProducer()->GetInputDesc(3, layernorm_input_3_desc);
+    layernorm_input_3_desc.SetDataType(DT_FLOAT);
+    layernorm_input_3_desc.SetShape(shape_gamma);
+    layernorm.y.GetProducer()->UpdateInputDesc(3, layernorm_input_3_desc);
+
+    std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
+    CustomPassContext pass_contex;
+    ops::AddLayerNormV4FusionPass pass;
+    Status status = pass.Run(graph, pass_contex);
+    EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }

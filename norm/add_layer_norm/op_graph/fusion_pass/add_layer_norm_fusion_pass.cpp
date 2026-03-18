@@ -35,26 +35,30 @@ using namespace fusion;
 namespace ops {
 namespace {
 const std::string kPassName = "AddLayerNormFusionPass";
-// 在第二个场景中MATCH_RESULT的输出个数
-const int64_t KMatchResultOutputsNumInSituation2 = 4;
+const std::string kPatternOutputCast = "Cast1";
+const std::string kPatternOutputAdd = "Add2";
 const int64_t kLayerNormCaptureIdx = 0l;
 const int64_t kAdd1CaptureIdx = 1l;
 const int64_t kAdd2CaptureIdx = 2l;
 const int64_t kCast1CaptureIdx = 3l;
 
-PatternUniqPtr MakePatternForLayernorm(bool make_cast1_as_output)
+PatternUniqPtr MakePatternForLayernorm(bool make_cast1_as_output, bool make_add2_as_output, bool bias_first, bool add_first)
 {
-    std::string pattern_name = make_cast1_as_output ? "PatternForLayernormS2" : "PatternForLayernormS1";
+    std::string pattern_name = make_cast1_as_output ? kPassName + "Cast1" : kPassName;
+    pattern_name = make_add2_as_output ? pattern_name + "Add2" : pattern_name;
+    pattern_name = bias_first ? pattern_name + "BiasFirst" : pattern_name + "BiasSecond";
+    pattern_name = add_first ? pattern_name + "AddFirst" : pattern_name + "AddSecond";
     auto graph_builder = es::EsGraphBuilder(pattern_name.c_str());
     auto [x1,x2,gamma,beta,bias] = graph_builder.CreateInputs<5>();
-    auto add1 = x2 + bias;
-    auto add2 = x1 + add1;
+    auto add1 = bias_first? bias + x2 : x2 + bias;
+    auto add2 = add_first? add1 + x1 : x1 + add1;
     auto cast1 = es::Cast(add2, DT_FLOAT);
     auto [y, mean, variance] = es::LayerNorm(cast1, gamma, beta);
     y = es::Cast(y, DT_FLOAT16);
-    auto graph = make_cast1_as_output ?
-                     graph_builder.BuildAndReset({y, mean, variance, cast1}) :
-                     graph_builder.BuildAndReset({y, mean, variance});
+    std::vector outputs{y, mean, variance};
+    if (make_cast1_as_output) outputs.emplace_back(cast1);
+    if (make_add2_as_output) outputs.emplace_back(add2);
+    auto graph = graph_builder.BuildAndReset(outputs);
     auto pattern = std::make_unique<Pattern>(std::move(*graph));
     pattern->CaptureTensor({*mean.GetProducer(), 0})
         .CaptureTensor({*add1.GetProducer(), 0})
@@ -63,19 +67,24 @@ PatternUniqPtr MakePatternForLayernorm(bool make_cast1_as_output)
     return pattern;
 }
 
-PatternUniqPtr MakePatternForLayernormV3(bool make_cast1_as_output)
+PatternUniqPtr MakePatternForLayernormV3(bool make_cast1_as_output, bool make_add2_as_output, bool bias_first, bool add_first)
 {
-    std::string pattern_name = make_cast1_as_output ? "PatternForLayernormV3S2" : "PatternForLayernormV3S1";
+    std::string pattern_name = make_cast1_as_output ? kPassName + "V3Cast1" : kPassName + "V3";
+    pattern_name = make_add2_as_output ? pattern_name + "Add2" : pattern_name;
+    pattern_name = bias_first ? pattern_name + "BiasFirst" : pattern_name + "BiasSecond";
+    pattern_name = add_first ? pattern_name + "AddFirst" : pattern_name + "AddSecond";
     auto graph_builder = es::EsGraphBuilder(pattern_name.c_str());
     auto [x1,x2,gamma,beta,bias] = graph_builder.CreateInputs<5>();
-    auto add1 = x2 + bias;
-    auto add2 = x1 + add1;
+    auto add1 = bias_first? bias + x2 : x2 + bias;
+    auto add2 = add_first? add1 + x1 : x1 + add1;
     auto cast1 = es::Cast(add2, DT_FLOAT);
     auto [y, mean, rstd] = es::LayerNormV3(cast1, gamma, beta);
     y = es::Cast(y, DT_FLOAT16);
-    auto graph = make_cast1_as_output ?
-                     graph_builder.BuildAndReset({y, mean, rstd, cast1}) :
-                     graph_builder.BuildAndReset({y, mean, rstd});
+    std::vector outputs{y, mean, rstd};
+
+    if (make_cast1_as_output) outputs.emplace_back(cast1);
+    if (make_add2_as_output) outputs.emplace_back(add2);
+    auto graph = graph_builder.BuildAndReset(outputs);
     auto pattern = std::make_unique<Pattern>(std::move(*graph));
     pattern->CaptureTensor({*mean.GetProducer(), 0})
         .CaptureTensor({*add1.GetProducer(), 0})
@@ -250,10 +259,11 @@ bool IsAllInputShapeAndDtypeValid(const std::unique_ptr<MatchResult>& match_resu
 std::vector<PatternUniqPtr> AddLayerNormFusionPass::Patterns()
 {
     std::vector<PatternUniqPtr> pattern_graphs;
-    pattern_graphs.emplace_back(MakePatternForLayernorm(false));
-    pattern_graphs.emplace_back(MakePatternForLayernorm(true));
-    pattern_graphs.emplace_back(MakePatternForLayernormV3(false));
-    pattern_graphs.emplace_back(MakePatternForLayernormV3(true));
+    // 传入所有情况的bool值
+    for (int i = 0; i < 16; ++i) {
+        pattern_graphs.emplace_back(MakePatternForLayernorm((i & 1) != 0, (i & 2) != 0, (i & 4) != 0, (i & 8) != 0));
+        pattern_graphs.emplace_back(MakePatternForLayernormV3((i & 1) != 0, (i & 2) != 0, (i & 4) != 0, (i & 8) != 0));
+    }
     return pattern_graphs;
 }
 
@@ -274,6 +284,14 @@ bool AddLayerNormFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>
         return false;
     }
     if (IsCast1HasControlEdge(match_result, kCast1CaptureIdx, kPassName)) {
+        return false;
+    }
+    NodeIo layer_norm_output;
+    OP_LOGE_IF(
+        match_result->GetCapturedTensor(kLayerNormCaptureIdx, layer_norm_output) != SUCCESS, false, kPassName,
+        "Failed to get layernorm in meetrequirements");
+    auto y_output_nodes = layer_norm_output.node.GetOutDataNodesAndPortIndexs(0);
+    if (y_output_nodes.size() != 1) {
         return false;
     }
     return true;
@@ -317,9 +335,13 @@ GraphUniqPtr AddLayerNormFusionPass::Replacement(const std::unique_ptr<MatchResu
     std::vector<es::EsTensorHolder> replace_outputs = {addlayernorm.y, addlayernorm.mean, addlayernorm.rstd};
     std::vector<SubgraphOutput> subgraph_outputs;
     match_result->ToSubgraphBoundary()->GetAllOutputs(subgraph_outputs);
-    int64_t output_num = subgraph_outputs.size();
-    if (output_num == KMatchResultOutputsNumInSituation2) {
-        OPS_LOG_D(kPassName.c_str(), "output_num is %d, now in situation 2", output_num);
+    AscendString pattern_name;
+    match_result->GetPatternGraph().GetName(pattern_name);
+    std::string pattern_name_str = pattern_name.GetString();
+    if (pattern_name_str.find(kPatternOutputAdd) != std::string::npos) {
+        replace_outputs.emplace_back(addlayernorm.x);
+    }
+    if (pattern_name_str.find(kPatternOutputCast) != std::string::npos) {
         replace_outputs.emplace_back(es::Cast(addlayernorm.x, DT_FLOAT));
     }
     GraphUniqPtr replaceGraph = replace_graph_builder.BuildAndReset(replace_outputs);

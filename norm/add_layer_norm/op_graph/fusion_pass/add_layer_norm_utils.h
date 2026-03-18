@@ -57,23 +57,36 @@ static bool IsAdd2InputValid(
     const AscendString& add1_node_name, const AscendString& add2_node_name, const std::string& pass_name)
 {
     TensorDesc add1_input0_desc;
+    TensorDesc add1_input1_desc;
     add1_node.GetInputDesc(0, add1_input0_desc);
-    TensorDesc add2_input0_desc;
-    add2_node.GetInputDesc(0, add2_input0_desc);
+    add1_node.GetInputDesc(1, add1_input1_desc);
+    auto add1_input0_size = add1_input0_desc.GetShape().GetShapeSize();
+    auto add1_input1_size = add1_input1_desc.GetShape().GetShapeSize();
+    auto add1_inputx_desc = (add1_input0_size > add1_input1_size) ? add1_input0_desc : add1_input1_desc;
+    
+    TensorDesc add2_inputx_desc;
+    auto [input_node0,_] = add2_node.GetInDataNodesAndPortIndexs(0);
+    AscendString add2_node_type;
+    input_node0->GetType(add2_node_type);
+    if (add2_node_type == "Add") {
+        add2_node.GetInputDesc(1, add2_inputx_desc);
+    }else {
+        add2_node.GetInputDesc(0, add2_inputx_desc);
+    }
     //check shape
-    if (!(add1_input0_desc.GetShape().GetDims() == add2_input0_desc.GetShape().GetDims())) {
+    if (!(add1_inputx_desc.GetShape().GetDims() == add2_inputx_desc.GetShape().GetDims())) {
         OPS_LOG_D(
             pass_name.c_str(), "only support %s input0 and %s input0 have same shape.",
             add1_node_name.GetString(), add2_node_name.GetString());
         return false;
     }
     //check dtype
-    if (!(add1_input0_desc.GetDataType() == add2_input0_desc.GetDataType())) {
+    if (!(add1_inputx_desc.GetDataType() == add2_inputx_desc.GetDataType())) {
         OPS_LOG_D(
             pass_name.c_str(),
             "Only support %s inputs and %s inputs have same dtype, but now Add1_input0_dtype is %d, Add2_input0_dtype is %d",
-            add1_node_name.GetString(), add2_node_name.GetString(), add1_input0_desc.GetDataType(),
-            add2_input0_desc.GetDataType());
+            add1_node_name.GetString(), add2_node_name.GetString(), add1_inputx_desc.GetDataType(),
+            add2_inputx_desc.GetDataType());
         return false;
     }
     return true;

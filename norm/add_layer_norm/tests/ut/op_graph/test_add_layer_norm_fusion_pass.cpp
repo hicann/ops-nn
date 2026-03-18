@@ -794,3 +794,130 @@ TEST_F(AddLayerNormFusionPassTest, for2_add_layer_normV3_fusion_93_bf_OK)
     EXPECT_EQ(findAddLayerNorm, true);
     EXPECT_EQ(node_count, 9);
 }
+
+TEST_F(AddLayerNormFusionPassTest, for2_add_layer_normV3_fusion_MultiQuoteAdd2_93_bf_OK)
+{
+    std::vector<int64_t> dims_x{1, 128, 1024};
+    std::vector<int64_t> dims_gamma{1024};
+    std::vector<int64_t> dims_bias{1024};
+    Shape shape_x(dims_x);
+    Shape shape_gamma(dims_gamma);
+    Shape shape_bias(dims_bias);
+
+    auto graph_builder = es::EsGraphBuilder("add_layer_norm_fusion_third_patten");
+    auto x1 = graph_builder.CreateInput(0, "x1", DT_BF16, FORMAT_ND, shape_x.GetDims());
+    auto x2 = graph_builder.CreateInput(1, "x2", DT_BF16, FORMAT_ND, shape_x.GetDims());
+    auto gamma = graph_builder.CreateInput(2, "gamma", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
+    auto beta = graph_builder.CreateInput(3, "beta", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
+    auto bias = graph_builder.CreateInput(4, "bias", DT_BF16, FORMAT_ND, shape_bias.GetDims());
+    auto add1 = es::Add(x2, bias);
+    auto add2 = es::Add(x1, add1);
+    auto multiquote_add2 = es::Add(add2, add2);
+    auto cast1 = es::Cast(add2, DT_FLOAT);
+    auto add3 = es::Add(cast1, cast1);
+    auto layernorm = es::LayerNormV3(cast1, gamma, beta, -1, 0, 1e-5);
+    auto cast2 = es::Cast(layernorm.y, DT_BF16);
+
+    InferShapeForTest(
+        DT_BF16, shape_x, shape_gamma, shape_bias, x1, x2, bias, gamma, beta,
+        add1, add2, cast1, layernorm.y, cast2);
+
+    std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd, add3});
+    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_graph_for_layernorm_test14");
+    CustomPassContext pass_contex;
+    ops::AddLayerNormFusionPass pass;
+    Status status = pass.Run(graph, pass_contex);
+    EXPECT_EQ(status, SUCCESS);
+    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_afterpass_graph_for_layernorm_test14");
+    bool findAddLayerNorm = false;
+    int node_count = 0;
+    for (auto node : graph->GetAllNodes()) {
+        node_count++;
+        AscendString type;
+        node.GetType(type);
+        if (type == "AddLayerNorm" && IsAddLayerNormInputRight(node, shape_x, shape_gamma, shape_bias, DT_BF16)) {
+            findAddLayerNorm = true;
+        }
+    }
+    EXPECT_EQ(findAddLayerNorm, true);
+}
+
+TEST_F(AddLayerNormFusionPassTest, for2_add_layer_normV3_fusion_ReverseAddOrder_93_bf_OK)
+{
+    std::vector<int64_t> dims_x{1, 128, 1024};
+    std::vector<int64_t> dims_gamma{1024};
+    std::vector<int64_t> dims_bias{1024};
+    Shape shape_x(dims_x);
+    Shape shape_gamma(dims_gamma);
+    Shape shape_bias(dims_bias);
+
+    auto graph_builder = es::EsGraphBuilder("add_layer_norm_fusion_third_patten");
+    auto x1 = graph_builder.CreateInput(0, "x1", DT_BF16, FORMAT_ND, shape_x.GetDims());
+    auto x2 = graph_builder.CreateInput(1, "x2", DT_BF16, FORMAT_ND, shape_x.GetDims());
+    auto gamma = graph_builder.CreateInput(2, "gamma", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
+    auto beta = graph_builder.CreateInput(3, "beta", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
+    auto bias = graph_builder.CreateInput(4, "bias", DT_BF16, FORMAT_ND, shape_bias.GetDims());
+    auto add1 = es::Add(bias, x2);
+    auto add2 = es::Add(add1, x1);
+    auto cast1 = es::Cast(add2, DT_FLOAT);
+    auto add3 = es::Add(cast1, cast1);
+    auto layernorm = es::LayerNormV3(cast1, gamma, beta, -1, 0, 1e-5);
+    auto cast2 = es::Cast(layernorm.y, DT_BF16);
+
+    InferShapeForTest(
+        DT_BF16, shape_x, shape_gamma, shape_bias, x1, x2, bias, gamma, beta,
+        add1, add2, cast1, layernorm.y, cast2);
+
+    std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd, add3});
+    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_graph_for_layernorm_test14");
+    CustomPassContext pass_contex;
+    ops::AddLayerNormFusionPass pass;
+    Status status = pass.Run(graph, pass_contex);
+    EXPECT_EQ(status, SUCCESS);
+    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_afterpass_graph_for_layernorm_test14");
+    bool findAddLayerNorm = false;
+    int node_count = 0;
+    for (auto node : graph->GetAllNodes()) {
+        node_count++;
+        AscendString type;
+        node.GetType(type);
+        if (type == "AddLayerNorm" && IsAddLayerNormInputRight(node, shape_x, shape_gamma, shape_bias, DT_BF16)) {
+            findAddLayerNorm = true;
+        }
+    }
+    EXPECT_EQ(findAddLayerNorm, true);
+}
+
+TEST_F(AddLayerNormFusionPassTest, for2_add_layer_normV3_fusion_AddLayerNormFirstOutputMultiQuote_95_FP16_Fail)
+{
+    std::vector<int64_t> dims_x{1, 128, 1024};
+    std::vector<int64_t> dims_gamma{1024};
+    std::vector<int64_t> dims_bias{1024};
+    Shape shape_x(dims_x);
+    Shape shape_gamma(dims_gamma);
+    Shape shape_bias(dims_bias);
+
+    auto graph_builder = es::EsGraphBuilder("add_layer_norm_fusion_third_patten");
+    auto x1 = graph_builder.CreateInput(0, "x1", DT_BF16, FORMAT_ND, shape_x.GetDims());
+    auto x2 = graph_builder.CreateInput(1, "x2", DT_BF16, FORMAT_ND, shape_x.GetDims());
+    auto gamma = graph_builder.CreateInput(2, "gamma", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
+    auto beta = graph_builder.CreateInput(3, "beta", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
+    auto bias = graph_builder.CreateInput(4, "bias", DT_BF16, FORMAT_ND, shape_bias.GetDims());
+    auto add1 = es::Add(x2, bias);
+    auto add2 = es::Add(x1, add1);
+    auto cast1 = es::Cast(add2, DT_FLOAT);
+    auto add3 = es::Add(cast1, cast1);
+    auto layernorm = es::LayerNormV3(cast1, gamma, beta, -1, 0, 1e-5);
+    auto cast2 = es::Cast(layernorm.y, DT_BF16);
+    auto multiquote_y = es::Add(layernorm.y, layernorm.y);
+
+    InferShapeForTest(
+        DT_BF16, shape_x, shape_gamma, shape_bias, x1, x2, bias, gamma, beta,
+        add1, add2, cast1, layernorm.y, cast2);
+
+    std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd, add3});
+    CustomPassContext pass_contex;
+    ops::AddLayerNormFusionPass pass;
+    Status status = pass.Run(graph, pass_contex);
+    EXPECT_EQ(status, GRAPH_NOT_CHANGED);
+}
