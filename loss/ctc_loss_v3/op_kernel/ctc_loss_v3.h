@@ -425,8 +425,8 @@ private:
         pipe->InitBuffer(logAlpha1Buf, alphaLengthAlign * FLOAT_SIZE);
         pipe->InitBuffer(logAlpha2Buf, alphaLengthAlign * FLOAT_SIZE);
         pipe->InitBuffer(logAlpha3Buf, alphaLengthAlign * FLOAT_SIZE);
-        pipe->InitBuffer(inlogAlphaBuf, alphaTailSizeAlign * FLOAT_SIZE);
-        pipe->InitBuffer(outLogAlphaBuf, alphaTailSizeAlign * sizeof(TProb));
+        pipe->InitBuffer(inlogAlphaBuf, alphaLengthAlign * FLOAT_SIZE);
+        pipe->InitBuffer(outLogAlphaBuf, alphaLengthAlign * sizeof(TProb));
         pipe->InitBuffer(gtAlpha1MaskBuf, maskNumAlpha);
         pipe->InitBuffer(maxAlphaBuf, alphaLengthAlign * FLOAT_SIZE);
         pipe->InitBuffer(allZeroBuf, BLOCK_BYTES);
@@ -439,13 +439,6 @@ private:
         pipe->InitBuffer(lossBuf, HALF_NUM_PER_REPEAT);
     }
 
-    __aicore__ inline void SToMTE2Sync()
-    {
-        event_t eventIDSToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
-        SetFlag<HardEvent::S_MTE2>(eventIDSToMTE2);
-        WaitFlag<HardEvent::S_MTE2>(eventIDSToMTE2);
-    }
-
     __aicore__ inline void MTE2ToSSync()
     {
         event_t eventIDMTE2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
@@ -453,11 +446,11 @@ private:
         WaitFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
     }
 
-    __aicore__ inline void SToMTE3Sync()
+    __aicore__ inline void SToMTE2Sync()
     {
-        event_t eventIDSToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
-        SetFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
-        WaitFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
+        event_t eventIDSToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
+        SetFlag<HardEvent::S_MTE2>(eventIDSToMTE2);
+        WaitFlag<HardEvent::S_MTE2>(eventIDSToMTE2);
     }
 
     __aicore__ inline void MTE3ToSSync()
@@ -467,11 +460,11 @@ private:
         WaitFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
     }
 
-    __aicore__ inline void SToVSync()
+    __aicore__ inline void SToMTE3Sync()
     {
-        event_t eventIDSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
-        SetFlag<HardEvent::S_V>(eventIDSToV);
-        WaitFlag<HardEvent::S_V>(eventIDSToV);
+        event_t eventIDSToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
+        SetFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
+        WaitFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
     }
 
     __aicore__ inline void VToSSync()
@@ -481,11 +474,11 @@ private:
         WaitFlag<HardEvent::V_S>(eventIDVToS);
     }
 
-    __aicore__ inline void MTE3ToVSync()
+    __aicore__ inline void SToVSync()
     {
-        event_t eventIDMTE3ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
-        SetFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
-        WaitFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
+        event_t eventIDSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+        SetFlag<HardEvent::S_V>(eventIDSToV);
+        WaitFlag<HardEvent::S_V>(eventIDSToV);
     }
 
     __aicore__ inline void VToMTE3Sync()
@@ -494,11 +487,12 @@ private:
         SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
         WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
     }
-    __aicore__ inline void MTE3ToMTE2Sync()
+
+    __aicore__ inline void MTE3ToVSync()
     {
-        event_t eventIDMTE3ToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
-        SetFlag<HardEvent::MTE3_MTE2>(eventIDMTE3ToMTE2);
-        WaitFlag<HardEvent::MTE3_MTE2>(eventIDMTE3ToMTE2);
+        event_t eventIDMTE3ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+        SetFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
+        WaitFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
     }
 
     __aicore__ inline void MTE2ToVSync()
@@ -508,11 +502,11 @@ private:
         WaitFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
     }
 
-    __aicore__ inline void VToMTE2Sync()
+    __aicore__ inline void MTE3ToMTE2Sync()
     {
-        event_t eventIDVToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
-        SetFlag<HardEvent::V_MTE2>(eventIDVToMTE2);
-        WaitFlag<HardEvent::V_MTE2>(eventIDVToMTE2);
+        event_t eventIDMTE3ToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
+        SetFlag<HardEvent::MTE3_MTE2>(eventIDMTE3ToMTE2);
+        WaitFlag<HardEvent::MTE3_MTE2>(eventIDMTE3ToMTE2);
     }
 
     __aicore__ inline void MTE2ToMTE3Sync()
@@ -520,6 +514,13 @@ private:
         event_t eventIDMTE2ToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_MTE3));
         SetFlag<HardEvent::MTE2_MTE3>(eventIDMTE2ToMTE3);
         WaitFlag<HardEvent::MTE2_MTE3>(eventIDMTE2ToMTE3);
+    }
+
+    __aicore__ inline void VToMTE2Sync()
+    {
+        event_t eventIDVToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
+        SetFlag<HardEvent::V_MTE2>(eventIDVToMTE2);
+        WaitFlag<HardEvent::V_MTE2>(eventIDVToMTE2);
     }
 
     __aicore__ inline void InitTensor()
@@ -672,17 +673,16 @@ private:
             logProbBlank = logProbBlankTensor.GetValue(0);
         }
         if (t == 0) {
-            int64_t firstChar = targetsTensor.GetValue(0);
-            SToMTE2Sync();
-            CopyInlogProbFirst(batchOffsetProb, t, firstChar);
             Duplicate<float>(logAlphaTensor, -INFINITY, alphaTailSizeAlign);
-            VToSSync();
-            if (std::is_same<TProb, bfloat16_t>::value) {
-                logProbFirstChar = ToFloat(logProbFirstTensor.GetValue(0));
-            } else {
-                logProbFirstChar = logProbFirstTensor.GetValue(0);
-            }
             if (targetLength > 0) {
+                int64_t firstChar = targetsTensor.GetValue(0);
+                SToMTE2Sync();
+                CopyInlogProbFirst(batchOffsetProb, t, firstChar);
+                if (std::is_same<TProb, bfloat16_t>::value) {
+                    logProbFirstChar = ToFloat(logProbFirstTensor.GetValue(0));
+                } else {
+                    logProbFirstChar = logProbFirstTensor.GetValue(0);
+                }
                 logAlphaTensor.SetValue(1, logProbFirstChar);
             }
             logAlphaTensor.SetValue(0, logProbBlank);
