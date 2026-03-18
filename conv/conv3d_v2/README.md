@@ -174,9 +174,6 @@
   - 不支持 `pad_mode` 属性。
   - 当不满足 `Pointwise` 分支情况时，`x` 支持 `NDC1HWC0`，`filter` 支持 `FRACTAL_Z_3D`。
 
-- Ascend 950PR/Ascend 950DT：
-  - 不支持 `INT8` 数据类型。
-
 ## 约束说明
 
 - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：
@@ -239,11 +236,8 @@
   </table>
 
 - Ascend 950PR/Ascend 950DT：
-  - 当 `x` 数据类型为 `HIFLOAT8` 时，`filter` 的数据类型必须与 `x` 一致。`N` 维度大小应该大于等于 0。`D`、`H`、`W` 维度大小应该大于等于 0（等于 0 的场景仅在输出 `y` 的 `D`、`H`、`W` 维度也等于 0 时支持）。`C` 维度大小应该大于等于 0（等于 0 的场景仅在输出 `y` 的任意维度也等于 0 时支持）。
+  - 对于 `x` 输入，`N` 维度大小应该大于等于 0。`D`、`H`、`W` 维度大小应该大于等于 0（等于 0 的场景仅在输出 `y` 的 `D`、`H`、`W` 维度也等于 0 时支持）。`C` 维度大小应该大于等于 0（等于 0 的场景仅在输出 `y` 的任意维度也等于 0 时支持）。
   - 对于 `filter` 输入，`H`、`W` 的大小应该在 [1, 511] 的范围内。`N` 维度大小应该大于等于 0（等于 0 的场景仅在输入 `bias`、输出 `y` 的 `N` 维度也等于 0 时支持），`C` 维度大小的支持情况与输入 `x` 的 `C` 维度一致。
-  - 当 `x` 和 `filter` 数据类型是 `HIFLOAT8` 时，`bias` 数据类型会转成 `FLOAT` 参与计算。
-  - 不支持 `scale` 参数。
-
 
   <table>
   <tr>
@@ -251,50 +245,78 @@
   <th style="text-align:center; width:150px">x</th>
   <th style="text-align:center; width:150px">filter</th>
   <th style="text-align:center; width:100px">bias</th>
+  <th style="text-align:center; width:100px">scale</th>
   <th style="text-align:center; width:150px">y</th>
   </tr>
   <tr>
-  <td rowspan="4" style="text-align:center">数据类型</td>
+  <td rowspan="6" style="text-align:center">数据类型</td>
   <td style="text-align:center">FLOAT16</td>
   <td style="text-align:center">FLOAT16</td>
   <td style="text-align:center">FLOAT16</td>
+  <td style="text-align:center">/</td>
   <td style="text-align:center">FLOAT16</td>
   </tr>
   <tr>
   <td style="text-align:center">BFLOAT16</td>
   <td style="text-align:center">BFLOAT16</td>
   <td style="text-align:center">BFLOAT16</td>
+  <td style="text-align:center">/</td>
   <td style="text-align:center">BFLOAT16</td>
   </tr>
   <tr>
   <td style="text-align:center">FLOAT</td>
   <td style="text-align:center">FLOAT</td>
   <td style="text-align:center">FLOAT</td>
+  <td style="text-align:center">/</td>
   <td style="text-align:center">FLOAT</td>
   </tr>
   <tr>
   <td style="text-align:center">HIFLOAT8</td>
   <td style="text-align:center">HIFLOAT8</td>
   <td style="text-align:center">FLOAT</td>
+  <td style="text-align:center">/</td>
   <td style="text-align:center">HIFLOAT8</td>
   </tr>
   <tr>
-  <td rowspan="2" style="text-align:center">数据格式</td>
+  <td style="text-align:center">INT8</td>
+  <td style="text-align:center">INT8</td>
+  <td style="text-align:center">FLOAT/FLOAT16</td>
+  <td style="text-align:center">FLOAT</td>
+  <td style="text-align:center">FLOAT16</td>
+  </tr>
+  <tr>
+  <td style="text-align:center">INT8</td>
+  <td style="text-align:center">INT8</td>
+  <td style="text-align:center">FLOAT/BFLOAT16</td>
+  <td style="text-align:center">FLOAT</td>
+  <td style="text-align:center">BFLOAT16</td>
+  </tr>
+  <tr>
+  <td rowspan="3" style="text-align:center">数据格式</td>
   <td style="text-align:center">NCDHW</td>
   <td style="text-align:center">NCDHW</td>
   <td style="text-align:center">ND</td>
+  <td style="text-align:center">/</td>
   <td style="text-align:center">NCDHW</td>
   </tr>
   <tr>
   <td style="text-align:center">NDHWC</td>
   <td style="text-align:center">DHWCN</td>
   <td style="text-align:center">ND</td>
+  <td style="text-align:center">/</td>
+  <td style="text-align:center">NDHWC</td>
+  </tr>
+  <tr>
+  <td style="text-align:center">NCDHW</td>
+  <td style="text-align:center">NCDHW</td>
+  <td style="text-align:center">ND</td>
+  <td style="text-align:center">ND</td>
   <td style="text-align:center">NDHWC</td>
   </tr>
   </table>
 
 - `x`、`filter`、`bias`、`scale`、`y` 中每一组 `tensor` 的每一维大小都应不大于 1000000。
-
+- 当 `x` 数据类型为 `INT8` 时，`x`、`filter` 的数据格式仅支持 `NCDHW`，`output` 的数据格式仅支持 `NDHWC`。
 - `groups` ∈ [1, 65535]。
 
 - 如果任何参数超出上述范围，算子的正确性无法保证。
@@ -306,4 +328,5 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_conv3d_v2](./examples/test_aclnn_conv3d_v2.cpp) | 通过 [aclnnConvolution](../convolution_forward/docs/aclnnConvolution.md) 接口方式调用 Conv3DV2 算子。    |
+| aclnn调用 | [test_aclnn_conv3d_v2](./examples/test_aclnn_conv3d_v2.cpp) | 通过 [aclnnConvolution](../convolution_forward/docs/aclnnConvolution.md) 接口方式调用 Conv3DV2 算子的非`INT8`数据类型计算。    |
+| aclnn调用 | [test_aclnn_quant_conv3d](../quant_conv3d/examples/arch35/test_aclnn_quant_conv3d.cpp) | 通过 [aclnnQuantConvolution](../convolution_forward/docs/aclnnQuantConvolution.md) 接口方式调用 Conv3DV2 算子的`INT8`数据类型计算。    |
