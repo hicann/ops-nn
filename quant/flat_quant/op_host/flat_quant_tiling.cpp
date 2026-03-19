@@ -15,10 +15,12 @@
 #include "register/tilingdata_base.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include "error_util.h"
 #include "op_host/tiling_base.h"
 #include "op_host/tiling_util.h"
 #include "op_host/tiling_templates_registry.h"
 #include "flat_quant_tiling.h"
+#include "platform/soc_spec.h"
 
 namespace optiling {
 using namespace Ops::NN::OpTiling;
@@ -246,16 +248,35 @@ static ge::graphStatus Tiling4FlatQuantTiling(gert::TilingContext *context)
     return tilingObject.RunBigKernelTiling();
 }
 
-static ge::graphStatus TilingPrepareTiling(gert::TilingParseContext *context)
+static ge::graphStatus TilingPrepareTiling(gert::TilingParseContext* context)
 {
-    auto compileInfo =context->GetCompiledInfo<FlatQuantCompileInfo>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    compileInfo->coreNum = ascendcPlatform.GetCoreNumAic();
+    OP_TILING_CHECK(context == nullptr, "FlatQuant context is null", return ge::GRAPH_FAILED);
+    fe::PlatFormInfos* platformInfo = context->GetPlatformInfo();
+    OP_TILING_CHECK(platformInfo == nullptr, "FlatQuant platformInfoPtr is null", return ge::GRAPH_FAILED);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
 
-    OP_CHECK_IF(compileInfo->coreNum <= 0,
-        OP_LOGE(context->GetNodeName(), "FlatQuanrtTiling GetHardwareInfo Failed"),
+    auto compileInfo = context->GetCompiledInfo<FlatQuantCompileInfo>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+
+    compileInfo->coreNum = ascendcPlatform.GetCoreNumAic();
+    compileInfo->aivNum = ascendcPlatform.GetCoreNumAiv();
+    compileInfo->socVersion = ascendcPlatform.GetSocVersion();
+    NpuArch npuArch = ascendcPlatform.GetCurNpuArch();
+    bool IsArch3510 = npuArch == NpuArch::DAV_3510;
+
+    OP_LOGI(
+        "FlatQuant", "parse compile info success soc:%d, aicNum:%lu, aivNum:%lu",
+        static_cast<int>(compileInfo->socVersion), compileInfo->coreNum, compileInfo->aivNum);
+    OP_CHECK_IF(
+        compileInfo->coreNum <= 0, OP_LOGE(context->GetNodeName(), "FlatQuant is not supported for aicNum <=0 "),
         return ge::GRAPH_FAILED);
+    if (IsArch3510) {
+        OP_CHECK_IF(
+            compileInfo->aivNum != (compileInfo->coreNum * 2), // aivNum must == aicNum*2
+            OP_LOGE(context->GetNodeName(), "FlatQuantTiling is only supported for aivNum == aicNum*2 "),
+            return ge::GRAPH_FAILED);
+    }
+
     return ge::GRAPH_SUCCESS;
 }
 

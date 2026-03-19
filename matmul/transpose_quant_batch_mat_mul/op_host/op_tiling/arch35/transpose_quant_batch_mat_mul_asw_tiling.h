@@ -27,10 +27,7 @@ public:
     ~TransposeQuantBatchMatMulAswTiling() override = default;
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    };
+    bool IsCapable() override;
 
     ge::graphStatus DoOpTiling() override;
 

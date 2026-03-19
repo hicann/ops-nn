@@ -22,6 +22,9 @@ namespace optiling {
 
 struct FlatQuantCompileInfo {
     int64_t coreNum;
+    int64_t aivNum;
+    platform_ascendc::SocVersion socVersion;
+    std::string socVersionStr = "";
 };
 
 BEGIN_TILING_DATA_DEF(FlatQuantTilingData)

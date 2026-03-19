@@ -25,6 +25,9 @@ MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulAswBasicApiTiling, DAV_3510,
 
 bool FusedMatMulAswBasicApiTiling::IsCapable()
 {
+    auto attrs = context_->GetAttrs();
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
+    std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
     if (args_.batchInfo->batchC > 1) {
         OP_LOGD(args_.opName, "bmm only support IterBatch shape");
         return false;
@@ -33,7 +36,13 @@ bool FusedMatMulAswBasicApiTiling::IsCapable()
         OP_LOGD(args_.opName, "ND is the only supported format for basic api");
         return false;
     }
-
+    if (opType == "add" || opType == "mul") {
+        // when optype is "add" or "mul", aivNum must == aicNum * 2
+        if (compileInfo_.aivNum != (compileInfo_.aicNum * NUM_TWO)) {
+            OP_LOGD(args_.opName, "FusedMatMul aswt model only support aivNum == aicNum *2");
+            return false;
+        }
+    }
     OP_LOGI(args_.opName, "FusedMatMul tiling enable state basic api");
     return true;
 }

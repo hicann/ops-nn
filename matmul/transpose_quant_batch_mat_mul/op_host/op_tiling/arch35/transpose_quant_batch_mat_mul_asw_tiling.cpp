@@ -18,6 +18,7 @@
 #include "transpose_quant_batch_mat_mul_tiling_strategy.h"
 #include "op_host/tiling_key.h"
 #include "../../../op_kernel/arch35/transpose_quant_batch_mat_mul_tiling_key.h"
+#include "matmul/common/op_host/math_util.h"
 
 using Ops::NN::MathUtil;
 namespace optiling {
@@ -43,13 +44,22 @@ ge::graphStatus TransposeQuantBatchMatMulAswTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
+bool TransposeQuantBatchMatMulAswTiling::IsCapable()
+{
+    if (compileInfo_.aivNum != compileInfo_.aicNum * NUM_TWO) {
+        OP_LOGE(
+            args_.opName, "TransposeQuantBatchMatMul is only supported for aivNum == aicNum *2.aivNum:%llu,aicNum:%llu",
+            compileInfo_.aivNum, compileInfo_.aicNum);
+        return false;
+    }
+    return true;
+}
+
 void TransposeQuantBatchMatMulAswTiling::AdjustBasicBlock()
 {
     uint64_t baseMAlignNum = args_.isATrans ? L2_ALIGN_SIZE : CUBE_BLOCK;
     uint64_t baseNAlignNum = args_.isBTrans ? CUBE_BLOCK : L2_ALIGN_SIZE;
-    uint64_t baseKAlignNum = (args_.isATrans && ! args_.isBTrans) ?
-                                 BASIC_BLOCK_SIZE_32:
-                                 L2_ALIGN_SIZE;
+    uint64_t baseKAlignNum = (args_.isATrans && !args_.isBTrans) ? BASIC_BLOCK_SIZE_32 : L2_ALIGN_SIZE;
     uint64_t mMaxtile = MathUtil::CeilDivision(args_.mValue, baseMAlignNum);
     uint64_t nMaxtile = MathUtil::CeilDivision(args_.nValue, baseNAlignNum);
     uint64_t tempBaseM = runInfo_.baseM;

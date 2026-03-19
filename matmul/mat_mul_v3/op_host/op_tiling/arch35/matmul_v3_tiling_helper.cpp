@@ -158,7 +158,7 @@ MatMulV3L0C2Out GetL0C2OutDav3510(const MatmulV3CompileInfo &compileInfo, const 
     // 128: SMALL_SHAPE_LOWER_THRES
     bool isUnalignedN = args.nValue * cDtypeSize % 128UL != 0 && args.nValue * cDtypeSize > BASIC_BLOCK_SIZE_256;
     bool fixpipeBound = isValidMKN && isMultiRound && isUnalignedN;
-    if (!fixpipeBound) {
+    if (!fixpipeBound || (compileInfo.aivNum != (compileInfo.aicNum * NUM_TWO))) {
         return MatMulV3L0C2Out::ON_THE_FLY;
     }
     if (args.aType == ge::DT_FLOAT16 || args.aType == ge::DT_BF16) {

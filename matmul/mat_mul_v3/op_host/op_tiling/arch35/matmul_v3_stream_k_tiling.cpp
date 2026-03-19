@@ -156,6 +156,10 @@ bool MatMulV3StreamKTiling::IsCapable()
         OP_LOGD(args_.opName, "NonContiguous self does not support StreamK");
         return false;
     }
+    if (compileInfo_.aivNum != (compileInfo_.aicNum * NUM_TWO)) {
+        OP_LOGD(args_.opName, "streamk only support aivNum == aicNum * 2");
+        return false;
+    }
     return (CheckStreamKSKTiling() || CheckStreamKDPSKTiling());
 }
 

@@ -14,6 +14,7 @@
  */
 #include "fused_matmul_iterbatch_basic_tiling.h"
 #include "fused_matmul_builtin_tiling_strategy.h"
+#include "fused_matmul_common.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "matmul/common/op_host/math_util.h"
 
@@ -24,10 +25,20 @@ MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulIterBatchApiTiling, DAV_3510
 
 bool FusedMatMulIterBatchApiTiling::IsCapable()
 {
+    auto attrs = context_->GetAttrs();
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
+    std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
     bool status = BatchMatMulV3IterBatchBasicApiTiling::IsCapable();
     if (!status) {
         OP_LOGD(args_.opName, "IterBatch model is not supported for this shape");
         return false;
+    }
+    if (opType == "add" || opType == "mul") {
+        // when optype is "add" or "mul", aivNum must == aicNum * 2
+        if (compileInfo_.aivNum != (compileInfo_.aicNum * NUM_TWO)) {
+            OP_LOGW(args_.opName, "FusedMatMul IterBatch model only support aivNum == aicNum *2");
+            return false;
+        }
     }
     OP_LOGI(args_.opName, "FusedMatMul tiling enable iterbatch basic api");
     return true;

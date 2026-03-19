@@ -242,7 +242,8 @@ ge::graphStatus BatchMatMulV3IterBatchBasicApiTiling::DoOpTiling()
 
     // enable Fixpipe optimization
     if (args_.nValue * args_.bDtypeSize > BASIC_BLOCK_SIZE_256 &&
-        args_.nValue % (BASIC_BLOCK_SIZE_256 / args_.bDtypeSize) != 0) {
+        args_.nValue % (BASIC_BLOCK_SIZE_256 / args_.bDtypeSize) != 0 &&
+        (compileInfo_.aivNum == (compileInfo_.aicNum * NUM_TWO))) {
         l0C2Out_ = MatMulV3L0C2Out::ND_FIXPIPE_1_2;
     }
     OP_LOGI(
