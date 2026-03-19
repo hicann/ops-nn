@@ -300,14 +300,6 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
       <td>161002</td>
       <td>输入或输出的数据类型不在支持的范围之内。</td>
     </tr>
-    <tr>
-      <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="2">561002</td>
-      <td>输入smoothScale2Optional，而没有输入smoothScale1Optional。</td>
-    </tr>
-    <tr>
-      <td>输入/输出的shape关系不符合预期。</td>
-    </tr>
   </tbody></table>
 
 ## aclnnAddRmsNormDynamicQuant

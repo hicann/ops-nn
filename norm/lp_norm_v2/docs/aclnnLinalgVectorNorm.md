@@ -117,7 +117,7 @@ aclnnStatus aclnnLinalgVectorNorm(
       <td>dtype（aclDataType）</td>
       <td>输入</td>
       <td>指定self计算时的数据类型。需要与out的dtype一致。</td>
-      <td><ul>在计算前将self转换成dtype指定类型进行计算。dtype需要与self数据类型满足转换关系：<li>当self数据类型为FLOAT32时，dtype只能为FLOAT32。</li><li>self数据类型为FLOAT16时，dtype可以为FLOAT或FLOAT16。</li><li>self数据类型为BFLOAT16时，dtype可以为FLOAT或BFLOAT16。</li></ul></td>
+      <td>在计算前将self转换成dtype指定类型进行计算。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>-</td>
       <td>-</td>
@@ -183,8 +183,6 @@ aclnnStatus aclnnLinalgVectorNorm(
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="8">161002</td>
-      <td>self或out的数据类型不在支持的范围之内。</td>
-    </tr>
     <tr>
       <td>dims超过[-N, N-1] (N表示self的维度)。</td>
     </tr>
@@ -202,9 +200,6 @@ aclnnStatus aclnnLinalgVectorNorm(
     </tr>
     <tr>
       <td>out的shape不等于由self，dim，keepDim推导得到的shape。</td>
-    </tr>
-    <tr>
-      <td>dtype不满足与self数据类型的转换关系。</td>
     </tr>
   </tbody></table>
 

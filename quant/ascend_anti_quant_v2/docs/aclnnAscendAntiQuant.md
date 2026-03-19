@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：根据输入的sacle和offset对输入x进行反量化。
+- 接口功能：根据输入的scale和offset对输入x进行反量化。
 - 计算公式：
   - sqrtMode为false时，计算公式为：
 

@@ -159,7 +159,7 @@ aclnnStatus aclnnLayerNormQuant(
       <td>quantMode（int）</td>
       <td>输入</td>
       <td>量化模式，用于确定融合算子融合的时静态还是动态量化算子。对应公式中的`quantMode`。取值为0（静态量化）或1（动态量化）。</td>
-      <td>-</td>
+      <td>当前仅支持取值为0。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -243,8 +243,8 @@ aclnnStatus aclnnLayerNormQuant(
       <td>如果传入参数是必选输入，输出或者必选属性，且是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="6">161002</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
       <td>硬件平台不在支持的产品范围内。</td>
     </tr>
     <tr>
@@ -261,6 +261,9 @@ aclnnStatus aclnnLayerNormQuant(
     </tr>
     <tr>
       <td>zeroPointsOptional、scale的shape不相同。</td>
+    </tr>
+    <tr>
+      <td>quantMode的取值不为0。</td>
     </tr>
   </tbody></table>
 

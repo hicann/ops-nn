@@ -230,9 +230,6 @@ aclnnStatus aclnnDynamicBlockQuant(
       <td rowspan="5">161002</td>
       <td>输入或输出数据格式或数据类型不在支持的范围之内。</td>
     </tr>
-    <tr>
-      <td>输入或输出数据的shape不在支持的范围之内。</td>
-    </tr>
   </tbody></table>
 
 ## aclnnDynamicBlockQuant

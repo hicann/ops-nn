@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：根据输入的sacle和offset对输入x进行量化，且scale和offset的size需要是x的最后一维或1。
+- 接口功能：根据输入的scale和offset对输入x进行量化，且scale和offset的size需要是x的最后一维或1。
 - 计算公式：
   - sqrtMode为false时，计算公式为:
 
@@ -84,9 +84,9 @@ aclnnStatus aclnnAscendQuant(
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>需要执行量化的输入。对应公式中的`x`。</td>
-      <td><ul><li>支持空Tensor。</li><li>如果`dstType`为3，shape的最后一维需要能被8整除；如果`dstType`为29，shape的最后一维需要能被2整除。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>如果`dstType`为3，shape的最后一维需要能被8整除；如果`dstType`为29，shape的最后一维需要能被2整除。</li><li>数据格式为NZ时，shape只支持3维，shape的最后一维需要能被8整除。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>ND</td>
+      <td>ND、NZ</td>
       <td>1-8</td>
       <td>√</td>
     </tr>
@@ -94,9 +94,9 @@ aclnnStatus aclnnAscendQuant(
       <td>scale（aclTensor*）</td>
       <td>输入</td>
       <td>量化中的scale值。对应公式中的`scale`。</td>
-      <td><ul><li>支持空Tensor。</li><li>`scale`支持1维张量或多维张量（当shape为1维张量时，`scale`的第0维需要等于x的最后一维或等于1；当shape为多维张量时，`scale`的维度需要和`x`保持一致，最后一个维度的值需要和`x`保持一致，其他维度为1）。</li><li>如果`x`的dtype不是FLOAT32，需要和`x`的dtype一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>`scale`支持1维张量或多维张量（当shape为1维张量时，`scale`的第0维需要等于x的最后一维或等于1；当shape为多维张量时，`scale`的维度需要和`x`保持一致，最后一个维度的值需要和`x`保持一致，其他维度为1）。</li><li>如果`x`的dtype不是FLOAT32，需要和`x`的dtype一致。</li><li>当数据格式为NZ时，`scale`的所有元素值为1。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>ND</td>
+      <td>ND、NZ</td>
       <td>1-8</td>
       <td>√</td>
     </tr>
@@ -104,9 +104,9 @@ aclnnStatus aclnnAscendQuant(
       <td>offset（aclTensor*）</td>
       <td>输入</td>
       <td>可选参数，反量化中的offset值。对应公式中的`offset`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型和shape需要与`scale`保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型和shape需要与`scale`保持一致。</li><li>数据格式为NZ时，值为空，offset的数据类型和x保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>ND</td>
+      <td>ND、NZ</td>
       <td>1-8</td>
       <td>√</td>
     </tr>
@@ -124,7 +124,7 @@ aclnnStatus aclnnAscendQuant(
       <td>roundMode（char*）</td>
       <td>输入</td>
       <td>指定cast到INT8输出的转换方式。</td>
-      <td>支持取值round/ceil/trunc/floor。</td>
+      <td><ul><li>支持取值round/ceil/trunc/floor。</li><li>当输入`x`的数据格式为NZ时，支持取值round。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -134,7 +134,7 @@ aclnnStatus aclnnAscendQuant(
       <td>dstType（int32_t）</td>
       <td>输入</td>
       <td>指定输出的数据类型。</td>
-      <td>支持取值2、3、29，分别表示INT8、INT32、INT4。</td>
+      <td><ul><li>支持取值2、3、29，分别表示INT8、INT32、INT4。</li><li>当输入`x`的数据格式为NZ时，支持取值3，表示INT32。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -146,7 +146,7 @@ aclnnStatus aclnnAscendQuant(
       <td>量化的计算输出。对应公式中的`y`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型为INT32时，shape的最后一维是`x`最后一维的1/8，其余维度和`x`一致；其他类型时，shape与`x`一致。</li></ul></td>
       <td>INT8、INT32、INT4</td>
-      <td>ND</td>
+      <td>ND、NZ</td>
       <td>1-8</td>
       <td>√</td>
     </tr>
@@ -173,11 +173,16 @@ aclnnStatus aclnnAscendQuant(
   </tbody>
   </table>
   
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+
+    - 参数`x`、`scale`、`offset`的数据格式为NZ时，数据类型仅支持FLOAT32。
+    - 当数据格式为NZ时，出参`y`的数据类型支持INT32。
+
   - <term>Atlas 推理系列产品</term>：
-    - 入参`x`、`scale`、`offset`的数据类型不支持BFLOAT16。
-    - 出参`y`数据类型仅支持INT8。
+    - 入参`x`、`scale`、`offset`的数据类型不支持BFLOAT16，数据格式不支持NZ。
+    - 出参`y`数据类型仅支持INT8，数据格式不支持NZ。
     - 入参`dstType`仅支持取值2，表示INT8。
-  
+
 
 - **返回值：**
 

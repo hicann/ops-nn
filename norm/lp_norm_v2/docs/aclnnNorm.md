@@ -150,10 +150,7 @@ aclnnStatus aclnnNorm(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>公式中的out。</td>
-      <td>
-        若keepdim为true，除dim指定维度上的size为1以外，其余维度的shape需要与self保持一致；<br>
-        若keepdim为false，reduce轴的维度不保留，其余维度shape需要与self一致。
-      </td>
+      <td><ul><li>若keepdim为true，除dim指定维度上的size为1以外，其余维度的shape需要与self保持一致。</li><li>若keepdim为false，reduce轴的维度不保留，其余维度shape需要与self一致。</li></ul></td>
       <td>
         FLOAT32、FLOAT16、BFLOAT16
       </td>
@@ -211,7 +208,7 @@ aclnnStatus aclnnNorm(
     <tr>
       <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="6">161002</td>
-      <td>self的数据类型和数据格式不在支持的范围之内。</td>
+      <td>self的数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>dim和keepdim的数据类型和数据格式不符合接口入参要求。</td>
