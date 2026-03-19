@@ -750,6 +750,13 @@ static aclnnStatus ExecScatterGetWorkspaceSize(
     return ret;
 }
 
+static void CheckFormat(const aclTensor* self) {
+    ge::Format selfStorageFormat = self->GetStorageFormat();
+    if (selfStorageFormat == ge::Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGW("aclnnScatterValue/aclnnInplaceScatterValue doesn't support format NZ.");
+    }
+}
+
 static aclnnStatus ExecScatterValueGetWorkspaceSize(
     const aclTensor* self, int64_t dim, const aclTensor* index, const aclScalar* value, int64_t reduce, aclTensor* out,
     uint64_t* workspaceSize, aclOpExecutor** executor)
@@ -765,6 +772,9 @@ static aclnnStatus ExecScatterValueGetWorkspaceSize(
     CHECK_COND(
         isTensorComplex(self) || !isScalarComplex(value), ACLNN_ERR_PARAM_INVALID,
         "When value is COMPLEX, the data type of self must be COMPLEX.");
+
+    // 检查格式
+    CheckFormat(self);
 
     if (index->IsEmpty()) {
         auto selfContiguous = InitializeTensor(self, uniqueExecutor.get());

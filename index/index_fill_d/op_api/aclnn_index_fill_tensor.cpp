@@ -200,6 +200,13 @@ static const aclTensor *GenerateAssistMatrix(const aclTensor *self, const aclInt
   return ReshapeTensor(castedTensor, shapeArray, executor);
 }
 
+static void CheckFormat(const aclTensor* self) {
+    ge::Format selfStorageFormat = self->GetStorageFormat();
+    if (selfStorageFormat == ge::Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGW("aclnnIndexFillTensor/aclnnInplaceIndexFillTensor doesn't support format NZ.");
+    }
+}
+
 aclnnStatus aclnnIndexFillTensorGetWorkspaceSize(const aclTensor *self, int64_t dim, const aclIntArray *index,
                                                  const aclScalar *value, aclTensor *out,
                                                  uint64_t *workspaceSize, aclOpExecutor **executor) {
@@ -209,6 +216,9 @@ aclnnStatus aclnnIndexFillTensorGetWorkspaceSize(const aclTensor *self, int64_t 
   // 固定写法，参数检查
   auto ret = CheckParams(self, dim, index, value, out);
   CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+  // 检查格式
+  CheckFormat(self);
 
   // 固定写法，创建OpExecutor
   auto uniqueExecutor = CREATE_EXECUTOR();
