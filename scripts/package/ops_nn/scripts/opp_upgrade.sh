@@ -316,7 +316,7 @@ getinstallpath() {
 }
 
 setenv() {
-    logandprint "[INFO]: Set the environment path [ export ASCEND_OPS_NN_PATH=${relative_path_val}/${ops_nn_platform_dir} ]."
+    logandprint "[INFO]: Set the environment path [ export ASCEND_OPS_NN_PATH=${relative_path_val}/opp ]."
     if [ "${is_docker_install}" = y ] ; then
         upgrade_option="--docker-root=${docker_root}"
     else
