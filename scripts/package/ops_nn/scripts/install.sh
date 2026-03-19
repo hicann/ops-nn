@@ -1,6 +1,6 @@
 #!/bin/bash
 # ----------------------------------------------------------------------------
-# Copyright (c) 2025 Huawei Technologies Co., Ltd.
+# Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
 # This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -51,8 +51,8 @@ OPP_COMMON_FILE="${CURR_PATH}/opp_common.sh"
 
 ARCH_INFO=$(grep -e "arch" "$RUN_PKG_INFO_FILE" | cut --only-delimited -d"=" -f2-)
 # 包内路径
-GRAPH_SO_PATH="${CURR_PATH}/../../../../${OPP_PLATFORM_DIR}/built-in/op_graph/lib/linux/${ARCH_INFO}/libopgraph_nn.so"
-HOST_SO_PATH="${CURR_PATH}/../../../../${OPP_PLATFORM_DIR}/built-in/op_impl/ai_core/tbe/op_host/lib/linux/${ARCH_INFO}/libophost_nn.so"
+GRAPH_SO_PATH="${CURR_PATH}/../../../../opp/built-in/op_graph/lib/linux/${ARCH_INFO}/libopgraph_nn.so"
+HOST_SO_PATH="${CURR_PATH}/../../../../opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux/${ARCH_INFO}/libophost_nn.so"
 # defaluts info determinated by user's inputs
 ASCEND_INSTALL_INFO="ascend_install.info"
 TARGET_INSTALL_PATH="${DEFAULT_INSTALL_PATH}" #--input-path
@@ -324,7 +324,9 @@ get_opts() {
   done
 
   if [ "$*" = "" ]; then
-    echo "[ERROR]: ERR_NO:${PARAM_INVALID}; ERR_DES:Unrecognized parameters.Try './xxx.run --help for more information.'"
+    echo "[OpsNn] [ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES:\
+ only support one type: full/upgrade/uninstall, operation execute failed!\
+ Please use [--help] to see the usage."
     exitlog
     exit 1
   fi
@@ -387,7 +389,7 @@ check_opts() {
 
   if [ "${CONFLICT_CMD_NUMS}" != 1 ]; then
     echo "[OpsNn] [ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES:\
- only support one type: full/run/devel/upgrade/uninstall/check, operation execute failed!\
+ only support one type: full/upgrade/uninstall, operation execute failed!\
  Please use [--help] to see the usage."
     exitlog
     exit 1
@@ -489,6 +491,36 @@ mkdir_install_path() {
   fi
 }
 
+handle_multi_arch_install() {
+  local target_dir="$1"
+  local so_file="$2"
+  local lib_dir
+  lib_dir=$(dirname "${target_dir}")
+  local need_restore_lib_w="n"
+  local need_restore_target_w="n"
+
+  if [ -d "${lib_dir}" ]; then
+    if [ ! -w "${lib_dir}" ]; then
+      need_restore_lib_w="y"
+      chmod u+w "${lib_dir}"
+    fi
+  else
+    mkdir -p "${lib_dir}"
+  fi
+  if [ -d "${target_dir}" ]; then
+    if [ ! -w "${target_dir}" ]; then
+      need_restore_target_w="y"
+      chmod u+w "${target_dir}"
+    fi
+  else
+    mkdir -p "${target_dir}"
+  fi
+  cp -f "${so_file}" "${target_dir}"
+  chmod 755 "${target_dir}"/*
+  [ "${need_restore_target_w}" = "y" ] && chmod u-w "${target_dir}"
+  [ "${need_restore_lib_w}" = "y" ] && chmod u-w "${lib_dir}"
+}
+
 install_package() {
   if [ "${IS_INSTALL}" = "n" ] && [ "${IS_UPGRADE}" = "n" ]; then
     return
@@ -503,21 +535,8 @@ install_package() {
   # check platform
   if [ "${architecture}" != "${ARCH_INFO}" ]; then
     logandprint "[INFO]: the architecture of the run package is inconsistent with that of the current environment. "
-    # 异构安装场景，拷贝so到指定目录
-    if [ -d "${TARGET_VERSION_DIR}/opp/built-in/op_graph/lib/linux" ]; then
-      chmod u+w ${TARGET_VERSION_DIR}/opp/built-in/op_graph/lib/linux
-    fi
-    if [ -d "${TARGET_VERSION_DIR}/opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux" ]; then
-      chmod u+w ${TARGET_VERSION_DIR}/opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux
-    fi
-    mkdir -p ${graph_so_dir_path}
-    mkdir -p ${host_so_dir_path}
-    cp ${GRAPH_SO_PATH} ${graph_so_dir_path}
-    cp ${HOST_SO_PATH} ${host_so_dir_path}
-    chmod 755 ${graph_so_dir_path}/*
-    chmod 755 ${host_so_dir_path}/*
-    chmod u-w ${TARGET_VERSION_DIR}/opp/built-in/op_graph/lib/linux
-    chmod u-w ${TARGET_VERSION_DIR}/opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux
+    handle_multi_arch_install "${graph_so_dir_path}" "${GRAPH_SO_PATH}"
+    handle_multi_arch_install "${host_so_dir_path}" "${HOST_SO_PATH}"
     exit 0
   fi
   # use uninstall to clean the install folder
@@ -543,6 +562,40 @@ install_package() {
   comm_log_operation "Install" "${IN_INSTALL_TYPE}" "OpsNn" "$?" "${CMD_LIST}"
 }
 
+# 通用函数：删除so文件和空目录（带权限检查）
+# 参数: $1 - so文件完整路径
+remove_so_and_empty_dir() {
+  local so_path="$1"
+  local so_dir_path=$(dirname "${so_path}")
+  local parent_dir=$(dirname "${so_dir_path}")
+  local so_dir_w_added=0
+  local parent_dir_w_added=0
+
+  # 删除so文件
+  if [ -f "${so_path}" ]; then
+    # 检查目录写权限，无权限时临时添加
+    if [ -d "${so_dir_path}" ] && [ ! -w "${so_dir_path}" ]; then
+      chmod u+w "${so_dir_path}" 2>/dev/null
+      so_dir_w_added=1
+    fi
+    rm -f "${so_path}"
+  fi
+
+  # 删除空目录
+  if [ -d "${so_dir_path}" ] && [ -z "$(ls -A "${so_dir_path}")" ]; then
+    # 检查父目录写权限，无权限时临时添加
+    if [ -d "${parent_dir}" ] && [ ! -w "${parent_dir}" ]; then
+      chmod u+w "${parent_dir}" 2>/dev/null
+      parent_dir_w_added=1
+    fi
+    rm -rf "${so_dir_path}"
+  fi
+
+  # 恢复权限
+  [ ${parent_dir_w_added} -eq 1 ] && chmod -w "${parent_dir}" 2>/dev/null
+  [ ${so_dir_w_added} -eq 1 ] && chmod -w "${so_dir_path}" 2>/dev/null
+}
+
 uninstall_package() {
   if [ "${IS_UNINSTALL}" = "n" ]; then
     return
@@ -562,6 +615,7 @@ uninstall_package() {
 
   # 如果是异构卸载
   local architecture=$(uname -m)
+  local target_arch=""
   if [ "${architecture}" != ${ARCH_INFO} ]; then
     target_arch=${ARCH_INFO}
   else
@@ -572,27 +626,13 @@ uninstall_package() {
         target_arch="x86_64"
     fi
   fi
+
+  # 删除异构so文件和空目录
   local graph_so_path="${TARGET_VERSION_DIR}/opp/built-in/op_graph/lib/linux/${target_arch}/libopgraph_nn.so"
-  local graph_so_dir_path="${TARGET_VERSION_DIR}/opp/built-in/op_graph/lib/linux/${target_arch}"
   local host_so_path="${TARGET_VERSION_DIR}/opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux/${target_arch}/libophost_nn.so"
-  local host_so_dir_path="${TARGET_VERSION_DIR}/opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux/${target_arch}"
-  if [ -f "${graph_so_path}" ]; then
-      rm -f "${graph_so_path}"
-  fi
-  if [ -f "${host_so_path}" ]; then
-      rm -f "${host_so_path}"
-  fi
-  # 判断目录是否存在且是否为空
-  if [ -d "${graph_so_dir_path}" ]; then
-      if [ -z "$(ls -A "${graph_so_dir_path}")" ]; then
-          rm -rf "${graph_so_dir_path}"
-      fi
-  fi
-  if [ -d "${host_so_dir_path}" ]; then
-      if [ -z "$(ls -A "${host_so_dir_path}")" ]; then
-          rm -rf "${host_so_dir_path}"
-      fi
-  fi
+  remove_so_and_empty_dir "${graph_so_path}"
+  remove_so_and_empty_dir "${host_so_path}"
+
   if [ "${architecture}" != ${ARCH_INFO} ]; then
       return
   fi
