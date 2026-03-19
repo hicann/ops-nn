@@ -21,6 +21,7 @@
 
 - 计算公式：
 
+
   $$
   x=x_{1}+x_{2}
   $$
@@ -43,9 +44,11 @@
     \end{cases}
   $$
 
+ 
   $$
   scale1Out=\begin{cases}
-    row\_max(abs(input1))/127 & outputMask[0]=True\ ||\ !outputMask \\
+    row\_max(abs(input1))/127 & (outputMask[0]=True\ ||\ !outputMask) \& y1Out为INT8 \\
+    row\_max(abs(input1))/7 & (outputMask[0]=True\ ||\ !outputMask) \& y1Out为INT4 \\
     无效输出 & outputMask[0]=False
     \end{cases}
   $$
@@ -57,10 +60,10 @@
     \end{cases}
   $$
 
-
   $$
   scale2Out=\begin{cases}
-    row\_max(abs(input2))/127 & outputMask[1]=True\ ||\ (!outputMask\ \&\ smoothScale1Optional\ \&\ smoothScale2Optional) \\
+    row\_max(abs(input2))/127 & (outputMask[1]=True\ ||\ (!outputMask\ \&\ smoothScale1Optional\ \&\ smoothScale2Optional)) \& y2Out为INT8 \\
+    row\_max(abs(input2))/7 & (outputMask[1]=True\ ||\ (!outputMask\ \&\ smoothScale1Optional\ \&\ smoothScale2Optional)) \& y2Out为INT4 \\
     无效输出 & outputMask[1]=False\ ||\ (!outputMask\ \&\ smoothScale1Optional\ \&\ !smoothScale2Optional)
     \end{cases}
   $$
@@ -309,17 +312,12 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>如果传入参数是必选输入，输出或者必选属性，且是空指针，则返回161001。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">161002</td>
       <td>输入或输出的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="2">561002</td>
       <td>outputMaskOptional为空指针时，输入smoothScale2Optional，而没有输入smoothScale1Optional。</td>
-    </tr>
-    <tr>
-      <td>输入/输出的shape关系不符合预期。</td>
     </tr>
   </tbody></table>
 

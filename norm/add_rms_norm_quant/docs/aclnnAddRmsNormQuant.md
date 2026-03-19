@@ -361,10 +361,6 @@ aclnnStatus aclnnAddRmsNormQuant(
 
 - <term>Atlas 推理系列产品</term>：x1、x2、y1Out、y2Out、xOut的norm轴长度，以及gamma、scales1、scales2Optional、zeroPoints1Optional、zeroPoints2Optional的长度必须大于等于32Bytes。
 
-- 支持类型说明：
-
-  是否支持空Tensor：支持空进空出。
-
 - 数据格式说明：
   
   所有输入输出Tensor的数据格式推荐使用ND格式，其他数据格式会由框架默认转换成ND格式进行处理。

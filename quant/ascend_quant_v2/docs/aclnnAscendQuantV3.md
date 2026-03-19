@@ -126,7 +126,7 @@ aclnnStatus aclnnAscendQuantV3(
       <td>roundMode（char*）</td>
       <td>输入</td>
       <td>指定cast到INT8输出的转换方式。</td>
-      <td><ul><li>支持取值round/ceil/trunc/floor/hybrid。</li><li>当输入`x`的数据格式为NZ时，支持取值round。</li></td>
+      <td><ul><li>支持取值round/ceil/trunc/floor/hybrid。</li><li>当输入`x`的数据格式为NZ时，支持取值round。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -136,7 +136,7 @@ aclnnStatus aclnnAscendQuantV3(
       <td>dstType（int32_t）</td>
       <td>输入</td>
       <td>指定输出的数据类型。</td>
-      <td><ul><li>支持取值2，3，29，34，35，36，分别表示INT8、INT32、INT4、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN。</li><li>当输入`x`的数据格式为NZ时，支持取值3，表示INT32。</li></td>
+      <td><ul><li>支持取值2，3，29，34，35，36，分别表示INT8、INT32、INT4、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN。</li><li>当输入`x`的数据格式为NZ时，支持取值3，表示INT32。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

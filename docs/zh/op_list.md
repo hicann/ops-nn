@@ -2942,7 +2942,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>根据输入的sacle和offset对输入x进行量化，且scale和offset的size需要是x的最后一维或1。</td>
+    <td>根据输入的scale和offset对输入x进行量化，且scale和offset的size需要是x的最后一维或1。</td>
   </tr>
   <tr>
     <td>quant</td>

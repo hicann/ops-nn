@@ -90,7 +90,7 @@ aclnnStatus aclnnForeachSubScalarList(
     <tr>
       <td>scalars（aclScalarList*）</td>
       <td>输入</td>
-      <td>表示减法运算的第二个输入标量列表，对应公式中的`x2`。</td>
+      <td>表示减法运算的第二个输入标量列表，对应公式中的`scalars`。</td>
       <td><ul><li>元素个数与`x`中Tensor的个数相等。</li><li>数据类型与入参`x`的数据类型具有一定对应关系：<ul><li>当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型仅支持FLOAT32。</li><li>当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。</li></ul></td>
       <td>FLOAT32、INT64</td>
       <td>-</td>
