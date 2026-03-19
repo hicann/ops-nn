@@ -15,12 +15,13 @@
 
 current_dir=$(pwd)
 variables_cmake="cmake/variables.cmake"
-pr_file=$(realpath "${1:-pr_filelist.txt}")
 # 提取 OP_CATEGORY_LIST 的值
 op_category_list=$(grep -oP 'set\(OP_CATEGORY_LIST\s*\K".*"' $current_dir/$variables_cmake | sed 's/"//g')
 IFS=' ' read -r -a op_categories <<< "$op_category_list"
 
 THREAD_NUM="-j16"
+force=""
+pr_file="pr_filelist.txt"
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -j)
@@ -36,7 +37,16 @@ while [[ $# -gt 0 ]]; do
             THREAD_NUM="$1"
             shift
             ;;
+        --no_force)
+            force="--no_force"
+            shift
+            ;;
+        -*)
+            echo "Unknown option: $1"
+            shift
+            ;;
         *)
+            pr_file=$(realpath "${1:-pr_filelist.txt}")
             shift
             ;;
     esac
@@ -167,8 +177,8 @@ for name in "${ops_name[@]}"
 do
     rm -rf build
     rm -rf build_out
-    echo "[EXECUTE_COMMAND] bash build.sh --pkg --vendor_name=$name --ops=$name ${THREAD_NUM}"
-    bash build.sh --pkg --vendor_name=$name --ops=$name --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} ${THREAD_NUM}
+    echo "[EXECUTE_COMMAND] bash build.sh --pkg --vendor_name=$name --ops=$name ${THREAD_NUM} ${force}"
+    bash build.sh --pkg --vendor_name=$name --ops=$name --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} ${THREAD_NUM} ${force}
     status=$?
     if [ $status -ne 0 ]; then
         echo "${name} check pkg fail"

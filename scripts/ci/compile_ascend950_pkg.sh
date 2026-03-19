@@ -100,6 +100,7 @@ IFS=' ' read -r -a op_categories <<< "$op_category_list"
 builtin_dirs=()
 experimental_dirs=()
 force_jit="false"
+force=""
 pr_file="pr_filelist.txt"
 THREAD_NUM="-j16"
 while [[ $# -gt 0 ]]; do
@@ -118,6 +119,10 @@ while [[ $# -gt 0 ]]; do
             else
                 echo "-pr_file use default value: $pr_file"
             fi
+            shift
+            ;;
+        --no_force)
+            force="--no_force"
             shift
             ;;
         -j)
@@ -242,14 +247,14 @@ a5_soc="ascend950"
 
 if [[ ${#builtin_ops_name[@]} -gt 0 && "$force_jit" = "false" ]]; then
     builtin_ops_str=$(IFS=,; echo "${builtin_ops_name[*]}")
-    build_cmd="bash build.sh --pkg --ops=$builtin_ops_str --soc=$a5_soc ${THREAD_NUM} --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH}"
+    build_cmd="bash build.sh --pkg --ops=$builtin_ops_str --soc=$a5_soc ${THREAD_NUM} --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} ${force}"
     run_build_command "$build_cmd"
     execute_run_file "custom"
 fi
 
 if [[ ${#experimental_ops_name[@]} -gt 0 && "$force_jit" = "false" ]]; then
     experimental_ops_str=$(IFS=,; echo "${experimental_ops_name[*]}")
-    build_cmd="bash build.sh --pkg --experimental --ops=$experimental_ops_str --soc=$a5_soc ${THREAD_NUM} --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH}"
+    build_cmd="bash build.sh --pkg --experimental --ops=$experimental_ops_str --soc=$a5_soc ${THREAD_NUM} --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} ${force}"
     run_build_command "$build_cmd"
     execute_run_file "custom"
 fi

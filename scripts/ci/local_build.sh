@@ -17,6 +17,7 @@ ENABLE_OPHOST=false
 ENABLE_UTEST=false
 ENABLE_SMOKE=false
 PR_FILELIST=""
+THREAD_NUM=$(grep -c ^processor /proc/cpuinfo)
 
 show_usage() {
 cat << EOF
@@ -24,13 +25,13 @@ Usage: $0 [OPTIONS]
 
 Options:
   -h, --help                    Show this help message and exit
+  --jit                         Enable ophost build
   -u                            Build utest
   -s                            Build smoke test workflow:
                                  - build single op
                                  - build ascend950
                                  - if Ascend 910B: run A2 smoke
   -f <file>, --file <file>      Specify filelist for build
-  --jit                         Enable ophost build
 
   Note: Options can be combined.
 EOF
@@ -53,6 +54,19 @@ else
                 ;;
             -s)
                 ENABLE_SMOKE=true
+                shift
+                ;;
+            -j)
+                if [[ ${2+x} && -n "$2" && "$2" != --* ]]; then
+                    THREAD_NUM="$2"
+                    shift
+                else
+                    echo "-j use default value: $THREAD_NUM"
+                fi
+                shift
+                ;;
+            -j*)
+                THREAD_NUM="${1#-j}"
                 shift
                 ;;
             -f)
@@ -179,7 +193,6 @@ export BUILD_PATH="${BASE_PATH}/build"
 rm -rf $BUILD_PATH
 rm -rf $BASE_PATH/build_out
 
-THREAD_NUM=$(grep -c ^processor /proc/cpuinfo)
 if [[ "$ENABLE_OPHOST" == "true" ]]; then
     echo "==============================build jit============================================="
     echo "exec cmd: [bash build.sh --pkg --jit -j${THREAD_NUM} --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH}]"
@@ -216,8 +229,8 @@ if [[ "$ENABLE_SMOKE" == "true" ]]; then
         SINGLE_FILE="single.tar.gz"
         need_check_example="false"
         rm -rf single/*
-        echo "exec cmd: [bash scripts/ci/check_pkg.sh $PR_FILELIST -j${THREAD_NUM}]"
-        bash scripts/ci/check_pkg.sh "$PR_FILELIST" -j${THREAD_NUM}
+        echo "exec cmd: [bash scripts/ci/check_pkg.sh $PR_FILELIST -j${THREAD_NUM} --no_force]"
+        bash scripts/ci/check_pkg.sh "$PR_FILELIST" -j${THREAD_NUM} --no_force
         if [[ -f "$SINGLE_FILE" && -s "$SINGLE_FILE" ]]; then
             need_check_example="true"
             rm single.tar.gz
@@ -229,8 +242,8 @@ if [[ "$ENABLE_SMOKE" == "true" ]]; then
     ARCH=$(uname -m)
     # 判断是 x86 还是 ARM
     if [[ "$ARCH" == "x86_64" ]]; then
-        echo "exec cmd: [bash scripts/ci/compile_ascend950_pkg.sh $PR_FILELIST -j${THREAD_NUM}]"
-        bash scripts/ci/compile_ascend950_pkg.sh $PR_FILELIST -j${THREAD_NUM}
+        echo "exec cmd: [bash scripts/ci/compile_ascend950_pkg.sh $PR_FILELIST -j${THREAD_NUM} --no_force]"
+        bash scripts/ci/compile_ascend950_pkg.sh $PR_FILELIST -j${THREAD_NUM} --no_force
     elif [[ "$ARCH" == "aarch64" ]]; then
         echo "exec cmd: [bash scripts/ci/compile_ascend950_pkg.sh $PR_FILELIST -force_jit -j${THREAD_NUM}]"
         bash scripts/ci/compile_ascend950_pkg.sh $PR_FILELIST -force_jit -j${THREAD_NUM}
