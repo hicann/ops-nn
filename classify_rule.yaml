@@ -299,6 +299,12 @@ ops-nn:
       - index/gather_v2/op_host/**/arch35
       - index/gather_v2/op_host/*.cpp
       - index/gather_v2/op_kernel
+      - index/concat_offset/op_host/**/arch35
+      - index/concat_offset/op_host/*.cpp
+      - index/concat_offset/op_kernel
+      - index/sparse_segment_mean/op_host/**/arch35
+      - index/sparse_segment_mean/op_host/*.cpp
+      - index/sparse_segment_mean/op_kernel
       - activation/sigmoid/op_host/**/arch35
       - activation/sigmoid/op_host/*.cpp
       - activation/sigmoid/op_kernel
@@ -1922,6 +1928,10 @@ VC8@ops-nn:
         - ops/ops-nn/index/gather_v2/op_kernel/arch35/
         - ops/ops-nn/index/embedding/op_host/arch35/
         - ops/ops-nn/index/embedding/op_kernel/arch35/
+        - ops/ops-nn/index/concat_offset/op_host/arch35/
+        - ops/ops-nn/index/concat_offset/op_kernel/arch35/
+        - ops/ops-nn/index/sparse_segment_mean/op_host/arch35/
+        - ops/ops-nn/index/sparse_segment_mean/op_kernel/arch35/
         - ops/ops-nn/index/scatter/op_host/
         - ops/ops-nn/index/scatter_nd/op_host/arch35/
         - ops/ops-nn/index/scatter_nd/op_kernel/arch35/
@@ -1951,6 +1961,8 @@ VC8@ops-nn:
         - ops/ops-nn/index/gather_v2/tests/
         - ops/ops-nn/index/embedding/examples/
         - ops/ops-nn/index/embedding/tests/
+        - ops/ops-nn/index/concat_offset/tests/
+        - ops/ops-nn/index/sparse_segment_mean/tests/
         - ops/ops-nn/index/scatter_nd/examples/
         - ops/ops-nn/index/scatter_nd/tests/
         - ops/ops-nn/index/scatter_add/examples/

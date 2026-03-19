@@ -1,0 +1,55 @@
+{
+    "op_type": "ConcatOffset",
+    "op_list": [
+      {
+        "bin_filename": "ConcatOffset_int32_bin",
+        "inputs": [
+            {
+                "name": "concat_dim",
+                "index": 0,
+                "dtype": "int32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+            },
+            [
+              {
+                "name": "x",
+                "index": 1,
+                "dtype": "int32",
+                "format": "ND",
+                "paramType": "dynamic",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ]
+        ],
+        "outputs": [
+          [
+            {
+              "name": "y",
+              "index": 0,
+              "dtype": "int32",
+              "format": "ND",
+              "paramType": "dynamic",
+              "shape": [
+                -2
+              ],
+              "format_match_mode": "FormatAgnostic"
+            }
+          ]
+        ],
+        "attrs": [
+          {
+            "name": "N",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      }
+    ]
+}
