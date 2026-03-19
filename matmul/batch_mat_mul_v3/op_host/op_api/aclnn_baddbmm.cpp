@@ -278,9 +278,7 @@ public:
         // self(bias) * beta
         const aclTensor* selfContiguous = l0op::Contiguous(bias, executor);
         CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        const aclTensor* mulOut = reinterpret_cast<void*>(l0op::MulsInplace) != nullptr ?
-            l0op::MulsInplace(selfContiguous, beta->ToFloat(), executor) :
-            l0op::Muls(selfContiguous, beta->ToFloat(), executor);
+        const aclTensor* mulOut = l0op::Muls(selfContiguous, beta->ToFloat(), executor);
         CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         // bmmOut = batch1(matA) @ batch2(matB)
