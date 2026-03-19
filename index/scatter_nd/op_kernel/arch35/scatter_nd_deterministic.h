@@ -171,6 +171,34 @@ __aicore__ inline void ScatterNdDeterministicImpl<T, U>::Init(GM_ADDR indices, G
     // 量化分支
     shiftOffset_ = UB_AGLIN_VALUE / sizeof(U);
     indicesUbLoop_ = GetBlockIdx() == tilingData_.logicCoreNum - 1 ? tilingData_.tailCoreIndicesLoopSize : tilingData_.indicesLoopSize;
+    
+    indicesGm_.SetGlobalBuffer((__gm__ U *)(indices) + GetBlockIdx() * tilingData_.perCoreHandleIndices * tilingData_.rankSize);
+    updatesGm_.SetGlobalBuffer((__gm__ T *)(updates) + GetBlockIdx() * tilingData_.perCoreHandleIndices * tilingData_.afterAxis);
+
+    workspaceMaxValueCount_.SetGlobalBuffer((__gm__ uint32_t *)(workspace));
+    
+    workspaceMaxValue_.SetGlobalBuffer((__gm__ float *)workspace + tilingData_.rankFusedAxis);
+    workspaceMaxValueInit_.SetGlobalBuffer((__gm__ float *)workspace + tilingData_.rankFusedAxis + GetBlockIdx() * initPerCore);
+    
+    workspaceInt32Res_.SetGlobalBuffer((__gm__ int32_t *)workspace + tilingData_.rankFusedAxis +
+        tilingData_.rankFusedAxis * tilingData_.afterAxis);
+    workspaceInt32ResInit_.SetGlobalBuffer((__gm__ int32_t *)workspace + tilingData_.rankFusedAxis +
+        tilingData_.rankFusedAxis * tilingData_.afterAxis + GetBlockIdx() * initPerCore);
+    
+    workspaceLogicCoreSumValue_.SetGlobalBuffer((__gm__ float*)workspace + tilingData_.rankFusedAxis + 
+    tilingData_.rankFusedAxis * tilingData_.afterAxis * DOUBLE + GetBlockIdx() * tilingData_.perCoreHandleIndices * postVarAlignSizeFp32_);
+    
+    __gm__ float* workspaceCoreLogicCoreSumIdStart = (__gm__ float*)workspace + tilingData_.rankFusedAxis + 
+                                                        tilingData_.rankFusedAxis * tilingData_.afterAxis * DOUBLE + 
+                                                        tilingData_.logicCoreNum * tilingData_.perCoreHandleIndices * postVarAlignSizeFp32_;
+    workspaceCoreLogicCoreSumId_.SetGlobalBuffer((__gm__ U*)workspaceCoreLogicCoreSumIdStart + GetBlockIdx() * tilingData_.perCoreHandleIndices);
+
+    InitWspZero();
+    if (tilingData_.isIdxSplit == 1) {
+        InitGlobalMemory(yGmInit_, initCoreReal, (T)0);
+    }
+    SyncAll();
+
     pipe_.InitBuffer(indicesQue_, DOUBLE_BUF, ops::CeilAlign(tilingData_.indicesUbFactor * tilingData_.rankSize * sizeof(U), UB_AGLIN_VALUE));
     pipe_.InitBuffer(outOfstBuf_, tilingData_.indicesUbFactor * sizeof(U));
     pipe_.InitBuffer(calcBuf_, MAX_RANK_COUNT * sizeof(U));  
@@ -179,30 +207,15 @@ __aicore__ inline void ScatterNdDeterministicImpl<T, U>::Init(GM_ADDR indices, G
     pipe_.InitBuffer(updateSumIdxQueue_, DOUBLE_BUF, ops::CeilAlign(tilingData_.indicesUbFactor * sizeof(U), UB_AGLIN_VALUE));
     pipe_.InitBuffer(updatesQueue_, DOUBLE_BUF, tilingData_.indicesUbFactor * postVarAlignSize_ * sizeof(T));
     pipe_.InitBuffer(updateSumQue_, DOUBLE_BUF, tilingData_.indicesUbFactor * postVarAlignSizeFp32_ * sizeof(float));
-    
-    indicesGm_.SetGlobalBuffer((__gm__ U *)(indices) + GetBlockIdx() * tilingData_.perCoreHandleIndices * tilingData_.rankSize);
-    updatesGm_.SetGlobalBuffer((__gm__ T *)(updates) + GetBlockIdx() * tilingData_.perCoreHandleIndices * tilingData_.afterAxis);
-
-    workspaceMaxValueCount_.SetGlobalBuffer((__gm__ uint32_t *)(workspace));
-    workspaceMaxValue_.SetGlobalBuffer((__gm__ float *)workspace + tilingData_.rankFusedAxis);
-    workspaceMaxValueInit_.SetGlobalBuffer((__gm__ float *)workspace + tilingData_.rankFusedAxis + GetBlockIdx() * initPerCore);
-    workspaceInt32Res_.SetGlobalBuffer((__gm__ int32_t *)workspace + tilingData_.rankFusedAxis +
-        tilingData_.rankFusedAxis * tilingData_.afterAxis);
-    workspaceInt32ResInit_.SetGlobalBuffer((__gm__ int32_t *)workspace + tilingData_.rankFusedAxis +
-        tilingData_.rankFusedAxis * tilingData_.afterAxis + GetBlockIdx() * initPerCore);
-    workspaceLogicCoreSumValue_.SetGlobalBuffer((__gm__ float*)workspace + tilingData_.rankFusedAxis + 
-    tilingData_.rankFusedAxis * tilingData_.afterAxis * DOUBLE + GetBlockIdx() * tilingData_.perCoreHandleIndices * postVarAlignSizeFp32_);
-    
-    __gm__ float* workspaceCoreLogicCoreSumIdStart = (__gm__ float*)workspace + tilingData_.rankFusedAxis + 
-                                                        tilingData_.rankFusedAxis * tilingData_.afterAxis * DOUBLE + 
-                                                        tilingData_.logicCoreNum * tilingData_.perCoreHandleIndices * postVarAlignSizeFp32_;
-    workspaceCoreLogicCoreSumId_.SetGlobalBuffer((__gm__ U*)workspaceCoreLogicCoreSumIdStart + GetBlockIdx() * tilingData_.perCoreHandleIndices);
 }
 
 template<typename T, typename U>
 __aicore__ inline void ScatterNdDeterministicImpl<T,  U>::InitWspZero()
 {
     InitGlobalMemory(workspaceCoreLogicCoreSumId_, tilingData_.perCoreHandleIndices, (U)(-1));
+    auto vWaitMte3EventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+    SetFlag<HardEvent::MTE3_V>(vWaitMte3EventID);
+    WaitFlag<HardEvent::MTE3_V>(vWaitMte3EventID);
     InitGlobalMemory(workspaceLogicCoreSumValue_, tilingData_.perCoreHandleIndices * postVarAlignSizeFp32_, (float)(0));
     InitGlobalMemory(workspaceMaxValueCount_, tilingData_.rankFusedAxis, (uint32_t)(0));
     InitGlobalMemory(workspaceMaxValueInit_, initCoreReal, (float)(0));
@@ -912,12 +925,6 @@ __aicore__ inline void ScatterNdDeterministicImpl<T,  U>::Process()
         }
         return;
     }
-
-    InitWspZero();
-    if (tilingData_.isIdxSplit == 1) {
-        InitGlobalMemory(yGmInit_, initCoreReal, (T)0);
-    }
-    SyncAll();
 
     LocalTensor<U> calcLocal = calcBuf_.Get<U>();
     for (int32_t i = 0; i < MAX_RANK_COUNT; i++) {

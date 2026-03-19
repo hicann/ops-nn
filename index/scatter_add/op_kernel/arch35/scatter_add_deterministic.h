@@ -168,6 +168,9 @@ template<typename T, typename U, uint32_t scatterOp>
 __aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::InitWspZero()
 {
     InitGlobalMemory(workspaceCoreLogicCoreSumId_, tilingData_.perCoreHandleIndices, (U)(-1));
+    auto vWaitMte3EventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+    SetFlag<HardEvent::MTE3_V>(vWaitMte3EventID);
+    WaitFlag<HardEvent::MTE3_V>(vWaitMte3EventID);
     InitGlobalMemory(workspaceLogicCoreSumValue_, tilingData_.perCoreHandleIndices * postVarAlignSizeFp32_, (float)(0));
     InitGlobalMemory(workspaceMaxValueCount_, tilingData_.varShape[0], (uint32_t)(0));
     InitGlobalMemory(workspaceMaxValue_, tilingData_.varShape[1] * tilingData_.varShape[0], (float)(0));

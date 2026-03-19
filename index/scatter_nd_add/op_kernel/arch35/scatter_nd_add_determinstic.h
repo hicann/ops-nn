@@ -160,6 +160,9 @@ __aicore__ inline void ScatterNdAddDeterministic<T, U, CAST_T, castType>::Init(G
                                     GetBlockIdx() * tilingData_.eachCoreIndexCount, tilingData_.eachCoreIndexCount);
     
     InitGlobalMemory(updateSumWsGm_, sumWsSize_, (float)(0));
+    auto vWaitMte3EventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+    SetFlag<HardEvent::MTE3_V>(vWaitMte3EventID);
+    WaitFlag<HardEvent::MTE3_V>(vWaitMte3EventID);
     InitGlobalMemory(updateSumIdxWsGm_, tilingData_.eachCoreIndexCount, (U)(-1));
     AscendC::SyncAll();
 }
