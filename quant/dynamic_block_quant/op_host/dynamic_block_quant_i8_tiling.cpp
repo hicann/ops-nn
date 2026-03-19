@@ -196,6 +196,10 @@ ge::graphStatus DynamicBlockQuantI8::CheckShape(DynamicBlockQuantTilingParam& ti
         static_cast<int64_t>(xShape.GetDimNum() != DIM_TWO && xShape.GetDimNum() != DIM_THREE),
         OP_LOGE(context, "The shape of x dim should be 2 or 3, please check."), return ge::GRAPH_FAILED);
 
+    OP_CHECK_IF(
+        static_cast<int64_t>(xShape.GetDimNum()) != static_cast<int64_t>(scaleShape.GetDimNum()),
+        OP_LOGE(context, "The shape of x dim must be same with shape of scale, please check."),
+        return ge::GRAPH_FAILED);
     if (xShape.GetDimNum() == DIM_TWO) {
         OP_CHECK_IF(
             (static_cast<int64_t>(scaleShape.GetDim(0)) !=
