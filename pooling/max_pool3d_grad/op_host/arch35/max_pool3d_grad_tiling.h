@@ -68,9 +68,10 @@ protected:
 class MaxPool3DGradNCDHWSmallKernelTiling : public MaxPool3DGradTilingBase {
 public:
     explicit MaxPool3DGradNCDHWSmallKernelTiling(gert::TilingContext* context)
-        : MaxPool3DGradTilingBase(context)
+        : MaxPool3DGradTilingBase(context),
+        base(new Pool3DGradNCDHWSmallKernelCommonTiling(&inputData))
     {
-        base = new Pool3DGradNCDHWSmallKernelCommonTiling(&inputData);
+
     }
 
     ~MaxPool3DGradNCDHWSmallKernelTiling()
@@ -83,7 +84,6 @@ private:
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus PostTiling() override;
-
 };
 
 const int64_t NCDHW_DIMS = 5;

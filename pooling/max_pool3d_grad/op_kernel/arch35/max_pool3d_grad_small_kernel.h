@@ -88,7 +88,6 @@ public:
     TBuf<TPosition::VECCALC> inputCalcBuff_;
     TBuf<TPosition::VECCALC> argmaxBuff_;
 
-
     GlobalTensor<TYPE_ORIG_X> gradGm_;
     GlobalTensor<TYPE_ORIG_X> yGm_;
     GlobalTensor<TYPE_ARGMAX> argmaxGm_;

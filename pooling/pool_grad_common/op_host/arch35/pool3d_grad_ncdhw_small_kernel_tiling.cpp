@@ -27,6 +27,8 @@ static constexpr int64_t UB_RESVERVED_SIZE = 5120;
 static constexpr int64_t T3_INT64 = 10;
 static constexpr int64_t DOUBLE_BUFFER = 2;
 static constexpr int64_t THRESHOLD= 2;
+static constexpr int64_t KERNEL_OFFSET = 1;
+static constexpr int64_t DOUBLE = 2;
 
 void Pool3DGradNCDHWSmallKernelCommonTiling::InitializationVars(gert::TilingContext* context_, int64_t ubSize_, int64_t coreNum_)
 {
@@ -71,7 +73,6 @@ void Pool3DGradNCDHWSmallKernelCommonTiling::InitializationVars(gert::TilingCont
     }
 }
 
-
 void Pool3DGradNCDHWSmallKernelCommonTiling::DoBufferCalculate()
 {
     // The calculation only involves inner.
@@ -80,13 +81,13 @@ void Pool3DGradNCDHWSmallKernelCommonTiling::DoBufferCalculate()
     int64_t wInputInner = Ops::Base::CeilDiv(splitData.wOutputInner + inputData->wKernel - 1, inputData->wStride); 
     int64_t wInputInnerAligned = Ops::Base::CeilAlign(wInputInner, baseData.maxDataNumInOneBlock); 
     int64_t wOutputInnerAligned = Ops::Base::CeilAlign(splitData.wOutputInner, baseData.maxDataNumInOneBlock);
-    int64_t wInputAligned = Ops::Base::CeilAlign(splitData.wOutputInner + ((inputData->wKernel - 1) * inputData->wDilation) * 2, baseData.maxDataNumInOneBlock); 
+    int64_t wInputAligned = Ops::Base::CeilAlign(splitData.wOutputInner + ((inputData->wKernel - KERNEL_OFFSET) * inputData->wDilation) * DOUBLE, baseData.maxDataNumInOneBlock); 
 
     int64_t inputPlaneSizeDHW = dInputInner * hInputInner * wInputInnerAligned;   
     int64_t outputPlaneSizeDHW = splitData.dOutputInner * splitData.hOutputInner * wOutputInnerAligned;
 
-    splitData.inputBufferSize = splitData.highAxisInner * (splitData.dOutputInner + ((inputData->dKernel - 1) * inputData->dDilation) * 2) *
-                                (splitData.hOutputInner + ((inputData->hKernel - 1) * inputData->hDilation) * 2)  * wInputAligned * baseData.inputBytes;
+    splitData.inputBufferSize = splitData.highAxisInner * (splitData.dOutputInner + ((inputData->dKernel - KERNEL_OFFSET) * inputData->dDilation) * DOUBLE) *
+                                (splitData.hOutputInner + ((inputData->hKernel - KERNEL_OFFSET) * inputData->hDilation) * DOUBLE)  * wInputAligned * baseData.inputBytes;
     splitData.gradBufferSize = splitData.highAxisInner * inputPlaneSizeDHW * baseData.inputBytes;
     splitData.argmaxBufferSize = splitData.highAxisInner * dInputInner * hInputInner * wInputInner * (inputData->isInt32Meet ? INT64_SIZE : INT32_SIZE);
     splitData.outputBufferSize = splitData.highAxisInner * outputPlaneSizeDHW * FLOAT32_SIZE; 

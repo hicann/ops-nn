@@ -53,7 +53,7 @@ inline ge::graphStatus SetAllUnknownDim(const int64_t rank, gert::Shape* output_
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus CheckAttrInfo(gert::InferShapeContext* context)
+ge::graphStatus CheckAttrInfo(const gert::InferShapeContext* context)
 {
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
@@ -63,7 +63,7 @@ ge::graphStatus CheckAttrInfo(gert::InferShapeContext* context)
     OP_CHECK_IF(ksize->GetSize() != ATTR_LIST_SHAPE_SIZE,
         OP_LOGE(context->GetNodeName(), "Length of ksize %lu must be equal 5!", ksize->GetSize()), return GRAPH_FAILED);
 
-    auto ksize_data = reinterpret_cast<const int64_t*>(ksize->GetData());
+    auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
     for (uint32_t i = 0; i < static_cast<uint32_t>(ksize->GetSize()); i++) {
         OP_CHECK_IF((ksize_data[i] <= 0), OP_LOGE(context->GetNodeName(), "Attr value invalid, ksize_data[%u] is %ld, should bigger than 0.", i, ksize_data[i]),
             return ge::GRAPH_FAILED);
@@ -74,7 +74,7 @@ ge::graphStatus CheckAttrInfo(gert::InferShapeContext* context)
     OP_CHECK_IF(strides->GetSize() != ATTR_LIST_SHAPE_SIZE,
         OP_LOGE(context->GetNodeName(), "Length of strides %lu must be equal 5!", strides->GetSize()), return GRAPH_FAILED);
 
-    auto strides_data = reinterpret_cast<const int64_t*>(strides->GetData());
+    auto strides_data = static_cast<const int64_t*>(strides->GetData());
     for (uint32_t i = 0; i < static_cast<uint32_t>(strides->GetSize()); i++) {
         OP_CHECK_IF((strides_data[i] <= 0),
             OP_LOGE(context->GetNodeName(), "Attr value invalid, strides_data[%u] is %ld, should bigger than 0.", i, strides_data[i]), return ge::GRAPH_FAILED);
@@ -91,7 +91,7 @@ ge::graphStatus CheckAttrInfo(gert::InferShapeContext* context)
     OP_CHECK_IF(pads->GetSize() != 0 && pads->GetSize() != 1 && pads->GetSize() != ATTR_LIST_SHAPE_SIZE,
             OP_LOGE(context->GetNodeName(), "Length of pads %lu must be equal 0, 1 or 3!", pads->GetSize()), return GRAPH_FAILED);
 
-    auto pads_data = reinterpret_cast<const int64_t*>(pads->GetData());
+    auto pads_data = static_cast<const int64_t*>(pads->GetData());
     for (uint32_t i = 0; i < static_cast<uint32_t>(pads->GetSize()); i++) {
         OP_CHECK_IF((pads_data[i] < 0), OP_LOGE(context->GetNodeName(), "Attr value invalid, pads_data[%u] is %ld, should bigger or equal 0.", i, pads_data[i]),
             return ge::GRAPH_FAILED);

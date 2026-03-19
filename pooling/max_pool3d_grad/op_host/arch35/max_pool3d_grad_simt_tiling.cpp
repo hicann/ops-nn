@@ -36,6 +36,11 @@ const int INPUT_IDX_X = 0;
 static const gert::Shape g_vec_1_shape = {1};
 static constexpr uint64_t DCACHE_SIZE = 128 *1024UL;
 static constexpr int64_t DIGIT_TWO = 2;
+constexpr size_t N_DIM_OFFSET = 0;
+constexpr size_t C_DIM_OFFSET = 4;
+constexpr size_t D_DIM_OFFSET = 1;
+constexpr size_t H_DIM_OFFSET = 2;
+constexpr size_t W_DIM_OFFSET = 3;
 
 static const gert::Shape &EnsureNotScalar(const gert::Shape &inShape) {
     if (inShape.IsScalar()) {
@@ -54,7 +59,7 @@ ge::graphStatus MaxPool3DGradSimtTiling::GetPlatformInfo()
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr == nullptr) {
         auto compileInfoPtr =
-            reinterpret_cast<const Tiling4Pool3DGradCompileInfo*>(context_->GetCompileInfo());
+            static_cast<const Tiling4Pool3DGradCompileInfo*>(context_->GetCompileInfo());
         OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
                     return ge::GRAPH_FAILED);
         coreNum = compileInfoPtr->totalCoreNum;
@@ -110,11 +115,11 @@ ge::graphStatus MaxPool3DGradSimtTiling::GetShapeAttrsInfo()
     }
 
     if (inputData.data_format == "ndhwc") {
-        nDimPos = 0;
-        cDimPos = 4;
-        dDimPos = 1;
-        hDimPos = 2;
-        wDimPos = 3;
+        nDimPos = N_DIM_OFFSET;
+        cDimPos = C_DIM_OFFSET;
+        dDimPos = D_DIM_OFFSET;
+        hDimPos = H_DIM_OFFSET;
+        wDimPos = W_DIM_OFFSET;
     }
 
     inputData.inputShape = 

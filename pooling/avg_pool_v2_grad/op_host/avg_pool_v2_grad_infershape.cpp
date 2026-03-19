@@ -94,9 +94,10 @@ ge::graphStatus InferShape4AvgPoolV2Grad(gert::InferShapeContext* context)
 
     auto padding_mode = attrs->GetAttrPointer<char>(ATTR_PADDING_MODE_POS);
     OP_CHECK_NULL_WITH_CONTEXT(context, padding_mode);
-    OP_CHECK_IF(
-        !strcmp(padding_mode, "SAME") && !strcmp(padding_mode, "VALID") && !strcmp(padding_mode, "CALCULATED"),
-        OP_LOGE(context->GetNodeName(),"attr padding_mode(%s) only support SAME、 VALID and CALCULATED", padding_mode), return GRAPH_FAILED);
+    OP_CHECK_IF(strcmp(padding_mode, "SAME") != 0 && strcmp(padding_mode, "VALID") != 0 &&
+        strcmp(padding_mode, "CALCULATED") != 0, OP_LOGE(context->GetNodeName(),
+                "attr padding_mode(%s) only support SAME, VALID and CALCULATED", padding_mode),
+        return GRAPH_FAILED);
 
     auto ksize = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_KERNEL_POS);
     OP_CHECK_NULL_WITH_CONTEXT(context, ksize);

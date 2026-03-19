@@ -120,10 +120,8 @@ struct Tiling4Pool3DGradCompileInfo {
 
 class Pool3DGradNCDHWSmallKernelCommonTiling {
 public:
-    Pool3DGradNCDHWSmallKernelCommonTiling(Pool3DGradNCDHWInputInfo* input)
-    {
-        inputData = input;
-    }
+    Pool3DGradNCDHWSmallKernelCommonTiling(Pool3DGradNCDHWInputInfo* input) : inputData(input) 
+    {}
 
     void InitializationVars(gert::TilingContext* context_, int64_t ubSize_, int64_t coreNum_);
     ge::graphStatus DoOpTiling(gert::TilingContext* context);

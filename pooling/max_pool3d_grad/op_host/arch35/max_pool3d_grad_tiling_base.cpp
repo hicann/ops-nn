@@ -163,20 +163,20 @@ ge::graphStatus MaxPool3DGradTilingBase::CheckAttrVal()
                     0, 1, stridesVector[0], stridesVector[1]),
             return ge::GRAPH_FAILED);
     }
-    for (uint32_t i = 0; i < (uint32_t)kSizeDimNum; i++) {
+    for (uint32_t i = 0; i < static_cast<uint32_t>(kSizeDimNum); i++) {
         OP_CHECK_IF((kSizeVector[i] <= 0),
                     OP_LOGE(context_->GetNodeName(), "Attr value invalid, kSize[%u] is %ld, should bigger than 0.",
                             i, kSizeVector[i]),
                     return ge::GRAPH_FAILED);
     }
-    for (uint32_t i = 0; i < (uint32_t)stridesDimNum; i++) {
+    for (uint32_t i = 0; i < static_cast<uint32_t>(stridesDimNum); i++) {
         OP_CHECK_IF((stridesVector[i] <= 0),
                     OP_LOGE(context_->GetNodeName(), "Attr value invalid, strides[%u] is %ld, should bigger than 0.",
                             i, stridesVector[i]),
                     return ge::GRAPH_FAILED);
     }
     auto padsVector = attrs->GetListInt(PADS_ATTR_INDEX)->GetData();
-    for (uint32_t i = 0; i < (uint32_t)padsDimNum; i++) {
+    for (uint32_t i = 0; i < static_cast<uint32_t>(padsDimNum); i++) {
         OP_CHECK_IF((padsVector[i] < 0),
                     OP_LOGE(context_->GetNodeName(), "Attr value invalid, pads[%u] is %ld, should bigger or equal 0.",
                             i, padsVector[i]),
@@ -409,7 +409,7 @@ ge::graphStatus MaxPool3DGradTilingBase::GetPlatformInfo()
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr == nullptr) {
         auto compileInfoPtr =
-            reinterpret_cast<const Tiling4Pool3DGradCompileInfo*>(context_->GetCompileInfo());
+            static_cast<const Tiling4Pool3DGradCompileInfo*>(context_->GetCompileInfo());
         OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
                     return ge::GRAPH_FAILED);
         coreNum_ = compileInfoPtr->totalCoreNum;

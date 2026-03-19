@@ -70,7 +70,6 @@ static inline bool IsGreaterThanInt32Max(const AvgPoolV2GradInputInfo& inputData
 static ge::graphStatus GetPadInfo(gert::TilingContext* context, const gert::RuntimeAttrs* runtimeAttrs,
                                   AvgPoolV2GradInputInfo& inputData, const AvgPoolV2GradCommon& commInfo)
 {
-
     if (commInfo.padModeStr == "VALID") {
         inputData.pad = {0, 0, 0, 0};  // top, bottom, left, right
     } else if (commInfo.padModeStr == "SAME") {
