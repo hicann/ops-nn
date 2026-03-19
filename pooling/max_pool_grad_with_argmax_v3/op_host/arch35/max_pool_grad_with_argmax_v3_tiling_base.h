@@ -20,9 +20,8 @@
 #include "../../../pool_grad_common/op_host/arch35/max_pool_grad_with_argmax_tiling_common.h"
 #include "../../../pool_grad_common/op_kernel/arch35/max_pool_grad_with_argmax_struct_common.h"
 
-using namespace std;
-
 namespace optiling {
+using namespace std;
 
 BEGIN_TILING_DATA_DEF(MaxPoolGradWithArgmaxV3TilingData)
 TILING_DATA_FIELD_DEF(uint64_t, nc);

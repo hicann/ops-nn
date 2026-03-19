@@ -25,9 +25,10 @@ class MaxPoolGradWithArgmaxV3SimtTiling : public MaxPoolGradWithArgmaxV3BaseTili
 {
 public:
     explicit MaxPoolGradWithArgmaxV3SimtTiling(gert::TilingContext* context)
-        : MaxPoolGradWithArgmaxV3BaseTiling(context)
+        : MaxPoolGradWithArgmaxV3BaseTiling(context),
+        SimtBase(new MaxPoolGradWithArgmaxSIMTTilingCommon(&inputData))
     {
-        SimtBase = new MaxPoolGradWithArgmaxSIMTTilingCommon(&inputData);
+
     }
 
     ~MaxPoolGradWithArgmaxV3SimtTiling() override

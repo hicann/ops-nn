@@ -28,9 +28,9 @@
 #include "util/math_util.h"
 #include "op_host/tiling_util.h"
 
-using namespace std;
 
 namespace optiling {
+using namespace std;
 using Ops::NN::Optiling::TilingBaseClass;
 constexpr int64_t MAX_INT32 = 2147483647;
 constexpr uint64_t MAX_UINT32 = 4294967295;

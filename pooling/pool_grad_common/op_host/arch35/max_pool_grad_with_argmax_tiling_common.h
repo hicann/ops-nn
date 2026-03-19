@@ -96,7 +96,7 @@ public :
     MaxPoolGradWithArgmaxHardwareInfo hardwareData;
 };
  
- static bool CheckGradShape(const MaxPoolGradWithArgmaxInputInfoCommon& inputData,const std::string padModeStr)
+ static inline bool CheckGradShape(const MaxPoolGradWithArgmaxInputInfoCommon& inputData,const std::string padModeStr)
  {
     int64_t tmpHGrad, tmpWGrad;
     if (padModeStr == "VALID") {

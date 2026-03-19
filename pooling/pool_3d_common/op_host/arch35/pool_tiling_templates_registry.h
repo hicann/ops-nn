@@ -102,7 +102,7 @@ public:
         const char *op_type = context->GetNodeType();
         fe::PlatFormInfos *platformInfoPtr = context->GetPlatformInfo();
         if (platformInfoPtr == nullptr) {
-            auto compileInfoPtr = reinterpret_cast<const Ops::NN::Optiling::CompileInfoCommon *>(context->GetCompileInfo());
+            auto compileInfoPtr = static_cast<const Ops::NN::Optiling::CompileInfoCommon *>(context->GetCompileInfo());
             OPS_ERR_IF(compileInfoPtr == nullptr, OPS_REPORT_VECTOR_INNER_ERR(op_type, "compileInfoPtr is null."),
                         return ge::GRAPH_FAILED);
             soc_version = compileInfoPtr->socVersion;
@@ -138,7 +138,7 @@ public:
         const char *op_type = context->GetNodeType();
         auto platformInfoPtr = context->GetPlatformInfo();
         if (platformInfoPtr == nullptr) {
-            auto compileInfoPtr = reinterpret_cast<const Ops::NN::Optiling::CompileInfoCommon *>(context->GetCompileInfo());
+            auto compileInfoPtr = static_cast<const Ops::NN::Optiling::CompileInfoCommon *>(context->GetCompileInfo());
             OPS_ERR_IF(compileInfoPtr == nullptr, OPS_REPORT_VECTOR_INNER_ERR(op_type, "compileInfoPtr is null."),
                         return ge::GRAPH_FAILED);
             soc_version = compileInfoPtr->socVersion;

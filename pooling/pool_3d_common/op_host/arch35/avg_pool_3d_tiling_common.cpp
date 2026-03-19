@@ -446,7 +446,7 @@ ge::graphStatus GetAvgPool3DPlatformInfo(gert::TilingContext* context, uint64_t&
 {
     auto platformPtr = context->GetPlatformInfo();
     if (platformPtr == nullptr) {
-        auto compileInfoPtr = reinterpret_cast<const optiling::avgPool3DTilingCompileInfo::CubeCompileInfo *>(context->GetCompileInfo());
+        auto compileInfoPtr = static_cast<const optiling::avgPool3DTilingCompileInfo::CubeCompileInfo *>(context->GetCompileInfo());
         OP_TILING_CHECK(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context, "compile info is null"),
                         return ge::GRAPH_FAILED);
         coreNum = compileInfoPtr->core_num;

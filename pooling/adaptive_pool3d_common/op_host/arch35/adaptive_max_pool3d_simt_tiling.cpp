@@ -70,7 +70,6 @@ uint64_t AdaptiveMaxPool3DTilingSimt::GetTilingKey() const
     }else {
         return GET_TPL_TILING_KEY(TPL_MODE_2, TPL_INT64_UINT64, TPL_MULTI_MODE_0, TPL_DATA_FORMAT_MODE_0);
     }
-    
 }
 
 ge::graphStatus AdaptiveMaxPool3DTilingSimt::PostTiling()
