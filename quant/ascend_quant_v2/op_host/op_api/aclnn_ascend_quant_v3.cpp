@@ -367,9 +367,8 @@ static aclnnStatus CheckParams(
     const aclTensor* x, const aclTensor* scale, const aclTensor* offset, const char* roundMode, int32_t dstType,
     int32_t axis, const aclTensor* y)
 {
-    CHECK_RET(CheckInputScalar(x), ACLNN_ERR_PARAM_INVALID);
-
     CHECK_RET(CheckNotNull(x, scale, y), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckInputScalar(x), ACLNN_ERR_PARAM_INVALID);
 
     CHECK_RET(CheckDtypeValid(x, scale, offset, y, dstType), ACLNN_ERR_PARAM_INVALID);
 
