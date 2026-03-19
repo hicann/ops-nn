@@ -134,6 +134,7 @@
     {"name": "EmbeddingHashTableApplyAdamW", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"GroupNormGrad", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync" : true, "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"ApplyAdamD", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "--cce-simd-at-voss=true"]},"impl_mode" : ""},
+    {"name":"ApplyAdam", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "-mllvm -cce-aicore-dcci-before-kernel-end=true"]}},
     {"name":"NonFiniteCheck", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},
     {"name":"ForeachMulScalarInplace", "compute_units": ["ascend910b", "ascend950"], "auto_sync" : false},
     {"name":"ForeachAddScalar", "compute_units": ["ascend910b", "ascend910_93", "ascend950", "kirinx90", "kirin9030"], "auto_sync" : false, "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
