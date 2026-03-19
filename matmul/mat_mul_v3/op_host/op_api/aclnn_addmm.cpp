@@ -208,9 +208,7 @@ static aclnnStatus AddmmMulEmptyProcess(
 {
     auto selfContiguous = l0op::Contiguous(self, executor);
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto mulOut = reinterpret_cast<void*>(l0op::MulsInplace) != nullptr ?
-        l0op::MulsInplace(selfContiguous, beta->ToFloat(), executor) :
-        l0op::Muls(selfContiguous, beta->ToFloat(), executor);
+    auto mulOut = l0op::Muls(selfContiguous, beta->ToFloat(), executor);
     CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // broadcast成和out一个shape
@@ -257,13 +255,13 @@ static const aclTensor* AddProcess(
     return addOut;
 }
 
-static const aclTensor* MulsProcess(const aclTensor* mat, const aclScalar* scalar, aclOpExecutor* executor){
+static const aclTensor* MulsProcess(const aclTensor* mat, const aclScalar* scalar, bool isMulsInplace, aclOpExecutor* executor){
     const aclTensor* mulsOut = nullptr;
     auto matContiguous = l0op::Contiguous(mat, executor);
     if (fabs(scalar->ToFloat() - 1.0f) <= numeric_limits<float>::epsilon()) {
         mulsOut = matContiguous;
     } else {
-        mulsOut = reinterpret_cast<void*>(l0op::MulsInplace) != nullptr ?
+        mulsOut = (reinterpret_cast<void*>(l0op::MulsInplace) != nullptr && isMulsInplace) ?
             l0op::MulsInplace(matContiguous, scalar->ToFloat(), executor) :
             l0op::Muls(matContiguous, scalar->ToFloat(), executor);
         CHECK_RET(mulsOut != nullptr, nullptr);
@@ -314,9 +312,7 @@ static const aclTensor* AddMatmulProcess(
     if (fabs(addmmTensor.beta->ToFloat() - 1.0f) <= numeric_limits<float>::epsilon()) {
         mulOut = selfContiguous;
     } else {
-        mulOut = reinterpret_cast<void*>(l0op::MulsInplace) != nullptr ?
-            l0op::MulsInplace(selfContiguous, addmmTensor.beta->ToFloat(), uniqueExecutor) :
-            l0op::Muls(selfContiguous, addmmTensor.beta->ToFloat(), uniqueExecutor);
+        mulOut = l0op::Muls(selfContiguous, addmmTensor.beta->ToFloat(), uniqueExecutor);
         CHECK_RET(mulOut != nullptr, nullptr);
     }
 
@@ -510,7 +506,8 @@ public:
             return ACLNN_SUCCESS;
         }
         // 执行 Muls: out1 = beta * bias
-        const aclTensor* out1 = MulsProcess(bias, beta, executor);
+        // 非inplace接口不能改变输入tensor，isMulsInplace=false
+        const aclTensor* out1 = MulsProcess(bias, beta, false, executor);
         CHECK_RET(out1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
         // 执行 Matmul: out2 = mat1 @ mat2
         // 为了提升addmm的精度，如果输入是fp16或者bf16时，输出需要是fp32类型
@@ -556,7 +553,8 @@ public:
 
     aclnnStatus Impl() override{
         // 执行 Muls: out1 = beta * bias
-        const aclTensor* out1 = MulsProcess(bias, beta, executor);
+        // 非inplace接口不能改变输入tensor，isMulsInplace=false
+        const aclTensor* out1 = MulsProcess(bias, beta, false, executor);
         CHECK_RET(out1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
         convOut = out1;
         return ACLNN_SUCCESS;
@@ -597,7 +595,8 @@ public:
         const aclTensor* out = MatmulProcess(matA, matB, output, cubeMathType, opInfo, executor);
         CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
         // 执行 Muls: out1 = alpha * out
-        const aclTensor* out1 = MulsProcess(out, alpha, executor);
+        // 对mmout多muls，为中间内存可以进行再复用，isMulsInplace=true
+        const aclTensor* out1 = MulsProcess(out, alpha, true, executor);
         CHECK_RET(out1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
         convOut = out1;
         return ACLNN_SUCCESS;
