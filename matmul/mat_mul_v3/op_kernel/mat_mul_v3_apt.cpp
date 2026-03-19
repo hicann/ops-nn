@@ -26,6 +26,7 @@
 #include "arch35/mat_mul_pingpong_basic_cmct.h"
 #include "arch35/mat_mul_streamk_basic_cmct.h"
 #include "arch35/mat_mul_fixpipe_opti_basic_cmct.h"
+#include "arch35/mat_mul_mn_equal_one_cmct.h"
 
 using namespace Cmct;
 using namespace Cmct::Gemm;
@@ -175,6 +176,13 @@ __global__ __aicore__ void mat_mul_v3(
         MMV3_IMPL_CLASS_TRANS(
             tilingData, tilingGM, aTran, bTran, nullptr, MatmulV3Advanced::MatmulAswKernelABL1FullLoad,
             MatmulV3Advanced::MatmulAswBlock, MM_CFG_NO_PRELOAD);
+    } else if constexpr (
+        API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_MN_EQUAL_ONE &&
+        L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
+        GET_TILING_DATA_WITH_STRUCT(MatMulV3MNEqOneBasicTilingData, tilingData, tilingGM);
+        MatmulV3Advanced::MatMulMNEqualOneActKernel<
+            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor>(
+            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
 #endif
     }
 }

@@ -33,6 +33,7 @@ struct KernelMmadWithScale {};     // Multi-block with scale
 struct KernelMultiBlockStreamK {}; // Multi-tile transfer with K-axis spliting and caching
 struct KernelBatchMatMulToMul {};  // BatchMatmul to mul
 struct KernelMixWithWeightPrologue {};
+struct KernelMNEqualOne {}; 
 
 enum class MatMulL0C2Out : std::uint8_t {
     ON_THE_FLY = 0,
@@ -314,6 +315,12 @@ struct UbAntiquantWithScSc {
 template <uint64_t AivNum>
 struct MmadAPrefetchBAntiquantScmc {
     constexpr static uint64_t AIV_NUM = AivNum;
+};
+
+template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>
+struct MatmulMNEqualOne {
+    using ScheduleType = KernelMNEqualOne;
+    using SingleShape = SingleCoreShape;
 };
 
 } // namespace Gemm
