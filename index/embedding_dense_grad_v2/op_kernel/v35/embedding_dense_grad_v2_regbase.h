@@ -907,6 +907,9 @@ __aicore__ inline bool EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
     inQueGrad_.template EnQue<IDX_T>(indicesBeginTensor);
 
     LocalTensor<uint64_t> checkResult = cmpResult.template ReinterpretCast<uint64_t>();
+    event_t eventV_S = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+    SetFlag<HardEvent::V_S>(eventV_S);
+    WaitFlag<HardEvent::V_S>(eventV_S);
     int64_t sameIdxCount = ScalarGetCountOfValue<1>(checkResult(0));  // 统计 bit=1的数量，bit 1 代表核间的头和尾相等，需要累加
     return sameIdxCount != 0;
 }
