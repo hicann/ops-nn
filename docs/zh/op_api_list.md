@@ -310,6 +310,7 @@
 | [aclnnScatterAdd](../../index/scatter_add/docs/aclnnScatterAdd.md) |将src tensor中的值按指定的轴方向和index tensor中的位置关系逐个填入self tensor中，若有多于一个src值被填入到self的同一位置，那么这些值将会在这一位置上进行累加。 |默认确定性实现|
 | [aclnnScatterNd](../../index/scatter_nd_update/docs/aclnnScatterNd.md) | 拷贝data的数据至out，同时在指定indices处根据updates更新out中的数据。|默认确定性实现|
 | [aclnnScatterNdUpdate](../../index/scatter_nd_update/docs/aclnnScatterNdUpdate.md) | 将tensor updates中的值按指定的索引indices逐个更新tensor varRef中的值。|默认确定性实现|
+| [aclnnScatterList](../../index/scatter_list/docs/aclnnScatterList.md) | 将稀疏更新应用到变量引用张量列表中，通过索引将updates中的值scatter到var对应的维度上。 | 默认非确定性实现，支持配置开启 |   |
 | [aclnnScaledMaskedSoftmax](../../vfusion/scaled_masked_softmax_v2/docs/aclnnScaledMaskedSoftmax.md)|将输入的数据x先进行scale缩放和mask，然后执行softmax的输出。|默认确定性实现|
 | [aclnnScaledMaskedSoftmaxBackward](../../vfusion/scaled_masked_softmax_grad_v2/docs/aclnnScaledMaskedSoftmaxBackward.md)|softmax的反向传播，并对结果进行缩放以及掩码。|默认非确定性实现，支持配置开启。|
 | [aclnnSelu&aclnnInplaceSelu](../../activation/selu/docs/aclnnSelu&aclnnInplaceSelu.md) |对输入tensor逐元素进行Selu符号函数的运算并输出结果tensor。|默认确定性实现|
