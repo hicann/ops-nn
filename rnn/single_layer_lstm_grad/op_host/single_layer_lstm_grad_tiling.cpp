@@ -726,7 +726,7 @@ static ge::graphStatus TilingFunc4SingleLayerLstmGrad(gert::TilingContext* conte
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus TilingPrepareForSingleLayerLstmGrad(gert::TilingParseContext *context)
+ge::graphStatus TilingPrepareForSingleLayerLstmGrad([[maybe_unused]] gert::TilingParseContext *context)
 {
   return ge::GRAPH_SUCCESS;
 }
