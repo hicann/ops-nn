@@ -106,7 +106,7 @@ __aicore__ inline void GroupNormGradCFullLoad<T, U>::Compute(int32_t taskIdx)
 {
     LocalTensor<float> dbetaTensor = this->outQueDbeta_.template AllocTensor<float>();
     LocalTensor<float> dsTensor = this->outQueDs_.template AllocTensor<float>();
-    uint32_t baseOffset = taskIdx * this->eleNumPerG_;
+    int64_t baseOffset = taskIdx * this->eleNumPerG_;
     uint32_t ubLoopCnt = (this->C_G_ + this->mode1UbCapCNum_ - 1) / this->mode1UbCapCNum_;
     LocalTensor<T> dyTensor;
     LocalTensor<T> xTensor;
@@ -374,8 +374,8 @@ __aicore__ inline void GroupNormGradCFullLoad<T, U>::ComputeMode1Dx(
 {
     float sum1 = 0;
     float sum2 = 0;
-    uint32_t channelIdx = (taskIdx % this->G_) * this->C_G_;
-    uint32_t baseOffset = taskIdx * this->eleNumPerG_;
+    int64_t channelIdx = (taskIdx % this->G_) * this->C_G_;
+    int64_t baseOffset = taskIdx * this->eleNumPerG_;
     uint32_t ubCapEleNum = CeilAlign(static_cast<uint32_t>(this->eleNumPerC_), this->elemTPerBlock_);
     this->LoadDataToUb(this->inQueGamma_, this->tBufGamma_, this->gammaGm_, channelIdx, this->C_G_);
     LocalTensor<float> gammaTensor = this->inQueGamma_.template DeQue<float>();
@@ -389,7 +389,7 @@ __aicore__ inline void GroupNormGradCFullLoad<T, U>::ComputeMode1Dx(
     LocalTensor<T> dyTensor;
     uint32_t ubLoopCnt = (this->C_G_ + this->mode1UbCapCNum_ - 1) / this->mode1UbCapCNum_;
     for (uint32_t loopIdx = 0; loopIdx < ubLoopCnt; loopIdx++) {
-        uint32_t offset = baseOffset + loopIdx * this->mode1UbCapCNum_ * this->eleNumPerC_;
+        int64_t offset = baseOffset + loopIdx * this->mode1UbCapCNum_ * this->eleNumPerC_;
         auto curCNum = this->mode1UbCapCNum_;
         if ((loopIdx == ubLoopCnt - 1) && (this->C_G_ % this->mode1UbCapCNum_ != 0)) {
             curCNum = this->C_G_ % this->mode1UbCapCNum_;

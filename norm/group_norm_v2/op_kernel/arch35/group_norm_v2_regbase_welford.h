@@ -202,7 +202,7 @@ private:
       if (i < loopNum - BUFFER_NUM) {
         SetFlag<HardEvent::V_MTE2>(isPing ? eventIDVToMte2Ping : eventIDVToMte2Pong);
       }
-      int32_t outputGmOffset = outputBaseOffset + hwNum * (processSize / hwNumAlign) * i + elemNum * curNumPerCore;
+      int64_t outputGmOffset = outputBaseOffset + hwNum * (processSize / hwNumAlign) * i + elemNum * curNumPerCore;
       CopyY2Gm<T1>(yGm[outputGmOffset], yTensor[inputUbOffset], rowsCount, hwNum);
       if (i < loopNum - BUFFER_NUM) {
         SetFlag<HardEvent::MTE3_V>(isPing ? eventIDMte3ToVPing : eventIDMte3ToVPong);

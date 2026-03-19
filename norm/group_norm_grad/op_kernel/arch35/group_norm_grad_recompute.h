@@ -364,7 +364,7 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::ComputeMode2Dx(
 {
     float sum1 = 0;
     float sum2 = 0;
-    uint32_t channelIdx = (taskIdx % this->G_) * this->C_G_;
+    int64_t channelIdx = (taskIdx % this->G_) * this->C_G_;
     this->LoadDataToUb(this->inQueGamma_, this->tBufGamma_, this->gammaGm_, channelIdx, this->C_G_);
     LocalTensor<float> gammaTensor = this->inQueGamma_.template DeQue<float>();
     this->ComputeSum1Sum2(dbetaTensor, dsTensor, gammaTensor, sum1, sum2);

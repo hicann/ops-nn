@@ -51,22 +51,22 @@ protected:
     __aicore__ inline void LoadMeanRstd(int32_t taskIdx);
     __aicore__ inline void LoadDataToUb(
         TQue<TPosition::VECIN, 1>& inQue, TBuf<TPosition::VECCALC>& tbuf, const GlobalTensor<U>& gm,
-        const uint32_t offset, const uint32_t count);
+        const int64_t offset, const uint32_t count);
     __aicore__ inline void CopyInDyAndX(
         const LocalTensor<T>& dyTensor, const LocalTensor<T>& xTensor, const int64_t offset, const uint32_t burstLen);
     __aicore__ inline void StoreDxToGm(
-        TQue<TPosition::VECOUT, 1>& outQue, const uint32_t gmOffset, const uint32_t count);
+        TQue<TPosition::VECOUT, 1>& outQue, const int64_t gmOffset, const uint32_t count);
     __aicore__ inline void Fp32StoreDgamma(
-        uint32_t channelIdx, const GlobalTensor<float>& dgammaOut, const LocalTensor<float>& dsTensor,
+        int64_t channelIdx, const GlobalTensor<float>& dgammaOut, const LocalTensor<float>& dsTensor,
         const LocalTensor<float>& dbetaTensor, const float mean, const float rstd);
     __aicore__ inline void NonFp32StoreDgamma(
-        uint32_t channelIdx, const GlobalTensor<U>& dgammaOut, const LocalTensor<float>& dsTensor,
+        int64_t channelIdx, const GlobalTensor<U>& dgammaOut, const LocalTensor<float>& dsTensor,
         const LocalTensor<float>& dbetaTensor, const float mean, const float rstd);
     __aicore__ inline void Fp32DgammaDbeta2GM(
-        uint32_t channelIdx, GlobalTensor<float>& dgammaOut, const LocalTensor<float>& dsTensor,
+        int64_t channelIdx, GlobalTensor<float>& dgammaOut, const LocalTensor<float>& dsTensor,
         GlobalTensor<float>& dbetaOut, const LocalTensor<float>& dbetaTensor, const float mean, const float rstd);
     __aicore__ inline void NonFp32DgammaDbeta2GM(
-        uint32_t channelIdx, const LocalTensor<float>& dsTensor, const LocalTensor<float>& dbetaTensor,
+        int64_t channelIdx, const LocalTensor<float>& dsTensor, const LocalTensor<float>& dbetaTensor,
         const float mean, const float rstd);
     __aicore__ inline void StoreDgammaDbeta(
         const int32_t taskIdx, const LocalTensor<float>& dsTensor, const LocalTensor<float>& dbetaTensor,
@@ -82,19 +82,19 @@ protected:
         const LocalTensor<float>& gammaTensor, float& sum1, float& sum2);
     __aicore__ inline void InitStage2Mode2Buffer();
     __aicore__ inline void InitStage2Mode1Buffer();
-    __aicore__ inline void stage2Mode1Process(uint32_t cOffset, uint32_t currentCNum);
+    __aicore__ inline void stage2Mode1Process(int64_t cOffset, uint32_t currentCNum);
     __aicore__ inline void ProcessStage2Mode2(const GlobalTensor<float>& workspace, const GlobalTensor<U>& gmOut);
     __aicore__ inline void reduceNMode1Wsp2Ub(
-        TQue<QuePosition::VECIN, 1>& vecInQue, const GlobalTensor<float>& workspace, uint32_t gmOffset,
+        TQue<QuePosition::VECIN, 1>& vecInQue, const GlobalTensor<float>& workspace, int64_t gmOffset,
         uint32_t currentCNum);
     __aicore__ inline void stage2Mode1B32Compute(
         TQue<QuePosition::VECIN, 1>& inQue, TQue<QuePosition::VECOUT, 1>& calQue, TBuf<TPosition::VECCALC>& outTbuf,
         TBuf<TPosition::VECCALC>& tempbuf, const GlobalTensor<float>& workspace, GlobalTensor<U>& gmOut,
-        uint32_t cOffset, uint32_t currentCNum);
+        int64_t cOffset, uint32_t currentCNum);
     __aicore__ inline void stage2Mode1B16Compute(
         TQue<QuePosition::VECIN, 1>& inQue, TQue<QuePosition::VECOUT, 1>& calQue, TBuf<TPosition::VECCALC>& outTbuf,
         TBuf<TPosition::VECCALC>& tempbuf, const GlobalTensor<float>& workspace, GlobalTensor<U>& gmOut,
-        uint32_t cOffset, uint32_t currentCNum);
+        int64_t cOffset, uint32_t currentCNum);
     __aicore__ inline void reduceNMode1LessThan2(
         __local_mem__ float* inUbAddr, __local_mem__ float* calUbAddr, uint32_t currentCNum);
     __aicore__ inline void reduceNMode1LessThan4(
@@ -185,7 +185,7 @@ protected:
     uint32_t curCoreTaskNum_;
     uint32_t workSpaceSize_;
     int32_t curBlockIdx_;
-    int32_t startTaskId_;
+    int64_t startTaskId_;
     float meanScalar_;
     float rstdScalar_;
     uint32_t mode2UbCapEle_;
@@ -403,7 +403,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::Stage2Process()
                     (this->curBlockIdx_ == (this->stage2CoreUsed_ - 1)) ? this->cTailBlockFactor_ : this->cBlockFactor_;
                 uint32_t quotient = (stage2CurCoreCNum + this->cFactor_ - 1) / this->cFactor_;
                 for (uint32_t ubLoopIdx = 0; ubLoopIdx < quotient; ubLoopIdx++) {
-                    uint32_t cOffset = ubLoopIdx * this->cFactor_ + this->curBlockIdx_ * this->cBlockFactor_;
+                    int64_t cOffset = ubLoopIdx * this->cFactor_ + this->curBlockIdx_ * this->cBlockFactor_;
                     uint32_t currentC = (ubLoopIdx == (quotient - 1)) ?
                                             (stage2CurCoreCNum - (quotient - 1) * this->cFactor_) :
                                             this->cFactor_;
@@ -501,7 +501,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::LoadMeanRstd(int32_t taskIdx)
 template <typename T, typename U>
 __aicore__ inline void GroupNormGradBase<T, U>::LoadDataToUb(
     TQue<TPosition::VECIN, 1>& inQue, TBuf<TPosition::VECCALC>& tbuf, const GlobalTensor<U>& gm,
-    const uint32_t gmOffset, const uint32_t count)
+    const int64_t gmOffset, const uint32_t count)
 {
     DataCopyExtParams params;
     params.blockCount = 1;
@@ -542,7 +542,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::CopyInDyAndX(
 
 template <typename T, typename U>
 __aicore__ inline void GroupNormGradBase<T, U>::StoreDxToGm(
-    TQue<TPosition::VECOUT, 1>& outQue, const uint32_t gmOffset, const uint32_t count)
+    TQue<TPosition::VECOUT, 1>& outQue, const int64_t gmOffset, const uint32_t count)
 {
     LocalTensor<T> out = outQue.DeQue<T>();
     DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
@@ -552,7 +552,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::StoreDxToGm(
 
 template <typename T, typename U>
 __aicore__ inline void GroupNormGradBase<T, U>::Fp32StoreDgamma(
-    uint32_t channelIdx, const GlobalTensor<float>& dgammaOut, const LocalTensor<float>& dsTensor,
+    int64_t channelIdx, const GlobalTensor<float>& dgammaOut, const LocalTensor<float>& dsTensor,
     const LocalTensor<float>& dbetaTensor, const float mean, const float rstd)
 {
     auto rstdScalar = rstd;
@@ -596,7 +596,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::Fp32StoreDgamma(
 */
 template <typename T, typename U>
 __aicore__ inline void GroupNormGradBase<T, U>::NonFp32StoreDgamma(
-    uint32_t channelIdx, const GlobalTensor<U>& dgammaOut, const LocalTensor<float>& dsTensor,
+    int64_t channelIdx, const GlobalTensor<U>& dgammaOut, const LocalTensor<float>& dsTensor,
     const LocalTensor<float>& dbetaTensor, const float mean, const float rstd)
 {
     auto rstdScalar = rstd;
@@ -637,7 +637,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::NonFp32StoreDgamma(
 
 template <typename T, typename U>
 __aicore__ inline void GroupNormGradBase<T, U>::Fp32DgammaDbeta2GM(
-    uint32_t channelIdx, GlobalTensor<float>& dgammaOut, const LocalTensor<float>& dsTensor,
+    int64_t channelIdx, GlobalTensor<float>& dgammaOut, const LocalTensor<float>& dsTensor,
     GlobalTensor<float>& dbetaOut, const LocalTensor<float>& dbetaTensor, const float mean, const float rstd)
 {
     if (dbetaIsRequire_) {
@@ -656,7 +656,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::Fp32DgammaDbeta2GM(
 
 template <typename T, typename U>
 __aicore__ inline void GroupNormGradBase<T, U>::NonFp32DgammaDbeta2GM(
-    uint32_t channelIdx, const LocalTensor<float>& dsTensor, const LocalTensor<float>& dbetaTensor, const float mean,
+    int64_t channelIdx, const LocalTensor<float>& dsTensor, const LocalTensor<float>& dbetaTensor, const float mean,
     const float rstd)
 {
     if (dbetaIsRequire_) {
@@ -687,7 +687,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::StoreDgammaDbeta(
     const int32_t taskIdx, const LocalTensor<float>& dsTensor, const LocalTensor<float>& dbetaTensor, const float mean,
     const float rstd)
 {
-    uint32_t cIdx;
+    int64_t cIdx;
     // When N == 1 or N = 2, directly written to the GM, workSpace is not required.
     if (this->N_ <= 2) {
         cIdx = (taskIdx % this->G_) * this->C_G_;
@@ -967,7 +967,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::InitStage2Mode1Buffer()
 }
 
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradBase<T, U>::stage2Mode1Process(uint32_t cOffset, uint32_t currentCNum)
+__aicore__ inline void GroupNormGradBase<T, U>::stage2Mode1Process(int64_t cOffset, uint32_t currentCNum)
 {
     if (dgammaIsRequire_) {
         if constexpr (IsSameType<U, half>::value || IsSameType<U, bfloat16_t>::value) {
@@ -995,7 +995,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::stage2Mode1Process(uint32_t cOff
 
 template <typename T, typename U>
 __aicore__ inline void GroupNormGradBase<T, U>::reduceNMode1Wsp2Ub(
-    TQue<QuePosition::VECIN, 1>& vecInQue, const GlobalTensor<float>& workspace, uint32_t gmOffset,
+    TQue<QuePosition::VECIN, 1>& vecInQue, const GlobalTensor<float>& workspace, int64_t gmOffset,
     uint32_t currentCNum)
 {
     LocalTensor<float> vecInTensor = vecInQue.AllocTensor<float>();
@@ -1018,7 +1018,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::reduceNMode1Wsp2Ub(
 template <typename T, typename U>
 __aicore__ inline void GroupNormGradBase<T, U>::stage2Mode1B32Compute(
     TQue<QuePosition::VECIN, 1>& inQue, TQue<QuePosition::VECOUT, 1>& calQue, TBuf<TPosition::VECCALC>& outTbuf,
-    TBuf<TPosition::VECCALC>& tempTbuf, const GlobalTensor<float>& workspace, GlobalTensor<U>& gmOut, uint32_t cOffset,
+    TBuf<TPosition::VECCALC>& tempTbuf, const GlobalTensor<float>& workspace, GlobalTensor<U>& gmOut, int64_t cOffset,
     uint32_t currentCNum)
 {
     reduceNMode1Wsp2Ub(inQue, workspace, cOffset, currentCNum);
@@ -1048,7 +1048,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::stage2Mode1B32Compute(
 template <typename T, typename U>
 __aicore__ inline void GroupNormGradBase<T, U>::stage2Mode1B16Compute(
     TQue<QuePosition::VECIN, 1>& inQue, TQue<QuePosition::VECOUT, 1>& calQue, TBuf<TPosition::VECCALC>& outTbuf,
-    TBuf<TPosition::VECCALC>& tempTbuf, const GlobalTensor<float>& workspace, GlobalTensor<U>& gmOut, uint32_t cOffset,
+    TBuf<TPosition::VECCALC>& tempTbuf, const GlobalTensor<float>& workspace, GlobalTensor<U>& gmOut, int64_t cOffset,
     uint32_t currentCNum)
 {
     reduceNMode1Wsp2Ub(inQue, workspace, cOffset, currentCNum);

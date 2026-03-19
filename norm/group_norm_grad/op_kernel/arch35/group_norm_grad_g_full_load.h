@@ -102,7 +102,7 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::Stage1Process()
         dyTensor = this->inQueDy_.template DeQue<T>();
         xTensor = this->inQueX_.template DeQue<T>();
         LocalTensor<T> dxTensor = this->outQueDx_.template AllocTensor<T>();
-        uint32_t baseTaskId = this->startTaskId_ + loopIdx * this->mode0UbCapGNum_;
+        int64_t baseTaskId = this->startTaskId_ + loopIdx * this->mode0UbCapGNum_;
         this->LoadDataToUb(this->inQueMean_, this->tempMeanBuf_, this->meanGm_, baseTaskId, currGNum);
         this->LoadDataToUb(this->inQueRstd_, this->tempRstdBuf_, this->rstdGm_, baseTaskId, currGNum);
         LocalTensor<float> meanTensor = this->inQueMean_.template DeQue<float>();
@@ -464,7 +464,7 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::ComputeMode0Dx(
     int32_t taskIdx, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor, const LocalTensor<T>& dxTensor,
     LocalTensor<float>& dbetaTensor, LocalTensor<float>& dsTensor, const float mean, const float rstd)
 {
-    uint32_t channelIdx = (taskIdx % this->G_) * this->C_G_;
+    int64_t channelIdx = (taskIdx % this->G_) * this->C_G_;
     this->LoadDataToUb(this->inQueGamma_, this->tBufGamma_, this->gammaGm_, channelIdx, this->C_G_);
     LocalTensor<float> gammaTensor = this->inQueGamma_.template DeQue<float>();
     float sum1 = 0;

@@ -90,7 +90,7 @@ private:
       if (i > 1) {
         WaitFlag<HardEvent::V_MTE2>(isPing ? eventIDVToMte2Ping : eventIDVToMte2Pong);
       }
-      uint32_t xGmOffset = xGmBaseOffset + i * onceNumPerCore * elemNum;
+      int64_t xGmOffset = xGmBaseOffset + i * onceNumPerCore * elemNum;
       uint32_t xUbOffset = isPing * processSize;
       CopyX2UB<T1>(xGm[xGmOffset], xTensor[xUbOffset], numPerCoreProcess, elemNum);
       SetFlag<HardEvent::MTE2_V>(isPing ? eventIDMte2ToVPing : eventIDMte2ToVPong);

@@ -154,7 +154,7 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::ComputeStage0()
 {
     LocalTensor<float> dbetaTensor = this->outQueDbeta_.template AllocTensor<float>();
     LocalTensor<float> dsTensor = this->outQueDs_.template AllocTensor<float>();
-    uint32_t baseOffset = this->startTaskId_ * this->eleNumPerC_;
+    int64_t baseOffset = this->startTaskId_ * this->eleNumPerC_;
     uint32_t ubLoopCnt = (this->curCoreTaskNum_ + this->mode1UbCapCNum_ - 1) / this->mode1UbCapCNum_;
     bool isLessEqualVL = this->eleNumPerC_ <= this->VecLen_;
     LocalTensor<T> dyTensor;
@@ -222,8 +222,8 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::ComputeStage1(int32_
     if (this->dxIsRequire_) {
         float sum1 = 0;
         float sum2 = 0;
-        uint32_t channelIdx = (taskIdx % this->G_) * this->C_G_;
-        uint32_t baseOffset = taskIdx * this->eleNumPerG_;
+        int64_t channelIdx = (taskIdx % this->G_) * this->C_G_;
+        int64_t baseOffset = taskIdx * this->eleNumPerG_;
         uint32_t ubCapEleNum = CeilAlign(static_cast<uint32_t>(this->eleNumPerC_), this->elemTPerBlock_);
         this->LoadDataToUb(this->inQueGamma_, this->tBufGamma_, this->gammaGm_, channelIdx, this->C_G_);
         LocalTensor<float> gammaTensor = this->inQueGamma_.template DeQue<float>();
