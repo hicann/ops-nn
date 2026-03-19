@@ -70,6 +70,7 @@ constexpr int64_t K_MTE2_ALIGN_K_THRESHOLD = 4096; // 当原始K大于等于这�
 constexpr int64_t BASE_N_THRESHOLD = 128;
 constexpr int64_t BASE_M_THRESHOLD = 64;
 constexpr double EPSILON = 1e-9;
+constexpr int64_t DEFAULT_FALLBACK_BASEM = 256L;
 
 struct PlatformParam {
     int64_t blockNum = 0;
@@ -184,6 +185,8 @@ protected:
     void UpdateL1ParamWithScaleFactor(L1TilingParam& l1TilingParam, int64_t& mte2DataSize, double& mte2Cost, bool& ret, const StepKParam& stepKParams);
     bool CheckL1TilingInvalid(int64_t stepKa, int64_t stepKb, int64_t stepKMax);
     bool GetFinalResult();
+    bool GetFallbackTiling();
+    bool GetFallbackBaseK();
     bool ValidateTilingResult() const;
     void AddOptionalSolution();
     void PrintFinalResult(const BasicBlockParam &param, bool enable) const;
