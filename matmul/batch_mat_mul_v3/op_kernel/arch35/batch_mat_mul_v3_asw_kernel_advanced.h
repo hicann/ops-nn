@@ -37,6 +37,7 @@ public:
         GM_ADDR workspaceGM, const void *tilingData, TPipe *pipe);
     __aicore__ inline void UpdateGlobalTensor(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM,
         GM_ADDR workspaceGM);
+    __aicore__ inline void UpdateBias(uint64_t kIndex);
     __aicore__ inline void InitInputs(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM);
     __aicore__ inline void Process(uint8_t enAtomic = 0);
     __aicore__ inline void End() { mm_.End(); }
@@ -95,6 +96,20 @@ __aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, B
     InitInputs(aGM, bGM, cGM, biasGM);
 }
 
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
+__aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::UpdateBias(
+    uint64_t kIndex)
+{
+    if (block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.isBias) {
+        if (kIndex == 0) {
+            mm_.SetBias(biasGlobal_[block_.offset_.offsetBias]);
+        } else {
+            mm_.ClearBias();
+        }
+    }
+}
+
+
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG>
 __aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::Process(uint8_t enAtomic)
@@ -115,16 +130,17 @@ __aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, B
             block_.template UpdateBlockParams<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE>(j);
             if (block_.params_.singleCoreM > 0 && block_.params_.singleCoreN > 0) {
                 block_.template CalcGMOffset<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE>();
-
-                mm_.SetSingleShape(block_.params_.singleCoreM, block_.params_.singleCoreN,
-                    block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.singleCoreK);
-                mm_.SetTensorA(aGlobal_[block_.offset_.offsetA], A_TYPE::isTrans);
-                mm_.SetTensorB(bGlobal_[block_.offset_.offsetB], B_TYPE::isTrans);
-                if (block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.isBias) {
-                    mm_.SetBias(biasGlobal_[block_.offset_.offsetBias]);
+                for (uint64_t kIndex = 0; kIndex < block_.params_.splitKRound; kIndex++) {
+                    uint64_t singleShapeK = kIndex == block_.params_.splitKRound - 1 ? block_.params_.singleShapeKTail : 
+                    block_.params_.singleCoreSplitK;
+                    mm_.SetSingleShape(block_.params_.singleCoreM, block_.params_.singleCoreN, singleShapeK);
+                    block_.template CalcSplitKGMOffset<A_TYPE, B_TYPE>(kIndex);
+                    mm_.SetTensorA(aGlobal_[block_.offset_.offsetA], A_TYPE::isTrans);
+                    mm_.SetTensorB(bGlobal_[block_.offset_.offsetB], B_TYPE::isTrans);
+                    UpdateBias(kIndex);
+                    mm_.Iterate();
+                    mm_.GetTensorC(cGlobal_[block_.offset_.offsetC], kIndex != 0);
                 }
-                mm_.Iterate();
-                mm_.GetTensorC(cGlobal_[block_.offset_.offsetC], enAtomic);
             }
         }
     }

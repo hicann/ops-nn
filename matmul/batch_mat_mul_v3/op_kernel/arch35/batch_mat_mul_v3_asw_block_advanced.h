@@ -29,6 +29,8 @@ namespace BatchMatMulV3Advanced {
 using namespace AscendC;
 using namespace matmul;
 
+constexpr uint64_t FP32_SPLIT_K_THRESHOLD = 8192;
+
 struct BmmAswBlockOffset {
     uint64_t offsetA = 0;
     uint64_t offsetB = 0;
@@ -77,6 +79,12 @@ struct BmmAswBlockArgs {
     uint64_t tailWindow = 0;
     uint64_t kbAlignSize = 0;
     uint64_t nAlignSize = 0;
+
+    uint64_t offsetABatch_ = 0;
+    uint64_t offsetBBatch_ = 0;
+    uint64_t splitKRound = 1;
+    uint64_t singleCoreSplitK = 0;
+    uint64_t singleShapeKTail = 0;
 };
 
 
@@ -90,6 +98,8 @@ public:
     __aicore__ inline void UpdateBlockParams(uint64_t roundIdx);
     template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE>
     __aicore__ inline void CalcGMOffset();
+    template <class A_TYPE, class B_TYPE>
+    __aicore__ inline void CalcSplitKGMOffset(uint64_t splitKIndex);
 
 public:
     BmmAswBlockOffset offset_;
@@ -141,6 +151,25 @@ __aicore__ inline void BatchMatMulAswBlock::Init(const void *tilingData)
     using B_T = typename B_TYPE::T;
     params_.kbAlignSize = (B_TYPE::isTrans) ? BLOCK_BYTE_SIZE / sizeof(B_T) : BLOCK_SIZE;
     params_.nAlignSize = (B_TYPE::isTrans) ? BLOCK_SIZE : BLOCK_BYTE_SIZE / sizeof(B_T);
+
+    params_.splitKRound = 1;
+    params_.singleCoreSplitK = batchMatmulTilingData_->matMulTilingData.tCubeTiling.singleCoreK;
+    params_.singleShapeKTail = batchMatmulTilingData_->matMulTilingData.tCubeTiling.singleCoreK;
+    constexpr bool isFp32 = std::is_same_v<typename C_TYPE::T, float>;
+    // 如果是fp32且singleCoreK大于8192且B矩阵不是NZ格式，需要单核切K保精度，否则不需要切K
+    if (isFp32 && !batchMatmulTilingData_->matMulTilingData.isHf32 && B_TYPE::format == CubeFormat::ND &&
+        batchMatmulTilingData_->matMulTilingData.tCubeTiling.singleCoreK > FP32_SPLIT_K_THRESHOLD) {
+        params_.splitKRound =
+            MMV3DivCeil(batchMatmulTilingData_->matMulTilingData.tCubeTiling.singleCoreK, FP32_SPLIT_K_THRESHOLD);
+        params_.singleCoreSplitK = MMV3CeilAlign(
+            MMV3DivCeil(batchMatmulTilingData_->matMulTilingData.tCubeTiling.singleCoreK, params_.splitKRound),
+            ALIGN_BYTE / DATA_SIZE_FP32);
+        params_.singleShapeKTail =
+            batchMatmulTilingData_->matMulTilingData.tCubeTiling.singleCoreK % params_.singleCoreSplitK;
+        if (params_.singleShapeKTail == 0) {
+            params_.singleShapeKTail = params_.singleCoreSplitK;
+        }
+    }
 }
 
 __aicore__ inline void BatchMatMulAswBlock::UpdateBasicIndex(uint64_t roundIdx, uint64_t newBlockIdx)
@@ -189,7 +218,7 @@ __aicore__ inline void BatchMatMulAswBlock::CalcGMOffset()
     uint64_t batchA4Index = batchC4Index % params_.batchA4;
     uint64_t batchAIndex = batchA1Index * (params_.batchA2 * params_.batchA3 * params_.batchA4) +
         batchA2Index * (params_.batchA3 * params_.batchA4) + batchA3Index * params_.batchA4 + batchA4Index;
-    uint64_t offsetABatch = batchAIndex * batchMatmulTilingData_->matMulTilingData.tCubeTiling.M *
+     params_.offsetABatch_ = batchAIndex * batchMatmulTilingData_->matMulTilingData.tCubeTiling.M *
                             static_cast<uint64_t>(batchMatmulTilingData_->matMulTilingData.tCubeTiling.Ka);
     uint64_t batchB1Index = batchC1Index % params_.batchB1;
     uint64_t batchB2Index = batchC2Index % params_.batchB2;
@@ -197,20 +226,20 @@ __aicore__ inline void BatchMatMulAswBlock::CalcGMOffset()
     uint64_t batchB4Index = batchC4Index % params_.batchB4;
     uint64_t batchBIndex = batchB1Index * (params_.batchB2 * params_.batchB3 * params_.batchB4) +
         batchB2Index * (params_.batchB3 * params_.batchB4) + batchB3Index * params_.batchB4 + batchB4Index;
-    uint64_t offsetBBatch = batchBIndex * batchMatmulTilingData_->matMulTilingData.tCubeTiling.N *
+    params_.offsetBBatch_ = batchBIndex * batchMatmulTilingData_->matMulTilingData.tCubeTiling.N *
                             static_cast<uint64_t>(batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb);
 
     if constexpr (A_TYPE::isTrans) {
-        offset_.offsetA = offsetABatch + params_.mCntIndex * params_.blockBaseM;
+        offset_.offsetA = params_.offsetABatch_ + params_.mCntIndex * params_.blockBaseM;
     } else {
-        offset_.offsetA = offsetABatch + (params_.mCntIndex * params_.blockBaseM) *
+        offset_.offsetA = params_.offsetABatch_ + (params_.mCntIndex * params_.blockBaseM) *
             static_cast<uint64_t>(batchMatmulTilingData_->matMulTilingData.tCubeTiling.Ka);
     }
     if constexpr (B_TYPE::isTrans) {
-        offset_.offsetB = offsetBBatch + (params_.nCntIndex * params_.blockBaseN) *
+        offset_.offsetB = params_.offsetBBatch_ + (params_.nCntIndex * params_.blockBaseN) *
             static_cast<uint64_t>(batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb);
     } else {
-        offset_.offsetB = offsetBBatch + params_.nCntIndex * params_.blockBaseN;
+        offset_.offsetB = params_.offsetBBatch_ + params_.nCntIndex * params_.blockBaseN;
     }
     offset_.offsetC = batchCIndex * static_cast<uint64_t>(batchMatmulTilingData_->matMulTilingData.tCubeTiling.M) *
         batchMatmulTilingData_->matMulTilingData.tCubeTiling.N + (params_.nCntIndex * params_.blockBaseN) +
@@ -219,6 +248,31 @@ __aicore__ inline void BatchMatMulAswBlock::CalcGMOffset()
         offset_.offsetBias = (batchCIndex % batchMatmulTilingData_->biasBatchDimAll) *
                              static_cast<uint64_t>(batchMatmulTilingData_->matMulTilingData.tCubeTiling.N) +
                              params_.nCntIndex * params_.blockBaseN;
+    }
+}
+
+template <class A_TYPE, class B_TYPE>
+__aicore__ inline void BatchMatMulAswBlock::CalcSplitKGMOffset(uint64_t splitKIndex)
+{
+    if constexpr (A_TYPE::isTrans) {
+        offset_.offsetA = params_.offsetABatch_ + params_.mCntIndex * params_.blockBaseM +
+                          splitKIndex * params_.singleCoreSplitK *
+                              static_cast<uint64_t>(batchMatmulTilingData_->matMulTilingData.tCubeTiling.M);
+    } else {
+        offset_.offsetA = params_.offsetABatch_ +
+                          (params_.mCntIndex * params_.blockBaseM) *
+                              static_cast<uint64_t>(batchMatmulTilingData_->matMulTilingData.tCubeTiling.Ka) +
+                          splitKIndex * params_.singleCoreSplitK;
+    }
+    if constexpr (B_TYPE::isTrans) {
+        offset_.offsetB = params_.offsetBBatch_ +
+                          (params_.nCntIndex * params_.blockBaseN) *
+                              static_cast<uint64_t>(batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb) +
+                          splitKIndex * params_.singleCoreSplitK;
+    } else {
+        offset_.offsetB = params_.offsetBBatch_ + params_.nCntIndex * params_.blockBaseN +
+                          splitKIndex * params_.singleCoreSplitK *
+                              static_cast<uint64_t>(batchMatmulTilingData_->matMulTilingData.tCubeTiling.N);
     }
 }
 
