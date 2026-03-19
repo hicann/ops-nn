@@ -445,6 +445,13 @@ static aclnnStatus DealMedianEmptyTensor(const aclTensor *self, aclTensor *out, 
   return ACLNN_SUCCESS;
 }
 
+static void CheckFormat(const aclTensor* self) {
+    ge::Format selfStorageFormat = self->GetStorageFormat();
+    if (selfStorageFormat == ge::Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGW("aclnnMedian/aclnnMedianDim doesn't support format NZ.");
+    }
+}
+
 aclnnStatus aclnnMedianGetWorkspaceSize(const aclTensor *self, aclTensor *valuesOut, uint64_t *workspaceSize,
                                         aclOpExecutor **executor) {
   OP_CHECK_COMM_INPUT(workspaceSize, executor);
@@ -458,6 +465,9 @@ aclnnStatus aclnnMedianGetWorkspaceSize(const aclTensor *self, aclTensor *values
   // 参数检查
   auto ret = CheckParams(self, valuesOut);
   CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+  // 检查格式
+  CheckFormat(self);
 
   // 空Tensor处理
   if (valuesOut->IsEmpty()) {
@@ -545,6 +555,9 @@ aclnnStatus aclnnMedianDimGetWorkspaceSize(const aclTensor *self, int64_t dim, b
   // 参数检查
   auto ret = CheckParamsDim(self, dim, keepDim, valuesOut, indicesOut);
   CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+  // 检查格式
+  CheckFormat(self);
 
   // 空Tensor处理
   if (self->IsEmpty() || valuesOut->IsEmpty() || indicesOut->IsEmpty()) {
