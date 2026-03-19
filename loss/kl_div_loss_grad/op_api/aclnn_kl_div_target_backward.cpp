@@ -82,8 +82,8 @@ static bool CheckDtypeValid(
     OP_CHECK_DTYPE_NOT_SUPPORT(target, supportList, return false);
     // 检查gradTarget的数据类型是否在支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(gradTarget, supportList, return false);
-    // self和gradTarget数据类型必须一样
-    OP_CHECK_DTYPE_NOT_MATCH(gradTarget, self->GetDataType(), return false);
+    // target和gradTarget数据类型必须一样
+    OP_CHECK_DTYPE_NOT_MATCH(gradTarget, target->GetDataType(), return false);
 
     return true;
 }
@@ -113,15 +113,16 @@ static bool CheckShape(
     return true;
 }
 
-static bool CheckFormat(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* gradTarget)
-{
-    if (gradOutput->GetStorageFormat() != Format::FORMAT_ND || self->GetStorageFormat() != Format::FORMAT_ND ||
-        target->GetStorageFormat() != Format::FORMAT_ND || gradTarget->GetStorageFormat() != Format::FORMAT_ND) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND.");
-        return false;
- 	}
-    
-    return true;
+static bool CheckFormat(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* gradTarget) {
+  // 如果输入格式是私有格式，记录日志，直接报错
+  if (op::IsPrivateFormat(gradOutput->GetStorageFormat()) || op::IsPrivateFormat(self->GetStorageFormat()) || 
+      op::IsPrivateFormat(target->GetStorageFormat()) || op::IsPrivateFormat(gradTarget->GetStorageFormat())) {
+    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND、NCHW、NHWC、HWCN、NDHWC、NCDHW、NCL. Actual: gradOutput [%s], self [%s], target [%s], gradTarget [%s] ",
+            ToString(gradOutput->GetStorageFormat()).GetString(), ToString(self->GetStorageFormat()).GetString(),
+            ToString(target->GetStorageFormat()).GetString(), ToString(gradTarget->GetStorageFormat()).GetString());
+    return false;
+  }
+  return true;
 }
 
 static aclnnStatus CheckParams(

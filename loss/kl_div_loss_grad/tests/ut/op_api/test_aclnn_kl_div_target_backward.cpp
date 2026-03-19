@@ -171,7 +171,7 @@ TEST_F(l2_kl_div_target_backward_test, ascend910B2_case_fp_logtarget_true)
     int64_t reduction = 0;
     bool logTarget = true;
 
-    auto gradTargetDesc = TensorDesc({3, 5, 4, 6}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto gradTargetDesc = TensorDesc({3, 5, 4, 6}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
     auto ut =
         OP_API_UT(aclnnKlDivTargetBackward, INPUT(gradDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(gradTargetDesc));
@@ -201,7 +201,7 @@ TEST_F(l2_kl_div_target_backward_test, case_NHWC)
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
     // SAMPLE: precision simulate
     ut.TestPrecision();
@@ -223,7 +223,7 @@ TEST_F(l2_kl_div_target_backward_test, case_NDHWC)
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
     // SAMPLE: precision simulate
     ut.TestPrecision();
@@ -325,7 +325,7 @@ TEST_F(l2_kl_div_target_backward_test, case_dtype_promte)
     int64_t reduction = 0;
     bool logTarget = true;
 
-    auto gradTargetDesc = TensorDesc({3, 4, 1, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto gradTargetDesc = TensorDesc({3, 4, 1, 2, 3}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
     auto ut =
         OP_API_UT(aclnnKlDivTargetBackward, INPUT(gradDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(gradTargetDesc));
