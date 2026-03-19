@@ -14,7 +14,7 @@
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/reshape.h"
 #include "aclnn_quant_batch_matmul_inplace_add.h"
-#include "aclnn_quant_batch_matmul_inplace_add_util.h"
+#include "quant_batch_matmul_inplace_add_util.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
 #include <dlfcn.h>
 #include "securec.h"
