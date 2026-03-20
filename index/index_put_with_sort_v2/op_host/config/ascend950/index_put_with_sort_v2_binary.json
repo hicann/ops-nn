@@ -342,76 +342,7 @@
           {
             "name": "accumulate",
             "dtype": "bool",
-            "value": false
-          }
-        ]
-      },
-      {
-        "bin_filename": "IndexPutWithSortV2_uint8_true",
-        "inputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "uint8",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "linear_index",
-            "index": 1,
-            "dtype": "int64",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "pos_idx",
-            "index": 2,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "value",
-            "index": 3,
-            "dtype": "uint8",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "outputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "uint8",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "attrs": [
-          {
-            "name": "indexed_sizes",
-            "dtype": "list_int",
             "value": null
-          },
-          {
-            "name": "accumulate",
-            "dtype": "bool",
-            "value": true
           }
         ]
       },
@@ -480,76 +411,7 @@
           {
             "name": "accumulate",
             "dtype": "bool",
-            "value": false
-          }
-        ]
-      },
-      {
-        "bin_filename": "IndexPutWithSortV2_float16_true",
-        "inputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "float16",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "linear_index",
-            "index": 1,
-            "dtype": "int64",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "pos_idx",
-            "index": 2,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "value",
-            "index": 3,
-            "dtype": "float16",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "outputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "float16",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "attrs": [
-          {
-            "name": "indexed_sizes",
-            "dtype": "list_int",
             "value": null
-          },
-          {
-            "name": "accumulate",
-            "dtype": "bool",
-            "value": true
           }
         ]
       },
@@ -756,76 +618,7 @@
           {
             "name": "accumulate",
             "dtype": "bool",
-            "value": false
-          }
-        ]
-      },
-      {
-        "bin_filename": "IndexPutWithSortV2_int32_true",
-        "inputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "linear_index",
-            "index": 1,
-            "dtype": "int64",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "pos_idx",
-            "index": 2,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "value",
-            "index": 3,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "outputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "attrs": [
-          {
-            "name": "indexed_sizes",
-            "dtype": "list_int",
             "value": null
-          },
-          {
-            "name": "accumulate",
-            "dtype": "bool",
-            "value": true
           }
         ]
       },
@@ -894,76 +687,7 @@
           {
             "name": "accumulate",
             "dtype": "bool",
-            "value": false
-          }
-        ]
-      },
-      {
-        "bin_filename": "IndexPutWithSortV2_float32_true",
-        "inputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "float32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "linear_index",
-            "index": 1,
-            "dtype": "int64",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "pos_idx",
-            "index": 2,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "value",
-            "index": 3,
-            "dtype": "float32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "outputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "float32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "attrs": [
-          {
-            "name": "indexed_sizes",
-            "dtype": "list_int",
             "value": null
-          },
-          {
-            "name": "accumulate",
-            "dtype": "bool",
-            "value": true
           }
         ]
       },
@@ -1170,76 +894,7 @@
           {
             "name": "accumulate",
             "dtype": "bool",
-            "value": false
-          }
-        ]
-      },
-      {
-        "bin_filename": "IndexPutWithSortV2_bool_int32_true",
-        "inputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "bool",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "linear_index",
-            "index": 1,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "pos_idx",
-            "index": 2,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "value",
-            "index": 3,
-            "dtype": "bool",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "outputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "bool",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "attrs": [
-          {
-            "name": "indexed_sizes",
-            "dtype": "list_int",
             "value": null
-          },
-          {
-            "name": "accumulate",
-            "dtype": "bool",
-            "value": true
           }
         ]
       },
@@ -1308,76 +963,7 @@
           {
             "name": "accumulate",
             "dtype": "bool",
-            "value": false
-          }
-        ]
-      },
-      {
-        "bin_filename": "IndexPutWithSortV2_int8_int32_true",
-        "inputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "int8",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "linear_index",
-            "index": 1,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "pos_idx",
-            "index": 2,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "value",
-            "index": 3,
-            "dtype": "int8",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "outputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "int8",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "attrs": [
-          {
-            "name": "indexed_sizes",
-            "dtype": "list_int",
             "value": null
-          },
-          {
-            "name": "accumulate",
-            "dtype": "bool",
-            "value": true
           }
         ]
       },
@@ -1446,76 +1032,7 @@
           {
             "name": "accumulate",
             "dtype": "bool",
-            "value": false
-          }
-        ]
-      },
-      {
-        "bin_filename": "IndexPutWithSortV2_uint8_int32_true",
-        "inputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "uint8",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "linear_index",
-            "index": 1,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "pos_idx",
-            "index": 2,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "value",
-            "index": 3,
-            "dtype": "uint8",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "outputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "uint8",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "attrs": [
-          {
-            "name": "indexed_sizes",
-            "dtype": "list_int",
             "value": null
-          },
-          {
-            "name": "accumulate",
-            "dtype": "bool",
-            "value": true
           }
         ]
       },
@@ -1584,76 +1101,7 @@
           {
             "name": "accumulate",
             "dtype": "bool",
-            "value": false
-          }
-        ]
-      },
-      {
-        "bin_filename": "IndexPutWithSortV2_float16_int32_true",
-        "inputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "float16",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "linear_index",
-            "index": 1,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "pos_idx",
-            "index": 2,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "value",
-            "index": 3,
-            "dtype": "float16",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "outputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "float16",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "attrs": [
-          {
-            "name": "indexed_sizes",
-            "dtype": "list_int",
             "value": null
-          },
-          {
-            "name": "accumulate",
-            "dtype": "bool",
-            "value": true
           }
         ]
       },
@@ -1860,76 +1308,7 @@
           {
             "name": "accumulate",
             "dtype": "bool",
-            "value": false
-          }
-        ]
-      },
-      {
-        "bin_filename": "IndexPutWithSortV2_int32_int32_true",
-        "inputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "linear_index",
-            "index": 1,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "pos_idx",
-            "index": 2,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "value",
-            "index": 3,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "outputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "attrs": [
-          {
-            "name": "indexed_sizes",
-            "dtype": "list_int",
             "value": null
-          },
-          {
-            "name": "accumulate",
-            "dtype": "bool",
-            "value": true
           }
         ]
       },
@@ -1998,76 +1377,7 @@
           {
             "name": "accumulate",
             "dtype": "bool",
-            "value": false
-          }
-        ]
-      },
-      {
-        "bin_filename": "IndexPutWithSortV2_float32_int32_true",
-        "inputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "float32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "linear_index",
-            "index": 1,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "pos_idx",
-            "index": 2,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "value",
-            "index": 3,
-            "dtype": "float32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "outputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "float32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "attrs": [
-          {
-            "name": "indexed_sizes",
-            "dtype": "list_int",
             "value": null
-          },
-          {
-            "name": "accumulate",
-            "dtype": "bool",
-            "value": true
           }
         ]
       },
@@ -2136,76 +1446,7 @@
           {
             "name": "accumulate",
             "dtype": "bool",
-            "value": false
-          }
-        ]
-      },
-      {
-        "bin_filename": "IndexPutWithSortV2_int64_int32_true",
-        "inputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "int64",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "linear_index",
-            "index": 1,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "pos_idx",
-            "index": 2,
-            "dtype": "int32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          },
-          {
-            "name": "value",
-            "index": 3,
-            "dtype": "int64",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "outputs": [
-          {
-            "name": "self",
-            "index": 0,
-            "dtype": "int64",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ]
-          }
-        ],
-        "attrs": [
-          {
-            "name": "indexed_sizes",
-            "dtype": "list_int",
             "value": null
-          },
-          {
-            "name": "accumulate",
-            "dtype": "bool",
-            "value": true
           }
         ]
       }
