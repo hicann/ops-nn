@@ -1,5 +1,7 @@
 # aclnnQuantConvolution
 
+ [📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/conv/convolution_forward)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -77,7 +79,7 @@ aclnnStatus aclnnQuantConvolution(
   <th style="width:145px">维度（shape）</th>
   <th style="width:145px">非连续 Tensor</th>
   </tr>
-  <td>input（const aclTensor*）</td>
+  <td>input（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的 input，表示卷积输入。</td>
   <td><ul><li>不支持空 Tensor。</li><li>数据类型与 weight 的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li><li>input、weight、output 的维度需要相同。</li><li>N≥0，C≥1，D≥0，H≥0，W≥0。</li></ul></td>
@@ -87,7 +89,7 @@ aclnnStatus aclnnQuantConvolution(
   <td style="text-align:center">√</td>
   </tr>
   <tr>
-  <td>weight（const aclTensor*）</td>
+  <td>weight（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的 weight，表示卷积权重。</td>
   <td><ul><li>不支持空 Tensor。</li><li>数据类型与 input 的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li><li>其 shape 的 C 维度需要与 input 的 C 维度保持一致。</li><li>所有维度≥1。</li></ul></td>
@@ -97,7 +99,7 @@ aclnnStatus aclnnQuantConvolution(
   <td style="text-align:center">√</td>
   </tr>
   <tr>
-  <td>bias（const aclTensor*）</td>
+  <td>bias（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的 bias，表示卷积偏置。</td>
   <td>一维且与 weight 第一维相等。</td>
@@ -107,7 +109,7 @@ aclnnStatus aclnnQuantConvolution(
   <td style="text-align:center">√</td>
   </tr>
   <tr>
-  <td>scale（const aclTensor*）</td>
+  <td>scale（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的 scale，表示量化参数。</td>
   <td>一维且与 weight 第一维相等。</td>
@@ -117,7 +119,7 @@ aclnnStatus aclnnQuantConvolution(
   <td style="text-align:center">√</td>
   </tr>
   <tr>
-  <td>offset（const aclTensor*）</td>
+  <td>offset（aclTensor*）</td>
   <td>输入</td>
   <td>预留量化参数。</td>
   <td>目前暂不支持，传入空指针 nullptr 即可。</td>
@@ -127,7 +129,7 @@ aclnnStatus aclnnQuantConvolution(
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>stride（const aclIntArray*）</td>
+  <td>stride（aclIntArray*）</td>
   <td>输入</td>
   <td>卷积扫描步长。</td>
   <td><ul><li>2d 场景下数组长度=2，3d 场景下数组长度=3。</li><li>strideH 和 strideW 应在 [1,63] 范围内。</li><li>conv3d 场景下 strideD 应在 [1,1000000] 范围内。</li></ul></td>
@@ -137,7 +139,7 @@ aclnnStatus aclnnQuantConvolution(
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>padding（const aclIntArray*）</td>
+  <td>padding（aclIntArray*）</td>
   <td>输入</td>
   <td>对 input 的填充。</td>
   <td><ul><li>值应≥0。</li><li>paddingH 和 paddingW 应在 [0,255] 范围内。</li><li>conv3d 场景下 paddingD 应在 [0,1000000] 范围内。</li></ul></td>
@@ -147,7 +149,7 @@ aclnnStatus aclnnQuantConvolution(
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>dilation（const aclIntArray*）</td>
+  <td>dilation（aclIntArray*）</td>
   <td>输入</td>
   <td>卷积核中元素的间隔。</td>
   <td><ul><li>2d 场景下数组长度=2，3d 场景下数组长度=3。</li><li>值应>0。</li><li>dilationH 和 dilationW 应在 [1,255] 范围内。</li><li>conv3d 场景下 dilationD 应在 [1,1000000] 范围内。</li></ul></td>
@@ -167,7 +169,7 @@ aclnnStatus aclnnQuantConvolution(
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>outputPadding（const aclIntArray*）</td>
+  <td>outputPadding（aclIntArray*）</td>
   <td>输入</td>
   <td>预留参数。表示转置卷积情况下，对输出所有边的填充。</td>
   <td>非转置卷积情况下，忽略该属性配置。目前暂不支持，传入空指针 nullptr 即可。</td>
@@ -197,7 +199,7 @@ aclnnStatus aclnnQuantConvolution(
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>roundMode（const char*）</td>
+  <td>roundMode（char*）</td>
   <td>输入</td>
   <td>表示取整模式。</td>
   <td>rint、round 或 nullptr。</td>

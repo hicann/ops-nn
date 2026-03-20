@@ -373,10 +373,10 @@ aclnnStatus aclnnDeformableConv2d(
 - 确定性计算：
   - aclnnDeformableConv2d默认确定性实现。
 
-<table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
-    <col style="width:150px">
-    <col style="width:450px">
-    <col style="width:550px">
+<table style="undefined;table-layout: fixed; width: 1146px"><colgroup>
+    <col style="width:345px">
+    <col style="width:491px">
+    <col style="width:310px">
     </colgroup>
    <thead>
     <tr>
