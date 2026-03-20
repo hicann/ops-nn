@@ -123,7 +123,7 @@ uint64_t ScatterAddTiling::GetSortTmpSize(ge::DataType dataType, uint32_t lastAx
 }
 
 ge::graphStatus ScatterAddTiling::getRestAvailableSize(uint64_t sampleNum, uint64_t valueTypeBytes, uint64_t originalSize, uint64_t postAxisSize,
-    ge::DataType idType)
+    ge::DataType idType) const
 {
     uint64_t indicesDtypeSize = ge::GetSizeByDataType(idType);
     OP_CHECK_IF(indicesDtypeSize <= 0, OP_LOGE(opName, "get indicesType size fail."),
@@ -390,7 +390,7 @@ void ScatterAddTiling::DoBlockTiling(uint64_t baseCol)
 /**
  * @brief Find best baseSize in range [baseXoStart, baseXoEnd], use dichotomy algorithm.
  */
-uint64_t ScatterAddTiling::CalBestBaseSize(uint64_t baseXoStart, uint64_t baseXoEnd)
+uint64_t ScatterAddTiling::CalBestBaseSize(uint64_t baseXoStart, uint64_t baseXoEnd) const
 {
     uint64_t indicesSortBufCnt = 2;
     uint64_t baseXoMid;
