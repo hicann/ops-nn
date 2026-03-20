@@ -31,7 +31,7 @@ $$
 aclnnStatus aclnnLinalgVectorNormGetWorkspaceSize(
   const aclTensor    *self,
   const aclScalar    *ord,
-  const aclIntArry   *dims,
+  const aclIntArray   *dims,
   bool                keepDims,
   const aclDataType   dtype,
   aclTensor          *out,
