@@ -890,8 +890,14 @@ static const aclTensor* IndexPutV2Process(const aclTensor* selfCast, const aclTe
     const aclTensor* tmp = selfCast;
     if (isNonContiguous) {
         allIndicesTensorList = executor->AllocTensorList(allDefinedIndices.data(), allDefinedIndices.size());
-        valueBroadcast = executor->CreateView(valuesCast, valuesCast->GetViewShape(), valuesCast->GetStorageShape(), valuesCast->GetViewStrides(),
-                    valuesCast->GetViewOffset());
+        if (valuesCast->GetViewShape().IsScalar()) {
+          bool iscontiguousIdx = CheckIfContiguous(indices, definedIndices, allIndices, executor);
+          valueBroadcast = valuesToBroadcastArch3510(selfCast, definedIndices, valuesCast, masks,
+                                                        iscontiguousIdx, executor);     
+        } else {
+          valueBroadcast = executor->CreateView(valuesCast, valuesCast->GetViewShape(), valuesCast->GetStorageShape(), valuesCast->GetViewStrides(),
+            valuesCast->GetViewOffset());
+        }
         selfCast = executor->CreateView(tmp, tmp->GetViewShape(), tmp->GetStorageShape(), tmp->GetViewStrides(),
                     tmp->GetViewOffset());
     } else {
@@ -906,7 +912,7 @@ static const aclTensor* IndexPutV2Process(const aclTensor* selfCast, const aclTe
                                                       iscontiguousIdx, executor);
         CHECK_RET(valueBroadcast != nullptr, nullptr);
     }
-    
+
     // IndexPutV2
     const aclTensor* indexPutOpOut;
     aclTensor* out = const_cast<aclTensor*>(selfCast);
@@ -1114,7 +1120,11 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
   bool isHighPrecision = accumulate && (selfRef->GetDataType() == op::DataType::DT_FLOAT16 || 
                                         selfRef->GetDataType() == op::DataType::DT_BF16 ||selfRef->GetDataType() == op::DataType::DT_INT8 
                                         || selfRef->GetDataType() == op::DataType::DT_UINT8);
-  bool isNonContiguous = isIndexPutV2 && nonContiguous && !isAiCpu && !isHighPrecision;         // 非连续+AiCore+IndexPutV2分支
+  bool isNonContiguous = isIndexPutV2 && nonContiguous && !isAiCpu && !isHighPrecision;    // 非连续+AiCore+IndexPutV2分支
+  OP_LOGI("isIndexPutV2 is %s", isIndexPutV2 ? "true" : "false");
+  OP_LOGI("nonContiguous is %s", nonContiguous ? "true" : "false");
+  OP_LOGI("isAiCpu is %s", isAiCpu ? "true" : "false");
+  OP_LOGI("isHighPrecision is %s", isHighPrecision ? "true" : "false");
   OP_LOGI("isNonContiguous is %s", isNonContiguous ? "true" : "false");
   int64_t indicesSize = static_cast<int64_t>(indices->Size());
   int64_t selfSize = selfCast->GetViewShape().GetDimNum();
