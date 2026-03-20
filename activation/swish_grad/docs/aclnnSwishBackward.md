@@ -153,7 +153,7 @@ aclnnStatus aclnnSwishBackward(
   </tbody>
   </table>
   
-   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。
+   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：不支持BFLOAT16数据类型。
 
 - **返回值：**
 

@@ -154,7 +154,7 @@ aclnnStatus aclnnInplaceThreshold(
   </tbody>
   </table>
   
-   - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32、INT32、INT8、UINT8、INT16、INT64。
+   - <term>Atlas 训练系列产品</term>：不支持BFLOAT16数据类型。
 
 - **返回值：**
 
@@ -317,7 +317,7 @@ aclnnStatus aclnnInplaceThreshold(
     </tbody>
   </table>
   
-   - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32、INT32、INT8、UINT8、INT16、INT64。
+   - <term>Atlas 训练系列产品</term>：不支持BFLOAT16数据类型。
 
 - **返回值**
 

@@ -1,5 +1,7 @@
 # aclnnConvolution
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/conv/convolution_forward)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -83,14 +85,14 @@ aclnnStatus aclnnConvolution(
   <th style="width:220px">参数名</th>
   <th style="width:120px">输入/输出</th>
   <th style="width:300px">描述</th>
-  <th style="width:400px">使用说明</th>
+  <th style="width:350px">使用说明</th>
   <th style="width:212px">数据类型</th>
   <th style="width:180px">数据格式</th>
   <th style="width:120px">维度（shape）</th>
   <th style="width:145px">非连续 Tensor</th>
   </tr>
   <tr>
-  <td>input（const aclTensor*）</td>
+  <td>input（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的 input，表示卷积输入。</td>
   <td><ul><li>支持空 Tensor。</li><li>数据类型需要与 weight 满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li></ul></td>
@@ -100,7 +102,7 @@ aclnnStatus aclnnConvolution(
   <td style="text-align:center">√</td>
   </tr>
   <tr>
-  <td>weight（const aclTensor*）</td>
+  <td>weight（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的 weight，表示卷积权重。</td>
   <td><ul><li>支持空 Tensor。</li><li>数据类型需要与 input 满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li></ul></td>
@@ -110,7 +112,7 @@ aclnnStatus aclnnConvolution(
   <td style="text-align:center">√</td>
   </tr>
   <tr>
-  <td>bias（const aclTensor*）</td>
+  <td>bias（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的 bias，表示卷积偏置。</td>
   <td><ul><li>无 bias 场景，可传入 nullptr。</li><li>当 transposed=false 时为一维且数值与 weight 第一维相等；当 transposed=true 时为一维且数值与 weight.shape[1] * groups 相等，format仅支持ND格式。</li></ul></td>
@@ -120,7 +122,7 @@ aclnnStatus aclnnConvolution(
   <td style="text-align:center">√</td>
   </tr>
   <tr>
-  <td>stride（const aclIntArray*）</td>
+  <td>stride（aclIntArray*）</td>
   <td>输入</td>
   <td>卷积扫描步长。</td>
   <td>数组长度需等于 input 的维度减 2，值应该大于 0。</td>
@@ -130,7 +132,7 @@ aclnnStatus aclnnConvolution(
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>padding（const aclIntArray*）</td>
+  <td>padding（aclIntArray*）</td>
   <td>输入</td>
   <td>对 input 的填充。</td>
   <td>数组长度：conv1d 非转置为 1 或 2；conv1d转置为1；conv2d 为 2 或 4；conv3d 为 3。值应该大于等于 0。</td>
@@ -140,7 +142,7 @@ aclnnStatus aclnnConvolution(
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>dilation（const aclIntArray*）</td>
+  <td>dilation（aclIntArray*）</td>
   <td>输入</td>
   <td>卷积核中元素的间隔。</td>
   <td>数组长度需等于 input 的维度减 2，值应该大于 0。</td>
@@ -160,7 +162,7 @@ aclnnStatus aclnnConvolution(
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>outputPadding（const aclIntArray*）</td>
+  <td>outputPadding（aclIntArray*）</td>
   <td>输入</td>
   <td>转置卷积情况下，对输出所有边的填充。</td>
   <td>非转置卷积情况下忽略该配置。数组长度需等于input的维度减2。值应大于等于0，且小于 stride 或 dilation 对应维度的值。</td>
@@ -170,7 +172,7 @@ aclnnStatus aclnnConvolution(
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>groups（const int64_t）</td>
+  <td>groups（int64_t）</td>
   <td>输入</td>
   <td>表示从输入通道到输出通道的块链接个数。</td>
   <td>数值需要在[1,65535]的范围内，且满足 groups*weight 的 C 维度=input 的 C 维度。</td>

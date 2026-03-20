@@ -138,9 +138,9 @@ aclnnStatus aclnnThresholdBackward(
   </tbody>
   </table>
   
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8。
-    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16、INT32、INT8、UINT8。
-    - <term>Ascend 950PR/Ascend 950DT</term>：仅取值为0.0时，支持本产品。数据类型支持FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8、INT64。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持INT64数据类型。
+    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：不支持BFLOAT16、INT64数据类型。
+    - <term>Ascend 950PR/Ascend 950DT</term>：仅取值为0.0时，支持本产品。
 
 - **返回值：**
 
