@@ -137,7 +137,10 @@ aclnnStatus aclnnMatmulCompressGetWorkspaceSize(const aclTensor* x, const aclTen
 
     const aclTensor *xNZReshape = PreProcessX(xNZ, uniqueExecutor.get());
     const aclTensor *weightNZ = PreProcessWeight(weight, op::Format::FORMAT_FRACTAL_NZ, uniqueExecutor.get());
-
+    if (bias != nullptr) {
+            bias = l0op::Contiguous(bias, uniqueExecutor.get());
+            CHECK_RET(bias != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
     // 调用MatmulCompress算子Kernel
     auto outC = l0op::MatmulCompress(xNZReshape, weightNZ, bias, compressIndex, false, true, 8, 8, uniqueExecutor.get());
     CHECK_RET(outC != nullptr, ACLNN_ERR_INNER_NULLPTR);
