@@ -122,7 +122,7 @@ static ge::graphStatus GetTilingAttr(const gert::TilingContext* context, ApplyAd
     OP_CHECK_NULL_WITH_CONTEXT(context, attrGnormScale);
     tilingParam.gnorm_scale = static_cast<float>(*attrGnormScale);
 
-    auto* attrBlockSize = attrs->GetAttrPointer<int>(INDEX_ATTR_BLOCK_SIZE);
+    auto* attrBlockSize = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_BLOCK_SIZE);
     OP_CHECK_NULL_WITH_CONTEXT(context, attrBlockSize);
     tilingParam.block_size = static_cast<int64_t>(*attrBlockSize);
     OP_CHECK_IF(
