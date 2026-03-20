@@ -403,8 +403,8 @@ __aicore__ inline void WeightQuantBatchMatmulV2CustomNzSplitkKernel<
     mWaitMte1EventIds_[0] = GetTPipePtr()->AllocEventID<HardEvent::MTE1_M>();
     mWaitMte1EventIds_[1] = GetTPipePtr()->AllocEventID<HardEvent::MTE1_M>();
 
-    mte2WaitVEventIds_[0] = GetTPipePtr()->AllocEventID<HardEvent::MTE2_V>();
-    mte2WaitVEventIds_[1] = GetTPipePtr()->AllocEventID<HardEvent::MTE2_V>();
+    mte2WaitVEventIds_[0] = GetTPipePtr()->AllocEventID<HardEvent::V_MTE2>();
+    mte2WaitVEventIds_[1] = GetTPipePtr()->AllocEventID<HardEvent::V_MTE2>();
 
     mWaitFixEventIds_[0] = GetTPipePtr()->AllocEventID<HardEvent::FIX_M>();
     mWaitFixEventIds_[1] = GetTPipePtr()->AllocEventID<HardEvent::FIX_M>();

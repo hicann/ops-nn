@@ -292,6 +292,7 @@ __aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, qua
     nSize_ = tilingData_->nSize;
     kSize_ = tilingData_->kSize;
     mSize_ = tilingData_->mSize;
+    pipe_ = tPipe;
 
     mmObj_.SetSubBlockIdx(0);
     mmObj_.Init(matmulTiling_, pipe_);
@@ -300,7 +301,6 @@ __aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, qua
             coreIdx_ /= GetTaskRation();
         }
     }
-    pipe_ = tPipe;
     InitUbBuffer();
 }
 
