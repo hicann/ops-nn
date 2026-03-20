@@ -261,25 +261,25 @@ ge::graphStatus DeformableOffsetsGradAscendCTilingImpl::GetAttrInfoAndCheck() {
     OP_CHECK_IF(
         strides->GetSize() != DIM_NUM_4D, OP_LOGE(context_->GetNodeName(), "Not stride support len"),
         return ge::GRAPH_FAILED);
-    const int64_t* stridesData = reinterpret_cast<const int64_t*>(strides->GetData());
+    const int64_t* stridesData = static_cast<const int64_t*>(strides->GetData());
     auto pads = attrs->GetAttrPointer<gert::ContinuousVector>(PADS_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, pads);
     OP_CHECK_IF(
         pads->GetSize() != DIM_NUM_4D, OP_LOGE(context_->GetNodeName(), "Not pads support len"),
         return ge::GRAPH_FAILED);
-    const int64_t* padsData = reinterpret_cast<const int64_t*>(pads->GetData());
+    const int64_t* padsData = static_cast<const int64_t*>(pads->GetData());
     auto ksizes = attrs->GetAttrPointer<gert::ContinuousVector>(KSIZE_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, ksizes);
     OP_CHECK_IF(
         ksizes->GetSize() != EXCEPTED_KERNEL_SIZE, OP_LOGE(context_->GetNodeName(), "Not ksize support len"),
         return ge::GRAPH_FAILED);
-    const int64_t* ksizesData = reinterpret_cast<const int64_t*>(ksizes->GetData());
+    const int64_t* ksizesData = static_cast<const int64_t*>(ksizes->GetData());
     auto dilates = attrs->GetAttrPointer<gert::ContinuousVector>(DILATIONS_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dilates);
     OP_CHECK_IF(
         dilates->GetSize() != DIM_NUM_4D, OP_LOGE(context_->GetNodeName(), "Not dilation support len"),
         return ge::GRAPH_FAILED);
-    const int64_t* dilatesData = reinterpret_cast<const int64_t*>(dilates->GetData());
+    const int64_t* dilatesData = static_cast<const int64_t*>(dilates->GetData());
     auto modulatePtr = attrs->GetAttrPointer<bool>(MODULATE_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, modulatePtr);
     isModulated_ = *modulatePtr;
@@ -497,7 +497,7 @@ static ge::graphStatus Tiling4DeformableOffsetsGrad(gert::TilingContext* context
 {
     OP_LOGI(context->GetNodeName(), "Tiling4DeformableOffsetsGrad running.");
     const TilingPrepareForDeformableOffsetsGradCompileInfo* compile_info =
-        reinterpret_cast<const TilingPrepareForDeformableOffsetsGradCompileInfo*>(context->GetCompileInfo());
+        static_cast<const TilingPrepareForDeformableOffsetsGradCompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
 
     OP_LOGD(context->GetNodeName(), "AscendC deformable offsets grad simt tiling");

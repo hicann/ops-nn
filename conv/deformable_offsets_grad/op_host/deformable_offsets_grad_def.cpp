@@ -12,7 +12,6 @@
  * \file deformable_offsets_grad_def.cpp
  * \brief deformable_offsets_grad_def op_host
  */
-#include <cstdint>
 #include "register/op_def_registry.h"
 namespace ops {
 class DeformableOffsetsGrad : public OpDef {

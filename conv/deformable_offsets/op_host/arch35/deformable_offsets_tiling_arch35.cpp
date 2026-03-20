@@ -46,7 +46,7 @@ static constexpr int64_t DATA_INT32_MAX = 2147483647; // int32最大值
 static const std::set<ge::DataType> supportDtype = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
 
 ge::graphStatus CheckDeformableOffsetParams(
-    gert::TilingContext* context, gert::Shape& inputXShape, gert::Shape& inputOffsetShape, gert::Shape& outputShapeInfo)
+    const gert::TilingContext* context, gert::Shape& inputXShape, gert::Shape& inputOffsetShape, gert::Shape& outputShapeInfo)
 {
     // input data Format
     auto inputXdesc = context->GetInputDesc(INPUT_X_INDEX);
