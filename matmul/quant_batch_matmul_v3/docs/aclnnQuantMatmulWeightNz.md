@@ -168,7 +168,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
         <td>INT4<sup>1、3</sup>、INT8、INT32<sup>1、3</sup>、FLOAT4_E2M1<sup>1、2</sup>、FLOAT32<sup>1、2</sup>、FLOAT8_E4M3FN<sup>1、2</sup></td>
         <td>NZ</td>
         <td>4-8</td>
-        <td>✓</td>
+        <td>-</td>
     </tr>
     <tr>
         <td>x1Scale</td>

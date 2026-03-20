@@ -89,7 +89,7 @@ aclnnStatus aclnnMatmulWeightNz(
         <td>BFLOAT16、FLOAT16、FLOAT32</td>
         <td>NZ</td>
         <td>4</td>
-        <td>√</td>
+        <td>-</td>
       </tr>
       <tr>
         <td>out</td>
