@@ -25,7 +25,7 @@ namespace ge {
 *  variance = np.mean(np.power((x - mean),2), reduce_axis, keepdims=True) \n
 *  y = gamma*((x - mean) / np.sqrt(variance + epsilon)) + beta
 
-*@par Inputs:
+*@par Inputs
 *Three inputs, including:
 * @li x: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.
 * The shape is [A1,...,Ai,R1,...,Rj].
@@ -34,14 +34,14 @@ namespace ge {
 * @li beta: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.
 * Has the same dtype and shape as gamma. The shape is [R1,...,Rj]. \n
 
-*@par Attributes:
+*@par Attributes
 * @li begin_norm_axis: An optional attribute, the dtype is int32. Defaults to 0.
 * Indicates the index of the R1 axis in the shape of x.
 * @li begin_params_axis: An optional attribute, the dtype is int32. Defaults to 0.
 * In Ascend 950 AI Processor, begin_params_axis and begin_norm_axis refer to the same axis in the shape of x.
 * @li epsilon: An optional attribute, the dtype is float32. Defaults to 1e-7 . \n
 
-*@par Outputs:
+*@par Outputs
 *Three outputs, including:
 * @li y: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.
 * Has the same dtype, shape and format as x. 

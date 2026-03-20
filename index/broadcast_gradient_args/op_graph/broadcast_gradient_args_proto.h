@@ -24,11 +24,11 @@ namespace ge {
 /**
 * @brief Returns the reduction indices for computing gradients of "x1" and "x2" with broadcast.
 *
-* @par Inputs:
+* @par Inputs
 * @li x1: A tensor. The type support int32 and int64. Its shape must be 1D. Format: ND.
 * @li x2: A tensor. Its type is consistent with x1. Its shape must be 1D. Format: ND.
 
-* @par Outputs:
+* @par Outputs
 * @li y1: A tensor. Reduction indices of x1. Its type is consistent with x1. Its shape must be 1D. Format: ND.
 * @li y2: A tensor. Reduction indices of x2. Its type is consistent with x1. Its shape must be 1D. Format: ND.
 

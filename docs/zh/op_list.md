@@ -34,7 +34,17 @@
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
-<tr>
+  <tr>
+    <td>norm</td>
+    <td><a href="../../activation/confusion_softmax_grad/README.md">confusion_softmax_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>融合算子，将mul、sum、sub三个算子进行融合。</td>
+  </tr>
+  <tr>
     <td>activation</td>
     <td><a href="../../activation/elu/README.md">elu</a></td>
     <td>✓</td>
@@ -2323,6 +2333,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>RmsNorm是大模型常用的标准化操作，相比LayerNorm，其去掉了减去均值的部分。AddRmsNormQuant算子将RmsNorm前的Add算子以及RmsNorm归一化的输出给到1个或2个Quantize算子融合起来，减少搬入搬出操作。AddRmsNormQuantV2算子相较于AddRmsNormQuant在RmsNorm计算过程中增加了偏置项bias参数，即计算公式中的`bias`。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
+    <td><a href="../../norm/batch_norm/README.md">batch_norm</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对一个批次的数据做批量归一化处理，正则化之后生成的数据的统计结果为0均值、1标准差。</td>
   </tr>
   <tr>
     <td>norm</td>
