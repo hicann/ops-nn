@@ -92,6 +92,51 @@ static bool CheckDtypeValid(
     return true;
 }
 
+static bool CheckShapeValid(
+    const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* smoothScale1Optional,
+    const aclTensor* smoothScale2Optional)
+{
+    // 检查 x1 和 x2 shape 是否一致
+    auto x1Shape = x1->GetViewShape();
+    auto x2Shape = x2->GetViewShape();
+    if (x1Shape != x2Shape) {
+        OP_LOGE(ACLNN_ERR_INNER_TILING_ERROR, "x1 and x2 shape mismatch.");
+        return false;
+    }
+
+    // 检查 gamma shape 是否为1维
+    auto gammaShape = gamma->GetViewShape();
+    if (gammaShape.GetDimNum() != 1) {
+        OP_LOGE(ACLNN_ERR_INNER_TILING_ERROR, "gamma shape dim num should be 1.");
+        return false;
+    }
+
+    // 检查 gammaShape 是否与 x1 最后一维一致
+    auto x1DimNum = x1Shape.GetDimNum();
+    if (x1Shape.GetDim(x1DimNum - 1) != gammaShape.GetDim(0)) {
+        OP_LOGE(ACLNN_ERR_INNER_TILING_ERROR, "gammaShape isn't consistent with the last dimension of x1.");
+        return false;
+    }
+
+    // 检查 smoothScale shape 是否与 gamma 一致
+    if (smoothScale1Optional != nullptr) {
+        auto smooth1Shape = smoothScale1Optional->GetViewShape();
+        if (smooth1Shape != gammaShape) {
+            OP_LOGE(ACLNN_ERR_INNER_TILING_ERROR, "smoothScale1 shape mismatch with gamma.");
+            return false;
+        }
+    }
+    if (smoothScale2Optional != nullptr) {
+        auto smooth2Shape = smoothScale2Optional->GetViewShape();
+        if (smooth2Shape != gammaShape) {
+            OP_LOGE(ACLNN_ERR_INNER_TILING_ERROR, "smoothScale2 shape mismatch with gamma.");
+            return false;
+        }
+    }
+
+    return true;
+}
+
 static aclnnStatus CheckParams(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* smoothScale1Optional,
     const aclTensor* smoothScale2Optional, aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut, aclTensor* scale1Out,
@@ -105,6 +150,11 @@ static aclnnStatus CheckParams(
         CheckDtypeValid(
             x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, y1Out, y2Out, xOut, scale1Out, scale2Out),
         ACLNN_ERR_PARAM_INVALID);
+
+    // 3. 检查输入 shape 是否合法
+    CHECK_RET(
+        CheckShapeValid(x1, x2, gamma, smoothScale1Optional, smoothScale2Optional),
+        ACLNN_ERR_INNER_TILING_ERROR);
 
     return ACLNN_SUCCESS;
 }
@@ -122,7 +172,7 @@ aclnnStatus ComputeAddRmsNormDynamicQuant(
     int dstType = dstTypeMap[y1Out->GetDataType()];
 
     auto addRmsNormQuantOuts = l0op::AddRmsNormDynamicQuant(
-        x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, nullptr, epsilon, nullptr, dstType, scale1Out,  
+        x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, nullptr, epsilon, nullptr, dstType, scale1Out,
         scale2Out, executor);
     y1ComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_0>(addRmsNormQuantOuts);
     y2ComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_1>(addRmsNormQuantOuts);
