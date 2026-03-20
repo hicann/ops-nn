@@ -29,6 +29,7 @@ namespace optiling
 const int32_t HW_DIMS = 2;
 const int32_t PAD_DIMS = 4;
 
+const int32_t ZERO_DIMS = 0;
 const int32_t ONE_DIMS = 1;
 const int32_t CHW_DIMS = 3;
 const int32_t NCHW_DIMS = 4;
@@ -51,7 +52,7 @@ struct AvgPoolV2GradInputInfo {
     std::array<int64_t, HW_DIMS> kernelSize;
     std::array<int64_t, HW_DIMS> stride;
     std::array<int64_t, PAD_DIMS> pad;
-    bool ceilMode = false; 
+    bool ceilMode = false;
     bool countIncludePad = true;
     bool globalPooling = false;
     int64_t divisorOverride = 0;
