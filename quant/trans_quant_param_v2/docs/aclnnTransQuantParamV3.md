@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：完成量化计算参数scale数据类型的转换，将FLOAT32的数据类型转换为硬件需要的UINT64，INT64类型。相较于aclnnTransQuantParamV2版本，增加了roundMode输入，用于选择数据类型转换过程中，数据值转换采取的转化模式。
+- 接口功能：完成量化计算参数scale数据类型的转换，将FLOAT32的数据类型转换为硬件需要的UINT64，INT64类型。相较于aclnnTransQuantParamV2版本，增加了roundMode输入，用于选择数据类型转换过程中，数据值转换采取的转换模式。
 - 计算公式：
 
   1. `out`为64位格式，初始为0。

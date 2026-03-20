@@ -197,7 +197,7 @@ aclnnStatus aclnnAddRmsNorm(
     <tr>
       <td rowspan="2">ACLNN_ERR_PARAM_NULLPTR</td>
       <td rowspan="2">161001</td>
-      <td>传入的x1、x2、gamma、yout是空指针。</td>
+      <td>传入的x1、x2、gamma、yOut是空指针。</td>
     </tr>
     <tr>
       <td>当rstdOut传入的预置值不为nullptr时，xOut传入的预置值为nullptr。</td>

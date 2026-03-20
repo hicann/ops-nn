@@ -137,16 +137,6 @@ aclnnStatus aclnnNorm(
       <td>-</td>
     </tr>
     <tr>
-      <td>relType（aclDataType）</td>
-      <td>输入</td>
-      <td>预留参数，暂不支持使用。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>公式中的out。</td>
