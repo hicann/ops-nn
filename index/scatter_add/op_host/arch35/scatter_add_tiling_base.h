@@ -116,13 +116,13 @@ protected:
     std::set<uint64_t> FindUniqueCut(uint64_t usedCoreNum) const;
     std::tuple<uint64_t, uint64_t> SimdTiling(uint64_t usedCoreNum, uint64_t colNumAlign, uint64_t colLimitSize, bool colTileNumMin=false);
     void DoBlockTiling(uint64_t baseCol);
-    uint64_t CalBestBaseSize(uint64_t baseXoStart, uint64_t baseXoEnd);
+    uint64_t CalBestBaseSize(uint64_t baseXoStart, uint64_t baseXoEnd) const;
     ge::graphStatus TilingSimdSupportAtomicAddSortCompute();
     ge::graphStatus TilingSimdSupportAtomicAddCompute();
     ge::graphStatus TilingSimdNotSupportAtomicAddCompute(bool supportAtomicAdd);
     ge::graphStatus ScatterAddDeterministicTiling();
     ge::graphStatus getRestAvailableSize(uint64_t sampleNum, uint64_t valueTypeBytes, uint64_t originalSize,
-        uint64_t postAxisSize, ge::DataType idType);
+        uint64_t postAxisSize, ge::DataType idType) const;
     uint64_t GetSortTmpSize(ge::DataType dataType, uint32_t lastAxisNum, bool isDescend) const;
     void DumpTilingInfo() override;
     void SetTilingData();
