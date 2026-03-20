@@ -2040,7 +2040,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2MsdSplitKKernel<
     GetTPipePtr()->ReleaseEventID<HardEvent::MTE2_V>(eventIdsMte2ToV[0]);
     GetTPipePtr()->ReleaseEventID<HardEvent::MTE2_V>(eventIdsMte2ToV[1]);
     GetTPipePtr()->ReleaseEventID<HardEvent::V_MTE2>(eventIdsVToMte2[0]);
-    GetTPipePtr()->ReleaseEventID<HardEvent::V_MTE2>(eventIdsVToMte2[0]);
+    GetTPipePtr()->ReleaseEventID<HardEvent::V_MTE2>(eventIdsVToMte2[1]);
 }
 
 template <

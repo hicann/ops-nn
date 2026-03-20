@@ -283,7 +283,7 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     uint64_t aUnfoldSize =
         CeilDiv(2 * tiling_->mSize * tiling_->kSize, GM_ADDR_ALIGN_BASIC_BLOCK) * GM_ADDR_ALIGN_BASIC_BLOCK;
     uint64_t atomicAddSize =
-        CeilDiv(tiling_->mSize * tiling_->nSize * sizeof(float), GM_ADDR_ALIGN_BASIC_BLOCK) * GM_ADDR_ALIGN_BASIC_BLOCK;
+        CeilDiv(tiling_->mSize * tiling_->nSize, GM_ADDR_ALIGN_BASIC_BLOCK) * GM_ADDR_ALIGN_BASIC_BLOCK;
     uint64_t reduceSumSize =
         CeilDiv(tiling_->mSize * groupNum_ * GROUP_DIM, GM_ADDR_ALIGN_BASIC_BLOCK) * GM_ADDR_ALIGN_BASIC_BLOCK;
 
@@ -297,7 +297,7 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
 
     // reduce sum和reduce max各需要占用一份reduceSumSize的空间
     workspaceCGlobal_.SetGlobalBuffer(
-        reinterpret_cast<__gm__ preciseType*>(workspace + aUnfoldSize + atomicAddSize + 2 * reduceSumSize),
+        reinterpret_cast<__gm__ preciseType*>(workspace + aUnfoldSize + atomicAddSize * sizeof(float) + 2 * reduceSumSize),
         multiScaleTimes_ * tiling_->mSize * tiling_->nSize * DOUBLE_BUFFER_NUM * sizeof(preciseType));
 
     InitAtomicAddr(workspaceAtomicGlobal_, atomicAddSize, curBlockIdx_);
