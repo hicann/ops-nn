@@ -69,10 +69,21 @@ function(gen_es_nn_lib_ready)
     OUTPUT_PATH ${CMAKE_BINARY_DIR}/es_packages
   )
   install(
-    DIRECTORY ${CMAKE_BINARY_DIR}/es_packages
-    DESTINATION ${VERSION_INFO_INSTALL_DIR}
+    FILES ${CMAKE_BINARY_DIR}/es_packages/lib64/libes_nn.so
+    DESTINATION ${VERSION_INFO_INSTALL_DIR}/lib64
     OPTIONAL
   )
+  install(
+    DIRECTORY ${CMAKE_BINARY_DIR}/es_packages/include/es_nn
+    DESTINATION ${VERSION_INFO_INSTALL_DIR}/include/es
+    OPTIONAL
+    )
+ 	install(
+    DIRECTORY ${CMAKE_BINARY_DIR}/es_packages/whl/
+    DESTINATION ${WHL_INSTALL_DIR}/es_packages/whl
+    OPTIONAL
+    )
+
 endfunction()
 
 # gen es_nn for custom

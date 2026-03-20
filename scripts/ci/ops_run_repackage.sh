@@ -215,6 +215,7 @@ for runfile in kernel_*.run; do
         ensure_dir $dest_conf_ascend_first
         # config文件拷贝
         cp -v $config_src_dir/* $dest_conf_ascend_first/
+        chmod 555 "$dest_conf_ascend_first/binary_info_config.json"
         first_run=false
     else
         # 非第一个文件：增量合并
@@ -244,6 +245,7 @@ for runfile in kernel_*.run; do
                     --output-file=binary_info_config.json 
                 # 覆盖HOST中的config文件
                 mv -f binary_info_config.json $target_json
+                chmod 555 "$target_json"
             else
                 cp -v "$json_file" "$dest_conf_ascend"/ || \
                     die "Warning: failed to copy $json_file"

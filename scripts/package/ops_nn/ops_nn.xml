@@ -9,8 +9,9 @@
         <version>package/ops_nn/version.xml</version>
         <cleanup>share/info/ops_nn/script/cleanup.sh</cleanup>
         <check_features>true</check_features>
+        <copy_all>true</copy_all>
     </package_info>
-    <generate_info value="ops_nn_version.h" dst_path="share/info/ops_nn" install_path="$(TARGET_ENV)/include/version" install_mod="440" install_type="devel" generator="version_header">
+    <generate_info value="ops_nn_version.h" dst_path="$(TARGET_ENV)/include/version" install_path="$(TARGET_ENV)/include/version" install_mod="440" install_type="devel" generator="version_header">
        <OPS_NN_VERSION>$(ASCEND_VER)</OPS_NN_VERSION>
        <OPS_NN_TIMESTAMP>$(TIMESTAMP_NO)</OPS_NN_TIMESTAMP>
     </generate_info>
@@ -25,22 +26,22 @@
         <file value="version.info"/>
     </file_info>
     <file_info value="ops_es_packages_lib" copy_type="delivery" src_path=""
-        dst_path="ops_nn/es_packages/lib64"
+        dst_path="$(TARGET_ENV)/lib64"
         install_path="$(TARGET_ENV)/lib64" install_mod="555">
         <file value="libes_nn.so"
             file_type="shared"/>
     </file_info>
     <file_info copy_type="source" src_path=""
-        dst_path="ops_nn/es_packages/include"
+        dst_path="$(TARGET_ENV)/include/es"
         install_path="$(TARGET_ENV)/include/es" install_type="all">
         <file value="es_nn" install_mod="555" entity="true"/>
     </file_info>
     <!--block_info-->
-    <block_info dependtree="false" dst_path="ops_nn" block_conf_path="ascend">
+    <block_info dependtree="false" dst_path="" block_conf_path="ascend">
         <block name="EngineeringCommon"/>
         <block name="EngineeringFiles"/>
     </block_info>
-    <block_info dependtree="false" dst_path="opp" block_conf_path="ascend">
+    <block_info dependtree="false" dst_path="" block_conf_path="ascend">
         <block name="OpsNNInfo"/>
     </block_info>
     <!--dir_info-->

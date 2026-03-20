@@ -108,16 +108,10 @@ function(pack_built_in)
       DESTINATION share/info/ops_nn
   )
   install(FILES ${CONF_FILES}
-      DESTINATION ops_nn/conf
+      DESTINATION ${CMAKE_SYSTEM_PROCESSOR}-linux/conf
   )
   install(FILES ${PACKAGE_FILES}
       DESTINATION share/info/ops_nn/script
-  )
-  install(FILES ${LATEST_MANGER_FILES}
-      DESTINATION latest_manager
-  )
-  install(DIRECTORY ${CMAKE_SOURCE_DIR}/scripts/package/latest_manager/scripts/
-      DESTINATION latest_manager
   )
 
   string(FIND "${ASCEND_COMPUTE_UNIT}" ";" SEMICOLON_INDEX)
