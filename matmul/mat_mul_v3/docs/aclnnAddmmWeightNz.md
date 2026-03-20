@@ -108,7 +108,7 @@ aclnnStatus aclnnAddmmWeightNz(
       <td>BFLOAT16、FLOAT16</td>
       <td>NZ</td>
       <td>4</td>
-      <td>√</td>
+      <td>-</td>
     </tr>
     <tr>
     <tr>

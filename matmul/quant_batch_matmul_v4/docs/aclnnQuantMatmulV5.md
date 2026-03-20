@@ -371,8 +371,7 @@ aclnnStatus aclnnQuantMatmulV5(
         <td>yOffset(aclTensor*)</td>
         <td>可选输入</td>
         <td>公式中的输入yOffset。</td>
-        <td>
-        </td>
+        <td>-</td>
         <td>FLOAT32</td>
         <td>ND</td>
         <td>1</td>
