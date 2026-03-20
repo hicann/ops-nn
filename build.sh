@@ -982,6 +982,8 @@ assemble_cmake_args() {
       print_error "The soc [${COMPUTE_UNIT}] is not support."
       usage
       exit 1
+    else
+      COMPUTE_UNIT_SHORT="${COMPUTE_UNIT_SHORT%?}"
     fi
 
     echo "COMPUTE_UNIT: ${COMPUTE_UNIT_SHORT}"
@@ -1503,7 +1505,9 @@ main() {
     parse_op_dependencies
   fi
 
-  cd "${BUILD_PATH}" && cmake ${CMAKE_ARGS} -DPREPROCESS_ONLY=OFF ..
+  rm -fr ${BUILD_PATH}/autogen
+  cd "${BUILD_PATH}" && cmake ${CMAKE_ARGS} -DENABLE_GEN_ACLNN=ON -DPREPROCESS_ONLY=OFF .. 
+  cd "${BUILD_PATH}" && cmake ${CMAKE_ARGS} -DENABLE_GEN_ACLNN=OFF -DPREPROCESS_ONLY=OFF ..
 
   if [[ "$ENABLE_TEST" == "TRUE" ]]; then
     build_ut

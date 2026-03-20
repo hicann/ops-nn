@@ -10,67 +10,17 @@
 # ######################################################################################################################
 # 调用opbuild工具，生成aclnn/aclnnInner/.ini的算子信息库 等文件 generate outpath: ${ASCEND_AUTOGEN_PATH}/${sub_dir}
 # ######################################################################################################################
-function(gen_opbuild_target)
-  set(oneValueArgs TARGET PREFIX GENACLNN OUT_DIR OUT_SUB_DIR)
-  set(multiValueArgs IN_SRCS OUT_SRCS OUT_HEADERS)
-  cmake_parse_arguments(OPBUILD "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
-  if(NOT OPBUILD_IN_SRCS)
-    message(STATUS "No ${OPBUILD_PREFIX} srcs, skip ${OPBUILD_TARGET}")
-    return()
-  endif()
-
-  if (NOT TARGET gen_op_host_${OPBUILD_PREFIX})
-    add_library(gen_op_host_${OPBUILD_PREFIX} SHARED ${OPBUILD_IN_SRCS})
-  endif()
-  target_link_libraries(gen_op_host_${OPBUILD_PREFIX} PRIVATE $<BUILD_INTERFACE:intf_pub_cxx17> exe_graph register
-                                                              c_sec)
-  target_compile_options(gen_op_host_${OPBUILD_PREFIX} PRIVATE -fno-common)
-  string(REPLACE ";" "\;" OPS_PRODUCT_NAME "${ASCEND_COMPUTE_UNIT}")
-
-  if(ENABLE_ASAN)
-    execute_process(
-      COMMAND ${CMAKE_C_COMPILER} -print-file-name=libasan.so
-      OUTPUT_VARIABLE LIBASAN_PATH
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-      RESULT_VARIABLE result
-    )
-    if(NOT result EQUAL 0)
-      message(FATAL_ERROR "compiler not support asan, please disable asan")
-    endif()
-  endif()
-  message("LIBASAN_PATH = ${LIBASAN_PATH}")
-  add_custom_command(
-    OUTPUT ${OPBUILD_OUT_SRCS} ${OPBUILD_OUT_HEADERS}
-    COMMAND
-      OPS_PROTO_SEPARATE=1 OPS_PROJECT_NAME=${OPBUILD_PREFIX} OPS_ACLNN_GEN=${OPBUILD_GENACLNN}
-      OPS_PRODUCT_NAME=\"${OPS_PRODUCT_NAME}\"
-      env LD_PRELOAD=${LIBASAN_PATH}
-      env LD_LIBRARY_PATH=${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64:$ENV{LD_LIBRARY_PATH} ${OP_BUILD_TOOL}
-      $<TARGET_FILE:gen_op_host_${OPBUILD_PREFIX}> ${OPBUILD_OUT_DIR}/${OPBUILD_OUT_SUB_DIR})
-
-  if (NOT TARGET ${OPBUILD_TARGET})
-    add_custom_target(${OPBUILD_TARGET} DEPENDS ${OPBUILD_OUT_SRCS} ${OPBUILD_OUT_HEADERS})
-  endif()
-  add_dependencies(${OPBUILD_TARGET} gen_op_host_${OPBUILD_PREFIX})
-  if(TARGET op_build)
-    add_dependencies(${OPBUILD_TARGET} op_build)
-  endif()
-endfunction()
-
 function(gen_aclnn_classify host_obj prefix ori_out_srcs ori_out_headers opbuild_out_srcs opbuild_out_headers)
   get_target_property(module_sources ${host_obj} INTERFACE_SOURCES)
   set(sub_dir)
   # aclnn\aclnnExc以aclnn开头，aclnnInner以aclnnInner开头
   if("${prefix}" STREQUAL "aclnn")
-    set(file_prefix "aclnn")
     set(need_gen_aclnn 1)
   elseif("${prefix}" STREQUAL "aclnnInner")
     set(sub_dir inner)
-    set(file_prefix "aclnnInner")
     set(need_gen_aclnn 1)
   elseif("${prefix}" STREQUAL "aclnnExc")
     set(sub_dir exc)
-    set(file_prefix "aclnn")
     set(need_gen_aclnn 0)
   else()
     message(FATAL_ERROR "UnSupported aclnn prefix type, must be in aclnn/aclnnInner/aclnnExc")
@@ -79,51 +29,37 @@ function(gen_aclnn_classify host_obj prefix ori_out_srcs ori_out_headers opbuild
   set(out_src_path ${ASCEND_AUTOGEN_PATH}/${sub_dir})
   file(MAKE_DIRECTORY ${out_src_path})
   get_filename_component(out_src_path ${out_src_path} REALPATH)
-  set(in_srcs)
-  set(out_srcs)
-  set(out_headers)
-  if(module_sources)
-    foreach(file ${module_sources})
-      # 用***def.cpp文件的上上级目录名作为_op_name更准确，因为可能出现非标准命名的***def.cpp
-      get_filename_component(PARENT_DIR ${file} DIRECTORY)
-      get_filename_component(PARENT_DIR ${PARENT_DIR} DIRECTORY)
-      get_filename_component(_op_name ${PARENT_DIR} NAME)
-      list(APPEND in_srcs ${file})
-      file(GLOB out_src_with_ver ${out_src_path}/${file_prefix}_${_op_name}_v*.cpp)
-      file(GLOB out_headers_with_ver ${out_src_path}/${file_prefix}_${_op_name}_v*.h)
-      list(APPEND out_srcs ${out_src_path}/${file_prefix}_${_op_name}.cpp ${out_src_with_ver})
-      list(APPEND out_headers ${out_src_path}/${file_prefix}_${_op_name}.h ${out_headers_with_ver})
-    endforeach()
-    # 当一个算子对应多个***def.cpp文件时，out_srcs和out_headers会出现同名元素，因此做去重处理
-    list(REMOVE_DUPLICATES out_srcs)
-    list(REMOVE_DUPLICATES out_headers)
-  endif()
   # opbuild_gen_aclnn/opbuild_gen_aclnnInner/opbuild_gen_aclnnExc
-  gen_opbuild_target(
-    TARGET opbuild_gen_${prefix} PREFIX ${prefix} GENACLNN ${need_gen_aclnn} IN_SRCS "${in_srcs}" OUT_SRCS
-    "${out_srcs}" OUT_HEADERS "${out_headers}" OUT_DIR ${ASCEND_AUTOGEN_PATH} OUT_SUB_DIR ${sub_dir})
+  if(module_sources AND ENABLE_GEN_ACLNN)
+    if (module_sources)
+      npu_op_code_gen(
+        SRC ${module_sources}
+        PACKAGE opbuild_gen_${prefix}
+        OPTIONS OPS_PROTO_SEPARATE 1 OPS_PROJECT_NAME ${prefix} OPS_ACLNN_GEN ${need_gen_aclnn}
+        OUT_DIR ${out_src_path}
+      )
+      execute_process(COMMAND bash -c "rm -fr ${out_src_path}/*.ini"
+        COMMAND 
+          ${CMAKE_COMMAND} -E env OPS_PROTO_SEPARATE=1 OPS_PROJECT_NAME=${prefix} OPS_ACLNN_GEN=${need_gen_aclnn}
+          OPS_PRODUCT_NAME=${ASCEND_COMPUTE_UNIT} ${OP_BUILD_TOOL} ${out_src_path}/libascend_all_ops.so ${out_src_path}
+      )
+    endif()
+  else()
+    message(STATUS "No ${prefix} srcs, skip ${prefix}")
+  endif()
+
   if("${prefix}" STREQUAL "aclnnExc")
     get_target_property(exclude_headers ${OPHOST_NAME}_aclnn_exclude_headers INTERFACE_SOURCES)
     if(exclude_headers)
       set(${opbuild_out_headers} ${ori_out_headers} ${exclude_headers} PARENT_SCOPE)
     endif()
   else()
-    function(add_parent_path input_list output_list)
-      set(path_list "")
-      foreach(item ${input_list})
-        list(APPEND path_list "${ASCEND_AUTOGEN_PATH}/${item}")
-      endforeach()
-      set(${output_list} "${path_list}" PARENT_SCOPE)
-    endfunction()
+    file(GLOB out_srcs ${out_src_path}/${prefix}_*.cpp)
+    file(GLOB out_headers ${out_src_path}/${prefix}_*.h)
 
-    add_parent_path("${ACLNN_EXTRA_SRCS}" PARENT_ACLNN_EXTRA_SRCS)
-    add_parent_path("${ACLNN_EXTRA_HEADERS}" PARENT_ACLNN_EXTRA_HEADERS)
-    add_parent_path("${ACLNNINNER_EXTRA_SRCS}" PARENT_ACLNNINNER_EXTRA_SRCS)
-    add_parent_path("${ACLNNINNER_EXTRA_HEADERS}" PARENT_ACLNNINNER_EXTRA_HEADERS)
-
-    set(${opbuild_out_srcs} ${ori_out_srcs} ${out_srcs} ${PARENT_ACLNN_EXTRA_SRCS} ${PARENT_ACLNNINNER_EXTRA_SRCS} PARENT_SCOPE)
+    set(${opbuild_out_srcs} ${ori_out_srcs} ${out_srcs} PARENT_SCOPE)
     if("${prefix}" STREQUAL "aclnn")
-      set(${opbuild_out_headers} ${ori_out_headers} ${out_headers} ${PARENT_ACLNN_EXTRA_HEADERS} ${PARENT_ACLNNINNER_EXTRA_HEADERS} PARENT_SCOPE)
+      set(${opbuild_out_headers} ${ori_out_headers} ${out_headers} PARENT_SCOPE)
     endif()
   endif()
 endfunction()
@@ -179,42 +115,18 @@ function(gen_aclnn_with_opdef)
       install(FILES ${opbuild_out_headers} DESTINATION ${CMAKE_BINARY_DIR}/static_library_files/include OPTIONAL)
       install(FILES ${opbuild_out_headers} DESTINATION ${CMAKE_BINARY_DIR}/static_library_files/include/aclnnop OPTIONAL)
     endif()
-    foreach(aclnn_header_path ${opbuild_out_headers})
-      string(REGEX REPLACE "^.*/" "" filename "${aclnn_header_path}")
-      list(APPEND aclnn_header_file "${filename}")
-    endforeach()
   endif()
 
-  # ascendc_impl_gen depends opbuild_custom_gen_aclnn_all, for opbuild will generate .ini
-  set(dependency_list)
-  if(TARGET opbuild_gen_aclnn)
-    list(APPEND dependency_list opbuild_gen_aclnn)
-  endif()
-  if(TARGET opbuild_gen_aclnnInner)
-    list(APPEND dependency_list opbuild_gen_aclnnInner)
-    if(TARGET ${OPHOST_NAME}_opapi_obj)
-      add_dependencies(${OPHOST_NAME}_opapi_obj opbuild_gen_aclnnInner)
-    endif()
-  endif()
-  if(TARGET opbuild_gen_aclnnExc)
-    list(APPEND dependency_list opbuild_gen_aclnnExc)
-  endif()
-  if(NOT dependency_list)
-    message(STATUS "no operator info to generate")
-    return()
-  endif()
-
-  if (NOT TARGET opbuild_custom_gen_aclnn_all)
-    add_custom_target(opbuild_custom_gen_aclnn_all
-                      COMMAND python3 ${PROJECT_SOURCE_DIR}/scripts/util/modify_gen_aclnn_static.py ${CMAKE_BINARY_DIR})
-  endif()
-  add_dependencies(opbuild_custom_gen_aclnn_all ${dependency_list})
   if(opbuild_out_srcs)
     set_source_files_properties(${opbuild_out_srcs} PROPERTIES GENERATED TRUE)
     if (NOT TARGET opbuild_gen_aclnn_all)
       add_library(opbuild_gen_aclnn_all OBJECT ${opbuild_out_srcs})
     endif()
-    add_dependencies(opbuild_gen_aclnn_all opbuild_custom_gen_aclnn_all)
+    if (ENABLE_STATIC AND NOT TARGET opbuild_custom_gen_aclnn_all)
+      add_custom_target(opbuild_custom_gen_aclnn_all
+                        COMMAND python3 ${PROJECT_SOURCE_DIR}/scripts/util/modify_gen_aclnn_static.py ${CMAKE_BINARY_DIR})
+      add_dependencies(opbuild_gen_aclnn_all opbuild_custom_gen_aclnn_all)
+    endif()
     target_include_directories(opbuild_gen_aclnn_all PRIVATE ${OPAPI_INCLUDE})
   endif()
 endfunction()

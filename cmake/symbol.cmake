@@ -12,8 +12,8 @@ function(gen_ophost_symbol)
   if (NOT TARGET ${OPHOST_NAME}_infer_obj AND NOT TARGET ${OPHOST_NAME}_tiling_obj AND NOT TARGET ${OPHOST_NAME}_aicpu_objs)
     return()
   endif()
-  add_library(
-    ${OPHOST_NAME} SHARED
+  npu_op_library(${OPHOST_NAME}_obj TILING)
+  target_sources(${OPHOST_NAME}_obj PUBLIC
     $<$<TARGET_EXISTS:${OPHOST_NAME}_infer_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_infer_obj>>
     $<$<TARGET_EXISTS:${OPHOST_NAME}_tiling_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_tiling_obj>>
     $<$<TARGET_EXISTS:${OPHOST_NAME}_aicpu_objs>:$<TARGET_OBJECTS:${OPHOST_NAME}_aicpu_objs>>
@@ -21,20 +21,11 @@ function(gen_ophost_symbol)
     $<$<TARGET_EXISTS:opbase_infer_objs>:$<TARGET_OBJECTS:opbase_infer_objs>>
     $<$<TARGET_EXISTS:opbase_tiling_objs>:$<TARGET_OBJECTS:opbase_tiling_objs>>
     )
-
+  add_library(${OPHOST_NAME} SHARED $<TARGET_OBJECTS:${OPHOST_NAME}_obj>)
   target_link_libraries(
     ${OPHOST_NAME}
     PRIVATE $<BUILD_INTERFACE:intf_pub_cxx17>
-            c_sec
-            -Wl,--no-as-needed
-            register
-            -Wl,--as-needed
-            -Wl,--whole-archive
-            rt2_registry_static
-            tiling_api
-            -Wl,--no-whole-archive
-            -Wl,-Bsymbolic
-            unified_dlog
+            ${OPHOST_NAME}_obj
     )
 
   target_link_directories(${OPHOST_NAME} PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64)
@@ -205,11 +196,15 @@ function(gen_opapi_symbol)
   if((NOT TARGET ${OPHOST_NAME}_opapi_obj AND NOT TARGET opbuild_gen_aclnn_all) OR NO_ACLNN)
     return()
   endif()
+  npu_op_library(${OPAPI_NAME}_obj ACLNN)
+  target_sources(${OPAPI_NAME}_obj PUBLIC
+    $<$<TARGET_EXISTS:${OPHOST_NAME}_opapi_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_opapi_obj>>
+    $<$<TARGET_EXISTS:opbuild_gen_aclnn_all>:$<TARGET_OBJECTS:opbuild_gen_aclnn_all>>
+  )
   # opapi shared
   add_library(
     ${OPAPI_NAME} SHARED
-    $<$<TARGET_EXISTS:${OPHOST_NAME}_opapi_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_opapi_obj>>
-    $<$<TARGET_EXISTS:opbuild_gen_aclnn_all>:$<TARGET_OBJECTS:opbuild_gen_aclnn_all>>
+    $<TARGET_OBJECTS:${OPAPI_NAME}_obj>
     )
 
   if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
@@ -219,8 +214,9 @@ function(gen_opapi_symbol)
   target_link_libraries(
     ${OPAPI_NAME}
     PUBLIC $<BUILD_INTERFACE:intf_pub_cxx17>
-    PRIVATE c_sec nnopbase $<$<BOOL:${BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG}>:$<BUILD_INTERFACE:opapi_math>>
+    PRIVATE ${OPAPI_NAME}_obj $<$<BOOL:${BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG}>:$<BUILD_INTERFACE:opapi_math>>
     )
+  target_link_directories(${OPAPI_NAME} PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64)
 
   install(
     TARGETS ${OPAPI_NAME}

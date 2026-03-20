@@ -13,7 +13,7 @@
  * \brief
  */
 #include "register/op_def_registry.h"
-#include "runtime/infer_shape_context.h"
+#include "exe_graph/runtime/infer_shape_context.h"
 #include "graph/operator.h"
 
  namespace {

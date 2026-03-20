@@ -207,7 +207,6 @@ function(add_ops_info_target_v1)
             ${OPINFO_OPS_INFO_DIR}/inner/aic-${OPINFO_COMPUTE_UNIT}-ops-info.ini
             ${OPINFO_OPS_INFO_DIR}/exc/aic-${OPINFO_COMPUTE_UNIT}-ops-info.ini
             ${OPINFO_OUTPUT}
-    DEPENDS opbuild_custom_gen_aclnn_all
   )
   add_custom_target(${OPINFO_TARGET} ALL
     DEPENDS ${OPINFO_OUTPUT}
@@ -236,7 +235,6 @@ function(merge_ini_files)
                             ${MGINI_OPS_INFO_DIR}/inner/aic-${MGINI_COMPUTE_UNIT}-ops-info.ini
                             ${MGINI_OPS_INFO_DIR}/exc/aic-${MGINI_COMPUTE_UNIT}-ops-info.ini
                             --output-file ${ASCEND_KERNEL_CONF_DST}/aic-${MGINI_COMPUTE_UNIT}-ops-info.ini
-                    DEPENDS opbuild_custom_gen_aclnn_all
     )
   add_custom_target(${MGINI_TARGET} ALL
                     DEPENDS ${ASCEND_KERNEL_CONF_DST}/aic-${MGINI_COMPUTE_UNIT}-ops-info.ini
@@ -531,10 +529,6 @@ endfunction()
 # binary compile
 function(gen_ops_info_and_python)
   gen_aclnn_with_opdef()
-  if(NOT TARGET opbuild_custom_gen_aclnn_all)
-    message(STATUS "no need build binary, for all the ops donot have any operator def")
-    return()
-  endif()
 
   kernel_src_copy(
     TARGET ascendc_kernel_src_copy
@@ -570,7 +564,7 @@ function(gen_ops_info_and_python)
     )
   endif()
 
-  set(ascendc_impl_gen_depends ascendc_kernel_src_copy opbuild_custom_gen_aclnn_all common_copy)
+  set(ascendc_impl_gen_depends ascendc_kernel_src_copy common_copy)
   foreach(compute_unit ${ASCEND_ALL_COMPUTE_UNIT})
     # generate aic-${compute_unit}-ops-info.json, operator infos
     if(ENABLE_CUSTOM)

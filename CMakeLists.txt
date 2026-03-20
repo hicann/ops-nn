@@ -56,6 +56,7 @@ option(OP_GRAPH_UT "Enable graph ut" OFF)
 option(OP_KERNEL_UT "Enable kernel ut" OFF)
 option(OP_KERNEL_AICPU_UT "Enable aicpu kernel ut" OFF)
 option(UT_TEST_ALL "Enable all ut" OFF)
+option(ENABLE_GEN_ACLNN "Enable gen aclnn" OFF)
 
 set(BISHENG_FLAGS "" CACHE STRING "bisheng compiler flags")
 set(CANN_3RD_LIB_PATH ${PROJECT_SOURCE_DIR}/build/third_party CACHE STRING "cann third party lib path")

@@ -14,7 +14,7 @@
  */
 
 #include "register/op_def_registry.h"
-#include "runtime/infer_shape_context.h"
+#include "exe_graph/runtime/infer_shape_context.h"
 
 namespace ops {
 class SingleLayerLstmGrad : public OpDef {

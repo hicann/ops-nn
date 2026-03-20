@@ -491,17 +491,11 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
                     message(STATUS "get_opfile_from_opsinfo kernel_cpp_name is ${kernel_cpp_name}")
                 else()
                     gen_aclnn_with_opdef()
-                    if(NOT TARGET opbuild_custom_gen_aclnn_all)
-                        message(STATUS "no need build binary, for all the ops donot have any operator def")
-                        break()
-                    endif()
 
                     merge_ini_files(TARGET merge_ini_${compute_unit}_${opName}
                         OPS_INFO_DIR ${ASCEND_AUTOGEN_PATH}
                         COMPUTE_UNIT ${compute_unit}
                     )
-
-                    add_dependencies(merge_ini_${compute_unit}_${opName} opbuild_custom_gen_aclnn_all)
 
                     add_ops_info_target_v1(
                         TARGET ops_info_gen_${lowerSocVersion}_${opName}
