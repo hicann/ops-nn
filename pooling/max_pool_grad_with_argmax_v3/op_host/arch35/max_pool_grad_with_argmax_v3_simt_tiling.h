@@ -28,7 +28,6 @@ public:
         : MaxPoolGradWithArgmaxV3BaseTiling(context),
         SimtBase(new MaxPoolGradWithArgmaxSIMTTilingCommon(&inputData))
     {
-
     }
 
     ~MaxPoolGradWithArgmaxV3SimtTiling() override

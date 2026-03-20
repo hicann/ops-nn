@@ -27,7 +27,6 @@ public:
         : MaxPoolGradWithArgmaxV3BaseTiling(context),
         NHWCBase(new MaxPoolGradWithArgmaxNHWCTilingCommon(&inputData))
     {
-        
     }
 
     ~MaxPoolGradWithArgmaxV3NHWCTiling() override

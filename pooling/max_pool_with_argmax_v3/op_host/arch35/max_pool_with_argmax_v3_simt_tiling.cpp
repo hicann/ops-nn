@@ -149,26 +149,26 @@ ge::graphStatus MaxPoolWithArgmaxV3TilingSIMT::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-std::string MaxPoolWithArgmaxV3TilingSIMT::ToString(MaxPoolWithArgmaxV3SimtTilingData& tiling)
+std::string MaxPoolWithArgmaxV3TilingSIMT::ToString(MaxPoolWithArgmaxV3SimtTilingData& tilingData)
 {
     std::string str;
-    str += " threadNums:" + std::to_string(tiling.get_threadNums());
-    str += " blockNums:" + std::to_string(tiling.get_blockNums());
-    str += " nDim:" + std::to_string(tiling.get_nDim());
-    str += " cDim:" + std::to_string(tiling.get_cDim());
-    str += " hInDim:" + std::to_string(tiling.get_hInDim());
-    str += " wInDim:" + std::to_string(tiling.get_wInDim());
-    str += " hOutDim:" + std::to_string(tiling.get_hOutDim());
-    str += " wOutDim:" + std::to_string(tiling.get_wOutDim());
-    str += " kSizeH:" + std::to_string(tiling.get_kSizeH());
-    str += " kSizeW:" + std::to_string(tiling.get_kSizeW());
-    str += " stridesH:" + std::to_string(tiling.get_stridesH());
-    str += " stridesW:" + std::to_string(tiling.get_stridesW());
-    str += " padH:" + std::to_string(tiling.get_padH());
-    str += " padW:" + std::to_string(tiling.get_padW());
-    str += " dilationH:" + std::to_string(tiling.get_dilationH());
-    str += " dilationW:" + std::to_string(tiling.get_dilationW());
-    str += " ceilMode:" + std::to_string(tiling.get_ceilMode());
+    str += " threadNums:" + std::to_string(tilingData.get_threadNums());
+    str += " blockNums:" + std::to_string(tilingData.get_blockNums());
+    str += " nDim:" + std::to_string(tilingData.get_nDim());
+    str += " cDim:" + std::to_string(tilingData.get_cDim());
+    str += " hInDim:" + std::to_string(tilingData.get_hInDim());
+    str += " wInDim:" + std::to_string(tilingData.get_wInDim());
+    str += " hOutDim:" + std::to_string(tilingData.get_hOutDim());
+    str += " wOutDim:" + std::to_string(tilingData.get_wOutDim());
+    str += " kSizeH:" + std::to_string(tilingData.get_kSizeH());
+    str += " kSizeW:" + std::to_string(tilingData.get_kSizeW());
+    str += " stridesH:" + std::to_string(tilingData.get_stridesH());
+    str += " stridesW:" + std::to_string(tilingData.get_stridesW());
+    str += " padH:" + std::to_string(tilingData.get_padH());
+    str += " padW:" + std::to_string(tilingData.get_padW());
+    str += " dilationH:" + std::to_string(tilingData.get_dilationH());
+    str += " dilationW:" + std::to_string(tilingData.get_dilationW());
+    str += " ceilMode:" + std::to_string(tilingData.get_ceilMode());
     return str;
 }
 REGISTER_OPS_TILING_TEMPLATE(MaxPoolWithArgmaxV3, MaxPoolWithArgmaxV3TilingSIMT, 100);
