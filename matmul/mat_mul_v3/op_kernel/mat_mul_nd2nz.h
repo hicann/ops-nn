@@ -82,15 +82,17 @@ __aicore__ inline void CopyPadNd2Nz(const GlobalTensor<T>& dstGlobal, const Glob
                 {static_cast<uint16_t>(baseH), 1, 1, nRowBlock});
         }
     }
-    for (uint32_t j = 0; j < numIterJ; j++) {
-        Copy(ubLocal2[baseH * nRepeat * j + numIterI * REPEAT_TIMES_MAX * c0Size],
-            ubLocal1[nRepeat * j + numIterI * REPEAT_TIMES_MAX * baseW], nRepeat, heightTail,
-            {static_cast<uint16_t>(baseH), 1, 1, nRowBlock});
-    }
-    if (widthTail) {
-        Copy(ubLocal2[baseH * nRepeat * numIterJ + numIterI * REPEAT_TIMES_MAX * c0Size],
-            ubLocal1[nRepeat * numIterJ + numIterI * REPEAT_TIMES_MAX * baseW], widthTail, heightTail,
-            {static_cast<uint16_t>(baseH), 1, 1, nRowBlock});
+    if (heightTail){
+        for (uint32_t j = 0; j < numIterJ; j++) {
+            Copy(ubLocal2[baseH * nRepeat * j + numIterI * REPEAT_TIMES_MAX * c0Size],
+                ubLocal1[nRepeat * j + numIterI * REPEAT_TIMES_MAX * baseW], nRepeat, heightTail,
+                {static_cast<uint16_t>(baseH), 1, 1, nRowBlock});
+        }
+        if (widthTail) {
+            Copy(ubLocal2[baseH * nRepeat * numIterJ + numIterI * REPEAT_TIMES_MAX * c0Size],
+                ubLocal1[nRepeat * numIterJ + numIterI * REPEAT_TIMES_MAX * baseW], widthTail, heightTail,
+                {static_cast<uint16_t>(baseH), 1, 1, nRowBlock});
+        }
     }
 
     SetFlag<HardEvent::V_MTE3>(static_cast<event_t>(0));
@@ -253,7 +255,11 @@ __aicore__ inline void MatrixAtoNZV2(GM_ADDR workspace, GM_ADDR src, const TCube
             (oriD * sizeof(T) <= 512 && oriD % 4 == 0))) { // 32 is blocksize, 512 is cacheline
             Nd2nzVnchwMM(tempDstGlobal, tempSrcGlobal, oriN, oriD, batch, tmpBuf, usedCoreNum);
         } else {
-            MatrixtoNZ(oriN, oriD, nValue, dValue, baseAN, baseAD, usedCoreNum, tempSrcGlobal, tempDstGlobal, tmpBuf);
+            if (nValue * dValue * sizeof(T) * 2 > 192 * 1024){  // nd2nz cannot exceed the size of UB
+                Nd2nzVnchwBMM(tempDstGlobal, tempSrcGlobal, oriN, oriD, batch, tmpBuf, usedCoreNum);
+            } else {
+                MatrixtoNZ(oriN, oriD, nValue, dValue, baseAN, baseAD, usedCoreNum, tempSrcGlobal, tempDstGlobal, tmpBuf);
+            }
         }
     }
 #else
@@ -289,7 +295,11 @@ __aicore__ inline void MatrixBtoNZV2(GM_ADDR workspace, GM_ADDR src, const TCube
             (oriD * sizeof(T) <= 512 && oriD % 4 == 0))) { // 32 is blocksize, 512 is cacheline
             Nd2nzVnchwMM(tempDstGlobal1, tempSrcGlobal1, oriN, oriD, batch, tmpBuf, usedCoreNum);
         } else {
-            MatrixtoNZ(oriN, oriD, nValue, dValue, baseBN, baseBD, usedCoreNum, tempSrcGlobal1, tempDstGlobal1, tmpBuf);
+            if (nValue * dValue * sizeof(T) * 2 > 192 * 1024){  // nd2nz cannot exceed the size of UB
+                Nd2nzVnchwBMM(tempDstGlobal1, tempSrcGlobal1, oriN, oriD, batch, tmpBuf, usedCoreNum);
+            } else {
+                MatrixtoNZ(oriN, oriD, nValue, dValue, baseBN, baseBD, usedCoreNum, tempSrcGlobal1, tempDstGlobal1, tmpBuf);
+            }    
         }
     }
 #else
