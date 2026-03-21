@@ -120,7 +120,7 @@ ge::graphStatus QuantBatchMatmulPertokenArch20::DoTiling()
         auto biasShape = context_->GetOptionalInputShape(BIAS_IDX)->GetOriginShape();
         if (biasShape.GetDimNum() == 1){
             qbmmTilingDataArch20_.biasWithBatch = false;
-        } else if(biasShape.GetDimNum() != 1 && biasShape.GetDimNum() == 3) { 
+        } else if(biasShape.GetDimNum() == CONST_THREE) {
             qbmmTilingDataArch20_.biasWithBatch = true;
         } else{
             OP_LOGW(context_->GetNodeName(),"Arch20 Pertoken mode bias only support [n] or [b, 1, n]");

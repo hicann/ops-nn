@@ -37,7 +37,6 @@ bool FusedQuantMatMulChecker::CheckShape(const std::vector<gert::Shape *> &mandt
     auto biasShape = optionalInputShape[0];     // using index 0 to get biasShape
     auto scaleShape = optionalInputShape[1];    // using index 1 to get x2ScaleShape
     auto offsetShape = context_->GetOptionalInputShape(GetOffsetIdx());
-
     if (!CheckShapeInRangeForOptionalInputs(scaleShape, biasShape, offsetShape) ||
         !CheckDimValue(scaleShape, biasShape, offsetShape, dimValueOfMKN) ||
         !CheckShapeInBoundary(x1Shape, GetX1Idx()) || !CheckShapeInBoundary(x2Shape, GetX2Idx())) {
