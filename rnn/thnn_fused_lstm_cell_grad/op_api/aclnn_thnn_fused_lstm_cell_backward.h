@@ -47,7 +47,7 @@ ACLNN_API aclnnStatus aclnnThnnFusedLstmCellBackward(
     void *workspace,
     uint64_t workspaceSize,
     aclOpExecutor *executor,
-    const aclrtStream stream);
+    aclrtStream stream);
 
 #ifdef __cplusplus
 }
