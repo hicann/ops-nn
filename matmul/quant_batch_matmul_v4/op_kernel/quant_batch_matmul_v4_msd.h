@@ -330,6 +330,7 @@ __aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, qua
 template <typename xType, typename wType, typename scaleType, typename yType, QuantType quantType, bool bTrans, bool weightNz >
 __aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, quantType, bTrans, weightNz >::Process()
 {
+    if (coreIdx_ >= tilingData_->coreNum) { return; }
     mmObj_.SetOrgShape(mSize_ * 2 , nSize_, kSize_);
     blockDimN_ = ops::CeilDiv(nSize_, baseN_);
     blockDimM_ = ops::CeilDiv(mSize_ * 2, baseM_);

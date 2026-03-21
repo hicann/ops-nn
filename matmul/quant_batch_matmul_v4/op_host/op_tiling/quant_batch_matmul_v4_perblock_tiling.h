@@ -36,9 +36,6 @@ constexpr int32_t GROUP_N_OFFSET = 16;
 constexpr uint64_t GROUP_MNK_BIT_SIZE = 0xFFFF;
 constexpr int32_t CV_PARALL_NUM = 2;
 
-struct QuantBatchMatmulPerblockInfo: public QuantBatchMatmulMsdInfo {
-};
-
 class QuantBatchMatmulV4PerblockTiling : public QuantBatchMatmulV3BasicTiling
 {
 public:
