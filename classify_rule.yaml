@@ -526,6 +526,7 @@ conv_backward-c@ops-nn:
         - ops/ops-nn/conv/convolution_backward/op_api/convtbc_backward_checker.h
         - ops/ops-nn/conv/convolution_backward/README.md
         - ops/ops-nn/conv/convolution_backward/CMakeLists.txt
+        - ops/ops-nn/matmul/quant_batch_matmul_v3/op_kernel/quant_batch_matmul_v3_bf16.h
       opensource_style: null
       kernel_style: null
     unrelease:
@@ -866,6 +867,7 @@ matmul-c@ops-nn:
         - ops/ops-nn/matmul/sparse4to2quant_matmul/examples/test_aclnn_sparse4to2quant_matmul.cpp
         - ops/ops-nn/matmul/quant_matmul_reduce_sum/examples/test_aclnn_quant_matmul_reduce_sum_weight_nz.cpp
         - ops/ops-nn/matmul/quant_batch_matmul_inplace_add/examples/arch35/test_aclnn_quant_batch_matmul_inplace_add_mxfp8.cpp
+        - ops/ops-nn/matmul/quant_batch_matmul_v3/op_kernel/quant_batch_matmul_v3_bf16.h
       non_delivery: null
       open_source: null
 
