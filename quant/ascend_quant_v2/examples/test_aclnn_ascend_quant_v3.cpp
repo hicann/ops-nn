@@ -116,8 +116,7 @@ int main()
     const int32_t axis = -1;
     bool sqrtMode = false;
     const char* roundMode = "round";
-
-    // 3. 调用CANN算子库API，需要修改为具体的API
+    // 3. 调用CANN算子库API，需要修改为具体的API名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     // 调用aclnnAscendQuantV3第一段接口

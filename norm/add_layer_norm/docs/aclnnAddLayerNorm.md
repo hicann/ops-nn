@@ -558,7 +558,7 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // aclnnAddLayerNorm接口调用示例，包含带biasOptional和不带biasOptional的各一次
-    // 3. 调用CANN算子库API，需要修改为具体的Api名称
+    // 3. 调用CANN算子库API，需要修改为具体的API名称
 
     // 3.1 不带biasOptional可选输入的示例
     // 调用aclnnAddLayerNorm第一段接口
@@ -606,7 +606,7 @@ int main()
 
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
 
-    // 5.1 拷出不带biasOptional的输出
+    // 5.1 拷贝出不带biasOptional的输出
     auto outputYSize = GetShapeSize(outputYShape);
     std::vector<float> resultDataY(outputYSize, 0);
     ret = aclrtMemcpy(
@@ -651,7 +651,7 @@ int main()
         LOG_PRINT("result[%ld] is: %f\n", i, resultDataX[i]);
     }
 
-    // 5.2 拷出带biasOptional的输出
+    // 5.2 拷贝出带biasOptional的输出
     auto outputYSizebiasOptional = GetShapeSize(outputYShape);
     std::vector<float> resultDataYbiasOptional(outputYSizebiasOptional, 0);
     ret = aclrtMemcpy(

@@ -155,7 +155,7 @@ int main()
 
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
 
-    // 5.1 拷出不带bias的输出
+    // 5.1 拷贝出不带bias的输出
     auto size = GetShapeSize(yShape);
     std::vector<float> resultData(size, 0);
     ret = aclrtMemcpy(

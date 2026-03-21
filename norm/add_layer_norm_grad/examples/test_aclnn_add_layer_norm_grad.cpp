@@ -153,7 +153,7 @@ int main()
     aclOpExecutor* executor;
 
     // aclnnAddLayerNormGrad接口调用示例
-    // 3. 调用CANN算子库API，需要修改为具体的Api名称
+    // 3. 调用CANN算子库API，需要修改为具体的API名称
     // 调用aclnnAddLayerNormGrad第一段接口
     LOG_PRINT("\nUse aclnnAddLayerNormGrad Port.");
     ret = aclnnAddLayerNormGradGetWorkspaceSize(

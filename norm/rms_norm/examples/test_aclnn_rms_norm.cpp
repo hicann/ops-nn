@@ -102,7 +102,7 @@ int main()
     std::vector<float> yHostData = {0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7,
                                     0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7};
     std::vector<float> rstdHostData = {1, 2};
-    float epsilon = 1e-6;
+    double epsilon = 1e-6;
 
     // 创建x aclTensor
     ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT, &x);

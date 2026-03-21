@@ -110,7 +110,7 @@ int main()
     dim = aclCreateIntArray(dimData.data(), 1);
     CHECK_RET(dim != nullptr, return ret);
 
-    // 3. 调用CANN算子库API，需要修改为具体的Api名称
+    // 3. 调用CANN算子库API，需要修改为具体的API名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     // 调用aclnnNorm第一段接口

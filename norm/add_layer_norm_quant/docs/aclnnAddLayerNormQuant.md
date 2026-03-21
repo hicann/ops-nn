@@ -674,7 +674,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // aclnnAddLayerNormQuant接口调用示例，包含带bias和不带bias的各一次
-  // 3. 调用CANN算子库API，需要修改为具体的Api名称
+  // 3. 调用CANN算子库API，需要修改为具体的API名称
 
   // 3.1 不带bias可选输入的示例
   // 调用aclnnAddLayerNormQuant第一段接口
