@@ -4,9 +4,9 @@
 
 本指南旨在帮助您快速上手CANN和`ops-nn`算子仓的使用。为方便快速了解算子开发全流程，将以**AddExample**算子为实践对象，其源文件位于`ops-nn/examples/add_example`，具体操作流程如下：
 
-1. **[环境部署](zh/install/quick_install.md)**：参考环境部署章节完成软件包安装和源码下载，此处不赘述。**推荐WebIDE或Docker环境**，安装操作简单。
+1. **[环境部署](zh/install/quick_install.md)**：完成软件安装和源码下载，此处不再赘述。快速入门场景下，**推荐WebIDE或Docker环境**，安装操作简单。
 
-    > **说明**：当前WebIDE或Docker环境默认最新商发版CANN包；如需体验master分支最新能力，可手动搭建环境，注意软件与源码版本配套。
+   > **说明**：WebIDE或Docker环境默认提供最新商发版CANN包；如需体验master分支最新能力，可手动搭建环境。注意软件包与源码版本是否配套。
 
 2. **[编译运行](#一编译运行)**：编译自定义算子包并安装，实现快速调用算子。
 
@@ -20,11 +20,27 @@
 
 本阶段目的是**快速体验项目标准流程**，验证环境能否成功进行算子源码编译、打包、安装和运行。
 
-### 1. 编译AddExample算子
+### 1. 进入项目目录
 
-环境准备好后（注意软件与源码版本配套），进入环境并访问项目源码根目录，编译指定算子。
+环境准备好后（注意软件与源码版本配套），进入项目目录。
 
-通用编译命令格式：`bash build.sh --pkg --soc=<芯片版本> --ops=<算子名>`。以AddExample算子为例，编译命令如下：
+- 对于Docker部署或手动安装场景，项目源码位于
+
+  ```bash
+  cd ops-nn
+  ```
+
+- 对于WebIDE场景，项目源码位于
+
+  ```bash
+  cd /mnt/workspace/ops-nn
+  ```
+
+### 2. 编译AddExample算子
+
+编译指定的算子，通用编译命令格式：`bash build.sh --pkg --soc=<芯片版本> --ops=<算子名>`。
+
+以AddExample算子为例，编译命令如下：
 
 ```bash
 bash build.sh --pkg --soc=ascend910b --ops=add_example -j16
@@ -36,20 +52,20 @@ Self-extractable archive "cann-ops-nn-custom-linux.${arch}.run" successfully cre
 ```
 编译成功后，run包存放于项目根目录的build_out目录下。
 
-### 2. 安装AddExample算子包
+### 3. 安装AddExample算子包
 ```bash
 ./build_out/cann-ops-nn-*linux*.run
 ```
 `AddExample`安装在```${ASCEND_HOME_PATH}/opp/vendors```路径中，```${ASCEND_HOME_PATH}```表示CANN软件安装目录。
 
-### 3. 配置环境变量
+### 4. 配置环境变量
 
 将自定义算子包的路径加入环境变量，确保运行时能够找到。
 ```bash
 export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/opp/vendors/custom_nn/op_api/lib:${LD_LIBRARY_PATH}
 ```
 
-### 4. 快速验证：运行算子样例
+### 5. 快速验证：运行算子样例
 
 通用的运行命令格式：`bash build.sh --run_example <算子名> <运行模式> <包模式>`。
 

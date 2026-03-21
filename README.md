@@ -22,18 +22,16 @@ ops-nn是[CANN](https://hiascend.com/software/cann) （Compute Architecture for 
 
 若您希望**从零到一快速体验**项目能力，请访问下述简易教程。
 
-1. [环境部署](docs/zh/install/quick_install.md)：介绍基础环境搭建，包括软件包和三方依赖的获取和安装、源码下载等。
-
-    >  **说明**：本步骤是QuickStart和各类教程的操作前提，请先完成基础环境搭建。
-2. [QuickStart](docs/QUICKSTART.md)：提供快速上手本项目能力的指南，包括编译部署、算子调用/开发/调试等核心能力。
+1. [环境部署](docs/zh/install/quick_install.md)：本文是**QuickStart和各类教程的操作前提**，请先完成基础环境搭建和源码下载。
+2. [QuickStart](docs/QUICKSTART.md)：针对源码编译、算子调用/开发/调试等关键能力，提供快速上手的简易指南。
 
 ## 📖学习教程
 
-若您已学习**环境部署和QuickStart**，对本项目有一定认知，并希望**深入了解和体验项目**，请访问下述详细教程。
+若您已学习完**快速入门**章节，对本项目有一定认知，并希望**深入了解和体验项目**，请访问下述详细教程。
 
 1. [算子列表](docs/zh/op_list.md)：提供全量算子信息，方便您查看算子分类和功能。
-2. [算子调用](docs/zh/invocation/quick_op_invocation.md)：提供多种算子编译和运行方法（包括执行算子样例和UT）等。
-3. [算子开发](docs/zh/develop/aicore_develop_guide.md)：提供详细算子开发指南，从零学习创建算子工程、实现Tiling和Kernel核心交付件等。
+2. [算子调用](docs/zh/invocation/quick_op_invocation.md)：提供多种源码编译和执行算子样例（包括执行UT）的方法。
+3. [算子开发](docs/zh/develop/aicore_develop_guide.md)：提供算子端到端开发指南，从零学习创建算子工程、实现Tiling和Kernel核心交付件。
 4. [算子调试调优](docs/zh/debug/op_debug_prof.md)：提供常见算子调试和调优方法，如DumpTensor、msProf、Simulator等。
 
 除了上述关键教程，还有其他文档介绍，例如算子调用方式、build参数说明、术语概念等，全量文档请访问[docs](docs/README.md)。
@@ -58,7 +56,7 @@ ops-nn是[CANN](https://hiascend.com/software/cann) （Compute Architecture for 
 │   │   ├── examples                   # 算子使用示例
 │   │   ├── op_graph                   # 算子构图相关目录
 │   │   ├── op_host                    # 算子信息库、Tiling、InferShape相关实现目录
-│   │   │   └── op_api                 # 算子aclnn接口实现目录
+│   │   ├── op_api                 # 可选，算子aclnn接口实现目录，如未提供则表示此算子的aclnn接口会让工程自动生成
 │   │   ├── op_kernel                  # 算子Kernel目录
 │   │   ├── CMakeLists.txt             # 算子编译配置文件
 │   │   └── README.md                  # 算子介绍文档
