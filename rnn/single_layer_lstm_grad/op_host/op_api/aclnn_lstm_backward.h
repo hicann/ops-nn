@@ -63,7 +63,7 @@ ACLNN_API aclnnStatus aclnnLstmBackward(
     void *workspace,
     uint64_t workspaceSize,
     aclOpExecutor *executor,
-    const aclrtStream stream);
+    aclrtStream stream);
 
 #ifdef __cplusplus
 }

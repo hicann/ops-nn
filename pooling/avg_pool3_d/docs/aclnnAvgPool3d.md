@@ -43,9 +43,9 @@ aclnnStatus aclnnAvgPool3dGetWorkspaceSize(
   const aclIntArray *kernelSize,
   const aclIntArray *strides,
   const aclIntArray *padding,
-  const bool         ceilMode,
-  const bool         countIncludePad,
-  const int64_t      divisorOverride,
+  bool              ceilMode,
+  bool              countIncludePad,
+  int64_t           divisorOverride,
   aclTensor         *out,
   uint64_t          *workspaceSize,
   aclOpExecutor     **executor)

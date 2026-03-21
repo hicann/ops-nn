@@ -60,10 +60,10 @@ aclnnStatus aclnnAvgPool3dBackwardGetWorkspaceSize(
 ```
 ```Cpp
 aclnnStatus aclnnAvgPool3dBackward(
-  void          *workspace,
-  uint64_t       workspaceSize,
-  aclOpExecutor *executor,
-  aclrtStream    stream)
+  void               *workspace,
+  uint64_t           workspaceSize,
+  aclOpExecutor      *executor,
+  const aclrtStream  stream)
 ```
 ## aclnnAvgPool3dBackwardGetWorkspaceSize
 

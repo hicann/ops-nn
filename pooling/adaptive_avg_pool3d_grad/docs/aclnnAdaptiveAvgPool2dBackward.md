@@ -29,10 +29,10 @@ aclnnStatus aclnnAdaptiveAvgPool2dBackwardGetWorkspaceSize(
 ```
 ```Cpp
 aclnnStatus aclnnAdaptiveAvgPool2dBackward(
-  void          *workspace,
-  uint64_t       workspaceSize,
-  aclOpExecutor *executor,
-  aclrtStream    stream)
+  void              *workspace,
+  uint64_t          workspaceSize,
+  aclOpExecutor     *executor,
+  const aclrtStream stream)
 ```
 ## aclnnAdaptiveAvgPool2dBackwardGetWorkspaceSize
 - **参数说明：**
