@@ -220,7 +220,6 @@ int main()
     aclrtFree(rVarDeviceAddr);
     aclrtFree(sMeanDeviceAddr);
     aclrtFree(sVarDeviceAddr);
-    aclrtFree(outMaskDeviceAddr);
     aclrtFree(gradInDeviceAddr);
     aclrtFree(gradWeightDeviceAddr);
     aclrtFree(gradBiasDeviceAddr);

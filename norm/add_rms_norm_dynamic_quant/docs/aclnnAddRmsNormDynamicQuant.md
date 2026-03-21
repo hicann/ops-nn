@@ -541,7 +541,7 @@ int main()
     // 调用aclnnAddRmsNormDynamicQuant第一段接口
     ret = aclnnAddRmsNormDynamicQuantGetWorkspaceSize(
         x1, x2, gamma, smooth1, smooth2, epsilon, y1, y2, x, scale1, scale2, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnRmsNormGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddRmsNormDynamicQuantGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
