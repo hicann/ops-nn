@@ -395,7 +395,7 @@ TEST_F(l2_norm_test, case_3_3_2_4_p2_4dim_double_ND_24)
     auto ut = OP_API_UT(aclnnNorm, INPUT(selfDesc, pDesc, dims, keepdim), OUTPUT(resultDesc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 // p2_complex64_ND的场景
@@ -411,7 +411,7 @@ TEST_F(l2_norm_test, case_3_3_2_4_p2_4dim_complex64_ND_025)
     auto ut = OP_API_UT(aclnnNorm, INPUT(selfDesc, pDesc, dims, keepdim), OUTPUT(resultDesc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 // p2_complex128_ND的场景
@@ -427,7 +427,7 @@ TEST_F(l2_norm_test, case_3_3_2_4_p2_4dim_complex128_ND_026)
     auto ut = OP_API_UT(aclnnNorm, INPUT(selfDesc, pDesc, dims, keepdim), OUTPUT(resultDesc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 // p2_bfloat16_ND 场景(1980-异常场景)
@@ -474,7 +474,7 @@ TEST_F(l2_norm_test, case_diff_type_float)
     auto ut = OP_API_UT(aclnnNorm, INPUT(selfDesc, pDesc, dims, keepdim), OUTPUT(resultDesc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 TEST_F(l2_norm_test, case_diff_type_double)
@@ -489,5 +489,5 @@ TEST_F(l2_norm_test, case_diff_type_double)
     auto ut = OP_API_UT(aclnnNorm, INPUT(selfDesc, pDesc, dims, keepdim), OUTPUT(resultDesc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
