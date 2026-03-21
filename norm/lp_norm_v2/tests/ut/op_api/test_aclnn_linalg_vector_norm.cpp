@@ -76,7 +76,7 @@ TEST_F(l2_linalg_vector_norm_test, case_float_float16_normal)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 TEST_F(l2_linalg_vector_norm_test, case_float16_float16_normal)
@@ -203,7 +203,7 @@ TEST_F(l2_linalg_vector_norm_test, case_self_int32)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 TEST_F(l2_linalg_vector_norm_test, case_out_int32)

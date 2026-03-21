@@ -43,6 +43,14 @@ constexpr float INT_MIN_F = static_cast<float>(INT_MIN);
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_FLOAT = {op::DataType::DT_FLOAT};
+
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_FLOAT16 = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_BF16 = {
+    op::DataType::DT_FLOAT, op::DataType::DT_BF16};
+
 static inline bool CheckNotNull(
     const aclTensor* self, const aclScalar* pScalar, const aclIntArray* dim, const aclTensor* out)
 {
@@ -60,25 +68,66 @@ static inline bool CheckSocVersionIsSupportBf16(void)
     return curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch);
 }
 
+struct InputParams {
+    const aclTensor* self;
+    const aclScalar* ord;
+    const aclIntArray* dims;
+    const aclTensor* out;
+    bool keepDims;
+    float p;
+};
+
 static inline bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
+{
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST, return false);
+    }
+    return true;
+}
+
+static inline bool CheckDtypeConvertValid(const aclTensor* self, const aclTensor* out)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST, return false);
+
+    op::DataType selfDtype = self->GetDataType();
+    std::initializer_list<op::DataType> DTYPE_CONVERT_LIST;
+    if (selfDtype == op::DataType::DT_FLOAT16) {
+        DTYPE_CONVERT_LIST = DTYPE_SUPPORT_LIST_FLOAT16;
+    }
+    if (selfDtype == op::DataType::DT_FLOAT) {
+        DTYPE_CONVERT_LIST = DTYPE_SUPPORT_LIST_FLOAT;
+    }
+    if (selfDtype == op::DataType::DT_BF16) {
+        DTYPE_CONVERT_LIST = DTYPE_SUPPORT_LIST_BF16;
+    }
+    auto dtype = out->GetDataType();
+    OP_CHECK(
+        CheckType(dtype, DTYPE_CONVERT_LIST),
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "For self with dtype %s, dtype should be %s, but got %s.",
+            op::ToString(selfDtype).GetString(), op::ToString(DTYPE_CONVERT_LIST).GetString(),
+            op::ToString(dtype).GetString()),
+        return false);
+
     return true;
 }
 
 static inline bool CheckPromoteType(const aclTensor* self, const aclTensor* out)
 {
     // 检查self和other能否做数据类型推导
-    op::DataType promoteType = op::PromoteType(self->GetDataType(), out->GetDataType());
-    if (promoteType == DataType::DT_UNDEFINED) {
+    op::DataType normPromoteType = op::PromoteType(self->GetDataType(), out->GetDataType());
+    if (normPromoteType == DataType::DT_UNDEFINED) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "Input dtype %s and output dtype %s can not promote dtype.",
             op::ToString(self->GetDataType()).GetString(), op::ToString(out->GetDataType()).GetString());
         return false;
     }
-    // 检查推导后的数据类型是否能转换为输出的数据类型
-    OP_CHECK_RESULT_DTYPE_CAST_FAILED(promoteType, out->GetDataType(), return false);
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        // 检查推导后的数据类型是否能转换为输出的数据类型
+        OP_CHECK_RESULT_DTYPE_CAST_FAILED(normPromoteType, out->GetDataType(), return false);
+    }
     return true;
 }
 
@@ -236,6 +285,48 @@ static inline bool CheckOrdValue(const aclScalar* ord)
 }
 
 
+static aclnnStatus aclnnLinalgVectorA3(const aclTensor* selfContiguous, InputParams& inputParams, aclOpExecutor* executor)
+{
+    auto epsilon = static_cast<float>(0);
+
+    const aclTensor* lpNormOut;
+    bool isOrdValid = CheckOrdValue(inputParams.ord);
+    bool isPromoteValid = CheckDtypeConvertValid(inputParams.self, inputParams.out);
+    if(isOrdValid && isPromoteValid) {
+        op::DataType promoteType = op::PromoteType(inputParams.self->GetDataType(), inputParams.out->GetDataType());
+        auto selfContiguousCast = l0op::Cast(selfContiguous, promoteType, executor);
+        CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        lpNormOut = l0op::LpNormV2(selfContiguousCast, selfContiguousCast, inputParams.p, inputParams.dims, inputParams.keepDims, epsilon, executor);
+        CHECK_RET(lpNormOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    } else if (CheckOrdValue(inputParams.ord) && !isPromoteValid) {
+        auto selfContiguousCast = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, executor);
+        CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        lpNormOut = l0op::LpNormV2(selfContiguousCast, selfContiguousCast, inputParams.p, inputParams.dims, inputParams.keepDims, epsilon, executor);
+        CHECK_RET(lpNormOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        lpNormOut = l0op::Cast(lpNormOut, inputParams.out->GetDataType(), executor);
+        CHECK_RET(lpNormOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    } else {
+        auto selfContiguousCast = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, executor);
+        CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        auto reduceOut = l0op::LpNormReduceV2(selfContiguousCast, inputParams.p, inputParams.dims, inputParams.keepDims, epsilon, executor);
+        CHECK_RET(reduceOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        auto updateOut = l0op::LpNormUpdateV2(reduceOut, inputParams.p, epsilon, executor);
+        CHECK_RET(updateOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        lpNormOut = l0op::Cast(updateOut, inputParams.out->GetDataType(), executor);
+        CHECK_RET(lpNormOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+    
+    auto viewCopyResult = l0op::ViewCopy(lpNormOut, inputParams.out, executor);
+    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnNormGetWorkspaceSize(
     const aclTensor* self, const aclScalar* pScalar, const aclIntArray* dim, bool keepdim, aclTensor* out,
     uint64_t* workspaceSize, aclOpExecutor** executor)
@@ -280,19 +371,9 @@ aclnnStatus aclnnNormGetWorkspaceSize(
         // [ViewCopy] 将计算结果拷贝到输出out上，可能是非连续的tensor
         auto viewCopyResult = l0op::ViewCopy(normOut, out, uniqueExecutor.get());
         CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    } else if (CheckSocVersionIsSupportBf16() && CheckOrdValue(pScalar)) {
-        // [Cast] 将计算结果转化为out的数据类型
-        op::DataType promoteType = op::PromoteType(self->GetDataType(), out->GetDataType());
-        auto selfContiguousCast = l0op::Cast(selfContiguous, promoteType, uniqueExecutor.get());
-        CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // [LpNormV2] 调用LpNormV2算子kernel function(AI core算子)
-        auto normOut = l0op::LpNormV2(selfContiguousCast, selfContiguousCast, p, dim, keepdim, ops, uniqueExecutor.get());
-        CHECK_RET(normOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // [ViewCopy] 将计算结果拷贝到输出out上，可能是非连续的tensor
-        auto viewCopyResult = l0op::ViewCopy(normOut, out, uniqueExecutor.get());
-        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    } else if (CheckSocVersionIsSupportBf16()) {
+        InputParams inputParams{self, pScalar, dim, out, keepdim, p};
+        aclnnLinalgVectorA3(selfContiguous, inputParams, uniqueExecutor.get());
     } else {
         // On 910A and 310P chips: self -> fp32Self -> LpNormReduceV2 -> LpNormUpdateV2 -> Cast
         // 类型转换为fp32
