@@ -78,7 +78,7 @@ struct gm_to_l1<ArchTag, DataType, DataFormat::NZ, DataFormat::NZ> {
     };
 };
 
-// Partial specialization for V220, ND_in, ND_out
+// Partial specialization for V220, ND_in, NZ_out
 template <ArchType ArchTag, typename DataType>
 struct gm_to_l1<ArchTag, DataType, DataFormat::ND, DataFormat::NZ> {
     using HardwareParams = HardwareInfo<ArchTag>;
@@ -109,50 +109,6 @@ struct gm_to_l1<ArchTag, DataType, DataFormat::ND, DataFormat::NZ> {
             for (uint32_t i = 0; i < nTileActual; i++) {
                 AscendC::DataCopy(l1Tensor[i * BLOCK_SIZE],
                                   gmTensor[i * dVal],
-                                  AscendC::Nd2NzParams(1,           // ndNum
-                                                       1,           // nValue
-                                                       dTileActual, // dValue
-                                                       0,           // srcNdMatrixStride, unused
-                                                       0,           // srcDValue
-                                                       nTileCeil,   // dstNzC0Stride
-                                                       0,           // dstNzNStride
-                                                       0));         // dstNzMatrixStride, unused
-            }
-        }
-    };
-};
-
-// Partial specialization for V220, ND_in, NZ_out
-template <ArchType ArchTag, typename DataType>
-struct gm_to_l1<ArchTag, DataType, DataFormat::ND, DataFormat::ZN> {
-    using HardwareParams = HardwareInfo<ArchTag>;
-    static constexpr uint32_t BLOCK_SIZE = HardwareParams::l1l0BlockSize / sizeof(DataType);
-    static constexpr uint32_t STRIDE_LIMIT = 65536;
-
-    __aicore__ gm_to_l1(AscendC::LocalTensor<DataType> l1Tensor,
-                        AscendC::GlobalTensor<DataType> gmTensor,
-                        uint32_t nTileActual,
-                        uint32_t nTileCeil,
-                        uint32_t nVal,
-                        uint32_t dTileActual,
-                        uint32_t dTileCeil,
-                        uint32_t dVal)
-    {
-        if (dVal < STRIDE_LIMIT) {
-            AscendC::DataCopy(l1Tensor,
-                            gmTensor,
-                            AscendC::Nd2NzParams(1,           // ndNum
-                                                 nTileActual, // nValue
-                                                 dTileActual, // dValue
-                                                 0,           // srcNdMatrixStride, unused
-                                                 dVal,        // srcDValue
-                                                 nTileCeil,   // dstNzC0Stride
-                                                 1,           // dstNzNStride
-                                                 0));         // dstNzMatrixStride, unused
-        } else {
-            for (uint32_t i = 0; i < nTileActual; ++i) {
-                AscendC::DataCopy(l1Tensor,
-                                  gmTensor,
                                   AscendC::Nd2NzParams(1,           // ndNum
                                                        1,           // nValue
                                                        dTileActual, // dValue
