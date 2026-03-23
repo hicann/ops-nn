@@ -7,15 +7,29 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef OP_API_INC_LEVEL0_ASCEND_ANTI_QUANT_V2_H_
-#define OP_API_INC_LEVEL0_ASCEND_ANTI_QUANT_V2_H_
 
-#include "opdev/op_executor.h"
+/* !
+ * \file ascend_anti_quant_v2_tilingdata.h
+ * \brief
+ */
+#ifndef ASCEND_ANTI_QUANT_V2_TILINGDATA_H_
+#define ASCEND_ANTI_QUANT_V2_TILINGDATA_H_
+#include <cstdint>
 
-namespace l0op {
-const aclTensor* AscendAntiQuantV2(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* offset, int64_t dstType, bool sqrtMode,
-    aclOpExecutor* executor);
-} // namespace l0op
+class AscendAntiQuantV2TilingData {
+public:
+    int64_t numCore;
+    int64_t blockAxis;
+    int64_t dim0;
+    int64_t dim1;
+    int64_t dim2;
+    int64_t blockUnion;
+    int64_t blockFactor;
+    int64_t blockTailFactor;
+    int64_t baseN;
+    int64_t baseLen;
+    int64_t hasOffset;
+    int64_t sqrtMode;
+};
 
-#endif // OP_API_INC_LEVEL0_ASCEND_ANTI_QUANT_V2_H_
+#endif   // ASCEND_ANTI_QUANT_V2_TILINGDATA_H_

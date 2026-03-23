@@ -6,7 +6,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
@@ -17,16 +17,28 @@
 
 - 接口功能：根据输入的scale和offset对输入x进行反量化。
 - 计算公式：
-  - sqrtMode为false时，计算公式为：
+  - sqrtMode为true，offset为None时，计算公式为：
 
     $$
-    y = float16((x+offset) * scale)
+    y = cast\_to\_dst\_type((x) * scale * scale)
     $$
 
-  - sqrtMode为true时，计算公式为：
+  - sqrtMode为true，offset不为None时，计算公式为：
 
     $$
-    y = float16((x+offset) * scale * scale)
+    y = cast\_to\_dst\_type((x + offset) * scale * scale)
+    $$
+
+  - sqrtMode为false，offset为None时，计算公式为：
+
+    $$
+    y = cast\_to\_dst\_type((x) * scale)
+    $$
+
+  - sqrtMode为false，offset不为None时，计算公式为：
+
+    $$
+    y = cast\_to\_dst\_type((x + offset) * scale)
     $$
 
 ## 函数原型
@@ -82,9 +94,9 @@ aclnnStatus aclnnAscendAntiQuant(
     <tr>
       <td>x（aclTensor*）</td>
       <td>输入</td>
-      <td>表示需要做反量化的输入。对应公式中的`x`。</td>
-      <td><ul><li>支持空Tensor。</li><li>当数据类型是INT32时，每个数据被作为8个INT4数据使用。</li><li>当数据类型是INT4时，shape的尾轴为偶数。</li></ul></td>
-      <td>INT4、INT8、INT32</td>
+      <td>表示需要做反量化的输入。对应公式中的x。</td>
+      <td><ul><li>支持空Tensor；</li><li>当数据类型是INT32时，每个数据被作为8个INT4数据使用；</li><li>当数据类型是INT4时，shape的尾轴为偶数。</li></ul></td>
+      <td>INT4、INT8、INT32、HIFLOAT8、FLOAT8_E4M3、FLOAT8_E5M2</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -92,26 +104,26 @@ aclnnStatus aclnnAscendAntiQuant(
     <tr>
       <td>scale（aclTensor*）</td>
       <td>输入</td>
-      <td>反量化中的scale值。对应公式中的`scale`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape的大小可以为1，如果不为1，在输入`x`为INT4/INT8类型时，等于输入`x`的最后一个维度的大小；在输入`x`为INT32类型时，等于输入`x`的最后一个维度大小的8倍。</li></ul></td>
+      <td>反量化中的scale值。对应公式中的scale。</td>
+      <td><ul><li>不支持空Tensor；</li><li>scale的维数必须与x相同，或者是1维；</li><li>如果x是1维，scale的形状必须是[1]或与x相同；</li><li>如果scale是1维，其大小必须是1、x[-1]或x[-2]；</li><li>如果scale是多维，最多只能有一个非1的维度，且这个非1的维度只能是-1或-2轴；</li><li>当输入x为INT32类型且反量化轴为尾轴时，scale的尾轴需要等于x尾轴大小的8倍；</li><li>当x的类型为HIFLOAT8、FLOAT8_E4M3、FLOAT8_E5M2时，scale只支持FLOAT32。</li></ul></td>
       <td>FLOAT32、BFLOAT16</td>
       <td>ND</td>
-      <td>1</td>
+      <td>1-8</td>
       <td>√</td>
     </tr>
     <tr>
       <td>offset（aclTensor*）</td>
       <td>输入</td>
-      <td>反量化中的offset值。对应公式中的`offset`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型和shape需要与`scale`保持一致。</li></ul></td>
+      <td>反量化中的offset值。对应公式中的offset。</td>
+      <td><ul><li>不支持空Tensor；</li><li>数据类型和shape需要与scale保持一致。</li></ul></td>
       <td>FLOAT32、BFLOAT16</td>
       <td>ND</td>
-      <td>1</td>
+      <td>1-8</td>
       <td>√</td>
     </tr>
     <tr>
       <td>dstType（int64_t）</td>
-      <td>输入</td>
+      <td>属性</td>
       <td>指定输出的数据类型。</td>
       <td>支持取值1、27，分别表示FLOAT16、BFLOAT16。</td>
       <td>-</td>
@@ -121,9 +133,9 @@ aclnnStatus aclnnAscendAntiQuant(
     </tr>
     <tr>
       <td>sqrtMode（bool）</td>
-      <td>输入</td>
-      <td>指定scale参与计算的逻辑。对应公式中的`sqrtMode`。</td>
-      <td>-</td>
+      <td>属性</td>
+      <td>指定scale参与计算的逻辑。对应公式中的sqrtMode。</td>
+      <td>当x的数据类型为HIFLOAT8、FLOAT8_E4M3、FLOAT8_E5M2时，sqrtMode为false。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -132,8 +144,8 @@ aclnnStatus aclnnAscendAntiQuant(
     <tr>
       <td>y（aclTensor*）</td>
       <td>输出</td>
-      <td>反量化的计算输出。对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>当输入`x`为INT4或INT8类型时，shape与输入`x`一致。</li><li>当输入`x`为INT32类型时，shape尾轴的大小为输入`x`的尾轴大小的8倍。</li></ul></td>
+      <td>反量化的计算输出。对应公式中的y。</td>
+      <td><ul><li>支持空Tensor。</li><li>当输入x为INT32类型时，shape尾轴的大小为输入x的尾轴大小的8倍，其余情况shape与输入x一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -167,6 +179,10 @@ aclnnStatus aclnnAscendAntiQuant(
       - 入参`x`仅支持INT8。
       - 入参`scale`、`offset`和出参`y`不支持BFLOAT16。
     - 入参`dstType`仅支持取值1，表示FLOAT16。
+    - 入参`scale`、`offset`仅支持一维，且只能等于x尾轴大小或1，当x为int32类型时，必须为x尾轴大小的8倍。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品/Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+    - 入参`x`仅支持INT4、INT8、INT32。
+    - 入参`scale`、`offset`仅支持一维，且只能等于x尾轴大小或1，当x为int32类型时，必须为x尾轴大小的8倍。
 
 - **返回值：**
 
@@ -201,9 +217,9 @@ aclnnStatus aclnnAscendAntiQuant(
       <td>dstType不在有效取值范围。</td>
     </tr>
     <tr>
-      <td>x的数据类型为INT4时，x的shape尾轴大小不是偶数。</tr>
+      <td>x的数据类型为INT4时，x的反量化轴大小不是偶数。</tr>
     <tr>
-      <td>x的数据类型为INT32时，y的shape尾轴不是x的shape尾轴大小的8倍，或者x与y的shape的非尾轴的大小不一致。</td>
+      <td>x的数据类型为INT32时，y的反量化轴不是x的反量化轴大小的8倍，或者x与y的其他轴大小不一致。</td>
     </tr>
   </tbody></table>
 

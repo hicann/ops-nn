@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ extern "C" {
  * @domain aclnn_ops_infer
  *
  * @param [in] x: 待进行AscendAntiQuant计算的入参。npu device侧的aclTensor，
- * 数据类型支持int8, 数据格式支持ND，
+ * 数据类型支持int8, int4, hifloat8, float8_e5m2, float8_e4m3, 数据格式支持ND，
  * 支持非连续的Tensor。
  * @param [in] scale: npu device侧的aclTensor, 数据类型支持float, bf16
  * @param [in] offset: npu device侧的aclTensor，数据类型支持float, bf16
