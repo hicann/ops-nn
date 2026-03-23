@@ -6,11 +6,11 @@
 
 | 产品                                                         |  是否支持   |
 | :----------------------------------------------------------- |:-------:|
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √    |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √    |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    ✓    |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ✓    |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ✓    |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×    |
-| <term>Atlas 推理系列产品</term>                             |    √    |
+| <term>Atlas 推理系列产品</term>                             |    ✓    |
 | <term>Atlas 训练系列产品</term>                              |    ×    |
 
 ## 功能说明
@@ -21,7 +21,7 @@
     兼容aclnnQuantMatmulV3、aclnnQuantMatmulV4接口功能。完成量化的矩阵乘计算，最小支持输入维度为1维，最大支持输入维度为2维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）。
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
-    兼容aclnnQuantMatmulV3、aclnnQuantMatmulV4接口功能，在其基础上新增支持G-B、B-B、T-CG、mx[量化模式](../../../docs/zh/context/量化介绍.md)等特性，新增x1，x2输入支持dtype为FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8、FLOAT4_E2M1。完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。
+    兼容aclnnQuantMatmulV3、aclnnQuantMatmulV4接口功能，并在其基础上新增支持G-B、B-B、T-CG、mx [量化模式](../../../docs/zh/context/量化介绍.md)等特性；x1、x2输入新增支持FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8、FLOAT4_E2M1等数据类型。完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。
 
 - 计算公式：
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
@@ -38,7 +38,7 @@
         out = ((x1 @ (x2*x2Scale)) + yOffset) * x1Scale
         $$
         
-      - x1，x2为INT4，x1Scale，x2Scale为FLOAT32，x2Offset为FLOAT16，out为FLOAT16/BFLOAT16 (pertoken-pergroup非对称量化)：
+      - x1，x2为INT4，x1Scale，x2Scale为FLOAT32，x2Offset为FLOAT16，out为FLOAT16/BFLOAT16（pertoken-pergroup非对称量化）：
 
         $$
         out = x1Scale * x2Scale @ (x1 @ x2 - x1 @ x2Offset)
@@ -50,19 +50,19 @@
 
     <summary><term><strong>K-C && K-T量化模式</strong></term></summary>
 
-      - x1Scale无bias：
+      - x1Scale、无bias：
 
         $$
         out = x1@x2 * x2Scale * x1Scale
         $$
 
-      - x1Scale，bias INT32（此场景无offset）：
+      - x1Scale、bias INT32（此场景无offset）：
 
         $$
         out = (x1@x2 + bias) * x2Scale * x1Scale
         $$
 
-      - x1Scale，bias BFLOAT16/FLOAT16/FLOAT32（此场景无offset）：
+      - x1Scale、bias BFLOAT16/FLOAT16/FLOAT32（此场景无offset）：
 
         $$
         out = x1@x2 * x2Scale * x1Scale + bias
@@ -74,7 +74,7 @@
 
     <summary><term><strong>T-C && T-T量化模式</strong></term></summary>
 
-      - 无x1Scale无bias：
+      - 无x1Scale、无bias：
 
         $$
         out = x1@x2 * x2Scale + x2Offset
@@ -98,7 +98,7 @@
 
     <summary><term><strong>G-B量化模式</strong></term></summary>
 
-      - x1，x2为INT8，x1Scale，x2Scale为FLOAT32，bias为FLOAT32，out为FLOAT16/BFLOAT16  (pergroup-perblock量化)：
+      - x1，x2为INT8，x1Scale，x2Scale为FLOAT32，bias为FLOAT32，out为FLOAT16/BFLOAT16（pergroup-perblock量化）：
 
         $$
         out = (x1 @ x2) * x1Scale * x2Scale + bias
@@ -106,7 +106,7 @@
 
     </details>
 
-  - <term>Atlas 推理系列产品：</term>：
+  - <term>Atlas 推理系列产品</term>：
 
     支持K-C[量化模式](../../../docs/zh/context/量化介绍.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
 
@@ -114,13 +114,13 @@
 
     <summary><term><strong>K-C量化模式</strong></term></summary>
 
-      - x1Scale无bias：
+      - x1Scale、无bias：
 
         $$
         out = x1@x2 * x2Scale * x1Scale
         $$
 
-      - x1Scale，bias INT32（此场景无offset）：
+      - x1Scale、bias INT32（此场景无offset）：
 
         $$
         out = (x1@x2 + bias) * x2Scale * x1Scale
@@ -130,7 +130,7 @@
 
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
-    支持T-C && T-T、K-C && K-T、G-B 、B-B 、mx、T-CG[量化模式](../../../docs/zh/context/量化介绍.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
+    支持T-C && T-T、K-C && K-T、G-B、B-B、mx、T-CG [量化模式](../../../docs/zh/context/量化介绍.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
 
     <details>
 
@@ -209,7 +209,7 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnQuantMatmulV5GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnQuantMatmulV5”接口执行计算。
 
-```c++
+```cpp
 aclnnStatus aclnnQuantMatmulV5GetWorkspaceSize(
   const aclTensor *x1,
   const aclTensor *x2,
@@ -228,7 +228,7 @@ aclnnStatus aclnnQuantMatmulV5GetWorkspaceSize(
   aclOpExecutor   **executor)
 ```
 
-```c++
+```cpp
 aclnnStatus aclnnQuantMatmulV5(
   void          *workspace,
   uint64_t       workspaceSize,
@@ -240,7 +240,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
 - **参数说明**
 
-  <table style="undefined;table-layout: fixed; width: 1554px"><colgroup>
+  <table style="table-layout: fixed; width: 1554px"><colgroup>
   <col style="width: 248px">
   <col style="width: 121px">
   <col style="width: 210px">
@@ -275,7 +275,7 @@ aclnnStatus aclnnQuantMatmulV5(
         <td>INT4<sup>1</sup>、INT8、INT32<sup>1</sup>、FLOAT8_E4M3FN<sup>2</sup>、FLOAT8_E5M2<sup>2</sup>、HIFLOAT8<sup>2</sup>、FLOAT4_E2M1<sup>2</sup></td>
         <td>ND</td>
         <td>2-6</td>
-        <td>√</td>
+        <td>✓</td>
       </tr>
       <tr>
         <td>x2(aclTensor*)</td>
@@ -291,8 +291,8 @@ aclnnStatus aclnnQuantMatmulV5(
         </td>
         <td>INT4<sup>1</sup>、INT8、INT32<sup>1</sup>、FLOAT8_E4M3FN<sup>2</sup>、FLOAT8_E5M2<sup>2</sup>、HIFLOAT8<sup>2</sup>、FLOAT4_E2M1<sup>2</sup></td>
         <td>ND、NZ</td>
-        <td>2-8</td>
-        <td>√</td>
+        <td>2-6（ND）<br>4-8（NZ）</td>
+        <td>✓</td>
       </tr>
       <tr>
         <td>x1Scale(aclTensor*)</td>
@@ -306,7 +306,7 @@ aclnnStatus aclnnQuantMatmulV5(
         <td>FLOAT32、FLOAT8_E8M0<sup>2</sup>、FLOAT8_E4M3FN<sup>2</sup>、FLOAT8_E5M2<sup>2</sup>、HIFLOAT8<sup>2</sup></td>
         <td>ND</td>
         <td>1-6</td>
-        <td>√</td>
+        <td>✓</td>
       </tr>
       <tr>
         <td>x2Scale(aclTensor*)</td>
@@ -320,7 +320,7 @@ aclnnStatus aclnnQuantMatmulV5(
         <td>UINT64、INT64、FLOAT32、BFLOAT16、FLOAT8_E8M0<sup>2</sup></td>
         <td>ND</td>
         <td>1-6</td>
-        <td>√</td>
+        <td>✓</td>
       </tr>
       <tr>
         <td>yScale(aclTensor*)</td>
@@ -422,7 +422,7 @@ aclnnStatus aclnnQuantMatmulV5(
         <td>-</td>
       </tr>
       <tr>
-        <td>out(aclTensor)</td>
+        <td>out(aclTensor*)</td>
         <td>输出</td>
         <td>公式中的输出out。</td>
         <td>
@@ -446,7 +446,7 @@ aclnnStatus aclnnQuantMatmulV5(
         <td>-</td>
       </tr>
       <tr>
-        <td style="white-space: nowrap">executor(aclOpExecutor)</td>
+        <td style="white-space: nowrap">executor(aclOpExecutor*)</td>
         <td>输出</td>
         <td>返回op执行器，包含了算子计算流程。</td>
         <td>-</td>
@@ -481,7 +481,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed; width: 1149px"><colgroup>
+  <table style="table-layout: fixed; width: 1149px"><colgroup>
   <col style="width: 281px">
   <col style="width: 119px">
   <col style="width: 749px">
@@ -519,7 +519,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
 - **参数说明**
 
-  <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+  <table style="table-layout: fixed; width: 1150px"><colgroup>
   <col style="width: 168px">
   <col style="width: 128px">
   <col style="width: 854px">
@@ -733,8 +733,8 @@ aclnnStatus aclnnQuantMatmulV5(
 - **公共约束：**
   <a id="公共约束2"></a>
   
-  - transposeX1为false时x1的shape：(batch, m, k)。transposeX1为true时x1的shape：(batch, k, m)。其中batch代表前0~4维，0维表示bacth不存在。
-  - transposeX2为false时x2的shape：(batch, k, n)。transposeX2为true时x2的shape：(batch, n, k)。其中batch代表前0~4维，0维表示bacth不存在。k与x1的shape中的k一致。
+  - transposeX1为false时x1的shape：(batch, m, k)。transposeX1为true时x1的shape：(batch, k, m)。其中batch代表前0~4维，0维表示batch不存在。
+  - transposeX2为false时x2的shape：(batch, k, n)。transposeX2为true时x2的shape：(batch, n, k)。其中batch代表前0~4维，0维表示batch不存在。k与x1的shape中的k一致。
   - 当x2Scale的原始输入类型不满足量化场景约束中组合时，需提前调用aclnnTransQuantParamV2接口来将scale转成INT64、UINT64数据类型。
   - yScale仅当x1为FLOAT8_E4M3FN，x2为FLOAT4_E2M1时支持，其他场景暂不支持。shape是2维(1, n)，其中n与x2的n一致。
   - x2Offset仅当x1，x2数据类型为INT8，且out数据类型为INT8时支持，其他输入类型需要传入nullptr。shape是1维(t, )，t = 1或n，其中n与x2的n一致。
@@ -974,7 +974,7 @@ x1为FLOAT8_E4M3FN，x2为FLOAT4_E2M1，x2Scale为BFLOAT16，yScale为UINT64。
       aclFinalize();
   }
   
-  // 将bloat16的uint16_t表示转换为float表示
+  // 将bfloat16的uint16_t表示转换为float表示
   float Bf16ToFloat(uint16_t h)
   {
       uint32_t sign = (h & 0x8000U) ? 0x80000000U : 0x00000000U; // sign bit
@@ -1215,7 +1215,6 @@ x1为INT8，x2为INT8，x1Scale为FLOAT32，x2Scale为FLOAT32，bias为INT32。
       std::vector<int64_t> x1Shape = {5, 16};
       std::vector<int64_t> x2Shape = {16, 8};
       std::vector<int64_t> biasShape = {8};
-      std::vector<int64_t> x2OffsetShape = {8};
       std::vector<int64_t> x1ScaleShape = {5};
       std::vector<int64_t> x2ScaleShape = {8};
       std::vector<int64_t> outShape = {5, 8};
@@ -1237,7 +1236,6 @@ x1为INT8，x2为INT8，x1Scale为FLOAT32，x2Scale为FLOAT32，bias为INT32。
       std::vector<int8_t> x2HostData(128, 1);
       std::vector<int32_t> biasHostData(8, 1);
       std::vector<float> x2ScaleHostData(8, 1);
-      std::vector<float> x2OffsetHostData(8, 1);
       std::vector<float> x1ScaleHostData(5, 1);
       std::vector<uint16_t> outHostData(40, 1);  // 实际上是float16半精度方式
       // 创建x1 aclTensor
@@ -1420,7 +1418,6 @@ x1，x2为FLOAT8_E4M3FN，x1Scale为FLOAT32，x2Scale为FLOAT32，无x2Offset，
       std::vector<int64_t> x1Shape = {16, 16};
       std::vector<int64_t> x2Shape = {16, 16};
       std::vector<int64_t> biasShape = {16};
-      std::vector<int64_t> x2OffsetShape = {16};
       std::vector<int64_t> x1ScaleShape = {1};
       std::vector<int64_t> x2ScaleShape = {1};
       std::vector<int64_t> outShape = {16, 16};
@@ -1440,9 +1437,8 @@ x1，x2为FLOAT8_E4M3FN，x1Scale为FLOAT32，x2Scale为FLOAT32，无x2Offset，
       aclTensor *out = nullptr;
       std::vector<int8_t> x1HostData(256, 1);
       std::vector<int8_t> x2HostData(256, 1);
-      std::vector<int32_t> biasHostData(16, 1);
+      std::vector<float> biasHostData(16, 1);
       std::vector<float> x2ScaleHostData(1, 1);
-      std::vector<float> x2OffsetHostData(16, 1);
       std::vector<float> x1ScaleHostData(1, 1);
       std::vector<uint16_t> outHostData(256, 1);  // 实际上是float16半精度方式
 
