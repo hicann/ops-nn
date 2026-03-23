@@ -215,6 +215,7 @@ function(gen_opapi_symbol)
     ${OPAPI_NAME}
     PUBLIC $<BUILD_INTERFACE:intf_pub_cxx17>
     PRIVATE ${OPAPI_NAME}_obj $<$<BOOL:${BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG}>:$<BUILD_INTERFACE:opapi_math>>
+    -Wl,-Bsymbolic
     )
   target_link_directories(${OPAPI_NAME} PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64)
 
@@ -244,6 +245,7 @@ function(gen_cust_opapi_symbol)
     cust_opapi
     PUBLIC $<BUILD_INTERFACE:intf_pub_cxx17>
     PRIVATE $<$<BOOL:${BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG}>:$<BUILD_INTERFACE:opapi_math>>
+    -Wl,-Bsymbolic
     )
 endfunction()
 
