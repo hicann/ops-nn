@@ -22,6 +22,7 @@
 #include "register/op_impl_registry.h"
 #include "tiling/tiling_api.h"
 #include "apply_top_k_top_p_with_sorted_tiling.h"
+#include "platform/soc_spec.h"
 
 namespace {
     constexpr uint32_t SYS_RESERVED_UB = uint32_t(16 * 1024);
@@ -94,7 +95,7 @@ private:
     uint32_t onlyTopK_ = 0;
     uint32_t onlyTopP_ = 0;
     uint64_t platformUbSize_ = 0;
-    platform_ascendc::SocVersion socVersion_;
+    NpuArch socVersion_;
 };
 
 ge::graphStatus ApplyTopKTopPWithSortedTiling::CheckShape() {
@@ -158,7 +159,7 @@ ge::graphStatus ApplyTopKTopPWithSortedTiling::Init() {
     OP_LOGD(opName_, "TilingForApplyTopKTopPWithSorted init.");
     auto platformInfo = platform_ascendc::PlatformAscendC(tilingcontext->GetPlatformInfo());
     coreNum_ = platformInfo.GetCoreNumAiv();
-    socVersion_ = platformInfo.GetSocVersion();
+    socVersion_ = platformInfo.GetCurNpuArch();
     platformInfo.GetCoreMemSize(platform_ascendc::CoreMemType::UB, platformUbSize_);
     OP_LOGD(opName_, "platformUbSize: %lu.", platformUbSize_);
     uint32_t avaliableUb = static_cast<uint32_t>(platformUbSize_) - SYS_RESERVED_UB - SELECT_RESERVED_UB;
@@ -185,7 +186,7 @@ void ApplyTopKTopPWithSortedTiling::SetTilingKey() {
 
 void ApplyTopKTopPWithSortedTiling::GetUsedCore()
 {
-    if (socVersion_ == platform_ascendc::SocVersion::ASCEND950 && tilingKey_ == ONLY_TOP_P_KEY){
+    if (socVersion_ == NpuArch::DAV_3510 && tilingKey_ == ONLY_TOP_P_KEY){
         coreNum_ = coreNum_ > ONLY_TOP_950_MAX_CORENUM ? ONLY_TOP_950_MAX_CORENUM : coreNum_;
     }
     if (coreNum_ > 0) {
