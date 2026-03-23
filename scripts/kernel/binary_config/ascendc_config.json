@@ -321,6 +321,7 @@
     {"name":"MoeTutelCombineGates", "compute_units": ["ascend910b"], "auto_sync" : true},
     {"name":"MoeTutelDispatch", "compute_units": ["ascend910b"], "auto_sync" : true},
     {"name": "RmsNorm", "compute_units": ["ascend950", "ascend910_93", "ascend910b", "ascend910", "ascend310p", "kirinx90", "kirin9030", "mc62cm12a"], "auto_sync": false, "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
+    {"name": "RmsNormDynamicMxQuant", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"GemmaRmsNorm", "compute_units": ["ascend910_93", "ascend910b", "kirinx90", "kirin9030"], "auto_sync" : false},
     {"name":"AddRmsNorm", "compute_units": ["ascend910_93", "ascend910b", "ascend310p", "ascend950", "kirinx90", "kirin9030"], "auto_sync" : false, "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"AddRmsNormCast", "compute_units": ["ascend910_93", "ascend910b", "ascend950", "kirinx90", "kirin9030"], "auto_sync" : false, "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},

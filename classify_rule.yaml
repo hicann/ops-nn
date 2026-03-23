@@ -435,6 +435,27 @@ HPTG1@ops-nn:
                 - ops/ops-nn/norm/rms_norm/op_kernel/arch35/
                 - ops/ops-nn/norm/rms_norm_grad/op_host/rms_norm_grad_regbase_tiling.cpp
                 - ops/ops-nn/norm/rms_norm_grad/op_kernel/arch35/
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_host/rms_norm_dynamic_mx_quant_infershape.cpp
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_host/config/ascend950/rms_norm_dynamic_mx_quant_binary.json
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_host/config/ascend950/rms_norm_dynamic_mx_quant_simplified_key.ini
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_host/arch35/rms_norm_dynamic_mx_quant_tiling_arch35.h
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_host/arch35/rms_norm_dynamic_mx_quant_full_load_general_tiling.cpp
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_host/arch35/rms_norm_dynamic_mx_quant_base_tiling.cpp
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_host/rms_norm_dynamic_mx_quant_def.cpp
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_host/CMakeLists.txt
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_kernel/rms_norm_dynamic_mx_quant_apt.cpp
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_kernel/arch35/rms_norm_dynamic_mx_quant_base_tiling.cpp
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_kernel/arch35/rms_norm_dynamic_mx_quant_full_load_general_tiling.cpp
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/rms_norm_dynamic_mx_quant_apt.cpp
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/examples/test_aclnn_rms_norm_dynamic_mx_quant.cpp
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/docs/aclnnRmsNormDynamicMxQuant.md
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_graph/rms_norm_dynamic_mx_quant_proto.h
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_graph/CMakeLists.txt 
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/tests/CMakeLists.txt
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/tests/ut/CMakeLists.txt  
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/tests/ut/op_host/arch35/test_rms_norm_dynamic_mx_quant_tiling_arch35.cpp
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/tests/ut/op_host/test_rms_norm_dynamic_mx_quant_infershape.cpp
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/CMakeLists.txt
                 - ops/ops-nn/norm/add_rms_norm_quant/op_host/add_rms_norm_quant_tiling_arch35.cpp
                 - ops/ops-nn/norm/add_rms_norm_quant/op_kernel/arch35/
                 - ops/ops-nn/norm/add_rms_norm_cast/op_host/add_rms_norm_cast_tiling_arch35.cpp
