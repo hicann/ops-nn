@@ -36,51 +36,252 @@
 
 - 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMaxUnpool3dGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMaxUnpool3d”接口执行计算。
 
-  - `aclnnStatus aclnnMaxUnpool3dGetWorkspaceSize(const aclTensor* self, const aclTensor* indices, const aclIntArray* outputSize, const aclIntArray* stride, const aclIntArray* padding, aclTensor* outRef, uint64_t* workspaceSize, aclOpExecutor** executor)`
-  - `aclnnStatus aclnnMaxUnpool3d(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`
+```Cpp
+aclnnStatus aclnnMaxUnpool3dGetWorkspaceSize(
+  const aclTensor*     self,
+  const aclTensor*     indices, 
+  const aclIntArray*   outputSize,
+  const aclIntArray*   stride,
+  const aclIntArray*   padding,
+  aclTensor*           outRef, 
+  uint64_t*            workspaceSize, 
+  aclOpExecutor**      executor)
+```
+
+```Cpp
+aclnnStatus aclnnMaxUnpool3d(
+  void*          workspace, 
+  uint64_t       workspaceSize, 
+  aclOpExecutor* executor, 
+  aclrtStream    stream)
+```
 
 ## aclnnMaxUnpool3dGetWorkspaceSize
 
 - **参数说明：**
-  
-  - self（aclTensor\*，计算输入）：表示待转换的目标张量，公式中的输入`self`，Device侧的aclTensor。数据类型支持FLOAT、FLOAT16、INT16、INT32、INT64、INT8、UINT8和DOUBLE，且数据类型与outRef的数据类型一致，shape与indices保持一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，维度支持4-5维，当维度为4时，各维度依次表示N、D、H、W，当维度为5时，各维度依次表示N、C、D、H、W。
-  - indices（aclTensor\*，计算输入）：表示输入self的元素在输出结果中的索引位置，公式中的输入`indices`，Device侧的aclTensor。数据类型支持INT64、INT32，且shape与self保持一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，维度支持4-5维，当维度为4时，各维度依次表示N、D、H、W，当维度为5时，各维度依次表示N、C、D、H、W。
-  - outputSize（aclIntArray\*，计算输入）：Host侧的aclIntArray，size大小为3，三个元素乘积值需大于等于self在D、H和W维度上的size乘积值。表示输出结果在D、H和W维度上的空间大小。
-  - stride（aclIntArray\*，计算输入）：预留参数，当前版本不参与计算，需要传入size大小为3、值大于0的Host侧aclIntArray。表示最大池化窗口在D、H和W维度上的步长大小。
-  - padding（aclIntArray\*，计算输入）：预留参数，当前版本不参与计算，需要传入size大小为3的Host侧aclIntArray。表示最大池化窗口在D、H和W维度上的填充值。
-  - outRef（aclTensor\*，计算输出）：公式中的输出`outRef`，Device侧的aclTensor。数据类型支持FLOAT、FLOAT16、INT16、INT32、INT64、INT8、UINT8和DOUBLE，且数据类型与self的数据类型一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，维度支持4-5维，当维度为4时，各维度依次表示N、D、H、W，当维度为5时，各维度依次表示N、C、D、H、W。
-  - workspaceSize（uint64_t\*，出参）：返回需要在Device侧申请的workspace大小。
-  - executor（aclOpExecutor\*\*，出参）：返回op执行器，包含了算子计算流程。
+
+  <table class="tg" style="undefined;table-layout: fixed; width: 1445px"><colgroup>
+  <col style="width: 165px">
+  <col style="width: 160px">
+  <col style="width: 150px">
+  <col style="width: 300px">
+  <col style="width: 280px">
+  <col style="width: 115px">
+  <col style="width: 130px">
+  <col style="width: 145px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">参数名</th>
+      <th class="tg-0pky">输入/输出</th>
+      <th class="tg-0pky">描述</th>
+      <th class="tg-0pky">使用说明</th>
+      <th class="tg-0pky">数据类型</th>
+      <th class="tg-0pky">数据格式</th>
+      <th class="tg-0pky">维度(shape)</th>
+      <th class="tg-0pky">非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky">self（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">公式中的self，表示待转换的目标张量。</td>
+      <td class="tg-0pky">
+        <ul>
+          <li>数据类型与outRef的数据类型一致。</li>
+          <li>shape与indices保持一致。</li>
+          <li>当维度为4时，各维度依次表示N、D、H、W，当维度为5时，各维度依次表示N、C、D、H、W。</li>
+        </ul>
+      </td>
+      <td class="tg-0pky">FLOAT、FLOAT16、INT16、INT32、INT64、INT8、UINT8、DOUBLE</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">4-5</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">indices（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">公式中的indices，表示输入self的元素在输出结果中的索引位置。</td>
+      <td class="tg-0pky">
+        <ul>
+          <li>shape与self保持一致。</li>
+          <li>当维度为4时，各维度依次表示N、D、H、W，当维度为5时，各维度依次表示N、C、D、H、W。</li>
+        </ul>
+      </td>
+      <td class="tg-0pky">INT64、INT32</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">4-5</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">outputSize（aclIntArray*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">表示输出结果在D、H和W维度上的空间大小。</td>
+      <td class="tg-0pky">size大小为3，三个元素乘积值需大于等于self在D、H和W维度上的size乘积值。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">stride（aclIntArray*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">表示最大池化窗口在D、H和W维度上的步长大小。</td>
+      <td class="tg-0pky">预留参数，当前版本不参与计算，需要传入size大小为3、值大于0的Host侧aclIntArray。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">padding（aclIntArray*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">表示最大池化窗口在D、H和W维度上的填充值。</td>
+      <td class="tg-0pky">预留参数，当前版本不参与计算，需要传入size大小为3的Host侧aclIntArray。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">outRef（aclTensor*）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">公式中的outRef。</td>
+      <td class="tg-0pky">
+        <ul>
+          <li>数据类型与self的数据类型一致。</li>
+          <li>当维度为4时，各维度依次表示N、D、H、W，当维度为5时，各维度依次表示N、C、D、H、W。</li>
+        </ul>
+      </td>
+      <td class="tg-0pky">FLOAT、FLOAT16、INT16、INT32、INT64、INT8、UINT8、DOUBLE</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">4-5</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">workspaceSize（uint64_t*）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回需要在Device侧申请的workspace大小。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">executor（aclOpExecutor**）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回op执行器，包含了算子计算流程。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+  </tbody></table>
   
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
   第一段接口完成入参校验，出现以下场景时报错：
-  返回161001 (ACLNN_ERR_PARAM_NULLPTR)：1. 传入的self、indices、outputSize、stride、padding或outRef是空指针。
-  返回161002 (ACLNN_ERR_PARAM_INVALID): 1. self和indices的数据类型不在支持的范围之内。
-                                        2. self和outRef的数据类型不一致。
-                                        3. self的维度不为4维或者5维。
-                                        4. self和indices的shape不一致。
-                                        5. outputSize的size大小不等于3。
-                                        6. outputSize的三个元素乘积值小于self在D、H和W维度上的size乘积值。
-                                        7. stride的size大小不等于3。
-                                        8. padding的size大小不等于3。
-                                        9. self在C、D、H、W维度上的size大小不大于0。
-                                        10. stride的元素值不大于0。
-                                        11. outRef在N、C维度上的size大小与self不完全相同。
-                                        12. outRef在D、H、W维度上的size大小与outputSize中的三个元素值不相等。
-  ```
+
+  <table style="undefined;table-layout: fixed; width: 1147px"><colgroup>
+  <col style="width: 286px">
+  <col style="width: 123px">
+  <col style="width: 738px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>返回值</th>
+      <th>错误码</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>ACLNN_ERR_PARAM_NULLPTR</td>
+      <td>161001</td>
+      <td>传入的self、indices、outputSize、stride、padding或outRef是空指针。</td>
+    </tr>
+    <tr>
+      <td rowspan="12">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="12">161002</td>
+      <td>self和indices的数据类型不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td>self和outRef的数据类型不一致。</td>
+    </tr>
+    <tr>
+      <td>self的维度不为4维或者5维。</td>
+    </tr>
+    <tr>
+      <td>self和indices的shape不一致。</td>
+    </tr>
+    <tr>
+      <td>outputSize的size大小不等于3。</td>
+    </tr>
+    <tr>
+      <td>outputSize的三个元素乘积值小于self在D、H和W维度上的size乘积值。</td>
+    </tr>
+    <tr>
+      <td>stride的size大小不等于3。</td>
+    </tr>
+    <tr>
+      <td>padding的size大小不等于3。</td>
+    </tr>
+    <tr>
+      <td>self在C、D、H、W维度上的size大小不大于0。</td>
+    </tr>
+    <tr>
+      <td>stride的元素值不大于0。</td>
+    </tr>
+    <tr>
+      <td>outRef在N、C维度上的size大小与self不完全相同。</td>
+    </tr>
+    <tr>
+      <td>outRef在D、H、W维度上的size大小与outputSize中的三个元素值不相等。</td>
+    </tr>
+  </tbody>
+  </table>
 
 ## aclnnMaxUnpool3d
 
 - **参数说明：**
   
-  - workspace（void\*，入参）：在Device侧申请的workspace内存地址。
-  - workspaceSize（uint64_t，入参）：在Device侧申请的workspace大小，由第一段接口aclnnMaxUnpool3dGetWorkspaceSize获取。
-  - executor（aclOpExecutor\*，入参）：op执行器，包含了算子计算流程。
-  - stream（aclrtStream，入参）：指定执行任务的Stream。
+  <table style="undefined;table-layout: fixed; width: 1149px"><colgroup>
+  <col style="width: 167px">
+  <col style="width: 134px">
+  <col style="width: 848px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnLogAddExpGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
+  </table>
   
 - **返回值：**
 

@@ -15,68 +15,249 @@
 
 ## 功能说明
 
-算子功能：MaxPool2d的逆运算[aclnnMaxUnpool2d](../../scatter_elements/docs/aclnnMaxUnpool2d.md)的反向传播，根据indices索引在out中填入gradOutput的元素值。
+- 算子功能：MaxPool2d的逆运算[aclnnMaxUnpool2d](../../scatter_elements/docs/aclnnMaxUnpool2d.md)的反向传播，根据indices索引在out中填入gradOutput的元素值。
 
-$$
-out[n][c][i] = gradOutput[n][c][indices[n][c][i]]
-$$
+- 计算公式：
 
-其中out、gradOutput、indices是最后两轴合为一轴，经过reshape得到的，H，W分别代表最后两轴，$i ∈ [0, H*W)$。
+  $$
+  out[n][c][i] = gradOutput[n][c][indices[n][c][i]]
+  $$
+
+  其中out、gradOutput、indices是最后两轴合为一轴，经过reshape得到的，H，W分别代表最后两轴，$i ∈ [0, H*W)$。
 
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMaxUnpool2dBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMaxUnpool2dBackward”接口执行计算。
 
-- `aclnnStatus aclnnMaxUnpool2dBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclIntArray* outputSize, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)`
-- `aclnnStatus aclnnMaxUnpool2dBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)`
+```Cpp
+aclnnStatus aclnnMaxUnpool2dBackwardGetWorkspaceSize(
+  const aclTensor*     gradOutput,
+  const aclTensor*     self, 
+  const aclTensor*     indices, 
+  const aclIntArray*   outputSize,
+  aclTensor*           out, 
+  uint64_t*            workspaceSize, 
+  aclOpExecutor**      executor)
+```
+
+```Cpp
+aclnnStatus aclnnMaxUnpool2dBackward(
+  void*          workspace, 
+  uint64_t       workspaceSize, 
+  aclOpExecutor* executor, 
+  aclrtStream    stream)
+```
 
 ## aclnnMaxUnpool2dBackwardGetWorkspaceSize
 
 - **参数说明：**
 
-  - gradOutput(aclTensor*, 计算输入)：公式中的输入`gradOutput`，Device侧的aclTensor，数据类型支持FLOAT、FLOAT16、INT32、INT64、INT16、INT8、UINT8、BOOL，数据类型需要可转换为out的数据类型（参见[互转换关系](../../../docs/zh/context/互转换关系.md)），且数据类型需要与self一致，shape需要为(N, C, outputSize[0], outputSize[1])或(C, outputSize[0], outputSize[1])，维度需要与self一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-
-  - self(aclTensor*, 计算输入)：Device侧的aclTensor，数据类型支持FLOAT、FLOAT16、INT32、INT64、INT16、INT8、UINT8、BOOL，且数据类型需要与gradOutput一致，shape需要为(N, C, H, W)或(C, H, W)，且shape需要与indices一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-
-  - indices(aclTensor*, 计算输入)：公式中的输入`indices`，Device侧的aclTensor，数据类型支持INT64、INT32，shape需要与self一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-
-  - outputSize(aclIntArray*, 计算输入)：Host侧的aclIntArray，元素个数必须为2，元素值必须与gradOutput的shape的最后两维一致。
-
-  - out(aclTensor*, 计算输出)：公式中的`out`，Device侧的aclTensor，数据类型支持FLOAT、FLOAT16、INT32、INT64、INT16、INT8、UINT8、BOOL，shape需要与self一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-
-  - workspaceSize(uint64_t*, 出参)：返回需要在Device侧申请的workspace大小。
-
-  - executor(aclOpExecutor**, 出参)：返回op执行器，包含了算子计算流程。
+  <table class="tg" style="undefined;table-layout: fixed; width: 1445px"><colgroup>
+  <col style="width: 165px">
+  <col style="width: 160px">
+  <col style="width: 150px">
+  <col style="width: 300px">
+  <col style="width: 280px">
+  <col style="width: 115px">
+  <col style="width: 130px">
+  <col style="width: 145px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">参数名</th>
+      <th class="tg-0pky">输入/输出</th>
+      <th class="tg-0pky">描述</th>
+      <th class="tg-0pky">使用说明</th>
+      <th class="tg-0pky">数据类型</th>
+      <th class="tg-0pky">数据格式</th>
+      <th class="tg-0pky">维度(shape)</th>
+      <th class="tg-0pky">非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky">gradOutput（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">公式中的gradOutput。</td>
+      <td class="tg-0pky">
+        <ul>
+          <li>数据类型需要可转换为out的数据类型（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互转换关系</a>）。</li>
+          <li>数据类型需要与self一致。</li>
+          <li>shape需要为(N, C, outputSize[0], outputSize[1])或(C, outputSize[0], outputSize[1])。</li>
+          <li>维度需要与self一致。</li>
+        </ul>
+      </td>
+      <td class="tg-0pky">FLOAT、FLOAT16、INT32、INT64、INT16、INT8、UINT8、BOOL</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">3-4</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">self（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">
+        <ul>
+          <li>数据类型需要与gradOutput一致。</li>
+          <li>shape需要为(N, C, H, W)或(C, H, W)，且shape需要与indices一致。</li>
+        </ul>
+      </td>
+      <td class="tg-0pky">FLOAT、FLOAT16、INT32、INT64、INT16、INT8、UINT8、BOOL</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">3-4</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">indices（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">公式中的indices。</td>
+      <td class="tg-0pky">shape需要与self一致。</td>
+      <td class="tg-0pky">INT64、INT32</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">3-4</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">outputSize（aclIntArray*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">元素个数必须为2，元素值必须与gradOutput的shape的最后两维一致。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">out（aclTensor*）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">公式中的out。</td>
+      <td class="tg-0pky">shape需要与self一致。</td>
+      <td class="tg-0pky">FLOAT、FLOAT16、INT32、INT64、INT16、INT8、UINT8、BOOL</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">3-4</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">workspaceSize（uint64_t*）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回需要在Device侧申请的workspace大小。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">executor（aclOpExecutor**）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回op执行器，包含了算子计算流程。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+  </tbody></table>
 
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
-  第一段接口完成入参校验，出现如下场景时报错：
-  返回161001（ACLNN_ERR_PARAM_NULLPTR）：1. 传入的gradOutput、self、indices、outputSize或out是空指针。
-  返回161002（ACLNN_ERR_PARAM_INVALID）：1. gradOutput、self、indices或out不在支持的数据类型范围之内。
-                                        2. gradOutput不能转换为out的数据类型。
-                                        3. gradOutput和self的数据类型不一致。
-                                        4. self的维度不为3维或者4维。
-                                        5. gradOutput的维度与self不一致。
-                                        6. 当self为3维时，self与gradOutput在C维度上的size不一致。
-                                        7. 当self为4维时，self与gradOutput在N，C维度上的size不一致。
-                                        8. self、indices、out的shape不一致。
-                                        9. outputSize的元素个数不为2。
-                                       10. gradOutput的shape最后两维的size与outputSize的元素不一致。
-                                       11. self与indices不为空Tensor，gradOutput为空Tensor。
-  ```
+  第一段接口完成入参校验，出现以下场景时报错：
+
+  <table style="undefined;table-layout: fixed; width: 1147px"><colgroup>
+  <col style="width: 286px">
+  <col style="width: 123px">
+  <col style="width: 738px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>返回值</th>
+      <th>错误码</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>ACLNN_ERR_PARAM_NULLPTR</td>
+      <td>161001</td>
+      <td>传入的gradOutput、self、indices、outputSize或out是空指针。</td>
+    </tr>
+    <tr>
+      <td rowspan="11">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="11">161002</td>
+      <td>gradOutput、self、indices或out不在支持的数据类型范围之内。</td>
+    </tr>
+    <tr>
+      <td>gradOutput不能转换为out的数据类型。</td>
+    </tr>
+    <tr>
+      <td>gradOutput和self的数据类型不一致。</td>
+    </tr>
+    <tr>
+      <td>self的维度不为3维或者4维。</td>
+    </tr>
+    <tr>
+      <td>gradOutput的维度与self不一致。</td>
+    </tr>
+    <tr>
+      <td>当self为3维时，self与gradOutput在C维度上的size不一致。</td>
+    </tr>
+    <tr>
+      <td>当self为4维时，self与gradOutput在N，C维度上的size不一致。</td>
+    </tr>
+    <tr>
+      <td>self、indices、out的shape不一致。</td>
+    </tr>
+    <tr>
+      <td>outputSize的元素个数不为2。</td>
+    </tr>
+    <tr>
+      <td>gradOutput的shape最后两维的size与outputSize的元素不一致。</td>
+    </tr>
+    <tr>
+      <td>self与indices不为空Tensor，gradOutput为空Tensor。</td>
+    </tr>
+  </tbody>
+  </table>
 
 ## aclnnMaxUnpool2dBackward
 
 - **参数说明：**
 
-  - workspace(void*, 入参)：在Device侧申请的workspace内存地址。
-  - workspaceSize(uint64_t, 入参)：在Device侧申请的workspace大小，由第一段接口aclnnMaxUnpool2dBackwardGetWorkspaceSize获取。
-  - executor(aclOpExecutor*, 入参)：op执行器，包含了算子计算流程。
-  - stream(aclrtStream, 入参)：指定执行任务的Stream。
+  <table style="undefined;table-layout: fixed; width: 1149px"><colgroup>
+  <col style="width: 167px">
+  <col style="width: 134px">
+  <col style="width: 848px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnLogAddExpGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
+  </table>
 
 
 - **返回值：**
