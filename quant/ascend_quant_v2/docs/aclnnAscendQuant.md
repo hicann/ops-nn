@@ -211,7 +211,7 @@ aclnnStatus aclnnAscendQuant(
     <tr>
       <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="7">161002</td>
-      <td>x、scale、offset、y的数据类型或数据格式不在支持的范围之内。</td>
+      <td>x、scale、offset、y的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x、scale、offset、y的shape不满足限制条件。</td>
