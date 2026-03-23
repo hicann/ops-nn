@@ -14,7 +14,7 @@
  */
 #ifndef OPP_SWI_GLU_GRAD_SINGLE_HPP
 #define OPP_SWI_GLU_GRAD_SINGLE_HPP
-#include "glu_tiling_kernel.hpp"
+#include "../swi_glu/glu_tiling_kernel.hpp"
 
 using namespace AscendC;
 template<typename ParentClass, typename inType, typename outType>
