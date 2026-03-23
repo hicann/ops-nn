@@ -17,7 +17,7 @@
 
 - 计算公式：
   
-  假定输入（input）的shape是[N, inC, inH, inW]，输出的（out）的shape为[N, outC, outH, outW]，根据已有参数计算outH、outW:
+  假定输入（input）的shape是[N, inH, inW, inC]，输出的（out）的shape为[N, outH, outC, outW]，根据已有参数计算outH、outW:
   
   $$
   outH = (inH + padding[0] + padding[1] - ((K_H - 1) * dilation[2] + 1)) // stride[2] + 1
@@ -64,7 +64,7 @@
   进行卷积计算得到最终输出：
   
   $$
-  \text{out}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) + \sum_{k = 0}^{C_{\text{in}} - 1} \text{weight}(C_{\text{out}_j}, k) \star \text{deformOut}(N_i, k)
+  \text{out}(N_i, C_{\text{out}_j}) = \sum_{k = 0}^{C_{\text{in}} - 1} \text{weight}(C_{\text{out}_j}, k) \star \text{deformOut}(N_i, k)
   $$
 
 ## 参数说明
@@ -88,27 +88,27 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>表示输入的原始数据。对应公式中的`input`。shape为[N, inC, inH, inW]，其中inH * inW不能超过2147483647。</td>
+      <td>表示输入的原始数据。对应公式中的`input`。shape为[N, inH, inW, inC]，其中inH * inW不能超过2147483647。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     <tr>
       <td>weight</td>
       <td>输入</td>
-      <td>表示可学习过滤器的4D张量，对应公式中的`weight`。数据类型、数据格式与入参`x`保持一致。shape为[outC, inC/groups, K_H, K_W]。</td>
+      <td>表示可学习过滤器的4D张量，对应公式中的`weight`。数据类型、数据格式与入参`x`保持一致。shape为[outC, K_H, K_W, inC/groups]。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>offsets</td>
       <td>输入</td>
-      <td>表示x-y坐标偏移和掩码的4D张量。对应公式中的`offset`。数据类型、数据格式与入参`x`保持一致。当`modulated`为true时，shape为[N, 3 * deformable_groups * K_H * K_W, outH, outW]；当`modulated`为false时，shape为[N, 2 * deformable_groups * K_H * K_W, outH, outW]。</td>
+      <td>表示x-y坐标偏移和掩码的4D张量。对应公式中的`offset`。数据类型、数据格式与入参`x`保持一致。当`modulated`为true时，shape为[N, outH, outW, 3 * deformable_groups * K_H * K_W]；当`modulated`为false时，shape为[N, outH, outW, 2 * deformable_groups * K_H * K_W]。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>bias</td>
       <td>可选输入</td>
-      <td>表示过滤器输出附加偏置的1D张量，对应公式中的`bias`。数据类型与入参`x`一致。不需要时为空指针，存在时shape为[outC]。</td>
+      <td>表示过滤器输出附加偏置的1D张量，预留参数。数据类型与入参`x`一致。不需要时为空指针，存在时shape为[outC]。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -157,21 +157,21 @@
     <tr>
       <td>modulated</td>
       <td>属性</td>
-      <td><ul><li>表示`offset`中是否包含掩码。若为true，`offset`中包含掩码；若为false，则不包含。</li><li>默认值为true。</li></ul></td>
+      <td><ul><li>表示`offset`中是否包含掩码。若为true，`offset`中包含掩码；若为false，则不包含。</li><li>默认值为true，且当前仅支持配置为true。</li></ul></td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>表示计算的输出张量。对应公式中的`out`。数据类型、数据格式与`x保持一致。shape为[N, outC, outH, outW]。</td>
+      <td>表示计算的输出张量。对应公式中的`out`。数据类型、数据格式与`x保持一致。shape为[N, outH, outC, outW]。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>deform_out</td>
       <td>输出</td>
-      <td>表示计算的输出张量。对应公式中的`out`。数据类型、数据格式与`x保持一致。shape为[N, outC, outH, outW]。</td>
+      <td>表示计算的输出张量。对应公式中的`out`。数据类型、数据格式与`x保持一致。shape为[N, outH * K_H, outW * K_W, inC]。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
