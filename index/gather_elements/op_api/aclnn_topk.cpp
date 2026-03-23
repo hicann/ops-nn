@@ -49,6 +49,8 @@ const int64_t MAX_AICORE_CALC_DIM = 8;
 const int64_t CONCAT_MAX = 512; // Concat能处理的最大Tensor
 const int64_t SORT_WITH_INDEX_THRESHOLD = 2000; // TopK后调用SortWithIndex的阈值
 const float SORT_AND_TOP_K_THRESHOLD = 0.5; // 走先排序后取前K个值k/n的比值的阈值
+const int64_t MAX_AICORE_CALC_REG_BASE_INT64_DIM = 4;
+const int64_t MAX_AICORE_CALC_REG_BASE_INT64_INPUTSIZE = 180000;
 
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_INT32, op::DataType::DT_INT64, op::DataType::DT_FLOAT16,
@@ -186,6 +188,25 @@ static aclIntArray *GetDimTransposeArray(int64_t dimNum, int64_t lastDim, int64_
   }
   std::swap(perm[positiveDim], perm[lastDim]);
   return executor->AllocIntArray(perm.data(), dimNum);
+}
+
+
+static bool IsSortEnable(const aclTensor *self) {
+  // 在950的int64场景上，需要判断inputsize和排序轴的大小，因为在排序轴较小时，不走sort，直接走topk性能更好；
+  if (self->GetDataType() == op::DataType::DT_INT64) {
+      auto& inputShape = self->GetViewShape();
+      int64_t tmpDim = static_cast<int64_t>(inputShape.GetDimNum());
+      int64_t inputSize = 1;
+      for (int64_t i = 0; i < tmpDim; i++) {
+          inputSize *= inputShape.GetDim(i);
+      }
+      
+      if (inputSize < MAX_AICORE_CALC_REG_BASE_INT64_INPUTSIZE && 
+          inputShape.GetDim(tmpDim - 1) < MAX_AICORE_CALC_REG_BASE_INT64_DIM) {
+          return false;
+      }
+  }
+  return true;
 }
 
 static bool CanDealWith(const aclTensor *self, int64_t k)
@@ -431,7 +452,7 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t 
 
     // 进行top计算
     std::tuple<const aclTensor*, const aclTensor*> topkOut(nullptr, nullptr);
-    if (sortDimValue == k && Ops::NN::AclnnUtil::IsRegbase() && CanDealWith(selfTranspose, k)) {
+    if (sortDimValue == k && Ops::NN::AclnnUtil::IsRegbase() && CanDealWith(selfTranspose, k) && IsSortEnable(selfTranspose)) {
       topkOut = l0op::Sort(selfTranspose, -1, largest, true, indicesDType, uniqueExecutor.get());
       isHasCasted = true;
     } else if (IsSortAndTopK(sorted, k, sortDimValue)) {
@@ -463,7 +484,7 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t 
       indicesCastInt32 = l0op::GatherElements(indicesCastFirst, positiveDim, indicesCast, uniqueExecutor.get());
     } else {
       std::tuple<const aclTensor*, const aclTensor*> topkOut(nullptr, nullptr);
-      if (sortDimValue == k && Ops::NN::AclnnUtil::IsRegbase() && CanDealWith(selfCast, k)) {
+      if (sortDimValue == k && Ops::NN::AclnnUtil::IsRegbase() && CanDealWith(selfCast, k) && IsSortEnable(selfCast)) {
         topkOut = l0op::Sort(selfCast, -1, largest, true, indicesDType, uniqueExecutor.get());
         isHasCasted = true;
       } else if (IsSortAndTopK(sorted, k, sortDimValue)) {
