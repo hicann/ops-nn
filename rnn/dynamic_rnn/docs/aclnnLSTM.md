@@ -462,6 +462,7 @@ aclnnStatus aclnnLSTM(
 
 - 确定性计算：
   - aclnnLSTM默认确定性实现。
+- 所有支持FLOAT16、FLOAT32类型的输入和输出，它们的数据类型需要保持一致。
 
 ## 调用示例
 

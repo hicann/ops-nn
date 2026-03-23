@@ -51,8 +51,15 @@
   * 将得到的4个门控激活值沿最后一维拼接成$\text{storage}$，即 $[i_{out}, g_{out}, f_{out}, o_{out}] \xrightarrow{\text{concat}} \text{storage}$
   * $\sigma$ 为 Sigmoid 激活函数，$\odot$ 为逐元素乘积
 
-- **参数说明：**
-<table><thead>
+## 参数说明
+<table style="undefined;table-layout: fixed; width: 970px"><colgroup>
+  <col style="width: 130px">
+  <col style="width: 144px">
+  <col style="width: 400px">
+  <col style="width: 200px">
+  <col style="width: 100px">
+  </colgroup>
+  <thead>
     <tr>
       <th>参数名</th>
       <th>输入/输出/属性</th>

@@ -342,6 +342,7 @@
 | [aclnnSwishBackward](../../activation/swish_grad/docs/aclnnSwishBackward.md) | aclnnSwishBackward是aclnnSwish激活函数的反向传播，用于计算Swish激活函数的梯度。 | 默认确定性实现 |   |
 | [aclnnSyncBatchNormGatherStats](../../norm/sync_batch_norm_gather_stats/docs/aclnnSyncBatchNormGatherStats.md) | 收集所有device的均值和方差，更新全局的均值和方差。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnTake](../../index/gather_v2/docs/aclnnTake.md) | 将输入的self张量视为一维数组，把index的值当作索引，从self中取值，输出shape与index一致的Tensor。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnThnnFusedLstmCell](../../rnn/thnn_fused_lstm_cell/docs/aclnnThnnFusedLstmCell.md) | 完成LSTM单元前向计算中，矩阵乘法后的后续计算。 | 默认确定性实现 |   |
 | [aclnnThnnFusedLstmCellBackward](../../rnn/thnn_fused_lstm_cell_grad/docs/aclnnThnnFusedLstmCellBackward.md) | 完成单个时间步LSTM反向的计算。 | 默认确定性实现 |   |
 | [aclnnThreshold&aclnnInplaceThreshold](../../activation/threshold/docs/aclnnThreshold&aclnnInplaceThreshold.md) | 对输入x进行阈值操作。当x中的elements大于threshold时，返回elements；否则，返回value。 | 默认确定性实现 |   |
 | [aclnnThresholdBackward](../../activation/threshold_grad_v2_d/docs/aclnnThresholdBackward.md) | 完成aclnnThreshold的反向。 | 默认确定性实现 |   |
