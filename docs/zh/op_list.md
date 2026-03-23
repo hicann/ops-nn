@@ -2166,6 +2166,16 @@
   </tr>
   <tr>
     <td>matmul</td>
+    <td><a href="../../matmul/quant_batch_matmul_inplace_add/README.md">quant_batch_matmul_inplace_add</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>完成量化的矩阵乘计算和原地累加。</td>
+  </tr>
+  <tr>
+    <td>matmul</td>
     <td><a href="../../matmul/quant_matmul_reduce_sum/README.md">quant_matmul_reduce_sum</a></td>
     <td>✓</td>
     <td>✓</td>
