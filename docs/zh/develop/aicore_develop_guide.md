@@ -404,19 +404,282 @@ __aicore__ inline void AddExample<T>::Process()
 
 ## 算子验证
 
-验证算子前需确保已配置了环境变量，命令如下：
+算子开发过程中，可通过如下方式进行验证：
+
+1. [UT验证](#UT验证): 验证交付件代码能否正常运行。UT验证无需NPU环境。
+
+2. [aclnn调用验证](#aclnn调用验证): 验证算子在NPU环境上的功能。aclnn调用验证需要NPU环境。
+
+### UT验证
+
+主要交付件代码开发过程中，可通过UT验证方式进行快速验证，无需编译部署算子包。
+
+UT目录结构如下，需用户手动创建：
 ```bash
+${op_name}
+...                                                     # 其他交付件
+└── tests                                               # 测试交付件
+    └── ut                                              # UT实现
+        ├── op_host
+        │   └── test_${op_name}_tiling.cpp              # Tiling UT实现
+        │   └── test_${op_name}_infershape.cpp          # Infershape UT实现
+        └── op_kernel
+            └── test_${op_name}.cpp                     # Kernel UT实现
+```
+
+执行UT验证的命令，请参考[算子调用](../invocation/quick_op_invocation.md)。下面将依次介绍各UT交付件的编写。
+
+#### Infershape UT
+
+Infershape UT用于验证host侧Infershape逻辑是否正确，在给定算子的输入后，Infershape能否正确执行、输出是否符合预期，推荐在算子开发阶段同步补齐。
+
+UT编写指导如下，如需查看详细实现，请参考样例UT实现[test_add_example_infershape.cpp](../../../examples/add_example/tests/ut/op_host/test_add_example_infershape.cpp)。
+
+**1. 组织结构与命名建议**
+
+- **头文件**：统一包含`iostream`, `gtest/gtest.h`、`infershape_context_faker.h`、`infershape_case_executor.h`。
+- **测试类**：继承`testing::Test`，实现`SetUpTestCase/TearDownTestCase`统一做数据准备与清理。
+- **命名**：测试类建议`${OpName}InfershapeTest`，用例名建议`test_case_xxx`，可读性更高。
+
+测试类示例：
+
+```CPP
+class ${OpName}InfershapeTest : public testing::Test {
+protected:
+    static void SetUpTestCase()
+    {
+        std::cout << "${OpName}InfershapeTest SetUp" << std::endl;
+    }
+    static void TearDownTestCase()
+    {
+        std::cout << "${OpName}InfershapeTest TearDown" << std::endl;
+    }
+};
+```
+
+**2. 用例基本流程**
+1) 调用接口构造用例上下文。需要的参数主要为输入和输出的shape/format/dtype。
+    - shape/format/dtype可参考`${op_name}_def.cpp`算子信息库
+    - 若某输入在信息库中标记为`ValueDepend`，UT中需同时准备该输入的**真实数据值**。
+2) 设定预期结果。
+3) 调用接口执行用例。
+
+简化示例：
+
+```CPP
+TEST_F(${OpName}InfershapeTest, test_case_xxx)
+{
+    // 1. 构造用例上下文
+    gert::InfershapeContextPara infershapeContextPara(
+        "${OpName}",
+        {
+            {{{1, -1, -1, 64}, {1, -1, -1, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND},  // input tensor1
+            {{{1, -1, -1, 64}, {1, -1, -1, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND},  // input tensor2
+            // 若输入为ValueDepend，需额外传入true和constValue这两个参数
+            // 其中constValue为自己定义的变量，如int constValue[2] = {2, 2}
+            // {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND, true, constValue}
+        },
+        {
+            {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},  // output tensor
+        }
+    );
+    // 2. 设定预期结果
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {1, -1, -1, 64},
+    };
+    // 3. 调用接口执行用例
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+```
+
+#### Tiling UT
+
+Tiling UT用于验证host侧Tiling逻辑是否正确，在给定算子的输入后，Tiling能否正确执行、输出是否符合预期，推荐在算子开发阶段同步补齐。
+
+UT编写指导如下，如需查看详细实现，请参考样例UT实现[test_add_example_tiling.cpp](../../../examples/add_example/tests/ut/op_host/test_add_example_tiling.cpp)。
+
+**1. 组织结构与命名建议**
+
+- **头文件**：统一包含`iostream`, `gtest/gtest.h`、`tiling_context_faker.h`、`tiling_case_executor.h`。
+     - 若tiling头文件中已经定义CompileInfo结构体，则也需引入。
+- **测试类**：继承`testing::Test`，实现`SetUpTestCase/TearDownTestCase`统一做数据准备与清理。
+- **命名**：测试类建议`${OpName}TilingTest`，用例名建议`test_case_xxx`，可读性更高。
+
+测试类示例：
+
+```CPP
+class ${OpName}TilingTest : public testing::Test {
+protected:
+    static void SetUpTestCase()
+    {
+        std::cout << "${OpName}TilingTest SetUp" << std::endl;
+    }
+
+    static void TearDownTestCase()
+    {
+        std::cout << "${OpName}TilingTest TearDown" << std::endl;
+    }
+};
+```
+
+**2. 用例基本流程**
+1) 调用接口构造用例上下文。需要的参数主要为输入和输出的shape/format/dtype、属性以及compileInfo，可参考`${op_name}_def.cpp`算子信息库。
+    - shape/format/dtype和属性可参考`${op_name}_def.cpp`算子信息库。
+    - 若某输入在信息库中标记为`ValueDepend`，UT中需同时准备该输入的**真实数据值**。
+    - compileInfo优先使用tiling头文件中声明的结构体，若tiling头文件没有声明，则在用例中声明。
+2) 设定预期结果。
+3) 调用接口执行用例。
+
+简化示例：
+
+```CPP
+TEST_F(${OpName}TilingTest, test_case_xxx)
+{
+    // 声明结构体并初始化一个结构体变量
+    struct ${OpName}CompileInfo {
+    } compileInfo;
+    // 1. 构造用例上下文
+    gert::TilingContextPara tilingContextPara(
+        "${OpName}",
+        {
+            {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input tensor1
+            {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input tensor2
+            // 若输入为ValueDepend，需额外传入true和constValue这两个参数
+            // 其中constValue为自己定义的变量，如int constValue[2] = {2, 2}
+            // {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND, true, constValue}
+        },
+        {
+            {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output tensor
+        },
+        {
+            // 属性
+            gert::TilingContextPara::OpAttr("${attr_name}", AnyValue::CreateFrom<std::string>("${attr_value}"))
+        },
+        &compileInfo,
+        64,     // tiling阶段获取的核数
+        262144, // tiling阶段湖区的ub大小，但实际获取的值比指定值少256字节
+        4096    // 指定tiling阶段中tiling data的最大值
+    );
+    // 2. 设定预期结果
+    uint64_t expectTilingKey = 0;
+    string expectTilingData = "2048 32 10912 ";
+    std::vector<size_t> expectWorkspaces = {0};
+    // 3. 调用接口执行用例
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
+}
+```
+
+#### Kernel UT
+
+Kernel UT用于验证Device侧Kernel逻辑是否正确，在给定输入/Tiling参数后，Kernel能否正确执行、输出是否符合预期，推荐在算子开发阶段同步补齐。
+
+UT编写指导如下，如需查看详细实现，请参考样例UT实现[test_add_example.cpp](../../../examples/add_example/tests/ut/op_kernel/test_add_example.cpp)。
+
+**1. 组织结构与命名建议**
+- **头文件**：建议统一包含`gtest/gtest.h`、`tikicpulib.h`、`data_utils.h`与Tiling头文件。
+    - 直接引用`op_host/${op_name}_tiling.h`
+    - 或在UT目录提供轻量适配头（如`examples/add_example/tests/ut/op_kernel/add_example_tiling.h`）
+    - 若Kernel为模板函数，可在UT中直接`#include "../../../op_kernel/${op_name}.cpp"`触发实例化（参考`AddExample`）
+- **测试类**：继承`testing::Test`，实现`SetUpTestCase/TearDownTestCase`统一做数据准备与清理（如拷贝数据目录、chmod、生成bin）。
+- **命名**：测试类建议`${OpName}KernelTest`，用例名建议`test_case_xxx`，可读性更高。
+
+测试类示例：
+```CPP
+class ${OpName}KernelTest : public testing::Test {
+protected:
+    static void SetUpTestCase()
+    {
+        std::cout << "${OpName}KernelTest SetUp" << std::endl;
+        // 在此统一准备测试数据
+    }
+    static void TearDownTestCase()
+    {
+        std::cout << "${OpName}KernelTest TearDown" << std::endl;
+    }
+};
+```
+
+**2. 用例基本流程**
+1) 设定输入shape/format/dtype，初次上手可参考`${op_name}_def.cpp`算子信息库。
+    - 若某输入在信息库中标记为`ValueDepend`，UT中需同时准备该输入的**真实数据值**。
+2) 准备输入/输出/Workspace/Tiling缓冲区（`AscendC::GmAlloc`）。
+3) 准备Tiling数据（手动构造或由Tiling函数生成）。
+4) 设置`ICPU_SET_TILING_KEY`与`AscendC::SetKernelMode`。
+5) 使用`ICPU_RUN_KF`执行Kernel。
+6) 结果校验并释放资源（`AscendC::GmFree`）。
+
+简化示例：
+```CPP
+extern "C" __global__ __aicore__ void ${op_name}(GM_ADDR x, GM_ADDR y, GM_ADDR z,
+                                                GM_ADDR workspace, GM_ADDR tiling);
+
+TEST_F(${OpName}KernelTest, test_case_basic)
+{
+    // 1.设定输入shape/format/dtype，必要时准备ValueDepend输入值
+    // 2.申请输入/输出/workspace/tiling内存
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(...);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(...);
+    uint8_t* z = (uint8_t*)AscendC::GmAlloc(...);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(...);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(sizeof(${op_name}TilingData));
+
+    // 3.准备tiling数据（手动构造或由tiling函数生成）
+    auto* tilingData = reinterpret_cast<${op_name}TilingData*>(tiling);
+    tilingData->... = ...;
+
+    // 4.设置tiling key并执行kernel
+    ICPU_SET_TILING_KEY(tilingKey);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(${op_name}, blockDim, x, y, z, workspace, tiling);
+
+    // 5.结果校验
+    EXPECT_EQ(..., ...);
+
+    // 6.释放资源
+    AscendC::GmFree(x);
+    AscendC::GmFree(y);
+    AscendC::GmFree(z);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+```
+
+**3. Tiling数据准备方式**
+- **手动构造**：适合字段少、逻辑简单。
+- **调用Tiling函数自动生成**：适合字段多、依赖属性/shape复杂。可复用`tests/ut/common/tiling_context_faker.h`与`tiling_case_executor.h`。示例：
+
+```CPP
+gert::TilingContextPara para("OpName",
+    {{{{2, 2, 2, 1}, {2, 2, 2, 1}}, ge::DT_FLOAT, ge::FORMAT_ND}},
+    {{{{2, 1, 2, 2}, {2, 1, 2, 2}}, ge::DT_FLOAT, ge::FORMAT_ND}},
+    {gert::TilingContextPara::OpAttr("attr", AnyValue::CreateFrom<int64_t>(1))},
+    &compileInfo);
+
+TilingInfo tilingInfo;
+ASSERT_TRUE(ExecuteTiling(para, tilingInfo));
+uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingInfo.tilingDataSize);
+std::memcpy(tiling, tilingInfo.tilingData.get(), tilingInfo.tilingDataSize);
+ICPU_SET_TILING_KEY(tilingInfo.tilingKey);
+uint32_t blockDim = tilingInfo.blockNum;
+```
+
+**4. 数据生成与结果比对**
+- 可使用`tests/ut/op_kernel/data_utils.h`的`ReadFile/WriteFile`读写二进制。
+- 结合`gen_data.py`/`compare_data.py`脚本生成与比对数据，可参考`add_example`的`add_example_data`目录：
+  [gen_data.py](../../../examples/add_example/tests/ut/op_kernel/add_example_data/gen_data.py)、
+  [compare_data.py](../../../examples/add_example/tests/ut/op_kernel/add_example_data/compare_data.py)。
+- 简单算子可直接在UT中计算期望值并比对。
+    - 浮点比较建议使用`EXPECT_NEAR/ASSERT_NEAR`并设置合理容差。
+
+
+### aclnn调用验证
+
+```bash
+# 执行前需要导入环境变量
 export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}_nn/op_api/lib:${LD_LIBRARY_PATH}
 ```
 
-- **UT验证**
-
-  算子开发过程中，可通过UT验证（如Tiling）方式进行快速验证，如需查看详细实现，请参考[Tiling UT](../../../examples/add_example/tests/ut/op_host/test_add_example_tiling.cpp)。
-  执行UT验证的命令，请参考[算子调用](../invocation/quick_op_invocation.md)。
-
-- **aclnn调用验证**
-
-  开发好的算子完成编译部署后，可通过aclnn方式验证功能，方法请参考[算子调用方式](../invocation/op_invocation.md)。
+开发好的算子完成编译部署后，可通过aclnn方式验证功能，方法请参考[算子调用方式](../invocation/op_invocation.md)。
 
 ## 附录
 
