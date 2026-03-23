@@ -93,9 +93,11 @@ public:
 
         // 一次计算最多取Min(baseM/2 * baseN, stageSize_)
         int64_t stageSize = AscendC::Std::min(stageSize_, inputSize) / blockShapeNAlign * blockShapeNAlign;
-        ASCENDC_ASSERT(stageSize > 0, {
-            KERNEL_LOG(KERNEL_EORROR, "stageSize size limit %ld, %ld, %ld!", stageSize_, blockShapeM, blockShapeN);
-        });
+        // m轴为1场景第二个vec直接返回
+        if (stageSize <= 0) {
+            AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_V>(flagId);
+            return;
+        }
         int64_t loop = 0;
         int64_t stageOffset = 0;
         int64_t N = Get<MNK_N>(problemShape_);
