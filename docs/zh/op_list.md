@@ -3126,6 +3126,16 @@
   </tr>
   <tr>
     <td>rnn</td>
+    <td><a href="../../rnn/thnn_fused_lstm_cell/README.md">thnn_fused_lstm_cell</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>实现长短期记忆网络单元（LSTM Cell）的单步前向计算中，矩阵乘法后的后续计算。</td>
+  </tr>
+  <tr>
+    <td>rnn</td>
     <td><a href="../../rnn/dynamic_rnnv2/README.md">dynamic_rnnv2</a></td>
     <td>✓</td>
     <td>✓</td>

@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 算子功能：实现长短期记忆网络单元（LSTM Cell）的单步前向计算中，矩阵乘法后的后续计算。输出当前时刻的隐状态和细胞状态，同时输出当前遗忘门、输入门、输出门和候选状态用于反向计算。
+- 接口功能：实现长短期记忆网络单元（LSTM Cell）的单步前向计算中，矩阵乘法后的后续计算。输出当前时刻的隐状态和细胞状态，同时输出当前遗忘门、输入门、输出门和候选状态用于反向计算。
 - 计算公式：
 
   计算门控激活值：
@@ -81,192 +81,201 @@ aclnnStatus aclnnThnnFusedLstmCell(
 
 - **参数说明：**
 
-<table><thead>
-    <tr>
-      <th>参数名</th>
-      <th>输入/输出</th>
-      <th>描述</th>
-      <th>使用说明</th>
-      <th>数据类型</th>
-      <th>数据格式</th>
-      <th>维度(shape)</th>
-      <th>非连续Tensor</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>inputGates</td>
-      <td>输入</td>
-      <td>输入层的4个门，即输入门（Input Gate）、候选细胞状态（Cell Candidate）、遗忘门（Forget Gate）、输出门（Output Gate）的值。</td>
-      <td>shape为(batch_size, 4*hidden_size)。</td>
-      <td>FLOAT、FLOAT16</td>
-      <td>ND</td>
-      <td>2</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>hiddenGates</td>
-      <td>输入</td>
-      <td>隐藏层的4个门的值。</td>
-      <td>shape为(batch_size, 4*hidden_size)。</td>
-      <td>FLOAT、FLOAT16</td>
-      <td>ND</td>
-      <td>2</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>cx</td>
-      <td>输入</td>
-      <td>上一时的刻细胞状态。</td>
-      <td>shape均为(batch_size, hidden_size)。</td>
-      <td>FLOAT、FLOAT16</td>
-      <td>ND</td>
-      <td>2</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>inputBiasOptional</td>
-      <td>可选输入</td>
-      <td>可选的输入偏置。传入nullptr时，代表没有偏置。</td>
-      <td>shape为(4*hidden_size,)。</td>
-      <td>FLOAT、FLOAT16</td>
-      <td>ND</td>
-      <td>1</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>hiddenBiasOptional</td>
-      <td>可选输入</td>
-      <td>可选的隐藏层偏置。传入nullptr时，代表没有偏置。</td>
-      <td>shape为(4*hidden_size,)。当inputBiasOptional输入有效时，hiddenBiasOptional须有效，否则须为nullptr。</td>
-      <td>FLOAT、FLOAT16</td>
-      <td>ND</td>
-      <td>1</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>hyOut</td>
-      <td>输出</td>
-      <td>当前时刻的隐状态，即当前时刻的输出。</td>
-      <td>shape为(batch_size, hidden_size)。</td>
-      <td>FLOAT、FLOAT16</td>
-      <td>ND</td>
-      <td>2</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>cyOut</td>
-      <td>输出</td>
-      <td>当前时刻的细胞状态。</td>
-      <td>shape为(batch_size, hidden_size)。</td>
-      <td>FLOAT、FLOAT16</td>
-      <td>ND</td>
-      <td>2</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>storageOut</td>
-      <td>输出</td>
-      <td>4个门的激活值，提供给反向计算。</td>
-      <td>shape为(batch_size, 4 * hidden_size)。</td>
-      <td>FLOAT、FLOAT16</td>
-      <td>ND</td>
-      <td>2</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>workspaceSize</td>
-      <td>输出</td>
-      <td>返回需要在Device侧申请的workspace大小。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>executor</td>
-      <td>输出</td>
-      <td>返回op执行器，包含了算子计算流程。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-  </tbody></table>
+  <table style="undefined;table-layout: fixed; width: 1599px"><colgroup>
+  <col style="width: 210px">
+  <col style="width: 125px">
+  <col style="width: 344px">
+  <col style="width: 244px">
+  <col style="width: 179px">
+  <col style="width: 122px">
+  <col style="width: 230px">
+  <col style="width: 145px">
+  <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+        <th>使用说明</th>
+        <th>数据类型</th>
+        <th>数据格式</th>
+        <th>维度(shape)</th>
+        <th>非连续Tensor</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>inputGates（aclTensor*）</td>
+        <td>输入</td>
+        <td>输入层的4个门，即输入门（Input Gate）、候选细胞状态（Cell Candidate）、遗忘门（Forget Gate）、输出门（Output Gate）的值。</td>
+        <td>无。</td>
+        <td>FLOAT、FLOAT16</td>
+        <td>ND</td>
+        <td>(batch_size, 4*hidden_size)</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>hiddenGates（aclTensor*）</td>
+        <td>输入</td>
+        <td>隐藏层的4个门的值。</td>
+        <td>无。</td>
+        <td>FLOAT、FLOAT16</td>
+        <td>ND</td>
+        <td>(batch_size, 4*hidden_size)</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>cx（aclTensor*）</td>
+        <td>输入</td>
+        <td>上一时的刻细胞状态。</td>
+        <td>无。</td>
+        <td>FLOAT、FLOAT16</td>
+        <td>ND</td>
+        <td>(batch_size, hidden_size)</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>inputBiasOptional（aclTensor*）</td>
+        <td>可选输入</td>
+        <td>可选的输入偏置。传入nullptr时，代表没有偏置。</td>
+        <td>无。</td>
+        <td>FLOAT、FLOAT16</td>
+        <td>ND</td>
+        <td>(4*hidden_size,)</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>hiddenBiasOptional（aclTensor*）</td>
+        <td>可选输入</td>
+        <td>可选的隐藏层偏置。传入nullptr时，代表没有偏置。</td>
+        <td>当inputBiasOptional输入有效时，hiddenBiasOptional须有效，否则须为nullptr。</td>
+        <td>FLOAT、FLOAT16</td>
+        <td>ND</td>
+        <td>(4*hidden_size,)</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>hyOut（aclTensor*）</td>
+        <td>输出</td>
+        <td>当前时刻的隐状态，即当前时刻的输出。</td>
+        <td>无。</td>
+        <td>FLOAT、FLOAT16</td>
+        <td>ND</td>
+        <td>(batch_size, hidden_size)</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>cyOut（aclTensor*）</td>
+        <td>输出</td>
+        <td>当前时刻的细胞状态。</td>
+        <td>无。</td>
+        <td>FLOAT、FLOAT16</td>
+        <td>ND</td>
+        <td>(batch_size, hidden_size)</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>storageOut（aclTensor*）</td>
+        <td>输出</td>
+        <td>4个门的激活值，提供给反向计算。</td>
+        <td>无。</td>
+        <td>FLOAT、FLOAT16</td>
+        <td>ND</td>
+        <td>(batch_size, 4 * hidden_size)</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>workspaceSize（uint64_t*）</td>
+        <td>输出</td>
+        <td>返回需要在Device侧申请的workspace大小。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>executor（aclOpExecutor**）</td>
+        <td>输出</td>
+        <td>返回op执行器，包含了算子计算流程。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+    </tbody></table>
 
 - **返回值：**
 
-aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-第一段接口会完成入参校验，出现以下场景时报错：
+  第一段接口会完成入参校验，出现以下场景时报错：
 
-<table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 319px">
-  <col style="width: 144px">
-  <col style="width: 671px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>返回码</th>
-      <th>错误码</th>
-      <th>描述</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>ACLNN_ERR_PARAM_NULLPTR</td>
-      <td>161001</td>
-      <td>传入的tensor是空指针。</td>
-    </tr>
-    <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
-      <td>参数的数据类型或数据格式不在支持的范围之内。</td>
-    </tr>
-    <tr>
-      <td>参数的维度不在支持的范围内，或shape不满足参数之间的数量关系。</td>
-    </tr>
-  </tbody></table>
+  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
+    <col style="width: 319px">
+    <col style="width: 144px">
+    <col style="width: 671px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>返回码</th>
+        <th>错误码</th>
+        <th>描述</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>ACLNN_ERR_PARAM_NULLPTR</td>
+        <td>161001</td>
+        <td>传入的tensor是空指针。</td>
+      </tr>
+      <tr>
+        <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="2">161002</td>
+        <td>参数的数据类型或数据格式不在支持的范围之内。</td>
+      </tr>
+      <tr>
+        <td>参数的维度不在支持的范围内，或shape不满足参数之间的数量关系。</td>
+      </tr>
+    </tbody></table>
 
 ## aclnnThnnFusedLstmCell
 
-- **参数说明：**
-  
-  <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
-  <col style="width: 173px">
-  <col style="width: 112px">
-  <col style="width: 668px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>参数名</th>
-      <th>输入/输出</th>
-      <th>描述</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>workspace</td>
-      <td>输入</td>
-      <td>在Device侧申请的workspace内存地址。</td>
-    </tr>
-    <tr>
-      <td>workspaceSize</td>
-      <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnThnnFusedLstmCellGetWorkspaceSize获取。</td>
-    </tr>
-    <tr>
-      <td>executor</td>
-      <td>输入</td>
-      <td>op执行器，包含了算子计算流程。</td>
-    </tr>
-    <tr>
-      <td>stream</td>
-      <td>输入</td>
-      <td>指定执行任务的Stream。</td>
-    </tr>
-  </tbody>
-  </table>
+  - **参数说明：**
+    
+    <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
+    <col style="width: 173px">
+    <col style="width: 112px">
+    <col style="width: 668px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>workspace</td>
+        <td>输入</td>
+        <td>在Device侧申请的workspace内存地址。</td>
+      </tr>
+      <tr>
+        <td>workspaceSize</td>
+        <td>输入</td>
+        <td>在Device侧申请的workspace大小，由第一段接口aclnnThnnFusedLstmCellGetWorkspaceSize获取。</td>
+      </tr>
+      <tr>
+        <td>executor</td>
+        <td>输入</td>
+        <td>op执行器，包含了算子计算流程。</td>
+      </tr>
+      <tr>
+        <td>stream</td>
+        <td>输入</td>
+        <td>指定执行任务的Stream。</td>
+      </tr>
+    </tbody>
+    </table>
 - **返回值：**
   
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
