@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 接口功能：对输入Tensor进行窗口为$kH * kW$、步长为$sH * sW$的二维平均池化操作，其中$k$为kernelSize，表示池化窗口的大小，$s$为stride，表示池化操作的步长。
+- 算子功能：对输入Tensor进行窗口为$kH * kW$、步长为$sH * sW$的二维平均池化操作，其中$k$为kernelSize，表示池化窗口的大小，$s$为stride，表示池化操作的步长。
 - 计算公式：
   输入input（$N,C,H,W$）、输出out（$N,C,H_{out},W_{out}$）和池化步长（$strides$）、池化窗口大小($kH,kW$)的关系是
 

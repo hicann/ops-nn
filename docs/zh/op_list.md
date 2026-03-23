@@ -1692,7 +1692,7 @@
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>算子功能：根据indices在给定变量内，将updates应用于变量的单个值或切片。</a>。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -2863,6 +2863,26 @@
     <td>✗</td>
     <td>AI Core</td>
     <td>正向自适应最大池化的反向传播，将梯度回填到每个自适应窗口最大值的坐标处，相同坐标处累加。</td>
+  </tr>
+    <tr>
+    <td>pooling</td>
+    <td><a href="../../pooling/avg_pool/README.md">avg_pool</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入Tensor进行窗口为kH * kW、步长为sH * sW的二维平均池化操作，其中k为kernelSize，表示池化窗口的大小，s为stride，表示池化操作的步长。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
+    <td><a href="../../pooling/avg_pool_v2/README.md">avg_pool_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入Tensor进行窗口为kH * kW、步长为sH * sW的二维平均池化操作，其中k为kernelSize，表示池化窗口的大小，s为stride，表示池化操作的步长。</td>
   </tr>
   <tr>
     <td>pooling</td>
