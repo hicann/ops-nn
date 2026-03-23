@@ -144,6 +144,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "add_rms_norm_apt");
         this->AICore().AddConfig("ascend950", config_950);
+        this->AICore().AddConfig("mc62cm12a", config_950);
     }
 };
 OP_ADD(AddRmsNorm);
