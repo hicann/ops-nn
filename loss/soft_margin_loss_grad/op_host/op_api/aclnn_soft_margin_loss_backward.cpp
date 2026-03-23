@@ -89,8 +89,17 @@ static const aclTensor* BroadcastTensor(const aclTensor* self, const op::Shape b
   return self;
 }
 
-static inline aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, 
-                                      const aclTensor* target, const aclTensor* out) {
+static void CheckFormat(const aclTensor* gradOutput)
+{
+    // 检查format，若是NZ格式，则添加警告
+    if (gradOutput->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGW("Format of gradOutput gets [%s], this format may lead to precision failure.",
+        op::ToString(gradOutput->GetStorageFormat()).GetString());
+    }
+}
+
+static inline aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self,
+                                     const aclTensor* target, const aclTensor* out) {
   // 1. 检查参数是否为空指针
   CHECK_RET(CheckNotNull4Tensor(gradOutput, self, target, out), ACLNN_ERR_PARAM_NULLPTR);
 
@@ -99,6 +108,9 @@ static inline aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTens
 
   // 3. 检查输出shape
   CHECK_RET(CheckShape(gradOutput, self, target, out), ACLNN_ERR_PARAM_INVALID);
+
+  // 检查format，若是NZ格式，则添加警告
+  CheckFormat(gradOutput);
 
   return ACLNN_SUCCESS;
 }
