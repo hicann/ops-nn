@@ -243,7 +243,7 @@ MatMulBaseKernelSingleCoreSplitK<A_TYPE, B_TYPE, L0C_TYPE, OUTPUT_TYPE, BIAS_TYP
             uint64_t vMOffset = MMV3DivCeil(block_.params_.mCoreUse, NUM_TWO);
             if (GetBlockIdx() % NUM_TWO == 1) { // 一个C核对应两个V核中的第二个V核的计算处理
                 offset = offset + vMOffset * block_.matmulTilingData_->matmulTiling.N;
-                vMOffset = block_.params_.innerSingleCoreM - vMOffset;
+                vMOffset = block_.params_.mCoreUse - vMOffset;
             }
             uint64_t singleSize = vMOffset * block_.params_.innerSingleCoreN;
             Cast32to16V220(reinterpret_cast<__gm__ typename OUTPUT_TYPE::T *>(cGM) + offset,
