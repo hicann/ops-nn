@@ -196,7 +196,7 @@ __aicore__ inline void KernelND2NZBMM<T>::CopyOutDirect(uint64_t gmOutOffset, ui
                      {widthBlockTotal_, total, 0, static_cast<uint16_t>(hAligned_ - total)});
         } else {
             for (uint16_t i = 0; i < widthBlockTotal_; i++) {
-                DataCopy(dstGM[gmOutOffset + hAligned_ * c0_ * i], outBuf_[total * c0_ * i], {1, total, 0, 0});
+                DataCopy(dstGM[gmOutOffset + hAligned_ * c0_ * i], outBuf_[hBuffer_ * c0_ * i], {1, total, 0, 0});
             }
         }
         return;
