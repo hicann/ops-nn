@@ -41,7 +41,7 @@ public:
         qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams const* tiling)
     {
         auto stepKa = static_cast<uint32_t>(tiling->matmulTiling.stepKa);
-        auto stepKb = static_cast<uint32_t>(tiling->matmulTiling.stepKa);
+        auto stepKb = static_cast<uint32_t>(tiling->matmulTiling.stepKb);
         auto baseK = static_cast<uint32_t>(tiling->matmulTiling.baseK);
         auto baseM = static_cast<uint32_t>(tiling->matmulTiling.baseM);
         auto baseN = static_cast<uint32_t>(tiling->matmulTiling.baseN);
