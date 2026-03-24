@@ -58,6 +58,26 @@ static const uint64_t INPUT_DIM_MIN_VALUE = 2;
 static constexpr int64_t OUTPUT_INFER_FAIL = -1;
 static const int PENULTIMATE_DIM = 2;
 
+// 二维及以上的tensor都需要调
+inline bool TensorContiguousProcess(const aclTensor *&contiguousTensor, bool &transpose,
+                                           aclOpExecutor *executor) {
+    if (contiguousTensor == nullptr) {
+        OP_LOGD("QuantMatmul no need to do contiguous process.");
+        return true;
+    }
+    auto transposeFlag = IsTransposeLastTwoDims(contiguousTensor);
+    // swap tensor if its viewshape not satisfy request shape without adding a transpose node
+    if (transposeFlag) {
+        contiguousTensor = executor->CreateView(contiguousTensor, SwapLastTwoDimValue(contiguousTensor->GetViewShape()),
+                                                contiguousTensor->GetViewOffset());
+        transpose = !transpose;
+    } else {
+        contiguousTensor = l0op::Contiguous(contiguousTensor, executor);
+    }
+    CHECK_RET(contiguousTensor != nullptr, false);
+    return true;
+}
+
 inline static void FirstPrint(bool& isFirstToPrint, const char* interfaceName, bool isExecutorInferface)
 {
     if (isFirstToPrint) {
@@ -441,8 +461,16 @@ aclnnStatus aclnnQuantMatmulGetWorkspaceSize(
     auto ret = CheckParams(x1, x2, bias, deqScaleTensor, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
+    // 检查输入连续性
+    bool x1TransposeValue = false;
+    CHECK_RET(TensorContiguousProcess(x1, x1TransposeValue, unique_executor.get()), ACLNN_ERR_INNER_NULLPTR);
+    bool x2TransposeValue = false;
+    CHECK_RET(TensorContiguousProcess(x2, x2TransposeValue, unique_executor.get()), ACLNN_ERR_INNER_NULLPTR);
+    bool biasTransposeValue = false;
+    CHECK_RET(TensorContiguousProcess(bias, biasTransposeValue, unique_executor.get()), ACLNN_ERR_INNER_NULLPTR);
+
     // 构建matmul计算图
-    auto matmulOut = BuildQuantMatMulGraph(x1, x2, bias, deqScaleTensor, false, false, out, unique_executor.get());
+    auto matmulOut = BuildQuantMatMulGraph(x1, x2, bias, deqScaleTensor, x1TransposeValue, x2TransposeValue, out, unique_executor.get());
     CHECK_RET(matmulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     if (matmulOut->IsEmpty()) {
         // 当输出为空tensor的场景，空tensor处理
@@ -495,6 +523,14 @@ aclnnStatus aclnnQuantMatmulV2GetWorkspaceSize(
     const_cast<aclTensor*>(deqScale)->SetOriginalFormat(op::Format::FORMAT_NHWC);
     const_cast<aclTensor*>(deqScale)->SetViewFormat(op::Format::FORMAT_NHWC);
     const_cast<aclTensor*>(deqScale)->SetStorageFormat(op::Format::FORMAT_NC1HWC0);
+
+    // 检查输入连续性
+    CHECK_RET(TensorContiguousProcess(x1, adjX1, unique_executor.get()), ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(TensorContiguousProcess(x2, adjX2, unique_executor.get()), ACLNN_ERR_INNER_NULLPTR);
+    bool biasTransposeValue = false;
+    CHECK_RET(TensorContiguousProcess(bias, biasTransposeValue, unique_executor.get()), ACLNN_ERR_INNER_NULLPTR);
+    bool deqScaleTransposeValue = false;
+    CHECK_RET(TensorContiguousProcess(deqScale, deqScaleTransposeValue, unique_executor.get()), ACLNN_ERR_INNER_NULLPTR);
 
     // 构建matmul计算图
     auto matmulOut = BuildQuantMatMulGraph(x1, x2, bias, deqScale, adjX1, adjX2, out, unique_executor.get());
