@@ -16,7 +16,7 @@
 - 算子功能：在-1轴和-2轴上同时进行目的数据类型为FLOAT4类、FLOAT8类的MX量化。在给定的-1轴和-2轴上，每32个数，计算出这两组数对应的量化尺度mxscale1、mxscale2，然后分别对两组数所有元素除以对应的mxscale1或mxscale2，根据round_mode转换到对应的dst_type，得到量化结果y1和y2。
 
 - 计算公式：
-  - 当前只支持scale_alg=0，即OCP实现：
+  - 当前只支持scale_alg=0，即OCP Microscaling Formats (Mx) Specification实现：
   - 将输入x在-1轴上按照32个数进行分组，一组32个数 $\{\{V_i\}_{i=1}^{32}\}$ 量化为 $\{mxscale1, \{P_i\}_{i=1}^{32}\}$
 
     $$

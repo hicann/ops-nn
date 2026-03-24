@@ -34,7 +34,7 @@ namespace ge {
 * @li dst_type: An optional int. Declare the output y dtype. Support FLOAT4_E2M1, FLOAT4_E1M2,
 * FLOAT8_E4M3FN or FLOAT8_E5M2. Defaults to FLOAT4_E2M1.
 * @li scale_alg: An optional int.The algorithm for the scale in quantization.Default to 0.
-* Support MxFP8(OCP , count 0)
+* Support MxFP8(OCP Microscaling Formats (Mx) Specification, count 0)
 
 * @par Outputs:
 * @li y1: Quantized output tensor. It has the same shape and rank as input x.
