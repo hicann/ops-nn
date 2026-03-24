@@ -17,7 +17,7 @@
 
 - 接口功能：二维平均池化的反向传播，计算二维平均池化正向传播的输入梯度。
 
-- 计算公式：假设二位平均池化正向的输入张量为$X$，输出张量为$Y$，池化窗口大小为$k*k$,步长为$s$,则$X$的梯度$\frac{\partial L}{\partial X}$计算公式为：
+- 计算公式：假设二维平均池化正向的输入张量为$X$，输出张量为$Y$，池化窗口大小为$k*k$,步长为$s$,则$X$的梯度$\frac{\partial L}{\partial X}$计算公式为：
 
   $$
   \frac{\partial L}{\partial X_{i,j}}=\frac{1}{k^2}\sum_{n=0}^{k-1}\frac{\partial L}{\partial Y_{\lfloor\frac{i*s+m}{k}\rfloor,\lfloor\frac{j*s+n}{k}\rfloor}}
@@ -166,7 +166,7 @@ aclnnStatus aclnnAvgPool2dBackward(
     </tr>
     <tr>
       <td>cubeMathType</td>
-      <td>out</td>
+      <td>输入</td>
       <td>指定Cube单元的计算逻辑</td>
       <td>-</td>
       <td>INT8</td>
@@ -318,6 +318,7 @@ aclnnStatus aclnnAvgPool2dBackward(
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 ```Cpp
+#include <cstdio>
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"

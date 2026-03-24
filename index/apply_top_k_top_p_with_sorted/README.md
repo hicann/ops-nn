@@ -81,7 +81,7 @@
       <td>sorted_indices</td>
       <td>输入</td>
       <td>表示需要处理的数据的索引，公式中的`sortedIndices`。</td>
-      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td>INT32</td>
       <td>ND</td>
     </tr>
     <tr>
