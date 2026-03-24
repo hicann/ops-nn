@@ -119,7 +119,10 @@ static inline bool CheckMMV3NzNzNdSupport(MmOpInfo& mmOpInfo)
         ALIGN_UNIT_MAP.find(mmOpInfo.support_info.self_dtype) == ALIGN_UNIT_MAP.end()) {
         return false;
     }
-    return (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201);
+    auto it = ALIGN_UNIT_MAP.find(mmOpInfo.support_info.self_dtype);
+    uint64_t alignUnit = it->second;
+    return (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) &&
+           (mmOpInfo.shapeInfo.nDim % alignUnit == 0);
 }
 
 static bool CheckDtypeValid(
