@@ -18,6 +18,7 @@
 
 #include "op_host/tiling_base.h"
 #include "tiling/tiling_api.h"
+#include "../../../transpose_batch_mat_mul/op_host/op_tiling/pp_matmul_default.h"
 #include "../../op_kernel/quant_batch_matmul_v3_kernel_tiling_data.h"
 
 namespace optiling {
@@ -26,13 +27,25 @@ bool IsSocVersionArch20Pertoken(const gert::TilingContext* context);
 
 class QuantBatchMatmulPertokenArch20 {
 public:
-    explicit QuantBatchMatmulPertokenArch20(gert::TilingContext* context) : context_(context){}
+    explicit QuantBatchMatmulPertokenArch20(gert::TilingContext* context)
+        : context_(context),
+          tiling_(context),
+          params_(tiling_.matMulInfo_),
+          hwInfo_(tiling_.hardwareInfo_),
+          tilingData_(tiling_.ppMatmulDefaultTilingData_)
+    {}
     ~QuantBatchMatmulPertokenArch20() = default;
+    ge::graphStatus GetShapeAttrsInfo();
     ge::graphStatus DoTiling();
     ge::graphStatus PostTiling();
-    QuantMatmulPertokenTilingDataArch20 qbmmTilingDataArch20_{};
-    gert::TilingContext *context_ = nullptr;
+    gert::TilingContext* context_ = nullptr;
+private:
     uint64_t tilingKey_{0};
+    QuantMatmulPertokenTilingDataArch20 qbmmTilingDataArch20_{};
+    pp_matmul::PpMatMulDefault tiling_;
+    pp_matmul::MatMulInfo& params_;
+    pp_matmul::HardwareInfo& hwInfo_;
+    pp_matmul::PpMatmulDefaultTilingData& tilingData_;
 };
-}
+} // namespace optiling
 #endif // __OP_HOST_QUANT_BATCH_MAT_MUL_V3_TILING_ARCH20_H__

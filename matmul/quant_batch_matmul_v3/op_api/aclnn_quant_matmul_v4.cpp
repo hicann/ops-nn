@@ -200,6 +200,42 @@ static inline bool CheckDtypeValidOnOnlyL0c2ub(TupleTensor mandatoryTensors, Tup
     return true;
 }
 
+static inline bool CheckDtypeValidOnOnlyL0c2ubPertoken(TupleTensor mandatoryTensors, TupleOptional optionalTensors,
+                                               const aclTensor *out)
+{
+    auto x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    auto x2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    if (x1->GetDataType() != op::DataType::DT_INT8 || x2->GetDataType() != op::DataType::DT_INT8) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input x1 and x2 dtype should be INT8, actual dtype are %s and %s",
+                op::ToString(x1->GetDataType()).GetString(), op::ToString(x2->GetDataType()).GetString());
+        return false;
+    }
+    auto scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    if (scale->GetDataType() != op::DataType::DT_FLOAT) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Scale dtype should be FLOAT, actual dtype is %s",
+                op::ToString(scale->GetDataType()).GetString());
+        return false;
+    }
+    auto bias = std::get<INDEX_BIAS_IN_OPTIONAL_TUPLE>(optionalTensors);
+    if (bias != nullptr && bias->GetDataType() != op::DataType::DT_INT32) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Bias dtype should be INT32, actual dtype is %s",
+                op::ToString(bias->GetDataType()).GetString());
+        return false;
+    }
+    auto pertokenScaleOptional = std::get<INDEX_PERTOKEN_IN_OPTIONAL_TUPLE>(optionalTensors);
+    if (pertokenScaleOptional->GetDataType() != op::DataType::DT_FLOAT) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "PertokenScaleOptional should be FLOAT, actual dtype is %s",
+                op::ToString(scale->GetDataType()).GetString());
+        return false;
+    }
+    if (out->GetDataType() != op::DataType::DT_FLOAT16) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Output dtype should be FLOAT16, actual dtype is %s",
+                op::ToString(out->GetDataType()).GetString());
+        return false;
+    }
+    return true;
+}
+
 static inline bool CheckDtypeValidOnOnlyL0c2outForA4W4(TupleTensor mandatoryTensors, TupleOptional optionalTensors,
                                                        const aclTensor *out)
 {
@@ -387,10 +423,10 @@ static inline bool CheckDtypeValid(TupleTensor mandatoryTensors, TupleOptional o
             return false;
         }
     }
-
     // 区分芯片校验
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P &&
-        !CheckDtypeValidOnOnlyL0c2ub(mandatoryTensors, optionalTensors, out)) {
+    if ((GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P) &&
+        ((pertokenScale == nullptr && !CheckDtypeValidOnOnlyL0c2ub(mandatoryTensors, optionalTensors, out)) ||
+         (pertokenScale != nullptr && !CheckDtypeValidOnOnlyL0c2ubPertoken(mandatoryTensors, optionalTensors, out)))) {
         return false;
     } else if ((GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
                 GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) &&
@@ -421,10 +457,13 @@ static inline bool CheckFormat(TupleTensor mandatoryTensors, TupleOptional optio
     auto offset = std::get<INDEX_OFFSET_IN_OPTIONAL_TUPLE>(optionalTensors);
     auto pertokenScaleOptional = std::get<INDEX_PERTOKEN_IN_OPTIONAL_TUPLE>(optionalTensors);
     auto bias = std::get<INDEX_BIAS_IN_OPTIONAL_TUPLE>(optionalTensors);
+    auto x1StorageFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(x1->GetStorageFormat()));
     auto x2StorageFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(x2->GetStorageFormat()));
-    bool formatValid = x1->GetStorageFormat() == op::Format::FORMAT_ND &&
+    bool formatValid = ((x1StorageFormat == op::Format::FORMAT_ND) ||
+                        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P &&
+                         pertokenScaleOptional != nullptr && x1StorageFormat == op::Format::FORMAT_FRACTAL_NZ)) &&
                        (x2StorageFormat == op::Format::FORMAT_ND || x2StorageFormat == op::Format::FORMAT_FRACTAL_NZ) &&
-                        scale->GetStorageFormat() == op::Format::FORMAT_ND;
+                       scale->GetStorageFormat() == op::Format::FORMAT_ND;
     if (offset != nullptr) {
         formatValid = formatValid && offset->GetStorageFormat() == op::Format::FORMAT_ND;
     }
@@ -1701,8 +1740,11 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor man
     auto inputAShape = reformatedX1->GetViewShape();
     uint32_t M = inputAShape.GetDimNum() == NO_BATCH_DIM_SUM ? inputAShape[0] : inputAShape[1];
     auto socLongVersion = GetCurrentPlatformInfo().GetSocLongVersion();
-    bool isPpMatmul = (socLongVersion == "Ascend310P3" && M >= PPMATMUL_PRIORITY_M && bias != nullptr && !transposeX1 &&
-                       transposeX2 && dtype != DataType::DT_BF16);
+    bool isPpMatmul =
+        ((socLongVersion == "Ascend310P3" && M >= PPMATMUL_PRIORITY_M && bias != nullptr && !transposeX1 &&
+          transposeX2 && dtype != DataType::DT_BF16) ||
+         (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P && 
+         pertokenScaleOptional != nullptr && !pertokenScaleOptional->IsEmpty()));
     ret = TransdataX1Process(isX1TransdataFlag, reformatedX1, executor, isPpMatmul);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
