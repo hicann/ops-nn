@@ -19,6 +19,7 @@
 #include "platform/platform_info.h"
 #include "atvoss/broadcast/broadcast_tiling.h"
 #include "op_common/op_host/util/platform_util.h"
+#include "op_host/tiling_util.h"
 
 namespace optiling {
 
@@ -365,7 +366,7 @@ ge::graphStatus MaxPool3DGradTilingBase::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto socVersion = ascendcPlatform.GetSocVersion();
-    if (socVersion != platform_ascendc::SocVersion::ASCEND950) {
+    if (!Ops::NN::OpTiling::IsRegbaseSocVersion(context_)) {
         // Skip the current template
         return ge::GRAPH_PARAM_INVALID;
     }
