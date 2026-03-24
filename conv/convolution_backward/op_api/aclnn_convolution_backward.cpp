@@ -1512,7 +1512,11 @@ static bool IsConvBpSupportMatmulMode(const aclTensor *inputTensor, const Convol
 
 static bool IsConv2DBp2MmMode(const ConvolutionBackwardInputTensor &inputTensor,
   const ConvolutionBackwardParams &params)
-{
+{ 
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (curArch != NpuArch::DAV_2201) {
+    return false;
+  }
   // matmul暂时不支持8bit
   auto is8bit = [](const aclTensor *tensor) -> bool {
     auto dtype = tensor->GetDataType();
