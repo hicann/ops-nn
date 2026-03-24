@@ -110,7 +110,7 @@ include(cmake/opbuild.cmake)
 include(cmake/third_party/eigen.cmake)
 include(cmake/intf_pub_linux.cmake)
 include(cmake/modules/Finddlog.cmake)
-include(cmake/version.cmake)
+include(version.cmake)
 
 if(ENABLE_CUSTOM AND ENABLE_ASC_BUILD)
   include(cmake/custom_kernel.cmake)
