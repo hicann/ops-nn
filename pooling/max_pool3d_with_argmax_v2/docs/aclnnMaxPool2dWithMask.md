@@ -16,7 +16,7 @@
 ## 功能说明
 
 - 接口功能：
-对于输入信号的输入通道，提供2维最大池化（max pooling）操作，输出池化后的值out和索引indices（采用mask语义计算得出）。
+对于输入信号的输入通道，提供2维最大池化（max pooling）操作，输出池化后的值out和索引indices（采用mask语义计算得出，指在池化过程中记录最大值所在位置的掩码信息）。
 
 - 计算公式：
 
@@ -160,7 +160,7 @@ aclnnStatus aclnnMaxPool2dWithMask(
       <td>indices</td>
       <td>输出</td>
       <td>最大值的索引位置组成的Tensor（采用mask语义）。</td>
-      <td>shape与out一致，为自定义mask值。</td>
+      <td>shape由上述公式推导出，为自定义mask值。</td>
       <td>INT8。</td>
       <td>NCHW、ND</td>
       <td>3-4</td>
@@ -246,7 +246,7 @@ aclnnStatus aclnnMaxPool2dWithMask(
       <td>kernelSize中的数值中存在小于等于0的数值。</td>
     </tr>
     <tr>
-      <td>stride的长度不等于0，1或2。</td>
+      <td>stride的长度不等于0、1或2。</td>
     </tr>
     <tr>
       <td>stride的数值中存在小于等于0的值。</td>
@@ -325,6 +325,7 @@ $$s_w >= (W_{in} + padding\_size) / (W_{out} - 1)$$
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 ```Cpp
+#include <cstdio>
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"

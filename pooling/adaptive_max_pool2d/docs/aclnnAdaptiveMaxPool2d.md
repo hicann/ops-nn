@@ -77,7 +77,7 @@ aclnnStatus aclnnAdaptiveMaxPool2d(
         <td>outputSize</td>
         <td>输入</td>
         <td>表示输出结果在H和W维度上的空间大小。</td>
-        <td>-</td>
+        <td>长度为2的INT32数组，且每个元素都必须大于等于0。</td>
         <td>INT32</td>
         <td>-</td>
         <td>-</td>
@@ -242,6 +242,7 @@ aclnnStatus aclnnAdaptiveMaxPool2d(
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 ```Cpp
+#include <cstdio>
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"

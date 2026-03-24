@@ -62,7 +62,7 @@ aclnnStatus aclnnAdaptiveAvgPool2dBackward(
       <td>gradOutput</td>
       <td>输入</td>
       <td>当前节点的梯度。</td>
-      <td>数据类型与self一致，NC维度和sekf保持一致。</td>
+      <td>数据类型与self一致，NC维度和self保持一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND、NCHW、NCL</td>
       <td>3-4</td>
@@ -209,6 +209,7 @@ aclnnStatus aclnnAdaptiveAvgPool2dBackward(
 #include "math.h"
 #include "acl/acl.h"
 #include "aclnnop/aclnn_adaptive_avg_pool2d_backward.h"
+#include <cstdio>
 
 #define CHECK_RET(cond, return_expr) \
   do {                               \

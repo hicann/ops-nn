@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <cstdio>
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
@@ -88,7 +89,7 @@ int main() {
                                      8, 9, 10, 11, 12, 13, 14, 15,
                                      16, 17, 18, 19, 20, 21, 22, 23};
   std::vector<float> outHostData = {0, 0, 0, 0.0};
-  std::vector<int64_t> indicesHostData = {0, 0, 0, 0};
+  std::vector<int32_t> indicesHostData = {0, 0, 0, 0};
 
   //创建self aclTensor
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);

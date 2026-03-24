@@ -108,7 +108,7 @@ aclnnStatus aclnnAvgPool3d(
       <td>stride</td>
       <td>输入</td>
       <td>池化操作的步长，公式中的strides。</td>
-      <td>长度为0（数值与kernelSize数值保持一致）或者1(SD = SH = SW)或者3(SD, SH, SW)，数值必须大于0。</td>
+      <td>长度为0（数值与kernelSize数值保持一致）或者1(SD = SH = SW)或者3(SD, SH, SW)，长度为1或3时数值必须大于0。</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -219,11 +219,12 @@ aclnnStatus aclnnAvgPool3d(
     </tr>
     <tr>
       <td>传入的stride存在某维度的值小于等于0，padding的值不在[0, kernelSize/2]的范围内。</td>
-      <tr>
+    </tr>
+    <tr>
       <td>传入的kernelSize存在某维度的值小于等于0或大于self对应维度上的值。</td>
     </tr>
     <tr>
-      <td>传入的kernelSize、padding的长度不等于1或者不等于3，stride的长度不等于0或1或3。</td>
+      <td>传入的kernelSize、padding的长度既不等于1也不等于3，stride的长度既不等于0、1，也不等于3。</td>
     </tr>
     <tr>
       <td>根据平均池化语义计算得到的输出shape与接口传入的输出shape不一致。</td>
@@ -278,6 +279,7 @@ aclnnStatus aclnnAvgPool3d(
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 ```Cpp
+#include <cstdio>
 #include <iostream>
 #include <memory>
 #include <vector>

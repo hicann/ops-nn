@@ -240,10 +240,10 @@ aclnnStatus aclnnMaxPool(
       <td>单个空间轴方向pad填充量之和需小于等于对应方向kernelShape。</td>
     </tr>
     <tr>
-      <td>dilation的长度不等于0、1、2或4。</td>
+      <td>dilations的长度不等于0、1、2或4。</td>
     </tr>
     <tr>
-      <td>dilation的数值不等于1。</td>
+      <td>dilations的数值不等于1。</td>
     </tr>
   </tbody>
   </table>
@@ -295,6 +295,7 @@ aclnnStatus aclnnMaxPool(
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 ```Cpp
+#include <cstdio>
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"

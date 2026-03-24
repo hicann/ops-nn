@@ -151,7 +151,7 @@ aclnnStatus aclnnAvgPool2d(
     </tr>
     <tr>
       <td>cubeMathType</td>
-      <td>out</td>
+      <td>输入</td>
       <td>指定Cube单元的计算逻辑</td>
       <td>-</td>
       <td>INT8</td>
@@ -298,6 +298,7 @@ aclnnStatus aclnnAvgPool2d(
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 ```Cpp
+#include <cstdio>
 #include <iostream>
 #include <memory>
 #include <vector>

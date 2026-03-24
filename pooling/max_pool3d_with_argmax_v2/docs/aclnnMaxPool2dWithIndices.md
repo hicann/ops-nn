@@ -115,7 +115,7 @@ aclnnStatus aclnnMaxPool2dWithIndices(
     <td>padding</td>
     <td>输入</td>
     <td>每一条边补充的层数，补充的位置填写“负无穷”。</td>
-    <td>数组长度必须为1或2，且数组元素必须都大于等于0或者小于等于kernelSize/2。</td>
+    <td>数组长度必须为1或2，且数组元素必须都大于等于0且小于等于kernelSize/2。</td>
     <td>INT64</td>
     <td>-</td>
     <td>-</td>
@@ -304,6 +304,7 @@ aclnnStatus aclnnMaxPool2dWithIndices(
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 ```Cpp
+#include <cstdio>
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"

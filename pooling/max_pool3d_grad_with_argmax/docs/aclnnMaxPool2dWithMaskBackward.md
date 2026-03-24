@@ -80,7 +80,7 @@ aclnnStatus aclnnMaxPool2dWithMaskBackward(
     <td>输入</td>
     <td>正向的输入数据。</td>
     <td>-</td>
-    <td>FLOAT、FLOAT16、BFLOAT16</td>
+    <td>FLOAT32、FLOAT16、BFLOAT16</td>
     <td>NCHW</td>
     <td>4</td>
     <td>√</td>
@@ -284,8 +284,10 @@ aclnnStatus aclnnMaxPool2dWithMaskBackward(
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 ```Cpp
+#include <cstdio>
 #include <iostream>
 #include <vector>
+#include <algorithm>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_max_pool2d_with_indices_backward.h"
 

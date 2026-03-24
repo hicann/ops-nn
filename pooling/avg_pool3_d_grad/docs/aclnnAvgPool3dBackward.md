@@ -32,7 +32,7 @@
   W_{in} = (W_{out} - 1) * {stride[2]} + kernel\_size[2] - 2 * padding[2]
   $$
 
-  若ceil_mode为true，且满足
+  若ceilMode为true，且满足
 
   $$
   (D_{out} - 1) * stride[0] >= D_{in} + padding[0]
@@ -294,6 +294,7 @@ aclnnStatus aclnnAvgPool3dBackward(
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 ```Cpp
+#include <cstdio>
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"

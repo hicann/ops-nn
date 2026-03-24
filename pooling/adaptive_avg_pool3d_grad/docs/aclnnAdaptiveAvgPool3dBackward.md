@@ -208,6 +208,7 @@ aclnnStatus aclnnAdaptiveAvgPool3dBackward(
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
 ```Cpp
+#include <cstdio>
 #include <iostream>
 #include <vector>
 #include "math.h"
@@ -290,6 +291,7 @@ int main() {
   std::vector<float> xGradHostData(16, 0);
   // 创建yGrad aclTensor
   ret = CreateAclTensor(yGradHostData, yGradShape, &yGradDeviceAddr, aclDataType::ACL_FLOAT, &yGrad);
+  CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建x aclTensor
   ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT, &x);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
