@@ -40,6 +40,7 @@ constexpr uint64_t L0AB_PINGPONG_BUFFER_SIZE_INT8 = 262144; // 131072 * 2 = 256 
 constexpr uint64_t L0AB_PINGPONG_BUFFER_SIZE_FP16 = 131072; // 128 KB
 constexpr uint64_t L1AB_PINGPONG_BUFFER_SIZE_INT8_SPARSE = 163840; // 160 * 1024
 constexpr uint64_t UB_LIMIT_SIZE_910A = 131072; // 128 * 1024
+constexpr uint64_t UB_LIMIT_SIZE_PERTOKEN_ARCH20 = 131072; // 128 * 1024
 
 template <uint64_t DIV>
 inline uint64_t CeilDiv(uint64_t num)
@@ -121,10 +122,12 @@ inline uint64_t GetN0TilingInit(const OpShareType &opShape, bool compressFlag,
 template <bool PRI_FLAG>
 inline bool IsExceedTilingLimit(uint64_t axes0, uint64_t priAxes0,
                                 uint64_t n0TilingLimit, platform_ascendc::SocVersion platformType,
-                                uint64_t basicBlockSize)
+                                uint64_t basicBlockSize, const bool isPertokenArch20)
 {
     return (PRI_FLAG && axes0 > n0TilingLimit) || (!PRI_FLAG && priAxes0 > n0TilingLimit) ||
-           (platformType == platform_ascendc::SocVersion::ASCEND910 && basicBlockSize > UB_LIMIT_SIZE_910A);
+           (platformType == platform_ascendc::SocVersion::ASCEND910 && basicBlockSize > UB_LIMIT_SIZE_910A ||
+            platformType == platform_ascendc::SocVersion::ASCEND310P && isPertokenArch20 == true && 
+            basicBlockSize > UB_LIMIT_SIZE_PERTOKEN_ARCH20);
 }
 
 template <bool PRI_FLAG, typename OpShareType>
@@ -187,7 +190,7 @@ void TilingFunc(OpShareType &opShape, TilingType &tilingParam, const HardwareTyp
                 continue;
             }
             if (mmInfo.isInt8 &&
-                IsExceedTilingLimit<PRI_FLAG>(axes0, priAxes0, n0TilingLimit, platformType, basicBlockSize)) {
+                IsExceedTilingLimit<PRI_FLAG>(axes0, priAxes0, n0TilingLimit, platformType, basicBlockSize, mmInfo.isPertokenArch20)) {
                 continue;
             }
             SetOpShapeAxesInfo<PRI_FLAG>(opShape, priAxes0, axes0);

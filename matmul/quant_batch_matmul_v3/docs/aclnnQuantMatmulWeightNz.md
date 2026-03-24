@@ -32,6 +32,18 @@
     out = (x1@x2 + bias) * x2Scale + x2Offset
     $$
 
+    - 有x1Scale无bias
+
+    $$
+    out = x1@x2 * x2Scale * x1Scale
+    $$
+
+    - 有x1Scale，bias INT32
+
+    $$
+    out = (x1@x2 + bias) * x2Scale * x1Scale
+    $$
+
     </details>
 
     <details>
@@ -343,8 +355,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 
     - 上表数据类型列中的角标“1”代表该系列不支持的数据类型。
     - x2不支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-    - 不支持x1Scale。
-    - 不支持yScale
+    - 不支持yScale。
     - 不支持groupSize，groupSize传0。
     </details>
 
@@ -498,6 +509,8 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     | ---- | ---- | ------- | ------------ | ------------- | ---------- | ------- |
     | INT8 | INT8 | null    | UINT64/INT64 | null          | null/INT32 | FLOAT16 |
     | INT8 | INT8 | null    | UINT64/INT64 | null/FLOAT32  | null/INT32 | INT8    |
+    | INT8 | INT8 | FLOAT   | FLOAT        | null          | null/INT32 | FLOAT16 |
+  - 当x1Scale不为null时，只支持K-C量化。
 
 </details>
 

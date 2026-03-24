@@ -80,7 +80,6 @@ public:
         core_loop_ = tilingData->coreLoop;
         swizzle_cnt_ = tilingData->swizzleCount;
         BiasWithBatch = tilingData->biasWithBatch;
-
         l1_a_ping = buf.template GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(0);
         l1_a_pong = buf.template GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(L1_PINGPONG_BUFFER_LEN_INT8);
         l1_b_ping = buf.template GetBuffer<BufferType::ASCEND_CB, IN_DTYPE>(L1_PINGPONG_BUFFER_LEN_INT8 * CONST_2);

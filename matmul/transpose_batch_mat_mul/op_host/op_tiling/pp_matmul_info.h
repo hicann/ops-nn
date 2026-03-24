@@ -40,6 +40,7 @@ struct MatMulInfo {
     bool biasFlag{0}; // false: 0, true: 1
     bool isInt8{0};
     bool isQuantBatchMatmulV3{0};
+    bool isPertokenArch20{0};
     float sizeInDtype{0};
     float sizeOutDtype{0};
 };

@@ -583,7 +583,6 @@ aclnnStatus aclnnQuantMatmulV5(
     | INT8       | INT8         | FLOAT32     | FLOAT32      | null        | null        | null     | null       | null/INT32   | FLOAT16            |
   - x1的约束：
     - x1的最后一维大小不能超过65535，transposeX1仅支持false。
-    - x1仅支持shape为2维（m，k）或3维（b，m，k）。
   - x2的约束：
     - x2的最后一维大小不能超过65535，transposeX2仅支持true。
     - 各个维度表示：（batch，k1，n1，n0，k0），batch可不存在，其中k0 = 32， n0 = 16， x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 32） = k1。
