@@ -47,7 +47,7 @@ __aicore__ inline void CTCLossV2FP16<T, DataType, ThreadType>::Init(GM_ADDR log_
 }
 
 template <typename DataType, typename ThreadType>
-__aicore__ inline DataType ProcessTgBatchOffsetsFp16(__gm__ DataType *targetLengthsGm, int32_t targetsDim,
+__simt_callee__ __aicore__ inline DataType ProcessTgBatchOffsetsFp16(__gm__ DataType *targetLengthsGm, int32_t targetsDim,
     int32_t tgBatchStride, int32_t idx)
 {
     if (targetsDim == 1) {
@@ -62,7 +62,7 @@ __aicore__ inline DataType ProcessTgBatchOffsetsFp16(__gm__ DataType *targetLeng
 }
 
 template <typename T, typename DataType, typename ThreadType>
-__aicore__ __attribute__((always_inline)) inline void CalcLogAlphaFp16(int32_t batchSize, int32_t laInputStride, 
+__simt_callee__  __aicore__ __attribute__((always_inline)) inline void CalcLogAlphaFp16(int32_t batchSize, int32_t laInputStride, 
     ThreadType laBatchStride, ThreadType lpBatchStride, int32_t maxInputLength, ThreadType lpInputStride, int32_t targetsDim, 
     int32_t tgBatchStride, int32_t blank, int32_t tgTargetStride, __gm__ T *logProbsGm, __gm__ DataType *targetsGm, 
     __gm__ DataType *inputLengthsGm, __gm__ DataType *targetLengthsGm, __gm__ T *negLogLikelihoodGm, __gm__ T *logAlphaGm, __gm__ float *tmpDataGm)

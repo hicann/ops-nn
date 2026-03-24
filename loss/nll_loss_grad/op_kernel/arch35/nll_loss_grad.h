@@ -110,7 +110,7 @@ __aicore__ inline void KernelNLLLossGrad<T, F>::Init(GM_ADDR x, GM_ADDR y_grad, 
     this->blockTailCore_ = tilingData.blockTailCore;
 }
 
-__aicore__ inline void TargetCheck(const int64_t idx, const int64_t classNum)
+__simt_callee__ __aicore__ inline void TargetCheck(const int64_t idx, const int64_t classNum)
 {
     ASSERT((0 <= idx && idx < classNum) &&
            ("Currert target is %ld, which should be in range (0, classNum:%ld)", idx, classNum));

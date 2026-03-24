@@ -40,7 +40,7 @@ constexpr uint32_t THREAD_DIMS = 1024;
 #endif
 
 template <typename T1>
-__aicore__ inline void SetOutOfBoundValue(__ubuf__ T1 *dstTensor, const uint32_t idx)
+__simt_callee__ __aicore__ inline void SetOutOfBoundValue(__ubuf__ T1 *dstTensor, const uint32_t idx)
 {
     if constexpr (IsSameType<T1, int4>::value) {
         dstTensor[idx] = (int4){defaultZero[0], defaultZero[1], defaultZero[2], defaultZero[3]};

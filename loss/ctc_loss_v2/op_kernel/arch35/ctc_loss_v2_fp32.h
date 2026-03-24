@@ -70,21 +70,21 @@ __aicore__ inline void CTCLossV2FP32<T, DataType, ThreadType>::Init(GM_ADDR log_
 }
 
 template <typename DataType>
-__aicore__ inline DataType GetTargetPrime(__gm__ DataType *target, int64_t offset, int64_t stride, int32_t idx,
+__simt_callee__ __aicore__ inline DataType GetTargetPrime(__gm__ DataType *target, int64_t offset, int64_t stride, int32_t idx,
     int64_t blank)
 {
     return ((idx & 1) == 0) ? blank : target[offset + stride * (idx >> 1)];
 }
 
 template <typename DataType>
-__aicore__ inline DataType ProcessTgBatchOffsets(__ubuf__ DataType *tensor, int64_t targetsDim, int64_t tgBatchStride,
+__simt_callee__ __aicore__ inline DataType ProcessTgBatchOffsets(__ubuf__ DataType *tensor, int64_t targetsDim, int64_t tgBatchStride,
     int32_t idx)
 {
     return (targetsDim == 1) ? tensor[idx] : (tgBatchStride * idx);
 }
 
 template <typename T, typename DataType, typename ThreadType>
-__aicore__ __attribute__((always_inline)) inline void CalcLogAlpha(int32_t batchSize, int32_t laInputStride, ThreadType laBatchStride, 
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline void CalcLogAlpha(int32_t batchSize, int32_t laInputStride, ThreadType laBatchStride, 
     ThreadType lpBatchStride, int32_t maxInputLength, ThreadType lpInputStride, int32_t targetsDim, int32_t tgBatchStride, int32_t blank,
     int32_t tgTargetStride, __gm__ T *logProbsGm, __gm__ DataType *targetsGm, __gm__ DataType *inputLengthsGm,
     __gm__ DataType *targetLengthsGm, __gm__ T *negLogLikelihoodGm, __gm__ T *logAlphaGm, __ubuf__ DataType *tensor)

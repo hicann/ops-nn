@@ -161,7 +161,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void SimtComputeDim8(
     __gm__ CAST_T* xWorkspaceGm, __ubuf__ uint64_t* TilingUint64Ub, COMP_T allAxis, __ubuf__ COMP_T* params);
 
 template <typename DATA_T, typename COMP_T, typename CAST_T, const uint32_t REDU>
-__aicore__ inline void ReplaceOut(__gm__ DATA_T* updates, __gm__ DATA_T* y, __gm__ CAST_T* updatesWorkspaceGm,
+__simt_callee__  __aicore__ inline void ReplaceOut(__gm__ DATA_T* updates, __gm__ DATA_T* y, __gm__ CAST_T* updatesWorkspaceGm,
                                   __gm__ CAST_T* xWorkspaceGm, COMP_T yOffset, COMP_T updatesOffset);
 
 template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, const uint32_t REDU>
@@ -480,7 +480,7 @@ __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU
 }
 
 template <typename DATA_T, typename COMP_T, typename CAST_T, const uint32_t REDU>
-__aicore__ inline void ReplaceOut(__gm__ DATA_T* updates, __gm__ DATA_T* y, __gm__ CAST_T* updatesWorkspaceGm,
+__simt_callee__  __aicore__ inline void ReplaceOut(__gm__ DATA_T* updates, __gm__ DATA_T* y, __gm__ CAST_T* updatesWorkspaceGm,
                                   __gm__ CAST_T* xWorkspaceGm, COMP_T yOffset, COMP_T updatesOffset)
 {
     if constexpr (REDU == REDU_ADD) {

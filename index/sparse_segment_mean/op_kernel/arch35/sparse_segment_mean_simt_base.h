@@ -32,7 +32,7 @@ constexpr uint32_t THREAD_NUM_LAUNCH_BOUND = 2048;
 constexpr uint32_t THREAD_NUM_LAUNCH_BOUND_SMALL = 1024;
 
 template <typename SEGMENTIDS_T>
-__aicore__ inline SEGMENTIDS_T Clip(SEGMENTIDS_T id, uint32_t segmentNum)
+__simt_callee__ __aicore__ inline SEGMENTIDS_T Clip(SEGMENTIDS_T id, uint32_t segmentNum)
 {
     return min(
         static_cast<SEGMENTIDS_T>(max(SEGMENTIDS_T(-1), id)),
@@ -112,7 +112,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtLoo
 }
 
 
-__aicore__ inline float BinaryAdd(float value, uint32_t threadNumY, bool valid, uint32_t threadIdxY,
+__simt_callee__ __aicore__ inline float BinaryAdd(float value, uint32_t threadNumY, bool valid, uint32_t threadIdxY,
                                   uint32_t threadIdxX, uint32_t threadNumX, __local_mem__ float* tmpLocal, uint32_t threadIdxZ)
 {
     // Binary add in the thread_y

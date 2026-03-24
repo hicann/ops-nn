@@ -135,7 +135,7 @@ __aicore__ inline void CTCLossV2Grad<T, DataType, ThreadType>::Init(
 }
 
 template <typename T, typename DataType, typename ThreadType>
-__aicore__ __attribute__((always_inline)) inline ThreadType ProcessTgBatchOffsets(
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline ThreadType ProcessTgBatchOffsets(
     ThreadType idx, __gm__ DataType* targetLengthsGm, ThreadType targetsDimNum, ThreadType sDimRange)
 {
     if (targetsDimNum == 1) {
@@ -150,7 +150,7 @@ __aicore__ __attribute__((always_inline)) inline ThreadType ProcessTgBatchOffset
 }
 
 template <typename T, typename DataType, typename ThreadType>
-__aicore__ __attribute__((always_inline)) inline ThreadType GetTargetPrime(
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline ThreadType GetTargetPrime(
     __gm__ DataType* targetsGm, ThreadType offset, ThreadType stride, ThreadType idx, ThreadType blank)
 {
     if ((idx & 1) == 0) {

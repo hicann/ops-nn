@@ -32,7 +32,7 @@ constexpr int32_t THREAD_NUM_FULL = 1024;
 constexpr int32_t THREAD_NUM_HALF = 512;
 
 template<typename TX, typename TIDX, bool ACCUMULATE, bool ALL_INDEXED, bool INDEXED_BLOCK_MODE>
-__aicore__ __attribute__((always_inline)) inline void SimtIndexPutV2(__gm__ TX* output, __gm__ TIDX* sortIndices,
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline void SimtIndexPutV2(__gm__ TX* output, __gm__ TIDX* sortIndices,
     __gm__ int32_t* posIdx, __gm__ TX* values, __ubuf__ int64_t* tilingUb) {
     const auto& nonIndexedDimNum = tilingUb[0];
     const auto& indexedDimSize = tilingUb[1];

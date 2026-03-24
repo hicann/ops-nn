@@ -62,7 +62,7 @@ __aicore__ inline void DeformableOffsetGrad<T, T1>::Init(
 }
 
 template <typename T1>
-__aicore__ __attribute__((always_inline)) inline T1 GetFloorValue(float x)
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline T1 GetFloorValue(float x)
 {
     float negativeValue = static_cast<float>(0.0);
     float floorFactor = static_cast<float>(-1);
@@ -70,7 +70,7 @@ __aicore__ __attribute__((always_inline)) inline T1 GetFloorValue(float x)
 }
 
 template <typename T, typename T1>
-__aicore__ __attribute__((always_inline)) inline void ComputeForGetFloorValueDeformableGrad(
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline void ComputeForGetFloorValueDeformableGrad(
     __gm__ T* gradGmAddr, T1 c, T1 gradPrevIdx, float mask, float& gradOffsetsValueH, float vRow1,
     float Row1_2, float& gradOffsetsValueW, float vRow2, float Row2_2, float& gradOffsetsValueMask, float w,
     float vRow3)
@@ -81,7 +81,7 @@ __aicore__ __attribute__((always_inline)) inline void ComputeForGetFloorValueDef
 }
 
 template <typename T, typename T1>
-__aicore__ __attribute__((always_inline)) inline void BilinearInterpolate(
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline void BilinearInterpolate(
     __gm__ T* gradGmAddr, __gm__ T* inputXGmAddr, __gm__ T* offsetsGmAddr, __gm__ T* yGradXGmAddr,
     __gm__ T* yGradOffsetsGmAddr, T1 gradPrevIdx, float mask, T1 inputXIdx, T1 yGradXIdx,
     T1 gradOffsetsHIdx, T1 gradOffsetsWIdx, T1 gradOffsetsMaskIdx, float posH, float posW,
@@ -160,7 +160,7 @@ __aicore__ __attribute__((always_inline)) inline void BilinearInterpolate(
 }
 
 template <typename T, typename T1>
-__aicore__ __attribute__((always_inline)) inline void DoComputePerGroup(
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline void DoComputePerGroup(
     __gm__ T* gradGmAddr, __gm__ T* inputXGmAddr, __gm__ T* offsetsGmAddr, __gm__ T* yGradXGmAddr,
     __gm__ T* yGradOffsetsGmAddr, T1 gradIdx, T1 inputXIdx, T1 offsetsIdx, T1 yGradXIdx,
     T1 yGradOffsetsIdx, T1 channelPerGroup, T1 iHo, T1 iWo, T1 iKh, T1 iKw,

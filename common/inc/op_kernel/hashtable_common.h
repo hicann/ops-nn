@@ -18,8 +18,7 @@
 #include "kernel_operator.h"
 
 namespace Hashtbl {
-
-__aicore__ inline uint32_t MurmurHash3(__gm__ int64_t* key, int len, uint32_t seed)
+__simt_callee__ __aicore__ inline uint32_t MurmurHash3(__gm__ int64_t* key, int len, uint32_t seed)
 {
     const uint32_t c1 = 0xcc9e2d51;
     const uint32_t c2 = 0x1b873593;

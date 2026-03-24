@@ -52,13 +52,13 @@ __aicore__ inline void DeformableOffset<T, T1, T2>::Init(
     tiling_ = tilingData;
 }
 
-__aicore__ __attribute__((always_inline)) inline float GetFloorValue(float x)
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline float GetFloorValue(float x)
 {
     return __floorf(x);
 }
 
 template <typename T, typename T1, typename T2>
-__aicore__ __attribute__((always_inline)) inline T GetInputPointValue(
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline T GetInputPointValue(
     __gm__ T* inputImgGmAddr, T1 inputHeight, T1 inputWidth, T1 channelIndex,
     T1 inputDataBatchOffset, T1 imgHeight, T1 imgWidth, T1 imgWidthStride, T1 imgChannel)
 {
@@ -70,7 +70,7 @@ __aicore__ __attribute__((always_inline)) inline T GetInputPointValue(
 }
 
 template <typename T, typename T1, typename T2>
-__aicore__ __attribute__((always_inline)) inline T DeformableOffsetBilinear(
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline T DeformableOffsetBilinear(
     __gm__ T* inputImgGmAddr, float pointHeight, float pointWidth, T1 channelIndex, T offsetPointWeight,
     T1 inputDataBatchOffset, T1 imgHeight, T1 imgWidth, T1 imgWidthStride, T1 imgChannel)
 {
