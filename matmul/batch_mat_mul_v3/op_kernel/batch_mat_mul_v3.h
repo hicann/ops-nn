@@ -724,21 +724,21 @@ BatchMatMulUnalignedMultiBatchKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TY
     // ND2NZ
     if (innerParams_.nd2nzFlag == ND2NZ_SELECT::ONLY_B) {
         MatrixBtoNZV2<B_T>(innerParams_.workspaceGMNZ, innerParams_.bGMND, tilingPtr_->matmulTiling.matmulTiling,
-            innerParams_.isTransposeB, ubBuf_, 0, 0, innerParams_.nd2nzBatchNum);
+            innerParams_.isTransposeB, ubBuf_, 0, 0, innerParams_.nd2nzBatchNum, tilingPtr_->multiBatchInfo.cBatchDimAll);
     } else if (innerParams_.nd2nzFlag == ND2NZ_SELECT::ONLY_A) {
         MatrixAtoNZV2<A_T>(innerParams_.workspaceGMNZ, innerParams_.aGMND, tilingPtr_->matmulTiling.matmulTiling,
-            innerParams_.isTransposeA, ubBuf_, 0, 0, innerParams_.nd2nzBatchNum);
+            innerParams_.isTransposeA, ubBuf_, 0, 0, innerParams_.nd2nzBatchNum, tilingPtr_->multiBatchInfo.cBatchDimAll);
     } else if (innerParams_.nd2nzFlag == ND2NZ_SELECT::BOTH_AB) {
         if (!innerParams_.alignedA) {
             MatrixAtoNZV2<A_T>(innerParams_.workspaceGMNZ, innerParams_.aGMND, tilingPtr_->matmulTiling.matmulTiling,
-                innerParams_.isTransposeA, ubBuf_, 0, 0, innerParams_.nd2nzBatchNum);
+                innerParams_.isTransposeA, ubBuf_, 0, 0, innerParams_.nd2nzBatchNum, tilingPtr_->multiBatchInfo.cBatchDimAll);
         }
         event_t eventMTE3MTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
         SetFlag<HardEvent::MTE3_MTE2>(eventMTE3MTE2);
         WaitFlag<HardEvent::MTE3_MTE2>(eventMTE3MTE2);
         if (!innerParams_.alignedB) {
             MatrixBtoNZV2<B_T>(innerParams_.workspaceGMabNZ, innerParams_.bGMND, tilingPtr_->matmulTiling.matmulTiling,
-                innerParams_.isTransposeB, ubBuf_, 0, 0, innerParams_.nd2nzBatchNum);
+                innerParams_.isTransposeB, ubBuf_, 0, 0, innerParams_.nd2nzBatchNum, tilingPtr_->multiBatchInfo.cBatchDimAll);
         }
     }
     SyncAll();
