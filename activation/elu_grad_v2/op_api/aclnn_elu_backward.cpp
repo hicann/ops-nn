@@ -123,6 +123,28 @@ static inline bool CheckAttributeValue(const aclScalar* alpha, bool isResult)
     return true;
 }
 
+static void CheckFormat(const aclTensor* gradOutput, const aclTensor* selfOrResult, const aclTensor* gradInput)
+{
+    op::Format format = gradOutput->GetStorageFormat();
+    if (format == Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGW(
+            "Format of gradOutput input gets [%s], this format mat lead to precision failure",
+            op::ToString(format).GetString());
+    }
+    format = selfOrResult->GetStorageFormat();
+    if (format == Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGW(
+            "Format of selfOrResult input gets [%s], this format mat lead to precision failure",
+            op::ToString(format).GetString());
+    }
+    format = gradInput->GetStorageFormat();
+    if (format == Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGW(
+            "Format of gradInput input gets [%s], this format mat lead to precision failure",
+            op::ToString(format).GetString());
+    }
+}
+
 static aclnnStatus CheckParams(
     const aclTensor* gradOutput, const aclScalar* alpha, const aclScalar* scale, const aclScalar* inputScale,
     bool isResult, const aclTensor* selfOrResult, const aclTensor* gradInput)
@@ -139,6 +161,8 @@ static aclnnStatus CheckParams(
     // 4. 检查alpha的取值是否满足要求
     CHECK_RET(CheckAttributeValue(alpha, isResult), ACLNN_ERR_PARAM_INVALID);
 
+    // 5.检查数据格式是否支持
+    CheckFormat(gradOutput, selfOrResult, gradInput);
     return ACLNN_SUCCESS;
 }
 
