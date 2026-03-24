@@ -222,7 +222,7 @@ aclnnStatus aclnnAddRmsNormGetWorkspaceSize(
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 支持空tensor
-    bool anyEmptyTensor = x1->IsEmpty() || gamma->IsEmpty() || rstdOut->IsEmpty();
+    bool anyEmptyTensor = x1->IsEmpty() || gamma->IsEmpty();
     if (anyEmptyTensor) {
         OP_LOGW("Got empty tensor in aclnnAddRmsNorm!");
         *workspaceSize = 0;
