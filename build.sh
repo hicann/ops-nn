@@ -593,11 +593,8 @@ make_clean() {
 }
 
 make_clean_all() {
-  if [ -d "$BUILD_PATH" ]; then
-    cd $BUILD_PATH
-    rm -rf ./*
-  fi
-  [ -d "$BUILD_OUT_PATH" ] && rm -rf $BUILD_OUT_PATH
+  clean_build
+  clean_build_out
   print_success "make clean all success!"
 }
 
@@ -999,6 +996,51 @@ assemble_cmake_args() {
   fi
 }
 
+cmake_init() {
+  if [ ! -d "${BUILD_PATH}" ]; then
+    mkdir -p "${BUILD_PATH}"
+  fi
+
+  [ -f "${BUILD_PATH}/CMakeCache.txt" ] && rm -f ${BUILD_PATH}/CMakeCache.txt
+
+  cd "${BUILD_PATH}" && cmake -DCANN_3RD_LIB_PATH=${CANN_3RD_LIB_PATH} -DENABLE_EXPERIMENTAL=${ENABLE_EXPERIMENTAL} -DPREPROCESS_ONLY=ON ..
+}
+
+clean_build() {
+  if [ -d "${BUILD_PATH}" ]; then
+    rm -rf ${BUILD_PATH}/*
+  fi
+}
+
+clean_build_out() {
+  if [ -d "${BUILD_OUT_PATH}" ]; then
+    rm -rf ${BUILD_OUT_PATH}/*
+  fi
+}
+
+clean_build_binary() {
+  if [ -d "${BUILD_PATH}/tbe" ]; then
+    rm -rf ${BUILD_PATH}/tbe/
+  fi
+  if [ -d "${BUILD_PATH}/autogen" ]; then
+    rm -rf ${BUILD_PATH}/autogen/
+  fi
+  if [ -d "${BUILD_PATH}/binary" ]; then
+    rm -rf ${BUILD_PATH}/binary/
+  fi
+  if [ -d "${BUILD_PATH}/es_packages" ]; then
+    rm -rf ${BUILD_PATH}/es_packages/
+  fi
+  if [ -d "${BUILD_PATH}/es_nn_build" ]; then
+    rm -rf ${BUILD_PATH}/es_nn_build/
+  fi
+  if [[ "$ENABLE_STATIC" == "TRUE" ]]; then
+    if [ -d "${BUILD_PATH}/static_library_files" ]; then
+      rm -rf ${BUILD_PATH}/static_library_files/
+    fi
+  fi
+}
+
 build_static_lib() {
   echo $dotted_line
   echo "Start to build static lib."
@@ -1036,7 +1078,7 @@ build_lib() {
   echo "Start to build libs ${BUILD_LIBS[@]}"
 
   git submodule init && git submodule update
-  cd "${BUILD_PATH}" && cmake ${CMAKE_ARGS} -UENABLE_STATIC ..
+  cd "${BUILD_PATH}" && cmake ${CMAKE_ARGS} -UENABLE_STATIC .. &>/dev/null
   local all_targets=$(cmake --build . --target help)
   for lib in "${BUILD_LIBS[@]}"; do
     if grep -wq "$lib" <<< "${all_targets}"; then
@@ -1079,7 +1121,7 @@ build_binary() {
   echo "arch=$(arch)" >> ${BUILD_PATH}/opp/scene.info
   echo "--------------- build tiling end ---------------"
 
-  cd "${BUILD_PATH}" && cmake .. ${CMAKE_ARGS}
+  cd "${BUILD_PATH}" && cmake .. ${CMAKE_ARGS} &>/dev/null
 
   echo "--------------- prepare build start ---------------"
   local all_targets=$(cmake --build . --target help)
@@ -1111,7 +1153,7 @@ build_binary() {
     [[ -f "$OPC_CMD_FILE" ]] && opc_list_num=$(wc -l < "$OPC_CMD_FILE") || opc_list_num=0
     CMAKE_ARGS="${CMAKE_ARGS} -DOPC_NUM_${unit}=${opc_list_num}"
   done
-  cd "$BUILD_PATH" && cmake .. ${CMAKE_ARGS}
+  cd "$BUILD_PATH" && cmake .. ${CMAKE_ARGS} &>/dev/null
 
   if grep -wq "binary" <<< "${all_targets}"; then
     cmake --build . --target binary -- ${VERBOSE} -j $THREAD_NUM
@@ -1129,6 +1171,7 @@ build_binary() {
 
 build_pkg() {
   echo "--------------- build pkg start ---------------"
+  clean_build_out
   local all_targets=$(cmake --build . --target help)
   if [[ "$ENABLE_BINARY" == "FALSE" ]]; then # for jit need dynamic py
     if grep -wq "ascendc_impl_gen" <<< "${all_targets}"; then
@@ -1136,7 +1179,7 @@ build_pkg() {
       if [ $? -ne 0 ]; then exit 1; fi
     fi
   fi
-  cd "${BUILD_PATH}" && cmake ${CMAKE_ARGS} ..
+  cd "${BUILD_PATH}" && cmake ${CMAKE_ARGS} .. &>/dev/null
 
   if echo "${all_targets}" | grep -wq "build_es_nn"; then
  	     cmake --build . --target build_es_nn -- ${VERBOSE} -j $THREAD_NUM
@@ -1153,8 +1196,8 @@ parse_op_dependencies() {
 
   cd "${BUILD_PATH}"
   python3 ${BASE_PATH}/scripts/util/dependency_parser.py --ops ${COMPILED_OPS} -p ${BUILD_PATH}
-  echo $dotted_line
   echo "End to parse op dependencies"
+  echo $dotted_line
 }
 
 set_ci_mode() {
@@ -1190,7 +1233,7 @@ build_ut() {
     mkdir -p "${BUILD_PATH}"
   fi
   # 删除ai_core下的json文件，强制UT执行时重新生成json文件，避免多次执行之间的干扰
-  cd "${BUILD_PATH}"  && rm -rf ${BUILD_PATH}/tbe/op_info_cfg/ai_core/* && cmake ${CMAKE_ARGS} ..
+  cd "${BUILD_PATH}"  && rm -rf ${BUILD_PATH}/tbe/op_info_cfg/ai_core/* && cmake ${CMAKE_ARGS} .. &>/dev/null
   local enable_cov=FALSE
   if [[ "$CI_MODE" == "TRUE" ]]; then
     # ci 模式
@@ -1492,12 +1535,12 @@ main() {
   assemble_cmake_args
   echo "CMAKE_ARGS: ${CMAKE_ARGS}"
 
+  clean_build_binary
   if [[ "$ENABLE_RUN_EXAMPLE" == "TRUE" ]]; then
     build_example
     exit $?
   fi
-  mkdir -p "${BUILD_PATH}"
-  cd "${BUILD_PATH}" && rm -f CMakeCache.txt && cmake -DCANN_3RD_LIB_PATH=${CANN_3RD_LIB_PATH} -DENABLE_EXPERIMENTAL=${ENABLE_EXPERIMENTAL} -DPREPROCESS_ONLY=ON ..
+  cmake_init
 
   if [[ "$CI_MODE" == "TRUE" ]]; then
     set_ci_mode
@@ -1505,9 +1548,8 @@ main() {
     parse_op_dependencies
   fi
 
-  rm -fr ${BUILD_PATH}/autogen
-  cd "${BUILD_PATH}" && cmake ${CMAKE_ARGS} -DENABLE_GEN_ACLNN=ON -DPREPROCESS_ONLY=OFF .. 
-  cd "${BUILD_PATH}" && cmake ${CMAKE_ARGS} -DENABLE_GEN_ACLNN=OFF -DPREPROCESS_ONLY=OFF ..
+  cd "${BUILD_PATH}" && cmake ${CMAKE_ARGS} -DENABLE_GEN_ACLNN=ON -DPREPROCESS_ONLY=OFF ..
+  cd "${BUILD_PATH}" && cmake ${CMAKE_ARGS} -DENABLE_GEN_ACLNN=OFF -DPREPROCESS_ONLY=OFF .. &>/dev/null
 
   if [[ "$ENABLE_TEST" == "TRUE" ]]; then
     build_ut

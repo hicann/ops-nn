@@ -55,7 +55,7 @@ function get_binary_config_file() {
 
 function get_simplified_key_config_file() {
   if [ $# -ne 4 ]; then
-    echo "eroor invalid param number:$#, must be 4" >&2
+    echo "error invalid param number:$#, must be 4" >&2
     return 1
   fi
   local workdir="$1"
@@ -92,7 +92,7 @@ function get_simplified_key_config_file() {
 
 main() {
   echo "[INFO] excute file: $0"
-  if [ $# -lt 7 ]; then
+  if [ $# -lt 8 ]; then
     echo "[ERROR] input error"
     echo "[ERROR] bash $0 {op_type} {soc_version} {output_path} {task_path} {enable_debug} {enable_oom} {enable_dump_cce} {enable_mssanitizer} bisheng_flags={bisheng_flags} kernel_template_input={kernel_template_input}"
     exit 1
@@ -114,7 +114,6 @@ main() {
   local enable_mssanitizer=$8
   local bisheng_flags="${9#*=}"
   local kernel_template_input="${10#*=}"
-  local is_need_gen_opc_info=TRUE
   local python_arg=${HI_PYTHON}
   if [ "${python_arg}" = "" ]; then
     python_arg="python3"
@@ -157,7 +156,7 @@ main() {
     op_name="${op_name%_apt}"
   fi
 
-  # 检查并处理以 "_apt" 结尾的 op_file_name
+  # 检查并处理以 "_910b" 结尾的 op_file_name
   if [[ "$op_name" == *_910b ]]; then
     op_name="${op_name%_910b}"
   fi
@@ -193,13 +192,13 @@ main() {
   fi
   if [ -f "${binary_compile_json_file}" ]; then
     echo "[INFO] op:${op_type} will clean ${binary_compile_json_file}"
-    rm -f {binary_compile_json_file}
+    rm -f ${binary_compile_json_file}
   fi
 
   # step 4: get simplified_key_mode from binary_simplified_key_mode.ini
   local simplified_key_file=$(get_simplified_key_config_file ${workdir} ${op_type} ${op_name} ${soc_version_lower})
   local key_mode_default=0
-  if [ -z ${simplified_key_file} ] || [ ! -f ${simplified_key_file} ]; then
+  if [ -z "${simplified_key_file}" ] || [ ! -f "${simplified_key_file}" ]; then
     echo "[INFO] No simplified_key_file found. Using default key_mode_default=0"
   else
     if file "$simplified_key_file" | grep -q "CRLF"; then
@@ -253,7 +252,7 @@ main() {
   var_array=(${val//,/ })
   impl_list_array=(${impl_list//,/ })
   if [ ${#var_array[@]} -ge 2 ]; then
-    impl_list_array=$val
+    impl_list_array="${var_array[@]}"
   fi
 
   opc_soc_version=$(trans_soc ${soc_version})
