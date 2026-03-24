@@ -2304,6 +2304,16 @@
     <td>AI Core</td>
     <td>RmsNorm算子是大模型常用的归一化操作，AddRmsNormCast算子将AddRmsNorm后的Cast算子融合起来，减少搬入搬出操作。</td>
   </tr>
+    <tr>
+    <td>norm</td>
+    <td><a href="../../norm/add_rms_norm_dynamic_mx_quant/README.md">add_rms_norm_dynamic_mx_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicMxQuant算子则是在尾轴上按blocksize分组进行动态MX量化的算子。AddRmsNormDynamicMxQuant算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的DynamicMxQuant算子融合起来，减少搬入搬出操作。AddRmsNormDynamicMxQuant算子相较于AddRmsNormQuant在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算公式中的beta。</td>
+  </tr>
   <tr>
     <td>norm</td>
     <td><a href="../../norm/add_rms_norm_dynamic_quant/README.md">add_rms_norm_dynamic_quant</a></td>
