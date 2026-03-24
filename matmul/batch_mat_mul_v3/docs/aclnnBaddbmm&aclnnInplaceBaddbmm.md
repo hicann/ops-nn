@@ -212,12 +212,14 @@ aclnnStatus aclnnInplaceBaddbmm(
     - cubeMathType=2，当输入数据类型是FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理。
     - cubeMathType=4时不做处理。
+    - cubeMathType=5时，当前不支持输入self与matmul计算结果矩阵做broadcast。
+
   - <term>Ascend 950PR/Ascend 950DT</term>：
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型是FLOAT32时，会转换为FLOAT16计算；当输入为其他数据类型时不做处理；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理。
     - cubeMathType=4时不做处理。
- 	  - 当前不支持cubeMathType=5。
+    - 当前不支持cubeMathType=5。
 
 - **返回值：**
 

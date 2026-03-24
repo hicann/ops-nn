@@ -118,7 +118,7 @@ bool CheckCubeMathTypeForMm(const op::DataType cubeTensorDtype, int8_t cubeMathT
     }
 }
 
-bool CheckCubeMathTypeForAddMm(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias,
+bool CheckCubeMathTypeForAddMm(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* self,
     const aclTensor* out, int8_t cubeMathType)
 {   
     if (cubeMathType != USE_FP32_ADDMM) {
@@ -130,6 +130,29 @@ bool CheckCubeMathTypeForAddMm(const aclTensor* self, const aclTensor* mat2, con
             ACLNN_ERR_PARAM_INVALID,
             "current platform not support cubeMathType = 5: USE_FP32_ADDMM.");
         return false;
+    }
+    // 当cubeMathType=USE_FP32_ADDMM时，当前不支持self与mmout broadcast
+    uint64_t dimNum = mat1->GetViewShape().GetDimNum();
+    uint64_t selfDimNum = self->GetViewShape().GetDimNum();
+    if (dimNum != selfDimNum) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "when cubeMathType = 5:USE_FP32_ADDMM, do not support self's dimnum != matmul out's dimnum.");
+        return false;
+    }
+    const op::Shape selfShape = self->GetViewShape();
+    const op::Shape mat1Shape = mat1->GetViewShape();
+    const op::Shape mat2Shape = mat2->GetViewShape();
+    if (dimNum == 3UL) {
+        OP_CHECK(selfShape[0] == mat1Shape[0] && selfShape[1] == mat1Shape[1] && selfShape[2] == mat2Shape[2],
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "when cubeMathType = 5:USE_FP32_ADDMM, self shape should equal to matmul out shape."),
+            return false);
+    } else if (dimNum == 2UL) {
+        OP_CHECK(selfShape[0] == mat1Shape[0] && selfShape[1] == mat2Shape[1],
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "when cubeMathType = 5:USE_FP32_ADDMM, self shape should equal to matmul out shape."),
+            return false);
     }
     return true;
 }
