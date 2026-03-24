@@ -362,3 +362,60 @@ TEST_F(l2_quant_matmul_test, ascend910B2_test_abnormal_outBatchDim)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
+
+// ==================== 非 contiguous 张量测试 ====================
+
+TEST_F(l2_quant_matmul_test, ascend910B2_test_non_contiguous_x1)
+{
+    // x1 为非 contiguous 张量（转置后的张量）
+    // 原始形状 [16, 32]，转置后逻辑形状 [32, 16]，步长 [1, 16]
+    auto x1_desc = TensorDesc({32, 16}, ACL_INT8, ACL_FORMAT_ND, {1, 16}, 0, {16, 32});
+    auto x2_desc = TensorDesc({16, 8}, ACL_INT8, ACL_FORMAT_ND);
+    auto bias_desc = TensorDesc({8}, ACL_INT32, ACL_FORMAT_ND);
+    float deqScale = 1.0;
+    auto out_desc = TensorDesc({32, 8}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnQuantMatmul, INPUT(x1_desc, x2_desc, bias_desc, deqScale), OUTPUT(out_desc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_quant_matmul_test, ascend910B2_test_non_contiguous_bias)
+{
+    // bias 为非 contiguous 张量
+    auto x1_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto x2_desc = TensorDesc({32, 16}, ACL_INT8, ACL_FORMAT_ND);
+    // bias 从 [32] 的存储中切片出 [16]，步长为 2
+    auto bias_desc = TensorDesc({16}, ACL_INT32, ACL_FORMAT_ND, {2}, 0, {32});
+    float deqScale = 1.0;
+    auto out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnQuantMatmul, INPUT(x1_desc, x2_desc, bias_desc, deqScale), OUTPUT(out_desc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+// aclnnQuantMatmulV2 的非 contiguous 测试
+TEST_F(l2_quant_matmul_test, ascend910B2_test_non_contiguous_v2)
+{
+    // aclnnQuantMatmulV2 接口的非 contiguous 测试
+    auto x1_desc = TensorDesc({32, 16}, ACL_INT8, ACL_FORMAT_ND, {1, 16}, 0, {16, 32});
+    auto x2_desc = TensorDesc({16, 8}, ACL_INT8, ACL_FORMAT_ND);
+    auto bias_desc = TensorDesc({8}, ACL_INT32, ACL_FORMAT_ND);
+    // deqScale 也设为非 contiguous
+    auto deqScale_desc = TensorDesc({16}, ACL_UINT64, ACL_FORMAT_ND, {2}, 0, {32});
+    bool adjX1 = false;
+    bool adjX2 = false;
+    auto out_desc = TensorDesc({32, 8}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(
+        aclnnQuantMatmulV2, INPUT(x1_desc, x2_desc, bias_desc, deqScale_desc, adjX1, adjX2), OUTPUT(out_desc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
