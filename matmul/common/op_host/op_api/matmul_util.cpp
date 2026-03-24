@@ -794,10 +794,10 @@ bool CheckGemmV3WithAlphaBeta(const aclTensor* bias,
         return false;
     }
     // 仅支持fp16、bf16输入
-    if (!(bias->GetDataType() != op::DataType::DT_FLOAT16 && self->GetDataType() != op::DataType::DT_FLOAT16 &&
-          mat2->GetDataType() != op::DataType::DT_FLOAT16) &&
-        !(bias->GetDataType() != op::DataType::DT_BF16 && self->GetDataType() != op::DataType::DT_BF16 &&
-          mat2->GetDataType() != op::DataType::DT_BF16)) {
+    if (!(bias->GetDataType() == op::DataType::DT_FLOAT16 && self->GetDataType() == op::DataType::DT_FLOAT16 &&
+          mat2->GetDataType() == op::DataType::DT_FLOAT16) &&
+        !(bias->GetDataType() == op::DataType::DT_BF16 && self->GetDataType() == op::DataType::DT_BF16 &&
+          mat2->GetDataType() == op::DataType::DT_BF16)) {
         return false;
     }
     OP_LOGI("Check GemmV3WithAlphaBeta success.");
