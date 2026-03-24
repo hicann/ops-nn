@@ -3126,6 +3126,26 @@
   </tr>
   <tr>
     <td>rnn</td>
+    <td><a href="../../rnn/dynamic_rnnv2/README.md">dynamic_rnnv2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>基础循环神经网络 (Recurrent Neural Network) 算子，用于处理序列数据。它通过隐藏状态传递时序信息，适合处理具有时间/顺序依赖性的数据， 仅支持单层RNN。</td>
+  </tr>
+  <tr>
+    <td>rnn</td>
+      <td><a href="../../rnn/single_layer_lstm_grad/README.md">single_layer_lstm_grad</a></td>
+      <td>✓</td>
+      <td>✓</td>
+      <td>✗</td>
+      <td>✓</td>
+      <td>AI Core</td>
+      <td>单层单向LSTM的反向传播，计算正向输入x、权重w、偏置b、初始隐藏状态initH与初始细胞状态initC的梯度。</td>
+  </tr>
+  <tr>
+    <td>rnn</td>
     <td><a href="../../rnn/thnn_fused_lstm_cell/README.md">thnn_fused_lstm_cell</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -3134,15 +3154,15 @@
     <td>AI Core</td>
     <td>实现长短期记忆网络单元（LSTM Cell）的单步前向计算中，矩阵乘法后的后续计算。</td>
   </tr>
-  <tr>
+    <tr>
     <td>rnn</td>
-    <td><a href="../../rnn/dynamic_rnnv2/README.md">dynamic_rnnv2</a></td>
+    <td><a href="../../rnn/thnn_fused_lstm_cell_grad/README.md">thnn_fused_lstm_cell_grad</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>基础循环神经网络 (Recurrent Neural Network) 算子，用于处理序列数据。它通过隐藏状态传递时序信息，适合处理具有时间/顺序依赖性的数据， 仅支持单层RNN。</td>
+    <td>LSTMCell中四个门中matmul后剩余计算的反向传播，计算正向输出四个门激活前的值gates、输入cx、偏置b的梯度。</td>
   </tr>
   <tr>
     <td>vfusion</td>
