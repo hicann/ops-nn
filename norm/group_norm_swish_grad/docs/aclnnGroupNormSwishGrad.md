@@ -78,7 +78,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
 
 -   **参数说明：**
     <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
-      <col style="width: 120px">
+      <col style="width: 220px">
       <col style="width: 120px">
       <col style="width: 287px">
       <col style="width: 387px">
@@ -100,7 +100,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
       </tr></thead>
       <tbody>
       <tr>
-          <td>dy (aclTensor *)</td>
+          <td>dy (aclTensor*)</td>
           <td>输入</td>
           <td>反向计算的梯度，公式中的<code>dy</code>。</td>
           <td><ul><li>不支持空tensor。</li><li>维度支持2D到8D，1维为N，第2维为C。</td>
@@ -110,7 +110,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>√</td>
       </tr>
       <tr>
-          <td>mean (aclTensor *)</td>
+          <td>mean (aclTensor*)</td>
           <td>输入</td>
           <td>正向计算的第二个输出，表示input分组后每个组的均值，公式中的<code>mean</code>。</td>
           <td><ul><li>不支持空tensor。</li><li>数据类型与gamma相同，其中N与dy的第0维度保持一致。</td>
@@ -120,7 +120,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>√</td>
       </tr>
       <tr>
-          <td>rstd (aclTensor *)</td>
+          <td>rstd (aclTensor*)</td>
           <td>输入</td>
           <td>正向计算的第三个输出，表示input分组后每个组的标准差倒数，公式中的<code>rstd</code>。</td>
           <td><ul><li>不支持空tensor。</li><li>数据类型与gamma相同，其中N与dy的第0维度保持一致。</td>
@@ -130,7 +130,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>√</td>
       </tr>
       <tr>
-          <td>x (aclTensor *)</td>
+          <td>x (aclTensor*)</td>
           <td>输入</td>
           <td>正向输入，公式中的<code>x</code>。</td>
           <td><ul><li>不支持空tensor。</li><li>数据类型和shape与dy相同。</td>
@@ -140,7 +140,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>√</td>
       </tr>
       <tr>
-          <td>gamma (aclTensor *)</td>
+          <td>gamma (aclTensor*)</td>
           <td>输入</td>
           <td>每个channel的缩放系数，公式中的<code>gamma</code>。</td>
           <td><ul><li>不支持空tensor。</li><li>数据类型和维度与dy相同，元素个数需要等于C</td>
@@ -150,7 +150,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>√</td>
       </tr>
       <tr>
-          <td>beta (aclTensor *)</td>
+          <td>beta (aclTensor*)</td>
           <td>输入</td>
           <td>每个channel的偏移系数，公式中的<code>beta</code>。</td>
           <td><ul><li>不支持空tensor。</li><li>数据类型和维度与dy相同，元素个数需要等于C</td>
@@ -164,17 +164,17 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>输入</td>
           <td>输入gradOut的C维度分为group组。</td>
           <td>group需大于0，C必须可以被group整除并且比值不能超过4000。</td>
-          <td>INT64</td>
+          <td>-</td>
           <td>-</td>
           <td>-</td>
           <td>-</td>
       </tr>
       <tr>
-          <td>dataFormatOptional (char *)</td>
+          <td>dataFormatOptional (char*)</td>
           <td>输入</td>
           <td>数据格式。</td>
           <td>建议值NCHW。</td>
-          <td>CHAR</td>
+          <td>-</td>
           <td>-</td>
           <td>-</td>
           <td>-</td>
@@ -184,7 +184,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>输入</td>
           <td>计算系数。</td>
           <td>建议值1.0。</td>
-          <td>DOUBLE</td>
+          <td>-</td>
           <td>-</td>
           <td>-</td>
           <td>-</td>
@@ -194,7 +194,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>输入</td>
           <td>是否需要输出dgamma。</td>
           <td>建议值TRUE。</td>
-          <td>BOOL</td>
+          <td>-</td>
           <td>-</td>
           <td>-</td>
           <td>-</td>
@@ -204,13 +204,13 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>输入</td>
           <td>是否需要输出dbeta。</td>
           <td>建议值TRUE。</td>
-          <td>BOOL</td>
+          <td>-</td>
           <td>-</td>
           <td>-</td>
           <td>-</td>
       </tr>
       <tr>
-          <td>dxOut (aclTensor *)</td>
+          <td>dxOut (aclTensor*)</td>
           <td>输出</td>
           <td>公式中的<code>dx</code>。</td>
           <td>数据类型和shape与x相同。</td>
@@ -220,7 +220,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>x</td>
       </tr>
       <tr>
-          <td>dgammaOut (aclTensor *)</td>
+          <td>dgammaOut (aclTensor*)</td>
           <td>输出</td>
           <td>公式中的<code>dGamma</code>。</td>
           <td>数据类型和shape与gamma相同。</td>
@@ -230,7 +230,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>x</td>
       </tr>
       <tr>
-          <td>dbetaOut (aclTensor *)</td>
+          <td>dbetaOut (aclTensor*)</td>
           <td>输出</td>
           <td>beta 的输出梯度，公式中的<code>dBeta</code>。</td>
           <td>数据类型和shape与gamma相同。</td>
@@ -240,7 +240,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>x</td>
       </tr>
       <tr>
-          <td>workspaceSize (uint64_t *)</td>
+          <td>workspaceSize (uint64_t*)</td>
           <td>输出</td>
           <td>返回需要在Device侧申请的workspace大小。</td>
           <td>-</td>
@@ -250,7 +250,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>-</td>
       </tr>
       <tr>
-          <td>executor (aclOpExecutor **)</td>
+          <td>executor (aclOpExecutor**)</td>
           <td>输出</td>
           <td>返回op执行器，包含了算子计算流程。</td>
           <td>-</td>
@@ -260,7 +260,6 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>-</td>
       </tr>
       </tbody></table>
-
 
 - **返回值：**
   
