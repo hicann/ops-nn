@@ -16,25 +16,25 @@
 - 算子功能：根据输入的scale和offset对输入x进行反量化。
 
 - 计算公式：
-  - sqrtMode为true，offset为None时，计算公式为：
+  - sqrt\_mode为true，offset为None时，计算公式为：
 
     $$
     y = cast\_to\_dst\_type((x) * scale * scale)
     $$
 
-  - sqrtMode为true，offset不为None时，计算公式为：
+  - sqrt\_mode为true，offset不为None时，计算公式为：
 
     $$
     y = cast\_to\_dst\_type((x + offset) * scale * scale)
     $$
 
-  - sqrtMode为false，offset为None时，计算公式为：
+  - sqrt\_mode为false，offset为None时，计算公式为：
 
     $$
     y = cast\_to\_dst\_type((x) * scale)
     $$
 
-  - sqrtMode为false，offset不为None时，计算公式为：
+  - sqrt\_mode为false，offset不为None时，计算公式为：
 
     $$
     y = cast\_to\_dst\_type((x + offset) * scale)
@@ -89,7 +89,7 @@
     <tr>
       <td>sqrt_mode</td>
       <td>可选属性</td>
-      <td><ul><li>表示scale参与计算的逻辑。对应公式中的sqrtMode；</li><li>当x的数据类型为HIFLOAT8、FLOAT8_E4M3、FLOAT8_E5M2时，sqrtMode为false。</td>
+      <td><ul><li>表示scale参与计算的逻辑。对应公式中的sqrt_mode；</li><li>当x的数据类型为HIFLOAT8、FLOAT8_E4M3、FLOAT8_E5M2时，sqrt_mode为false。</td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
