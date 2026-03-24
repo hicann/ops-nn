@@ -23,6 +23,11 @@ using namespace AscendC;
 using namespace ScatterAddCommon;
 
 constexpr uint32_t SORT_PADDING = 64;
+constexpr AscendC::MicroAPI::CastTrait castTraitU32U16 = {
+    AscendC::MicroAPI::RegLayout::ZERO,
+    AscendC::MicroAPI::SatMode::NO_SAT,
+    AscendC::MicroAPI::MaskMergeMode::ZEROING
+};
 
 template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
 class ScatterAddSIMDSortSupportAtomicAdd {
@@ -35,6 +40,16 @@ public:
     __aicore__ inline uint32_t ProcessIndices(uint64_t blockOffsetindices, uint64_t rowLoop, uint32_t rows);
     __aicore__ inline void ComputeUpdatesSum(uint64_t cols, uint64_t colsAlign, uint32_t uniqueIdNum);
     __aicore__ inline void CopyResToGm(uint32_t cols, uint32_t colsAlign, uint64_t ubOffset, uint32_t& uniqueIdNum);
+    __aicore__ inline void ProcessPerUpdateScalar(
+        __local_mem__ T* resLocalAddr, MicroAPI::MaskReg& maskRegUpdate, MicroAPI::AddrReg& addrReg,
+        updateAddParams& params, T updateScalarValue);
+
+    template <typename VGatherIndexDType>
+    __aicore__ inline void ComputeUpdatesSumRegbase(uint64_t cols, uint64_t colsAlign, uint32_t uniqueIdNum);
+    template <typename VGatherIndexDType, typename VGatherIndexDTypeInt>
+    __aicore__ inline void ProcessPerUpdateGroup(
+        __local_mem__ T* updatesLocalAddr, __local_mem__ T* resLocalAddr, MicroAPI::MaskReg& maskRegUpdate,
+        MicroAPI::RegTensor<VGatherIndexDTypeInt>& serReg, MicroAPI::AddrReg& addrReg, updateAddParams& params);
 
 private:
     AscendC::GlobalTensor<T> varGm_;
@@ -54,6 +69,7 @@ private:
     const ScatterAddTilingData& tilingData_;
 
     static constexpr uint32_t shiftOffset_ = platform::GetUbBlockSize() / sizeof(CAST_T);
+    static constexpr uint32_t vfLenUpdate_ = VECTOR_LENGTH / sizeof(T);
 };
 
 template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
@@ -104,6 +120,131 @@ __aicore__ inline uint32_t ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, upda
     indicesQueue_.FreeTensor(indicesLocal);
 
     return uniqueIdNum;
+}
+
+template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
+template <typename VGatherIndexDType, typename VGatherIndexDTypeInt>
+__aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesIsScalar, castType, scatterOp>::ProcessPerUpdateGroup(
+    __local_mem__ T* updatesLocalAddr, __local_mem__ T* resLocalAddr, MicroAPI::MaskReg& maskRegUpdate,
+    MicroAPI::RegTensor<VGatherIndexDTypeInt>& serReg, MicroAPI::AddrReg& addrReg, updateAddParams& params)
+{
+    if constexpr (IsSameType<VGatherIndexDType, uint16_t>::value) {
+        MicroAPI::RegTensor<VGatherIndexDType> initIdsReg, idsReg;
+        MicroAPI::RegTensor<VGatherIndexDType> initIdsReg1;
+        MicroAPI::RegTensor<uint32_t> tmReg;
+        MicroAPI::RegTensor<T> gatherOut;
+        MicroAPI::RegTensor<int16_t> gatherOutInt16;  // 用于int8转int16
+        MicroAPI::RegTensor<T> outReg;
+        MicroAPI::MaskReg maskReg = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg maskRegU32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
+
+        MicroAPI::Duplicate(outReg, (T)0, maskReg);
+        for (uint16_t pIdx = 0; pIdx < params.segCount; ++pIdx) {
+            MicroAPI::DataCopy<uint32_t, MicroAPI::LoadDist::DIST_BRC_B32>(tmReg, params.sortedIdxAddr + (params.outGmIndex + pIdx));
+            MicroAPI::Cast<uint16_t, uint32_t, castTraitU32U16>((MicroAPI::RegTensor<uint16_t>&)tmReg, tmReg, maskRegU32);
+            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::HIGHEST>(
+                (MicroAPI::RegTensor<uint16_t>&)initIdsReg, (MicroAPI::RegTensor<uint32_t>&)tmReg);
+            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
+                (MicroAPI::RegTensor<uint16_t>&)initIdsReg1, (MicroAPI::RegTensor<uint32_t>&)tmReg);
+            MicroAPI::Add(initIdsReg, initIdsReg, initIdsReg1, maskReg);
+            MicroAPI::Muls(idsReg, initIdsReg, params.xPerRowNum, maskRegUpdate);
+            MicroAPI::Add(idsReg, (MicroAPI::RegTensor<VGatherIndexDType>&)serReg, idsReg, maskRegUpdate);
+            MicroAPI::DataCopyGather(gatherOut, updatesLocalAddr, idsReg, maskRegUpdate);
+            MicroAPI::Add(outReg, outReg, gatherOut, maskRegUpdate);
+        }
+
+        MicroAPI::DataCopy(resLocalAddr, outReg, addrReg, maskRegUpdate);
+    } else {
+        MicroAPI::RegTensor<VGatherIndexDType> initIdsReg, idsReg;
+        MicroAPI::RegTensor<T> gatherOut;
+        MicroAPI::RegTensor<T> outReg;
+        MicroAPI::MaskReg maskReg = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
+
+        MicroAPI::Duplicate(outReg, (T)0, maskReg);
+        for (uint16_t pIdx = 0; pIdx < params.segCount; ++pIdx) {
+            MicroAPI::DataCopy<uint32_t, MicroAPI::LoadDist::DIST_BRC_B32>(
+                (MicroAPI::RegTensor<uint32_t>&)initIdsReg, params.sortedIdxAddr + (params.outGmIndex + pIdx));
+            MicroAPI::Muls(idsReg, initIdsReg, params.xPerRowNum, maskRegUpdate);
+            MicroAPI::Add(idsReg, (MicroAPI::RegTensor<VGatherIndexDType>&)serReg, idsReg, maskRegUpdate);
+            MicroAPI::DataCopyGather(gatherOut, updatesLocalAddr, idsReg, maskRegUpdate);
+            MicroAPI::Add(outReg, outReg, gatherOut, maskRegUpdate);
+        }
+
+        MicroAPI::DataCopy(resLocalAddr, outReg, addrReg, maskRegUpdate);
+    }
+}
+
+template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesIsScalar, castType, scatterOp>::ProcessPerUpdateScalar(
+    __local_mem__ T* resLocalAddr, MicroAPI::MaskReg& maskRegUpdate, MicroAPI::AddrReg& addrReg,
+    updateAddParams& params, T updateScalarValue)
+{
+    MicroAPI::RegTensor<T> addOut;
+    MicroAPI::RegTensor<T> outReg;
+    MicroAPI::MaskReg maskReg = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
+    MicroAPI::Duplicate(outReg, (T)0, maskReg);
+    MicroAPI::Duplicate(addOut, updateScalarValue, maskReg);
+    for (uint16_t pIdx = 0; pIdx < params.segCount; ++pIdx) {
+        MicroAPI::Add(outReg, outReg, addOut, maskRegUpdate);
+    }
+    MicroAPI::DataCopy(resLocalAddr, outReg, addrReg, maskRegUpdate);
+}
+
+template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
+template <typename VGatherIndexDType>
+__aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesIsScalar, castType, scatterOp>::ComputeUpdatesSumRegbase(
+                                                               uint64_t cols, uint64_t colsAlign, uint32_t uniqueIdNum)
+{
+    LocalTensor<uint32_t> updatesOriginIdxLocal = updatesOriginIdexQue_.Get<uint32_t>();
+    LocalTensor<int32_t> uniqueIdCountLocal = uniqueIdCountQue_.Get<int32_t>();
+    LocalTensor<T> updatesLocal = updatesQueue_.DeQue<T>();
+    LocalTensor<T> resLocal = outQueueRes_.AllocTensor<T>();
+
+    __local_mem__ T* updatesLocalAddr = (__local_mem__ T*)updatesLocal.GetPhyAddr();
+    __local_mem__ T* resLocalAddr = (__local_mem__ T*)resLocal.GetPhyAddr();
+    __local_mem__ T* resLocalBaseAddr = resLocalAddr;
+
+    int32_t sclar0 = 0;
+    T updateScalarValue = updatesLocal(0);
+    uint32_t loopPerRow = (cols + vfLenUpdate_ - 1) / vfLenUpdate_;
+    updateAddParams params;
+    params.xPerRowNum = colsAlign;
+    params.outGmIndex = 0;
+    params.sortedIdxAddr = (__local_mem__ uint32_t*)updatesOriginIdxLocal.GetPhyAddr();
+    using VGatherIndexDTypeInt = std::conditional_t<std::is_same_v<VGatherIndexDType, uint16_t>, int16_t, int32_t>;
+
+    __VEC_SCOPE__
+    {
+        for (uint16_t i = 0; i < (uint16_t)uniqueIdNum; ++i) {
+            MicroAPI::RegTensor<VGatherIndexDTypeInt> serReg;
+            MicroAPI::RegTensor<VGatherIndexDTypeInt> serRegBase;
+
+            MicroAPI::Arange(serRegBase, (VGatherIndexDTypeInt)sclar0);
+
+            params.segCount = static_cast<uint16_t>(uniqueIdCountLocal(i));
+            uint32_t colCount = cols;
+            resLocalAddr = resLocalBaseAddr + i * colsAlign;
+            for (uint16_t j = 0; j < (uint16_t)loopPerRow; ++j) {
+                MicroAPI::MaskReg maskRegUpdate = MicroAPI::UpdateMask<VGatherIndexDType>(colCount);
+                auto addrReg = MicroAPI::CreateAddrReg<T>(j, static_cast<uint16_t>(vfLenUpdate_));
+                if constexpr (updatesIsScalar) {
+                    ProcessPerUpdateScalar(resLocalAddr, maskRegUpdate, addrReg, params, updateScalarValue);
+                } else {
+                    MicroAPI::Adds(serReg, serRegBase, (VGatherIndexDTypeInt)(vfLenUpdate_ * j), maskRegUpdate);
+                    ProcessPerUpdateGroup<VGatherIndexDType, VGatherIndexDTypeInt>(
+                        updatesLocalAddr, resLocalAddr, maskRegUpdate, serReg, addrReg, params);
+                }
+            }
+            params.outGmIndex = params.outGmIndex + params.segCount;
+        }
+    }
+
+    outQueueRes_.EnQue<T>(resLocal);
+    if constexpr (updatesIsScalar) {
+        updatesQueue_.EnQue<T>(updatesLocal);
+    } else {
+        updatesQueue_.FreeTensor<T>(updatesLocal);
+    }
 }
 
 template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
@@ -208,7 +349,14 @@ __aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesI
                 CopyIn(updatesLocal, updatesGm_, offset, rows, cols, tilingData_.varShape[1] - cols);
                 updatesQueue_.EnQue<T>(updatesLocal);
             }
-            ComputeUpdatesSum(cols, colsAlign, uniqueIdNum);
+            if constexpr (IsSameType<T, int8_t>::value) {
+                ComputeUpdatesSum(cols, colsAlign, uniqueIdNum);
+            } else if constexpr (IsSameType<T, half>::value || IsSameType<T, bfloat16_t>::value) {
+                ComputeUpdatesSumRegbase<uint16_t>(cols, colsAlign, uniqueIdNum);
+            } else {
+                ComputeUpdatesSumRegbase<uint32_t>(cols, colsAlign, uniqueIdNum);
+            }
+            
             uint64_t ubOffset = colIdx * tilingData_.normBlockCol + colLoop * tilingData_.ubFactorCol;
             CopyResToGm(cols, colsAlign, ubOffset, uniqueIdNum);
         }

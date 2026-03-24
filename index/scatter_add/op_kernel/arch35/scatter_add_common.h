@@ -19,6 +19,7 @@
 #include "kernel_operator.h"
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
+
 namespace ScatterAddCommon {
 using namespace AscendC;
 constexpr uint32_t VECTOR_LENGTH = platform::GetVRegSize();
@@ -60,6 +61,13 @@ template <typename, typename>
 struct is_same : public false_type {};
 template <typename Tp>
 struct is_same<Tp, Tp> : public true_type {};
+
+typedef struct {
+    uint16_t segCount;    // 记录每次拿到的局部排序后索引的重复次数
+    uint32_t outGmIndex;
+    uint32_t xPerRowNum;
+    __local_mem__ uint32_t* sortedIdxAddr;
+} updateAddParams;
 
 template <typename T>
 __aicore__ inline void CastToInt32(LocalTensor<int32_t>& dstLocal, LocalTensor<T>& srcLocal, uint32_t dataLen)
