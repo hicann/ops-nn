@@ -27,6 +27,7 @@
 #include "level0/dot.h"
 #include "level0/fill.h"
 #include "matmul/common/op_host/op_api/matmul.h"
+#include "matmul/quant_batch_matmul_v4/op_host/op_api/quant_matmul_common_check.h"
 #include "aclnn_kernels/reshape.h"
 #include "aclnn_kernels/transdata.h"
 #include "level0/unsqueeze.h"
@@ -427,8 +428,16 @@ aclnnStatus aclnnQuantMatmulGetWorkspaceSize(
     auto ret = CheckParams(x1, x2, bias, deqScaleTensor, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
+    // 检查输入连续性
+    bool x1TransposeValue = false;
+    CHECK_RET(TensorContiguousProcess(x1, x1TransposeValue, unique_executor.get()), ACLNN_ERR_INNER_NULLPTR);
+    bool x2TransposeValue = false;
+    CHECK_RET(TensorContiguousProcess(x2, x2TransposeValue, unique_executor.get()), ACLNN_ERR_INNER_NULLPTR);
+    bool biasTransposeValue = false;
+    CHECK_RET(TensorContiguousProcess(bias, biasTransposeValue, unique_executor.get()), ACLNN_ERR_INNER_NULLPTR);
+
     // 构建matmul计算图
-    auto matmulOut = BuildQuantMatMulGraph(x1, x2, bias, deqScaleTensor, false, false, out, unique_executor.get());
+    auto matmulOut = BuildQuantMatMulGraph(x1, x2, bias, deqScaleTensor, x1TransposeValue, x2TransposeValue, out, unique_executor.get());
     CHECK_RET(matmulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     if (matmulOut->IsEmpty()) {
         // 当输出为空tensor的场景，空tensor处理
@@ -479,6 +488,14 @@ aclnnStatus aclnnQuantMatmulV2GetWorkspaceSize(
     const_cast<aclTensor*>(deqScale)->SetOriginalFormat(op::Format::FORMAT_NHWC);
     const_cast<aclTensor*>(deqScale)->SetViewFormat(op::Format::FORMAT_NHWC);
     const_cast<aclTensor*>(deqScale)->SetStorageFormat(op::Format::FORMAT_NC1HWC0);
+
+    // 检查输入连续性
+    CHECK_RET(TensorContiguousProcess(x1, adjX1, unique_executor.get()), ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(TensorContiguousProcess(x2, adjX2, unique_executor.get()), ACLNN_ERR_INNER_NULLPTR);
+    bool biasTransposeValue = false;
+    CHECK_RET(TensorContiguousProcess(bias, biasTransposeValue, unique_executor.get()), ACLNN_ERR_INNER_NULLPTR);
+    bool deqScaleTransposeValue = false;
+    CHECK_RET(TensorContiguousProcess(deqScale, deqScaleTransposeValue, unique_executor.get()), ACLNN_ERR_INNER_NULLPTR);
 
     // 构建matmul计算图
     auto matmulOut = BuildQuantMatMulGraph(x1, x2, bias, deqScale, adjX1, adjX2, out, unique_executor.get());
