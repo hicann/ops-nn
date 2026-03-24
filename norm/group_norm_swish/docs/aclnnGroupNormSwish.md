@@ -6,8 +6,12 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    ×     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品</term>                             |    ×     |
+| <term>Atlas 训练系列产品</term>                              |    ×     |
 
 ## 功能说明
 
@@ -15,7 +19,7 @@
 - 计算公式：
   - **GroupNorm:**
     记 $E[x] = \bar{x}$代表$x$的均值，$Var[x] = \frac{1}{n} * \sum_{i=1}^n(x_i - E[x])^2$代表$x$的方差，则
-    
+
     $$
     \left\{
     \begin{array} {rcl}
@@ -27,11 +31,11 @@
     $$
 
   - **Swish:**
-    
+
     $$
     yOut = \frac{x}{1+e^{-scale * x}}
     $$
-    
+
     当activateSwish为True时，会计算Swish， 此时swish计算公式的x为GroupNorm公式得到的out。
 
 ## 函数原型
@@ -67,9 +71,9 @@ aclnnStatus aclnnGroupNormSwish(
 
 - **参数说明：**
     <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+      <col style="width: 220px">
       <col style="width: 120px">
-      <col style="width: 120px">
-      <col style="width: 287px">
+      <col style="width: 187px">
       <col style="width: 387px">
       <col style="width: 187px">
       <col style="width: 187px">
@@ -89,7 +93,7 @@ aclnnStatus aclnnGroupNormSwish(
       </tr></thead>
       <tbody>
       <tr>
-          <td>x</td>
+          <td>x（aclTensor*）</td>
           <td>输入</td>
           <td>待组归一化的目标张量，yOut计算公式中的x。</td>
           <td><ul><li>不支持空tensor。</li><li>维度支持2D到8D，1维为N，第2维为C，要求x第0维和第1维大于0，第1维要求能被group整除。</td>
@@ -99,7 +103,7 @@ aclnnStatus aclnnGroupNormSwish(
           <td>√</td>
       </tr>
       <tr>
-          <td>gamma</td>
+          <td>gamma（aclTensor*）</td>
           <td>输入</td>
           <td>组归一化中的gamma参数，yOut计算公式中的γ。</td>
           <td><ul><li>不支持空tensor。</li><li>元素数量需与输入x的第1维度相同，gamma与beta的数据类型必须保持一致，且数据类型与x相同或者为FLOAT。</td>
@@ -109,7 +113,7 @@ aclnnStatus aclnnGroupNormSwish(
           <td>√</td>
       </tr>
       <tr>
-          <td>beta</td>
+          <td>beta（aclTensor*）</td>
           <td>输入</td>
           <td>组归一化中的 beta 参数，yOut计算公式中的β。</td>
           <td><ul><li>不支持空tensor。</li><li>元素数量需与输入x的第1维度相同，gamma与beta的数据类型必须保持一致，且数据类型与x相同或者为FLOAT。</td>
@@ -119,7 +123,7 @@ aclnnStatus aclnnGroupNormSwish(
           <td>√</td>
       </tr>
       <tr>
-          <td>numGroups</td>
+          <td>numGroups（int64_t）</td>
           <td>输入</td>
           <td>输入gradOut的C维度分为group组。</td>
           <td>group需大于0。</td>
@@ -129,7 +133,7 @@ aclnnStatus aclnnGroupNormSwish(
           <td>-</td>
       </tr>
       <tr>
-          <td>dataFormatOptional</td>
+          <td>dataFormatOptional（char*）</td>
           <td>输入</td>
           <td>数据格式。</td>
           <td>建议值NCHW。</td>
@@ -139,7 +143,7 @@ aclnnStatus aclnnGroupNormSwish(
           <td>-</td>
       </tr>
       <tr>
-          <td>eps</td>
+          <td>eps（double）</td>
           <td>输入</td>
           <td>防止产生除0的偏移，yOut和rstdOut计算公式中的epsepseps值。</td>
           <td>建议值1.0。</td>
@@ -149,7 +153,7 @@ aclnnStatus aclnnGroupNormSwish(
           <td>-</td>
       </tr>
       <tr>
-          <td>activateSwish</td>
+          <td>activateSwish（bool）</td>
           <td>输入</td>
           <td>是否支持swish计算。</td>
           <td>如果设置为true，则表示groupnorm计算后继续swish计算。</td>
@@ -159,7 +163,7 @@ aclnnStatus aclnnGroupNormSwish(
           <td>-</td>
       </tr>
       <tr>
-          <td>swishScale</td>
+          <td>swishScale（double）</td>
           <td>输入</td>
           <td>Swish计算时的scalescalescale值。</td>
           <td>建议值1.0。</td>
@@ -169,7 +173,7 @@ aclnnStatus aclnnGroupNormSwish(
           <td>-</td>
       </tr>
       <tr>
-          <td>yOut</td>
+          <td>yOut（aclTensor*）</td>
           <td>输出</td>
           <td>组归一化结果。</td>
           <td>数据类型和shape与x相同。</td>
@@ -179,7 +183,7 @@ aclnnStatus aclnnGroupNormSwish(
           <td>x</td>
       </tr>
       <tr>
-          <td>meanOut</td>
+          <td>meanOut（aclTensor*）</td>
           <td>x分组后的均值</td>
           <td>公式中的meanOut。</td>
           <td>数据类型与gamma相同，shape为(N， numGroups)，其中N表示x第0维度的大小，numGroups为计算输入，表示将输入x的第1维度分为group组。</td>
@@ -189,7 +193,7 @@ aclnnStatus aclnnGroupNormSwish(
           <td>x</td>
       </tr>
       <tr>
-          <td>rstdOut</td>
+          <td>rstdOut（aclTensor*）</td>
           <td>输出</td>
           <td>x分组后的标准差的倒数。</td>
           <td>数据类型与gamma相同，shape为(N， numGroups)，其中N表示x第0维度的大小，numGroups为计算输入，表示将输入x的第1维度分为group组。</td>
@@ -199,7 +203,7 @@ aclnnStatus aclnnGroupNormSwish(
           <td>x</td>
       </tr>
       <tr>
-          <td>workspaceSize</td>
+          <td>workspaceSize（uint64_t*）</td>
           <td>输出</td>
           <td>返回需要在Device侧申请的workspace大小。</td>
           <td>-</td>
@@ -209,7 +213,7 @@ aclnnStatus aclnnGroupNormSwish(
           <td>-</td>
       </tr>
       <tr>
-          <td>executor</td>
+          <td>executor（aclOpExecutor**）</td>
           <td>输出</td>
           <td>返回op执行器，包含了算子计算流程。</td>
           <td>-</td>
@@ -224,7 +228,7 @@ aclnnStatus aclnnGroupNormSwish(
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-第一段接口完成入参校验，出现以下场景时报错：
+  第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
   <col style="width: 253px">
