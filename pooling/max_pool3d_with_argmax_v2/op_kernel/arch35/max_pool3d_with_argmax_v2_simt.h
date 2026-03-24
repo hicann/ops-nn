@@ -36,7 +36,7 @@ namespace MaxPool3DWithArgmaxV2WithSimt{
     constexpr uint32_t DIM_3 = 3;
 
     template <typename VALUE_T, typename PROCESS_T>
-    __aicore__ inline static void CycleUpdate(VALUE_T val, PROCESS_T idxOffset, VALUE_T *maxVal, PROCESS_T *maxIdx)
+    __simt_callee__ __aicore__ inline static void CycleUpdate(VALUE_T val, PROCESS_T idxOffset, VALUE_T *maxVal, PROCESS_T *maxIdx)
     {
         if ((static_cast<VALUE_T>(val) > *maxVal) || Simt::IsNan(static_cast<float>(val))) {
             *maxIdx = idxOffset;

@@ -42,14 +42,14 @@ namespace AdaptivePool3DWithSimt{
     constexpr static uint32_t IDX7 = 7;
 
 template <typename DIV_T>
-__aicore__ __attribute__((always_inline)) inline static DIV_T CalStartIdx(DIV_T outIdx, DIV_T magicOutLen, DIV_T shiftOutLen,  DIV_T inLen)
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline static DIV_T CalStartIdx(DIV_T outIdx, DIV_T magicOutLen, DIV_T shiftOutLen,  DIV_T inLen)
 {
     DIV_T pStart = outIdx * inLen;
     return Simt::UintDiv<DIV_T>(pStart, magicOutLen, shiftOutLen);
 }
 
 template <typename DIV_T>
-__aicore__ __attribute__((always_inline)) inline static DIV_T CalEndIdx(DIV_T outIdx, DIV_T magicOutLen, DIV_T shiftOutLen,  DIV_T inLen, DIV_T outLen)
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline static DIV_T CalEndIdx(DIV_T outIdx, DIV_T magicOutLen, DIV_T shiftOutLen,  DIV_T inLen, DIV_T outLen)
 {
     DIV_T pEnd = ((outIdx + 1) * inLen + outLen - 1);
     return Simt::UintDiv<DIV_T>(pEnd, magicOutLen, shiftOutLen);

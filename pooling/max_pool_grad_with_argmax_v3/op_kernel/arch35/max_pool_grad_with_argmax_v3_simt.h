@@ -31,7 +31,7 @@ namespace SimtProc {
     constexpr static uint32_t THREAD_DIM = 1024;
 
     template<typename FORMAT_TYPE, typename DIV_T>
-    __aicore__ __attribute__((always_inline)) inline static FORMAT_TYPE PStart(FORMAT_TYPE size, FORMAT_TYPE pad, FORMAT_TYPE kernel, FORMAT_TYPE dilation, DIV_T magicStride, DIV_T shiftStride) {
+    __simt_callee__ __aicore__ __attribute__((always_inline)) inline static FORMAT_TYPE PStart(FORMAT_TYPE size, FORMAT_TYPE pad, FORMAT_TYPE kernel, FORMAT_TYPE dilation, DIV_T magicStride, DIV_T shiftStride) {
         if (size + pad < ((kernel -1) * dilation + 1)) {
             return 0;
         } else {
@@ -43,7 +43,7 @@ namespace SimtProc {
     }
 
     template<typename FORMAT_TYPE, typename DIV_T>
-     __aicore__ __attribute__((always_inline)) inline static FORMAT_TYPE PEnd(FORMAT_TYPE size, FORMAT_TYPE pad, FORMAT_TYPE poolSize, DIV_T magicStride, DIV_T shiftStride) {
+     __simt_callee__ __aicore__ __attribute__((always_inline)) inline static FORMAT_TYPE PEnd(FORMAT_TYPE size, FORMAT_TYPE pad, FORMAT_TYPE poolSize, DIV_T magicStride, DIV_T shiftStride) {
         FORMAT_TYPE pEnd = size + pad;
         pEnd = Simt::UintDiv<DIV_T>(pEnd, magicStride, shiftStride);
         pEnd += 1;

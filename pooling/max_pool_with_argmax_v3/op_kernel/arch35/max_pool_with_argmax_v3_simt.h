@@ -29,7 +29,7 @@ namespace SimtProc {
 constexpr static uint32_t THREAD_DIM = 256;
 
 template <typename idx_accscalar_t>
-__aicore__ inline static void CycleUpdate(float val, idx_accscalar_t idxOffset, float* maxval, idx_accscalar_t* maxidx)
+__simt_callee__ __aicore__ inline static void CycleUpdate(float val, idx_accscalar_t idxOffset, float* maxval, idx_accscalar_t* maxidx)
 {
     if ((static_cast<float>(val) > *maxval) || Simt::IsNan(val)) {
         *maxidx = idxOffset;

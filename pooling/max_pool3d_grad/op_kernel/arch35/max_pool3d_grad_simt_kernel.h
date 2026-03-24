@@ -42,7 +42,7 @@ namespace MaxPool3DGrad {
     constexpr static uint32_t MAGIC_STRIDE_W_IDX = 12;
 
     template <typename VALUE_T, typename PROCESS_T>
-    __aicore__ inline static void CycleUpdate(VALUE_T val, PROCESS_T idxOffset, VALUE_T *maxVal, PROCESS_T *maxIdx)
+    __simt_callee__ __aicore__ inline static void CycleUpdate(VALUE_T val, PROCESS_T idxOffset, VALUE_T *maxVal, PROCESS_T *maxIdx)
     {
         if ((static_cast<VALUE_T>(val) > *maxVal) || Simt::IsNan(static_cast<float>(val))) {
             *maxIdx = idxOffset;
@@ -192,7 +192,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPool3DNdhwc(const
 }
 
 template <typename OFFSET_T>
-__aicore__ inline static OFFSET_T PStart(int64_t size, int64_t pad, int64_t kernel, int64_t dilation,
+__simt_callee__ __aicore__ inline static OFFSET_T PStart(int64_t size, int64_t pad, int64_t kernel, int64_t dilation,
                                          OFFSET_T magicStride, OFFSET_T shiftStride)
 {
     if (size + pad < ((kernel - 1) * dilation + 1)) {
@@ -207,7 +207,7 @@ __aicore__ inline static OFFSET_T PStart(int64_t size, int64_t pad, int64_t kern
 }
 
 template <typename OFFSET_T>
-__aicore__ inline static OFFSET_T PEnd(int64_t size, int64_t pad, int64_t poolSize, OFFSET_T magicStride,
+__simt_callee__ __aicore__ inline static OFFSET_T PEnd(int64_t size, int64_t pad, int64_t poolSize, OFFSET_T magicStride,
                                        OFFSET_T shiftStride)
 {
     using DIV_T = typename std::conditional<std::is_same<OFFSET_T, int32_t>::value, uint32_t, uint64_t>::type;

@@ -59,7 +59,7 @@ template <typename OFFSET_T>
 using SimtDivT = typename std::conditional<std::is_same<OFFSET_T, int32_t>::value, uint32_t, uint64_t>::type;
 
 template <typename DIV_T>
-__aicore__ inline static DIV_T FloorDivMul(DIV_T numerator, DIV_T mulFactor, DIV_T divisorMagic, DIV_T divisorShift)
+__simt_callee__ __aicore__ inline static DIV_T FloorDivMul(DIV_T numerator, DIV_T mulFactor, DIV_T divisorMagic, DIV_T divisorShift)
 {
     DIV_T wideNumerator = numerator * mulFactor;
     DIV_T quotient = Simt::UintDiv<DIV_T>(wideNumerator, divisorMagic, divisorShift);
@@ -67,7 +67,7 @@ __aicore__ inline static DIV_T FloorDivMul(DIV_T numerator, DIV_T mulFactor, DIV
 }
 
 template <typename DIV_T>
-__aicore__ inline static DIV_T CeilDivMul(
+__simt_callee__ __aicore__ inline static DIV_T CeilDivMul(
     DIV_T numerator, DIV_T mulFactor, DIV_T ceilAddend, DIV_T divisorMagic, DIV_T divisorShift)
 {
     DIV_T wideNumerator = numerator * mulFactor + ceilAddend;
@@ -76,26 +76,26 @@ __aicore__ inline static DIV_T CeilDivMul(
 }
 
 template <typename DIV_T>
-__aicore__ inline static DIV_T StartIndexIn2Out(DIV_T inIdx, DIV_T osize, DIV_T magicIsize, DIV_T shiftIsize)
+__simt_callee__ __aicore__ inline static DIV_T StartIndexIn2Out(DIV_T inIdx, DIV_T osize, DIV_T magicIsize, DIV_T shiftIsize)
 {
     return FloorDivMul<DIV_T>(inIdx, osize, magicIsize, shiftIsize);
 }
 
 template <typename DIV_T>
-__aicore__ inline static DIV_T EndIndexIn2Out(
+__simt_callee__ __aicore__ inline static DIV_T EndIndexIn2Out(
     DIV_T inIdx, DIV_T isize, DIV_T osize, DIV_T magicIsize, DIV_T shiftIsize)
 {
     return CeilDivMul<DIV_T>(inIdx + 1, osize, isize - 1, magicIsize, shiftIsize);
 }
 
 template <typename DIV_T>
-__aicore__ inline static DIV_T StartIndexOut2In(DIV_T outIdx, DIV_T isize, DIV_T magicOsize, DIV_T shiftOsize)
+__simt_callee__ __aicore__ inline static DIV_T StartIndexOut2In(DIV_T outIdx, DIV_T isize, DIV_T magicOsize, DIV_T shiftOsize)
 {
     return FloorDivMul<DIV_T>(outIdx, isize, magicOsize, shiftOsize);
 }
 
 template <typename DIV_T>
-__aicore__ inline static DIV_T EndIndexOut2In(
+__simt_callee__ __aicore__ inline static DIV_T EndIndexOut2In(
     DIV_T outIdx, DIV_T osize, DIV_T isize, DIV_T magicOsize, DIV_T shiftOsize)
 {
     return CeilDivMul<DIV_T>(outIdx + 1, isize, osize - 1, magicOsize, shiftOsize);
