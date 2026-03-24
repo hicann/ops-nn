@@ -8,11 +8,11 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 /*!
- * \file common_tiling.h
+ * \file layer_norm_quant_tiling_base.h
  * \brief
  */
-#ifndef COMMON_TILING_H
-#define COMMON_TILING_H
+#ifndef LAYER_NORM_QUANT_TILING_BASE_H
+#define LAYER_NORM_QUANT_TILING_BASE_H
 
 namespace optiling {
 #define UINT_MAX  (__INT_MAX__  *2U +1U)
@@ -113,4 +113,4 @@ inline __attribute__((always_inline)) ge::graphStatus CheckSplit(T* tilingDataPt
     return ge::GRAPH_SUCCESS;
 }
 }
-#endif
+#endif  // LAYER_NORM_QUANT_TILING_BASE_H

@@ -133,16 +133,15 @@ ge::graphStatus LayerNormQuantRegTiling::DoTiling()
     GetTilingBasicInfo();
     GetTilingSliceInfo();
 
-    if (tilingData.get_sliceNum() == 1) {
-        OP_CHECK_IF(colsAligned > (UINT_MAX / (FP16_DATA_USED * layerNormPtrCon.nlFirstdimPerCoreNum)),
-                        OP_LOGE(context->GetNodeName(), "totalMemNeed is invalid!"), return ge::GRAPH_FAILED);
-        uint32_t totalMemNeed =
-            static_cast<uint32_t>(FP16_DATA_USED) * layerNormPtrCon.nlFirstdimPerCoreNum * colsAligned;
+    if (tilingData.get_sliceNum() == 1) { 
+        uint64_t totalMemNeed =
+            static_cast<uint64_t>(FP16_DATA_USED) * layerNormPtrCon.nlFirstdimPerCoreNum * colsAligned;
         OP_CHECK_IF(colsAligned > (UINT_MAX / FP16_OTHER_USED),
                         OP_LOGE(context->GetNodeName(), "sumData is invalid!"), return ge::GRAPH_FAILED);
         uint32_t sumData = (layerNormPtrCon.maxUbSize - NUM_TEMP_BUF -
                            static_cast<uint32_t>(FP16_OTHER_USED) * colsAligned - SCALAR_USED) / dtypeSize;
-
+        OP_CHECK_IF(CeilDiv(totalMemNeed, static_cast<uint64_t>(sumData)) > UINT_MAX ,
+                        OP_LOGE(context->GetNodeName(), "totalMemNeed is invalid!"), return ge::GRAPH_FAILED);
         ret = CheckSplit(&tilingData, totalMemNeed, sumData, layerNormPtrCon, context);
         if (ret == ge::GRAPH_FAILED) {
             return ret;
