@@ -1696,9 +1696,11 @@ bool CheckAttrs(const gert::TilingContext *context, Conv3dBpInputV2RunInfo &runI
       CUBE_INNER_ERR_REPORT(opName, "cannot support dilation_w: [%d] != 1 while kernel_w: [%ld] = 1",
       runInfoV2.dilation_w, otherParams.b_shape.w), return false);
 
-  OP_CHECK_IF(runInfoV2.stride_d > otherParams.b_shape.d,
+  if (!IsArchAfter35(context)) {
+      OP_CHECK_IF(runInfoV2.stride_d > otherParams.b_shape.d,
       OP_LOGE(opName, "cannot support stride_d: %d > kernel_d: %ld", runInfoV2.stride_d, otherParams.b_shape.d),
       return false);
+  }
 
   OP_CHECK_IF(CheckRange(runInfoV2.stride_h, DIM_LOW, strideHwUp) == false,
       OP_LOGE(opName, "stride_h: %d is invalid, support range [%d, %d]", runInfoV2.stride_h, DIM_LOW, strideHwUp),

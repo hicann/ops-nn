@@ -15,50 +15,50 @@ import sys
 
 params_case_1 = [
     1, 1, 1, 1, 1, 1, # batchDim, groupDim, mDim, kDim, nDim, dDim
-    1, 0, # coreNum, unknown
+    1, 0,# coreNum, unknown
     # conv tiling as belows
     1, 512, 512, 32, 32, 1, 1, 16, 4, # batch, cin, cout, cout1, cin1, cout1G, cin1G, c0, c0Bits
     5, 32, 32, # dout, ho, wo
     5, 32, 32, # di, hi, wi
     1, 1, 1, # dk, hk, wk
     1, 1, 1, 1, # group strideD, strideH, strideW
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, # pads & bp_pads
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, # pads & bp_pads
     1, 1, 1, # dilations
     2, 2, 1, 1, 1, # al0pb, bl0pb, cl0pb, al1pb, bl1pb
     1, 512, 32, 16, 5, 1, # sGroup, sCout, sCout1, sCin1, sDin, sHo
     96, 16, 256, 1, 1, 1, # baseM, baseK, baseN, baseD, baseBatch, baseGroup
     # stepM, stepN, stepKa, stepKb, stepBatch, stepGroup, iterateOrder, hf32Flag, sBatch, sM, sCin
-    1, 1, 8, 8, 1, 1, 1, 0, 1, 0, 96, 0, 256, 0,
+    1, 1, 8, 8, 1, 1, 1, 0, 0, 0, 0, 1, 0, 96, 0, 256,
 ]
 
 params_case_2 = [
     1, 1, 1, 1, 1, 1, # batchDim, groupDim, mDim, kDim, nDim, dDim
-    1, 0, # coreNum, unknown
+    1, 0,# coreNum, unknown
     # conv tiling as belows
     1, 512, 512, 32, 32, 1, 1, 16, 4, # batch, cin, cout, cout1, cin1, cout1G, cin1G, c0, c0Bits
     5, 32, 32, # dout, ho, wo
     5, 32, 32, # di, hi, wi
     1, 1, 1, # dk, hk, wk
     1, 1, 1, 1, # group strideD, strideH, strideW
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, # pads & bp_pads
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, # pads & bp_pads
     1, 1, 1, # dilations
     2, 2, 1, 1, 1, # al0pb, bl0pb, cl0pb, al1pb, bl1pb
     1, 512, 32, 16, 5, 1, # sGroup, sCout, sCout1, sCin1, sDin, sHo
     96, 16, 256, 1, 1, 1, # baseM, baseK, baseN, baseD, baseBatch, baseGroup
     # stepM, stepN, stepKa, stepKb, stepBatch, stepGroup, iterateOrder, hf32Flag, sBatch, sM, sCin
-    1, 1, 8, 8, 1, 1, 1, 1, 1, 0, 96, 0, 256, 0,
+    1, 1, 8, 8, 1, 1, 1, 1, 0, 0, 0, 1, 0, 96, 0, 256,
 ]
 
 params_case_group_depthwise_1 = [
     2, 1, 4, 1, 1, 1, # batchDim, groupDim, mDim, kDim, nDim, dDim
-    8, 0, # coreNum, unknown
+    8, 0,# coreNum, unknown
     # conv tiling as belows
     2, 256, 256, 16, 16, 1, 1, 16, 4, # batch, cin, cout, cout1, cin1, cout1G, cin1G, c0, c0Bits
     1, 4, 4, # dout, ho, wo
     1, 8, 8, # di, hi, wi
     1, 2, 2, # dk, hk, wk
     16, 1, 2, 2, # group strideD, strideH, strideW
-    0, 0, 0, 0, 0, 0, 1, 0, 1, 1, # pads & bp_pads
+    0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, # pads & bp_pads
     1, 1, 1, # dilations
     2, 2, 1, 1, 1, # al0pb, bl0pb, cl0pb, al1pb, bl1pb
     16, 256, 1, 1, 1, 1, # sGroup, sCout, sCout1, sCin1, sDin, sHo
@@ -66,7 +66,7 @@ params_case_group_depthwise_1 = [
     # stepM, stepN, stepKa, stepKb, stepBatch, stepGroup,
     1, 1, 2, 2, 1, 1,
     # iterateOrder, hf32Flag, initOutputFlag, outputPadD, outputPadH, reserved, sBatch, sM, sCin
-    1, 0, 0, 0, 0, 0, 1, 0, 16, 0, 256, 0,
+    1, 0, 0, 0, 0, 1, 0, 16, 0, 256,
 ]
 
 params_info = {

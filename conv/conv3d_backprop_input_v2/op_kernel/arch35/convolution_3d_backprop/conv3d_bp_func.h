@@ -582,16 +582,6 @@ static __aicore__ inline void UpdateKComputeStatus(Intf *self)
         return;
     }
 
-    // 整个dk都在pad里面, 整轮计算跳过
-    if (unlikely(self->ctx.tiling_->strideD > self->ctx.tiling_->dk)) {
-        int64_t dTmp = self->ctx.curDinIdx_ + self->ctx.tiling_->padFront;
-        if (dTmp % self->ctx.tiling_->strideD >= self->ctx.tiling_->dk ||
-            dTmp / self->ctx.tiling_->strideD >= self->ctx.tiling_->dout) {
-            self->ctx.needComputeFlag_ = false;
-            return;
-        }
-    }
-
     bool isKNeedCompute = false;
     for (uint64_t curKdIdx = self->ctx.curDkIdx_; curKdIdx < self->ctx.curDkIdx_ + self->ctx.tiling_->singleIterateDk; curKdIdx++) {
         // 由于膨胀卷积使dk的位置发生改变，求解dout_idx时，dk_idx需乘上膨胀系数再参与计算，才能求取正确的索引
