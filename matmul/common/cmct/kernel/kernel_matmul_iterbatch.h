@@ -34,10 +34,7 @@
 #include "../block/block_mmad_builder.h"
 #include "../epilogue/block_epilogue_empty.h"
 
-// supportMmadS8S4平台对block_epilogue_iterbatch.h有编译报错，例如未定义AIC_SYNC_AIV_MODE_4
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
 #include "../epilogue/block_epilogue_iterbatch.h"
-#endif
 #include "../block/block_scheduler_utils.h"
 #include "../block/block_scheduler_policy.h"
 
@@ -65,26 +62,23 @@ class KernelMatMulIterBatch<
     AscendC::Std::enable_if_t<
         (AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueEmpty> &&
          AscendC::Std::is_same_v<
-             MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY>, typename BlockMmadBuilder_::BlockMatmulPolicy>)
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
-        || ((AscendC::Std::is_base_of_v<
-                 BlockEpilogue_, Block::BlockEpilogueIterbatch<float, float, Block::FusionAdd<float, float>>> ||
-             AscendC::Std::is_base_of_v<
-                 BlockEpilogue_, Block::BlockEpilogueIterbatch<float, float, Block::DefaultFusion<float, float>>> ||
-             AscendC::Std::is_base_of_v<
-                 BlockEpilogue_, Block::BlockEpilogueIterbatch<half, half, Block::FusionAdd<half, half>>> ||
-             AscendC::Std::is_base_of_v<
-                 BlockEpilogue_, Block::BlockEpilogueIterbatch<half, half, Block::DefaultFusion<half, half>>> ||
-             AscendC::Std::is_base_of_v<
-                 BlockEpilogue_,
-                 Block::BlockEpilogueIterbatch<bfloat16_t, bfloat16_t, Block::FusionAdd<bfloat16_t, bfloat16_t>>> ||
-             AscendC::Std::is_base_of_v<
-                 BlockEpilogue_, Block::BlockEpilogueIterbatch<
-                                     bfloat16_t, bfloat16_t, Block::DefaultFusion<bfloat16_t, bfloat16_t>>>)&&AscendC::
-                Std::is_same_v<
-                    MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2>, typename BlockMmadBuilder_::BlockMatmulPolicy>)
-#endif
-        >> {
+             MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY>, typename BlockMmadBuilder_::BlockMatmulPolicy>) ||
+        ((AscendC::Std::is_base_of_v<
+              BlockEpilogue_, Block::BlockEpilogueIterbatch<float, float, Block::FusionAdd<float, float>>> ||
+          AscendC::Std::is_base_of_v<
+              BlockEpilogue_, Block::BlockEpilogueIterbatch<float, float, Block::DefaultFusion<float, float>>> ||
+          AscendC::Std::is_base_of_v<
+              BlockEpilogue_, Block::BlockEpilogueIterbatch<half, half, Block::FusionAdd<half, half>>> ||
+          AscendC::Std::is_base_of_v<
+              BlockEpilogue_, Block::BlockEpilogueIterbatch<half, half, Block::DefaultFusion<half, half>>> ||
+          AscendC::Std::is_base_of_v<
+              BlockEpilogue_,
+              Block::BlockEpilogueIterbatch<bfloat16_t, bfloat16_t, Block::FusionAdd<bfloat16_t, bfloat16_t>>> ||
+          AscendC::Std::is_base_of_v<
+              BlockEpilogue_, Block::BlockEpilogueIterbatch<
+                                  bfloat16_t, bfloat16_t, Block::DefaultFusion<bfloat16_t, bfloat16_t>>>)&&AscendC::
+             Std::is_same_v<
+                 MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2>, typename BlockMmadBuilder_::BlockMatmulPolicy>)>> {
 public:
     __aicore__ inline KernelMatMulIterBatch() {}
     __aicore__ inline ~KernelMatMulIterBatch() {}
@@ -297,10 +291,8 @@ public:
             if (tileIdx + blockNum >= tileNum) {
                 isFinalRound = true;
             }
-// supportMmadS8S4平台未定义ASCEND_IS_AIC
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
-            if ASCEND_IS_AIC {
-#endif
+            // ASCEND_IS_NOT_AIV 等价于 (分离架构ASCEND_IS_AIC OR 耦合架构)
+            if ASCEND_IS_NOT_AIV {
                 if constexpr (!AscendC::Std::is_same_v<BlockEpilogue, Block::BlockEpilogueEmpty>) {
                     blockMmadOp(cLocal, aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_, blockNum, curIterBatchL1,
                                 nextIterBatchL1, mainIterBatchL1, mainIterBatchL0, baseM, baseN, baseK, isPreLoadRound,
@@ -312,9 +304,7 @@ public:
                         isFinalRound);
                 }
                 isPreLoadRound = false;
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
             }
-#endif
             if ASCEND_IS_AIV {
                 if constexpr (!AscendC::Std::is_same_v<BlockEpilogue, Block::BlockEpilogueEmpty>) {
                     epilogueOp(offsetC, baseM, baseN, curIterBatchL1, mainIterBatchL0, isLastTurn);

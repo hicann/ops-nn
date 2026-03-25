@@ -52,12 +52,7 @@ class BlockMmad<
             MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, A_FULL_LOAD_MODE, OP_TYPE_RELU>,
             DispatchPolicy_>>> {
 public:
-// supportMmadS8S4平台L0c和biasBt的dtype为int32_t
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-    using L0cType = int32_t;
-#else
-    using L0cType = float;
-#endif
+    using L0cType = typename GetL0CAndBtType::Type;
     using AType = AType_;
     using BType = BType_;
     using CType = CType_;
@@ -110,10 +105,8 @@ public:
 
     __aicore__ inline BlockMmad()
     {
-// supportMmadS8S4平台未定义ASCEND_IS_AIC
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
-        if ASCEND_IS_AIC {
-#endif
+        // ASCEND_IS_NOT_AIV 等价于 (分离架构ASCEND_IS_AIC OR 耦合架构)
+        if ASCEND_IS_NOT_AIV {
             AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(ZERO_FLAG);
             AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(FIRST_FLAG);
             AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(SECOND_FLAG);
@@ -122,17 +115,13 @@ public:
             AscendC::SetFlag<AscendC::HardEvent::FIX_M>(FIRST_FLAG);
             AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(SIXTH_FLAG);
             AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(SEVENTH_FLAG);
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
         }
-#endif
     }
 
     __aicore__ inline ~BlockMmad()
     {
-// supportMmadS8S4平台未定义ASCEND_IS_AIC
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
-        if ASCEND_IS_AIC {
-#endif
+        // ASCEND_IS_NOT_AIV 等价于 (分离架构ASCEND_IS_AIC OR 耦合架构)
+        if ASCEND_IS_NOT_AIV {
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(ZERO_FLAG);
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(FIRST_FLAG);
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(SECOND_FLAG);
@@ -141,9 +130,7 @@ public:
             AscendC::WaitFlag<AscendC::HardEvent::FIX_M>(FIRST_FLAG);
             AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(SIXTH_FLAG);
             AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(SEVENTH_FLAG);
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
         }
-#endif
     }
 
 public:
@@ -416,12 +403,10 @@ public:
         }
     }
 
-    __aicore__ inline void CopyOut(
+    __aicore__ inline void CopyOutForArch5102(
         const AscendC::GlobalTensor<C_T>& cGlobal, AscendC::LocalTensor<L0cType>& c1Local, uint64_t baseM,
         uint64_t baseN)
     {
-// supportMmadS8S4平台兼容
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
         AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
         fixpipeParams.nSize = static_cast<uint16_t>(baseN);
         fixpipeParams.mSize = static_cast<uint16_t>(baseM);
@@ -438,7 +423,12 @@ public:
         fixpipeParams.params.srcNdStride = 1;
         fixpipeParams.params.dstNdStride = 1;
         AscendC::Fixpipe<C_T, L0cType, AscendC::CFG_ROW_MAJOR>(cGlobal, c1Local, fixpipeParams);
-#else
+    }
+
+    __aicore__ inline void CopyOutForOtherArch(
+        const AscendC::GlobalTensor<C_T>& cGlobal, AscendC::LocalTensor<L0cType>& c1Local, uint64_t baseM,
+        uint64_t baseN)
+    {
         if (isSplitSingleK_) {
             PipeBarrier<PIPE_FIX>();
             if (!isFirstSplitK_) {
@@ -470,6 +460,16 @@ public:
         if (isSplitSingleK_ && isEndSplitK_) {
             AscendC::DisableDmaAtomic();
         }
+    }
+
+    __aicore__ inline void CopyOut(
+        const AscendC::GlobalTensor<C_T>& cGlobal, AscendC::LocalTensor<L0cType>& c1Local, uint64_t baseM,
+        uint64_t baseN)
+    {
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+        CopyOutForArch5102(cGlobal, c1Local, baseM, baseN);
+#else
+        CopyOutForOtherArch(cGlobal, c1Local, baseM, baseN);
 #endif
     }
 

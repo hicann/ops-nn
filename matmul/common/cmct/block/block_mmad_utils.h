@@ -234,6 +234,18 @@ __aicore__ inline constexpr bool IsTileShapeValid()
     return l1M == l0M && l1N == l0N && (l1Ka >= l0K && (l0K == 0 || l1Ka % l0K == 0)) &&
            (l1Kb >= l0K && (l0K == 0 || l1Kb % l0K == 0));
 }
+
+/**
+ * @brief Get the type of L0C and Bt
+ */
+struct GetL0CAndBtType {
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+    using Type = int32_t;
+#else
+    using Type = float;
+#endif
+};
+
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct

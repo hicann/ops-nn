@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -29,8 +29,6 @@ struct BlockEpilogueSelector {
     using type = Block::BlockEpilogueEmpty;
 };
 
-// supportMmadS8S4平台暂不支持BlockEplogueIterbatch
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
 template <class OutType, class InType>
 struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType, InType, OP_TYPE_EMPTY> {
     using type = Block::BlockEpilogueIterbatch<OutType, InType, Block::DefaultFusion<OutType, InType>>;
@@ -40,7 +38,6 @@ template <class OutType, class InType>
 struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType, InType, OP_TYPE_ADD> {
     using type = Block::BlockEpilogueIterbatch<OutType, InType, Block::FusionAdd<OutType, InType>>;
 };
-#endif
 
 template <
     class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,

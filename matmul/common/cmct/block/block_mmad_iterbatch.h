@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -29,18 +29,11 @@ template <
 class BlockMmad<
     DispatchPolicy_, L1TileShape_, L0TileShape_, AType_, BType_, CType_, BiasType_, TileCopy_,
     AscendC::Std::enable_if_t<
-        AscendC::Std::is_base_of_v<MatmulIterBatch<>, DispatchPolicy_>
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
-        || AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2>, DispatchPolicy_>
-#endif
-        >> {
+        AscendC::Std::is_base_of_v<MatmulIterBatch<>, DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2>, DispatchPolicy_>>> {
 public:
 // supportMmadS8S4平台L0c和biasBt的dtype为int32_t
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-    using L0cType = int32_t;
-#else
-    using L0cType = float;
-#endif
+    using L0cType = typename GetL0CAndBtType::Type;
     using AType = AType_;
     using BType = BType_;
     using CType = CType_;
@@ -299,12 +292,10 @@ public:
         }
     }
 
-    __aicore__ inline void CopyOut(
+    __aicore__ inline void CopyOutForArch5102(
         const AscendC::GlobalTensor<C_T>& cGlobal, const AscendC::LocalTensor<L0cType>& l0c, const uint64_t mInGM,
         const uint64_t nInGM, const uint64_t curIterBatchL0)
     {
-// supportMmadS8S4平台兼容
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
         AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
         fixpipeParams.nSize = static_cast<uint16_t>(nInGM);
         fixpipeParams.mSize = static_cast<uint16_t>(mInGM);
@@ -322,7 +313,12 @@ public:
             Align(mInGM, AscendC::BLOCK_CUBE) * Align(nInGM, AscendC::BLOCK_CUBE) / AscendC::BLOCK_CUBE;
         fixpipeParams.params.dstNdStride = mInGM * nInGM;
         AscendC::Fixpipe<C_T, L0cType, AscendC::CFG_ROW_MAJOR>(cGlobal, l0c, fixpipeParams);
-#else
+    }
+
+    __aicore__ inline void CopyOutForOtherArch(
+        const AscendC::GlobalTensor<C_T>& cGlobal, const AscendC::LocalTensor<L0cType>& l0c, const uint64_t mInGM,
+        const uint64_t nInGM, const uint64_t curIterBatchL0)
+    {
         AscendC::DataCopyCO12DstParams intriParams;	
         intriParams.nSize = nInGM;	
         intriParams.mSize = mInGM;	
@@ -336,10 +332,20 @@ public:
         intriParams.nz2ndEn = true;	
         intriParams.unitFlag = 0;	
 
-        // When nz2nd loop in copyout, src stride is unit of c0Size, dst stride is unit of one element.	
+        // When nz2nd loop in copyout, src stride is unit of c0Size, dst stride is unit of one element.
         AscendC::SetFixpipeNz2ndFlag(curIterBatchL0, Align(mInGM, AscendC::BLOCK_CUBE) *	
                                      Align(nInGM, AscendC::BLOCK_CUBE) / AscendC::BLOCK_CUBE, mInGM * nInGM);	
         AscendC::DataCopy(cGlobal, l0c, intriParams);
+    }
+
+    __aicore__ inline void CopyOut(
+        const AscendC::GlobalTensor<C_T>& cGlobal, const AscendC::LocalTensor<L0cType>& l0c, const uint64_t mInGM,
+        const uint64_t nInGM, const uint64_t curIterBatchL0)
+    {
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+        CopyOutForArch5102(cGlobal, l0c, mInGM, nInGM, curIterBatchL0);
+#else
+        CopyOutForOtherArch(cGlobal, l0c, mInGM, nInGM, curIterBatchL0);
 #endif
     }
 
@@ -488,8 +494,6 @@ public:
                     AscendC::SetFlag<AscendC::HardEvent::M_FIX>(l0CEventID_ & 0x1);
 
                     AscendC::WaitFlag<AscendC::HardEvent::M_FIX>(l0CEventID_ & 0x1);
-// supportMmadS8S4未定义AIC_SYNC_AIV_MODE_4
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
                     if constexpr (DispatchPolicy::enableSync == MatMulL0C2Out::ND_FIXPIPE_1_2) {
                         if (l0CEventID_ > 1) {
                             AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(
@@ -498,14 +502,11 @@ public:
                         CopyOut(cTensor, l0c_[l0COffset_ * (l0CEventID_ & 0x1)], curML0, curNL0, curIterBatchL0);
                         AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>((l0CEventID_ & 0x1) * FLAG_ID_MAX);
                     } else {
-#endif
                         uint64_t offsetCGMOfCopyOut =
                             iter1 * mainIterBatchL0 * m_ * n_ + iterML0 * baseM * n_ + iterNL0 * baseN;
                         CopyOut(cTensor[offsetCGMOfCopyOut], l0c_[l0COffset_ * (l0CEventID_ & 0x1)], curML0, curNL0,
                             curIterBatchL0);
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
                     }
-#endif
                     AscendC::SetFlag<AscendC::HardEvent::FIX_M>(l0CEventID_ & 0x1);
                     l0CEventID_++;
                 }
