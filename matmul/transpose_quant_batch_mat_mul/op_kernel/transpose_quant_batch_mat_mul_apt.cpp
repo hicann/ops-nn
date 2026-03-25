@@ -23,17 +23,11 @@ using namespace TransposeQuantBatchMatMulAdvanced;
 using namespace AscendC;
 using namespace matmul;
 
-#ifndef DTYPE_BIAS
-#define DTYPE_BIAS half
-#endif
-
 #define DTYPE_LOC_LOCAL float
 
-#undef DTYPE_PERTOKEN_SCALE
-#define DTYPE_PERTOKEN_SCALE float
-
-#undef DTYPE_SCALE
-#define DTYPE_SCALE float
+ #ifndef DTYPE_BIAS 
+ #define DTYPE_BIAS half 
+ #endif
 
 #ifndef FORMAT_FRACTAL_NZ
 #define FORMAT_FRACTAL_NZ
@@ -48,25 +42,24 @@ constexpr MatmulConfig MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG =
 
 #define TQBMM_IMPL_CLASS_COMMON_TRNAS(transposeX1, transposeX2, templateClass, ...)                                    \
     do {                                                                                                               \
-        templateClass<DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_PERTOKEN_SCALE, DTYPE_Y, transposeX1,         \
+        templateClass<DTYPE_X1, DTYPE_X2, DTYPE_X2_SCALE, DTYPE_BIAS, DTYPE_X1_SCALE, DTYPE_Y, transposeX1,         \
                       transposeX2, DTYPE_LOC_LOCAL, __VA_ARGS__>                                                       \
             op;                                                                                                        \
         op.Init(aGM, bGM, x2_scaleGM, x1_scaleGM, cGM, user, &tilingData, &pipe);                                      \
         op.Process();                                                                                                  \
     } while (0)
 
-template <int8_t PERM_X1, int8_t PERM_X2, int8_t BATCH_SPLIT>
+template <int8_t PERM_X1, int8_t PERM_X2, int8_t BATCH_SPLIT, int8_t PRECISION_MODE>
 __global__ __aicore__ void transpose_quant_batch_mat_mul(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR x1_scaleGM,
                                                          GM_ADDR x2_scaleGM, GM_ADDR cGM, GM_ADDR workspaceGM,
                                                          GM_ADDR tilingGM)
 {
     constexpr bool aTran = false;
-    constexpr bool bTran = false;
+    constexpr bool bTran = (PERM_X2 == 1);
     TPipe pipe;
     GM_ADDR user = GetUserWorkspace(workspaceGM);
     REGISTER_TILING_DEFAULT(BatchMatMulV3TilingData);
     GET_TILING_DATA(tilingData, tilingGM);
-    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
     TQBMM_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, TransposeQuantBatchMatMulAdvanced::TransposeQuantBatchMatMulAswKernel,
                                   TransposeQuantBatchMatMulAdvanced::TransposeQuantBatchMatMulAswBlock,
                                   MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG);

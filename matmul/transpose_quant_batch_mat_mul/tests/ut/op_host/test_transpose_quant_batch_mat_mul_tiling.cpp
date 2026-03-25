@@ -78,7 +78,7 @@ struct TilingTestParam {
     string tiling_data;
 
     int32_t dtype = 1;
-    int32_t group_size = 0;
+    int64_t group_size = 0;
     std::initializer_list<int64_t> perm_x1;
     std::initializer_list<int64_t> perm_x2;
     std::initializer_list<int64_t> perm_y;
@@ -163,7 +163,7 @@ TEST_P(TransposeQuantBatchMatMulTilingRuntime, general_cases) {
         "AICoreintrinsicDtypeMap", intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     if (get_map_string(soc_version, "NpuArch") == "3510") {
-        compile_info.aivNum = std::stoi(soc_infos["vector_core_cnt"]);
+        compile_info.aivNum = soc_infos["vector_core_cnt"] == "" ? 0 : std::stoi(soc_infos["vector_core_cnt"]);
     }
 
     auto tiling_data = gert::TilingData::CreateCap(2048);
@@ -219,7 +219,7 @@ static TilingTestParam ascend950_cases_params[] = {
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, {71, 21, 512}, {21, 512, 128}, {71},  {128}, {71, 21, 128}, false, 0, 0, 32, 1UL,
-    "32 71 128 512 512 80 128 512 80 128 128 16 16 1 1 0 0 0 0 32768 4096 0 1 1 1 1 8 8 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 21 21 21 1 1 1 1 1 1 1 1 1 1 21 21 21 0 1 1 ",
+    "32 71 128 512 512 256 256 512 256 256 128 8 8 1 1 0 0 0 0 32768 4096 0 1 1 1 1 4 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 21 21 21 1 1 1 1 1 1 1 1 1 1 21 21 21 0 1 1 ",
     1, 0, {1, 0, 2}, {0, 1, 2}, {1, 0, 2}, 1, DT_FLOAT8_E5M2, DT_FLOAT, DT_FLOAT16
   },{
     "TransposeQuantBatchMatMul_950_test_2", "TransposeQuantBatchMatMul", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
@@ -228,7 +228,7 @@ static TilingTestParam ascend950_cases_params[] = {
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, {71, 21, 512}, {21, 512, 128}, {71},  {128}, {71, 21, 128}, false, 0, 0, 32, 1UL,
-    "32 71 128 512 512 80 128 512 80 128 128 16 16 1 1 0 0 0 0 32768 4096 0 1 1 1 1 8 8 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 21 21 21 1 1 1 1 1 1 1 1 1 1 21 21 21 0 1 1 ",
+    "32 71 128 512 512 256 256 512 256 256 128 8 8 1 1 0 0 0 0 32768 4096 0 1 1 1 1 4 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 21 21 21 1 1 1 1 1 1 1 1 1 1 21 21 21 0 1 1 ",
     1, 0, {1, 0, 2}, {0, 1, 2}, {1, 0, 2}, 1, DT_FLOAT8_E4M3FN, DT_FLOAT, DT_FLOAT16
   },{
     "TransposeQuantBatchMatMul_950_test_3", "TransposeQuantBatchMatMul", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
@@ -237,8 +237,17 @@ static TilingTestParam ascend950_cases_params[] = {
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, {777, 118, 512}, {118, 512, 128}, {777},  {128}, {777, 118, 128}, false, 0, 0, 32, 1UL,
-    "32 777 128 512 512 32 128 512 32 128 256 32 8 1 1 0 0 0 0 131072 14336 0 1 1 1 1 16 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 118 118 118 1 1 1 1 1 1 1 1 1 1 118 118 118 0 1 1 ",
+    "32 777 128 512 512 256 256 512 256 256 128 8 8 1 1 0 0 0 0 131072 14336 0 1 1 1 1 4 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 118 118 118 1 1 1 1 1 1 1 1 1 1 118 118 118 0 1 1 ",
     1, 0, {1, 0, 2}, {0, 1, 2}, {1, 0, 2}, 1, DT_FLOAT8_E4M3FN, DT_FLOAT, DT_FLOAT16
+  },{
+    "TransposeQuantBatchMatMul_950_test_4", "TransposeQuantBatchMatMul", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
+      "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
+      "block_dim":{"CORE_NUM":32},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend950" },
+      "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, {35, 32, 192}, {32, 744, 192}, {35, 32, 3, 2},  {32, 744, 3, 2}, {777, 118, 128}, false, 0, 0, 32, 1041UL,
+    "32 35 744 192 192 256 256 192 256 256 128 4 4 1 1 0 0 0 0 18432 8192 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 16843009 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 ",
+    1, 0, {1, 0, 2}, {0, 2, 1}, {1, 0, 2}, 1, DT_FLOAT8_E4M3FN, DT_FLOAT8_E8M0, DT_FLOAT16
   }
 };
 

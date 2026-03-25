@@ -19,6 +19,7 @@
 #include "./arch35/transpose_quant_batch_mat_mul_tiling_advanced.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/matmul_v3_compile_info.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/matmul_v3_platform_common.h"
+#include "transpose_quant_batch_mat_mul_simplifiedkey.h"
 #include "op_cache_tiling.h"
 #include "error_util.h"
 
@@ -71,5 +72,6 @@ static ge::graphStatus TilingPrepareForTransposeQuantBatchMatMul(gert::TilingPar
 
 IMPL_OP_OPTILING(TransposeQuantBatchMatMul)
     .Tiling(TransposeQuantBatchMatMulTilingFunc)
-    .TilingParse<MatmulV3CompileInfo>(TilingPrepareForTransposeQuantBatchMatMul);
+    .TilingParse<MatmulV3CompileInfo>(TilingPrepareForTransposeQuantBatchMatMul)
+    .GenSimplifiedKey(transpose_quant_batch_matmul::GenSimplifiedKey);
 } // namespace optiling

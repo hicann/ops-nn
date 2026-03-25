@@ -24,8 +24,8 @@ OP_TYPE_REGISTER(TransposeQuantBatchMatMul);
 
 const aclTensor* TransposeQuantBatchMatMul(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* x1Scale, const aclTensor* x2Scale,
-    const int32_t dtype, const int32_t groupSize, const aclIntArray* permX1, const aclIntArray* permX2,
-    const aclIntArray* permY, const int32_t batchSplitFactor, aclOpExecutor* executor)
+    int32_t dtype, int64_t groupSize, const aclIntArray* permX1, const aclIntArray* permX2,
+    const aclIntArray* permY, int32_t batchSplitFactor, aclOpExecutor* executor)
 {
     L0_DFX(
         TransposeQuantBatchMatMul, x1, x2, bias, x1Scale, x2Scale, dtype, groupSize, permX1, permX2, permY,

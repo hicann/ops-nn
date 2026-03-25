@@ -49,7 +49,7 @@ aclnnStatus aclnnTransposeBatchMatMul(
     const aclrtStream  stream)
 ```
 
-## aclnnTransposeBatchMatMulGetWorkSpaceSize
+## aclnnTransposeBatchMatMulGetWorkspaceSize
 
 - **参数说明：**
 
@@ -300,7 +300,7 @@ aclnnStatus aclnnTransposeBatchMatMul(
     <tr>
       <td>workspaceSize</td>
       <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnTransposeBatchMatMulGetWorkSpaceSize获取。</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnTransposeBatchMatMulGetWorkspaceSize获取。</td>
     </tr>
     <tr>
       <td>executor</td>
@@ -454,7 +454,7 @@ int main() {
   std::vector<uint16_t> x2HostData(GetShapeSize(x2Shape),0x3C00);
   std::vector<uint16_t> outHostData(GetShapeSize(outShape),0);
   int8_t cubeMathType = 1;
-  int8_t batchSplitFactor = 1;
+  int32_t batchSplitFactor = 1;
 
   // 创建x1 aclTensor
   ret = CreateAclTensor(x1HostData, x1Shape, &x1DeviceAddr, aclDataType::ACL_FLOAT16, &x1);
@@ -511,6 +511,7 @@ int main() {
 
   // 7. 释放device资源，需要根据具体API的接口定义修改
   aclrtFree(x1DeviceAddr);
+  aclrtFree(x2DeviceAddr);
   aclrtFree(outDeviceAddr);
   if (workspaceSize > 0) {
     aclrtFree(workspaceAddr);

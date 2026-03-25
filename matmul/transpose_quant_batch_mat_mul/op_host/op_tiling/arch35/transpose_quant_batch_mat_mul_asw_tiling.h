@@ -40,13 +40,20 @@ protected:
     ge::graphStatus GetTilingDataProcess(BatchMatMulV3TilingData& tilingData) const override;
 
     std::vector<size_t> GetWorkspaceSize() const override;
-    void AdjustBasicBlock(); 
+    void CalL1Tiling();
+    void CalStepKs();
+    uint64_t GetDepthA1B1(uint64_t leftSize, uint64_t perDepthSize, uint64_t depthInit);
+    void CalScaleFactors(uint64_t baseASize, uint64_t baseBSize, uint64_t baseScaleASize, uint64_t baseScaleBSize);
+    void GetTransposeBatchMatMulInfo();
 
 private:
     TQBMMPermX1 permX1_ = TQBMMPermX1::PERM_X1_1_0_2;
     TQBMMPermX2 permX2_ = TQBMMPermX2::PERM_X2_0_1_2;
     TQBMMBatchSplit batchSplitMode_ = TQBMMBatchSplit::BATCH_SPLIT_FALSE;
+    TQBMMPrecisionMode precisionMode_ = TQBMMPrecisionMode::PRECISION_MODE_FP8;
     uint32_t batchSplitFactor_ = 1;
+    uint32_t scaleFactorA_ = 1;
+    uint32_t scaleFactorB_ = 1;
 };
 } // namespace transpose_quant_batch_mat_mul_advanced
 } // namespace optiling

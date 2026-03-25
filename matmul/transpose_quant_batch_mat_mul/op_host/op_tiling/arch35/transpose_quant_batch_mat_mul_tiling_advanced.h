@@ -37,7 +37,8 @@ protected:
 
     ge::graphStatus CheckArgs() override;
 
-    ge::graphStatus CheckScale(const int64_t m,const int64_t n) const;
+    ge::graphStatus CheckScale(const int64_t b, const int64_t m, const int64_t n, const int64_t k,
+                               const int64_t* bPerm) const;
 };
 } // namespace transpose_quant_batch_mat_mul_advanced
 } // namespace optiling

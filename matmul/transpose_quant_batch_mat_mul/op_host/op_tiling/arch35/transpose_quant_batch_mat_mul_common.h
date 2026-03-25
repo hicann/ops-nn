@@ -36,6 +36,7 @@ constexpr size_t PERM_Y_IDX = 4;
 constexpr size_t ATTR_NUM = 6;
 constexpr size_t ALLOW_DIM = 3;
 constexpr size_t EXPECTED_SCALE_DIM = 1;
+constexpr size_t EXPECTED_MX_SCALE_DIM = 4;
 constexpr size_t TQBMM_VALID_K = 512;
 constexpr size_t TQBMM_VALID_N = 128;
 constexpr uint64_t  L1_ALIGN_SIZE = 32;
@@ -47,6 +48,31 @@ constexpr uint64_t NUM_HALF = 2;
 constexpr uint64_t BASEM_BASEN_RATIO = 2;
 constexpr uint32_t DOUBLE_CORE_NUM = 2;
 constexpr uint64_t BASEK_LIMIT = 4095;
+constexpr int64_t SUPPORTED_GROUP_SIZE = 32;
+constexpr int64_t NUM_TWO = 2;
+constexpr int64_t NUM_THREE = 3;
+constexpr uint32_t SCALER_FACTOR_MIN = 1;
+constexpr uint32_t SCALER_FACTOR_MAX = 127;
+constexpr uint32_t SCALER_FACTOR_B_BIT = 8;
+constexpr uint32_t SCALER_FACTOR_M_BIT = 16;
+constexpr uint32_t SCALER_FACTOR_N_BIT = 24;
+constexpr uint32_t SCALER_FACTOR_DEFAULT = 1;
+constexpr uint64_t MXFP_DIVISOR_SIZE = 64;
+constexpr uint64_t MXFP_MULTI_BASE_SIZE = 2;
+constexpr uint64_t MTE2_MIN_LOAD_SIZE_V100 = 32768;
+constexpr uint32_t BASIC_BLOCK_SIZE_512 = 512;
+constexpr uint32_t BASIC_BLOCK_SIZE_256 = 256;
+constexpr uint64_t MX_GROUP_SIZE = 32;
+constexpr uint64_t K_ALIGNMENT64 = 64UL;
+
+bool inline IsMicroScaling(const gert::CompileTimeTensorDesc* x1Scale, const gert::CompileTimeTensorDesc* x2Scale)
+{
+    if (x1Scale == nullptr || x2Scale == nullptr) {
+        return false;
+    }
+    return x1Scale->GetDataType() == ge::DT_FLOAT8_E8M0 &&
+           x2Scale->GetDataType() == ge::DT_FLOAT8_E8M0;
+}
 } // namespace transpose_quant_batch_mat_mul_advanced
 } // namespace optiling
 #endif // __OP_HOST_TRANSPOSE_QUANT_BATCH_MAT_MUL_COMMON_H__

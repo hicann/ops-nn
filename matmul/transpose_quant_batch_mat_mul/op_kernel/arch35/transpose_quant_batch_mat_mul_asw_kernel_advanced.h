@@ -69,14 +69,26 @@ public:
     __aicore__ inline void Process();
 
 public:
-    using aT = AscendC::MatmulType<TPosition::GM, CubeFormat::ND, aType, aTrans>;
-    using bT = AscendC::MatmulType<TPosition::GM, CubeFormat::ND, bType, bTrans>;
+    using aT = typename AscendC::Conditional<
+        TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>(),
+        AscendC::MatmulTypeWithScale<TPosition::GM, TPosition::GM, CubeFormat::ND, aType, aTrans>,
+        AscendC::MatmulType<TPosition::GM, CubeFormat::ND, aType, aTrans>>::type;
+    using bT = typename AscendC::Conditional<
+        TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>(),
+        AscendC::MatmulTypeWithScale<TPosition::GM, TPosition::GM, CubeFormat::ND, bType, bTrans>,
+        AscendC::MatmulType<TPosition::GM, CubeFormat::ND, bType, bTrans>>::type;
     using biasT = AscendC::MatmulType<TPosition::GM, CubeFormat::ND, biasType>;
-    using cT = AscendC::MatmulType<TPosition::VECIN, CubeFormat::ND_ALIGN, l0cDtype>;
-    AscendC::MatmulImpl<aT, bT, cT, biasT, mmCfg, AscendC::MatmulCallBackFunc<nullptr, nullptr, nullptr>,
-                        AscendC::TQBmmCustomMatmulPolicy>
-        mm;
-
+    using cT = typename AscendC::Conditional<
+        TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>(),
+        AscendC::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, cType>,
+        AscendC::MatmulType<TPosition::VECIN, CubeFormat::ND_ALIGN, l0cDtype>>::type;
+    using MmType = typename AscendC::Conditional<
+        TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>(),
+        AscendC::MatmulImpl<aT, bT, cT, biasT, mmCfg,
+                           MatmulCallBackFunc<nullptr, nullptr, nullptr>, AscendC::Impl::Detail::MatmulWithScalePolicy>,
+        AscendC::MatmulImpl<aT, bT, cT, biasT, mmCfg, AscendC::MatmulCallBackFunc<nullptr, nullptr, nullptr>,
+                            AscendC::TQBmmCustomMatmulPolicy>>::type;
+    MmType mm;
     constexpr static uint32_t BUFFER_NUM = 2;
     constexpr static uint8_t AIC_SYNC_AIV_MODE = 4;
     constexpr static uint16_t FLAG_ID_MAX = 16;
@@ -144,35 +156,44 @@ protected:
 
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::Init(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scaleGM, GM_ADDR ptScaleGM, GM_ADDR cGM, GM_ADDR workSpace, const void* tilingData,
-    TPipe* pipe)
+    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scaleGM, GM_ADDR ptScaleGM, GM_ADDR cGM, GM_ADDR workSpace,
+    const void* tilingData, TPipe* pipe)
 {
-    blockIdx_ = AscendC::GetBlockIdx();
-    if ASCEND_IS_AIV {
-        blockIdx_ = blockIdx_ / AscendC::GetTaskRation();
-        subBlockIdx_ = AscendC::GetSubBlockIdx();
-    }
     pipe_ = pipe;
     tilingData_ = static_cast<const BatchMatMulV3TilingData*>(tilingData);
-
-    UpdateGlobalAddr(aGM, bGM, scaleGM, ptScaleGM, cGM, workSpace);
     if ASCEND_IS_AIC {
         mm.Init(&tilingData_->matMulTilingData.tCubeTiling, pipe);
         SetOrgShape();
     }
-    uint32_t mForSingleVec = CeilDiv(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.baseM), CV_RATIO);
-    pipe_->InitBuffer(vecQueMMRes_, 1,
-                      mForSingleVec * tilingData_->matMulTilingData.tCubeTiling.baseN * sizeof(l0cDtype));
-    l0cOutUb_ = vecQueMMRes_.AllocTensor<l0cDtype>();
-    // 仅AIV相关的buffer
-    if ASCEND_IS_AIV {
-        pipe_->InitBuffer(vecQueScale_, 1, tilingData_->matMulTilingData.tCubeTiling.baseN * sizeof(scaleType));
-        pipe_->InitBuffer(vecQuePertokenScale_, 1,
-                          Align(mForSingleVec * sizeof(ptScaleType), static_cast<uint64_t>(DATA_BLOCK)));
-        // fp16/bf16分两次输出，fp32分四次输出
-        pipe_->InitBuffer(vecQueOut_, BUFFER_NUM,
-                          CeilDiv(static_cast<uint64_t>(mForSingleVec), FP32_OUTPUT_TIMES) *
-                              tilingData_->matMulTilingData.tCubeTiling.baseN * sizeof(cType));
+    if constexpr (TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>()) {
+        if ASCEND_IS_AIV {
+            return;
+        }
+        mm.SetSubBlockIdx(0);
+        blockIdx_ = AscendC::GetBlockIdx();
+        UpdateGlobalAddr(aGM, bGM, scaleGM, ptScaleGM, cGM, workSpace);
+    } else {
+        blockIdx_ = AscendC::GetBlockIdx();
+        if ASCEND_IS_AIV {
+            blockIdx_ = blockIdx_ / AscendC::GetTaskRation();
+            subBlockIdx_ = AscendC::GetSubBlockIdx();
+        }
+        UpdateGlobalAddr(aGM, bGM, scaleGM, ptScaleGM, cGM, workSpace);
+        uint32_t mForSingleVec =
+            CeilDiv(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.baseM), CV_RATIO);
+        pipe_->InitBuffer(vecQueMMRes_, 1,
+                          mForSingleVec * tilingData_->matMulTilingData.tCubeTiling.baseN * sizeof(l0cDtype));
+        l0cOutUb_ = vecQueMMRes_.AllocTensor<l0cDtype>();
+        // 仅AIV相关的buffer
+        if ASCEND_IS_AIV {
+            pipe_->InitBuffer(vecQueScale_, 1, tilingData_->matMulTilingData.tCubeTiling.baseN * sizeof(scaleType));
+            pipe_->InitBuffer(vecQuePertokenScale_, 1,
+                              Align(mForSingleVec * sizeof(ptScaleType), static_cast<uint64_t>(DATA_BLOCK)));
+            // fp16/bf16分两次输出，fp32分四次输出
+            pipe_->InitBuffer(vecQueOut_, BUFFER_NUM,
+                              CeilDiv(static_cast<uint64_t>(mForSingleVec), FP32_OUTPUT_TIMES) *
+                                  tilingData_->matMulTilingData.tCubeTiling.baseN * sizeof(cType));
+        }
     }
 }
 
@@ -181,7 +202,8 @@ __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MI
 {
     uint64_t mergeBatchK = tilingData_->cBatchDimAll * tilingData_->matMulTilingData.tCubeTiling.Ka;
     mm.SetOrgShape(tilingData_->matMulTilingData.tCubeTiling.M, tilingData_->matMulTilingData.tCubeTiling.N,
-                   mergeBatchK, tilingData_->matMulTilingData.tCubeTiling.Kb, 0);
+                   mergeBatchK, tilingData_->matMulTilingData.tCubeTiling.Kb,
+                   tilingData_->cBatchDimAll * tilingData_->matMulTilingData.tCubeTiling.N);
 }
 
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
@@ -193,29 +215,44 @@ __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MI
         aGlobal_.SetGlobalBuffer((__gm__ aType*)aGM);
         bGlobal_.SetGlobalBuffer((__gm__ bType*)bGM);
     }
-    if ASCEND_IS_AIV {
-        scaleGlobal_.SetGlobalBuffer((__gm__ scaleType*)scaleGM);
-        pertokenScaleGlobal_.SetGlobalBuffer((__gm__ ptScaleType*)ptScaleGM);
+    if constexpr (TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>()) {
+        pertokenScaleGlobal_.SetGlobalBuffer((__gm__ fp8_e8m0_t*)ptScaleGM);
+        scaleGlobal_.SetGlobalBuffer((__gm__ fp8_e8m0_t*)scaleGM);
         cGlobal_.SetGlobalBuffer((__gm__ cType*)cGM);
+    } else {
+        if ASCEND_IS_AIV {
+            scaleGlobal_.SetGlobalBuffer((__gm__ scaleType*)scaleGM);
+            pertokenScaleGlobal_.SetGlobalBuffer((__gm__ ptScaleType*)ptScaleGM);
+            cGlobal_.SetGlobalBuffer((__gm__ cType*)cGM);
+        }
     }
 }
 
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::Process()
 {
-    for (uint64_t bIndex = 0; bIndex < tilingData_->cBatchDimAll; ++bIndex) {
-        block_.offset_.batchOffset = bIndex;
-        bool isVecSetSyncCom = false;
-        for (uint64_t j = 0; j < block_.params_.round; j++) {
-            block_.UpdateBasicIndex(j);
-            if (block_.params_.index < block_.params_.totalCnt) {
-                block_.UpdateBlockParams(j);
-                if (block_.params_.singleCoreM > 0 && block_.params_.singleCoreN > 0) {
-                    block_.CalcGMOffset();
+    bool isVecSetSyncCom = false;
+    for (uint64_t j = 0; j < block_.params_.round; j++) {
+        block_.UpdateBasicIndex(j);
+        block_.offset_.batchOffset = block_.params_.index / (block_.params_.mCnt * block_.params_.nCnt);
+        if (block_.params_.index < block_.params_.totalCnt) {
+            block_.UpdateBlockParams();
+            if (block_.params_.singleCoreM > 0 && block_.params_.singleCoreN > 0) {
+                block_.template CalcGMOffset<bTrans>(TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>());
+                if constexpr (TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>()) {
+                    if ASCEND_IS_AIV {
+                        return;
+                    }
+                    mm.SetSingleShape(block_.params_.singleCoreM, block_.params_.singleCoreN,
+                                      tilingData_->matMulTilingData.tCubeTiling.singleCoreK);
+                    mm.SetTensorScaleA(pertokenScaleGlobal_[block_.offset_.offsetPerTokenScale], aTrans);
+                    mm.SetTensorScaleB(scaleGlobal_[block_.offset_.offsetScale], bTrans);
+                    MMCompute();
+                } else {
                     if ASCEND_IS_AIC {
                         mm.SetSingleShape(block_.params_.singleCoreM, block_.params_.singleCoreN,
                                           tilingData_->matMulTilingData.tCubeTiling.singleCoreK);
-                        if (block_.offset_.batchOffset * block_.params_.round + j > 0) {
+                        if (j > 0) {
                             WaitForVector();
                         }
                         MMCompute();
@@ -227,13 +264,13 @@ __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MI
                         DequantCompute();
                         NotifyCube();
                     }
+                    // 由于vec最后一次会通过NotifyCube多发一次硬同步，所以cube侧需要额外加一次硬同步
+                    if ASCEND_IS_AIC {
+                        if (block_.offset_.batchOffset == tilingData_->cBatchDimAll - 1 && isVecSetSyncCom) {
+                            WaitForVector();
+                        }
+                    }
                 }
-            }
-        }
-        // 由于vec最后一次会通过NotifyCube多发一次硬同步，所以cube侧需要额外加一次硬同步
-        if ASCEND_IS_AIC {
-            if (block_.offset_.batchOffset == tilingData_->cBatchDimAll - 1 && isVecSetSyncCom) {
-                WaitForVector();
             }
         }
     }
@@ -245,7 +282,11 @@ __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MI
     mm.SetTensorA(aGlobal_[block_.offset_.offsetA], aTrans);
     mm.SetTensorB(bGlobal_[block_.offset_.offsetB], bTrans);
     mm.Iterate();
-    mm.GetTensorC(l0cOutUb_, 0, true);
+    if constexpr (TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>()) {
+        mm.GetTensorC(cGlobal_[block_.offset_.offsetC]);
+    } else {
+        mm.GetTensorC(l0cOutUb_, 0, true);
+    }
 }
 
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS

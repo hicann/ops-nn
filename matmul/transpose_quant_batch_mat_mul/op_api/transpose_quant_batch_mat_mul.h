@@ -17,8 +17,8 @@
 namespace l0op {
 const aclTensor* TransposeQuantBatchMatMul(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* x1Scale, const aclTensor* x2Scale,
-    const int32_t dtype, const int32_t groupSize, const aclIntArray* permX1, const aclIntArray* permX2,
-    const aclIntArray* permY, const int32_t batchSplitFactor, aclOpExecutor* executor);
+    int32_t dtype, int64_t groupSize, const aclIntArray* permX1, const aclIntArray* permX2,
+    const aclIntArray* permY, int32_t batchSplitFactor, aclOpExecutor* executor);
 } // namespace l0op
 
 #endif  // OP_API_OP_API_COMMON_INC_LEVEL0_OP_TRANSPOSE_QUANT_BATCH_MAT_MUL_OP_H_

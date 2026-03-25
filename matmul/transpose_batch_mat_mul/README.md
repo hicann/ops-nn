@@ -9,14 +9,14 @@
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas A2 推理系列产品|√|
 |Atlas 200I/500 A2推理产品|×|
-|Atlas 推理系列产品|x|
-|Atlas 训练系列产品|x|
+|Atlas 推理系列产品|×|
+|Atlas 训练系列产品|×|
 |Kirin X90 处理器系列产品|√|
 |Kirin 9030 处理器系列产品|√|
 
 ## 功能说明
 
-- 算子功能：完成张量x1与张量x2的矩阵乘计算。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的序列进行变更。permX1代表张量x1的转置序列，支持[0,1,2]、[1,0,2]，permX2代表张量x2的转置序列[0,1,2]，permY表示矩阵乘输出矩阵的转置序列，当前仅支持[1,0,2]，序列值为0的是batch维度，其余两个维度做矩阵乘法。scale表示输出矩阵的量化系数，可在输入为FLOAT16且输出为INT8时使能；bias为预留参数，当前暂不支持，详细约束条件可见约束说明或者[aclnnTransposeBatchMatMul](docs/aclnnTransposeBatchMatMul.md)调用说明文档。
+- 算子功能：完成张量x1与张量x2的矩阵乘计算。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的序列进行变更。permX1代表张量x1的转置序列，支持[0,1,2]、[1,0,2]，permX2代表张量x2的转置序列[0,1,2]，permY表示矩阵乘输出矩阵的转置序列，当前仅支持[1,0,2]，序列值为0的是batch维度，其余两个维度做矩阵乘法。scale表示输出矩阵的量化系数，可在输入为FLOAT16且输出为INT8时使能，详细约束条件可见约束说明或者[aclnnTransposeBatchMatMul](docs/aclnnTransposeBatchMatMul.md)调用说明文档。
 
 - 示例：
   - x1的shape是(B, M, K)，x2的shape是(B, K, N)，scale为None，batchSplitFactor等于1时，计算输出out的shape是(M, B, N)。
@@ -69,41 +69,6 @@
     <td>INT64, UINT64</td>
     <td>ND</td>
   </tr>
-    <tr>
-    <td>permX1</td>
-    <td>输入</td>
-    <td>x1的转置序列。</td>
-    <td>INT64</td>
-    <td>ND</td>
-  </tr>
-  <tr>
-    <td>permX2</td>
-    <td>输入</td>
-    <td>x2的转置序列。</td>
-    <td>INT64</td>
-    <td>ND</td>
-  </tr>
-  <tr>
-    <td>permY</td>
-    <td>输入</td>
-    <td>y的转置序列。</td>
-    <td>INT64</td>
-    <td>ND</td>
-  </tr>
-  <tr>
-    <td>cubeMathType</td>
-    <td>输入</td>
-    <td>指定Cube单元的计算逻辑。</td>
-    <td>INT64</td>
-    <td>ND</td>
-  </tr>
-  <tr>
-    <td>batchSplitFactor</td>
-    <td>输入</td>
-    <td>矩阵乘输出矩阵中N维的切分大小。</td>
-    <td>INT64</td>
-    <td>ND</td>
-  </tr>
   <tr>
     <td>permX1</td>
     <td>输入</td>
@@ -123,6 +88,13 @@
     <td>输入</td>
     <td>表示矩阵乘输出矩阵的转置序列。</td>
     <td>INT64</td>
+    <td>-</td>
+  </tr>
+  <tr>
+    <td>cubeMathType</td>
+    <td>输入</td>
+    <td>指定Cube单元的计算逻辑。</td>
+    <td>INT8</td>
     <td>-</td>
   </tr>
   <tr>
@@ -152,6 +124,7 @@
     - 当scale不为空时，batchSplitFactor只能等于1，B与N的乘积小于65536, 且仅支持输入为FLOAT16和输出为INT8的类型推导。
 - <term>Ascend 950PR/Ascend 950DT</term>：
     - 当scale不为空时，batchSplitFactor只能等于1，且仅支持输入为FLOAT16和输出为INT8的类型推导。
+    - bias为预留参数，当前暂不支持。
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |

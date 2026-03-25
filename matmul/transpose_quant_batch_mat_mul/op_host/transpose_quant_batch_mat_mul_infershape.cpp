@@ -57,31 +57,6 @@ static bool TransposeShape(const Shape& src, const TypedContinuousVector<int64_t
     return true;
 }
 
-static ge::graphStatus CheckScaleForTransposeQuantBatchMatMul(
-    const InferShapeContext* context, const Shape* x1Scale, const Shape* x2Scale, Shape& shapeX1Transposed,
-    Shape& shapeX2Transposed)
-{
-    if (x1Scale != nullptr && x1Scale->GetDimNum() == 1) {
-        CHECK(
-            x1Scale->GetDim(0) != shapeX1Transposed.GetDim(1), // scale[0] = x1[1] = m
-            OP_LOGE(
-                context->GetNodeName(), "The m dimension of x1 [%ld] and x1Scale [%ld] tensors must be the same",
-                shapeX1Transposed.GetDim(1), x1Scale->GetDim(0)),
-            return ge::GRAPH_FAILED);
-    }
-
-    if (x2Scale != nullptr && x2Scale->GetDimNum() == 1) {
-        CHECK(
-            x2Scale->GetDim(0) != shapeX2Transposed.GetDim(2), // scale[0] = x2[2] = n
-            OP_LOGE(
-                context->GetNodeName(), "The n dimension of x2 [%ld] and x2Scale [%ld] tensors must be the same",
-                shapeX2Transposed.GetDim(2), x2Scale->GetDim(0)),
-            return ge::GRAPH_FAILED);
-    }
-
-    return ge::GRAPH_SUCCESS;
-}
-
 static ge::graphStatus SetShapeY(
     Shape& shapeY, const Shape& shapeX1Transposed, const Shape& shapeX2Transposed,
     const TypedContinuousVector<int64_t>& permY, const int32_t batchSplitFactor)
@@ -113,37 +88,6 @@ static ge::graphStatus SetShapeY(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CheckPermForTransposeQuantBatchMatMul(
-    const TypedContinuousVector<int64_t>& permX1, const TypedContinuousVector<int64_t>& permX2,
-    const TypedContinuousVector<int64_t>& permY)
-{
-    bool permSizeInvalid =
-        permX1.GetSize() != PERM_DIM_NUM || permX2.GetSize() != PERM_DIM_NUM || permY.GetSize() != PERM_DIM_NUM;
-    CHECK(
-        permSizeInvalid,
-        CUBE_INNER_ERR_REPORT(
-            "TQBMM",
-            "The dims of the permArray should be 3, now permX1 dims: %zu, permX2 dims: %zu, permY dims: %zu",
-            permX1.GetSize(), permX2.GetSize(), permY.GetSize()),
-        return ge::GRAPH_FAILED);
-    const auto permX1_attr = permX1.GetData();
-    auto check_permX1 = (*permX1_attr == 1 && *(permX1_attr + 1) == 0 && *(permX1_attr + 2) == 2);
-    CHECK(
-        !check_permX1, CUBE_INNER_ERR_REPORT("TQBMM", "[InferShape] permX1 should be {1, 0, 2}"),
-        return ge::GRAPH_FAILED);
-
-    const auto permX2_attr = permX2.GetData();
-    auto check_permX2 = (*permX2_attr == 0 && *(permX2_attr + 1) == 1 && *(permX2_attr + 2) == 2);
-    CHECK(
-        !check_permX2, CUBE_INNER_ERR_REPORT("TQBMM", "[InferShape] permX2 should be {0, 1, 2}"),
-        return ge::GRAPH_FAILED);
-
-    const auto permY_attr = permY.GetData();
-    auto check_permY = *permY_attr == 1 && *(permY_attr + 1) == 0 && *(permY_attr + 2) == 2;
-    CHECK(!check_permY, CUBE_INNER_ERR_REPORT("TQBMM", "[InferShape] permY should {1, 0, 2}"), return ge::GRAPH_FAILED);
-    return ge::GRAPH_SUCCESS;
-}
-
 static ge::graphStatus InferShapeForTransposeQuantBatchMatMul(InferShapeContext* context)
 {
     CHECK(
@@ -169,9 +113,6 @@ static ge::graphStatus InferShapeForTransposeQuantBatchMatMul(InferShapeContext*
     CHECK(
         permX1 == nullptr || permX2 == nullptr || permY == nullptr,
         CUBE_INNER_ERR_REPORT(nameOp, "[Infershape] attr is nullptr."), return ge::GRAPH_FAILED);
-    CHECK(
-        CheckPermForTransposeQuantBatchMatMul(*permX1, *permX2, *permY) != ge::GRAPH_SUCCESS,
-        CUBE_INNER_ERR_REPORT(nameOp, "[InferShape] Failed to check perm value."), return ge::GRAPH_FAILED);
 
     Shape shapeX1Transposed;
     Shape shapeX2Transposed;
@@ -200,13 +141,6 @@ static ge::graphStatus InferShapeForTransposeQuantBatchMatMul(InferShapeContext*
             nameOp, "The batch-axis must be equal, transposed shape of x1 and x2 is %s, %s.",
             Ops::Base::ToString(shapeX1Transposed).c_str(), Ops::Base::ToString(shapeX2Transposed).c_str()),
         return ge::GRAPH_FAILED);
-    // Check shape k n
-    CHECK(
-        shapeX2Transposed.GetDim(DIM_1) != VALID_K || shapeX2Transposed.GetDim(DIM_2) != VALID_N,
-        CUBE_INNER_ERR_REPORT(
-            nameOp, "The shape of the x2 is not supported, now transposed shape of is %s.",
-            Ops::Base::ToString(shapeX2Transposed).c_str()),
-        return ge::GRAPH_FAILED);
 
     auto* x1Scale = context->GetOptionalInputShape(kX1ScaleIdx);
     auto* x2Scale = context->GetOptionalInputShape(kX2ScaleIdx);
@@ -225,12 +159,6 @@ static ge::graphStatus InferShapeForTransposeQuantBatchMatMul(InferShapeContext*
     CHECK(
         ret != ge::GRAPH_SUCCESS, CUBE_INNER_ERR_REPORT(nameOp, "[InferShape] set shapeY failed."),
         return ge::GRAPH_FAILED);
-
-    CHECK(
-        CheckScaleForTransposeQuantBatchMatMul(context, x1Scale, x2Scale, shapeX1Transposed, shapeX2Transposed) !=
-            ge::GRAPH_SUCCESS,
-        CUBE_INNER_ERR_REPORT(nameOp, "[InferShape] scale shape check failed."), return ge::GRAPH_FAILED);
-
     // no need to SetDataType in runtime
     return ge::GRAPH_SUCCESS;
 }

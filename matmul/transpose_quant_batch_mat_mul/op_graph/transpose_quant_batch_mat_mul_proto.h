@@ -29,10 +29,10 @@ namespace ge {
 * @li bias: An optional tensor. Bias for batchmatmul. Must be one of the following types:
 * float32, float16, bfloat16. 1D. Has format ND.
 * @li x1_scale: A matrix tensor, quantization parameter.
-             Must be one of the following types: float32. The format
+             Must be one of the following types: float32、float8_e8m0. The format
              supports ND. The shape is 1D (t,), with t equal to m, where m is the same as that of x1.
 * @li x2_scale: A matrix tensor, quantization parameter.
-             Must be one of the following types: float32. The format
+             Must be one of the following types: float32、float8_e8m0. The format
              supports ND. The shape is 1D (t,), with t equal to n, where n is the same as that of x2.
 
 * @par Attributes:
@@ -53,8 +53,8 @@ REG_OP(TransposeQuantBatchMatMul)
     .INPUT(x1, TensorType({DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN}))
     .INPUT(x2, TensorType({DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN}))
     .OPTIONAL_INPUT(bias, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
-    .OPTIONAL_INPUT(x1_scale, TensorType({DT_FLOAT}))
-    .OPTIONAL_INPUT(x2_scale, TensorType({DT_FLOAT}))
+    .OPTIONAL_INPUT(x1_scale, TensorType({DT_FLOAT, DT_FLOAT8_E8M0}))
+    .OPTIONAL_INPUT(x2_scale, TensorType({DT_FLOAT,DT_FLOAT8_E8M0}))
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_BF16}))
     .ATTR(dtype, Int, 1)
     .ATTR(group_size, Int, 0)

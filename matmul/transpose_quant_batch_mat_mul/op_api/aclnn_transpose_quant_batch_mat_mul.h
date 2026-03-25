@@ -26,7 +26,7 @@ extern "C" {
  * @param [in] x1Scale: 量化参数中的缩放因子，数据类型支持：float32。
  * @param [in] x2Scale: 量化参数中的缩放因子，数据类型支持：float32。
  * @param [in] dtype: 输出矩阵的数据类型。数据类型支持：int32。
- * @param [in] groupSize: 输出矩阵的分组大小。数据类型支持：int32。
+ * @param [in] groupSize: 输出矩阵的分组大小。数据类型支持：int64。
  * @param [in] permX1: 表示输入x1的转置数组。
  * @param [in] permX2: 表示输入x2的转置数组。
  * @param [in] permY: 表示输入y的转置数组。
@@ -38,8 +38,8 @@ extern "C" {
  */
 ACLNN_API aclnnStatus aclnnTransposeQuantBatchMatMulGetWorkspaceSize(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* x1Scale, const aclTensor* x2Scale,
-    const int32_t dtype, const int32_t groupSize, const aclIntArray* permX1, const aclIntArray* permX2,
-    const aclIntArray* permY, const int32_t batchSplitFactor, aclTensor* out, uint64_t* workspaceSize,
+    int32_t dtype, int64_t groupSize, const aclIntArray* permX1, const aclIntArray* permX2,
+    const aclIntArray* permY, int32_t batchSplitFactor, aclTensor* out, uint64_t* workspaceSize,
     aclOpExecutor** executor);
 
 /**

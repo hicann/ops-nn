@@ -19,6 +19,7 @@
 #include "register/op_def_registry.h"
 #include "common/op_host/op_tiling/debug_tiling.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_compile_info_advanced.h"
+#include "matmul/common/op_host/math_util.h"
 
 namespace {
 using namespace optiling;
@@ -35,7 +36,7 @@ static inline void TQBMMGetDtype(const gert::TilingContext& context, MatMulV3Arg
 
 ge::graphStatus TQBMMGetShapeMKN(const gert::Shape& aShape, const gert::Shape& bShape,
                                  const gert::ContinuousVector* aPermList, const gert::ContinuousVector* bPermList,
-                                 MatMulV3Args& args)
+                                 MatMulV3Args& args, bool isMxfp8)
 {
     const int64_t* aPerm = static_cast<const int64_t*>(aPermList->GetData());
     const int64_t* bPerm = static_cast<const int64_t*>(bPermList->GetData());
@@ -51,8 +52,11 @@ ge::graphStatus TQBMMGetShapeMKN(const gert::Shape& aShape, const gert::Shape& b
         OP_LOGE(args.opName, "illegal value: m[%ld], k[%ld], n[%ld]", m, kA, n);
         return ge::GRAPH_FAILED;
     }
-
-    if (kA != TQBMM_VALID_K || n != TQBMM_VALID_N) {
+    if (isMxfp8 && (kA % K_ALIGNMENT64 != 0)){
+        OP_LOGE(args.opName, "K must be a multiple of 64, now K are %ld", kA);
+        return ge::GRAPH_FAILED;
+    }
+    if (!isMxfp8 && (kA != TQBMM_VALID_K || n != TQBMM_VALID_N)) {
         OP_LOGE(args.opName, "The shape of the x2 is not supported, now K are %ld and N are %ld", kA, n);
         return ge::GRAPH_FAILED;
     }
@@ -66,6 +70,8 @@ ge::graphStatus TQBMMGetShapeMKN(const gert::Shape& aShape, const gert::Shape& b
 
 ge::graphStatus TQBMMGetShape(const gert::TilingContext& context, MatMulV3Args& args)
 {
+    bool isMxfp8 =
+        IsMicroScaling(context.GetOptionalInputDesc(SCALE_X1_IDX), context.GetOptionalInputDesc(SCALE_X2_IDX));
     const gert::Shape& aShape = context.GetInputShape(0)->GetOriginShape();
     const gert::Shape& bShape = context.GetInputShape(1)->GetOriginShape();
     auto attrs = context.GetAttrs();
@@ -79,13 +85,15 @@ ge::graphStatus TQBMMGetShape(const gert::TilingContext& context, MatMulV3Args& 
     OP_TILING_CHECK(!aPermCheck, CUBE_INNER_ERR_REPORT(args.opName, "unsupport aPerm value"), return ge::GRAPH_FAILED);
     const int64_t* bPerm = static_cast<const int64_t*>(bPermList->GetData());
     bool bPermCheck = ((bPerm[BATCH_IDX] == 0L) && (bPerm[KB_IDX] == 1L) && (bPerm[N_IDX] == 2L)); // bPerm is [0,1,2]
+    if (isMxfp8) {
+        bPermCheck = bPermCheck || ((bPerm[BATCH_IDX] == 0L) && (bPerm[KB_IDX] == 2L) && (bPerm[N_IDX] == 1L));
+    }
     OP_TILING_CHECK(!bPermCheck, CUBE_INNER_ERR_REPORT(args.opName, "unsupport bPerm value"), return ge::GRAPH_FAILED);
     // perm_y
     const int64_t* yPerm = static_cast<const int64_t*>(yPermList->GetData());
     bool yPermCheck = (yPerm[BATCH_IDX] == 1L) && (yPerm[M_IDX] == 0L) && (yPerm[N_IDX] == 2L); // yPerm is [1,0,2]
     OP_TILING_CHECK(!yPermCheck, CUBE_INNER_ERR_REPORT(args.opName, "unsupport yPerm value"), return ge::GRAPH_FAILED);
-
-    OP_TILING_CHECK((TQBMMGetShapeMKN(aShape, bShape, aPermList, bPermList, args) != ge::GRAPH_SUCCESS),
+    OP_TILING_CHECK((TQBMMGetShapeMKN(aShape, bShape, aPermList, bPermList, args, isMxfp8) != ge::GRAPH_SUCCESS),
                     CUBE_INNER_ERR_REPORT(args.opName, "get m/k/n failed"), return ge::GRAPH_FAILED);
 
     if (attrs->GetAttrNum() >= ATTR_NUM) {
@@ -118,7 +126,9 @@ ge::graphStatus IsValidDtype(const gert::TilingContext& context, const MatMulV3A
         {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16},
         {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_BF16},
         {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16},
-        {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_BF16}};
+        {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_BF16},
+        {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT16},
+        {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_BF16}};
     for (auto& supported : dtypeSuportList) {
         if (std::equal(dtype.begin(), dtype.end(), supported.begin())) {
             return ge::GRAPH_SUCCESS;
@@ -142,7 +152,10 @@ ge::graphStatus TransposeQuantBatchMatMulTiling::GetArgs()
     }
     return IsValidDtype(*context_, args_);
 }
-ge::graphStatus TransposeQuantBatchMatMulTiling::CheckScale(const int64_t m, const int64_t n) const
+
+
+ge::graphStatus TransposeQuantBatchMatMulTiling::CheckScale(const int64_t b, const int64_t m, const int64_t n,
+                                                            const int64_t k, const int64_t* bPerm) const
 {
     // scale
     auto scaleX1ShapePtr = context_->GetOptionalInputShape(SCALE_X1_IDX);
@@ -152,16 +165,33 @@ ge::graphStatus TransposeQuantBatchMatMulTiling::CheckScale(const int64_t m, con
         return ge::GRAPH_FAILED;
     }
     auto scaleX1DimNum = scaleX1ShapePtr->GetStorageShape().GetDimNum();
-    int64_t scaleX1Dim0 = scaleX1ShapePtr->GetStorageShape().GetDim(0);
-    if (scaleX1DimNum != EXPECTED_SCALE_DIM || scaleX1Dim0 != m) {
-        OP_LOGE(args_.opName, "Dim of x1Scale != 1 or x1Scale dim 0 != M");
-        return ge::GRAPH_FAILED;
-    }
     auto scaleX2DimNum = scaleX2ShapePtr->GetStorageShape().GetDimNum();
-    int64_t scaleX2Dim0 = scaleX2ShapePtr->GetStorageShape().GetDim(0);
-    if (scaleX2DimNum != EXPECTED_SCALE_DIM || scaleX2Dim0 != n) {
-        OP_LOGE(args_.opName, "Dim of x2Scale != 1 or x2Scale dim 0 != N");
-        return ge::GRAPH_FAILED;
+    if (IsMicroScaling(context_->GetOptionalInputDesc(SCALE_X1_IDX), context_->GetOptionalInputDesc(SCALE_X2_IDX))) {
+        int64_t numGroup = ops::CeilDiv(ops::CeilDiv(k, SUPPORTED_GROUP_SIZE), NUM_TWO);
+        if (scaleX1DimNum != EXPECTED_MX_SCALE_DIM || scaleX1ShapePtr->GetStorageShape().GetDim(0) != m ||
+            scaleX1ShapePtr->GetStorageShape().GetDim(1) != b ||
+            scaleX1ShapePtr->GetStorageShape().GetDim(2) != numGroup ||
+            scaleX1ShapePtr->GetStorageShape().GetDim(NUM_THREE) != NUM_TWO) {
+            OP_LOGE(args_.opName, "MXFp8 Dim of x1ScaleDim != 4 or The x1scale shape invaild");
+            return ge::GRAPH_FAILED;
+        }
+        int64_t scaleN = scaleX2ShapePtr->GetStorageShape().GetDim(bPerm[NUM_TWO]);
+        int64_t scaleGroupNum = scaleX2ShapePtr->GetStorageShape().GetDim(bPerm[1]);
+        if (scaleX2DimNum != EXPECTED_MX_SCALE_DIM || scaleX2ShapePtr->GetStorageShape().GetDim(0) != b ||
+            scaleN != n || scaleGroupNum != numGroup ||
+            scaleX2ShapePtr->GetStorageShape().GetDim(NUM_THREE) != NUM_TWO) {
+            OP_LOGE(args_.opName, "MXFp8 Dim of x2ScaleDim != 4 or The x2scale shape invaild");
+            return ge::GRAPH_FAILED;
+        }
+    } else {
+        if (scaleX1DimNum != EXPECTED_SCALE_DIM || scaleX1ShapePtr->GetStorageShape().GetDim(0) != m) {
+            OP_LOGE(args_.opName, "Dim of x1Scale != 1 or x1Scale dim 0 != M");
+            return ge::GRAPH_FAILED;
+        }
+        if (scaleX2DimNum != EXPECTED_SCALE_DIM || scaleX2ShapePtr->GetStorageShape().GetDim(0) != n) {
+            OP_LOGE(args_.opName, "Dim of x2Scale != 1 or x2Scale dim 0 != N");
+            return ge::GRAPH_FAILED;
+        }
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -197,10 +227,12 @@ ge::graphStatus TransposeQuantBatchMatMulTiling::CheckArgs()
     }
     const int64_t* aPerm = static_cast<const int64_t*>(aPermList->GetData());
     const int64_t* bPerm = static_cast<const int64_t*>(bPermList->GetData());
+    int64_t b = aShape[aPerm[BATCH_IDX]];
     int64_t m = aShape[aPerm[M_IDX]];
     int64_t n = bShape[bPerm[N_IDX]];
+    int64_t k = aShape[aPerm[KA_IDX]];
     //scale
-    OP_TILING_CHECK((CheckScale(m, n) != ge::GRAPH_SUCCESS), CUBE_INNER_ERR_REPORT(args_.opName, "invalid scale"),
+    OP_TILING_CHECK((CheckScale(b, m, n, k, bPerm) != ge::GRAPH_SUCCESS), CUBE_INNER_ERR_REPORT(args_.opName, "invalid scale"),
                     return ge::GRAPH_FAILED);
     // bias
     if (context_->GetOptionalInputShape(BIAS_IDX) != nullptr) {

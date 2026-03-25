@@ -47,13 +47,20 @@ struct ASWTilingParam {
     uint64_t index;
 };
 
+template <typename T>
+__aicore__ inline constexpr bool IsMxType()
+{
+    return AscendC::IsSameType<T, AscendC::fp8_e8m0_t>::value;
+}
+
 class TransposeQuantBatchMatMulAswBlock {
 public:
     __aicore__ inline TransposeQuantBatchMatMulAswBlock() {}
     __aicore__ inline void Init(const BatchMatMulV3TilingData* tilingData, uint32_t blockIdx);
     __aicore__ inline void UpdateBasicIndex(uint64_t roundIdx);
-    __aicore__ inline void UpdateBlockParams(uint64_t roundIdx);
-    __aicore__ inline void CalcGMOffset();
+    __aicore__ inline void UpdateBlockParams();
+    template  <bool bTrans>
+    __aicore__ inline void CalcGMOffset(bool isMxType);
 
 public:
     ASWTilingParam params_;
@@ -62,6 +69,7 @@ public:
 
 private:
     const uint64_t WINDOW_LEN = 4;
+    static constexpr int32_t MXFP_MULTI_BASE_SIZE = 2;
     static constexpr uint64_t CUBE_BLOCK = 16UL;
     uint32_t blockIdx_;
 };
@@ -75,7 +83,7 @@ __aicore__ inline void TransposeQuantBatchMatMulAswBlock::Init(const BatchMatMul
                            static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.baseM));
     params_.nCnt = CeilDiv(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.N),
                            static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.baseN));
-    params_.totalCnt = params_.mCnt * params_.nCnt;
+    params_.totalCnt = params_.mCnt * params_.nCnt * tilingData_->cBatchDimAll;
     params_.round = CeilDiv(static_cast<uint64_t>(params_.totalCnt),
                             static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.usedCoreNum));
     params_.mCoreNum = AscendC::Std::min(WINDOW_LEN, params_.mCnt);
@@ -91,43 +99,60 @@ __aicore__ inline void TransposeQuantBatchMatMulAswBlock::Init(const BatchMatMul
 __aicore__ inline void TransposeQuantBatchMatMulAswBlock::UpdateBasicIndex(uint64_t roundIdx)
 {
     params_.index = blockIdx_ + roundIdx * tilingData_->matMulTilingData.tCubeTiling.usedCoreNum;
-    uint64_t rowIdx = params_.index / params_.nCnt / params_.mCoreNum;
+    uint64_t matIndex = params_.index % (params_.mCnt * params_.nCnt);
+    uint64_t rowIdx = matIndex / params_.nCnt / params_.mCoreNum;
     if (rowIdx < params_.mainRow) {
-        params_.mIndex = rowIdx * params_.mCoreNum + params_.index % params_.mCoreNum;
-        params_.nIndex = (params_.index / params_.mCoreNum) % params_.nCnt;
+        params_.mIndex = rowIdx * params_.mCoreNum + matIndex % params_.mCoreNum;
+        params_.nIndex = (matIndex / params_.mCoreNum) % params_.nCnt;
     } else {
         rowIdx = params_.mainRow;
-        uint64_t tailIndex = params_.index - params_.mainRow * params_.mCoreNum * params_.nCnt;
+        uint64_t tailIndex = matIndex - params_.mainRow * params_.mCoreNum * params_.nCnt;
         params_.mIndex = params_.mainRow * params_.mCoreNum + tailIndex % params_.mTailCoreNum;
         params_.nIndex = (tailIndex / params_.mTailCoreNum) % params_.nCnt;
     }
-
     if (rowIdx & 1) {
         params_.nIndex = params_.nCnt - 1 - params_.nIndex;
     }
 }
 
-__aicore__ inline void TransposeQuantBatchMatMulAswBlock::UpdateBlockParams(uint64_t roundIdx)
+__aicore__ inline void TransposeQuantBatchMatMulAswBlock::UpdateBlockParams()
 {
     params_.singleCoreM =
         params_.mIndex != (params_.mCnt - 1UL) ? tilingData_->matMulTilingData.tCubeTiling.baseM : params_.mBaseTail;
     params_.singleCoreN =
         params_.nIndex != (params_.nCnt - 1UL) ? tilingData_->matMulTilingData.tCubeTiling.baseN : params_.nBaseTail;
 }
-
-__aicore__ inline void TransposeQuantBatchMatMulAswBlock::CalcGMOffset()
+template  <bool bTrans>
+__aicore__ inline void TransposeQuantBatchMatMulAswBlock::CalcGMOffset(bool isMxType)
 {
     uint64_t mOffset = params_.mIndex * tilingData_->matMulTilingData.tCubeTiling.baseM;
     uint64_t nOffset = params_.nIndex * tilingData_->matMulTilingData.tCubeTiling.baseN;
     offset_.offsetA = mOffset * tilingData_->cBatchDimAll * tilingData_->matMulTilingData.tCubeTiling.Ka +
                       offset_.batchOffset * tilingData_->matMulTilingData.tCubeTiling.Ka;
-    offset_.offsetB = offset_.batchOffset * tilingData_->matMulTilingData.tCubeTiling.N *
-                          tilingData_->matMulTilingData.tCubeTiling.Kb +
-                      nOffset;
+    uint64_t offsetBBatch = offset_.batchOffset * tilingData_->matMulTilingData.tCubeTiling.N *
+                            tilingData_->matMulTilingData.tCubeTiling.Kb;
+    offset_.offsetB =
+        bTrans ? offsetBBatch + nOffset * tilingData_->matMulTilingData.tCubeTiling.Kb : offsetBBatch + nOffset;
     offset_.offsetC = mOffset * tilingData_->cBatchDimAll * tilingData_->matMulTilingData.tCubeTiling.N +
                       offset_.batchOffset * tilingData_->matMulTilingData.tCubeTiling.N + nOffset;
-    offset_.offsetPerTokenScale = mOffset;
-    offset_.offsetScale = nOffset;
+    if (isMxType) {
+        int32_t pertokenScaleK = MXFP_MULTI_BASE_SIZE;
+        int32_t scaleK = MXFP_MULTI_BASE_SIZE;
+        pertokenScaleK *=
+            CeilDiv(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.Ka), MXFP_DIVISOR_SIZE);
+        if constexpr (bTrans) {
+            scaleK *= CeilDiv(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.Ka), MXFP_DIVISOR_SIZE);
+        }
+        offset_.offsetPerTokenScale =
+            mOffset * tilingData_->cBatchDimAll * pertokenScaleK + offset_.batchOffset * pertokenScaleK;
+        offset_.offsetScale =
+            offset_.batchOffset * tilingData_->matMulTilingData.tCubeTiling.N * MXFP_MULTI_BASE_SIZE *
+                CeilDiv(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.Ka), MXFP_DIVISOR_SIZE) +
+            nOffset * scaleK;
+    } else {
+        offset_.offsetPerTokenScale = mOffset;
+        offset_.offsetScale = nOffset;
+    }
 }
 
 } // namespace TransposeQuantBatchMatMulAdvanced

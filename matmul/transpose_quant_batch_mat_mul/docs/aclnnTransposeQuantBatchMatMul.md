@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：完成张量x1与张量x2量化的矩阵乘计算，支持K-C[量化模式](../../../docs/zh/context/量化介绍.md)。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的数列进行变更。permX1代表张量x1的转置序列，permX2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。
+- 接口功能：完成张量x1与张量x2量化的矩阵乘计算，支持K-C、MX[量化模式](../../../docs/zh/context/量化介绍.md)。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的数列进行变更。permX1代表张量x1的转置序列，permX2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。
 
 - 示例：
   假设x1的shape是(M, B, K)，x2的shape是(B, K, N)，x1Scale和x2Scale不为None，batchSplitFactor等于1时，计算输出out的shape是(M, B, N)。
@@ -32,7 +32,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMulGetWorkspaceSize(
     const aclTensor*   x1Scale, 
     const aclTensor*   x2Scale,
     const int32_t      dtype, 
-    const int32_t      groupSize, 
+    const int64_t      groupSize, 
     const aclIntArray* permX1, 
     const aclIntArray* permX2,
     const aclIntArray* permY, 
@@ -122,8 +122,13 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
       <td>x1Scale（aclTensor*）</td>
         <td>输入</td>
         <td>表示左矩阵的量化系数。</td>
-        <td>shape仅支持一维且需要满足且等于[m]。</td>
-        <td>FLOAT32</td>
+        <td>        
+        <ul>
+          <li>K-C量化场景，shape支持一维且需要等于[m]。</li>
+          <li>MX量化场景，shape支持四维。</li>
+        </ul>
+        </td>
+        <td>FLOAT32、FLOAT8_E8M0</td>
         <td>ND</td>
         <td>1</td>
         <td>√</td>
@@ -132,8 +137,13 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
       <td>x2Scale（aclTensor*）</td>
         <td>输入</td>
         <td>表示右矩阵的量化系数。</td>
-        <td>shape仅支持一维且需要满足且等于[n]。</td>
-        <td>FLOAT32</td>
+        <td>        
+        <ul>
+          <li>K-C量化场景，shape支持一维且需要等于[n]。</li>
+          <li>MX量化场景，shape支持四维。</li>
+        </ul>
+        </td>
+        <td>FLOAT32、FLOAT8_E8M0</td>
         <td>ND</td>
         <td>1</td>
         <td>√</td>
@@ -154,11 +164,13 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>-</td>
       </tr>
       <tr>
-        <td>groupSize（int32_t）</td>
+        <td>groupSize（int64_t）</td>
         <td>输入</td>
-        <td>用于指定量化分组大小，预留参数，当前仅支持配置为0，其他取值不生效。</td>
-        <td>当前配置非0取值不生效。</td>
-        <td>INT32</td>
+        <td>用于输入m、n、k方向上的量化分组大小。</td>
+        <td>
+        由3个方向的groupSizeM，groupSizeN，groupSizeK 三个值拼接组成，每个值占16位，共占用int64_t类型groupSize的低48位（groupSize中的高16位的数值无效）
+        </td>
+        <td>INT64</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -177,7 +189,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>permX2（aclIntArray*）</td>
         <td>输入</td>
         <td>表示矩阵乘的第二个矩阵的转置序列，host侧的aclIntArray。</td>
-        <td>支持[0, 1, 2]。</td>
+        <td>-</td>
         <td>INT64</td>
         <td>-</td>
         <td>1</td>
@@ -208,10 +220,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>输出</td>
         <td>表示矩阵乘的输出矩阵，公式中的out。</td>
         <td>
-        <ul>
-          <li> 数据类型需要与x1与x2推导之后的数据类型保持一致（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
-          <li> 当前仅支持x1Scale和x2Scale不为空，groupSize为0，batchSplitFactor为1，输出shape为(M, B, N)。</li>
-        </ul>
+        不支持空Tensor。
         </td>
         <td>BFLOAT16、FLOAT16</td>
         <td>ND</td>
@@ -325,9 +334,10 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
 - 确定性说明： aclnnTransposeQuantBatchMatMul默认确定性实现。
 
 - <term>Ascend 950PR/Ascend 950DT</term>：
-    - permX1和permY支持[1, 0, 2], permX2支持输入[0, 1, 2]。
-    - x1Scale和x2Scale为1维，并且x1Scale为(M,), x2Scale为(N,)。
-    - out和dtype支持float16和bfloat16。
+    - permX1和permY支持[1, 0, 2]
+    - K-C量化场景，permX2支持输入[0, 1, 2]；MX量化场景，permX2支持输入[0, 1, 2]或[0, 2, 1]。
+    - K-C量化场景，K仅支持512，N仅支持128。x1Scale和x2Scale为1维，并且x1Scale为(M,), x2Scale为(N,)，group_size仅支持配置为0，其他取值不生效。
+    - MX量化场景，K仅支持64的倍数。x1Scale和x2Scale为4维，并且x1Scale为(M, B, K/64, 2), x2Scale为(B, K/64, N, 2)或(B, N, K/64, 2)，group_size的groupSizeM和groupSizeN仅支持0或1，groupSizeK仅支持32。
 
 ## 调用示例
 
