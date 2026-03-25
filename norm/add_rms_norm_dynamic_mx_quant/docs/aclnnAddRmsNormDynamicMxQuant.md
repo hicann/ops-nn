@@ -309,11 +309,26 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
       <td>输入或输出的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="2">561002</td>
+      <td rowspan="9">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="9">561002</td>
     </tr>
     <tr>
-      <td>输入和输出。</td>
+      <td>scaleAlg不是0或1，roundModeOptional(非空时)不是 {rint, floor, round}。</td>
+    </tr>
+    <tr>
+      <td>dstType为 fp8 时，roundModeOptional不是 rint。</td>
+    </tr>
+    <tr>
+      <td>输入x1、输出yOut的shape不是完全相同的shape。</td>
+    </tr>
+    <tr>
+      <td>mxscaleOut的维度数不等于输入x1的维度数+1。</td>
+    </tr>
+    <tr>
+      <td>gamma、beta(若存在)的shape不是完全相同的shape，或者类型不相同。</td>
+    </tr>
+    <tr>
+      <td>gamma的维度和x1的需要作norm的维度不相同，或rstdOut的维度和x1的不需要norm的维度不相同，或x1的需要norm的维度数不为1。</td>
     </tr>
   </tbody></table>
 
