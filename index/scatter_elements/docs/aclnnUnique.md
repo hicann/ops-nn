@@ -19,45 +19,203 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnUniqueGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnUnique”接口执行计算。
 
-- `aclnnStatus aclnnUniqueGetWorkspaceSize(const aclTensor* self, bool sorted, bool returnInverse, aclTensor* valueOut, aclTensor* inverseOut, uint64_t* workspaceSize, aclOpExecutor** executor)`
-- `aclnnStatus aclnnUnique(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)`
+```cpp
+aclnnStatus aclnnUniqueGetWorkspaceSize(
+  const aclTensor* self, 
+  bool             sorted, 
+  bool             returnInverse, 
+  aclTensor*       valueOut, 
+  aclTensor*       inverseOut, 
+  uint64_t*        workspaceSize, 
+  aclOpExecutor**  executor)
+```
+
+```cpp
+aclnnStatus aclnnUnique(
+  void*          workspace, 
+  uint64_t       workspaceSize, 
+  aclOpExecutor* executor, 
+  aclrtStream    stream)
+```
 
 ## aclnnUniqueGetWorkspaceSize
 
-* **参数说明**：
-  - self（aclTensor*，计算输入）：Device侧的aclTensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，维度不大于8。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BOOL、FLOAT、FLOAT16、DOUBLE、UINT8、INT8、UINT16、INT16、INT32、UINT32、UINT64、INT64、BFLOAT16。
-  
-  - sorted（bool，计算输入）: 表示是否对 valueOut 按升序进行排序。true时排序，false时乱序。
-  - returnInverse（bool，计算输入）: 表示是否返回输入数据中各个元素在 valueOut 中的下标。
-  - valueOut（aclTensor*，计算输出）: Device侧的aclTensor，第一个输出张量，输入张量中的唯一元素，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BOOL、FLOAT、FLOAT16、DOUBLE、UINT8、INT8、UINT16、INT16、INT32、UINT32、UINT64、INT64、BFLOAT16。
-  - inverseOut（aclTensor*，计算输出）: 第二个输出张量，当returnInverse为True时有意义，返回self中各元素在valueOut中出现的位置下标，数据类型支持INT64，shape与self保持一致。
-  - workspaceSize（uint64_t*，出参）：返回需要在Device侧申请的workspace大小。
-  - executor（aclOpExecutor**，出参）：返回op执行器，包含了算子计算流程。
+* **参数说明**
+ 
+  <table style="undefined;table-layout: fixed; width: 1483px"><colgroup>
+  <col style="width: 128px">
+  <col style="width: 122px">
+  <col style="width: 374px">
+  <col style="width: 171px">
+  <col style="width: 297px">
+  <col style="width: 106px">
+  <col style="width: 136px">
+  <col style="width: 149px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      <th>使用说明</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+      <th>维度（shape）</th>
+      <th>非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>self</td>
+      <td>输入</td>
+      <td>-</td>
+      <td>-</td>
+      <td>BOOL、FLOAT、FLOAT16、DOUBLE、UINT8、INT8、UINT16、INT16、INT32、UINT32、UINT64、INT64、BFLOAT16</td>
+      <td>ND</td>
+      <td>≤8</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>sorted</td>
+      <td>输入</td>
+      <td>表示是否对 valueOut 按升序进行排序。true时排序，false时乱序。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>returnInverse</td>
+      <td>输入</td>
+      <td>表示是否返回输入数据中各个元素在 valueOut 中的下标。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>valueOut</td>
+      <td>输出</td>
+      <td>第一个输出张量，输入张量中的唯一元素。</td>
+      <td></td>
+      <td>BOOL、FLOAT、FLOAT16、DOUBLE、UINT8、INT8、UINT16、INT16、INT32、UINT32、UINT64、INT64、BFLOAT16</td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>inverseOut</td>
+      <td>输出</td>
+      <td>第二个输出张量，当returnInverse为True时有意义，返回self中各元素在valueOut中出现的位置下标。</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输出</td>
+      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输出</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+  </tbody></table>
 
-* **返回值**：
+* **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
   第一段接口完成入参校验，出现以下场景时报错：
-  返回161001(ACLNN_ERR_PARAM_NULLPTR)：1. 传入的 self或valueOut或inverseOut是空指针时。
-  返回161002(ACLNN_ERR_PARAM_INVALID)：1. self 或valueOut 的数据类型不在支持的范围之内。
-                                      2. self为非连续张量。
-                                      3. returnInverse为True，且inverseOut与self shape不一致。
-                                      4. returnInverse为True，inverseOut的数据类型不为INT64。
-  ```
+
+  <table style="undefined;table-layout: fixed; width: 1015px"><colgroup>
+  <col style="width: 257px">
+  <col style="width: 101px">
+  <col style="width: 657px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>返回值</th>
+      <th>错误码</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>ACLNN_ERR_PARAM_NULLPTR</td>
+      <td>161001</td>
+      <td>传入的 self或valueOut或inverseOut是空指针时。</td>
+    </tr>
+    <tr>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
+      <td>self 或valueOut 的数据类型不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td>self为非连续张量。</td>
+    </tr>
+    <tr>
+      <td>returnInverse为True，且inverseOut与self shape不一致。</td>
+    </tr>
+    <tr>
+      <td>returnInverse为True，inverseOut的数据类型不为INT64。</td>
+    </tr>
+  </tbody>
+  </table>
 
 ## aclnnUnique
 
-* **参数说明**：
-  * workspace（void\*, 入参）：在Device侧申请的workspace内存地址。
-  * workspaceSize（uint64\_t, 入参）：在Device侧申请的workspace大小，由第一段接口aclnnUniqueGetWorkspaceSize获取。
-  * executor（aclOpExecutor\*, 入参）：op执行器，包含了算子计算流程。
-  * stream（aclrtStream, 入参）：指定执行任务的Stream。
+* **参数说明**
 
-* **返回值**：
+  <table style="undefined;table-layout: fixed; width: 950px"><colgroup>
+  <col style="width: 122px">
+  <col style="width: 105px">
+  <col style="width: 723px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnUniqueGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
+  </table>
+
+* **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -73,6 +231,7 @@
   * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：在输入self包含0的情况下，算子的输出中会包含正0和负0，而非只输出一个0。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
 ```Cpp
