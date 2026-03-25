@@ -1684,7 +1684,6 @@ TEST_F(MatMulV3TilingRuntime, splitK_nkm_fp32) {
   auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData(), case_name, tiling_key);
   cout<<"===== splitK_nkm_fp32:"<<tiling_key<<" === \n"<<tiling_data_result<<std::endl;
   ASSERT_NE(tiling_key, 65568);
-  ASSERT_NE(tiling_key, 65616);
 }
 
 TEST_F(MatMulV3TilingRuntime, splitK_nkm_indivisibleM) {

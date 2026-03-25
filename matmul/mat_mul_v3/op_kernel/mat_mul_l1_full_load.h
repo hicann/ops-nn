@@ -42,6 +42,16 @@ __aicore__ inline void DataCopy2L1(const LocalTensor<int8_t> &matrix, const __gm
 
 template<class T>
 __aicore__ inline void DataCopy2L1(const LocalTensor<int8_t> &matrix, const __gm__ void *gm,
+                                   const DataCopyParams &dataCopyParams, uint64_t l1Size)
+{
+    LocalTensor<T> dst = matrix.ReinterpretCast<T>();
+    GlobalTensor<T> src;
+    src.SetGlobalBuffer((__gm__ T*)gm, l1Size);
+    DataCopy(dst, src, dataCopyParams);
+}
+
+template<class T>
+__aicore__ inline void DataCopy2L1(const LocalTensor<int8_t> &matrix, const __gm__ void *gm,
                                    const Nd2NzParams &nd2nzParams, uint64_t l1Size)
 {
     LocalTensor<T> dst = matrix.ReinterpretCast<T>();
@@ -50,6 +60,7 @@ __aicore__ inline void DataCopy2L1(const LocalTensor<int8_t> &matrix, const __gm
     DataCopy(dst, src, nd2nzParams);
 }
 
+template<CubeFormat B_FORMAT = CubeFormat::ND>
 __aicore__ inline void DataCopyL1FullLoad(bool isAl1FullLoad, const LocalTensor<int8_t> &matrix,
                                           const __gm__ void *gm, uint64_t useM, uint64_t useK, uint64_t useN,
                                           const MatmulTilingData &tilingData)
@@ -71,6 +82,15 @@ __aicore__ inline void DataCopyL1FullLoad(bool isAl1FullLoad, const LocalTensor<
         // 走连续拷贝
         return isFp32 ? DataCopy2L1<float>(matrix, gm, l1Size, nDim * dDim)
                       : DataCopy2L1<half>(matrix, gm, l1Size, nDim * dDim);
+    }
+    if constexpr (B_FORMAT == CubeFormat::NZ) {
+        DataCopyParams dataCopyParams;
+        dataCopyParams.blockCount = 1;
+        dataCopyParams.blockLen = MMV3CeilAlign(dDim, c0) * MMV3CeilAlign(nDim, static_cast<uint64_t>(BLOCK_SIZE)) * ctx.inputDtypeSize / BLOCK_BYTE_SIZE;
+        dataCopyParams.srcStride = 0;
+        dataCopyParams.dstStride = 0;
+        return isFp32 ? DataCopy2L1<float>(matrix, gm, dataCopyParams, nDim * dDim)
+                      : DataCopy2L1<half>(matrix, gm, dataCopyParams, nDim * dDim);
     }
     // 走Nd2Nz
     Nd2NzParams nd2nzParams;
@@ -98,6 +118,7 @@ __aicore__ inline void CopyAL1(const LocalTensor<int8_t> &aMatrix, const __gm__ 
     ctx.isFirst = false;
 }
 
+template<CubeFormat B_FORMAT = CubeFormat::ND>
 __aicore__ inline void CopyBL1(const LocalTensor<int8_t> &bMatrix, const __gm__ void *gm, int row, int col,
                               int useK, int useN, const uint64_t tilingPtr, const uint64_t dataPtr)
 {
@@ -106,7 +127,7 @@ __aicore__ inline void CopyBL1(const LocalTensor<int8_t> &bMatrix, const __gm__ 
         return;
     }
 
-    DataCopyL1FullLoad(false, bMatrix, gm, 0UL, useK, useN, *tilingDataPtr);
+    DataCopyL1FullLoad<B_FORMAT>(false, bMatrix, gm, 0UL, useK, useN, *tilingDataPtr);
     ctx.isFirst = false;
 }
 
@@ -381,18 +402,18 @@ __aicore__ inline void CalCopyBL1Nz2NzParams(const BLOCK_TYPE& block, const Matm
                                              bool isNMultiCore, DataCopyParams& dataCopyParams, uint64_t instrN)
 {
     if (B_TYPE::isTrans && isNMultiCore) {
-        dataCopyParams.blockCount = MMV3DivCeil(matmulTilingData.matmulTiling.Kb, block.params_.kbAlignSize);
+        dataCopyParams.blockCount = MMV3DivCeil(matmulTilingData.matmulTiling.Kb, block.params_.alignedKbSize);
         dataCopyParams.blockLen =
-            block.params_.kbAlignSize * MMV3CeilAlign(instrN, block.params_.nAlignSize) * sizeof(B_T) / BLOCK_BYTE_SIZE;
-        dataCopyParams.srcStride = block.params_.kbAlignSize *
-                                   (MMV3CeilAlign(matmulTilingData.matmulTiling.N, block.params_.nAlignSize) -
-                                    MMV3CeilAlign(instrN, block.params_.nAlignSize)) *
+            block.params_.alignedKbSize * MMV3CeilAlign(instrN, block.params_.alignedOriN) * sizeof(B_T) / BLOCK_BYTE_SIZE;
+        dataCopyParams.srcStride = block.params_.alignedKbSize *
+                                   (MMV3CeilAlign(matmulTilingData.matmulTiling.N, block.params_.alignedOriN) -
+                                    MMV3CeilAlign(instrN, block.params_.alignedOriN)) *
                                    sizeof(B_T) / BLOCK_BYTE_SIZE;
         dataCopyParams.dstStride = 0;
     } else {
         dataCopyParams.blockCount = 1;
-        dataCopyParams.blockLen = MMV3CeilAlign(matmulTilingData.matmulTiling.Kb, block.params_.kbAlignSize) *
-                                  MMV3CeilAlign(instrN, block.params_.nAlignSize) * sizeof(B_T) / BLOCK_BYTE_SIZE;
+        dataCopyParams.blockLen = MMV3CeilAlign(matmulTilingData.matmulTiling.Kb, block.params_.alignedKbSize) *
+                                  MMV3CeilAlign(instrN, block.params_.alignedOriN) * sizeof(B_T) / BLOCK_BYTE_SIZE;
         dataCopyParams.srcStride = 0;
         dataCopyParams.dstStride = 0;
     }
