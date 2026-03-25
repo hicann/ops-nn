@@ -16,6 +16,7 @@
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "aclnn_kernels/transdata.h"
 #include "opdev/common_types.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
@@ -93,27 +94,26 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
     return CheckCubeMathTypeForMm(promoteType, cubeMathType);
 }
 
-// 校验是否是ND格式
+// 校验是否不为NZ格式
 static bool CheckFormat(
     const aclTensor* x, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3, const aclTensor* y)
 {
-    // self格式是ND
-    if (x->GetStorageFormat() != Format::FORMAT_ND || x2->GetStorageFormat() != Format::FORMAT_ND ||
-        y->GetStorageFormat() != Format::FORMAT_ND) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND");
+    if (x->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ || x2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ ||
+        y->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format not support NZ");
         return false;
     }
 
     if (bias != nullptr) {
-        if (bias->GetStorageFormat() != Format::FORMAT_ND) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND");
+        if (bias->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format not support NZ");
             return false;
         }
     }
 
     if (x3 != nullptr) {
-        if (x3->GetStorageFormat() != Format::FORMAT_ND) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND");
+        if (x3->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format not support NZ");
             return false;
         }
     }
@@ -276,10 +276,17 @@ static const aclTensor* BuildFusedMatMulGraph(
         contiguousBias = ContiguousBias(x, bias, executor);
         CHECK_RET(contiguousBias != nullptr, nullptr);
     }
+    // 全部转成ND
+    selfCastOut = l0op::ReFormat(selfCastOut, op::Format::FORMAT_ND);
+    CHECK_RET(selfCastOut != nullptr, nullptr);
+    mat2CastOut = l0op::ReFormat(mat2CastOut, op::Format::FORMAT_ND);
+    CHECK_RET(mat2CastOut != nullptr, nullptr);
     // x3非连续转连续
     auto contiguousX3 = x3;
     if (contiguousX3 != nullptr) {
         contiguousX3 = l0op::Contiguous(x3, executor);
+        CHECK_RET(contiguousX3 != nullptr, nullptr);
+        contiguousX3 = l0op::ReFormat(contiguousX3, op::Format::FORMAT_ND);
         CHECK_RET(contiguousX3 != nullptr, nullptr);
     }
     const aclTensor* mmOut = nullptr;
