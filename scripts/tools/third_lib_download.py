@@ -10,14 +10,38 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
 import urllib.request
+import subprocess
 import os
 import re
 from pathlib import Path
 
 
-def down_files_native(url_list):
-    current_dir = os.path.dirname(os.path.abspath(__file__))
+git_repo_urls = []
+current_dir = os.path.dirname(os.path.abspath(__file__))
 
+
+def execute_process(cmd_list: list, cwd=None):
+    result = subprocess.run(cmd_list, capture_output=True, text=True, check=False, cwd=cwd)
+    if result.returncode != 0:
+        raise Exception(f"Failed to execute command: {cmd_list}, error: {result.stderr}")
+
+
+def git_download():
+    for url in list(set(git_repo_urls)):
+        file_name = url.split('/')[-1]
+        file_name = file_name.rsplit(".git", 1)[0]
+        if not file_name:
+            file_name = "downloaded_file"
+        file_path = os.path.join(current_dir, file_name)
+        if not Path(file_path).exists():
+            execute_process(["git", "clone", url, file_path])
+        else:
+            cmd_list = ["git", "fetch", "origin", "&&", "git", "reset" "--hard" "HEAD"]
+            execute_process(["git", "fetch", "origin"], cwd=file_path)
+            execute_process(["git", "reset", "--hard", "origin/HEAD"], cwd=file_path)
+
+
+def down_files_native(url_list):
     # 创建子目录（例如：downloads）
     download_dir = os.path.join(current_dir, "cann_3rd_lib_path_download")
     os.makedirs(download_dir, exist_ok=True)  # 如果目录不存在则创建
@@ -46,6 +70,7 @@ def extract_urls_from_cmake(cmake_file):
     - "https://..."
     """
     urls = []
+    repo_urls = []
     content = cmake_file.read_text(encoding='utf-8')
 
     # 匹配模式1: set(XXX "https://...")
@@ -72,10 +97,13 @@ def extract_urls_from_cmake(cmake_file):
                 url = match
             # 清理 URL
             url = url.strip().rstrip(')')
+            if url.endswith(".git"):
+                repo_urls.append(url)
+                continue
             if url not in urls:
                 urls.append(url)
 
-    return urls
+    return (urls, repo_urls)
 
 
 def scan_cmake_files(directory: Path) -> dict[str, list[str]]:
@@ -97,10 +125,12 @@ def scan_cmake_files(directory: Path) -> dict[str, list[str]]:
         return results
 
     for cmake_file in cmake_files:
-        urls = extract_urls_from_cmake(cmake_file)
+        (urls, repo_urls) = extract_urls_from_cmake(cmake_file)
         if urls:
             results[cmake_file.name] = urls
-        else:
+        if repo_urls:
+            git_repo_urls.extend(repo_urls)
+        if not urls and not repo_urls:
             print(f"[{cmake_file.name}] No URLs found")
 
     return results
@@ -122,3 +152,4 @@ if __name__ == "__main__":
     cmake_dir = script_path.parent.parent.parent / "cmake" / "third_party"
     all_urls = get_all_urls(cmake_dir)
     down_files_native(all_urls)
+    git_download()
