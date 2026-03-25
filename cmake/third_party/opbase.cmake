@@ -7,6 +7,8 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
+set(OPBASE_TAG_ID ec88904b611b04f9b23b529aee66c78bb7cf6140)
+
 if(EXISTS "${PROJECT_SOURCE_DIR}/../../ops-base")
   get_filename_component(OPBASE_SOURCE_PATH
                          ${PROJECT_SOURCE_DIR}/../../ops-base REALPATH)
@@ -15,6 +17,16 @@ elseif(EXISTS "${CANN_3RD_LIB_PATH}/opbase")
   get_filename_component(OPBASE_SOURCE_PATH
                          ${CANN_3RD_LIB_PATH}/opbase REALPATH)
   message(STATUS "Find opbase source dir: ${OPBASE_SOURCE_PATH}")
+  execute_process(
+    COMMAND git checkout ${OPBASE_TAG_ID}
+    WORKING_DIRECTORY ${OPBASE_SOURCE_PATH}
+    RESULT_VARIABLE EXEC_RESULT
+    OUTPUT_VARIABLE EXEC_INFO
+    ERROR_VARIABLE EXEC_ERROR
+  )
+  if(${EXEC_RESULT})
+    message(FATAL_ERROR "Git checkout failed! error: ${EXEC_ERROR}")
+  endif()
 else()
   if(EXISTS "${PROJECT_SOURCE_DIR}/build/_deps/opbase-subbuild")
     file(REMOVE_RECURSE ${PROJECT_SOURCE_DIR}/build/_deps/opbase-subbuild)
@@ -24,7 +36,7 @@ else()
   FetchContent_Declare(
     opbase
     GIT_REPOSITORY https://gitcode.com/cann/opbase.git
-    GIT_TAG ec88904b611b04f9b23b529aee66c78bb7cf6140
+    GIT_TAG ${OPBASE_TAG_ID}
     GIT_PROGRESS TRUE
     SOURCE_DIR ${CANN_3RD_LIB_PATH}/opbase)
 
