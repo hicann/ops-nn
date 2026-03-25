@@ -3186,6 +3186,16 @@
   </tr>
   <tr>
     <td>quant</td>
+    <td><a href="../../quant/swiglu_mx_quant/README.md">swiglu_mx_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>在SwiGlu激活函数后添加mx_quant操作，实现输入x的SwigluMxQuant计算，支持FP8或FP4量化输出。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
     <td><a href="../../quant/trans_quant_param/README.md">trans_quant_param</a></td>
     <td>✓</td>
     <td>✓</td>

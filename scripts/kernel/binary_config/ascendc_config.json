@@ -245,6 +245,7 @@
     {"name":"DynamicMxQuant", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"DynamicMxQuantWithDualAxis", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"DynamicDualLevelMxQuant", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
+    {"name":"SwigluMxQuant", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"GroupedDynamicBlockQuant", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"MapIndex", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"PRelu", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
