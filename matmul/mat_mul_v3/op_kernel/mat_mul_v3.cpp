@@ -185,26 +185,6 @@ __global__ __aicore__ void mat_mul_v3(
             MatmulBaseKernel, format_x1, MatmulBaseBlock, MM_CFG_VEC_ND2NZ
         );
     }
-#elif defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
-    if constexpr (LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
-        FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE) {
-        MMV3_IMPL_CLASS(
-            MatmulBaseUnAlignedKernel, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD
-        );
-    } else if constexpr (
-        LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
-        FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE &&
-        SPECIALOPT == MAT_MUL_V3_K_SHIFT) {
-        MMV3_IMPL_CLASS(
-            MatmulBaseKernel, format_x1, MatmulBaseBlock, MM_CFG_K_SHIFT
-        );
-    } else if constexpr (
-        LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
-        FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
-        MMV3_IMPL_CLASS(
-            MatmulBaseKernel, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD
-        );
-    }
 #else
     if constexpr (
         LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
@@ -289,14 +269,14 @@ __global__ __aicore__ void mat_mul_v3(
         FIXOPTI == MAT_MUL_V3_BASE_ENABLE_ALIGNOUT && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
         MMV3_IMPL_CLASS(
             MatmulBaseUnalignedNKernel, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD,
-            MatmulCallBackFunc<nullptr, nullptr, CopyBL1>
+            MatmulCallBackFunc<nullptr, nullptr, CopyBL1<format_x2>>
         );
     } else if constexpr (
         LOADMODE == MAT_MUL_V3_BL1_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE) {
         MMV3_IMPL_CLASS(
             MatmulBaseUnAlignedKernelBL1FullLoad, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD,
-            MatmulCallBackFunc<nullptr, nullptr, CopyBL1>
+            MatmulCallBackFunc<nullptr, nullptr, CopyBL1<format_x2>>
         );
     } else if constexpr (
         LOADMODE == MAT_MUL_V3_BL1_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
@@ -309,14 +289,14 @@ __global__ __aicore__ void mat_mul_v3(
         FIXOPTI == MAT_MUL_V3_BASE_ENABLE_ALIGNOUT && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE) {
         MMV3_IMPL_CLASS(
             MatmulBaseAToNZWithBL1FixpipeKernel, CubeFormat::NZ, MatmulBaseBlock, MM_CFG_NO_PRELOAD,
-            MatmulCallBackFunc<nullptr, nullptr, CopyBL1>
+            MatmulCallBackFunc<nullptr, nullptr, CopyBL1<format_x2>>
         );
     } else if constexpr (
         LOADMODE == MAT_MUL_V3_BL1_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
         FIXOPTI == MAT_MUL_V3_VEC_NZ2ND_UNALIGNOUT && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
         MMV3_IMPL_C_CLASS(
             MatmulBaseUnalignedNKernel, format_x1, CubeFormat::NZ, MatmulBaseBlock, MM_CFG_NO_PRELOAD,
-            MatmulCallBackFunc<nullptr, nullptr, CopyBL1>, FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT
+            MatmulCallBackFunc<nullptr, nullptr, CopyBL1<format_x2>>, FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT
         );
     } else if constexpr (
         LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_DETERMINISTIC_SPLIT_K &&

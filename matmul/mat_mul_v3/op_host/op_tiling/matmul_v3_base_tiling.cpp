@@ -582,7 +582,7 @@ bool MatmulV3BaseTiling::NeedNd2NzVnchw(uint64_t outerSize, uint64_t innerSize, 
 
 ge::graphStatus MatmulV3BaseTiling::SelectNZTiling()
 {
-    if ((compileInfo_.supportL12BtBf16 || compileInfo_.supportL0c2out) && args_.bFormat == ge::FORMAT_FRACTAL_NZ) {
+    if (args_.bFormat == ge::FORMAT_FRACTAL_NZ && args_.bType != ge::DT_FLOAT && (compileInfo_.supportL12BtBf16 || compileInfo_.supportL0c2out)) {
         if (tilingSelect_ == TilingCalcSelect::ALL) {
             tilingSelect_ = TilingCalcSelect::BASE;
         } else if (tilingSelect_ != TilingCalcSelect::BASE) {
@@ -1897,7 +1897,9 @@ bool MatmulV3BaseTiling::DoBL1FullLoadTiling()
     // mValue should be 16 times more than max of k/nValue, and kValue should be no more than 256
     bool validMK = args_.mValue > 16 * std::max(args_.kValue, args_.nValue) && args_.kValue <= 256;
     uint64_t biasSize = args_.hasBias ? runInfo_.baseN * GetSizeByDataType(ge::DT_FLOAT) : 0; // 默认最高精度保证BF16
-    bool bl1SizeValid = (compileInfo_.l1Size / NUM_HALF - biasSize) > args_.kValue * args_.nValue * bDtypeSize_;
+    uint64_t kAlignedValue = args_.isBTrans ? ops::CeilAlign(args_.kValue, BLOCK_BYTE_SIZE / bDtypeSize_) : ops::CeilAlign(args_.kValue, BASIC_ALIGN_16);
+    uint64_t nAlignedValue = args_.isBTrans ? ops::CeilAlign(args_.nValue, BASIC_ALIGN_16) : ops::CeilAlign(args_.nValue, BLOCK_BYTE_SIZE / bDtypeSize_);
+    bool bl1SizeValid = (compileInfo_.l1Size / NUM_HALF - biasSize) > kAlignedValue * nAlignedValue * bDtypeSize_;
     bool alignedBl1FullLoad = (supportNd2NzOnTheFly && !args_.nd2nzB);
     bool bl1FullLoadCheck = !validMK || (!alignedBl1FullLoad && !(nd2nzAUsingVnchwConv && bl1SizeValid));
     uint64_t mTailBlock = (args_.mValue / BASIC_BLOCK_SIZE_128) % 12; // 当baseM为128时，M方向上分核数量为12的尾块数量
@@ -2074,10 +2076,6 @@ bool MatmulV3BaseTiling::DoL2CacheTiling()
     runInfo_.l2Info.nTileBlock = nTileBlock;
     OP_LOGI(args_.opName, "Enter L2cache tile kernel.");
 
-    if (args_.bFormat == ge::FORMAT_FRACTAL_NZ) {
-        OP_LOGI(args_.opName, "Do not enter split K tile kernel when weightNz.");
-        return true;
-    }
     return false; // 进去单核切K逻辑
 }
 
@@ -2249,10 +2247,10 @@ MixNd2NzType MatmulV3BaseTiling::GetMixNd2nzType() // check different platform
 
 bool MatmulV3BaseTiling::IsSupportSingleCoreSplitSmallK(uint64_t xDim, uint64_t yDim) const
 {
-    // 条件0： A,B 矩阵数据仅支持 bf16/fp16, 矩阵格式支持 (ND,ND)
-    bool isDTypeFormatSupport = args_.aFormat == ge::FORMAT_ND && args_.bFormat == ge::FORMAT_ND &&
-                                (args_.aType == ge::DT_FLOAT16 || args_.aType == ge::DT_BF16) &&
-                                (args_.bType == ge::DT_FLOAT16 || args_.bType == ge::DT_BF16);
+    // 条件0： A,B 矩阵数据支持 bf16/fp16/fp32, 矩阵格式支持 (ND,ND),(ND,NZ)
+    bool isDTypeFormatSupport = args_.aFormat == ge::FORMAT_ND &&
+                                (args_.aType == ge::DT_FLOAT16 || args_.aType == ge::DT_BF16 || args_.aType == ge::DT_FLOAT) &&
+                                (args_.bType == ge::DT_FLOAT16 || args_.bType == ge::DT_BF16 || args_.bType == ge::DT_FLOAT);
     // 条件1： M,N 被128整除，K=1536 （对应DeepSeekV3 的Prefill阶段）
     bool isSmallKwithLargeMN = (args_.kValue == SINGLE_CORE_SPLIT_SMALL_K) &&
                             (args_.mValue % ALIGN_128 == 0 && args_.nValue % ALIGN_128 == 0);
