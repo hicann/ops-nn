@@ -21,8 +21,7 @@
   $$
   y = \operatorname{RmsNorm}(x)=\frac{x}{\operatorname{Rms}(\mathbf{x})}\cdot gamma+beta, \quad \text { where } \operatorname{Rms}(\mathbf{x})=\sqrt{\frac{1}{n} \sum_{i=1}^n x_i^2+epsilon}
   $$
-
-  当scaleAlg为0时：
+  场景1，当scaleAlg为0时：
    - 将RmsNorm输出y在尾轴维度上按k = 32个数分组，一组k个数 $\{\{V_i\}_{i=1}^{k}\}$ 动态量化为 $\{mxscale,\{P_i\}_{i=1}^{k}\}$
     $$
     shared\_exp = floor(log_2(max_i(|V_i|))) - emax
@@ -43,7 +42,7 @@
         |  FLOAT4_E1M2  |  0   |
         | FLOAT8_E4M3FN |  8   |
         |  FLOAT8_E5M2  |  15  |
-  当scaleAlg为1时，只涉及FP8类型：
+  场景2，当scaleAlg为1时，只涉及FP8类型：
     - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP8。
     - 找到该块中数值的最大绝对值:
       $$
@@ -69,26 +68,26 @@
 
 ```Cpp
 aclnnStatus aclnnRmsNormDynamicMxQuantGetWorkspaceSize(
-  const aclTensor *x,
-  const aclTensor *gamma,
-  const aclTensor *beta,
-  double           epsilon,
-  int64_t          scaleAlg,
-  char            *roundModeOptional,
-  int64_t          dstType,
-  aclTensor       *yOut,
-  aclTensor       *mxscaleOut,
-  aclTensor       *rstdOut,
-  uint64_t        *workspaceSize,
-  aclOpExecutor  **executor)
+  const aclTensor   *x,
+  const aclTensor   *gamma,
+  const aclTensor   *beta,
+  double             epsilon,
+  int64_t            scaleAlg,
+  char              *roundModeOptional,
+  int64_t            dstType,
+  aclTensor         *yOut,
+  aclTensor         *mxscaleOut,
+  aclTensor         *rstdOut,
+  uint64_t          *workspaceSize,
+  aclOpExecutor    **executor)
 ```
 
 ```cpp
 aclnnStatus aclnnRmsNormDynamicMxQuant(
-    void *workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor *executor,
-    aclrtStream stream)
+    void            *workspace,
+    uint64_t         workspaceSize,
+    aclOpExecutor   *executor,
+    aclrtStream      stream)
 ```
 
 ## aclnnRmsNormDynamicMxQuantGetWorkspaceSize
@@ -161,7 +160,7 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
       <td>scaleAlg（int64_t）</td>
       <td>输入</td>
       <td>表示mxscaleOut的计算方法，对应公式中的scaleAlg。</td>
-      <td><ul><li>支持取值0和1，取值为0表示OCP实现，取值为1表示cuBLAS实现。</li><li>当dstType为FLOAT4_E2M1/FLOAT4_E1M2时仅支持取值为0。</li><li>默认值为0。</li></ul></td>
+      <td><ul><li>支持取值0和1，取值为0代表场景1，取值为1代表场景2。</li><li>当dstType为FLOAT4_E2M1/FLOAT4_E1M2时仅支持取值为0。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -171,7 +170,7 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
       <td>roundModeOptional（char*）</td>
       <td>输入</td>
       <td>表示数据转换的模式，对应公式中的round_mode。</td>
-      <td><ul><li>当dstType为40/41时，支持{"rint", "floor", "round"}。</li><li>当dstType为36/35时，仅支持{"rint"}。</li><li>默认值为"rint"模式。</li></ul></td>
+      <td><ul><li>当dstType为40/41时，支持{"rint", "floor", "round"}。</li><li>当dstType为36/35时，仅支持{"rint"}。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -181,7 +180,7 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
       <td>dstType（int64_t）</td>
       <td>输入</td>
       <td>表示指定数据转换后yOut的类型，对应公式中的DType。</td>
-      <td><ul><li>输入范围为{35, 36, 40, 41}，分别对应{35:FLOAT8_E5M2, 36:FLOAT8_E4M3FN, 40:FLOAT4_E2M1, 41:FLOAT4_E1M2}。</li><li>默认值为40。</li></ul></td>
+      <td><ul><li>输入范围为{35, 36, 40, 41}，分别对应{35:FLOAT8_E5M2, 36:FLOAT8_E4M3FN, 40:FLOAT4_E2M1, 41:FLOAT4_E1M2}。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -262,19 +261,35 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>如果传入参数是必选输入，输出或者必选属性，且是空指针。</td>
+      <td>如果传入参数是必选输入，输出或者必选属性，且是空指针，则返回161001。</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_PARAM_INVALID</td>
       <td>161002</td>
-      <td>输入或输出的数据类型不在支持的范围之内。</td>
+      <td>输入workspaceSize小于连续区域大小。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="2">561002</td>
+      <td rowspan="9">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="9">561002</td>
+      <td>输入或输出的数据类型不在支持的范围之内</td>
     </tr>
     <tr>
-      <td>输入和输出的不符合上述参数说明内的要求。</td>
+      <td>scaleAlg不是0或1，roundModeOptional(非空时)不是 {rint, floor, round}。</td>
+    </tr>
+    <tr>
+      <td>dstType为 fp8 时，roundModeOptional不是 rint。</td>
+    </tr>
+    <tr>
+      <td>x、yOut的shape不是完全相同的shape。</td>
+    </tr>
+    <tr>
+      <td>mxscaleOut的维度数不等于输入维度数+1。</td>
+    </tr>
+    <tr>
+      <td>gamma、beta(若存在)的shape不是完全相同的shape，或者类型不是相同的类型。</td>
+    </tr>
+    <tr>
+      <td>gamma的维度和x的需要作norm的维度不相同，或rstdOut的维度和x的不需要norm的维度不相同，或rstdOut的需要norm的维度不为1。</td>
     </tr>
   </tbody></table>
 

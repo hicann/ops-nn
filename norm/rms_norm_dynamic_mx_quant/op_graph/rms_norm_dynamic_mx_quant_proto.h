@@ -27,7 +27,7 @@ namespace ge {
 
 * @par Inputs:
 * @li x: An input tensor of type float16 or bfloat16.
-* The shape supports at least 1 dimensions, and at most 7 dimensions.
+* The shape supports at least 1 dimension, and at most 7 dimensions.
 * @li gamma: A scale tensor of type float16, bfloat16 or float32.
 * The shape must match the normalized dimension of x.
 * @li beta: An optional bias tensor of type float16, bfloat16 or float32.

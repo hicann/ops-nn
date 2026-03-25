@@ -367,11 +367,12 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::GetShapeAttrsInfo()
     OP_CHECK_IF(
         context_ == nullptr, OP_LOGE("RmsNormDynamicMxQuantTilingBase", "context is nullptr."),
         return ge::GRAPH_FAILED);
-
-    OP_CHECK_IF(GetAttr() != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckDtype() != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckShape() != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
-
+    OP_CHECK_IF(GetAttr() != ge::GRAPH_SUCCESS, OP_LOGE("RmsNormDynamicMxQuantTiling", "GetAttr Failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckDtype() != ge::GRAPH_SUCCESS, OP_LOGE("RmsNormDynamicMxQuantTiling", "CheckDtype Failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShape() != ge::GRAPH_SUCCESS, OP_LOGE("RmsNormDynamicMxQuantTiling", "CheckShape Failed."),
+                return ge::GRAPH_FAILED);
     OP_LOGD(
         context_->GetNodeName(), "numM: %ld, numN: %ld, epsilon: %f, dstType: %ld, quantAlg: %ld, roundMode: %ld",
         numM_, numN_, epsilon_, dstType_, scaleAlg_, roundMode_);
