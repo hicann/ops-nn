@@ -33,7 +33,7 @@
 | [aclnnAdaptiveAvgPool2dBackward](../../pooling/adaptive_avg_pool3d_grad/docs/aclnnAdaptiveAvgPool2dBackward.md) | [aclnnAdaptiveAvgPool2d](../../pooling/adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool2d.md) 的反向计算。 | 默认非确定性实现，支持配置开启 |   |
 | [aclnnAdaptiveAvgPool3d](../../pooling/adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool3d.md) | 在指定三维输出shape信息（outputSize）的情况下，完成张量self的3D自适应平均池化计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAdaptiveAvgPool3dBackward]() | [aclnnAdaptiveAvgPool3d](../../pooling/adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool3d.md)的反向计算。 | 默认非确定性实现，支持配置开启 | - |
-| [aclnnAdaptiveMaxPool2d](../../pooling/adaptive_max_pool3d/docs/aclnnAdaptiveMaxPool2d.md) | 根据输入的outputSize计算每次kernel的大小，对输入self进行2维最大池化操作。 | 默认确定性实现 | - |
+| [aclnnAdaptiveMaxPool2d](../../pooling/adaptive_max_pool2d/docs/aclnnAdaptiveMaxPool2d.md) | 根据输入的outputSize计算每次kernel的大小，对输入self进行2维最大池化操作。 | 默认确定性实现 | - |
 | [aclnnAdaptiveMaxPool3d](../../pooling/adaptive_max_pool3d/docs/aclnnAdaptiveMaxPool3d.md) | 根据输入的outputSize计算每次kernel的大小，对输入self进行3维最大池化操作。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAdaptiveMaxPool3dBackward](../../pooling/adaptive_max_pool3d_grad/docs/aclnnAdaptiveMaxPool3dBackward.md) | 正向自适应最大池化的反向传播，将梯度回填到每个自适应窗口最大值的坐标处，相同坐标处累加。 | 默认非确定性实现，支持配置开启 |   |
 | [aclnnAddbmm&aclnnInplaceAddbmm](../../matmul/batch_mat_mul_v3/docs/aclnnAddbmm&aclnnInplaceAddbmm.md) | 首先进行batch1、batch3的矩阵乘计算，然后将该结果按照第一维（batch维度）批处理相加，将三维向量压缩为二维向量（shape大小为后两维的shape），然后该结果与α作乘积计算，再与β和self的乘积求和得到结果。 | 默认确定性实现 | 默认确定性实现 |
@@ -80,7 +80,7 @@
 | [aclnnBinaryCrossEntropy](../../loss/binary_cross_entropy/docs/aclnnBinaryCrossEntropy.md) | 计算self和target的二元交叉熵。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnBinaryCrossEntropyBackward](../../loss/binary_cross_entropy_grad/docs/aclnnBinaryCrossEntropyBackward.md) | 求二元交叉熵反向传播的梯度值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnBinaryCrossEntropyWithLogits](../../loss/sigmoid_cross_entropy_with_logits_v2/docs/aclnnBinaryCrossEntropyWithLogits.md) | 计算输入logits与标签target之间的BCELoss损失。 | 默认确定性实现 |   |
-| [aclnnBinaryCrossEntropyWithLogitsTargetBackward](../../activation/logsigmoid/docs/aclnnBinaryCrossEntropyWithLogitsTargetBackward.md) | 将输入self执行logits计算，将得到的值与标签值target一起进行BECLoss关于target的反向传播计算。 | 默认确定性实现 |   |
+| [aclnnBinaryCrossEntropyWithLogitsTargetBackward](../../activation/log_sigmoid/docs/aclnnBinaryCrossEntropyWithLogitsTargetBackward.md) | 将输入self执行logits计算，将得到的值与标签值target一起进行BECLoss关于target的反向传播计算。 | 默认确定性实现 |   |
 | [aclnnCelu&aclnnInplaceCelu](../../activation/celu_v2/docs/aclnnCelu&aclnnInplaceCelu.md) | aclnnCelu对输入张量self中的每个元素x调用连续可微指数线性单元激活函数CELU，并将得到的结果存入输出张量out中。 | 默认确定性实现 |   |
 | [aclnnChamferDistanceBackward](../../loss/chamfer_distance_grad/docs/aclnnChamferDistanceBackward.md) | ChamferDistance（倒角距离）的反向算子，根据正向的输入对输出的贡献及初始梯度求出输入对应的梯度。 | 默认非确定性实现，支持配置开启 |   |
 | [aclnnConvolution](../../conv/convolution_forward/docs/aclnnConvolution.md) | 实现卷积功能，支持1D/2D/3D、转置卷积、空洞卷积、分组卷积。 | 默认确定性实现 | 默认确定性实现 |
@@ -110,7 +110,7 @@
 | [aclnnEinsum](../../matmul/batch_mat_mul_v3/docs/aclnnEinsum.md) | 使用爱因斯坦求和约定执行张量计算，形式为“term1, term2 -> output-term”，按照以下等式生成输出张量，其中reduce-sum对出现在输入项(term1, term2)中但未出现在输出项中的所有索引执行求和。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnElu&aclnnInplaceElu](../../activation/elu/docs/aclnnElu&aclnnInplaceElu.md) | 对输入张量self中的每个元素x调用指数线性单元激活函数ELU，并将得到的结果存入输出张量out中。 | 默认确定性实现 |   |
 | [aclnnEluBackward](../../activation/elu_grad_v2/docs/aclnnEluBackward.md) | aclnnElu激活函数的反向计算，输出ELU激活函数正向输入的梯度。 | 默认确定性实现 |   |
-| [aclnnEmbedding](../../index/gather_v2/docs/aclnnEmbedding.md) | 把数据集合映射到向量空间，进而将数据进行量化。embedding的二维权重张量为weight(m+1行，n列)，对于任意输入索引张量indices（如1行3列），输出out是一个3行n列的张量。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnEmbedding](../../index/embedding/docs/aclnnEmbedding.md) | 把数据集合映射到向量空间，进而将数据进行量化。embedding的二维权重张量为weight(m+1行，n列)，对于任意输入索引张量indices（如1行3列），输出out是一个3行n列的张量。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnEmbeddingBag](../../index/embedding_bag/docs/aclnnEmbeddingBag.md) | 根据indices从weight中获得一组被聚合的数，然后根据offsets的偏移和mode指定的聚合模式对获取的数进行max、sum、mean聚合。其余参数则更细化了计算过程的控制。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnEmbeddingDenseBackward](../../index/embedding_dense_grad_v2/docs/aclnnEmbeddingDenseBackward.md) | 实现aclnnEmbedding的反向计算, 将相同索引indices对应grad的一行累加到out上。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnEmbeddingRenorm](../../index/gather_v2/docs/aclnnEmbeddingRenorm.md) | 根据给定的maxNorm和normType返回输入tensor在指定indices下的修正结果。 | 默认确定性实现 |   |
@@ -256,9 +256,9 @@
 | [aclnnLinalgVectorNorm](../../norm/lp_norm_v2/docs/aclnnLinalgVectorNorm.md) | 计算输入张量的向量范数。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
 | [aclnnLogit](../../loss/logit/docs/aclnnLogit.md) | 该算子是概率到对数几率（log-odds）转换的一个数学运算，常用于概率值的反变换。 | 默认确定性实现 |   |
 | [aclnnLogitGrad](../../loss/logit_grad/docs/aclnnLogitGrad.md) | 完成aclnnLogit的反向传播。 | 默认确定性实现 |   |
-| [aclnnLogSigmoid](../../activation/logsigmoid/docs/aclnnLogSigmoid.md) | 对输入张量逐元素实现LogSigmoid运算。 | 默认确定性实现 |   |
+| [aclnnLogSigmoid](../../activation/log_sigmoid/docs/aclnnLogSigmoid.md) | 对输入张量逐元素实现LogSigmoid运算。 | 默认确定性实现 |   |
 | [aclnnLogSigmoidBackward](../../activation/logsigmoid_grad/docs/aclnnLogSigmoidBackward.md) | aclnnLogSigmoid的反向传播，根据上一层传播的梯度与LogSigmoid正向输入计算其梯度输入。 | 默认确定性实现 |   |
-| [aclnnLogSigmoidForward](../../activation/logsigmoid/docs/aclnnLogSigmoidForward.md) | 对输入张量逐元素实现LogSigmoid运算。 | 默认确定性实现 |   |
+| [aclnnLogSigmoidForward](../../activation/log_sigmoid/docs/aclnnLogSigmoidForward.md) | 对输入张量逐元素实现LogSigmoid运算。 | 默认确定性实现 |   |
 | [aclnnLogSoftmax](../../activation/log_softmax_v2/docs/aclnnLogSoftmax.md) | 对输入张量计算logsoftmax值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnLogSoftmaxBackward](../../activation/log_softmax_grad/docs/aclnnLogSoftmaxBackward.md) | 完成aclnnLogSoftmax的反向传播。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnLSTM](../../rnn/dynamic_rnn/docs/aclnnLSTM.md) | 完成LSTM的计算。 | 默认确定性实现 |   |
@@ -293,7 +293,7 @@
 | [aclnnNonzero](../../index/non_zero/docs/aclnnNonzero.md) | 找出self中非零元素的位置，设self的维度为D，self中非零元素的个数为N，则返回out的shape为D * N，每一列表示一个非零元素的位置坐标。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnNonzeroV2](../../index/non_zero/docs/aclnnNonzeroV2.md) | 找出self中非零元素的位置，设self的维度为D，self中非零元素的个数为N，则返回out的shape为D * N，每一列表示一个非零元素的位置坐标。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnPrelu](../../activation/prelu/docs/aclnnPrelu.md) | 激活函数，Tensor中value大于0，取该value，小于0时取权重与value的乘积。 | 默认确定性实现 |   |
-| [aclnnPreluBackward](../../activation/prelu_grad_update/docs/aclnnPreluBackward.md) | 完成aclnnPreluBackward的反向函数。 | 默认确定性实现 |   |
+| [aclnnPreluBackward](../../activation/p_relu_grad_update/docs/aclnnPreluBackward.md) | 完成aclnnPreluBackward的反向函数。 | 默认确定性实现 |   |
 | [aclnnQuantConvolution](../../conv/convolution_forward/docs/aclnnQuantConvolution.md) | 完成per-channel量化的2D/3D卷积计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnQuantConvolutionWeightNz](../../conv/convolution_forward/docs/aclnnQuantConvolutionWeightNz.md) | 完成 per-channel 量化的 3D 卷积计算，weight仅支持FRACTAL_Z_3D格式。 | 默认确定性实现 |   |
 | [aclnnQuantize](../../quant/quantize/docs/aclnnQuantize.md) | 对输入张量进行量化处理。 | 默认确定性实现 |   |
@@ -349,7 +349,7 @@
 | [aclnnThreshold&aclnnInplaceThreshold](../../activation/threshold/docs/aclnnThreshold&aclnnInplaceThreshold.md) | 对输入x进行阈值操作。当x中的elements大于threshold时，返回elements；否则，返回value。 | 默认确定性实现 |   |
 | [aclnnThresholdBackward](../../activation/threshold_grad_v2_d/docs/aclnnThresholdBackward.md) | 完成aclnnThreshold的反向。 | 默认确定性实现 |   |
 | [aclnnTransposeBatchMatMul](../../matmul/transpose_batch_mat_mul/docs/aclnnTransposeBatchMatMul.md) | 完成张量x1与张量x2的矩阵乘计算。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnTransposeBatchMatMulWeightNz](../../matmul/transpose_batch_mat_mul/docs/aclnnTransposeBatchMatMulWeightNz.md) | 完成张量x1与张量x2的矩阵乘计算。x2仅支持昇腾亲和数据排布格式NZ，只支持x1为3维, x2为5维。 | 默认确定性实现 | - |
+| [aclnnTransposeBatchMatMulWeightNz](../../matmul/transpose_batch_mat_mul/docs/aclnnTransposeBatchMatMulWeightNZ.md) | 完成张量x1与张量x2的矩阵乘计算。x2仅支持昇腾亲和数据排布格式NZ，只支持x1为3维, x2为5维。 | 默认确定性实现 | - |
 | [aclnnTransposeQuantBatchMatMul](../../matmul/transpose_quant_batch_mat_mul/docs/aclnnTransposeQuantBatchMatMul.md) | 完成张量x1与张量x2量化的矩阵乘计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnTransQuantParam](../../quant/trans_quant_param/docs/aclnnTransQuantParam.md) | 将输入scale数据从FLOAT32类型转换为硬件需要的UINT64类型，并存储到quantParam中。 | 默认确定性实现 |   |
 | [aclnnTransQuantParamV2](../../quant/trans_quant_param_v2/docs/aclnnTransQuantParamV2.md) | 完成量化计算参数scale数据类型的转换，将FLOAT32的数据类型转换为硬件需要的UINT64，INT64类型。 | 默认确定性实现 |   |

@@ -7,7 +7,7 @@ build.sh是本项目的构建脚本，默认在项目根目录下，作用是将
 ## 使用方法
 1. **配置环境变量**
 
-   参考[环境部署](../context/quick_install.md)完成基础环境搭建。
+   参考[环境部署](./quick_install.md)完成基础环境搭建。
    ```bash
    # 默认路径安装，以root用户为例
    source /usr/local/Ascend/cann/set_env.sh

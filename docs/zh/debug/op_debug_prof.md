@@ -162,7 +162,7 @@
    
 ### 方式二（针对Ascend 950PR）
 
-算子开发过程中，如果出现执行精度下降、内存占用异常等问题，可以通过[CANN Simulator](./cann_simulator.md)仿真工具分析算子的指令流水情况，从而确定问题根源，并针对性地优化。
+算子开发过程中，如果出现执行精度下降、内存占用异常等问题，可以通过[CANN Simulator](./cann_sim.md)仿真工具分析算子的指令流水情况，从而确定问题根源，并针对性地优化。
 
 本章以[AddExample自定义算子](../../../examples/add_example/)为例，主要介绍仿真工具的使用。如何通过仿真工具进行精度和性能调优。
 
@@ -182,5 +182,5 @@
    trace_core0.json
    ``` 
 
-3. 在Chrome浏览器中输入“chrome://tracing”地址，并将生成的指令流水图文件（trace_core0.json）拖到空白处打开，具体参数介绍参考CANN Simulator中[“仿真结果解析”](./cann_simulator.md/#仿真结果解析)章节。
+3. 在Chrome浏览器中输入“chrome://tracing”地址，并将生成的指令流水图文件（trace_core0.json）拖到空白处打开，具体参数介绍参考CANN Simulator中[“仿真结果解析”](./cann_sim.md/#仿真结果解析说明)章节。
 
