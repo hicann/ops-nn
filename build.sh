@@ -1020,8 +1020,7 @@ clean_build_out() {
 
 clean_build_binary() {
   if [ -d "${BUILD_PATH}/tbe" ]; then
-    rm -rf ${BUILD_PATH}/tbe/
-    find ${BUILD_PATH} -type f -name "*.gcda" -delete
+    find ${BUILD_PATH}/tbe/ -mindepth 1 -not -path "${BUILD_PATH}/tbe/ascendc" -not -path "${BUILD_PATH}/tbe/ascendc/*" -delete
   fi
   if [ -d "${BUILD_PATH}/autogen" ]; then
     rm -rf ${BUILD_PATH}/autogen/
