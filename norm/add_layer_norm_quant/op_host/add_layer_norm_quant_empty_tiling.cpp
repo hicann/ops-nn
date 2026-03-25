@@ -153,7 +153,7 @@ ge::graphStatus AddLayerNormQuantEmptyTiling::CheckInputsShape()
 ge::graphStatus AddLayerNormQuantEmptyTiling::GetShapeAttrsInfo()
 {
     if (context_ == nullptr) {
-        OP_LOGE(context_->GetNodeName(), "Tiling context is null");
+        OP_LOGE("AddLayerNormQuantEmptyTiling", "Tiling context is null");
         return ge::GRAPH_FAILED;
     }
 
