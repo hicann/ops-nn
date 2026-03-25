@@ -174,6 +174,9 @@ aclnnStatus aclnnAddRmsNorm(
   - <term>Atlas 推理系列产品</term>：
     - 参数`x1`、`x2`、`gamma`、`yOut`、`xOut`的数据类型不支持BFLOAT16。
     - 参数`rstdOut`在当前产品使用场景下无效。
+  - <term>Ascend 950PR/Ascend 950DT</term>：
+
+    参数`gamma`的shape需要与`x1`后几维保持一致，后几维为`x1`需要norm的维度。
 
 - **返回值：**
 
