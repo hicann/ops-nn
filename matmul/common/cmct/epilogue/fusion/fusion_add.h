@@ -95,7 +95,7 @@ public:
         } else {
             // NDdma
             int64_t curBatch = stageSize / curAivNAlign / curAivM;
-            AscendC::MultiCopyParams<DataTypeIn, 3> ndDmaParams;
+            AscendC::MultiCopyParams<DataTypeIn, DIM_SIZE_THREE> ndDmaParams;
             ndDmaParams.loopInfo.loopSrcStride[0] = 1;
             ndDmaParams.loopInfo.loopSrcStride[1] = static_cast<uint32_t>(strideN);
             ndDmaParams.loopInfo.loopSrcStride[2] = 0;

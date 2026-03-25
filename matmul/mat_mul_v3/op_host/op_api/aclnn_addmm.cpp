@@ -49,6 +49,8 @@ static const size_t LAST_SECOND_DIM_INDEX = 2;
 static const size_t LAST_FIRST_DIM_INDEX = 1;
 static const int NZ_STORAGE_PENULTIMATE_DIM = 16;
 static const int NZ_K0_VALUE_16 = 16;
+static const int DIM_SIZE_ONE = 1;
+static const int DIM_SIZE_TWO = 2;
 
 static inline bool CheckNotNull(AclnnAddmmTensor& addmmTensor)
 {
@@ -124,11 +126,11 @@ static inline bool CheckMatmul(const aclTensor* self, const aclTensor* mat1, con
 
 static inline bool CheckBroadcast(const aclTensor* self, const aclTensor* mat1, const aclTensor* mat2)
 {
-    if (self->GetViewShape().GetDimNum() > 2) {
+    if (self->GetViewShape().GetDimNum() > DIM_SIZE_TWO) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dim of self should be less than 3.");
         return false;
     }
-    if (self->GetStorageShape().GetDimNum() < 1) {
+    if (self->GetStorageShape().GetDimNum() < DIM_SIZE_ONE) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self can not be empty.");
         return false;
     }
@@ -403,7 +405,7 @@ static inline bool CheckMatmulWeightNz(const aclTensor* mat1, const aclTensor* m
         return false;
     }
 
-    if (mat1->GetViewShape().GetDimNum() != 2 || mat2->GetViewShape().GetDimNum() != 2) {
+    if (mat1->GetViewShape().GetDimNum() != DIM_SIZE_TWO || mat2->GetViewShape().GetDimNum() != DIM_SIZE_TWO) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dim of mat1 and mat2 should be 2.");
         return false;
     }

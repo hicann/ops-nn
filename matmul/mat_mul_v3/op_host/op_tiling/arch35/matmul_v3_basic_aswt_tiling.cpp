@@ -48,7 +48,7 @@ uint64_t MatMulV3BasicAswtTiling::GetAFullLoadBasicNL1() const
 }
 
 // A全载切换基础API的条件
-bool MatMulV3BasicAswtTiling::CheckAL1FullLoadDav3510(const uint64_t kAlignedValue, const uint64_t mAlignedValue)
+bool MatMulV3BasicAswtTiling::CheckAL1FullLoadDav3510(const uint64_t kAlignedValue, const uint64_t mAlignedValue) const
 {
     uint64_t al1Size = kAlignedValue * mAlignedValue * args_.aDtypeSize;
     // 单核上只有一轮，走basic api模板， 头开销较小，无需走全载模板
@@ -180,7 +180,7 @@ void MatMulV3BasicAswtTiling::DoAL1FullLoad(uint64_t bBatchDimAll, uint64_t bias
     return;
 }
 
-bool MatMulV3BasicAswtTiling::CheckBL1FullLoadDav3510(const uint64_t kAlignedValue, const uint64_t nAlignedValue)
+bool MatMulV3BasicAswtTiling::CheckBL1FullLoadDav3510(const uint64_t kAlignedValue, const uint64_t nAlignedValue) const
 {
     uint64_t bl1Size = kAlignedValue * nAlignedValue * args_.bDtypeSize;
     // 单核上只有一轮，走basic api模板， 头开销较小，无需走全载模板

@@ -308,7 +308,9 @@ bool MatMulV3TilingHelper::IsSelfNonContiguous(const gert::TilingContext* contex
     size_t selfDimNum = selfShape.GetDimNum();
     size_t mat2DimNum = mat2Shape.GetDimNum();
     // createView with TensorV2 & storageShape 1d ->  non contiguous
-    return (context->InputIsView(0) && selfStorageShape.GetDimNum() == 1 && selfDimNum == 3 && mat2DimNum == 2);
+    return (
+        context->InputIsView(0) && selfStorageShape.GetDimNum() == NUM_ONE && selfDimNum == NUM_THREE &&
+        mat2DimNum == NUM_TWO);
 }
 }  // namespace matmul_v3_advanced
 }  // namespace optiling

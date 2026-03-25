@@ -129,7 +129,7 @@ inline static bool CheckScaleValid(const aclTensor* scale, int64_t batchN)
 }
 
 namespace {
-static bool CheckDavidLimit(const aclTensor* scale, const aclIntArray* perm_x1, const aclIntArray* perm_x2)
+static bool CheckDavidLimit(const aclIntArray* perm_x1, const aclIntArray* perm_x2)
 {
     auto x1_need_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2) ||
                              ((*perm_x1)[0] == 0 && (*perm_x1)[1] == 1 && (*perm_x1)[2] == 2);
@@ -173,7 +173,7 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclT
     auto x1_need_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2);
     auto x2_need_transpose = ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 1 && (*perm_x2)[2] == 2);
     if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
-        if (!CheckDavidLimit(scale, perm_x1, perm_x2)) {
+        if (!CheckDavidLimit(perm_x1, perm_x2)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "npu arch 3510 Limit.");
             return false;
         }

@@ -31,6 +31,7 @@ constexpr uint64_t BASIC_BLOCK_SIZE_16 = 16UL;
 constexpr uint64_t BASIC_BLOCK_SIZE_64 = 64UL;
 constexpr uint64_t BASIC_BLOCK_K_256_BYTE = 256UL;
 constexpr uint64_t BASIC_BLOCK_K_128_BYTE = 128UL;
+constexpr uint64_t NUM_ONE = 1UL;
 constexpr uint64_t NUM_TWO = 2UL;
 constexpr uint64_t NUM_THREE = 3UL;
 constexpr uint64_t NUM_FOUR = 4UL;

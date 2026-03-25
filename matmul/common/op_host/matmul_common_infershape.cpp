@@ -23,6 +23,9 @@ constexpr size_t BATCH_MATMUL_FIXPIPE_BIAS_IDX = 3;
 constexpr size_t SWIGLU_CONCAT_WEIGHT_DIM_NUM = 3;
 constexpr int64_t UNKNOWN_DIM = -1;
 constexpr int64_t UNKNOWN_DIM_NUM = -2;
+constexpr int64_t DIM_INDEX_FIRST = 0;
+constexpr int64_t DIM_INDEX_SECOND = 1;
+constexpr int64_t DIM_INDEX_THIRD = 2;
 constexpr int64_t SWIGLU_CONCAT_DIM_VALUE = 2;
 const int64_t B4_NUMS_IN_B32 = 8;
 constexpr char FUSED_OP_TYPE_SWIGLU[] = "swiglu";
@@ -375,8 +378,8 @@ static ge::graphStatus UpdateX2NewShape(
 
         // remove the highest dimension (value 2) to perform normal matmul inferShape
         new_shape.SetDimNum(BATCH_MATMUL_MIN_SHAPE_SIZE);
-        new_shape.SetDim(0, new_shape.GetDim(1));
-        new_shape.SetDim(1, new_shape.GetDim(2));
+        new_shape.SetDim(DIM_INDEX_FIRST, new_shape.GetDim(DIM_INDEX_SECOND));
+        new_shape.SetDim(DIM_INDEX_SECOND, new_shape.GetDim(DIM_INDEX_THIRD));
     }
 
     return ge::GRAPH_SUCCESS;

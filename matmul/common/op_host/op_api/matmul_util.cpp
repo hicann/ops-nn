@@ -439,7 +439,7 @@ static const bool CheckMatmulV3Support(
            (mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ && mmOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT);
 }
 
-static const bool CheckSupportInfoFormatNzNzNd(MmOpInfo& mmOpInfo)
+static const bool CheckSupportInfoFormatNzNzNd(const MmOpInfo& mmOpInfo)
 {
     return mmOpInfo.support_info.self_format == ge::FORMAT_FRACTAL_NZ &&
            mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ &&
@@ -2255,6 +2255,7 @@ aclnnStatus Dav2201MatMulRule::PromoteDtype(
         mmOpInfo.ori_info.self_dtype = matA->GetDataType();
         mmOpInfo.ori_info.mat2_dtype = matB->GetDataType();
         mmOpInfo.ori_info.output_dtype = out->GetDataType();
+        mmOpInfo.ori_info.bias_dtype = DataType::DT_UNDEFINED;
         if (bias != nullptr){
             mmOpInfo.ori_info.bias_dtype = bias->GetDataType();
         }
@@ -2382,6 +2383,7 @@ aclnnStatus DefaultMatMulRule::PromoteDtype(const aclTensor* matA, const aclTens
         mmOpInfo.ori_info.self_dtype = matA->GetDataType();
         mmOpInfo.ori_info.mat2_dtype = matB->GetDataType();
         mmOpInfo.ori_info.output_dtype = out->GetDataType();
+        mmOpInfo.ori_info.bias_dtype = DataType::DT_UNDEFINED;
         if (bias != nullptr){
             mmOpInfo.ori_info.bias_dtype = bias->GetDataType();
         }

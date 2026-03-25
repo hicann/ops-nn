@@ -30,7 +30,7 @@ const aclTensor *ExecBmmOpWithBiasV2(const aclTensor *self, const aclTensor *mat
 const aclTensor* ExecBatchMatmulOpWithBiasAndAttrsV2(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, bool adjX1, bool adjX2,
     int8_t cubeMathType, aclOpExecutor* executor,
-    NonContiguousMode isTransposeMat2Contiguous = NonContiguousMode::CONTINUOUS, bool isBaddbmm = false);
+    NonContiguousMode nonContiguousMode = NonContiguousMode::CONTINUOUS, bool isBaddbmm = false);
 
 const aclTensor *ExecBmmOpV2(const aclTensor *self, const aclTensor *mat2, const aclTensor *out, int8_t cubeMathType,
     aclOpExecutor *executor, bool isBaddbmm = false);

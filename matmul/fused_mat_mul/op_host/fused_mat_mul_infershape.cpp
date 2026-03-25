@@ -26,6 +26,7 @@ const int kMatmulV2MinShapeSize = 2;
 const int kMatmulV2MaxShapeSize = 3;
 const int kFusedMatMulX3Idx = 3;
 const int kOutputIdx = 0;
+const int DIM_SIZE_TWO = 2;
 
 const std::vector<const char*> kAllSupportedOpTypes = {"", "16cast32", "add", "mul", "gelu_erf", 
     "gelu_tanh", "relu"};
@@ -133,7 +134,7 @@ ge::graphStatus InferShapeForFusedMatMul(InferShapeContext* context)
                 CUBE_INNER_ERR_REPORT(
                     op_name, "The n(%d) tensors must be the same bias(%ld,)", b_n, shape_bias->GetDim(0)),
                 return ge::GRAPH_FAILED);
-        } else if (shape_bias->GetDimNum() == 2) {
+        } else if (shape_bias->GetDimNum() == DIM_SIZE_TWO) {
             OP_CHECK_IF(
                 shape_bias->GetDim(0) != 1,
                 CUBE_INNER_ERR_REPORT(op_name, "The m(%ld) of bias must be 1", shape_bias->GetDim(0)),
