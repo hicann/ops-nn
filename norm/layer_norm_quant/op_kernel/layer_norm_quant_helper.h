@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file utils.h
+ * \file layer_norm_quant_helper.h
  * \brief
  */
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef LAYER_NORM_QUANT_HELPER_H
+#define LAYER_NORM_QUANT_HELPER_H
 #include "kernel_operator.h"
 using namespace AscendC;
 using AscendC::HardEvent;
@@ -80,4 +80,4 @@ __aicore__ inline void CastFromF16ToI8(const AscendC::LocalTensor<int8_t> &res, 
     AscendC::PipeBarrier<PIPE_V>();
 }
 
-#endif
+#endif // LAYER_NORM_QUANT_HELPER_H
