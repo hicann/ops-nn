@@ -70,6 +70,7 @@ __aicore__ inline void ModulateL<T, isScale, isShift>::SetGmAddr(GM_ADDR x, GM_A
     this->yGm_.SetGlobalBuffer((__gm__ T*)y + baseOffset);
     this->scaleGm_.SetGlobalBuffer((__gm__ T*)scale + scaleShiftOffset);
     this->shiftGm_.SetGlobalBuffer((__gm__ T*)shift + scaleShiftOffset);
+    this->xGm_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
 }
 
 template<typename T, bool isScale, bool isShift>
@@ -153,6 +154,7 @@ __aicore__ inline void ModulateD<T, isScale, isShift>::SetGmAddr(GM_ADDR x, GM_A
     this->yGm_.SetGlobalBuffer((__gm__ T*)y + currentD_);
     this->scaleGm_.SetGlobalBuffer((__gm__ T*)scale + currentD_);
     this->shiftGm_.SetGlobalBuffer((__gm__ T*)shift + currentD_);
+    this->xGm_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
 }
 
 template<typename T, bool isScale, bool isShift>
