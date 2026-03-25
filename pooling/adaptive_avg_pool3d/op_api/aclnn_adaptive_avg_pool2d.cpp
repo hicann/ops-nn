@@ -323,7 +323,7 @@ static aclnnStatus DoAdaptiveAvgPool2D(
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         return DoAdaptiveAvgPool2D_950(self, outputSize, out, executor);
     }
-    if (IsSocVersion910B_310P){
+    if (IsSocVersion910B_310P()){
         return DoAdaptiveAvgPool2D_910B_310P(self, outputSize, out, executor);
     }
     aclTensor* input = const_cast<aclTensor*>(self);
