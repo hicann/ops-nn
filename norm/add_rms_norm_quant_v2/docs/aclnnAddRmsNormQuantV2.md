@@ -314,11 +314,6 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td rowspan="1">161002</td>
       <td>输入或输出的数据类型不在支持的范围之内。</td>
     </tr>
-    <tr>
-      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td>561002</td>
-      <td>输入/输出的shape关系不符合预期。</td>
-    </tr>
   </tbody></table>
 
 ## aclnnAddRmsNormQuantV2
