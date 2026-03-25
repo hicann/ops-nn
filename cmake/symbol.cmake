@@ -26,6 +26,7 @@ function(gen_ophost_symbol)
     ${OPHOST_NAME}
     PRIVATE $<BUILD_INTERFACE:intf_pub_cxx17>
             ${OPHOST_NAME}_obj
+            -Wl,-Bsymbolic
     )
 
   target_link_directories(${OPHOST_NAME} PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64)
