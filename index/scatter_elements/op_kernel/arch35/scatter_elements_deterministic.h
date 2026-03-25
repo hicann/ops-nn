@@ -133,15 +133,7 @@ __aicore__ inline void KernelScatterElementsDeterm<DATA_T, IDX_T, COMP_T, REDU>:
     midAxis_ = tilingData_->midAxis;
     afterAxis_ = tilingData_->afterAxis;
 
-    int64_t sortDim = tilingData_->baseS * tilingData_->baseA;
     pipe_->InitBuffer(dataQueue_, DB_BUFFER, tilingData_->loopLength * sizeof(DATA_T));
-    pipe_->InitBuffer(indicesQue_, INDICES_DB_BUFFER,
-                      ops::Aligned(static_cast<int64_t>(sortDim * sizeof(IDX_T)), BLOCK_SIZE));
-    pipe_->InitBuffer(sortedKeyBuf_, ops::Aligned(static_cast<int64_t>(sortDim * sizeof(IDX_T)), BLOCK_SIZE));
-    pipe_->InitBuffer(sortedIdxBuf_, ops::Aligned(static_cast<int64_t>(sortDim * sizeof(uint32_t)), BLOCK_SIZE));
-    pipe_->InitBuffer(sharedTmpBuf_, ops::Aligned(static_cast<int64_t>(tilingData_->sortSharedBufSize), BLOCK_SIZE));
-    pipe_->InitBuffer(tilingDataUint64Buf_, TILING_DATA_UB_NUM * sizeof(uint64_t));
-    pipe_->InitBuffer(paramBuf_, PARAM_UB_NUM * sizeof(COMP_T));
 }
 
 template <typename DATA_T, typename IDX_T, typename COMP_T, const uint32_t REDU>
@@ -1211,6 +1203,17 @@ __aicore__ inline void KernelScatterElementsDeterm<DATA_T, IDX_T, COMP_T, REDU>:
     
     CopyDataToY();
     SyncAll();
+
+    pipe_->Reset();
+    int64_t sortDim = tilingData_->baseS * tilingData_->baseA;
+    pipe_->InitBuffer(indicesQue_, INDICES_DB_BUFFER,
+                      ops::Aligned(static_cast<int64_t>(sortDim * sizeof(IDX_T)), BLOCK_SIZE));
+    pipe_->InitBuffer(sortedKeyBuf_, ops::Aligned(static_cast<int64_t>(sortDim * sizeof(IDX_T)), BLOCK_SIZE));
+    pipe_->InitBuffer(sortedIdxBuf_, ops::Aligned(static_cast<int64_t>(sortDim * sizeof(uint32_t)), BLOCK_SIZE));
+    pipe_->InitBuffer(sharedTmpBuf_, ops::Aligned(static_cast<int64_t>(tilingData_->sortSharedBufSize), BLOCK_SIZE));
+    pipe_->InitBuffer(tilingDataUint64Buf_, TILING_DATA_UB_NUM * sizeof(uint64_t));
+    pipe_->InitBuffer(paramBuf_, PARAM_UB_NUM * sizeof(COMP_T));
+    
     SortAndUpdate();
 }
 }  // namespace ScatterElements
