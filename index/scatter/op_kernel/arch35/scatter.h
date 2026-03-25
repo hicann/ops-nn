@@ -58,7 +58,7 @@ constexpr int8_t SHIFT_ARR_LEN = 3;
 constexpr int8_t M_ARR_LEN = 3;
 
 template<typename T3>
-__aicore__ inline void CalcIndex2(int32_t addr, uint32_t &i, uint32_t &j, __local_mem__ T3* factorArr, __local_mem__ T3* shiftArr, __local_mem__ T3* mArr) {
+__simt_callee__ __aicore__ inline void CalcIndex2(int32_t addr, uint32_t &i, uint32_t &j, __local_mem__ T3* factorArr, __local_mem__ T3* shiftArr, __local_mem__ T3* mArr) {
     // fast division, addr / factor0
     uint32_t t = Simt::MulHi(static_cast<uint32_t>(addr), static_cast<uint32_t>(mArr[INDEX_ZERO]));
     t = t + addr;
@@ -71,7 +71,7 @@ __aicore__ inline void CalcIndex2(int32_t addr, uint32_t &i, uint32_t &j, __loca
 }
 
 template<typename T3>
-__aicore__ inline void CalcIndex3(int32_t addr, uint32_t &i, uint32_t &j, uint32_t &k, __local_mem__ T3* factorArr, __local_mem__ T3* shiftArr, __local_mem__ T3* mArr) {
+__simt_callee__ __aicore__ inline void CalcIndex3(int32_t addr, uint32_t &i, uint32_t &j, uint32_t &k, __local_mem__ T3* factorArr, __local_mem__ T3* shiftArr, __local_mem__ T3* mArr) {
     // fast division, addr / factor0
     uint32_t t = Simt::MulHi(static_cast<uint32_t>(addr), static_cast<uint32_t>(mArr[INDEX_ZERO]));
     t = t + addr;
@@ -89,7 +89,7 @@ __aicore__ inline void CalcIndex3(int32_t addr, uint32_t &i, uint32_t &j, uint32
 }
 
 template<typename T3>
-__aicore__ inline void CalcUint64Index2(int64_t addr, uint64_t &i, uint64_t &j, __local_mem__ T3* factorArr, __local_mem__ T3* shiftArr, __local_mem__ T3* mArr) {
+__simt_callee__ __aicore__ inline void CalcUint64Index2(int64_t addr, uint64_t &i, uint64_t &j, __local_mem__ T3* factorArr, __local_mem__ T3* shiftArr, __local_mem__ T3* mArr) {
     // uint64_t &i, uint64_t &j
     i = Simt::UintDiv(static_cast<uint64_t>(addr), static_cast<uint64_t>(mArr[INDEX_ZERO]), static_cast<uint64_t>(shiftArr[INDEX_ZERO]));
     int64_t remain = addr - i * factorArr[INDEX_ZERO];
@@ -97,7 +97,7 @@ __aicore__ inline void CalcUint64Index2(int64_t addr, uint64_t &i, uint64_t &j, 
 }
 
 template<typename T3>
-__aicore__ inline void CalcUint64Index3(int64_t addr, uint64_t &i, uint64_t &j, uint64_t &k, __local_mem__ T3* factorArr, __local_mem__ T3* shiftArr, __local_mem__ T3* mArr) {
+__simt_callee__ __aicore__ inline void CalcUint64Index3(int64_t addr, uint64_t &i, uint64_t &j, uint64_t &k, __local_mem__ T3* factorArr, __local_mem__ T3* shiftArr, __local_mem__ T3* mArr) {
   // uint64_t &i, uint64_t &j, uint64_t &k
     i = Simt::UintDiv(static_cast<uint64_t>(addr), static_cast<uint64_t>(mArr[INDEX_ZERO]), static_cast<uint64_t>(shiftArr[INDEX_ZERO]));
     int64_t remain = addr - i * factorArr[INDEX_ZERO];

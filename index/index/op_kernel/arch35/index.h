@@ -73,9 +73,9 @@ struct is_same<Tp, Tp> : public true_type {};
 // index assignment function
 template <typename T, typename T2>
 struct IndexAssign {
-    __aicore__ inline IndexAssign()
+    __simt_callee__ __aicore__ inline IndexAssign()
     {}
-    __aicore__ inline void operator()(__gm__ T* output, __gm__ T* input, T2 i, T2 idx)
+    __simt_callee__ __aicore__ inline void operator()(__gm__ T* output, __gm__ T* input, T2 i, T2 idx)
     {
         output[i] = input[idx];
     }
@@ -84,9 +84,9 @@ struct IndexAssign {
 // indexPut assignment function
 template <typename T>
 struct IndexPutAssign {
-    __aicore__ inline IndexPutAssign()
+    __simt_callee__ __aicore__ inline IndexPutAssign()
     {}
-    __aicore__ inline void operator()(__gm__ T* output, __gm__ T* input, uint32_t i, uint32_t idx)
+    __simt_callee__ __aicore__ inline void operator()(__gm__ T* output, __gm__ T* input, uint32_t i, uint32_t idx)
     {
         output[idx] = input[i];
     }
@@ -95,9 +95,9 @@ struct IndexPutAssign {
 // indexPut add function for accumulate mode
 template <typename T>
 struct IndexPutAdd {
-    __aicore__ inline IndexPutAdd()
+    __simt_callee__ __aicore__ inline IndexPutAdd()
     {}
-    __aicore__ inline void operator()(__gm__ T* output, __gm__ T* input, uint32_t i, uint32_t idx)
+    __simt_callee__ __aicore__ inline void operator()(__gm__ T* output, __gm__ T* input, uint32_t i, uint32_t idx)
     {
         if constexpr (is_same<bool, T>::value) {
             if(input[i]){

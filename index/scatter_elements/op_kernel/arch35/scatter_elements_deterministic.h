@@ -99,7 +99,7 @@ private:
 };
 
 template <typename COMP_T, const uint16_t RANK, const uint16_t DIM>
-__aicore__ inline void CalcOffset(COMP_T origIndicesOffset, COMP_T sValue, COMP_T& yOffset, COMP_T& updatesOffset,
+__simt_callee__ __aicore__ inline void CalcOffset(COMP_T origIndicesOffset, COMP_T sValue, COMP_T& yOffset, COMP_T& updatesOffset,
                                   __ubuf__ uint64_t* TilingUint64Ub, __ubuf__ COMP_T* params);
 
 template <typename DATA_T, typename IDX_T, typename COMP_T, const uint32_t REDU, const uint16_t RANK,
@@ -804,7 +804,7 @@ __aicore__ inline void KernelScatterElementsDeterm<DATA_T, IDX_T, COMP_T, REDU>:
 }
 
 template <typename COMP_T, const uint16_t RANK, const uint16_t DIM>
-__aicore__ inline void CalcOffset(COMP_T origIndicesOffset, COMP_T sValue, COMP_T& yOffset, COMP_T& updatesOffset,
+__simt_callee__ __aicore__ inline void CalcOffset(COMP_T origIndicesOffset, COMP_T sValue, COMP_T& yOffset, COMP_T& updatesOffset,
                                   __ubuf__ uint64_t* TilingUint64Ub, __ubuf__ COMP_T* params)
 {
     uint64_t dataStride[TILING_ARRAY_LEN] = {};

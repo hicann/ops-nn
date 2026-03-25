@@ -43,12 +43,12 @@ constexpr int64_t NUMBER_TWO = 2;
 constexpr int64_t NUMBER_FOUR = 4;
 
 template <typename U>
-__aicore__ inline void TargetCheck(const U idx, const uint32_t xDimC_)
+__simt_callee__ __aicore__ inline void TargetCheck(const U idx, const uint32_t xDimC_)
 {
     ASSERT((0 <= idx && idx < xDimC_) && "Target is invalid value");
 }
 
-__aicore__ inline void SimtComputeBinaryReduction(__ubuf__ float* tmpOut_, __ubuf__ float* tmpWeight_)
+__simt_callee__ __aicore__ inline void SimtComputeBinaryReduction(__ubuf__ float* tmpOut_, __ubuf__ float* tmpWeight_)
 {
     uint32_t countBR = Simt::GetThreadNum();
     while (countBR > 1) {
