@@ -238,7 +238,7 @@ ge::graphStatus MatmulV3BaseTiling::CheckArgs()
     }
 
     if (attrs->GetAttrNum() >= OP_IMPL_MODE_ATTR_NUM) {
-        OP_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<int32_t>(OP_IMPL_MODE_ATTR_INDEX - 1));
+        OP_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<int64_t>(OP_IMPL_MODE_ATTR_INDEX - 1));
         OP_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<bool>(OP_IMPL_MODE_ATTR_INDEX));
     }
     OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputDesc(0));
