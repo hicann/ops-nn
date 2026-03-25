@@ -54,7 +54,7 @@ const size_t OFFSET_W_INDEX = 4;
 const size_t ENABLE_HF32_INDEX = 5;
 const size_t OUTPUT_PADDING_INDEX = 5;
 const size_t OFFSET_X_INDEX = 6;
-const size_t TRANSPOSE_ENABLE_HF32_INDEX = 5;
+const size_t TRANSPOSE_ENABLE_HF32_INDEX = 7;
 
 struct TilingValueDavid {
     uint64_t coreNum;

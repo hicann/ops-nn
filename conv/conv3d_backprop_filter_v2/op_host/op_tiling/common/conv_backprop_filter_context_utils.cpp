@@ -89,7 +89,8 @@ static bool GetNCDHWShape(const T &origin_shape, int64_t *ncdhw_shape, ge::Forma
     }
 }
 
-static inline bool CheckRange(int32_t val, int32_t lower, int32_t upper)
+template <typename T>
+static inline bool CheckRange(T val, T lower, T upper)
 {
     return val >= lower && val <= upper;
 }
@@ -115,13 +116,16 @@ bool SetStridesAttr(const gert::TilingContext *context, Conv3dBpFilterV2RunInfo 
     OP_CHECK_IF(normalized_strides[NCDHW_N_INDEX] != 1 || normalized_strides[NCDHW_C_INDEX] != 1, OP_LOGE(op_name,
         "stride_n and stride_c's dim must be 1, current stride_n is %ld, stride_c is %ld.",
         normalized_strides[NCDHW_N_INDEX], normalized_strides[NCDHW_C_INDEX]), return false);
-    OP_CHECK_IF(!CheckRange(normalized_strides[NCDHW_D_INDEX], STRIDE_LOWER, SHAPE_UPPER),
+    OP_CHECK_IF(!CheckRange<int64_t>(normalized_strides[NCDHW_D_INDEX],
+                static_cast<int64_t>(STRIDE_LOWER), static_cast<int64_t>(SHAPE_UPPER)),
         OP_LOGE(op_name, "stride_d is invalid, current is %ld, stride_d support range [%d, %d]",
         normalized_strides[NCDHW_D_INDEX], STRIDE_LOWER, SHAPE_UPPER), return false);
-    OP_CHECK_IF(!CheckRange(normalized_strides[NCDHW_H_INDEX], STRIDE_LOWER, STRIDE_UPPER),
+    OP_CHECK_IF(!CheckRange<int64_t>(normalized_strides[NCDHW_H_INDEX],
+                static_cast<int64_t>(STRIDE_LOWER), static_cast<int64_t>(STRIDE_UPPER)),
         OP_LOGE(op_name, "stride_h is invalid, current is %ld, stride_h support range [%d, %d]",
         normalized_strides[NCDHW_H_INDEX], STRIDE_LOWER, STRIDE_UPPER), return false);
-    OP_CHECK_IF(!CheckRange(normalized_strides[NCDHW_W_INDEX], STRIDE_LOWER, STRIDE_UPPER),
+    OP_CHECK_IF(!CheckRange<int64_t>(normalized_strides[NCDHW_W_INDEX],
+                static_cast<int64_t>(STRIDE_LOWER), static_cast<int64_t>(STRIDE_UPPER)),
         OP_LOGE(op_name, "stride_w is invalid, current is %ld, stride_w support range [%d, %d]",
         normalized_strides[NCDHW_W_INDEX], STRIDE_LOWER, STRIDE_UPPER), return false);
     // stride attrs
@@ -150,15 +154,18 @@ bool SetDilationsAttr(const gert::TilingContext *context, Conv3dBpFilterV2RunInf
     OP_CHECK_IF(normalized_dilations[NCDHW_N_INDEX] != 1 || normalized_dilations[NCDHW_C_INDEX] != 1, OP_LOGE(op_name,
         "dilation_n and dilation_c's dim must be 1, current dilation_n is %ld, dilation_c is %ld.",
         normalized_dilations[NCDHW_N_INDEX], normalized_dilations[NCDHW_C_INDEX]), return false);
-    OP_CHECK_IF(!CheckRange(normalized_dilations[NCDHW_D_INDEX], DILATION_LOWWER, SHAPE_UPPER),
+    OP_CHECK_IF(!CheckRange<int64_t>(normalized_dilations[NCDHW_D_INDEX],
+                static_cast<int64_t>(DILATION_LOWWER), static_cast<int64_t>(SHAPE_UPPER)),
         OP_LOGE(op_name, "dilation_d is invalid, current is %ld, dilation_d support range [%d, %d]",
         normalized_dilations[NCDHW_D_INDEX], DILATION_LOWWER, SHAPE_UPPER), return false);
     int32_t dilation_limit =
         context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510 ? SHAPE_UPPER : DILATION_UPPER;
-    OP_CHECK_IF(!CheckRange(normalized_dilations[NCDHW_H_INDEX], DILATION_LOWWER, dilation_limit),
+    OP_CHECK_IF(!CheckRange<int64_t>(normalized_dilations[NCDHW_H_INDEX],
+                static_cast<int64_t>(DILATION_LOWWER), static_cast<int64_t>(dilation_limit)),
         OP_LOGE(op_name, "dilation_h is invalid, current is %ld, dilation_h support range [%d, %d]",
         normalized_dilations[NCDHW_H_INDEX], DILATION_LOWWER, dilation_limit), return false);
-    OP_CHECK_IF(!CheckRange(normalized_dilations[NCDHW_W_INDEX], DILATION_LOWWER, dilation_limit),
+    OP_CHECK_IF(!CheckRange<int64_t>(normalized_dilations[NCDHW_W_INDEX],
+                static_cast<int64_t>(DILATION_LOWWER), static_cast<int64_t>(dilation_limit)),
         OP_LOGE(op_name, "dilation_w is invalid, current is %ld, dilation_w support range [%d, %d]",
         normalized_dilations[NCDHW_W_INDEX], DILATION_LOWWER, dilation_limit), return false);
     // dilation attrs
@@ -173,7 +180,7 @@ bool SetDilationsAttr(const gert::TilingContext *context, Conv3dBpFilterV2RunInf
     if (runInfoV2.kh == 1) {
         runInfoV2.dilation_h = 1;
     }
-    if (runInfoV2.kw  == 1) {
+    if (runInfoV2.kw == 1) {
         runInfoV2.dilation_w = 1;
     }
     return true;
@@ -235,6 +242,31 @@ bool SetGroupsAttrs(const gert::TilingContext *context, Conv3dBpFilterV2RunInfo 
     return true;
 }
 
+bool ValidateInputShapeRange(const char *op_name, const std::vector<int64_t> &shape)
+{
+    OP_CHECK_IF(!CheckRange<int64_t>(shape[NCDHW_N_INDEX],
+                static_cast<int64_t>(SHAPE_LOWER), static_cast<int64_t>(SHAPE_UPPER)),
+        OP_LOGE(op_name, "x_shape_batch is invalid, current is %ld, x_shape_batch support range [%d, %d]",
+        shape[NCDHW_N_INDEX], SHAPE_LOWER, SHAPE_UPPER), return false);
+    OP_CHECK_IF(!CheckRange<int64_t>(shape[NCDHW_C_INDEX],
+                static_cast<int64_t>(SHAPE_LOWER), static_cast<int64_t>(SHAPE_UPPER)),
+        OP_LOGE(op_name, "x_shape_c is invalid, current is %ld, x_shape_c support range [%d, %d]",
+        shape[NCDHW_C_INDEX], SHAPE_LOWER, SHAPE_UPPER), return false);
+    OP_CHECK_IF(!CheckRange<int64_t>(shape[NCDHW_D_INDEX],
+                static_cast<int64_t>(SHAPE_LOWER), static_cast<int64_t>(SHAPE_UPPER)),
+        OP_LOGE(op_name, "x_shape_d is invalid, current is %ld, x_shape_d support range [%d, %d]",
+        shape[NCDHW_D_INDEX], SHAPE_LOWER, SHAPE_UPPER), return false);
+    OP_CHECK_IF(!CheckRange<int64_t>(shape[NCDHW_H_INDEX],
+                static_cast<int64_t>(SHAPE_LOWER), static_cast<int64_t>(SHAPE_UPPER)),
+        OP_LOGE(op_name, "x_shape_h is invalid, current is %ld, x_shape_h support range [%d, %d]",
+        shape[NCDHW_H_INDEX], SHAPE_LOWER, SHAPE_UPPER), return false);
+    OP_CHECK_IF(!CheckRange<int64_t>(shape[NCDHW_W_INDEX],
+                static_cast<int64_t>(SHAPE_LOWER), static_cast<int64_t>(SHAPE_UPPER)),
+        OP_LOGE(op_name, "x_shape_w is invalid, current is %ld, x_shape_w support range [%d, %d]",
+        shape[NCDHW_W_INDEX], SHAPE_LOWER, SHAPE_UPPER), return false);
+    return true;
+}
+
 bool SetFmapDesc(const gert::TilingContext *context, Conv3dBpFilterV2RunInfo &runInfoV2)
 {
     const auto op_name = (context->GetNodeName() == nullptr) ? "nil" : context->GetNodeName();
@@ -250,22 +282,15 @@ bool SetFmapDesc(const gert::TilingContext *context, Conv3dBpFilterV2RunInfo &ru
     OP_CHECK_IF(!GetNCDHWShape(inputShape->GetOriginShape(), normalized_input_shape.data(), input_format),
         OP_LOGE(op_name, "GetNCDHWShape failed."), return false);
 
+    if (!ValidateInputShapeRange(op_name, normalized_input_shape)) {
+        return false;
+    }
+
     runInfoV2.batch = normalized_input_shape[NCDHW_N_INDEX];
     runInfoV2.ci = normalized_input_shape[NCDHW_C_INDEX];
     runInfoV2.di = normalized_input_shape[NCDHW_D_INDEX];
     runInfoV2.hi = normalized_input_shape[NCDHW_H_INDEX];
     runInfoV2.wi = normalized_input_shape[NCDHW_W_INDEX];
-    OP_CHECK_IF(!CheckRange(runInfoV2.batch, SHAPE_LOWER, SHAPE_UPPER),
-        OP_LOGE(op_name, "x_shape_batch is invalid, current is %d, x_shape_batch support range [%d, %d]",
-        runInfoV2.batch, SHAPE_LOWER, SHAPE_UPPER), return false);
-    OP_CHECK_IF(!CheckRange(runInfoV2.ci, SHAPE_LOWER, SHAPE_UPPER),
-        OP_LOGE(op_name, "x_shape_c is invalid, current is %d, x_shape_c support range [%d, %d]", runInfoV2.ci, SHAPE_LOWER, SHAPE_UPPER), return false);
-    OP_CHECK_IF(!CheckRange(runInfoV2.di, SHAPE_LOWER, SHAPE_UPPER),
-        OP_LOGE(op_name, "x_shape_d is invalid, current is %d, x_shape_d support range [%d, %d]", runInfoV2.di, SHAPE_LOWER, SHAPE_UPPER), return false);
-    OP_CHECK_IF(!CheckRange(runInfoV2.hi, SHAPE_LOWER, SHAPE_UPPER),
-        OP_LOGE(op_name, "x_shape_h is invalid, current is %d, x_shape_h support range [%d, %d]", runInfoV2.hi, SHAPE_LOWER, SHAPE_UPPER), return false);
-    OP_CHECK_IF(!CheckRange(runInfoV2.wi, SHAPE_LOWER, SHAPE_UPPER),
-        OP_LOGE(op_name, "x_shape_w is invalid, current is %d, x_shape_w support range [%d, %d]", runInfoV2.wi, SHAPE_LOWER, SHAPE_UPPER), return false);
 
     runInfoV2.a_dtype = inputDesc->GetDataType();
     int32_t a_dtype_bytes = ge::GetSizeByDataType(runInfoV2.a_dtype);
@@ -298,23 +323,32 @@ bool SetGradOutputDesc(const gert::TilingContext *context, Conv3dBpFilterV2RunIn
     std::vector<int64_t> normalized_dedy_shape(CONV_BACKPROP_SHAPE_DIM, 0);
     OP_CHECK_IF(!GetNCDHWShape(gradOutputShape->GetOriginShape(), normalized_dedy_shape.data(), gradOutputFormat),
         OP_LOGE(op_name, "GetNCDHWShape failed."), return false);
+    OP_CHECK_IF(!CheckRange<int64_t>(normalized_dedy_shape[NCDHW_N_INDEX],
+                static_cast<int64_t>(SHAPE_LOWER), static_cast<int64_t>(SHAPE_UPPER)),
+        OP_LOGE(op_name, "out_backprop_batch is invalid, current is %ld, out_backprop_batch support range [%d, %d]",
+        normalized_dedy_shape[NCDHW_N_INDEX], SHAPE_LOWER, SHAPE_UPPER), return false);
+    OP_CHECK_IF(!CheckRange<int64_t>(normalized_dedy_shape[NCDHW_C_INDEX],
+                static_cast<int64_t>(SHAPE_LOWER), static_cast<int64_t>(SHAPE_UPPER)),
+        OP_LOGE(op_name, "out_backprop_c is invalid, current is %ld, out_backprop_c support range [%d, %d]",
+        normalized_dedy_shape[NCDHW_C_INDEX], SHAPE_LOWER, SHAPE_UPPER), return false);
+    OP_CHECK_IF(!CheckRange<int64_t>(normalized_dedy_shape[NCDHW_D_INDEX],
+                static_cast<int64_t>(SHAPE_LOWER), static_cast<int64_t>(SHAPE_UPPER)),
+        OP_LOGE(op_name, "out_backprop_d is invalid, current is %ld, out_backprop_d support range [%d, %d]",
+        normalized_dedy_shape[NCDHW_D_INDEX], SHAPE_LOWER, SHAPE_UPPER), return false);
+    OP_CHECK_IF(!CheckRange<int64_t>(normalized_dedy_shape[NCDHW_H_INDEX],
+                static_cast<int64_t>(SHAPE_LOWER), static_cast<int64_t>(SHAPE_UPPER)),
+        OP_LOGE(op_name, "out_backprop_h is invalid, current is %ld, out_backprop_h support range [%d, %d]",
+        normalized_dedy_shape[NCDHW_H_INDEX], SHAPE_LOWER, SHAPE_UPPER), return false);
+    OP_CHECK_IF(!CheckRange<int64_t>(normalized_dedy_shape[NCDHW_W_INDEX],
+                static_cast<int64_t>(SHAPE_LOWER), static_cast<int64_t>(SHAPE_UPPER)),
+        OP_LOGE(op_name, "out_backprop_w is invalid, current is %ld, out_backprop_w support range [%d, %d]",
+        normalized_dedy_shape[NCDHW_W_INDEX], SHAPE_LOWER, SHAPE_UPPER), return false);
+
     runInfoV2.batch = normalized_dedy_shape[NCDHW_N_INDEX];
     runInfoV2.co = normalized_dedy_shape[NCDHW_C_INDEX];
     runInfoV2.dout = normalized_dedy_shape[NCDHW_D_INDEX];
     runInfoV2.ho = normalized_dedy_shape[NCDHW_H_INDEX];
     runInfoV2.wo = normalized_dedy_shape[NCDHW_W_INDEX];
-
-    OP_CHECK_IF(!CheckRange(runInfoV2.batch, SHAPE_LOWER, SHAPE_UPPER),
-        OP_LOGE(op_name, "out_backprop_batch is invalid, current is %d, out_backprop_batch support range [%d, %d]",
-        runInfoV2.batch, SHAPE_LOWER, SHAPE_UPPER), return false);
-    OP_CHECK_IF(!CheckRange(runInfoV2.co, SHAPE_LOWER, SHAPE_UPPER),
-        OP_LOGE(op_name, "out_backprop_c is invalid, current is %d, out_backprop_c support range [%d, %d]", runInfoV2.co, SHAPE_LOWER, SHAPE_UPPER), return false);
-    OP_CHECK_IF(!CheckRange(runInfoV2.dout, SHAPE_LOWER, SHAPE_UPPER),
-        OP_LOGE(op_name, "out_backprop_d is invalid, current is %d, out_backprop_d support range [%d, %d]", runInfoV2.dout, SHAPE_LOWER, SHAPE_UPPER), return false);
-    OP_CHECK_IF(!CheckRange(runInfoV2.ho, SHAPE_LOWER, SHAPE_UPPER),
-        OP_LOGE(op_name, "out_backprop_h is invalid, current is %d, out_backprop_h support range [%d, %d]", runInfoV2.ho, SHAPE_LOWER, SHAPE_UPPER), return false);
-    OP_CHECK_IF(!CheckRange(runInfoV2.wo, SHAPE_LOWER, SHAPE_UPPER),
-        OP_LOGE(op_name, "out_backprop_w is invalid, current is %d, out_backprop_w support range [%d, %d]", runInfoV2.wo, SHAPE_LOWER, SHAPE_UPPER), return false);
 
     runInfoV2.b_dtype = gradOutputDesc->GetDataType();
     int32_t b_dtype_bytes = ge::GetSizeByDataType(runInfoV2.b_dtype);
@@ -338,6 +372,9 @@ bool SetOutputDesc(const gert::TilingContext *context, Conv3dBpFilterV2RunInfo &
     OP_CHECK_IF(!GetNCDHWShape(outputShape->GetOriginShape(), normalized_output_shape.data(), output_format),
         OP_LOGE(op_name, "GetNCDHWShape failed."), return false);
 
+    OP_CHECK_IF(!CheckRange<int64_t>(normalized_output_shape[NCDHW_C_INDEX],
+                static_cast<int64_t>(SHAPE_LOWER), static_cast<int64_t>(SHAPE_UPPER)),
+        OP_LOGE(op_name, "filter_shape_c(%ld) is out of int32_t range.", normalized_output_shape[NCDHW_C_INDEX]), return false);
     int32_t filter_shape_ci = normalized_output_shape[NCDHW_C_INDEX];
     OP_CHECK_IF(filter_shape_ci <= 0, OP_LOGE(op_name, "filter_shape_c(%d) should be greater than 0.", filter_shape_ci), return false);
     if (runInfoV2.ci % filter_shape_ci != 0) {
@@ -345,16 +382,22 @@ bool SetOutputDesc(const gert::TilingContext *context, Conv3dBpFilterV2RunInfo &
         return false;
     }
 
+    OP_CHECK_IF(!CheckRange<int64_t>(normalized_output_shape[NCDHW_D_INDEX],
+                static_cast<int64_t>(SHAPE_LOWER), static_cast<int64_t>(SHAPE_UPPER)),
+        OP_LOGE(op_name, "output_shape_d is invalid, current is %ld, output_shape_d support range [%d, %d]",
+        normalized_output_shape[NCDHW_D_INDEX], SHAPE_LOWER, SHAPE_UPPER), return false);
+    OP_CHECK_IF(!CheckRange<int64_t>(normalized_output_shape[NCDHW_H_INDEX],
+                static_cast<int64_t>(SHAPE_LOWER), static_cast<int64_t>(SHAPE_UPPER)),
+        OP_LOGE(op_name, "output_shape_h is invalid, current is %ld, output_shape_h support range [%d, %d]",
+        normalized_output_shape[NCDHW_H_INDEX], SHAPE_LOWER, SHAPE_UPPER), return false);
+    OP_CHECK_IF(!CheckRange<int64_t>(normalized_output_shape[NCDHW_W_INDEX],
+                static_cast<int64_t>(SHAPE_LOWER), static_cast<int64_t>(SHAPE_UPPER)),
+        OP_LOGE(op_name, "output_shape_w is invalid, current is %ld, output_shape_w support range [%d, %d]",
+        normalized_output_shape[NCDHW_W_INDEX], SHAPE_LOWER, SHAPE_UPPER), return false);
+
     runInfoV2.kd = normalized_output_shape[NCDHW_D_INDEX];
     runInfoV2.kh = normalized_output_shape[NCDHW_H_INDEX];
     runInfoV2.kw = normalized_output_shape[NCDHW_W_INDEX];
-
-    OP_CHECK_IF(!CheckRange(runInfoV2.kd, SHAPE_LOWER, SHAPE_UPPER),
-        OP_LOGE(op_name, "output_shape_d is invalid, current is %d, output_shape_d support range [%d, %d]", runInfoV2.kd, SHAPE_LOWER, SHAPE_UPPER), return false);
-    OP_CHECK_IF(!CheckRange(runInfoV2.kh, SHAPE_LOWER, SHAPE_UPPER),
-        OP_LOGE(op_name, "output_shape_h is invalid, current is %d, output_shape_h support range [%d, %d]", runInfoV2.kh, SHAPE_LOWER, SHAPE_UPPER), return false);
-    OP_CHECK_IF(!CheckRange(runInfoV2.kw, SHAPE_LOWER, SHAPE_UPPER),
-        OP_LOGE(op_name, "output_shape_w is invalid, current is %d, output_shape_w support range [%d, %d]", runInfoV2.kw, SHAPE_LOWER, SHAPE_UPPER), return false);
 
     runInfoV2.c_dtype = outputDesc->GetDataType();
     int32_t c_dtype_bytes = ge::GetSizeByDataType(runInfoV2.c_dtype);
@@ -402,13 +445,13 @@ bool CheckGradOutputShape(const gert::TilingContext* context, Conv3dBpFilterV2Ru
         runInfoV2.stride_w + 1;
     OP_CHECK_IF(
         do_expect != runInfoV2.dout, OP_LOGE(op_name,
-            "out_backprop's D = %ld is not equal with inferred D = %ld", runInfoV2.dout, do_expect), return false);
+            "out_backprop's D = %d is not equal with inferred D = %ld", runInfoV2.dout, do_expect), return false);
     OP_CHECK_IF(
         ho_expect != runInfoV2.ho, OP_LOGE(op_name,
-            "out_backprop's H = %ld is not equal with inferred H = %ld", runInfoV2.ho, ho_expect), return false);
+            "out_backprop's H = %d is not equal with inferred H = %ld", runInfoV2.ho, ho_expect), return false);
     OP_CHECK_IF(
         wo_expect != runInfoV2.wo, OP_LOGE(op_name,
-            "out_backprop's W = %ld is not equal with inferred W = %ld", runInfoV2.wo, wo_expect), return false);
+            "out_backprop's W = %d is not equal with inferred W = %ld", runInfoV2.wo, wo_expect), return false);
     return true;
 }
 
