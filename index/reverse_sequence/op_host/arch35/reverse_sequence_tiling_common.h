@@ -39,6 +39,7 @@ struct ReverseInputInfo {
     int64_t inputDim[allDims] = {0, 0, 0, 0, 0};
     int64_t comBineDims = 0;
     int64_t xDtypeSize = 0;
+    int64_t seqLengthsDtypeSize = 0;
     int64_t xShapeSize = 0;
     int64_t batchSize = 1;
     int64_t reverseSize = 1;

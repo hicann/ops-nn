@@ -151,7 +151,7 @@ TEST_F(ReverseSequenceTiling, test_tiling_ascendc_bfloat16) // ASB
     gert::StorageShape shape1 = {{2, 3, 2, 2}, {2, 3, 2, 2}};
     gert::StorageShape shape2 = {{2}, {2}};
     string expectTilingData = "2 3 2 4 24 28608 1 1 24 1 24 ";
-    uint64_t tilingKeyValue = 2;
+    uint64_t tilingKeyValue = 8;
     int64_t batchDim = 2;
     int64_t seqDim = 1;
 
@@ -163,7 +163,7 @@ TEST_F(ReverseSequenceTiling, test_tiling_ascendc_float16) // BS
     gert::StorageShape shape1 = {{3, 5}, {3, 5}};
     gert::StorageShape shape2 = {{3}, {3}};
     string expectTilingData = "3 5 5 1 15 28608 1 1 15 1 15 ";
-    uint64_t tilingKeyValue = 2;
+    uint64_t tilingKeyValue = 8;
     int64_t batchDim = 0;
     int64_t seqDim = 1;
 
@@ -175,7 +175,7 @@ TEST_F(ReverseSequenceTiling, test_tiling_ascendc_int16) // SB
     gert::StorageShape shape1 = {{3, 5}, {3, 5}};
     gert::StorageShape shape2 = {{5}, {5}};
     string expectTilingData = "5 3 1 5 15 28608 1 1 15 1 15 ";
-    uint64_t tilingKeyValue = 2;
+    uint64_t tilingKeyValue = 8;
     int64_t batchDim = 1;
     int64_t seqDim = 0;
 
@@ -187,7 +187,7 @@ TEST_F(ReverseSequenceTiling, test_tiling_ascendc_float32) // A0SA1B -> ASB
     gert::StorageShape shape1 = {{2, 3, 2, 2}, {2, 3, 2, 2}};
     gert::StorageShape shape2 = {{2}, {2}};
     string expectTilingData = "2 3 1 4 24 14304 1 1 24 1 24 ";
-    uint64_t tilingKeyValue = 4;
+    uint64_t tilingKeyValue = 16;
     int64_t batchDim = 3;
     int64_t seqDim = 1;
 
@@ -200,7 +200,7 @@ TEST_F(ReverseSequenceTiling, test_tiling_ascendc_int32) // ABS
     gert::StorageShape shape1 = {{2, 3, 2, 2}, {2, 3, 2, 2}};
     gert::StorageShape shape2 = {{3}, {3}};
     string expectTilingData = "3 2 4 1 24 14304 1 1 24 1 24 ";
-    uint64_t tilingKeyValue = 4;
+    uint64_t tilingKeyValue = 16;
     int64_t batchDim = 1;
     int64_t seqDim = 3;
 
@@ -212,7 +212,7 @@ TEST_F(ReverseSequenceTiling, test_tiling_ascendc_uint16) // SBA
     gert::StorageShape shape1 = {{2, 3, 2, 2}, {2, 3, 2, 2}};
     gert::StorageShape shape2 = {{3}, {3}};
     string expectTilingData = "3 2 4 12 24 28608 1 1 24 1 24 ";
-    uint64_t tilingKeyValue = 2;
+    uint64_t tilingKeyValue = 8;
     int64_t batchDim = 1;
     int64_t seqDim = 0;
 
@@ -223,8 +223,8 @@ TEST_F(ReverseSequenceTiling, test_tiling_ascendc_uint8) // BAS
 {
     gert::StorageShape shape1 = {{2, 3, 2, 2}, {2, 3, 2, 2}};
     gert::StorageShape shape2 = {{2}, {2}};
-    string expectTilingData = "2 2 12 1 24 57216 1 1 24 1 24 ";
-    uint64_t tilingKeyValue = 0;
+    string expectTilingData = "2 6 2 0 1 2 6 2 1 1 1 32 32 12 1 3 1 ";
+    uint64_t tilingKeyValue = 34;
     int64_t batchDim = 0;
     int64_t seqDim = 3;
 

@@ -38,8 +38,8 @@ static constexpr int64_t TYPE_BSA = 2;
 static constexpr int64_t TYPE_ABS = 3;
 static constexpr int64_t TYPE_SBA = 4;
 static constexpr int64_t TYPE_ASB = 5;
-static constexpr int64_t TYPE_SAB = 6;
-static constexpr int64_t TYPE_BAS = 7;
+static constexpr int64_t TYPE_BAS = 6;
+static constexpr int64_t TYPE_SAB = 7;
 static constexpr int64_t TYPE_OTHER = 8;
 
 static const std::set<ge::DataType> X_DTYPES = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT8, ge::DT_UINT8,
@@ -66,6 +66,10 @@ static ge::graphStatus CheckDTypeParams(gert::TilingContext* context, ReverseInp
     OP_CHECK_IF(SEQ_LENGTHS_DTYPES.find(seqLengthsDtype) == SEQ_LENGTHS_DTYPES.end(),
         OP_LOGE(context->GetNodeName(), "Input seqLengths dtype not supports %d.", static_cast<int32_t>(seqLengthsDtype)), return ge::GRAPH_FAILED);
     
+    inputData.seqLengthsDtypeSize = ge::GetSizeByDataType(seqLengthsDtype);
+    OP_CHECK_IF(inputData.seqLengthsDtypeSize <= 0, 
+        OP_LOGE(context->GetNodeName(), "Get seqLengthsDtypeSize[%ld] failed.", inputData.seqLengthsDtypeSize), return ge::GRAPH_FAILED);
+    
     auto yDescPtr = context->GetOutputDesc(Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, yDescPtr);
     ge::DataType yDtype = yDescPtr->GetDataType();
@@ -75,15 +79,15 @@ static ge::graphStatus CheckDTypeParams(gert::TilingContext* context, ReverseInp
     return ge::GRAPH_SUCCESS;
 }
 
-static void ComputeCombineType(int64_t rank, ReverseInputInfo& inputData)
+static void ComputeCombineType(ReverseInputInfo& inputData)
 {
-    if (rank == TWO_DIM) {
+    if (inputData.comBineDims == TWO_DIM) {
         if (inputData.seqAxis == 0 && inputData.batchAxis == 1) {
             inputData.comBineType = TYPE_SB; // SB
         } else {
             inputData.comBineType = TYPE_BS; // BS
         }
-    } else if (rank == THREE_DIM) {
+    } else if (inputData.comBineDims == THREE_DIM) {
         if (inputData.batchAxis == inputData.seqAxis - 1) {
            if (inputData.batchAxis == 0) {
                 inputData.comBineType = TYPE_BSA; // BSA
@@ -97,13 +101,22 @@ static void ComputeCombineType(int64_t rank, ReverseInputInfo& inputData)
                 inputData.comBineType = TYPE_ASB; // ASB
             }
         } else if (inputData.seqAxis > inputData.batchAxis) {
-            inputData.comBineType = TYPE_SAB; // SAB
-        } else {
             inputData.comBineType = TYPE_BAS; // BAS
+        } else {
+            inputData.comBineType = TYPE_SAB; // SAB
         }
     } else {
         inputData.comBineType = TYPE_OTHER;
     }
+}
+
+static int64_t ComBineAxis(const gert::Shape& xShape, int64_t& i, int64_t k) 
+{
+    int64_t comBineRes = 1;
+    for (; i < k; i++) {
+        comBineRes *= xShape.GetDim(i);
+    }
+    return comBineRes;
 }
 
 static void ComputeComBineAxis(const gert::Shape& xShape, int64_t rank, ReverseInputInfo& inputData)
@@ -115,36 +128,43 @@ static void ComputeComBineAxis(const gert::Shape& xShape, int64_t rank, ReverseI
     int64_t i = 0;
     int64_t j = 0;
     if (firstAxis != 0) {
-        int64_t firstDim = 1;
-        for (; i < firstAxis; i++) {
-            firstDim *= xShape.GetDim(i);
-        }
-        inputData.inputDim[j++] = firstDim;
+        inputData.inputDim[j++] = ComBineAxis(xShape, i, firstAxis);
         inputData.comBineDims++;
     }
+
+    if (inputData.seqAxis > inputData.batchAxis) { // 更新合轴后的BS Axis
+        inputData.batchAxis = inputData.comBineDims;
+    } else {
+        inputData.seqAxis = inputData.comBineDims;
+    }
+
     inputData.inputDim[j++] = xShape.GetDim(i++);
     inputData.comBineDims++;
     
     if (secondAxis == i) {
+        if (inputData.seqAxis > inputData.batchAxis) {
+            inputData.seqAxis = j;
+        } else {
+            inputData.batchAxis = j;
+        }
+
         inputData.inputDim[j++] = xShape.GetDim(i++);
         inputData.comBineDims++;
     } else {
-        int64_t secondDim = 1;
-        for (; i < secondAxis; ++i) {
-            secondDim *= xShape.GetDim(i);
-        }
-        inputData.inputDim[j++] = secondDim;
+        inputData.inputDim[j++] = ComBineAxis(xShape, i, secondAxis);
         inputData.comBineDims++;
+
+        if (inputData.seqAxis > inputData.batchAxis) {
+            inputData.seqAxis = j;
+        } else {
+            inputData.batchAxis = j;
+        }
         inputData.inputDim[j++] = xShape.GetDim(i++);
         inputData.comBineDims++;
     }
 
     if (secondAxis != rank - 1) {
-        int64_t afterDim = 1;
-        for (; i < rank; ++i) {
-            afterDim *= xShape.GetDim(i);
-        }
-        inputData.inputDim[j] = afterDim;
+        inputData.inputDim[j] = ComBineAxis(xShape, i, rank);
         inputData.comBineDims++;
     }
 }
@@ -173,7 +193,7 @@ static ge::graphStatus CheckAttrParams(gert::TilingContext* context, ReverseInpu
     const auto* batchAxisPtr = attrs->GetAttrPointer<int64_t>(BATCH_AXIS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, batchAxisPtr);
     inputData.batchAxis = static_cast<int64_t>(*batchAxisPtr);
-    OP_LOGD(context, "CheckShapeParams inputData.batchAxis=%ld", inputData.batchAxis);
+    OP_LOGD(context, "CheckShapeParams inputData.batchAxis=%ld, inputData.seqAxis=%ld", inputData.batchAxis, inputData.seqAxis);
     
     return ge::GRAPH_SUCCESS;
 }
@@ -191,7 +211,7 @@ static ge::graphStatus CheckShapeParams(gert::TilingContext* context, ReverseInp
     
     inputData.seqAxis = inputData.seqAxis < 0 ? inputData.seqAxis + rank : inputData.seqAxis;
     inputData.batchAxis = inputData.batchAxis < 0 ? inputData.batchAxis + rank : inputData.batchAxis;
-    OP_LOGD(context, "CheckShapeParams inputData.batchAxis=%ld", inputData.batchAxis);
+    OP_LOGD(context, "CheckShapeParams inputData.batchAxis=%ld, inputData.seqAxis=%ld", inputData.batchAxis, inputData.seqAxis);
     
     OP_CHECK_IF(inputData.seqAxis == inputData.batchAxis,
         OP_LOGE(context->GetNodeName(), "batchAxis == seqAxis == %ld.", inputData.seqAxis), return ge::GRAPH_FAILED);
@@ -225,14 +245,15 @@ static ge::graphStatus CheckShapeParams(gert::TilingContext* context, ReverseInp
 
     ComputeAfterAxisSize(xShape, rank, inputData);
     ComputeComBineAxis(xShape, rank, inputData);
-    ComputeCombineType(rank, inputData);
+    ComputeCombineType(inputData);
+    OP_LOGD(context, "ComputeComBineAxis inputData.comBineType=%ld, inputData.comBineDims=%ld, inputData.batchAxis=%ld, inputData.seqAxis=%ld", 
+        inputData.comBineType, inputData.comBineDims, inputData.batchAxis, inputData.seqAxis);
 
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus GetReverseSequenceShapeAttrsInfo(gert::TilingContext* context, ReverseInputInfo& inputData)
 {
-    OP_LOGD("GetReverseSequenceShapeAttrsInfo begin");
     OP_CHECK_IF(CheckDTypeParams(context, inputData) != ge::GRAPH_SUCCESS,
         OP_LOGE(context->GetNodeName(), "CheckDTypeParams failed."), return ge::GRAPH_FAILED);
 
@@ -247,7 +268,6 @@ ge::graphStatus GetReverseSequenceShapeAttrsInfo(gert::TilingContext* context, R
 
 ge::graphStatus GetReverseSequencePlatformInfo(gert::TilingContext* context, uint64_t& ubSize, uint64_t& coreNum)
 {
-    OP_LOGD("GetReverseSequencePlatformInfo begin");
     auto compileInfo = reinterpret_cast<const ReverseSequenceCompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     coreNum = compileInfo->coreNum;
