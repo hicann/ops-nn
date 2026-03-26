@@ -512,6 +512,82 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A4W4_1)
     // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
+// MXFP4 + E8M0，x1/x2 均为 ND
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend3510_test_mxfp4_nd_micro_scaling_ok)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x1_desc = TensorDesc({2, 3072}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({1608, 3072}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x1_scale_desc = TensorDesc({2, 48, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc x2_scale_desc = TensorDesc({1608, 48, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({2, 1608}, ACL_BF16, ACL_FORMAT_ND);
+    const int64_t groupSizeMx = 32;
+    auto ut = OP_API_UT(aclnnQuantMatmulV5,
+                        INPUT(x1_desc, x2_desc, x1_scale_desc, x2_scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr,
+                              false, true, groupSizeMx),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+// MXFP4 + E8M0，x2 为 ND：允许 transposeX1=true（逻辑 m/k 与 x1 为 [2,3072]、transpose false 等价）
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend3510_test_mxfp4_nd_micro_scaling_ok_transpose_x1)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x1_desc = TensorDesc({3072, 2}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({1608, 3072}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x1_scale_desc = TensorDesc({48, 2, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc x2_scale_desc = TensorDesc({1608, 48, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({2, 1608}, ACL_BF16, ACL_FORMAT_ND);
+    const int64_t groupSizeMx = 32;
+    auto ut = OP_API_UT(aclnnQuantMatmulV5,
+                        INPUT(x1_desc, x2_desc, x1_scale_desc, x2_scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr,
+                              true, true, groupSizeMx),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+// FLOAT4+E8M0：x1/x2 内轴（view 最后一维）须为偶数 — 本例 x1 最后一维为 63
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend3510_test_mxfp4_nd_invalid_odd_inner_axis)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x1_desc = TensorDesc({16, 63}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({128, 63}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x1_scale_desc = TensorDesc({16, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc x2_scale_desc = TensorDesc({128, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 128}, ACL_BF16, ACL_FORMAT_ND);
+    const int64_t groupSizeMx = 32;
+    auto ut = OP_API_UT(aclnnQuantMatmulV5,
+                        INPUT(x1_desc, x2_desc, x1_scale_desc, x2_scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr,
+                              false, true, groupSizeMx),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// FLOAT4+E8M0：k 维须大于 2
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend3510_test_mxfp4_nd_invalid_k_le_2)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x1_desc = TensorDesc({8, 2}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({16, 2}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x1_scale_desc = TensorDesc({8, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc x2_scale_desc = TensorDesc({16, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({8, 16}, ACL_BF16, ACL_FORMAT_ND);
+    const int64_t groupSizeMx = 32;
+    auto ut = OP_API_UT(aclnnQuantMatmulV5,
+                        INPUT(x1_desc, x2_desc, x1_scale_desc, x2_scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr,
+                              false, true, groupSizeMx),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
 TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A4W4_2)
 {
     // A4W4场景无pertoken_scale时不支持transposeX1=true

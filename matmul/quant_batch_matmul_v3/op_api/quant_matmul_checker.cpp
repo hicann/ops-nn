@@ -351,8 +351,11 @@ bool QuantMatmulChecker::CheckShapeForWeightNz() const
     const op::Shape x2Shape = x2_->GetStorageShape();
     auto x2DimNum = x2_->GetStorageShape().GetDimNum();
     int64_t x2K1Dim = transposeX2_ ? x2Shape[x2DimNum - NZ_K1_INDEX_TRANS] : x2Shape[x2DimNum - NZ_K1_INDEX];
-    int64_t nz_k0_value_trans = (x1_->GetDataType() == op::DataType::DT_INT32 || x1_->GetDataType() == op::DataType::DT_INT4) ? 
-        NZ_K0_VALUE_INT4_TRANS : NZ_K0_VALUE_INT8_TRANS;
+    int64_t nz_k0_value_trans =
+        (x1_->GetDataType() == op::DataType::DT_INT32 || x1_->GetDataType() == op::DataType::DT_INT4 ||
+         x1_->GetDataType() == op::DataType::DT_FLOAT4_E2M1) ?
+            NZ_K0_VALUE_INT4_TRANS :
+            NZ_K0_VALUE_INT8_TRANS;
     int64_t aligneValue = transposeX2_ ? nz_k0_value_trans : NZ_K0_VALUE_INT8_INT4;
     int64_t alignedX1K = ((x1KDim_ + aligneValue - 1) / aligneValue) * aligneValue;
     if (alignedX1K != x2K1Dim * aligneValue) {
@@ -364,23 +367,28 @@ bool QuantMatmulChecker::CheckShapeForWeightNz() const
     return true;
 }
 
-bool QuantMatmulChecker::CheckKDimValueFp4Fp8WeightNZMicroScaling() const
+bool QuantMatmulChecker::CheckMXFP4FP8ParamsNDOrNZ() const
 {
-    // fp4内轴偶数校验
-    if (IsFp4Input(x1_, x2_)) {
-        if (x1KDim_ % MICRO_SCALING_ALIGN_NUM != 0 || x2KDim_ % MICRO_SCALING_ALIGN_NUM != 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In mx quantification and x1 and x2 are FLOAT4, \
-matrix multiplication is (batchX1, m, k) @ transpose(batchX2, n, k) = (batch, m, n). \
-The k-dimension of x1 and x2 should both be even number, actual they are %ld and %ld.", x1KDim_, x2KDim_);
-            return false;
-        }
+    // fp4 内轴偶数校验
+    auto x1DimNum = x1_->GetViewShape().GetDimNum();
+    auto x1InnerAxis = x1_->GetViewShape().GetDim(x1DimNum - 1);
+    auto x2DimNum = x2_->GetViewShape().GetDimNum();
+    auto x2InnerAxis = x2_->GetViewShape().GetDim(x2DimNum - 1);
+    if (x1InnerAxis % MICRO_SCALING_ALIGN_NUM != 0 || x2InnerAxis % MICRO_SCALING_ALIGN_NUM != 0) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "In mx quantification and x1 and x2 are FLOAT4_E2M1, the inner axis must be even. However, x1 and x2 have "
+            "inner axes of %ld and %ld now.",
+            x1InnerAxis, x2InnerAxis);
+        return false;
     }
-    if (CeilDiv(x1KDim_, PERGROUP_GROUP_SIZE) % MICRO_SCALING_ALIGN_NUM != 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "In mx quantification, when x1 and x2 are FLOAT4, matrix multiplication is  (batchX1, m, k) @ \
-transpose(batchX2, n, k) = (batch, m, n). The k-dimension should satisfy that ceil(k, 32) is an even \
-number. Actual k-dimension is %ld and ceil(k, 32) = %ld.",
-                x1KDim_, CeilDiv(x1KDim_, PERGROUP_GROUP_SIZE));
+    // fp4 k轴大于2校验
+    if (x1KDim_ <= 2 || x2KDim_ <= 2) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "In mx quantification and x1 and x2 are FLOAT4_E2M1, the k-dimension of x1 and x2 should both be greater "
+            "than 2. However, they are % ld and % ld.",
+            x1KDim_, x2KDim_);
         return false;
     }
     return true;
@@ -423,7 +431,7 @@ actual last dimension of %s is %ld, actual last dimension of %s is %ld.",
         return false;
     }
     if (IsFp4Input(x1_, x2_)) {
-        CHECK_RET(CheckKDimValueFp4Fp8WeightNZMicroScaling(), false);
+        CHECK_RET(CheckMXFP4FP8ParamsNDOrNZ(), false);
     }
     return true;
 }
@@ -971,11 +979,15 @@ bool QuantMatmulChecker::CheckFormatInt4() const
 
 bool QuantMatmulChecker::CheckDtype4WeightNz() const
 {
-    if (!(x1_->GetDataType() == op::DataType::DT_INT8 || (x1_->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN &&
-                                                          x2_->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN))) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "When format of x2 is FRACTAL_NZ, input dtype must be INT8/FLOAT8_E4M3FN, actual x1 is %s, x2 is %s.",
-                op::ToString(x1_->GetDataType()).GetString(), op::ToString(x2_->GetDataType()).GetString());
+    if (!(x1_->GetDataType() == op::DataType::DT_INT8 ||
+          (x1_->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN &&
+           x2_->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN) ||
+          (x1_->GetDataType() == op::DataType::DT_FLOAT4_E2M1 && x2_->GetDataType() == op::DataType::DT_FLOAT4_E2M1))) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "When format of x2 is FRACTAL_NZ, input dtype must be INT8/FLOAT8_E4M3FN/FLOAT4_E2M1FN, actual x1 is %s, "
+            "x2 is %s.",
+            op::ToString(x1_->GetDataType()).GetString(), op::ToString(x2_->GetDataType()).GetString());
         return false;
     }
 
@@ -983,10 +995,22 @@ bool QuantMatmulChecker::CheckDtype4WeightNz() const
          x2_->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN) &&
         !(x1Scale_->GetDataType() == op::DataType::DT_FLOAT8_E8M0 &&
           x2Scale_->GetDataType() == op::DataType::DT_FLOAT8_E8M0)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "When format of x2 is FRACTAL_NZ and input dtype is FLOAT8_E4M3FN, x1Scale and x2Scale are \
-FLOAT8_E8M0, actual x1Scale is %s, x2Scale is %s.",
-                op::ToString(x1Scale_->GetDataType()).GetString(), op::ToString(x2Scale_->GetDataType()).GetString());
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "When format of x2 is FRACTAL_NZ and input dtype is FLOAT8_E4M3FN, x1Scale and x2Scale are FLOAT8_E8M0, "
+            "actual x1Scale is %s, x2Scale is %s.",
+            op::ToString(x1Scale_->GetDataType()).GetString(), op::ToString(x2Scale_->GetDataType()).GetString());
+        return false;
+    }
+
+    if ((x1_->GetDataType() == op::DataType::DT_FLOAT4_E2M1 && x2_->GetDataType() == op::DataType::DT_FLOAT4_E2M1) &&
+        !(x1Scale_->GetDataType() == op::DataType::DT_FLOAT8_E8M0 &&
+          x2Scale_->GetDataType() == op::DataType::DT_FLOAT8_E8M0)) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "When format of x2 is FRACTAL_NZ and input dtype is FLOAT4_E2M1, x1Scale and x2Scale are FLOAT8_E8M0, "
+            "actual x1Scale is %s, x2Scale is %s.",
+            op::ToString(x1Scale_->GetDataType()).GetString(), op::ToString(x2Scale_->GetDataType()).GetString());
         return false;
     }
     return true;
@@ -1259,7 +1283,7 @@ bool QuantMatmulChecker::CheckMicroScaling() const
 {
     if (!IsFp4Input(x1_, x2_) && !IsFp8Input(x1_, x2_)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Invalid x1 or x2 dtype. When %s and %s are FLOAT8_E8M0, the dtype of x1 and x2 must be FLOAT4 or \
+                "Invalid x1 or x2 dtype. When %s and %s are FLOAT8_E8M0, the dtype of x1 and x2 must be FLOAT4_E2M1 or \
 FLOAT8. Actual x1 dtype: %s, x2 dtype: %s.",
                 GetX1ScaleName().c_str(), GetX2ScaleName().c_str(),
                 RemoveDtInDtype(op::ToString(x1_->GetDataType()).GetString()).c_str(),
@@ -1277,11 +1301,15 @@ FLOAT8. Actual x1 dtype: %s, x2 dtype: %s.",
                 GetX2OffsetName().c_str());
         return false;
     }
-    if (IsFp4Input(x1_, x2_) && (transposeX1_ || !transposeX2_)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Unsupported transpose. When %s and %s are FLOAT8_E8M0 and x1 and x2 are FLOAT4, transposeX1 should be \
-false and transposeX2 should be true. Actual transposeX1: %d, transposeX2: %d.",
-                GetX1ScaleName().c_str(), GetX2ScaleName().c_str(), transposeX1_, transposeX2_);
+    // MXFP4 NZ场景下，transposeX1必须为false
+    if (IsFp4Input(x1_, x2_) && ge::GetPrimaryFormat(x2_->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ &&
+        transposeX1_) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "Unsupported transpose. When %s and %s are FLOAT8_E8M0, x1 and x2 are FLOAT4_E2M1 and x2 is FRACTAL_NZ "
+            "format, transposeX1 should "
+            "be false. Actual transposeX1: %s.",
+            GetX1ScaleName().c_str(), GetX2ScaleName().c_str(), transposeX1_ ? "true" : "false");
         return false;
     }
     return true;

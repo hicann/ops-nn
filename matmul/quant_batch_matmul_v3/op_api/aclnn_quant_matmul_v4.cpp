@@ -124,10 +124,13 @@ static inline bool isA8W4Int(const aclTensor* x1, const aclTensor* x2)
            (x2->GetDataType() == op::DataType::DT_INT4 || x2->GetDataType() == op::DataType::DT_INT32);
 }
 
-static inline bool isMxfp8Nz(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale)
+static inline bool isMxNz(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale)
 {
-    return x1->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN && x2->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN
-     && scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0;
+    return scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0 &&
+           ((x1->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN &&
+             x2->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN) ||
+            (x1->GetDataType() == op::DataType::DT_FLOAT4_E2M1 &&
+             x2->GetDataType() == op::DataType::DT_FLOAT4_E2M1));
 }
 
 static inline bool isA8W4Msd(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale,
@@ -490,7 +493,7 @@ static inline bool CheckDimRange(const aclTensor *x1, const aclTensor *x2, const
     OP_CHECK_MIN_DIM(out, MIN_DIM_NUM_ND, return false);
     OP_CHECK_MAX_DIM(x1, MAX_DIM_NUM_ND, return false);
     OP_CHECK_MAX_DIM(out, MAX_DIM_NUM_ND, return false);
-    size_t expectScaleDim = isMxfp8Nz(x1, x2, scale) ? MX_SCALE_DIM_NUM : 1;
+    size_t expectScaleDim = isMxNz(x1, x2, scale) ? MX_SCALE_DIM_NUM : 1;
     OP_CHECK_WRONG_DIMENSION(scale, expectScaleDim, return false);
     OP_LOGD("QuantMatmul check dim-num range success");
     return true;
@@ -648,6 +651,8 @@ static inline bool MaxDimCheck(int64_t x1DimNum, int64_t x2DimNum, const op::Sha
 static inline int64_t SelectNzK0Value(op::DataType dataType) {
     switch (dataType) {
         case op::DataType::DT_INT4:
+            return NZ_K0_VALUE_INT4_TRANS;
+        case op::DataType::DT_FLOAT4_E2M1:
             return NZ_K0_VALUE_INT4_TRANS;
         case op::DataType::DT_INT32:
             return NZ_K0_VALUE_INT32_TRANS;
@@ -1019,7 +1024,7 @@ static aclnnStatus CheckParamsDAV3510(TupleTensor mandatoryTensors, TupleOptiona
 
     int64_t groupSizeReal = groupSize;
     auto& scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
-    if (isMxfp8Nz(x1, x2, scale)) {
+    if (isMxNz(x1, x2, scale)) {
         QuantMatmulChecker qmmV3Checker(inputTensors, quantTensors, boolsTrans, out);
         qmmV3Checker.Init();
         CHECK_RET(qmmV3Checker.InferGroupSize(groupSizeReal), ACLNN_ERR_PARAM_INVALID);
@@ -1075,12 +1080,15 @@ static aclnnStatus CheckWeightNzParamsDAV3510(const aclTensor *x1, const aclTens
         return ACLNN_ERR_PARAM_INVALID;
     }
 
-    // 对于torch的场景，NZ情况两维某一维度为1的场景无法正确判断是否转置，资料呈现不支持此种输入
+    // 对于torch的场景，NZ情况下，x2的k和n不能为1
     int64_t dim1 = x2->GetViewShape().GetDimNum() - 1;
     int64_t dim2 = x2->GetViewShape().GetDimNum() - PENULTIMATE_DIM;
     if (x2->GetViewShape().GetDim(dim2) == 1 || x2->GetViewShape().GetDim(dim1) == 1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of x2 must be FRACTAL_NZ, actual is %s.",
-                op::ToString(x2->GetStorageFormat()).GetString());
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "When the x2 format is NZ, the k-dimension and n-dimension of x2 cannot be 1. However, they are %ld and "
+            "%ld now.",
+            x2->GetViewShape().GetDim(dim2), x2->GetViewShape().GetDim(dim1));
         return ACLNN_ERR_PARAM_INVALID;
     }
 
@@ -1888,7 +1896,7 @@ bool checkNotSupportParam(
         return false;
     }
 
-    if (!(isA8W4Float(x1, x2) || isMxfp8Nz(x1, x2, scale))) {
+    if (!(isA8W4Float(x1, x2) || isMxNz(x1, x2, scale))) {
         if (yScale != nullptr && yScale->GetViewShape().GetShapeSize() != 0) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Current version do not support yScale.");
             return false;

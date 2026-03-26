@@ -33,8 +33,8 @@ namespace ge {
           (batch,x1_k1,x1_m1,x1_m0,x1_k0), where batch is optional, x1_m0 = 16, and x1_k0 = 32. \n
           When the data type is int4, float4_e2m1, the last dim must be even. \n
 * @li x2: A matrix tensor. Must be one of the following types: int8, int4, hifloat8, float8_e5m2, float8_e4m3fn, float4_e2m1. \n
-          when the data type is int8, supports ND and NZ formats. \n
-          when the data type is int4, hifloat8, float8_e5m2, float8_e4m3fn, float4_e2m1, the format only supports ND. \n
+          when the data type is int8, float8_e5m2, float8_e4m3fn, float4_e2m1, supports ND and NZ formats. \n
+          when the data type is int4, hifloat8, the format only supports ND. \n
           - In ND format and Non-int4 type, the shape ranges from 2D to 6D. When transpose_x2 is false, the shape is (batch,k,n), where
           batch is optional; In int4 type, shape only supports 2D. \n
           - In NZ (Ascend affinity) format, the shape ranges from 4D to 8D. \n
@@ -122,6 +122,14 @@ namespace ge {
 * @li When input type of x1 and x2 is int4, x1 should be ND format.
 * @li When y type is int8, x1 should be ND format.
 * @li When x2 is ND format, x1 should be ND format.
+* @li In mx quantification, when x1 type and x2 type are both float4_e2m1 and pertoken_scale/scale types are float8_e8m0:
+*      - x1 and x2 inner axis (the last dimension of view shape, independent of transpose_x1/transpose_x2) must be even.
+*      - k must be greater than 2.
+*      - supported final [group_size_m, group_size_n, group_size_k] is [1, 1, 32].
+* @li In mx quantification, when x2 type is float4_e2m1 and x2 format is NZ:
+*      - transpose_x1 must be false.
+*      - when transpose_x2 is false, n must be greater than 2.
+*      - when transpose_x2 is true, n must be greater than 1.
 * @li The following are the supported data type combinations by platform.
 
 * - Atlas Inference Series Product:

@@ -853,7 +853,11 @@ aclnnStatus aclnnQuantMatmulV5(
     |mx 伪量化|FLOAT8_E4M3FN|FLOAT4_E2M1|(m, k)|(n, k)|(m, ceil(k / 64), 2)|(n, ceil(k / 64), 2)|(1，n)|null|[0, 0, 32]/[1, 1, 32]|32/4295032864|
 
   - mx全量化场景下，当x2数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2时，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致。
-  - mx全量化场景下，当x2数据类型为FLOAT4_E2M1时，仅支持transposeX1为false且transposeX2为true，要求k为偶数且ceil(k / 32)为偶数。
+  - mx全量化场景下，当x2数据类型为FLOAT4_E2M1时，x1和x2的内轴必须为偶数，且k必须大于2。
+  - mx全量化场景下，当x2数据类型为FLOAT4_E2M1时，x2数据格式支持NZ。若x2数据格式为NZ，则需满足以下条件：
+     - transposeX1必须为false。
+     - 当transposeX2为false时，n必须大于2。
+     - 当transposeX2为true时，n必须大于1。
   - mx伪量化场景下，当x2数据类型为FLOAT4_E2M1时，transposeX1为false且transposeX2为true，不支持batch轴。数据格式支持ND和AI处理器亲和数据排布格式。当数据格式为ND格式时，要求支持k是64的倍数。当数据格式为AI处理器亲和数据排布格式时，要求k，n都是64的倍数。
   - mx伪量化场景下，bias为可选参数。数据类型支持BFLOAT16，数据格式支持ND，shape支持2维，shape表示(1，n)。如不需要使用该参数，传入nullptr。
   - mx伪量化场景下，[groupSizeM，groupSizeN，groupSizeK]取值组合支持[0, 0, 32]和[1, 1, 32]，对应的groupSize值分别为32和4295032864。

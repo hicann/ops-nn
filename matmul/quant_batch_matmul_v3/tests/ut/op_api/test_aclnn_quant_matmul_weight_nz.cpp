@@ -300,6 +300,100 @@ TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_a8w4_mx_1)
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
+TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_mxfp4_weight_nz_micro_scaling_enc_group)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x1_desc = TensorDesc({16, 64}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({64, 128}, ACL_FLOAT4_E2M1, ACL_FORMAT_FRACTAL_NZ, {}, 0, {4, 4, 16, 32});
+    TensorDesc x1_scale_desc = TensorDesc({16, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc x2_scale_desc = TensorDesc({1, 128, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    int64_t groupSize = 32;
+    TensorDesc out_desc = TensorDesc({16, 128}, ACL_BF16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                        INPUT(x1_desc, x2_desc, x1_scale_desc, x2_scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr,
+                              false, false, groupSize),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+// FLOAT4+E8M0：内轴（view 最后一维）须为偶数
+TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_mxfp4_weight_nz_invalid_odd_inner_axis)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x1_desc = TensorDesc({16, 63}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({128, 63}, ACL_FLOAT4_E2M1, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 8, 16, 32});
+    TensorDesc x1_scale_desc = TensorDesc({16, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc x2_scale_desc = TensorDesc({128, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    const int64_t groupSizeMx = 32;
+    TensorDesc out_desc = TensorDesc({16, 128}, ACL_BF16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                        INPUT(x1_desc, x2_desc, x1_scale_desc, x2_scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr,
+                              false, true, groupSizeMx),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// FLOAT4+E8M0：k 维须大于 2
+TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_mxfp4_weight_nz_invalid_k_le_2)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x1_desc = TensorDesc({8, 2}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({16, 2}, ACL_FLOAT4_E2M1, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 1, 16, 32});
+    TensorDesc x1_scale_desc = TensorDesc({8, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc x2_scale_desc = TensorDesc({16, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    const int64_t groupSizeMx = 32;
+    TensorDesc out_desc = TensorDesc({8, 16}, ACL_BF16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                        INPUT(x1_desc, x2_desc, x1_scale_desc, x2_scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr,
+                              false, true, groupSizeMx),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// FLOAT4+E8M0 + x2 为 NZ：view 最后两维之一为 1（k 或 n 为 1）应拦截
+TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_mxfp4_weight_nz_invalid_last_two_dim_one)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x1_desc = TensorDesc({16, 32}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({32, 1}, ACL_FLOAT4_E2M1, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 2, 16, 32});
+    TensorDesc x1_scale_desc = TensorDesc({16, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc x2_scale_desc = TensorDesc({32, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    const int64_t groupSizeMx = 32;
+    TensorDesc out_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                        INPUT(x1_desc, x2_desc, x1_scale_desc, x2_scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr,
+                              false, true, groupSizeMx),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// FLOAT4+E8M0 + x2 为 NZ：不允许 transposeX1=true
+TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_mxfp4_weight_nz_invalid_transpose_x1_true)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x1_desc = TensorDesc({16, 64}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({64, 128}, ACL_FLOAT4_E2M1, ACL_FORMAT_FRACTAL_NZ, {}, 0, {4, 4, 16, 32});
+    TensorDesc x1_scale_desc = TensorDesc({16, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc x2_scale_desc = TensorDesc({1, 128, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    const int64_t groupSizeMx = 32;
+    TensorDesc out_desc = TensorDesc({16, 128}, ACL_BF16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                        INPUT(x1_desc, x2_desc, x1_scale_desc, x2_scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr,
+                              true, true, groupSizeMx),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
 TEST_F(l2_QuantBatchMatmulWeightNz_test, a4w4_weight_nz_case_01_fp16)
 {
     TensorDesc x1_desc = TensorDesc({6256, 5120}, ACL_INT4, ACL_FORMAT_ND);

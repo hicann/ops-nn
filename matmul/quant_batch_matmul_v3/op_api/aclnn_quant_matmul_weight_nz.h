@@ -21,8 +21,8 @@ extern "C" {
  * @brief aclnnQuantMatmulWeightNz的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
  * 算子功能：相对于aclnnQuantBatchMatmulV4, 新增了支持x2为nz格式。
- * @param [in] x1: matmul左矩阵，数据类型支持：int8, float8_e4m3fn。
- * @param [in] x2: matmul右矩阵，数据类型支持：int8, float8_e4m3fn。
+ * @param [in] x1: matmul左矩阵，数据类型支持：int8, float8_e4m3fn, float4_e2m1。
+ * @param [in] x2: matmul右矩阵，数据类型支持：int8, float8_e4m3fn, float4_e2m1。
  * @param [in] x1Scale: 量化参数，数据类型支持：float32, float8_e8m0。
  * @param [in] x2Scale: 量化参数，数据类型支持：uint64, float32, bfloat16, int64, float8_e8m0。
  * @param [in] yScale: 预留参数，当前接口不支持该参数。

@@ -161,7 +161,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
               <li>在transposeX1为true情况下各个维度表示：(batch, k, m)，batch可不存在。</li>
           </ul>
         </td>
-        <td>INT4<sup>1、3</sup>、INT8、FLOAT8_E4M3FN<sup>1、2</sup></td>
+        <td>INT4<sup>1、3</sup>、INT8、FLOAT8_E4M3FN<sup>1、2</sup>、FLOAT4_E2M1<sup>1、2</sup></td>
         <td>ND</td>
         <td>2-6</td>
         <td>✓</td>
@@ -555,13 +555,20 @@ aclnnStatus aclnnQuantMatmulWeightNz(
       | x1            | x2            | x1Scale     | x2Scale     | x2Offset | yScale | bias         | out                         |
       |---------------| ------------- | ----------- | ----------- | -------- | ------ | -------------| --------------------------- |
       | FLOAT8_E4M3FN | FLOAT8_E4M3FN | FLOAT8_E8M0 | FLOAT8_E8M0 | null     | null   | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32    |
+      | FLOAT4_E2M1 | FLOAT4_E2M1 | FLOAT8_E8M0 | FLOAT8_E8M0 | null     | null   | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32    |
                                
     - x1数据类型、x2数据类型、x1、x2、x1Scale、x2Scale和groupSize的取值关系：
       |量化类型|x1数据类型|x2数据类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|bias shape|yScale shape|[groupSizeM, groupSizeN, groupSizeK]|groupSize|
       |-------|--------|--------|--------|--------|-------------|-------------|------------|---------------------------------------|--|--|
-      |mx 全量化|FLOAT8_E4M3FN|FLOAT8_E4M3FN|<li>非转置：(batch, m, k)</li><li>转置：(batch, k, m)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(m, ceil(k / 64), 2)</li><li>转置：(ceil(k / 64), m, 2)</li>|<li>非转置：(ceil(k / 64), n, 2)</li><li>转置：(n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
+      |mx 全量化|FLOAT8_E4M3FN|FLOAT8_E4M3FN|<li>非转置：(batch, m, k)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(m, ceil(k / 64), 2)</li>|<li>非转置：(ceil(k / 64), n, 2)</li><li>转置：(n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
+      |mx 全量化|FLOAT4_E2M1|FLOAT4_E2M1|<li>非转置：(batch, m, k)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(m, ceil(k / 64), 2)</li>|<li>非转置：(ceil(k / 64), n, 2)</li><li>转置：(n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
 
-    - mx全量化场景下，当x1与x2数据类型为FLOAT8_E4M3FN时，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致。
+    - mx全量化场景下，当x1与x2数据类型为FLOAT8_E4M3FN/FLOAT4_E2M1时，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致。
+    - mx全量化场景下，当x1与x2数据类型为FLOAT4_E2M1时，需满足以下条件：
+      - x1和x2的内轴必须为偶数，且k必须大于2。
+      - transposeX1必须为false。
+      - 当transposeX2为false时，n必须大于2。
+      - 当transposeX2为true时，n必须大于1。
 
   - **伪量化场景下dtype和shape要求如下：**
   

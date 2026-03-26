@@ -64,7 +64,7 @@ private:
     bool CheckDimValuePertokenDoubleScale() const;
     bool CheckDimValuePerblock() const;
     bool CheckGroupSizeShape(uint64_t groupSizeM) const;
-    bool CheckKDimValueFp4Fp8WeightNZMicroScaling() const;
+    bool CheckMXFP4FP8ParamsNDOrNZ() const;
     bool CheckDimValueMicroScaling() const;
     bool CheckShapeForWeightNz() const;
     bool CheckShapeInt4() const;
