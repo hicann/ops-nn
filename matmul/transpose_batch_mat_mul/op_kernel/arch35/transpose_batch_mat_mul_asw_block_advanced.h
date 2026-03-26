@@ -62,6 +62,11 @@ struct TBmmAswBlockArgs {
     uint64_t mainRow = 0;
     uint64_t mainWindow = 0;
     uint64_t tailWindow = 0;
+
+    // NZ格式对齐参数
+    uint64_t c0Size = 0;        // NZ格式的C0大小
+    uint64_t alignedOriN = 0;   // N维度对齐后的大小
+    uint64_t alignedKbSize = 0; // Kb维度对齐后的大小
 };
 
 class TransposeBatchMatMulAswBlock {
@@ -108,6 +113,23 @@ __aicore__ inline void TransposeBatchMatMulAswBlock::Init(const void* tilingData
     params_.mainRow = params_.mCnt / params_.mainWindow - 1;                  // 主划窗数量
     params_.tailWindow = params_.mCnt - params_.mainRow * params_.mainWindow; // 尾划窗m方向的块个数
     batchSplitFactor_ = batchMatmulTilingData_->batchSplitFactor <= 0 ? 1 : batchMatmulTilingData_->batchSplitFactor;
+
+    // 计算NZ格式对齐参数
+    if constexpr (B_TYPE::format == CubeFormat::NZ) {
+        GetSizeC0<typename B_TYPE::T>(params_.c0Size);
+        // 根据B矩阵是否转置选择不同的对齐方式
+        if constexpr (B_TYPE::isTrans) {
+            params_.alignedOriN =
+                MMV3DivCeil(batchMatmulTilingData_->matMulTilingData.tCubeTiling.N, ALIGNED_H) * ALIGNED_H;
+            params_.alignedKbSize =
+                MMV3DivCeil(batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb, params_.c0Size) * params_.c0Size;
+        } else {
+            params_.alignedOriN =
+                MMV3DivCeil(batchMatmulTilingData_->matMulTilingData.tCubeTiling.N, params_.c0Size) * params_.c0Size;
+            params_.alignedKbSize =
+                MMV3DivCeil(batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb, ALIGNED_H) * ALIGNED_H;
+        }
+    }
 }
 
 __aicore__ inline void TransposeBatchMatMulAswBlock::UpdateBasicIndex(uint64_t roundIdx, uint64_t newBlockIdx)
@@ -163,21 +185,27 @@ __aicore__ inline void TransposeBatchMatMulAswBlock::CalcGMOffset()
                           totalBmTileIndex * batchMatmulTilingData_->matMulTilingData.tCubeTiling.Ka;
     }
     if constexpr (MODE == TBMM_MODE::BMM_TRANS || MODE == TBMM_MODE::BMM_TRANS_TRANS) {
-        offset_.offsetA =
-            totalBmTileIndex * batchMatmulTilingData_->matMulTilingData.tCubeTiling.M *
-                batchMatmulTilingData_->matMulTilingData.tCubeTiling.Ka +
-            params_.mCntIndex * params_.blockBaseM * batchMatmulTilingData_->matMulTilingData.tCubeTiling.Ka;
+        offset_.offsetA = totalBmTileIndex * batchMatmulTilingData_->matMulTilingData.tCubeTiling.M *
+                          batchMatmulTilingData_->matMulTilingData.tCubeTiling.Ka + params_.mCntIndex *
+                          params_.blockBaseM * batchMatmulTilingData_->matMulTilingData.tCubeTiling.Ka;
     }
-    uint64_t offsetBBatch = totalBmTileIndex *
-                            static_cast<uint64_t>(batchMatmulTilingData_->matMulTilingData.tCubeTiling.N) *
-                            batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb;
-
-    offset_.offsetB =
-        B_TYPE::isTrans ?
-            offsetBBatch +
-                (params_.nCntIndex * static_cast<uint64_t>(batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb) *
-                 params_.blockBaseN) :
-            offsetBBatch + (params_.nCntIndex * params_.blockBaseN);
+    if constexpr (B_TYPE::format == CubeFormat::NZ) {
+        uint64_t offsetBBatch = totalBmTileIndex * params_.alignedOriN * params_.alignedKbSize;
+        // false : (b, n1, k1, k0, n0)
+        // true : (b, k1, n1, n0, k0)
+        offset_.offsetB = offsetBBatch + (params_.nCntIndex * params_.blockBaseN *
+                                          (B_TYPE::isTrans ? params_.c0Size : params_.alignedKbSize));
+    } else {
+        uint64_t offsetBBatch = totalBmTileIndex *
+                                static_cast<uint64_t>(batchMatmulTilingData_->matMulTilingData.tCubeTiling.N) *
+                                batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb;
+        offset_.offsetB =
+            B_TYPE::isTrans ?
+                offsetBBatch + (params_.nCntIndex *
+                                static_cast<uint64_t>(batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb) *
+                                params_.blockBaseN) :
+                offsetBBatch + (params_.nCntIndex * params_.blockBaseN);
+    }
     offset_.offsetScales =
         totalBmTileIndex * static_cast<uint64_t>(batchMatmulTilingData_->matMulTilingData.tCubeTiling.N) +
         (params_.nCntIndex * params_.blockBaseN);

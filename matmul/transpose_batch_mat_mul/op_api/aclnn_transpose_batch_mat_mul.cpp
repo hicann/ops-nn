@@ -37,6 +37,7 @@ using namespace Ops::NN;
 static const std::initializer_list<op::DataType> x1_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
 static const std::initializer_list<op::DataType> x2_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WEIGHTNZ = {op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST_WEIGHTNZ = {op::DataType::DT_FLOAT16, op::DataType::DT_BF16, DataType::DT_INT8};
 static const std::initializer_list<op::DataType> x1_SCALE_SUPPORT_LIST = {DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> x2_SCALE_SUPPORT_LIST = {DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> SCALE_DTYPE_SUPPORT_LIST = {DataType::DT_INT64, DataType::DT_UINT64};
@@ -72,7 +73,7 @@ inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2,
     if (x2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
         auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
         auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-        if (npuArch != NpuArch::DAV_2201) {
+        if ((npuArch != NpuArch::DAV_2201) && (npuArch != NpuArch::DAV_3510)) {
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID,
                 "transposebatchmatmulweightnz is unsupported by the current SOC version [%s].",
@@ -81,19 +82,19 @@ inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2,
         }
         OP_CHECK_DTYPE_NOT_SUPPORT(x1, DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);
         OP_CHECK_DTYPE_NOT_SUPPORT(x2, DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);
-        OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(out, OUT_DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);
         if (scale != nullptr) {
             OP_CHECK_DTYPE_NOT_SUPPORT(scale, SCALE_DTYPE_SUPPORT_LIST, return false);
             OP_CHECK_DTYPE_NOT_SUPPORT(x1, x1_SCALE_SUPPORT_LIST, return false);
             OP_CHECK_DTYPE_NOT_SUPPORT(x2, x2_SCALE_SUPPORT_LIST, return false);
         }
-        if (x1->GetDataType() != out->GetDataType()) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "x1's dtype [%s] and out's dtype [%s] are not equal.",
-                op::ToString(x1->GetDataType()).GetString(), op::ToString(out->GetDataType()).GetString());
-                return false;
-        }
+        if ((x1->GetDataType() != out->GetDataType()) && (npuArch == NpuArch::DAV_2201)) {
+             OP_LOGE(
+                 ACLNN_ERR_PARAM_INVALID,
+                 "x1's dtype [%s] and out's dtype [%s] are not equal in DAV_2201.",
+                 op::ToString(x1->GetDataType()).GetString(), op::ToString(out->GetDataType()).GetString());
+                 return false;
+         }
         return true;
     }
 
@@ -214,8 +215,13 @@ static inline bool CheckMathType(const aclTensor* x1, const aclTensor* x2, int8_
 
 static inline bool CheckNzStorageShape(const aclTensor* x2)
 {
+    op::Shape x2Shape = x2->GetViewShape();
     auto storageShape = x2->GetStorageShape();
     auto storageShapeDim = storageShape.GetDimNum();
+    if (x2Shape[1] == 1 || x2Shape[2] == 1) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis or n-axis can not be 1 when the format is nz.");
+        return false;
+    }
     OP_CHECK(
         storageShapeDim == EXPECTED_NZ_DIM,
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Only support x2 storageShapeDim is 5, which are [%zu].", storageShapeDim),

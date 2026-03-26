@@ -82,6 +82,13 @@ ge::graphStatus IsValidDtype(const MatMulV3Args &args)
 
 ge::graphStatus TBMMOpSpecificCheck(MatMulV3Args &args)
 {
+    // format check
+    OP_TILING_CHECK(
+        (args.aFormat == ge::FORMAT_FRACTAL_NZ) || (args.outFormat == ge::FORMAT_FRACTAL_NZ),
+        CUBE_INNER_ERR_REPORT(args.opName, "invalid input/output format"), return ge::GRAPH_FAILED);
+
+    OP_TILING_CHECK(args.hasBias, CUBE_INNER_ERR_REPORT(args.opName, "Not support bias."), return ge::GRAPH_FAILED);
+
     // dtype check
     return IsValidDtype(args);
 }

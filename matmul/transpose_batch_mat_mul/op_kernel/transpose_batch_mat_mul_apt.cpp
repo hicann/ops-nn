@@ -30,8 +30,13 @@ using namespace matmul;
 #endif
 
 constexpr CubeFormat format_x1 = CubeFormat::ND;
-constexpr CubeFormat format_x2 = CubeFormat::ND;
 constexpr CubeFormat format_y = CubeFormat::ND;
+
+#if defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
+constexpr CubeFormat format_x2 = CubeFormat::NZ;
+#else
+constexpr CubeFormat format_x2 = CubeFormat::ND;
+#endif
 
 #define TBMM_IMPL_CLASS_COMMON_TRNAS(transA, transB, Mode, templateClass, ...)                                         \
     do {                                                                                                               \
