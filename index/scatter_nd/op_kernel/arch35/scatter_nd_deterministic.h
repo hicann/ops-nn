@@ -151,6 +151,7 @@ __aicore__ inline void ScatterNdDeterministicImpl<T, U>::Init(GM_ADDR indices, G
     yGmInit_.SetGlobalBuffer((__gm__ T *)(y) + yGmOffset);
     // 非量化分支
     if (tilingData_.isDeterministic == 0) {
+        yGm_.SetGlobalBuffer((__gm__ T *)(y) + GetBlockIdx() * tilingData_.perCoreHandleCol);
         indicesGm_.SetGlobalBuffer((__gm__ U *)(indices));
         updatesGm_.SetGlobalBuffer((__gm__ T *)(updates) + GetBlockIdx() * tilingData_.perCoreHandleCol);
 
@@ -242,6 +243,7 @@ __aicore__ inline void ScatterNdDeterministicImpl<T,  U>::CopyOutUpdates(int64_t
     SetAtomicAdd<T>();
     DataCopyPad(yGm_[offset], updatesLocal, outParams);
     SetAtomicNone();
+    PipeBarrier<PIPE_MTE3>();   // keep the accumulation order when DB process the same index
     dataQueue_.FreeTensor(updatesLocal);
 }
 
@@ -327,7 +329,6 @@ __aicore__ inline void ScatterNdDeterministicImpl<T,  U>::ProcessSingleLoopIndic
             CopyOutUpdates(varRefOffset, tilingData_.updatesUbFactor);
             varRefOffset += tilingData_.updatesUbFactor;
         }
-        varRefOffset += GetBlockIdx() * tilingData_.perCoreHandleCol;
         CopyInUpdates(updatesOffset, updatesTailUbFactor);
         CopyOutUpdates(varRefOffset, updatesTailUbFactor);
     }
