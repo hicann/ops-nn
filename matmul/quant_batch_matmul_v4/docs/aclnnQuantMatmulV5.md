@@ -32,7 +32,7 @@
     
     <summary><term><strong>K-G量化模式</strong></term></summary>
     
-      - x1为INT8，x2为INT32，x1Scale为FLOAT32，x2Scale为UINT64，yOffset为FLOAT32：
+      - x1为INT8，x2为INT32，x1Scale为FLOAT32，x2Scale为UINT64/INT64，yOffset为FLOAT32：
 
         $$
         out = ((x1 @ (x2*x2Scale)) + yOffset) * x1Scale
@@ -608,6 +608,7 @@ aclnnStatus aclnnQuantMatmulV5(
       - 为true时X2维度为：（batch，k1，n1，n0，k0），batch可不存在，其中k0 = 32，n0 = 16，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 32） = k1。
       - 为false时X2维度为：（batch，n1，k1，k0，n0），batch可不存在，其中k0 = 16，n0 = 32，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 16） = k1。
       - 可使用aclnnCalculateMatmulWeightSizeV2接口以及aclnnTransMatmulWeight接口完成输入Format从ND到NZ格式的转换。
+  - 当x2Scale的原始输入类型不满足量化场景约束中组合时，需提前调用aclnnTransQuantParamV2接口来将scale转成INT64、UINT64数据类型。
   - 当前版本不支持yScale，需要传入nullptr。
   - out的shape支持2~6维，（batch，m，n），batch可不存在。数据类型支持FLOAT16、INT8、BFLOAT16、INT32。
   - x1，x2为INT8，out为INT32，bias为INT32或nullptr时，各scale实际不参与计算，计算公式如下：
@@ -657,7 +658,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
     | x1                        | x2                        | x1Scale     | x2Scale         | x2Offset    | yScale   | bias         | yOffset    | out                                    |
     | ------------------------- | ------------------------- | ----------- | -----------     | ----------- | -------  | ------------ | -----------| -------------------------------------- |
-    | INT8                      | INT32                     | FLOAT32     | UINT64          | null        | null     | null         | FLOAT32    | FLOAT16/BFLOAT16                       |
+    | INT8                      | INT32                     | FLOAT32     | UINT64/INT64    | null        | null     | null         | FLOAT32    | FLOAT16/BFLOAT16                       |
     | INT8                      | INT8                      | null        | UINT64/INT64    | null        | null     | null/INT32   | null       | FLOAT16                                |
     | INT8                      | INT8                      | null        | UINT64/INT64    | null/FLOAT32| null     | null/INT32   | null       | INT8                                   |
     | INT8                      | INT8                      | null/FLOAT32| FLOAT32/BFLOAT16| null        | null     | null/INT32/BFLOAT16/FLOAT32   | null       | BFLOAT16              |
@@ -703,13 +704,13 @@ aclnnStatus aclnnQuantMatmulV5(
   <a id="输入和输出支持以下数据类型组合K-G"></a>
       | x1                        | x2                        | x1Scale     | x2Scale         | x2Offset    | yScale   | bias         | yOffset    | out                                    |
       | ------------------------- | ------------------------- | ----------- | -----------     | ----------- | -------  | ------------ | -----------| -------------------------------------- |
-      | INT8                      | INT32                     | FLOAT32     | UINT64          | null        | null     | null         | FLOAT32    | FLOAT16/BFLOAT16                       |
+      | INT8                      | INT32                     | FLOAT32     | UINT64/INT64    | null        | null     | null         | FLOAT32    | FLOAT16/BFLOAT16                       |
       | INT4                      | INT4                      | FLOAT32     | FLOAT32         | FLOAT16     | null     | null         | null       | BFLOAT16                               |
 
   - x1、x2、x1Scale、x2Scale和groupSize的取值关系：
     |量化类型| x1数据类型                 | x2数据类型                 | x1Scale数据类型| x2Scale数据类型| x1 shape | x2 shape| x1Scale shape| x2Scale shape|x2Offset shape| yOffset shape| [gsM，gsN，gsK]|
     | ----- | ------------------------- | ------------------------- | -------------- | ------------- | -------- | ------- | ------------ | ------ |------------ | ------------ | ------------ |
-    | K-G量化 | INT8                    |INT32                   |FLOAT32              |UINT64       |(m, k) |(k, ceil(n / 8))|(m, 1)|(ceil(k / 256), n)|null| (n) | [0, 0, 256]|
+    | K-G量化 | INT8                    |INT32                   |FLOAT32              |UINT64/INT64 |(m, k) |(k, ceil(n / 8))|(m, 1)|(ceil(k / 256), n)|null| (n) | [0, 0, 256]|
     | K-G量化 | INT4                    |INT4                    |FLOAT32              |FLOAT32      |(m, k)|(n, k)|(m, 1)|(ceil(k / 256), n)|(ceil(k / 256), n)| null | [0, 0, 256]|
   - x1的约束：
     - 当数据类型为INT8时，k需与256对齐，并小于18432。transposeX1为false。
@@ -718,7 +719,7 @@ aclnnStatus aclnnQuantMatmulV5(
     - 当数据类型为INT32时，k需与256对齐。transposeX2为false。
     - 当数据类型为INT4时，k需与1024对称，n需与256对齐。transposeX2为true，
   - x2Scale的约束：
-    - 当数据类型为UINT64时，由于TransQuantParamV2只支持1维，需要将x2Scale view成一维(k / groupSize * n)，再调用TransQuantParamV2算子的aclnn接口来将x2Scale转成UINT64数据类型，再将输出view成二维（k / groupSize, n），groupSize值为256。
+    - 当数据类型为UINT64/INT64时，由于TransQuantParamV2只支持1维，需要将x2Scale view成一维(k / groupSize * n)，再调用TransQuantParamV2算子的aclnn接口来将x2Scale转成UINT64/INT64数据类型，再将输出view成二维（k / groupSize, n），groupSize值为256。
     - 当x1、x2为INT4时，x2Scale的shape为(ceil(k / 256), n)。
 
   </details>
