@@ -99,7 +99,7 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::GetAttr()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus DynamicDualLevelMxQuantTiling::CheckDtype() const
+ge::graphStatus DynamicDualLevelMxQuantTiling::CheckRequiredDtype() const
 {
     auto inputXPtr = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputXPtr);
@@ -111,7 +111,6 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::CheckDtype() const
             "Input x's data type only support FLOAT16 and BFLOAT16 currently, but x is [%s], please check.",
             Ops::Base::ToString(xDtype).c_str()),
         return ge::GRAPH_FAILED);
-
     auto outputYPtr = context_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputYPtr);
     auto yDtype = outputYPtr->GetDataType();
@@ -148,7 +147,7 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::CheckDtype() const
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus DynamicDualLevelMxQuantTiling::CheckShape() const
+ge::graphStatus DynamicDualLevelMxQuantTiling::CheckRequiredShape() const
 {
     auto xShapePtr = context_->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xShapePtr);
@@ -204,6 +203,40 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::CheckShape() const
             Shape2String(level1ScaleShape).c_str(), Shape2String(newScale1Shape).c_str()),
         return ge::GRAPH_FAILED);
 
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus DynamicDualLevelMxQuantTiling::CheckSmoothScaleDtypeShape()
+{
+    auto xDescPtr = context_->GetInputDesc(0);
+    auto xDtype = xDescPtr->GetDataType();
+    auto smoothScaleDescPtr = context_->GetInputDesc(1);
+    if (smoothScaleDescPtr != nullptr) {
+        auto smoothScaleDtype = smoothScaleDescPtr->GetDataType();
+        OP_CHECK_IF(
+            smoothScaleDtype != xDtype,
+            OP_LOGE(
+                context_->GetNodeName(),
+                "The data type of smooth_scale [%s] should match the data type of x [%s], please check.",
+                Ops::Base::ToString(smoothScaleDtype).c_str(), Ops::Base::ToString(xDtype).c_str()),
+            return ge::GRAPH_FAILED);
+    }
+    auto xShapePtr = context_->GetInputShape(0);
+    auto xShape = xShapePtr->GetStorageShape();
+    auto smoothScaleShapePtr = context_->GetInputShape(1);
+    if (smoothScaleShapePtr != nullptr) {
+        auto smoothScaleShape = smoothScaleShapePtr->GetStorageShape();
+
+        OP_CHECK_IF(
+            smoothScaleShape.IsScalar() || smoothScaleShape.GetDimNum() != 1 ||
+                smoothScaleShape.GetDim(0) != xShape.GetDim(xShape.GetDimNum() - 1),
+            OP_LOGE(
+                context_->GetNodeName(),
+                "The size of smooth_scale [%ld] should match the size of the last axis of x [%ld], please check.",
+                smoothScaleShape.GetDim(0), xShape.GetDim(xShape.GetDimNum() - 1)),
+            return ge::GRAPH_FAILED);
+        needSmoothScale = true;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -321,12 +354,13 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::AutoTiling()
 }
 
 // 切块
-void DynamicDualLevelMxQuantTiling::SplitCore()
+ge::graphStatus DynamicDualLevelMxQuantTiling::SplitCore()
 {
     // 计算ub能处理多少个基本块
     uint64_t xUbSize = BLOCK_SIZE * BYTES_OF_INPUT_TYPE * N_BUFFER;
     uint64_t yUbSize = BLOCK_SIZE / DIGIT_TWO * N_BUFFER;
     uint64_t tempXUbSize = BLOCK_SIZE * BYTES_OF_INPUT_TYPE;
+    uint64_t smoothScaleUbSize = needSmoothScale ? BLOCK_SIZE * BYTES_OF_INPUT_TYPE * N_BUFFER : 0;
     // ceilAlign(512/512,32)
     uint64_t level0ScaleUbSize = DIGIT_32 * N_BUFFER;
     // ceilAlign(512/32,32)
@@ -335,7 +369,15 @@ void DynamicDualLevelMxQuantTiling::SplitCore()
     uint64_t level1ScaleReciprocalUbSize = DIGIT_32;
     tilingParams.ubFactor =
         (tilingParams.ubSize - RESERVED_UB_SIZE) /
-        (xUbSize + yUbSize + tempXUbSize + level0ScaleUbSize + level1ScaleUbSize + level1ScaleReciprocalUbSize);
+        (xUbSize + yUbSize + tempXUbSize + smoothScaleUbSize + level0ScaleUbSize + level1ScaleUbSize + level1ScaleReciprocalUbSize);
+    OP_CHECK_IF(
+        tilingParams.ubSize <= RESERVED_UB_SIZE || tilingParams.ubFactor <= 0,
+        OP_LOGE(
+            context_->GetNodeName(),
+            "Invalid ubSize/ubFactor for SplitCore: ubSize: %ld, ubFactor: %ld",
+            tilingParams.ubSize, tilingParams.ubFactor),
+        return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus DynamicDualLevelMxQuantTiling::SetTilingParams()
@@ -348,7 +390,9 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::SetTilingParams()
     tilingParams.blockSizeCol = DIGIT_ONE;
     MergeAxis();
     AutoTiling();
-    SplitCore();
+    if (SplitCore() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
     // 分核分块后，存在部分核处理的块大小为0，减少核数，再均分
     tilingParams.normalTileRowBlockNum = Ops::Base::CeilDiv(tilingParams.rowBlockNum, tilingParams.rowTileNum);
@@ -390,6 +434,7 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::SetTilingParams()
         tilingParams.tailTileColLoopNum = tilingParams.tailTileColBlockNum;
     }
     tilingParams.tailAlignNum = Ops::Base::CeilDiv(tilingParams.tailTileRowSize % BLOCK_SIZE, DIGIT_128);
+    tilingParams.needSmoothScale = needSmoothScale;
 
     return ge::GRAPH_SUCCESS;
 }
@@ -403,7 +448,7 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::DoTiling()
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
-        CheckDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "The data type check failed."),
+        CheckRequiredDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "The data type check failed."),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
@@ -411,7 +456,11 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::DoTiling()
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
-        CheckShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "The shape check failed."),
+        CheckRequiredShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "The shape check failed."),
+        return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(
+        CheckSmoothScaleDtypeShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "The shape check failed."),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
@@ -486,6 +535,7 @@ void DynamicDualLevelMxQuantTiling::SetTilingData()
     tilingData.set_ubFactor(tilingParams.ubFactor);
     tilingData.set_tailAlignNum(tilingParams.tailAlignNum);
     tilingData.set_copyMethod(tilingParams.copyMethod);
+    tilingData.set_needSmoothScale(tilingParams.needSmoothScale);
 }
 
 void DynamicDualLevelMxQuantTiling::PrintTilingData()
@@ -498,7 +548,7 @@ void DynamicDualLevelMxQuantTiling::PrintTilingData()
         "colTileNum: %ld, normalTileRowBlockNum: %ld, normalTileColBlockNum: %ld, "
         "tailTileRowBlockNum: %ld, tailTileColBlockNum: %ld, normalTileRowSize: %ld, "
         "tailTileRowSize: %ld, normalTileRowLoopNum: %ld, normalTileColLoopNum: %ld, tailTileRowLoopNum: %ld, "
-        "tailTileColLoopNum: %ld, ubFactor: %ld, tailAlignNum: %ld ,copyMethod: %ld ",
+        "tailTileColLoopNum: %ld, ubFactor: %ld, tailAlignNum: %ld, copyMethod: %ld, needSmoothScale: %ld",
         tilingData.get_tilingKey(), tilingData.get_totalCoreNum(), tilingData.get_usedCoreNum(),
         tilingData.get_roundMode(), tilingData.get_level0BlockSize(), tilingData.get_level1BlockSize(),
         tilingData.get_rowSize(), tilingData.get_colSize(), tilingData.get_blockSizeRow(),
@@ -508,7 +558,7 @@ void DynamicDualLevelMxQuantTiling::PrintTilingData()
         tilingData.get_tailTileColBlockNum(), tilingData.get_normalTileRowSize(), tilingData.get_tailTileRowSize(),
         tilingData.get_normalTileRowLoopNum(), tilingData.get_normalTileColLoopNum(),
         tilingData.get_tailTileRowLoopNum(), tilingData.get_tailTileColLoopNum(), tilingData.get_ubFactor(),
-        tilingData.get_tailAlignNum(), tilingData.get_copyMethod());
+        tilingData.get_tailAlignNum(), tilingData.get_copyMethod(), tilingData.get_needSmoothScale());
 }
 
 static ge::graphStatus TilingForDynamicDualLevelMxQuant(gert::TilingContext* context)

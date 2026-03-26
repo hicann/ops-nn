@@ -14,6 +14,7 @@
 ## 功能说明
 
 - 算子功能：目的数据类型为FLOAT4类的MX量化。只对尾轴进行量化，前面所有的轴都合轴处理，通过给定的level0_block_size将输入划分成多个数据块，对每个数据块进行一级量化，输出量化尺度level0_scale；然后将一级量化的结果作为新的输入，并通过给定的level1_block_size将其划分成多个数据块，对每个数据块进行二级量化，输出量化尺度level1_scale，根据round_mode进行数据类型的转换，得到量化结果y。
+  - 可选功能：融合smooth scale运算，在对数据输入x进行量化前先进行x=x*smooth_scale（广播逐元素乘法）。
 
 - 计算公式：
   - 将输入x在尾轴上按$k_0$ = level0_block_size个数分组，一组$k_0$个数  $\{\{x_i\}_{i=1}^{k_0}\}$ 动态量化为 $\{level0_scale, \{temp_i\}_{i=1}^{k_0}\}$, $k_0$ = level0_block_size，然后将temp在尾轴上按$k_1$ = level1_block_size个数分组，一组$k_1$个数  $\{\{temp_i\}_{i=1}^{k_1}\}$ 动态量化为 $\{level1_scale, \{y_i\}_{i=1}^{k_1}\}$, $k_1$ = level1_block_size
@@ -73,56 +74,56 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td><ul><li>表示算子输入的Tensor，对应公式中<em>x</em><sub>i</sub>；</li><li>shape支持1-7维，最后一维必须是偶数。</td>
+      <td><ul><li>表示算子输入的Tensor，对应公式中<em>x</em><sub>i</sub>；</li><li>shape支持1-7维，最后一维必须是偶数。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>smooth_scales</td>
+      <td>smooth_scale</td>
       <td>可选输入</td>
-      <td>当前该功能暂不支持，只支持输入为nullptr。</td>
-      <td>和输入x一致</td>
+      <td><ul><li>表示用于smooth scale运算的输入；</li><li>当不需要融合smooth scale运算时，smooth_scale应传入nullptr；</li><li>当smooth_scale不为nullptr时，smooth_scale的dtype需与x一致，且shape为1维，长度等于x最后一维。</li></ul></td>
+      <td>FLOAT16、BFLOAT16（且与输入x一致）</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>round_mode</td>
       <td>可选属性</td>
-      <td><ul><li>表示数据转换的模式，对应公式中的round_mode；</li><li>支持{"rint", "round", "floor"}；</li><li> 默认值为"rint"。</td>
+      <td><ul><li>表示数据转换的模式，对应公式中的round_mode；</li><li>支持{"rint", "round", "floor"}；</li><li> 默认值为"rint"。</li></ul></td>
       <td>STRING</td>
       <td>-</td>
     </tr>
     <tr>
       <td>level0_block_size</td>
       <td>可选属性</td>
-      <td><ul><li>表示第一级量化的block_size，对应公式中的level0_block_size；</li><li>输入范围为{512}。</td>
+      <td><ul><li>表示第一级量化的block_size，对应公式中的level0_block_size；</li><li>输入范围为{512}。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>level1_block_size</td>
       <td>可选属性</td>
-      <td><ul><li>表示第二级量化的block_size，对应公式中的level1_block_size；</li><li>输入范围为{32}。</td>
+      <td><ul><li>表示第二级量化的block_size，对应公式中的level1_block_size；</li><li>输入范围为{32}。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td><ul><li>表示输入x量化后的对应结果，对应公式中的<em>y</em><sub>i</sub>；</li><li>shape和输入x一致。</td>
+      <td><ul><li>表示输入x量化后的对应结果，对应公式中的<em>y</em><sub>i</sub>；</li><li>shape和输入x一致。</li></ul></td>
       <td>FLOAT4_E2M1</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>level0_scale</td>
       <td>输出</td>
-      <td><ul><li>表示第一级量化的scale，对应公式中的level0_scale；</li><li>shape在尾轴上的值，为x尾轴的值除以level0_block_size向上取整</td>
+      <td><ul><li>表示第一级量化的scale，对应公式中的level0_scale；</li><li>shape在尾轴上的值，为x尾轴的值除以level0_block_size向上取整。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>level1_scale</td>
       <td>输出</td>
-      <td><ul><li>表示第二级量化的scale，对应公式中的level1_scale；</li><li>shape的大小为x的dim + 1；</li><li> shape在最后两轴的值为((ceil(x.shape[-1] / level1_block_size) + 2 - 1) / 2, 2)，并对其进行偶数pad，pad填充值为0。</td>
+      <td><ul><li>表示第二级量化的scale，对应公式中的level1_scale；</li><li>shape的大小为x的dim + 1；</li><li> shape在最后两轴的值为((ceil(x.shape[-1] / level1_block_size) + 2 - 1) / 2, 2)，并对其进行偶数pad，pad填充值为0。</li></ul></td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
     </tr>

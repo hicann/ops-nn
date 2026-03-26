@@ -110,5 +110,4 @@ TEST_F(dynamic_dual_level_mx_quant_test, test_case_100)
     AscendC::GmFree(level1Scale);
     AscendC::GmFree(workSpace);
     AscendC::GmFree(tilingDatafromBin);
-    free(path_);
 }

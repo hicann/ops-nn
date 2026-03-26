@@ -49,10 +49,17 @@ __global__ __aicore__ void dynamic_dual_level_mx_quant(
 
     GET_TILING_DATA_WITH_STRUCT(DynamicDualLevelMxQuantTilingData, tilingData, tiling);
     TPipe pipe;
-    constexpr AscendC::RoundMode ascendcRoundMode = RoundModeMapper<roundMode>::value;
-    DynamicDualLevelMxQuantBase<DTYPE_X, ascendcRoundMode> op(&tilingData, &pipe);
-    op.Init(x, y, level0_scale, level1_scale);
-    op.Process();
+    if (tilingData.needSmoothScale == 0) {
+        constexpr AscendC::RoundMode ascendcRoundMode = RoundModeMapper<roundMode>::value;
+        DynamicDualLevelMxQuantBase<DTYPE_X, ascendcRoundMode, false> op(&tilingData, &pipe);
+        op.Init(x, smooth_scale, y, level0_scale, level1_scale);
+        op.Process();
+    } else {
+        constexpr AscendC::RoundMode ascendcRoundMode = RoundModeMapper<roundMode>::value;
+        DynamicDualLevelMxQuantBase<DTYPE_X, ascendcRoundMode, true> op(&tilingData, &pipe);
+        op.Init(x, smooth_scale, y, level0_scale, level1_scale);
+        op.Process();
+    }
 
 #if (__NPU_ARCH__ == 3510)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);

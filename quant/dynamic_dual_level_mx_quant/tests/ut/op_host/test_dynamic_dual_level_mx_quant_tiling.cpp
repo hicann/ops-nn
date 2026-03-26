@@ -244,7 +244,7 @@ TEST_F(DynamicDualLevelMxQuantTiling, DynamicDualLevelMxQuant_roundMode_rint)
     string roundMode = "rint";
     int64_t level0BlockSize = 512;
     int64_t level1BlockSize = 32;
-    string expectTilingData = "0 64 64 4 512 32 512 128 512 1 1 128 1 64 1 2 1 2 512 512 1 1 1 1 67 0 0 ";
+    string expectTilingData = "0 64 64 4 512 32 512 128 512 1 1 128 1 64 1 2 1 2 512 512 1 1 1 1 67 0 0 0 ";
 
     ExecuteTestCase(
         ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
