@@ -244,14 +244,14 @@ __aicore__ inline void LoadL12L0bFp32(Intf *self, const LocalTensor<typename Int
     uint8_t repeatMode = 1; // K方向repeat
     // 跳c1hkwk16放howo方向的数据，即m_dst_stride
     uint16_t dstStride = static_cast<uint16_t>(ShiftCeilM0(self->ctx.baseUseN_, self->ctx.tiling_->n0));
-    LoadDataRepeatParam repeatParam = {repeatStride, repeatTime, repeatMode, dstStride};
-    SetLoadDataRepeat(repeatParam);
+    LoadDataRepeatParamWithStride repeatParam = {repeatStride, repeatTime, repeatMode, dstStride};
+    SetLoadDataRepeatWithStride(repeatParam);
 
     // 由于load3d不支持配置k_dst_stride, 因此循环下hkwk条load3d命令去实现k_dst_stride
     for (uint16_t i = 0; i < dstStride; i++) {
         // 每次k方向的dst地址跳512B
         constexpr uint32_t baseBlock = 128; //self->ctx.tiling_->n0 * self->ctx.tiling_->k0
-        LoadData(l0b[i * baseBlock], l1BMatrix, self->ctx.load3d_);
+        LoadDataWithStride(l0b[i * baseBlock], l1BMatrix, self->ctx.load3d_);
         // 每次k方向上src跳一个cin0,取的是连续cin0， 即hkwk上的cin0
         self->ctx.load3d_.kStartPt += self->ctx.tiling_->channelSize;
         if (self->ctx.tiling_->singleCoreCin > 8 &&
@@ -283,8 +283,8 @@ __aicore__ inline void LoadL12L0bFp8(Intf *self, const LocalTensor<typename Intf
     self->ctx.load3d_.kStartPt = ((self->ctx.curNL1Idx_ * self->ctx.tiling_->baseN) %
         hkwk16) * DOUBLE + (calculatedL1N % hkwk16) * DOUBLE;
 
-    LoadDataRepeatParam repeatParam = {0, 1, 0, 0};
-    SetLoadDataRepeat(repeatParam);
+    LoadDataRepeatParamWithStride repeatParam = {0, 1, 0, 0};
+    SetLoadDataRepeatWithStride(repeatParam);
     uint32_t mLoopTime = ShiftCeilChannelSize<Intf>(self->ctx.baseUseK_, self->ctx.tiling_->k0);
     uint32_t hwkLoopTime = self->ctx.hwK_;
     if (baseNNoAllHkWk) {
@@ -297,7 +297,7 @@ __aicore__ inline void LoadL12L0bFp8(Intf *self, const LocalTensor<typename Intf
     for (uint16_t i = 0; i < mLoopTime; i++) {
         self->ctx.load3d_.kStartPt = kStartPt;
         for (uint16_t j = 0; j < hwkLoopTime; j++) {
-            LoadData(l0b[l0bDstStride], l1BMatrix, self->ctx.load3d_);
+            LoadDataWithStride(l0b[l0bDstStride], l1BMatrix, self->ctx.load3d_);
             AscendC::PipeBarrier<PIPE_MTE1>();
             l0bDstStride += baseBlock;
             self->ctx.load3d_.kStartPt += self->ctx.tiling_->k0;
@@ -317,20 +317,20 @@ __aicore__ inline void LoadL12L0b(Intf *self, const LocalTensor<typename Intf::S
         if (!self->ctx.tiling_->isSplitKernelHW) {
             LoadL12L0bFp32(self, l1BMatrix, l0b);
         } else {
-            LoadDataRepeatParam repeatParam = {0, 1, 0, 1};
-            SetLoadDataRepeat(repeatParam);
-            LoadData(l0b, l1BMatrix, self->ctx.load3d_);
+            LoadDataRepeatParamWithStride repeatParam = {0, 1, 0, 1};
+            SetLoadDataRepeatWithStride(repeatParam);
+            LoadDataWithStride(l0b, l1BMatrix, self->ctx.load3d_);
         }
     } else if ((self->ctx.dhwK_ != 1) && (IsSameType<typename Intf::SrcT, hifloat8_t>::value)) {
         LoadL12L0bFp8(self, l1BMatrix, l0b);
     } else {
-        LoadDataRepeatParam repeatParam = {0, 1, 0,
+        LoadDataRepeatParamWithStride repeatParam = {0, 1, 0,
             static_cast<uint16_t>(ShiftCeilM0(self->ctx.baseUseN_, self->ctx.tiling_->n0))};
         if (self->ctx.tiling_->isSplitKernelHW) {
             repeatParam = {0, 1, 0, 1}; //切hk/wk后，每次循环一个hkwk，因此修改dstStride为1个单元
         }
-        SetLoadDataRepeat(repeatParam);
-        LoadData(l0b, l1BMatrix, self->ctx.load3d_);
+        SetLoadDataRepeatWithStride(repeatParam);
+        LoadDataWithStride(l0b, l1BMatrix, self->ctx.load3d_);
     }
 }
 
