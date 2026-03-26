@@ -304,6 +304,9 @@ public:
                 int64_t weightLocalOffset = 0;
                 LocalTensor<T> weightLocal_ = this->inQueueWeight_.template AllocTensor<T>();
                 LocalTensor<float> perSampleWeightCountLocal = this->perSampleWeightsBuf_.template Get<float>();
+                int32_t eventIDVToS = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+                SetFlag<HardEvent::V_S>(eventIDVToS);
+                WaitFlag<HardEvent::V_S>(eventIDVToS);
                 for (uint64_t indicesIdx = 0; indicesIdx < curIndicesNumber; ++indicesIdx) {
                     int64_t indiceLocalIdx = indiceStart + indicesIdx - this->copyIndicesStart_;
                     U weightIndex = indicesLocal_(indiceLocalIdx);
@@ -396,6 +399,9 @@ public:
                     int64_t indicesIndex = 0;
                     LocalTensor<float> perSampleWeightCountLocal = this->perSampleWeightsBuf_.template Get<float>();
                     LocalTensor<T> weightLocal_ = this->inQueueWeight_.template AllocTensor<T>();
+                    int32_t eventIDVToS = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+                    SetFlag<HardEvent::V_S>(eventIDVToS);
+                    WaitFlag<HardEvent::V_S>(eventIDVToS);
                     for (uint64_t indicesIdx = 0; indicesIdx < curIndicesNumber; ++indicesIdx) {
                         int64_t indiceLocalIdx = indiceStart + indicesIdx - this->copyIndicesStart_;
                         U weightIndex = indicesLocal_(indiceLocalIdx);
