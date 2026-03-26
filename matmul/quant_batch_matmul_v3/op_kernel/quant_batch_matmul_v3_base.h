@@ -256,6 +256,14 @@ __aicore__ inline uint64_t Align(uint64_t a, uint64_t b = 16)
     return (a + b - 1) / b * b;
 }
 
+__aicore__ inline uint64_t FloorAlign(uint64_t a, uint64_t b = 16)
+{
+    if (b == 0) {
+        return a;
+    }
+    return a / b * b;
+}
+
 __aicore__ inline uint64_t CeilDiv(uint64_t a, uint64_t b)
 {
     if (b == 0) {

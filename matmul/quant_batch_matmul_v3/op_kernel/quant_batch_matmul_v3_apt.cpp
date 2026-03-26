@@ -38,6 +38,10 @@
 #include "kernel_operator.h"
 #endif
 
+#ifdef IS_A4W4I
+#include "arch35/qbmm_int4_to_int8_preprocess.h"
+#endif
+
 #ifdef __CCE_KT_TEST__
 #define UT_STATIC static
 #else
@@ -143,19 +147,23 @@ constexpr CubeFormat format_y = CubeFormat::ND;
 #if defined(ORIG_DTYPE_SCALE) && ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0
 #define QUANT_BMMV3_MX_CMCT_IMPL_CLASS(aLayout, bLayout, cLayout, fullLoadMode)                     \
     do {                                                                                            \
-        GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3BasicAPITilingData, tilingData, tiling);             \
-        QbmmMxBasicApiKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, aLayout, bLayout, cLayout, fullLoadMode>( \
-            x1, x2, scale, bias, pertokenScale, y, &tilingData);                                    \
+        if ASCEND_IS_AIC {                                                                          \
+            GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3BasicAPITilingData, tilingData, tiling);             \
+            QbmmMxBasicApiKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, aLayout, bLayout, cLayout, fullLoadMode>( \
+                x1, x2, scale, bias, pertokenScale, y, &tilingData);                                    \
+        }                                                                                           \
     } while (0)
 #endif
 
 #if CUBE_TEMPLATE_ND
 #define QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(aLayout, bLayout, cLayout, fullLoadMode)                           \
     do {                                                                                                    \
-        GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3BasicAPITilingData, tilingData, tiling);  \
-        QbmmCubeBasicApiKernel<                                                                             \
-            DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, cLayout, fullLoadMode>( \
+        if ASCEND_IS_AIC {                                                                                  \
+            GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3BasicAPITilingData, tilingData, tiling);  \
+            QbmmCubeBasicApiKernel<                                                                             \
+                DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, cLayout, fullLoadMode>( \
             x1, x2, scale, bias, pertokenScale, y, &tilingData);                                            \
+        }                                                                                                   \
     } while (0)
 #endif
 
@@ -174,6 +182,31 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
     }
 
     REGISTER_TILING_DEFAULT(DequantBmm::QuantBatchMatmulV3TilingDataParams);
+
+#ifdef IS_A4W4I
+#if defined(ORIG_DTYPE_SCALE) && (ORIG_DTYPE_SCALE == DT_UINT64 || ORIG_DTYPE_SCALE == DT_INT64)
+    GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3BasicAPITilingData, tilingData, tiling);
+    uint64_t m      = tilingData.matmulTiling.m;
+    uint64_t n      = tilingData.matmulTiling.n;
+    uint64_t k      = tilingData.matmulTiling.k;
+    uint64_t batchC = tilingData.params.batchC;
+#else
+    GET_TILING_DATA(tilingData, tiling);
+    uint64_t m      = tilingData.matmulTiling.M;
+    uint64_t n      = tilingData.matmulTiling.N;
+    uint64_t k      = tilingData.matmulTiling.Ka;
+    uint64_t batchC = tilingData.params.batchC;
+#endif
+    if ASCEND_IS_AIV {
+        QbmmInt4ToInt8Preprocess preprocessOp;
+        preprocessOp.Init(x1, x2, user1, tPipe, m, n, k, batchC);
+        preprocessOp.Process();
+        tPipe.Reset();
+    }
+    x1 = user1;
+    x2 = user1 + DequantBmm::Align(batchC * m * k * sizeof(int8_t), ALIGN_SIZE_128);
+    SyncAll<false>();
+#endif
 
 #if (ORIG_DTYPE_SCALE == DT_FLOAT || ORIG_DTYPE_SCALE == DT_BF16)
     if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE) {         // Bias Mode = 0;

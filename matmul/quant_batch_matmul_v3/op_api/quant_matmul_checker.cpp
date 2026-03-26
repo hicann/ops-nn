@@ -1250,7 +1250,7 @@ bool QuantMatmulChecker::CheckL0c2outOrL0c2ubPertensorPerchannel() const
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When out is INT32, x1 and x2 should be INT8.");
         return false;
     }
-    if (IsInt8Input(x1_, x2_)) {
+    if (IsInt8Input(x1_, x2_) || IsInt4Input(x1_, x2_)) {
         CHECK_RET(CheckL0c2outOrL0c2ubPertensorPerchannel4Int8Input(), false);
     } else if (IsHif8Input(x1_, x2_) || IsFp8Input(x1_, x2_)) {
         CHECK_RET(
@@ -1317,8 +1317,8 @@ FLOAT8. Actual x1 dtype: %s, x2 dtype: %s.",
 
 bool QuantMatmulChecker::CheckL0c2outOrL0c2ubPertoken() const
 {
-    CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X1_NAME, x1_, op::DataType::DT_INT8), false);
-    CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2_NAME, x2_, op::DataType::DT_INT8), false);
+    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X1_NAME, x1_, {op::DataType::DT_INT4, op::DataType::DT_INT8}), false);
+    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X2_NAME, x2_, {op::DataType::DT_INT4, op::DataType::DT_INT8}), false);
     CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, OUT_NAME, out_, PERTOKEN_OUT_TYPE_SUPPORT_LIST), false);
     CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X1SCALE_NAME, x1Scale_, op::DataType::DT_FLOAT), false);
 
@@ -1382,11 +1382,6 @@ aclnnStatus QuantMatmulChecker::CheckDtypeL0c2outOrL0c2ub() const
     if (ge::GetPrimaryFormat(x2_->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ && !CheckDtype4WeightNz()) {
         return ACLNN_ERR_PARAM_INVALID;
     }
-    if (isA4W4_) {
-        OP_LOGE(ACLNN_ERR_RUNTIME_ERROR,
-                "QuantBatchMatmul support for %s is not implemented in a4w4 senario.",
-                op::ToString(socVersion_).GetString());
-    }
     if (outType_ == op::DataType::DT_INT32 && x1Scale_ != nullptr) { 
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,"The pertokenScaleOptional/x1Scale(pertokenScale) should be nullptr when out is INT32."); 
         return ACLNN_ERR_PARAM_INVALID; 
@@ -1395,7 +1390,7 @@ aclnnStatus QuantMatmulChecker::CheckDtypeL0c2outOrL0c2ub() const
         CHECK_RET(CheckL0c2outOrL0c2ubPertensorPerchannel(), ACLNN_ERR_PARAM_INVALID);
     } else if (IsMicroScaling(x1Scale_, x2Scale_)) { // micro scaling
         CHECK_RET(CheckMicroScaling(), ACLNN_ERR_PARAM_INVALID);
-    } else if (IsInt8Input(x1_, x2_)) { // pertoken
+    } else if (IsInt8Input(x1_, x2_) || IsInt4Input(x1_, x2_)) { // pertoken
         CHECK_RET(CheckL0c2outOrL0c2ubPertoken(), ACLNN_ERR_PARAM_INVALID);
     } else if (IsHif8Input(x1_, x2_) ||
                IsFp8Input(x1_, x2_)) {  // double scale, pertensor-perchannel, fp8/hif8 pertoken, perblock/pertile

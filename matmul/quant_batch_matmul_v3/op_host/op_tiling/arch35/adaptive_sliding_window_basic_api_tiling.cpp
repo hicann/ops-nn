@@ -71,7 +71,13 @@ ge::graphStatus AdaptiveSlidingWindowBasicAPITiling::GetShapeAttrsInfo()
 {
     inputParams_.Reset();
     tilingDataSize_ = sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
-    return QuantBatchMatmulV3TilingBase::GetShapeAttrsInfo();
+    auto ret = QuantBatchMatmulV3TilingBase::GetShapeAttrsInfo();
+    isSupportS4S4_ = inputParams_.aDtype == ge::DT_INT4 && inputParams_.bDtype == ge::DT_INT4 && !compileInfo_.supportMmadS8S4;
+    if (isSupportS4S4_) {
+        inputParams_.aDtype = ge::DT_INT8;
+        inputParams_.bDtype = ge::DT_INT8;
+    }
+    return ret;
 }
 
 bool AdaptiveSlidingWindowBasicAPITiling::IsCapable()

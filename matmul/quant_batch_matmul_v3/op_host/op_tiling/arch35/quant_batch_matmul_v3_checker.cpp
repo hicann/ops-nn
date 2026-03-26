@@ -47,6 +47,14 @@ inline constexpr bool IsFp4Pair(ge::DataType aDtype, ge::DataType bDtype)
 {
     return aDtype == ge::DT_FLOAT4_E2M1 && bDtype == ge::DT_FLOAT4_E2M1;
 }
+
+const std::vector<ge::DataType> AB_DTYPE_LIST = {
+    ge::DT_INT4,
+    ge::DT_INT8,
+    ge::DT_HIFLOAT8,
+    ge::DT_FLOAT8_E5M2,
+    ge::DT_FLOAT8_E4M3FN
+};
 }
 
 namespace optiling {
@@ -57,8 +65,16 @@ bool QuantBatchMatmulV3Checker::LogicXOR(bool cond1, bool cond2) const
     return static_cast<bool>(result);
 }
 
-bool QuantBatchMatmulV3Checker::CheckABDtypes() const
+bool QuantBatchMatmulV3Checker::CheckABDtypesSame() const
 {
+    OP_TILING_CHECK(
+        LogicXOR(inputParams_.aDtype == ge::DT_INT4, inputParams_.bDtype == ge::DT_INT4),
+        CUBE_INNER_ERR_REPORT(
+            inputParams_.opName,
+            "When one input dtype is INT4, then the other input dtype must be INT4, actual x1 is %s, x2 is %s.",
+            ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
+            ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
+        return false);
     OP_TILING_CHECK(
         LogicXOR(inputParams_.aDtype == ge::DT_INT8, inputParams_.bDtype == ge::DT_INT8),
         CUBE_INNER_ERR_REPORT(
@@ -92,15 +108,22 @@ bool QuantBatchMatmulV3Checker::CheckABDtypes() const
             ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
             ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
         return false);
+    return true;
+}
+
+bool QuantBatchMatmulV3Checker::CheckABDtypes() const
+{
+    if (!CheckABDtypesSame()) {
+        return false;
+    }
     if (context_->GetOptionalInputDesc(GetPertokenIdx()) == nullptr ||
         context_->GetOptionalInputShape(GetPertokenIdx()) == nullptr) {
-        OP_TILING_CHECK(!(inputParams_.aDtype == ge::DT_INT8 || inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN ||
-                            inputParams_.aDtype == ge::DT_FLOAT8_E5M2 || inputParams_.aDtype == ge::DT_HIFLOAT8) ||
-                            !(inputParams_.bDtype == ge::DT_INT8 || inputParams_.bDtype == ge::DT_FLOAT8_E4M3FN ||
-                                inputParams_.bDtype == ge::DT_FLOAT8_E5M2 || inputParams_.bDtype == ge::DT_HIFLOAT8),
+        OP_TILING_CHECK(
+            std::find(AB_DTYPE_LIST.begin(), AB_DTYPE_LIST.end(), inputParams_.aDtype) == AB_DTYPE_LIST.end() ||
+            std::find(AB_DTYPE_LIST.begin(), AB_DTYPE_LIST.end(), inputParams_.bDtype) == AB_DTYPE_LIST.end(),
                         CUBE_INNER_ERR_REPORT(
                             inputParams_.opName,
-                            "Input dtypes should be INT8/FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8, actual are %s and %s.",
+                            "Input dtypes should be INT4/INT8/FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8, actual are %s and %s.",
                             ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
                             ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
                         return false);
@@ -112,9 +135,10 @@ bool QuantBatchMatmulV3Checker::CheckScaleDtypeWithPertoken() const
 {
     bool isFp4 = inputParams_.aDtype == ge::DT_FLOAT4_E2M1;
     bool isFp8 = inputParams_.aDtype == ge::DT_FLOAT8_E5M2 || inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN;
-    OP_TILING_CHECK(inputParams_.aDtype != ge::DT_INT8 && inputParams_.perTokenScaleDtype != inputParams_.scaleDtype,
+    OP_TILING_CHECK(inputParams_.aDtype != ge::DT_INT4 && inputParams_.aDtype != ge::DT_INT8 &&
+                    inputParams_.perTokenScaleDtype != inputParams_.scaleDtype,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "When input is not INT8, pertokenScale and scale should have the same \
+                                          "When input is not INT4/INT8, pertokenScale and scale should have the same \
 dtypes, actual pertokeScale is %s and scale is %s.",
                                           ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str(),
                                           ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()),
@@ -140,17 +164,18 @@ dtypes, actual pertokeScale is %s and scale is %s.",
                         ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str()),
                     return false);
 
-    OP_TILING_CHECK(
-        inputParams_.aDtype == ge::DT_INT8 && inputParams_.cDtype == ge::DT_FLOAT16 && inputParams_.scaleDtype != ge::DT_FLOAT,
+    OP_TILING_CHECK((inputParams_.aDtype == ge::DT_INT4 || inputParams_.aDtype == ge::DT_INT8) &&
+                    inputParams_.cDtype == ge::DT_FLOAT16 && inputParams_.scaleDtype != ge::DT_FLOAT,
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "When input is INT8 and output is FLOAT16 with pertokenScale, scale dtype should be \
+                              "When input is INT4/INT8 and output is FLOAT16 with pertokenScale, scale dtype should be \
 FLOAT, actual dtype is %s.",
                               ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()),
         return false);
-    OP_TILING_CHECK(inputParams_.aDtype == ge::DT_INT8 && inputParams_.cDtype == ge::DT_BF16 &&
-                        !(inputParams_.scaleDtype == ge::DT_FLOAT || inputParams_.scaleDtype == ge::DT_BF16),
+    OP_TILING_CHECK((inputParams_.aDtype == ge::DT_INT4 || inputParams_.aDtype == ge::DT_INT8) &&
+                    inputParams_.cDtype == ge::DT_BF16 &&
+                    !(inputParams_.scaleDtype == ge::DT_FLOAT || inputParams_.scaleDtype == ge::DT_BF16),
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "When input is INT8 and output is BFLOAT16 with pertokenScale, scale dtype \
+                                          "When input is INT4/INT8 and output is BFLOAT16 with pertokenScale, scale dtype \
 should be FLOAT/BFLOAT16, actual dtype is %s.",
                                           ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()),
                     return false);
@@ -202,40 +227,44 @@ bool QuantBatchMatmulV3Checker::CheckBiasDtype() const
 {
     auto biasDesc = context_->GetOptionalInputDesc(GetBiasIdx());
     OP_TILING_CHECK(
-        biasDesc != nullptr && inputParams_.biasDtype != ge::DT_FLOAT && inputParams_.aDtype != ge::DT_INT8,
+        biasDesc != nullptr && inputParams_.biasDtype != ge::DT_FLOAT &&
+        inputParams_.aDtype != ge::DT_INT4 && inputParams_.aDtype != ge::DT_INT8,
         CUBE_INNER_ERR_REPORT(
             inputParams_.opName,
-            "When input dtype is not INT8, bias dtype should be FLOAT, actual dtype is %s.",
+            "When input dtype is not INT4/INT8, bias dtype should be FLOAT, actual dtype is %s.",
             ge::TypeUtils::DataTypeToSerialString(inputParams_.biasDtype).c_str()),
         return false);
 
     OP_TILING_CHECK(
-        biasDesc != nullptr && inputParams_.aDtype == ge::DT_INT8 &&
+        biasDesc != nullptr && (inputParams_.aDtype == ge::DT_INT4 || inputParams_.aDtype == ge::DT_INT8) &&
             (inputParams_.cDtype == ge::DT_INT8 || inputParams_.cDtype == ge::DT_FLOAT16 || inputParams_.cDtype == ge::DT_BF16) &&
             (inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64) &&
             inputParams_.biasDtype != ge::DT_INT32,
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "When input dtype is INT8, output is INT8/FLOAT16/BFLOAT16, and scale is UINT64/INT64, \
+                              "When input dtype is INT4/INT8, output is INT8/FLOAT16/BFLOAT16, and scale is UINT64/INT64, \
 the bias dtype should be INT32, actual dtype is %s.",
                               ge::TypeUtils::DataTypeToSerialString(inputParams_.biasDtype).c_str()),
         return false);
 
-    OP_TILING_CHECK(biasDesc != nullptr && inputParams_.aDtype == ge::DT_INT8 && inputParams_.cDtype == ge::DT_FLOAT16 &&
-                        inputParams_.scaleDtype == ge::DT_FLOAT &&
-                        !(inputParams_.biasDtype == ge::DT_INT32 || inputParams_.biasDtype == ge::DT_FLOAT ||
-                          inputParams_.biasDtype == ge::DT_FLOAT16),
+    OP_TILING_CHECK(biasDesc != nullptr && (inputParams_.aDtype == ge::DT_INT4 || inputParams_.aDtype == ge::DT_INT8) &&
+                    inputParams_.cDtype == ge::DT_FLOAT16 && inputParams_.scaleDtype == ge::DT_FLOAT &&
+                    !(inputParams_.biasDtype == ge::DT_INT32 ||
+                        inputParams_.biasDtype == ge::DT_FLOAT ||
+                        inputParams_.biasDtype == ge::DT_FLOAT16),
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "When input dtype is INT8, output is FLOAT16, and scale is FLOAT, bias dtype \
+                                          "When input dtype is INT4/INT8, output is FLOAT16, and scale is FLOAT, bias dtype \
 should be INT32/FLOAT/FLOAT16, actual dtype is %s.",
                                           ge::TypeUtils::DataTypeToSerialString(inputParams_.biasDtype).c_str()),
                     return false);
 
-    OP_TILING_CHECK(biasDesc != nullptr && inputParams_.aDtype == ge::DT_INT8 && inputParams_.cDtype == ge::DT_BF16 &&
-                        (inputParams_.scaleDtype == ge::DT_FLOAT || inputParams_.scaleDtype == ge::DT_BF16) &&
-                        !(inputParams_.biasDtype == ge::DT_INT32 || inputParams_.biasDtype == ge::DT_FLOAT ||
-                          inputParams_.biasDtype == ge::DT_BF16),
+    OP_TILING_CHECK(biasDesc != nullptr && (inputParams_.aDtype == ge::DT_INT4 || inputParams_.aDtype == ge::DT_INT8) &&
+                    inputParams_.cDtype == ge::DT_BF16 &&
+                    (inputParams_.scaleDtype == ge::DT_FLOAT || inputParams_.scaleDtype == ge::DT_BF16) &&
+                    !(inputParams_.biasDtype == ge::DT_INT32 ||
+                        inputParams_.biasDtype == ge::DT_FLOAT ||
+                        inputParams_.biasDtype == ge::DT_BF16),
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "When input dtype is INT8, output is BFLOAT16, and scale is FLOAT/BFLOAT16, \
+                                          "When input dtype is INT4/INT8, output is BFLOAT16, and scale is FLOAT/BFLOAT16, \
 bias dtype should be INT32/FLOAT/BFLOAT16, actual dtype is %s.",
                                           ge::TypeUtils::DataTypeToSerialString(inputParams_.biasDtype).c_str()),
                     return false);
@@ -253,10 +282,14 @@ bool QuantBatchMatmulV3Checker::CheckOutputDtype() const
                                 "When input dtype is FLOAT8/FLOAT4, output dtype must not be INT8, actual is %s.",
                                 ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
         return false);
-    OP_TILING_CHECK(inputParams_.aDtype == ge::DT_HIFLOAT8 &&
-                        (inputParams_.cDtype == ge::DT_INT8),
+    OP_TILING_CHECK(inputParams_.aDtype == ge::DT_HIFLOAT8 && inputParams_.cDtype == ge::DT_INT8,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
                                             "When input dtype is HIFLOAT8, output must not be INT8, actual is %s.",
+                                            ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
+                    return false);
+    OP_TILING_CHECK(inputParams_.aDtype == ge::DT_INT4 && inputParams_.cDtype == ge::DT_INT32,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                            "When input dtype is INT4, output must not be INT32, actual is %s.",
                                             ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
                     return false);
     bool isFp4 = inputParams_.aDtype == ge::DT_FLOAT4_E2M1;
@@ -276,7 +309,7 @@ bool QuantBatchMatmulV3Checker::CheckOutputDtype() const
             !(isFp8 || isFp4) && !(inputParams_.cDtype == ge::DT_FLOAT16 || inputParams_.cDtype == ge::DT_BF16),
             CUBE_INNER_ERR_REPORT(
                 inputParams_.opName,
-                "When input is INT8 with pertokenScale, output dtype should be FLOAT16/BFLOAT16 actual is %s.",
+                "When input is INT4/INT8 with pertokenScale, output dtype should be FLOAT16/BFLOAT16 actual is %s.",
                 ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
             return false);
         OP_TILING_CHECK(
@@ -293,21 +326,21 @@ bool QuantBatchMatmulV3Checker::CheckOutputDtype() const
 bool QuantBatchMatmulV3Checker::CheckDtypesInRange() const
 {
     static const std::vector<ge::DataType> legalInputDtypes = {
-        ge::DT_INT8, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_HIFLOAT8, ge::DT_FLOAT4_E2M1};
+        ge::DT_INT4, ge::DT_INT8, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_HIFLOAT8, ge::DT_FLOAT4_E2M1};
     static const std::vector<ge::DataType> legalOutputDtypes = {ge::DT_INT8,          ge::DT_FLOAT16,  ge::DT_BF16,
                                                                 ge::DT_FLOAT, ge::DT_INT32};
     OP_TILING_CHECK(
         std::find(legalInputDtypes.begin(), legalInputDtypes.end(), inputParams_.aDtype) == legalInputDtypes.end(),
         CUBE_INNER_ERR_REPORT(
             inputParams_.opName,
-            "The x1 dtype must be INT8/FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8/FLOAT4_E2M1, actual is %s.",
+            "The x1 dtype must be INT4/INT8/FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8/FLOAT4_E2M1, actual is %s.",
             ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str()),
         return false);
     OP_TILING_CHECK(
         std::find(legalInputDtypes.begin(), legalInputDtypes.end(), inputParams_.bDtype) == legalInputDtypes.end(),
         CUBE_INNER_ERR_REPORT(
             inputParams_.opName,
-            "The x2 dtype must be INT8/FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8/FLOAT4_E2M1, actual is %s.",
+            "The x2 dtype must be INT4/INT8/FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8/FLOAT4_E2M1, actual is %s.",
             ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
         return false);
     OP_TILING_CHECK(

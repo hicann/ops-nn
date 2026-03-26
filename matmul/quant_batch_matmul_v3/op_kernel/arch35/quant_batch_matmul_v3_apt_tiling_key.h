@@ -17,6 +17,19 @@
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
+#if defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(DT_INT4) && \
+    ORIG_DTYPE_X1 == DT_INT4 && ORIG_DTYPE_X2 == DT_INT4
+#define IS_A4W4I
+#undef DTYPE_X1
+#undef DTYPE_X2
+#undef ORIG_DTYPE_X1
+#undef ORIG_DTYPE_X2
+#define DTYPE_X1 int8_t
+#define DTYPE_X2 int8_t
+#define ORIG_DTYPE_X1 DT_INT8
+#define ORIG_DTYPE_X2 DT_INT8
+#endif
+
 namespace QuantBatchMatmulV3Arch35TilingKey {
 
 #if (defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_SCALE))
@@ -92,7 +105,11 @@ ASCENDC_TPL_SEL(
             TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOBL1_WITH_MMAPI)),
 #endif
     ASCENDC_TPL_ARGS_SEL(       // kernel type {0, 1} * ATRANS {0, 1} * BTRANS {0, 1}
+#ifdef IS_A4W4I
+        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
+#else
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),
+#endif
         ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BIASMODE, ASCENDC_TPL_UI_LIST, TPL_EXCLUDE_FROM_TEMPLATE),

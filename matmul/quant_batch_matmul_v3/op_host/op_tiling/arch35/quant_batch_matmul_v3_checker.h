@@ -68,6 +68,7 @@ protected:
     bool CheckKAxisGreaterThanTwo() const;
     bool CheckInnerAxisIsEven(const std::vector<int64_t> &dimValueOfMKN) const;
     bool CheckMXFP4Constraints(const std::vector<int64_t> &dimValueOfMKN) const;
+    bool CheckABDtypesSame() const;
 };
 }  // namespace optiling
 #endif  // QUANT_BATCH_MATMUL_V3_CHECKER_H

@@ -170,7 +170,13 @@ ge::graphStatus AdaptiveSlidingWindowTiling::GetShapeAttrsInfo()
 {
     inputParams_.Reset();
     tilingDataSize_ = sizeof(DequantBmm::QuantBatchMatmulV3TilingDataParams);
-    return QuantBatchMatmulV3TilingBase::GetShapeAttrsInfo();
+    auto ret = QuantBatchMatmulV3TilingBase::GetShapeAttrsInfo();
+    isSupportS4S4_ = inputParams_.aDtype == ge::DT_INT4 && inputParams_.bDtype == ge::DT_INT4 && !compileInfo_.supportMmadS8S4;
+    if (isSupportS4S4_) {
+        inputParams_.aDtype = ge::DT_INT8;
+        inputParams_.bDtype = ge::DT_INT8;
+    }
+    return ret;
 }
 
 bool AdaptiveSlidingWindowTiling::CheckCoreNum() const
@@ -179,7 +185,7 @@ bool AdaptiveSlidingWindowTiling::CheckCoreNum() const
     auto aivNum = compileInfo_.aivNum;
     bool isScaleVecPostProcess = inputParams_.isPerChannel &&
                                  !(inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64);
-    if ((isScaleVecPostProcess || inputParams_.isPertoken || isBf16Mix_ || inputParams_.isPerBlock) && aivNum != CORE_RATIO * aicNum) {
+    if ((isScaleVecPostProcess || inputParams_.isPertoken || isBf16Mix_ || inputParams_.isPerBlock || isSupportS4S4_) && aivNum != CORE_RATIO * aicNum) {
         OP_LOGE(inputParams_.opName, "For mix template, aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.", aicNum, aivNum);
         return false;
     }
@@ -250,6 +256,12 @@ uint64_t AdaptiveSlidingWindowTiling::GetTilingKey() const
 ge::graphStatus AdaptiveSlidingWindowTiling::GetWorkspaceSize()
 {
     workspaceSize_ = inputParams_.libApiWorkSpaceSize;
+    if (isSupportS4S4_) {
+        uint64_t aInt8Size = inputParams_.batchC * inputParams_.mSize * inputParams_.kSize;
+        uint64_t bInt8Size = inputParams_.kSize * inputParams_.nSize;
+        uint64_t convertWorkspaceSize = ops::CeilAlign(aInt8Size, (uint64_t)BASIC_BLOCK_SIZE_128) + ops::CeilAlign(bInt8Size, (uint64_t)BASIC_BLOCK_SIZE_128);
+        workspaceSize_ += convertWorkspaceSize;
+    }
     return ge::GRAPH_SUCCESS;
 }
 

@@ -224,7 +224,7 @@ aclnnStatus aclnnQuantMatmulV3(
     - x1和x2为INT32、INT4时，transposeX1仅支持false
     - out支持FLOAT16、INT8、BFLOAT16、INT32
   - <term>Ascend 950PR/Ascend 950DT</term>：
-    - x1、x2支持INT8
+    - x1、x2支持INT8、INT4
     - scale数据类型支持UINT64、INT64、FLOAT32、BFLOAT16
     - scale支持INT32、BFLOAT16、FLOAT32
     - out支持FLOAT16、INT8、BFLOAT16、INT32
@@ -363,6 +363,7 @@ aclnnStatus aclnnQuantMatmulV3(
   | INT8 | INT8 | UINT64/INT64 | null/FLOAT32 | null/INT32  |  INT8 |
   | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32/BFLOAT16/FLOAT32  |  BFLOAT16 |
   | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32  | INT32 |
+  | INT4 | INT4 | UINT64/INT64 | null | null/INT32  | FLOAT16 |
 
 ## 调用示例
 

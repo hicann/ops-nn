@@ -272,7 +272,7 @@ aclnnStatus aclnnQuantMatmulV5(
             <li>仅最后m和k轴转置情况下支持<a href="../../../docs/zh/context/非连续的Tensor.md">非连续的Tensor</a>，其他轴方向不支持非连续的Tensor。</li>
           </ul>
         </td>
-        <td>INT4<sup>1</sup>、INT8、INT32<sup>1</sup>、FLOAT8_E4M3FN<sup>2</sup>、FLOAT8_E5M2<sup>2</sup>、HIFLOAT8<sup>2</sup>、FLOAT4_E2M1<sup>2</sup></td>
+        <td>INT4、INT8、INT32<sup>1</sup>、FLOAT8_E4M3FN<sup>2</sup>、FLOAT8_E5M2<sup>2</sup>、HIFLOAT8<sup>2</sup>、FLOAT4_E2M1<sup>2</sup></td>
         <td>ND</td>
         <td>2-6</td>
         <td>✓</td>
@@ -289,7 +289,7 @@ aclnnStatus aclnnQuantMatmulV5(
             <li>ND格式下支持最后两根轴转置情况下的非连续tensor，其他场景的<a href="../../../docs/zh/context/非连续的Tensor.md">非连续的Tensor</a>不支持。</li>
           </ul>
         </td>
-        <td>INT4<sup>1</sup>、INT8、INT32<sup>1</sup>、FLOAT8_E4M3FN<sup>2</sup>、FLOAT8_E5M2<sup>2</sup>、HIFLOAT8<sup>2</sup>、FLOAT4_E2M1<sup>2</sup></td>
+        <td>INT4、INT8、INT32<sup>1</sup>、FLOAT8_E4M3FN<sup>2</sup>、FLOAT8_E5M2<sup>2</sup>、HIFLOAT8<sup>2</sup>、FLOAT4_E2M1<sup>2</sup></td>
         <td>ND、NZ</td>
         <td>2-6（ND）<br>4-8（NZ）</td>
         <td>✓</td>
@@ -462,7 +462,7 @@ aclnnStatus aclnnQuantMatmulV5(
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
     - 上表数据类型列中的角标“1”代表该系列不支持的数据类型。
-    - 输入参数x1、x2均不支持INT4、INT32类型。
+    - 输入参数x1、x2均不支持INT32类型。
     - x2为ND格式时，当输入参数x1为m=0的空tensor或x2为n=0的空tensor时，输出为空tensor；x2为FRACTAL_NZ格式时，当输入参数x1中m=0的空tensor时，输出为空tensor。
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
@@ -782,6 +782,7 @@ aclnnStatus aclnnQuantMatmulV5(
       | HIFLOAT8                  | HIFLOAT8                  | null        | UINT64/ INT64      | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/ FLOAT32      |
       | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT32     |   FLOAT32           | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/  FLOAT32               |
       | HIFLOAT8                  | HIFLOAT8                  | FLOAT32     | FLOAT32           | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
+      | INT4                  | INT4                  | null     | UINT64/INT64           | null     | null     | null/INT32 | FLOAT16               |
 
     - T-T量化场景下，x1Scale的shape为(1,)或nullptr，x2Scale的shape为(1,)。
     - T-C量化场景下，x1Scale的shape为(1,)或nullptr，x2Scale的shape为(n,)，其中n与x2的n一致。
@@ -801,6 +802,8 @@ aclnnStatus aclnnQuantMatmulV5(
       | ------------------------- | ------------------------- | ----------- | ----------- | -------- | -------|   ------- | -------------------------------------- |
       | INT8                      | INT8                      | FLOAT32| FLOAT32/BFLOAT16  | null     | null     |  null/INT32/FLOAT32/BFLOAT16   | BFLOAT16              |
       | INT8                      | INT8                      | FLOAT32     | FLOAT32           | null     |  null     | null/INT32/FLOAT32/FLOAT16  | FLOAT16                 |
+      | INT4                      | INT4                      | FLOAT32| FLOAT32/BFLOAT16  | null     | null     |  null/INT32/FLOAT32/BFLOAT16   | BFLOAT16              |
+      | INT4                      | INT4                      | FLOAT32     | FLOAT32           | null     |  null     | null/INT32/FLOAT32/FLOAT16  | FLOAT16                 |
       | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT32     | FLOAT32           | null     |  null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
       | HIFLOAT8                  | HIFLOAT8                  | FLOAT32     | FLOAT32           | null     |  null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
 

@@ -300,8 +300,8 @@ aclnnStatus aclnnQuantMatmulV4(
     - x1和x2为INT32、INT4时，transposeX1仅支持false。
     - out数据类型支持FLOAT16、INT8、BFLOAT16、INT32。
   - <term>Ascend 950PR/Ascend 950DT</term>：
-	- x1数据类型支持INT8。
-    - x2数据类型支持INT8，当最后两根轴其中一根轴为1（即n=1或k=1）时，x2不支持私有格式，仅支持ND格式。
+	- x1数据类型支持INT8、INT4。
+    - x2数据类型支持INT8、INT4，当最后两根轴其中一根轴为1（即n=1或k=1）时，x2不支持私有格式，仅支持ND格式。
     - bias数据类型支持INT32，BFLOAT16，FLOAT16，FLOAT32。
     - out数据类型支持FLOAT16、INT8、BFLOAT16、INT32。
     - x2为ND格式时，当输入x1为m=0的空tensor或x2为n=0的空tensor时，输出为空tensor；x2为FRACTAL_NZ格式时，当输入x1中m=0的空tensor时，输出为空tensor。
@@ -428,6 +428,9 @@ aclnnStatus aclnnQuantMatmulV4(
   | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32/FLOAT32/BFLOAT16 | null/FLOAT32 | BFLOAT16 |
   | INT8 | INT8 | FLOAT32 | null | null/INT32/FLOAT32/FLOAT16 | FLOAT32 | FLOAT16 |
   | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32 | null | INT32 |
+  | INT4 | INT4 | UINT64/INT64 | null | null/INT32 | null | FLOAT16 |
+  | INT4 | INT4 | FLOAT32/BFLOAT16 | null | null/INT32/FLOAT32/BFLOAT16 | FLOAT32 | BFLOAT16 |
+  | INT4 | INT4 | FLOAT32 | null | null/INT32/FLOAT32/FLOAT16 | FLOAT32 | FLOAT16 |
 
 ## 调用示例
 

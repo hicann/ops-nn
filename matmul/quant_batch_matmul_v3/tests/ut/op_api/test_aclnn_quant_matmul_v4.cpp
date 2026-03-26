@@ -1505,3 +1505,120 @@ TEST_F(l2_QuantBatchMatmulV4_test, ascend910B2_test_case_75)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
+
+TEST_F(l2_QuantBatchMatmulV4_test, ascend950_A4W4_test_case_01)
+{
+    // A4W4 pertoken_scale out: fp16, bias: fp16, transposeX2: false
+    TensorDesc x1_desc = TensorDesc({64, 8}, ACL_INT4, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({8, 14}, ACL_INT4, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc scale_desc = TensorDesc({14}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc pertoken_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-5, 5);
+    TensorDesc bias_desc = TensorDesc({14}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({64, 14}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulV4, INPUT(x1_desc, x2_desc, scale_desc, nullptr,
+                        pertoken_desc, bias_desc, false, false),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_QuantBatchMatmulV4_test, ascend950_A4W4_test_case_02)
+{
+    // A4W4 pertoken_scale out: fp16, bias: fp16, transposeX2: true
+    TensorDesc x1_desc = TensorDesc({64, 8}, ACL_INT4, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({14, 8}, ACL_INT4, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc scale_desc = TensorDesc({14}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc pertoken_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-5, 5);
+    TensorDesc bias_desc = TensorDesc({14}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({64, 14}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulV4, INPUT(x1_desc, x2_desc, scale_desc, nullptr,
+                        pertoken_desc, bias_desc, false, true),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_QuantBatchMatmulV4_test, ascend950_A4W4_test_case_03)
+{
+    // A4W4 pertoken_scale out: bf16, bias: bf16, transposeX2: false
+    TensorDesc x1_desc = TensorDesc({64, 8}, ACL_INT4, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({8, 14}, ACL_INT4, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc scale_desc = TensorDesc({14}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc pertoken_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-5, 5);
+    TensorDesc bias_desc = TensorDesc({14}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({64, 14}, ACL_BF16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulV4, INPUT(x1_desc, x2_desc, scale_desc, nullptr,
+                        pertoken_desc, bias_desc, false, false),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_QuantBatchMatmulV4_test, ascend950_A4W4_test_case_04)
+{
+    // A4W4 pertoken_scale out: bf16, bias: bf16, transposeX2: true
+    TensorDesc x1_desc = TensorDesc({64, 8}, ACL_INT4, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({14, 8}, ACL_INT4, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc scale_desc = TensorDesc({14}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc pertoken_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-5, 5);
+    TensorDesc bias_desc = TensorDesc({14}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({64, 14}, ACL_BF16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulV4, INPUT(x1_desc, x2_desc, scale_desc, nullptr,
+                        pertoken_desc, bias_desc, false, true),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_QuantBatchMatmulV4_test, ascend950_A4W4_test_case_05)
+{
+    // A4W4 perchannel out: int32, bias: int32, transposeX2: false
+    TensorDesc x1_desc = TensorDesc({64, 8}, ACL_INT4, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({8, 14}, ACL_INT4, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc scale_desc = TensorDesc({14}, ACL_INT64, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({14}, ACL_INT32, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({64, 14}, ACL_INT32, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulV4, INPUT(x1_desc, x2_desc, scale_desc, nullptr,
+                        nullptr, bias_desc, false, false),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_QuantBatchMatmulV4_test, ascend950_A4W4_test_case_06)
+{
+    // A4W4 pertoken_scale out: int32, bias: fp16, transposeX2: false
+    TensorDesc x1_desc = TensorDesc({64, 8}, ACL_INT4, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({8, 14}, ACL_INT4, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc scale_desc = TensorDesc({14}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc pertoken_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-5, 5);
+    TensorDesc bias_desc = TensorDesc({14}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({64, 14}, ACL_INT32, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulV4, INPUT(x1_desc, x2_desc, scale_desc, nullptr,
+                        pertoken_desc, bias_desc, false, false),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_QuantBatchMatmulV4_test, ascend950_A4W4_test_case_07)
+{
+    // A4W4 perchannel out: int32, bias: int32, transposeX2: false
+    TensorDesc x1_desc = TensorDesc({2, 64, 8}, ACL_INT4, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({8, 14}, ACL_INT4, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc scale_desc = TensorDesc({14}, ACL_INT64, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({14}, ACL_INT32, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({2, 64, 14}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulV4, INPUT(x1_desc, x2_desc, scale_desc, nullptr,
+                        nullptr, bias_desc, false, false),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}

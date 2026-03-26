@@ -1253,9 +1253,10 @@ static aclnnStatus CheckSupportSocVersion(bool isA4W4) {
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
     NpuArch npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if (isA4W4) {
-        // a4w4 support 910B 910_93，其余暂不支持
+        // a4w4 support 910B 910_93 950，其余暂不支持
         switch (npuArch) {
             case NpuArch::DAV_2201:
+            case NpuArch::DAV_3510:
                 break;
             default: {
                 OP_LOGE(ACLNN_ERR_RUNTIME_ERROR,
