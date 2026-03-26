@@ -79,6 +79,8 @@ bool AdaptiveSlidingWindowBasicAPITiling::IsCapable()
     bool isMxfp8 = (inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams_.aDtype == ge::DT_FLOAT8_E5M2) &&
                    (inputParams_.bDtype == ge::DT_FLOAT8_E4M3FN || inputParams_.bDtype == ge::DT_FLOAT8_E5M2) &&
                    inputParams_.isMxPerGroup;
+    bool isMxfp4 = inputParams_.isMxPerGroup && inputParams_.aDtype == ge::DT_FLOAT4_E2M1 &&
+                   inputParams_.bDtype == ge::DT_FLOAT4_E2M1;
     bool isCubePerTensor =
         inputParams_.isPerTensor &&
         ((inputParams_.aDtype == ge::DT_INT8 && inputParams_.biasDtype == ge::DT_INT32 && !inputParams_.isPertoken) ||
@@ -91,7 +93,7 @@ bool AdaptiveSlidingWindowBasicAPITiling::IsCapable()
     return (((inputParams_.isDoubleScale && !inputParams_.isPerChannel) || isCubePerTensor || isCubePerChannel ||
              inputParams_.isPerBlock) &&
             inputParams_.bFormat == ge::FORMAT_ND) ||
-           isMxfp8;
+           isMxfp8 || isMxfp4;
 }
 
 uint64_t AdaptiveSlidingWindowBasicAPITiling::GetBatchCoreCnt() const

@@ -46,7 +46,8 @@ protected:
                                      size_t pertokenShapeLen, size_t scaleShapeLen) const;
     bool CheckBatchValidInPerblockMode(const gert::Shape& scaleShape, const gert::Shape& pertoken,
                                        const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
-    bool CheckInputValidInMxPerGroupMode(const gert::Shape& scaleShape, const gert::StorageShape *pertokenShape,
+    bool CheckInputValidInMxPerGroupMode(const gert::Shape& weightShape,
+                                         const gert::Shape& scaleShape, const gert::StorageShape *pertokenShape,
                                          const std::vector<int64_t> &dimValueOfMKN) const;
     bool CheckShapeValidInPerblockMode(const gert::Shape& scaleShape,
                                        const gert::Shape& pertoken, const gert::Shape& x1Shape,
@@ -64,6 +65,9 @@ protected:
                         const gert::StorageShape *pertokenShape) const;
     bool ExtraInputCheck() const;
     bool LogicXOR(bool cond1, bool cond2) const;
+    bool CheckKAxisGreaterThanTwo() const;
+    bool CheckInnerAxisIsEven(const std::vector<int64_t> &dimValueOfMKN) const;
+    bool CheckMXFP4Constraints(const std::vector<int64_t> &dimValueOfMKN) const;
 };
 }  // namespace optiling
 #endif  // QUANT_BATCH_MATMUL_V3_CHECKER_H

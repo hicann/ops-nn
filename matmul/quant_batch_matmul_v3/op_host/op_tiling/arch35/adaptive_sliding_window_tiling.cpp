@@ -786,8 +786,7 @@ void AdaptiveSlidingWindowTiling::CalStepKs()
     if (basicTiling_.stepKb > basicTiling_.stepKa) {
         basicTiling_.stepKb = basicTiling_.stepKb / basicTiling_.stepKa * basicTiling_.stepKa;
     }
-    if (inputParams_.isPerBlock || (inputParams_.isMxPerGroup && (inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN ||
-                                                                  inputParams_.aDtype == ge::DT_FLOAT8_E5M2))) {
+    if (inputParams_.isPerBlock || inputParams_.isMxPerGroup) {
         basicTiling_.stepKa =
             std::min(basicTiling_.stepKa, static_cast<uint32_t>(4)); // 限制stepKa最大为4, 防止issue queue阻塞
         basicTiling_.stepKb =

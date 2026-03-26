@@ -707,7 +707,8 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
         }
 
         bool isMxfp8 = quantMode == 2 && (x1Dtype == ge::DT_FLOAT8_E4M3FN || x1Dtype == ge::DT_FLOAT8_E5M2) && (x2Dtype == ge::DT_FLOAT8_E4M3FN || x2Dtype == ge::DT_FLOAT8_E5M2);
-        if ((quantMode == 3 || quantMode == 4 || isMxfp8 || (quantMode == 0 && !pertokenFlag) || (quantMode == 1 && (scaleDtype == ge::DT_UINT64 || yDtype == ge::DT_INT32))) && !weightNz) {
+        bool isMxfp4 = quantMode == 2 && x1Dtype == ge::DT_FLOAT4_E2M1 && x2Dtype == ge::DT_FLOAT4_E2M1;
+        if ((quantMode == 3 || quantMode == 4 || isMxfp8 || isMxfp4 || (quantMode == 0 && !pertokenFlag) || (quantMode == 1 && (scaleDtype == ge::DT_UINT64 || yDtype == ge::DT_INT32))) && !weightNz) {
             DequantBmm::QuantBatchMatmulV3BasicAPITilingData& actualTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(tilingContext->GetRawTilingData()->GetData());
             DequantBmm::QuantBatchMatmulV3BasicAPITilingData& expectTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(tilingDataInt.data());
             // biasFlag 为0时，biasDtype在kernel侧不使用，忽略校验
