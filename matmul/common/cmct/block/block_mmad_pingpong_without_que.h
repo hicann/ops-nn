@@ -92,6 +92,7 @@ public:
     constexpr static int32_t C0_SIZE = AscendC::AuxGetC0Size<typename AType::T>();
     constexpr static int32_t BIAS_C0 = AscendC::AuxGetC0Size<typename BiasType::T>();
     constexpr static uint64_t halfL0Size_ = L0AUF_SIZE / BUFFER_NUM / sizeof(A_T);
+    constexpr static uint64_t HALF_L1_SIZE = AscendC::TOTAL_L1_SIZE / DOUBLE_BUFFER_COUNT / sizeof(A_T);
     // Set unitflag state: 3 = final accumulation, 2 = non-final accumulation
     constexpr static uint32_t FINAL_ACCUMULATION = 3;
     constexpr static uint32_t NON_FINAL_ACCUMULATION = 2;
@@ -155,18 +156,12 @@ public:
         l1BufNum_ = l1BufNum;
         enableL0cPingPong_ = l0cDB;
         // init tensor
-        if (isBias_) {
-            // l1Loca以A_T为单位
-            biasL1Offset_ = nL1_ * sizeof(Bias_T) / sizeof(A_T) * l1BufNum_;
-        }
         if constexpr (FULL_LOAD_MODE_ == A_FULL_LOAD_MODE) {
             // A全载
             aL1OneBuffer_ = mL1_ * kAlign_;
-            bL1Init_ = biasL1Offset_ + aL1OneBuffer_;
         } else {
             // 非全载和B全载
             aL1OneBuffer_ = mL1_ * kL1_;
-            bL1Init_ = biasL1Offset_ + aL1OneBuffer_ * l1BufNum_;
         }
         // 当前B全载后续未用到bL1OneBuffer_
         if constexpr (FULL_LOAD_MODE_ == B_FULL_LOAD_MODE) {
@@ -279,20 +274,24 @@ public:
     // 重载函数，适用于A全载场景
     __aicore__ inline void CopyInA1(const AscendC::GlobalTensor<B_T> &aGlobal, uint64_t curML1, uint64_t curKL1)
     {
-        CopyInA1(aGlobal, l1Local_[biasL1Offset_], curML1, curKL1);
+        // A全载-AL1搬入偏移位置：*AL1*-BL1Ping-BL1Pong-BiasPing-BiasPong
+        CopyInA1(aGlobal, l1Local_, curML1, curKL1);
     }
 
     // 重载函数，适用于B全载场景
     template <CubeFormat LayoutB = CubeFormat::ND>
     __aicore__ inline void CopyInB1(const AscendC::GlobalTensor<B_T>& bGlobal, uint64_t curNL1, uint64_t curKL1)
     {
-        CopyInB1<LayoutB>(bGlobal, l1Local_[bL1Init_], curNL1, curKL1);
+        // B全载-BL1搬入偏移位置：AL1Ping-AL1Pong-*BL1*-Bias
+        CopyInB1<LayoutB>(bGlobal, l1Local_[aL1OneBuffer_ * l1BufNum_], curNL1, curKL1);
     }
 
     __aicore__ inline void CopyInC1(const AscendC::GlobalTensor<Bias_T> &biasGlobal, uint64_t curNL1)
     {
         if (isBias_) {
-            AscendC::LocalTensor<Bias_T> biasL1Local = l1Local_.template ReinterpretCast<Bias_T>();
+            // B全载-Bias搬入偏移位置：AL1Ping-AL1Pong-BL1-*Bias*
+            AscendC::LocalTensor<Bias_T> biasL1Local =
+                l1Local_[aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_].template ReinterpretCast<Bias_T>();
             CopyInC1(biasGlobal, biasL1Local, curNL1);
         }
     }
@@ -581,7 +580,7 @@ public:
         mmadParams.m = curML0;
         mmadParams.n = curNL0;
         mmadParams.disableGemv = true;
-        AscendC::LocalTensor<Bias_T> biasL1LocalInit = l1Local_.template ReinterpretCast<Bias_T>();
+        AscendC::LocalTensor<Bias_T> biasL1LocalInit;
         AscendC::LocalTensor<B_T> bl1Local;
         uint64_t kl1Offset = 0;
         uint64_t l0cOffset = (l0cPingPong_ & 0x1) * HALF_L0C_SIZE;
@@ -600,24 +599,41 @@ public:
             // A搬运数据到L1，开启4buffer
             uint64_t l1BufId = abL1LoopCnt_ & (l1BufNum_ - 1);
             uint64_t offsetA = AType::isTrans ? kL1OffsetLength * m_ : kL1OffsetLength;
-            uint64_t offsetAl1 = biasL1Offset_ + aL1OneBuffer_ * l1BufId;
+            // 普通模板-2buffer-AL1搬入偏移位置：*AL1Ping*-BL1Ping-BiasPing|*AL1Pong*-BL1Pong-BiasPong
+            // 普通模板-4buffer-AL1搬入偏移位置: *AL1Ping-AL1Pong*-BL1Ping-BL1Pong-BiasPing-BiasPong
+            uint64_t offsetAl1 = (DispatchPolicy::fullLoadMode == 0 && l1BufNum_ == DOUBLE_BUFFER_COUNT) ?
+                                 (HALF_L1_SIZE * l1BufId) : aL1OneBuffer_ * l1BufId;
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(l1BufId);
             uint64_t biasBufId = abL1LoopCnt_ & 0x1;
 
             CopyInA1(aGlobal[offsetA], l1Local_[offsetAl1], curML1, curKL1);
             if constexpr (DispatchPolicy::fullLoadMode == 0) {
                 if (isBias_ && iter0 == 0) {
-                    biasL1Local = biasL1LocalInit[nL1_ * l1BufId];
+                    // 普通模板-2buffer-Bias搬入偏移位置：AL1Ping-BL1Ping-*BiasPing*|AL1Pong-BL1Pong-*BiasPong*
+                    // 普通模板-4buffer-Bias搬入偏移位置: AL1Ping-AL1Pong-BL1Ping-BL1Pong-*BiasPing-BiasPong*
+                    biasL1LocalInit = l1Local_[(l1BufNum_ == DOUBLE_BUFFER_COUNT) ?
+                        HALF_L1_SIZE * l1BufId + aL1OneBuffer_ + bL1OneBuffer_ :
+                        aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_ * l1BufNum_].template ReinterpretCast<Bias_T>();
+                    biasL1Local = biasL1LocalInit[(l1BufNum_ == DOUBLE_BUFFER_COUNT) ? 0 : nL1_ * l1BufId];
                     CopyInC1(biasGlobal, biasL1Local, curNL1);
                 }
                 // B搬运数据到L1，开启4buffer
-                bl1Local = l1Local_[bL1Init_ + bL1OneBuffer_ * l1BufId];
+                // 普通模板-2buffer-BL1搬入偏移位置：AL1Ping-*BL1Ping*-BiasPing|AL1Pong-*BL1Pong*-BiasPong
+                // 普通模板-4buffer-BL1搬入偏移位置: AL1Ping-AL1Pong-*BL1Ping-BL1Pong*-BiasPing-BiasPong
+                uint64_t offsetBl1 = (l1BufNum_ == DOUBLE_BUFFER_COUNT) ?
+                                     (HALF_L1_SIZE * l1BufId + aL1OneBuffer_) :
+                                     (aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_ * l1BufId);
+                bl1Local = l1Local_[offsetBl1];
                 uint64_t offsetB = BType::isTrans ? kL1OffsetLength : kL1OffsetLength * n_;
                 CopyInB1(bGlobal[offsetB], bl1Local, curNL1, curKL1);
                 kbL1Size = curKL1;
             } else {
-                bl1Local = l1Local_[bL1Init_];
+                // B全载-BL1搬入偏移位置：AL1Ping-AL1Pong-*BL1*-Bias
+                bl1Local = l1Local_[aL1OneBuffer_ * l1BufNum_];
                 kl1Offset = kL1OffsetLength;
+                // B全载-Bias搬入偏移位置：AL1Ping-AL1Pong-BL1-*Bias*
+                biasL1LocalInit =
+                    l1Local_[aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_].template ReinterpretCast<Bias_T>();
                 biasL1Local = biasL1LocalInit[nL1Offset];
                 kbL1Size = kAlign_;
             }
@@ -699,7 +715,7 @@ public:
         mmadParams.m = curML0;
         mmadParams.n = curNL0;
         mmadParams.disableGemv = true;
-        AscendC::LocalTensor<Bias_T> biasL1LocalInit = l1Local_.template ReinterpretCast<Bias_T>();
+        AscendC::LocalTensor<Bias_T> biasL1LocalInit;
         AscendC::LocalTensor<B_T> bl1Local;
         uint64_t kl1Offset = 0;
         uint64_t l0cOffset = (l0cPingPong_ & 0x1) * HALF_L0C_SIZE;
@@ -730,18 +746,32 @@ public:
             // A搬运数据到L1，开启4buffer
             uint64_t l1BufId = abL1LoopCnt_ & (l1BufNum_ - 1);
             uint64_t offsetA = AType::isTrans ? kL1OffsetLength * m_ : kL1OffsetLength;
-            uint64_t offsetAl1 = biasL1Offset_ + aL1OneBuffer_ * l1BufId;
+            // 普通模板-2buffer-AL1搬入偏移位置：*AL1Ping*-BL1Ping-BiasPing|*AL1Pong*-BL1Pong-BiasPong
+            // 普通模板-4buffer-AL1搬入偏移位置: *AL1Ping-AL1Pong*-BL1Ping-BL1Pong-BiasPing-BiasPong
+            uint64_t offsetAl1 = (DispatchPolicy::fullLoadMode == 0 && l1BufNum_ == DOUBLE_BUFFER_COUNT) ?
+                                 (HALF_L1_SIZE * l1BufId) :
+                                 aL1OneBuffer_ * l1BufId;
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(l1BufId);
             uint64_t biasBufId = abL1LoopCnt_ & 0x1;
 
             CopyInA1(aGlobal[offsetA], l1Local_[offsetAl1], curML1, curKL1);
             if constexpr (DispatchPolicy::fullLoadMode == 0) {
                 if (isBias_ && iter0 == 0) {
-                    biasL1Local = biasL1LocalInit[nL1_ * l1BufId];
+                    // 普通模板-2buffer-Bias搬入偏移位置：AL1Ping-BL1Ping-*BiasPing*|AL1Pong-BL1Pong-*BiasPong*
+                    // 普通模板-4buffer-Bias搬入偏移位置: AL1Ping-AL1Pong-BL1Ping-BL1Pong-*BiasPing-BiasPong*
+                    biasL1LocalInit = l1Local_[(l1BufNum_ == DOUBLE_BUFFER_COUNT) ?
+                        HALF_L1_SIZE * l1BufId + aL1OneBuffer_ + bL1OneBuffer_ :
+                        aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_ * l1BufNum_].template ReinterpretCast<Bias_T>();
+                    biasL1Local = biasL1LocalInit[(l1BufNum_ == DOUBLE_BUFFER_COUNT) ? 0 : nL1_ * l1BufId];
                     CopyInC1(biasGlobal, biasL1Local, curNL1);
                 }
                 // B搬运数据到L1，开启4buffer
-                bl1Local = l1Local_[bL1Init_ + bL1OneBuffer_ * l1BufId];
+                // 普通模板-2buffer-BL1搬入偏移位置：AL1Ping-*BL1Ping*-BiasPing|AL1Pong-*BL1Pong*-BiasPong
+                // 普通模板-4buffer-BL1搬入偏移位置: AL1Ping-AL1Pong-*BL1Ping-BL1Pong*-BiasPing-BiasPong
+                uint64_t offsetBl1 = (l1BufNum_ == DOUBLE_BUFFER_COUNT) ?
+                                     (HALF_L1_SIZE * l1BufId + aL1OneBuffer_) :
+                                     (aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_ * l1BufId);
+                bl1Local = l1Local_[offsetBl1];
                 uint64_t offsetB = BType::isTrans ? kL1OffsetLength : kL1OffsetLength * n_;
                 if constexpr (LayoutB == CubeFormat::NZ) {
                     if constexpr (BType::isTrans) {
@@ -753,8 +783,12 @@ public:
                 CopyInB1<LayoutB>(bGlobal[offsetB], bl1Local, curNL1, curKL1);
                 kbL1Size = curKL1;
             } else {
-                bl1Local = l1Local_[bL1Init_];
+                // B全载-BL1搬入偏移位置：AL1Ping-AL1Pong-*BL1*-Bias
+                bl1Local = l1Local_[aL1OneBuffer_ * l1BufNum_];
                 kl1Offset = kL1OffsetLength;
+                // B全载-Bias搬入偏移位置：AL1Ping-AL1Pong-BL1-*Bias*
+                biasL1LocalInit =
+                    l1Local_[aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_].template ReinterpretCast<Bias_T>();
                 biasL1Local = biasL1LocalInit[nL1Offset];
                 kbL1Size = kAlign_;
             }
@@ -833,7 +867,9 @@ public:
         mmadParams.m = curML0;
         mmadParams.n = curNL0;
         mmadParams.disableGemv = true;
-        AscendC::LocalTensor<Bias_T> biasL1LocalInit = l1Local_.template ReinterpretCast<Bias_T>();
+        // A全载-Bias搬入偏移位置：AL1-BL1Ping-BL1Pong-*BiasPing-BiasPong*
+        AscendC::LocalTensor<Bias_T> biasL1LocalInit =
+            l1Local_[aL1OneBuffer_ + bL1OneBuffer_ * l1BufNum_].template ReinterpretCast<Bias_T>();
         AscendC::LocalTensor<A_T> aL1Local;
 
         uint64_t l0cOffset = (l0cPingPong_ & 0x1) * HALF_L0C_SIZE;
@@ -847,7 +883,8 @@ public:
             uint64_t curKL1 = (iter0 + 1 == kL1Iter_) ? (k_ - iter0 * kL1_) : kL1_;
             uint64_t l1BufId = abL1LoopCnt_ & (l1BufNum_ - 1);
             uint64_t offsetB = BType::isTrans ? iter0 * kL1_ : iter0 * kL1_ * n_;
-            uint64_t offsetBl1 = bL1Init_ + bL1OneBuffer_ * l1BufId;
+            // A全载-BL1搬入偏移位置：AL1-*BL1Ping-BL1Pong*-BiasPing-BiasPong
+            uint64_t offsetBl1 = aL1OneBuffer_ + bL1OneBuffer_ * l1BufId;
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(l1BufId);
             // B -> L1
             if constexpr (LayoutB == CubeFormat::NZ) {
@@ -864,7 +901,7 @@ public:
                 CopyInC1(biasGlobal, biasL1Local, curNL1);
             }
             // A -> L1
-            aL1Local = l1Local_[biasL1Offset_];  // biasL1 -> AL1 -> BL1
+            aL1Local = l1Local_;  // biasL1 -> AL1 -> BL1
             kL1Offset = iter0 * kL1_;
             kaL1Size = kAlign_;
 
@@ -970,8 +1007,6 @@ private:
     constexpr static uint16_t TWO_ALIGN = 2;
     constexpr static uint16_t NUM_TWO = 2;
     constexpr static int32_t BT_SIZE = 4096;
-    uint64_t biasL1Offset_ = 0;
-    uint64_t bL1Init_ = 0;
     uint64_t aL1OneBuffer_ = 0;
     uint64_t bL1OneBuffer_ = 0;
     AscendC::LocalTensor<A_T> l0aLocal_{AscendC::TPosition::A2, 0, L0A_SIZE};
