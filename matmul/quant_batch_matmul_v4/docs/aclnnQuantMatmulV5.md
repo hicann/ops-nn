@@ -713,7 +713,7 @@ aclnnStatus aclnnQuantMatmulV5(
     | K-G量化 | INT8                    |INT32                   |FLOAT32              |UINT64/INT64 |(m, k) |(k, ceil(n / 8))|(m, 1)|(ceil(k / 256), n)|null| (n) | [0, 0, 256]|
     | K-G量化 | INT4                    |INT4                    |FLOAT32              |FLOAT32      |(m, k)|(n, k)|(m, 1)|(ceil(k / 256), n)|(ceil(k / 256), n)| null | [0, 0, 256]|
   - x1的约束：
-    - 当数据类型为INT8时，k需与256对齐，并小于18432。transposeX1为false。
+    - 当数据类型为INT8时，k需与256对齐，并小于29576。transposeX1为false。
     - 当数据类型为INT4时，k需与1024对齐。transposeX1为false。
   - x2的约束：
     - 当数据类型为INT32时，k需与256对齐。transposeX2为false。
