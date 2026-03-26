@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 算子功能：为输入张量进行per-token对称/非对称动态量化。在MOE场景下，每个专家的smooth_scales是不同的，根据输入的group_index进行区分。
+- 算子功能：为输入张量进行pertoken/pertensor/perchannel对称/非对称动态量化。在MOE场景下，每个专家的smooth_scales是不同的，根据输入的group_index进行区分。
 
 - 计算公式：
   - 对称量化：
@@ -138,8 +138,15 @@
     <tr>
       <td>quant_mode</td>
       <td>可选属性</td>
-      <td><ul><li>指定量化模式。支持"pertoken"、"pertensor"。</li><li>默认值为"pertoken"。</li></ul></td>
+      <td><ul><li>指定量化模式。支持"pertoken"、"pertensor"、"perchannel"。</li><li>默认值为"pertoken"。</li></ul></td>
       <td>STRING</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>dst_type_max</td>
+      <td>可选属性</td>
+      <td><ul><li>指定量化输出的范围，仅在Hifloat8场景生效。支持0，15，56，224，32768。</li><li>默认值为0。</li></ul></td>
+      <td>FLOAT</td>
       <td>-</td>
     </tr>
     <tr>

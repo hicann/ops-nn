@@ -55,7 +55,7 @@ public:
 
     // 没有group_index输入
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset,
-                                GM_ADDR workSpace, const DynamicQuantTilingData* __restrict tilingData) {
+                                GM_ADDR workSpace, const DynamicQuantTilingDataArch35* __restrict tilingData) {
         DynamicQuantNDOpt::SetFloatOverflowModeForRegbase<yDtype>();                                    
         ParseTilingData(tilingData);
         InitParams(offset);
@@ -399,9 +399,9 @@ private:
             offsetValue = FP8_E4M3FN_MAX_VALUE;
             offsetDivValue = static_cast<float>(1.0) / FP8_E4M3FN_OFFSET_VALUE;
         } else if constexpr (IsSameType<yDtype, hifloat8_t>::value) {
-            maxValue = static_cast<float>(1.0) / HIFLOAT8_MAX_VALUE;
-            offsetValue = HIFLOAT8_MAX_VALUE;
-            offsetDivValue = static_cast<float>(1.0) / HIFLOAT8_OFFSET_VALUE;
+            maxValue = static_cast<float>(1.0) / tilingData_.dstTypeMax;
+            offsetValue = tilingData_.dstTypeMax;
+            offsetDivValue = static_cast<float>(1.0) / (tilingData_.dstTypeMax * 2);
         }
     }
 

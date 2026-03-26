@@ -53,7 +53,7 @@ public:
     using yCopyDtype = std::conditional_t<IsSameType<yDtype, int4b_t>::value, uint8_t, yDtype>;
     __aicore__ inline DynamicQuantLargeShapeMOE(TPipe *pipe) { pPipe = pipe; }
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR group_index, GM_ADDR y, GM_ADDR scale,
-                                GM_ADDR offset, GM_ADDR workSpace, const DynamicQuantTilingData& tilingData);
+                                GM_ADDR offset, GM_ADDR workSpace, const DynamicQuantTilingDataArch35& tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -76,14 +76,14 @@ private:
     __aicore__ inline void ComputeYVF(__local_mem__ T* inLocalAddr, __local_mem__ T* smoothLocalAddr,
                                       __local_mem__ yCopyDtype* outAddr, __local_mem__ float* scaleLocalAddr,
                                       __local_mem__ float* offsetLocalAddr, uint32_t elementNum);
-    __aicore__ inline void ParseTilingData(const DynamicQuantTilingData& tilingData);
+    __aicore__ inline void ParseTilingData(const DynamicQuantTilingDataArch35& tilingData);
     __aicore__ inline void CopyOutScale(int64_t offset);
     __aicore__ inline void CopyOutY(int64_t offset, uint32_t element);
 
 private:
     TPipe* pPipe = nullptr;
     /* tiling data */
-    DynamicQuantTilingData tilingData_;
+    DynamicQuantTilingDataArch35 tilingData_;
 
     /* ascendc variable */
     TQue<QuePosition::VECIN, DOUBLE_BUFFER_NUM> inQueue;
@@ -157,7 +157,7 @@ private:
 template <typename T, typename yDtype, int64_t hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantLargeShapeMOE<T, yDtype, hasSmooth, isSymmetrical>::Init(
     GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR group_index, GM_ADDR y, GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace,
-    const DynamicQuantTilingData& tilingData)
+    const DynamicQuantTilingDataArch35& tilingData)
 {
     DynamicQuantNDOpt::SetFloatOverflowModeForRegbase<yDtype>();
     blockIdx = GetBlockIdx();
@@ -252,7 +252,7 @@ __aicore__ inline void DynamicQuantLargeShapeMOE<T, yDtype, hasSmooth, isSymmetr
     } else if constexpr (IsSameType<yDtype, fp8_e4m3fn_t>::value) {
         scaleMaxValue = static_cast<float>(1.0) / FP8_E4M3FN_MAX_VALUE;
     } else if constexpr (IsSameType<yDtype, hifloat8_t>::value) {
-        scaleMaxValue = static_cast<float>(1.0) / HIFLOAT8_MAX_VALUE;
+        scaleMaxValue = static_cast<float>(1.0) / tilingData_.dstTypeMax;
     }
 }
 
@@ -272,13 +272,13 @@ __aicore__ inline void DynamicQuantLargeShapeMOE<T, yDtype, hasSmooth, isSymmetr
         scaleMaxValue = static_cast<float>(1.0) / FP8_E4M3FN_MAX_VALUE_NO_SYM;
         offsetMaxValue = FP8_E4M3FN_MAX_VALUE;
     } else if constexpr (IsSameType<yDtype, hifloat8_t>::value) {
-        scaleMaxValue = static_cast<float>(1.0) / HIFLOAT8_MAX_VALUE_NO_SYM;
-        offsetMaxValue = HIFLOAT8_MAX_VALUE;
+        scaleMaxValue = static_cast<float>(1.0) / (tilingData_.dstTypeMax * 2);
+        offsetMaxValue = tilingData_.dstTypeMax;
     }
 }
 
 template <typename T, typename yDtype, int64_t hasSmooth, bool isSymmetrical>
-__aicore__ inline void DynamicQuantLargeShapeMOE<T, yDtype, hasSmooth, isSymmetrical>::ParseTilingData(const DynamicQuantTilingData& tilingData)
+__aicore__ inline void DynamicQuantLargeShapeMOE<T, yDtype, hasSmooth, isSymmetrical>::ParseTilingData(const DynamicQuantTilingDataArch35& tilingData)
 {
     tilingData_.coreNum = tilingData.coreNum;
     tilingData_.rowLen = tilingData.rowLen;
@@ -293,6 +293,7 @@ __aicore__ inline void DynamicQuantLargeShapeMOE<T, yDtype, hasSmooth, isSymmetr
     tilingData_.groupNum = tilingData.groupNum;
     tilingData_.alignGroupNum = tilingData.alignGroupNum;
     tilingData_.hasSmooth = tilingData.hasSmooth;
+    tilingData_.dstTypeMax = tilingData.dstTypeMax;
 }
 
 template <typename T, typename yDtype, int64_t hasSmooth, bool isSymmetrical>

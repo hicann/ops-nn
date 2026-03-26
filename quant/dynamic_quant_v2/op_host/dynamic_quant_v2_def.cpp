@@ -204,6 +204,7 @@ public:
                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Attr("is_symmetrical").AttrType(OPTIONAL).Bool(false);
         this->Attr("quant_mode").AttrType(OPTIONAL).String("pertoken");
+        this->Attr("dst_type_max").AttrType(OPTIONAL).Float(0.0);
 
         config950.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)

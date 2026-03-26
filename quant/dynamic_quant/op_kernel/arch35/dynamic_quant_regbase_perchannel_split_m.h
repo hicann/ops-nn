@@ -34,14 +34,14 @@ public:
 
     // 没有group_index输入
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset,
-        GM_ADDR workSpace, const DynamicQuantTilingData *__restrict tilingData);
+        GM_ADDR workSpace, const DynamicQuantTilingDataArch35 *__restrict tilingData);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void ReInit();
     template <bool copyInMax>
     __aicore__ inline void CopyIn(uint32_t bIdx, uint32_t mIdx, uint32_t nIdx);
-    __aicore__ inline void ParseTilingData(const DynamicQuantTilingData *tilingData);
+    __aicore__ inline void ParseTilingData(const DynamicQuantTilingDataArch35 *tilingData);
 
     // __aicore__ inline void ComputeMinMax(uint32_t bIdx, uint32_t mIdx, uint32_t nIdx);
     __aicore__ inline void ComputeMinMax(__ubuf__ xDtype *inAddr, __ubuf__ xDtype *smoothAddr,
@@ -94,6 +94,7 @@ private:
     uint32_t blockPerHead_ = 0;
     uint32_t blockPerTail_ = 0;
     uint32_t totalBlockNum_ = 0;
+    float dstTypeMax = 0.0;
 
     uint32_t curCoreProcessNum_ = 0;
     uint32_t blockStart_ = 0;
@@ -110,7 +111,7 @@ private:
 template <typename xDtype, typename yDtype, bool hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasSmooth, isSymmetrical>::Init(GM_ADDR x,
     GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace,
-    const DynamicQuantTilingData *__restrict tilingData)
+    const DynamicQuantTilingDataArch35 *__restrict tilingData)
 {
     DynamicQuantNDOpt::SetFloatOverflowModeForRegbase<yDtype>();
     ParseTilingData(tilingData);
@@ -118,7 +119,7 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasS
     if (blockIdx >= coreNum_) {
         return;
     }
-    SetMaxValue<yDtype>(maxValue_, offsetValue_, offsetDivValue_);
+    SetMaxValue<yDtype>(maxValue_, offsetValue_, offsetDivValue_, dstTypeMax);
 
     // calc params
     curCoreProcessNum_ = blockIdx < headCoreNum_ ? blockPerHead_ : blockPerTail_;
@@ -184,7 +185,7 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasS
 
 template <typename xDtype, typename yDtype, bool hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasSmooth, isSymmetrical>::ParseTilingData(
-    const DynamicQuantTilingData *tilingData)
+    const DynamicQuantTilingDataArch35 *tilingData)
 {
     coreNum_ = tilingData->coreNum;
     headCoreNum_ = tilingData->headCoreNum;
@@ -211,6 +212,7 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasS
     blockPerHead_ = tilingData->blockPerHead;
     blockPerTail_ = tilingData->blockPerTail;
     totalBlockNum_ = tilingData->totalBlockNum;
+    dstTypeMax = tilingData->dstTypeMax;
     if constexpr (IsSameType<yDtype, int4b_t>::value) {
         outBufferSize_ = mBlockSize_ * nBlockSize_ / 2;
     } else {

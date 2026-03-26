@@ -51,7 +51,7 @@ public:
     using yCopyDtype = std::conditional_t<IsSameType<yDtype, int4b_t>::value, uint8_t, yDtype>;
     __aicore__ inline DynamicQuantLargeShapeDbPertensor(TPipe *pipe) { pPipe = pipe; }
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset,
-                                GM_ADDR workSpace, const DynamicQuantTilingData& tilingData);
+                                GM_ADDR workSpace, const DynamicQuantTilingDataArch35& tilingData);
     __aicore__ inline void Process();
 private:
     __aicore__ inline void SetMaxValue();
@@ -71,13 +71,13 @@ private:
     __aicore__ inline void ComputeScaleSymVF(__local_mem__ float* maxLocalAddr, __local_mem__ float* minLocalAddr, __local_mem__ float* scaleLocalAddr,uint32_t elementNum);
     __aicore__ inline void ComputeOffsetSymVF(__local_mem__ float* maxLocalAddr, __local_mem__ float* scaleLocalAddr, __local_mem__ float* offsetLocalAddr,uint32_t elementNum);
     __aicore__ inline void ComputeYVF(__local_mem__ T* inLocalAddr, __local_mem__ T* smoothLocalAddr,__local_mem__ yCopyDtype* outAddr, __local_mem__ float* scaleLocalAddr, __local_mem__ float* offsetLocalAddr, uint32_t elementNum);
-    __aicore__ inline void ParseTilingData(const DynamicQuantTilingData& tilingData);
+    __aicore__ inline void ParseTilingData(const DynamicQuantTilingDataArch35& tilingData);
     __aicore__ inline void CopyOutY(int64_t offset, uint32_t element);
     __aicore__ inline void CopyUB2Workspace(int64_t size);
 private:
     TPipe* pPipe = nullptr;
     /* tiling data */
-    DynamicQuantTilingData tilingData_;
+    DynamicQuantTilingDataArch35 tilingData_;
 
     /* ascendc variable */
     TQue<QuePosition::VECIN, DOUBLE_BUFFER_NUM> inQueue;
@@ -158,7 +158,7 @@ private:
 
 template <typename T, typename yDtype, int64_t hasSmooth, bool isSymmertrical>
 __aicore__ inline void DynamicQuantLargeShapeDbPertensor<T, yDtype, hasSmooth, isSymmertrical>::Init(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset,
-                                                                            GM_ADDR workSpace, const DynamicQuantTilingData& tilingData) {
+                                                                            GM_ADDR workSpace, const DynamicQuantTilingDataArch35& tilingData) {
     DynamicQuantNDOpt::SetFloatOverflowModeForRegbase<yDtype>();                                                                                
     blockIdx = GetBlockIdx();
 
@@ -257,13 +257,13 @@ __aicore__ inline void DynamicQuantLargeShapeDbPertensor<T, yDtype, hasSmooth, i
         maxValue = FP8_E4M3FN_MAX_VALUE;
         maxValueNoSym = FP8_E4M3FN_MAX_VALUE_NO_SYM;
     } else if constexpr (IsSameType<yDtype, hifloat8_t>::value) {
-        maxValue = HIFLOAT8_MAX_VALUE;
-        maxValueNoSym = HIFLOAT8_MAX_VALUE_NO_SYM;
+        maxValue = tilingData_.dstTypeMax;
+        maxValueNoSym = tilingData_.dstTypeMax * 2;
     }
 }
 
 template <typename T, typename yDtype, int64_t hasSmooth, bool isSymmertrical>
-__aicore__ inline void DynamicQuantLargeShapeDbPertensor<T, yDtype, hasSmooth, isSymmertrical>::ParseTilingData(const DynamicQuantTilingData& tilingData) {
+__aicore__ inline void DynamicQuantLargeShapeDbPertensor<T, yDtype, hasSmooth, isSymmertrical>::ParseTilingData(const DynamicQuantTilingDataArch35& tilingData) {
     tilingData_.coreNum = tilingData.coreNum;
     tilingData_.rowLen = tilingData.rowLen;
     tilingData_.headCoreNum = tilingData.headCoreNum;
@@ -277,6 +277,7 @@ __aicore__ inline void DynamicQuantLargeShapeDbPertensor<T, yDtype, hasSmooth, i
     tilingData_.groupNum = tilingData.groupNum;
     tilingData_.alignGroupNum = tilingData.alignGroupNum;
     tilingData_.hasSmooth = tilingData.hasSmooth;
+    tilingData_.dstTypeMax = tilingData.dstTypeMax;
 }
 
 template <typename T, typename yDtype, int64_t hasSmooth, bool isSymmertrical>

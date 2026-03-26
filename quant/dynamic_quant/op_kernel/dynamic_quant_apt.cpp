@@ -17,6 +17,7 @@
 #include "arch35/dynamic_quant_regbase_large_shape_db.h"
 #include "arch35/dynamic_quant_regbase_moe_large_shape.h"
 #include "arch35/dynamic_quant_struct.h"
+#include "arch35/dynamic_quant_arch35_tilingdata.h"
 #define FLOAT_OVERFLOW_MODE_CTRL 60
 
 using namespace AscendC;
@@ -37,7 +38,8 @@ __global__ __aicore__ void dynamic_quant(GM_ADDR x, GM_ADDR smooth_scales, GM_AD
     #endif 
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     TPipe pipe;
-    GET_TILING_DATA(tilingData, tiling);
+    REGISTER_TILING_DEFAULT(DynamicQuantTilingDataArch35);
+    GET_TILING_DATA_WITH_STRUCT(DynamicQuantTilingDataArch35, tilingData, tiling);
 
     if constexpr (quantMode == TPL_COMMON_FULL_LOAD) {
         DynamicQuantRegbaseFullLoad<

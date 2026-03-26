@@ -48,7 +48,7 @@ public:
     }
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset,
-                                GM_ADDR workSpace, const DynamicQuantTilingData* __restrict tilingData) {
+                                GM_ADDR workSpace, const DynamicQuantTilingDataArch35* __restrict tilingData) {
         DynamicQuantNDOpt::SetFloatOverflowModeForRegbase<yDtype>();
         ParseTilingData(tilingData);
         InitParams(offset);
@@ -803,8 +803,8 @@ private:
             maxValue = FP8_E4M3FN_MAX_VALUE;
             maxValueNoSym = FP8_E4M3FN_MAX_VALUE_NO_SYM;
         } else if constexpr (IsSameType<yDtype, hifloat8_t>::value) {
-            maxValue = HIFLOAT8_MAX_VALUE;
-            maxValueNoSym = HIFLOAT8_MAX_VALUE_NO_SYM;
+            maxValue = tilingData_.dstTypeMax;
+            maxValueNoSym = tilingData_.dstTypeMax * 2;
         }
 }
 

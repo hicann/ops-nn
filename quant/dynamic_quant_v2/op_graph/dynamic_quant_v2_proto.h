@@ -40,7 +40,10 @@ namespace ge {
  * @li is_symmetrical: An optional attribute of type bool. Select whether to be symmetrical.
  * Defaults to false.
  * @li quant_mode: An optional attribute of type string. Specifies the mode of quantization.
- * Support "pertoken", "pertensor", "perchannel". Defaults to "pertoken". \n
+ * Support "pertoken", "pertensor", "perchannel". Defaults to "pertoken".
+ * @li dst_type_max: An optional attribute of type float. Specifies the range of quantized output.
+ * Only effective when dst_type is 34(hifloat8), supporting values 0, 15, 56, 224, 32768.
+ * Defaults to 0. \n
  * @par Outputs:
  * @li y: A tensor. Quantized output tensor, Shape is same as input x. If y dtype is int4, x last dim must be divisible
  * by 2. The format support ND. Type specified by dst_type, support INT4, INT8, FLOAT8_E5M2, FLOAT8_E4M3FN, HIFLOAT8.
@@ -66,6 +69,7 @@ REG_OP(DynamicQuantV2)
     .ATTR(dst_type, Int, DT_INT8)
     .ATTR(is_symmetrical, Bool, false)
     .ATTR(quant_mode, String, "pertoken")
+    .ATTR(dst_type_max, Float, 0.0)
     .OP_END_FACTORY_REG(DynamicQuantV2)
 } // namespace ge
 

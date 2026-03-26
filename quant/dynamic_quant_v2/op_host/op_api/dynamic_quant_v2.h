@@ -15,7 +15,7 @@
 namespace l0op {
 std::tuple<aclTensor*, aclTensor*, aclTensor*> DynamicQuantV2(
     const aclTensor* x, const aclTensor* smoothScalesOptional, const aclTensor* groupIndexsOptional, int32_t dstType,
-    bool isSymmetrical, const char* quantMode, aclOpExecutor* executor);
+    bool isSymmetrical, const char* quantMode, float dstTypeMax, aclOpExecutor* executor);
 }
 
 #endif

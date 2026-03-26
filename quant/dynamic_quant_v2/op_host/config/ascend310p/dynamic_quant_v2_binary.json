@@ -82,6 +82,11 @@
           "name": "quant_mode",
           "dtype": "string",
           "value": null
+        },
+        {
+          "name": "dst_type_max",
+          "dtype": "float",
+          "value": null
         }
       ]
     }

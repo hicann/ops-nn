@@ -34,12 +34,12 @@ public:
     }
     // 没有group_index输入
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset,
-                                GM_ADDR workSpace, const DynamicQuantTilingData* __restrict tilingData);
+                                GM_ADDR workSpace, const DynamicQuantTilingDataArch35* __restrict tilingData);
     __aicore__ inline void Process();
 
 private:
     using yCopyDtype = std::conditional_t<IsSameType<yDtype, int4b_t>::value, uint8_t, yDtype>;
-    __aicore__ inline void ParseTilingData(const DynamicQuantTilingData* tilingData);
+    __aicore__ inline void ParseTilingData(const DynamicQuantTilingDataArch35* tilingData);
     __aicore__ inline void ProcessSingleBlock(uint32_t batchBlockIdx, uint32_t nBlockIdx, uint32_t bBlockSize, uint32_t nBlockSize);
     __aicore__ inline void CopyIn(uint32_t bBlockSize, uint32_t nBlockSize, uint64_t  xOffset, uint64_t smoothOffset);
     __aicore__ inline void Compute(uint32_t bBlockSize, uint32_t nBlockSize);
@@ -88,12 +88,13 @@ private:
     uint32_t batchBlockSize_ = 1;
     uint32_t batchTailBlockSize_ = 1;
     uint32_t batchBlockNum_ = 1;
+    float dstTypeMax = 0.0;
 };
 
 template <typename xDtype, typename yDtype, bool hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, hasSmooth, isSymmetrical>::Init(
     GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset,
-    GM_ADDR workSpace, const DynamicQuantTilingData* __restrict tilingData)
+    GM_ADDR workSpace, const DynamicQuantTilingDataArch35* __restrict tilingData)
 {
     DynamicQuantNDOpt::SetFloatOverflowModeForRegbase<yDtype>();
     ParseTilingData(tilingData);
@@ -101,7 +102,7 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, ha
     if (blockIdx >= coreNum_) {
         return;
     }
-    SetMaxValue<yDtype>(maxValueDiv, maxValue, offsetDivValue);
+    SetMaxValue<yDtype>(maxValueDiv, maxValue, offsetDivValue, dstTypeMax);
 
     // calc params
     curCoreProcessNum_ = blockIdx < headCoreNum_ ? blockPerHead_ : blockPerTail_;
@@ -130,7 +131,7 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, ha
 }
 
 template <typename xDtype, typename yDtype, bool hasSmooth, bool isSymmetrical>
-__aicore__ inline void DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, hasSmooth, isSymmetrical>::ParseTilingData(const DynamicQuantTilingData* tilingData)
+__aicore__ inline void DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, hasSmooth, isSymmetrical>::ParseTilingData(const DynamicQuantTilingDataArch35* tilingData)
 {
     coreNum_ = tilingData->coreNum;
     headCoreNum_ = tilingData->headCoreNum;
@@ -148,6 +149,7 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, ha
     batchBlockSize_ = tilingData->batchBlockSize;
     batchTailBlockSize_ = tilingData->batchTailBlockSize;
     batchBlockNum_ = tilingData->batchBlockNum;
+    dstTypeMax = tilingData->dstTypeMax;
     if constexpr(IsSameType<yDtype, int4b_t>::value) {
         outBufferSize_ = batchBlockSize_ * mLen_* nBlockSize_ / 2;
     } else {

@@ -20,6 +20,7 @@
 #include "platform/platform_infos_def.h"
 #include "error_util.h"
 #include "quant/dynamic_quant/op_kernel/arch35/dynamic_quant_struct.h"
+#include "quant/dynamic_quant/op_kernel/arch35/dynamic_quant_arch35_tilingdata.h"
 
 using namespace ge;
 using namespace AscendC;
@@ -33,6 +34,7 @@ constexpr uint32_t GROUP_INDEX = 2;
 constexpr uint32_t DST_TYPE_ATTR_INDEX = 0;
 constexpr uint32_t IS_SYMMETRICAL_ATTR_INDEX = 1;
 constexpr uint32_t QUANT_MODE_ATTR_INDEX = 2;
+constexpr uint32_t DST_TYPE_MAX_ATTR_INDEX = 3;
 constexpr uint32_t Y_INDEX = 0;
 constexpr uint32_t SCALE_INDEX = 1;
 constexpr uint32_t OFFSET_INDEX = 2;
@@ -68,6 +70,8 @@ static map<const ge::DataType, const uint32_t> g_dTypeLen = {{ge::DT_INT32, 4}, 
 constexpr uint32_t SPLIT_M_SCHEDULE_MODE = 1;
 constexpr uint32_t PER_CHANNEL_EXCLUDE_DIM = 2;
 constexpr uint32_t PER_CHANNEL_N_BASE_SIZE = 64;
+
+std::vector<float> dstTypeMaxSupportList = {0.0, 15.0, 56.0, 224.0, 32768.0};
 
 template <uint32_t base, typename T = uint32_t>
 auto AlignUp(T a) -> T
@@ -339,6 +343,18 @@ ge::graphStatus DynamicQuantRegbaseTiling::CheckAttrs(gert::TilingContext* conte
         // get and check quant mode
         const char* quantModeAttr = attrs->GetAttrPointer<char>(QUANT_MODE_ATTR_INDEX);
         OP_CHECK_NULL_WITH_CONTEXT(context, quantModeAttr);
+
+        // 获取dstTypeMax的值
+        const float* dstTypeMaxAttr = attrs->GetAttrPointer<float>(DST_TYPE_MAX_ATTR_INDEX);
+        dstTypeMax = (dstTypeMaxAttr != nullptr) ? *dstTypeMaxAttr : 0.0f;
+
+        if (std::find(dstTypeMaxSupportList.begin(), dstTypeMaxSupportList.end(), dstTypeMax) \
+                == dstTypeMaxSupportList.end()) {
+            OP_LOGE(context, "dstTypeMax must in (0, 15, 56, 224, 32768).");
+            return ge::GRAPH_FAILED;
+        }
+        dstTypeMax = (dstTypeMax == 0) ? 32768 : dstTypeMax;
+
         std::string quantModeStr = quantModeAttr;
         if (quantModeStr == "pertoken") {
             quantMode_ = TPL_COMMON_FULL_LOAD;
@@ -348,7 +364,7 @@ ge::graphStatus DynamicQuantRegbaseTiling::CheckAttrs(gert::TilingContext* conte
             // quantMode_ will be computed later
             isPerChannel_ = true;
         } else {
-            OP_LOGE(context, "Invalid attr quant_mode: %s, only support pertoken or pertensor.",
+            OP_LOGE(context, "Invalid attr quant_mode: %s, only support pertoken, pertensor or perchannel.",
                 quantModeStr.c_str());
             return ge::GRAPH_FAILED;
         }
@@ -400,33 +416,36 @@ void DynamicQuantRegbaseTiling::ResetLargeTilingParams()
 // 打印tiling参数
 void DynamicQuantRegbaseTiling::PrintTilingData(gert::TilingContext* context)
 {
+    DynamicQuantTilingDataArch35* tilingDataPtr = context->GetTilingData<DynamicQuantTilingDataArch35>();
     OP_LOGD(
         context,
         "tilingData is coreNum:%u, rowLen:%u, headCoreNum:%u, rowPerHeadCore:%u, "
         "rowPerTailCore:%u, multiRowNumHeadCore:%u, multiRowNumTailCore:%u, "
-        "innerLoopEle:%u, innerLoopTimes:%u, innerLoopTail:%u, groupNum:%u, hasSmooth:%u",
-        tilingData.get_coreNum(), tilingData.get_rowLen(), tilingData.get_headCoreNum(),
-        tilingData.get_rowPerHeadCore(), tilingData.get_rowPerTailCore(), tilingData.get_multiRowNumHeadCore(),
-        tilingData.get_multiRowNumTailCore(), tilingData.get_innerLoopEle(), tilingData.get_innerLoopTimes(),
-        tilingData.get_innerLoopTail(), tilingData.get_groupNum(), tilingData.get_hasSmooth());
+        "innerLoopEle:%u, innerLoopTimes:%u, innerLoopTail:%u, groupNum:%u, hasSmooth:%u, dstTypeMax:%f",
+        tilingDataPtr->coreNum, tilingDataPtr->rowLen, tilingDataPtr->headCoreNum, tilingDataPtr->rowPerHeadCore,
+        tilingDataPtr->rowPerTailCore, tilingDataPtr->multiRowNumHeadCore, tilingDataPtr->multiRowNumTailCore,
+        tilingDataPtr->innerLoopEle, tilingDataPtr->innerLoopTimes, tilingDataPtr->innerLoopTail,
+        tilingDataPtr->groupNum, tilingDataPtr->hasSmooth, tilingDataPtr->dstTypeMax);
 }
 
 // 赋值tiling参数
 void DynamicQuantRegbaseTiling::SetTilingData(gert::TilingContext* context)
 {
     SetTilingKey(context);
-    tilingData.set_coreNum(coreNum);
-    tilingData.set_rowLen(rowLen);
-    tilingData.set_headCoreNum(headCoreNum);
-    tilingData.set_rowPerHeadCore(rowPerHeadCore);
-    tilingData.set_rowPerTailCore(rowPerTailCore);
-    tilingData.set_multiRowNumHeadCore(multiRowNumHeadCore);
-    tilingData.set_multiRowNumTailCore(multiRowNumTailCore);
-    tilingData.set_innerLoopEle(innerLoopEle);
-    tilingData.set_innerLoopTimes(innerLoopTimes);
-    tilingData.set_innerLoopTail(innerLoopTail);
-    tilingData.set_groupNum(groupNum);
-    tilingData.set_hasSmooth(hasSmooth ? 1 : 0);
+    DynamicQuantTilingDataArch35* tilingDataPtr = context->GetTilingData<DynamicQuantTilingDataArch35>();
+    tilingDataPtr->coreNum = coreNum;
+    tilingDataPtr->rowLen = rowLen;
+    tilingDataPtr->headCoreNum = headCoreNum;
+    tilingDataPtr->rowPerHeadCore = rowPerHeadCore;
+    tilingDataPtr->rowPerTailCore = rowPerTailCore;
+    tilingDataPtr->multiRowNumHeadCore = multiRowNumHeadCore;
+    tilingDataPtr->multiRowNumTailCore = multiRowNumTailCore;
+    tilingDataPtr->innerLoopEle = innerLoopEle;
+    tilingDataPtr->innerLoopTimes = innerLoopTimes;
+    tilingDataPtr->innerLoopTail = innerLoopTail;
+    tilingDataPtr->groupNum = groupNum;
+    tilingDataPtr->hasSmooth = hasSmooth ? 1 : 0;
+    tilingDataPtr->dstTypeMax = dstTypeMax;
 }
 
 // 处理空Tensor的tiling
@@ -438,14 +457,6 @@ ge::graphStatus DynamicQuantRegbaseTiling::DoEmptyTensorTiling(gert::TilingConte
 
     size_t* workSpaces = context->GetWorkspaceSizes(1);
     workSpaces[0] = SYS_WORKSPACE_SIZE;
-    OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetRawTilingData());
-    auto rawTilingData = context->GetRawTilingData();
-    if (tilingData.GetDataSize() > rawTilingData->GetCapacity()) {
-        OP_LOGD(context->GetNodeName(), "Tiling DataSize Greater than capacity, please check.");
-        return ge::GRAPH_FAILED;
-    }    
-    tilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
-    rawTilingData->SetDataSize(tilingData.GetDataSize());
     context->SetBlockDim(1);
     return ge::GRAPH_SUCCESS;
 }
@@ -664,47 +675,48 @@ ge::graphStatus DynamicQuantRegbaseTiling::CalculateTilingDataForPerChannel(gert
     coreNum = std::max(vectorCoreNum, ONE);
     // 默认开db
     useDb = true;
-    SetTilingDataForPerChannel();
+    SetTilingDataForPerChannel(context);
     PrintTilingDataForPerChannel(context);
     return ge::GRAPH_SUCCESS;
 }
 
-void DynamicQuantRegbaseTiling::SetTilingDataForPerChannel() {
-    tilingData.set_totalBatchLen(totalBatchLen);
-    tilingData.set_mLen(mLen);
-    tilingData.set_mBlockSize(mBlockSize);
-    tilingData.set_mTailBlockSize(mLen - mBlockSize * (mBlockNum - 1));
-    tilingData.set_mBlockNum(mBlockNum);
-    tilingData.set_nLen(nLen);
-    tilingData.set_nBlockSize(nBlockSize);
-    tilingData.set_nTailBlockSize(nLen - nBlockSize * (nBlockNum - 1));
-    tilingData.set_nBlockNum(nBlockNum);
-    tilingData.set_nBaseSize(PER_CHANNEL_N_BASE_SIZE);
-    tilingData.set_nBaseLoopNum(nBaseLoopNum);
-    tilingData.set_blockPerHead(blockPerHead);
-    tilingData.set_blockPerTail(blockPerTail);
-    tilingData.set_totalBlockNum(totalBlockNum);
-    tilingData.set_batchBlockSize(batchBlockSize);
-    tilingData.set_batchTailBlockSize(batchTailBlockSize);
-    tilingData.set_batchBlockNum(batchBlockNum);
+void DynamicQuantRegbaseTiling::SetTilingDataForPerChannel(gert::TilingContext* context) {
+    DynamicQuantTilingDataArch35* tilingDataPtr = context->GetTilingData<DynamicQuantTilingDataArch35>();
+    tilingDataPtr->totalBatchLen = totalBatchLen;
+    tilingDataPtr->mLen = mLen;
+    tilingDataPtr->mBlockSize = mBlockSize;
+    tilingDataPtr->mTailBlockSize = mLen - mBlockSize * (mBlockNum - 1);
+    tilingDataPtr->mBlockNum = mBlockNum;
+    tilingDataPtr->nLen = nLen;
+    tilingDataPtr->nBlockSize = nBlockSize;
+    tilingDataPtr->nTailBlockSize = nLen - nBlockSize * (nBlockNum - 1);
+    tilingDataPtr->nBlockNum = nBlockNum;
+    tilingDataPtr->nBaseSize = PER_CHANNEL_N_BASE_SIZE;
+    tilingDataPtr->nBaseLoopNum = nBaseLoopNum;
+    tilingDataPtr->blockPerHead = blockPerHead;
+    tilingDataPtr->blockPerTail = blockPerTail;
+    tilingDataPtr->totalBlockNum = totalBlockNum;
+    tilingDataPtr->batchBlockSize = batchBlockSize;
+    tilingDataPtr->batchTailBlockSize = batchTailBlockSize;
+    tilingDataPtr->batchBlockNum = batchBlockNum;
+    tilingDataPtr->dstTypeMax = dstTypeMax;
 }
 
 // 打印perchannel模板相关tiling参数
 void DynamicQuantRegbaseTiling::PrintTilingDataForPerChannel(gert::TilingContext* context)
 {
+    DynamicQuantTilingDataArch35* tilingDataPtr = context->GetTilingData<DynamicQuantTilingDataArch35>();
     OP_LOGD(
         context,
         "tilingData is totalBatchLen:%u, mLen:%u, mBlockSize:%u, mTailBlockSize:%u, mBlockNum:%u, "
         "nLen:%u, nBlockSize:%u, nTailBlockSize:%u, nBlockNum:%u, "
         "nBaseSize:%u, nBaseLoopNum:%u, blockPerHead:%u, blockPerTail:%u, totalBlockNum:%u"
         "batchBlockSize:%u, batchTailBlockSize:%u, batchBlockNum:%u",
-        tilingData.get_totalBatchLen(),
-        tilingData.get_mLen(), tilingData.get_mBlockSize(), tilingData.get_mTailBlockSize(), tilingData.get_mBlockNum(),
-        tilingData.get_nLen(), tilingData.get_nBlockSize(), tilingData.get_nTailBlockSize(), tilingData.get_nBlockNum(),
-        tilingData.get_nBaseSize(), tilingData.get_nBaseLoopNum(), 
-        tilingData.get_blockPerHead(), tilingData.get_blockPerTail(), tilingData.get_totalBlockNum(),
-        tilingData.get_batchBlockSize(), tilingData.get_batchTailBlockSize(), tilingData.get_batchBlockNum()
-        );
+        tilingDataPtr->totalBatchLen, tilingDataPtr->mLen, tilingDataPtr->mBlockSize, tilingDataPtr->mTailBlockSize,
+        tilingDataPtr->mBlockNum, tilingDataPtr->nLen, tilingDataPtr->nBlockSize, tilingDataPtr->nTailBlockSize,
+        tilingDataPtr->nBlockNum, tilingDataPtr->nBaseSize, tilingDataPtr->nBaseLoopNum, tilingDataPtr->blockPerHead,
+        tilingDataPtr->blockPerTail, tilingDataPtr->totalBlockNum, tilingDataPtr->batchBlockSize,
+        tilingDataPtr->batchTailBlockSize, tilingDataPtr->batchBlockNum);
 }
 
 // 获取核数vectorCoreNum和UB大小ubSize
@@ -761,16 +773,6 @@ ge::graphStatus DynamicQuantRegbaseTiling::RunFusionKernelTiling(gert::TilingCon
     if (quantMode_ == TPL_PER_TENSOR_FULL_LOAD || quantMode_ == TPL_PER_TENSOR_LARGE_SHAPE){
         context->SetScheduleMode(1); // 设置为batch mode模式，所有核同时启动
     }
-
-    OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetRawTilingData());
-    auto rawTilingData = context->GetRawTilingData();
-    if (tilingData.GetDataSize() > rawTilingData->GetCapacity()) {
-        OP_LOGD(context->GetNodeName(), "Tiling DataSize Greater than capacity, please check.");
-        return ge::GRAPH_FAILED;
-    }
-
-    tilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
-    rawTilingData->SetDataSize(tilingData.GetDataSize());
     context->SetBlockDim(coreNum);
     return ge::GRAPH_SUCCESS;
 }

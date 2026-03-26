@@ -43,7 +43,7 @@ static op::Shape GetOutPutShapePerchannel(const aclTensor* x)
 
 std::tuple<aclTensor*, aclTensor*, aclTensor*> DynamicQuantV2(
     const aclTensor* x, const aclTensor* smoothScalesOptional, const aclTensor* groupIndexsOptional, int32_t dstType,
-    bool isSymmetrical, const char* quantMode, aclOpExecutor* executor)
+    bool isSymmetrical, const char* quantMode, float dstTypeMax, aclOpExecutor* executor)
 {
     L0_DFX(DynamicQuantV2, x, smoothScalesOptional, groupIndexsOptional, dstType, isSymmetrical, quantMode);
     auto yOut = executor->AllocTensor(
@@ -65,7 +65,7 @@ std::tuple<aclTensor*, aclTensor*, aclTensor*> DynamicQuantV2(
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
         DynamicQuantV2, OP_INPUT(x, smoothScalesOptional, groupIndexsOptional), OP_OUTPUT(yOut, scaleOut, offsetOut),
-        OP_ATTR(dstType, isSymmetrical, quantMode));
+        OP_ATTR(dstType, isSymmetrical, quantMode, dstTypeMax));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "DynamicQuantV2 launch kernel failed.");
         return std::tuple<aclTensor*, aclTensor*, aclTensor*>(nullptr, nullptr, nullptr);

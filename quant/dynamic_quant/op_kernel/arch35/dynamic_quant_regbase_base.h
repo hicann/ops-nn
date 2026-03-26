@@ -17,6 +17,7 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
+#include "dynamic_quant_arch35_tilingdata.h"
 #define FLOAT_OVERFLOW_MODE_CTRL 60
 
 namespace DynamicQuantNDOpt {
@@ -62,7 +63,7 @@ class DynamicQuantBase {
   __aicore__ inline DynamicQuantBase() {
   }
 
-  __aicore__ inline void ParseTilingData(const DynamicQuantTilingData* tilingData) {
+  __aicore__ inline void ParseTilingData(const DynamicQuantTilingDataArch35* tilingData) {
     tilingData_.rowLen = tilingData->rowLen;
     tilingData_.coreNum = tilingData->coreNum;
     tilingData_.headCoreNum = tilingData->headCoreNum;
@@ -76,6 +77,7 @@ class DynamicQuantBase {
     tilingData_.alignGroupNum = tilingData->alignGroupNum;
     tilingData_.groupNum = tilingData->groupNum;
     tilingData_.hasSmooth = tilingData->hasSmooth;
+    tilingData_.dstTypeMax = tilingData->dstTypeMax;
   }
 
   __aicore__ inline void InitBaseBuffer() {
@@ -251,7 +253,7 @@ class DynamicQuantBase {
  protected:
   TPipe* pPipe = nullptr;
   /* tiling data */
-  DynamicQuantTilingData tilingData_;
+  DynamicQuantTilingDataArch35 tilingData_;
 
   /* variable */
   uint32_t blockIdx, sizeFloatLen, sizeHalfLen, outAlignLen, multiRowNum;

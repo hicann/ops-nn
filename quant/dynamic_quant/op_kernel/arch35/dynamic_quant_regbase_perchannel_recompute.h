@@ -44,14 +44,14 @@ public:
     // 相比V1新增了group_index输入
     __aicore__ inline void Init(
         GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace,
-        const DynamicQuantTilingData* __restrict tilingData)
+        const DynamicQuantTilingDataArch35* __restrict tilingData)
     {
         DynamicQuantNDOpt::SetFloatOverflowModeForRegbase<yDtype>();
         coreIndex_ = GetBlockIdx();
         ParseTilingData(*tilingData);
         if (coreIndex_ >= coreNum_)
             return;
-        SetMaxValue<yDtype>(maxValue_, offsetValue_, offsetDivValue_);
+        SetMaxValue<yDtype>(maxValue_, offsetValue_, offsetDivValue_, dstTypeMax);
         // 计算参数
         currBlockNumOnCore_ = coreIndex_ < headCoreNum_ ? blockPerHead_ : blockPerTail_;
         blockStartIndex_ = coreIndex_ < headCoreNum_ ?
@@ -80,7 +80,7 @@ public:
 
 private:
     TPipe* pPipe = nullptr;
-    __aicore__ inline void ParseTilingData(const DynamicQuantTilingData& tilingData);
+    __aicore__ inline void ParseTilingData(const DynamicQuantTilingDataArch35& tilingData);
     __aicore__ inline void InitAndSetBuffer(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset);
 
     /** @brief 处理每个mLen * nBaseSize大小的块 */
@@ -181,7 +181,7 @@ private:
     __aicore__ inline void CopyOutY(uint32_t blockRowNum, uint32_t blockColNum, uint64_t xOffset);
 
     /* tiling data */
-    DynamicQuantTilingData tilingData_;
+    DynamicQuantTilingDataArch35 tilingData_;
 
     /* ascendc variable */
     TQue<QuePosition::VECIN, USE_BUFFER_NUM> inQueue_;
@@ -223,6 +223,7 @@ private:
     uint32_t blockPerTail_ = 0;
     uint32_t totalBlockNum_ = 0;
     uint32_t currBlockNumOnCore_ = 0;
+    float dstTypeMax = 0;
 
     float maxValue_ = 0.0;
     float offsetValue_ = 0.0;
@@ -233,7 +234,7 @@ private:
 template <typename xDtype, typename yDtype, bool hasSmooth, bool isSymmetrical>
 __aicore__ inline void
 DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, hasSmooth, isSymmetrical>::ParseTilingData(
-    const DynamicQuantTilingData& tilingData)
+    const DynamicQuantTilingDataArch35& tilingData)
 {
     coreNum_ = tilingData.coreNum;
     headCoreNum_ = tilingData.headCoreNum;
@@ -259,6 +260,7 @@ DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, hasSmooth, isSymmetrical
     blockPerHead_ = tilingData.blockPerHead;   // 大核处理的块数
     blockPerTail_ = tilingData.blockPerTail;   // 小核处理的块数
     totalBlockNum_ = tilingData.totalBlockNum; // 总共需要处理几个块
+    dstTypeMax = tilingData.dstTypeMax;
     if constexpr (IsSameType<yDtype, int4b_t>::value) {
         outBufferSize_ = mBlockSize_ * nBlockSize_ / 2;
     } else {

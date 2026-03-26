@@ -63,7 +63,7 @@ constexpr float POS_INFINITY = INFINITY;
 constexpr float NEG_INFINITY = -INFINITY;
 // 设定每种数据类型对应的最大值和offset最大值
 template <typename yDtype>
-__aicore__ inline void SetMaxValue(float &maxValue, float &offsetValue, float &offsetDivValue) {
+__aicore__ inline void SetMaxValue(float &maxValue, float &offsetValue, float &offsetDivValue, float dstTypeMax) {
     if constexpr (IsSameType<yDtype, int8_t>::value) {
         maxValue = static_cast<float>(1.0) / INT8_MAX_VALUE;
         offsetValue = INT8_MAX_VALUE;
@@ -81,9 +81,9 @@ __aicore__ inline void SetMaxValue(float &maxValue, float &offsetValue, float &o
         offsetValue = FP8_E4M3FN_MAX_VALUE;
         offsetDivValue = static_cast<float>(1.0) / FP8_E4M3FN_OFFSET_VALUE;
     } else if constexpr (IsSameType<yDtype, hifloat8_t>::value) {
-        maxValue = static_cast<float>(1.0) / HIFLOAT8_MAX_VALUE;
-        offsetValue = HIFLOAT8_MAX_VALUE;
-        offsetDivValue = static_cast<float>(1.0) / HIFLOAT8_OFFSET_VALUE;
+        maxValue = static_cast<float>(1.0) / dstTypeMax;
+        offsetValue = dstTypeMax;
+        offsetDivValue = static_cast<float>(1.0) / (dstTypeMax * 2);
     }
 }
 

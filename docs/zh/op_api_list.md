@@ -107,6 +107,7 @@
 | [aclnnDynamicQuant](../../quant/dynamic_quant/docs/aclnnDynamicQuant.md) | 对输入张量进行per-token对称动态量化。 | 默认确定性实现 |   |
 | [aclnnDynamicQuantV2](../../quant/dynamic_quant_v2/docs/aclnnDynamicQuantV2.md) | 为输入张量进行per-token对称/非对称动态量化。 | 默认确定性实现 |   |
 | [aclnnDynamicQuantV3](../../quant/dynamic_quant/docs/aclnnDynamicQuantV3.md) | 为输入张量进行动态量化。 | 默认确定性实现 |   |
+| [aclnnDynamicQuantV4](../../quant/dynamic_quant/docs/aclnnDynamicQuantV4.md) | 为输入张量进行动态量化。支持设置量化结果范围。 | 默认确定性实现 | 默认确定性实现  |
 | [aclnnEinsum](../../matmul/batch_mat_mul_v3/docs/aclnnEinsum.md) | 使用爱因斯坦求和约定执行张量计算，形式为“term1, term2 -> output-term”，按照以下等式生成输出张量，其中reduce-sum对出现在输入项(term1, term2)中但未出现在输出项中的所有索引执行求和。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnElu&aclnnInplaceElu](../../activation/elu/docs/aclnnElu&aclnnInplaceElu.md) | 对输入张量self中的每个元素x调用指数线性单元激活函数ELU，并将得到的结果存入输出张量out中。 | 默认确定性实现 |   |
 | [aclnnEluBackward](../../activation/elu_grad_v2/docs/aclnnEluBackward.md) | aclnnElu激活函数的反向计算，输出ELU激活函数正向输入的梯度。 | 默认确定性实现 |   |
