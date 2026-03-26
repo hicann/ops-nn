@@ -93,7 +93,7 @@ __aicore__ inline void AvgPoolV2GradSimt<VALUE_T, IDX_T, FORMAT_T, COUNTPAD_T, D
 }
 
 template <typename VALUE_T, typename IDX_T, typename ACC_VALUE_T, uint32_t FORMAT_T, uint32_t COUNTPAD_T, uint32_t DIV_T>
-__aicore__ inline static void CycleUpdateGradValue(
+__simt_callee__ __aicore__ inline static void CycleUpdateGradValue(
     IDX_T channels, IDX_T height, IDX_T width, int32_t pooledWidth,
     IDX_T phStart, IDX_T phEnd, IDX_T pwStart, IDX_T pwEnd,
     int32_t strideH, int32_t strideW, int32_t padHL, int32_t padWL, int32_t padHR, int32_t padWR,

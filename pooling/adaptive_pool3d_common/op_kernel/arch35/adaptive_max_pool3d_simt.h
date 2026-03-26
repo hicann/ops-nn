@@ -37,14 +37,14 @@ namespace AdaptivePool3DWithSimt{
  	constexpr static uint32_t DIV_W_IDX = 6;
 
     template <typename DIV_T>
-    __aicore__ __attribute__((always_inline)) inline static DIV_T startIndex(DIV_T outIdx, DIV_T magicOutLen, DIV_T shiftOutLen,  DIV_T inLen)
+    __simt_callee__ __aicore__ __attribute__((always_inline)) inline static DIV_T startIndex(DIV_T outIdx, DIV_T magicOutLen, DIV_T shiftOutLen,  DIV_T inLen)
     {
         DIV_T pStart = outIdx * inLen;
         return Simt::UintDiv<DIV_T>(pStart, magicOutLen, shiftOutLen);
     }
 
     template <typename DIV_T>
-    __aicore__ __attribute__((always_inline)) inline static DIV_T endIndex(DIV_T outIdx, DIV_T magicOutLen, DIV_T shiftOutLen,  DIV_T inLen)
+    __simt_callee__ __aicore__ __attribute__((always_inline)) inline static DIV_T endIndex(DIV_T outIdx, DIV_T magicOutLen, DIV_T shiftOutLen,  DIV_T inLen)
     {
         DIV_T pEnd = ((outIdx + 1) * inLen - 1);
         pEnd = Simt::UintDiv<DIV_T>(pEnd, magicOutLen, shiftOutLen);
@@ -52,7 +52,7 @@ namespace AdaptivePool3DWithSimt{
     }
 
     template <typename VALUE_T, typename INDICES_T, typename FORMAT_T, typename DIV_T>
-    __aicore__ __attribute__((always_inline)) inline static void executeFunc(FORMAT_T count, __gm__ VALUE_T* bottomData, FORMAT_T ncSize, FORMAT_T depth,
+    __simt_callee__ __aicore__ __attribute__((always_inline)) inline static void executeFunc(FORMAT_T count, __gm__ VALUE_T* bottomData, FORMAT_T ncSize, FORMAT_T depth,
                                                                                 FORMAT_T height, FORMAT_T width, FORMAT_T outputNc, FORMAT_T outputDep,  FORMAT_T outputHeight, FORMAT_T outputWidth, 
                                                                                __gm__ VALUE_T* valueData, __gm__ INDICES_T* indicesData,
                                                                                DIV_T magicDHW, DIV_T shiftDHW, DIV_T magicD, DIV_T shiftD, DIV_T magicH, DIV_T shiftH, DIV_T magicW, DIV_T shiftW) {

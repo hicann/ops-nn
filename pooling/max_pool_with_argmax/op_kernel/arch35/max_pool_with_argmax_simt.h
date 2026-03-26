@@ -31,7 +31,7 @@ namespace SimtProc {
 constexpr static uint32_t THREAD_DIM = 256;
 
 template <typename VALUE_T, typename TYPE_T, const uint32_t NANPROP_T>
-__aicore__ inline static void CycleUpdate(VALUE_T val, TYPE_T idxOffset, VALUE_T* maxVal, TYPE_T* maxIdx)
+__simt_callee__ __aicore__ inline static void CycleUpdate(VALUE_T val, TYPE_T idxOffset, VALUE_T* maxVal, TYPE_T* maxIdx)
 {
     if (NANPROP_T == 1) {
         if (!(static_cast<VALUE_T>(val) <= *maxVal)) {
