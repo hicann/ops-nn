@@ -81,10 +81,12 @@ public:
     uint64_t baseN_{16};
     uint64_t baseK_{16};
     bool isBias_{false};
+    static constexpr uint64_t MIN_STEP = AscendC::IsSameType<AType, fp4x2_e2m1_t>::value ? B4_MIN_STEP : B8_MIN_STEP;
+    static constexpr bool IS_FP4 = AscendC::IsSameType<AType, fp4x2_e2m1_t>::value;
     static constexpr CubeFormat formatB = TagToFormat<LayoutB>::format;
     static constexpr bool transA = TagToTrans<LayoutA>::value;
     static constexpr bool transB = TagToTrans<LayoutB>::value;
-    constexpr static uint64_t HALF_L0_SIZE = L0A_SIZE / DOUBLE_BUFFER_COUNT / sizeof(AType);
+    constexpr static uint64_t HALF_L0_SIZE = L0A_SIZE / DOUBLE_BUFFER_COUNT;
     constexpr static uint64_t HALF_L0C_SIZE = AscendC::TOTAL_L0C_SIZE / DOUBLE_BUFFER_COUNT / sizeof(float);
     constexpr static int32_t C0_SIZE = AscendC::AuxGetC0Size<AType>();
     constexpr static int32_t BIAS_C0 = AscendC::AuxGetC0Size<BiasType>();
@@ -171,13 +173,19 @@ public:
             for (int32_t bufferId = 0; bufferId < l1BufNum_; bufferId++) {
                 // 2 buffer: L1 space is : A0|B0|AScale0|BScale0|bias0|...|A1|B1|AScale1|BScale1|bias1|...
                 // 4 buffer: L1 space is : A0A2|B0B2|AScale0|BScale0|bias0|...|A1A3|B1B3|AScale1|BScale1|bias1|...
-                uint64_t l1Offset = (AscendC::TOTAL_L1_SIZE >> 1) * (bufferId & 1);
+                // For B8, l1Offset represents byte count; for B4, l1Offset represents element count
+                uint64_t l1Offset = IS_FP4 
+                    ? AscendC::TOTAL_L1_SIZE * (bufferId & 1)
+                    : (AscendC::TOTAL_L1_SIZE >> 1) * (bufferId & 1);
                 l1BufferAOffset_[bufferId] = l1Offset + aL1OneBuffer_ * (bufferId >> 1);
                 l1BufferBOffset_[bufferId] =
                     l1Offset + aL1OneBuffer_ * (l1BufNum_ >> 1) + bL1OneBuffer_ * (bufferId >> 1);
             }
             for (int32_t bufferId = 0; bufferId < SCALE_BUFFER_NUM; bufferId++) {
-                l1BufferScaleAOffset_[bufferId] = l1BufferBOffset_[bufferId] + bL1OneBuffer_ * (l1BufNum_ >> 1);
+                // l1BufferScaleAOffset_[bufferId]: byte count when B8, element count when B4
+                l1BufferScaleAOffset_[bufferId] = IS_FP4
+                    ? ((l1BufferBOffset_[bufferId] + bL1OneBuffer_ * (l1BufNum_ >> 1)) >> 1)
+                    : (l1BufferBOffset_[bufferId] + bL1OneBuffer_ * (l1BufNum_ >> 1));
                 l1BufferScaleBOffset_[bufferId] = l1BufferScaleAOffset_[bufferId] + scaleAL1OneBuffer_;
                 l1BufferBiasOffset_[bufferId] = l1BufferScaleBOffset_[bufferId] + scaleBL1OneBuffer_;
             }
@@ -188,15 +196,28 @@ public:
             scaleAL1OneBuffer_ = baseM_ * Cmct::Gemm::CeilDiv(k_, MXFP_DIVISOR_SIZE) * MXFP_MULTI_BASE_SIZE;
             // 2 buffer: L1 space is : B0|BScale0|bias0|A|AScale|...|B1|BScale1|bias1|
             // 4 buffer: L1 space is : B0B2|BScale0|bias0|A|AScale|...|B1B3|BScale1|bias1|...
-            l1BufferAOffset_[0] = bL1OneBuffer_ * (l1BufNum_ >> 1) + scaleBL1OneBuffer_ + biasL1OneBuffer_;
-            l1BufferScaleAOffset_[0] = l1BufferAOffset_[0] + aL1OneBuffer_;
+            // l1BufferAOffset_[0]: byte count when B8, element count when B4
+            // l1BufferScaleAOffset_[0]: byte count when B8, element count when B4
+            l1BufferAOffset_[0] = IS_FP4
+                ? (bL1OneBuffer_ * (l1BufNum_ >> 1) + ((scaleBL1OneBuffer_ + biasL1OneBuffer_) << 1))
+                : (bL1OneBuffer_ * (l1BufNum_ >> 1) + scaleBL1OneBuffer_ + biasL1OneBuffer_);
+            l1BufferScaleAOffset_[0] = IS_FP4
+                ? ((l1BufferAOffset_[0] + aL1OneBuffer_) >> 1)
+                : (l1BufferAOffset_[0] + aL1OneBuffer_);
+            // b1Offset: byte count when B8, element count when B4
             uint64_t b1Offset = l1BufferScaleAOffset_[0] + scaleAL1OneBuffer_ >= (AscendC::TOTAL_L1_SIZE >> 1)
                                 ? l1BufferScaleAOffset_[0] + scaleAL1OneBuffer_ : (AscendC::TOTAL_L1_SIZE >> 1);
+            if constexpr (IS_FP4) {
+ 	                 b1Offset <<= 1;
+ 	        }
             for (int32_t bufferId = 0; bufferId < l1BufNum_; bufferId++) {
                 l1BufferBOffset_[bufferId] = b1Offset * (bufferId & 1) + bL1OneBuffer_ * (bufferId >> 1);
             }
             for (int32_t bufferId = 0; bufferId < SCALE_BUFFER_NUM; bufferId++) {
-                l1BufferScaleBOffset_[bufferId] = l1BufferBOffset_[bufferId] + bL1OneBuffer_ * (l1BufNum_ >> 1);
+                // l1BufferScaleBOffset_[bufferId]: byte count when B8, element count when B4
+                l1BufferScaleBOffset_[bufferId] = IS_FP4 ?
+                    ((l1BufferBOffset_[bufferId] + bL1OneBuffer_ * (l1BufNum_ >> 1)) >> 1)
+                    : (l1BufferBOffset_[bufferId] + bL1OneBuffer_ * (l1BufNum_ >> 1));
                 l1BufferBiasOffset_[bufferId] = l1BufferScaleBOffset_[bufferId] + scaleBL1OneBuffer_;
             }
         }
@@ -213,8 +234,14 @@ public:
 
         nd2nzParams.nValue = nDim;
         nd2nzParams.dValue = dDim;
+        if constexpr (IS_FP4) {
+            nd2nzParams.dValue = dDim >> 1;
+        }
         nd2nzParams.srcNdMatrixStride = 1;
         nd2nzParams.srcDValue = transA ? m_ : k_;
+        if constexpr (IS_FP4) {
+            nd2nzParams.srcDValue = nd2nzParams.srcDValue >> 1;
+        }
         nd2nzParams.dstNzC0Stride = transA ? tileL1L0Param.curPadAKL1 : tileL1L0Param.curAlignM;
         nd2nzParams.dstNzNStride = 1;
         nd2nzParams.dstNzMatrixStride = 1;
@@ -231,8 +258,14 @@ public:
 
         nd2nzParams.nValue = nDim;
         nd2nzParams.dValue = dDim;
+        if constexpr (IS_FP4) {
+            nd2nzParams.dValue = dDim >> 1;
+        }
         nd2nzParams.srcNdMatrixStride = 1;
         nd2nzParams.srcDValue = transB ? k_ : n_;
+        if constexpr (IS_FP4) {
+            nd2nzParams.srcDValue = nd2nzParams.srcDValue >> 1;
+        }
         nd2nzParams.dstNzC0Stride = transB ? tileL1L0Param.curAlignN : tileL1L0Param.curPadBKL1;
         nd2nzParams.dstNzNStride = 1;
         nd2nzParams.dstNzMatrixStride = 1;
@@ -252,14 +285,26 @@ public:
         if constexpr (transB) {
             dataCopyParams.blockCount = Cmct::Gemm::CeilDiv(tileL1L0Param.curGmBKL1, C0_SIZE);
             dataCopyParams.blockLen = tileL1L0Param.curAlignN * C0_SIZE;
+            if constexpr (IS_FP4) {
+                dataCopyParams.blockLen = dataCopyParams.blockLen >> 1;
+            }
             dataCopyParams.srcStride =
                 (Cmct::Gemm::CeilAlign(n_, AscendC::BLOCK_CUBE) - tileL1L0Param.curAlignN) * C0_SIZE;
+            if constexpr (IS_FP4) {
+                dataCopyParams.srcStride = dataCopyParams.srcStride >> 1;
+            }
             dataCopyParams.dstStride = 0;
         } else {
             int64_t curGmBKL1NZ = Cmct::Gemm::CeilAlign(tileL1L0Param.curGmBKL1, AscendC::BLOCK_CUBE);
             dataCopyParams.blockCount = tileL1L0Param.curAlignN / C0_SIZE;
             dataCopyParams.blockLen = curGmBKL1NZ * C0_SIZE;
+            if constexpr (IS_FP4) {
+                dataCopyParams.blockLen = dataCopyParams.blockLen >> 1;
+            }
             dataCopyParams.srcStride = (Cmct::Gemm::CeilAlign(k_, AscendC::BLOCK_CUBE) - curGmBKL1NZ) * C0_SIZE;
+            if constexpr (IS_FP4) {
+                dataCopyParams.srcStride = dataCopyParams.srcStride >> 1;
+            }
             dataCopyParams.dstStride = tileL1L0Param.curPadBKL1 - curGmBKL1NZ;
         }
         AscendC::DataCopyPad(bl1LocalUint8, bGlobalUInt8, dataCopyParams, padParams);
@@ -465,11 +510,12 @@ public:
         } else {
             loadDataParams.mStartPosition = Cmct::Gemm::CeilDiv(iter * baseK_, AscendC::BLOCK_CUBE);
             loadDataParams.kStartPosition = 0;
-            if ((m1 & 1) == 0) {
+            if (((m1 & 1) == 0 && !(IS_FP4)) || \
+                (IS_FP4 && Cmct::Gemm::CeilDiv(tileL1L0Param.curM, AscendC::BLOCK_CUBE) % B4_MIN_STEP == 0)) {
                 loadDataParams.mStep = Cmct::Gemm::CeilAlign(
                     Cmct::Gemm::CeilDiv(tileL1L0Param.curKL0, AscendC::BLOCK_CUBE), MXFP_MULTI_BASE_SIZE);
             } else {
-                loadDataParams.mStep = B8_MIN_STEP;
+                loadDataParams.mStep = MIN_STEP;
             }
             loadDataParams.kStep = Cmct::Gemm::CeilDiv(tileL1L0Param.curM, C0_SIZE);
             loadDataParams.srcStride = Cmct::Gemm::CeilDiv(tileL1L0Param.curPadAKL1, AscendC::BLOCK_CUBE);
@@ -484,13 +530,14 @@ public:
         loadData2DMxParams.dstStride = loadData2DMxParams.yStep;
         AscendC::LoadData(l0aLocal, al1Local, scaleAl1Local, loadDataParams, loadData2DMxParams);
         if constexpr (transA) {
-            if ((m1 & 1) != 0) {
+            if (((m1 & 1) != 0 && !(IS_FP4)) || \
+                (IS_FP4 && Cmct::Gemm::CeilDiv(tileL1L0Param.curM, AscendC::BLOCK_CUBE) % B4_MIN_STEP != 0)) {
                 PipeBarrier<PIPE_MTE1>();
                 LocalTensor<AType> l0a = l0aLocal.template ReinterpretCast<AType>();
                 uint64_t loadTimes =
-                    Cmct::Gemm::CeilDiv(Cmct::Gemm::CeilDiv(tileL1L0Param.curKL0, BLOCK_CUBE), B8_MIN_STEP);
+                    Cmct::Gemm::CeilDiv(Cmct::Gemm::CeilDiv(tileL1L0Param.curKL0, BLOCK_CUBE), MIN_STEP);
                 for (uint64_t i = 1; i < loadTimes; i++) {
-                    loadDataParams.mStartPosition = B8_MIN_STEP * i + Cmct::Gemm::CeilDiv(iter * baseK_, BLOCK_CUBE);
+                    loadDataParams.mStartPosition = MIN_STEP * i + Cmct::Gemm::CeilDiv(iter * baseK_, BLOCK_CUBE);
                     AscendC::LoadData(l0a[i * m1 * BLOCK_CUBE * C0_SIZE], al1Local, loadDataParams);
                     PipeBarrier<PIPE_MTE1>();
                 }
@@ -517,11 +564,12 @@ public:
         } else {
             loadDataParams.mStartPosition = Cmct::Gemm::CeilDiv(iter * baseK_, AscendC::BLOCK_CUBE);
             loadDataParams.kStartPosition = 0;
-            if ((n1 & 1) == 0) {
+            if (((n1 & 1) == 0 && !(IS_FP4)) || \
+                (IS_FP4 && Cmct::Gemm::CeilDiv(tileL1L0Param.curN, AscendC::BLOCK_CUBE) % B4_MIN_STEP == 0)) {
                 loadDataParams.mStep =
                     Cmct::Gemm::CeilAlign(Cmct::Gemm::CeilDiv(tileL1L0Param.curKL0, AscendC::BLOCK_CUBE), EVEN_FACTOR);
             } else {
-                loadDataParams.mStep = B8_MIN_STEP;
+                loadDataParams.mStep = MIN_STEP;
             }
             loadDataParams.kStep = Cmct::Gemm::CeilDiv(tileL1L0Param.curN, C0_SIZE);
             loadDataParams.srcStride = Cmct::Gemm::CeilDiv(tileL1L0Param.curPadBKL1, AscendC::BLOCK_CUBE);
@@ -536,13 +584,14 @@ public:
         loadData2DMxParams.dstStride = loadData2DMxParams.yStep;
         AscendC::LoadData(l0bLocal, bl1Local, scaleBl1Local, loadDataParams, loadData2DMxParams);
         if constexpr (!transB) {
-            if ((n1 & 1) != 0) {
+            if (((n1 & 1) != 0 && !(IS_FP4)) || \
+                (IS_FP4 && Cmct::Gemm::CeilDiv(tileL1L0Param.curN, AscendC::BLOCK_CUBE) % B4_MIN_STEP != 0)) {
                 PipeBarrier<PIPE_MTE1>();
                 LocalTensor<BType> l0b = l0bLocal.template ReinterpretCast<BType>();
                 uint64_t loadTimes =
-                    Cmct::Gemm::CeilDiv(Cmct::Gemm::CeilDiv(tileL1L0Param.curKL0, BLOCK_CUBE), B8_MIN_STEP);
+                    Cmct::Gemm::CeilDiv(Cmct::Gemm::CeilDiv(tileL1L0Param.curKL0, BLOCK_CUBE), MIN_STEP);
                 for (uint64_t i = 1; i < loadTimes; i++) {
-                    loadDataParams.mStartPosition = B8_MIN_STEP * i + Cmct::Gemm::CeilDiv(iter * baseK_, BLOCK_CUBE);
+                    loadDataParams.mStartPosition = MIN_STEP * i + Cmct::Gemm::CeilDiv(iter * baseK_, BLOCK_CUBE);
                     AscendC::LoadData(l0b[i * n1 * AscendC::BLOCK_CUBE * C0_SIZE], bl1Local, loadDataParams);
                     PipeBarrier<PIPE_MTE1>();
                 }
@@ -632,12 +681,16 @@ public:
                                      uint64_t offsetAL1, uint64_t l1Iter)
     {
         if constexpr (DispatchPolicy::fullLoadMode == 0) {
-            InitA1(aL1Local_[offsetAL1], tileL1L0Param);
+            if constexpr (!(IS_FP4 && !transA)) {
+                InitA1(aL1Local_[offsetAL1], tileL1L0Param);
+            }
             CopyInA1(aGlobal[offsetA], aL1Local_[offsetAL1], tileL1L0Param);
         } else {
             offsetAL1 = l1BufferAOffset_[0] + l1Iter * kL1_ * tileL1L0Param.curAlignM;
             if (abL1LoopCnt_ < kL1Iter_) {
-                InitA1(aL1Local_[offsetAL1], tileL1L0Param);
+                if constexpr (!(IS_FP4 && !transA)) {
+                    InitA1(aL1Local_[offsetAL1], tileL1L0Param);
+                }
                 CopyInA1(aGlobal[offsetA], aL1Local_[offsetAL1], tileL1L0Param);
             }
         }
@@ -646,7 +699,9 @@ public:
     __aicore__ inline void CopyBInL1(AscendC::GlobalTensor<BType> bGlobal, TileL1L0Param tileL1L0Param, uint64_t l1BufId,
                                      uint64_t l1Iter)
     {
-        InitB1(bL1Local_[l1BufferBOffset_[l1BufId]], tileL1L0Param);
+        if constexpr (!(IS_FP4 && transB)) {
+            InitB1(bL1Local_[l1BufferBOffset_[l1BufId]], tileL1L0Param);
+        }
         if constexpr (formatB == CubeFormat::NZ) {
             uint64_t offsetB =
                 transB ? l1Iter * kL1_ * Cmct::Gemm::CeilAlign(n_, AscendC::BLOCK_CUBE) : l1Iter * kL1_ * C0_SIZE;
@@ -665,6 +720,9 @@ public:
             UpdateKL0(tileL1L0Param, iter1);
             // Load data to L0 and open DB
             uint64_t l0Offset = HALF_L0_SIZE * (l0PingPong_ & 0x1);
+            if constexpr (IS_FP4) {
+ 	            l0Offset = (HALF_L0_SIZE << 1) * (l0PingPong_ & 0x1);
+ 	        }
             AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(l0PingPong_ & 0x1);
             uint64_t offsetScaleL1 = BLOCK_CUBE * (l1Iter % (scaleKL1_ / kL1_)) * (kL1_ / MXFP_GROUP_SIZE);
             if constexpr (DispatchPolicy::fullLoadMode == 0) {

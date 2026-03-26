@@ -52,13 +52,12 @@ public:
     static constexpr bool transA = BlockMmad::transA;
     static constexpr bool transB = BlockMmad::transB;
 
-    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<
-        ProblemShape, typename BlockMmad::L1TileShape, typename BlockMmad::L0TileShape, BlockScheduler, transA,
-        transB>::SchedulerOp;
-
     using BlockMmadParams = typename BlockMmad::Params;
     using L1Params = typename BlockMmad::L1Params;
     using AType = typename BlockMmad::AType;
+    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<
+        ProblemShape, typename BlockMmad::L1TileShape, typename BlockMmad::L0TileShape, BlockScheduler, transA,
+        transB, AType>::SchedulerOp;
     using BType = typename BlockMmad::BType;
     using CType = typename BlockMmad::CType;
     using BiasType = typename BlockMmad::BiasType;
@@ -251,14 +250,16 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::AddBatchOf
 {
     Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_) += batchAOffset_ * params.problemShape.m * params.problemShape.k;
     if constexpr (FormatB == CubeFormat::NZ) {
+        int64_t c0Size = 
+                AscendC::IsSameType<AType, fp4x2_e2m1_t>::value ? C0_SIZE_B4 : C0_SIZE_B8;
         if constexpr (transB) {
             Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_) +=
-                batchBOffset_ * Cmct::Gemm::CeilDiv(params.problemShape.k, C0_SIZE_B8) *
-                Cmct::Gemm::CeilDiv(params.problemShape.n, AscendC::BLOCK_CUBE) * AscendC::BLOCK_CUBE * C0_SIZE_B8;
+                batchBOffset_ * Cmct::Gemm::CeilDiv(params.problemShape.k, c0Size) *
+                Cmct::Gemm::CeilDiv(params.problemShape.n, AscendC::BLOCK_CUBE) * AscendC::BLOCK_CUBE * c0Size;
         } else {
             Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_) +=
-                batchBOffset_ * Cmct::Gemm::CeilDiv(params.problemShape.n, C0_SIZE_B8) *
-                Cmct::Gemm::CeilDiv(params.problemShape.k, AscendC::BLOCK_CUBE) * AscendC::BLOCK_CUBE * C0_SIZE_B8;
+                batchBOffset_ * Cmct::Gemm::CeilDiv(params.problemShape.n, c0Size) *
+                Cmct::Gemm::CeilDiv(params.problemShape.k, AscendC::BLOCK_CUBE) * AscendC::BLOCK_CUBE * c0Size;
         }
     } else {
         Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_) +=
@@ -295,7 +296,7 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessSin
             return;
         }
         AscendC::Std::tuple<uint32_t, uint32_t, uint32_t, uint32_t> loadBalanceInfo = bs.GetLoadBalanceInfo();
-        blockOffset_ = coord.template GetQuantOffset<QuantBatchMatmul::QuantMode::MX_PERGROUP_MODE, true>(
+        blockOffset_ = coord.template GetQuantOffset<QuantBatchMatmul::QuantMode::MX_PERGROUP_MODE, AType, true>(
             Get<QuantBatchMatmul::IDX_M_TILEIDX>(blockIdx), Get<QuantBatchMatmul::IDX_N_TILEIDX>(blockIdx),
             Get<QuantBatchMatmul::IDX_M_TAIL_SPLIT_TILEIDX>(singleShape),
             Get<QuantBatchMatmul::IDX_N_TAIL_SPLIT_TILEIDX>(singleShape), loadBalanceInfo);

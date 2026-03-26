@@ -51,12 +51,11 @@ public:
     static constexpr bool transA = BlockMmad::transA;
     static constexpr bool transB = BlockMmad::transB;
 
-    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<
-        ProblemShape, typename BlockMmad::L1TileShape, typename BlockMmad::L0TileShape, BlockScheduler, transA,
-        transB>::SchedulerOp;
-
     using BlockMmadParams = typename BlockMmad::Params;
     using AType = typename BlockMmad::AType;
+    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<
+        ProblemShape, typename BlockMmad::L1TileShape, typename BlockMmad::L0TileShape, BlockScheduler, transA,
+        transB, AType>::SchedulerOp;
     using BType = typename BlockMmad::BType;
     using CType = typename BlockMmad::CType;
     using X2ScaleType = typename AscendC::Conditional<
@@ -291,7 +290,7 @@ __aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUN_TEM_PARAMS>::Proces
             return;
         }
         AscendC::Std::tuple<uint32_t, uint32_t, uint32_t, uint32_t> loadBalanceInfo = bs.GetLoadBalanceInfo();
-        blockOffset_ = coord.template GetQuantOffset<QuantBatchMatmul::QuantMode::DEFAULT, true>(
+        blockOffset_ = coord.template GetQuantOffset<QuantBatchMatmul::QuantMode::DEFAULT, AType, true>(
             Get<QuantBatchMatmul::IDX_M_TILEIDX>(blockIdx), Get<QuantBatchMatmul::IDX_N_TILEIDX>(blockIdx),
             Get<QuantBatchMatmul::IDX_M_TAIL_SPLIT_TILEIDX>(singleShape),
             Get<QuantBatchMatmul::IDX_N_TAIL_SPLIT_TILEIDX>(singleShape), loadBalanceInfo);

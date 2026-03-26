@@ -323,12 +323,15 @@ public:
         }
     }
 
+    template <class AType>
     __aicore__ inline void CalOffset4Weight(
         int64_t nOffset, AscendC::Std::tuple<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t> &offset)
     {
         if constexpr (layoutB == CubeFormat::NZ) {
             if constexpr (isTransB) {
-                Get<1>(offset) = nOffset * C0_SIZE_B8;
+                int64_t c0Size = 
+                    AscendC::IsSameType<AType, fp4x2_e2m1_t>::value ? C0_SIZE_B4 : C0_SIZE_B8;
+                Get<1>(offset) = nOffset * c0Size;
             } else {
                 Get<1>(offset) = nOffset * CeilDiv(k, AscendC::BLOCK_CUBE) * AscendC::BLOCK_CUBE;
             }
@@ -341,7 +344,7 @@ public:
         }
     }
 
-    template <QuantBatchMatmul::QuantMode aQuantMode, bool enableLoadBalance = false>
+    template <QuantBatchMatmul::QuantMode aQuantMode, class AType, bool enableLoadBalance = false>
     __aicore__ inline AscendC::Std::tuple<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t> GetQuantOffset(
         int64_t mTileIdx, int64_t nTileIdx, int64_t mSplitOffset = 0, int64_t nSplitOffset = 0,
         const AscendC::Std::tuple<uint32_t, uint32_t, uint32_t, uint32_t>& loadBalanceParam = {0u, 0u, 0u, 0u})
@@ -368,7 +371,7 @@ public:
         } else {
             Get<0>(offset) = mOffset * k;
         }
-        CalOffset4Weight(nOffset, offset);
+        CalOffset4Weight<AType>(nOffset, offset);
         
         Get<5>(offset) = mOffset * n + nOffset; // 5: idx of y
         if constexpr (

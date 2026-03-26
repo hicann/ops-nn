@@ -27,7 +27,7 @@ constexpr uint64_t WINDOW_LEN = 4UL;
 
 // Base template definition for BlockSchedulerSelector
 template <class ProblemShape, class L1TileShape, class L0TileShape, class BlockScheduler = void,
-          bool TransA = false, bool TransB = false>
+          bool TransA = false, bool TransB = false, class AType = void>
 struct BlockSchedulerSelector;
 
 __aicore__ inline int64_t GetPerBlockNum(int64_t coreNum, int64_t mTileNum, int64_t nTileNum, int64_t b = 1)

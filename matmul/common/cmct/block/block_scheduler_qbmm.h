@@ -24,7 +24,7 @@ namespace Cmct {
 namespace Gemm {
 namespace Block {
 
-template <class ProblemShape_, class L1TileShape_, class L0TileShape_, uint64_t FullLoadMode_, bool TransA_, bool TransB_>
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_, uint64_t FullLoadMode_, bool TransA_, bool TransB_, class AType_>
 class BlockSchedulerQuantBatchMatmulV3 {
 public:
     int64_t m_{0};
@@ -59,8 +59,10 @@ public:
     using BlockShape = AscendC::Shape<int64_t, int64_t, int64_t, int64_t>;
     using BlockCoord = AscendC::Coord<int64_t, int64_t, int64_t, int64_t>;
     using ProblemShape = ProblemShape_;
+    using AType = AType_;
 
     constexpr static uint64_t A_FULL_LOAD_MODE = 1;
+    constexpr static int64_t C0_SIZE = AscendC::IsSameType<AType, fp4x2_e2m1_t>::value ? C0_SIZE_B4 : C0_SIZE_B8;
 
     struct Params {
         int64_t baseM;
@@ -199,6 +201,12 @@ public:
 
         int64_t singleCoreMSplit = Cmct::Gemm::CeilDiv(singleCoreM, mTailTile_);
         int64_t singleCoreNSplit = Cmct::Gemm::CeilDiv(singleCoreN, nTailTile_);
+        if constexpr (AscendC::IsSameType<AType, fp4x2_e2m1_t>::value) {
+            singleCoreMSplit = (singleCoreMSplit + 1) & ~1;
+        }
+        if constexpr (AscendC::IsSameType<AType, fp4x2_e2m1_t>::value) {
+            singleCoreNSplit = (singleCoreNSplit + 1) & ~1;
+        }
         if constexpr (
             (aQuantMode == QuantBatchMatmul::QuantMode::PERGROUP_MODE ||
              aQuantMode == QuantBatchMatmul::QuantMode::PERBLOCK_MODE) &&
@@ -216,8 +224,8 @@ public:
         }
 
         if constexpr (formatB == CubeFormat::NZ) {
-            if constexpr (!TransB_) { 
-                singleCoreNSplit = Cmct::Gemm::CeilAlign(singleCoreNSplit, C0_SIZE_B8);
+            if constexpr (!TransB_) {
+                singleCoreNSplit = Cmct::Gemm::CeilAlign(singleCoreNSplit, C0_SIZE);
             } else {
                 singleCoreNSplit = Cmct::Gemm::CeilAlign(singleCoreNSplit, AscendC::BLOCK_CUBE);
             }
@@ -300,16 +308,16 @@ public:
     }
 };
 
-template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_>
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_, class AType_>
 struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::QuantBatchMatmulV3Scheduler<>,
-                              TransA_, TransB_> {
-    using SchedulerOp = BlockSchedulerQuantBatchMatmulV3<ProblemShape_, L1TileShape_, L0TileShape_, 0, TransA_, TransB_>;
+                              TransA_, TransB_, AType_> {
+    using SchedulerOp = BlockSchedulerQuantBatchMatmulV3<ProblemShape_, L1TileShape_, L0TileShape_, 0, TransA_, TransB_, AType_>;
 };
 
-template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_>
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_, class AType_>
 struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::QuantBatchMatmulV3Scheduler<A_FULL_LOAD_MODE>,
-                              TransA_, TransB_> {
-    using SchedulerOp = BlockSchedulerQuantBatchMatmulV3<ProblemShape_, L1TileShape_, L0TileShape_, A_FULL_LOAD_MODE, TransA_, TransB_>;
+                              TransA_, TransB_, AType_> {
+    using SchedulerOp = BlockSchedulerQuantBatchMatmulV3<ProblemShape_, L1TileShape_, L0TileShape_, A_FULL_LOAD_MODE, TransA_, TransB_, AType_>;
 };
 }  // namespace Block
 }  // namespace Gemm

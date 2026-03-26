@@ -54,6 +54,7 @@ constexpr uint64_t IDX_K_IDX = 2UL;
 constexpr uint32_t FINAL_ACCUMULATION = 3;
 constexpr uint32_t NON_FINAL_ACCUMULATION = 2;
 constexpr uint64_t B8_MIN_STEP = 2UL;
+constexpr uint64_t B4_MIN_STEP = 4UL;
 
 constexpr uint16_t INPUT_BUFFER_FLAG_0 = 0;
 constexpr uint16_t INPUT_BUFFER_FLAG_1 = 1;

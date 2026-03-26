@@ -56,15 +56,14 @@ public:
     static constexpr bool transA = BlockMmad::transA;
     static constexpr bool transB = BlockMmad::transB;
 
-    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<
-        ProblemShape, typename BlockMmad::L1TileShape, typename BlockMmad::L0TileShape, BlockScheduler, transA,
-        transB>::SchedulerOp;
-
     using BlockMmadParams = typename BlockMmad::Params;
     using BlockEpilogueParams = typename BlockEpilogue::Params;
-    using BlockSchedulerParams = typename BlockSchedulerOp::Params;
 
     using AType = typename BlockMmad::AType;
+    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<
+        ProblemShape, typename BlockMmad::L1TileShape, typename BlockMmad::L0TileShape, BlockScheduler, transA,
+        transB, AType>::SchedulerOp;
+    using BlockSchedulerParams = typename BlockSchedulerOp::Params;
     using BType = typename BlockMmad::BType;
     using CType = typename BlockMmad::CType;
     using BiasType = typename BlockMmad::BiasType;
@@ -345,17 +344,17 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
         if (isPertile_) {
             if constexpr (!transA) {
                 AscendC::Std::tuple<uint32_t, uint32_t, uint32_t, uint32_t> loadBalanceInfo = bs.GetLoadBalanceInfo();
-                blockOffset_ = coord.template GetQuantOffset<QuantBatchMatmul::QuantMode::PERGROUP_MODE, true>(
+                blockOffset_ = coord.template GetQuantOffset<QuantBatchMatmul::QuantMode::PERGROUP_MODE, AType, true>(
                     Get<QuantBatchMatmul::IDX_M_TILEIDX>(tileIdx), Get<QuantBatchMatmul::IDX_N_TILEIDX>(tileIdx),
                     Get<QuantBatchMatmul::IDX_M_TAIL_SPLIT_TILEIDX>(singleShape), Get<QuantBatchMatmul::IDX_N_TAIL_SPLIT_TILEIDX>(singleShape),
                     loadBalanceInfo);
             } else {
-                blockOffset_ = coord.template GetQuantOffset<QuantBatchMatmul::QuantMode::PERGROUP_MODE>(
+                blockOffset_ = coord.template GetQuantOffset<QuantBatchMatmul::QuantMode::PERGROUP_MODE, AType>(
                     Get<QuantBatchMatmul::IDX_M_TILEIDX>(tileIdx), Get<QuantBatchMatmul::IDX_N_TILEIDX>(tileIdx),
                     Get<QuantBatchMatmul::IDX_M_TAIL_SPLIT_TILEIDX>(singleShape), Get<QuantBatchMatmul::IDX_N_TAIL_SPLIT_TILEIDX>(singleShape));
             }
         } else {
-            blockOffset_ = coord.template GetQuantOffset<QuantBatchMatmul::QuantMode::PERBLOCK_MODE>(
+            blockOffset_ = coord.template GetQuantOffset<QuantBatchMatmul::QuantMode::PERBLOCK_MODE, AType>(
                 Get<QuantBatchMatmul::IDX_M_TILEIDX>(tileIdx), Get<QuantBatchMatmul::IDX_N_TILEIDX>(tileIdx), Get<QuantBatchMatmul::IDX_M_TAIL_SPLIT_TILEIDX>(singleShape),
                 Get<QuantBatchMatmul::IDX_N_TAIL_SPLIT_TILEIDX>(singleShape));
         }

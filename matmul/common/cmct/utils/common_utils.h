@@ -45,6 +45,7 @@ constexpr int MNK_K = 2;
 constexpr int MNK_B = 3;
 constexpr int MNK_M0 = 4;
 constexpr int MNK_N0 = 5;
+constexpr int EVEN_NUMBER = 2;
 
 constexpr static uint64_t A_FULL_LOAD_MODE = 1UL;
 constexpr static uint64_t B_FULL_LOAD_MODE = 2UL;
@@ -53,6 +54,7 @@ constexpr static int64_t PER_BLOCK_SIZE = 128LL;
 constexpr int32_t MXFP_DIVISOR_SIZE = 64;
 constexpr int32_t MXFP_MULTI_BASE_SIZE = 2;
 constexpr uint32_t C0_SIZE_B8 = 32UL;
+constexpr uint32_t C0_SIZE_B4 = 64UL;
 // FusedMatMul OpType
 constexpr static uint64_t OP_TYPE_EMPTY = 0UL;
 constexpr static uint64_t OP_TYPE_ADD = 1UL;

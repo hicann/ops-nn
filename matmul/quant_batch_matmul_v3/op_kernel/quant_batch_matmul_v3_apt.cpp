@@ -81,11 +81,12 @@ using namespace matmul;
 #endif
 
 #if (defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_SCALE) && defined(FORMAT_X2))
-#define IS_MXFP8                                                               \
-    ((ORIG_DTYPE_X1 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X1 == DT_FLOAT8_E5M2) && \
-     (ORIG_DTYPE_X2 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X2 == DT_FLOAT8_E5M2) && ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0)
+#define IS_MX                                                                                               \
+    ((ORIG_DTYPE_X1 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X1 == DT_FLOAT8_E5M2 || ORIG_DTYPE_X1 == DT_FLOAT4_E2M1) && \
+     (ORIG_DTYPE_X2 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X2 == DT_FLOAT8_E5M2 || ORIG_DTYPE_X2 == DT_FLOAT4_E2M1) && \
+     ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0)
 #else
-#define IS_MXFP8 false
+#define IS_MX false
 #endif
 
 #if defined(ORIG_DTYPE_SCALE)
@@ -192,7 +193,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
 #endif
 
     if constexpr (DequantBmm::IsMxType<DTYPE_SCALE>()) {
-#if IS_MXFP8
+#if IS_MX
 #if defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
         if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) {
             if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
@@ -201,12 +202,6 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
             } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
                 QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Zn,
                                                Cmct::Gemm::layout::RowMajorAlign, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Nz,
-                                               Cmct::Gemm::layout::RowMajorAlign, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Zn,
-                                               Cmct::Gemm::layout::RowMajorAlign, 0);
             }
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) {
             if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
@@ -214,12 +209,6 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
                                                Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
             } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
                 QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Zn,
-                                               Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Nz,
-                                               Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Zn,
                                                Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
             }
         }
@@ -261,30 +250,6 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
             }
         }
 #endif
-#else
-        if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE) {            // Bias Mode = 0;
-            if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 0;
-                GET_TILING_DATA(tilingData, tiling);
-                MatMulASWKernel<
-                    DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
-                    static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
-                    op;
-                op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
-                op.Process();
-            }
-            if constexpr (
-                TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
-                TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE && TPL_ATRANS == 0 &&
-                TPL_BTRANS == 1) { // Kernel Type = 1, ATrans = 0, BTrans = 1;
-                GET_TILING_DATA(tilingData, tiling);
-                QuantBatchMatmulV3::MatmulAswKernelAL1FullLoad<
-                    DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
-                    static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
-                    op;
-                op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
-                op.Process();
-            }
-        }
 #endif
     } else {
         if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE) {            // Bias Mode = 0
