@@ -443,27 +443,21 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
     | x        | weight            | weight Format | antiquantScale | antiquantOffsetOptional | quantScaleOptional | quantOffsetOptional | biasOptional | antiquantGroupSize | y    | 场景说明 |
     | ----     | ------------------| --------------| -------------- | ------------------------| ------------------ | ------------------- | ------------ | ------------------ | ---- | ------- |
     | FLOAT16/BFLOAT16 | INT4/INT32 | ND | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | 0 | 与x一致 | T 量化 |
-    | FLOAT16/BFLOAT16 | INT4/INT32 | ND/FRACTAL_NZ | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | pergroup: [32, k-1]且为32倍数<br>其他: 0 | 与x一致 | C & G 量化 |
-    | FLOAT16/BFLOAT16 | FLOAT4_E2M1 | FRACTAL_NZ | 与x一致 | null | null | null | 与x一致/null | [32, k-1]且为32倍数 | 与x一致 | G 量化 |
-    | FLOAT16/BFLOAT16 | FLOAT | FRACTAL_NZ | 与x一致 | null | null | null | 与x一致/null | [32, k-1]且为32倍数 | 与x一致 | G 量化 |
-    | FLOAT16/BFLOAT16 | FLOAT4_E2M1 | ND/FRACTAL_NZ | FLOAT8_E8M0 | null | null | null | 与x一致/null | 32 | 与x一致 | MX 量化 |
-    | FLOAT16/BFLOAT16 | FLOAT | ND/FRACTAL_NZ | FLOAT8_E8M0 | null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | 32 | 与x一致 | MX 量化 |
+    | FLOAT16/BFLOAT16 | INT4/INT32 | ND | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | pergroup: [32, k-1]且为32倍数<br>其他: 0 | 与x一致 | C & G 量化 |
+    | FLOAT16/BFLOAT16 | FLOAT4_E2M1 | ND | FLOAT8_E8M0 | null | null | null | 与x一致/null | 32 | 与x一致 | MX 量化 |
+    | FLOAT16/BFLOAT16 | FLOAT | ND | FLOAT8_E8M0 | null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | 32 | 与x一致 | MX 量化 |
 
     - **约束说明**
 
       除[公共约束](#公共约束)外，A16W4场景其余约束如下：
       - 若`weight`数据类型为INT4或FLOAT4_E2M1，则weight的最后一维应为2对齐；若`weight`数据类型为INT32或FLOAT，则weight的最后一维应为8对齐。
       - 若`weight`数据类型为INT32/FLOAT时，必须配合`aclnnConvertWeightToINT4Pack`接口完成从INT32/FLOAT到紧密排布的INT4/FLOAT4_E2M1的转换，[详情可参考样例](../../convert_weight_to_int4_pack/docs/aclnnConvertWeightToINT4Pack.md)。
-      - `weight`的[数据格式](../../../docs/zh/context/数据格式.md)为FRACTAL_NZ仅在如下场景下支持:
-        - perchannel[量化模式](../../../docs/zh/context/量化介绍.md)：`weight`的数据类型为INT4/INT32，`weight`非转置，`x`非转置
-        - pergroup[量化模式](../../../docs/zh/context/量化介绍.md)：`weight`的数据类型为INT4/INT32/FLOAT4_E2M1/FLOAT，`weight`非转置，`x`非转置。
-        - mx[量化模式](../../../docs/zh/context/量化介绍.md)：`weight`的数据类型为FLOAT4_E2M1/FLOAT，`weight`非转置，`x`非转置。
 
   <a id="ascend_950pr_ascend950dt_性能优化建议"></a>
   - **性能优化建议**
 
-    - pertensor[量化模式](../../../docs/zh/context/量化介绍.md)：当[数据格式](../../../docs/zh/context/数据格式.md)为ND时，推荐使用转置后的`weight`输入；当[数据格式](../../../docs/zh/context/数据格式.md)为FRACTAL_NZ时，推荐使用非转置的`weight`输入。
-    - perchannel[量化模式](../../../docs/zh/context/量化介绍.md)：当[数据格式](../../../docs/zh/context/数据格式.md)为ND时，推荐使用转置后的`weight`输入；当[数据格式](../../../docs/zh/context/数据格式.md)为FRACTAL_NZ时，推荐使用非转置的`weight`输入。
+    - pertensor[量化模式](../../../docs/zh/context/量化介绍.md)：推荐使用转置后的`weight`输入。
+    - perchannel[量化模式](../../../docs/zh/context/量化介绍.md)：推荐使用转置后的`weight`输入。
     - pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和mx[量化模式](../../../docs/zh/context/量化介绍.md)：推荐使用非转置的`weight`输入。
 
     </details>
@@ -472,7 +466,8 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
 ## 调用示例
   示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
-- A16W8调用示例：
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品、Ascend 950PR/Ascend 950DT</term>：
+A16W8调用示例：
 
   ```cpp
   #include <iostream>
@@ -706,7 +701,8 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
   }
   ```
 
-- A16W4调用示例，需要调用 `aclnnConvertWeightToINT4Pack` 接口辅助完成调用：
+- <term>Ascend 950PR/Ascend 950DT</term>：
+A16MxFp4调用示例，需要调用 `aclnnConvertWeightToINT4Pack` 接口辅助完成调用：
 
   ``` cpp
   #include <iostream>
@@ -801,15 +797,6 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
       return 0;
   }
 
-  int GetSize(std::vector<int64_t>& shape)
-  {
-      int64_t size = 1;
-      for (auto i : shape) {
-          size *= i;
-      }
-      return size;
-  }
-
   template <typename T>
   int CreateAclTensorB4(
       const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
@@ -830,21 +817,9 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
       }
 
       // 调用aclCreateTensor接口创建aclTensor
-      if (format == aclFormat::ACL_FORMAT_ND) {
-          *tensor = aclCreateTensor(
-              shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(),
-              shape.size(), *deviceAddr);
-      } else {
-          std::vector<int64_t> nzShape;
-          if (dataType == aclDataType::ACL_INT4 || dataType == aclDataType::ACL_FLOAT4_E2M1) {
-              nzShape = {CeilDiv(shape[1], (int64_t)16), CeilDiv(shape[0], (int64_t)16), 16, 16};
-          } else {
-              nzShape = {CeilDiv(shape[1], (int64_t)2), CeilDiv(shape[0], (int64_t)16), 16, 2};
-          }
-          *tensor = aclCreateTensor(
-              shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_FRACTAL_NZ, nzShape.data(),
-              nzShape.size(), *deviceAddr);
-      }
+      *tensor = aclCreateTensor(
+          shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(),
+          shape.size(), *deviceAddr);
 
       return 0;
   }
@@ -906,37 +881,37 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
       aclTensor* antiquantScale = nullptr;
       std::vector<int64_t> weightPackedShape;
       weightPackedShape = {weightDim0, weightDim1 / 8};
-      // 填充FP16的1.0，BF16的1.0为0b0011111110000000
-      std::vector<uint16_t> xHostData(GetSize(xShape), 0b0011110000000000);
-      std::vector<float> weightHostData(GetSize(weightShape), 1.0); // fp32的1.0，经过int4pack后转到fp4_e2m1的1.0
-      std::vector<float> yHostData(GetSize(yShape), 0);
+      std::vector<uint16_t> xHostData(GetShapeSize(xShape), 0b0011110000000000); // fp16的1.0
+      xHostData[0] = 0;                                                  // fp16的0，验证结果是否符合要求
+      std::vector<float> weightHostData(GetShapeSize(weightShape), 1.0); // fp32的1.0，经过int4pack后转到fp4_e2m1的1.0
+      std::vector<float> yHostData(GetShapeSize(yShape), 0);
 
-      std::vector<uint16_t> antiquantScaleHostData(GetSize(antiquantScaleShape), 0b0011110000000000); // fp16的1.0
+      std::vector<uint8_t> antiquantScaleHostData(GetShapeSize(antiquantScaleShape), 0b01111111); // fp8_e8m0的1.0
 
-      // 创建x aclTensor，可选ACL_FLOAT16/ACL_BFLOAT16类型
+      // 创建x aclTensor
       ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT16, &x);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> xTensorPtr(x, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void*)> xDeviceAddrPtr(xDeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-      // 创建other aclTensor，FLOAT4_E2M1类型pack为FLOAT
+      // 创建other aclTensor
       ret = CreateAclTensor(weightHostData, weightShape, &weightDeviceAddr, aclDataType::ACL_FLOAT, &weight);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> weightTensorPtr(weight, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void*)> weightDeviceAddrPtr(weightDeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-      // 创建y aclTensor，用于将输出转回FP32
+      // 创建y aclTensor
       ret = CreateAclTensor(yHostData, yShape, &yDeviceAddr, aclDataType::ACL_FLOAT, &y);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> yTensorPtr(y, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void*)> yDeviceAddrPtr(yDeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
       // 创建antiquantScale aclTensor
       ret = CreateAclTensor(
-          antiquantScaleHostData, antiquantScaleShape, &antiquantScaleDeviceAddr, aclDataType::ACL_FLOAT16,
+          antiquantScaleHostData, antiquantScaleShape, &antiquantScaleDeviceAddr, aclDataType::ACL_FLOAT8_E8M0,
           &antiquantScale);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> antiquantScaleTensorPtr(
           antiquantScale, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void*)> antiquantScaleDeviceAddrPtr(antiquantScaleDeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-      // 创建yFp16 aclTensor，实际计算的输出，类型与x保持一致
+      // 创建yFp16 aclTensor
       void* yFp16DeviceAddr = nullptr;
       aclTensor* yFp16 = nullptr;
       ret = CreateAclTensor(yHostData, yShape, &yFp16DeviceAddr, aclDataType::ACL_FLOAT16, &yFp16);
@@ -945,13 +920,10 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
       CHECK_RET(ret == ACL_SUCCESS, return ret);
 
       // 3. 调用CANN算子库API，需要修改为具体的Api名称
-      aclFormat weightFormat = aclFormat::ACL_FORMAT_FRACTAL_NZ; // 可选：ACL_FORMAT_ND
+      aclFormat weightFormat = aclFormat::ACL_FORMAT_ND;
       aclTensor* weightPacked = nullptr;
 
       std::vector<int8_t> weightB4PackHostData(n * k / 2, 0); // 一个B8数据存放2个B4数据，所以这里除以2
-      if (weightFormat == aclFormat::ACL_FORMAT_FRACTAL_NZ) {
-          weightB4PackHostData.resize(CeilAlign(weightDim1 / 2, (int64_t)8) * CeilAlign(weightDim0, (int64_t)16), 0);
-      }
       // 创建weightInt4Pack aclTensor
       ret = CreateAclTensorB4(
           weightB4PackHostData, weightPackedShape, &weightB4PackDeviceAddr, weightPackedDtype, &weightPacked,
@@ -959,7 +931,6 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> weightPackedTensorPtr(weightPacked, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void*)> weightPackedDeviceAddrPtr(weightB4PackDeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-
       // 对weight做int32转int4pack
       uint64_t workspaceSize = 0;
       aclOpExecutor* executor;
