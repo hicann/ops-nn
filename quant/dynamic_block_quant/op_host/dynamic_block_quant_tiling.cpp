@@ -369,7 +369,6 @@ static void AutoTiling(DynamicBlockQuantTilingParam& tilingParam)
 
         int64_t rowNormalBlock = Ops::Base::CeilDiv(tilingParam.rowBlockLoopNum, m);
         int64_t colNormalBlock = Ops::Base::CeilDiv(tilingParam.colBlockLoopNum, n);
-
         if (rowNormalBlock == DIGIT_ZERO || colNormalBlock == DIGIT_ZERO) {
             continue;
         }

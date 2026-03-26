@@ -1717,6 +1717,9 @@ VC1@ops-nn:
         - ops/ops-nn/quant/ascend_quant_v2/op_kernel/arch35/
         - ops/ops-nn/quant/ascend_quant_v2/op_kernel/ascend_quant_v2_apt.cpp
         - ops/ops-nn/quant/dynamic_block_quant/op_graph/
+        - ops/ops-nn/quant/dynamic_block_quant/op_host/dynamic_block_quant_i8_tiling.cpp
+        - ops/ops-nn/quant/dynamic_block_quant/op_host/config/ascend910_93/
+        - ops/ops-nn/quant/dynamic_block_quant/op_host/config/ascend910b/
         - ops/ops-nn/quant/dynamic_block_quant/op_host/config/ascend950/
         - ops/ops-nn/quant/dynamic_block_quant/op_host/dynamic_block_quant_def.cpp
         - ops/ops-nn/quant/dynamic_block_quant/op_host/dynamic_block_quant_infershape.cpp
@@ -1810,6 +1813,7 @@ VC1@ops-nn:
         - ops/ops-nn/quant/ascend_quant/tests/
         - ops/ops-nn/quant/ascend_quant_v2/examples/
         - ops/ops-nn/quant/ascend_quant_v2/tests/
+        - ops/ops-nn/quant/dynamic_block_quant/README.md
         - ops/ops-nn/quant/dynamic_block_quant/docs/
         - ops/ops-nn/quant/dynamic_block_quant/examples/
         - ops/ops-nn/quant/dynamic_block_quant/tests/
