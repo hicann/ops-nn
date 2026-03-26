@@ -191,7 +191,7 @@ aclnnStatus aclnnKlDivTargetBackward(
       <td class="tg-0pky">gradOutput、self、target和gradTarget的数据类型不在支持的范围内时。</td>
     </tr>
     <tr>
-      <td class="tg-0pky">self、gradTarget的数据类型不一致。</td>
+      <td class="tg-0pky">target、gradTarget的数据类型不一致。</td>
     </tr>
     <tr>
       <td class="tg-0pky">gradOutput的shape不能向self或者target做<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>。</td>
@@ -200,7 +200,7 @@ aclnnStatus aclnnKlDivTargetBackward(
       <td class="tg-0pky">target的shape和self的shape不满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>关系。</td>
     </tr>
     <tr>
-      <td class="tg-0lax">self的shape与gradTarget的shape不相同。</td>
+      <td class="tg-0lax">target的shape与gradTarget的shape不相同。</td>
     </tr>
     <tr>
       <td class="tg-0lax">gradOutput、self、target或者gradTarget维度大于8。</td>

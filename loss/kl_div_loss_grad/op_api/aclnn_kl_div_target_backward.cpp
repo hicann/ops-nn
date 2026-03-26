@@ -108,7 +108,7 @@ static bool CheckShape(
             op::ToString(broadcastShape).GetString(), op::ToString(gradOutput->GetViewShape()).GetString());
         return false;
     }
-    OP_CHECK_SHAPE_NOT_EQUAL(self, gradTarget, return false);
+    OP_CHECK_SHAPE_NOT_EQUAL(target, gradTarget, return false);
 
     return true;
 }
@@ -194,10 +194,24 @@ static const aclTensor* ReduceSumTensor(const aclTensor* grad, const op::Shape g
 
 static const aclTensor* ComputeGradForKlDiv(
     const aclTensor* targetBroadcast, const aclTensor* selfCasted, 
-    const aclTensor* gradOutputCasted, bool logTarget, aclOpExecutor* executor)
+    const aclTensor* gradOutputCasted, bool logTarget, int64_t reduction, aclOpExecutor* executor)
 {
     auto oneScalar = executor->AllocScalar(1.0);
     auto oneTensor = executor->ConvertToTensor(oneScalar, op::DataType::DT_FLOAT);
+
+    const aclTensor* grad = nullptr;
+
+    //将reduction处理前置，防溢出
+    if (reduction == Mean) {
+        auto totalElementScalar = executor->AllocScalar(GetElementNum(targetBroadcast->GetViewShape()));
+        auto totalElementTensor = executor->ConvertToTensor(totalElementScalar, op::DataType::DT_FLOAT);
+        gradOutputCasted = l0op::Div(gradOutputCasted, totalElementTensor, executor);
+    } else if (reduction == Batchmean){
+        auto batchSizeScalar = executor->AllocScalar(targetBroadcast->GetViewShape()[0]);
+        auto batchSizeTensor = executor->ConvertToTensor(batchSizeScalar, op::DataType::DT_FLOAT);
+        gradOutputCasted = l0op::Div(gradOutputCasted, batchSizeTensor, executor);
+    }
+
     if (!logTarget) {
         const float LOG_BASE = -1.0f;
         const float LOG_SCALE = 1.0f;
@@ -205,14 +219,16 @@ static const aclTensor* ComputeGradForKlDiv(
         auto logOut = l0op::Log(targetBroadcast, LOG_BASE, LOG_SCALE, LOG_SHIFT, executor);
         auto logPlusOne = l0op::Add(logOut, oneTensor, executor);
         auto termSubSelf = l0op::Sub(logPlusOne, selfCasted, executor);
-        return l0op::Mul(gradOutputCasted, termSubSelf, executor);
+        grad =  l0op::Mul(gradOutputCasted, termSubSelf, executor);
     } else {
         auto expOut = l0op::Exp(targetBroadcast, executor);
         auto logPlusOne = l0op::Add(targetBroadcast, oneTensor, executor);
         auto termSubSelf = l0op::Sub(logPlusOne, selfCasted, executor);
-        auto mulExp = l0op::Mul(expOut, termSubSelf, executor);
-        return l0op::Mul(gradOutputCasted, mulExp, executor);
+        auto mulExp = l0op::Mul(gradOutputCasted, expOut, executor);
+        grad = l0op::Mul(mulExp, termSubSelf, executor);
     }
+
+    return grad;
 }
 
 static aclnnStatus ExecuteKlDivTargetBackward(
@@ -248,25 +264,13 @@ static aclnnStatus ExecuteKlDivTargetBackward(
     op::Shape broadcastShape;
     BroadcastInferShape(target->GetViewShape(), self->GetViewShape(), broadcastShape);
 
-    // 判断self是否需要进行broadcast
+    // 判断target是否需要进行broadcast
     auto targetBroadcast = BroadcastTensor(targetCasted, broadcastShape, executor);
     CHECK_RET(targetBroadcast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 进行计算
-    auto grad = ComputeGradForKlDiv(targetBroadcast, selfCasted, gradOutputCasted, logTarget, executor);
+    auto grad = ComputeGradForKlDiv(targetBroadcast, selfCasted, gradOutputCasted, logTarget, reduction, executor);
     CHECK_RET(grad != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    if (reduction == Mean) {
-        auto totalElementScalar = executor->AllocScalar(GetElementNum(grad->GetViewShape()));
-        auto totalElementTensor = executor->ConvertToTensor(totalElementScalar, promoteType);
-        grad = l0op::Div(grad, totalElementTensor, executor);
-        CHECK_RET(grad != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    } else if (reduction == Batchmean){
-        auto batchSizeScalar = executor->AllocScalar(grad->GetViewShape()[0]);
-        auto batchSizeTensor = executor->ConvertToTensor(batchSizeScalar, promoteType);
-        grad = l0op::Div(grad, batchSizeTensor, executor);
-        CHECK_RET(grad != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
     
     // 根据grad的shape是否与gradTarget的shape相同，判断是否需要reduce
     auto gradReduce = ReduceSumTensor(grad, gradTarget->GetViewShape(), executor);

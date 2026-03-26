@@ -469,8 +469,8 @@ TEST_F(l2_kl_div_target_backward_test, case_checknull)
 TEST_F(l2_kl_div_target_backward_test, case_broadcast_1)
 {
     auto gradDesc = TensorDesc({3, 1}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto selfDesc = TensorDesc({3, 1}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto targetDesc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 4);
+    auto selfDesc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto targetDesc = TensorDesc({3, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 4);
     int64_t reduction = 0;
     bool logTarget = false;
 
@@ -489,7 +489,7 @@ TEST_F(l2_kl_div_target_backward_test, case_broadcast_2)
 {
     auto gradDesc = TensorDesc({3, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto selfDesc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto targetDesc = TensorDesc({3, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 4);
+    auto targetDesc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 4);
     int64_t reduction = 0;
     bool logTarget = false;
 
@@ -507,8 +507,8 @@ TEST_F(l2_kl_div_target_backward_test, case_broadcast_2)
 TEST_F(l2_kl_div_target_backward_test, case_broadcast_3)
 {
     auto gradDesc = TensorDesc({3, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto selfDesc = TensorDesc({3, 5, 1}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto targetDesc = TensorDesc({6, 3, 1, 7}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 4);
+    auto selfDesc = TensorDesc({6, 3, 1, 7}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto targetDesc = TensorDesc({3, 5, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 4);
     int64_t reduction = 0;
     bool logTarget = false;
 
