@@ -479,7 +479,7 @@ namespace RmsNorm {
         uint64_t curUbTails;
         uint32_t blockSize = GetUbBlockSize();
         uint32_t blockSizeB32 = GetUbBlockSize() / sizeof(float);
-        uint32_t VectorLenB32 = GetVRegSize() / sizeof(float);
+        static constexpr uint32_t VectorLenB32 = GetVRegSize() / sizeof(float);
         static constexpr float RMS_POS_INF = 3.40282366920938E+38;
         static constexpr float RMS_ZERO = 0.0f;
         static constexpr int32_t NUM_ONE = 1;
