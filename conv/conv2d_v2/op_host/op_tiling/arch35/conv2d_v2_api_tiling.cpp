@@ -32,7 +32,7 @@ namespace conv_tiling {
 int64_t Conv2dTiling::GetTiling(optiling::TConv2DTiling &tiling)
 {
     if (!CheckParams()) {
-        TILING_LOG_ERROR("conv2d api tiling check params failed.");
+        OP_LOGE(nodeType, "conv2d api tiling check params failed.");
         return -1;
     }
     InferCubeInfo();
@@ -41,18 +41,17 @@ int64_t Conv2dTiling::GetTiling(optiling::TConv2DTiling &tiling)
     platformInfo.abL1mte2BandWidthCof = GetBandWidthCof();
     int64_t ret = Compute();
     if (ret == -1) {
-        TILING_LOG_ERROR("conv2d api tiling compute failed.");
+        OP_LOGE(nodeType, "conv2d api tiling compute failed.");
         return -1;
     }
 
     ret = CheckTilingRes();
     if (ret == -1) {
-        TILING_LOG_ERROR("conv2d api tiling check tiling result failed.");
+        OP_LOGE(nodeType, "conv2d api tiling check tiling result failed.");
         return -1;
     }
 
     SetTilingData(tiling);
-    PrintTilingData();
     return 0;
 }
 
@@ -69,16 +68,15 @@ bool Conv2dTiling::GetTiling(Conv2DBasicBlockInfo& conv2DBasicBlockInfo, optilin
         conv2DBasicBlockInfo);
     int64_t ret = algoBBPtr->Process();
     if (ret == -1) {
-        TILING_LOG_ERROR("conv2d api tiling Process failed.");
+        OP_LOGE(nodeType, "conv2d api tiling Process failed.");
         return false;
     }
     ret = CheckTilingRes();
     if (ret == -1) {
-        TILING_LOG_ERROR("conv2d api tiling check tiling result failed.");
+        OP_LOGE(nodeType, "conv2d api tiling check tiling result failed.");
         return false;
     }
     SetTilingData(tiling);
-    PrintTilingData();
     return true;
 }
 
@@ -114,14 +112,11 @@ int64_t Conv2dTiling::Compute()
             algoPtr = std::make_shared<ConvTilingAlgorithmHWmode>(this);
             break;
         default:
-            TILING_LOG_ERROR("Unsupported output order %d, only support Mmode(%d) and HWmode(%d).",
+            OP_LOGE(nodeType, "Unsupported output order %d, only support Mmode(%d) and HWmode(%d).",
                 static_cast<int>(outputOrder), static_cast<int>(OutputOrder::M), static_cast<int>(OutputOrder::HW));
             return -1;
     }
-    TILING_LOG_DEBUG("output order: %d", outputOrder);
-    int64_t ret = algoPtr->Process();
-
-    return ret;
+    return algoPtr->Process();
 }
 
 bool Conv2dTiling::CheckParams()
@@ -487,55 +482,6 @@ uint32_t Conv2dTiling::CalcAL1SpaceSize(optiling::TConv2DTiling& tiling)
     return static_cast<uint32_t>(aL1SpaceSize);
 }
 
-void Conv2dTiling::PrintTilingData() const
-{
-    TILING_LOG_DEBUG("orgHi: %ld", shapeInfo.orgHi);
-    TILING_LOG_DEBUG("orgWi: %ld", shapeInfo.orgWi);
-    TILING_LOG_DEBUG("orgHo: %ld", shapeInfo.orgHo);
-    TILING_LOG_DEBUG("orgWo: %ld", shapeInfo.orgWo);
-    if (outputOrder == static_cast<int8_t>(OutputOrder::M)) {
-        TILING_LOG_DEBUG("singleCoreM: %ld", shapeInfo.singleM);
-        TILING_LOG_DEBUG("mL1: %lu", l1TilingInfo.mAL1);
-        TILING_LOG_DEBUG("hoL0: %lu", l0TilingInfo.mL0);
-    } else {
-        TILING_LOG_DEBUG("singleCoreHo: %ld", shapeInfo.singleHo);
-        TILING_LOG_DEBUG("singleCoreWo: %ld", shapeInfo.singleWo);
-        TILING_LOG_DEBUG("hoL1: %lu", l1TilingInfo.hoAL1);
-        TILING_LOG_DEBUG("woL1: %lu", l1TilingInfo.woAL1);
-        TILING_LOG_DEBUG("hoL0: %lu", l0TilingInfo.hoL0);
-        TILING_LOG_DEBUG("woL0: %lu", l0TilingInfo.woL0);
-    }
-    TILING_LOG_DEBUG("groups: %d", attrInfo.groups);
-    TILING_LOG_DEBUG("orgCi: %ld", shapeInfo.orgCi);
-    TILING_LOG_DEBUG("orgCo: %ld", shapeInfo.orgCo);
-    TILING_LOG_DEBUG("kernelH: %ld", shapeInfo.orgkH);
-    TILING_LOG_DEBUG("kernelW: %ld", shapeInfo.orgkW);
-    TILING_LOG_DEBUG("singleCoreCi: %ld", shapeInfo.singleCi);
-    TILING_LOG_DEBUG("singleCoreCo: %ld", shapeInfo.singleCo);
-    TILING_LOG_DEBUG("kAL1: %lu", l1TilingInfo.kAL1);
-    TILING_LOG_DEBUG("kBL1: %lu", l1TilingInfo.kBL1);
-    TILING_LOG_DEBUG("nBL1: %lu", l1TilingInfo.nBL1);
-    TILING_LOG_DEBUG("kL0: %lu", l0TilingInfo.kL0);
-    TILING_LOG_DEBUG("nL0: %lu", l0TilingInfo.nL0);
-    TILING_LOG_DEBUG("pBufferFlag: %lu", dbValue.pBufferFlag);
-    TILING_LOG_DEBUG("strideH: %d", attrInfo.strideH);
-    TILING_LOG_DEBUG("strideW: %d", attrInfo.strideW);
-    TILING_LOG_DEBUG("dilationH: %d", attrInfo.dilationH);
-    TILING_LOG_DEBUG("dilationW: %d", attrInfo.dilationW);
-    TILING_LOG_DEBUG("padTop: %d", attrInfo.padTop);
-    TILING_LOG_DEBUG("padBottom: %d", attrInfo.padBottom);
-    TILING_LOG_DEBUG("padLeft: %d", attrInfo.padLeft);
-    TILING_LOG_DEBUG("padRight: %d", attrInfo.padRight);
-    TILING_LOG_DEBUG("iterateMNOrder: %u", static_cast<uint8_t>(l1TilingInfo.iterateMNOrder));
-    TILING_LOG_DEBUG("biasFullLoadFlag: %u", l1TilingInfo.biasFullLoadFlag);
-    TILING_LOG_DEBUG("fixpParamsFullLoadFlag: %u", l1TilingInfo.fixpParamsFullLoadFlag);
-    TILING_LOG_DEBUG("offsetx: %d", attrInfo.offsetx);
-    TILING_LOG_DEBUG("hf32Mode: %u", hf32Enable);
-    TILING_LOG_DEBUG("hf32TransMode: %u", hf32TransMode);
-    TILING_LOG_DEBUG("enableInnerBatch: %u", enableInnerBatch);
-    TILING_LOG_DEBUG("innerBatch: %d", innerBatch);
-}
-
 void Conv2dTiling::SetOutputOrder(int8_t outOrder)
 {
     this->outputOrder = outOrder;
@@ -698,17 +644,17 @@ void Conv2dTiling::SetOptGroupParams(int32_t enlarge, int64_t singleGroups, int6
 void Conv2dTiling::CalcOptGroupParams(const ConvOriGroupInfo& oriGroupInfo, ConvOptGroupInfo& optGroupInfo) const
 {
     if (oriGroupInfo.groups <= 0) {
-        TILING_LOG_ERROR("Illegal params : groups=%lu which must > 0.", oriGroupInfo.groups);
+        OP_LOGE(nodeType, "Illegal params : groups=%lu which must > 0.", oriGroupInfo.groups);
         return;
     }
 
     if (oriGroupInfo.coPerGroup <= 0) {
-        TILING_LOG_ERROR("Illegal params : coPerGroup=%lu which must > 0.", oriGroupInfo.coPerGroup);
+        OP_LOGE(nodeType, "Illegal params : coPerGroup=%lu which must > 0.", oriGroupInfo.coPerGroup);
         return;
     }
 
     if (oriGroupInfo.ciPerGroup <= 0) {
-        TILING_LOG_ERROR("Illegal params : ciPerGroup=%lu which must > 0.", oriGroupInfo.ciPerGroup);
+        OP_LOGE(nodeType, "Illegal params : ciPerGroup=%lu which must > 0.", oriGroupInfo.ciPerGroup);
         return;
     }
 
@@ -734,7 +680,7 @@ uint64_t Conv2dTiling::CalcC04UbLoadMaxNsize(const ConvC04Info &c04Info) const
 uint64_t Conv2dTiling::CalcC04UbLoadNsize(const ConvC04Info &c04Info) const
 {
     if (c04Info.curNBL1 < c04Info.n0) {
-        TILING_LOG_DEBUG("Ubsize is not enough to load even a n0 size block, c04 mode cannot be enabled.");
+        OP_LOGD(nodeType, "Ubsize is not enough to load even a n0 size block, c04 mode cannot be enabled.");
         return 0;
     }
 
@@ -745,7 +691,7 @@ uint64_t Conv2dTiling::CalcC04UbLoadNsize(const ConvC04Info &c04Info) const
     } else {
         uint32_t vecNum = platformInfo.aivPerAic;
         if (vecNum == 0) {
-            TILING_LOG_DEBUG("can't get vector num per cube by soc version");
+            OP_LOGD(nodeType, "can't get vector num per cube by soc version");
             return 0;
         }
         uint64_t nStepVec0 = CeilDiv(c04Info.curNBL1 / c04Info.n0, vecNum) * c04Info.n0;
@@ -759,20 +705,20 @@ bool Conv2dTiling::CheckAttrBeforeCoreBind()
 {
     if (attrInfo.padLeft < 0 || attrInfo.padRight < 0 ||
         attrInfo.padTop < 0 || attrInfo.padBottom < 0) {
-        TILING_LOG_ERROR(
+        OP_LOGE(nodeType, 
             "Illlegal attrs have set: padTop=%d, padBottom=%d, padLeft=%d, padRight=%d, which must >= 0.",
             attrInfo.padTop, attrInfo.padBottom, attrInfo.padLeft, attrInfo.padRight);
         return false;
     }
 
     if (attrInfo.strideH <= 0 || attrInfo.strideW <= 0) {
-        TILING_LOG_ERROR("Illegal attrs have set: strideH=%d, strideW=%d, which must > 0.",
+        OP_LOGE(nodeType, "Illegal attrs have set: strideH=%d, strideW=%d, which must > 0.",
                          attrInfo.strideH, attrInfo.strideW);
         return false;
     }
 
     if (attrInfo.dilationH <= 0 || attrInfo.dilationW <= 0) {
-        TILING_LOG_ERROR("Illegal attrs have set: dilationH=%d, dilationW=%d, which must > 0.",
+        OP_LOGE(nodeType, "Illegal attrs have set: dilationH=%d, dilationW=%d, which must > 0.",
                          attrInfo.dilationH, attrInfo.dilationW);
         return false;
     }
@@ -807,13 +753,13 @@ bool Conv2dTiling::CheckAttrBBModePhase1()
 bool Conv2dTiling::CheckGroupsBBModePhase1()
 {
     if (attrInfo.groups <= 0) {
-        TILING_LOG_ERROR("Illegal attrs have set: groups=%d which must > 0.", attrInfo.groups);
+        OP_LOGE(nodeType, "Illegal attrs have set: groups=%d which must > 0.", attrInfo.groups);
         return false;
     }
 
     if (this->optGroupFlag) {
         if (shapeInfo.enlarge <= 0) {
-            TILING_LOG_ERROR("Illegal attrs have set: enlarge=%d which must > 0.", shapeInfo.enlarge);
+            OP_LOGE(nodeType, "Illegal attrs have set: enlarge=%d which must > 0.", shapeInfo.enlarge);
             return false;
         }
     }
@@ -824,22 +770,22 @@ bool Conv2dTiling::CheckGroupsBBModePhase1()
 bool Conv2dTiling::CheckFmapShapeBeforeCoreBind()
 {
     if (shapeInfo.orgHi <= 0 || shapeInfo.orgWi <= 0) {
-        TILING_LOG_ERROR("Input illegal orgHi: %ld, orgWi: %ld, which must > 0.", shapeInfo.orgHi, shapeInfo.orgWi);
+        OP_LOGE(nodeType, "Input illegal orgHi: %ld, orgWi: %ld, which must > 0.", shapeInfo.orgHi, shapeInfo.orgWi);
         return false;
     }
     if (shapeInfo.orgCi <= 0 || static_cast<uint64_t>(shapeInfo.orgCi) > MAX_31_BIT_NUM) {
-        TILING_LOG_ERROR("Input illegal orgCi: %ld, which must in range [1, %lu].", shapeInfo.orgCi, MAX_31_BIT_NUM);
+        OP_LOGE(nodeType, "Input illegal orgCi: %ld, which must in range [1, %lu].", shapeInfo.orgCi, MAX_31_BIT_NUM);
         return false;
     }
     int64_t ciPerg = this->optGroupFlag ? shapeInfo.singleCi / shapeInfo.enlarge : shapeInfo.singleCi;
     if (ciPerg * attrInfo.groups != shapeInfo.orgCi) {
-        TILING_LOG_ERROR("only support groups * singleCi = orgCi, current groups: %d, singleCi: %ld, orgCi: %ld",
+        OP_LOGE(nodeType, "only support groups * singleCi = orgCi, current groups: %d, singleCi: %ld, orgCi: %ld",
             attrInfo.groups, ciPerg, shapeInfo.orgCi);
         return false;
     }
 
     if (attrInfo.strideH == 0 || attrInfo.strideW == 0) {
-        TILING_LOG_ERROR("div zero when calculating output shape, strideH: %d, strideW: %d.",
+        OP_LOGE(nodeType, "div zero when calculating output shape, strideH: %d, strideW: %d.",
             attrInfo.strideH, attrInfo.strideW);
         return false;
     }
@@ -848,7 +794,7 @@ bool Conv2dTiling::CheckFmapShapeBeforeCoreBind()
     shapeInfo.orgWo = (shapeInfo.orgWi + attrInfo.padLeft + attrInfo.padRight -
                        attrInfo.dilationW * (shapeInfo.orgkW - 1) - 1) / attrInfo.strideW + 1;
     if (shapeInfo.orgHo <= 0 || shapeInfo.orgWo <= 0) {
-        TILING_LOG_ERROR("Calculated output orgHo: %ld, orgWo: %ld, which must > 0", shapeInfo.orgHo, shapeInfo.orgWo);
+        OP_LOGE(nodeType, "Calculated output orgHo: %ld, orgWo: %ld, which must > 0", shapeInfo.orgHo, shapeInfo.orgWo);
         return false;
     }
 
@@ -865,12 +811,12 @@ bool Conv2dTiling::CheckFeaMapShape()
 {
     if (outputOrder == static_cast<int8_t>(OutputOrder::HW) &&
         (shapeInfo.singleHo <= 0 || shapeInfo.singleWo <= 0)) {
-        TILING_LOG_ERROR("Input illegal singleHo: %ld, singleWo: %ld, which must > 0.",
+        OP_LOGE(nodeType, "Input illegal singleHo: %ld, singleWo: %ld, which must > 0.",
             shapeInfo.singleHo, shapeInfo.singleWo);
         return false;
     }
     if (outputOrder == static_cast<int8_t>(OutputOrder::M) && shapeInfo.singleM <= 0) {
-        TILING_LOG_ERROR("Input illegal singleM: %ld, which must > 0.", shapeInfo.singleM);
+        OP_LOGE(nodeType, "Input illegal singleM: %ld, which must > 0.", shapeInfo.singleM);
         return false;
     }
     bool ret = CheckFmapShapeBeforeCoreBind();
@@ -880,28 +826,28 @@ bool Conv2dTiling::CheckFeaMapShape()
 bool Conv2dTiling::CheckWeightShapeBeforeCoreBind()
 {
     if (shapeInfo.orgkW <= 0 || static_cast<uint64_t>(shapeInfo.orgkW) > MAX_31_BIT_NUM) {
-        TILING_LOG_ERROR("Input illegal kW: %ld, which must in range [1, %lu].", shapeInfo.orgkW, MAX_31_BIT_NUM);
+        OP_LOGE(nodeType, "Input illegal kW: %ld, which must in range [1, %lu].", shapeInfo.orgkW, MAX_31_BIT_NUM);
         return false;
     }
 
     if (shapeInfo.orgkH <= 0 || static_cast<uint64_t>(shapeInfo.orgkH) > MAX_31_BIT_NUM) {
-        TILING_LOG_ERROR("Input illegal kH: %ld, which must in range [1, %lu].", shapeInfo.orgkH, MAX_31_BIT_NUM);
+        OP_LOGE(nodeType, "Input illegal kH: %ld, which must in range [1, %lu].", shapeInfo.orgkH, MAX_31_BIT_NUM);
         return false;
     }
 
     if (shapeInfo.orgCo <= 0 || static_cast<uint64_t>(shapeInfo.orgCo) > MAX_31_BIT_NUM) {
-        TILING_LOG_ERROR("Input illegal orgCo: %ld, which must in range [1, %lu].", shapeInfo.orgCo, MAX_31_BIT_NUM);
+        OP_LOGE(nodeType, "Input illegal orgCo: %ld, which must in range [1, %lu].", shapeInfo.orgCo, MAX_31_BIT_NUM);
         return false;
     }
 
     if (shapeInfo.singlekW != shapeInfo.orgkW) {
-        TILING_LOG_ERROR("Only support singlekW = orgkW, current singlekW: %ld, orgkW: %ld",
+        OP_LOGE(nodeType, "Only support singlekW = orgkW, current singlekW: %ld, orgkW: %ld",
             shapeInfo.singlekW, shapeInfo.orgkW);
         return false;
     }
 
     if (shapeInfo.singlekH != shapeInfo.orgkH) {
-        TILING_LOG_ERROR("Only support singlekH = orgkH, current singlekH: %ld, orgkH: %ld,",
+        OP_LOGE(nodeType, "Only support singlekH = orgkH, current singlekH: %ld, orgkH: %ld,",
             shapeInfo.singlekH, shapeInfo.orgkH);
         return false;
     }
@@ -918,7 +864,7 @@ bool Conv2dTiling::CheckWeightShapeBBModePhase1()
 bool Conv2dTiling::CheckWeightShape()
 {
     if (shapeInfo.singleCo <= 0 || static_cast<uint64_t>(shapeInfo.singleCo) > MAX_31_BIT_NUM) {
-        TILING_LOG_ERROR("Input illegal SingleCo: %ld, which must in range [1, %lu].",
+        OP_LOGE(nodeType, "Input illegal SingleCo: %ld, which must in range [1, %lu].",
             shapeInfo.singleCo, MAX_31_BIT_NUM);
         return false;
     }
@@ -966,7 +912,7 @@ bool Conv2dTiling::CheckFormat()
 
     if (conv2dSupportFormatSet.find({descInfo.fMapType.format, descInfo.weightType.format}) ==
         conv2dSupportFormatSet.end()) {
-        TILING_LOG_ERROR("unSupported format combo: fmap format: %s, weight format: %s.",
+        OP_LOGE(nodeType, "unSupported format combo: fmap format: %s, weight format: %s.",
                          FORMAT_TO_STR.at(descInfo.fMapType.format).c_str(),
                          FORMAT_TO_STR.at(descInfo.weightType.format).c_str());
         return false;
@@ -979,7 +925,7 @@ bool Conv2dTiling::CheckAlgorithmLimit()
 {
     if (attrInfo.groups > 1 && isC04Flag) {
         // group conv2d currently not support c04 mode
-        TILING_LOG_ERROR("not support C04 mode in group Conv.");
+        OP_LOGE(nodeType, "not support C04 mode in group Conv.");
         return false;
     }
 
@@ -1035,7 +981,7 @@ bool Conv2dTiling::CheckFixpipeLimits()
     uint64_t fixpipeLoop2DstStrideLimit = MAX_32_BIT_NUM;
     uint64_t fixpipeLoop2DstStride = static_cast<uint64_t>(shapeInfo.orgHo) * shapeInfo.orgWo;
     if (descInfo.fMapType.format == ConvFormat::NCHW && fixpipeLoop2DstStride > fixpipeLoop2DstStrideLimit) {
-        TILING_LOG_ERROR(
+        OP_LOGE(nodeType, 
             "Output shape not satisfy Fixpipe's limits: hout(%ld)*wout(%ld)=%lu, which must <= %lu",
             shapeInfo.orgHo, shapeInfo.orgWo, fixpipeLoop2DstStride, fixpipeLoop2DstStrideLimit);
         return false;
@@ -1046,7 +992,7 @@ bool Conv2dTiling::CheckFixpipeLimits()
     uint64_t fixpipeLoop3DstStride = shapeInfo.orgWo * shapeInfo.orgCo;
     if (descInfo.fMapType.format == ConvFormat::NHWC && outputOrder == static_cast<int8_t>(OutputOrder::HW) &&
         fixpipeLoop3DstStride > fixpipeLoop3DstStrideLimit) {
-        TILING_LOG_ERROR(
+        OP_LOGE(nodeType, 
             "Output shape not satisfy Fixpipe's limits: wout(%lu)*cout(%lu)=%lu, which must <= %lu",
             shapeInfo.orgWo, shapeInfo.orgCo, fixpipeLoop3DstStride, fixpipeLoop3DstStrideLimit);
         return false;
@@ -1060,7 +1006,7 @@ bool Conv2dTiling::CheckDataCopyLimits()
     uint64_t loadAL1loop1SrcStrideLimits = MAX_40_BIT_NUM;
     uint64_t loadAL1loop1SrcStride = shapeInfo.orgHi * shapeInfo.orgWi * DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype);
     if (descInfo.fMapType.format == ConvFormat::NCHW && loadAL1loop1SrcStride > loadAL1loop1SrcStrideLimits) {
-        TILING_LOG_ERROR(
+        OP_LOGE(nodeType, 
             "Fmap shape not satisfy DataCopy's limits: hin(%ld)*win(%ld)*typesize(%u)=%lu, must <= %lu",
             shapeInfo.orgHi, shapeInfo.orgWi, DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype),
             loadAL1loop1SrcStride, loadAL1loop1SrcStrideLimits);
@@ -1094,7 +1040,7 @@ bool Conv2dTiling::CheckL1SizeLimitsKernelFullLoad(bool isC04)
 
     uint64_t minL1LoadSize = biasUsedL1Size + scaleUsedL1Size + fmapUsedL1Size + weightUsedL1Size;
     if (minL1LoadSize > platformInfo.l1Size) {
-        TILING_LOG_DEBUG("KernelSplitMinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
+        OP_LOGE(nodeType, "KernelSplitMinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
             minL1LoadSize, platformInfo.l1Size);
         return false;
     }
@@ -1142,7 +1088,7 @@ bool Conv2dTiling::CheckL1SizeLimit()
     minAL1Size = minHiAL1 * shapeInfo.orgWi * cubeInfo.k0 * fMapDtypeSize * innerBatch;
     uint64_t minL1LoadSize = minAL1Size + minBL1Size + minBiasSize + minScaleSize;
     if (minL1LoadSize > platformInfo.l1Size) {
-        TILING_LOG_DEBUG("CheckL1SizeLimit, current L1size: %lu, maxL1Size: %lu",
+        OP_LOGE(nodeType, "CheckL1SizeLimit, minimum L1 size: %lu, maxL1Size: %lu",
             minL1LoadSize, platformInfo.l1Size);
         return false;
     }
@@ -1151,60 +1097,60 @@ bool Conv2dTiling::CheckL1SizeLimit()
 
 void Conv2dTiling::PrintConv2DBasicBlockInfoPhase1(UNUSED const Conv2DBasicBlockInfo& conv2DBasicBlockInfo) const
 {
-    TILING_LOG_DEBUG("[Phase1]");
-    TILING_LOG_DEBUG("Conv2DBasicBlock fDim is: %u", conv2DBasicBlockInfo.fDim);
-    TILING_LOG_DEBUG("Conv2DBasicBlock nDim is: %u", conv2DBasicBlockInfo.nDim);
-    TILING_LOG_DEBUG("Conv2DBasicBlock groupDim is: %u", conv2DBasicBlockInfo.groupDim);
-    TILING_LOG_DEBUG("Conv2DBasicBlock aicoreNum is: %u", conv2DBasicBlockInfo.aicoreNum);
-    TILING_LOG_DEBUG("Conv2DBasicBlock mIn is: %lu", conv2DBasicBlockInfo.mIn);
-    TILING_LOG_DEBUG("Conv2DBasicBlock mTile is: %u", conv2DBasicBlockInfo.mTile);
-    TILING_LOG_DEBUG("Conv2DBasicBlock nTile is: %u", conv2DBasicBlockInfo.nTile);
-    TILING_LOG_DEBUG("Conv2DBasicBlock mCut is: %u", conv2DBasicBlockInfo.mCut);
-    TILING_LOG_DEBUG("Conv2DBasicBlock nCut is: %u", conv2DBasicBlockInfo.nCut);
-    TILING_LOG_DEBUG("Conv2DBasicBlock batch is: %u", conv2DBasicBlockInfo.batch);
+    OP_LOGD(nodeType,
+        "[Phase1]: fDim[%u], nDim[%u], groupDim[%u], mIn[%u], mTile[%u], nTile[%u], mCut[%u], nCut[%u], batch[%u]",
+        conv2DBasicBlockInfo.fDim,
+        conv2DBasicBlockInfo.nDim,
+        conv2DBasicBlockInfo.groupDim,
+        conv2DBasicBlockInfo.mIn,
+        conv2DBasicBlockInfo.mTile,
+        conv2DBasicBlockInfo.nTile,
+        conv2DBasicBlockInfo.mCut,
+        conv2DBasicBlockInfo.nCut,
+        conv2DBasicBlockInfo.batch);
 }
 
 bool Conv2dTiling::CheckConv2DBasicBlockInfoPhase1(Conv2DBasicBlockInfo& conv2DBasicBlockInfo) const
 {
     PrintConv2DBasicBlockInfoPhase1(conv2DBasicBlockInfo);
     if (conv2DBasicBlockInfo.fDim == 0) {
-        TILING_LOG_ERROR("fDim is illegal which is: %u", conv2DBasicBlockInfo.fDim);
+        OP_LOGE(nodeType, "fDim is illegal which is: %u", conv2DBasicBlockInfo.fDim);
         return false;
     }
     if (conv2DBasicBlockInfo.nDim == 0) {
-        TILING_LOG_ERROR("nDim is illegal which is: %u", conv2DBasicBlockInfo.nDim);
+        OP_LOGE(nodeType, "nDim is illegal which is: %u", conv2DBasicBlockInfo.nDim);
         return false;
     }
     if (conv2DBasicBlockInfo.groupDim == 0) {
-        TILING_LOG_ERROR("groupDim is illegal which is: %u", conv2DBasicBlockInfo.groupDim);
+        OP_LOGE(nodeType, "groupDim is illegal which is: %u", conv2DBasicBlockInfo.groupDim);
         return false;
     }
     if (conv2DBasicBlockInfo.aicoreNum == 0) {
-        TILING_LOG_ERROR("aicoreNum is illegal which is: %u", conv2DBasicBlockInfo.aicoreNum);
+        OP_LOGE(nodeType, "aicoreNum is illegal which is: %u", conv2DBasicBlockInfo.aicoreNum);
         return false;
     }
     if (conv2DBasicBlockInfo.mIn == 0) {
-        TILING_LOG_ERROR("mIn is illegal which is: %lu", conv2DBasicBlockInfo.mIn);
+        OP_LOGE(nodeType, "mIn is illegal which is: %lu", conv2DBasicBlockInfo.mIn);
         return false;
     }
     if (conv2DBasicBlockInfo.mTile == 0) {
-        TILING_LOG_ERROR("mTile is illegal which is: %u", conv2DBasicBlockInfo.mTile);
+        OP_LOGE(nodeType, "mTile is illegal which is: %u", conv2DBasicBlockInfo.mTile);
         return false;
     }
     if (conv2DBasicBlockInfo.nTile == 0) {
-        TILING_LOG_ERROR("nTile is illegal which is: %u", conv2DBasicBlockInfo.nTile);
+        OP_LOGE(nodeType, "nTile is illegal which is: %u", conv2DBasicBlockInfo.nTile);
         return false;
     }
     if (conv2DBasicBlockInfo.mCut == 0) {
-        TILING_LOG_ERROR("mCut is illegal which is: %u", conv2DBasicBlockInfo.mCut);
+        OP_LOGE(nodeType, "mCut is illegal which is: %u", conv2DBasicBlockInfo.mCut);
         return false;
     }
     if (conv2DBasicBlockInfo.nCut == 0) {
-        TILING_LOG_ERROR("nCut is illegal which is: %u", conv2DBasicBlockInfo.nCut);
+        OP_LOGE(nodeType, "nCut is illegal which is: %u", conv2DBasicBlockInfo.nCut);
         return false;
     }
     if (conv2DBasicBlockInfo.batch == 0) {
-        TILING_LOG_ERROR("batch is illegal which is: %u", conv2DBasicBlockInfo.batch);
+        OP_LOGE(nodeType, "batch is illegal which is: %u", conv2DBasicBlockInfo.batch);
         return false;
     }
     return true;
@@ -1212,47 +1158,48 @@ bool Conv2dTiling::CheckConv2DBasicBlockInfoPhase1(Conv2DBasicBlockInfo& conv2DB
 
 void Conv2dTiling::PrintConv2DBasicBlockInfoPhase2(UNUSED const Conv2DBasicBlockInfo& conv2DBasicBlockInfo) const
 {
-    TILING_LOG_DEBUG("[Phase2]");
-    TILING_LOG_DEBUG("Conv2DBasicBlock batchDim is: %u", conv2DBasicBlockInfo.batchDim);
-    TILING_LOG_DEBUG("Conv2DBasicBlock mDim is: %u", conv2DBasicBlockInfo.mDim);
-    TILING_LOG_DEBUG("Conv2DBasicBlock nDim is: %u", conv2DBasicBlockInfo.nDim);
-    TILING_LOG_DEBUG("Conv2DBasicBlock groupDim is: %u", conv2DBasicBlockInfo.groupDim);
-    TILING_LOG_DEBUG("Conv2DBasicBlock mCut is: %u", conv2DBasicBlockInfo.mCut);
-    TILING_LOG_DEBUG("Conv2DBasicBlock nCut is: %u", conv2DBasicBlockInfo.nCut);
-    TILING_LOG_DEBUG("Conv2DBasicBlock mTile is: %u", conv2DBasicBlockInfo.mTile);
-    TILING_LOG_DEBUG("Conv2DBasicBlock nTile is: %u", conv2DBasicBlockInfo.nTile);
-    TILING_LOG_DEBUG("Conv2DBasicBlock mIn is: %lu", conv2DBasicBlockInfo.mIn);
+    OP_LOGD(nodeType,
+        "[Phase2]: batchDim[%u], mDim[%u], nDim[%u], groupDim[%u], mCut[%u], nCut[%u], mTile[%u], nTile[%u], mIn[%u],",
+        conv2DBasicBlockInfo.batchDim,
+        conv2DBasicBlockInfo.mDim,
+        conv2DBasicBlockInfo.nDim,
+        conv2DBasicBlockInfo.groupDim,
+        conv2DBasicBlockInfo.mCut,
+        conv2DBasicBlockInfo.nCut,
+        conv2DBasicBlockInfo.mTile,
+        conv2DBasicBlockInfo.nTile,
+        conv2DBasicBlockInfo.mIn);
 }
 
 bool Conv2dTiling::CheckConv2DBasicBlockInfoPhase2(Conv2DBasicBlockInfo& conv2DBasicBlockInfo) const
 {
     PrintConv2DBasicBlockInfoPhase2(conv2DBasicBlockInfo);
     if (conv2DBasicBlockInfo.batchDim == 0) {
-        TILING_LOG_ERROR("batchDim is illegal which is: %u", conv2DBasicBlockInfo.batchDim);
+        OP_LOGE(nodeType, "batchDim is illegal which is: %u", conv2DBasicBlockInfo.batchDim);
         return false;
     }
     if (conv2DBasicBlockInfo.mDim == 0) {
-        TILING_LOG_ERROR("mDim is illegal which is: %u", conv2DBasicBlockInfo.mDim);
+        OP_LOGE(nodeType, "mDim is illegal which is: %u", conv2DBasicBlockInfo.mDim);
         return false;
     }
     if (conv2DBasicBlockInfo.nDim == 0) {
-        TILING_LOG_ERROR("nDim is illegal which is: %u", conv2DBasicBlockInfo.nDim);
+        OP_LOGE(nodeType, "nDim is illegal which is: %u", conv2DBasicBlockInfo.nDim);
         return false;
     }
     if (conv2DBasicBlockInfo.mTile == 0) {
-        TILING_LOG_ERROR("mTile is illegal which is: %u", conv2DBasicBlockInfo.mTile);
+        OP_LOGE(nodeType, "mTile is illegal which is: %u", conv2DBasicBlockInfo.mTile);
         return false;
     }
     if (conv2DBasicBlockInfo.nTile == 0) {
-        TILING_LOG_ERROR("nTile is illegal which is: %u", conv2DBasicBlockInfo.nTile);
+        OP_LOGE(nodeType, "nTile is illegal which is: %u", conv2DBasicBlockInfo.nTile);
         return false;
     }
     if (conv2DBasicBlockInfo.mIn == 0) {
-        TILING_LOG_ERROR("mIn is illegal which is: %lu", conv2DBasicBlockInfo.mIn);
+        OP_LOGE(nodeType, "mIn is illegal which is: %lu", conv2DBasicBlockInfo.mIn);
         return false;
     }
     if (conv2DBasicBlockInfo.iterateMNOrder == IterateMNOrder::INVALID) {
-        TILING_LOG_ERROR("iterateMNOrder is illegal which is: %u (INVALID)",
+        OP_LOGE(nodeType, "iterateMNOrder is illegal which is: %u (INVALID)",
                          static_cast<uint8_t>(conv2DBasicBlockInfo.iterateMNOrder));
         return false;
     }
@@ -1263,29 +1210,29 @@ bool Conv2dTiling::CheckTilingAlgorithmType(Conv2DBasicBlockInfo& conv2DBasicBlo
 {
     if (phase == BB_PHASE_1) {
         if (!CheckParamsBBModePhase1()) { // General Check
-            TILING_LOG_ERROR("conv2d api tiling general params check failed in phase 1.");
+            OP_LOGE(nodeType, "conv2d api tiling general params check failed in phase 1.");
             return false;
         }
     } else {
         if (!CheckParams()) {
-            TILING_LOG_ERROR("conv2d api tiling general params check failed in phase 2.");
+            OP_LOGE(nodeType, "conv2d api tiling general params check failed in phase 2.");
             return false;
         }
     }
     InferCubeInfo();
     if (!CheckL1SizeLimit()) { // L1size check
-        TILING_LOG_ERROR("conv2d api tiling L1size check failed.");
+        OP_LOGE(nodeType, "conv2d api tiling L1size check failed.");
         return false;
     }
 
     if (phase == BB_PHASE_1) {
         if (!CheckConv2DBasicBlockInfoPhase1(conv2DBasicBlockInfo)) {
-            TILING_LOG_ERROR("conv2d basic block info check failed in phase 1.");
+            OP_LOGE(nodeType, "conv2d basic block info check failed in phase 1.");
             return false;
         }
     } else {
         if (!CheckConv2DBasicBlockInfoPhase2(conv2DBasicBlockInfo)) {
-            TILING_LOG_ERROR("conv2d basic block info check failed in phase 2.");
+            OP_LOGE(nodeType, "conv2d basic block info check failed in phase 2.");
             return false;
         }
     }
@@ -1297,7 +1244,7 @@ bool Conv2dTiling::CheckTilingAlgorithmType(Conv2DBasicBlockInfo& conv2DBasicBlo
             return true;
         case static_cast<int8_t>(TilingAlgorithmType::FORMULAS):
         default:
-            TILING_LOG_ERROR("Unsupported tiling algorithm type %d, only support BASIC_BLOCK(%d) and FORMULAS(%d).",
+            OP_LOGE(nodeType, "Unsupported tiling algorithm type %d, only support BASIC_BLOCK(%d) and FORMULAS(%d).",
                 tilingAlgorithmType, static_cast<int8_t>(TilingAlgorithmType::BASIC_BLOCK),
                 static_cast<int8_t>(TilingAlgorithmType::FORMULAS));
             return false;

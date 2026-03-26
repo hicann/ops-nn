@@ -54,7 +54,6 @@ protected:
     uint64_t InferWiL1(uint64_t woL1, int64_t wi) const;
     void SetPBufferRes();
     void ResetOptGroupDoubleBuffer(bool resetFlag);
-    void PrintRanges(std::vector<uint64_t> inputRanges, std::string rangeName) const;
     bool CheckL0Buffer(uint64_t currmL0, uint64_t currkL0, uint64_t currnL0) const;
     bool CheckOptGroupPreload() const;
     ConvTilingBase* tilingIns_ = nullptr;

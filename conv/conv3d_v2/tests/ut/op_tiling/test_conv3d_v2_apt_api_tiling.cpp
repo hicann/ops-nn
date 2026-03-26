@@ -25,7 +25,232 @@
 using namespace std;
 using namespace conv_tiling;
 using namespace conv_tiling_algo_m;
-// using namespace conv_api_tiling_test;
+
+namespace {
+// 硬件相关常量
+constexpr uint32_t CUBE_M0 = 16;
+constexpr uint32_t CUBE_N0 = 16;
+constexpr uint32_t CUBE_K0_32 = 32;
+constexpr uint32_t CUBE_K0_16 = 16;
+constexpr uint32_t CUBE_K0_8 = 8;
+constexpr uint32_t CUBE_C0_SIZE = 32;
+constexpr uint32_t CUBE_C04_SIZE = 4;
+constexpr uint32_t AIC_NUM = 32;
+
+// 内存相关常量
+constexpr uint32_t MEM_SIZE_64B = 64;
+constexpr uint32_t MEM_SIZE_128B = 128;
+constexpr uint32_t MEM_SIZE_1K = 1024;
+constexpr uint32_t MEM_SIZE_4K = 4096;
+constexpr uint32_t MEM_SIZE_64K = 65536;
+constexpr uint32_t MEM_SIZE_100K = 102400;
+constexpr uint32_t MEM_SIZE_212K = 217088;
+constexpr uint32_t MEM_SIZE_256K = 262144;
+constexpr uint32_t MEM_SIZE_512K = 524288;
+constexpr uint32_t MEM_SIZE_300K = 307200;
+
+// 基本块相关常量
+constexpr uint32_t BASICBLOCK_BOUNDARY_VALUE_64 = 64;
+constexpr uint32_t BASICBLOCK_BOUNDARY_VALUE_128 = 128;
+constexpr uint32_t BASICBLOCK_INIT_VALUE_64 = 64;
+constexpr uint32_t BASICBLOCK_INIT_VALUE_128 = 128;
+constexpr uint32_t BASICBLOCK_INIT_VALUE_256 = 256;
+constexpr uint32_t BASICBLOCK_INIT_VALUE_512 = 512;
+constexpr uint32_t BASICBLOCK_INIT_VALUE_1024 = 1024;
+
+// 数值常量
+constexpr uint32_t DIM_2 = 2;
+constexpr uint32_t DIM_3 = 3;
+constexpr uint32_t NUM_2 = 2;
+constexpr uint32_t NUM_3 = 3;
+constexpr uint32_t NUM_4 = 4;
+constexpr uint32_t NUM_10 = 10;
+constexpr uint32_t NUM_14 = 14;
+constexpr uint32_t DTYPESIZE_2 = 2;
+constexpr uint32_t DTYPESIZE_4 = 4;
+constexpr uint32_t DTYPESIZE_8 = 8;
+
+PlatformInfo SetPlatFormInfo()
+{
+    PlatformInfo platformInfo;
+    platformInfo.npuArch = NpuArch::DAV_3510;
+    platformInfo.l1Size = MEM_SIZE_512K;
+    platformInfo.l0ASize = MEM_SIZE_64K;
+    platformInfo.l0BSize = MEM_SIZE_64K;
+    platformInfo.l0CSize = MEM_SIZE_256K;
+    platformInfo.ubSize = MEM_SIZE_256K;
+    platformInfo.btSize = MEM_SIZE_4K;
+    platformInfo.fbSize = MEM_SIZE_4K;
+    platformInfo.aivPerAic = NUM_2;
+    return platformInfo;
+}
+
+void SetSingleOutputShapeInTest(conv_tiling::Conv3dTiling &testTiling)
+{
+    int64_t orgHo = (testTiling.shapeInfo.orgHi + testTiling.attrInfo.padTop + testTiling.attrInfo.padBottom -
+             testTiling.attrInfo.dilationH * (testTiling.shapeInfo.orgkH - 1) - 1) / testTiling.attrInfo.strideH + 1;
+    int64_t orgWo = (testTiling.shapeInfo.orgWi + testTiling.attrInfo.padLeft + testTiling.attrInfo.padRight -
+             testTiling.attrInfo.dilationW * (testTiling.shapeInfo.orgkW - 1) - 1) / testTiling.attrInfo.strideW + 1;
+
+    int64_t singleM = orgHo * orgWo;
+    int64_t singleDo = (testTiling.shapeInfo.orgDi + testTiling.attrInfo.padHead + testTiling.attrInfo.padTail -
+                        testTiling.attrInfo.dilationD * (testTiling.shapeInfo.orgkD - 1) - 1) / testTiling.attrInfo.strideD + 1;
+
+    testTiling.SetSingleOutputShape(testTiling.shapeInfo.orgCo, singleDo, singleM, 1);
+    if (testTiling.platformInfo.npuArch == NpuArch::DAV_3510) {
+        testTiling.SetWeightType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
+        testTiling.SetFmapType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
+        testTiling.SetOutputType(TPosition::CO1, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
+        testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::BFLOAT16);
+    } else {
+        testTiling.SetWeightType(TPosition::GM, ConvFormat::NDC1HWC0, ConvDtype::FLOAT16);
+        testTiling.SetFmapType(TPosition::GM, ConvFormat::FRACTAL_Z_3D, ConvDtype::FLOAT16);
+        testTiling.SetOutputType(TPosition::CO1, ConvFormat::NDC1HWC0, ConvDtype::FLOAT16);
+        testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
+    }
+}
+
+void SetType(conv_tiling::Conv3dTiling &testTiling, conv_tiling::PlatformInfo &platform)
+{
+    if (platform.npuArch == NpuArch::DAV_3510) {
+        testTiling.SetWeightType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
+        testTiling.SetFmapType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
+        testTiling.SetOutputType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
+    } else {
+        testTiling.SetWeightType(TPosition::GM, ConvFormat::FRACTAL_Z_3D, ConvDtype::BFLOAT16);
+        testTiling.SetFmapType(TPosition::GM, ConvFormat::NDC1HWC0, ConvDtype::BFLOAT16);
+        testTiling.SetOutputType(TPosition::GM, ConvFormat::NDC1HWC0, ConvDtype::BFLOAT16);
+    }
+    if (testTiling.hasBias) {
+        testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::BFLOAT16);
+    }
+}
+
+uint64_t Conv3DCeilDiv(uint64_t a, uint64_t b)
+{
+    return (a + b - 1) / b;
+}
+
+uint64_t Conv3DGcd(uint64_t a, uint64_t b)
+{
+    uint64_t c;
+    if (a < b) {
+        c = a;
+        a = b;
+        b = c;
+    }
+
+    while (a % b != 0) {
+        c = a % b;
+        a = b;
+        b = c;
+    }
+
+    return b;
+}
+
+void TestTilingPartOne(conv_tiling::Conv3dTiling &testTiling)
+{
+    uint64_t pBuffer = testTiling.dbValue.pBufferFlag;
+    int8_t pbAL0 = pBuffer & 0x01;
+    int8_t pbBL0 = (pBuffer & 0x02) >> 1;
+    int8_t pbCL0 = (pBuffer & 0x04) >> 2;
+    uint64_t weightDtypeSize = 2;
+    uint64_t featuremapDtypeSize = 2;
+    uint64_t mmadDtypesize = 4;
+
+    EXPECT_GT(testTiling.l1TilingInfo.kAL1, 0);
+    EXPECT_GT(testTiling.l1TilingInfo.mAL1, 0);
+    EXPECT_GT(testTiling.l1TilingInfo.kBL1, 0);
+    EXPECT_GT(testTiling.l1TilingInfo.nBL1, 0);
+    EXPECT_GT(testTiling.l0TilingInfo.nL0, 0);
+    EXPECT_GT(testTiling.l0TilingInfo.mL0, 0);
+    EXPECT_GT(testTiling.l0TilingInfo.kL0, 0);
+
+    auto multi_mAL1max = Conv3DCeilDiv(Conv3DCeilDiv(testTiling.shapeInfo.singleM, testTiling.cubeInfo.m0) * testTiling.cubeInfo.m0, testTiling.l0TilingInfo.mL0);
+    EXPECT_LE(testTiling.l1TilingInfo.mAL1, multi_mAL1max * testTiling.l0TilingInfo.mL0);
+    EXPECT_LE(testTiling.l1TilingInfo.kAL1, testTiling.shapeInfo.singlekD * testTiling.shapeInfo.singlekH * testTiling.shapeInfo.singlekW * Conv3DCeilDiv(testTiling.shapeInfo.orgCi, testTiling.cubeInfo.k0) * testTiling.cubeInfo.k0);
+    
+    auto multi_nBL1max = Conv3DCeilDiv(Conv3DCeilDiv(testTiling.shapeInfo.singleCo, testTiling.cubeInfo.n0) * testTiling.cubeInfo.n0, testTiling.l0TilingInfo.nL0);
+    EXPECT_LE(testTiling.l1TilingInfo.nBL1, multi_nBL1max * testTiling.l0TilingInfo.nL0);
+    EXPECT_LE(testTiling.l1TilingInfo.kBL1, testTiling.shapeInfo.singlekD * testTiling.shapeInfo.singlekH * testTiling.shapeInfo.singlekW * Conv3DCeilDiv(testTiling.shapeInfo.orgCi, testTiling.cubeInfo.k0) * testTiling.cubeInfo.k0);
+    
+    auto mL0max = std::min(testTiling.platformInfo.l0ASize / (testTiling.cubeInfo.k0 * (pbAL0 + 1) * featuremapDtypeSize), testTiling.platformInfo.l0CSize / (testTiling.cubeInfo.n0 * (pbCL0 + 1) * mmadDtypesize));
+    auto nL0max = std::min(testTiling.platformInfo.l0BSize / (testTiling.cubeInfo.k0 * (pbBL0 + 1) * weightDtypeSize), testTiling.platformInfo.l0CSize / (testTiling.cubeInfo.m0 * (pbCL0 + 1) * mmadDtypesize));
+    EXPECT_LE(testTiling.l0TilingInfo.mL0, Conv3DCeilDiv(mL0max, testTiling.cubeInfo.m0) * testTiling.cubeInfo.m0);
+    EXPECT_LE(testTiling.l0TilingInfo.nL0, Conv3DCeilDiv(nL0max, testTiling.cubeInfo.n0) * testTiling.cubeInfo.n0);
+    auto tmpkBL1 = testTiling.l1TilingInfo.kAL1;
+    tmpkBL1 = testTiling.l1TilingInfo.kBL1;
+    EXPECT_LE(testTiling.l0TilingInfo.kL0, Conv3DGcd(Conv3DCeilDiv(testTiling.l1TilingInfo.kAL1, testTiling.cubeInfo.k0), Conv3DCeilDiv(tmpkBL1, testTiling.cubeInfo.k0)) * testTiling.cubeInfo.k0);
+}
+
+void TestTilingPartTwo(conv_tiling::Conv3dTiling &testTiling)
+{
+    uint64_t pBuffer = testTiling.dbValue.pBufferFlag;
+    int8_t pbAL0 = pBuffer & 0x01;
+    int8_t pbBL0 = (pBuffer & 0x02) >> 1;
+    int8_t pbCL0 = (pBuffer & 0x04) >> 2;
+    int8_t pbAL1 = (pBuffer & 0x02) >> 3;
+    int8_t pbBL1 = (pBuffer & 0x04) >> 4;
+    uint64_t weightDtypeSize = 2;
+    uint64_t featuremapDtypeSize = 2;
+    uint64_t biasDTypeSize = 2;
+    uint64_t mmadDtypesize = 4;
+    EXPECT_EQ(testTiling.l1TilingInfo.kAL1 % testTiling.cubeInfo.k0, 0);
+    EXPECT_EQ(testTiling.l1TilingInfo.nBL1 % testTiling.cubeInfo.n0, 0);
+    EXPECT_EQ(testTiling.l1TilingInfo.kBL1 % testTiling.cubeInfo.k0, 0);
+
+    EXPECT_EQ(testTiling.l1TilingInfo.mAL1 % testTiling.cubeInfo.k0, 0);
+    EXPECT_EQ(testTiling.l0TilingInfo.nL0 % testTiling.cubeInfo.k0, 0);
+    EXPECT_EQ(testTiling.l0TilingInfo.kL0 % testTiling.cubeInfo.k0, 0);
+    EXPECT_EQ(testTiling.l0TilingInfo.mL0 % testTiling.cubeInfo.k0, 0);
+    if (!testTiling.l1TilingInfo.al1FullLoad) {
+        EXPECT_EQ(testTiling.l1TilingInfo.mAL1 % testTiling.l0TilingInfo.mL0, 0);
+    }
+    EXPECT_EQ(testTiling.l1TilingInfo.kAL1 % testTiling.l0TilingInfo.kL0, 0);
+    if (!testTiling.l1TilingInfo.bl1FullLoad) {
+        EXPECT_EQ(testTiling.l1TilingInfo.nBL1 % testTiling.l0TilingInfo.nL0, 0);
+    }
+    EXPECT_EQ(testTiling.l1TilingInfo.kBL1 % testTiling.l0TilingInfo.kL0, 0);
+
+    int64_t hoAL1Tmp = testTiling.l1TilingInfo.mAL1 / testTiling.shapeInfo.orgWo + 2;
+    int64_t hiL1Tmp = std::min((hoAL1Tmp - 1) * testTiling.attrInfo.strideH + (testTiling.shapeInfo.singlekH - 1) / testTiling.attrInfo.dilationH + 1, testTiling.shapeInfo.orgHi);
+    uint64_t al1Size = static_cast<uint64_t>(hiL1Tmp) * testTiling.shapeInfo.orgWi * (testTiling.l1TilingInfo.kAL1 / (testTiling.shapeInfo.singlekH * testTiling.shapeInfo.singlekW)) * (pbAL1 + 1) * featuremapDtypeSize;
+    uint64_t bl1Size = testTiling.l1TilingInfo.nBL1 * testTiling.l1TilingInfo.kBL1 * (pbBL1 + 1) * weightDtypeSize;
+    uint64_t biasL1Size = !testTiling.hasBias ? 0 : testTiling.l1TilingInfo.biasFullLoadFlag == 1 ? Conv3DCeilDiv(testTiling.shapeInfo.singleCo, testTiling.cubeInfo.n0) * testTiling.cubeInfo.n0 * biasDTypeSize : testTiling.l0TilingInfo.nL0 * biasDTypeSize;
+    uint64_t curl1Size = al1Size + bl1Size + biasL1Size;
+    uint64_t curl0aSize = testTiling.l0TilingInfo.mL0 * testTiling.l0TilingInfo.kL0 * (pbAL0 + 1) * featuremapDtypeSize;
+    uint64_t curl0bSize = testTiling.l0TilingInfo.nL0 * testTiling.l0TilingInfo.kL0 * (pbBL0 + 1) * weightDtypeSize;
+    uint64_t curl0cSize = testTiling.l0TilingInfo.mL0 * testTiling.l0TilingInfo.nL0 * (pbCL0 + 1) * mmadDtypesize;
+    EXPECT_LE(curl1Size, testTiling.platformInfo.l1Size);
+    EXPECT_LE(curl0aSize, testTiling.platformInfo.l0ASize);
+    EXPECT_LE(curl0bSize, testTiling.platformInfo.l0BSize);
+    EXPECT_LE(curl0cSize, testTiling.platformInfo.l0CSize);
+}
+
+void TestTilingResult(int64_t ret, conv_tiling::Conv3dTiling &testTiling)
+{
+    EXPECT_EQ(ret, 0);
+    if (ret != 0) {
+        return;
+    }
+
+    TestTilingPartOne(testTiling);
+    TestTilingPartTwo(testTiling);
+
+    if (testTiling.l1TilingInfo.al1FullLoad) {
+        testTiling.l1TilingInfo.kAL1 = testTiling.shapeInfo.singlekD * Conv3DCeilDiv(testTiling.shapeInfo.orgCi, testTiling.cubeInfo.k0) * testTiling.cubeInfo.k0 * testTiling.shapeInfo.singlekH * testTiling.shapeInfo.singlekW;
+        testTiling.l1TilingInfo.mAL1 = testTiling.cubeInfo.m0 * Conv3DCeilDiv(testTiling.shapeInfo.singleM, testTiling.cubeInfo.m0);
+        testTiling.l1TilingInfo.iterateMNOrder = IterateMNOrder::ITER_N_FST;
+    }
+
+    if (testTiling.l1TilingInfo.bl1FullLoad) {
+        testTiling.l1TilingInfo.kBL1 = testTiling.shapeInfo.singlekD * Conv3DCeilDiv(testTiling.shapeInfo.orgCi, testTiling.cubeInfo.k0) * testTiling.cubeInfo.k0 * testTiling.shapeInfo.singlekH * testTiling.shapeInfo.singlekW;
+        testTiling.l1TilingInfo.nBL1 = testTiling.cubeInfo.n0 * Conv3DCeilDiv(testTiling.shapeInfo.singleCo, testTiling.cubeInfo.n0);
+        testTiling.l1TilingInfo.iterateMNOrder = IterateMNOrder::ITER_M_FST;
+    }
+}
+} // namespace
 
 class TestConv3dV2Tiling : public testing::Test {
 protected:
@@ -34,14 +259,14 @@ protected:
     static void TearDownTestCase() {}
     virtual void SetUp() {
         platform.npuArch = NpuArch::DAV_3510;
-        platform.l1Size = 524288;
-        platform.l0ASize = 65536;
-        platform.l0BSize = 65536;
-        platform.l0CSize = 262144;
-        platform.ubSize = 262144;
-        platform.btSize = 4096;
-        platform.fbSize = 4096;
-        platform.aivPerAic = 2;
+        platform.l1Size = MEM_SIZE_512K;
+        platform.l0ASize = MEM_SIZE_64K;
+        platform.l0BSize = MEM_SIZE_64K;
+        platform.l0CSize = MEM_SIZE_256K;
+        platform.ubSize = MEM_SIZE_256K;
+        platform.btSize = MEM_SIZE_4K;
+        platform.fbSize = MEM_SIZE_4K;
+        platform.aivPerAic = NUM_2;
     }
     virtual void TearDown() {}
     conv_tiling::PlatformInfo platform;
@@ -155,18 +380,10 @@ TEST_F(TestConv3dV2Tiling, Demo_api_tiling)
     tilingData.conv3dRunInfo.groupOpt = 0;
     tilingData.conv3dRunInfo.hasBias = 0;
 
-    conv_tiling::PlatformInfo platform;
-    platform.npuArch = NpuArch::DAV_3510;
-    platform.l1Size = 524288;
-    platform.l0ASize = 65536;
-    platform.l0BSize = 65536;
-    platform.l0CSize = 262144;
-    platform.ubSize = 262144;
-    platform.btSize = 4096;
-    platform.aivPerAic = 2;
-    tilingInfo.convOpsConstParams.m0 = 16;
-    tilingInfo.convOpsConstParams.k0 = 8;
-    tilingInfo.convOpsConstParams.n0 = 16;
+    conv_tiling::PlatformInfo platform = SetPlatFormInfo();
+    tilingInfo.convOpsConstParams.m0 = CUBE_M0;
+    tilingInfo.convOpsConstParams.k0 = CUBE_K0_8;
+    tilingInfo.convOpsConstParams.n0 = CUBE_N0;
     tilingInfo.convOpsConstParams.ci1 = optiling::conv_ops_tiling::ConvCeilDiv(tilingInfo.shapeInfo.ci, tilingInfo.convOpsConstParams.k0);
     tilingInfo.convOpsConstParams.co1 = optiling::conv_ops_tiling::ConvCeilDiv(tilingInfo.shapeInfo.co, tilingInfo.convOpsConstParams.n0);
     conv_tiling::Conv3dTiling conv3dApiTiling(platform);
@@ -375,158 +592,6 @@ TEST_F(TestConv3dV2Tiling, GetL0Tiling_normal)
     }
 }
 
-void SetSingleOutputShapeInTest(conv_tiling::Conv3dTiling &testTiling)
-{
-    int64_t orgHo = (testTiling.shapeInfo.orgHi + testTiling.attrInfo.padTop + testTiling.attrInfo.padBottom -
-             testTiling.attrInfo.dilationH * (testTiling.shapeInfo.orgkH - 1) - 1) / testTiling.attrInfo.strideH + 1;
-    int64_t orgWo = (testTiling.shapeInfo.orgWi + testTiling.attrInfo.padLeft + testTiling.attrInfo.padRight -
-             testTiling.attrInfo.dilationW * (testTiling.shapeInfo.orgkW - 1) - 1) / testTiling.attrInfo.strideW + 1;
-
-    int64_t singleM = orgHo * orgWo;
-    int64_t singleDo = (testTiling.shapeInfo.orgDi + testTiling.attrInfo.padHead + testTiling.attrInfo.padTail -
-                        testTiling.attrInfo.dilationD * (testTiling.shapeInfo.orgkD - 1) - 1) / testTiling.attrInfo.strideD + 1;
-
-    testTiling.SetSingleOutputShape(testTiling.shapeInfo.orgCo, singleDo, singleM, 1);
-    if (testTiling.platformInfo.npuArch == NpuArch::DAV_3510) {
-        testTiling.SetWeightType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
-        testTiling.SetFmapType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
-        testTiling.SetOutputType(TPosition::CO1, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
-        testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::BFLOAT16);
-    } else {
-        testTiling.SetWeightType(TPosition::GM, ConvFormat::NDC1HWC0, ConvDtype::FLOAT16);
-        testTiling.SetFmapType(TPosition::GM, ConvFormat::FRACTAL_Z_3D, ConvDtype::FLOAT16);
-        testTiling.SetOutputType(TPosition::CO1, ConvFormat::NDC1HWC0, ConvDtype::FLOAT16);
-        testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
-    }
-}
-
-void SetType(conv_tiling::Conv3dTiling &testTiling, conv_tiling::PlatformInfo &platform)
-{
-    if (platform.npuArch == NpuArch::DAV_3510) {
-        testTiling.SetWeightType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
-        testTiling.SetFmapType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
-        testTiling.SetOutputType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
-    } else {
-        testTiling.SetWeightType(TPosition::GM, ConvFormat::FRACTAL_Z_3D, ConvDtype::BFLOAT16);
-        testTiling.SetFmapType(TPosition::GM, ConvFormat::NDC1HWC0, ConvDtype::BFLOAT16);
-        testTiling.SetOutputType(TPosition::GM, ConvFormat::NDC1HWC0, ConvDtype::BFLOAT16);
-    }
-    if (testTiling.hasBias) {
-        testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::BFLOAT16);
-    }
-}
-
-uint64_t Conv3DCeilDiv(uint64_t a, uint64_t b)
-{
-    return (a + b - 1) / b;
-}
-
-uint64_t Conv3DGcd(uint64_t a, uint64_t b)
-{
-    uint64_t c;
-    if (a < b) {
-        c = a;
-        a = b;
-        b = c;
-    }
-
-    while (a % b != 0) {
-        c = a % b;
-        a = b;
-        b = c;
-    }
-
-    return b;
-}
-
-void TestTilingResult(int64_t ret, conv_tiling::Conv3dTiling &testTiling)
-{
-    EXPECT_EQ(ret, 0);
-    if (ret != 0) {
-        return;
-    }
-    uint64_t pBuffer = testTiling.dbValue.pBufferFlag;
-    int8_t pbAL0 = pBuffer & 0x01;
-    int8_t pbBL0 = (pBuffer & 0x02) >> 1;
-    int8_t pbCL0 = (pBuffer & 0x04) >> 2;
-    int8_t pbAL1 = (pBuffer & 0x08) >> 3;
-    int8_t pbBL1 = (pBuffer & 0x10) >> 4;
-    // BFLOAT16
-    uint64_t weightDtypeSize = 2;
-    uint64_t featuremapDtypeSize = 2;
-    uint64_t biasDTypeSize = 2;
-    uint64_t mmadDtypesize = 4;
-
-
-    EXPECT_GT(testTiling.l1TilingInfo.kAL1, 0);
-    EXPECT_GT(testTiling.l1TilingInfo.mAL1, 0);
-    EXPECT_GT(testTiling.l1TilingInfo.kBL1, 0);
-    EXPECT_GT(testTiling.l1TilingInfo.nBL1, 0);
-    EXPECT_GT(testTiling.l0TilingInfo.nL0, 0);
-    EXPECT_GT(testTiling.l0TilingInfo.mL0, 0);
-    EXPECT_GT(testTiling.l0TilingInfo.kL0, 0);
-
-
-    auto multi_mAL1max = Conv3DCeilDiv(Conv3DCeilDiv(testTiling.shapeInfo.singleM, testTiling.cubeInfo.m0) * testTiling.cubeInfo.m0, testTiling.l0TilingInfo.mL0);
-    EXPECT_LE(testTiling.l1TilingInfo.mAL1, multi_mAL1max * testTiling.l0TilingInfo.mL0);
-    EXPECT_LE(testTiling.l1TilingInfo.kAL1, testTiling.shapeInfo.singlekD * testTiling.shapeInfo.singlekH * testTiling.shapeInfo.singlekW * Conv3DCeilDiv(testTiling.shapeInfo.orgCi, testTiling.cubeInfo.k0) * testTiling.cubeInfo.k0);
-    
-    auto multi_nBL1max = Conv3DCeilDiv(Conv3DCeilDiv(testTiling.shapeInfo.singleCo, testTiling.cubeInfo.n0) * testTiling.cubeInfo.n0, testTiling.l0TilingInfo.nL0);
-    EXPECT_LE(testTiling.l1TilingInfo.nBL1, multi_nBL1max * testTiling.l0TilingInfo.nL0);
-    EXPECT_LE(testTiling.l1TilingInfo.kBL1, testTiling.shapeInfo.singlekD * testTiling.shapeInfo.singlekH * testTiling.shapeInfo.singlekW * Conv3DCeilDiv(testTiling.shapeInfo.orgCi, testTiling.cubeInfo.k0) * testTiling.cubeInfo.k0);
-    
-    auto mL0max = std::min(testTiling.platformInfo.l0ASize / (testTiling.cubeInfo.k0 * (pbAL0 + 1) * featuremapDtypeSize), testTiling.platformInfo.l0CSize / (testTiling.cubeInfo.n0 * (pbCL0 + 1) * mmadDtypesize));
-    auto nL0max = std::min(testTiling.platformInfo.l0BSize / (testTiling.cubeInfo.k0 * (pbBL0 + 1) * weightDtypeSize), testTiling.platformInfo.l0CSize / (testTiling.cubeInfo.m0 * (pbCL0 + 1) * mmadDtypesize));
-    EXPECT_LE(testTiling.l0TilingInfo.mL0, Conv3DCeilDiv(mL0max, testTiling.cubeInfo.m0) * testTiling.cubeInfo.m0);
-    EXPECT_LE(testTiling.l0TilingInfo.nL0, Conv3DCeilDiv(nL0max, testTiling.cubeInfo.n0) * testTiling.cubeInfo.n0);
-    auto tmpkBL1 = testTiling.l1TilingInfo.kAL1;
-    tmpkBL1 = testTiling.l1TilingInfo.kBL1;
-    EXPECT_LE(testTiling.l0TilingInfo.kL0, Conv3DGcd(Conv3DCeilDiv(testTiling.l1TilingInfo.kAL1, testTiling.cubeInfo.k0), Conv3DCeilDiv(tmpkBL1, testTiling.cubeInfo.k0)) * testTiling.cubeInfo.k0);
-
-
-    EXPECT_EQ(testTiling.l1TilingInfo.kAL1 % testTiling.cubeInfo.k0, 0);
-    EXPECT_EQ(testTiling.l1TilingInfo.nBL1 % testTiling.cubeInfo.n0, 0);
-    EXPECT_EQ(testTiling.l1TilingInfo.kBL1 % testTiling.cubeInfo.k0, 0);
-
-    EXPECT_EQ(testTiling.l1TilingInfo.mAL1 % testTiling.cubeInfo.k0, 0);
-    EXPECT_EQ(testTiling.l0TilingInfo.nL0 % testTiling.cubeInfo.k0, 0);
-    EXPECT_EQ(testTiling.l0TilingInfo.kL0 % testTiling.cubeInfo.k0, 0);
-    EXPECT_EQ(testTiling.l0TilingInfo.mL0 % testTiling.cubeInfo.k0, 0);
-    if (!testTiling.l1TilingInfo.al1FullLoad) {
-        EXPECT_EQ(testTiling.l1TilingInfo.mAL1 % testTiling.l0TilingInfo.mL0, 0);
-    }
-    EXPECT_EQ(testTiling.l1TilingInfo.kAL1 % testTiling.l0TilingInfo.kL0, 0);
-    if (!testTiling.l1TilingInfo.bl1FullLoad) {
-        EXPECT_EQ(testTiling.l1TilingInfo.nBL1 % testTiling.l0TilingInfo.nL0, 0);
-    }
-    EXPECT_EQ(testTiling.l1TilingInfo.kBL1 % testTiling.l0TilingInfo.kL0, 0);
-
-
-    int64_t hoAL1Tmp = testTiling.l1TilingInfo.mAL1 / testTiling.shapeInfo.orgWo + 2;
-    int64_t hiL1Tmp = std::min((hoAL1Tmp - 1) * testTiling.attrInfo.strideH + (testTiling.shapeInfo.singlekH - 1) / testTiling.attrInfo.dilationH + 1, testTiling.shapeInfo.orgHi);
-    uint64_t al1Size = static_cast<uint64_t>(hiL1Tmp) * testTiling.shapeInfo.orgWi * (testTiling.l1TilingInfo.kAL1 / (testTiling.shapeInfo.singlekH * testTiling.shapeInfo.singlekW)) * (pbAL1 + 1) * featuremapDtypeSize;
-    uint64_t bl1Size = testTiling.l1TilingInfo.nBL1 * testTiling.l1TilingInfo.kBL1 * (pbBL1 + 1) * weightDtypeSize;
-    uint64_t biasL1Size = !testTiling.hasBias ? 0 : testTiling.l1TilingInfo.biasFullLoadFlag == 1 ? Conv3DCeilDiv(testTiling.shapeInfo.singleCo, testTiling.cubeInfo.n0) * testTiling.cubeInfo.n0 * biasDTypeSize : testTiling.l0TilingInfo.nL0 * biasDTypeSize;
-    uint64_t curl1Size = al1Size + bl1Size + biasL1Size;
-    uint64_t curl0aSize = testTiling.l0TilingInfo.mL0 * testTiling.l0TilingInfo.kL0 * (pbAL0 + 1) * featuremapDtypeSize;
-    uint64_t curl0bSize = testTiling.l0TilingInfo.nL0 * testTiling.l0TilingInfo.kL0 * (pbBL0 + 1) * weightDtypeSize;
-    uint64_t curl0cSize = testTiling.l0TilingInfo.mL0 * testTiling.l0TilingInfo.nL0 * (pbCL0 + 1) * mmadDtypesize;
-    EXPECT_LE(curl1Size, testTiling.platformInfo.l1Size);
-    EXPECT_LE(curl0aSize, testTiling.platformInfo.l0ASize);
-    EXPECT_LE(curl0bSize, testTiling.platformInfo.l0BSize);
-    EXPECT_LE(curl0cSize, testTiling.platformInfo.l0CSize);
-
-    if (testTiling.l1TilingInfo.al1FullLoad) {
-        testTiling.l1TilingInfo.kAL1 = testTiling.shapeInfo.singlekD * Conv3DCeilDiv(testTiling.shapeInfo.orgCi, testTiling.cubeInfo.k0) * testTiling.cubeInfo.k0 * testTiling.shapeInfo.singlekH * testTiling.shapeInfo.singlekW;
-        testTiling.l1TilingInfo.mAL1 = testTiling.cubeInfo.m0 * Conv3DCeilDiv(testTiling.shapeInfo.singleM, testTiling.cubeInfo.m0);
-        testTiling.l1TilingInfo.iterateMNOrder = IterateMNOrder::ITER_N_FST;
-    }
-    if (testTiling.l1TilingInfo.bl1FullLoad) {
-        testTiling.l1TilingInfo.kBL1 = testTiling.shapeInfo.singlekD * Conv3DCeilDiv(testTiling.shapeInfo.orgCi, testTiling.cubeInfo.k0) * testTiling.cubeInfo.k0 * testTiling.shapeInfo.singlekH * testTiling.shapeInfo.singlekW;
-        testTiling.l1TilingInfo.nBL1 = testTiling.cubeInfo.n0 * Conv3DCeilDiv(testTiling.shapeInfo.singleCo, testTiling.cubeInfo.n0);
-        testTiling.l1TilingInfo.iterateMNOrder = IterateMNOrder::ITER_M_FST;
-    }
-}
 
 // TestCase for Networks
 TEST_F(TestConv3dV2Tiling, NetWorks_001)
@@ -2166,7 +2231,6 @@ TEST_F(TestConv3dV2Tiling, NetWorks_082)
     SetType(testTiling, platform);
     SetSingleOutputShapeInTest(testTiling);
     
-
     int64_t ret1 = testTiling.GetTiling(tilingData);
     TestTilingResult(ret1, testTiling);
 }
@@ -4418,7 +4482,6 @@ TEST_F(TestConv3dV2Tiling, NetWorks_ND2NZ_limits)
     testTiling.SetOutputType(TPosition::CO1, ConvFormat::NDHWC, ConvDtype::BFLOAT16);
     testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::BFLOAT16);
  
-    
     testTiling.hasBias = 0; 
     
     int64_t ret1 = testTiling.GetTiling(tilingData);

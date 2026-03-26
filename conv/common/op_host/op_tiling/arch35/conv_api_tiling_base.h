@@ -16,6 +16,8 @@
 #ifndef ASCENDC_TILING_CONV_API_TILING_BASE_H
 #define ASCENDC_TILING_CONV_API_TILING_BASE_H
 
+#include "log/log.h"
+#include "error_util.h"
 #include "conv_api_tiling_util.h"
 
 namespace conv_tiling {
@@ -199,6 +201,7 @@ public:
     ConvTilingBase() {};
     explicit ConvTilingBase(const PlatformInfo& platform);
     virtual ~ConvTilingBase() = default;
+    void SetNodeType(std::string inType);
 
     DescInfo descInfo;
     ShapeInfo shapeInfo;
@@ -211,6 +214,7 @@ public:
     DoubleBufferRes dbValue;
 
     // common usd
+    std::string nodeType = "";
     bool hasBias = false;
     bool hasScale = false;
     bool isScaleBiasInUb = false;

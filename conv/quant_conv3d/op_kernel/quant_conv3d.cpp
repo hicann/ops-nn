@@ -13,8 +13,8 @@
  * \brief
  */
 
-#include "../conv3d_v2/arch35/conv3d_v2.h"   
-#include "../conv3d_v2/arch35/conv3d_v2_group.h" 
+#include "../conv3d_v2/arch35/conv3d_v2.h"
+#include "../conv3d_v2/arch35/conv3d_v2_group.h"
 #include "../conv3d_v2/arch35/conv3d_v2_tilingkey.h"
 using namespace AscendC;
 

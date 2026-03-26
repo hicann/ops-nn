@@ -77,6 +77,7 @@ ge::graphStatus Conv2dBaseTiling::InitConv2dApiTiling()
     this->conv2dApiTiling_ = conv_tiling::Conv2dTiling(apiInputPlatformInfo);
     this->conv2dApiTiling_.SetExtendConvFlag(flagInfo_.extendConvFlag);
     this->conv2dApiTiling_.SetQuantConvFlag(flagInfo_.quantFlag);
+    this->conv2dApiTiling_.SetNodeType(paramInfo_.nodeType);
     return ge::GRAPH_SUCCESS;
 }
 

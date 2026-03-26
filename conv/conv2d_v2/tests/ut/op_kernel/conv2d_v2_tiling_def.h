@@ -17,6 +17,7 @@
 #ifndef _GE_CONV2DV2_TILING_H_
 #define _GE_CONV2DV2_TILING_H_
 
+#include "securec.h"
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 
@@ -139,7 +140,9 @@ struct Conv2DTilingData
 #pragma pack()
 
 inline void InitTilingData(uint8_t* tiling, Conv2DTilingData* constData) {
-    memcpy(constData, tiling, sizeof(Conv2DTilingData));
+    if (constData != nullptr && tiling != nullptr) {
+        memcpy_s(constData, sizeof(Conv2DTilingData), tiling, sizeof(Conv2DTilingData));
+    }
 }
 
 #define GET_TILING_DATA(tilingData, tilingArg) \

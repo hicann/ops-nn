@@ -9,13 +9,12 @@
  */
 
  /*!
- * \file test_conv2d_v2_ascendc_utils_tiling.h
+ * \file test_conv2d_v2_tiling_utils.h.h
  * \brief
  */
 
-#ifndef ASCENDC_COMMON_UTILS_H
-#define ASCENDC_COMMON_UTILS_H
-
+#ifndef TEST_CONV2D_V2_ASCENDC_UTILS_TILING_H
+#define TEST_CONV2D_V2_ASCENDC_UTILS_TILING_H
 
 #include "platform/platform_info.h"
 #include "../../../op_host/op_tiling/conv2d_v2_tiling.h"
@@ -23,13 +22,57 @@
 #include "../../../../common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_Mmode.h"
 #include "../../../../common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_BBmode.h"
 
-namespace conv_api_tiling_test {
-
+namespace conv_tiling_utils {
 using namespace std;
 using namespace conv_tiling_algo_hw;
 using namespace conv_tiling;
 using namespace conv_tiling_algo_m;
 
+// 硬件相关常量
+constexpr uint32_t CUBE_M0 = 16;
+constexpr uint32_t CUBE_N0 = 16;
+constexpr uint32_t CUBE_K0_32 = 32;
+constexpr uint32_t CUBE_K0_16 = 16;
+constexpr uint32_t CUBE_K0_8 = 8;
+constexpr uint32_t CUBE_C0_SIZE = 32;
+constexpr uint32_t CUBE_C04_SIZE = 4;
+constexpr uint32_t AIC_NUM = 32;
+
+// 内存相关常量
+constexpr uint32_t MEM_SIZE_64B = 64;
+constexpr uint32_t MEM_SIZE_128B = 128;
+constexpr uint32_t MEM_SIZE_1K = 1024;
+constexpr uint32_t MEM_SIZE_4K = 4096;
+constexpr uint32_t MEM_SIZE_64K = 65536;
+constexpr uint32_t MEM_SIZE_100K = 102400;
+constexpr uint32_t MEM_SIZE_200K = 204800;
+constexpr uint32_t MEM_SIZE_212K = 217088;
+constexpr uint32_t MEM_SIZE_256K = 262144;
+constexpr uint32_t MEM_SIZE_512K = 524288;
+constexpr uint32_t MEM_SIZE_300K = 307200;
+
+// 基本块相关常量
+constexpr uint32_t BASICBLOCK_BOUNDARY_VALUE_64 = 64;
+constexpr uint32_t BASICBLOCK_BOUNDARY_VALUE_128 = 128;
+constexpr uint32_t BASICBLOCK_INIT_VALUE_64 = 64;
+constexpr uint32_t BASICBLOCK_INIT_VALUE_128 = 128;
+constexpr uint32_t BASICBLOCK_INIT_VALUE_256 = 256;
+constexpr uint32_t BASICBLOCK_INIT_VALUE_512 = 512;
+constexpr uint32_t BASICBLOCK_INIT_VALUE_1024 = 1024;
+
+// 数值常量
+constexpr uint32_t DIM_2 = 2;
+constexpr uint32_t DIM_3 = 3;
+constexpr uint32_t NUM_2 = 2;
+constexpr uint32_t NUM_3 = 3;
+constexpr uint32_t NUM_4 = 4;
+constexpr uint32_t NUM_10 = 10;
+constexpr uint32_t NUM_14 = 14;
+constexpr uint32_t DTYPESIZE_2 = 2;
+constexpr uint32_t DTYPESIZE_4 = 4;
+constexpr uint32_t DTYPESIZE_8 = 8;
+
+// Dtype相关常量组合
 const std::vector<std::vector<ConvDtype>> SUPPORTED_QUANT_TYPES_WITHOUT_BIAS = {
     {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT16},
     {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::FLOAT32},
@@ -62,40 +105,27 @@ const std::vector<std::vector<ConvDtype>> SUPPORTED_CONV2D_TYPES_WITHOUT_BIAS = 
     {ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32},
     {ConvDtype::BFLOAT16, ConvDtype::BFLOAT16, ConvDtype::BFLOAT16}
 };
-uint64_t InferHo(uint64_t inputHi, uint64_t kH, uint64_t padTop, uint64_t padBottom, uint64_t dilationH, uint64_t strideH);
-uint64_t InferWo(uint64_t inputWi, uint64_t kW, uint64_t padLeft, uint64_t padRight, uint64_t dilationW, uint64_t strideW);
-uint64_t InferHi(uint64_t inputHo, uint64_t kH, uint64_t padTop, uint64_t padBottom, uint64_t dilationH, uint64_t strideH);
-uint64_t InferWi(uint64_t inputWo, uint64_t kW, uint64_t padLeft, uint64_t padRight, uint64_t dilationW, uint64_t strideW);
-int64_t InferHiL1(uint64_t inputHoL1, int64_t hi, uint64_t singlekH, uint64_t dilationH, uint64_t strideH);
-int64_t InferWiL1(uint64_t inputWoL1, int64_t wi, uint64_t singlekW, uint64_t dilationW, uint64_t strideW);
 
+// ConvShape 结构体定义
+struct ConvShape {
+    uint64_t inputV;
+    uint64_t kernelV;
+    uint64_t padone;
+    uint64_t padtwo;
+    uint64_t dilationV;
+    uint64_t strideV;
+};
+
+uint64_t InferOut(ConvShape convShape);
+
+int64_t InferHiL1(uint64_t inputHoL1, int64_t hi, uint64_t singlekH, uint64_t dilationH, uint64_t strideH);
+
+int64_t InferWiL1(uint64_t inputWoL1, int64_t wi, uint64_t singlekW, uint64_t dilationW, uint64_t strideW);
 
 uint64_t ConvCeilDiv(uint64_t a, uint64_t b);
 
-void Conv2DCase(vector<uint64_t> fmShape, vector<uint64_t> weightShape,
-                vector<uint32_t> pads, vector<uint32_t> strides, vector<uint32_t> dilations,
-                vector<uint32_t> NumBlocks, std::vector<ConvDtype> dtypes,
-                std::vector<bool> flags,
-                std::vector<uint8_t> modes, uint32_t groups);
-void CheckValidTilingData(optiling::TConv2DTiling &tilingData,
-                          Conv2dTiling &tiling);
+uint64_t ConvGcd(uint64_t a, uint64_t b);
 
-uint64_t CalcUsdL1Size(optiling::TConv2DTiling &tilingData,
-                       Conv2dTiling &tiling,
-                       int8_t pbAL1,
-                       int8_t pbBL1);
-
-uint64_t CalcUsdL0ASize(optiling::TConv2DTiling &tilingData,
-                       Conv2dTiling &tiling,
-                       int8_t pbAL0);
-
-uint64_t CalcUsdL0BSize(optiling::TConv2DTiling &tilingData,
-                       Conv2dTiling &tiling,
-                       int8_t pbBL0);
-
-uint64_t CalcUsdL0CSize(optiling::TConv2DTiling &tilingData,
-                       Conv2dTiling &tiling,
-                       int8_t pbCL0);
-#endif
-
+uint64_t ConvAlignB(uint64_t a, uint64_t b);
 }
+#endif

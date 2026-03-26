@@ -52,7 +52,7 @@ void Conv3dTiling::InitFlag()
 int64_t Conv3dTiling::GetTiling(Ops::NN::Conv3dV2::TConv3DTiling &tiling)
 {
     if (!CheckInputParam()) {
-        TILING_LOG_ERROR("conv3d api tiling check params failed.");
+        OP_LOGE(nodeType, "conv3d api tiling check params failed.");
         return RET_FAIL;
     }
     InitFlag();
@@ -62,16 +62,15 @@ int64_t Conv3dTiling::GetTiling(Ops::NN::Conv3dV2::TConv3DTiling &tiling)
     platformInfo.abL1mte2BandWidthCof = GetBandWidthCof();
     int64_t ret = Compute();
     if (ret == RET_FAIL) {
-        TILING_LOG_ERROR("conv3d api tiling compute failed.");
+        OP_LOGE(nodeType, "conv3d api tiling compute failed.");
         return RET_FAIL;
     }
     ret = CheckTilingRes();
     if (ret == RET_FAIL) {
-        TILING_LOG_ERROR("conv3d api tiling check tiling result failed.");
+        OP_LOGE(nodeType, "conv3d api tiling check tiling result failed.");
         return RET_FAIL;
     }
     SetTilingData(tiling);
-    PrintTilingData();
     return ret;
 }
 
@@ -90,11 +89,10 @@ int64_t Conv3dTiling::Compute()
             algoPtr = std::make_shared<ConvTilingAlgorithmHWmode>(this);
             break;
         default:
-            TILING_LOG_ERROR("Unsupported output order %d, only support Mmode(%d) and HWmode(%d).",
+            OP_LOGE(nodeType, "Unsupported output order %d, only support Mmode(%d) and HWmode(%d).",
                 outputOrder, static_cast<int>(OutputOrder::M), static_cast<int>(OutputOrder::HW));
             return RET_FAIL;
     }
-    TILING_LOG_DEBUG("output order: %d", outputOrder);
     int64_t ret = algoPtr->Process();
     return ret;
 }
@@ -116,7 +114,7 @@ bool Conv3dTiling::CheckInputFormat()
 
     if (conv3dSupportFormatSet.find({descInfo.fMapType.format, descInfo.weightType.format}) ==
         conv3dSupportFormatSet.end()) {
-        TILING_LOG_ERROR("unSupported format combo: fmap format: %s, weight format: %s.",
+        OP_LOGE(nodeType, "unSupported format combo: fmap format: %s, weight format: %s.",
                          FORMAT_TO_STR.at(descInfo.fMapType.format).c_str(),
                          FORMAT_TO_STR.at(descInfo.weightType.format).c_str());
         return false;
@@ -291,68 +289,15 @@ void Conv3dTiling::SetTilingData(Ops::NN::Conv3dV2::TConv3DTiling& tiling)
     SetScalarParams(tiling);
 }
 
-void Conv3dTiling::PrintTilingData() const
-{
-    TILING_LOG_DEBUG("orgDo: %ld", this->shapeInfo.orgDo);
-    TILING_LOG_DEBUG("orgCo: %ld", this->shapeInfo.orgCo);
-    TILING_LOG_DEBUG("orgHo: %ld", this->shapeInfo.orgHo);
-    TILING_LOG_DEBUG("orgWo: %ld", this->shapeInfo.orgWo);
-    TILING_LOG_DEBUG("orgCi: %ld", this->shapeInfo.orgCi);
-    TILING_LOG_DEBUG("orgDi: %ld", this->shapeInfo.orgDi);
-    TILING_LOG_DEBUG("orgHi: %ld", this->shapeInfo.orgHi);
-    TILING_LOG_DEBUG("orgWi: %ld", this->shapeInfo.orgWi);
-    TILING_LOG_DEBUG("orgkD: %ld", this->shapeInfo.orgkD);
-    TILING_LOG_DEBUG("orgkH: %ld", this->shapeInfo.orgkH);
-    TILING_LOG_DEBUG("orgkW: %ld", this->shapeInfo.orgkW);
-    TILING_LOG_DEBUG("singleCo: %ld", this->shapeInfo.singleCo);
-    TILING_LOG_DEBUG("singleDo: %ld", this->shapeInfo.singleDo);
-    TILING_LOG_DEBUG("singleM: %ld", this->shapeInfo.singleM);
-    TILING_LOG_DEBUG("strideH: %d", this->attrInfo.strideH);
-    TILING_LOG_DEBUG("strideW: %d", this->attrInfo.strideW);
-    TILING_LOG_DEBUG("strideD: %d", this->attrInfo.strideD);
-    TILING_LOG_DEBUG("dilationH: %d", this->attrInfo.dilationH);
-    TILING_LOG_DEBUG("dilationW: %d", this->attrInfo.dilationW);
-    TILING_LOG_DEBUG("dilationD: %d", this->attrInfo.dilationD);
-    TILING_LOG_DEBUG("padHead: %d", this->attrInfo.padHead);
-    TILING_LOG_DEBUG("padTail: %d", this->attrInfo.padTail);
-    TILING_LOG_DEBUG("padTop: %d", this->attrInfo.padTop);
-    TILING_LOG_DEBUG("padBottom: %d", this->attrInfo.padBottom);
-    TILING_LOG_DEBUG("padLeft: %d", this->attrInfo.padLeft);
-    TILING_LOG_DEBUG("padRight: %d", this->attrInfo.padRight);
-    TILING_LOG_DEBUG("kAL1: %lu", this->l1TilingInfo.kAL1);
-    TILING_LOG_DEBUG("kBL1: %lu", this->l1TilingInfo.kBL1);
-    TILING_LOG_DEBUG("hoAL1: %lu", this->l1TilingInfo.hoAL1);
-    TILING_LOG_DEBUG("woAL1: %lu", this->l1TilingInfo.woAL1);
-    TILING_LOG_DEBUG("mAL1: %lu", this->l1TilingInfo.mAL1);
-    TILING_LOG_DEBUG("nBL1: %lu", this->l1TilingInfo.nBL1);
-    TILING_LOG_DEBUG("hoL0: %lu", this->l0TilingInfo.hoL0);
-    TILING_LOG_DEBUG("woL0: %lu", this->l0TilingInfo.woL0);
-    TILING_LOG_DEBUG("mL0: %lu", this->l0TilingInfo.mL0);
-    TILING_LOG_DEBUG("kL0: %lu", this->l0TilingInfo.kL0);
-    TILING_LOG_DEBUG("nL0: %lu", this->l0TilingInfo.nL0);
-    TILING_LOG_DEBUG("pBufferFlag: %lu", this->dbValue.pBufferFlag);
-    TILING_LOG_DEBUG("iterateMNOrder: %u", static_cast<uint8_t>(this->l1TilingInfo.iterateMNOrder));
-    TILING_LOG_DEBUG("biasFullLoadFlag: %u", static_cast<uint8_t>(this->l1TilingInfo.biasFullLoadFlag));
-    TILING_LOG_DEBUG("fixpParamsFullLoadFlag: %u", static_cast<uint8_t>(this->l1TilingInfo.fixpParamsFullLoadFlag));
-    TILING_LOG_DEBUG("hf32Enable: %u", static_cast<uint8_t>(this->hf32Enable));
-    TILING_LOG_DEBUG("hf32TransMode: %u", static_cast<uint8_t>(this->hf32TransMode));
-    TILING_LOG_DEBUG("al1FullLoad: %u", static_cast<uint8_t>(this->l1TilingInfo.al1FullLoad));
-    TILING_LOG_DEBUG("bl1FullLoad: %u", static_cast<uint8_t>(this->l1TilingInfo.bl1FullLoad));
-    TILING_LOG_DEBUG("offsetx: %d", this->attrInfo.offsetx);
-    TILING_LOG_DEBUG("groups: %d", this->attrInfo.groups);
-    TILING_LOG_DEBUG("roundMode: %d", this->attrInfo.roundMode);
-    return;
-}
-
 bool Conv3dTiling::CheckFeaMapShape()
 {
     if (shapeInfo.orgHi <= 0 || shapeInfo.orgWi <= 0 || shapeInfo.orgDi <= 0) {
-        TILING_LOG_ERROR("Input illegal orgHi: %ld, orgWi: %ld, orgDi: %ld, which must > 0.",
+        OP_LOGE(nodeType, "Input illegal orgHi: %ld, orgWi: %ld, orgDi: %ld, which must > 0.",
             shapeInfo.orgHi, shapeInfo.orgWi, shapeInfo.orgDi);
         return false;
     }
     if (attrInfo.strideH == 0 || attrInfo.strideW == 0 || attrInfo.strideD == 0) {
-        TILING_LOG_ERROR("div zero when calculating output shape, strideH: %d, strideW: %d, strideD: %d",
+        OP_LOGE(nodeType, "div zero when calculating output shape, strideH: %d, strideW: %d, strideD: %d",
             attrInfo.strideH, attrInfo.strideW, attrInfo.strideD);
         return false;
     }
@@ -364,28 +309,28 @@ bool Conv3dTiling::CheckFeaMapShape()
     shapeInfo.orgDo = (shapeInfo.orgDi + attrInfo.padHead + attrInfo.padTail -
                        attrInfo.dilationD * (shapeInfo.orgkD - 1) - 1) / attrInfo.strideD + 1;
     if (shapeInfo.orgHo <= 0 || shapeInfo.orgWo <= 0 || shapeInfo.orgDo <= 0) {
-        TILING_LOG_ERROR("Calculated output orgHo: %ld, orgWo: %ld, orgDo: %ld, which must > 0",
+        OP_LOGE(nodeType, "Calculated output orgHo: %ld, orgWo: %ld, orgDo: %ld, which must > 0",
             shapeInfo.orgHo, shapeInfo.orgWo, shapeInfo.orgDo);
         return false;
     }
 
     if ((outputOrder == static_cast<int8_t>(OutputOrder::M)) && (shapeInfo.singleM <= 0)) {
-        TILING_LOG_ERROR("Input illegal singleM: %ld, which must > 0.", shapeInfo.singleM);
+        OP_LOGE(nodeType, "Input illegal singleM: %ld, which must > 0.", shapeInfo.singleM);
         return false;
     }
 
     int64_t ciPerg = this->optGroupFlag ? shapeInfo.singleCi / shapeInfo.enlarge : shapeInfo.singleCi;
     if (ciPerg * attrInfo.groups != shapeInfo.orgCi) {
-        TILING_LOG_ERROR("only support groups * singleCi = orgCi, current groups: %d, singleCi: %ld, orgCi: %ld",
+        OP_LOGE(nodeType, "only support groups * singleCi = orgCi, current groups: %d, singleCi: %ld, orgCi: %ld",
                          attrInfo.groups, ciPerg, shapeInfo.orgCi);
         return false;
     }
     if (shapeInfo.singleDo <= 0) {
-        TILING_LOG_ERROR("Input illegal singleDo: %ld, which must > 0.", shapeInfo.singleDo);
+        OP_LOGE(nodeType, "Input illegal singleDo: %ld, which must > 0.", shapeInfo.singleDo);
         return false;
     }
     if (shapeInfo.orgCi <= 0 || static_cast<uint64_t>(shapeInfo.orgCi) > MAX_31_BIT_NUM) {
-        TILING_LOG_ERROR("Input illegal orgCi: %ld, which must in range [1, %lu].", shapeInfo.orgCi, MAX_31_BIT_NUM);
+        OP_LOGE(nodeType, "Input illegal orgCi: %ld, which must in range [1, %lu].", shapeInfo.orgCi, MAX_31_BIT_NUM);
         return false;
     }
 
@@ -395,39 +340,39 @@ bool Conv3dTiling::CheckFeaMapShape()
 bool Conv3dTiling::CheckWeightShape()
 {
     if (shapeInfo.orgkH <= 0 || static_cast<uint64_t>(shapeInfo.orgkH) > MAX_31_BIT_NUM) {
-        TILING_LOG_ERROR("Input illegal kH: %ld, which must in range [1, %lu].", shapeInfo.orgkH, MAX_31_BIT_NUM);
+        OP_LOGE(nodeType, "Input illegal kH: %ld, which must in range [1, %lu].", shapeInfo.orgkH, MAX_31_BIT_NUM);
         return false;
     }
     if (shapeInfo.orgkW <= 0 || static_cast<uint64_t>(shapeInfo.orgkW) > MAX_31_BIT_NUM) {
-        TILING_LOG_ERROR("Input illegal kW: %ld, which must in range [1, %lu].", shapeInfo.orgkW, MAX_31_BIT_NUM);
+        OP_LOGE(nodeType, "Input illegal kW: %ld, which must in range [1, %lu].", shapeInfo.orgkW, MAX_31_BIT_NUM);
         return false;
     }
     if (shapeInfo.orgkD <= 0 || static_cast<uint64_t>(shapeInfo.orgkD) > MAX_31_BIT_NUM) {
-        TILING_LOG_ERROR("Input illegal kD: %ld, which must in range [1, %lu].", shapeInfo.orgkD, MAX_31_BIT_NUM);
+        OP_LOGE(nodeType, "Input illegal kD: %ld, which must in range [1, %lu].", shapeInfo.orgkD, MAX_31_BIT_NUM);
         return false;
     }
     if (shapeInfo.orgCo <= 0 || static_cast<uint64_t>(shapeInfo.orgCo) > MAX_31_BIT_NUM) {
-        TILING_LOG_ERROR("Input illegal orgCo: %ld, which must in range [1, %lu].", shapeInfo.orgCo, MAX_31_BIT_NUM);
+        OP_LOGE(nodeType, "Input illegal orgCo: %ld, which must in range [1, %lu].", shapeInfo.orgCo, MAX_31_BIT_NUM);
         return false;
     }
     if (shapeInfo.singleCo <= 0 || static_cast<uint64_t>(shapeInfo.singleCo) > MAX_31_BIT_NUM) {
-        TILING_LOG_ERROR("Input illegal SingleCo: %ld, which must in range [1, %lu].",
+        OP_LOGE(nodeType, "Input illegal SingleCo: %ld, which must in range [1, %lu].",
             shapeInfo.singleCo, MAX_31_BIT_NUM);
         return false;
     }
 
     if (shapeInfo.singlekH != shapeInfo.orgkH) {
-        TILING_LOG_ERROR("Only support singlekH = orgkH, current singlekH: %ld, orgkH: %ld,",
+        OP_LOGE(nodeType, "Only support singlekH = orgkH, current singlekH: %ld, orgkH: %ld,",
             shapeInfo.singlekH, shapeInfo.orgkH);
         return false;
     }
     if (shapeInfo.singlekW != shapeInfo.orgkW) {
-        TILING_LOG_ERROR("Only support singlekW = orgkW, current singlekW: %ld, orgkW: %ld",
+        OP_LOGE(nodeType, "Only support singlekW = orgkW, current singlekW: %ld, orgkW: %ld",
             shapeInfo.singlekW, shapeInfo.orgkW);
         return false;
     }
     if (shapeInfo.singlekD != shapeInfo.orgkD) {
-        TILING_LOG_ERROR("Only support singlekD = orgkD, current singlekD: %ld, orgkD: %ld",
+        OP_LOGE(nodeType, "Only support singlekD = orgkD, current singlekD: %ld, orgkD: %ld",
             shapeInfo.singlekD, shapeInfo.orgkD);
         return false;
     }
@@ -450,7 +395,7 @@ bool Conv3dTiling::CheckInputShape()
 bool Conv3dTiling::CheckSoc()
 {
     if (this->platformInfo.npuArch != NpuArch::DAV_3510) {
-        TILING_LOG_ERROR("current Soc Version is not support");
+        OP_LOGE(nodeType, "current Soc Version is not support");
         return false;
     }
     return true;
@@ -485,7 +430,7 @@ bool Conv3dTiling::CheckInputParam()
 bool Conv3dTiling::CheckAlgorithmLimit() const
 {
     if (isC04Flag) {
-        TILING_LOG_ERROR("conv3d temporarily unSupport C04 format.");
+        OP_LOGE(nodeType, "conv3d temporarily unSupport C04 format.");
         return false;
     }
     return true;
@@ -511,7 +456,7 @@ bool Conv3dTiling::CheckPadStrideDilation()
         this->attrInfo.padTop < 0 || this->attrInfo.padBottom < 0 ||
         this->attrInfo.padHead < 0 || this->attrInfo.padTail < 0);
     if (padInvalidFlag) {
-        TILING_LOG_ERROR(
+        OP_LOGE(nodeType, 
             "Illlegal attrs have set: padTop=%d, padBottom=%d, padLeft=%d, padRight=%d, padHead=%d, padTail=%d,\
             which must >= 0.", this->attrInfo.padTop, this->attrInfo.padBottom, this->attrInfo.padLeft,
             this->attrInfo.padRight, this->attrInfo.padHead, this->attrInfo.padTail);
@@ -519,35 +464,35 @@ bool Conv3dTiling::CheckPadStrideDilation()
     }
 
     if (this->attrInfo.strideH <= 0 || this->attrInfo.strideW <= 0 || this->attrInfo.strideD <= 0) {
-        TILING_LOG_ERROR("Illegal attrs have set: strideH=%d, strideW=%d, strideD=%d, which must > 0.",
+        OP_LOGE(nodeType, "Illegal attrs have set: strideH=%d, strideW=%d, strideD=%d, which must > 0.",
                          this->attrInfo.strideH, this->attrInfo.strideW, this->attrInfo.strideD);
         return false;
     }
 
     if (this->attrInfo.dilationH <= 0 || this->attrInfo.dilationW <= 0 || this->attrInfo.dilationD <= 0) {
-        TILING_LOG_ERROR("Illegal attrs have set: dilationH=%d, dilationW=%d, dilationD=%d, which must > 0.",
+        OP_LOGE(nodeType, "Illegal attrs have set: dilationH=%d, dilationW=%d, dilationD=%d, which must > 0.",
                          this->attrInfo.dilationH, this->attrInfo.dilationW, this->attrInfo.dilationD);
         return false;
     }
 
     if (attrInfo.groups <= 0) {
-        TILING_LOG_ERROR("Illegal attrs have set: groups=%d which must > 0.", attrInfo.groups);
+        OP_LOGE(nodeType, "Illegal attrs have set: groups=%d which must > 0.", attrInfo.groups);
         return false;
     }
 
     if (this->optGroupFlag) {
         if (shapeInfo.singleGroups <= 0) {
-            TILING_LOG_ERROR("Illegal attrs have set: singleGroups=%ld which must > 0.", shapeInfo.singleGroups);
+            OP_LOGE(nodeType, "Illegal attrs have set: singleGroups=%ld which must > 0.", shapeInfo.singleGroups);
             return false;
         }
 
         if (shapeInfo.enlarge <= 0) {
-            TILING_LOG_ERROR("Illegal attrs have set: enlarge=%d which must > 0.", shapeInfo.enlarge);
+            OP_LOGE(nodeType, "Illegal attrs have set: enlarge=%d which must > 0.", shapeInfo.enlarge);
             return false;
         }
 
         if (shapeInfo.singleGroupOpt <= 0) {
-            TILING_LOG_ERROR("Input illegal singleGroupOpt: %ld, which must > 0.", shapeInfo.singleGroupOpt);
+            OP_LOGE(nodeType, "Input illegal singleGroupOpt: %ld, which must > 0.", shapeInfo.singleGroupOpt);
             return false;
         }
     }
@@ -563,7 +508,7 @@ bool Conv3dTiling::CheckDataCopyLimits()
         uint64_t loadAL1loop1SrcStride = shapeInfo.orgHi * shapeInfo.orgWi * tmpOrgDi *
                                         DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype);
         if (loadAL1loop1SrcStride > loadAL1loop1SrcStrideLimits) {
-            TILING_LOG_ERROR(
+            OP_LOGE(nodeType, 
                 "Fmap shape not satisfy DataCopy's limits: din(%ld)*hin(%ld)*win(%ld)*typesize(%u)=%lu, must <= %lu",
                 tmpOrgDi, shapeInfo.orgHi, shapeInfo.orgWi,
                 DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype),
@@ -574,7 +519,7 @@ bool Conv3dTiling::CheckDataCopyLimits()
     if (descInfo.fMapType.format == ConvFormat::NDHWC && outputOrder == static_cast<int8_t>(OutputOrder::M)) {
         uint64_t loadAL1SrcNdMatixStride = shapeInfo.orgHi * shapeInfo.orgWi * shapeInfo.orgCi * attrInfo.dilationD;
         if (loadAL1SrcNdMatixStride > MAX_40_BIT_NUM) {
-            TILING_LOG_ERROR(
+            OP_LOGE(nodeType, 
                 "Fmap shape not satisfy DataCopy's limits: cin(%ld)*hin(%ld)*win(%ld)*dilationD(%d)=%lu, must <= %lu",
                 shapeInfo.orgCi, shapeInfo.orgHi, shapeInfo.orgWi,
                 attrInfo.dilationD,
@@ -592,7 +537,7 @@ bool Conv3dTiling::CheckFixpipeLimits()
         int64_t tmpOrgDo = (shapeInfo.orgDo <= 0) ? 1 : shapeInfo.orgDo;
         uint64_t fixpipeLoop2DstStride = static_cast<uint64_t>(shapeInfo.orgHo) * shapeInfo.orgWo * tmpOrgDo;
         if (fixpipeLoop2DstStride > fixpipeLoop2DstStrideLimit) {
-            TILING_LOG_ERROR(
+            OP_LOGE(nodeType, 
                 "Output shape not satisfy Fixpipe's limits: dout(%ld)*hout(%ld)*wout(%ld)=%lu, must <= %lu",
                 tmpOrgDo, shapeInfo.orgHo, shapeInfo.orgWo,
                 fixpipeLoop2DstStride, fixpipeLoop2DstStrideLimit);
@@ -602,7 +547,7 @@ bool Conv3dTiling::CheckFixpipeLimits()
     if (descInfo.fMapType.format == ConvFormat::NDHWC && outputOrder == static_cast<int8_t>(OutputOrder::HW)) {
         uint64_t fixpipeLoop3DstStride = shapeInfo.orgCo * shapeInfo.orgWo;
         if (fixpipeLoop3DstStride > MAX_32_BIT_NUM) {
-            TILING_LOG_ERROR(
+            OP_LOGE(nodeType, 
                 "Output shape not satisfy Fixpipe's limits: cout(%ld)*wout(%ld)=%lu, must <= %lu",
                 shapeInfo.orgCo, shapeInfo.orgWo,
                 fixpipeLoop3DstStride, MAX_32_BIT_NUM);
@@ -615,6 +560,7 @@ bool Conv3dTiling::CheckFixpipeLimits()
 bool Conv3dTiling::CheckInstructionLimits()
 {
     if (!CheckLoad3DLimits()) {
+        OP_LOGE(nodeType, "Check Load3D instruction Limits Failed");
         return false;
     }
     if (!CheckDataCopyLimits()) {
@@ -739,17 +685,17 @@ void Conv3dTiling::CalcOptGroupParams(const optiling::conv_ops_tiling::ConvOriGr
                                       optiling::conv_ops_tiling::ConvOptGroupInfo& optGroupInfo) const
 {
     if (oriGroupInfo.groups <= 0) {
-        TILING_LOG_ERROR("Illegal params : groups=%lu which must > 0.", oriGroupInfo.groups);
+        OP_LOGE(nodeType, "Illegal params : groups=%lu which must > 0.", oriGroupInfo.groups);
         return;
     }
 
     if (oriGroupInfo.ciPerGroup <= 0) {
-        TILING_LOG_ERROR("Illegal params : ciPerGroup=%lu which must > 0.", oriGroupInfo.ciPerGroup);
+        OP_LOGE(nodeType, "Illegal params : ciPerGroup=%lu which must > 0.", oriGroupInfo.ciPerGroup);
         return;
     }
 
     if (oriGroupInfo.coPerGroup <= 0) {
-        TILING_LOG_ERROR("Illegal params : coPerGroup=%lu which must > 0.", oriGroupInfo.coPerGroup);
+        OP_LOGE(nodeType, "Illegal params : coPerGroup=%lu which must > 0.", oriGroupInfo.coPerGroup);
         return;
     }
 

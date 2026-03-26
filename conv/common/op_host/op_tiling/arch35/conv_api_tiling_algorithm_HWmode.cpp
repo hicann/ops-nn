@@ -105,8 +105,6 @@ void ConvTilingAlgorithmHWmode::GetDmaL1Tiling()
     std::vector<uint64_t> khL1Range;
     CalcCommFactor(tilingIns_->shapeInfo.singlekW, tilingIns_->shapeInfo.singlekW, kwL1Range);
     CalcCommFactor(tilingIns_->shapeInfo.singlekH, tilingIns_->shapeInfo.singlekH, khL1Range);
-    PrintRanges(khL1Range, "khL1Range");
-    PrintRanges(kwL1Range, "kwL1Range");
     uint32_t kwL1Idx = 0;
     uint32_t khL1Idx = 0;
     L1TilingParams inputTiling;
@@ -537,7 +535,6 @@ void ConvTilingAlgorithmHWmode::GetL1TilingRange()
         // remove value which is over load3dv2's hin/win limit [0, 32767]
     for (auto it = this->l1TilingRange.hoAL1Range.begin(); it != this->l1TilingRange.hoAL1Range.end();) {
         if (CheckHinOverLoad3dv2Limit(*it)) {
-            TILING_LOG_DEBUG("Hin over Load3dv2 limit, erase it.");
             it = this->l1TilingRange.hoAL1Range.erase(it);
         } else {
             ++it;
@@ -545,7 +542,6 @@ void ConvTilingAlgorithmHWmode::GetL1TilingRange()
     }
     for (auto it = this->l1TilingRange.woAL1Range.begin(); it != this->l1TilingRange.woAL1Range.end();) {
         if (CheckWinOverLoad3dv2Limit(*it)) {
-            TILING_LOG_DEBUG("Win over Load3dv2 limit, erase it.");
             it = this->l1TilingRange.woAL1Range.erase(it);
         } else {
             ++it;
@@ -682,10 +678,6 @@ uint64_t ConvTilingAlgorithmHWmode::CalcCurL1Size(const L1TilingParams &inputTil
         }
         weightSize = AlignB(inputTiling.nBL1 * inputTiling.kBL1 * weightDTypeSize * this->dbValue.pbBL1, C0_SIZE);
     }
-    TILING_LOG_DEBUG("CalcCurL1Size: hoAL1: %lu, woAL1: %lu, kAL1: %lu, kBL1: %lu, nBL1: %lu, hiAL1: %ld, wiAL1: %ld, \
-        fmSize: %lu, weightSize: %lu, biasSize: %lu, fixpSize: %lu, curL1Size: %lu",
-        inputTiling.hoAL1, inputTiling.woAL1, inputTiling.kAL1, inputTiling.kBL1, inputTiling.nBL1, hiAL1, wiAL1,
-        feaMapSize, weightSize, biasL1Size, fixpParamsSize, feaMapSize + weightSize + biasL1Size + fixpParamsSize);
     return feaMapSize + weightSize + biasL1Size + fixpParamsSize;
 }
 
@@ -704,7 +696,6 @@ void ConvTilingAlgorithmHWmode::IterKAL1(uint64_t &kAL1, uint64_t kBL1, uint64_t
         kAL1 = l1TilingInit.kAL1Init;
         return;
     }
-    TILING_LOG_DEBUG("IterKAL1");
     uint32_t curIdx = 0;
     uint64_t curValue = 0;
     bool isExceedL1Size = false;
@@ -743,7 +734,6 @@ void ConvTilingAlgorithmHWmode::IterKAL1(uint64_t &kAL1, uint64_t kBL1, uint64_t
 
 void ConvTilingAlgorithmHWmode::IterKBL1(uint64_t kAL1, uint64_t &kBL1, uint64_t hoAL1, uint64_t woAL1, uint64_t nBL1)
 {
-    TILING_LOG_DEBUG("IterKBL1");
     if (tilingIns_->isC04Flag) {
         kBL1 = l1TilingInit.kBL1Init;
         return;
@@ -786,7 +776,6 @@ void ConvTilingAlgorithmHWmode::IterKBL1(uint64_t kAL1, uint64_t &kBL1, uint64_t
 
 void ConvTilingAlgorithmHWmode::IterNBL1(uint64_t kAL1, uint64_t kBL1, uint64_t hoAL1, uint64_t woAL1, uint64_t &nBL1)
 {
-    TILING_LOG_DEBUG("IterNBL1");
     uint32_t curIdx = 0;
     uint64_t curValue = 0;
     bool isExceedL1Size = false;
@@ -821,7 +810,6 @@ void ConvTilingAlgorithmHWmode::IterNBL1(uint64_t kAL1, uint64_t kBL1, uint64_t 
 void ConvTilingAlgorithmHWmode::IterHoAL1(uint64_t &hoAL1Res, const std::vector<uint64_t> &inputHoAL1Range,
                                           L1TilingParams &inputTiling)
 {
-    TILING_LOG_DEBUG("IterHoAL1");
     uint32_t curHoIdx = 0;
     uint64_t curHoValue = 0;
     bool isExceedL1Size = false;
@@ -850,7 +838,6 @@ void ConvTilingAlgorithmHWmode::IterHoAL1(uint64_t &hoAL1Res, const std::vector<
 void ConvTilingAlgorithmHWmode::IterWoAL1(uint64_t &woAL1Res, const std::vector<uint64_t> &inputWoAL1Range,
                                           L1TilingParams &inputTiling)
 {
-    TILING_LOG_DEBUG("IterWoAL1");
     inputTiling.hoAL1 = l1TilingRange.hoAL1StrictRange[0];
     uint32_t curWoIdx = 0;
     uint64_t curWoValue = 0;
@@ -897,10 +884,8 @@ bool ConvTilingAlgorithmHWmode::IsKBL1FullLoadFirst()
 
 bool ConvTilingAlgorithmHWmode::CheckKL1FullLoad(uint64_t kAL1, uint64_t kBL1)
 {
-    TILING_LOG_DEBUG("CheckKL1FullLoad");
     if (!tilingIns_->isDmaFlag &&
         kAL1 * tilingIns_->shapeInfo.singlekH * tilingIns_->shapeInfo.singlekW > MAX_16_BIT_NUM) {
-        TILING_LOG_DEBUG("Exceeded kStartPos limit");
         return false;
     }
     L1TilingParams inputTiling;
@@ -921,7 +906,6 @@ bool ConvTilingAlgorithmHWmode::CheckKL1FullLoad(uint64_t kAL1, uint64_t kBL1)
 void ConvTilingAlgorithmHWmode::IterKABL1(uint64_t& tmpKAL1, uint64_t& tmpKBL1, uint64_t tmpHoAL1,
                                           uint64_t tmpWoAL1, uint64_t tmpNBL1)
 {
-    TILING_LOG_DEBUG("IterKABL1");
     if (tilingIns_->isC04Flag) {
         tmpKAL1 = l1TilingInit.kAL1Init;
         tmpKBL1 = l1TilingInit.kBL1Init;
@@ -941,9 +925,6 @@ void ConvTilingAlgorithmHWmode::IterKABL1(uint64_t& tmpKAL1, uint64_t& tmpKBL1, 
         inputTiling.kBL1 = l1TilingRange.kBL1StrictRange[kBL1Idx];
         isExceedL1Size = CalcCurL1Size(inputTiling, tmpNBL1) > tilingIns_->platformInfo.l1Size;
         if (isExceedL1Size) {
-            if (kAL1Idx == 0 && kBL1Idx == 0) {
-                TILING_LOG_DEBUG("no valid value in IterKABL1");
-            }
             break;
         }
         tmpKAL1 = l1TilingRange.kAL1StrictRange[kAL1Idx];
@@ -1078,7 +1059,6 @@ void ConvTilingAlgorithmHWmode::CoreL1TilingNoneFullLoadDecision()
 
 void ConvTilingAlgorithmHWmode::UpdateBiasFixpParamsL1Fullload()
 {
-    TILING_LOG_DEBUG("UpdateBiasFixpParamsL1Fullload");
     uint64_t biasFixpFullLoadSize = tilingIns_->shapeInfo.singleCo1 * tilingIns_->cubeInfo.n0;
     bool updateBiasFixpFullLoadFlag = CalcCurL1Size(l1Params, l1Params.nBL1) < tilingIns_->platformInfo.l1Size &&
                                       !l1Flags.isBiasFullLoad && !l1Flags.isFixpParamsFullLoad &&
@@ -1109,7 +1089,6 @@ void ConvTilingAlgorithmHWmode::UpdateAL1DoubleBufferFirst()
 
 void ConvTilingAlgorithmHWmode::UpdateAL1DoubleBufferSecond()
 {
-    TILING_LOG_DEBUG("UpdateAL1DoubleBufferSecond");
     bool kAl1FullLoadFlag = tilingIns_->isC04Flag ? true :
         l1Params.kAL1 == this->l1TilingCalc.kAL1MaxSize ? true : false;
     if (static_cast<uint64_t>(tilingIns_->shapeInfo.singleHo) <= l1Params.hoAL1 &&
@@ -1123,7 +1102,6 @@ void ConvTilingAlgorithmHWmode::UpdateAL1DoubleBufferSecond()
 void ConvTilingAlgorithmHWmode::CoreL1TilingDecision()
 {
     if (l1Flags.abL1Mode == L1TilingMode::ALL_FULL_LOAD) {
-        TILING_LOG_DEBUG("Attributed to ALL_FULL_LOAD");
         l1Params = {l1TilingInit.kAL1Init, l1TilingInit.kBL1Init, l1TilingInit.hoAL1Init, l1TilingInit.woAL1Init,
                     l1TilingInit.nBL1Init, this->l1TilingCalc.khL1, this->l1TilingCalc.kwL1};
         l1Flags.iterateMNOrder = IterateMNOrder::ITER_M_FST;
@@ -1133,7 +1111,6 @@ void ConvTilingAlgorithmHWmode::CoreL1TilingDecision()
     }
 
     if (l1Flags.abL1Mode == L1TilingMode::FULL_LOAD_BL1) {
-        TILING_LOG_DEBUG("Attributed to FULL_LOAD_BL1");
         uint64_t tmpKAL1 = 0;
         uint64_t tmpHoAL1 = 0;
         uint64_t tmpWoAL1 = 0;
@@ -1152,7 +1129,6 @@ void ConvTilingAlgorithmHWmode::CoreL1TilingDecision()
     }
 
     if (l1Flags.abL1Mode == L1TilingMode::FULL_LOAD_AL1) {
-        TILING_LOG_DEBUG("Attributed to FULL_LOAD_AL1");
         uint64_t tmpKBL1 = 0;
         uint64_t tmpNBL1 = 0;
         IterKBL1(l1TilingInit.kAL1Init, tmpKBL1, l1TilingInit.hoAL1Init, l1TilingInit.woAL1Init,
@@ -1165,7 +1141,7 @@ void ConvTilingAlgorithmHWmode::CoreL1TilingDecision()
         l1Flags.isFixpParamsFullLoad = false;
         return;
     }
-    TILING_LOG_DEBUG("Attributed to NONE_FULL_LOAD");
+
     CoreL1TilingNoneFullLoadDecision();
 }
 
@@ -1200,12 +1176,6 @@ void ConvTilingAlgorithmHWmode::InitL1TiLing()
     RestrictRange(l1TilingRange.kAL1Range, l1TilingRange.kAL1StrictRange, l1TilingInit.kAL1Init);
     RestrictRange(l1TilingRange.kBL1Range, l1TilingRange.kBL1StrictRange, l1TilingInit.kBL1Init);
     RestrictRange(l1TilingRange.nBL1Range, l1TilingRange.nBL1StrictRange, l1TilingInit.nBL1Init);
-
-    PrintRanges(l1TilingRange.hoAL1StrictRange, "hoAL1StrictRange");
-    PrintRanges(l1TilingRange.woAL1StrictRange, "woAL1StrictRange");
-    PrintRanges(l1TilingRange.kAL1StrictRange, "kAL1StrictRange");
-    PrintRanges(l1TilingRange.kBL1StrictRange, "kBL1StrictRange");
-    PrintRanges(l1TilingRange.nBL1StrictRange, "nBL1StrictRange");
 }
 
 void ConvTilingAlgorithmHWmode::InitCalcL1Params()
@@ -1258,45 +1228,7 @@ void ConvTilingAlgorithmHWmode::InitCalcL1Params()
         this->l1TilingCalc.bL1Minsize = this->l1TilingCalc.ci0HkWk * l0Params.nL0 * weightDTypeSize *
                                         this->dbValue.pbBL1;
     }
-    Printl1TilingCalc();
 }
-
-void ConvTilingAlgorithmHWmode::Printl1TilingCalc() const
-{
-    TILING_LOG_DEBUG("In Printl1TilingCalc");
-    TILING_LOG_DEBUG("khL1: %lu, kwL1: %lu", this->l1TilingCalc.khL1, this->l1TilingCalc.kwL1);
-    TILING_LOG_DEBUG("l0Params woL0: %lu, hoL0: %lu, nL0: %lu", l0Params.woL0, l0Params.hoL0, l0Params.nL0);
-    TILING_LOG_DEBUG("cubeInfo m0: %u, k0: %u, n0: %u",
-                     tilingIns_->cubeInfo.m0, tilingIns_->cubeInfo.k0, tilingIns_->cubeInfo.n0);
-    TILING_LOG_DEBUG("shapeInfo.singleCi: %ld,  shapeInfo.singleCo: %ld, shapeInfo.singleCi1: %lu, \
-                      shapeInfo.singleCo1: %lu, shapeInfo.singleWo: %ld, shapeInfo.singleHo: %ld",
-                      tilingIns_->shapeInfo.singleCi, tilingIns_->shapeInfo.singleCo, tilingIns_->shapeInfo.singleCi1,
-                      tilingIns_->shapeInfo.singleCo1, tilingIns_->shapeInfo.singleWo, tilingIns_->shapeInfo.singleHo);
-    TILING_LOG_DEBUG("dbValue.pbAL1: %lu, dbValue.pbBL1: %lu",
-                     static_cast<uint64_t>(this->dbValue.pbAL1), static_cast<uint64_t>(this->dbValue.pbBL1));
-    TILING_LOG_DEBUG("tmpSingleHi: %lu, tmpSingleWi: %ld",
-        InferHiL1(tilingIns_->shapeInfo.singleHo, tilingIns_->shapeInfo.orgHi),
-        InferWiL1(static_cast<uint64_t>(tilingIns_->shapeInfo.singleWo), tilingIns_->shapeInfo.orgWi));
-    TILING_LOG_DEBUG("l1TilingCalc ci0HkWk: %lu, woAL1Min: %lu, hoAL1Min: %lu, kAL1MaxSize: %lu, kBL1MaxSize: %lu, \
-        aL1MaxSize: %lu, bL1MaxSize: %lu, biasL1MaxSize: %lu, fixpParamsL1MaxSize: %lu, \
-        bL1Minsize: %lu, biasL1MinSize: %lu, fixpParamsL1MinSize: %lu, wiAL1Min: %lu, hiAL1Min: %lu, aL1Minsize: %lu,",
-    this->l1TilingCalc.ci0HkWk,
-    this->l1TilingCalc.woAL1Min,
-    this->l1TilingCalc.hoAL1Min,
-    this->l1TilingCalc.kAL1MaxSize,
-    this->l1TilingCalc.kBL1MaxSize,
-    this->l1TilingCalc.aL1MaxSize,
-    this->l1TilingCalc.bL1MaxSize,
-    this->l1TilingCalc.biasL1MaxSize,
-    this->l1TilingCalc.fixpParamsL1MaxSize,
-    this->l1TilingCalc.bL1Minsize,
-    this->l1TilingCalc.biasL1MinSize,
-    this->l1TilingCalc.fixpParamsL1MinSize,
-    this->l1TilingCalc.wiAL1Min,
-    this->l1TilingCalc.hiAL1Min,
-    this->l1TilingCalc.aL1Minsize);
-}
-
 
 void ConvTilingAlgorithmHWmode::InitCalcL1ParamsC04Mode()
 {
@@ -1341,7 +1273,6 @@ void ConvTilingAlgorithmHWmode::InitCalcL1ParamsC04Mode()
 
 int64_t ConvTilingAlgorithmHWmode::CheckMinL1Tiling()
 {
-    TILING_LOG_DEBUG("CheckMinL1Tiling");
     uint64_t minKBL1 = 0;
     uint64_t minwoAL1 = tilingIns_->shapeInfo.singleWo < tilingIns_->cubeInfo.m0 ?
                         tilingIns_->shapeInfo.singleWo : tilingIns_->cubeInfo.m0;
@@ -1358,7 +1289,7 @@ int64_t ConvTilingAlgorithmHWmode::CheckMinL1Tiling()
                         CeilDiv(tilingIns_->cubeInfo.m0, tilingIns_->shapeInfo.singleWo) : 1;
     L1TilingParams inputTiling = {tilingIns_->cubeInfo.k0, minKBL1, minHoAL1, minwoAL1, tilingIns_->cubeInfo.n0, 1, 1};
     if (CalcCurL1Size(inputTiling, inputTiling.nBL1) > tilingIns_->platformInfo.l1Size) {
-        TILING_LOG_ERROR("L1 tiling failed, l1 minLoadSize is exceeding L1size.");
+        OP_LOGE(tilingIns_->nodeType, "L1 tiling failed, l1 minLoadSize is exceeding L1size.");
         return -1;
     }
 
@@ -1381,11 +1312,7 @@ int64_t ConvTilingAlgorithmHWmode::GetL1Tiling()
         InitCalcL1Params();
     }
     GetL1TilingRange();
-    TILING_LOG_DEBUG("Before InitL1TiLing this->dbValue.pbAL1: %lu", static_cast<uint64_t>(this->dbValue.pbAL1));
-    TILING_LOG_DEBUG("Before InitL1TiLing this->dbValue.pbBL1: %lu", static_cast<uint64_t>(this->dbValue.pbBL1));
     InitL1TiLing();
-    TILING_LOG_DEBUG("After InitL1TiLing this->dbValue.pbAL1: %lu", static_cast<uint64_t>(this->dbValue.pbAL1));
-    TILING_LOG_DEBUG("After InitL1TiLing this->dbValue.pbBL1: %lu", static_cast<uint64_t>(this->dbValue.pbBL1));
     UpdateAL1DoubleBufferFirst();
     CoreL1TilingDecision();
     UpdateAL1DoubleBufferSecond();

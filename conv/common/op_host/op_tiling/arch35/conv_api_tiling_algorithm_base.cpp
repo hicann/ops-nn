@@ -99,18 +99,6 @@ uint64_t ConvTilingAlgorithmBase::InferWiL1(uint64_t woL1, int64_t wi) const
     return tmpWiL1;
 }
 
-void ConvTilingAlgorithmBase::PrintRanges(std::vector<uint64_t> inputRanges, std::string rangeName) const
-{
-    std::string res = "";
-    res += rangeName;
-    res += ": ";
-    for (auto v: inputRanges) {
-        res += to_string(v);
-        res += " ";
-    }
-    TILING_LOG_DEBUG("%s", res.c_str());
-}
-
 void ConvTilingAlgorithmBase::ResetOptGroupDoubleBuffer(bool resetFlag)
 {
     if (resetFlag) {
@@ -189,8 +177,5 @@ void ConvTilingAlgorithmBase::SetPBufferRes()
                                       (tilingIns_->dbValue.pbBL0 == DOUBLE_BUFFER_NUM ? 1 : 0);
     tilingIns_->dbValue.pBufferFlag = (tilingIns_->dbValue.pBufferFlag << 1) |
                                       (tilingIns_->dbValue.pbAL0 == DOUBLE_BUFFER_NUM ? 1 : 0);
-    TILING_LOG_DEBUG("pBufferFlag: %ld, pbAL0: %d, pbBL0: %d, pbCL0: %d, pbAL1: %d, pbBL1: %d, ",
-                     tilingIns_->dbValue.pBufferFlag, tilingIns_->dbValue.pbAL0, tilingIns_->dbValue.pbBL0,
-                     tilingIns_->dbValue.pbCL0, tilingIns_->dbValue.pbAL1, tilingIns_->dbValue.pbBL1);
 }
 }

@@ -19,8 +19,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <stdio.h>
-
+#include <cstdio>
 #include "log/log.h"
 #include "array_ops.h"
 #include "ut_op_util.h"
@@ -37,75 +36,30 @@ using namespace ge;
 using namespace ut_util;
 
 namespace {
-uint64_t L1_Size = 524288;
-uint64_t n0 = 16;
-uint64_t mAL1_min = 16;
-uint64_t m0 = 16;
+uint64_t L1_SIZE = 524288;
+uint64_t L0A_SIZE = 65536;
+uint64_t L0B_SIZE = 65536;
+uint64_t L0C_SIZE = 262144;
+uint64_t SIZE_4096 = 4096;
+uint64_t AICORE_NUM = 32;
+uint64_t N0_SIZE = 16;
+uint64_t M0_SIZE = 16;
 uint64_t C0_SIZE = 32;
-
-class ExtendConv2dTiling : public testing::Test {
-    protected:
-      static void SetUpTestCase() {
-          std::cout << "Conv2d ascendc ops tiling testParam setup" << std::endl;
-      }
-      static void TearDownTestCase() {
-          std::cout << "Conv2d ascendc ops tiling testParam tearDown" << std::endl;
-      }
-};
-
-uint64_t InferHo(uint64_t inputHiL1, uint64_t singlekH, uint64_t padTop, uint64_t padBottom, uint64_t dilationH, uint64_t strideH)
-{
-    return (inputHiL1 + padTop + padBottom - dilationH * (singlekH - 1) - 1) / strideH + 1;
-}
-
-uint64_t InferWo(uint64_t inputWiL1, uint64_t singlekW, uint64_t padLeft, uint64_t padRight, uint64_t dilationW, uint64_t strideW)
-{
-    return (inputWiL1 + padLeft + padRight - dilationW * (singlekW - 1) - 1) / strideW + 1;
-}
-
-int64_t InferHiL1(uint64_t inputHoL1, int64_t hi, uint64_t singlekH, uint64_t dilationH, uint64_t strideH)
-{
-    int64_t khDilated = (singlekH - 1) * dilationH + 1;
-    int64_t tmpHiL1 = (inputHoL1 - 1) * strideH + khDilated;
-    if (tmpHiL1 > hi) {
-        tmpHiL1 = hi;
-    }
-
-    return tmpHiL1;
-}
-
-int64_t InferWiL1(uint64_t inputWoL1, int64_t wi, uint64_t singlekW, uint64_t dilationW, uint64_t strideW)
-{
-    int64_t kwDilated = (singlekW - 1) * dilationW + 1;
-    int64_t tmpWiL1 = (inputWoL1 - 1) * strideW + kwDilated;
-    if (tmpWiL1 > wi) {
-        tmpWiL1 = wi;
-    }
-
-    return tmpWiL1;
-}
-
-uint64_t ConvCeilDiv(uint64_t a, uint64_t b)
-{
-    return (a + b - 1) / b;
-}
-
-uint64_t ConvGcd(uint64_t a, uint64_t b) {
-    while (b != 0) {
-        uint64_t temp = a % b;
-        a = b;
-        b = temp;
-    }
-    return a;
-}
-
-uint64_t ConvAlignB(uint64_t a, uint64_t b)
-{
-    if (b == 0) {
-        return 0;
-    }
-    return ((a + b - 1) / b) * b;
-}
+uint64_t C04_SIZE = 4;
+uint64_t DTYPESIZE_2 = 2;
+uint64_t DTYPESIZE_4 = 4;
+uint64_t DTYPESIZE_8 = 8;
+uint64_t NUM_2 = 2;
+uint64_t NUM_3 = 3;
+uint64_t NUM_4 = 4;
+uint64_t NUM_5 = 5;
+uint64_t NUM_14 = 14;
+uint64_t MEM_SIZE_64K = 65536;
+uint64_t MEM_SIZE_256K = 262144;
+uint64_t MEM_SIZE_512K = 524288;
+uint64_t DIM_2 = 2;
+uint64_t DIM_3 = 3;
+uint64_t DIM_4 = 4;
 
 struct TilingParam {
     // api tilingdata
@@ -213,227 +167,353 @@ struct TilingParam {
     uint8_t hasBias;
 };
 
-bool isConv1dFlag(uint64_t Hi, uint64_t Hk, uint64_t dilationH, uint64_t strideH, int64_t padTop, int64_t padBottom, bool hasScale, bool isC04Mode)
+struct KParmas {
+    uint32_t kAL1min;
+    uint32_t kBL1min;
+};
+
+struct DtypeSize {
+    uint32_t fMapDtypeSize;
+    uint32_t weightDtypeSize;
+    uint32_t biasDtypeSize;
+    uint32_t scaleDtypeSize;
+};
+
+struct PadModeParams {
+    const string padMode;
+    uint32_t strideH;
+    uint32_t strideW;
+    uint32_t dilationH;
+    uint32_t dilationW;
+    int64_t batch;
+    int64_t cin;
+    int64_t hi;
+    int64_t wi;
+    int64_t cout;
+    int64_t kH;
+    int64_t kW;
+};
+
+struct ConvShape {
+    uint64_t inputV;
+    uint64_t kernelV;
+    uint64_t padone;
+    uint64_t padtwo;
+    uint64_t dilationV;
+    uint64_t strideV;
+};
+
+struct BasicParams {
+    int64_t availableL1Size;
+    uint64_t basicBlockM;
+    uint64_t basicBlockN;
+    DtypeSize dtypeSize;
+};
+
+uint64_t InferHo(ConvShape convShape)
+{
+    uint64_t inputHi = convShape.inputV;
+    uint64_t kH = convShape.kernelV;
+    uint64_t padTop = convShape.padone;
+    uint64_t padBottom = convShape.padtwo;
+    uint64_t dilationH = convShape.dilationV;
+    uint64_t strideH = convShape.strideV;
+    if (strideH == 0) {
+        return 0;
+    }
+    return (inputHi + padTop + padBottom - dilationH * (kH - 1) - 1) / strideH + 1;
+}
+
+uint64_t InferWo(ConvShape convShape)
+{
+    uint64_t inputWi = convShape.inputV;
+    uint64_t kW = convShape.kernelV;
+    uint64_t padLeft = convShape.padone;
+    uint64_t padRight = convShape.padtwo;
+    uint64_t dilationW = convShape.dilationV;
+    uint64_t strideW = convShape.strideV;
+    if (strideW == 0) {
+        return 0;
+    }
+    return (inputWi + padLeft + padRight - dilationW * (kW - 1) - 1) / strideW + 1;
+}
+
+int64_t InferHiL1(uint64_t inputHoL1, int64_t hi, uint64_t singlekH, uint64_t dilationH, uint64_t strideH)
+{
+    int64_t khDilated = (singlekH - 1) * dilationH + 1;
+    int64_t tmpHiL1 = (inputHoL1 - 1) * strideH + khDilated;
+    if (tmpHiL1 > hi) {
+        tmpHiL1 = hi;
+    }
+
+    return tmpHiL1;
+}
+
+int64_t InferWiL1(uint64_t inputWoL1, int64_t wi, uint64_t singlekW, uint64_t dilationW, uint64_t strideW)
+{
+    int64_t kwDilated = (singlekW - 1) * dilationW + 1;
+    int64_t tmpWiL1 = (inputWoL1 - 1) * strideW + kwDilated;
+    if (tmpWiL1 > wi) {
+        tmpWiL1 = wi;
+    }
+
+    return tmpWiL1;
+}
+
+uint64_t ConvCeilDiv(uint64_t a, uint64_t b)
+{
+    return (a + b - 1) / b;
+}
+
+uint64_t ConvGcd(uint64_t a, uint64_t b) {
+    while (b != 0) {
+        uint64_t temp = a % b;
+        a = b;
+        b = temp;
+    }
+    return a;
+}
+
+uint64_t ConvAlignB(uint64_t a, uint64_t b)
+{
+    if (b == 0) {
+        return 0;
+    }
+    return ((a + b - 1) / b) * b;
+}
+
+bool isConv1dFlag(TilingParam &tilingData, bool isC04Mode)
 {
     if (isC04Mode) {
         return false;
     }
-    if (Hi == 1 && Hk == 1 && strideH == 1 && dilationH == 1 &&
-        padTop == 0 && padBottom == 0) {
+    if (tilingData.orgHi == 1 && tilingData.kernelH == 1 && tilingData.strideH == 1 && tilingData.dilationH == 1 &&
+        tilingData.padTop == 0 && tilingData.padBottom == 0) {
         return true;
     }
     return false;
 }
 
-uint64_t CalcMinUsedL1SizeInMsplitMode(TilingParam &tilingData, uint32_t kAL1min, uint32_t kBL1min,
-  uint32_t fMapDtypeSize, uint32_t biasDtypeSize, uint32_t weightDtypeSize, uint32_t scaleDtypeSize, bool hasScale)
+uint64_t CalcMinUsedL1SizeInMsplitMode(TilingParam &tilingData, uint32_t kAL1min, uint32_t kBL1min, DtypeSize dtypeSizes, bool hasScale)
 {
-    uint64_t nBL1min = n0;
-    uint64_t biasUsedL1Size = tilingData.hasBias_api ? ConvAlignB(nBL1min * biasDtypeSize, 32) : 0;
-    uint64_t scaleUsedL1Size = hasScale ? ConvAlignB(nBL1min * scaleDtypeSize, 32) : 0;
-    uint64_t weightUsedL1Size = ConvAlignB(kBL1min * nBL1min * weightDtypeSize, 32);
-    uint64_t hoAL1min = std::min(m0 / tilingData.orgWo + 2, tilingData.orgHo);
+    uint64_t nBL1min = N0_SIZE;
+    uint64_t biasUsedL1Size = tilingData.hasBias_api ? ConvAlignB(nBL1min * dtypeSizes.biasDtypeSize, C0_SIZE) : 0;
+    uint64_t scaleUsedL1Size = hasScale ? ConvAlignB(nBL1min * dtypeSizes.scaleDtypeSize, C0_SIZE) : 0;
+    uint64_t weightUsedL1Size = ConvAlignB(kBL1min * nBL1min * dtypeSizes.weightDtypeSize, C0_SIZE);
+    uint64_t hoAL1min = std::min(M0_SIZE / tilingData.orgWo + NUM_2, tilingData.orgHo);
     uint64_t hiAL1min = InferHiL1(hoAL1min, tilingData.orgHi, tilingData.kernelH, tilingData.dilationH_api, tilingData.strideH_api);
-    uint64_t fmapUsedL1Size = ConvAlignB(hiAL1min * tilingData.orgWi * kAL1min * fMapDtypeSize, 32);
+    uint64_t fmapUsedL1Size = ConvAlignB(hiAL1min * tilingData.orgWi * kAL1min * dtypeSizes.fMapDtypeSize, C0_SIZE);
     uint64_t minL1LoadSize = biasUsedL1Size + fmapUsedL1Size + weightUsedL1Size + scaleUsedL1Size;
     return minL1LoadSize;
 }
 
-uint64_t CalcMinUsedL1SizeInHWsplitMode(TilingParam &tilingData, uint32_t kAL1min, uint32_t kBL1min, uint32_t wiAL1min,
-  uint32_t fMapDtypeSize, uint32_t biasDtypeSize, uint32_t weightDtypeSize, uint32_t scaleDtypeSize, bool hasScale)
+uint64_t CalcMinUsedL1SizeInHWsplitMode(TilingParam &tilingData, KParmas kParmas, uint32_t wiAL1min,
+                                        DtypeSize dtypeSizes, bool hasScale)
 {
-    uint64_t nBL1min = n0;
-    uint64_t biasUsedL1Size = tilingData.hasBias_api ? ConvAlignB(nBL1min * biasDtypeSize, 32) : 0;
-    uint64_t scaleUsedL1Size = hasScale ? ConvAlignB(nBL1min * scaleDtypeSize, 32) : 0;
-    uint64_t weightUsedL1Size = ConvAlignB(kBL1min * nBL1min * weightDtypeSize, 32);
-    uint64_t hoAL1min = tilingData.orgWo < m0 ? ConvCeilDiv(m0, tilingData.orgWo) : 1;
-    uint64_t hiAL1min = InferHiL1(hoAL1min, tilingData.orgHi, tilingData.kernelH, tilingData.dilationH_api, tilingData.strideH_api);
-    uint64_t fmapUsedL1Size = ConvAlignB(hiAL1min * wiAL1min * kAL1min * fMapDtypeSize, 32);
+    uint32_t kAL1min = kParmas.kAL1min;
+    uint32_t kBL1min = kParmas.kBL1min;
+    uint32_t fMapDtypeSize = dtypeSizes.fMapDtypeSize;
+    uint32_t biasDtypeSize = dtypeSizes.biasDtypeSize;
+    uint32_t weightDtypeSize = dtypeSizes.weightDtypeSize;
+    uint32_t scaleDtypeSize = dtypeSizes.scaleDtypeSize;
+    uint64_t nBL1min = N0_SIZE;
+    uint64_t biasUsedL1Size = tilingData.hasBias_api ? ConvAlignB(nBL1min * biasDtypeSize, C0_SIZE) : 0;
+    uint64_t scaleUsedL1Size = hasScale ? ConvAlignB(nBL1min * scaleDtypeSize, C0_SIZE) : 0;
+    uint64_t weightUsedL1Size = ConvAlignB(kBL1min * nBL1min * weightDtypeSize, C0_SIZE);
+    uint64_t hoAL1min = tilingData.orgWo < M0_SIZE ? ConvCeilDiv(M0_SIZE, tilingData.orgWo) : 1;
+    uint64_t hiAL1min = InferHiL1(hoAL1min, tilingData.orgHi, tilingData.kernelH,
+                                    tilingData.dilationH_api, tilingData.strideH_api);
+    uint64_t fmapUsedL1Size = ConvAlignB(hiAL1min * wiAL1min * kAL1min * fMapDtypeSize, C0_SIZE);
 
     uint64_t minL1LoadSize = biasUsedL1Size + scaleUsedL1Size + fmapUsedL1Size + weightUsedL1Size;
     return minL1LoadSize;
 }
 
-bool CheckL1SizeLimitsInHWsplitMode(TilingParam &tilingData,
-  uint32_t fMapDtypeSize, uint32_t biasDtypeSize, uint32_t weightDtypeSize, uint32_t scaleDtypeSize, bool hasScale)
+bool CheckL1SizeLimitsInHWsplitMode(TilingParam &tilingData, DtypeSize dtypeSizes, bool hasScale)
 {
     // require hiL1 * wiL1 >= m0
-    uint64_t woAL1min = m0;
-    uint32_t k0 = 32 / fMapDtypeSize;
+    uint64_t woAL1min = M0_SIZE;
+    uint32_t k0 = C0_SIZE / dtypeSizes.fMapDtypeSize;
+    KParmas kParmas = {k0, tilingData.kernelH * tilingData.kernelW * k0};
     uint64_t wiAL1min = InferWiL1(woAL1min, tilingData.orgWi, tilingData.kernelW, tilingData.dilationW, tilingData.strideW);
-    uint64_t usdL1SizeUnderMinHWtiling = CalcMinUsedL1SizeInHWsplitMode(tilingData, k0, tilingData.kernelH * tilingData.kernelW * k0, wiAL1min,
-      fMapDtypeSize, biasDtypeSize, weightDtypeSize, scaleDtypeSize, hasScale);
-    if (usdL1SizeUnderMinHWtiling > 524288) {
+    uint64_t usdL1SizeUnderMinHWtiling = CalcMinUsedL1SizeInHWsplitMode(tilingData, kParmas, wiAL1min, dtypeSizes, hasScale);
+    if (usdL1SizeUnderMinHWtiling > L1_SIZE) {
         return false;
     }
     return true;
 }
  
-bool CheckL1SizeLimitsInMsplitMode(TilingParam &tilingData,
-  uint32_t fMapDtypeSize, uint32_t biasDtypeSize, uint32_t weightDtypeSize, uint32_t scaleDtypeSize, bool hasScale)
+bool CheckL1SizeLimitsInMsplitMode(TilingParam &tilingData, DtypeSize dtypeSizes, bool hasScale)
 {
-    uint32_t k0 = 32 / fMapDtypeSize;
+    uint32_t k0 = C0_SIZE / dtypeSizes.fMapDtypeSize;
     uint64_t usdL1SizeUnderMinMtiling = CalcMinUsedL1SizeInMsplitMode(tilingData, k0, tilingData.kernelH * tilingData.kernelW * k0,
-      fMapDtypeSize, biasDtypeSize, weightDtypeSize, scaleDtypeSize, hasScale);
-    if (usdL1SizeUnderMinMtiling > 524288) {
+      dtypeSizes, hasScale);
+    if (usdL1SizeUnderMinMtiling > L1_SIZE) {
         return false;
     }
     return true;
 }
 
-bool CheckC04L1SizeLimitsInHWsplitMode(TilingParam &tilingData,
-  uint32_t fMapDtypeSize, uint32_t biasDtypeSize, uint32_t weightDtypeSize, uint32_t scaleDtypeSize, bool hasScale)
+bool CheckC04L1SizeLimitsInHWsplitMode(TilingParam &tilingData, DtypeSize dtypeSizes, bool hasScale)
 {
     // c04 require wi fulload L1
-    uint32_t k0 = 32 / fMapDtypeSize;
-    uint64_t usdL1SizeUnderMinHWtiling = CalcMinUsedL1SizeInHWsplitMode(tilingData, 4, ConvAlignB(
-        4 * tilingData.kernelH * tilingData.kernelW, k0), tilingData.orgWi,
-        fMapDtypeSize, biasDtypeSize, weightDtypeSize, scaleDtypeSize, hasScale);
-    if (usdL1SizeUnderMinHWtiling > 524288) {
+    uint32_t k0 = C0_SIZE / dtypeSizes.fMapDtypeSize;
+    KParmas kParmas = {C04_SIZE, ConvAlignB(C04_SIZE * tilingData.kernelH * tilingData.kernelW, k0)};
+    uint64_t usdL1SizeUnderMinHWtiling = CalcMinUsedL1SizeInHWsplitMode(tilingData, kParmas, tilingData.orgWi,
+            dtypeSizes, hasScale);
+    if (usdL1SizeUnderMinHWtiling > L1_SIZE) {
         return false;
     }
     return true;
 }
  
-bool CheckC04L1SizeLimitsInMsplitMode(TilingParam &tilingData,
-  uint32_t fMapDtypeSize, uint32_t biasDtypeSize, uint32_t weightDtypeSize, uint32_t scaleDtypeSize, bool hasScale)
+bool CheckC04L1SizeLimitsInMsplitMode(TilingParam &tilingData, DtypeSize dtypeSizes, bool hasScale)
 {
-    uint32_t k0 = 32 / fMapDtypeSize;
-    uint64_t c04UsdL1SizeUnderMinMtiling = CalcMinUsedL1SizeInMsplitMode(tilingData, 4, ConvAlignB(4 * tilingData.kernelH * tilingData.kernelW, k0),
-      fMapDtypeSize, biasDtypeSize, weightDtypeSize, scaleDtypeSize, hasScale);
-    if (c04UsdL1SizeUnderMinMtiling > 524288) {
+    uint32_t k0 = C0_SIZE / dtypeSizes.fMapDtypeSize;
+    uint64_t c04UsdL1SizeUnderMinMtiling = CalcMinUsedL1SizeInMsplitMode(tilingData, C04_SIZE, ConvAlignB(C04_SIZE * tilingData.kernelH * tilingData.kernelW, k0),
+      dtypeSizes, hasScale);
+    if (c04UsdL1SizeUnderMinMtiling > L1_SIZE) {
         return false;
     }
     return true;
 }
 
 // M split mode return 1, HW split mode retun 0, M and HW split mode both fail return -1
-int32_t GetSplitMode(TilingParam &tilingData, uint32_t featuremapDtyeSize, uint32_t weightDtypeSize, bool hasScale, bool isC04Mode)
+int32_t GetSplitMode(TilingParam &tilingData, uint32_t featuremapDtyeSize,
+    uint32_t weightDtypeSize, bool hasScale, bool isC04Mode)
 {
-	uint32_t biasDtyeSize = 0;
-  uint32_t scaleDtyeSize = 0;
-	if (tilingData.hasBias) {
-		if (hasScale) {
-			biasDtyeSize = 4; // biasdetype is int32 for int8; biasdetype is fp32 for hif8/fp8
-		}
-		else {
-			biasDtyeSize = featuremapDtyeSize; // biasdtype is same as fmdtype for fp32/hf32/fp16/bf16
-		}
-	}
-	if (hasScale) {
-		scaleDtyeSize = 8; // scaleDtye is int64/uint64 for int8/hif8/fp8
-	}
-  bool MsplitModeL1LimitCheckRes = false;
-  bool HWsplitModeL1LimitCheckRes = false;
-  if (isC04Mode) {
-    MsplitModeL1LimitCheckRes = CheckC04L1SizeLimitsInMsplitMode(tilingData, featuremapDtyeSize, biasDtyeSize, weightDtypeSize, scaleDtyeSize, hasScale);
-    HWsplitModeL1LimitCheckRes = CheckC04L1SizeLimitsInHWsplitMode(tilingData, featuremapDtyeSize, biasDtyeSize, weightDtypeSize, scaleDtyeSize, hasScale);
-  } else {
-    MsplitModeL1LimitCheckRes = CheckL1SizeLimitsInMsplitMode(tilingData, featuremapDtyeSize, biasDtyeSize, weightDtypeSize, scaleDtyeSize, hasScale);
-    HWsplitModeL1LimitCheckRes = CheckL1SizeLimitsInHWsplitMode(tilingData, featuremapDtyeSize, biasDtyeSize, weightDtypeSize, scaleDtyeSize, hasScale);
-  }
-  if (isConv1dFlag(tilingData.orgHi, tilingData.kernelH, tilingData.dilationH, tilingData.strideH, tilingData.padTop, tilingData.padBottom, hasScale, false)) {
-      MsplitModeL1LimitCheckRes = false; // only hw split mode in conv1d
-  }
+    uint32_t biasDtyeSize = 0;
+    uint32_t scaleDtyeSize = 0;
+    if (tilingData.hasBias) {
+        if (hasScale) {
+            biasDtyeSize = DTYPESIZE_4; // biasdetype is int32 for int8; biasdetype is fp32 for hif8/fp8
+        }
+        else {
+            biasDtyeSize = featuremapDtyeSize; // biasdtype is same as fmdtype for fp32/hf32/fp16/bf16
+        }
+    }
+    if (hasScale) {
+        scaleDtyeSize = DTYPESIZE_8; // scaleDtye is int64/uint64 for int8/hif8/fp8
+    }
+    bool MsplitModeL1LimitCheckRes = false;
+    bool HWsplitModeL1LimitCheckRes = false;
+    DtypeSize dtypeSizes = {featuremapDtyeSize, biasDtyeSize, weightDtypeSize, scaleDtyeSize};
+    if (isC04Mode) {
+        MsplitModeL1LimitCheckRes = CheckC04L1SizeLimitsInMsplitMode(tilingData, dtypeSizes, hasScale);
+        HWsplitModeL1LimitCheckRes = CheckC04L1SizeLimitsInHWsplitMode(tilingData, dtypeSizes, hasScale);
+    } else {
+        MsplitModeL1LimitCheckRes = CheckL1SizeLimitsInMsplitMode(tilingData, dtypeSizes, hasScale);
+        HWsplitModeL1LimitCheckRes = CheckL1SizeLimitsInHWsplitMode(tilingData, dtypeSizes, hasScale);
+    }
+    if (isConv1dFlag(tilingData, false)) {
+        MsplitModeL1LimitCheckRes = false; // only hw split mode in conv1d
+    }
 
-	if(MsplitModeL1LimitCheckRes && HWsplitModeL1LimitCheckRes) {
-		return 1;
-	}
-	if(!MsplitModeL1LimitCheckRes && HWsplitModeL1LimitCheckRes) {
-		return 0;
-	}
-	if(MsplitModeL1LimitCheckRes && !HWsplitModeL1LimitCheckRes) {
-		return 1;
-	}
-	if(!MsplitModeL1LimitCheckRes && !HWsplitModeL1LimitCheckRes) {
-		return -1;
-	}
+    if(MsplitModeL1LimitCheckRes && HWsplitModeL1LimitCheckRes) {
+        return 1;
+    }
+    if(!MsplitModeL1LimitCheckRes && HWsplitModeL1LimitCheckRes) {
+        return 0;
+    }
+    if(MsplitModeL1LimitCheckRes && !HWsplitModeL1LimitCheckRes) {
+        return 1;
+    }
+    if(!MsplitModeL1LimitCheckRes && !HWsplitModeL1LimitCheckRes) {
+        return -1;
+    }
+}
+
+uint64_t CalcUsdL1SizeMode(TilingParam &tilingData,
+                           DtypeSize dtypeSize,
+                           int8_t pbAL1,
+                           int8_t pbBL1)
+{
+    uint64_t mL1Max = tilingData.hoL1 < tilingData.singleCoreHo ? tilingData.hoL1 : tilingData.singleCoreHo;
+    uint64_t hoAL1Tmp = min(mL1Max / tilingData.orgWo + NUM_2, tilingData.orgHo);
+    uint64_t hiL1Tmp = min((hoAL1Tmp - 1) * tilingData.strideH + (tilingData.kernelH - 1) / tilingData.dilationH + 1,
+        tilingData.orgHi);
+    uint64_t al1Size = hiL1Tmp * tilingData.orgWi * (tilingData.kAL1 / (tilingData.kernelH * tilingData.kernelW)) *
+        (pbAL1 + 1) * dtypeSize.fMapDtypeSize;
+    uint64_t bl1Size = tilingData.nBL1 * tilingData.kBL1 * (pbBL1 + 1) * dtypeSize.weightDtypeSize;
+    return al1Size + bl1Size;
+}
+
+uint64_t CalcUsdL1SizeHWode(TilingParam &tilingData,
+                            DtypeSize dtypeSize,
+                            int8_t pbAL1,
+                            bool isC04Flag)
+{
+    uint64_t hiL1 = InferHiL1(tilingData.hoL1, tilingData.orgHi, tilingData.kernelH,
+        tilingData.dilationH, tilingData.strideH);
+    uint64_t wiL1 = InferWiL1(tilingData.woL1, tilingData.orgWi, tilingData.kernelW,
+        tilingData.dilationW, tilingData.strideW);
+    uint64_t al1Size = hiL1 * wiL1 * (tilingData.kAL1 / (tilingData.kernelH * tilingData.kernelW)) *
+        (pbAL1 + 1) * dtypeSize.fMapDtypeSize;
+    if (isC04Flag) {
+        al1Size = ConvCeilDiv(hiL1 * wiL1 * C04_SIZE * dtypeSize.fMapDtypeSize, C0_SIZE) *
+            C0_SIZE * (pbAL1 + 1);
+    }
+    uint64_t bl1Size = tilingData.nBL1 * tilingData.kBL1 * dtypeSize.weightDtypeSize;
+    return al1Size + bl1Size;
 }
 
 uint64_t CalcUsdL1Size(TilingParam &tilingData,
-					   uint32_t featuremapDtyeSize,
-					   uint32_t weightDtyeSize,
-					   uint64_t n0,
-					   uint32_t outputOrder,
-                       int8_t pbAL1,
-                       int8_t pbBL1,
+                       DtypeSize dtypeSize,
                        int64_t padCompensationValue,
-					   bool hasBias,
-					   bool hasQuantScale,
-					   bool isC04Flag)
+                       bool hasQuantScale,
+                       bool isC04Flag)
 {
-    
-    uint32_t biasDtyeSize = 0;
+    uint32_t featuremapDtyeSize = dtypeSize.fMapDtypeSize;
+    uint32_t weightDtyeSize = dtypeSize.weightDtypeSize;
+    uint32_t outputOrder = (tilingData.hoL1 > 0 && tilingData.woL1 == 0) ? 1 : 0;
+    uint64_t pBuffer = tilingData.pBufferFlag;
+    int8_t pbAL0 = pBuffer & 0x01;
+    int8_t pbBL0 = (pBuffer & 0x02) >> 1;
+    int8_t pbCL0 = (pBuffer & 0x04) >> NUM_2;
+    int8_t pbAL1 = (pBuffer & 0x08) >> NUM_3;
+    int8_t pbBL1 = (pBuffer & 0x10) >> NUM_4;
+    bool hasBias = tilingData.hasBias;
+    uint32_t biasDtyeSize = featuremapDtyeSize;
     uint32_t scaleDtyeSize = 0;
-	if(hasBias) {
-		if(hasQuantScale) {
-      biasDtyeSize = 4; // biasdetype is int32 for int8; biasdetype is fp32 for hif8/fp8
-		}
-		else {
-			biasDtyeSize = featuremapDtyeSize; // biasdtype is same as fmdtype for fp32/hf32/fp16/bf16
-		}
-	}
-	if(hasQuantScale) {
-		scaleDtyeSize = 8; // scaleDtye is int64/uint64 for int8/hif8/fp8
-	}
+    if(hasBias & hasQuantScale) {
+        biasDtyeSize = DTYPESIZE_4; // biasdetype is int32 for int8; biasdetype is fp32 for hif8/fp8
+    }
+    if(hasQuantScale) {
+        scaleDtyeSize = DTYPESIZE_8; // scaleDtye is int64/uint64 for int8/hif8/fp8
+    }
     uint64_t curl1Size = 0;
-    uint64_t al1Size = 0;
-    uint64_t bl1Size = 0;
+    uint64_t al1Bl1Size = 0;
     uint64_t biasL1Size = 0;
     uint64_t scaleL1Size = 0;
+    uint64_t fixpSize = 0;
     if (outputOrder == 1) { // Mmode
-        uint64_t mL1Max = tilingData.hoL1 < tilingData.singleCoreHo ? tilingData.hoL1 : tilingData.singleCoreHo;
-        uint64_t hoAL1Tmp = min(mL1Max / tilingData.orgWo + 2, tilingData.orgHo);
-        uint64_t hiL1Tmp = min((hoAL1Tmp - 1) * tilingData.strideH + (tilingData.kernelH - 1) / tilingData.dilationH + 1, tilingData.orgHi);
-        al1Size = hiL1Tmp * tilingData.orgWi * (tilingData.kAL1 / (tilingData.kernelH * tilingData.kernelW)) * (pbAL1 + 1) * featuremapDtyeSize;
-        bl1Size = tilingData.nBL1 * tilingData.kBL1 * (pbBL1 + 1) * weightDtyeSize;
-        if (hasBias) {
-            if (tilingData.biasFullLoadFlag == 1) {
-                biasL1Size = ConvCeilDiv(tilingData.singleCoreCo, n0) * n0 * biasDtyeSize;
-            } else { // tilingData.biasFullLoadFlag == 0
-                biasL1Size = tilingData.nL0 * biasDtyeSize;
-            }
-        }
-        if (hasQuantScale) {
-            if (tilingData.fixpParamsFullLoadFlag) {
-                scaleL1Size = ConvCeilDiv(tilingData.singleCoreCo, n0) * n0 * scaleDtyeSize;
-            } else {
-                scaleL1Size = tilingData.nL0 * scaleDtyeSize;
-            }
-        }
-        curl1Size = al1Size + bl1Size + biasL1Size + scaleL1Size;
-    } else { // HWmode
-        uint64_t hiL1 = InferHiL1(tilingData.hoL1, tilingData.orgHi, tilingData.kernelH, tilingData.dilationH, tilingData.strideH);
-        uint64_t wiL1 = InferWiL1(tilingData.woL1, tilingData.orgWi, tilingData.kernelW, tilingData.dilationW, tilingData.strideW);
-        al1Size = hiL1 * wiL1 * (tilingData.kAL1 / (tilingData.kernelH * tilingData.kernelW)) * (pbAL1 + 1) * featuremapDtyeSize;
-        if (isC04Flag) {
-            al1Size = ConvCeilDiv(hiL1 * wiL1 * 4 * featuremapDtyeSize, 32) * 32 * (pbAL1 + 1);
-        }
-        bl1Size = tilingData.nBL1 * tilingData.kBL1 * weightDtyeSize;
-        if (hasBias) {
-            if (tilingData.biasFullLoadFlag) {
-                biasL1Size = ConvCeilDiv(tilingData.singleCoreCo, n0) * n0 * biasDtyeSize;
-            } else {
-                biasL1Size = tilingData.nBL1 * biasDtyeSize;
-            }
-        }
-        if (hasQuantScale) {
-            if (tilingData.fixpParamsFullLoadFlag) {
-                scaleL1Size = ConvCeilDiv(tilingData.singleCoreCo, n0) * n0 * scaleDtyeSize;
-            } else {
-                scaleL1Size = tilingData.nBL1 * scaleDtyeSize;
-            }
-        }
-        curl1Size = al1Size + bl1Size + biasL1Size + scaleL1Size;
+        fixpSize = tilingData.nL0;
+        al1Bl1Size = CalcUsdL1SizeMode(tilingData, dtypeSize, pbAL1, pbBL1);
     }
+    if (outputOrder == 0) { // HWmode
+        fixpSize = tilingData.nBL1;
+        al1Bl1Size = CalcUsdL1SizeHWode(tilingData, dtypeSize, pbAL1, isC04Flag);
+    }
+    if (hasBias) {
+        if (tilingData.biasFullLoadFlag) {
+            biasL1Size = ConvCeilDiv(tilingData.singleCoreCo, N0_SIZE) * N0_SIZE * biasDtyeSize;
+        } else {
+            biasL1Size = fixpSize * biasDtyeSize;
+        }
+    }
+    if (hasQuantScale) {
+        if (tilingData.fixpParamsFullLoadFlag) {
+            scaleL1Size = ConvCeilDiv(tilingData.singleCoreCo, N0_SIZE) * N0_SIZE * scaleDtyeSize;
+        } else {
+            scaleL1Size = fixpSize * scaleDtyeSize;
+        }
+    }
+    curl1Size = al1Bl1Size + biasL1Size + scaleL1Size;
 
     return curl1Size;
 }
 
-uint64_t CalcUsdL0ASize(TilingParam &tilingData,
-					   uint32_t outputOrder,
-					   uint32_t featuremapDtyeSize,
-                       int8_t pbAL0)
+uint64_t CalcUsdL0ASize(TilingParam &tilingData, uint32_t outputOrder, uint32_t featuremapDtyeSize, int8_t pbAL0)
 {
     uint64_t curl0aSize = 0;
     if (outputOrder == 0) {
@@ -444,23 +524,18 @@ uint64_t CalcUsdL0ASize(TilingParam &tilingData,
     return curl0aSize;
 }
 
-uint64_t CalcUsdL0BSize(TilingParam &tilingData,
-					   uint32_t weightDtyeSize,
-                       int8_t pbBL0)
+uint64_t CalcUsdL0BSize(TilingParam &tilingData, uint32_t weightDtyeSize, int8_t pbBL0)
 {
     return tilingData.nL0 * tilingData.kL0 * (pbBL0 + 1) * weightDtyeSize;
 }
 
-uint64_t CalcUsdL0CSize(TilingParam &tilingData,
-					   uint32_t outputOrder,
-                       int8_t pbCL0)
+uint64_t CalcUsdL0CSize(TilingParam &tilingData, uint32_t outputOrder, int8_t pbCL0)
 {
     uint64_t curl0cSize = 0;
-    uint32_t mmadDtypeSize = 4;
     if (outputOrder == 0) {
-        curl0cSize = tilingData.hoL0 * tilingData.woL0 * tilingData.nL0 * (pbCL0 + 1) * mmadDtypeSize;
+        curl0cSize = tilingData.hoL0 * tilingData.woL0 * tilingData.nL0 * (pbCL0 + 1) * DTYPESIZE_4;
     } else {
-        curl0cSize = tilingData.hoL0 * tilingData.nL0 * (pbCL0 + 1) * mmadDtypeSize;
+        curl0cSize = tilingData.hoL0 * tilingData.nL0 * (pbCL0 + 1) * DTYPESIZE_4;
     }
     return curl0cSize;
 }
@@ -497,40 +572,43 @@ void GetInitBasicBlockMN(TilingParam &tilingData, uint64_t& basicBlockM, uint64_
 }
 
 bool CmpFirstAdjustMnTile(TilingParam &tilingData, int64_t& mTile, int64_t& nTile,
-                            int64_t availableL1Size, uint64_t basicBlockM, uint64_t basicBlockN,
-                            int64_t fMapDtypeSize, int64_t weightDtypeSize, vector<int64_t> pads)
+                          BasicParams basicParams, vector<int64_t> pads)
 {
-    int64_t k0 = 32 / fMapDtypeSize;
-    int64_t maxHiWiL1 = availableL1Size / fMapDtypeSize / k0 / 2;
+    DtypeSize dtypeSize = basicParams.dtypeSize;
+    int64_t fMapDtypeSize = dtypeSize.fMapDtypeSize;
+    int64_t weightDtypeSize = dtypeSize.weightDtypeSize;
+    int64_t availableL1Size = basicParams.availableL1Size;
+    uint64_t basicBlockM = basicParams.basicBlockM;
+    uint64_t basicBlockN = basicParams.basicBlockN;
+    int64_t k0 = C0_SIZE / fMapDtypeSize;
+    int64_t maxHiWiL1 = availableL1Size / fMapDtypeSize / k0 / NUM_2;
     int64_t padTop = pads[0];
     int64_t padBottom = pads[1];
     if (maxHiWiL1 <= 0) {
         return false;
     }
     int64_t maxhiL1 = maxHiWiL1 / static_cast<int64_t>(tilingData.win);
-    if (maxhiL1 <= 2) {
+    if (maxhiL1 <= NUM_2) {
         return false;
     }
     int64_t hoMax = 0;
     int64_t padCompensationValue = 0;
-	if (basicBlockM >= tilingData.wout * tilingData.hout) { // L1 can full load M direction
+    if (basicBlockM >= tilingData.wout * tilingData.hout) { // L1 can full load M direction
         padCompensationValue = padTop + padBottom;
         hoMax = (maxhiL1 + padCompensationValue -
-            static_cast<int64_t>(tilingData.dilationH) *
-            (static_cast<int64_t>(tilingData.kh) - 1) - 1) /
+            static_cast<int64_t>(tilingData.dilationH) * (static_cast<int64_t>(tilingData.kh) - 1) - 1) /
             static_cast<int64_t>(tilingData.strideH) + 1;
     } else {
         padCompensationValue = max(padTop, padBottom);
         hoMax = (maxhiL1 + padCompensationValue - static_cast<int64_t>(tilingData.dilationH) *
-		    (static_cast<int64_t>(tilingData.kh) - 1) - 1) /
-            static_cast<int64_t>(tilingData.strideH) + 1;
+            (static_cast<int64_t>(tilingData.kh) - 1) - 1) / static_cast<int64_t>(tilingData.strideH) + 1;
     }
-	if (hoMax <= 0) {
+    if (hoMax <= 0) {
         return false;
-	}
+    }
     int64_t maxHoWoL1 = hoMax * static_cast<int64_t>(tilingData.wout);
     int64_t cmpM = tilingData.hout * tilingData.wout;
-    int64_t cmpN = availableL1Size / weightDtypeSize / 2 / k0 / tilingData.kh / tilingData.kw;
+    int64_t cmpN = availableL1Size / weightDtypeSize / NUM_2 / k0 / tilingData.kh / tilingData.kw;
     mTile = min(min(cmpM, maxHoWoL1), static_cast<int64_t>(basicBlockM));
     nTile = min(min(static_cast<int64_t>(tilingData.cout), cmpN), static_cast<int64_t>(basicBlockN));
     if (tilingData.groupOpt == 0) {
@@ -538,19 +616,19 @@ bool CmpFirstAdjustMnTile(TilingParam &tilingData, int64_t& mTile, int64_t& nTil
     } else if (tilingData.groupOpt != 0) {
         nTile = ConvCeilDiv(nTile, tilingData.groups) * tilingData.enlarge;
     }
-    int64_t m0 = 16;
-    int64_t n0 = 16;
-    mTile = mTile / m0 * m0;
-    nTile = nTile / n0 * n0;
-    if (mTile < m0 || nTile < n0) {
+    mTile = mTile / M0_SIZE * M0_SIZE;
+    nTile = nTile / N0_SIZE * N0_SIZE;
+    if (mTile < M0_SIZE || nTile < N0_SIZE) {
         return false;
     }
     return true;
 }
 
-void SelectMmodeAlgorithm(TilingParam &tilingData, bool& mBasicBlockModeFlag, uint64_t aicoreNum, uint32_t featuremapDtyeSize,
-                        uint32_t weightDtyeSize, vector<int64_t> pads, bool hasBias, bool hasScale)
+void SelectMmodeAlgorithm(TilingParam &tilingData, bool& mBasicBlockModeFlag,
+                          DtypeSize dtypeSize, vector<int64_t> pads, bool hasScale)
 {
+    uint32_t featuremapDtyeSize = dtypeSize.fMapDtypeSize;
+    bool hasBias = tilingData.hasBias;
     mBasicBlockModeFlag = false;
     uint64_t basicBlockM = 0;
     uint64_t basicBlockN = 0;
@@ -561,7 +639,7 @@ void SelectMmodeAlgorithm(TilingParam &tilingData, bool& mBasicBlockModeFlag, ui
     if (tilingData.groupOpt != 0) {
         group = tilingData.groupOpt;
     }
-    if (mCut * nCut * tilingData.batch * group <= aicoreNum) {
+    if (mCut * nCut * tilingData.batch * group <= AICORE_NUM) {
         return;
     }
     int64_t biasSize = 0;
@@ -569,24 +647,27 @@ void SelectMmodeAlgorithm(TilingParam &tilingData, bool& mBasicBlockModeFlag, ui
     if (hasBias) {
         biasSize = featuremapDtyeSize; // for fp32/hf32/fp16/bf16
         if (hasScale) {
-            biasSize = 4; // bias dtype is fp32 for int8/fp8/hif8
+            biasSize = DTYPESIZE_4; // bias dtype is fp32 for int8/fp8/hif8
         }
     }
     if (hasScale) {
-        scaleSize = 8; // scale dtype is uint64/int64 for int8/fp8/hif8
+        scaleSize = DTYPESIZE_8; // scale dtype is uint64/int64 for int8/fp8/hif8
     }
-    int64_t availableL1Size = L1_Size - biasSize - scaleSize;
+    int64_t availableL1Size = MEM_SIZE_512K - biasSize - scaleSize;
     int64_t mTile = 0;
     int64_t nTile = 0;
-    if (!CmpFirstAdjustMnTile(tilingData, mTile, nTile, availableL1Size,basicBlockM,
-                            basicBlockN, featuremapDtyeSize, weightDtyeSize, pads)) {
+    BasicParams basicParams;
+    basicParams.availableL1Size = availableL1Size;
+    basicParams.basicBlockM = basicBlockM;
+    basicParams.basicBlockN = basicBlockN;
+    basicParams.dtypeSize = dtypeSize;
+    if (!CmpFirstAdjustMnTile(tilingData, mTile, nTile, basicParams, pads)) {
         return;
     }
     mBasicBlockModeFlag = true;
-    return;
 }
 
-void CheckHWModeTilingDataValidForConv2d(TilingParam &tilingData, uint64_t m0, uint64_t n0, uint64_t k0, bool isC04Flag)
+void CheckHWModeForConv2dPartOne(TilingParam &tilingData, uint64_t k0)
 {
     // K direction check
     EXPECT_GE(tilingData.kL0, k0);
@@ -594,30 +675,33 @@ void CheckHWModeTilingDataValidForConv2d(TilingParam &tilingData, uint64_t m0, u
     EXPECT_EQ(tilingData.kL0 % k0, 0);
     
     // N direction check
-    EXPECT_GE(tilingData.nL0, n0);
+    EXPECT_GE(tilingData.nL0, N0_SIZE);
     EXPECT_GE(tilingData.nBL1, tilingData.nL0);
-    EXPECT_LE(tilingData.nBL1, ConvCeilDiv(ConvCeilDiv(tilingData.singleCoreCo, n0) * n0, tilingData.nL0) * tilingData.nL0);
-    EXPECT_EQ(tilingData.nL0 % n0, 0);
+    EXPECT_LE(tilingData.nBL1,
+        ConvCeilDiv(ConvCeilDiv(tilingData.singleCoreCo, N0_SIZE) * N0_SIZE, tilingData.nL0) * tilingData.nL0);
+    EXPECT_EQ(tilingData.nL0 % N0_SIZE, 0);
     uint32_t nBL1DivCheck = 0;
     if (tilingData.nBL1 % tilingData.nL0 == 0 ||
-        tilingData.nBL1 == ConvCeilDiv(tilingData.singleCoreCo, n0) * n0) {
+        tilingData.nBL1 == ConvCeilDiv(tilingData.singleCoreCo, N0_SIZE) * N0_SIZE) {
         nBL1DivCheck = 1;
     }
     EXPECT_EQ(nBL1DivCheck, 1);
     
     // W direction check
-    EXPECT_GE(tilingData.woL0, m0);
+    EXPECT_GE(tilingData.woL0, M0_SIZE);
     EXPECT_GE(tilingData.woL1, tilingData.woL0);
     EXPECT_LE(tilingData.woL1, 
-        ConvCeilDiv(ConvCeilDiv(tilingData.singleCoreWo, m0) * m0, tilingData.woL0) * tilingData.woL0);
-    EXPECT_EQ(tilingData.woL0 % m0, 0);
-    if (tilingData.woL0 < ConvCeilDiv(tilingData.orgWo, m0) * m0) {
+        ConvCeilDiv(ConvCeilDiv(tilingData.singleCoreWo, M0_SIZE) * M0_SIZE, tilingData.woL0) * tilingData.woL0);
+    if (tilingData.woL0 != tilingData.woL1) {
+        EXPECT_EQ(tilingData.woL0 % M0_SIZE, 0);
+    }
+    if (tilingData.woL0 < tilingData.orgWo) {
         // woL0 does not reach the upper limit, thus hoL0 must be 1.
         EXPECT_EQ(tilingData.hoL0, 1);
     }
-    if (tilingData.hoL0 > 1) {
-        EXPECT_EQ(tilingData.woL0, ConvCeilDiv(tilingData.orgWo, m0) * m0);
-        EXPECT_EQ(tilingData.woL1, ConvCeilDiv(tilingData.orgWo, m0) * m0);
+    if (tilingData.hoL0 > 1 && !(tilingData.groups > 1)) {
+        EXPECT_EQ(tilingData.woL0, tilingData.orgWo);
+        EXPECT_EQ(tilingData.woL1, tilingData.orgWo);
     }
 
     // H direction check
@@ -630,20 +714,24 @@ void CheckHWModeTilingDataValidForConv2d(TilingParam &tilingData, uint64_t m0, u
         hoL1Check = 1;
     }
     EXPECT_EQ(hoL1Check, 1);
+}
+
+void CheckHWModeTilingDataValidForConv2d(TilingParam &tilingData, uint64_t k0, bool isC04Flag)
+{
+    CheckHWModeForConv2dPartOne(tilingData, k0);
 
     if (isC04Flag) {
-        EXPECT_EQ(tilingData.kAL1, ConvCeilDiv(4 * tilingData.kernelH * tilingData.kernelW, k0) * k0);
-        EXPECT_EQ(tilingData.kBL1, ConvCeilDiv(4 * tilingData.kernelH * tilingData.kernelW, k0) * k0);
+        EXPECT_EQ(tilingData.kAL1, ConvCeilDiv(C04_SIZE * tilingData.kernelH * tilingData.kernelW, k0) * k0);
+        EXPECT_EQ(tilingData.kBL1, ConvCeilDiv(C04_SIZE * tilingData.kernelH * tilingData.kernelW, k0) * k0);
         if (tilingData.orgHi > 1) {
-            // w fullload in L1
-            EXPECT_EQ(tilingData.woL1, ConvCeilDiv(tilingData.orgWo, m0) * m0);
+            EXPECT_EQ(tilingData.woL1, ConvCeilDiv(tilingData.orgWo, M0_SIZE) * M0_SIZE);
         }
-        // if tilingData.orgHi == 1, process is same as NO_C04_SITUATION
-        // fmap fullload in L1, woL1 == AlignB(tilingIns_->shapeInfo.singleWo, tilingIns_->cubeInfo.m0)
-        // woL1 may not be able to divide woL0 exactly
+    } else if (tilingData.groups > 1) {
+        EXPECT_EQ(tilingData.kAL1 % (k0 * tilingData.khL1 * tilingData.kwL1), 0);
+        EXPECT_EQ(tilingData.kBL1 % (k0 * tilingData.khL1 * tilingData.kwL1), 0);
     } else {
-        EXPECT_LE(tilingData.kAL1, ConvCeilDiv(tilingData.singleCoreCi, k0) * k0 * tilingData.kernelH * tilingData.kernelW);
-        // Mmode KBL1 iter when Cin is Max, will multi kd in some case. This is a loose validation condition.
+        EXPECT_LE(tilingData.kAL1,
+                ConvCeilDiv(tilingData.singleCoreCi, k0) * k0 * tilingData.kernelH * tilingData.kernelW);
         EXPECT_LE(tilingData.kBL1, ConvCeilDiv(tilingData.singleCoreCi, k0) * k0 * tilingData.kernelHxkernelWxkernelD);
         EXPECT_EQ(tilingData.kAL1 % (k0 * tilingData.kernelH * tilingData.kernelW), 0);
         EXPECT_EQ(tilingData.kBL1 % (k0 * tilingData.kernelH * tilingData.kernelW), 0);
@@ -660,63 +748,48 @@ void CheckHWModeTilingDataValidForConv2d(TilingParam &tilingData, uint64_t m0, u
             kBL1DivCheck = true;
         }
         EXPECT_EQ(kBL1DivCheck, 1);
-
-        // No woL1 % woL0 check
-        // In fmap fullload situation, woL1 is not obtained by magnifying, thus woL1 may not be able to divide woL0 exactly
-        // In fmap fullload situation, since woL1 needs to align to m0, thus woL1 may be not equal to singleCoreWo
     }
 }
 
-void CheckGroupsTiling(TilingParam &tilingData, uint64_t n0, uint64_t tilingKey)
+void CheckGroupsTiling(TilingParam &tilingData, uint64_t tilingKey)
 {
-    int32_t groupMode = tilingData.enlarge > 0 ? 2 : 1;
+    int32_t groupMode = tilingData.enlarge > 0 ? NUM_2 : 1;
     uint64_t realCo = 0;
     if (groupMode == 1) {
         realCo = tilingData.cout / tilingData.groups;
-    } else if (groupMode == 2) {
+    } else if (groupMode == NUM_2) {
         realCo = tilingData.coutOpt;
-        
     }
-    EXPECT_LE(tilingData.nDim, ConvCeilDiv(realCo, n0));
+    EXPECT_LE(tilingData.nDim, ConvCeilDiv(realCo, N0_SIZE));
 }
 
-void CheckValidTilingData(TilingParam &tilingData,
-                          uint64_t m0,
-                          uint64_t n0,
-                          uint64_t k0,
-                          uint32_t weightDtyeSize,
-                          uint32_t featuremapDtyeSize,
-                          std::vector<int64_t> pads,
-                          uint64_t l1Size,
-                          uint64_t l0aSize,
-                          uint64_t l0bSize,
-                          uint64_t l0cSize,
-                          bool hasBias,
-                          bool hasScale,
-						  uint64_t tilingKey,
-                          uint64_t aicoreNum)
+bool CheckValidTilingDataPartOne(TilingParam &tilingData,
+                                 DtypeSize dtypeSize,
+                                 std::vector<int64_t> pads,
+                                 bool hasScale,
+                                 uint64_t tilingKey)
 {
+    uint64_t k0 = C0_SIZE / dtypeSize.fMapDtypeSize;
+    bool hasBias = tilingData.hasBias;
+    uint32_t weightDtyeSize = dtypeSize.weightDtypeSize;
+    uint32_t featuremapDtyeSize = dtypeSize.fMapDtypeSize;
     bool isC04Flag = (tilingData.bUbNStep > 0 && tilingData.bUbKStep == 0) ? true : false;
     if (tilingData.groups > 1) {
-        CheckGroupsTiling(tilingData, n0, tilingKey);
+        CheckGroupsTiling(tilingData, tilingKey);
     }
     uint64_t pBuffer = tilingData.pBufferFlag;
     int8_t pbAL0 = pBuffer & 0x01;
     int8_t pbBL0 = (pBuffer & 0x02) >> 1;
-    int8_t pbCL0 = (pBuffer & 0x04) >> 2;
-    int8_t pbAL1 = (pBuffer & 0x08) >> 3;
-    int8_t pbBL1 = (pBuffer & 0x10) >> 4;
-	 uint64_t nBL1 = tilingData.multiNBL1 * tilingData.nL0;
-	 int32_t outputOrder = tilingData.singleCoreWo == 0 && tilingData.woL1 == 0;
+    int8_t pbCL0 = (pBuffer & 0x04) >> NUM_2;
+    uint64_t nBL1 = tilingData.multiNBL1 * tilingData.nL0;
+    int32_t outputOrder = tilingData.singleCoreWo == 0 && tilingData.woL1 == 0;
     bool mBasicBlockModeFlag = false;
     int64_t padCompensationValue = 0;
     int64_t padTop = pads[0];
     int64_t padBottom = pads[1];
     int32_t splitModeFromCmp = GetSplitMode(tilingData, featuremapDtyeSize, weightDtyeSize, hasScale, isC04Flag);
-    //  EXPECT_EQ(splitModeFromCmp, outputOrder);
     if (outputOrder == 1) {
-        SelectMmodeAlgorithm(tilingData, mBasicBlockModeFlag, aicoreNum,
-        featuremapDtyeSize, weightDtyeSize, pads, hasBias, hasScale); // determine m-mode formulation algorithm or basic block algorithm
+        SelectMmodeAlgorithm(tilingData, mBasicBlockModeFlag, dtypeSize, pads, hasScale);
     }
     if (mBasicBlockModeFlag) {
         if (tilingData.hoL0 >= tilingData.wout * tilingData.hout) {
@@ -726,54 +799,93 @@ void CheckValidTilingData(TilingParam &tilingData,
         }
     }
 
-    EXPECT_LE(CalcUsdL1Size(tilingData, featuremapDtyeSize, weightDtyeSize, n0, outputOrder, pbAL1, pbBL1, padCompensationValue, hasBias, hasScale, isC04Flag), l1Size);
-    EXPECT_LE(CalcUsdL0ASize(tilingData, outputOrder, featuremapDtyeSize, pbAL0), l0aSize);
-    EXPECT_LE(CalcUsdL0BSize(tilingData, weightDtyeSize, pbBL0), l0bSize);
-    EXPECT_LE(CalcUsdL0CSize(tilingData, outputOrder, pbCL0), l0cSize);
-	
-    if (outputOrder == 1) {
-        EXPECT_GT(tilingData.kAL1, 0);
-        EXPECT_GT(tilingData.kBL1, 0);
-        EXPECT_GT(tilingData.hoL1, 0);
-        EXPECT_GT(nBL1, 0);
-        EXPECT_GT(tilingData.hoL0, 0);
-        EXPECT_GT(tilingData.kL0, 0);
-        EXPECT_GT(tilingData.nL0, 0);
+    EXPECT_LE(CalcUsdL1Size(tilingData, dtypeSize, padCompensationValue, hasScale, isC04Flag), L1_SIZE);
+    EXPECT_LE(CalcUsdL0ASize(tilingData, outputOrder, featuremapDtyeSize, pbAL0), L0A_SIZE);
+    EXPECT_LE(CalcUsdL0BSize(tilingData, weightDtyeSize, pbBL0), L0B_SIZE);
+    EXPECT_LE(CalcUsdL0CSize(tilingData, outputOrder, pbCL0), L0C_SIZE);
+    return mBasicBlockModeFlag;
+}
 
-        EXPECT_EQ(tilingData.kAL1 % k0, 0);
-        EXPECT_EQ(tilingData.nBL1 % n0, 0);
-        EXPECT_EQ(tilingData.nL0 % n0, 0);
-        EXPECT_EQ(tilingData.kL0 % k0, 0);
-        if (!mBasicBlockModeFlag) { // only check m-mode/hw-mode formulation algorithm
-            EXPECT_EQ(tilingData.kAL1 % tilingData.kL0, 0);
-            EXPECT_EQ(tilingData.kBL1 % tilingData.kL0, 0);
-        }
-		    uint32_t mmadDtypeSize = 4; // if bf16 fp16 fp32 hf32 in cube is 4, int8 in cube is int32, hif8 / fp8 in cube is fp32
-        EXPECT_LE(tilingData.nBL1, ConvCeilDiv(ConvCeilDiv(tilingData.singleCoreCo, n0) * n0, tilingData.nL0) * tilingData.nL0);
-        EXPECT_LE(tilingData.hoL1, ConvCeilDiv(ConvCeilDiv(tilingData.singleCoreHo, m0) * m0, tilingData.hoL0) * tilingData.hoL0);
-        EXPECT_LE(tilingData.kAL1, tilingData.kernelH * tilingData.kernelW * ConvCeilDiv(tilingData.cin, k0) * k0);
-        EXPECT_LE(tilingData.kBL1, tilingData.kernelH * tilingData.kernelW * ConvCeilDiv(tilingData.cin, k0) * k0);
-        EXPECT_LE(tilingData.hoL0, ConvCeilDiv(std::min(l0aSize / (k0 * (pbAL0 + 1) * featuremapDtyeSize), l0cSize / (n0 * (pbCL0 + 1) * mmadDtypeSize)), m0) * m0);
-        EXPECT_LE(tilingData.nL0, ConvCeilDiv(std::min(l0bSize / (k0 * (pbBL0 + 1) * weightDtyeSize), l0cSize / (m0 * (pbCL0 + 1) * mmadDtypeSize)), n0) * n0);
-        if (!mBasicBlockModeFlag) { // only check m-mode formulation algorithm
-            EXPECT_LE(tilingData.kL0, ConvGcd(ConvCeilDiv(tilingData.kAL1, k0), ConvCeilDiv(tilingData.kBL1, k0)) * k0);
-        }
-        EXPECT_EQ(tilingData.woL1, 0);
-        EXPECT_EQ(tilingData.woL0, 0);
-        EXPECT_EQ(tilingData.singleCoreWo, 0);
-        EXPECT_EQ(tilingData.hoL1 % m0, 0);
+void CheckMModeTilingDataValidForConv2d(TilingParam &tilingData, DtypeSize dtypeSize, bool mBasicBlockModeFlag)
+{
+    uint64_t k0 = C0_SIZE / dtypeSize.fMapDtypeSize;
+    uint64_t pBuffer = tilingData.pBufferFlag;
+    int8_t pbAL0 = pBuffer & 0x01;
+    int8_t pbBL0 = (pBuffer & 0x02) >> 1;
+    int8_t pbCL0 = (pBuffer & 0x04) >> NUM_2;
+    EXPECT_GT(tilingData.kAL1, 0);
+    EXPECT_GT(tilingData.kBL1, 0);
+    EXPECT_GT(tilingData.hoL1, 0);
+    EXPECT_GT(tilingData.multiNBL1 * tilingData.nL0, 0);
+    EXPECT_GT(tilingData.hoL0, 0);
+    EXPECT_GT(tilingData.kL0, 0);
+    EXPECT_GT(tilingData.nL0, 0);
+
+    EXPECT_EQ(tilingData.kAL1 % k0, 0);
+    EXPECT_EQ(tilingData.nBL1 % N0_SIZE, 0);
+    EXPECT_EQ(tilingData.nL0 % N0_SIZE, 0);
+    EXPECT_EQ(tilingData.kL0 % k0, 0);
+    if (!mBasicBlockModeFlag) { // only check m-mode/hw-mode formulation algorithm
+        EXPECT_EQ(tilingData.kAL1 % tilingData.kL0, 0);
+        EXPECT_EQ(tilingData.kBL1 % tilingData.kL0, 0);
+    }
+    uint32_t mmadDtypeSize = DTYPESIZE_4;
+    EXPECT_LE(tilingData.nBL1,
+        ConvCeilDiv(ConvCeilDiv(tilingData.singleCoreCo, N0_SIZE) * N0_SIZE, tilingData.nL0) * tilingData.nL0);
+    EXPECT_LE(tilingData.hoL1,
+        ConvCeilDiv(ConvCeilDiv(tilingData.singleCoreHo, M0_SIZE) * M0_SIZE, tilingData.hoL0) * tilingData.hoL0);
+    EXPECT_LE(tilingData.kAL1, tilingData.kernelH * tilingData.kernelW * ConvCeilDiv(tilingData.cin, k0) * k0);
+    EXPECT_LE(tilingData.kBL1, tilingData.kernelH * tilingData.kernelW * ConvCeilDiv(tilingData.cin, k0) * k0);
+    EXPECT_LE(tilingData.hoL0,
+        ConvCeilDiv(std::min(MEM_SIZE_64K / (k0 * (pbAL0 + 1) * dtypeSize.fMapDtypeSize),
+        MEM_SIZE_256K / (N0_SIZE * (pbCL0 + 1) * mmadDtypeSize)), M0_SIZE) * M0_SIZE);
+    EXPECT_LE(tilingData.nL0,
+        ConvCeilDiv(std::min(MEM_SIZE_64K / (k0 * (pbBL0 + 1) * dtypeSize.weightDtypeSize),
+        MEM_SIZE_256K / (M0_SIZE * (pbCL0 + 1) * mmadDtypeSize)), N0_SIZE) * N0_SIZE);
+    if (!mBasicBlockModeFlag) { // only check m-mode formulation algorithm
+        EXPECT_LE(tilingData.kL0, ConvGcd(ConvCeilDiv(tilingData.kAL1, k0), ConvCeilDiv(tilingData.kBL1, k0)) * k0);
+    }
+    EXPECT_EQ(tilingData.woL1, 0);
+    EXPECT_EQ(tilingData.woL0, 0);
+    EXPECT_EQ(tilingData.singleCoreWo, 0);
+    EXPECT_EQ(tilingData.hoL1 % M0_SIZE, 0);
+}
+
+void CheckValidTilingData(TilingParam &tilingData,
+                          DtypeSize dtypeSize,
+                          std::vector<int64_t> pads,
+                          bool hasScale,
+                          uint64_t tilingKey)
+{
+    bool mBasicBlockModeFlag = CheckValidTilingDataPartOne(tilingData, dtypeSize, pads, hasScale, tilingKey);
+    uint64_t k0 = C0_SIZE / dtypeSize.fMapDtypeSize;
+    bool isC04Flag = (tilingData.bUbNStep > 0 && tilingData.bUbKStep == 0) ? true : false;
+    bool dma_flag = (tilingKey & 0x4000) >> NUM_14;
+    int32_t outputOrder = tilingData.singleCoreWo == 0 && tilingData.woL1 == 0;
+    if (outputOrder == 1) {
+        CheckMModeTilingDataValidForConv2d(tilingData, dtypeSize, mBasicBlockModeFlag);
     }
 
     if (outputOrder == 0) {
-        CheckHWModeTilingDataValidForConv2d(tilingData, m0, n0, k0, isC04Flag);
+        CheckHWModeTilingDataValidForConv2d(tilingData, k0, isC04Flag);
     }
 }
 
-void GetOriPadFromPadModeConv2D(const string& padMode, uint32_t& padu, uint32_t& padd,
-  uint32_t& padl, uint32_t& padr, uint32_t strideH, uint32_t strideW,
-  uint32_t dilationH, uint32_t dilationW, int64_t batch, int64_t cin, int64_t hi, int64_t wi,
-  int64_t cout, int64_t kH, int64_t kW)
+void GetOriPadFromPadModeConv2D(PadModeParams padModeParams, uint32_t& padu, uint32_t& padd,
+   uint32_t& padl, uint32_t& padr)
 {
+    string padMode = padModeParams.padMode;
+    uint32_t strideH = padModeParams.strideH;
+    uint32_t strideW = padModeParams.strideW;
+    uint32_t dilationH = padModeParams.dilationH;
+    uint32_t dilationW = padModeParams.dilationW;
+    int64_t batch = padModeParams.batch;
+    int64_t cin = padModeParams.cin;
+    int64_t hi = padModeParams.hi;
+    int64_t wi = padModeParams.wi;
+    int64_t cout = padModeParams.cout;
+    int64_t kH = padModeParams.kH;
+    int64_t kW = padModeParams.kW;
     if (padMode == "SPECIFIC") {
         return;
     }
@@ -784,58 +896,59 @@ void GetOriPadFromPadModeConv2D(const string& padMode, uint32_t& padu, uint32_t&
         padl = 0;
         padr = 0;
         return;
-    } else {
-        auto padH = (ConvCeilDiv(hi, strideH) - 1) * strideH + dilationH * (kH - 1) - hi + 1;
-        auto padW = (ConvCeilDiv(wi, strideW) - 1) * strideW + dilationW * (kW - 1) - wi + 1;
-        if (padMode == "SAME" || padMode == "SAME_UPPER") {
-            padd = ConvCeilDiv(padH, 2);
-            padu = padH - padd;
-            padr = ConvCeilDiv(padW, 2);
-            padl = padW - padr;
-        } else {
-            // padMode is "SAME_LOWER"
-            padu = ConvCeilDiv(padH, 2);
-            padd = padH - padu;
-            padl = ConvCeilDiv(padW, 2);
-            padr = padW - padl;
-        }
     }
-    return;
+    auto padH = (ConvCeilDiv(hi, strideH) - 1) * strideH + dilationH * (kH - 1) - hi + 1;
+    auto padW = (ConvCeilDiv(wi, strideW) - 1) * strideW + dilationW * (kW - 1) - wi + 1;
+    if (padMode == "SAME" || padMode == "SAME_UPPER") {
+        padd = ConvCeilDiv(padH, NUM_2);
+        padu = padH - padd;
+        padr = ConvCeilDiv(padW, NUM_2);
+        padl = padW - padr;
+    } else {
+        // padMode is "SAME_LOWER"
+        padu = ConvCeilDiv(padH, NUM_2);
+        padd = padH - padu;
+        padl = ConvCeilDiv(padW, NUM_2);
+        padr = padW - padl;
+    }
 }
 
 void ExtendConv2DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
-                    vector<uint32_t> pads, vector<uint32_t> strides, vector<uint32_t> dilations,
-                    ge::DataType inDataType, ge::DataType out0DataType, ge::DataType out1DataType,
-                    bool isHasBias = true, bool isHasScale0 = false, bool isHasScale1 = false,
-                    bool isHasReluWeight0 = false, bool isHasReluWeight1 = false,
-                    bool isHasClipValue0 = false, bool isHasClipValue1 = false,
-                    bool enableRelu0 = false, bool enableRelu1 = false, bool dualOutput = false,
-                    bool enableHf32Mode = false, uint32_t groups = 1,
-                    string padMode = "SPECIFIC",
-                    uint8_t errorCaseStatus = 0, string format = "NCHW", string round_mode = "rint") {
+    vector<uint32_t> pads, vector<uint32_t> strides, vector<uint32_t> dilations,
+    ge::DataType inDataType, ge::DataType out0DataType, ge::DataType out1DataType,
+    bool isHasBias = true, bool isHasScale0 = false, bool isHasScale1 = false,
+    bool isHasReluWeight0 = false, bool isHasReluWeight1 = false,
+    bool isHasClipValue0 = false, bool isHasClipValue1 = false,
+    bool enableRelu0 = false, bool enableRelu1 = false, bool dualOutput = false,
+    bool enableHf32Mode = false, uint32_t groups = 1,
+    string padMode = "SPECIFIC", uint8_t errorCaseStatus = 0, string format = "NCHW", string round_mode = "rint")
+{
     bool hasBias = isHasBias == 1;
     bool hasScale = isHasScale0 == 1;
     bool isErrorCaseFlag = errorCaseStatus == 0 ? false : true;
 
     uint32_t padu = pads[0];
     uint32_t padd = pads[1];
-    uint32_t padl = pads[2];
-    uint32_t padr = pads[3];
+    uint32_t padl = pads[DIM_2];
+    uint32_t padr = pads[DIM_3];
     uint32_t strideH = strides[0];
     uint32_t strideW = strides[1];
     uint32_t dilationH = dilations[0];
     uint32_t dilationW = dilations[1];
     int64_t cout = weightShape[0];
     int64_t kH = weightShape[1];
-    int64_t kW = weightShape[2];
+    int64_t kW = weightShape[DIM_2];
     int64_t batch = fmShape[0];
     int64_t cin = fmShape[1];
-    int64_t hi = fmShape[2];
-    int64_t wi = fmShape[3];
-    GetOriPadFromPadModeConv2D(padMode, padu, padd, padl, padr, strideH, strideW,
-        dilationH, dilationW, batch, cin, hi, wi, cout, kH, kW);
-    int64_t ho = InferHo(hi, kH, padu, padd, dilationH, strideH);
-    int64_t wo = InferWo(wi, kW, padl, padr, dilationW, strideW);
+    int64_t hi = fmShape[DIM_2];
+    int64_t wi = fmShape[DIM_3];
+    PadModeParams padModeParams =
+        {padMode, strideH, strideW, dilationH, dilationW, batch, cin, hi, wi, cout, kH, kW};
+    GetOriPadFromPadModeConv2D(padModeParams, padu, padd, padl, padr);
+    ConvShape convShapeH = {hi, kH, padu, padd, dilationH, strideH};
+    ConvShape convShapeW = {wi, kW, padl, padr, dilationW, strideW};
+    int64_t ho = InferHo(convShapeH);
+    int64_t wo = InferWo(convShapeW);
     EXPECT_GE(ho, 1);
     EXPECT_GE(wo, 1);
 
@@ -846,10 +959,10 @@ void ExtendConv2DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
     gert::StorageShape featuremap = {{batch, cin, hi, wi}, {batch, cin, hi, wi}};
     gert::StorageShape weight = {{cout, cin / groups, kH, kW}, {cout, cin / groups, kH, kW}};
     gert::StorageShape bias = {{cout}, {cout}};
-    gert::StorageShape Scale0 = {{cout}, {cout}};
-    gert::StorageShape Scale1 = {{cout}, {cout}};
-    gert::StorageShape ReluWeight0 = {{cout}, {cout}};
-    gert::StorageShape ReluWeight1 = {{cout}, {cout}};
+    gert::StorageShape scale0 = {{cout}, {cout}};
+    gert::StorageShape scale1 = {{cout}, {cout}};
+    gert::StorageShape reluWeight0 = {{cout}, {cout}};
+    gert::StorageShape reluWeight1 = {{cout}, {cout}};
     gert::StorageShape offset_w;
     gert::StorageShape output0 = {{batch, cout, ho, wo}, {batch, cout, ho, wo}};
     gert::StorageShape output1 = {{batch, cout, ho, wo}, {batch, cout, ho, wo}};
@@ -869,15 +982,15 @@ void ExtendConv2DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
     std::vector<void*> input_shape_ref;
    if (hasBias) {
       if (isHasScale1) {
-         input_shape_ref = {&featuremap, &weight, &bias, &Scale0, &Scale1};
+         input_shape_ref = {&featuremap, &weight, &bias, &scale0, &scale1};
       } else {
-         input_shape_ref = {&featuremap, &weight, &bias, &Scale0};
+         input_shape_ref = {&featuremap, &weight, &bias, &scale0};
       }
    } else {
       if (isHasScale1) {
-         input_shape_ref = {&featuremap, &weight, nullptr, nullptr, &Scale0, nullptr, nullptr, &Scale1};
+         input_shape_ref = {&featuremap, &weight, nullptr, nullptr, &scale0, nullptr, nullptr, &scale1};
       } else {
-         input_shape_ref = {&featuremap, &weight, nullptr, nullptr, &Scale0};
+         input_shape_ref = {&featuremap, &weight, nullptr, nullptr, &scale0};
       }
    }
     std::vector<void*> output_shapes_ref = {&output0, &output1};
@@ -903,13 +1016,7 @@ void ExtendConv2DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
     std::string op_type = "ExtendConv2D";
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
-    uint64_t L1_SIZE = 524288;
-    uint64_t L0a_SIZE = 65536;
-    uint64_t L0b_SIZE = 65536;
-    uint64_t L0c_SIZE = 262144;
-    uint64_t bt_SIZE = 4096;
-    uint64_t fb_SIZE = 4096;
-    uint64_t aicoreNum = 32;
+
     string compile_info_string = R"({"hardware_info": 
       {"BT_SIZE": 4096, "load3d_constraints": "1", "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
        "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false, "UB_SIZE": 253952,
@@ -926,25 +1033,24 @@ void ExtendConv2DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
     platform_info.Init();
     optiling::conv_ops_tiling::ConvTilingParseInfo compile_info;
 
-    auto tilingDataPtr = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto tilingDataPtr = gert::TilingData::CreateCap(SIZE_4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(SIZE_4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
     ASSERT_NE(tilingDataPtr, nullptr);
 
-    std::map<ge::DataType, uint32_t> k0Map = {{ge::DT_FLOAT16, 16}, {ge::DT_FLOAT, 8}, {ge::DT_INT8, 32}, {ge::DT_BF16, 16}, {ge::DT_HIFLOAT8, 32}, {ge::DT_FLOAT8_E4M3FN, 32}};
-    std::map<ge::DataType, uint32_t> dtypesizeMap = {{ge::DT_FLOAT16, 2}, {ge::DT_FLOAT, 4}, {ge::DT_INT8, 1}, {ge::DT_BF16, 2}, {ge::DT_HIFLOAT8, 1}, {ge::DT_FLOAT8_E4M3FN, 1}};
-    uint64_t m0 = 16;
-    uint64_t k0 = k0Map.at(fmapDataType);
-    uint64_t n0 = 16;
+    std::map<ge::DataType, uint32_t> dtypesizeMap = {
+        {ge::DT_FLOAT16, DTYPESIZE_2}, {ge::DT_FLOAT, DTYPESIZE_4},
+        {ge::DT_INT8, 1}, {ge::DT_BF16, DTYPESIZE_2}, {ge::DT_HIFLOAT8, 1}, {ge::DT_FLOAT8_E4M3FN, 1}};
+
     uint32_t weightDtyeSize = dtypesizeMap.at(fmapDataType);
     uint32_t featuremapDtyeSize = dtypesizeMap.at(fmapDataType);
+    uint64_t k0 = C0_SIZE / featuremapDtyeSize;
     ge::DataType bias_dtype = (!hasScale && fmapDataType == ge::DT_HIFLOAT8) ? ge::DT_FLOAT : fmapDataType;
-
 
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
     // generate TilingParseContext to do TilingPrepareForConv2DV2
     auto kernel_holder = gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
+            .KernelIONum(NUM_2, 1)
             .Inputs({const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info)})
             .Outputs({&compile_info})
             .Build();
@@ -964,7 +1070,7 @@ void ExtendConv2DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
     platform_info1.Init();
     auto holder = isHasScale1 ?
                      gert::TilingContextFaker().SetOpType(op_type)
-                                             .NodeIoNum(5, 2)
+                                             .NodeIoNum(NUM_5, NUM_2)
                                              .IrInstanceNum({1, 1, 1, 0, 1, 0, 0, 1}) // 控制算子原型对应位置的可选输入，是否存在
                                              .InputShapes(input_shape_ref)
                                              .OutputShapes(output_shapes_ref)
@@ -972,9 +1078,9 @@ void ExtendConv2DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
                                              .PlatformInfo(reinterpret_cast<char *>(&platform_info))
                                              .NodeInputTd(0, fmapDataType, fmapFormat, fmapFormat)
                                              .NodeInputTd(1, weightDataType, weightFormat, weightFormat)
-                                             .NodeInputTd(2, biasDataType, ge::FORMAT_ND, ge::FORMAT_ND)
-                                             .NodeInputTd(3, scale0DType, ge::FORMAT_ND, ge::FORMAT_ND)
-                                             .NodeInputTd(4, scale1DType, ge::FORMAT_ND, ge::FORMAT_ND)
+                                             .NodeInputTd(DIM_2, biasDataType, ge::FORMAT_ND, ge::FORMAT_ND)
+                                             .NodeInputTd(DIM_3, scale0DType, ge::FORMAT_ND, ge::FORMAT_ND)
+                                             .NodeInputTd(DIM_4, scale1DType, ge::FORMAT_ND, ge::FORMAT_ND)
                                              .NodeOutputTd(0, out0DataType, outputFormat, outputFormat)
                                              .NodeOutputTd(1, out1DataType, outputFormat, outputFormat)
                                              .NodeAttrs({
@@ -997,7 +1103,7 @@ void ExtendConv2DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
                                              .Workspace(ws_size)
                                              .Build() :
                      gert::TilingContextFaker().SetOpType(op_type)
-                                             .NodeIoNum(4, 2)
+                                             .NodeIoNum(NUM_4, NUM_2)
                                              .IrInstanceNum({1, 1, 1, 0, 1}) // 控制算子原型对应位置的可选输入，是否存在
                                              .InputShapes(input_shape_ref)
                                              .OutputShapes(output_shapes_ref)
@@ -1005,8 +1111,8 @@ void ExtendConv2DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
                                              .PlatformInfo(reinterpret_cast<char *>(&platform_info))
                                              .NodeInputTd(0, fmapDataType, fmapFormat, fmapFormat)
                                              .NodeInputTd(1, weightDataType, weightFormat, weightFormat)
-                                             .NodeInputTd(2, biasDataType, ge::FORMAT_ND, ge::FORMAT_ND)
-                                             .NodeInputTd(3, scale0DType, ge::FORMAT_ND, ge::FORMAT_ND)
+                                             .NodeInputTd(DIM_2, biasDataType, ge::FORMAT_ND, ge::FORMAT_ND)
+                                             .NodeInputTd(DIM_3, scale0DType, ge::FORMAT_ND, ge::FORMAT_ND)
                                              .NodeOutputTd(0, outputDataType, outputFormat, outputFormat)
                                              .NodeOutputTd(1, outputDataType, outputFormat, outputFormat)
                                              .NodeAttrs({
@@ -1029,33 +1135,42 @@ void ExtendConv2DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
                                              .Workspace(ws_size)
                                              .Build();
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
-	
+
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
-    
-    if (isErrorCaseFlag == false) {
-      EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-      auto buf = (TilingParam*)tiling_context->GetRawTilingData()->GetData();
-      TilingParam tilingParam = *buf;
-      uint64_t tilingKey = tiling_context->GetTilingKey();
-      // printf("tilingKey is equal to %lu\n", tilingKey);
-      EXPECT_LE(tilingParam.batchDim * tilingParam.hoDim * tilingParam.nDim * tilingParam.groupDim, aicoreNum);
-      EXPECT_GE(tilingParam.batchDim, 1);
-      EXPECT_GE(tilingParam.hoDim, 1);
-      EXPECT_GE(tilingParam.nDim, 1);
-      EXPECT_GE(tilingParam.groupDim, 1);
-      if (tilingParam.batchDim > 0 && tilingParam.hoDim > 0 && tilingParam.nDim > 0 && tilingParam.groupDim > 0) {
-        // CheckValidTilingData(tilingParam, m0, n0, k0, weightDtyeSize, featuremapDtyeSize, pads, L1_SIZE, L0a_SIZE, L0b_SIZE, L0c_SIZE, hasBias, hasScale, tilingKey, compile_info.aicoreNum);
-      }
-    } else {
-      EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+    if (isErrorCaseFlag) {
+        EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+        return;
+    }
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    auto buf = (TilingParam*)tiling_context->GetRawTilingData()->GetData();
+    TilingParam tilingParam = *buf;
+    uint64_t tilingKey = tiling_context->GetTilingKey();
+    EXPECT_LE(tilingParam.batchDim * tilingParam.hoDim * tilingParam.nDim * tilingParam.groupDim, AICORE_NUM);
+    EXPECT_GE(tilingParam.batchDim, 1);
+    EXPECT_GE(tilingParam.hoDim, 1);
+    EXPECT_GE(tilingParam.nDim, 1);
+    EXPECT_GE(tilingParam.groupDim, 1);
+    if (tilingParam.batchDim > 0 && tilingParam.hoDim > 0 && tilingParam.nDim > 0 && tilingParam.groupDim > 0) {
+        DtypeSize dtypeSize = {featuremapDtyeSize, weightDtyeSize, 0, 0};
+        CheckValidTilingData(tilingParam, dtypeSize, pads, hasScale, tilingKey);
     }
 }
 } // namespace
+
+class ExtendConv2dTiling : public testing::Test {
+    protected:
+      static void SetUpTestCase() {
+          std::cout << "Conv2d ascendc ops tiling testParam setup" << std::endl;
+      }
+      static void TearDownTestCase() {
+          std::cout << "Conv2d ascendc ops tiling testParam tearDown" << std::endl;
+      }
+};
 
 TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_001) {
   ExtendConv2DTestCase({1,16,256,256}, {32,3,3},{2,2,2,2}, {1,1}, {1,1},
@@ -1236,10 +1351,6 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_015) {
                       "SPECIFIC",
                       0, "NCHW", "rint"); // errorCaseStatus, format, round_mode
 }
-
-// TEST_F(ExtendConv2dTiling, run_quantConv2d_BasicBlockAlgo_singleCoreCo_fix) {
-//    Conv2DTestCase({16,6,92395,21}, {386,16,14}, {4,0,5,0}, {53,3}, {6,1}, ge::DT_HIFLOAT8, 1, 1, false, 2);
-// }
 
 TEST_F(ExtendConv2dTiling, run_ExtendConv2D_singleCoreCo_fix_case1) {
   ExtendConv2DTestCase({4,4,43765,5}, {1024,165,4},{146,10,1,1}, {13,2}, {4,1},

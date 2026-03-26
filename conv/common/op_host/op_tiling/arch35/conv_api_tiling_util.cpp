@@ -14,12 +14,13 @@
  */
 
 #include "conv_api_tiling_util.h"
+#include "error_util.h"
 
 namespace conv_tiling {
+
 uint64_t AlignB(uint64_t a, uint64_t b)
 {
     if (b == 0) {
-        TILING_LOG_DEBUG("The denominator cannot be zero!");
         return 0;
     }
 
@@ -29,7 +30,6 @@ uint64_t AlignB(uint64_t a, uint64_t b)
 uint64_t CeilDiv(uint64_t a, uint64_t b)
 {
     if (b == 0) {
-        TILING_LOG_DEBUG("The denominator cannot be zero!");
         return 0;
     }
 
@@ -48,7 +48,6 @@ uint64_t FloorAlign(uint64_t a, uint64_t b)
 uint64_t Gcd(uint64_t a, uint64_t b)
 {
     if (b == 0) {
-        TILING_LOG_DEBUG("The denominator cannot be zero!");
         return 0;
     }
 
@@ -71,7 +70,6 @@ uint64_t Gcd(uint64_t a, uint64_t b)
 uint64_t Lcm(const uint64_t valueA, const uint64_t valueB)
 {
     if (valueB == 0 || valueA == 0) {
-        TILING_LOG_DEBUG("The denominator cannot be zero!");
         return 0;
     }
 

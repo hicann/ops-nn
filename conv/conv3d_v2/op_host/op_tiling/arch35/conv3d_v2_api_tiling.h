@@ -73,7 +73,6 @@ private:
     void SetTilingData(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
     void SetAttrsTilingData(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
     uint32_t CalcAL1SpaceSize(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
-    void PrintTilingData() const;
     void Infer5hdShape();
     bool CheckInputParam();
     bool CheckAlgorithmLimit() const;

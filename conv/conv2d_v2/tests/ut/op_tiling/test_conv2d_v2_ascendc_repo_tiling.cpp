@@ -15,7 +15,7 @@
 
 #include <iostream>
 #include <vector>
-#include <stdio.h>
+#include <cstdio>
 #include <map>
 #include <sstream>
 #include <string>
@@ -34,30 +34,44 @@
 #include "../../../op_host/op_tiling/arch35/conv2d_v2_tuning_tiling.h"
 #include "../../../op_host/op_tiling/arch35/conv2d_v2_base_tiling.h"
 #include "../../../../common/op_host/op_tiling/arch35/conv_base.h"
+#include "test_conv2d_v2_ascendc_utils_tiling.h"
 
 using namespace std;
 using namespace ge;
 using namespace ut_util;
+using namespace conv_tiling_utils;
 
-extern std::string GetTestSuiteName();
-extern std::string GetTestCaseName();
-
-static string TilingData2Str(const gert::TilingData *tiling_data) {
-  auto data = tiling_data->GetData();
-  string result;
-  for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(int32_t)) {
-    result += std::to_string((reinterpret_cast<const int32_t *>(tiling_data->GetData())[i / sizeof(int32_t)]));
-    result += " ";
-  }
-  return result;
+namespace {
+string TilingData2Str(const gert::TilingData *tiling_data) {
+    auto data = tiling_data->GetData();
+    string result;
+    for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(int32_t)) {
+        result += std::to_string((reinterpret_cast<const int32_t *>(tiling_data->GetData())[i / sizeof(int32_t)]));
+        result += " ";
+    }
+    return result;
 }
 
 struct Conv2DTilingTestParamRepo {
-  string case_name;
-  string op_type;
-  string tiling_data;
-  string info_dict;
+    string case_name;
+    string op_type;
+    string tiling_data;
+    string info_dict;
 };
+
+string to_string(const std::stringstream &tiling_data) {
+    auto data = tiling_data.str();
+    string result;
+    int32_t tmp = 0;
+    for (size_t i = 0; i < data.length(); i += sizeof(int32_t)) {
+        memcpy_s(&tmp, sizeof(tmp), data.c_str() + i, sizeof(tmp));
+        result += std::to_string(tmp);
+        result += " ";
+    }
+
+    return result;
+}
+} // namespace
 
 class Conv2DTilingRepo: public testing::TestWithParam<Conv2DTilingTestParamRepo> {
 protected:
@@ -154,19 +168,6 @@ protected:
     tuningtiling::Conv2DV2InputArgs conv2d_info_dict;
 };
 
-static string to_string(const std::stringstream &tiling_data) {
-    auto data = tiling_data.str();
-    string result;
-    int32_t tmp = 0;
-    for (size_t i = 0; i < data.length(); i += sizeof(int32_t)) {
-        memcpy(&tmp, data.c_str() + i, sizeof(tmp));
-        result += std::to_string(tmp);
-        result += " ";
-    }
-
-    return result;
-}
-
 TEST_P(Conv2DTilingRepo, general_cases_001) {
     Conv2DTilingTestParamRepo param = GetParam(); 
     PrepareTest(param);  
@@ -205,7 +206,6 @@ TEST_P(Conv2DTilingRepo, general_cases_001) {
     shared_ptr<tuningtiling::TuningTilingDef> tuningTiling = nullptr;
     std::string kbFile = "Ascend950PR_9589_32_AiCore_Conv2DV2_runtime_kb.json";
     std::string socVersion = "Ascend950PR_9589";
-    uint32_t aicoreNum = 32;
 
     tuningtiling::TuningTilingDefPtr tiling = tuningtiling::TuningTilingClassFactory::CreateTilingDataInstance(optype);
     nlohmann::json a;
@@ -213,60 +213,44 @@ TEST_P(Conv2DTilingRepo, general_cases_001) {
     conv2d_knowledge.ToJson(a);  
     tiling->FromJson(a);  
 
-    gert::StorageShape featuremap = {{conv2d_info_dict.aShapeN, conv2d_info_dict.bShapeC, 
-                                        conv2d_info_dict.aShapeH, conv2d_info_dict.aShapeW},
-                                        {conv2d_info_dict.aShapeN, conv2d_info_dict.bShapeC, 
-                                        conv2d_info_dict.aShapeH, conv2d_info_dict.aShapeW}};
-    gert::StorageShape weight = {{conv2d_info_dict.bShapeN, conv2d_info_dict.bShapeC, 
-                                    conv2d_info_dict.bShapeH, conv2d_info_dict.bShapeW},
-                                    {conv2d_info_dict.bShapeN, conv2d_info_dict.bShapeC, 
-                                    conv2d_info_dict.bShapeH, conv2d_info_dict.bShapeW}};
+    gert::StorageShape featuremap = {
+        {conv2d_info_dict.aShapeN, conv2d_info_dict.bShapeC, conv2d_info_dict.aShapeH, conv2d_info_dict.aShapeW},
+        {conv2d_info_dict.aShapeN, conv2d_info_dict.bShapeC, conv2d_info_dict.aShapeH, conv2d_info_dict.aShapeW}};
+    gert::StorageShape weight = {
+        {conv2d_info_dict.bShapeN, conv2d_info_dict.bShapeC, conv2d_info_dict.bShapeH, conv2d_info_dict.bShapeW},
+        {conv2d_info_dict.bShapeN, conv2d_info_dict.bShapeC, conv2d_info_dict.bShapeH, conv2d_info_dict.bShapeW}};
     gert::StorageShape bias = {{conv2d_info_dict.bShapeN}, {conv2d_info_dict.bShapeN}};
     gert::StorageShape quantScale = {{conv2d_info_dict.bShapeN}, {conv2d_info_dict.bShapeN}};
     gert::StorageShape offset_w;
 
-    gert::StorageShape output = {{conv2d_info_dict.aShapeN, conv2d_info_dict.bShapeN, 
-                                    conv2d_info_dict.cShapeH, conv2d_info_dict.cShapeW},
-                                    {conv2d_info_dict.aShapeN, conv2d_info_dict.bShapeN, 
-                                    conv2d_info_dict.cShapeH, conv2d_info_dict.cShapeW}};
+    gert::StorageShape output = {
+        {conv2d_info_dict.aShapeN, conv2d_info_dict.bShapeN, conv2d_info_dict.cShapeH, conv2d_info_dict.cShapeW},
+        {conv2d_info_dict.aShapeN, conv2d_info_dict.bShapeN, conv2d_info_dict.cShapeH, conv2d_info_dict.cShapeW}};
     std::vector<void*> input_shape_ref;
 
-    bool quantFlag = conv2d_info_dict.aDtype == ge::DT_INT8;
     bool hasScale = false;
     bool hasBias = conv2d_info_dict.biasFlag;
 
-    if (quantFlag) {
-        if (hasBias && hasScale) {
-            input_shape_ref = {&featuremap, &weight, &quantScale, &bias, nullptr};
-        } else if (!hasBias && hasScale) {
-            input_shape_ref = {&featuremap, &weight, &quantScale, nullptr, nullptr};
-        } else if (hasBias && !hasScale) {
-            input_shape_ref = {&featuremap, &weight, nullptr, &bias, nullptr};
-        } else {
-            input_shape_ref = {&featuremap, &weight, nullptr, nullptr, nullptr};
-        }
+    if (hasBias) {
+        input_shape_ref = {&featuremap, &weight, &bias, nullptr};
     } else {
-        if (hasBias) {
-            input_shape_ref = {&featuremap, &weight, &bias, nullptr};
-        } else {
-            input_shape_ref = {&featuremap, &weight, nullptr, nullptr};
-        }
+        input_shape_ref = {&featuremap, &weight, nullptr, nullptr};
     }
 
     std::vector<void*> output_shapes_ref = {&output};
     std::vector<int64_t> strides = {1, 1, conv2d_info_dict.strideH, conv2d_info_dict.strideW};
-    std::vector<int64_t> pads = {conv2d_info_dict.padTop, conv2d_info_dict.padBottom, 
-                                conv2d_info_dict.padLeft, conv2d_info_dict.padRight};
+    std::vector<int64_t> pads = 
+    {conv2d_info_dict.padTop, conv2d_info_dict.padBottom, conv2d_info_dict.padLeft, conv2d_info_dict.padRight};
     std::vector<int64_t> dilations = {1, 1, conv2d_info_dict.dilationH, conv2d_info_dict.dilationW};
 
-    std::string op_type = quantFlag ? "QuantConv2D" : "Conv2DV2";
+    std::string op_type = "Conv2DV2";
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
-    aicoreNum = 32;
     string compile_info_string = R"({"hardware_info": 
-      {"BT_SIZE": 4096, "load3d_constraints": "1", "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
-       "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false, "UB_SIZE": 253952,
+      {"BT_SIZE": 4096, "load3d_constraints": "1", "Intrinsic_fix_pipe_l0c2out": false,
+       "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true,
+       "Intrinsic_data_move_out2l1_nd2nz": false, "UB_SIZE": 253952,
        "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "FB_SIZE": 4096,
        "BT_SIZE": 4096, "L0C_SIZE": 262144, "CORE_NUM": 32, "cube_core_cnt": 32, "vector_core_cnt": 64,
        "core_type_list": "CubeCore,VectorCore"}})";
@@ -279,7 +263,7 @@ TEST_P(Conv2DTilingRepo, general_cases_001) {
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     optiling::conv_ops_tiling::ConvTilingParseInfo compile_info;
-    compile_info.aicoreNum = aicoreNum;
+    compile_info.aicoreNum = AIC_NUM;
     compile_info.socVersion = "Ascend950PR_9589";
     compile_info.shortSocVersion = "Ascend950";
 
@@ -287,61 +271,36 @@ TEST_P(Conv2DTilingRepo, general_cases_001) {
     quant_compile_info.opType = op_type;
     quant_compile_info.shortSocVersion = "Ascend950";
 
-    auto tilingDataPtr = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto tilingDataPtr = gert::TilingData::CreateCap(MEM_SIZE_1K);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(MEM_SIZE_1K);
     auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
-    auto holder = quantFlag ?
-                      gert::TilingContextFaker().SetOpType(op_type)
-                                                .NodeIoNum(5, 1)
-                                                .IrInstanceNum({1, 1, 1, 1, 1})
-                                                .InputShapes(input_shape_ref)
-                                                .OutputShapes(output_shapes_ref)
-                                                .CompileInfo(&quant_compile_info)
-                                                .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                                                .NodeInputTd(0, ge::DT_INT8, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                                                .NodeInputTd(1, ge::DT_INT8, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                                                .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                                                .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                                                .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                                                .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                                                .NodeAttrs({
-                                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
-                                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
-                                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")}
-                                                  })
-                                                .TilingData(tilingDataPtr.get())
-                                                .Workspace(ws_size)
-                                                .Build() :
-                      gert::TilingContextFaker().SetOpType(op_type)
-                                                .NodeIoNum(4, 1)
-                                                .IrInstanceNum({1, 1, 1, 1})
-                                                .InputShapes(input_shape_ref)
-                                                .OutputShapes(output_shapes_ref)
-                                                .CompileInfo(&compile_info)
-                                                .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                                                .NodeInputTd(0, conv2d_info_dict.aDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                                                .NodeInputTd(1, conv2d_info_dict.aDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                                                .NodeInputTd(2, conv2d_info_dict.aDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                                                .NodeInputTd(3, conv2d_info_dict.aDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                                                .NodeOutputTd(0, conv2d_info_dict.aDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                                                .NodeAttrs({
-                                                    {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                                                    {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
-                                                    {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
-                                                    {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                                    {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                                    {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                                    {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                                                    {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)}
-                                                  })
-                                                .TilingData(tilingDataPtr.get())
-                                                .Workspace(ws_size)
-                                                .Build();
+    auto holder = gert::TilingContextFaker().SetOpType(op_type)
+                                            .NodeIoNum(4, 1)
+                                            .IrInstanceNum({1, 1, 1, 1})
+                                            .InputShapes(input_shape_ref)
+                                            .OutputShapes(output_shapes_ref)
+                                            .CompileInfo(&compile_info)
+                                            .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                                            .NodeInputTd(0, conv2d_info_dict.aDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                                            .NodeInputTd(1, conv2d_info_dict.aDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                                            .NodeInputTd(2, conv2d_info_dict.aDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                                            .NodeInputTd(3, conv2d_info_dict.aDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                                            .NodeOutputTd(0, conv2d_info_dict.aDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                                            .NodeAttrs({
+                                                {"strides",
+                                                    Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                                                {"dilations",
+                                                    Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
+                                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)}
+                                                })
+                                            .TilingData(tilingDataPtr.get())
+                                            .Workspace(ws_size)
+                                            .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -365,8 +324,8 @@ static Conv2DTilingTestParamRepo general_cases_params_repo[] = {
     "dilationW":1,"padTop":1,"padBottom":1,"padLeft":1,"padRight":1,"biasFullLoadFlag":1,"fixpParamsFullLoadFlag":1,
     "offsetx":0,"hf32Enable":0,"hf32TransMode":0,"isC04Flag":0,"roundMode":1,"batchDim":1,"hoDim":2,"woDim":1,"nDim":16,
     "groupDim":1,"mMode":0,"woL1":32,"woL0":32,"kAL1":576,"kBL1":576,"hoL1":16,"nBL1":80,"kL0":32,"nL0":80,"hoL0":16,
-    "iterateMNOrder":1,"pBufferFlag":27})",R"({"aDtype":1,"bDtype":1,
-    "cDtype":1,"biasDtype":1,"aShapeN":1,"aShapeH":32,"aShapeW":32,"bShapeN":1280,"bShapeC":1280,"bShapeH":3,"bShapeW":3,
+    "iterateMNOrder":1,"pBufferFlag":27})",R"({"aDtype":1,"bDtype":1, "cDtype":1,"biasDtype":1,"aShapeN":1,
+    "aShapeH":32,"aShapeW":32,"bShapeN":1280,"bShapeC":1280,"bShapeH":3,"bShapeW":3,
     "cShapeH":32,"cShapeW":32,"aFormat":0,"bFormat":0,"cFormat":0,"groups":1,"strideH":1,"strideW":1,"dilationH":1,
     "dilationW":1,"padTop":1,"padBottom":1,"padLeft":1,"padRight":1,"biasFlag":true,"hf32Flag":false,
     "reserverdParam1": 0, "reserverdParam2": 0, "reserverdParam3": 0, "reserverdParam4": 0, "reserverdParam5": 0,

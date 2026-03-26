@@ -36,7 +36,7 @@ int64_t ConvTilingAlgorithmMmode::Process()
 bool ConvTilingAlgorithmMmode::CheckMinL1Tiling() const
 {
     if (tilingIns_->shapeInfo.orgWo == 0) {
-        TILING_LOG_ERROR("zero div in CheckMinL1Tiling.");
+        OP_LOGE(tilingIns_->nodeType, "zero div in CheckMinL1Tiling.");
         return false;
     }
     uint64_t minHoAL1 = min(tilingIns_->cubeInfo.m0 / tilingIns_->shapeInfo.orgWo + CONST_VALUE_2,
@@ -60,7 +60,7 @@ bool ConvTilingAlgorithmMmode::CheckMinL1Tiling() const
     }
 
     if (curUsedL1Size > tilingIns_->platformInfo.l1Size) {
-        TILING_LOG_ERROR("when w fullyload, minL1LoadSize > L1size.");
+        OP_LOGE(tilingIns_->nodeType, "when w fully load, minimum L1 Load Size > L1 platform size.");
         return false;
     }
     return true;
@@ -156,7 +156,7 @@ int64_t ConvTilingAlgorithmMmode::InitCalcL1FullLoadParams()
         tilingIns_->shapeInfo.orgWi * tilingIns_->cubeInfo.k0 * this->fMapDTypeSize) / this->fMapDTypeSize !=
         (tilingIns_->shapeInfo.singlekD * tilingIns_->shapeInfo.singleCi1 * hiL1FullLoad *
         tilingIns_->shapeInfo.orgWi * tilingIns_->cubeInfo.k0)) {
-        TILING_LOG_ERROR("fmap size in l1 is overflow uint64, initcalc l1 params failed!");
+        OP_LOGE(tilingIns_->nodeType, "fmap size in l1 is overflow uint64, initcalc l1 params failed!");
         return -1;
     }
     if (!tilingIns_->isC04Flag) {
@@ -177,7 +177,7 @@ int64_t ConvTilingAlgorithmMmode::InitCalcL1FullLoadParams()
         tilingIns_->shapeInfo.singleCo1 * tilingIns_->cubeInfo.n0 * this->weightDTypeSize) / weightDTypeSize !=
         (tilingIns_->shapeInfo.singlekD * tilingIns_->shapeInfo.singleCi1 * this->l1TilingCalc.ci0HkWk *
         tilingIns_->shapeInfo.singleCo1 * tilingIns_->cubeInfo.n0)) {
-        TILING_LOG_ERROR("weight size in l1 is overflow uint64, initcalc l1 params failed!");
+        OP_LOGE(tilingIns_->nodeType, "weight size in l1 is overflow uint64, initcalc l1 params failed!");
         return -1;
     }
     this->l1TilingCalc.weightFullLoadL1Size = tilingIns_->shapeInfo.singlekD * this->l1TilingCalc.kBL1FullLoadSize *

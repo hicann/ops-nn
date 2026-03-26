@@ -38,9 +38,7 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
-extern std::string GetTestSuiteName();
-extern std::string GetTestCaseName();
-
+namespace {
 static string TilingData2Str(const gert::TilingData *tiling_data) {
   auto data = tiling_data->GetData();
   string result;
@@ -58,20 +56,23 @@ struct Conv3DTilingTestParamRepo {
   string info_dict;
   string tiling_data;
 };
+} //namespace
 
 class Conv3DTilingRepo: public testing::TestWithParam<Conv3DTilingTestParamRepo> {
 protected:
     void SetUp() {}
-
     void TearDown() {}
     static void TearDownTestCase() {}
     void PrepareTest(Conv3DTilingTestParamRepo &param) {
-        std::cout << "knowledge" << std::endl;
-        PrepareKnowledge(param);
+        std::cout << "knowledge shape" << std::endl;
+        PrepareKnowledgeShape(param);
+        std::cout << "knowledge tiling" << std::endl;
+        PrepareKnowledgeTiling(param);
         std::cout << "info dict" << std::endl;
         PrepareInfoDict(param);
     }
-    void PrepareKnowledge(Conv3DTilingTestParamRepo &param) {
+
+    void PrepareKnowledgeShape(Conv3DTilingTestParamRepo &param) {
         std::cout << param.tiling_data << std::endl;
         auto j = nlohmann::json::parse(param.tiling_data);
         conv3d_knowledge.groups = j["groups"];
@@ -103,6 +104,11 @@ protected:
         conv3d_knowledge.padBottom= j["padBottom"];
         conv3d_knowledge.padLeft= j["padLeft"];
         conv3d_knowledge.padRight= j["padRight"];
+    }
+
+    void PrepareKnowledgeTiling(Conv3DTilingTestParamRepo &param) {
+        std::cout << param.tiling_data << std::endl;
+        auto j = nlohmann::json::parse(param.tiling_data);
         conv3d_knowledge.hoL0 = j["hoL0"];
         conv3d_knowledge.woL0 = j["woL0"];
         conv3d_knowledge.kL0 = j["kL0"];
@@ -130,6 +136,7 @@ protected:
         conv3d_knowledge.al1FullLoad = j["al1FullLoad"];
         conv3d_knowledge.bl1BypassFlag = j["bl1BypassFlag"];
     }
+
     void PrepareInfoDict(Conv3DTilingTestParamRepo &param) {
         std::cout << param.info_dict << std::endl;
         auto j = nlohmann::json::parse(param.info_dict);
@@ -167,6 +174,7 @@ protected:
         conv3d_info_dict.padRight = j["padRight"];
         conv3d_info_dict.biasFlag = j["biasFlag"];
     }
+
     std::string bank_path;
     const char* optype = "Conv3DV2";
     gert::TilingContext* context = nullptr;
@@ -278,7 +286,6 @@ TEST_P(Conv3DTilingRepo, general_cases_001) {
     auto tiling_key = tiling_context->GetTilingKey();
     auto block_dim = tiling_context->GetBlockDim();
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
-
 }
 
 static Conv3DTilingTestParamRepo general_cases_params_repo[] = {

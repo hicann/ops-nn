@@ -30,19 +30,6 @@ namespace conv_tiling {
 using namespace std;
 using optiling::conv_ops_tiling::ConvDtype;
 using optiling::conv_ops_tiling::ConvFormat;
-#ifdef ENABLE_CONV_TILING_DEBUG
-#define LOG(level, format, ...)                                         \
-    do {                                                                \
-        fprintf(stdout, "[LOG] %s " format "\n", level, ##__VA_ARGS__); \
-    } while (0)
-#else
-#define LOG(level, format, ...)
-#endif
-
-#define TILING_LOG_DEBUG(format, ...) LOG("[DEBUG]", format, ##__VA_ARGS__)
-#define TILING_LOG_INFO(format, ...) LOG("[INFO] ", format, ##__VA_ARGS__)
-#define TILING_LOG_WARNING(format, ...) LOG("[WARN] ", format, ##__VA_ARGS__)
-#define TILING_LOG_ERROR(format, ...) LOG("[ERROR]", format, ##__VA_ARGS__)
 
 enum class TPosition {
     GM = 0,

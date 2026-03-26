@@ -120,7 +120,6 @@ private:
     uint64_t CalcDmaUBSize(ConvDmaParams& params, uint64_t khUb, uint64_t kwUb) const;
     uint32_t CalcAL1SpaceSize(optiling::TConv2DTiling& tiling);
     void SetDefaultDdim();
-    void PrintTilingData() const;
     void Infer5hdShape();
     bool CheckParams();
     bool CheckAttr();

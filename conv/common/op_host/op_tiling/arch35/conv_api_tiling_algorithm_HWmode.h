@@ -185,7 +185,6 @@ private:
                         uint64_t anotherValue);
     void L0TilingRest(bool kFullLoadFlag);
     void CheckL0DoubleBuffer();
-    void Printl1TilingCalc() const;
     void GetDmaL1Tiling();
     void ScaleBiasUbTilingDecision();
     void GetUbTiling();

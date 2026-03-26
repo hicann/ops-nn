@@ -47,9 +47,6 @@ void ConvTilingAlgorithmBBmode::AdjustM()
         conv2DBasicBlockInfoPtr->mIn = InferHiL1(conv2DBasicBlockInfoPtr->mTile);
         fActive = fActiveAdjusted;
     }
-    TILING_LOG_DEBUG("fActiveAdjusted: %lu, fActive: %lu, After adjustM mTile: %u, mCut: %u, mIn: %lu",
-        fActiveAdjusted, fActive, conv2DBasicBlockInfoPtr->mTile,
-        conv2DBasicBlockInfoPtr->mCut, conv2DBasicBlockInfoPtr->mIn);
 }
 
 void ConvTilingAlgorithmBBmode::AdjustN()
@@ -83,8 +80,6 @@ void ConvTilingAlgorithmBBmode::AdjustN()
         conv2DBasicBlockInfoPtr->nTile = static_cast<uint32_t>(nTileAdjusted);
         conv2DBasicBlockInfoPtr->nCut = static_cast<uint32_t>(nCutAdjusted);
     }
-    TILING_LOG_DEBUG("nActiveAdjusted: %lu, nActive: %lu, After adjustM nTile: %u, nCut: %u",
-        nActiveAdjusted, nActive, conv2DBasicBlockInfoPtr->nTile, conv2DBasicBlockInfoPtr->nCut);
 }
 
 uint64_t ConvTilingAlgorithmBBmode::InferHiL1(uint32_t multiMTileSize) const{
@@ -487,9 +482,6 @@ int64_t ConvTilingAlgorithmBBmode::GetL1Tiling(ConvTilingAlgorithmBBmode* bbPtr)
     if (bbPtr->conv2DBasicBlockInfoPtr->mTile >=  tilingIns_->shapeInfo.singleM) {
         conv2DBasicBlockInfoPtr->mAl1FullLoad = true;
     }
-    TILING_LOG_DEBUG("kAl1FullLoad: %u, kBl1FullLoad: %u, mAl1FullLoad: %u, nBl1FullLoad: %u",
-        conv2DBasicBlockInfoPtr->kAl1FullLoad, conv2DBasicBlockInfoPtr->kBl1FullLoad,
-        conv2DBasicBlockInfoPtr->mAl1FullLoad, conv2DBasicBlockInfoPtr->nBl1FullLoad);
 
     // KABL1 FullLoad
     if (conv2DBasicBlockInfoPtr->kAl1FullLoad && conv2DBasicBlockInfoPtr->kBl1FullLoad) {
@@ -514,7 +506,7 @@ int64_t ConvTilingAlgorithmBBmode::GetL1Tiling(ConvTilingAlgorithmBBmode* bbPtr)
         }
     }
 
-    TILING_LOG_DEBUG("l1LoadStrategyType is: %u", static_cast<uint32_t>(l1LoadStrategyType));
+    OP_LOGD(tilingIns_->nodeType, "l1LoadStrategyType is: %u", static_cast<uint32_t>(l1LoadStrategyType));
     if (!GetL1TilingParams(this, l1LoadStrategyType)) {
         return -1;
     };
@@ -577,7 +569,7 @@ void ConvTilingAlgorithmBBmode::GetKL0() const
     CalcCommFactor(kL1, kL0Max, factors);
     auto maxFactorPtr = max_element(factors.begin(), factors.end());
     if (maxFactorPtr == factors.end()) {
-        TILING_LOG_ERROR("Input data for GetKL0 is illegal in BasicBlockMode.");
+        OP_LOGE(tilingIns_->nodeType, "Input data for GetKL0 is illegal in BasicBlockMode.");
         return;
     }
     conv2DBasicBlockInfoPtr->kTile = static_cast<uint32_t>((*maxFactorPtr) * tilingIns_->cubeInfo.k0);
@@ -674,7 +666,8 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyKFullLoad::GetL1LoadTilingParams(C
     // 单core上fmap放BB的总大小
     int64_t singleBBFmapSize = maxMAL1Iter * fmapLoadSizeMultix1;
 
-    TILING_LOG_DEBUG("singleBBFmapSize: %lu, singleBBWeightSize: %lu, fmapSizeMultix1: %lu, weightBBSizeMultix1: %lu",
+    OP_LOGD(bbPtr->tilingIns_->nodeType,
+        "singleBBFmapSize: %lu, singleBBWeightSize: %lu, fmapSizeMultix1: %lu, weightBBSizeMultix1: %lu",
         singleBBFmapSize, singleBBWeightSize, fmapLoadSizeMultix1, weightLoadBBSizeMultix1);
     if (GetAOrBFullLoadL1TilingParams(bbPtr, fmapLoadSizeMultix1, weightLoadBBSizeMultix1,
                                       singleBBFmapSize, singleBBWeightSize)) {
@@ -812,7 +805,7 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyNFirst::GetL1LoadTilingParams(Conv
     }
     cinBL1 = FloorAlign(cinBL1, bbPtr->tilingIns_->cubeInfo.k0);
     if (cinBL1 <= 0) {
-        TILING_LOG_ERROR("L1LoadStrategyNFirst still cannot generate L1 tiling.");
+        OP_LOGE(bbPtr->tilingIns_->nodeType, "L1LoadStrategyNFirst still cannot generate L1 tiling.");
         return false;
     }
     bbPtr->l1TilingParams.kBL1 = cinBL1 * bbPtr->tilingIns_->shapeInfo.orgkH * bbPtr->tilingIns_->shapeInfo.orgkW;
@@ -873,7 +866,7 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyMFirst::GetL1LoadTilingParams(Conv
     }
     cinAL1 = FloorAlign(cinAL1, bbPtr->tilingIns_->cubeInfo.k0);
     if (cinAL1 <= 0) {
-        TILING_LOG_ERROR("L1LoadStrategyMFirst still cannot generate L1 tiling.");
+        OP_LOGE(bbPtr->tilingIns_->nodeType, "L1LoadStrategyMFirst still cannot generate L1 tiling.");
         return false;
     }
     bbPtr->l1TilingParams.kAL1 = cinAL1;
@@ -954,7 +947,7 @@ bool ConvTilingAlgorithmBBmode::KAllSplit::GetL1LoadTilingParams(ConvTilingAlgor
     bbPtr->aL1DBNeedClose = bbPtr->dbValue.pbAL1 == 1 ? true : false;
     bbPtr->bL1DBNeedClose = bbPtr->dbValue.pbBL1 == 1 ? true : false;
     if (cinL1 == 0) {
-        TILING_LOG_ERROR("K all split still cannot generate L1 tiling.");
+        OP_LOGE(bbPtr->tilingIns_->nodeType, "K all split still cannot generate L1 tiling.");
         return false;
     }
     uint32_t cinTile = cinL1;
@@ -1027,11 +1020,11 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyBase::MultiLoadKL1(ConvTilingAlgor
 
             if (bbPtr->l1TilingParams.kAL1 * bbPtr->tilingIns_->shapeInfo.singlekH *
                 bbPtr->tilingIns_->shapeInfo.singlekW >= MAX_16_BIT_NUM) {
-                TILING_LOG_DEBUG("Exceeded kStartPos limit");
+                OP_LOGE(bbPtr->tilingIns_->nodeType, "Exceeded kStartPos limit");
                 return false;
             }
             if (FindMaxProductUnderLimit(l1TempSize, min(bbPtr->availableL1Size, maxsingleCoreFmapSize)) == 0) {
-                TILING_LOG_ERROR("AL1 space is not enough for Basic Block mode in this case.");
+                OP_LOGE(bbPtr->tilingIns_->nodeType, "AL1 space is not enough for Basic Block mode in this case.");
                 return false;
             }
             return true;
@@ -1055,7 +1048,7 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyBase::MultiLoadKL1(ConvTilingAlgor
             bbPtr->dbValue.pbBL1 = 1;
 
             if (FindMaxProductUnderLimit(l1TempSize, min(bbPtr->availableL1Size, maxSingleCoreWeightSize)) == 0) {
-                TILING_LOG_ERROR("BL1 space is not enough for Basic Block mode in this case.");
+                OP_LOGE(bbPtr->tilingIns_->nodeType, "BL1 space is not enough for Basic Block mode in this case.");
                 return false;
             }
             return true;

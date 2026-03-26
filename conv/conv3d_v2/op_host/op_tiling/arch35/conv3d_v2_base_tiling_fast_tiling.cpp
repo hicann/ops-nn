@@ -176,7 +176,7 @@ ge::graphStatus Conv3dBaseTilingV2::GetConv3dApiTiling()
     conv3dApiTiling_.SetFixpipeParams(fixpipeInfo_);
     conv3dApiTiling_.SetOffsetx(static_cast<int8_t>(attrInfo_.offsetx));
     conv3dApiTiling_.SetRoundMode(static_cast<int8_t>(attrInfo_.roundMode));
-
+    conv3dApiTiling_.SetNodeType(paramInfo_.nodeType);
     if (flagInfo_.hasBias) {
         conv3dApiTiling_.SetBiasType(TPosition::GM, formatMap[descInfo_.biasFormat],
                                      dtypeMap[descInfo_.biasDtype]);
