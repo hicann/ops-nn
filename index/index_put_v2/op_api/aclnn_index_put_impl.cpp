@@ -1011,6 +1011,48 @@ static const aclTensor* IndexPutProcessArch3510(aclTensor* selfRef, const aclTen
     }
 }
 
+static bool IsStridesAllZero(const aclTensor* tensor)
+{
+    bool isAllZero = true;
+    const auto& viewStrides = tensor->GetViewStrides();
+    int32_t dimNum = tensor->GetViewShape().GetDimNum();
+    for (int32_t i = 0; i < dimNum; i++) {
+        if (viewStrides[i] != 0) {
+          isAllZero = false;
+        }
+    }
+    return isAllZero;
+}
+
+static bool IsTranspose(const aclTensor* tensor)
+{
+    bool isTranspose = false;
+    const auto& viewStrides = tensor->GetViewStrides();
+    int32_t dimNum = tensor->GetViewShape().GetDimNum();
+    for (int32_t j = 1; j < dimNum; j++) {
+        if (viewStrides[j - 1] < viewStrides[j] && viewStrides[j - 1] != 0) {
+          isTranspose = true;
+        }
+    }
+    return isTranspose;
+}
+
+static bool CheckIsContiguous(bool selfContiguous, bool valueContiguous, bool indicesContiguous, bool overLimit,
+                              bool isIndicesTranspose, bool isSelfTranspose, bool isValueTranspose, bool isIndicesStridesAllZero,
+                              bool isSelfStridesAllZero)
+{
+    if ((selfContiguous && valueContiguous && indicesContiguous)) {
+      return false;
+    }
+    if ((!selfContiguous || !valueContiguous || !indicesContiguous) && overLimit) {
+      return false;
+    }
+    if (isIndicesTranspose || isSelfTranspose || isValueTranspose || isIndicesStridesAllZero || isSelfStridesAllZero) {
+      return false;
+    }
+    return true;
+}
+
 static bool IsNonContiguousScene(const aclTensor* self, const aclTensorList* indices, const aclTensor *value, 
                                   FVector<const aclTensor*, DIMLIMIT>& allDefinedIndices, FVector<int64_t, DIMLIMIT>& masks,
                                   int64_t& indicesNum, int64_t& masksNum, const aclTensor*& selfRefContiguous, const aclTensor*& valuesContiguous, 
@@ -1019,10 +1061,15 @@ static bool IsNonContiguousScene(const aclTensor* self, const aclTensorList* ind
     int64_t xDim = self->GetViewShape().GetDimNum();
     int64_t indicesSize = static_cast<int64_t>(indices->Size());
     bool overLimit = false;
+    bool isSelfTranspose = false;
+    bool isValueTranspose = false;
+    bool isIndicesTranspose = false;
+    bool isIndicesStridesAllZero = false;
+    bool isSelfStridesAllZero = false;
     if (xDim > DIM_BOUND_NON_CONTIGUOUS || indicesSize > DIM_BOUND_NON_CONTIGUOUS) {
         overLimit = true;
     }
-    bool indicesContiguous = false;
+    bool indicesContiguous = true;
     for (int32_t i = 0; i < indicesSize; i++) {
       if ((*indices)[i]) {
         const aclTensor* curIndice = (*indices)[i];
@@ -1034,8 +1081,14 @@ static bool IsNonContiguousScene(const aclTensor* self, const aclTensorList* ind
           masks.emplace_back(1);
           indicesNum += 1;
           masksNum += 1;
-          if (IsContiguous(curIndice)) {
-              indicesContiguous = true;
+          if (!IsContiguous(curIndice)) {
+              indicesContiguous = false;
+              if (!isIndicesTranspose) {
+                isIndicesTranspose = IsTranspose(curIndice);
+              }
+              if (!isIndicesStridesAllZero) {
+                isIndicesStridesAllZero = IsStridesAllZero(curIndice);
+              }
           }
         } else {
           masks.emplace_back(0);
@@ -1048,10 +1101,11 @@ static bool IsNonContiguousScene(const aclTensor* self, const aclTensorList* ind
     }
     bool selfContiguous = IsContiguous(self);
     bool valueContiguous = IsContiguous(value);
-    if ((selfContiguous && valueContiguous && indicesContiguous)) {
-      return false;
-    }
-    if ((!selfContiguous || !valueContiguous || !indicesContiguous) && overLimit) {
+    isSelfTranspose = IsTranspose(self);
+    isValueTranspose = IsTranspose(value);
+    isSelfStridesAllZero = IsStridesAllZero(self);
+    if (!CheckIsContiguous(selfContiguous, valueContiguous, indicesContiguous, overLimit, isIndicesTranspose,
+                           isSelfTranspose, isValueTranspose, isIndicesStridesAllZero, isSelfStridesAllZero)) {
       return false;
     }
 
