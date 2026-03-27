@@ -109,7 +109,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
     <td>(N,C)<br>N为批处理大小，C为标签数，必须大于0</td>
-    <td>-</td>
+    <td>√</td>
     </tr>
     <tr>
     <td>target（aclTensor*）</td>
@@ -119,7 +119,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>INT32、INT64</td>
     <td>ND</td>
     <td>(N)<br>N与input第零维相等。数值范围为[0, C)，当指定了ignoreIndex时，target的值也可以等于ignoreIndex。</td>
-    <td>-</td>
+    <td>√</td>
     </tr>
     <tr>
     <td>weightOptional（aclTensor*）</td>
@@ -129,7 +129,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>FLOAT</td>
     <td>ND</td>
     <td>(C)</td>
-    <td>-</td>
+    <td>√</td>
     </tr>
     <tr>
     <td>reductionOptional（char*）</td>

@@ -37,7 +37,7 @@
 
 ```Cpp
 aclnnStatus aclnnMseLossBackwardGetWorkspaceSize(
-    onst aclTensor*  gradOutput, 
+    const aclTensor* gradOutput, 
     const aclTensor* self,
     const aclTensor* target, 
     int64_t          reduction,
