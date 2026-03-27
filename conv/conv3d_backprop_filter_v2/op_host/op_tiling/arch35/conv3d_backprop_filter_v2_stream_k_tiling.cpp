@@ -89,6 +89,12 @@ ge::graphStatus Conv3DBackpropFilterV2StreamKTiling::DoOpTiling()
         OP_LOGE(opName_, "StreamK tiling template do optiling failed. Exceed L1 buffer size, please check the shape and attribute. %s", ss.str().c_str());
         return ge::GRAPH_FAILED;
     }
+    if (blockTiling_.isSplitKernelHW) {
+        std::stringstream ss;
+        ss << "The conv3d has entered the large kernel processing process. A timeout AiCore error may be reported. "
+           << "If a timeout AiCore error is reported, reduce the conv3d specifications and try again.";
+        OP_LOGD(opName_, "%s", ss.str().c_str());
+    }
     AdjustSmallCaseBaseBlock();
     DoStreamKTiling();
     OP_LOGD(
