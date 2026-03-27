@@ -39,8 +39,9 @@ static const size_t YOFFSET_DIM = 1;
 static const size_t SUPPORTED_K_ALIGN_NUM_INT4 = 2;
 static const size_t MX_SCALE_MAX_DIM = 3;
 static const size_t PENULTIMATE_DIM = 2;
+static const size_t MX_SCALE_LAST_DIM_SIZE = 2;  // MicroScaling场景下scale tensor最后一维的大小
 static const int64_t SUPPORTED_GROUP_SIZE = 32;
-static const int64_t MAX_SHAPE_SIZE__A8W4_INT = 29576;
+static const int64_t MAX_SHAPE_SIZE_A8W4_INT = 29576;
 static const int64_t SUPPORTED_GROUP_SIZE_A8W4_INT = 256;
 static const int64_t SUPPORTED_K_ALIGN_NUM = 64;
 static const int64_t SUPPORTED_N_ALIGN_NUM = 64;
@@ -477,13 +478,15 @@ static inline bool CheckScaleX1Shape(const TupleQuant& quantTensors, int64_t x1M
             CHECK_RET(CheckA8W4ScaleShape(x1Scale, x1MDim), false);
         }
     } else if (IsMicroScaling(x1Scale, x2Scale)) {
-        // 2: x1Scale (m, k / GroupSize / 2, 2)
-        if (x1Scale->GetViewShape().GetDim(0) != x1MDim || x1Scale->GetViewShape().GetDim(1) != (groupDim / 2) ||
-            x1Scale->GetViewShape().GetDim(2) != 2) {
+        // MX_SCALE_LAST_DIM_SIZE: x1Scale (m, k / GroupSize / MX_SCALE_LAST_DIM_SIZE, MX_SCALE_LAST_DIM_SIZE)
+        if (x1Scale->GetViewShape().GetDim(0) != x1MDim ||
+            x1Scale->GetViewShape().GetDim(1) != (groupDim / MX_SCALE_LAST_DIM_SIZE) ||
+            x1Scale->GetViewShape().GetDim(2) != MX_SCALE_LAST_DIM_SIZE) {
             OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "The x1Scale shape must be [%ld, %ld, 2] for MxA8W4,which are [%ld, %ld, %ld]",
-                x1MDim, (groupDim / 2), x1Scale->GetViewShape().GetDim(0), x1Scale->GetViewShape().GetDim(1),
-                x1Scale->GetViewShape().GetDim(2));
+                ACLNN_ERR_PARAM_INVALID,
+                "The x1Scale shape must be [%ld, %ld, %zu] for MxA8W4, which are [%ld, %ld, %ld]", x1MDim,
+                (groupDim / MX_SCALE_LAST_DIM_SIZE), MX_SCALE_LAST_DIM_SIZE, x1Scale->GetViewShape().GetDim(0),
+                x1Scale->GetViewShape().GetDim(1), x1Scale->GetViewShape().GetDim(2));
             return false;
         }
     }
@@ -513,11 +516,13 @@ static inline bool CheckScaleX2Shape(const TupleQuant& quantTensors, int64_t x2N
             }
         }
     } else if (IsMicroScaling(x1Scale, x2Scale)) {
-        // 2:x2Scale Shape: (n, groupDim / 2, 2)
-       if (x2ScaleNDim != x2NDim || x2ScaleGroupDim != groupDim / 2 || x2Scale->GetViewShape().GetDim(2) != 2) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "The x2scale shape must be [%ld, %ld, 2], which are [%ld, %ld, %ld]",
-                x2NDim, groupDim / 2, x2ScaleNDim, x2ScaleGroupDim, x2Scale->GetViewShape().GetDim(2));
+        // MX_SCALE_LAST_DIM_SIZE:x2Scale Shape: (n, groupDim / MX_SCALE_LAST_DIM_SIZE, MX_SCALE_LAST_DIM_SIZE)
+        if (x2ScaleNDim != x2NDim || x2ScaleGroupDim != groupDim / MX_SCALE_LAST_DIM_SIZE ||
+            x2Scale->GetViewShape().GetDim(2) != MX_SCALE_LAST_DIM_SIZE) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "The x2scale shape must be [%ld, %ld, %zu], which are [%ld, %ld, %ld]", x2NDim,
+                    groupDim / MX_SCALE_LAST_DIM_SIZE, MX_SCALE_LAST_DIM_SIZE, x2ScaleNDim, x2ScaleGroupDim,
+                    x2Scale->GetViewShape().GetDim(2));
             return false;
         }
     } else {
@@ -571,8 +576,8 @@ static inline bool CheckX1X2Shape(const TupleInput &inputTensors, int64_t x1KDim
     // CHECK x1KDim
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if (npuArch == NpuArch::DAV_2201) {   // A8W4INT A2 A3
-        if (x1KDim <= 0 || x1KDim > MAX_SHAPE_SIZE__A8W4_INT) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k-dim must in [1, %ld], which is %ld", MAX_SHAPE_SIZE__A8W4_INT, x1KDim);
+        if (x1KDim <= 0 || x1KDim > MAX_SHAPE_SIZE_A8W4_INT) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k-dim must in [1, %ld], which is %ld", MAX_SHAPE_SIZE_A8W4_INT, x1KDim);
             return false;
         }
     } else {    // A8W4FLOAT DAV3510
@@ -594,7 +599,7 @@ static inline bool CheckX1X2Shape(const TupleInput &inputTensors, int64_t x1KDim
         size_t kAlign = isPerChannel ? SUPPORTED_K_ALIGN_NUM_INT4 : SUPPORTED_GROUP_SIZE_A8W4_INT;
         if (x1KDim % kAlign !=0) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k dim must be align to %ld, which is %ld", kAlign, x1KDim);
-            return false; 
+            return false;
         }
     } else {
         if (x1KDim % SUPPORTED_K_ALIGN_NUM != 0) {
@@ -635,9 +640,9 @@ static inline bool CheckShape(const TupleInput &inputTensors, const TupleQuant &
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the m-dim must > 0, which is %ld", x1MDim);
         return false;
     }
-    CHECK_RET(CheckX1X2Shape(inputTensors, x1KDim, x2KDim, x2NDim, isA8W4PerChannel), false);     
+    CHECK_RET(CheckX1X2Shape(inputTensors, x1KDim, x2KDim, x2NDim, isA8W4PerChannel), false);
     int64_t groupDim = isA8W4INT ? (x2KDim + SUPPORTED_GROUP_SIZE_A8W4_INT - 1) / SUPPORTED_GROUP_SIZE_A8W4_INT :
-                                    (x2KDim + SUPPORTED_GROUP_SIZE - 1) / SUPPORTED_GROUP_SIZE;                  
+                                    (x2KDim + SUPPORTED_GROUP_SIZE - 1) / SUPPORTED_GROUP_SIZE;
     CHECK_RET(CheckScaleX1Shape(quantTensors, x1MDim, groupDim, isA8W4INT), false);
     CHECK_RET(CheckScaleX2Shape(quantTensors, x2NDim, groupDim, transposeX2, isA8W4INT), false);
     CHECK_RET(CheckOutAndOffsetShape(quantTensors, x1MDim, x2NDim, out), false);
@@ -880,7 +885,7 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput &inp
     if (isA8W4F) {
         CHECK_RET(A8W4InferGroupSize(groupSize), ACLNN_ERR_PARAM_INVALID);
         OP_LOGD("Infer groupSize success. groupSize: %ld.", groupSize);
-    }    
+    }
     if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
         auto x1DimNum = x1->GetViewShape().GetDimNum();
         auto inputSizeM = transposeX1 ? x1->GetViewShape().GetDim(x1DimNum - 1) :

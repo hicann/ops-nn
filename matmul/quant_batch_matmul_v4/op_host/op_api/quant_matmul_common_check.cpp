@@ -50,8 +50,10 @@ op::Shape GetWeightNzShape(const aclTensor *input, bool transpose)
     int64_t n = transpose ? input->GetViewShape().GetDim(viewDimNum - LAST_SECOND_DIM_INDEX)
                            : input->GetViewShape().GetDim(viewDimNum - 1);
 
-    int64_t nz_k0_value_trans = (input->GetDataType() == op::DataType::DT_INT32 || input->GetDataType() == op::DataType::DT_INT4) ? 
-        NZ_K0_VALUE_INT4_TRANS : NZ_K0_VALUE_INT8_TRANS;
+    int64_t nz_k0_value_trans =
+        (input->GetDataType() == op::DataType::DT_INT32 || input->GetDataType() == op::DataType::DT_INT4) ?
+            NZ_K0_VALUE_INT4_TRANS :
+            NZ_K0_VALUE_INT8_TRANS;
     int64_t k1 = transpose ? CeilDiv(k, nz_k0_value_trans) : CeilDiv(k, NZ_K0_VALUE_INT8_INT4);
     int64_t n1 = transpose ? CeilDiv(n, NZ_K0_VALUE_INT8_INT4) : CeilDiv(n, nz_k0_value_trans);
 
@@ -231,5 +233,3 @@ aclnnStatus PostMatmulCalcProcess(const aclTensor *matmulRet, const aclTensor *x
 
     return ACLNN_SUCCESS;
 }
-
-

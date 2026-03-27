@@ -94,7 +94,7 @@ bool AdaptiveSlidingWindowBasicTilingV4::CheckPertileDtype()
         OP_LOGD(inputParams_.opName, "x1Scale or x2Scale is nullptr.");
         return false;
     }
-    
+
     inputParams_.scaleDtype = scaleDesc->GetDataType();
     inputParams_.perTokenScaleDtype = pertokenScaleDesc->GetDataType();
     auto biasDesc = context_->GetOptionalInputDesc(GetBiasIdx());
@@ -124,7 +124,6 @@ bool AdaptiveSlidingWindowBasicTilingV4::IsCapable()
     auto* platformInfoPtr = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
-
     if (!(ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_3510)) {
         return false;
     }

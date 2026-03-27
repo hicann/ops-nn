@@ -30,7 +30,7 @@ using TupleInput = std::tuple<const aclTensor *, const aclTensor *>;
 using TupleQuant = std::tuple<const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *,
                               const aclTensor *, const aclTensor *, const aclTensor *, const int64_t &,
                               const int64_t &>;
-using TupleFused = std::tuple<const aclTensor *, const char *>; 
+using TupleFused = std::tuple<const aclTensor *, const char *>;
 using TupleAttr = std::tuple<bool, bool>;
 using TupleTensor = std::tuple<const aclTensor *, const aclTensor *, const aclTensor *>;
 
