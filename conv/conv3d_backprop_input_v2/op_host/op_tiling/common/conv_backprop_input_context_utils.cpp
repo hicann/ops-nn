@@ -932,6 +932,62 @@ static bool CalPads(gert::TilingContext *context, Conv3dBpInputV2RunInfo &runInf
   return CheckCalPads(context, runInfoV2, op_type, otherParams);
 }
 
+static int32_t CalFmapH(gert::TilingContext *context, const Conv3dBpInputV2RunInfo &runInfoV2, const OtherParams& otherParams)
+{
+    int32_t minBaseM = 1024;
+
+    int64_t dedx_w = otherParams.c_shape.w;
+    OP_CHECK_IF(dedx_w == 0, OP_LOGE(context, "dedx_w is 0"), return 0);
+
+    constexpr int32_t FMAP_H_NUM = 2;
+    int32_t hiCal;
+
+    if (minBaseM % dedx_w == 0 || dedx_w % minBaseM == 0) {
+        hiCal = Ops::Base::CeilDiv(static_cast<int64_t>(minBaseM), dedx_w);
+    } else if (minBaseM > dedx_w) {
+        hiCal = minBaseM / dedx_w + FMAP_H_NUM;
+    } else {
+        hiCal = FMAP_H_NUM;
+    }
+    // L1HKhk=1dilation
+    int32_t khDilation = (otherParams.b_shape.h - 1) * runInfoV2.dilation_h + 1;
+    int32_t hoCal = (hiCal - 1) + khDilation;
+    int64_t hoExpand = static_cast<int64_t>(otherParams.a_shape.h - 1) * runInfoV2.stride_h + 1;
+    return static_cast<int32_t>(std::min(static_cast<int64_t>(hoCal), hoExpand));
+}
+
+static bool IsNeedTilingHkWk(gert::TilingContext *context, const Conv3dBpInputV2RunInfo &runInfoV2, const OtherParams& otherParams)
+{
+    uint32_t minBaseN = 16;
+    uint32_t dtypeByteL0a_ = runInfoV2.a_dtype_bytes;
+    uint32_t dtypeByteL0b_ = runInfoV2.b_dtype_bytes;
+    uint32_t blockSize_ = BYTE_BLOCK / dtypeByteL0b_;
+    uint64_t l1_size  = 0;
+
+    fe::PlatFormInfos* platformInfo = context->GetPlatformInfo();
+    OP_CHECK_IF(platformInfo == nullptr, OP_LOGE(context, "platformInfoPtr is null"), return false);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L1, l1_size);
+
+    int64_t bpPadRight = otherParams.c_shape.w - (static_cast<int64_t>(otherParams.a_shape.w - 1) * runInfoV2.stride_w + 1) +
+        (otherParams.b_shape.w - 1) * runInfoV2.dilation_w - runInfoV2.backprop_pad_l;
+    int32_t curHo = CalFmapH(context, runInfoV2, otherParams);
+    uint64_t minA1Size = static_cast<uint64_t>(dtypeByteL0a_) * curHo *
+        otherParams.a_shape.w * runInfoV2.stride_w * blockSize_;
+    uint64_t lenHkWkC0 = otherParams.b_shape.h * otherParams.b_shape.w * blockSize_;
+    uint64_t minB1Size = static_cast<uint64_t>(dtypeByteL0b_) * lenHkWkC0 * minBaseN;
+
+    if ((minA1Size + minB1Size) <= l1_size &&
+        runInfoV2.backprop_pad_l <= PAD_DIM_UP && bpPadRight <= PAD_DIM_UP &&
+        runInfoV2.backprop_pad_u <= PAD_DIM_UP && runInfoV2.backprop_pad_d <= PAD_DIM_UP &&
+        runInfoV2.dilation_h <= PAD_DIM_UP && runInfoV2.dilation_w <= PAD_DIM_UP) {
+        return false;
+    }
+
+    OP_LOGD(context, "need tiling hw wk");
+    return true;
+}
+
 static bool CalRealG(gert::TilingContext *context, Conv3dBpInputV2RunInfo &runInfoV2, OtherParams& otherParams) {
   // calc real g and check shape
   int32_t dy_c_ori = otherParams.a_shape.c / runInfoV2.groups;
@@ -973,7 +1029,7 @@ static bool CalRealG(gert::TilingContext *context, Conv3dBpInputV2RunInfo &runIn
     bool nonExtendedDtype = (filter_desc->GetDataType() == ge::DT_FLOAT8_E4M3FN || filter_desc->GetDataType() == ge::DT_HIFLOAT8 ||
       filter_desc->GetDataType() == ge::DT_INT8) || (out_backprop_desc->GetDataType() == ge::DT_FLOAT8_E4M3FN ||
       out_backprop_desc->GetDataType() == ge::DT_HIFLOAT8 || out_backprop_desc->GetDataType() == ge::DT_INT8);
-    if (disableGroupEnlarge || nonExtendedDtype) {
+    if (disableGroupEnlarge || nonExtendedDtype || IsNeedTilingHkWk(context, runInfoV2, otherParams)) {
       otherParams.multiple_extend = 1;
       runInfoV2.real_g = runInfoV2.groups;
       otherParams.ci1g = Ops::Base::CeilDiv(otherParams.b_shape.c, static_cast<int64_t>(kBlockSize));
@@ -1399,8 +1455,8 @@ bool Conv3DBackpropInputParseFunc(gert::TilingContext *context, optiling::OpType
                 OP_LOGE(context, "failed to get input output format"), return false);
     OP_CHECK_IF(!CalGroups(context, otherParams, runInfoV2), OP_LOGE(op_name, "Calc groups failed."), return false);
     OP_CHECK_IF(!CalPads(context, runInfoV2, opType, otherParams), OP_LOGE(op_name, "Calc pads failed."), return false);
-    OP_CHECK_IF(!CalRealG(context, runInfoV2, otherParams), OP_LOGE(op_name, "Calc real_g failed."), return false);
     OP_CHECK_IF(!CalModify(context, runInfoV2, otherParams), OP_LOGE(op_name, "Modify pad failed."), return false);
+    OP_CHECK_IF(!CalRealG(context, runInfoV2, otherParams), OP_LOGE(op_name, "Calc real_g failed."), return false);
     OP_CHECK_IF(!CalScale(context, runInfoV2, otherParams), OP_LOGE(op_name, "Sacle size too big, not support."), return false);
     return true;
 }
