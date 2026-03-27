@@ -28,6 +28,7 @@
 #include "platform/platform_infos_def.h"
 #include "../../../../op_host/arch35/reverse_sequence_tiling.h"
 #include "../../../../op_host/arch35/reverse_sequence_simt_tiling.h"
+#include "../../../../op_host/arch35/reverse_sequence_bs_tiling.h"
 
 using namespace std;
 using namespace ge;
