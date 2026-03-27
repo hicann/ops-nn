@@ -19,19 +19,19 @@
 - 接口功能：返回给定张量的矩阵范数或者向量范数。
 
 - 计算公式：支持1/2范数、无穷范数以及其他`p`为float类型的范数计算。
-  - 1-范数：  
+  - p = 1范数：  
   
     $$
     \Vert x \Vert = \sum_{i=1}^{N}{\vert x_i \vert}
     $$
 
-  - 2-范数（默认值）：  
+  - p = 2范数（默认值）：  
 
     $$
     \Vert x \Vert_2 = (\sum_{i=1}^{N}{\vert x_i \vert^2})^{\frac{1}{2}}
     $$
 
-  - 无穷范数：
+  - p = 无穷范数：
   
     $$
     \Vert x \Vert_\infty = \max\limits_{i}{\vert x_i \vert}
@@ -41,7 +41,7 @@
     \Vert x \Vert_{-\infty} = \min\limits_{i}{\vert x_i \vert}
     $$
 
-  - p范数：
+  - p = 其他范数：
   
     $$
     \Vert x \Vert_p = (\sum_{i=1}^{N}{\vert x_i \vert^p})^{\frac{1}{p}}
@@ -110,7 +110,7 @@ aclnnStatus aclnnNorm(
       <td>pScalar（aclScalar*）</td>
       <td>输入</td>
       <td>表示范数的类型，公式中的p。</td>
-      <td>-</td>
+      <td>取值支持0/1/2/3范数、无穷范数。</td>
       <td>FLOAT32</td>
       <td>-</td>
       <td>-</td>
@@ -201,7 +201,7 @@ aclnnStatus aclnnNorm(
       <td>self的数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>dim和keepdim的数据类型和数据格式不符合接口入参要求。</td>
+      <td>dim和keepdim的数据类型不符合接口入参要求。</td>
     </tr>
     <tr>
       <td>dim超过[-N, N-1] (N表示self的维度)。</td>

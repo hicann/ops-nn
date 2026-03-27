@@ -84,7 +84,7 @@ aclnnStatus aclnnLinalgVectorNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>ord（aclTensor*）</td>
+      <td>ord（aclScalar*）</td>
       <td>输入</td>
       <td>表示范数的类型。对应公式中的ord。</td>
       <td>-</td>
@@ -117,7 +117,7 @@ aclnnStatus aclnnLinalgVectorNorm(
       <td>dtype（aclDataType）</td>
       <td>输入</td>
       <td>指定self计算时的数据类型。需要与out的dtype一致。</td>
-      <td>在计算前将self转换成dtype指定类型进行计算。</td>
+      <td>在计算前将self转换成dtype指定类型进行计算。dtype需要与self数据类型满足约束：<ul><li>当self数据类型为FLOAT32时，dtype只能为FLOAT32。</li><li>self数据类型为FLOAT16时，dtype可以为FLOAT或FLOAT16。</li><li>self数据类型为BFLOAT16时，dtype可以为FLOAT或BFLOAT16。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>-</td>
       <td>-</td>
@@ -155,6 +155,9 @@ aclnnStatus aclnnLinalgVectorNorm(
     </tr>
   </tbody>
   </table>
+
+  - <term>Ascend 950PR/Ascend 950DT</term>：ord参数数值额外支持2147483647.0、-2147483648.0、Inf、-Inf。
+  - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：数据类型不支持BFLOAT16。
 
 - **返回值**：
 
