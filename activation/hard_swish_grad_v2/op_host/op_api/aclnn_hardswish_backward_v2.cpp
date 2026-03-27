@@ -17,11 +17,11 @@
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/op_api_def.h"
-#include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
+#include "opdev/common_types.h"
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
@@ -47,10 +47,10 @@ extern "C" {
 
  namespace {
     // 根据API定义，需要列出所能支持的所有dtype
-    static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-        op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
     static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
         op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+    static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
+        op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
 
     static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* out)
     {

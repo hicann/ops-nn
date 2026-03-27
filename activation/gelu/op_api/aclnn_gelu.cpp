@@ -102,11 +102,11 @@ aclnnStatus aclnnGeluGetWorkspaceSize(const aclTensor *self, aclTensor *out,
   }
 
   // self如果非连续，需要转连续
-  auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
-  CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  auto selfIsContiguous = l0op::Contiguous(self, uniqueExecutor.get());
+  CHECK_RET(selfIsContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
   // 调用l0算子Gelu进行计算
-  auto geluResult = l0op::Gelu(selfContiguous, uniqueExecutor.get());
+  auto geluResult = l0op::Gelu(selfIsContiguous, uniqueExecutor.get());
   CHECK_RET(geluResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
   // 如果出参out是非连续Tensor，需要把计算完的连续Tensor转非连续

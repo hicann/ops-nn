@@ -31,7 +31,7 @@ extern "C" {
 static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+    op::DataType::DT_BF16, op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
 
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportList()
 {
@@ -131,19 +131,19 @@ static aclnnStatus CheckParams(
 
 static std::tuple<const aclTensor *, const aclTensor *> BroadcastTo(const aclTensor *gradOutput, const aclTensor *self,
                                                                     aclOpExecutor *executor) {
-    Shape broadcastShape;
-    if (!BroadcastInferShape(self->GetViewShape(), gradOutput->GetViewShape(), broadcastShape)) {
+    Shape shapeBroadcast;
+    if (!BroadcastInferShape(self->GetViewShape(), gradOutput->GetViewShape(), shapeBroadcast)) {
         return std::tuple(nullptr, nullptr);
     }
-    FVector<int64_t, op::MAX_DIM_NUM> broadcastDims = ToShapeVector(broadcastShape);
+    FVector<int64_t, op::MAX_DIM_NUM> broadcastDims = ToShapeVector(shapeBroadcast);
     auto broadcastShapeArray = executor->AllocIntArray(broadcastDims.data(), broadcastDims.size());
     CHECK_RET(broadcastShapeArray != nullptr, std::tuple(nullptr, nullptr));
 
-    self = l0op::BroadcastTo(self, broadcastShapeArray, executor);
-    CHECK_RET(self != nullptr, std::tuple(nullptr, nullptr));
-
     gradOutput = l0op::BroadcastTo(gradOutput, broadcastShapeArray, executor);
     CHECK_RET(gradOutput != nullptr, std::tuple(nullptr, nullptr));
+
+    self = l0op::BroadcastTo(self, broadcastShapeArray, executor);
+    CHECK_RET(self != nullptr, std::tuple(nullptr, nullptr));
 
     return std::tie(gradOutput, self);
 }
@@ -178,13 +178,13 @@ aclnnStatus aclnnHardshrinkBackwardGetWorkspaceSize(
     op::Shape resultShape;
     CHECK_RET(CheckShapeBroadcast(gradOutput, self, gradInput, resultShape), ACLNN_ERR_PARAM_INVALID);
 
-    // 固定写法，将输入gradOutput转换成连续的tensor
-    auto gradOutputContiguous = l0op::Contiguous(gradOutput, uniqueExecutor.get());
-    CHECK_RET(gradOutputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
     // 固定写法，将输入self转换成连续的tensor
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 固定写法，将输入gradOutput转换成连续的tensor
+    auto gradOutputContiguous = l0op::Contiguous(gradOutput, uniqueExecutor.get());
+    CHECK_RET(gradOutputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 如果是viewShape不同，则需要broadCast成shape相同的
     if (gradOutput->GetViewShape() != self->GetViewShape()) {

@@ -10,15 +10,15 @@
 
 #include "aclnn_celu.h"
 #include "celu_v2.h"
-#include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
+#include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
 #include "opdev/op_dfx.h"
-#include "opdev/op_executor.h"
 #include "opdev/op_log.h"
+#include "opdev/op_executor.h"
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 

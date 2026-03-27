@@ -45,13 +45,13 @@ static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const
     OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
     const auto& gradInputShape = gradInput->GetViewShape();
 
-    op::Shape broadcastShape;
-    OP_CHECK_BROADCAST_AND_INFER_SHAPE(gradOutput, self, broadcastShape, return false);
+    op::Shape shapeBroadcast;
+    OP_CHECK_BROADCAST_AND_INFER_SHAPE(gradOutput, self, shapeBroadcast, return false);
 
-    if (broadcastShape != gradInputShape) {
+    if (shapeBroadcast != gradInputShape) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "Shape of out should be %s, but current is %s.",
-            op::ToString(broadcastShape).GetString(), op::ToString(gradInputShape).GetString());
+            op::ToString(shapeBroadcast).GetString(), op::ToString(gradInputShape).GetString());
         return false;
     }
     return true;
@@ -68,6 +68,17 @@ static bool CheckPromoteType(const aclTensor* gradOutput, const aclTensor* self,
 }
 } // namespace
 
+// getBroadcastShape for l0op::BroadcastTo
+static aclIntArray* GetShape(const op::Shape broadcastShape, aclOpExecutor* executor)
+{
+    int64_t tensorSize = (int64_t)(broadcastShape.GetDimNum());
+    std::vector<int64_t> tensorShape(tensorSize);
+    for (int i = 0; i < tensorSize; i++) {
+        tensorShape[i] = broadcastShape[i];
+    }
+    return executor->AllocIntArray(tensorShape.data(), tensorSize);
+}
+
 static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput)
 {
     // 1. 检查参数是否为空指针
@@ -82,18 +93,7 @@ static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* sel
     return ACLNN_SUCCESS;
 }
 
-// getBroadcastShape for l0op::BroadcastTo
-static aclIntArray* GetShape(const op::Shape broadcastShape, aclOpExecutor* executor)
-{
-    int64_t tensorSize = (int64_t)(broadcastShape.GetDimNum());
-    std::vector<int64_t> tensorShape(tensorSize);
-    for (int i = 0; i < tensorSize; i++) {
-        tensorShape[i] = broadcastShape[i];
-    }
-    return executor->AllocIntArray(tensorShape.data(), tensorSize);
-}
-
-// 如果gradOutput或者self的shape与braodcast后的shape不一致，在进行反向计算前，先进行broadcasto操作。
+// 如果gradOutput或者self的shape与broadcast后的shape不一致，在进行反向计算前，先进行broadcasto操作。
 static const aclTensor* BroadcastTensor(const aclTensor* self, const op::Shape broadcastShape, aclOpExecutor* executor)
 {
     // 如果self的shape与broadcast的不一致，进行BroadcastTo

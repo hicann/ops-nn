@@ -109,22 +109,22 @@ static aclnnStatus CheckParams(
 }
 
 // getBroadcastShape for l0op::BroadcastTo
-static aclIntArray* GetShape(const op::Shape broadcastShape, aclOpExecutor* executor)
+static aclIntArray* GetShape(const op::Shape shapeBroadcast, aclOpExecutor* executor)
 {
-    int64_t tensorSize = (int64_t)(broadcastShape.GetDimNum());
+    int64_t tensorSize = (int64_t)(shapeBroadcast.GetDimNum());
     std::vector<int64_t> tensorShape(tensorSize);
     for (int i = 0; i < tensorSize; i++) {
-        tensorShape[i] = broadcastShape[i];
+        tensorShape[i] = shapeBroadcast[i];
     }
     return executor->AllocIntArray(tensorShape.data(), tensorSize);
 }
 
 // 如果gradOutput或者self的shape与braodcast后的shape不一致，在进行反向计算前，先进行broadcasto操作。
-static const aclTensor* BroadcastTensor(const aclTensor* self, const op::Shape broadcastShape, aclOpExecutor* executor)
+static const aclTensor* BroadcastTensor(const aclTensor* self, const op::Shape shapeBroadcast, aclOpExecutor* executor)
 {
     // 如果self的shape与broadcast的不一致，进行BroadcastTo
-    if (self->GetViewShape() != broadcastShape) {
-        auto broadcastShapeIntArray = GetShape(broadcastShape, executor);
+    if (self->GetViewShape() != shapeBroadcast) {
+        auto broadcastShapeIntArray = GetShape(shapeBroadcast, executor);
         if (broadcastShapeIntArray != nullptr) {
             return l0op::BroadcastTo(self, broadcastShapeIntArray, executor);
         }

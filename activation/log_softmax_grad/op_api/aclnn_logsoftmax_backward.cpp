@@ -10,19 +10,19 @@
 
 #include "aclnn_logsoftmax_backward.h"
 #include "logsoftmax_grad.h"
+#include "aclnn/aclnn_base.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
-#include "aclnn/aclnn_base.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/shape_utils.h"
 #include "opdev/format_utils.h"
+#include "opdev/tensor_view_utils.h"
+#include "opdev/platform.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
-#include "opdev/tensor_view_utils.h"
-#include "opdev/platform.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -30,8 +30,8 @@ extern "C" {
 #endif
 
 static bool CheckNotNull(const aclTensor *gradOutput, const aclTensor *output, const aclTensor *out) {
-    OP_CHECK_NULL(gradOutput, return false);
     OP_CHECK_NULL(output, return false);
+    OP_CHECK_NULL(gradOutput, return false);
     OP_CHECK_NULL(out, return false);
     return true;
 }
@@ -53,8 +53,8 @@ static bool CheckDtypeValid(const aclTensor *gradOutput, const aclTensor *output
         "aclnnLogSoftmaxBackward is not support bfloat16 in current socversion.");
         return false;
     }
-    OP_CHECK_DTYPE_NOT_SUPPORT(gradOutput, dtype_support_list, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(output, dtype_support_list, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(gradOutput, dtype_support_list, return false);
     OP_CHECK_DTYPE_NOT_SAME(gradOutput, output, return false);
     return true;
 }
@@ -62,12 +62,12 @@ static bool CheckDtypeValid(const aclTensor *gradOutput, const aclTensor *output
 static bool CheckDim(const aclTensor *self, int64_t dim) {
     // 检查指定dim是否在self的维度范围内
     auto selfViewShape = self->GetViewShape();
-    auto selfDimNum = static_cast<int64_t>(selfViewShape.GetDimNum());
-    if (selfDimNum == 0) {
-        selfDimNum++;
+    auto selfDimNumber = static_cast<int64_t>(selfViewShape.GetDimNum());
+    if (selfDimNumber == 0) {
+        selfDimNumber++;
     }
-    if (dim >= selfDimNum || dim < -selfDimNum) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "provided dim %ld not in the range of input size %ld.", dim, selfDimNum);
+    if (dim >= selfDimNumber || dim < -selfDimNumber) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "provided dim %ld not in the range of input size %ld.", dim, selfDimNumber);
         return false;
     }
     return true;
@@ -94,11 +94,11 @@ static aclnnStatus CheckParams(const aclTensor *gradOutput, const aclTensor *out
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(CheckDtypeValid(gradOutput, output), ACLNN_ERR_PARAM_INVALID);
 
-    // 3. 检查指定dim是否在gradOutput的维度范围内
-    CHECK_RET(CheckDim(gradOutput, dim), ACLNN_ERR_PARAM_INVALID);
-
-    // 4. 检查输入shape和输出shape是否一致PReluGrad
+    // 3. 检查输入shape和输出shape是否一致PReluGrad
     CHECK_RET(CheckShape(gradOutput, output, out), ACLNN_ERR_PARAM_INVALID);
+
+    // 4. 检查指定dim是否在gradOutput的维度范围内
+    CHECK_RET(CheckDim(gradOutput, dim), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
