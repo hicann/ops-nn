@@ -39,7 +39,7 @@ bool AdaptiveMaxPool3dBigKernelTiling::IsCapable()
 
 uint64_t AdaptiveMaxPool3dBigKernelTiling::GetTilingKey() const
 {
-    return GET_TPL_TILING_KEY(TPL_MODE_1, TPL_DYTPE_0, TPL_MULTI_MODE_0, TPL_DATA_FORMAT_MODE_0);
+    return GET_TPL_TILING_KEY(TPL_MODE_1, TPL_DTYPE_0, TPL_MULTI_MODE_0, TPL_DATA_FORMAT_MODE_0);
 }
 
 void AdaptiveMaxPool3dBigKernelTiling::DoBlockTiling()

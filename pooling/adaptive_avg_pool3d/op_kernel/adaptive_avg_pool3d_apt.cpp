@@ -16,6 +16,7 @@
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "../adaptive_pool3d_common/arch35/adaptive_avg_pool3d_simt.h"
+#include "../adaptive_pool3d_common/arch35/adaptive_avg_pool3d_parall_pool.h"
 #include "../adaptive_pool3d_common/arch35/adaptive_pool3d_tiling_struct.h"
 
 template <uint64_t TEMPLATE_MODE, uint64_t DYTPE_MODE, uint64_t MULTI_MODE, uint64_t FORMAT_MODE>
@@ -27,19 +28,23 @@ __global__ __aicore__ void adaptive_avg_pool3d(
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(AdaptivePool3DTiling::AdaptivePool3dBigKernelTilingData);
     if constexpr (TEMPLATE_MODE == TPL_MODE_2 && DYTPE_MODE == TPL_INT32_UINT32 && MULTI_MODE == TPL_MULTI_MODE_0) {
-        REGISTER_TILING_FOR_TILINGKEY(
-            "TEMPLATE_MODE == TPL_MODE_2 && DYTPE_MODE == TPL_INT32_UINT32 && MULTI_MODE == TPL_MULTI_MODE_0", 
-            AdaptivePool3DTiling::AdaptivePool3DSimtTilingData);
         GET_TILING_DATA_WITH_STRUCT(AdaptivePool3DTiling::AdaptivePool3DSimtTilingData, tilingData, tiling);
         AdaptivePool3DWithSimt::AdaptiveAvgPool3DSimt<DTYPE_X, uint32_t, FORMAT_MODE> op(&pipeBase, &tilingData);
         op.Init(x, y);
         op.Process();
-    } else if constexpr (TEMPLATE_MODE == TPL_MODE_2 && DYTPE_MODE == TPL_INT64_UINT64 && MULTI_MODE == TPL_MULTI_MODE_0 ){
-        REGISTER_TILING_FOR_TILINGKEY(
-            "TEMPLATE_MODE == TPL_MODE_2 && DYTPE_MODE == TPL_INT64_UINT64 && MULTI_MODE == TPL_MULTI_MODE_0",
-            AdaptivePool3DTiling::AdaptivePool3DSimtTilingData);
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_2 && DYTPE_MODE == TPL_INT64_UINT64 && MULTI_MODE == TPL_MULTI_MODE_0) {
         GET_TILING_DATA_WITH_STRUCT(AdaptivePool3DTiling::AdaptivePool3DSimtTilingData, tilingData, tiling);
         AdaptivePool3DWithSimt::AdaptiveAvgPool3DSimt<DTYPE_X, uint64_t, FORMAT_MODE> op(&pipeBase, &tilingData);
+        op.Init(x, y);
+        op.Process();
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_0 && DYTPE_MODE == TPL_INT32_UINT32 && MULTI_MODE == TPL_MULTI_MODE_0) {
+        GET_TILING_DATA_WITH_STRUCT(AdaptivePool3DTiling::AdaptivePool3dParaKernelTilingData, tilingData, tiling);
+        AdaptivePool3d::AdaptiveAvgPool3dParaPool<DTYPE_X, int32_t> op(tilingData, pipeBase);
+        op.Init(x, y);
+        op.Process();
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_0 && DYTPE_MODE == TPL_INT64_UINT64 && MULTI_MODE == TPL_MULTI_MODE_0) {
+        GET_TILING_DATA_WITH_STRUCT(AdaptivePool3DTiling::AdaptivePool3dParaKernelTilingData, tilingData, tiling);
+        AdaptivePool3d::AdaptiveAvgPool3dParaPool<DTYPE_X, int64_t> op(tilingData, pipeBase);
         op.Init(x, y);
         op.Process();
     }

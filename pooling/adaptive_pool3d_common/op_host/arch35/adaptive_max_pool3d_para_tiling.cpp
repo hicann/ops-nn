@@ -231,7 +231,7 @@ ge::graphStatus AdaptiveMaxPool3dParaPoolTiling::DoOpTiling()
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         SearchOuter() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "AdaptiveMaxPool3dParaPoolTiling search ubfactor failed"),
+        OP_LOGE(context_->GetNodeName(), "AdaptiveMaxPool3dParaPoolTiling search outer failed"),
         return ge::GRAPH_FAILED);
 
     CalUbBlockFactor();
@@ -304,7 +304,7 @@ void AdaptiveMaxPool3dParaPoolTiling::PrintTilingData() const
 uint64_t AdaptiveMaxPool3dParaPoolTiling::GetTilingKey() const
 {
     OP_LOGD(context_->GetNodeName(), "AdaptiveMaxPool3dParaPoolTiling GetTilingKey start.");
-    return GET_TPL_TILING_KEY(TPL_MODE_0, TPL_DYTPE_0, TPL_MULTI_MODE_0, TPL_DATA_FORMAT_MODE_0);
+    return GET_TPL_TILING_KEY(TPL_MODE_0, TPL_DTYPE_0, TPL_MULTI_MODE_0, TPL_DATA_FORMAT_MODE_0);
 }
 
 ge::graphStatus AdaptiveMaxPool3dParaPoolTiling::PostTiling()
