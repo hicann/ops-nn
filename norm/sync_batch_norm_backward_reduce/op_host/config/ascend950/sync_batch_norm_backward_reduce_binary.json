@@ -1,0 +1,206 @@
+{
+    "op_type": "SyncBatchNormBackwardReduce",
+    "op_list": [
+      {
+        "bin_filename": "SyncBatchNormBackwardReduce_float16_case",
+        "inputs": [
+          {
+            "name": "sum_dy",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "sum_dy_dx_pad",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "mean",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "invert_std",
+            "index": 3,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "sum_dy_xmu",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "y",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ]
+      },
+      {
+        "bin_filename": "SyncBatchNormBackwardReduce_float32_case",
+        "inputs": [
+          {
+            "name": "sum_dy",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "sum_dy_dx_pad",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "mean",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "invert_std",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "sum_dy_xmu",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "y",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ]
+      },
+      {
+        "bin_filename": "SyncBatchNormBackwardReduce_bfloat16_case",
+        "inputs": [
+          {
+            "name": "sum_dy",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "sum_dy_dx_pad",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "mean",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "invert_std",
+            "index": 3,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "sum_dy_xmu",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "y",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ]
+      }
+    ]
+  }

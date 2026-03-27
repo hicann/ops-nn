@@ -18,7 +18,7 @@
 #include "level0/reduce_sum_op.h"
 #include "aclnn_kernels/contiguous.h"
 #include "level0/reduce_mean_with_count.h"
-#include "sync_bn_training_update.h"
+#include "norm/sync_bn_training_update/op_api/sync_bn_training_update.h"
 #include "sync_batch_norm_gather_stats_with_counts.h"
 #include "aclnn/aclnn_base.h"
 #include "op_api/op_api_def.h"

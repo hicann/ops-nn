@@ -1,0 +1,332 @@
+{
+    "op_type": "SyncBatchNormGatherStats",
+    "op_list": [
+      {
+        "bin_filename": "SyncBatchNormGatherStats_BFLOAT16",
+        "inputs": [
+          {
+            "name": "total_sum",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "total_square_sum",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "sample_count",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "mean",
+            "index": 3,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "variance",
+            "index": 4,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "batch_mean",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "batch_invstd",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "mean",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "variance",
+            "index": 3,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "momentum",
+            "dtype": "float",
+            "value": null
+          },            
+          {
+            "name": "eps",
+            "dtype": "float",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "SyncBatchNormGatherStats_float16",
+        "inputs": [
+          {
+            "name": "total_sum",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "total_square_sum",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "sample_count",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "mean",
+            "index": 3,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "variance",
+            "index": 4,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "batch_mean",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "batch_invstd",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "mean",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "variance",
+            "index": 3,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "momentum",
+            "dtype": "float",
+            "value": null
+          },            
+          {
+            "name": "eps",
+            "dtype": "float",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "SyncBatchNormGatherStats_float32",
+        "inputs": [
+          {
+            "name": "total_sum",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "total_square_sum",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "sample_count",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "mean",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "variance",
+            "index": 4,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "batch_mean",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "batch_invstd",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "mean",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "variance",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "momentum",
+            "dtype": "float",
+            "value": null
+          },            
+          {
+            "name": "eps",
+            "dtype": "float",
+            "value": null
+          }
+        ]
+      }
+    ]
+}

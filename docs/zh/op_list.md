@@ -2717,32 +2717,32 @@
   <tr>
     <td>norm</td>
     <td><a href="../../norm/sync_batch_norm_backward_elemt/README.md">sync_batch_norm_backward_elemt</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>SyncBatchNormBackwardElemt算子用于计算输入张量的元素级梯度，以便在反向传播过程中更新模型参数。</td>
   </tr>
   <tr>
     <td>norm</td>
     <td><a href="../../norm/sync_batch_norm_backward_reduce/README.md">sync_batch_norm_backward_reduce</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>SyncBatchNormBackwardReduce用于反向传播过程中计算BatchNorm操作的所需的权重梯度gradWeight和中间量sumDyXmu。</td>
   </tr>
   <tr>
     <td>norm</td>
     <td><a href="../../norm/sync_batch_norm_gather_stats/README.md">sync_batch_norm_gather_stats</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>SyncBatchNormGatherStats算子用于收集所有device的均值和方差，更新全局的均值和方差。</td>
   </tr>
   <tr>
     <td>norm</td>
@@ -2753,6 +2753,16 @@
     <td>✗</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
+    <td><a href="../../norm/sync_bn_training_update/README.md">sync_bn_training_update</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>SyncBNTrainingUpdate算子用于更新在BatchNormTraining过程中的全局的均值。</td>
   </tr>
   <tr>
     <td>optim</td>
