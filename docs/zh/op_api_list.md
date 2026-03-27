@@ -98,6 +98,7 @@
 | [aclnnDequantBias](../../quant/dequant_bias/docs/aclnnDequantBias.md) | 对输入x反量化操作，将输入的int32的数据转化为FLOAT16/BFLOAT16输出。 | 默认确定性实现 |   |
 | [aclnnDequantSwigluQuant](../../quant/dequant_swiglu_quant/docs/aclnnDequantSwigluQuant.md) | 在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnDequantSwigluQuantV2](../../quant/dequant_swiglu_quant/docs/aclnnDequantSwigluQuantV2.md) | 在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。 | 默认确定性实现 |   |
+| [aclnnSwigluMxQuant](../../quant/swiglu_mx_quant/docs/aclnnSwigluMxQuant.md) | 在Swish门控线性单元激活函数前后添加DynamicMxQuant操作，实现x的SwigluMxQuant计算。 | 默认确定性实现 |   |
 | [aclnnGroupedDynamicMxQuant](../../quant/grouped_dynamic_mx_quant/docs/aclnnGroupedDynamicMxQuant.md) | 根据传入的分组索引的起始值，对传入的数据进行分组的float8的动态量化。 | - |  |
 | [aclnnDynamicDualLevelMxQuant](../../quant/dynamic_dual_level_mx_quant/docs/aclnnDynamicDualLevelMxQuant.md) | 通过给定的level0BlockSize和level1BlockSize将输入进行两次划分，以数据块为粒度，进行目的数据类型为FLOAT4类的MX二级量化。 | - |   |
 | [aclnnGroupedDynamicBlockQuant](../../quant/grouped_dynamic_block_quant/docs/aclnnGroupedDynamicBlockQuant.md) | 根据传入的分组索引的起始值对各个group以基本块的粒度进行量化，并输出量化参数scale。 | - |   |
