@@ -87,8 +87,8 @@ public:
             repeatTime = self_->ctx.currentHoL0;
         }
 
-        LoadDataRepeatParam repeatParams = {repeatStride, repeatTime, repeatMode, dstStride};
-        SetLoadDataRepeat(repeatParams);
+        LoadDataRepeatParamWithStride repeatParams = {repeatStride, repeatTime, repeatMode, dstStride};
+        SetLoadDataRepeatWithStride(repeatParams);
     }
 
     __aicore__ inline void LoadAL0(bool isFirst = true)
