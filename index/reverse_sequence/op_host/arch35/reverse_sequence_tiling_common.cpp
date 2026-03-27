@@ -32,6 +32,7 @@ static constexpr int64_t Y_INDEX = 0;
 static constexpr int64_t ONE_DIM = 1;
 static constexpr int64_t TWO_DIM = 2;
 static constexpr int64_t THREE_DIM = 3;
+static constexpr int64_t FOUR_DIM = 4;
 static constexpr int64_t TYPE_SB = 0;
 static constexpr int64_t TYPE_BS = 1;
 static constexpr int64_t TYPE_BSA = 2;
@@ -41,6 +42,7 @@ static constexpr int64_t TYPE_ASB = 5;
 static constexpr int64_t TYPE_BAS = 6;
 static constexpr int64_t TYPE_SAB = 7;
 static constexpr int64_t TYPE_OTHER = 8;
+static constexpr int64_t TYPE_A1SBA = 9;
 
 static const std::set<ge::DataType> X_DTYPES = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT8, ge::DT_UINT8,
                                                    ge::DT_INT16, ge::DT_UINT16, ge::DT_INT32, ge::DT_INT64,
@@ -105,6 +107,8 @@ static void ComputeCombineType(ReverseInputInfo& inputData)
         } else {
             inputData.comBineType = TYPE_SAB; // SAB
         }
+    } else if (inputData.comBineDims == FOUR_DIM && inputData.batchAxis == inputData.seqAxis + 1 && inputData.seqAxis == ONE_DIM) {
+        inputData.comBineType = TYPE_A1SBA; // A1SBA
     } else {
         inputData.comBineType = TYPE_OTHER;
     }
