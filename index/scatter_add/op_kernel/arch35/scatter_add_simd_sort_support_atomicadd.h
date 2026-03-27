@@ -299,7 +299,7 @@ __aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesI
 
     SetAtomicAdd<T>();
     for (uint32_t i = 0; i < uniqueIdNum; i++) {
-        uint64_t dstIndices = indicesSortedLocal(tmpIndex);       // 获取每个可能重复的indices的第一个的值
+        CAST_T dstIndices = indicesSortedLocal(tmpIndex);       // 获取每个可能重复的indices的第一个的值
         uint64_t offset = dstIndices * tilingData_.varShape[1] + ubOffset;  // 通过indices值获取对应var的偏移
         tmpIndex = tmpIndex + uniqueIdCountLocal(i);
 

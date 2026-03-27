@@ -211,7 +211,7 @@ __aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::ProcessSing
     WaitFlag<HardEvent::MTE2_S>(sWaitMTEEventID);
     for (int64_t i = 0; i < indicesLen; ++i) {
         U indicesValue = indicesLocal.GetValue(i);
-        if (static_cast<int64_t>(indicesValue) >= tilingData_.varShape[0]) {
+        if (indicesValue < 0 || indicesValue >= tilingData_.varShape[0]) {
             continue;
         }
         int64_t updatesOffset = indicesOffset * tilingData_.varShape[1] + i * tilingData_.varShape[1];

@@ -44,6 +44,7 @@ constexpr uint64_t GM_ALIGN = 512;
 constexpr uint64_t MIN_SIZE_SORT_INDICES_128 = 128;
 constexpr uint64_t INT32_TYPE_SIZE = 4;
 constexpr uint64_t VAR_TAIL_DIM_SIZE = 128;
+constexpr uint64_t VAR_TAIL_DIM_SIZE_SORT = 512;
 constexpr uint32_t TILING_KEY_PLACE_HOLD = 3;
 constexpr size_t VAR_SHAPE_LENGTH = 2;
 constexpr uint32_t SORT_UTIL_SIZE = 20;
@@ -195,6 +196,7 @@ ge::graphStatus ScatterAddTiling::GetShapeAttrsInfo()
     OP_CHECK_IF(CheckInputDtype() != ge::GRAPH_SUCCESS,
                     OP_LOGE(opName, "input dtype check failed."), return ge::GRAPH_FAILED);
 
+    isSimt_ = varShape_[1] * varTypeSize_ < VAR_TAIL_DIM_SIZE;
     bool supportAtomicAdd =
         isSimt_ ? SIMT_ATOMIC_ADD_NOT_SUPPORT_DTYPE.find(varDtype_) == SIMT_ATOMIC_ADD_NOT_SUPPORT_DTYPE.end()
                 : SIMD_ATOMIC_ADD_NOT_SUPPORT_DTYPE.find(varDtype_) == SIMD_ATOMIC_ADD_NOT_SUPPORT_DTYPE.end();
@@ -202,6 +204,9 @@ ge::graphStatus ScatterAddTiling::GetShapeAttrsInfo()
         isSort_ = indicesNum_ > varShape_[0] * TEN ? 1 : 0;
         if (varShape_[1] >= VAR_LASTDIM_10W && indicesNum_ > MIN_SIZE_SORT_INDICES_128) {
             isSort_ = indicesNum_ > varShape_[0] * THREE ? 1 : 0;
+        }
+        if (isSort_ == 1 && varDtype_ != ge::DataType::DT_INT8) {           // 排序场景尾轴小于512B走simt性能更好，simt AtomicAdd不支持int8
+            isSimt_ = varShape_[1] * varTypeSize_ < VAR_TAIL_DIM_SIZE_SORT;
         }
     }
 
@@ -236,7 +241,6 @@ ge::graphStatus ScatterAddTiling::CheckInputDtype()
     varTypeSize_ = ge::GetSizeByDataType(varDtype_);
     OP_CHECK_IF(varTypeSize_ <= 0, OP_LOGE(opName, "get dataType size fail."),
                     return ge::GRAPH_FAILED);
-    isSimt_ = varShape_[1] * varTypeSize_ < VAR_TAIL_DIM_SIZE;
     auto updatePtr = context_->GetInputDesc(UPDATES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, updatePtr);
     auto updatesType = updatePtr->GetDataType();

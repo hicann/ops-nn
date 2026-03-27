@@ -96,7 +96,7 @@ __aicore__ inline void ScatterAddSIMDSupportAtomicAdd<T, U, updatesIsScalar, sca
                 LocalTensor<T> updatesLocal = updatesQueue_.DeQue<T>();
                 SetAtomicAdd<T>();
                 for (uint64_t i = 0; i < rows; i++) {
-                    uint64_t dstIdx = indicesLocal.GetValue(i);      // 找到当次循环对应的indices内的值，即var的索引
+                    U dstIdx = indicesLocal.GetValue(i);      // 找到当次循环对应的indices内的值，即var的索引
                     if (dstIdx < 0 || dstIdx >= tilingData_.varShape[0]) {
                         continue;
                     }
