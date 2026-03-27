@@ -21,7 +21,7 @@
 #include "kernel_operator_data_copy_intf.h"
 #include "kernel_operator_mm_intf.h"
 #include "kernel_operator_fixpipe_intf.h"
-#include "kernel_utils.h"
+#include "kernel_common.h"
 
 using namespace AscendC;
 using namespace conv;

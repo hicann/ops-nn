@@ -16,7 +16,7 @@
 #ifndef CONV3D_INTF_H
 #define CONV3D_INTF_H
 
-#include "kernel_utils.h"
+#include "kernel_common.h"
 #include "conv3d_util.h"
 #include "conv3d_common_func.h"
 #include "../conv_common/conv_common_func.h"

@@ -21,7 +21,7 @@
 #include "conv3d_config.h"
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
-#include "kernel_utils.h"
+#include "kernel_common.h"
 
 namespace Conv3dFunc {
 

@@ -19,7 +19,7 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
-#include "kernel_utils.h"
+#include "kernel_common.h"
 #include "conv3d_util.h"
 #include "conv3d_config.h"
 #include "conv3d_common_func.h"
