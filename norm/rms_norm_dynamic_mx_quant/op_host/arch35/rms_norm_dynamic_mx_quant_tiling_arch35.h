@@ -31,10 +31,11 @@
 #include "op_common/op_host/util/platform_util.h"
 
 namespace optiling {
+
 using Ops::NN::Optiling::TilingBaseClass;
 using Ops::NN::Optiling::TilingRegistry;
-enum class RoundModeList
-{
+
+enum class RoundModeList {
     MODE_ROUND = 0,
     MODE_FLOOR = 1,
     MODE_CEIL = 2,
@@ -43,41 +44,39 @@ enum class RoundModeList
     MODE_HYBRID = 5,
     MODE_UNDEFINED = -1,
 };
+
 // ============== Constants ==============
+constexpr int64_t FP32_BYTES = 4;
+constexpr int64_t FP16_BYTES = 2;
 constexpr int64_t MX_BLOCK_SIZE = 32;
-constexpr int64_t Mx_BLOCK_NUM_PROC_ONCE = 8;
-constexpr int64_t NUM_ZERO = 0;
-constexpr int64_t NUM_ONE = 1;
-constexpr int64_t NUM_TWO = 2;
-constexpr int64_t NUM_THREE = 3;
-constexpr int64_t NUM_FOUR = 4;
-constexpr int64_t NUM_SIXTY_THREE = 63;
-constexpr int64_t BLOCK_SIZE = 32;
-constexpr int64_t B32_BLOCK_NUM = 8;
 constexpr int64_t DOUBLE_BUFFER = 2;
-constexpr int64_t RESERVED_UB_SIZE = 2048;
-constexpr int64_t FULL_LOAD_THRESHOLD = 4096;
-constexpr size_t MAX_DIM_NUM = 7;
-constexpr int64_t N_ALIGN32 = 32;
-constexpr int64_t N_ALIGN64 = 64;
-constexpr int64_t N_ALIGN128 = 128;
-constexpr int64_t BLOCK_PER_GROUP = 2;
-constexpr int64_t WORKSPACE_ALIGN_SIZE = 512;
-constexpr int64_t BYTES_OF_INPUT_TYPE = 2;
-constexpr int64_t MAX_BYTES_OF_OUTPUT_TYPE = 1;
-constexpr int64_t UINT16_BYTES_SIZE = 2;
-constexpr int64_t UINT8_BYTES_SIZE = 1;
-constexpr int64_t BLOCKALIGNRESERVE = 1024;
+constexpr int64_t MAX_DIM_NUM = 7;
+
 constexpr int64_t ULONG_BIT_LEN = 64;
+constexpr int64_t CONST_ZERO = 0;
+constexpr int64_t CONST_ONE = 1;
+constexpr int64_t CONST_TWO = 2;
+constexpr int64_t CONST_THREE = 3;
+constexpr int64_t CONST_FOUR = 4;
+constexpr int64_t CONST_FIVE = 5;
+constexpr int64_t CONST_SIX = 6;
+constexpr int64_t CONST_SEVEN = 7;
+constexpr int64_t CONST_EIGHT = 8;
+constexpr int64_t CONST_SIXTY_THREE = 63;
+
 // ============== Attr Default Values ==============
 constexpr float EPSILON_DEFAULT = 1e-6f;
-constexpr int64_t QUANT_ALG_DEFAULT = 0;
+constexpr int64_t SCALE_ALG_DEFAULT = 0;
 constexpr int64_t ROUND_MODE_DEFAULT = static_cast<int64_t>(RoundModeList::MODE_RINT);
 constexpr int64_t DST_TYPE_DEFAULT = 40; // DT_FLOAT4_E2M1
+
 // ============== Priority ==============
 constexpr int32_t TEMPLATE_FULL_LOAD_GENERAL_PRIORITY = 100;
+
 // ============== TilingKey ==============
 constexpr int64_t TILINGKEY_FULL_LOAD_GENERAL = 1000;
+constexpr int64_t TILING_KEY_FULL_LOAD_OPTIMIZE = 10000;
+
 // ============== Dtype Support ==============
 const std::set<ge::DataType> X_SUPPORT_DTYPE_SET = {ge::DT_FLOAT16, ge::DT_BF16};
 const std::set<ge::DataType> GAMMA_SUPPORT_DTYPE_SET = {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT};
@@ -87,41 +86,41 @@ const std::set<ge::DataType> Y_SUPPORT_DTYPE_FP4_SET = {ge::DT_FLOAT4_E2M1, ge::
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_FP8_SET = {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
 const std::set<ge::DataType> MXSCALE_SUPPORT_DTYPE_SET = {ge::DT_FLOAT8_E8M0};
 const std::set<ge::DataType> RSTD_SUPPORT_DTYPE_SET = {ge::DT_FLOAT};
+
 // ============== TilingData Definitions ==============
-BEGIN_TILING_DATA_DEF(RmsNormDynamicMxQuantFullLoadGeneralTilingData)
+BEGIN_TILING_DATA_DEF(RmsNormDynamicMxQuantFullLoadTilingData)
 TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);
 TILING_DATA_FIELD_DEF(int64_t, mTailCores);
 TILING_DATA_FIELD_DEF(int64_t, numM);
 TILING_DATA_FIELD_DEF(int64_t, numN);
 TILING_DATA_FIELD_DEF(int64_t, numNUbAligned);
-TILING_DATA_FIELD_DEF(int64_t, colFlodFactor);
+TILING_DATA_FIELD_DEF(int64_t, binAddFoldPoint);
 TILING_DATA_FIELD_DEF(int64_t, mPerCore);
 TILING_DATA_FIELD_DEF(int64_t, mUbFactor);
 TILING_DATA_FIELD_DEF(int64_t, mxBlockSize);
-TILING_DATA_FIELD_DEF(int64_t, totalNMxBlockAligned);
-TILING_DATA_FIELD_DEF(int64_t, totalNMxBlockNumAlignedTwo);
-TILING_DATA_FIELD_DEF(int64_t, totalNMxBlockNum);
+TILING_DATA_FIELD_DEF(int64_t, nMxblockAligned);
+TILING_DATA_FIELD_DEF(int64_t, nMxblockNumAlignedTwo);
+TILING_DATA_FIELD_DEF(int64_t, nMxblockNum);
 TILING_DATA_FIELD_DEF(int64_t, needPadN);
 TILING_DATA_FIELD_DEF(int64_t, needPadScale);
 TILING_DATA_FIELD_DEF(int64_t, scaleAlg);
+TILING_DATA_FIELD_DEF(int64_t, roundMode);
 TILING_DATA_FIELD_DEF(int64_t, hasInputBeta);
 TILING_DATA_FIELD_DEF(int64_t, hasOutputRstd);
 TILING_DATA_FIELD_DEF(float, epsilon);
 TILING_DATA_FIELD_DEF(float, avgFactor);
 END_TILING_DATA_DEF;
+
 // ============== Register TilingData ==============
-REGISTER_TILING_DATA_CLASS(RmsNormDynamicMxQuant, RmsNormDynamicMxQuantFullLoadGeneralTilingData);
+REGISTER_TILING_DATA_CLASS(RmsNormDynamicMxQuant, RmsNormDynamicMxQuantFullLoadTilingData);
+
 // ============== CompileInfo ==============
 struct RmsNormDynamicMxQuantCompileInfo {
     int64_t coreNum = 0;
     int64_t ubSize = 0;
 };
+
 // ============== Helper Functions ==============
-template <typename T>
-static inline uint64_t GetRemainder(uint64_t num, T div)
-{
-    return div == 0 ? div : num % div;
-}
 template <typename T>
 std::string Shape2String(const T& shape)
 {
@@ -136,10 +135,12 @@ std::string Shape2String(const T& shape)
     oss << "]";
     return oss.str();
 }
+
 // ============== Base Class ==============
 class RmsNormDynamicMxQuantTilingBase : virtual public TilingBaseClass {
 public:
-    explicit RmsNormDynamicMxQuantTilingBase(gert::TilingContext* context) : TilingBaseClass(context){}
+    explicit RmsNormDynamicMxQuantTilingBase(gert::TilingContext* context) : TilingBaseClass(context)
+    {}
     ~RmsNormDynamicMxQuantTilingBase() override = default;
 
     void Reset(gert::TilingContext* context) override
@@ -179,34 +180,44 @@ protected:
     ge::graphStatus GetAttr();
     ge::graphStatus CheckShape();
     RoundModeList GetRoundMode(const std::string& roundMode);
-    bool IsOptimizeCondition();
-    int64_t blockSize_ = {0};
-    int64_t vecRegSize_ = {0};
+    bool IsOptimizeCondition() const;
+    int64_t FindNearestPower2(const int64_t value);
+
+    ge::DataType xDtype_{ge::DT_UNDEFINED};
+    ge::DataType yDtype_{ge::DT_UNDEFINED};
+    ge::DataType gammaDtype_{ge::DT_UNDEFINED};
+    int64_t gammaDtypeSize_ = 0;
+
+    int64_t ubBlockSize_ = {0};
+    int64_t ubBlockFp32Num_ = {0};
+    int64_t ubBlockB16Num_ = {0};
     int64_t vlFp32_ = {0};
     int64_t totalCoreNum_{0};
     int64_t usedCoreNum_{0};
     int64_t ubSize_{0};
     uint32_t workspaceSize_{0};
+
     int64_t numM_{0};
     int64_t numN_{0};
-    float epsilon_{EPSILON_DEFAULT};
-    float avgFactor_{0};
+
     int64_t dstType_{DST_TYPE_DEFAULT};
-    int64_t scaleAlg_{QUANT_ALG_DEFAULT};
+    int64_t scaleAlg_{SCALE_ALG_DEFAULT};
     int64_t roundMode_{ROUND_MODE_DEFAULT};
+
     int64_t hasOutputRstd_{0};
     int64_t hasInputBeta_{0};
-    int64_t gammaDtypeSize_ = 0;
-    ge::DataType xDtype_{ge::DT_UNDEFINED};
-    ge::DataType yDtype_{ge::DT_UNDEFINED};
-    ge::DataType gammaDtype_{ge::DT_UNDEFINED};
+
+    float epsilon_{EPSILON_DEFAULT};
+    float avgFactor_{0};
 };
-// ============== FullLoad General Template ==============
-class RmsNormDynamicMxQuantFullLoadGeneralTiling : virtual public RmsNormDynamicMxQuantTilingBase {
+
+// ============== FullLoad Template ==============
+class RmsNormDynamicMxQuantFullLoadTiling : virtual public RmsNormDynamicMxQuantTilingBase {
 public:
-    explicit RmsNormDynamicMxQuantFullLoadGeneralTiling(gert::TilingContext* context)
-        : TilingBaseClass(context), RmsNormDynamicMxQuantTilingBase(context){}
-    ~RmsNormDynamicMxQuantFullLoadGeneralTiling() override = default;
+    explicit RmsNormDynamicMxQuantFullLoadTiling(gert::TilingContext* context)
+        : TilingBaseClass(context), RmsNormDynamicMxQuantTilingBase(context)
+    {}
+    ~RmsNormDynamicMxQuantFullLoadTiling() override = default;
 
     void Reset(gert::TilingContext* context) override
     {
@@ -220,10 +231,13 @@ protected:
     ge::graphStatus PostTiling() override;
 
 private:
-    RmsNormDynamicMxQuantFullLoadGeneralTilingData tilingData_;
+    RmsNormDynamicMxQuantFullLoadTilingData tilingData_;
 };
+
 // ============== Entry Functions ==============
 extern ge::graphStatus TilingForRmsNormDynamicMxQuant(gert::TilingContext* context);
 extern ge::graphStatus TilingPrepareForRmsNormDynamicMxQuant(gert::TilingParseContext* context);
+
 } // namespace optiling
+
 #endif // RMS_NORM_DYNAMIC_MX_QUANT_TILING_ARCH35_H

@@ -55,9 +55,12 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::GetPlatformInfo()
         ubSize_ = static_cast<int64_t>(ubSize);
         workspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
     }
-    blockSize_ = Ops::Base::GetUbBlockSize(context_);
-    vecRegSize_ = Ops::Base::GetVRegSize(context_);
-    vlFp32_ = vecRegSize_ / sizeof(float);
+
+    ubBlockSize_ = Ops::Base::GetUbBlockSize(context_);
+    vlFp32_ = Ops::Base::GetVRegSize(context_) / sizeof(float);
+
+    ubBlockFp32Num_ = ubBlockSize_ / FP32_BYTES;
+    ubBlockB16Num_ = ubBlockSize_ / FP16_BYTES;
 
     OP_CHECK_IF(
         totalCoreNum_ <= 0, OP_LOGE(context_->GetNodeName(), "Failed to get core num."), return ge::GRAPH_FAILED);
@@ -75,8 +78,10 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckDtype()
     auto inputXPtr = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputXPtr);
     xDtype_ = inputXPtr->GetDataType();
-    OP_CHECK_IF(X_SUPPORT_DTYPE_SET.count(xDtype_) == 0, 
-        OP_LOGE(context_->GetNodeName(),
+    OP_CHECK_IF(
+        X_SUPPORT_DTYPE_SET.count(xDtype_) == 0,
+        OP_LOGE(
+            context_->GetNodeName(),
             "Input x's data type[%s] only support FLOAT16 and BFLOAT16 currently, please check.",
             Ops::Base::ToString(static_cast<ge::DataType>(xDtype_)).c_str()),
         return ge::GRAPH_FAILED);
@@ -84,19 +89,21 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckDtype()
     auto inputGammaPtr = context_->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputGammaPtr);
     gammaDtype_ = inputGammaPtr->GetDataType();
-    OP_CHECK_IF(gammaDtype_ != xDtype_ && gammaDtype_ != ge::DT_FLOAT,
+    OP_CHECK_IF(
+        gammaDtype_ != xDtype_ && gammaDtype_ != ge::DT_FLOAT,
         OP_LOGE(
             context_->GetNodeName(), "Input gamma's data type[%s] should be same as x[%s] or FLOAT, please check.",
             Ops::Base::ToString(static_cast<ge::DataType>(gammaDtype_)).c_str(),
             Ops::Base::ToString(static_cast<ge::DataType>(xDtype_)).c_str()),
         return ge::GRAPH_FAILED);
 
-    gammaDtypeSize_ = gammaDtype_ == ge::DT_FLOAT ?  sizeof(float) : sizeof(float) / NUM_TWO;
+    gammaDtypeSize_ = gammaDtype_ == ge::DT_FLOAT ? FP32_BYTES : FP16_BYTES;
 
     auto inputBetaPtr = context_->GetOptionalInputDesc(2);
     if (inputBetaPtr != nullptr) {
         auto betaDtype = inputBetaPtr->GetDataType();
-        OP_CHECK_IF(betaDtype != gammaDtype_,
+        OP_CHECK_IF(
+            betaDtype != gammaDtype_,
             OP_LOGE(
                 context_->GetNodeName(), "Input beta's data type[%s] should be same as gamma[%s], please check.",
                 Ops::Base::ToString(static_cast<ge::DataType>(betaDtype)).c_str(),
@@ -109,7 +116,8 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckDtype()
     yDtype_ = outputYPtr->GetDataType();
     OP_CHECK_IF(
         Y_SUPPORT_DTYPE_SET.count(yDtype_) == 0,
-        OP_LOGE(context_->GetNodeName(),
+        OP_LOGE(
+            context_->GetNodeName(),
             "Output y's data type[%s] only support FLOAT4_E2M1/FLOAT4_E1M2/FLOAT8_E4M3FN/FLOAT8_E5M2 currently, please "
             "check.",
             Ops::Base::ToString(static_cast<ge::DataType>(yDtype_)).c_str()),
@@ -117,8 +125,10 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckDtype()
 
     int checkDstType = static_cast<int>(dstType_);
     OP_CHECK_IF(
-        (yDtype_ == ge::DT_FLOAT4_E2M1 && checkDstType != 40) ||(yDtype_ == ge::DT_FLOAT4_E1M2 && checkDstType != 41) ||
-        (yDtype_ == ge::DT_FLOAT8_E4M3FN && checkDstType != 36) ||(yDtype_ == ge::DT_FLOAT8_E5M2 && checkDstType != 35),
+        (yDtype_ == ge::DT_FLOAT4_E2M1 && checkDstType != 40) ||
+            (yDtype_ == ge::DT_FLOAT4_E1M2 && checkDstType != 41) ||
+            (yDtype_ == ge::DT_FLOAT8_E4M3FN && checkDstType != 36) ||
+            (yDtype_ == ge::DT_FLOAT8_E5M2 && checkDstType != 35),
         OP_LOGE(
             context_->GetNodeName(),
             "y's data type[%s] and dst_type[%d] is not corresponded, y's data type: "
@@ -175,7 +185,7 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::GetAttr()
     epsilon_ = (epsilonPtr != nullptr) ? *epsilonPtr : EPSILON_DEFAULT;
 
     const int64_t* scaleAlgPtr = attrs->GetAttrPointer<int64_t>(1);
-    scaleAlg_ = (scaleAlgPtr != nullptr) ? static_cast<int64_t>(*scaleAlgPtr) : QUANT_ALG_DEFAULT;
+    scaleAlg_ = (scaleAlgPtr != nullptr) ? static_cast<int64_t>(*scaleAlgPtr) : SCALE_ALG_DEFAULT;
     OP_CHECK_IF(
         scaleAlg_ != 0 && scaleAlg_ != 1,
         OP_LOGE(context_->GetNodeName(), "The scale_alg[%ld] should be 0 or 1, please check.", scaleAlg_),
@@ -193,6 +203,7 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::GetAttr()
             return ge::GRAPH_FAILED);
 
         roundMode_ = static_cast<int64_t>(roundMode);
+
     } else {
         roundMode_ = ROUND_MODE_DEFAULT;
     }
@@ -220,16 +231,18 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckShape()
 
     OP_CHECK_IF(
         xShapeDimNum < 1 || xShapeDimNum > MAX_DIM_NUM,
-        OP_LOGE(context_->GetNodeName(), "Input x rank[%zu] should be in [1, 7].", xShapeDimNum),
+        OP_LOGE(context_->GetNodeName(), "Input x rank[%ld] should be in [1, 7].", xShapeDimNum),
         return ge::GRAPH_FAILED);
 
     int64_t xLastDim = xShape.GetDim(xShapeDimNum - 1);
+
     numM_ = 1;
-    for (size_t i = 0; i < xShapeDimNum - 1; i++) {
+    for (int64_t i = 0; i < xShapeDimNum - 1; i++) {
         numM_ *= xShape.GetDim(i);
     }
     numN_ = xLastDim;
     avgFactor_ = float(1.0) / float(numN_);
+
     if (Y_SUPPORT_DTYPE_FP4_SET.count(yDtype_) != 0) {
         OP_CHECK_IF(
             xLastDim % 2 != 0,
@@ -284,53 +297,43 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckShape()
     if (hasOutputRstd_) {
         auto rstdShapePtr = context_->GetOutputShape(2);
         auto rstdShape = rstdShapePtr->GetStorageShape();
+        int64_t rstdDimNum = rstdShape.GetDimNum();
         OP_CHECK_IF(
-            rstdShape.GetDimNum() != xShapeDimNum && rstdShape.GetDimNum() != xShapeDimNum - 1 &&
-                rstdShape.GetDimNum() != 1,
-            OP_LOGE(
-                context_->GetNodeName(), "Output rstd rank[%zu] should be 1 or %zu, or %zu.", rstdShape.GetDimNum(),
-                xShapeDimNum - 1, xShapeDimNum),
+            rstdDimNum != xShapeDimNum,
+            OP_LOGE(context_->GetNodeName(), "Output rstd rank[%ld] should be %ld.", rstdDimNum, xShapeDimNum),
             return ge::GRAPH_FAILED);
-        if (rstdShape.GetDimNum() == xShapeDimNum - 1 || rstdShape.GetDimNum() == xShapeDimNum) {
-            for (size_t i = 0; i < xShapeDimNum - 1; i++) {
-                OP_CHECK_IF(
-                    rstdShape.GetDim(i) != xShape.GetDim(i),
-                    OP_LOGE(
-                        context_->GetNodeName(), "Output rstd dim[%zu]=%ld should be equal to x dim[%zu]=%ld.", i,
-                        rstdShape.GetDim(i), i, xShape.GetDim(i)),
-                    return ge::GRAPH_FAILED);
-            }
-            if (rstdShape.GetDimNum() == xShapeDimNum) {
-                OP_CHECK_IF(
-                    rstdShape.GetDim(xShapeDimNum - 1) != 1,
-                    OP_LOGE(
-                        context_->GetNodeName(), "Output rstd dim[%zu]=%ld should be equal to 1.", xShapeDimNum - 1,
-                        rstdShape.GetDim(xShapeDimNum - 1)),
-                    return ge::GRAPH_FAILED);
-            }
-        } else {
+
+        for (int64_t i = 0; i < xShapeDimNum - 1; i++) {
             OP_CHECK_IF(
-                rstdShape.GetDim(0) != numM_,
+                rstdShape.GetDim(i) != xShape.GetDim(i),
                 OP_LOGE(
-                    context_->GetNodeName(), "Output rstd dim[0]=%ld should be equal to numM=%ld.", rstdShape.GetDim(0),
-                    numM_),
+                    context_->GetNodeName(), "Output rstd dim[%ld]=%ld should be equal to x dim[%ld]=%ld.", i,
+                    rstdShape.GetDim(i), i, xShape.GetDim(i)),
                 return ge::GRAPH_FAILED);
         }
+
+        OP_CHECK_IF(
+            rstdShape.GetDim(xShapeDimNum - 1) != 1,
+            OP_LOGE(
+                context_->GetNodeName(), "Output rstd dim[%ld]=%ld should be equal to 1.", xShapeDimNum - 1,
+                rstdShape.GetDim(xShapeDimNum - 1)),
+            return ge::GRAPH_FAILED);
     }
 
     auto mxscaleShapePtr = context_->GetOutputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, mxscaleShapePtr);
     auto mxscaleShape = mxscaleShapePtr->GetStorageShape();
+    int64_t mxscaleDimNum = mxscaleShape.GetDimNum();
     OP_CHECK_IF(
-        mxscaleShape.GetDimNum() != xShapeDimNum + 1,
+        mxscaleDimNum != xShapeDimNum + 1,
         OP_LOGE(
-            context_->GetNodeName(), "Output mxscale rank[%zu] should be equal to x rank[%zu] + 1.",
-            mxscaleShape.GetDimNum(), xShapeDimNum),
+            context_->GetNodeName(), "Output mxscale rank[%ld] should be equal to x rank[%ld] + 1.", mxscaleDimNum,
+            xShapeDimNum),
         return ge::GRAPH_FAILED);
 
     auto newScaleShape = xShape;
-    newScaleShape.SetDim(xShapeDimNum - 1, Ops::Base::CeilDiv(Ops::Base::CeilDiv(xLastDim, MX_BLOCK_SIZE), NUM_TWO));
-    newScaleShape.AppendDim(NUM_TWO);
+    newScaleShape.SetDim(xShapeDimNum - 1, Ops::Base::CeilDiv(Ops::Base::CeilDiv(xLastDim, MX_BLOCK_SIZE), CONST_TWO));
+    newScaleShape.AppendDim(CONST_TWO);
 
     OP_CHECK_IF(
         newScaleShape != mxscaleShape,
@@ -343,7 +346,7 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckShape()
 }
 
 // ============== Is Optimize Condition ==============
-bool RmsNormDynamicMxQuantTilingBase::IsOptimizeCondition()
+bool RmsNormDynamicMxQuantTilingBase::IsOptimizeCondition() const
 {
     if (xDtype_ != ge::DT_FLOAT16) {
         return false;
@@ -359,6 +362,22 @@ bool RmsNormDynamicMxQuantTilingBase::IsOptimizeCondition()
         return false;
     }
     return true;
+}
+
+// ============== Helper Functions ==============
+int64_t RmsNormDynamicMxQuantTilingBase::FindNearestPower2(const int64_t value)
+{
+    if (value <= CONST_ONE) {
+        return CONST_ZERO;
+    } else if (value <= CONST_TWO) {
+        return CONST_ONE;
+    } else if (value <= CONST_FOUR) {
+        return CONST_TWO;
+    } else {
+        const int64_t num = value - CONST_ONE;
+        const int64_t pow = CONST_SIXTY_THREE - __builtin_clzl(num);
+        return (CONST_ONE << pow);
+    }
 }
 
 // ============== GetShapeAttrsInfo ==============

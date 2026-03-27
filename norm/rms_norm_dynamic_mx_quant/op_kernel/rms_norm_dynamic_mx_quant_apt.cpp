@@ -13,27 +13,19 @@
  * \brief rms_norm_dynamic_mx_quant kernel entry
  */
 
-#include "arch35/rms_norm_dynamic_mx_quant_full_load_general.h"
+#include "arch35/rms_norm_dynamic_mx_quant_full_load.h"
 
 using namespace AscendC;
 using namespace RmsNormDynamicMxQuantNs;
 
 #define TILING_KEY_FULL_LOAD_GENERAL 1000
+#define TILING_KEY_FULL_LOAD_OPTIMIZE 10000
 
 #define FLOAT_OVERFLOW_MODE_CTRL 60
 
 extern "C" __global__ __aicore__ void rms_norm_dynamic_mx_quant(
     GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
 {
-    if (workspace == nullptr) {
-        return;
-    }
-
-    GM_ADDR userWS = GetUserWorkspace(workspace);
-    if (userWS == nullptr) {
-        return;
-    }
-
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
 
 #if (__NPU_ARCH__ == 3510)
@@ -41,14 +33,19 @@ extern "C" __global__ __aicore__ void rms_norm_dynamic_mx_quant(
 #endif
 
     if (TILING_KEY_IS(TILING_KEY_FULL_LOAD_GENERAL)) {
-        if constexpr (std::is_same<DTYPE_Y, fp8_e4m3fn_t>::value || std::is_same<DTYPE_Y, fp8_e5m2_t>::value) {
-            GET_TILING_DATA_WITH_STRUCT(RmsNormDynamicMxQuantFullLoadGeneralTilingData, tilingDataIn, tiling);
-            const RmsNormDynamicMxQuantFullLoadGeneralTilingData* __restrict tilingData = &tilingDataIn;
-            TPipe pipe;
-            KernelRmsNormDynamicMxQuantFullLoadGeneral<DTYPE_X, DTYPE_GAMMA, DTYPE_Y> op(&pipe);
-            op.Init(x, gamma, beta, y, mxscale, rstd, userWS, tilingData);
-            op.Process();
-        }
+        GET_TILING_DATA_WITH_STRUCT(RmsNormDynamicMxQuantFullLoadTilingData, tilingDataIn, tiling);
+        const RmsNormDynamicMxQuantFullLoadTilingData* __restrict tilingData = &tilingDataIn;
+        TPipe pipe;
+        RmsNormDynamicMxQuantFullLoad<DTYPE_X, DTYPE_GAMMA, DTYPE_Y, false> op(&pipe);
+        op.Init(x, gamma, beta, y, mxscale, rstd, tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_FULL_LOAD_OPTIMIZE)) {
+        GET_TILING_DATA_WITH_STRUCT(RmsNormDynamicMxQuantFullLoadTilingData, tilingDataIn, tiling);
+        const RmsNormDynamicMxQuantFullLoadTilingData* __restrict tilingData = &tilingDataIn;
+        TPipe pipe;
+        RmsNormDynamicMxQuantFullLoad<DTYPE_X, DTYPE_GAMMA, DTYPE_Y, true> op(&pipe);
+        op.Init(x, gamma, beta, y, mxscale, rstd, tilingData);
+        op.Process();
     }
 
 #if (__NPU_ARCH__ == 3510)
