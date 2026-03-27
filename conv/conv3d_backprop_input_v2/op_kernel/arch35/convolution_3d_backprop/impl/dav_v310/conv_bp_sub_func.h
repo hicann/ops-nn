@@ -161,8 +161,8 @@ static __aicore__ inline void UpdateLoadToA2ParamsM(Intf *self)
     // load3dStepM
     self->ctx.load3d_.mExtension = self->ctx.baseUseM_;
     // posM: 当前默认stepM = 1
-    LoadDataRepeatParam repeatParam = {0, 1, 0, static_cast<uint16_t>(DivCeil16(self->ctx.baseUseM_))};
-    SetLoadDataRepeat(repeatParam);
+    LoadDataRepeatParamWithStride repeatParam = {0, 1, 0, static_cast<uint16_t>(DivCeil16(self->ctx.baseUseM_))};
+    SetLoadDataRepeatWithStride(repeatParam);
 }
 
 template <class Intf>
@@ -369,7 +369,7 @@ static __aicore__ inline void LoadToB2(Intf *self, const LocalTensor<typename In
 template <class Intf>
 static __aicore__ inline void LoadToA2(Intf *self, const LocalTensor<typename Intf::SrcT> &l1A1Matrix, LocalTensor<typename Intf::SrcT> &l0a)
 {
-    LoadData(l0a, l1A1Matrix, self->ctx.load3d_);
+    LoadDataWithStride(l0a, l1A1Matrix, self->ctx.load3d_);
 }
 
 template <class Intf>
