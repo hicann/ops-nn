@@ -29,12 +29,12 @@ constexpr uint32_t PATTERN_AB = 1;
 
 template <typename T, typename U, const uint32_t PATTERN_TYPE>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_LAUNCH) inline void MaskedScatterWithPositionSimtAB(
-    __gm__ T* xGm, __gm__ bool* maskGm, __gm__ int64_t* positionGm, __gm__ T* updatesGm, __gm__ T* yGm, U magic, U shift, U xNum, U xInner
+    __gm__ T* xGm, __gm__ bool* maskGm, __gm__ int64_t* positionGm, __gm__ T* updatesGm, U magic, U shift, U xNum, U xInner
 );
 
 template <typename T, typename U, const uint32_t PATTERN_TYPE>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_LAUNCH) inline void MaskedScatterWithPositionSimtBA(
-    __gm__ T* xGm, __gm__ bool* maskGm, __gm__ int64_t* positionGm, __gm__ T* updatesGm, __gm__ T* yGm, U magic, U shift, U xNum, U xInner
+    __gm__ T* xGm, __gm__ bool* maskGm, __gm__ int64_t* positionGm, __gm__ T* updatesGm, U magic, U shift, U xNum, U xInner
 );
 
 template <typename T, typename U, const uint32_t PATTERN_TYPE>
@@ -42,7 +42,7 @@ class MaskedScatterWithPositionSimt {
 public:
     __aicore__ inline MaskedScatterWithPositionSimt (
         const MaskedScatterWithPositionTilingData* tilingData):tilingData_(tilingData){};
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR mask, GM_ADDR position, GM_ADDR updates, GM_ADDR y);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR mask, GM_ADDR position, GM_ADDR updates);
     __aicore__ inline void Process();
 
 private:
@@ -51,17 +51,15 @@ private:
     AscendC::GlobalTensor<bool> maskGm_;
     AscendC::GlobalTensor<int64_t> positionGm_;
     AscendC::GlobalTensor<T> updatesGm_;
-    AscendC::GlobalTensor<T> yGm_;
 };
 
 template <typename T, typename U, const uint32_t PATTERN_TYPE>
-__aicore__ inline void MaskedScatterWithPositionSimt<T, U, PATTERN_TYPE>::Init(GM_ADDR x, GM_ADDR mask, GM_ADDR position, GM_ADDR updates, GM_ADDR y)
+__aicore__ inline void MaskedScatterWithPositionSimt<T, U, PATTERN_TYPE>::Init(GM_ADDR x, GM_ADDR mask, GM_ADDR position, GM_ADDR updates)
 {
     xGm_.SetGlobalBuffer((__gm__ T *)(x));
     maskGm_.SetGlobalBuffer((__gm__ bool *)(mask));
     positionGm_.SetGlobalBuffer((__gm__ int64_t *)(position));
     updatesGm_.SetGlobalBuffer((__gm__ T *)(updates));
-    yGm_.SetGlobalBuffer((__gm__ T *)(y));
 }
 
 template <typename T, typename U, const uint32_t PATTERN_TYPE>
@@ -71,6 +69,9 @@ __aicore__ inline void MaskedScatterWithPositionSimt<T, U, PATTERN_TYPE>::Proces
     U xInner = tilingData_->xInner;
     U xOutter = xNum / xInner;
     auto positionGm = (__gm__ int64_t*)(positionGm_.GetPhyAddr());
+    if ((PATTERN_TYPE == PATTERN_AB && positionGm[xOutter - 1] == 0) || (PATTERN_TYPE == PATTERN_BA && positionGm[xInner - 1] == 0)){
+ 	    return;
+ 	}
     U maskTrueNum = PATTERN_TYPE == PATTERN_AB ? (positionGm[xOutter - 1] * xInner) : (positionGm[xInner - 1] * xOutter);
     assert(maskTrueNum <= tilingData_->updatesEleNums,
         "The num of true in mask is larger than the num of elements in update.");
@@ -81,17 +82,17 @@ __aicore__ inline void MaskedScatterWithPositionSimt<T, U, PATTERN_TYPE>::Proces
     if constexpr (PATTERN_TYPE == PATTERN_AB) {  // AB
         Simt::VF_CALL<MaskedScatterWithPositionSimtAB<T, U, PATTERN_TYPE>>(Simt::Dim3(USED_THREAD_NUMS),
         (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ bool*)(maskGm_.GetPhyAddr()), (__gm__ int64_t*)(positionGm_.GetPhyAddr()), (__gm__ T*)(updatesGm_.GetPhyAddr()),
-        (__gm__ T*)(yGm_.GetPhyAddr()), magic, shift, xNum, xInner);
+        magic, shift, xNum, xInner);
     } else {  // BA
         Simt::VF_CALL<MaskedScatterWithPositionSimtBA<T, U, PATTERN_TYPE>>(Simt::Dim3(USED_THREAD_NUMS),
         (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ bool*)(maskGm_.GetPhyAddr()), (__gm__ int64_t*)(positionGm_.GetPhyAddr()), (__gm__ T*)(updatesGm_.GetPhyAddr()),
-        (__gm__ T*)(yGm_.GetPhyAddr()), magic, shift, xNum, xInner);
+        magic, shift, xNum, xInner);
     }
 }
 
 template <typename T, typename U, const uint32_t PATTERN_TYPE>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_LAUNCH) inline void MaskedScatterWithPositionSimtAB(
-     __gm__ T* xGm, __gm__ bool* maskGm, __gm__ int64_t* positionGm, __gm__ T* updatesGm, __gm__ T* yGm, U magic, U shift, U xNum, U xInner
+     __gm__ T* xGm, __gm__ bool* maskGm, __gm__ int64_t* positionGm, __gm__ T* updatesGm, U magic, U shift, U xNum, U xInner
      )
 {
     for (U i = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < xNum; i += Simt::GetBlockNum() * Simt::GetThreadNum()) {
@@ -99,16 +100,14 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_LAUNCH) inline void MaskedScatterWith
         U colidx = i - rowidx * xInner;
         if (maskGm[rowidx] == true) {
             U prefixSum = (positionGm[rowidx] - 1) * xInner + colidx;
-            yGm[i] = updatesGm[prefixSum];
-        } else {
-            yGm[i] = xGm[i];
+            xGm[i] = updatesGm[prefixSum];
         }
     }
 }
 
 template <typename T, typename U, const uint32_t PATTERN_TYPE>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_LAUNCH) inline void MaskedScatterWithPositionSimtBA(
-     __gm__ T* xGm, __gm__ bool* maskGm, __gm__ int64_t* positionGm, __gm__ T* updatesGm, __gm__ T* yGm, U magic, U shift, U xNum, U xInner
+     __gm__ T* xGm, __gm__ bool* maskGm, __gm__ int64_t* positionGm, __gm__ T* updatesGm, U magic, U shift, U xNum, U xInner
      )
 {
     for (U i = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < xNum; i += Simt::GetBlockNum() * Simt::GetThreadNum()) {
@@ -116,9 +115,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_LAUNCH) inline void MaskedScatterWith
         U colidx = i - rowidx * xInner;
         if (maskGm[i % xInner] == true) {
             U prefixSum = positionGm[colidx] - 1 + rowidx * positionGm[xInner - 1];
-            yGm[i] = updatesGm[prefixSum];
-        } else {
-            yGm[i] = xGm[i];
+            xGm[i] = updatesGm[prefixSum];
         }
     }
 }

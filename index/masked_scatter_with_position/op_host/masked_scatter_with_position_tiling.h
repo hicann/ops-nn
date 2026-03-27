@@ -41,7 +41,7 @@ protected:
     void DumpTilingInfo() override;
 
 private:
-    ge::graphStatus CheckOutputShape();
+    ge::graphStatus CheckInputShape();
     ge::graphStatus CheckDataType();
     bool CanBroadcastBAOrAB(const gert::Shape xShape, const gert::Shape maskShape);
     void CanBroadcastBAOrABEqual(const std::vector<int64_t>& xShapeVec, const std::vector<int64_t>& maskShapeVec, const size_t len, bool& BA, bool& AB);

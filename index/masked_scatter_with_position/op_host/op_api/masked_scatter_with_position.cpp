@@ -28,21 +28,20 @@ namespace l0op {
 OP_TYPE_REGISTER(MaskedScatterWithPosition);
 
 static const aclTensor* MaskedScatterWithPositionAiCore(
-    const aclTensor* x, const aclTensor* mask, const aclTensor* position, const aclTensor* updates, const aclTensor* y, aclOpExecutor* executor)
+    const aclTensor* x, const aclTensor* mask, const aclTensor* position, const aclTensor* updates, aclOpExecutor* executor)
 {
-    L0_DFX(MaskedScatterWithPositionAiCore, x, mask, position, updates, y);
-    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(MaskedScatterWithPosition, OP_INPUT(x, mask, position, updates), OP_OUTPUT(y));
+    L0_DFX(MaskedScatterWithPositionAiCore, x, mask, position, updates);
+    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(MaskedScatterWithPosition, OP_INPUT(x, mask, position, updates), OP_OUTPUT(x));
     OP_CHECK(
         retAicore == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MaskedScatterWithPosition ADD_TO_LAUNCHER_LIST_AICORE failed."),
         return nullptr);
-    return y;
+    return x;
 }
 
 const aclTensor* MaskedScatterWithPosition(const aclTensor* x, const aclTensor* mask, const aclTensor* position, const aclTensor* updates, aclOpExecutor* executor)
 {
     L0_DFX(MaskedScatterWithPosition, x, mask, position, updates);
-    auto y = executor->AllocTensor(x->GetViewShape(), x->GetDataType());
-    return MaskedScatterWithPositionAiCore(x, mask, position, updates, y, executor);
+    return MaskedScatterWithPositionAiCore(x, mask, position, updates, executor);
 }
 
 } // namespace l0op

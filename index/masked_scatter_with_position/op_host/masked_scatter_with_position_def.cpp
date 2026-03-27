@@ -63,7 +63,7 @@ public:
             .UnknownShapeFormat(SUPPORT_FORMAT)
             .AutoContiguous();
 
-        this->Output("y")
+        this->Output("x")
             .ParamType(REQUIRED)
             .DataType(SUPPORT_DTYPE)
             .Format(SUPPORT_FORMAT)

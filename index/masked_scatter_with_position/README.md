@@ -21,7 +21,6 @@
   - position=[[0, 0, 0, 1, 2]]
   - updates=[[0, 1, 2, 3, 4] ,[5, 6, 7, 8, 9]]
   - maskedscatterwithposition(x, masked, position, updates)的结果是[[0, 0, 0, 0, 1],[0, 0, 0, 2, 3]]。
-  注意整型、布尔都是有界的。
 
 ## 参数说明
 
@@ -70,7 +69,7 @@
       <td>ND</td>
     </tr>
     <tr>
-      <td>y</td>
+      <td>x</td>
       <td>输出</td>
       <td>输出结果。</td>
       <td>FLOAT、FLOAT16、BFLOAT16、UINT8、INT8、INT16、INT32、INT64、DOUBLE、BOOL</td>

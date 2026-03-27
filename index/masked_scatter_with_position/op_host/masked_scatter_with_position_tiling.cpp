@@ -30,7 +30,6 @@ static constexpr uint16_t INPUT_X_IDX = 0;
 static constexpr uint16_t INPUT_MASK_IDX = 1;
 static constexpr uint16_t INPUT_POSITION_IDX = 2;
 static constexpr uint16_t INPUT_UPDATES_IDX = 3;
-static constexpr uint16_t OUTPUT_Y_IDX = 0;
 
 static constexpr uint16_t PATTERN_BA = 1;
 static constexpr uint16_t PATTERN_AB = 2;
@@ -73,8 +72,8 @@ ge::graphStatus MaskedScatterWithPositionTiling::GetShapeAttrsInfo()  // 2、获
     OP_CHECK_IF(CheckDataType(),
         OP_LOGE(opName_, "CheckDataType failed!"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(CheckOutputShape(),
-        OP_LOGE(opName_, "CheckOutputShape failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputShape(),
+        OP_LOGE(opName_, "CheckInputShape failed!"), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -146,9 +145,9 @@ void MaskedScatterWithPositionTiling::DumpTilingInfo()
     OP_LOGI(opName_, "%s", info.str().c_str());
 }
 
-ge::graphStatus MaskedScatterWithPositionTiling::CheckOutputShape()
+ge::graphStatus MaskedScatterWithPositionTiling::CheckInputShape()
 {
-    OP_LOGI(opName_, "MaskedScatterWithPositionTiling::CheckOutputShape begin.");
+    OP_LOGI(opName_, "MaskedScatterWithPositionTiling::CheckInputShape begin.");
     auto xShapePtr = context_->GetRequiredInputShape(INPUT_X_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xShapePtr);
     auto xShape = xShapePtr->GetStorageShape();
@@ -168,12 +167,6 @@ ge::graphStatus MaskedScatterWithPositionTiling::CheckOutputShape()
     auto maskShape = maskShapePtr->GetStorageShape();
     maskEleNums_ = maskShape.GetShapeSize();
 
-    auto yShapePtr = context_->GetOutputShape(OUTPUT_Y_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, yShapePtr);
-    auto yShape = yShapePtr->GetStorageShape();
-
-    OP_CHECK_IF(xShape != yShape, OP_LOGE(opName_,
-        "The x and y must have the same shape, please check."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(positionShape != maskShape, OP_LOGE(opName_,
         "The position and mask must have the same shape, please check."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(maskShape.GetDimNum() > xShape.GetDimNum() , OP_LOGE(opName_,
@@ -184,7 +177,7 @@ ge::graphStatus MaskedScatterWithPositionTiling::CheckOutputShape()
     OP_CHECK_IF(isBAorAB != true, OP_LOGE(opName_,
         "The x and position shape must be compatible with broadcasting rules of BA/AB, please check."), return ge::GRAPH_FAILED);
 
-    OP_LOGI(opName_, "MaskedScatterWithPositionTiling::CheckOutputShape end.");
+    OP_LOGI(opName_, "MaskedScatterWithPositionTiling::CheckInputShape end.");
     return ge::GRAPH_SUCCESS;
 }
 
@@ -281,13 +274,9 @@ ge::graphStatus MaskedScatterWithPositionTiling::CheckDataType()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputUpdatesPtr);
     auto updatesDtype = inputUpdatesPtr->GetDataType();
 
-    auto outputYPtr = context_->GetOutputDesc(OUTPUT_Y_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, outputYPtr);
-    auto yDtype = outputYPtr->GetDataType();
-
-    OP_CHECK_IF(dType_ != updatesDtype || dType_ != yDtype,
+    OP_CHECK_IF(dType_ != updatesDtype,
         OP_LOGE(opName_,
-        "The x, updates and y must have the same dtype, please check."), return ge::GRAPH_FAILED);
+        "The x and updates must have the same dtype, please check."), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }

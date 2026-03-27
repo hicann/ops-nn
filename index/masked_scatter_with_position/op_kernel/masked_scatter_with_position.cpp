@@ -29,20 +29,20 @@ extern "C" __global__ __aicore__ void masked_scatter_with_position(
     GET_TILING_DATA(tilingData, tiling);
 
     if (TILING_KEY_IS(BA_INT32_TILING_KEY)) {
-        MaskedScatterWithPosition::MaskedScatterWithPositionSimt<DTYPE_Y, uint32_t, PATTERN_BA> op(&tilingData);
-        op.Init(x, mask, position, updates, y);
+        MaskedScatterWithPosition::MaskedScatterWithPositionSimt<DTYPE_X, uint32_t, PATTERN_BA> op(&tilingData);
+        op.Init(x, mask, position, updates);
         op.Process();
     } else if (TILING_KEY_IS(BA_INT64_TILING_KEY)) {
-        MaskedScatterWithPosition::MaskedScatterWithPositionSimt<DTYPE_Y, uint64_t, PATTERN_BA> op(&tilingData);
-        op.Init(x, mask, position, updates, y);
+        MaskedScatterWithPosition::MaskedScatterWithPositionSimt<DTYPE_X, uint64_t, PATTERN_BA> op(&tilingData);
+        op.Init(x, mask, position, updates);
         op.Process();
     } else if (TILING_KEY_IS(AB_INT32_TILING_KEY)) {
-        MaskedScatterWithPosition::MaskedScatterWithPositionSimt<DTYPE_Y, uint32_t, PATTERN_AB> op(&tilingData);
-        op.Init(x, mask, position, updates, y);
+        MaskedScatterWithPosition::MaskedScatterWithPositionSimt<DTYPE_X, uint32_t, PATTERN_AB> op(&tilingData);
+        op.Init(x, mask, position, updates);
         op.Process();
     } else if (TILING_KEY_IS(AB_INT64_TILING_KEY)) {
-        MaskedScatterWithPosition::MaskedScatterWithPositionSimt<DTYPE_Y, uint64_t, PATTERN_AB> op(&tilingData);
-        op.Init(x, mask, position, updates, y);
+        MaskedScatterWithPosition::MaskedScatterWithPositionSimt<DTYPE_X, uint64_t, PATTERN_AB> op(&tilingData);
+        op.Init(x, mask, position, updates);
         op.Process();
     }
 }
