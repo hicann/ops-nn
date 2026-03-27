@@ -19,7 +19,7 @@
 - 计算公式：
 
   $$
-  output_i = scale \cdot [\max(0, input_i) + \min(0, \alpha \cdot\exp(input_i - 1))] \\
+  output_i = scale \cdot [\max(0, input_i) + \min(0, \alpha \cdot (\exp(input_i) - 1))] \\
   \alpha = 1.6732632423543772848170429916717 \\
   scale = 1.0507009873554804934193349852946
   $$

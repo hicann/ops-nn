@@ -8,7 +8,7 @@
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-| <term>Atlas 推理系列产品 </term>    |     √    |
+| <term>Atlas 推理系列产品</term>    |     √    |
 | <term>Atlas 训练系列产品</term>    |     √    |
 
 ## 功能说明
@@ -45,14 +45,17 @@ $$
       <td>x</td>
       <td>输入</td>
       <td>待进行Relu计算的入参。</td>
-      <td>FLOAT、FLOAT16、INT8、INT32、INT64、BFLOAT16、UINT8</td>
+      <td>FLOAT、FLOAT16、INT8、INT32、INT64、BFLOAT16</td>
       <td>ND</td>
-  <tr>
+   </tr>
+   <tr>
       <td>y</td>
       <td>输出</td>
       <td>进行Relu计算后的输出</td>
-      <td>FLOAT、FLOAT16、INT8、INT32、INT64、BFLOAT16、UINT8</td>
+      <td>FLOAT、FLOAT16、INT8、INT32、INT64、BFLOAT16</td>
       <td>ND</td>
+   </tr>
+  </tbody>
   </table>
 
 ## 约束说明
@@ -65,4 +68,5 @@ $$
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_relu](examples/test_aclnn_relu.cpp) | 通过[aclnnRelu&aclnnInplaceRelu](docs/aclnnRelu&aclnnInplaceRelu.md)接口方式调用Relu算子。 |
 | aclnn调用 | [test_aclnn_inplace_relu](examples/test_aclnn_inplace_relu.cpp) | 通过[aclnnRelu&aclnnInplaceRelu](docs/aclnnRelu&aclnnInplaceRelu.md)接口方式调用Relu算子。 |
+
 | 图模式 | - | 通过[算子IR](op_graph/relu_proto.h)构图方式调用Relu算子。 |

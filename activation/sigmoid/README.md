@@ -8,7 +8,7 @@
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-| <term>Atlas 推理系列产品 </term>    |     √    |
+| <term>Atlas 推理系列产品</term>    |     √    |
 | <term>Atlas 训练系列产品</term>    |     √    |
 
 ## 功能说明
@@ -46,19 +46,18 @@ $$
       <td>x</td>
       <td>输入</td>
       <td>待进行Sigmoid计算的入参，公式中的input。</td>
-      <td>FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8、BOOL、COMPLEX64、COMPLEX128、BFLOAT16</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
       <td>计算的出参。</td>
-      <td>FLOAT、FLOAT16、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
+    </tr>
   </tbody>
   </table>
-
-  - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：self的数据类型支持FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8、BOOL、COMPLEX64、COMPLEX128。out的数据类型支持FLOAT、FLOAT16、DOUBLE、COMPLEX64、COMPLEX128。
 
 ## 约束说明
 
