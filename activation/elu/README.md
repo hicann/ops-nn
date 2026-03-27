@@ -53,7 +53,7 @@
       <td>输入</td>
       <td>表示ELU激活函数的输入，公式中的x。</td>
       <td>支持空Tensor。</td>
-      <td>FLOAT、FLOAT16、DOUBLE、BFLOAT16</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -93,14 +93,14 @@
       <td>输出</td>
       <td>表示ELU激活函数的输出。</td>
       <td>shape需要与self一致。</td>
-      <td>FLOAT、FLOAT16、DOUBLE、BFLOAT16</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
     </tr>
   </tbody>
   </table>  
-   - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16、DOUBLE。
+   - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16。
 
 ## 约束说明
 

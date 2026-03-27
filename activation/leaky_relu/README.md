@@ -49,7 +49,7 @@
       <td>输入</td>
       <td>待进行LeakyRelu激活函数的入参，公式中的self。</td>
       <td><ul><li>shape支持0到8维，shape需要与out一致。</li><li>支持空Tensor。</li></ul></td>
-      <td>FLOAT、FLOAT16、BFLOAT16、DOUBLE</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -69,7 +69,7 @@
       <td>输出</td>
       <td>待进行LeakyRelu激活函数的出参。</td>
       <td>out的数据类型需要是self可转换的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
-      <td>FLOAT、FLOAT16、BFLOAT16、DOUBLE</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -77,12 +77,11 @@
   </tbody>
   </table>
 
-- <term>Atlas 训练系列产品</term>：FLOAT、FLOAT16、DOUBLE。
+- <term>Atlas 训练系列产品</term>：FLOAT、FLOAT16。
 
 ## 约束说明
 
 - negativeSlope使用整型类型作为属性输入，而输入self是FLOAT类型，那么如果negativeSlope大于2^24或小于-2^24可能存在精度损失。同理，如果输入self是FLOAT16类型，那么negativeSlope大于2^11或小于-2^11可能存在精度损失。
-
 
 ## 调用说明
 
