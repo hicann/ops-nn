@@ -360,8 +360,8 @@ static aclnnStatus InputPreProcess(const aclTensor *&inputTensor, const string &
 }
 
 static aclnnStatus BiasPreProcess(ConvolutionBackwardInputTensor &inputTensor, const string &tensorName,
-                                   ConvolutionBackwardParams &params, aclOpExecutor *executor) {
-  if (params.cubeMathType == USE_FP16 && inputTensor.gradOutput->GetDataType() != op::DataType::DT_BF16) {
+                                   ConvolutionBackwardParams &params, const op::DataType promoteDtype, aclOpExecutor *executor) {
+  if (params.cubeMathType == USE_FP16 && inputTensor.gradOutput->GetDataType() == op::DataType::DT_FLOAT && promoteDtype == op::DataType::DT_FLOAT) {
     auto castedTensor = l0op::Cast(inputTensor.gradOutput, op::DataType::DT_FLOAT16, executor);
     OP_CHECK(castedTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The bias perprocess failed, %s with Cast DataType to DT_FLOAT16 return nullptr.",
              tensorName.c_str()), return ACLNN_ERR_INNER_NULLPTR);
@@ -375,8 +375,8 @@ static aclnnStatus BiasPreProcess(ConvolutionBackwardInputTensor &inputTensor, c
 }
 
 static aclnnStatus BiasReDtypeProcess(const aclTensor *&outputTensor, const string &tensorName,
-                                   ConvolutionBackwardParams &params, aclOpExecutor *executor) {
-  if (params.cubeMathType == USE_FP16 && outputTensor->GetDataType() != op::DataType::DT_BF16) {
+                                   ConvolutionBackwardParams &params, const op::DataType promoteDtype, aclOpExecutor *executor) {
+  if (params.cubeMathType == USE_FP16 && outputTensor->GetDataType() == op::DataType::DT_FLOAT && promoteDtype == op::DataType::DT_FLOAT) {
     auto castedTensor  = l0op::Cast(outputTensor, op::DataType::DT_FLOAT16, executor);
     OP_CHECK(castedTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The bias perprocess failed, %s with Cast DataType to DT_FLOAT16 return nullptr.",
              tensorName.c_str()), return ACLNN_ERR_INNER_NULLPTR);
@@ -847,6 +847,7 @@ static aclnnStatus CalculateBiasGrad(ConvolutionBackwardInputTensor &inputTensor
                                      ConvolutionBackwardResult &outputTensor, ConvolutionBackwardParams &params,
                                      aclOpExecutor *executor) {
   auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  DataType promoteDtype = CalcPromoteType(inputTensor);
   // Index 为 2：进行bias grad运算
   if ((*params.outputMask)[2]) {
     OP_LOGD("Enter bias grad Calculate");
@@ -860,7 +861,7 @@ static aclnnStatus CalculateBiasGrad(ConvolutionBackwardInputTensor &inputTensor
               op::ToString(outputTensor.gradBias->GetDataType()).GetString()),
             return ACLNN_ERR_INNER_NULLPTR);
     }
-    CHECK_RET(BiasPreProcess(inputTensor, "bias", params, executor) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(BiasPreProcess(inputTensor, "bias", params, promoteDtype, executor) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
 
     auto gradContiguous = l0op::Contiguous(inputTensor.gradOutput, executor);
     op::Format gradOutputFormat = inputTensor.gradOutput->GetStorageFormat();
@@ -900,7 +901,7 @@ static aclnnStatus CalculateBiasGrad(ConvolutionBackwardInputTensor &inputTensor
     OP_CHECK(gradBiasResult != nullptr,
             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The ReduceSumOp with gradOutput failed."),
             return ACLNN_ERR_INNER_NULLPTR);
-    BiasReDtypeProcess(gradBiasResult, "gradBias", params, executor);
+    BiasReDtypeProcess(gradBiasResult, "gradBias", params, promoteDtype, executor);
     OP_LOGD("gradBiasResult: %s", gradBiasResult->ToString().GetString());
     CHECK_RET(
         OutputPostProcess(outputTensor.gradBias, gradBiasResult, "gradBias", params.groups, executor) == ACLNN_SUCCESS,
