@@ -9,25 +9,25 @@
  */
 
 /* !
- * \file mat_mul_mn_equal_one_cmct.h
+ * \file mat_mul_to_mul_cmct.h
  * \brief
  */
 
-#ifndef MAT_MUL_MN_EQUAL_ONE_CMCT_H
-#define MAT_MUL_MN_EQUAL_ONE_CMCT_H
+#ifndef MAT_MUL_TO_MUL_CMCT_H
+#define MAT_MUL_TO_MUL_CMCT_H
 
 #include "cmct/block/block_scheduler_policy.h"
 #include "cmct/block/block_scheduler_utils.h"
-#include "cmct/kernel/kernel_matmul_mn_equal_one.h"
-#include "block_scheduler_one.h"
+#include "cmct/kernel/kernel_matmul_to_mul.h"
+#include "block_scheduler_mul.h"
 
 namespace MatmulV3Advanced {
 using namespace Cmct;
 using namespace Cmct::Gemm;
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT>
-__aicore__ inline void MatMulMNEqualOneActKernel(
+__aicore__ inline void MatMulToMulActKernel(
     GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR yGM, GM_ADDR workspaceGM,
-    const MatMulV3MNEqOneBasicTilingData& tilingData, int64_t batch = 0)
+    const MatMulToMulBasicTilingData& tilingData, int64_t batch = 0)
 {
     // 定义L1和L0的TileShape
     using L1TileShape = AscendC::Shape<_0, _0, _0>;
@@ -44,12 +44,12 @@ __aicore__ inline void MatMulMNEqualOneActKernel(
     using LayoutC = C_LAYOUT;
 
     // 定义scheduler类型 来自block_scheduler_policy.h
-    using BlockScheduler = BuiltInOneScheduler;
+    using BlockScheduler = BuiltInMulScheduler;
 
     // 定义MMAD类型
     using BlockMmad = Block::BlockMmadBuilder<
         AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutC, L1TileShape, L0TileShape, BlockScheduler,
-        MatmulMNEqualOne<>>;
+        MatmulToMul<>>;
 
     // 定义Fusion类型
     using FusionOp = Block::DefaultFusion<OutType, OutType>;
@@ -61,7 +61,7 @@ __aicore__ inline void MatMulMNEqualOneActKernel(
     using ProblemShape = MatmulShape;
 
     // 定义Kernel类型
-    using MatmulKernel = Kernel::KernelMatmulMNEqualOne<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
+    using MatmulKernel = Kernel::KernelMatmulToMul<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
     using Params = typename MatmulKernel::Params;
     Params params = {
         {tilingData.m, tilingData.n, tilingData.k, batch}, // shape

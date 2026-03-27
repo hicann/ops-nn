@@ -50,16 +50,16 @@ ge::graphStatus BatchMatMulV3ToMulTiling::DoOpTiling()
         lastCoreNum -= 1UL;
     }
 
-    runInfo_.toMulInfo.m = m;
-    runInfo_.toMulInfo.n = n;
-    runInfo_.toMulInfo.b = b;
-    runInfo_.toMulInfo.usedCoreNum = usedCoreNum;
-    runInfo_.toMulInfo.singleCoreBatch = singleCoreBatch;
-    runInfo_.toMulInfo.batchNum = batchNum;
-    runInfo_.toMulInfo.batchNumLastRound = batchNumLastRound;
-    runInfo_.toMulInfo.batchNumLastRoundTail = batchNumLastRoundTail;
-    runInfo_.toMulInfo.lastCoreNum = lastCoreNum;
-    runInfo_.toMulInfo.alignNum = alignNum_;
+    runInfo_.bmmToMulInfo.m = m;
+    runInfo_.bmmToMulInfo.n = n;
+    runInfo_.bmmToMulInfo.b = b;
+    runInfo_.bmmToMulInfo.usedCoreNum = usedCoreNum;
+    runInfo_.bmmToMulInfo.singleCoreBatch = singleCoreBatch;
+    runInfo_.bmmToMulInfo.batchNum = batchNum;
+    runInfo_.bmmToMulInfo.batchNumLastRound = batchNumLastRound;
+    runInfo_.bmmToMulInfo.batchNumLastRoundTail = batchNumLastRoundTail;
+    runInfo_.bmmToMulInfo.lastCoreNum = lastCoreNum;
+    runInfo_.bmmToMulInfo.alignNum = alignNum_;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -117,7 +117,7 @@ uint64_t BatchMatMulV3ToMulTiling::GetTilingKey() const
 
 uint64_t BatchMatMulV3ToMulTiling::GetNumBlocks() const
 {
-    return runInfo_.toMulInfo.usedCoreNum;
+    return runInfo_.bmmToMulInfo.usedCoreNum;
 }
 
 ge::graphStatus BatchMatMulV3ToMulTiling::GetTilingData(TilingResult& tiling) const

@@ -354,7 +354,8 @@ static MmOpInfo GetMatmulOpInfoWithTrans(
     // 如果允许降精度处理， 则开启HF32模式（0x40），否则采用默认模式; 后续此字段配置需要按照字段表进行配置
     mmOpInfo.enableHf32 = (cubeMathType == ALLOW_FP32_DOWN_PRECISION) || (cubeMathType == USE_HF32);
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    mmOpInfo.enableForceGrpAccForFp32 = cubeMathType == FORCE_GRP_ACC_FOR_FP32 && (npuArch == NpuArch::DAV_2201);
+    mmOpInfo.enableForceGrpAccForFp32 =
+        cubeMathType == FORCE_GRP_ACC_FOR_FP32 && (npuArch == NpuArch::DAV_2201 || npuArch == NpuArch::DAV_3510);
     mmOpInfo.opImplModeEnum = mmOpInfo.enableHf32 ? 0x40 : (mmOpInfo.enableForceGrpAccForFp32 ? 0x4 : 0x1);
     OP_LOGD(
         "opImplModeEnum=%ld, enableHf32=%d, enableForceGrpAccForFp32=%d cubeMathType=%d", mmOpInfo.opImplModeEnum,
@@ -1007,7 +1008,8 @@ MmOpInfo GetMatmulOpInfo(const aclTensor* self, const aclTensor* mat2, int8_t cu
     // 如果允许降精度处理， 则开启HF32模式（0x40），否则采用默认模式; 后续此字段配置需要按照字段表进行配置
     mmOpInfo.enableHf32 = (cubeMathType == ALLOW_FP32_DOWN_PRECISION) || (cubeMathType == USE_HF32);
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    mmOpInfo.enableForceGrpAccForFp32 = cubeMathType == FORCE_GRP_ACC_FOR_FP32 && (npuArch == NpuArch::DAV_2201);
+    mmOpInfo.enableForceGrpAccForFp32 =
+        cubeMathType == FORCE_GRP_ACC_FOR_FP32 && (npuArch == NpuArch::DAV_2201 || npuArch == NpuArch::DAV_3510);
     mmOpInfo.opImplModeEnum = mmOpInfo.enableHf32 ? 0x40 : (mmOpInfo.enableForceGrpAccForFp32 ? 0x4 : 0x1);
     OP_LOGD(
         "opImplModeEnum=%ld, enableHf32=%d, enableForceGrpAccForFp32=%d cubeMathType=%d, inputFp32Flag= %d", mmOpInfo.opImplModeEnum,
@@ -1066,8 +1068,9 @@ aclnnStatus CreateMatmulOpInfo(
                          mmOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT;
     // 如果允许降精度处理， 则开启HF32模式（0x40），否则采用默认模式; 后续此字段配置需要按照字段表进行配置
     mmOpInfo.enableHf32 = (cubeMathType == ALLOW_FP32_DOWN_PRECISION) || (cubeMathType == USE_HF32);
-    mmOpInfo.enableForceGrpAccForFp32 = (cubeMathType == FORCE_GRP_ACC_FOR_FP32) &&
-                                        (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201);
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    mmOpInfo.enableForceGrpAccForFp32 =
+        cubeMathType == FORCE_GRP_ACC_FOR_FP32 && (npuArch == NpuArch::DAV_2201 || npuArch == NpuArch::DAV_3510);
     mmOpInfo.opImplModeEnum = mmOpInfo.enableHf32 ? 0x40 : (mmOpInfo.enableForceGrpAccForFp32 ? 0x4 : 0x1);
     OP_LOGD(
         "opImplModeEnum=%ld, enableHf32=%d, enableForceGrpAccForFp32=%d cubeMathType=%d, inputFp32Flag= %d", mmOpInfo.opImplModeEnum,

@@ -10,22 +10,22 @@
 
 
 /* !
- * \file matmul_v3_mn_equal_one_tiling.h
+ * \file matmul_v3_to_mul_tiling.h
  * \brief
  */
-#ifndef __OP_HOST_MATMUL_V3_MN_EQUAL_ONE_TILING_H__
-#define __OP_HOST_MATMUL_V3_MN_EQUAL_ONE_TILING_H__
+#ifndef __OP_HOST_MATMUL_V3_TO_MUL_TILING_H__
+#define __OP_HOST_MATMUL_V3_TO_MUL_TILING_H__
 
 #include "matmul_v3_base_tiling_advanced.h"
 
 namespace optiling {
 namespace matmul_v3_advanced {
-class MatMulV3MNEqOneTiling : public MatMulV3BaseTiling {
+class MatMulV3ToMulTiling : public MatMulV3BaseTiling {
 public:
-    MatMulV3MNEqOneTiling(gert::TilingContext *context, MatMulTilingCfg &cfg)
+    MatMulV3ToMulTiling(gert::TilingContext *context, MatMulTilingCfg &cfg)
         : MatMulV3BaseTiling(context, cfg) {};
 
-    ~MatMulV3MNEqOneTiling() override = default;
+    ~MatMulV3ToMulTiling() override = default;
 protected:
     bool IsCapable() override;
 
@@ -35,10 +35,11 @@ protected:
 
     ge::graphStatus GetTilingData(TilingResult &tiling) const override;
 private:
-    static constexpr uint64_t BASE_K = 512;
-    static constexpr uint64_t BASE_MN = 32;
-    static constexpr uint64_t LIMIT_UB = 16384;
+    static constexpr uint64_t BASE_MN = 128;
+    static constexpr uint64_t BASE_K = 128;
+    static constexpr uint64_t LIMIT_K = 512;
+    static constexpr uint64_t ALIGN_NUM = 8;
 };
 } // namespace matmul_v3
 } // namespace optiling
-#endif // __OP_HOST_MATMUL_V3_MN_EQUAL_ONE_H__
+#endif // __OP_HOST_MATMUL_V3_TO_MUL_TILING_H__

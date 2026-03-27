@@ -30,7 +30,7 @@
 #define MAT_MUL_BASIC 0
 #define MAT_MUL_STREAM_K 1
 #define MAT_MUL_K_EQUAL_ZERO 2
-#define MAT_MUL_MN_EQUAL_ONE 3
+#define MAT_MUL_TO_MUL 3
 
 #define MAT_MUL_NO_FULL_LOAD 0
 #define MAT_MUL_A_FULL_LOAD 1
@@ -72,7 +72,7 @@ enum class MatMulV3Model : std::uint8_t
     BASIC = MAT_MUL_BASIC,
     STREAM_K = MAT_MUL_STREAM_K,
     K_EQUAL_ZERO = MAT_MUL_K_EQUAL_ZERO,
-    MN_EQUAL_ONE = MAT_MUL_MN_EQUAL_ONE
+    TO_MUL = MAT_MUL_TO_MUL
 };
 
 enum class MatMulV3FullLoad : std::uint8_t 

@@ -29,7 +29,7 @@
 #include "../utils/coord_utils.h"
 #include "../utils/tensor_utils.h"
 #include "../utils/status_utils.h"
-#include "../block/block_mmad_mn_equal_one.h"
+#include "../block/block_mmad_to_mul.h"
 #include "../block/block_mmad_builder.h"
 #include "../block/block_scheduler_utils.h"
 #include "../block/block_scheduler_policy.h"
@@ -41,17 +41,17 @@ namespace Kernel {
 
 template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_,
           typename Enable_ = void>
-class KernelMatmulMNEqualOne {
+class KernelMatmulToMul {
     static_assert(AscendC::Std::always_false_v<BlockEpilogue_>,
-                  "KernelMatmulMNEqualOne is not implemented for this BlockEpilogue");
+                  "KernelMatmulToMul is not implemented for this BlockEpilogue");
 };
 
 template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_>
-class KernelMatmulMNEqualOne<ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_,
+class KernelMatmulToMul<ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_,
                              std::enable_if_t<std::is_same_v<BlockEpilogue_, Block::BlockEpilogueEmpty>>> {
 public:
-    __aicore__ inline KernelMatmulMNEqualOne() {}
-    __aicore__ inline ~KernelMatmulMNEqualOne() {}
+    __aicore__ inline KernelMatmulToMul() {}
+    __aicore__ inline ~KernelMatmulToMul() {}
 
     using BlockMmadBuilder = BlockMmadBuilder_;
     using ProblemShape = ProblemShape_;
@@ -78,7 +78,6 @@ public:
     using AType = typename BlockMmadBuilder::AType;
     using BType = typename BlockMmadBuilder::BType;
     using CType = typename BlockMmadBuilder::CType;
-    using BlockInfo = Shape<bool, bool, bool>;
     using TupleShape = Shape<int64_t, int64_t, int64_t, int64_t>;
     using ParamsShape = Shape<uint64_t, uint64_t, uint64_t>;
 
@@ -89,6 +88,7 @@ public:
     AscendC::GlobalTensor<float> aGlobal_;
     AscendC::GlobalTensor<float> bGlobal_;
     AscendC::GlobalTensor<float> cGlobal_;
+    AscendC::GlobalTensor<float> biasGlobal_;
 
     // Shape
     TupleShape problemShape_{};
@@ -96,6 +96,7 @@ public:
     uint64_t n_{0};
     uint64_t k_{0};
     uint64_t b_{0};
+    bool hasBias_ = false;
 
     struct Arguments {
         ProblemShape problemShape;
@@ -131,6 +132,10 @@ public:
         aGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(blockMmadParams_.aGmAddr));
         bGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(blockMmadParams_.bGmAddr));
         cGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(blockMmadParams_.cGmAddr));
+        if (blockMmadParams_.biasGmAddr != nullptr) {
+            hasBias_ = true;
+            biasGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(blockMmadParams_.biasGmAddr));
+        }
     }
 
     __aicore__ inline void Run(const Params& params)
@@ -152,18 +157,15 @@ public:
         if (curBlockIdx >= realBlockNum) {
             return;
         }
+        TupleShape blockInfo = bs.GetBlockInfo();
+        int64_t baseMN = Get<MNK_M>(blockInfo);
+        int64_t tailMN = Get<MNK_N>(blockInfo) == 0 ? baseMN : Get<MNK_N>(blockInfo);
+        int64_t baseK = Get<MNK_K>(blockInfo);
+        int64_t tailK = Get<MNK_B>(blockInfo);
         int64_t tileNum = bs.GetTileNum();
         int64_t loopK = bs.GetLoopK();
-        int64_t tileMN = bs.GetTailMN();
-        bool hasBias = bs.GetBias();
-        int64_t baseMN = 32;
-        int64_t baseK = 512;
-        bool dataCopyMode = false;
-        if ((m_ == 1 && !transB) || (n_ == 1 && transA)) {
-            dataCopyMode = true;
-        }
-        blockMmadOp.Init(problemShape_, loopK, hasBias, dataCopyMode);
-        // todo:尾快剩余n的处理
+        bool dataCopyMode = bs.GetDataCopyMode();
+        blockMmadOp.Init(problemShape_, blockInfo, loopK, hasBias_, dataCopyMode);
         int64_t loopOffsetA = baseMN;
         int64_t loopOffsetB = baseMN;
         if (m_ == 1 && transB) {
@@ -173,10 +175,14 @@ public:
             loopOffsetA = baseMN * k_;
         }
         for (int64_t tileIdx = curBlockIdx; tileIdx < tileNum; tileIdx += blockNum) {
+            if (tileIdx == tileNum - 1) {
+                blockMmadOp.SetTailMN(tailMN);
+            }
             int64_t offsetA = m_ == 1 ? 0 : tileIdx * loopOffsetA;
             int64_t offsetB = n_ == 1 ? 0 : tileIdx * loopOffsetB;
             int64_t offsetC = tileIdx * baseMN;
-            blockMmadOp(cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB]);
+            int64_t offsetBias = m_ == 1 ? tileIdx * baseMN : 0;
+            blockMmadOp(cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias]);
         }
     }
 

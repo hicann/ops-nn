@@ -35,6 +35,7 @@ constexpr uint64_t NUM_ONE = 1UL;
 constexpr uint64_t NUM_TWO = 2UL;
 constexpr uint64_t NUM_THREE = 3UL;
 constexpr uint64_t NUM_FOUR = 4UL;
+constexpr uint64_t NUM_FIVE = 5UL;
 constexpr uint64_t CACHELINE = 512UL;
 constexpr uint64_t BLOCK_BYTE_SIZE = 32UL;
 constexpr uint64_t BIAS_TABLE_NUM = 256UL;
@@ -98,6 +99,7 @@ struct MatMulV3Args {
     uint64_t fusedOpType = 0UL;
     uint64_t batchX3 = 1UL;
     bool hasX3Input = false;
+    bool isForceGrpAccForFp32 = false;
     MatMulV3BatchInfo *batchInfo = nullptr;
 };
 
@@ -126,10 +128,14 @@ struct BatchMatMulV3ToMulInfo {
     uint64_t alignNum = 1UL;
 };
 
-struct MatMulV3MNEqualOneInfo {
-    uint64_t useAllCoreNum = 1UL;
+struct MatMulV3ToMulInfo {
+    uint64_t tileNum = 1UL;
+    uint64_t baseMN = 1UL;
+    uint64_t tailMN = 1UL;
+    uint64_t baseK = 1UL;
+    uint64_t tailK = 1UL;
     uint64_t loopK = 1UL;
-    uint64_t tailMN = 0UL;
+    bool dataCopyMode = false;
 };
 
 struct MatMulV3RunInfo {
@@ -164,8 +170,8 @@ struct MatMulV3RunInfo {
     MatMulV3TailInfo tailInfo;
     BatchMatMulV3RunInfo bmmRunInfo;
     MatMulV3MixInfo mixInfo;
-    BatchMatMulV3ToMulInfo toMulInfo;
-    MatMulV3MNEqualOneInfo oneInfo;
+    BatchMatMulV3ToMulInfo bmmToMulInfo;
+    MatMulV3ToMulInfo mmToMulInfo;
 };
 }
 }

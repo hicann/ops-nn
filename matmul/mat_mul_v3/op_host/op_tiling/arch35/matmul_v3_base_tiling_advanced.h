@@ -428,18 +428,18 @@ protected:
         return ge::GRAPH_SUCCESS; 
     };
 
-    virtual ge::graphStatus GetTilingDataProcess(BatchMatMulToMulBasicTilingData &matmulToMulBasicData) const
+    virtual ge::graphStatus GetTilingDataProcess(BatchMatMulToMulBasicTilingData &bmmToMulBasicData) const
     {
-        matmulToMulBasicData.m = runInfo_.toMulInfo.m;
-        matmulToMulBasicData.n = runInfo_.toMulInfo.n;
-        matmulToMulBasicData.b = runInfo_.toMulInfo.b;
-        matmulToMulBasicData.usedCoreNum = runInfo_.toMulInfo.usedCoreNum;
-        matmulToMulBasicData.singleCoreBatch = runInfo_.toMulInfo.singleCoreBatch;
-        matmulToMulBasicData.batchNum = runInfo_.toMulInfo.batchNum;
-        matmulToMulBasicData.batchNumLastRound = runInfo_.toMulInfo.batchNumLastRound;
-        matmulToMulBasicData.batchNumLastRoundTail = runInfo_.toMulInfo.batchNumLastRoundTail;
-        matmulToMulBasicData.lastCoreNum = runInfo_.toMulInfo.lastCoreNum;
-        matmulToMulBasicData.alignNum = runInfo_.toMulInfo.alignNum;
+        bmmToMulBasicData.m = runInfo_.bmmToMulInfo.m;
+        bmmToMulBasicData.n = runInfo_.bmmToMulInfo.n;
+        bmmToMulBasicData.b = runInfo_.bmmToMulInfo.b;
+        bmmToMulBasicData.usedCoreNum = runInfo_.bmmToMulInfo.usedCoreNum;
+        bmmToMulBasicData.singleCoreBatch = runInfo_.bmmToMulInfo.singleCoreBatch;
+        bmmToMulBasicData.batchNum = runInfo_.bmmToMulInfo.batchNum;
+        bmmToMulBasicData.batchNumLastRound = runInfo_.bmmToMulInfo.batchNumLastRound;
+        bmmToMulBasicData.batchNumLastRoundTail = runInfo_.bmmToMulInfo.batchNumLastRoundTail;
+        bmmToMulBasicData.lastCoreNum = runInfo_.bmmToMulInfo.lastCoreNum;
+        bmmToMulBasicData.alignNum = runInfo_.bmmToMulInfo.alignNum;
         return ge::GRAPH_SUCCESS;
     };
 
@@ -450,16 +450,19 @@ protected:
         return ge::GRAPH_SUCCESS;
     }
 
-    virtual ge::graphStatus GetTilingDataProcess(MatMulV3MNEqOneBasicTilingData &mnEqOneBasicTilingData) const
+    virtual ge::graphStatus GetTilingDataProcess(MatMulToMulBasicTilingData &matmulToMulBasicData) const
     {
-        mnEqOneBasicTilingData.m = args_.mValue;
-        mnEqOneBasicTilingData.n = args_.nValue;
-        mnEqOneBasicTilingData.k = args_.kValue;
-        mnEqOneBasicTilingData.useAllCoreNum = runInfo_.oneInfo.useAllCoreNum;
-        mnEqOneBasicTilingData.usedCoreNum = runInfo_.usedCoreNum;
-        mnEqOneBasicTilingData.tailMN = runInfo_.oneInfo.tailMN;
-        mnEqOneBasicTilingData.loopK = runInfo_.oneInfo.loopK;
-        mnEqOneBasicTilingData.hasBias = args_.hasBias;
+        matmulToMulBasicData.usedCoreNum = runInfo_.usedCoreNum;
+        matmulToMulBasicData.tileNum = runInfo_.mmToMulInfo.tileNum;
+        matmulToMulBasicData.m = args_.mValue;
+        matmulToMulBasicData.n = args_.nValue;
+        matmulToMulBasicData.k = args_.kValue;
+        matmulToMulBasicData.baseMN = runInfo_.mmToMulInfo.baseMN;
+        matmulToMulBasicData.tailMN = runInfo_.mmToMulInfo.tailMN;
+        matmulToMulBasicData.baseK = runInfo_.mmToMulInfo.baseK;
+        matmulToMulBasicData.tailK = runInfo_.mmToMulInfo.tailK;
+        matmulToMulBasicData.loopK = runInfo_.mmToMulInfo.loopK;
+        matmulToMulBasicData.dataCopyMode = runInfo_.mmToMulInfo.dataCopyMode;
         return ge::GRAPH_SUCCESS;
     }
 

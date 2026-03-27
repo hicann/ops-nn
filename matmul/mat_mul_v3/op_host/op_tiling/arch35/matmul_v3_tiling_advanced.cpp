@@ -50,6 +50,7 @@ inline void GetDtype(const gert::TilingContext &context, MatMulV3Args &args)
     if (strcmp(context.GetNodeType(), "MatMulV3") == 0) {
         if (context.GetAttrs()->GetAttrNum() >= OP_IMPL_MODE_ATTR_NUM) {
             args.isHf32 = *context.GetAttrs()->GetAttrPointer<int64_t>(OP_IMPL_MODE_ATTR_INDEX) == 0x40;
+            args.isForceGrpAccForFp32 = *context.GetAttrs()->GetAttrPointer<int64_t>(OP_IMPL_MODE_ATTR_INDEX) == 0x4;
         }
     } else {
         if (context.GetAttrs()->GetAttrNum() >= HF32_ATTR_NUM) {
