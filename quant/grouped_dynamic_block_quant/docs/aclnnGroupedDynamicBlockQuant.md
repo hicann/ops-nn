@@ -88,7 +88,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>x (aclTensor*)</td>
       <td>输入</td>
       <td>表示算子输入的Tensor。对应公式中的input。</td>
-      <td>支持空Tensor。</td>
+      <td>不支持空Tensor。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-3，形如[M, N]和[B, M, N]</td>
@@ -98,7 +98,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>groupList (aclTensor*)</td>
       <td>输入</td>
       <td>表示在M轴上每个group的偏移（cumsum模式）。</td>
-      <td>表示量化分组的起始索引，要求大于等于0，且非递减，并且最后一个数需要与x的-2轴大小相等。</td>
+      <td>表示量化分组的起始索引，要求大于等于0，且非递减，并且最后一个数需要与x的-2轴大小相等。<br>不支持空Tensor。</td>
       <td>INT32</td>
       <td>ND</td>
       <td>1</td>
@@ -168,7 +168,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>yOut (aclTensor*)</td>
       <td>输出</td>
       <td>表示量化后的输出Tensor。对应公式中的y。</td>
-      <td>支持空Tensor。<br>shape的维度与x保持一致。</td>
+      <td>shape的维度与x保持一致。</td>
       <td>HIFLOAT8、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
       <td>2-3</td>
@@ -178,7 +178,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>scaleOut (aclTensor*)</td>
       <td>输出</td>
       <td>表示每个分组对应的量化尺度，对应公式中的scale。</td>
-      <td>支持空Tensor。<br>如果输入x的shape为[M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[(M//rowBlockSize+g), (N/colBlockSize)]。</br>如果输入x的shape为[B, M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[B, (M//rowBlockSize+g), (N/colBlockSize)]。 </td>
+      <td>如果输入x的shape为[M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[(M//rowBlockSize+g), (N/colBlockSize)]。</br>如果输入x的shape为[B, M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[B, (M//rowBlockSize+g), (N/colBlockSize)]。 </td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>2-3</td>

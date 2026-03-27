@@ -3096,6 +3096,16 @@
   </tr>
   <tr>
     <td>quant</td>
+    <td><a href="../../quant/dynamic_block_mx_quant/README.md">dynamic_block_mx_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入变量，以数据块（32*32）为基本块进行MX量化转换为目的数据类型。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
     <td><a href="../../quant/dynamic_mx_quant/README.md">dynamic_mx_quant</a></td>
     <td>✓</td>
     <td>✓</td>
