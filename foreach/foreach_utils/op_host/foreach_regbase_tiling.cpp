@@ -329,7 +329,8 @@ ge::graphStatus ForeachRegbaseTiling::CheckOutput()
             return ge::GRAPH_FAILED);
 
         OP_CHECK_IF(
-            srcShape->GetStorageShape().GetShapeSize() != dstShape->GetStorageShape().GetShapeSize(),
+            srcShape->GetStorageShape() != dstShape->GetStorageShape() &&
+                srcShape->GetStorageShape().GetShapeSize() > dstShape->GetStorageShape().GetShapeSize(),
             OP_LOGE(
                 context_,
                 "The output tensors[%u] shapeSize should be same with input, but input tensors[%u] is %ld, output "
