@@ -103,7 +103,7 @@ static bool CheckParamsDataAndShape(const aclTensor *self, int64_t dim, const ac
   // 入参dim超出了self的shape可选维度范围[-self.dim，self.dim-1]
   int64_t selfDim = static_cast<int64_t>(self->GetViewShape().GetDimNum());
   if (dim < -selfDim || dim >= selfDim) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dimension out of range (expected to be in range of [%ld, %ld], but got %ld).",
+    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input dimension out of range (expected to be in range of [%ld, %ld], but got %ld).",
             -selfDim, (selfDim - 1), dim);
     return false;
   }
@@ -117,7 +117,7 @@ static bool CheckParamsDataAndShape(const aclTensor *self, int64_t dim, const ac
   // 入参self根据指定的dim所对应的维度不能整除2
   int64_t splitShape = self->GetViewShape().GetDim(positiveDim);
   if (splitShape % SPLIT_NUM != 0) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Halving dimension must be even, but dimension %ld is size %ld.", dim, splitShape);
+    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Split dimension must be even, but dimension %ld is size %ld.", dim, splitShape);
     return false;
   }
 
@@ -199,7 +199,7 @@ aclnnStatus aclnnGluGetWorkspaceSize(const aclTensor *self, int64_t dim, const a
     auto splitResult = l0op::SplitV(selfContiguous, splitSize, positiveDim, uniqueExecutor.get());
     CHECK_RET(splitResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     if (splitResult->Size() != static_cast<size_t>(SPLIT_NUM)) {
-      OP_LOGE(ACLNN_ERR_INNER, "The result of SplitV must be equal 2, but get %zu.", splitResult->Size());
+      OP_LOGE(ACLNN_ERR_INNER, "The result of SplitV should be equal 2, but get %zu.", splitResult->Size());
       return ACLNN_ERR_INNER;
     }
 

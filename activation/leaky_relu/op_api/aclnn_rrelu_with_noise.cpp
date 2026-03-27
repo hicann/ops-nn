@@ -29,11 +29,11 @@
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/shape_utils.h"
+#include "opdev/tensor_view_utils.h"
 #include "opdev/format_utils.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
-#include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
 
 using namespace op;

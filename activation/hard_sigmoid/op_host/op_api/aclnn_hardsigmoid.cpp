@@ -14,14 +14,14 @@
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
+#include "opdev/shape_utils.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
-#include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "aclnn_kernels/common/op_error_check.h"
-#include "op_api/op_api_def.h"
 #include "op_api/level2_base.h"
+#include "op_api/op_api_def.h"
 
 using namespace op;
 #ifdef __cplusplus

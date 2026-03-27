@@ -16,15 +16,15 @@
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
 #include "opdev/op_dfx.h"
-#include "opdev/op_executor.h"
-#include "opdev/op_log.h"
 #include "opdev/platform.h"
 #include "opdev/shape_utils.h"
+#include "opdev/op_executor.h"
+#include "opdev/op_log.h"
 #include "opdev/tensor_view_utils.h"
 
 #include "aclnn_kernels/cast.h"
-#include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/reshape.h"
+#include "aclnn_kernels/contiguous.h"
 #include "selu.h"
 #include "aclnn_kernels/transdata.h"
 
@@ -33,12 +33,12 @@ using namespace op;
 extern "C" {
 #endif
 
-static inline const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_INT8};
-
 static inline const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32,
     op::DataType::DT_INT8, op::DataType::DT_BF16};
+
+static inline const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_INT8};
 
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
   if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
@@ -77,6 +77,17 @@ static inline aclnnStatus CheckParams(const aclTensor *self, const aclTensor *ou
   return ACLNN_SUCCESS;
 }
 
+static const aclTensor *ReshapeLongTensor(const aclTensor *x, aclOpExecutor *executor, int originalDimSize,
+                                          aclIntArray *valuePerm = nullptr) {
+  int64_t dimSize = x->GetViewShape().GetDimNum();
+  if (originalDimSize == dimSize && dimSize <= (int64_t)MAX_SUPPORT_DIMS_NUMS) {
+    return x;
+  }
+
+  auto reshapeSelf = l0op::Reshape(x, valuePerm, executor);
+  return reshapeSelf;
+}
+
 static inline aclIntArray *GetTensorShape(const aclTensor *x, aclOpExecutor *executor) {
   auto shape = x->GetViewShape();
   int64_t dimSize = x->GetViewShape().GetDimNum();
@@ -89,17 +100,6 @@ static inline aclIntArray *GetTensorShape(const aclTensor *x, aclOpExecutor *exe
   return perm;
 }
 
-static const aclTensor *ReshapeLongTensor(const aclTensor *x, aclOpExecutor *executor, int originalDimSize,
-                                          aclIntArray *valuePerm = nullptr) {
-  int64_t dimSize = x->GetViewShape().GetDimNum();
-  if (originalDimSize == dimSize && dimSize <= (int64_t)MAX_SUPPORT_DIMS_NUMS) {
-    return x;
-  }
-
-  auto reshapeSelf = l0op::Reshape(x, valuePerm, executor);
-  return reshapeSelf;
-}
-
 aclnnStatus ExecSeluGetWorkspaceSize(const aclTensor *self, aclTensor *out, uint64_t *workspaceSize,
                                      aclOpExecutor **executor) {
   auto uniqueExecutor = CREATE_EXECUTOR();
@@ -108,7 +108,7 @@ aclnnStatus ExecSeluGetWorkspaceSize(const aclTensor *self, aclTensor *out, uint
   auto ret = CheckParams(self, out);
   CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-  if (self->IsEmpty() || out->IsEmpty()) {
+  if (out->IsEmpty() || self->IsEmpty()) {
     *workspaceSize = 0;
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;

@@ -17,15 +17,15 @@
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/op_api_def.h"
+#include "op_api/level2_base.h"
 #include "opdev/common_types.h"
+#include "opdev/shape_utils.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
-#include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
-#include "op_api/level2_base.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -51,23 +51,23 @@ static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* out)
-{
-    // 检查gradOutput的数据类型是否在HardSwishGrad算子的支持列表内
-    auto supportList = GetDtypeSupportListV2(ASCEND910B_DTYPE_SUPPORT_LIST, ASCEND910_DTYPE_SUPPORT_LIST);
-    OP_CHECK_DTYPE_NOT_SUPPORT(gradOutput, supportList, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
-    OP_CHECK_DTYPE_NOT_MATCH(gradOutput, self->GetDataType(), return false);
-    OP_CHECK_DTYPE_NOT_MATCH(out, self->GetDataType(), return false);
-    return true;
-}
-
 static bool CheckShapeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* out)
 {
     OP_CHECK_MAX_DIM(gradOutput, MAX_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_SHAPE_NOT_EQUAL(gradOutput, self, return false);
     OP_CHECK_SHAPE_NOT_EQUAL(out, self, return false);
+    return true;
+}
+
+static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* out)
+{
+    // 检查gradOutput的数据类型是否在HardSwishGrad算子的支持列表内
+    auto supportList = GetDtypeSupportListV2(ASCEND910B_DTYPE_SUPPORT_LIST, ASCEND910_DTYPE_SUPPORT_LIST);
+    OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(gradOutput, supportList, return false);
+    OP_CHECK_DTYPE_NOT_MATCH(gradOutput, self->GetDataType(), return false);
+    OP_CHECK_DTYPE_NOT_MATCH(out, self->GetDataType(), return false);
     return true;
 }
 
@@ -109,13 +109,13 @@ aclnnStatus aclnnHardswishBackwardGetWorkspaceSize(
         return ACLNN_SUCCESS;
     }
 
-    // 固定写法，将输入gradOutputContiguous转换成连续的tensor
-    auto gradOutputContiguous = l0op::Contiguous(gradOutput, uniqueExecutor.get());
-    CHECK_RET(gradOutputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
     // 固定写法，将输入self转换成连续的tensor
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 固定写法，将输入gradOutputContiguous转换成连续的tensor
+    auto gradOutputContiguous = l0op::Contiguous(gradOutput, uniqueExecutor.get());
+    CHECK_RET(gradOutputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 调用HardSwishGrad算子kernel
     auto hardswishBackwardOpOut = l0op::HardSwishGrad(gradOutputContiguous, selfContiguous, uniqueExecutor.get());
