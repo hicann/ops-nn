@@ -16,7 +16,7 @@
 #ifndef CONV2D_FRAMEWORK_H
 #define CONV2D_FRAMEWORK_H
 
-#include "kernel_utils.h"
+#include "kernel_common.h"
 using namespace AscendC;
 
 #ifdef ASC_OP_DEBUG_TEST

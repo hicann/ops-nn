@@ -16,7 +16,7 @@
 #ifndef CONV_CONFIG_H
 #define CONV_CONFIG_H
 
-#include "kernel_utils.h"
+#include "kernel_common.h"
 #include "conv_util.h"
 #include "conv_framework_util.h"
 
