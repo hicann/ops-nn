@@ -167,15 +167,18 @@ struct MatMulV3KEqZeroBasicTilingData {
 #pragma pack(pop)
 
 #pragma pack(push, 8)
-struct MatMulV3MNEqOneBasicTilingData{
+struct MatMulToMulBasicTilingData{
+    uint32_t usedCoreNum = 1;
+    uint32_t tileNum = 1;
     uint32_t m = 1;
     uint32_t n = 1;
     uint32_t k = 1;
-    uint32_t useAllCoreNum = 1;
-    uint32_t usedCoreNum = 1;
-    uint32_t loopK = 1;
+    uint32_t baseMN = 0;
     uint32_t tailMN = 0;
-    bool hasBias = false;
+    uint32_t baseK = 0;
+    uint32_t tailK = 0;
+    uint32_t loopK = 1;
+    bool dataCopyMode = false;
 };
 #pragma pack(pop)
 

@@ -9,12 +9,12 @@
  */
 
 /* !
- * \file block_scheduler_one.h
+ * \file block_scheduler_mul.h
  * \brief
  */
 
-#ifndef CMCT_BLOCK_SCHEDULER_ONE_BUILTIN_H
-#define CMCT_BLOCK_SCHEDULER_ONE_BUILTIN_H
+#ifndef CMCT_BLOCK_SCHEDULER_MUL_BUILTIN_H
+#define CMCT_BLOCK_SCHEDULER_MUL_BUILTIN_H
 
 #include "cmct/block/block_scheduler_utils.h"
 #include "cmct/block/block_scheduler_policy.h"
@@ -28,31 +28,37 @@ template <
     class L1TileShape_,
     class L0TileShape_
 >
-class BlockSchedulerOneBuiltIn {
+class BlockSchedulerMulBuiltIn {
 public:
     int64_t m_{0};
     int64_t n_{0};
     int64_t k_{0};
-    int64_t useAllCoreNum_{0};
+    int64_t tileNum_{0};
     int64_t usedCoreNum_{0};
-    int64_t loopK_{0};
+    int64_t baseMN_{0};
     int64_t tailMN_{0};
-    bool hasBias_{false};
+    int64_t baseK_{0};
+    int64_t tailK_{0};
+    int64_t loopK_{0};
+    bool dataCopyMode_{false};
 
+    using TupleShape = Shape<int64_t, int64_t, int64_t, int64_t>;
     using ProblemShape = ProblemShape_;
 
     struct Params {
-        const MatMulV3MNEqOneBasicTilingData* tilingData;
+        const MatMulToMulBasicTilingData* tilingData;
     };
 public:
-    __aicore__ inline BlockSchedulerOneBuiltIn(const ProblemShape& shape, const Params& params)
+    __aicore__ inline BlockSchedulerMulBuiltIn(const ProblemShape& shape, const Params& params)
     {
-        useAllCoreNum_ = params.tilingData->useAllCoreNum;
+        tileNum_ = params.tilingData->tileNum;
         usedCoreNum_ = params.tilingData->usedCoreNum;
-        loopK_ = params.tilingData->loopK;
+        baseMN_ = params.tilingData->baseMN;
         tailMN_ = params.tilingData->tailMN;
-        hasBias_ = params.tilingData->hasBias;
-        m_ = shape.m;
+        baseK_ = params.tilingData->baseK;
+        tailK_ = params.tilingData->tailK;
+        loopK_ = params.tilingData->loopK;
+        dataCopyMode_ = params.tilingData->dataCopyMode;
         n_ = shape.n;
         k_ = shape.k;
     }
@@ -64,7 +70,7 @@ public:
 
     __aicore__ inline int64_t GetTileNum()
     {
-        return useAllCoreNum_;
+        return tileNum_;
     }
 
     __aicore__ inline int64_t GetLoopK()
@@ -72,14 +78,14 @@ public:
         return loopK_;
     }
 
-    __aicore__ inline int64_t GetTailMN()
+    __aicore__ inline bool GetDataCopyMode()
     {
-        return tailMN_;
+        return dataCopyMode_;
     }
 
-    __aicore__ inline bool GetBias()
+    __aicore__ inline TupleShape GetBlockInfo()
     {
-        return hasBias_;
+        return {baseMN_, tailMN_, baseK_, tailK_};
     }
 };
 
@@ -93,11 +99,11 @@ struct BlockSchedulerSelector<
     ProblemShape_,
     L1TileShape_,
     L0TileShape_,
-    Cmct::Gemm::BuiltInOneScheduler,
+    Cmct::Gemm::BuiltInMulScheduler,
     TransA_,
     TransB_
 > {
-using SchedulerOp = BlockSchedulerOneBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_>;
+using SchedulerOp = BlockSchedulerMulBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_>;
 };
 
 } // namespace Block

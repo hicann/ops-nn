@@ -33,7 +33,7 @@ struct KernelMmadWithScale {};     // Multi-block with scale
 struct KernelMultiBlockStreamK {}; // Multi-tile transfer with K-axis spliting and caching
 struct KernelBatchMatMulToMul {};  // BatchMatmul to mul
 struct KernelMixWithWeightPrologue {};
-struct KernelMNEqualOne {}; 
+struct KernelMatMulToMul {}; 
 
 enum class MatMulL0C2Out : std::uint8_t {
     ON_THE_FLY = 0,
@@ -317,9 +317,14 @@ struct MmadAPrefetchBAntiquantScmc {
     constexpr static uint64_t AIV_NUM = AivNum;
 };
 
+/**
+ * @struct MatmulToMul
+ * @brief Matrix multiplication policy for converting a matmul operation to vector (when M=1 or N=1)
+ * @param [in] SingleCoreShape: the shape of a single core, default is AscendC::Shape<_0, _0, _0, _0>
+ */
 template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>
-struct MatmulMNEqualOne {
-    using ScheduleType = KernelMNEqualOne;
+struct MatmulToMul {
+    using ScheduleType = KernelMatMulToMul;
     using SingleShape = SingleCoreShape;
 };
 
