@@ -70,8 +70,8 @@ public:
             currentML0Align_ = m;
             currentML0_ = mNotAlign;
         }
-        LoadDataRepeatParam repeatParams = {0, 1, 0, static_cast<uint16_t>(currentML0Align_ / BLOCK_L0_M)};
-        SetLoadDataRepeat(repeatParams);
+        LoadDataRepeatParamWithStride repeatParams = {0, 1, 0, static_cast<uint16_t>(currentML0Align_ / BLOCK_L0_M)};
+        SetLoadDataRepeatWithStride(repeatParams);
     }
 
     __aicore__ inline void LoadAL0(bool isFirst = true)
