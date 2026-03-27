@@ -42,7 +42,7 @@ protected:
     ge::graphStatus CalcOutputDtype();
     ge::graphStatus CalcInputDtype();
     ge::graphStatus CheckInputShape();
-    float CalcReductionCof();
+    float CalcReductionCof(const gert::Shape& inputLabelShape);
     ge::graphStatus CalcDiffDtype();
 
     ge::graphStatus RunFp16BroadcastTiling(float reducationCof);

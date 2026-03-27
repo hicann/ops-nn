@@ -116,7 +116,7 @@ ge::graphStatus Tiling4CTCLossV2ForAscendC(gert::TilingContext* context)
     OP_LOGD(context->GetNodeName(), "Tiling4CTCLossV2ForAscendC running begin");
     CTCLossV2TilingData4AscendC tilingData;
     // set lpInputStride, lpBatchStride, lpCharStride
-    auto logProbs = context->GetInputTensor(LOG_PROBS_IDX);
+    auto logProbs = context->GetInputShape(LOG_PROBS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, logProbs);
     auto logProbsDesc = context->GetInputDesc(LOG_PROBS_IDX);
     DataType logProbsDtype = logProbsDesc->GetDataType();
@@ -176,7 +176,7 @@ ge::graphStatus Tiling4CTCLossV2ForAscendC(gert::TilingContext* context)
     // set targetDim、tgBatchStride
     int64_t targetsDim = 0;
     int64_t tgBatchStride = 0;
-    auto targets = context->GetInputTensor(TARGETS_IDX);
+    auto targets = context->GetInputShape(TARGETS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, targets);
     auto targetsShape = targets->GetStorageShape();
     targetsDim = targetsShape.GetDimNum();

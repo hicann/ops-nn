@@ -21,7 +21,7 @@
 namespace optiling {
 ge::graphStatus Tiling4CTCLossV2GradForAscendC(gert::TilingContext* context);
 
-BEGIN_TILING_DATA_DEF(CTCLossV2GradTilingData4AscnedC)
+BEGIN_TILING_DATA_DEF(CTCLossV2GradTilingData4AscendC)
 TILING_DATA_FIELD_DEF(int64_t, alphaLength);
 TILING_DATA_FIELD_DEF(int64_t, maxInputLength);
 TILING_DATA_FIELD_DEF(int64_t, symbolSet);
@@ -51,7 +51,7 @@ TILING_DATA_FIELD_DEF(int64_t, initTempGradGmSizePerBlock);
 TILING_DATA_FIELD_DEF(int64_t, initTempGradGmSizeEndBlock);
 END_TILING_DATA_DEF;
 
-REGISTER_TILING_DATA_CLASS(CTCLossV2Grad, CTCLossV2GradTilingData4AscnedC)
+REGISTER_TILING_DATA_CLASS(CTCLossV2Grad, CTCLossV2GradTilingData4AscendC)
 
 struct CTCLossV2GradForCompileInfo {
     int32_t totalCoreNum = 0;

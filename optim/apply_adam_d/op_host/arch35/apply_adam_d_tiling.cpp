@@ -107,7 +107,7 @@ ge::graphStatus ApplyAdamDTiling::CheckDtype() {
     }
 
     for (int32_t outputIdx = 0; outputIdx < OUTPUT_NUM; outputIdx++) {
-        auto outputDesc = tilingContext_->GetInputDesc(outputIdx);
+        auto outputDesc = tilingContext_->GetOutputDesc(outputIdx);
         OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, outputDesc);
 
         auto curDtype = outputDesc->GetDataType();

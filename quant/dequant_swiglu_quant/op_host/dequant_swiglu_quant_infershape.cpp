@@ -23,6 +23,7 @@ namespace ops {
 constexpr size_t INPUT_IDX_X = 0;
 constexpr size_t OUTPUT_IDX_Y = 0;
 constexpr size_t OUTPUT_IDX_SCALE = 1;
+constexpr int64_t CONST_UNKNOW_SHAPE = -1;
 constexpr int64_t NUM_TWO = 2;
 constexpr int64_t INDEX_ATTR_DST_TYPE = 2;
 constexpr int64_t INDEX_ATTR_ACTIVATE_DIM = 4;
@@ -41,27 +42,31 @@ graphStatus InferShape4DequantSwigluQuant(gert::InferShapeContext* context) {
   OP_CHECK_NULL_WITH_CONTEXT(context, scaleShape);
 
   *yShape = *xShape;
-  *scaleShape = *xShape;
-
   OP_CHECK_IF(Ops::Base::IsUnknownRank(*xShape),
            OP_LOGD(context, "End to do InferShape4DequantSwigluQuant, inputx is [-2]."),
            return GRAPH_SUCCESS);
 
   auto attrsPtr = context->GetAttrs();
   OP_CHECK_NULL_WITH_CONTEXT(context, attrsPtr);
-  const int32_t *activateDim = attrsPtr->GetAttrPointer<int32_t>(INDEX_ATTR_ACTIVATE_DIM);
-  const int32_t activateDimNum = (activateDim == nullptr) ? -1 : *activateDim;
+  const int64_t *activateDim = attrsPtr->GetAttrPointer<int64_t>(INDEX_ATTR_ACTIVATE_DIM);
+  const int64_t activateDimNum = (activateDim == nullptr) ? -1 : *activateDim;
 
   // 将切分轴转换为正数
   int64_t xShapeRank = static_cast<int64_t>(xShape->GetDimNum());
-  size_t selectDim = (activateDimNum >= 0) ? static_cast<size_t>(activateDimNum) : static_cast<size_t>(activateDimNum + xShapeRank);
-
+  int64_t selectDim = (activateDimNum >= 0) ? activateDimNum : (activateDimNum + xShapeRank);
+  OP_CHECK_IF(selectDim >= xShapeRank,
+           OP_LOGE(context, "activateDim must < xShapeRank, but is %ld, xShapeRank is %ld", selectDim, xShapeRank),
+           return ge::GRAPH_FAILED);
+  int64_t activateShape = xShape->GetDim(selectDim);
+  int64_t outActivateShape = activateShape == CONST_UNKNOW_SHAPE ? CONST_UNKNOW_SHAPE : activateShape / NUM_TWO;
+  OP_CHECK_IF((activateShape != CONST_UNKNOW_SHAPE) && (activateShape % NUM_TWO != 0),
+           OP_LOGE(context, "The active axis must be an even number， but is %ld", activateShape),
+           return ge::GRAPH_FAILED);
   // 设置Y的shape
-  yShape->SetDim(selectDim, xShape->GetDim(selectDim) / NUM_TWO);
+  yShape->SetDim(selectDim, outActivateShape);
   // 设置Scale的shape
+  *scaleShape = *yShape;
   scaleShape->SetDimNum(xShapeRank - 1);
-  scaleShape->SetDim(selectDim, xShape->GetDim(selectDim) / NUM_TWO);
-
   OP_LOGD(context, "End to do InferShape4DequantSwigluQuant");
   return ge::GRAPH_SUCCESS;
 }
@@ -71,8 +76,8 @@ graphStatus InferDtype4DequantSwigluQuant(gert::InferDataTypeContext* context) {
 
   auto attrsPtr = context->GetAttrs();
   OP_CHECK_NULL_WITH_CONTEXT(context, attrsPtr);
-  const int32_t *dstDtype = attrsPtr->GetAttrPointer<int32_t>(INDEX_ATTR_DST_TYPE);
-  const int32_t dstDtypeNum = (dstDtype == nullptr) ? 2 : *dstDtype;
+  const int64_t *dstDtype = attrsPtr->GetAttrPointer<int64_t>(INDEX_ATTR_DST_TYPE);
+  const int64_t dstDtypeNum = (dstDtype == nullptr) ? NUM_TWO : *dstDtype;
 
   ge::DataType outDtype = static_cast<ge::DataType>(dstDtypeNum);
   OP_CHECK_IF(std::find(Y_SUPPORT_DTYPE_SET.begin(), Y_SUPPORT_DTYPE_SET.end(), outDtype) == Y_SUPPORT_DTYPE_SET.end(),

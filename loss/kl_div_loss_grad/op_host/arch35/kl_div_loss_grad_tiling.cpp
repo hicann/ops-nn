@@ -134,22 +134,21 @@ ge::graphStatus KlDivLossGradTiling::CalcOutputDtype()
     return ge::GRAPH_SUCCESS;
 }
 
-float KlDivLossGradTiling::CalcReductionCof()
+float KlDivLossGradTiling::CalcReductionCof(const gert::Shape& inputLabelShape)
 {
     float reducationCof = 1.0;
+    float negReductionCof = -1.0f;
     int64_t dimVal = 1;
-    auto inputStorageShape = context_->GetInputShape(INPUT_INPUT_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, inputStorageShape);
-    const gert::Shape& inputLabelShape = EnsureNotScalar(inputStorageShape->GetStorageShape());
-
     auto attrs = context_->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
+    OP_CHECK_IF(attrs == nullptr,
+        OP_LOGE(context_->GetNodeName(), "attrs is nullptr"),
+        return negReductionCof);
 
     this->reducationStr = attrs->GetAttrPointer<char>(REDUCTION_INDEX);
     auto iter = STR_2_INT.find(this->reducationStr);
     OP_CHECK_IF(iter == STR_2_INT.end(),
                     OP_LOGE(context_->GetNodeName(), "reduction is %s not in [none, mean , sum , batchmean].",this->reducationStr),
-                    return ge::GRAPH_FAILED);
+                    return negReductionCof);
 
     if (strcmp(this->reducationStr, "mean") == 0) {
         const size_t dimLen = inputLabelShape.GetDimNum();
@@ -158,7 +157,7 @@ float KlDivLossGradTiling::CalcReductionCof()
                 dimVal = dimVal * inputLabelShape.GetDim(i);
             } else {
                 OP_LOGE(context_->GetNodeName(), "The  [%u]  axis of the input is 0, which is not supported", i);
-                return ge::GRAPH_FAILED;
+                return negReductionCof;
             }
         }
     } else if (strcmp(this->reducationStr, "batchmean") == 0){
@@ -166,9 +165,12 @@ float KlDivLossGradTiling::CalcReductionCof()
             dimVal = dimVal * inputLabelShape.GetDim(0);
         } else {
             OP_LOGE(context_->GetNodeName(), "The 0 axis of the input is 0, which is not supported");
-            return ge::GRAPH_FAILED;
+            return negReductionCof;
         }
     }
+    OP_CHECK_IF(dimVal <= 0,
+        OP_LOGE(context_->GetNodeName(), "dimVal must greater 0, but is %ld", dimVal),
+        return negReductionCof);
     OP_LOGD(context_->GetNodeName(), "[dimVal] : dimVal = %ld", dimVal);
     reducationCof = static_cast<float>(reducationCof / static_cast<double>(dimVal));
     OP_LOGD(context_->GetNodeName(), "[TilingData] : reducationCof = %f", reducationCof);
@@ -201,19 +203,14 @@ ge::graphStatus KlDivLossGradTiling::DoOpTiling()
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
 
     const bool* getLogtarget = attrs->GetAttrPointer<bool>(LOGTARGET_INDEX);
-    if(getLogtarget == nullptr){
-        OP_LOGD(context_->GetNodeName(), "KlDivLossGradTiling DoOpTiling  attrs->GetAttrPointer<bool> logTarget is null");
-    }
-
-    this->logTarget_ =  *getLogtarget;
-    if (this->logTarget_){
-        OP_LOGD(context_->GetNodeName(), "KlDivLossGradTiling DoOpTiling  logTarget is True.");
-    }else{
-        OP_LOGD(context_->GetNodeName(), "KlDivLossGradTiling DoOpTiling  logTarget is False.");
-    }
-    
-    this->reducationCof_ = CalcReductionCof();
-
+    this->logTarget_ = (getLogtarget != nullptr) ? *getLogtarget : false;
+    OP_LOGD(context_->GetNodeName(), "logTarget is %d", static_cast<int32_t>(this->logTarget_));
+    auto inputShape = context_->GetInputShape(INPUT_INPUT_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
+    auto inputLabelShape = EnsureNotScalar(inputShape->GetStorageShape());
+    this->reducationCof_ = CalcReductionCof(inputLabelShape);
+    OP_CHECK_IF(this->reducationCof_ < 0.0f,
+        OP_LOGE(context_->GetNodeName(), "reducationCof must > 0"), return ge::GRAPH_FAILED);
     if (input0DType == ge::DT_FLOAT16 || input0DType == ge::DT_BF16) {
         OP_CHECK_IF(RunFp16BroadcastTiling(this->reducationCof_) == ge::GRAPH_FAILED,
                         OP_LOGE(context_->GetNodeName(), "get input dtype failed"),

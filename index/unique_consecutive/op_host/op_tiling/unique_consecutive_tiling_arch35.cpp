@@ -146,6 +146,9 @@ bool UniqueConsecutiveTilingHelper::DoBlockTiling()
 {
     int64_t maxSingleCoreElements = MAX_BYTES_SINGLE_CORE / this->dtSizeX_;
     this->useCoreNums_ = CeilDiv(this->totalSize_, maxSingleCoreElements);
+    if (this->useCoreNums_ <= 0) {
+        return false;
+    }
     if (this->useCoreNums_ > this->aivCoreNum_) {
         this->useCoreNums_ = this->aivCoreNum_;
         this->tileLengthPerCore_ = CeilDiv(this->totalSize_, this->useCoreNums_);

@@ -99,7 +99,7 @@ private:
     ge::graphStatus InitSimtParams();
 
 private:
-    CTCLossV2GradTilingData4AscnedC tilingData;
+    CTCLossV2GradTilingData4AscendC tilingData;
     gert::TilingContext* context_ = nullptr;
     int64_t coreUsed = 0;
     int64_t coreNum = 0;

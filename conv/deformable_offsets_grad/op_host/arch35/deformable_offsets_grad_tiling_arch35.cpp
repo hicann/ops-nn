@@ -157,7 +157,9 @@ ge::graphStatus DeformableOffsetsGradAscendCTilingImpl::Init(const int64_t coreN
 
     offsetValueDim_ = isModulated_ ? POINT_WEIGHT_SIZE : POINT_NOT_WEIGHT_SIZE;
     deformableGroups_ = offsetChannel_ / (dimKh_ * dimKw_ * offsetValueDim_);
-
+    OP_CHECK_IF(
+        strideH_ == 0 || strideW_ == 0, OP_LOGE(context_->GetNodeName(), "StrideH or StrideW must not equal to 0"),
+        return ge::GRAPH_FAILED);
     // conved img
     imgOutHeight_ = static_cast<int64_t>(
         (imgHeight_ + padsHeightUp_ + padsHeightDown_ - (dilationH_ * (dimKh_ - 1) + 1)) / strideH_ + 1);
@@ -346,10 +348,6 @@ ge::graphStatus DeformableOffsetsGradAscendCTilingImpl::UpdateStrideAndDilationB
 ge::graphStatus DeformableOffsetsGradAscendCTilingImpl::GetParameterAndCheck(
     const DeformableOffsetsGradOffset deformableOffsetsGradOffset) const
 {
-    OP_CHECK_IF(
-        strideH_ == 0 || strideW_ == 0, OP_LOGE(context_->GetNodeName(), "StrideH or StrideW must not equal to 0"),
-        return ge::GRAPH_FAILED);
-
     OP_CHECK_IF(
         imgOutHeight_ <= static_cast<int64_t>(0) || imgOutWidth_ <= static_cast<int64_t>(0),
         OP_LOGE(

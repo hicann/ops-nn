@@ -139,7 +139,7 @@ TEST_F(SwigluMxQuantTilingTest, test_tiling_fp16_to_fp8_e4m3)
     ge::DataType mxscaleDtype = ge::DT_FLOAT8_E8M0;
     gert::StorageShape xShape = {{8, 128, 8192}, {8, 128, 8192}};
     gert::StorageShape yShape = {{8, 128, 4096}, {8, 128, 4096}};
-    gert::StorageShape mxscaleShape = {{8, 128, 129, 2}, {8, 128, 129, 2}};
+    gert::StorageShape mxscaleShape = {{8, 128, 64, 2}, {8, 128, 64, 2}};
     ExecuteTestCase(
         xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape,
         -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1, 36, "rint", 0, 0.0f,
@@ -153,7 +153,7 @@ TEST_F(SwigluMxQuantTilingTest, test_tiling_bf16_to_fp8_e5m2)
     ge::DataType mxscaleDtype = ge::DT_FLOAT8_E8M0;
     gert::StorageShape xShape = {{4, 64, 2048}, {4, 64, 2048}};
     gert::StorageShape yShape = {{4, 64, 1024}, {4, 64, 1024}};
-    gert::StorageShape mxscaleShape = {{4, 64, 33, 2}, {4, 64, 33, 2}};
+    gert::StorageShape mxscaleShape = {{4, 64, 16, 2}, {4, 64, 16, 2}};
     ExecuteTestCase(
         xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape,
         -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1, 35, "rint", 0, 0.0f,
@@ -167,7 +167,7 @@ TEST_F(SwigluMxQuantTilingTest, test_tiling_fp16_to_fp4_e2m1)
     ge::DataType mxscaleDtype = ge::DT_FLOAT8_E8M0;
     gert::StorageShape xShape = {{4, 256, 4096}, {4, 256, 4096}};
     gert::StorageShape yShape = {{4, 256, 2048}, {4, 256, 2048}};
-    gert::StorageShape mxscaleShape = {{4, 256, 65, 2}, {4, 256, 65, 2}};
+    gert::StorageShape mxscaleShape = {{4, 256, 32, 2}, {4, 256, 32, 2}};
     ExecuteTestCase(
         xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape,
         -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1, 40, "rint", 0, 0.0f,
@@ -181,7 +181,7 @@ TEST_F(SwigluMxQuantTilingTest, test_tiling_bf16_to_fp4_e1m2)
     ge::DataType mxscaleDtype = ge::DT_FLOAT8_E8M0;
     gert::StorageShape xShape = {{2, 128, 2048}, {2, 128, 2048}};
     gert::StorageShape yShape = {{2, 128, 1024}, {2, 128, 1024}};
-    gert::StorageShape mxscaleShape = {{2, 128, 33, 2}, {2, 128, 33, 2}};
+    gert::StorageShape mxscaleShape = {{2, 128, 16, 2}, {2, 128, 16, 2}};
     ExecuteTestCase(
         xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape,
         -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1, 41, "floor", 0, 0.0f,
@@ -195,7 +195,7 @@ TEST_F(SwigluMxQuantTilingTest, test_tiling_round_mode_floor_fp4)
     ge::DataType mxscaleDtype = ge::DT_FLOAT8_E8M0;
     gert::StorageShape xShape = {{4, 256, 4096}, {4, 256, 4096}};
     gert::StorageShape yShape = {{4, 256, 2048}, {4, 256, 2048}};
-    gert::StorageShape mxscaleShape = {{4, 256, 65, 2}, {4, 256, 65, 2}};
+    gert::StorageShape mxscaleShape = {{4, 256, 32, 2}, {4, 256, 32, 2}};
     ExecuteTestCase(
         xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape,
         -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1, 40, "floor", 0, 0.0f,
@@ -209,7 +209,7 @@ TEST_F(SwigluMxQuantTilingTest, test_tiling_invalid_round_mode_fp8)
     ge::DataType mxscaleDtype = ge::DT_FLOAT8_E8M0;
     gert::StorageShape xShape = {{4, 256, 4096}, {4, 256, 4096}};
     gert::StorageShape yShape = {{4, 256, 2048}, {4, 256, 2048}};
-    gert::StorageShape mxscaleShape = {{4, 256, 65, 2}, {4, 256, 65, 2}};
+    gert::StorageShape mxscaleShape = {{4, 256, 32, 2}, {4, 256, 32, 2}};
     ExecuteTestCase(
         xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape,
         -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1, 36, "floor", 0, 0.0f,
@@ -223,7 +223,7 @@ TEST_F(SwigluMxQuantTilingTest, test_tiling_scale_alg_1)
     ge::DataType mxscaleDtype = ge::DT_FLOAT8_E8M0;
     gert::StorageShape xShape = {{4, 256, 4096}, {4, 256, 4096}};
     gert::StorageShape yShape = {{4, 256, 2048}, {4, 256, 2048}};
-    gert::StorageShape mxscaleShape = {{4, 256, 65, 2}, {4, 256, 65, 2}};
+    gert::StorageShape mxscaleShape = {{4, 256, 32, 2}, {4, 256, 32, 2}};
     ExecuteTestCase(
         xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape,
         -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1, 36, "rint", 1, 0.0f,
@@ -237,7 +237,7 @@ TEST_F(SwigluMxQuantTilingTest, test_tiling_invalid_axis)
     ge::DataType mxscaleDtype = ge::DT_FLOAT8_E8M0;
     gert::StorageShape xShape = {{4, 256, 4096}, {4, 256, 4096}};
     gert::StorageShape yShape = {{4, 256, 2048}, {4, 256, 2048}};
-    gert::StorageShape mxscaleShape = {{4, 256, 65, 2}, {4, 256, 65, 2}};
+    gert::StorageShape mxscaleShape = {{4, 256, 32, 2}, {4, 256, 32, 2}};
     ExecuteTestCase(
         xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape,
         -1, false, 0, 7.0f, 1.702f, 1.0f, 0, 0, 36, "rint", 0, 0.0f,
@@ -251,7 +251,7 @@ TEST_F(SwigluMxQuantTilingTest, test_tiling_invalid_dst_type)
     ge::DataType mxscaleDtype = ge::DT_FLOAT8_E8M0;
     gert::StorageShape xShape = {{4, 256, 4096}, {4, 256, 4096}};
     gert::StorageShape yShape = {{4, 256, 2048}, {4, 256, 2048}};
-    gert::StorageShape mxscaleShape = {{4, 256, 65, 2}, {4, 256, 65, 2}};
+    gert::StorageShape mxscaleShape = {{4, 256, 32, 2}, {4, 256, 32, 2}};
     ExecuteTestCase(
         xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape,
         -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1, 99, "rint", 0, 0.0f,

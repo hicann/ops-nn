@@ -95,9 +95,7 @@ graphStatus ComputeInferShape(gert::InferShapeContext* context, const gert::Shap
         return ge::GRAPH_FAILED);
     int64_t groupIndexNum = 0;
     if (hasGroup) {
-        if (groupIndexShape->GetDim(0) != UNKNOWN_DIM_VALUE_) {
-            groupIndexNum = groupIndexShape->GetDim(0);
-        }
+        groupIndexNum = groupIndexShape->GetDim(0);
     }
     // 校验：当前仅支持 axis 为尾轴
     OP_CHECK_IF(axisNorm != xRank - 1,
@@ -112,14 +110,12 @@ graphStatus ComputeInferShape(gert::InferShapeContext* context, const gert::Shap
     } else {
         int64_t yDim = yShape->GetDim(axisNorm);
         if (hasGroup && axisNorm == yShape->GetDimNum() - 2) {
-            // floor(yDim / BLOCK_SIZE) + groupIndexNum
             if (groupIndexNum == UNKNOWN_DIM_VALUE_ || groupIndexNum == UNKNOWN_RANK_DIM) {
                 yAxisSize = UNKNOWN_DIM_VALUE_;
             } else {
                 yAxisSize = yDim / (ALIGN_NUM * BLOCK_SIZE) + groupIndexNum;
             }
         } else {
-            // ceil(yDim / BLOCK_SIZE)
             yAxisSize = Ops::Base::CeilDiv(yDim, ALIGN_NUM * BLOCK_SIZE);
         }
     }

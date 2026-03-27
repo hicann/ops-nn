@@ -62,7 +62,7 @@ ge::graphStatus AdamApplyOneTiling::GetShapeAttrsInfo()
         }
     }
     for (int32_t outputIdx = 0; outputIdx < OUTPUT_NUM; outputIdx++) {
-        auto outputDesc = context_->GetInputDesc(outputIdx);
+        auto outputDesc = context_->GetOutputDesc(outputIdx);
         OP_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
 
         auto curDtype = outputDesc->GetDataType();

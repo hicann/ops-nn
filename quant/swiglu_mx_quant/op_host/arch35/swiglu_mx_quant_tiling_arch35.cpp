@@ -19,6 +19,7 @@
 #include <cmath>
 #include <sstream>
 #include "platform/platform_info.h"
+#include "op_host/tiling_util.h"
 #include "util/math_util.h"
 
 using namespace std;
@@ -51,6 +52,7 @@ constexpr int64_t TILING_KEY_BASE = 1000;
 constexpr int64_t INPUT_GROUP_INDEX = 1;
 constexpr int64_t DOUBLE_BUFFER = 2;
 constexpr int64_t CONST_TWO = 2;
+constexpr int64_t CONST_THREE = 3;
 constexpr int64_t CONST_FOUR = 4;
 constexpr int64_t DTYPE_35 = 35;               // F8e5m2
 constexpr int64_t DTYPE_36 = 36;               // F8e8m0
@@ -243,9 +245,9 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::ValidateInput()
     OP_CHECK_NULL_WITH_CONTEXT(context_, xShape);
     int64_t dimNum = static_cast<int64_t>(xShape->GetStorageShape().GetDimNum());
     OP_LOGI(context_->GetNodeName(), "Input x shape = %s", Shape2String(xShape->GetStorageShape()).c_str());
-
-    OP_CHECK_IF((dimNum < CONST_TWO),
-        OP_LOGE(context_->GetNodeName(), "Input dimension must be at least 2, but got %ld.", dimNum),
+    int64_t xSize = xShape->GetStorageShape().GetShapeSize();
+    OP_CHECK_IF((dimNum < CONST_TWO || xSize == 0),
+        OP_LOGE(context_->GetNodeName(), "rank of x must >= 2, but is %ld, and not support empty tensor", dimNum),
         return ge::GRAPH_FAILED);
 
     // 保存维度数量，供属性校验使用
@@ -280,9 +282,9 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::ValidateInput()
         inputInfo_.groupIndexNum = groupIndexShape->GetStorageShape().GetDim(0);
         OP_LOGI(context_->GetNodeName(), "group_index exists with shape[0]=%ld", inputInfo_.groupIndexNum);
 
-        // 校验 group_index 的 shape[0] 必须不大于 256
-        OP_CHECK_IF(inputInfo_.groupIndexNum > LIMIT_GRPUP_INDEX,
-            OP_LOGE(context_->GetNodeName(), "group_index shape[0] must be <= 256, but got %ld.",
+        // 校验 group_index shape必须满足 0 <shape[0] <= 256
+        OP_CHECK_IF(inputInfo_.groupIndexNum > LIMIT_GRPUP_INDEX || inputInfo_.groupIndexNum <= 0,
+            OP_LOGE(context_->GetNodeName(), "group_index shape[0] must be <= 256 and > 0, but got %ld.",
             inputInfo_.groupIndexNum),
             return ge::GRAPH_FAILED);
     } else {
@@ -319,7 +321,19 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::ValidateOutput()
     // 获取输出 y 的 shape，设置 outputDim2 为 y 的 activateDim 维度的值
     auto yShape = context_->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yShape);
+    auto scaleShape = context_->GetOutputShape(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, scaleShape);
+    auto yShapeNew = Ops::NN::OpTiling::EnsureNotScalar(yShape->GetStorageShape());
+    auto scaleShapeNew = Ops::NN::OpTiling::EnsureNotScalar(scaleShape->GetStorageShape());
+    int64_t yShapeSize = yShapeNew.GetShapeSize();
+    int64_t scaleShapeSize = scaleShapeNew.GetShapeSize();
     int64_t yDimNum = static_cast<int64_t>(yShape->GetStorageShape().GetDimNum());
+    int64_t scaleDimNum = static_cast<int64_t>(scaleShape->GetStorageShape().GetDimNum());
+    OP_CHECK_IF(yShapeSize <= 0 || scaleShapeSize <= 0 || yDimNum < CONST_TWO || scaleDimNum < CONST_THREE,
+        OP_LOGE(context_->GetNodeName(),
+        "out not support empty tensor, rank of yShape must >=2, rank of scale must >=3, but yDim %ld, scaleDim %ld",
+        yDimNum, scaleDimNum),
+        return ge::GRAPH_FAILED);
     outputInfo_.outputDim2 = yShape->GetStorageShape().GetDim(yDimNum - 1);
     // 校验：y 的 activateDim 轴的 shape = x 的 activateDim 轴的 shape / 2
     if (attrParam_.activateDim == -1) {
@@ -329,6 +343,19 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::ValidateOutput()
             "Output y's activateDim dimension size %ld should equal to x's activateDim dimension size / 2, expected "
             "%ld.",
             outputInfo_.outputDim2, expectedOutputDim2),
+            return ge::GRAPH_FAILED);
+    }
+    if (attrParam_.axis == -1) {
+        int64_t scaleNum = Ops::Base::CeilDiv(outputInfo_.outputDim2, BLOCK_SIZE);
+        if ((scaleNum % CONST_TWO) != 0) {
+            scaleNum = scaleNum + 1;
+        }
+        int64_t expectedScaleNum = scaleNum / CONST_TWO;
+        int64_t mxScaleNum = scaleShape->GetStorageShape().GetDim(scaleDimNum - CONST_TWO);
+        OP_CHECK_IF(mxScaleNum != expectedScaleNum,
+            OP_LOGE(context_->GetNodeName(),
+            "Output mxScale's axis dimension size is error,mxScaleNum is %ld, expectedScaleNum is %ld",
+            mxScaleNum, expectedScaleNum),
             return ge::GRAPH_FAILED);
     }
     OP_CHECK_IF((attrParam_.dstType == DTYPE_35 || attrParam_.dstType == DTYPE_36) && (attrParam_.roundMode != 1),
