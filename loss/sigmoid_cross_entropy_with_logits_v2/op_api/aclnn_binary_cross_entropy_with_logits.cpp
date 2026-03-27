@@ -237,14 +237,12 @@ static aclnnStatus BinaryCrossEntropyWithLogitsStub(const aclTensor* self, const
     CHECK_RET(weightCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
   }
 
-  // 可选参数posWeight，如果没有定义，则用默认值；同时进行类型转换
-  const aclTensor *posWeightCast = nullptr;
-  if (posWeight != nullptr) {
-    auto posWeightContiguous = l0op::Contiguous(posWeight, executor);
-    CHECK_RET(posWeightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    posWeightCast = l0op::Cast(posWeightContiguous, promoteType, executor);
-    CHECK_RET(posWeightCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  }
+  // 可选参数posWeight，如果没有定义，则用默认值；同时进行类型转换	 
+  auto posWeightContiguous =
+      ((posWeight == nullptr) ? l0op::OnesLike(selfCast, executor) : l0op::Contiguous(posWeight, executor));	 
+  CHECK_RET(posWeightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  auto posWeightCast = l0op::Cast(posWeightContiguous, promoteType, executor);	 
+  CHECK_RET(posWeightCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
   
   // 调用SigmoidCrossEntropyWithLogitsV2接口完成bceWithLogits计算
   // 该算子为融合算子，先求none情况下的返回值，再依据reduction求最终值
