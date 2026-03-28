@@ -27,7 +27,7 @@ namespace ge {
 * @par Inputs:
 * @li var: The rewritten tensor. An ND tensor. Support 1D ~ 8D. Must be one of the following types:
 * complex128, complex64, double, float32, float16, int16, int32, int64, int8, qint16, qint32, qint8, quint16, quint8,
-* uint16, uint32, uint64, uint8, bfloat16, bool.
+* uint16, uint32, uint64, uint8, bfloat16, bool, float8_e4m3fn, float8_e5m2, float8_e8m0, hifloat8.
 * @li indices: The index tensor. An ND tensor. Support 1D ~ 8D. Must be one of the following types: int32, int64. The
 * last dimension of "indices" represents that the first few dimensions of "var" are the batch dimensions.
 * @li updates: The source tensor. An ND tensor. Support 1D ~ 8D. Shape should be equal to the shape of "indices" except
@@ -43,10 +43,10 @@ namespace ge {
 * Compatible with the TensorFlow operator ScatterNdUpdate.
 */
 REG_OP(ScatterNdUpdate)
-    .INPUT(var, TensorType({BasicType(), DT_BOOL, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E8M0}))
+    .INPUT(var, TensorType({BasicType(), DT_BOOL, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E8M0, DT_HIFLOAT8}))
     .INPUT(indices, TensorType::IndexNumberType())
-    .INPUT(updates, TensorType({BasicType(), DT_BOOL, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E8M0}))
-    .OUTPUT(var,  TensorType({BasicType(), DT_BOOL, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E8M0}))
+    .INPUT(updates, TensorType({BasicType(), DT_BOOL, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E8M0, DT_HIFLOAT8}))
+    .OUTPUT(var,  TensorType({BasicType(), DT_BOOL, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E8M0, DT_HIFLOAT8}))
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(ScatterNdUpdate)
 
