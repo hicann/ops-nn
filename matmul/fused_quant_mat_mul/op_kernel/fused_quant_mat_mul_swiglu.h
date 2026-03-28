@@ -374,13 +374,13 @@ __aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>
 {
     DataCopyParams dataCopyParams;
 
-    dataCopyParams.blockLen = curAicN * sizeof(yType) / DATA_BLOCK;
     dataCopyParams.blockCount = curAicM;
+    dataCopyParams.blockLen = curAicN * sizeof(yType);
     dataCopyParams.srcStride = 0;
-    dataCopyParams.dstStride = n * sizeof(yType) / DATA_BLOCK - curAicN * sizeof(yType) / DATA_BLOCK;
+    dataCopyParams.dstStride = (n - curAicN) * sizeof(yType);
 
     auto out = outBuf.Get<yType>();
-    DataCopy(yGm[xOffset * (uint64_t)n + wOffset], out, dataCopyParams);
+    DataCopyPad(yGm[xOffset * (uint64_t)n + wOffset], out, dataCopyParams);
 }
 
 FUSED_SWIGLU_TEMPLATE_CLASS_PARAMS
@@ -403,22 +403,22 @@ __aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>
 
     CalcParams();
     uint64_t xCurOffset = xCoreOffset;
-    auto l1a = l1AQueue.AllocTensor<x1Type>();
-    auto leftResult = matmulLeftOutQueue.AllocTensor<half>();
-    auto rightResult = matmulRightOutQueue.AllocTensor<half>();
 
     for (uint32_t mInnerIdx = 0; mInnerIdx < mInnerLoops; mInnerIdx++) {
         uint32_t curAicM = mInnerIdx == mInnerLoops - 1 ? aicMtail : singleTimeM;
+        auto l1a = l1AQueue.AllocTensor<x1Type>();
         CopyIn(l1a, curAicM, xCurOffset);
         l1AQueue.EnQue(l1a);
-        l1a = l1AQueue.DeQue<x1Type>();
+        auto x1L1 = l1AQueue.DeQue<x1Type>();
 
         mm.SetOrgShape(curAicM, n, k);
-        mm.SetTensorA(l1a);
+        mm.SetTensorA(x1L1);
 
         uint64_t nOffset = wCoreOffset;
         for (uint32_t nInnerIdx = 0; nInnerIdx < nInnerLoops; nInnerIdx++) {
             uint32_t curAicN = nInnerIdx == nInnerLoops - 1 ? aicNtail : singleTimeN;
+            auto leftResult = matmulLeftOutQueue.AllocTensor<half>();
+            auto rightResult = matmulRightOutQueue.AllocTensor<half>();
             mm.SetTail(DequantBmm::Align(curAicM, BMM_BLOCK_NUM), DequantBmm::Align(curAicN, BMM_BLOCK_NUM), k);
             mm.SetTensorB(wGm[nOffset * (uint64_t)k]);
             mm.SetQuantVector(deQuantScaleGm[nOffset]);
@@ -442,12 +442,12 @@ __aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>
             CopyOut(xCurOffset, nOffset, curAicM, curAicN);
 
             nOffset += singleTimeN;
+            matmulRightOutQueue.FreeTensor(rightResult);
+            matmulLeftOutQueue.FreeTensor(leftResult);
         }
         xCurOffset += singleTimeM;
         l1AQueue.FreeTensor(l1a);
     }
-    matmulLeftOutQueue.FreeTensor(leftResult);
-    matmulRightOutQueue.FreeTensor(rightResult);
     mm.End();
 }
 }
