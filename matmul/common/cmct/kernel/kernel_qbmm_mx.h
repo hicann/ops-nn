@@ -118,6 +118,7 @@ private:
         return {problemShape.m, problemShape.n, problemShape.k};
     }
     __aicore__ inline void AddBatchOffset(const Params &params);
+    __aicore__ inline void SetL2Cache(const ProblemShape& problemShape, uint64_t curBaseM, uint64_t baseN);
 
 private:
     BlockMmad mmadOp_;
@@ -161,6 +162,39 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::Run(const 
     }
 
     ProcessWithBatch(params, bs);
+}
+
+QBMM_MX_KERNEL_CLASS_TEM_PARAMS
+__aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::SetL2Cache(const ProblemShape& problemShape,
+                                                                                 uint64_t curBaseM, uint64_t baseN)
+{
+    if constexpr (FormatB != CubeFormat::ND) {
+        if (curBaseM >= problemShape.m) {
+            bGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
+            x2scaleGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
+        } else {
+            bGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_NORMAL);
+            x2scaleGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_NORMAL);
+        }
+    } else {
+        if constexpr(transB) {
+            if (curBaseM >= problemShape.m && (problemShape.k & 0xff) == 0) {
+                bGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
+                x2scaleGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
+            } else {
+                bGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_NORMAL);
+                x2scaleGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_NORMAL);
+            }
+        } else {
+            if (curBaseM >= problemShape.m && (problemShape.n & 0xff) == 0 && (baseN & 0xff) == 0) {
+                bGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
+                x2scaleGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
+            } else {
+                bGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_NORMAL);
+                x2scaleGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_NORMAL);
+            }
+        }
+    }
 }
 
 QBMM_MX_KERNEL_CLASS_TEM_PARAMS
@@ -250,7 +284,7 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::AddBatchOf
 {
     Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_) += batchAOffset_ * params.problemShape.m * params.problemShape.k;
     if constexpr (FormatB == CubeFormat::NZ) {
-        int64_t c0Size = 
+        int64_t c0Size =
                 AscendC::IsSameType<AType, fp4x2_e2m1_t>::value ? C0_SIZE_B4 : C0_SIZE_B8;
         if constexpr (transB) {
             Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_) +=
@@ -295,6 +329,7 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessSin
         if (Get<MNK_M>(singleShape) <= 0 || Get<MNK_N>(singleShape) <= 0) {
             return;
         }
+        SetL2Cache(params.problemShape, Get<MNK_M>(singleShape), Get<MNK_N>(singleShape));
         AscendC::Std::tuple<uint32_t, uint32_t, uint32_t, uint32_t> loadBalanceInfo = bs.GetLoadBalanceInfo();
         blockOffset_ = coord.template GetQuantOffset<QuantBatchMatmul::QuantMode::MX_PERGROUP_MODE, AType, true>(
             Get<QuantBatchMatmul::IDX_M_TILEIDX>(blockIdx), Get<QuantBatchMatmul::IDX_N_TILEIDX>(blockIdx),
