@@ -19,13 +19,15 @@
 
 ### 方式1：WebIDE环境
 
-对于无昇腾设备的开发者，可直接使用WebIDE开发平台，即“**算子一站式开发平台**”，该平台为您提供在线可直接运行的昇腾环境，环境中已安装必备的驱动固件、软件包和依赖，无需手动安装。更多关于开发平台的介绍请参考[LINK](https://gitcode.com/org/cann/discussions/54)。
+对于无昇腾设备的开发者，可直接使用WebIDE开发平台，即“**算子一站式开发平台**”，该平台为您提供在线可直接运行的昇腾环境，环境中已安装必备的驱动固件、软件包和依赖，无需手动安装。
+
+> **说明**：环境默认安装最新商发版CANN包，源码下载时注意与软件配套。更多关于开发平台的介绍请参考[LINK](https://gitcode.com/org/cann/discussions/54)。
 
 1. 进入开源项目，单击“`云开发`”按钮，使用已认证过的华为云账号登录。若未注册或认证，请根据页面提示进行注册和认证。
 
    <img src="../figures/cloudIDE.png" alt="云平台"  width="750px" height="90px">
 
-2. 根据页面提示创建并启动云开发环境，单击“`连接 > WebIDE `”进入算子一站式开发平台，开源项目的源码资源默认在`/mnt/workspace`目录下。
+2. 根据页面提示创建并启动云开发环境，单击“`连接 > WebIDE`”进入算子一站式开发平台，开源项目的源码资源默认在`/mnt/workspace`目录下。
 
    <img src="../figures/webIDE.png" alt="云平台"  width="1000px" height="150px">
 
@@ -34,7 +36,10 @@
 
 对于有昇腾设备的开发者，若您想快速搭建昇腾环境，可使用Docker镜像部署。
 
-> **说明**：镜像文件比较大，下载需要一定时间，请您耐心等待。关于docker命令的选项介绍可通过`docker --help`查询。
+> **说明**：
+>
+> - 镜像文件比较大，下载需要一定时间，请您耐心等待。关于docker命令的选项介绍可通过`docker --help`查询。
+> - 环境默认安装最新商发版CANN包，源码下载时注意与软件配套。
 
 1.**安装驱动与固件（运行态依赖）**
 
@@ -106,17 +111,17 @@ pip3 install -r requirements.txt
 
 #### 软件安装
 
-1. **安装驱动与固件（运行态依赖）**
+- **场景1：体验master版本能力或基于master版本进行开发**
 
-    驱动与固件的下载和安装操作请参考《[CANN软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstWizard)》中“准备软件包”和“安装NPU驱动和固件”章节。驱动与固件是运行态依赖，若仅编译算子，可以不安装。
+    1. **安装驱动与固件（运行态依赖）**
 
-2. **安装CANN包**
+        下载和安装操作请参考《[CANN软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstWizard)》中“准备软件包”和“安装NPU驱动和固件”章节。驱动与固件是运行态依赖，若仅编译算子，可以不安装。
 
-    - **场景1：体验master版本能力或基于master版本进行开发**
+    2. **安装CANN包**
 
         请单击[下载链接](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-mirror/software/master/)，选择最新时间版本，并根据产品型号和环境架构下载对应包。安装命令如下，更多指导参考《[CANN软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstWizard)》。
 
-        1. 安装CANN toolkit包
+        - 安装CANN toolkit包
 
             ```bash
             # 确保安装包具有可执行权限
@@ -125,7 +130,7 @@ pip3 install -r requirements.txt
            ./Ascend-cann-toolkit_${cann_version}_linux-${arch}.run --install --install-path=${install_path}
            ```
 
-        2. 安装CANN ops包（运行态依赖）
+        - 安装CANN ops包（运行态依赖）
 
             ops包是运行态依赖，若仅编译算子，可不安装此包。
 
@@ -134,28 +139,28 @@ pip3 install -r requirements.txt
             chmod +x Ascend-cann-${soc_name}-ops_${cann_version}_linux-${arch}.run
             # 安装命令
             ./Ascend-cann-${soc_name}-ops_${cann_version}_linux-${arch}.run --install --install-path=${install_path}
-            ```
+           ```
 
-        - \$\{cann\_version\}：表示CANN包版本号。
-        - \$\{arch\}：表示CPU架构，如aarch64、x86_64。
-        - \$\{soc\_name\}：表示NPU型号名称。
-        - \$\{install\_path\}：表示指定安装路径，ops包需与toolkit包安装在相同路径，root用户默认安装在`/usr/local/Ascend`目录。
+            - \$\{cann\_version\}：表示CANN包版本号。
+            - \$\{arch\}：表示CPU架构，如aarch64、x86_64。
+            - \$\{soc\_name\}：表示NPU型号名称。
+            - \$\{install\_path\}：表示指定安装路径，ops包需与toolkit包安装在相同路径，root用户默认安装在`/usr/local/Ascend`目录。
 
-    - **场景2：体验已发布版本能力或基于已发布版本进行开发**
+- **场景2：体验已发布版本能力或基于已发布版本进行开发**
 
-        请访问[CANN官网下载中心](https://www.hiascend.com/cann/download)，选择发布版本（仅支持CANN 8.5.0及后续版本），并根据产品型号和环境架构下载对应包，最后参考网页提供的命令完成安装。
+    请访问[CANN官网下载中心](https://www.hiascend.com/cann/download)，选择发布版本（仅支持CANN 8.5.0及后续版本），并根据产品型号和环境架构下载对应包，最后参考网页提供的命令完成安装。
 
 ## 环境验证
 
 安装完CANN包后，需验证环境和驱动是否正常。
 
--   **检查NPU设备**
+- **检查NPU设备**
 
     ```bash
     # 运行npu-smi，若能正常显示设备信息，则驱动正常
     npu-smi info
     ```
--   **检查CANN安装**
+- **检查CANN版本**
 
     ```bash
     # 查看CANN toolkit包版本信息（默认路径安装），WebIDE场景下将/usr/local替换为/home/developer
@@ -176,14 +181,14 @@ source /usr/local/Ascend/cann/set_env.sh
 
 ## 源码下载
 
-源码下载命令如下，请将\$\{tag\_version\}替换为目标分支标签名，源码分支标签与CANN版本配套关系参见[release仓库](https://gitcode.com/cann/release-management)。
+请根据CANN软件版本下载对应分支源码，\$\{tag\_version\}表示分支标签名，分支标签与CANN版本配套关系参见[release仓库](https://gitcode.com/cann/release-management)。
 
 ```bash
 # 下载项目对应分支源码
 git clone -b ${tag_version} https://gitcode.com/cann/ops-nn.git
 ```
 
-对于WebIDE或Docker环境，已默认提供最新商发版本的项目源码，如需获取其他版本的源码，也需通过上述命令下载源码。
+对于WebIDE环境，**已默认提供最新商发版本的项目源码**，如需获取其他版本源码，也需通过上述命令下载源码。
 
 > [!NOTE] 注意
 >
