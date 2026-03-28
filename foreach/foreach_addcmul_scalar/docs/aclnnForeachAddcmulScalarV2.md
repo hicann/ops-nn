@@ -111,7 +111,7 @@ aclnnStatus aclnnForeachAddcmulScalarV2(
       <td>scalar（aclScalar*）</td>
       <td>输入</td>
       <td>表示混合运算中乘法的第一个输入标量。对应公式中的`scalar`。</td>
-      <td>-</td>
+      <td>-</li></ul></td>
       <td>FLOAT32、FLOAT16、INT32、DOUBLE、INT64</td>
       <td>-</td>
       <td>-</td>

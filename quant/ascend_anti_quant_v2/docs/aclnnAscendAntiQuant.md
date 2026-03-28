@@ -217,8 +217,7 @@ aclnnStatus aclnnAscendAntiQuant(
       <td>dstType不在有效取值范围。</td>
     </tr>
     <tr>
-      <td>x的数据类型为INT4时，x的反量化轴大小不是偶数。</td>
-      </tr>
+      <td>x的数据类型为INT4时，x的反量化轴大小不是偶数。</tr>
     <tr>
       <td>x的数据类型为INT32时，y的反量化轴不是x的反量化轴大小的8倍，或者x与y的其他轴大小不一致。</td>
     </tr>

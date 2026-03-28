@@ -86,7 +86,7 @@ aclnnStatus aclnnScatterAdd(
 
 ## aclnnScatterAddGetWorkspaceSize
 
-- **参数说明**
+- **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
     <col style="width: 180px">
@@ -113,7 +113,7 @@ aclnnStatus aclnnScatterAdd(
       <tr>
         <td>self（aclTensor*）</td>
         <td>输入</td>
-        <td>公式中的输入self，scatter的目标张量。</td>
+        <td>公式中的输入`self`，scatter的目标张量。</td>
         <td>维度数量需要与index和src相同。<br>数据类型与src的数据类型一致。</td>
         <td>BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128</td>
         <td>ND</td>
@@ -123,7 +123,7 @@ aclnnStatus aclnnScatterAdd(
       <tr>
         <td>dim（int64_t）</td>
         <td>输入</td>
-        <td>计算公式中的输入dim。</td>
+        <td>计算公式中的输入`dim`。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -133,7 +133,7 @@ aclnnStatus aclnnScatterAdd(
       <tr>
         <td>index（aclTensor*）</td>
         <td>输入</td>
-        <td>公式中的输入index。</td>
+        <td>公式中的输入`index`。</td>
         <td>维度数量需要与src相同。</td>
         <td>INT32、INT64</td>
         <td>ND</td>
@@ -143,7 +143,7 @@ aclnnStatus aclnnScatterAdd(
       <tr>
         <td>src（aclTensor*）</td>
         <td>输入</td>
-        <td>公式中的输入src，源张量。</td>
+        <td>公式中的输入`src`，源张量。</td>
         <td>维度数量需要与index相同。<br>数据类型与self的数据类型一致。</td>
         <td>BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128</td>
         <td>ND</td>
@@ -153,7 +153,7 @@ aclnnStatus aclnnScatterAdd(
       <tr>
         <td>out（aclTensor*）</td>
         <td>输出</td>
-        <td>公式中的output。</td>
+        <td>公式中的`output`。</td>
         <td>shape需要与self一致。<br>数据类型与self的数据类型一致。</td>
         <td>BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128</td>
         <td>ND</td>
@@ -220,7 +220,7 @@ aclnnStatus aclnnScatterAdd(
 
 ## aclnnScatterAdd
 
-- **参数说明**
+- **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1100px"><colgroup>
     <col style="width: 200px">

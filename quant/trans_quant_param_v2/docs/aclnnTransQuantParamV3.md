@@ -192,8 +192,7 @@ aclnnStatus aclnnTransQuantParamV3(
       <td>scale、offset的shape不在支持的范围内。</td>
     </tr>
     <tr>
-      <td>roundMode的值不在支持的范围内。</td>
-    </tr>
+      <td>roundMode的值不在支持的范围内。</tr>
   </tbody></table>
 
 ## aclnnTransQuantParamV3

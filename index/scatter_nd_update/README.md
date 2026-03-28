@@ -73,6 +73,7 @@
       <td>BOOL</td>
       <td>-</td>
     </tr>
+    </tr>
   </tbody></table>
 
 ## 约束说明

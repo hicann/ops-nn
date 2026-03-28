@@ -55,7 +55,6 @@
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
-     <tr>
       <td>features</td>
       <td>输入</td>
       <td>待进行反向计算的入参，公式中的x。</td>
@@ -77,7 +76,6 @@
 - 输入输出数据类型保持一致。
 
 ## 调用示例
-
 | 调用方式   | 样例代码                                                                         | 说明                                                                               |
 | ---------------- |------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
 | aclnn接口  | [test_aclnn_logsigmoid_grad.cpp](examples/test_aclnn_logsigmoid_grad.cpp) | 通过[aclnnLogSigmoidBackward](docs/aclnnLogSigmoidBackward.md)接口方式调用LogSigmoidGrad算子。 |

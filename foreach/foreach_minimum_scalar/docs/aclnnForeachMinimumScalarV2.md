@@ -89,7 +89,7 @@ aclnnStatus aclnnForeachMinimumScalarV2(
       <td>scalar（aclScalar*）</td>
       <td>输入</td>
       <td>对应公式中的`scalar`，表示取最小值运算的输入标量。</td>
-      <td>数据类型与入参`x`的数据类型具有一定对应关系，且数值不超过入参`x`对应数据类型的数值范围：<ul><li>当`x`的数据类型为FLOAT32、BFLOAT16时，数据类型支持FLOAT32、DOUBLE。</li><li>当`x`的数据类型为FLOAT16时，数据类型支持FLOAT16、DOUBLE。</li><li>当`x`的数据类型为INT32时，数据类型支持INT32、INT64。</li></ul></td>
+      <td>数据类型与入参`x`的数据类型具有一定对应关系，且数值不超过入参`x`对应数据类型的数值范围：<ul><li>当`x`的数据类型为FLOAT32、BFLOAT16时，数据类型支持FLOAT32、DOUBLE。</li><li>当`x`的数据类型为FLOAT16时，数据类型支持FLOAT16、DOUBLE。</li><li>当`x`的数据类型为INT32时，数据类型支持INT32、INT64。</li></li></ul></td>
       <td>FLOAT32、FLOAT16、INT32、DOUBLE、INT64</td>
       <td>-</td>
       <td>-</td>
@@ -171,6 +171,7 @@ aclnnStatus aclnnForeachMinimumScalarV2(
     </tr>
   </tbody></table>
 
+
 ## aclnnForeachMinimumScalarV2
 
 - **参数说明：**
@@ -210,7 +211,8 @@ aclnnStatus aclnnForeachMinimumScalarV2(
   </tbody>
   </table>
 
-- **返回值**
+
+- **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

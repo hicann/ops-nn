@@ -201,8 +201,7 @@ aclnnStatus aclnnQuantize(
       <td>输入axis指定的轴超出输入x的维度数。</td>
     </tr>
     <tr>
-      <td>输入dtype不在支持的范围之内。</td>
-    </tr>
+      <td>输入dtype不在支持的范围之内。</tr>
     <tr>
       <td>输入scales和zeroPoints的size不相等。</td>
     </tr>

@@ -21,17 +21,17 @@
 
 1. 先计算GELU计算得到geluOut
 
-    - approximate = tanh
+  - approximate = tanh
 
-    $$
-    geluOut=Gelu(self)=self × Φ(self)=0.5 * self * (1 + Tanh( \sqrt{2 / \pi} * (self + 0.044715 * self^{3})))
-    $$
+  $$
+  geluOut=Gelu(self)=self × Φ(self)=0.5 * self * (1 + Tanh( \sqrt{2 / \pi} * (self + 0.044715 * self^{3})))
+  $$
 
-    - approximate = none
+  - approximate = none
 
-    $$
-    geluOut=Gelu(self)=self × Φ(self)=0.5 * self *[1 + erf(self/\sqrt{2})]
-    $$
+  $$
+   geluOut=Gelu(self)=self × Φ(self)=0.5 * self *[1 + erf(self/\sqrt{2})]
+  $$
   
 2. 再对geluOut进行量化操作
 
@@ -111,21 +111,18 @@
       <td>STRING</td>
       <td>-</td>
     </tr>
-    <tr>
       <td>quantMode</td>
       <td>属性</td>
       <td><ul><li>量化的模式。</li><li>quantMode仅支持{"static", "dynamic"}。</li></ul></td>
       <td>STRING</td>
       <td>-</td>
     </tr>
-     <tr>
       <td>roundMode</td>
       <td>属性</td>
       <td><ul><li>数据转换的模式。</li><li>支持{"rint", "round", "hybrid"}模式。</li></ul></td>
       <td>STRING</td>
       <td>-</td>
     </tr>
-     <tr>
       <td>dstType</td>
       <td>属性</td>
       <td><ul><li>数据转换后y的类型。</li><li>输入范围为{2, 34, 35, 36}。</li></ul></td>
@@ -149,7 +146,6 @@
   </tbody></table>
 
 - Kirin X90/Kirin 9030处理器系列产品：self、inputScaleOptional和inputOffsetOptional的数据类型不支持BFLOAT16。y不支持FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8。
-
 ## 约束说明
 
 inputScaleOptional的数据类型与self的类型一致，或者在类型不一致时采用精度更高的类型。

@@ -139,8 +139,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>ND</td>
       <td>1或2</td>
       <td>x</td>
-      </tr>
-    <tr>
+    </tr>
       <td>activationScaleOptional（aclTensor*）</td>
       <td>输入</td>
       <td>激活函数的反量化scale。</td>
@@ -174,7 +173,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>quantOffsetOptional（aclTensor*）</td>
       <td>输入</td>
       <td>量化的offset。</td>
-      <td>quant_mode为动态时不需要quantOffset输入，静态量化中quantOffset必须输入，且数据类型与shape同quantScale。</td>
+      <td><ul><li>quant_mode为动态时不需要quantOffset输入，静态量化中quantOffset必须输入，且数据类型与shape同quantScale。</td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
@@ -194,7 +193,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>activateLeft（bool）</td>
       <td>输入</td>
       <td>表示是否对输入的左半部分做swiglu激活。</td>
-      <td>当值为false时，对输入的右半部分做激活。如果swigluMode为1，activateLeft必须为true。</td>
+      <td><ul><li>当值为false时，对输入的右半部分做激活。如果swigluMode为1，activateLeft必须为true。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

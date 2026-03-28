@@ -130,6 +130,7 @@ aclnnStatus aclnnBatchNorm(
       <td>1</td>
       <td>√</td>
     </tr>
+    </tr>
     <tr>
       <td>training（bool）</td>
       <td>输入</td>

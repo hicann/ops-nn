@@ -1,6 +1,6 @@
 # EmbeddingBag
 
-## 产品支持情况
+##  产品支持情况
 
 | 产品 | 是否支持 |
 | ---- | :----:|
@@ -18,16 +18,14 @@
 - 算子功能：根据indices从weight中获得一组被聚合的数，然后根据offsets的偏移和mode指定的聚合模式对获取的数进行max、sum、mean聚合。其余参数则更细化了计算过程的控制。
   - shape推导方式如下：
     假设:
-
-    ```cpp
+    ```
     weight的shape为(numWeight, embeddingDim)
     indices的shape为(indices)
     offsets的shape为(offsets)
     ```
 
     - 当mode为sum模式：
-
-      ```cpp
+      ```
       y的shape 为 include_last_offset ? (offsets - 1, embeddingDim) : (offsets, embeddingDim)
       offset2bag的shape 为 (indices,)
       bag_size的shape 为 include_last_offset ? (offsets - 1) : (offsets,)
@@ -35,8 +33,7 @@
       ```
 
     - 当mode为mean模式：
-
-      ```cpp
+      ```
       y的shape 为 include_last_offset? (offsets - 1, embeddingDim) : (offsets, embeddingDim)
       offset2bag的shape 为 (indices,)
       bag_size的shape 为 include_last_offset ? (offsets - 1) : (offsets,)
@@ -44,8 +41,7 @@
       ```
 
     - 当mode为max模式：
-
-      ```cpp
+      ```
       y的shape 为 include_last_offset ? (offsets - 1, embeddingDim) : (offsets, embeddingDim)
       offset2bag的shape 为 (indices,)
       bag_size的shape 为 include_last_offset ? (offsets - 1) : (offsets,)
@@ -129,35 +125,35 @@
     <tr>
       <td>mode</td>
       <td>可选属性</td>
-      <td><ul><li>用于控制聚合模式。</li><li>默认值为"mean"。</li></ul></td>
+      <td><ul><li>用于控制聚合模式。</li><li>默认值为"mean"。</li></td>
       <td>String</td>
       <td>-</td>
     </tr>
     <tr>
       <td>scale_grad_by_freq</td>
       <td>可选属性</td>
-      <td><ul><li>用于控制是否根据词频缩放梯度。</li><li>默认值为false。</li></ul></td>
+      <td><ul><li>用于控制是否根据词频缩放梯度。</li><li>默认值为false。</li></td>
       <td>Bool</td>
       <td>-</td>
     </tr>
     <tr>
       <td>sparse</td>
       <td>可选属性</td>
-      <td><ul><li>用于控制稀疏模式。</li><li>默认值为false。</li></ul></td>
+      <td><ul><li>用于控制稀疏模式。</li><li>默认值为false。</li></td>
       <td>Bool</td>
       <td>-</td>
     </tr>
     <tr>
       <td>include_last_offset</td>
       <td>可选属性</td>
-      <td><ul><li>控制是否包含最后的偏移。</li><li>默认值为false。</li></ul></td>
+      <td><ul><li>控制是否包含最后的偏移。</li><li>默认值为false。</li></td>
       <td>Bool</td>
       <td>-</td>
     </tr>
     <tr>
       <td>padding_idx</td>
       <td>可选属性</td>
-      <td><ul><li>控制是否包含最后的偏移。</li><li>默认值为-1。</li></ul></td>
+      <td><ul><li>控制是否包含最后的偏移。</li><li>默认值为-1。</li></td>
       <td>Int</td>
       <td>-</td>
     </tr>
@@ -165,7 +161,6 @@
 
 - Atlas 训练系列产品：不支持BFLOAT16。
 - Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
-
 ## 约束说明
 
 无

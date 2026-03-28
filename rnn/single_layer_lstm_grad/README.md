@@ -302,42 +302,42 @@ $$
     <tr>
       <td>seq_length</td>
       <td>可选输入</td>
-      <td><ul><li>表示实际序列长度对应的掩码矩阵。</li><li>shape为[T, Batch, hidden_size]。</li></ul></td>
+      <td><ul><li>表示实际序列长度对应的掩码矩阵。</li><li>shape为[T, Batch, hidden_size]。</li></td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>dw</td>
       <td>输出</td>
-      <td><ul><li>表示LSTM输入权重上的梯度，对应公式中的∂L/∂W。</li><li>shape为[4 * hidden_size，input_size+hidden_size]。</li></ul></td>
+      <td><ul><li>表示LSTM输入权重上的梯度，对应公式中的∂L/∂W。</li><li>shape为[4 * hidden_size，input_size+hidden_size]。</li></td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>db</td>
       <td>输出</td>
-      <td><ul><li>表示LSTM输入偏置上的梯度，对应公式中的∂L/∂b。</li><li>shape为[4, hidden_size]。</li></ul></td>
+      <td><ul><li>表示LSTM输入偏置上的梯度，对应公式中的∂L/∂b。</li><li>shape为[4, hidden_size]。</li></td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>dx</td>
       <td>输出</td>
-      <td><ul><li>表示LSTM输入序列x上的梯度，对应公式中的δx。</li><li>shape为[T, Batch, input_size]。</li></ul></td>
+      <td><ul><li>表示LSTM输入序列x上的梯度，对应公式中的δx。</li><li>shape为[T, Batch, input_size]。</li></td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>dh_prev</td>
       <td>输出</td>
-      <td><ul><li>表示LSTM输入inith的梯度，对应公式中在t=0时的δh_prev。</li><li>shape为[1, Batch, hidden_size]。</li></ul></td>
+      <td><ul><li>表示LSTM输入inith的梯度，对应公式中在t=0时的δh_prev。</li><li>shape为[1, Batch, hidden_size]。</li></td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
       <tr>
       <td>dc_prev</td>
       <td>输出</td>
-      <td><ul><li>表示LSTM输入initc的梯度，对应公式中在t=0时的δc_prev。</li><li>shape为[1, Batch, hidden_size]。</li></ul></td>
+      <td><ul><li>表示LSTM输入initc的梯度，对应公式中在t=0时的δc_prev。</li><li>shape为[1, Batch, hidden_size]。</td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
@@ -348,8 +348,7 @@ $$
       <td>STRING</td>
       <td>-</td>
     </tr>
-     <tr>
-      <td>gate_order</td>
+    <td>gate_order</td>
       <td>属性</td>
       <td>ijfo的排布顺序。支持"ijfo"或"ifjo"。</td>
       <td>STRING</td>

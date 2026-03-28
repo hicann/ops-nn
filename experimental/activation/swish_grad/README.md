@@ -1,6 +1,6 @@
 # SwishGrad
 
-## 产品支持情况
+##  产品支持情况
 
 | 产品 | 是否支持 |
 | ---- | :----:|
@@ -44,6 +44,7 @@ $$
       <td>fp16、fp32、bf16</td>
       <td>ND,FRACTAL_NZ,NC1HWC0</td>
     </tr>  
+    <tr>  
     <tr>
       <td>x</td>
       <td>输入</td>

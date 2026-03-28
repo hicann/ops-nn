@@ -13,6 +13,7 @@
 |  <term>Atlas 推理系列产品</term>     |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
+
 ## 功能说明
 
 - 接口功能：ChamferDistance（倒角距离）的反向算子，根据正向的输入对输出的贡献及初始梯度求出输入对应的梯度。
@@ -82,8 +83,9 @@ aclnnStatus aclnnChamferDistanceBackward(
 
 ## aclnnChamferDistanceBackwardGetWorkspaceSize
 
-- **参数说明**
+- **参数说明**：
 
+  </style>
   <table class="tg" style="undefined;table-layout: fixed; width: 1172px"><colgroup>
   <col style="width: 184px">
   <col style="width: 86px">
@@ -214,6 +216,7 @@ aclnnStatus aclnnChamferDistanceBackward(
 
   第一段接口完成入参校验，出现以下场景时报错：
   
+  </style>
   <table class="tg" style="undefined;table-layout: fixed; width: 951px"><colgroup>
   <col style="width: 258px">
   <col style="width: 86px">
@@ -284,7 +287,7 @@ aclnnStatus aclnnChamferDistanceBackward(
       </tbody>
     </table>
 
-- **返回值**
+- **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

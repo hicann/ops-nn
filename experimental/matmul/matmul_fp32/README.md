@@ -1,18 +1,14 @@
 # MatmulFp32算子
 
-## 概述
-
+##  概述
 本样例的MatmulFP32算子实现使用自定义算子工程，其kernel包含两个模板：基础模板以及AL1全载模板。本工程默认使用基础模板，若要使用AL1全载模板，则需要在tiling阶段开启AL1全载的开关且同时满足AL1全载的tiling的条件。example的用例分别使用两个模板的精度均正常，示例通过msprof工具采集了模板的性能数据。
-
-## 支持的AI处理器
-
+##  支持的AI处理器
 | 产品 | 是否支持 |
 | ---- | :----:|
 |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
 
 ## 目录结构介绍
-
-```bash
+```
 ├── CMakeLists.txt                        // 编译工程文件
 ├── README.md                             // 算子样例工程介绍文件
 ├── examples                              // 样例算子的aclnn接口样例目录
@@ -61,46 +57,41 @@
 - 算子规格：
   <table>
   <tr><td rowspan="1" align="center">算子类型(OpType)</td><td colspan="4" align="center">Matmul</td></tr>
+  </tr>
   <tr><td rowspan="4" align="center">算子输入</td><td align="center">name</td><td align="center">shape</td><td align="center">data type</td><td align="center">format</td></tr>
   <tr><td align="center">a</td><td align="center">M * K</td><td align="center">float</td><td align="center">ND</td></tr>
   <tr><td align="center">b</td><td align="center">K * N</td><td align="center">float</td><td align="center">ND</td></tr>
   <tr><td align="center">bias</td><td align="center">N</td><td align="center">float</td><td align="center">ND</td></tr>
+  </tr>
+  </tr>
   <tr><td rowspan="1" align="center">算子输出</td><td align="center">c</td><td align="center">M * N</td><td align="center">float</td><td align="center">ND</td></tr>
+  </tr>
   <tr><td rowspan="1" align="center">核函数名</td><td colspan="4" align="center">matmul_fp32</td></tr>
   </table>
 
-## 编译运行
 
-- 配置环境变量
-
-以命令行方式下载样例代码，master分支为例
-
+## 编译运行 
+- 配置环境变量  
+以命令行方式下载样例代码，master分支为例 
 ```bash
 cd ${git_clone_path}/experimental/matmul/matmul_fp32
 ```
-
-根据当前环境上CANN开发套件包（toolkit包+ops包）的安装方式，选择对应配置环境变量的命令。
-
+根据当前环境上CANN开发套件包（toolkit包+ops包）的安装方式，选择对应配置环境变量的命令。  
   - 默认路径，root用户安装CANN软件包
-
     ```bash
     export ASCEND_INSTALL_PATH=/usr/local/Ascend/cann
     ```
-
   - 默认路径，非root用户安装CANN软件包
-
     ```bash
     export ASCEND_INSTALL_PATH=$HOME/Ascend/cann
     ```
-
   - 指定路径install_path，安装CANN软件包
-
     ```bash
     export ASCEND_INSTALL_PATH=${install_path}/cann
     ```
 
-  - 编译与安装自定义算子包
 
+- 编译与安装自定义算子包
 ```bash
 # 切换到工程根目录
 cd ${git_clone_path}  
@@ -110,8 +101,8 @@ bash build.sh --pkg  --soc=ascend910b --vendor_name=custom --ops=matmul_fp32 --e
 ./build_out/cann-ops-nn-${vendor_name}-${arch}_linux.run
 ```
 
-- 编译+执行aclnn接口样例，采集样例性能：
 
+- 编译+执行aclnn接口样例，采集样例性能：
 ```bash
 # 切换matmul_fp32 aclnn执行用例目录
 cd ${git_clone_path}/experimental/matmul/matmul_fp32/examples

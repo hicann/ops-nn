@@ -29,179 +29,40 @@ $$
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnTfScatterAddGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnTfScatterAdd”接口执行计算。
 
-```cpp
-aclnnStatus aclnnTfScatterAddGetWorkspaceSize(
-  aclTensor       *varRef, 
-  const aclTensor *indices, 
-  const aclTensor *updates, 
-  uint64_t        *workspaceSize, 
-  aclOpExecutor  **executor)
-```
-
-```cpp
-aclnnStatus aclnnTfScatterAdd(
-  void          *workspace, 
-  uint64_t       workspaceSize, 
-  aclOpExecutor *executor, 
-  aclrtStream    stream)
-```
+* `aclnnStatus aclnnTfScatterAddGetWorkspaceSize(aclTensor *varRef, const aclTensor *indices, const aclTensor *updates, uint64_t *workspaceSize, aclOpExecutor **executor)`
+* `aclnnStatus aclnnTfScatterAdd(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`
 
 ## aclnnTfScatterAddGetWorkspaceSize
 
 - **参数说明**
-    
-  <table style="undefined;table-layout: fixed; width: 1382px"><colgroup>
-  <col style="width: 126px">
-  <col style="width: 120px">
-  <col style="width: 339px">
-  <col style="width: 168px">
-  <col style="width: 245px">
-  <col style="width: 104px">
-  <col style="width: 134px">
-  <col style="width: 146px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>参数名</th>
-      <th>输入/输出</th>
-      <th>描述</th>
-      <th>使用说明</th>
-      <th>数据类型</th>
-      <th>数据格式</th>
-      <th>维度（shape）</th>
-      <th>非连续Tensor</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>varRef</td>
-      <td>输入/输出</td>
-      <td>公式中的输入varRef，要进行更新的初始张量。</td>
-      <td>-</td>
-      <td>FLOAT32，FLOAT16，BFLOAT16，INT32，INT8，UINT8</td>
-      <td>ND</td>
-      <td>1-8</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>indices</td>
-      <td>输入</td>
-      <td>公式中的输入indices，要更新的索引位置。</td>
-      <td>-</td>
-      <td>INT32、INT64</td>
-      <td>ND</td>
-      <td>1-8</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>updates</td>
-      <td>输出</td>
-      <td>公式中的输入updates，要添加到varRef中的更新值。</td>
-      <td>-</td>
-      <td>FLOAT32，FLOAT16，BFLOAT16，INT32，INT8，UINT8</td>
-      <td>ND</td>
-      <td>1-8</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>workspaceSize</td>
-      <td>输出</td>
-      <td>返回需要在Device侧申请的workspace大小。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>executor</td>
-      <td>输出</td>
-      <td>返回op执行器，包含了算子计算流程。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-  </tbody></table>
+
+  * varRef(aclTensor *，计算输入|计算输出)：公式中的输入`varRef`，要进行更新的初始张量，Device侧的aclTensor。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，维数支持1~8维，数据类型需要与updates一致。数据类型支持FLOAT32，FLOAT16，BFLOAT16，INT32，INT8，UINT8。
+  * indices(aclTensor*，计算输入)：公式中的输入`indices`，要更新的索引位置，Device侧的aclTensor。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，维数支持1~8维，indices中的索引数据不支持越界，若出现索引越界，则不对varRef进行更新。数据类型支持INT32、INT64。
+  * updates(aclTensor*，计算输入)：公式中的输入`updates`，要添加到`varRef`中的更新值，Device侧的aclTensor。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，维数支持1~8维，数据类型需要与varRef一致。数据类型支持FLOAT32，FLOAT16，BFLOAT16，INT32，INT8，UINT8。
+  * workspaceSize(uint64_t *，计算输入)：返回需要在Device侧申请的workspace大小。
+  * executor(aclOpExecutor\**，出参)：返回op执行器，包含了算子计算流程。
 
 - **返回值**
 
   返回aclnnStatus状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-   
-   第一段接口完成入参校验，若出现以下错误码，则对应原因为：
 
-  <table style="undefined;table-layout: fixed; width: 1015px"><colgroup>
-  <col style="width: 257px">
-  <col style="width: 101px">
-  <col style="width: 657px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>返回值</th>
-      <th>错误码</th>
-      <th>描述</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>ACLNN_ERR_PARAM_NULLPTR</td>
-      <td>161001</td>
-      <td>传入的varRef、indices、updates是空指针。</td>
-    </tr>
-    <tr>
-      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="4">161002</td>
-      <td>varRef、indices、updates的数据类型不在支持的范围之内。</td>
-    </tr>
-    <tr>
-      <td>varRef、updates的dtype不一致。</td>
-    </tr>
-    <tr>
-      <td>varRef为空且indices不为空tensor。</td>
-    </tr>
-    <tr>
-      <td>updates的shape不满足对应shape约束。</td>
-    </tr>
-  </tbody>
-  </table>
+  ```
+  第一段接口完成入参校验，若出现以下错误码，则对应原因为：
+  - 161001(ACLNN_ERR_PARAM_NULLPTR): 1. 传入的varRef、indices、updates是空指针。
+  - 161002(ACLNN_ERR_PARAM_INVALID): 1. varRef、indices、updates的数据类型不在支持的范围之内。
+                                     2. varRef、updates的dtype不一致。
+                                     3. varRef为空且indices不为空tensor。
+                                     4. updates的shape不满足对应shape约束。
+  ```
 
 ## aclnnTfScatterAdd
 
 - **参数说明**
 
-  <table style="undefined;table-layout: fixed; width: 950px"><colgroup>
-  <col style="width: 122px">
-  <col style="width: 105px">
-  <col style="width: 723px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>参数名</th>
-      <th>输入/输出</th>
-      <th>描述</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>workspace</td>
-      <td>输入</td>
-      <td>在Device侧申请的workspace内存地址。</td>
-    </tr>
-    <tr>
-      <td>workspaceSize</td>
-      <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnTfScatterAddGetWorkspaceSize获取。</td>
-    </tr>
-    <tr>
-      <td>executor</td>
-      <td>输入</td>
-      <td>op执行器，包含了算子计算流程。</td>
-    </tr>
-    <tr>
-      <td>stream</td>
-      <td>输入</td>
-      <td>指定执行任务的Stream。</td>
-    </tr>
-  </tbody>
-  </table>
+  * workspace(void *，入参)：在Device侧申请的workspace内存地址。
+  * workspaceSize(uint64_t，入参)：在Device侧申请的workspace大小，由第一段接口aclnnTfScatterAddGetWorkspaceSize获取。
+  * executor(aclOpExecutor *，入参)：op执行器，包含了算子计算流程。
+  * stream(aclrtStream，入参)：指定执行任务的Stream。
 
 - **返回值**
 
@@ -218,7 +79,6 @@ aclnnStatus aclnnTfScatterAdd(
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
-
 ```Cpp
 #include <iostream>
 #include <vector>

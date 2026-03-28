@@ -37,7 +37,6 @@ aclnnStatus aclnnAddmvGetWorkspaceSize(
   uint64_t*        workspaceSize, 
   aclOpExecutor**  executor)
 ```
-
 ```Cpp
 aclnnStatus aclnnAddmv(
   void*           workspace, 
@@ -89,7 +88,7 @@ aclnnStatus aclnnAddmv(
       <td>输入</td>
       <td>和vec进行乘法运算的2维矩阵。</td>
       <td><ul><li>数据类型需要与self构成<a href="../../../docs/zh/context/互推导关系.md">互推导关系。</a></li>
-      <li>shape需要与 vec 满足乘法关系。</li></ul></td>
+      <li>shape需要与 vec 满足乘法关系。</ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE、BOOL</td>
       <td>ND</td>
       <td>2</td>
@@ -100,7 +99,7 @@ aclnnStatus aclnnAddmv(
       <td>输入</td>
       <td>和mat进行乘法运算的1维向量。</td>
       <td><ul><li>数据类型需要与self构成<a href="../../../docs/zh/context/互推导关系.md">互推导关系。</a></li>
-      <li>shape需要与 mat 满足乘法关系。</li></ul></td>
+      <li>shape需要与 mat 满足乘法关系。</ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE、BOOL</td>
       <td>ND</td>
       <td>1</td>
@@ -131,7 +130,7 @@ aclnnStatus aclnnAddmv(
       <td>输出</td>
       <td>指定的1维输出向量。</td>
       <td><ul><li>数据类型需要是self, mat, vec, alpha, beta<a href="../../../docs/zh/context/互推导关系.md">推导后的数据类型。</a></li>
-      <li>shape与mat和vec的乘积相同。</li></ul></td>
+      <li>shape与mat和vec的乘积相同。</ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE</td>
       <td>ND</td>
       <td>1</td>
@@ -188,6 +187,7 @@ aclnnStatus aclnnAddmv(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
 
   第一段接口完成入参校验，出现如下场景时报错：
 

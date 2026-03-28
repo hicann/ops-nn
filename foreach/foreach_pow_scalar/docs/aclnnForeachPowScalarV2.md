@@ -78,7 +78,7 @@ aclnnStatus aclnnForeachPowScalarV2(
       <td>x（aclTensorList*）</td>
       <td>输入</td>
       <td>对应公式中的`x`，表示进行n次方运算的底数。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>

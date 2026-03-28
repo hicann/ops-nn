@@ -168,7 +168,7 @@ aclnnStatus aclnnCrossEntropyLossGrad(
         <td>gradLoss（aclTensor*）</td>
         <td>输入</td>
         <td>正向输出loss的梯度。参数与公式中grad对应。</td>
-        <td><ul><li>当reductionOptional为none时，要求为一个维度为1D的Tensor。</li><li>当reductionOptional为mean/sum时，要求为一个维度为0D的Tensor。</li></ul></td>
+        <td><ul><li>当reductionOptional为none时，要求为一个维度为1D的Tensor。</li><li>当reductionOptional为mean/sum时，要求为一个维度为0D的Tensor。</td>
         <td>FLOAT16、FLOAT、BFLOAT16</td>
         <td>ND</td>
         <td>(N,)<br>N为批处理大小</td>
@@ -218,7 +218,7 @@ aclnnStatus aclnnCrossEntropyLossGrad(
         <td>lseForZlossOptional（aclTensor*）</td>
         <td>可选输入</td>
         <td>zloss相关输入，如果lse_square_scale_for_zloss非0，正向额外输出的lse_for_zloss中间结果给反向用于计算lse。</td>
-        <td><ul><li>要求为一个维度为1D的Tensor。</li><li>当前暂不支持。</li></ul></td>
+        <td><ul><li>要求为一个维度为1D的Tensor。</li><li>当前暂不支持。</td>
         <td>FLOAT16、FLOAT、BFLOAT16</td>
         <td>ND</td>
         <td>(N,)</td>
@@ -323,7 +323,6 @@ aclnnStatus aclnnCrossEntropyLossGrad(
       <td>ACLNN_ERR_PARAM_INVALID</td>
       <td>161002</td>
       <td>gradLoss、logProb、target、weightOptional、gradZlossOptional、lseForZlossOptional的数据类型不在支持的范围内。</td>
-      </tr>
       <tr>
       <td>ACLNN_ERR_INNER_TILING_ERROR</td>
       <td>561002</td>

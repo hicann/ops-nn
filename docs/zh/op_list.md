@@ -612,7 +612,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>Swish激活函数的反向传播，用于计算Swish激活函数的梯度。</td>
+    <td>Swish激活函数的反向传播，用于计算Swish激活函数的梯度。</a>。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -1692,7 +1692,7 @@
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>算子功能：根据indices在给定变量内，将updates应用于变量的单个值或切片。</td>
+    <td>算子功能：根据indices在给定变量内，将updates应用于变量的单个值或切片。</a>。</td>
   </tr>
   <tr>
     <td>index</td>

@@ -153,7 +153,6 @@ aclnnStatus aclnnInplaceAddmm(
       <td>-</td>
       <td>-</td>
     </tr>
-    <tr>
       <td>out</td>
       <td>输出</td>
       <td>表示矩阵乘的输出矩阵，公式中的out。</td>
@@ -356,6 +355,7 @@ aclnnStatus aclnnInplaceAddmm(
       <td>√</td>
     </tr>
     <tr>
+    <tr>
       <td>beta(β)</td>
       <td>输入</td>
       <td>表示公式中的β。</td>
@@ -374,7 +374,6 @@ aclnnStatus aclnnInplaceAddmm(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-    </tr>
     <tr>
       <td>cubeMathType</td>
       <td>输入</td>
@@ -468,9 +467,11 @@ aclnnStatus aclnnInplaceAddmm(
       </tbody>
       </table>
 
+
 ## aclnnInplaceAddmm
 
 - **参数说明**
+
 
   <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
   <col style="width: 168px">
@@ -507,12 +508,12 @@ aclnnStatus aclnnInplaceAddmm(
   </tbody>
   </table>
 
+
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnAddmm&aclnnInplaceAddmm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
   - <term>Ascend 950PR/Ascend 950DT</term>: aclnnAddmm&aclnnInplaceAddmm默认确定性实现。
@@ -523,10 +524,9 @@ aclnnStatus aclnnInplaceAddmm(
     - aclnnAddmm&aclnnInplaceAddmm默认非一致性实现，支持通过aclrtCtxSetSysParamOpt开启一致性。
     - 例如，在进行矩阵乘时，不同基本块的累加顺序可能不同，这可能会导致相同数据在不同行的计算结果出现细微差异。然而，在开启强一致性计算的情况下，即使在不同的行中，只要输入相同，计算结果也将相同。
 
+
 ## 调用示例
-
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
-
 ```Cpp
 #include <iostream>
 #include <vector>

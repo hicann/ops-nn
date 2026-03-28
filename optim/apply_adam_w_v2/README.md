@@ -23,25 +23,31 @@
   if(maximize) : g_{t} = - g_{t}
   $$
 
+
   $$
   m_{t}=\beta_{1} m_{t-1}+\left(1-\beta_{1}\right) g_{t}
   $$
+
 
   $$
   v_{t}=\beta_{2} v_{t-1}+\left(1-\beta_{2}\right) g_{t}^{2}
   $$
 
+
   $$
   \hat{m}_{t}=\frac{m_{t}}{1-\beta_{1}^{t}}
   $$
+
 
   $$
   \hat{v}_{t}=\frac{v_{t}}{1-\beta_{2}^{t}}
   $$
 
+
   $$
   if(amsgrad) : maxGradNorm = max(maxGradNorm,\hat{v}_{t})
   $$
+
 
   $$
   \theta_{t+1}=\theta_{t}-\frac{\eta}{\sqrt{\hat{v}_{t}}+\epsilon} \hat{m}_{t}-\eta \cdot \lambda \cdot \theta_{t-1}
@@ -68,7 +74,7 @@
     <tr>
       <td>varRef</td>
       <td>输入/输出</td>
-      <td>待计算的权重输入同时也是输出，公式中的输入/输出θ</td>
+      <td>待计算的权重输入同时也是输出，公式中的输入/输出θ
       <td>FLOAT16、BFLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
@@ -115,7 +121,7 @@
       <td>-</td>
     </tr>
     <tr>
-      <td>beta1</td>
+      <td>beta1
       <td>属性</td>
       <td><ul><li>beta1参数。</li><li>取值范围是(0,1)，默认为0.1。计算公式中的β1。</li></ul></td>
       <td>FLOAT</td>

@@ -87,7 +87,6 @@ aclnnStatus aclnnLogSigmoidBackward(
       <td>1-8</td>
       <td>√</td>
     </tr>
-    <tr>
       <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>待进行LogSigmoidBackward计算的入参，公式中的x。</td>
@@ -97,7 +96,6 @@ aclnnStatus aclnnLogSigmoidBackward(
       <td>1-8</td>
       <td>√</td>
     </tr>
-    <tr>
        <td>buffer（aclTensor*）</td>
       <td>输入</td>
       <td>正向计算的中间结果，暂不使用。</td>

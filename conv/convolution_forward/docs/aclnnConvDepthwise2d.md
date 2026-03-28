@@ -93,7 +93,7 @@ aclnnStatus aclnnConvDepthwise2d(
   <td>kernelSize（aclIntArray*）</td>
   <td>输入</td>
   <td>卷积核尺寸。</td>
-  <td><ul><li>（INT64, INT64）型元组。</li><li>数值为weight的H、W两维的数值。</li></ul></td>
+  <td><ul><li>（INT64, INT64）型元组。</li><li>数值为weight的H、W两维的数值。</li></td>
   <td>INT64</td>
   <td>-</td>
   <td>-</td>
@@ -192,11 +192,12 @@ aclnnStatus aclnnConvDepthwise2d(
     <col style="width:1050px">
     </colgroup>
    <thead>
+  
   <tr>
   <td>返回值</td>
   <td>错误码</td>
   <td>描述</td>
-  </tr> </thead>
+  </tr>
   <tr>
   <td align="left">ACLNN_ERR_PARAM_NULLPTR</td>
   <td align="left">161001</td>
@@ -304,7 +305,7 @@ aclnnStatus aclnnConvDepthwise2d(
         <li>为 1（ALLOW_FP32_DOWN_PRECISION）时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。</li>
         <li>为 2（USE_FP16）时，当输入是 BFLOAT16 不支持该选项。</li>
         <li>为 3（USE_HF32）时，当输入是 FLOAT 转换为 HFLOAT32 计算。</li>
-      </ul>
+      <ul>
     </td>
     <td>
       <ul>

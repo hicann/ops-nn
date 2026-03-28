@@ -167,7 +167,7 @@
     </tr>
       <tr>
       <td>packed</td>
-      <td>属性</td>
+      <td属性</td>
       <td>表示输入x是否压缩。仅在batchSizeOptional不为空时生效。</td>
       <td>BOOL</td>
       <td>-</td>
@@ -204,4 +204,3 @@
 | 调用方式 | 调用样例                                                                   | 说明                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_bidirection_lstm_v2](examples/test_aclnn_bidirection_lstm_v2.cpp) | 通过[aclnnBidirectionLSTMV2](docs/aclnnBidirectionLSTMV2.md)接口方式调用BidirectionLSTMV2算子。    |
- 

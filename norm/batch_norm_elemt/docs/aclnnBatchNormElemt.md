@@ -131,6 +131,7 @@ aclnnStatus aclnnBatchNormElemt(
       <td>1</td>
       <td>√</td>
     </tr>
+    </tr>
     <tr>
       <td>eps（double）</td>
       <td>输入</td>

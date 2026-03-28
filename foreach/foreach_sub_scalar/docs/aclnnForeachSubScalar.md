@@ -13,6 +13,7 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
+
 ## 功能说明
 
 - 接口功能：对输入张量列表的每个张量与张量scalar执行相减运算。
@@ -89,7 +90,7 @@ aclnnStatus aclnnForeachSubScalar(
       <td>scalar（aclTensor*）</td>
       <td>输入</td>
       <td>表示减法运算的第二个输入张量，对应公式中的`scalar`。</td>
-      <td><ul><li>不支持空tensor。</li><li>元素个数为1。</li><li>数据类型与入参`x`的数据类型具有一定对应关系：<ul><li>当`x`的数据类型为FLOAT32、FLOAT16、INT32时，数据类型与`x`的数据类型保持一致。</li><li>当`x`的数据类型为BFLOAT16时，数据类型支持FLOAT32。</li></ul></li></ul></td>
+      <td><ul><li>不支持空tensor。</li><li>元素个数为1。</li><li>数据类型与入参`x`的数据类型具有一定对应关系：<ul><li>当`x`的数据类型为FLOAT32、FLOAT16、INT32时，数据类型与`x`的数据类型保持一致。</li><li>当`x`的数据类型为BFLOAT16时，数据类型支持FLOAT32。</li></ul></td>
       <td>FLOAT32、FLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -99,7 +100,7 @@ aclnnStatus aclnnForeachSubScalar(
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示减法运算的输出张量列表，对应公式中的`y`。</td>
-      <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
+      <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li><ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -169,7 +170,7 @@ aclnnStatus aclnnForeachSubScalar(
     <tr>
       <td>x或out中的Tensor维度超过8维。</td></tr>
     <tr>
-      <td>scalar元素个数不为1。</td>
+      <td>scalar元素个数不为1。</td></tr>
     </tr>
   </tbody></table>
 

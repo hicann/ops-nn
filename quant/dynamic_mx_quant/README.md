@@ -1,6 +1,6 @@
 # DynamicMxQuant
 
-## 产品支持情况
+##  产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
@@ -75,14 +75,14 @@
       <td>INT64</td>
       <td>ND</td>
     </tr>
-    <tr>
+    </tr>
       <td>y</td>
       <td>输出</td>
       <td>输入x量化后的对应结果</td>
       <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
     </tr>
-    <tr>
+    </tr>
       <td>mxscale</td>
       <td>输出</td>
       <td>每个分组对应的量化尺度</td>

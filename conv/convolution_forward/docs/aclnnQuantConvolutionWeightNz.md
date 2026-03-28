@@ -19,7 +19,7 @@
 
 - 计算公式：
 
-  假定输入（input）的 shape 是 $(N, C_{\text{in}}, D, H, W)$，weight 的原shape 是 $(C_{\text{out}}, C_{\text{in}}, K_d, K_h, K_w)$，scale 的 shape 是 $(C_{\text{out}})$，bias 的 shape 是 $C_{\text{out}}$，输出（output）的 shape 是 $(N, C_{\text{out}}, D_{\text{out}}, H_{\text{out}}, W_{\text{out}})$，其中 $N$ 表示批次大小（batch size），$C$ 是通道数，$D$、$H$ 和 $W$ 分别是样本的深度、高度和宽度，$K_d$、$K_h$ 和 $K_w$ 分别是卷积核的深度、高度和宽度，那输出将被表示为：
+  假定输入（input）的 shape 是 $(N, C_{\text{in}}, D, H, W)$，weight 的 原shape 是 $(C_{\text{out}}, C_{\text{in}}, K_d, K_h, K_w)$，scale 的 shape 是 $(C_{\text{out}})$，bias 的 shape 是 $C_{\text{out}}$，输出（output）的 shape 是 $(N, C_{\text{out}}, D_{\text{out}}, H_{\text{out}}, W_{\text{out}})$，其中 $N$ 表示批次大小（batch size），$C$ 是通道数，$D$、$H$ 和 $W$ 分别是样本的深度、高度和宽度，$K_d$、$K_h$ 和 $K_w$ 分别是卷积核的深度、高度和宽度，那输出将被表示为：
 
   $$
   \text{output}(N_i, C_{\text{out}_j}, D_{\text{out}}, H_{\text{out}}, W_{\text{out}}) = \left[\sum_{k = 0}^{C_{\text{in}} - 1} \text{weight}(C_{\text{out}_j}, k) \star \text{input}(N_i, k)\right] \times \text{scale}(C_{\text{out}_j}) + \text{bias}(C_{\text{out}_j})
@@ -80,7 +80,6 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <th style="width:145px">维度（shape）</th>
   <th style="width:145px">非连续 Tensor</th>
   </tr>
-    <tr>
   <td>input（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的 input，表示卷积输入。</td>
@@ -254,42 +253,43 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
     <col style="width:1050px">
     </colgroup>
    <thead>
-    <tr>
-    <td>返回值</td>
-    <td>错误码</td>
-    <td>描述</td> 
-    </tr></thead>
-    <tr>
-    <td align="left">ACLNN_ERR_PARAM_NULLPTR</td>
-    <td align="left">161001</td>
-    <td align="left">传入的指针类型入参是空指针。</td>
-    </tr>
-    <tr>
-    <td rowspan="11" align="left">ACLNN_ERR_PARAM_INVALID</td>
-    <td rowspan="11" align="left">161002</td>
-    <td align="left">input、weight、bias、scale、offset、output 数据类型和数据格式不在支持的范围之内。</td>
-    </tr>
-    <tr><td align="left">stride、padding、dilation 输入 shape 不对。</td></tr>
-    <tr><td align="left">groups 输入不对的情况。</td></tr>
-    <tr><td align="left">scale 和 bias 输入 shape 不对。</td></tr>
-    <tr><td align="left">output 的 shape 不满足 infershape 结果。</td></tr>
-    <tr><td align="left">传入 tensor 中任意维度为零的均不满足要求。</td></tr>
-    <tr><td align="left">input 空间尺度在 padding 操作后小于 weight(经过 dilation 扩张（如存在 dilation>1 的情况）)的空间尺度。</td></tr>
-    <tr><td align="left">weight 和 input 通道数不满足要求。</td></tr>
-    <tr><td align="left">weight的转化前后shape不满足转化关系。</td></tr>
-    <tr><td align="left">stride、dilation 小于 0 情况下不满足要求。</td></tr>
-    <tr><td align="left">当前处理器不支持卷积。</td></tr>
-    <tr>
-    <td align="left">ACLNN_ERR_INNER_NULLPTR</td>
-    <td align="left">561103</td>
-    <td align="left">API 内部校验错误，通常由于输入数据或属性的规格不在支持的范围之内导致。</td>
-    </tr>
-    <tr>
-    <td align="left">ACLNN_ERR_RUNTIME_ERROR</td>
-    <td align="left">361001</td>
-    <td align="left">API 调用 npu runtime 的接口异常，如 SocVersion 不支持。</td>
-    </tr>
-    </table>
+
+  <tr>
+  <td>返回值</td>
+  <td>错误码</td>
+  <td>描述</td>
+  </tr>
+  <tr>
+  <td align="left">ACLNN_ERR_PARAM_NULLPTR</td>
+  <td align="left">161001</td>
+  <td align="left">传入的指针类型入参是空指针。</td>
+  </tr>
+  <tr>
+  <td rowspan="11" align="left">ACLNN_ERR_PARAM_INVALID</td>
+  <td rowspan="11" align="left">161002</td>
+  <td align="left">input、weight、bias、scale、offset、output 数据类型和数据格式不在支持的范围之内。</td>
+  </tr>
+  <tr><td align="left">stride、padding、dilation 输入 shape 不对。</td></tr>
+  <tr><td align="left">groups 输入不对的情况。</td></tr>
+  <tr><td align="left">scale 和 bias 输入 shape 不对。</td></tr>
+  <tr><td align="left">output 的 shape 不满足 infershape 结果。</td></tr>
+  <tr><td align="left">传入 tensor 中任意维度为零的均不满足要求。</td></tr>
+  <tr><td align="left">input 空间尺度在 padding 操作后小于 weight(经过 dilation 扩张（如存在 dilation>1 的情况）)的空间尺度。</td></tr>
+  <tr><td align="left">weight 和 input 通道数不满足要求。</td></tr>
+  <tr><td align="left">weight的转化前后shape不满足转化关系。</td></tr>
+  <tr><td align="left">stride、dilation 小于 0 情况下不满足要求。</td></tr>
+  <tr><td align="left">当前处理器不支持卷积。</td></tr>
+  <tr>
+  <td align="left">ACLNN_ERR_INNER_NULLPTR</td>
+  <td align="left">561103</td>
+  <td align="left">API 内部校验错误，通常由于输入数据或属性的规格不在支持的范围之内导致。</td>
+  </tr>
+  <tr>
+  <td align="left">ACLNN_ERR_RUNTIME_ERROR</td>
+  <td align="left">361001</td>
+  <td align="left">API 调用 npu runtime 的接口异常，如 SocVersion 不支持。</td>
+  </tr>
+  </table>
 
 ## aclnnQuantConvolutionWeightNz
 

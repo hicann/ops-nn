@@ -128,7 +128,7 @@ aclnnStatus aclnnLinalgVectorNorm(
       <td>输出</td>
       <td>计算输出张量。对应公式中的out。</td>
       <td>若keepDims为true，除dim指定维度上的size为1以外，其余维度的shape需要与self保持一致；若keepDims为false，reduce轴的维度不保留，其余维度shape需要与self一致。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</li></ul></td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -183,7 +183,6 @@ aclnnStatus aclnnLinalgVectorNorm(
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="8">161002</td>
-     </tr>
     <tr>
       <td>dims超过[-N, N-1] (N表示self的维度)。</td>
     </tr>

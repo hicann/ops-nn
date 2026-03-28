@@ -91,7 +91,7 @@
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
-    <tr>
+    </tr>
       <tr>
       <td>beta1_power</td>
       <td>计算输入</td>
@@ -99,7 +99,7 @@
       <td>FLOAT16、BFLOAT16、FLOAT32<</td>
       <td>ND</td>
     </tr>
-    <tr>
+    </tr>
       <tr>
       <td>beta2_power</td>
       <td>计算输入</td>
@@ -107,7 +107,7 @@
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
-    <tr>
+    </tr>
       <tr>
       <td>lr</td>
       <td>计算输入</td>
@@ -139,8 +139,7 @@
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
-
-    <tr>
+    </tr>
       <tr>
       <td>epsilon</td>
       <td>计算输入</td>
@@ -148,8 +147,7 @@
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
-
-    <tr>
+    </tr>
       <tr>
       <td>grad</td>
       <td>计算输入</td>
@@ -157,7 +155,7 @@
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
-    <tr>
+    </tr>
       <tr>
       <td>max_grad_norm</td>
       <td>计算输入</td>
@@ -179,8 +177,8 @@
       <td>BOOL</td>
       <td>ND</td>
     </tr>
-    
-  </tbody></table>
+    </tbody>
+  </table>
 
 ## 约束说明
 

@@ -27,8 +27,8 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 “aclnnAddmmWeightNzGetWorkspaceSize” 接口获取入参并根据计算流程计算所需workspace大小，再调用 “aclnnAddmmWeightNz”接口执行计算。
 
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 “aclnnAddmmWeightNzGetWorkspaceSize” 接口获取入参并根据计算流程计算所需workspace大小，再调用 “aclnnAddmmWeightNz”接口执行计算。
 ```cpp
 aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(
   const aclTensor *self, 
@@ -41,7 +41,6 @@ aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(
   uint64_t        *workspaceSize, 
   aclOpExecutor   **executor)
 ```
-
 ```cpp
 aclnnStatus aclnnAddmmWeightNz(
   void           *workspace,
@@ -49,6 +48,7 @@ aclnnStatus aclnnAddmmWeightNz(
   aclOpExecutor  *executor,
   aclrtStream    stream)
 ```
+
 
 ## aclnnAddmmWeightNzGetWorkspaceSize
 
@@ -102,8 +102,8 @@ aclnnStatus aclnnAddmmWeightNz(
       <td>输入</td>
       <td>表示矩阵乘的第二个矩阵，公式中的mat2。</td>
       <td><ul><li>数据类型需要与mat1满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat2的Reduce维度需要与mat1的Reduce维度大小相等。</li><li>需要与self、mat1满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> 
-      <li>当mat2矩阵不转置时，NZ格式各个维度表示：（n1，k1，k0，n0），其中k0 = 16， n0为16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n， n0) = n1。</li> 
-     <li>当mat2矩阵转置时，NZ格式各个维度表示：（k1，n1，n0，k0），其中n0 = 16， k0 = 16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n， n0) = n1。</li> </ul>
+      </li><li>当mat2矩阵不转置时，NZ格式各个维度表示：（n1，k1，k0，n0），其中k0 = 16， n0为16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n， n0) = n1。</li> 
+     </li><li>当mat2矩阵转置时，NZ格式各个维度表示：（k1，n1，n0，k0），其中n0 = 16， k0 = 16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n， n0) = n1。</li> 
       </td>
       <td>BFLOAT16、FLOAT16</td>
       <td>NZ</td>
@@ -223,9 +223,11 @@ aclnnStatus aclnnAddmmWeightNz(
       </tbody>
       </table>
 
+
 ## aclnnAddmmWeightNz
 
 - **参数说明**
+
 
   <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
   <col style="width: 168px">
@@ -262,12 +264,12 @@ aclnnStatus aclnnAddmmWeightNz(
   </tbody>
   </table>
 
+
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-
 - 确定性说明：aclnnAddmmWeightNz默认确定性实现。
 
 - 计算一致性说明
@@ -279,10 +281,9 @@ aclnnStatus aclnnAddmmWeightNz(
 - 不支持mat1与mat2两个输入中一个输入为BFLOAT16，另一个输入为FLOAT或者FLOAT16的数据类型推导。
 - 不支持mat2最后两根轴其中一根轴为1，即k=1或者n=1。
 
+
 ## 调用示例
-
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
-
 ```Cpp
   #include <iostream>
   #include <vector>

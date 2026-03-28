@@ -47,6 +47,7 @@ $$
 \text{grad\_weight} = \text{softmax}^T \cdot \text{input} \in \mathbb{R}^{V \times H}
 $$
 
+</br>
 &emsp;&emsp;省显存模式，softmaxOptional为nullptr：
 
 $$

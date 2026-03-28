@@ -68,7 +68,7 @@ aclnnStatus aclnnConvTbc(
   <td>self（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的 self，表示卷积输入。</td>
-  <td><ul><li>支持空 Tensor。</li><li>数据类型与 weight 的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。<li>shape 为（N,C<sub>in</sub>,H<sub>in</sub>）。</li></li><li>N≥0，C≥1，H≥0。</li></ul></td>
+  <td><ul></li><li>支持空 Tensor。</li><li>数据类型与 weight 的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。<li>shape 为（N,C<sub>in</sub>,H<sub>in</sub>）。</li></li><li>N≥0，C≥1，H≥0。</li></ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8</td>
   <td>ND、NCL</td>
   <td>3</td>
@@ -158,11 +158,12 @@ aclnnStatus aclnnConvTbc(
     <col style="width:1050px">
     </colgroup>
    <thead>
+
   <tr>
   <td>返回值</td>
   <td>错误码</td>
   <td>描述</td>
-  </tr></thead>
+  </tr>
   <tr>
   <td align="left">ACLNN_ERR_PARAM_NULLPTR</td>
   <td align="left">161001</td>
@@ -289,7 +290,7 @@ aclnnStatus aclnnConvTbc(
           <li>为 1（ALLOW_FP32_DOWN_PRECISION）时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。</li>
           <li>为 2（USE_FP16）时，当输入是 BFLOAT16 不支持该选项。</li>
           <li>为 3（USE_HF32）时，当输入是 FLOAT 转换为 HFLOAT32 计算。</li>
-        </ul>
+        <ul>
      </td>
      <td>
         <ul>

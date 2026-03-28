@@ -87,4 +87,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_quant_matmul_reduce_sum](examples/test_aclnn_quant_matmul_reduce_sum_weight_nz.cpp) | 通过[aclnnQuantMatmulReduceSumWeightNz](docs/aclnnQuantMatmulReduceSumWeightNz.md)等方式调用QuantMatmulReduceSum算子。 |
+| aclnn接口  | [test_aclnn_quant_matmul_reduce_sum](examples/test_aclnn_quant_matmul_reduce_sum_weight_nz.cpp) | 通过<br>[aclnnQuantMatmulReduceSumWeightNz](docs/aclnnQuantMatmulReduceSumWeightNz.md)</br>等方式调用QuantMatmulReduceSum算子。 |

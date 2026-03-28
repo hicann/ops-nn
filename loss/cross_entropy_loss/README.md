@@ -71,42 +71,42 @@
     <tr>
       <td>weight</td>
       <td>可选输入</td>
-      <td><ul><li>表示为每个类别指定的缩放权重，公式中的weight。</li><li>默认为全1。</li></ul></td>
+      <td><ul><li>表示为每个类别指定的缩放权重，公式中的weight。<li>默认为全1。</ul></td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>reductionOptional</td>
       <td>可选属性</td>
-      <td><ul><li>表示loss的归约方式。</li><li>默认值为“mean”。</li></ul></td>
+      <td><ul><li>表示loss的归约方式。<li>默认值为“mean”。</ul></td>
       <td>STRING</td>
       <td>-</td>
     </tr>
     <tr>
       <td>ignoreIndex</td>
       <td>可选属性</td>
-      <td><ul><li>指定被忽略的标签值。</li><li>默认值为-100。</li></ul></td>
+      <td><ul><li>指定被忽略的标签值。<li>默认值为-100。</ul></td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>labelSmoothing</td>
       <td>可选属性</td>
-      <td><ul><li>表示计算loss时的平滑量。</li><li>默认值为0。</li></ul></td>
+      <td><ul><li>表示计算loss时的平滑量。<li>默认值为0。</ul></td>
       <td>DOUBLE</td>
       <td>-</td>
     </tr>
     <tr>
       <td>lseSquareScaleForZloss</td>
       <td>可选属性</td>
-      <td><ul><li>表示zloss计算所需的scale。</li><li>当前暂不支持。</li></ul></td>
+      <td><ul><li>表示zloss计算所需的scale。<li>当前暂不支持。</ul></td>
       <td>DOUBLE</td>
       <td>-</td>
     </tr>
     <tr>
       <td>returnZloss</td>
       <td>可选属性</td>
-      <td><ul><li>控制是否返回zloss输出。Host侧的布尔值。需要输出zLoss时传入True，否则传入False。</li><li>当前暂不支持。</li></ul></td>
+      <td><ul><li>控制是否返回zloss输出。Host侧的布尔值。需要输出zLoss时传入True，否则传入False。<li>当前暂不支持。</ul></td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
@@ -127,14 +127,14 @@
     <tr>
       <td>zlossOut</td>
       <td>输出</td>
-      <td><ul><li>表示辅助损失，对应公式中的zlossOut。</li><li>当前暂不支持。</li></ul></td>
+      <td><ul><li>表示辅助损失，对应公式中的zlossOut。<li>当前暂不支持。</ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>lseForZlossOut</td>
       <td>输出</td>
-      <td><ul><li>表示zloss场景输出给反向的Tensor，lseSquareScaleForZloss为0时输出为None，对应公式中的lse。</li><li>当前暂不支持。</li></ul></td>
+      <td><ul><li>表示zloss场景输出给反向的Tensor，lseSquareScaleForZloss为0时输出为None，对应公式中的lse。<li>当前暂不支持。</ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>

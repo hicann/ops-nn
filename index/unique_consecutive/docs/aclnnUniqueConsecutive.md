@@ -19,223 +19,44 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnUniqueConsecutiveGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnUniqueConsecutive”接口执行**计算。
 
-```cpp
-aclnnStatus aclnnUniqueConsecutiveGetWorkspaceSize(
-  const aclTensor* self, 
-  bool             returnInverse, 
-  bool             returnCounts, 
-  int64_t          dim, 
-  clTensor*        valueOut, 
-  aclTensor*       inverseOut, 
-  aclTensor*       countsOut, 
-  uint64_t*        workspaceSize, 
-  aclOpExecutor**  executor)
-```
-
-```cpp
-aclnnStatus aclnnUniqueConsecutive(
-  void*          workspace, 
-  uint64_t       workspaceSize, 
-  aclOpExecutor* executor, 
-  aclrtStream    stream)
-```
+- `aclnnStatus aclnnUniqueConsecutiveGetWorkspaceSize(const aclTensor* self, bool returnInverse, bool returnCounts, int64_t dim, aclTensor* valueOut, aclTensor* inverseOut, aclTensor* countsOut, uint64_t* workspaceSize, aclOpExecutor** executor)`
+- `aclnnStatus aclnnUniqueConsecutive(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)`
 
 ## aclnnUniqueConsecutiveGetWorkspaceSize
 
-* **参数说明**
-
-  <table style="undefined;table-layout: fixed; width: 1391px"><colgroup>
-  <col style="width: 128px">
-  <col style="width: 122px">
-  <col style="width: 300px">
-  <col style="width: 156px">
-  <col style="width: 294px">
-  <col style="width: 106px">
-  <col style="width: 136px">
-  <col style="width: 149px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>参数名</th>
-      <th>输入/输出</th>
-      <th>描述</th>
-      <th>使用说明</th>
-      <th>数据类型</th>
-      <th>数据格式</th>
-      <th>维度（shape）</th>
-      <th>非连续Tensor</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>self</td>
-      <td>输入</td>
-      <td>-</td>
-      <td>-</td>
-      <td>FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX64、COMPLEX128、BOOL、BFLOAT16</td>
-      <td>ND</td>
-      <td>≤8</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>returnInverse</td>
-      <td>输入</td>
-      <td>表示是否返回self中各元素在valueOut中对应元素的位置下标，True时返回，False时不返回。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>returnCounts</td>
-      <td>输入</td>
-      <td>表示是否返回valueOut中各元素在self中连续重复出现的次数，True时返回，False时不返回。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>dim</td>
-      <td>输入</td>
-      <td>表示进行去重的维度。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>valueOut</td>
-      <td>输出</td>
-      <td>第一个输出张量，返回消除连续重复元素后的结果。</td>
-      <td>-</td>
-      <td>FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX64、COMPLEX128、BOOL、BFLOAT16。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>inverseOut</td>
-      <td>输出</td>
-      <td>第二个输出张量，当returnInverse为True时有意义，返回self中各元素在valueOut中对应元素的位置下标。</td>
-      <td>-</td>
-      <td>INT64</td>
-      <td>ND</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>countsOut</td>
-      <td>输出</td>
-      <td>第三个输出张量，当returnCounts为True时有意义，返回valueOut中各元素在self中连续重复出现的次数。</td>
-      <td>-</td>
-      <td>INT64</td>
-      <td>ND</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>workspaceSize</td>
-      <td>输出</td>
-      <td>返回需要在Device侧申请的workspace大小。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>executor</td>
-      <td>输出</td>
-      <td>返回op执行器，包含了算子计算流程。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-  </tbody></table>
-
-* **返回值**
+* **参数说明**：
+  - self（aclTensor*, 计算输入）：Device侧的aclTensor，维度不能超过8维。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品/Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX64、COMPLEX128、BOOL、BFLOAT16。
+  - returnInverse（bool, 计算输入）：表示是否返回self中各元素在valueOut中对应元素的位置下标，True时返回，False时不返回。
+  - returnCounts（bool, 计算输入）：表示是否返回valueOut中各元素在self中连续重复出现的次数，True时返回，False时不返回。
+  - dim（int64_t, 计算输入）：表示进行去重的维度。
+  - valueOut（aclTensor*，计算输出）：第一个输出张量，返回消除连续重复元素后的结果，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品/Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX64、COMPLEX128、BOOL、BFLOAT16。
+  - inverseOut（aclTensor*，计算输出）：第二个输出张量，当returnInverse为True时有意义，返回self中各元素在valueOut中对应元素的位置下标，数据类型支持INT64，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
+  - countsOut（aclTensor*，计算输出）：第三个输出张量，当returnCounts为True时有意义，返回valueOut中各元素在self中连续重复出现的次数，数据类型支持INT64，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
+  - workspaceSize（uint64_t*, 出参）：返回需要在Device侧申请的workspace大小。
+  - executor（aclOpExecutor**, 出参）：返回op执行器，包含了算子计算流程。
+* **返回值**：
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  第一段接口完成入参校验，出现以下场景时报错：
-    
-  <table style="undefined;table-layout: fixed; width: 1015px"><colgroup>
-  <col style="width: 257px">
-  <col style="width: 101px">
-  <col style="width: 657px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>返回值</th>
-      <th>错误码</th>
-      <th>描述</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>ACLNN_ERR_PARAM_NULLPTR</td>
-      <td>161001</td>
-      <td>传入的 self 或 valueOut 或inverseOut 或 countsOut 是空指针时。</td>
-    </tr>
-    <tr>
-      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="4">161002</td>
-      <td>self 或valueOut 的数据类型不在支持的范围之内。</td>
-    </tr>
-    <tr>
-      <td>self 的数据类型不在支持的范围之内。</td>
-    </tr>
-    <tr>
-      <td>inverseOut 或 countsOut 的数据类型不在支持的范围之内。</td>
-    </tr>
-    <tr>
-      <td>inverseOut 和 countsOut 的数据类型不一致。</td>
-    </tr>
-  </tbody>
-  </table>
+
+```
+第一段接口完成入参校验，出现以下场景时报错：
+返回161001(ACLNN_ERR_PARAM_NULLPTR)：1. 传入的 self 或 valueOut 或inverseOut 或 countsOut 是空指针时。
+返回161002(ACLNN_ERR_PARAM_INVALID)：1. self 的数据类型不在支持的范围之内。
+                                     2. self 和 valueOut 的数据类型不一致。
+                                     3. inverseOut 或 countsOut 的数据类型不在支持的范围之内。
+                                     4. inverseOut 和 countsOut 的数据类型不一致。
+```
 
 ## aclnnUniqueConsecutive
 
-* **参数说明**
+* **参数说明**:
+  - workspace（void\*, 入参）：在Device侧申请的workspace内存地址。
+  - workspaceSize（uint64\_t, 入参）：在Device侧申请的workspace大小，由第一段接口aclnnUniqueConsecutiveGetWorkspaceSize获取。
+  - executor（aclOpExecutor\*, 入参）：op执行器，包含了算子计算流程。
+  - stream（aclrtStream, 入参）：指定执行任务的Stream。
 
-  <table style="undefined;table-layout: fixed; width: 950px"><colgroup>
-  <col style="width: 122px">
-  <col style="width: 105px">
-  <col style="width: 723px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>参数名</th>
-      <th>输入/输出</th>
-      <th>描述</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>workspace</td>
-      <td>输入</td>
-      <td>在Device侧申请的workspace内存地址。</td>
-    </tr>
-    <tr>
-      <td>workspaceSize</td>
-      <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnUniqueConsecutiveGetWorkspaceSize获取。</td>
-    </tr>
-    <tr>
-      <td>executor</td>
-      <td>输入</td>
-      <td>op执行器，包含了算子计算流程。</td>
-    </tr>
-    <tr>
-      <td>stream</td>
-      <td>输入</td>
-      <td>指定执行任务的Stream。</td>
-    </tr>
-  </tbody>
-  </table>
-
-- **返回值**
+- **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

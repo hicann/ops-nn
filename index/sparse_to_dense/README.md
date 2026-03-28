@@ -1,6 +1,6 @@
 # SparseToDense
 
-## 产品支持情况
+##  产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
@@ -10,14 +10,13 @@
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
 | <term>Atlas 推理系列产品 </term>                             |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    ×   |
-
 ## 功能说明
 
 - 算子功能: 将一个稀疏表示（Sparse Representation）转换为一个稠密张亮。
 
 - 示例：
 
-  ```cpp
+  ```
   # If sparse_values is scalar
   dense[i] = (i == sparse_indices ? sparse_values : default_value)
 
@@ -75,7 +74,6 @@
       <td>UINT8、INT8、UINT16、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、BFLOAT16。</td>
       <td>ND</td>
     </tr>
-      <tr>
       <td>default_value</td>
       <td>输入</td>
       <td>公式中的`default_value`，Device侧的aclTensor，数据类型与values相同。</td>
@@ -97,6 +95,7 @@
       <td>ND</td>
     </tr>
   </tbody></table>
+
 
 ## 约束说明
 

@@ -122,7 +122,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>gradCOptional</td>
       <td>可选输入</td>
       <td>表示LSTMCell正向输出细胞状态的梯度。</td>
-      <td>数据类型与gradHy一致。</td>
+      <td><ul><li>数据类型与gradHy一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[batch，hidden_size]</td>
@@ -132,7 +132,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>cx</td>
       <td>输入</td>
       <td>表示LSTMCell正向输入细胞状态。</td>
-      <td>数据类型与gradHy一致。</td>
+      <td><ul><li>数据类型与gradHy一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[batch，hidden_size]</td>
@@ -142,7 +142,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>cy</td>
       <td>输入</td>
       <td>表示LSTMCell正向输出细胞状态。</td>
-      <td>数据类型与gradHy一致。</td>
+      <td><ul><li>数据类型与gradHy一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[batch，hidden_size]</td>
@@ -152,7 +152,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>storage</td>
       <td>输入</td>
       <td>表示LSTMCell正向输出四个门的激活值。</td>
-      <td>数据类型与input一致。</td>
+      <td><ul><li>数据类型与input一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[batch，4 * hidden_size]</td>
@@ -172,7 +172,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>gradGatesOut</td>
       <td>输出</td>
       <td>表示LSTMCell正向中四个门预激活值的梯度。</td>
-      <td>数据类型与input一致。</td>
+      <td><ul><li>数据类型与input一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[batch, 4 * hidden_size]</td>
@@ -182,7 +182,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>gradCxOut</td>
       <td>输出</td>
       <td>表示LSTMCell正向中输入细胞状态的梯度。</td>
-      <td>数据类型与input一致。</td>
+      <td><ul><li>数据类型与input一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[batch，hidden_size]</td>
@@ -192,7 +192,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>gradBiasOut</td>
       <td>输出</td>
       <td>表示LSTM正向中输入偏置的梯度。</td>
-      <td>数据类型与input一致。</td>
+      <td><ul><li>数据类型与input一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[4 * hidden_size]</td>

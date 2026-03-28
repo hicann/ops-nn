@@ -342,7 +342,7 @@ aclnnStatus aclnnInplaceBaddbmm(
       <td>输入|输出</td>
       <td>输入输出tensor，即公式中的输入self与out。</td>
       <td><ul>
-      <li>数据类型与batch1@batch2的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>shape后两维需要与batch1@batch2后两维一致。</li>
+      <li>数据类型与batch1@batch2的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。<li>shape后两维需要与batch1@batch2后两维一致。</li>
       <li>支持空Tensor。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
@@ -444,7 +444,7 @@ aclnnStatus aclnnInplaceBaddbmm(
     - cubeMathType=2，当输入数据类型是FLOAT32，会转换为FLOAT16计算；当输入为其他数据类型时不做处理；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理。
     - cubeMathType=4时不做处理。
- 	  - 当前不支持cubeMathType=5。   
+ 	  - 当前不支持cubeMathType=5。
 
 - **返回值：**
 

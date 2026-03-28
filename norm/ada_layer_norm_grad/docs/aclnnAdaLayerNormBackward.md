@@ -13,6 +13,7 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
+
 ## 功能说明
 
 - 接口功能：[aclnnAdaLayerNormV2](../../ada_layer_norm_v2/docs/aclnnAdaLayerNormV2.md)的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。
@@ -126,7 +127,7 @@ aclnnStatus aclnnAdaLayerNormBackward(
       <td>gradOut（aclTensor*）</td>
       <td>输入</td>
       <td>表示反向计算的梯度Tensor，对应计算公式中的`gradOut`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>与输入input的数据类型相同。</li><li>shape为[B, S, H]，其中B支持0-6维。</li></ul></td>
+      <td><ul><li>不支持空Tensor。<li>与输入input的数据类型相同。<li>shape为[B, S, H]，其中B支持0-6维。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
@@ -136,7 +137,7 @@ aclnnStatus aclnnAdaLayerNormBackward(
       <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向计算的首个输入，对应计算公式中的`input`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>与输入gradOut的数据类型相同。</li><li>shape与gradOut的shape相等，为[B, S, H], 其中B支持0-6维。</li></ul></td>
+      <td><ul><li>不支持空Tensor。<li>与输入gradOut的数据类型相同。<li>shape与gradOut的shape相等，为[B, S, H], 其中B支持0-6维。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
@@ -146,7 +147,7 @@ aclnnStatus aclnnAdaLayerNormBackward(
       <td>normalizedShape（aclIntArray*）</td>
       <td>输入</td>
       <td>表示需要进行norm计算的维度，对应计算公式中的reduce_axis_2。</td>
-      <td><ul><li>公式中的reduce_axis_0对应维度B，reduce_axis_1对应维度S，B和S维度不进行norm计算的维度。</li><li>在此处值固定为长度为1的数组，数组固定元素为[H], 数组长度小于输入input的shape维度，不支持为空。</li></ul></td>
+      <td><ul><li>公式中的reduce_axis_0对应维度B，reduce_axis_1对应维度S，B和S维度不进行norm计算的维度。<li>在此处值固定为长度为1的数组，数组固定元素为[H], 数组长度小于输入input的shape维度，不支持为空。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -166,7 +167,7 @@ aclnnStatus aclnnAdaLayerNormBackward(
       <td>rstd（aclTensor*）</td>
       <td>输入</td>
       <td>正向计算的第三个输出，表示input的标准差的倒数，对应计算公式中的rstd。</td>
-      <td><ul><li>不支持空Tensor。</li><li>与输入mean的数据类型相同且位宽不低于输入input的数据类型位宽。</li><li>shape与mean的shape相等，为[B, S, 1]，最后一维固定为1，其他维度与`x`一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。<li>与输入mean的数据类型相同且位宽不低于输入input的数据类型位宽。<li>shape与mean的shape相等，为[B, S, 1]，最后一维固定为1，其他维度与`x`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
