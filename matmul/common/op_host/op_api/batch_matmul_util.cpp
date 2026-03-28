@@ -108,7 +108,7 @@ static aclnnStatus SetBatchMatMulOpSupportInfoV2(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, MmOpInfo& matmulOpInfo, int8_t cubeMathType)
 {
     // 判断传入L0接口，用于计算的Dtype
-    std::shared_ptr<NpuArchMatMulRuleBase> archRule = NpuArchMatMulRule::getInstance();
+    std::shared_ptr<NpuArchMatMulRuleBase> archRule = BuildRule();
     CHECK_RET(archRule != nullptr, ACLNN_ERR_PARAM_INVALID);
 
     aclnnStatus status = archRule -> PromoteDtype(self, mat2, bias, out, cubeMathType, matmulOpInfo);

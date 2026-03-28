@@ -165,7 +165,7 @@ static aclnnStatus CheckParamsV2(const aclTensor* self, const aclTensor* mat2, c
     CHECK_RET(CheckNotNull(self, mat2, out), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    auto archRule = NpuArchMatMulRule::getInstance();
+    auto archRule = BuildRule();
     CHECK_RET(archRule != nullptr, ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(
         archRule -> CheckInput(self, mat2, nullptr, out, cubeMathType),
