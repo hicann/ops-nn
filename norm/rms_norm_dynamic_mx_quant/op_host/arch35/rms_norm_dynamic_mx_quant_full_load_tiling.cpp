@@ -68,10 +68,10 @@ ge::graphStatus RmsNormDynamicMxQuantFullLoadTiling::DoOpTiling()
                         nMxblockNumAlignedTwo * FP16_BYTES * (CONST_FOUR + needPadScale) + nMxblockAligned);
     } else { // fp4量化
         mUbFactorMax =
-            (ubSize_ - gammaBetaUbSize - RESERVED_UB_SIZE - CONST_THREE * nMxblockAligned * DOUBLE_BUFFER) /
+            (ubSize_ - gammaBetaUbSize - RESERVED_UB_SIZE) /
             (nMxblockAligned * DOUBLE_BUFFER * FP16_BYTES + binAddOutBufLen * FP32_BYTES + FP32_BYTES * CONST_THREE +
              nMxblockAligned * FP16_BYTES + nMxblockAligned / CONST_TWO * DOUBLE_BUFFER +
-             nMxblockNumAlignedTwo * FP16_BYTES * (CONST_FOUR + needPadScale) + nMxblockAligned);
+             nMxblockNumAlignedTwo * FP16_BYTES * (CONST_FOUR + needPadScale) + nMxblockAligned / CONST_TWO);
     }
 
     OP_CHECK_IF(
