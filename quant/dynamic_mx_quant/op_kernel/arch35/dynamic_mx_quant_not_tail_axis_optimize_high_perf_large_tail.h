@@ -36,15 +36,17 @@ public:
 private:
     __aicore__ inline void InitParams();
     __aicore__ inline void InitCalcParams(int64_t index);
-    template <const bool scaleAlg, RoundMode roundMode>
+    template <const int64_t calcMode>
     __aicore__ inline void ProcessOneLoop(int64_t index);
     __aicore__ inline void CopyOut(int64_t yOffset, int64_t scaleOutOffset, int64_t blockCount, int64_t dataLen);
     __aicore__ inline void CopyIn(int64_t offset, int64_t blockCount, int64_t dataLen);
-    template <const bool scaleAlg, RoundMode roundMode>
+    template <const int64_t calcMode, RoundMode roundMode>
     __aicore__ inline void ComputeAll(int64_t blockCount, int64_t dataLen);
+    template <const int64_t calcMode>
     __aicore__ inline void ComputeScaleCuBlas(
         uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint8_t* mxScaleAddr,
         __ubuf__ uint16_t* tmpAddr);
+    template <const int64_t calcMode>
     __aicore__ inline void ComputeScaleOcp(
         uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint8_t* mxScaleAddr,
         __ubuf__ uint16_t* tmpAddr);
@@ -82,23 +84,27 @@ private:
 
     // base varible
     int64_t blockIdx_ = 0;
+    int64_t mGroupSizeInOneN_ = 0;
+    int64_t roundMode_ = 0;
+    int64_t blockCountPerPage_ = 0;
+    uint32_t INV_DTYPE_MAX = 0;
+    uint16_t DTYPE_Y_MAX_EXP = 0;
+    uint16_t SUB_NUM_FOR_SCALE = 0;
+    uint16_t blockSize_ = 0;
+    float dstTypeMax_ = 0;
+    float invDstTypeMax_ = 0;
+    int64_t calcMode_ = 0;
+
+    // runtime varible
+    int64_t calcRow_ = 0;
+    int64_t calcCol_ = 0;
+    int64_t ubOffset_ = 0;
     int64_t blockOffset_ = 0;
     int64_t loopPerCore_ = 0;
     int64_t ubRowLen_ = 0;
     int64_t ubRowLenTail_ = 0;
     int64_t ubRowCount_ = 0;
     int64_t ubRowCountTail_ = 0;
-    int64_t mGroupSizeInOneN_ = 0;
-    int64_t roundMode_ = 0;
-    int64_t blockCountPerPage_ = 0;
-    uint32_t INV_DTYPE_MAX = 0;
-    uint16_t DTYPE_Y_MAX_EXP = 0;
-    uint16_t blockSize_ = 0;
-
-    // runtime varible
-    int64_t calcRow_ = 0;
-    int64_t calcCol_ = 0;
-    int64_t ubOffset_ = 0;
     int64_t scaleOffset_ = 0;
     int64_t calcBlockLoop_ = 0;
     int64_t calcBlockTail_ = 0;
@@ -106,7 +112,7 @@ private:
     int64_t dataLen32Align_ = 0;
     int64_t dataLen64Align_ = 0;
     bool scaleNeedsPad_ = false;
-    bool scaleAlg_ = false;
+    int64_t scaleAlg_ = 0;
 };
 
 template <typename xDtype, typename yDtype>
@@ -134,11 +140,23 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::InitParams()
     ubRowCount_ = tilingData_->groupPerUb * DIGIT_TWO * tilingData_->blockSize;
     ubRowCountTail_ =
         tilingData_->quantAxisSize % ubRowCount_ == 0 ? ubRowCount_ : tilingData_->quantAxisSize % ubRowCount_;
+    blockCountPerPage_ = tilingData_->nAlignBlockCount * Ops::Base::CeilDiv(tilingData_->quantAxisSize, ubRowCount_);
+    mGroupSizeInOneN_ = Ops::Base::CeilDiv(tilingData_->quantAxisSize, DIGIT_TWO * tilingData_->blockSize) *
+                        DIGIT_TWO; // 每页的scale行数
 
-    blockCountPerPage_ = tilingData_->nAlignBlockSize * ((tilingData_->quantAxisSize + ubRowCount_ - 1) / ubRowCount_);
+    scaleAlg_ = tilingData_->scaleAlg;
+    dstTypeMax_ = tilingData_->dstTypeMax;
+    invDstTypeMax_ = tilingData_->invDstTypeMax;
 
-    mGroupSizeInOneN_ = (tilingData_->quantAxisSize + DIGIT_TWO * tilingData_->blockSize - 1) /
-                        (DIGIT_TWO * tilingData_->blockSize) * DIGIT_TWO; // 每页的scale行数
+    if (scaleAlg_ == ModeZero || IsSame<DTYPE_Y, fp4x2_e1m2_t>::value) {
+        calcMode_ = ModeZero;
+    } else if (scaleAlg_ == ModeOne) {
+        calcMode_ = ModeOne;
+    } else if (scaleAlg_ == ModeTwo && dstTypeMax_ != DIGIT_SIX_FLOAT && dstTypeMax_ != DIGIT_SEVEN_FLOAT && dstTypeMax_ != DIGIT_ZERO_FLOAT) {
+        calcMode_ = ModeTwo;
+    } else {
+        calcMode_ = ModeThree;
+    }
 
     if constexpr (IsSame<DTYPE_Y, fp8_e4m3fn_t>::value) {
         DTYPE_Y_MAX_EXP = FP8_E4M3_MAX_EXP;
@@ -150,37 +168,45 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::InitParams()
         DTYPE_Y_MAX_EXP = FP4_E2M1_BF16_MAX_EXP;
     }
 
+    if (calcMode_ == ModeThree) {
+        if (dstTypeMax_ == DIGIT_SIX_FLOAT || dstTypeMax_ == DIGIT_ZERO_FLOAT) {
+            SUB_NUM_FOR_SCALE = 0x00c1;
+        } else {
+            SUB_NUM_FOR_SCALE = 0x00e1;
+        }
+    } else {
+        SUB_NUM_FOR_SCALE = DTYPE_Y_MAX_EXP;
+    }
+
     roundMode_ = tilingData_->roundMode;
-    scaleAlg_ =
-        (IsSame<DTYPE_Y, fp4x2_e2m1_t>::value || IsSame<DTYPE_Y, fp4x2_e1m2_t>::value) ? false : tilingData_->scaleAlg;
 }
 
 template <typename xDtype, typename yDtype>
 __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::InitCalcParams(int64_t index)
 {
-    calcRow_ = ((blockOffset_ + index) % tilingData_->nAlignBlockSize == tilingData_->nAlignBlockSize - 1) ?
+    calcRow_ = ((blockOffset_ + index) % tilingData_->nAlignBlockCount == tilingData_->nAlignBlockCount - 1) ?
                    ubRowLenTail_ :
                    ubRowLen_; // 本次ub计算的列数
-    calcCol_ = ((blockOffset_ + index) / tilingData_->nAlignBlockSize % tilingData_->mAlignBlockSize) ==
-                       (tilingData_->mAlignBlockSize - 1) ?
+    calcCol_ = ((blockOffset_ + index) / tilingData_->nAlignBlockCount % tilingData_->mAlignBlockCount) ==
+                       (tilingData_->mAlignBlockCount - 1) ?
                    ubRowCountTail_ :
                    ubRowCount_; // 本次ub计算的行数
 
     ubOffset_ = (blockOffset_ + index) / blockCountPerPage_ * tilingData_->quantAxisSize * tilingData_->postAxisSize +
-                (blockOffset_ + index) % blockCountPerPage_ / tilingData_->nAlignBlockSize * ubRowCount_ *
+                (blockOffset_ + index) % blockCountPerPage_ / tilingData_->nAlignBlockCount * ubRowCount_ *
                     tilingData_->postAxisSize +
-                (blockOffset_ + index) % blockCountPerPage_ % tilingData_->nAlignBlockSize * ubRowLen_;
+                (blockOffset_ + index) % blockCountPerPage_ % tilingData_->nAlignBlockCount * ubRowLen_;
     scaleOffset_ = (blockOffset_ + index) / blockCountPerPage_ * mGroupSizeInOneN_ * tilingData_->postAxisSize +
-                   (blockOffset_ + index) % blockCountPerPage_ / tilingData_->nAlignBlockSize *
+                   (blockOffset_ + index) % blockCountPerPage_ / tilingData_->nAlignBlockCount *
                        tilingData_->groupPerUb * DIGIT_TWO * tilingData_->postAxisSize +
-                   (blockOffset_ + index) % blockCountPerPage_ % tilingData_->nAlignBlockSize * ubRowLen_ * DIGIT_TWO;
+                   (blockOffset_ + index) % blockCountPerPage_ % tilingData_->nAlignBlockCount * ubRowLen_ * DIGIT_TWO;
 
     calcBlockLoop_ = (calcCol_ + tilingData_->blockSize - 1) / tilingData_->blockSize;
     calcBlockTail_ = calcCol_ % tilingData_->blockSize;
 
     scaleNeedsPad_ = tilingData_->quantAxisIsOdd &&
-                     ((blockOffset_ + index) / tilingData_->nAlignBlockSize % tilingData_->mAlignBlockSize) ==
-                         (tilingData_->mAlignBlockSize - 1);
+                     ((blockOffset_ + index) / tilingData_->nAlignBlockCount % tilingData_->mAlignBlockCount) ==
+                         (tilingData_->mAlignBlockCount - 1);
 
     // Align for fp16, fp8, fp4
     dataLen16Align_ = (calcRow_ + 15) / 16 * 16;
@@ -189,11 +215,21 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::InitCalcParams(int6
 }
 
 template <typename xDtype, typename yDtype>
-template <const bool scaleAlg, RoundMode roundMode>
+template <const int64_t calcMode>
 __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::ProcessOneLoop(int64_t index)
 {
     CopyIn(ubOffset_, calcCol_, calcRow_);
-    ComputeAll<scaleAlg, roundMode>(calcCol_, calcRow_);
+    if constexpr (IsSame<DTYPE_Y, fp4x2_e2m1_t>::value || IsSame<DTYPE_Y, fp4x2_e1m2_t>::value) {
+        if (roundMode_ == MODE_RINT) {
+            ComputeAll<calcMode, RoundMode::CAST_RINT>(calcCol_, calcRow_);
+        } else if (roundMode_ == MODE_ROUND) {
+            ComputeAll<calcMode, RoundMode::CAST_ROUND>(calcCol_, calcRow_);
+        } else if (roundMode_ == MODE_FLOOR) {
+            ComputeAll<calcMode, RoundMode::CAST_FLOOR>(calcCol_, calcRow_);
+        }
+    } else {
+        ComputeAll<calcMode, RoundMode::CAST_RINT>(calcCol_, calcRow_);
+    }
     CopyOut(ubOffset_, scaleOffset_, calcCol_, calcRow_);
 }
 
@@ -213,7 +249,7 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::CopyIn(int64_t offs
 }
 
 template <typename xDtype, typename yDtype>
-template <const bool scaleAlg, RoundMode roundMode>
+template <const int64_t calcMode, RoundMode roundMode>
 __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::ComputeAll(int64_t blockCount, int64_t dataLen)
 {
     LocalTensor<xDtype> x = inQueue.template DeQue<xDtype>();
@@ -243,11 +279,12 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::ComputeAll(int64_t 
         }
         scaleUbOffset = i * dataLen32Align_;
         tmpOffset = i * dataLen16Align_;
-        if constexpr (scaleAlg) {
-            ComputeScaleCuBlas(
+        if constexpr (calcMode == ModeTwo || calcMode == ModeOne) {
+            ComputeScaleCuBlas<calcMode>(
                 dataLen, blockSize_, xAddr + xOffset, mxTmpScaleAddr + scaleUbOffset, tmpAddr + tmpOffset);
         } else {
-            ComputeScaleOcp(dataLen, blockSize_, xAddr + xOffset, mxTmpScaleAddr + scaleUbOffset, tmpAddr + tmpOffset);
+            ComputeScaleOcp<calcMode>(
+                dataLen, blockSize_, xAddr + xOffset, mxTmpScaleAddr + scaleUbOffset, tmpAddr + tmpOffset);
         }
         ComputeYVf<roundMode>(dataLen, blockSize_, xAddr + xOffset, tmpAddr + tmpOffset, yAddr + yOffset);
     }
@@ -260,12 +297,12 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::ComputeAll(int64_t 
         }
         scaleUbOffset = calcLoop * dataLen32Align_;
         tmpOffset = calcLoop * dataLen16Align_;
-        if constexpr (scaleAlg) {
-            ComputeScaleCuBlas(
+        if constexpr (calcMode == ModeTwo || calcMode == ModeOne) {
+            ComputeScaleCuBlas<calcMode>(
                 dataLen, static_cast<uint16_t>(calcBlockTail_), xAddr + xOffset, mxTmpScaleAddr + scaleUbOffset,
                 tmpAddr + tmpOffset);
         } else {
-            ComputeScaleOcp(
+            ComputeScaleOcp<calcMode>(
                 dataLen, static_cast<uint16_t>(calcBlockTail_), xAddr + xOffset, mxTmpScaleAddr + scaleUbOffset,
                 tmpAddr + tmpOffset);
         }
@@ -336,6 +373,7 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::CopyOut(
 }
 
 template <typename xDtype, typename yDtype>
+template <const int64_t calcMode>
 __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::ComputeScaleCuBlas(
     uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint8_t* mxScaleAddr,
     __ubuf__ uint16_t* tmpAddr)
@@ -365,6 +403,7 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::ComputeScaleCuBlas(
         AscendC::MicroAPI::RegTensor<uint16_t> absForX;
         AscendC::MicroAPI::RegTensor<uint16_t> nanRegTensor;
         AscendC::MicroAPI::RegTensor<uint16_t> specialExpRegTensor;
+        AscendC::MicroAPI::RegTensor<float> dstTypeMaxReg;
 
         AscendC::MicroAPI::MaskReg p0;
         AscendC::MicroAPI::MaskReg p1;
@@ -383,14 +422,12 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::ComputeScaleCuBlas(
         static constexpr AscendC::MicroAPI::CastTrait castTraitOne = {
             AscendC::MicroAPI::RegLayout::ONE, AscendC::MicroAPI::SatMode::UNKNOWN,
             AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-        static constexpr AscendC::MicroAPI::CastTrait castTraitHalf2Bf16 = {
-            AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::UNKNOWN,
-            AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
 
         AscendC::MicroAPI::Duplicate(absForX, ABS_FOR_UINT16);
         AscendC::MicroAPI::Duplicate(maxEleRegTensorFP16, HALF_INF);
         AscendC::MicroAPI::Duplicate(manForFP32, MAN_FOR_FP32);
         AscendC::MicroAPI::Duplicate(invMax, INV_DTYPE_MAX);
+        AscendC::MicroAPI::Duplicate(dstTypeMaxReg, invDstTypeMax_);
         AscendC::MicroAPI::Duplicate(maxRegTensor, 0);
         AscendC::MicroAPI::Duplicate(maxEleRegTensor, MAX_EXP_FOR_BF16);
         AscendC::MicroAPI::Duplicate(biasRegTensor, BF16_EXP_BIAS);
@@ -408,30 +445,30 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::ComputeScaleCuBlas(
         AscendC::MicroAPI::Cast<float, xDtype, castTraitZero>(
             (AscendC::MicroAPI::RegTensor<float>&)manAbsFP32RegTensor0,
             (AscendC::MicroAPI::RegTensor<xDtype>&)maxRegTensor, pregAll16);
-        AscendC::MicroAPI::Mul(
-            (AscendC::MicroAPI::RegTensor<float>&)manAbsFP32RegTensor0,
-            (AscendC::MicroAPI::RegTensor<float>&)manAbsFP32RegTensor0, (AscendC::MicroAPI::RegTensor<float>&)invMax,
-            pregAll32);
-        AscendC::MicroAPI::ShiftRights(
-            mxScaleFP32RegTensor0, (AscendC::MicroAPI::RegTensor<uint32_t>&)manAbsFP32RegTensor0, SHR_NUM_FOR_FP32,
-            pregAll32);
-        AscendC::MicroAPI::And(
-            (AscendC::MicroAPI::RegTensor<uint32_t>&)manAbsFP32RegTensor0,
-            (AscendC::MicroAPI::RegTensor<uint32_t>&)manAbsFP32RegTensor0,
-            (AscendC::MicroAPI::RegTensor<uint32_t>&)manForFP32, pregAll32); // 提取尾数
+        if constexpr (calcMode == ModeOne) {
+            AscendC::MicroAPI::Mul(
+                (AscendC::MicroAPI::RegTensor<float>&)manAbsFP32RegTensor0,
+                (AscendC::MicroAPI::RegTensor<float>&)manAbsFP32RegTensor0,
+                (AscendC::MicroAPI::RegTensor<float>&)invMax, pregAll32);
+        } else {
+            AscendC::MicroAPI::Mul(
+                (AscendC::MicroAPI::RegTensor<float>&)manAbsFP32RegTensor0,
+                (AscendC::MicroAPI::RegTensor<float>&)manAbsFP32RegTensor0, dstTypeMaxReg, pregAll32);
+        }
 
-        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(
-            p0, (AscendC::MicroAPI::RegTensor<uint32_t>&)mxScaleFP32RegTensor0, NUMBER_ZERO, pregAll32);
-        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(
-            p0, (AscendC::MicroAPI::RegTensor<uint32_t>&)mxScaleFP32RegTensor0, NUMBER_TWO_FIVE_FOUR, p0);
-        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(
-            p0, (AscendC::MicroAPI::RegTensor<uint32_t>&)manAbsFP32RegTensor0, NUMBER_ZERO, p0);
+        AscendC::MicroAPI::ShiftRights(mxScaleFP32RegTensor0, manAbsFP32RegTensor0, SHR_NUM_FOR_FP32, pregAll32);
+        AscendC::MicroAPI::And(manAbsFP32RegTensor0, manAbsFP32RegTensor0, manForFP32,
+                               pregAll32); // 提取尾数
 
-        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(
-            p1, (AscendC::MicroAPI::RegTensor<uint32_t>&)mxScaleFP32RegTensor0, NUMBER_ZERO, pregAll32);
-        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(
-            p1, (AscendC::MicroAPI::RegTensor<uint32_t>&)manAbsFP32RegTensor0, NUMBER_HALF, p1);
-        AscendC::MicroAPI::MaskXor(p0, p0, p1, pregAll32);
+        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, mxScaleFP32RegTensor0, NUMBER_ZERO, pregAll32);
+        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p0, mxScaleFP32RegTensor0, NUMBER_TWO_FIVE_FOUR, p0);
+        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, manAbsFP32RegTensor0, NUMBER_ZERO, p0);
+
+        if constexpr (calcMode == ModeOne) {
+            AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(p1, mxScaleFP32RegTensor0, NUMBER_ZERO, pregAll32);
+            AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p1, manAbsFP32RegTensor0, NUMBER_HALF, p1);
+            AscendC::MicroAPI::MaskXor(p0, p0, p1, pregAll32);
+        }
 
         AscendC::MicroAPI::Adds(manAbsFP32RegTensor0, mxScaleFP32RegTensor0, 1, p0);
         AscendC::MicroAPI::Select(mxScaleFP32RegTensor0, manAbsFP32RegTensor0, mxScaleFP32RegTensor0, p0);
@@ -442,30 +479,31 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::ComputeScaleCuBlas(
         AscendC::MicroAPI::Cast<float, xDtype, castTraitOne>(
             (AscendC::MicroAPI::RegTensor<float>&)manAbsFP32RegTensor1,
             (AscendC::MicroAPI::RegTensor<xDtype>&)maxRegTensor, pregAll16);
-        AscendC::MicroAPI::Mul(
-            (AscendC::MicroAPI::RegTensor<float>&)manAbsFP32RegTensor1,
-            (AscendC::MicroAPI::RegTensor<float>&)manAbsFP32RegTensor1, (AscendC::MicroAPI::RegTensor<float>&)invMax,
-            pregAll32);
-        AscendC::MicroAPI::ShiftRights(
-            mxScaleFP32RegTensor1, (AscendC::MicroAPI::RegTensor<uint32_t>&)manAbsFP32RegTensor1, SHR_NUM_FOR_FP32,
-            pregAll32);
-        AscendC::MicroAPI::And(
-            (AscendC::MicroAPI::RegTensor<uint32_t>&)manAbsFP32RegTensor1,
-            (AscendC::MicroAPI::RegTensor<uint32_t>&)manAbsFP32RegTensor1,
-            (AscendC::MicroAPI::RegTensor<uint32_t>&)manForFP32, pregAll32); // 提取尾数
 
-        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(
-            p2, (AscendC::MicroAPI::RegTensor<uint32_t>&)mxScaleFP32RegTensor1, NUMBER_ZERO, pregAll32);
-        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(
-            p2, (AscendC::MicroAPI::RegTensor<uint32_t>&)mxScaleFP32RegTensor1, NUMBER_TWO_FIVE_FOUR, p2);
-        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(
-            p2, (AscendC::MicroAPI::RegTensor<uint32_t>&)manAbsFP32RegTensor1, NUMBER_ZERO, p2);
+        if constexpr (calcMode == ModeOne) {
+            AscendC::MicroAPI::Mul(
+                (AscendC::MicroAPI::RegTensor<float>&)manAbsFP32RegTensor1,
+                (AscendC::MicroAPI::RegTensor<float>&)manAbsFP32RegTensor1,
+                (AscendC::MicroAPI::RegTensor<float>&)invMax, pregAll32);
+        } else {
+            AscendC::MicroAPI::Mul(
+                (AscendC::MicroAPI::RegTensor<float>&)manAbsFP32RegTensor1,
+                (AscendC::MicroAPI::RegTensor<float>&)manAbsFP32RegTensor1, dstTypeMaxReg, pregAll32);
+        }
 
-        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(
-            p3, (AscendC::MicroAPI::RegTensor<uint32_t>&)mxScaleFP32RegTensor1, NUMBER_ZERO, pregAll32);
-        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(
-            p3, (AscendC::MicroAPI::RegTensor<uint32_t>&)manAbsFP32RegTensor1, NUMBER_HALF, p3);
-        AscendC::MicroAPI::MaskXor(p2, p3, p2, pregAll32);
+        AscendC::MicroAPI::ShiftRights(mxScaleFP32RegTensor1, manAbsFP32RegTensor1, SHR_NUM_FOR_FP32, pregAll32);
+        AscendC::MicroAPI::And(manAbsFP32RegTensor1, manAbsFP32RegTensor1, manForFP32,
+                               pregAll32); // 提取尾数
+
+        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p2, mxScaleFP32RegTensor1, NUMBER_ZERO, pregAll32);
+        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p2, mxScaleFP32RegTensor1, NUMBER_TWO_FIVE_FOUR, p2);
+        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p2, manAbsFP32RegTensor1, NUMBER_ZERO, p2);
+
+        if constexpr (calcMode == ModeOne) {
+            AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(p3, mxScaleFP32RegTensor1, NUMBER_ZERO, pregAll32);
+            AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p3, manAbsFP32RegTensor1, NUMBER_HALF, p3);
+            AscendC::MicroAPI::MaskXor(p2, p3, p2, pregAll32);
+        }
 
         AscendC::MicroAPI::Adds(manAbsFP32RegTensor1, mxScaleFP32RegTensor1, 1, p2);
         AscendC::MicroAPI::Select(mxScaleFP32RegTensor1, manAbsFP32RegTensor1, mxScaleFP32RegTensor1, p2);
@@ -493,6 +531,7 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::ComputeScaleCuBlas(
 }
 
 template <typename xDtype, typename yDtype>
+template <const int64_t calcMode>
 __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::ComputeScaleOcp(
     uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint8_t* mxScaleAddr,
     __ubuf__ uint16_t* tmpAddr)
@@ -506,6 +545,8 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::ComputeScaleOcp(
         AscendC::MicroAPI::RegTensor<uint16_t> mxScaleRegTensor;
         AscendC::MicroAPI::RegTensor<uint16_t> reversedShareExpRegTensor;
         AscendC::MicroAPI::RegTensor<uint8_t> mxScale;
+        AscendC::MicroAPI::RegTensor<uint16_t> absRegTensor; // x绝对值
+        AscendC::MicroAPI::RegTensor<uint16_t> maxRegTensor; // 绝对值最大值
 
         AscendC::MicroAPI::RegTensor<uint16_t> specialExpRegTensor;
         AscendC::MicroAPI::RegTensor<uint16_t> biasRegTensor;
@@ -513,8 +554,10 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::ComputeScaleOcp(
         AscendC::MicroAPI::RegTensor<uint16_t> nanRegTensor;
         AscendC::MicroAPI::RegTensor<uint16_t> maxEleRegTensor;
         AscendC::MicroAPI::RegTensor<uint16_t> maxEleRegTensorFP16;
-        AscendC::MicroAPI::RegTensor<uint16_t> fp8MaxExpRegTensor;
+        AscendC::MicroAPI::RegTensor<uint16_t> dtypeYMaxExp;
+        AscendC::MicroAPI::RegTensor<uint16_t> subNumForScale;
         AscendC::MicroAPI::RegTensor<uint16_t> fp8NanRegTensor;
+        AscendC::MicroAPI::RegTensor<uint16_t> absForX;
 
         AscendC::MicroAPI::MaskReg infMask;
         AscendC::MicroAPI::MaskReg zeroMask;
@@ -524,47 +567,75 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::ComputeScaleOcp(
         AscendC::MicroAPI::MaskReg pregAll16 =
             AscendC::MicroAPI::CreateMask<uint16_t, AscendC::MicroAPI::MaskPattern::ALL>();
 
-        static constexpr AscendC::MicroAPI::CastTrait castTraitHalf2Bf16 = {
+        static constexpr AscendC::MicroAPI::CastTrait castTraitCublsHalf2Bf16 = {
+            AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::UNKNOWN,
+            AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+        static constexpr AscendC::MicroAPI::CastTrait castTraitOcpHalf2Bf16 = {
             AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::UNKNOWN,
             AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
 
         AscendC::MicroAPI::Duplicate(maxEleRegTensor, MAX_EXP_FOR_BF16);
+        AscendC::MicroAPI::Duplicate(subNumForScale, SUB_NUM_FOR_SCALE);
+        AscendC::MicroAPI::Duplicate(absForX, ABS_FOR_UINT16);
         AscendC::MicroAPI::Duplicate(maxEleRegTensorFP16, HALF_INF);
-        AscendC::MicroAPI::Duplicate(fp8MaxExpRegTensor, DTYPE_Y_MAX_EXP);
+        AscendC::MicroAPI::Duplicate(dtypeYMaxExp, DTYPE_Y_MAX_EXP);
         AscendC::MicroAPI::Duplicate(fp8NanRegTensor, MAX_EXP_FOR_FP8);
         AscendC::MicroAPI::Duplicate(biasRegTensor, BF16_EXP_BIAS);
         AscendC::MicroAPI::Duplicate(zeroRegTensor, 0);
         AscendC::MicroAPI::Duplicate(nanRegTensor, NAN_CUSTOMIZATION);
         AscendC::MicroAPI::Duplicate(specialExpRegTensor, SPECIAL_EXP_THRESHOLD);
         AscendC::MicroAPI::Duplicate(expMaxRegTensor, 0);
+        AscendC::MicroAPI::Duplicate(maxRegTensor, 0);
 
         for (uint16_t j = 0; j < blockCount; j++) {
             DataCopy(xRegTensor, xAddr + j * dataLen16Align_);
-            if constexpr (IsSame<xDtype, half>::value) {
+            if constexpr (calcMode == ModeThree) {
                 AscendC::MicroAPI::And(
-                    expRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)xRegTensor, maxEleRegTensorFP16, pregAll16);
-                AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(
-                    infMask, expRegTensor, maxEleRegTensorFP16, pregAll16);
-                AscendC::MicroAPI::Cast<bfloat16_t, xDtype, castTraitHalf2Bf16>(
-                    (AscendC::MicroAPI::RegTensor<bfloat16_t>&)expRegTensor,
-                    (AscendC::MicroAPI::RegTensor<float16_t>&)xRegTensor, pregAll16);
-                AscendC::MicroAPI::Select<uint16_t>(expRegTensor, maxEleRegTensor, expRegTensor, infMask);
-                AscendC::MicroAPI::And(
-                    expRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)expRegTensor, maxEleRegTensor, pregAll16);
+                    absRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)xRegTensor, absForX, pregAll16);
+                if constexpr (IsSame<xDtype, half>::value) {
+                    AscendC::MicroAPI::Cast<bfloat16_t, xDtype, castTraitCublsHalf2Bf16>(
+                        (AscendC::MicroAPI::RegTensor<bfloat16_t>&)absRegTensor,
+                        (AscendC::MicroAPI::RegTensor<float16_t>&)absRegTensor, pregAll16);
+                }
+                AscendC::MicroAPI::Max(maxRegTensor, maxRegTensor, absRegTensor, pregAll16);
             } else {
-                AscendC::MicroAPI::And(
-                    expRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)xRegTensor, maxEleRegTensor, pregAll16);
+                if constexpr (IsSame<xDtype, half>::value) {
+                    AscendC::MicroAPI::And(
+                        expRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)xRegTensor, maxEleRegTensorFP16,
+                        pregAll16);
+                    AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(
+                        infMask, expRegTensor, maxEleRegTensorFP16, pregAll16);
+                    AscendC::MicroAPI::Cast<bfloat16_t, xDtype, castTraitOcpHalf2Bf16>(
+                        (AscendC::MicroAPI::RegTensor<bfloat16_t>&)expRegTensor,
+                        (AscendC::MicroAPI::RegTensor<float16_t>&)xRegTensor, pregAll16);
+                    AscendC::MicroAPI::Select<uint16_t>(expRegTensor, maxEleRegTensor, expRegTensor, infMask);
+                    AscendC::MicroAPI::And(
+                        expRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)expRegTensor, maxEleRegTensor,
+                        pregAll16);
+                } else {
+                    AscendC::MicroAPI::And(
+                        expRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)xRegTensor, maxEleRegTensor, pregAll16);
+                }
+                AscendC::MicroAPI::Max(expMaxRegTensor, expMaxRegTensor, expRegTensor, pregAll16);
             }
-            AscendC::MicroAPI::Max(expMaxRegTensor, expMaxRegTensor, expRegTensor, pregAll16);
+        }
+
+        if constexpr (calcMode == ModeThree) {
+            AscendC::MicroAPI::And(
+                expMaxRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)maxRegTensor, maxEleRegTensor, pregAll16);
         }
 
         AscendC::MicroAPI::Compare<uint16_t, CMPMODE::NE>(infMask, expMaxRegTensor, maxEleRegTensor, pregAll16);
         AscendC::MicroAPI::Compare<uint16_t, CMPMODE::NE>(zeroMask, expMaxRegTensor, zeroRegTensor, pregAll16);
-        AscendC::MicroAPI::Compare<uint16_t, CMPMODE::LE>(
-            invalidDataMask, expMaxRegTensor, fp8MaxExpRegTensor, pregAll16);
-        AscendC::MicroAPI::Select<uint16_t>(expMaxRegTensor, fp8MaxExpRegTensor, expMaxRegTensor, invalidDataMask);
-        AscendC::MicroAPI::Sub(expMaxRegTensor, expMaxRegTensor, fp8MaxExpRegTensor, pregAll16);
+        AscendC::MicroAPI::Compare<uint16_t, CMPMODE::LT>(invalidDataMask, expMaxRegTensor, dtypeYMaxExp, pregAll16);
 
+        if constexpr (calcMode == ModeThree) {
+            AscendC::MicroAPI::Sub(expMaxRegTensor, maxRegTensor, subNumForScale, pregAll16);
+        } else {
+            AscendC::MicroAPI::Sub(expMaxRegTensor, expMaxRegTensor, subNumForScale, pregAll16);
+        }
+
+        AscendC::MicroAPI::Select<uint16_t>(expMaxRegTensor, zeroRegTensor, expMaxRegTensor, invalidDataMask);
         AscendC::MicroAPI::ShiftRights(mxScaleRegTensor, expMaxRegTensor, SHR_NUM_FOR_BF16, pregAll16);
         AscendC::MicroAPI::Select<uint16_t>(mxScaleRegTensor, mxScaleRegTensor, fp8NanRegTensor, infMask);
         AscendC::MicroAPI::Select<uint16_t>(mxScaleRegTensor, mxScaleRegTensor, zeroRegTensor, zeroMask);
@@ -573,6 +644,9 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::ComputeScaleOcp(
             (AscendC::MicroAPI::RegTensor<uint8_t>&)mxScale, mxScaleRegTensor);
         DataCopy(mxScaleAddr, mxScale, pregAll8);
         // 求1/scale
+        if constexpr (calcMode == ModeThree) {
+            AscendC::MicroAPI::And(expMaxRegTensor, expMaxRegTensor, maxEleRegTensor, pregAll16);
+        }
         AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(invalidDataMask, expMaxRegTensor, biasRegTensor, pregAll16);
         AscendC::MicroAPI::Sub(reversedShareExpRegTensor, biasRegTensor, expMaxRegTensor, pregAll16);
         AscendC::MicroAPI::Select<uint16_t>(
@@ -904,30 +978,14 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype>::Process()
     for (int64_t i = 0; i < loopPerCore_; i++) {
         // init runtime ub params
         InitCalcParams(i);
-        if constexpr (IsSame<DTYPE_Y, fp8_e4m3fn_t>::value || IsSame<DTYPE_Y, fp8_e5m2_t>::value) {
-            if (scaleAlg_) {
-                ProcessOneLoop<true, RoundMode::CAST_RINT>(i);
-            } else {
-                ProcessOneLoop<false, RoundMode::CAST_RINT>(i);
-            }
-        } else if (roundMode_ == MODE_RINT) {
-            if (scaleAlg_) {
-                ProcessOneLoop<true, RoundMode::CAST_RINT>(i);
-            } else {
-                ProcessOneLoop<false, RoundMode::CAST_RINT>(i);
-            }
-        } else if (roundMode_ == MODE_ROUND) {
-            if (scaleAlg_) {
-                ProcessOneLoop<true, RoundMode::CAST_ROUND>(i);
-            } else {
-                ProcessOneLoop<false, RoundMode::CAST_ROUND>(i);
-            }
-        } else if (roundMode_ == MODE_FLOOR) {
-            if (scaleAlg_) {
-                ProcessOneLoop<true, RoundMode::CAST_FLOOR>(i);
-            } else {
-                ProcessOneLoop<false, RoundMode::CAST_FLOOR>(i);
-            }
+        if (calcMode_ == ModeZero) {
+            ProcessOneLoop<0>(i);
+        } else if (calcMode_ == ModeOne) {
+            ProcessOneLoop<1>(i);
+        } else if (calcMode_ == ModeTwo) {
+            ProcessOneLoop<2>(i);
+        } else {
+            ProcessOneLoop<3>(i);
         }
     }
 }

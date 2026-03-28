@@ -55,7 +55,37 @@
       $$
     - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
     - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
-    - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^b)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
+     - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
+  - 场景3，当scaleAlg为2时，只涉及FP4_E2M1类型：
+    - 当dst_max_value = 0.0/6.0/7.0时：
+      - 将输入x在axis维度上按k = blocksize个数分组，一组k个数  $\{\{V_i\}_{i=1}^{k}\}$ 动态量化为 $\{mxscale1, \{P_i\}_{i=1}^{k}\}$, k = blocksize：
+      $$
+      shared\_exp = \begin{cases} ceil(log_2(max_i(|V_i|))) - emax, & \text{如果} 尾数位的高比特前一/两位 \text{为1，且尾数不全为0} \\ floor(log_2(max_i(|V_i|))) - emax, & \text{其它} \end{cases} \\
+      $$
+      $$
+      P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize\\
+      $$
+      - ​量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
+    - 当dst_max_value != 0.0/6.0/7.0时：
+      - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP8。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
+      - 找到该块中数值的最大绝对值:
+      $$
+      Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
+      $$
+      - 将FP32映射到目标数据类型FP8可表示的范围内，其中当dst_max_value=0时，$Amax(DType)$是目标精度能表示的最大值；当dst_max_value!=0时，$Amax(DType)$是dst_max_value传入值。
+      $$
+      S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
+      $$
+      - 将块缩放因子$S_{fp32}^b$转换为FP8格式下可表示的缩放值$S_{ue8m0}^b$。
+      - 从块的浮点缩放因子$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$。
+      - 为保证量化时不溢出，对指数进行向上取整，且在FP8可表示的范围内：
+        $$
+        E_{int}^b = \begin{cases} E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为正规数，且} E_{int}^b < 254 \text{且} M_{fixp}^b > 0 \\ E_{int}^b, & \text{否则} \end{cases}
+        $$
+      - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
+      - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
+      - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
+      - ​量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
 
 ## 函数原型
 
@@ -69,6 +99,7 @@ aclnnStatus aclnnDynamicMxQuantGetWorkspaceSize(
   int64_t          dstType,
   int64_t          blocksize,
   int64_t          scaleAlg,
+  float            dstMaxValue,
   aclTensor       *yOut,
   aclTensor       *mxscaleOut,
   uint64_t        *workspaceSize,
@@ -163,8 +194,18 @@ aclnnStatus aclnnDynamicMxQuant(
       <td>scaleAlg</td>
       <td>输入</td>
       <td>表示mxscaleOut的计算方法，对应公式中的scaleAlg。</td>
-      <td><ul><li>支持取值0和1，取值为0代表场景1，为1代表场景2。</li><li>当dstType为FLOAT4_E2M1/FLOAT4_E1M2时仅支持取值为0。</li></ul></td>
+      <td><ul><li>支持取值0、1和2，取值为0代表场景1，为1代表场景2，为2代表场景3。</li><li>当dstType为FLOAT4_E1M2时仅支持取值为0；当dstType为FLOAT4_E2M1时仅支持取值为0和2；当dstType为FLOAT8时仅支持取值为0和1。</li></ul></td>
       <td>INT64</td>
+      <td>ND</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>dstMaxValue</td>
+      <td>输入</td>
+      <td>表示maxType的取值，对应公式中的Amax(DType)。</td>
+      <td><ul><li>支持取值0.0和6.0-12.0，取值为0.0代表Amax(DType)为量化结果数据类型的最大值；取值为6.0-12.0代表Amax(DType)为传入值。</li></ul></td>
+      <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
       <td>-</td>
@@ -307,6 +348,13 @@ aclnnStatus aclnnDynamicMxQuant(
   - mxscaleOut.shape[axis_change] = (ceil(x.shape[axis] / blocksize) + 2 - 1) / 2。
   - mxscaleOut.shape[-1] = 2。
   - 其他维度与输入x一致。
+- 关于参数的约束说明如下：
+  - x/yOut：rank(x) = rank(yOut) = 1-7，输入输出数据类型保持一致。
+  - round_mode：量化结果数据类型为FLOAT4时，支持"rint"、"round"、"floor"；量化结果数据类型为FLOAT8时，仅支持"rint"。
+  - dst_type：若量化结果数据类型为FLOAT4_E2M1，取值为40；若量化结果数据类型为FLOAT4_E1M2，取值为41；若量化结果数据类型为FLOAT8_E5M2，取值为35；若量化结果数据类型为FLOAT8_E4M3FN，取值为36。
+  - scale_alg：若量化结果数据类型为FLOAT4_E1M2，取值仅支持0（OCP Microscaling Formats (Mx) Specification 实现）;若量化结果数据类型为FLOAT4kt_E2M1，取值仅支持0或2（Dynamic dtype Range 实现）；若量化结果数据类型为FLOAT8，取值仅支持0或1（cuBLAS 实现）。
+  - blocksize：scale_alg为2时，blocksize必须为32。
+  - dst_max_value：取值仅支持0.0或6.0-12.0，在scale_alg=2时生效。默认值0.0代表maxType为目标数据类型的最大值，若传入其它数值则按照传入的数值计算mxscale。仅支持在FLOAT4_E2M1场景设置该值。
 
 
 ## 调用示例
@@ -420,6 +468,7 @@ int aclnnDynamicMxQuantTest(int32_t deviceId, aclrtStream& stream)
     int64_t dstType = 36;
     int64_t blocksize = 32;
     int64_t scaleAlg = 0;
+    float dstMaxValue = 0.0;
     // 创建x aclTensor
     ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_BF16, &x);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> xTensorPtr(x, aclDestroyTensor);
@@ -441,7 +490,7 @@ int aclnnDynamicMxQuantTest(int32_t deviceId, aclrtStream& stream)
     aclOpExecutor* executor;
 
     // 调用aclnnDynamicMxQuant第一段接口
-    ret = aclnnDynamicMxQuantGetWorkspaceSize(x, axis, roundModeOptional, dstType, blocksize, scaleAlg, yOut, mxscaleOut, &workspaceSize, &executor);
+    ret = aclnnDynamicMxQuantGetWorkspaceSize(x, axis, roundModeOptional, dstType, blocksize, scaleAlg, dstMaxValue, yOut, mxscaleOut, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存

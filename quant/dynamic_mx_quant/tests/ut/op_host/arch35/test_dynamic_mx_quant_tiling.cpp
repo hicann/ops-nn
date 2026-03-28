@@ -42,12 +42,20 @@ template <typename T>
 static string to_string(void* buf, size_t size)
 {
     std::string result;
+    const size_t metadata_size = 2 * sizeof(float);
+    size_t data_size = size - metadata_size;                                  // 减去最后两个float数据类型
     const T* data = reinterpret_cast<const T*>(buf);
-    size_t len = size / sizeof(T);
+    size_t len = data_size / sizeof(T);
     for (size_t i = 0; i < len; i++) {
         result += std::to_string(data[i]);
         result += " ";
     }
+    const float* meta_ptr = reinterpret_cast<const float*>(buf + data_size);
+    float dstTypeMaxFloat = meta_ptr[0];
+    float invDstTypeMaxFloat = meta_ptr[1];
+    int32_t dstTypeMax = static_cast<int32_t>(dstTypeMaxFloat);
+    int32_t invDstTypeMax = static_cast<int32_t>(invDstTypeMaxFloat);
+    result += std::to_string(dstTypeMax) + " " + std::to_string(invDstTypeMax);
     return result;
 }
 
@@ -65,6 +73,7 @@ static void ExecuteTestCase(
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
+    map<string, string> soc_versions = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
 
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
@@ -93,6 +102,7 @@ static void ExecuteTestCase(
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_versions);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
@@ -115,7 +125,8 @@ static void ExecuteTestCase(
                            {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
                            {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(outDtype)},
                            {"blocksize", Ops::NN::AnyValue::CreateFrom(blockSize)},
-                           {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                           {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                           {"dst_type_max", Ops::NN::AnyValue::CreateFrom<float>(0.0)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -147,7 +158,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp4e2m1_tail
     gert::StorageShape scaleShape = {{60, 14, 16, 2, 2}, {60, 14, 16, 2, 2}};
     int64_t axis = -1;
     int64_t blockSize = 32;
-    string expectTilingData = "64 45 0 0 0 0 0 0 4 40 32 0 4 0 0 1 13440 1 53760 2040 152 4 2 1 1 4 44 0 128 64 0 0 0 0 ";
+    string expectTilingData = "10 253952 4 32 64 64 64 1 13440 128 1 128 210 210 1528 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT4_E2M1, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -159,7 +170,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp4e2m1_not_
     int64_t axis = -2;
     int64_t blockSize = 32;
     string expectTilingData =
-        "64 60 4 40 32 0 32 0 10000 32 840 128 32 128 1 1 1 1 840 14 0 5 1680 10 168 0 0 0 ";
+        "64 60 4 40 32 0 32 0 10000 32 840 128 32 128 1 1 1 1 840 14 0 5 1680 10 168 0 0 0 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT4_E2M1, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -171,7 +182,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp4e1m2_not_
     int64_t axis = 2;
     int64_t blockSize = 32;
     string expectTilingData =
-        "64 64 820 769 0 52429 20 16 4 41 32 0 2 32 0 0 524288 32 33554432 2121 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ";
+        "64 64 820 769 0 52429 20 16 4 41 32 0 2 32 0 0 524288 32 33554432 2121 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT4_E1M2, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -183,7 +194,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp4e1m2_tail
     int64_t axis = 3;
     int64_t blockSize = 32;
     string expectTilingData =
-        "64 64 0 0 0 0 0 0 4 41 32 0 1 0 0 1 33554432 1 67108864 2141 152 1 3450 1 3403 1 63 0 32 128 0 0 0 0 ";
+        "10 253952 4 32 64 64 64 1 33554432 32 1 32 524288 524288 1528 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT4_E1M2, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -195,7 +206,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_float16_fp4e2m1_tail_
     int64_t axis = -1;
     int64_t blockSize = 64;
     string expectTilingData =
-        "64 41 2 2 0 82 328 312 4 40 64 0 2 64 0 1 13440 1 26880 1000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ";
+        "64 41 2 2 0 82 328 312 4 40 64 0 2 64 0 1 13440 1 26880 1000 0 0";
 
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -207,7 +218,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_float16_fp4e2m1_not_t
     int64_t axis = -2;
     int64_t blockSize = 64;
     string expectTilingData =
-        "64 60 7 7 0 420 2 2 4 40 64 0 1 64 0 0 840 128 215040 1011 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ";
+        "64 60 7 7 0 420 2 2 4 40 64 0 1 64 0 0 840 128 215040 1011 0 0";
 
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -219,7 +230,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_float16_fp4e1m2_not_t
     int64_t axis = 0;
     int64_t blockSize = 128;
     string expectTilingData =
-        "64 64 4 41 128 0 128 0 20000 1024 1 1048576 1024 1048576 4 8192 4 0 0 0 0 1 0 0 32768 512 512 0 ";
+        "64 64 4 41 128 0 128 0 20000 1024 1 1048576 1024 1048576 4 8192 4 0 0 0 0 1 0 0 32768 512 512 0 0 0";
 
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E1M2, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -231,8 +242,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_float16_fp4e1m2_tail_
     int64_t axis = 3;
     int64_t blockSize = 64;
     string expectTilingData =
-        "64 64 3197 3190 0 204601 328 64 4 41 64 0 2 64 0 1 33554432 1 67108864 1100 0 0 "
-        "0 0 0 0 0 0 0 0 0 0 0 0 ";
+        "64 64 3197 3190 0 204601 328 64 4 41 64 0 2 64 0 1 33554432 1 67108864 1100 0 0";
 
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E1M2, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -244,7 +254,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp8e4m3fn_no
     int64_t axis = -1;
     int64_t blockSize = 64;
     string expectTilingData =
-        "64 41 2 2 0 82 328 312 4 36 64 0 2 64 0 1 13440 1 26880 2200 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ";
+        "64 41 2 2 0 82 328 312 4 36 64 0 2 64 0 1 13440 1 26880 2200 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -256,7 +266,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp8e4m3fn_no
     int64_t axis = -2;
     int64_t blockSize = 32;
     string expectTilingData =
-        "64 60 4 36 32 0 32 0 10000 32 840 128 32 128 1 1 1 1 840 14 0 5 1680 10 168 0 0 0 ";
+        "64 60 4 36 32 0 32 0 10000 32 840 128 32 128 1 1 1 1 840 14 0 5 1680 10 168 0 0 0 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -268,7 +278,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp8e4m3fn_no
     int64_t axis = 2;
     int64_t blockSize = 32;
     string expectTilingData =
-        "64 64 820 769 0 52429 20 16 4 36 32 0 2 32 0 0 524288 32 33554432 2221 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ";
+        "64 64 820 769 0 52429 20 16 4 36 32 0 2 32 0 0 524288 32 33554432 2221 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -280,7 +290,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp8e4m3fn_ta
     int64_t axis = -1;
     int64_t blockSize = 32;
     string expectTilingData =
-        "64 58 0 0 0 0 0 0 4 36 32 0 4 0 0 1 13440 1 53760 2240 116 4 2 1 2 4 57 0 128 100 0 0 0 0 ";
+        "20 253952 4 32 64 64 64 1 13440 128 1 128 210 210 1280 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -292,7 +302,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp8e5m2_not_
     int64_t axis = -1;
     int64_t blockSize = 64;
     string expectTilingData =
-        "64 44 2 2 0 88 328 264 4 35 64 0 2 64 0 1 14400 1 28800 2300 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ";
+        "64 44 2 2 0 88 328 264 4 35 64 0 2 64 0 1 14400 1 28800 2300 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E5M2, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -304,7 +314,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp8e5m2_not_
     int64_t axis = -2;
     int64_t blockSize = 32;
     string expectTilingData =
-        "64 60 4 35 32 0 32 0 10000 32 900 128 32 128 1 1 1 1 900 15 0 5 1800 10 180 0 0 0 ";
+        "64 60 4 35 32 0 32 0 10000 32 900 128 32 128 1 1 1 1 900 15 0 5 1800 10 180 0 0 0 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E5M2, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -316,7 +326,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp8e5m2_not_
     int64_t axis = 2;
     int64_t blockSize = 32;
     string expectTilingData =
-        "64 38 2 1 0 75 8 8 4 35 32 0 2 32 0 0 300 32 19200 2321 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ";
+        "64 38 2 1 0 75 8 8 4 35 32 0 2 32 0 0 300 32 19200 2321 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E5M2, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -328,7 +338,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp8e5m2_tail
     int64_t axis = -1;
     int64_t blockSize = 32;
     string expectTilingData =
-        "64 63 0 0 0 0 0 0 4 35 32 0 4 0 0 1 14400 1 57600 2340 116 4 2 1 1 4 62 0 128 16 0 0 0 0 ";
+        "20 253952 4 32 64 64 64 1 14400 128 1 128 225 225 1280 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E5M2, shape, scaleShape, axis, blockSize, expectTilingData);
 }

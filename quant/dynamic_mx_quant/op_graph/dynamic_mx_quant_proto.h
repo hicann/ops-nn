@@ -36,8 +36,11 @@ namespace ge {
 * @li dst_type: An optional int. Declare the output y dtype. Support FLOAT4_E2M1, FLOAT4_E1M2,
 * FLOAT8_E4M3FN or FLOAT8_E5M2. Defaults to FLOAT4_E2M1.
 * @li blocksize: An optional int. Block size for quantization scaling factors.Defaults to 32.
+* When scale_alg is 2, blocksize must be 32.
 * @li scale_alg: An optional int.The algorithm for the scale in quantization.Default to 0.
-* Support MxFP8(OCP Microscaling Formats (Mx) Specification, count 0) or MxFP8(nvidia-cuBLAS , count 1).
+* Support MxFP8/MxFP4(OCP Microscaling Formats (Mx) Specification , count 0) or MxFP8(nvidia-cuBLAS , count 1) or MxFP4(Dynamic Dtype Range , count 2).
+* @li dst_type_max: An optional Float.Max_dtype takes the maximum value of the quant_data_type, or the provided value.Defaults to 0.
+* Only support in FP4_E2M1 mode, with a valid range of 6.0 to 12.0. 
 
 * @par Outputs:
 * @li y: Quantized output tensor. It has the same shape and rank as input x.
@@ -54,23 +57,25 @@ namespace ge {
 * @li When dst_type is DT_FLOAT4_E2M1 or DT_FLOAT4_E1M2, round_mode supports "rint", "floor" and "round".
 * @li If dst_type is DT_FLOAT4_E2M1 or DT_FLOAT4_E1M2, the input x last dimension of the shape must be divisible by 2.
 * @li The blocksize must be a multiple of 32 (non-zero) and ≤ 1024.
+* When scale_alg is 2, blocksize must be 32.
+* @li The value of dst_max_value only supports 0.0 or 6.0-12.0 and is effective when scale_alg=2.
+* The default value 0.0 means that maxType corresponds to the maximum value of the target data type.
+* If other values are provided, mxscale is calculated based on the provided value.
 
 * @par Third-party framework compatibility
 * It is a custom operator. It has no corresponding operator in Caffe, ONNX, TensorFlow, or PyTorch.
 */
 REG_OP(DynamicMxQuant)
     .INPUT(x, TensorType({DT_FLOAT16, DT_BF16}))
-    .OUTPUT(
-        y,
-        TensorType({DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_FLOAT6_E3M2, DT_FLOAT6_E2M3, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2}))
+    .OUTPUT(y, TensorType({DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_FLOAT6_E3M2, DT_FLOAT6_E2M3, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2}))
     .OUTPUT(mxscale, TensorType({DT_FLOAT8_E8M0}))
     .ATTR(axis, Int, -1)
     .ATTR(round_mode, String, "rint")
     .ATTR(dst_type, Int, DT_FLOAT4_E2M1)
     .ATTR(blocksize, Int, 32)
     .ATTR(scale_alg, Int, 0)
+    .ATTR(dst_type_max, Float, 0.0)
     .OP_END_FACTORY_REG(DynamicMxQuant)
-
 } // namespace ge
 
 #endif // QUANT_DYNAMIC_MX_QUANT_PROTO_H_

@@ -20,6 +20,7 @@
 #include "dynamic_mx_quant_common.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "op_kernel/platform_util.h"
+#include "dynamic_mx_quant_tilingdata.h"
 
 namespace DynamicMxQuant {
 using namespace AscendC;
@@ -72,11 +73,15 @@ protected:
     int64_t tailBlockSize_ = 0;
     int64_t postAxisSize_ = 0;
     int64_t mxScaleSize_ = 0;
+    int64_t scaleAlg_ = 0;
+    float dstTypeMax_ = 0;
+    float invDstTypeMax_ = 0;
     bool isPad_ = false;
     bool isTailBlock_ = false;
     using intCalcType = typename std::conditional<IsSame<T, half>::value, uint32_t, uint16_t>::type;
     constexpr static int16_t shrNum_ = GetShrNum<T>();
     constexpr static intCalcType maxExp_ = GetMaxExp<intCalcType>();
+    constexpr static intCalcType absForX_ = GetabsForX<intCalcType>();
     constexpr static intCalcType f4Emax_ = GetFp4MaxExp<intCalcType>();
     constexpr static intCalcType f8Emax_ = GetFp8MaxExp<intCalcType>();
     constexpr static intCalcType maxBias_ = GetMaxBias<intCalcType>();
@@ -116,6 +121,9 @@ __aicore__ inline void DynamicMxQuantBase<T, U, ISTAIL>::ParseTilingData(const D
     postAxisSize_ = tilingData->postAxisSize;
     isPad_ = tilingData->isPad == 1;
     mxScaleSize_ = tilingData->mxScaleSize;
+    scaleAlg_ = tilingData->scaleAlg;
+    dstTypeMax_ = tilingData->dstTypeMax;
+    invDstTypeMax_ = tilingData->invDstTypeMax;
 }
 
 template <typename T, typename U, const bool ISTAIL>

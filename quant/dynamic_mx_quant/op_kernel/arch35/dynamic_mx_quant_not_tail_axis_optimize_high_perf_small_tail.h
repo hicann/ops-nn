@@ -32,12 +32,12 @@ public:
 
 private:
     __aicore__ inline void ParseTilingData(const DynamicMxQuant4OptimizeTilingData* tilingData);
-    template <const bool needPadBlock, const bool needPadAxis, const bool canInterleave, const bool scaleAlg>
+    template <const bool needPadBlock, const bool needPadAxis, const bool canInterleave>
     __aicore__ inline void ProcessWithPad();
     __aicore__ inline void CopyIn(int64_t offset, int64_t blockCount);
-    template <const bool needPadBlock, const bool needPadAxis, const bool canInterleave, const bool scaleAlg>
+    template <const bool needPadBlock, const bool needPadAxis, const bool canInterleave>
     __aicore__ inline void SplitPreAxisCompute(int64_t offset, int64_t blockCount);
-    template <const bool canInterleave, const bool scaleAlg>
+    template <const bool canInterleave, const int64_t calcMode>
     __aicore__ inline void Compute(
         __ubuf__ DTYPE_X* lhsXAddr, __ubuf__ DTYPE_X* rhsXAddr, __ubuf__ uint8_t* mxScaleAddr,
         __ubuf__ uint8_t* lhsYAddr, __ubuf__ uint8_t* rhsYAddr, uint16_t loop0, uint16_t loop1);
@@ -51,6 +51,7 @@ private:
         AscendC::MicroAPI::RegTensor<DTYPE_Y> yRegTensor;
         AscendC::MicroAPI::RegTensor<uint16_t> u16RegTensor;
         AscendC::MicroAPI::RegTensor<uint16_t> expRegTensor;
+        AscendC::MicroAPI::RegTensor<uint16_t> absMaxRegTensor;
         AscendC::MicroAPI::RegTensor<uint16_t> expMaxRegTensor;
         AscendC::MicroAPI::RegTensor<uint16_t> expMaxRegTensor1;
         AscendC::MicroAPI::RegTensor<uint16_t> mxScaleRegTensor;
@@ -65,6 +66,7 @@ private:
         AscendC::MicroAPI::RegTensor<float> maxFP32RegTensor1;
     };
     struct AuxRegisters {
+        AscendC::MicroAPI::RegTensor<float> dstTypeMaxReg;
         AscendC::MicroAPI::RegTensor<uint16_t> maxEleRegTensor; // also bf16 inf
         AscendC::MicroAPI::RegTensor<uint16_t> maxEleRegTensorHalf;
         AscendC::MicroAPI::RegTensor<uint16_t> fp8NanRegTensor;
@@ -76,6 +78,7 @@ private:
         AscendC::MicroAPI::RegTensor<int32_t> negZeroRegTensor;
         AscendC::MicroAPI::RegTensor<uint16_t> bf16NegInfRegTensor;
         AscendC::MicroAPI::RegTensor<uint16_t> tgtMaxExpRegTensor;
+        AscendC::MicroAPI::RegTensor<uint16_t> subNumForScale;
         AscendC::MicroAPI::RegTensor<uint16_t> biasRegTensor;
         AscendC::MicroAPI::RegTensor<int32_t> maxExpFP32RegTensor; // for fp32 -> fp4x2_e2m1
         AscendC::MicroAPI::RegTensor<int32_t> expFP32RegTensor0;   // for fp32 -> fp4x2_e2m1
@@ -95,7 +98,7 @@ private:
         AscendC::MicroAPI::RegTensor<uint32_t> invMax;
     };
 
-    template <RoundMode roundMode, const bool canInterleave, const bool scaleAlg>
+    template <RoundMode roundMode, const bool canInterleave, const int64_t calcMode>
     __aicore__ inline void ComputeWithRound(
         __ubuf__ DTYPE_X* lhsXAddr, __ubuf__ DTYPE_X* rhsXAddr, __ubuf__ uint8_t* mxScaleAddr,
         __ubuf__ uint8_t* lhsYAddr, __ubuf__ uint8_t* rhsYAddr, uint16_t loop0, uint16_t loop1);
@@ -103,7 +106,7 @@ private:
     template <RoundMode roundMode, const bool canInterleave>
     __aicore__ inline void InitializeConstants(AuxRegisters& regs);
 
-    template <const bool canInterleave, const bool scaleAlg>
+    template <const bool canInterleave, const int64_t calcMode>
     __aicore__ inline void ComputeMaxExponents(
         ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs, AuxRegisters& auxRegs, __ubuf__ DTYPE_X* lhsXAddr,
         __ubuf__ DTYPE_X* rhsXAddr, uint16_t loop0, uint16_t loop1);
@@ -114,7 +117,7 @@ private:
         ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs, AuxRegisters& auxRegs, __ubuf__ DTYPE_X* lhsXAddr,
         __ubuf__ DTYPE_X* rhsXAddr);
 
-    template <RoundMode roundMode, const bool canInterleave, const bool scaleAlg>
+    template <RoundMode roundMode, const bool canInterleave, const int64_t calcMode>
     __aicore__ inline void ComputeScalesAndSharedExp(
         ComputeRegisters& Regs, AuxRegisters& auxRegs, __ubuf__ uint8_t* mxScaleAddr);
 
@@ -161,7 +164,7 @@ private:
     bool needPadBlock_{false};
     bool canInterleave_{false};
     bool needPadPostAxis_{false};
-    bool scaleAlg_{false};
+    int64_t scaleAlg_{0};
     int64_t preAxisSize_{0}, quantAxisSize_{0};
     uint32_t alignedPostAxisSize_{0}, alignedOutputPostAxisSize_{0}, postAxisSize_{0}, outputPostAxisSize_{0};
     uint16_t blockSize_{0}, tailBlockSize_{0};
@@ -173,7 +176,11 @@ private:
     int64_t nextInRowOffset_, nextOutRowOffset_;
     uint32_t inStride_, outStride_, scaleStride_;
     uint16_t DTYPE_Y_MAX_EXP{0};
+    uint16_t SUB_NUM_FOR_SCALE{0};
     uint32_t INV_DTYPE_MAX{0};
+    float dstTypeMax_{0};
+    float invDstTypeMax_{0};
+    int64_t calcMode_{0};
 };
 
 __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::Init(
@@ -203,14 +210,13 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ParseTilingDat
     usedCoreNum_ = tilingData->usedCoreNum;
     needPadAxis_ = tilingData->isPad;
     tailBlockSize_ = tilingData->tailBlockSize;
-    blockNumInAxis_ = tilingData->mAlignBlockSize;
+    blockNumInAxis_ = tilingData->mAlignBlockCount;
     alignedPostAxisSize_ = tilingData->nAlignSize;
     roundMode_ = tilingData->roundMode;
     needPadBlock_ = tilingData->quantAxisIsOdd;
-    scaleAlg_ =
-        (IsSame<DTYPE_Y, fp4x2_e2m1_t>::value || IsSame<DTYPE_Y, fp4x2_e1m2_t>::value) ? false : tilingData->scaleAlg;
+    scaleAlg_ = tilingData->scaleAlg;
     canInterleave_ = alignedPostAxisSize_ * DIGIT_TWO * sizeof(DTYPE_X) <= Ops::Base::GetVRegSize();
-    padBlockNumInAxis_ = tilingData->mAlignGroupSize * DIGIT_TWO;
+    padBlockNumInAxis_ = tilingData->mAlignGroupCount * DIGIT_TWO;
     totalBlockNum_ = tilingData->totalGroupNum * DIGIT_TWO;
     needPadPostAxis_ = tilingData->needPadPostAxis;
     blockNumPerTask_ = tilingData->blockNumPerTask;
@@ -241,6 +247,17 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ParseTilingDat
                        (taskStartIdx_ * blockNumPerTask_) % padBlockNumInAxis_ * blockSize_;
     nextOutRowOffset_ = nextInRowOffset_;
     // Determine target data type maximum exponent
+    dstTypeMax_ = tilingData->dstTypeMax;
+    invDstTypeMax_ = tilingData->invDstTypeMax;
+    if (scaleAlg_ == DIGIT_ZERO) {
+        calcMode_ = ModeZero;
+    } else if (scaleAlg_ == DIGIT_ONE) {
+        calcMode_ = ModeOne;
+    } else if (scaleAlg_ == DIGIT_TWO && dstTypeMax_ != DIGIT_ZERO_FLOAT && dstTypeMax_ != DIGIT_SIX_FLOAT && dstTypeMax_ != DIGIT_SEVEN_FLOAT) {
+        calcMode_ = ModeTwo;
+    } else {
+        calcMode_ = ModeThree;
+    }
     if constexpr (IsSame<DTYPE_Y, fp8_e4m3fn_t>::value) {
         DTYPE_Y_MAX_EXP = FP8_E4M3_MAX_EXP;
         INV_DTYPE_MAX = FP8_E4M3_MAX;
@@ -250,6 +267,15 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ParseTilingDat
     } else if constexpr (IsSame<DTYPE_Y, fp4x2_e2m1_t>::value) {
         DTYPE_Y_MAX_EXP = FP4_E2M1_BF16_MAX_EXP;
     }
+    if (calcMode_ == ModeThree) {
+        if (dstTypeMax_ == DIGIT_SIX_FLOAT || dstTypeMax_ == DIGIT_ZERO_FLOAT) {
+            SUB_NUM_FOR_SCALE = 0x00c1;
+        } else {
+            SUB_NUM_FOR_SCALE = 0x00e1;
+        }
+    } else {
+        SUB_NUM_FOR_SCALE = DTYPE_Y_MAX_EXP;
+    }
 }
 
 __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::Process()
@@ -257,70 +283,39 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::Process()
     if (blkIdx_ >= usedCoreNum_) {
         return;
     }
-    if (scaleAlg_) {
-        if (needPadBlock_) {
-            if (needPadAxis_) {
-                if (canInterleave_) {
-                    ProcessWithPad<true, true, true, true>();
-                } else {
-                    ProcessWithPad<true, true, false, true>();
-                }
+
+    if (needPadBlock_) {
+        if (needPadAxis_) {
+            if (canInterleave_) {
+                ProcessWithPad<true, true, true>();
             } else {
-                if (canInterleave_) {
-                    ProcessWithPad<true, false, true, true>();
-                } else {
-                    ProcessWithPad<true, false, false, true>();
-                }
+                ProcessWithPad<true, true, false>();
             }
         } else {
-            if (needPadAxis_) {
-                if (canInterleave_) {
-                    ProcessWithPad<false, true, true, true>();
-                } else {
-                    ProcessWithPad<false, true, false, true>();
-                }
+            if (canInterleave_) {
+                ProcessWithPad<true, false, true>();
             } else {
-                if (canInterleave_) {
-                    ProcessWithPad<false, false, true, true>();
-                } else {
-                    ProcessWithPad<false, false, false, true>();
-                }
+                ProcessWithPad<true, false, false>();
             }
         }
     } else {
-        if (needPadBlock_) {
-            if (needPadAxis_) {
-                if (canInterleave_) {
-                    ProcessWithPad<true, true, true, false>();
-                } else {
-                    ProcessWithPad<true, true, false, false>();
-                }
+        if (needPadAxis_) {
+            if (canInterleave_) {
+                ProcessWithPad<false, true, true>();
             } else {
-                if (canInterleave_) {
-                    ProcessWithPad<true, false, true, false>();
-                } else {
-                    ProcessWithPad<true, false, false, false>();
-                }
+                ProcessWithPad<false, true, false>();
             }
         } else {
-            if (needPadAxis_) {
-                if (canInterleave_) {
-                    ProcessWithPad<false, true, true, false>();
-                } else {
-                    ProcessWithPad<false, true, false, false>();
-                }
+            if (canInterleave_) {
+                ProcessWithPad<false, false, true>();
             } else {
-                if (canInterleave_) {
-                    ProcessWithPad<false, false, true, false>();
-                } else {
-                    ProcessWithPad<false, false, false, false>();
-                }
+                ProcessWithPad<false, false, false>();
             }
         }
     }
 }
 
-template <const bool needPadBlock, const bool needPadAxis, const bool canInterleave, const bool scaleAlg>
+template <const bool needPadBlock, const bool needPadAxis, const bool canInterleave>
 __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ProcessWithPad()
 {
     int64_t blockIdx = taskStartIdx_ * blockNumPerTask_;
@@ -331,12 +326,12 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ProcessWithPad
         int64_t nextBlockIdx = taskIdx * blockNumPerTask_;
         int64_t nextBlockCount = taskIdx == totalTaskNum_ - 1 ? blockNumLastTask_ : blockNumPerTask_;
         CopyIn(nextBlockIdx, nextBlockCount);
-        SplitPreAxisCompute<needPadBlock, needPadAxis, canInterleave, scaleAlg>(blockIdx, blockCount);
+        SplitPreAxisCompute<needPadBlock, needPadAxis, canInterleave>(blockIdx, blockCount);
         CopyOut(blockIdx, blockCount);
         blockIdx = nextBlockIdx;
         blockCount = nextBlockCount;
     }
-    SplitPreAxisCompute<needPadBlock, needPadAxis, canInterleave, scaleAlg>(blockIdx, blockCount);
+    SplitPreAxisCompute<needPadBlock, needPadAxis, canInterleave>(blockIdx, blockCount);
     CopyOut(blockIdx, blockCount);
 }
 
@@ -379,7 +374,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::CopyOut(int64_
     mxScaleQueue_.FreeTensor(mxScale);
 }
 
-template <const bool needPadBlock, const bool needPadAxis, const bool canInterleave, const bool scaleAlg>
+template <const bool needPadBlock, const bool needPadAxis, const bool canInterleave>
 __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::SplitPreAxisCompute(int64_t offset, int64_t count)
 {
     LocalTensor<DTYPE_X> x = inQueue_.DeQue<DTYPE_X>();
@@ -410,9 +405,24 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::SplitPreAxisCo
                 }
             }
         }
-        Compute<canInterleave, scaleAlg>(
-            xAddr, xAddr + (loop0 + loop1) * alignedPostAxisSize_, mxScaleAddr, yAddr,
-            yAddr + (loop0 + loop1) * alignedOutputPostAxisSize_, loop0, loop1);
+        if (calcMode_ == ModeZero) {
+            Compute<canInterleave, ModeZero>(
+                xAddr, xAddr + (loop0 + loop1) * alignedPostAxisSize_, mxScaleAddr, yAddr,
+                yAddr + (loop0 + loop1) * alignedOutputPostAxisSize_, loop0, loop1);
+        } else if (calcMode_ == ModeOne) {
+            Compute<canInterleave, ModeOne>(
+                xAddr, xAddr + (loop0 + loop1) * alignedPostAxisSize_, mxScaleAddr, yAddr,
+                yAddr + (loop0 + loop1) * alignedOutputPostAxisSize_, loop0, loop1);
+        } else if (calcMode_ == ModeTwo) {
+            Compute<canInterleave, ModeTwo>(
+                xAddr, xAddr + (loop0 + loop1) * alignedPostAxisSize_, mxScaleAddr, yAddr,
+                yAddr + (loop0 + loop1) * alignedOutputPostAxisSize_, loop0, loop1);
+        } else {
+            Compute<canInterleave, ModeThree>(
+                xAddr, xAddr + (loop0 + loop1) * alignedPostAxisSize_, mxScaleAddr, yAddr,
+                yAddr + (loop0 + loop1) * alignedOutputPostAxisSize_, loop0, loop1);
+        }
+
         xAddr += (2 * loop0 + loop1) * alignedPostAxisSize_;
         yAddr += (2 * loop0 + loop1) * alignedOutputPostAxisSize_;
         mxScaleAddr += 2 * alignedPostAxisSize_;
@@ -423,27 +433,27 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::SplitPreAxisCo
     outQueue_.EnQue(y);
 }
 
-template <const bool canInterleave, const bool scaleAlg>
+template <const bool canInterleave, const int64_t calcMode>
 __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::Compute(
     __ubuf__ DTYPE_X* lhsXAddr, __ubuf__ DTYPE_X* rhsXAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* lhsYAddr,
     __ubuf__ uint8_t* rhsYAddr, uint16_t loop0, uint16_t loop1)
 {
     if constexpr (IsSame<DTYPE_Y, fp8_e4m3fn_t>::value || IsSame<DTYPE_Y, fp8_e5m2_t>::value) {
-        ComputeWithRound<RoundMode::CAST_RINT, canInterleave, scaleAlg>(
+        ComputeWithRound<RoundMode::CAST_RINT, canInterleave, calcMode>(
             lhsXAddr, rhsXAddr, mxScaleAddr, lhsYAddr, rhsYAddr, loop0, loop1);
     } else if (roundMode_ == MODE_RINT) {
-        ComputeWithRound<RoundMode::CAST_RINT, canInterleave, scaleAlg>(
+        ComputeWithRound<RoundMode::CAST_RINT, canInterleave, calcMode>(
             lhsXAddr, rhsXAddr, mxScaleAddr, lhsYAddr, rhsYAddr, loop0, loop1);
     } else if (roundMode_ == MODE_FLOOR) {
-        ComputeWithRound<RoundMode::CAST_FLOOR, canInterleave, scaleAlg>(
+        ComputeWithRound<RoundMode::CAST_FLOOR, canInterleave, calcMode>(
             lhsXAddr, rhsXAddr, mxScaleAddr, lhsYAddr, rhsYAddr, loop0, loop1);
     } else if (roundMode_ == MODE_ROUND) {
-        ComputeWithRound<RoundMode::CAST_ROUND, canInterleave, scaleAlg>(
+        ComputeWithRound<RoundMode::CAST_ROUND, canInterleave, calcMode>(
             lhsXAddr, rhsXAddr, mxScaleAddr, lhsYAddr, rhsYAddr, loop0, loop1);
     }
 }
 
-template <RoundMode roundMode, const bool canInterleave, const bool scaleAlg>
+template <RoundMode roundMode, const bool canInterleave, const int64_t calcMode>
 __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ComputeWithRound(
     __ubuf__ DTYPE_X* lhsXAddr, __ubuf__ DTYPE_X* rhsXAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* lhsYAddr,
     __ubuf__ uint8_t* rhsYAddr, uint16_t loop0, uint16_t loop1)
@@ -458,15 +468,15 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ComputeWithRou
         InitializeConstants<roundMode, canInterleave>(auxRegs);
 
         // Compute maximum exponents from input data
-        ComputeMaxExponents<canInterleave, scaleAlg>(lhsRegs, rhsRegs, auxRegs, lhsXAddr, rhsXAddr, loop0, loop1);
+        ComputeMaxExponents<canInterleave, calcMode>(lhsRegs, rhsRegs, auxRegs, lhsXAddr, rhsXAddr, loop0, loop1);
 
         // Compute MX scales and shared exponents
-        ComputeScalesAndSharedExp<roundMode, canInterleave, scaleAlg>(lhsRegs, auxRegs, mxScaleAddr);
+        ComputeScalesAndSharedExp<roundMode, canInterleave, calcMode>(lhsRegs, auxRegs, mxScaleAddr);
         AscendC::MicroAPI::Pack<uint8_t, uint16_t, AscendC::MicroAPI::HighLowPart::LOWEST>(
             (AscendC::MicroAPI::RegTensor<uint8_t>&)lhsRegs.mxScaleRegTensor, lhsRegs.mxScaleRegTensor);
 
         if constexpr (!canInterleave) {
-            ComputeScalesAndSharedExp<roundMode, canInterleave, scaleAlg>(rhsRegs, auxRegs, mxScaleAddr);
+            ComputeScalesAndSharedExp<roundMode, canInterleave, calcMode>(rhsRegs, auxRegs, mxScaleAddr);
             AscendC::MicroAPI::Pack<uint8_t, uint16_t, AscendC::MicroAPI::HighLowPart::HIGHEST>(
                 (AscendC::MicroAPI::RegTensor<uint8_t>&)rhsRegs.mxScaleRegTensor, rhsRegs.mxScaleRegTensor);
             AscendC::MicroAPI::Or(
@@ -534,10 +544,12 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::InitializeCons
     AscendC::MicroAPI::Duplicate(regs.specialExpRegTensor, SPECIAL_EXP_THRESHOLD);
     AscendC::MicroAPI::Duplicate(regs.bf16NegInfRegTensor, BF16_NEG_INF);
     AscendC::MicroAPI::Duplicate(regs.tgtMaxExpRegTensor, DTYPE_Y_MAX_EXP);
+    AscendC::MicroAPI::Duplicate(regs.subNumForScale, SUB_NUM_FOR_SCALE);
 
     AscendC::MicroAPI::Duplicate(regs.invMax, INV_DTYPE_MAX);
     AscendC::MicroAPI::Duplicate(regs.absForX, ABS_FOR_UINT16);
     AscendC::MicroAPI::Duplicate(regs.manForFP32, MAN_FOR_FP32);
+    AscendC::MicroAPI::Duplicate(regs.dstTypeMaxReg, invDstTypeMax_);
 
     if constexpr (IsSame<DTYPE_X, half>::value) {
         if constexpr (IsSame<DTYPE_Y, fp4x2_e2m1_t>::value) {
@@ -564,7 +576,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::LoadData(
     AscendC::MicroAPI::Interleave(lhsRegs.xRegTensor, rhsRegs.xRegTensor, lhsRegs.xRegTensor, rhsRegs.xRegTensor);
 }
 
-template <const bool canInterleave, const bool scaleAlg>
+template <const bool canInterleave, const int64_t calcMode>
 __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ComputeMaxExponents(
     ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs, AuxRegisters& auxRegs, __ubuf__ DTYPE_X* lhsXAddr,
     __ubuf__ DTYPE_X* rhsXAddr, uint16_t loop0, uint16_t loop1)
@@ -572,9 +584,14 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ComputeMaxExpo
     static constexpr AscendC::MicroAPI::CastTrait castTraitHalf2Bf16 = {
         AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::UNKNOWN,
         AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
+    static constexpr AscendC::MicroAPI::CastTrait castTraitCublsHalf2Bf16 = {
+        AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::UNKNOWN,
+        AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
     AscendC::MicroAPI::Duplicate(lhsRegs.expMaxRegTensor, 0);
+    AscendC::MicroAPI::Duplicate(lhsRegs.absMaxRegTensor, 0);
     if constexpr (!canInterleave) {
         AscendC::MicroAPI::Duplicate(rhsRegs.expMaxRegTensor, 0);
+        AscendC::MicroAPI::Duplicate(rhsRegs.absMaxRegTensor, 0);
     }
 
     uint16_t xOffset0 = 0;
@@ -585,13 +602,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ComputeMaxExpo
             lhsRegs, rhsRegs, auxRegs, lhsXAddr + xOffset0 * alignedPostAxisSize_,
             rhsXAddr + xOffset0 * alignedPostAxisSize_);
 
-        if constexpr (scaleAlg) {
-            AscendC::MicroAPI::And(
-                lhsRegs.expRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)lhsRegs.xRegTensor, auxRegs.absForX,
-                auxRegs.p0); // |x|
-            AscendC::MicroAPI::Max(
-                lhsRegs.expMaxRegTensor, lhsRegs.expMaxRegTensor, lhsRegs.expRegTensor, auxRegs.p0); // max |x|
-        } else {
+        if constexpr (calcMode == ModeZero) {
             if constexpr (IsSame<DTYPE_X, half>::value) {
                 AscendC::MicroAPI::And(
                     lhsRegs.expRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)lhsRegs.xRegTensor,
@@ -614,15 +625,21 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ComputeMaxExpo
                     auxRegs.maxEleRegTensor, auxRegs.p0);
             }
             AscendC::MicroAPI::Max(lhsRegs.expMaxRegTensor, lhsRegs.expMaxRegTensor, lhsRegs.expRegTensor, auxRegs.p0);
+        } else {
+            AscendC::MicroAPI::And(
+                lhsRegs.expRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)lhsRegs.xRegTensor, auxRegs.absForX,
+                auxRegs.p0); // |x|
+            if constexpr (calcMode == ModeThree && (IsSame<DTYPE_X, half>::value)) {
+                AscendC::MicroAPI::Cast<bfloat16_t, DTYPE_X, castTraitCublsHalf2Bf16>(
+                    (AscendC::MicroAPI::RegTensor<bfloat16_t>&)lhsRegs.expRegTensor,
+                    (AscendC::MicroAPI::RegTensor<DTYPE_X>&)lhsRegs.expRegTensor, auxRegs.p0);
+            }
+            AscendC::MicroAPI::Max(
+                lhsRegs.absMaxRegTensor, lhsRegs.absMaxRegTensor, lhsRegs.expRegTensor, auxRegs.p0); // max |x|
         }
+
         if constexpr (!canInterleave) {
-            if constexpr (scaleAlg) {
-                AscendC::MicroAPI::And(
-                    rhsRegs.expRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)rhsRegs.xRegTensor, auxRegs.absForX,
-                    auxRegs.p0); // |x|
-                AscendC::MicroAPI::Max(
-                    rhsRegs.expMaxRegTensor, rhsRegs.expMaxRegTensor, rhsRegs.expRegTensor, auxRegs.p0); // max |x|
-            } else {
+            if constexpr (calcMode == ModeZero) {
                 if constexpr (IsSame<DTYPE_X, half>::value) {
                     AscendC::MicroAPI::And(
                         rhsRegs.expRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)rhsRegs.xRegTensor,
@@ -646,6 +663,17 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ComputeMaxExpo
                 }
                 AscendC::MicroAPI::Max(
                     rhsRegs.expMaxRegTensor, rhsRegs.expMaxRegTensor, rhsRegs.expRegTensor, auxRegs.p0);
+            } else {
+                AscendC::MicroAPI::And(
+                    rhsRegs.expRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)rhsRegs.xRegTensor, auxRegs.absForX,
+                    auxRegs.p0); // |x|
+                if constexpr (calcMode == ModeThree && (IsSame<DTYPE_X, half>::value)) {
+                    AscendC::MicroAPI::Cast<bfloat16_t, DTYPE_X, castTraitCublsHalf2Bf16>(
+                        (AscendC::MicroAPI::RegTensor<bfloat16_t>&)rhsRegs.expRegTensor,
+                        (AscendC::MicroAPI::RegTensor<DTYPE_X>&)rhsRegs.expRegTensor, auxRegs.p0);
+                }
+                AscendC::MicroAPI::Max(
+                    rhsRegs.absMaxRegTensor, rhsRegs.absMaxRegTensor, rhsRegs.expRegTensor, auxRegs.p0); // max |x|
             }
         }
         xOffset0++;
@@ -655,13 +683,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ComputeMaxExpo
     for (uint16_t i = 0; i < loop1; ++i) {
         LoadData<2>(lhsRegs, rhsRegs, auxRegs, lhsXAddr + xOffset0 * alignedPostAxisSize_, nullptr);
 
-        if constexpr (scaleAlg) {
-            AscendC::MicroAPI::And(
-                lhsRegs.expRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)lhsRegs.xRegTensor, auxRegs.absForX,
-                auxRegs.p0); // |x|
-            AscendC::MicroAPI::Max(
-                lhsRegs.expMaxRegTensor, lhsRegs.expMaxRegTensor, lhsRegs.expRegTensor, auxRegs.p0); // max |x|
-        } else {
+        if constexpr (calcMode == ModeZero) {
             if constexpr (IsSame<DTYPE_X, half>::value) {
                 AscendC::MicroAPI::And(
                     lhsRegs.expRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)lhsRegs.xRegTensor,
@@ -684,15 +706,20 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ComputeMaxExpo
                     auxRegs.maxEleRegTensor, auxRegs.p0);
             }
             AscendC::MicroAPI::Max(lhsRegs.expMaxRegTensor, lhsRegs.expMaxRegTensor, lhsRegs.expRegTensor, auxRegs.p0);
+        } else {
+            AscendC::MicroAPI::And(
+                lhsRegs.expRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)lhsRegs.xRegTensor, auxRegs.absForX,
+                auxRegs.p0); // |x|
+            if constexpr (calcMode == ModeThree && (IsSame<DTYPE_X, half>::value)) {
+                AscendC::MicroAPI::Cast<bfloat16_t, DTYPE_X, castTraitCublsHalf2Bf16>(
+                    (AscendC::MicroAPI::RegTensor<bfloat16_t>&)lhsRegs.expRegTensor,
+                    (AscendC::MicroAPI::RegTensor<DTYPE_X>&)lhsRegs.expRegTensor, auxRegs.p0);
+            }
+            AscendC::MicroAPI::Max(
+                lhsRegs.absMaxRegTensor, lhsRegs.absMaxRegTensor, lhsRegs.expRegTensor, auxRegs.p0); // max |x|
         }
         if constexpr (!canInterleave) {
-            if constexpr (scaleAlg) {
-                AscendC::MicroAPI::And(
-                    rhsRegs.expRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)rhsRegs.xRegTensor, auxRegs.absForX,
-                    auxRegs.p0); // |x|
-                AscendC::MicroAPI::Max(
-                    rhsRegs.expMaxRegTensor, rhsRegs.expMaxRegTensor, rhsRegs.expRegTensor, auxRegs.p0); // max |x|
-            } else {
+            if constexpr (calcMode == ModeZero) {
                 if constexpr (IsSame<DTYPE_X, half>::value) {
                     AscendC::MicroAPI::And(
                         rhsRegs.expRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)rhsRegs.xRegTensor,
@@ -716,17 +743,28 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ComputeMaxExpo
                 }
                 AscendC::MicroAPI::Max(
                     rhsRegs.expMaxRegTensor, rhsRegs.expMaxRegTensor, rhsRegs.expRegTensor, auxRegs.p0);
+            } else {
+                AscendC::MicroAPI::And(
+                    rhsRegs.expRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)rhsRegs.xRegTensor, auxRegs.absForX,
+                    auxRegs.p0); // |x|
+                if constexpr (calcMode == ModeThree && (IsSame<DTYPE_X, half>::value)) {
+                    AscendC::MicroAPI::Cast<bfloat16_t, DTYPE_X, castTraitCublsHalf2Bf16>(
+                        (AscendC::MicroAPI::RegTensor<bfloat16_t>&)rhsRegs.expRegTensor,
+                        (AscendC::MicroAPI::RegTensor<DTYPE_X>&)rhsRegs.expRegTensor, auxRegs.p0);
+                }
+                AscendC::MicroAPI::Max(
+                    rhsRegs.absMaxRegTensor, rhsRegs.absMaxRegTensor, rhsRegs.expRegTensor, auxRegs.p0); // max |x|
             }
         }
         xOffset0++;
     }
 }
 
-template <RoundMode roundMode, const bool canInterleave, const bool scaleAlg>
+template <RoundMode roundMode, const bool canInterleave, const int64_t calcMode>
 __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ComputeScalesAndSharedExp(
     ComputeRegisters& Regs, AuxRegisters& auxRegs, __ubuf__ uint8_t* mxScaleAddr)
 {
-    if constexpr (scaleAlg) {
+    if constexpr (calcMode == ModeOne || calcMode == ModeTwo) {
         static constexpr AscendC::MicroAPI::CastTrait castTraitZero = {
             AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
             AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
@@ -735,13 +773,16 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ComputeScalesA
             AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
         // Calculate elements at odd positions
-        AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(
-            auxRegs.zeroMask, Regs.expMaxRegTensor, auxRegs.zeroRegTensor, auxRegs.p0);
         AscendC::MicroAPI::Cast<float, DTYPE_X, castTraitZero>(
-            Regs.maxFP32RegTensor0, (AscendC::MicroAPI::RegTensor<DTYPE_X>&)Regs.expMaxRegTensor, auxRegs.p0);
-        AscendC::MicroAPI::Mul(
-            Regs.maxFP32RegTensor0, Regs.maxFP32RegTensor0, (AscendC::MicroAPI::RegTensor<float>&)auxRegs.invMax,
-            auxRegs.p1);
+            Regs.maxFP32RegTensor0, (AscendC::MicroAPI::RegTensor<DTYPE_X>&)Regs.absMaxRegTensor, auxRegs.p0);
+        if constexpr (calcMode == ModeOne) {
+            AscendC::MicroAPI::Mul(
+                Regs.maxFP32RegTensor0, Regs.maxFP32RegTensor0, (AscendC::MicroAPI::RegTensor<float>&)auxRegs.invMax,
+                auxRegs.p1);
+        } else {
+            AscendC::MicroAPI::Mul(Regs.maxFP32RegTensor0, Regs.maxFP32RegTensor0, auxRegs.dstTypeMaxReg, auxRegs.p1);
+        }
+
         AscendC::MicroAPI::ShiftRights(
             Regs.mxScaleFP32RegTensor0, (AscendC::MicroAPI::RegTensor<uint32_t>&)Regs.maxFP32RegTensor0,
             SHR_NUM_FOR_FP32, auxRegs.p1);
@@ -760,12 +801,15 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ComputeScalesA
         AscendC::MicroAPI::MaskAnd(auxRegs.p4, auxRegs.p4, auxRegs.p5, auxRegs.p1);
         AscendC::MicroAPI::MaskAnd(auxRegs.p4, auxRegs.p4, auxRegs.p6, auxRegs.p1);
 
-        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(
-            auxRegs.p5, (AscendC::MicroAPI::RegTensor<uint32_t>&)Regs.mxScaleFP32RegTensor0, NUMBER_ZERO, auxRegs.p1);
-        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(
-            auxRegs.p6, (AscendC::MicroAPI::RegTensor<uint32_t>&)Regs.maxFP32RegTensor0, NUMBER_HALF, auxRegs.p1);
-        AscendC::MicroAPI::MaskAnd(auxRegs.p5, auxRegs.p5, auxRegs.p6, auxRegs.p1);
-        AscendC::MicroAPI::MaskXor(auxRegs.p4, auxRegs.p4, auxRegs.p5, auxRegs.p1);
+        if constexpr (calcMode == ModeOne) {
+            AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(
+                auxRegs.p5, (AscendC::MicroAPI::RegTensor<uint32_t>&)Regs.mxScaleFP32RegTensor0, NUMBER_ZERO,
+                auxRegs.p1);
+            AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(
+                auxRegs.p6, (AscendC::MicroAPI::RegTensor<uint32_t>&)Regs.maxFP32RegTensor0, NUMBER_HALF, auxRegs.p1);
+            AscendC::MicroAPI::MaskAnd(auxRegs.p5, auxRegs.p5, auxRegs.p6, auxRegs.p1);
+            AscendC::MicroAPI::MaskXor(auxRegs.p4, auxRegs.p4, auxRegs.p5, auxRegs.p1);
+        }
 
         AscendC::MicroAPI::Adds(Regs.mxScaleFP32Add1RegTensor0, Regs.mxScaleFP32RegTensor0, 1, auxRegs.p4);
         AscendC::MicroAPI::Select(
@@ -776,10 +820,14 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ComputeScalesA
 
         // Calculate elements at even positions
         AscendC::MicroAPI::Cast<float, DTYPE_X, castTraitOne>(
-            Regs.maxFP32RegTensor1, (AscendC::MicroAPI::RegTensor<DTYPE_X>&)Regs.expMaxRegTensor, auxRegs.p0);
-        AscendC::MicroAPI::Mul(
-            Regs.maxFP32RegTensor1, Regs.maxFP32RegTensor1, (AscendC::MicroAPI::RegTensor<float>&)auxRegs.invMax,
-            auxRegs.p1);
+            Regs.maxFP32RegTensor1, (AscendC::MicroAPI::RegTensor<DTYPE_X>&)Regs.absMaxRegTensor, auxRegs.p0);
+        if constexpr (calcMode == ModeOne) {
+            AscendC::MicroAPI::Mul(
+                Regs.maxFP32RegTensor1, Regs.maxFP32RegTensor1, (AscendC::MicroAPI::RegTensor<float>&)auxRegs.invMax,
+                auxRegs.p1);
+        } else {
+            AscendC::MicroAPI::Mul(Regs.maxFP32RegTensor1, Regs.maxFP32RegTensor1, auxRegs.dstTypeMaxReg, auxRegs.p1);
+        }
         AscendC::MicroAPI::ShiftRights(
             Regs.mxScaleFP32RegTensor1, (AscendC::MicroAPI::RegTensor<uint32_t>&)Regs.maxFP32RegTensor1,
             SHR_NUM_FOR_FP32, auxRegs.p1);
@@ -798,12 +846,15 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ComputeScalesA
         AscendC::MicroAPI::MaskAnd(auxRegs.p4, auxRegs.p4, auxRegs.p5, auxRegs.p1);
         AscendC::MicroAPI::MaskAnd(auxRegs.p4, auxRegs.p4, auxRegs.p6, auxRegs.p1);
 
-        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(
-            auxRegs.p5, (AscendC::MicroAPI::RegTensor<uint32_t>&)Regs.mxScaleFP32RegTensor1, NUMBER_ZERO, auxRegs.p1);
-        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(
-            auxRegs.p6, (AscendC::MicroAPI::RegTensor<uint32_t>&)Regs.maxFP32RegTensor1, NUMBER_HALF, auxRegs.p1);
-        AscendC::MicroAPI::MaskAnd(auxRegs.p5, auxRegs.p5, auxRegs.p6, auxRegs.p1);
-        AscendC::MicroAPI::MaskXor(auxRegs.p4, auxRegs.p4, auxRegs.p5, auxRegs.p1);
+        if constexpr (calcMode == ModeOne) {
+            AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(
+                auxRegs.p5, (AscendC::MicroAPI::RegTensor<uint32_t>&)Regs.mxScaleFP32RegTensor1, NUMBER_ZERO,
+                auxRegs.p1);
+            AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(
+                auxRegs.p6, (AscendC::MicroAPI::RegTensor<uint32_t>&)Regs.maxFP32RegTensor1, NUMBER_HALF, auxRegs.p1);
+            AscendC::MicroAPI::MaskAnd(auxRegs.p5, auxRegs.p5, auxRegs.p6, auxRegs.p1);
+            AscendC::MicroAPI::MaskXor(auxRegs.p4, auxRegs.p4, auxRegs.p5, auxRegs.p1);
+        }
 
         AscendC::MicroAPI::Adds(Regs.mxScaleFP32Add1RegTensor1, Regs.mxScaleFP32RegTensor1, 1, auxRegs.p4);
         AscendC::MicroAPI::Select(
@@ -819,24 +870,41 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeHighPerf::ComputeScalesA
 
         AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(
             auxRegs.infMask, Regs.expMaxRegTensor, auxRegs.maxEleRegTensor, auxRegs.p0);
-        
+
     } else {
-        AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(
-            auxRegs.infMask, Regs.expMaxRegTensor, auxRegs.maxEleRegTensor, auxRegs.p0);
-        AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(
-            auxRegs.zeroMask, Regs.expMaxRegTensor, auxRegs.zeroRegTensor, auxRegs.p0);
+        if constexpr (calcMode == ModeThree) {
+            AscendC::MicroAPI::And(Regs.expMaxRegTensor, Regs.absMaxRegTensor, auxRegs.maxEleRegTensor, auxRegs.p0);
+            AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(
+                auxRegs.infMask, Regs.expMaxRegTensor, auxRegs.maxEleRegTensor, auxRegs.p0);
+            AscendC::MicroAPI::Compare<uint16_t, CMPMODE::LT>(
+                auxRegs.specialMask, Regs.expMaxRegTensor, auxRegs.tgtMaxExpRegTensor, auxRegs.p0);
 
-        AscendC::MicroAPI::Max(Regs.expMaxRegTensor, Regs.expMaxRegTensor, auxRegs.tgtMaxExpRegTensor, auxRegs.p0);
-        AscendC::MicroAPI::Sub(Regs.expMaxRegTensor, Regs.expMaxRegTensor, auxRegs.tgtMaxExpRegTensor, auxRegs.p0);
-        AscendC::MicroAPI::ShiftRights(Regs.mxScaleRegTensor, Regs.expMaxRegTensor, SHR_NUM_FOR_BF16, auxRegs.p0);
+            AscendC::MicroAPI::Sub(Regs.expMaxRegTensor, Regs.absMaxRegTensor, auxRegs.subNumForScale, auxRegs.p0);
+            AscendC::MicroAPI::Select<uint16_t>(
+                Regs.expMaxRegTensor, auxRegs.zeroRegTensor, Regs.expMaxRegTensor, auxRegs.specialMask);
+            AscendC::MicroAPI::ShiftRights(Regs.mxScaleRegTensor, Regs.expMaxRegTensor, SHR_NUM_FOR_BF16, auxRegs.p0);
 
-        AscendC::MicroAPI::Select<uint16_t>(
-            Regs.mxScaleRegTensor, auxRegs.fp8NanRegTensor, Regs.mxScaleRegTensor, auxRegs.infMask);
-        AscendC::MicroAPI::Select<uint16_t>(
-            Regs.mxScaleRegTensor, auxRegs.zeroRegTensor, Regs.mxScaleRegTensor, auxRegs.zeroMask);
+            AscendC::MicroAPI::Select<uint16_t>(
+                Regs.mxScaleRegTensor, auxRegs.fp8NanRegTensor, Regs.mxScaleRegTensor, auxRegs.infMask);
+            AscendC::MicroAPI::And(Regs.expMaxRegTensor, Regs.expMaxRegTensor, auxRegs.maxEleRegTensor, auxRegs.p0);
+        } else {
+            AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(
+                auxRegs.infMask, Regs.expMaxRegTensor, auxRegs.maxEleRegTensor, auxRegs.p0);
+            AscendC::MicroAPI::Compare<uint16_t, CMPMODE::LT>(
+                auxRegs.specialMask, Regs.expMaxRegTensor, auxRegs.tgtMaxExpRegTensor, auxRegs.p0);
+
+            AscendC::MicroAPI::Sub(Regs.expMaxRegTensor, Regs.expMaxRegTensor, auxRegs.subNumForScale, auxRegs.p0);
+            AscendC::MicroAPI::Select<uint16_t>(
+                Regs.expMaxRegTensor, auxRegs.zeroRegTensor, Regs.expMaxRegTensor, auxRegs.specialMask);
+            AscendC::MicroAPI::ShiftRights(Regs.mxScaleRegTensor, Regs.expMaxRegTensor, SHR_NUM_FOR_BF16, auxRegs.p0);
+
+            AscendC::MicroAPI::Select<uint16_t>(
+                Regs.mxScaleRegTensor, auxRegs.fp8NanRegTensor, Regs.mxScaleRegTensor, auxRegs.infMask);
+        }
     }
-
     // Calculate 1/scale
+    AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(
+        auxRegs.zeroMask, Regs.expMaxRegTensor, auxRegs.zeroRegTensor, auxRegs.p0);
     AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(
         auxRegs.specialMask, Regs.expMaxRegTensor, auxRegs.biasRegTensor, auxRegs.p0);
     AscendC::MicroAPI::Sub(Regs.expMaxRegTensor, auxRegs.biasRegTensor, Regs.expMaxRegTensor, auxRegs.p0);

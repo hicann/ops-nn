@@ -26,6 +26,7 @@ constexpr int64_t INDEX_ATTR_ROUND_MODE = 1;
 constexpr int64_t INDEX_ATTR_DST_DTYPE = 2;
 constexpr int64_t INDEX_ATTR_BLOCK_SIZE = 3;
 constexpr int64_t INDEX_ATTR_SCALE_ALG = 4;
+constexpr int64_t INDEX_ATTR_DST_DTYPE_MAX = 5;
 constexpr int64_t BYTES_OF_INPUT_TYPE = 2;
 constexpr int64_t MAX_BYTES_OF_OUTPUT_TYPE = 1;
 constexpr int64_t DIGIT_TEN_THOUSAND = 10000;
@@ -95,11 +96,16 @@ std::string Shape2String(const T& shape)
 inline static ge::graphStatus DynamicMxQuantSetTilingData(
     gert::TilingContext* context, DynamicMxQuantTilingData& tilingData)
 {
-    if (tilingData.GetDataSize() > context->GetRawTilingData()->GetCapacity()) {
+    uint64_t tilingDataSize = sizeof(tilingData);
+    OP_CHECK_NULL_WITH_CONTEXT(context, context->GetRawTilingData());
+    auto rawTilingData = context->GetRawTilingData();
+    errno_t ret = memcpy_s(rawTilingData->GetData(), rawTilingData->GetCapacity(),
+        reinterpret_cast<void *>(&tilingData), tilingDataSize);
+    if (ret != EOK) {
+        OP_LOGE(context->GetNodeName(), "memcpy_s failed, ret = %d", ret);
         return ge::GRAPH_FAILED;
     }
-    tilingData.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
-    context->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
+    context->GetRawTilingData()->SetDataSize(tilingDataSize);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -108,24 +114,13 @@ inline static void PrintTilingData(const gert::TilingContext* context, DynamicMx
     OP_LOGI(
         context->GetNodeName(),
         "tilingData is totalCoreNum:%ld, usedCoreNum:%ld,  ubFactor:%ld, \
-tailUbFactor:%ld, blockFactor:%ld, tailBlockFactor:%ld, uo:%ld, ubDim:%ld, dstType:%ld, blockSize:%ld, scaleAlg:%ld, \
-blockSizeNumInAxis:%ld, tailBlockSize:%ld, isPad:%ld, postAxisSize:%ld, tilingKey:%ld, ubFactorDim0TailAxis:%ld, \
-ubFactorDim1TailAxis:%ld, blockFactorDim0TailAxis:%ld, blockFactorDim1TailAxis:%ld, tailBlockFactorDim0TailAxis:%ld, \
-tailBlockCountDim1TailAxis:%ld, tailCoreStartIdxDim0TailAxis:%ld, cutNumberForDim1TailAxis:%ld, \
-tailUbFactorDim0TailAxis:%ld, isSplitDim1TailAxis:%ld, tailBlockFactorDim1ForSplitDim1:%ld, \
-tailLoopBlockTailCoreDim1ForSplitDim1:%ld, dim1EachCoreForSplitDim1:%ld, inputShapeDim1TailAxis:%ld",
-        tilingData.get_totalCoreNum(), tilingData.get_usedCoreNum(), tilingData.get_ubFactor(),
-        tilingData.get_tailUbFactor(), tilingData.get_blockFactor(), tilingData.get_tailBlockFactor(),
-        tilingData.get_uo(), tilingData.get_ubDim(), tilingData.get_dstType(), tilingData.get_blockSize(),
-        tilingData.get_scaleAlg(), tilingData.get_blockSizeNumInAxis(), tilingData.get_tailBlockSize(),
-        tilingData.get_isPad(), tilingData.get_postAxisSize(), tilingData.get_tilingKey(),
-        tilingData.get_ubFactorDim0TailAxis(), tilingData.get_ubFactorDim1TailAxis(),
-        tilingData.get_blockFactorDim0TailAxis(), tilingData.get_blockFactorDim1TailAxis(),
-        tilingData.get_tailBlockFactorDim0TailAxis(), tilingData.get_tailBlockCountDim1TailAxis(),
-        tilingData.get_tailCoreStartIdxDim0TailAxis(), tilingData.get_cutNumberForDim1TailAxis(),
-        tilingData.get_tailUbFactorDim0TailAxis(), tilingData.get_isSplitDim1TailAxis(),
-        tilingData.get_tailBlockFactorDim1ForSplitDim1(), tilingData.get_tailLoopBlockTailCoreDim1ForSplitDim1(),
-        tilingData.get_dim1EachCoreForSplitDim1(), tilingData.get_inputShapeDim1TailAxis());
+        tailUbFactor:%ld, blockFactor:%ld, tailBlockFactor:%ld, uo:%ld, ubDim:%ld, dstType:%ld, blockSize:%ld, scaleAlg:%ld, \
+        blockSizeNumInAxis:%ld, tailBlockSize:%ld, isPad:%ld, postAxisSize:%ld, tilingKey:%ld, dstTypeMax:%f, invDstTypeMax:%f.",
+        tilingData.totalCoreNum, tilingData.usedCoreNum, tilingData.ubFactor,
+        tilingData.tailUbFactor, tilingData.blockFactor, tilingData.tailBlockFactor,
+        tilingData.uo, tilingData.ubDim, tilingData.dstType, tilingData.blockSize,
+        tilingData.scaleAlg, tilingData.blockSizeNumInAxis, tilingData.tailBlockSize,
+        tilingData.isPad, tilingData.postAxisSize, tilingData.tilingKey, tilingData.dstTypeMax, tilingData.invDstTypeMax);
 }
 
 static RoundModeList GetRoundMode(const std::string& roundMode)
@@ -206,13 +201,44 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
     OP_CHECK_NULL_WITH_CONTEXT(context, attrScaleAlg);
     tilingParam.scaleAlg = static_cast<int64_t>(*attrScaleAlg);
     OP_CHECK_IF(
-        tilingParam.scaleAlg < 0 || tilingParam.scaleAlg > 1,
-        OP_LOGE(context->GetNodeName(), "The scaleAlg[%ld] should be 0 or 1, please check.", tilingParam.scaleAlg),
+        tilingParam.scaleAlg < 0 || tilingParam.scaleAlg > 2,
+        OP_LOGE(
+            context->GetNodeName(), "The scaleAlg[%ld] should be one of {0, 1, 2}, please check.",
+            tilingParam.scaleAlg),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
-        tilingParam.scaleAlg == 1 && Y_SUPPORT_DTYPE_FP4_SET.count(yDtype) != 0,
-        OP_LOGE(context->GetNodeName(), "When y's data type is FLOAT4_E2M1/FLOAT4_E1M2, scaleAlg must be set to 0."),
+        tilingParam.scaleAlg == 1 && yDtype == ge::DT_FLOAT4_E2M1,
+        OP_LOGE(context->GetNodeName(), "When y's data type is FLOAT4_E2M1, scaleAlg must be 0 or 2."),
+        return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(
+        (tilingParam.scaleAlg == 1 || tilingParam.scaleAlg == 2) && yDtype == ge::DT_FLOAT4_E1M2,
+        OP_LOGE(context->GetNodeName(), "When y's data type is FLOAT4_E1M2, scaleAlg must be 0."),
+        return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(
+        tilingParam.scaleAlg == 2 && Y_SUPPORT_DTYPE_FP8_SET.count(yDtype) != 0,
+        OP_LOGE(context->GetNodeName(), "When y's data type is FLOAT8_E4M3/FLOAT8_E5M2, scaleAlg must be 0 or 1."),
+        return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(
+        tilingParam.scaleAlg == 2 && tilingParam.blockSize != ATTR_BLOCK_SIZE,
+        OP_LOGE(context->GetNodeName(), "When scaleAlg is 2, blockSize must be 32, but got %ld.", tilingParam.blockSize),
+        return ge::GRAPH_FAILED);
+
+    auto* attrDstTypeMax = attrs->GetAttrPointer<float>(INDEX_ATTR_DST_DTYPE_MAX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrDstTypeMax);
+    tilingParam.dstTypeMax = static_cast<float>(*attrDstTypeMax);
+    if (tilingParam.dstTypeMax != 0.0) {
+        tilingParam.invDstTypeMax = 1.0 / tilingParam.dstTypeMax;
+    }
+    OP_CHECK_IF(
+        tilingParam.dstTypeMax < 0 || (tilingParam.dstTypeMax > 0 && tilingParam.dstTypeMax < 6) ||
+            tilingParam.dstTypeMax > 12,
+        OP_LOGE(
+            context->GetNodeName(), "The dstTypeMax[%f] should be one of [6,12] or equal 0, please check.",
+            tilingParam.dstTypeMax),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -324,33 +350,6 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Dyna
     return ge::GRAPH_SUCCESS;
 }
 
-inline static void SetTilingKeyForTail(DataType inputType, DataType outputType, DynamicMxQuantTilingParam& tilingParam)
-{
-    int64_t hundredDigit = inputType == DT_FLOAT16 ? 1 : DIGIT_TWO;
-    int64_t tenDigit = 0;
-    if (outputType == DT_FLOAT4_E1M2) {
-        tenDigit = 1;
-    } else if (outputType == DT_FLOAT8_E4M3FN) {
-        tenDigit = DIGIT_TWO;
-    } else if (outputType == DT_FLOAT8_E5M2) {
-        tenDigit = DIGIT_THREE;
-    }
-    int64_t digit = 0;
-    if (tilingParam.isTailAxis && tilingParam.blockSize == ATTR_BLOCK_SIZE && inputType == DT_FLOAT16 &&
-        Y_SUPPORT_DTYPE_FP4_SET.count(outputType) != 0 &&
-        (tilingParam.roundMode == static_cast<int64_t>(RoundModeList::MODE_RINT) ||
-         tilingParam.roundMode == static_cast<int64_t>(RoundModeList::MODE_ROUND))) {
-        digit = DIGIT_FIVE;
-    } else {
-        digit = TAIL_TILING_KEY_DIGIT;
-    }
-    int64_t isOdd = tilingParam.blockSizeNumInAxis % DIGIT_TWO;
-    int64_t axisScaleKey = isOdd == 0 && tilingParam.isTailAxis ? 0 : 1;
-    tilingParam.tilingKey =
-        hundredDigit * TILING_KEY_INPUT + tenDigit * TILING_KEY_OUTPUT + digit * TILING_KEY_TMPLATE + axisScaleKey;
-    return;
-}
-
 inline static void CalcTilingKey(DataType inputType, DataType outputType, DynamicMxQuantTilingParam& tilingParam)
 {
     // 百位数为1、2，分别表示输入类型是float16、bfloat16;
@@ -389,195 +388,37 @@ inline static void CalcTilingKey(DataType inputType, DataType outputType, Dynami
         hundredDigit * TILING_KEY_INPUT + tenDigit * TILING_KEY_OUTPUT + digit * TILING_KEY_TMPLATE + axisScaleKey;
 }
 
-static void CalcAxisSize(DynamicMxQuantTilingParam& tilingParam, const gert::Shape& xShape)
+static ge::graphStatus BaseCalc(const gert::TilingContext* context, DynamicMxQuantTilingParam& tilingParam)
 {
+    auto xShapePtr = context->GetInputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, xShapePtr);
+    auto xShape = xShapePtr->GetStorageShape();
+    // 将量化轴索引转换成非负数
+    tilingParam.axis = tilingParam.axis >= 0 ? tilingParam.axis : tilingParam.axis + xShape.GetDimNum();
+    // 量化轴是否是尾轴
+    tilingParam.isTailAxis = tilingParam.axis == static_cast<int64_t>(xShape.GetDimNum() - 1);
     int64_t dimSize = xShape.GetDim(tilingParam.axis);
+    if (tilingParam.blockSize == ATTR_BLOCK_SIZE) {
+        tilingParam.isBlockSize32 = true;
+    }
     if (dimSize < tilingParam.blockSize) {
         tilingParam.blockSize = dimSize;
     }
+    // 合轴
     for (int64_t i = 0; i < tilingParam.axis; i++) {
         tilingParam.preAxisSize *= xShape.GetDim(i);
     }
+    tilingParam.quantAxisSize = dimSize;
+    for (size_t i = tilingParam.axis + 1; i < xShape.GetDimNum(); i++) {
+        tilingParam.postAxisSize *= xShape.GetDim(i);
+    }
     tilingParam.blockSizeNumInAxis = Ops::Base::CeilDiv(dimSize, tilingParam.blockSize);
-    tilingParam.preAxisSize *= tilingParam.blockSizeNumInAxis;
     tilingParam.tailBlockSize = GetRemainder(dimSize, tilingParam.blockSize);
     tilingParam.isPad = tilingParam.tailBlockSize != 0;
     if (tilingParam.tailBlockSize == 0) {
         tilingParam.tailBlockSize = tilingParam.blockSize;
     }
-    tilingParam.axisSize = tilingParam.blockSize;
-    tilingParam.quantAxisSize = tilingParam.blockSize;
-    for (size_t i = tilingParam.axis + 1; i < xShape.GetDimNum(); i++) {
-        tilingParam.postAxisSize *= xShape.GetDim(i);
-    }
-}
-inline static int64_t FuseDimForTailAxis(const gert::Shape& inputShape)
-{
-    int64_t fusedDim0Value = 1;
-    for (size_t i = 0; i < inputShape.GetDimNum() - 1; i++) {
-        fusedDim0Value *= inputShape.GetDim(i);
-    }
-    return fusedDim0Value;
-}
-static void SetTilingDataForTailAxis(DynamicMxQuantTilingData& tilingData, const DynamicMxQuantTilingParam& tilingParam)
-{
-    tilingData.set_totalCoreNum(tilingParam.totalCoreNum);
-    tilingData.set_usedCoreNum(tilingParam.usedCoreNum);
-    tilingData.set_tilingKey(tilingParam.tilingKey);
-    tilingData.set_roundMode(tilingParam.roundMode);
-    tilingData.set_dstType(tilingParam.dstType);
-    tilingData.set_blockSize(tilingParam.blockSize);
-    tilingData.set_scaleAlg(tilingParam.scaleAlg);
-    tilingData.set_ubFactorDim0TailAxis(tilingParam.ubFactorDim0TailAxis);
-    tilingData.set_ubFactorDim1TailAxis(tilingParam.ubFactorDim1TailAxis);
-    tilingData.set_blockFactorDim0TailAxis(tilingParam.blockFactorDim0TailAxis);
-    tilingData.set_blockFactorDim1TailAxis(tilingParam.blockFactorDim1TailAxis);
-    tilingData.set_tailBlockFactorDim0TailAxis(tilingParam.tailBlockFactorDim0TailAxis);
-    tilingData.set_tailBlockCountDim1TailAxis(tilingParam.tailBlockCountDim1TailAxis);
-    tilingData.set_tailCoreStartIdxDim0TailAxis(tilingParam.tailCoreStartIdxDim0TailAxis);
-    tilingData.set_cutNumberForDim1TailAxis(tilingParam.cutNumberForDim1TailAxis);
-    tilingData.set_isPad(tilingParam.isPad);
-    tilingData.set_tailBlockSize(tilingParam.tailBlockSize);
-    tilingData.set_tailUbFactorDim0TailAxis(tilingParam.tailUbFactorDim0TailAxis);
-    tilingData.set_isSplitDim1TailAxis(tilingParam.isSplitDim1TailAxis);
-    tilingData.set_tailBlockFactorDim1ForSplitDim1(tilingParam.tailBlockFactorDim1ForSplitDim1);
-    tilingData.set_tailLoopBlockTailCoreDim1ForSplitDim1(tilingParam.tailLoopBlockTailCoreDim1ForSplitDim1);
-    tilingData.set_dim1EachCoreForSplitDim1(tilingParam.dim1EachCoreForSplitDim1);
-    tilingData.set_inputShapeDim1TailAxis(tilingParam.inputShapeDim1TailAxis);
-    int64_t preAxisSize = tilingParam.preAxisSize / tilingParam.blockSizeNumInAxis;
-    tilingData.set_mxScaleSize(tilingParam.mxScaleSize);
-    tilingData.set_preAxisSize(preAxisSize);
-    tilingData.set_postAxisSize(tilingParam.postAxisSize);
-    tilingData.set_blockSizeNumInAxis(tilingParam.blockSizeNumInAxis);
-    tilingData.set_isTailAxis(static_cast<int64_t>(tilingParam.isTailAxis));
-    return;
-}
-static void CalcBaseTilingParam(
-    const gert::Shape& inputShape, const DataType& inputDataType, const DataType& output1DataType,
-    DynamicMxQuantTilingParam& tilingParam)
-{
-    int64_t fusedDim0 = FuseDimForTailAxis(inputShape);
-    int64_t dim1Size = inputShape.GetDim(inputShape.GetDimNum() - 1);
-    tilingParam.inputShapeDim1TailAxis = dim1Size;
-    int64_t realDim1TailAxis = Ops::Base::CeilDiv(dim1Size, tilingParam.blockSize);
-    int64_t ubFactorDim1TailAxis = DIM1_BLOCK_COUNT;
-    int64_t doubleBufferMulByte = 1;
-    if (Y_SUPPORT_DTYPE_FP4_SET.count(output1DataType) != 0) {
-        doubleBufferMulByte = 1;
-    } else if (Y_SUPPORT_DTYPE_FP8_SET.count(output1DataType) != 0) {
-        doubleBufferMulByte = N_BUFFER;
-    }
-
-    tilingParam.isPad = false;
-    tilingParam.tailBlockSize = 0;
-    if (dim1Size % tilingParam.blockSize != 0) {
-        tilingParam.isPad = true;
-        tilingParam.tailBlockSize = dim1Size - dim1Size / tilingParam.blockSize * tilingParam.blockSize;
-    }
-    int64_t maxUbAvailable = tilingParam.ubSize / N_BUFFER;
-
-    int64_t inputSize =
-        (DIM1_BLOCK_COUNT * tilingParam.blockSize * ge::GetSizeByDataType(inputDataType) + BLOCK_SIZE - 1) /
-        BLOCK_SIZE * BLOCK_SIZE;
-    int64_t ouputdataAndBuffer =
-        (DIM1_BLOCK_COUNT * tilingParam.blockSize + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE * doubleBufferMulByte;
-    int64_t outputScale = (DIM1_BLOCK_COUNT + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE;
-    int64_t buffer = (DIM1_BLOCK_COUNT * ge::GetSizeByDataType(inputDataType) * DIGIT_TWO + BLOCK_SIZE - 1) /
-                     BLOCK_SIZE * BLOCK_SIZE;
-    // 输入的2个字节输出4位
-    int64_t ubFactorDim0TailAxis = maxUbAvailable / (inputSize + ouputdataAndBuffer + outputScale + buffer);
-    ubFactorDim0TailAxis = ubFactorDim0TailAxis / DIGIT_FOUR * DIGIT_FOUR;
-
-    if (ubFactorDim0TailAxis > fusedDim0) {
-        ubFactorDim0TailAxis = fusedDim0;
-    }
-    // 先按照dim0分核
-    int64_t usedCoreNum = min(Ops::Base::CeilDiv(fusedDim0, ubFactorDim0TailAxis), tilingParam.totalCoreNum);
-    int64_t blockFactorDim0TailAxis =
-        Ops::Base::CeilDiv(Ops::Base::CeilDiv(fusedDim0, ubFactorDim0TailAxis), usedCoreNum);
-
-    usedCoreNum = Ops::Base::CeilDiv(fusedDim0, ubFactorDim0TailAxis * blockFactorDim0TailAxis);
-
-    int64_t tailBlockFactorDim0TailAxis = Ops::Base::CeilDiv(
-        (fusedDim0 - (usedCoreNum - 1) * blockFactorDim0TailAxis * ubFactorDim0TailAxis), ubFactorDim0TailAxis);
-
-    // 尾核最后一轮循环处理的dim0个数
-    int64_t tailUbFactorDim0TailAxis = fusedDim0 - (usedCoreNum - 1) * blockFactorDim0TailAxis * ubFactorDim0TailAxis -
-                                       (tailBlockFactorDim0TailAxis - 1) * ubFactorDim0TailAxis;
-    if (realDim1TailAxis < DIM1_BLOCK_COUNT) {
-        ubFactorDim1TailAxis = realDim1TailAxis;
-    }
-    SetTilingKeyForTail(inputDataType, output1DataType, tilingParam);
-    tilingParam.ubFactorDim0TailAxis = ubFactorDim0TailAxis;
-    tilingParam.ubFactorDim1TailAxis = ubFactorDim1TailAxis;
-    tilingParam.tailUbFactorDim0TailAxis = tailUbFactorDim0TailAxis;
-    tilingParam.usedCoreNum = usedCoreNum;
-    tilingParam.blockFactorDim0TailAxis = blockFactorDim0TailAxis;
-    tilingParam.tailBlockFactorDim0TailAxis = tailBlockFactorDim0TailAxis;
-    return;
-}
-static void SplitDim0(DynamicMxQuantTilingParam& tilingParam)
-{
-    int64_t realDim1TailAxis = Ops::Base::CeilDiv(tilingParam.inputShapeDim1TailAxis, tilingParam.blockSize);
-    int64_t ubFactorDim1TailAxis = tilingParam.ubFactorDim1TailAxis;
-    int64_t blockFactorDim1TailAxis = Ops::Base::CeilDiv(realDim1TailAxis, ubFactorDim1TailAxis);
-
-    // 包含最后非对齐的块
-    tilingParam.blockFactorDim1TailAxis = blockFactorDim1TailAxis;
-    tilingParam.tailBlockCountDim1TailAxis = realDim1TailAxis - (blockFactorDim1TailAxis - 1) * ubFactorDim1TailAxis;
-    tilingParam.tailCoreStartIdxDim0TailAxis = tilingParam.usedCoreNum - 1;
-    return;
-}
-
-static void SplitDim1(DynamicMxQuantTilingParam& tilingParam)
-{
-    // 从dim1借轴进行开核
-    int64_t usedCoreNum = tilingParam.usedCoreNum;
-    int64_t ubFactorDim1TailAxis = tilingParam.ubFactorDim1TailAxis;
-    int64_t coreNumRatio = tilingParam.totalCoreNum / usedCoreNum;
-    int64_t realDim1TailAxis = Ops::Base::CeilDiv(tilingParam.inputShapeDim1TailAxis, tilingParam.blockSize);
-    int64_t dim1ForEachCore = Ops::Base::CeilDiv(realDim1TailAxis, coreNumRatio);
-    dim1ForEachCore = max(dim1ForEachCore, DIM1_BLOCK_COUNT);
-    int64_t dim1SplitCount = Ops::Base::CeilDiv(realDim1TailAxis, dim1ForEachCore);
-    int64_t dim1ForTailCore = realDim1TailAxis - (dim1SplitCount - 1) * dim1ForEachCore;
-    int64_t rowUsedCoreNum = usedCoreNum;
-    usedCoreNum = usedCoreNum * dim1SplitCount;
-    int64_t tailDim0StartCoreIdx = (rowUsedCoreNum - 1) * dim1SplitCount;
-
-    bool isSplitDim1 = true;
-
-    int64_t blockFactorDim1ForSplitDim1 = Ops::Base::CeilDiv(dim1ForEachCore, ubFactorDim1TailAxis);
-    int64_t tailLoopBlockDim1ForSplitDim1 = dim1ForEachCore - (blockFactorDim1ForSplitDim1 - 1) * ubFactorDim1TailAxis;
-    int64_t tailBlockFactorDim1ForSplitDim1 = Ops::Base::CeilDiv(dim1ForTailCore, ubFactorDim1TailAxis);
-
-    int64_t tailLoopBlockTailCoreDim1ForSplitDim1 =
-        dim1ForTailCore - (tailBlockFactorDim1ForSplitDim1 - 1) * ubFactorDim1TailAxis;
-    tilingParam.blockFactorDim0TailAxis = 1;
-    tilingParam.tailBlockFactorDim0TailAxis = 1;
-    tilingParam.blockFactorDim1TailAxis = blockFactorDim1ForSplitDim1;
-    tilingParam.tailBlockCountDim1TailAxis = tailLoopBlockDim1ForSplitDim1;
-    tilingParam.tailBlockFactorDim1ForSplitDim1 = tailBlockFactorDim1ForSplitDim1;
-    tilingParam.tailLoopBlockTailCoreDim1ForSplitDim1 = tailLoopBlockTailCoreDim1ForSplitDim1;
-    tilingParam.tailCoreStartIdxDim0TailAxis = tailDim0StartCoreIdx;
-    tilingParam.dim1EachCoreForSplitDim1 = dim1ForEachCore;
-    tilingParam.usedCoreNum = usedCoreNum;
-    tilingParam.isSplitDim1TailAxis = isSplitDim1;
-    tilingParam.cutNumberForDim1TailAxis = dim1SplitCount;
-    return;
-}
-static ge::graphStatus DoTilingForTailAxis(
-    const gert::Shape& inputShape, const DataType& inputDataType, const DataType& output1DataType,
-    DynamicMxQuantTilingParam& tilingParam)
-{
-    CalcBaseTilingParam(inputShape, inputDataType, output1DataType, tilingParam);
-    // dim0方向分核
-    // 增加判断列大小是否小于DIM1_BLOCK_COUNT
-    if (tilingParam.usedCoreNum > tilingParam.totalCoreNum / DIGIT_TWO ||
-        tilingParam.inputShapeDim1TailAxis <= DIM1_BLOCK_COUNT * tilingParam.blockSize) {
-        SplitDim0(tilingParam);
-    } else {
-        SplitDim1(tilingParam);
-    }
+    tilingParam.nAlignNum = tilingParam.postAxisSize == N_ALIGN64 ? N_ALIGN64 : N_ALIGN128;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -650,9 +491,6 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, DynamicMxQua
     auto xShapePtr = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShapePtr);
     auto xShape = xShapePtr->GetStorageShape();
-    tilingParam.axis = tilingParam.axis >= 0 ? tilingParam.axis : tilingParam.axis + xShape.GetDimNum();
-    tilingParam.isTailAxis = tilingParam.axis == static_cast<int64_t>(xShape.GetDimNum() - 1);
-    CalcAxisSize(tilingParam, xShape);
 
     // 获取输入/输出数据类型
     auto inputXPtr = context->GetInputDesc(0);
@@ -663,12 +501,9 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, DynamicMxQua
     auto outDtype = outputYPtr->GetDataType();
     CalcTilingKey(inDtype, outDtype, tilingParam);
 
-    CalScaleSize(xShape, tilingParam);
+    tilingParam.preAxisSize *= tilingParam.blockSizeNumInAxis;
 
-    if (tilingParam.isTailAxis && tilingParam.blockSize == ATTR_BLOCK_SIZE) {
-        tilingParam.tailAxisOptimize = true;
-        return DoTilingForTailAxis(xShape, inDtype, outDtype, tilingParam);
-    }
+    CalScaleSize(xShape, tilingParam);
 
     int64_t maxUbAvailable = (tilingParam.ubSize - RESERVED_UB_SIZE) / N_BUFFER / BYTES_OF_INPUT_TYPE / EXIST_NODE_NUM /
                              tilingParam.blockSize;
@@ -704,133 +539,85 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, DynamicMxQua
     return ge::GRAPH_SUCCESS;
 }
 
-static bool checkShapeForNotLastQuantAxis(
-    const uint64_t nAlignNum, const uint64_t postAxisSize, const gert::TilingContext* context,
-    DynamicMxQuantTilingParam tilingParam)
+static int64_t GetNotAxisGroupPerUb(const DynamicMxQuantTilingParam& tilingParam)
 {
-    uint64_t xUbSize = nAlignNum * tilingParam.blockSize * BLOCK_PER_GROUP * BYTES_OF_INPUT_TYPE;
-    uint64_t yUbSize = nAlignNum * tilingParam.blockSize * BLOCK_PER_GROUP * MAX_BYTES_OF_OUTPUT_TYPE;
-    uint64_t scaleUbSize = BLOCK_PER_GROUP * nAlignNum * UINT8_BYTES_SIZE; // scale is fp8
     int64_t groupPerUb = 0;
-    bool isOptimize = true;
+    uint64_t xUbSize = tilingParam.nAlignNum * tilingParam.blockSize * BLOCK_PER_GROUP * BYTES_OF_INPUT_TYPE;
+    uint64_t yUbSize = tilingParam.nAlignNum * tilingParam.blockSize * BLOCK_PER_GROUP * MAX_BYTES_OF_OUTPUT_TYPE;
+    uint64_t scaleUbSize = BLOCK_PER_GROUP * tilingParam.nAlignNum * UINT8_BYTES_SIZE; // scale is fp8
 
-    if (postAxisSize > N_ALIGN128) {
-        uint64_t tmpBufferUbSize = BLOCK_PER_GROUP * nAlignNum * UINT16_BYTES_SIZE;     // for 1 / scale
-        uint64_t tmpScaleBufferUbSize = BLOCK_PER_GROUP * nAlignNum * UINT8_BYTES_SIZE; // for scale interleave
+    if (tilingParam.postAxisSize > N_ALIGN128) {
+        uint64_t tmpBufferUbSize = BLOCK_PER_GROUP * tilingParam.nAlignNum * UINT16_BYTES_SIZE; // for 1 / scale
+        uint64_t tmpScaleBufferUbSize =
+            BLOCK_PER_GROUP * tilingParam.nAlignNum * UINT8_BYTES_SIZE; // for scale interleave
         groupPerUb = (tilingParam.ubSize - RESERVED_UB_SIZE) / N_BUFFER /
                      (xUbSize + yUbSize + scaleUbSize + tmpBufferUbSize + tmpScaleBufferUbSize);
-        if (groupPerUb == 0) {
-            OP_LOGD(context->GetNodeName(), "large tail : Shape too large to fit the optimal template.");
-            return false;
-        }
     } else {
-        if (tilingParam.blockSize != N_ALIGN32 || postAxisSize < N_ALIGN64) {
+        groupPerUb = (tilingParam.ubSize - RESERVED_UB_SIZE) / N_BUFFER / (xUbSize + yUbSize + scaleUbSize);
+    }
+    return groupPerUb;
+}
+// capable to be optimized
+static bool IsOptForNotLastQuantAxis(const gert::TilingContext* context, const DynamicMxQuantTilingParam& tilingParam)
+{
+    OP_LOGD(context->GetNodeName(), "Start to check input possible to be optimized.");
+
+    if (tilingParam.postAxisSize <= N_ALIGN128) { // 小尾轴
+        if (tilingParam.blockSize != N_ALIGN32 || tilingParam.postAxisSize < N_ALIGN64) {
             OP_LOGD(
                 context->GetNodeName(),
                 "small tail optimization template blockSize[%ld] should be 32, postAxisSize[%ld] should be no less "
                 "than 64, please check",
-                tilingParam.blockSize, postAxisSize);
-            return false;
-        }
-        groupPerUb = (tilingParam.ubSize - RESERVED_UB_SIZE) / N_BUFFER / (xUbSize + yUbSize + scaleUbSize);
-        if (groupPerUb == 0) {
-            OP_LOGD(context->GetNodeName(), "small tail : Shape too large to fit the optimal template.");
+                tilingParam.blockSize, tilingParam.postAxisSize);
             return false;
         }
     }
 
-    return isOptimize;
-}
-// capable to be optimized
-static bool IsOptForNotLastQuantAxis(const gert::TilingContext* context, DynamicMxQuantTilingParam& tilingParam)
-{
-    OP_LOGD(context->GetNodeName(), "Start to check input possible to be optimized.");
+    int64_t groupPerUb = GetNotAxisGroupPerUb(tilingParam);
 
-    auto xShapePtr = context->GetInputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, xShapePtr);
-    auto xShape = xShapePtr->GetStorageShape();
-    auto outputYPtr = context->GetOutputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, outputYPtr);
-    auto outDtype = outputYPtr->GetDataType();
-
-    auto* attrs = context->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-    auto* attrBlockSize = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_BLOCK_SIZE);
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrBlockSize);
-
-    int64_t negativeAxis = tilingParam.axis < 0 ? tilingParam.axis : tilingParam.axis - xShape.GetDimNum();
-    OP_LOGD(context->GetNodeName(), "The quant axis is the %ld th axis. ", negativeAxis);
-    if (negativeAxis >= -1) {
-        OP_LOGD(context->GetNodeName(), "The quant axis is not the last axis, it can not be optimized. ");
+    if (groupPerUb == 0) {
+        OP_LOGD(context->GetNodeName(), "blockSize too large to fit the optimal template.");
         return false;
     }
 
-    // 调整axis取值，使其始终为非负整数
-    uint64_t axis = tilingParam.axis >= 0 ? tilingParam.axis : tilingParam.axis + xShape.GetDimNum();
-    uint64_t postAxisSize = 1;
-    uint64_t preAxisSize = 1;
-
-    for (size_t i = axis + 1; i < xShape.GetDimNum(); i++) {
-        postAxisSize *= xShape.GetDim(i);
-    }
-
-    for (size_t i = 0; i < axis; i++) {
-        preAxisSize *= xShape.GetDim(i);
-    }
-
-    // 获取量化轴输入的shape大小
-    int64_t dimSize = xShape.GetDim(axis);
-    if (dimSize < tilingParam.blockSize) {
-        tilingParam.blockSize = dimSize;
-    }
-
-    // 尾轴对齐后的大小
-    auto nAlignNum = N_ALIGN128;
-    if (postAxisSize > N_ALIGN128) {
-        nAlignNum = N_ALIGN128;
-    } else {
-        if (postAxisSize <= N_ALIGN32) {
-            nAlignNum = N_ALIGN32;
-        } else if (postAxisSize <= N_ALIGN64) {
-            nAlignNum = N_ALIGN64;
-        } else {
-            nAlignNum = N_ALIGN128;
-        }
-        if (nAlignNum == N_ALIGN32 && (Y_SUPPORT_DTYPE_FP4_SET.count(outDtype) != 0)) { // fp4需64对齐
-            nAlignNum = N_ALIGN64;
-        }
-    }
-
-    if (!checkShapeForNotLastQuantAxis(nAlignNum, postAxisSize, context, tilingParam)) {
-        return false;
-    }
     return true;
+}
+
+static bool IsTailAxisAndBlockSize32(const gert::TilingContext* context, DynamicMxQuantTilingParam& tilingParam)
+{
+    if (tilingParam.isTailAxis && tilingParam.isBlockSize32) {
+        tilingParam.blockSize = ATTR_BLOCK_SIZE;
+        return true;
+    }
+    return false;
 }
 
 inline static void SetTilingData(DynamicMxQuantTilingData& tilingData, const DynamicMxQuantTilingParam& tilingParam)
 {
-    tilingData.set_totalCoreNum(tilingParam.totalCoreNum);
-    tilingData.set_usedCoreNum(tilingParam.usedCoreNum);
-    tilingData.set_uo(tilingParam.uo);
-    tilingData.set_ubDim(tilingParam.ubDim);
-    tilingData.set_ubFactor(tilingParam.ubFactor);
-    tilingData.set_tailUbFactor(tilingParam.tailUbFactor);
-    tilingData.set_blockFactor(tilingParam.blockFactor);
-    tilingData.set_tailBlockFactor(tilingParam.tailBlockFactor);
-    tilingData.set_tilingKey(tilingParam.tilingKey);
-    tilingData.set_roundMode(tilingParam.roundMode);
-    tilingData.set_dstType(tilingParam.dstType);
-    tilingData.set_blockSize(tilingParam.blockSize);
-    tilingData.set_scaleAlg(tilingParam.scaleAlg);
-    tilingData.set_tailBlockSize(tilingParam.tailBlockSize);
-    tilingData.set_blockSizeNumInAxis(tilingParam.blockSizeNumInAxis);
+    tilingData.totalCoreNum = tilingParam.totalCoreNum;
+    tilingData.usedCoreNum = tilingParam.usedCoreNum;
+    tilingData.uo = tilingParam.uo;
+    tilingData.ubDim = tilingParam.ubDim;
+    tilingData.ubFactor = tilingParam.ubFactor;
+    tilingData.tailUbFactor = tilingParam.tailUbFactor;
+    tilingData.blockFactor = tilingParam.blockFactor;
+    tilingData.tailBlockFactor = tilingParam.tailBlockFactor;
+    tilingData.tilingKey = tilingParam.tilingKey;
+    tilingData.roundMode = tilingParam.roundMode;
+    tilingData.dstType = tilingParam.dstType;
+    tilingData.blockSize = tilingParam.blockSize;
+    tilingData.scaleAlg = tilingParam.scaleAlg;
+    tilingData.tailBlockSize = tilingParam.tailBlockSize;
+    tilingData.blockSizeNumInAxis = tilingParam.blockSizeNumInAxis;
     int64_t isPad = tilingParam.isPad ? 1 : 0;
-    tilingData.set_isPad(isPad);
+    tilingData.isPad = isPad;
     int64_t preAxisSize = tilingParam.preAxisSize / tilingParam.blockSizeNumInAxis;
-    tilingData.set_preAxisSize(preAxisSize);
-    tilingData.set_postAxisSize(tilingParam.postAxisSize);
-    tilingData.set_mxScaleSize(tilingParam.mxScaleSize);
-    tilingData.set_isTailAxis(static_cast<int64_t>(tilingParam.isTailAxis));
+    tilingData.preAxisSize = preAxisSize;
+    tilingData.postAxisSize = tilingParam.postAxisSize;
+    tilingData.mxScaleSize = tilingParam.mxScaleSize;
+    tilingData.isTailAxis = static_cast<int64_t>(tilingParam.isTailAxis);
+    tilingData.dstTypeMax = tilingParam.dstTypeMax;
+    tilingData.invDstTypeMax = tilingParam.invDstTypeMax;
 }
 
 ge::graphStatus Tiling4DynamicMxQuant(gert::TilingContext* context)
@@ -867,23 +654,31 @@ ge::graphStatus Tiling4DynamicMxQuant(gert::TilingContext* context)
     tilingParam.vfLen = Ops::Base::GetVRegSize(context);
     tilingParam.workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
 
+    BaseCalc(context, tilingParam);
+
     bool isOptimizable = IsOptForNotLastQuantAxis(context, tilingParam);
     // 进入性能优化模板判断
     if (isOptimizable) {
-        DynamicMxQuantOptimzieTiling regbaseTiling(context);
+        int64_t x = GetNotAxisGroupPerUb(tilingParam);
+        tilingParam.groupPerUb = x;
+        DynamicMxQuantOptimzieTiling regbaseTiling(context, tilingParam);
         return regbaseTiling.DoTiling();
-    } else {
-        OP_CHECK_IF(
-            DoTiling(context, tilingParam) != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "Dotiling failed."),
-            return ge::GRAPH_FAILED);
     }
 
-    DynamicMxQuantTilingData tilingData;
-    if (tilingParam.tailAxisOptimize) {
-        SetTilingDataForTailAxis(tilingData, tilingParam);
-    } else {
-        SetTilingData(tilingData, tilingParam);
+    bool IsTailAnd32 = IsTailAxisAndBlockSize32(context, tilingParam);
+    // 当量化轴是尾轴，且BlockSize为32时，进入尾轴负载均衡模板
+    if (IsTailAnd32) {
+        DynamicMxQuantTailAxisTiling tailAxisTiling(context, tilingParam);
+        return tailAxisTiling.DoTiling();
     }
+
+    OP_CHECK_IF(
+        DoTiling(context, tilingParam) != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "Dotiling failed."),
+        return ge::GRAPH_FAILED);
+
+    DynamicMxQuantTilingData tilingData;
+    SetTilingData(tilingData, tilingParam);
+
     OP_CHECK_IF(
         DynamicMxQuantSetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
         OP_LOGE(context->GetNodeName(), "DynamicMxQuantSetTilingData set tiling data fail."), return ge::GRAPH_FAILED);
@@ -892,8 +687,8 @@ ge::graphStatus Tiling4DynamicMxQuant(gert::TilingContext* context)
         context->SetScheduleMode(1); // 设置为batch mode模式，所有核同时启动
     }
 
-    context->SetBlockDim(tilingData.get_usedCoreNum());
-    context->SetTilingKey(tilingData.get_tilingKey());
+    context->SetBlockDim(tilingData.usedCoreNum);
+    context->SetTilingKey(tilingData.tilingKey);
     size_t* workspaces = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, workspaces);
     workspaces[0] = tilingParam.workspaceSize + Ops::Base::CeilAlign(tilingParam.mxScaleSize, WORKSPACE_ALIGN_SIZE);
