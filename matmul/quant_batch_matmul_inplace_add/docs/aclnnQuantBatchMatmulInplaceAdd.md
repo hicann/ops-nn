@@ -195,7 +195,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <td>-</td>
       <td>-</td>
     </tr>
-  <tbody></table>
+  </tbody></table>
 
   - 计算公式：<a name='f1'></a>
 
@@ -272,10 +272,13 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
     $$
 - 动态量化（mx 量化）场景约束：
   - 输入和输出支持以下数据类型组合：
+
     | x1 | x2 | x1Scale | x2Scale | outRef |
     |:-------:|:-------:| :------- | :------ | :------ |
     |FLOAT8_E5M2/FLOAT8_E4M3FN |FLOAT8_E5M2/FLOAT8_E4M3FN| FLOAT8_E8M0 | FLOAT8_E8M0 | FLOAT32 |
+
   - x1数据类型、x2数据类型、x1、x2、x1Scale、x2Scale和groupSize的取值关系：
+
       | x1数据类型 | x2数据类型 | x1 shape | x2 shape | x1Scale Shape | x2Scale Shape | yRef Shape | [gsM, gsN, gsK] | groupSize |
       |:-------:|:-------:| :------- | :------ | :------ | :------ | :------ | :------ | :------ |
       |FLOAT8_E5M2/FLOAT8_E4M3FN |FLOAT8_E5M2/FLOAT8_E4M3FN| (k, m) | (k, n) | (ceil(k / 64), m, 2) | (ceil(k / 64), n, 2) | (m, n) | [1, 1, 32] | 32 |
@@ -493,3 +496,4 @@ int main()
     return 0;
 }
   ```
+  

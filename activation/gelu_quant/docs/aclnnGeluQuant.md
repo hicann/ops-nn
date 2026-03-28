@@ -19,17 +19,17 @@
 
 1. 先计算gelu计算得到geluOut
 
-  - approximate = tanh
+    - approximate = tanh
 
-  $$
-  geluOut=Gelu(self)=self × Φ(self)=0.5 * self * (1 + Tanh( \sqrt{2 / \pi} * (self + 0.044715 * self^{3})))
-  $$
+    $$
+    geluOut=Gelu(self)=self × Φ(self)=0.5 * self * (1 + Tanh( \sqrt{2 / \pi} * (self + 0.044715 * self^{3})))
+    $$
 
-  - approximate = none
+    - approximate = none
 
-  $$
-   geluOut=Gelu(self)=self × Φ(self)=0.5 * self *[1 + erf(self/\sqrt{2})]
-  $$
+    $$
+    geluOut=Gelu(self)=self × Φ(self)=0.5 * self *[1 + erf(self/\sqrt{2})]
+    $$
 
 2. 再对geluOut进行量化操作
 
@@ -147,6 +147,7 @@ aclnnStatus aclnnGeluQuant(
       <td>ND</td>
       <td>1</td>
       <td>√</td>
+     <tr>
     </tr>
       <tr>
       <td>approximate（char*）</td>

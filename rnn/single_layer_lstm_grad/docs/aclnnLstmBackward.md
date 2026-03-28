@@ -306,7 +306,7 @@ aclnnStatus aclnnLstmBackward(
       <td>hx</td>
       <td>输入</td>
       <td>LSTM每层的初始hidden和cell状态。对应0时刻的h(t-1)与c(t-1)。</td>
-      <td><ul><li>列表长度为2，包含h_0和c_0。</li><li>多层双向时每个tensor数据沿第0维按先双向后逐层排布。<li>数据类型与input一致。</li></ul></td>
+      <td><ul><li>列表长度为2，包含h_0和c_0。</li><li>多层双向时每个tensor数据沿第0维按先双向后逐层排布。</li><li>数据类型与input一致。</li></ul></td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>列表内每个tensor shape为[D * num_layers, batch_size, hidden_size]</td>

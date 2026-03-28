@@ -63,47 +63,227 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnUniqueDimGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnUniqueDim”接口执行计算。
 
-- `aclnnStatus aclnnUniqueDimGetWorkspaceSize(const aclTensor* self, bool sorted, bool returnInverse, int64_t dim, aclTensor* valueOut, aclTensor* inverseOut, aclTensor* countsOut, uint64_t* workspaceSize, aclOpExecutor** executor)`
-- `aclnnStatus aclnnUniqueDim(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`
+```cpp
+aclnnStatus aclnnUniqueDimGetWorkspaceSize(
+  const aclTensor* self, 
+  bool             sorted, 
+  bool             returnInverse, 
+  int64_t          dim, 
+  aclTensor*       valueOut, 
+  aclTensor*       inverseOut, 
+  aclTensor*       countsOut, 
+  uint64_t*        workspaceSize, 
+  aclOpExecutor**  executor)
+```
+
+```cpp
+aclnnStatus aclnnUniqueDim(
+  void          *workspace, 
+  uint64_t       workspaceSize, 
+  aclOpExecutor *executor, 
+  aclrtStream    stream)
+  ```
 
 ## aclnnUniqueDimGetWorkspaceSize
 
-- **参数说明**：
+- **参数说明**
 
-  - self（aclTensor\*, 计算输入）：示例中的`self`，Device侧的aclTensor。shape支持1-8维。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、UINT8、INT8、UINT16、INT16、UINT32、INT32、UINT64、INT64、DOUBLE、BOOL、BFLOAT16。
-  - sorted（bool, 计算输入）：表示返回的输出结果`valueOut`是否排序。
-  - returnInverse（bool, 计算输入）：表示是否返回`self`在`dim`轴上各元素在valueOut中对应元素的位置下标，True时返回，False时不返回。
-  - dim（int64_t, 计算输入）：示例中的`dim`，Host侧的整型，指定做去重操作的维度，数据类型支持INT64，取值范围为\[-self.dim(), self.dim()\)。
-  - valueOut（aclTensor\*, 计算输出）：示例中的`valueOut`，表示去重结果，Device侧的aclTensor。数据类型与`self`一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、UINT8、INT8、UINT16、INT16、UINT32、INT32、UINT64、INT64、DOUBLE、BOOL、BFLOAT16。
-  - inverseOut（aclTensor\*, 计算输出）：示例中的`inverseOut`，表示`self`在`dim`轴上各元素在valueOut中对应元素的位置下标，Device侧的aclTensor，数据类型支持INT64。
-  - countsOut（aclTensor\*,计算输出）：示例中的`countsOut`，表示`valueOut`中的各元素在`self`中出现的次数，Device侧的aclTensor，数据类型支持INT64。
-  - workspaceSize（uint64_t\*, 出参）：返回需要在Device侧申请的workspace大小。
-  - executor（aclOpExecutor\**, 出参）：返回op执行器，包含了算子计算流程。
-- **返回值**：
+  <table style="undefined;table-layout: fixed; width: 1568px"><colgroup>
+  <col style="width: 126px">
+  <col style="width: 121px">
+  <col style="width: 327px">
+  <col style="width: 283px">
+  <col style="width: 327px">
+  <col style="width: 104px">
+  <col style="width: 134px">
+  <col style="width: 146px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      <th>使用说明</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+      <th>维度（shape）</th>
+      <th>非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>self</td>
+      <td>输入</td>
+      <td>示例中的self。</td>
+      <td>-</td>
+      <td>FLOAT、FLOAT16、UINT8、INT8、UINT16、INT16、UINT32、INT32、UINT64、INT64、DOUBLE、BOOL、BFLOAT16。</td>
+      <td>ND</td>
+      <td>1-8</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>sorted</td>
+      <td>输入</td>
+      <td>表示返回的输出结果valueOut是否排序。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>returnInverse</td>
+      <td>输入</td>
+      <td>表示是否返回self在dim轴上各元素在valueOut中对应元素的位置下标，True时返回，False时不返回。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>dim</td>
+      <td>输入</td>
+      <td>示例中的dim。</td>
+      <td>指定做去重操作的维度，数据类型支持INT64，取值范围为[-self.dim(), self.dim())。</td>
+      <td>FLOAT、FLOAT16、UINT8、INT8、UINT16、INT16、UINT32、INT32、UINT64、INT64、DOUBLE、BOOL、BFLOAT16</td>
+      <td>ND</td>
+      <td></td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>valueOut</td>
+      <td>输出</td>
+      <td>示例中的valueOut，表示去重结果。</td>
+      <td>数据类型与self一致。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>inverseOut</td>
+      <td>输出</td>
+      <td>示例中的inverseOut，表示self在dim轴上各元素在valueOut中对应元素的位置下标。</td>
+      <td>-</td>
+      <td>INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>countsOut</td>
+      <td>输出</td>
+      <td>示例中的countsOut，表示valueOut中的各元素在self中出现的次数。</td>
+      <td>-</td>
+      <td>INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输出</td>
+      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输出</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+  </tbody></table>
+
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
-  ```
   第一段接口完成入参校验，出现以下场景时报错：
-  返回161001（ACLNN_ERR_PARAM_NULLPTR）: 1. 传入的self、valueOut、inverseOut或countsOut是空指针。
-  返回161002（ACLNN_ERR_PARAM_INVALID）: 1. self的数据类型不在支持的范围之内。
-                                        2. inverseOut和countsOut的数据类型不为INT64。
-                                        3. self和valueOut的数据类型不一致。
-                                        4. self的shape维度大于8。
-                                        5. dim值不在[-self.dim(), self.dim())范围内。
-  ```
+
+  <table style="undefined;table-layout: fixed; width: 1035px"><colgroup>
+  <col style="width: 262px">
+  <col style="width: 103px">
+  <col style="width: 670px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>返回值</th>
+      <th>错误码</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>ACLNN_ERR_PARAM_NULLPTR</td>
+      <td>161001</td>
+      <td>传入的self、valueOut、inverseOut或countsOut是空指针。</td>
+    </tr>
+    <tr>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
+      <td>self的数据类型不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td>inverseOut和countsOut的数据类型不为INT64。</td>
+    </tr>
+    <tr>
+      <td>self和valueOut的数据类型不一致。</td>
+    </tr>
+    <tr>
+      <td>self的shape维度大于8。</td>
+    </tr>
+    <tr>
+      <td>dim值不在[-self.dim(), self.dim())范围内。</td>
+    </tr>
+  </tbody>
+  </table>
 
 ## aclnnUniqueDim
 
-- **参数说明**：
+- **参数说明**
 
-  - workspace（void\*, 入参）：在Device侧申请的workspace内存地址。
-  - workspaceSize（uint64_t, 入参）：在Device侧申请的workspace大小，由第一段接口aclnnUniqueDimGetWorkspaceSize获取。
-  - executor（aclOpExecutor\*, 入参）：op执行器，包含了算子计算流程。
-  - stream（aclrtStream, 入参）：指定执行任务的Stream。
-- **返回值**：
+  <table style="undefined;table-layout: fixed; width: 950px"><colgroup>
+  <col style="width: 122px">
+  <col style="width: 105px">
+  <col style="width: 723px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnUniqueDimGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
+  </table>
+
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

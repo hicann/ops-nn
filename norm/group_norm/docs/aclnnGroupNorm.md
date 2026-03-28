@@ -127,7 +127,6 @@ aclnnStatus aclnnGroupNorm(
       <td>-</td>
       <td>-</td>
     </tr>
-    </tr>
     <tr>
       <td>C（int64_t）</td>
       <td>输入</td>
@@ -147,7 +146,6 @@ aclnnStatus aclnnGroupNorm(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-    </tr>
     </tr>
     <tr>
       <td>group（int64_t）</td>

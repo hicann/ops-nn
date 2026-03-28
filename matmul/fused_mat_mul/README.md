@@ -1,7 +1,6 @@
 # FusedMatMul
 
-
-##  产品支持情况
+## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
@@ -20,7 +19,6 @@
   $$
   y = OP((x1 @ x2 + bias), x3)
   $$
-
 
 ## 参数说明
 
@@ -48,7 +46,7 @@
         <td>x1</td>
         <td>输入</td>
         <td>公式中的输入x1。</td>
-        <td><ul><li>数据类型需要与x2满足数据类型推导规则（参见<a href="../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></td>
+        <td><ul><li>数据类型需要与x2满足数据类型推导规则（参见<a href="../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></ul></td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
       </tr>
@@ -56,7 +54,7 @@
         <td>x2</td>
         <td>输入</td>
         <td>公式中的输入x2。</td>
-        <td><ul><li>数据类型需要与x1满足数据类型推导规则（参见<a href="../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></td>
+        <td><ul><li>数据类型需要与x1满足数据类型推导规则（参见<a href="../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></ul></td>
         <td>数据类型与x1保持一致</td>
         <td>ND</td>
       </tr>
@@ -64,7 +62,7 @@
         <td>bias</td>
         <td>输入</td>
         <td>公式中的输入bias。</td>
-        <td><ul><li>仅当fusedOpType为""、"relu"、"add"、"mul"时生效，其他情况传入空指针即可。</li></td>
+        <td><ul><li>仅当fusedOpType为""、"relu"、"add"、"mul"时生效，其他情况传入空指针即可。</li></ul></td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
       </tr>
@@ -72,7 +70,7 @@
         <td>x3</td>
         <td>输入</td>
         <td>公式中的输入x3。</td>
-        <td><ul>-</td>
+        <td>-</td>
         <td>数据类型与x1保持一致</td>
         <td>ND</td>
       </tr>
@@ -80,7 +78,7 @@
         <td>fusedOpType</td>
         <td>输入</td>
         <td>公式中的输入OP。</td>
-        <td><ul><li>融合模式取值必须是""（表示不做融合）、"add"、"mul"、"gelu_erf"、"gelu_tanh"、"relu"中的一种。</li></td>
+        <td><ul><li>融合模式取值必须是""（表示不做融合）、"add"、"mul"、"gelu_erf"、"gelu_tanh"、"relu"中的一种。</li></ul></td>
         <td>STRING</td>
         <td>-</td>
       </tr>
@@ -88,16 +86,16 @@
         <td>y</td>
         <td>输出</td>
         <td>公式中的输出y。</td>
-        <td><ul><li>数据类型需要与x1和x2推导后的数据类型一致（参见<a href="../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></td>
+        <td><ul><li>数据类型需要与x1和x2推导后的数据类型一致（参见<a href="../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></ul></td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
       </tr>
   </tbody></table>
 
-
 ## 约束说明
 
 - 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2、x3的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"、"add"、"mul"时, x1、x2、x3的数据类型必须为FLOAT32(仅支持使能HFLOAT32场景)、BFLOAT16、FLOAT16。
+
 ## 调用说明
 
 <table style="undefined;table-layout: fixed; width: 900px"><colgroup>

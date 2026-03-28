@@ -55,6 +55,7 @@ $$
       <td>计算的出参。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
+    </tr>
   </tbody>
   </table>
 

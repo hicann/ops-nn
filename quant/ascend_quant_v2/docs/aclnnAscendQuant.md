@@ -183,8 +183,7 @@ aclnnStatus aclnnAscendQuant(
     - 出参`y`数据类型仅支持INT8，数据格式不支持NZ。
     - 入参`dstType`仅支持取值2，表示INT8。
 
-
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -217,7 +216,8 @@ aclnnStatus aclnnAscendQuant(
       <td>x、scale、offset、y的shape不满足限制条件。</td>
     </tr>
     <tr>
-      <td>roundMode不在有效取值范围。</tr>
+      <td>roundMode不在有效取值范围。</td>
+    </tr>
     <tr>
       <td>dstType不在有效取值范围。</td>
     </tr>

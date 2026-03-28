@@ -47,12 +47,15 @@ $$
       <td>待进行Relu计算的入参。</td>
       <td>FLOAT、FLOAT16、INT8、INT32、INT64、BFLOAT16</td>
       <td>ND</td>
+      </tr>
   <tr>
       <td>y</td>
       <td>输出</td>
       <td>进行Relu计算后的输出</td>
       <td>FLOAT、FLOAT16、INT8、INT32、INT64、BFLOAT16</td>
       <td>ND</td>
+      </tr>
+      </tbody>
   </table>
 
 ## 约束说明

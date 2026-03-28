@@ -17,7 +17,7 @@
 
 - 接口功能：Swish门控线性单元激活函数，实现x的SwiGlu计算。  
 
-- 计算公式：  
+- 计算公式:
 
   <p style="text-align: center">
   out<sub>i</sub> = SwiGlu(x<sub>i</sub>)=Swish(A<sub>i</sub>)*B<sub>i</sub>
@@ -50,7 +50,6 @@
       <td>ND</td>
     </tr>
     <tr>
-    <tr>
       <td>dim</td>
       <td>属性</td>
       <td><ul><li>需要进行切分的维度序号，对x相应轴进行对半切分。</li><li>取值范围为[-x.dim(), x.dim()-1]。</li></ul></td>
@@ -69,6 +68,7 @@
 - <term>Atlas 推理系列产品</term>：数据类型支持FLOAT16、FLOAT32。
 
 - Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
+
 ## 约束说明
 
 无

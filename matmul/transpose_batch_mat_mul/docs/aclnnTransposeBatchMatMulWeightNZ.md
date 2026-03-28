@@ -13,7 +13,6 @@
 | <term>Atlas 推理系列产品 </term>                             |    ×    |
 | <term>Atlas 训练系列产品</term>                              |    ×    |
 
-
 ## 功能说明
 
 - 接口功能：完成张量x1与张量x2的矩阵乘计算，仅支持x1为ND格式，x2为NZ格式，只支持x1为3维，x2为5维。Tensor支持转置，转置序列根据传入的数列进行变更。permX1代表张量x1的转置序列，permX2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。
@@ -26,6 +25,7 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnTransposeBatchMatMulWeightNz”接口执行计算。
+
 ```cpp
 aclnnStatus aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize(
     const aclTensor    *x1,
@@ -41,6 +41,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize(
     uint64_t           *workspaceSize,
     aclOpExecutor      **executor)
 ```
+
 ```cpp
 aclnnStatus aclnnTransposeBatchMatMulWeightNz(
     void               *workspace,
@@ -48,6 +49,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
     aclOpExecutor      *executor,
     const aclrtStream  stream)
 ```
+
 ## aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize
 
 - **参数说明：**
@@ -72,7 +74,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
         <th><a href="../../../docs/zh/context/数据格式.md" target="_blank">数据格式</a></th>
         <th style="white-space: nowrap">维度</th>
         <th><a href="../../../docs/zh/context/非连续的Tensor.md" target="_blank">非连续的Tensor</a></th>
-      <tr>
+      </tr>
     </thead>
     <tbody>
       <tr>
@@ -346,6 +348,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性说明：
   - aclnnTransposeBatchMatMulWeightNz默认确定性实现。
 
@@ -358,11 +361,11 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
     - permX2仅支持输入[0, 1, 2]。
     - 当scale不为空时，B与N的乘积小于65536, 且仅支持输入为FLOAT16和输出为INT8的类型推导。
 
-
 ## 调用示例
 
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   x1和x2数据类型为float16，x2为NZ格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
   ```Cpp
   #include <iostream>
   #include <memory>

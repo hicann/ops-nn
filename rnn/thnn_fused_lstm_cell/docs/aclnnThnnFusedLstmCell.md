@@ -90,6 +90,7 @@ aclnnStatus aclnnThnnFusedLstmCell(
   <col style="width: 122px">
   <col style="width: 230px">
   <col style="width: 145px">
+  </colgroup>
   <thead>
       <tr>
         <th>参数名</th>
@@ -202,7 +203,7 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>-</td>
         <td>-</td>
       </tr>
-    </tbody></table>
+    </tbody> </table>
 
 - **返回值：**
 
@@ -276,6 +277,7 @@ aclnnStatus aclnnThnnFusedLstmCell(
       </tr>
     </tbody>
     </table>
+
 - **返回值：**
   
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。

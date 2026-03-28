@@ -144,7 +144,6 @@ aclnnStatus aclnnQuantizedBatchNorm(
       <td>-</td>
       <td>-</td>
     </tr>
-    </tr>
     <tr>
       <td>outputScale（aclScalar*）</td>
       <td>输入</td>

@@ -88,7 +88,7 @@ aclnnStatus aclnnForeachSinh(
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示进行双曲正弦函数运算的输出张量列表，对应公式中的`y`。</td>
-      <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li><ul></td>
+      <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -157,7 +157,6 @@ aclnnStatus aclnnForeachSinh(
       <td>x或out中的Tensor的数据类型不一致。</td></tr>
     <tr>
       <td>x或out中的Tensor维度超过8维。</td></tr>
-    </tr>
   </tbody></table>
 
 ## aclnnForeachSinh
