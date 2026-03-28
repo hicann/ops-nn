@@ -107,8 +107,9 @@ aclnnStatus aclnnQuantMatmulV3(
         <td>输入</td>
         <td>公式中的输入x2。</td>
         <td><ul>
-        <li>ND：<ul><li>支持最后两根轴转置情况下的非连续tensor，其他场景的非连续的Tensor不支持</li>
-        <li>在transposeX1为false时shape形如（batch，n，k），在transposeX1为true时shape形如（batch，k，n），batch可不存在，其中k与x1的shape中的k一致</li></ul>
+        <li>ND：
+        <ul><li>支持最后两根轴转置情况下的非连续tensor，其他场景的非连续的Tensor不支持</li>
+        <li>在transposeX1为false时shape形如（batch，n，k），在transposeX1为true时shape形如（batch，k，n），batch可不存在，其中k与x1的shape中的k一致</li></ul> </li>
         <li>NZ：
           <ul><li>在transposeX2为true时shape形如（batch，k1，n1，n0，k0），batch可不存在，其中k0=32，n0=16，x1 shape中的k和x2 shape中的k1需要满足ceil（k / 32） = k1</li></ul>
           <ul><li>在transposeX2为false时shape形如（batch，n1，k1，k0，n0），batch可不存在，其中k0=16，n0=32，x1 shape中的k和x2 shape中的k1需要满足ceil（k / 16） = k1</li></ul>
@@ -873,6 +874,7 @@ aclnnStatus aclnnQuantMatmulV3(
       return 0;
   }
   ```
+  
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：INT4量化场景示例代码如下(x1和x2数据类型为INT4，transposeX2=false)，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
   ```cpp
@@ -1127,6 +1129,7 @@ aclnnStatus aclnnQuantMatmulV3(
       return 0;
   }
   ```
+
 - <term>Atlas 推理系列产品</term>：x2为NZ场景的示例代码如下(transposeX2=true)，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
   ```cpp

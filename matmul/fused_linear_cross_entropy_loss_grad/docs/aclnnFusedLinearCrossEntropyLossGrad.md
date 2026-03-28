@@ -49,7 +49,7 @@ $$
 \text{grad\_weight} = \text{softmax}^T \cdot \text{input} \in \mathbb{R}^{V \times H}
 $$
 
-</br>
+<br>
 &emsp;&emsp;省显存模式，softmaxOptional为nullptr：
 
 $$
@@ -120,6 +120,7 @@ $$
     uint64_t          *workspaceSize,
     aclOpExecutor    **executor)
   ```
+
   ```Cpp
   aclnnStatus aclnnFusedLinearCrossEntropyLossGrad(
     void             *workspace,
@@ -378,6 +379,7 @@ $$
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性说明：
   - aclnnFusedLinearCrossEntropyLossGrad默认确定性实现。
 

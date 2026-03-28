@@ -175,15 +175,15 @@ aclnnStatus aclnnForeachAddScalarV2(
       <td>x、scalar和out的数据类型不在支持的范围之内。</td>  
     </tr>
     <tr>
-      <td>x和out的数据类型不一致。
+      <td>x和out的数据类型不一致。</td>  
     </tr>
     <tr>
-      <td>x与out的shape不满足约束。
+      <td>x与out的shape不满足约束。</td>  
     <tr>
-      <td>x或out中的Tensor的数据类型不一致。
+      <td>x或out中的Tensor的数据类型不一致。</td>  
     </tr> 
     <tr>
-      <td>x或out中的Tensor维度超过8维。
+      <td>x或out中的Tensor维度超过8维。</td>  
     </tr>
     </tr>
   </tbody></table>

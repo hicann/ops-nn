@@ -262,7 +262,6 @@
   - 对于 `filter` 输入，`H`、`W` 的大小应该在 [1, 511] 的范围内。`N` 维度大小应该大于等于 0（等于 0 的场景仅在 `bias`、`output` 的 `N` 维度也等于 0 时支持），`C` 维度大小的支持情况与输入 `x` 的 `C` 维度一致。
   - `bias`和`scale`维度大小应该与`filter`的`N`维度大小一致。
 
-
   <table>
   <tr>
   <th style="text-align:center; width:80px">张量</th>
@@ -282,6 +281,7 @@
   <td style="text-align:center">INT8</td>
   <td style="text-align:center">FLOAT16/INT8</td>
   </tr>
+  <tr>
   <td style="text-align:center">HIFLOAT8</td>
   <td style="text-align:center">HIFLOAT8</td>
   <td style="text-align:center">FLOAT</td>
@@ -322,8 +322,7 @@
 
 - 如果任何参数超出上述范围，算子的正确性无法保证。
 
-- 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击 [Link](https://www.hiascend.com/support) 获取技术支持。
-
+- 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击 [on the website](https://www.hiascend.com/support) 获取技术支持。
 
 ## 调用说明
 

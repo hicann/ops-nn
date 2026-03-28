@@ -35,7 +35,7 @@
   - scaleGradByFreq(bool, 计算输入)：根据单词出现的频率，是否对梯度进行缩放。若为true，对结果按词频进行缩放，若为false，不进行处理。
   - out(aclTensor*, 计算输出)：梯度求和的结果输出，Device侧的aclTensor，维度为2维，首轴大小为numWeights，尾轴大小与grad尾轴相同，数据类型与grad类型相同，[数据格式](../../../docs/zh/context/数据格式.md)仅支持ND。
     - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。
-    - <termAtlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
   - workspaceSize(uint64_t *, 出参): 返回需要在Device侧申请的workspace大小。
   - executor(aclOpExecutor **, 出参): 返回op执行器，包含了算子计算流程。
 
@@ -43,7 +43,7 @@
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
+  ```cpp
   第一段接口完成入参校验，出现如下场景时报错：
   返回161001(ACLNN_ERR_PARAM_NULLPTR)：1. 传入的grad、indices、out是空指针。
   返回161002(ACLNN_ERR_PARAM_INVALID)：1. grad、indices、out的数据类型和数据格式不在支持的范围之内。
@@ -53,7 +53,6 @@
   ```
 
 ## aclnnEmbeddingDenseBackward
-
 
 - **参数说明：**
 
@@ -67,6 +66,7 @@
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - <term>Atlas 训练系列产品</term>：
   - 对于scale为true的场景，设定grad最后一维为embeddingDim，其大小超出指定范围时会被拦截报错。其合理范围如下：
     - indices为int32时，需满足
@@ -88,6 +88,7 @@
   - indices合轴后维度超过INT32_INF(2139095040)时，无法保证高性能
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
 ```Cpp

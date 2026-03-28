@@ -150,6 +150,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
+    </tr>
     <tr>
       <td>scales2Optional（aclTensor*）</td>
       <td>输入</td>

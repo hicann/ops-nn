@@ -226,7 +226,7 @@ aclnnStatus aclnnConvTbcBackward(
      <td>
       <ul><li>支持空Tensor。</li>
       <li>数据类型与bias类型一致。</li>
-      <li>shape为(C<sub>out</sub>)。</li>
+      <li>shape为(C<sub>out</sub>)。</li></ul>
     </td>
      <td>FLOAT、FLOAT16、BFLOAT16</td>
      <td>ND、NCL</td>
@@ -356,7 +356,6 @@ aclnnStatus aclnnConvTbcBackward(
      </tr>
     </tbody>
   </table>
-
 
 - **返回值：**
 

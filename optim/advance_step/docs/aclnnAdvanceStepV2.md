@@ -230,7 +230,6 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>-</td>
       <td>-</td>
     </tr>
-    <tr>
   </tbody>
   </table>
 

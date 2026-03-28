@@ -54,7 +54,7 @@
       <td>String</td>
       <td>ND</td>
     </tr>
-    </tr>
+    <tr>
       <td>y</td>
       <td>输出</td>
       <td>输出的损失tensor</td>

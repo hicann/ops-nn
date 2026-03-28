@@ -103,7 +103,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>dy (aclTensor*)</td>
           <td>输入</td>
           <td>反向计算的梯度，公式中的<code>dy</code>。</td>
-          <td><ul><li>不支持空tensor。</li><li>维度支持2D到8D，1维为N，第2维为C。</td>
+          <td><ul><li>不支持空tensor。</li><li>维度支持2D到8D，1维为N，第2维为C。</li></ul></td>
           <td>FLOAT16、FLOAT、BFLOAT16</td>
           <td>ND</td>
           <td>2-8</td>
@@ -113,7 +113,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>mean (aclTensor*)</td>
           <td>输入</td>
           <td>正向计算的第二个输出，表示input分组后每个组的均值，公式中的<code>mean</code>。</td>
-          <td><ul><li>不支持空tensor。</li><li>数据类型与gamma相同，其中N与dy的第0维度保持一致。</td>
+          <td><ul><li>不支持空tensor。</li><li>数据类型与gamma相同，其中N与dy的第0维度保持一致。</li></ul></td>
           <td>FLOAT16、FLOAT、BFLOAT16</td>
           <td>ND</td>
           <td>2</td>
@@ -123,7 +123,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>rstd (aclTensor*)</td>
           <td>输入</td>
           <td>正向计算的第三个输出，表示input分组后每个组的标准差倒数，公式中的<code>rstd</code>。</td>
-          <td><ul><li>不支持空tensor。</li><li>数据类型与gamma相同，其中N与dy的第0维度保持一致。</td>
+          <td><ul><li>不支持空tensor。</li><li>数据类型与gamma相同，其中N与dy的第0维度保持一致。</li></ul></td>
           <td>FLOAT16、FLOAT、BFLOAT16</td>
           <td>ND</td>
           <td>2</td>
@@ -133,7 +133,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>x (aclTensor*)</td>
           <td>输入</td>
           <td>正向输入，公式中的<code>x</code>。</td>
-          <td><ul><li>不支持空tensor。</li><li>数据类型和shape与dy相同。</td>
+          <td><ul><li>不支持空tensor。</li><li>数据类型和shape与dy相同。</li></ul></td>
           <td>FLOAT16、FLOAT、BFLOAT16</td>
           <td>ND</td>
           <td>2-8</td>
@@ -143,7 +143,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>gamma (aclTensor*)</td>
           <td>输入</td>
           <td>每个channel的缩放系数，公式中的<code>gamma</code>。</td>
-          <td><ul><li>不支持空tensor。</li><li>数据类型和维度与dy相同，元素个数需要等于C</td>
+          <td><ul><li>不支持空tensor。</li><li>数据类型和维度与dy相同，元素个数需要等于C</li></ul></td>
           <td>FLOAT16、FLOAT、BFLOAT16</td>
           <td>ND</td>
           <td>1</td>
@@ -153,7 +153,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>beta (aclTensor*)</td>
           <td>输入</td>
           <td>每个channel的偏移系数，公式中的<code>beta</code>。</td>
-          <td><ul><li>不支持空tensor。</li><li>数据类型和维度与dy相同，元素个数需要等于C</td>
+          <td><ul><li>不支持空tensor。</li><li>数据类型和维度与dy相同，元素个数需要等于C</li></ul></td>
           <td>FLOAT16、FLOAT、BFLOAT16</td>
           <td>ND</td>
           <td>1</td>

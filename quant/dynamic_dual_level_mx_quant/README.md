@@ -116,7 +116,7 @@
     <tr>
       <td>level0_scale</td>
       <td>输出</td>
-      <td><ul><li>表示第一级量化的scale，对应公式中的level0_scale；</li><li>shape在尾轴上的值，为x尾轴的值除以level0_block_size向上取整。</li></ul></td>
+      <td><ul><li>表示第一级量化的scale，对应公式中的level0_scale；</li><li>shape在尾轴上的值，为x尾轴的值除以level0_block_size向上取整</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>

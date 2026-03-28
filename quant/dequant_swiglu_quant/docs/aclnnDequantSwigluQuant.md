@@ -106,7 +106,8 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>ND</td>
       <td>1或2</td>
       <td>x</td>
-    </tr>
+     </tr>
+    <tr>
       <td>activationScaleOptional（aclTensor*）</td>
       <td>输入</td>
       <td>激活函数的反量化scale，公式中的activationScaleOptional。</td>

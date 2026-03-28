@@ -117,8 +117,7 @@ aclnnStatus aclnnGather(
         <td>index（aclTensor*）</td>
         <td>输入</td>
         <td>公式中的index。</td>
-        <td>维度数需要与self一致，且shape需要与out一致，除dim指定的维度外，其他维度的size需要小于等于self对应维度的size。<br>
-index中的具体数值代表self对应dim轴上的下标，取值范围[-self.shape[dim], self.shape[dim] - 1]，index中的索引不支持越界。</td>
+        <td>维度数需要与self一致，且shape需要与out一致，除dim指定的维度外，其他维度的size需要小于等于self对应维度的size。<br>index中的具体数值代表self对应dim轴上的下标，取值范围[-self.shape[dim], self.shape[dim] - 1]，index中的索引不支持越界。</td>
         <td>INT32、IND64</td>
         <td>-</td>
         <td>0-8</td>

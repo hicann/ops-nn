@@ -68,6 +68,7 @@ aclnnStatus aclnnFusedMatmulGetWorkspaceSize(
   uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
+
 ```cpp
 aclnnStatus aclnnFusedMatmul(
   void            *workspace,
@@ -105,7 +106,7 @@ aclnnStatus aclnnFusedMatmul(
         <td>x1</td>
         <td>输入</td>
         <td>表示矩阵乘的第一个矩阵，对应公式中的x1。</td>
-        <td><ul><li>数据类型需要与x2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></td>
+        <td><li>数据类型需要与x2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
         <td>2</td>
@@ -115,7 +116,7 @@ aclnnStatus aclnnFusedMatmul(
         <td>x2</td>
         <td>输入</td>
         <td>表示矩阵乘的第二个矩阵，对应公式中的x2。</td>
-        <td><ul><li>数据类型需要与x1满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></td>
+        <td><li>数据类型需要与x1满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></td>
         <td>数据类型与x1保持一致</td>
         <td>ND</td>
         <td>2</td>
@@ -125,7 +126,7 @@ aclnnStatus aclnnFusedMatmul(
         <td>bias</td>
         <td>输入</td>
         <td>表示偏置项，对应公式中的bias。</td>
-        <td><ul><li>仅当fusedOpType为""、"relu"、"add"、"mul"时生效，其他情况传入空指针即可。</li></td>
+        <td><li>仅当fusedOpType为""、"relu"、"add"、"mul"时生效，其他情况传入空指针即可。</li></td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
         <td>1-2</td>
@@ -135,7 +136,7 @@ aclnnStatus aclnnFusedMatmul(
         <td>x3</td>
         <td>输入</td>
         <td>表示融合操作的第二个矩阵，对应公式中的x3。</td>
-        <td><ul>-</td>
+        <td>-</td>
         <td>数据类型与x1保持一致</td>
         <td>ND</td>
         <td>2</td>
@@ -145,7 +146,7 @@ aclnnStatus aclnnFusedMatmul(
         <td>y</td>
         <td>输出</td>
         <td>表示计算的输出矩阵，对应公式中的y。</td>
-        <td><ul><li>数据类型需要与x1和x2推导后的数据类型一致（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></td>
+        <td><li>数据类型需要与x1和x2推导后的数据类型一致（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
         <td>2</td>
@@ -171,7 +172,7 @@ aclnnStatus aclnnFusedMatmul(
         <td>fusedOpType</td>
         <td>输入</td>
         <td>表示指定Matmul算子支持的融合模式，对应公式中的OP。</td>
-        <td><ul><li>融合模式取值必须是""（表示不做融合）、"add"、"mul"、"gelu_erf"、"gelu_tanh"、"relu"中的一种。</li></td>
+        <td><li>融合模式取值必须是""（表示不做融合）、"add"、"mul"、"gelu_erf"、"gelu_tanh"、"relu"中的一种。</li></td>
         <td>STRING</td>
         <td>-</td>
         <td>-</td>
@@ -181,7 +182,7 @@ aclnnStatus aclnnFusedMatmul(
         <td>workspaceSize</td>
         <td>输出</td>
         <td>返回用户需要在Device侧申请的workspace大小。</td>
-        <td><ul>-</td>
+        <td>-</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -191,7 +192,7 @@ aclnnStatus aclnnFusedMatmul(
         <td>executor</td>
         <td>输出</td>
         <td>返回op执行器，包含了算子计算流程。</td>
-        <td><ul>-</td>
+        <td>-</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -258,7 +259,6 @@ aclnnStatus aclnnFusedMatmul(
       </tr>
   </tbody></table>
 
-
 ## aclnnFusedMatmul
 
 - **参数说明：**
@@ -301,6 +301,7 @@ aclnnStatus aclnnFusedMatmul(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnFusedMatmul默认确定性实现。
 

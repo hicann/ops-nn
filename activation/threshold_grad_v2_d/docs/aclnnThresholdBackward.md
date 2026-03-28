@@ -104,7 +104,7 @@ aclnnStatus aclnnThresholdBackward(
       <td>0-8</td>
       <td>√</td>
     </tr>
-    <tr>
+    
     <tr>
       <td>out（aclTensor*）</td>
       <td>输出</td>

@@ -76,7 +76,6 @@ aclnnStatus aclnnMultilabelMarginLoss(
 
 - **参数说明**
 
-  </style>
   <table class="tg" style="undefined;table-layout: fixed; width: 1475px"><colgroup>
   <col style="width: 205px">
   <col style="width: 120px">
@@ -176,7 +175,7 @@ aclnnStatus aclnnMultilabelMarginLoss(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  </style>
+
   <table class="tg" style="undefined;table-layout: fixed; width: 1150px"><colgroup>
   <col style="width: 269px">
   <col style="width: 120px">
@@ -425,4 +424,3 @@ int main() {
   return 0;
 }
 ```
-

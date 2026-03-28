@@ -128,6 +128,7 @@ aclnnStatus aclnnQuantMatmulDequant(
       <td>2、4</td>
       <td>√</td>
     </tr>
+      <tr>
       <td>weightScale（aclTensor*）</td>
       <td>输入</td>
       <td>表示weight的量化系数，公式中的scale_{weight}。</td>

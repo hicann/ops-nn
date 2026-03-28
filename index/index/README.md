@@ -61,6 +61,7 @@
       <td>INT32、INT64</td>
       <td>ND</td>
     </tr>
+    <tr>
       <td>y</td>
       <td>输出</td>
       <td>根据索引取出后的数据。</td>

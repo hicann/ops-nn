@@ -58,7 +58,6 @@
       <td>ND</td>
     </tr>
     <tr>
-    <tr>
       <td>dim</td>
       <td>属性</td>
       <td><ul><li>需要进行切分的维度序号。</li><li>取值范围为[-x.dim(), x.dim()-1]。</li></ul></td>

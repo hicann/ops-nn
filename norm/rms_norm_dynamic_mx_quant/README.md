@@ -83,21 +83,21 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td><ul><li>表示标准化过程中的源数据张量，对应公式中的`x`。</td></li></ul>
+      <td><ul><li>表示标准化过程中的源数据张量，对应公式中的`x`。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>gamma</td>
       <td>输入</td>
-      <td><ul><li>表示标准化过程中的权重张量，对应公式中的`gamma`。shape需要与x最后一维一致。</td></li></ul>
+      <td><ul><li>表示标准化过程中的权重张量，对应公式中的`gamma`。shape需要与x最后一维一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>beta</td>
       <td>可选输入</td>
-      <td><ul><li>表示标准化过程中的偏置项，对应公式中的`beta`。shape必须与gamma一致。</td></li></ul>
+      <td><ul><li>表示标准化过程中的偏置项，对应公式中的`beta`。shape必须与gamma一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
@@ -160,7 +160,9 @@
   </tbody></table>
 
 ## 约束说明
+
 <term>Ascend 950PR/Ascend 950DT</term>：
+
 - mxscale的shape约束说明如下：
   - rank(mxscale) = rank(x) + 1。
   - mxscale.shape[-2] = (ceil(x.shape[-1] / 32) + 2 - 1) / 2。
@@ -170,6 +172,7 @@
 - 当输出yOut的数据类型为FLOAT4_E2M1或FLOAT4_E1M2，x尾轴的值必须为偶数。
 
 - 输入gamma、可选输入beta的数据类型只能和x的数据类型保持一致或者为FLOAT32。
+
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |

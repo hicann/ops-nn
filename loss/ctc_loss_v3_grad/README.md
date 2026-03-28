@@ -86,6 +86,7 @@
       <td>输入序列追踪到目标序列的概率。</td>
       <td>FLOAT16、FLOAT32、BFLOAT16、DOUBLE</td>
       <td>ND</td>
+      </tr>
     <tr>
       <td>blank</td>
       <td>属性</td>
@@ -124,7 +125,7 @@
 * input_lengths的元素数量必须为N，值为[0, T]。
 * target_lengths的元素数量必须为N，值为[1, S]。
 * neg_log_likelihood的shape必须为1维(N)。
-* log_alpha的shape必须为3维(N, T, X)，其中X=((2 * S + 1) + 7) / 8 * 8。
+* log_alpha的shape必须为3维(N,T,X)，其中X=((2 * S + 1) + 7) / 8 * 8。
 * blank的值域为[0, C - 1]。
 * reduction的取值范围为{'none', 'mean', 'sum'}。
 

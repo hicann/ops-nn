@@ -1,6 +1,6 @@
 # GatherElements
 
-##  产品支持情况
+## 产品支持情况
 
 | 产品 | 是否支持 |
 | ---- | :----:|
@@ -68,7 +68,7 @@
     <tr>
       <td>dim</td>
       <td>可选属性</td>
-      <td><ul><li>公式中的d。</li><li>默认值为0。</li></td>
+      <td><ul><li>公式中的d。</li><li>默认值为0。</li></ul></td>
       <td>Int</td>
       <td>-</td>
     </tr>
@@ -83,8 +83,3 @@
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_gather_elements_v3.cpp](./examples/test_aclnn_gather_elements_v3.cpp) | 通过[test_aclnn_gather_elements_v3.cpp]接口方式调用GatherElements算子。 |
-
-
-
-
-

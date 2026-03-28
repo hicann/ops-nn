@@ -421,7 +421,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>implMode（int32_t）</td>
       <td>输入</td>
       <td>表示用于指定kernel选择对应的计算模式。</td>
-      <td>支持配置为0，1，2，默认配置为0。0代表高精度模式，1代表高性能模式，2代表保持FLOAT16计算模式。高性能模式谨慎使用，有精度损失；保持FLOAT16计算模式仅支持所有输入同时为FLOAT16的场景，且计算精度最低。</li></ul></td>
+      <td>支持配置为0，1，2，默认配置为0。0代表高精度模式，1代表高性能模式，2代表保持FLOAT16计算模式。高性能模式谨慎使用，有精度损失；保持FLOAT16计算模式仅支持所有输入同时为FLOAT16的场景，且计算精度最低。</td>
       <td>INT32</td>
       <td>-</td>
       <td>-</td>
@@ -451,7 +451,6 @@ aclnnStatus aclnnLayerNormWithImplMode(
   </table>
 
   - <term>Atlas 训练系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：参数`input`、`weightOptional`、`biasOptional`、`out`、`meanOutOptional`、`rstdOutOptional`的数据类型不支持BFLOAT16。
-
 
 - **返回值：**
 
@@ -514,7 +513,6 @@ aclnnStatus aclnnLayerNormWithImplMode(
 ## aclnnLayerNormWithImplMode
 
 - **参数说明：**
-
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -770,7 +768,6 @@ aclnnStatus aclnnLayerNormWithImplMode(
   }
   ```
 
-
 - aclnnLayerNormWithImplMode示例：
 
   ```Cpp
@@ -991,3 +988,4 @@ aclnnStatus aclnnLayerNormWithImplMode(
       return 0;
   }
   ```
+  
