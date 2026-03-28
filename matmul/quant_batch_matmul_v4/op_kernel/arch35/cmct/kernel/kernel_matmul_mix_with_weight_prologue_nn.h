@@ -17,7 +17,7 @@
 #define QUANT_BATCH_MATMUL_V4_ARCH35_CMCT_KERNEL_KERNEL_MATMUL_MIX_WITH_WEIGHT_PROLOGUE_NN_H
 
 #include "cmct/kernel/kernel_matmul_mix_with_weight_prologue.h"
-#include "../../quant_batch_matmul_v4_tiling_data.h"
+#include "../../quant_batch_matmul_v4_tiling_data_apt.h"
 
 namespace QuantBatchMatmulV4 {
 namespace Kernel {

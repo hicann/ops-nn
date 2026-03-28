@@ -44,6 +44,7 @@ private:
     aclnnStatus CheckDtypeL0c2outOrL0c2ub() const;
     bool CheckDoubleScaleAndFp8Hif8PertokenPerblock() const;
     bool CheckL0c2outOrL0c2ubPertoken() const;
+    bool CheckL0C2outOrL0C2ubPertokenPergroup() const;
     bool CheckMicroScaling() const;
     bool CheckL0c2outOrL0c2ubPertensorPerchannel() const;
     bool CheckL0c2outOrL0c2ubPertensorPerchannel4Int8Input() const;
@@ -74,6 +75,12 @@ private:
     std::string GetX1ScaleName() const;
     std::string GetX2ScaleName() const;
     std::string GetX2OffsetName() const;
+    bool InferGroupSizeM(const aclTensor *x1, const aclTensor *x1Scale, const aclTensor *x2Scale,
+                         bool transX1, uint64_t &groupSizeM) const;
+    bool InferGroupSizeK(const aclTensor *x1, const aclTensor *x1Scale, const aclTensor *x2Scale,
+                         bool transX1, uint64_t &groupSizeK) const;
+    bool InferGroupSizeN(const aclTensor *x2, const aclTensor *x1Scale, const aclTensor *x2Scale,
+                         bool transX2, uint64_t groupSizeK, uint64_t &groupSizeN) const;
     bool ReCalcGroupSize(int64_t inputSize, int64_t scaleSize, uint64_t &groupSize, const char *dimensionName) const;
 
 public:

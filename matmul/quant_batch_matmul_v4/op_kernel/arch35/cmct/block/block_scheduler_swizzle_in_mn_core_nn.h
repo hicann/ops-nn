@@ -16,7 +16,7 @@
 #ifndef QUANT_BATCH_MATMUL_V4_ARCH35_CMCT_BLOCK_BLOCK_SCHEDULER_SWIZZLE_IN_MN_CORE_NN_H
 #define QUANT_BATCH_MATMUL_V4_ARCH35_CMCT_BLOCK_BLOCK_SCHEDULER_SWIZZLE_IN_MN_CORE_NN_H
 #include "cmct/block/block_scheduler_swizzle_in_mn_core.h"
-#include "../../quant_batch_matmul_v4_tiling_data.h"
+#include "../../quant_batch_matmul_v4_tiling_data_apt.h"
 /*
 iterateOrder = 0
 scheduler diagram c:core b:block

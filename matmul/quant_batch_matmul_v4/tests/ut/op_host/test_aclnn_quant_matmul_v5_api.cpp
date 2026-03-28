@@ -1246,3 +1246,37 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_test_case_A4W4_PERGROUP_4)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
+
+TEST_F(l2_QuantBatchMatmulV5_test_950, ascend910D_A4W4_test_case_PERTOKEN_PERGROUP_0)
+{
+    // A4W4 pertoken-pergroup_scale out: bf16
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x1_desc = TensorDesc({9, 1024}, ACL_INT4, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({256, 1024}, ACL_INT4, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x1scale_desc = TensorDesc({9,1}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2scale_desc = TensorDesc({4, 256}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2offset_desc = TensorDesc({4, 256}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({9, 256}, ACL_BF16, ACL_FORMAT_ND);
+    int64_t groupSize = 256L;
+    auto ut = OP_API_UT(aclnnQuantMatmulV5, INPUT(x1_desc, x2_desc, x1scale_desc, x2scale_desc, nullptr, nullptr, x2offset_desc, nullptr, nullptr, false, true, groupSize), OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_QuantBatchMatmulV5_test_950, ascend910D_A4W4_test_case_PERTOKEN_PERGROUP_1)
+{
+    // A4W4 pertoken-pergroup_scale out: float16
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x1_desc = TensorDesc({9, 1024}, ACL_INT4, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({256, 1024}, ACL_INT4, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x1scale_desc = TensorDesc({9,1}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2scale_desc = TensorDesc({4, 256}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2offset_desc = TensorDesc({4, 256}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({9, 256}, ACL_FLOAT16, ACL_FORMAT_ND);
+    int64_t groupSize = 256L;
+    auto ut = OP_API_UT(aclnnQuantMatmulV5, INPUT(x1_desc, x2_desc, x1scale_desc, x2scale_desc, nullptr, nullptr, x2offset_desc, nullptr, nullptr, false, true, groupSize), OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}

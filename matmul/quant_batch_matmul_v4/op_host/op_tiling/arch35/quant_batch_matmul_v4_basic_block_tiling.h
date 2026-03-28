@@ -23,7 +23,7 @@
 #include <vector>
 
 #include "error_util.h"
-#include "../../../op_kernel/arch35/quant_batch_matmul_v4_tiling_data.h"
+#include "../../../op_kernel/arch35/quant_batch_matmul_v4_tiling_data_apt.h"
 
 using std::ignore;
 using std::make_tuple;

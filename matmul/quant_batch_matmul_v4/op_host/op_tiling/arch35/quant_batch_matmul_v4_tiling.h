@@ -27,7 +27,7 @@
 #include "quant_batch_matmul_v4_basic_block_tiling.h"
 #include "../../../../weight_quant_batch_matmul_v2/op_host/op_tiling/weight_quant_batch_matmul_v2_tiling_tool.h"
 #include "../quant_batch_matmul_v4_compile_info.h"
-#include "../../../op_kernel/arch35/quant_batch_matmul_v4_tiling_data.h"
+#include "../../../op_kernel/arch35/quant_batch_matmul_v4_tiling_data_apt.h"
 
 namespace optiling {
 using matmul_tiling::MatrixTraverse;
@@ -99,7 +99,8 @@ enum class QuantType : uint32_t {
     PER_CHANNEL = 2,
     PER_GROUP = 3,
     MX = 4,
-    PER_TILE = 5
+    PER_TILE = 5,
+    INT4_ASYMMETRICAL = 6
 };
 
 enum class KernelTemplateType : uint32_t {

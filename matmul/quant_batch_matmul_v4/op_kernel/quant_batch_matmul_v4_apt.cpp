@@ -30,6 +30,15 @@
 #define CMCT_PRETILE_INT8_INT8_BF16 0
 #endif
 
+#if (defined(ORIG_DTYPE_X1) && defined(DT_INT4) && (ORIG_DTYPE_X1 == DT_INT4)) &&               \
+    (defined(ORIG_DTYPE_X2) && defined(DT_INT4) && (ORIG_DTYPE_X2 == DT_INT4)) &&               \
+    (defined(ORIG_DTYPE_X1_SCALE) && defined(DT_FLOAT) && (ORIG_DTYPE_X1_SCALE == DT_FLOAT)) && \
+    (defined(ORIG_DTYPE_X2_SCALE) && defined(DT_FLOAT) && (ORIG_DTYPE_X2_SCALE == DT_FLOAT))
+#define CMCT_PRETILE_INT4_INT4_ASYMMETRICAL 1
+#else
+#define CMCT_PRETILE_INT4_INT4_ASYMMETRICAL 0
+#endif
+
 // if run with ttk without bias, can't get DTYPE_BIAS macro
 #ifndef DTYPE_BIAS
 #if CMCT_PRETILE_INT8_INT8_BF16
@@ -51,20 +60,29 @@
 #endif
 
 #include "arch35/quant_batch_matmul_v4_tiling_key.h"
-#include "arch35/quant_batch_matmul_v4_tiling_data.h"
+#include "arch35/quant_batch_matmul_v4_tiling_data_apt.h"
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
 // define DTYPE_X2 should before cmct
+#if CMCT_PRETILE_INT4_INT4_ASYMMETRICAL
+#include "quant_batch_matmul_v4_tiling_data.h"
+#include "../quant_batch_matmul_v3/arch35/qbmm_int4_to_int8_preprocess.h"
+#include "quant_batch_matmul_v4_constant.h"
+#include "arch35/quant_batch_matmul_v4_pertoken_pergroup.h"
+#else
 #include "arch35/cmct_convertor.h"
 #include "arch35/quant_batch_matmul_v4_constant.h"
 #include "arch35/quant_batch_matmul_v4_perchannel.h"
 #include "../quant_batch_matmul_v3/arch35/qbmm_mix_pertile_cmct.h"
+#endif
 #else
 #include "../quant_batch_matmul_v3/quant_batch_matmul_v3_base.h"
 #include "../quant_batch_matmul_v3/arch35/qbmm_cube_on_the_fly.h"
 #include "../quant_batch_matmul_v3/arch35/qbmm_cube_on_the_fly_al1_full_load.h"
 using namespace AscendC;
 #endif
+
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if !CMCT_PRETILE_INT4_INT4_ASYMMETRICAL
 using namespace QuantBatchMatmulV4;
 namespace QuantBatchMatmulV4 {
 namespace Arch35 {
@@ -88,6 +106,7 @@ __aicore__ inline void InvokeWeightQuantBmmOpImpl(GM_ADDR x1, GM_ADDR x2, GM_ADD
 }
 }  // namespace Arch35
 }  // namespace QuantBatchMatmulV4
+#endif
 #endif
 
 #define QBMM_QUANT_GB_IMPL_CLASS(xLayout, wLayout, yLayout)                                                     \
@@ -122,7 +141,41 @@ __global__ __aicore__ void quant_batch_matmul_v4(
             Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajorAlign);
     }
 #else
-    REGISTER_TILING_DEFAULT(qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams);
+#if CMCT_PRETILE_INT4_INT4_ASYMMETRICAL
+    REGISTER_TILING_DEFAULT(QuantBatchMatmulV3TilingData);
+    if (QUANT_TYPE == QBMMV4_INT4_ASYMMETRICAL) {
+        GET_TILING_DATA(tilingData, tiling);
+        AscendC::TPipe tPipe;
+
+        GM_ADDR userWS = AscendC::GetUserWorkspace(workspace);
+        auto* tilingData_ = static_cast<QuantBatchMatmulV3TilingData*>(&tilingData);
+        uint64_t m = tilingData_->matmulTiling.M;
+        uint64_t n = tilingData_->matmulTiling.N;
+        uint64_t k = tilingData_->matmulTiling.Ka;
+        uint64_t batchC = tilingData_->params.batchC;
+        QbmmInt4ToInt8Preprocess preprocessOp;
+        if ASCEND_IS_AIV {
+            preprocessOp.Init(x1, x2, userWS, tPipe, m, n, k, batchC);
+            preprocessOp.Process();
+            tPipe.Reset();
+        }
+        SyncAll<false>();
+
+        constexpr uint64_t ALIGN_SIZE_128 = 128;
+        uint64_t x1TotalElems = batchC * m * k;
+        uint64_t x2TotalElems = batchC * k * n;
+        uint64_t offsetA = 0;
+        uint64_t offsetB = DequantBmm::Align(x1TotalElems * sizeof(int8_t), ALIGN_SIZE_128);
+        uint64_t offsetMMOut = offsetB + DequantBmm::Align(x2TotalElems * sizeof(int8_t), ALIGN_SIZE_128);
+        AscendC::QuantBatchMatmulV4Pergroup<int8_t, int8_t, float, float, DTYPE_Y> op;
+        op.Init(
+            userWS + offsetA, userWS + offsetB, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, y,
+            userWS + offsetMMOut, tilingData_, &tPipe);
+        op.Process();
+        tPipe.Destroy();
+    }
+#else
+    REGISTER_TILING_DEFAULT(DequantBmm::QuantBatchMatmulV3TilingDataParams);
     if (QUANT_TYPE == QBMMV4_PER_GROUP) {
         constexpr bool isTransA = TRANS == QBMMV4_A_TRANS || TRANS == QBMMV4_ALL_TRANS;
         constexpr bool isTransB = TRANS == QBMMV4_B_TRANS || TRANS == QBMMV4_ALL_TRANS;
@@ -133,6 +186,7 @@ __global__ __aicore__ void quant_batch_matmul_v4(
     } else if (QUANT_TYPE == QBMMV4_MX) {
         QuantBatchMatmulV4::InvokeKernel<WEIGHTNZ>(KERNEL_PARAMS);
     }
+#endif
 #endif
 
 #else

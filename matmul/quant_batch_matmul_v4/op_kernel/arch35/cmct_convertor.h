@@ -28,7 +28,7 @@
 #include "kernel_operator.h"
 #endif
 #include "lib/std/type_traits.h"
-#include "quant_batch_matmul_v4_tiling_data.h"
+#include "quant_batch_matmul_v4_tiling_data_apt.h"
 
 namespace QuantBatchMatmulV4 {
 using AscendC::fp8_e8m0_t;

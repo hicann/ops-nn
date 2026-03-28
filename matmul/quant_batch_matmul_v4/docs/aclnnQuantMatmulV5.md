@@ -130,7 +130,19 @@
 
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
-    支持T-C && T-T、K-C && K-T、G-B、B-B、mx、T-CG [量化模式](../../../docs/zh/context/量化介绍.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
+    支持T-C && T-T、K-C && K-T、G-B、B-B、mx、T-CG、K-G [量化模式](../../../docs/zh/context/量化介绍.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
+
+    <details>
+    
+    <summary><term><strong>K-G量化模式</strong></term></summary>
+        
+      - x1，x2为INT4，x1Scale，x2Scale为FLOAT32，x2Offset为FLOAT16，out为FLOAT16/BFLOAT16 (pertoken-pergroup非对称量化)：
+
+        $$
+        out = x1Scale * x2Scale @ (x1 @ x2 - x1 @ x2Offset)
+        $$
+
+    </details>
 
     <details>
 
@@ -886,6 +898,32 @@ aclnnStatus aclnnQuantMatmulV5(
   - T-CG量化模式下，bias是预留参数，当前版本不支持，需要传入nullptr。
   - T-CG量化模式下，transposeX1为false。数据格式支持ND格式。要求支持k是64的倍数，transposeX2为true。
   - T-CG量化模式下，[groupSizeM，groupSizeN，groupSizeK]取值组合支持[0, 0, 32]和[1, 1, 32]，对应的groupSize值分别为32和4295032864。
+
+  </details>
+
+  <details>
+
+  <summary><term><strong>K-G量化场景约束：</strong></term></summary>
+  <a id="K-G量化"></a>
+
+  - 输入和输出支持以下数据类型组合：
+  <a id="输入和输出支持以下数据类型组合K-G"></a>
+
+      | x1                        | x2                        | x1Scale     | x2Scale         | x2Offset    | yScale   | bias         | yOffset    | out                                    |
+      | ------------------------- | ------------------------- | ----------- | -----------     | ----------- | -------  | ------------ | -----------| -------------------------------------- |
+      | INT4                      | INT4                      | FLOAT32     | FLOAT32         | FLOAT16     | null     | null         | null       | BFLOAT16/FLOAT16                               |
+
+  - x1、x2、x1Scale、x2Scale和groupSize的取值关系：
+
+    |量化类型| x1数据类型                 | x2数据类型                 | x1Scale数据类型| x2Scale数据类型| x1 shape | x2 shape| x1Scale shape| x2Scale shape| yOffset shape| [gsM，gsN，gsK]|
+    | ----- | ------------------------- | ------------------------- | -------------- | ------------- | -------- | ------- | ------------ | ------------ | ------------ | ------------ |
+    | K-G量化 | INT4                    |INT4                    |FLOAT32              |FLOAT32             |(m, k)|(n, k)|(m, 1)|(ceil(k / 256), n)| null | [0, 0, 256]|
+  - x1的约束：
+    - 当数据类型为INT4时，k需与1024对齐。transposeX1为false。
+  - x2的约束：
+    - 当数据类型为INT4时，k需与1024对称，n需与256对齐。transposeX2为true，
+  - x2Scale的约束：
+    - 当x1、x2为INT4时，x2Scale的shape为(ceil(k / 256), n)。
 
   </details>
 

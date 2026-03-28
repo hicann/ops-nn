@@ -9,12 +9,12 @@
  */
 
 /*!
- * \file quant_batch_matmul_v4_tiling_data.h
+ * \file quant_batch_matmul_v4_tiling_data_apt.h
  * \brief
  */
 
-#ifndef QUANT_BATCH_MATMUL_V4_TILING_DATA_H
-#define QUANT_BATCH_MATMUL_V4_TILING_DATA_H
+#ifndef QUANT_BATCH_MATMUL_V4_TILING_DATA_APT_H
+#define QUANT_BATCH_MATMUL_V4_TILING_DATA_APT_H
 #include "kernel_tiling/kernel_tiling.h" // TCubeTiling结构体通过C++语法定义
 
 #ifndef __CCE_AICORE__
@@ -174,4 +174,6 @@ struct QuantBatchMatmulV4TilingDataParams {
 };
 #pragma pack(pop)
 } // namespace qbmmv4_tiling
-#endif // QUANT_BATCH_MATMUL_V4_TILING_DATA_H
+#endif // QUANT_BATCH_MATMUL_V4_TILING_DATA_APT_H
+
+

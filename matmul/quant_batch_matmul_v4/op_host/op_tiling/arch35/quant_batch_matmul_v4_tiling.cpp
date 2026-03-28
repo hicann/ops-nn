@@ -31,7 +31,7 @@
 #include "matmul/common/op_host/math_util.h"
 #include "platform/platform_infos_def.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
-#include "../../../op_kernel/arch35/quant_batch_matmul_v4_tiling_data.h"
+#include "../../../op_kernel/arch35/quant_batch_matmul_v4_tiling_data_apt.h"
 
 using AscendC::BLOCK_CUBE;
 using namespace Ops::NN;

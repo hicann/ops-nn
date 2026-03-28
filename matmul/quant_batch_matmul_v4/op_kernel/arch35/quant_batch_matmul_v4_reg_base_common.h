@@ -18,7 +18,7 @@
 
 #include "lib/matmul_intf.h"
 #include "quant_batch_matmul_v4_constant.h"
-#include "quant_batch_matmul_v4_tiling_data.h"
+#include "quant_batch_matmul_v4_tiling_data_apt.h"
 #include "quant_batch_matmul_v4_vf.h"
 
 using AscendC::BLOCK_CUBE;

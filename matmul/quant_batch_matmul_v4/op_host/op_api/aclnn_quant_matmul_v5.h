@@ -29,7 +29,7 @@ extern "C" {
  * @param [in] x2Scale: x2量化参数，数据类型支持：float8_e8m0, bfloat16, float32, int64, uint64。
  * @param [in] yScale: y量化参数，数据类型支持：int64、uint64。
  * @param [in] x1Offset: 预留参数，当前接口不支持该参数。
- * @param [in] x2Offset: 量化参数，数据类型支持：float32。
+ * @param [in] x2Offset: 量化参数，数据类型支持：float32, float16。
  * @param [in] yOffset: 预留参数，当前接口不支持该参数。
  * @param [in] bias: 偏置，数据类型支持：int32, bfloat16, float16, float32。
  * @param [in] transposeX1: x1矩阵是否转置。
