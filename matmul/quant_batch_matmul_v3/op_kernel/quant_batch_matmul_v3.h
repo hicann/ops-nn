@@ -211,12 +211,12 @@ protected:
                 // m1, k1, k0, m0
                 offsetA_ = DequantBmm::Align(mOffset, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM) +
                            DequantBmm::Align(kOffset, BMM_BLOCK_NUM) * K0_INT8 +
-                           batchBOffset * DequantBmm::Align(m_, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM);
+                           batchAOffset * DequantBmm::Align(m_, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM);
             } else {
                 // k1, m1, m0, k0
                 offsetA_ = DequantBmm::Align(mOffset, BMM_BLOCK_NUM) * K0_INT8 +
                            DequantBmm::Align(kOffset, K0_INT8) * DequantBmm::Align(m_, BMM_BLOCK_NUM) +
-                           batchBOffset * DequantBmm::Align(m_, BMM_BLOCK_NUM) * DequantBmm::Align(k_, K0_INT8);
+                           batchAOffset * DequantBmm::Align(m_, BMM_BLOCK_NUM) * DequantBmm::Align(k_, K0_INT8);
             }
         }
 
