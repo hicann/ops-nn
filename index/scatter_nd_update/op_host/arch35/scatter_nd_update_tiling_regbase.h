@@ -53,7 +53,10 @@ protected:
     void DoOpTilingSimdSplitIndices();
     void DoOpTilingForSimdNonDetermin();
     void DoOpTilingForSimdMask();
-    void DoOpTilingForDeterminstic();
+    void DoOpTilingForDeterministic();
+    void CalcDeterministicCoreSplit();
+    void CalcDeterministicUpdateSplit(int64_t ubBlock);
+    void CalcDeterministicIndicesSplit(int64_t ubBlock);
     void CalculateMask();
     uint64_t GetTilingKey() const override;
     void ComputeCoreSplitAfterAxis();
@@ -130,6 +133,12 @@ private:
     int64_t isSimtWithSort_ = 0;
     int64_t isMask_ = 0;
     int64_t isSimdNonDeterminstic_ = 0;
+
+    int64_t indicesUbFactor_ = 0;
+    int64_t normBlockLoop_ = 0;
+    int64_t tailBlockLoop_ = 0;
+    int64_t normBlockTail_ = 0;
+    int64_t tailBlockTail_ = 0;
 
     // 处理AtomicMax
     int64_t normCoreHandleIdx_ = 0;

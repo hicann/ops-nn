@@ -69,5 +69,11 @@ public:
     int64_t maskNormBlockLen = 0;
     int64_t maskTailBlockLen = 0;
     int64_t isDeterminSimt = 0;
+
+    int64_t indicesUbFactor = 0;
+    int64_t normBlockLoop = 0;
+    int64_t tailBlockLoop = 0;
+    int64_t normBlockTail = 0;
+    int64_t tailBlockTail = 0;
 };
 #endif

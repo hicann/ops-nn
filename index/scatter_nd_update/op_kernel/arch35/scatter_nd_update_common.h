@@ -37,6 +37,12 @@ constexpr float SORT_HIST_THRESHOLD = 0.01f;
 constexpr uint32_t HASH_SCORE_BUF_SIZE = 128;
 constexpr uint32_t MASK_DEFAULT = 0;
 
+#ifdef __DAV_FPGA__
+constexpr uint32_t THREAD_NUM_DETERMINISTIC = 256;
+#else
+constexpr uint32_t THREAD_NUM_DETERMINISTIC = 1024;
+#endif
+
 static constexpr SortConfig sortConfig{SortType::RADIX_SORT, false};
 
 template <typename T, typename U>
@@ -66,21 +72,23 @@ public:
     TQue<QuePosition::VECIN, DOUBLE_BUFFER> updatesOriginIdexQue_;
     TQue<QuePosition::VECIN, DOUBLE_BUFFER> uniqueIdCountQue_;
 
-    using IndexRegType = typename std::conditional<IsSameType<U, int64_t>::value,
-                         typename AscendC::MicroAPI::RegTensor<uint64_t, AscendC::MicroAPI::RegTraitNumTwo>,
-                         typename AscendC::MicroAPI::RegTensor<uint32_t>>::type;  
-    using InnerRegType = typename std::conditional<IsSameType<U, int64_t>::value,
-                         typename AscendC::MicroAPI::RegTensor<int64_t, AscendC::MicroAPI::RegTraitNumTwo>,
-                         typename AscendC::MicroAPI::RegTensor<int32_t>>::type;
+    using IndexRegType = typename std::conditional<
+        IsSameType<U, int64_t>::value,
+        typename AscendC::MicroAPI::RegTensor<uint64_t, AscendC::MicroAPI::RegTraitNumTwo>,
+        typename AscendC::MicroAPI::RegTensor<uint32_t>>::type;
+    using InnerRegType = typename std::conditional<
+        IsSameType<U, int64_t>::value,
+        typename AscendC::MicroAPI::RegTensor<int64_t, AscendC::MicroAPI::RegTraitNumTwo>,
+        typename AscendC::MicroAPI::RegTensor<int32_t>>::type;
 
     using selRegType = typename std::conditional<IsSameType<T, bool>::value, int8_t, T>::type;
 
     __aicore__ inline void InitBaseBuffer(
-        TPipe &pipe, uint32_t indicesNumber, GM_ADDR indices, GM_ADDR updates, GM_ADDR y)
+        TPipe& pipe, uint32_t indicesNumber, GM_ADDR indices, GM_ADDR updates, GM_ADDR y)
     {
-        indicesGm_.SetGlobalBuffer((__gm__ U *)(indices));
-        updatesGm_.SetGlobalBuffer((__gm__ T *)(updates));
-        yGm_.SetGlobalBuffer((__gm__ T *)(y));
+        indicesGm_.SetGlobalBuffer((__gm__ U*)(indices));
+        updatesGm_.SetGlobalBuffer((__gm__ T*)(updates));
+        yGm_.SetGlobalBuffer((__gm__ T*)(y));
 
         pipe.InitBuffer(strideBuf_, MAX_RANK_COUNT * sizeof(U));
         pipe.InitBuffer(dataQueue_, DOUBLE_BUFFER, indicesFactor_ * afterAxisFactor_ * sizeof(T));
@@ -89,33 +97,32 @@ public:
         pipe.InitBuffer(maxScoreBuf_, HASH_SCORE_BUF_SIZE * sizeof(float));
 
         pipe.InitBuffer(
-            sortIndicesQue_, Ops::Base::CeilAlign(indicesFactor_ * sizeof(U) + SORT_PAD_NUM * UB_AGLIN_VALUE, UB_AGLIN_VALUE));
+            sortIndicesQue_,
+            Ops::Base::CeilAlign(indicesFactor_ * sizeof(U) + SORT_PAD_NUM * UB_AGLIN_VALUE, UB_AGLIN_VALUE));
         pipe.InitBuffer(updatesOriginIdexQue_, DOUBLE_BUFFER, indicesFactor_ * sizeof(uint32_t));
         pipe.InitBuffer(
             uniqueIdCountQue_, DOUBLE_BUFFER, Ops::Base::CeilAlign((indicesFactor_ + 1) * sizeof(int32_t), UB_AGLIN_VALUE));
     }
 
     template <typename PARAM_T>
-    __aicore__ inline void CopyIn(const LocalTensor<PARAM_T>& dstTensor, const GlobalTensor<PARAM_T>& srcTensor, int64_t dataLen)
+    __aicore__ inline void CopyIn(
+        const LocalTensor<PARAM_T>& dstTensor, const GlobalTensor<PARAM_T>& srcTensor, int64_t dataLen)
     {
-        DataCopyExtParams copyParams = {static_cast<uint16_t>(1), 
-                                        static_cast<uint32_t>(dataLen * sizeof(PARAM_T)),
-                                        static_cast<uint32_t>(0),
-                                        static_cast<uint32_t>(0),
-                                        static_cast<uint32_t>(0)};
+        DataCopyExtParams copyParams = {
+            static_cast<uint16_t>(1), static_cast<uint32_t>(dataLen * sizeof(PARAM_T)), static_cast<uint32_t>(0),
+            static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
         DataCopyPadExtParams<PARAM_T> padParams = {
             false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<PARAM_T>(0)};
         DataCopyPad(dstTensor, srcTensor, copyParams, padParams);
     }
 
     template <typename PARAM_T>
-    __aicore__ inline void CopyOut(const GlobalTensor<PARAM_T>& dstTensor, const LocalTensor<PARAM_T>& srcTensor, int64_t dataLen)
+    __aicore__ inline void CopyOut(
+        const GlobalTensor<PARAM_T>& dstTensor, const LocalTensor<PARAM_T>& srcTensor, int64_t dataLen)
     {
-        DataCopyExtParams copyParams = {static_cast<uint16_t>(1),
-                                        static_cast<uint32_t>(dataLen * sizeof(PARAM_T)),
-                                        static_cast<uint32_t>(0),
-                                        static_cast<uint32_t>(0),
-                                        static_cast<uint32_t>(0)};
+        DataCopyExtParams copyParams = {
+            static_cast<uint16_t>(1), static_cast<uint32_t>(dataLen * sizeof(PARAM_T)), static_cast<uint32_t>(0),
+            static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
         DataCopyPad(dstTensor, srcTensor, copyParams);
     }
 
@@ -123,6 +130,7 @@ public:
         const LocalTensor<U> indicesLocal, const LocalTensor<U> outOfstLocal, int32_t indicesLen, int32_t rankSize)
     {
         LocalTensor<U> strideLocal = strideBuf_.Get<U>();
+
         __local_mem__ U* indicesLocalPtr = ((__local_mem__ U*)indicesLocal.GetPhyAddr());
         __local_mem__ U* outOfstLocalPtr = ((__local_mem__ U*)outOfstLocal.GetPhyAddr());
 
@@ -161,11 +169,10 @@ public:
                 AscendC::MicroAPI::DataCopy(outOfstAddr, outReg, pregLoop);
             }
         }
-        return;
     }
 
-    __aicore__ uint32_t ComputeUniqueIdNum(
-        LocalTensor<U> indicesLocal, LocalTensor<int32_t> uniqueIdCountLocal, int64_t dataLen)
+    __aicore__ uint32_t
+    ComputeUniqueIdNum(LocalTensor<U> indicesLocal, LocalTensor<int32_t> uniqueIdCountLocal, int64_t dataLen)
     {
         __local_mem__ U* indicesAddr = (__local_mem__ U*)indicesLocal[shiftOffset_].GetPhyAddr();
         __local_mem__ int32_t* uniqueIdCountsAddr = (__local_mem__ int32_t*)uniqueIdCountLocal.GetPhyAddr();
@@ -221,7 +228,7 @@ public:
             shiftSortLocal, updatesOriginIdexLocal, outOfstLocal, static_cast<uint32_t>(rowLen));
         Duplicate(sortIndicesLocal, (U)-1, shiftOffset_);
         shiftSortLocal(rowLen) = -1;
-        
+
         event_t eventIdSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
         SetFlag<HardEvent::S_V>(eventIdSToV);
         WaitFlag<HardEvent::S_V>(eventIdSToV);
@@ -236,7 +243,7 @@ public:
         LocalTensor<U> indicesLocal = indicesBuf_.Get<U>();
         LocalTensor<U> outOfstLocal = outOfstBuf_.Get<U>();
         LocalTensor<float> dstLocal = maxScoreBuf_.Get<float>();
-        
+
         int64_t rankSize = indexRankSize_;
         int64_t indicesOfset = rowIdx * indicesFactor_;
         CopyIn<U>(indicesLocal, indicesGm_[indicesOfset * rankSize], rowLen * rankSize);
@@ -251,16 +258,14 @@ public:
         }
     }
 
-    __aicore__ inline void CopyUpdatesInSplitAfter(
-        int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen)
+    __aicore__ inline void CopyUpdatesInSplitAfter(int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen)
     {
         LocalTensor<T> updatesLocal = this->dataQueue_.template AllocTensor<T>();
         int64_t indicesOfset = rowIdx * indicesFactor_;
-        DataCopyExtParams copyParams = {static_cast<uint16_t>(rowLen),
-                                        static_cast<uint32_t>(colLen * sizeof(T)),
-                                        static_cast<uint32_t>((afterAxis_ - colLen) * sizeof(T)),
-                                        static_cast<uint32_t>(0),
-                                        static_cast<uint32_t>(0)};
+        DataCopyExtParams copyParams = {
+            static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen * sizeof(T)),
+            static_cast<uint32_t>((afterAxis_ - colLen) * sizeof(T)), static_cast<uint32_t>(0),
+            static_cast<uint32_t>(0)};
         DataCopyPadExtParams<T> updatePadParams = {false, 0, 0, 0};
         int64_t rowOfset = indicesOfset * afterAxis_;
         int64_t updatesOfset = rowOfset + GetBlockIdx() * eachCoreAfterAxisCount_ + colIdx * afterAxisFactor_;
@@ -268,13 +273,12 @@ public:
         this->dataQueue_.template EnQue(updatesLocal);
     }
 
-    __aicore__ inline void CopyOutSplitAfter(
-        int64_t rowLen, int64_t colLen, int64_t colIdx)
+    __aicore__ inline void CopyOutSplitAfter(int64_t rowLen, int64_t colLen, int64_t colIdx)
     {
         LocalTensor<T> dataLocal = dataQueue_.DeQue<T>();
         LocalTensor<U> outOfstLocal = outOfstBuf_.Get<U>();
         int64_t colLenAlignSize = Ops::Base::CeilAlign(colLen * sizeof(T), UB_AGLIN_VALUE) / sizeof(T);
-        
+
         event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
         SetFlag<HardEvent::V_S>(eventIdVToS);
         WaitFlag<HardEvent::V_S>(eventIdVToS);
@@ -288,9 +292,8 @@ public:
         }
         dataQueue_.FreeTensor(dataLocal);
     }
-        
-    __aicore__ inline void CopyOutSplitAfterWithSort(
-        int64_t rowLen, int64_t colLen, int64_t colIdx)
+
+    __aicore__ inline void CopyOutSplitAfterWithSort(int64_t rowLen, int64_t colLen, int64_t colIdx)
     {
         LocalTensor<T> dataLocal = dataQueue_.DeQue<T>();
         LocalTensor<U> sortIndicesLocal = sortIndicesQue_.Get<U>();
@@ -319,11 +322,10 @@ public:
     }
 };
 
-
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtCalcMask(
-    __gm__ INDICES_T* idxGmAddr, __gm__ TYPE_T* maskGmAddr, __gm__ PARAMS_T* outputGmAddr, 
-    const __ubuf__ TYPE_T* strideListAddr, const __ubuf__ TYPE_T* outputShapeAddr, TYPE_T indiceBlockOffSet, 
+    __gm__ INDICES_T* idxGmAddr, __gm__ TYPE_T* maskGmAddr, __gm__ PARAMS_T* outputGmAddr,
+    const __ubuf__ TYPE_T* strideListAddr, const __ubuf__ TYPE_T* outputShapeAddr, TYPE_T indiceBlockOffSet,
     uint32_t rankSize, uint32_t currBlockHandleIdx, int64_t varInAxis, __gm__ TYPE_T* varIdxGmAddr)
 {
     for (uint32_t index = Simt::GetThreadIdx(); index < currBlockHandleIdx; index += Simt::GetThreadNum()) {
@@ -336,7 +338,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtCalcMask(
             idx += indiceVal * strideListAddr[dim];
         }
         if (!outOfBound) {
-            if (idx >= 0 && idx < varInAxis){
+            if (idx >= 0 && idx < varInAxis) {
                 Simt::AtomicMax(maskGmAddr + idx, globalIndiceRowOffset);
                 varIdxGmAddr[globalIndiceRowOffset] = idx;
             }
@@ -345,13 +347,66 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtCalcMask(
 }
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-class ScatterNdUpdateDeterministicCommon
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_DETERMINISTIC) inline void ScatterNdUpdateSimtCalcMaskUnSort(
+    uint32_t indicesCount, int64_t varFirstDimSize, uint64_t indicesStartGmOffset, __gm__ TYPE_T* workspaceMaskAddr,
+    __gm__ TYPE_T* varIdxGmAddr, __local_mem__ INDICES_T* indicesLocalAddr)
 {
+    for (uint32_t i = Simt::GetThreadIdx(); i < indicesCount; i += Simt::GetThreadNum()) {
+        INDICES_T indicesValue = indicesLocalAddr[i];
+        if (!(indicesValue >= 0 && indicesValue < varFirstDimSize)) {
+            continue;
+        }
+        Simt::AtomicMax(workspaceMaskAddr + indicesValue, static_cast<TYPE_T>(indicesStartGmOffset + i));
+        varIdxGmAddr[indicesStartGmOffset + i] = static_cast<TYPE_T>(indicesValue);
+    }
+}
+
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_DETERMINISTIC) inline void ScatterNdUpdateSimtCalcMaskSort(
+    uint32_t uniqueIdNum, int64_t varFirstDimSize, uint64_t indicesStartGmOffset, __gm__ TYPE_T* workspaceMaskAddr,
+    __local_mem__ INDICES_T* indicesSortedPtr, __local_mem__ uint32_t* updatesOriginIdxAddr,
+    __local_mem__ int32_t* uniqueIdCountAddr)
+{
+    for (uint32_t i = Simt::GetThreadIdx(); i < uniqueIdNum; i += Simt::GetThreadNum()) {
+        int32_t repeatTimes = uniqueIdCountAddr[i + 1] - uniqueIdCountAddr[i];
+        int32_t lastIndicesIdx = uniqueIdCountAddr[i] + repeatTimes - 1;
+        INDICES_T indicesValue = indicesSortedPtr[lastIndicesIdx];
+        if (!(indicesValue >= 0 && indicesValue < varFirstDimSize)) {
+            continue;
+        }
+
+        uint32_t indicesLocalOffset = updatesOriginIdxAddr[lastIndicesIdx];
+        Simt::AtomicMax(
+            workspaceMaskAddr + indicesValue, static_cast<TYPE_T>(indicesStartGmOffset + indicesLocalOffset));
+    }
+}
+
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_DETERMINISTIC) inline void ScatterNdUpdateSimtWriteVarIdx(
+    uint32_t indicesCount, int64_t varFirstDimSize, uint64_t indicesStartGmOffset, __gm__ TYPE_T* varIdxGmAddr,
+    __local_mem__ INDICES_T* indicesLocalAddr)
+{
+    for (uint32_t i = Simt::GetThreadIdx(); i < indicesCount; i += Simt::GetThreadNum()) {
+        INDICES_T indicesValue = indicesLocalAddr[i];
+        if (indicesValue >= 0 && indicesValue < varFirstDimSize) {
+            varIdxGmAddr[indicesStartGmOffset + i] = static_cast<TYPE_T>(indicesValue);
+        }
+    }
+}
+
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
+class ScatterNdUpdateDeterministicCommon : public ScatterNdUpdateBase<PARAMS_T, INDICES_T> {
 public:
-    __aicore__ inline ScatterNdUpdateDeterministicCommon(const ScatterNdUpdateRegBaseTilingData& tilingData, TPipe& pipe) : pipe_(pipe), tiling_(tilingData){};
+    __aicore__ inline ScatterNdUpdateDeterministicCommon(
+        const ScatterNdUpdateRegBaseTilingData& tilingData, TPipe& pipe)
+        : pipe_(pipe), tiling_(tilingData){};
     __aicore__ inline void InitBase(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace);
     __aicore__ inline void CalcMask();
     __aicore__ inline void InitUpdateBuffer();
+    __aicore__ inline void CopyInIndices(uint64_t indicesGmOffset, uint32_t indicesCount);
+    __aicore__ inline uint32_t DeterministicSortAndComputeUniqueIdx(
+        int64_t rowLen, LocalTensor<INDICES_T> indicesSrcLocal, LocalTensor<INDICES_T> sortIndicesLocal,
+        LocalTensor<int32_t> uniqueIdCountLocal, LocalTensor<uint32_t> updatesOriginIdexLocal);
 
 protected:
     TPipe& pipe_;
@@ -364,26 +419,32 @@ protected:
     GlobalTensor<TYPE_T> maskBlockGm;
 
     TQue<QuePosition::VECIN, DOUBLE_BUFFER> inQueX;
-    TBuf<TPosition::VECCALC> strideListBuf;
-    TBuf<TPosition::VECCALC> outputShapeBuf;
-
-    LocalTensor<TYPE_T> strideList;
-    LocalTensor<TYPE_T> outputShape;
+    TQue<QuePosition::VECIN, 1> indicesQue_;
+    TBuf<QuePosition::VECCALC> deterUpdatesOriginIdxBuf_;
+    TBuf<QuePosition::VECCALC> deterUniqueIdCountBuf_;
 
     uint32_t blockIdx;
     TYPE_T currBlockHandleIdx = 0;
-    TYPE_T indiceBlockOffSet = 0;    
+    TYPE_T indiceBlockOffSet = 0;
+    int64_t indicesUbFactor = 0;
+    uint32_t rankSize_ = 0;
+    uint64_t indicesBlockLoop_{0};
+    uint64_t indicesTailLoopSize_{0};
 };
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T>::InitBase(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y ,GM_ADDR workspace)
-{    
+__aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T>::InitBase(
+    GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace)
+{
     blockIdx = GetBlockIdx();
+    indicesUbFactor = tiling_.indicesUbFactor;
+    rankSize_ = tiling_.rankSize;
+
     idxGm.SetGlobalBuffer((__gm__ INDICES_T*)indices);
     updateGm.SetGlobalBuffer((__gm__ PARAMS_T*)updates);
     outputGm.SetGlobalBuffer((__gm__ PARAMS_T*)y);
     maskGm.SetGlobalBuffer((__gm__ TYPE_T*)workspace);
-    varIdxGm.SetGlobalBuffer((__gm__ TYPE_T*) workspace + (tiling_.varInAxis + 1));
+    varIdxGm.SetGlobalBuffer((__gm__ TYPE_T*)workspace + (tiling_.varInAxis + 1));
 
     if (blockIdx >= tiling_.calcMaskUsedCoreNum) {
         return;
@@ -398,13 +459,74 @@ __aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, T
     }
 
     uint64_t maskBlockOffset = blockIdx * tiling_.maskNormBlockLen;
-    uint64_t maskBlockLen = blockIdx == tiling_.calcMaskUsedCoreNum - 1 ? tiling_.maskTailBlockLen : tiling_.maskNormBlockLen;
-    maskBlockGm.SetGlobalBuffer((__gm__ TYPE_T*) workspace + maskBlockOffset);
-
-    pipe_.InitBuffer(strideListBuf, MAX_RANK_COUNT * sizeof(TYPE_T));
-    pipe_.InitBuffer(outputShapeBuf, MAX_SHAPE_RANK * sizeof(TYPE_T));
-
+    maskBlockGm.SetGlobalBuffer((__gm__ TYPE_T*)workspace + maskBlockOffset);
+    uint64_t maskBlockLen = tiling_.maskNormBlockLen;
+    if (blockIdx == tiling_.calcMaskUsedCoreNum - 1) {
+        maskBlockLen = tiling_.maskTailBlockLen;
+    }
     InitGlobalMemory(maskBlockGm, maskBlockLen, static_cast<TYPE_T>(MASK_DEFAULT));
+
+    pipe_.InitBuffer(
+        indicesQue_, 1, Ops::Base::CeilAlign(tiling_.indicesUbFactor * rankSize_ * sizeof(INDICES_T), UB_AGLIN_VALUE));
+
+    if (rankSize_ > 1) {
+        pipe_.InitBuffer(this->strideBuf_, MAX_RANK_COUNT * sizeof(INDICES_T));
+        pipe_.InitBuffer(
+            this->outOfstBuf_, Ops::Base::CeilAlign(tiling_.indicesUbFactor * sizeof(INDICES_T), UB_AGLIN_VALUE));
+    }
+
+    pipe_.InitBuffer(this->maxScoreBuf_, HASH_SCORE_BUF_SIZE * sizeof(float));
+
+    indicesBlockLoop_ = tiling_.normBlockLoop;
+    indicesTailLoopSize_ = tiling_.normBlockTail;
+    if (blockIdx == tiling_.calcMaskUsedCoreNum - 1) {
+        indicesBlockLoop_ = tiling_.tailBlockLoop;
+        indicesTailLoopSize_ = tiling_.tailBlockTail;
+    }
+
+    pipe_.InitBuffer(
+        this->sortIndicesQue_,
+        Ops::Base::CeilAlign(tiling_.indicesUbFactor * sizeof(INDICES_T), UB_AGLIN_VALUE) + SORT_PAD_NUM * UB_AGLIN_VALUE);
+    pipe_.InitBuffer(
+        deterUpdatesOriginIdxBuf_, Ops::Base::CeilAlign(tiling_.indicesUbFactor * sizeof(uint32_t), UB_AGLIN_VALUE));
+    pipe_.InitBuffer(
+        deterUniqueIdCountBuf_,
+        Ops::Base::CeilAlign(tiling_.indicesUbFactor * sizeof(int32_t), UB_AGLIN_VALUE) + SORT_PAD_NUM * UB_AGLIN_VALUE);
+}
+
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
+__aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T>::CopyInIndices(
+    uint64_t indicesGmOffset, uint32_t indicesCount)
+{
+    LocalTensor<INDICES_T> indicesLocal = indicesQue_.AllocTensor<INDICES_T>();
+
+    DataCopyExtParams indicesCopyParams{1, static_cast<uint32_t>(indicesCount * sizeof(INDICES_T)), 0, 0, 0};
+    DataCopyPadExtParams<INDICES_T> indicesPadParams{false, 0, 0, 0};
+    DataCopyPad(indicesLocal, idxGm[indicesGmOffset], indicesCopyParams, indicesPadParams);
+    indicesQue_.EnQue<INDICES_T>(indicesLocal);
+}
+
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
+__aicore__ inline uint32_t
+ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T>::DeterministicSortAndComputeUniqueIdx(
+    int64_t rowLen, LocalTensor<INDICES_T> indicesSrcLocal, LocalTensor<INDICES_T> sortIndicesLocal,
+    LocalTensor<int32_t> uniqueIdCountLocal, LocalTensor<uint32_t> updatesOriginIdexLocal)
+{
+    event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+    SetFlag<HardEvent::V_S>(eventIDVToS);
+    WaitFlag<HardEvent::V_S>(eventIDVToS);
+    LocalTensor<INDICES_T> shiftSortLocal = sortIndicesLocal[this->shiftOffset_];
+    AscendC::Sort<INDICES_T, true, sortConfig>(
+        shiftSortLocal, updatesOriginIdexLocal, indicesSrcLocal, static_cast<uint32_t>(rowLen));
+    Duplicate(sortIndicesLocal, (INDICES_T)-1, this->shiftOffset_);
+    SetFlag<HardEvent::V_S>(eventIDVToS);
+    WaitFlag<HardEvent::V_S>(eventIDVToS);
+    shiftSortLocal(rowLen) = -1;
+
+    event_t eventIdSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+    SetFlag<HardEvent::S_V>(eventIdSToV);
+    WaitFlag<HardEvent::S_V>(eventIdSToV);
+    return this->ComputeUniqueIdNum(sortIndicesLocal, uniqueIdCountLocal, rowLen);
 }
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
@@ -413,32 +535,89 @@ __aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, T
     if (blockIdx >= tiling_.calcMaskUsedCoreNum) {
         return;
     }
-    uint32_t currBlockHandleIdx = this->currBlockHandleIdx;
-    uint32_t rankSize = tiling_.rankSize;
-    TYPE_T indiceBlockOffSet = this->indiceBlockOffSet;
-    int64_t varInAxis = tiling_.varInAxis;
 
-    strideList = strideListBuf.Get<TYPE_T>();
-    outputShape = outputShapeBuf.Get<TYPE_T>();
-    for (uint32_t i = 0; i < MAX_RANK_COUNT; i++) {
-        strideList(i) = tiling_.strideList[i];
+    if (rankSize_ > 1) {
+        LocalTensor<INDICES_T> strideLocal = this->strideBuf_.template Get<INDICES_T>();
+        for (uint32_t i = 0; i < MAX_RANK_COUNT; i++) {
+            strideLocal(i) = static_cast<INDICES_T>(tiling_.strideList[i]);
+        }
     }
-    for (uint32_t i = 0; i < MAX_SHAPE_RANK; i++) {
-        outputShape(i) = tiling_.outPutShape[i];
+
+    int64_t varFirstDimSize = tiling_.varInAxis;
+    __gm__ TYPE_T* workspaceMaskAddr = (__gm__ TYPE_T*)(maskGm.GetPhyAddr());
+    __gm__ TYPE_T* varIdxGmAddr = (__gm__ TYPE_T*)(varIdxGm.GetPhyAddr());
+
+    uint32_t indicesCount = tiling_.indicesUbFactor;
+    for (uint64_t idx = 0; idx < indicesBlockLoop_; idx++) {
+        if (idx == indicesBlockLoop_ - 1) {
+            indicesCount = indicesTailLoopSize_;
+        }
+        uint64_t indicesStartGmOffset = blockIdx * tiling_.normCoreHandleIdx + idx * tiling_.indicesUbFactor;
+
+        LocalTensor<INDICES_T> flatOfstLocal;
+        if (rankSize_ > 1) {
+            CopyInIndices(indicesStartGmOffset * rankSize_, indicesCount * rankSize_);
+            LocalTensor<INDICES_T> indicesLocal = indicesQue_.DeQue<INDICES_T>();
+
+            flatOfstLocal = this->outOfstBuf_.template Get<INDICES_T>();
+            event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+            SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+            WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+            this->ComputeOutOfset(indicesLocal, flatOfstLocal, indicesCount, rankSize_);
+            indicesQue_.FreeTensor(indicesLocal);
+        } else {
+            CopyInIndices(indicesStartGmOffset, indicesCount);
+            flatOfstLocal = indicesQue_.DeQue<INDICES_T>();
+        }
+
+        LocalTensor<float> hashLocal = this->maxScoreBuf_.template Get<float>();
+        float maxScore = 0.0f;
+        if constexpr (IsSameType<INDICES_T, int32_t>::value) {
+            IndexStatisticInt32(flatOfstLocal, hashLocal, maxScore, indicesCount, tiling_.afterAxis);
+        } else {
+            IndexStatisticInt64(flatOfstLocal, hashLocal, maxScore, indicesCount, tiling_.afterAxis);
+        }
+
+        __local_mem__ INDICES_T* flatOfstAddr = (__local_mem__ INDICES_T*)(flatOfstLocal.GetPhyAddr());
+
+        if (maxScore > SORT_HIST_THRESHOLD) {
+            Simt::VF_CALL<ScatterNdUpdateSimtWriteVarIdx<PARAMS_T, INDICES_T, TYPE_T>>(
+                Simt::Dim3(THREAD_NUM_DETERMINISTIC), indicesCount, varFirstDimSize, indicesStartGmOffset, varIdxGmAddr,
+                flatOfstAddr);
+
+            LocalTensor<INDICES_T> indicesSortedLocal = this->sortIndicesQue_.template Get<INDICES_T>();
+            LocalTensor<uint32_t> updatesOriginIdxLocal = deterUpdatesOriginIdxBuf_.template Get<uint32_t>();
+            LocalTensor<int32_t> uniqueIdCountLocal = deterUniqueIdCountBuf_.template Get<int32_t>();
+            __local_mem__ INDICES_T* indicesSortedPtr =
+                (__local_mem__ INDICES_T*)(indicesSortedLocal.GetPhyAddr()) + this->shiftOffset_;
+            __local_mem__ uint32_t* updatesOriginIdxAddr =
+                (__local_mem__ uint32_t*)(updatesOriginIdxLocal.GetPhyAddr());
+            __local_mem__ int32_t* uniqueIdCountAddr = (__local_mem__ int32_t*)(uniqueIdCountLocal.GetPhyAddr());
+            uint32_t uniqueIdNum = this->DeterministicSortAndComputeUniqueIdx(
+                indicesCount, flatOfstLocal, indicesSortedLocal, uniqueIdCountLocal, updatesOriginIdxLocal);
+
+            Simt::VF_CALL<ScatterNdUpdateSimtCalcMaskSort<PARAMS_T, INDICES_T, TYPE_T>>(
+                Simt::Dim3(THREAD_NUM_DETERMINISTIC), uniqueIdNum, varFirstDimSize, indicesStartGmOffset,
+                workspaceMaskAddr, indicesSortedPtr, updatesOriginIdxAddr, uniqueIdCountAddr);
+        } else {
+            Simt::VF_CALL<ScatterNdUpdateSimtCalcMaskUnSort<PARAMS_T, INDICES_T, TYPE_T>>(
+                Simt::Dim3(THREAD_NUM_DETERMINISTIC), indicesCount, varFirstDimSize, indicesStartGmOffset,
+                workspaceMaskAddr, varIdxGmAddr, flatOfstAddr);
+        }
+
+        if (rankSize_ <= 1) {
+            indicesQue_.FreeTensor(flatOfstLocal);
+        }
     }
-    DataSyncBarrier<MemDsbT::UB>();
-    AscendC::Simt::VF_CALL<SimtCalcMask<PARAMS_T, INDICES_T, TYPE_T>>(
-        Simt::Dim3(THREAD_NUM), (__gm__ INDICES_T*)idxGm.GetPhyAddr(), (__gm__ TYPE_T*)maskGm.GetPhyAddr(), 
-        (__gm__ PARAMS_T*)(outputGm.GetPhyAddr()), (__ubuf__ TYPE_T*)strideList.GetPhyAddr(),
-        (__ubuf__ TYPE_T*)outputShape.GetPhyAddr(), indiceBlockOffSet, rankSize, currBlockHandleIdx, varInAxis, (__gm__ TYPE_T*) varIdxGm.GetPhyAddr());
 }
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T>::InitUpdateBuffer() {
+__aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T>::InitUpdateBuffer()
+{
     pipe_.Reset();
     pipe_.InitBuffer(inQueX, DOUBLE_BUFFER, Ops::Base::CeilAlign(tiling_.afterAxisFactor * sizeof(PARAMS_T), UB_AGLIN_VALUE));
 }
 
-}  // namespace ScatterNdUpdate
+} // namespace ScatterNdUpdate
 
 #endif
