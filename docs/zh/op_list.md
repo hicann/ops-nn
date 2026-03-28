@@ -247,12 +247,12 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/hard_swish_grad/README.md">hard_swish_grad</a></td>
-    <td>✗</td>
+    <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>分段线性激活函数HardSwish的梯度函数<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>activation</td>
