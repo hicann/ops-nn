@@ -53,6 +53,10 @@ const int VAR_GROUPS = 64;
 const size_t TWO_DIM = 2;
 const int64_t NO_TRANSPOSE_DIM_MAX = 256;
 const size_t NO_TRANSPOSE_TASKS_MIN = 768;
+
+const uint32_t ALIGN_SIZE = 32;
+const uint32_t TILE_SIZE = 5;
+const uint32_t AGG_INDICES_NUM = 1024;
 } // namespace
 
 namespace optiling {
@@ -582,12 +586,38 @@ bool ScatterElementsV2Tiling::CacheOpSupport() {
 
     const int64_t* dim = (attrs->GetAttrPointer<int64_t>(0));
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, dim);
-    auto inputShape = tilingContext->GetInputShape(INPUT_0)->GetStorageShape();
-    auto inputDimNum = inputShape.GetDimNum();
+    auto indicesShape = tilingContext->GetInputShape(INPUT_1)->GetStorageShape();
+    auto inputDimNum = indicesShape.GetDimNum();
     realDim = (*dim < 0 ? *dim + inputDimNum : *dim);
-    // 尾轴场景且非bool类型输入，不支持
+    // 尾轴场景任务数小于coreNums，不支持
+    size_t tasks = 1;
+    for (uint32_t i = 0; i < inputDimNum; ++i) {
+        if (i != realDim) {
+            tasks *= indicesShape.GetDim(i);
+        }
+    }
+    // x dim轴大于40000不支持
+    auto xShape = tilingContext->GetInputShape(INPUT_0)->GetStorageShape();
+    if (xShape.GetDim(realDim) > 40000) {
+        OP_LOGD("ScatterElementsV2", "new kernel only support x dim <= 40000.");
+        return false;
+    }
+    // x数据类型是bool int8 uint8时只支持替换模式
+    if (inputDtype == ge::DT_BOOL || inputDtype == ge::DT_INT8 || inputDtype == ge::DT_UINT8) {
+        const char* reduce = attrs->GetAttrPointer<char>(1);
+        if (reduce == nullptr) {
+            return false;
+        }
+        if (strcmp(reduce, "none") != 0) {
+            OP_LOGD("ScatterElementsV2", "when dtype is bool/int8/uint8, new kernel only support none mode.");
+            return false;
+        }
+    }
+
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(tilingContext->GetPlatformInfo());
+    auto platfCoreNums = ascendcPlatform.GetCoreNumAiv();
     if (realDim == inputDimNum - 1 && inputDtype != ge::DT_BOOL) {
-        OP_LOGD("ScatterElementsV2", "Low memory when realDim = -1, only support bool dtype.");
+        OP_LOGD("ScatterElementsV2", "when realDim = -1, only dtype is bool will use new kernel.");
         return false;
     }
     return true;
@@ -596,9 +626,7 @@ bool ScatterElementsV2Tiling::CacheOpSupport() {
 void ScatterElementsV2Tiling::SetTilingData(ScatterElementsV2TilingData& tiling) {
     tiling.set_batchSize(batchSize);
     tiling.set_realDim(realDim);
-    tiling.set_mode(mode);
     tiling.set_coreNums(usedCoreNum);
-    tiling.set_updatesIsScalar(updatesIsScalar);
     tiling.set_xDim0(xDim0);
     tiling.set_xDim1(xDim1);
     tiling.set_indicesDim0(indicesDim0);
@@ -624,23 +652,47 @@ void ScatterElementsV2Tiling::LogTilingData() {
 size_t ScatterElementsV2Tiling::CalculateWorkspaceSize() {
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(tilingContext->GetPlatformInfo());
     size_t libApiworkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    auto sizeOfVar = 4;
     auto inputDtype = tilingContext->GetInputDesc(INPUT_0)->GetDataType();
-    if (ge::DT_INT8 == inputDtype || ge::DT_UINT8 == inputDtype || ge::DT_BOOL == inputDtype) {
-        sizeOfVar = 2;
+
+    int32_t sizeOfVar = ge::GetSizeByDataType(inputDtype);
+    if (inputDtype == ge::DT_FLOAT || inputDtype == ge::DT_INT32) {
+        sizeOfVar = SIZE_OF_FP32;
+    } else if (inputDtype == ge::DT_FLOAT16 || inputDtype == ge::DT_BF16) {
+        sizeOfVar = SIZE_OF_FP16;
+    } else if (inputDtype == ge::DT_UINT8 || inputDtype == ge::DT_INT8 || inputDtype == ge::DT_BOOL) {
+        sizeOfVar = SIZE_OF_UINT8;
     }
+    OP_LOGD(tilingContext, "sizeOfVar: %d.", sizeOfVar);
+    libApiworkspaceSize += AGG_INDICES_NUM * 2 * sizeof(int32_t); // 2 is indices+updates
 
     if (batchSize == 1 && realDim == 1) { // 首轴需要转置
         auto targetParts = indicesDim1 / usedCoreNum;
         targetParts = targetParts > 0 ? targetParts : 1;
-        targetParts = targetParts > 5 ? 5 : targetParts;
+        targetParts = targetParts > TILE_SIZE ? TILE_SIZE : targetParts;
         auto partSize = indicesDim1 / targetParts;
-        libApiworkspaceSize += partSize * xDim0 * sizeOfVar + partSize * indicesDim0 * sizeof(int32_t) + 
-                               partSize * updatesDim0 * sizeOfVar;
+        auto extraSize = this->indicesDim1 % targetParts; // 额外的大小
+        auto maxSize = partSize > extraSize ? partSize : extraSize;
+
+        libApiworkspaceSize += maxSize * xDim0 * sizeOfVar;
+        libApiworkspaceSize += maxSize * indicesDim0 * sizeof(int32_t);
+        libApiworkspaceSize += this->updatesIsScalar ? 0 : maxSize * updatesDim0 * sizeOfVar;
+        // 用于转置x indices updates时，及用于x转置回来时，转连续
+        libApiworkspaceSize += ALIGN_SIZE * VAR_LIMIT * sizeof(uint32_t) * SIZE_OF_FP32;
+        // 用于整块处理时，直接使用gather做转置，无需pad/unpad，也无需TransDataTo5HD。（xForward indicesForward updatesForward xBackward）
+        libApiworkspaceSize += VAR_LIMIT * VAR_LIMIT * sizeof(uint32_t) * SIZE_OF_FP32;
     }
     if (batchSize > 1 && realDim == 1) { // 中轴需要转置
-        libApiworkspaceSize += xDim0 * xDim1 * sizeOfVar + indicesDim0 * indicesDim1 * sizeof(int32_t) +
-                               updatesDim0 * updatesDim1 * sizeOfVar;
+        int32_t targetParts = batchSize <= TILE_SIZE ? batchSize : TILE_SIZE;
+        uint32_t partSize = batchSize / targetParts;
+        uint32_t extraSize = batchSize % targetParts; // 额外的大小
+        uint32_t maxSize = partSize > extraSize ? partSize : extraSize;
+
+        libApiworkspaceSize += maxSize * xDim0 * xDim1 * sizeOfVar;
+        libApiworkspaceSize += maxSize * indicesDim0 * indicesDim1 * sizeof(int32_t);
+        libApiworkspaceSize += this->updatesIsScalar ? 0 : maxSize * updatesDim0 * updatesDim1 * sizeOfVar;
+
+        // 正向，x indices, updates + 反向x
+        libApiworkspaceSize += VAR_LIMIT * VAR_LIMIT * sizeof(uint32_t) * SIZE_OF_FP32;
     }
     return libApiworkspaceSize;
 }
@@ -655,7 +707,20 @@ ge::graphStatus ScatterElementsV2Tiling::SetCacheOpTiling() {
     currentWorkSpace[0] = calculateResult;
     
     tilingContext->SetBlockDim(usedCoreNum);
-    tilingContext->SetTilingKey(0);
+    if (mode == 0 && !updatesIsScalar) {
+        tilingContext->SetTilingKey(0);
+        OP_LOGD(tilingContext, "scatterElementsV2 tilingKey: %lu.", 0); // 000
+    } else if (mode == 1 && !updatesIsScalar) {
+        tilingContext->SetTilingKey(100);
+        OP_LOGD(tilingContext, "scatterElementsV2 tilingKey: %lu.", 100); // 100
+    } else if (mode == 0 && updatesIsScalar) {
+        tilingContext->SetTilingKey(10);
+        OP_LOGD(tilingContext, "scatterElementsV2 tilingKey: %lu.", 10); // 010
+    } else if (mode == 1 && updatesIsScalar) {
+        tilingContext->SetTilingKey(110);
+        OP_LOGD(tilingContext, "scatterElementsV2 tilingKey: %lu.", 110); // 110
+    }
+    tilingContext->SetScheduleMode(1); // kernel内涉及SyncAll()
     tiling.SaveToBuffer(tilingContext->GetRawTilingData()->GetData(), tilingContext->GetRawTilingData()->GetCapacity());
     tilingContext->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
     return ge::GRAPH_SUCCESS;
