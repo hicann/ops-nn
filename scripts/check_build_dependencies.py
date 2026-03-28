@@ -154,9 +154,9 @@ def check_build_deps(recv: Receiver, ascend_install_path: str, deps: list):
             continue
         try:
             if not check_build_dep(version, dep_info):
-                warn_msg = 'Check build dependency failed! ' \
+                err_msg = 'Check build dependency failed! ' \
                           f'Required {dep_pkg} version is {dep_info}, but {dep_pkg} version is {version}.'
-                recv.warn_msgs.append(warn_msg)
+                recv.err_msgs.append(err_msg)
         except ValueError:
             err_msg = f'Check build dependency error! version is {version}, dep_info is {dep_info}.'
             recv.err_msgs.append(err_msg)
