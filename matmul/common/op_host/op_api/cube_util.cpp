@@ -121,6 +121,7 @@ bool CheckCubeMathTypeForMm(const op::DataType cubeTensorDtype, int8_t cubeMathT
 bool CheckCubeMathTypeForAddMm(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* self,
     const aclTensor* out, int8_t cubeMathType)
 {   
+    (void)out;
     if (cubeMathType != USE_FP32_ADDMM) {
         return true;
     }

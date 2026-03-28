@@ -25,7 +25,7 @@ bool CheckCubeMathType(const op::DataType cubeTensorDtype, int8_t cubeMathType);
 bool CheckCubeMathTypeForMm(const op::DataType cubeTensorDtype, int8_t cubeMathType);
 
 // 校验针对Addmm算子的cubeMathType和平台是否符合预期
-bool CheckCubeMathTypeForAddMm(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias,
+bool CheckCubeMathTypeForAddMm(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* self,
     const aclTensor* out, int8_t cubeMathType);
 
 // 返回芯片对应支持的数据类型
