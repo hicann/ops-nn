@@ -184,7 +184,9 @@ static bool CheckOutputSize(const aclIntArray* outputSize, const aclTensor* out)
     size_t outputDimNum = outputShape.GetDimNum();
     size_t offset = outputDimNum == chwShapeSize ? 1 : 2;
     for (size_t i = 0; i < size; ++i) {
-        if (!Ops::NN::AclnnUtil::IsRegbase() && (*outputSize)[i] <= 0 || (*outputSize)[i] != outputShape[i + offset]) {
+        if ((Ops::NN::AclnnUtil::IsRegbase() && (*outputSize)[i] < 0) ||
+            (!Ops::NN::AclnnUtil::IsRegbase() && (*outputSize)[i] <= 0) ||
+            (*outputSize)[i] != outputShape[i + offset]) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outputSize value should match the outputShape value and greater than 0.");
             return false;
         }
@@ -373,7 +375,7 @@ static aclnnStatus DoAdaptiveAvgPool2D(
     CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     return ACLNN_SUCCESS;
 }
-static aclnnStatus DoFusionAdapativeAvgPool2D(
+static aclnnStatus DoFusionAdaptiveAvgPool2D(
     const aclTensor* self, const aclIntArray* outputSize, aclTensor* out, aclOpExecutor* executor)
 {
     int64_t hValue = (*outputSize)[0];
@@ -403,6 +405,7 @@ aclnnStatus aclnnAdaptiveAvgPool2dGetWorkspaceSize(
         return ACLNN_SUCCESS;
     }
 
+    ret = DoFusionAdaptiveAvgPool2D(self, outputSize, out, uniqueExecutor.get());
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 固定写法，获取计算过程中需要使用的workspace大小
