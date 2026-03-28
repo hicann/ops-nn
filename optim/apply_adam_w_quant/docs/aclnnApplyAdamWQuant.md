@@ -49,14 +49,14 @@
 
 ```Cpp
 aclnnStatus aclnnApplyAdamWQuantGetWorkspaceSize(
-    const aclTensor *varRef,
+    aclTensor       *varRef,
     const aclTensor *grad,
-    const aclTensor *mRef,
-    const aclTensor *vRef,
+    aclTensor       *mRef,
+    aclTensor       *vRef,
     const aclTensor *qmapM,
     const aclTensor *qmapV,
-    const aclTensor *absmaxMRef,
-    const aclTensor *absmaxVRef,
+    aclTensor       *absmaxMRef,
+    aclTensor       *absmaxVRef,
     const aclTensor *step,
     double          lr,
     double          beta1,
@@ -113,7 +113,7 @@ aclnnStatus aclnnApplyAdamWQuant(
       <td class="tg-0pky">FLOAT16、BFLOAT16、FLOAT32</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
-      <td class="tg-0pky">x</td>
+      <td class="tg-0pky">√</td>
     </tr>
     <tr>
       <td class="tg-0pky">grad（aclTensor*）</td>
@@ -123,7 +123,7 @@ aclnnStatus aclnnApplyAdamWQuant(
       <td class="tg-0pky">与varRef保持一致</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
-      <td class="tg-0pky">x</td>
+      <td class="tg-0pky">√</td>
     </tr>
     <tr>
       <td class="tg-0pky">mRef（aclTensor*）</td>
@@ -133,7 +133,7 @@ aclnnStatus aclnnApplyAdamWQuant(
       <td class="tg-0pky">uint8_t</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
-      <td class="tg-0pky">x</td>
+      <td class="tg-0pky">√</td>
     </tr>
     <tr>
       <td class="tg-0pky">vRef（aclTensor*）</td>
@@ -143,7 +143,7 @@ aclnnStatus aclnnApplyAdamWQuant(
       <td class="tg-0pky">uint8_t</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
-      <td class="tg-0pky">x</td>
+      <td class="tg-0pky">√</td>
     </tr>
     <tr>
       <td class="tg-0pky">qmapM（aclTensor*）</td>
@@ -153,7 +153,7 @@ aclnnStatus aclnnApplyAdamWQuant(
       <td class="tg-0pky">FLOAT32</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1</td>
-      <td class="tg-0pky">x</td>
+      <td class="tg-0pky">√</td>
     </tr>
     <tr>
       <td class="tg-0pky">qmapV（aclTensor*）</td>
@@ -163,7 +163,7 @@ aclnnStatus aclnnApplyAdamWQuant(
       <td class="tg-0pky">FLOAT32</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1</td>
-      <td class="tg-0pky">x</td>
+      <td class="tg-0pky">√</td>
     </tr>
     <tr>
       <td class="tg-0pky">absmaxMRef（aclTensor*）</td>
@@ -173,7 +173,7 @@ aclnnStatus aclnnApplyAdamWQuant(
       <td class="tg-0pky">FLOAT32</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1</td>
-      <td class="tg-0pky">x</td>
+      <td class="tg-0pky">√</td>
     </tr>
     <tr>
       <td class="tg-0pky">absmaxVRef（aclTensor*）</td>
@@ -183,7 +183,7 @@ aclnnStatus aclnnApplyAdamWQuant(
       <td class="tg-0pky">FLOAT32</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1</td>
-      <td class="tg-0pky">x</td>
+      <td class="tg-0pky">√</td>
     </tr>
     <tr>
       <td class="tg-0pky">step（aclTensor*）</td>
@@ -193,7 +193,7 @@ aclnnStatus aclnnApplyAdamWQuant(
       <td class="tg-0pky">INT64</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1</td>
-      <td class="tg-0pky">x</td>
+      <td class="tg-0pky">√</td>
     </tr>
     <tr>
       <td class="tg-0pky">lr（double）</td>
