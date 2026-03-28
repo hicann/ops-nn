@@ -50,6 +50,7 @@ public:
     int64_t shiftOffset_ = UB_AGLIN_VALUE / sizeof(U);
     uint32_t uniqueIdNum_ = 0;
     float maxScore_ = 0;
+    int64_t varInAxis_ = 0;
 
     AscendC::GlobalTensor<U> indicesGm_;
     AscendC::GlobalTensor<T> updatesGm_;
@@ -280,7 +281,10 @@ public:
         for (int64_t i = 0; i < rowLen; i++) {
             int64_t rowOfset = outOfstLocal(i) * afterAxis_;
             int64_t outOfset = rowOfset + GetBlockIdx() * eachCoreAfterAxisCount_ + colIdx * afterAxisFactor_;
-            CopyOut<T>(yGm_[outOfset], dataLocal[i * colLenAlignSize], colLen);
+            int64_t indicesValue = outOfstLocal(i);
+ 	        if (indicesValue >= 0 && indicesValue < varInAxis_) {
+ 	            CopyOut<T>(yGm_[outOfset], dataLocal[i * colLenAlignSize], colLen);
+ 	        }
         }
         dataQueue_.FreeTensor(dataLocal);
     }
@@ -303,7 +307,10 @@ public:
             int64_t inOfset = updatesOriginIdexLocal(uniqueIdx) * colLenAlignSize;
             int64_t outOfset = shiftSortLocal(uniqueIdx) * afterAxis_;
             outOfset += GetBlockIdx() * eachCoreAfterAxisCount_ + colIdx * afterAxisFactor_;
-            CopyOut<T>(yGm_[outOfset], dataLocal[inOfset], colLen);
+            int64_t indicesValue = shiftSortLocal(uniqueIdx);
+ 	        if (indicesValue >= 0 && indicesValue < varInAxis_) {
+ 	            CopyOut<T>(yGm_[outOfset], dataLocal[inOfset], colLen);
+ 	        }
         }
 
         uniqueIdCountQue_.EnQue(uniqueIdCountLocal);

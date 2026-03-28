@@ -139,7 +139,11 @@ __aicore__ inline void ScatterNdUpdateSimdMask<T, U>::ProcessMaskOneLine()
         event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
         SetFlag<HardEvent::V_S>(eventIdVToS);
         WaitFlag<HardEvent::V_S>(eventIdVToS);
-        if (maskLocal(outOfstLocal(0)) != 0) {
+        int64_t outOfstVal = outOfstLocal(0);
+ 	    if (outOfstVal < 0 || outOfstVal >= tilingData_.varInAxis) {
+ 	        continue;
+ 	    }
+        if (maskLocal(outOfstVal) != 0) {
             continue;
         }
 
@@ -149,7 +153,7 @@ __aicore__ inline void ScatterNdUpdateSimdMask<T, U>::ProcessMaskOneLine()
             CopyUpdatesIn(rowIdx, colIdx, tilingData_.indicesFactor, colDataLen);
             CopyOutOneLine(colDataLen, colIdx);
         }
-        maskLocal(outOfstLocal(0)) = 1;
+        maskLocal(outOfstVal) = 1;
     }
 }
 
@@ -168,10 +172,14 @@ __aicore__ inline void ScatterNdUpdateSimdMask<T, U>::CopyOutMultiLine(int64_t r
     WaitFlag<HardEvent::V_S>(eventIdVToS);
     for (int64_t i = 0; i < rowLen; i++) {
         int64_t srcOffset = i * colLenAlignSize;
-        int64_t dstOffset = outOfstLocal(i) * tilingData_.afterAxis;
-        if (maskLocal(outOfstLocal(i)) == 0) {
+        int64_t outOfstVal = outOfstLocal(i);
+ 	    if (outOfstVal < 0 || outOfstVal >= tilingData_.varInAxis) {
+ 	        continue;
+ 	    }
+        int64_t dstOffset = outOfstVal * tilingData_.afterAxis;
+        if (maskLocal(outOfstVal) == 0) {
             this->template CopyOut<T>(yGm_[dstOffset], dataLocal[srcOffset], tilingData_.afterAxis);
-            maskLocal(outOfstLocal(i)) = 1;
+            maskLocal(outOfstVal) = 1;
         }
     }
     this->dataQueue_.FreeTensor(dataLocal);

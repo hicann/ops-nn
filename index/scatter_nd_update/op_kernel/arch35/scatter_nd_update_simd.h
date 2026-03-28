@@ -65,6 +65,7 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U>::Init(
     this->afterAxisFactor_ = tilingData_.afterAxisFactor;
     this->indexRankSize_ = tilingData_.indexRankSize;
     this->eachCoreAfterAxisCount_ = tilingData_.eachCoreAfterAxisCount;
+    this->varInAxis_ = tilingData_.varInAxis;
     this->InitBaseBuffer(pipe_, tilingData_.indicesFactor, indices, updates, y);
 
     curCoreIndexCount_ = (GetBlockIdx() != (tilingData_.usedCoreNumBefore - 1) ? tilingData_.eachCoreIndexCount :
@@ -158,6 +159,7 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U>::CopyOutSplitIndices(
     LocalTensor<T> dataLocal = this->dataQueue_.template DeQue<T>();
     LocalTensor<U> outOfstLocal = this->outOfstBuf_.template Get<U>();
     int64_t colLenAlignSize = Ops::Base::CeilAlign(colLen * sizeof(T), UB_AGLIN_VALUE) / sizeof(T);
+    int64_t varInAxis = tilingData_.varInAxis;
 
     event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventIdVToS);
@@ -165,7 +167,10 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U>::CopyOutSplitIndices(
     for (int64_t i = 0; i < rowLen; i++) {
         int64_t rowOfset = outOfstLocal(i) * tilingData_.afterAxis;
         int64_t outOfset = rowOfset + colIdx * tilingData_.afterAxisFactor;
-        this->template CopyOut<T>(yGm_[outOfset], dataLocal[i * colLenAlignSize], colLen);
+        int64_t indicesValue = outOfstLocal(i);
+ 	    if (indicesValue >= 0 && indicesValue < varInAxis) {
+ 	        this->template CopyOut<T>(yGm_[outOfset], dataLocal[i * colLenAlignSize], colLen);
+ 	    }
     }
     this->dataQueue_.FreeTensor(dataLocal);
 }
@@ -180,6 +185,7 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U>::CopyOutSplitIndicesWithSort(
     LocalTensor<uint32_t> updatesOriginIdexLocal = this->updatesOriginIdexQue_.template DeQue<uint32_t>();
     LocalTensor<int32_t> uniqueIdCountLocal = this->uniqueIdCountQue_.template DeQue<int32_t>();
     int64_t colLenAlignSize = Ops::Base::CeilAlign(colLen * sizeof(T), UB_AGLIN_VALUE) / sizeof(T);
+    int64_t varInAxis = tilingData_.varInAxis;
 
     event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventIdVToS);
@@ -189,7 +195,10 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U>::CopyOutSplitIndicesWithSort(
         int64_t inOfset = updatesOriginIdexLocal(uniqueIdx) * colLenAlignSize;
         int64_t outOfset = shiftSortLocal(uniqueIdx) * tilingData_.afterAxis;
         outOfset += colIdx * tilingData_.afterAxisFactor;
-        this->template CopyOut<T>(yGm_[outOfset], dataLocal[inOfset], colLen);
+        int64_t indicesValue = shiftSortLocal(uniqueIdx);
+ 	    if (indicesValue >= 0 && indicesValue < varInAxis) {
+ 	        this->template CopyOut<T>(yGm_[outOfset], dataLocal[inOfset], colLen);
+ 	    }
     }
 
     this->uniqueIdCountQue_.FreeTensor(uniqueIdCountLocal);
