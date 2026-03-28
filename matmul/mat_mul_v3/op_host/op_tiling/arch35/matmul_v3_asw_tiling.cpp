@@ -356,7 +356,7 @@ uint64_t MatMulV3AswTiling::UpdateBaseBlock(uint64_t baseBlock, bool isMLarger)
     }
 }
 
-void MatMulV3AswTiling::CalcLargeSingleSide(uint64_t maxMN, uint64_t& targetBase, bool isMLarger)
+void MatMulV3AswTiling::CalcLargeSingleSide(uint64_t minMN, uint64_t maxMN, uint64_t& targetBase, bool isMLarger)
 {
     // ceil(核数*0.9)
     uint64_t minCoreNum = (compileInfo_.aicNum + 1UL) * NUM_NINE / NUM_TEN;
@@ -365,7 +365,8 @@ void MatMulV3AswTiling::CalcLargeSingleSide(uint64_t maxMN, uint64_t& targetBase
         while (loop <= MAX_LOOP_NUM) { // loop/(loop+1)>=0.95 loop=19
             uint64_t baseBlock = MathUtil::CeilDivision(maxMN, tmpCoreNum * loop);
             baseBlock = UpdateBaseBlock(baseBlock, isMLarger);
-            if (baseBlock >= MIN_BASE_BLOCK && baseBlock <= MAX_BASE_BLOCK) {
+            uint64_t tileSize = baseBlock * minMN * sizeof(float);
+            if (baseBlock >= MIN_BASE_BLOCK && baseBlock <= MAX_BASE_BLOCK && tileSize <= compileInfo_.l0CSize) {
                 targetBase = baseBlock;
                 return;
             }
@@ -379,14 +380,14 @@ void MatMulV3AswTiling::HandleLargeSingleSide(uint64_t minMN, uint64_t maxMN, bo
 {
     if (isMLarger) {
         runInfo_.baseN = minMN;
-        runInfo_.baseM = compileInfo_.l0CSize / runInfo_.dbL0C / runInfo_.baseN;
+        runInfo_.baseM = compileInfo_.l0CSize / runInfo_.dbL0C / runInfo_.baseN / sizeof(float);
         runInfo_.baseM = ops::FloorAlign(runInfo_.baseM, BASIC_BLOCK_SIZE_16);
-        CalcLargeSingleSide(maxMN, runInfo_.baseM, isMLarger);
+        CalcLargeSingleSide(minMN, maxMN, runInfo_.baseM, isMLarger);
     } else {
         runInfo_.baseM = minMN;
-        runInfo_.baseN = compileInfo_.l0CSize / runInfo_.dbL0C / runInfo_.baseM;
+        runInfo_.baseN = compileInfo_.l0CSize / runInfo_.dbL0C / runInfo_.baseM / sizeof(float);
         runInfo_.baseN = ops::FloorAlign(runInfo_.baseN, BLOCK_BYTE_SIZE);
-        CalcLargeSingleSide(maxMN, runInfo_.baseN, isMLarger);
+        CalcLargeSingleSide(minMN, maxMN, runInfo_.baseN, isMLarger);
     }
 }
 

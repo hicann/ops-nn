@@ -58,7 +58,7 @@ private:
     void CalcSingleX(uint64_t& higherSingleX, uint64_t& lowerSingleX);
     // 单边大场景处理
     uint64_t UpdateBaseBlock(uint64_t baseBlock, bool isMLarger);
-    void CalcLargeSingleSide(uint64_t maxMN, uint64_t& targetBase, bool isMLarger);
+    void CalcLargeSingleSide(uint64_t minMN, uint64_t maxMN, uint64_t& targetBase, bool isMLarger);
     void HandleLargeSingleSide(uint64_t minMN, uint64_t maxMN, bool isMLarger);
     // 两边都比较大场景处理
     bool UpdateBothBaseBlock(
