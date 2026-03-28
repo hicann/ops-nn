@@ -33,6 +33,13 @@ enum class CubeFormat : uint8_t {
     UNSUPPORT,
 };
 
+enum class QuantMode : std::uint8_t {
+    NO_QUANT = 0,
+    SCALAR_QUANT,   // perTensor量化模式，Scale shape为(1)
+    VECTOR_QUANT,   // perChannel量化模式，Scale shape和结果的channel一致
+    UNDEFINED
+};
+
 template <typename T>
 struct GetDstType {
     using Type = T;
@@ -43,10 +50,17 @@ struct GetDstType<float> {
     using Type = float;
 };
 
+#if (__NPU_ARCH__ == 5102)
+template <>
+struct GetDstType<half> {
+    using Type = int32_t;
+};
+#else
 template <>
 struct GetDstType<half> {
     using Type = float;
 };
+#endif
 
 template <>
 struct GetDstType<int8_t> {
@@ -99,30 +113,34 @@ __aicore__ constexpr Conv3dConfig GetDefaultConfig()
 constexpr Conv3dConfig CONV3D_CFG_DEFAULT = GetDefaultConfig();
 
 // 打包字段，内部实现的上下文，包含了用户构造的ConvBpParam
-template <class A, class B, class C, class D, class E>
+template <class A, class B, class C, class D, class E, class F>
 struct ConvBpContext {
     using xType = A;
     using cType = C;
     using dType = D;
     using eType = E;
+    using fType = F;
     using SrcT = typename A::Type;
-    using SrcAT = typename A::Type;
-    using SrcBT = typename C::Type;
+    using SrcAT = typename C::Type;    // dedy Type
+    using SrcBT = typename A::Type;    // filter Type
     using DstT = typename D::Type;
     using BiasT = typename E::Type;
-    using L0cT = typename GetDstType<SrcT>::Type;
+    using ScaleT = typename F::Type;
+    using L0cT = typename GetDstType<SrcAT>::Type;
 
     constexpr static auto formatA = A::format;
     constexpr static auto formatB = B::format;
     constexpr static auto formatC = C::format;
     constexpr static auto formatD = D::format;
     constexpr static auto formatE = E::format;
+    constexpr static auto formatF = F::format;
 
     constexpr static auto posA = A::pos;
     constexpr static auto posB = B::pos;
     constexpr static auto posC = C::pos;
     constexpr static auto posD = D::pos;
     constexpr static auto posE = E::pos;
+    constexpr static auto posF = F::pos;
 
     using ContextData = struct _ {
         __aicore__ inline _() {}

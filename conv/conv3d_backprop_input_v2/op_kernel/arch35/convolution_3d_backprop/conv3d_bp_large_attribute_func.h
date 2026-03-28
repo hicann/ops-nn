@@ -49,8 +49,8 @@ static __aicore__ inline bool ComputeForWkLoop(Intf *self, uint32_t kwDilation,
 }
 
 template <class Intf>
-static __aicore__ inline void ComputeForTilingHkWk(Intf *self, LocalTensor<typename Intf::SrcT> &l0a,
-    LocalTensor<typename Intf::SrcT> &l0b, LocalTensor<typename Intf::L0cT> &l0c, uint8_t &l0PingPongFlag)
+static __aicore__ inline void ComputeForTilingHkWk(Intf *self, LocalTensor<typename Intf::SrcAT> &l0a,
+    LocalTensor<typename Intf::SrcBT> &l0b, LocalTensor<typename Intf::L0cT> &l0c, uint8_t &l0PingPongFlag)
 {
     bool isFirstDHWk = true;
     int32_t curHoIdx = self->ctx.curHoIdx_;

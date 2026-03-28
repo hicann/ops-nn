@@ -23,9 +23,10 @@
 DECLARE_CHECK_IMPL(Init);
 DECLARE_CHECK_IMPL(SetOutBackprop);
 DECLARE_CHECK_IMPL(SetWeight);
-#if defined(__DAV_310R6__)
+#if (__NPU_ARCH__ == 5102)
 DECLARE_CHECK_IMPL(SetBias);
 #endif
+DECLARE_CHECK_IMPL(SetScale);
 DECLARE_CHECK_IMPL(SetSingleShape);
 DECLARE_CHECK_IMPL(SetStartIdx);
 DECLARE_CHECK_IMPL(SetFullLoadFlag);
@@ -200,11 +201,11 @@ template <class Intf>
 __aicore__ inline void InitC04Params(Intf *self)
 {
     if constexpr (Intf::conv3dConfig.enableC04Flag) {
-        if ASCEND_IS_AIV {
+        if ASCEND_IS_AIV_SCALAR {
             self->ctx.c04LoadToB1IterIdx_ = 0;
             uint32_t c04UbBufSize = (AscendC::TOTAL_UB_SIZE - AscendC::VECTOR_REG_WIDTH -
                 MASK_REG_WIDTH - AscendC::ONE_BLOCK_SIZE) >> 1;
-            uint32_t c04UbPixNum = DivDtypeByte<typename Intf::SrcT>(c04UbBufSize);
+            uint32_t c04UbPixNum = DivDtypeByte<typename Intf::SrcBT>(c04UbBufSize);
             uint32_t tmpVal1 = self->ctx.dkHkWk_ << C04_SHIFT_SIZE;
             uint32_t tmpVal2 = AlignUp((self->ctx.hkWk_ << C04_SHIFT_SIZE), self->ctx.tiling_->c0);
             uint32_t tmpVal3 = tmpVal1 > tmpVal2 ? tmpVal1 : tmpVal2;
@@ -216,7 +217,7 @@ __aicore__ inline void InitC04Params(Intf *self)
 template <class Intf>
 __aicore__ inline void InitParamsPart3(Intf *self)
 {
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || defined(__DAV_310R6__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
     self->ctx.dstB2Stride_ = 0;
     self->ctx.startAddrOffset_ = 0;
     self->ctx.headWi_ = 0;
@@ -325,7 +326,7 @@ __aicore__ inline void InitParams(Intf *self)
         InitParamsForNormal<Intf>(self);
     }
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || defined(__DAV_310R6__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
     self->ctx.dkHkWk_ = static_cast<uint64_t>(self->ctx.tiling_->dk) * self->ctx.hkWk_;
     self->ctx.hoWo_ = static_cast<uint64_t>(self->ctx.tiling_->ho) * self->ctx.tiling_->wo;
     self->ctx.doHoWo_ = self->ctx.tiling_->dout * self->ctx.hoWo_;
@@ -340,8 +341,8 @@ __aicore__ inline void InitParams(Intf *self)
         self->ctx.hoExpand_ = self->ctx.tiling_->ho;
     }
     self->ctx.l0PingPongFlag_ = 0;
-    self->ctx.l0aPingPongAddr_ = DivDtypeByte<typename Intf::SrcT>(TOTAL_L0A_SIZE >> 1);
-    self->ctx.l0bPingPongAddr_ = DivDtypeByte<typename Intf::SrcT>(TOTAL_L0B_SIZE >> 1);
+    self->ctx.l0aPingPongAddr_ = DivDtypeByte<typename Intf::SrcAT>(TOTAL_L0A_SIZE >> 1);
+    self->ctx.l0bPingPongAddr_ = DivDtypeByte<typename Intf::SrcBT>(TOTAL_L0B_SIZE >> 1);
     self->ctx.enableL0PingPong_ = (self->ctx.tiling_->al0Pbuffer - 1) & (self->ctx.tiling_->bl0Pbuffer - 1);
     InitLoadToA2Params<Intf>(self);
     InitLoadToB2Params<Intf>(self);
@@ -355,41 +356,41 @@ __aicore__ inline void CalcMatrixByteSize(Intf *self, uint32_t &aMatrixByteSize,
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
         uint32_t hoSize = CalFmapHMaxForKernelSplit(self, self->ctx.tiling_->baseM);
         hoSize = self->ctx.tiling_->ho < hoSize ? self->ctx.tiling_->ho : hoSize;
-        aMatrixByteSize = hoSize * self->ctx.tiling_->wo * self->ctx.channelSize_ * sizeof(typename Intf::SrcT);
+        aMatrixByteSize = hoSize * self->ctx.tiling_->wo * self->ctx.channelSize_ * sizeof(typename Intf::SrcAT);
         if (self->ctx.kSCoutFullLoad_) {
             bMatrixByteSize = self->ctx.tiling_->stepN * self->ctx.tiling_->baseN *
-                self->ctx.channelSize_ * self->ctx.singleShapeHWk_ * sizeof(typename Intf::SrcT);
+                self->ctx.channelSize_ * self->ctx.singleShapeHWk_ * sizeof(typename Intf::SrcBT);
         } else {
             bMatrixByteSize = self->ctx.tiling_->stepN * self->ctx.tiling_->baseN *
-                self->ctx.curStepKb_ * self->ctx.tiling_->baseK * sizeof(typename Intf::SrcT);
+                self->ctx.curStepKb_ * self->ctx.tiling_->baseK * sizeof(typename Intf::SrcBT);
         }
     } else if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_H) {
         uint32_t hoSize = self->ctx.tiling_->ho < self->ctx.curHoSize_ ? self->ctx.tiling_->ho : self->ctx.curHoSize_;
         aMatrixByteSize = hoSize * self->ctx.tiling_->wo * self->ctx.tiling_->strideW *
-            self->ctx.channelSize_ * sizeof(typename Intf::SrcT);
+            self->ctx.channelSize_ * sizeof(typename Intf::SrcAT);
         bMatrixByteSize = self->ctx.tiling_->stepN * self->ctx.tiling_->baseN *
-            self->ctx.curStepKb_ * self->ctx.tiling_->baseK * sizeof(typename Intf::SrcT);
+            self->ctx.curStepKb_ * self->ctx.tiling_->baseK * sizeof(typename Intf::SrcBT);
     } else {
         uint32_t hoSize = self->ctx.hoExpand_ < static_cast<uint64_t>(self->ctx.curHoSize_) ?
                 static_cast<uint32_t>(self->ctx.hoExpand_) : self->ctx.curHoSize_;
         if constexpr (Intf::conv3dConfig.enableC04Flag) {
             aMatrixByteSize = hoSize * self->ctx.tiling_->wo * self->ctx.tiling_->strideW *
-                C04_COUT_SIZE * sizeof(typename Intf::SrcT);
+                C04_COUT_SIZE * sizeof(typename Intf::SrcAT);
         } else if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
             // 不加载L1不加载完整的hkwk时, wo无需搬一整行
             aMatrixByteSize = self->ctx.tiling_->baseM *
-                DivHkWk<Intf>(self, self->ctx.curStepKa_ * self->ctx.tiling_->baseK) * sizeof(typename Intf::SrcT);
+                DivHkWk<Intf>(self, self->ctx.curStepKa_ * self->ctx.tiling_->baseK) * sizeof(typename Intf::SrcAT);
         } else {
             aMatrixByteSize = hoSize * self->ctx.tiling_->wo * self->ctx.tiling_->strideW *
                 DivHkWk<Intf>(self, self->ctx.curStepKa_ * self->ctx.tiling_->baseK) *
-                sizeof(typename Intf::SrcT);
+                sizeof(typename Intf::SrcAT);
         }
         bMatrixByteSize = self->ctx.tiling_->stepN * self->ctx.tiling_->baseN *
-            self->ctx.curStepKb_ * self->ctx.tiling_->baseK * sizeof(typename Intf::SrcT);
+            self->ctx.curStepKb_ * self->ctx.tiling_->baseK * sizeof(typename Intf::SrcBT);
     }
 }
 
-#if defined(__DAV_310R6__)
+#if (__NPU_ARCH__ == 5102)
 template <class Intf>
 __aicore__ inline void InitBiasTque(Intf *self)
 {
@@ -405,6 +406,17 @@ __aicore__ inline void InitBiasTque(Intf *self)
 #endif
 
 template <class Intf>
+__aicore__ inline void InitScaleTque(Intf *self)
+{
+    if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
+             self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+        uint32_t scaleSize = DivCeil(self->ctx.tiling_->singleCoreCin * sizeof(typename Intf::ScaleT),
+                                     ONE_BLK_SIZE) * ONE_BLK_SIZE;
+        self->ctx.pipe_.InitBuffer(self->ctx.scaleL1Que_, 1, scaleSize);
+    }
+}
+
+template <class Intf>
 __aicore__ inline void InitTque(Intf *self)
 {
     uint32_t bMatrixByteSize = 0;
@@ -416,7 +428,7 @@ __aicore__ inline void InitTque(Intf *self)
 #endif
 
     if (IsL1bUseTQue<Intf>(self)) {
-        if ASCEND_IS_AIC {
+        if ASCEND_IS_AIC_SCALAR {
             self->ctx.pipe_.InitBuffer(self->ctx.inQueL1B_, self->ctx.tiling_->bl1Pbuffer, bMatrixByteSize);
         }
     } else {
@@ -426,7 +438,7 @@ __aicore__ inline void InitTque(Intf *self)
         }
     }
 
-    if ASCEND_IS_AIC {
+    if ASCEND_IS_AIC_SCALAR {
         self->ctx.pipe_.InitBuffer(self->ctx.inQueL1A_, self->ctx.tiling_->al1Pbuffer, aMatrixByteSize);
 
         uint32_t baseMN = self->ctx.tiling_->baseM * self->ctx.tiling_->baseN;
@@ -439,9 +451,10 @@ __aicore__ inline void InitTque(Intf *self)
         }
         self->ctx.pipe_.InitBuffer(self->ctx.l0aBuf_, TOTAL_L0A_SIZE);
         self->ctx.pipe_.InitBuffer(self->ctx.l0bBuf_, TOTAL_L0B_SIZE);
-#if defined(__DAV_310R6__)
+#if (__NPU_ARCH__ == 5102)
         InitBiasTque(self);
 #endif
+        InitScaleTque(self);
     }
 
     InitUbByteSize(self);
@@ -449,7 +462,7 @@ __aicore__ inline void InitTque(Intf *self)
 
 template <class Intf>
 static __aicore__ inline void FreeFullLoadL1Tensor(Intf *self) {
-    if ASCEND_IS_AIC {
+    if ASCEND_IS_AIC_SCALAR {
         // 全载场景，如果Tensor已经被载入了，进行释放
         if (self->ctx.isB1FullLoadFlag_ && self->ctx.isFreeB1_ && !self->ctx.isLoadB1_) {
             self->ctx.inQueL1B_.FreeTensor(self->ctx.cacheB1Buf_);
@@ -464,8 +477,8 @@ static __aicore__ inline void FreeFullLoadL1Tensor(Intf *self) {
 }
 
 template <class Intf>
-static __aicore__ inline void ComputeForNoTilingHWk(Intf *self, LocalTensor<typename Intf::SrcT> &l0a,
-    LocalTensor<typename Intf::SrcT> &l0b, LocalTensor<typename Intf::L0cT> &l0c, uint8_t &l0PingPongFlag)
+static __aicore__ inline void ComputeForNoTilingHWk(Intf *self, LocalTensor<typename Intf::SrcAT> &l0a,
+    LocalTensor<typename Intf::SrcBT> &l0b, LocalTensor<typename Intf::L0cT> &l0c, uint8_t &l0PingPongFlag)
 { 
     bool isFirstDk = true;
     for (uint64_t curInnerKdIdx = self->ctx.curDkIdx_; curInnerKdIdx < self->ctx.curDkIdx_ + self->ctx.tiling_->singleIterateDk; curInnerKdIdx++) {
@@ -485,7 +498,7 @@ static __aicore__ inline void ComputeForNoTilingHWk(Intf *self, LocalTensor<type
 template <class Intf>
 static __aicore__ inline void ComputeStart(Intf *self, LocalTensor<typename Intf::L0cT> &l0c)
 {
-    if ASCEND_IS_AIC {
+    if ASCEND_IS_AIC_SCALAR {
         InitMmadParams<Intf>(self);
         UpdateLoadToA2ParamsM<Intf>(self);
         UpdateLoadToB2ParamsN<Intf>(self);
@@ -502,7 +515,7 @@ static __aicore__ inline void ComputeStart(Intf *self, LocalTensor<typename Intf
 template <class Intf>
 static __aicore__ inline void ComputeEnd(Intf *self, LocalTensor<typename Intf::L0cT> &l0c, uint8_t l0PingPongFlag)
 {
-    if ASCEND_IS_AIC {
+    if ASCEND_IS_AIC_SCALAR {
         if (self->ctx.l0cPingPongFlag_) {
             self->ctx.l0cPing_.EnQue(l0c);
         } else {
@@ -522,8 +535,8 @@ static __aicore__ inline void Compute(Intf *self)
         return;
     }
 
-    LocalTensor<typename Intf::SrcT> l0a;
-    LocalTensor<typename Intf::SrcT> l0b;
+    LocalTensor<typename Intf::SrcAT> l0a;
+    LocalTensor<typename Intf::SrcBT> l0b;
     LocalTensor<typename Intf::L0cT> l0c;
     ComputeStart<Intf>(self, l0c);
     uint8_t l0PingPongFlag = self->ctx.l0PingPongFlag_;
@@ -699,7 +712,7 @@ struct Init {
 template <class Intf>
 struct SetWeight {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::SrcT> &weight)
+    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::SrcBT> &weight)
     {
         self->ctx.weightGlobal_ = weight;
     }
@@ -708,13 +721,13 @@ struct SetWeight {
 template <class Intf>
 struct SetOutBackprop {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::SrcT> &outBackprop)
+    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::SrcAT> &outBackprop)
     {
         self->ctx.outBackPropGlobal_ = outBackprop;
     }
 };
 
-#if defined(__DAV_310R6__)
+#if (__NPU_ARCH__ == 5102)
 template <class Intf>
 struct SetBias {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
@@ -724,6 +737,15 @@ struct SetBias {
     }
 };
 #endif
+
+template <class Intf>
+struct SetScale {
+    DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
+    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::ScaleT> &scale)
+    {
+        self->ctx.scaleGlobal_ = scale;
+    }
+};
 
 template <class Intf>
 struct SetSingleShape {
@@ -956,11 +978,18 @@ struct IterateAll {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
     static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::DstT> &output, uint8_t enAtomic)
     {
-#if defined(__DAV_310R6__)
+#if (__NPU_ARCH__ == 5102)
         if (self->ctx.tiling_->isBiasFullLoad && Intf::Config::eType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
             Convolution3DBackpropFunc::FullLoadBias<Intf>(self);
         }
 #endif
+        if constexpr (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+            if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+                Convolution3DBackpropFunc::FullLoadToScaleL1<Intf>(self);
+            } else if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::SCALAR_QUANT)) {
+                self->ctx.deqScalar_ = self->ctx.scaleGlobal_.GetValue(0);
+            }
+        }
         if constexpr (Intf::conv3dConfig.kernelSplitMode != TPL_SPLIT_KERNEL_HW) {
             while (self->template Iterate<sync>()) {
                 self->template VecPreProcess<sync>(output, enAtomic);
@@ -970,14 +999,20 @@ struct IterateAll {
         } else {
             self->template IterateAllForKernelSplit<sync>(output, enAtomic);
         }
-#if defined(__DAV_310R6__)
+#if (__NPU_ARCH__ == 5102)
         if (self->ctx.tiling_->isBiasFullLoad && Intf::Config::eType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
-            if ASCEND_IS_AIC {
+            if ASCEND_IS_AIC_SCALAR {
                 self->ctx.biasL1Que_.FreeTensor(self->ctx.biasL1Buf_);
                 self->ctx.biasBTQue_.FreeTensor(self->ctx.biasBTBuf_);
             }
         }
 #endif
+        if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
+            self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+            if ASCEND_IS_AIC_SCALAR {
+                self->ctx.scaleL1Que_.FreeTensor(self->ctx.scaleL1Buf_);
+            }
+        }
         self->ctx.isFirstIter_ = true;
     }
 };
@@ -999,10 +1034,10 @@ struct VecPreProcess {
                                        uint8_t enAtomic = 0, bool enSequentialWrite = false)
     {
         if (unlikely(self->ctx.enableSplitDk_)) {
-            if ASCEND_IS_AIC {
+            if ASCEND_IS_AIC_SCALAR {
                 // 反向event(实际只需要保证vector核内的时序,不加反向event时cube到vector之间的event有可能会下超过16次,导致报错)
                 if (self->ctx.isLastDk_) {
-                    CrossCoreWaitFlag<SYNC_MODE, PIPE_FIX>(FLAG_FIXP_ID);
+                    CvCrossCoreWait<Intf, PIPE_MTE3, PIPE_FIX>(self, FLAG_FIXP_ID);
                 }
             }
         }
@@ -1019,19 +1054,19 @@ struct VecPostProcess {
             Rearrange2Gm<Intf>(self, output, enAtomic, enSequentialWrite);
         }
         if (unlikely(self->ctx.enableSplitDk_)) {
-            if ASCEND_IS_AIC {
+            if ASCEND_IS_AIC_SCALAR {
                 if (self->ctx.isLastDk_) {
-                    CrossCoreSetFlag<SYNC_MODE, PIPE_FIX>(FLAG_MTE2_VEC_ID);
+                    CvCrossCoreSet<Intf, PIPE_FIX, PIPE_MTE2>(self, FLAG_MTE2_VEC_ID);
                 }
             }
-            if ASCEND_IS_AIV {
+            if ASCEND_IS_AIV_SCALAR {
                 if (GetSubBlockIdx() != 0) {
                     return;
                 }
                 if (self->ctx.isLastDk_) {
-                    CrossCoreWaitFlag<SYNC_MODE, PIPE_MTE2>(FLAG_MTE2_VEC_ID);
+                    CvCrossCoreWait<Intf, PIPE_FIX, PIPE_MTE2>(self, FLAG_MTE2_VEC_ID);
                     CastToDstType<Intf>(self, output, enAtomic, enSequentialWrite);
-                    CrossCoreSetFlag<SYNC_MODE, PIPE_MTE3>(FLAG_FIXP_ID);
+                    CvCrossCoreSet<Intf, PIPE_MTE3, PIPE_FIX>(self, FLAG_FIXP_ID);
                 }
             }
         }
@@ -1052,6 +1087,17 @@ struct End {
         if (self->ctx.tiling_->cl0Pbuffer > 1) {
             self->ctx.l0cPong_.FreeAllEvent();
         }
+#if (__NPU_ARCH__ == 5102)
+        if constexpr (Intf::Config::eType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+            self->ctx.biasL1Que_.FreeAllEvent();
+            self->ctx.biasBTQue_.FreeAllEvent();
+        }
+#endif
+        if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
+            self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+            self->ctx.scaleL1Que_.FreeAllEvent();
+        }
+
         if (self->ctx.tiling_->hf32Flag) {
             SetHF32Mode(false);
         }

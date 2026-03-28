@@ -25,31 +25,32 @@ using AscendC::Dn2NzParams;
 using AscendC::Nd2NzParams;
 
 namespace Convolution3DBackpropFunc {
-template <class Intf>
-__aicore__ inline void InitZeroValue(Intf *self, const LocalTensor<typename Intf::SrcT> &buf)
+template <class Intf, typename SrcType>
+__aicore__ inline void InitZeroValue(Intf *self, const LocalTensor<SrcType> &buf)
 {
-    uint32_t len = buf.GetSize() * sizeof(typename Intf::SrcT);
-    if constexpr(std::is_same<typename Intf::SrcT, hifloat8_t>::value ||
-        std::is_same<typename Intf::SrcT, fp8_e4m3fn_t>::value) {
+    uint32_t len = buf.GetSize() * sizeof(SrcType);
+    if constexpr(std::is_same<SrcType, hifloat8_t>::value ||
+        std::is_same<SrcType, fp8_e4m3fn_t>::value ||
+        std::is_same<SrcType, int8_t>::value) {
         InitConstValue(buf.template ReinterpretCast<uint16_t>(), {1, static_cast<uint16_t>(len >> 5), 0, 0});
-    } else {
-        AscendC::InitConstValueParams<typename Intf::SrcT> initConstValueParams;
-        initConstValueParams.repeatTimes = 1;
-        initConstValueParams.blockNum = len >> 5;  // 除以blockSize
-        initConstValueParams.dstGap = 0;
-        initConstValueParams.initValue = (typename Intf::SrcT)(0);
-        InitConstValue(buf, initConstValueParams);
-    }
+        } else {
+            AscendC::InitConstValueParams<SrcType> initConstValueParams;
+            initConstValueParams.repeatTimes = 1;
+            initConstValueParams.blockNum = len >> 5;  // 除以blockSize
+            initConstValueParams.dstGap = 0;
+            initConstValueParams.initValue = (SrcType)(0);
+            InitConstValue(buf, initConstValueParams);
+        }
     PipeBarrier<PIPE_MTE2>();
 }
 
 template <class Intf>
 __aicore__ inline void LoadToB1Dn2Nz(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcT> &useB1Buf)
+    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
 {
     uint32_t curCout1Cout0Size = AlignUp16(curCoutSize);
     if (curCout1Cout0Size != curCoutSize) {
-        InitZeroValue(self, useB1Buf);
+        InitZeroValue<Intf, typename Intf::SrcBT>(self, useB1Buf);
     }
 
     // DN (cout, cin, dk, hk, wk) -> NZ (cin1, hk, wk, cout1, cout0, cin0) = (cin1, hkwk, cout_align, cin0)
@@ -72,11 +73,11 @@ __aicore__ inline void LoadToB1Dn2Nz(Intf *self, uint32_t curCinSize, uint32_t c
 
 template <class Intf>
 __aicore__ inline void LoadToB1Nd2Nz(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcT> &useB1Buf)
+    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
 {
     uint32_t curCout1Cout0Size = AlignUp16(curCoutSize);
     if (curCout1Cout0Size != curCoutSize) {
-        InitZeroValue(self, useB1Buf);
+        InitZeroValue<Intf, typename Intf::SrcBT>(self, useB1Buf);
     }
 
     // ND (cout, dk, hk, wk, cin) -> NZ (cin1, hk, wk, cout1, cout0, cin0) = (cin1, hkwk, cout_align, cin0)
@@ -99,11 +100,11 @@ __aicore__ inline void LoadToB1Nd2Nz(Intf *self, uint32_t curCinSize, uint32_t c
 
 template <class Intf>
 __aicore__ inline void LoadToB1TransposeForDkHkWkIsOne(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcT> &useB1Buf)
+    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
 {
     uint32_t curCin1Cin0Size = AlignUp16(curCinSize);
     if (curCin1Cin0Size != curCinSize) {
-        InitZeroValue(self, useB1Buf);
+        InitZeroValue<Intf, typename Intf::SrcBT>(self, useB1Buf);
     }
 
     // DN(ND) (cout, cin) -> NZ (cout1, cin1, cin0, cout0) = (cout1, cin_align, cout0)
@@ -125,11 +126,11 @@ __aicore__ inline void LoadToB1TransposeForDkHkWkIsOne(Intf *self, uint32_t curC
 
 template <class Intf>
 __aicore__ inline void LoadToB1Dn2NzTranspose(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcT> &useB1Buf)
+    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
 {
     uint32_t curCin1Cin0Size = AlignUp16(curCinSize);
     if (curCin1Cin0Size != curCinSize) {
-        InitZeroValue(self, useB1Buf);
+        InitZeroValue<Intf, typename Intf::SrcBT>(self, useB1Buf);
     }
 
     // DN (cout, cin, dk, hk, wk) -> NZ (cout1, hk, wk, cin1, cin0, cout0) = (cout1, hkwk, cin_align, cout0)
@@ -152,7 +153,7 @@ __aicore__ inline void LoadToB1Dn2NzTranspose(Intf *self, uint32_t curCinSize, u
 
 template <class Intf>
 __aicore__ inline void LoadToB1Dn2NzTransposeForKernelSplitH(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcT> &useB1Buf)
+    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
 {
     uint32_t curCin1Cin0Size = AlignUp16(curCinSize);
     if (curCin1Cin0Size != curCinSize) {
@@ -187,11 +188,11 @@ __aicore__ inline void LoadToB1Dn2NzTransposeForKernelSplitH(Intf *self, uint32_
 
 template <class Intf>
 __aicore__ inline void LoadToB1Nd2NzForDkHkWkIsOne(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcT> &useB1Buf)
+    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
 {
     uint32_t curCout1Cout0Size = AlignUp16(curCoutSize);
     if (curCout1Cout0Size != curCoutSize) {
-        InitZeroValue(self, useB1Buf);
+        InitZeroValue<Intf, typename Intf::SrcBT>(self, useB1Buf);
     }
 
     // ND (cout, cin, dk) -> NZ (cin1, cout1, cout0, cin0) = (cin1, cout_align, cin0)
@@ -214,11 +215,11 @@ __aicore__ inline void LoadToB1Nd2NzForDkHkWkIsOne(Intf *self, uint32_t curCinSi
 
 template <class Intf>
 __aicore__ inline void LoadToB1Nd2NzTranspose(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcT> &useB1Buf)
+    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
 {
     uint32_t curCin1Cin0Size = AlignUp16(curCinSize);
     if (curCin1Cin0Size != curCinSize) {
-        InitZeroValue(self, useB1Buf);
+        InitZeroValue<Intf, typename Intf::SrcBT>(self, useB1Buf);
     }
 
     // ND (cout, dk, hk, wk, cin) -> NZ (cout1, hk, wk, cin1, cin0, cout0) = (cout1, hkwk, cin_align, cout0)
@@ -245,14 +246,14 @@ __aicore__ inline void LoadToB1Nd2NzTranspose(Intf *self, uint32_t curCinSize, u
 
 template <class Intf>
 __aicore__ inline void LoadToB1Nd2NzForKernelSplit(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcT> &useB1Buf)
+    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
 {
     // ND (cout, dk, hk, wk, cin) -> NZ (cout1, splithk, splitwk, cin1, cin0, cout0) = (cout1, splithkwk, cin_align, cout0)
     // B: splitwk, D: cout, N: cin
     // ND (B, N, D) -> (D1, N, B, D0)
     uint32_t curCin1Cin0Size = AlignUp16(curCinSize);
     if (curCin1Cin0Size != curCinSize) {
-        InitZeroValue(self, useB1Buf);
+        InitZeroValue<Intf, typename Intf::SrcBT>(self, useB1Buf);
     }
     uint32_t strideW = self->ctx.tiling_->strideW;
     uint32_t cinOffset = self->ctx.tiling_->cinG;
@@ -289,7 +290,7 @@ __aicore__ inline void LoadToB1Nd2NzForKernelSplit(Intf *self, uint32_t curCinSi
 
 template <class Intf>
 __aicore__ inline void LoadGmDataToB1ForDn2Nz(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcT> &useB1Buf)
+    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
 {
     if constexpr (Intf::conv3dConfig.loadB2Condition == TPL_TRANSPOSE_ONLY) {
         LoadToB1Nd2NzForDkHkWkIsOne(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
@@ -310,7 +311,7 @@ __aicore__ inline void LoadGmDataToB1ForDn2Nz(Intf *self, uint32_t curCinSize, u
 
 template <class Intf>
 __aicore__ inline void LoadGmDataToB1ForNd2Nz(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcT> &useB1Buf)
+    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
 {
     if constexpr (Intf::conv3dConfig.loadB2Condition == TPL_TRANSPOSE_ONLY) {
         LoadToB1Nd2NzForDkHkWkIsOne(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
@@ -337,11 +338,11 @@ __aicore__ inline void LoadGmDataToB1ForNd2Nz(Intf *self, uint32_t curCinSize, u
 
 template <class Intf>
 __aicore__ inline void LoadGmDataToB1DHWCN2NzTranspose(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcT> &useB1Buf)
+    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
 {
     uint32_t curCin1Cin0Size = AlignUp16(curCinSize);
     if (curCin1Cin0Size != curCinSize) {
-        InitZeroValue(self, useB1Buf);
+        InitZeroValue<Intf, typename Intf::SrcBT>(self, useB1Buf);
     }
 
     // DHWCN (dk, hk, wk, cin，cout) -> NZ (cout1, hk, wk, cin1, cin0, cout0) = (cout1, hkwk, cin_align, cout0)
@@ -365,7 +366,7 @@ __aicore__ inline void LoadGmDataToB1DHWCN2NzTranspose(Intf *self, uint32_t curC
 template <class Intf, class src1_T>
 __aicore__ inline void LoadGmDataToB1(Intf *self, uint32_t kIdx, uint32_t curDkIdx)
 {
-    LocalTensor<typename Intf::SrcT> useB1Buf = self->ctx.inQueL1B_.template AllocTensor<typename Intf::SrcT>();
+    LocalTensor<typename Intf::SrcBT> useB1Buf = self->ctx.inQueL1B_.template AllocTensor<typename Intf::SrcBT>();
 
     uint32_t curCinIdx = self->ctx.curNL1Idx_ * self->ctx.tiling_->stepN * self->ctx.tiling_->baseN;
     uint32_t curCinSize = CalcCurCinSizeB1(self, curCinIdx);
@@ -413,18 +414,18 @@ __aicore__ inline void LoadToB1(Intf *self, uint64_t kIdx, uint32_t curDkIdx, bo
     }
 
     if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
-        if ASCEND_IS_AIV {
+        if ASCEND_IS_AIV_SCALAR {
             GroupTransdataWeight<Intf>(self, kIdx, curDkIdx);
         }
         self->ctx.groupIterIdx_ += 1;
     } else if constexpr (Intf::conv3dConfig.enableC04Flag) {
-        if ASCEND_IS_AIV {
+        if ASCEND_IS_AIV_SCALAR {
             C04TransdataWeight<Intf>(self, kIdx, curDkIdx);
         }
         self->ctx.c04LoadToB1IterIdx_ += 1;
     } else {
-        if ASCEND_IS_AIC {
-            LoadGmDataToB1<Intf, typename Intf::SrcT>(self, kIdx, curDkIdx);
+        if ASCEND_IS_AIC_SCALAR {
+            LoadGmDataToB1<Intf, typename Intf::SrcBT>(self, kIdx, curDkIdx);
         }
     }
 }

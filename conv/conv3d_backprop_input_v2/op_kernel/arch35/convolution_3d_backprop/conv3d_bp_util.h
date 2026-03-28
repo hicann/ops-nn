@@ -19,17 +19,29 @@
 #include "kernel_common.h"
 #include "basic_api/kernel_basic_intf.h"
 
+#if (__NPU_ARCH__ == 5102)
+#define ASCEND_IS_AIC_SCALAR constexpr(true)
+#define ASCEND_IS_AIV_SCALAR constexpr(true)
+#define ASCEND_IS_AIV_SHOULD_RETURN constexpr(false)
+#define ASCEND_IS_AIC_SHOULD_RETURN constexpr(false)
+#else
+#define ASCEND_IS_AIC_SCALAR ASCEND_IS_AIC
+#define ASCEND_IS_AIV_SCALAR ASCEND_IS_AIV
+#define ASCEND_IS_AIV_SHOULD_RETURN ASCEND_IS_AIV
+#define ASCEND_IS_AIC_SHOULD_RETURN ASCEND_IS_AIC
+#endif
+
 static __aicore__ inline uint64_t GetAicBlockIdx()
 {
-    if ASCEND_IS_AIV {
-#if defined(__DAV_310R6__)
+    if ASCEND_IS_AIV_SCALAR {
+#if (__NPU_ARCH__ == 5102)
         int64_t blockIdx = AscendC::GetBlockIdx();
 #elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
         int64_t blockIdx = AscendC::GetBlockIdx() >> 1;
 #endif
         return blockIdx;
     }
-    if ASCEND_IS_AIC {
+    if ASCEND_IS_AIC_SCALAR {
         return AscendC::GetBlockIdx();
     }
 }

@@ -343,7 +343,11 @@ __aicore__ inline void CrossCoreCSeitVForKS(Intf *self)
 {
 #ifndef __CCE_KT_TEST__
     if (self->ctx.needComputeFlag_) {
-        CrossCoreSetFlag<SYNC_MODE, PIPE_FIX>(FLAG_MTE2_VEC_ID);
+        if (self->ctx.kSUseWorkSpace_) {
+            CvCrossCoreSet<Intf, PIPE_FIX, PIPE_MTE2>(self, FLAG_MTE2_VEC_ID);
+        } else {
+            CvCrossCoreSet<Intf, PIPE_FIX, PIPE_V>(self, FLAG_MTE2_VEC_ID);
+        }
     }
 #endif
 }
@@ -353,7 +357,7 @@ __aicore__ inline void CrossCoreCWaitVForKS(Intf *self)
 {
 #ifndef __CCE_KT_TEST__
     if (self->ctx.needComputeFlag_) {
-        CrossCoreWaitFlag<SYNC_MODE, PIPE_FIX>(FLAG_FIXP_ID);
+        CvCrossCoreWait<Intf, PIPE_MTE3, PIPE_FIX>(self, FLAG_FIXP_ID);
     }
 #endif
 }
@@ -363,7 +367,7 @@ __aicore__ inline void CrossCoreVSeitCForKS(Intf *self)
 {
 #ifndef __CCE_KT_TEST__
     if (self->ctx.needComputeFlag_) {
-        CrossCoreSetFlag<SYNC_MODE, PIPE_MTE3>(FLAG_FIXP_ID);
+        CvCrossCoreSet<Intf, PIPE_MTE3, PIPE_FIX>(self, FLAG_FIXP_ID);
     }
 #endif
 }
@@ -374,10 +378,10 @@ __aicore__ inline void CrossCoreVWaitCForKS(Intf *self)
 #ifndef __CCE_KT_TEST__
     if (self->ctx.needComputeFlag_) {
         if (self->ctx.kSUseWorkSpace_) {
-        // workspace方案会存在从gm往ub写的过程，因此vec首指令为MTE2
-            CrossCoreWaitFlag<SYNC_MODE, PIPE_MTE2>(FLAG_MTE2_VEC_ID);
+            // workspace方案会存在从gm往ub写的过程，因此vec首指令为MTE2
+            CvCrossCoreWait<Intf, PIPE_FIX, PIPE_MTE2>(self, FLAG_MTE2_VEC_ID);
         } else {
-            CrossCoreWaitFlag<SYNC_MODE, PIPE_V>(FLAG_MTE2_VEC_ID);
+            CvCrossCoreWait<Intf, PIPE_FIX, PIPE_V>(self, FLAG_MTE2_VEC_ID);
         }
     }
 #endif
@@ -390,7 +394,7 @@ struct IterateAllForKernelSplit {
     static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::DstT> &output, uint8_t enAtomic)
     {
         while (self->template Iterate<sync>()) {
-            if ASCEND_IS_AIC {
+            if ASCEND_IS_AIC_SCALAR {
                 if (self->ctx.rearrangeWIndex_ == 0) {
                     CrossCoreCWaitVForKS<Intf>(self);
                 }
@@ -399,7 +403,7 @@ struct IterateAllForKernelSplit {
                     CrossCoreCSeitVForKS<Intf>(self);
                 }
             }
-            if ASCEND_IS_AIV {
+            if ASCEND_IS_AIV_SCALAR {
                 if (GetSubBlockIdx() != 0) {
                     continue;
                 }

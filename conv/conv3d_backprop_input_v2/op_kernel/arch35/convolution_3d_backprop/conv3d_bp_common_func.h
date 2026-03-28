@@ -21,7 +21,7 @@
 #include "../conv3d_backprop_input_v2/conv3d_backprop_input_v2_tiling_data.h"
 #include "../../conv3d_backprop_input_v2_arch35_tiling_key.h"
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || defined(__DAV_310R6__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
 #include "impl/dav_v310/conv_bp_sub_func.h"
 #endif
 namespace Convolution3DBackpropFunc {
@@ -74,7 +74,7 @@ __aicore__ inline uint32_t CalFmapH(Intf *self, uint32_t mL1Size)
 template <class Intf>
 static __aicore__ inline void ComputeL1A(Intf *self, uint64_t kIdx, int64_t curDoutIdx, uint32_t l0aKIdx)
 {
-    if ASCEND_IS_AIV {
+    if ASCEND_IS_AIV_SHOULD_RETURN {
         return;
     }
     bool loadFlag = false;
@@ -83,7 +83,7 @@ static __aicore__ inline void ComputeL1A(Intf *self, uint64_t kIdx, int64_t curD
     } else {
         loadFlag = (l0aKIdx == 0);
     }
-    Convolution3DBackpropFunc::LoadToA1<Intf, typename Intf::SrcT>(self, kIdx, curDoutIdx, loadFlag);
+    Convolution3DBackpropFunc::LoadToA1<Intf, typename Intf::SrcAT>(self, kIdx, curDoutIdx, loadFlag);
 }
 
 template <class Intf>
@@ -95,19 +95,19 @@ static __aicore__ inline void ComputeL1B(Intf *self, uint64_t kIdx, int64_t curK
     } else {
         loadFlag = (l0bKIdx == 0);
     }
-    Convolution3DBackpropFunc::LoadToB1<Intf, typename Intf::SrcT>(self, kIdx, curKdIdx, loadFlag);
+    Convolution3DBackpropFunc::LoadToB1<Intf, typename Intf::SrcBT>(self, kIdx, curKdIdx, loadFlag);
 }
 
 template <class Intf>
 static __aicore__ inline void ComputeL1APreLoad(Intf *self, uint64_t kIdx, int64_t curDoutIdx, uint32_t l0aKIdx)
 {
-    if ASCEND_IS_AIV {
+    if ASCEND_IS_AIV_SHOULD_RETURN {
         return;
     }
     if (self->ctx.tiling_->al1Pbuffer <= 1) {
         return;
     }
-    Convolution3DBackpropFunc::LoadToA1<Intf, typename Intf::SrcT>(self, self->ctx.curStepKa_ + kIdx,
+    Convolution3DBackpropFunc::LoadToA1<Intf, typename Intf::SrcAT>(self, self->ctx.curStepKa_ + kIdx,
         curDoutIdx, l0aKIdx == 0);
 }
 
@@ -117,11 +117,11 @@ static __aicore__ inline void ComputeL1BPreLoad(Intf *self, uint64_t kIdx, int64
     if (self->ctx.tiling_->bl1Pbuffer <= 1) {
         return;
     }
-    Convolution3DBackpropFunc::LoadToB1<Intf, typename Intf::SrcT>(self, self->ctx.curStepKb_ + kIdx,
+    Convolution3DBackpropFunc::LoadToB1<Intf, typename Intf::SrcBT>(self, self->ctx.curStepKb_ + kIdx,
         curKdIdx, l0bKIdx == 0);
 }
 
-#if defined(__DAV_310R6__)
+#if (__NPU_ARCH__ == 5102)
 template <class Intf>
 static __aicore__ inline void ComputeBTBias(Intf *self)
 {
@@ -134,12 +134,12 @@ static __aicore__ inline void ComputeBTBias(Intf *self)
 
 template <class Intf>
 static __aicore__ inline void ComputeL0AForKernelSplit(Intf *self, uint32_t l0aKIdx,
-    uint64_t curKdIdx, uint32_t curStepKa, LocalTensor<typename Intf::SrcT> &l0a)
+    uint64_t curKdIdx, uint32_t curStepKa, LocalTensor<typename Intf::SrcAT> &l0a)
 {
     if (unlikely(l0aKIdx == 0 && (!self->ctx.isA1FullLoadFlag_ || (self->ctx.isA1FullLoadFlag_ &&
         self->ctx.isLoadA1_)))) {
         self->ctx.isLoadA1_ = false;
-        self->ctx.cacheA1Buf_ = self->ctx.inQueL1A_.template DeQue<typename Intf::SrcT>();
+        self->ctx.cacheA1Buf_ = self->ctx.inQueL1A_.template DeQue<typename Intf::SrcAT>();
     }
 
     LoadToA2<Intf>(self, self->ctx.cacheA1Buf_, l0a);
@@ -152,10 +152,10 @@ static __aicore__ inline void ComputeL0AForKernelSplit(Intf *self, uint32_t l0aK
 }
 
 template <class Intf>
-static __aicore__ inline void ComputeL0A(Intf *self, uint32_t l0aKIdx, uint32_t curStepKa, LocalTensor<typename Intf::SrcT> &l0a)
+static __aicore__ inline void ComputeL0A(Intf *self, uint32_t l0aKIdx, uint32_t curStepKa, LocalTensor<typename Intf::SrcAT> &l0a)
 {
     if (unlikely(l0aKIdx == 0)) {
-        self->ctx.cacheA1Buf_ = self->ctx.inQueL1A_.template DeQue<typename Intf::SrcT>();
+        self->ctx.cacheA1Buf_ = self->ctx.inQueL1A_.template DeQue<typename Intf::SrcAT>();
     }
 
     LoadToA2<Intf>(self, self->ctx.cacheA1Buf_, l0a);
@@ -167,12 +167,12 @@ static __aicore__ inline void ComputeL0A(Intf *self, uint32_t l0aKIdx, uint32_t 
 
 template <class Intf>
 static __aicore__ inline void ComputeL0BForTQueData(Intf *self, uint32_t l0bKIdx,
-        uint32_t curStepKb, LocalTensor<typename Intf::SrcT> &l0b)
+        uint32_t curStepKb, LocalTensor<typename Intf::SrcBT> &l0b)
 {
     if (unlikely(l0bKIdx == 0 && (!self->ctx.isB1FullLoadFlag_ || (self->ctx.isB1FullLoadFlag_ &&
         self->ctx.isLoadB1_)))) {
         self->ctx.isLoadB1_ = false;
-        self->ctx.cacheB1Buf_ = self->ctx.inQueL1B_.template DeQue<typename Intf::SrcT>();
+        self->ctx.cacheB1Buf_ = self->ctx.inQueL1B_.template DeQue<typename Intf::SrcBT>();
     }
 
     LoadToB2<Intf>(self, self->ctx.cacheB1Buf_, l0bKIdx, l0b);
@@ -182,7 +182,7 @@ static __aicore__ inline void ComputeL0BForTQueData(Intf *self, uint32_t l0bKIdx
         self->ctx.isLoadB1_ = true;
         self->ctx.inQueL1B_.FreeTensor(self->ctx.cacheB1Buf_);
 
-#if defined(__DAV_310R6__)
+#if (__NPU_ARCH__ == 5102)
         if (!self->ctx.tiling_->isBiasFullLoad) {
             self->ctx.biasBTQue_.FreeTensor(self->ctx.biasBTBuf_);
         }
@@ -192,25 +192,25 @@ static __aicore__ inline void ComputeL0BForTQueData(Intf *self, uint32_t l0bKIdx
 
 template <class Intf>
 static __aicore__ inline void ComputeL0BForTBufData(Intf *self, uint32_t l0bKIdx,
-    uint64_t curKdIdx, uint32_t curStepKb, LocalTensor<typename Intf::SrcT> &l0b, uint64_t kIdx)
+    uint64_t curKdIdx, uint32_t curStepKb, LocalTensor<typename Intf::SrcBT> &l0b, uint64_t kIdx)
 {
     if (unlikely(l0bKIdx == 0 && (!self->ctx.isB1FullLoadFlag_ ||
         (self->ctx.isB1FullLoadFlag_ && self->ctx.isLoadB1_)))) {
         self->ctx.isLoadB1_ = false;
-        if ASCEND_IS_AIC {
+        if ASCEND_IS_AIC_SCALAR {
             WaitForVecBeforeLoadToB2<Intf>(self);
         }
         self->ctx.cacheB1Buf_ = GetB1Tbuf<Intf>(self, kIdx);
     }
 
-    if ASCEND_IS_AIC {
+    if ASCEND_IS_AIC_SCALAR {
         LoadToB2<Intf>(self, self->ctx.cacheB1Buf_, l0bKIdx, l0b);
     }
 
     if ((l0bKIdx == curStepKb - 1) && (!self->ctx.isB1FullLoadFlag_ ||
         (self->ctx.isB1FullLoadFlag_ && self->ctx.isFreeB1_))) {
         self->ctx.isLoadB1_ = true;
-        if ASCEND_IS_AIC {
+        if ASCEND_IS_AIC_SCALAR {
             NotifyVecAfterLoadToB2<Intf>(self);
         }
     }
@@ -218,7 +218,7 @@ static __aicore__ inline void ComputeL0BForTBufData(Intf *self, uint32_t l0bKIdx
 
 template <class Intf>
 static __aicore__ inline void ComputeL0B(Intf *self, uint32_t l0bKIdx,
-    uint64_t curKdIdx, uint32_t curStepKb, LocalTensor<typename Intf::SrcT> &l0b, uint64_t kIdx)
+    uint64_t curKdIdx, uint32_t curStepKb, LocalTensor<typename Intf::SrcBT> &l0b, uint64_t kIdx)
 {
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
         if (self->ctx.kSCoutFullLoad_) {
@@ -229,7 +229,7 @@ static __aicore__ inline void ComputeL0B(Intf *self, uint32_t l0bKIdx,
     }
 
     if (IsL1bUseTQue<Intf>(self)) {
-        if ASCEND_IS_AIV {
+        if ASCEND_IS_AIV_SHOULD_RETURN {
             return;
         }
         ComputeL0BForTQueData<Intf>(self, l0bKIdx, curStepKb, l0b);
@@ -239,8 +239,8 @@ static __aicore__ inline void ComputeL0B(Intf *self, uint32_t l0bKIdx,
 }
 
 template <class Intf>
-static __aicore__ inline void ComputeForKIter(Intf *self, LocalTensor<typename Intf::SrcT> &l0a,
-    LocalTensor<typename Intf::SrcT> &l0b, LocalTensor<typename Intf::L0cT> &l0c,
+static __aicore__ inline void ComputeForKIter(Intf *self, LocalTensor<typename Intf::SrcAT> &l0a,
+    LocalTensor<typename Intf::SrcBT> &l0b, LocalTensor<typename Intf::L0cT> &l0c,
     uint64_t curInnerKdIdx, int64_t curDoutIdx, bool isFirstDk, uint8_t &l0PingPongFlag)
 {
     uint32_t curStepKa = self->ctx.curStepKa_;
@@ -253,14 +253,14 @@ static __aicore__ inline void ComputeForKIter(Intf *self, LocalTensor<typename I
         ComputeL1B<Intf>(self, kIdx, curInnerKdIdx, l0bKIdx);
         ComputeL1APreLoad<Intf>(self, kIdx, curDoutIdx, l0aKIdx);
         ComputeL1BPreLoad<Intf>(self, kIdx, curInnerKdIdx, l0bKIdx);
-#if defined(__DAV_310R6__)
+#if (__NPU_ARCH__ == 5102)
         ComputeBTBias<Intf>(self);
 #endif
 
-        if ASCEND_IS_AIC {
+        if ASCEND_IS_AIC_SCALAR {
             WaitFlag<HardEvent::M_MTE1>(l0PingPongFlag & 1);
-            l0a = self->ctx.l0aBuf_.template Get<typename Intf::SrcT>();
-            l0b = self->ctx.l0bBuf_.template Get<typename Intf::SrcT>();
+            l0a = self->ctx.l0aBuf_.template Get<typename Intf::SrcAT>();
+            l0b = self->ctx.l0bBuf_.template Get<typename Intf::SrcBT>();
             if (l0PingPongFlag) {
                 l0a = l0a[self->ctx.l0aPingPongAddr_];
                 l0b = l0b[self->ctx.l0bPingPongAddr_];
@@ -275,7 +275,7 @@ static __aicore__ inline void ComputeForKIter(Intf *self, LocalTensor<typename I
         }
 
         ComputeL0B<Intf>(self, l0bKIdx, curInnerKdIdx, curStepKb, l0b, kIdx);
-        if ASCEND_IS_AIC {
+        if ASCEND_IS_AIC_SCALAR {
             SetFlag<HardEvent::MTE1_M>(l0PingPongFlag);
             WaitFlag<HardEvent::MTE1_M>(l0PingPongFlag);
             CalcParamsMmad<Intf>(self, kIdx, isFirstDk);

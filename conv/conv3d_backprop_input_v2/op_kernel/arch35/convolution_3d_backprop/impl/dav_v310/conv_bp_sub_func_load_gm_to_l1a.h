@@ -295,7 +295,7 @@ static __aicore__ inline void CalcLoadToA1Nd2NzParams(Intf *self, Nd2NzParams &n
 }
 
 template <class Intf, class src0_T>
-__aicore__ inline void LoadToA1ForDn2Nz(Intf *self, LocalTensor<typename Intf::SrcT> &useA1Buf,
+__aicore__ inline void LoadToA1ForDn2Nz(Intf *self, LocalTensor<typename Intf::SrcAT> &useA1Buf,
     uint32_t kIdx, uint32_t curDoutIdx)
 {
     Dn2NzParams dn2NzParams;
@@ -322,9 +322,9 @@ __aicore__ inline void LoadToA1ForDn2Nz(Intf *self, LocalTensor<typename Intf::S
             strideH = 1;
         }
         if (unlikely(self->ctx.tiling_->strideW * strideH > 1)) {
-            InitZeroValue(self, useA1Buf);
+            InitZeroValue<Intf, typename Intf::SrcAT>(self, useA1Buf);
         }
-        CalcLoadToA1Dn2NzParams<Intf, typename Intf::SrcT>(self, dn2NzParams, out2A1DstAddrOffset,
+        CalcLoadToA1Dn2NzParams<Intf, typename Intf::SrcAT>(self, dn2NzParams, out2A1DstAddrOffset,
             curCoutIdx, kIdx);
         if (strideH > 1) {
             curHoIdx = self->ctx.curHoIdx_ < 0 ? 0 : self->ctx.curHoIdx_;
@@ -342,7 +342,7 @@ __aicore__ inline void LoadToA1ForDn2Nz(Intf *self, LocalTensor<typename Intf::S
     uint64_t out2A1SrcAddrOffset = coOffset + doOffset + hoOffset + woOffset;
     if (dn2NzParams.dnNum > 0) { // dn2nz参数有效时，才执行加载，否则先跳过；后续考虑提前计算dn2nz参数减少无效计算
         if constexpr (Intf::conv3dConfig.enableC04Flag) {
-            DataCopy<typename Intf::SrcT, true>(useA1Buf[out2A1DstAddrOffset], self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], dn2NzParams);
+            DataCopy<typename Intf::SrcAT, true>(useA1Buf[out2A1DstAddrOffset], self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], dn2NzParams);
         } else {
             DataCopy(useA1Buf[out2A1DstAddrOffset], self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], dn2NzParams);
         }
@@ -350,7 +350,7 @@ __aicore__ inline void LoadToA1ForDn2Nz(Intf *self, LocalTensor<typename Intf::S
 }
 
 template <class Intf, class src0_T>
-__aicore__ inline void LoadToA1ForNd2Nz(Intf *self, LocalTensor<typename Intf::SrcT> &useA1Buf,
+__aicore__ inline void LoadToA1ForNd2Nz(Intf *self, LocalTensor<typename Intf::SrcAT> &useA1Buf,
     uint32_t kIdx, uint32_t curDoutIdx)
 {
     Nd2NzParams nd2NzParams;
@@ -371,14 +371,14 @@ __aicore__ inline void LoadToA1ForNd2Nz(Intf *self, LocalTensor<typename Intf::S
             strideH = 1;
         }
         if (unlikely(self->ctx.tiling_->strideW * strideH > 1)) {
-            InitZeroValue(self, useA1Buf);
+            InitZeroValue<Intf, typename Intf::SrcAT>(self, useA1Buf);
         }
 
         uint32_t curCoutIdx = 0;
         if constexpr (!Intf::conv3dConfig.enableC04Flag) {
             curCoutIdx = DivHkWk<Intf>(self, kIdx * self->ctx.tiling_->baseK);
         }
-        CalcLoadToA1Nd2NzParams<Intf, typename Intf::SrcT>(self, nd2NzParams, out2A1DstAddrOffset,
+        CalcLoadToA1Nd2NzParams<Intf, typename Intf::SrcAT>(self, nd2NzParams, out2A1DstAddrOffset,
             curCoutIdx, kIdx);
         coOffset = curCoutIdx;
         if (strideH > 1) {
@@ -399,7 +399,7 @@ __aicore__ inline void LoadToA1ForNd2Nz(Intf *self, LocalTensor<typename Intf::S
     uint64_t out2A1SrcAddrOffset = coOffset + doOffset + hoOffset + woOffset;
     if (nd2NzParams.ndNum > 0) { // nd2nz参数有效时，才执行加载，否则先跳过；后续考虑提前计算dn2nz参数减少无效计算
         if constexpr (Intf::conv3dConfig.enableC04Flag) {
-            DataCopy<typename Intf::SrcT, true>(useA1Buf[out2A1DstAddrOffset], self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], nd2NzParams);
+            DataCopy<typename Intf::SrcAT, true>(useA1Buf[out2A1DstAddrOffset], self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], nd2NzParams);
         } else {
             DataCopy(useA1Buf[out2A1DstAddrOffset], self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], nd2NzParams);
         }
@@ -412,11 +412,11 @@ __aicore__ inline void LoadToA1(Intf *self, uint32_t kIdx, uint32_t curDoutIdx, 
     if (!loadFlag || unlikely(kIdx >= self->ctx.kIter_ || (self->ctx.isA1FullLoadFlag_ && !self->ctx.isLoadA1_))) {
         return;
     }
-    LocalTensor<typename Intf::SrcT> useA1Buf = self->ctx.inQueL1A_.template AllocTensor<typename Intf::SrcT>();
+    LocalTensor<typename Intf::SrcAT> useA1Buf = self->ctx.inQueL1A_.template AllocTensor<typename Intf::SrcAT>();
     if constexpr (Intf::Config::cType::format == Convolution3DBackprop::CubeFormat::NCDHW) {
-        LoadToA1ForDn2Nz<Intf, typename Intf::SrcT>(self, useA1Buf, kIdx, curDoutIdx);
+        LoadToA1ForDn2Nz<Intf, typename Intf::SrcAT>(self, useA1Buf, kIdx, curDoutIdx);
     } else {
-        LoadToA1ForNd2Nz<Intf, typename Intf::SrcT>(self, useA1Buf, kIdx, curDoutIdx);
+        LoadToA1ForNd2Nz<Intf, typename Intf::SrcAT>(self, useA1Buf, kIdx, curDoutIdx);
     }
     self->ctx.inQueL1A_.EnQue(useA1Buf);
 }

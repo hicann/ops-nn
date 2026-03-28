@@ -28,7 +28,7 @@ using AscendC::TPipe;
 using AscendC::MmadParams;
 using AscendC::LoadData2DParams;
 using AscendC::LoadData3DParamsV2;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || defined(__DAV_310R6__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
 using AscendC::LoadData2DParamsV2;
 #endif
 
@@ -46,9 +46,10 @@ public:
 
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, Init, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetWeight, Intf);
-#if defined(__DAV_310R6__)
+#if (__NPU_ARCH__ == 5102)
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetBias, Intf);
 #endif
+    DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetScale, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetOutBackprop, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetKernelSplitParams, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetSingleShapeParams, Intf);
@@ -79,6 +80,7 @@ public:
         DEFINE_STUCT_TEMPLATE_FIELD(TQue, l0cPong_, TPosition::CO1, 1);
         DEFINE_STUCT_FIELD(uint8_t, l0cPingPongFlag_);
         DEFINE_STUCT_TEMPLATE_FIELD(TQue, biasL1Que_, TPosition::A1, 1);
+        DEFINE_STUCT_TEMPLATE_FIELD(TQue, scaleL1Que_, TPosition::A1, 1);
         DEFINE_STUCT_TEMPLATE_FIELD(TQue, biasBTQue_, TPosition::C2, 1);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, l0aBuf_, TPosition::A2);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, l0bBuf_, TPosition::B2);
@@ -154,24 +156,28 @@ public:
         DEFINE_STUCT_FIELD(uint8_t, enableL0PingPong_);
         DEFINE_STUCT_FIELD(MmadParams, mmad_);
         DEFINE_STUCT_FIELD(LoadData2DParams, load2d_);
-        using NDDMACopyParams = MultiCopyParams<typename Intf::SrcT, GROUP_NDDMA_DIM_NUM>;
+        using NDDMACopyParams = MultiCopyParams<typename Intf::SrcBT, GROUP_NDDMA_DIM_NUM>;
         DEFINE_STUCT_FIELD(NDDMACopyParams, groupCopyParams_);
 
-        using LoadData3DParamsV2SrcT = LoadData3DParamsV2<typename Intf::SrcT>;
+        using LoadData3DParamsV2SrcT = LoadData3DParamsV2<typename Intf::SrcAT>;
         DEFINE_STUCT_FIELD(LoadData3DParamsV2SrcT, load3d_);
-        using srcLocalTensor = LocalTensor<typename Intf::SrcT>;
-        DEFINE_STUCT_FIELD(srcLocalTensor, cacheA1Buf_);
-        DEFINE_STUCT_FIELD(srcLocalTensor, cacheB1Buf_);
-        using GlobalTnesor = GlobalTensor<typename Intf::SrcT>;
-        DEFINE_STUCT_FIELD(GlobalTnesor, outBackPropGlobal_);
-        DEFINE_STUCT_FIELD(GlobalTnesor, fmapGlobal_);
-        DEFINE_STUCT_FIELD(GlobalTnesor, weightGlobal_);
+        using srcLocalTensorA = LocalTensor<typename Intf::SrcAT>;
+        using srcLocalTensorB = LocalTensor<typename Intf::SrcBT>;
+        DEFINE_STUCT_FIELD(srcLocalTensorA, cacheA1Buf_);
+        DEFINE_STUCT_FIELD(srcLocalTensorB, cacheB1Buf_);
+        using GlobalTnesorA = GlobalTensor<typename Intf::SrcAT>;
+        using GlobalTnesorB = GlobalTensor<typename Intf::SrcBT>;
+        DEFINE_STUCT_FIELD(GlobalTnesorA, outBackPropGlobal_);
+        DEFINE_STUCT_FIELD(GlobalTnesorA, fmapGlobal_);
+        DEFINE_STUCT_FIELD(GlobalTnesorB, weightGlobal_);
         DEFINE_STUCT_FIELD(GlobalTensor<typename Intf::BiasT>, biasGlobal_);
         DEFINE_STUCT_FIELD(LocalTensor<typename Intf::BiasT>, biasL1Buf_);
         DEFINE_STUCT_FIELD(LocalTensor<typename Intf::L0cT>, biasBTBuf_);
+        DEFINE_STUCT_FIELD(GlobalTensor<typename Intf::ScaleT>, scaleGlobal_);
+        DEFINE_STUCT_FIELD(LocalTensor<typename Intf::ScaleT>, scaleL1Buf_);
         DEFINE_STUCT_FIELD(GlobalTensor<float>, l0cOutGm_); // tmp workspace to store result data with fp32
         DEFINE_STUCT_FIELD(GlobalTensor<typename Intf::DstT>, l0cOutWorkspace_); // tmp workspace for kernel split
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || defined(__DAV_310R6__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, b1UbPing_, TPosition::B1);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, b1UbPong_, TPosition::B1);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, vecBuf_, TPosition::VECIN);
@@ -179,7 +185,7 @@ public:
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, nzVecBuf_, TPosition::VECOUT);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, idxVecBuf_, TPosition::VECCALC);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, maskVecBuf_, TPosition::VECCALC);
-        using ubLocalTensor = LocalTensor<typename Intf::SrcT>;
+        using ubLocalTensor = LocalTensor<typename Intf::SrcBT>;
         DEFINE_STUCT_FIELD(ubLocalTensor, vecInBuf_);
         using ubDstLocalTensor = LocalTensor<typename Intf::DstT>;
         DEFINE_STUCT_FIELD(ubDstLocalTensor, vecOutBuf_);
@@ -211,6 +217,7 @@ public:
         DEFINE_STUCT_FIELD(uint32_t, l0aPingPongAddr_);
         DEFINE_STUCT_FIELD(uint32_t, l0bPingPongAddr_);
         DEFINE_STUCT_FIELD(uint32_t, realWoSize_);
+        DEFINE_STUCT_FIELD(uint64_t, deqScalar_);
 #endif
     };
 };

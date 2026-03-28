@@ -32,34 +32,43 @@ template <typename filterType, int filterFormat, typename dedyType, int dedyForm
     typename biasType, int biasFormat,
     uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
     uint8_t b1Condition = TPL_GM_TO_L1,
-    bool enableC04Flag = false>
+    bool enableC04Flag = false, typename scaleType = uint64_t, int scaleFormat = FORMAT_MAX>
 class Conv3dDxOswBlock : public Conv3dDx<filterType, filterFormat, dedyType, dedyFormat, yType, yFormat, biasType, biasFormat,
-    b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag> {
+    b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag, scaleType, scaleFormat> {
 public:
     __aicore__ inline Conv3dDxOswBlock() {};
     __aicore__ inline void Init(GM_ADDR filter, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
-                                const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData *tilingData)
+                                const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData *tilingData,
+                                GM_ADDR bias = nullptr, GM_ADDR scale=nullptr)
     {
         if constexpr (!enableC04Flag && !groupMode) {
-            if ASCEND_IS_AIV {
+            if ASCEND_IS_AIV_SHOULD_RETURN {
                 return;
             }
         }
 
         InitTilingData(tilingData);
-        if (this->enableVecTrans_) {
-            this->filterGm_.SetGlobalBuffer((__gm__ filterType *)workSpace);
-        } else {
+        if (!this->enableVecTrans_) {
             this->filterGm_.SetGlobalBuffer((__gm__ filterType *)filter);
+        } else {
+            this->filterGm_.SetGlobalBuffer((__gm__ filterType *)workSpace);
         }
         this->dedyGm_.SetGlobalBuffer((__gm__ dedyType *)dedy);
         this->yGm_.SetGlobalBuffer((__gm__ yType *)y);
+        if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+            this->scaleGm_.SetGlobalBuffer((__gm__ scaleType *)scale);
+        }
+#if (__NPU_ARCH__ == 5102)
+        if constexpr (biasFormat != FORMAT_MAX) {
+            this->biasGm_.SetGlobalBuffer((__gm__ biasType *)bias);
+        }
+#endif
         this->dedx_.Init(&(tilingData->conv3DDxTiling));
     }
 
     __aicore__ inline void Process() {
         if constexpr (!enableC04Flag && !groupMode) {
-            if ASCEND_IS_AIV {
+            if ASCEND_IS_AIV_SHOULD_RETURN {
                 return;
             }
         }
@@ -94,8 +103,13 @@ protected:
      __aicore__ inline void CrossCoreWaitVecTrans()
     {
         if (this->enableVecTrans_) {
-            if ASCEND_IS_AIC {
+            if ASCEND_IS_AIC_SCALAR {
+#if (__NPU_ARCH__ == 5102)
+                AscendC::TQueSync<PIPE_MTE3, PIPE_MTE2> sync;
+                sync.WaitFlag((event_t)SYNC_AIV_AIC_DET_FLAG);
+#else
                 CrossCoreWaitFlag<SYNC_MODE2, PIPE_MTE2>(SYNC_AIV_AIC_DET_FLAG);
+#endif
             }
         }
     }
@@ -201,7 +215,7 @@ protected:
 
     __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData) {
         Conv3dDx<filterType, filterFormat, dedyType, dedyFormat, yType, yFormat, biasType, biasFormat,
-            b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag>::InitTilingData(tilingData);
+            b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag, scaleType, scaleFormat>::InitTilingData(tilingData);
         this->singleShapeM_ = this->tiling_->singleCoreM;
         if(unlikely(this->tiling_->group > 1)) {
             if constexpr (b1Condition == TPL_GM_TO_L1) {
@@ -275,7 +289,14 @@ protected:
 
             this->CheckFullLoadEnable();
             this->dedx_.SetFullLoadFlag(this->tiling_->enableFullLoad);
-
+#if (__NPU_ARCH__ == 5102)
+            if constexpr (biasFormat != FORMAT_MAX) {
+                this->dedx_.SetBias(this->biasGm_[this->offsetBias_]);
+            }
+#endif
+            if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+                this->dedx_.SetScale(this->scaleGm_[this->offsetScale_]);
+            }
             if (j == 0) {
                 this->CrossCoreWaitVecTrans();
             }
@@ -293,7 +314,7 @@ protected:
         uint64_t blockNum = this->usedCoreNum_;
         CalBasicBlockCore(blockIdx, blockNum);
 
-        if ASCEND_IS_AIC {
+        if ASCEND_IS_AIC_SCALAR {
             // 当b1全载且dk=1时，只需要加载一次b1，在循环结束后释放
             this->dedx_.FreeB1Tensor();
         }

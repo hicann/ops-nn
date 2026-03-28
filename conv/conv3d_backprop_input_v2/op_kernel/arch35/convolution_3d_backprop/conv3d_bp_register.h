@@ -23,8 +23,8 @@
 namespace Convolution3DBackprop {
 // 注册，通过别名定义用户接口
 #define REGISTER_DX_IMPL(name, context, impl, intf)             \
-template <class X_T, class W_TYPE, class DEDY_T, class Y_T, class BIAS_T,\
+template <class X_T, class W_TYPE, class DEDY_T, class Y_T, class BIAS_T, class SCALE_T,\
     const Conv3dConfig& CONV3D_CONFIG = CONV3D_CFG_DEFAULT> \
-    using name = intf<context<X_T, W_TYPE, DEDY_T, Y_T, BIAS_T, CONV3D_CONFIG>, impl>
+    using name = intf<context<X_T, W_TYPE, DEDY_T, Y_T, BIAS_T, SCALE_T, CONV3D_CONFIG>, impl>
 }  // namespace Convolution3DBackprop
 #endif

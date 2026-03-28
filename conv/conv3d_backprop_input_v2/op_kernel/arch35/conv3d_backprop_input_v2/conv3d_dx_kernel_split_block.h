@@ -26,16 +26,17 @@ template <typename filterType, int filterFormat, typename dedyType, int dedyForm
     typename biasType, int biasFormat,
     uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
     uint8_t b1Condition = TPL_GM_TO_L1,
-    bool enableC04Flag = false>
+    bool enableC04Flag = false, typename scaleType = uint64_t, int scaleFormat = FORMAT_MAX>
 class Conv3dDxKsBlock : public Conv3dDxOswBlock<filterType, filterFormat, dedyType, dedyFormat, yType, yFormat, biasType, biasFormat,
-    b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag> {
+    b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag, scaleType, scaleFormat> {
 public:
     __aicore__ inline Conv3dDxKsBlock() {};
     __aicore__ inline void Init(GM_ADDR filter, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
-                                const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData *tilingData)
+                                const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData *tilingData,
+                                GM_ADDR bias = nullptr, GM_ADDR scale=nullptr)
     {
         if constexpr (kernelSplitMode != TPL_SPLIT_KERNEL_HW) {
-            if ASCEND_IS_AIV {
+            if ASCEND_IS_AIV_SHOULD_RETURN {
                 return;
             }
         }
@@ -51,16 +52,24 @@ public:
         }
         this->dedyGm_.SetGlobalBuffer((__gm__ dedyType *)dedy);
         this->yGm_.SetGlobalBuffer((__gm__ yType *)y);
+#if (__NPU_ARCH__ == 5102)
+        if constexpr (biasFormat != FORMAT_MAX) {
+            this->biasGm_.SetGlobalBuffer((__gm__ biasType *)bias);
+        }
+#endif
+        if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+            this->scaleGm_.SetGlobalBuffer((__gm__ scaleType *)scale);
+        }
         this->dedx_.Init(&(tilingData->conv3DDxTiling));
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || defined(__DAV_310R6__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
         InitMixCoreBuffer(workSpace);
 #endif
     }
 
     __aicore__ inline void Process() {
         if constexpr (kernelSplitMode != TPL_SPLIT_KERNEL_HW) {
-            if ASCEND_IS_AIV {
+            if ASCEND_IS_AIV_SHOULD_RETURN {
                 return;
             }
         }
@@ -193,7 +202,7 @@ protected:
 
     __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData) {
         Conv3dDx<filterType, filterFormat, dedyType, dedyFormat, yType, yFormat, biasType, biasFormat,
-            b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag>::InitTilingData(tilingData);
+            b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag, scaleType, scaleFormat>::InitTilingData(tilingData);
         this->kSUseWorkSpace_ = tilingData->conv3DDxKSTiling.kSUseWorkSpace;
         this->dedx_.SetKernelSplitParams(tilingData->conv3DDxKSTiling.kSCoutFullLoad, this->kSUseWorkSpace_);
         this->singleShapeM_ = this->tiling_->singleCoreM;
@@ -252,6 +261,14 @@ protected:
         CalcBlockKSOffset(kernelIdx);
         this->dedx_.SetOutBackprop(this->dedyGm_[this->offsetA_]);
         this->dedx_.SetWeight(this->filterGm_[this->offsetB_]);
+#if (__NPU_ARCH__ == 5102)
+        if constexpr (biasFormat != FORMAT_MAX) {
+            this->dedx_.SetBias(this->biasGm_[this->offsetBias_]);
+        }
+#endif
+        if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+            this->dedx_.SetScale(this->scaleGm_[this->offsetScale_]);
+        }
     }
 
     __aicore__ inline void CalBasicBlockCoreForSplitH(uint64_t blockIdx, uint64_t blockNum)
@@ -302,7 +319,7 @@ protected:
             CalBasicBlockCoreForSplitH(blockIdx, blockNum);
         } else {
             this->CalBasicBlockCore(blockIdx, blockNum);
-            if ASCEND_IS_AIC {
+            if ASCEND_IS_AIC_SCALAR {
                 // dk等于1且B矩阵全载，则整个循环过程中B矩阵仅需要加载一次，在循环结束后释放
                 this->dedx_.FreeB1Tensor();
             }

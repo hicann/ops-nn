@@ -29,11 +29,14 @@ struct ConvBpIntf {
     using Config = Config_;
     using Ext = Impl<ConvBpIntf, Config>;
     using SrcT = typename Config::SrcT;
+    using SrcBT = typename Config::SrcBT;
+    using SrcAT = typename Config::SrcAT;
     using DstT = typename Config::DstT;
     using L0cT = typename Config::L0cT;
     using BiasT = typename Config::BiasT;
+    using ScaleT = typename Config::ScaleT;
     using IndexT = typename AscendC::Conditional<
-        AscendC::IsSameType<SrcT, float>::value, uint32_t, uint16_t>::type;
+        AscendC::IsSameType<SrcBT, float>::value, uint32_t, uint16_t>::type;
     using ContextData = typename Ext::ContextData;
 
 public:
@@ -52,7 +55,7 @@ public:
         }
     }
 
-    __aicore__ inline void SetFmap(const GlobalTensor<SrcT> &fmap)
+    __aicore__ inline void SetFmap(const GlobalTensor<SrcAT> &fmap)
     {
         using Local = typename Ext::SetFmap;
         if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, fmap)) {
@@ -60,7 +63,7 @@ public:
         }
     }
 
-    __aicore__ inline void SetWeight(const GlobalTensor<SrcT> &weight)
+    __aicore__ inline void SetWeight(const GlobalTensor<SrcBT> &weight)
     {
         using Local = typename Ext::SetWeight;
         if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, weight)) {
@@ -68,7 +71,7 @@ public:
         }
     }
 
-    __aicore__ inline void SetOutBackprop(const GlobalTensor<SrcT> &outBackprop)
+    __aicore__ inline void SetOutBackprop(const GlobalTensor<SrcAT> &outBackprop)
     {
         using Local = typename Ext::SetOutBackprop;
         if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, outBackprop)) {
@@ -76,7 +79,7 @@ public:
         }
     }
 
-#if defined(__DAV_310R6__)
+#if (__NPU_ARCH__ == 5102)
     __aicore__ inline void SetBias(const GlobalTensor<BiasT> &bias)
     {
         using Local = typename Ext::SetBias;
@@ -85,6 +88,14 @@ public:
         }
     }
 #endif
+
+    __aicore__ inline void SetScale(const GlobalTensor<ScaleT> &scale)
+    {
+        using Local = typename Ext::SetScale;
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, scale)) {
+            Local::call(this, scale);
+        }
+    }
 
     __aicore__ inline void SetKernelSplitParams(uint32_t kSCoutFullLoad, uint32_t kSUseWorkSpace)
     {

@@ -26,6 +26,7 @@ using AscendC::MultiCopyConfig;
 
 namespace Convolution3DBackpropFunc {
 const static uint64_t DQ_SCALAR_ONE = 0x3F800000; // float 1.0
+const static uint64_t DQ_SCALAR_QF_ONE = 0x37800000;   // 1 / 2 ^ 16
 constexpr uint8_t FLAG_MTE1_ID_1 = 6;
 constexpr uint8_t FLAG_MTE1_ID_2 = 7;
 constexpr uint8_t FLAG_FIXP_ID = 8;
@@ -120,6 +121,28 @@ static __aicore__ inline uint32_t DivDtypeByte(uint32_t a)
     }
 }
 
+template <class Intf, pipe_t srcPipe, pipe_t dstPipe>
+__aicore__ inline void CvCrossCoreSet(Intf *self, uint8_t flagId)
+{
+#if (__NPU_ARCH__ == 5102)
+    AscendC::TQueSync<srcPipe, dstPipe> sync;
+    sync.SetFlag(flagId);
+#else
+    CrossCoreSetFlag<SYNC_MODE, srcPipe>(flagId);
+#endif
+}
+
+template <class Intf, pipe_t srcPipe, pipe_t dstPipe>
+__aicore__ inline void CvCrossCoreWait(Intf *self, uint8_t flagId)
+{
+#if (__NPU_ARCH__ == 5102)
+    AscendC::TQueSync<srcPipe, dstPipe> sync;
+    sync.WaitFlag(flagId);
+#else
+    CrossCoreWaitFlag<SYNC_MODE, dstPipe>(flagId);
+#endif
+}
+
 template <class Intf>
 __aicore__ inline void WaitForVecBeforeLoadToB2(Intf *self)
 {
@@ -159,17 +182,17 @@ __aicore__ inline void NotifyCubeAfterLoadToB1(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline LocalTensor<typename Intf::SrcT> GetB1Tbuf(Intf *self, const uint64_t kIdx)
+__aicore__ inline LocalTensor<typename Intf::SrcBT> GetB1Tbuf(Intf *self, const uint64_t kIdx)
 {
     bool b1PingPongFlag = true;
     if (self->ctx.tiling_->bl1Pbuffer > 1) {
         b1PingPongFlag = (1 + kIdx / self->ctx.tiling_->stepKb) & 1;
     }
-    LocalTensor<typename Intf::SrcT> useB1Tbuf;
+    LocalTensor<typename Intf::SrcBT> useB1Tbuf;
     if (b1PingPongFlag) {
-        useB1Tbuf = self->ctx.b1UbPing_.template Get<typename Intf::SrcT>();
+        useB1Tbuf = self->ctx.b1UbPing_.template Get<typename Intf::SrcBT>();
     } else {
-        useB1Tbuf = self->ctx.b1UbPong_.template Get<typename Intf::SrcT>();
+        useB1Tbuf = self->ctx.b1UbPong_.template Get<typename Intf::SrcBT>();
     }
     return useB1Tbuf;
 }
@@ -237,12 +260,43 @@ static __aicore__ inline void CalcCutInWIndex(Intf *self, const uint32_t crossBl
 }
 
 template <class Intf>
+static __aicore__ inline void LoadL0c2GMForKernelSplitFixPipe(Intf *self, const int64_t srcOffset, const int64_t wsDstOffset,
+    FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> &fixPipeParams, const LocalTensor<typename Intf::L0cT> &useC1Buf)
+{
+    if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
+        self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+        uint64_t scaleAddr = self->ctx.curNL0Idx_ * self->ctx.tiling_->baseN;
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(self->ctx.l0cOutWorkspace_[wsDstOffset],
+            useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
+    } else {
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(self->ctx.l0cOutWorkspace_[wsDstOffset],
+            useC1Buf[srcOffset], fixPipeParams);
+    }
+}
+
+template <class Intf>
+static __aicore__ inline void LoadL0c2UbForKernelSplitFixPipe(Intf *self, const int64_t srcOffset, const int64_t ubDstOffset,
+    FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> &fixPipeParams, const LocalTensor<typename Intf::L0cT> &useC1Buf)
+{
+    if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
+        self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+        uint64_t scaleAddr = self->ctx.curNL0Idx_ * self->ctx.tiling_->baseN;
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_UB>(self->ctx.vecOutBuf_[ubDstOffset],
+            useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
+    } else {
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_UB>(self->ctx.vecOutBuf_[ubDstOffset],
+            useC1Buf[srcOffset], fixPipeParams);
+    }
+}
+
+template <class Intf>
 static __aicore__ inline void LoadL0c2GMForKernelSplitInner(Intf *self, const LocalTensor<typename Intf::L0cT> &useC1Buf,
     FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> &fixPipeParams, const uint32_t crossBlockNum)
 {
     uint32_t align32Byte = 4; // 4: b16 需要对齐到16，2的4次方
     if constexpr(std::is_same<typename Intf::DstT, hifloat8_t>::value ||
-        std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value) {
+        std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value ||
+        std::is_same<typename Intf::DstT, int8_t>::value) {
         align32Byte = 5; // 5: b8 需要对齐到32，2的5次方
     }
 
@@ -269,8 +323,7 @@ static __aicore__ inline void LoadL0c2GMForKernelSplitInner(Intf *self, const Lo
         fixPipeParams.params.dstDnMatrixStride = 0; // loop3_dst_stride
 
         fixPipeParams.mSize = realHeadWi; // M: 首块的长度, 真实的headwi
-        Fixpipe<typename Intf::DstT, float, CFG_COLUMN_MAJOR>(self->ctx.l0cOutWorkspace_[wsDstOffset],
-            useC1Buf[srcOffset], fixPipeParams);
+        LoadL0c2GMForKernelSplitFixPipe(self, srcOffset, wsDstOffset, fixPipeParams, useC1Buf);
         // BLOCK_CUBE: MMAD一次计算为16*16, fixpipe搬到ub的时候取L0c的数据应该固定c0为16，不能随数据类型变化
         srcOffset += realHeadWi << 4; // headWi_/2是一个子kernel首块w的长度
         wsDstOffset += alignHeadWi;
@@ -282,8 +335,7 @@ static __aicore__ inline void LoadL0c2GMForKernelSplitInner(Intf *self, const Lo
         fixPipeParams.params.dstDnMatrixStride = alignMidWi; // loop3_dst_stride
 
         fixPipeParams.mSize = srcWi; // M: 中间块一行的长度, 真实的midwi
-        Fixpipe<typename Intf::DstT, float, CFG_COLUMN_MAJOR>(self->ctx.l0cOutWorkspace_[wsDstOffset],
-            useC1Buf[srcOffset], fixPipeParams);
+        LoadL0c2GMForKernelSplitFixPipe(self, srcOffset, wsDstOffset, fixPipeParams, useC1Buf);
         // BLOCK_CUBE: MMAD一次计算为16*16, fixpipe搬到ub的时候取L0c的数据应该固定c0为16，不能随数据类型变化
         srcOffset += self->ctx.midHi_ * srcWi << 4; // srcWi是一个子kernel中间块w的长度
         wsDstOffset += static_cast<int64_t>(self->ctx.midHi_) * alignMidWi;
@@ -295,8 +347,7 @@ static __aicore__ inline void LoadL0c2GMForKernelSplitInner(Intf *self, const Lo
         fixPipeParams.params.dstDnMatrixStride = 0; // loop3_dst_stride
 
         fixPipeParams.mSize = realTailWi; // M: 尾块的长度, 真实的tailwi
-        Fixpipe<typename Intf::DstT, float, CFG_COLUMN_MAJOR>(self->ctx.l0cOutWorkspace_[wsDstOffset],
-            useC1Buf[srcOffset], fixPipeParams);
+        LoadL0c2GMForKernelSplitFixPipe(self, srcOffset, wsDstOffset, fixPipeParams, useC1Buf);
     }
 }
 
@@ -307,7 +358,8 @@ static __aicore__ inline void LoadL0c2UbForKernelSplitInner(Intf *self, const Lo
     self->ctx.vecOutBuf_ = self->ctx.vecBuf_.template Get<typename Intf::DstT>();
     uint32_t align32Byte = 4; // 4: b16 需要对齐到16，2的4次方
     if constexpr(std::is_same<typename Intf::DstT, hifloat8_t>::value ||
-        std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value) {
+        std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value ||
+        std::is_same<typename Intf::DstT, int8_t>::value) {
         align32Byte = 5; // 5: b8 需要对齐到32，2的5次方
     }
 
@@ -331,8 +383,7 @@ static __aicore__ inline void LoadL0c2UbForKernelSplitInner(Intf *self, const Lo
         fixPipeParams.params.dstDnMatrixStride = 0; // loop3_dst_stride
 
         fixPipeParams.mSize = alignHeadWi; // M: 首块的长度
-        Fixpipe<typename Intf::DstT, float, CFG_COLUMN_MAJOR_UB>(self->ctx.vecOutBuf_[ubDstOffset],
-            useC1Buf[srcOffset], fixPipeParams);
+        LoadL0c2UbForKernelSplitFixPipe(self, srcOffset, ubDstOffset, fixPipeParams, useC1Buf);
         // BLOCK_CUBE: MMAD一次计算为16*16, fixpipe搬到ub的时候取L0c的数据应该固定c0为16，不能随数据类型变化
         srcOffset += realHeadWi << 4; // headWi_/2是一个子kernel首块w的长度
         ubDstOffset += alignHeadWi;
@@ -344,8 +395,7 @@ static __aicore__ inline void LoadL0c2UbForKernelSplitInner(Intf *self, const Lo
         fixPipeParams.params.dstDnMatrixStride = alignMidWi; // loop3_dst_stride
 
         fixPipeParams.mSize = alignMidWi; // M: 中间块一行的长度
-        Fixpipe<typename Intf::DstT, float, CFG_COLUMN_MAJOR_UB>(self->ctx.vecOutBuf_[ubDstOffset],
-            useC1Buf[srcOffset], fixPipeParams);
+        LoadL0c2UbForKernelSplitFixPipe(self, srcOffset, ubDstOffset, fixPipeParams, useC1Buf);
         // BLOCK_CUBE: MMAD一次计算为16*16, fixpipe搬到ub的时候取L0c的数据应该固定c0为16，不能随数据类型变化
         srcOffset += self->ctx.midHi_ * srcWi << 4; // srcWi是一个子kernel中间块w的长度
         ubDstOffset += self->ctx.midHi_ * alignMidWi;
@@ -357,16 +407,43 @@ static __aicore__ inline void LoadL0c2UbForKernelSplitInner(Intf *self, const Lo
         fixPipeParams.params.dstDnMatrixStride = 0; // loop3_dst_stride
 
         fixPipeParams.mSize = AlignUpByDtype(realTailWi, align32Byte); // M: 尾块的长度
-        Fixpipe<typename Intf::DstT, float, CFG_COLUMN_MAJOR_UB>(self->ctx.vecOutBuf_[ubDstOffset],
-            useC1Buf[srcOffset], fixPipeParams);
+        LoadL0c2UbForKernelSplitFixPipe(self, srcOffset, ubDstOffset, fixPipeParams, useC1Buf);
     }
 }
 
 template <class Intf>
-static __aicore__ inline void SetFixPipeQuantVal(FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> &fixPipeParams)
+static __aicore__ inline void SetQuantInt32ToHalf(Intf *self, FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> &fixPipeParams) {
+    if constexpr (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+        if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+            fixPipeParams.quantPre = QuantMode_t::VDEQF16;  // int32 -> fp16 tensor quant
+        } else {
+            fixPipeParams.quantPre = QuantMode_t::DEQF16;   // int32 -> fp16 scalar quant
+            fixPipeParams.deqScalar = self->ctx.deqScalar_;
+        }
+    } else {
+        fixPipeParams.quantPre = QuantMode_t::DEQF16;   // int32 -> fp16 scalar quant
+        fixPipeParams.deqScalar = DQ_SCALAR_QF_ONE;
+    }
+}
+
+template <class Intf>
+static __aicore__ inline void SetQuantInt8(Intf *self, FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> &fixPipeParams) {
+    if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+        fixPipeParams.quantPre = QuantMode_t::VREQ8;
+    } else {
+        fixPipeParams.quantPre = QuantMode_t::REQ8;
+        fixPipeParams.deqScalar = self->ctx.deqScalar_;
+    }
+}
+
+template <class Intf>
+static __aicore__ inline void SetFixPipeQuantVal(Intf *self, FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> &fixPipeParams)
 {
     if constexpr(std::is_same<typename Intf::DstT, bfloat16_t>::value) {
         fixPipeParams.quantPre = QuantMode_t::F322BF16;
+    } else if constexpr((std::is_same<typename Intf::L0cT, int32_t>::value) &&
+        (std::is_same<typename Intf::DstT, half>::value)) {
+        SetQuantInt32ToHalf(self, fixPipeParams);
     } else if constexpr(std::is_same<typename Intf::DstT, half>::value) {
         fixPipeParams.quantPre = QuantMode_t::F322F16;
     } else if constexpr(std::is_same<typename Intf::DstT, hifloat8_t>::value) {
@@ -375,6 +452,8 @@ static __aicore__ inline void SetFixPipeQuantVal(FixpipeParamsC310<CO2Layout::CO
     } else if constexpr(std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value) {
         fixPipeParams.quantPre = QuantMode_t::QF322FP8_PRE;
         fixPipeParams.deqScalar = DQ_SCALAR_ONE;
+    } else if constexpr(std::is_same<typename Intf::DstT, int8_t>::value) {
+        SetQuantInt8(self, fixPipeParams);
     }
 }
 
@@ -389,9 +468,13 @@ static __aicore__ inline void LoadL0c2OutForKernelSplitHW(Intf *self, const Loca
     CalcCutInWIndex<Intf>(self, crossBlockNum);
 
     FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> fixPipeParams;
-    SetFixPipeQuantVal<Intf>(fixPipeParams);
+    SetFixPipeQuantVal<Intf>(self, fixPipeParams);
     fixPipeParams.params.srcNzC0Stride = 1; // src M stride, loop0_src_stride (unit: 32B)
     fixPipeParams.nSize = self->ctx.baseUseN_; // N: cin
+#if (__NPU_ARCH__ == 5102)
+    fixPipeParams.reluEn = self->ctx.tiling_->enRelu;
+    fixPipeParams.preReluMode = static_cast<ReluMode>(self->ctx.tiling_->enRelu);
+#endif
     // loop1_src_stride, c0_size, cin1
     fixPipeParams.srcStride = AlignUp16(self->ctx.baseUseM_); // src N stride, loop1_src_stride (unit: 32B)
     // 由于tiling切M的时候是hi*wi一个整体对齐到32B进行切分，可能无法保证切到一个完整的wi，而ub指令又有对齐要求，所以需要分块对齐搬运
@@ -423,7 +506,8 @@ static __aicore__ inline void DataCopyUbToGmForKernelSplit(Intf *self, const Glo
     uint32_t wiUsed = AlignUp(self->ctx.tiling_->wi, self->ctx.tiling_->strideW);
     uint32_t align32Byte = 4; // 4: b16 需要对齐到16，2的4次方
     if constexpr(std::is_same<typename Intf::DstT, hifloat8_t>::value ||
-        std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value) {
+        std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value ||
+        std::is_same<typename Intf::DstT, int8_t>::value) {
         align32Byte = 5; // 5: b8 需要对齐到32，2的5次方
     }
     DataCopyExtParams ub2GmParams;
@@ -521,7 +605,8 @@ template <class Intf>
 __aicore__ inline void LoadWorkSpaceDataToUbInner(Intf *self, int64_t srcOffset, int64_t dstOffset, const DataCopyExtParams &mte2Param)
 {
     if constexpr(std::is_same<typename Intf::DstT, hifloat8_t>::value ||
-            std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value) {
+            std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value ||
+            std::is_same<typename Intf::DstT, int8_t>::value) {
         DataCopyPadExtParams<uint8_t> padParams = {false, 0, 0, 0};
         DataCopyPad<uint8_t, PaddingMode::Compact>(
             self->ctx.vecOutBuf_.template ReinterpretCast<uint8_t>()[dstOffset],
@@ -578,7 +663,8 @@ __aicore__ inline void Rearrange2GmForL0cToWorkSpace(Intf *self, const GlobalTen
         int32_t curUseN = (i == loopIter - 1) ? tailUseN : baseUseN;
         LoadWorkSpaceDataToUb(self, hwSize, curUseN, srcNOffset);
         if constexpr(std::is_same<typename Intf::DstT, hifloat8_t>::value ||
-            std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value) {
+            std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value ||
+            std::is_same<typename Intf::DstT, int8_t>::value) {
             InterleaveUbOutForKernelSplit<Intf, uint8_t>(self, curDataLen, crossBlockNum);
         } else {
             InterleaveUbOutForKernelSplit<Intf, typename Intf::DstT>(self, curDataLen, crossBlockNum);
@@ -599,7 +685,7 @@ template <class Intf>
 __aicore__ inline void Rearrange2Gm(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
                                          uint8_t enAtomic = 0, bool enSequentialWrite = false)
 {
-    if ASCEND_IS_AIC {
+    if ASCEND_IS_AIC_SHOULD_RETURN {
         return;
     }
     if (GetSubBlockIdx() > 0) {
@@ -613,7 +699,8 @@ __aicore__ inline void Rearrange2Gm(Intf *self, const GlobalTensor<typename Intf
         CalcCutInWIndex<Intf>(self, crossBlockNum);
         uint32_t align32Byte = 4; // 4: b16 需要对齐到16，2的4次方
         if constexpr(std::is_same<typename Intf::DstT, hifloat8_t>::value ||
-            std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value) {
+            std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value ||
+            std::is_same<typename Intf::DstT, int8_t>::value) {
             align32Byte = 5; // 5: b8 需要对齐到32，2的5次方
         }
         int64_t hwSize = AlignUpByDtype(self->ctx.headWi_ >> crossBlockNum, align32Byte) +
@@ -624,7 +711,8 @@ __aicore__ inline void Rearrange2Gm(Intf *self, const GlobalTensor<typename Intf
             Rearrange2GmForL0cToWorkSpace(self, output, align32Byte, hwSize, dataLen, crossBlockNum);
         } else {
             if constexpr(std::is_same<typename Intf::DstT, hifloat8_t>::value ||
-                std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value) {
+                std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value ||
+                std::is_same<typename Intf::DstT, int8_t>::value) {
                 InterleaveUbOutForKernelSplit<Intf, uint8_t>(self, dataLen, crossBlockNum);
             } else {
                 InterleaveUbOutForKernelSplit<Intf, typename Intf::DstT>(self, dataLen, crossBlockNum);
@@ -642,7 +730,7 @@ template <class Intf>
 __aicore__ inline void CastToDstType(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
                                          uint8_t enAtomic = 0, bool enSequentialWrite = false)
 {
-    if ASCEND_IS_AIC {
+    if ASCEND_IS_AIC_SHOULD_RETURN {
         return;
     }
     if (GetSubBlockIdx() > 0) {
@@ -701,10 +789,10 @@ static __aicore__ inline void InitUbZero4Group(Intf *self)
 {
     // Set ndVecBuf to zero.
     // size is cout1G * hk * wk * cinG * BLOCK_CUBE * c0
-    self->ctx.ndVecTensor_ = self->ctx.ndVecBuf_.template Get<typename Intf::SrcT>();
+    self->ctx.ndVecTensor_ = self->ctx.ndVecBuf_.template Get<typename Intf::SrcBT>();
     uint32_t groupHalfUbSize = self->ctx.tiling_->cout1G * self->ctx.hkWk_ * self->ctx.tiling_->cin1G *
-        BLOCK_CUBE * sizeof(typename Intf::SrcT) << self->ctx.tiling_->c0BitsB;
-    Duplicate<typename Intf::SrcT>(self->ctx.ndVecTensor_, 0, groupHalfUbSize / sizeof(typename Intf::SrcT));
+        BLOCK_CUBE * sizeof(typename Intf::SrcBT) << self->ctx.tiling_->c0BitsB;
+    Duplicate<typename Intf::SrcBT>(self->ctx.ndVecTensor_, 0, groupHalfUbSize / sizeof(typename Intf::SrcBT));
 }
 
 /*
@@ -737,7 +825,7 @@ static __aicore__ inline void LoadUbDiag4GroupNCDHW(Intf *self, uint64_t srcGmOf
         self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_3] = dstEnlargeStride;
     }
     self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_3] = self->ctx.curEnlarge;
-    DataCopy<typename Intf::SrcT, GROUP_NDDMA_DIM_NUM, nddmaConfig>(
+    DataCopy<typename Intf::SrcBT, GROUP_NDDMA_DIM_NUM, nddmaConfig>(
         self->ctx.ndVecTensor_, self->ctx.weightGlobal_[srcGmOffset], self->ctx.groupCopyParams_);
 }
 
@@ -765,7 +853,7 @@ static __aicore__ inline void LoadUbDiag4GroupNDHWC(Intf *self, uint64_t srcGmOf
         self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_3] = coutPerGroup * dstCoutGStride + cinPerGroup * self->ctx.hkWk_;
     }
     self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_3] = self->ctx.curEnlarge;
-    DataCopy<typename Intf::SrcT, GROUP_NDDMA_DIM_NUM, nddmaConfig>(
+    DataCopy<typename Intf::SrcBT, GROUP_NDDMA_DIM_NUM, nddmaConfig>(
         self->ctx.ndVecTensor_, self->ctx.weightGlobal_[srcGmOffset], self->ctx.groupCopyParams_);
 }
 
@@ -793,7 +881,7 @@ static __aicore__ inline void LoadUbDiag4GroupDHWCN(Intf *self, uint64_t srcGmOf
         self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_3] = coutPerGroup * dstCoutGStride + cinPerGroup * self->ctx.hkWk_;
     }
     self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_3] = self->ctx.curEnlarge;
-    DataCopy<typename Intf::SrcT, GROUP_NDDMA_DIM_NUM, nddmaConfig>(
+    DataCopy<typename Intf::SrcBT, GROUP_NDDMA_DIM_NUM, nddmaConfig>(
         self->ctx.ndVecTensor_, self->ctx.weightGlobal_[srcGmOffset], self->ctx.groupCopyParams_);
 }
 
@@ -860,11 +948,11 @@ static __aicore__ inline void Dn2Nz4Group(Intf *self)
     uint32_t dstKStride = (self->ctx.curEnlargeCin1_ << self->ctx.tiling_->c0BitsB) << SHIFT_BIT_4;
     uint32_t dstCin1GStride = C0PerReg << self->ctx.tiling_->c0BitsB;
 
-    self->ctx.nzVecTensor_ = self->ctx.nzVecBuf_.template Get<typename Intf::SrcT>();
+    self->ctx.nzVecTensor_ = self->ctx.nzVecBuf_.template Get<typename Intf::SrcBT>();
 
     auto idxAddr = (__ubuf__ typename Intf::IndexT *)self->ctx.idxVecTensor_.GetPhyAddr();
-    auto srcAddr = (__ubuf__ typename Intf::SrcT *)self->ctx.ndVecTensor_.GetPhyAddr();
-    auto dstAddr = (__ubuf__ typename Intf::SrcT *)self->ctx.nzVecTensor_.GetPhyAddr();
+    auto srcAddr = (__ubuf__ typename Intf::SrcBT *)self->ctx.ndVecTensor_.GetPhyAddr();
+    auto dstAddr = (__ubuf__ typename Intf::SrcBT *)self->ctx.nzVecTensor_.GetPhyAddr();
 
     // ub size is 253952, half is 126976, bfloat16 data num max is 63488, which is smaller than uint16_max.
     // that is cout1G * hk * wk * cinG * BLOCK_CUBE * c0 < 63488
@@ -874,9 +962,9 @@ static __aicore__ inline void Dn2Nz4Group(Intf *self)
     uint16_t cin1GIterMax = cin1G * C0LoopTimes;
 
     __VEC_SCOPE__ {
-        MicroAPI::RegTensor<typename Intf::SrcT> gatherReg;
+        MicroAPI::RegTensor<typename Intf::SrcBT> gatherReg;
         MicroAPI::RegTensor<typename Intf::IndexT> idxReg;
-        MicroAPI::MaskReg maskReg = MicroAPI::CreateMask<typename Intf::SrcT, MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg maskReg = MicroAPI::CreateMask<typename Intf::SrcBT, MicroAPI::MaskPattern::ALL>();
 
         // copy index from ub to reg
         MicroAPI::DataCopy<typename Intf::IndexT>(idxReg, idxAddr);
@@ -888,10 +976,10 @@ static __aicore__ inline void Dn2Nz4Group(Intf *self)
                     uint32_t dstOffset = cout1GIdx * dstCout1GStride + kIdx * dstKStride + cin1GIdx * dstCin1GStride;
 
                     // gather data from ub to reg according to gather index
-                    MicroAPI::DataCopyGather<typename Intf::SrcT, typename Intf::SrcT, typename Intf::IndexT>(
+                    MicroAPI::DataCopyGather<typename Intf::SrcBT, typename Intf::SrcBT, typename Intf::IndexT>(
                         gatherReg, srcAddr + srcOffset, idxReg, maskReg);
                     // copy gather output data from reg to ub
-                    MicroAPI::DataCopy<typename Intf::SrcT>(dstAddr + dstOffset, gatherReg, maskReg);
+                    MicroAPI::DataCopy<typename Intf::SrcBT>(dstAddr + dstOffset, gatherReg, maskReg);
                 }
             }
         }
@@ -900,7 +988,7 @@ static __aicore__ inline void Dn2Nz4Group(Intf *self)
 
 template <class Intf>
 static __aicore__ inline void CopyUb2L14Group(Intf *self, uint32_t curCout1Size, uint32_t curCin1Cin0Size,
-    uint32_t srcUbOffset, LocalTensor<typename Intf::SrcT> &useB1Buf)
+    uint32_t srcUbOffset, LocalTensor<typename Intf::SrcBT> &useB1Buf)
 {
     // from [coutG1, hk, wk, cinG1, cin0, cout0] extract [curCout1Size, hk, wk, curCin1Cin0Size, cout0],
     // copy data from ub to L1
@@ -914,7 +1002,7 @@ static __aicore__ inline void CopyUb2L14Group(Intf *self, uint32_t curCout1Size,
 
 template <class Intf>
 static __aicore__ inline void GroupTransdataWeightCore(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t srcGmOffset, uint32_t srcUbOffset, LocalTensor<typename Intf::SrcT> &useB1Buf)
+    uint64_t srcGmOffset, uint32_t srcUbOffset, LocalTensor<typename Intf::SrcBT> &useB1Buf)
 {
     uint32_t curCin1Cin0Size = AlignUp16(curCinSize);
     uint32_t curCout1Size = DivCeilC0<Intf>(self, curCoutSize);
@@ -968,7 +1056,7 @@ __aicore__ inline void GroupTransdataWeight(Intf *self, uint32_t kIdx, uint32_t 
         return;
     }
 
-    LocalTensor<typename Intf::SrcT> useB1Tbuf = GetB1Tbuf<Intf>(self, kIdx);
+    LocalTensor<typename Intf::SrcBT> useB1Tbuf = GetB1Tbuf<Intf>(self, kIdx);
 
     uint32_t curCinIdx = self->ctx.curNL1Idx_ * self->ctx.tiling_->stepN * self->ctx.tiling_->baseN;
     uint32_t curCinSize = CalcCurCinSizeB1(self, curCinIdx);
@@ -991,8 +1079,8 @@ __aicore__ inline void GroupTransdataWeight(Intf *self, uint32_t kIdx, uint32_t 
     uint32_t srcUbOffset = (curCout1Idx * self->ctx.hkWk_ * self->ctx.curEnlargeCin1_ +
         curCin1Idx) << self->ctx.tiling_->c0BitsB << SHIFT_BIT_4;
     // 调用指令不支持hif8，暂时隔离开，否则编译不通过
-    if constexpr(!std::is_same<typename Intf::SrcT, hifloat8_t>::value &&
-        !std::is_same<typename Intf::SrcT, fp8_e4m3fn_t>::value) {
+    if constexpr(!std::is_same<typename Intf::SrcBT, hifloat8_t>::value &&
+        !std::is_same<typename Intf::SrcBT, fp8_e4m3fn_t>::value) {
         GroupTransdataWeightCore<Intf>(self, curCinSize, curCoutSize, srcGmOffset, srcUbOffset, useB1Tbuf);
     }
 }
@@ -1000,13 +1088,13 @@ __aicore__ inline void GroupTransdataWeight(Intf *self, uint32_t kIdx, uint32_t 
 template <class Intf>
 static __aicore__ inline void InitUbZero4C04(Intf *self, uint32_t b1CinSize)
 {
-    self->ctx.ndVecTensor_ = self->ctx.ndVecBuf_.template Get<typename Intf::SrcT>();
+    self->ctx.ndVecTensor_ = self->ctx.ndVecBuf_.template Get<typename Intf::SrcBT>();
     uint32_t ubCinSize = (b1CinSize < self->ctx.vecBlockN_) ? b1CinSize : self->ctx.vecBlockN_;
     uint64_t ubPixCount = static_cast<uint64_t>(ubCinSize) * self->ctx.dkHkWk_;
-    uint64_t ubOffset = DivDtypeByte<typename Intf::SrcT>(AscendC::ONE_BLOCK_SIZE);
+    uint64_t ubOffset = DivDtypeByte<typename Intf::SrcBT>(AscendC::ONE_BLOCK_SIZE);
     ubOffset += (self->ctx.tiling_->cout * self->ctx.vecBlockN_ * self->ctx.dkHkWk_);
     for (uint8_t i = self->ctx.tiling_->cout; i < C04_COUT_SIZE; i++) {
-        Duplicate<typename Intf::SrcT>(self->ctx.ndVecTensor_[ubOffset], 0, ubPixCount);
+        Duplicate<typename Intf::SrcBT>(self->ctx.ndVecTensor_[ubOffset], 0, ubPixCount);
         ubOffset += (self->ctx.vecBlockN_ * self->ctx.dkHkWk_);
     }
 }
@@ -1023,13 +1111,13 @@ static __aicore__ inline void LoadUb4C04(Intf *self, uint32_t cinBlockSize, uint
     loopParams.loop1DstStride = 0;
     SetLoopModePara(loopParams, DataCopyMVType::OUT_TO_UB);
 
-    // The size of 'self->ctx.dkHkWk_ * sizeof(typename Intf::SrcT)' is not larger than the size of UB.
+    // The size of 'self->ctx.dkHkWk_ * sizeof(typename Intf::SrcBT)' is not larger than the size of UB.
     // It will be checked in CheckC04Enable(), in range of uint32_t.
-    uint32_t cinDataLen = static_cast<uint32_t>(self->ctx.dkHkWk_) * sizeof(typename Intf::SrcT);
+    uint32_t cinDataLen = static_cast<uint32_t>(self->ctx.dkHkWk_) * sizeof(typename Intf::SrcBT);
     uint32_t oriBlockLen = cinBlockSize * cinDataLen;
     uint32_t alignedBlockLen = AlignUp(oriBlockLen, AscendC::ONE_BLOCK_SIZE);
-    uint8_t rightPadding = DivDtypeByte<typename Intf::SrcT>(alignedBlockLen - oriBlockLen);
-    DataCopyPadExtParams<typename Intf::SrcT> padParams {true, 0, rightPadding, 0};
+    uint8_t rightPadding = DivDtypeByte<typename Intf::SrcBT>(alignedBlockLen - oriBlockLen);
+    DataCopyPadExtParams<typename Intf::SrcBT> padParams {true, 0, rightPadding, 0};
 
     DataCopyExtParams gm2UbParams;
     gm2UbParams.blockLen = oriBlockLen;
@@ -1037,8 +1125,8 @@ static __aicore__ inline void LoadUb4C04(Intf *self, uint32_t cinBlockSize, uint
     gm2UbParams.srcStride = (self->ctx.tiling_->cin - cinBlockSize) * cinDataLen;
     gm2UbParams.dstStride = (self->ctx.vecBlockN_ * cinDataLen - alignedBlockLen) >> ONE_BLK_SHIFT_SIZE;
 
-    uint32_t ubOffset = DivDtypeByte<typename Intf::SrcT>(AscendC::ONE_BLOCK_SIZE);
-    DataCopyPad<typename Intf::SrcT, PaddingMode::Normal>(self->ctx.ndVecTensor_[ubOffset],
+    uint32_t ubOffset = DivDtypeByte<typename Intf::SrcBT>(AscendC::ONE_BLOCK_SIZE);
+    DataCopyPad<typename Intf::SrcBT, PaddingMode::Normal>(self->ctx.ndVecTensor_[ubOffset],
         self->ctx.weightGlobal_[srcGmOffset], gm2UbParams, padParams);
 }
 
@@ -1088,11 +1176,11 @@ static __aicore__ inline void SetGatherTailMask4C04(Intf *self)
     uint32_t maskVal = 0xffffffff;
     uint32_t kernelNumInC0 = self->ctx.tiling_->c0 >> C04_SHIFT_SIZE;
     uint32_t tmpVal = self->ctx.hkWk_ % kernelNumInC0;
-    if constexpr(std::is_same<typename Intf::SrcT, float>::value) {
+    if constexpr(std::is_same<typename Intf::SrcBT, float>::value) {
         if (tmpVal == 1) { // 最后一个分形，VGather只需要从UB中取hkwk_rev中的最后1个点
             maskVal = 0xffff;
         }
-    } else if constexpr(std::is_same<typename Intf::SrcT, bfloat16_t>::value || std::is_same<typename Intf::SrcT, half>::value) {
+    } else if constexpr(std::is_same<typename Intf::SrcBT, bfloat16_t>::value || std::is_same<typename Intf::SrcBT, half>::value) {
         if (tmpVal == 3) { // 最后一个分形，VGather只需要从UB中取hkwk_rev中的最后3个点
             maskVal = 0xffffff;
         } else if (tmpVal == 2) { // 最后一个分形，VGather只需要从UB中取hkwk_rev中的最后2个点
@@ -1140,19 +1228,19 @@ static __aicore__ inline void Dn2Nz4C04(Intf *self, uint32_t cinBlockSize, uint3
     uint32_t dstN1Stride = C0PerReg << self->ctx.tiling_->c0BitsB;
     uint32_t dstK1Stride = AlignUp16(cinBlockSize) << self->ctx.tiling_->c0BitsB;
 
-    self->ctx.nzVecTensor_ = self->ctx.nzVecBuf_.template Get<typename Intf::SrcT>();
+    self->ctx.nzVecTensor_ = self->ctx.nzVecBuf_.template Get<typename Intf::SrcBT>();
 
     auto idxAddr = (__ubuf__ typename Intf::IndexT *)self->ctx.idxVecTensor_.GetPhyAddr();
-    auto srcAddr = (__ubuf__ typename Intf::SrcT *)self->ctx.ndVecTensor_.GetPhyAddr();
-    srcAddr += (DivDtypeByte<typename Intf::SrcT>(AscendC::ONE_BLOCK_SIZE) + curDkIdx * self->ctx.hkWk_);
+    auto srcAddr = (__ubuf__ typename Intf::SrcBT *)self->ctx.ndVecTensor_.GetPhyAddr();
+    srcAddr += (DivDtypeByte<typename Intf::SrcBT>(AscendC::ONE_BLOCK_SIZE) + curDkIdx * self->ctx.hkWk_);
     srcAddr -= ((k1 * kernelNumInC0) - self->ctx.hkWk_);
-    auto dstAddr = (__ubuf__ typename Intf::SrcT *)self->ctx.nzVecTensor_.GetPhyAddr();
+    auto dstAddr = (__ubuf__ typename Intf::SrcBT *)self->ctx.nzVecTensor_.GetPhyAddr();
     auto maskAddr = (__ubuf__ uint32_t *)self->ctx.maskVecTensor_.GetPhyAddr();
 
     __VEC_SCOPE__ {
-        MicroAPI::RegTensor<typename Intf::SrcT> gatherReg;
+        MicroAPI::RegTensor<typename Intf::SrcBT> gatherReg;
         MicroAPI::RegTensor<typename Intf::IndexT> idxReg;
-        MicroAPI::MaskReg maskReg = MicroAPI::CreateMask<typename Intf::SrcT, MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg maskReg = MicroAPI::CreateMask<typename Intf::SrcBT, MicroAPI::MaskPattern::ALL>();
 
         // copy index from ub to reg
         MicroAPI::DataCopy<typename Intf::IndexT>(idxReg, idxAddr);
@@ -1162,35 +1250,35 @@ static __aicore__ inline void Dn2Nz4C04(Intf *self, uint32_t cinBlockSize, uint3
                 uint32_t srcOffset = n1Idx * srcN1Stride + (k1Idx - 1) * srcK1Stride;
                 uint32_t dstOffset = n1Idx * dstN1Stride + (k1 - k1Idx) * dstK1Stride;
 
-                MicroAPI::DataCopyGather<typename Intf::SrcT, typename Intf::SrcT, typename Intf::IndexT>(
+                MicroAPI::DataCopyGather<typename Intf::SrcBT, typename Intf::SrcBT, typename Intf::IndexT>(
                     gatherReg, srcAddr + srcOffset, idxReg, maskReg);
-                MicroAPI::DataCopy<typename Intf::SrcT>(dstAddr + dstOffset, gatherReg, maskReg);
+                MicroAPI::DataCopy<typename Intf::SrcBT>(dstAddr + dstOffset, gatherReg, maskReg);
             }
         }
 
-        MicroAPI::MaskReg tailMaskReg = MicroAPI::CreateMask<typename Intf::SrcT, MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg tailMaskReg = MicroAPI::CreateMask<typename Intf::SrcBT, MicroAPI::MaskPattern::ALL>();
         // copy mask from ub to reg
         MicroAPI::DataCopy<uint32_t>(tailMaskReg, maskAddr);
         for (uint16_t n1Idx = 0; n1Idx < n1IterMax; ++n1Idx) {
             uint32_t srcOffset = n1Idx * srcN1Stride;
             uint32_t dstOffset = n1Idx * dstN1Stride + (k1 - 1) * dstK1Stride;
 
-            MicroAPI::DataCopyGather<typename Intf::SrcT, typename Intf::SrcT, typename Intf::IndexT>(
+            MicroAPI::DataCopyGather<typename Intf::SrcBT, typename Intf::SrcBT, typename Intf::IndexT>(
                 gatherReg, srcAddr + srcOffset, idxReg, tailMaskReg);
-            MicroAPI::DataCopy<typename Intf::SrcT>(dstAddr + dstOffset, gatherReg, maskReg);
+            MicroAPI::DataCopy<typename Intf::SrcBT>(dstAddr + dstOffset, gatherReg, maskReg);
         }
     }
 }
 
 template <class Intf>
 static __aicore__ inline void CopyUb2L14C04(Intf *self, uint32_t cinBlockSize, uint32_t b1CinSize,
-    LocalTensor<typename Intf::SrcT> &useB1Buf, uint32_t dstB1Offset)
+    LocalTensor<typename Intf::SrcBT> &useB1Buf, uint32_t dstB1Offset)
 {
     if (cinBlockSize == b1CinSize) { // UB上的格式转换不需要切块
         DataCopyParams copyParams;
         copyParams.blockCount = 1;
         copyParams.blockLen = (AlignUp16(cinBlockSize) * AlignUp(self->ctx.hkWk_ * C04_COUT_SIZE, self->ctx.tiling_->c0) *
-            sizeof(typename Intf::SrcT)) >> ONE_BLK_SHIFT_SIZE;
+            sizeof(typename Intf::SrcBT)) >> ONE_BLK_SHIFT_SIZE;
         copyParams.srcStride = 0;
         copyParams.dstStride = 0;
         DataCopy(useB1Buf, self->ctx.nzVecTensor_, copyParams);
@@ -1207,7 +1295,7 @@ static __aicore__ inline void CopyUb2L14C04(Intf *self, uint32_t cinBlockSize, u
 
 template <class Intf>
 static __aicore__ inline void C04TransdataWeightCore(Intf *self, uint32_t b1CinSize, uint64_t srcGmOffset,
-    LocalTensor<typename Intf::SrcT> &useB1Buf, uint32_t curDkIdx)
+    LocalTensor<typename Intf::SrcBT> &useB1Buf, uint32_t curDkIdx)
 {
     uint32_t loopCnt = DivCeil(b1CinSize, self->ctx.vecBlockN_);
     uint32_t cinRemain = b1CinSize;
@@ -1250,7 +1338,7 @@ template <class Intf>
 __aicore__ inline void C04TransdataWeight(Intf *self, const uint32_t kIdx, uint32_t curDkIdx)
 {
     WaitForCubeBeforeLoadToB1<Intf>(self);
-    LocalTensor<typename Intf::SrcT> useB1Tbuf = GetB1Tbuf<Intf>(self, kIdx);
+    LocalTensor<typename Intf::SrcBT> useB1Tbuf = GetB1Tbuf<Intf>(self, kIdx);
 
     if (GetSubBlockIdx() == (self->ctx.c04LoadToB1IterIdx_ & 1)) {
         uint32_t curCinIdx = self->ctx.curNL1Idx_ * self->ctx.tiling_->stepN * self->ctx.tiling_->baseN;
@@ -1258,8 +1346,8 @@ __aicore__ inline void C04TransdataWeight(Intf *self, const uint32_t kIdx, uint3
         uint64_t srcGmOffset = static_cast<uint64_t>(curCinIdx) * self->ctx.dkHkWk_;
 
         // 调用指令不支持hif8，暂时隔离开，否则编译不通过
-        if constexpr(!std::is_same<typename Intf::SrcT, hifloat8_t>::value &&
-            !std::is_same<typename Intf::SrcT, fp8_e4m3fn_t>::value) {
+        if constexpr(!std::is_same<typename Intf::SrcBT, hifloat8_t>::value &&
+            !std::is_same<typename Intf::SrcBT, fp8_e4m3fn_t>::value) {
             // 每个AIV只在第一次计算时需要清零
             if (GetSubBlockIdx() == self->ctx.c04LoadToB1IterIdx_) {
                 InitUbZero4C04<Intf>(self, b1CinSize); // VDup
@@ -1274,27 +1362,27 @@ __aicore__ inline void C04TransdataWeight(Intf *self, const uint32_t kIdx, uint3
 template <class Intf>
 __aicore__ inline void InitUbByteSize(Intf *self)
 {
-#if __CCE_AICORE__ == 310
+#if __CCE_AICORE__ == 310 || (__NPU_ARCH__ == 5102)
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
         if (GetSubBlockIdx() != 0) {
             return;
         }
         if (self->ctx.kSUseWorkSpace_) {
-            if ASCEND_IS_AIV {
+            if ASCEND_IS_AIV_SCALAR {
                 self->ctx.pipe_.InitBuffer(self->ctx.vecBuf_, UB_SIZE);
             }
         } else {
             self->ctx.pipe_.InitBuffer(self->ctx.vecBuf_, UB_SIZE);
         }
     } else if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
-        if ASCEND_IS_AIV {
+        if ASCEND_IS_AIV_SCALAR {
             constexpr uint32_t GROUP_UB_BUF_SIZE = (UB_SIZE - AscendC::VECTOR_REG_WIDTH) / HALF_FACTOR;
             self->ctx.pipe_.InitBuffer(self->ctx.ndVecBuf_, GROUP_UB_BUF_SIZE);
             self->ctx.pipe_.InitBuffer(self->ctx.nzVecBuf_, GROUP_UB_BUF_SIZE);
             self->ctx.pipe_.InitBuffer(self->ctx.idxVecBuf_, AscendC::VECTOR_REG_WIDTH);
         }
     } else if constexpr (Intf::conv3dConfig.enableC04Flag) {
-        if ASCEND_IS_AIV {
+        if ASCEND_IS_AIV_SCALAR {
             constexpr uint32_t C04_UB_BUF_SIZE = (UB_SIZE - AscendC::VECTOR_REG_WIDTH -
                 MASK_REG_WIDTH - AscendC::ONE_BLOCK_SIZE) >> 1;
             self->ctx.pipe_.InitBuffer(self->ctx.ndVecBuf_, C04_UB_BUF_SIZE);
@@ -1303,7 +1391,7 @@ __aicore__ inline void InitUbByteSize(Intf *self)
             self->ctx.pipe_.InitBuffer(self->ctx.maskVecBuf_, MASK_REG_WIDTH);
         }
     } else {
-        if ASCEND_IS_AIV {
+        if ASCEND_IS_AIV_SCALAR {
             self->ctx.pipe_.InitBuffer(self->ctx.vecBuf_, UB_SIZE);
         }
     }
@@ -1336,7 +1424,7 @@ template <class Intf>
 __aicore__ inline void CrossCoreWaitTail(Intf *self)
 {
 #ifndef __CCE_KT_TEST__
-    if ASCEND_IS_AIV {
+    if ASCEND_IS_AIV_SCALAR {
         if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
             if (GetSubBlockIdx() == 0) {
                 CrossCoreWaitFlag<SYNC_MODE, PIPE_V>(FLAG_MTE1_ID_2);
@@ -1350,14 +1438,14 @@ template <class Intf>
 __aicore__ inline void CrossCoreSetHeadForMix(Intf *self)
 {
 #ifndef __CCE_KT_TEST__
-    if ASCEND_IS_AIV {
+    if ASCEND_IS_AIV_SCALAR {
         if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
             CrossCoreSetFlag<SYNC_MODE, PIPE_MTE3>(FLAG_FIXP_ID);
         } else if (self->ctx.enableSplitDk_) {
             CrossCoreSetFlag<SYNC_MODE, PIPE_MTE3>(FLAG_FIXP_ID);
         }
     }
-    if ASCEND_IS_AIC {
+    if ASCEND_IS_AIC_SCALAR {
         if constexpr (Intf::conv3dConfig.enableC04Flag) {
             CrossCoreSetFlag<SYNC_MODE, PIPE_MTE1>(FLAG_MTE1_ID_2);
             CrossCoreSetFlag<SYNC_MODE, PIPE_MTE1>(FLAG_MTE1_ID_2 + CROSS_CORE_FLAG_ID_MAX);
@@ -1370,14 +1458,14 @@ template <class Intf>
 __aicore__ inline void CrossCoreWaitTailForMix(Intf *self)
 {
 #ifndef __CCE_KT_TEST__
-    if ASCEND_IS_AIC {
+    if ASCEND_IS_AIC_SCALAR {
         if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
             CrossCoreWaitFlag<SYNC_MODE, PIPE_FIX>(FLAG_FIXP_ID);
         } else if (self->ctx.enableSplitDk_) {
             CrossCoreWaitFlag<SYNC_MODE, PIPE_FIX>(FLAG_FIXP_ID);
         }
     }
-    if ASCEND_IS_AIV {
+    if ASCEND_IS_AIV_SCALAR {
         if constexpr (Intf::conv3dConfig.enableC04Flag) {
             CrossCoreWaitFlag<SYNC_MODE, PIPE_MTE3>(FLAG_MTE1_ID_2);
         }

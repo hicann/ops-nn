@@ -20,12 +20,12 @@
 
 namespace Convolution3DBackprop {
 
-template <class A, class B, class C, class D, class E, const Conv3dConfig& CONV3D_CONFIG = CONV3D_CFG_DEFAULT>
-struct Conv3DBpInputCfg : public ConvBpContext<A, B, C, D, E> {
+template <class A, class B, class C, class D, class E, class F, const Conv3dConfig& CONV3D_CONFIG = CONV3D_CFG_DEFAULT>
+struct Conv3DBpInputCfg : public ConvBpContext<A, B, C, D, E, F> {
 public:
     __aicore__ inline Conv3DBpInputCfg() {}
 
-    using ContextData = struct _ : public ConvBpContext<A, B, C, D, E>::ContextData {
+    using ContextData = struct _ : public ConvBpContext<A, B, C, D, E, F>::ContextData {
         __aicore__ inline _() {}
     };
     constexpr static Conv3dConfig conv3dConfig_ = CONV3D_CONFIG;

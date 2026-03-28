@@ -51,10 +51,10 @@ static __aicore__ inline void CalcParamsMmad(Intf *self, uint32_t kPos, bool isF
 }
 
 template <class Intf>
-static __aicore__ inline void MmadLocal(Intf *self, const LocalTensor<typename Intf::SrcT> &l0a,
-    const LocalTensor<typename Intf::SrcT> &l0b, LocalTensor<typename Intf::L0cT> &l0c)
+static __aicore__ inline void MmadLocal(Intf *self, const LocalTensor<typename Intf::SrcAT> &l0a,
+    const LocalTensor<typename Intf::SrcBT> &l0b, LocalTensor<typename Intf::L0cT> &l0c)
 {
-#if defined(__DAV_310R6__)
+#if (__NPU_ARCH__ == 5102)
     // eType is bias Class
     if constexpr (Intf::Config::eType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
         if (self->ctx.mmad_.cmatrixInitVal) {
@@ -239,8 +239,8 @@ static __aicore__ inline void UpdateLoadToB2ParamsKForKernelSplit(Intf *self, ui
 }
 
 template <class Intf>
-static __aicore__ inline void LoadToB2NoTransposeNoReverse(Intf *self, const LocalTensor<typename Intf::SrcT> &l1B1Matrix,
-    uint32_t srcB1Offset, uint32_t kPos, LocalTensor<typename Intf::SrcT> &l0b)
+static __aicore__ inline void LoadToB2NoTransposeNoReverse(Intf *self, const LocalTensor<typename Intf::SrcBT> &l1B1Matrix,
+    uint32_t srcB1Offset, uint32_t kPos, LocalTensor<typename Intf::SrcBT> &l0b)
 {
     self->ctx.load2dv2_.mStartPosition = 0;
     self->ctx.load2dv2_.kStartPosition = 0;
@@ -251,8 +251,8 @@ static __aicore__ inline void LoadToB2NoTransposeNoReverse(Intf *self, const Loc
 }
 
 template <class Intf>
-static __aicore__ inline void LoadToB2ReverseOnlyCommon(Intf *self, const LocalTensor<typename Intf::SrcT> &l1B1Matrix,
-    uint32_t blockSize, uint32_t srcB1Offset, uint32_t dstB2Offset, const uint32_t kPos, LocalTensor<typename Intf::SrcT> &l0b)
+static __aicore__ inline void LoadToB2ReverseOnlyCommon(Intf *self, const LocalTensor<typename Intf::SrcBT> &l1B1Matrix,
+    uint32_t blockSize, uint32_t srcB1Offset, uint32_t dstB2Offset, const uint32_t kPos, LocalTensor<typename Intf::SrcBT> &l0b)
 {
     // baseK可能会跨越HkWk,分多组HkWk进行逆序,以baseK=256,HkWk=9,kPos=1为例
     // *******kk  loop1: kStep=2
@@ -281,8 +281,8 @@ static __aicore__ inline void LoadToB2ReverseOnlyCommon(Intf *self, const LocalT
 }
 
 template <class Intf>
-static __aicore__ inline void LoadToB2ForKernelSplitB1FullLoad(Intf *self, const LocalTensor<typename Intf::SrcT> &l1B1Matrix,
-    uint32_t blockSize, uint32_t srcB1Offset, uint32_t dstB2Offset, LocalTensor<typename Intf::SrcT> &l0b)
+static __aicore__ inline void LoadToB2ForKernelSplitB1FullLoad(Intf *self, const LocalTensor<typename Intf::SrcBT> &l1B1Matrix,
+    uint32_t blockSize, uint32_t srcB1Offset, uint32_t dstB2Offset, LocalTensor<typename Intf::SrcBT> &l0b)
 {
     if (self->ctx.tiling_->strideH == self->ctx.tiling_->hk) {
         uint32_t kRepeat = self->ctx.baseUseK_ >> self->ctx.tiling_->c0BitsB;
@@ -312,8 +312,8 @@ static __aicore__ inline void LoadToB2ForKernelSplitB1FullLoad(Intf *self, const
 }
 
 template <class Intf>
-static __aicore__ inline void LoadToB2ReverseOnly(Intf *self, const LocalTensor<typename Intf::SrcT> &l1B1Matrix,
-    uint32_t blockSize, uint32_t srcB1Offset, uint32_t dstB2Offset, const uint32_t kPos, LocalTensor<typename Intf::SrcT> &l0b)
+static __aicore__ inline void LoadToB2ReverseOnly(Intf *self, const LocalTensor<typename Intf::SrcBT> &l1B1Matrix,
+    uint32_t blockSize, uint32_t srcB1Offset, uint32_t dstB2Offset, const uint32_t kPos, LocalTensor<typename Intf::SrcBT> &l0b)
 {
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
         if (self->ctx.kSCoutFullLoad_) {  // B1全载时，在load2b2阶段完成子kernel重排
@@ -332,7 +332,7 @@ static __aicore__ inline void LoadToB2ReverseOnly(Intf *self, const LocalTensor<
 }
 
 template <class Intf>
-static __aicore__ inline void LoadToB2(Intf *self, const LocalTensor<typename Intf::SrcT> &l1B1Matrix, uint32_t kPos, LocalTensor<typename Intf::SrcT> &l0b)
+static __aicore__ inline void LoadToB2(Intf *self, const LocalTensor<typename Intf::SrcBT> &l1B1Matrix, uint32_t kPos, LocalTensor<typename Intf::SrcBT> &l0b)
 {
     uint32_t blockSize = self->ctx.tiling_->c0 << 4;
     uint32_t srcB1Offset = 0;
@@ -367,9 +367,34 @@ static __aicore__ inline void LoadToB2(Intf *self, const LocalTensor<typename In
 
 // 数据从A1加载到A2
 template <class Intf>
-static __aicore__ inline void LoadToA2(Intf *self, const LocalTensor<typename Intf::SrcT> &l1A1Matrix, LocalTensor<typename Intf::SrcT> &l0a)
+static __aicore__ inline void LoadToA2(Intf *self, const LocalTensor<typename Intf::SrcAT> &l1A1Matrix, LocalTensor<typename Intf::SrcAT> &l0a)
 {
     LoadDataWithStride(l0a, l1A1Matrix, self->ctx.load3d_);
+}
+
+template <class Intf>
+static __aicore__ inline uint64_t ComputeDstOffset(Intf *self, FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> &fixPipeParams)
+{
+    uint64_t dstOffset = 0;
+    if (self->ctx.enableSplitDk_) {
+        // workspace格式: D singleCoreCin/baseN singleCoreM/baseM baseN baseM
+        fixPipeParams.dstStride = self->ctx.baseUseM_;
+        uint64_t singleCoreCinAlignBaseN = AlignUp(self->ctx.tiling_->singleCoreCin, self->ctx.tiling_->baseN);
+        uint64_t singleCoreMAlignBaseM = AlignUp(self->ctx.tiling_->singleCoreM, self->ctx.tiling_->baseM);
+        uint64_t singleCoreWorkspaceSize = singleCoreCinAlignBaseN * singleCoreMAlignBaseM *
+            self->ctx.tiling_->singleCoreDin;
+        dstOffset = (self->ctx.curDinIdx_ - self->ctx.curDinStartIdx_) * singleCoreCinAlignBaseN *
+            singleCoreMAlignBaseM + self->ctx.curNL0Idx_ * self->ctx.tiling_->baseN *
+            singleCoreMAlignBaseM + self->ctx.curML0Idx_ * self->ctx.tiling_->baseN *
+            self->ctx.tiling_->baseM + GetBlockIdx() * singleCoreWorkspaceSize;
+    } else {
+        // loop2_dst_stride, element, c
+        fixPipeParams.dstStride = self->ctx.diHiWi_; // dst N stride, loop2_dst_stride (unit: element)
+        dstOffset = static_cast<uint64_t>(self->ctx.curNL0Idx_) * self->ctx.tiling_->baseN * self->ctx.diHiWi_ + // cin offset
+            static_cast<uint64_t>(self->ctx.curDinIdx_) * self->ctx.hiWi_ + // di offset, remove useless data
+            static_cast<uint64_t>(self->ctx.curML0Idx_) * self->ctx.tiling_->baseM; // hi&wi offset
+    }
+    return dstOffset;
 }
 
 template <class Intf>
@@ -390,41 +415,36 @@ static __aicore__ inline void LoadL0c2GmForNz2Dn(Intf *self, const GlobalTensor<
     fixPipeParams.nSize = self->ctx.baseUseN_; // N: cin
     // loop1_src_stride, c0_size, cin1
     fixPipeParams.srcStride = AlignUp16(self->ctx.baseUseM_); // src N stride, loop1_src_stride (unit: 32B)
-    uint64_t dstOffset = 0;
-    if (self->ctx.enableSplitDk_) {
-        // workspace格式: D singleCoreCin/baseN singleCoreM/baseM baseN baseM
-        fixPipeParams.dstStride = self->ctx.baseUseM_;
-        uint64_t singleCoreCinAlignBaseN = AlignUp(self->ctx.tiling_->singleCoreCin, self->ctx.tiling_->baseN);
-        uint64_t singleCoreMAlignBaseM = AlignUp(self->ctx.tiling_->singleCoreM, self->ctx.tiling_->baseM);
-        uint64_t singleCoreWorkspaceSize = singleCoreCinAlignBaseN * singleCoreMAlignBaseM *
-            self->ctx.tiling_->singleCoreDin;
-        dstOffset = (self->ctx.curDinIdx_ - self->ctx.curDinStartIdx_) * singleCoreCinAlignBaseN *
-            singleCoreMAlignBaseM + self->ctx.curNL0Idx_ * self->ctx.tiling_->baseN *
-            singleCoreMAlignBaseM + self->ctx.curML0Idx_ * self->ctx.tiling_->baseN *
-            self->ctx.tiling_->baseM + GetBlockIdx() * singleCoreWorkspaceSize;
-    } else {
-        // loop2_dst_stride, element, c
-        fixPipeParams.dstStride = self->ctx.diHiWi_; // dst N stride, loop2_dst_stride (unit: element)
-        dstOffset = static_cast<uint64_t>(self->ctx.curNL0Idx_) * self->ctx.tiling_->baseN * self->ctx.diHiWi_ + // cin offset
-            static_cast<uint64_t>(self->ctx.curDinIdx_) * self->ctx.hiWi_ + // di offset, remove useless data
-            static_cast<uint64_t>(self->ctx.curML0Idx_) * self->ctx.tiling_->baseM; // hi&wi offset
-    }
+#if (__NPU_ARCH__ == 5102)
+    fixPipeParams.reluEn = self->ctx.tiling_->enRelu;
+    fixPipeParams.preReluMode = static_cast<ReluMode>(self->ctx.tiling_->enRelu);
+#endif
+    uint64_t dstOffset = ComputeDstOffset(self, fixPipeParams);
     if constexpr(std::is_same<typename Intf::DstT, bfloat16_t>::value) {
         fixPipeParams.quantPre = self->ctx.enableSplitDk_ ? QuantMode_t::NoQuant : QuantMode_t::F322BF16;
+    } else if constexpr((std::is_same<typename Intf::DstT, half>::value) &&
+        (std::is_same<typename Intf::L0cT, int32_t>::value)) {
+        SetQuantInt32ToHalf(self, fixPipeParams);
     } else if constexpr(std::is_same<typename Intf::DstT, half>::value) {
         fixPipeParams.quantPre = self->ctx.enableSplitDk_ ? QuantMode_t::NoQuant : QuantMode_t::F322F16;
     } else if constexpr(std::is_same<typename Intf::DstT, hifloat8_t>::value) {
         fixPipeParams.quantPre = QuantMode_t::QF322HIF8_PRE; // Half to Away Round
         fixPipeParams.deqScalar = DQ_SCALAR_ONE;
+    } else if constexpr(std::is_same<typename Intf::DstT, int8_t>::value) {
+        SetQuantInt8(self, fixPipeParams);
     } else if constexpr(std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value) {
         fixPipeParams.quantPre = QuantMode_t::QF322FP8_PRE;
         fixPipeParams.deqScalar = DQ_SCALAR_ONE;
     }
     if (self->ctx.enableSplitDk_) {
-        Fixpipe<float, float, CFG_COLUMN_MAJOR>(self->ctx.l0cOutGm_[dstOffset],
-            useC1Buf, fixPipeParams);
+        Fixpipe<float, float, CFG_COLUMN_MAJOR>(self->ctx.l0cOutGm_[dstOffset], useC1Buf, fixPipeParams);
+    } else if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
+        self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+        uint64_t scaleAddr = self->ctx.curNL0Idx_ * self->ctx.tiling_->baseN;
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(output[dstOffset],
+            useC1Buf, self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
     } else {
-        Fixpipe<typename Intf::DstT, float, CFG_COLUMN_MAJOR>(output[dstOffset],
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(output[dstOffset],
             useC1Buf, fixPipeParams);
     }
 }
@@ -480,6 +500,22 @@ static __aicore__ inline void CalcCutInWIndexForOnlyH(Intf *self)
 }
 
 template <class Intf>
+static __aicore__ inline void LoadL0c2GmForKernelSplitHFixPipe(Intf *self, const int64_t srcOffset, const int64_t dstOffset,
+    const GlobalTensor<typename Intf::DstT> &output, LocalTensor<typename Intf::L0cT> &useC1Buf,
+    FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> &fixPipeParams)
+{
+    if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
+        self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+        uint64_t scaleAddr = self->ctx.curNL0Idx_ * self->ctx.tiling_->baseN;
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(output[dstOffset],
+            useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
+    } else {
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(output[dstOffset],
+            useC1Buf[srcOffset], fixPipeParams);
+    }
+}
+
+template <class Intf>
 static __aicore__ inline void LoadL0c2GmForKernelSplitH(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
     LocalTensor<typename Intf::L0cT> &useC1Buf)
 {
@@ -495,13 +531,17 @@ static __aicore__ inline void LoadL0c2GmForKernelSplitH(Intf *self, const Global
     CalcCutInWIndexForOnlyH<Intf>(self);
 
     FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> fixPipeParams;
-    SetFixPipeQuantVal<Intf>(fixPipeParams);
+    SetFixPipeQuantVal<Intf>(self, fixPipeParams);
     fixPipeParams.nSize = self->ctx.baseUseN_; // N: cin
     fixPipeParams.params.srcNzC0Stride = 1; // src M stride, loop0_src_stride (unit: 32B)
     // loop1_src_stride, c0_size, cin1
     fixPipeParams.srcStride = AlignUp16(self->ctx.baseUseM_); // src N stride, loop1_src_stride (unit: 32B)
     // loop2_dst_stride, element, c
     fixPipeParams.dstStride = self->ctx.diHiWi_; // dst N stride, loop2_dst_stride (unit: element)
+#if (__NPU_ARCH__ == 5102)
+    fixPipeParams.reluEn = self->ctx.tiling_->enRelu;
+    fixPipeParams.preReluMode = static_cast<ReluMode>(self->ctx.tiling_->enRelu);
+#endif
     int64_t srcOffset = 0;
     // fixpipe->ub 需要分首块，中间块，尾块分别对齐到16，然后再搬到ub
     if (self->ctx.headWi_ != 0) { // 需要首块
@@ -510,7 +550,7 @@ static __aicore__ inline void LoadL0c2GmForKernelSplitH(Intf *self, const Global
         fixPipeParams.params.dstDnMatrixStride = 0; // loop3_dst_stride
 
         fixPipeParams.mSize = self->ctx.headWi_; // M: 首块的长度
-        Fixpipe<typename Intf::DstT, float, CFG_COLUMN_MAJOR>(output[dstOffset], useC1Buf[srcOffset], fixPipeParams);
+        LoadL0c2GmForKernelSplitHFixPipe(self, srcOffset, dstOffset, output, useC1Buf, fixPipeParams);
         // BLOCK_CUBE: MMAD一次计算为16*16, fixpipe搬到ub的时候取L0c的数据应该固定c0为16，不能随数据类型变化
         srcOffset += self->ctx.headWi_ * BLOCK_CUBE; // headWi_/2是一个子kernel首块w的长度
         dstOffset += self->ctx.headWi_ + skipDstOffset;
@@ -522,8 +562,7 @@ static __aicore__ inline void LoadL0c2GmForKernelSplitH(Intf *self, const Global
         fixPipeParams.params.dstDnMatrixStride = skipDstOffset + self->ctx.tiling_->wi; // loop3_dst_stride
 
         fixPipeParams.mSize = srcWi; // M: 中间块一行的长度
-        Fixpipe<typename Intf::DstT, float, CFG_COLUMN_MAJOR>(output[dstOffset],
-            useC1Buf[srcOffset], fixPipeParams);
+        LoadL0c2GmForKernelSplitHFixPipe(self, srcOffset, dstOffset, output, useC1Buf, fixPipeParams);
         // BLOCK_CUBE: MMAD一次计算为16*16, fixpipe搬到ub的时候取L0c的数据应该固定c0为16，不能随数据类型变化
         srcOffset += self->ctx.midHi_ * srcWi * BLOCK_CUBE; // srcWi是一个子kernel中间块w的长度
         dstOffset += self->ctx.midHi_ * (fixPipeParams.params.dstDnMatrixStride);
@@ -535,15 +574,14 @@ static __aicore__ inline void LoadL0c2GmForKernelSplitH(Intf *self, const Global
         fixPipeParams.params.dstDnMatrixStride = 0; // loop3_dst_stride
 
         fixPipeParams.mSize = self->ctx.tailWi_; // M: 尾块的长度
-        Fixpipe<typename Intf::DstT, float, CFG_COLUMN_MAJOR>(output[dstOffset],
-            useC1Buf[srcOffset], fixPipeParams);
+        LoadL0c2GmForKernelSplitHFixPipe(self, srcOffset, dstOffset, output, useC1Buf, fixPipeParams);
     }
 }
 
 template <class Intf>
 static __aicore__ inline void FreeTensorC1Buf(Intf *self, LocalTensor<typename Intf::L0cT> &useC1Buf)
 {
-    if ASCEND_IS_AIC {
+    if ASCEND_IS_AIC_SCALAR {
         // l0c不搬运数据，需释放l0c的空间，否则会等待卡死
         if (self->ctx.l0cPingPongFlag_) {
             self->ctx.l0cPing_.FreeTensor(useC1Buf);
@@ -559,7 +597,7 @@ static __aicore__ inline void FreeTensorC1Buf(Intf *self, LocalTensor<typename I
 template <class Intf>
 static __aicore__ inline void L0CDeQue(Intf *self, LocalTensor<typename Intf::L0cT> &useC1Buf)
 {
-    if ASCEND_IS_AIV {
+    if ASCEND_IS_AIV_SHOULD_RETURN {
         return;
     }
     
@@ -573,7 +611,7 @@ static __aicore__ inline void L0CDeQue(Intf *self, LocalTensor<typename Intf::L0
 template <class Intf>
 __aicore__ inline void FullLoadBias(Intf *self)
 {
-    if ASCEND_IS_AIV {
+    if ASCEND_IS_AIV_SHOULD_RETURN {
         return ;
     }
     // GM -> L1
@@ -601,7 +639,7 @@ __aicore__ inline void FullLoadBias(Intf *self)
 template <class Intf>
 __aicore__ inline void LoadBiasToBT(Intf *self)
 {
-    if ASCEND_IS_AIV {
+    if ASCEND_IS_AIV_SHOULD_RETURN {
         return ;
     }
     uint32_t btCinSize = self->ctx.singleShapeCin_ < self->ctx.baseUseN_ ? self->ctx.singleShapeCin_ : self->ctx.baseUseN_;
@@ -629,6 +667,23 @@ __aicore__ inline void LoadBiasToBT(Intf *self)
 }
 
 template <class Intf>
+__aicore__ inline void FullLoadToScaleL1(Intf *self)
+{
+    if ASCEND_IS_AIV_SHOULD_RETURN {
+        return ;
+    }
+    LocalTensor<typename Intf::ScaleT> useScaleL1 = self->ctx.scaleL1Que_.template AllocTensor<typename Intf::ScaleT>();
+    uint16_t blockLen = self->ctx.singleShapeCin_ * sizeof(typename Intf::ScaleT);
+    DataCopyParams dataCopyParams(1, blockLen, 0, 0);
+    // 4 is B64 data num per block, currently scale is always uint64
+    uint8_t rightPadding = DivCeil(self->ctx.singleShapeCin_, 4) * 4 - self->ctx.singleShapeCin_;
+    DataCopyPadParams padParams(true, 0, rightPadding, 0);
+    DataCopyPad<typename Intf::ScaleT>(useScaleL1, self->ctx.scaleGlobal_, dataCopyParams, padParams);
+    self->ctx.scaleL1Que_.EnQue(useScaleL1);
+    self->ctx.scaleL1Buf_ = self->ctx.scaleL1Que_.template DeQue<typename Intf::ScaleT>();
+}
+
+template <class Intf>
 static __aicore__ inline void LoadL0c2OutForNz2Dn(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
     LocalTensor<typename Intf::L0cT> &useC1Buf)
 {
@@ -646,7 +701,7 @@ static __aicore__ inline void LoadL0c2Gm(Intf *self, const GlobalTensor<typename
                                          uint8_t enAtomic = 0, bool enSequentialWrite = false)
 {
     if constexpr (Intf::conv3dConfig.kernelSplitMode != TPL_SPLIT_KERNEL_HW) {
-        if ASCEND_IS_AIV {
+        if ASCEND_IS_AIV_SHOULD_RETURN {
             return;
         }
     }

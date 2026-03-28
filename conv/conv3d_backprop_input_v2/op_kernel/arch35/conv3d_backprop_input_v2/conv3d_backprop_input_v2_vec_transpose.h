@@ -24,7 +24,11 @@ static constexpr uint8_t SYNC_MODE0 = 0;
 static constexpr uint8_t SYNC_MODE2 = 2;
 static constexpr uint16_t SYNC_AIV_ONLY_ALL_DET_FLAG = 2;
 static constexpr uint16_t SYNC_AIV_AIC_DET_FLAG = 6;
+#if (__NPU_ARCH__ == 5102)
+static constexpr uint32_t MULTIPLE_AIV_TO_AIC = 1;
+#else
 static constexpr uint32_t MULTIPLE_AIV_TO_AIC = 2;
+#endif
 static constexpr uint32_t DATA_BLOCK_SIZE = 32;
 static constexpr uint32_t POWER_5 = 5;
 
@@ -99,7 +103,8 @@ protected:
             loadGm2UbParams.blockCount = cin0Tail_;
         }
         uint8_t rightPadPoint = static_cast<uint8_t>(dkhkwkAlign_ - dkhkwk_);
-        if constexpr (std::is_same<filterType, hifloat8_t>::value || std::is_same<filterType, fp8_e4m3fn_t>::value) {
+        if constexpr (std::is_same<filterType, hifloat8_t>::value || std::is_same<filterType, fp8_e4m3fn_t>::value ||
+            std::is_same<filterType, int8_t>::value) {
             // 指令不支持hifloat8_t,fp8_e4m3fn_t，用uint8_t伪装
             DataCopyPadExtParams<uint8_t> padExtParams{true, 0, rightPadPoint, 0};
             DataCopyPad<uint8_t, PaddingMode::Normal>(vecInBuf_.template ReinterpretCast<uint8_t>(),
@@ -124,7 +129,8 @@ protected:
                 transDataParams.dstRepStride = (cin0_ * 8 * sizeof(filterType)) >> POWER_5; // 8: 32bit数据VNCHWCONV一个dataBlock是8个point
             } else if constexpr (std::is_same<filterType, bfloat16_t>::value || std::is_same<filterType, half>::value) {
                 transDataParams.dstRepStride = (cin0_ * 16 * sizeof(filterType)) >> POWER_5; // 16: 16bit数据VNCHWCONV一个dataBlock是16个point
-            } else if constexpr (std::is_same<filterType, hifloat8_t>::value || std::is_same<filterType, fp8_e4m3fn_t>::value) {
+            } else if constexpr (std::is_same<filterType, hifloat8_t>::value || std::is_same<filterType, fp8_e4m3fn_t>::value ||
+                std::is_same<filterType, int8_t>::value) {
                 transDataParams.dstRepStride = (cin0_ * 64 * sizeof(filterType)) >> POWER_5; // 64: 8bit时需要用到高低位，一次高低位完成2个dataBlock
             }
             transDataParams.srcRepStride = 1; // 单位 dataBlock
@@ -150,7 +156,8 @@ protected:
                 dstLocalList[i] = reinterpret_cast<uint64_t>(vecOutBuf_[dstCount].GetPhyAddr());
                 dstCount += cin0_;
             }
-        } else if constexpr (std::is_same<filterType, hifloat8_t>::value || std::is_same<filterType, fp8_e4m3fn_t>::value) {
+        } else if constexpr (std::is_same<filterType, hifloat8_t>::value || std::is_same<filterType, fp8_e4m3fn_t>::value ||
+            std::is_same<filterType, int8_t>::value) {
             for (int i = 0; i < cin0_; i++) {
                 dstLocalList[i] = reinterpret_cast<uint64_t>(vecOutBuf_[dstCount].GetPhyAddr());
                 dstCount += DATA_BLOCK_SIZE;    // 8bit 需要数据VNCHWCONV一个dataBlock是32个point
@@ -163,7 +170,8 @@ protected:
             srcCount += dkhkwkAlign_;
         }
 
-        if constexpr (std::is_same<filterType, hifloat8_t>::value || std::is_same<filterType, fp8_e4m3fn_t>::value) {
+        if constexpr (std::is_same<filterType, hifloat8_t>::value || std::is_same<filterType, fp8_e4m3fn_t>::value ||
+            std::is_same<filterType, int8_t>::value) {
             TransDataTo5HD<uint8_t>(dstLocalList, srcLocalList, transDataParams);
             transDataParams.srcHighHalf = true;
             for (int i = 0; i < cin0_; i++) {
@@ -182,7 +190,8 @@ protected:
     {
         LocalTensor<filterType> vecOutBuf_ = vecOutQueue_.template DeQue<filterType>();
         uint64_t dstGmOffset = static_cast<uint64_t>(curCoutCnt_) * dkhkwk_ * cin1_ * cin0_ + static_cast<uint64_t>(curCin1Cnt_) * cin0_;
-        if constexpr (std::is_same<filterType, hifloat8_t>::value || std::is_same<filterType, fp8_e4m3fn_t>::value) {
+        if constexpr (std::is_same<filterType, hifloat8_t>::value || std::is_same<filterType, fp8_e4m3fn_t>::value ||
+            std::is_same<filterType, int8_t>::value) {
             // 8bit时，转置完后最内轴c0为32，而真实有效数据量为16，因此需排除无效部分，只写出有效部分
             DataCopyExtParams loadUb2GmParams;
             loadUb2GmParams.srcStride = (DATA_BLOCK_SIZE - cin0_) >> POWER_5; // 单位为 32B
@@ -203,9 +212,16 @@ protected:
     }
     __aicore__ inline void VecNotifyCube()
     {
+#if (__NPU_ARCH__ == 5102)
+        ffts_cross_core_sync(PIPE_MTE3, GetffstMsg(0x0, SYNC_AIV_AIC_DET_FLAG));  // don't support mode 0
+        wait_flag_dev(PIPE_MTE3, SYNC_AIV_AIC_DET_FLAG);
+        AscendC::TQueSync<PIPE_MTE3, PIPE_MTE2> sync;
+        sync.SetFlag((event_t)SYNC_AIV_AIC_DET_FLAG);
+#else
         CrossCoreSetFlag<SYNC_MODE0, PIPE_MTE3>(SYNC_AIV_ONLY_ALL_DET_FLAG);
         CrossCoreWaitFlag(SYNC_AIV_ONLY_ALL_DET_FLAG);
         CrossCoreSetFlag<SYNC_MODE2, PIPE_MTE3>(SYNC_AIV_AIC_DET_FLAG);
+#endif
     }
 public:
     __aicore__ inline Conv3dDxVecTranspose() {}

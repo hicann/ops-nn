@@ -18,8 +18,8 @@
 #include "conv3d_backprop_input_v2_tiling_data.h"
 
 namespace AscendC {
-#if __CCE_AICORE__ == 310
-    #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || defined(__DAV_310R6__)
+#if __CCE_AICORE__ == 310 || (__NPU_ARCH__ == 5102)
+    #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
         constexpr int32_t TOTALL0CSIZE = 262144;
     #endif
 #endif
@@ -64,7 +64,11 @@ public:
         realClearSize = realClearSize > clearSizePerCore ? clearSizePerCore : realClearSize;
 
         // popbuffer的dtype应为src的dtype float类型
+#if (__NPU_ARCH__ == 5102)
+        LocalTensor<int32_t> popBuffer = localBuffer_.template Get<int32_t>();
+#else
         LocalTensor<float> popBuffer = localBuffer_.template Get<float>();
+#endif
         // fixpipe的mSize的范围为【1，65535】，loc的size为262144，fp32的数据个数为65536，大于mSize，因此需减去32去对齐
         uint32_t localSize = (static_cast<uint64_t>(popBuffer.GetSize()) - ONE_BLK_SIZE) < clearSizePerCore
                                  ? (popBuffer.GetSize() - ONE_BLK_SIZE)
@@ -73,13 +77,16 @@ public:
         uint64_t round = realClearSize / localSize;
         uint32_t tail = realClearSize % localSize;
         QuantMode_t quantPre = QuantMode_t::QF322BF16_PRE;
-        if constexpr (IsSameType<yType, float>::value) {
-            quantPre = QuantMode_t::QF322F32_PRE;
-        } else if constexpr (IsSameType<yType, half>::value) {
+        if constexpr (IsSameType<yType, half>::value) {
             quantPre = QuantMode_t::QF322F16_PRE;
         } else if constexpr (IsSameType<yType, hifloat8_t>::value) {
             quantPre = QuantMode_t::QF322HIF8_PRE; // Half to Away Round
-        } else if constexpr (IsSameType<yType, fp8_e4m3fn_t>::value) {
+        } else if constexpr (IsSameType<yType, int8_t>::value) {
+            quantPre = QuantMode_t::REQ8;
+        }
+        else if constexpr (IsSameType<yType, float>::value) {
+            quantPre = QuantMode_t::QF322F32_PRE;
+        }  else if constexpr (IsSameType<yType, fp8_e4m3fn_t>::value) {
             quantPre = QuantMode_t::QF322FP8_PRE;
         }
         // fixPipeParams前四个参数为nsize msize srcstride dststride，由于nsize为16，srcstride dststride可以不配置
@@ -89,7 +96,11 @@ public:
         for (uint64_t idx = 0; idx < round; ++idx) {
             // 由于我们是通过量化参数为0去达到清零效果，因此，我们的src起始地址可以始终为0
             // 若要配置src的起始地址不能使用popBuffer[offset]，因为offset可能会大于65536，导致越界
+#if (__NPU_ARCH__ == 5102)
+            AscendC::Fixpipe<yType, int32_t, CFG_NZ>(yGm_[offset], popBuffer, fixPipeParamsDma);
+#else
             AscendC::Fixpipe<yType, float, CFG_NZ>(yGm_[offset], popBuffer, fixPipeParamsDma);
+#endif
             offset += localSize;
         }
 
@@ -99,7 +110,11 @@ public:
                 AscendC::FixpipeParamsC310<CO2Layout::NZ> fixPipeParamsDmaTail(BLOCK_CUBE, tail / BLOCK_CUBE, 1, 1);
                 fixPipeParamsDmaTail.deqScalar = 0;
                 fixPipeParamsDmaTail.quantPre = quantPre;
+#if (__NPU_ARCH__ == 5102)
+                AscendC::Fixpipe<yType, int32_t, CFG_NZ>(yGm_[offset], popBuffer, fixPipeParamsDmaTail);
+#else
                 AscendC::Fixpipe<yType, float, CFG_NZ>(yGm_[offset], popBuffer, fixPipeParamsDmaTail);
+#endif
             }
             // tail大于16和tail对16取余不等于0 可以同时存在，也可单独存在
             if (tail % BLOCK_CUBE != 0) {
@@ -115,7 +130,11 @@ public:
                 fixPipeParamsNz2nd.deqScalar = 0;
                 fixPipeParamsNz2nd.quantPre = quantPre;
 
+#if (__NPU_ARCH__ == 5102)
+                AscendC::Fixpipe<yType, int32_t, CFG_ROW_MAJOR>(yGm_[offset], popBuffer, fixPipeParamsNz2nd);
+#else
                 AscendC::Fixpipe<yType, float, CFG_ROW_MAJOR>(yGm_[offset], popBuffer, fixPipeParamsNz2nd);
+#endif
             }
         }
         SyncAllCores();
@@ -123,7 +142,7 @@ public:
 
     __aicore__ inline void Process()
     {
-        if ASCEND_IS_AIV {
+        if ASCEND_IS_AIV_SHOULD_RETURN {
             return;
         }
 

@@ -21,9 +21,21 @@
 #include "lib/matmul_intf.h"
 #include "conv3d_backprop_input_v2_tiling_data.h"
 #include "../../conv3d_backprop_input_v2_arch35_tiling_key.h"
+#if (__NPU_ARCH__ == 5102)
+#ifndef DTYPE_BIAS
+#define DTYPE_BIAS int32_t
+#define FORMAT_BIAS FORMAT_MAX  // FORMAT_MAX意为数据格式不支持，用以表达不带bias输入场景
+#endif
+#else
 #ifndef DTYPE_BIAS
 #define DTYPE_BIAS float
 #define FORMAT_BIAS FORMAT_MAX  // FORMAT_MAX意为数据格式不支持，用以表达不带bias输入场景
+#endif
+#endif
+
+#ifndef DTYPE_SCALE
+#define DTYPE_SCALE uint64_t
+#define FORMAT_SCALE FORMAT_MAX  // FORMAT_MAX意为数据格式不支持，用以表达不带scale输入场景
 #endif
 
 namespace AscendC {
@@ -45,30 +57,41 @@ __aicore__ inline constexpr Convolution3DBackprop::CubeFormat GetFormat(int form
     }
 }
 
+template <typename filterType>
+__aicore__ inline constexpr Convolution3DBackprop::CubeFormat GetScaleFormat(int format)
+{
+    if (std::is_same_v<filterType, int8_t> && ((format == FORMAT_ND) || (format == FORMAT_NCHW))) {
+        return Convolution3DBackprop::CubeFormat::ND;
+    } else {
+        return Convolution3DBackprop::CubeFormat::UNSUPPORT;
+    }
+}
+
 template <typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
         typename biasType, int biasFormat,
         uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
         uint8_t b1Condition = TPL_GM_TO_L1,
-        bool enableC04Flag = false>
+        bool enableC04Flag = false, typename scaleType = uint64_t, int scaleFormat = FORMAT_MAX>
 class Conv3dDx {
 public:
     __aicore__ inline Conv3dDx(){};
     __aicore__ inline void Init(GM_ADDR filter, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
-                                const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData *tilingData, GM_ADDR bias = nullptr)
+                                const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData *tilingData, GM_ADDR bias = nullptr,
+                                GM_ADDR scale=nullptr)
     {
         InitTilingData(tilingData);
         enableSplitDk_ = tiling_->singleIterateDk != tiling_->dk;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || defined(__DAV_310R6__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
         if constexpr ((kernelSplitMode != TPL_SPLIT_KERNEL_HW) &&
             groupMode == TPL_GROUP_MODE_ORIGIN) {
             if (!enableSplitDk_) {
-                if ASCEND_IS_AIV {
+                if ASCEND_IS_AIV_SHOULD_RETURN {
                     return;
                 }
             }
         }
 #else
-        if ASCEND_IS_AIV {
+        if ASCEND_IS_AIV_SHOULD_RETURN {
             return;
         }
 #endif
@@ -77,13 +100,16 @@ public:
         dedyGm_.SetGlobalBuffer((__gm__ dedyType *)dedy);
         yGm_.SetGlobalBuffer((__gm__ yType *)y);
         dedx_.Init(&(tilingData->conv3DDxTiling));
-#if defined(__DAV_310R6__)
+#if (__NPU_ARCH__ == 5102)
         if constexpr (biasFormat != FORMAT_MAX) {
             biasGm_.SetGlobalBuffer((__gm__ biasType *)bias);
         }
 #endif
+        if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+            scaleGm_.SetGlobalBuffer((__gm__ scaleType *)scale);
+        }
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || defined(__DAV_310R6__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
         InitMixCoreBuffer(workSpace);
 #endif
     }
@@ -92,17 +118,17 @@ public:
      */
     __aicore__ inline void Process()
     {
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || defined(__DAV_310R6__)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
         if constexpr ((kernelSplitMode != TPL_SPLIT_KERNEL_HW) &&
             groupMode == TPL_GROUP_MODE_ORIGIN) {
             if (!enableSplitDk_) {
-                if ASCEND_IS_AIV {
+                if ASCEND_IS_AIV_SHOULD_RETURN {
                     return;
                 }
             }
         }
 #else
-        if ASCEND_IS_AIV {
+        if ASCEND_IS_AIV_SHOULD_RETURN {
             return;
         }
 #endif
@@ -119,11 +145,14 @@ public:
                 dedx_.SetOutBackprop(dedyGm_[offsetA_]);
                 dedx_.SetWeight(filterGm_[offsetB_]);
                 dedx_.SetFullLoadFlag(this->tiling_->enableFullLoad);
-#if defined(__DAV_310R6__)
+#if (__NPU_ARCH__ == 5102)
                 if constexpr (biasFormat != FORMAT_MAX) {
                     dedx_.SetBias(biasGm_[offsetBias_]);
                 }
 #endif
+                if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+                    dedx_.SetScale(scaleGm_[offsetScale_]);
+                }
                 dedx_.IterateAll(yGm_[offsetC_], 0);  // 1 means atomic add
                 CalcBatchOffset();
             }
@@ -148,12 +177,15 @@ public:
                 dedx_.SetOutBackprop(dedyGm_[offsetA_]);
                 dedx_.SetWeight(filterGm_[offsetB_]);
                 dedx_.SetFullLoadFlag(this->tiling_->enableFullLoad);
-#if defined(__DAV_310R6__)
+#if (__NPU_ARCH__ == 5102)
                 if constexpr (biasFormat != FORMAT_MAX) {
                     offsetBias_ = nCoreIdx_ * tiling_->singleCoreCin + groupIdx * tiling_->cinG;
                     dedx_.SetBias(biasGm_[offsetBias_]);
                 }
 #endif
+                if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+                    dedx_.SetScale(scaleGm_[offsetScale_]);
+                }
                 dedx_.IterateAll(yGm_[offsetC_], 0);  // 1 means atomic add
                 CalcGroupOffset();
             }
@@ -166,21 +198,25 @@ protected:
     static constexpr Convolution3DBackprop::CubeFormat dedyCubeFormat = GetFormat(dedyFormat);
     static constexpr Convolution3DBackprop::CubeFormat yCubeFormat = GetFormat(yFormat);
     static constexpr Convolution3DBackprop::CubeFormat biasCubeFormat = GetFormat(biasFormat);
+    static constexpr Convolution3DBackprop::CubeFormat scaleCubeFormat = GetScaleFormat<filterType>(scaleFormat);
     using filterDxType = Convolution3DBackprop::ConvType<TPosition::GM, filterCubeFormat, filterType>;
     using inputSizeDxType =
         Convolution3DBackprop::ConvType<TPosition::GM, Convolution3DBackprop::CubeFormat::ND, int32_t>;
     using dedyDxType = Convolution3DBackprop::ConvType<TPosition::GM, dedyCubeFormat, dedyType>;
     using yDxType = Convolution3DBackprop::ConvType<TPosition::GM, yCubeFormat, yType>;
     using biasDxType = Convolution3DBackprop::ConvType<TPosition::GM, biasCubeFormat, biasType>;
+    using scaleDxType = Convolution3DBackprop::ConvType<TPosition::GM, scaleCubeFormat, scaleType>;
     static constexpr Conv3dConfig conv3dConfig = {b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag};
-    Convolution3DBackprop::Conv3DBackpropInput<filterDxType, inputSizeDxType, dedyDxType, yDxType, biasDxType, conv3dConfig> dedx_;
+    Convolution3DBackprop::Conv3DBackpropInput<filterDxType, inputSizeDxType, dedyDxType, yDxType, biasDxType,
+        scaleDxType, conv3dConfig> dedx_;
 
     GlobalTensor<filterType> filterGm_;
-    GlobalTensor<filterType> dedyGm_;
+    GlobalTensor<dedyType> dedyGm_;
     GlobalTensor<yType> yGm_;
-#if defined(__DAV_310R6__)
+#if (__NPU_ARCH__ == 5102)
     GlobalTensor<biasType> biasGm_;
 #endif
+    GlobalTensor<scaleType> scaleGm_;
 
     uint64_t batchStrideA_ = 1;
     uint64_t batchStrideC_ = 1;
@@ -194,10 +230,10 @@ protected:
     uint64_t offsetA_ = 0;
     uint64_t offsetB_ = 0;
     uint64_t offsetC_ = 0;
-#if defined(__DAV_310R6__)
+#if (__NPU_ARCH__ == 5102)
     uint64_t offsetBias_ = 0;
 #endif
-
+    uint64_t offsetScale_ = 0;
     uint32_t kSCoreIdx_ = 0;
     uint32_t batchCoreIdx_ = 0;
     uint32_t mCoreIdx_ = 0;
@@ -341,7 +377,7 @@ protected:
         offsetC_ += groupStrideC_ * groupIdx;
     }
 
-#if defined(__DAV_310R6__)
+#if (__NPU_ARCH__ == 5102)
     __aicore__ inline void CalcBiasOffset()
     {
         if constexpr (biasFormat != FORMAT_MAX) {
@@ -350,15 +386,22 @@ protected:
     }
 #endif
 
+    __aicore__ inline void CalcScaleOffset()
+    {
+        if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+            offsetScale_ = static_cast<uint64_t>(nCoreIdx_) * tiling_->singleCoreCin;
+        }
+    }
     __aicore__ inline void CalcBlockOffset(uint32_t batchIdx, uint32_t groupIdx)
     {
         CalcBlockOffsetA(batchIdx);
         CalcBlockOffsetB();
         CalcBlockOffsetC(batchIdx);
         CalcGroupBlockOffset(groupIdx);
-#if defined(__DAV_310R6__)
+#if (__NPU_ARCH__ == 5102)
         CalcBiasOffset();
 #endif
+        CalcScaleOffset();
     }
 
     __aicore__ inline void CalcBatchOffset()
