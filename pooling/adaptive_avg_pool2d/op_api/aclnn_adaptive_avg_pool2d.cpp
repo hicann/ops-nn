@@ -1,3 +1,4 @@
+
 /**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
@@ -9,7 +10,8 @@
  */
 
 #include "adaptive_avg_pool2d_assist_matrix.h"
-#include "adaptive_avg_pool3d.h"
+#include "../../adaptive_avg_pool3d/op_api/adaptive_avg_pool3d.h"
+#include "adaptive_avg_pool2d.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "shape_op.h"
@@ -113,9 +115,19 @@ static bool CheckInputOutputShape(const aclTensor* self, const aclTensor* out)
     for (uint64_t i = 0; i < outputDimNum - 2; i++) {
         if (outputShape.GetDim(i) != inputShape.GetDim(i)) {
             OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Out_shape[%lu]: %ld should equal to input_shape[%lu]: %ld", i, outputShape.GetDim(i),
-                i, inputShape.GetDim(i));
+                ACLNN_ERR_PARAM_INVALID, "Out_shape[%lu]: %ld should equal to input_shape[%lu]: %ld", i,
+                outputShape.GetDim(i), i, inputShape.GetDim(i));
             return false;
+        }
+    }
+    // hw_dim should bigger than 0
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        for (size_t i = outputDimNum - 2; i < inputDimNum; i++) {
+            if (inputShape.GetDim(i) <= 0) {
+                OP_LOGE(
+                    ACLNN_ERR_PARAM_INVALID, "x'dims is invalid, self No.[%lu] dim is not bigger than 0.", i + 1);
+                return false;
+            }
         }
     }
     return true;
@@ -172,7 +184,7 @@ static bool CheckOutputSize(const aclIntArray* outputSize, const aclTensor* out)
     size_t outputDimNum = outputShape.GetDimNum();
     size_t offset = outputDimNum == chwShapeSize ? 1 : 2;
     for (size_t i = 0; i < size; ++i) {
-        if ((*outputSize)[i] <= 0 || (*outputSize)[i] != outputShape[i + offset]) {
+        if (!Ops::NN::AclnnUtil::IsRegbase() && (*outputSize)[i] <= 0 || (*outputSize)[i] != outputShape[i + offset]) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outputSize value should match the outputShape value and greater than 0.");
             return false;
         }
@@ -233,98 +245,62 @@ static aclnnStatus DoReduceMean(const aclTensor* self, aclTensor* out, aclOpExec
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus DoAdaptiveAvgPool2D_910B_310P(
-    const aclTensor* self, const aclIntArray* outputSize, aclTensor* out, aclOpExecutor* executor)
-{
-    // 将2d参数转换为3d可以使用的参数
-    int64_t newOutputSizeData[] = {1, (*outputSize)[0], (*outputSize)[1]};
-    aclIntArray* newOutputSize = executor->AllocIntArray(newOutputSizeData, 3);
-    auto inputContiguous = l0op::Contiguous(self, executor);
-    CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    // reshape(将3d的input转变为4d并增加D=1维)
-    op::Shape inputContiguousShape = inputContiguous->GetViewShape();
-    int64_t inputDimNum = static_cast<int64_t>(inputContiguousShape.GetDimNum());
-    std::vector<int64_t> valueShape(ncdhwShapeSize);
-    valueShape[0] = inputDimNum == nchwShapeSize ? inputContiguousShape.GetDim(0) : 1;
-    valueShape[1] = inputDimNum == nchwShapeSize ? inputContiguousShape.GetDim(1) : inputContiguousShape.GetDim(0);
-    valueShape[dimD] = 1;
-    for (int64_t i = inputDimNum - outputSizeLimit; i < inputDimNum; i++) {
-        valueShape[ncdhwShapeSize - inputDimNum + i] = inputContiguousShape.GetDim(i);
-    }
-    auto reshapeShape = executor->AllocIntArray(valueShape.data(), ncdhwShapeSize);
-    CHECK_RET(reshapeShape != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto inputContiguousReshape = l0op::Reshape(inputContiguous, reshapeShape, executor);
-    CHECK_RET(inputContiguousReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    // get resShape
-    auto resShapeVector = op::ToShapeVector(out->GetViewShape());
-    aclIntArray* resShapeArray = executor->AllocIntArray(resShapeVector.data(), resShapeVector.size());
-    CHECK_RET(resShapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    // 将C维度转置到最后面
-    std::vector<int64_t> valuePerm{INDEX_DIM0, INDEX_DIM2, INDEX_DIM3, INDEX_DIM4, INDEX_DIM1};
-    auto perm = executor->AllocIntArray(valuePerm.data(), ncdhwShapeSize);
-    CHECK_RET(perm != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto inputReshapeTran = l0op::Transpose(inputContiguousReshape, perm, executor);
-    CHECK_RET(inputReshapeTran != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto poolResult = l0op::AdaptiveAvgPool3d(inputReshapeTran, newOutputSize, executor);
-    CHECK_RET(poolResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    // 将C维度转置回原位置
-    std::vector<int64_t> valuePermRes{INDEX_DIM0, INDEX_DIM4, INDEX_DIM1, INDEX_DIM2, INDEX_DIM3};
-    auto permRes = executor->AllocIntArray(valuePermRes.data(), ncdhwShapeSize);
-    CHECK_RET(permRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto resTran = l0op::Transpose(poolResult, permRes, executor);
-    CHECK_RET(resTran != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    // 3d -> 2d
-    auto resTranReshape = l0op::Reshape(resTran, resShapeArray, executor);
-    CHECK_RET(resTranReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto viewCopyResult = l0op::ViewCopy(resTranReshape, out, executor);
-    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    return ACLNN_SUCCESS;
-}
-
-static aclnnStatus DoAdaptiveAvgPool2D_950(
-    const aclTensor* self, const aclIntArray* outputSize, aclTensor* out, aclOpExecutor* executor)
-{
-    // 将2d参数转换为3d可以使用的参数
-    int64_t newOutputSizeData[] = {1, (*outputSize)[0], (*outputSize)[1]};
-    aclIntArray* newOutputSize = executor->AllocIntArray(newOutputSizeData, 3);
-    auto inputContiguous950 = l0op::Contiguous(self, executor);
-    CHECK_RET(inputContiguous950 != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    // reshape(将3d的input转变为4d并增加D=1维)
-    op::Shape inputContiguousShape950 = inputContiguous950->GetViewShape();
-    int64_t inputDimNum = static_cast<int64_t>(inputContiguousShape950.GetDimNum());
-    std::vector<int64_t> valueShape(ncdhwShapeSize);
-    valueShape[0] = inputDimNum == nchwShapeSize ? inputContiguousShape950.GetDim(0) : 1;
-    valueShape[1] = inputDimNum == nchwShapeSize ? inputContiguousShape950.GetDim(1) : inputContiguousShape950.GetDim(0);
-    valueShape[dimD] = 1;
-    for (int64_t i = inputDimNum - outputSizeLimit; i < inputDimNum; i++) {
-        valueShape[ncdhwShapeSize - inputDimNum + i] = inputContiguousShape950.GetDim(i);
-    }
-    auto reshapeShape = executor->AllocIntArray(valueShape.data(), ncdhwShapeSize);
-    CHECK_RET(reshapeShape != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto inputContiguousReshape = l0op::Reshape(inputContiguous950, reshapeShape, executor);
-    CHECK_RET(inputContiguousReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    // get resShape
-    auto resShapeVector = op::ToShapeVector(out->GetViewShape());
-    aclIntArray* resShapeArray950 = executor->AllocIntArray(resShapeVector.data(), resShapeVector.size());
-    CHECK_RET(resShapeArray950 != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto poolResult = l0op::AdaptiveAvgPool3d(inputContiguousReshape, newOutputSize, executor);
-    CHECK_RET(poolResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    // 3d -> 2d
-    auto poolResultReshape = l0op::Reshape(poolResult, resShapeArray950, executor);
-    CHECK_RET(poolResultReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto viewCopyResult = l0op::ViewCopy(poolResultReshape, out, executor);
-    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    return ACLNN_SUCCESS;
-}
 // InputSize不为[1, 1], AdaptiveAvgPool2D走融合算子流程，会拆分成多个算子进行实现
 static aclnnStatus DoAdaptiveAvgPool2D(
     const aclTensor* self, const aclIntArray* outputSize, aclTensor* out, aclOpExecutor* executor)
 {
     if (Ops::NN::AclnnUtil::IsRegbase()) {
-        return DoAdaptiveAvgPool2D_950(self, outputSize, out, executor);
-    }
-    if (IsSocVersion910B_310P()){
-        return DoAdaptiveAvgPool2D_910B_310P(self, outputSize, out, executor);
+        auto selfContiguous = l0op::Contiguous(self, executor);
+        CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // 该芯片版本l0接口支持的format为NCHW
+        auto pool2dResult950 = l0op::AdaptiveAvgPool2d(selfContiguous, outputSize, executor);
+        CHECK_RET(pool2dResult950 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto viewCopyResult = l0op::ViewCopy(pool2dResult950, out, executor);
+        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        return ACLNN_SUCCESS;
+    } else if (IsSocVersion910B_310P()) {
+        // 将2d参数转换为3d可以使用的参数
+        int64_t newOutputSizeData[] = {1, (*outputSize)[0], (*outputSize)[1]};
+        aclIntArray* newOutputSize = executor->AllocIntArray(newOutputSizeData, 3);
+        auto inputContiguous = l0op::Contiguous(self, executor);
+        CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // reshape(将3d的input转变为4d并增加D=1维)
+        op::Shape inputContiguousShape = inputContiguous->GetViewShape();
+        int64_t inputDimNum = static_cast<int64_t>(inputContiguousShape.GetDimNum());
+        std::vector<int64_t> valueShape(ncdhwShapeSize);
+        valueShape[0] = inputDimNum == nchwShapeSize ? inputContiguousShape.GetDim(0) : 1;
+        valueShape[1] = inputDimNum == nchwShapeSize ? inputContiguousShape.GetDim(1) : inputContiguousShape.GetDim(0);
+        valueShape[dimD] = 1;
+        for (int64_t i = inputDimNum - outputSizeLimit; i < inputDimNum; i++) {
+            valueShape[ncdhwShapeSize - inputDimNum + i] = inputContiguousShape.GetDim(i);
+        }
+        auto reshapeShape = executor->AllocIntArray(valueShape.data(), ncdhwShapeSize);
+        CHECK_RET(reshapeShape != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto inputContiguousReshape = l0op::Reshape(inputContiguous, reshapeShape, executor);
+        CHECK_RET(inputContiguousReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // 将C维度转置到最后面
+        std::vector<int64_t> valuePerm{INDEX_DIM0, INDEX_DIM2, INDEX_DIM3, INDEX_DIM4, INDEX_DIM1};
+        auto perm = executor->AllocIntArray(valuePerm.data(), ncdhwShapeSize);
+        CHECK_RET(perm != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto inputReshapeTran = l0op::Transpose(inputContiguousReshape, perm, executor);
+        CHECK_RET(inputReshapeTran != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto poolResult = l0op::AdaptiveAvgPool3d(inputReshapeTran, newOutputSize, executor);
+        CHECK_RET(poolResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // 将C维度转置回原位置
+        std::vector<int64_t> valuePermRes{INDEX_DIM0, INDEX_DIM4, INDEX_DIM1, INDEX_DIM2, INDEX_DIM3};
+        auto permRes = executor->AllocIntArray(valuePermRes.data(), ncdhwShapeSize);
+        CHECK_RET(permRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto resTran = l0op::Transpose(poolResult, permRes, executor);
+        CHECK_RET(resTran != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        auto resShapeVector = op::ToShapeVector(out->GetViewShape());
+        aclIntArray* resShapeArray = executor->AllocIntArray(resShapeVector.data(), resShapeVector.size());
+        CHECK_RET(resShapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto resTranReshape = l0op::Reshape(resTran, resShapeArray, executor);
+        CHECK_RET(resTranReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto viewCopyResult = l0op::ViewCopy(resTranReshape, out, executor);
+        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        return ACLNN_SUCCESS;
     }
     aclTensor* input = const_cast<aclTensor*>(self);
     input = Reformat(self, Format::FORMAT_ND);
@@ -373,10 +349,12 @@ static aclnnStatus DoAdaptiveAvgPool2D(
     auto rightMatrixCast = l0op::Cast(rightMatrixUnsqueeze, self->GetDataType(), executor);
     CHECK_RET(rightMatrixCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    leftMatrixBmmv2 = Ops::NN::ExecBatchMatmulOp(inputContiguous, leftMatrixCast, inputContiguous, true, true, 1, executor);
+    leftMatrixBmmv2 =
+        Ops::NN::ExecBatchMatmulOp(inputContiguous, leftMatrixCast, inputContiguous, true, true, 1, executor);
     CHECK_RET(leftMatrixBmmv2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    rightMatrixBmmv2 = Ops::NN::ExecBatchMatmulOp(leftMatrixBmmv2, rightMatrixCast, inputContiguous, true, false, 1, executor);
+    rightMatrixBmmv2 =
+        Ops::NN::ExecBatchMatmulOp(leftMatrixBmmv2, rightMatrixCast, inputContiguous, true, false, 1, executor);
     CHECK_RET(rightMatrixBmmv2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto mulMatrixCast = l0op::Cast(mulMatrixUnsqueeze, rightMatrixBmmv2->GetDataType(), executor);
@@ -419,13 +397,12 @@ aclnnStatus aclnnAdaptiveAvgPool2dGetWorkspaceSize(
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    if (self->IsEmpty()) {
+    if (self->IsEmpty() || (Ops::NN::AclnnUtil::IsRegbase() && out->IsEmpty())) {
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
 
-    ret = DoFusionAdapativeAvgPool2D(self, outputSize, out, uniqueExecutor.get());
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 固定写法，获取计算过程中需要使用的workspace大小

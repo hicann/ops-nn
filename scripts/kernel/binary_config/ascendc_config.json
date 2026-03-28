@@ -5,6 +5,7 @@
     {"name":"AdaptiveAvgPool3d", "compute_units": ["ascend310p", "ascend910b", "ascend910_93", "ascend950", "kirinx90", "kirin9030"], "auto_sync" : {"ascend310p": true, "ascend910b": true, "ascend910_93": true, "ascend950": false}},
     {"name":"AdaptiveAvgPool3dGrad", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
     {"name":"AdaptiveMaxPool3d", "compute_units": ["ascend910b", "ascend910_93", "kirinx90", "kirin9030"], "auto_sync" : true},
+    {"name":"AdaptiveAvgPool2d", "compute_units": ["ascend950"], "auto_sync" : false},
     {"name":"AddLora", "compute_units": ["ascend310p", "ascend910b"], "auto_sync":true},
     {"name":"AddExample", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync":true, "impl_mode" : ""},
     {"name":"AvgPool3DGrad", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync" : true},

@@ -2866,6 +2866,16 @@
   </tr>
   <tr>
     <td>pooling</td>
+    <td><a href="../../pooling/adaptive_avg_pool2d/README.md">adaptive_avg_pool2d</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>在指定二维输出shape信息的情况下，完成输入张量的2D自适应平均池化计算。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
     <td><a href="../../pooling/adaptive_avg_pool3d_grad/README.md">adaptive_avg_pool3d_grad</a></td>
     <td>✓</td>
     <td>✓</td>
