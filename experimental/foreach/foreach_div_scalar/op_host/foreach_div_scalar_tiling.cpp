@@ -9,11 +9,9 @@
  */
 
 /**
-* 我们正常的版权申明，下面是我们的备注
-*
-* NOTE: Portions of this code were AI-generated and have been
-* technically reviewed for functional accuracy and security
-*/
+ * NOTE: Portions of this code were AI-generated and have been
+ * technically reviewed for functional accuracy and security
+ */
 
 /**
  * \file foreach_div_scalar_tiling.cpp
