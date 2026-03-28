@@ -12,30 +12,30 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTOR ${PROJECT_SOURCE_DIR}/build)
 
 file(GLOB_RECURSE OP_API_FILES "*.cpp")
 
-add_library(opapi SHARED ${OP_API_FILES})
+add_library(opapi_math SHARED ${OP_API_FILES})
 
-target_compile_definitions(opapi PRIVATE
+target_compile_definitions(opapi_math PRIVATE
     _GLIBCXX_USE_CXX11_ABI=0
     LOG_CPP
 )
 
-target_include_directories(opapi PRIVATE
+target_include_directories(opapi_math PRIVATE
     ${OPAPI_INCLUDE}
 )
 
-target_compile_options(opapi PRIVATE -Wno-unused-parameter)
+target_compile_options(opapi_math PRIVATE -Wno-unused-parameter)
 
 if(ENABLE_TEST)
-    add_library(opapi_stub SHARED ${OP_API_FILES})
+    add_library(opapi_math_stub SHARED ${OP_API_FILES})
 
-    target_compile_definitions(opapi_stub PRIVATE
+    target_compile_definitions(opapi_math_stub PRIVATE
         _GLIBCXX_USE_CXX11_ABI=0
         LOG_CPP
     )
 
-    target_compile_options(opapi_stub PRIVATE -Wno-unused-parameter)
+    target_compile_options(opapi_math_stub PRIVATE -Wno-unused-parameter)
 
-    target_include_directories(opapi_stub PRIVATE
+    target_include_directories(opapi_math_stub PRIVATE
         ${OPAPI_INCLUDE}
     )
 endif()

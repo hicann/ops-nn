@@ -88,7 +88,7 @@ function(gen_opapi_symbol)
   if(NOT TARGET ${OPHOST_NAME}_opapi_obj AND NOT TARGET opbuild_gen_aclnn_all)
     return()
   endif()
-  # opapi shared
+  # opapi_math shared
   add_library(
     ${OPAPI_NAME} SHARED
     $<$<TARGET_EXISTS:${OPHOST_NAME}_opapi_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_opapi_obj>>
@@ -96,13 +96,13 @@ function(gen_opapi_symbol)
     )
 
   if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
-    add_dependencies(${OPAPI_NAME} opapi)
+    add_dependencies(${OPAPI_NAME} opapi_math)
   endif()
 
   target_link_libraries(
     ${OPAPI_NAME}
     PUBLIC $<BUILD_INTERFACE:intf_pub_cxx17>
-    PRIVATE c_sec nnopbase $<$<BOOL:${BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG}>:$<BUILD_INTERFACE:opapi>>
+    PRIVATE c_sec nnopbase $<$<BOOL:${BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG}>:$<BUILD_INTERFACE:opapi_math>>
     )
 
   install(
@@ -119,7 +119,7 @@ function(gen_cust_opapi_symbol)
   npu_op_library(cust_opapi ACLNN)
 
   if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
-    add_dependencies(cust_opapi opapi)
+    add_dependencies(cust_opapi opapi_math)
   endif()
 
   target_sources(
@@ -130,7 +130,7 @@ function(gen_cust_opapi_symbol)
   target_link_libraries(
     cust_opapi
     PUBLIC $<BUILD_INTERFACE:intf_pub_cxx17>
-    PRIVATE $<$<BOOL:${BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG}>:$<BUILD_INTERFACE:opapi>>
+    PRIVATE $<$<BOOL:${BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG}>:$<BUILD_INTERFACE:opapi_math>>
     )
 endfunction()
 
