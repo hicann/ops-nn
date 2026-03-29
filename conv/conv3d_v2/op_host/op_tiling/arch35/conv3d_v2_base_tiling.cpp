@@ -66,7 +66,7 @@ void Conv3dBaseTilingV2::SetApiInputPlatformInfo()
     apiInputPlatformInfo_.fbSize = opInfo_->fbSize;
     OP_LOGD(context_->GetNodeName(),
         "%s AscendC: Tiling get platformInfo: l1Size: %ld, l0CSize: %ld, l0ASize: %ld, l0BSize: %ld, ubSize: %ld " \
-        "btSize: %ld, fbSize: %ld, socName: %s.", paramInfo_.nodeType.c_str(), opInfo_->l1Size, opInfo_->l0cSize,
+        "btSize: %ld, fbSize: %ld.", paramInfo_.nodeType.c_str(), opInfo_->l1Size, opInfo_->l0cSize,
         opInfo_->l0aSize, opInfo_->l0bSize, opInfo_->ubSize, opInfo_->btSize, opInfo_->fbSize);
 }
 
