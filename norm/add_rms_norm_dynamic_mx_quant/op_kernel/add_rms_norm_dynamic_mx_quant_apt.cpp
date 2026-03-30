@@ -13,12 +13,14 @@
  * \brief
  */
 #include "arch35/add_rms_norm_dynamic_mx_quant_fp8_r_full_load.h"
+#include "arch35/add_rms_norm_dynamic_mx_quant_fp4_r_full_load.h"
 #include "arch35/add_rms_norm_dynamic_mx_quant_tiling_data.h"
 
 using namespace AscendC;
 using namespace AddRmsNormDynamicMxQuant;
 
 #define TILING_KEY_FP8_R_FULL_LOAD 100
+#define TILING_KEY_FP4_R_FULL_LOAD 101
 
 extern "C" __global__ __aicore__ void add_rms_norm_dynamic_mx_quant(
     GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta,
@@ -40,6 +42,11 @@ extern "C" __global__ __aicore__ void add_rms_norm_dynamic_mx_quant(
     if (TILING_KEY_IS(TILING_KEY_FP8_R_FULL_LOAD)) {
         GET_TILING_DATA_WITH_STRUCT(AddRmsNormDynamicMxQuantTilingData, tilingDataIn, tiling);
         AddRmsNormDynamicMxQuantFP8RFullLoad<DTYPE_X1, DTYPE_GAMMA, DTYPE_Y> op(&pipe);
+        op.Init(x1, x2, gamma, beta, y, x, mxscale, mxscale, rstd, &tilingDataIn);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_FP4_R_FULL_LOAD)) {
+        GET_TILING_DATA_WITH_STRUCT(AddRmsNormDynamicMxQuantTilingData, tilingDataIn, tiling);
+        AddRmsNormDynamicMxQuantFP4RFullLoad<DTYPE_X1, DTYPE_GAMMA, DTYPE_Y> op(&pipe);
         op.Init(x1, x2, gamma, beta, y, x, mxscale, mxscale, rstd, &tilingDataIn);
         op.Process();
     }

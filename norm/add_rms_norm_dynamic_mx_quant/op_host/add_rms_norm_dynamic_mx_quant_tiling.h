@@ -67,22 +67,22 @@ constexpr uint64_t ALIGN_FACTOR_512 = 512;
 constexpr uint64_t COL_ALIGN_NUM = 64;
 constexpr uint32_t UB_RESERVE_FOR_RSTD_ALIGN = 1024;
 constexpr uint32_t UB_RESERVE_FOR_OUTPUT_Y_ALIGN = 1536;
-
-// Tiling key encoding
-constexpr uint64_t DTYPE_KEY_FP16 = 1;
-constexpr uint64_t DTYPE_KEY_BF16 = 2;
-constexpr uint64_t OUT_KEY_E2M1 = 0;
-constexpr uint64_t OUT_KEY_E1M2 = 1;
-constexpr uint64_t OUT_KEY_E4M3FN = 2;
-constexpr uint64_t OUT_KEY_E5M2 = 3;
+constexpr uint64_t ARND_R_FULL_LOAD_PRIORITY = 1000;
+constexpr uint64_t FULL_LOAD_R_MAX = 16384;
 
 // DstType enum values
 constexpr int64_t DST_TYPE_E5M2 = 35;
 constexpr int64_t DST_TYPE_E4M3FN = 36;
 constexpr int64_t DST_TYPE_E2M1 = 40;
 constexpr int64_t DST_TYPE_E1M2 = 41;
+
+// Tiling key values
 constexpr int64_t TILING_KEY_FP8_R_FULL_LOAD = 100;
-constexpr uint64_t ARND_R_FULL_LOAD_PRIORITY = 1000;
+constexpr int64_t TILING_KEY_FP4_R_FULL_LOAD = 101;
+
+const std::set<ge::DataType> Y_SUPPORT_DTYPE_FP4_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2};
+const std::set<ge::DataType> Y_SUPPORT_DTYPE_FP8_SET = {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
+const std::set<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
 
 struct AddRmsNormDynamicMxQuantCompileInfo {
     uint64_t totalCoreNum = 0;

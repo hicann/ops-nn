@@ -18,10 +18,6 @@
 namespace optiling {
 using namespace NormCheck;
 
-// DynamicMxQuant dtype sets for validation
-const std::set<ge::DataType> Y_SUPPORT_DTYPE_FP4_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2};
-const std::set<ge::DataType> Y_SUPPORT_DTYPE_FP8_SET = {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
-
 MxRoundMode AddRmsNormDynamicMxQuantRegbaseTilingBase::ParseRoundMode(const std::string& roundMode)
 {
     if (roundMode == "rint") {
@@ -123,8 +119,8 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckInputShapeValue(
 ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckInputDtype()
 {
     OP_LOGD(context_->GetNodeName(), "Enter CheckInputDtype.");
-    std::vector<ge::DataType> supportedXDtypes = {ge::DT_FLOAT16, ge::DT_BF16};
-    std::vector<ge::DataType> supportedGammaDtypes = {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT};
+    std::set<ge::DataType> supportedXDtypes = {ge::DT_FLOAT16, ge::DT_BF16};
+    std::set<ge::DataType> supportedGammaDtypes = {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT};
 
     OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputTensor(X1_INDEX));
     OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputTensor(X2_INDEX));
@@ -139,26 +135,12 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckInputDtype()
         return ge::GRAPH_FAILED;
     }
     // x dtype must be FP16 or BF16
-    bool xValid = false;
-    for (const auto& dt : supportedXDtypes) {
-        if (x1Dtype == dt) {
-            xValid = true;
-            break;
-        }
-    }
-    if (!xValid) {
+    if (supportedXDtypes.count(x1Dtype) == 0) {
         OP_LOGE(context_->GetNodeName(), "Input x1/x2 dtype should be float16 or bfloat16.");
         return ge::GRAPH_FAILED;
     }
     // gamma must be FP16/BF16/FP32
-    bool gammaValid = false;
-    for (const auto& dt : supportedGammaDtypes) {
-        if (gammaDtype == dt) {
-            gammaValid = true;
-            break;
-        }
-    }
-    if (!gammaValid) {
+    if (supportedGammaDtypes.count(gammaDtype) == 0) {
         OP_LOGE(context_->GetNodeName(), "Input gamma dtype should be float16, bfloat16 or float32.");
         return ge::GRAPH_FAILED;
     }
@@ -181,20 +163,10 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckInputDtype()
 ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckOutputDtype()
 {
     OP_LOGD(context_->GetNodeName(), "Enter CheckOutputDtype.");
-    std::vector<ge::DataType> supportedYDtypes = {
-        ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2,
-        ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2
-    };
     OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputDesc(Y_INDEX));
     ge::DataType yDtype = context_->GetOutputDesc(Y_INDEX)->GetDataType();
-    bool yValid = false;
-    for (const auto& dt : supportedYDtypes) {
-        if (yDtype == dt) {
-            yValid = true;
-            break;
-        }
-    }
-    if (!yValid) {
+
+    if (Y_SUPPORT_DTYPE_SET.count(yDtype) == 0) {
         OP_LOGE(context_->GetNodeName(), "Output y dtype should be FP4_E2M1/E1M2 or FP8_E4M3FN/E5M2.");
         return ge::GRAPH_FAILED;
     }

@@ -74,6 +74,16 @@ constexpr uint16_t MX_ABS_MASK_FOR_16BIT = 0x7fff;
 constexpr uint32_t MX_FP8_E5M2_MAX = 0x37924925;
 constexpr uint32_t MX_FP8_E4M3_MAX = 0x3b124925;
 
+constexpr int32_t NEG_ZERO = 0x80000000;
+constexpr float ONE_FOURTH = 0.25;
+constexpr int32_t FP32_BIAS_NEG = -127;
+constexpr int32_t FP32_BIAS = 127;
+constexpr uint16_t FP4_E2M1_BF16_MAX_EXP = 0x0100;
+constexpr uint16_t FP4_E1M2_MAX_EXP = 0x0000;
+constexpr int64_t MODE_ROUND = 0;
+constexpr int64_t MODE_FLOOR = 1;
+constexpr int64_t MODE_RINT = 4;
+
 constexpr static uint32_t VL_F32 = platform::GetVRegSize() / sizeof(float); // 64
 constexpr static uint32_t BLOCK_F32_ALIGN_NUM = Ops::Base::GetUbBlockSize() / sizeof(float);  // 8
 constexpr static uint32_t UB_BLOCK_SIZE = Ops::Base::GetUbBlockSize();

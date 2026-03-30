@@ -18,17 +18,9 @@
 namespace optiling {
 using namespace NormCheck;
 
-/**
- * @brief Compute total UB usage for given rowFactor (A rows per UB iteration)
- * Buffer allocation follows the design document strictly:
- *   InQue: x1_Q, x2_Q, gamma_Q, beta_Q
- *   OutQue: x_Q, rstd_Q, mxscale_Q, y_Q
- *   TmpBuffer: x_tmp, binAdd_tmp, Max_tmp, Half_tmp
- */
 uint64_t AddRmsNormDynamicMxQuantRFullLoadTiling::CalUBTotalSize()
 {
     uint64_t R_Align = numColAlign_;
-
     // mxscale buffer per row: CeilAlign(CeilDiv(R, 32), 32) * FP8_SIZE
     uint64_t mxscaleBufPerRow = mxScaleSize_ * xDtypeSize_;
 
@@ -47,18 +39,20 @@ uint64_t AddRmsNormDynamicMxQuantRFullLoadTiling::CalUBTotalSize()
     uint64_t x2Buf = DOUBLE_BUFFER * Ops::Base::CeilAlign(R_Align * xDtypeSize_, ubBlockSize_);
 
     // OutQue
-    uint64_t yBuf = DOUBLE_BUFFER * Ops::Base::CeilAlign(R_Align, ubBlockSize_);
+    uint64_t yBuf = 0;
+    if (Y_SUPPORT_DTYPE_FP8_SET.count(yDtype_) != 0) {
+        yBuf = DOUBLE_BUFFER * Ops::Base::CeilAlign(R_Align, ubBlockSize_);
+    } else if (Y_SUPPORT_DTYPE_FP4_SET.count(yDtype_) != 0) {
+        yBuf = DOUBLE_BUFFER * Ops::Base::CeilAlign(R_Align / NUM_TWO, ubBlockSize_);
+    }
     uint64_t xOutBuf = DOUBLE_BUFFER * Ops::Base::CeilAlign(R_Align * xDtypeSize_, ubBlockSize_);
     uint64_t mxscaleBuf = DOUBLE_BUFFER * Ops::Base::CeilAlign(mxscaleBufPerRow, ubBlockSize_);
-    uint64_t rstdBuf = 0;
-    if (rstdFlag_) {
-        rstdBuf = DOUBLE_BUFFER * FP32_SIZE;
-    }
+    uint64_t rstdBuf = DOUBLE_BUFFER * FP32_SIZE;
 
     // TmpBuffer
-    uint64_t xTmpBuf = Ops::Base::CeilAlign(R_Align * FP32_SIZE, ubBlockSize_); // dui
-    uint64_t binAddBuf = Ops::Base::CeilAlign(binAddBufPerRow, ubBlockSize_);  // dui
-    uint64_t xReduceBuff = FP32_SIZE;  // dui
+    uint64_t xTmpBuf = Ops::Base::CeilAlign(R_Align * FP32_SIZE, ubBlockSize_);
+    uint64_t binAddBuf = Ops::Base::CeilAlign(binAddBufPerRow, ubBlockSize_);
+    uint64_t xReduceBuff = FP32_SIZE;
 
     uint64_t maxTmpBuf = maxTmpPerRow;
     uint64_t halfTmpBuf = halfTmpPerRow;
@@ -90,6 +84,7 @@ ge::graphStatus AddRmsNormDynamicMxQuantRFullLoadTiling::SetTilingParams()
     uint64_t gammaBuf = Ops::Base::CeilAlign(numCol_, ubBlockSize_ / gammaDtypeSize_) * gammaDtypeSize_;
     uint64_t betaBuf = Ops::Base::CeilAlign(betaFlag_ * numCol_, ubBlockSize_ / gammaDtypeSize_) * gammaDtypeSize_;
     uint64_t availableUb = maxUbSize_ - UB_RESERVE_FOR_RSTD_ALIGN - UB_RESERVE_FOR_OUTPUT_Y_ALIGN - gammaBuf - betaBuf;
+
     uint64_t rowFactor = 0;
 
     // Try R-full-load: find max rowFactor A that fits in UB
@@ -111,7 +106,10 @@ ge::graphStatus AddRmsNormDynamicMxQuantRFullLoadTiling::SetTilingParams()
 
 bool AddRmsNormDynamicMxQuantRFullLoadTiling::IsCapable()
 {
-    if (yDtype_ != ge::DT_FLOAT8_E4M3FN && yDtype_ != ge::DT_FLOAT8_E5M2) {
+    if (Y_SUPPORT_DTYPE_SET.count(yDtype_) == 0) {
+        return false;
+    }
+    if (numCol_ > FULL_LOAD_R_MAX) {
         return false;
     }
     return true;
@@ -214,8 +212,15 @@ ge::graphStatus AddRmsNormDynamicMxQuantRFullLoadTiling::PostTiling()
 uint64_t AddRmsNormDynamicMxQuantRFullLoadTiling::GetTilingKey() const
 {
     // Tiling key
-    OP_LOGD(context_->GetNodeName(), "TilingKey is %lu.", TILING_KEY_FP8_R_FULL_LOAD);
-    return TILING_KEY_FP8_R_FULL_LOAD;
+    uint64_t tilingKey = 0;
+    if (Y_SUPPORT_DTYPE_FP8_SET.count(yDtype_) != 0) {
+        tilingKey = TILING_KEY_FP8_R_FULL_LOAD;
+        OP_LOGD(context_->GetNodeName(), "TilingKey is %lu.", TILING_KEY_FP8_R_FULL_LOAD);
+    } else if (Y_SUPPORT_DTYPE_FP4_SET.count(yDtype_) != 0) {
+        tilingKey = TILING_KEY_FP4_R_FULL_LOAD;
+        OP_LOGD(context_->GetNodeName(), "TilingKey is %lu.", TILING_KEY_FP4_R_FULL_LOAD);
+    }
+    return tilingKey;
 }
 
 REGISTER_OPS_TILING_TEMPLATE(AddRmsNormDynamicMxQuant, AddRmsNormDynamicMxQuantRFullLoadTiling, ARND_R_FULL_LOAD_PRIORITY);
