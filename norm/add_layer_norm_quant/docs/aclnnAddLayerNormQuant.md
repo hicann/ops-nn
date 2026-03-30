@@ -69,7 +69,7 @@
         $$
   
         $$
-        y1Out = round(y / outScales1Out)
+        y1Out = round(tmp1 / outScales1Out)
         $$
   
     - 若scales1Optional和scales2Optional均存在，则y2Out和scale2Out输出有效。计算公式如下所示：
@@ -83,7 +83,7 @@
         $$
   
         $$
-        y1Out = round(y / outScales1Out),\quad y2Out = round(y / outScales2Out)
+        y1Out = round(tmp1 / outScales1Out),\quad y2Out = round(tmp2 / outScales2Out)
         $$
   
         其中row\_max代表对每行求最大值
