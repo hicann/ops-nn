@@ -93,6 +93,7 @@
   </tbody></table>
 
 - Kirin X90/Kirin 9030 处理器系列产品: 不支持BFLOAT16。
+
 ## 约束说明
 
 输入和输出参数中shape的N和M必须是正整数，且M的取值小于等于25000。

@@ -60,6 +60,7 @@
       $$
         yOut=round(input/scaleOut+offset)
       $$
+
   其中$\max_{t}$/$\min_{t}$代表求最大/最小值的模式，如果quantMode为“pertoken”，则$t=row$，表示对每个token计算最大/最小值；如果quantMode为“pertensor”，则$t=all$，表示求整个tensor的最大/最小值；如果quantMode为“perchannel”，则$t=col$，表示对每个channel求最大/最小值。$DTYPE_{MAX}$是输出类型的最大值，$DTYPE_{MIN}$是输出类型的最小值。
 
 ## 函数原型
@@ -303,18 +304,18 @@ aclnnStatus aclnnDynamicQuantV3(
     </tbody>
     </table>
 
-- **返回值：**
+  - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+    aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
 - 确定性计算：
   - aclnnDynamicQuantV3默认确定性实现。
 
-yOut的数据类型为INT4时，需满足x和yOut的最后一维能被2整除。
-yOut的数据类型为INT32时，需满足x的最后一维能被8整除。
-当有groupIndexOptional时，专家数不超过x剔除最后一维的各个维度乘积。groupIndexOptional的值需要是一组不小于零且非递减的数组，且最后一个值和x剔除最后一维的各个维度乘积相等。若不满足该条件，结果无实际意义。
+  yOut的数据类型为INT4时，需满足x和yOut的最后一维能被2整除。
+  yOut的数据类型为INT32时，需满足x的最后一维能被8整除。
+  当有groupIndexOptional时，专家数不超过x剔除最后一维的各个维度乘积。groupIndexOptional的值需要是一组不小于零且非递减的数组，且最后一个值和x剔除最后一维的各个维度乘积相等。若不满足该条件，结果无实际意义。
 
 ## 调用示例
 

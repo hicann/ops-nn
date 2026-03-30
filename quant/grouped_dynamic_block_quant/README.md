@@ -29,7 +29,6 @@
     y = cast\_to\_[HiF8/FP8](input/scale)
   $$
 
-
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1401px"><colgroup>

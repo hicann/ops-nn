@@ -65,7 +65,6 @@
     - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
     - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^b)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
 
-
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnDynamicBlockMxQuantGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDynamicBlockMxQuant”接口执行计算。
@@ -106,10 +105,9 @@ aclnnStatus aclnnDynamicBlockMxQuant(
   | yOut (aclTensor\*) | 输出 | 表示输入x量化后的对应结果，对应公式中的$P_i$。 | shape和输入x一致。 | FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2 | ND | 2-3 | √ |
   | scale1Out (aclTensor*) | 输出 | 表示-1轴每个分组对应的量化尺度，对应公式中的scale1。 | shape为x的-1轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0。 | FLOAT8_E8M0 | ND | 3-4 | √ |
   | scale2Out (aclTensor*) | 输出 | 表示-2轴每个分组对应的量化尺度，对应公式中的scale2。 | shape为x的-2轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0； <br>  scale2Out输出需要对每两行数据进行交织处理。 | FLOAT8_E8M0 | ND | 3-4 | √ |
-  | workspaceSize (uint64_t\*)  | 输出 | 返回需要在Device侧申请的workspace大小。 | - | - | - | - | - |     
-  | executor (aclOpExecutor\*\*)  | 输出 | 返回op执行器，包含了算子计算流程。 | - | - | - | - | - |     
-   
-  
+  | workspaceSize (uint64_t\*)  | 输出 | 返回需要在Device侧申请的workspace大小。 | - | - | - | - | - |
+  | executor (aclOpExecutor\*\*)  | 输出 | 返回op执行器，包含了算子计算流程。 | - | - | - | - | - |
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -207,7 +205,6 @@ aclnnStatus aclnnDynamicBlockMxQuant(
     - 其他维度与输入x一致。
     - 举例：输入x的shape为[B, M, N]，目的数据类型为FP8类时，对应的y的shape为[B, M, N]，scale1的shape为[B, M, (ceil(N/32) + 2 - 1) / 2, 2]，scale2的shape为[B, (ceil(M / 32) + 2 - 1) / 2, N, 2]。
  - 确定性说明：aclnnDynamicBlockMxQuant默认确定性实现。
-
 
 ## 调用示例
 

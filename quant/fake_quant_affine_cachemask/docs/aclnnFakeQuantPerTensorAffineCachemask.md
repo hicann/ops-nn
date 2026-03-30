@@ -47,6 +47,7 @@ aclnnStatus aclnnFakeQuantPerTensorAffineCachemaskGetWorkspaceSize(
   uint64_t          *workspaceSize,
   aclOpExecutor     **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnFakeQuantPerTensorAffineCachemask(
   void          *workspace,
@@ -261,12 +262,13 @@ aclnnStatus aclnnFakeQuantPerTensorAffineCachemask(
       </tr>
     </tbody>
     </table>
-    
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算：
   - aclnnFakeQuantPerTensorAffineCachemask默认确定性实现。
 
@@ -430,4 +432,3 @@ int main() {
   return 0;
 }
 ```
-

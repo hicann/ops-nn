@@ -87,6 +87,7 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
 ## aclnnDynamicMxQuantWithDualAxisGetWorkspaceSize
 
 - **参数说明：**
+
   | 参数名 | 输入/输出 | 描述 | 使用说明 | 数据类型 | 数据格式 | 维度（shape）| 非连续Tensor |  
   | ----- | ----- |----- |----- |----- |----- |----- |----- |
   | x (aclTensor\*) | 输入 | 表示输入x，对应公式中$V_i$。 | 目的类型为FLOAT4_E2M1、FLOAT4_E1M2时，x的最后一维必须是偶数。 | FLOAT16、BFLOAT16 | ND | 2-7 | √ |
@@ -97,10 +98,9 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
   | mxscale1Out (aclTensor*) | 输出 | 表示-1轴每个分组对应的量化尺度，对应公式中的mxscale1。 | shape为x的-1轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0。 | FLOAT8_E8M0 | ND | 2-8 | √ |
   | y2Out (aclTensor\*) | 输出 | 表示输入x量化-2轴后的对应结果，对应公式中的$P_j$。 | shape和输入x一致。 | FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2 | ND | 2-7 | √ |
   | mxscale2Out (aclTensor*) | 输出 | 表示-2轴每个分组对应的量化尺度，对应公式中的mxscale2。 | shape为x的-2轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0； <br>  mxscale2Out输出需要对每两行数据进行交织处理。 | FLOAT8_E8M0 | ND | 2-8 | √ |
-  | workspaceSize (uint64_t\*)  | 输出 | 返回需要在Device侧申请的workspace大小。 | - | - | - | - | - |     
-  | executor (aclOpExecutor\*\*)  | 输出 | 返回op执行器，包含了算子计算流程。 | - | - | - | - | - |     
-   
-  
+  | workspaceSize (uint64_t\*)  | 输出 | 返回需要在Device侧申请的workspace大小。 | - | - | - | - | - |
+  | executor (aclOpExecutor\*\*)  | 输出 | 返回op执行器，包含了算子计算流程。 | - | - | - | - | - |
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -197,7 +197,6 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
     - 其他维度与输入x一致。
     - 举例：输入x的shape为[B, M, N]，目的数据类型为FP8类时，对应的y1和y2的shape为[B, M, N]，mxscale1的shape为[B, M, (ceil(N/32)+2-1)/2, 2]，mxscale2的shape为[B, (ceil(M/32)+2-1)/2, N, 2]。
  - 确定性说明：aclnnDynamicMxQuantWithDualAxis默认确定性实现。
-
 
 ## 调用示例
 

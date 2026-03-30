@@ -37,6 +37,7 @@
         |  FLOAT4_E1M2  |  0   |
         | FLOAT8_E4M3FN |  8   |
         |  FLOAT8_E5M2  |  15  |
+
   - 场景2，当scaleAlg为1时，只涉及FP8类型：
     - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP8。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
     - 找到该块中数值的最大绝对值:
@@ -55,7 +56,7 @@
       $$
     - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
     - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
-     - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
+    - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
   - 场景3，当scaleAlg为2时，只涉及FP4_E2M1类型：
     - 当dst_max_value = 0.0/6.0/7.0时：
       - 将输入x在axis维度上按k = blocksize个数分组，一组k个数  $\{\{V_i\}_{i=1}^{k}\}$ 动态量化为 $\{mxscale1, \{P_i\}_{i=1}^{k}\}$, k = blocksize：
@@ -355,7 +356,6 @@ aclnnStatus aclnnDynamicMxQuant(
   - scale_alg：若量化结果数据类型为FLOAT4_E1M2，取值仅支持0（OCP Microscaling Formats (Mx) Specification 实现）;若量化结果数据类型为FLOAT4kt_E2M1，取值仅支持0或2（Dynamic dtype Range 实现）；若量化结果数据类型为FLOAT8，取值仅支持0或1（cuBLAS 实现）。
   - blocksize：scale_alg为2时，blocksize必须为32。
   - dst_max_value：取值仅支持0.0或6.0-12.0，在scale_alg=2时生效。默认值0.0代表maxType为目标数据类型的最大值，若传入其它数值则按照传入的数值计算mxscale。仅支持在FLOAT4_E2M1场景设置该值。
-
 
 ## 调用示例
 
