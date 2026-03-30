@@ -1,9 +1,9 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# Copyright (c) 2026 Huawei Technologies Co., Ltd.
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -11,7 +11,7 @@ if(POLICY CMP0135)
     cmake_policy(SET CMP0135 NEW)
 endif()
 
-set(EIGEN_DOWNLOAD_PATH ${CANN_3RD_LIB_PATH}/pkg)
+set(EIGEN_VERSION_PKG eigen-5.0.0.tar.gz)
 
 if (EXISTS "${CANN_3RD_LIB_PATH}/eigen-5.0.0/CMakeLists.txt" AND NOT FORCE_REBUILD_CANN_3RD)
   message(STATUS "Eigen path found in cache: ${CANN_3RD_LIB_PATH}/eigen-5.0.0, and not force rebuild cann third_party.")
@@ -20,15 +20,23 @@ elseif (EXISTS "${CANN_3RD_LIB_PATH}/eigen/CMakeLists.txt" AND NOT FORCE_REBUILD
   message(STATUS "Eigen path found in cache: ${CANN_3RD_LIB_PATH}/eigen, and not force rebuild cann third_party.")
   set(SOURCE_DIR "${CANN_3RD_LIB_PATH}/eigen")
 else()
-  message("The eigen package needs to be downloaded.")
-  set(REQ_URL "https://gitcode.com/cann-src-third-party/eigen/releases/download/5.0.0-h0.trunk/eigen-5.0.0.tar.gz")
+  if(EXISTS "${CANN_3RD_LIB_PATH}/pkg/${EIGEN_VERSION_PKG}")
+    set(REQ_URL "${CANN_3RD_LIB_PATH}/pkg/${EIGEN_VERSION_PKG}")
+    message(STATUS "[ThirdPartyLib][eigen] found in ${REQ_URL}.")
+  elseif(EXISTS "${CANN_3RD_LIB_PATH}/${EIGEN_VERSION_PKG}")
+    set(REQ_URL "${CANN_3RD_LIB_PATH}/${EIGEN_VERSION_PKG}")
+    message(STATUS "[ThirdPartyLib][eigen] found in ${REQ_URL}.")
+  else()
+    set(REQ_URL "https://gitcode.com/cann-src-third-party/eigen/releases/download/5.0.0-h0.trunk/eigen-5.0.0.tar.gz")
+    message(STATUS "[ThirdPartyLib][eigen] ${REQ_URL} not found, need download.")
+  endif()
+
   include(ExternalProject)
   ExternalProject_Add(external_eigen_nn
     TLS_VERIFY        OFF
     URL               ${REQ_URL}
-    DOWNLOAD_DIR      ${EIGEN_DOWNLOAD_PATH}
+    DOWNLOAD_DIR      ${CANN_3RD_LIB_PATH}/pkg
     SOURCE_DIR        ${CANN_3RD_LIB_PATH}/eigen
-    PREFIX            third_party
     CONFIGURE_COMMAND ""
     BUILD_COMMAND     ""
     INSTALL_COMMAND   ""

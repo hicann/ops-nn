@@ -27,16 +27,16 @@ def execute_process(cmd_list: list, cwd=None):
 
 
 def git_download():
+    download_dir = os.path.join(current_dir, "cann_3rd_lib_path_download")
     for url in list(set(git_repo_urls)):
         file_name = url.split('/')[-1]
         file_name = file_name.rsplit(".git", 1)[0]
         if not file_name:
             file_name = "downloaded_file"
-        file_path = os.path.join(current_dir, file_name)
+        file_path = os.path.join(download_dir, file_name)
         if not Path(file_path).exists():
             execute_process(["git", "clone", url, file_path])
         else:
-            cmd_list = ["git", "fetch", "origin", "&&", "git", "reset" "--hard" "HEAD"]
             execute_process(["git", "fetch", "origin"], cwd=file_path)
             execute_process(["git", "reset", "--hard", "origin/HEAD"], cwd=file_path)
 
@@ -55,7 +55,7 @@ def down_files_native(url_list):
 
         # 将文件保存到新建的目录下
         file_path = os.path.join(download_dir, file_name)
-
+        print(f"正在下载 {url} 到 {file_path}")
         urllib.request.urlretrieve(url, file_path)
 
 

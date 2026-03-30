@@ -10,6 +10,7 @@
 
 set(MAKESELF_NAME "makeself")
 set(MAKESELF_PATH ${CANN_3RD_LIB_PATH}/makeself)
+set(MAKESELF_VERSION_PKG makeself-release-2.5.0-patch1.tar.gz)
 
 if (POLICY CMP0135)
     cmake_policy(SET CMP0135 NEW)
@@ -17,8 +18,17 @@ endif()
 
 # 默认配置的makeself还是不存在则下载
 if (NOT EXISTS "${MAKESELF_PATH}/makeself-header.sh" OR NOT EXISTS "${MAKESELF_PATH}/makeself.sh")
-    set(MAKESELF_URL "https://gitcode.com/cann-src-third-party/makeself/releases/download/release-2.5.0-patch1.0/makeself-release-2.5.0-patch1.tar.gz")
-    message(STATUS "Downloading ${MAKESELF_NAME} from ${MAKESELF_URL}")
+    # 优先查找本地压缩包
+    if(EXISTS "${CANN_3RD_LIB_PATH}/pkg/${MAKESELF_VERSION_PKG}")
+        set(REQ_URL "file://${CANN_3RD_LIB_PATH}/pkg/${MAKESELF_VERSION_PKG}")
+        message(STATUS "[ThirdPartyLib][makeself] found in ${REQ_URL}.")
+    elseif(EXISTS "${CANN_3RD_LIB_PATH}/${MAKESELF_VERSION_PKG}")
+        set(REQ_URL "file://${CANN_3RD_LIB_PATH}/${MAKESELF_VERSION_PKG}")
+        message(STATUS "[ThirdPartyLib][makeself] found in ${REQ_URL}.")
+    else()
+        set(REQ_URL "https://gitcode.com/cann-src-third-party/makeself/releases/download/release-2.5.0-patch1.0/makeself-release-2.5.0-patch1.tar.gz")
+        message(STATUS "[ThirdPartyLib][makeself] ${REQ_URL} not found, need download.")
+    endif()
 
     include(FetchContent)
     FetchContent_Declare(

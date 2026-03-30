@@ -37,10 +37,21 @@ if(json_FOUND AND NOT FORCE_REBUILD_CANN_3RD)
     set(JSON_INCLUDE ${JSON_INSTALL_PATH}/include)
     add_custom_target(nlohmann_json)
 else()
-    message("not use cache, download the json code")
+    if(EXISTS "${CANN_3RD_LIB_PATH}/pkg/include.zip")
+        set(REQ_URL "file://${CANN_3RD_LIB_PATH}/pkg/include.zip")
+        message(STATUS "[ThirdPartyLib][json] found in ${REQ_URL}.")
+    elseif(EXISTS "${CANN_3RD_LIB_PATH}/include.zip")
+        set(REQ_URL "file://${CANN_3RD_LIB_PATH}/include.zip")
+        set(JSON_DOWNLOAD_PATH ${CANN_3RD_LIB_PATH})
+        message(STATUS "[ThirdPartyLib][json] found in ${REQ_URL}.")
+    else()
+        set(REQ_URL "https://gitcode.com/cann-src-third-party/json/releases/download/v3.11.3/include.zip")
+        message(STATUS "[ThirdPartyLib][json] ${REQ_URL} not found, need download.")
+    endif()
+
     include(ExternalProject)
     ExternalProject_Add(nlohmann_json
-      URL                         https://gitcode.com/cann-src-third-party/json/releases/download/v3.11.3/include.zip
+      URL                         ${REQ_URL}
       URL_MD5                     e2f46211f4cf5285412a63e8164d4ba6
       DOWNLOAD_DIR                ${JSON_DOWNLOAD_PATH}
       SOURCE_DIR                  ${JSON_INSTALL_PATH}
