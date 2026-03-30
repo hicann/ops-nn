@@ -133,7 +133,15 @@ struct Init {
             InitHf32Mode<Intf>(self);
             InitSubApiParams<Intf>(self);
 
-            if constexpr (Intf::groupOptFlag) {
+            if constexpr (Intf::groupOptPreloadFlag) {
+                self->ctx.singleGroups = self->ctx.convTiling->singleCoreGroups;
+                self->ctx.singleGroupOpt = self->ctx.convTiling->singleCoreGroupOpt;
+                self->ctx.ciPerGroup = self->ctx.convTiling->orgCi / self->ctx.convTiling->groups;
+                if ASCEND_IS_AIC_CONV {
+                    InitKDirectionValue<Intf>(self);
+                    OptGroupCalcBL1LoadTimes<Intf>(self);
+                }
+            } else if constexpr (Intf::groupOptFlag) {
                 self->ctx.ciPerGroup = self->ctx.convTiling->orgCi / self->ctx.convTiling->groups;
                 self->ctx.singleGroupOpt = self->ctx.convTiling->singleCoreGroupOpt;
             } else if constexpr (Intf::c04NDFlag) {
@@ -353,12 +361,13 @@ struct SetFmapStartPosition {
 
 template <class Intf, uint32_t ImplType>
 struct SetOptGroupParams {
-    static __aicore__ inline void call(Intf *self, uint64_t singleGroups, uint64_t singleGroupOpt)
+    static __aicore__ inline void call(Intf *self, uint64_t singleGroups, uint64_t singleGroupOpt, uint64_t singleCoOpt)
     {
-        self->ctx.singleGroups = singleGroups;
         self->ctx.singleGroupOpt = singleGroupOpt;
-        self->ctx.singleCoreCi = singleGroups * self->ctx.ciPerGroup;
-
+        if constexpr (!Intf::groupOptPreloadFlag) {
+            self->ctx.singleGroups = singleGroups;
+            self->ctx.singleCoreCi = singleGroups * self->ctx.ciPerGroup;
+        }
         if ASCEND_IS_AIC_CONV {
             InitKDirectionValue<Intf>(self);
             if constexpr (Intf::groupOptFlag) {
@@ -369,6 +378,10 @@ struct SetOptGroupParams {
             if constexpr (Intf::groupOptNDFlag) {
                 OptGroupInitKValue<Intf>(self);
             }
+        }
+        if (singleGroups != self->ctx.enlarge) {
+            self->ctx.updateEnlarge = singleGroups;
+            self->ctx.updateSingleCoOpt = singleCoOpt;
         }
     }
 };
