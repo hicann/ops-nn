@@ -10,7 +10,7 @@
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    ×     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品 </term>                             |    ×     |
+| <term>Atlas 推理系列产品</term>                             |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    ×     |
 
 ## 功能说明
@@ -75,6 +75,7 @@ aclnnStatus aclnnRmsNormDynamicMxQuantGetWorkspaceSize(
   int64_t            scaleAlg,
   char              *roundModeOptional,
   int64_t            dstType,
+  bool               outputRstd,
   aclTensor         *yOut,
   aclTensor         *mxscaleOut,
   aclTensor         *rstdOut,
@@ -187,6 +188,16 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
       <td>-</td>
     </tr>
     <tr>
+      <td>outputRstd（bool）</td>
+      <td>输入</td>
+      <td>表示指定是否输出有效的rstdOut。</td>
+      <td><ul><li>支持True和False。</li><li>当outputRstd为False时，rstdOut为无效输出。</li></ul></td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
       <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示归一化并量化后的结果，对应公式中的Pi和di。</td>
@@ -200,7 +211,7 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
       <td>mxscaleOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示每个分组对应的量化尺度，对应公式中的mxscale和Sb。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape在尾轴上为x对应值除以blocksize=32向上取整，并对其进行偶数pad，pad填充值为0，具体计算过程见约束说明。其余维度与入参`x`的shape前几维保持一致，前几维指`x`的维度减去`gamma`的维度，表示不需要norm的维度。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape的维度数为输入`x`的维度数加1。其中，前几维（`x`的维度数减去`gamma`的维度数）与`x`对应维度保持一致，表示不需要norm的维度；后两维由MX量化决定：倒数第二维为ceil(`x`尾轴 / blocksize=32)再向上取偶数对齐（pad填充值为0），最后一维固定为2。具体计算过程见约束说明。</li></ul></td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>2-8</td>
@@ -210,7 +221,7 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
       <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示归一化后的标准差的倒数。对应公式中`Rms(x)`的倒数。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape与入参`x`的shape前几维保持一致，前几维指`x`的维度减去`gamma`的维度，表示不需要norm的维度。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>当outputRstd为True时，shape与入参`x`的shape前几维保持一致，前几维指`x`的维度减去`gamma`的维度，表示不需要norm的维度，rstdOut的-1轴是1。</li><li>当outputRstd为False时，该参数的最终输出无效。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-7</td>
@@ -264,16 +275,16 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
       <td>如果传入参数是必选输入，输出或者必选属性，且是空指针，则返回161001。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
-      <td>输入workspaceSize小于连续区域大小。</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">161002</td>
+      <td>输入或输出的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td rowspan="9">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="9">561002</td>
-      <td>输入或输出的数据类型不在支持的范围之内</td>
+      <td>输入或输出的参数不满足参数说明的约束。</td>
     </tr>
     <tr>
+      <td rowspan="6">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="6">561002</td>
       <td>scaleAlg不是0或1，roundModeOptional(非空时)不是 {rint, floor, round}。</td>
     </tr>
     <tr>
@@ -455,7 +466,7 @@ int main() {
   // 2. 构造输入与输出，需要根据API的接口自定义构造
   std::vector<int64_t> xShape = {2, 64};
   std::vector<int64_t> gammaShape = {64};
-  std::vector<int64_t> mxscaleShape = {2, 2};  // CeilAlign(CeilDiv(64, 32), 2) = 2
+  std::vector<int64_t> mxscaleShape = {2, 1, 2};  // CeilDiv(CeilDiv(64, 32), 2) = 1
   std::vector<int64_t> rstdShape = {2, 1};
 
   void* xDeviceAddr = nullptr;
@@ -487,6 +498,7 @@ int main() {
   std::vector<float> rstdHostData(rstdShapeSize, 0);
 
   float epsilon = 1e-6;
+  bool outputRstd = true;  // 设置为true，输出有效的rstdOut
 
   // 创建x aclTensor
   ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT16, &x);
@@ -510,7 +522,7 @@ int main() {
   aclOpExecutor* executor;
   // 调用aclnnRmsNormDynamicMxQuant第一段接口
   ret = aclnnRmsNormDynamicMxQuantGetWorkspaceSize(
-      x, gamma, nullptr, epsilon, 0, nullptr, 36, y, mxscale, rstd, &workspaceSize, &executor);
+      x, gamma, nullptr, epsilon, 0, nullptr, 36, outputRstd, y, mxscale, rstd, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS,
       LOG_PRINT("aclnnRmsNormDynamicMxQuantGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
