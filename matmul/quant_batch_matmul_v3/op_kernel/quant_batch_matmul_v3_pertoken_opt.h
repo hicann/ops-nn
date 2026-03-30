@@ -276,7 +276,7 @@ protected:
         } else if constexpr (AMatmulType::format == CubeFormat::NZ) {
             if constexpr (aTrans) {
                 // m1, k1, k0, m0
-                offsetA_ = batchBOffset * DequantBmm::Align(k_, BMM_BLOCK_NUM) * DequantBmm::Align(m_, K0_INT8) +
+                offsetA_ = batchAOffset * DequantBmm::Align(k_, BMM_BLOCK_NUM) * DequantBmm::Align(m_, K0_INT8) +
                            DequantBmm::Align(mOffset, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM);
             } else {
                 // k1, m1, m0, k0
