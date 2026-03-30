@@ -165,7 +165,7 @@ protected:
     float epsilon_{1e-6};
     float avgFactor_{0.0};
     uint64_t roundMode_{4};        // default: RINT
-    uint64_t scaleAlg_{0};         // default: standard MX
+    int64_t scaleAlg_{0};         // default: standard MX
 
     // MX Quant derived params
     uint64_t mxBlockSize_{32};       // MX block size

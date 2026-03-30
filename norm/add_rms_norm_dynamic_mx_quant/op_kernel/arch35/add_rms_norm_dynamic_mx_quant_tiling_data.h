@@ -26,9 +26,9 @@ struct AddRmsNormDynamicMxQuantTilingData {
     float avgFactor;            // 1.0 / R
     uint64_t roundMode;          // rounding mode (0=round, 1=floor, 4=rint)
     uint64_t mxBlockSize;        // MX block size (32)
-    uint64_t scaleAlg;           // scale algorithm (0=standard, 1=cublas)
+    int64_t scaleAlg;           // scale algorithm (0=standard, 1=cublas)
     uint64_t blockNumInColAxis;  // CeilDiv(R, 32)
-    uint64_t dstStrideUbBlocks;  // whether R needs dstStrideUbBlocksding to mxBlockSize multiple
+    uint64_t dstStrideUbBlocks;  // R axis needs dstStrideUbBlocks to align numColAlign
     uint64_t mxScaleSize;        // mxscale output size per row
     uint32_t betaFlag;          // whether beta input exists
     uint32_t rstdFlag;          // whether rstd output is needed

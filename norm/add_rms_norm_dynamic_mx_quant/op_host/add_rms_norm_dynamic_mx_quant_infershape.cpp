@@ -60,7 +60,7 @@ static ge::graphStatus InferShape4AddRmsNormDynamicMxQuant(gert::InferShapeConte
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const bool* output_rstd = attrs->GetAttrPointer<bool>(ATTR_OUTPUT_RSTD_IDX);
-    bool rstd_enable =false;
+    bool rstd_enable = false;
     if (output_rstd != nullptr) {
         rstd_enable = *output_rstd;
     }
@@ -87,11 +87,6 @@ static ge::graphStatus InferShape4AddRmsNormDynamicMxQuant(gert::InferShapeConte
 
     // mxscale shape: same batch dims as x, last dim = CeilDiv(CeilDiv(R, 32), 2)
     // where R is the last gammaDimNum dims of x
-    int64_t numCol = 1;
-    for (size_t i = 0; i < gammaDimNum; i++) {
-        numCol *= gammaShape->GetDim(i);
-    }
-
     size_t dim = x1Shape->GetDimNum() - 1;
     int64_t dimSize = 0;
     if (x1Shape->GetDim(dim) == UNKNOWN_DIM_VALUE_) {
@@ -138,19 +133,19 @@ static graphStatus InferDataType4AddRmsNormDynamicMxQuant(gert::InferDataTypeCon
                         "attr dst_type only support 35(float8_e5m2), 36(float8_e4m3fn), 40(float4_e2m1), 41(float4_e1m2)"),
                 return ge::GRAPH_FAILED);
         }
+        const bool* output_rstd = attrs->GetAttrPointer<bool>(ATTR_OUTPUT_RSTD_IDX);
+        bool rstd_enable = false;
+        if (output_rstd != nullptr) {
+            rstd_enable = *output_rstd;
+        }
+        if (rstd_enable) {
+            context->SetOutputDataType(RSTD_IDX, ge::DT_FLOAT);
+        }
     }
     context->SetOutputDataType(Y_IDX, yDtype);
     context->SetOutputDataType(X_IDX, context->GetInputDataType(X1_IDX));
     context->SetOutputDataType(MXSCALE_IDX, ge::DT_FLOAT8_E8M0);
 
-    const bool* output_rstd = attrs->GetAttrPointer<bool>(ATTR_OUTPUT_RSTD_IDX);
-    bool rstd_enable =false;
-    if (output_rstd != nullptr) {
-        rstd_enable = *output_rstd;
-    }
-    if (rstd_enable) {
-        context->SetOutputDataType(RSTD_IDX, ge::DT_FLOAT);
-    }
     OP_LOGD(context, "End InferDataType4AddRmsNormDynamicMxQuant");
     return GRAPH_SUCCESS;
 }

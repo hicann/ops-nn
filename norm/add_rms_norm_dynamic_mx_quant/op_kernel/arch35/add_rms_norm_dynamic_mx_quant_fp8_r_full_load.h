@@ -88,7 +88,7 @@ public:
 
         // === Compute buffer sizes ===
         uint64_t rstdUbSizeAlignSize = CeilAlign(rowFactor_, static_cast<uint64_t>(VL_F32)) * sizeof(float);
-        uint16_t binaryAddQuotientLoop = CeilDiv(binAddQuotient_, VL_F32);
+        uint32_t binaryAddQuotientLoop = CeilDiv(binAddQuotient_, VL_F32);
         uint32_t binaryAddBufLen = CeilAlign(CeilAlign(binaryAddQuotientLoop, BLOCK_F32_ALIGN_NUM) * sizeof(float), UB_BLOCK_SIZE) * rowFactor_;
 
         // MxQuant buffer sizes
@@ -977,7 +977,7 @@ private:
             0
         };
         DataCopyPadExtParams<T_GAMMA> padParams{false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<T_GAMMA>(0.0)};
-        gammaLocal = gammabetaLocal.ReinterpretCast<T_GAMMA>();;
+        gammaLocal = gammabetaLocal.ReinterpretCast<T_GAMMA>();
         DataCopyPad<T_GAMMA>(gammaLocal, gammaGm, copyParams, padParams);
         if (betaFlag_ != 0) {
             betaLocal = gammabetaLocal[CeilAlign(numCol_, UB_BLOCK_SIZE / sizeof(T_GAMMA)) * sizeof(T_GAMMA)].ReinterpretCast<T_GAMMA>();
@@ -1073,7 +1073,7 @@ private:
     uint64_t rowWork{1};
     uint64_t roundMode_;
     uint64_t mxBlockSize_;
-    uint64_t scaleAlg_;
+    int64_t scaleAlg_;
     uint64_t blockNumInColAxis_;
     uint64_t dstStrideUbBlocks_;
     uint64_t mxScaleSize_;

@@ -92,7 +92,7 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckInputShapeValue(
         return ge::GRAPH_FAILED;
     }
 
-    // gamma dim num shoule be 1
+    // gamma dim num should be 1
     if (1 != gammaShape->GetStorageShape().GetDimNum()) {
         OP_LOGE(context_->GetNodeName(), "The shape dim of gamma/beta only support 1, please check.");
         return ge::GRAPH_FAILED;
@@ -361,7 +361,7 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckMxScaleRstdShape
             OP_LOGE(context_->GetNodeName(), "Invalid rstd shape dim num (must same with input x1)."),
                 return ge::GRAPH_FAILED);
         // A维度的轴必须一致，其他维度为1
-        for (size_t i = 0; i < xRank - gammaRank; i++) {
+        for (size_t i = 0; i < xRank; i++) {
             if (i >= xRank - gammaRank) {
                 if (rstdShape.GetDim(i) != 1) {
                     OP_LOGE(context_->GetNodeName(), "rstd shape dim[%zu]=%ld should be 1.", i, rstdShape.GetDim(i));
@@ -422,7 +422,7 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::SetInputParams()
         roundMode_ = static_cast<uint64_t>(ParseRoundMode(std::string(roundModeStr)));
     }
 
-    const uint64_t* quantAlgPtr = attrs->GetAttrPointer<uint64_t>(QUANT_ALG_ATTR_INDEX);
+    const int64_t* quantAlgPtr = attrs->GetAttrPointer<int64_t>(QUANT_ALG_ATTR_INDEX);
     if (quantAlgPtr != nullptr) {
         scaleAlg_ = *quantAlgPtr;
     }
