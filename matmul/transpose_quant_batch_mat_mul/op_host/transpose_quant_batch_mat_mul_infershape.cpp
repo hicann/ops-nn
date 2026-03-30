@@ -159,7 +159,7 @@ static ge::graphStatus InferShapeForTransposeQuantBatchMatMul(InferShapeContext*
         shapeX1 == nullptr || shapeX2 == nullptr || shapeY == nullptr || attrs == nullptr,
         CUBE_INNER_ERR_REPORT(nameOp, "[Infershape]shape or attrs is null."), return ge::GRAPH_FAILED);
 
-    const auto dtype = attrs->GetAttrPointer<int32_t>(0); // dtype index is 0
+    const auto dtype = attrs->GetAttrPointer<int64_t>(0); // dtype index is 0
     CHECK(dtype == nullptr, CUBE_INNER_ERR_REPORT(nameOp, "[Infershape] attr dtype is null."), return ge::GRAPH_FAILED);
 
     const auto permX1 = attrs->GetListInt(2);                        // permX1 index is 2

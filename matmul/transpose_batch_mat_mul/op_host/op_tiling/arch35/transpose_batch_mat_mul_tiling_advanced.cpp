@@ -241,8 +241,6 @@ ge::graphStatus TransposeBatchMatMulTiling::CheckArgs()
                         CUBE_INNER_ERR_REPORT(args_.opName, "scale condition not satisfied"), return ge::GRAPH_FAILED);
     }
     if (attrs->GetAttrNum() >= HF32_ATTR_NUM) {
-        OPS_CHECK_NULL_WITH_CONTEXT(context_,
-                                    attrs->GetAttrPointer<int32_t>(HF32_ATTR_INDEX - 1)); // 检查倒数第2个属性
         OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<bool>(HF32_ATTR_INDEX));
     }
     if (attrs->GetAttrNum() >= ATTR_NUM) {
