@@ -84,6 +84,7 @@ protected:
 
 private:
     void SetParamForKernelSplit(bool isKernelSplitOnlyH = true);
+    bool CheckKernelSplitHW11Enable();
     int32_t CalFmapHForKernelSplit(const int32_t& mL1Size, bool isKernelSplitOnlyH = false) const;
     bool IsBaseShapeFitKernelSplitHW(const uint32_t bestBaseMN);
     bool CheckKernelSplitHWEnable(

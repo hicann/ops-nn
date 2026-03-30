@@ -394,11 +394,17 @@ struct IterateAllForKernelSplit {
     static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::DstT> &output, uint8_t enAtomic)
     {
         while (self->template Iterate<sync>()) {
-            if ASCEND_IS_AIC_SCALAR {
+            if (unlikely(self->ctx.tiling_->wk == 1 && self->ctx.tiling_->hk == 1 && self->ctx.rearrangeHIndex_ != 0)) {
+                continue;
+            }
+            if ASCEND_IS_AIC_SCALAR {    
                 if (self->ctx.rearrangeWIndex_ == 0) {
                     CrossCoreCWaitVForKS<Intf>(self);
                 }
-                self->template GetTensorC<sync>(output, enAtomic);
+                if (self->ctx.tiling_->wk != 1 || self->ctx.tiling_->hk != 1 || self->ctx.rearrangeWIndex_ == 0) {
+                // kernel = 1*1 跳过判断，只处理第一个子kernel的计算
+                    self->template GetTensorC<sync>(output, enAtomic);
+                }
                 if (self->ctx.rearrangeWIndex_ == self->ctx.tiling_->strideW - 1) {
                     CrossCoreCSeitVForKS<Intf>(self);
                 }

@@ -886,6 +886,9 @@ struct Iterate {
             if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
                 if (IterateForKernelSplit<Intf>(self)) {
                     UpdateFullLoadL1Status<Intf>(self);
+                    if (unlikely(self->ctx.tiling_->hk == 1)) {
+                        return true;
+                    }
                     Compute<Intf>(self);
                     return true;
                 }
@@ -912,6 +915,9 @@ struct Iterate {
             if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
                 if (IterateForKernelSplit<Intf>(self)) {
                     UpdateFullLoadL1Status<Intf>(self);
+                    if (unlikely(self->ctx.tiling_->hk == 1)) {
+                        return true;
+                    }
                     Compute<Intf>(self);
                     return true;
                 }
@@ -943,6 +949,9 @@ struct Iterate {
             if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
                 if (IterateForKernelSplit<Intf>(self)) {
                     UpdateFullLoadL1Status<Intf>(self);
+                    if (unlikely(self->ctx.tiling_->hk == 1)) {
+                        return true;
+                    }
                     Compute<Intf>(self);
                     return true;
                 }

@@ -575,28 +575,47 @@ __aicore__ inline void InterleaveUbOutForKernelSplit(Intf *self, int64_t dataLen
     uint32_t doubleVfLen = (vfLen << crossBlockNum);
     uint16_t repeatTimes = (dataLen + vfLen - 1) / vfLen;
     uint64_t twoBlockLen = (dataLen << crossBlockNum);
-
+    bool kernelFlag1 = (self->ctx.tiling_->wk == 1 && self->ctx.tiling_->hk == 1);
     auto src0Ptr = (__ubuf__ ReDstT *)self->ctx.vecOutBuf_[0].GetPhyAddr();
     auto src1Ptr = (__ubuf__ ReDstT *)self->ctx.vecOutBuf_[dataLen].GetPhyAddr();
     auto dst0Ptr = (__ubuf__ ReDstT *)self->ctx.vecOutBuf_[twoBlockLen].GetPhyAddr();
     auto dst1Ptr = (__ubuf__ ReDstT *)self->ctx.vecOutBuf_[twoBlockLen + vfLen].GetPhyAddr();
 
     // 取两个kernel拆分的切块(CHW)使用interleave进行交叉排布
-    __VEC_SCOPE__
-    {
-        MicroAPI::MaskReg preg = MicroAPI::CreateMask<ReDstT, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::RegTensor<ReDstT> src0;
-        MicroAPI::RegTensor<ReDstT> src1;
-        MicroAPI::RegTensor<ReDstT> dst0;
-        MicroAPI::RegTensor<ReDstT> dst1;
-
-        for (uint16_t i = 0; i < repeatTimes; i++) {
-            MicroAPI::DataCopy(src0, src0Ptr + i * vfLen);
-            MicroAPI::DataCopy(src1, src1Ptr + i * vfLen);
-            // Interleave指令不支持hif8，需要伪装成uint8
-            MicroAPI::Interleave(dst0, dst1, src0, src1);
-            MicroAPI::DataCopy(dst0Ptr + i * doubleVfLen, dst0, preg);
-            MicroAPI::DataCopy(dst1Ptr + i * doubleVfLen, dst1, preg);
+    if (likely(!kernelFlag1)){
+        __VEC_SCOPE__
+        {
+            MicroAPI::MaskReg preg = MicroAPI::CreateMask<ReDstT, MicroAPI::MaskPattern::ALL>();
+            MicroAPI::RegTensor<ReDstT> src0;
+            MicroAPI::RegTensor<ReDstT> src1;
+            MicroAPI::RegTensor<ReDstT> dst0;
+            MicroAPI::RegTensor<ReDstT> dst1;
+            for (uint16_t i = 0; i < repeatTimes; i++) {
+                MicroAPI::DataCopy(src0, src0Ptr + i * vfLen);
+                MicroAPI::DataCopy(src1, src1Ptr + i * vfLen);
+                // Interleave指令不支持hif8，需要伪装成uint8
+                MicroAPI::Interleave(dst0, dst1, src0, src1);
+                MicroAPI::DataCopy(dst0Ptr + i * doubleVfLen, dst0, preg);
+                MicroAPI::DataCopy(dst1Ptr + i * doubleVfLen, dst1, preg);
+            }
+        }
+    }else {
+        __VEC_SCOPE__ //kernel = 1*1场景下需要对第二个Reg清零
+        {
+            MicroAPI::MaskReg preg = MicroAPI::CreateMask<ReDstT, MicroAPI::MaskPattern::ALL>();
+            MicroAPI::RegTensor<ReDstT> src0;
+            MicroAPI::RegTensor<ReDstT> src1;
+            MicroAPI::RegTensor<ReDstT> dst0;
+            MicroAPI::RegTensor<ReDstT> dst1;
+            ReDstT scalarValue = 0;
+            for (uint16_t i = 0; i < repeatTimes; i++) {
+                MicroAPI::DataCopy(src0, src0Ptr + i * vfLen);
+                MicroAPI::Duplicate(src1, scalarValue);
+                // Interleave指令不支持hif8，需要伪装成uint8
+                MicroAPI::Interleave(dst0, dst1, src0, src1);
+                MicroAPI::DataCopy(dst0Ptr + i * doubleVfLen, dst0, preg);
+                MicroAPI::DataCopy(dst1Ptr + i * doubleVfLen, dst1, preg);
+            }
         }
     }
 }
