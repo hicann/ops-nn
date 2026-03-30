@@ -12,7 +12,7 @@
 #include "aclnn_embedding_renorm.h"
 #include "level0/arange.h"
 #include "aclnn_kernels/reshape.h"
-#include "index/scatter_update/op_host/op_api/scatter_update.h"
+#include "index/scatter_update/op_api/scatter_update.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "gather_v2.h"

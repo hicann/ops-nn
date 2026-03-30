@@ -24,7 +24,7 @@
 #include "level0/sort.h"
 #include "level0/arange.h"
 #include "level0/tensor_move.h"
-#include "index/scatter_update/op_host/op_api/scatter_update.h"
+#include "index/scatter_update/op_api/scatter_update.h"
 #include "../../../tf_scatter_add/op_host/op_api/tf_scatter_add.h"
 #include "../../../scatter_add_with_sorted/op_host/op_api/scatter_add_with_sorted.h"
 #include "../../../linear_index/op_host//op_api//linear_index.h"

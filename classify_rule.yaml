@@ -1986,6 +1986,8 @@ VC8@ops-nn:
         - ops/ops-nn/index/linear_index_v2/op_kernel/arch35/
         - ops/ops-nn/index/sparse_to_dense/op_host/
         - ops/ops-nn/index/sparse_to_dense/op_kernel/arch35/
+        - ops/ops-nn/index/sorted_sparse_segment_mean_grad/op_host/
+        - ops/ops-nn/index/sorted_sparse_segment_mean_grad/op_kernel/arch35/
       opensource_style: null
       kernel_style: null
     unrelease:
@@ -2010,5 +2012,6 @@ VC8@ops-nn:
         - ops/ops-nn/index/scatter_add/tests/
         - ops/ops-nn/index/linear_index_v2/tests/
         - ops/ops-nn/index/sparse_to_dense/tests/
+        - ops/ops-nn/index/sorted_sparse_segment_mean_grad/tests/
       non_delivery: null
       open_source: null
