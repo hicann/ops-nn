@@ -1,0 +1,1085 @@
+{
+  "op_type": "IndexFill",
+  "op_list": [
+    {
+      "bin_filename": "IndexFill_8460c4b727ab5cc93a9595333a3fd501",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "value",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dim",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "IndexFill_8460c4b727ab5cc93a9595333a3fd502",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "value",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dim",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "IndexFill_8460c4b727ab5cc93a9595333a3fd503",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "value",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dim",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "IndexFill_8460c4b727ab5cc93a9595333a3fd504",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "value",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dim",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "IndexFill_8460c4b727ab5cc93a9595333a3fd505",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "value",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dim",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "IndexFill_8460c4b727ab5cc93a9595333a3fd506",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "value",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dim",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "IndexFill_8460c4b727ab5cc93a9595333a3fd507",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "value",
+          "index": 2,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dim",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "IndexFill_8460c4b727ab5cc93a9595333a3fd508",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "value",
+          "index": 2,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dim",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "IndexFill_8460c4b727ab5cc93a9595333a3fd509",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bool",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "value",
+          "index": 2,
+          "dtype": "bool",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bool",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dim",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "IndexFill_8460c4b727ab5cc93a9595333a3fd510",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bool",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "value",
+          "index": 2,
+          "dtype": "bool",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bool",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dim",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "IndexFill_8460c4b727ab5cc93a9595333a3fd511",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "value",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dim",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "IndexFill_8460c4b727ab5cc93a9595333a3fd512",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "value",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dim",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+		  "bin_filename": "IndexFill_8460c4b727ab5cc93a9595333a3fd513",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "int8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "indices",
+					"index": 1,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "value",
+					"index": 2,
+					"dtype": "int8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "int8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "dim",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+    {
+		  "bin_filename": "IndexFill_8460c4b727ab5cc93a9595333a3fd514",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "int8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "indices",
+					"index": 1,
+					"dtype": "int64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "value",
+					"index": 2,
+					"dtype": "int8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "int8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "dim",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+    {
+			"bin_filename": "IndexFill_8460c4b727ab5cc93a9595333a3fd515",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "uint8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "indices",
+					"index": 1,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "value",
+					"index": 2,
+					"dtype": "uint8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "uint8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "dim",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+    {
+			"bin_filename": "IndexFill_8460c4b727ab5cc93a9595333a3fd516",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "uint8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "indices",
+					"index": 1,
+					"dtype": "int64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "value",
+					"index": 2,
+					"dtype": "uint8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "uint8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "dim",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+    {
+			"bin_filename": "IndexFill_8460c4b727ab5cc93a9595333a3fd517",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "int16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "indices",
+					"index": 1,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "value",
+					"index": 2,
+					"dtype": "int16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "int16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "dim",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+    {
+			"bin_filename": "IndexFill_8460c4b727ab5cc93a9595333a3fd518",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "int16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "indices",
+					"index": 1,
+					"dtype": "int64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "value",
+					"index": 2,
+					"dtype": "int16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "int16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "dim",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+    {
+			"bin_filename": "IndexFill_8460c4b727ab5cc93a9595333a3fd519",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "double",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "indices",
+					"index": 1,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "value",
+					"index": 2,
+					"dtype": "double",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "double",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "dim",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+    {
+			"bin_filename": "IndexFill_8460c4b727ab5cc93a9595333a3fd520",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "double",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "indices",
+					"index": 1,
+					"dtype": "int64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "value",
+					"index": 2,
+					"dtype": "double",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "double",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "dim",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		}
+  ]
+}

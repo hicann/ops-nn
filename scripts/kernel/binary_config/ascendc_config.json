@@ -574,6 +574,7 @@
     {"name":"CircularPad", "compute_units": ["ascend910b","ascend910_93"], "auto_sync" : true},
     {"name":"CircularPadGrad", "compute_units": ["ascend910b","ascend910_93"], "auto_sync" : true},
     {"name":"PadV3GradReplication", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync": false},
+    {"name":"IndexFill", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"IndexFillD", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"ScatterNdAdd", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "high_precision", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"RoiAlignRotatedGrad", "compute_units": ["ascend910", "ascend910b","ascend910_93", "ascend310p"], "auto_sync" : true},

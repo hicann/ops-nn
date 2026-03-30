@@ -24,6 +24,15 @@ namespace {
     static const std::vector<ge::DataType> indicesDataType = {
             ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
             ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
+    static const std::vector<ge::DataType> ascend950XDataType = {
+        ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT64, ge::DT_INT32, ge::DT_BOOL, ge::DT_INT8, ge::DT_UINT8, ge::DT_INT16, ge::DT_DOUBLE,
+        ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT64, ge::DT_INT32, ge::DT_BOOL, ge::DT_INT8, ge::DT_UINT8, ge::DT_INT16, ge::DT_DOUBLE};
+    static const std::vector<ge::Format> ascend950FormatList = {
+            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+    static const std::vector<ge::DataType> ascend950IndicesDataType = {
+            ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+            ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
 }
 
 namespace ops {
@@ -43,6 +52,34 @@ public:
             .DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend910b", aicore_config);
         this->AICore().AddConfig("ascend910_93", aicore_config);
+
+        OpAICoreConfig config_950;
+        config_950.Input("x")
+            .ParamType(REQUIRED)
+            .DataType(ascend950XDataType)
+            .Format(ascend950FormatList)
+            .UnknownShapeFormat(ascend950FormatList);
+        config_950.Input("indices")
+            .ParamType(REQUIRED)
+            .DataType(ascend950IndicesDataType)
+            .Format(ascend950FormatList)
+            .UnknownShapeFormat(ascend950FormatList);
+        config_950.Input("value")
+            .ParamType(REQUIRED)
+            .DataType(ascend950XDataType)
+            .Format(ascend950FormatList)
+            .UnknownShapeFormat(ascend950FormatList);
+        config_950.Output("y")
+            .ParamType(REQUIRED)
+            .DataType(ascend950XDataType)
+            .Format(ascend950FormatList)
+            .UnknownShapeFormat(ascend950FormatList);
+        config_950.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .ExtendCfgInfo("opFile.value", "index_fill_apt");
+        this->AICore().AddConfig("ascend950", config_950);
     }
 };
 

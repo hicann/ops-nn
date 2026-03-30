@@ -47,6 +47,12 @@ static const std::initializer_list<op::DataType> DTYPE_910B_SUPPORT_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT,
     op::DataType::DT_INT64, op::DataType::DT_BOOL, op::DataType::DT_BF16};
 
+static const std::initializer_list<op::DataType> DTYPE_950_SUPPORT_LIST = {
+    op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT,
+    op::DataType::DT_INT64, op::DataType::DT_BOOL,    op::DataType::DT_BF16,
+    op::DataType::DT_INT8,  op::DataType::DT_UINT8,   op::DataType::DT_INT16,
+    op::DataType::DT_DOUBLE};
+
 static bool CheckNotNull(const aclTensor *self, const aclIntArray *index,
                          const aclScalar *value, const aclTensor *out) {
   OP_CHECK_NULL(self, return false);
@@ -94,7 +100,9 @@ static bool CheckShape(const aclTensor *self, const aclIntArray *index,
 static bool CheckDtypeValid(const aclTensor *self, const aclTensor *out) {
   // 检查self的数据类型是否在算子的支持列表内
   auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND910B ||
+  if (socVersion == SocVersion::ASCEND950) {
+    OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_950_SUPPORT_LIST, return false);
+  } else if (socVersion == SocVersion::ASCEND910B ||
       socVersion == SocVersion::ASCEND910_93 || Ops::NN::AclnnUtil::IsRegbase()) {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_910B_SUPPORT_LIST, return false);
   } else {
@@ -207,9 +215,36 @@ static void CheckFormat(const aclTensor* self) {
     }
 }
 
-aclnnStatus aclnnIndexFillTensorGetWorkspaceSize(const aclTensor *self, int64_t dim, const aclIntArray *index,
-                                                 const aclScalar *value, aclTensor *out,
-                                                 uint64_t *workspaceSize, aclOpExecutor **executor) {
+aclnnStatus IndexFillAiCore(const aclTensor *self, int64_t dim, const aclIntArray *index, const aclScalar *value, aclTensor *out,
+    uint64_t *workspaceSize, aclOpExecutor **executor, UniqueExecutor& uniqueExecutor) {
+    //  固定写法，将输入self转换成连续的tensor
+    auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
+    CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 1.将index从aclIntArray类型转为变成aclTensor类型
+    auto indexTensor = uniqueExecutor.get()->ConvertToTensor(index, op::ToOpDataType(ACL_INT64));
+    auto indexContiguous = l0op::Contiguous(indexTensor, uniqueExecutor.get());
+    CHECK_RET(indexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 2.将value转为和self同类型的Tensor
+    auto valueTensor = uniqueExecutor.get()->ConvertToTensor(value, selfContiguous->GetDataType());
+
+    // 3. 调用index_fill l0接口
+    auto indexFillOut = l0op::IndexFill(selfContiguous, indexContiguous, valueTensor, dim, uniqueExecutor.get());
+    CHECK_RET(indexFillOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 4. 固定写法，将计算结果拷贝到输出out上，out可能是非连续的tensor
+    auto viewCopyResult = l0op::ViewCopy(indexFillOut, out, uniqueExecutor.get());
+    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+    uniqueExecutor.ReleaseTo(executor);
+    return ACLNN_SUCCESS;
+}
+
+aclnnStatus aclnnIndexFillTensorGetWorkspaceSize(const aclTensor *self, int64_t dim,
+    const aclIntArray *index, const aclScalar *value, aclTensor *out,
+    uint64_t *workspaceSize, aclOpExecutor **executor) {
   OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
   L2_DFX_PHASE_1(aclnnIndexFillTensor, DFX_IN(self, dim, index, value), DFX_OUT(out));
@@ -251,6 +286,12 @@ aclnnStatus aclnnIndexFillTensorGetWorkspaceSize(const aclTensor *self, int64_t 
       appendIndex[i] = (*index)[i];
     }
   }
+
+  auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+  if (socVersion == SocVersion::ASCEND950 && CheckType(self->GetDataType(), DTYPE_950_SUPPORT_LIST)) {
+    return IndexFillAiCore(self, dim, index, value, out, workspaceSize, executor, uniqueExecutor);
+  }
+
   index = uniqueExecutor.get()->AllocIntArray(appendIndex, indexNum);
 
   const aclTensor *assist1 = GenerateAssistMatrix(self, index, dim, true, 0, self->GetDataType(),

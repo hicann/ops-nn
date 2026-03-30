@@ -46,6 +46,12 @@ static const std::initializer_list<op::DataType> DTYPE_910B_SUPPORT_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT,
     op::DataType::DT_INT64, op::DataType::DT_BOOL,    op::DataType::DT_BF16};
 
+static const std::initializer_list<op::DataType> DTYPE_950_SUPPORT_LIST = {
+    op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT,
+    op::DataType::DT_INT64, op::DataType::DT_BOOL,    op::DataType::DT_BF16,
+    op::DataType::DT_INT8,  op::DataType::DT_UINT8,   op::DataType::DT_INT16,
+    op::DataType::DT_DOUBLE};
+
 static const std::initializer_list<op::DataType> DTYPE_INDEX_SUPPORT_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_INT64};
 
@@ -89,7 +95,7 @@ static bool CheckShape(
 static bool CheckIndexDtypeValid(const aclTensor* index)
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
+    if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 || socVersion == SocVersion::ASCEND950) {
         OP_CHECK_DTYPE_NOT_SUPPORT(index, DTYPE_INDEX_SUPPORT_LIST, return true);
     }
     return true;
@@ -101,6 +107,8 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
         OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_910B_SUPPORT_LIST, return false);
+    } else if (socVersion == SocVersion::ASCEND950) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_950_SUPPORT_LIST, return false);
     } else {
         OP_CHECK_DTYPE_NOT_SUPPORT(self, NULL_SUPPORT_LIST, return false);
     }
@@ -125,6 +133,12 @@ static aclnnStatus CheckParams(
 
 static bool NeedTranspose(const aclTensor* self, int64_t dim)
 {
+    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    if (socVersion == SocVersion::ASCEND950) {
+        // 950芯片不需要做转置操作
+        return false;
+    }
+
     if (self->GetDataType() == op::DataType::DT_INT64 || self->GetDataType() == op::DataType::DT_BOOL) {
         auto selfDimNum = static_cast<int64_t>(self->GetViewShape().GetDimNum());
         dim = dim > 0 ? dim : dim + selfDimNum;
