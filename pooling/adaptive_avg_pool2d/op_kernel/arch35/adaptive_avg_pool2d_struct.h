@@ -43,6 +43,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
         ASCENDC_TPL_UINT_SEL(TEMPLATE_MODE, ASCENDC_TPL_UI_LIST, TPL_BIG_KERNEL),
         ASCENDC_TPL_UINT_SEL(DTYPE_MODE, ASCENDC_TPL_UI_LIST, TPL_INT32_UINT32),
+        ASCENDC_TPL_TILING_STRUCT_SEL(AdaptivePool2dBigKernelTilingData),
     ),
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
@@ -83,6 +84,21 @@ struct AdaptivePool2DSimtTilingData {
     int64_t wInDim = 0;
     int64_t hOutDim = 0;
     int64_t wOutDim = 0;
+};
+
+class AdaptivePool2dBigKernelTilingData {
+public:
+    int64_t nc = 1;
+    int64_t hInDim = 1;
+    int64_t wInDim = 1;
+    int64_t hOutDim = 1;
+    int64_t wOutDim = 1;
+    int64_t blockFactor = 1;
+    int64_t blockTail = 1;
+    int64_t totalIdx = 1;
+    int64_t coreNums = 1;
+    int64_t maxCount = 1;
+    int64_t batchCount = 1;
 };
 
 } // namespace AdaptiveAvgPool2dOp

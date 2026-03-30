@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "arch35/adaptive_avg_pool2d_big_kernel.h"
 #include "arch35/adaptive_avg_pool2d_simt.h"
 #include "arch35/adaptive_avg_pool2d_small_kernel.h"
 #include "arch35/adaptive_avg_pool2d_struct.h"
@@ -50,5 +51,10 @@ __global__ __aicore__ void adaptive_avg_pool2d(
             op.Init(x, y);
             op.Process();
         }
+    } else if constexpr (TEMPLATE_MODE == TPL_BIG_KERNEL) {
+        GET_TILING_DATA_WITH_STRUCT(AdaptivePool2dBigKernelTilingData, tilingData, tiling);
+        AdaptiveAvgPool2dBigKernel<DTYPE_X> op(tilingData, pipe);
+        op.Init(x, y);
+        op.Process();
     }
 }

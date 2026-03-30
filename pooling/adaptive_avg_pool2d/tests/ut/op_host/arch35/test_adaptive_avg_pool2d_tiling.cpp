@@ -171,7 +171,7 @@ TEST_F(AdaptiveAvgPool2dTiling950Test, test_simt_3d_enough)
 {
     gert::StorageShape x_shape = {{2, 9226, 3}, {2, 9226, 3}};
     gert::StorageShape y_shape = {{2, 88, 53}, {2, 88, 53}};
-    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {88, 53}, ge::DT_FLOAT16, 2);
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {88, 53}, ge::DT_FLOAT16, 1);
 }
 
 // 测试用例1: FP32 小kernel 2x2，n*c=64 >= 32
