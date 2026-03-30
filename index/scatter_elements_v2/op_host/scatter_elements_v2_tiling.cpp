@@ -616,8 +616,9 @@ bool ScatterElementsV2Tiling::CacheOpSupport() {
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(tilingContext->GetPlatformInfo());
     auto platfCoreNums = ascendcPlatform.GetCoreNumAiv();
-    if (realDim == inputDimNum - 1 && inputDtype != ge::DT_BOOL) {
-        OP_LOGD("ScatterElementsV2", "when realDim = -1, only dtype is bool will use new kernel.");
+    auto updatesShape = tilingContext->GetInputShape(INPUT_2)->GetStorageShape();
+    if (realDim == inputDimNum - 1 && updatesShape.GetDimNum() != 0 && inputDtype != ge::DT_BOOL) {
+        OP_LOGD("ScatterElementsV2", "when realDim = -1 and updates not scalar, only dtype is bool will use new kernel.");
         return false;
     }
     return true;
