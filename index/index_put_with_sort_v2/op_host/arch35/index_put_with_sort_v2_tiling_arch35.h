@@ -15,28 +15,18 @@
 #ifndef OPS_BUILD_IN_OP_TILING_RUNTIME_INDEX_PUT_WITH_SORT_V2_ARCH35_H
 #define OPS_BUILD_IN_OP_TILING_RUNTIME_INDEX_PUT_WITH_SORT_V2_ARCH35_H
 
-#include "register/op_impl_registry.h"
 #include "op_host/tiling_base.h"
-#include "register/tilingdata_base.h"
+#include "op_host/tiling_templates_registry.h"
+#include "op_host/tiling_util.h"
+#include "util/math_util.h"
 
 namespace optiling {
 constexpr size_t MAX_DIM_NUM = 8;
-
-BEGIN_TILING_DATA_DEF(IndexPutWithSortV2TilingData)
-  TILING_DATA_FIELD_DEF(int64_t, nonIndexedDimNum);
-  TILING_DATA_FIELD_DEF(int64_t, indexedDimSize);
-  TILING_DATA_FIELD_DEF(int64_t, nonIndexedDimSize);
-  TILING_DATA_FIELD_DEF_ARR(int64_t, MAX_DIM_NUM, nonIdxedStride);
-  TILING_DATA_FIELD_DEF_ARR(int64_t, MAX_DIM_NUM, nonIdxedSelfStride);
-  TILING_DATA_FIELD_DEF_ARR(int64_t, MAX_DIM_NUM, nonIdxedValueStride);
-  TILING_DATA_FIELD_DEF(int64_t, idxedValueStride);
-  TILING_DATA_FIELD_DEF(int64_t, indexedThreadNum);
-  TILING_DATA_FIELD_DEF(int64_t, nonIndexedThreadNum);
-  
-
-END_TILING_DATA_DEF;
-
-REGISTER_TILING_DATA_CLASS(IndexPutWithSortV2, IndexPutWithSortV2TilingData);
+constexpr size_t CACHELINE_SIZE = 128;
+constexpr int64_t B8_SIZE = 8;
+constexpr int64_t B4_SIZE = 4;
+constexpr int64_t B2_SIZE = 2;
+constexpr int64_t B1_SIZE = 1;
 
 class IndexPutWithSortV2Tiling : public Ops::NN::Optiling::TilingBaseClass
 {
@@ -56,9 +46,11 @@ protected:
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
 
-private:
-    IndexPutWithSortV2TilingData tilingData_;
-    uint32_t selfDimNum_;
+    ge::DataType xDataType_{ge::DT_INT32};
+    int64_t indicesTypeSize_{0};
+    int64_t indexed0_ = {0};
+
+    uint32_t selfDimNum_{1};
     uint32_t indexedDimNum_{0};
     uint32_t nonIndexedDimNum_{0};
     int64_t indexedDimSize_{1};
@@ -71,14 +63,14 @@ private:
     int64_t nonIdxedStride_[MAX_DIM_NUM] = {1, 1, 1, 1, 1, 1, 1, 1};
     int64_t nonIdxedSelfStride_[MAX_DIM_NUM] = {1, 1, 1, 1, 1, 1, 1, 1};
     int64_t nonIdxedValueStride_[MAX_DIM_NUM] = {1, 1, 1, 1, 1, 1, 1, 1};
-    bool isContinous_;
-    bool accumulate_;
-    bool indexedBlockMode_;
-    int64_t idxedValueStride_;
-    int64_t indexedThreadNum_;
-    int64_t nonIndexedThreadNum_;
-    int64_t aivCoreNum_;
-    uint64_t maxUbSize_;
+    bool isContinous_{false};
+    bool accumulate_{false};
+    bool indexedBlockMode_{false};
+    int64_t idxedValueStride_{0};
+    int64_t indexedThreadNum_{0};
+    int64_t nonIndexedThreadNum_{0};
+    int64_t aivCoreNum_{0};
+    uint64_t maxUbSize_{0};
     ge::graphStatus CheckShapeAllPositive(gert::Shape& shape);
     ge::graphStatus CheckInputsShape();
     ge::graphStatus CheckInputsDtypeAndFormat();

@@ -15,7 +15,7 @@
 #include "util/platform_util.h"
 #include "op_host/tiling_util.h"
 #include "index_put_with_sort_v2_tiling_arch35.h"
-
+#include "index/index_put_with_sort_v2/op_kernel/arch35/index_put_with_sort_v2_struct.h"
 namespace optiling
 {
 using namespace Ops::NN::OpTiling;
@@ -36,8 +36,6 @@ constexpr int32_t THREAD_NUM_HALF = 512;
 constexpr int64_t TILING_KEY_ACCUMULATE_TRUE = 1;
 constexpr int64_t TILING_KEY_ALL_INDEXED_TRUE = 10;
 constexpr int64_t TILING_KEY_INDEXED_BLOCK_MODE_TRUE = 100;
-
-const std::string OP_NAME = "IndexPutWithSortV2";
 
 ge::graphStatus IndexPutWithSortV2Tiling::GetPlatformInfo()
 {
@@ -63,7 +61,7 @@ ge::graphStatus IndexPutWithSortV2Tiling::CheckShapesEqual(gert::Shape& shape0, 
 {
     OP_CHECK_IF(
         shape0.GetDimNum() != shape1.GetDimNum(),
-        OP_LOGE(context_->GetNodeName(), "DimNum of shapes are not equal: %ld vs %ld",
+        OP_LOGE(context_->GetNodeName(), "DimNum of shapes are not equal: %lu vs %lu",
                                         shape0.GetDimNum(), shape1.GetDimNum()),
         return ge::GRAPH_FAILED);
 
@@ -87,6 +85,10 @@ ge::graphStatus IndexPutWithSortV2Tiling::CheckInputsShape()
        OP_LOGE(context_->GetNodeName(), "self shape contains zero.");
         return ge::GRAPH_FAILED;
     }
+    auto inputXDesc = context_->GetInputDesc(INPUT_INDEX_0);
+ 	OP_CHECK_NULL_WITH_CONTEXT(context_, inputXDesc);
+ 	auto inputXDtype = inputXDesc->GetDataType();
+ 	xDataType_ = inputXDtype;
 
     // check linear_index
     inputShape = context_->GetInputShape(INPUT_INDEX_1);
@@ -97,12 +99,16 @@ ge::graphStatus IndexPutWithSortV2Tiling::CheckInputsShape()
         return ge::GRAPH_FAILED;
     }
     indexedDimSize_ = storageShape1.GetShapeSize();
+    auto indexed = context_->GetInputDesc(INPUT_INDEX_1);
+ 	OP_CHECK_NULL_WITH_CONTEXT(context_, indexed);
+ 	auto indexedDtype = indexed->GetDataType();
+ 	indicesTypeSize_ = (indexedDtype == ge::DT_INT64) ? B8_SIZE : B4_SIZE;
 
     // check pos_idx
     inputShape = context_->GetInputShape(INPUT_INDEX_2);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto storageShape2 = inputShape->GetStorageShape();
-    if (CheckShapeAllPositive(storageShape1) != ge::GRAPH_SUCCESS) {
+    if (CheckShapeAllPositive(storageShape2) != ge::GRAPH_SUCCESS) {
         OP_LOGE(context_->GetNodeName(), "pos_idx shape contains zero.");
         return ge::GRAPH_FAILED;
     }
@@ -150,7 +156,7 @@ bool IndexPutWithSortV2Tiling::IsIndexedContinous(const int64_t* arr, int64_t si
 ge::graphStatus IndexPutWithSortV2Tiling::GetShapeAttrsInfo()
 {
     if (context_ == nullptr) {
-        OP_LOGE(OP_NAME, "Tiling context is null");
+        OP_LOGE("IndexPutWithSortV2", "Tiling context is null");
         return ge::GRAPH_FAILED;
     }
 
@@ -167,7 +173,18 @@ ge::graphStatus IndexPutWithSortV2Tiling::GetShapeAttrsInfo()
         indexedSizes_[i] = indexedSizesPtr->GetData()[i];
     }
     isContinous_ = IsIndexedContinous(indexedSizes_, indexedSizesDimNum);
+    indexed0_ = indexedSizes_[0];
     accumulate_ = *attrs->GetBool(1);
+
+    for (size_t i = 0; i < selfDimNum_; i++) { // 注意之前要校验selfDimNum_和 indexedSizesDimNum一致
+        if (indexedSizes_[i] == 0) {
+            nonIdxedDims_[nonIndexedDimNum_] = selfDims_[i];
+            nonIndexedDimNum_++;
+            nonIndexedDimSize_ *= selfDims_[i];
+        } else {
+            indexedDimNum_++;
+        }
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -178,28 +195,16 @@ bool IndexPutWithSortV2Tiling::IsCapable()
 
 uint64_t IndexPutWithSortV2Tiling::GetTilingKey() const
 {
-    return tilingKey_;
+    return GET_TPL_TILING_KEY(accumulate_, nonIndexedDimSize_ == 1, indexedBlockMode_ , false, 0);
 }
 
 ge::graphStatus IndexPutWithSortV2Tiling::PostTiling()
 {
-    tilingKey_ = 0;
-    if (accumulate_) {
-        tilingKey_ += TILING_KEY_ACCUMULATE_TRUE;
-    }
-    if (nonIndexedDimSize_ == 1) {
-        tilingKey_ += TILING_KEY_ALL_INDEXED_TRUE;
-    }
-    if (indexedBlockMode_) {
-        tilingKey_ += TILING_KEY_INDEXED_BLOCK_MODE_TRUE;
-    }
     context_->SetBlockDim(aivCoreNum_);
     context_->SetLocalMemorySize(maxUbSize_ - DCACHE_SIZE);
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
     currentWorkspace[0] = workspaceSize_;
-    tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;
 }
 
@@ -217,20 +222,30 @@ ge::graphStatus IndexPutWithSortV2Tiling::GetWorkspaceSize()
 
 void IndexPutWithSortV2Tiling::LogTilingResult()
 {
-    OP_LOGI(OP_NAME, "indexedDimSize_: %ld, nonIndexedDimSize_: %ld", indexedDimSize_, nonIndexedDimSize_);
+    OP_LOGI(context_->GetNodeName(), "indexedDimSize_: %ld, nonIndexedDimSize_: %ld", indexedDimSize_, nonIndexedDimSize_);
+}
+ 	 
+template<typename T>
+void CopyArray(T &arrSrc, T &arrDst, uint8_t count)
+{
+    for (uint8_t i = 0; i < count; i++) {
+        arrDst[i] = arrSrc[i];
+    }
 }
 
 void IndexPutWithSortV2Tiling::SetTilingData()
 {
-    tilingData_.set_nonIndexedDimNum((int64_t)nonIndexedDimNum_);
-    tilingData_.set_indexedDimSize(indexedDimSize_);
-    tilingData_.set_nonIndexedDimSize(nonIndexedDimSize_);
-    tilingData_.set_nonIdxedStride(nonIdxedStride_);
-    tilingData_.set_nonIdxedSelfStride(nonIdxedSelfStride_);
-    tilingData_.set_nonIdxedValueStride(nonIdxedValueStride_);
-    tilingData_.set_idxedValueStride(idxedValueStride_);
-    tilingData_.set_indexedThreadNum(indexedThreadNum_);
-    tilingData_.set_nonIndexedThreadNum(nonIndexedThreadNum_);
+    IndexPutWithSortV2TilingData* tilingData =
+    context_->GetTilingData<IndexPutWithSortV2TilingData>();
+    tilingData->nonIndexedDimNum = static_cast<int64_t>(nonIndexedDimNum_);
+    tilingData->indexedDimSize = indexedDimSize_;
+    tilingData->nonIndexedDimSize = nonIndexedDimSize_;
+    CopyArray(nonIdxedStride_, tilingData->nonIdxedStride, MAX_DIM_NUM);
+    CopyArray(nonIdxedSelfStride_, tilingData->nonIdxedSelfStride, MAX_DIM_NUM);
+    CopyArray(nonIdxedValueStride_, tilingData->nonIdxedValueStride, MAX_DIM_NUM);
+    tilingData->idxedValueStride = idxedValueStride_;
+    tilingData->indexedThreadNum = indexedThreadNum_;
+    tilingData->nonIndexedThreadNum = nonIndexedThreadNum_;
 }
 
 void IndexPutWithSortV2Tiling::CalcSelfAndValueStride(int64_t* selfStride, int64_t* valueStride)
@@ -368,18 +383,8 @@ void IndexPutWithSortV2Tiling::CalcThreadNum() {
 
 ge::graphStatus IndexPutWithSortV2Tiling::DoOpTiling()
 {
+    OP_LOGI(context_->GetNodeName(), "IndexPutWithSortV2Tiling DoOpTiling");
     ge::graphStatus result = ge::GRAPH_SUCCESS;
-
-    for (size_t i = 0; i < selfDimNum_; i++) { // 注意之前要校验selfDimNum_和 indexedSizesDimNum一致
-        if (indexedSizes_[i] == 0) {
-            nonIdxedDims_[nonIndexedDimNum_] = selfDims_[i];
-            nonIndexedDimNum_++;
-            nonIndexedDimSize_ *= selfDims_[i];
-        } else {
-            indexedDimNum_++;
-        }
-    }
-
     int64_t selfStride[selfDimNum_];
     for (size_t k = 0; k < selfDimNum_; k++){
         selfStride[k] = 0L;
@@ -401,27 +406,20 @@ ge::graphStatus IndexPutWithSortV2Tiling::DoOpTiling()
     return result;
 }
 
-static ge::graphStatus Tiling4IndexPutWithSortV2(gert::TilingContext* context) {
-    // IndexPutWithSortV2TilingData tiling;
+REGISTER_OPS_TILING_TEMPLATE(IndexPutWithSortV2, IndexPutWithSortV2Tiling, 100);
 
-    // calc Tiling Factor
-    bool isRegbase = IsRegbaseSocVersion(context) ? true : false;
-    if (isRegbase) {
-        OP_LOGD(context->GetNodeName(), "IndexPutWithSortV2 tiling start");
-        IndexPutWithSortV2Tiling indexPutWithSortV2Tiling(context);
-        return indexPutWithSortV2Tiling.DoTiling();
-    }
+ge::graphStatus Tiling4IndexPutWithSortV2(gert::TilingContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "Tiling for IndexPutWithSortV2 is running.");
+    return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
+}
 
+static ge::graphStatus TilingPrepare4IndexPutWithSortV2([[maybe_unused]] gert::TilingParseContext* context) 
+{
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingPrepare4IndexPutWithSortV2(gert::TilingParseContext* context) {
-    return ge::GRAPH_SUCCESS;
-}
-
-struct RmsNormCompileInfo {};
-IMPL_OP_OPTILING(IndexPutWithSortV2)
-    .Tiling(Tiling4IndexPutWithSortV2)
-    .TilingParse<RmsNormCompileInfo>(TilingPrepare4IndexPutWithSortV2);
+struct IndexPutWithSortV2CompileInfo {};
+IMPL_OP_OPTILING(IndexPutWithSortV2).Tiling(Tiling4IndexPutWithSortV2).TilingParse<IndexPutWithSortV2CompileInfo>(TilingPrepare4IndexPutWithSortV2);
 
 }  // namespace optiling

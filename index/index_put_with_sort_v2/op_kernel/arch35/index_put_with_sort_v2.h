@@ -20,6 +20,7 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
 #include "op_kernel/platform_util.h"
+#include "index_put_with_sort_v2_struct.h"
 
 namespace AscendC
 {

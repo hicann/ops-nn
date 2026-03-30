@@ -15,8 +15,13 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
 #include "arch35/index_put_with_sort_v2.h"
+#include "arch35/index_put_with_sort_v2_simd.h"
 
-extern "C" __global__ __aicore__ void index_put_with_sort_v2(GM_ADDR self, GM_ADDR linearIndex,
+using namespace AscendC;
+using namespace IndexPutWithSortV2;
+
+template<bool ACCUMULATE, bool ALL_INDEXED, bool INDEXED_BLOCK_MODE, bool IS_CAST, bool IS_SIMD>
+__global__ __aicore__ void index_put_with_sort_v2(GM_ADDR self, GM_ADDR linearIndex,
     GM_ADDR posIdx, GM_ADDR values, GM_ADDR output, GM_ADDR workSpace, GM_ADDR tiling) {
     if (workSpace == nullptr) {
         return;
@@ -25,41 +30,41 @@ extern "C" __global__ __aicore__ void index_put_with_sort_v2(GM_ADDR self, GM_AD
     if (user == nullptr) {
         return;
     }
-    GET_TILING_DATA(tilingDataIn, tiling);
-    const IndexPutWithSortV2TilingData* __restrict tilingData = &tilingDataIn;
+
+    REGISTER_TILING_DEFAULT(IndexPutWithSortV2SimdTilingData);
+ 	REGISTER_TILING_FOR_TILINGKEY("IS_SIMD == false", IndexPutWithSortV2TilingData);
+ 	REGISTER_TILING_FOR_TILINGKEY("IS_SIMD == true", IndexPutWithSortV2SimdTilingData);
+ 	 
+ 	KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     AscendC::TPipe tpipe;
-    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY); 
-    if (TILING_KEY_IS(0)) {
-        AscendC::IndexPutWithSortV2Kernel<DTYPE_SELF, DTYPE_LINEAR_INDEX, false, false, false> op(&tpipe, tilingData);
+
+    if constexpr (IS_SIMD) {
+        GET_TILING_DATA_WITH_STRUCT(IndexPutWithSortV2SimdTilingData, tilingData, tiling);
+        if constexpr (ACCUMULATE) {
+            if constexpr (IS_CAST) {
+                if constexpr (IsSameType<DTYPE_SELF, float16_t>::value) {
+                    IndexPutWithSortV2SIMDKernel<float16_t, DTYPE_LINEAR_INDEX, ACCUMULATE, true, float> op(&tpipe, &tilingData);
+                    op.Init(self, linearIndex, posIdx, values, output, workSpace);
+                    op.Process();
+                } else if (IsSameType<DTYPE_SELF, bfloat16_t>::value) {
+                    IndexPutWithSortV2SIMDKernel<bfloat16_t, DTYPE_LINEAR_INDEX, ACCUMULATE, true, float> op(&tpipe, &tilingData);
+                    op.Init(self, linearIndex, posIdx, values, output, workSpace);
+                    op.Process();                    
+                }
+            } else {
+                IndexPutWithSortV2SIMDKernel<DTYPE_SELF, DTYPE_LINEAR_INDEX, ACCUMULATE, false, DTYPE_SELF> op(&tpipe, &tilingData);
+                op.Init(self, linearIndex, posIdx, values, output, workSpace);
+                op.Process();
+            }
+        } else {
+            IndexPutWithSortV2SIMDKernel<DTYPE_SELF, DTYPE_LINEAR_INDEX, ACCUMULATE, IS_CAST, DTYPE_SELF> op(&tpipe, &tilingData);
+            op.Init(self, linearIndex, posIdx, values, output, workSpace);
+            op.Process();
+        }
+    } else {
+        GET_TILING_DATA_WITH_STRUCT(IndexPutWithSortV2TilingData, tilingData, tiling);
+ 	    IndexPutWithSortV2Kernel<DTYPE_SELF, DTYPE_LINEAR_INDEX, ACCUMULATE, ALL_INDEXED, INDEXED_BLOCK_MODE> op(&tpipe, &tilingData);   
         op.Init(self, linearIndex, posIdx, values, output);
-        op.Process();
-    } else if (TILING_KEY_IS(1)) {
-        AscendC::IndexPutWithSortV2Kernel<DTYPE_SELF, DTYPE_LINEAR_INDEX, true, false, false> op(&tpipe, tilingData);
-        op.Init(self, linearIndex, posIdx, values, output);
-        op.Process();
-    } else if (TILING_KEY_IS(10)) {
-        AscendC::IndexPutWithSortV2Kernel<DTYPE_SELF, DTYPE_LINEAR_INDEX, false, true, false> op(&tpipe, tilingData);
-        op.Init(self, linearIndex, posIdx, values, output);
-        op.Process();
-    } else if (TILING_KEY_IS(11)) {
-        AscendC::IndexPutWithSortV2Kernel<DTYPE_SELF, DTYPE_LINEAR_INDEX, true, true, false> op(&tpipe, tilingData);
-        op.Init(self, linearIndex, posIdx, values, output);
-        op.Process();
-    } else if (TILING_KEY_IS(100)) {
-        AscendC::IndexPutWithSortV2Kernel<DTYPE_SELF, DTYPE_LINEAR_INDEX, false, false, true> op(&tpipe, tilingData);
-        op.Init(self, linearIndex, posIdx, values, output);
-        op.Process();
-    } else if (TILING_KEY_IS(101)) {
-        AscendC::IndexPutWithSortV2Kernel<DTYPE_SELF, DTYPE_LINEAR_INDEX, true, false, true> op(&tpipe, tilingData);
-        op.Init(self, linearIndex, posIdx, values, output);
-        op.Process();
-    } else if (TILING_KEY_IS(110)) {
-        AscendC::IndexPutWithSortV2Kernel<DTYPE_SELF, DTYPE_LINEAR_INDEX, false, true, true> op(&tpipe, tilingData);
-        op.Init(self, linearIndex, posIdx, values, output);
-        op.Process();
-    } else if (TILING_KEY_IS(111)) {
-        AscendC::IndexPutWithSortV2Kernel<DTYPE_SELF, DTYPE_LINEAR_INDEX, true, true, true> op(&tpipe, tilingData);
-        op.Init(self, linearIndex, posIdx, values, output);
-        op.Process();
+        op.Process();     
     }
 }

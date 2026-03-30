@@ -77,11 +77,11 @@ struct IndexPutWithSortV2CompileInfo {};
 
 TEST_F(IndexPutWithSortV2ImportTiling, index_put_with_sort_v2_tiling_001) {
   dlog_setlevel(0,0,0);
-  gert::StorageShape input_shape = {{50,2}, {50,2}};
-  gert::StorageShape input1_shape = {{2}, {2}};
-  gert::StorageShape input2_shape = {{2},{2}};
-  gert::StorageShape input3_shape = {{2,2},{2,2}};
-  gert::StorageShape out_shape = {{50,2}, {50,2}};
+  gert::StorageShape input_shape = {{32904, 2048}, {32904, 2048}};
+  gert::StorageShape input1_shape = {{3965}, {3965}};
+  gert::StorageShape input2_shape = {{3965},{3965}};
+  gert::StorageShape input3_shape = {{3965, 2048},{3965, 2048}};
+  gert::StorageShape out_shape = {{32904, 2048}, {32904, 2048}};
 
   string compile_info_string = R"({
       "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -112,7 +112,7 @@ TEST_F(IndexPutWithSortV2ImportTiling, index_put_with_sort_v2_tiling_001) {
 
   // tilingParseFunc simulate
   auto kernel_holder = gert::KernelRunContextFaker()
-                    .KernelIONum(2, 1)
+                    .KernelIONum(4, 1)
                     .Inputs({const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info)})
                     .Outputs({&compile_info})
                     .Build();
@@ -131,13 +131,16 @@ TEST_F(IndexPutWithSortV2ImportTiling, index_put_with_sort_v2_tiling_001) {
   auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
   ASSERT_NE(param, nullptr);
   auto holder = gert::TilingContextFaker()
-                    .SetOpType("IndexPutWithSortV2Import")
+                    .SetOpType(op_type)
                     .NodeIoNum(4, 1)
-                    .IrInstanceNum({4})
+                    .IrInstanceNum({1, 1, 1, 1})
                     .InputShapes({&input_shape,&input1_shape,&input2_shape,&input3_shape})
                     .OutputShapes({&out_shape})
                     .CompileInfo(&compile_info)
                     .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                    .NodeAttrs(
+                        {{"indexed_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 0})},
+                        {"indexed_size", Ops::NN::AnyValue::CreateFrom<std::string>("True")}})
                     .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
