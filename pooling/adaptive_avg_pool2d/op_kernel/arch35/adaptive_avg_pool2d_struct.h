@@ -48,8 +48,33 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
         ASCENDC_TPL_UINT_SEL(TEMPLATE_MODE, ASCENDC_TPL_UI_LIST, TPL_SMALL_KERNEL),
         ASCENDC_TPL_UINT_SEL(DTYPE_MODE, ASCENDC_TPL_UI_LIST, TPL_INT32_UINT32, TPL_INT64_UINT64),
+        ASCENDC_TPL_TILING_STRUCT_SEL(AdaptivePool2dSmallKernelTilingData)
     )
 );
+
+class AdaptivePool2dSmallKernelTilingData {
+public:
+    int64_t hIn = 1;
+    int64_t wIn = 1;
+    int64_t hOut = 1;
+    int64_t wOut = 1;
+    int64_t useCoreNum = 1;
+    int64_t blockFactor = 1;
+    int64_t blockTail = 1;
+    int64_t ncFactor = 1;
+    int64_t hoFactor = 1;
+    int64_t woFactor = 1;
+    int64_t ncOuter = 1;
+    int64_t hoOuter = 1;
+    int64_t woOuter = 1;
+    int64_t ncTail = 1;
+    int64_t hoTail = 1;
+    int64_t woTail = 1;
+    int64_t inputQueSize = 1;
+    int64_t resQue1Size = 1;
+    int64_t resQue2Size = 1;
+    int64_t maxDimOut = 1;
+};
 
 struct AdaptivePool2DSimtTilingData {
     int64_t nDim = 0;

@@ -10,7 +10,7 @@
 
 /*!
  * \file test_adaptive_avg_pool2d_tiling.cpp
- * \brief Tiling测试 - TestAdaptiveAvgPool2dTiling
+ * \brief Tiling测试 - AdaptiveAvgPool2dTiling950Test
  */
 
 #include <gtest/gtest.h>
@@ -145,9 +145,7 @@ static void ExecuteAdaptiveAvgPool2d950TestCase(gert::StorageShape xShape, gert:
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
         "version", soc_version_infos);
 
-    std::cout << "[950] before tiling_func" << std::endl;
     auto ret = tiling_func(tiling_context);
-    std::cout << "[950] after tiling_func, ret=" << ret << std::endl;
 
     ASSERT_EQ(ret, ge::GRAPH_SUCCESS);
 
@@ -174,4 +172,45 @@ TEST_F(AdaptiveAvgPool2dTiling950Test, test_simt_3d_enough)
     gert::StorageShape x_shape = {{2, 9226, 3}, {2, 9226, 3}};
     gert::StorageShape y_shape = {{2, 88, 53}, {2, 88, 53}};
     ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {88, 53}, ge::DT_FLOAT16, 2);
+}
+
+// 测试用例1: FP32 小kernel 2x2，n*c=64 >= 32
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_small_kernel_fp32_2x2)
+{
+    gert::StorageShape x_shape = {{2, 32, 2, 2}, {2, 32, 2, 2}}; // n*c = 64
+    gert::StorageShape y_shape = {{2, 32, 1, 1}, {2, 32, 1, 1}};
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {1, 1}, ge::DT_FLOAT, 0);
+}
+
+// 测试用例2: FP16 小kernel 3x3，n*c=64 >= 32
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_small_kernel_fp16_3x3)
+{
+    gert::StorageShape x_shape = {{1, 64, 3, 3}, {1, 64, 3, 3}}; // n*c = 64
+    gert::StorageShape y_shape = {{1, 64, 2, 2}, {1, 64, 2, 2}};
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {2, 2}, ge::DT_FLOAT16, 0);
+}
+
+// 测试用例3: BF16 小kernel 4x4，n*c=128 >= 32
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_small_kernel_bf16_4x4)
+{
+    gert::StorageShape x_shape = {{4, 32, 4, 4}, {4, 32, 4, 4}}; // n*c = 128
+    gert::StorageShape y_shape = {{4, 32, 1, 1}, {4, 32, 1, 1}};
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {1, 1}, ge::DT_BF16, 0);
+}
+
+// 测试用例4: 小kernel边界条件 - kernel大小刚好在限制内 (8x8 = 64 < 128)
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_small_kernel_boundary_8x8)
+{
+    gert::StorageShape x_shape = {{1, 32, 16, 16}, {1, 32, 16, 16}}; // n*c = 32
+    gert::StorageShape y_shape = {{1, 32, 2, 2}, {1, 32, 2, 2}};
+    // kernelHMax = ceil(16/2) = 8, kernelWMax = ceil(16/2) = 8, 8*8=64 < 128
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {2, 2}, ge::DT_FLOAT, 0);
+}
+
+// 测试用例5: 非方形输出，n*c=64 >= 32
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_small_kernel_non_square_output)
+{
+    gert::StorageShape x_shape = {{1, 64, 6, 8}, {1, 64, 6, 8}}; // n*c = 64
+    gert::StorageShape y_shape = {{1, 64, 3, 4}, {1, 64, 3, 4}};
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {3, 4}, ge::DT_FLOAT, 0);
 }

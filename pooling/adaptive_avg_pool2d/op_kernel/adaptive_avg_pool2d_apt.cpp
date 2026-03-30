@@ -14,6 +14,7 @@
  */
 
 #include "arch35/adaptive_avg_pool2d_simt.h"
+#include "arch35/adaptive_avg_pool2d_small_kernel.h"
 #include "arch35/adaptive_avg_pool2d_struct.h"
 
 using namespace AdaptiveAvgPool2dOp;
@@ -27,8 +28,18 @@ __global__ __aicore__ void adaptive_avg_pool2d(
     TPipe pipe;
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(AdaptivePool2DSimtTilingData);
-    if constexpr (TEMPLATE_MODE == TPL_SIMT_KERNEL) {
-        REGISTER_TILING_FOR_TILINGKEY("TEMPLATE_MODE == TPL_SIMT_KERNEL", AdaptivePool2DSimtTilingData);
+    if constexpr (TEMPLATE_MODE == TPL_SMALL_KERNEL) {
+        GET_TILING_DATA_WITH_STRUCT(AdaptivePool2dSmallKernelTilingData, tilingData, tiling);
+        if constexpr (DTYPE_MODE == TPL_INT32_UINT32) {
+            AdaptivePool2dSmallKernelNamespace::AdaptiveAvgPool2dSmallKernel<DTYPE_X, int32_t> op(&tilingData, &pipe);
+            op.Init(x, y);
+            op.Process();
+        } else {
+            AdaptivePool2dSmallKernelNamespace::AdaptiveAvgPool2dSmallKernel<DTYPE_X, int64_t> op(&tilingData, &pipe);
+            op.Init(x, y);
+            op.Process();
+        }
+    } else if constexpr (TEMPLATE_MODE == TPL_SIMT_KERNEL) {
         GET_TILING_DATA_WITH_STRUCT(AdaptivePool2DSimtTilingData, tilingData, tiling);
         if constexpr (DTYPE_MODE == TPL_INT32_UINT32) {
             AdaptiveAvgPool2dSimt<DTYPE_X, uint32_t> op(&pipe, &tilingData);
