@@ -34,7 +34,7 @@ aclnnStatus aclnnConvTbcGetWorkspaceSize(
     const aclTensor       *self,
     const aclTensor       *weight,
     const aclTensor       *bias,
-    int64_t                pad,
+    const int64_t          pad,
     aclTensor             *out,
     int8_t                 cubeMathType,
     uint64_t              *workspaceSize,
