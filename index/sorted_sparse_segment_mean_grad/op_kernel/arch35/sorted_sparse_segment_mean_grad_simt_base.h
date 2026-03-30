@@ -33,7 +33,7 @@ constexpr uint32_t SIMPLE_THREAD_NUM_LAUNCH_BOUND = 2048;
 
 
 template <typename SEGMENTIDS_T>
-__aicore__ inline SEGMENTIDS_T Clip(SEGMENTIDS_T id, SEGMENTIDS_T segmentNum)
+__simt_callee__ __aicore__ inline SEGMENTIDS_T Clip(SEGMENTIDS_T id, SEGMENTIDS_T segmentNum)
 {
     return min(
         static_cast<SEGMENTIDS_T>(max(SEGMENTIDS_T(-1), id)),
@@ -192,7 +192,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtLar
 }
 
 // 这里进行二分累加，实际是按y线程数量按照 inner逐列累加，按 0与(numY/2)处依次累加
-__aicore__ inline float BinaryAdd(float value, uint32_t threadNumY, bool valid, uint32_t threadIdxY,
+__simt_callee__ __aicore__ inline float BinaryAdd(float value, uint32_t threadNumY, bool valid, uint32_t threadIdxY,
                                   uint32_t threadIdxX, uint32_t threadNumX, __local_mem__ float* tmpLocal)
 {
     // Binary add in the thread_y
