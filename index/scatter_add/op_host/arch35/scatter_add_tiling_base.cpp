@@ -186,7 +186,7 @@ ge::graphStatus ScatterAddTiling::GetShapeAttrsInfo()
     auto updateShape = updates->GetStorageShape();
     updatesSize_ = updateShape.GetShapeSize();
     uint64_t updateDims = updateShape.GetDimNum();
-    if (updateDims == 0) {
+    if ((updateDims == 1 && updatesSize_ == 1) || updateDims == 0) {
         isUpdateScalar_ = 1;
     } else {
         OP_CHECK_IF(CheckUpdatesShape(varShape, indiceShape, updateShape) != ge::GRAPH_SUCCESS,
@@ -205,10 +205,11 @@ ge::graphStatus ScatterAddTiling::GetShapeAttrsInfo()
         }
     }
 
-    if (context_->GetDeterministic() == 1 && isUpdateScalar_ == 0 &&
-        scatterAddDeterminsiticType.find(varDtype_) != scatterAddDeterminsiticType.end()) {
-        isDeterminTemplate_ = 1;
+    if (context_->GetDeterministic() == 1 && scatterAddDeterminsiticType.find(varDtype_) != scatterAddDeterminsiticType.end()) {
         isSort_ = 0;
+        if (isUpdateScalar_ == 0) {
+            isDeterminTemplate_ = 1;
+        }
     }
     return ge::GRAPH_SUCCESS;
 }
