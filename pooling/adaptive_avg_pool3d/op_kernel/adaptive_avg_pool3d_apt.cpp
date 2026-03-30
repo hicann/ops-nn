@@ -15,6 +15,7 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
+#include "../adaptive_pool3d_common/arch35/adaptive_avg_pool3d_big_kernel.h"
 #include "../adaptive_pool3d_common/arch35/adaptive_avg_pool3d_simt.h"
 #include "../adaptive_pool3d_common/arch35/adaptive_avg_pool3d_parall_pool.h"
 #include "../adaptive_pool3d_common/arch35/adaptive_pool3d_tiling_struct.h"
@@ -45,6 +46,11 @@ __global__ __aicore__ void adaptive_avg_pool3d(
     } else if constexpr (TEMPLATE_MODE == TPL_MODE_0 && DYTPE_MODE == TPL_INT64_UINT64 && MULTI_MODE == TPL_MULTI_MODE_0) {
         GET_TILING_DATA_WITH_STRUCT(AdaptivePool3DTiling::AdaptivePool3dParaKernelTilingData, tilingData, tiling);
         AdaptivePool3d::AdaptiveAvgPool3dParaPool<DTYPE_X, int64_t> op(tilingData, pipeBase);
+        op.Init(x, y);
+        op.Process();
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_1 && DYTPE_MODE == TPL_DTYPE_0 && MULTI_MODE == TPL_MULTI_MODE_0) {
+        GET_TILING_DATA_WITH_STRUCT(AdaptivePool3DTiling::AdaptivePool3dBigKernelTilingData, tilingData, tiling);
+        AdaptivePool3d::AdaptiveAvgPool3dBigKernel<DTYPE_X> op(tilingData, pipeBase);
         op.Init(x, y);
         op.Process();
     }

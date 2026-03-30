@@ -239,7 +239,7 @@ private:
     __aicore__ inline void CopyOutIndices(int64_t copyCount, int64_t offset);
 
     // indices need
-    TBuf<> indicesUB_;
+    TBuf<QuePosition::VECCALC> indicesUB_;
     GlobalTensor<TINDEX> indicesGm_;
 };
 
@@ -249,7 +249,7 @@ __aicore__ inline void AdaptiveMaxPool3dBigKernel<T, TINDEX>::InitOutputBuffer()
     event_t eventIdMTE3toV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
     SetFlag<HardEvent::MTE3_V>(eventIdMTE3toV);
     WaitFlag<HardEvent::MTE3_V>(eventIdMTE3toV);
-    LocalTensor<T> maxOutLocal = this->maxUB_.template Get<T>();
+    LocalTensor<T> maxOutLocal = this->outputUB_.template Get<T>();
     __local_mem__ T* maxOutAddr = (__local_mem__ T*)maxOutLocal.GetPhyAddr();
     LocalTensor<TINDEX> idxOutLocal = indicesUB_.Get<TINDEX>();
     __local_mem__ TINDEX* idxOutAddr = (__local_mem__ TINDEX*)idxOutLocal.GetPhyAddr();
@@ -302,10 +302,10 @@ template <int32_t SPLIT_MODE, typename U, typename UINDEX>
 __aicore__ inline void AdaptiveMaxPool3dBigKernel<T, TINDEX>::ComputeMax(
     LocalTensor<T> xLocal, int64_t localCurIdx, int64_t dataCount, int64_t curOffset)
 {
-    LocalTensor<T> maxLocal = this->maxUB_.template Get<T>();
+    LocalTensor<T> outputLocal = this->outputUB_.template Get<T>();
     LocalTensor<TINDEX> indicesLocal = indicesUB_.Get<TINDEX>();
     __local_mem__ T* xLocalAddr = (__local_mem__ T*)xLocal.GetPhyAddr();
-    __local_mem__ T* dstLocalAddr = (__local_mem__ T*)maxLocal.GetPhyAddr();
+    __local_mem__ T* dstLocalAddr = (__local_mem__ T*)outputLocal.GetPhyAddr();
     __local_mem__ TINDEX* indicesLocalAddr = (__local_mem__ TINDEX*)indicesLocal.GetPhyAddr();
     
     T minValue = this->minValue_;

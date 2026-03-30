@@ -80,7 +80,7 @@ private:
 protected:
     TPipe pipe_;
     TQue<QuePosition::VECIN, USE_BUFFER_NUM> inputQue_;
-    TBuf<> maxUB_;
+    TBuf<QuePosition::VECCALC> outputUB_;
     GlobalTensor<T> xGm_, yGm_;
     const AdaptivePool3DTiling::AdaptivePool3dBigKernelTilingData tilingData_;
 
@@ -149,13 +149,13 @@ __aicore__ inline void AdaptivePool3dBigKernel<T>::CopyOut(int64_t copyCount, in
     event_t eventIdVtoMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
     SetFlag<HardEvent::V_MTE3>(eventIdVtoMTE3);
     WaitFlag<HardEvent::V_MTE3>(eventIdVtoMTE3);
-    LocalTensor<T> maxLocal = maxUB_.Get<T>();
+    LocalTensor<T> outputLocal = outputUB_.Get<T>();
     DataCopyExtParams extParams;
     extParams.blockCount = DIGHT1;
     extParams.blockLen = copyCount * sizeof(T);
     extParams.srcStride = 0;
     extParams.dstStride = 0;
-    DataCopyPad(yGm_[offset], maxLocal, extParams);
+    DataCopyPad(yGm_[offset], outputLocal, extParams);
 }
 
 template <typename T>
@@ -171,7 +171,7 @@ __aicore__ inline void AdaptivePool3dBigKernel<T>::Init(GM_ADDR x, GM_ADDR y)
     xGm_.SetGlobalBuffer((__gm__ T*)x);
     yGm_.SetGlobalBuffer((__gm__ T*)y);
     pipe_.InitBuffer(inputQue_, USE_BUFFER_NUM, tilingData_.maxCount * sizeof(T));
-    pipe_.InitBuffer(maxUB_, BATCH_COPYOUT_COUNT * sizeof(T));
+    pipe_.InitBuffer(outputUB_, BATCH_COPYOUT_COUNT * sizeof(T));
 }
 
 template <typename T>
