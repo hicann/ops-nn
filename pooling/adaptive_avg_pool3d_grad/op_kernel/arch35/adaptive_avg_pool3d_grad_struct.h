@@ -21,31 +21,34 @@
 
 namespace AdaptiveAvgPool3dGradOp {
 
+#define TPL_SMALL_KERNEL 1
+#define TPL_BIG_KERNEL 2
+#define TPL_SIMT_KERNEL 3
+
 #define TPL_INT32 1
 #define TPL_INT64 2
 
 ASCENDC_TPL_ARGS_DECL(AdaptiveAvgPool3dGrad,
+    ASCENDC_TPL_UINT_DECL(
+        TEMPLATE_MODE, ASCENDC_TPL_4_BW, ASCENDC_TPL_UI_LIST, TPL_SMALL_KERNEL, TPL_BIG_KERNEL, TPL_SIMT_KERNEL),
     ASCENDC_TPL_DTYPE_DECL(INDEX_DTYPE, TPL_INT32, TPL_INT64),
-    ASCENDC_TPL_BOOL_DECL(IS_SIMT, 0, 1),
-    ASCENDC_TPL_BOOL_DECL(IS_CHANNEL_LAST, 0, 1),
-    ASCENDC_TPL_BOOL_DECL(IS_CHECK_RANGE, 0, 1)
+    ASCENDC_TPL_BOOL_DECL(IS_CHANNEL_LAST, 0, 1)
 );
 
 ASCENDC_TPL_SEL(
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
-        ASCENDC_TPL_DTYPE_SEL(INDEX_DTYPE, TPL_INT32),
-        ASCENDC_TPL_BOOL_SEL(IS_SIMT, 0, 1),
-        ASCENDC_TPL_BOOL_SEL(IS_CHANNEL_LAST, 0, 1),
-        ASCENDC_TPL_BOOL_SEL(IS_CHECK_RANGE, 0, 1)
+        ASCENDC_TPL_UINT_SEL(TEMPLATE_MODE, ASCENDC_TPL_UI_LIST, TPL_BIG_KERNEL),
+        ASCENDC_TPL_DTYPE_SEL(INDEX_DTYPE, TPL_INT32, TPL_INT64),
+        ASCENDC_TPL_BOOL_SEL(IS_CHANNEL_LAST, 0),
+        ASCENDC_TPL_TILING_STRUCT_SEL(AdaptiveAvgPool3dNCDHWGradBigKernelTilingDataV35)
     ),
-
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
-        ASCENDC_TPL_DTYPE_SEL(INDEX_DTYPE, TPL_INT64),
-        ASCENDC_TPL_BOOL_SEL(IS_SIMT, 0, 1),
+        ASCENDC_TPL_UINT_SEL(TEMPLATE_MODE, ASCENDC_TPL_UI_LIST, TPL_SIMT_KERNEL),
+        ASCENDC_TPL_DTYPE_SEL(INDEX_DTYPE, TPL_INT32, TPL_INT64),
         ASCENDC_TPL_BOOL_SEL(IS_CHANNEL_LAST, 0, 1),
-        ASCENDC_TPL_BOOL_SEL(IS_CHECK_RANGE, 0, 1)
+        ASCENDC_TPL_TILING_STRUCT_SEL(AdaptiveAvgPool3dGradTilingDataV35)
     )
 );
 // //simt tilingdata
@@ -59,6 +62,30 @@ struct AdaptiveAvgPool3dGradTilingDataV35 {
     int64_t hOutDim = 0;
     int64_t wOutDim = 0;
 };
-
+struct AdaptiveAvgPool3dNCDHWGradBigKernelTilingDataV35 {
+    int64_t dInput = 0;
+    int64_t hInput = 0;
+    int64_t wInput = 0;
+    int64_t dOutput = 0;
+    int64_t hOutput = 0;
+    int64_t wOutput = 0;
+    int64_t highAxisInner = 0;
+    int64_t highAxisTail = 0;
+    int64_t highAxisOuter = 0;
+    int64_t dOutputInner = 0;
+    int64_t dOutputTail = 0;
+    int64_t dOutputOuter = 0;
+    int64_t hOutputInner = 0;
+    int64_t hOutputTail = 0;
+    int64_t hOutputOuter = 0;
+    int64_t wOutputInner = 0;
+    int64_t wOutputTail = 0;
+    int64_t wOutputOuter = 0;
+    int64_t normalCoreProcessNum = 0;
+    int64_t tailCoreProcessNum = 0;
+    int64_t usedCoreNum = 0;
+    int64_t outputBufferSize = 0;
+    int64_t gradInputBufferSize = 0;
+};
 } // namespace AdaptiveAvgPool3dGradOp
 #endif  // MAX_POOL3D_GRAD_WITH_ARGMAX_STRUCT_H_

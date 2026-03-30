@@ -65,9 +65,7 @@ uint64_t AdaptiveAvgPool3dGradTilingSimt::GetTilingKey() const
                       NeedInt64(inputData.wX, inputData.wGrad));
     uint32_t idxDtype = needInt64 ? TPL_INT64 : TPL_INT32;
     uint32_t isChannelLast = (inputData.inputFormat == ge::Format::FORMAT_NDHWC) ? 1 : 0;
-    uint32_t isSimt = 1;
-    uint32_t isCheckRange = 0;
-    return GET_TPL_TILING_KEY(idxDtype, isSimt, isChannelLast, isCheckRange);
+    return GET_TPL_TILING_KEY(TPL_SIMT_KERNEL, idxDtype, isChannelLast);
 }
 
 REGISTER_TILING_TEMPLATE("AdaptiveAvgPool3dGrad", AdaptiveAvgPool3dGradTilingSimt, 50);

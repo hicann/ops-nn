@@ -44,49 +44,6 @@ struct AdaptiveAvgPool3dGradInputInfo {
     int64_t isInt32Meet{1};
 };
 
-struct AdaptiveAvgPool3dGradNCDHWBaseInfo {
-    int64_t vRegSize{0};
-    int64_t ubBlockSize{0};
-    int64_t availableUb{0};
-    int64_t totalCoreNum{0};
-    int64_t coreUsedForBestPerformance{0};
-    int64_t inputNCSize{0};
-    int64_t maxDataNumInOneBlock{0};
-    int64_t proDataNumInOneBeatT2{0};
-};
-
-struct AdaptiveAvgPool3dGradNCDHWSplitInfo {
-    // DoUBTiling
-    int64_t isCheckRange{0};
-
-    int64_t highAxisInner{0};
-    int64_t highAxisTail{0};
-    int64_t highAxisOuter{0};
-
-    int64_t dOutputInner{0};
-    int64_t dOutputTail{0};
-    int64_t dOutputOuter{0};
-
-    int64_t hOutputInner{0};
-    int64_t hOutputTail{0};
-    int64_t hOutputOuter{0};
-
-    int64_t wOutputInner{0};
-    int64_t wOutputTail{0};
-    int64_t wOutputOuter{0};
-
-    // DoBlockTiling
-    int64_t normalCoreProcessNum{0};
-    int64_t tailCoreProcessNum{0};
-    int64_t usedCoreNum{0};
-    int64_t totalBaseBlockNum{0};
-
-    // DoBufferCalculate
-    int64_t outputBufferSize{0};
-    int64_t gradBufferSize{0};
-    int64_t totalBufferSize{0};
-};
-
 class AdaptiveAvgPool3dGradTilingBaseV35 : public TilingBaseClass {
 public:
     explicit AdaptiveAvgPool3dGradTilingBaseV35(gert::TilingContext* context) : TilingBaseClass(context)
