@@ -94,6 +94,9 @@ __aicore__ inline void ScatterAddSIMDSupportAtomicAdd<T, U, updatesIsScalar, sca
 
             if constexpr (updatesIsScalar) {
                 LocalTensor<T> updatesLocal = updatesQueue_.DeQue<T>();
+                event_t eventIDMTE2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
+                SetFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
+                WaitFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
                 SetAtomicAdd<T>();
                 for (uint64_t i = 0; i < rows; i++) {
                     U dstIdx = indicesLocal.GetValue(i);      // 找到当次循环对应的indices内的值，即var的索引
