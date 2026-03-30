@@ -610,6 +610,28 @@ static __aicore__ inline void UpdateKComputeStatus(Intf *self)
 }
 
 template <class Intf>
+static __aicore__ inline bool CheckFreeA1ForKernelSplit(Intf* self)
+{
+    // kernel拆分HW场景，如果subpad为负数，需要重新加载A矩阵
+    if (self->ctx.tiling_->backpropPadUp == 0) {
+        for (int splitIndex = 0; splitIndex < self->ctx.tiling_->strideW * self->ctx.tiling_->strideH; splitIndex++) {
+            if (self->ctx.subPadUpList_[splitIndex] < 0) {
+                return true;
+            }
+        }
+    }
+    if (self->ctx.tiling_->backpropPadLeft == 0) {
+        for (int splitIndex = 0; splitIndex < self->ctx.tiling_->strideW * self->ctx.tiling_->strideH; splitIndex++) {
+            if (self->ctx.subPadLeftList_[splitIndex] < 0) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+template <class Intf>
 static __aicore__ inline void UpdateFullLoadL1Status(Intf *self)
 {
     if (!self->ctx.isB1FullLoadFlag_ && !self->ctx.isA1FullLoadFlag_) {
@@ -626,6 +648,9 @@ static __aicore__ inline void UpdateFullLoadL1Status(Intf *self)
         bool isLastRearrangeHWIter = (self->ctx.rearrangeWIndex_ == self->ctx.tiling_->strideW - 1) &&
             (self->ctx.rearrangeHIndex_ == self->ctx.tiling_->strideH - 1);
         self->ctx.isFreeA1_ = isLastRearrangeHWIter;
+        if (!isLastRearrangeHWIter && CheckFreeA1ForKernelSplit(self)) {
+            self->ctx.isFreeA1_ = true;
+        }
         self->ctx.isFreeB1_ = self->ctx.isFreeB1_ && isLastRearrangeHWIter;
     } else {
         if (self->ctx.isB1FullLoadFlag_ && self->ctx.tiling_->dk == 1) {
