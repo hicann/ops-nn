@@ -70,6 +70,7 @@ constexpr int64_t DIM1_BLOCK_COUNT = 8;
 constexpr int64_t BLOCK_SIZE = 32;
 constexpr int64_t TAIL_TILING_KEY_DIGIT = 4;
 constexpr int64_t SINGLE_LOOP_MIN_COLS = 128;
+constexpr float FP4E2M1_MAX = 6.0;
 constexpr size_t MAX_DIM_NUM = 7;
 
 template <typename T>
@@ -230,9 +231,14 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
     auto* attrDstTypeMax = attrs->GetAttrPointer<float>(INDEX_ATTR_DST_DTYPE_MAX);
     OP_CHECK_NULL_WITH_CONTEXT(context, attrDstTypeMax);
     tilingParam.dstTypeMax = static_cast<float>(*attrDstTypeMax);
+
     if (tilingParam.dstTypeMax != 0.0) {
         tilingParam.invDstTypeMax = 1.0 / tilingParam.dstTypeMax;
+    } else {
+        // 当dstTypeMax=0时，默认使用目标数据类型最大值，当前为FP4E2M1最大值6
+        tilingParam.invDstTypeMax = 1.0 / FP4E2M1_MAX;
     }
+
     OP_CHECK_IF(
         tilingParam.dstTypeMax < 0 || (tilingParam.dstTypeMax > 0 && tilingParam.dstTypeMax < 6) ||
             tilingParam.dstTypeMax > 12,
