@@ -24,6 +24,7 @@
 #endif
 
  namespace MicroAPI = AscendC::MicroAPI;
+ using AscendC::IsSameType;
 
  namespace QuantBatchMatmulV4 {
 
@@ -74,7 +75,27 @@
      MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
  constexpr MicroAPI::CastTrait castF42F16Trait0 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
      MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
+ constexpr MicroAPI::CastTrait castBF162FP16Trait0 = {MicroAPI::RegLayout::UNKNOWN, MicroAPI::SatMode::NO_SAT,
+     MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
 
+ template <typename wType, typename scaleType>
+ __simd_callee__ inline void CastWeightF4ToF16(
+     MicroAPI::RegTensor<scaleType>& weightF16Reg0, MicroAPI::RegTensor<scaleType>& weightF16Reg1,
+     MicroAPI::RegTensor<wType>& weightInReg0, MicroAPI::RegTensor<wType>& weightInReg1, MicroAPI::MaskReg& maskRegALL)
+ {
+     if constexpr (AscendC::IsSameType<scaleType, half>::value) {
+         MicroAPI::RegTensor<bfloat16_t> weightBF16Reg0, weightBF16Reg1;
+         // f4 -> bf16
+         MicroAPI::Cast<bfloat16_t, wType, castF42F16Trait0>(weightBF16Reg0, weightInReg0, maskRegALL);
+         MicroAPI::Cast<bfloat16_t, wType, castF42F16Trait0>(weightBF16Reg1, weightInReg1, maskRegALL);
+         // bf16 -> fp16
+         MicroAPI::Cast<scaleType, bfloat16_t, castBF162FP16Trait0>(weightF16Reg0, weightBF16Reg0, maskRegALL);
+         MicroAPI::Cast<scaleType, bfloat16_t, castBF162FP16Trait0>(weightF16Reg1, weightBF16Reg1, maskRegALL);
+     } else {
+         MicroAPI::Cast<scaleType, wType, castF42F16Trait0>(weightF16Reg0, weightInReg0, maskRegALL);
+         MicroAPI::Cast<scaleType, wType, castF42F16Trait0>(weightF16Reg1, weightInReg1, maskRegALL);
+     }
+ }
 
  template <typename xType, typename wType, typename scaleType, bool hasAntiquantOffset>
  __aicore__ inline void AntiquantW4Pergroup32NK(ParamsGroupSize32<xType, wType, scaleType> &p)
@@ -144,8 +165,7 @@
                  (MicroAPI::RegTensor<uint8_t>&)wLoad1,
                  (__local_mem__  uint8_t*)p.weightInBaseAddr1, addrRegWeight);
 
-             MicroAPI::Cast<scaleType, wType, castTrait0>(wCvt0, wLoad0, maskRegB4);
-             MicroAPI::Cast<scaleType, wType, castTrait0>(wCvt1, wLoad1, maskRegB4);
+             CastWeightF4ToF16<wType, scaleType>(wCvt0, wCvt1, wLoad0, wLoad1, maskRegB4);
 
              MicroAPI::Mul(wMul0, wCvt0, scaleCompute0, maskRegB16);
              MicroAPI::Mul(wMul1, wCvt1, scaleCompute1, maskRegB16);
@@ -203,8 +223,7 @@
                  MicroAPI::DataCopy<uint8_t, MicroAPI::LoadDist::DIST_UNPACK4_B8>(
                       (MicroAPI::RegTensor<uint8_t>&)weightInReg1, (__local_mem__  uint8_t*)param.weightInBaseAddr1,
                       weightInAddrReg);
-                 MicroAPI::Cast<scaleType, wType, castF42F16Trait0>(weightF16Reg0, weightInReg0, maskRegALL);
-                 MicroAPI::Cast<scaleType, wType, castF42F16Trait0>(weightF16Reg1, weightInReg1, maskRegALL);
+                 CastWeightF4ToF16<wType, scaleType>(weightF16Reg0, weightF16Reg1, weightInReg0, weightInReg1, maskRegALL);
                  MicroAPI::Mul(weightF16Reg0, weightF16Reg0, scaleRegCompute, maskRegALL);
                  MicroAPI::Mul(weightF16Reg1, weightF16Reg1, scaleRegCompute, maskRegALL);
 

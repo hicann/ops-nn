@@ -70,8 +70,8 @@ constexpr uint64_t INT4_DTYPE_PARAM = 2;
 constexpr uint32_t WORKSPACE_SIZE = 16777216; // 16 * 1024 * 1024
 constexpr int32_t DB_BUFFER = 2;
 constexpr int32_t EXTRA_GROUP_NUM = 2;
-constexpr uint64_t K_ALIGN_SIZE = 64;
-constexpr uint64_t N_ALIGN_SIZE = 64;
+constexpr uint64_t K_ALIGN_SIZE = 32;
+constexpr uint64_t N_ALIGN_SIZE = 8;
 
 constexpr int64_t B64_BITS = 64;
 constexpr int64_t B8_BITS = 8;
@@ -256,6 +256,7 @@ protected:
     void GetBubTilingA8W4BySize(int64_t &nBubSize, int64_t &kBubSize,
         int64_t &kBl1Size, int64_t &nBl1Size) const;
     bool CustomCheck() const;
+    bool CheckA8W4Params() const;
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus DoLibApiTiling() override
     {

@@ -81,8 +81,8 @@ static const int64_t M_RANGE1_RIGHT = 512;
 static const int32_t CORE_NUM_20 = 20;
 static const int64_t SUPPORTED_GROUP_SIZE = 32;
 static constexpr uint64_t B4_PER_B32 = 8UL;
-static const int64_t SUPPORTED_K_ALIGN_NUM = 64;
-static const int64_t SUPPORTED_N_ALIGN_NUM = 64;
+static const int64_t SUPPORTED_K_ALIGN_NUM = 32;
+static const int64_t SUPPORTED_N_ALIGN_NUM = 8;
 static const size_t MAX_DIM_VALUE = 2;
 static const size_t MX_SCALE_DIM_VALUE = 3;
 static const uint64_t GROUP_M_OFFSET = 32;
@@ -648,12 +648,16 @@ static inline bool MaxDimCheck(int64_t x1DimNum, int64_t x2DimNum, const op::Sha
     return true;
 }
 
-static inline int64_t SelectNzK0Value(op::DataType dataType) {
+static inline int64_t SelectNzK0Value(op::DataType dataType, const bool isA8W4Float) {
     switch (dataType) {
         case op::DataType::DT_INT4:
             return NZ_K0_VALUE_INT4_TRANS;
         case op::DataType::DT_FLOAT4_E2M1:
-            return NZ_K0_VALUE_INT4_TRANS;
+            if (isA8W4Float) {
+                return NZ_K0_VALUE_INT8_TRANS;
+            } else {
+                return NZ_K0_VALUE_INT4_TRANS;
+            }
         case op::DataType::DT_INT32:
             return NZ_K0_VALUE_INT32_TRANS;
         default:
@@ -668,7 +672,7 @@ static inline bool CheckShapeForWeightNz(const aclTensor *x1, const aclTensor *x
     auto x2DimNum = x2->GetStorageShape().GetDimNum();
     int64_t x1KDim = transposeX1 ? x1Shape[x1DimNum - PENULTIMATE_DIM] : x1Shape[x1DimNum - 1];
     int64_t x2K1Dim = transposeX2 ? x2Shape[x2DimNum - NZ_K1_INDEX_TRANS] : x2Shape[x2DimNum - NZ_K1_INDEX];
-    int64_t nz_k0_value_trans = SelectNzK0Value(x2->GetDataType());
+    int64_t nz_k0_value_trans = SelectNzK0Value(x2->GetDataType(), isA8W4Float(x1, x2));
     int64_t roundValue = transposeX2 ? nz_k0_value_trans : NZ_K0_VALUE_BMM_BLOCK_NUM;
     int64_t x1KDimRound = ((x1KDim + roundValue - 1) / roundValue) * roundValue;
     if (x1KDimRound != x2K1Dim * roundValue) {
@@ -815,8 +819,8 @@ static bool CheckA8W4Dtype(const TupleTensor &mandatoryTensors, const TupleOptio
                 ACLNN_ERR_PARAM_INVALID, "In A8W4 t-cg quant mode, bias must be null and yScale cannot be null.");
             return false;
         }
-        if (x2Scale == nullptr || x2Scale->GetDataType() != DataType::DT_BF16) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In A8W4 mode, x2Scale must be bf16.");
+        if (x2Scale == nullptr || (x2Scale->GetDataType() != DataType::DT_BF16 && x2Scale->GetDataType() != DataType::DT_FLOAT16)) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In A8W4 mode, x2Scale must be bf16 or fp16.");
             return false;
         }
 
@@ -951,8 +955,11 @@ static inline bool CheckA8W4X1X2Shape(int64_t x1KDim, int64_t x2KDim, int64_t x2
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k dim of x1 and x2 must be same, which are %ld and %ld", x1KDim, x2KDim);
         return false;
     }
-    if (x1KDim % SUPPORTED_K_ALIGN_NUM != 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k dim must be align to %ld, which is %ld", SUPPORTED_K_ALIGN_NUM, x1KDim);
+    if (x1KDim % SUPPORTED_K_ALIGN_NUM != 0 || x1KDim <= SUPPORTED_K_ALIGN_NUM) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "the k dim must to be aligned to %ld, and k dim must be greater than %ld, which is %ld",
+            SUPPORTED_K_ALIGN_NUM, SUPPORTED_K_ALIGN_NUM, x1KDim);
         return false;
     }
     if (x2NDim % SUPPORTED_N_ALIGN_NUM != 0) {
@@ -1066,7 +1073,7 @@ static aclnnStatus CheckWeightNzParamsDAV3510(const aclTensor *x1, const aclTens
             return ACLNN_ERR_PARAM_INVALID;
         }
 
-        if (out->GetDataType() != op::DataType::DT_BF16) {
+        if (out->GetDataType() != op::DataType::DT_BF16 && out->GetDataType() != op::DataType::DT_FLOAT16) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Data type of out only support bfloat16, actual is %s.",
                     op::ToString(out->GetDataType()).GetString());
             return ACLNN_ERR_PARAM_INVALID;
@@ -1824,7 +1831,7 @@ aclnnStatus aclnnQuantMatmulV4GetWorkspaceSize(const aclTensor *x1, const aclTen
 }
 
 namespace {
-static op::Shape GetWeightNzShape(const aclTensor *input, bool transpose)
+static op::Shape GetWeightNzShape(const aclTensor *input, bool transpose, bool isA8W4Float)
 {
     size_t viewDimNum = input->GetViewShape().GetDimNum();
     int64_t k = transpose ? input->GetViewShape().GetDim(viewDimNum - 1)
@@ -1832,7 +1839,7 @@ static op::Shape GetWeightNzShape(const aclTensor *input, bool transpose)
     int64_t n = transpose ? input->GetViewShape().GetDim(viewDimNum - LAST_SECOND_DIM_INDEX)
         : input->GetViewShape().GetDim(viewDimNum - 1);
 
-    int64_t nz_k0_value_trans = SelectNzK0Value(input->GetDataType());
+    int64_t nz_k0_value_trans = SelectNzK0Value(input->GetDataType(), isA8W4Float);
     int64_t k1 = transpose ? CeilDiv(k, nz_k0_value_trans) : CeilDiv(k, NZ_K0_VALUE_BMM_BLOCK_NUM);
     int64_t n1 = transpose ? CeilDiv(n, NZ_K0_VALUE_BMM_BLOCK_NUM) : CeilDiv(n, nz_k0_value_trans);
 
@@ -2044,7 +2051,7 @@ aclnnStatus aclnnQuantMatmulWeightNzGetWorkspaceSize(const aclTensor *x1, const 
         transposeX2 = GetTransposeAttrValue(x2, transposeX2, false);
     }
 
-    op::Shape weightNzShape = GetWeightNzShape(x2, transposeX2);
+    op::Shape weightNzShape = GetWeightNzShape(x2, transposeX2, isA8W4Float(x1, x2));
     if (!CheckWeightNzStorageShape(weightNzShape, x2->GetStorageShape())) {
       OP_LOGE(ACLNN_ERR_PARAM_INVALID,
               "x2'format only support NZ, but now x2's format is not NZ(Ascend affinity format). \

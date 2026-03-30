@@ -180,7 +180,7 @@ __global__ __aicore__ void quant_batch_matmul_v4(
         constexpr bool isTransA = TRANS == QBMMV4_A_TRANS || TRANS == QBMMV4_ALL_TRANS;
         constexpr bool isTransB = TRANS == QBMMV4_B_TRANS || TRANS == QBMMV4_ALL_TRANS;
         QuantBatchMatmulV4::Arch35::InvokeWeightQuantBmmOpImpl<QuantBatchMatmulV4PerChannelKernel<
-            DTYPE_X1, DTYPE_X2, DTYPE_BIAS, DTYPE_Y, isTransA, isTransB, false, QuantType::PER_GROUP, bfloat16_t,
+            DTYPE_X1, DTYPE_X2, DTYPE_BIAS, DTYPE_Y, isTransA, isTransB, false, QuantType::PER_GROUP, DTYPE_Y,
             WEIGHTNZ>>(
             x1, x2, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, y, workspace, tiling);
     } else if (QUANT_TYPE == QBMMV4_MX) {

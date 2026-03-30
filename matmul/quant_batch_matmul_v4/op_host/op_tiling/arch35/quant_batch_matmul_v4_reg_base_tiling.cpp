@@ -39,13 +39,48 @@ bool QuantBatchMatmulV4RegBase::IsCapable()
     return true;
 }
 
+bool QuantBatchMatmulV4RegBase::CheckA8W4Params() const
+{
+    OP_CHECK_IF(inputParams_.transA,
+             VECTOR_INNER_ERR_REPORT_TILIING(
+                 inputParams_.opName, "Invalid params, only support transpose_x1 false. Actual transpose_x: %s.",
+                 inputParams_.transA ? "true" : "false"),
+             return false);
+    OP_CHECK_IF(inputParams_.bFormat == ge::FORMAT_ND && !inputParams_.transB,
+             VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
+                                             "Invalid params, only support x2 transpose FORMAT_ND."),
+             return false);
+    OP_CHECK_IF(inputParams_.antiQuantType == QuantType::PER_GROUP && inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && inputParams_.transB,
+            VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
+                                            "Invalid params, only support x2 not transpose FORMAT_FRACTAL_NZ."),
+            return false);
+    OP_CHECK_IF(
+        inputParams_.groupSize <= 0 || inputParams_.kSize < inputParams_.groupSize,
+        VECTOR_INNER_ERR_REPORT_TILIING(
+            inputParams_.opName,
+            "Invalid params, groupSize must be greater than 0 and less than kSize, kSize: %lu, groupSize: %lu.",
+            inputParams_.kSize, inputParams_.groupSize), return false);
+    OP_CHECK_IF(inputParams_.groupSize % GROUP_ALIGN_SIZE > 0,
+             VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
+                                             "Invalid params, groupSize must be 32 aligned, groupSize: %lu.",
+                                             inputParams_.groupSize), return false);
+    // A8W4 Nz场景要求n为32B对齐
+    OP_CHECK_IF(inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && inputParams_.nSize % N_ALIGN_SIZE > 0,
+            VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
+                                            "Invalid params, nSize only support aligned to 64 when weight format is NZ, but nSize is %lu.",
+                                            inputParams_.nSize), return false);
+    return true;
+}
+
 bool QuantBatchMatmulV4RegBase::CustomCheck() const
 {
-    OP_CHECK_IF(inputParams_.kSize % K_ALIGN_SIZE > 0,
-             VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-                                             "Invalid params, kSize only support aligned to 64, but kSize is %lu.", inputParams_.kSize),
-             return false);
-
+    OP_CHECK_IF(
+        inputParams_.kSize % K_ALIGN_SIZE > 0 || inputParams_.kSize <= K_ALIGN_SIZE,
+        VECTOR_INNER_ERR_REPORT_TILIING(
+            inputParams_.opName, "Invalid params, kSize must be aligned to 32 and greater than 32, but got %lu.",
+            inputParams_.kSize),
+        return false);
+    
     OP_CHECK_IF((inputParams_.cDtype != ge::DT_BF16) && (inputParams_.cDtype != ge::DT_FLOAT16),
              VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Invalid params, output only support DT_BF16 or DT_FLOAT16."),
              return false);
@@ -54,34 +89,7 @@ bool QuantBatchMatmulV4RegBase::CustomCheck() const
                      inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN) &&
                     (inputParams_.bDtype == ge::DT_FLOAT4_E2M1 || inputParams_.bDtype == ge::DT_FLOAT);
     if (a8w4Flag) {
-        OP_CHECK_IF(inputParams_.transA,
-                 VECTOR_INNER_ERR_REPORT_TILIING(
-                     inputParams_.opName, "Invalid params, only support transpose_x1 false. Actual transpose_x: %s.",
-                     inputParams_.transA ? "true" : "false"),
-                 return false);
-        OP_CHECK_IF(inputParams_.bFormat == ge::FORMAT_ND && !inputParams_.transB,
-                 VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-                                                 "Invalid params, only support x2 transpose FORMAT_ND."),
-                 return false);
-        OP_CHECK_IF(inputParams_.antiQuantType == QuantType::PER_GROUP && inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && inputParams_.transB,
-                VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-                                                "Invalid params, only support x2 not transpose FORMAT_FRACTAL_NZ."),
-                return false);
-        OP_CHECK_IF(
-            inputParams_.groupSize <= 0 || inputParams_.kSize < inputParams_.groupSize,
-            VECTOR_INNER_ERR_REPORT_TILIING(
-                inputParams_.opName,
-                "Invalid params, groupSize must be greater than 0 and less than kSize, kSize: %lu, groupSize: %lu.",
-                inputParams_.kSize, inputParams_.groupSize), return false);
-        OP_CHECK_IF(inputParams_.groupSize % GROUP_ALIGN_SIZE > 0,
-                 VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-                                                 "Invalid params, groupSize must be 32 aligned, groupSize: %lu.",
-                                                 inputParams_.groupSize), return false);
-        // A8W4 Nz场景要求n为32B对齐
-        OP_CHECK_IF(inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && inputParams_.nSize % N_ALIGN_SIZE > 0,
-                VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-                                                "Invalid params, nSize only support aligned to 64 when weight format is NZ, but nSize is %lu.",
-                                                inputParams_.nSize), return false);
+        return CheckA8W4Params();
     } else {
         OP_LOGE(inputParams_.opName,
                 "Only support x1 Dtype: %s, x2 Dtype: %s, y Dtype: %s, groupSize: "

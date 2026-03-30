@@ -58,6 +58,7 @@ namespace QuantBatchMatmulV4
 using AscendC::IsSameType;
 
 constexpr uint8_t MAX_AL1_BUF_NUM = 4;
+constexpr int32_t ALIGNED_32_SIZE = 32;
 template <TPosition POSITION, CubeFormat FORMAT, typename TYPE, bool ISTRANS = false,
           LayoutMode LAYOUT = LayoutMode::NONE, bool IBSHARE = false>
 struct MatmulL1GmType : MatmulType<POSITION, FORMAT, TYPE, ISTRANS, LAYOUT, IBSHARE> {
@@ -695,7 +696,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
     params.groupNumUb = bubKLen / tiling_->groupSize;
     params.vLLoopNumInGroup = tiling_->groupSize * C0_SIZE_B8 / VECTOR_REG_WIDTH;
     params.n1LoopNum = CeilDiv(bubNLen, C0_SIZE_B8);
-    params.bubNLen = bubNLen;
+    params.bubNLen = CeilAlign(bubNLen, ALIGNED_32_SIZE);
     params.scaleN1Stride = C0_SIZE_B8;
     params.weightInGroupIdStride = tiling_->groupSize * C0_SIZE_B8 / 2;
     params.weighInN1Stride = params.weightInGroupIdStride * params.groupNumUb;
@@ -727,7 +728,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
         params.outDimOffset =
             AscendC::ONE_BLOCK_SIZE - params.innerExtend * params.repeatStride * AscendC::ONE_BLOCK_SIZE;
         params.outerStrideScale = CeilAlign(params.innerExtend * OFFSET_8, AscendC::BLOCK_CUBE);
-        params.outerStrideWeight = bubKLen >> 1;
+        params.outerStrideWeight = CeilAlign(bubKLen >> 1, ALIGNED_32_SIZE);
         params.maskWeight = bubKLen;
         params.offsetBaseAddr = offsetBaseAddr1_;
         params.scaleBaseAddr = scaleBaseAddr1_;
@@ -992,7 +993,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
     if (idx_ >= tiling_->BL1Pingpong) {
         WaitFlag<HardEvent::V_MTE2>(ubBufIdx_);
     }
-    int32_t bubNLen = Min(vecNBL1Len_, tiling_->nBubSize);
+    int32_t bubNLen = CeilAlign(Min(vecNBL1Len_, tiling_->nBubSize), ALIGNED_32_SIZE);
     CopyInScaleOffset(nBL1Offset, bubNLen, 0, 0, kBL1Offset, 1);
     MovWeightAndCompute(kBL1Offset, nBL1Offset, bubKLen, bubNLen);
 

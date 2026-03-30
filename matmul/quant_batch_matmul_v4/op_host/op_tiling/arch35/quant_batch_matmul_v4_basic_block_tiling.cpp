@@ -626,7 +626,7 @@ bool QuantBatchMatmulV4BasicBlockTiling::GetFallbackBaseK()
 
             const int64_t stepKMax = CeilDiv(basicBlockParam_.singleK, baseK);
             const int64_t bufferNum = min(stepKMax, BUFF_NUM_4);
-            if (bufferNum != BUFF_NUM_4 && bufferNum != BUFF_NUM_1) {
+            if (isMxType_ && weightNzFlag_ && bufferNum != BUFF_NUM_4 && bufferNum != BUFF_NUM_1) {
                 continue;
             }
 

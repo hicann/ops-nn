@@ -264,9 +264,9 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeDtype()
             ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
         return false);
     // check y dtype
-    OP_TILING_CHECK(inputParams_.cDtype != ge::DT_BF16,
+    OP_TILING_CHECK(inputParams_.cDtype != ge::DT_BF16 && inputParams_.cDtype != ge::DT_FLOAT16,
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-        "Unsupported data type [%s] for Y. Only DT_BF16 is supported.",
+        "Unsupported data type [%s] for Y. DT_BF16 and DT_FLOAT16 are supported.",
         ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
         return false);
     if (inputParams_.antiQuantType != QuantType::MX) {
@@ -318,16 +318,20 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeX2scaleDtype(const gert::CompileTimeTe
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "X2 scale can not be null."), return false);
     inputParams_.x2ScaleDtype = x2ScaleDesc->GetDataType();
     OP_TILING_CHECK(
-        inputParams_.antiQuantType == QuantType::PER_GROUP && inputParams_.x2ScaleDtype != ge::DT_BF16,
+        inputParams_.antiQuantType == QuantType::PER_GROUP && inputParams_.x2ScaleDtype != ge::DT_BF16 &&
+            inputParams_.x2ScaleDtype != ge::DT_FLOAT16,
         VECTOR_INNER_ERR_REPORT_TILIING(
             inputParams_.opName,
-            "In per_group quantization mode, the x2 scale dtype supports only DT_BF16, but the actual value is %s.",
+            "In per_group quantization mode, the x2 scale dtype supports DT_BF16 and DT_FLOAT16, but the actual value "
+            "is %s.",
             ge::TypeUtils::DataTypeToSerialString(inputParams_.x2ScaleDtype).c_str()),
         return false);
-    OP_TILING_CHECK(inputParams_.x2ScaleDtype != ge::DT_BF16 && inputParams_.x2ScaleDtype != ge::DT_FLOAT8_E8M0,
+    OP_TILING_CHECK(
+        inputParams_.x2ScaleDtype != ge::DT_BF16 && inputParams_.x2ScaleDtype != ge::DT_FLOAT8_E8M0 &&
+            inputParams_.x2ScaleDtype != ge::DT_FLOAT16,
         VECTOR_INNER_ERR_REPORT_TILIING(
             inputParams_.opName,
-            "Unsupported data type [%s] for X2 scale. Only DT_BF16 and DT_FLOAT8_E8M0 is supported.",
+            "Unsupported data type [%s] for X2 scale. Only DT_BF16, DT_FLOAT16 and DT_FLOAT8_E8M0 is supported.",
             ge::TypeUtils::DataTypeToSerialString(inputParams_.x2ScaleDtype).c_str()),
         return false);
     OP_TILING_CHECK(
@@ -484,18 +488,14 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeShapeSize(const gert::StorageShape* x1
         OP_TILING_CHECK(inputParams_.kSize != kBSize, VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
             "kA[%lu] is not equal kB[%lu]", inputParams_.kSize, kBSize), return false);
     } else if (x2ShapeDimSize == VALID_WEIGHT_NZ_DIM_NUM) {
-        uint32_t n0Idx = inputParams_.transB ? DIM_INDEX_2 : DIM_INDEX_3;
-        uint32_t n1Idx = inputParams_.transB ? DIM_INDEX_1 : DIM_INDEX_0;
-        // (n1, k1, k0, n0) or (k1, n1, n0, k0)
-        uint64_t n1 = x2Shape->GetStorageShape().GetDim(n1Idx);
-        uint64_t n0 = x2Shape->GetStorageShape().GetDim(n0Idx);
-        // 当x2数据类型是float32, 并且最后1维是n0时, 最后一维扩大8倍
-        OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputDesc(X2_INDEX));
+        auto x2OriginShape = x2Shape->GetOriginShape();
+        auto x2ShapeDimSize = x2OriginShape.GetDimNum();
+        inputParams_.nSize = static_cast<uint64_t>(
+            inputParams_.transB ? x2OriginShape.GetDim(x2ShapeDimSize - MATMUL_SHAPE_DIM_NUM) :
+                                  x2OriginShape.GetDim(x2ShapeDimSize - 1)); // - 1: 表示尾轴为n轴
         if (context_->GetInputDesc(X2_INDEX)->GetDataType() == ge::DT_FLOAT && !inputParams_.transB) {
-            n0 *= B4_IN_B32_NUMS;
+            inputParams_.nSize *= B4_IN_B32_NUMS;
         }
-
-        inputParams_.nSize = n1 * n0;
     }
     OP_TILING_CHECK(inputParams_.mSize < MIN_SHAPE_SIZE,
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,

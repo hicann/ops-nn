@@ -44,7 +44,8 @@ static const int64_t SUPPORTED_GROUP_SIZE = 32;
 static const int64_t MAX_SHAPE_SIZE_A8W4_INT = 29576;
 static const int64_t SUPPORTED_GROUP_SIZE_A8W4_INT = 256;
 static const int64_t SUPPORTED_K_ALIGN_NUM = 64;
-static const int64_t SUPPORTED_N_ALIGN_NUM = 64;
+static const int64_t SUPPORTED_TCG_K_ALIGN_NUM = 32;
+static const int64_t SUPPORTED_N_ALIGN_NUM = 8;
 static const uint64_t GROUP_M_OFFSET = 32;
 static const uint64_t GROUP_N_OFFSET = 16;
 static const uint64_t GROUP_MNK_BIT_SIZE = 0xFFFF;
@@ -64,6 +65,12 @@ static inline bool isA8W4Float(const aclTensor *x1, const aclTensor *x2) {
             EIGHT_BIT_FLOAT_INPUT_LIST.end()) &&
            (std::find(FOUR_BIT_FLOAT_INPUT_LIST.begin(), FOUR_BIT_FLOAT_INPUT_LIST.end(), x2->GetDataType()) !=
            FOUR_BIT_FLOAT_INPUT_LIST.end());
+}
+
+static inline bool isA8W4FloatTCG(const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale)
+{
+    return x1->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN && x2->GetDataType() == op::DataType::DT_FLOAT4_E2M1 &&
+           x1Scale == nullptr;
 }
 
 static inline bool isA8W4Int(const aclTensor *x1, const aclTensor *x2) {
@@ -569,10 +576,16 @@ static inline bool CheckOutAndOffsetShape(const TupleQuant& quantTensors, int64_
     return true;
 }
 
-static inline bool CheckX1X2Shape(const TupleInput &inputTensors, int64_t x1KDim, int64_t x2KDim, int64_t x2NDim, bool isPerChannel) {
+static inline bool CheckKDimAndBasicShape(
+    const TupleInput& inputTensors, const TupleQuant& quantTensors, int64_t x1KDim, int64_t x2KDim, int64_t x2NDim)
+{
     auto x1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(inputTensors);
     auto x2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(inputTensors);
+    auto x1Scale = std::get<INDEX_X1_SCALE_IN_QUANT_TUPLE>(quantTensors);
+    auto x2Scale = std::get<INDEX_X2_SCALE_IN_QUANT_TUPLE>(quantTensors);
+    bool isPerChannel = x2Scale->GetViewShape().GetDimNum() == 1;
     bool isA8W4INT = isA8W4IntAfterPre(x1, x2);
+    bool isA8W4TCG = isA8W4FloatTCG(x1, x2, x1Scale);
     // CHECK x1KDim
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if (npuArch == NpuArch::DAV_2201) {   // A8W4INT A2 A3
@@ -587,7 +600,7 @@ static inline bool CheckX1X2Shape(const TupleInput &inputTensors, int64_t x1KDim
         }
     }
     if (x2NDim <= 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the n-dim must be at least 1,, which is %ld", x2NDim);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the n-dim must be at least 1, which is %ld", x2NDim);
         return false;
     }
     if (x1KDim != x2KDim) {
@@ -597,8 +610,15 @@ static inline bool CheckX1X2Shape(const TupleInput &inputTensors, int64_t x1KDim
     }
     if (isA8W4INT) {
         size_t kAlign = isPerChannel ? SUPPORTED_K_ALIGN_NUM_INT4 : SUPPORTED_GROUP_SIZE_A8W4_INT;
-        if (x1KDim % kAlign !=0) {
+        if (x1KDim % kAlign != 0) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k dim must be align to %ld, which is %ld", kAlign, x1KDim);
+            return false;
+        }
+    } else if (isA8W4TCG) {
+        if (x1KDim % SUPPORTED_TCG_K_ALIGN_NUM != 0 || x1KDim <= SUPPORTED_TCG_K_ALIGN_NUM) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "the k dim must to be aligned to %ld and more than %ld, which is %ld",
+                    SUPPORTED_TCG_K_ALIGN_NUM, SUPPORTED_TCG_K_ALIGN_NUM, x1KDim);
             return false;
         }
     } else {
@@ -607,7 +627,18 @@ static inline bool CheckX1X2Shape(const TupleInput &inputTensors, int64_t x1KDim
             return false;
         }
     }
+    return true;
+}
+
+static inline bool CheckX1X2Shape(
+    const TupleInput& inputTensors, const TupleQuant& quantTensors, int64_t x1KDim, int64_t x2KDim, int64_t x2NDim)
+{
+    if (!CheckKDimAndBasicShape(inputTensors, quantTensors, x1KDim, x2KDim, x2NDim)) {
+        return false;
+    }
+    auto x2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(inputTensors);
     bool isX2Nz = ge::GetPrimaryFormat(x2->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ;
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if (npuArch == NpuArch::DAV_3510 && isX2Nz) {
         if (x2NDim % SUPPORTED_N_ALIGN_NUM != 0) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "A8W4 NZ the n dim must be align to %ld, which is %ld",
@@ -622,9 +653,7 @@ static inline bool CheckShape(const TupleInput &inputTensors, const TupleQuant &
                               const TupleAttr &boolsTrans, const aclTensor *out) {
     auto x1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(inputTensors);
     auto x2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(inputTensors);
-    auto x2Scale = std::get<INDEX_X2_SCALE_IN_QUANT_TUPLE>(quantTensors);
     bool isA8W4INT = isA8W4IntAfterPre(x1, x2);
-    bool isA8W4PerChannel = x2Scale->GetViewShape().GetDimNum() == 1;
     bool transposeX1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(boolsTrans);
     bool transposeX2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(boolsTrans);
 
@@ -640,7 +669,7 @@ static inline bool CheckShape(const TupleInput &inputTensors, const TupleQuant &
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the m-dim must > 0, which is %ld", x1MDim);
         return false;
     }
-    CHECK_RET(CheckX1X2Shape(inputTensors, x1KDim, x2KDim, x2NDim, isA8W4PerChannel), false);
+    CHECK_RET(CheckX1X2Shape(inputTensors, quantTensors, x1KDim, x2KDim, x2NDim), false);
     int64_t groupDim = isA8W4INT ? (x2KDim + SUPPORTED_GROUP_SIZE_A8W4_INT - 1) / SUPPORTED_GROUP_SIZE_A8W4_INT :
                                     (x2KDim + SUPPORTED_GROUP_SIZE - 1) / SUPPORTED_GROUP_SIZE;
     CHECK_RET(CheckScaleX1Shape(quantTensors, x1MDim, groupDim, isA8W4INT), false);
