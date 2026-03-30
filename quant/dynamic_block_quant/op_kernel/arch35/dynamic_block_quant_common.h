@@ -30,6 +30,7 @@ constexpr uint16_t BLOCK_BYTE_32 = 32;
 constexpr float FP8_E5M2_MAX_VALUE = 57344.0f;
 constexpr float FP8_E4M3_MAX_VALUE = 448.0f;
 constexpr float HIFP8_MAX_VALUE = 32768.0f;
+constexpr uint32_t FP32_INF_VALUE = 0x7f800000;
 constexpr uint16_t FP16_INF_VALUE = 0x7c00;
 constexpr uint16_t BF16_INF_VALUE = 0x7f80;
 // 1 / max_dtype

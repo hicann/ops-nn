@@ -40,6 +40,8 @@ namespace ge {
 * Only support 1, 128, 256, 512. Defaults to 1.
 - col_block_size: (Optional) Number of elements per block in -1 dimension.
 * Only support 64, 128, 192, 256. Defaults to 128.
+- dst_type_max: (Optional) Maximum Value of the target data type.
+* Only effective when dst_type is 34(HIFLOAT8), supporting values 0.0, 15.0, 56.0, 224.0, 32768.0. Defaults to 0.0.
 
 * @par Outputs:
 - y: Quantized tensor with same shape as input x. Data type depends on dst_type.
@@ -57,6 +59,7 @@ REG_OP(DynamicBlockQuant)
     .ATTR(dst_type, Int, DT_FLOAT8_E5M2)
     .ATTR(row_block_size, Int, 1)
     .ATTR(col_block_size, Int, 128)
+    .ATTR(dst_type_max, Float, 0.0)
     .OP_END_FACTORY_REG(DynamicBlockQuant)
 } // namespace ge
 

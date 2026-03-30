@@ -33,6 +33,7 @@ constexpr int64_t INDEX_ATTR_ROUND_MODE = 1;
 constexpr int64_t INDEX_ATTR_DST_DTYPE = 2;
 constexpr int64_t INDEX_ATTR_BLOCK_SIZE_ROW = 3;
 constexpr int64_t INDEX_ATTR_BLOCK_SIZE_COL = 4;
+constexpr int64_t INDEX_ATTR_DST_DTYPE_MAX = 5;
 constexpr int64_t BYTES_OF_INPUT_TYPE = 2;
 constexpr int64_t BYTES_OF_FLOAT_TYPE = 4;
 constexpr int64_t BYTES_OF_OUTPUT_TYPE = 1;
@@ -42,6 +43,11 @@ constexpr int64_t DIGIT_TWO = 2;
 constexpr int64_t DIGIT_THOUSAND = 1000;
 constexpr int64_t DIGIT_HUNDRED = 100;
 constexpr int64_t DIGIT_TEN = 10;
+constexpr float FLOAT_0 = 0.0;
+constexpr float FLOAT_15 = 15.0;
+constexpr float FLOAT_56 = 56.0;
+constexpr float FLOAT_224 = 224.0;
+constexpr float FLOAT_32768 = 32768.0;
 constexpr int64_t N_BUFFER = 2;
 constexpr int64_t EXIST_NODE_NUM = 3;
 constexpr int64_t AXIS_NUM_AFTER_MERGE = 3;
@@ -69,6 +75,7 @@ constexpr int64_t INPUT_DIM_NUM_THREE = 3;
 const std::set<int64_t> ROW_BLOCK_SIZE_SUPPORT_DTYPE = {BLOCK_SIZE_1, BLOCK_SIZE_128, BLOCK_SIZE_256, BLOCK_SIZE_512};
 const std::set<int64_t> COL_BLOCK_SIZE_SUPPORT_DTYPE = {BLOCK_SIZE_64, BLOCK_SIZE_128, BLOCK_SIZE_192, BLOCK_SIZE_256};
 constexpr int64_t RESERVED_UB_SIZE = 1024; // 预留空间
+const std::set<float> DST_TYPE_MAX_SUPPORT_DTYPE = {FLOAT_0, FLOAT_15, FLOAT_56, FLOAT_224, FLOAT_32768};
 
 inline static ge::graphStatus DynamicBlockQuantSetTilingData(
     gert::TilingContext* context, DynamicBlockQuantTilingData& tilingData)
@@ -86,13 +93,13 @@ inline static void PrintTilingData(const gert::TilingContext* context, DynamicBl
     OP_LOGI(
         context,
         "tilingData is totalCoreNum:%ld, ubSize:%ld, vfLen:%ld, minScale:%f, \
-roundMode:%ld, dstType:%ld, blockSizeRow:%ld, blockSizeCol:%ld, rowNum:%ld, colNum:%ld, rowBlockLoopNum:%ld, \
+roundMode:%ld, dstType:%ld, blockSizeRow:%ld, blockSizeCol:%ld, dstTypeMax:%f, rowNum:%ld, colNum:%ld, rowBlockLoopNum:%ld, \
 colBlockLoopNum:%ld, rowUbBlockLoopNum:%ld, colUbBlockLoopNum:%ld, rowUbFactor:%ld, colUbFactor:%ld, \
 usedCoreNum:%ld, rowTileNum:%ld, colTileNum:%ld, normalCoreRowTileNum:%ld, \
 normalCoreColTileNum:%ld, tailCoreRowTileNum:%ld, tailCoreColTileNum:%ld, batchNum:%ld, singleBatchRowBlockLoopNum:%ld",
         tilingData.get_totalCoreNum(), tilingData.get_ubSize(), tilingData.get_vfLen(), tilingData.get_minScale(),
         tilingData.get_roundMode(), tilingData.get_dstType(), tilingData.get_blockSizeRow(),
-        tilingData.get_blockSizeCol(), tilingData.get_rowNum(), tilingData.get_colNum(),
+        tilingData.get_blockSizeCol(), tilingData.get_dstTypeMax(), tilingData.get_rowNum(), tilingData.get_colNum(),
         tilingData.get_rowBlockLoopNum(), tilingData.get_colBlockLoopNum(), tilingData.get_rowUbBlockLoopNum(),
         tilingData.get_colUbBlockLoopNum(), tilingData.get_rowUbFactor(), tilingData.get_colUbFactor(),
         tilingData.get_usedCoreNum(), tilingData.get_normalCoreRowTileNum(), tilingData.get_rowTileNum(),
@@ -112,6 +119,36 @@ static RoundModeList GetRoundMode(const std::string& roundMode)
         return RoundModeList::MODE_HYBRID;
     }
     return RoundModeList::MODE_UNDEFINED;
+}
+
+static ge::graphStatus CheckBlockSizeAndDstTypeMax(const gert::TilingContext* context, DynamicBlockQuantTilingParam& tilingParam) {
+    auto* attrs = context->GetAttrs();
+    auto* attrBlockSizeRow = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_BLOCK_SIZE_ROW);
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrBlockSizeRow);
+    tilingParam.blockSizeRow = static_cast<int64_t>(*attrBlockSizeRow);
+    OP_CHECK_IF(ROW_BLOCK_SIZE_SUPPORT_DTYPE.count(tilingParam.blockSizeRow) == 0,
+        OP_LOGE(context, "The row_block_size is %ld but should be 1 or 128 or 256 or 512, please check.", tilingParam.blockSizeRow),
+        return ge::GRAPH_FAILED);
+
+    auto* attrBlockSizeCol = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_BLOCK_SIZE_COL);
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrBlockSizeCol);
+    tilingParam.blockSizeCol = static_cast<int64_t>(*attrBlockSizeCol);
+    OP_CHECK_IF(COL_BLOCK_SIZE_SUPPORT_DTYPE.count(tilingParam.blockSizeCol) == 0,
+        OP_LOGE(context, "The col_block_size is %ld but should be 64 or 128 or 192 or 256, please check.", tilingParam.blockSizeCol),
+        return ge::GRAPH_FAILED);
+
+    auto* attrDstTypeMax = attrs->GetAttrPointer<float>(INDEX_ATTR_DST_DTYPE_MAX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrDstTypeMax);
+    tilingParam.dstTypeMax = static_cast<float>(*attrDstTypeMax);
+    OP_CHECK_IF(DST_TYPE_MAX_SUPPORT_DTYPE.count(tilingParam.dstTypeMax) == 0,
+        OP_LOGE(context, "The dst_type_max is %f but should be 0.0 or 15.0 or 56.0 or 224.0 or 32768.0, please check.", tilingParam.dstTypeMax),
+        return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF((tilingParam.dstTypeMax != 0.0 && tilingParam.dstType != 34),
+        OP_LOGE(context, "invalid dst_type_max: %f. dst_type_max only supported when dst_type is DT_HIFLOAT8", tilingParam.dstTypeMax),
+        return ge::GRAPH_FAILED);
+
+    return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicBlockQuantTilingParam& tilingParam)
@@ -159,21 +196,7 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicBlockQ
             attrRoundMode),
         return ge::GRAPH_FAILED);
 
-    auto* attrBlockSizeRow = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_BLOCK_SIZE_ROW);
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrBlockSizeRow);
-    tilingParam.blockSizeRow = static_cast<int64_t>(*attrBlockSizeRow);
-    OP_CHECK_IF(ROW_BLOCK_SIZE_SUPPORT_DTYPE.count(tilingParam.blockSizeRow) == 0,
-        OP_LOGE(context, "The row_block_size is %ld but should be 1 or 128 or 256 or 512, please check.", tilingParam.blockSizeRow),
-        return ge::GRAPH_FAILED);
-
-    auto* attrBlockSizeCol = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_BLOCK_SIZE_COL);
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrBlockSizeCol);
-    tilingParam.blockSizeCol = static_cast<int64_t>(*attrBlockSizeCol);
-    OP_CHECK_IF(COL_BLOCK_SIZE_SUPPORT_DTYPE.count(tilingParam.blockSizeCol) == 0,
-        OP_LOGE(context, "The col_block_size is %ld but should be 64 or 128 or 192 or 256, please check.", tilingParam.blockSizeCol),
-        return ge::GRAPH_FAILED);
-
-    return ge::GRAPH_SUCCESS;
+    return CheckBlockSizeAndDstTypeMax(context, tilingParam);
 }
 
 static ge::graphStatus CheckDtype(const gert::TilingContext* context)
@@ -475,6 +498,7 @@ inline static void SetTilingData(
     tilingData.set_dstType(tilingParam.dstType);
     tilingData.set_blockSizeRow(tilingParam.blockSizeRow);
     tilingData.set_blockSizeCol(tilingParam.blockSizeCol);
+    tilingData.set_dstTypeMax(tilingParam.dstTypeMax);
     tilingData.set_batchNum(tilingParam.batchNum);
     tilingData.set_rowNum(tilingParam.rowNum);
     tilingData.set_colNum(tilingParam.colNum);

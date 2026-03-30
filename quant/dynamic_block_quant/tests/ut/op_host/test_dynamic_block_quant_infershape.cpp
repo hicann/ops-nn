@@ -41,7 +41,7 @@ TEST_F(DynamicBlockQuantTest, dynamic_block_quant_infershape_test_case_1) {
     XDesc.SetOriginShape(xShape);
     quant_op.UpdateInputDesc("x", XDesc);
 
-    Runtime2TestParam param{{"min_scale", "round_mode", "dst_type", "row_block_size", "col_block_size"}};
+    Runtime2TestParam param{{"min_scale", "round_mode", "dst_type", "row_block_size", "col_block_size", "dst_type_max"}};
     EXPECT_EQ(InferShapeTest(quant_op, param), ge::GRAPH_SUCCESS);
 
     auto output_y_desc = quant_op.GetOutputDesc(0);
@@ -61,7 +61,7 @@ TEST_F(DynamicBlockQuantTest, dynamic_block_quant_infershape_test_case_2) {
     XDesc.SetOriginShape(xShape);
     quant_op.UpdateInputDesc("x", XDesc);
 
-    Runtime2TestParam param{{"min_scale", "round_mode", "dst_type", "row_block_size", "col_block_size"}};
+    Runtime2TestParam param{{"min_scale", "round_mode", "dst_type", "row_block_size", "col_block_size", "dst_type_max"}};
     EXPECT_EQ(InferShapeTest(quant_op, param), ge::GRAPH_SUCCESS);
 
     auto output_y_desc = quant_op.GetOutputDesc(0);
@@ -81,7 +81,7 @@ TEST_F(DynamicBlockQuantTest, dynamic_block_quant_infershape_test_case_3) {
     XDesc.SetOriginShape(xShape);
     quant_op.UpdateInputDesc("x", XDesc);
 
-    Runtime2TestParam param{{"min_scale", "round_mode", "dst_type", "row_block_size", "col_block_size"}};
+    Runtime2TestParam param{{"min_scale", "round_mode", "dst_type", "row_block_size", "col_block_size", "dst_type_max"}};
     EXPECT_EQ(InferShapeTest(quant_op, param), ge::GRAPH_SUCCESS);
 
     auto output_y_desc = quant_op.GetOutputDesc(0);
@@ -101,6 +101,6 @@ TEST_F(DynamicBlockQuantTest, dynamic_block_quant_infershape_fail_test_case) {
     XDesc.SetOriginShape(xShape);
     quant_op.UpdateInputDesc("x", XDesc);
 
-    Runtime2TestParam param{{"min_scale", "round_mode", "dst_type", "row_block_size", "col_block_size"}};
+    Runtime2TestParam param{{"min_scale", "round_mode", "dst_type", "row_block_size", "col_block_size", "dst_type_max"}};
     EXPECT_EQ(InferShapeTest(quant_op, param), ge::GRAPH_FAILED);
 }

@@ -19,6 +19,7 @@ namespace ops {
 static constexpr int32_t DEFAULT_BLOCK_SIZE_ROW = 1;
 static constexpr int32_t DEFAULT_BLOCK_SIZE_COL = 128;
 static constexpr int32_t BLOCK_QUANT_DEFAULT_DST_TYPE = 35;
+static constexpr int32_t DYNAMIC_BLOCK_QUANT_VERSION_V2 = 2;
 class DynamicBlockQuant : public OpDef {
 public:
     explicit DynamicBlockQuant(const char* name) : OpDef(name)
@@ -49,7 +50,8 @@ public:
         this->Attr("dst_type").AttrType(OPTIONAL).Int(BLOCK_QUANT_DEFAULT_DST_TYPE);
         this->Attr("row_block_size").AttrType(OPTIONAL).Int(DEFAULT_BLOCK_SIZE_ROW);
         this->Attr("col_block_size").AttrType(OPTIONAL).Int(DEFAULT_BLOCK_SIZE_COL);
-
+        this->Attr("dst_type_max").AttrType(OPTIONAL).Version(DYNAMIC_BLOCK_QUANT_VERSION_V2).Float(0.0);
+        
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)

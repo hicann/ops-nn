@@ -67,9 +67,11 @@ private:
     int64_t fullBlockNum = 0;
     int64_t resBlockRowNum = 0;
     float fp8MaxExpValue = 0.0;
+    uint32_t infValue_ = 0;
     constexpr static int64_t DB_BUFFER = 2;
     constexpr static int64_t DIGIT_ONE = 1;
     constexpr static int64_t ADDR_PAD_OFFSET = 16;
+    constexpr static uint32_t FP32_INF_VALUE = 0x7f800000;
     constexpr static float FP8_E5M2_MAX_VALUE = 57344.0f;
     constexpr static float FP8_E4M3_MAX_VALUE = 448.0f;
     constexpr static float HIFP8_MAX_VALUE = 32768.0f;
@@ -151,7 +153,7 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::Init(
     if (this->blockIdx_ >= this->usedCoreNum_) {
         return;
     }
-
+    infValue_ = FP32_INF_VALUE;
     this->xGm_.SetGlobalBuffer((__gm__ T*)(x));
     this->groupListGm_.SetGlobalBuffer((__gm__ int32_t*)(groupList));
     this->yOutGm_.SetGlobalBuffer((__gm__ U*)(yOut));
@@ -332,6 +334,7 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeA
         AscendC::MicroAPI::MaskReg p2;
         AscendC::MicroAPI::MaskReg dataLenMask16;
         AscendC::MicroAPI::MaskReg dataLenMask32;
+        AscendC::MicroAPI::MaskReg scaleMaskReg;
         AscendC::MicroAPI::MaskReg scaleMask32 =
             AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
 
@@ -349,9 +352,6 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeA
             for (uint16_t step128 = 0; step128 < static_cast<uint16_t>(normalStep128); step128++) {
                 dataLenMask16 = AscendC::MicroAPI::UpdateMask<uint16_t>(pnum16);
                 AscendC::MicroAPI::LoadAlign(xRegTensor, xAddr + stepBlock * blockDataNumOffset + step128 * vfLen);
-                AscendC::MicroAPI::Mul(xRegTensorZero, xRegTensor, zeroRegTensor16, dataLenMask16);
-                AscendC::MicroAPI::Compare<T, CMPMODE::NE>(p1, xRegTensorZero, xRegTensorZero, dataLenMask16);
-                AscendC::MicroAPI::Select(xRegTensor, zeroRegTensor16, xRegTensor, p1);
                 AscendC::MicroAPI::And(
                     xAbsRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)xRegTensor, absMaskRegTensor,
                     dataLenMask16);
@@ -369,9 +369,11 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeA
             AscendC::MicroAPI::Div(
                 (AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor, expMaxRegTensorFp32, fp8MaxRegTensor,
                 scaleMask32);
-            AscendC::MicroAPI::Min(
+            AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(scaleMaskReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)scaleRegTensor, infValue_, scaleMask32);
+            // Min(input_max / FP_MAX, 1 / minScale)
+            AscendC::MicroAPI::Min<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(
                 (AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor,
-                (AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor, minScaleRegTensor, scaleMask32);
+                (AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor, minScaleRegTensor, scaleMaskReg);
             AscendC::MicroAPI::StoreAlign<uint32_t, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 scaleOutAddr + stepBlock * 8, scaleRegTensor, scaleMask32);
 
@@ -382,19 +384,11 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeA
                 AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                     xRegTensor, xAddr + stepBlock * blockDataNumOffset + step64 * vfNum);
                 AscendC::MicroAPI::Cast<float, T, castTraitT2Float>(
-                    (AscendC::MicroAPI::RegTensor<float>&)xRegTensorFp32, xRegTensor, dataLenMask32);
-                AscendC::MicroAPI::Muls(
-                    (AscendC::MicroAPI::RegTensor<float>&)y, (AscendC::MicroAPI::RegTensor<float>&)xRegTensorFp32, 0.0f,
-                    dataLenMask32);
-                AscendC::MicroAPI::Compare<float, CMPMODE::NE>(
-                    p2, (AscendC::MicroAPI::RegTensor<float>&)y, (AscendC::MicroAPI::RegTensor<float>&)y,
-                    dataLenMask32);
-                AscendC::MicroAPI::Select(yRegTensorFp32, zeroRegTensor32, xRegTensorFp32, p2);
+                    (AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32, xRegTensor, dataLenMask32);
                 AscendC::MicroAPI::Div(
                     (AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32,
                     (AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32,
                     (AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor, dataLenMask32);
-                AscendC::MicroAPI::Select(yRegTensorFp32, xRegTensorFp32, yRegTensorFp32, p2);
                 AscendC::MicroAPI::Cast<U, float, castTrait32to8>(
                     yRegTensorFp8, (AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32, dataLenMask32);
                 AscendC::MicroAPI::StoreAlign<U, MicroAPI::StoreDist::DIST_PACK4_B32>(
@@ -408,9 +402,6 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeA
         for (uint16_t step128 = 0; step128 < static_cast<uint16_t>(tailStep128); step128++) {
             dataLenMask16 = AscendC::MicroAPI::UpdateMask<uint16_t>(pnum16);
             AscendC::MicroAPI::LoadAlign(xRegTensor, xAddr + tailBlockIdx * blockDataNumOffset + step128 * vfLen);
-            AscendC::MicroAPI::Mul(xRegTensorZero, xRegTensor, zeroRegTensor16, dataLenMask16);
-            AscendC::MicroAPI::Compare<T, CMPMODE::NE>(p1, xRegTensorZero, xRegTensorZero, dataLenMask16);
-            AscendC::MicroAPI::Select(xRegTensor, zeroRegTensor16, xRegTensor, p1);
             AscendC::MicroAPI::And(
                 xAbsRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)xRegTensor, absMaskRegTensor, dataLenMask16);
             AscendC::MicroAPI::Max<uint16_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(
@@ -426,9 +417,11 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeA
         AscendC::MicroAPI::Duplicate(expMaxRegTensorFp32, expMaxRegTensorFp32, scaleMask32);
         AscendC::MicroAPI::Div(
             (AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor, expMaxRegTensorFp32, fp8MaxRegTensor, scaleMask32);
-        AscendC::MicroAPI::Min(
+        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(scaleMaskReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)scaleRegTensor, infValue_, scaleMask32);
+        // Min(input_max / FP_MAX, 1 / minScale)
+        AscendC::MicroAPI::Min<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(
             (AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor, (AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor,
-            minScaleRegTensor, scaleMask32);
+            minScaleRegTensor, scaleMaskReg);
         AscendC::MicroAPI::StoreAlign<uint32_t, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
             scaleOutAddr + tailBlockIdx * 8, scaleRegTensor, scaleMask32);
 
@@ -439,18 +432,11 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeA
             AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                 xRegTensor, xAddr + tailBlockIdx * blockDataNumOffset + step64 * vfNum);
             AscendC::MicroAPI::Cast<float, T, castTraitT2Float>(
-                (AscendC::MicroAPI::RegTensor<float>&)xRegTensorFp32, xRegTensor, dataLenMask32);
-            AscendC::MicroAPI::Muls(
-                (AscendC::MicroAPI::RegTensor<float>&)y, (AscendC::MicroAPI::RegTensor<float>&)xRegTensorFp32, 0.0f,
-                dataLenMask32);
-            AscendC::MicroAPI::Compare<float, CMPMODE::NE>(
-                p2, (AscendC::MicroAPI::RegTensor<float>&)y, (AscendC::MicroAPI::RegTensor<float>&)y, dataLenMask32);
-            AscendC::MicroAPI::Select(yRegTensorFp32, zeroRegTensor32, xRegTensorFp32, p2);
+                (AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32, xRegTensor, dataLenMask32);
             AscendC::MicroAPI::Div(
                 (AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32,
                 (AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32,
                 (AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor, dataLenMask32);
-            AscendC::MicroAPI::Select(yRegTensorFp32, xRegTensorFp32, yRegTensorFp32, p2);
             AscendC::MicroAPI::Cast<U, float, castTrait32to8>(
                 yRegTensorFp8, (AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32, dataLenMask32);
             AscendC::MicroAPI::StoreAlign<U, MicroAPI::StoreDist::DIST_PACK4_B32>(

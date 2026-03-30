@@ -22,7 +22,7 @@
   $$
   
   $$
-  scale = min((FP8\_MAX/HiF8\_MAX / INT8\_MAX) / input\_max, 1/min_scale)
+  scale = min((FP8\_MAX/HiF8\_MAX /DST\_TYPE\_MAX / INT8\_MAX) / input\_max, 1/min_scale)
   $$
 
   $$
@@ -80,15 +80,22 @@
     <tr>
       <td>row_block_size</td>
       <td>可选属性</td>
-      <td><ul><li>表示行维度上每个块包含的元素数量。支持取值1，128。</li><li>默认值为1。</li></ul></td>
+      <td><ul><li>表示行维度上每个块包含的元素数量。支持取值1，128，256，512。</li><li>默认值为1。</li></ul></td>
       <td>INT</td>
       <td>-</td>
     </tr>
     <tr>
       <td>col_block_size</td>
       <td>可选属性</td>
-      <td><ul><li>表示列维度上每个块包含的元素数量。</li><li>默认值为128。</li></ul></td>
+      <td><ul><li>表示列维度上每个块包含的元素数量。支持取值64，128，192，256。</li><li>默认值为128。</li></ul></td>
       <td>INT</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>dst_type_max</td>
+      <td>可选属性</td>
+      <td><ul><li>目标数据类型的最大值。</li><li>当前只支持目标数据类型为HIFLOAT8，且可选取值为0.0，15.0，56.0，224.0，32768.0</li><li>0.0表示使用数据类型原始的最大值。</li></ul></td>
+      <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
@@ -101,20 +108,23 @@
     <tr>
       <td>scale</td>
       <td>输出</td>
-      <td>表示量化使用的缩放张量，对应公式中的`scale`。shape为[ceil(x.rows/row_block_size), ceil(x.cols/col_block_size)]。</td>
+      <td><ul><li>表示量化使用的缩放张量，对应公式中的`scale`。</li><li>如果输入`x`的shape为[M, N]，输出`scaleOut`的shape维度为[ceil(M/rowBlockSize), ceil(N/colBlockSize)]；如果输入`x`的shape为[B, M, N]，输出`scaleOut`的shape维度为[B, ceil(M/rowBlockSize), ceil(N/colBlockSize)]。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
   </tbody></table>
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+    - 参数`x`、`y`、`scale`的shape仅支持2维
     - 参数`round_mode`只支持rint。
     - 参数`dst_type`仅支持取值2，代表ACL_INT8。
-    - 参数`row_block_size`仅支持取值1。
+    - 参数`row_block_size`仅支持取值1或128。
+    - 参数`col_block_size`仅支持取值1。
+    - 参数`dst_type_max`仅支持取值0。
     - 参数`y`的数据类型仅支持INT8。
 
   - <term>Ascend 950PR/Ascend 950DT</term>：
-    - 参数`x`、`y`、`scale`的shape仅支持2维。
+    - 参数`x`、`y`、`scale`的shape仅支持2维或3维。
     - 参数`round_mode`的取值与参数`y`的数据类型存在对应关系：
       - 当输出`y`的数据类型是HIFLOAT8时，参数`round_mode`支持设置为round。
       - 当输出`y`的数据类型是FLOAT8_E4M3FN、FLOAT8_E5M2时，参数`round_mode`支持设置为rint。

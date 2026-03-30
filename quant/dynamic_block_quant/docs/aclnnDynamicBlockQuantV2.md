@@ -1,4 +1,4 @@
-# aclnnDynamicBlockQuant
+# aclnnDynamicBlockQuantV2
 
 [📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/quant/dynamic_block_quant)
 
@@ -24,7 +24,7 @@
   $$
 
   $$
-  scaleOut = min(input\_max / (FP8\_MAX/HiF8\_MAX / INT8\_MAX), 1/minScale)
+  scaleOut = min(input\_max / (FP8\_MAX/HiF8\_MAX/DST\_TYPE\_MAX / INT8\_MAX), 1/minScale)
   $$
 
   $$
@@ -35,16 +35,17 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnDynamicBlockQuantGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDynamicBlockQuant”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnDynamicBlockQuantV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDynamicBlockQuantV2”接口执行计算。
 
 ```Cpp
-aclnnStatus aclnnDynamicBlockQuantGetWorkspaceSize(
+aclnnStatus aclnnDynamicBlockQuantV2GetWorkspaceSize(
   const aclTensor   *x,
   double             minScale,
   char              *roundModeOptional,
   int64_t            dstType,
   int64_t            rowBlockSize,
   int64_t            colBlockSize,
+  double             dstTypeMax,
   const aclTensor   *yOut,
   const aclTensor   *scaleOut,
   uint64_t          *workspaceSize,
@@ -52,14 +53,14 @@ aclnnStatus aclnnDynamicBlockQuantGetWorkspaceSize(
 ```
 
 ```Cpp
-aclnnStatus aclnnDynamicBlockQuant(
+aclnnStatus aclnnDynamicBlockQuantV2(
   void          *workspace,
   uint64_t       workspaceSize,
   aclOpExecutor *executor,
   aclrtStream    stream)
 ```
 
-## aclnnDynamicBlockQuantGetWorkspaceSize
+## aclnnDynamicBlockQuantV2GetWorkspaceSize
 
 - **参数说明：**
 
@@ -146,6 +147,16 @@ aclnnStatus aclnnDynamicBlockQuant(
       <td>-</td>
     </tr>
     <tr>
+      <td>dstTypeMax（double）</td>
+      <td>输入</td>
+      <td>目标数据类型的最大值。</td>
+      <td><ul><li>当前只支持目标数据类型为HIFLOAT8，且可选取值为0.0，15.0，56.0，224.0，32768.0</li><li>0.0表示使用数据类型原始的最大值。</li></ul></td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
       <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化后的输出Tensor。对应公式中的`yOut`。</td>
@@ -192,7 +203,8 @@ aclnnStatus aclnnDynamicBlockQuant(
     - 参数`roundModeOptional`只支持rint。
     - 参数`dstType`仅支持取值2，代表ACL_INT8。
     - 参数`rowBlockSize`仅支持取值1。
-    - 参数`colBlockSize`仅支持取值128。
+    - 参数`colBlockSize`仅支持取值1或128。
+    - 参数`dstTpeMax`仅支持取值0。
     - 参数`yOut`的数据类型仅支持INT8。
   - <term>Ascend 950PR/Ascend 950DT</term>：
     - 参数`x`、`yOut`、`scaleOut`的shape仅支持2维或3维。
@@ -231,9 +243,12 @@ aclnnStatus aclnnDynamicBlockQuant(
       <td rowspan="5">161002</td>
       <td>输入或输出数据格式或数据类型不在支持的范围之内。</td>
     </tr>
+    <tr>
+      <td>输入或输出数据的shape不在支持的范围之内。</td>
+    </tr>
   </tbody></table>
 
-## aclnnDynamicBlockQuant
+## aclnnDynamicBlockQuantV2
 
 - **参数说明：**
 
@@ -257,7 +272,7 @@ aclnnStatus aclnnDynamicBlockQuant(
     <tr>
       <td>workspaceSize</td>
       <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnDynamicBlockQuantGetWorkspaceSize获取。</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnDynamicBlockQuantV2GetWorkspaceSize获取。</td>
     </tr>
     <tr>
       <td>executor</td>
@@ -279,7 +294,7 @@ aclnnStatus aclnnDynamicBlockQuant(
 ## 约束说明
 
 - 确定性计算：
-  - aclnnDynamicBlockQuant默认确定性实现。
+  - aclnnDynamicBlockQuantV2默认确定性实现。
 
 ## 调用示例
 
@@ -390,15 +405,15 @@ aclnnStatus aclnnDynamicBlockQuant(
     ret = CreateAclTensor(scaleHostData, scaleShape, &scaleDeviceAddr, aclDataType::ACL_FLOAT, &scale);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
   
-    // 3. 调用CANN算子库API，需要修改为具体的API名称
+    // 3. 调用CANN算子库API，需要修改为具体的Api名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
   
     const char* roundMode = "rint";
   
-    // 调用aclnnDynamicBlockQuant第一段接口
-    ret = aclnnDynamicBlockQuantGetWorkspaceSize(x, 0, (char *)roundMode, aclDataType::ACL_INT8, 1, 128, y, scale, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicBlockQuantGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    // 调用aclnnDynamicBlockQuantV2第一段接口
+    ret = aclnnDynamicBlockQuantV2GetWorkspaceSize(x, 0, (char *)roundMode, aclDataType::ACL_INT8, 1, 128, 0, y, scale, &workspaceSize, &executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicBlockQuantV2GetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
@@ -407,9 +422,9 @@ aclnnStatus aclnnDynamicBlockQuant(
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
     }
   
-    // 调用aclnnDynamicBlockQuant第二段接口
-    ret = aclnnDynamicBlockQuant(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicBlockQuant failed. ERROR: %d\n", ret); return ret);
+    // 调用aclnnDynamicBlockQuantV2第二段接口
+    ret = aclnnDynamicBlockQuantV2(workspaceAddr, workspaceSize, executor, stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicBlockQuantV2 failed. ERROR: %d\n", ret); return ret);
   
     // 4. （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
@@ -444,7 +459,7 @@ aclnnStatus aclnnDynamicBlockQuant(
   #include <iostream>
   #include <vector>
   #include "acl/acl.h"
-  #include "aclnnop/aclnn_dynamic_block_quant.h"
+  #include "aclnnop/aclnn_dynamic_block_quant_v2.h"
   
   #define CHECK_RET(cond, return_expr) \
     do {                               \
@@ -544,15 +559,15 @@ aclnnStatus aclnnDynamicBlockQuant(
     ret = CreateAclTensor(scaleHostData, scaleShape, &scaleDeviceAddr, aclDataType::ACL_FLOAT, &scale);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
   
-    // 3. 调用CANN算子库API，需要修改为具体的API名称
+    // 3. 调用CANN算子库API，需要修改为具体的Api名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
   
     const char* roundMode = "rint";
   
-    // 调用aclnnDynamicBlockQuant第一段接口
-    ret = aclnnDynamicBlockQuantGetWorkspaceSize(x, 0.1, (char *)roundMode, aclDataType::ACL_FLOAT8_E5M2, 1, 128, y, scale, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicBlockQuantGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    // 调用aclnnDynamicBlockQuantV2第一段接口
+    ret = aclnnDynamicBlockQuantV2GetWorkspaceSize(x, 0.1, (char *)roundMode, aclDataType::ACL_FLOAT8_E5M2, 1, 128, 0, y, scale, &workspaceSize, &executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicBlockQuantV2GetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
@@ -561,9 +576,9 @@ aclnnStatus aclnnDynamicBlockQuant(
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
     }
   
-    // 调用aclnnDynamicBlockQuant第二段接口
-    ret = aclnnDynamicBlockQuant(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicBlockQuant failed. ERROR: %d\n", ret); return ret);
+    // 调用aclnnDynamicBlockQuantV2第二段接口
+    ret = aclnnDynamicBlockQuantV2(workspaceAddr, workspaceSize, executor, stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicBlockQuantV2 failed. ERROR: %d\n", ret); return ret);
   
     // 4. （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
@@ -591,4 +606,3 @@ aclnnStatus aclnnDynamicBlockQuant(
     return 0;
   }
   ```
-  

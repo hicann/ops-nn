@@ -56,7 +56,7 @@ static string to_string(void *buf, size_t size)
 }
 
 static void ExecuteTestCase(ge::DataType inDtype, ge::DataType outDtype, gert::StorageShape shape,
-    gert::StorageShape scaleShape, float minScale, string roundMode, int64_t rowBlockSize, int64_t colBlockSize, string expectTilingData,
+    gert::StorageShape scaleShape, float minScale, string roundMode, int64_t rowBlockSize, int64_t colBlockSize, float dstTypeMax, string expectTilingData,
     ge::graphStatus status = ge::GRAPH_SUCCESS) {
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -118,7 +118,8 @@ static void ExecuteTestCase(ge::DataType inDtype, ge::DataType outDtype, gert::S
                                 {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(roundMode)},
                                 {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(outDtype)},
                                 {"row_block_size", Ops::NN::AnyValue::CreateFrom(rowBlockSize)},
-                                {"col_block_size", Ops::NN::AnyValue::CreateFrom(colBlockSize)}})
+                                {"col_block_size", Ops::NN::AnyValue::CreateFrom(colBlockSize)},
+                                {"dst_type_max", Ops::NN::AnyValue::CreateFrom<float>(dstTypeMax)}})
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();
@@ -144,7 +145,7 @@ static void ExecuteTestCase(ge::DataType inDtype, ge::DataType outDtype, gert::S
 }
 
 static void ExecuteTestCaseA2(ge::DataType inDtype, ge::DataType outDtype, gert::StorageShape shape,
-    gert::StorageShape scaleShape, float minScale, string roundMode, int64_t rowBlockSize, int64_t colBlockSize, string expectTilingData,
+    gert::StorageShape scaleShape, float minScale, string roundMode, int64_t rowBlockSize, int64_t colBlockSize, float dstTypeMax, string expectTilingData,
     ge::graphStatus status = ge::GRAPH_SUCCESS)
 {
     string compile_info_string = R"({
@@ -217,7 +218,8 @@ static void ExecuteTestCaseA2(ge::DataType inDtype, ge::DataType outDtype, gert:
                                 {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(roundMode)},
                                 {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(outDtype)},
                                 {"row_block_size", Ops::NN::AnyValue::CreateFrom(rowBlockSize)},
-                                {"col_block_size", Ops::NN::AnyValue::CreateFrom(colBlockSize)}})
+                                {"col_block_size", Ops::NN::AnyValue::CreateFrom(colBlockSize)},
+                                {"dst_type_max", Ops::NN::AnyValue::CreateFrom<float>(dstTypeMax)}})
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();
@@ -248,9 +250,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_fp8e5m2
     string roundMode = "rint";
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
-    string expectTilingData = "1100 64 253952 256 0 1 35 128 128 1 128 256 1 1 2 1 1 128 128 2 1 2 1 1 1 1 1 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "1100 64 253952 256 0 1 35 128 128 0 1 128 256 1 1 2 1 1 128 128 2 1 2 1 1 1 1 1 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_fp8e4m3) {
@@ -260,9 +263,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_fp8e4m3
     string roundMode = "rint";
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
-    string expectTilingData = "1110 64 253952 256 0 1 36 128 128 1 128 256 1 1 2 1 1 128 128 2 1 2 1 1 1 1 1 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "1110 64 253952 256 0 1 36 128 128 0 1 128 256 1 1 2 1 1 128 128 2 1 2 1 1 1 1 1 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_hifloat8) {
@@ -272,9 +276,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_hifloat
     string roundMode = "round";
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
-    string expectTilingData = "4120 64 253952 256 0 4 34 128 128 1 128 256 1 1 2 1 1 128 128 2 1 2 1 1 1 1 1 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "4120 64 253952 256 0 4 34 128 128 0 1 128 256 1 1 2 1 1 128 128 2 1 2 1 1 1 1 1 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_HIFLOAT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_HIFLOAT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_fp8e5m2) {
@@ -284,9 +289,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_fp8e5m
     string roundMode = "rint";
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
-    string expectTilingData = "1200 64 253952 256 0 1 35 128 128 1 128 256 1 1 2 1 1 128 128 2 1 2 1 1 1 1 1 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "1200 64 253952 256 0 1 35 128 128 0 1 128 256 1 1 2 1 1 128 128 2 1 2 1 1 1 1 1 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_fp8e4m3) {
@@ -296,9 +302,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_fp8e4m
     string roundMode = "rint";
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
-    string expectTilingData = "1210 64 253952 256 0 1 36 128 128 1 128 256 1 1 2 1 1 128 128 2 1 2 1 1 1 1 1 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "1210 64 253952 256 0 1 36 128 128 0 1 128 256 1 1 2 1 1 128 128 2 1 2 1 1 1 1 1 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_hifloat8) {
@@ -308,9 +315,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_hifloa
     string roundMode = "round";
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
-    string expectTilingData = "4220 64 253952 256 0 4 34 128 128 1 128 256 1 1 2 1 1 128 128 2 1 2 1 1 1 1 1 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "4220 64 253952 256 0 4 34 128 128 0 1 128 256 1 1 2 1 1 128 128 2 1 2 1 1 1 1 1 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_fp8e5m2_one_row) {
@@ -320,9 +328,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_fp8e5m2
     string roundMode = "rint";
     int64_t rowBlockSize = 1;
     int64_t colBlockSize = 128;
-    string expectTilingData = "1101 64 253952 256 0 1 35 1 128 1 128 256 128 128 2 4 1 4 128 64 32 2 4 1 4 1 32 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "1101 64 253952 256 0 1 35 1 128 0 1 128 256 128 128 2 4 1 4 128 64 32 2 4 1 4 1 32 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_fp8e4m3_one_row) {
@@ -332,9 +341,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_fp8e4m3
     string roundMode = "rint";
     int64_t rowBlockSize = 1;
     int64_t colBlockSize = 128;
-    string expectTilingData = "1111 64 253952 256 0 1 36 1 128 1 128 256 128 128 2 4 1 4 128 64 32 2 4 1 4 1 32 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "1111 64 253952 256 0 1 36 1 128 0 1 128 256 128 128 2 4 1 4 128 64 32 2 4 1 4 1 32 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_hifloat8_one_row) {
@@ -344,9 +354,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_hifloat
     string roundMode = "round";
     int64_t rowBlockSize = 1;
     int64_t colBlockSize = 128;
-    string expectTilingData = "4121 64 253952 256 0 4 34 1 128 1 128 256 128 128 2 4 1 4 128 64 32 2 4 1 4 1 32 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "4121 64 253952 256 0 4 34 1 128 0 1 128 256 128 128 2 4 1 4 128 64 32 2 4 1 4 1 32 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_HIFLOAT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_HIFLOAT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_fp8e5m2_one_row) {
@@ -356,9 +367,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_fp8e5m
     string roundMode = "rint";
     int64_t rowBlockSize = 1;
     int64_t colBlockSize = 128;
-    string expectTilingData = "1201 64 253952 256 0 1 35 1 128 1 128 256 128 128 2 4 1 4 128 64 32 2 4 1 4 1 32 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "1201 64 253952 256 0 1 35 1 128 0 1 128 256 128 128 2 4 1 4 128 64 32 2 4 1 4 1 32 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_fp8e4m3_one_row) {
@@ -368,9 +380,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_fp8e4m
     string roundMode = "rint";
     int64_t rowBlockSize = 1;
     int64_t colBlockSize = 128;
-    string expectTilingData = "1211 64 253952 256 0 1 36 1 128 1 128 256 128 128 2 4 1 4 128 64 32 2 4 1 4 1 32 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "1211 64 253952 256 0 1 36 1 128 0 1 128 256 128 128 2 4 1 4 128 64 32 2 4 1 4 1 32 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_hifloat8_one_row) {
@@ -380,9 +393,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_hifloa
     string roundMode = "round";
     int64_t rowBlockSize = 1;
     int64_t colBlockSize = 128;
-    string expectTilingData = "4221 64 253952 256 0 4 34 1 128 1 128 256 128 128 2 4 1 4 128 64 32 2 4 1 4 1 32 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "4221 64 253952 256 0 4 34 1 128 0 1 128 256 128 128 2 4 1 4 128 64 32 2 4 1 4 1 32 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_fp8e5m2_unsupport_round_mode) {
@@ -392,9 +406,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_fp8e5m2
     string roundMode = "round";
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
-    string expectTilingData = "64 45 0 0 0 0 0 0 4 137438953512 32 0 0 0 0 204 152 4 2 1 1 4 44 0 128 64 0 0 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "64 45 0 0 0 0 0 0 4 0 137438953512 32 0 0 0 0 204 152 4 2 1 1 4 44 0 128 64 0 0 0 0 ";
 
-    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData,
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData,
                     ge::GRAPH_FAILED);
 }
 
@@ -405,9 +420,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_hifloat
     string roundMode = "rint";
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
-    string expectTilingData = "64 45 0 0 0 0 0 0 4 137438953512 32 0 0 0 0 204 152 4 2 1 1 4 44 0 128 64 0 0 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "64 45 0 0 0 0 0 0 4 0 137438953512 32 0 0 0 0 204 152 4 2 1 1 4 44 0 128 64 0 0 0 0 ";
 
-    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_HIFLOAT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData,
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_HIFLOAT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData,
                     ge::GRAPH_FAILED);
 }
 
@@ -418,9 +434,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_fp8e5m2
     string roundMode = "rint";
     int64_t rowBlockSize = 2;
     int64_t colBlockSize = 128;
-    string expectTilingData = "64 45 0 0 0 0 0 0 4 137438953512 32 0 0 0 0 204 152 4 2 1 1 4 44 0 128 64 0 0 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "64 45 0 0 0 0 0 0 4 0 137438953512 32 0 0 0 0 204 152 4 2 1 1 4 44 0 128 64 0 0 0 0 ";
 
-    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData,
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData,
                     ge::GRAPH_FAILED);
 }
 
@@ -431,9 +448,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_fp8e5m2
     string roundMode = "rint";
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 2;
-    string expectTilingData = "64 45 0 0 0 0 0 0 4 137438953512 32 0 0 0 0 204 152 4 2 1 1 4 44 0 128 64 0 0 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "64 45 0 0 0 0 0 0 4 0 137438953512 32 0 0 0 0 204 152 4 2 1 1 4 44 0 128 64 0 0 0 0 ";
 
-    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData,
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData,
                     ge::GRAPH_FAILED);
 }
 
@@ -444,9 +462,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_unsupport_input
     string roundMode = "rint";
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
-    string expectTilingData = "64 45 0 0 0 0 0 0 4 137438953512 32 0 0 0 0 204 152 4 2 1 1 4 44 0 128 64 0 0 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "64 45 0 0 0 0 0 0 4 0 137438953512 32 0 0 0 0 204 152 4 2 1 1 4 44 0 128 64 0 0 0 0 ";
 
-    ExecuteTestCase(ge::DT_FLOAT, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData,
+    ExecuteTestCase(ge::DT_FLOAT, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData,
                     ge::GRAPH_FAILED);
 }
 
@@ -457,9 +476,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_unsupport_outpu
     string roundMode = "rint";
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
-    string expectTilingData = "64 45 0 0 0 0 0 0 4 137438953512 32 0 0 0 0 204 152 4 2 1 1 4 44 0 128 64 0 0 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "64 45 0 0 0 0 0 0 4 0 137438953512 32 0 0 0 0 204 152 4 2 1 1 4 44 0 128 64 0 0 0 0 ";
 
-    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData,
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData,
                     ge::GRAPH_FAILED);
 }
 
@@ -470,9 +490,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_unsupport_dim_n
     string roundMode = "rint";
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
-    string expectTilingData = "64 45 0 0 0 0 0 0 4 137438953512 32 0 0 0 0 204 152 4 2 1 1 4 44 0 128 64 0 0 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "64 45 0 0 0 0 0 0 4 0 137438953512 32 0 0 0 0 204 152 4 2 1 1 4 44 0 128 64 0 0 0 0 ";
 
-    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData,
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData,
                     ge::GRAPH_FAILED);
 }
 
@@ -483,9 +504,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_unsupport_min_s
     string roundMode = "rint";
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
-    string expectTilingData = "64 45 0 0 0 0 0 0 4 137438953512 32 0 0 0 0 204 152 4 2 1 1 4 44 0 128 64 0 0 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "64 45 0 0 0 0 0 0 4 0 137438953512 32 0 0 0 0 204 152 4 2 1 1 4 44 0 128 64 0 0 0 0 ";
 
-    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData,
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData,
                     ge::GRAPH_FAILED);
 }
 
@@ -496,9 +518,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_unsuppo
     string roundMode = "rint";
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
-    string expectTilingData = "1100 64 253952 256 0 1 35 128 128 128 256 1 2 1 1 128 128 2 1 2 1 1 1 1 1 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "1100 64 253952 256 0 1 35 128 128 0 128 256 1 2 1 1 128 128 2 1 2 1 1 1 1 1 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax,
                     expectTilingData, ge::GRAPH_FAILED);
 }
 
@@ -509,9 +532,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_1) {
     string roundMode = "rint";
     int64_t rowBlockSize = 1;
     int64_t colBlockSize = 128;
-    string expectTilingData = "10 48 196352 0 0 1 2 1 128 0 40 256 0 0 0 0 0 0 0 48 0 0 0 0 0 0 0 0 0 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "10 48 196352 0 0 1 2 1 128 0 0 40 256 0 0 0 0 0 0 0 48 0 0 0 0 0 0 0 0 0 0 0 ";
 
-    ExecuteTestCaseA2(ge::DT_BF16, ge::DT_INT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCaseA2(ge::DT_BF16, ge::DT_INT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_fploat16_1) {
@@ -521,9 +545,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_fploat16_1) {
     string roundMode = "rint";
     int64_t rowBlockSize = 1;
     int64_t colBlockSize = 128;
-    string expectTilingData = "0 48 196352 0 0 1 2 1 128 0 40 256 0 0 0 0 0 0 0 48 0 0 0 0 0 0 0 0 0 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "0 48 196352 0 0 1 2 1 128 0 0 40 256 0 0 0 0 0 0 0 48 0 0 0 0 0 0 0 0 0 0 0 ";
 
-    ExecuteTestCaseA2(ge::DT_FLOAT16, ge::DT_INT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCaseA2(ge::DT_FLOAT16, ge::DT_INT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_fp8e5m2_largeShape) {
@@ -533,9 +558,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_fp8e5m2
     string roundMode = "rint";
     int64_t rowBlockSize = 256;
     int64_t colBlockSize = 192;
-    string expectTilingData = "1102 64 253952 256 0 1 35 256 192 1 851 312 4 4 2 1 1 256 192 8 4 2 1 1 1 1 4 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "1102 64 253952 256 0 1 35 256 192 0 1 851 312 4 4 2 1 1 256 192 8 4 2 1 1 1 1 4 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_fp8e4m3_largeShape) {
@@ -545,9 +571,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_fp8e4m3
     string roundMode = "rint";
     int64_t rowBlockSize = 256;
     int64_t colBlockSize = 192;
-    string expectTilingData = "1112 64 253952 256 0 1 36 256 192 1 851 312 4 4 2 1 1 256 192 8 4 2 1 1 1 1 4 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "1112 64 253952 256 0 1 36 256 192 0 1 851 312 4 4 2 1 1 256 192 8 4 2 1 1 1 1 4 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_hifloat8_largeShape) {
@@ -557,9 +584,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_hifloat
     string roundMode = "round";
     int64_t rowBlockSize = 256;
     int64_t colBlockSize = 192;
-    string expectTilingData = "4122 64 253952 256 0 4 34 256 192 1 851 312 4 4 2 1 1 256 192 8 4 2 1 1 1 1 4 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "4122 64 253952 256 0 4 34 256 192 0 1 851 312 4 4 2 1 1 256 192 8 4 2 1 1 1 1 4 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_HIFLOAT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_HIFLOAT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_fp8e5m2_largeShape) {
@@ -569,9 +597,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_fp8e5m
     string roundMode = "rint";
     int64_t rowBlockSize = 256;
     int64_t colBlockSize = 192;
-    string expectTilingData = "1202 64 253952 256 0 1 35 256 192 1 851 312 4 4 2 1 1 256 192 8 4 2 1 1 1 1 4 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "1202 64 253952 256 0 1 35 256 192 0 1 851 312 4 4 2 1 1 256 192 8 4 2 1 1 1 1 4 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E5M2, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_fp8e4m3_largeShape) {
@@ -581,9 +610,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_fp8e4m
     string roundMode = "rint";
     int64_t rowBlockSize = 256;
     int64_t colBlockSize = 192;
-    string expectTilingData = "1212 64 253952 256 0 1 36 256 192 1 851 312 4 4 2 1 1 256 192 8 4 2 1 1 1 1 4 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "1212 64 253952 256 0 1 36 256 192 0 1 851 312 4 4 2 1 1 256 192 8 4 2 1 1 1 1 4 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_hifloat8_largeShape) {
@@ -593,9 +623,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_hifloa
     string roundMode = "round";
     int64_t rowBlockSize = 256;
     int64_t colBlockSize = 192;
-    string expectTilingData = "4222 64 253952 256 0 4 34 256 192 1 851 312 4 4 2 1 1 256 192 8 4 2 1 1 1 1 4 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "4222 64 253952 256 0 4 34 256 192 0 1 851 312 4 4 2 1 1 256 192 8 4 2 1 1 1 1 4 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_3D_bfloat16_single_row) {
@@ -605,9 +636,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_3D_bfloat16_sin
     string roundMode = "rint";
     int64_t rowBlockSize = 1;
     int64_t colBlockSize = 128;
-    string expectTilingData = "10 48 196352 0 0 1 2 1 128 0 80 256 0 0 0 0 0 0 0 48 0 0 0 0 0 0 0 0 0 0 1 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "10 48 196352 0 0 1 2 1 128 0 0 80 256 0 0 0 0 0 0 0 48 0 0 0 0 0 0 0 0 0 0 1 ";
 
-    ExecuteTestCaseA2(ge::DT_BF16, ge::DT_INT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCaseA2(ge::DT_BF16, ge::DT_INT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 
@@ -618,9 +650,10 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_3D_bfloat16_fp8
     string roundMode = "rint";
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
-    string expectTilingData = "1210 64 253952 256 0 1 36 128 128 2 128 256 1 2 2 1 1 128 128 4 2 2 1 1 1 1 2 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "1210 64 253952 256 0 1 36 128 128 0 2 128 256 1 2 2 1 1 128 128 4 2 2 1 1 1 1 2 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_3D_bfloat16_hifloat8_largeBlock) {
@@ -630,7 +663,8 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_3D_bfloat16_hif
     string roundMode = "round";
     int64_t rowBlockSize = 256;
     int64_t colBlockSize = 192;
-    string expectTilingData = "4222 64 253952 256 0 4 34 256 192 2 851 312 4 8 2 1 1 256 192 16 8 2 1 1 1 1 8 2 0 0 ";
+    float dstTypeMax = 0.0;
+    string expectTilingData = "4222 64 253952 256 0 4 34 256 192 0 2 851 312 4 8 2 1 1 256 192 16 8 2 1 1 1 1 8 2 0 0 ";
 
-    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }

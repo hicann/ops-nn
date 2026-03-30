@@ -72,7 +72,7 @@ private:
     int64_t groupBlockNumTailCore_ = 0;
     float fp8MaxExpValue_ = 0.0f;
 
-    uint16_t infValue_ = 0;
+    uint32_t infValue_ = 0;
     constexpr static int64_t DB_BUFFER = 2;
     constexpr static int64_t DIGIT_ONE = 1;
 
@@ -81,6 +81,7 @@ private:
     constexpr static float HIFP8_MAX_VALUE = 32768.0f;
 
     constexpr static uint16_t MAX_EXP_FOR_BF16 = 0x7fff;
+    constexpr static uint32_t FP32_INF_VALUE = 0x7f800000;
     constexpr static uint16_t FP16_INF_VALUE = 0x7c00;
     constexpr static uint16_t BF16_INF_VALUE = 0x7f80;
 
@@ -169,13 +170,7 @@ __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::Init(
     } else if constexpr (IsSameType<U, hifloat8_t>::value) {
         fp8MaxExpValue_ = HIFP8_MAX_VALUE;
     }
-
-    if constexpr (IsSameType<T, half>::value) {
-        infValue_ = FP16_INF_VALUE;
-    } else {
-        infValue_ = BF16_INF_VALUE;
-    }
-
+    infValue_ = FP32_INF_VALUE;
     this->xGm_.SetGlobalBuffer((__gm__ T*)(x));
     this->groupListGm_.SetGlobalBuffer((__gm__ int32_t*)(groupList));
     this->yOutGm_.SetGlobalBuffer((__gm__ U*)(yOut));
@@ -323,7 +318,6 @@ __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ComputeX
 
         AscendC::MicroAPI::Duplicate((AscendC::MicroAPI::RegTensor<uint16_t>&)vreg2, MAX_EXP_FOR_BF16);
         AscendC::MicroAPI::MaskReg preg0;
-        AscendC::MicroAPI::MaskReg preg2;
         AscendC::MicroAPI::MaskReg maskAll =
             AscendC::MicroAPI::CreateMask<uint16_t, AscendC::MicroAPI::MaskPattern::ALL>();
 
@@ -335,10 +329,8 @@ __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ComputeX
             AscendC::MicroAPI::And(
                 (AscendC::MicroAPI::RegTensor<uint16_t>&)vreg3, (AscendC::MicroAPI::RegTensor<uint16_t>&)vreg1,
                 (AscendC::MicroAPI::RegTensor<uint16_t>&)vreg2, preg0);
-            AscendC::MicroAPI::CompareScalar<uint16_t, CMPMODE::LT>(
-                preg2, (AscendC::MicroAPI::RegTensor<uint16_t>&)vreg3, infValue_, preg0);
             AscendC::MicroAPI::Max<T, AscendC::MicroAPI::MaskMergeMode::MERGING>(
-                vLocalTmpMaxReg, vLocalTmpMaxReg, vreg3, preg2);
+                vLocalTmpMaxReg, vLocalTmpMaxReg, vreg3, preg0);
         }
         AscendC::MicroAPI::DataCopy(xLocalMaxTmp, vLocalTmpMaxReg, maskAll);
     }
@@ -361,6 +353,7 @@ __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ComputeS
         AscendC::MicroAPI::RegTensor<float> vreg6;
 
         AscendC::MicroAPI::MaskReg preg0;
+        AscendC::MicroAPI::MaskReg scaleMaskReg;
 
         preg0 = AscendC::MicroAPI::UpdateMask<T>(scaleNum);
 
@@ -373,10 +366,12 @@ __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ComputeS
         AscendC::MicroAPI::Cast<float, T, castTraitT2Float>(vreg2, vreg1, preg0);
 
         AscendC::MicroAPI::Div<float, &mode>(vreg5, vreg2, vreg3, preg0);
-        AscendC::MicroAPI::Min(vreg6, vreg5, reciprocalScale, preg0);
+        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(scaleMaskReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)vreg5, infValue_, preg0);
+        // Min(input_max / FP_MAX, 1 / minScale)
+        AscendC::MicroAPI::Min<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vreg5, vreg5, reciprocalScale, scaleMaskReg);
 
         AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-            scaleLocalTmp, vreg6, preg0);
+            scaleLocalTmp, vreg5, preg0);
     }
 }
 
@@ -411,11 +406,7 @@ __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ComputeO
             AscendC::MicroAPI::Cast<float, T, castTraitT2Float>(vreg4, vreg1, preg0);
             AscendC::MicroAPI::Div<float, &mode>(vreg5, vreg4, vreg2, preg0);
 
-            AscendC::MicroAPI::Muls(vreg3, vreg4, 0.0f, preg0);
-            AscendC::MicroAPI::Compare<float, CMPMODE::NE>(preg1, vreg3, vreg3, preg0);
-            AscendC::MicroAPI::Select(vreg7, vreg4, vreg5, preg1);
-
-            AscendC::MicroAPI::Cast<U, float, castTrait32to8>(outReg, vreg7, preg0);
+            AscendC::MicroAPI::Cast<U, float, castTrait32to8>(outReg, vreg5, preg0);
 
             MicroAPI::DataCopy<U, MicroAPI::StoreDist::DIST_PACK4_B32>(outLocal + i * VL, outReg, preg0);
         }

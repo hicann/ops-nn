@@ -106,6 +106,7 @@
 | [aclnnDynamicMxQuant](../../quant/dynamic_mx_quant/docs/aclnnDynamicMxQuant.md) | 目的数据类型为FLOAT4类、FLOAT8类的MX量化。在给定的轴axis上，根据每blocksize个数，计算出这组数对应的量化尺度mxscale作为输出mxscaleOut的对应部分，然后对这组数每一个除以mxscale，根据round_mode转换到对应的dstType，得到量化结果y作为输出yOut的对应部分。在dstType为FLOAT8_E4M3FN、FLOAT8_E5M2时，根据scaleAlg的取值来指定计算mxscale的不同算法。 | - |  |
 | [aclnnDynamicBlockMxQuant](../../quant/dynamic_block_mx_quant/docs/aclnnDynamicBlockMxQuant.md) | 对输入变量，以数据块（32\*32）为基本块进行MX量化转换为目的数据类型。在每个基本块中，根据scale_alg的取值采取不同的scale算法计算出当前块对应的量化参数scale（1\*1），将其广播为scale1（32\*1）和scale2（1\*32）输出。同时对基本块中的每一个数除以scale，根据round_mode转换到对应的dst_type，得到量化结果y | - | 默认确定性实现 |
 | [aclnnDynamicBlockQuant](../../quant/dynamic_block_quant/docs/aclnnDynamicBlockQuant.md) | 对输入张量，通过给定的rowBlockSize和colBlockSize将输入划分成多个数据块，以数据块为基本粒度进行量化。在每个块中，先计算出当前块对应的量化参数scaleOut，并根据scaleOut对输入进行量化。输出最终的量化结果，以及每个块的量化参数scaleOut。 | 默认确定性实现 |   |
+| [aclnnDynamicBlockQuantV2](../../quant/dynamic_block_quant/docs/aclnnDynamicBlockQuantV2.md)|对输入张量，通过给定的rowBlockSize和colBlockSize将输入划分成多个数据块，以数据块为基本粒度进行量化。在每个块中，先计算出当前块对应的量化参数scaleOut，并根据scaleOut对输入进行量化。输出最终的量化结果，以及每个块的量化参数scaleOut。在目标数据类型为HIFLOAT8时，可以根据dstTypeMax设置目标数据类型的最大值。| 默认确定性实现 | 默认确定性实现 |
 | [aclnnDynamicQuant](../../quant/dynamic_quant/docs/aclnnDynamicQuant.md) | 对输入张量进行per-token对称动态量化。 | 默认确定性实现 |   |
 | [aclnnDynamicQuantV2](../../quant/dynamic_quant_v2/docs/aclnnDynamicQuantV2.md) | 为输入张量进行per-token对称/非对称动态量化。 | 默认确定性实现 |   |
 | [aclnnDynamicQuantV3](../../quant/dynamic_quant/docs/aclnnDynamicQuantV3.md) | 为输入张量进行动态量化。 | 默认确定性实现 |   |

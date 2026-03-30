@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file test_dynamic_block_quant.cpp
+ * \file test_dynamic_block_quant_apt.cpp
  * \brief
  */
 
@@ -71,6 +71,7 @@ TEST_F(dynamic_block_quant_test, test_case_half_001) {
     tilingDatafromBin->dstType = 35;
     tilingDatafromBin->blockSizeRow = 128;
     tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->dstTypeMax = 0.0;
     tilingDatafromBin->rowNum = 128;
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
@@ -128,6 +129,7 @@ TEST_F(dynamic_block_quant_test, test_case_half_002) {
     tilingDatafromBin->dstType = 36;
     tilingDatafromBin->blockSizeRow = 128;
     tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->dstTypeMax = 0.0;
     tilingDatafromBin->rowNum = 128;
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
@@ -185,6 +187,7 @@ TEST_F(dynamic_block_quant_test, test_case_half_003) {
     tilingDatafromBin->dstType = 34;
     tilingDatafromBin->blockSizeRow = 128;
     tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->dstTypeMax = 0.0;
     tilingDatafromBin->rowNum = 128;
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
@@ -242,6 +245,7 @@ TEST_F(dynamic_block_quant_test, test_case_half_004) {
     tilingDatafromBin->dstType = 34;
     tilingDatafromBin->blockSizeRow = 128;
     tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->dstTypeMax = 0.0;
     tilingDatafromBin->rowNum = 128;
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
@@ -299,6 +303,7 @@ TEST_F(dynamic_block_quant_test, test_case_bfloat_001) {
     tilingDatafromBin->dstType = 35;
     tilingDatafromBin->blockSizeRow = 128;
     tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->dstTypeMax = 0.0;
     tilingDatafromBin->rowNum = 128;
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
@@ -356,6 +361,7 @@ TEST_F(dynamic_block_quant_test, test_case_bfloat_002) {
     tilingDatafromBin->dstType = 36;
     tilingDatafromBin->blockSizeRow = 128;
     tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->dstTypeMax = 0.0;
     tilingDatafromBin->rowNum = 128;
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
@@ -413,6 +419,7 @@ TEST_F(dynamic_block_quant_test, test_case_bfloat_003) {
     tilingDatafromBin->dstType = 34;
     tilingDatafromBin->blockSizeRow = 128;
     tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->dstTypeMax = 0.0;
     tilingDatafromBin->rowNum = 128;
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
@@ -470,6 +477,7 @@ TEST_F(dynamic_block_quant_test, test_case_bfloat_004) {
     tilingDatafromBin->dstType = 34;
     tilingDatafromBin->blockSizeRow = 128;
     tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->dstTypeMax = 0.0;
     tilingDatafromBin->rowNum = 128;
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
@@ -527,6 +535,7 @@ TEST_F(dynamic_block_quant_test, test_case_one_row_half_001) {
     tilingDatafromBin->dstType = 35;
     tilingDatafromBin->blockSizeRow = 1;
     tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->dstTypeMax = 0.0;
     tilingDatafromBin->rowNum = 1;
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
@@ -584,6 +593,7 @@ TEST_F(dynamic_block_quant_test, test_case_one_row_half_002) {
     tilingDatafromBin->dstType = 36;
     tilingDatafromBin->blockSizeRow = 1;
     tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->dstTypeMax = 0.0;
     tilingDatafromBin->rowNum = 128;
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
@@ -641,6 +651,7 @@ TEST_F(dynamic_block_quant_test, test_case_one_row_half_003) {
     tilingDatafromBin->dstType = 34;
     tilingDatafromBin->blockSizeRow = 1;
     tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->dstTypeMax = 0.0;
     tilingDatafromBin->rowNum = 1;
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
@@ -698,6 +709,7 @@ TEST_F(dynamic_block_quant_test, test_case_one_row_half_004) {
     tilingDatafromBin->dstType = 34;
     tilingDatafromBin->blockSizeRow = 1;
     tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->dstTypeMax = 0.0;
     tilingDatafromBin->rowNum = 1;
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
@@ -755,6 +767,7 @@ TEST_F(dynamic_block_quant_test, test_case_one_row_bfloat_001) {
     tilingDatafromBin->dstType = 35;
     tilingDatafromBin->blockSizeRow = 1;
     tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->dstTypeMax = 0.0;
     tilingDatafromBin->rowNum = 1;
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
@@ -812,6 +825,7 @@ TEST_F(dynamic_block_quant_test, test_case_one_row_bfloat_002) {
     tilingDatafromBin->dstType = 36;
     tilingDatafromBin->blockSizeRow = 1;
     tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->dstTypeMax = 0.0;
     tilingDatafromBin->rowNum = 1;
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
@@ -869,6 +883,7 @@ TEST_F(dynamic_block_quant_test, test_case_one_row_bfloat_003) {
     tilingDatafromBin->dstType = 34;
     tilingDatafromBin->blockSizeRow = 1;
     tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->dstTypeMax = 0.0;
     tilingDatafromBin->rowNum = 1;
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
@@ -926,6 +941,7 @@ TEST_F(dynamic_block_quant_test, test_case_one_row_bfloat_004) {
     tilingDatafromBin->dstType = 34;
     tilingDatafromBin->blockSizeRow = 1;
     tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->dstTypeMax = 0.0;
     tilingDatafromBin->rowNum = 1;
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
@@ -983,6 +999,7 @@ TEST_F(dynamic_block_quant_test, test_case_large_shape_half_001) {
     tilingDatafromBin->dstType = 35;
     tilingDatafromBin->blockSizeRow = 1;
     tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->dstTypeMax = 0.0;
     tilingDatafromBin->rowNum = 1;
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
@@ -1040,6 +1057,7 @@ TEST_F(dynamic_block_quant_test, test_case_large_shape_half_002) {
     tilingDatafromBin->dstType = 35;
     tilingDatafromBin->blockSizeRow = 1;
     tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->dstTypeMax = 0.0;
     tilingDatafromBin->rowNum = 1;
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
@@ -1097,6 +1115,7 @@ TEST_F(dynamic_block_quant_test, test_case_large_shape_half_003) {
     tilingDatafromBin->dstType = 34;
     tilingDatafromBin->blockSizeRow = 1;
     tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->dstTypeMax = 0.0;
     tilingDatafromBin->rowNum = 1;
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;

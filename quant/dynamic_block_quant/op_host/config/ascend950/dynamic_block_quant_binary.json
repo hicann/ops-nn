@@ -62,6 +62,11 @@
           "name": "col_block_size",
           "dtype": "int",
           "value": null
+        },
+        {
+          "name": "dst_type_max",
+          "dtype": "float",
+          "value": null
         }
       ]
     },
@@ -125,6 +130,11 @@
         {
           "name": "col_block_size",
           "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "dst_type_max",
+          "dtype": "float",
           "value": null
         }
       ]
@@ -190,6 +200,11 @@
           "name": "col_block_size",
           "dtype": "int",
           "value": null
+        },
+        {
+          "name": "dst_type_max",
+          "dtype": "float",
+          "value": null
         }
       ]
     },
@@ -253,6 +268,11 @@
         {
           "name": "col_block_size",
           "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "dst_type_max",
+          "dtype": "float",
           "value": null
         }
       ]
@@ -318,6 +338,11 @@
           "name": "col_block_size",
           "dtype": "int",
           "value": null
+        },
+        {
+          "name": "dst_type_max",
+          "dtype": "float",
+          "value": null
         }
       ]
     },
@@ -381,6 +406,11 @@
         {
           "name": "col_block_size",
           "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "dst_type_max",
+          "dtype": "float",
           "value": null
         }
       ]
