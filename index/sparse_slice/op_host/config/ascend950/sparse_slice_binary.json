@@ -1,0 +1,955 @@
+{
+    "op_type": "SparseSlice",
+    "op_list": [
+        {
+            "bin_filename": "SparseSlice_float32",
+            "inputs": [
+                {
+                    "name": "indices",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "values",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "shape",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "start",
+                    "index": 3,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "size",
+                    "index": 4,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y_indices",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y_values",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y_shape",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ]
+        },
+        {
+            "bin_filename": "SparseSlice_float16",
+            "inputs": [
+                {
+                    "name": "indices",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "values",
+                    "index": 1,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "shape",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "start",
+                    "index": 3,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "size",
+                    "index": 4,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y_indices",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y_value",
+                    "index": 1,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y_shape",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ]
+        },
+        {
+            "bin_filename": "SparseSlice_bfloat16",
+            "inputs": [
+                {
+                    "name": "indices",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "values",
+                    "index": 1,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "shape",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "start",
+                    "index": 3,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "size",
+                    "index": 4,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y_indices",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y_value",
+                    "index": 1,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y_shape",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ]
+        },
+        {
+            "bin_filename": "SparseSlice_uint8",
+            "inputs": [
+                {
+                    "name": "indices",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "values",
+                    "index": 1,
+                    "dtype": "uint8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "shape",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "start",
+                    "index": 3,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "size",
+                    "index": 4,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y_indices",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y_value",
+                    "index": 1,
+                    "dtype": "uint8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y_shape",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ]
+        },
+        {
+            "bin_filename": "SparseSlice_int8",
+            "inputs": [
+                {
+                    "name": "indices",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "values",
+                    "index": 1,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "shape",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "start",
+                    "index": 3,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "size",
+                    "index": 4,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y_indices",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y_value",
+                    "index": 1,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y_shape",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ]
+        },
+        {
+            "bin_filename": "SparseSlice_int16",
+            "inputs": [
+                {
+                    "name": "indices",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "values",
+                    "index": 1,
+                    "dtype": "int16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "shape",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "start",
+                    "index": 3,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "size",
+                    "index": 4,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y_indices",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y_value",
+                    "index": 1,
+                    "dtype": "int16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y_shape",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ]
+        },
+        {
+            "bin_filename": "SparseSlice_int32",
+            "inputs": [
+                {
+                    "name": "indices",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "values",
+                    "index": 1,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "shape",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "start",
+                    "index": 3,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "size",
+                    "index": 4,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y_indices",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y_value",
+                    "index": 1,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y_shape",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ]
+        },
+        {
+            "bin_filename": "SparseSlice_int64",
+            "inputs": [
+                {
+                    "name": "indices",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "values",
+                    "index": 1,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "shape",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "start",
+                    "index": 3,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "size",
+                    "index": 4,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y_indices",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y_value",
+                    "index": 1,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y_shape",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ]
+        },
+        {
+            "bin_filename": "SparseSlice_bool",
+            "inputs": [
+                {
+                    "name": "indices",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "values",
+                    "index": 1,
+                    "dtype": "bool",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "shape",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "start",
+                    "index": 3,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "size",
+                    "index": 4,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y_indices",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y_value",
+                    "index": 1,
+                    "dtype": "bool",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y_shape",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ]
+        },
+        {
+            "bin_filename": "SparseSlice_uint16",
+            "inputs": [
+                {
+                    "name": "indices",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "values",
+                    "index": 1,
+                    "dtype": "uint16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "shape",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "start",
+                    "index": 3,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "size",
+                    "index": 4,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y_indices",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y_value",
+                    "index": 1,
+                    "dtype": "uint16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y_shape",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ]
+        }
+    ]
+}

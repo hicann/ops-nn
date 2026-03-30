@@ -765,8 +765,8 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/leaky_relu/examples/
         - ops/ops-nn/activation/leaky_relu_grad/tests/
         - ops/ops-nn/activation/leaky_relu_grad/examples/
-        - ops/ops-nn/activation/logsigmoid/tests/
-        - ops/ops-nn/activation/logsigmoid/examples/
+        - ops/ops-nn/activation/log_sigmoid/tests/
+        - ops/ops-nn/activation/log_sigmoid/examples/
         - ops/ops-nn/activation/logsigmoid_grad/tests/
         - ops/ops-nn/activation/logsigmoid_grad/examples/
         - ops/ops-nn/activation/logsoftmax_grad/tests/
@@ -777,8 +777,8 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/mish/examples/
         - ops/ops-nn/activation/mish_grad/tests/
         - ops/ops-nn/activation/mish_grad/examples/
-        - ops/ops-nn/activation/prelu/tests/
-        - ops/ops-nn/activation/prelu/examples/
+        - ops/ops-nn/activation/p_relu/tests/
+        - ops/ops-nn/activation/p_relu/examples/
         - ops/ops-nn/activation/prelu_grad_update/tests/
         - ops/ops-nn/activation/prelu_grad_update/examples/
         - ops/ops-nn/activation/relu/tests/
@@ -1292,6 +1292,7 @@ norm-c@ops-nn:
         - ops/ops-nn/norm/sync_batch_norm_backward_reduce/
         - ops/ops-nn/norm/sync_batch_norm_gather_stats/
         - ops/ops-nn/norm/sync_batch_norm_gather_stats_with_counts/
+        - ops/ops-nn/norm/softmax_grad_ext/
       opensource_style: null
       kernel_style: null
     unrelease:
@@ -1684,7 +1685,9 @@ VC1@ops-nn:
         - ops/ops-nn/activation/hardtanh_grad/
         - ops/ops-nn/activation/leaky_relu/
         - ops/ops-nn/activation/leaky_relu_grad/
-        - ops/ops-nn/activation/prelu/
+        - ops/ops-nn/activation/p_relu/
+        - ops/ops-nn/activation/erfinv/
+        - ops/ops-nn/activation/mish/
         - ops/ops-nn/activation/relu/
         - ops/ops-nn/activation/relu_grad/
         - ops/ops-nn/activation/relu_v2/
@@ -1752,6 +1755,7 @@ VC1@ops-nn:
         - ops/ops-nn/quant/quantize/
         - ops/ops-nn/quant/trans_quant_param_v2/op_kernel/trans_quant_param_v2.h
         - ops/ops-nn/index/quant_update_scatter/
+        - ops/ops-nn/index/sparse_slice/
       opensource_style: null
       kernel_style: null
     unrelease:
@@ -1827,6 +1831,7 @@ VC1@ops-nn:
         - ops/ops-nn/quant/quantize/tests/
         - ops/ops-nn/index/quant_update_scatter/examples/
         - ops/ops-nn/index/quant_update_scatter/tests/
+        - ops/ops-nn/index/sparse_slice/tests/
       non_delivery: null
       open_source: null
 

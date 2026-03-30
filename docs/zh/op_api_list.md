@@ -296,7 +296,7 @@
 | [aclnnNLLLossBackward](../../loss/nll_loss_grad/docs/aclnnNLLLossBackward.md) | 负对数似然损失函数的反向传播。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnNonzero](../../index/non_zero/docs/aclnnNonzero.md) | 找出self中非零元素的位置，设self的维度为D，self中非零元素的个数为N，则返回out的shape为D * N，每一列表示一个非零元素的位置坐标。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnNonzeroV2](../../index/non_zero/docs/aclnnNonzeroV2.md) | 找出self中非零元素的位置，设self的维度为D，self中非零元素的个数为N，则返回out的shape为D * N，每一列表示一个非零元素的位置坐标。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnPrelu](../../activation/prelu/docs/aclnnPrelu.md) | 激活函数，Tensor中value大于0，取该value，小于0时取权重与value的乘积。 | 默认确定性实现 |   |
+| [aclnnPrelu](../../activation/p_relu/docs/aclnnPrelu.md) | 激活函数，Tensor中value大于0，取该value，小于0时取权重与value的乘积。 | 默认确定性实现 |   |
 | [aclnnPreluBackward](../../activation/p_relu_grad_update/docs/aclnnPreluBackward.md) | 完成aclnnPreluBackward的反向函数。 | 默认确定性实现 |   |
 | [aclnnQuantConvolution](../../conv/convolution_forward/docs/aclnnQuantConvolution.md) | 完成per-channel量化的2D/3D卷积计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnQuantConvolutionWeightNz](../../conv/convolution_forward/docs/aclnnQuantConvolutionWeightNz.md) | 完成 per-channel 量化的 3D 卷积计算，weight仅支持FRACTAL_Z_3D格式。 | 默认确定性实现 |   |

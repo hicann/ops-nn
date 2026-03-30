@@ -7,8 +7,8 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef PTA_NPU_OP_API_INC_LEVEL0_OP_MISH_OP_H_
-#define PTA_NPU_OP_API_INC_LEVEL0_OP_MISH_OP_H_
+#ifndef OPS_NN_ACTIVATION_MISH_OP_API_H
+#define OPS_NN_ACTIVATION_MISH_OP_API_H
 
 #include "opdev/op_executor.h"
 
@@ -16,4 +16,4 @@ namespace l0op {
 const aclTensor* Mish(const aclTensor* self, aclOpExecutor* executor);
 }
 
-#endif  // PTA_NPU_OP_API_INC_LEVEL0_OP_MISH_OP_H_
+#endif  // OPS_NN_ACTIVATION_MISH_OP_API_H

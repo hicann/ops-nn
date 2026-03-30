@@ -4,35 +4,37 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef OPS_BUILD_IN_OP_TILING_RUNTIME_MISH_REGBASE_OPTILING
-#define OPS_BUILD_IN_OP_TILING_RUNTIME_MISH_REGBASE_OPTILING
+#ifndef OPS_NN_ACTIVATION_MISH_TILING_ARCH35_H
+#define OPS_NN_ACTIVATION_MISH_TILING_ARCH35_H
 
 #include "register/tilingdata_base.h"
 #include "op_host/tiling_base.h"
 #include "atvoss/elewise/elewise_tiling.h"
 
 namespace optiling {
-    struct MishCompileInfo {
-        uint64_t coreNum = 0;
-        uint64_t ubSize = 0;
-    };
-    
-    class MishTiling {
-    public:
-        explicit MishTiling(gert::TilingContext* context) : tilingContext(context) {};
-        ge::graphStatus RunTiling();
-    protected:
-        ge::graphStatus CalcOutputDtype();
-        ge::graphStatus CalcInputDtype();
-        ge::graphStatus CheckShape();
-    private:
-        gert::TilingContext* tilingContext;
-        ge::DataType outputDtype = ge::DT_UNDEFINED;
-        ge::DataType inputDtype = ge::DT_UNDEFINED;
-        uint64_t dType = 0;
-    };
+struct MishCompileInfo {
+    uint64_t coreNum = 0;
+    uint64_t ubSize = 0;
+};
+
+class MishTiling {
+public:
+    explicit MishTiling(gert::TilingContext* context) : tilingContext(context){};
+    ge::graphStatus RunTiling();
+
+protected:
+    ge::graphStatus CalcOutputDtype();
+    ge::graphStatus CalcInputDtype();
+    ge::graphStatus CheckShape();
+
+private:
+    gert::TilingContext* tilingContext = nullptr;
+    ge::DataType outputDtype = ge::DT_UNDEFINED;
+    ge::DataType inputDtype = ge::DT_UNDEFINED;
+    uint64_t dType = 0;
+};
 } // namespace optiling
-#endif  // OPS_BUILD_IN_OP_TILING_RUNTIME_MISH_TILING_H
+#endif // OPS_NN_ACTIVATION_MISH_TILING_ARCH35_H

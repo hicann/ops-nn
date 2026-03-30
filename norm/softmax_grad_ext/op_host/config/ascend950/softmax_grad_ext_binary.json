@@ -1,0 +1,194 @@
+{
+    "op_type": "SoftmaxGradExt",
+    "op_list": [
+        {
+            "bin_filename": "SoftmaxGradExt_float16",
+            "inputs": [
+                {
+                    "name": "grad",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "x1",
+                    "index": 1,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "x2",
+                    "index": 2,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "axes",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "keep_dims",
+                    "dtype": "bool",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "SoftmaxGradExt_float32",
+            "inputs": [
+                {
+                    "name": "grad",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "x1",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "x2",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "axes",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "keep_dims",
+                    "dtype": "bool",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "SoftmaxGradExt_bfloat16",
+            "inputs": [
+                {
+                    "name": "grad",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "x1",
+                    "index": 1,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "x2",
+                    "index": 2,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "axes",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "keep_dims",
+                    "dtype": "bool",
+                    "value": null
+                }
+            ]
+        }
+    ]
+}

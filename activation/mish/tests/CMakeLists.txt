@@ -9,7 +9,6 @@
 # ----------------------------------------------------------------------------
 
  file(GLOB CURRENT_SOURCE_DIRS LIST_DIRECTORIES true ${CMAKE_CURRENT_SOURCE_DIR}/*)
- message(STATUS "=== Debug: CURRENT_SOURCE_DIRS =${CURRENT_SOURCE_DIRS} ")
  foreach(SUB_DIR ${CURRENT_SOURCE_DIRS})
      if(EXISTS "${SUB_DIR}/CMakeLists.txt")
          add_subdirectory(${SUB_DIR})

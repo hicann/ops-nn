@@ -77,12 +77,12 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/erfinv/README.md">erfinv</a></td>
-    <td>✗</td>
+    <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>高斯误差函数erf的反函数。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -337,12 +337,12 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/mish/README.md">mish</a></td>
-    <td>✗</td>
+    <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>一个自正则化的非单调神经网络激活函数。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -356,13 +356,13 @@
   </tr>
   <tr>
     <td>activation</td>
-    <td><a href="../../activation/prelu/README.md">prelu</a></td>
-    <td>✗</td>
+    <td><a href="../../activation/p_relu/README.md">p_relu</a></td>
+    <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>一种激活函数，当Tensor中value大于0，取该value，小于0时取权重与value的乘积。</td>
   </tr>
   <tr>
     <td>activation</td>

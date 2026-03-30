@@ -13,12 +13,14 @@
 #include <graph/utils/type_utils.h>
 #include "register/tilingdata_base.h"
 #include "register/op_impl_registry.h"
-#include "../op_kernel/arch35/mish_dag.h"
-#include "../op_kernel/arch35/mish_struct.h"
+#include "activation/mish/op_kernel/arch35/mish_dag.h"
+#include "activation/mish/op_kernel/arch35/mish_struct.h"
 #include "op_host/tiling_util.h"
 #include <iostream>
 
 using namespace ge;
+using namespace Ops::Base;
+using namespace MishDag1;
 
 namespace optiling
 {
