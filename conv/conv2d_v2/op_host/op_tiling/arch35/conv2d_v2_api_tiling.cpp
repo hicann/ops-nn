@@ -1040,7 +1040,7 @@ bool Conv2dTiling::CheckL1SizeLimitsKernelFullLoad(bool isC04)
 
     uint64_t minL1LoadSize = biasUsedL1Size + scaleUsedL1Size + fmapUsedL1Size + weightUsedL1Size;
     if (minL1LoadSize > platformInfo.l1Size) {
-        OP_LOGE(nodeType, "KernelSplitMinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
+        OP_LOGD(nodeType, "KernelSplitMinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
             minL1LoadSize, platformInfo.l1Size);
         return false;
     }
@@ -1088,7 +1088,7 @@ bool Conv2dTiling::CheckL1SizeLimit()
     minAL1Size = minHiAL1 * shapeInfo.orgWi * cubeInfo.k0 * fMapDtypeSize * innerBatch;
     uint64_t minL1LoadSize = minAL1Size + minBL1Size + minBiasSize + minScaleSize;
     if (minL1LoadSize > platformInfo.l1Size) {
-        OP_LOGE(nodeType, "CheckL1SizeLimit, minimum L1 size: %lu, maxL1Size: %lu",
+        OP_LOGD(nodeType, "CheckL1SizeLimit, minimum L1 size: %lu, maxL1Size: %lu",
             minL1LoadSize, platformInfo.l1Size);
         return false;
     }
