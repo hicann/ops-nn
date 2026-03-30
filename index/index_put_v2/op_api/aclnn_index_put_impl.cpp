@@ -922,7 +922,7 @@ static const aclTensor* IndexPutV2Process(const aclTensor* selfCast, const aclTe
     return indexPutOpOut;
 }
 
-static const aclTensor* DeterministicProcess(const aclTensor* selfCast, const aclTensor* valuesCast,
+static const aclTensor* SortedIndexPutProcess(const aclTensor* selfCast, const aclTensor* valuesCast,
                                              const aclTensorList* indices,
                                              const bool accumulate, const FVector<int64_t, 8> masks, int64_t masksNum,
                                              aclOpExecutor* executor)
@@ -981,17 +981,18 @@ static const aclTensor* IndexPutProcessArch3510(aclTensor* selfRef, const aclTen
                                               const aclTensorList* indices,
                                               const FVector<const aclTensor*, 8>& allDefinedIndices,
                                               const bool accumulate, FVector<int64_t, 8> masks, int64_t masksNum, const bool isSupportAiCpu,
-                                              const bool isNonContiguous, aclOpExecutor* executor)
+                                              const bool isNonContiguous, const bool useSortedV2Opt, aclOpExecutor* executor)
 {
     int64_t deterministicValue = 0;
     rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
     if (retRts != RT_ERROR_NONE) {
         deterministicValue = 0;
     }
+    const aclTensor* indexPutOpOut = nullptr;
     if (isSupportAiCpu) {
         OP_LOGD("Enter Aicpu Process");
-        return AicpuProcess(selfRef, selfCast, valuesCast, allDefinedIndices, accumulate, masks, masksNum,
-                            executor);
+        indexPutOpOut =
+            AicpuProcess(selfRef, selfCast, valuesCast, allDefinedIndices, accumulate, masks, masksNum, executor);
     } else {
         while (masks.size() < selfRef->GetViewShape().GetDimNum()) {
             masks.emplace_back(0);
@@ -999,16 +1000,24 @@ static const aclTensor* IndexPutProcessArch3510(aclTensor* selfRef, const aclTen
         for (int i = 0; i < static_cast<int>(masks.size()); i++) {
             OP_LOGD("Process arch3510 masks %d is %ld.", i, masks[i]);
         }
-        if (deterministicValue == 0) {
+        if (deterministicValue == 0 && useSortedV2Opt) {
+            OP_LOGD("Enter IndexPutWithSortV2 Process");
+            indexPutOpOut = SortedIndexPutProcess(
+                selfCast, valuesCast, indices, accumulate, masks, selfRef->GetViewShape().GetDimNum(), executor);
+        } else if (deterministicValue == 0 && !useSortedV2Opt) {
             OP_LOGD("Enter IndexPutV2 Process");
-            return IndexPutV2Process(selfCast, valuesCast, indices, accumulate, masks, selfRef->GetViewShape().GetDimNum(), 
-                                      isNonContiguous, allDefinedIndices, executor);
-        } else {
+            indexPutOpOut = IndexPutV2Process(
+                selfCast, valuesCast, indices, accumulate, masks, selfRef->GetViewShape().GetDimNum(), isNonContiguous,
+                allDefinedIndices, executor);
+        } else if (deterministicValue == 1 && !useSortedV2Opt) {
             OP_LOGD("Enter Deterministic Process");
-            return DeterministicProcess(selfCast, valuesCast, indices, accumulate, masks,
-                                        selfRef->GetViewShape().GetDimNum(), executor);
+            indexPutOpOut = SortedIndexPutProcess(
+                selfCast, valuesCast, indices, accumulate, masks, selfRef->GetViewShape().GetDimNum(), executor);
         }
     }
+
+    CHECK_RET(indexPutOpOut != nullptr, nullptr);
+    return indexPutOpOut;
 }
 
 static bool IsStridesAllZero(const aclTensor* tensor)
@@ -1228,12 +1237,11 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
       if (retRts != RT_ERROR_NONE) {
           deterministicValue = 0;
       }
-      bool disDeterministicHighPrecision =
-          accumulate && deterministicValue == 0 &&
+      const bool useSortedV2Opt = l0op::IsUseSortedV2OptScene(isAiCpu, selfRef, indices, values, deterministicValue, accumulate, isNonContiguous);
+      const bool disDeterministicHighPrecision = accumulate && deterministicValue == 0 && !useSortedV2Opt &&
           (selfRef->GetDataType() == op::DataType::DT_FLOAT16 || selfRef->GetDataType() == op::DataType::DT_BF16 ||
            selfRef->GetDataType() == op::DataType::DT_INT8 || selfRef->GetDataType() == op::DataType::DT_UINT8);
-      bool DeterministicHighPrecision =
-          accumulate && deterministicValue == 1 &&
+      const bool DeterministicHighPrecision = accumulate && deterministicValue == 1 && !useSortedV2Opt &&
           (selfRef->GetDataType() == op::DataType::DT_FLOAT16 || selfRef->GetDataType() == op::DataType::DT_BF16);
       if (disDeterministicHighPrecision || DeterministicHighPrecision) {
           OP_LOGD("Begin cast fp16, bf16 to fp32");
@@ -1250,14 +1258,15 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
           CHECK_RET(valuesCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
       }
     indexPutOpOut = IndexPutProcessArch3510(selfRef, selfCast, valuesCast, indices, allDefinedIndices, accumulate, masks, 
-                                          masksNum, isAiCpu, isNonContiguous, uniqueExecutor.get());
+                                          masksNum, isAiCpu, isNonContiguous, useSortedV2Opt, uniqueExecutor.get());
     CHECK_RET(indexPutOpOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    // 固定写法，将计算结果转换成输出out的数据类型
-    auto castOut = l0op::Cast(indexPutOpOut, selfRef->GetDataType(), uniqueExecutor.get());
-    CHECK_RET(castOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
+    const aclTensor* arch3510Result = indexPutOpOut;
+    if (!useSortedV2Opt) {
+        arch3510Result = l0op::Cast(indexPutOpOut, selfRef->GetDataType(), uniqueExecutor.get());
+        CHECK_RET(arch3510Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
     // 固定写法，将计算结果拷贝到输出out上，out可能是非连续的tensor
-    auto viewCopyResult = l0op::ViewCopy(castOut, selfRef, uniqueExecutor.get());
+    auto viewCopyResult = l0op::ViewCopy(arch3510Result, selfRef, uniqueExecutor.get());
     CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，获取计算过程中需要使用的workspace大小

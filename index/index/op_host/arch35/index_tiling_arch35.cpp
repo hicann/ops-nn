@@ -45,7 +45,7 @@ constexpr uint64_t INPUT_DTYPE_B128 = 16;
 constexpr uint32_t IDX_TYPE_TILING_KEY_WEIGHT = 100;
 constexpr size_t INDEXED_SIZES_IDX = 1;
 constexpr size_t INDICES_IDX = 3;
-constexpr uint32_t DCACHE_SIZE = 32 * 1024;
+constexpr uint32_t DCACHE_SIZE = 128 * 1024;
 constexpr uint32_t MAX_DIM = 8;
 constexpr uint32_t LIMIT_DIM = 5;
 #ifdef DAVID_FPGA
@@ -342,7 +342,7 @@ ge::graphStatus IndexSimtTiling::PostTiling()
         context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     }
     context_->SetBlockDim(std::min(Ops::Base::CeilDiv(outputLength_, usedThread), coreNum_));
-    context_->SetLocalMemorySize(DCACHE_SIZE);
+    context_->SetLocalMemorySize(ubSize_ - DCACHE_SIZE);
     return ge::GRAPH_SUCCESS;
 }
 REGISTER_OPS_TILING_TEMPLATE(Index, IndexSimtTiling, 30);
