@@ -55,7 +55,9 @@
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32。
 
 ## 约束说明
+
 - 确定性计算： 
+
     - aclnnSmoothL1LossBackward默认确定性实现。
 
 ## 调用说明

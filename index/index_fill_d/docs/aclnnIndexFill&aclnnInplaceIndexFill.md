@@ -581,6 +581,7 @@ int main() {
   return 0;
 }
 ```
+
 **aclnnInplaceIndexFillTensor调用示例：**
 
 ```Cpp
@@ -716,4 +717,3 @@ int main() {
   aclFinalize();
   return 0;
 }
-```

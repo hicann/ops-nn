@@ -290,13 +290,13 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-
 ## 约束说明
 
   - 确定性说明：aclnnWeightQuantBatchMatmulNz默认确定性实现。
   - 支持的量化模式：perchannel[量化模式](../../../docs/zh/context/量化介绍.md)、pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和mx[量化模式](../../../docs/zh/context/量化介绍.md)。
   - 输入和输出支持以下数据类型和shape组合：
     - <term>Ascend 950PR/Ascend 950DT</term>：
+
       |[量化模式](../../../docs/zh/context/量化介绍.md)| x | weight | antiquantScale | antiquantOffsetOptional | biasOptional | y | antiquantScale shape | antiquantOffsetOptional shape     |
       |------------| ----     | ----------------- | ----------- | ------------- | --------------------- | -------- | ------------------------------- | ------------------------------------ |
       | perchannel | BFLOAT16 | INT32/INT4        | BFLOAT16    | null/BFLOAT16 | null/BFLOAT16/FLOAT32 | BFLOAT16 | (1, n)/(n,)                     | null/(1, n)/(n,)                     |
@@ -309,6 +309,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       |  pergroup  | FLOAT16  | FLOAT/FLOAT4_E2M1 | FLOAT16     | null          | null/FLOAT16          | FLOAT16  | (ceil(k/antiquantGroupSize), n) | null                                 |
       |     mx     | BFLOAT16 | FLOAT/FLOAT4_E2M1 | FLOAT8_E8M0 | null          | null/BFLOAT16         | BFLOAT16 | (ceil(k/32), n)                 | null                                 |
       |     mx     | FLOAT16  | FLOAT/FLOAT4_E2M1 | FLOAT8_E8M0 | null          | null/FLOAT16          | FLOAT16  | (ceil(k/32), n)                 | null                                 |
+      
       - x的shape均为(m, k)，y的shape均为(m, n)，biasOptional的shape为null/(1, n)/(n,)。
       - weight的数据类型为INT32或FLOAT时，表示紧密排布的INT4或FLOAT4_E2M1，需要满足以下约束：
         - 原始ND矩阵的最后一维8对齐；

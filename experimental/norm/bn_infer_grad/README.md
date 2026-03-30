@@ -157,6 +157,7 @@ cd tests/ut && bash run.sh
 ```
 
 UT 测试覆盖 InferShape 和 Tiling 计算逻辑，验证各 TilingKey 分支的参数计算正确性。共 66 个用例，覆盖：
+
 - 3 种数据类型（fp32, fp16, bf16）
 - 3 种数据格式（NCHW, NHWC, NC1HWC0）
 - 多核切分、跨 dtype 等价性、空 tensor 边界、单通道边界
@@ -172,6 +173,7 @@ cd tests/st && bash run.sh --real
 ```
 
 ST 测试为端到端测试，支持 Mock 模式（CPU Golden 自验证）和 Real 模式（真实 NPU 执行）。共 63 个用例，覆盖：
+
 - 3 种数据类型（fp32, fp16, bf16）
 - 3 种数据格式（NCHW, NHWC, NC1HWC0）
 - 9 个 dtype x format 全交叉组合

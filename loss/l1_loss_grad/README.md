@@ -11,7 +11,6 @@
 |  <term>Atlas 推理系列产品</term>     |     √    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
-
 ## 功能说明
 
 - 算子功能：计算[aclnnL1Loss](../lp_loss/docs/aclnnL1Loss.md)的反向传播。reduction指定损失函数的计算方式，支持 'none'、'mean'、'sum'。'none' 表示不应用减少，'mean' 表示输出的总和将除以输出中的元素数，'sum' 表示输出将被求和。

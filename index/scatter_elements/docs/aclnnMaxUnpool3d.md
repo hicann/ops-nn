@@ -29,8 +29,7 @@
     outRef[N][C][indices[N][C][i]] = self[N][C][i]
     $$
     
-  
-    其中outRef、indices和self是最后两轴合为一轴，经过reshape得到的，i ∈ [0, D * H * W)。
+    其中outRef、indices和self是最后两轴合为一轴，经过reshape得到的，i∈[0,D*H*W)。
 
 ## 函数原型
 
@@ -293,7 +292,9 @@ aclnnStatus aclnnMaxUnpool3d(
   - aclnnMaxUnpool3d默认确定性实现。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

@@ -58,7 +58,6 @@
  | >1   | FLOAT16/FLOAT32/BFLOAT16/INT8 |    NCDHW    |      NCDHW    |     NCDHW      |
  | >1   | FLOAT16/FLOAT32/BFLOAT16/INT8 |    NCDHW    |      NDHWC    |     NCDHW      |
 
-
 ## 约束说明
 
 * x
@@ -77,4 +76,4 @@
     - W、H维度的取值范围必须在 [1,255] 之间。
     - D维度必须为1
 * output_padding
-    -  N和C维度必须为0，仅允许在深度、高度、宽度方向上添加。
+    - N和C维度必须为0，仅允许在深度、高度、宽度方向上添加。

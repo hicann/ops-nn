@@ -18,6 +18,7 @@
 接口功能：返回所有元素的中位数（若总元素个数为size，则中位数对应排序后的下标为`(size - 1) // 2`）。
 
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMedianGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMedian”接口执行计算。
 
 ```cpp
@@ -189,7 +190,7 @@ aclnnStatus aclnnMedian(
 - 确定性计算：
   - aclnnMedian默认确定性实现。
 
--  self的数据类型不为FLOAT、FLOAT16、BFLOAT16时，tensor size过大可能会导致算子执行超时（aicpu error类型报错，报错 reason=[aicpu timeout]）具体类型最大size(与机器具体剩余内存强相关) 限制如下：
+- self的数据类型不为FLOAT、FLOAT16、BFLOAT16时，tensor size过大可能会导致算子执行超时（aicpu error类型报错，报错 reason=[aicpu timeout]）具体类型最大size(与机器具体剩余内存强相关) 限制如下：
    - INT64 类型：150000000
    - UINT8、INT8、INT16、INT32 类型：725000000
 - 当self为BFLOAT16数据类型时，不支持尾轴为1。

@@ -12,9 +12,11 @@
 | <term>Atlas 训练系列产品</term>                              |    ×   |
 
 ## 功能说明
+
 算子功能：拷贝data的数据至out，同时在指定indices处根据updates更新out中的数据。
 
 ## 参数说明
+
   - data(aclTensor*,计算输入)：Device侧的aclTensor, 数据类型与updates、out一致，shape满足1<=rank(data)<=8。支持[非连续的Tensor](../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../docs/zh/context/数据格式.md)支持ND。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT、BOOL、BFLOAT16
 
@@ -27,6 +29,7 @@
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT、BOOL、BFLOAT16
 
 ## 约束说明
+
 无
 
 ## 调用说明

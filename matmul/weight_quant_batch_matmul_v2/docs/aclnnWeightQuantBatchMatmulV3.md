@@ -351,7 +351,6 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-
 ## 约束说明
 
 <a id="a2_a3_系列产品"></a>
@@ -372,6 +371,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
   - **性能优化建议**
     - per_channel模式：为提高性能，推荐使用transpose后的weight输入。m范围为[65, 96]时，推荐使用数据类型为UINT64/INT64的antiquantScale。
     - per_group模式：在A16W4，batchSize<=16的场景下可设置innerPrecise参数为1，并且weight数据格式设为FRACTAL_NZ，来提升性能，但会存在一定的精度下降。
+
 </details>
 
 <a id="ascend_950pr_ascend950dt"></a>
@@ -427,6 +427,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
       - 若`weight`数据类型为INT32/FLOAT时，必须配合`aclnnConvertWeightToINT4Pack`接口完成从INT32/FLOAT到紧密排布的INT4/FLOAT4_E2M1的转换，[详情可参考样例](../../convert_weight_to_int4_pack/docs/aclnnConvertWeightToINT4Pack.md)。
   
   <a id="ascend_950pr_ascend950dt_性能优化建议"></a>
+
   - **性能优化建议**
 
     - pertensor[量化模式](../../../docs/zh/context/量化介绍.md)：当[数据格式](../../../docs/zh/context/数据格式.md)为ND时，推荐使用转置后的`weight`输入；
@@ -434,6 +435,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
     - pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和mx[量化模式](../../../docs/zh/context/量化介绍.md)：推荐使用非转置的`weight`输入。
 
     </details>
+
 </details>
 
 ## 调用示例
@@ -666,8 +668,10 @@ A16W8调用示例。
     return 0;
   }
   ```
+
 - <term>Ascend 950PR/Ascend 950DT</term>：
 A16MxFp4调用示例。
+
   ```Cpp
   #include <iostream>
   #include <memory>
@@ -993,3 +997,4 @@ A16MxFp4调用示例。
       return 0;
   }
   ```
+  

@@ -14,6 +14,7 @@
 ## 功能说明
 
 算子功能：找出`self`中非零元素的位置，设self的维度为D，self中非零元素的个数为N，则返回`out`的shape为N * D，每一列表示一个非零元素的位置坐标。
+
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 980px"><colgroup>

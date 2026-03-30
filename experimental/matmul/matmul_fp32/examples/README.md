@@ -29,15 +29,22 @@
 aclnnStatus aclnnMatmulFp32GetWorkspaceSize(const aclTensor *a, const aclTensor *b, const aclTensor *bias, bool transposeX1, bool transposeX2, const aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor);
 // 执行算子
 aclnnStatus aclnnMatmulFp32(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream);
+
 ```
 其中aclnnMatmulFp32GetWorkspaceSize为第一段接口，主要用于计算本次API调用计算过程中需要多少的workspace内存。获取到本次API计算需要的workspace大小后，按照workspaceSize大小申请Device侧内存，然后调用第二段接口aclnnMatmulFp32执行计算。具体请参考[单算子API调用](https://hiascend.com/document/redirect/CannCommunityAscendCInVorkSingleOp)章节。
 
 ## 运行样例算子
+
 ### 1. 编译算子工程
+
 运行此样例前，请参考[编译算子工程](../README.md#operatorcompile)完成前期准备。
+
 ### 2. aclnn调用样例运行
+
   - 进入到样例目录   
+
     以命令行方式下载样例代码，master分支为例。
+
     ```bash
     cd ${git_clone_path}/experimental/matmul/matmul_fp32/examples
     ```
@@ -45,7 +52,7 @@ aclnnStatus aclnnMatmulFp32(void *workspace, uint64_t workspaceSize, aclOpExecut
   - 样例执行
 
     样例执行过程中会自动生成测试数据，然后编译与运行aclnn样例，检验运行结果并采集性能数据,。具体过程可参见run.sh脚本。
+
     ```bash
     bash run.sh
     ```
-

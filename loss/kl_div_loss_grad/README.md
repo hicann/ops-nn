@@ -11,13 +11,11 @@
 |  <term>Atlas 推理系列产品</term>     |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 算子功能：进行[aclnnKlDiv](https://gitcode.com/cann/ops-math/blob/master/math/kl_div_v2/docs/aclnnKlDiv.md) api的结果的反向计算。
 
 ## 参数说明
-
 
 - gradOutput(aclTensor*, 计算输入)：Device侧的aclTensor，[数据格式](../../docs/zh/context/数据格式.md)支持ND。shape需要与self满足[broadcast关系](../../docs/zh/context/broadcast关系.md)。支持[非连续的Tensor](../../docs/zh/context/非连续的Tensor.md)。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16。

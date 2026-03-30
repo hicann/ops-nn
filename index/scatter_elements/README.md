@@ -16,6 +16,7 @@
 算子功能：返回输入张量中的唯一元素。
 
 ## 参数说明
+
   - self（aclTensor*，计算输入）：Device侧的aclTensor，[数据格式](../../docs/zh/context/数据格式.md)支持ND，维度不大于8。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BOOL、FLOAT、FLOAT16、DOUBLE、UINT8、INT8、UINT16、INT16、INT32、UINT32、UINT64、INT64、BFLOAT16。
   

@@ -63,7 +63,7 @@ aclnnStatus aclnnMishBackward(
       <td>gradOutput</td>
       <td>输入</td>
       <td>反向传播过程中上一步输出的梯度，作为本反向算子的输入。公式中的gradOutput。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>shape需要与self满足<a href="../../../docs/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>shape需要与self满足<a href="../../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -73,7 +73,7 @@ aclnnStatus aclnnMishBackward(
       <td>self</td>
       <td>输入</td>
       <td>正向的输入数据。公式中的self。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型与gradOutput的数据类型需满足数据类型推导规则（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>shape需要与gradOutput满足<a href="../../../docs/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型与gradOutput的数据类型需满足数据类型推导规则（参见<a href="../../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>shape需要与gradOutput满足<a href="../../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -112,8 +112,6 @@ aclnnStatus aclnnMishBackward(
   </tbody>
   </table>
   
-
-
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
@@ -148,7 +146,6 @@ aclnnStatus aclnnMishBackward(
       <td>gradOutput或self的shape dim大于8。</td>
     </tr>
   </tbody></table>  
-
 
 ## aclnnMishBackward
 
@@ -194,6 +191,7 @@ aclnnStatus aclnnMishBackward(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 无。
 
 ## 调用示例

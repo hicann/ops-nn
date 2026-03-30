@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-算子功能：实现[aclnnEmbedding](../../gather_v2/docs/aclnnEmbedding.md)的反向计算, 将相同索引`indices`对应grad的一行累加到out上。
+算子功能：实现[aclnnEmbedding](../../../index/embedding/docs/aclnnEmbedding.md)的反向计算, 将相同索引`indices`对应grad的一行累加到out上。
 
 ## 函数原型
 

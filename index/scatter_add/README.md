@@ -11,7 +11,6 @@
 | <term>Atlas 推理系列产品 </term>                             |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    ×   |
 
-
 ## 功能说明
 
 - 算子功能：将src tensor中的值按指定的轴方向和index tensor中的位置关系逐个填入self tensor中，若有多于一个src值被填入到self的同一位置，那么这些值将会在这一位置上进行累加。
