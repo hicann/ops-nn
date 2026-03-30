@@ -357,11 +357,12 @@ __aicore__ void Iterate<Intf, ImplType>::UpdateNextGroupOptIters(Intf *self, Tem
     tempIters.batchIter = 0;
 
     tempIters.groupOptIter = self->ctx.groupOptIter + 1;
-    if (tempIters.groupOptIter < self->ctx.singleGroupOpt) {
-        return;
+    if (tempIters.groupOptIter == self->ctx.singleGroupOpt) {
+        tempIters.groupOptIter = 0;
+        tempIters.endTag = true;
+    } else if (tempIters.groupOptIter == self->ctx.singleGroupOpt - 1 && self->ctx.updateSingleCoOpt == 0) {
+        tempIters.endTag = true;
     }
-    tempIters.groupOptIter = 0;
-    tempIters.endTag = true;
 }
 
 template <class Intf, uint32_t ImplType>

@@ -434,10 +434,13 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, RUN_INFO>::
 {
     uint64_t groupOptIter = 0;
     
-    if (convOps->isGroupDimTail && enlargeTail != 0 && convOps->singleGroupOpt == 1) {
-        SetOptGroupTail();
+    if (convOps->isGroupDimTail && enlargeTail != 0) {
+        if (unlikely(convOps->singleCoOpt == 0 && convOps->singleGroupOpt == 1)) {
+            return;
+        }
+        convOps->conv.SetOptGroupParams(enlargeTail, convOps->singleGroupOpt, convOps->singleCoOpt);
     } else {
-        convOps->conv.SetOptGroupParams(convRunInfo->enlarge, convOps->singleGroupOpt);
+        convOps->conv.SetOptGroupParams(convRunInfo->enlarge, convOps->singleGroupOpt, convOps->singleCoOpt);
     }
 
     convOps->conv.SetIterIndex(groupOptIter);
@@ -487,7 +490,7 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, RUN_INFO>::
         }
     }
 
-    convOps->conv.SetOptGroupParams(convOps->singleGroups, convOps->singleGroupOpt);
+    convOps->conv.SetOptGroupParams(convOps->singleGroups, convOps->singleGroupOpt, convOps->singleCoOpt);
 }
 
 #endif // CONV_GROUP_COMMON_H

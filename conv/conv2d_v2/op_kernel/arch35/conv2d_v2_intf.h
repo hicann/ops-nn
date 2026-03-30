@@ -82,12 +82,16 @@ struct Conv2dIntf {
         ConvParam::groupType == static_cast<int8_t>(ConvGroupType::NORMAL_CONV);
     constexpr static bool kPreLoadFlag =
         kPreLoadAFlag || kPreLoadBFlag || kPreLoadABFlag;
+#if defined(FORMAT_FILTER) && (FORMAT_FILTER == FORMAT_FRACTAL_Z || FORMAT_FILTER == FORMAT_FRACTAL_Z_C04)
+    constexpr static bool groupOptPreloadFlag = false;
+#else
     constexpr static bool groupOptPreloadFlag =
         ConvParam::groupType == static_cast<int8_t>(ConvGroupType::OPT_GROUP_CONV) &&
         ConvParam::weightTiling == static_cast<int8_t>(ConvWeightTiling::FULLLOAD_BL1) &&
         (ConvParam::fmapTiling == static_cast<int8_t>(ConvFmapTiling::FULLLOAD_AL1) ||
         ConvParam::fmapTiling == static_cast<int8_t>(ConvFmapTiling::OTHER)) &&
         ConvParam::l1PingPong == static_cast<int8_t>(ConvL1PingPong::ALL_OPEN);
+#endif
     constexpr static bool iterateMFirstFlag = ConvParam::iterOrder == 0;
     constexpr static bool iterateNFirstFlag = ConvParam::iterOrder == 1;
 
@@ -251,11 +255,11 @@ public:
         }
     }
 
-    __aicore__ inline void SetOptGroupParams(uint64_t singleGroups, uint64_t singleGroupOpt)
+    __aicore__ inline void SetOptGroupParams(uint64_t singleGroups, uint64_t singleGroupOpt, uint64_t singleCoOpt)
     {
         using local = typename Ext::SetOptGroupParams;
-        if constexpr (CONV_CHECK_FUN(local, Conv2dFunc, this, singleGroups, singleGroupOpt)) {
-            local::call(this, singleGroups, singleGroupOpt);
+        if constexpr (CONV_CHECK_FUN(local, Conv2dFunc, this, singleGroups, singleGroupOpt, singleCoOpt)) {
+            local::call(this, singleGroups, singleGroupOpt, singleCoOpt);
         }
     }
 

@@ -86,7 +86,7 @@ public:
         this->wiLoadL1 = paddingWiAL1 - this->padLeftL1 - this->padRightL1;
     }
 
-    __aicore__ inline void SetDn2NzIntriParams(Dn2NzParams &intriParams, uint64_t kAL1Iter)
+    __aicore__ inline void SetDn2NzIntriParams(Dn2NzParams &intriParams, uint64_t kAL1Iter, uint64_t groupOptIter)
     {
         if (likely(this->wiLoadL1 == self_->ctx.orgWi)) {
             intriParams.dnNum = 1;
@@ -100,7 +100,15 @@ public:
             intriParams.dstNzMatrixStride = this->wiLoadL1 * Intf::k0;
         }
 
-        if constexpr (Intf::groupOptFlag) {
+        if constexpr (Intf::groupOptPreloadFlag) {
+            uint64_t kAl1Tail = self_->ctx.kAL1Tail;
+            if (groupOptIter == self_->ctx.singleGroupOpt - 1) {
+                kAl1Tail = (self_->ctx.singleCoreCi * self_->ctx.convTiling->kernelHxkernelW) % self_->ctx.convTiling->kAL1;
+                kAl1Tail = kAl1Tail == 0 ? self_->ctx.convTiling->kAL1 : kAl1Tail;
+            }
+            intriParams.dValue = kAL1Iter == self_->ctx.maxKAL1Iter ?
+                (kAl1Tail / self_->ctx.convTiling->kernelHxkernelW) : self_->ctx.convTiling->cinAInCore;
+        } else if constexpr (Intf::groupOptFlag) {
             intriParams.dValue = kAL1Iter == self_->ctx.maxKAL1Iter ?
                 (self_->ctx.kAL1Tail / self_->ctx.convTiling->kernelHxkernelW) : self_->ctx.convTiling->cinAInCore;
         } else {
@@ -171,7 +179,7 @@ public:
         // Calculate aL1GmOffset
         int64_t realHiTopGmIdx = hiTopPadIdx < 0 ? 0 : hiTopPadIdx;
         int64_t realWiTopGmIdx = wiLeftPadIdx < 0 ? 0 : wiLeftPadIdx;
-        int64_t aL1GmOffset = groupOptIter * self_->ctx.convTiling->enlarge * self_->ctx.orgWi * self_->ctx.orgHi +
+        int64_t aL1GmOffset = groupOptIter * self_->ctx.convTiling->singleCoreCi * self_->ctx.orgWi * self_->ctx.orgHi +
                               kAL1Iter * self_->ctx.convTiling->cinOffsetBlockInGM +
                               realHiTopGmIdx * self_->ctx.orgWi + realWiTopGmIdx +
                               batchIter * self_->ctx.fmapOneBatchSize;
@@ -181,7 +189,7 @@ public:
             SetDn2NzIntriParamsC04(intriParams);
             DataCopy<typename Intf::FmapT, true>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
         } else {
-            SetDn2NzIntriParams(intriParams, kAL1Iter);
+            SetDn2NzIntriParams(intriParams, kAL1Iter, groupOptIter);
             DataCopy<typename Intf::FmapT>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
         }
     }
@@ -192,7 +200,7 @@ public:
         // Calculate aL1GmOffset
         int64_t realHiTopGmIdx = hiTopPadIdx < 0 ? 0 : hiTopPadIdx;
         int64_t realWiTopGmIdx = wiLeftPadIdx < 0 ? 0 : wiLeftPadIdx;
-        int64_t aL1GmOffset = groupOptIter * self_->ctx.convTiling->enlarge +
+        int64_t aL1GmOffset = groupOptIter * self_->ctx.convTiling->singleCoreCi +
                               realHiTopGmIdx * self_->ctx.orgWi * self_->ctx.orgCi +
                               realWiTopGmIdx * self_->ctx.orgCi +
                               batchIter * self_->ctx.fmapOneBatchSize +
@@ -307,7 +315,8 @@ public:
         if constexpr (Intf::disContinuousFlag) {
             LoadAL1InputHWNC(kAL1Iter, mAL1Iter, batchIter);
         } else if constexpr (Intf::formatFmap == ConvFormat::NCHW) {
-            uint64_t aL1GmOffset = groupOptIter * self_->ctx.convTiling->enlarge * self_->ctx.orgWi * self_->ctx.orgHi +
+            uint64_t aL1GmOffset = groupOptIter * self_->ctx.convTiling->singleCoreCi *
+                                   self_->ctx.orgWi * self_->ctx.orgHi +
                                    batchIter * self_->ctx.fmapOneBatchSize +
                                    kAL1Iter * self_->ctx.convTiling->cinOffsetBlockInGM +   
                                    hiIdx * self_->ctx.orgWi;
@@ -317,12 +326,12 @@ public:
             if constexpr (Intf::c04Flag) {
                 LoadAL1DataC04(intriParams, aL1GmOffset);
             } else {
-                SetDn2NzIntriParams(intriParams, kAL1Iter);
+                SetDn2NzIntriParams(intriParams, kAL1Iter, groupOptIter);
                 DataCopy<typename Intf::FmapT>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
             }
         } else {
             Nd2NzParams intriParams;
-            uint64_t aL1GmOffset = groupOptIter * self_->ctx.convTiling->enlarge +
+            uint64_t aL1GmOffset = groupOptIter * self_->ctx.convTiling->singleCoreCi +
                                    hiIdx * self_->ctx.orgWi * self_->ctx.orgCi +
                                    batchIter * self_->ctx.fmapOneBatchSize +
                                    kAL1Iter * self_->ctx.convTiling->cinAInCore;
@@ -412,17 +421,16 @@ private:
         }
     }
 
-    __aicore__ inline void SetDn2NzIntriParams(Dn2NzParams &intriParams, uint64_t kAL1Iter)
+    __aicore__ inline void SetDn2NzIntriParams(Dn2NzParams &intriParams, uint64_t kAL1Iter, uint64_t groupOptIter)
     {
         uint64_t aL1Mi = this->hiLoadL1 * self_->ctx.orgWi;
         intriParams.dnNum = 1;
         intriParams.nValue = aL1Mi;
         if constexpr (Intf::groupOptPreloadFlag) {
             uint64_t kAl1Tail = self_->ctx.kAL1Tail;
-            uint64_t singleGroups = self_->ctx.convTiling->groups % self_->ctx.convTiling->enlarge;
-            singleGroups = singleGroups == 0 ? self_->ctx.convTiling->enlarge : singleGroups;
-            if(self_->ctx.groupOptIter + 1 == self_->ctx.singleGroupOpt - 1) {
-                kAl1Tail = singleGroups * self_->ctx.convTiling->kernelHxkernelW * self_->ctx.ciPerGroup;
+            if (groupOptIter == self_->ctx.singleGroupOpt - 1) {
+                kAl1Tail = (self_->ctx.singleCoreCi * self_->ctx.convTiling->kernelHxkernelW) % self_->ctx.convTiling->kAL1;
+                kAl1Tail = kAl1Tail == 0 ? self_->ctx.convTiling->kAL1 : kAl1Tail;
             }
             intriParams.dValue = IsKAL1Tail(kAL1Iter) ?
                 (kAl1Tail / self_->ctx.convTiling->kernelHxkernelW) : self_->ctx.convTiling->cinAInCore;

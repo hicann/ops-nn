@@ -380,6 +380,9 @@ public:
         uint16_t outerIter = 0;
         uint16_t bL1LoadTimes = 0;
 
+        uint16_t updateEnlarge = 0; 
+        uint16_t updateSingleCoOpt = N_VALUE_MAX;
+
         int64_t ciStartPos = 0;
         int64_t coStartPos = 0;
         uint64_t singleCoreCi = 0; // 单核上处理的Cin大小

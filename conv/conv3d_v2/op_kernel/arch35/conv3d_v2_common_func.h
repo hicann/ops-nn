@@ -298,7 +298,7 @@ struct SetFmapStartPosition {
 
 template <class Intf, uint32_t ImplType>
 struct SetOptGroupParams {
-    static __aicore__ inline void call(Intf *self, uint64_t singleGroups, uint64_t singleGroupOpt)
+    static __aicore__ inline void call(Intf *self, uint64_t singleGroups, uint64_t singleGroupOpt, uint64_t singleCoOpt)
     {
         self->ctx.singleGroups = singleGroups;
         self->ctx.singleGroupOpt = singleGroupOpt;
