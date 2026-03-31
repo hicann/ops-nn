@@ -329,7 +329,7 @@ aclnnStatus aclnnQuantMatmulV5(
             <li>不支持空Tensor。</li>
           </ul>
         </td>
-        <td>UINT64、INT64、FLOAT32、BFLOAT16、FLOAT8_E8M0<sup>2</sup></td>
+        <td>UINT64、INT64、FLOAT32、BFLOAT16、FLOAT8_E8M0<sup>2</sup>、FLOAT16<sup>2</sup></td>
         <td>ND</td>
         <td>1-6</td>
         <td>✓</td>
@@ -860,7 +860,7 @@ aclnnStatus aclnnQuantMatmulV5(
       |-------| ------------------------- | ------------------------- | ----------- | ----------- |   -------- | -------| ------- | -------------------------------------- |
       |mx 全量化| FLOAT8_E4M3FN/ FLOAT8_E5M2 | FLOAT8_E4M3FN/ FLOAT8_E5M2 | FLOAT8_E8M0 |   FLOAT8_E8M0       | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
       |mx 全量化| FLOAT4_E2M1                | FLOAT4_E2M1                | FLOAT8_E8M0 |   FLOAT8_E8M0       | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
-      |mx 伪量化| FLOAT8_E4M3FN             | FLOAT4_E2M1               | FLOAT8_E8M0 |   FLOAT8_E8M0       | null     | null     | null/BFLOAT16|  BFLOAT16                               |
+      |mx 伪量化| FLOAT8_E4M3FN             | FLOAT4_E2M1               | FLOAT8_E8M0 |   FLOAT8_E8M0       | null     | null     | null/BFLOAT16/FLOAT16 |  BFLOAT16/FLOAT16                               |
   - x1数据类型、x2数据类型、x1、x2、x1Scale、x2Scale和groupSize的取值关系：
     |量化类型|x1数据类型|x2数据类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|bias shape|yScale shape|[gsM，gsN，gsK]|groupSize|
     |-------|--------|--------|--------|--------|-------------|-------------|------------|---------------------------------------|--|--|
@@ -874,8 +874,8 @@ aclnnStatus aclnnQuantMatmulV5(
      - transposeX1必须为false。
      - 当transposeX2为false时，n必须大于2。
      - 当transposeX2为true时，n必须大于1。
-  - mx伪量化场景下，当x2数据类型为FLOAT4_E2M1时，transposeX1为false且transposeX2为true，不支持batch轴。数据格式支持ND格式。要求支持k是64的倍数。
-  - mx伪量化场景下，bias为可选参数。数据类型支持BFLOAT16，数据格式支持ND，shape支持2维，shape表示(1，n)。如不需要使用该参数，传入nullptr。
+  - mx伪量化场景下，当x2数据类型为FLOAT4_E2M1时，transposeX1为false且transposeX2为true，不支持batch轴。数据格式支持ND格式。要求支持k是32的倍数。
+  - mx伪量化场景下，bias为可选参数。数据类型支持BFLOAT16或FLOAT16，数据类型要求与输出类型保持一致。数据格式支持ND，shape支持2维，shape表示(1，n)。如不需要使用该参数，传入nullptr。
   - mx伪量化场景下，[groupSizeM，groupSizeN，groupSizeK]取值组合支持[0, 0, 32]和[1, 1, 32]，对应的groupSize值分别为32和4295032864。
 
   </details>
@@ -889,15 +889,16 @@ aclnnStatus aclnnQuantMatmulV5(
   <a id="输入和输出支持以下数据类型组合TCG"></a>
       | x1                        | x2                        | x1Scale     | x2Scale     |     x2Offset | yScale | bias    | out                                    |
       | ------------------------- | ------------------------- | ----------- | ----------- |     -------- | -------| ------- | -------------------------------------- |
-      | FLOAT8_E4M3FN             | FLOAT4_E2M1               | null        |     BFLOAT16          | null     | INT64/UINT64    | null         |     BFLOAT16                               |
+      | FLOAT8_E4M3FN             | FLOAT4_E2M1               | null        |    BFLOAT16/FLOAT16 | null     | INT64/UINT64    | null         |     BFLOAT16/FLOAT16 |
   - x1、x2、x1Scale、x2Scale和groupSize的取值关系：
     |量化类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|yScale shape|[gsM，gsN，gsK]|groupSize|
     |-------|--------|--------|-------------|-------------|------------|---------------------------------------|--|
     |T-CG量化|(m, k)|(n, k)/(k, n)|null|(n, ceil(k / 32))|(1, n)|[0, 0, 32]/[1, 1, 32]|32/4295032864|
   - T-CG量化模式下，yScale数据类型支持INT64和UINT64，数据格式支持ND，shape支持2维，shape表示为(1, n)。当原始输入类型不满足约束和限制中的数据类型组合时，需要提前调用TransQuantParamV2算子的aclnn接口来将其转成UINT64数据类型。当输入数据类型是INT64时，内部会把INT64当成UINT64处理。
   - T-CG量化模式下，bias是预留参数，当前版本不支持，需要传入nullptr。
-  - T-CG量化模式下，transposeX1为false。数据格式支持ND格式。要求支持k是64的倍数，transposeX2为true。
+  - T-CG量化模式下，transposeX1为false。数据格式支持ND格式。要求支持k是32的倍数，transposeX2为true。
   - T-CG量化模式下，[groupSizeM，groupSizeN，groupSizeK]取值组合支持[0, 0, 32]和[1, 1, 32]，对应的groupSize值分别为32和4295032864。
+  - T-CG量化模式下，out和x2Scale的数据类型需要一致。
 
   </details>
 

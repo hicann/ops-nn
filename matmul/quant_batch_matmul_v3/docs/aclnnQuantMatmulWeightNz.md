@@ -208,7 +208,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
               <li>当原始输入类型不满足<a href="#约束说明">约束说明</a>中组合时，需提前调用TransQuantParamV2算子的aclnn接口来将scale转成INT64、UINT64数据类型。</li>
           </ul>
         </td>
-        <td>UINT64、INT64、FLOAT32<sup>1</sup>、BFLOAT16<sup>1</sup>、FLOAT8_E8M0<sup>1、2</sup></td>
+        <td>UINT64、INT64、FLOAT32<sup>1</sup>、BFLOAT16<sup>1</sup>、FLOAT8_E8M0<sup>1、2</sup>、FLOAT16<sup>1、2</sup></td>
         <td>ND</td>
         <td>1、3</td>
         <td>-</td>
@@ -572,15 +572,16 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 
   - **伪量化场景下dtype和shape要求如下：**
   
-    |量化类型|x1 dtype       |x2 dtype     | x1Scale dtype  |x2Scale dtype |bias dtype   |x1 shape  | x2 shape| x1Scale shape | x2Scale shape     |bias shape | yScale shape| [groupSizeM, groupSizeN, groupSizeK]|
-    |---------------| ------------| -------------- |--------------|-------------|--------- | --------| --------------| ------------      |---------- | ------------| ---------------------------------------|-------|
-    | mx量化 |FLOAT8_E4M3FN  |FLOAT4_E2M1  |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16|(m, k)  |(n, k)  |(m, k/64, 2)    |(n, k/64, 2)        |(1, n)    | null        | [0, 0, 32] / [1, 1, 32]                |
-    | mx量化 |FLOAT8_E4M3FN  |FLOAT32      |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16|(m, k)  |(n, k/8)|(m, k/64, 2)    |(n, k/64, 2)        |(1, n)    | null        | [0, 0, 32] / [1, 1, 32]                |
-    | T-CG量化 |FLOAT8_E4M3FN  |FLOAT4_E2M1  |null            |BFLOAT16      |null         |(m, k)  |(k, n)  |null           |(k/32, n)        |null       |(1, n)      | [0, 0, 32] / [1, 1, 32]                |
-    | T-CG量化 |FLOAT8_E4M3FN  |FLOAT32      |null            |BFLOAT16      |null         |(m, k)  |(k, n/8)|null           |(k/32, n)        |null       |(1, n)      | [0, 0, 32] / [1, 1, 32]                |
+    |量化类型|x1 dtype       |x2 dtype     | x1Scale dtype  |x2Scale dtype |bias dtype   | out dtype | x1 shape  | x2 shape| x1Scale shape | x2Scale shape     |bias shape | yScale shape| [groupSizeM, groupSizeN, groupSizeK]|
+    |---------------| ------------| -------------- |--------------|-------------|--------- | --------| ---------- | --------------| ------------      |---------- | ------------| ---------------------------------------|-------|
+    | mx量化 |FLOAT8_E4M3FN  |FLOAT4_E2M1  |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16/FLOAT16|BFLOAT16/FLOAT16|(m, k)  |(n, k)  |(m, k/64, 2)    |(n, k/64, 2)        |(1, n)    | null        | [0, 0, 32] / [1, 1, 32]                |
+    | mx量化 |FLOAT8_E4M3FN  |FLOAT32      |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16/FLOAT16|BFLOAT16/FLOAT16|(m, k)  |(n, k/8)|(m, k/64, 2)    |(n, k/64, 2)        |(1, n)    | null        | [0, 0, 32] / [1, 1, 32]                |
+    | T-CG量化 |FLOAT8_E4M3FN  |FLOAT4_E2M1  |null            |BFLOAT16      |BFLOAT16/FLOAT16|BFLOAT16/FLOAT16|null         |(m, k)  |(k, n)  |null           |(k/32, n)        |null       |(1, n)      | [0, 0, 32] / [1, 1, 32]                |
+    | T-CG量化 |FLOAT8_E4M3FN  |FLOAT32      |null            |BFLOAT16      |BFLOAT16/FLOAT16|BFLOAT16/FLOAT16|null         |(m, k)  |(k, n/8)|null           |(k/32, n)        |null       |(1, n)      | [0, 0, 32] / [1, 1, 32]                |
     - 约束说明：
-      - k, n大小要求64对齐。
+      - k要求32对齐, n要求8对齐。MX量化模式下k要求大于32，n大于等于8；T-CG量化模式下k要求大于等于64，n的要求大于等于8。
       - x1是FLOAT8_E4M3FN，x2是FLOAT32时, x2表示一个FLOAT32存储8个FLOAT4_E2M1的紧密排布的数据格式。
+      - MX量化模式下，bias数据类型与out数据类型需要一致；T-CG量化模式下，x2Scale的数据类型和out的数据类型需要一致。
 
 </details>  
 
