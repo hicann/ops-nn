@@ -103,7 +103,7 @@ aclnnStatus aclnnAvgPool2d(
       <td>strides</td>
       <td>输入</td>
       <td>池化操作的步长，公式中的strides。</td>
-      <td>长度为1（sH=sW）或2（sH, sW），数值必须大于0。</td>
+      <td>长度为0（sH=kH, sW=kW）或长度为1（sH=sW）或2（sH, sW），数值必须大于0。</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
