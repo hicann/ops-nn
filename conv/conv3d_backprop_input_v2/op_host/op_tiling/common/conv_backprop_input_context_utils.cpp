@@ -321,39 +321,46 @@ bool CheckAttrRangeStrides(const gert::TilingContext *context, const int64_t *st
 
 bool CheckAttrRangePads(const gert::TilingContext *context, const int64_t *pads) {
     const auto op_name = context->GetNodeName();
-    int32_t kPadUpTmp = kDimUp;
+    int32_t padHwUp = kPadUp;
+    int32_t padDUp = kDimUp;
+    
     if (IsSocVersionFuse(context)) {
-      kPadUpTmp = kPadUp;
+      padDUp = kPadUp;
     }
+
+    if (IsArchAfter35(context)) {
+        padHwUp = kDimUp;
+    }
+
     OP_CHECK_IF(
-      !CheckRangeInt64(pads[K_CONV3D_PAD_HEAD_IDX], 0, kPadUpTmp),
+      !CheckRangeInt64(pads[K_CONV3D_PAD_HEAD_IDX], 0, padDUp),
       OP_LOGE(op_name, "pad_h value [%ld] is invalid, support range [%d, %d]",
-              pads[K_CONV3D_PAD_HEAD_IDX], 0, kPadUpTmp),
+              pads[K_CONV3D_PAD_HEAD_IDX], 0, padDUp),
       return false);
     OP_CHECK_IF(
-      !CheckRangeInt64(pads[K_CONV3D_PAD_TAIL_IDX], 0, kPadUpTmp),
+      !CheckRangeInt64(pads[K_CONV3D_PAD_TAIL_IDX], 0, padDUp),
       OP_LOGE(op_name, "pad_t value [%ld] is invalid, support range [%d, %d]",
-              pads[K_CONV3D_PAD_TAIL_IDX], 0, kPadUpTmp),
+              pads[K_CONV3D_PAD_TAIL_IDX], 0, padDUp),
       return false);
     OP_CHECK_IF(
-      !CheckRangeInt64(pads[K_CONV3D_PAD_UP_IDX], 0, kPadUp),
+      !CheckRangeInt64(pads[K_CONV3D_PAD_UP_IDX], 0, padHwUp),
       OP_LOGE(op_name, "pad_u value [%ld] is invalid, support range [%d, %d]",
-              pads[K_CONV3D_PAD_UP_IDX], 0, kPadUp),
+              pads[K_CONV3D_PAD_UP_IDX], 0, padHwUp),
       return false);
     OP_CHECK_IF(
-      !CheckRangeInt64(pads[K_CONV3D_PAD_DOWN_IDX], 0, kPadUp),
+      !CheckRangeInt64(pads[K_CONV3D_PAD_DOWN_IDX], 0, padHwUp),
       OP_LOGE(op_name, "pad_d value [%ld] is invalid, support range [%d, %d]",
-              pads[K_CONV3D_PAD_DOWN_IDX], 0, kPadUp),
+              pads[K_CONV3D_PAD_DOWN_IDX], 0, padHwUp),
       return false);
     OP_CHECK_IF(
-      !CheckRangeInt64(pads[K_CONV3D_PAD_LEFT_IDX], 0, kPadUp),
+      !CheckRangeInt64(pads[K_CONV3D_PAD_LEFT_IDX], 0, padHwUp),
       OP_LOGE(op_name, "pad_l value [%ld] is invalid, support range [%d, %d]",
-              pads[K_CONV3D_PAD_LEFT_IDX], 0, kPadUp),
+              pads[K_CONV3D_PAD_LEFT_IDX], 0, padHwUp),
       return false);
     OP_CHECK_IF(
-      !CheckRangeInt64(pads[K_CONV3D_PAD_RIGHT_IDX], 0, kPadUp),
+      !CheckRangeInt64(pads[K_CONV3D_PAD_RIGHT_IDX], 0, padHwUp),
       OP_LOGE(op_name, "pad_r value [%ld] is invalid, support range [%d, %d]",
-              pads[K_CONV3D_PAD_RIGHT_IDX], 0, kPadUp),
+              pads[K_CONV3D_PAD_RIGHT_IDX], 0, padHwUp),
       return false);
 
     return true;

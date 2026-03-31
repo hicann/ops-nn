@@ -165,10 +165,6 @@ aclnnStatus ConvTbcBackwardChecker::CheckTbcParams() {
     CHECK_RET(CheckTbcCubeMathType(), ACLNN_ERR_PARAM_INVALID);
 
     if (npuArch_ == NpuArch::DAV_3510) {
-       // 检查pad是否在[0, 255]之间
-      OP_CHECK(params_.pad >= 0 && params_.pad <= 255, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "pad value [%ld] is invalid, support range [0, 255].", params_.pad),
-               return ACLNN_ERR_PARAM_INVALID);
-
       // 检查输入输出是否类型一致
       OP_CHECK(
           outputTensor_.gradInput->GetDataType() == inputTensor_.input->GetDataType(),

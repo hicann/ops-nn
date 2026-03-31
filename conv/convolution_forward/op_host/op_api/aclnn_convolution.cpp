@@ -1289,7 +1289,7 @@ public:
         }
 
         // 针对 2d transpose error msg is: backprop pad value invalid 提前拦截
-        if (!(padBinaryValid(engine))) {
+        if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510 && !(padBinaryValid(engine))) {
             return ACLNN_ERR_PARAM_INVALID;
         }
 
