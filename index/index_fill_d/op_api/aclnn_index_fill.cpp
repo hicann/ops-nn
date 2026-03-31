@@ -31,6 +31,7 @@
 #include "opdev/op_log.h"
 #include "opdev/framework_op.h"
 #include "opdev/tensor_view_utils.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -49,7 +50,7 @@ static const std::initializer_list<op::DataType> DTYPE_910B_SUPPORT_LIST = {
 static const std::initializer_list<op::DataType> DTYPE_950_SUPPORT_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT,
     op::DataType::DT_INT64, op::DataType::DT_BOOL,    op::DataType::DT_BF16,
-    op::DataType::DT_INT8,  op::DataType::DT_UINT8,   op::DataType::DT_INT16,
+    op::DataType::DT_INT8, op::DataType::DT_UINT8,    op::DataType::DT_INT16,
     op::DataType::DT_DOUBLE};
 
 static const std::initializer_list<op::DataType> DTYPE_INDEX_SUPPORT_LIST = {
@@ -96,7 +97,7 @@ static bool CheckIndexDtypeValid(const aclTensor* index)
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 || socVersion == SocVersion::ASCEND950) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(index, DTYPE_INDEX_SUPPORT_LIST, return true);
+        OP_CHECK_DTYPE_NOT_SUPPORT(index, DTYPE_INDEX_SUPPORT_LIST, return false);
     }
     return true;
 }
@@ -141,7 +142,7 @@ static bool NeedTranspose(const aclTensor* self, int64_t dim)
 
     if (self->GetDataType() == op::DataType::DT_INT64 || self->GetDataType() == op::DataType::DT_BOOL) {
         auto selfDimNum = static_cast<int64_t>(self->GetViewShape().GetDimNum());
-        dim = dim > 0 ? dim : dim + selfDimNum;
+        dim = dim >= 0 ? dim : dim + selfDimNum;
         if (dim == selfDimNum - 1) {
             return true;
         }
@@ -164,13 +165,12 @@ static const aclTensor* SwapDim(const aclTensor* self, aclOpExecutor* executor)
     return selfTrans;
 }
 
-aclnnStatus aclnnIndexFillGetWorkspaceSize(
-    const aclTensor* self, int64_t dim, const aclTensor* index, const aclScalar* value, aclTensor* out,
+aclnnStatus ExecIndexFillGetWorkspaceSize(
+    const aclTensor* self, int64_t dim, const aclTensor* index, const aclScalar* value, aclTensor* out, bool isInplace,
     uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
-    L2_DFX_PHASE_1(aclnnIndexFill, DFX_IN(self, dim, index, value), DFX_OUT(out));
     // 固定写法，参数检查
     auto ret = CheckParams(self, dim, index, value, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -178,6 +178,12 @@ aclnnStatus aclnnIndexFillGetWorkspaceSize(
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+
+    if(self->IsEmpty() || index->IsEmpty()){
+        *workspaceSize = 0;
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
 
     if (index->Size() == 0) {
         auto viewCopyResult = l0op::ViewCopy(self, out, uniqueExecutor.get());
@@ -219,9 +225,15 @@ aclnnStatus aclnnIndexFillGetWorkspaceSize(
         dim = 0;
     }
 
-    // 进行IndexFill计算
-    auto indexFillOut = l0op::IndexFill(selfContiguous, indexContiguous, valueTensor, dim, uniqueExecutor.get());
-    CHECK_RET(indexFillOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const aclTensor* indexFillOut = nullptr;
+    if (isInplace && Ops::NN::AclnnUtil::IsRegbase()) {
+        indexFillOut = l0op::InplaceIndexFill(selfContiguous, indexContiguous, valueTensor, dim, uniqueExecutor.get());
+        CHECK_RET(indexFillOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    } else {
+        // 进行IndexFill计算
+        indexFillOut = l0op::IndexFill(selfContiguous, indexContiguous, valueTensor, dim, uniqueExecutor.get());
+        CHECK_RET(indexFillOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
 
     if (needTranspose) {
         indexFillOut = SwapDim(indexFillOut, uniqueExecutor.get());
@@ -238,6 +250,16 @@ aclnnStatus aclnnIndexFillGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
+aclnnStatus aclnnIndexFillGetWorkspaceSize(
+    const aclTensor* self, int64_t dim, const aclTensor* index, const aclScalar* value, aclTensor* out,
+    uint64_t* workspaceSize, aclOpExecutor** executor)
+{
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
+
+    L2_DFX_PHASE_1(aclnnIndexFill, DFX_IN(self, dim, index, value), DFX_OUT(out));
+    return ExecIndexFillGetWorkspaceSize(self, dim, index, value, out, false, workspaceSize, executor);
+}
+
 aclnnStatus aclnnIndexFill(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnIndexFill);
@@ -248,8 +270,11 @@ aclnnStatus aclnnIndexFill(void* workspace, uint64_t workspaceSize, aclOpExecuto
 aclnnStatus aclnnInplaceIndexFillGetWorkspaceSize(
     aclTensor* selfRef, int64_t dim, const aclTensor* index, const aclScalar* value, uint64_t* workspaceSize,
     aclOpExecutor** executor)
-{
-    return aclnnIndexFillGetWorkspaceSize(selfRef, dim, index, value, selfRef, workspaceSize, executor);
+{    
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
+
+    L2_DFX_PHASE_1(aclnnInplaceIndexFill, DFX_IN(selfRef, dim, index, value), DFX_OUT(selfRef));
+    return ExecIndexFillGetWorkspaceSize(selfRef, dim, index, value, selfRef, true, workspaceSize, executor);
 }
 
 aclnnStatus aclnnInplaceIndexFill(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)

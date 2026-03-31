@@ -547,6 +547,7 @@
     {"name":"InplaceIndexAddWithSorted", "compute_units": ["ascend910b", "ascend910_93", "kirinx90", "kirin9030"], "auto_sync" : false},
     {"name":"InplaceScatterAdd", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},
     {"name":"InplaceIndexAdd", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
+    {"name":"InplaceIndexFill", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode" : "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"GemmV2", "compute_units": ["ascend910b", "ascend910_93", "kirinx90", "kirin9030"], "auto_sync" : false},
     {"name":"ScatterSub", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "high_precision", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"AscendQuant", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},

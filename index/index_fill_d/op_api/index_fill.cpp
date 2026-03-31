@@ -27,6 +27,7 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(IndexFillD);
 OP_TYPE_REGISTER(IndexFill);
+OP_TYPE_REGISTER(InplaceIndexFill);
 
 // AICORE
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
@@ -84,6 +85,19 @@ const aclTensor *IndexFill(const aclTensor *self, const aclTensor *indices, cons
   OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "IndexFillAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
     return nullptr);
   return out;
+}
+
+const aclTensor *InplaceIndexFill(const aclTensor *self, const aclTensor *indices, const aclTensor *value,
+                            int64_t dim, aclOpExecutor *executor){
+  L0_DFX(InplaceIndexFill, self, indices, value);
+  // 使用框架宏 ADD_TO_LAUNCHER_LIST_AICORE，将inplaceindexfill算子加入任务队列
+  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(InplaceIndexFill,
+                                         OP_INPUT(self, indices, value),
+                                         OP_OUTPUT(self),
+                                         OP_ATTR(dim));
+  OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "InplaceIndexFillAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+    return nullptr);
+  return self;
 }
 
 }  // namespace l0op
