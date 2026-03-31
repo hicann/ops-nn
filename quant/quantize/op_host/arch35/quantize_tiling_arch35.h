@@ -34,11 +34,11 @@ protected:
     ge::graphStatus GetOpParam();
     ge::graphStatus CheckDtype();
     ge::graphStatus CheckAttrs();
-    ge::DataType GetDataType(const std::string &dtype);
+    ge::DataType GetDataType(const std::string &dtype) const;
     ge::graphStatus CheckShape();
     void SelectMode();
     void MergeInputShape();
-    int64_t GetCoreNum(int64_t factor, int64_t coreNum);
+    int64_t GetCoreNum(int64_t factor, int64_t coreNum) const;
     void CalcPerTensorBlockFactor(int64_t size);
     void CalcPerChannelBlockFactor(int64_t size);
     void CalcPerTensorUBFactor(int64_t cacheLineNum);
@@ -47,8 +47,8 @@ protected:
     void CalcPerHeadBlockFactor();
     void CalcPerHeadUBFactor(int64_t cacheLineNum);
     void CalcTiling();
-    int64_t CalcMaxBaseLen(int64_t ubSize);
-    int64_t CalcPerChannelMaxN(int64_t ubSize, int64_t base);
+    int64_t CalcMaxBaseLen(int64_t ubSize) const;
+    int64_t CalcPerChannelMaxN(int64_t ubSize, int64_t base) const;
     uint32_t GetCoreNumDoubleCut(int64_t shapeDim0, int64_t shapeDim1, int64_t coreNum);
     void CalTilingKey();
     void WriteTilingData();

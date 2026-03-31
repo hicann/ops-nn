@@ -21,6 +21,7 @@
 #include "../op_kernel/arch35/gelu_v2_dag.h"
 #include "../op_kernel/arch35/gelu_v2_struct.h"
 #include "op_host/tiling_util.h"
+#include "atvoss/broadcast/broadcast_tiling.h"
 
 #include <iostream>
 
@@ -31,15 +32,6 @@ namespace optiling
 const size_t ASCEND_WORKSPACE = 16777216; // 16M
 const int64_t ASCEND_API_BUFFER = 122880; //120K
 const int ATTR_APPROXIMATE_POS = 0;
-static const gert::Shape g_vec_1_shape = {1};
-
-const gert::Shape& GeluV2Tiling::EnsureNotScalar(const gert::Shape& inShape)
-{
-    if (inShape.IsScalar()) {
-        return g_vec_1_shape;
-    }
-    return inShape;
-}
 
 ge::graphStatus GeluV2Tiling::CalcInputDtype()
 {
@@ -83,11 +75,11 @@ ge::graphStatus GeluV2Tiling::CheckShape()
     OP_LOGD(tilingContext->GetNodeName(), "GeluV2Tiling CheckShape enter.");
     auto inputStorageShape = tilingContext->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputStorageShape);
-    const gert::Shape& inputXShape = EnsureNotScalar(inputStorageShape->GetStorageShape());
+    const gert::Shape& inputXShape = Ops::Base::EnsureNotScalar(inputStorageShape->GetStorageShape());
 
     auto outputStorageShape = tilingContext->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputStorageShape);
-    const gert::Shape& outputYShape = EnsureNotScalar(outputStorageShape->GetStorageShape());
+    const gert::Shape& outputYShape = Ops::Base::EnsureNotScalar(outputStorageShape->GetStorageShape());
 
     OP_CHECK_IF(inputXShape != outputYShape,
                 OP_LOGE(tilingContext, "input x and output y shape not same"),

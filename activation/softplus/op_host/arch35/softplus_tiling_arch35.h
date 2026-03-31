@@ -14,8 +14,6 @@
  */
 #ifndef _ACTIVATION_HOST_SOFTPLUS_TILING_H_
 #define _ACTIVATION_HOST_SOFTPLUS_TILING_H_
-
-#include "register/tilingdata_base.h"
 #include "atvoss/elewise/elewise_tiling.h"
 #include "activation/softplus/op_kernel/arch35/softplus_tilingdata.h"
 
@@ -28,7 +26,7 @@ public:
 
 protected:
     ge::graphStatus CalcOutputDtype();
-    ge::graphStatus SetTilingData();
+    ge::graphStatus SetTilingData() const;
 
 private:
     ge::graphStatus CheckShape();

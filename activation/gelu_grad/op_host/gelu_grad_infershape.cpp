@@ -17,9 +17,10 @@
 #include "platform/platform_info.h"
 #include "register/op_impl_registry.h"
 
+namespace ops {
 using namespace ge;
 using namespace Ops::Base;
-namespace ops {
+
 static ge::graphStatus CopyShapeInput2OutputWithIdx(
     gert::InferShapeContext* context, int64_t input_idx, int64_t output_idx)
 {

@@ -19,6 +19,7 @@
 #include "atvoss/util/vec.h"
 #include "atvoss/util/placeholder.h"
 
+namespace EluOp {
 using namespace Ops::Base;
 using namespace AscendC;
 constexpr int ELU_ATTR_ALPHA_INDEX = 0;
@@ -88,4 +89,6 @@ struct EluDag {
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
 
+} // namespace EluOp
 #endif // CANN_CUSTOM_OPS_ELU_DAG_H
+

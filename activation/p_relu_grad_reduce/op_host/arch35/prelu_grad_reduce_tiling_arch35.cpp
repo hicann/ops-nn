@@ -55,7 +55,7 @@ static ge::graphStatus DoTiling(gert::TilingContext* context, ReduceOpInputParam
     return status;
 }
 
-static ge::graphStatus GetPreluGradReduceAxes(gert::TilingContext* context, ReduceOpInputParam& opInput)
+static ge::graphStatus GetPreluGradReduceAxes(const gert::TilingContext* context, ReduceOpInputParam& opInput)
 {
     auto features = context->GetInputShape(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context, features);

@@ -57,7 +57,7 @@ ge::graphStatus SiluGradTiling::GetPlatformInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t SiluGradTiling::GetOpKey(ge::DataType dyDtype, ge::DataType xDtype, ge::DataType dxDtype)
+uint64_t SiluGradTiling::GetOpKey(ge::DataType dyDtype, ge::DataType xDtype, ge::DataType dxDtype) const
 {
     bool opKey1Flag = dyDtype == DT_FLOAT16 && xDtype == DT_FLOAT16 && dxDtype == DT_FLOAT16;
     if (opKey1Flag) {
@@ -99,12 +99,12 @@ uint64_t SiluGradTiling::GetOpKey(ge::DataType dyDtype, ge::DataType xDtype, ge:
     return OP_KEY_INVALID;
 }
 
-uint64_t SiluGradTiling::GenerateTilingKey(uint64_t innerKey)
+uint64_t SiluGradTiling::GenerateTilingKey(uint64_t innerKey) const
 {
     return opKey * Ops::Base::BROADCAST_OP_KEY_OFFSET + innerKey;
 }
 
-std::map<uint64_t, Ops::Base::BroadcastComputeParams> SiluGradTiling::GetComputeMap(uint64_t opKeyParam)
+std::map<uint64_t, Ops::Base::BroadcastComputeParams> SiluGradTiling::GetComputeMap(uint64_t opKeyParam) const
 {
     Ops::Base::BroadcastComputeParams computeParams0;
         switch (opKeyParam) {
@@ -217,7 +217,7 @@ ge::graphStatus SiluGradTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-std::string SiluGradTiling::ToString(SiluGradTilingData &tilingDataParam) {
+std::string SiluGradTiling::ToString(SiluGradTilingData &tilingDataParam) const {
     std::string str;
     str += " blockFormer:" + std::to_string(tilingDataParam.get_blockFormer());
     str += " ubFormer:" + std::to_string(tilingDataParam.get_ubFormer());

@@ -13,9 +13,8 @@
 
 #include "atvoss/elewise/elewise_base_struct.h"
 
-using namespace Ops::Base;
-
 namespace EluNs {
+using namespace Ops::Base;
 
 struct EluTilingData {
     EleBaseTilingData baseTiling;

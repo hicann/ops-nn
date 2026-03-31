@@ -20,6 +20,7 @@
 #include "atvoss/util/dfx.h"
 
 using namespace AscendC;
+using namespace ReluOp;
 
 extern "C" __global__ __aicore__ void relu(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
 

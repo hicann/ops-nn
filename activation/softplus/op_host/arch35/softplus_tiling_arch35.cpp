@@ -26,12 +26,13 @@
 
 using namespace ge;
 using namespace SoftplusOp;
+using namespace Ops::Base;
 
 namespace optiling {
 constexpr uint64_t SOFTPLUS_TILING_KEY_ELEMENTWISE = 101;
 constexpr uint64_t SOFTPLUS_WORKSPACE_RESERVE_BYTE = 16777216; // 16 * 1024 * 1024
 
-ge::graphStatus SoftplusTiling::SetTilingData()
+ge::graphStatus SoftplusTiling::SetTilingData() const
 {
     size_t* currentWorkspace = tilingContext_->GetWorkspaceSizes(1);
     currentWorkspace[0] = SOFTPLUS_WORKSPACE_RESERVE_BYTE;

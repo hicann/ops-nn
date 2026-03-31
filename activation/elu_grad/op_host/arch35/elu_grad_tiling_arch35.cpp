@@ -16,7 +16,6 @@
 #include <graph/utils/type_utils.h>
 #include "tiling/platform/platform_ascendc.h"
 #include "register/op_impl_registry.h"
-#include "kernel_tiling/kernel_tiling.h"
 #include "log/log.h"
 #include <iostream>
 #include "../op_kernel/arch35/elu_grad_dag.h"

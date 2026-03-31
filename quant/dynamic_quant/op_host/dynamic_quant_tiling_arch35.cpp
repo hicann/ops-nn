@@ -542,7 +542,7 @@ void DynamicQuantRegbaseTiling::CalculateTilingData()
     }
 }
 
-void DynamicQuantRegbaseTiling::IsCapableForFullLoad(gert::TilingContext* context)
+void DynamicQuantRegbaseTiling::IsCapableForFullLoad(const gert::TilingContext* context)
 {
     bool iscapable = false;
     int64_t tempNBlockSize = 1;

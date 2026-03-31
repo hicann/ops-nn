@@ -53,7 +53,7 @@ ge::graphStatus SigmoidTiling::GetPlatformInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t SigmoidTiling::GetOpKey(ge::DataType xDtype, ge::DataType yDtype)
+uint64_t SigmoidTiling::GetOpKey(ge::DataType xDtype, ge::DataType yDtype) const
 {
     bool opKey1Flag = xDtype == DT_FLOAT16 && yDtype == DT_FLOAT16;
     if (opKey1Flag) {
@@ -71,12 +71,12 @@ uint64_t SigmoidTiling::GetOpKey(ge::DataType xDtype, ge::DataType yDtype)
     return OP_KEY_INVALID;
 }
 
-uint64_t SigmoidTiling::GenerateTilingKey(uint64_t innerKey)
+uint64_t SigmoidTiling::GenerateTilingKey(uint64_t innerKey) const
 {
     return opKey * Ops::Base::OP_KEY_OFFSET + innerKey;
 }
 
-std::map<uint64_t, Ops::Base::ComputeParams> SigmoidTiling::GetComputeMap(uint64_t opKey_)
+std::map<uint64_t, Ops::Base::ComputeParams> SigmoidTiling::GetComputeMap(uint64_t opKey_) const
 {
     ComputeParams computeParams0;
         switch (opKey_) {
@@ -155,7 +155,7 @@ ge::graphStatus SigmoidTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-std::string SigmoidTiling::ToString(SigmoidTilingData &tilingData_) {
+std::string SigmoidTiling::ToString(SigmoidTilingData &tilingData_) const {
     std::string str;
     str += " dim0:" + std::to_string(tilingData_.get_dim0());
     str += " blockFormer:" + std::to_string(tilingData_.get_blockFormer());
@@ -207,7 +207,7 @@ ge::graphStatus TilingForSigmoid(gert::TilingContext* context)
     return tiling.DoTiling();
 }
 
-inline std::unique_ptr<nlohmann::json> GetCompileInfoJson(gert::TilingParseContext* context) {
+inline std::unique_ptr<nlohmann::json> GetCompileInfoJson(const gert::TilingParseContext* context) {
   auto json_str = context->GetCompiledJson();
   OP_CHECK_IF(json_str == nullptr, OP_LOGE(context->GetNodeName(), "json_str is nullptr!"), return nullptr);
   std::unique_ptr<nlohmann::json> parsed_object_cinfo =

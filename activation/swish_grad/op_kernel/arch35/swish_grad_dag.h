@@ -20,6 +20,7 @@
 #include "atvoss/util/vec.h"
 #include "atvoss/util/placeholder.h"
 
+namespace SwishGradOp {
 using namespace AscendC;
 using namespace Ops::Base;
 
@@ -132,5 +133,5 @@ struct SwishGradDAG {
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
-
+} // namespace SwishGradOp
 #endif // CANN_CUSTOM_OPS_SWISHGRAD_DAG_H

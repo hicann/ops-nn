@@ -13,10 +13,8 @@
 
 #include "atvoss/elewise/elewise_base_struct.h"
 
-using namespace Ops::Base;
-
 struct LeakyReluTilingData {
-    EleBaseTilingData baseTiling;
+    Ops::Base::EleBaseTilingData baseTiling;
     float negativeSlope;
 };
 #endif // LEAKY_RELU_TILINGDATA_H

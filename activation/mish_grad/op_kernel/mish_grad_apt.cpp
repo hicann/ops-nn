@@ -16,7 +16,7 @@
 #include "atvoss/util/dfx.h"
 
 using namespace AscendC;
-
+using namespace MishGradOp;
 template <uint64_t schMode, uint64_t dType>
 __global__ __aicore__ void mish_grad(
     GM_ADDR grad, GM_ADDR x, GM_ADDR tanhx, GM_ADDR x_grad, GM_ADDR workspace, GM_ADDR tiling)

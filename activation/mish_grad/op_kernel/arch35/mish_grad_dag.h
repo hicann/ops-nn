@@ -15,6 +15,7 @@
 #include "atvoss/util/vec.h"
 #include "atvoss/util/placeholder.h"
 
+namespace MishGradOp {
 using namespace AscendC;
 using namespace Ops::Base;
 
@@ -179,5 +180,5 @@ struct MishGradDAG {
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
-
+} // namespace MishGradOp
 #endif // CANN_CUSTOM_OPS_MISHGRAD_DAG_H

@@ -21,9 +21,8 @@
 #include "atvoss/util/vec.h"
 #include "atvoss/util/placeholder.h"
 
-using namespace Ops::Base;
 namespace ReluGradV2Ns {
-
+using namespace Ops::Base;
 const int VSEL_TENSOR_TENSOR_MODE = 2;
 
 template <typename T>

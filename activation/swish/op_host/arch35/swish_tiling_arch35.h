@@ -18,8 +18,8 @@
 
 #include "op_host/tiling_base.h"
 
-using namespace Ops::NN::Optiling;
 namespace optiling {
+using namespace Ops::NN::Optiling;
 
 class SwishTiling
 {

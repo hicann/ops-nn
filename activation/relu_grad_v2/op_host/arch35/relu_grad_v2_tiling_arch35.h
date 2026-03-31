@@ -19,10 +19,10 @@
 #include "op_host/tiling_base.h"
 #include "atvoss/elewise/elewise_tiling.h"
 
+namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
 using namespace Ops::Base;
 
-namespace optiling {
 struct ReluGradV2CompileInfo {
     uint64_t coreNum;
     uint64_t ubSize;

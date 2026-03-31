@@ -13,9 +13,7 @@
 
 #include "atvoss/elewise/elewise_base_struct.h"
 
-using namespace Ops::Base;
-
 struct SoftplusTilingData {
-    EleBaseTilingData baseTiling;
+    Ops::Base::EleBaseTilingData baseTiling;
 };
 #endif // _ACTIVATION_KERNEL_SOFTPLUS_TILINGDATA_

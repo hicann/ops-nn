@@ -32,6 +32,7 @@
 
 using namespace ge;
 using namespace LeakyReluOp;
+using namespace Ops::Base;
 
 namespace optiling
 {

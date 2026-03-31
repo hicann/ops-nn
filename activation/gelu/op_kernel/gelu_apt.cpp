@@ -21,6 +21,7 @@
 #include "atvoss/util/dfx.h"
 
 using namespace AscendC;
+using namespace Ops::Base;
 
 template <uint64_t schMode, uint64_t dType>
 __global__ __aicore__ void gelu(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
@@ -30,15 +31,15 @@ __global__ __aicore__ void gelu(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
 
     if constexpr (dType == TPL_FP16) {
-        ElementwiseSch16B<schMode, GeluDAG<half>::OpDag> sch(tilingData);
+        ElementwiseSch16B<schMode, GeluOp::GeluDAG<half>::OpDag> sch(tilingData);
         sch.Init(x, y);
         sch.Process();
     } else if constexpr (dType == TPL_BF16) {
-        ElementwiseSch16B<schMode, GeluDAG<bfloat16_t>::OpDag> sch(tilingData);
+        ElementwiseSch16B<schMode, GeluOp::GeluDAG<bfloat16_t>::OpDag> sch(tilingData);
         sch.Init(x, y);
         sch.Process();
     } else if constexpr (dType == TPL_FP32) {
-        ElementwiseSch16B<schMode, GeluDAG<float>::OpDag> sch(tilingData);
+        ElementwiseSch16B<schMode, GeluOp::GeluDAG<float>::OpDag> sch(tilingData);
         sch.Init(x, y);
         sch.Process();
     }

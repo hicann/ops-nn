@@ -20,9 +20,10 @@
 #include "../../op_kernel/elu_grad_v2_tiling_struct.h"
 #include <exe_graph/runtime/tiling_context.h>
 
+namespace optiling {
 using namespace Ops::Base;
 using namespace EluGradV2Ns;
-namespace optiling {
+
 struct EluGradV2CompileInfo {
     uint64_t coreNum = 0;
     uint64_t ubSize = 0;

@@ -20,9 +20,8 @@
  #include "atvoss/util/vec.h"
  #include "atvoss/util/placeholder.h"
  
- using namespace Ops::Base;
-
  namespace GeluV2Op {
+ using namespace Ops::Base;
  const float NEG_SQRT_EIGHT_OVER_PI = -1.595769121 * 0.044715;
  const float TANH_APPROX_FACTOR = 1 / 0.044715;
  const int CAST_MODE_NONE = 0;

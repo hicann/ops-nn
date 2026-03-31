@@ -16,11 +16,8 @@
 #ifndef RELU_GRAD_V2_TILING_STRUCT_H
 #define RELU_GRAD_V2_TILING_STRUCT_H
 
-#include "atvoss/elewise/elewise_base_struct.h"
-
-using namespace Ops::Base;
-
 namespace ReluGradV2Ns {
+using namespace Ops::Base;
 
 #define TPL_FP16 1
 #define TPL_BF16 2

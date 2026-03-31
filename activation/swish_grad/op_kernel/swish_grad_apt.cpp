@@ -21,6 +21,7 @@
 #include "atvoss/util/dfx.h"
 
 using namespace AscendC;
+using namespace SwishGradOp;
 
 template <uint64_t schMode, uint64_t dType>
 __global__ __aicore__ void swish_grad(

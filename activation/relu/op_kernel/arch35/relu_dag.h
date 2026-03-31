@@ -19,6 +19,7 @@
 #include "atvoss/util/vec.h"
 #include "atvoss/util/placeholder.h"
 
+namespace ReluOp {
 using namespace Ops::Base;
 
 template <typename U, typename T = float>
@@ -46,4 +47,5 @@ struct GraphReluMax {
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
+} // namespace ReluOp
 #endif  // CANN_CUSTOM_OPS_RELU_DAG_H

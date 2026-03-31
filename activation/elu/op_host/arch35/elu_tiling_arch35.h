@@ -19,8 +19,8 @@
 #include "atvoss/elewise/elewise_tiling.h"
 #include "../../op_kernel/arch35/elu_tiling_struct.h"
 
-using namespace EluNs;
 namespace optiling {
+using namespace EluNs;
 
 struct EluCompileInfo {
     uint64_t coreNum = 0;

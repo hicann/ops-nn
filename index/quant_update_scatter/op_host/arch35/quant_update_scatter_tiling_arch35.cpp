@@ -48,7 +48,7 @@ const map<ge::DataType, string> DTYPE_ROUND_MODE_LOG_MAP = {
 const map<string, uint64_t> ROUND_MODE_TPL_MAP = {
     {"rint", TPL_ROUND_MODE_RINT}, {"round", TPL_ROUND_MODE_ROUND}, {"hybrid", TPL_ROUND_MODE_HYBRID}};
 
-int64_t QuantUpdateScatterRegbaseTiling::NewAxis(int64_t axis)
+int64_t QuantUpdateScatterRegbaseTiling::NewAxis(int64_t axis) const
 {
     int64_t newAxis = axis < 0 ? (oldDims_ + axis) : axis;
     if (0 < newAxis && newAxis < oldDims_ - 1) {
@@ -57,7 +57,7 @@ int64_t QuantUpdateScatterRegbaseTiling::NewAxis(int64_t axis)
     return newAxis;
 }
 
-double QuantUpdateScatterRegbaseTiling::GetUpdateUbRatio(bool isLittleQuant)
+double QuantUpdateScatterRegbaseTiling::GetUpdateUbRatio(bool isLittleQuant) const
 {
     int64_t totalPart = varDtypeSize_ + updateDtypeSize_;
     if (isLittleQuant) {
@@ -84,7 +84,7 @@ bool QuantUpdateScatterRegbaseTiling::CheckRoundMode(ge::DataType type, string m
     return true;
 }
 
-string QuantUpdateScatterRegbaseTiling::GetErrMsg(ge::DataType type)
+string QuantUpdateScatterRegbaseTiling::GetErrMsg(ge::DataType type) const
 {
     auto it = DTYPE_ROUND_MODE_LOG_MAP.find(type);
     if (it != DTYPE_ROUND_MODE_LOG_MAP.end()) {

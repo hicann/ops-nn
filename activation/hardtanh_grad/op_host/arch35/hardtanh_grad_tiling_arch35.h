@@ -15,8 +15,6 @@
 #ifndef OPS_BUILD_IN_OP_TILING_RUNTIME_HARDTANH_GRAD_TILING_H
 #define OPS_BUILD_IN_OP_TILING_RUNTIME_HARDTANH_GRAD_TILING_H
 
-#include "../../op_kernel/arch35/hardtanh_grad_tilingdata.h"
-
 // 声明具有外部链接的对象或函数
 namespace optiling {
 extern void Tiling4HardtanhGrad();

@@ -20,8 +20,9 @@
 #include "atvoss/elewise/elewise_tiling.h"
 #include "op_host/tiling_base.h"
 
-using namespace Ops::Base;
 namespace optiling {
+using namespace Ops::Base;
+
 class LogSigmoidTiling
 {
 public:

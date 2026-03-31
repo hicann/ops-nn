@@ -13,12 +13,10 @@
 
 #include "atvoss/elewise/elewise_base_struct.h"
 
-using namespace Ops::Base;
-
 namespace ReluV2Ns {
 
 struct ReluV2TilingData {
-    EleBaseTilingData baseTiling;
+    Ops::Base::EleBaseTilingData baseTiling;
 };
 
 } // namespace ReluV2Ns

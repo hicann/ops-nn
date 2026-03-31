@@ -49,7 +49,7 @@ ge::graphStatus SigmoidGradTiling::GetPlatformInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t SigmoidGradTiling::GetOpKey(ge::DataType yDtype, ge::DataType dyDtype, ge::DataType zDtype)
+uint64_t SigmoidGradTiling::GetOpKey(ge::DataType yDtype, ge::DataType dyDtype, ge::DataType zDtype) const
 {
     bool opKey1Flag = yDtype == DT_FLOAT16 && dyDtype == DT_FLOAT16 && zDtype == DT_FLOAT16;
     if (opKey1Flag) {
@@ -67,12 +67,12 @@ uint64_t SigmoidGradTiling::GetOpKey(ge::DataType yDtype, ge::DataType dyDtype, 
     return OP_KEY_INVALID;
 }
 
-uint64_t SigmoidGradTiling::GenerateTilingKey(uint64_t innerKey)
+uint64_t SigmoidGradTiling::GenerateTilingKey(uint64_t innerKey) const
 {
     return opKey * Ops::Base::OP_KEY_OFFSET + innerKey;
 }
 
-std::map<uint64_t, Ops::Base::ComputeParams> SigmoidGradTiling::GetComputeMap(uint64_t opKeyParam)
+std::map<uint64_t, Ops::Base::ComputeParams> SigmoidGradTiling::GetComputeMap(uint64_t opKeyParam) const
 {
     Ops::Base::ComputeParams computeParams0;
         switch (opKeyParam) {
@@ -159,7 +159,7 @@ ge::graphStatus SigmoidGradTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-std::string SigmoidGradTiling::ToString(SigmoidGradTilingData &tilingDataParam) {
+std::string SigmoidGradTiling::ToString(SigmoidGradTilingData &tilingDataParam) const {
     std::string str;
     str += " dim0:" + std::to_string(tilingDataParam.get_dim0());
     str += " blockFormer:" + std::to_string(tilingDataParam.get_blockFormer());

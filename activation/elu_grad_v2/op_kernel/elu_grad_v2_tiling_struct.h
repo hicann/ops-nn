@@ -11,8 +11,10 @@
 #ifndef OPS_NN_DEV_ELUGRADV2_STRUCT_H
 #define OPS_NN_DEV_ELUGRADV2_STRUCT_H
 #include "atvoss/elewise/elewise_base_struct.h"
-using namespace Ops::Base;
+
 namespace EluGradV2Ns {
+using namespace Ops::Base;
+
 struct EluGradV2TilingData {
     EleBaseTilingData baseTiling;
 	float negcoef;

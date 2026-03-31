@@ -30,14 +30,14 @@
 namespace optiling {
 const size_t ASCEND_WORKSPACE = 16777216; // 16M
 
-ge::graphStatus SwishGradTiling::SetTilingData()
+ge::graphStatus SwishGradTiling::SetTilingData() const
 {
     OP_LOGD(tilingContext->GetNodeName(), "SwishGradTiling SetTilingData enter.");
 
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
     currentWorkspace[0] = ASCEND_WORKSPACE;
 
-    const uint64_t tilingKey = GET_TPL_TILING_KEY((uint64_t)tiling->baseTiling.scheMode, dType);
+    const uint64_t tilingKey = GET_TPL_TILING_KEY(tiling->baseTiling.scheMode, dType);
     OP_LOGD(tilingContext->GetNodeName(), "[TilingData] : tilingKey=%lu", tilingKey);
     tilingContext->SetTilingKey(tilingKey);
     tilingContext->SetBlockDim(tiling->baseTiling.blockNum);
@@ -156,13 +156,13 @@ ge::graphStatus SwishGradTiling::RunTiling()
     ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
     if (this->outputDtype == ge::DT_FLOAT16) {
         dType = TPL_FP16;
-        baseTilingResult = elewiseBaseTiling.DoTiling<SwishGradDAG<half>::OpDag>(tiling->baseTiling);
+        baseTilingResult = elewiseBaseTiling.DoTiling<SwishGradOp::SwishGradDAG<half>::OpDag>(tiling->baseTiling);
     } else if (this->outputDtype == ge::DT_BF16) {
         dType = TPL_BF16;
-        baseTilingResult = elewiseBaseTiling.DoTiling<SwishGradDAG<bfloat16_t>::OpDag>(tiling->baseTiling);
+        baseTilingResult = elewiseBaseTiling.DoTiling<SwishGradOp::SwishGradDAG<bfloat16_t>::OpDag>(tiling->baseTiling);
     } else if (this->outputDtype == ge::DT_FLOAT) {
         dType = TPL_FP32;
-        baseTilingResult = elewiseBaseTiling.DoTiling<SwishGradDAG<float>::OpDag>(tiling->baseTiling);
+        baseTilingResult = elewiseBaseTiling.DoTiling<SwishGradOp::SwishGradDAG<float>::OpDag>(tiling->baseTiling);
     } else {
         OP_LOGE(
             tilingContext->GetNodeName(), "output dtype[%s] not support",

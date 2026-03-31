@@ -21,9 +21,10 @@
 #include "activation/relu/op_kernel/arch35/relu_dag.h"
 #include "atvoss/elewise/elewise_base_struct.h"
 
-using namespace ge;
-
 namespace optiling {
+using namespace ge;
+using namespace Ops::Base;
+
 constexpr uint64_t SYS_WORKSPACE = 16777216; //16M
 constexpr uint64_t RELU_TILING_KEY_ELEMENTWISE_FP16 = 101;
 constexpr uint64_t RELU_TILING_KEY_ELEMENTWISE_BF16 = 102;
@@ -57,17 +58,17 @@ ge::graphStatus ReluTiling::RunTiling()
                return ge::GRAPH_FAILED);
     ge::graphStatus res = ge::GRAPH_FAILED;
     if (this->outputDtype == ge::DT_FLOAT16) {
-        res = elewiseBaseTiling.DoTiling<GraphRelu<half, half>::OpDag>(*tiling);
+        res = elewiseBaseTiling.DoTiling<ReluOp::GraphRelu<half, half>::OpDag>(*tiling);
     } else if (this->outputDtype == ge::DT_FLOAT) {
-        res = elewiseBaseTiling.DoTiling<GraphRelu<float, float>::OpDag>(*tiling);
+        res = elewiseBaseTiling.DoTiling<ReluOp::GraphRelu<float, float>::OpDag>(*tiling);
     } else if (this->outputDtype == ge::DT_BF16) {
-        res = elewiseBaseTiling.DoTiling<GraphRelu<half, float>::OpDag>(*tiling);
+        res = elewiseBaseTiling.DoTiling<ReluOp::GraphRelu<half, float>::OpDag>(*tiling);
     } else if (this->outputDtype == ge::DT_INT8) {
-        res = elewiseBaseTiling.DoTiling<GraphRelu<int8_t, half>::OpDag>(*tiling);
+        res = elewiseBaseTiling.DoTiling<ReluOp::GraphRelu<int8_t, half>::OpDag>(*tiling);
     } else if (this->outputDtype == ge::DT_INT32) {
-        res = elewiseBaseTiling.DoTiling<GraphRelu<int32_t, int32_t>::OpDag>(*tiling);
+        res = elewiseBaseTiling.DoTiling<ReluOp::GraphRelu<int32_t, int32_t>::OpDag>(*tiling);
     } else if (this->outputDtype == ge::DT_INT64) {
-        res = elewiseBaseTiling.DoTiling<GraphReluMax<int64_t>::OpDag>(*tiling);
+        res = elewiseBaseTiling.DoTiling<ReluOp::GraphReluMax<int64_t>::OpDag>(*tiling);
     } else {
         OP_LOGE(tilingContext, "data type check failed. getype：%d", this->outputDtype);
         return ge::GRAPH_FAILED;

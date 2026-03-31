@@ -24,6 +24,7 @@
 using namespace EluNs;
 using namespace Ops::Base;
 using namespace AscendC;
+using namespace EluOp;
 KERNEL_API void elu(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);

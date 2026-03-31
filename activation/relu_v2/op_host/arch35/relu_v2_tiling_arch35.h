@@ -17,7 +17,6 @@
 
 #include "register/tilingdata_base.h"
 #include "op_common/atvoss/elewise/elewise_tiling.h"
-#include "../../op_kernel/arch35/relu_v2_tiling_struct.h"
 
 namespace optiling {
 

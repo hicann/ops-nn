@@ -21,7 +21,6 @@
 #include "register/op_impl_registry.h"
 #include "register/tilingdata_base.h"
 #include "atvoss/broadcast/broadcast_tiling.h"
-#include "kernel_tiling/kernel_tiling.h"
 #include "util/math_util.h"
 
 namespace optiling
@@ -109,7 +108,7 @@ ge::graphStatus Quantize::GetCompileInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::DataType Quantize::GetDataType(const std::string& dtype)
+ge::DataType Quantize::GetDataType(const std::string& dtype) const
 {
     static const std::unordered_map<std::string, ge::DataType> dtypeMap = {
         {"torch.quint8", ge::DataType::DT_UINT8},
@@ -398,7 +397,7 @@ ge::graphStatus Quantize::GetOpParam()
     return ge::GRAPH_SUCCESS;
 }
 
-int64_t Quantize::GetCoreNum(int64_t factor, int64_t coreNum)
+int64_t Quantize::GetCoreNum(int64_t factor, int64_t coreNum) const
 {
     int64_t elePerCore = Ops::Base::CeilDiv(factor, coreNum);
     int64_t actCore = Ops::Base::CeilDiv(factor, elePerCore);
@@ -432,7 +431,7 @@ void Quantize::CalcPerChannelBlockFactor(int64_t size)
     blockTailFactor_ = blockTailFactor_ == 0 ? blockFactor_ : blockTailFactor_;
 }
 
-int64_t Quantize::CalcMaxBaseLen(int64_t ubSize)
+int64_t Quantize::CalcMaxBaseLen(int64_t ubSize) const
 {
     // set n == 1 to calc max base
     int64_t xDtypeSize = ge::GetSizeByDataType(xDtype_);
@@ -453,7 +452,7 @@ int64_t Quantize::CalcMaxBaseLen(int64_t ubSize)
     return totalBytes == 0 ? DEFAULT_BASE_LEN : ubSize / totalBytes;
 }
 
-int64_t Quantize::CalcPerChannelMaxN(int64_t ubSize, int64_t base)
+int64_t Quantize::CalcPerChannelMaxN(int64_t ubSize, int64_t base) const
 {
     int64_t xDtypeSize = ge::GetSizeByDataType(xDtype_);
     int64_t yDtypeSize = ge::GetSizeByDataType(yDtype_);
@@ -474,28 +473,28 @@ int64_t Quantize::CalcPerChannelMaxN(int64_t ubSize, int64_t base)
     return leftXBytes / totalNBytes;
 }
 
-void Quantize::CalcPerTensorUBFactor(int64_t numPerCache)
+void Quantize::CalcPerTensorUBFactor(int64_t cacheLineNum)
 {
     int64_t availableUb = ubSize_ - reserveUb_;
     int64_t maxBase = CalcMaxBaseLen(availableUb);    // 一个UB能算的数
-    maxBase = Ops::Base::FloorAlign(maxBase, numPerCache);  // 用cacheLine对齐
+    maxBase = Ops::Base::FloorAlign(maxBase, cacheLineNum);  // 用cacheLine对齐
     int64_t blockBase = blockFactor_;                 // 合成一个轴时，block块的宽度
-    blockBase = CeilAlign(blockBase, numPerCache);
+    blockBase = CeilAlign(blockBase, cacheLineNum);
     ubAxis_ = 1;
     baseN_ = 1;
     baseLen_ = std::min(blockBase, maxBase);
 }
 
-void Quantize::CalcPerChannelUBFactor(int64_t numPerCache)
+void Quantize::CalcPerChannelUBFactor(int64_t cacheLineNum)
 {
     // ub can split to three input: x_dtype_size * n * base, x_dtype_size * base, x_dtype_size * base
     // and one output: y_dtype_size * n * base
     int64_t availableUb = ubSize_ - reserveUb_;
     int64_t maxBase = CalcMaxBaseLen(availableUb);    // 一个UB能算的数
-    maxBase = Ops::Base::FloorAlign(maxBase, numPerCache);  // 用cacheLine对齐
+    maxBase = Ops::Base::FloorAlign(maxBase, cacheLineNum);  // 用cacheLine对齐
     // block cut axis 0, means all dim 1 is continous, else each core handle blockFactor
     int64_t blockBase = blockAxis_ == 0 ? xInputShape_.GetDim(1) : blockFactor_;  // block的宽度，n方向
-    blockBase = CeilAlign(blockBase, numPerCache);                           // 用cacheLine对齐
+    blockBase = CeilAlign(blockBase, cacheLineNum);                           // 用cacheLine对齐
     // 至少能放下2行时走第一分支
     if (blockBase <= maxBase / 2) {
         // need calc max n with real base
@@ -503,7 +502,7 @@ void Quantize::CalcPerChannelUBFactor(int64_t numPerCache)
         int64_t blockInnerSize = blockAxis_ == 0 ? blockFactor_ : xInputShape_.GetDim(0);
         ubAxis_ = 0;
         baseN_ = std::min(maxN, blockInnerSize);            // UB块的行数
-        baseLen_ = CeilAlign(blockBase, numPerCache);  // UB块的宽度
+        baseLen_ = CeilAlign(blockBase, cacheLineNum);  // UB块的宽度
     } else {
         ubAxis_ = 1;
         baseN_ = 1;

@@ -14,6 +14,7 @@
 #include "op_common/atvoss/elewise/elewise_tiling.h"
 
 namespace optiling {
+using namespace Ops::Base;
 
 struct GeluCompileInfo {
     uint64_t coreNum;

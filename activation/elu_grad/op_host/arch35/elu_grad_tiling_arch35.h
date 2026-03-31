@@ -20,8 +20,8 @@
 #include "atvoss/elewise/elewise_tiling.h"
 #include "atvoss/elewise/elewise_base_struct.h"
 
-using namespace Ops::Base;
 namespace optiling {
+using namespace Ops::Base;
 
 struct EluGradCompileInfo {
     uint64_t coreNum = 0;

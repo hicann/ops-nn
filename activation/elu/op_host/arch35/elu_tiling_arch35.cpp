@@ -116,11 +116,11 @@ ge::graphStatus EluTiling::RunTiling()
 
     ge::graphStatus res = ge::GRAPH_FAILED;
     if (this->outputDtype == ge::DT_FLOAT16) {
-        res = elewiseBaseTiling.DoTiling<EluDag<half, float>::OpDag>(tiling->baseTiling);
+        res = elewiseBaseTiling.DoTiling<EluOp::EluDag<half, float>::OpDag>(tiling->baseTiling);
     } else if (this->outputDtype == ge::DT_FLOAT) {
-        res = elewiseBaseTiling.DoTiling<EluDag<float, float>::OpDag>(tiling->baseTiling);
+        res = elewiseBaseTiling.DoTiling<EluOp::EluDag<float, float>::OpDag>(tiling->baseTiling);
     } else if (this->outputDtype == ge::DT_BF16) {
-        res = elewiseBaseTiling.DoTiling<EluDag<bfloat16_t, float>::OpDag>(tiling->baseTiling);
+        res = elewiseBaseTiling.DoTiling<EluOp::EluDag<bfloat16_t, float>::OpDag>(tiling->baseTiling);
     } else {
         OP_LOGE(tilingContext, "data type check failed. dtype：%d", this->outputDtype);
         return ge::GRAPH_FAILED;

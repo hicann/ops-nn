@@ -18,6 +18,7 @@
 #include <iostream>
 
 using namespace ge;
+using namespace Ops::Base;
 
 namespace optiling {
 constexpr int64_t ASCEND_WORKSPACE = 0;
@@ -127,22 +128,22 @@ ge::graphStatus MishGradTiling::RunTiling()
     ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
     if (this->outputDtype == ge::DT_FLOAT16 && unfullCompute) {
         dType = TPL_FP16;
-        baseTilingResult = elewiseBaseTiling.DoTiling<MishGradDAG<half>::OpDag>(*tiling);
+        baseTilingResult = elewiseBaseTiling.DoTiling<MishGradOp::MishGradDAG<half>::OpDag>(*tiling);
     } else if (this->outputDtype == ge::DT_BF16 && unfullCompute) {
         dType = TPL_BF16;
-        baseTilingResult = elewiseBaseTiling.DoTiling<MishGradDAG<bfloat16_t>::OpDag>(*tiling);
+        baseTilingResult = elewiseBaseTiling.DoTiling<MishGradOp::MishGradDAG<bfloat16_t>::OpDag>(*tiling);
     } else if (this->outputDtype == ge::DT_FLOAT && unfullCompute) {
         dType = TPL_FP32;
-        baseTilingResult = elewiseBaseTiling.DoTiling<MishGradDAG<float>::OpDag>(*tiling);
+        baseTilingResult = elewiseBaseTiling.DoTiling<MishGradOp::MishGradDAG<float>::OpDag>(*tiling);
     } else if (this->outputDtype == ge::DT_FLOAT16 && !unfullCompute) {
         dType = TPL_FP16_FULL;
-        baseTilingResult = elewiseBaseTiling.DoTiling<MishGradFullDAG<half>::OpDag>(*tiling);
+        baseTilingResult = elewiseBaseTiling.DoTiling<MishGradOp::MishGradFullDAG<half>::OpDag>(*tiling);
     } else if (this->outputDtype == ge::DT_BF16 && !unfullCompute) {
         dType = TPL_BF16_FULL;
-        baseTilingResult = elewiseBaseTiling.DoTiling<MishGradFullDAG<bfloat16_t>::OpDag>(*tiling);
+        baseTilingResult = elewiseBaseTiling.DoTiling<MishGradOp::MishGradFullDAG<bfloat16_t>::OpDag>(*tiling);
     } else if (this->outputDtype == ge::DT_FLOAT && !unfullCompute) {
         dType = TPL_FP32_FULL;
-        baseTilingResult = elewiseBaseTiling.DoTiling<MishGradFullDAG<float>::OpDag>(*tiling);
+        baseTilingResult = elewiseBaseTiling.DoTiling<MishGradOp::MishGradFullDAG<float>::OpDag>(*tiling);
     } else {
         OP_LOGE(tilingContext->GetNodeName(), "output dtype not support");
         return ge::GRAPH_FAILED;

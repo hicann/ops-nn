@@ -53,12 +53,12 @@ class SigmoidTiling : public Ops::NN::Optiling::TilingBaseClass {
     uint64_t GetTilingKey() const override;
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
-    std::string ToString(SigmoidTilingData &tilingData_);
+    std::string ToString(SigmoidTilingData &tilingData_) const;
 
    private:
-    uint64_t GetOpKey(ge::DataType xDtype, ge::DataType yDtype);
-    uint64_t GenerateTilingKey(uint64_t innerKey);
-    std::map<uint64_t, Ops::Base::ComputeParams> GetComputeMap(uint64_t opKey_);
+    uint64_t GetOpKey(ge::DataType xDtype, ge::DataType yDtype) const;
+    uint64_t GenerateTilingKey(uint64_t innerKey) const;
+    std::map<uint64_t, Ops::Base::ComputeParams> GetComputeMap(uint64_t opKey_) const;
 
     SigmoidTilingData tilingData;
     uint64_t opKey = 0;

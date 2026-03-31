@@ -33,7 +33,6 @@ protected:
     ge::graphStatus CalcInputDtype();
     ge::graphStatus CheckShape();
     ge::graphStatus CheckValid();
-    const gert::Shape& EnsureNotScalar(const gert::Shape& inShape);
 
 private:
     gert::TilingContext* tilingContext;

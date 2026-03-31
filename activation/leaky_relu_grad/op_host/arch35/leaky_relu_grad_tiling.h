@@ -16,9 +16,8 @@
  #define OPS_BUILD_IN_OP_TILING_RUNTIME_LEAKY_RELU_GRAD_TILING_H_
  
 #include "op_host/tiling_base.h"
-using namespace Ops::NN::Optiling;
  namespace optiling {
- 
+ using namespace Ops::NN::Optiling;
  class LeakyReluGradTiling : public TilingBaseClass {
     public:
      explicit LeakyReluGradTiling(gert::TilingContext* context) : TilingBaseClass(context) {}

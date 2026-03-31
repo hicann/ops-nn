@@ -19,8 +19,8 @@
 #include "atvoss/util/vec.h"
 #include "atvoss/util/placeholder.h"
 
-using namespace Ops::Base;
 namespace LogSigmoidDag {
+using namespace Ops::Base;
 
 constexpr int CAST_MODE_NONE = 0;
 constexpr int CAST_MODE_RINT = 1;

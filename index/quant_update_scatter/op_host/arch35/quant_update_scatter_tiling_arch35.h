@@ -143,10 +143,10 @@ private:
     uint64_t divMode_{0};
     uint64_t castRoundMode_{0};
 
-    int64_t NewAxis(int64_t axis);
-    double GetUpdateUbRatio(bool isLittleQuant);
+    int64_t NewAxis(int64_t axis) const;
+    double GetUpdateUbRatio(bool isLittleQuant) const;
     bool CheckRoundMode(ge::DataType type, std::string mode);
-    std::string GetErrMsg(ge::DataType type);
+    std::string GetErrMsg(ge::DataType type) const;
     void CalcTilingDataForLargeBatchLargeQuant();
     void CalcTilingDataForLargeBatchLittleQuant();
     void CalcTilingDataForLargeEleLargeQuant();

@@ -15,6 +15,7 @@
 #include "atvoss/elewise/elewise_tiling.h"
 
 namespace optiling {
+    using namespace Ops::Base;
     struct MishGradCompileInfo {
         uint64_t coreNum = 0;
         uint64_t ubSize = 0;

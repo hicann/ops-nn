@@ -116,7 +116,7 @@ private:
     void CalculateMaxUbSizePerRow(ge::DataType xDtype);
     bool SetSpecialTilingForDs(gert::TilingContext* context);
     bool CalcTilingForMultiRow(gert::TilingContext* context);
-    bool CheckMultiRowPreconditions(gert::TilingContext* context, uint32_t& maxUbLen);
+    bool CheckMultiRowPreconditions(const gert::TilingContext* context, uint32_t& maxUbLen);
     void CalculateMultiRowCoreDistribution(uint32_t maxUbLen, uint32_t& perCoreLoop, uint32_t& extraRows);
     ge::graphStatus GetCompileInfo(gert::TilingContext* context);
 
@@ -548,7 +548,7 @@ bool DynamicQuantTiling::SetSpecialTilingForDs(gert::TilingContext* context)
     return true;
 }
 
-bool DynamicQuantTiling::CheckMultiRowPreconditions(gert::TilingContext* context, uint32_t& maxUbLen)
+bool DynamicQuantTiling::CheckMultiRowPreconditions(const gert::TilingContext* context, uint32_t& maxUbLen)
 {
     // 仅非moe场景、对称量化可以使用当前模板
     auto groupDesc = context->GetOptionalInputDesc(GROUP_INDEX);

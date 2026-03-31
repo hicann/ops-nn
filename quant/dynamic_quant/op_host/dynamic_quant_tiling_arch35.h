@@ -42,7 +42,7 @@ private:
     void SetTilingData(gert::TilingContext* context);
     void PrintTilingData(gert::TilingContext* context);
 
-    void IsCapableForFullLoad(gert::TilingContext* context);
+    void IsCapableForFullLoad(const gert::TilingContext* context);
     void IsCapableForRecompute(gert::TilingContext* context);
     void IsCapableForSplitM(gert::TilingContext* context);
     void SetTilingDataForPerChannel(gert::TilingContext* context);

@@ -91,13 +91,13 @@ ge::graphStatus GeluTiling::RunTiling()
     ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
     if (this->outputDtype == ge::DT_FLOAT16) {
         dType = TPL_FP16;
-        baseTilingResult = elewiseBaseTiling.DoTiling<GeluDAG<half>::OpDag>(*tiling);
+        baseTilingResult = elewiseBaseTiling.DoTiling<GeluOp::GeluDAG<half>::OpDag>(*tiling);
     } else if (this->outputDtype == ge::DT_BF16) {
         dType = TPL_BF16;
-        baseTilingResult = elewiseBaseTiling.DoTiling<GeluDAG<bfloat16_t>::OpDag>(*tiling);
+        baseTilingResult = elewiseBaseTiling.DoTiling<GeluOp::GeluDAG<bfloat16_t>::OpDag>(*tiling);
     } else if (this->outputDtype == ge::DT_FLOAT) {
         dType = TPL_FP32;
-        baseTilingResult = elewiseBaseTiling.DoTiling<GeluDAG<float>::OpDag>(*tiling);
+        baseTilingResult = elewiseBaseTiling.DoTiling<GeluOp::GeluDAG<float>::OpDag>(*tiling);
     } else {
         OP_LOGE(tilingContext->GetNodeName(), "output dtype[%s] not support",
         ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str());

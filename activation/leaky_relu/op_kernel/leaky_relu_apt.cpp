@@ -22,6 +22,7 @@
 
 using namespace AscendC;
 using namespace LeakyReluOp;
+using namespace Ops::Base;
 
 template <uint64_t schMode, uint64_t dType>
 __global__ __aicore__ void leaky_relu(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {

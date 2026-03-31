@@ -21,6 +21,7 @@
 #include "register/op_impl_registry.h"
 #include "atvoss/elewise/elewise_tiling.h"
 #include "atvoss/broadcast/broadcast_tiling.h"
+#include "util/math_util.h"
 
 using namespace AscendC;
 using namespace ge;
@@ -37,7 +38,6 @@ static constexpr uint64_t WORKSPACE_SIZE = 32;
 const int64_t ASCEND_WORKSPACE = 16777216; // 16 * 1024 * 1024
 static constexpr float NEG_ONE = -1.0f;
 static constexpr float ZERO = 0.0;
-
 
 ge::graphStatus SwishTiling::CalcInputDtype()
 {
@@ -95,9 +95,9 @@ ge::graphStatus SwishTiling::SetAttr()
 
     attrScale = scale;
 
-    if (scale == NEG_ONE) {
+    if (IsFloatEqual(scale, NEG_ONE)) {
         attrWork = static_cast<uint64_t>(TPL_SCALE_NEG_ONE);
-    } else if (scale == ZERO) {
+    } else if (IsFloatEqual(scale, ZERO)) {
         attrWork = static_cast<uint64_t>(TPL_SCALE_ZERO);
     } else {
         attrWork = static_cast<uint64_t>(TPL_SCALE_OTHER);

@@ -20,6 +20,7 @@
 #include "atvoss/util/vec.h"
 #include "atvoss/util/placeholder.h"
 
+namespace GeluOp {
 using namespace Ops::Base;
 const float NEG_SQRT_EIGHT_OVER_PI = -1.595769121 * 0.044715;
 const float TANH_APPROX_FACTOR = 1 / 0.044715;
@@ -81,5 +82,5 @@ struct GeluDAG {
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
-
+} // namespace GeluOp
 #endif  // CANN_CUSTOM_OPS_GELU_DAG_H

@@ -32,7 +32,7 @@ protected:
     ge::graphStatus CalcOutputDtype();
     ge::graphStatus CalcInputDtype();
     ge::graphStatus CheckShape();
-    ge::graphStatus SetTilingData();
+    ge::graphStatus SetTilingData() const;
     ge::graphStatus SetAttr();
 
 private:

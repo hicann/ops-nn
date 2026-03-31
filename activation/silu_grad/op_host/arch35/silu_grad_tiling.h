@@ -64,12 +64,12 @@ class SiluGradTiling : public Ops::NN::Optiling::TilingBaseClass {
     uint64_t GetTilingKey() const override;
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
-    std::string ToString(SiluGradTilingData &tilingData);
+    std::string ToString(SiluGradTilingData &tilingDataParam) const;
 
    private:
-    uint64_t GetOpKey(ge::DataType dyDtype, ge::DataType xDtype, ge::DataType dxDtype);
-    uint64_t GenerateTilingKey(uint64_t innerKey);
-    std::map<uint64_t, Ops::Base::BroadcastComputeParams> GetComputeMap(uint64_t opKey);
+    uint64_t GetOpKey(ge::DataType dyDtype, ge::DataType xDtype, ge::DataType dxDtype) const;
+    uint64_t GenerateTilingKey(uint64_t innerKey) const;
+    std::map<uint64_t, Ops::Base::BroadcastComputeParams> GetComputeMap(uint64_t opKeyParam) const;
 
     SiluGradTilingData tilingData;
     uint64_t opKey = 0;

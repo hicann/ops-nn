@@ -18,27 +18,25 @@
 #include "atvoss/util/vec.h"
 #include "atvoss/util/placeholder.h"
 
-using namespace AscendC;
-using namespace Ops::Base;
 template <typename U, typename T = float>
 struct LeakyReluDag {
-    using OpCopyInX = Bind<Vec::CopyIn<U>, Placeholder::In0<U>>;
-    using OpLeakRelu = Bind<Vec::LeakyRelu<U>, OpCopyInX, Placeholder::Var<T, 0>>;
-    using OpCopyOut = Bind<Vec::CopyOut<U>, Placeholder::Out0<U>, OpLeakRelu>;
-    using Outputs = Elems<OpCopyOut>;
-    using OpDag = DAGSch<Outputs>;
+    using OpCopyInX = Ops::Base::Bind<Ops::Base::Vec::CopyIn<U>, Ops::Base::Placeholder::In0<U>>;
+    using OpLeakRelu = Ops::Base::Bind<Ops::Base::Vec::LeakyRelu<U>, OpCopyInX, Ops::Base::Placeholder::Var<T, 0>>;
+    using OpCopyOut = Ops::Base::Bind<Ops::Base::Vec::CopyOut<U>, Ops::Base::Placeholder::Out0<U>, OpLeakRelu>;
+    using Outputs = Ops::Base::Elems<OpCopyOut>;
+    using OpDag = Ops::Base::DAGSch<Outputs>;
 };
 
 template <typename U, typename T = float>
 struct LeakyReluCastDag {
-    using OpCopyInX = Bind<Vec::CopyIn<U>, Placeholder::In0<U>>;
-    using OpCopyInXCast = Bind<Vec::Cast<T, U, 0>, OpCopyInX>;
-    using OpLeakRelu = Bind<Vec::LeakyRelu<T>, OpCopyInXCast, Placeholder::Var<T, 0>>;
+    using OpCopyInX = Ops::Base::Bind<Ops::Base::Vec::CopyIn<U>, Ops::Base::Placeholder::In0<U>>;
+    using OpCopyInXCast = Ops::Base::Bind<Ops::Base::Vec::Cast<T, U, 0>, OpCopyInX>;
+    using OpLeakRelu = Ops::Base::Bind<Ops::Base::Vec::LeakyRelu<T>, OpCopyInXCast, Ops::Base::Placeholder::Var<T, 0>>;
     constexpr static int CAST_MODE_RINT = 1;
-    using OpCopyOutCast = Bind<Vec::Cast<U, T, CAST_MODE_RINT>, OpLeakRelu>;
-    using OpCopyOut = Bind<Vec::CopyOut<U>, Placeholder::Out0<U>, OpCopyOutCast>;
-    using Outputs = Elems<OpCopyOut>;
-    using OpDag = DAGSch<Outputs>;
+    using OpCopyOutCast = Ops::Base::Bind<Ops::Base::Vec::Cast<U, T, CAST_MODE_RINT>, OpLeakRelu>;
+    using OpCopyOut = Ops::Base::Bind<Ops::Base::Vec::CopyOut<U>, Ops::Base::Placeholder::Out0<U>, OpCopyOutCast>;
+    using Outputs = Ops::Base::Elems<OpCopyOut>;
+    using OpDag = Ops::Base::DAGSch<Outputs>;
 };
+#endif // ASCENDC_LEAKY_RELU_DAG_H_
 
-#endif //ASCENDC_LEAKY_RELU_DAG_H_
