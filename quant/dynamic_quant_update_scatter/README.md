@@ -1,6 +1,6 @@
 # DynamicQuantUpdateScatter
 
-##  产品支持情况
+## 产品支持情况
 
 | 产品 | 是否支持 |
 | ---- | :----:|
@@ -82,9 +82,10 @@
     </tr>
   </tbody></table>
 
-- Kirin X90/Kirin 9030 处理器系列产品: 
- 	- 输入`updates`：数据类型仅支持FLOAT16。
- 	- 输入`smooth_scales`：数据类型仅支持FLOAT16。
+- Kirin X90/Kirin 9030 处理器系列产品:
+  - 输入`updates`：数据类型仅支持FLOAT16。
+  - 输入`smooth_scales`：数据类型仅支持FLOAT16。
+
 ## 约束说明
 
 1. indices的维数只能是1维或者2维，如果是2维，其第2维的大小必须是2。

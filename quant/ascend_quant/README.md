@@ -16,13 +16,13 @@
 - 算子功能：对输入x进行量化操作，且scale和offset的size需要是x的最后一维或1。
 - 计算公式：
   - sqrtMode为false时，计算公式为:
-    
+
     $$
     y = round((x * scale) + offset)
     $$
 
   - sqrtMode为true时，计算公式为:
-    
+
     $$
     y = round((x * scale * scale) + offset)
     $$
@@ -96,7 +96,7 @@
     </tr>
   </tbody></table>
 
-- Ascend 950PR/Ascend 950DT </term>：数据类型支持FLOAT32、FLOAT16。
+- <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT32、FLOAT16。
 
 ## 约束说明
 

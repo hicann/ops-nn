@@ -71,7 +71,7 @@
 
 ## 约束说明
 
- - 关于x、mxscale1、mxscale2的shape约束说明如下：
+  - 关于x、mxscale1、mxscale2的shape约束说明如下：
     - x的维度应该大于等于2。
     - rank(mxscale1) = rank(x) + 1。
     - rank(mxscale2) = rank(x) + 1。

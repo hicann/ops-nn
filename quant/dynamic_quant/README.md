@@ -113,9 +113,10 @@
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：输出`y`的数据类型仅支持INT8、INT4。
 
 - Kirin X90/Kirin 9030 处理器系列产品：
- 	- 输入`x`：数据类型仅支持FLOAT16。
- 	- 可选输入`smooth_scales`：数据类型仅支持FLOAT16。
- 	- 输出`y`：数据类型仅支持INT8。
+  - 输入`x`：数据类型仅支持FLOAT16。
+  - 可选输入`smooth_scales`：数据类型仅支持FLOAT16。
+  - 输出`y`：数据类型仅支持INT8。
+
 ## 约束说明
 
 无

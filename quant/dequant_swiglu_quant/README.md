@@ -60,7 +60,6 @@
 
   其中，x\_glu表示dequantOut<sub>i</sub>的偶数索引部分，x\_linear表示dequantOut<sub>i</sub>的奇数索引部分。
 
-
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 951px"><colgroup>
@@ -207,13 +206,12 @@
     </tr>
   </tbody></table>
 
+- Kirin X90/Kirin 9030 处理器系列产品:
+  - 输入`x`：数据类型不支持BFLOAT16。
+  - 输入`biasOptional`：数据类型不支持BFLOAT16。
+  - 输入`quantScaleOptional`：数据类型不支持FLOAT16。
+  - 输出`y`：数据类型仅支持INT8。
 
-
-- Kirin X90/Kirin 9030 处理器系列产品: 
- 	- 输入`x`：数据类型不支持BFLOAT16。
- 	- 输入`biasOptional`：数据类型不支持BFLOAT16。
- 	- 输入`quantScaleOptional`：数据类型不支持FLOAT16。
- 	- 输出`y`：数据类型仅支持INT8
 ## 约束说明
 
 - <term>Ascend 950PR/Ascend 950DT</term>：
@@ -229,7 +227,6 @@
   - x的最后一维需要是2的倍数，且x的维数必须大于1维。
   - 当quant_mode为static时，quant_scale和quant_offset为1维，值为1；quant_mode为dynamic时，quant_scale和quant_offset
   - 算子支持的输入张量的内存大小有上限，校验公式：weight_scale张量内存大小+bias张量内存大小+quant_scale张量内存大小+quant_offset张量内存大小 + （activation_scale张量内存大小 + scale张量内存大小）/40  + x张量最后一维H内存大小 * 10 < 192KB。
-
 
 ## 调用说明
 

@@ -168,7 +168,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>yOut (aclTensor*)</td>
       <td>输出</td>
       <td>表示量化后的输出Tensor。对应公式中的y。</td>
-      <td>支持空Tensor。<br>shape的维度与x保持一致。</td>
+      <td><li>支持空Tensor。</li><li>shape的维度与x保持一致。</li></td>
       <td>HIFLOAT8、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
       <td>2-3</td>
@@ -178,7 +178,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>scaleOut (aclTensor*)</td>
       <td>输出</td>
       <td>表示每个分组对应的量化尺度，对应公式中的scale。</td>
-      <td>支持空Tensor。<br>如果输入x的shape为[M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[(M//rowBlockSize+g), (N/colBlockSize)]。</br>如果输入x的shape为[B, M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[B, (M//rowBlockSize+g), (N/colBlockSize)]。 </td>
+      <td><li>支持空Tensor。</li><li>如果输入x的shape为[M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[(M//rowBlockSize+g), (N/colBlockSize)]。</li><li>如果输入x的shape为[B, M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[B, (M//rowBlockSize+g), (N/colBlockSize)]。 </li></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>2-3</td>
@@ -205,8 +205,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>-</td>
     </tr>
   </tbody></table>
-   
-  
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -287,10 +286,10 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
 
  - 确定性说明：aclnnGroupedDynamicBlockQuant默认确定性实现。
 
-
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
   #include <iostream>
   #include <vector>
