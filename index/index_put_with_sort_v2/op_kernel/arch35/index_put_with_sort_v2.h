@@ -46,7 +46,7 @@ using AccumType = std::conditional_t<
     std::conditional_t<std::is_same_v<T, half> || std::is_same_v<T, bfloat16_t>, float, T>>;
 
 template <typename TX, typename AccumT, bool ACCUMULATE, typename IdxT>
-__aicore__ inline void WriteBack(__gm__ TX* output, IdxT idx, AccumT value) {
+__simt_callee__ __aicore__ inline void WriteBack(__gm__ TX* output, IdxT idx, AccumT value) {
     if constexpr (ACCUMULATE) {
         output[idx] = static_cast<TX>(value + static_cast<AccumT>(output[idx]));
     } else {
