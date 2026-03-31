@@ -237,6 +237,7 @@ function(add_op_graph_ut_modules OP_GRAPH_MODULE_NAME)
     target_link_libraries(${OP_GRAPH_MODULE_NAME}_static_lib PRIVATE
             ${OP_GRAPH_MODULE_NAME}_cases_obj
             ${GRAPH_PLUGIN_NAME}_obj
+            ${CUBE_UTILS_PLUGIN_NAME}_obj
             es_math
             es_nn
     )

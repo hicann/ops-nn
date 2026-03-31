@@ -17,6 +17,7 @@ set(OPSTATIC_NAME cann_${PKG_NAME}_static)
 set(OPAPI_NAME opapi_${PKG_NAME})
 set(OPGRAPH_NAME opgraph_${PKG_NAME})
 set(ONNX_PLUGIN_NAME op_${PKG_NAME}_onnx_plugin)
+set(CUBE_UTILS_PLUGIN_NAME cube_utils_${PKG_NAME}_util)
 set(GRAPH_PLUGIN_NAME graph_plugin_${PKG_NAME})
 set(VENDOR_PACKAGE_NAME ${VENDOR_NAME}_nn)
 
@@ -165,6 +166,7 @@ set(OP_TILING_INCLUDE
   ${OPS_NN_DIR}
   ${OPS_NN_DIR}/common/inc
   ${OPS_NN_DIR}/common/inc/op_host
+  ${ASCEND_DIR}/include
 )
 
 set(OP_PROTO_INCLUDE
@@ -178,6 +180,7 @@ set(OP_PROTO_INCLUDE
   ${OPS_NN_DIR}/conv
   ${OPS_NN_DIR}/vfusion
   ${OPS_NN_DIR}/common/inc
+  ${ASCEND_DIR}/include
 )
 
 set(AICPU_INCLUDE

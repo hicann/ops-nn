@@ -288,6 +288,7 @@ function(add_graph_plugin_modules)
     target_include_directories(${GRAPH_PLUGIN_NAME}_obj PRIVATE 
       ${OP_PROTO_INCLUDE}
       ${PROJECT_SOURCE_DIR}/common/inc
+      ${PROJECT_SOURCE_DIR}/common/graph_fusion
       ${ASCEND_DIR}/include
       ${ASCEND_DIR}/include/external
       ${ASCEND_DIR}/include/exe_graph
@@ -748,6 +749,68 @@ function(add_onnx_plugin_modules)
   endif()
 endfunction()
 
+# 添加 cube_utils 插件模块
+function(add_cube_utils_plugin_modules)
+  if (NOT TARGET ${CUBE_UTILS_PLUGIN_NAME}_obj)
+    if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
+      npu_op_library(${CUBE_UTILS_PLUGIN_NAME}_obj GRAPH)
+    else()
+      add_library(${CUBE_UTILS_PLUGIN_NAME}_obj OBJECT)
+    endif()
+
+    # 设置 C++14 标准
+    set_target_properties(${CUBE_UTILS_PLUGIN_NAME}_obj PROPERTIES
+      CXX_STANDARD 14
+      CXX_STANDARD_REQUIRED ON
+      CXX_EXTENSIONS OFF
+    )
+    
+    # 设置头文件包含路径
+    target_include_directories(${CUBE_UTILS_PLUGIN_NAME}_obj PRIVATE 
+      ${OP_PROTO_INCLUDE} 
+      ${ASCEND_DIR}/include
+      ${CMAKE_CURRENT_SOURCE_DIR}
+      ${PROJECT_SOURCE_DIR}/common/inc
+    )
+    
+    # 设置编译定义
+    target_compile_definitions(${CUBE_UTILS_PLUGIN_NAME}_obj PRIVATE 
+      OPS_UTILS_LOG_SUB_MOD_NAME="CUBE_UTILS_PLUGIN" 
+      LOG_CPP
+    )
+
+    # 设置编译选项
+    if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
+      target_compile_options(
+        ${CUBE_UTILS_PLUGIN_NAME}_obj PRIVATE 
+          -Dgoogle=ascend_private 
+          -fvisibility=hidden 
+          -Wno-shadow 
+          -Wno-unused-parameter
+          -Wno-deprecated-declarations
+      )
+    else()
+      target_compile_options(
+        ${CUBE_UTILS_PLUGIN_NAME}_obj PRIVATE 
+          $<$<NOT:$<BOOL:${ENABLE_TEST}>>:-DDISABLE_COMPILE_V1> 
+          -Dgoogle=ascend_private
+          -fvisibility=hidden 
+          -Wno-shadow 
+          -Wno-unused-parameter
+      )
+    endif()
+
+    # 设置链接库
+    target_link_libraries(
+      ${CUBE_UTILS_PLUGIN_NAME}_obj
+      PRIVATE 
+        $<BUILD_INTERFACE:$<IF:$<BOOL:${ENABLE_TEST}>,intf_llt_pub_asan_cxx17,intf_pub_cxx14>>
+        $<BUILD_INTERFACE:dlog_headers>
+        eager_style_graph_builder_base
+    )
+  endif()
+endfunction()
+
 macro(add_onnx_plugin_sources)
   set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -758,7 +821,22 @@ macro(add_onnx_plugin_sources)
   else()
     message(STATUS "ONNX_PLUGIN_SRCS is empty")
   endif()
+  endmacro()
+
+# 添加 cube_utils 插件源文件
+macro(add_cube_utils_plugin_sources)
+  set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
+  # 收集所有 cube_utils/*.cc 文件
+  file(GLOB CUBE_UTILS_PLUGIN_SRCS ${SOURCE_DIR}/cube_utils/*.cc)
+  if(CUBE_UTILS_PLUGIN_SRCS)
+    add_cube_utils_plugin_modules()
+    target_sources(${CUBE_UTILS_PLUGIN_NAME}_obj PRIVATE ${CUBE_UTILS_PLUGIN_SRCS})
+  else()
+    message(STATUS "CUBE_UTILS_PLUGIN_SRCS is empty")
+  endif()
 endmacro()
+
 # 设置包和版本号
 function(set_package name)
   cmake_parse_arguments(VERSION "" "VERSION" "" ${ARGN})

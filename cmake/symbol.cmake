@@ -124,6 +124,7 @@ function(gen_opgraph_symbol)
   add_library(
     ${OPGRAPH_NAME} SHARED
     $<$<TARGET_EXISTS:${GRAPH_PLUGIN_NAME}_obj>:$<TARGET_OBJECTS:${GRAPH_PLUGIN_NAME}_obj>>
+    $<$<TARGET_EXISTS:${CUBE_UTILS_PLUGIN_NAME}_obj>:$<TARGET_OBJECTS:${CUBE_UTILS_PLUGIN_NAME}_obj>>
     $<$<TARGET_EXISTS:opbase_util_objs>:$<TARGET_OBJECTS:opbase_util_objs>>
     $<$<TARGET_EXISTS:opbase_infer_objs>:$<TARGET_OBJECTS:opbase_infer_objs>>
   )
@@ -166,7 +167,6 @@ function(gen_opgraph_symbol)
         es_math
         es_nn
       )
-
       target_link_libraries(
         ${OPGRAPH_NAME}
         PRIVATE 
