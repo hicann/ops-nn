@@ -61,7 +61,7 @@ aclnnStatus aclnnGroupNormSilu(
 
 ## aclnnGroupNormSiluGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
     <col style="width: 220px">
@@ -191,7 +191,7 @@ aclnnStatus aclnnGroupNormSilu(
 
   - <term>Ascend 950PR/Ascend 950DT</term>：meanOut和rstdOut数据类型要求与gamma和beta相同。
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -227,7 +227,7 @@ aclnnStatus aclnnGroupNormSilu(
 
 ## aclnnGroupNormSilu
 
-- **参数说明：**
+- **参数说明**
 
   <table>
   <thead>
@@ -260,7 +260,7 @@ aclnnStatus aclnnGroupNormSilu(
     </tr>
   </tbody></table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -479,4 +479,3 @@ int main() {
   return 0;
 }
 ```
-

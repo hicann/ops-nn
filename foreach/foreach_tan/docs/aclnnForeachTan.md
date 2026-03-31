@@ -49,7 +49,7 @@ aclnnStatus aclnnForeachTan(
 
 ## aclnnForeachTanGetWorkspaceSize
 
-- **参数说明**：
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
     <col style="width: 170px">
@@ -161,7 +161,7 @@ aclnnStatus aclnnForeachTan(
   
 ## aclnnForeachTan
 
-- **参数说明**：
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -198,7 +198,7 @@ aclnnStatus aclnnForeachTan(
   </tbody>
   </table>
 
-- **返回值**：
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

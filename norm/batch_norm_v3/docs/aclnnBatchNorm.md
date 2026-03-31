@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     √    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
-
 ## 功能说明
 
 - 接口功能：对一个批次的数据做批量归一化处理，正则化之后生成的数据的统计结果为0均值、1标准差。
@@ -56,7 +55,7 @@ aclnnStatus aclnnBatchNorm(
 
 ## aclnnBatchNormGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -222,7 +221,7 @@ aclnnStatus aclnnBatchNorm(
     - 参数`saveInvstd`表示input的方差。
   - <term>Ascend 950PR/Ascend 950DT</term>：参数`saveInvstd`表示input标准差的倒数。
   
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -267,7 +266,7 @@ aclnnStatus aclnnBatchNorm(
 
 ## aclnnBatchNorm
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -304,7 +303,7 @@ aclnnStatus aclnnBatchNorm(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

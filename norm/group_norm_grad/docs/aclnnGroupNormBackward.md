@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
-
 ## 功能说明
 
 - 接口功能：[aclnnGroupNorm](../../group_norm/docs/aclnnGroupNorm.md)的反向计算。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。
@@ -66,7 +65,7 @@ aclnnStatus aclnnGroupNormBackward(
 
 ## aclnnGroupNormBackwardGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -255,6 +254,7 @@ aclnnStatus aclnnGroupNormBackward(
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
     参数`mean`与`gradOut`支持的数据类型对应关系如下：
+    
     |输入参数 | gradOut | mean |
     |--|--|--|
     |数据类型 | FLOAT32 | FLOAT32 |
@@ -263,7 +263,7 @@ aclnnStatus aclnnGroupNormBackward(
     |数据类型 | BFLOAT16 | BFLOAT16 |
     |数据类型 | BFLOAT16 | FLOAT32 |
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -338,7 +338,7 @@ aclnnStatus aclnnGroupNormBackward(
 
 ## aclnnGroupNormBackward
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -375,7 +375,7 @@ aclnnStatus aclnnGroupNormBackward(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

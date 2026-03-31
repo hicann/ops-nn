@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     √    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：[aclnnRmsNorm](../../rms_norm/docs/aclnnRmsNorm.md)的反向计算。用于计算RmsNorm的梯度，即在反向传播过程中计算输入张量的梯度。
@@ -61,7 +60,7 @@ aclnnStatus aclnnRmsNormGrad(
 
 ## aclnnRmsNormGradGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -170,7 +169,7 @@ aclnnStatus aclnnRmsNormGrad(
 
   - <term>Atlas 推理系列产品</term>：参数`dy`、`x`、`gamma`、`dxOut`的数据类型不支持BFLOAT16。
   
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -208,7 +207,7 @@ aclnnStatus aclnnRmsNormGrad(
 
 ## aclnnRmsNormGrad
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -245,8 +244,7 @@ aclnnStatus aclnnRmsNormGrad(
   </tbody>
   </table>
 
-
-- **返回值：**
+- **返回值**
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
@@ -255,6 +253,7 @@ aclnnStatus aclnnRmsNormGrad(
 
 - 各产品支持数据类型说明：
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
+    
     | `dy`数据类型 | `x`数据类型 | `rstd`数据类型 | `gamma`数据类型 | `dxOut`数据类型 | `dgammaOut`数据类型 |
     | -------- | -------- | -------- | -------- | -------- | -------- |
     | FLOAT16  | FLOAT16  | FLOAT32  | FLOAT32  | FLOAT16  | FLOAT32  |
@@ -262,16 +261,18 @@ aclnnStatus aclnnRmsNormGrad(
     | FLOAT16  | FLOAT16  | FLOAT32  | FLOAT16  | FLOAT16  | FLOAT32  |
     | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  |
     | BFLOAT16 | BFLOAT16 | FLOAT32  | BFLOAT16 | BFLOAT16 | FLOAT32  |
+
   - <term>Atlas 推理系列产品</term>：
+    
     | `dy`数据类型 | `x`数据类型 | `rstd`数据类型 | `gamma`数据类型 | `dxOut`数据类型 | `dgammaOut`数据类型 |
     | -------- | -------- | -------- | -------- | -------- | -------- |
     | FLOAT16  | FLOAT16  | FLOAT32  | FLOAT16  | FLOAT16  | FLOAT32  |
     | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  |
+
 - 确定性计算：
   - aclnnRmsNormGrad默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 ## 调用示例
-
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 

@@ -13,7 +13,6 @@
 |  <term>Kirin X90 处理器系列产品</term> | √ |
 |  <term>Kirin 9030 处理器系列产品</term> | √ |
 
-
 ## 功能说明
 
 - 算子功能：对两个张量列表对应位置元素执行插值计算，其中标量weight是插值系数。
@@ -80,6 +79,7 @@
 - <term>Ascend 950PR/Ascend 950DT</term>：`x1`的shape size与入参`x2`、出参`y`的一致。支持包含的最大Tensor个数为50。
 
 - Kirin X90/Kirin 9030处理器系列产品：x1、x2和y的数据类型不支持BFLOAT16。
+
 ## 约束说明
 
 无

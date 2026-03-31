@@ -52,7 +52,7 @@ aclnnStatus aclnnForeachSubScalarList(
 
 ## aclnnForeachSubScalarListGetWorkspaceSize
 
-- **参数说明**：
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
     <col style="width: 170px">
@@ -90,7 +90,7 @@ aclnnStatus aclnnForeachSubScalarList(
       <td>scalars（aclScalarList*）</td>
       <td>输入</td>
       <td>表示减法运算的第二个输入标量列表，对应公式中的`scalars`。</td>
-      <td><ul><li>元素个数与`x`中Tensor的个数相等。</li></ul>数据类型与入参`x`的数据类型具有一定对应关系：<ul><li>当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型仅支持FLOAT32。</li><li>当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。</li></ul></td>
+      <td><ul><li>元素个数与`x`中Tensor的个数相等。</li><li>数据类型与入参`x`的数据类型具有一定对应关系：<ul><li>当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型仅支持FLOAT32。</li><li>当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。</li></ul></li></ul></td>
       <td>FLOAT32、INT64</td>
       <td>-</td>
       <td>-</td>
@@ -128,7 +128,7 @@ aclnnStatus aclnnForeachSubScalarList(
     </tr>
   </tbody>
   </table>
-- **返回值**：
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -171,7 +171,7 @@ aclnnStatus aclnnForeachSubScalarList(
 
 ## aclnnForeachSubScalarList
 
-- **参数说明**：
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -208,7 +208,7 @@ aclnnStatus aclnnForeachSubScalarList(
   </tbody>
   </table>
 
-- **返回值**：
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

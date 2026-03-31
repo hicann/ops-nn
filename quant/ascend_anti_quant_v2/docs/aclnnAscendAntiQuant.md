@@ -184,7 +184,7 @@ aclnnStatus aclnnAscendAntiQuant(
     - 入参`x`仅支持INT4、INT8、INT32。
     - 入参`scale`、`offset`仅支持一维，且只能等于x尾轴大小或1，当x为int32类型时，必须为x尾轴大小的8倍。
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -263,7 +263,7 @@ aclnnStatus aclnnAscendAntiQuant(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

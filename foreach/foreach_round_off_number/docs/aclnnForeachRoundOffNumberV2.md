@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：对输入张量列表的每个张量执行指定精度的四舍五入运算，可通过roundMode指定舍入方式。本接口相较于[aclnnForeachRoundOffNumber](aclnnForeachRoundOffNumber.md)，修改入参roundMode的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
@@ -51,7 +50,7 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
 
 ## aclnnForeachRoundOffNumberV2GetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
   <col style="width: 120px">
@@ -127,7 +126,7 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -172,7 +171,7 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
 
 ## aclnnForeachRoundOffNumberV2
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -209,7 +208,7 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

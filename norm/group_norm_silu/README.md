@@ -13,7 +13,6 @@
 | <term>Kirin X90 处理器系列产品</term> | √ |
 | <term>Kirin 9030 处理器系列产品</term> | √ |
 
-
 ## 功能说明
 
 - 算子功能：计算输入self的组归一化结果out，均值meanOut，标准差的倒数rstdOut，以及silu的输出。
@@ -120,6 +119,7 @@
   </tbody></table>
 
 - Kirin X90/Kirin 9030处理器系列产品：所有输入、输出的数据类型不支持BFLOAT16。
+
 ## 约束说明
 
 无
@@ -130,4 +130,4 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_group_norm_silu.cpp](examples/test_aclnn_group_norm_silu.cpp) | 通过[aclnnGroupNormSilu.md](docs/aclnnGroupNormSilu.md)接口方式调用GroupNormSilu算子。 |
 | aclnn接口  | [test_aclnn_group_norm_silu_v2.cpp](examples/test_aclnn_group_norm_silu_v2.cpp) | 通过[aclnnGroupNormSiluV2.md](docs/aclnnGroupNormSiluV2.md)接口方式调用GroupNormSilu算子。 |
-| 图模式 | -  | 通过[算子IR](op_graph/group_norm_silu_proto.h)构图方式调用GroupNormSilu算子。
+| 图模式 | -  | 通过[算子IR](op_graph/group_norm_silu_proto.h)构图方式调用GroupNormSilu算子。 |

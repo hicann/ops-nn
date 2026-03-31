@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：
@@ -71,15 +70,15 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
 
 ## aclnnSyncBatchNormGatherStatsGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
-  <table style="undefined;table-layout: fixed; width: 1567px"><colgroup>
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
   <col style="width: 120px">
-  <col style="width: 300px">
+  <col style="width: 271px">
   <col style="width: 330px">
-  <col style="width: 212px">
-  <col style="width: 190px">
+  <col style="width: 223px">
+  <col style="width: 101px">
   <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
@@ -96,120 +95,121 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
   </tr></thead>
     <tbody>
     <tr>
-        <td>totalSum（aclTensor*）</td>
-        <td>输入</td>
-        <td>表示各设备的通道特征和，对应公式中的totalSum。</td>
-        <td>第一维必须大于0。</td>
-        <td>BFLOAT16、FLOAT16、FLOAT</td>
-        <td>ND</td>
-        <td>2</td>
-        <td>√</td>
+      <td>totalSum（aclTensor*）</td>
+      <td>输入</td>
+      <td>表示各设备的通道特征和，对应公式中的totalSum。</td>
+      <td>第一维必须大于0。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>ND</td>
+      <td>2</td>
+      <td>√</td>
     </tr>
     <tr>
-        <td>totalSquareSum（aclTensor*）</td>
-        <td>输入</td>
-        <td>表示各设备的通道特征平方，对应公式中的totalSquareSum。</td>
-        <td><ul><li>第一维必须大于0。</li><li>shape与totalSum相同。</li></ul></td>
-        <td>BFLOAT16、FLOAT16、FLOAT</td>
-        <td>ND</td>
-        <td>2</td>
-        <td>√</td>
+      <td>totalSquareSum（aclTensor*）</td>
+      <td>输入</td>
+      <td>表示各设备的通道特征平方，对应公式中的totalSquareSum。</td>
+      <td><ul><li>第一维必须大于0。</li><li>shape与totalSum相同。</li></ul></td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>ND</td>
+      <td>2</td>
+      <td>√</td>
     </tr>
     <tr>
-        <td>sampleCount（aclTensor*）</td>
-        <td>输入</td>
-        <td>表示各设备的样本计数，对应公式中的sampleCount。</td>
-        <td><ul><li>第一维必须大于0。</li><li>shape与totalSum的第一维一致。</li></ul></td>
-        <td>BFLOAT16、FLOAT16、FLOAT、INT32</td>
-        <td>ND</td>
-        <td>1</td>
-        <td>√</td>
+      <td>sampleCount（aclTensor*）</td>
+      <td>输入</td>
+      <td>表示各设备的样本计数，对应公式中的sampleCount。</td>
+      <td><ul><li>第一维必须大于0。</li><li>shape与totalSum的第一维一致。</li></ul></td>
+      <td>BFLOAT16、FLOAT16、FLOAT、INT32</td>
+      <td>ND</td>
+      <td>1</td>
+      <td>√</td>
     </tr>
     <tr>
-        <td>mean（aclTensor*）</td>
-        <td>输入</td>
-        <td>表示计算过程中的均值，对应公式中的runningMean。</td>
-        <td><ul><li>支持空Tensor。</li><li>shape与totalSum的第二维一致。</li></ul></td>
-        <td>BFLOAT16、FLOAT16、FLOAT</td>
-        <td>ND</td>
-        <td>1</td>
-        <td>√</td>
+      <td>mean（aclTensor*）</td>
+      <td>输入</td>
+      <td>表示计算过程中的均值，对应公式中的runningMean。</td>
+      <td><ul><li>支持空Tensor。</li><li>shape与totalSum的第二维一致。</li></ul></td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>ND</td>
+      <td>1</td>
+      <td>√</td>
     </tr>
     <tr>
-        <td>variance（aclTensor*）</td>
-        <td>输入</td>
-        <td>表示计算过程中的方差，对应公式中的runningVar。</td>
-        <td><ul><li>支持空Tensor。</li><li>shape与totalSum的第二维一致。</li></ul></td>
-        <td>BFLOAT16、FLOAT16、FLOAT</td>
-        <td>ND</td>
-        <td>1</td>
-        <td>√</td>
+      <td>variance（aclTensor*）</td>
+      <td>输入</td>
+      <td>表示计算过程中的方差，对应公式中的runningVar。</td>
+      <td><ul><li>支持空Tensor。</li><li>shape与totalSum的第二维一致。</li></ul></td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>ND</td>
+      <td>1</td>
+      <td>√</td>
     </tr>
     <tr>
-        <td>momentum（float）</td>
-        <td>输入</td>
-        <td>runningMean和runningVar的指数平滑参数。</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
+      <td>momentum（float）</td>
+      <td>输入</td>
+      <td>runningMean和runningVar的指数平滑参数。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
     </tr>
     <tr>
-        <td>eps（float）</td>
-        <td>输入</td>
-        <td>用于防止产生除0的偏移。</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
+      <td>eps（float）</td>
+      <td>输入</td>
+      <td>用于防止产生除0的偏移。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
     </tr>
     <tr>
-        <td>batchMean（aclTensor*）</td>
-        <td>输出</td>
-        <td>表示全局批均值，对应公式中的batchMean。</td>
-        <td><ul><li>第一维必须大于0。</li></ul></td>
-        <td>BFLOAT16、FLOAT16、FLOAT</td>
-        <td>ND</td>
-        <td>1</td>
-        <td>√</td>
+      <td>batchMean（aclTensor*）</td>
+      <td>输出</td>
+      <td>表示全局批均值，对应公式中的batchMean。</td>
+      <td><ul><li>第一维必须大于0。</li></ul></td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>ND</td>
+      <td>1</td>
+      <td>√</td>
     </tr>
     <tr>
-        <td>batchInvstd（aclTensor*）</td>
-        <td>输出</td>
-        <td>表示标准差倒数，对应公式中的batchInvstd。</td>
-        <td><ul><li>第一维必须大于0。</li></ul></td>
-        <td>BFLOAT16、FLOAT16、FLOAT</td>
-        <td>ND</td>
-        <td>1</td>
-        <td>√</td>
+      <td>batchInvstd（aclTensor*）</td>
+      <td>输出</td>
+      <td>表示标准差倒数，对应公式中的batchInvstd。</td>
+      <td><ul><li>第一维必须大于0。</li></ul></td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>ND</td>
+      <td>1</td>
+      <td>√</td>
     </tr>
     <tr>
-        <td>workspaceSize（uint64_t*）</td>
-        <td>输出</td>
-        <td>返回需要在Device侧申请的workspace大小。</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
+      <td>workspaceSize（uint64_t*）</td>
+      <td>输出</td>
+      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
     </tr>
     <tr>
-        <td>executor（aclOpExecutor**）</td>
-        <td>输出</td>
-        <td>返回op执行器，包含了算子计算流程。</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
+      <td>executor（aclOpExecutor**）</td>
+      <td>输出</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
     </tr>
-    </tbody></table>
+    </tbody>
+    </table>
 
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：参数`totalSum`、`totalSquareSum`、`mean`、`variance`、`batchMean`、`batchInvstd`的数据类型不支持BFLOAT16。
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -248,7 +248,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
 
 ## aclnnSyncBatchNormGatherStats
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -285,7 +285,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

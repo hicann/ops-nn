@@ -163,7 +163,7 @@ aclnnStatus aclnnDynamicQuant(
     - 出参`yOut`的数据类型仅支持INT8。
     - 入参`smoothScalesOptional`为预留参数，当前版本不参与计算。
   
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -244,7 +244,7 @@ aclnnStatus aclnnDynamicQuant(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

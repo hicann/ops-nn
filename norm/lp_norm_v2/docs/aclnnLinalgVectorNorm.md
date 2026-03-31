@@ -13,7 +13,6 @@
 | <term>Atlas 推理系列产品</term>                             |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    √     |
 
-
 ## 功能说明
 
 - 接口功能：计算输入张量的向量范数。
@@ -49,7 +48,7 @@ aclnnStatus aclnnLinalgVectorNorm(
 
 ## aclnnLinalgVectorNormGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -156,7 +155,7 @@ aclnnStatus aclnnLinalgVectorNorm(
   </tbody>
   </table>
 
-- **返回值**：
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -183,7 +182,7 @@ aclnnStatus aclnnLinalgVectorNorm(
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="8">161002</td>
-     </tr>
+    </tr>
     <tr>
       <td>dims超过[-N, N-1] (N表示self的维度)。</td>
     </tr>
@@ -206,7 +205,7 @@ aclnnStatus aclnnLinalgVectorNorm(
 
 ## aclnnLinalgVectorNorm
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -243,7 +242,7 @@ aclnnStatus aclnnLinalgVectorNorm(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

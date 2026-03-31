@@ -13,7 +13,6 @@
 |  <term>Kirin X90 处理器系列产品</term> | √ |
 |  <term>Kirin 9030 处理器系列产品</term> | √ |
 
-
 ## 功能说明
 
 - 算子功能：对张量列表x1和张量列表x2执行逐元素比较，计算每个元素对应的最大值。
@@ -70,6 +69,7 @@
   </tbody></table>
 
 - Kirin X90/Kirin 9030处理器系列产品：支持FLOAT32、FLOAT16和INT32，不支持BFLOAT16。
+
 ## 约束说明
 
 无

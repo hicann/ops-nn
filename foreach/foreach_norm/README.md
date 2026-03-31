@@ -13,7 +13,6 @@
 |  <term>Kirin X90 处理器系列产品</term> | √ |
 |  <term>Kirin 9030 处理器系列产品</term> | √ |
 
-
 ## 功能说明
 
 - 算子功能：对输入张量列表的每个张量进行范数运算。
@@ -85,12 +84,12 @@
     </tr>
   </tbody></table>
 
-
-<term>Ascend 950PR/Ascend 950DT</term>：
-- 输入`x`、输出`y`支持的最大长度为256个。
-- 输入`scalar`的取值，仅支持1或者2。
+- <term>Ascend 950PR/Ascend 950DT</term>：
+  - 输入`x`、输出`y`支持的最大长度为256个。
+  - 输入`scalar`的取值，仅支持1或者2。
 
 - Kirin X90/Kirin 9030处理器系列产品：x和y的数据类型不支持BFLOAT16。
+
 ## 约束说明
 
 无

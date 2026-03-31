@@ -43,6 +43,7 @@
         |  FLOAT4_E1M2  |  0   |
         | FLOAT8_E4M3FN |  8   |
         |  FLOAT8_E5M2  |  15  |
+
   当scaleAlg为1时，只涉及FP8类型：
     - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP8。
     - 找到该块中数值的最大绝对值:
@@ -62,6 +63,7 @@
     - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
     - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
     - 应用到量化的最终步骤：$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$
+    
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
@@ -83,21 +85,33 @@
     <tr>
       <td>x</td>
       <td>输入</td>
+<<<<<<< HEAD
       <td><ul><li>表示标准化过程中的源数据张量，对应公式中的`x`。</li></ul></td>
+=======
+      <td>表示标准化过程中的源数据张量，对应公式中的`x`。</td>
+>>>>>>> ce6bdcb5f (modified md files)
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>gamma</td>
       <td>输入</td>
+<<<<<<< HEAD
       <td><ul><li>表示标准化过程中的权重张量，对应公式中的`gamma`。shape需要与x最后一维一致。</li></ul></td>
+=======
+      <td>表示标准化过程中的权重张量，对应公式中的`gamma`。shape需要与x最后一维一致。</td>
+>>>>>>> ce6bdcb5f (modified md files)
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>beta</td>
       <td>可选输入</td>
+<<<<<<< HEAD
       <td><ul><li>表示标准化过程中的偏置项，对应公式中的`beta`。shape必须与gamma一致。</li></ul></td>
+=======
+      <td>表示标准化过程中的偏置项，对应公式中的`beta`。shape必须与gamma一致。</td>
+>>>>>>> ce6bdcb5f (modified md files)
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
@@ -161,9 +175,9 @@
 
 ## 约束说明
 
-<term>Ascend 950PR/Ascend 950DT</term>：
-
-- mxscale的shape约束说明如下：
+- <term>Ascend 950PR/Ascend 950DT</term>：
+  
+  mxscale的shape约束说明如下：
   - rank(mxscale) = rank(x) + 1。
   - mxscale.shape[-2] = (ceil(x.shape[-1] / 32) + 2 - 1) / 2。
   - mxscale.shape[-1] = 2。

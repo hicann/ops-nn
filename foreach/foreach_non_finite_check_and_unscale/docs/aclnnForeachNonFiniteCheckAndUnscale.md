@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     √    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：遍历scaledGrads中的所有Tensor，检查是否存在Inf或NaN，如果存在则将foundInf设置为1.0，否则foundInf保持不变，并对scaledGrads中的所有Tensor进行反缩放。
@@ -53,7 +52,7 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
 
 ## aclnnForeachNonFiniteCheckAndUnscaleGetWorkspaceSize
 
-- **参数说明**：
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
     <col style="width: 170px">
@@ -130,7 +129,7 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
   </tbody>
   </table>
 
-- **返回值**：
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -174,7 +173,7 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
 
 ## aclnnForeachNonFiniteCheckAndUnscale
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -211,7 +210,7 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

@@ -126,7 +126,7 @@ aclnnStatus aclnnAddLayerNormQuant(
 
 ## aclnnAddLayerNormQuantGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -353,7 +353,7 @@ aclnnStatus aclnnAddLayerNormQuant(
   </tbody>
   </table>
   
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -412,7 +412,7 @@ aclnnStatus aclnnAddLayerNormQuant(
 
 ## aclnnAddLayerNormQuant
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -449,7 +449,7 @@ aclnnStatus aclnnAddLayerNormQuant(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -458,7 +458,7 @@ aclnnStatus aclnnAddLayerNormQuant(
 - 功能维度：
   
   * 可选输入（scales1Optional、scales2Optional、zeroPoints1Optional、zeroPoints2Optional）支持的可选输入组合如下所示：
-
+    
     | scales1Optional | scales2Optional | zeroPoints1Optional | zeroPoints2Optional | quantMode | 是否合法 |
     | --------------- | --------------- | ------------------- | ------------------- | ----------------- | :------ |
     | T               | T               | T                   | T                   | "static"          | T       |
@@ -483,7 +483,7 @@ aclnnStatus aclnnAddLayerNormQuant(
     - `X`代表任意情况均可。
 - 数据类型支持说明：
   - 当`quantMode`为"static"时：
-
+    
     | x1 数据类型 | x2 数据类型 | gamma 数据类型 | beta 数据类型 | bias 数据类型 | scale1 数据类型 | scale2 数据类型 | zeroPoints1 数据类型 | zeroPoints2 数据类型 | y1 数据类型 | y2 数据类型 | x 数据类型 | outScale1 数据类型 | outScale2 数据类型 |
     | ---------- | --------- | ------------- | ----------- | ------------ | -------------- | -------------- | ------------------ | ------------------- | --------- | ---------- | --------- | ----------------- | :--------------- |
     | FLOAT16    | FLOAT16   | FLOAT16       | FLOAT16     | FLOAT16      | FLOAT16        | FLOAT16        | FLOAT16            | FLOAT16             | INT8      | INT8       | FLOAT16   | FLOAT32           | FLOAT32          |
@@ -493,7 +493,7 @@ aclnnStatus aclnnAddLayerNormQuant(
     | BFLOAT16   | BFLOAT16  | BFLOAT16      | BFLOAT16    | BFLOAT16     | FLOAT32        | FLOAT32        | FLOAT32            | FLOAT32             | INT8      | INT8       | BFLOAT16  | FLOAT32           | FLOAT32          |
 
   - 当`quantMode`为"dynamic"时：
-
+    
     | x1 数据类型 | x2 数据类型 | gamma 数据类型 | beta 数据类型 | bias 数据类型 | scale1 数据类型 | scale2 数据类型 | zeroPoints1 数据类型 | zeroPoints2 数据类型 | y1 数据类型 | y2 数据类型 | x 数据类型 | outScale1 数据类型 | outScale2 数据类型 |
     | ---------- | --------- | ------------- | ----------- | ------------ | -------------- | -------------- | ------------------ | ------------------- | --------- | ---------- | --------- | ----------------- | :--------------- |
     | FLOAT16    | FLOAT16   | FLOAT16       | FLOAT16     | FLOAT16      | FLOAT16        | FLOAT16        | FLOAT16            | FLOAT16             | INT8      | INT8       | FLOAT16   | FLOAT32           | FLOAT32          |
@@ -789,5 +789,8 @@ int main() {
   aclFinalize();
   return 0;
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> ce6bdcb5f (modified md files)
 ```

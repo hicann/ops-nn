@@ -49,7 +49,7 @@ aclnnStatus aclnnForeachSqrt(
 
 ## aclnnForeachSqrtGetWorkspaceSize
 
-- **参数说明**：
+- **参数说明**
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
     <col style="width: 170px">
     <col style="width: 120px">
@@ -118,7 +118,7 @@ aclnnStatus aclnnForeachSqrt(
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：入参`x`的shape size小于等于出参`out`的shape size。
     - <term>Ascend 950PR/Ascend 950DT</term>：入参`x`的shape size与出参`out`的shape size一致。入参`x`和出参`out`支持包含的最大Tensor个数均为50。
 
-- **返回值**：
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -157,7 +157,8 @@ aclnnStatus aclnnForeachSqrt(
     <tr>
       <td>x或out中的Tensor的数据类型不一致。</td></tr>
     <tr>
-      <td>x或out中的Tensor维度超过8维。</td></tr>
+      <td>x或out中的Tensor维度超过8维。</td>
+    </tr>
   </tbody></table>
 
 ## aclnnForeachSqrt
@@ -199,7 +200,7 @@ aclnnStatus aclnnForeachSqrt(
   </tbody>
   </table>
 
-- **返回值**：
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

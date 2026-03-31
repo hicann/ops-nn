@@ -15,7 +15,6 @@
 
 - 算子功能：SyncBNTrainingUpdate算子用于更新在BatchNormTraining过程中的全局的均值。
 
-
 - 计算公式：
 
 $$
@@ -73,7 +72,6 @@ $$
     </tr>
   </tbody>
   </table>
-
 
 ## 约束说明
 

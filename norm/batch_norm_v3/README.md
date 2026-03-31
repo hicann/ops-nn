@@ -11,7 +11,6 @@
 |  <term>Atlas 推理系列产品</term>    |     √    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
-
 ## 功能说明
 
 - 算子功能：对一个批次的数据做正则化处理，正则化之后生成的数据的统计结果为0均值、1标准差。
@@ -23,7 +22,6 @@
   $$
   E(x)表示均值，Var(x)表示方差，均需要在算子内部计算得到；ε表示一个极小的浮点数，防止分母为0的情况。
 
-  
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
@@ -138,7 +136,6 @@
       <td>ND</td>
     </tr>
   </tbody></table>
-
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 输入x和输出y的数据格式不支持NHWC、NDHWC。

@@ -13,8 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
-
-
 - 接口功能：将全局的均值和标准差倒数作为算子输入，对x做BatchNorm计算。该算子是一个元素级别的BatchNorm操作函数，用于在某些特定场景下对输入数据进行归一化处理。与[aclnnBatchNorm](../../batch_norm_v3/docs/aclnnBatchNorm.md)相比，aclnnBatchNormElemt可能会针对特定的硬件或优化需求进行调整。
 
 - 计算公式：
@@ -56,8 +54,7 @@ aclnnStatus aclnnBatchNormElemt(
 
 ## aclnnBatchNormElemtGetWorkspaceSize
 
-- **参数说明：**
-
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -176,8 +173,7 @@ aclnnStatus aclnnBatchNormElemt(
 
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：参数`input`、`weight`、`bias`、`mean`、`invstd`、`output`的数据类型不支持BFLOAT16。
  
-- **返回值：**
-
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -228,7 +224,7 @@ aclnnStatus aclnnBatchNormElemt(
 
 ## aclnnBatchNormElemt
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -265,7 +261,7 @@ aclnnStatus aclnnBatchNormElemt(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

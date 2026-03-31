@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：对张量列表x和标量值scalar执行逐元素比较，计算每个元素对应的最小值。本接口相较于[aclnnForeachMinimumScalar](aclnnForeachMinimumScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
@@ -51,7 +50,7 @@ aclnnStatus aclnnForeachMinimumScalarV2(
 
 ## aclnnForeachMinimumScalarV2GetWorkspaceSize
 
-- **参数说明**：
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -128,7 +127,7 @@ aclnnStatus aclnnForeachMinimumScalarV2(
   </tbody>
   </table>
 
-- **返回值**：
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -173,7 +172,7 @@ aclnnStatus aclnnForeachMinimumScalarV2(
 
 ## aclnnForeachMinimumScalarV2
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">

@@ -76,7 +76,8 @@ aclnnStatus aclnnGroupNormSwishGrad(
 
 ## aclnnGroupNormSwishGradGetWorkspaceSize
 
--   **参数说明：**
+- **参数说明**
+
     <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
       <col style="width: 220px">
       <col style="width: 120px">
@@ -143,7 +144,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>gamma (aclTensor*)</td>
           <td>输入</td>
           <td>每个channel的缩放系数，公式中的<code>gamma</code>。</td>
-          <td><ul><li>不支持空tensor。</li><li>数据类型和维度与dy相同，元素个数需要等于C</li></ul></td>
+          <td><ul><li>不支持空tensor。</li><li>数据类型和维度与dy相同，元素个数需要等于C。</li></ul></td>
           <td>FLOAT16、FLOAT、BFLOAT16</td>
           <td>ND</td>
           <td>1</td>
@@ -153,7 +154,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>beta (aclTensor*)</td>
           <td>输入</td>
           <td>每个channel的偏移系数，公式中的<code>beta</code>。</td>
-          <td><ul><li>不支持空tensor。</li><li>数据类型和维度与dy相同，元素个数需要等于C</li></ul></td>
+          <td><ul><li>不支持空tensor。</li><li>数据类型和维度与dy相同，元素个数需要等于C。</li></ul></td>
           <td>FLOAT16、FLOAT、BFLOAT16</td>
           <td>ND</td>
           <td>1</td>
@@ -261,7 +262,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
       </tr>
       </tbody></table>
 
-- **返回值：**
+- **返回值**
   
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -300,7 +301,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
 
 ## aclnnGroupNormSwishGrad
 
-- **参数说明：**
+- **参数说明**
   <table>
   <thead>
       <tr>
@@ -332,7 +333,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
       </tr>
   </tbody></table>
 
-- **返回值：**
+- **返回值**
   
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

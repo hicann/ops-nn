@@ -15,7 +15,6 @@
 
 - 算子功能：SyncBatchNormBackwardReduce用于反向传播过程中计算BatchNorm操作的所需的权重梯度gradWeight和中间量sumDyXmu。
 
-
 - 计算公式：
 
 $$

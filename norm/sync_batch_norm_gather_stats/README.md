@@ -15,7 +15,6 @@
 
 - 算子功能：SyncBatchNormGatherStats算子用于收集所有device的均值和方差，更新全局的均值和方差。
 
-
 - 计算公式：
 
   $$
@@ -140,7 +139,6 @@
 </tbody></table>
 
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：参数`totalSum`、`totalSquareSum`、`mean`、`variance`、`batchMean`、`batchInvstd`的数据类型不支持BFLOAT16。
-
 
 ## 约束说明
 

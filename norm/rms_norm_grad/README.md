@@ -11,7 +11,6 @@
 |  <term>Atlas 推理系列产品</term>    |     √    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 算子功能：[RmsNorm](../rms_norm/README.md)的反向计算。用于计算RmsNorm的梯度，即在反向传播过程中计算输入张量的梯度。
@@ -32,7 +31,6 @@
   $$
   dg_i = \frac{x_i}{\operatorname{Rms}(\mathbf{x})} dy_i
   $$
-
 
 ## 参数说明
 

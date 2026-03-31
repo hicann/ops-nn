@@ -13,7 +13,6 @@
 | <term>Atlas 推理系列产品</term>                             |    √     |
 | <term>Atlas 训练系列产品</term>                              |    ×     |
 
-
 ## 功能说明
 
 - 接口功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。AddRmsNorm算子将RmsNorm前的Add算子融合起来，减少搬入搬出操作。
@@ -52,7 +51,7 @@ aclnnStatus aclnnInplaceAddRmsNorm(
 
 ## aclnnInplaceAddRmsNormGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -153,7 +152,7 @@ aclnnStatus aclnnInplaceAddRmsNorm(
     - 参数`x1Ref`、`x2Ref`、`gamma`的数据类型不支持BFLOAT16。
     - 参数`rstdOut`在当前产品使用场景下无效。
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -186,7 +185,7 @@ aclnnStatus aclnnInplaceAddRmsNorm(
 
 ## aclnnInplaceAddRmsNorm
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -223,7 +222,7 @@ aclnnStatus aclnnInplaceAddRmsNorm(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码。（具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)）
 

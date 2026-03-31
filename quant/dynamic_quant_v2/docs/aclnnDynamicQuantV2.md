@@ -228,7 +228,7 @@ aclnnStatus aclnnDynamicQuantV2(
     - 入参`dstType`只支持配置为2。
     - 出参`yOut`只支持INT8。
   
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -309,7 +309,7 @@ aclnnStatus aclnnDynamicQuantV2(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

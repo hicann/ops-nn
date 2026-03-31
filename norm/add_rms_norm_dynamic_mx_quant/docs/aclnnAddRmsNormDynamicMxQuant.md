@@ -13,8 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
-
 ## 功能说明
 
 - 接口功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicMxQuant算子则是在尾轴上按blocksize分组进行动态MX量化的算子。AddRmsNormDynamicMxQuant算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的DynamicMxQuant算子融合起来，减少搬入搬出操作。 在输入尾轴axis上，根据每blocksize=32个数，计算出这组数对应的量化尺度mxscale，然后对这组数每一个除以mxscale，根据round_mode转换到对应的dst_type，得到量化结果y。在dst_type为FLOAT8_E4M3FN、FLOAT8_E5M2时，根据scale_alg的取值来指定计算mxscale的不同算法。
@@ -49,6 +47,7 @@
         |  FLOAT4_E1M2  |  0   |
         | FLOAT8_E4M3FN |  8   |
         |  FLOAT8_E5M2  |  15  |
+
   当scaleAlg为1时，只涉及FP8类型：
     - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP8。
     - 找到该块中数值的最大绝对值:
@@ -102,7 +101,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
 
 ## aclnnAddRmsNormDynamicMxQuantGetWorkspaceSize
 
-- **参数说明**：
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
     <col style="width: 170px">
@@ -279,7 +278,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -334,7 +333,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
 
 ## aclnnAddRmsNormDynamicMxQuant
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -371,7 +370,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -388,6 +387,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
 - **各产品型号支持数据类型说明**
 
   - <term>Ascend 950PR/Ascend 950DT</term>：
+    
     | `x1`数据类型 | `x2`数据类型 | `gamma`数据类型 | `beta`数据类型 | `yOut`数据类型 | `xOut`数据类型 | `mxscaleOut`数据类型 | `rstdOut`数据类型 |
     | ----------- | ----------- | -------------- | ------------- | -------------- | ------------- | ------------------- | ---------------- |
     | FLOAT16     | FLOAT16     | FLOAT16        | FLOAT16       | FLOAT4_E2M1    | FLOAT16       | FLOAT8_E8M0         | FLOAT32          |

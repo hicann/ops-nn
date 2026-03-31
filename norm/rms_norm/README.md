@@ -74,7 +74,7 @@
       <td>表示归一化后的标准差倒数，公式中`Rms(x)`的倒数。</td>
       <td>FLOAT32</td>
       <td>ND</td>
-      </tr>
+    </tr>
   </tbody></table>
 
   - <term>Atlas 推理系列产品</term>、<term>Kirin X90/Kirin 9030 处理器系列产品</term>：所有输入参数和输出参数的数据类型不支持BFLOAT16。

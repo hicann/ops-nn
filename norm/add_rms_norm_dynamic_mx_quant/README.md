@@ -89,28 +89,28 @@
     <tr>
       <td>x1</td>
       <td>输入</td>
-      <td><ul><li>表示标准化过程中的源数据张量，对应公式中的x1。</li></ul></td>
+      <td>表示标准化过程中的源数据张量，对应公式中的x1。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x2</td>
       <td>输入</td>
-      <td><ul><li>表示标准化过程中的源数据张量，对应公式中的x2。shape和数据类型需要与x1一致。</li></ul></td>
+      <td>表示标准化过程中的源数据张量，对应公式中的x2。shape和数据类型需要与x1一致。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>gamma</td>
       <td>输入</td>
-      <td><ul><li>表示标准化过程中的权重张量，对应公式中的gamma。shape需要与x1最后一维一致。</li></ul></td>
+      <td>表示标准化过程中的权重张量，对应公式中的gamma。shape需要与x1最后一维一致。</td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>beta</td>
       <td>可选输入</td>
-      <td><ul><li>表示标准化过程中的偏置项，对应公式中的beta。shape必须与gamma一致。</li></ul></td>
+      <td>表示标准化过程中的偏置项，对应公式中的beta。shape必须与gamma一致。</td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
@@ -181,9 +181,9 @@
 
 ## 约束说明
 
-<term>Ascend 950PR/Ascend 950DT</term>：
+- <term>Ascend 950PR/Ascend 950DT</term>：
 
-- mxscale的shape约束说明如下：
+  mxscale的shape约束说明如下：
   - rank(mxscale) = rank(x1) + 1。
   - mxscale.shape[-2] = (ceil(x1.shape[-1] / 32) + 2 - 1) / 2。
   - mxscale.shape[-1] = 2。

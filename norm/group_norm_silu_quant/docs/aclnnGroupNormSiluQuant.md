@@ -11,7 +11,6 @@
 | <term>Atlas 推理系列产品</term>                             |     ×    |
 | <term>Atlas 训练系列产品</term>                              |    ×     |
 
-
 ## 功能说明
 
 - 接口功能：计算输入self的组归一化，输出均值meanOut，标准差的倒数rstdOut，以及对silu的输出结果进行量化的结果out。
@@ -71,7 +70,7 @@ aclnnStatus aclnnGroupNormSiluQuant(
 
 ## aclnnGroupNormSiluQuantGetWorkspaceSize
 
--   **参数说明：**
+- **参数说明**
 
     <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
     <col style="width: 187px">
@@ -217,7 +216,7 @@ aclnnStatus aclnnGroupNormSiluQuant(
     </tr>
     </tbody></table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -253,25 +252,25 @@ aclnnStatus aclnnGroupNormSiluQuant(
 
 ## aclnnGroupNormSiluQuant
 
--   **参数说明：**
+- **参数说明**
 
-      <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
-        <col style="width: 173px">
-        <col style="width: 112px">
-        <col style="width: 668px">
-        </colgroup>
-            <thead>
-                <tr><th>参数名</th><th>输入/输出</th><th>描述</th></tr>
-            </thead>
-            <tbody>
-                <tr><td>workspace</td><td>输入</td><td>在Device侧申请的workspace内存地址。</td></tr>
-                <tr><td>workspaceSize</td><td>输入</td><td>在Device侧申请的workspace大小，由第一段接口aclnnGroupNormSiluQuantGetWorkspaceSize获取。</td></tr>
-                <tr><td>executor</td><td>输入</td><td> op执行器，包含了算子计算流程。 </td></tr>
-                <tr><td>stream</td><td>输入</td><td> 指定执行任务的Stream。 </td></tr>
-            </tbody>
-        </table>
+  <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
+    <col style="width: 173px">
+    <col style="width: 112px">
+    <col style="width: 668px">
+    </colgroup>
+        <thead>
+            <tr><th>参数名</th><th>输入/输出</th><th>描述</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>workspace</td><td>输入</td><td>在Device侧申请的workspace内存地址。</td></tr>
+            <tr><td>workspaceSize</td><td>输入</td><td>在Device侧申请的workspace大小，由第一段接口aclnnGroupNormSiluQuantGetWorkspaceSize获取。</td></tr>
+            <tr><td>executor</td><td>输入</td><td> op执行器，包含了算子计算流程。 </td></tr>
+            <tr><td>stream</td><td>输入</td><td> 指定执行任务的Stream。 </td></tr>
+        </tbody>
+    </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -509,4 +508,3 @@ int main() {
   return 0;
 }
 ```
-

@@ -202,7 +202,7 @@ aclnnStatus aclnnDynamicBlockQuant(
     - 参数`dstType`支持取值34、35、36，分别代表HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN。
     - 参数`yOut`的数据类型不支持INT8。
   
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -272,7 +272,7 @@ aclnnStatus aclnnDynamicBlockQuant(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

@@ -204,7 +204,7 @@ aclnnStatus aclnnAscendQuantV3(
     - 入参`dstType`仅支持取值2，表示INT8。
     - 入参`axis`只支持指定x的最后一个维度（假设输入x维度是xDimNum，axis取值是-1或xDimNum-1）。
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -295,7 +295,7 @@ aclnnStatus aclnnAscendQuantV3(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

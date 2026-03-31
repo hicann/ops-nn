@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：对输入张量列表的每个张量进行Sigmoid函数运算。
@@ -51,7 +50,7 @@ aclnnStatus aclnnForeachSigmoid(
 
 ## aclnnForeachSigmoidGetWorkspaceSize
 
-- **参数说明**：
+- **参数说明**
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
     <col style="width: 170px">
     <col style="width: 120px">
@@ -117,7 +116,7 @@ aclnnStatus aclnnForeachSigmoid(
   </tbody>
   </table>
 
-- **返回值**：
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -157,7 +156,6 @@ aclnnStatus aclnnForeachSigmoid(
       <td>x或out中的Tensor的数据类型不一致。</td></tr>
     <tr>
       <td>x或out中的Tensor维度超过8维。</td></tr>
-    
   </tbody></table>
 
 ## aclnnForeachSigmoid
@@ -199,7 +197,7 @@ aclnnStatus aclnnForeachSigmoid(
   </tbody>
   </table>
 
-- **返回值**：
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
