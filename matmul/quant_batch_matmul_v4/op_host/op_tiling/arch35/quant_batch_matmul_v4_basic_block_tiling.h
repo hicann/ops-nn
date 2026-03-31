@@ -71,6 +71,7 @@ constexpr int64_t BASE_N_THRESHOLD = 128;
 constexpr int64_t BASE_M_THRESHOLD = 64;
 constexpr double EPSILON = 1e-9;
 constexpr int64_t DEFAULT_FALLBACK_BASEM = 256L;
+constexpr int64_t MX_K_ALIGN_SIZE = 64L;
 
 struct PlatformParam {
     int64_t blockNum = 0;

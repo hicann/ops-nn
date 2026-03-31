@@ -45,6 +45,13 @@ using CType = Cmct::Gemm::GemmType<DTYPE_Y, LayoutC>;
 using BiasType = Cmct::Gemm::GemmType<DTYPE_Y, LayoutBias>;
 using ScaleType = Cmct::Gemm::GemmType<fp8_e8m0_t, LayoutScale>;
 
+// 不要使用 AscendC namespace下的CeilDiv和CeilAlign函数!
+using Cmct::CeilDiv;
+using Cmct::CeilAlign;
+
+constexpr uint64_t MX_GROUP_SIZE = 32UL;
+constexpr uint64_t MX_K_ALIGN_SIZE = 64UL;
+
 template <bool weightNz>
 struct StrideWeight {
     static_assert(
@@ -98,13 +105,13 @@ struct CreateLayoutB<true> {
     {
         return AscendC::MakeLayout(
             AscendC::MakeShape(
-                AscendC::MakeShape(Cmct::Gemm::_16{}, static_cast<uint64_t>(AscendC::CeilDiv(n, Cmct::Gemm::_16{}))),
-                AscendC::MakeShape(Cmct::Gemm::_32{}, static_cast<uint64_t>(AscendC::CeilDiv(k, Cmct::Gemm::_32{})))),
+                AscendC::MakeShape(Cmct::Gemm::_16{}, static_cast<uint64_t>(Cmct::CeilDiv<uint64_t>(n, Cmct::Gemm::_16{}))),
+                AscendC::MakeShape(Cmct::Gemm::_32{}, static_cast<uint64_t>(Cmct::CeilDiv<uint64_t>(k, Cmct::Gemm::_32{})))),
             AscendC::MakeStride(
                 AscendC::MakeStride(Cmct::Gemm::_32{}, Cmct::Gemm::_512{}),
                 AscendC::MakeStride(
                     Cmct::Gemm::_1{},
-                    static_cast<uint64_t>(AscendC::CeilAlign(n, Cmct::Gemm::_16{}) * Cmct::Gemm::_32{}))));
+                    Cmct::CeilAlign<uint64_t>(n, Cmct::Gemm::_16{}) * Cmct::Gemm::_32{})));
     }
 };
 
@@ -128,6 +135,7 @@ __aicore__ inline void InvokeKernel(
         ProblemShape, AscendC::Std::tuple<uint32_t, uint32_t>, AscendC::Std::tuple<uint8_t, uint8_t>>;
     using KernelMmad = Kernel::KernelMatmulMixWeightPrologueNN<ProblemShape, BlockMmad, BlockScheduler, BlockPrologue>;
     auto problemShape = AscendC::MakeShape(tilingDataIn.mSize, tilingDataIn.nSize, tilingDataIn.kSize);
+    uint64_t kAlign = Cmct::CeilAlign<uint64_t>(tilingDataIn.kSize, MX_K_ALIGN_SIZE);
     typename BlockMmad::Arguments mmad{
         .ptrA = x1,
         .ptrC = y,
@@ -140,8 +148,8 @@ __aicore__ inline void InvokeKernel(
             AscendC::MakeShape(tilingDataIn.mSize, tilingDataIn.nSize),
             AscendC::MakeStride(tilingDataIn.nSize, Cmct::Gemm::_1{})),
         .layoutScale = AscendC::MakeLayout(
-            AscendC::MakeShape(tilingDataIn.nSize, static_cast<uint64_t>(AscendC::CeilDiv(tilingDataIn.kSize, 32UL))),
-            AscendC::MakeStride(static_cast<uint64_t>(AscendC::CeilDiv(tilingDataIn.kSize, 32UL)), Cmct::Gemm::_1{}))};
+            AscendC::MakeShape(tilingDataIn.nSize, Cmct::CeilDiv<uint64_t>(kAlign, MX_GROUP_SIZE)),
+            AscendC::MakeStride(Cmct::CeilDiv<uint64_t>(kAlign, MX_GROUP_SIZE), Cmct::Gemm::_1{}))};
     typename BlockPrologue::Arguments prologue{
         .ptrB = x2,
         .ptrBias = bias,

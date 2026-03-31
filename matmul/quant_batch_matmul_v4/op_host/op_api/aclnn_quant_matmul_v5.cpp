@@ -31,6 +31,8 @@
 using namespace op;
 using Ops::NN::SwapLastTwoDimValue;
 using Ops::NN::IsTransposeLastTwoDims;
+using Ops::Base::CeilDiv;
+
 namespace {
 static const size_t MAX_SCALE_DIM = 2;
 static const size_t MIN_SCALE_DIM = 1;
@@ -44,7 +46,7 @@ static const int64_t SUPPORTED_GROUP_SIZE = 32;
 static const int64_t MAX_SHAPE_SIZE_A8W4_INT = 29576;
 static const int64_t SUPPORTED_GROUP_SIZE_A8W4_INT = 256;
 static const int64_t SUPPORTED_K_ALIGN_NUM = 64;
-static const int64_t SUPPORTED_TCG_K_ALIGN_NUM = 32;
+static const int64_t SUPPORTED_A8W4_K_ALIGN_NUM = 32;
 static const int64_t SUPPORTED_N_ALIGN_NUM = 8;
 static const uint64_t GROUP_M_OFFSET = 32;
 static const uint64_t GROUP_N_OFFSET = 16;
@@ -71,6 +73,12 @@ static inline bool isA8W4FloatTCG(const aclTensor* x1, const aclTensor* x2, cons
 {
     return x1->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN && x2->GetDataType() == op::DataType::DT_FLOAT4_E2M1 &&
            x1Scale == nullptr;
+}
+
+static inline bool isA8W4FloatMx(const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale, const aclTensor* x2Scale)
+{
+    return x1->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN && x2->GetDataType() == op::DataType::DT_FLOAT4_E2M1 && 
+        x1Scale != nullptr && x1Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0 && x2Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0;
 }
 
 static inline bool isA8W4Int(const aclTensor *x1, const aclTensor *x2) {
@@ -487,12 +495,12 @@ static inline bool CheckScaleX1Shape(const TupleQuant& quantTensors, int64_t x1M
     } else if (IsMicroScaling(x1Scale, x2Scale)) {
         // MX_SCALE_LAST_DIM_SIZE: x1Scale (m, k / GroupSize / MX_SCALE_LAST_DIM_SIZE, MX_SCALE_LAST_DIM_SIZE)
         if (x1Scale->GetViewShape().GetDim(0) != x1MDim ||
-            x1Scale->GetViewShape().GetDim(1) != (groupDim / MX_SCALE_LAST_DIM_SIZE) ||
+            x1Scale->GetViewShape().GetDim(1) != CeilDiv(groupDim, static_cast<int64_t>(MX_SCALE_LAST_DIM_SIZE)) ||
             x1Scale->GetViewShape().GetDim(2) != MX_SCALE_LAST_DIM_SIZE) {
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID,
                 "The x1Scale shape must be [%ld, %ld, %zu] for MxA8W4, which are [%ld, %ld, %ld]", x1MDim,
-                (groupDim / MX_SCALE_LAST_DIM_SIZE), MX_SCALE_LAST_DIM_SIZE, x1Scale->GetViewShape().GetDim(0),
+                CeilDiv(groupDim, static_cast<int64_t>(MX_SCALE_LAST_DIM_SIZE)), MX_SCALE_LAST_DIM_SIZE, x1Scale->GetViewShape().GetDim(0),
                 x1Scale->GetViewShape().GetDim(1), x1Scale->GetViewShape().GetDim(2));
             return false;
         }
@@ -524,11 +532,11 @@ static inline bool CheckScaleX2Shape(const TupleQuant& quantTensors, int64_t x2N
         }
     } else if (IsMicroScaling(x1Scale, x2Scale)) {
         // MX_SCALE_LAST_DIM_SIZE:x2Scale Shape: (n, groupDim / MX_SCALE_LAST_DIM_SIZE, MX_SCALE_LAST_DIM_SIZE)
-        if (x2ScaleNDim != x2NDim || x2ScaleGroupDim != groupDim / MX_SCALE_LAST_DIM_SIZE ||
+        if (x2ScaleNDim != x2NDim || x2ScaleGroupDim != CeilDiv(groupDim, static_cast<int64_t>(MX_SCALE_LAST_DIM_SIZE)) ||
             x2Scale->GetViewShape().GetDim(2) != MX_SCALE_LAST_DIM_SIZE) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                     "The x2scale shape must be [%ld, %ld, %zu], which are [%ld, %ld, %ld]", x2NDim,
-                    groupDim / MX_SCALE_LAST_DIM_SIZE, MX_SCALE_LAST_DIM_SIZE, x2ScaleNDim, x2ScaleGroupDim,
+                    CeilDiv(groupDim, static_cast<int64_t>(MX_SCALE_LAST_DIM_SIZE)), MX_SCALE_LAST_DIM_SIZE, x2ScaleNDim, x2ScaleGroupDim,
                     x2Scale->GetViewShape().GetDim(2));
             return false;
         }
@@ -586,6 +594,7 @@ static inline bool CheckKDimAndBasicShape(
     bool isPerChannel = x2Scale->GetViewShape().GetDimNum() == 1;
     bool isA8W4INT = isA8W4IntAfterPre(x1, x2);
     bool isA8W4TCG = isA8W4FloatTCG(x1, x2, x1Scale);
+    bool isA8W4Mx = isA8W4FloatMx(x1, x2, x1Scale, x2Scale);
     // CHECK x1KDim
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if (npuArch == NpuArch::DAV_2201) {   // A8W4INT A2 A3
@@ -614,11 +623,10 @@ static inline bool CheckKDimAndBasicShape(
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k dim must be align to %ld, which is %ld", kAlign, x1KDim);
             return false;
         }
-    } else if (isA8W4TCG) {
-        if (x1KDim % SUPPORTED_TCG_K_ALIGN_NUM != 0 || x1KDim <= SUPPORTED_TCG_K_ALIGN_NUM) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "the k dim must to be aligned to %ld and more than %ld, which is %ld",
-                    SUPPORTED_TCG_K_ALIGN_NUM, SUPPORTED_TCG_K_ALIGN_NUM, x1KDim);
+    } else if (isA8W4TCG || isA8W4Mx) {
+        if (x1KDim % SUPPORTED_A8W4_K_ALIGN_NUM != 0 || x1KDim <= SUPPORTED_A8W4_K_ALIGN_NUM) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,"the k dim must to be aligned to %ld and more than %ld, which is %ld",
+                    SUPPORTED_A8W4_K_ALIGN_NUM, SUPPORTED_A8W4_K_ALIGN_NUM, x1KDim);
             return false;
         }
     } else {

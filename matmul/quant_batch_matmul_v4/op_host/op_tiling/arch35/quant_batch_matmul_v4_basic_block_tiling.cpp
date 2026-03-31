@@ -383,7 +383,7 @@ bool QuantBatchMatmulV4BasicBlockTiling::CheckL1TilingInvalid(int64_t stepKa, in
     }
     if (weightNzFlag_) {
         int64_t kBl1Size =
-            min(basicBlockParam_.singleK, basicBlockParam_.l1Param.stepKb * basicBlockParam_.basicBlock.baseK);
+            min(CeilAlign(basicBlockParam_.singleK, MX_K_ALIGN_SIZE), basicBlockParam_.l1Param.stepKb * basicBlockParam_.basicBlock.baseK);
         int64_t nBl1Size =
             min(basicBlockParam_.singleN, basicBlockParam_.l1Param.stepN * basicBlockParam_.basicBlock.baseN);
         invalidFlag =
@@ -399,7 +399,7 @@ void QuantBatchMatmulV4BasicBlockTiling::UpdateL1ParamWithScaleFactor(L1TilingPa
                                                                       bool &ret, const StepKParam &stepKParams)
 {
     int64_t scaleFactorMax =
-    isMxType_ ? CeilDiv(basicBlockParam_.singleK, basicBlockParam_.basicBlock.baseK * stepKParams.stepKaTmp) : 1;
+        isMxType_ ? CeilDiv(CeilAlign(basicBlockParam_.singleK, MX_K_ALIGN_SIZE), basicBlockParam_.basicBlock.baseK * stepKParams.stepKaTmp) : 1;
     scaleFactorMax = max(scaleFactorMax, SCALE_FACTOR_MAX);  // 确保能取到1
     for (int64_t scaleFactorTmp = 1; scaleFactorTmp < scaleFactorMax; scaleFactorTmp++) {
         basicBlockParam_.l1Param = {1, 1, 1, stepKParams.stepKaTmp, stepKParams.stepKbTmp,
@@ -415,7 +415,7 @@ void QuantBatchMatmulV4BasicBlockTiling::UpdateL1ParamWithScaleFactor(L1TilingPa
 bool QuantBatchMatmulV4BasicBlockTiling::GetL1TilingResult(L1TilingParam &l1TilingParam,
                                                                           int64_t &mte2DataSize, double &mte2Cost)
 {
-    if (basicBlockParam_.basicBlock.baseK > basicBlockParam_.singleK) {
+    if (basicBlockParam_.basicBlock.baseK > CeilAlign(basicBlockParam_.singleK, MX_K_ALIGN_SIZE)) {
         return false;
     }
     const int64_t stepKaMin = 1;
@@ -621,12 +621,6 @@ bool QuantBatchMatmulV4BasicBlockTiling::GetFallbackBaseK()
 
             if (basicBlockParam_.basicBlock.baseM * baseK * BUFF_NUM_2 > platformParam_.l0aSize ||
                 basicBlockParam_.basicBlock.baseN * baseK * BUFF_NUM_2 > platformParam_.l0bSize) {
-                continue;
-            }
-
-            const int64_t stepKMax = CeilDiv(basicBlockParam_.singleK, baseK);
-            const int64_t bufferNum = min(stepKMax, BUFF_NUM_4);
-            if (isMxType_ && weightNzFlag_ && bufferNum != BUFF_NUM_4 && bufferNum != BUFF_NUM_1) {
                 continue;
             }
 

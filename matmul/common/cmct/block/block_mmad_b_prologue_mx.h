@@ -138,8 +138,8 @@ public:
         kL1Size_ = Get<2>(params.tileShapeL1); // 2 in order to obtain k
         auto nBL1Size = Get<1>(params.tileShapeL1);
         kL0Size_ = Get<2>(params.tileShapeL0);                   // 2 in order to obtain k
-        bL1Size_ = nBL1Size * Get<3>(params.tileShapeL1);        // 3 in order to obtain kb
-        aL1Size_ = Get<0>(params.tileShapeL1) * kL1Size_;        // 0 in order to obtain m
+        bL1Size_ = nBL1Size * CeilAlign(Get<3>(params.tileShapeL1), K_ALIGN_SIZE);        // 3 in order to obtain kb
+        aL1Size_ = Get<0>(params.tileShapeL1) * CeilAlign(kL1Size_, K_ALIGN_SIZE);        // 0 in order to obtain m
         scaleAL1Size_ = aL1Size_ * scaleFactor_ / GROUP_SIZE_32; // aL1Size is an integer multiple of 32
         scaleBL1Size_ = bL1Size_ * scaleFactor_ / GROUP_SIZE_32;
         cL0Tensor_ = LocalTensor<float>(AscendC::TPosition::CO1, 0, L0C_BUFFER_SIZE);
@@ -290,18 +290,20 @@ private:
             if (kL1Offset_ + scaleKAL1Size > kSize_) {
                 scaleKAL1Size = kSize_ - kL1Offset_;
             }
+            scaleKAL1Size = CeilAlign(scaleKAL1Size, K_ALIGN_SIZE);
+            int64_t scaleKAL1GroupNum = CeilDiv(scaleKAL1Size, GROUP_SIZE_32);
+            int64_t scaleKGmGroupNum = CeilDiv(CeilAlign(kSize_, K_ALIGN_SIZE), GROUP_SIZE_32);
             auto tensorBlockScaleA = GetTile(
                 scaleA, MakeCoord(0, kL1Offset_ / GROUP_SIZE_32),
                 MakeShape(mL1Len_, static_cast<uint64_t>(CeilDiv(kL1Len_, GROUP_SIZE_32))));
-            if (scaleABufIdx_ == 0) {
-                CopyScaleDn2Nz(
-                    scaleAL1Buf0_, tensorBlockScaleA, 0, kL1Size_ * scaleFactor_ / GROUP_SIZE_32, mL1Len_,
-                    scaleKAL1Size / GROUP_SIZE_32, kSize_ / GROUP_SIZE_32);
-            } else {
-                CopyScaleDn2Nz(
-                    scaleAL1Buf1_, tensorBlockScaleA, 0, kL1Size_ * scaleFactor_ / GROUP_SIZE_32, mL1Len_,
-                    scaleKAL1Size / GROUP_SIZE_32, kSize_ / GROUP_SIZE_32);
-            }
+            CopyScaleDn2Nz(
+                scaleABufIdx_ == 0 ? scaleAL1Buf0_ : scaleAL1Buf1_,
+                tensorBlockScaleA,
+                0,
+                CeilDiv(kL1Size_ * scaleFactor_, GROUP_SIZE_32),
+                mL1Len_,
+                scaleKAL1GroupNum,
+                scaleKGmGroupNum);
         }
         CopyND2NZ(l1BufIdx_, tensorA);
     }
@@ -312,9 +314,22 @@ private:
         if (kLoopIdx % scaleFactor_ == 0) {
             auto tensorBlockScaleB = GetTile(
                 scaleB, MakeCoord(0, kL1Offset_ / GROUP_SIZE_32),
-                MakeShape(mL1Len_, static_cast<uint64_t>(CeilDiv(kL1Len_, GROUP_SIZE_32))));
+                MakeShape(nL1Len_, static_cast<uint64_t>(CeilDiv(kL1Len_, GROUP_SIZE_32))));
             WaitFlag<HardEvent::MTE1_MTE2>(eventIdsScaleBMte1ToMte2_[scaleBBufIdx_]);
             CopyScaleB2L1(tensorBlockScaleB);
+        }
+        if (kL1Len_ % K_ALIGN_SIZE != 0) {
+            LocalTensor<ElementA> bL1Tensor;
+            if (l1BufIdx_ == IDX_0) {
+                bL1Tensor = bL1LocalBuf0_;
+            } else if (l1BufIdx_ == IDX_1) {
+                bL1Tensor = bL1LocalBuf1_;
+            } else if (l1BufIdx_ == IDX_2) {
+                bL1Tensor = bL1LocalBuf2_;
+            } else {
+                bL1Tensor = bL1LocalBuf3_;
+            }
+            FillL1WithZero(bL1Tensor[CeilAlign(nL1Len_, BLOCK_CUBE) * kL1Len_].template ReinterpretCast<uint32_t>(), nL1Len_);
         }
         WaitForVector(l1BufIdx_);
     }
@@ -405,6 +420,7 @@ private:
         mmadParams.n = CeilAlign(nL0Len_, static_cast<int64_t>(BLOCK_CUBE));
         mmadParams.cmatrixInitVal = !enPartialSum;
         mmadParams.cmatrixSource = false;
+        mmadParams.disableGemv = true;
         int32_t kFractalIdx = totalKLoopIdx_ * kL1Size_ / kL0Size_;
         int32_t stepK = CeilDiv(kL1Len_, static_cast<int64_t>(kL0Size_));
         bool needPipeM = mmadParams.m * mmadParams.n < 2560;
@@ -419,7 +435,7 @@ private:
             if (kFractalIdx == 0) {
                 WaitFlag<HardEvent::FIX_M>(eventIdsFixToM_[madLoopIdx_ & 1]);
             }
-            mmadParams.k = baseK;
+            mmadParams.k = CeilAlign(baseK, 64);
             if (kL0Idx > 0) {
                 mmadParams.cmatrixInitVal = false;
             }
@@ -465,17 +481,17 @@ private:
         aL0Load2dParams.kStartPosition =
             CeilDiv(static_cast<uint64_t>(kL0Idx * kL0Size_ * sizeof(ElementA)), C0_SIZE_B8);
         aL0Load2dParams.mStep = CeilDiv(mL0Len_, static_cast<uint64_t>(BLOCK_CUBE));
-        aL0Load2dParams.kStep = CeilDiv(baseK, C0_SIZE_B8);
+        aL0Load2dParams.kStep = CeilDiv(static_cast<uint64_t>(CeilAlign(baseK, K_ALIGN_SIZE)), C0_SIZE_B8);
         aL0Load2dParams.srcStride = CeilDiv(mL1AlignLen_ * C0_SIZE_B8, FRACTAL_SIZE);
         aL0Load2dParams.dstStride = aL0Load2dParams.srcStride;
         AscendC::LoadData2DMxParams aL0Load2dMx;
         aL0Load2dMx.xStartPosition = 0;
         aL0Load2dMx.yStartPosition = CeilDiv(kL0Idx * kL0Size_, GROUP_SIZE_32 * C0_SIZE_MX_B8);
         aL0Load2dMx.xStep = CeilDiv(mL0Len_, static_cast<uint64_t>(BLOCK_CUBE));
-        aL0Load2dMx.yStep = CeilDiv(baseK, GROUP_SIZE_32 * C0_SIZE_MX_B8);
+        aL0Load2dMx.yStep = CeilDiv(static_cast<uint64_t>(CeilAlign(baseK, K_ALIGN_SIZE)), GROUP_SIZE_32 * C0_SIZE_MX_B8);
         aL0Load2dMx.srcStride = CeilDiv(
             static_cast<uint64_t>(kL1Size_ * scaleFactor_), static_cast<uint64_t>(GROUP_SIZE_32 * C0_SIZE_MX_B8));
-        aL0Load2dMx.dstStride = CeilDiv(baseK, GROUP_SIZE_32 * C0_SIZE_MX_B8);
+        aL0Load2dMx.dstStride = CeilDiv(static_cast<uint64_t>(CeilAlign(baseK, K_ALIGN_SIZE)), GROUP_SIZE_32 * C0_SIZE_MX_B8);
         AscendC::LoadData(aL0Tensor, aL1Tensor_, scaleAL1Tensor_, aL0Load2dParams, aL0Load2dMx);
     }
 
@@ -486,17 +502,17 @@ private:
         bL0Load2dParams.kStartPosition =
             CeilDiv(static_cast<uint64_t>(kL0Idx * kL0Size_ * sizeof(ElementA)), C0_SIZE_B8);
         bL0Load2dParams.mStep = CeilDiv(nL0Len_, static_cast<uint64_t>(BLOCK_CUBE));
-        bL0Load2dParams.kStep = CeilDiv(baseK, C0_SIZE_B8);
+        bL0Load2dParams.kStep = CeilDiv(static_cast<uint64_t>(CeilAlign(baseK, K_ALIGN_SIZE)), C0_SIZE_B8);
         bL0Load2dParams.srcStride = CeilDiv(nL1AlignLen_ * C0_SIZE_B8, FRACTAL_SIZE);
         bL0Load2dParams.dstStride = bL0Load2dParams.srcStride;
         AscendC::LoadData2DMxParams bL0Load2dMx;
         bL0Load2dMx.xStartPosition = 0;
         bL0Load2dMx.yStartPosition = CeilDiv(kL0Idx * kL0Size_, GROUP_SIZE_32 * C0_SIZE_MX_B8);
         bL0Load2dMx.xStep = CeilDiv(nL0Len_, static_cast<uint64_t>(BLOCK_CUBE));
-        bL0Load2dMx.yStep = CeilDiv(baseK, GROUP_SIZE_32 * C0_SIZE_MX_B8);
+        bL0Load2dMx.yStep = CeilDiv(static_cast<uint64_t>(CeilAlign(baseK, K_ALIGN_SIZE)), GROUP_SIZE_32 * C0_SIZE_MX_B8);
         bL0Load2dMx.srcStride = CeilDiv(
             static_cast<uint64_t>(kL1Size_ * scaleFactor_), static_cast<uint64_t>(GROUP_SIZE_32 * C0_SIZE_MX_B8));
-        bL0Load2dMx.dstStride = CeilDiv(baseK, GROUP_SIZE_32 * C0_SIZE_MX_B8);
+        bL0Load2dMx.dstStride = CeilDiv(static_cast<uint64_t>(CeilAlign(baseK, K_ALIGN_SIZE)), GROUP_SIZE_32 * C0_SIZE_MX_B8);
         AscendC::LoadData(bL0Tensor, bL1Tensor_, scaleBL1Tensor_, bL0Load2dParams, bL0Load2dMx);
     }
 
@@ -517,15 +533,16 @@ private:
         if (kL1Offset_ + scaleKBL1Size > kSize_) {
             scaleKBL1Size = kSize_ - kL1Offset_;
         }
-        if (scaleBBufIdx_ == IDX_0) {
-            CopyScaleDn2Nz(
-                scaleBL1Buf0_, scaleB, 0, kL1Size_ * scaleFactor_ / GROUP_SIZE_32, nL1Len_,
-                scaleKBL1Size / GROUP_SIZE_32, kSize_ / GROUP_SIZE_32);
-        } else {
-            CopyScaleDn2Nz(
-                scaleBL1Buf1_, scaleB, 0, kL1Size_ * scaleFactor_ / GROUP_SIZE_32, nL1Len_,
-                scaleKBL1Size / GROUP_SIZE_32, kSize_ / GROUP_SIZE_32);
-        }
+        scaleKBL1Size = CeilAlign(scaleKBL1Size, K_ALIGN_SIZE);
+        int64_t scaleKBL1GroupNum = CeilDiv(scaleKBL1Size, GROUP_SIZE_32);
+        int64_t scaleKBGmGroupNum = CeilDiv(CeilAlign(kSize_, K_ALIGN_SIZE), GROUP_SIZE_32);
+        CopyScaleDn2Nz(scaleBBufIdx_ == IDX_0 ? scaleBL1Buf0_ : scaleBL1Buf1_,
+            scaleB,
+            0,
+            CeilDiv(kL1Size_ * scaleFactor_, GROUP_SIZE_32),
+            nL1Len_,
+            scaleKBL1GroupNum,
+            scaleKBGmGroupNum);
     }
 
     template <class TensorScale>
@@ -538,7 +555,7 @@ private:
         dn2NzParams.dValue = height;
         dn2NzParams.nValue = CeilDiv(static_cast<uint64_t>(width), static_cast<uint64_t>(SCALE_COPY_GROUP_SIZE));
         dn2NzParams.srcDnMatrixStride = SCALE_COPY_DEFAULT_STRIDE;
-        dn2NzParams.srcDValue = gScaleCol / SCALE_COPY_GROUP_SIZE;
+        dn2NzParams.srcDValue = CeilDiv(gScaleCol, SCALE_COPY_GROUP_SIZE);
         dn2NzParams.dstNzC0Stride = CeilDiv(static_cast<uint64_t>(col), static_cast<uint64_t>(SCALE_COPY_GROUP_SIZE));
         dn2NzParams.dstNzNStride = SCALE_COPY_DEFAULT_NS_STRIDE;
         dn2NzParams.dstNzMatrixStride = SCALE_COPY_DEFAULT_STRIDE;
@@ -562,15 +579,32 @@ private:
         nd2nzParams.dstNzMatrixStride = 0;
         AscendC::GlobalTensor<ElementA> srcTensor;
         srcTensor.SetGlobalBuffer(tensorA.address_);
+        LocalTensor<ElementA> aL1LocalBuf;
         if (aL1Idx == IDX_0) {
-            DataCopy(aL1LocalBuf0_, srcTensor, nd2nzParams);
+            aL1LocalBuf = aL1LocalBuf0_; 
         } else if (aL1Idx == IDX_1) {
-            DataCopy(aL1LocalBuf1_, srcTensor, nd2nzParams);
+            aL1LocalBuf = aL1LocalBuf1_; 
         } else if (aL1Idx == IDX_2) {
-            DataCopy(aL1LocalBuf2_, srcTensor, nd2nzParams);
+            aL1LocalBuf = aL1LocalBuf2_; 
         } else if (aL1Idx == IDX_3) {
-            DataCopy(aL1LocalBuf3_, srcTensor, nd2nzParams);
+            aL1LocalBuf = aL1LocalBuf3_; 
         }
+        DataCopy(aL1LocalBuf, srcTensor, nd2nzParams);
+
+        if (kL1Len_ % K_ALIGN_SIZE != 0) {
+            FillL1WithZero(aL1LocalBuf[CeilAlign(mL1Len_, BLOCK_CUBE) * kL1Len_].template ReinterpretCast<uint32_t>(), mL1Len_);
+        }
+    }
+
+    template <typename T>
+    __aicore__ inline void FillL1WithZero(const LocalTensor<T>& l1Buf, uint64_t blockCount)
+    {
+        InitConstValueParams<T> initParams;
+        initParams.repeatTimes = 1;
+        initParams.dstGap = 0;
+        initParams.initValue = 0;
+        initParams.blockNum = blockCount;
+        Fill(l1Buf, initParams);
     }
 
     __aicore__ inline void PostUpdateParams()
@@ -655,6 +689,7 @@ private:
     static constexpr uint64_t FRACTAL_SIZE = 512; // 16 * 32
     static constexpr uint64_t C0_SIZE_MX_B8 = 2;
     static constexpr uint8_t MAX_AL1_BUF_NUM = 4;
+    static constexpr uint64_t K_ALIGN_SIZE = 64;
     static constexpr uint64_t FIXP_QUANT_SACLAR_VALUE = 0x42800000; // FP32类型的64的16进制表示
     static constexpr TEventID eventIdsMte1ToMte2_[MAX_AL1_BUF_NUM] = {0, 1, 2, 3};
     static constexpr TEventID eventIdsScaleAMte1ToMte2_[DOUBLE_BUFFER] = {4, 5};

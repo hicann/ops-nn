@@ -139,26 +139,26 @@ public:
         }
         nL1Size_ = Get<1>(params.tileShapeL1);
         kL1Size_ = Get<3>(params.tileShapeL1); // 3 in order to obtain k
-        bL1Size_ = nL1Size_ * kL1Size_;
+        bL1Size_ = nL1Size_ * CeilAlign(kL1Size_, K_ALIGN_SIZE);
         aL1Size_ = Get<0>(params.tileShapeL1) * Get<2>(params.tileShapeL1); // 2 in order to obtain k
         if (likely(l1BufNum_ == QUADRUPLE_BUFFER)) {
             if constexpr (weightNz) {
                 vecWeightInLen_ = (l1BufNum_ * nUbSize_ * kUbSize_) >> INT4_DTYPE_PARAM;
-                vecWeightOutLen_ = l1BufNum_ * nUbSize_ * kUbSize_;
+                vecWeightOutLen_ = l1BufNum_ * CeilAlign(nUbSize_, BLOCK_CUBE) * CeilAlign(kUbSize_, static_cast<int32_t>(K_ALIGN_SIZE));
             } else {
                 vecWeightInLen_ = (l1BufNum_ * (nUbSize_ * CeilAlign(kUbSize_, OFFSET_64))) >> INT4_DTYPE_PARAM;
                 vecWeightOutLen_ = l1BufNum_ * (CeilAlign(nUbSize_, BLOCK_CUBE) + 1) *
-                                   CeilAlign(kUbSize_, static_cast<int32_t>(ONE_BLK_SIZE));
+                                   CeilAlign(CeilAlign(kUbSize_, static_cast<int32_t>(ONE_BLK_SIZE)), static_cast<int32_t>(K_ALIGN_SIZE));
             }
         } else {
             if constexpr (weightNz) {
                 vecWeightInLen_ = (nUbSize_ * kUbSize_) >> INT4_DTYPE_PARAM;
-                vecWeightOutLen_ = nUbSize_ * kUbSize_;
+                vecWeightOutLen_ = CeilAlign(nUbSize_, BLOCK_CUBE) * CeilAlign(kUbSize_, static_cast<int32_t>(K_ALIGN_SIZE));
             } else {
                 vecBufNum_ = Min(l1BufNum_, DOUBLE_BUFFER);
                 vecWeightInLen_ = (vecBufNum_ * (nUbSize_ * CeilAlign(kUbSize_, OFFSET_64))) >> INT4_DTYPE_PARAM;
                 vecWeightOutLen_ = vecBufNum_ * (CeilAlign(nUbSize_, BLOCK_CUBE) + 1) *
-                                   CeilAlign(kUbSize_, static_cast<int32_t>(ONE_BLK_SIZE));
+                                   CeilAlign(CeilAlign(kUbSize_, static_cast<int32_t>(ONE_BLK_SIZE)), static_cast<int32_t>(K_ALIGN_SIZE));
             }
         }
         weightOutUb_ = AscendC::LocalTensor<ElementOut>(AscendC::TPosition::VECCALC, 0, vecWeightOutLen_);
@@ -375,14 +375,21 @@ private:
         intriParams.dstStride = 0;
         AscendC::DataCopyPadExtParams<ElementIn> padParams;
         if constexpr (weightNz) {
-            intriParams.blockCount = kUbLen_ / C0_SIZE_B8;
-            intriParams.blockLen = nUbLen_ * BLOCK_CUBE;
             int64_t nAlignSize = CeilAlign(nSize_, static_cast<uint64_t>(BLOCK_CUBE));
-            intriParams.srcStride = (nAlignSize - nUbLen_) * BLOCK_CUBE;
+            int64_t nUbAlignSize = CeilAlign(nUbLen_, BLOCK_CUBE);
+            intriParams.blockCount = kUbLen_ / C0_SIZE_B8;
+            intriParams.blockLen = nUbAlignSize * C0_SIZE_B8;
+            intriParams.srcStride = (nAlignSize - nUbAlignSize) * C0_SIZE_B8;
         } else {
             intriParams.blockCount = nUbLen_;
-            intriParams.blockLen = kUbLen_ >> INT4_DTYPE_PARAM;
-            intriParams.srcStride = (kSize_ - kUbLen_) >> INT4_DTYPE_PARAM;
+            intriParams.blockLen = kUbLen_;
+            intriParams.srcStride = kSize_ - kUbLen_;
+        }
+        if constexpr (IsSameType<ElementIn, int4b_t>::value || IsSameType<ElementIn, fp4x2_e2m1_t>::value ||
+            IsSameType<ElementIn, fp4x2_e1m2_t>::value) {
+            intriParams.blockLen = intriParams.blockLen >> INT4_DTYPE_PARAM;
+            intriParams.srcStride = intriParams.srcStride >> INT4_DTYPE_PARAM;
+            intriParams.dstStride = intriParams.dstStride >> INT4_DTYPE_PARAM;
         }
         uint64_t weightInOffset = ubBufIdx_ * (vecWeightInLen_ << INT4_DTYPE_PARAM) / l1BufNum_;
         AscendC::GlobalTensor<ElementIn> srcTensor;
@@ -416,7 +423,7 @@ private:
         AscendC::DataCopyParams params;
         if constexpr (weightNz) {
             params.blockLen = BLOCK_NUM_REG;
-            params.blockCount = nUbLen_ * kUbLen_ * sizeof(ElementOut) / VECTOR_REG_WIDTH;
+            params.blockCount = CeilAlign(nUbLen_, BLOCK_CUBE) * kUbLen_ * sizeof(ElementOut) / VECTOR_REG_WIDTH;
             params.srcStride = (l1BufNum_ - 1) * BLOCK_NUM_REG;
             params.dstStride = 0;
             DataCopy(l1Local_[l1Offset], ubLocal, params);
@@ -515,7 +522,7 @@ private:
                 MicroAPI::MaskReg MaskRegB8Tail0 = MicroAPI::UpdateMask<uint8_t>(maskWeight0Tmp);
                 MicroAPI::MaskReg MaskRegB8Tail1 = MicroAPI::UpdateMask<uint8_t>(maskWeight1Tmp);
                 MicroAPI::AddrReg aregWeightB8 =
-                    MicroAPI::CreateAddrReg<uint8_t>(outIdx, kUbLen_ >> 1, repeatIdx, VEC_MAX_ELEM_B8);
+                    MicroAPI::CreateAddrReg<uint8_t>(outIdx, CeilAlign(kUbLen_, static_cast<int32_t>(K_ALIGN_SIZE)) >> 1, repeatIdx, VEC_MAX_ELEM_B8);
                 MicroAPI::LoadAlign(wLoad0, (__ubuf__ uint8_t*&)wParams.weightInUbBaseAddr, aregWeightB8);
                 // 提取E/M
                 MicroAPI::ShiftRight(wShr, wLoad0, wdup0, preg); // vr1
@@ -582,7 +589,7 @@ private:
         wParams.shiftLeftSize =
             IsSameType<ElementIn, fp4x2_e2m1_t>::value ? E2M1_SHIFT_LEFT_SIZE : E1M2_SHIFT_LEFT_SIZE;
         wParams.andMask = IsSameType<ElementIn, fp4x2_e2m1_t>::value ? E2M1_AND_MASK : E1M2_AND_MASK;
-        wParams.innerExtend = CeilDiv(kUbLen_ * nUbLen_, static_cast<int32_t>(VECTOR_REG_WIDTH));
+        wParams.innerExtend = CeilDiv(kUbLen_ * CeilAlign(nUbLen_, BLOCK_CUBE), static_cast<int32_t>(VECTOR_REG_WIDTH));
         wParams.innerDstExtend = VECTOR_REG_WIDTH * l1BufNum_;
         wParams.innerSrcExtend = VECTOR_REG_WIDTH >> 1;
         wParams.weightInUbBaseAddr = weightInUbBaseAddr_;
@@ -647,6 +654,7 @@ private:
     static constexpr int32_t VEC_MAX_ELEM_B16 = VECTOR_REG_WIDTH / sizeof(ElementBias);
     static constexpr int32_t VECTOR_REG_WIDTH_FOR_4BITS = 512;
     static constexpr int32_t OFFSET_64 = 64;
+    static constexpr uint64_t K_ALIGN_SIZE = 64;
     static constexpr uint64_t BIAS_SPLIT_N_L1_SIZE = 256UL;
     static constexpr ElementBias BIAS_REDUCE_FACTOR = static_cast<ElementBias>(0.015625f);
 
