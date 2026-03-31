@@ -58,7 +58,7 @@ aclnnStatus aclnnHardtanhBackward(
 
 - **参数说明：**
 
-<table style="undefined;table-layout: fixed; width: 1412px"><colgroup>
+  <table style="undefined;table-layout: fixed; width: 1412px"><colgroup>
   <col style="width: 258px">
   <col style="width: 120px">
   <col style="width: 233px">
@@ -164,15 +164,15 @@ aclnnStatus aclnnHardtanhBackward(
       <td>-</td>
     </tr>
   </tbody>
-</table>
+  </table>
 
    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+    aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  第一段接口会完成入参校验，出现以下场景时报错：
+    第一段接口会完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1150px"><colgroup>
   <col style="width: 283px">

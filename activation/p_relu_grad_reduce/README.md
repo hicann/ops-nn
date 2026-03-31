@@ -61,31 +61,36 @@ $$
       <td>prelu正向的输出y反向传播的梯度</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-  <tr>
+    </tr>
+    <tr>
       <td>features</td>
       <td>输入</td>
       <td>prelu正向的输入features</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-  <tr>
+    </tr>
+    <tr>
       <td>weights</td>
       <td>输入</td>
       <td>prelu正向的输入weights</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-
-  <tr>
+    </tr>
+    <tr>
       <td>updates</td>
       <td>输入</td>
       <td>weights梯度计算的中间结果，用于计算da</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-  <tr>
+    </tr>
+    <tr>
       <td>da</td>
       <td>输出</td>
       <td>weights的梯度</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
+    </tr>
+  </tbody>
   </table>
 
 ## 约束说明

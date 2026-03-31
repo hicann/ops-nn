@@ -17,7 +17,7 @@
 
 - 计算公式：
 
-1. 先计算gelu计算得到geluOut
+1.先计算gelu计算得到geluOut
 
   - approximate = tanh
 
@@ -31,7 +31,7 @@
    geluOut=Gelu(self)=self × Φ(self)=0.5 * self *[1 + erf(self/\sqrt{2})]
   $$
 
-2. 再对geluOut进行量化操作
+2.再对geluOut进行量化操作
 
   - quant_mode = static
 
@@ -139,6 +139,7 @@ aclnnStatus aclnnGeluQuant(
       <td>1</td>
       <td>√</td>
     </tr>
+     <tr>
       <td>inputOffsetOptional（aclTensor*）</td>
       <td>输入</td>
       <td>算子的可选输入，公式中的inputOffsetOptional。</td>

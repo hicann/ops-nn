@@ -36,57 +36,42 @@
 
 ## 参数说明
 
-  <table style="undefined;table-layout: fixed; width: 1430px"><colgroup>
-  <col style="width: 171px">
-  <col style="width: 115px">
-  <col style="width: 200px">
-  <col style="width: 280px">
-  <col style="width: 177px">
-  <col style="width: 104px">
-  <col style="width: 238px">
-  <col style="width: 145px">
+  <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
+  <col style="width: 170px">
+  <col style="width: 170px">
+  <col style="width: 352px">
+  <col style="width: 213px">
+  <col style="width: 100px">
   </colgroup>
   <thead>
     <tr>
       <th>参数名</th>
-      <th>输入/输出</th>
+      <th>输入/输出/属性</th>
       <th>描述</th>
-      <th>使用说明</th>
       <th>数据类型</th>
       <th>数据格式</th>
-      <th>维度(shape)</th>
-      <th>非连续Tensor</th>
     </tr></thead>
   <tbody>
     <tr>
       <td>gradOutput</td>
       <td>输入</td>
       <td>表示输入梯度。公式中的gradOutput。</td>
-      <td><ul><li>支持空Tensor。</li><li>gradOutput、self与gradInput的数据类型和shape一致。</li><li>gradOutput、self与gradInput的shape满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
-      <td>1-8</td>
-      <td>√</td>
     </tr>
     <tr>
       <td>self</td>
       <td>输入</td>
       <td>表示输入数据。公式中的x，且对应正向的输入参数。</td>
-      <td><ul><li>支持空Tensor。</li><li>gradOutput、self与gradInput的数据类型和shape一致。</li><li>gradOutput、self与gradInput的shape满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
-      <td>1-8</td>
-      <td>√</td>
     </tr>
       <tr>
       <td>gradInput</td>
       <td>输出</td>
       <td>表示对输入数据self求的梯度。公式中的gradInput。</td>
-      <td><ul><li>gradOutput、self与gradInput的数据类型和shape一致。</li><li>gradOutput、self与gradInput的shape满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
-      <td>1-8</td>
-      <td>√</td>
     </tr>
    </tbody>
   </table>

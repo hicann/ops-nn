@@ -88,6 +88,7 @@ aclnnStatus aclnnGeGluV3Backward(
       <td>1-8</td>
       <td>√</td>
     </tr>
+     <tr>
       <td>gelu（aclTensor*）</td>
       <td>输入</td>
       <td>GeGluV3Backward计算的入参，公式中的gelu。</td>

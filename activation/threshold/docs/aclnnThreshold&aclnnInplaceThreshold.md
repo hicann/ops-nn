@@ -242,76 +242,41 @@ aclnnStatus aclnnInplaceThreshold(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1405px"><colgroup>
-  <col style="width: 271px">
-  <col style="width: 115px">
-  <col style="width: 247px">
-  <col style="width: 208px">
-  <col style="width: 177px">
-  <col style="width: 104px">
-  <col style="width: 138px">
-  <col style="width: 145px">
+  <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
+  <col style="width: 170px">
+  <col style="width: 170px">
+  <col style="width: 352px">
+  <col style="width: 213px">
+  <col style="width: 100px">
   </colgroup>
   <thead>
     <tr>
       <th>参数名</th>
-      <th>输入/输出</th>
+      <th>输入/输出/属性</th>
       <th>描述</th>
-      <th>使用说明</th>
       <th>数据类型</th>
       <th>数据格式</th>
-      <th>维度(shape)</th>
-      <th>非连续Tensor</th>
     </tr></thead>
   <tbody>
     <tr>
       <td>selfRef（aclTensor*）</td>
       <td>输入/输出</td>
       <td>表示输入/输出张量，公式中的x/out。</td>
-      <td>-</td>
       <td>BFLOAT16、FLOAT16、FLOAT32、INT32、INT8、UINT8、INT16、INT64</td>
       <td>ND</td>
-      <td>0-8</td>
-      <td>√</td>
     </tr>
        <tr>
       <td>threshold（aclScalar*）</td>
       <td>输入</td>
       <td>表示阈值，公式中的输入threshold。</td>
-      <td>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32、INT32、INT8、UINT8、INT16、INT64</td>
-      <td>-</td>
-      <td>-</td>
       <td>-</td>
     </tr>
       <tr>
       <td>value（aclScalar*）</td>
       <td>输入</td>
       <td>表示输入self的元素小于阈值时的返回值，公式中的输入value。</td>
-      <td>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32、INT32、INT8、UINT8、INT16、INT64</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-      <tr>
-      <td>workspaceSize（uint64_t*）</td>
-      <td>输出</td>
-      <td>返回需要在Device侧申请的workspace大小。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-      <tr>
-      <td>executor（aclOpExecutor**）</td>
-      <td>输出</td>
-      <td>返回op执行器，包含了算子计算流程。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
       <td>-</td>
     </tr>
     </tbody>

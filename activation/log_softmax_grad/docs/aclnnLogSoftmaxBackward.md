@@ -1,4 +1,4 @@
-## aclnnLogSoftmaxBackward
+# aclnnLogSoftmaxBackward
 
 [📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/logsoftmax_grad)
 
@@ -25,6 +25,7 @@ $$
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnLogSoftmaxBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnLogSoftmaxBackward”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnLogSoftmaxBackwardGetWorkspaceSize(
   const aclTensor *gradOutput,
@@ -223,6 +224,7 @@ aclnnStatus aclnnLogSoftmaxBackward(
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>
@@ -364,4 +366,3 @@ int main() {
   return 0;
 }
 ```
-

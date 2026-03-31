@@ -23,40 +23,40 @@
 
 ## 参数说明
 
-<table style="undefined;table-layout: fixed; width: 1000px">
-<colgroup>
-<col style="width: 150px">
-<col style="width: 150px">
-<col style="width: 300px">
-<col style="width: 250px">
-<col style="width: 150px">
-</colgroup>
-<thead>
-	<tr>
-		<th>参数名</th>
-		<th>输入/输出</th>
-		<th>描述</th>
-		<th>数据类型</th>
-		<th>数据格式</th>
-		</tr>
-	</thead>
-	<tbody>
-		<tr>
-		<td>x</td>
-		<td>输入</td>
-		<td>表示softplus激活函数的输入，公式中的x。</td>
-		<td>FLOAT、FLOAT16、BFLOAT16</td>
-		<td>ND</td>
-		</tr>
-		<tr>
-		<td>y</td>
-		<td>输出</td>
-		<td>表示softplus激活函数的输出，公式中的y。</td>
-		<td>FLOAT、FLOAT16、BFLOAT16</td>
-		<td>ND</td>
-		</tr>
-	</tbody>
-</table>
+  <table style="undefined;table-layout: fixed; width: 1000px">
+  <colgroup>
+  <col style="width: 150px">
+  <col style="width: 150px">
+  <col style="width: 300px">
+  <col style="width: 250px">
+  <col style="width: 150px">
+  </colgroup>
+  <thead>
+    <tr>
+    <th>参数名</th>
+    <th>输入/输出</th>
+    <th>描述</th>
+    <th>数据类型</th>
+    <th>数据格式</th>
+   </tr>
+  </thead>
+  <tbody>
+    <tr>
+    <td>x</td>
+    <td>输入</td>
+    <td>表示softplus激活函数的输入，公式中的x。</td>
+    <td>FLOAT、FLOAT16、BFLOAT16</td>
+    <td>ND</td>
+    </tr>
+    <tr>
+    <td>y</td>
+    <td>输出</td>
+    <td>表示softplus激活函数的输出，公式中的y。</td>
+    <td>FLOAT、FLOAT16、BFLOAT16</td>
+    <td>ND</td>
+    </tr>
+    </tbody>
+   </table>
   
 ## 约束说明
 
