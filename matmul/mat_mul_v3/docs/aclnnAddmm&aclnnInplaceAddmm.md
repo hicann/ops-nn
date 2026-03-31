@@ -217,7 +217,7 @@ aclnnStatus aclnnInplaceAddmm(
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
-    - 不支持cubeMathType=4。
+    - cubeMathType=4，当输入数据类型为FLOAT32，m轴等于1或者n轴等于1且k轴大于512时，会使用vector核进行计算，以提高计算结果的精度（该方式在部分场景下会导致算子性能发生劣化）。
     - 不支持cubeMathType=5。
 - **返回值**
 
@@ -429,7 +429,7 @@ aclnnStatus aclnnInplaceAddmm(
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
-    - 不支持cubeMathType=4。
+    - cubeMathType=4，当输入数据类型为FLOAT32，m轴等于1或者n轴等于1且k轴大于512时，会使用vector核进行计算，以提高计算结果的精度（该方式在部分场景下会导致算子性能发生劣化）。
     - 不支持cubeMathType=5。
 
 - **返回值**
