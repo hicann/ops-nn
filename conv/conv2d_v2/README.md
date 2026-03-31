@@ -85,7 +85,7 @@
 <td>输出</td>
 <td>公式中的输出张量 y。</td>
 <td>FLOAT16、FLOAT、BFLOAT16、HIFLOAT8</td>
-<td>NCDHW、NDHWC</td>
+<td>NCHW、NHWC</td>
 </tr>
 <tr>
 <td>strides</td>
