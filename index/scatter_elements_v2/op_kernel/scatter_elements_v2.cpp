@@ -16,7 +16,23 @@
 #include "scatter_elements_v2_310p.h"
 #else
 #include "scatter_elements_v2.h"
-#include "scatter_elements_v2_low_memory/execute_scatter.h"
+#include "scatter_elements_v2_low_memory/exec_transpose_and_scatter_elements.h"
+
+template <typename T, typename U, uint32_t MODE, bool IsScalar>
+__aicore__ inline void ExecScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
+                                      ScatterElementsV2TilingData* tiling_data,
+                                      AscendC::TPipe* pipe, GM_ADDR workspace) {
+    if constexpr (MODE == 1) {
+        if constexpr (!(std::is_same<T, int32_t>::value || std::is_same<T, float>::value ||
+                        std::is_same<T, half>::value || std::is_same<T, bfloat16_t>::value)) {
+            return;
+        }
+    }
+    GM_ADDR userspace = GetUserWorkspace(workspace);
+    ScatterElementsV2NS::ExecTransposeAndScatterElements<T, U, MODE, IsScalar> op;
+    op.Init(var, indices, updates, tiling_data, pipe, userspace);
+    op.Process();
+}
 #endif
 
 extern "C" __global__ __aicore__ void scatter_elements_v2(
@@ -35,12 +51,15 @@ extern "C" __global__ __aicore__ void scatter_elements_v2(
 #endif
 #else
     if (TILING_KEY_IS(0)) {
-        // 显存优化分支
-        GM_ADDR userspace = GetUserWorkspace(workspace);
-        ScatterElementsV2NS::ExecuteScatter<DTYPE_VAR, DTYPE_INDICES> op;
-        op.Init(var, indices, updates, &tiling_data, &pipe, userspace);
-        op.Process();
+        ExecScatterOp<DTYPE_VAR, DTYPE_INDICES, 0, false>(var, indices, updates, &tiling_data, &pipe, workspace);
+    } else if (TILING_KEY_IS(10)) {
+        ExecScatterOp<DTYPE_VAR, DTYPE_INDICES, 0, true>(var, indices, updates, &tiling_data, &pipe, workspace);
+    } else if (TILING_KEY_IS(100)) {
+        ExecScatterOp<DTYPE_VAR, DTYPE_INDICES, 1, false>(var, indices, updates, &tiling_data, &pipe, workspace);
+    } else if (TILING_KEY_IS(110)) {
+        ExecScatterOp<DTYPE_VAR, DTYPE_INDICES, 1, true>(var, indices, updates, &tiling_data, &pipe, workspace);
     } else if (TILING_KEY_IS(1)) {
+        // 原始分支，仅支持尾轴场景，需要在算子外部做transpose
         KernelScatterElementsV2<DTYPE_VAR, DTYPE_INDICES, 1> op;
         op.Init(tilingDevice, &pipe, var, indices, updates);
         if (tilingDevice->modeFlag == 1) {
@@ -49,6 +68,7 @@ extern "C" __global__ __aicore__ void scatter_elements_v2(
             op.ProcessScatter();
         }
     } else if (TILING_KEY_IS(2)) {
+        // 原始分支，仅支持尾轴场景，需要在算子外部做transpose
         KernelScatterElementsV2<DTYPE_VAR, DTYPE_INDICES, 2> op;
         op.Init(tilingDevice, &pipe, var, indices, updates);
         if (tilingDevice->modeFlag == 1) {

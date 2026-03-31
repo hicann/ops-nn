@@ -48,6 +48,13 @@ static const int64_t NO_TRANSPOSE_DIM_MAX = 256;
 static const uint64_t NO_TRANSPOSE_TASKS_MIN = 48;
 static const uint32_t SPCIAL_TASKS_MIN = 6144;
 
+// 无转置场景校验相关常量
+static const uint64_t NO_TRANSPOSE_AXIS_MAX = 40000;              // dim轴最大值
+static const uint64_t NO_TRANSPOSE_SINGLE_INDEX_THRESHOLD = 100000; // 单索引场景任务数阈值
+static const uint64_t NO_TRANSPOSE_DATA_SIZE_THRESHOLD = 30000000; // 数据量阈值，100M
+static const uint64_t NO_TRANSPOSE_MID_AXIS_MIN_SIZE = 16384;     // batch大小
+static const uint64_t NO_TRANSPOSE_INDEX_RATIO = 256;             // 索引更新比例
+
 static map<const op::DataType, const int32_t> DATA_BLOCK_LEN = {
     {op::DataType::DT_INT8, BLOCK_8},   {op::DataType::DT_UINT8, BLOCK_8},  {op::DataType::DT_FLOAT16, BLOCK_16},
     {op::DataType::DT_FLOAT, BLOCK_32}, {op::DataType::DT_INT32, BLOCK_32}, {op::DataType::DT_BF16, BLOCK_16}};
@@ -402,37 +409,68 @@ static DimsInfo CalculateDimsInfo(const aclTensor* data, const aclTensor* indice
     auto dataDimNum = data->GetViewShape().GetDimNum();
     
     if (axis == 0) {
-        CalculateDimsForFirstAxis(data, indices, dims);
+        CalculateDimsForFirstAxis(data, indices, dims); // [M, N]
     } else if (axis == dataDimNum - 1) {
-        CalculateDimsForLastAxis(data, indices, axis, dims);
+        CalculateDimsForLastAxis(data, indices, axis, dims); // [M, N]
     } else {
-        CalculateDimsForMiddleAxis(data, indices, axis, dims);
+        CalculateDimsForMiddleAxis(data, indices, axis, dims); // [batch, M, N]
     }
     
     return dims;
 }
 
 static bool CheckLastAxisPerformance(const DimsInfo& dims) {
-    if (!(dims.dataN < 40000 && dims.indicesM >= 10)) {
-        OP_LOGD("ScatterElementsV2 No Transpose when axis = dataDimNum - 1 not support M > 40000 or N < 10.");
+    if (!(dims.dataN < NO_TRANSPOSE_AXIS_MAX && dims.indicesM >= NO_TRANSPOSE_TASKS_MIN)) {
+        OP_LOGD("ScatterElementsV2 No Transpose when axis = dataDimNum - 1 only support data.N < 40000 && indices.M >= 48.");
         return false;
     }
     return true;
 }
 
-static bool CheckFirstAxisPerformance(const DimsInfo& dims) {
-    if (!(dims.dataM < 40000 && dims.indicesN >= 48 && dims.indicesM >= dims.dataM / 256)) {
-        OP_LOGD("ScatterElementsV2 No Transpose when realDim = 0, only support N > 48.");
+static bool CheckFirstAxisPerformance(const DimsInfo& dims, const aclTensor* data) {
+    if (!(dims.dataM < NO_TRANSPOSE_AXIS_MAX && dims.indicesN >= NO_TRANSPOSE_DIM_MAX)) {
+        OP_LOGD("ScatterElementsV2 No Transpose when axis = 0 only support data.M < 40000 && indices.N >= 256.");
         return false;
     }
+    uint64_t dataNums = dims.dataM * dims.dataN + dims.indicesM * dims.indicesN * 2;
+    if (!((dims.indicesM == 1 && dims.indicesN >= NO_TRANSPOSE_SINGLE_INDEX_THRESHOLD) || (dataNums > NO_TRANSPOSE_DATA_SIZE_THRESHOLD))) {
+        OP_LOGD("ScatterElementsV2 No Transpose when axis = 0 only support indices.M == 1 && indices.N >= 100000 || data.N * data.M + indices.N * indices.M * 2 > 30000000.");
+        return false;
+    }
+
+    if (data->GetDataType() == op::DataType::DT_INT8 || data->GetDataType() == op::DataType::DT_UINT8 ||
+        data->GetDataType() == op::DataType::DT_FLOAT16 || data->GetDataType() == op::DataType::DT_BF16) {
+        uint64_t indicesNums = dims.indicesM * dims.indicesN;
+        if (indicesNums < NO_TRANSPOSE_SINGLE_INDEX_THRESHOLD * FLOAT_CAST) {
+            OP_LOGD("ScatterElementsV2 No Transpose when int8 or uint8 or bf16 or fp16 only support has many indices.");
+            return false;
+        }
+    }
+
     return true;
 }
 
-static bool CheckMiddleAxisPerformance(const DimsInfo& dims) {
-    if (!(dims.batchSize <= 5 && dims.dataM * dims.dataN > 32 * 32 && dims.indicesM >= dims.dataM / 2 && dims.indicesN > 48
-          && dims.dataM < 40000)) {
-        OP_LOGD("ScatterElementsV2 No Transpose when axis in mid not support data.M * data.N > 32 * 32 && indices.M > data.M / 2 && indices.N > 48.");
+static bool CheckMiddleAxisPerformance(const DimsInfo& dims, const aclTensor* data) {
+    if (!(dims.dataM * dims.dataN >= NO_TRANSPOSE_MID_AXIS_MIN_SIZE && dims.indicesN >= NO_TRANSPOSE_TASKS_MIN && dims.dataM < NO_TRANSPOSE_AXIS_MAX)) {
+        OP_LOGD("ScatterElementsV2 No Transpose when axis in mid only support data.M * data.N >= 16384 && indices.N >= 48 && data.M < 40000.");
         return false;
+    }
+    uint64_t dataNums = dims.batchSize * dims.dataM * dims.dataN + dims.batchSize * dims.indicesM * dims.indicesN * 2;
+    if (!(dataNums > NO_TRANSPOSE_DATA_SIZE_THRESHOLD)) {
+        OP_LOGD("ScatterElementsV2 No Transpose when axis in mid only support batchSize * (data.N * data.M + indices.N * indices.M * 2) > 30000000.");
+        return false;
+    }
+    if (!(dims.indicesM >= dims.dataM / NO_TRANSPOSE_INDEX_RATIO)) {
+        OP_LOGD("ScatterElementsV2 No Transpose when axis in mid only support indices.M >= data.M / 256.");
+        return false;
+    }
+    if (data->GetDataType() == op::DataType::DT_INT8 || data->GetDataType() == op::DataType::DT_UINT8 ||
+        data->GetDataType() == op::DataType::DT_FLOAT16 || data->GetDataType() == op::DataType::DT_BF16) {
+        uint64_t batchIndicesNums = dims.indicesM * dims.indicesN;
+        if (batchIndicesNums < SPCIAL_TASKS_MIN) {
+            OP_LOGD("ScatterElementsV2 No Transpose when int8 or uint8 or bf16 or fp16 only support has many indices.");
+            return false;
+        }
     }
     return true;
 }
@@ -455,9 +493,9 @@ static bool NoTransposePerformanceCheck(const aclTensor* data, const aclTensor* 
     if (axis == dataDimNum - 1) {
         return CheckLastAxisPerformance(dims);
     } else if (axis == 0) {
-        return CheckFirstAxisPerformance(dims);
+        return CheckFirstAxisPerformance(dims, data);
     } else {
-        return CheckMiddleAxisPerformance(dims);
+        return CheckMiddleAxisPerformance(dims, data);
     }
 }
 
@@ -474,14 +512,6 @@ static bool CheckDimsEqualInRange(const gert::Shape& dataShape, const gert::Shap
     return true;
 }
 
-static bool CheckTwoDimShape(const aclTensor* data, uint64_t axis, size_t dataDimNum) {
-    if (axis == dataDimNum - 1 && data->GetDataType() != op::DataType::DT_BOOL) {
-        OP_LOGD("ScatterElementsV2 No Transpose when axis = dataDimNum - 1, only support bool type.");
-        return false;
-    }
-    return true;
-}
-
 static bool CheckMultiDimFirstAxis(const gert::Shape& dataShape, const gert::Shape& indicesShape, 
                                     const gert::Shape& updatesShape, size_t dataDimNum) {
     if (!CheckDimsEqualInRange(dataShape, indicesShape, updatesShape, 1, dataDimNum)) {
@@ -494,10 +524,6 @@ static bool CheckMultiDimFirstAxis(const gert::Shape& dataShape, const gert::Sha
 static bool CheckMultiDimLastAxis(const aclTensor* data, const gert::Shape& dataShape, 
                                    const gert::Shape& indicesShape, const gert::Shape& updatesShape, 
                                    size_t dataDimNum) {
-    if (data->GetDataType() != op::DataType::DT_BOOL) {
-        OP_LOGD("ScatterElementsV2 No Transpose when axis = dataDimNum - 1, only support bool type.");
-        return false;
-    }
     if (!CheckDimsEqualInRange(dataShape, indicesShape, updatesShape, 1, dataDimNum - 1)) {
         OP_LOGD("ScatterElementsV2 No Transpose when axis = dataDimNum - 1, only support var、indices、updates dim equal.");
         return false;
@@ -549,21 +575,13 @@ static bool NoTransposeShapeCheck(const aclTensor* data, const aclTensor* indice
     if (updatesShape.GetDimNum() == 0) {
         OP_LOGD("ScatterElementsV2 updates is scalar Tensor.");
         updatesShape = indicesShape;
-        if (data->GetDataType() == op::DataType::DT_BF16) {
-            return false;
-        }
     }
     
     if (dataDimNum > AXIS_LIMIT || (dataDimNum != indicesShape.GetDimNum()) || dataDimNum != updatesShape.GetDimNum()) {
         OP_LOGD("ScatterElementsV2 No Transpose only support var、indices、updates dimNums equal.");
         return false;
     }
-
-    if (dataDimNum == TWO_DIM) {
-        return CheckTwoDimShape(data, axis, dataDimNum);
-    } else {
-        return CheckMultiDimShape(data, dataShape, indicesShape, updatesShape, axis, dataDimNum);
-    }
+    return CheckMultiDimShape(data, dataShape, indicesShape, updatesShape, axis, dataDimNum);
 }
 
 static bool MoeIndicesExpandCheck(const aclTensor* indices, int64_t axis, int64_t dataDimNum) {
@@ -585,7 +603,6 @@ static bool MoeIndicesExpandCheck(const aclTensor* indices, int64_t axis, int64_
 
 static bool BaseCheck(const aclTensor* data, const aclTensor* indices, const aclTensor* updates,
                       const std::string& reduction) {
-    // 非null，非空
     if (data == nullptr || indices == nullptr || updates == nullptr) {
         OP_LOGD("ScatterElementsV2 No Transpose not support nullptr");
         return false;
@@ -623,7 +640,6 @@ static bool BaseCheck(const aclTensor* data, const aclTensor* indices, const acl
         OP_LOGD("ScatterElementsV2 No Transpose not support add reduction for int8 uint8 bool.");
         return false;
     }
-
     return true;
 }
 

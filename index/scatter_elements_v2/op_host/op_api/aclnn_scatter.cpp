@@ -322,10 +322,6 @@ static aclnnStatus ExecScatterNoTranspose(
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto indexContiguous = l0op::Contiguous(index, executor);
     CHECK_RET(indexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    // linear index，转换负数索引并输出int32索引
-    indexContiguous = l0op::LinearIndex(indexContiguous, selfContiguous, -1, false, executor);
-    CHECK_COND(indexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "LinearIndex failed!");
-    
     auto srcContiguous = l0op::Contiguous(src, executor);
     CHECK_RET(srcContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto reduction = GetReduceStr(reduce);
