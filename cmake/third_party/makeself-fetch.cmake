@@ -33,7 +33,7 @@ if (NOT EXISTS "${MAKESELF_PATH}/makeself-header.sh" OR NOT EXISTS "${MAKESELF_P
     include(FetchContent)
     FetchContent_Declare(
         ${MAKESELF_NAME}
-        URL ${MAKESELF_URL}
+        URL ${REQ_URL}
         URL_HASH SHA256=bfa730a5763cdb267904a130e02b2e48e464986909c0733ff1c96495f620369a
         SOURCE_DIR "${MAKESELF_PATH}"  # 直接解压到此目录
     )
