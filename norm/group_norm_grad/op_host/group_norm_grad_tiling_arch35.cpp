@@ -449,6 +449,9 @@ ge::graphStatus GroupNormGradRegBaseTiling::Stage2Mode2Tiling()
         int64_t nTotalLoop = Ops::Base::CeilDiv(reduceNCnt_, nTileNum);
         int64_t nTail = reduceNCnt_ - nLoop * nTileNum;
         int64_t basicBlockLoop = FindNearestPower2(nTotalLoop);
+        if (basicBlockLoop == 0) {
+            break;
+        }
         int64_t mainFoldCount = nLoop - basicBlockLoop;
         int64_t cacheBufferCount = CONST_ONE;
         int32_t resultCacheID = CONST_ZERO;
@@ -461,7 +464,7 @@ ge::graphStatus GroupNormGradRegBaseTiling::Stage2Mode2Tiling()
         cTileNum = (ubSize_ - FLOAT16_DTYPE_BYTES * UB_COPIES_4) / (CONST_THREE * nTileNum + CONST_TWO + cacheBufferCount) / sizeof(float);
         cTileNum = cTileNum / cTileNumBase * cTileNumBase;
 
-        if ((cTileNum < cBlockFactor && nTileNum != nTileNumList[0]) || cTileNum <=0) {
+        if ((cTileNum < cBlockFactor && nTileNum != nTileNumList[0]) || cTileNum <= 0) {
             break;
         }
 
