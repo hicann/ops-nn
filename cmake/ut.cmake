@@ -206,6 +206,7 @@ function(add_op_graph_ut_modules OP_GRAPH_MODULE_NAME)
         ${JSON_INCLUDE}
         ${GTEST_INCLUDE}
         ${OPBASE_INC_DIRS}
+        ${PROJECT_SOURCE_DIR}/common/graph_fusion
         ${PROJECT_SOURCE_DIR}/common/inc
         ${ASCEND_DIR}/include
         ${ASCEND_DIR}/include/external
