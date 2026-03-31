@@ -16,18 +16,21 @@
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
 #include "./arch35/fused_mat_mul_tiling_data.h"
 #include "./arch35/fused_mat_mul_tilingkey.h"
-#include "cmct/kernel/kernel_matmul_mix_without_que.h"
 #include "cmct/kernel/kernel_matmul_mix.h"
 #include "cmct/kernel/kernel_matmul.h"
 #include "cmct/kernel/kernel_matmul_iterbatch.h"
 #include "../mat_mul_v3/arch35/mat_mul_tiling_data.h"
 #include "../batch_mat_mul_v3/arch35/batch_mat_mul_v3_asw_kernel_advanced.h"
 #include "../batch_mat_mul_v3/arch35/batch_mat_mul_v3_iterbatch_basicapi_cmct.h"
-#include "../mat_mul_v3/arch35/mat_mul_pingpong_basic_cmct.h"
 #include "../mat_mul_v3/arch35/mat_mul_streamk_basic_cmct.h"
 #include "../mat_mul_v3/arch35/mat_mul_mix_basic_cmct.h"
 #include "../mat_mul_v3/arch35/mat_mul_fixpipe_opti_basic_cmct.h"
 #include "./arch35/fused_mat_mul_tilingkey.h"
+
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+#include "cmct/kernel/kernel_matmul_mix_without_que.h"
+#include "../mat_mul_v3/arch35/mat_mul_pingpong_basic_cmct.h"
+#endif
 
 using namespace Cmct;
 using namespace Gemm;

@@ -35,6 +35,11 @@ ge::graphStatus BatchMatMulV3AswTiling::DoOpTiling()
 
 uint64_t BatchMatMulV3AswTiling::GetTilingKey() const
 {
+    if (tilingKeyObj != nullptr) {
+        tilingKeyObj->SetTrans(args_.isATrans, args_.isBTrans);
+        tilingKeyObj->SetModel(MatMulV3Model::BASIC);
+        return tilingKeyObj->GetTilingKey();
+    }
     return BatchMatMulV3TilingKey()
         .SetTrans(args_.isATrans, args_.isBTrans)
         .SetModel(MatMulV3Model::BASIC)
