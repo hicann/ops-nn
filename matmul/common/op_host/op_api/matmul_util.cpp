@@ -1019,6 +1019,16 @@ MmOpInfo GetMatmulOpInfo(const aclTensor* self, const aclTensor* mat2, int8_t cu
     return mmOpInfo;
 }
 
+std::shared_ptr<NpuArchMatMulRuleBase> BuildRule()
+{
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    if ((npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3510)) {
+        return std::make_shared<Dav2201MatMulRule>(npuArch);
+    } else {
+        return std::make_shared<DefaultMatMulRule>(npuArch);
+    }
+}
+
 aclnnStatus CreateMatmulOpInfo(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType,
     MmOpInfo& mmOpInfo, bool isSelfSlice = false)
@@ -1052,7 +1062,7 @@ aclnnStatus CreateMatmulOpInfo(
         mmOpInfo.shapeInfo.dtypeBSize);
 
     // 解析当前规格matmulop支持的dtype能力
-    std::shared_ptr<NpuArchMatMulRuleBase> archRule = NpuArchMatMulRule::getInstance();
+    std::shared_ptr<NpuArchMatMulRuleBase> archRule = BuildRule();
     aclnnStatus status = archRule -> PromoteDtype(self, mat2, bias, out, cubeMathType, mmOpInfo);
     CHECK_RET(status == ACLNN_SUCCESS, status);
 
@@ -2461,17 +2471,6 @@ op::DataType DefaultMatMulRule::PromoteOutputAndBiasDtype(op::DataType outputDty
             return op::DataType::DT_FLOAT;
         }
         return op::DataType::DT_FLOAT16;
-}
-
-std::shared_ptr<NpuArchMatMulRuleBase> NpuArchMatMulRule::instance = nullptr;
-
-std::shared_ptr<NpuArchMatMulRuleBase> NpuArchMatMulRule::BuildRule() {
-        auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-        if ((npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3510)) {
-            return std::make_shared<Dav2201MatMulRule>(npuArch);
-        } else {
-            return std::make_shared<DefaultMatMulRule>(npuArch);
-        }
 }
 
 const aclTensor* ExecGemmV3WithAlphaBetaOp(const aclTensor* bias,

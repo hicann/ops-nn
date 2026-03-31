@@ -95,7 +95,7 @@ static aclnnStatus CheckInputParams(const aclTensor* self, const aclTensor* vec,
     CHECK_RET(CheckDtypeSame(self, vec, out), ACLNN_ERR_PARAM_INVALID);
 
     //  self dtype 按soc校验。
-    auto archRule = NpuArchMatMulRule::getInstance();
+    auto archRule = BuildRule();
     CHECK_RET(archRule != nullptr, ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(archRule -> CheckInput(self, vec, nullptr, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
 

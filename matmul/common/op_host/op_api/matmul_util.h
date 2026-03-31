@@ -387,21 +387,7 @@ private:
     op::DataType PromoteOutputAndBiasDtype(op::DataType outputDtype, op::DataType biasOriDtype) const;
 };
 
-// 单例
-class NpuArchMatMulRule {
-public:
-    static std::shared_ptr<NpuArchMatMulRuleBase> getInstance() {
-        if(instance == nullptr) {
-            instance = BuildRule();
-        }
-        return std::move(instance);
-    }
-
-private:
-    static std::shared_ptr<NpuArchMatMulRuleBase> instance;
-
-    static std::shared_ptr<NpuArchMatMulRuleBase> BuildRule() ;
-};
+std::shared_ptr<NpuArchMatMulRuleBase> BuildRule();
 
 // =====================================================================================================
 
