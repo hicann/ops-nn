@@ -70,14 +70,14 @@
 <td>输入</td>
 <td>公式中的输入张量 x。</td>
 <td>FLOAT8_E4M3FN、INT8、HIFLOAT8</td>
-<td>NCDHW、NDHWC</td>
+<td>NCDHW</td>
 </tr>
 <tr>
 <td>filter</td>
 <td>输入</td>
 <td>公式中的卷积权重张量 filter。</td>
 <td>FLOAT8_E4M3FN、INT8、HIFLOAT8</td>
-<td>NCDHW、DHWCN</td>
+<td>NCDHW</td>
 </tr>
 <tr>
 <td>scale</td>
@@ -104,13 +104,13 @@
 <td>y</td>
 <td>输出</td>
 <td>公式中的输出张量 y。</td>
-<td>FLOAT16、FLOAT、FLOAT8_E4M3FN、INT8、HIFLOAT8</td>
-<td>NCDHW、NDHWC</td>
+<td>FLOAT、FLOAT16、BFLOAT16、FLOAT8_E4M3FN、HIFLOAT8</td>
+<td>NCDHW</td>
 </tr>
 <tr>
 <td>dtype</td>
 <td>属性</td>
-<td>表示输出 y 的数据类型。支持的列表包括 [-1(默认)，0(FLOAT)，1(FLOAT16)，2(INT8)，27(BF16)， 34(HIFLOAT8), 36(FLOAT8_E4M3FN)]。</td>
+<td>表示输出 y 的数据类型。支持的列表包括 [-1(默认)，0(FLOAT)，1(FLOAT16)，27(BFLOAT16)，34(HIFLOAT8)，36(FLOAT8_E4M3FN)]。</td>
 <td>BOOL</td>
 <td>-</td>
 </tr>
@@ -145,7 +145,7 @@
 <tr>
 <td>data_format</td>
 <td>可选属性</td>
-<td>输入数据格式，支持 "NCDHW"、"NDHWC"。</td>
+<td>输入数据格式，支持 "NCDHW"。</td>
 <td>STRING</td>
 <td>-</td>
 </tr>
@@ -198,7 +198,7 @@
   <td style="text-align:center">INT8</td>
   <td style="text-align:center">INT64/UINT64</td>
   <td style="text-align:center">INT32</td>
-  <td style="text-align:center">FLOAT16/INT8</td>
+  <td style="text-align:center">FLOAT16</td>
   </tr>
   <tr>
   <td style="text-align:center">HIFLOAT8</td>
@@ -221,13 +221,6 @@
   <td style="text-align:center">ND</td>
   <td style="text-align:center">ND</td>
   <td style="text-align:center">NCDHW</td>
-  </tr>
-  <tr>
-  <td style="text-align:center">NDHWC</td>
-  <td style="text-align:center">DHWCN</td>
-  <td style="text-align:center">ND</td>
-  <td style="text-align:center">ND</td>
-  <td style="text-align:center">NDHWC</td>
   </tr>
   </table>
 
