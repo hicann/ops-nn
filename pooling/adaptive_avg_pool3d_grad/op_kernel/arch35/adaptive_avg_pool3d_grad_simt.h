@@ -116,6 +116,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool3dGra
     __gm__ VALUE_T* gradX)
 {
     using DIV_T = SimtDivT<OFFSET_T>;
+    using INDEX_T = uint64_t;
 
     DIV_T magicC = static_cast<DIV_T>(simtParams[MAGIC_C_IDX]);
     DIV_T shiftC = static_cast<DIV_T>(simtParams[MAGIC_C_IDX + 1]);
@@ -133,17 +134,29 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool3dGra
     DIV_T magicOsizeW = static_cast<DIV_T>(simtParams[MAGIC_OSIZE_W_IDX]);
     DIV_T shiftOsizeW = static_cast<DIV_T>(simtParams[MAGIC_OSIZE_W_IDX + 1]);
 
-    DIV_T count = nDims * cDims * inD * inH * inW;
-    for (DIV_T index = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); index < count;
-         index += Simt::GetBlockNum() * Simt::GetThreadNum()) {
-        DIV_T temp1 = Simt::UintDiv(index, magicInW, shiftInW);
-        DIV_T w = index - temp1 * inW;
-        DIV_T temp2 = Simt::UintDiv(temp1, magicInH, shiftInH);
-        DIV_T h = temp1 - temp2 * inH;
-        DIV_T temp3 = Simt::UintDiv(temp2, magicInD, shiftInD);
-        DIV_T d = temp2 - temp3 * inD;
-        DIV_T n = Simt::UintDiv(temp3, magicC, shiftC);
-        DIV_T c = temp3 - n * cDims;
+    const INDEX_T count =
+        static_cast<INDEX_T>(nDims) *
+        static_cast<INDEX_T>(cDims) *
+        static_cast<INDEX_T>(inD) *
+        static_cast<INDEX_T>(inH) *
+        static_cast<INDEX_T>(inW);
+
+    const INDEX_T threadStart =
+        static_cast<INDEX_T>(Simt::GetBlockIdx()) * static_cast<INDEX_T>(Simt::GetThreadNum()) +
+        static_cast<INDEX_T>(Simt::GetThreadIdx());
+    const INDEX_T threadStride =
+        static_cast<INDEX_T>(Simt::GetBlockNum()) * static_cast<INDEX_T>(Simt::GetThreadNum());
+
+    for (INDEX_T index = threadStart; index < count; index += threadStride) {
+        const INDEX_T temp1 = index / static_cast<INDEX_T>(inW);
+        const DIV_T w = static_cast<DIV_T>(index - temp1 * static_cast<INDEX_T>(inW));
+        const INDEX_T temp2 = temp1 / static_cast<INDEX_T>(inH);
+        const DIV_T h = static_cast<DIV_T>(temp1 - temp2 * static_cast<INDEX_T>(inH));
+        const INDEX_T temp3 = temp2 / static_cast<INDEX_T>(inD);
+        const DIV_T d = static_cast<DIV_T>(temp2 - temp3 * static_cast<INDEX_T>(inD));
+        const INDEX_T n64 = temp3 / static_cast<INDEX_T>(cDims);
+        const DIV_T n = static_cast<DIV_T>(n64);
+        const DIV_T c = static_cast<DIV_T>(temp3 - n64 * static_cast<INDEX_T>(cDims));
 
         DIV_T odStarts = StartIndexIn2Out<DIV_T>(d, outD, magicInD, shiftInD);
         DIV_T odEnds = EndIndexIn2Out<DIV_T>(d, inD, outD, magicInD, shiftInD);
@@ -167,8 +180,16 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool3dGra
                     DIV_T kW = iw1 - iw0;
                     DIV_T div = kD * kH * kW;
 
-                    DIV_T outputIdx = n * cDims * outD * outH * outW + c * outD * outH * outW +
-                                      od * outH * outW + oh * outW + ow;
+                    const INDEX_T outputIdx =
+                        static_cast<INDEX_T>(n) * static_cast<INDEX_T>(cDims) *
+                            static_cast<INDEX_T>(outD) * static_cast<INDEX_T>(outH) *
+                            static_cast<INDEX_T>(outW) +
+                        static_cast<INDEX_T>(c) * static_cast<INDEX_T>(outD) *
+                            static_cast<INDEX_T>(outH) * static_cast<INDEX_T>(outW) +
+                        static_cast<INDEX_T>(od) * static_cast<INDEX_T>(outH) *
+                            static_cast<INDEX_T>(outW) +
+                        static_cast<INDEX_T>(oh) * static_cast<INDEX_T>(outW) +
+                        static_cast<INDEX_T>(ow);
 
                     gradient += static_cast<float>(gradY[outputIdx]) / static_cast<float>(div);
                 }
@@ -193,6 +214,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool3dGra
     __gm__ VALUE_T* gradX)
 {
     using DIV_T = SimtDivT<OFFSET_T>;
+    using INDEX_T = uint64_t;
 
     DIV_T magicC = static_cast<DIV_T>(simtParams[MAGIC_C_IDX]);
     DIV_T shiftC = static_cast<DIV_T>(simtParams[MAGIC_C_IDX + 1]);
@@ -210,18 +232,29 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool3dGra
     DIV_T magicOsizeW = static_cast<DIV_T>(simtParams[MAGIC_OSIZE_W_IDX]);
     DIV_T shiftOsizeW = static_cast<DIV_T>(simtParams[MAGIC_OSIZE_W_IDX + 1]);
 
-    DIV_T count = nDims * inD * inH * inW * cDims;
+    const INDEX_T count =
+        static_cast<INDEX_T>(nDims) *
+        static_cast<INDEX_T>(inD) *
+        static_cast<INDEX_T>(inH) *
+        static_cast<INDEX_T>(inW) *
+        static_cast<INDEX_T>(cDims);
 
-    for (DIV_T index = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); index < count;
-         index += Simt::GetBlockNum() * Simt::GetThreadNum()) {
-        DIV_T temp1 = Simt::UintDiv(index, magicC, shiftC);
-        DIV_T c = index - temp1 * cDims;
-        DIV_T temp2 = Simt::UintDiv(temp1, magicInW, shiftInW);
-        DIV_T w = temp1 - temp2 * inW;
-        DIV_T temp3 = Simt::UintDiv(temp2, magicInH, shiftInH);
-        DIV_T h = temp2 - temp3 * inH;
-        DIV_T n = Simt::UintDiv(temp3, magicInD, shiftInD);
-        DIV_T d = temp3 - n * inD;
+    const INDEX_T threadStart =
+        static_cast<INDEX_T>(Simt::GetBlockIdx()) * static_cast<INDEX_T>(Simt::GetThreadNum()) +
+        static_cast<INDEX_T>(Simt::GetThreadIdx());
+    const INDEX_T threadStride =
+        static_cast<INDEX_T>(Simt::GetBlockNum()) * static_cast<INDEX_T>(Simt::GetThreadNum());
+
+    for (INDEX_T index = threadStart; index < count; index += threadStride) {
+        const INDEX_T temp1 = index / static_cast<INDEX_T>(cDims);
+        const DIV_T c = static_cast<DIV_T>(index - temp1 * static_cast<INDEX_T>(cDims));
+        const INDEX_T temp2 = temp1 / static_cast<INDEX_T>(inW);
+        const DIV_T w = static_cast<DIV_T>(temp1 - temp2 * static_cast<INDEX_T>(inW));
+        const INDEX_T temp3 = temp2 / static_cast<INDEX_T>(inH);
+        const DIV_T h = static_cast<DIV_T>(temp2 - temp3 * static_cast<INDEX_T>(inH));
+        const INDEX_T n64 = temp3 / static_cast<INDEX_T>(inD);
+        const DIV_T n = static_cast<DIV_T>(n64);
+        const DIV_T d = static_cast<DIV_T>(temp3 - n64 * static_cast<INDEX_T>(inD));
 
         DIV_T odStarts = StartIndexIn2Out<DIV_T>(d, outD, magicInD, shiftInD);
         DIV_T odEnds = EndIndexIn2Out<DIV_T>(d, inD, outD, magicInD, shiftInD);
@@ -245,8 +278,17 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool3dGra
                     DIV_T kW = iw1 - iw0;
                     DIV_T div = kD * kH * kW;
 
-                    DIV_T outputIdx = n * outD * outH * outW * cDims + od * outH * outW * cDims +
-                                      oh * outW * cDims + ow * cDims + c;
+                    const INDEX_T outputIdx =
+                        static_cast<INDEX_T>(n) * static_cast<INDEX_T>(outD) *
+                            static_cast<INDEX_T>(outH) * static_cast<INDEX_T>(outW) *
+                            static_cast<INDEX_T>(cDims) +
+                        static_cast<INDEX_T>(od) * static_cast<INDEX_T>(outH) *
+                            static_cast<INDEX_T>(outW) * static_cast<INDEX_T>(cDims) +
+                        static_cast<INDEX_T>(oh) * static_cast<INDEX_T>(outW) *
+                            static_cast<INDEX_T>(cDims) +
+                        static_cast<INDEX_T>(ow) * static_cast<INDEX_T>(cDims) +
+                        static_cast<INDEX_T>(c);
+
                     gradient += static_cast<float>(gradY[outputIdx]) / static_cast<float>(div);
                 }
             }

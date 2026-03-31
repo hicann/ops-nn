@@ -16,6 +16,7 @@
 #include "arch35/adaptive_avg_pool3d_grad_simt.h"
 #include "arch35/adaptive_avg_pool3d_grad_ncdhw_big_kernel.h"
 #include "arch35/adaptive_avg_pool3d_grad_struct.h"
+#include "arch35/adaptive_avg_pool3d_grad_ncdhw_small_kernel.h"
 #else
 #include "adaptive_avg_pool3d_grad_float.h"
 #include "adaptive_avg_pool3d_grad_cast.h"
@@ -53,6 +54,17 @@ __global__ __aicore__ void adaptive_avg_pool3d_grad(
             op.Process();
         } else {
             AdaptiveAvgPool3dGradNCDHWBigKernel<DTYPE_X, int64_t> op;
+            op.Init(y_grad, x_grad, pipe, tilingData);
+            op.Process();
+        }
+    } else if constexpr (TEMPLATE_MODE == TPL_SMALL_KERNEL && IS_CHANNEL_LAST == 0) {
+        GET_TILING_DATA_WITH_STRUCT(AdaptiveAvgPool3dNCDHWGradSmallKernelTilingDataV35, tilingData, tiling);
+        if constexpr (INDEX_DTYPE == TPL_INT32) {
+            AdaptiveAvgPool3dGradNCDHWSmallKernel<DTYPE_X, int32_t> op;
+            op.Init(y_grad, x_grad, pipe, tilingData);
+            op.Process();
+        } else {
+            AdaptiveAvgPool3dGradNCDHWSmallKernel<DTYPE_X, int64_t> op;
             op.Init(y_grad, x_grad, pipe, tilingData);
             op.Process();
         }
