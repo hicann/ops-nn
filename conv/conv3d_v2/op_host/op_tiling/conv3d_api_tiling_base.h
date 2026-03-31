@@ -90,6 +90,15 @@ struct Conv3DInputshape {
     int64_t singleCoreGroupOpt = INITIAL_SHAPE_MINUS_ONE;
 };
 
+struct SingleCoreInfo {
+    int64_t singleCo = INITIAL_SHAPE_MINUS_ONE;
+    int64_t singleDo = INITIAL_SHAPE_MINUS_ONE;
+    int64_t singleM = INITIAL_SHAPE_MINUS_ONE;
+    int64_t singleHo = INITIAL_SHAPE_MINUS_ONE;
+    int64_t singleWo = INITIAL_SHAPE_MINUS_ONE;
+    int64_t singleCoreGroupOpt = INITIAL_SHAPE_MINUS_ONE;
+};
+
 struct Conv3DInputAttr {
     int64_t groups = 1;
     int64_t groupOpt = 1;
@@ -162,6 +171,8 @@ public:
     void SetSingleWeightShape(int64_t singleCi, int64_t singleKd, int64_t singleKh, int64_t singleKw);
     void SetSingleOutputShape(int64_t singleCo, int64_t singleDo, int64_t singleM);
     void SetSingleOutputShape(int64_t singleCo, int64_t singleDo, int64_t singleHo, int64_t singleWo);
+    void SetSingleOutputShapeOpt(int64_t singleCo, int64_t singleDo, int64_t singleM, int64_t singleCoreGroupOpt);
+    void SetSingleOutputShapeOpt(int64_t singleCo, int64_t singleDo, int64_t singleHo, int64_t singleWo, int64_t singleCoreGroupOpt);
     void SetOutputOrder(int8_t outputOrder);
     void SetWeightType(TPosition pos, ConvFormat format, ConvDtype dtype);
     void SetFmapType(TPosition pos, ConvFormat format, ConvDtype dtype);
@@ -179,6 +190,7 @@ public:
 
     Conv3DDesc descInfo;
     Conv3DInputshape shapeInfo;
+    SingleCoreInfo singleCoreInfo;
     Conv3DCalcShape shapeCalc;
     Conv3DInputAttr attrInfo;
     CubeInfo cubeInfo;
@@ -200,6 +212,7 @@ protected:
     virtual int64_t Compute() = 0;
     void SetFinalTilingBasicInfo(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
     void SetFinalTilingDecisionInfo(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
+    void ResetSingleCoreInfo(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
     void SetFinalTiling(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
     void PrintTilingDataBasicInfo() const;
     void PrintTilingDataDecision() const;
