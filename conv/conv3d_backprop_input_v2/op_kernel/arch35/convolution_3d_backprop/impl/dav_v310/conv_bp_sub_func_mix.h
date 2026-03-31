@@ -798,8 +798,10 @@ __aicore__ inline void CastToDstType(Intf *self, const GlobalTensor<typename Int
         mte3Param.blockLen = self->ctx.baseUseM_ * sizeof(typename Intf::DstT);
         mte3Param.srcStride = 0;
         mte3Param.dstStride = self->ctx.diHiWi_ * sizeof(typename Intf::DstT) - mte3Param.blockLen;
+#if (__NPU_ARCH__ != 5102)
         DataCopyPad<typename Intf::DstT, PaddingMode::Compact>(output[dstOffset],
             self->ctx.castVecTensor_.template ReinterpretCast<typename Intf::SrcT>(), mte3Param);
+#endif
     }
 }
 
