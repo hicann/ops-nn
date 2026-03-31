@@ -29,16 +29,13 @@ namespace strategy {
 constexpr int32_t MATMUL_INPUT_K_EQUAL_ZERO = 0;
 constexpr int32_t TO_MUL = 1;
 constexpr int32_t BASIC_STREAM_K = 2;
-constexpr int32_t STREAM_K = 3;
-constexpr int32_t BASIC_ASWT = 4;
-constexpr int32_t FULL_LOAD_BASE = 5;
+constexpr int32_t BASIC_ASWT = 3;
 constexpr int32_t BASE = 999;
 
 const static std::map<NpuArch, std::vector<int32_t>> MatMulV3PrioritiesMap = {
     {NpuArch::DAV_3510,
-     {strategy::MATMUL_INPUT_K_EQUAL_ZERO, strategy::TO_MUL, strategy::BASIC_STREAM_K, strategy::STREAM_K, strategy::BASIC_ASWT,
-      strategy::FULL_LOAD_BASE}},
-    {NpuArch::DAV_RESV, {strategy::BASIC_ASWT, strategy::FULL_LOAD_BASE}}, // supportMmadS8S4平台
+     {strategy::MATMUL_INPUT_K_EQUAL_ZERO, strategy::TO_MUL, strategy::BASIC_STREAM_K, strategy::BASIC_ASWT}},
+    {NpuArch::DAV_RESV, {strategy::BASIC_ASWT}}, // supportMmadS8S4平台
 };
 
 inline std::vector<int32_t> GetMatMulV3Priorities(NpuArch npuArch)

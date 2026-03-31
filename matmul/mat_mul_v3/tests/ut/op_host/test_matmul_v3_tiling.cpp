@@ -2885,9 +2885,9 @@ TEST_F(MatMulV3TilingRuntime, 950_slice_non_contiguous_case) {
 
   platform_info.Init();
   string compile_info_string = R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false,"offset_x":0,"opImplMode":0},
-      "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":33554432},"binary_mode_flag":true,
-      "block_dim":{"CORE_NUM":24, "vector_core_cnt": 48},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 196608, "L2_SIZE": 201326592, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM":24, "vector_core_cnt": 48, "socVersion": "Ascend950" },
+      "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
+      "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 235952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM":32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})";
   optiling::MatmulV3CompileInfo compile_info;
   auto kernel_holder = gert::KernelRunContextFaker()
@@ -2947,10 +2947,15 @@ TEST_F(MatMulV3TilingRuntime, 950_slice_non_contiguous_case) {
   ge::char_t simplifiedKey[100] = {0};
   ASSERT_EQ(gen_simplifiedkey_func(tiling_context, simplifiedKey), ge::GRAPH_SUCCESS);
   uint64_t tiling_key = tiling_context->GetTilingKey();
+  uint32_t block_dim = tiling_context->GetBlockDim();
   string case_name = "950_slice_non_contiguous_case";
   auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData(), case_name, tiling_key);
-  cout<<"===== 950_slice_non_contiguous_case:"<<tiling_key<<" === \n"<<tiling_data_result<<std::endl;
+  auto golden_tiling_data = GenGoldenTilingData(
+      "1 10 4 7 16 16 64 16 16 16 7 1 1 1 1 0 0 16908800 0 2 0 0", case_name, tiling_key);
+  cout << "===== 950_slice_non_contiguous_case:" << tiling_key << " === \n" << tiling_data_result << std::endl;
   ASSERT_EQ(tiling_key, 1);
+  ASSERT_EQ(block_dim, 1);
+  ASSERT_EQ(tiling_data_result, golden_tiling_data);
 }
 
 } // namespace
