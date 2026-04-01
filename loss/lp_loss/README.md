@@ -48,6 +48,7 @@
 
 - 确定性计算：
     - aclnnL1Loss默认确定性实现。
+- LpLoss中p为计算loss的参数，只支持p=1，aclnn接口名称为aclnnL1Loss。
 
 ## 调用说明
 

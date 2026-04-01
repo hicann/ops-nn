@@ -92,7 +92,7 @@
     <tr>
       <td>neg_log_likelihood</td>
       <td>输出</td>
-      <td>公式中的输入reduction，指定要应用到输出的缩减，支持 0('none') | 1('mean') | 2('sum')。'none' 表示不应用缩减，'mean' 表示输出的总和将除以输出中的元素数，'sum' 表示输出将被求和。</td>
+      <td>表示输出的损失值，公式中的h。</td>
       <td>int64_t</td>
       <td>ND</td>
     </tr>
