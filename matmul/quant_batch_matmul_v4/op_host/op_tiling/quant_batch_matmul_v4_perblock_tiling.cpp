@@ -359,7 +359,6 @@ ge::graphStatus QuantBatchMatmulV4PerblockTiling::DoOpTiling()
         return ge::GRAPH_FAILED);
     SetTilingData();
 
-    constexpr uint32_t SYS_WORKSPACE_SIZE = 16U * 1024U * 1024U;
     workspaceSize_ = SYS_WORKSPACE_SIZE +
                      compileInfo_.aicNum * basicTiling_.baseN * basicTiling_.baseM * sizeof(int32_t) * CV_PARALL_NUM;
     return ge::GRAPH_SUCCESS;

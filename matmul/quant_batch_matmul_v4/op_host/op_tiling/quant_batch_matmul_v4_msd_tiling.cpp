@@ -34,7 +34,6 @@ constexpr uint32_t UB_BUFFER_NUMBER = 4; // ub上分成4块buffer
 constexpr uint32_t UB_RESTBYTES = UB_CALSIZE * sizeof(float) * UB_BUFFER_NUMBER;
 constexpr uint32_t CV_PARAll_NUM = 4;
 constexpr size_t SUPPORT_DIM = 2;
-constexpr uint32_t SYS_WORKSPACE_SIZE = 16U * 1024U * 1024U;
 
 }
 

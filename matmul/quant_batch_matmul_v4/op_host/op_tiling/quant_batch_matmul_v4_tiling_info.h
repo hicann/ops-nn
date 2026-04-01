@@ -37,6 +37,8 @@ constexpr size_t TRANSPOSE_X1_IDX = 2UL;
 constexpr size_t TRANSPOSE_X2_IDX = 3UL;
 constexpr size_t GROUP_SIZE_IDX = 4UL;
 
+constexpr uint32_t SYS_WORKSPACE_SIZE = 16U * 1024U * 1024U;
+
 // antiquant type
 enum class QuantBatchMatmulV4QuantType : std::uint8_t {
     NONE = 0,
