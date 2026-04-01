@@ -50,21 +50,21 @@
     <tr>
       <td>predict</td>
       <td>输入</td>
-      <td>公式中的输入grad </td>
+      <td>公式中的输入x。 </td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>label</td>
       <td>输入</td>
-      <td>公式中的输入x。</td>
+      <td>公式中的输入y。</td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>dout</td>
       <td>输入</td>
-      <td>公式中的输入y。</td>
+      <td>公式中的输入grad，梯度值。</td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
