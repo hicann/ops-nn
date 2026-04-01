@@ -10,7 +10,7 @@
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品 </term>                             |    ×     |
+| <term>Atlas 推理系列产品</term>                             |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    ×   |
 
 ## 功能说明
@@ -85,7 +85,7 @@ aclnnStatus aclnnFlip(
         <td>dims</td>
         <td>输入</td>
         <td>aclIntArray类型，表示需要翻转的轴。</td>
-        <td>取值范围为[-self.dim(), self.dim())。</ul></td>
+        <td><ul>取值范围为[-self.dim(), self.dim())。</ul></td>
         <td>INT64</td>
         <td>-</td>
         <td>-</td>

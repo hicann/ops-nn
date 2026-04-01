@@ -8,7 +8,7 @@
 <th style="text-align:center; width:100px">是否支持</th>
 </tr>
 <tr>
-<td><term>Ascend 950PR/Ascend 950DT </term></td>
+<td><term>Ascend 950PR/Ascend 950DT</term></td>
 <td style="text-align:center">√</td>
 </tr>
 <tr>
@@ -24,7 +24,7 @@
 <td style="text-align:center">×</td>
 </tr>
 <tr>
-<td><term>Atlas 推理系列产品 </term></td>
+<td><term>Atlas 推理系列产品</term></td>
 <td style="text-align:center">×</td>
 </tr>
 <tr>

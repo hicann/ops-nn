@@ -125,35 +125,35 @@
     <tr>
       <td>mode</td>
       <td>可选属性</td>
-      <td><ul><li>用于控制聚合模式。</li><li>默认值为"mean"。</li></td>
+      <td><ul><li>用于控制聚合模式。</li><li>默认值为"mean"。</li></ul></td>
       <td>String</td>
       <td>-</td>
     </tr>
     <tr>
       <td>scale_grad_by_freq</td>
       <td>可选属性</td>
-      <td><ul><li>用于控制是否根据词频缩放梯度。</li><li>默认值为false。</li></td>
+      <td><ul><li>用于控制是否根据词频缩放梯度。</li><li>默认值为false。</li></ul></td>
       <td>Bool</td>
       <td>-</td>
     </tr>
     <tr>
       <td>sparse</td>
       <td>可选属性</td>
-      <td><ul><li>用于控制稀疏模式。</li><li>默认值为false。</li></td>
+      <td><ul><li>用于控制稀疏模式。</li><li>默认值为false。</li></ul></td>
       <td>Bool</td>
       <td>-</td>
     </tr>
     <tr>
       <td>include_last_offset</td>
       <td>可选属性</td>
-      <td><ul><li>控制是否包含最后的偏移。</li><li>默认值为false。</li></td>
+      <td><ul><li>控制是否包含最后的偏移。</li><li>默认值为false。</li></ul></td>
       <td>Bool</td>
       <td>-</td>
     </tr>
     <tr>
       <td>padding_idx</td>
       <td>可选属性</td>
-      <td><ul><li>控制是否包含最后的偏移。</li><li>默认值为-1。</li></td>
+      <td><ul><li>控制是否包含最后的偏移。</li><li>默认值为-1。</li></ul></td>
       <td>Int</td>
       <td>-</td>
     </tr>

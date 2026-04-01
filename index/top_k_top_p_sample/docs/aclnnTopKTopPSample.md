@@ -8,7 +8,7 @@
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品 </term>                             |    ×     |
+| <term>Atlas 推理系列产品</term>                             |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    ×   |
 
 ## 功能说明
@@ -267,6 +267,7 @@ aclnnStatus aclnnTopKTopPSample(
         <td>-</td>
         <td>-</td>
       </tr>
+      <tr>
         <td>isNeedLogits</td>
         <td>输入</td>
         <td>表示控制logitsTopKPselect的输出条件，建议设置为0。</td>
@@ -276,7 +277,7 @@ aclnnStatus aclnnTopKTopPSample(
         <td>-</td>
         <td>-</td>
       </tr>
-      </tr>
+      <tr>
         <td>topKGuess</td>
         <td>输入</td>
         <td>表示每个batch在尝试topP部分遍历采样logits时的候选logits大小，必须为正整数。</td>
@@ -286,7 +287,7 @@ aclnnStatus aclnnTopKTopPSample(
         <td>-</td>
         <td>-</td>
       </tr>
-      </tr>
+      <tr>
         <td>logitsSelectIdx</td>
         <td>输出</td>
         <td>表示经过topK-topP-sample计算流程后，每个batch中词频最大元素max(probsOpt[batch, :])在输入logits中的位置索引。</td>
@@ -296,7 +297,7 @@ aclnnStatus aclnnTopKTopPSample(
         <td>1</td>
         <td>√</td>
       </tr>
-      </tr>
+      <tr>
         <td>logitsTopKPSelect</td>
         <td>输出</td>
         <td>表示经过topK-topP计算流程后，输入logits中剩余未被过滤的logits。</td>

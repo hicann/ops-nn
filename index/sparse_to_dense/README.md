@@ -8,7 +8,7 @@
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×    |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    ×     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品 </term>                             |    ×     |
+| <term>Atlas 推理系列产品</term>                             |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    ×   |
 ## 功能说明
 
@@ -74,6 +74,7 @@
       <td>UINT8、INT8、UINT16、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、BFLOAT16。</td>
       <td>ND</td>
     </tr>
+    <tr>
       <td>default_value</td>
       <td>输入</td>
       <td>公式中的`default_value`，Device侧的aclTensor，数据类型与values相同。</td>

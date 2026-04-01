@@ -8,7 +8,7 @@
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品 </term>                             |    ×     |
+| <term>Atlas 推理系列产品</term>                             |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    √     |
 
 ## 功能说明
@@ -35,7 +35,7 @@
   - scaleGradByFreq(bool, 计算输入)：根据单词出现的频率，是否对梯度进行缩放。若为true，对结果按词频进行缩放，若为false，不进行处理。
   - out(aclTensor*, 计算输出)：梯度求和的结果输出，Device侧的aclTensor，维度为2维，首轴大小为numWeights，尾轴大小与grad尾轴相同，数据类型与grad类型相同，[数据格式](../../../docs/zh/context/数据格式.md)仅支持ND。
     - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。
-    - <termAtlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
   - workspaceSize(uint64_t *, 出参): 返回需要在Device侧申请的workspace大小。
   - executor(aclOpExecutor **, 出参): 返回op执行器，包含了算子计算流程。
 
