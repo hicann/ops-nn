@@ -145,7 +145,7 @@ bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitHW11Enable()
     uint64_t mValueForCheck = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w;
         uint64_t nValueForCheck = static_cast<uint64_t>(runInfo_.dedx_cin1_g) * BLOCK_CUBE;
         uint64_t kValueForCheck = runInfo_.dedy_cout1_g * BASIC_BLOCK_SIZE_32 / dtypeByteL0b_;        
-        if (runInfo_.dedx_cin <= 32 || runInfo_.dedy_cout <= 32) { // 小shape不准入
+        if (runInfo_.dedx_cin <= BASIC_BLOCK_SIZE_32 || runInfo_.dedy_cout <= BASIC_BLOCK_SIZE_32) { // 小shape不准入
             return false;
         }  
         // 判断是否能走进fullload tiling模板

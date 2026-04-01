@@ -88,7 +88,7 @@ private:
     int32_t CalFmapHForKernelSplit(const int32_t& mL1Size, bool isKernelSplitOnlyH = false) const;
     bool IsBaseShapeFitKernelSplitHW(const uint32_t bestBaseMN);
     bool CheckKernelSplitHWEnable(
-        bool isEnableKernelSplitFlag1, const int32_t kernelSplitStrideVal, const uint32_t bestBaseMN);
+        bool isEnableKernelSplitFlag2, const int32_t kernelSplitStrideVal, const uint32_t bestBaseMN);
     bool IsBaseShapeFitKernelSplitH(const uint32_t bestBaseMN);
     bool CheckKernelSplitHEnable(const uint32_t bestBaseMN);
 
