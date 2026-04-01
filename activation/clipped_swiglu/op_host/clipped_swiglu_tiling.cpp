@@ -91,7 +91,6 @@ ge::graphStatus ClippedSwigluTiling::DoOpTiling()
     tilingData_.set_dim2H(dim2H_);
     tilingData_.set_isLongH(isLongH_);
     tilingData_.set_isGroup(isGroup_);
-    tilingData_.set_dim2H(dim2H_);
     tilingData_.set_isInterleaved(isInterleaved_);
     tilingData_.set_gluAlpha(gluAlpha_);
     tilingData_.set_gluLimit(gluLimit_);

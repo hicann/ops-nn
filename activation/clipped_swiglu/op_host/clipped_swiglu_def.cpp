@@ -15,8 +15,8 @@
 #include <register/op_def_registry.h>
 
 namespace ops {
-constexpr float DEFALUT_ALPHA = 1.702;
-constexpr float DEFALUT_LIMIT = 7.0;
+constexpr float DEFAULT_ALPHA = 1.702;
+constexpr float DEFAULT_LIMIT = 7.0;
 class ClippedSwiglu : public OpDef {
 public:
     explicit ClippedSwiglu(const char* name) : OpDef(name)
@@ -37,8 +37,8 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Attr("dim").AttrType(OPTIONAL).Int(-1);
-        this->Attr("alpha").AttrType(OPTIONAL).Float(DEFALUT_ALPHA);
-        this->Attr("limit").AttrType(OPTIONAL).Float(DEFALUT_LIMIT);
+        this->Attr("alpha").AttrType(OPTIONAL).Float(DEFAULT_ALPHA);
+        this->Attr("limit").AttrType(OPTIONAL).Float(DEFAULT_LIMIT);
         this->Attr("bias").AttrType(OPTIONAL).Float(1.0);
         this->Attr("interleaved").AttrType(OPTIONAL).Bool(true);
         this->AICore().AddConfig("ascend910b");
