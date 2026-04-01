@@ -40,7 +40,7 @@ constexpr uint64_t PER_BLOCK_SIZE = 128;
 constexpr size_t DIM_NUM_TWO = 2;
 
 // 控核比例
-constexpr uint32_t CORE_RATIO = 2;
+constexpr uint32_t CORE_RATIO = 2U;
 }  // namespace
 
 namespace optiling {

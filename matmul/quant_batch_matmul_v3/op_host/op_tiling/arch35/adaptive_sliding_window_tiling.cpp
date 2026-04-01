@@ -76,7 +76,7 @@ constexpr uint64_t CACHE_LINE_512B = 512UL;
 constexpr uint32_t MAX_STEPK_With_BL1_FULL = 8U;
 
 // 控核比例
-constexpr uint32_t CORE_RATIO = 2;
+constexpr uint32_t CORE_RATIO = 2U;
 } // namespace
 
 namespace optiling {
@@ -185,7 +185,8 @@ bool AdaptiveSlidingWindowTiling::CheckCoreNum() const
     auto aivNum = compileInfo_.aivNum;
     bool isScaleVecPostProcess = inputParams_.isPerChannel &&
                                  !(inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64);
-    if ((isScaleVecPostProcess || inputParams_.isPertoken || isBf16Mix_ || inputParams_.isPerBlock || isSupportS4S4_) && aivNum != CORE_RATIO * aicNum) {
+    bool isMixScene = isScaleVecPostProcess || inputParams_.isPertoken || isBf16Mix_ || inputParams_.isPerBlock || isSupportS4S4_;
+    if (isMixScene && aivNum != CORE_RATIO * aicNum) {
         OP_LOGE(inputParams_.opName, "For mix template, aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.", aicNum, aivNum);
         return false;
     }
