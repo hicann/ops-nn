@@ -591,11 +591,8 @@ static __aicore__ inline void LoadToB1Nd2Nz(Intf *self, const uint32_t hiCopyLen
 
 template <class Intf, class src1_T>
 __aicore__ inline void LoadToB1(Intf *self, bool cachePosB1, const Out2L1ScalarParams& params,
-                                bool isLoadB1, uint64_t kbStepIdx, bool &skipCurrentHiCompute)
+    uint64_t kbStepIdx, bool &skipCurrentHiCompute)
 {
-    if (!isLoadB1) {
-        return;
-    }
     skipCurrentHiCompute = false;
     // 需要载入BL1的条件为，被计算的BL0块是BL1上的第一块数据，一次载入完整BL1大小
     // 此时满足以下条件之一需要载入BL1：

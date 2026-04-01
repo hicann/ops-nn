@@ -373,8 +373,10 @@ __aicore__ inline void ComputeNormal(Intf *self, Out2L1ScalarParams& out2L1Param
                 if (isBL1PingPong) {
                     b1PingPongFlag = (curNKL1Idx + kbStepIdx + 1) & 1;
                 }
-                ConvolutionBackpropFunc::LoadToB1<Intf, typename Intf::SrcT>(self, b1PingPongFlag, out2L1Params,
-                            isLoadB1, kbStepIdx, skipCurrentHiCompute);
+                if (isLoadB1) {
+                    ConvolutionBackpropFunc::LoadToB1<Intf, typename Intf::SrcT>(self, b1PingPongFlag, out2L1Params,
+                        kbStepIdx, skipCurrentHiCompute);
+                }
                 if (skipCurrentHiCompute) {
                     UpdateIdx(isLastStepKa, isLastStepKb, kaIdx, kbIdx, kaStepIdx, kbStepIdx);
                     continue;
@@ -383,7 +385,7 @@ __aicore__ inline void ComputeNormal(Intf *self, Out2L1ScalarParams& out2L1Param
                     a1PingPongFlag = (curMKL1Idx + kaStepIdx + 1) & 1;
                 }
                 ConvolutionBackpropFunc::LoadToA1<Intf, typename Intf::SrcT>(self, a1PingPongFlag, k,
-                                                                            out2L1Params, isLoadA1, kaStepIdx);
+                    out2L1Params, isLoadA1, kaStepIdx);
 
                 WaitFlag<HardEvent::M_MTE1>(self->ctx.l0aPingPongFlag_ & 1);
 

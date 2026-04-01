@@ -258,11 +258,8 @@ static __aicore__ inline void LoadToB1Nd2NzSplitKernelHW(
 
 template <class Intf, class src1_T>
 __aicore__ inline void LoadToB1SplitKernelHW(Intf *self, bool cachePosB1, const Out2L1ScalarParams& params,
-                    bool isLoadB1, uint64_t kbStepIdx, uint64_t hkIdx, uint32_t startWo, bool &skipCurrentHiCompute)
+    uint64_t kbStepIdx, uint64_t hkIdx, uint32_t startWo, bool &skipCurrentHiCompute)
 {
-    if (!isLoadB1) {
-        return;
-    }
     skipCurrentHiCompute = false;
     // 需要载入BL1的条件为，被计算的BL0块是BL1上的第一块数据，一次载入完整BL1大小
     // 此时满足以下条件之一需要载入BL1：
@@ -462,9 +459,11 @@ __aicore__ inline void ComputeSplitKernelHW(Intf* self, Out2L1ScalarParams& out2
                     if (isBL1PingPong) {
                         b1PingPongFlag = (curNKL1Idx + kbStepIdx + 1) & 1;
                     }
-                    LoadToB1SplitKernelHW<Intf, typename Intf::SrcT>(
-                        self, b1PingPongFlag,
-                        out2L1Params, isLoadB1, kbStepIdx, hkIdx, splitWoIdx * splitWo, skipCurrentHiCompute);
+
+                    if (isLoadB1) {
+                        LoadToB1SplitKernelHW<Intf, typename Intf::SrcT>(
+                        self, b1PingPongFlag, out2L1Params, kbStepIdx, hkIdx, splitWoIdx * splitWo, skipCurrentHiCompute);
+                    }
                     if (skipCurrentHiCompute) {
                         UpdateIdx(isLastStepKa, isLastStepKb, kaIdx, kbIdx, kaStepIdx, kbStepIdx);
                         continue;
