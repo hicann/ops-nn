@@ -373,11 +373,12 @@ void Conv3dTilingEngine::GetConv3DRunInfo(Ops::NN::Conv3dV2::Conv3DV2TilingData 
     runInfo.hout = shapeInfo_.ho;
     runInfo.wout = shapeInfo_.wo;
 
-    runInfo.batchDim = numBlocksRes_.batchDim;
-    runInfo.mDim = numBlocksRes_.mDim;
-    runInfo.nDim = numBlocksRes_.nDim;
-    runInfo.doDim = numBlocksRes_.doDim;
-    runInfo.groupDim = numBlocksRes_.groupDim;
+    // 使用优化后的分核，更负载均衡
+    runInfo.batchDim = numBlocksResOpt_.batchDim;
+    runInfo.mDim = numBlocksResOpt_.mDim;
+    runInfo.nDim = numBlocksResOpt_.nDim;
+    runInfo.doDim = numBlocksResOpt_.doDim;
+    runInfo.groupDim = numBlocksResOpt_.groupDim;
 
     runInfo.strideH = static_cast<uint32_t>(attrInfo_.strideH);
     runInfo.strideW = static_cast<uint32_t>(attrInfo_.strideW);
@@ -1266,8 +1267,8 @@ bool Conv3dTilingEngine::ComputeNumBlocks()
     CoreNumBlocksDecision();
 
     OP_LOGD(logTag_.c_str(), "Block dimension computed - batch: %u, m: %u, n: %u, do: %u, group: %u",
-            numBlocksRes_.batchDim, numBlocksRes_.mDim, numBlocksRes_.nDim,
-            numBlocksRes_.doDim, numBlocksRes_.groupDim);
+            numBlocksResOpt_.batchDim, numBlocksResOpt_.mDim, numBlocksResOpt_.nDim,
+            numBlocksResOpt_.doDim, numBlocksResOpt_.groupDim);
 
     return true;
 }
@@ -1305,7 +1306,6 @@ void Conv3dTilingEngine::GetNumBlocksRange()
     } else {
         NumBlocksFactorMix(shapeInfo_.batch, numBlocksRanges_.batchRange, numBlocksRanges_.aicNumRange);
     }
-    NumBlocksRangesFilter(shapeInfo_.batch, numBlocksRanges_.batchRange);
     // nRange
     uint32_t n0 = g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_N_IDX);
     CalcCommFactor(CeilDiv(shapeInfo_.coutOpt, n0), platformInfo_.aicoreNum, numBlocksRanges_.nRange);
@@ -1315,18 +1315,14 @@ void Conv3dTilingEngine::GetNumBlocksRange()
         uint64_t m1 = CeilDiv(shapeInfo_.ho * shapeInfo_.wo, m0);
         CalcCommFactor(m1, platformInfo_.aicoreNum, numBlocksRanges_.mRange);
         NumBlocksFactorMix(m1, numBlocksRanges_.mRange, numBlocksRanges_.aicNumRange);
-        NumBlocksRangesFilter(m1, numBlocksRanges_.mRange);
     } else {
         // hoRange
         CalcCommFactor(shapeInfo_.ho, platformInfo_.aicoreNum, numBlocksRanges_.mRange);
         NumBlocksFactorMix(shapeInfo_.ho, numBlocksRanges_.mRange, numBlocksRanges_.aicNumRange);
-        NumBlocksRangesFilter(shapeInfo_.ho, numBlocksRanges_.mRange);
     }
     // doRange
     CalcCommFactor(shapeInfo_.dOut, platformInfo_.aicoreNum, numBlocksRanges_.doRange);
     NumBlocksFactorMix(shapeInfo_.dOut, numBlocksRanges_.doRange, numBlocksRanges_.aicNumRange);
-    // filter the d-axis aicore partitioning range to avoid unused idle-core scenarios in its candidate values
-    NumBlocksRangesFilter(shapeInfo_.dOut, numBlocksRanges_.doRange);
     // groupRange
     if (attrInfo_.groups == 1) {
         GetNumBlocksRangeforGroupRange(numBlocksRanges_.groupRange);
@@ -1367,13 +1363,8 @@ void Conv3dTilingEngine::CoreNumBlocksDecision()
 {
     OP_LOGD(logTag_.c_str(), "Performing core block dimension decision");
 
-    numBlocksRes_.batchDim = 1;
-    numBlocksRes_.mDim = 1;
-    numBlocksRes_.nDim = 1;
-    numBlocksRes_.doDim = 1;
-    numBlocksRes_.groupDim = 1;
-    numBlocksRes_.minCost = MAX_64_BIT_NUM;
-
+    optiling::Conv3dOpsTiling::NumBlocksRes numBlocksResTmp;
+    InitNumBlocksRes(numBlocksResTmp);
     std::vector<std::vector<uint32_t>> allRanges(NUMBLOCKS_DEC_NUM, std::vector<uint32_t>(1, 1));
     allRanges[NUMBLOCKS_BATCH_IDX] = numBlocksRanges_.batchRange;
     allRanges[NUMBLOCKS_M_IDX] = numBlocksRanges_.mRange;
@@ -1381,10 +1372,46 @@ void Conv3dTilingEngine::CoreNumBlocksDecision()
     allRanges[NUMBLOCKS_DO_IDX] = numBlocksRanges_.doRange;
     allRanges[NUMBLOCKS_GROUP_IDX] = numBlocksRanges_.groupRange;
     std::vector<uint32_t> dimsRecord;
-    NumBlocksDecisionBackTrack(allRanges, NUMBLOCKS_BATCH_IDX, dimsRecord);
+    NumBlocksDecisionBackTrack(numBlocksResTmp, allRanges, NUMBLOCKS_BATCH_IDX, dimsRecord);
+    numBlocksRes_ = numBlocksResTmp;
+
+    /**
+     * An optimized core partitioning logic is implemented here to ensure that the dout axis partitioning (doDim) is 
+     * used as fully as possible on the kernel side.
+     * In order to ensure that part of the logic entering this optimized core partitioning does not degrade performance,
+     * the following two constraints are implemented:
+     * ** 1. This logic only updates the inter-core allocation for different axes (such as doDim) and the amount of 
+     *       data that each core needs to process (such as singleCoreDo)
+     * ** 2. Optimized core partitioning is only performed for cases that meet DO_DIM_FILTER_THRESHOLD
+    */
+    InitNumBlocksRes(numBlocksResTmp);
+    // filter the d-axis aicore partitioning range to avoid unused idle-core scenarios in its candidate values
+    NumBlocksRangesFilter(shapeInfo_.dOut, numBlocksRanges_.doRange);
+    allRanges[NUMBLOCKS_DO_IDX] = numBlocksRanges_.doRange;
+    NumBlocksDecisionBackTrack(numBlocksResTmp, allRanges, NUMBLOCKS_BATCH_IDX, dimsRecord);
+    if (numBlocksRes_.doDim > DO_DIM_FILTER_THRESHOLD) {
+        OP_LOGD(logTag_.c_str(), "Using original block dimensions: doDim (%u) > threshold (%u), keeping original block dimensions", 
+                numBlocksRes_.doDim, DO_DIM_FILTER_THRESHOLD);
+        numBlocksResOpt_ = numBlocksRes_;
+    } else {
+        OP_LOGD(logTag_.c_str(), "Entering block dimension optimization logic: original doDim (%u) <= threshold (%u), using filtered optimized doDim (%u)", 
+                numBlocksRes_.doDim, DO_DIM_FILTER_THRESHOLD, numBlocksResTmp.doDim);
+        numBlocksResOpt_ = numBlocksResTmp;
+    }
 }
 
-void Conv3dTilingEngine::NumBlocksDecisionBackTrack(const std::vector<std::vector<uint32_t>> &inputRanges,
+void Conv3dTilingEngine::InitNumBlocksRes(optiling::Conv3dOpsTiling::NumBlocksRes &numBlocksRes)
+{
+    numBlocksRes.batchDim = 1;
+    numBlocksRes.mDim = 1;
+    numBlocksRes.nDim = 1;
+    numBlocksRes.doDim = 1;
+    numBlocksRes.groupDim = 1;
+    numBlocksRes.minCost = MAX_64_BIT_NUM;
+}
+
+void Conv3dTilingEngine::NumBlocksDecisionBackTrack(optiling::Conv3dOpsTiling::NumBlocksRes &numBlocksResTmp,
+                                                   const std::vector<std::vector<uint32_t>> &inputRanges,
                                                    uint32_t rangeIdx,
                                                    std::vector<uint32_t> &record)
 {
@@ -1397,28 +1424,28 @@ void Conv3dTilingEngine::NumBlocksDecisionBackTrack(const std::vector<std::vecto
         bool updateFlag = false;
         uint64_t curCost = CalcTotalCost(record[NUMBLOCKS_BATCH_IDX], record[NUMBLOCKS_M_IDX], record[NUMBLOCKS_N_IDX],
                                          record[NUMBLOCKS_DO_IDX], record[NUMBLOCKS_GROUP_IDX]);
-        if (curCost < numBlocksRes_.minCost) {
+        if (curCost < numBlocksResTmp.minCost) {
             updateFlag = true;
-        } else if (curCost == numBlocksRes_.minCost) {
+        } else if (curCost == numBlocksResTmp.minCost) {
             // for same cost, preference: batch > group > dout
-            if (numBlocksRes_.batchDim < record[NUMBLOCKS_BATCH_IDX]) {
+            if (numBlocksResTmp.batchDim < record[NUMBLOCKS_BATCH_IDX]) {
                 updateFlag = true;
-            } else if ((numBlocksRes_.batchDim == record[NUMBLOCKS_BATCH_IDX]) &&
-                        (numBlocksRes_.groupDim < record[NUMBLOCKS_GROUP_IDX])) {
+            } else if ((numBlocksResTmp.batchDim == record[NUMBLOCKS_BATCH_IDX]) &&
+                        (numBlocksResTmp.groupDim < record[NUMBLOCKS_GROUP_IDX])) {
                 updateFlag = true;
-            } else if ((numBlocksRes_.batchDim == record[NUMBLOCKS_BATCH_IDX]) &&
-                       (numBlocksRes_.groupDim == record[NUMBLOCKS_GROUP_IDX]) &&
-                       (numBlocksRes_.doDim < record[NUMBLOCKS_DO_IDX])) {
+            } else if ((numBlocksResTmp.batchDim == record[NUMBLOCKS_BATCH_IDX]) &&
+                       (numBlocksResTmp.groupDim == record[NUMBLOCKS_GROUP_IDX]) &&
+                       (numBlocksResTmp.doDim < record[NUMBLOCKS_DO_IDX])) {
                 updateFlag = true;
             }
         }
         if (updateFlag) {
-            numBlocksRes_.batchDim = record[NUMBLOCKS_BATCH_IDX];
-            numBlocksRes_.mDim = record[NUMBLOCKS_M_IDX];
-            numBlocksRes_.nDim = record[NUMBLOCKS_N_IDX];
-            numBlocksRes_.doDim = record[NUMBLOCKS_DO_IDX];
-            numBlocksRes_.groupDim = record[NUMBLOCKS_GROUP_IDX];
-            numBlocksRes_.minCost = curCost;
+            numBlocksResTmp.batchDim = record[NUMBLOCKS_BATCH_IDX];
+            numBlocksResTmp.mDim = record[NUMBLOCKS_M_IDX];
+            numBlocksResTmp.nDim = record[NUMBLOCKS_N_IDX];
+            numBlocksResTmp.doDim = record[NUMBLOCKS_DO_IDX];
+            numBlocksResTmp.groupDim = record[NUMBLOCKS_GROUP_IDX];
+            numBlocksResTmp.minCost = curCost;
         }
         return;
     }
@@ -1438,7 +1465,7 @@ void Conv3dTilingEngine::NumBlocksDecisionBackTrack(const std::vector<std::vecto
             record.emplace_back(inputRanges[rangeIdx][i]);
         }
 
-        NumBlocksDecisionBackTrack(inputRanges, rangeIdx + 1, record);
+        NumBlocksDecisionBackTrack(numBlocksResTmp, inputRanges, rangeIdx + 1, record);
         record.pop_back();
     }
 }
@@ -1552,6 +1579,24 @@ void Conv3dTilingEngine::SetSingleOutputShapeByMode()
     }
 }
 
+void Conv3dTilingEngine::SetSingleOutputShapeByModeOpt()
+{
+    OP_LOGD(logTag_.c_str(), "Update single output shape by mode");
+    int64_t singleCoreGroupOpt = static_cast<int64_t>(CeilDiv(attrInfo_.groupOpt, numBlocksResOpt_.groupDim));
+
+    int32_t singleCoreCo = numBlocksResOpt_.nDim == 1 ? shapeInfo_.coutOpt :
+        AlignUp(shapeInfo_.coutOpt, g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_N_IDX)) / numBlocksResOpt_.nDim;
+    int32_t singleCoreDo = CeilDiv(static_cast<uint32_t>(shapeInfo_.dOut), numBlocksResOpt_.doDim);
+
+    if (outputOrder_ == Conv3dApiTiling::M_Mode) {
+        int64_t singleCoreMo = CeilDiv(static_cast<uint64_t>(shapeInfo_.ho * shapeInfo_.wo), static_cast<uint64_t>(numBlocksResOpt_.mDim));
+        conv3dApiTiling_.SetSingleOutputShapeOpt(singleCoreCo, singleCoreDo, singleCoreMo, singleCoreGroupOpt);
+    } else {
+        int64_t singleCoreHo = CeilDiv(static_cast<uint64_t>(shapeInfo_.ho), static_cast<uint64_t>(numBlocksResOpt_.mDim));
+        conv3dApiTiling_.SetSingleOutputShapeOpt(singleCoreCo, singleCoreDo, singleCoreHo, shapeInfo_.wo, singleCoreGroupOpt);
+    }
+}
+
 void Conv3dTilingEngine::GetConv3dApiTilingPartSetAttrAndShape()
 {
     OP_LOGD(logTag_.c_str(), "Setting API tiling attributes and shapes");
@@ -1583,6 +1628,8 @@ void Conv3dTilingEngine::GetConv3dApiTilingSetGroupsInfo()
     conv3dApiTiling_.SetOptGroupInfo(static_cast<int64_t>(attrInfo_.groupOpt), singleCoreGroupOpt,
                                      static_cast<int64_t>(shapeInfo_.cinOpt), static_cast<int64_t>(shapeInfo_.coutOpt));
     SetSingleOutputShapeByMode();
+    // It updates the singleCoreXXX values in conv3dApiTiling_ with optimized values
+    SetSingleOutputShapeByModeOpt();
     conv3dApiTiling_.SetOutputOrder(outputOrder_);
 
     conv3dApiTiling_.SetWeightType(Conv3dApiTiling::TPosition::GM, descInfo_.weightFormat,

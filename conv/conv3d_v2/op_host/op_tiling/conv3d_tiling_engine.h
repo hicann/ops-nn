@@ -33,6 +33,9 @@ namespace Conv3dTilingEngineApi {
 constexpr uint8_t ATTRS_D_DIM_IDX_NCDHW = 0;
 constexpr uint8_t ATTRS_H_DIM_IDX_NCDHW = 1;
 constexpr uint8_t ATTRS_W_DIM_IDX_NCDHW = 2;
+// Threshold for doDim to determine whether to use filtered block dimensions
+// When doDim > 6, filtered result helps avoid idle cores; otherwise use original result
+constexpr uint32_t DO_DIM_FILTER_THRESHOLD = 6;
 
 using ::Conv3dCommon::MAX_64_BIT_NUM;
 constexpr uint8_t CONV_ATTRS_DIM = 3;
@@ -88,6 +91,7 @@ public:
     optiling::Conv3dOpsTiling::NumBlocksConstParas numBlocksConst_;
     std::vector<uint32_t> numBlocksInit_;
     optiling::Conv3dOpsTiling::NumBlocksRes numBlocksRes_;
+    optiling::Conv3dOpsTiling::NumBlocksRes numBlocksResOpt_;
 
     Conv3dApiTiling::Conv3dTiling conv3dApiTiling_;
 
@@ -128,7 +132,9 @@ public:
     void GetNumBlocksInit();
     void NumBlocksDecision();
     void CoreNumBlocksDecision();
-    void NumBlocksDecisionBackTrack(const std::vector<std::vector<uint32_t>> &inputRanges,
+    void InitNumBlocksRes(optiling::Conv3dOpsTiling::NumBlocksRes &numBlocksRes);
+    void NumBlocksDecisionBackTrack(optiling::Conv3dOpsTiling::NumBlocksRes &numBlocksResTmp,
+                                   const std::vector<std::vector<uint32_t>> &inputRanges,
                                    uint32_t rangeIdx,
                                    std::vector<uint32_t> &record);
     uint64_t CalcTotalCost(uint32_t batchDim, uint32_t mDim, uint32_t nDim,
@@ -145,6 +151,7 @@ public:
     bool ComputeApiTiling(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingdata);
     bool GetConv3dApiTiling(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingdata);
     void SetSingleOutputShapeByMode();
+    void SetSingleOutputShapeByModeOpt();
     void GetConv3dApiTilingPartSetAttrAndShape();
     void GetConv3dApiTilingSetGroupsInfo();
     bool InitOutputOrder();

@@ -96,6 +96,24 @@ void Conv3dTilingBase::SetSingleOutputShape(int64_t singleCo, int64_t singleDo, 
     this->shapeInfo.singleM = singleHo * singleWo;
 }
 
+void Conv3dTilingBase::SetSingleOutputShapeOpt(int64_t singleCo, int64_t singleDo, int64_t singleM, int64_t singleCoreGroupOpt)
+{
+    this->singleCoreInfo.singleCo = singleCo;
+    this->singleCoreInfo.singleDo = singleDo;
+    this->singleCoreInfo.singleM = singleM;
+    this->singleCoreInfo.singleCoreGroupOpt = singleCoreGroupOpt;
+}
+
+void Conv3dTilingBase::SetSingleOutputShapeOpt(int64_t singleCo, int64_t singleDo, int64_t singleHo, int64_t singleWo, int64_t singleCoreGroupOpt)
+{
+    this->singleCoreInfo.singleCo = singleCo;
+    this->singleCoreInfo.singleDo = singleDo;
+    this->singleCoreInfo.singleHo = singleHo;
+    this->singleCoreInfo.singleWo = singleWo;
+    this->singleCoreInfo.singleM = singleHo * singleWo;
+    this->singleCoreInfo.singleCoreGroupOpt = singleCoreGroupOpt;
+}
+
 void Conv3dTilingBase::SetOutputOrder(int8_t outputOrder)
 {
     this->outputOrder_ = outputOrder;
@@ -805,10 +823,25 @@ void Conv3dTilingBase::SetFinalTilingDecisionInfo(Ops::NN::Conv3dV2::TConv3DTili
     tiling.hf32TransMode = DISABLE_DOUBLE_BUFFER;
 }
 
+void Conv3dTilingBase::ResetSingleCoreInfo(Ops::NN::Conv3dV2::TConv3DTiling& tiling)
+{
+    // reset single core info
+    tiling.singleCoreCo = static_cast<uint32_t>(this->singleCoreInfo.singleCo);
+    tiling.singleCoreDo = static_cast<uint64_t>(this->singleCoreInfo.singleDo);
+    if (outputOrder_ == M_Mode) {
+        tiling.singleCoreM = static_cast<uint64_t>(this->singleCoreInfo.singleM);
+    } else {
+        tiling.singleCoreM = static_cast<uint64_t>(this->singleCoreInfo.singleHo);
+    }
+    tiling.singleCoreGroupOpt = static_cast<uint32_t>(this->singleCoreInfo.singleCoreGroupOpt);
+}
+
 void Conv3dTilingBase::SetFinalTiling(Ops::NN::Conv3dV2::TConv3DTiling& tiling)
 {
     SetFinalTilingBasicInfo(tiling);
     SetFinalTilingDecisionInfo(tiling);
+    // Reset single core information with optimized values set by SetSingleOutputShapeOpt
+    ResetSingleCoreInfo(tiling);
 }
 
 void Conv3dTilingBase::PrintTilingDataBasicInfo() const
