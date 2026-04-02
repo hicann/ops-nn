@@ -85,11 +85,7 @@
     <tr>
       <td>variance</td>
       <td>输入</td>
-<<<<<<< HEAD
       <td><ul><li>不支持空Tensor。</li><li>正向计算的第三个输出，表示`x`的方差，对应计算公式中的`variance`</li>。<li>与输入mean的数据类型相同且位宽不低于输入`x`的数据类型位宽。</li><li>shape与`mean`的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
-=======
-      <td><ul><li>不支持空Tensor。</li><li>正向计算的第三个输出，表示`x`的方差，对应计算公式中的`variance`。</li><li>与输入mean的数据类型相同且位宽不低于输入`x`的数据类型位宽。</li><li>shape与`mean`的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
->>>>>>> ce6bdcb5f (modified md files)
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

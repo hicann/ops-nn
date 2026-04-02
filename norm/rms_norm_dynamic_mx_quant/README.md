@@ -85,33 +85,21 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-<<<<<<< HEAD
-      <td><ul><li>表示标准化过程中的源数据张量，对应公式中的`x`。</li></ul></td>
-=======
       <td>表示标准化过程中的源数据张量，对应公式中的`x`。</td>
->>>>>>> ce6bdcb5f (modified md files)
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>gamma</td>
       <td>输入</td>
-<<<<<<< HEAD
-      <td><ul><li>表示标准化过程中的权重张量，对应公式中的`gamma`。shape需要与x最后一维一致。</li></ul></td>
-=======
       <td>表示标准化过程中的权重张量，对应公式中的`gamma`。shape需要与x最后一维一致。</td>
->>>>>>> ce6bdcb5f (modified md files)
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>beta</td>
       <td>可选输入</td>
-<<<<<<< HEAD
-      <td><ul><li>表示标准化过程中的偏置项，对应公式中的`beta`。shape必须与gamma一致。</li></ul></td>
-=======
       <td>表示标准化过程中的偏置项，对应公式中的`beta`。shape必须与gamma一致。</td>
->>>>>>> ce6bdcb5f (modified md files)
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>

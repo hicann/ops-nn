@@ -789,8 +789,4 @@ int main() {
   aclFinalize();
   return 0;
 }
-<<<<<<< HEAD
-
-=======
->>>>>>> ce6bdcb5f (modified md files)
 ```

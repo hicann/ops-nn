@@ -103,7 +103,7 @@ aclnnStatus aclnnDynamicQuantV2(
   aclrtStream    stream)
 ```
 
-## aclnnDynamicQuantGetWorkspaceSize
+## aclnnDynamicQuantV2GetWorkspaceSize
 
 - **参数说明：**
 
@@ -174,7 +174,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>输出</td>
       <td>量化后的输出Tensor。对应公式中的`yOut`。</td>
       <td><ul><li>支持空Tensor。</li><li>类型为INT32时，shape的最后一维是x最后一维的1/8，其余维度和x一致。其他类型时，shape与x一致。</li></ul></td>
-      <td>INT4、INT8、INT32</td>
+      <td>INT4、INT8、INT32、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8</td>
       <td>ND</td>
       <td>大于1维</td>
       <td>-</td>
@@ -222,6 +222,9 @@ aclnnStatus aclnnDynamicQuantV2(
   </tbody>
   </table>
 
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  
+    出参`yOut`的数据类型仅支持INT4、INT8、INT32。
   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：
     - 入参`x`仅支持FLOAT16。
     - 入参`smoothScalesOptional`、`groupIndexOptional`为预留参数，当前版本不参与计算。
@@ -315,9 +318,10 @@ aclnnStatus aclnnDynamicQuantV2(
 
 ## 约束说明
 
-- `yOut`的数据类型为INT4时，需满足`x`和`yOut`的最后一维能被2整除。
-- `yOut`的数据类型为INT32时，需满足`x`的最后一维能被8整除。
-- <term>Atlas 推理系列产品</term>：尾轴只支持32位对齐的数据，暂时只支持对称量化，不支持BFLOAT16数据类型。
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
+  - `yOut`的数据类型为INT4时，需满足`x`和`yOut`的最后一维能被2整除。
+  - `yOut`的数据类型为INT32时，需满足`x`的最后一维能被8整除。
+- <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：输入x的最后一维需满足被32整除，暂时只支持对称量化，不支持BFLOAT16数据类型。
 - 确定性计算：
   - aclnnDynamicQuantV2默认确定性实现。
 

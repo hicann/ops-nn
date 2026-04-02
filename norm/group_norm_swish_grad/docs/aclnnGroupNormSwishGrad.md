@@ -345,12 +345,12 @@ aclnnStatus aclnnGroupNormSwishGrad(
 - 输入shape限制：
     1. numGroups大于0。
     2. C能被group整除。
-    3. dy的元素个等于 N * C * HxW。
-    4. mean的元素个数等于 N * group。
-    5. rstd的元素个数等于 N * group。
-    6. x的元素个数等于 N * C * HxW。
-    7. gamma的元素个数等于 C。
-    8. beta的元素个数等于 C。
+    3. dy的元素个等于$N * C * HxW$。
+    4. mean的元素个数等于$N * group$。
+    5. rstd的元素个数等于$N * group$。
+    6. x的元素个数等于$N * C * HxW$。
+    7. gamma的元素个数等于C。
+    8. beta的元素个数等于C。
     9. C与group比值超不过4000。
 
 ## 调用示例

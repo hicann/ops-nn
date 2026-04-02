@@ -227,7 +227,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
 
   - 对于attenMaskOptional存在的情况：
     
-    ```
+    ```tex
     对于FLOAT类型，公式如下：
     dtypeSize = 4；
     xSize = s2AlignedSize * dtypeSize;
@@ -242,7 +242,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
 
   - 对于attenMaskOptional不存在的情况：
     
-    ```
+    ```tex
     对于FLOAT类型，公式如下：
     dtypeSize = 4；
     xSize = s2AlignedSize * dtypeSize;
