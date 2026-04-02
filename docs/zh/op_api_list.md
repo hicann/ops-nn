@@ -30,12 +30,12 @@
 | [aclnnAdaLayerNormQuant](../../norm/ada_layer_norm_quant/docs/aclnnAdaLayerNormQuant.md) | 算子将AdaLayerNorm和下游的量化（目前仅支持DynamicQuant）融合起来。该算子主要是用于执行自适应层归一化的量化操作，即将输入数据进行归一化处理，并将其量化为低精度整数，以提高计算效率和减少内存占用。 | 默认确定性实现 |   |
 | [aclnnAdaLayerNormV2](../../norm/ada_layer_norm_v2/docs/aclnnAdaLayerNormV2.md) | 算子将LayerNorm和下游的Add、Mul融合起来，通过自适应参数scale和shift来调整归一化过程。相比AdaLayerNorm算子，输出新增2个参数（输入的均值和输入的标准差的倒数）；weight和bias支持的数据类型增加对应约束。 | 默认确定性实现 |   |
 | [aclnnAdaptiveAvgPool2d](../../pooling/adaptive_avg_pool2d/docs/aclnnAdaptiveAvgPool2d.md) | 在指定二维输出shape信息（outputSize）的情况下，完成张量self的2D自适应平均池化计算。 | 默认确定性实现 | - |
-| [aclnnAdaptiveAvgPool2dBackward](../../pooling/adaptive_avg_pool3d_grad/docs/aclnnAdaptiveAvgPool2dBackward.md) | [aclnnAdaptiveAvgPool2d](../../pooling/adaptive_avg_pool2d/docs/aclnnAdaptiveAvgPool2d.md) 的反向计算。 | 默认非确定性实现，支持配置开启 |   |
+| [aclnnAdaptiveAvgPool2dBackward](../../pooling/adaptive_avg_pool3d_grad/docs/aclnnAdaptiveAvgPool2dBackward.md) | [aclnnAdaptiveAvgPool2d](../../pooling/adaptive_avg_pool2d/docs/aclnnAdaptiveAvgPool2d.md) 的反向计算。 | 默认非确定性实现，支持配置开启 | - |
 | [aclnnAdaptiveAvgPool3d](../../pooling/adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool3d.md) | 在指定三维输出shape信息（outputSize）的情况下，完成张量self的3D自适应平均池化计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAdaptiveAvgPool3dBackward]() | [aclnnAdaptiveAvgPool3d](../../pooling/adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool3d.md)的反向计算。 | 默认非确定性实现，支持配置开启 | - |
 | [aclnnAdaptiveMaxPool2d](../../pooling/adaptive_max_pool2d/docs/aclnnAdaptiveMaxPool2d.md) | 根据输入的outputSize计算每次kernel的大小，对输入self进行2维最大池化操作。 | 默认确定性实现 | - |
 | [aclnnAdaptiveMaxPool3d](../../pooling/adaptive_max_pool3d/docs/aclnnAdaptiveMaxPool3d.md) | 根据输入的outputSize计算每次kernel的大小，对输入self进行3维最大池化操作。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnAdaptiveMaxPool3dBackward](../../pooling/adaptive_max_pool3d_grad/docs/aclnnAdaptiveMaxPool3dBackward.md) | 正向自适应最大池化的反向传播，将梯度回填到每个自适应窗口最大值的坐标处，相同坐标处累加。 | 默认非确定性实现，支持配置开启 |   |
+| [aclnnAdaptiveMaxPool3dBackward](../../pooling/adaptive_max_pool3d_grad/docs/aclnnAdaptiveMaxPool3dBackward.md) | 正向自适应最大池化的反向传播，将梯度回填到每个自适应窗口最大值的坐标处，相同坐标处累加。 | 默认非确定性实现，支持配置开启 | - |
 | [aclnnAddbmm&aclnnInplaceAddbmm](../../matmul/batch_mat_mul_v3/docs/aclnnAddbmm&aclnnInplaceAddbmm.md) | 首先进行batch1、batch3的矩阵乘计算，然后将该结果按照第一维（batch维度）批处理相加，将三维向量压缩为二维向量（shape大小为后两维的shape），然后该结果与α作乘积计算，再与β和self的乘积求和得到结果。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAddmm](../../matmul/mat_mul_v3/docs/aclnnAddmm&aclnnInplaceAddmm.md) | 计算α 乘以mat1与mat2的乘积，再与β和self的乘积求和。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
 | [aclnnAddmmWeightNz](../../matmul/mat_mul_v3/docs/aclnnAddmmWeightNz.md) | 计算α 乘以mat1与mat2的乘积，再与β和self的乘积求和。相较于原有addmm接口，新接口mat2支持nz格式。 | 默认确定性实现 | 默认确定性实现 |
@@ -63,7 +63,7 @@
 | [aclnnAvgPool2d](../../pooling/avg_pool3_d/docs/aclnnAvgPool2d.md) | 对输入Tensor进行窗口为$kH * kW$、步长为$sH * sW$的二维平均池化操作。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAvgPool2dBackward](../../pooling/avg_pool3_d_grad/docs/aclnnAvgPool2dBackward.md) | 二维平均池化的反向传播，计算二维平均池化正向传播的输入梯度。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
 | [aclnnAvgPool3d](../../pooling/avg_pool3_d/docs/aclnnAvgPool3d.md) | 对输入Tensor进行窗口为$kD * kH * kW$、步长为$sD * sH * sW$的三维平均池化操作。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnAvgPool3dBackward](../../pooling/avg_pool3_d_grad/docs/aclnnAvgPool3dBackward.md) | 三维平均池化的反向传播，计算三维平均池化正向传播的输入梯度。 | 默认非确定性实现，支持配置开启 |   |
+| [aclnnAvgPool3dBackward](../../pooling/avg_pool3_d_grad/docs/aclnnAvgPool3dBackward.md) | 三维平均池化的反向传播，计算三维平均池化正向传播的输入梯度。 | 默认非确定性实现，支持配置开启 | - |
 | [aclnnBaddbmm&aclnnInplaceBaddbmm](../../matmul/batch_mat_mul_v3/docs/aclnnBaddbmm&aclnnInplaceBaddbmm.md) | 计算α与batch1、batch2的矩阵乘结果的乘积，再与β和self的乘积求和。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnBatchMatMul](../../matmul/batch_mat_mul_v3/docs/aclnnBatchMatMul.md) | 完成张量self与张量mat2的矩阵乘计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnBatchMatmulQuant](../../matmul/batch_matmul_quant/docs/aclnnBatchMatmulQuant.md) | 实现输入Tensor的dtype是float16, 输出的dtype是int8的矩阵乘计算。 | 默认确定性实现 | - |
@@ -275,10 +275,10 @@
 | [aclnnMaxPool](../../pooling/max_pool_v3/docs/aclnnMaxPool.md) | 对于dim=3 或4维的输入张量，进行最大池化（max pooling）操作。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMaxPool2dWithIndices](../../pooling/max_pool3d_with_argmax_v2/docs/aclnnMaxPool2dWithIndices.md) | 对于输入信号的输入通道，提供2维（H，W维度）最大池化（max pooling）操作，输出池化后的值out和索引indices。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMaxPool2dWithIndicesBackward](../../pooling/max_pool3d_grad_with_argmax/docs/aclnnMaxPool2dWithIndicesBackward.md) | 正向最大池化aclnnMaxPool2dWithIndices的反向传播。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
-| [aclnnMaxPool2dWithMask](../../pooling/max_pool3d_with_argmax_v2/docs/aclnnMaxPool2dWithMask.md) | 对于输入信号的输入通道，提供2维最大池化（max pooling）操作，输出池化后的值out和索引indices（采用mask语义计算得出）。 | 默认确定性实现 |   |
-| [aclnnMaxPool2dWithMaskBackward](../../pooling/max_pool3d_grad_with_argmax/docs/aclnnMaxPool2dWithMaskBackward.md) | 正向最大池化aclnnMaxPool2dWithMask的反向传播。 | 默认非确定性实现，支持配置开启。 |   |
+| [aclnnMaxPool2dWithMask](../../pooling/max_pool3d_with_argmax_v2/docs/aclnnMaxPool2dWithMask.md) | 对于输入信号的输入通道，提供2维最大池化（max pooling）操作，输出池化后的值out和索引indices（采用mask语义计算得出）。 | 默认确定性实现 | - |
+| [aclnnMaxPool2dWithMaskBackward](../../pooling/max_pool3d_grad_with_argmax/docs/aclnnMaxPool2dWithMaskBackward.md) | 正向最大池化aclnnMaxPool2dWithMask的反向传播。 | 默认非确定性实现，支持配置开启。 | - |
 | [aclnnMaxPool3dWithArgmax](../../pooling/max_pool3d_with_argmax_v2/docs/aclnnMaxPool3dWithArgmax.md) | 对于输入信号的输入通道，提供3维最大池化（max pooling）操作，输出池化后的值out和索引indices。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnMaxPool3dWithArgmaxBackWard](../../pooling/max_pool3d_grad_with_argmax/docs/aclnnMaxPool3dWithArgmaxBackward.md) | 正向最大池化aclnnMaxPool3dWithArgmax的反向传播，将梯度回填到每个窗口最大值的坐标处，相同坐标处累加。 | 默认非确定性实现，支持配置开启。 |   |
+| [aclnnMaxPool3dWithArgmaxBackWard](../../pooling/max_pool3d_grad_with_argmax/docs/aclnnMaxPool3dWithArgmaxBackward.md) | 正向最大池化aclnnMaxPool3dWithArgmax的反向传播，将梯度回填到每个窗口最大值的坐标处，相同坐标处累加。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
 | [aclnnMaxUnpool2dBackward](../../index/gather_elements/docs/aclnnMaxUnpool2dBackward.md) | MaxPool2d的逆运算aclnnMaxUnpool2d的反向传播，根据indices索引在out中填入gradOutput的元素值。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnMaxUnpool3dBackward](../../index/gather_elements/docs/aclnnMaxUnpool3dBackward.md) | axPool3d的逆运算aclnnMaxUnpool3d的反向传播，根据indices索引在out中填入gradOutput的元素值。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnMedian](../../index/gather_v2/docs/aclnnMedian.md) | 返回所有元素的中位数。 | 默认确定性实现 | 默认确定性实现 |
