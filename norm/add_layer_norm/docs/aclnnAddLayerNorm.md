@@ -23,7 +23,7 @@
   $$
 
   $$
-  rstd = {{1}\over\sqrt {Var(x)+eps}}
+  rstd = {{1}\over\sqrt {Var(x)+epsilon}}
   $$
 
   $$
