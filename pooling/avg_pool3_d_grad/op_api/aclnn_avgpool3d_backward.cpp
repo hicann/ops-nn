@@ -28,6 +28,7 @@
 #include "avgpool3d_backward.h"
 #include "aclnn_kernels/transpose.h"
 #include "aclnn_kernels/reshape.h"
+#include "acl/acl_rt.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -319,8 +320,8 @@ const aclTensor* TransGrad2CDHW(const aclTensor* gradOutput, aclOpExecutor* exec
     uint32_t coreNum = GetCurrentPlatformInfo().GetVectorCoreNum();
     int64_t usedCoreNum = 1;
     int64_t deterministicValue = 0;
-    rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
-    if (retRts != RT_ERROR_NONE) {
+    aclError aclRet = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
+    if (aclRet != ACL_SUCCESS) {
         deterministicValue = 0;
     }
     if (deterministicValue != 0) {

@@ -20,6 +20,7 @@
 #include "op_api/aclnn_util.h"
 #include "runtime/context.h"
 #include "aclnn_kernels/transpose.h"
+#include "acl/acl_rt.h"
 
 using namespace op;
 
@@ -1321,8 +1322,8 @@ bool IsConv2DBpFilterTo3Dcase(const ConvBackpropParams &params) {
   ConstructCaseInfo(params, caseInfo);
 
   int64_t deterministicValue = 0;
-  rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
-  if (retRts != RT_ERROR_NONE) {
+  aclError aclRet = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
+  if (aclRet != ACL_SUCCESS) {
     deterministicValue = 0;
   }
   if (static_cast<bool>(deterministicValue) && 
@@ -1706,8 +1707,8 @@ bool IsConv3DBackpropFilterV2(const ConvBackpropParams &params) {
   }
 
   int64_t deterministicValue = 0;
-  rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
-  if (retRts != RT_ERROR_NONE) {
+  aclError aclRet = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
+  if (aclRet != ACL_SUCCESS) {
     deterministicValue = 0;
   }
   if (static_cast<bool>(deterministicValue)) {
