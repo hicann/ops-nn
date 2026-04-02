@@ -62,11 +62,11 @@ struct TConv3DInputV2Tiling {
     uint32_t padDown = 1;
     uint32_t padLeft = 1;
     uint32_t padRight = 1;
-    uint32_t backpropPadTail = 1;
-    uint32_t backpropPadUp = 1;
-    uint32_t backpropPadDown = 1;
-    uint32_t backpropPadLeft = 1;
-    uint32_t backpropPadRight = 1;
+    int32_t backpropPadTail = 1;
+    int32_t backpropPadUp = 1;
+    int32_t backpropPadDown = 1;
+    int32_t backpropPadLeft = 1;
+    int32_t backpropPadRight = 1;
     uint32_t dilationD = 1;
     uint32_t dilationH = 1;
     uint32_t dilationW = 1;

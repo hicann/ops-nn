@@ -974,11 +974,12 @@ void Conv3DBackpropInputV2TilingArch35::SetBackpropPadInfo(conv_bp_v2_kernel::TC
     dxt.backpropPadLeft = runInfo_.backprop_pad_l;
     int64_t bpPadRight = runInfo_.dedx_w - (static_cast<int64_t>(runInfo_.dedy_w - 1) * runInfo_.stride_w + 1) +
                          (runInfo_.kernel_w - 1) * runInfo_.dilation_w - runInfo_.backprop_pad_l;
-    if (bpPadRight < PAD_DIM_LOW || bpPadRight > PAD_DIM_UP) {
+    if (bpPadRight > PAD_DIM_UP) {
         dxt.backpropPadRight = runInfo_.backprop_pad_r;
     } else {
-        dxt.backpropPadRight = static_cast<uint32_t>(bpPadRight);
+        dxt.backpropPadRight = static_cast<int32_t>(bpPadRight);
     }
+
     OP_LOGD(opName_, "backprop right pad: %ld, origin backprop_pad_r: %d", bpPadRight, runInfo_.backprop_pad_r);
 }
 

@@ -924,6 +924,7 @@ static bool CalPads(gert::TilingContext *context, Conv3dBpInputV2RunInfo &runInf
                              0L);
     int32_t pad_left = static_cast<int32_t>((static_cast<uint32_t>(pad_w) >> 1U));
     int32_t pad_right = pad_w - pad_left;
+
     runInfoV2.pad_h = pad_head;
     runInfoV2.pad_t = pad_tail;
     runInfoV2.pad_u = pad_up;
@@ -1109,22 +1110,9 @@ static bool CalModifyBackpropPadHW(gert::TilingContext *context, Conv3dBpInputV2
 
   otherParams.pad_left_before = CalBackpropPadBefore(filterShape.w, runInfoV2.dilation_w, runInfoV2.pad_l);
   otherParams.pad_up_before = CalBackpropPadBefore(filterShape.h, runInfoV2.dilation_h, runInfoV2.pad_u);
-  int32_t kPadUpTmp = (IsArchAfter35(context) || IsSocVersionFuse(context)) ? kDimUp : kPadUp;
 
-  OP_CHECK_IF(!CheckRange(otherParams.pad_left_before, 0, kPadUpTmp),
-              OP_LOGE(context, "backprop_pad_left=((kw - 1) * dilation_w - pad_left)=[%d] is invalid, it should be in [%d, %d]",
-                      otherParams.pad_left_before, 0 , kPadUpTmp),
-              return false);
-  OP_CHECK_IF(!CheckRange(otherParams.pad_up_before, 0, kPadUpTmp),
-              OP_LOGE(context, "backprop_pad_up=((kh - 1) * dilation_h - pad_up)=[%d] is invalid, it should be in [%d, %d]",
-                      otherParams.pad_up_before, 0 , kPadUpTmp),
-              return false);
   if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
     otherParams.pad_head_before = CalBackpropPadBefore(filterShape.d, runInfoV2.dilation_d, runInfoV2.pad_h);
-    OP_CHECK_IF(!CheckRange(otherParams.pad_head_before, 0, kPadUpTmp),
-                OP_LOGE(context, "backprop_pad_head=((kd - 1) * dilation_d - pad_head)=[%d] is invalid, it should be in [%d, %d]",
-                        otherParams.pad_head_before, 0 , kPadUpTmp),
-                return false);
   }
 
   otherParams.shape_left_modify = (otherParams.pad_left_before - abs(otherParams.pad_left_before)) / kNumTwo;
@@ -1133,22 +1121,8 @@ static bool CalModifyBackpropPadHW(gert::TilingContext *context, Conv3dBpInputV2
   int64_t pad_right_after = CalBackpropPadAfter(dedxShape.w, dedyShape.w, runInfoV2.stride_w, runInfoV2.pad_l);
   int64_t pad_down_after = CalBackpropPadAfter(dedxShape.h, dedyShape.h, runInfoV2.stride_h, runInfoV2.pad_u);
 
-  OP_CHECK_IF(IsOverflowInt32(pad_right_after) || !CheckRange(static_cast<int32_t>(pad_right_after), -kPadUpTmp, kPadUpTmp),
-              OP_LOGE(context, "backprop_right_pad = (inputW - outputW * strideW + padLeft)=%ld is invalid, it should be in[%d, %d]",
-                      pad_right_after, -kPadUpTmp, kPadUpTmp),
-              return false);
-
-  OP_CHECK_IF(IsOverflowInt32(pad_down_after) || !CheckRange(static_cast<int32_t>(pad_down_after), -kPadUpTmp, kPadUpTmp),
-              OP_LOGE(context, "backprop_down_pad = (inputH - outputH * strideH + padUp)=%ld is invalid, it should be in[%d, %d]",
-                      pad_down_after, -kPadUpTmp, kPadUpTmp),
-              return false);
-
   int64_t shape_down_modify = (pad_down_after - abs(pad_down_after)) / kNumTwo;
   int64_t shape_right_modify = (pad_right_after - abs(pad_right_after)) / kNumTwo;
-
-  otherParams.pad_left_before = (otherParams.pad_left_before + abs(otherParams.pad_left_before)) / kNumTwo;
-  pad_down_after = (pad_down_after + abs(pad_down_after)) / kNumTwo;
-  pad_right_after = (pad_right_after + abs(pad_right_after)) / kNumTwo;
 
   otherParams.pad_right_after = pad_right_after;
   otherParams.pad_down_after = pad_down_after;
@@ -1788,32 +1762,28 @@ bool CheckAttrs(const gert::TilingContext *context, Conv3dBpInputV2RunInfo &runI
   return true;
 }
 
-bool CheckPadRange(const gert::TilingContext *context, Conv3dBpInputV2RunInfo &runInfoV2, const char* opName, OtherParams& otherParams) {
+bool CheckPadRange(const gert::TilingContext *context, Conv3dBpInputV2RunInfo &runInfoV2, const char* opName) {
     int32_t padDimUp = PAD_DIM_UP;
     if (IsArchAfter35(context)) {
         padDimUp = kDimUp;
     }
-
-    int32_t padHDimUp = std::min(padDimUp, static_cast<int32_t>(otherParams.b_shape.d - 1));
-    int32_t padUDimUp = std::min(padDimUp, static_cast<int32_t>(otherParams.b_shape.h - 1));
-    int32_t padLDimUp = std::min(padDimUp, static_cast<int32_t>(otherParams.b_shape.w - 1));
-    OP_CHECK_IF(CheckRange(runInfoV2.pad_h, PAD_DIM_LOW, padHDimUp) == false,
-                OP_LOGE(opName, "pad head: %d invalid, it should be in [%d, %d]", runInfoV2.pad_h, PAD_DIM_LOW, padHDimUp),
+    OP_CHECK_IF(CheckRange(runInfoV2.pad_h, PAD_DIM_LOW, padDimUp) == false,
+                OP_LOGE(opName, "pad head: %d invalid, it should be in [%d, %d]", runInfoV2.pad_h, PAD_DIM_LOW, padDimUp),
                 return false);
-    OP_CHECK_IF(CheckRange(runInfoV2.pad_t, PAD_DIM_LOW, padHDimUp) == false,
-                OP_LOGE(opName, "pad tail: %d invalid, it should be in [%d, %d]", runInfoV2.pad_t, PAD_DIM_LOW, padHDimUp),
+    OP_CHECK_IF(CheckRange(runInfoV2.pad_t, PAD_DIM_LOW, padDimUp) == false,
+                OP_LOGE(opName, "pad tail: %d invalid, it should be in [%d, %d]", runInfoV2.pad_t, PAD_DIM_LOW, padDimUp),
                 return false);
-    OP_CHECK_IF(CheckRange(runInfoV2.pad_u, PAD_DIM_LOW, padUDimUp) == false,
-                OP_LOGE(opName, "pad up: %d invalid, it should be in [%d, %d]", runInfoV2.pad_u, PAD_DIM_LOW, padUDimUp),
+    OP_CHECK_IF(CheckRange(runInfoV2.pad_u, PAD_DIM_LOW, padDimUp) == false,
+                OP_LOGE(opName, "pad up: %d invalid, it should be in [%d, %d]", runInfoV2.pad_u, PAD_DIM_LOW, padDimUp),
                 return false);
-    OP_CHECK_IF(CheckRange(runInfoV2.pad_d, PAD_DIM_LOW, padUDimUp) == false,
-                OP_LOGE(opName, "pad down: %d invalid, it should be in [%d, %d]", runInfoV2.pad_d, PAD_DIM_LOW, padUDimUp),
+    OP_CHECK_IF(CheckRange(runInfoV2.pad_d, PAD_DIM_LOW, padDimUp) == false,
+                OP_LOGE(opName, "pad down: %d invalid, it should be in [%d, %d]", runInfoV2.pad_d, PAD_DIM_LOW, padDimUp),
                 return false);
-    OP_CHECK_IF(CheckRange(runInfoV2.pad_l, PAD_DIM_LOW, padLDimUp) == false,
-                OP_LOGE(opName, "pad left: %d invalid, it should be in [%d, %d]", runInfoV2.pad_l, PAD_DIM_LOW, padLDimUp),
+    OP_CHECK_IF(CheckRange(runInfoV2.pad_l, PAD_DIM_LOW, padDimUp) == false,
+                OP_LOGE(opName, "pad left: %d invalid, it should be in [%d, %d]", runInfoV2.pad_l, PAD_DIM_LOW, padDimUp),
                 return false);
-    OP_CHECK_IF(CheckRange(runInfoV2.pad_r, PAD_DIM_LOW, padLDimUp) == false,
-                OP_LOGE(opName, "pad right: %d invalid, it should be in [%d, %d]", runInfoV2.pad_r, PAD_DIM_LOW, padLDimUp),
+    OP_CHECK_IF(CheckRange(runInfoV2.pad_r, PAD_DIM_LOW, padDimUp) == false,
+                OP_LOGE(opName, "pad right: %d invalid, it should be in [%d, %d]", runInfoV2.pad_r, PAD_DIM_LOW, padDimUp),
                 return false);
     return true;
 }
@@ -1936,7 +1906,7 @@ bool SetRunInfoToV2(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInf
     }
 
     if (!CheckCalPads(context, runInfoV2, opType, otherParams) || !CheckParams(runInfoV2, context, otherParams) ||
-        !CheckAttrs(context, runInfoV2, context->GetNodeName(), otherParams) || !CheckPadRange(context, runInfoV2, context->GetNodeName(), otherParams)) {
+        !CheckAttrs(context, runInfoV2, context->GetNodeName(), otherParams) || !CheckPadRange(context, runInfoV2, context->GetNodeName())) {
         OP_LOGE(context, "params is invalid");
         return false;
     }

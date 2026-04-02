@@ -676,8 +676,8 @@ static __aicore__ inline void UpdateL1ComputeInfo(Intf *self)
         uint32_t Wd = (self->ctx.tiling_->wk - 1) * self->ctx.tiling_->dilationW + 1;
         // load3d指令的padList[3]固定为255
         uint32_t Hp = self->ctx.hoExpand_ + self->ctx.tiling_->backpropPadUp + 255;
-        uint32_t Wp = (self->ctx.tiling_->wo - 1) * self->ctx.tiling_->strideW + 1 
-            + self->ctx.tiling_->backpropPadLeft + self->ctx.tiling_->backpropPadRight;
+        uint32_t Wp = (self->ctx.tiling_->wo - 1) * self->ctx.tiling_->strideW + 1 +
+                      self->ctx.tiling_->backpropPadLeft + self->ctx.tiling_->backpropPadRight;
         uint64_t M = (Hp - Hd + 1) * (Wp - Wd + 1);
         if (unlikely(M < self->ctx.baseUseM_) && self->ctx.mIter_ == 1) {
             self->ctx.baseUseM_ = M;
