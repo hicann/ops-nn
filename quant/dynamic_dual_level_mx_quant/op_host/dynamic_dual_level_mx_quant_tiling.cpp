@@ -208,11 +208,13 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::CheckRequiredShape() const
 
 ge::graphStatus DynamicDualLevelMxQuantTiling::CheckSmoothScaleDtypeShape()
 {
-    auto xDescPtr = context_->GetInputDesc(0);
-    auto xDtype = xDescPtr->GetDataType();
-    auto smoothScaleDescPtr = context_->GetInputDesc(1);
-    if (smoothScaleDescPtr != nullptr) {
-        auto smoothScaleDtype = smoothScaleDescPtr->GetDataType();
+    auto x = context_->GetInputTensor(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, x);
+    auto xDtype = x->GetDataType();
+    auto xShape = x->GetStorageShape();
+    auto smoothScale = context_->GetOptionalInputTensor(1);
+    if (smoothScale != nullptr) {
+        auto smoothScaleDtype = smoothScale->GetDataType();
         OP_CHECK_IF(
             smoothScaleDtype != xDtype,
             OP_LOGE(
@@ -220,13 +222,7 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::CheckSmoothScaleDtypeShape()
                 "The data type of smooth_scale [%s] should match the data type of x [%s], please check.",
                 Ops::Base::ToString(smoothScaleDtype).c_str(), Ops::Base::ToString(xDtype).c_str()),
             return ge::GRAPH_FAILED);
-    }
-    auto xShapePtr = context_->GetInputShape(0);
-    auto xShape = xShapePtr->GetStorageShape();
-    auto smoothScaleShapePtr = context_->GetInputShape(1);
-    if (smoothScaleShapePtr != nullptr) {
-        auto smoothScaleShape = smoothScaleShapePtr->GetStorageShape();
-
+        auto smoothScaleShape = smoothScale->GetStorageShape();
         OP_CHECK_IF(
             smoothScaleShape.IsScalar() || smoothScaleShape.GetDimNum() != 1 ||
                 smoothScaleShape.GetDim(0) != xShape.GetDim(xShape.GetDimNum() - 1),
