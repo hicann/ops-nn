@@ -655,7 +655,7 @@ aclnnStatus aclnnQuantMatmulV5(
     | G-B量化 | (m, k) |(n, k)|(m, ceil(k / 128))|(ceil(n / 128),ceil(k / 128))| (n, ) | [1, 128, 128]|
 
   - 注：上表中gsM、gsK和gsN分别表示groupSizeM、groupSizeK和groupSizeN。
-  - x1的约束：目前n需与256对齐, k与128对齐且为4 * 128的倍数, transposeX1为false。
+  - x1的约束：目前k需与128对齐且为4 * 128的倍数, transposeX1为false。
   - x2的约束：目前n需与256对齐，k与128对齐且为4 * 128的倍数，transposeX2为true。
 
   </details>
