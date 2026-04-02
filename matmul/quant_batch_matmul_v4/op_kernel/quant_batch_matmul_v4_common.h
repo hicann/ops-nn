@@ -88,10 +88,10 @@ protected:
         GetTPipePtr()->ReleaseEventID<HardEvent::MTE1_MTE2>(eAL1Pong12_);
         GetTPipePtr()->ReleaseEventID<HardEvent::MTE1_MTE2>(eBL1Ping12_);
         GetTPipePtr()->ReleaseEventID<HardEvent::MTE1_MTE2>(eBL1Pong12_);
-        GetTPipePtr()->ReleaseEventID<HardEvent::MTE1_MTE2>(eAL1Ping21_);
-        GetTPipePtr()->ReleaseEventID<HardEvent::MTE1_MTE2>(eAL1Pong21_);
-        GetTPipePtr()->ReleaseEventID<HardEvent::MTE1_MTE2>(eBL1Ping21_);
-        GetTPipePtr()->ReleaseEventID<HardEvent::MTE1_MTE2>(eBL1Ping21_);
+        GetTPipePtr()->ReleaseEventID<HardEvent::MTE2_MTE1>(eAL1Ping21_);
+        GetTPipePtr()->ReleaseEventID<HardEvent::MTE2_MTE1>(eAL1Pong21_);
+        GetTPipePtr()->ReleaseEventID<HardEvent::MTE2_MTE1>(eBL1Ping21_);
+        GetTPipePtr()->ReleaseEventID<HardEvent::MTE2_MTE1>(eBL1Pong21_);
     }
 
     __aicore__ inline void initEventID()
