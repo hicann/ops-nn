@@ -281,7 +281,7 @@ aclnnStatus aclnnQuantMatmulV4(
   </tbody></table>
   
   - <term>Atlas 推理系列产品</term>：
-    - x1与x2的最后一维大小不能超过65535（x1的最后一维指transposeX1为true时的m或transposeX1为false时的k，x2的最后一维指transposeX2为true时的k或transposeX2为false时的n。
+    - x1与x2的最后一维大小不能超过65535（x1的最后一维指transposeX1为true时的m或transposeX1为false时的k，x2的最后一维指transposeX2为true时的k或transposeX2为false时的n）。
  	- x1数据类型支持INT8。
     - x2数据类型支持INT8，为NZ格式时，不支持transposeX2为false的场景。
     - bias数据类型支持INT32。
