@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 接口功能：沿输入x的给定轴dim，将indices指定位置的值使用value进行原地填充替换。
+- 算子功能：沿输入x的给定轴dim，将indices指定位置的值使用value进行原地填充替换。
 - 示例：
 输入x为:
 
@@ -82,12 +82,12 @@
       <tr>
         <td>dim</td>
         <td>属性</td>
-        <td>指定了x将要填充的维度。当x为1-8维时，dim的取值范围在[-x.dim(), x.dim())，当x为0维时，dim的取值范围在[-1, 1)。</td>
+        <td>指定了x将要填充的维度。dim的取值范围在[-x.dim(), x.dim())。</td>
         <td>INT64</td>
         <td>-</td>
       </tr>
       <tr>
-        <td>x（输出）</td>
+        <td>x</td>
         <td>输出</td>
         <td>原地填充后的输出张量，shape与输入x一致。</td>
         <td>与输入x一致</td>
@@ -97,9 +97,10 @@
 
 ## 约束说明
 
-- x与value的数据类型必须一致。
-- indices的数据类型仅支持INT32和INT64。
+无
 
 ## 调用说明
 
-无
+| 调用方式 | 调用样例                                                                   | 说明                                                           |
+|--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
+| aclnn调用 | [test_aclnn_inplace_index_fill](../index_fill_d/examples/test_aclnn_inplace_index_fill.cpp) | 通过[aclnnInplaceIndexFill](../index_fill_d/docs/aclnnIndexFill&aclnnInplaceIndexFill.md)接口方式调用InplaceIndexFill算子。 |
