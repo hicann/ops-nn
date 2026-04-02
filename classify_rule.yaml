@@ -1747,6 +1747,7 @@ VC1@ops-nn:
         - ops/ops-nn/quant/dynamic_quant/op_host/dynamic_quant_tiling.h
         - ops/ops-nn/quant/dynamic_quant/op_kernel/arch35/
         - ops/ops-nn/quant/dynamic_quant/op_kernel/dynamic_quant_apt.cpp
+        - ops/ops-nn/quant/dynamic_quant/op_kernel/dynamic_quant_unalign_large_310p.h
         - ops/ops-nn/quant/dynamic_quant_v2/op_graph/
         - ops/ops-nn/quant/dynamic_quant_v2/op_host/config/ascend950/
         - ops/ops-nn/quant/dynamic_quant_v2/op_host/op_api/
