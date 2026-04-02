@@ -322,6 +322,7 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessSin
         needUpdateTail_ = true;
         bs.UpdateTailTile(mTailTile, nTailTile);
     }
+    SetL2Cache(params.problemShape, params.qbmmParams.baseM, params.qbmmParams.baseN);
     while (bs.GetTileIdx(blockIdx)) {
         BlockShape singleShape =
             bs.template GetBlockShape<QuantBatchMatmul::QuantMode::MX_PERGROUP_MODE,
@@ -329,7 +330,6 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessSin
         if (Get<MNK_M>(singleShape) <= 0 || Get<MNK_N>(singleShape) <= 0) {
             return;
         }
-        SetL2Cache(params.problemShape, Get<MNK_M>(singleShape), Get<MNK_N>(singleShape));
         AscendC::Std::tuple<uint32_t, uint32_t, uint32_t, uint32_t> loadBalanceInfo = bs.GetLoadBalanceInfo();
         blockOffset_ = coord.template GetQuantOffset<QuantBatchMatmul::QuantMode::MX_PERGROUP_MODE, AType, true>(
             Get<QuantBatchMatmul::IDX_M_TILEIDX>(blockIdx), Get<QuantBatchMatmul::IDX_N_TILEIDX>(blockIdx),
