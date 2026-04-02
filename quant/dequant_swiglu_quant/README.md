@@ -208,9 +208,9 @@
 
 - Kirin X90/Kirin 9030 处理器系列产品:
   - 输入`x`：数据类型不支持BFLOAT16。
-  - 输入`biasOptional`：数据类型不支持BFLOAT16。
-  - 输入`quantScaleOptional`：数据类型不支持FLOAT16。
-  - 输出`y`：数据类型仅支持INT8。
+  - 输入`bias`：数据类型不支持BFLOAT16。
+  - 输入`quant_scale`：数据类型不支持FLOAT16。
+  - 输出`y`：数据类型不支持FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2。
 
 ## 约束说明
 

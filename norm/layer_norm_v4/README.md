@@ -118,7 +118,6 @@
   - Kirin X90/Kirin 9030处理器系列产品：
     - 所有输入、输出的数据类型不支持BFLOAT16。
     - normalized_shape的数据类型不支持INT64。
-    - mean和rstd的数据类型不支持FLOAT16、BFLOAT16。
 
 ## 约束说明
 

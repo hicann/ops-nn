@@ -69,8 +69,7 @@
     </tr>
   </tbody></table>
 
-- Kirin X90/Kirin 9030 处理器系列产品:
-  - 输入`x`：数据类型仅支持FLOAT16。
+- Kirin X90/Kirin 9030 处理器系列产品:不支持BFLOAT16。
 
 ## 约束说明
 

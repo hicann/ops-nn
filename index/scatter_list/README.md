@@ -86,7 +86,7 @@
     </tr>
   </tbody></table>
 
-- Kirin X90/Kirin 9030处理器系列产品：var和updates的数据类型不支持BFLOAT16,输出var的数据类型不支持DOUBLE、BFLOAT16、INT64和BOOL。
+- Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
 
 ## 约束说明
 

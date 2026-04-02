@@ -133,7 +133,7 @@
     </tr>
   </tbody></table>
 
-- Kirin X90/Kirin 9030处理器系列产品：output_zero_point的数据类型只支持INT32。
+
 
 ## 约束说明
 

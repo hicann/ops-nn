@@ -89,7 +89,7 @@
     </tr>
   </tbody></table>
 
-- Kirin X90/Kirin 9030处理器系列产品：var和value的数据类型不支持BFLOAT16，sorted_index和pos的数据类型不支持INT64。
+- Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
 
 ## 约束说明
 
