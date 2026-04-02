@@ -201,7 +201,7 @@ aclnnStatus aclnnGroupNormSiluV2(
 
   - <term>Atlas 推理系列产品</term>：数据类型不支持BFLOAT16。
 
-  - <term>Ascend 950PR/Ascend 950DT</term>：meanOut和rstdOut数据类型要求与gamma和beta相同。
+  - <term>Ascend 950PR/Ascend 950DT</term>：gamma或beta支持为空。当gamma或beta不为空时，meanOut和rstdOut数据类型要求与gamma或beta相同；当gamma和beta均为空时，meanOut和rstdOut数据类型要求与self相同。
 
 - **返回值**
 
