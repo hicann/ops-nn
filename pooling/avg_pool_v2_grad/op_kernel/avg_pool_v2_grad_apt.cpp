@@ -31,7 +31,6 @@ __global__ __aicore__ void avg_pool_v2_grad(
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(AvgPoolV2GradTilingData);
     if constexpr (schMode == TPL_SIMT_KERNEL) {
-        REGISTER_TILING_FOR_TILINGKEY("schMode == TPL_SIMT_KERNEL", AvgPoolV2GradSimtTilingData);
         GET_TILING_DATA_WITH_STRUCT(AvgPoolV2GradSimtTilingData, tilingData, tiling);
         if constexpr (isInt32Meet == TPL_INT32) {
             AvgPoolV2GradSimtNamespace::AvgPoolV2GradSimt<DTYPE_INPUT_GRAD, int32_t, format, countIncludePad, hasDivisor> op(&pipe, &tilingData);
@@ -43,7 +42,6 @@ __global__ __aicore__ void avg_pool_v2_grad(
             op.Process();
         }
     } else if constexpr (schMode == TPL_NCHW_KERNEL) {
-        REGISTER_TILING_FOR_TILINGKEY("schMode == TPL_NCHW_KERNEL", AvgPoolV2GradNCHWTilingData);
         if constexpr (isInt32Meet == 1) {
             GET_TILING_DATA_WITH_STRUCT(AvgPoolV2GradNCHWTilingData, tilingData, tiling);
             AvgPoolV2GradNCHWKernel<DTYPE_INPUT_GRAD, int32_t, hasDivisor, isCheckRange, countIncludePad> op(&pipe, &tilingData);
@@ -56,7 +54,6 @@ __global__ __aicore__ void avg_pool_v2_grad(
             op.Process();
         }
     } else if constexpr (schMode == TPL_NHWC_KERNEL) {    //NHWC
-        REGISTER_TILING_FOR_TILINGKEY("schMode == TPL_NHWC_KERNEL", AvgPoolV2GradNHWCTilingData);
         if constexpr (isInt32Meet == TPL_INT32){
             GET_TILING_DATA_WITH_STRUCT(AvgPoolV2GradNHWCTilingData, tilingData, tiling);
             AvgPoolV2GradNHWCNameSpace::AvgPoolV2GradKernelNHWC<DTYPE_INPUT_GRAD, int32_t, hasDivisor, isCheckRange, countIncludePad> op(&pipe, &tilingData);

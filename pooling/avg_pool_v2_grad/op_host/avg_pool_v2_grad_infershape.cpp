@@ -121,7 +121,7 @@ ge::graphStatus InferShape4AvgPoolV2Grad(gert::InferShapeContext* context)
                 OP_LOGE(context->GetNodeName(), "Pooling ksize[3] %ld must be 1.", ksize_data[IDX_THREE]),
                 return GRAPH_FAILED);
     }
-    
+
     auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_STRIDE_POS);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
     OP_CHECK_IF(
@@ -155,7 +155,7 @@ ge::graphStatus InferShape4AvgPoolV2Grad(gert::InferShapeContext* context)
         return GRAPH_FAILED);
     const gert::Shape* inputShape1 = context->GetInputShape(IDX_ORIGIN_INPUT);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputShape1);
-    
+
     gert::Shape* OutShape = context->GetOutputShape(IDX_OUTPUT);
     OP_CHECK_NULL_WITH_CONTEXT(context, OutShape);
 
@@ -184,7 +184,7 @@ static ge::graphStatus InferDataType4AvgPoolV2Grad(gert::InferDataTypeContext* c
         return GRAPH_FAILED;
     }
 
-    const ge::DataType xDtype = context->GetInputDataType(0);
+    const ge::DataType xDtype = context->GetInputDataType(1);
     context->SetOutputDataType(0, xDtype);
     return GRAPH_SUCCESS;
 }

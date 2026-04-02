@@ -120,7 +120,7 @@ aclnnStatus aclnnAvgPool2dBackward(
       <td>stride</td>
       <td>输入</td>
       <td>池化操作的步长，公式中的strides。</td>
-      <td>长度为1（sH=sW）或2（sH, sW），数值不能小于0。</td>
+      <td>长度为0（stride=kernelSize）或1（sH=sW）或2（sH, sW），数值大于0。</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
