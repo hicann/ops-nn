@@ -569,7 +569,7 @@ uint64_t BidirectionLSTMTiling::GetTilingKey() {
 
 bool BidirectionLSTMTiling::SetLaunchInfo(gert::TilingContext* context) {
   context->SetBlockDim(_Params.CoreNum);
-
+  context->SetScheduleMode(1);
   context->SetTilingKey(GetTilingKey());
 
   int64_t workspaceSize = _Params.workspaceGateN * (NUM_OF_GATE + 1) * GetDtypeSize(ge::DataType::DT_FLOAT)
