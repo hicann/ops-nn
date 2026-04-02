@@ -46,8 +46,8 @@ private:
     uint64_t GetAFullLoadBasicNL1() const;
     void CalcTailBasicBlockBL1Full();
     void CalcTailBasicBlockAL1Full();
-    bool CheckBL1FullLoad();
-    bool CheckAL1FullLoad();
+    bool CheckBL1FullLoad() const;
+    bool CheckAL1FullLoad() const;
 
     uint64_t biasSize_ {0};
     bool isSingleRound_ {false};

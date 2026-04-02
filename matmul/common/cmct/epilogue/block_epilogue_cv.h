@@ -109,14 +109,14 @@ public:
             stageSize = AscendC::Std::min(stageSize, inputSize - stageOffset);
             // Do add or mul in ub: x3 + cLocal_[stageOffset] -> cLocal_  in stage 1
             fusionOp_(offset, stageSize / blockShapeNAlign, blockShapeN, N, M, blockShapeNAlign,
-                stageSize, stageOffset, 1);
+                stageSize, stageOffset, CUBE_OUT_VECTOR_IN);
             if (stageOffset + stageSize >= inputSize) {
                 // Notify aic
                 AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_V>(flagId);
             }
             // CopyOut in stage 2
             fusionOp_(offset, stageSize / blockShapeNAlign, blockShapeN, N, M, blockShapeNAlign,
-                stageSize, stageOffset, 2);
+                stageSize, stageOffset, ONLY_VECTOR_IN);
             stageOffset += stageSize;
             loop++;
         }

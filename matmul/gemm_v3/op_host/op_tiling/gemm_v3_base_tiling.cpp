@@ -63,15 +63,15 @@ ge::graphStatus GemmV3BaseTiling::GetInputDims(const gert::Shape& shapeA, const 
         params_.batchSize = std::max(numBatchA_, numBatchB_);
     }
 
-    int64_t ka = shapeA.GetDim(params_.transA ? numDimA - SECOND_LAST_DIM_OFFSET : numDimA - LAST_DIM_OFFSET);
-    int64_t kb = shapeB.GetDim(params_.transB ? numDimB - LAST_DIM_OFFSET : numDimB - SECOND_LAST_DIM_OFFSET);
+    int64_t ka = shapeA.GetDim(params_.transA != 0 ? numDimA - SECOND_LAST_DIM_OFFSET : numDimA - LAST_DIM_OFFSET);
+    int64_t kb = shapeB.GetDim(params_.transB != 0 ? numDimB - LAST_DIM_OFFSET : numDimB - SECOND_LAST_DIM_OFFSET);
     if (ka != kb) {
         OP_LOGE(params_.opName, "unequal input kDim values: k_left[%ld], k_right[%ld]", ka, kb);
         return ge::GRAPH_FAILED;
     }
     params_.k = ka;
-    params_.m = shapeA.GetDim(params_.transA ? numDimA - LAST_DIM_OFFSET : numDimA - SECOND_LAST_DIM_OFFSET);
-    params_.n = shapeB.GetDim(params_.transB ? numDimB - SECOND_LAST_DIM_OFFSET : numDimB - LAST_DIM_OFFSET);
+    params_.m = shapeA.GetDim(params_.transA != 0 ? numDimA - LAST_DIM_OFFSET : numDimA - SECOND_LAST_DIM_OFFSET);
+    params_.n = shapeB.GetDim(params_.transB != 0 ? numDimB - SECOND_LAST_DIM_OFFSET : numDimB - LAST_DIM_OFFSET);
     return ge::GRAPH_SUCCESS;
 }
 

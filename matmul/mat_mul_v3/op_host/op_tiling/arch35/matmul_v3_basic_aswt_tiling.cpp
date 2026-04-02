@@ -76,7 +76,7 @@ bool MatMulV3BasicAswtTiling::CheckAL1FullLoadDav3510(const uint64_t kAlignedVal
     return true;
 }
 
-bool MatMulV3BasicAswtTiling::CheckAL1FullLoad()
+bool MatMulV3BasicAswtTiling::CheckAL1FullLoad() const
 {
     if (l0C2Out_ != MatMulV3L0C2Out::ON_THE_FLY) {
         return false;
@@ -208,7 +208,7 @@ bool MatMulV3BasicAswtTiling::CheckBL1FullLoadDav3510(const uint64_t kAlignedVal
     return true;
 }
 
-bool MatMulV3BasicAswtTiling::CheckBL1FullLoad()
+bool MatMulV3BasicAswtTiling::CheckBL1FullLoad() const
 {
     if (args_.mValue < CACHELINE) {
         return false;

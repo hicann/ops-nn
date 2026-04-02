@@ -364,7 +364,7 @@ ge::graphStatus MatMulV3Tiling::CheckArgs()
         args_.hasBias = true;
     }
     if (attrs->GetAttrNum() >= HF32_ATTR_NUM) {
-        OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<int32_t>(HF32_ATTR_INDEX - 1));
+        OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<int64_t>(HF32_ATTR_INDEX - 1));
         OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<bool>(HF32_ATTR_INDEX));
     }
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputDesc(0));

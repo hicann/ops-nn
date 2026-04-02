@@ -47,7 +47,6 @@ protected:
     // 7、保存Tiling数据
     ge::graphStatus PostTiling() override;
 
-
 private:
     bool InitParams();
     ge::graphStatus GetInputDims(const gert::Shape& shapeA, const gert::Shape& shapeB);
