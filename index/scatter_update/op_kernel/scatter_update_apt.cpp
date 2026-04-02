@@ -229,63 +229,63 @@ __aicore__ inline void SortSimdTensor(
     }
 }
 
-template <typename IDX_SIZE_T>
+template <typename IDX_SIZE_T, typename VAR_T>
 __aicore__ inline void DeterministicSimdSort(
     GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR userWs, const ScatterUpdateTilingData& tilingData, TPipe &pipe)
 {
     if (tilingData.indicesCastMode == CAST_NOT_CAST) {
-        ScatterUpdateDeterministicSimd<DTYPE_VAR, DTYPE_INDICES, IDX_SIZE_T, false, DTYPE_INDICES, CAST_NOT_CAST> op(tilingData, pipe);
+        ScatterUpdateDeterministicSimd<VAR_T, DTYPE_INDICES, IDX_SIZE_T, false, DTYPE_INDICES, CAST_NOT_CAST> op(tilingData, pipe);
         op.Init(var, indices, updates, userWs);
         op.Process();
     } else if (tilingData.indicesCastMode == CAST_INT32_TO_INT16) {
-        ScatterUpdateDeterministicSimd<DTYPE_VAR, DTYPE_INDICES, IDX_SIZE_T, false, int16_t, CAST_INT32_TO_INT16> op(tilingData, pipe);
+        ScatterUpdateDeterministicSimd<VAR_T, DTYPE_INDICES, IDX_SIZE_T, false, int16_t, CAST_INT32_TO_INT16> op(tilingData, pipe);
         op.Init(var, indices, updates, userWs);
         op.Process();
     } else if (tilingData.indicesCastMode == CAST_INT64_TO_INT32) {
-        ScatterUpdateDeterministicSimd<DTYPE_VAR, DTYPE_INDICES, IDX_SIZE_T, false, int32_t, CAST_INT64_TO_INT32> op(tilingData, pipe);
+        ScatterUpdateDeterministicSimd<VAR_T, DTYPE_INDICES, IDX_SIZE_T, false, int32_t, CAST_INT64_TO_INT32> op(tilingData, pipe);
         op.Init(var, indices, updates, userWs);
         op.Process();
     } else if (tilingData.indicesCastMode == CAST_INT64_TO_INT16) {
-        ScatterUpdateDeterministicSimd<DTYPE_VAR, DTYPE_INDICES, IDX_SIZE_T, false, int16_t, CAST_INT64_TO_INT16> op(tilingData, pipe);
+        ScatterUpdateDeterministicSimd<VAR_T, DTYPE_INDICES, IDX_SIZE_T, false, int16_t, CAST_INT64_TO_INT16> op(tilingData, pipe);
         op.Init(var, indices, updates, userWs);
         op.Process();
     } else if (tilingData.indicesCastMode == CAST_INT32_TO_UINT8) {
-        ScatterUpdateDeterministicSimd<DTYPE_VAR, DTYPE_INDICES, IDX_SIZE_T, false, uint8_t, CAST_INT32_TO_UINT8> op(tilingData, pipe);
+        ScatterUpdateDeterministicSimd<VAR_T, DTYPE_INDICES, IDX_SIZE_T, false, uint8_t, CAST_INT32_TO_UINT8> op(tilingData, pipe);
         op.Init(var, indices, updates, userWs);
         op.Process();
     } else if (tilingData.indicesCastMode == CAST_INT64_TO_UINT8) {
-        ScatterUpdateDeterministicSimd<DTYPE_VAR, DTYPE_INDICES, IDX_SIZE_T, false, uint8_t, CAST_INT64_TO_UINT8> op(tilingData, pipe);
+        ScatterUpdateDeterministicSimd<VAR_T, DTYPE_INDICES, IDX_SIZE_T, false, uint8_t, CAST_INT64_TO_UINT8> op(tilingData, pipe);
         op.Init(var, indices, updates, userWs);
         op.Process();
     }
 }
 
-template <typename IDX_SIZE_T>
+template <typename IDX_SIZE_T, typename VAR_T>
 __aicore__ inline void DeterministicSimtSort(
     GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR userWs, const ScatterUpdateTilingData& tilingData, TPipe &pipe)
 {
     if (tilingData.indicesCastMode == CAST_NOT_CAST) {
-        ScatterUpdateDeterministicSimt<DTYPE_VAR, DTYPE_INDICES, IDX_SIZE_T, false, DTYPE_INDICES, CAST_NOT_CAST> op(tilingData, pipe);
+        ScatterUpdateDeterministicSimt<VAR_T, DTYPE_INDICES, IDX_SIZE_T, false, DTYPE_INDICES, CAST_NOT_CAST> op(tilingData, pipe);
         op.Init(var, indices, updates, userWs);
         op.Process();
     } else if (tilingData.indicesCastMode == CAST_INT32_TO_INT16) {
-        ScatterUpdateDeterministicSimt<DTYPE_VAR, DTYPE_INDICES, IDX_SIZE_T, false, int16_t, CAST_INT32_TO_INT16> op(tilingData, pipe);
+        ScatterUpdateDeterministicSimt<VAR_T, DTYPE_INDICES, IDX_SIZE_T, false, int16_t, CAST_INT32_TO_INT16> op(tilingData, pipe);
         op.Init(var, indices, updates, userWs);
         op.Process();
     } else if (tilingData.indicesCastMode == CAST_INT64_TO_INT32) {
-        ScatterUpdateDeterministicSimt<DTYPE_VAR, DTYPE_INDICES, IDX_SIZE_T, false, int32_t, CAST_INT64_TO_INT32> op(tilingData, pipe);
+        ScatterUpdateDeterministicSimt<VAR_T, DTYPE_INDICES, IDX_SIZE_T, false, int32_t, CAST_INT64_TO_INT32> op(tilingData, pipe);
         op.Init(var, indices, updates, userWs);
         op.Process();
     } else if (tilingData.indicesCastMode == CAST_INT64_TO_INT16) {
-        ScatterUpdateDeterministicSimt<DTYPE_VAR, DTYPE_INDICES, IDX_SIZE_T, false, int16_t, CAST_INT64_TO_INT16> op(tilingData, pipe);
+        ScatterUpdateDeterministicSimt<VAR_T, DTYPE_INDICES, IDX_SIZE_T, false, int16_t, CAST_INT64_TO_INT16> op(tilingData, pipe);
         op.Init(var, indices, updates, userWs);
         op.Process();
     } else if (tilingData.indicesCastMode == CAST_INT32_TO_UINT8) {
-        ScatterUpdateDeterministicSimt<DTYPE_VAR, DTYPE_INDICES, IDX_SIZE_T, false, uint8_t, CAST_INT32_TO_UINT8> op(tilingData, pipe);
+        ScatterUpdateDeterministicSimt<VAR_T, DTYPE_INDICES, IDX_SIZE_T, false, uint8_t, CAST_INT32_TO_UINT8> op(tilingData, pipe);
         op.Init(var, indices, updates, userWs);
         op.Process();
     } else if (tilingData.indicesCastMode == CAST_INT64_TO_UINT8) {
-        ScatterUpdateDeterministicSimt<DTYPE_VAR, DTYPE_INDICES, IDX_SIZE_T, false, uint8_t, CAST_INT64_TO_UINT8> op(tilingData, pipe);
+        ScatterUpdateDeterministicSimt<VAR_T, DTYPE_INDICES, IDX_SIZE_T, false, uint8_t, CAST_INT64_TO_UINT8> op(tilingData, pipe);
         op.Init(var, indices, updates, userWs);
         op.Process();
     }
@@ -311,19 +311,19 @@ extern "C" __global__ __aicore__ void scatter_update(GM_ADDR var, GM_ADDR indice
 
     ///////////////////// SIMT //////////////////////////
     if (TILING_KEY_IS(TILING_KEY_SIMT_ADDR32_SCALAR)) {
-        ScatterUpdateSimt<DTYPE_INDICES, DTYPE_VAR, uint32_t, true> op(tilingData);
+        ScatterUpdateSimt<DTYPE_INDICES, VAR_T, uint32_t, true> op(tilingData);
         op.Init(var, indices, updates, userWs);
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_SIMT_ADDR32_TENSOR)) {
-        ScatterUpdateSimt<DTYPE_INDICES, DTYPE_VAR, uint32_t, false> op(tilingData);
+        ScatterUpdateSimt<DTYPE_INDICES, VAR_T, uint32_t, false> op(tilingData);
         op.Init(var, indices, updates, userWs);
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_SIMT_ADDR64_SCALAR)) {
-        ScatterUpdateSimt<DTYPE_INDICES, DTYPE_VAR, uint64_t, true> op(tilingData);
+        ScatterUpdateSimt<DTYPE_INDICES, VAR_T, uint64_t, true> op(tilingData);
         op.Init(var, indices, updates, userWs);
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_SIMT_ADDR64_TENSOR)) {
-        ScatterUpdateSimt<DTYPE_INDICES, DTYPE_VAR, uint64_t, false> op(tilingData);
+        ScatterUpdateSimt<DTYPE_INDICES, VAR_T, uint64_t, false> op(tilingData);
         op.Init(var, indices, updates, userWs);
         op.Process();
 
@@ -359,20 +359,20 @@ extern "C" __global__ __aicore__ void scatter_update(GM_ADDR var, GM_ADDR indice
 
     ///////////////////// Deterministic //////////////////////////
     } else if (TILING_KEY_IS(TILING_KEY_DETERMINISTIC_SIMD_SPLITCOL)) {
-        ScatterUpdateDeterministicSimd<DTYPE_VAR, DTYPE_INDICES, int64_t, true, DTYPE_INDICES, CAST_NOT_CAST> op(tilingData, pipe);
+        ScatterUpdateDeterministicSimd<VAR_T, DTYPE_INDICES, int64_t, true, DTYPE_INDICES, CAST_NOT_CAST> op(tilingData, pipe);
         op.Init(var, indices, updates, userWs);
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_DETERMINISTIC_SIMD_SPLITROW)) {
         if (tilingData.isIndicesSizeInt64) {
-            DeterministicSimdSort<int64_t>(var, indices, updates, userWs, tilingData, pipe);
+            DeterministicSimdSort<int64_t, VAR_T>(var, indices, updates, userWs, tilingData, pipe);
         } else {
-            DeterministicSimdSort<int32_t>(var, indices, updates, userWs, tilingData, pipe);
+            DeterministicSimdSort<int32_t, VAR_T>(var, indices, updates, userWs, tilingData, pipe);
         }
     } else if (TILING_KEY_IS(TILING_KEY_DETERMINISTIC_SIMT)) {
         if (tilingData.isIndicesSizeInt64) {
-            DeterministicSimtSort<int64_t>(var, indices, updates, userWs, tilingData, pipe);
+            DeterministicSimtSort<int64_t, VAR_T>(var, indices, updates, userWs, tilingData, pipe);
         } else {
-            DeterministicSimtSort<int32_t>(var, indices, updates, userWs, tilingData, pipe);
+            DeterministicSimtSort<int32_t, VAR_T>(var, indices, updates, userWs, tilingData, pipe);
         }
     } else if (TILING_KEY_IS(TILING_KEY_0)) {
         return;
