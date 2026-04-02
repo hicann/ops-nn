@@ -57,9 +57,6 @@ public:
         if constexpr (MODE == PRE_RMS_NORM_MODE) {
             xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
         }
-        if constexpr (MODE == POST_RMS_NORM_MODE) {
-            wsGm.SetGlobalBuffer((__gm__ T*)workspace + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        }
 
         // pipe alloc memory to queue, the unit is Bytes.
         // We need 2 buffers here for both x1 and x2.
@@ -116,7 +113,7 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyInAndAdd(uint32_t i_idx, uint32_t j_idx, uint32_t num)
+    __aicore__ inline void CopyInX1X2(uint32_t i_idx, uint32_t j_idx, uint32_t num)
     {
         LocalTensor<T> splitX1X2In = inQueueX.AllocTensor<T>();
         LocalTensor<T> splitX1In = splitX1X2In[0];
@@ -124,8 +121,36 @@ private:
         DataCopyCustom<T>(splitX1In, x1Gm[i_idx * this->numCol + j_idx * this->ubFactor], num);
         DataCopyCustom<T>(splitX2In, x2Gm[i_idx * this->numCol + j_idx * this->ubFactor], num);
         inQueueX.EnQue(splitX1X2In);
+    }
+
+    __aicore__ inline void AddX(uint32_t i_idx, uint32_t j_idx, uint32_t num)
+    {
+        CopyInX1X2(i_idx, j_idx, num);
         LocalTensor<T> splitX1X2Local = inQueueX.DeQue<T>();
 
+        auto splitX1Local = splitX1X2Local[0];
+        auto splitX2Local = splitX1X2Local[this->ubFactor];
+        if constexpr (is_same<T, bfloat16_t>::value) {
+            LocalTensor<float> x1_fp32 = xFp32Buf.Get<float>();
+            LocalTensor<float> x2_fp32 = splitX1X2Local.template ReinterpretCast<float>();
+            Cast(x1_fp32, splitX1Local, RoundMode::CAST_NONE, num);
+            PipeBarrier<PIPE_V>();
+            Cast(x2_fp32, splitX2Local, RoundMode::CAST_NONE, num);
+            PipeBarrier<PIPE_V>();
+            Add(x1_fp32, x1_fp32, x2_fp32, num);
+            PipeBarrier<PIPE_V>();
+            Cast(splitX1X2Local, x1_fp32, RoundMode::CAST_RINT, num);
+        } else {
+            Add(splitX1X2Local, splitX1Local, splitX2Local, num);
+        }
+        PipeBarrier<PIPE_V>();
+        inQueueX.EnQue(splitX1X2Local);
+    }
+
+    __aicore__ inline void CopyInAndAdd(uint32_t i_idx, uint32_t j_idx, uint32_t num)
+    {
+        CopyInX1X2(i_idx, j_idx, num);
+        LocalTensor<T> splitX1X2Local = inQueueX.DeQue<T>();
         auto splitX1Local = splitX1X2Local[0];
         auto splitX2Local = splitX1X2Local[this->ubFactor];
 
@@ -166,9 +191,6 @@ private:
         auto x_out = outQueueY.DeQue<T>();
         if constexpr (MODE == ADD_RMS_NORM_MODE || MODE == PRE_RMS_NORM_MODE) {
             DataCopyCustom<T>(xGm[i_idx * numCol + j_idx * ubFactor], x_out, num);
-        }
-        if constexpr (MODE == POST_RMS_NORM_MODE) {
-            DataCopyCustom<T>(wsGm[i_idx * numCol + j_idx * ubFactor], x_out, num);
         }
         outQueueY.FreeTensor(x_out);
     }
@@ -241,14 +263,14 @@ private:
 
     __aicore__ inline void CopyInX(uint32_t i_idx, uint32_t j_idx, uint32_t num)
     {
-        LocalTensor<T> xLocal = inQueueX.AllocTensor<T>();
         if constexpr (MODE == ADD_RMS_NORM_MODE || MODE == PRE_RMS_NORM_MODE) {
+            LocalTensor<T> xLocal = inQueueX.AllocTensor<T>();
             DataCopyCustom<T>(xLocal, xGm[i_idx * numCol + j_idx * ubFactor], num);
+            inQueueX.EnQue<T>(xLocal);
         }
         if constexpr (MODE == POST_RMS_NORM_MODE) {
-            DataCopyCustom<T>(xLocal, wsGm[i_idx * numCol + j_idx * ubFactor], num);
+            AddX(i_idx, j_idx, num);
         }
-        inQueueX.EnQue<T>(xLocal);
         if constexpr (is_same<T, half>::value || is_same<T, bfloat16_t>::value) {
             LocalTensor<float> splitXFp32 = xFp32Buf.Get<float>();
             LocalTensor<T> splitXLocalDeq = inQueueX.DeQue<T>();
@@ -366,7 +388,6 @@ private:
     GlobalTensor<T> yGm;
     GlobalTensor<float> rstdGm;
     GlobalTensor<T> xGm;
-    GlobalTensor<T> wsGm;
 
     uint32_t numRow;
     uint32_t numCol;

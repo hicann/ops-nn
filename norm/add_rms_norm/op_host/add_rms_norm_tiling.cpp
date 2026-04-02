@@ -373,14 +373,7 @@ static void SetWorkspaceSize(gert::TilingContext* context)
 {
     const gert::Shape x1_shape = context->GetInputShape(0)->GetStorageShape();
     const size_t x1DimNum = x1_shape.GetDimNum();
-    uint32_t xShapeSize = 0;
-    if (norm_key == POST_RMS_NORM) {
-        xShapeSize = 1U;
-        for (size_t i = 0; i < x1DimNum; ++i) {
-            xShapeSize *= x1_shape.GetDim(i);
-        }
-    }
-    size_t sysWorkspaceSize = 16 * 1024 * 1024 + xShapeSize * sizeof(float);
+    size_t sysWorkspaceSize = 16 * 1024 * 1024;
     constexpr size_t usrSize = 256;
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     currentWorkspace[0] = usrSize + sysWorkspaceSize;
