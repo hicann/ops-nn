@@ -42,7 +42,7 @@ ge::graphStatus CheckContext(gert::TilingContext* context, uint64_t tilingDataSi
     OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetInputDesc(X2_LEVEL0_SCALE_INDEX));
     OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetInputDesc(X2_LEVEL1_SCALE_INDEX));
     OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetOutputDesc(OUTPUT_Y_INDEX));
-    OPS_CHECK_NULL_WITH_CONTEXT(context, attrs->GetAttrPointer<int32_t>(ATTR_DTYPE_INDEX));
+    OPS_CHECK_NULL_WITH_CONTEXT(context, attrs->GetAttrPointer<int64_t>(ATTR_DTYPE_INDEX));
 
     // check Raw TilingData
     OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetRawTilingData());
