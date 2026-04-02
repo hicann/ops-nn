@@ -384,7 +384,7 @@ int aclnnBatchMatmulQuantTest(int32_t deviceId, aclrtStream &stream) {
 
   for (int64_t i = 0; i < quantParamSize; i++) {
     if (quantParamData == nullptr) {
-        printf("ERROR: quantParamData[*ld] = nullptr", i);
+        printf("ERROR: quantParamData[%ld] = nullptr", i);
         return ACL_SUCCESS;
     } else {
         printf("quantParamData[%ld] = %lu\n", i, quantParamData[i]);
