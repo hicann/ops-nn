@@ -31,6 +31,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/platform.h"
 #include "runtime/context.h"
+#include "acl/acl_rt.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -258,7 +259,7 @@ aclnnStatus aclnnIndexAddV2GetWorkspaceSize(const aclTensor *self, const int64_t
   // 固定写法，参数检查
   L2_DFX_PHASE_1(aclnnIndexAddV2, DFX_IN(self, dim, index, source, alpha, mode), DFX_OUT(out));
   int64_t deterministicValue = 0;
-  rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
+  rtError_t retRts = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
   if (retRts != RT_ERROR_NONE) {
       deterministicValue = 0;
   }

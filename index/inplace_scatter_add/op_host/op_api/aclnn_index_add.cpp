@@ -27,6 +27,7 @@
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
 #include "runtime/context.h"
+#include "acl/acl_rt.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -231,7 +232,7 @@ static const aclTensor* DoIndexAddWithSorted(const aclTensor *self, const int64_
 
 static bool inplaceScatterAddSupport(const aclTensor * self, int64_t dim, const aclScalar * alpha) {
   int64_t deterministicValue = 0;
-  rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
+  rtError_t retRts = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
   if (retRts != RT_ERROR_NONE) {
       deterministicValue = 0;
   }
