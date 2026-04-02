@@ -1,6 +1,6 @@
 # AvgPoolV2
 
-##  产品支持情况
+## 产品支持情况
 
 | 产品 | 是否支持 |
 | ---- | :----:|
@@ -130,8 +130,8 @@
 
 无。
 
-
 ## 调用说明
+
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_avgpool2d.cpp](../avg_pool3_d/examples/test_aclnn_avgpool2d.cpp) | 通过[aclnnAvgPool2d](../avg_pool3_d/examples/test_aclnn_avgpool2d.md)接口方式调用AvgPoolV2算子。 
+| aclnn接口  | [test_aclnn_avgpool2d.cpp](../avg_pool3_d/examples/test_aclnn_avgpool2d.cpp) | 通过[aclnnAvgPool2d](../../pooling/avg_pool3_d/docs/aclnnAvgPool2d.md)接口方式调用AvgPoolV2算子。

@@ -16,6 +16,7 @@
 ## 功能说明
 
 接口功能：对输入weight数据做预处理，实现低比特数据由稀疏存储到紧密存储的排布转换。输出weightInt4Pack的[数据格式](../../../docs/zh/context/数据格式.md)声明为FRACTAL_NZ时，该算子将[数据格式](../../../docs/zh/context/数据格式.md)从ND转为FRACTAL_NZ。
+
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：将INT32类型的weight输入数据打包为紧密排布的INT4数据。
 - <term>Ascend 950PR/Ascend 950DT</term> ：将INT32类型的weight打包为紧密排布的INT4类型，将FLOAT类型的weight打包为紧密排布的FLOAT4_E2M1类型。
 
@@ -30,6 +31,7 @@ aclnnStatus aclnnConvertWeightToINT4PackGetWorkspaceSize(
   uint64_t        *workspaceSize, 
   aclOpExecutor   **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnConvertWeightToINT4Pack(
   void            *workspace,
@@ -671,6 +673,7 @@ aclnnStatus aclnnConvertWeightToINT4Pack(
   }
 
 - <term>Ascend 950PR/Ascend 950DT</term>：
+
   示例代码如下（INT32输入），仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
   伪量化有aclnnWeightQuantBatchMatmulV2和aclnnWeightQuantBatchMatmulV3接口， 这里以aclnnWeightQuantBatchMatmulV2为例
 
@@ -1320,4 +1323,3 @@ aclnnStatus aclnnConvertWeightToINT4Pack(
     return 0;
   }
   ```
-

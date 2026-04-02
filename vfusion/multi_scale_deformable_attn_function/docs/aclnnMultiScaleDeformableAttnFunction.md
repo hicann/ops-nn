@@ -70,6 +70,7 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMultiScaleDeformableAttnFunctionGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMultiScaleDeformableAttnFunction”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnMultiScaleDeformableAttnFunctionGetWorkspaceSize(
     const aclTensor* value,
@@ -81,6 +82,7 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunctionGetWorkspaceSize(
     uint64_t*        workspaceSize,
     aclOpExecutor**  executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnMultiScaleDeformableAttnFunction(
     void*          workspace,
@@ -382,7 +384,7 @@ int main() {
     auto ret = Init(deviceId, &stream);
     // check根据自己的需要处理
     CHECK_RET(ret == 0, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
-	// 2.构造输入与输出，需要根据API的接口自定义构造
+   // 2.构造输入与输出，需要根据API的接口自定义构造
     std::vector<int64_t> valueShape = {1, 1, 2, 32};
     std::vector<int64_t> spatialShapeShape = {1, 2};
     std::vector<int64_t> levelStartIndexShape = {1};

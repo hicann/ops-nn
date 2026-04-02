@@ -11,7 +11,6 @@
 |  <term>Atlas 推理系列产品</term>     |     √    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
-
 ## 功能说明
 
 - 算子功能：计算[aclnnSmoothL1Loss](../smooth_l1_loss_v2/docs/aclnnSmoothL1Loss.md) api的反向传播。

@@ -34,6 +34,7 @@ aclnnStatus aclnnScaledMaskedSoftmaxGetWorkspaceSize(
     uint64_t*        workspaceSize,
     aclOpExecutor**  executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnScaledMaskedSoftmax(
     void*          workspace,

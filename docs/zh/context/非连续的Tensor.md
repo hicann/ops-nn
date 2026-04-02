@@ -1,4 +1,5 @@
 # 非连续的Tensor
+
 目前大部分算子API的输入aclTensor支持“**非连续的Tensor**”，即一个Tensor可以通过\(shape, strides, offset\)表示。
 
 说明：创建aclTensor可通过[《算子库接口》](https://hiascend.com/document/redirect/CannCommunityOplist)中“公共接口>aclCreateTensor”实现。
@@ -16,7 +17,6 @@
 > a<sub>7,0</sub> , a<sub>7,1</sub> , **a<sub>7,2</sub> , a<sub>7,3</sub> , a<sub>7,4</sub> , a<sub>7,5</sub> , a<sub>7,6</sub>** , a<sub>7,7</sub> , a<sub>7,8</sub> , a<sub>7,9</sub>  
 > a<sub>8,0</sub> , a<sub>8,1</sub> , a<sub>8,2</sub> , a<sub>8,3</sub> , a<sub>8,4</sub> , a<sub>8,5</sub> , a<sub>8,6</sub> , a<sub>8,7</sub> , a<sub>8,8</sub> , a<sub>8,9</sub>  
 > a<sub>9,0</sub> , a<sub>9,1</sub> , a<sub>9,2</sub> , a<sub>9,3</sub> , a<sub>9,4</sub> , a<sub>9,5</sub> , a<sub>9,6</sub> , a<sub>9,7</sub> , a<sub>9,8</sub> , a<sub>9,9</sub>  
-
 
 即该Tensor排布如上图的深色位置。这个完整的Tensor在内存排布上是不连续的，strides描述Tensor维度上相邻两个元素的间隔，如果在维度1上的stride为1， 该维度是连续的；如果在维度0上的stride为10，那么相邻的元素间隔10个元素，即非连续。offset表示这个Tensor的首元素相对addr的偏移。
 

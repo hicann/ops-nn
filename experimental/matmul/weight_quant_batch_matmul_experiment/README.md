@@ -1,9 +1,11 @@
 # WeightQuantBatchMatmulExperiment算子
 
-##  概述
+## 概述
+
 本样例的WeightQuantBatchMatmulExperiment算子实现使用自定义算子工程，其kernel包含两个模板：基础模板以及计算解耦流水模板。example的用例分别使用两个模板的精度均正常，示例通过msprof工具采集了模板的性能数据。
 
-##  支持的AI处理器
+## 支持的AI处理器
+
 | 产品 | 是否支持 |
 | ---- | :----:|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|

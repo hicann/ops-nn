@@ -35,6 +35,7 @@ aclnnStatus aclnnScaledMaskedSoftmaxBackwardGetWorkspaceSize(
     uint64_t*        workspaceSize,
     aclOpExecutor**  executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnScaledMaskedSoftmaxBackward(
     void*             workspace,
@@ -237,6 +238,7 @@ aclnnStatus aclnnScaledMaskedSoftmaxBackward(
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```c++
 #include <iostream>
 #include <vector>

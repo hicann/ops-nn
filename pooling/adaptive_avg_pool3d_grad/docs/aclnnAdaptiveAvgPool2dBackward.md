@@ -15,10 +15,12 @@
 
 ## 功能说明
 
-[aclnnAdaptiveAvgPool2d](../../adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool2d.md) 的反向计算。
+[aclnnAdaptiveAvgPool2d](../../../pooling/adaptive_avg_pool2d/docs/aclnnAdaptiveAvgPool2d.md) 的反向计算。
 
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnAdaptiveAvgPool2dBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnAdaptiveAvgPool2dBackward”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnAdaptiveAvgPool2dBackwardGetWorkspaceSize(
   const aclTensor   *gradOutput,
@@ -27,6 +29,7 @@ aclnnStatus aclnnAdaptiveAvgPool2dBackwardGetWorkspaceSize(
   uint64_t          *workspaceSize,
   aclOpExecutor     **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnAdaptiveAvgPool2dBackward(
   void              *workspace,
@@ -34,7 +37,9 @@ aclnnStatus aclnnAdaptiveAvgPool2dBackward(
   aclOpExecutor     *executor,
   const aclrtStream stream)
 ```
+
 ## aclnnAdaptiveAvgPool2dBackwardGetWorkspaceSize
+
 - **参数说明：**
   <table style="undefined;table-layout: fixed; width: 1453px"><colgroup>
   <col style="width: 154px">
@@ -110,7 +115,7 @@ aclnnStatus aclnnAdaptiveAvgPool2dBackward(
     </tr>
   </tbody></table>
 
-    -  <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：参数`self`、`out`的数据类型不支持BFLOAT16。
+    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：参数`self`、`out`的数据类型不支持BFLOAT16。
 
 - **返回值：**
 
@@ -158,6 +163,7 @@ aclnnStatus aclnnAdaptiveAvgPool2dBackward(
     </table>
 
 ## aclnnAdaptiveAvgPool2dBackward
+
 - **参数说明：**
   <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
   <col style="width: 173px">
@@ -193,16 +199,20 @@ aclnnStatus aclnnAdaptiveAvgPool2dBackward(
     </tr>
   </tbody>
   </table>
--  **返回值：**
+
+- **返回值：**
 
     aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算：
   - aclnnAdaptiveAvgPool2dBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

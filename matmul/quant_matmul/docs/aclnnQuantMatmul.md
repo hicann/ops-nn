@@ -236,6 +236,7 @@ aclnnStatus aclnnQuantMatmul(
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：aclnnQuantMatmul默认确定性实现。
 
 该接口迁移到aclnnQuantMatmulV4接口的方法：
+
 - 输入x1，x2，bias可以直接转为aclnnQuantMatmulV4接口中的x1，x2，bias。
 - 输入deqScale为FLOAT型，将这个FLOAT数构造成shape为（1，）的FLOAT型aclTensor（参考[调用示例](#调用示例)中的CreateAclTensor）, 再利用aclnnTransQuantParamV2转为shape为（1，）的uint64_t的aclTensor（参考[aclnnQuantMatmulV4调用示例](../../quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md#调用示例)），记为**scale**，对标aclnnQuantMatmulV4接口中的scale。
 - aclnnQuantMatmulV4接口中的可选输入offset/pertokenScaleOptional设置为nullptr，transposeX1和transposeX2均设置为false。
@@ -244,6 +245,7 @@ aclnnStatus aclnnQuantMatmul(
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

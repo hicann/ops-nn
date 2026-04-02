@@ -16,6 +16,7 @@
 ## 功能说明
 
 正向最大池化[aclnnMaxPool2dWithIndices](../../max_pool3d_with_argmax_v2/docs/aclnnMaxPool2dWithIndices.md)的反向传播。
+
 - 输入tensor的推导公式：
   - 当ceilMode=False时，indices tensor的shape中H和W维度推导公式：
     $$
@@ -34,7 +35,9 @@
     W_{out}=W_{out} - 1& \text{if } (W_{out}-1)*s_w>=W_{in}+padding\_size_{Wleft}  \\
     \end{cases}\\
     $$
+
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMaxPool2dWithIndicesBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMaxPool2dWithIndicesBackward”接口执行计算。
 
 ```Cpp
@@ -51,6 +54,7 @@ aclnnStatus aclnnMaxPool2dWithIndicesBackwardGetWorkspaceSize(
   uint64_t          *workspaceSize,
   aclOpExecutor     **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnMaxPool2dWithIndicesBackward(
   void          *workspace,
@@ -256,6 +260,7 @@ aclnnStatus aclnnMaxPool2dWithIndicesBackward(
     </tr>
   </tbody>
   </table>
+
 ## aclnnMaxPool2dWithIndicesBackward
 
 - **参数说明：**
@@ -298,13 +303,16 @@ aclnnStatus aclnnMaxPool2dWithIndicesBackward(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算：
   - aclnnMaxPool2dWithIndicesBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 - 输入数据暂不支持NaN、-Inf。indices值不能超过公式中的$H\_in*W\_in$，且需要大于等于0。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <cstdio>
 #include <iostream>

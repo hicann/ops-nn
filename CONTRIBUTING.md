@@ -46,6 +46,7 @@ ${op_class}                                          # 算子分类
 │   ├── CMakeLists.txt                               # 算子编译配置文件
 │   ├── README.md                                    # 算子README文档
 ```
+
 PR上库要求：
 
 - 代码交付件：需提供算子Kernel实现、算子测试文件，开发过程参考[fast_kernel_launch_example](examples/fast_kernel_launch_example/README.md)。

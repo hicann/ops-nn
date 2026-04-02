@@ -228,7 +228,6 @@ aclnnStatus aclnnNLLLoss2dBackward(
       </tbody>
       </table>
 
-
 ## aclnnNLLLoss2dBackward
 
 - **参数说明**

@@ -35,6 +35,7 @@ self必须要支持和batch1@batch2的结果做broadcast。（broadcast，广播
   - aclnnBaddbmm：需新建一个输出张量对象存储计算结果。
   - aclnnInplaceBaddbmm：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
 - 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnBaddbmmGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnBaddbmm”接口执行计算。
+
 ```cpp
 aclnnStatus aclnnBaddbmmGetWorkspaceSize(
   const aclTensor*    self,
@@ -47,6 +48,7 @@ aclnnStatus aclnnBaddbmmGetWorkspaceSize(
   uint64_t*           workspaceSize,
   aclOpExecutor**     executor)
 ```
+
 ```cpp
 aclnnStatus aclnnBaddbmm(
   void*           workspace,
@@ -66,6 +68,7 @@ aclnnStatus aclnnInplaceBaddbmmGetWorkspaceSize(
   uint64_t*           workspaceSize,
   aclOpExecutor**     executor)
 ```
+
 ```cpp
 aclnnStatus aclnnInplaceBaddbmm(
   void*             workspace,
@@ -172,7 +175,7 @@ aclnnStatus aclnnInplaceBaddbmm(
         <li>2：USE_FP16，支持将输入降精度至FLOAT16计算。</li>
         <li>3：USE_HF32，支持将输入降精度至数据类型HFLOAT32计算。</li>
         <li>4：FORCE_GRP_ACC_FOR_FP32，支持使用分组累加方式进行计算。</li>
- 	      <li>5：USE_FP32_ADDMM，输入数类型为FLOAT16/BFLOAT16时addmm过程升精度计算。</li></ul>
+        <li>5：USE_FP32_ADDMM，输入数类型为FLOAT16/BFLOAT16时addmm过程升精度计算。</li></ul>
       </td>
       <td>INT8</td>
       <td>-</td>
@@ -444,7 +447,7 @@ aclnnStatus aclnnInplaceBaddbmm(
     - cubeMathType=2，当输入数据类型是FLOAT32，会转换为FLOAT16计算；当输入为其他数据类型时不做处理；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理。
     - cubeMathType=4时不做处理。
- 	  - 当前不支持cubeMathType=5。   
+    - 当前不支持cubeMathType=5。
 
 - **返回值：**
 
@@ -538,6 +541,7 @@ aclnnStatus aclnnInplaceBaddbmm(
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性说明：
 aclnnBaddbmm&aclnnInplaceBaddbmm默认确定性实现。
 
@@ -545,7 +549,9 @@ aclnnBaddbmm&aclnnInplaceBaddbmm默认确定性实现。
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持batch1和batch2两输入其中一个输入为BFLOAT16, 另一个输入为FLOAT或FLOAT16的数据类型推导。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

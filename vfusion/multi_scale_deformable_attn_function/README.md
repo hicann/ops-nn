@@ -20,7 +20,6 @@
     x = u \cdot W_\ell - 0.5, \qquad y = v \cdot H_\ell - 0.5
     $$
 
-
     确定采样点落在哪四个整数网格点之间：
 
     $$
@@ -108,6 +107,7 @@
 - Atlas推理系列产品：不支持BFLOAT16
 
 ## 约束说明
+
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   - 通道数channels%8 = 0，且channels <= 256
   - 查询的数量32 <= num_queries < 500000

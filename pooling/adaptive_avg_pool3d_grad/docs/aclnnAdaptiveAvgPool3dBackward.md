@@ -1,7 +1,8 @@
 # aclnnAdaptiveAvgPool3dBackward
-## 产品支持情况
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/pooling/adaptive_avg_pool3d_grad)
 
+## 产品支持情况
+
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/pooling/adaptive_avg_pool3d_grad)
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
@@ -17,7 +18,9 @@
 [aclnnAdaptiveAvgPool3d](../../adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool3d.md) 的反向计算。
 
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnAdaptiveAvgPool3dBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnAdaptiveAvgPool3dBackward”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnAdaptiveAvgPool3dBackwardGetWorkspaceSize(
   const aclTensor   *gradOutput,
@@ -26,6 +29,7 @@ aclnnStatus aclnnAdaptiveAvgPool3dBackwardGetWorkspaceSize(
   uint64_t          *workspaceSize,
   aclOpExecutor     **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnAdaptiveAvgPool3dBackward(
   void          *workspace,
@@ -33,6 +37,7 @@ aclnnStatus aclnnAdaptiveAvgPool3dBackward(
   aclOpExecutor *executor,
   aclrtStream    stream)
 ```
+
 ## aclnnAdaptiveAvgPool3dBackwardGetWorkspaceSize
 
 - **参数说明：**
@@ -200,6 +205,7 @@ aclnnStatus aclnnAdaptiveAvgPool3dBackward(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算：
   - aclnnAdaptiveAvgPool3dBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
@@ -348,4 +354,3 @@ int main() {
   return 0;
 }
 ```
-

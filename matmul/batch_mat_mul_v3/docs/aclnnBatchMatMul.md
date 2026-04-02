@@ -30,6 +30,7 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnBatchMatMulGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnBatchMatMul”接口执行计算。
+
 ```cpp
 aclnnStatus aclnnBatchMatMulGetWorkspaceSize(
   const aclTensor *self, 
@@ -39,6 +40,7 @@ aclnnStatus aclnnBatchMatMulGetWorkspaceSize(
   uint64_t        *workspaceSize, 
   aclOpExecutor   **executor)
 ```
+
 ```cpp
 aclnnStatus aclnnBatchMatMul(
   void            *workspace, 
@@ -150,7 +152,6 @@ aclnnStatus aclnnBatchMatMul(
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
     - 不支持cubeMathType=3。
 
-
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -233,12 +234,15 @@ aclnnStatus aclnnBatchMatMul(
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnBatchMatMul默认确定性实现。
   - <term>Ascend 950PR/Ascend 950DT</term>: aclnnBatchMatMul默认确定性实现。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

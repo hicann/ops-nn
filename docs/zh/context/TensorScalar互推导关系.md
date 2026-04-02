@@ -8,11 +8,12 @@
 
 > 说明：
 >
->-   为方便描述，表格中使用的数据类型是简写形式，代表的含义：ACL\_FLOAT\(f32\)、ACL\_FLOAT16\(f16\)、ACL\_DOUBLE\(f64\)、ACL\_BF16\(bf16\)、ACL\_INT8\(s8\)、ACL\_UINT8\(u8\)、ACL\_INT16\(s16\)、ACL\_UINT16\(u16\)、ACL\_INT32\(s32\)、ACL\_UINT32\(u32\)、ACL\_INT64\(s64\)、ACL\_UINT64\(u64\)、ACL\_BOOL\(bool\)、ACL\_COMPLEX32\(c32\)、ACL\_COMPLEX64\(c64\)、ACL\_COMPLEX128\(c128\)。
->-   表格里表头表示待推导的输入Tensor数据类型，最左侧一列分别表示待推导的输入Scalar数据类型，表格中对应位置表示推导出的数据类型。
->-   表中叉号(×)表示这两种类型不能进行推导计算。
+>- 为方便描述，表格中使用的数据类型是简写形式，代表的含义：ACL\_FLOAT\(f32\)、ACL\_FLOAT16\(f16\)、ACL\_DOUBLE\(f64\)、ACL\_BF16\(bf16\)、ACL\_INT8\(s8\)、ACL\_UINT8\(u8\)、ACL\_INT16\(s16\)、ACL\_UINT16\(u16\)、ACL\_INT32\(s32\)、ACL\_UINT32\(u32\)、ACL\_INT64\(s64\)、ACL\_UINT64\(u64\)、ACL\_BOOL\(bool\)、ACL\_COMPLEX32\(c32\)、ACL\_COMPLEX64\(c64\)、ACL\_COMPLEX128\(c128\)。
+>- 表格里表头表示待推导的输入Tensor数据类型，最左侧一列分别表示待推导的输入Scalar数据类型，表格中对应位置表示推导出的数据类型。
+>- 表中叉号(×)表示这两种类型不能进行推导计算。
 
 **表 1**  数据类型推导关系表
+
 | 数据类型  | f32  | f16  | f64  | bf16 |  s8  |  u8  | s16  | u16  | s32  | u32  | s64  | u64  | bool | c32  | c64  | c128 |
 | :------: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: |
 | **f32**  | f32  | f16  | f64  | bf16 | f32  | f32  | f32  |  ×   | f32  |  ×   | f32  |  ×   | f32  | c32  | c64  | c128 |
@@ -34,6 +35,5 @@
 
 ## 推导示例
 
--   如果输入Tensor的数据类型为float16，输入Scalar的数据类型为float32，那么API内部就会将输入Scalar的float32数据类型转换成float16数据类型然后进行计算。
--   如果输入Tensor的数据类型为bool，输入Scalar的数据类型为float32，那么API内部就会将输入Tensor的bool数据类型转换成float32数据类型然后进行计算。
-
+- 如果输入Tensor的数据类型为float16，输入Scalar的数据类型为float32，那么API内部就会将输入Scalar的float32数据类型转换成float16数据类型然后进行计算。
+- 如果输入Tensor的数据类型为bool，输入Scalar的数据类型为float32，那么API内部就会将输入Tensor的bool数据类型转换成float32数据类型然后进行计算。

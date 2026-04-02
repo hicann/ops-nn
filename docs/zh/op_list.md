@@ -1,7 +1,9 @@
 # 算子列表
 
 > 说明：
+>
 > - **算子目录**：目录名为算子名小写下划线形式，每个目录承载该算子所有交付件，包括代码实现、examples、文档等，目录介绍参见[项目目录](./install/dir_structure.md)。
+>
 > - **算子执行硬件单元**：大部分算子运行在AI Core，少部分算子运行在AI CPU。默认情况下，项目中提到的算子一般指AI Core算子。关于AI Core和AI CPU详细介绍参见[《Ascend C算子开发》](https://hiascend.com/document/redirect/CannCommunityOpdevAscendC)中“概念原理和术语 > 硬件架构与数据处理原理”。
 > - **算子接口列表**：为方便调用算子，CANN提供一套C API执行算子，一般以aclnn为前缀，全量接口参见[aclnn列表](op_api_list.md)。
 
@@ -2225,15 +2227,15 @@
     <td>AdaLayerNorm算子将LayerNorm和下游的Add、Mul融合起来，通过自适应参数scale和shift来调整归一化过程。</td>
   </tr>
   <tr>
- 	  <td>norm</td>
- 	  <td><a href="../../norm/ada_layer_norm_grad/README.md">ada_layer_norm_grad</a></td>
- 	  <td>✓</td>
- 	  <td>✓</td>
- 	  <td>✓</td>
- 	  <td>✓</td>
- 	  <td>AI Core</td>
- 	  <td>AdaLayerNormV2的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。</td>
- 	</tr>
+    <td>norm</td>
+    <td><a href="../../norm/ada_layer_norm_grad/README.md">ada_layer_norm_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>AdaLayerNormV2的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。</td>
+  </tr>
   <tr>
     <td>norm</td>
     <td><a href="../../norm/ada_layer_norm_quant/README.md">ada_layer_norm_quant</a></td>

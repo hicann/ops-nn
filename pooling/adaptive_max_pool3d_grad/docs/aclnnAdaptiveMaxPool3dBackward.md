@@ -66,6 +66,7 @@ aclnnStatus aclnnAdaptiveMaxPool3dBackwardGetWorkspaceSize(
   uint64_t          *workspaceSize,
   aclOpExecutor     **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnAdaptiveMaxPool3dBackward(
   void          *workspace,
@@ -73,6 +74,7 @@ aclnnStatus aclnnAdaptiveMaxPool3dBackward(
   aclOpExecutor *executor,
   aclrtStream    stream)
 ```
+
 ## aclnnAdaptiveMaxPool3dBackwardGetWorkspaceSize
 
 - **参数说明：**
@@ -239,11 +241,13 @@ aclnnStatus aclnnAdaptiveMaxPool3dBackward(
     </tr>
   </tbody>
   </table>
--  **返回值：**
+
+- **返回值：**
 
     aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算：
   - aclnnAdaptiveMaxPool3dBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 

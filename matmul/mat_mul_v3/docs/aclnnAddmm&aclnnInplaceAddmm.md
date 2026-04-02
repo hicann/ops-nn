@@ -32,6 +32,7 @@
   - aclnnAddmm：需新建一个输出张量对象存储计算结果。
   - aclnnInplaceAddmm：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
 - 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 “aclnnAddmmGetWorkspaceSize” 或者 “aclnnInplaceAddmmGetWorkspaceSize” 接口获取入参并根据计算流程计算所需workspace大小，再调用 “aclnnAddmm” 或者 “aclnnInplaceAddmm” 接口执行计算。
+
 ```cpp
 aclnnStatus aclnnAddmmGetWorkspaceSize(
   const aclTensor *self,
@@ -44,6 +45,7 @@ aclnnStatus aclnnAddmmGetWorkspaceSize(
   uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
+
 ```cpp
 aclnnStatus aclnnAddmm(
   void           *workspace,
@@ -51,6 +53,7 @@ aclnnStatus aclnnAddmm(
   aclOpExecutor  *executor,
   aclrtStream    stream)
 ```
+
 ```cpp
 aclnnStatus aclnnInplaceAddmmGetWorkspaceSize(
   const aclTensor *selfRef,
@@ -62,6 +65,7 @@ aclnnStatus aclnnInplaceAddmmGetWorkspaceSize(
   uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
+
 ```cpp
 aclnnStatus aclnnInplaceAddmm(
   void           *workspace,
@@ -292,7 +296,6 @@ aclnnStatus aclnnInplaceAddmm(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值**
 

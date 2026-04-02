@@ -26,7 +26,7 @@
     符号说明：
     - $\odot$: 表示逐元素乘法；
     - $\sum_{l=1}^{L}$: 求和操作，沿序列维度$L$(即dim=1)进行
-    -  $b,l,d$：下标，表示张量的维度索引（通常为Batch，Length，Dimension）
+    - $b,l,d$：下标，表示张量的维度索引（通常为Batch，Length，Dimension）
     - $\text{scale}^{\uparrow L}$： 表示将scale张量在序列维度 $L$ 上进行广播（扩展）
 
 ## 函数原型
@@ -45,6 +45,7 @@ aclnnStatus aclnnModulateBackwardGetWorkspaceSize(
     uint64_t*        workspaceSize,
     aclOpExecutor**  executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnModulateBackward(
     void*          workspaceAddr,
@@ -205,7 +206,6 @@ aclnnStatus aclnnModulateBackward(
   </tbody>
   </table>
 
-
 ## aclnnModulateBackward
 
 - **参数说明**：
@@ -283,10 +283,10 @@ aclnnStatus aclnnModulateBackward(
 - scale和shift是二维向量，第一维需要和input的第一维shape相同，第二维需要和input的第三维shape相同。
 - 输入gradoutput的shape需要和输入input的shape保持一致。
 
-
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

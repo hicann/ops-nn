@@ -93,7 +93,6 @@
         其中，gsM，gsN和gsK分别代表groupSizeM，groupSizeN和groupSizeK；x1Slice代表x1第m行长度为groupSizeK的向量，x2Slice代表x2第n列长度为groupSizeK的向量；K轴均从j*groupSizeK起始切片，j的取值范围为[0, kLoops)，kLoops = ceil(K / groupSizeK)，K为K轴长度，支持最后的切片长度不足groupSizeK。
     </details>
 
-
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnQuantMatmulWeightNzGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnQuantMatmulWeightNz”接口执行计算。
@@ -378,7 +377,6 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     - 支持groupSize传非0。
     </details>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -424,7 +422,6 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     </tr>
     </tbody>
     </table>
-
 
 ## aclnnQuantMatmulWeightNz
 
@@ -480,21 +477,22 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 
   - 输入和输出支持以下数据类型组合：
 
-    | x1   | x2    | x1Scale      | x2Scale          | x2Offset      | yOffset | bias                        | out               |
-    | ---- | ----- | ------------ | ---------------- | ------------- | ------- | --------------------------- | ----------------- |
-    | INT8 | INT8  | null         | UINT64/INT64     | null          | null    | null/INT32                  | FLOAT16           |
-    | INT8 | INT8  | null         | UINT64/INT64     | null/FLOAT32  | null    | null/INT32                  | INT8              |
-    | INT8 | INT8  | null/FLOAT32 | FLOAT32/BFLOAT16 | null          | null    | null/INT32/BFLOAT16/FLOAT32 | BFLOAT16          |
-    | INT8 | INT8  | FLOAT32      | FLOAT32          | null          | null    | null/INT32/FLOAT16/FLOAT32  | FLOAT16           |
-    | INT8 | INT8  | null         | FLOAT32/BFLOAT16 | null          | null    | null/INT32                  | INT32             |
-    | INT4 | INT4  | null/FLOAT32 | BFLOAT16         | null/FLOAT32  | null    | null/BFLOAT16               | BFLOAT16          |
-    | INT4 | INT4  | null/FLOAT32 | FLOAT32          | null/FLOAT32  | null    | null/BFLOAT16               | BFLOAT16          |
- 	| INT4 | INT4  | null/FLOAT32 | UINT64           | null/FLOAT32  | null    | null/INT32                  | FLOAT16           |
- 	| INT4 | INT4  | null/FLOAT32 | FLOAT32          | null/FLOAT32  | null    | null/INT32                  | FLOAT16           |
- 	| INT8 | INT32 | UINT64       | FLOAT32          | null          | FLOAT32 | null                        | FLOAT16/BFLOAT16  |
+  | x1   | x2    | x1Scale      | x2Scale          | x2Offset      | yOffset | bias                        | out               |
+  | ---- | ----- | ------------ | ---------------- | ------------- | ------- | --------------------------- | ----------------- |
 
+    INT8 | INT8  | null         | UINT64/INT64     | null          | null    | null/INT32                  | FLOAT16           |
+  | INT8 | INT8  | null         | UINT64/INT64     | null/FLOAT32  | null    | null/INT32                  | INT8              |
+  | INT8 | INT8  | null/FLOAT32 | FLOAT32/BFLOAT16 | null          | null    | null/INT32/BFLOAT16/FLOAT32 | BFLOAT16          |
+  | INT8 | INT8  | FLOAT32      | FLOAT32          | null          | null    | null/INT32/FLOAT16/FLOAT32  | FLOAT16           |
+  | INT8 | INT8  | null         | FLOAT32/BFLOAT16 | null          | null    | null/INT32                  | INT32             |
+  | INT4 | INT4  | null/FLOAT32 | BFLOAT16         | null/FLOAT32  | null    | null/BFLOAT16               | BFLOAT16          |
+  | INT4 | INT4  | null/FLOAT32 | FLOAT32          | null/FLOAT32  | null    | null/BFLOAT16               | BFLOAT16          |
+  | INT4 | INT4  | null/FLOAT32 | UINT64           | null/FLOAT32  | null    | null/INT32                  | FLOAT16           |
+  | INT4 | INT4  | null/FLOAT32 | FLOAT32          | null/FLOAT32  | null    | null/INT32                  | FLOAT16           |
+  | INT8 | INT32 | UINT64       | FLOAT32          | null          | FLOAT32 | null                        | FLOAT16/BFLOAT16  |
+    
   - x1的约束：当数据类型为INT8时，且x2的数据类型为INT32时，transposeX1为false。维度为：（m，k），要求k为偶数，并小于29576。
-  - yOffset的约束：shape支持1维（n）。为计算过程中离线计算的辅助结果，值要求为8 * x2 * x2Scale，并在第1维累加。
+  - yOffset的约束：shape支持1维（n）。为计算过程中离线计算的辅助结果，值要求为8 *x2* x2Scale，并在第1维累加。
 
 </details>
 
@@ -510,6 +508,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     | INT8 | INT8 | null    | UINT64/INT64 | null          | null/INT32 | FLOAT16 |
     | INT8 | INT8 | null    | UINT64/INT64 | null/FLOAT32  | null/INT32 | INT8    |
     | INT8 | INT8 | FLOAT   | FLOAT        | null          | null/INT32 | FLOAT16 |
+
   - 当x1Scale不为null时，只支持K-C量化。
 
 </details>
@@ -525,6 +524,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
   <a id="T-C量化 && T-T量化"></a>
     - 输入和输出支持以下数据类型组合：
   <a id="输入和输出支持以下数据类型组合TC/TT"></a>
+
       | x1              | x2          | x1Scale     |   x2Scale         | x2Offset     | yScale | bias                       |   out                   |
       | --------------- | ----------- | ----------- |   --------------- | ------------ | -------| -------------------------- |   ----------------------|
       | INT8            | INT8        | null        | UINT64/ INT64     | null         | null   | null/INT32                 |   FLOAT16/ BFLOAT16     |
@@ -540,6 +540,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
   <a id="K-C量化 && K-T量化"></a>
     - 输入和输出支持以下数据类型组合：
   <a id="输入和输出支持以下数据类型组合KC/KT"></a>
+
       | x1                   | x2                   | x1Scale | x2Scale         | x2Offset | yScale |   bias                      | out             |
       | -------------------- | -------------------- | ------- | --------------- | -------- | -------|   ------------------------- | --------------- |
       | INT8                 | INT8                 | FLOAT32 | FLOAT32/BFLOAT16| null     | null   | null/INT32/FLOAT32/BFLOAT16 | BFLOAT16        |
@@ -552,12 +553,14 @@ aclnnStatus aclnnQuantMatmulWeightNz(
   <a id="mx量化"></a>
     - 输入和输出支持以下数据类型组合：
   <a id="输入和输出支持以下数据类型组合mx"></a>
+
       | x1            | x2            | x1Scale     | x2Scale     | x2Offset | yScale | bias         | out                         |
       |---------------| ------------- | ----------- | ----------- | -------- | ------ | -------------| --------------------------- |
       | FLOAT8_E4M3FN | FLOAT8_E4M3FN | FLOAT8_E8M0 | FLOAT8_E8M0 | null     | null   | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32    |
       | FLOAT4_E2M1 | FLOAT4_E2M1 | FLOAT8_E8M0 | FLOAT8_E8M0 | null     | null   | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32    |
                                
     - x1数据类型、x2数据类型、x1、x2、x1Scale、x2Scale和groupSize的取值关系：
+
       |量化类型|x1数据类型|x2数据类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|bias shape|yScale shape|[groupSizeM, groupSizeN, groupSizeK]|groupSize|
       |-------|--------|--------|--------|--------|-------------|-------------|------------|---------------------------------------|--|--|
       |mx 全量化|FLOAT8_E4M3FN|FLOAT8_E4M3FN|<li>非转置：(batch, m, k)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(m, ceil(k / 64), 2)</li>|<li>非转置：(ceil(k / 64), n, 2)</li><li>转置：(n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
@@ -578,6 +581,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     | mx量化 |FLOAT8_E4M3FN  |FLOAT32      |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16/FLOAT16|BFLOAT16/FLOAT16|(m, k)  |(n, k/8)|(m, k/64, 2)    |(n, k/64, 2)        |(1, n)    | null        | [0, 0, 32] / [1, 1, 32]                |
     | T-CG量化 |FLOAT8_E4M3FN  |FLOAT4_E2M1  |null            |BFLOAT16      |BFLOAT16/FLOAT16|BFLOAT16/FLOAT16|null         |(m, k)  |(k, n)  |null           |(k/32, n)        |null       |(1, n)      | [0, 0, 32] / [1, 1, 32]                |
     | T-CG量化 |FLOAT8_E4M3FN  |FLOAT32      |null            |BFLOAT16      |BFLOAT16/FLOAT16|BFLOAT16/FLOAT16|null         |(m, k)  |(k, n/8)|null           |(k/32, n)        |null       |(1, n)      | [0, 0, 32] / [1, 1, 32]                |
+
     - 约束说明：
       - k要求32对齐, n要求8对齐。MX量化模式下k要求大于32，n大于等于8；T-CG量化模式下k要求大于等于64，n的要求大于等于8。
       - x1是FLOAT8_E4M3FN，x2是FLOAT32时, x2表示一个FLOAT32存储8个FLOAT4_E2M1的紧密排布的数据格式。

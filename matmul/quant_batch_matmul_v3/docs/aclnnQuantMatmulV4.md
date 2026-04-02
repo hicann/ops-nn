@@ -291,7 +291,7 @@ aclnnStatus aclnnQuantMatmulV4(
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - x1与x2的最后一维大小不能超过65535。
-	- x1数据类型支持INT8、INT32、INT4。当数据类型为INT32、INT4时，为INT4量化场景，当前仅支持2-6维ND格式，transposeX1为false情况。其中当x1数据类型为INT4时，维度表示：（batch，m，k），要求k为偶数，当x1数据类型为INT32时，每个INT32数据存放8个INT4数据，对应维度表示：（batch，m，k // 8），要求k为8的倍数。
+    - x1数据类型支持INT8、INT32、INT4。当数据类型为INT32、INT4时，为INT4量化场景，当前仅支持2-6维ND格式，transposeX1为false情况。其中当x1数据类型为INT4时，维度表示：（batch，m，k），要求k为偶数，当x1数据类型为INT32时，每个INT32数据存放8个INT4数据，对应维度表示：（batch，m，k // 8），要求k为8的倍数。
     - x2数据类型支持INT8、INT32、INT4。当数据类型为INT32、INT4时，为INT4量化场景，当前仅支持2维ND格式。
     - 数据类型为INT4时，在transposeX2为true情况下各个维度表示：（n，k），要求k为偶数；在transposeX2为false情况下各个维度表示：（k，n），要求n为偶数。
     - 数据类型为INT32时，每个INT32数据存放8个INT4数据，在transposeX2为true情况下各个维度表示：（n，k // 8），要求k为8的倍数；在transposeX2为false情况下各个维度表示：（k，n // 8），要求n为8的倍数。
@@ -300,12 +300,11 @@ aclnnStatus aclnnQuantMatmulV4(
     - x1和x2为INT32、INT4时，transposeX1仅支持false。
     - out数据类型支持FLOAT16、INT8、BFLOAT16、INT32。
   - <term>Ascend 950PR/Ascend 950DT</term>：
-	- x1数据类型支持INT8、INT4。
+    - x1数据类型支持INT8、INT4。
     - x2数据类型支持INT8、INT4，当最后两根轴其中一根轴为1（即n=1或k=1）时，x2不支持私有格式，仅支持ND格式。
     - bias数据类型支持INT32，BFLOAT16，FLOAT16，FLOAT32。
     - out数据类型支持FLOAT16、INT8、BFLOAT16、INT32。
     - x2为ND格式时，当输入x1为m=0的空tensor或x2为n=0的空tensor时，输出为空tensor；x2为FRACTAL_NZ格式时，当输入x1中m=0的空tensor时，输出为空tensor。
-
 
 - **返回值：**
 
@@ -387,6 +386,7 @@ aclnnStatus aclnnQuantMatmulV4(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnQuantMatmulV4默认确定性实现。
   - <term>Ascend 950PR/Ascend 950DT</term>: aclnnQuantMatmulV4默认确定性实现。
@@ -397,6 +397,7 @@ aclnnStatus aclnnQuantMatmulV4(
   2.当原始ND的后两维中存在某一维度为1时，不建议转NZ格式，默认x2为非连续，且仅支持x2为非连续的tensor。
 
 输入和输出支持以下数据类型组合：
+
 - <term>Atlas 推理系列产品</term>：
 
   | x1 | x2 | scale | offset | bias | pertokenScaleOptional | out |

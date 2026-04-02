@@ -20,7 +20,6 @@
   \end{cases}
   $$
 
-
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 970px"><colgroup>
@@ -82,7 +81,6 @@
       <td>ND</td>
     </tr>
   </tbody></table>
-
 
 ## 约束说明
 

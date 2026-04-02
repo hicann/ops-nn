@@ -1,6 +1,7 @@
 # 简介
 
 > 说明：
+>
 > - 目前算子库中大部分算子运行在AI Core上，少部分算子运行在AI CPU上。默认情况下，项目中提到的算子指AI Core算子。
 > - 关于AI Core和AI CPU的介绍请参见[《Ascend C算子开发》](https://hiascend.com/document/redirect/CannCommunityOpdevAscendC)中“概念原理和术语 > 硬件架构与数据处理原理”。
 

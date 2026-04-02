@@ -263,11 +263,14 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogits(
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算： 
   - aclnnBinaryCrossEntropyWithLogits默认确定性实现。 
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

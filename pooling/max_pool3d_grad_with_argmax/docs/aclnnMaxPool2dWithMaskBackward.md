@@ -14,9 +14,11 @@
 | <term>Atlas 训练系列产品</term>                              |    √     |
 
 ## 功能说明
+
 正向最大池化[aclnnMaxPool2dWithMask](../../max_pool3d_with_argmax_v2/docs/aclnnMaxPool2dWithMask.md)的反向传播。
 
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMaxPool2dWithMaskBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMaxPool2dWithMaskBackward”接口执行计算。
 
 ```Cpp
@@ -33,6 +35,7 @@ aclnnStatus aclnnMaxPool2dWithMaskBackwardGetWorkspaceSize(
   uint64_t          *workspaceSize,
   aclOpExecutor     **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnMaxPool2dWithMaskBackward(
   void          *workspace,
@@ -40,6 +43,7 @@ aclnnStatus aclnnMaxPool2dWithMaskBackward(
   aclOpExecutor *executor,
   aclrtStream    stream)
 ```
+
 ## aclnnMaxPool2dWithMaskBackwardGetWorkspaceSize
 
 - **参数说明：**
@@ -232,6 +236,7 @@ aclnnStatus aclnnMaxPool2dWithMaskBackward(
     </tr>
   </tbody>
   </table>
+
 ## aclnnMaxPool2dWithMaskBackward
 
 - **参数说明：**
@@ -269,11 +274,13 @@ aclnnStatus aclnnMaxPool2dWithMaskBackward(
     </tr>
   </tbody>
   </table>
--  **返回值：**
+
+- **返回值：**
 
     aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算：
   - aclnnMaxPool2dWithMaskBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
@@ -282,7 +289,9 @@ aclnnStatus aclnnMaxPool2dWithMaskBackward(
 - <term>Atlas 训练系列产品</term>：当输入数据是FLOAT类型时，会转换为FLOAT16类型进行计算，存在一定程度的精度损失。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <cstdio>
 #include <iostream>

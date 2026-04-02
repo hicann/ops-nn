@@ -1,4 +1,5 @@
 # SingleLayerLstmGrad
+
 ## 产品支持情况
 
 | 产品                                                                            | 是否支持 |
@@ -31,6 +32,7 @@
 | 隐藏状态 | $\mathbf{h}_t = \mathbf{o}_t \odot \tanh(\mathbf{c}_t)$ |
 
 其中：
+
 - $\sigma$ 是 sigmoid 函数
 - $\odot$ 表示逐元素乘法 (Hadamard product)
 - $W_*$ 是可学习的权重矩阵

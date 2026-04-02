@@ -31,7 +31,6 @@
 
    <img src="../figures/webIDE.png" alt="云平台"  width="1000px" height="150px">
 
-
 ### 方式2：Docker部署
 
 对于有昇腾设备的开发者，若您想快速搭建昇腾环境，可使用Docker镜像部署。
@@ -63,6 +62,7 @@
 ```bash
 docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_manager --device /dev/devmm_svm --device /dev/hisi_hdc -v /usr/local/dcmi:/usr/local/dcmi -v /usr/local/bin/npu-smi:/usr/local/bin/npu-smi -v /usr/local/Ascend/driver/lib64/:/usr/local/Ascend/driver/lib64/ -v /usr/local/Ascend/driver/version.info:/usr/local/Ascend/driver/version.info -v /etc/ascend_install.info:/etc/ascend_install.info -it swr.cn-south-1.myhuaweicloud.com/ascendhub/cann:8.5.0-910b-ubuntu22.04-py3.10-ops bash
 ```
+
 | 参数 | 说明 | 注意事项 |
 | :--- | :--- | :--- |
 | `--name cann_container` | 为容器指定名称，便于管理。 | 可自定义。 |
@@ -160,6 +160,7 @@ pip3 install -r requirements.txt
     # 运行npu-smi，若能正常显示设备信息，则驱动正常
     npu-smi info
     ```
+
 - **检查CANN版本**
 
     ```bash
@@ -172,6 +173,7 @@ pip3 install -r requirements.txt
 ## 环境变量配置
 
 按需选择合适的命令使环境变量生效。
+
 ```bash
 # 默认路径安装，以root用户为例（非root用户，将/usr/local替换为${HOME}）
 source /usr/local/Ascend/cann/set_env.sh

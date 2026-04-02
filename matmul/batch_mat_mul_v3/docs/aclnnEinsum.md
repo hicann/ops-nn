@@ -1,4 +1,5 @@
 # aclnnEinsum
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -11,6 +12,7 @@
 | <term>Atlas 训练系列产品</term>                              |    ×     |
 
 ## 功能说明
+
 - 接口功能：使用爱因斯坦求和约定执行张量计算，形式为“term1, term2 -> output-term”，按照以下等式生成输出张量，其中reduce-sum对出现在输入项(term1, term2)中但未出现在输出项中的所有索引执行求和。
 - 计算公式：
 
@@ -21,6 +23,7 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnEinsumGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnEinsum”接口执行计算。
+
 ```cpp
 aclnnStatus aclnnEinsumGetWorkspaceSize(
   const aclTensorList *tensors, 
@@ -29,6 +32,7 @@ aclnnStatus aclnnEinsumGetWorkspaceSize(
   uint64_t            *workspaceSize, 
   aclOpExecutor       **executor)
 ```
+
 ```cpp
 aclnnStatus aclnnEinsum(
   void            *workspace, 
@@ -210,6 +214,7 @@ aclnnStatus aclnnEinsum(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性说明：aclnnEinsum默认确定性实现。
 
 - 目前equation需完全匹配，才能找到对应函数。

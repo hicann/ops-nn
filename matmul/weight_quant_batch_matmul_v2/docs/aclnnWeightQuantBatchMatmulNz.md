@@ -669,6 +669,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
   ```
 
 - x为FLOAT16，weight为INT8调用示例，需要调用 `aclnnTransMatmulWeight` 接口辅助完成调用：
+
   ```Cpp
   #include <cmath>
   #include <iostream>

@@ -1,6 +1,6 @@
 # MaxPool3DWithArgmaxV2
 
-##  产品支持情况
+## 产品支持情况
 
 | 产品 | 是否支持 |
 | ---- | :----:|
@@ -118,7 +118,8 @@
   </tbody></table>
 
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`argmax` 数据类型不支持INT64。输入数据排布不支持NDHWC。
-- Kirin X90/Kirin 9030 处理器系列产品: 输入/输出不支持BFLOAT16；`argmax` 数据类型不支持INT64。
+  - Kirin X90/Kirin 9030 处理器系列产品: 输入/输出不支持BFLOAT16；`argmax` 数据类型不支持INT64。
+
 ## 约束说明
 
 无。
@@ -128,4 +129,3 @@
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_max_pool3d_with_argmax.cpp](examples/test_aclnn_max_pool3d_with_argmax.cpp) | 通过[aclnnMaxPool3dWithArgmax](docs/aclnnMaxPool3dWithArgmax.md)接口方式调用MaxPool3DWithArgmaxV2算子。 |
-
