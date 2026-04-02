@@ -251,7 +251,7 @@
 | [aclnnInstanceNorm](../../norm/instance_norm_v3/docs/aclnnInstanceNorm.md) | 用于执行Instance Normalization（实例归一化）操作。 | 默认确定性实现 | - |
 | [aclnnKlDivBackward](../../loss/kl_div_loss_grad/docs/aclnnKlDivBackward.md) | 进行aclnnKlDiv api的结果的反向计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnKlDivTargetBackward](../../loss/kl_div_loss_grad/docs/aclnnKlDivTargetBackward.md) | 进行aclnnKlDiv api的结果的target反向计算。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnKthvalue](../../index/gather_v2/docs/aclnnKthvalue.md) | 返回输入Tensor在指定维度上的第k个最小值及索引。 | 默认确定性实现 |   |
+| [aclnnKthvalue](../../index/gather_v2/docs/aclnnKthvalue.md) | 返回输入Tensor在指定维度上的第k个最小值及索引。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnL1Loss](../../loss/lp_loss/docs/aclnnL1Loss.md) | 计算输入self和目标target中每个元素之间的平均绝对误差（Mean Absolute Error，简称MAE）。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnL1LossBackward](../../loss/l1_loss_grad/docs/aclnnL1LossBackward.md) | 计算aclnnL1Loss的反向传播。reduction指定损失函数的计算方式。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnLayerNorm&aclnnLayerNormWithImplMode](../../norm/layer_norm_v4/docs/aclnnLayerNorm&aclnnLayerNormWithImplMode.md) | 对指定层进行均值为0、标准差为1的归一化计算。 | 默认确定性实现 | 默认确定性实现 |
@@ -320,7 +320,7 @@
 | [aclnnScatterAdd](../../index/scatter_add/docs/aclnnScatterAdd.md) | 将src tensor中的值按指定的轴方向和index tensor中的位置关系逐个填入self tensor中，若有多于一个src值被填入到self的同一位置，那么这些值将会在这一位置上进行累加。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnScatterNd](../../index/scatter_nd_update/docs/aclnnScatterNd.md) | 拷贝data的数据至out，同时在指定indices处根据updates更新out中的数据。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnScatterNdUpdate](../../index/scatter_nd_update/docs/aclnnScatterNdUpdate.md) | 将tensor updates中的值按指定的索引indices逐个更新tensor varRef中的值。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
-| [aclnnScatterList](../../index/scatter_list/docs/aclnnScatterList.md) | 将稀疏更新应用到变量引用张量列表中，通过索引将updates中的值scatter到var对应的维度上。 | 默认非确定性实现，支持配置开启 |   |
+| [aclnnScatterList](../../index/scatter_list/docs/aclnnScatterList.md) | 将稀疏更新应用到变量引用张量列表中，通过索引将updates中的值scatter到var对应的维度上。 | 默认非确定性实现，支持配置开启 | - |
 | [aclnnScaledMaskedSoftmax](../../vfusion/scaled_masked_softmax_v2/docs/aclnnScaledMaskedSoftmax.md) | 将输入的数据x先进行scale缩放和mask，然后执行softmax的输出。 | 默认确定性实现 |   |
 | [aclnnScaledMaskedSoftmaxBackward](../../vfusion/scaled_masked_softmax_grad_v2/docs/aclnnScaledMaskedSoftmaxBackward.md) | softmax的反向传播，并对结果进行缩放以及掩码。 | 默认非确定性实现，支持配置开启。 |   |
 | [aclnnSelu&aclnnInplaceSelu](../../activation/selu/docs/aclnnSelu&aclnnInplaceSelu.md) | 对输入tensor逐元素进行Selu符号函数的运算并输出结果tensor。 | 默认确定性实现 |   |
