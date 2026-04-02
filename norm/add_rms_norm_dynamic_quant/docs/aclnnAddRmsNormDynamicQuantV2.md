@@ -6,7 +6,7 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    ×     |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √      |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
@@ -215,7 +215,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y1Out`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要与输入`x1`保持一致。</li></ul></td>
-      <td>INT8、INT4</td>
+      <td>INT4、INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
       <td>2-8</td>
       <td>√</td>
@@ -225,7 +225,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y2Out`。</td>
       <td><ul><li>支持空Tensor。</li><li>如果`y2Out`为有效输出时，shape需要与`y1Out`保持一致；如果`y2Out`为无效输出时，shape为[1]。</li></ul></td>
-      <td>INT8、INT4</td>
+      <td>INT4、INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
       <td>2-8</td>
       <td>√</td>
@@ -369,14 +369,10 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
 - 当outputMaskOptional为空时，参数smoothScale2Optional有值时，参数smoothScale1Optional也必须有值。
 
 - 各产品型号支持数据类型说明：
-
-    | x1数据类型 | x2数据类型 | gamma数据类型 | smoothScale1Optional数据类型 | smoothScale2Optional数据类型 | betaOptional数据类型 | y1Out数据类型 | y2Out数据类型 | scale1Out数据类型 | scale2Out数据类型 |
-    | ---------- | ---------- | ------------- | ---------------------------- | ---------------------------- | -------------------- | ------------- | ------------- | ----------------- | ----------------- |
-    | FLOAT16    | FLOAT16    | FLOAT16       | FLOAT16                      | FLOAT16                      | FLOAT16              | INT8          | INT8          | FLOAT32           | FLOAT32           |
-    | BFLOAT16   | BFLOAT16   | BFLOAT16      | BFLOAT16                     | BFLOAT16                     | BFLOAT16             | INT8          | INT8          | FLOAT32           | FLOAT32           |
-    | FLOAT16    | FLOAT16    | FLOAT16       | FLOAT16                      | FLOAT16                      | FLOAT16              | INT4          | INT4          | FLOAT32           | FLOAT32           |
-    | BFLOAT16   | BFLOAT16   | BFLOAT16      | BFLOAT16                     | BFLOAT16                     | BFLOAT16             | INT4          | INT4          | FLOAT32           | FLOAT32           |
-
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
+    - 参数`y1Out`和`y2Out`数据类型仅支持int4和int8。
+  - <term>Ascend 950PR/Ascend 950DT</term>：
+    - 参数`y1Out`和`y2Out`数据类型不支持int4。
 - 确定性计算：
   - aclnnAddRmsNormDynamicQuantV2默认确定性实现。
 

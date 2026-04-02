@@ -24,6 +24,7 @@ class KernelAddRmsNormDynamicQuantRegbaseSpiltReduce {
 #define INPUT_KEY ((TILING_KEY % 100) / 10)
 #define HAS_SMOOTH_SCALE1 ((INPUT_KEY >> 1) % 2 == 1)
 #define HAS_SMOOTH_SCALE2 (INPUT_KEY % 2 == 1)
+#define HAS_BETA (INPUT_KEY > 3)
 #define HAS_Y2_SCALE2 HAS_SMOOTH_SCALE2
 #define T_SMOOTH_SCALE T_X
 public:
@@ -33,8 +34,8 @@ public:
     }
 
     __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooathScale1, GM_ADDR smooathScale2, GM_ADDR y1, GM_ADDR y2,
-        GM_ADDR x, GM_ADDR scale1, GM_ADDR scale2, GM_ADDR workspace,
+        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooathScale1, GM_ADDR smooathScale2, GM_ADDR beta,
+        GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR scale1, GM_ADDR scale2, GM_ADDR workspace,
         const AddRmsNormDynamicQuantRegbaseTilingData* tilingData)
     {
         numM_ = tilingData->numM;
@@ -54,7 +55,7 @@ public:
         blockIdx_ = GetBlockIdx();
 
         CalBlockTail();
-        InitBuffer(x1, x2, gamma, smooathScale1, smooathScale2, y1, y2, x, scale1, scale2, workspace);
+        InitBuffer(x1, x2, gamma, smooathScale1, smooathScale2, beta, y1, y2, x, scale1, scale2, workspace);
     }
 
     __aicore__ inline void CalBlockTail()
@@ -71,8 +72,8 @@ public:
     }
 
     __aicore__ inline void InitBuffer(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooathScale1, GM_ADDR smooathScale2, GM_ADDR y1, GM_ADDR y2,
-        GM_ADDR x, GM_ADDR scale1, GM_ADDR scale2, GM_ADDR workspace)
+        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooathScale1, GM_ADDR smooathScale2, GM_ADDR beta,
+        GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR scale1, GM_ADDR scale2, GM_ADDR workspace)
     {
         uint64_t gmOffset = blockIdx_ * mPerCore_ * numN_;
         uint64_t gmLen = mCore_ * numN_;
@@ -82,6 +83,9 @@ public:
         x1Gm_.SetGlobalBuffer((__gm__ T_X*)x1 + gmOffset, gmLen);
         x2Gm_.SetGlobalBuffer((__gm__ T_X*)x2 + gmOffset, gmLen);
         gammaGm_.SetGlobalBuffer((__gm__ T_X*)gamma, numN_);
+        if constexpr (HAS_BETA) {
+            betaGm_.SetGlobalBuffer((__gm__ T_X*)beta, numN_);
+        }
         y1Gm_.SetGlobalBuffer((__gm__ T_Y*)y1 + gmOffset, gmLen);
         xGm_.SetGlobalBuffer((__gm__ T_X*)x + gmOffset, gmLen);
         scale1Gm_.SetGlobalBuffer((__gm__ float*)scale1 + scalesGmOffset, mCore_);
@@ -105,6 +109,9 @@ public:
         pipe_->InitBuffer(inQueueX2_, 1, baseNReduceAlign_ * sizeof(T_X));
         pipe_->InitBuffer(outQueueX_, 1, baseNReduceAlign_ * sizeof(T_X));
         pipe_->InitBuffer(inQueueGamma_, 1, baseNDtypeAlign_ * sizeof(T_X));
+        if constexpr (HAS_BETA) {
+            pipe_->InitBuffer(inQueueBeta_, 1, baseNDtypeAlign_ * sizeof(T_X));
+        }
         pipe_->InitBuffer(outQueueY1_, 1, baseNB8Align_ * sizeof(T_Y));
         pipe_->InitBuffer(outQueueScale1_, 1, ubFactorRstd * sizeof(float));
         if constexpr (HAS_SMOOTH_SCALE1) {
@@ -196,6 +203,13 @@ private:
             RmsNorm::DataCopyImpl<T_SMOOTH_SCALE>(smoothScale2Local, smoothScale2Gm_[gmOffset], 1, blockLen);
             inQueueSmoothScale2_.EnQue(smoothScale2Local);
         }
+    }
+
+    __aicore__ inline void CopyInBeta(uint64_t gmOffset, uint64_t blockLen)
+    {
+        LocalTensor<T_X> betaLocal = inQueueBeta_.AllocTensor<T_X>();
+        RmsNorm::DataCopyImpl<T_X>(betaLocal, betaGm_[gmOffset], 1, blockLen);
+        inQueueBeta_.EnQue(betaLocal);
     }
 
     /**
@@ -322,6 +336,9 @@ private:
             uint64_t realNDtypeAlign = (nIdx == nCnt_ - 1) ? tailNDtypeAlign_ : baseNDtypeAlign_;
             CopyInGamma(nIdx * baseN_, realN);
             CopyInQuant(nIdx * baseN_, realN);
+            if constexpr (HAS_BETA) {
+                CopyInBeta(nIdx * baseN_, realN);
+            }
             LocalTensor<T_X> gammaLocal = inQueueGamma_.DeQue<T_X>();
             LocalTensor<T_SMOOTH_SCALE> smoothScale1Local;
             LocalTensor<T_SMOOTH_SCALE> smoothScale2Local;
@@ -330,6 +347,10 @@ private:
             }
             if constexpr (HAS_SMOOTH_SCALE2) {
                 smoothScale2Local = inQueueSmoothScale2_.DeQue<T_SMOOTH_SCALE>();
+            }
+            LocalTensor<T_X> betaLocal;
+            if constexpr (HAS_BETA) {
+                betaLocal = inQueueBeta_.DeQue<T_X>();
             }
 
             uint64_t gmOffsetX = mIdx * numN_ + nIdx * baseN_;
@@ -349,11 +370,12 @@ private:
             SetFlag<HardEvent::MTE2_V>(eventMTE2V);
             WaitFlag<HardEvent::MTE2_V>(eventMTE2V);
 
-            ComputeReduceMax<float, T_X, T_SMOOTH_SCALE, HAS_SMOOTH_SCALE1, T_Y>(
-                scale1Local, y1TmpLocal, xOutTmpLocal, rstdLocal, gammaLocal, smoothScale1Local, 0, baseNDtypeAlign_);
+            ComputeReduceMax<float, T_X, T_SMOOTH_SCALE, HAS_SMOOTH_SCALE1, HAS_BETA, T_Y>(
+                scale1Local, y1TmpLocal, xOutTmpLocal, rstdLocal, gammaLocal, betaLocal, smoothScale1Local, 0,
+                baseNDtypeAlign_);
             if constexpr (HAS_Y2_SCALE2) {
-                ComputeReduceMax<float, T_X, T_SMOOTH_SCALE, HAS_SMOOTH_SCALE2, T_Y>(
-                    scale2Local, y2TmpLocal, xOutTmpLocal, rstdLocal, gammaLocal, smoothScale2Local, 0,
+                ComputeReduceMax<float, T_X, T_SMOOTH_SCALE, HAS_SMOOTH_SCALE2, HAS_BETA, T_Y>(
+                    scale2Local, y2TmpLocal, xOutTmpLocal, rstdLocal, gammaLocal, betaLocal, smoothScale2Local, 0,
                     baseNDtypeAlign_);
             }
 
@@ -363,6 +385,9 @@ private:
             }
             if constexpr (HAS_SMOOTH_SCALE2) {
                 inQueueSmoothScale2_.FreeTensor(smoothScale2Local);
+            }
+            if constexpr (HAS_BETA) {
+                inQueueBeta_.FreeTensor(betaLocal);
             }
 
             // Copy (rmsOut * smooth) to workspace
@@ -446,6 +471,7 @@ private:
     GlobalTensor<T_X> x1Gm_;
     GlobalTensor<T_X> x2Gm_;
     GlobalTensor<T_X> gammaGm_;
+    GlobalTensor<T_X> betaGm_;
     GlobalTensor<T_X> xGm_;
     GlobalTensor<T_SMOOTH_SCALE> smoothScale1Gm_;
     GlobalTensor<T_SMOOTH_SCALE> smoothScale2Gm_;
@@ -460,6 +486,7 @@ private:
     TQue<QuePosition::VECIN, 1> inQueueX1_;
     TQue<QuePosition::VECIN, 1> inQueueX2_;
     TQue<QuePosition::VECIN, 1> inQueueGamma_;
+    TQue<QuePosition::VECIN, 1> inQueueBeta_;
     TQue<QuePosition::VECIN, 1> inQueueSmoothScale1_;
     TQue<QuePosition::VECIN, 1> inQueueSmoothScale2_;
     TQue<QuePosition::VECOUT, 1> outQueueY1_;

@@ -135,10 +135,12 @@ __aicore__ inline void CopyOutScale(
     outQueueScale.FreeTensor(scaleLocal);
 }
 
-template <typename T_X, typename T_GAMMA, typename T_SMOOTH_SCALE = float, bool HAS_SMOOTH_SCALE = true, typename T_Y>
+template <
+    typename T_X, typename T_GAMMA, typename T_SMOOTH_SCALE = float, bool HAS_SMOOTH_SCALE = true,
+    bool HAS_BETA = false, typename T_Y>
 __aicore__ inline void ComputeYScale(
     LocalTensor<T_Y>& yLocal, LocalTensor<float>& scaleLocal, LocalTensor<T_X>& xLocal, LocalTensor<float>& rstdLocal,
-    LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<T_SMOOTH_SCALE>& smoothScaleLocal, LocalTensor<float>& yTmpLocal,
+    LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<T_GAMMA>& betaLocal, LocalTensor<T_SMOOTH_SCALE>& smoothScaleLocal, LocalTensor<float>& yTmpLocal,
     uint32_t rstdScaleOffset, uint32_t calCount)
 {
     uint16_t repeatTimes = (uint16_t)CeilDivision(calCount, V_LENGTH);
@@ -150,6 +152,10 @@ __aicore__ inline void ComputeYScale(
     if constexpr (HAS_SMOOTH_SCALE) {
         smoothScaleAddr = (__ubuf__ T_SMOOTH_SCALE*)smoothScaleLocal.GetPhyAddr();
     }
+    __local_mem__ T_GAMMA* betaAddr;
+    if constexpr (HAS_BETA) {
+        betaAddr = (__ubuf__ T_GAMMA*)betaLocal.GetPhyAddr();
+    }
     __local_mem__ T_Y* yAddr = (__ubuf__ T_Y*)yLocal.GetPhyAddr();
     __local_mem__ float* scaleAddr = (__ubuf__ float*)scaleLocal.GetPhyAddr();
     __local_mem__ float* yTmpAddr = (__ubuf__ float*)yTmpLocal.GetPhyAddr();
@@ -158,7 +164,7 @@ __aicore__ inline void ComputeYScale(
     {
         // VF0. Calc scale
         RegTensor<float> rstdReg, scaleReg;
-        RegTensor<float> xRegFp32, yRegFp32, gammaRegFp32, smoothScaleRegFp32;
+        RegTensor<float> xRegFp32, yRegFp32, gammaRegFp32, betaRegFp32, smoothScaleRegFp32;
         MaskReg maskRegFull = CreateMask<float, MaskPattern::ALL>();
         MaskReg maskRegOne = CreateMask<float, MaskPattern::VL1>();
         MaskReg maskReg;
@@ -172,8 +178,14 @@ __aicore__ inline void ComputeYScale(
             if constexpr (HAS_SMOOTH_SCALE) {
                 NormCommon::LoadCastRegVF(smoothScaleRegFp32, smoothScaleAddr, idx, maskReg);
             }
+            if constexpr (HAS_BETA) {
+                NormCommon::LoadCastRegVF(betaRegFp32, betaAddr, idx, maskReg);
+            }
             Mul(xRegFp32, xRegFp32, rstdReg, maskReg);
             Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
+            if constexpr (HAS_BETA) {
+                Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
+            }
             if constexpr (HAS_SMOOTH_SCALE) {
                 Mul(yRegFp32, xRegFp32, smoothScaleRegFp32, maskReg);
                 DataCopy<float>(yTmpAddr + idx * V_LENGTH, yRegFp32, maskReg);
@@ -228,17 +240,21 @@ __aicore__ inline void ComputeYScale(
     }
 }
 
-template <typename T_X, typename T_GAMMA, typename T_SMOOTH_SCALE = float, bool HAS_SMOOTH_SCALE = true, typename T_Y>
+template <typename T_X, typename T_GAMMA, typename T_SMOOTH_SCALE = float, bool HAS_SMOOTH_SCALE = true, bool HAS_BETA = false, typename T_Y>
 __aicore__ inline void ComputeReduceMax(
     LocalTensor<float>& scaleLocal, LocalTensor<float>& yTmpLocal, LocalTensor<T_X>& xLocal,
-    LocalTensor<float>& rstdLocal, LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<T_SMOOTH_SCALE>& smoothScaleLocal,
-    uint32_t rstdScaleOffset, uint32_t calCount)
+    LocalTensor<float>& rstdLocal, LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<T_GAMMA>& betaLocal,
+    LocalTensor<T_SMOOTH_SCALE>& smoothScaleLocal, uint32_t rstdScaleOffset, uint32_t calCount)
 {
     uint16_t repeatTimes = (uint16_t)CeilDivision(calCount, V_LENGTH);
 
     __local_mem__ T_X* xAddr = (__ubuf__ T_X*)xLocal.GetPhyAddr();
     __local_mem__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
     __local_mem__ T_GAMMA* gammaAddr = (__ubuf__ T_GAMMA*)gammaLocal.GetPhyAddr();
+    __local_mem__ T_GAMMA* betaAddr;
+    if constexpr (HAS_BETA) {
+        betaAddr = (__ubuf__ T_GAMMA*)betaLocal.GetPhyAddr();
+    }
     __local_mem__ T_SMOOTH_SCALE* smoothScaleAddr;
     if constexpr (HAS_SMOOTH_SCALE) {
         smoothScaleAddr = (__ubuf__ T_SMOOTH_SCALE*)smoothScaleLocal.GetPhyAddr();
@@ -249,7 +265,7 @@ __aicore__ inline void ComputeReduceMax(
     __VEC_SCOPE__
     {
         RegTensor<float> rstdReg, scaleReg, scaleLastReg;
-        RegTensor<float> xRegFp32, yRegFp32, gammaRegFp32, smoothScaleRegFp32;
+        RegTensor<float> xRegFp32, yRegFp32, gammaRegFp32, betaRegFp32, smoothScaleRegFp32;
         MaskReg maskRegFull = CreateMask<float, MaskPattern::ALL>();
         MaskReg maskRegOne = CreateMask<float, MaskPattern::VL1>();
         MaskReg maskReg;
@@ -261,11 +277,17 @@ __aicore__ inline void ComputeReduceMax(
             maskReg = UpdateMask<float>(calCount);
             NormCommon::LoadCastRegVF(xRegFp32, xAddr, idx, maskReg);
             NormCommon::LoadCastRegVF(gammaRegFp32, gammaAddr, idx, maskReg);
+            if constexpr (HAS_BETA) {
+                NormCommon::LoadCastRegVF(betaRegFp32, betaAddr, idx, maskReg);
+            }
             if constexpr (HAS_SMOOTH_SCALE) {
                 NormCommon::LoadCastRegVF(smoothScaleRegFp32, smoothScaleAddr, idx, maskReg);
             }
             Mul(xRegFp32, xRegFp32, rstdReg, maskReg);
             Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
+            if constexpr (HAS_BETA) {
+                Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
+            }
             if constexpr (HAS_SMOOTH_SCALE) {
                 Mul(yRegFp32, xRegFp32, smoothScaleRegFp32, maskReg);
                 DataCopy<float>(yTmpAddr + idx * V_LENGTH, yRegFp32, maskReg);

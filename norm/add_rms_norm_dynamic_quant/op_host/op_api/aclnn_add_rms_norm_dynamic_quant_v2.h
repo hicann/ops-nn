@@ -49,6 +49,7 @@ extern "C" {
  * 公式中的输入`betaOptional`，可选参数，数据类型支持BFLOAT16、FLOAT16，shape维度需要等于x1的最后一维。
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] epsilon: double 类型，层归一化中用到的防止除0的参数。
+ * @param [in] outputMask: 数据类型支持支持传空指针或长度为2的BOOL数组，表示输出的掩码。
  * @param [in] y1Out:
  * 公式中的输出`y1`，数据类型支持INT8,INT4，shape需要与x1一致。
  * 支持非连续的Tensor，数据格式支持ND。
@@ -75,7 +76,7 @@ ACLNN_API aclnnStatus aclnnAddRmsNormDynamicQuantV2GetWorkspaceSize(
     aclTensor* scale2Out, uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
- * @brief aclnnAddRmsNormQuant的第二段接口，用于执行计算。
+ * @brief aclnnAddRmsNormQuantV2的第二段接口，用于执行计算。
  *
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
  * @param [in] workspaceSize: 在npu
@@ -91,4 +92,4 @@ aclnnAddRmsNormDynamicQuantV2(void* workspace, uint64_t workspaceSize, aclOpExec
 }
 #endif
 
-#endif // OP_API_INC_LEVEL2_ADD_RMS_NORM_QUANT_H_
+#endif // OP_API_INC_LEVEL2_ADD_RMS_NORM_DYNAMIC_QUANT_V2_H_
