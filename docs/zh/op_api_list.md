@@ -231,6 +231,7 @@
 | [aclnnHeaviside](../../activation/heaviside/docs/aclnnHeaviside.md) | 计算输入input中每个元素的Heaviside阶跃函数，作为模型的激活函数。 | 默认确定性实现 |   |
 | [aclnnIndex](../../index/index/docs/aclnnIndex.md) | 根据索引indices将输入x对应坐标的数据取出。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnIndexAdd](../../index/inplace_scatter_add/docs/aclnnIndexAdd.md) | 在指定维度上，根据给定的索引，将源张量中的值加到输入张量中对应位置的值上。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
+| [aclnnIndexAddV2](../../index/inplace_scatter_add/docs/aclnnIndexAddV2.md) | 在指定维度上，根据给定的索引，将源张量中的值加到输入张量中对应位置的值上。支持开启高性能计算模式。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnIndexCopy&aclnnInplaceIndexCopy](../../index/scatter_update/docs/aclnnIndexCopy&aclnnInplaceIndexCopy.md) | 将index张量中元素值作为索引，针对指定轴dim，把source中元素复制到selfRef的对应位置上。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnIndexFillTensor&aclnnInplaceIndexFillTensor](../../index/index_fill_d/docs/aclnnIndexFillTensor&aclnnInplaceIndexFillTensor.md) | 沿输入self的给定轴dim，将index指定位置的值使用value进行替换。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnIndexPutImpl](../../index/index_put_v2/docs/aclnnIndexPutImpl.md) | 根据索引 indices 将输入 x 对应坐标的数据与输入 value 进行替换或累加。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
