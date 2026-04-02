@@ -41,6 +41,7 @@
 #include "runtime/context.h"
 #include "convolution_backward_checker.h"
 #include "convtbc_backward_checker.h"
+#include "acl/acl_rt.h"
 
 using namespace op;
 using namespace l0op;
@@ -2744,8 +2745,8 @@ aclnnStatus aclnnConvolutionBackwardGetWorkspaceSize(
     if ((*outputMask)[1] && (input->GetViewShape().GetDimNum() == CONV3DINPUTDIM ||
       (input->GetViewShape().GetDimNum() == CONV2DINPUTDIM && npuArch == NpuArch::DAV_3510))) {
       int64_t deterministicValue = 0;
-      rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
-      if (retRts != RT_ERROR_NONE) {
+      aclError aclRet = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
+      if (aclRet != ACL_SUCCESS) {
         deterministicValue = 0;
       }
       if (npuArch != NpuArch::DAV_3510 && npuArch != NpuArch::DAV_2201) {
