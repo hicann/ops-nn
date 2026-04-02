@@ -13,7 +13,6 @@
 |  <term>Kirin X90 处理器系列产品</term> | √ |
 |  <term>Kirin 9030 处理器系列产品</term> | √ |
 
-
 ## 功能说明
 
 - 算子功能：遍历scaledGrads中的所有Tensor，检查是否存在Inf或NaN，如果存在则将foundInf设置为1.0，否则foundInf保持不变，并对scaledGrads中的所有Tensor进行反缩放。
@@ -71,6 +70,7 @@
   </tbody></table>
 
 - Kirin X90/Kirin 9030处理器系列产品：scaled_grads的数据类型不支持BFLOAT16。
+
 ## 约束说明
 
 无

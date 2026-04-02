@@ -11,7 +11,6 @@
 | <term>Atlas 推理系列产品</term>                             |    x     |
 | <term>Atlas 训练系列产品</term>                              |    ×     |
 
-
 ## 功能说明
 
 - 接口功能：计算输入self的组归一化，输出均值meanOut，标准差的倒数rstdOut，以及对silu的输出结果进行量化的结果out。
@@ -38,7 +37,6 @@
   out = round(siluOut / quantScale)
   $$
 
-      
 ## 参数说明
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>

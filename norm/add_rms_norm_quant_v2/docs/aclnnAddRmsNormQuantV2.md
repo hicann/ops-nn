@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     √    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能描述
 
 - 接口功能：RmsNorm是大模型常用的标准化操作，相比LayerNorm，其去掉了减去均值的部分。AddRmsNormQuant算子将RmsNorm前的Add算子以及RmsNorm归一化的输出给到1个或2个Quantize算子融合起来，减少搬入搬出操作。AddRmsNormQuantV2算子相较于AddRmsNormQuant在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算公式中的`beta`。
@@ -86,8 +85,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
 
 ## aclnnAddRmsNormQuantV2GetWorkspaceSize
 
-- **参数说明**：
-
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
     <col style="width: 170px">
@@ -150,6 +148,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
+    </tr>
     <tr>
       <td>scales2Optional（aclTensor*）</td>
       <td>输入</td>
@@ -285,7 +284,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
   
   - <term>Atlas 推理系列产品</term>：参数`x1`、`x2`、`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`betaOptional`、`xOut`、`rmsNormOut`的数据类型不支持BFLOAT16。
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -318,7 +317,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
 
 ## aclnnAddRmsNormQuantV2
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -355,7 +354,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码。（具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)）
 

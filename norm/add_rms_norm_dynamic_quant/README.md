@@ -13,7 +13,6 @@
 |  <term>Kirin X90 处理器系列产品</term> | √ |
 |  <term>Kirin 9030 处理器系列产品</term> | √ |
 
-
 ## 功能说明
 
 - 算子功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuantV2算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。AddRmsNormDynamicQuant算子相较于AddRmsNormDynamicQuantV2在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算对应公式中的beta，以及新增输出配置项output_mask参数，用于配置是否输出对应位置的量化结果。
@@ -55,7 +54,6 @@
     无效输出 & outputMask[0]=False
     \end{cases}
   $$
-  
   
   $$
   scale2Out=\begin{cases}
@@ -192,7 +190,8 @@
 
     输出参数`y1`、`y2`的数据类型仅支持INT4、INT8。
 
-- Kirin X90/Kirin 9030处理器系列产品：x1、x2、gamma、smooth_scale1、smooth_scale2、beta和x的数据类型不支持BFLOAT16，y1和y2只支持INT8。
+  - Kirin X90/Kirin 9030处理器系列产品：x1、x2、gamma、smooth_scale1、smooth_scale2、beta和x的数据类型不支持BFLOAT16，y1和y2只支持INT8。
+
 ## 约束说明
 
 - 当output_mask不为空时，参数smooth_scale1有值时，则output_mask[0]必须为True。参数smooth_scale2有值时，则output_mask[1]必须为True。

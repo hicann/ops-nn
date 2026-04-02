@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：对张量列表和标量值scalar执行逐元素比较，计算每个元素对应的最大值。本接口相较于[aclnnForeachMaximumScalar](aclnnForeachMaximumScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
@@ -51,7 +50,7 @@ aclnnStatus aclnnForeachMaximumScalarV2(
 
 ## aclnnForeachMaximumScalarV2GetWorkspaceSize
 
-- **参数说明**：
+- **参数说明**
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
     <col style="width: 170px">
     <col style="width: 120px">
@@ -101,7 +100,7 @@ aclnnStatus aclnnForeachMaximumScalarV2(
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示取最大值运算的输出张量列表，对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li><ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -130,8 +129,7 @@ aclnnStatus aclnnForeachMaximumScalarV2(
   </tbody>
   </table>
 
-
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -171,7 +169,7 @@ aclnnStatus aclnnForeachMaximumScalarV2(
 
 ## aclnnForeachDivScalarV2
 
-- **参数说明**：
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -208,7 +206,7 @@ aclnnStatus aclnnForeachMaximumScalarV2(
   </tbody>
   </table>
 
-- **返回值**：
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

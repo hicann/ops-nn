@@ -13,7 +13,6 @@
 |  <term>Kirin X90 处理器系列产品</term> | √ |
 |  <term>Kirin 9030 处理器系列产品</term> | √ |
 
-
 ## 功能说明
 
 - 算子功能：两个Tensor列表中的元素逐个相加，并可以通过alpha参数调整相加系数。
@@ -78,6 +77,7 @@
   </tbody></table>
 
 - Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
+
 ## 约束说明
 
 无

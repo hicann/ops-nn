@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
-
 ## 功能说明
 
 - 接口功能：[aclnnBatchNorm](../../batch_norm_v3/docs/aclnnBatchNorm.md)的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。
@@ -34,7 +33,6 @@
     gradBias = \sum^m_{i=0}{gradOut} 
     $$
 
-
   - 当training为false时：
 
     $$
@@ -49,7 +47,6 @@
     gradBias = \sum^m_{i=0}{gradOut} 
     $$
 
-  
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnBatchNormBackwardGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnBatchNormBackward”接口执行计算。
@@ -83,7 +80,7 @@ aclnnStatus aclnnBatchNormBackward(
 
 ## aclnnBatchNormBackwardGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -277,8 +274,7 @@ aclnnStatus aclnnBatchNormBackward(
     - `runningVar`数据类型需要与`runningMean`的数据类型一致。
     - `saveInvstd`数据类型需要与`saveMean`的数据类型一致。
 
-
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -347,7 +343,7 @@ aclnnStatus aclnnBatchNormBackward(
 
 ## aclnnBatchNormBackward
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -384,7 +380,7 @@ aclnnStatus aclnnBatchNormBackward(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

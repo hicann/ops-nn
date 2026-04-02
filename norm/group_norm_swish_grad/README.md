@@ -11,7 +11,6 @@
 
 - 算子功能：[aclnnGroupNormSwish](../../norm/group_norm_swish/docs/aclnnGroupNormSwish.md)的反向操作。
 
-
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>

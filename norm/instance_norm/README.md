@@ -11,7 +11,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 算子功能：用于执行Instance Normalization（实例归一化）操作。与[BatchNorm](../batch_norm_v3/README.md)相比，InstanceNorm在每个样本的实例上进行归一化，而不是在整个批次上进行归一化，这使得该函数更适合处理图像等数据。

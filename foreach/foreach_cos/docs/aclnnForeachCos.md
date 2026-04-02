@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：按元素进行余弦函数运算。
@@ -56,7 +55,7 @@ aclnnStatus aclnnForeachCos(
 
 ## aclnnForeachCosGetWorkspaceSize
 
-- **参数说明**：
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
     <col style="width: 170px">
@@ -123,7 +122,7 @@ aclnnStatus aclnnForeachCos(
   </tbody>
   </table>
 
-- **返回值**：
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -170,7 +169,7 @@ aclnnStatus aclnnForeachCos(
 
 ## aclnnForeachCos
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -207,7 +206,7 @@ aclnnStatus aclnnForeachCos(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

@@ -13,7 +13,6 @@
 |  <term>Kirin X90 处理器系列产品</term> | √ |
 |  <term>Kirin 9030 处理器系列产品</term> | √ |
 
-
 ## 功能说明
 
 - 算子功能：GemmaRmsNorm算子是大模型常用的归一化操作，相比RmsNorm算子，在计算时对gamma执行了+1操作。
@@ -79,6 +78,7 @@
   </tbody></table>
 
 - Kirin X90/Kirin 9030处理器系列产品：x、gamma和y的数据类型不支持BFLOAT16。
+
 ## 约束说明
 
 无

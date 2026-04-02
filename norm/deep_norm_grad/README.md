@@ -11,7 +11,6 @@
 |  <term>Atlas 推理系列产品</term>    |     √    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 算子功能：[DeepNorm](../deep_norm/README.md)的反向传播，完成张量x、张量gx、张量gamma的梯度计算，以及张量dy的求和计算。

@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：先对张量列表x2和张量列表x3执行逐元素乘法，并将结果乘以张量scalars，最后将之前计算的结果与张量列表x1执行逐元素相加。
@@ -53,7 +52,7 @@ aclnnStatus aclnnForeachAddcmulList(
 
 ## aclnnForeachAddcmulListGetWorkspaceSize
 
-- **参数说明**：
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -150,7 +149,7 @@ aclnnStatus aclnnForeachAddcmulList(
   </tbody>
   </table>
 
-- **返回值**：
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -197,7 +196,7 @@ aclnnStatus aclnnForeachAddcmulList(
 
 ## aclnnForeachAddcmulList
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -234,7 +233,7 @@ aclnnStatus aclnnForeachAddcmulList(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

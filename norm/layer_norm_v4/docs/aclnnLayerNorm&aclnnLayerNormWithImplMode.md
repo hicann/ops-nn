@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
-
 ## 功能说明
 
 - 接口功能：对指定层进行均值为0、标准差为1的归一化计算。aclnnLayerNormWithImplMode接口相比aclnnLayerNorm接口，可以通过配置impl_mode参数选择不同的归一化实现策略，以适应不同的应用场景和性能需求。
@@ -85,7 +84,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
 
 ## aclnnLayerNormGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -214,7 +213,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
 
   - <term>Atlas 训练系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：参数`input`、`weightOptional`、`biasOptional`、`out`、`meanOutOptional`、`rstdOutOptional`的数据类型不支持BFLOAT16。
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -266,11 +265,9 @@ aclnnStatus aclnnLayerNormWithImplMode(
     </tr>
   </tbody></table>
 
-
 ## aclnnLayerNorm
 
-- **参数说明：**
-
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -307,13 +304,13 @@ aclnnStatus aclnnLayerNormWithImplMode(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## aclnnLayerNormWithImplModeGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -421,7 +418,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>implMode（int32_t）</td>
       <td>输入</td>
       <td>表示用于指定kernel选择对应的计算模式。</td>
-      <td>支持配置为0，1，2，默认配置为0。0代表高精度模式，1代表高性能模式，2代表保持FLOAT16计算模式。高性能模式谨慎使用，有精度损失；保持FLOAT16计算模式仅支持所有输入同时为FLOAT16的场景，且计算精度最低。</li></ul></td>
+      <td>支持配置为0，1，2，默认配置为0。0代表高精度模式，1代表高性能模式，2代表保持FLOAT16计算模式。高性能模式谨慎使用，有精度损失；保持FLOAT16计算模式仅支持所有输入同时为FLOAT16的场景，且计算精度最低。</td>
       <td>INT32</td>
       <td>-</td>
       <td>-</td>
@@ -452,8 +449,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
 
   - <term>Atlas 训练系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：参数`input`、`weightOptional`、`biasOptional`、`out`、`meanOutOptional`、`rstdOutOptional`的数据类型不支持BFLOAT16。
 
-
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -513,8 +509,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
 
 ## aclnnLayerNormWithImplMode
 
-- **参数说明：**
-
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -551,7 +546,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -769,7 +764,6 @@ aclnnStatus aclnnLayerNormWithImplMode(
       return 0;
   }
   ```
-
 
 - aclnnLayerNormWithImplMode示例：
 

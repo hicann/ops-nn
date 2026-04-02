@@ -13,7 +13,6 @@
 | <term>Atlas 推理系列产品</term>                             |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    √     |
 
-
 ## 功能说明
 
 - 接口功能：计算输入张量的向量范数。
@@ -49,7 +48,7 @@ aclnnStatus aclnnLinalgVectorNorm(
 
 ## aclnnLinalgVectorNormGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -128,7 +127,7 @@ aclnnStatus aclnnLinalgVectorNorm(
       <td>输出</td>
       <td>计算输出张量。对应公式中的out。</td>
       <td>若keepDims为true，除dim指定维度上的size为1以外，其余维度的shape需要与self保持一致；若keepDims为false，reduce轴的维度不保留，其余维度shape需要与self一致。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</li></ul></td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -159,7 +158,7 @@ aclnnStatus aclnnLinalgVectorNorm(
   - <term>Ascend 950PR/Ascend 950DT</term>：ord参数数值额外支持2147483647.0、-2147483648.0、Inf、-Inf。
   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：数据类型不支持BFLOAT16。
 
-- **返回值**：
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -185,7 +184,7 @@ aclnnStatus aclnnLinalgVectorNorm(
     </tr>
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="8">161002</td></tr>
     <tr>
       <td>dims超过[-N, N-1] (N表示self的维度)。</td>
     </tr>
@@ -208,7 +207,7 @@ aclnnStatus aclnnLinalgVectorNorm(
 
 ## aclnnLinalgVectorNorm
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -245,7 +244,7 @@ aclnnStatus aclnnLinalgVectorNorm(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

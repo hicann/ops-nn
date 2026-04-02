@@ -13,14 +13,11 @@
 | <term>Atlas 推理系列产品</term>                             |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    ×     |
 
-
-
 ## 功能说明
 
 - 接口功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuant算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。aclnnAddRmsNormDynamicQuantV2相较于aclnnAddRmsNormDynamicQuant在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算公式中的beta，以及新增输出配置项outputMaskOptional参数，用于配置是否输出对应位置的量化结果。
 
 - 计算公式：
-
 
   $$
   x=x_{1}+x_{2}
@@ -44,7 +41,6 @@
     \end{cases}
   $$
 
- 
   $$
   scale1Out=\begin{cases}
     row\_max(abs(input1))/127 & (outputMask[0]=True\ ||\ !outputMask) \& y1Out为INT8 \\
@@ -110,7 +106,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
 
 ## aclnnAddRmsNormDynamicQuantV2GetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
     <col style="width: 170px">
@@ -287,7 +283,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -323,7 +319,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
 
 ## aclnnAddRmsNormDynamicQuantV2
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -360,7 +356,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码。（具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)）
 

@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：对张量列表x和标量值scalar执行逐元素比较，计算每个元素对应的最小值。本接口相较于[aclnnForeachMinimumScalar](aclnnForeachMinimumScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
@@ -51,7 +50,7 @@ aclnnStatus aclnnForeachMinimumScalarV2(
 
 ## aclnnForeachMinimumScalarV2GetWorkspaceSize
 
-- **参数说明**：
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -89,7 +88,7 @@ aclnnStatus aclnnForeachMinimumScalarV2(
       <td>scalar（aclScalar*）</td>
       <td>输入</td>
       <td>对应公式中的`scalar`，表示取最小值运算的输入标量。</td>
-      <td>数据类型与入参`x`的数据类型具有一定对应关系，且数值不超过入参`x`对应数据类型的数值范围：<ul><li>当`x`的数据类型为FLOAT32、BFLOAT16时，数据类型支持FLOAT32、DOUBLE。</li><li>当`x`的数据类型为FLOAT16时，数据类型支持FLOAT16、DOUBLE。</li><li>当`x`的数据类型为INT32时，数据类型支持INT32、INT64。</li></li></ul></td>
+      <td>数据类型与入参`x`的数据类型具有一定对应关系，且数值不超过入参`x`对应数据类型的数值范围：<ul><li>当`x`的数据类型为FLOAT32、BFLOAT16时，数据类型支持FLOAT32、DOUBLE。</li><li>当`x`的数据类型为FLOAT16时，数据类型支持FLOAT16、DOUBLE。</li><li>当`x`的数据类型为INT32时，数据类型支持INT32、INT64。</li></ul></td>
       <td>FLOAT32、FLOAT16、INT32、DOUBLE、INT64</td>
       <td>-</td>
       <td>-</td>
@@ -128,7 +127,7 @@ aclnnStatus aclnnForeachMinimumScalarV2(
   </tbody>
   </table>
 
-- **返回值**：
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -171,10 +170,9 @@ aclnnStatus aclnnForeachMinimumScalarV2(
     </tr>
   </tbody></table>
 
-
 ## aclnnForeachMinimumScalarV2
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -211,8 +209,7 @@ aclnnStatus aclnnForeachMinimumScalarV2(
   </tbody>
   </table>
 
-
-- **返回值**：
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

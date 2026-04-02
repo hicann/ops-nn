@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：GemmaRmsNorm算子是大模型常用的归一化操作，相比RmsNorm算子，在计算时对gamma执行了+1操作。
@@ -48,7 +47,7 @@ aclnnStatus aclnnGemmaRmsNorm(
 
 ## aclnnGemmaRmsNormGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -145,7 +144,7 @@ aclnnStatus aclnnGemmaRmsNorm(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -183,7 +182,7 @@ aclnnStatus aclnnGemmaRmsNorm(
 
 ## aclnnGemmaRmsNorm
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -220,8 +219,7 @@ aclnnStatus aclnnGemmaRmsNorm(
   </tbody>
   </table>
 
-
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -240,6 +238,7 @@ aclnnStatus aclnnGemmaRmsNorm(
   - 当输入是Inf时，输出为Inf。
   - 当输入是NaN时，输出为NaN。
 - 各平台支持数据类型说明：
+
     | `x`数据类型 | `gamma`数据类型 | `yOut`数据类型 | `rstdOut`数据类型 |
     | -------- | -------- | -------- | -------- |
     | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 |

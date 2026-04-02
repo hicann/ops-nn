@@ -53,7 +53,7 @@ aclnnStatus aclnnRmsNormQuant(
 
 ## aclnnRmsNormQuantGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
     <col style="width: 170px">
     <col style="width: 120px">
@@ -172,7 +172,7 @@ aclnnStatus aclnnRmsNormQuant(
   - <term>Atlas 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：入参`x`、`gamma`、`beta`、`scale`的数据类型仅支持FLOAT16。
   - <term>A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>A2 训练系列产品/Atlas A2 推理系列产品</term>：入参`x`、`gamma`、`beta`、`scale`的数据类型仅支持FLOAT16，BFLOAT16，`offset`仅支持INT8。
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -210,7 +210,7 @@ aclnnStatus aclnnRmsNormQuant(
 
 ## aclnnRmsNormQuant
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -247,7 +247,7 @@ aclnnStatus aclnnRmsNormQuant(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
   
   aclnnStatus：返回状态码。（具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)）
 
@@ -273,6 +273,7 @@ aclnnStatus aclnnRmsNormQuant(
     | --------- | ------------- | ------------- | ------------- | -------------- | --------- |--------- |
     | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |INT8      |
     | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |INT4      |
+    
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
     | x数据类型 | gamma数据类型 | beta数据类型 | scale数据类型 | offset数据类型 | epsilon数据类型 | y数据类型 |
@@ -289,6 +290,7 @@ aclnnStatus aclnnRmsNormQuant(
 
 - 确定性计算：
   - aclnnRmsNormQuant默认确定性实现。
+  
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     √    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：RmsNorm算子是大模型常用的标准化操作，相比LayerNorm算子，其去掉了减去均值的部分。AddRmsNormQuant算子将RmsNorm前的Add算子以及RmsNorm后的Quantize算子融合起来，减少搬入搬出操作。
@@ -80,7 +79,7 @@ aclnnStatus aclnnAddRmsNormQuant(
 
 ## aclnnAddRmsNormQuantGetWorkspaceSize
 
-- **参数说明**：
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
     <col style="width: 170px">
@@ -143,11 +142,12 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
+    </tr>
     <tr>
       <td>scales2Optional（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到y2Out进行的scales张量。对应公式中的`scales2`。</td>
-      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape、数据类型与`scales1`保持一致。<li>当参数`divMode`的值为True时，该参数的值不能为0。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape、数据类型与`scales1`保持一致。</li><li>当参数`divMode`的值为True时，该参数的值不能为0。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -272,7 +272,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       - 出参`y1Out`、`y2Out`仅支持INT8。
     - 入参`divMode`仅支持True。
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -311,7 +311,7 @@ aclnnStatus aclnnAddRmsNormQuant(
 
 ## aclnnAddRmsNormQuant
 
-- **参数说明**：
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -348,7 +348,7 @@ aclnnStatus aclnnAddRmsNormQuant(
   </tbody>
   </table>
 
-- **返回值**：
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -363,15 +363,20 @@ aclnnStatus aclnnAddRmsNormQuant(
 - 各产品型号支持数据类型说明：
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+    
     | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 |     scales2Optional数据类型 | zeroPoints1Optional数据类型 |     zeroPoints2Optional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 |
     | - | - | - | - | - | - | - | - | - | - |
     | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 |     INT8 | INT8 | FLOAT16 |
     | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 |     BFLOAT16 | INT8 | INT8 | BFLOAT16 |
+
   - <term>Atlas 推理系列产品</term>：
+    
     | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 |     scales2Optional数据类型 | zeroPoints1Optional数据类型 |     zeroPoints2Optional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 |
     | - | - | - | - | - | - | - | - | - | - |
     | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 |     INT8 | INT8 | FLOAT16 |
+
   - <term>Ascend 950PR/Ascend 950DT</term>：
+    
     | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 |     scales2Optional数据类型 | zeroPoints1Optional数据类型 |     zeroPoints2Optional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 |
     | - | - | - | - | - | - | - | - | - | - |
     | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 |     INT8 | INT8 | FLOAT16 |
