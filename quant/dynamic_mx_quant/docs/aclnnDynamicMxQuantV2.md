@@ -359,7 +359,7 @@ aclnnStatus aclnnDynamicMxQuantV2(
 #include <vector>
 
 #include "acl/acl.h"
-#include "aclnnop/aclnn_dynamic_mx_quant.h"
+#include "aclnnop/aclnn_dynamic_mx_quant_v2.h"
 
 #define CHECK_RET(cond, return_expr) \
     do {                             \
