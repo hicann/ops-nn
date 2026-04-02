@@ -174,7 +174,7 @@ static aclnnStatus CheckParamsV2(const aclTensor* self, const aclTensor* mat2, c
     // 3. 检查self和mat2的shape是否符合要求
     CHECK_RET(CheckShape(self, mat2, out), ACLNN_ERR_PARAM_INVALID);
     
-    // 4. 检查self和mat2的format是否符合要求
+    // 4. 检查self和out的format是否符合要求
     CHECK_RET(CheckFormat(self, mat2, out), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
