@@ -27,7 +27,7 @@ namespace ge {
 * One input, including:
 * @li x: A Tensor. Must be one of the following data types:
 *     float16, float32, bfloat16. \n
-* For Ascend 950PR/Ascend 950DT: Support Format: [NCHW].
+* Support Format: [NCHW, NCL], NCL input is processed as (C, H, W).
 
 * @par Attributes:
 * @li output_size: A required list of 2 ints
