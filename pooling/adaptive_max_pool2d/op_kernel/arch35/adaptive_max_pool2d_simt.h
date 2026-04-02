@@ -49,6 +49,22 @@ namespace AdaptiveMaxPool2DWithSimt{
         return pEnd + 1;
     }
 
+    template <typename DIV_T>
+    __simt_callee__ __aicore__ __attribute__((always_inline)) inline static DIV_T startIndexNoMagic(DIV_T a, DIV_T b, DIV_T c) {
+        uint64_t x = static_cast<uint64_t>(a);
+        uint64_t y = static_cast<uint64_t>(b);
+        uint64_t z = static_cast<uint64_t>(c);
+        return static_cast<uint32_t>((x / y) * z + ((x % y) * z) / y);
+    }
+
+    template <typename DIV_T>
+    __simt_callee__ __aicore__ __attribute__((always_inline)) inline static DIV_T endIndexNoMagic(DIV_T a, DIV_T b, DIV_T c) {
+        uint64_t x = static_cast<uint64_t>(a);
+        uint64_t y = static_cast<uint64_t>(b);
+        uint64_t z = static_cast<uint64_t>(c);
+        return static_cast<uint32_t>(1 + ((x + 1) * z - 1) / y);
+    }
+
     template <typename VALUE_T, typename INDICES_T, typename FORMAT_T, typename DIV_T>
     __simt_callee__ __aicore__ __attribute__((always_inline)) inline static void executeFunc(FORMAT_T count, __gm__ VALUE_T* bottomData, 
                                                                              FORMAT_T ncSize, FORMAT_T height, FORMAT_T width, 
@@ -67,10 +83,10 @@ namespace AdaptiveMaxPool2DWithSimt{
             DIV_T wId = indexIdx - hId * outputWidth;
             
             // 计算输入窗口的起始和结束位置
-            FORMAT_T startInH = startIndex<DIV_T>(hId, magicH, shiftH, height);
-            FORMAT_T endInH = endIndex<DIV_T>(hId, magicH, shiftH, height);
-            FORMAT_T startInW = startIndex<DIV_T>(wId, magicW, shiftW, width);
-            FORMAT_T endInW = endIndex<DIV_T>(wId, magicW, shiftW, width);
+            FORMAT_T startInH = startIndexNoMagic<DIV_T>(hId, outputHeight, height);
+            FORMAT_T endInH = endIndexNoMagic<DIV_T>(hId, outputHeight, height);
+            FORMAT_T startInW = startIndexNoMagic<DIV_T>(wId, outputWidth, width);
+            FORMAT_T endInW = endIndexNoMagic<DIV_T>(wId, outputWidth, width);
             
             VALUE_T maxVal = AscendC::NumericLimits<VALUE_T>::NegativeInfinity();
             FORMAT_T maxIdx = startInH * width + startInW;  // 2D索引: h * width + w
