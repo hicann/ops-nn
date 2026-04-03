@@ -3387,6 +3387,46 @@
     <td>实现adamW优化器功能。</td>
   </tr>
   <tr>
+    <td>optim</td>
+    <td><a href="../../optim/apply_adam/README.md">apply_adam</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现adam优化器功能。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/apply_adam_d/README.md">apply_adam_d</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现adam优化器功能。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/apply_ftrl/README.md">apply_ftrl</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现ftrl优化器功能。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/apply_momentum/README.md">apply_momentum</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现momentum优化器功能。</td>
+  </tr>
+  <tr>
     <td>hash</td>
     <td><a href="../../hash/embedding_hash_table_apply_adam_w/README.md">embedding_hash_table_apply_adam_w</a></td>
     <td>✓</td>
