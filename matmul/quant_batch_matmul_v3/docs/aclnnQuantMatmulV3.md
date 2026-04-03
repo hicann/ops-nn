@@ -97,7 +97,7 @@ aclnnStatus aclnnQuantMatmulV3(
         <li>在transposeX1为false时shape形如（batch，m，k），在transposeX1为true时shape形如（batch，k，m），batch可不存在。
         </li></ul>
         </td>
-        <td>INT8、INT32、INT4、</td>
+        <td>INT8、INT32、INT4</td>
         <td>ND</td>
         <td>2-6</td>
         <td>√</td>
@@ -113,7 +113,7 @@ aclnnStatus aclnnQuantMatmulV3(
           <ul><li>在transposeX2为true时shape形如（batch，k1，n1，n0，k0），batch可不存在，其中k0=32，n0=16，x1 shape中的k和x2 shape中的k1需要满足ceil（k / 32） = k1</li></ul>
           <ul><li>在transposeX2为false时shape形如（batch，n1，k1，k0，n0），batch可不存在，其中k0=16，n0=32，x1 shape中的k和x2 shape中的k1需要满足ceil（k / 16） = k1</li></ul>
         </li></ul></td>
-        <td>INT8、INT32、INT4、</td>
+        <td>INT8、INT32、INT4</td>
         <td>ND、NZ</td>
         <td>2-8（ND）、4-8（NZ）
         </td>
@@ -123,8 +123,8 @@ aclnnStatus aclnnQuantMatmulV3(
         <td>scale</td>
         <td>输入</td>
         <td>表示量化参数，公式中的输入scale。</td>
-        <td>（t，），t = 1或n，其中n与x2的n一致<br>当原始输入类型不满足[约束说明]中类型组合时，需提前调用TtransQuantParamV2算子的aclnn接口来将scale转成INT64、UINT64类型。</td>
-        <td>UINT64、INT64、FLOAT32、BFLOAT16、</td>
+        <td>（t，），t = 1或n，其中n与x2的n一致<br>当原始输入类型不满足[约束说明]中类型组合时，需提前调用TransQuantParamV2算子的aclnn接口来将scale转成INT64、UINT64类型。</td>
+        <td>UINT64、INT64、FLOAT32、BFLOAT16</td>
         <td>ND</td>
         <td>1</td>
         <td>×</td>
@@ -574,7 +574,7 @@ aclnnStatus aclnnQuantMatmulV3(
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
                 return ret);
       for (int64_t i = 0; i < size; i++) {
-          LOG_PRINT("result[%ld] is: %u\n", i, resultData[i]);
+          LOG_PRINT("result[%ld] is: %hu\n", i, resultData[i]);
       }
       return ACL_SUCCESS;
   }
@@ -853,7 +853,7 @@ aclnnStatus aclnnQuantMatmulV3(
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
                 return ret);
       for (int64_t i = 0; i < size; i++) {
-          LOG_PRINT("result[%ld] is: %u\n", i, resultData[i]);
+          LOG_PRINT("result[%ld] is: %hu\n", i, resultData[i]);
       }
       return ACL_SUCCESS;
   }
@@ -1107,7 +1107,7 @@ aclnnStatus aclnnQuantMatmulV3(
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
                 return ret);
       for (int64_t i = 0; i < size; i++) {
-          LOG_PRINT("result[%ld] is: %u\n", i, resultData[i]);
+          LOG_PRINT("result[%ld] is: %hu\n", i, resultData[i]);
       }
       return ACL_SUCCESS;
   }
@@ -1332,7 +1332,7 @@ aclnnStatus aclnnQuantMatmulV3(
       aclOpExecutor *executor = nullptr;
       void *workspaceAddr = nullptr;
 
-      // x2的shpe需要transpose成nk格式，再进行transdata
+      // x2的shape需要transpose成nk格式，再进行transdata
       std::vector<int64_t> dimsData = {1, 0};
       // 创建dims aclIntArray
       aclIntArray *dims = aclCreateIntArray(dimsData.data(), dimsData.size());
@@ -1416,7 +1416,7 @@ aclnnStatus aclnnQuantMatmulV3(
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
                 return ret);
       for (int64_t i = 0; i < size; i++) {
-          LOG_PRINT("result[%ld] is: %u\n", i, resultData[i]);
+          LOG_PRINT("result[%ld] is: %hu\n", i, resultData[i]);
       }
       return ACL_SUCCESS;
   }

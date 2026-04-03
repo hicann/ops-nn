@@ -122,7 +122,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
       <td>x1Scale（aclTensor*）</td>
         <td>输入</td>
         <td>表示左矩阵的量化系数。</td>
-        <td>shape仅支持一维且需要满足且等于[m]。</td>
+        <td>shape仅支持一维且需要满足等于[m]。</td>
         <td>FLOAT32</td>
         <td>ND</td>
         <td>1</td>
@@ -132,7 +132,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
       <td>x2Scale（aclTensor*）</td>
         <td>输入</td>
         <td>表示右矩阵的量化系数。</td>
-        <td>shape仅支持一维且需要满足且等于[n]。</td>
+        <td>shape仅支持一维且需要满足等于[n]。</td>
         <td>FLOAT32</td>
         <td>ND</td>
         <td>1</td>

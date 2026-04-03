@@ -423,10 +423,10 @@ int main() {
   float antiquantScale = 1;
 
   std::vector<float> addOffsetHostData = {1.0, 1.0, 1.0, 0.0};
-  float* addOffsetDate = addOffsetHostData.data();
+  float* addOffsetData = addOffsetHostData.data();
   uint64_t addOffsetSize = 4;
   std::vector<float> mulScaleHostData = {2.0, 2.0, 1.0, 1.0};
-  float* mulScaleDate = mulScaleHostData.data();
+  float* mulScaleData = mulScaleHostData.data();
   uint64_t mulScaleSize = 4;
 
   // diagonalMatrixData
@@ -442,7 +442,7 @@ int main() {
   uint64_t deqOffsetSize = addOffsetSize;
   int32_t *deqOffsetData = (int32_t *)calloc(deqOffsetSize, sizeof(int32_t));
   for (int64_t i = 0; i < deqOffsetSize; i++) {
-    deqOffsetData[i] = static_cast<int32_t>(round(addOffsetDate[i] / antiquantScale - antiquantOffset));
+    deqOffsetData[i] = static_cast<int32_t>(round(addOffsetData[i] / antiquantScale - antiquantOffset));
   }
   std::vector<int32_t> deqOffsetHostData(deqOffsetData, deqOffsetData + deqOffsetSize);
 
@@ -450,7 +450,7 @@ int main() {
   uint64_t deqScaleSize = mulScaleSize;
   uint64_t *deqScaleData = (uint64_t *)calloc(deqScaleSize, sizeof(uint64_t));
   for (int64_t i = 0; i < deqScaleSize; i++) {
-    mulScaleDate[i] = mulScaleDate[i] * antiquantScale;
+    mulScaleData[i] = mulScaleData[i] * antiquantScale;
   }
   std::vector<uint64_t> deqScaleHostData(deqScaleData, deqScaleData + deqScaleSize);
 

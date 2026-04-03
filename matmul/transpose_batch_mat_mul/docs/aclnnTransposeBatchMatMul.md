@@ -131,7 +131,7 @@ aclnnStatus aclnnTransposeBatchMatMul(
         <td>表示输出矩阵的量化系数，可在输入为FLOAT16且输出为INT8时使能。</td>
         <td>
         <ul>
-            <li>shape仅支持一维且需要满足且等于[b*n]。</li>
+            <li>shape仅支持一维且需要满足等于[b*n]。</li>
         </ul>
         </td>
         <td>INT64、UINT64</td>
