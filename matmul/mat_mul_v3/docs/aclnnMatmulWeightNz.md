@@ -506,7 +506,7 @@ aclnnStatus aclnnMatmulWeightNz(
       return shapeSize;
     }
 
-    // 将bloat16的uint16_t表示转换为float表示
+    // 将bfloat16的uint16_t表示转换为float表示
     float Bf16ToFloat(uint16_t h) {
       uint32_t sign = (h & 0x8000U) ? 0x80000000U : 0x00000000U;  // sign bit
       uint32_t exponent = (h >> 7) & 0x00FFU;                      // exponent bits
@@ -625,7 +625,7 @@ aclnnStatus aclnnMatmulWeightNz(
       int8_t cubeMathType = 1;
       aclOpExecutor* executor = nullptr;
 
-      // weight tensor ND转NZ，调用npu_foramt_cast接口
+      // weight tensor ND转NZ，调用npu_format_cast接口
       int64_t* dstShape = nullptr;
       uint64_t dstShapeSize = 0;
       int actualFormat;

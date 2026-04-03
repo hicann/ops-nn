@@ -628,7 +628,7 @@ aclnnStatus aclnnQuantMatmulV4(
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
                 return ret);
       for (int64_t i = 0; i < size; i++) {
-          LOG_PRINT("result[%ld] is: %u\n", i, resultData[i]);
+          LOG_PRINT("result[%ld] is: %hu\n", i, resultData[i]);
       }
       return ACL_SUCCESS;
   }
@@ -920,7 +920,7 @@ x2为NZ格式场景(transposeX2=false)。
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
                 return ret);
       for (int64_t i = 0; i < size; i++) {
-          LOG_PRINT("result[%ld] is: %u\n", i, resultData[i]);
+          LOG_PRINT("result[%ld] is: %hu\n", i, resultData[i]);
       }
       return ACL_SUCCESS;
   }
@@ -1241,7 +1241,7 @@ x2为NZ格式场景(transposeX2=true)。
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
                 return ret);
       for (int64_t i = 0; i < size; i++) {
-          LOG_PRINT("result[%ld] is: %u\n", i, resultData[i]);
+          LOG_PRINT("result[%ld] is: %hu\n", i, resultData[i]);
       }
       return ACL_SUCCESS;
   }
@@ -1499,7 +1499,7 @@ INT4量化场景(x1和x2数据类型为INT4，transposeX2=false)。
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
                 return ret);
       for (int64_t i = 0; i < size; i++) {
-          LOG_PRINT("result[%ld] is: %u\n", i, resultData[i]);
+          LOG_PRINT("result[%ld] is: %hu\n", i, resultData[i]);
       }
       return ACL_SUCCESS;
   }

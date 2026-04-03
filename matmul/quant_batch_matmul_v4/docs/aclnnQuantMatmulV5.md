@@ -732,7 +732,7 @@ aclnnStatus aclnnQuantMatmulV5(
     - 当数据类型为INT4时，k需与1024对齐。transposeX1为false。
   - x2的约束：
     - 当数据类型为INT32时，k需与256对齐。transposeX2为false。
-    - 当数据类型为INT4时，k需与1024对称，n需与256对齐。transposeX2为true，
+    - 当数据类型为INT4时，k需与1024对齐，n需与256对齐。transposeX2为true，
   - x2Scale的约束：
     - 当数据类型为UINT64/INT64时，由于TransQuantParamV2只支持1维，需要将x2Scale view成一维(k / groupSize * n)，再调用TransQuantParamV2算子的aclnn接口来将x2Scale转成UINT64/INT64数据类型，再将输出view成二维（k / groupSize, n），groupSize值为256。
     - 当x1、x2为INT4时，x2Scale的shape为(ceil(k / 256), n)。
@@ -791,19 +791,19 @@ aclnnStatus aclnnQuantMatmulV5(
 
       | x1                        | x2                        | x1Scale     |   x2Scale     | x2Offset | yScale | bias    |   out                                    |
       | ------------------------- | ------------------------- | ----------- |   ----------- | -------- | -------| ------- |   -------------------------------------- |
-      | INT8                      | INT8                      | null        | UINT64/ INT64      | null     | null     | null/INT32   | FLOAT16/ BFLOAT16                       |
-      | INT8                      | INT8                      | null        | UINT64/ INT64      | null/FLOAT32  | null     | null/INT32   |   INT8                              |
-      | INT8                      | INT8                      | null        | FLOAT32/  BFLOAT16  | null     | null     | null/INT32/FLOAT32/ BFLOAT16   |   BFLOAT16              |
-      | INT8                      | INT8                      | null        | FLOAT32/  BFLOAT16| null        | null     | null/INT32   |   INT32                                |
-      | FLOAT8_E4M3FN/ FLOAT8_E5M2 | FLOAT8_E4M3FN/ FLOAT8_E5M2 | null        | UINT64/ INT64      | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32 |
-      | HIFLOAT8                  | HIFLOAT8                  | null        | UINT64/ INT64      | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/ FLOAT32      |
-      | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT32     |   FLOAT32           | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/  FLOAT32               |
+      | INT8                      | INT8                      | null        | UINT64/INT64      | null     | null     | null/INT32   | FLOAT16/BFLOAT16                       |
+      | INT8                      | INT8                      | null        | UINT64/INT64      | null/FLOAT32  | null     | null/INT32   |   INT8                              |
+      | INT8                      | INT8                      | null        | FLOAT32/BFLOAT16  | null     | null     | null/INT32/FLOAT32/BFLOAT16   |   BFLOAT16              |
+      | INT8                      | INT8                      | null        | FLOAT32/BFLOAT16  | null     | null     | null/INT32   |   INT32                                |
+      | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | null        | UINT64/INT64      | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32 |
+      | HIFLOAT8                  | HIFLOAT8                  | null        | UINT64/INT64      | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32      |
+      | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT32     | FLOAT32           | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
       | HIFLOAT8                  | HIFLOAT8                  | FLOAT32     | FLOAT32           | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
       | INT4                  | INT4                  | null     | UINT64/INT64           | null     | null     | null/INT32 | FLOAT16               |
 
     - T-T量化场景下，x1Scale的shape为(1,)或nullptr，x2Scale的shape为(1,)。
     - T-C量化场景下，x1Scale的shape为(1,)或nullptr，x2Scale的shape为(n,)，其中n与x2的n一致。
-    - x1/x2的数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8时，区分静态量化和动态量化。静态量化时x2Scale数据类型为UINT64/ INT64，动态量化时x2Scale数据类型为FLOAT32；x1/x2数据类型为INT8时，不支持动态T-C或动态T-T量化。
+    - x1/x2的数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8时，区分静态量化和动态量化。静态量化时x2Scale数据类型为UINT64/INT64，动态量化时x2Scale数据类型为FLOAT32；x1/x2数据类型为INT8时，不支持动态T-C或动态T-T量化。
     - 动态T-C量化场景下，不支持bias。
 
   </details>
@@ -840,7 +840,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
       | x1                        | x2                        | x1Scale     | x2Scale     |   x2Offset | yScale | bias    | out                                    |
       | ------------------------- | ------------------------- | ----------- | ----------- |   -------- | -------| ------- | -------------------------------------- |
-      | FLOAT8_E4M3FN/ FLOAT8_E5M2 | FLOAT8_E4M3FN/ FLOAT8_E5M2 | FLOAT32     |   FLOAT32           | null     | null     | null | FLOAT16/BFLOAT16/  FLOAT32               |
+      | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT32     |   FLOAT32           | null     | null     | null | FLOAT16/BFLOAT16/  FLOAT32               |
       | HIFLOAT8                  | HIFLOAT8                  | FLOAT32     |   FLOAT32           | null     | null     | null | FLOAT16/BFLOAT16/  FLOAT32               |
       | INT8                      |INT8                       | FLOAT32     |   FLOAT32           | null     | null     | FLOAT32 |BFLOAT16       |
 
@@ -868,7 +868,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
       |量化类型| x1                        | x2                        | x1Scale     | x2Scale     |   x2Offset | yScale | bias    | out                                    |
       |-------| ------------------------- | ------------------------- | ----------- | ----------- |   -------- | -------| ------- | -------------------------------------- |
-      |mx 全量化| FLOAT8_E4M3FN/ FLOAT8_E5M2 | FLOAT8_E4M3FN/ FLOAT8_E5M2 | FLOAT8_E8M0 |   FLOAT8_E8M0       | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
+      |mx 全量化| FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E8M0 |   FLOAT8_E8M0       | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
       |mx 全量化| FLOAT4_E2M1                | FLOAT4_E2M1                | FLOAT8_E8M0 |   FLOAT8_E8M0       | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
       |mx 伪量化| FLOAT8_E4M3FN             | FLOAT4_E2M1               | FLOAT8_E8M0 |   FLOAT8_E8M0       | null     | null     | null/BFLOAT16/FLOAT16 |  BFLOAT16/FLOAT16                               |
 
@@ -876,7 +876,7 @@ aclnnStatus aclnnQuantMatmulV5(
   
     |量化类型|x1数据类型|x2数据类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|bias shape|yScale shape|[gsM，gsN，gsK]|groupSize|
     |-------|--------|--------|--------|--------|-------------|-------------|------------|---------------------------------------|--|--|
-    |mx 全量化|FLOAT8_E4M3FN/ FLOAT8_E5M2|FLOAT8_E4M3FN/ FLOAT8_E5M2|<li>非转置：(batch, m, k)</li><li>转置：(batch, k, m)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(m, ceil(k / 64), 2)</li><li>转置：(ceil(k / 64), m, 2)</li>|<li>非转置：(ceil(k / 64), n, 2)</li><li>转置：(n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
+    |mx 全量化|FLOAT8_E4M3FN/FLOAT8_E5M2|FLOAT8_E4M3FN/FLOAT8_E5M2|<li>非转置：(batch, m, k)</li><li>转置：(batch, k, m)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(m, ceil(k / 64), 2)</li><li>转置：(ceil(k / 64), m, 2)</li>|<li>非转置：(ceil(k / 64), n, 2)</li><li>转置：(n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
     |mx 全量化|FLOAT4_E2M1|FLOAT4_E2M1|(batch, m, k)|(batch, n, k)|(m, ceil(k / 64), 2)|(n, ceil(k / 64), 2)|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
     |mx 伪量化|FLOAT8_E4M3FN|FLOAT4_E2M1|(m, k)|(n, k)|(m, ceil(k / 64), 2)|(n, ceil(k / 64), 2)|(1，n)|null|[1, 1, 32]|4295032864|
 
@@ -935,7 +935,7 @@ aclnnStatus aclnnQuantMatmulV5(
   - x1的约束：
     - 当数据类型为INT4时，k需与1024对齐。transposeX1为false。
   - x2的约束：
-    - 当数据类型为INT4时，k需与1024对称，n需与256对齐。transposeX2为true，
+    - 当数据类型为INT4时，k需与1024对齐，n需与256对齐。transposeX2为true，
   - x2Scale的约束：
     - 当x1、x2为INT4时，x2Scale的shape为(ceil(k / 256), n)。
 

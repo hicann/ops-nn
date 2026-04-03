@@ -15,7 +15,7 @@
 
 - **算子功能**：完成一个输入为伪量化场景的矩阵乘计算，并可以实现对于输出的量化计算。相较于aclnnWeightQuantBatchMatmulV2接口，此接口变化点为：
 
-  新增innerPrecise参数，用于支持高精度或者高性能计算模式选择。A16W4 per_group场景在batchSize<=16的场景下可设置为1， 提升性能。
+  新增innerPrecise参数，用于支持高精度或者高性能计算模式选择。A16W4 per_group场景在batchSize<=16的场景下可设置为1，提升性能。
 - **计算公式**：
 
   $$
@@ -68,7 +68,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
   void          *workspace, 
   uint64_t       workspaceSize, 
   aclOpExecutor *executor, 
-  aclrtStream    stream)`
+  aclrtStream    stream)
 ```
 
 ## aclnnWeightQuantBatchMatmulV3GetWorkspaceSize
@@ -129,7 +129,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
           <ul>
             <li>per_tensor模式：输入shape为(1,)或(1, 1)</li>
             <li>per_channel模式：输入shape为(1, n)或(n,)</li>
-            <li>per_group模式模式：输入shape为(ceil(k, group_size), n)</li>
+            <li>per_group模式：输入shape为(ceil(k, group_size), n)</li>
           </ul>
         </td>
         <td>非连续的Tensor仅支持transpose场景。</td>

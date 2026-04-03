@@ -577,7 +577,7 @@ aclnnStatus aclnnQuantMatmulV3(
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
                 return ret);
       for (int64_t i = 0; i < size; i++) {
-          LOG_PRINT("result[%ld] is: %u\n", i, resultData[i]);
+          LOG_PRINT("result[%ld] is: %hu\n", i, resultData[i]);
       }
       return ACL_SUCCESS;
   }
@@ -856,7 +856,7 @@ aclnnStatus aclnnQuantMatmulV3(
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
                 return ret);
       for (int64_t i = 0; i < size; i++) {
-          LOG_PRINT("result[%ld] is: %u\n", i, resultData[i]);
+          LOG_PRINT("result[%ld] is: %hu\n", i, resultData[i]);
       }
       return ACL_SUCCESS;
   }
@@ -1111,7 +1111,7 @@ aclnnStatus aclnnQuantMatmulV3(
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
                 return ret);
       for (int64_t i = 0; i < size; i++) {
-          LOG_PRINT("result[%ld] is: %u\n", i, resultData[i]);
+          LOG_PRINT("result[%ld] is: %hu\n", i, resultData[i]);
       }
       return ACL_SUCCESS;
   }
@@ -1337,7 +1337,7 @@ aclnnStatus aclnnQuantMatmulV3(
       aclOpExecutor *executor = nullptr;
       void *workspaceAddr = nullptr;
 
-      // x2的shpe需要transpose成nk格式，再进行transdata
+      // x2的shape需要transpose成nk格式，再进行transdata
       std::vector<int64_t> dimsData = {1, 0};
       // 创建dims aclIntArray
       aclIntArray *dims = aclCreateIntArray(dimsData.data(), dimsData.size());
@@ -1421,7 +1421,7 @@ aclnnStatus aclnnQuantMatmulV3(
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
                 return ret);
       for (int64_t i = 0; i < size; i++) {
-          LOG_PRINT("result[%ld] is: %u\n", i, resultData[i]);
+          LOG_PRINT("result[%ld] is: %hu\n", i, resultData[i]);
       }
       return ACL_SUCCESS;
   }
