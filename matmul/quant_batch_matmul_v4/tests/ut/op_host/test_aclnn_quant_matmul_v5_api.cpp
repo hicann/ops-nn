@@ -97,6 +97,8 @@ vector<int64_t> GenerateNZShape(const vector<int64_t> &viewShape, const aclDataT
 static void TestOneParamCase(const QuantBatchMatmulV5TestParam &param)
 {
     std::cout << "run case " << param.caseName << std::endl;
+    std::string npuArchStr = "ascend950";
+    op::NpuArchManager archManager(param.caseName.compare(0, npuArchStr.length(), npuArchStr) == 0 ? NpuArch::DAV_3510 : NpuArch::DAV_2201);
     vector<int64_t> stride;
     void* deviceAddr = nullptr;
     aclTensor* x1Desc = nullptr;
@@ -421,6 +423,8 @@ static QuantBatchMatmulV5TestParam casesParams950[] = {
     // {"ascend950_test_quant_bmm_v5_MxA8W4_NZ_C0_32", {16, 128}, {128, 128}, {128, 4}, {}, {16, 4}, {1, 128}, {}, {}, {}, {16, 128}, {}, {}, ACL_FLOAT8_E4M3FN, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_BF16, ACL_FLOAT8_E8M0, ACL_BF16, ACL_UINT64, ACL_BF16, ACL_BF16, ACL_BF16, false, true, 32, ACLNN_SUCCESS, ACL_FORMAT_FRACTAL_NZ_C0_32},
     // {"ascend950_test_quant_bmm_v5_MxA8W4_NZ_C0_32_X2_No_TransX2_ERROR", {16, 128}, {128, 128}, {128, 4}, {}, {16, 4}, {1, 128}, {}, {}, {}, {16, 128}, {}, {}, ACL_FLOAT8_E4M3FN, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_BF16, ACL_FLOAT8_E8M0, ACL_BF16, ACL_UINT64, ACL_BF16, ACL_BF16, ACL_BF16, false, false, 32, ACLNN_ERR_PARAM_INVALID, ACL_FORMAT_FRACTAL_NZ_C0_32},
     // {"ascend950_test_quant_bmm_v5_A8W4_NZ_TransX2_ERROR", {16, 128}, {128, 128}, {128, 4}, {}, {}, {}, {1, 128}, {}, {}, {16, 128}, {}, {}, ACL_FLOAT8_E4M3FN, ACL_FLOAT4_E2M1, ACL_BF16, ACL_BF16, ACL_BF16, ACL_BF16, ACL_UINT64, ACL_BF16, ACL_BF16, ACL_BF16, false, true, 32, ACLNN_ERR_PARAM_INVALID, ACL_FORMAT_FRACTAL_NZ},
+    {"ascend950_test_quant_bmm_v5_MxA8W4_Bias_fp16", {16, 128}, {128, 128}, {128, 2, 2}, {}, {16, 2, 2}, {1, 128}, {}, {}, {}, {16, 128}, {128, 1}, {128, 1}, ACL_FLOAT8_E4M3FN, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT16, ACL_FLOAT8_E8M0, ACL_FLOAT16, ACL_UINT64, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, false, true, 32, ACLNN_SUCCESS},
+    {"ascend950_test_quant_bmm_v5_MxA8W4_Bias_Error_dtype", {16, 128}, {128, 128}, {128, 2, 2}, {}, {16, 2, 2}, {1, 128}, {}, {}, {}, {16, 128}, {128, 1}, {128, 1}, ACL_FLOAT8_E4M3FN, ACL_FLOAT4_E2M1, ACL_FLOAT8_E8M0, ACL_FLOAT16, ACL_FLOAT8_E8M0, ACL_FLOAT16, ACL_UINT64, ACL_FLOAT16, ACL_FLOAT16, ACL_BF16, false, true, 32, ACLNN_ERR_PARAM_INVALID},
 };
 
 INSTANTIATE_TEST_SUITE_P(Ascend950_QuantBatchMatmulV5, l2_QuantBatchMatmulV5_test_950, testing::ValuesIn(casesParams950));

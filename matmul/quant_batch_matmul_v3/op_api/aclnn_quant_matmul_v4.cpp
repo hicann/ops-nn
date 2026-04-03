@@ -806,7 +806,7 @@ static inline bool IsMicroScaling(const aclTensor *x1Scale, const aclTensor *x2S
            x2Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0;
 }
 
-static bool CheckA8W4Dtype(const TupleTensor &mandatoryTensors, const TupleOptional &optionalTensors) {
+static bool CheckA8W4Dtype(const TupleTensor &mandatoryTensors, const TupleOptional &optionalTensors, const aclTensor *out) {
     auto x2Scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
     auto x1Scale = std::get<INDEX_PERTOKEN_IN_OPTIONAL_TUPLE>(optionalTensors);
     auto bias = std::get<INDEX_BIAS_IN_OPTIONAL_TUPLE>(optionalTensors);
@@ -827,9 +827,21 @@ static bool CheckA8W4Dtype(const TupleTensor &mandatoryTensors, const TupleOptio
         OP_CHECK_DTYPE_NOT_SUPPORT(yScale, Y_SCALE_SUPPORT_LIST, return false);
     } else if (IsMicroScaling(x1Scale, x2Scale)) {
         // MxA8W4 mode
-        if (bias != nullptr && bias->GetDataType() != DataType::DT_BF16 && bias->GetDataType() != DataType::DT_FLOAT16) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In A8W4 mx quant mode, bias dtype must be bfloat16 or float16.");
-            return false;
+        if (bias != nullptr) {
+            // 检查1：bias 类型必须是 bf16 或 fp16
+            if (bias->GetDataType() != DataType::DT_BF16 && bias->GetDataType() != DataType::DT_FLOAT16) {
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In A8W4 mx quant mode, bias dtype must be bfloat16 or float16.");
+                return false;
+            }
+            // 检查2：bias dtype 必须与 out dtype 一致
+            if (bias->GetDataType() != out->GetDataType()) {
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                         "In A8W4 mx quant mode, bias dtype must be consistent with output dtype. "
+                         "bias dtype: %s, output dtype: %s",
+                         op::ToString(bias->GetDataType()).GetString(),
+                         op::ToString(out->GetDataType()).GetString());
+                return false;
+            }
         }
         if (yScale != nullptr) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In A8W4 mx quant mode, yScale must be null.");
@@ -1006,7 +1018,7 @@ static inline bool CheckA8W4Shape(const TupleTensor &mandatoryTensors, const Tup
 static inline aclnnStatus CheckParamsA8W4Float(const TupleTensor &mandatoryTensors, const TupleOptional &optionalTensors,
                                           const TupleAttr &boolsTrans, const aclTensor *out) {
     // 1. 校验dtype是否符合要求
-    CHECK_RET(CheckA8W4Dtype(mandatoryTensors, optionalTensors), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckA8W4Dtype(mandatoryTensors, optionalTensors, out), ACLNN_ERR_PARAM_INVALID);
     // 2. 检查format是否符合要求
     CHECK_RET(CheckA8W4Format(mandatoryTensors, optionalTensors, out), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查shape是否符合要求

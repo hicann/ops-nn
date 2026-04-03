@@ -300,6 +300,42 @@ TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_a8w4_mx_1)
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
+// mxa8w4: bias/out支持fp16
+TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_mxa8w4_bias_fp16)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x1_desc = TensorDesc({16, 128}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({64, 128}, ACL_FLOAT4_E2M1, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 8, 16, 32});
+    TensorDesc x1_scale_desc = TensorDesc({16, 2, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc x2_scale_desc = TensorDesc({64, 2, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    int64_t groupSize = 32;
+    TensorDesc bias_desc = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1_scale_desc, x2_scale_desc, nullptr, nullptr, nullptr, nullptr, bias_desc, false, true, groupSize),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+// mxa8w4: bias/out类型要求一致
+TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_mxa8w4_bias_fp16_out_bf16)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x1_desc = TensorDesc({16, 128}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({128, 64}, ACL_FLOAT4_E2M1, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 8, 16, 32});
+    TensorDesc x1_scale_desc = TensorDesc({16, 2, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc x2_scale_desc = TensorDesc({64, 2, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    int64_t groupSize = 32;
+    TensorDesc bias_desc = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 128}, ACL_BF16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1_scale_desc, x2_scale_desc, nullptr, nullptr, nullptr, nullptr, bias_desc, false, true, groupSize),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
 TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_mxfp4_weight_nz_micro_scaling_enc_group)
 {
     op::NpuArchManager archManager(NpuArch::DAV_3510);

@@ -111,7 +111,7 @@ public:
         nL1Len_ = Get<1>(actualShape);
         mL0Len_ = mL1Len_;
         nL0Len_ = nL1Len_;
-        for (uint64_t kLoopIdx = 0; kLoopIdx < kTileCount_; kLoopIdx++) {
+        for (uint64_t kLoopIdx = 0UL; kLoopIdx < kTileCount_; kLoopIdx++) {
             kL1Offset_ = kLoopIdx * kL1Size_;
             kL1Len_ = Cmct::Gemm::Min(kSize_ - kL1Offset_, kL1Size_);
             WaitFlag<HardEvent::MTE1_MTE2>(eventIdsMte1ToMte2_[l1BufIdx_]);
@@ -435,7 +435,7 @@ private:
             if (kFractalIdx == 0) {
                 WaitFlag<HardEvent::FIX_M>(eventIdsFixToM_[madLoopIdx_ & 1]);
             }
-            mmadParams.k = CeilAlign(baseK, 64);
+            mmadParams.k = CeilAlign(baseK, K_ALIGN_SIZE);
             if (kL0Idx > 0) {
                 mmadParams.cmatrixInitVal = false;
             }

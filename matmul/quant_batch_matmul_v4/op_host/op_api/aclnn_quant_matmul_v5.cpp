@@ -384,7 +384,14 @@ static bool CheckDtype(const TupleInput &inputTensors, const TupleQuant &quantTe
     } else if (IsMicroScaling(x1Scale, x2Scale)) {
         // MxA8W4 mode
         if (bias != nullptr) {
+            // 检查1：bias 类型必须在 Y_SUPPORT_LIST 中
             OP_CHECK_DTYPE_NOT_SUPPORT(bias, Y_SUPPORT_LIST, return false);
+            // 检查2：bias dtype 必须与 out dtype 一致
+            if (bias->GetDataType() != out->GetDataType()) {
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                         "In MxA8W4 mode, bias dtype must be consistent with output dtype. ");
+                return false;
+            }
         }
         if (yScale != nullptr) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In MxA8W4 mode, yScale must be null.");
