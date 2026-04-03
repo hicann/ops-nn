@@ -306,7 +306,7 @@ aclnnStatus aclnnDynamicBlockQuantV2(
   #include <iostream>
   #include <vector>
   #include "acl/acl.h"
-  #include "aclnnop/aclnn_dynamic_block_quant.h"
+  #include "aclnnop/aclnn_dynamic_block_quant_v2.h"
   
   #define CHECK_RET(cond, return_expr) \
     do {                               \
