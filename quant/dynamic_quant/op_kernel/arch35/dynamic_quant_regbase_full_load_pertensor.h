@@ -804,7 +804,7 @@ private:
             maxValueNoSym = FP8_E4M3FN_MAX_VALUE_NO_SYM;
         } else if constexpr (IsSameType<yDtype, hifloat8_t>::value) {
             maxValue = tilingData_.dstTypeMax;
-            maxValueNoSym = tilingData_.dstTypeMax * 2;
+            maxValueNoSym = tilingData_.dstTypeMax * DynamicQuantNDOpt::SYM_RANGE_MULTI;
         }
 }
 

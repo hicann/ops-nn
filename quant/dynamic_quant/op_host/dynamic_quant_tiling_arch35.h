@@ -39,19 +39,19 @@ private:
         const gert::StorageShape* shape1, const gert::StorageShape* shape2, uint32_t shape1Dim, uint32_t shape2Dim)const;
     ge::graphStatus CheckOpParams(gert::TilingContext* context);
     void ResetLargeTilingParams();
-    void SetTilingData(gert::TilingContext* context);
-    void PrintTilingData(gert::TilingContext* context);
+    void SetTilingData(gert::TilingContext* context) const;
+    void PrintTilingData(gert::TilingContext* context) const;
 
     void IsCapableForFullLoad(const gert::TilingContext* context);
     void IsCapableForRecompute(gert::TilingContext* context);
     void IsCapableForSplitM(gert::TilingContext* context);
-    void SetTilingDataForPerChannel(gert::TilingContext* context);
-    void PrintTilingDataForPerChannel(gert::TilingContext* context);
+    void SetTilingDataForPerChannel(gert::TilingContext* context) const;
+    void PrintTilingDataForPerChannel(gert::TilingContext* context) const;
     void CalculateTilingData();
     ge::graphStatus CalculateTilingDataForPerChannel(gert::TilingContext* context);
     void CalculateCoreNum(const gert::TilingContext* context);
     ge::graphStatus GetCompileInfo(gert::TilingContext* context);
-    ge::graphStatus DoEmptyTensorTiling(gert::TilingContext* context);
+    ge::graphStatus DoEmptyTensorTiling(gert::TilingContext* context) const;
 
 private:
     uint32_t vectorCoreNum{0};
@@ -85,7 +85,7 @@ private:
     bool isEmptyTensor = false;
     uint32_t quantMode_ = 0;     // 0: pertoken, 1: pertensor
     bool isSymmetrical_ = false; // 0: False, 1: True
-    float dstTypeMax = 0.0;
+    float dstTypeMax = 32768.0;
 
     int32_t yDtype;
     // members for perchannel

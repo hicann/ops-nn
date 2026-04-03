@@ -45,6 +45,7 @@ constexpr float DYNAMIC_QUANT_INT4_OFFSET = 7.0;
 constexpr float DYNAMIC_QUANT_EPSINON = 1e-12;
 constexpr float MIN_FLOAT_VALUE = -3.4028235e+38f;
 constexpr float MAX_FLOAT_VALUE = 3.402823466e+38f;
+constexpr float SYM_RANGE_MULTI = 2;
 
 template <typename yDtype>
 __aicore__ inline void SetFloatOverflowModeForRegbase()

@@ -71,6 +71,9 @@ constexpr uint32_t SPLIT_M_SCHEDULE_MODE = 1;
 constexpr uint32_t PER_CHANNEL_EXCLUDE_DIM = 2;
 constexpr uint32_t PER_CHANNEL_N_BASE_SIZE = 64;
 
+constexpr float HIFLOAT8_MAX_VALUE = 32768.0;
+constexpr float FLT_EPSILON = 1e-6f;
+
 std::vector<float> dstTypeMaxSupportList = {0.0, 15.0, 56.0, 224.0, 32768.0};
 
 template <uint32_t base, typename T = uint32_t>
@@ -353,7 +356,9 @@ ge::graphStatus DynamicQuantRegbaseTiling::CheckAttrs(gert::TilingContext* conte
             OP_LOGE(context, "dstTypeMax must in (0, 15, 56, 224, 32768).");
             return ge::GRAPH_FAILED;
         }
-        dstTypeMax = (dstTypeMax == 0) ? 32768 : dstTypeMax;
+        if (std::fabs(dstTypeMax) < FLT_EPSILON) {
+            dstTypeMax = HIFLOAT8_MAX_VALUE;
+        }
 
         std::string quantModeStr = quantModeAttr;
         if (quantModeStr == "pertoken") {
@@ -414,7 +419,7 @@ void DynamicQuantRegbaseTiling::ResetLargeTilingParams()
 }
 
 // 打印tiling参数
-void DynamicQuantRegbaseTiling::PrintTilingData(gert::TilingContext* context)
+void DynamicQuantRegbaseTiling::PrintTilingData(gert::TilingContext* context) const
 {
     DynamicQuantTilingDataArch35* tilingDataPtr = context->GetTilingData<DynamicQuantTilingDataArch35>();
     OP_LOGD(
@@ -429,7 +434,7 @@ void DynamicQuantRegbaseTiling::PrintTilingData(gert::TilingContext* context)
 }
 
 // 赋值tiling参数
-void DynamicQuantRegbaseTiling::SetTilingData(gert::TilingContext* context)
+void DynamicQuantRegbaseTiling::SetTilingData(gert::TilingContext* context) const
 {
     SetTilingKey(context);
     DynamicQuantTilingDataArch35* tilingDataPtr = context->GetTilingData<DynamicQuantTilingDataArch35>();
@@ -449,7 +454,7 @@ void DynamicQuantRegbaseTiling::SetTilingData(gert::TilingContext* context)
 }
 
 // 处理空Tensor的tiling
-ge::graphStatus DynamicQuantRegbaseTiling::DoEmptyTensorTiling(gert::TilingContext* context)
+ge::graphStatus DynamicQuantRegbaseTiling::DoEmptyTensorTiling(gert::TilingContext* context) const
 {
     int64_t tilingKey = GET_TPL_TILING_KEY(0U, TPL_EMPTY_TENSOR, 0U, 0U);
     OP_LOGD(context, "DoEmptyTensorTiling, the last dim must be 0, tilingKey is %ld", tilingKey);
@@ -680,7 +685,7 @@ ge::graphStatus DynamicQuantRegbaseTiling::CalculateTilingDataForPerChannel(gert
     return ge::GRAPH_SUCCESS;
 }
 
-void DynamicQuantRegbaseTiling::SetTilingDataForPerChannel(gert::TilingContext* context) {
+void DynamicQuantRegbaseTiling::SetTilingDataForPerChannel(gert::TilingContext* context) const {
     DynamicQuantTilingDataArch35* tilingDataPtr = context->GetTilingData<DynamicQuantTilingDataArch35>();
     tilingDataPtr->totalBatchLen = totalBatchLen;
     tilingDataPtr->mLen = mLen;
@@ -703,7 +708,7 @@ void DynamicQuantRegbaseTiling::SetTilingDataForPerChannel(gert::TilingContext* 
 }
 
 // 打印perchannel模板相关tiling参数
-void DynamicQuantRegbaseTiling::PrintTilingDataForPerChannel(gert::TilingContext* context)
+void DynamicQuantRegbaseTiling::PrintTilingDataForPerChannel(gert::TilingContext* context) const
 {
     DynamicQuantTilingDataArch35* tilingDataPtr = context->GetTilingData<DynamicQuantTilingDataArch35>();
     OP_LOGD(

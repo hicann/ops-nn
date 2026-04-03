@@ -55,6 +55,7 @@ constexpr float INT4_OFFSET_VALUE = 15.0f;
 constexpr float NEGATIVE_ONE = -1.0f;
 constexpr uint32_t REG_LEN = 64;
 constexpr uint32_t USE_BUFFER_NUM = 2;
+constexpr float SYM_RANGE_MULTI_PERCHANNEL = 2;
 
 #ifndef INFINITY
 #define INFINITY (__builtin_inff())
@@ -83,7 +84,7 @@ __aicore__ inline void SetMaxValue(float &maxValue, float &offsetValue, float &o
     } else if constexpr (IsSameType<yDtype, hifloat8_t>::value) {
         maxValue = static_cast<float>(1.0) / dstTypeMax;
         offsetValue = dstTypeMax;
-        offsetDivValue = static_cast<float>(1.0) / (dstTypeMax * 2);
+        offsetDivValue = static_cast<float>(1.0) / (dstTypeMax * SYM_RANGE_MULTI_PERCHANNEL);
     }
 }
 

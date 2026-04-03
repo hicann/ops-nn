@@ -271,7 +271,7 @@ __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetri
         scaleMaxValue = static_cast<float>(1.0) / FP8_E4M3FN_MAX_VALUE_NO_SYM;
         offsetMaxValue = FP8_E4M3FN_MAX_VALUE;
     } else if constexpr (IsSameType<yDtype, hifloat8_t>::value) {
-        scaleMaxValue = static_cast<float>(1.0) / (tilingData_.dstTypeMax * 2);
+        scaleMaxValue = static_cast<float>(1.0) / (tilingData_.dstTypeMax * DynamicQuantNDOpt::SYM_RANGE_MULTI);
         offsetMaxValue = tilingData_.dstTypeMax;
     }
 }

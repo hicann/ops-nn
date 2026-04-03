@@ -436,7 +436,7 @@ private:
         } else if constexpr (IsSameType<yDtype, hifloat8_t>::value) {
             maxValue = static_cast<float>(1.0) / tilingData_.dstTypeMax;
             offsetValue = tilingData_.dstTypeMax;
-            offsetDivValue = static_cast<float>(1.0) / (tilingData_.dstTypeMax * 2);
+            offsetDivValue = static_cast<float>(1.0) / (tilingData_.dstTypeMax * DynamicQuantNDOpt::SYM_RANGE_MULTI);
         }
     }
 
