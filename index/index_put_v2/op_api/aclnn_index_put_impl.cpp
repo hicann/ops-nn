@@ -15,6 +15,7 @@
 #include "aclnn_index_put_impl.h"
 #include "index/index_put/op_host/op_api/index_put.h"
 #include "index_put_v2.h"
+#include "acl/acl_rt.h"
 #include "index/linear_index_v2/op_host/op_api/linear_index_v2.h"
 #include "index/index_put_with_sort_v2/op_api/index_put_with_sort_v2.h"
 #include "index/index_put_with_sort/op_host/op_api/index_put_with_sort.h"
@@ -1212,7 +1213,7 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
     return ACLNN_SUCCESS;
   }
   int64_t deterministicValue = 0;
-  rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
+  rtError_t retRts = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
   if (retRts != RT_ERROR_NONE) {
       deterministicValue = 0;
   }

@@ -24,6 +24,7 @@
 #include "aclnn_kernels/common/op_error_check.h"
 #include "runtime/context.h"
 #include "aclnn_embedding_dense_backward.h"
+#include "acl/acl_rt.h"
 
 using namespace op;
 
@@ -178,7 +179,7 @@ static aclnnStatus CheckParams(
 static bool CheckIsSmallDimMode(const aclTensor* grad, const uint64_t embeddingDim, const uint64_t numWeights)
 {
     int64_t deterministicValue = 0;
-    rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
+    rtError_t retRts = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
     if (retRts != ACL_ERROR_NONE) {
         deterministicValue = 0;
     }
