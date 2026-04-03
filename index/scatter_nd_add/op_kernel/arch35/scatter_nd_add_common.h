@@ -107,15 +107,17 @@ public:
 
     using selRegType = typename std::conditional<IsSameType<T, bool>::value, int8_t, T>::type;
 
+    using COMPUTE_TYPE = typename std::conditional<IsSameType<T, bool>::value, int8_t,
+                        typename std::conditional<IsSameType< T, half>::value || IsSameType< T, bfloat16_t>::value, float32_t, T>::type>::type;
+
     __aicore__ inline void InitBaseBuffer(
-        TPipe& pipe, uint32_t indicesNumber, GM_ADDR indices, GM_ADDR updates, GM_ADDR y)
+        TPipe& pipe, uint32_t indicesNumber, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, int64_t singleCol = 0)
     {
         indicesGm_.SetGlobalBuffer((__gm__ U*)(indices));
         updatesGm_.SetGlobalBuffer((__gm__ T*)(updates));
         yGm_.SetGlobalBuffer((__gm__ T*)(y));
 
         pipe.InitBuffer(strideBuf_, MAX_RANK_COUNT * sizeof(U));
-        pipe.InitBuffer(dataQueue_, 1, indicesFactor_ * afterAxisFactor_ * sizeof(T));
         pipe.InitBuffer(outOfstBuf_, indicesFactor_ * sizeof(U));
         pipe.InitBuffer(indicesBuf_, indicesFactor_ * indexRankSize_ * sizeof(U));
         pipe.InitBuffer(maxScoreBuf_, HASH_SCORE_BUF_SIZE * sizeof(float));
@@ -125,7 +127,13 @@ public:
             uniqueIdCountQue_, 1, ops::CeilAlign((indicesFactor_ + 1) * sizeof(int32_t), UB_AGLIN_VALUE));
         pipe.InitBuffer(
             updateSumIdxQue_, 1, ops::CeilAlign((indicesFactor_ + 1) * sizeof(U), UB_AGLIN_VALUE));
-        pipe.InitBuffer(updateSumQue_, 1, indicesFactor_ * afterAxisFactor_ * sizeof(float));
+        if (singleCol) {
+            pipe.InitBuffer(dataQueue_, DOUBLE_BUFFER, afterAxisFactor_ * sizeof(T));
+            pipe.InitBuffer(updateSumQue_, DOUBLE_BUFFER, afterAxisFactor_ * sizeof(float));
+        } else {
+            pipe.InitBuffer(dataQueue_, 1, indicesFactor_ * afterAxisFactor_ * sizeof(T));
+            pipe.InitBuffer(updateSumQue_, 1, indicesFactor_ * afterAxisFactor_ * sizeof(float));
+        }
 
         if constexpr (castType == CAST_0) {
             pipe.InitBuffer(sortIndicesQue_, ops::CeilAlign(indicesFactor_ * sizeof(U) + SORT_PAD_NUM * UB_AGLIN_VALUE, UB_AGLIN_VALUE));
@@ -729,6 +737,125 @@ public:
             IndexStatisticInt32(outOfstLocal, dstLocal, this->maxScore_, rowLen, afterAxis_);
         } else {
             IndexStatisticInt64(outOfstLocal, dstLocal, this->maxScore_, rowLen, afterAxis_);
+        }
+    }
+
+    __aicore__ inline void SingleColAdd(LocalTensor<COMPUTE_TYPE> updateSumLocal, int64_t colLen) {
+        LocalTensor<T> updatesLocal = dataQueue_.DeQue<T>();
+        __local_mem__ selRegType* updatesAddr = (__local_mem__ selRegType*)updatesLocal.GetPhyAddr();
+        __local_mem__ COMPUTE_TYPE* updateSumAddr = (__local_mem__ COMPUTE_TYPE*)updateSumLocal.GetPhyAddr();
+        uint32_t vfLen = platform::GetVRegSize() / sizeof(COMPUTE_TYPE);
+        int32_t loopSize = (colLen + vfLen - 1) / vfLen;
+        __VEC_SCOPE__
+        {
+            AscendC::MicroAPI::RegTensor<COMPUTE_TYPE> sumReg;
+            AscendC::MicroAPI::RegTensor<COMPUTE_TYPE> updateReg;
+            AscendC::MicroAPI::MaskReg maskReg;
+            uint32_t maskLen = static_cast<uint32_t>(colLen);
+            for (uint16_t j = 0; j < static_cast<uint16_t>(loopSize); j++) {
+                maskReg = AscendC::MicroAPI::UpdateMask<COMPUTE_TYPE>(maskLen);
+                if constexpr(IsSameType<T, half>::value || IsSameType<T, bfloat16_t>::value) {
+                    ops::LoadOneTensorForDtypeT<T>(updatesAddr + j * vfLen, updateReg, maskReg, 0);
+                    AscendC::MicroAPI::DataCopy(sumReg, updateSumAddr + j * vfLen);
+                    AscendC::MicroAPI::Add(sumReg, sumReg, updateReg, maskReg);
+                    auto updateSumAddrOfst = updateSumAddr + j * vfLen;
+                    AscendC::MicroAPI::DataCopy(updateSumAddrOfst, sumReg, maskReg);
+                } else {
+                    AscendC::MicroAPI::DataCopy(sumReg, updateSumAddr + j * vfLen);
+                    AscendC::MicroAPI::DataCopy(updateReg, updatesAddr + j * vfLen);
+                    AscendC::MicroAPI::Add(sumReg, sumReg, updateReg, maskReg);
+                    auto updateSumAddrOfst = updateSumAddr + j * vfLen;
+                    AscendC::MicroAPI::DataCopy(updateSumAddrOfst, sumReg, maskReg);
+                }
+            }
+        }
+        dataQueue_.FreeTensor(updatesLocal);
+    }
+
+    __aicore__ inline void CopyOutSingleCol(LocalTensor<T> outLocal, int64_t outOffset, int64_t colLen)
+    {
+        if constexpr (IsSameType<T, bool>::value) {
+            SetAtomicMax<int8_t>();
+            CopyOut<bool>(yGm_[outOffset], outLocal, colLen);
+            SetAtomicNone();
+        } else {
+            SetAtomicAdd<T>();
+            CopyOut<T>(yGm_[outOffset], outLocal, colLen);
+            SetAtomicNone();
+        }
+    }
+
+    __aicore__ inline void CopyInUpdates(int64_t updatesOffset, int64_t rowLen, int64_t colLen) {
+        LocalTensor<T> updatesLocal = dataQueue_.AllocTensor<T>();
+        DataCopyExtParams copyParams = {
+            static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen * sizeof(T)),
+            static_cast<uint32_t>((afterAxis_ - colLen) * sizeof(T)), static_cast<uint32_t>(0),
+            static_cast<uint32_t>(0)};
+        DataCopyPadExtParams<T> updatePadParams = {false, 0, 0, 0};
+        DataCopyPad(updatesLocal, updatesGm_[updatesOffset], copyParams, updatePadParams);
+        dataQueue_.EnQue(updatesLocal);
+    }
+
+    __aicore__ inline void ComputeSortInOutSingleCol(
+        int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen)
+    {
+        // rowIdx 可以改为indicesOffset， splitAfter和SplitBefore通用 colIdx 同理
+        int64_t indicesOffset = GetBlockIdx() * eachCoreIndexCount_ + rowIdx * indicesFactor_;
+        event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
+        SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
+        WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
+
+        event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+        SetFlag<HardEvent::V_S>(eventIdVToS);
+        WaitFlag<HardEvent::V_S>(eventIdVToS);
+
+        LocalTensor<int32_t> uniqueIdCountLocal = uniqueIdCountQue_.DeQue<int32_t>();
+        LocalTensor<uint32_t> updatesOriginIdexLocal = updatesOriginIdexQue_.DeQue<uint32_t>();
+        LocalTensor<U> ofstLocal = updateSumIdxQue_.DeQue<U>();
+        int64_t updatesOffset = indicesOffset * afterAxis_ + colIdx * afterAxisFactor_;
+        int32_t idLocation = 0;
+        for (int32_t i = 0; i < uniqueIdNum_; i++) {
+            LocalTensor<COMPUTE_TYPE> updateSumLocal = updateSumQue_.AllocTensor<COMPUTE_TYPE>();
+            AscendC::Duplicate<COMPUTE_TYPE>(updateSumLocal, 0, colLen);
+            int32_t idRepeatTimes = uniqueIdCountLocal(i);
+            for (int32_t k = 0; k < idRepeatTimes; k++) {
+                // 兼容splitAfter
+                int64_t curOffset = updatesOffset + updatesOriginIdexLocal(idLocation) * afterAxis_;
+                event_t eventIdVToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
+                SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
+                WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
+                CopyInUpdates(curOffset, 1, colLen);
+                event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+                SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+                WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+                SingleColAdd(updateSumLocal, colLen);
+                idLocation += 1;
+            }
+            if constexpr (IsSameType<T, half>::value || IsSameType<T, bfloat16_t>::value) {
+                LocalTensor<T> updateSumLocalOrg = updateSumLocal.template ReinterpretCast<T>();
+                AscendC::Cast(updateSumLocalOrg, updateSumLocal, RoundMode::CAST_RINT, colLen);
+            }
+            updateSumQue_.EnQue(updateSumLocal);
+            int64_t outOffset = ofstLocal(i) * afterAxis_ + colIdx * afterAxisFactor_;
+            LocalTensor<T> outLocal = updateSumQue_.DeQue<T>();
+            CopyOutSingleCol(outLocal, outOffset, colLen);
+            updateSumQue_.FreeTensor(outLocal);
+        }
+        updatesOriginIdexQue_.EnQue(updatesOriginIdexLocal);
+        uniqueIdCountQue_.EnQue(uniqueIdCountLocal);
+        updateSumIdxQue_.EnQue(ofstLocal);
+    }
+
+    __aicore__ inline void CopyInAndOutSingleCol(LocalTensor<U> outOffsetLocal, int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen)
+    {
+        for (int32_t i = 0; i < rowLen; i++) {
+            int64_t indicesOfset = GetBlockIdx() * eachCoreIndexCount_ + rowIdx * indicesFactor_ + i;
+            int64_t updatesOffset = indicesOfset * afterAxis_ + colIdx * afterAxisFactor_;
+            CopyInUpdates(updatesOffset, 1, colLen);
+            LocalTensor<T> dataLocal = dataQueue_.DeQue<T>();
+            int64_t outOffset = outOffsetLocal(i) * afterAxis_ + colIdx * afterAxisFactor_;
+            CopyOutSingleCol(dataLocal, outOffset, colLen);
+            dataQueue_.FreeTensor(dataLocal);
         }
     }
 

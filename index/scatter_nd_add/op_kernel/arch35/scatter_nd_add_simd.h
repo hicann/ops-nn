@@ -33,6 +33,7 @@ public:
     __aicore__ inline void Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace);
     __aicore__ inline void ProcessSplitAfter();
     __aicore__ inline void ProcessSplitIndices();
+    __aicore__ inline void ProcessSplitIndicesSingleCol();
     __aicore__ inline void Process();
 
 private:
@@ -63,7 +64,7 @@ __aicore__ inline void ScatterNdAddSimd<T, U, CAST_T, castType>::Init(
     this->indicesFactor_ = tilingData_.indicesFactor;
     this->afterAxis_ = tilingData_.afterAxis;
     this->afterAxisFactor_ = tilingData_.afterAxisFactor;
-    this->InitBaseBuffer(pipe_, tilingData_.indicesFactor, indices, updates, y);
+    this->InitBaseBuffer(pipe_, tilingData_.indicesFactor, indices, updates, y, tilingData_.singleCol);
 
     curCoreIndexCount_ =
         (GetBlockIdx() != (tilingData_.usedCoreNumBefore - 1) ? tilingData_.eachCoreIndexCount :
@@ -173,6 +174,46 @@ __aicore__ inline void ScatterNdAddSimd<T, U, CAST_T, castType>::ProcessSplitInd
     }
 }
 
+
+template <typename T, typename U, typename CAST_T, uint32_t castType>
+__aicore__ inline void ScatterNdAddSimd<T, U, CAST_T, castType>::ProcessSplitIndicesSingleCol()
+{
+    if (GetBlockIdx() >= tilingData_.usedCoreNumBefore) {
+        return;
+    }
+
+    int64_t colLoopNum = tilingData_.updateLoopSize;
+    int64_t colMainDataLen = tilingData_.afterAxisFactor;
+    int64_t colTailDataLen = tilingData_.updateTailNum;
+    int64_t rowLoopNum = ops::CeilDiv(curCoreIndexCount_, tilingData_.indicesFactor);
+    int64_t rowMainDataLen = tilingData_.indicesFactor;
+    int64_t rowTailDataLen = curCoreIndexCount_ - tilingData_.indicesFactor * (rowLoopNum - 1);
+
+    for (int64_t rowIdx = 0; rowIdx < rowLoopNum; rowIdx++) {
+        int64_t rowDataLen = (rowIdx == rowLoopNum - 1) ? rowTailDataLen : rowMainDataLen;
+        this->CopyIndiceInSplitIndices(rowIdx, rowDataLen);
+        LocalTensor<U> outOfstLocal = this->outOfstBuf_.template Get<U>();
+        if (this->maxScore_ > SORT_HIST_THRESHOLD) {
+            this->SortIndices(outOfstLocal, rowDataLen);
+            for (int64_t colIdx = 0; colIdx < colLoopNum; colIdx++) {
+                int64_t colLen = (colIdx == colLoopNum - 1) ? colTailDataLen : colMainDataLen;
+                this->ComputeSortInOutSingleCol(rowIdx, colIdx, rowDataLen, colLen);
+            }
+            LocalTensor<int32_t> uniqueIdCountLocal = this->uniqueIdCountQue_.template DeQue<int32_t>();
+            LocalTensor<uint32_t> updatesOriginIdexLocal = this->updatesOriginIdexQue_.template DeQue<uint32_t>();
+            LocalTensor<U> updateSumIdxLocal = this->updateSumIdxQue_.template DeQue<U>();
+            this->uniqueIdCountQue_.template FreeTensor(uniqueIdCountLocal);
+            this->updatesOriginIdexQue_.template FreeTensor(updatesOriginIdexLocal);
+            this->updateSumIdxQue_.template FreeTensor(updateSumIdxLocal);
+        } else {
+            for (int64_t colIdx = 0; colIdx < colLoopNum; colIdx++) {
+                int64_t colDataLen = (colIdx == colLoopNum - 1) ? colTailDataLen : colMainDataLen;
+                this->CopyInAndOutSingleCol(outOfstLocal, rowIdx, colIdx, rowDataLen, colDataLen);
+            }
+        }
+    }
+}
+
 template <typename T, typename U, typename CAST_T, uint32_t castType>
 __aicore__ inline void ScatterNdAddSimd<T, U, CAST_T, castType>::Process()
 {
@@ -184,7 +225,11 @@ __aicore__ inline void ScatterNdAddSimd<T, U, CAST_T, castType>::Process()
     if (tilingData_.isSplitAfterAxis == 1) {
         ProcessSplitAfter();
     } else {
-        ProcessSplitIndices();
+        if (tilingData_.singleCol) {
+            ProcessSplitIndicesSingleCol();
+        } else {
+            ProcessSplitIndices();
+        }
     }
 }
 } // namespace ScatterNdAdd

@@ -71,6 +71,7 @@ BEGIN_TILING_DATA_DEF(ScatterNdAddTilingData)
   TILING_DATA_FIELD_DEF(int64_t, isSimdNonDeterminstic);
   TILING_DATA_FIELD_DEF(int64_t, isSort);
   TILING_DATA_FIELD_DEF(int64_t, isOpti);
+  TILING_DATA_FIELD_DEF(int64_t, singleCol);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(ScatterNdAdd, ScatterNdAddTilingData)
@@ -99,6 +100,7 @@ protected:
     void DoOpTilingSplitAfter();
     void DoOpTilingForDeterminsticSplitIndices();
     void DoOpTilingSimdSplitIndices();
+    void DoOpTilingSplitIndicesSingleCol();
     void DoOpTilingForDeterminstic();
     void DoOpTilingForSimdNonDetermin();
     void SelectTiling();
@@ -175,6 +177,7 @@ private:
     int64_t isSimdNonDeterminstic_ = 0;
     int64_t isSort_ = 0;
     int64_t isOpti_ = 0;
+    int64_t singleCol_ = 0;
     
     const char* opName = "ScatterNdAdd";
     ScatterNdAddTilingData tilingData;

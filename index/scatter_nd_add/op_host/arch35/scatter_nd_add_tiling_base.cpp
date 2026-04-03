@@ -42,6 +42,7 @@ static constexpr uint64_t DB_BUFFER = 2;
 static constexpr uint64_t RESERVE_SIZE = 256;
 static constexpr int64_t ALIGN_SIZE = 32;
 static constexpr int64_t MIN_HANDLE_SIZE = 128;
+static constexpr int64_t SIMD_NONDETERMINSTIC_MIN_HANDLE_SIZE = 4096;
 static constexpr int64_t MIN_SIZE_SIMD_NONDETERMINSTIC = 128;
 static constexpr int64_t INDICES_MIN_BLOCK_SIZE = 1024;
 static constexpr int64_t INT32_BYTES = 4;
@@ -383,7 +384,7 @@ void ScatterNdAddSimtTiling::DoOpTilingSplitAfter()
                                     Ops::Base::CeilAlign(indicesFactor_ * INT32_BYTES, ubBlock) + 
                                     Ops::Base::CeilAlign(indicesFactor_ * (INT32_BYTES * TWO), ubBlock) +
                                     Ops::Base::CeilAlign(indicesFactor_ * indicesTypeSize_, ubBlock) + 
-                                    indicesFactor_ * Ops::Base::CeilAlign((varTypeSize_) * eachCoreAfterAxisCount_, ubBlock) + 
+                                    indicesFactor_ * Ops::Base::CeilAlign((varTypeSize_) * eachCoreAfterAxisCount_, ubBlock) +
                                     indicesFactor_ * Ops::Base::CeilAlign((FP32_BYTES) * eachCoreAfterAxisCount_, ubBlock) + 
                                     GetSortTmpSize(sortTmpType, indicesFactor_, false));
             if (indicesFactor_ > indicesAxis_) {
@@ -509,6 +510,68 @@ void ScatterNdAddSimtTiling::DoOpTilingForDeterminsticSplitIndices()
     }
 }
 
+void ScatterNdAddSimtTiling::DoOpTilingSplitIndicesSingleCol()
+{
+    int64_t indicesDtypeCastSize = indiceCastMode_ ? indiceCastDtypeSize_ : 0;
+    int64_t indicesRealTypeSize = indiceCastMode_ ? indiceCastDtypeSize_ : indicesTypeSize_;
+    ge::DataType sortTmpType = indiceCastMode_ ?  indiceCastDtype_ : indiceDtype_;
+
+    int64_t alignNum = ALIGN_SIZE / varTypeSize_;
+    int64_t halfUbSize = static_cast<int64_t>((ubSize_ - RESERVE_SIZE) / DB_BUFFER);
+    halfUbSize = halfUbSize - MIN_HANDLE_SIZE * FP32_BYTES;
+    eachCoreIndexCount_ = Ops::Base::CeilDiv(indicesAxis_, totalCoreNum_);
+    usedCoreNumBefore_ = Ops::Base::CeilDiv(indicesAxis_, eachCoreIndexCount_);
+    tailCoreIndexCount_ = indicesAxis_ - eachCoreIndexCount_ * (usedCoreNumBefore_ - 1);
+    int64_t oneIndexSize = static_cast<int64_t>(rankSize_) * indicesTypeSize_;
+
+    auto ubBlock = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
+    int64_t indicesAlignSize = Ops::Base::CeilAlign(oneIndexSize, ubBlock) +
+                                Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +
+                                Ops::Base::CeilAlign(indicesDtypeCastSize, ubBlock) +
+                                Ops::Base::CeilAlign(indicesRealTypeSize + TWO * ALIGN_SIZE, ubBlock) + 
+                                Ops::Base::CeilAlign(INT32_BYTES, ubBlock) + 
+                                Ops::Base::CeilAlign(INT32_BYTES * TWO, ubBlock) +
+                                Ops::Base::CeilAlign(indicesTypeSize_, ubBlock);
+
+    int64_t updateAlignSize = Ops::Base::CeilAlign(varTypeSize_ * afterAxis_, ubBlock) + 
+                                Ops::Base::CeilAlign(FP32_BYTES * afterAxis_, ubBlock) + 
+                                GetSortTmpSize(sortTmpType, SPLIT_THRESHOLD, false);
+    //每次最少搬入indices数
+    int64_t minIndicesFactorSize = indicesAlignSize * SPLIT_THRESHOLD;
+
+    if (minIndicesFactorSize + updateAlignSize > halfUbSize) {
+        indicesFactor_ = SPLIT_THRESHOLD;
+        int64_t sortTmpSize = GetSortTmpSize(sortTmpType, SPLIT_THRESHOLD, false);
+        afterAxisFactor_ = (halfUbSize - indicesFactor_ * indicesAlignSize - sortTmpSize) / (varTypeSize_ + FP32_BYTES);
+        afterAxisFactor_ = Ops::Base::FloorAlign(afterAxisFactor_, alignNum);
+    } else {
+        afterAxisFactor_ = Ops::Base::CeilAlign(afterAxis_, alignNum);
+        indicesFactor_ = (halfUbSize - updateAlignSize) / indicesAlignSize;
+        int64_t restSize = static_cast<int64_t>(-1);
+        while (restSize <= 0) {
+            int64_t occupy = Ops::Base::CeilAlign(indicesFactor_ * rankSize_ * indicesTypeSize_, ubBlock) +
+                            Ops::Base::CeilAlign(indicesFactor_ * indicesTypeSize_, ubBlock) +
+                            Ops::Base::CeilAlign(indicesFactor_ * indicesDtypeCastSize, ubBlock) + 
+                            Ops::Base::CeilAlign(indicesFactor_ * (indicesRealTypeSize + TWO * ALIGN_SIZE), ubBlock) + 
+                            Ops::Base::CeilAlign(indicesFactor_ * INT32_BYTES, ubBlock) + 
+                            Ops::Base::CeilAlign(indicesFactor_ * (INT32_BYTES * TWO), ubBlock) +
+                            Ops::Base::CeilAlign(indicesFactor_ * indicesTypeSize_, ubBlock) + 
+                            Ops::Base::CeilAlign((varTypeSize_) * afterAxisFactor_, ubBlock) +
+                            Ops::Base::CeilAlign((FP32_BYTES) * afterAxisFactor_, ubBlock) + 
+                            GetSortTmpSize(sortTmpType, indicesFactor_, false);
+            restSize = halfUbSize - occupy;
+            if (indicesFactor_ > indicesAxis_) {
+                indicesFactor_ = indicesAxis_;
+                break;
+            }
+            --indicesFactor_;
+        }
+    }
+    updateLoopSize_ = Ops::Base::CeilDiv(afterAxis_, afterAxisFactor_);
+    updateTailNum_ = afterAxis_ - (updateLoopSize_ - 1) * afterAxisFactor_;
+    singleCol_ = 1;
+}
+
 void ScatterNdAddSimtTiling::DoOpTilingSimdSplitIndices()
 {
     int64_t indicesDtypeCastSize = indiceCastMode_ ? indiceCastDtypeSize_ : 0;
@@ -560,7 +623,7 @@ void ScatterNdAddSimtTiling::DoOpTilingSimdSplitIndices()
                             Ops::Base::CeilAlign(indicesFactor_ * INT32_BYTES, ubBlock) + 
                             Ops::Base::CeilAlign(indicesFactor_ * (INT32_BYTES * TWO), ubBlock) +
                             Ops::Base::CeilAlign(indicesFactor_ * indicesTypeSize_, ubBlock) + 
-                            indicesFactor_ * Ops::Base::CeilAlign((varTypeSize_) * afterAxisFactor_, ubBlock) + 
+                            indicesFactor_ * Ops::Base::CeilAlign((varTypeSize_) * afterAxisFactor_, ubBlock) +
                             indicesFactor_ * Ops::Base::CeilAlign((FP32_BYTES) * afterAxisFactor_, ubBlock) + 
                             GetSortTmpSize(sortTmpType, indicesFactor_, false);
             restSize = halfUbSize - occupy;
@@ -592,8 +655,14 @@ void ScatterNdAddSimtTiling::DoOpTilingForDeterminstic()
 void ScatterNdAddSimtTiling::DoOpTilingForSimdNonDetermin()
 {
     GetCastType();
+    // 列大于4k单行搬入搬出
+    if (afterAxis_ * varTypeSize_ > SIMD_NONDETERMINSTIC_MIN_HANDLE_SIZE &&
+        (indicesAxis_ > (totalCoreNum_ * SPLIT_THRESHOLD))) {
+        DoOpTilingSplitIndicesSingleCol();
+        return;
+    }
     /* 优先分after */
-    int64_t splitThresh = totalCoreNum_ * MIN_HANDLE_SIZE / varTypeSize_;
+    int64_t splitThresh = totalCoreNum_ * MIN_HANDLE_SIZE / varTypeSize_; 
     if ((afterAxis_ > splitThresh) || (indicesAxis_ < (totalCoreNum_ / TWO))) {
         DoOpTilingSplitAfter();
         return;
@@ -737,6 +806,7 @@ void ScatterNdAddSimtTiling::SetTilingData()
     tilingData.set_ubRowOptiFactor(ubRowOptiFactor_);
     tilingData.set_isOpti(isOpti_);
     tilingData.set_indiceCastMode(indiceCastMode_);
+    tilingData.set_singleCol(singleCol_);
 }
 
 
@@ -744,43 +814,44 @@ std::string ScatterNdAddSimtTiling::TilingDataToString()
 {
     // 基础分块参数
     std::string result = "blockNum: " + std::to_string(tilingData.get_blockNum());
-    result += "blockTilingSize: " + std::to_string(tilingData.get_blockTilingSize());
-    result += "tailBlockTilingSize: " + std::to_string(tilingData.get_tailBlockTilingSize());
-    result += "ubTilingSize: " + std::to_string(tilingData.get_ubTilingSize());
-    result += "sliceSize: " + std::to_string(tilingData.get_sliceSize());
-    result += "rankSize: " + std::to_string(tilingData.get_rankSize());
+    result += " blockTilingSize: " + std::to_string(tilingData.get_blockTilingSize());
+    result += " tailBlockTilingSize: " + std::to_string(tilingData.get_tailBlockTilingSize());
+    result += " ubTilingSize: " + std::to_string(tilingData.get_ubTilingSize());
+    result += " sliceSize: " + std::to_string(tilingData.get_sliceSize());
+    result += " rankSize: " + std::to_string(tilingData.get_rankSize());
 
     // 轴相关参数
-    result +="varInAxis: " + std::to_string(tilingData.get_varInAxis());
-    result +="indexRankSize: " + std::to_string(tilingData.get_indexRankSize());
-    result +="afterAxis: " + std::to_string(tilingData.get_afterAxis());
-    result +="usedCoreNumBefore: " + std::to_string(tilingData.get_usedCoreNumBefore());
-    result +="usedCoreNumAfter: " + std::to_string(tilingData.get_usedCoreNumAfter());
-    result +="eachCoreAfterAxisCount: " + std::to_string(tilingData.get_eachCoreAfterAxisCount());
-    result +="tailCoreAfterAxisCount: " + std::to_string(tilingData.get_tailCoreAfterAxisCount());
+    result += " varInAxis: " + std::to_string(tilingData.get_varInAxis());
+    result += " indexRankSize: " + std::to_string(tilingData.get_indexRankSize());
+    result += " afterAxis: " + std::to_string(tilingData.get_afterAxis());
+    result += " usedCoreNumBefore: " + std::to_string(tilingData.get_usedCoreNumBefore());
+    result += " usedCoreNumAfter: " + std::to_string(tilingData.get_usedCoreNumAfter());
+    result += " eachCoreAfterAxisCount: " + std::to_string(tilingData.get_eachCoreAfterAxisCount());
+    result += " tailCoreAfterAxisCount: " + std::to_string(tilingData.get_tailCoreAfterAxisCount());
 
     // 循环与索引相关参数
-    result +="updateLoopSize: " + std::to_string(tilingData.get_updateLoopSize());
-    result +="updateTailNum: " + std::to_string(tilingData.get_updateTailNum());
-    result +="indicesLoopSize: " + std::to_string(tilingData.get_indicesLoopSize());
-    result +="indiceTailNum: " + std::to_string(tilingData.get_indiceTailNum());
-    result +="tailUpdateLoopSize: " + std::to_string(tilingData.get_tailUpdateLoopSize());
-    result +="tailUpdateAxisNum: " + std::to_string(tilingData.get_tailUpdateAxisNum());
-    result +="isSplitAfterAxis: " + std::to_string(tilingData.get_isSplitAfterAxis());
-    result +="eachCoreIndexCount: " + std::to_string(tilingData.get_eachCoreIndexCount());
-    result +="tailCoreIndexCount: " + std::to_string(tilingData.get_tailCoreIndexCount());
-    result +="eachCoreVarCount: " + std::to_string(tilingData.get_eachCoreVarCount());
-    result +="tailCoreVarCount: " + std::to_string(tilingData.get_tailCoreVarCount());
-    result +="indicesFactor: " + std::to_string(tilingData.get_indicesFactor());
-    result +="afterAxisFactor: " + std::to_string(tilingData.get_afterAxisFactor());
-    result +="ubQuantaIndxFactor: " + std::to_string(tilingData.get_ubQuantaIndxFactor());
-    result +="ubRowFactor: " + std::to_string(tilingData.get_ubRowFactor());
-    result +="isDeterminstic: " + std::to_string(tilingData.get_isDeterminstic());
-    result +="isSimdNonDeterminstic: " + std::to_string(tilingData.get_isSimdNonDeterminstic());
-    result +="isSort: " + std::to_string(tilingData.get_isSort());
-    result +="ubRowOptiFactor: " + std::to_string(tilingData.get_ubRowOptiFactor());
-    result +="isOpti: " + std::to_string(tilingData.get_isOpti());
-    result +="indiceCastMode: " + std::to_string(tilingData.get_indiceCastMode());
+    result += " updateLoopSize: " + std::to_string(tilingData.get_updateLoopSize());
+    result += " updateTailNum: " + std::to_string(tilingData.get_updateTailNum());
+    result += " indicesLoopSize: " + std::to_string(tilingData.get_indicesLoopSize());
+    result += " indiceTailNum: " + std::to_string(tilingData.get_indiceTailNum());
+    result += " tailUpdateLoopSize: " + std::to_string(tilingData.get_tailUpdateLoopSize());
+    result += " tailUpdateAxisNum: " + std::to_string(tilingData.get_tailUpdateAxisNum());
+    result += " isSplitAfterAxis: " + std::to_string(tilingData.get_isSplitAfterAxis());
+    result += " eachCoreIndexCount: " + std::to_string(tilingData.get_eachCoreIndexCount());
+    result += " tailCoreIndexCount: " + std::to_string(tilingData.get_tailCoreIndexCount());
+    result += " eachCoreVarCount: " + std::to_string(tilingData.get_eachCoreVarCount());
+    result += " tailCoreVarCount: " + std::to_string(tilingData.get_tailCoreVarCount());
+    result += " indicesFactor: " + std::to_string(tilingData.get_indicesFactor());
+    result += " afterAxisFactor: " + std::to_string(tilingData.get_afterAxisFactor());
+    result += " ubQuantaIndxFactor: " + std::to_string(tilingData.get_ubQuantaIndxFactor());
+    result += " ubRowFactor: " + std::to_string(tilingData.get_ubRowFactor());
+    result += " isDeterminstic: " + std::to_string(tilingData.get_isDeterminstic());
+    result += " isSimdNonDeterminstic: " + std::to_string(tilingData.get_isSimdNonDeterminstic());
+    result += " isSort: " + std::to_string(tilingData.get_isSort());
+    result += " ubRowOptiFactor: " + std::to_string(tilingData.get_ubRowOptiFactor());
+    result += " isOpti: " + std::to_string(tilingData.get_isOpti());
+    result += " indiceCastMode: " + std::to_string(tilingData.get_indiceCastMode());
+    result += " singleCol: " + std::to_string(tilingData.get_singleCol());
     return result;
 }
 
