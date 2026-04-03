@@ -147,9 +147,9 @@ template <class Intf>
 __aicore__ inline void WaitForVecBeforeLoadToB2(Intf *self)
 {
 #ifndef __CCE_KT_TEST__
-    CrossCoreWaitFlag<SYNC_MODE, PIPE_MTE1>(FLAG_MTE1_ID_1);
+    CvCrossCoreWait<Intf, PIPE_MTE3, PIPE_MTE1>(self, FLAG_MTE1_ID_1);
     if constexpr (Intf::conv3dConfig.enableC04Flag) {
-        CrossCoreWaitFlag<SYNC_MODE, PIPE_MTE1>(FLAG_MTE1_ID_1 + CROSS_CORE_FLAG_ID_MAX);
+        CvCrossCoreWait<Intf, PIPE_MTE3, PIPE_MTE1>(self, FLAG_MTE1_ID_1 + CROSS_CORE_FLAG_ID_MAX);
     }
 #endif
 }
@@ -158,9 +158,9 @@ template <class Intf>
 __aicore__ inline void NotifyVecAfterLoadToB2(Intf *self)
 {
 #ifndef __CCE_KT_TEST__
-    CrossCoreSetFlag<SYNC_MODE, PIPE_MTE1>(FLAG_MTE1_ID_2);
+    CvCrossCoreSet<Intf, PIPE_MTE1, PIPE_V>(self, FLAG_MTE1_ID_2);
     if constexpr (Intf::conv3dConfig.enableC04Flag) {
-        CrossCoreSetFlag<SYNC_MODE, PIPE_MTE1>(FLAG_MTE1_ID_2 + CROSS_CORE_FLAG_ID_MAX);
+        CvCrossCoreSet<Intf, PIPE_MTE1, PIPE_MTE3>(self, FLAG_MTE1_ID_2 + CROSS_CORE_FLAG_ID_MAX);
     }
 #endif
 }
@@ -169,7 +169,7 @@ template <class Intf>
 __aicore__ inline void WaitForCubeBeforeLoadToB1(Intf *self)
 {
 #ifndef __CCE_KT_TEST__
-    CrossCoreWaitFlag<SYNC_MODE, PIPE_MTE3>(FLAG_MTE1_ID_2);
+    CvCrossCoreWait<Intf, PIPE_MTE1, PIPE_MTE3>(self, FLAG_MTE1_ID_2);
 #endif
 }
 
@@ -177,7 +177,7 @@ template <class Intf>
 __aicore__ inline void NotifyCubeAfterLoadToB1(Intf *self)
 {
 #ifndef __CCE_KT_TEST__
-    CrossCoreSetFlag<SYNC_MODE, PIPE_MTE3>(FLAG_MTE1_ID_1);
+    CvCrossCoreSet<Intf, PIPE_MTE3, PIPE_MTE1>(self, FLAG_MTE1_ID_1);
 #endif
 }
 
@@ -1029,7 +1029,7 @@ static __aicore__ inline void GroupTransdataWeightCore(Intf *self, uint32_t curC
     uint32_t curCout1Size = DivCeilC0<Intf>(self, curCoutSize);
     uint32_t curCin1Size = DivCeil16(curCinSize);
 #ifndef __CCE_KT_TEST__
-    CrossCoreWaitFlag<SYNC_MODE, PIPE_V>(FLAG_MTE1_ID_2);
+    CvCrossCoreWait<Intf, PIPE_MTE1, PIPE_V>(self, FLAG_MTE1_ID_2);
 #endif
     // vdup wait vgather
     if (self->ctx.groupIterIdx_ > GetSubBlockIdx()) {
@@ -1066,7 +1066,7 @@ static __aicore__ inline void GroupTransdataWeightCore(Intf *self, uint32_t curC
     WaitFlag<HardEvent::V_MTE3>(eventId);
     CopyUb2L14Group<Intf>(self, curCout1Size, curCin1Cin0Size, srcUbOffset, useB1Buf); // MOV_UB_TO_L1 (MTE3)
 #ifndef __CCE_KT_TEST__
-    CrossCoreSetFlag<SYNC_MODE, PIPE_MTE3>(FLAG_MTE1_ID_1);
+    CvCrossCoreSet<Intf, PIPE_MTE3, PIPE_MTE1>(self, FLAG_MTE1_ID_1);
 #endif
 }
 
@@ -1433,9 +1433,9 @@ template <class Intf>
 __aicore__ inline void CrossCoreSetHead(Intf *self)
 {
 #ifndef __CCE_KT_TEST__
-    if ASCEND_IS_AIC {
+    if ASCEND_IS_AIC_SCALAR {
         if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
-            CrossCoreSetFlag<SYNC_MODE, PIPE_MTE1>(FLAG_MTE1_ID_2);
+            CvCrossCoreSet<Intf, PIPE_MTE1, PIPE_V>(self, FLAG_MTE1_ID_2);
         }
     }
 #endif
@@ -1448,7 +1448,7 @@ __aicore__ inline void CrossCoreWaitTail(Intf *self)
     if ASCEND_IS_AIV_SCALAR {
         if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
             if (GetSubBlockIdx() == 0) {
-                CrossCoreWaitFlag<SYNC_MODE, PIPE_V>(FLAG_MTE1_ID_2);
+                CvCrossCoreWait<Intf, PIPE_MTE1, PIPE_V>(self, FLAG_MTE1_ID_2);
             }
         }
     }
@@ -1461,15 +1461,15 @@ __aicore__ inline void CrossCoreSetHeadForMix(Intf *self)
 #ifndef __CCE_KT_TEST__
     if ASCEND_IS_AIV_SCALAR {
         if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
-            CrossCoreSetFlag<SYNC_MODE, PIPE_MTE3>(FLAG_FIXP_ID);
+            CvCrossCoreSet<Intf, PIPE_MTE3, PIPE_FIX>(self, FLAG_FIXP_ID);
         } else if (self->ctx.enableSplitDk_) {
-            CrossCoreSetFlag<SYNC_MODE, PIPE_MTE3>(FLAG_FIXP_ID);
+            CvCrossCoreSet<Intf, PIPE_MTE3, PIPE_FIX>(self, FLAG_FIXP_ID);
         }
     }
     if ASCEND_IS_AIC_SCALAR {
         if constexpr (Intf::conv3dConfig.enableC04Flag) {
-            CrossCoreSetFlag<SYNC_MODE, PIPE_MTE1>(FLAG_MTE1_ID_2);
-            CrossCoreSetFlag<SYNC_MODE, PIPE_MTE1>(FLAG_MTE1_ID_2 + CROSS_CORE_FLAG_ID_MAX);
+            CvCrossCoreSet<Intf, PIPE_MTE1, PIPE_MTE3>(self, FLAG_MTE1_ID_2);
+            CvCrossCoreSet<Intf, PIPE_MTE1, PIPE_MTE3>(self, FLAG_MTE1_ID_2 + CROSS_CORE_FLAG_ID_MAX);
         }
     }
 #endif
@@ -1481,14 +1481,14 @@ __aicore__ inline void CrossCoreWaitTailForMix(Intf *self)
 #ifndef __CCE_KT_TEST__
     if ASCEND_IS_AIC_SCALAR {
         if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
-            CrossCoreWaitFlag<SYNC_MODE, PIPE_FIX>(FLAG_FIXP_ID);
+            CvCrossCoreWait<Intf, PIPE_MTE3, PIPE_FIX>(self, FLAG_FIXP_ID);
         } else if (self->ctx.enableSplitDk_) {
-            CrossCoreWaitFlag<SYNC_MODE, PIPE_FIX>(FLAG_FIXP_ID);
+            CvCrossCoreWait<Intf, PIPE_MTE3, PIPE_FIX>(self, FLAG_FIXP_ID);
         }
     }
     if ASCEND_IS_AIV_SCALAR {
         if constexpr (Intf::conv3dConfig.enableC04Flag) {
-            CrossCoreWaitFlag<SYNC_MODE, PIPE_MTE3>(FLAG_MTE1_ID_2);
+            CvCrossCoreWait<Intf, PIPE_MTE1, PIPE_MTE3>(self, FLAG_MTE1_ID_2);
         }
     }
 #endif

@@ -437,7 +437,10 @@ static __aicore__ inline void LoadL0c2GmForNz2Dn(Intf *self, const GlobalTensor<
         fixPipeParams.deqScalar = DQ_SCALAR_ONE;
     }
     if (self->ctx.enableSplitDk_) {
-        Fixpipe<float, float, CFG_COLUMN_MAJOR>(self->ctx.l0cOutGm_[dstOffset], useC1Buf, fixPipeParams);
+#if (__NPU_ARCH__ != 5102)
+        Fixpipe<float, float, CFG_COLUMN_MAJOR>(self->ctx.l0cOutGm_[dstOffset],
+            useC1Buf, fixPipeParams);
+#endif
     } else if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
         self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
         uint64_t scaleAddr = self->ctx.curNL0Idx_ * self->ctx.tiling_->baseN;
@@ -735,11 +738,13 @@ static __aicore__ inline void LoadL0c2Gm(Intf *self, const GlobalTensor<typename
             return;
         }
     } else {
+#if (__NPU_ARCH__ != 5102)
         if (!enSequentialWrite) {
             LoadL0c2GmForNz2Nd<Intf>(self, output, useC1Buf);
         } else {
             return;
         }
+#endif
     }
     if constexpr(std::is_same<typename Intf::DstT, float>::value || std::is_same<typename Intf::DstT, bfloat16_t>::value ||
         std::is_same<typename Intf::DstT, half>::value) {
