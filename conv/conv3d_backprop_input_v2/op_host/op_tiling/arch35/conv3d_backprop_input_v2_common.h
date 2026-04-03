@@ -81,6 +81,7 @@ struct TilingRunInfo {
     uint32_t n0 = 16;
     uint32_t k0 = 16;
     bool enableVecTransFlag = false;
+    bool enableSplitKernelFlag = false;
     uint8_t tilingHkWkMode = 0;
 };
 

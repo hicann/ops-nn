@@ -97,6 +97,9 @@ private:
     void UpdateBaseKParams(L1TilingParams& l1Params, L0TilingParams& l0Params, uint32_t coutA1, uint32_t coutB1);
     void ShrinkBaseKForKernelSplit(
         L1TilingParams& l1Params, L0TilingParams& l0Params, uint32_t coutA1, uint32_t coutB1);
+    
+    bool CheckBestBlockEnable(uint64_t nValue, uint64_t bestBlockCnt);
+    bool CheckShapeConditions();
 };
 
 } // namespace Conv

@@ -40,7 +40,11 @@ bool Conv3DDXV2FullLoadTiling::IsCapable()
         return false;
     }
     // 8bit时只在filter_format=NDHWC放开基本块tiling，否则理论建模对8bit容易失效。
-    const auto filter_desc = context_->GetInputDesc(FILTER_INDEX);
+    auto filter_index = FILTER_INDEX;
+    if (IsSocVersionFuse(context_)) {
+        filter_index = OUTPUT_BP_INDEX;
+    }
+    const auto filter_desc = context_->GetInputDesc(filter_index);
     auto filter_format = static_cast<ge::Format>(ge::GetPrimaryFormat(filter_desc->GetStorageFormat()));
     bool is8bit = static_cast<int32_t>(dtypeByteL0b_) == ge::GetSizeByDataType(ge::DT_HIFLOAT8);
     if (is8bit && filter_format != ge::FORMAT_NDHWC) {

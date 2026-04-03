@@ -94,6 +94,11 @@ private:
     bool ShrinkBaseK(L1TilingParams& l1Params, L0TilingParams& l0Params, const uint32_t maxBaseK);
     void ShrinkBasicBlock(L1TilingParams& l1Params, L0TilingParams& l0Params);
     ge::graphStatus GetLargeHkWkTilingMode();
+    uint32_t CalculateMaxBaseM(uint32_t baseN);
+    void AdjustBaseMWhenSmallN(uint32_t& baseM, uint32_t baseN, const L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo);
+    void AdjustBaseNWhenSmallM(uint32_t& baseN, uint32_t baseM, const L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo);
+    uint32_t CalculateOptimalBaseK(uint32_t baseM, uint32_t baseN, const L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo);
+    void UpdateL0CBufferMode(L0TilingParams& l0Params);
 };
 
 } // namespace Conv

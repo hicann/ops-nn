@@ -48,6 +48,7 @@ ge::graphStatus Conv3DDXV2KernelSplitTiling::GetShapeAttrsInfo()
     }
 
     enableSplitKernel_ = CheckKernelSplitEnable();
+    tilingRunInfo_.enableSplitKernelFlag = enableSplitKernel_;
     if (!enableSplitKernel_) {
         return ge::GRAPH_SUCCESS;
     }
@@ -147,7 +148,7 @@ bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitHW11Enable()
         uint64_t kValueForCheck = runInfo_.dedy_cout1_g * BASIC_BLOCK_SIZE_32 / dtypeByteL0b_;        
         if (runInfo_.dedx_cin <= BASIC_BLOCK_SIZE_32 || runInfo_.dedy_cout <= BASIC_BLOCK_SIZE_32) { // 小shape不准入
             return false;
-        }  
+        }
         // 判断是否能走进fullload tiling模板
         bool fullLoadCondition = (runInfo_.kernel_d <= 1) &&
                                 (mValueForCheck > nValueForCheck) &&
@@ -169,35 +170,17 @@ bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitHW11Enable()
     return true;
 }
 
-bool Conv3DDXV2KernelSplitTiling::IsBaseShapeFitKernelSplitHW(const uint32_t bestBaseMN)
+bool Conv3DDXV2KernelSplitTiling::CheckBestBlockEnable(uint64_t nValue, uint64_t bestBlockCnt)
 {
-    uint32_t curBaseM = kernelSplitPara_.splitHiWi > bestBaseMN ? bestBaseMN : kernelSplitPara_.splitHiWi;
-    int32_t curHo = CalFmapHForKernelSplit(curBaseM);
-    uint64_t a1Size = static_cast<uint64_t>(dtypeByteL0a_) * curHo * runInfo_.dedy_w * blockSize_;
-    uint64_t cout1A1 = std::max(static_cast<uint64_t>(1), platformInfo_.l1_size / BUFFER_NUM_DB / a1Size);
-    uint64_t cout1 = static_cast<uint64_t>(runInfo_.dedy_cout1_g);
-    cout1A1 = cout1A1 >= cout1 ? cout1 : cout1A1;
-
-    kSCoutFullLoad_ = false;
-    uint64_t nValue = static_cast<uint64_t>(runInfo_.dedx_cin1_g) * BLOCK_CUBE;
-    uint32_t curBaseN = nValue > bestBaseMN ? bestBaseMN : nValue;
-    uint64_t b1Size = static_cast<uint64_t>(dtypeByteL0b_) * curBaseN * kernelSplitPara_.splitHkWkC0;
-    uint64_t cout1B1 = (platformInfo_.l1_size - cout1A1 * a1Size) / b1Size;
-    uint64_t bestBlockCnt =
-        static_cast<uint64_t>(kernelSplitPara_.splitHiWi / BASIC_BLOCK_SIZE_512) * runInfo_.dedx_d * runInfo_.batch_n;
-    bool bestBlockEnable = bestBlockCnt >= static_cast<uint64_t>(coreNum_) &&
-                           nValue <= static_cast<uint64_t>(BASIC_BLOCK_SIZE_128) && runInfo_.dedx_cin >= BLOCK_CUBE;
-    bool aBFullLoad =
-        cout1B1 >= cout1 * kernelSplitPara_.strideHW &&
-        cout1A1 >= cout1 &&
-        curBaseN >= static_cast<uint32_t>(runInfo_.dedx_cin) &&
-        (runInfo_.dedy_d == 1 || runInfo_.kernel_d == 1);
-
-    // A B矩阵都全载时，才会在cout全载模板, A B全载时，若cin较小，则转为NDHWC性能较差，仍走cout全载模板
-    if (aBFullLoad && !bestBlockEnable) {
-        kSCoutFullLoad_ = true;
+    if (IsSocVersionFuse(context_)) {
+        return nValue <= static_cast<uint64_t>(BASIC_BLOCK_SIZE_64) && runInfo_.dedx_cin >= BLOCK_CUBE;
     }
+    return bestBlockCnt >= static_cast<uint64_t>(coreNum_) &&
+           nValue <= static_cast<uint64_t>(BASIC_BLOCK_SIZE_128) && runInfo_.dedx_cin >= BLOCK_CUBE;
+}
 
+bool Conv3DDXV2KernelSplitTiling::CheckShapeConditions()
+{
     if (!IsSocVersionFuse(context_) && (runInfo_.filterFormat == ge::FORMAT_NDHWC && // CV耦合架构，kernel拆分省scalar，性能有收益
         (kSCoutFullLoad_ || runInfo_.dedx_cin == 1))) { // cin较小，则转为NDHWC性能较差
         return false;
@@ -220,11 +203,48 @@ bool Conv3DDXV2KernelSplitTiling::IsBaseShapeFitKernelSplitHW(const uint32_t bes
     return true;
 }
 
+bool Conv3DDXV2KernelSplitTiling::IsBaseShapeFitKernelSplitHW(const uint32_t bestBaseMN)
+{
+    uint32_t curBaseM = kernelSplitPara_.splitHiWi > bestBaseMN ? bestBaseMN : kernelSplitPara_.splitHiWi;
+    int32_t curHo = CalFmapHForKernelSplit(curBaseM);
+    uint64_t a1Size = static_cast<uint64_t>(dtypeByteL0a_) * curHo * runInfo_.dedy_w * blockSize_;
+    uint64_t cout1A1 = std::max(static_cast<uint64_t>(1), platformInfo_.l1_size / BUFFER_NUM_DB / a1Size);
+    uint64_t cout1 = static_cast<uint64_t>(runInfo_.dedy_cout1_g);
+    cout1A1 = cout1A1 >= cout1 ? cout1 : cout1A1;
+
+    kSCoutFullLoad_ = false;
+    uint64_t nValue = static_cast<uint64_t>(runInfo_.dedx_cin1_g) * BLOCK_CUBE;
+    uint32_t curBaseN = nValue > bestBaseMN ? bestBaseMN : nValue;
+    uint64_t b1Size = static_cast<uint64_t>(dtypeByteL0b_) * curBaseN * kernelSplitPara_.splitHkWkC0;
+    uint64_t cout1B1 = (platformInfo_.l1_size - cout1A1 * a1Size) / b1Size;
+
+    uint64_t bestBlockCnt =
+        static_cast<uint64_t>(kernelSplitPara_.splitHiWi / BASIC_BLOCK_SIZE_512) * runInfo_.dedx_d * runInfo_.batch_n;
+    bool bestBlockEnable = CheckBestBlockEnable(nValue, bestBlockCnt);
+
+    bool aBFullLoad = cout1B1 >= cout1 * kernelSplitPara_.strideHW &&
+                      cout1A1 >= cout1 &&
+                      curBaseN >= static_cast<uint32_t>(runInfo_.dedx_cin) &&
+                      (runInfo_.dedy_d == 1 || runInfo_.kernel_d == 1);
+
+    // A B矩阵都全载时，才会在cout全载模板, A B全载时，若cin较小，则转为NDHWC性能较差，仍走cout全载模板
+    if (aBFullLoad && !bestBlockEnable) {
+        kSCoutFullLoad_ = true;
+    }
+
+    return CheckShapeConditions();
+}
+
 bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitHWEnable(
     bool isEnableKernelSplitFlag2, const int32_t kernelSplitStrideVal, const uint32_t bestBaseMN)
 {
     // cout=cin=1,kernel_h/w=2的场景，假设使能kernel拆分会拆成1*1的子kernel同时cin/cout极小会造成算力浪费，无明显收益，故暂不支持kernel拆分
     if (runInfo_.dedx_cin == 1 && runInfo_.dedy_cout == 1 && isEnableKernelSplitFlag2) {
+        return false;
+    }
+
+    // 经验值，耦合架构下，K轴小场景kernel拆分没有明显收益，会引入更多scaler
+    if (IsSocVersionFuse(context_) && runInfo_.dedy_cout1 <= 2) {
         return false;
     }
 
