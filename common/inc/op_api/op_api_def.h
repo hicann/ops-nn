@@ -19,9 +19,8 @@ namespace op {
     constexpr int8_t ALLOW_FP32_DOWN_PRECISION = 1;
     constexpr int8_t USE_FP16 = 2;
     constexpr int8_t USE_HF32 = 3;
-    constexpr int8_t FORCE_GRP_ACC_FOR_FP32 = 4;
-    constexpr int8_t USE_FP32_ADDMM = 5;
-    constexpr int8_t USE_HIGH_PREC_MODE = 6;
+    constexpr int8_t USE_FP32_ADD = 4;
+    constexpr int8_t USE_HIGH_PREC_MODE = 5;
     constexpr size_t MAX_MASK_LEN64 = 64;
 }  // namespace op
 #endif  // OP_API_DEF_H_

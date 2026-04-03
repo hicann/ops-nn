@@ -174,8 +174,7 @@ aclnnStatus aclnnInplaceBaddbmm(
         <li>1：ALLOW_FP32_DOWN_PRECISION，支持将输入数据降精度计算。</li>
         <li>2：USE_FP16，支持将输入降精度至FLOAT16计算。</li>
         <li>3：USE_HF32，支持将输入降精度至数据类型HFLOAT32计算。</li>
-        <li>4：FORCE_GRP_ACC_FOR_FP32，支持使用分组累加方式进行计算。</li>
-        <li>5：USE_FP32_ADDMM，输入数类型为FLOAT16/BFLOAT16时addmm过程升精度计算。</li></ul>
+        <li>4：USE_FP32_ADD，支持使用高精度方式进行计算。</li></ul>
       </td>
       <td>INT8</td>
       <td>-</td>
@@ -208,21 +207,19 @@ aclnnStatus aclnnInplaceBaddbmm(
     - 不支持BFLOAT16数据类型；
     - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
-    - 不支持cubeMathType=3、4、5。
+    - 不支持cubeMathType=3、4。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - cubeMathType=0，当输入数据类型为FLOAT16或BFLOAT16时，矩阵乘计算会使用FLOAT16 / BFLOAT16输入、FLOAT32输出的方式传递，当输入为其他数据类型时不做处理；
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型是FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理。
-    - cubeMathType=4时不做处理。
-    - cubeMathType=5时，当前不支持输入self与matmul计算结果矩阵做broadcast。
+    - cubeMathType=4，输入数类型为FLOAT16/BFLOAT16时addmm过程升精度计算，该情况下当前不支持输入self与matmul计算结果矩阵做broadcast。
 
   - <term>Ascend 950PR/Ascend 950DT</term>：
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型是FLOAT32时，会转换为FLOAT16计算；当输入为其他数据类型时不做处理；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理。
     - cubeMathType=4时不做处理。
-    - 当前不支持cubeMathType=5。
 
 - **返回值：**
 
@@ -401,8 +398,7 @@ aclnnStatus aclnnInplaceBaddbmm(
         <li>1：ALLOW_FP32_DOWN_PRECISION，支持将输入数据降精度计算。</li>
         <li>2：USE_FP16，支持将输入降精度至FLOAT16计算。</li>
         <li>3：USE_HF32，支持将输入降精度至数据类型HFLOAT32计算。</li>
-        <li>4：FORCE_GRP_ACC_FOR_FP32，支持使用分组累加方式进行计算。</li>
-        <li>5：USE_FP32_ADDMM，输入数类型为FLOAT16/BFLOAT16时addmm过程升精度计算。</li></ul>
+        <li>4：USE_FP32_ADD，支持使用高精度方式进行计算。</li></ul>
       </td>
       <td>INT8</td>
       <td>-</td>
@@ -435,19 +431,23 @@ aclnnStatus aclnnInplaceBaddbmm(
     - 不支持BFLOAT16数据类型；
     - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
-    - 不支持cubeMathType=3、4、5。
+    - 不支持cubeMathType=3、4。
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
     - 不支持BFLOAT16数据类型；
     - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
     - 不支持cubeMathType=3。
     - cubeMathType=4时不做处理。
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+    - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
+    - cubeMathType=2，当输入数据类型是FLOAT32，会转换为FLOAT16计算；当输入为其他数据类型时不做处理；
+    - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理。
+    - cubeMathType=4，输入数类型为FLOAT16/BFLOAT16时addmm过程升精度计算，该情况下当前不支持输入self与matmul计算结果矩阵做broadcast。
+  - <term>Ascend 950PR/Ascend 950DT</term>：
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型是FLOAT32，会转换为FLOAT16计算；当输入为其他数据类型时不做处理；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理。
     - cubeMathType=4时不做处理。
-    - 当前不支持cubeMathType=5。
 
 - **返回值：**
 
