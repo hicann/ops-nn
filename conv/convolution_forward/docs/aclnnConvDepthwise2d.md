@@ -19,7 +19,7 @@
 
 - 计算公式：
 
-  假定输入 self 的 shape 是 $(N, C_{\text{in}}, H, W)$，输出 out 的 shape 是 $(N, N*C_{\text{out}}, H_{\text{out}}, W_{\text{out}})$，那么每个卷积核的输出将被表示为：
+  假定输入 self 的 shape 是 $(N, C_{\text{in}}, H, W)$，输出 out 的 shape 是 $(N, C_{\text{out}}, H_{\text{out}}, W_{\text{out}})$，那么每个卷积核的输出将被表示为：
 
   $$
   \text{out}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) + \text{weight}(C_{\text{out}_j}, C_{\text{in}_j}) \star \text{self}(N_i, C_{\text{in}_j})
@@ -291,7 +291,7 @@ aclnnStatus aclnnConvDepthwise2d(
   <tr>
     <th scope="row">bias</th>
     <td>
-      bias 数据类型不支持 HIFLOAT8、FLOAT8_E4M3FN。数据类型与 self、weight 一致。
+      bias 数据类型不支持 HIFLOAT8、FLOAT8_E4M3FN。数据类型与 input、weight 一致。
     </td>
     <td>
       当 self 数据类型为 HIFLOAT8 时，bias 数据类型最终会转成 FLOAT 参与计算。

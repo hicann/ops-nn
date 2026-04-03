@@ -173,7 +173,7 @@ aclnnStatus aclnnConvTbc(
   <td rowspan="9" align="left">161002</td>
   <td align="left">self、weight、bias、out 的数据类型和格式不在支持的范围内。</td>
   </tr>
-  <tr><td align="left">self、weight、output 数据类型不一致。</td></tr>
+  <tr><td align="left">self、weight、out 数据类型不一致。</td></tr>
   <tr><td align="left">out 的 shape 不满足 infershape 结果。</td></tr>
   <tr><td align="left">out 的 shape 中存在小于 0 的情况。</td></tr>
   <tr><td align="left">self 的 dim 不为 3。</td></tr>
