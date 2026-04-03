@@ -211,7 +211,7 @@ aclnnStatus aclnnQuantConvolution(
   <tr>
   <td>output（aclTensor*）</td>
   <td>输出</td>
-  <td>公式中的 out，表示卷积输出。</td>
+  <td>公式中的 output，表示卷积输出。</td>
   <td><ul><li>不支持空 Tensor 输出。</li><li>其 shape 满足卷积的推导规则。</li><li>通道数等于 weight 第一维，其他维度≥0。</li></ul></td>
   <td>BFLOAT16、FLOAT16、FLOAT、FLOAT8_E4M3FN、HIFLOAT8</td>
   <td>NCHW、NCDHW</td>

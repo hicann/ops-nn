@@ -46,7 +46,7 @@
 
 * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - input、weight 数据类型不支持 HIFLOAT8、FLOAT8_E4M3FN。
-    - bias 数据类型不支持 HIFLOAT8、FLOAT8_E4M3FN。数据类型与 self、weight 一致。
+    - bias 数据类型不支持 HIFLOAT8、FLOAT8_E4M3FN。数据类型与 input、weight 一致。
     - conv1d、conv2d、conv3d 正向场景下 bias 会转成 FLOAT 参与计算。
     - conv2d 和 conv3d transposed=true 场景，weight H、W 的大小应该在[1,255]范围内，其他维度应该大于等于 1。
     - conv1d transposed=true 场景，weight L 的大小应该在[1,255]范围内，其他维度应该大于等于 1。

@@ -35,7 +35,7 @@
 
 ## 函数原型
 
-每个算子分为<a href="../../../docs/zh/context/两段式接口.md">两段式接口</a>，必须先调用 aclnnQuantConvolutionWeightNzGetWorkspaceSize 接口获取计算所需 workspace 大小以及包含了算子计算流程的执行器，再调用 aclnnQuantConvolution 接口执行计算。
+每个算子分为<a href="../../../docs/zh/context/两段式接口.md">两段式接口</a>，必须先调用 aclnnQuantConvolutionWeightNzGetWorkspaceSize 接口获取计算所需 workspace 大小以及包含了算子计算流程的执行器，再调用 aclnnQuantConvolutionWeightNz 接口执行计算。
 
 ```cpp
 aclnnStatus aclnnQuantConvolutionWeightNzGetWorkspaceSize(
@@ -93,7 +93,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <td>weight（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的 weight，表示卷积权重。</td>
-  <td><ul><li>其原 shape 的 C 维度需要与 input 的 C 维度保持一致。</li><li>不支持空 Tensor。</li><li>数据类型与 input 的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li><li>FRACTAL_Z_3D格式各个维度表示：（D * C1 * H * W，N1，N0，C0），其中D，H，W为transdata前的NCDWH。N0=16，C0=32，N1与N满足关系：N1=CEIL(N,N0)。 </li><li>所有维度≥1。</li></ul></td>
+  <td><ul><li>其原 shape 的 C 维度需要与 input 的 C 维度保持一致。</li><li>不支持空 Tensor。</li><li>数据类型与 input 的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li><li>FRACTAL_Z_3D是3D卷积权重格式。格式各个维度表示：（D * C1 * H * W，N1，N0，C0），其中D，H，W为transdata前的NCDWH。N0=16，C0=32，N1与N满足关系：N1=CEIL(N,N0)。 </li><li>所有维度≥1。</li></ul></td>
   <td>INT8</td>
   <td>Fractal_Z_3D</td>
   <td>4</td>
@@ -212,7 +212,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <tr>
   <td>output（aclTensor*）</td>
   <td>输出</td>
-  <td>公式中的 out，表示卷积输出。</td>
+  <td>公式中的 output，表示卷积输出。</td>
   <td><ul><li>其 shape 满足卷积的推导规则。</li><li>不支持空 Tensor 输出。</li><li>通道数等于 weight 原shape第一维，其他维度≥0。</li></ul></td>
   <td>BFLOAT16、FLOAT16</td>
   <td>NCDHW</td>
