@@ -410,6 +410,9 @@ static ge::graphStatus BaseCalc(const gert::TilingContext* context, DynamicMxQua
     if (dimSize < tilingParam.blockSize) {
         tilingParam.blockSize = dimSize;
     }
+    if (tilingParam.blockSize == ATTR_BLOCK_SIZE) {     // 需要再次判断，存在量化轴为尾轴，尾轴大小为32，但是blockSize>32时，也应该走尾轴、blockSize=32的模板
+        tilingParam.isBlockSize32 = true;
+    }
     // 合轴
     for (int64_t i = 0; i < tilingParam.axis; i++) {
         tilingParam.preAxisSize *= xShape.GetDim(i);
