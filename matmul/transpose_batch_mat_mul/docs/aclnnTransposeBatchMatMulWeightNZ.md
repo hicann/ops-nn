@@ -71,16 +71,16 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
         <th>描述</th>
         <th>使用说明</th>
         <th>数据类型</th>
-        <th><a href="../../../docs/zh/context/数据格式.md" target="_blank">数据格式</a></th>
+        <th>数据格式</th>
         <th style="white-space: nowrap">维度</th>
-        <th><a href="../../../docs/zh/context/非连续的Tensor.md" target="_blank">非连续的Tensor</a></th>
+        <th>非连续的Tensor</th>
       </tr>
     </thead>
     <tbody>
       <tr>
         <td>x1</td>
         <td>输入</td>
-        <td>表示矩阵乘的第一个矩阵，Device侧aclTensor。</td>
+        <td>表示矩阵乘的第一个矩阵。</td>
         <td>
           <ul>
             <li>数据类型需要与x2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
@@ -96,7 +96,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       <tr>
         <td>x2</td>
         <td>输入</td>
-        <td>表示矩阵乘的第二个矩阵，Device侧aclTensor。</td>
+        <td>表示矩阵乘的第二个矩阵。</td>
         <td>
         <ul>
             <li>数据类型需要与x1满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
@@ -113,7 +113,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       <tr>
         <td>bias</td>
         <td>输入</td>
-        <td>表示矩阵乘的偏置矩阵，Device侧aclTensor。</td>
+        <td>表示矩阵乘的偏置矩阵。</td>
         <td>
         <ul>
             <li>预留参数，当前暂不支持。</li>
@@ -127,7 +127,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       <tr>
       <td>scale</td>
         <td>输入（可选）</td>
-        <td>表示输出矩阵的量化系数，可在输入为FLOAT16且输出为INT8时使能，Device侧aclTensor。</td>
+        <td>表示输出矩阵的量化系数，可在输入为FLOAT16且输出为INT8时使能。</td>
         <td>
         <ul>
             <li>shape仅支持一维且需要满足且等于[b*n]。</li>
@@ -141,7 +141,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       <tr>
         <td>permX1</td>
         <td>输入</td>
-        <td>表示矩阵乘的第一个矩阵的转置序列，host侧的aclIntArray。</td>
+        <td>表示矩阵乘的第一个矩阵的转置序列。</td>
         <td>
         <ul>
           <li> 支持[0, 1, 2]、[1, 0, 2]。</li>
@@ -155,7 +155,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       <tr>
         <td>permX2</td>
         <td>输入</td>
-        <td>表示矩阵乘的第二个矩阵的转置序列，host侧的aclIntArray。</td>
+        <td>表示矩阵乘的第二个矩阵的转置序列。</td>
         <td>
         <ul>
           <li> 支持[0, 1, 2]、[0, 2, 1]。</li>
@@ -169,7 +169,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       <tr>
         <td>permY</td>
         <td>输入</td>
-        <td>表示矩阵乘输出矩阵的转置序列，host侧的aclIntArray。</td>
+        <td>表示矩阵乘输出矩阵的转置序列。</td>
         <td>
         <ul>
             <li>支持[1, 0, 2]。</li>
@@ -183,7 +183,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       <tr>
         <td>cubeMathType</td>
         <td>输入</td>
-        <td>用于指定Cube单元的计算逻辑，Host侧的整型。</td>
+        <td>用于指定Cube单元的计算逻辑。</td>
         <td>如果输入的数据类型存在互相推导关系，该参数默认对推导后的数据类型进行处理。具体的枚举值如下：<ul>
             <li>0：KEEP_DTYPE，保持输入的数据类型进行计算。</li>
             <li>1：ALLOW_FP32_DOWN_PRECISION，支持将输入数据降精度计算。当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当数据为其他数据类型时，保持输入类型计算。</li>
@@ -198,7 +198,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       <tr>
         <td>batchSplitFactor</td>
         <td>输入</td>
-        <td>用于指定矩阵乘输出矩阵中B维的切分大小，Host侧的整型。</td>
+        <td>用于指定矩阵乘输出矩阵中B维的切分大小。</td>
         <td>
         <ul>
           <li>取值范围为[1, B]且能被B整除。</li>
@@ -213,7 +213,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       <tr>
         <td>out</td>
         <td>输出</td>
-        <td>表示矩阵乘的输出矩阵，公式中的out，Device侧aclTensor。</td>
+        <td>表示矩阵乘的输出矩阵，公式中的out。</td>
         <td>
         <ul>
           <li> 数据类型需要与x1与x2推导之后的数据类型保持一致（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
@@ -233,7 +233,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
         <td>-</td>
       </tr>
       <tr>
-        <td>workspaceSize(uint64_t)</td>
+        <td>workspaceSize</td>
         <td>输出</td>
         <td>返回需要在Device侧申请的workspace大小。</td>
         <td>-</td>
@@ -243,7 +243,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
         <td>-</td>
       </tr>
       <tr>
-        <td style="white-space: nowrap">executor(aclOpExecutor)</td>
+        <td style="white-space: nowrap">executor</td>
         <td>输出</td>
         <td>返回op执行器，包含了算子计算流程。</td>
         <td>-</td>
@@ -360,6 +360,13 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
     - x1和x2的dtype必须相同。
     - permX2仅支持输入[0, 1, 2]。
     - 当scale不为空时，B与N的乘积小于65536, 且仅支持输入为FLOAT16和输出为INT8的类型推导。
+
+- <term>Ascend 950PR/Ascend 950DT</term>：
+    - permX2支持输入[0, 1, 2]、[0, 2, 1]。
+    - 当scale不为空时，batchSplitFactor只能等于1，且仅支持输入为FLOAT16和输出为INT8的类型推导。
+
+- self只支持3维, mat2只支持昇腾私有格式，调用此接口之前，必须完成mat2从ND到昇腾私有格式的转换。
+- 不支持mat2最后两根轴其中一根轴为1，即k=1或者n=1。
 
 ## 调用示例
 
