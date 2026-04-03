@@ -42,7 +42,7 @@
       <td>var</td>
       <td>输入</td>
       <td>表示一个待被更新的张量, 等同于公式中的`ref`</td>
-      <td>DT_INT8、DT_INT64、DT_BOOL、DT_FLOAT16、DT_BF16、DT_FLOAT</td>
+      <td>DT_INT8、DT_INT64、DT_BOOL、DT_FLOAT16、DT_BF16、DT_FLOAT、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -56,14 +56,14 @@
       <td>updates</td>
       <td>输入</td>
       <td>使用此张量来更新var张量，必须跟输入var张量保持一样的数据类型</td>
-      <td>DT_INT8、DT_INT64、DT_BOOL、DT_FLOAT16、DT_BF16、DT_FLOAT</td>
+      <td>DT_INT8、DT_INT64、DT_BOOL、DT_FLOAT16、DT_BF16、DT_FLOAT、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>var</td>
       <td>输出</td>
       <td>表示更新后的张量</td>
-      <td>DT_INT8、DT_INT64、DT_BOOL、DT_FLOAT16、DT_BF16、DT_FLOAT</td>
+      <td>DT_INT8、DT_INT64、DT_BOOL、DT_FLOAT16、DT_BF16、DT_FLOAT、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -74,11 +74,9 @@
       <td>-</td>
     </tr>
   </tbody></table>
+  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8数据类型在该型号中不支持。
 
 ## 约束说明
-
-- 确定性计算：
-  - aclnnScatterNdUpdate默认确定性实现。
 
 - 输入shape限制：
   - indices至少是2维，其最后1维的大小不能超过varRef的维度大小。

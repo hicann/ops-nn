@@ -69,7 +69,7 @@ aclnnStatus aclnnScatterNdUpdate(
         <td>输入/输出</td>
         <td>被更新的目标张量。</td>
         <td>数据类型需要与updates一致。</td>
-        <td>FLOAT16、BFLOAT16、FLOAT32、INT64、BOOL、INT8</td>
+        <td>FLOAT16、BFLOAT16、FLOAT32、INT64、BOOL、INT8、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8</td>
         <td>ND</td>
         <td>1-8</td>
         <td>√</td>
@@ -89,7 +89,7 @@ aclnnStatus aclnnScatterNdUpdate(
         <td>输入</td>
         <td>更新的数据张量。</td>
         <td>数据类型需要与varRef一致。</td>
-        <td>FLOAT16、BFLOAT16、FLOAT32、INT64、BOOL、INT8</td>
+        <td>FLOAT16、BFLOAT16、FLOAT32、INT64、BOOL、INT8、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8</td>
         <td>ND</td>
         <td>-</td>
         <td>√</td>
@@ -115,7 +115,7 @@ aclnnStatus aclnnScatterNdUpdate(
         <td>-</td>
       </tr>
     </tbody></table>
-
+  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8数据类型在该型号中不支持。
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
