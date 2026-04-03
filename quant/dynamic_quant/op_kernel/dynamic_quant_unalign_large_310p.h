@@ -134,7 +134,7 @@ private:
         inQueue_.FreeTensor(inLocal);
     }
 
-    __aicore__ inline void QuantCompute(AscendC::LocalTensor<float>& scaleLocal, uint32_t calRow, uint32_t calCol)
+    __aicore__ inline void QuantCompute(AscendC::LocalTensor<float>& scaleLocal, uint32_t calRow, uint32_t calCol, uint32_t startRow)
     {
         // 尾块只需要搬运一次，直接量化生成结果
         // deque input tensors from VECIN queue
@@ -145,7 +145,7 @@ private:
         float scale;
         for (uint32_t i = 0; i < calRow; i++) {
             idx = i * calCol;
-            float rowMax = scaleLocal.GetValue(i);
+            float rowMax = scaleLocal.GetValue(startRow + i);
             AscendC::SetFlag<HardEvent::S_V>(EVENT_ID0);
             AscendC::WaitFlag<HardEvent::S_V>(EVENT_ID0);
             if (rowMax <= DYNAMIC_QUANT_EPSINON || rowMax == 0.0f) {
@@ -251,7 +251,7 @@ private:
             for (uint32_t rowIndex = 0; rowIndex < calRow; rowIndex+=safeCalRow) {
                 innerOffsetBase = offsetBase + innerLoopIndex * calCol + rowIndex * this->sizeH_;
                 CopyIn(innerOffsetBase, splitCopyinParams);
-                QuantCompute(scaleLocal, safeCalRow, calCol);
+                QuantCompute(scaleLocal, safeCalRow, calCol, rowIndex);
                 CopyOut(innerOffsetBase, splitCopyoutParams);
             }
         }

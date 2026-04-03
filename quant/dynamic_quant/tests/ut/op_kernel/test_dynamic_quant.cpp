@@ -39,7 +39,7 @@ protected:
     }
 };
 
-TEST_F(dynamic_quant_test, test_case_fp16_bf16)
+TEST_F(dynamic_quant_test, test_case_bf16)
 {
     size_t inputByteSize = 1 * 128 * 1024 * sizeof(uint16_t);
     size_t smoothScalesByteSzie = 1024 * sizeof(uint16_t);
@@ -122,7 +122,7 @@ TEST_F(dynamic_quant_test, test_case_fp16_bf16)
     free(path_);
 }
 
-TEST_F(dynamic_quant_test, test_case_fp16_bf16_no_smooth)
+TEST_F(dynamic_quant_test, test_case_bf16_no_smooth)
 {
     size_t inputByteSize = 1 * 128 * 1024 * sizeof(uint16_t);
     size_t outputByteSize = 1 * 128 * 1024 * sizeof(int8_t);
@@ -196,7 +196,7 @@ TEST_F(dynamic_quant_test, test_case_fp16_bf16_no_smooth)
     free(path_);
 }
 
-TEST_F(dynamic_quant_test, test_case_fp16_bf16_no_smooth_use_db)
+TEST_F(dynamic_quant_test, test_case_bf16_no_smooth_use_db)
 {
     size_t inputByteSize = 1 * 72 * 128 * sizeof(uint16_t);
     size_t outputByteSize = 1 * 72 * 128 * sizeof(int8_t);
@@ -397,6 +397,428 @@ TEST_F(dynamic_quant_test, test_case_largeShape_fp16_int8_2)
     ICPU_RUN_KF(
         dynamic_quant, blockDim, input, smooth_scales, group_index, output, scale, workSpace,
         (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(input);
+    AscendC::GmFree(output);
+    AscendC::GmFree(scale);
+    AscendC::GmFree(workSpace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(dynamic_quant_test, test_case_01)
+{
+    size_t inputByteSize = 1 * 128 * 20480 * sizeof(uint16_t);
+    size_t smoothScalesByteSzie = 20480 * sizeof(uint16_t);
+    size_t outputByteSize = 1 * 128 * 20480 * sizeof(int8_t);
+    size_t scaleByteSize = 1 * 128 * sizeof(uint32_t);
+    size_t tiling_data_size = sizeof(DynamicQuantTilingData);
+    uint32_t blockDim = 48;
+
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* smooth_scales = (uint8_t*)AscendC::GmAlloc(smoothScalesByteSzie);
+    uint8_t* group_index = nullptr;
+    uint8_t* output = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scaleByteSize);
+
+    uint8_t* workSpace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    DynamicQuantTilingData* tilingDatafromBin = reinterpret_cast<DynamicQuantTilingData*>(tiling);
+
+    tilingDatafromBin->coreNum = 40;
+    tilingDatafromBin->rowLen = 20480;
+    tilingDatafromBin->headCoreNum = 8;
+    tilingDatafromBin->rowPerHeadCore = 4;
+    tilingDatafromBin->rowPerTailCore = 3;
+    tilingDatafromBin->multiRowNumHeadCore = 1;
+    tilingDatafromBin->multiRowNumTailCore = 1;
+    tilingDatafromBin->innerLoopEle = 10240;
+    tilingDatafromBin->innerLoopTimes = 2;
+    tilingDatafromBin->innerLoopTail = 0;
+    tilingDatafromBin->groupNum = 0;
+    tilingDatafromBin->alignGroupNum = 0;
+    tilingDatafromBin->hasSmooth = 1;
+    tilingDatafromBin->unused = 0;
+    tilingDatafromBin->ubSize = 196608;
+
+    tilingDatafromBin->sizeH = 0;
+    tilingDatafromBin->sizeX = 0;
+    tilingDatafromBin->sizeZOut = 0;
+    tilingDatafromBin->sizeCopyRow = 0;
+    tilingDatafromBin->numCopyRow = 0;
+    tilingDatafromBin->numHeadCore = 0;
+    tilingDatafromBin->numTailCore = 0;
+    tilingDatafromBin->numHeadTimes = 0;
+    tilingDatafromBin->numTailTimes = 0;
+    tilingDatafromBin->numLastTailRow = 0;
+    tilingDatafromBin->alignType = 0;
+
+    tilingDatafromBin->totalBatchLen = 0;
+    tilingDatafromBin->mLen = 0;
+    tilingDatafromBin->mBlockSize = 0;
+    tilingDatafromBin->mTailBlockSize = 0;
+    tilingDatafromBin->mBlockNum = 0;
+    tilingDatafromBin->nLen = 0;
+    tilingDatafromBin->nBlockSize = 0;
+    tilingDatafromBin->nTailBlockSize = 0;
+    tilingDatafromBin->nBlockNum = 0;
+    tilingDatafromBin->nBaseSize = 0;
+    tilingDatafromBin->nBaseLoopNum = 0;
+    tilingDatafromBin->blockPerHead = 0;
+    tilingDatafromBin->blockPerTail = 0;
+    tilingDatafromBin->totalBlockNum = 0;
+    tilingDatafromBin->batchBlockSize = 0;
+    tilingDatafromBin->batchTailBlockSize = 0;
+    tilingDatafromBin->batchBlockNum = 0;
+
+    blockDim = 40;
+
+    ICPU_SET_TILING_KEY(6);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(
+        dynamic_quant, blockDim, input, smooth_scales, group_index, output, scale, workSpace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(input);
+    AscendC::GmFree(output);
+    AscendC::GmFree(scale);
+    AscendC::GmFree(workSpace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(dynamic_quant_test, test_case_03)
+{
+    size_t inputByteSize = 1 * 128 * 2001 * sizeof(uint16_t);
+    size_t smoothScalesByteSzie = 2001 * sizeof(uint16_t);
+    size_t outputByteSize = 1 * 128 * 2001 * sizeof(int8_t);
+    size_t scaleByteSize = 1 * 128 * sizeof(uint32_t);
+    size_t tiling_data_size = sizeof(DynamicQuantTilingData);
+    uint32_t blockDim = 48;
+
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* smooth_scales = (uint8_t*)AscendC::GmAlloc(smoothScalesByteSzie);
+    uint8_t* group_index = nullptr;
+    uint8_t* output = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scaleByteSize);
+
+    uint8_t* workSpace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    DynamicQuantTilingData* tilingDatafromBin = reinterpret_cast<DynamicQuantTilingData*>(tiling);
+
+    tilingDatafromBin->coreNum = 40;
+    tilingDatafromBin->rowLen = 2001;
+    tilingDatafromBin->headCoreNum = 8;
+    tilingDatafromBin->rowPerHeadCore = 4;
+    tilingDatafromBin->rowPerTailCore = 3;
+    tilingDatafromBin->multiRowNumHeadCore = 4;
+    tilingDatafromBin->multiRowNumTailCore = 3;
+    tilingDatafromBin->innerLoopEle = 0;
+    tilingDatafromBin->innerLoopTimes = 0;
+    tilingDatafromBin->innerLoopTail = 0;
+    tilingDatafromBin->groupNum = 0;
+    tilingDatafromBin->alignGroupNum = 0;
+    tilingDatafromBin->hasSmooth = 1;
+    tilingDatafromBin->unused = 0;
+    tilingDatafromBin->ubSize = 196608;
+
+    tilingDatafromBin->sizeH = 0;
+    tilingDatafromBin->sizeX = 0;
+    tilingDatafromBin->sizeZOut = 0;
+    tilingDatafromBin->sizeCopyRow = 0;
+    tilingDatafromBin->numCopyRow = 0;
+    tilingDatafromBin->numHeadCore = 0;
+    tilingDatafromBin->numTailCore = 0;
+    tilingDatafromBin->numHeadTimes = 0;
+    tilingDatafromBin->numTailTimes = 0;
+    tilingDatafromBin->numLastTailRow = 0;
+    tilingDatafromBin->alignType = 0;
+
+    tilingDatafromBin->totalBatchLen = 0;
+    tilingDatafromBin->mLen = 0;
+    tilingDatafromBin->mBlockSize = 0;
+    tilingDatafromBin->mTailBlockSize = 0;
+    tilingDatafromBin->mBlockNum = 0;
+    tilingDatafromBin->nLen = 0;
+    tilingDatafromBin->nBlockSize = 0;
+    tilingDatafromBin->nTailBlockSize = 0;
+    tilingDatafromBin->nBlockNum = 0;
+    tilingDatafromBin->nBaseSize = 0;
+    tilingDatafromBin->nBaseLoopNum = 0;
+    tilingDatafromBin->blockPerHead = 0;
+    tilingDatafromBin->blockPerTail = 0;
+    tilingDatafromBin->totalBlockNum = 0;
+    tilingDatafromBin->batchBlockSize = 0;
+    tilingDatafromBin->batchTailBlockSize = 0;
+    tilingDatafromBin->batchBlockNum = 0;
+
+    blockDim = 40;
+
+    ICPU_SET_TILING_KEY(3);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(
+        dynamic_quant, blockDim, input, smooth_scales, group_index, output, scale, workSpace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(input);
+    AscendC::GmFree(output);
+    AscendC::GmFree(scale);
+    AscendC::GmFree(workSpace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(dynamic_quant_test, test_case_04)
+{
+    size_t inputByteSize = 1 * 128 * 1024 * sizeof(uint16_t);
+    size_t smoothScalesByteSzie = 8 * 1024 * sizeof(uint16_t);
+    size_t groupIndexByteSzie = 8 * sizeof(uint32_t);
+    size_t outputByteSize = 1 * 128 * 1024 * sizeof(int8_t);
+    size_t scaleByteSize = 1 * 128 * sizeof(uint32_t);
+    size_t tiling_data_size = sizeof(DynamicQuantTilingData);
+    uint32_t blockDim = 48;
+
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* smooth_scales = (uint8_t*)AscendC::GmAlloc(smoothScalesByteSzie);
+    uint8_t* group_index = (uint8_t*)AscendC::GmAlloc(groupIndexByteSzie);
+    uint8_t* output = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scaleByteSize);
+
+    uint8_t* workSpace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    DynamicQuantTilingData* tilingDatafromBin = reinterpret_cast<DynamicQuantTilingData*>(tiling);
+
+    tilingDatafromBin->coreNum = 40;
+    tilingDatafromBin->rowLen = 1024;
+    tilingDatafromBin->headCoreNum = 8;
+    tilingDatafromBin->rowPerHeadCore = 4;
+    tilingDatafromBin->rowPerTailCore = 3;
+    tilingDatafromBin->multiRowNumHeadCore = 4;
+    tilingDatafromBin->multiRowNumTailCore = 3;
+    tilingDatafromBin->innerLoopEle = 0;
+    tilingDatafromBin->innerLoopTimes = 0;
+    tilingDatafromBin->innerLoopTail = 0;
+    tilingDatafromBin->groupNum = 8;
+    tilingDatafromBin->alignGroupNum = 8;
+    tilingDatafromBin->hasSmooth = 1;
+    tilingDatafromBin->unused = 0;
+    tilingDatafromBin->ubSize = 196608;
+
+    tilingDatafromBin->sizeH = 0;
+    tilingDatafromBin->sizeX = 0;
+    tilingDatafromBin->sizeZOut = 0;
+    tilingDatafromBin->sizeCopyRow = 0;
+    tilingDatafromBin->numCopyRow = 0;
+    tilingDatafromBin->numHeadCore = 0;
+    tilingDatafromBin->numTailCore = 0;
+    tilingDatafromBin->numHeadTimes = 0;
+    tilingDatafromBin->numTailTimes = 0;
+    tilingDatafromBin->numLastTailRow = 0;
+    tilingDatafromBin->alignType = 0;
+
+    tilingDatafromBin->totalBatchLen = 0;
+    tilingDatafromBin->mLen = 0;
+    tilingDatafromBin->mBlockSize = 0;
+    tilingDatafromBin->mTailBlockSize = 0;
+    tilingDatafromBin->mBlockNum = 0;
+    tilingDatafromBin->nLen = 0;
+    tilingDatafromBin->nBlockSize = 0;
+    tilingDatafromBin->nTailBlockSize = 0;
+    tilingDatafromBin->nBlockNum = 0;
+    tilingDatafromBin->nBaseSize = 0;
+    tilingDatafromBin->nBaseLoopNum = 0;
+    tilingDatafromBin->blockPerHead = 0;
+    tilingDatafromBin->blockPerTail = 0;
+    tilingDatafromBin->totalBlockNum = 0;
+    tilingDatafromBin->batchBlockSize = 0;
+    tilingDatafromBin->batchTailBlockSize = 0;
+    tilingDatafromBin->batchBlockNum = 0;
+
+    blockDim = 40;
+
+    ICPU_SET_TILING_KEY(7);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(
+        dynamic_quant, blockDim, input, smooth_scales, group_index, output, scale, workSpace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(input);
+    AscendC::GmFree(output);
+    AscendC::GmFree(scale);
+    AscendC::GmFree(workSpace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(dynamic_quant_test, test_case_05)
+{
+    size_t inputByteSize = 1 * 128 * 20485 * sizeof(uint16_t);
+    size_t smoothScalesByteSzie = 8 * 20485 * sizeof(uint16_t);
+    size_t groupIndexByteSzie = 8 * sizeof(uint32_t);
+    size_t outputByteSize = 1 * 128 * 20485 * sizeof(int8_t);
+    size_t scaleByteSize = 1 * 128 * sizeof(uint32_t);
+    size_t tiling_data_size = sizeof(DynamicQuantTilingData);
+    uint32_t blockDim = 48;
+
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* smooth_scales = (uint8_t*)AscendC::GmAlloc(smoothScalesByteSzie);
+    uint8_t* group_index = (uint8_t*)AscendC::GmAlloc(groupIndexByteSzie);
+    uint8_t* output = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scaleByteSize);
+
+    uint8_t* workSpace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    DynamicQuantTilingData* tilingDatafromBin = reinterpret_cast<DynamicQuantTilingData*>(tiling);
+
+    tilingDatafromBin->coreNum = 40;
+    tilingDatafromBin->rowLen = 20485;
+    tilingDatafromBin->headCoreNum = 8;
+    tilingDatafromBin->rowPerHeadCore = 4;
+    tilingDatafromBin->rowPerTailCore = 3;
+    tilingDatafromBin->multiRowNumHeadCore = 1;
+    tilingDatafromBin->multiRowNumTailCore = 1;
+    tilingDatafromBin->innerLoopEle = 10240;
+    tilingDatafromBin->innerLoopTimes = 2;
+    tilingDatafromBin->innerLoopTail = 5;
+    tilingDatafromBin->groupNum = 8;
+    tilingDatafromBin->alignGroupNum = 8;
+    tilingDatafromBin->hasSmooth = 1;
+    tilingDatafromBin->unused = 0;
+    tilingDatafromBin->ubSize = 196608;
+
+    tilingDatafromBin->sizeH = 0;
+    tilingDatafromBin->sizeX = 0;
+    tilingDatafromBin->sizeZOut = 0;
+    tilingDatafromBin->sizeCopyRow = 0;
+    tilingDatafromBin->numCopyRow = 0;
+    tilingDatafromBin->numHeadCore = 0;
+    tilingDatafromBin->numTailCore = 0;
+    tilingDatafromBin->numHeadTimes = 0;
+    tilingDatafromBin->numTailTimes = 0;
+    tilingDatafromBin->numLastTailRow = 0;
+    tilingDatafromBin->alignType = 0;
+
+    tilingDatafromBin->totalBatchLen = 0;
+    tilingDatafromBin->mLen = 0;
+    tilingDatafromBin->mBlockSize = 0;
+    tilingDatafromBin->mTailBlockSize = 0;
+    tilingDatafromBin->mBlockNum = 0;
+    tilingDatafromBin->nLen = 0;
+    tilingDatafromBin->nBlockSize = 0;
+    tilingDatafromBin->nTailBlockSize = 0;
+    tilingDatafromBin->nBlockNum = 0;
+    tilingDatafromBin->nBaseSize = 0;
+    tilingDatafromBin->nBaseLoopNum = 0;
+    tilingDatafromBin->blockPerHead = 0;
+    tilingDatafromBin->blockPerTail = 0;
+    tilingDatafromBin->totalBlockNum = 0;
+    tilingDatafromBin->batchBlockSize = 0;
+    tilingDatafromBin->batchTailBlockSize = 0;
+    tilingDatafromBin->batchBlockNum = 0;
+
+    blockDim = 40;
+
+    ICPU_SET_TILING_KEY(8);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(
+        dynamic_quant, blockDim, input, smooth_scales, group_index, output, scale, workSpace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(input);
+    AscendC::GmFree(output);
+    AscendC::GmFree(scale);
+    AscendC::GmFree(workSpace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(dynamic_quant_test, test_case_06)
+{
+    size_t inputByteSize = 1 * 128 * 11001 * sizeof(uint16_t);
+    size_t smoothScalesByteSzie = 11001 * sizeof(uint16_t);
+    size_t outputByteSize = 1 * 128 * 11001 * sizeof(int8_t);
+    size_t scaleByteSize = 1 * 128 * sizeof(uint32_t);
+    size_t tiling_data_size = sizeof(DynamicQuantTilingData);
+    uint32_t blockDim = 48;
+
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* smooth_scales = (uint8_t*)AscendC::GmAlloc(smoothScalesByteSzie);
+    uint8_t* group_index = nullptr;
+    uint8_t* output = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scaleByteSize);
+
+    uint8_t* workSpace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    DynamicQuantTilingData* tilingDatafromBin = reinterpret_cast<DynamicQuantTilingData*>(tiling);
+
+    tilingDatafromBin->coreNum = 40;
+    tilingDatafromBin->rowLen = 11001;
+    tilingDatafromBin->headCoreNum = 8;
+    tilingDatafromBin->rowPerHeadCore = 4;
+    tilingDatafromBin->rowPerTailCore = 3;
+    tilingDatafromBin->multiRowNumHeadCore = 1;
+    tilingDatafromBin->multiRowNumTailCore = 1;
+    tilingDatafromBin->innerLoopEle = 0;
+    tilingDatafromBin->innerLoopTimes = 0;
+    tilingDatafromBin->innerLoopTail = 0;
+    tilingDatafromBin->groupNum = 8;
+    tilingDatafromBin->alignGroupNum = 8;
+    tilingDatafromBin->hasSmooth = 1;
+    tilingDatafromBin->unused = 0;
+    tilingDatafromBin->ubSize = 196608;
+
+    tilingDatafromBin->sizeH = 0;
+    tilingDatafromBin->sizeX = 0;
+    tilingDatafromBin->sizeZOut = 0;
+    tilingDatafromBin->sizeCopyRow = 0;
+    tilingDatafromBin->numCopyRow = 0;
+    tilingDatafromBin->numHeadCore = 0;
+    tilingDatafromBin->numTailCore = 0;
+    tilingDatafromBin->numHeadTimes = 0;
+    tilingDatafromBin->numTailTimes = 0;
+    tilingDatafromBin->numLastTailRow = 0;
+    tilingDatafromBin->alignType = 0;
+
+    tilingDatafromBin->totalBatchLen = 0;
+    tilingDatafromBin->mLen = 0;
+    tilingDatafromBin->mBlockSize = 0;
+    tilingDatafromBin->mTailBlockSize = 0;
+    tilingDatafromBin->mBlockNum = 0;
+    tilingDatafromBin->nLen = 0;
+    tilingDatafromBin->nBlockSize = 0;
+    tilingDatafromBin->nTailBlockSize = 0;
+    tilingDatafromBin->nBlockNum = 0;
+    tilingDatafromBin->nBaseSize = 0;
+    tilingDatafromBin->nBaseLoopNum = 0;
+    tilingDatafromBin->blockPerHead = 0;
+    tilingDatafromBin->blockPerTail = 0;
+    tilingDatafromBin->totalBlockNum = 0;
+    tilingDatafromBin->batchBlockSize = 0;
+    tilingDatafromBin->batchTailBlockSize = 0;
+    tilingDatafromBin->batchBlockNum = 0;
+
+    blockDim = 40;
+
+    ICPU_SET_TILING_KEY(1);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(
+        dynamic_quant, blockDim, input, smooth_scales, group_index, output, scale, workSpace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(input);
     AscendC::GmFree(output);

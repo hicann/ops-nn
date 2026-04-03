@@ -35,6 +35,8 @@ struct DynamicQuantTilingData {
     uint32_t groupNum;
     uint32_t alignGroupNum;
     uint32_t hasSmooth;
+    uint32_t unused;
+    uint32_t ubSize;
 
     uint32_t sizeH;
     uint32_t sizeX;
@@ -47,7 +49,24 @@ struct DynamicQuantTilingData {
     uint32_t numTailTimes;
     uint32_t numLastTailRow;
     uint32_t alignType;
-    uint32_t ubSize;
+
+    int64_t totalBatchLen;
+    int64_t mLen;
+    int64_t mBlockSize;
+    int64_t mTailBlockSize;
+    int64_t mBlockNum;
+    int64_t nLen;
+    int64_t nBlockSize;
+    int64_t nTailBlockSize;
+    int64_t nBlockNum;
+    int64_t nBaseSize;
+    int64_t nBaseLoopNum;
+    int64_t blockPerHead;
+    int64_t blockPerTail;
+    int64_t totalBlockNum;
+    int64_t batchBlockSize;
+    int64_t batchTailBlockSize;
+    int64_t batchBlockNum;
 };
 
 #pragma pack()
@@ -59,14 +78,14 @@ struct DynamicQuantTilingData {
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                                  \
+#define GET_TILING_DATA(tilingData, tilingPointer)                              \
     DynamicQuantTilingData tilingData;                                          \
     INIT_TILING_DATA(DynamicQuantTilingData, tilingDataPointer, tilingPointer); \
     (tilingData).coreNum = tilingDataPointer->coreNum;                          \
     (tilingData).rowLen = tilingDataPointer->rowLen;                            \
     (tilingData).headCoreNum = tilingDataPointer->headCoreNum;                  \
-    (tilingData).rowPerHeadCore = tilingDataPointer->rowPerHeadCore;            \
     (tilingData).rowPerTailCore = tilingDataPointer->rowPerTailCore;            \
+    (tilingData).rowPerHeadCore = tilingDataPointer->rowPerHeadCore;            \
     (tilingData).multiRowNumHeadCore = tilingDataPointer->multiRowNumHeadCore;  \
     (tilingData).multiRowNumTailCore = tilingDataPointer->multiRowNumTailCore;  \
     (tilingData).innerLoopEle = tilingDataPointer->innerLoopEle;                \
@@ -75,6 +94,8 @@ struct DynamicQuantTilingData {
     (tilingData).groupNum = tilingDataPointer->groupNum;                        \
     (tilingData).alignGroupNum = tilingDataPointer->alignGroupNum;              \
     (tilingData).hasSmooth = tilingDataPointer->hasSmooth;                      \
+    (tilingData).unused = tilingDataPointer->unused;                            \
+    (tilingData).ubSize = tilingDataPointer->ubSize;                            \
     (tilingData).sizeH = tilingDataPointer->sizeH;                              \
     (tilingData).sizeX = tilingDataPointer->sizeX;                              \
     (tilingData).sizeZOut = tilingDataPointer->sizeZOut;                        \
@@ -86,5 +107,21 @@ struct DynamicQuantTilingData {
     (tilingData).numTailTimes = tilingDataPointer->numTailTimes;                \
     (tilingData).numLastTailRow = tilingDataPointer->numLastTailRow;            \
     (tilingData).alignType = tilingDataPointer->alignType;                      \
-    (tilingData).ubSize = tilingDataPointer->ubSize;
+    (tilingData).totalBatchLen = tilingDataPointer->totalBatchLen;              \
+    (tilingData).mLen = tilingDataPointer->mLen;                                \
+    (tilingData).mBlockSize = tilingDataPointer->mBlockSize;                    \
+    (tilingData).mTailBlockSize = tilingDataPointer->mTailBlockSize;            \
+    (tilingData).mBlockNum = tilingDataPointer->mBlockNum;                      \
+    (tilingData).nLen = tilingDataPointer->nLen;                                \
+    (tilingData).nBlockSize = tilingDataPointer->nBlockSize;                    \
+    (tilingData).nTailBlockSize = tilingDataPointer->nTailBlockSize;            \
+    (tilingData).nBlockNum = tilingDataPointer->nBlockNum;                      \
+    (tilingData).nBaseSize = tilingDataPointer->nBaseSize;                      \
+    (tilingData).nBaseLoopNum = tilingDataPointer->nBaseLoopNum;                \
+    (tilingData).blockPerHead = tilingDataPointer->blockPerHead;                \
+    (tilingData).blockPerTail = tilingDataPointer->blockPerTail;                \
+    (tilingData).totalBlockNum = tilingDataPointer->totalBlockNum;              \
+    (tilingData).batchBlockSize = tilingDataPointer->batchBlockSize;            \
+    (tilingData).batchTailBlockSize = tilingDataPointer->batchTailBlockSize;    \
+    (tilingData).batchBlockNum = tilingDataPointer->batchBlockNum;
 #endif
