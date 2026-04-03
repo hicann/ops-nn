@@ -278,7 +278,7 @@ private:
             aL1PingFlag = !aL1PingFlag;
         }
         if ((kidx + 1) % stepkb_ == 0) {
-            SetFlag<HardEvent::MTE1_MTE2>(bL1PingFlag ? eBL1Ping21_ : eBL1Pong21_);
+            SetFlag<HardEvent::MTE1_MTE2>(bL1PingFlag ? eBL1Ping12_ : eBL1Pong12_);
             bL1PingFlag = !bL1PingFlag;
         }
         CrossCoreWaitFlag(wsPingFlag ? V2C_PING_FLAG : V2C_PONG_FLAG);
