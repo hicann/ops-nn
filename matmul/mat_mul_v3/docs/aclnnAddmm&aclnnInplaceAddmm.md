@@ -209,7 +209,7 @@ aclnnStatus aclnnInplaceAddmm(
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
-    - cubeMathType=4，输入数类型为FLOAT16/BFLOAT16时addmm过程升精度计算，该情况下当前不支持输入self与matmul计算结果矩阵做broadcast；当输入数据类型为FLOAT32且k轴大于2048时，会使用分组累加进行计算。
+    - cubeMathType=4，当输入数据类型为FLOAT16/BFLOAT16时addmm过程升精度计算，该情况下当前不支持输入self与matmul计算结果矩阵做broadcast；当输入数据类型为FLOAT32且k轴大于2048时，会使用分组累加进行计算。
   - <term>Ascend 950PR/Ascend 950DT</term>：
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
@@ -419,7 +419,7 @@ aclnnStatus aclnnInplaceAddmm(
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
-    - cubeMathType=4，输入数类型为FLOAT16/BFLOAT16时addmm过程升精度计算，该情况下当前不支持输入self与matmul计算结果矩阵做broadcast；当输入数据类型为FLOAT32且k轴大于2048时，会使用分组累加进行计算。
+    - cubeMathType=4，当输入数据类型为FLOAT16/BFLOAT16时addmm过程升精度计算，该情况下当前不支持输入self与matmul计算结果矩阵做broadcast；当输入数据类型为FLOAT32且k轴大于2048时，会使用分组累加进行计算。
   - <term>Ascend 950PR/Ascend 950DT</term>：
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；

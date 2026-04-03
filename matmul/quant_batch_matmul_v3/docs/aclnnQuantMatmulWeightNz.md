@@ -528,13 +528,13 @@ aclnnStatus aclnnQuantMatmulWeightNz(
   <a id="输入和输出支持以下数据类型组合TC/TT"></a>
       | x1              | x2          | x1Scale     |   x2Scale         | x2Offset     | yScale | bias                       |   out                   |
       | --------------- | ----------- | ----------- |   --------------- | ------------ | -------| -------------------------- |   ----------------------|
-      | INT8            | INT8        | null        | UINT64/ INT64     | null         | null   | null/INT32                 |   FLOAT16/ BFLOAT16     |
-      | INT8            | INT8        | null        | UINT64/ INT64     | null/FLOAT32 | null   | null/INT32                 |   INT8                  |
+      | INT8            | INT8        | null        | UINT64/INT64     | null         | null   | null/INT32                 |   FLOAT16/ BFLOAT16     |
+      | INT8            | INT8        | null        | UINT64/INT64     | null/FLOAT32 | null   | null/INT32                 |   INT8                  |
       | INT8            | INT8        | null        | FLOAT32/BFLOAT16  | null         | null   | null/INT32/FLOAT32/BFLOAT16|   BFLOAT16              |
       | INT8            | INT8        | null        | FLOAT32/BFLOAT16  | null         | null   | null/INT32                 |   INT32                 |
 
     - T-T量化场景下，x1Scale的shape为nullptr，x2Scale的shape为(1,)。
-    - T-C量化场景下，x1Scale的shape为或nullptr，x2Scale的shape为(n,)，其中n与x2的n一致。
+    - T-C量化场景下，x1Scale的shape为nullptr，x2Scale的shape为(n,)，其中n与x2的n一致。
     - 不支持动态T-C或动态T-T量化。
 
   - **K-C量化 && K-T量化场景约束：**
@@ -1262,7 +1262,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
       aclFinalize();
   }
 
-  // 将bloat16的uint16_t表示转换为float表示
+  // 将bfloat16的uint16_t表示转换为float表示
   float Bf16ToFloat(uint16_t h)
   {
       uint32_t sign = (h & 0x8000U) ? 0x80000000U : 0x00000000U; // sign bit
@@ -1299,7 +1299,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
       return 0;
   }
 
-  int AclnnQuantMatmulWeightNzTest(int32_t deviceId, aclrtStream& stream)
+  int aclnnQuantMatmulWeightNzTest(int32_t deviceId, aclrtStream& stream)
   {
       auto ret = Init(deviceId, &stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
@@ -1473,8 +1473,8 @@ aclnnStatus aclnnQuantMatmulWeightNz(
       // 根据自己的实际device填写deviceId
       int32_t deviceId = 0;
       aclrtStream stream;
-      auto ret = AclnnQuantMatmulWeightNzTest(deviceId, stream);
-      CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("AclnnQuantMatmulWeightNzTest failed. ERROR: %d\n", ret); return ret);
+      auto ret = aclnnQuantMatmulWeightNzTest(deviceId, stream);
+      CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulWeightNzTest failed. ERROR: %d\n", ret); return ret);
 
       Finalize(deviceId, stream);
       return 0;
