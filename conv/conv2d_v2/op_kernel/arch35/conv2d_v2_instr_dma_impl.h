@@ -133,7 +133,7 @@ public:
 private:
     __aicore__ inline bool IsCiTail()
     {
-        return (self_->ctx.kAL1Iter == self_->ctx.maxKAL1Iter && self_->ctx.vecCi1Iter == self_->ctx.maxVecCi1Iter);
+        return (self_->ctx.cinAL1Iter == self_->ctx.maxCinAL1Iter && self_->ctx.vecCi1Iter == self_->ctx.maxVecCi1Iter);
     }
 
     __aicore__ inline bool IsOnPadAndUpdateKernelSize(uint16_t hoIdx, uint16_t woIdx)
