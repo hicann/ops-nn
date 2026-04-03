@@ -212,7 +212,7 @@ void ScatterNdUpdateTiling::BlockTiling()
 {
     auto typeSize = ge::GetSizeByDataType(updateDtype_);
     OP_CHECK_IF(typeSize == 0, OP_LOGE(opName, "typeSize is 0"), return);
-    alignFactor = Ops::Base::GetCacheLineSize(context_) / typeSize;
+    alignFactor = Ops::Base::GetUbBlockSize(context_) / typeSize;
     auto blockFactor = Ops::Base::CeilDiv(updateShapeSize, static_cast<uint64_t>(totalCoreNum_));
     auto blockAlignFactor = Ops::Base::CeilDiv(blockFactor, alignFactor) * alignFactor;
     blockTilingSize = std::max(static_cast<uint64_t>(blockAlignFactor), MIN_TILING_SIZE);
@@ -264,7 +264,7 @@ ge::graphStatus ScatterNdUpdateTiling::SortTiling()
     OP_CHECK_IF(
         sliceSize == static_cast<uint64_t>(0), OP_LOGE(opName, "sliceSize %lu is zero. please check.", sliceSize),
         return ge::GRAPH_FAILED);
-    int64_t ubBlockSize = Ops::Base::GetCacheLineSize(context_);
+    int64_t ubBlockSize = Ops::Base::GetUbBlockSize(context_);
 
     // 分核策略：每个核平分行数
     uint64_t rows = indiceShapeSize / rankSize_;
@@ -332,7 +332,7 @@ uint32_t ScatterNdUpdateTiling::GetSortTmpSize(ge::DataType dataType, uint32_t l
 int64_t ScatterNdUpdateTiling::GetRestAvailableSize(
     int64_t sampleNum, int64_t valueTypeBytes, int64_t originalSize, int64_t postAxisSize, ge::DataType idType)
 {
-    int64_t ubBlock = Ops::Base::GetCacheLineSize(context_);
+    int64_t ubBlock = Ops::Base::GetUbBlockSize(context_);
     int64_t occupy = Ops::Base::CeilAlign(sampleNum * rankSize_ * indicesTypeSize_, ubBlock) +
                      Ops::Base::CeilAlign(sampleNum * indicesTypeSize_, ubBlock) +
                      Ops::Base::CeilAlign(sampleNum * (indicesTypeSize_ + TWO * ALIGN_SIZE), ubBlock) +
@@ -471,7 +471,7 @@ void ScatterNdUpdateTiling::DoOpTilingSplitAfter()
     int64_t oneIndexSize = static_cast<int64_t>(rankSize_) * indicesTypeSize_;
     int64_t indicesSize =
         oneIndexSize + indicesTypeSize_ + (indicesTypeSize_ + TWO * ALIGN_SIZE) + INT32_BYTES + (INT32_BYTES + 1);
-    int64_t ubBlock = Ops::Base::GetCacheLineSize(context_);
+    int64_t ubBlock = Ops::Base::GetUbBlockSize(context_);
     ComputeCoreSplitAfterAxis();
     InitFactors(halfUbSize, indicesSize, alignNum);
     if (indicesFactor_ > 1) {
@@ -510,7 +510,7 @@ void ScatterNdUpdateTiling::DoOpTilingSimdSplitIndices()
      *                 (uniqueIdCntQue_ + 1)
      * indicesFactor_ * eachCoreAfterAxisCount_: updatesQue_
      */
-    int64_t ubBlock = Ops::Base::GetCacheLineSize(context_);
+    int64_t ubBlock = Ops::Base::GetUbBlockSize(context_);
     int64_t indicesAlignSize =
         Ops::Base::CeilAlign(oneIndexSize, ubBlock) + Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +
         Ops::Base::CeilAlign(indicesTypeSize_ + TWO * ALIGN_SIZE, ubBlock) +
@@ -563,7 +563,7 @@ void ScatterNdUpdateTiling::DoOpTilingForSimdNonDetermin()
 
 void ScatterNdUpdateTiling::DoOpTilingForSimdMask()
 {
-    int64_t ubBlock = Ops::Base::GetCacheLineSize(context_);
+    int64_t ubBlock = Ops::Base::GetUbBlockSize(context_);
     int64_t alignNum = ubBlock / varTypeSize_;
     uint64_t maskSize = static_cast<uint64_t>(
         Ops::Base::CeilAlign(static_cast<int64_t>(varInAxis_) * static_cast<int64_t>(sizeof(int8_t)), ubBlock));
@@ -683,7 +683,7 @@ void ScatterNdUpdateTiling::DoOpTilingForDeterministic()
 {
     CalcDeterministicCoreSplit();
 
-    int64_t ubBlock = Ops::Base::GetCacheLineSize(context_);
+    int64_t ubBlock = Ops::Base::GetUbBlockSize(context_);
     CalcDeterministicUpdateSplit(ubBlock);
     CalcDeterministicIndicesSplit(ubBlock);
 }
