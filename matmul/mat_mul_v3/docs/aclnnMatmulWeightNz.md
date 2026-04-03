@@ -110,7 +110,7 @@ aclnnStatus aclnnMatmulWeightNz(
           <li>1：ALLOW_FP32_DOWN_PRECISION，支持将输入数据降精度计算，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理。</li>
           <li>2：USE_FP16，支持将输入降精度至FLOAT16计算，当输入数据类型为BFLOAT16时不支持该选项。</li>
           <li>3：USE_HF32，支持将输入降精度至数据类型HFLOAT32计算，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。</li>
-          <li>4：FORCE_GRP_ACC_FOR_FP32，支持使用分组累加方式进行计算，当输入数据类型为FLOAT32且k轴大于2048时，会使用分组累加进行计算，当输入为其他数据类型或k轴小于2048时不做处理。</li></ul>
+          <li>4：USE_FP32_ADD，支持使用高精度方式进行计算。</li></ul>
         </td>
         <td>INT8</td>
         <td>-</td>
@@ -141,11 +141,12 @@ aclnnStatus aclnnMatmulWeightNz(
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 调用此接口之前，必须使用aclnnTransMatmulWeight接口完成mat2的原始输入Format从ND到NZ格式的转换。
+    - cubeMathType=4，当输入数据类型为FLOAT32且k轴大于2048时，会使用分组累加进行计算，当输入为其他数据类型或k轴小于2048时不做处理。
   - <term>Ascend 950PR/Ascend 950DT</term>:
     - 调用此接口之前，必须使用aclnnNpuFormatCast接口完成mat2的原始输入Format从ND到NZ格式的转换。
     - 不支持 cubeMathType为1：ALLOW_FP32_DOWN_PRECISION 的选项
     - 不支持 cubeMathType为3：USE_HF32 的选项
-    - 不支持 cubeMathType为4：FORCE_GRP_ACC_FOR_FP32 的选项
+    - 不支持 cubeMathType为4：USE_FP32_ADD 的选项
 
 - **返回值**
 

@@ -160,7 +160,7 @@ aclnnStatus aclnnFusedMatmul(
         <li>1：ALLOW_FP32_DOWN_PRECISION，支持将输入数据降精度计算。</li>
         <li>2：USE_FP16，支持将输入降精度至FLOAT16计算。</li>
         <li>3：USE_HF32，支持将输入降精度至数据类型HFLOAT32计算。</li>
-        <li>4：FORCE_GRP_ACC_FOR_FP32，支持使用分组累加方式进行计算。</li></ul>
+        <li>4：USE_FP32_ADD，支持使用高精度方式进行计算。</li></ul>
       </td>
       <td>INT8</td>
       <td>-</td>

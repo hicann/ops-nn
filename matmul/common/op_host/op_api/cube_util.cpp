@@ -80,19 +80,16 @@ bool CheckCubeMathType(const op::DataType cubeTensorDtype, int8_t cubeMathType) 
         case USE_HF32:
             OP_LOGD("The cubeMathType is USE_HF32.");
             return CheckSocSupportDtype(cubeTensorDtype, false);
-        case FORCE_GRP_ACC_FOR_FP32:
-            OP_LOGD("The cubeMathType is FORCE_GRP_ACC_FOR_FP32.");
+        case USE_FP32_ADD:
+            OP_LOGD("The cubeMathType is USE_FP32_ADD.");
             return CheckSocSupportDtype(cubeTensorDtype, false);
-        case USE_FP32_ADDMM:
-            OP_LOGD("The cubeMathType is USE_FP32_ADDMM.");
-            return true;
         case USE_HIGH_PREC_MODE:
             OP_LOGD("The cubeMathType is USE_HIGH_PREC_MODE.");
             return true;
         default:
           OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                   "The value of cubeMathType only support {0: KEEP_DTYPE, 1: "
-                  "ALLOW_FP32_DOWN_PRECISION, 2: USE_FP16, 3: USE_HF32, 4: FORCE_GRP_ACC_FOR_FP32, 5: USE_FP32_ADDMM, 6: USE_HIGH_PREC_MODE}, but got %d",
+                  "ALLOW_FP32_DOWN_PRECISION, 2: USE_FP16, 3: USE_HF32, 4: USE_FP32_ADD, 5: USE_HIGH_PREC_MODE}, but got %d",
                   cubeMathType);
           return false;
     }
@@ -105,9 +102,6 @@ bool CheckCubeMathTypeForMm(const op::DataType cubeTensorDtype, int8_t cubeMathT
     } else if (cubeMathType == USE_HF32 &&
                (cubeTensorDtype == DataType::DT_BF16 || cubeTensorDtype == DataType::DT_FLOAT16)) {
         OP_LOGW("The cubeMathType is USE_HF32. For input FP16/BF16, it will not be enabled.");
-    } else if (cubeMathType == FORCE_GRP_ACC_FOR_FP32 &&
-               (cubeTensorDtype == DataType::DT_BF16 || cubeTensorDtype == DataType::DT_FLOAT16)) {
-        OP_LOGW("The cubeMathType is FORCE_GRP_ACC_FOR_FP32. For input FP16/BF16, it will not be enabled.");
     }
 
     if (cubeMathType == -1) {
@@ -122,38 +116,48 @@ bool CheckCubeMathTypeForAddMm(const aclTensor* mat1, const aclTensor* mat2, con
     const aclTensor* out, int8_t cubeMathType)
 {   
     (void)out;
-    if (cubeMathType != USE_FP32_ADDMM) {
+    if (cubeMathType > USE_FP32_ADD) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                  "The value of cubeMathType only support {0: KEEP_DTYPE, 1: "
+                  "ALLOW_FP32_DOWN_PRECISION, 2: USE_FP16, 3: USE_HF32, 4: USE_FP32_ADD}, but got %d",
+                  cubeMathType);
+        return false;
+    }
+    if (cubeMathType != USE_FP32_ADD) {
         return true;
     }
     // 平台校验
-    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_2201) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_2201 && 
+        GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
-            "current platform not support cubeMathType = 5: USE_FP32_ADDMM.");
+            "current platform not support cubeMathType = 4: USE_FP32_ADD.");
         return false;
     }
-    // 当cubeMathType=USE_FP32_ADDMM时，当前不支持self与mmout broadcast
+    // A2平台上，当cubeMathType=USE_FP32_ADD时，当前不支持self与mmout broadcast
     uint64_t dimNum = mat1->GetViewShape().GetDimNum();
     uint64_t selfDimNum = self->GetViewShape().GetDimNum();
-    if (dimNum != selfDimNum) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "when cubeMathType = 5:USE_FP32_ADDMM, do not support self's dimnum != matmul out's dimnum.");
-        return false;
-    }
-    const op::Shape selfShape = self->GetViewShape();
-    const op::Shape mat1Shape = mat1->GetViewShape();
-    const op::Shape mat2Shape = mat2->GetViewShape();
-    if (dimNum == 3UL) {
-        OP_CHECK(selfShape[0] == mat1Shape[0] && selfShape[1] == mat1Shape[1] && selfShape[2] == mat2Shape[2],
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "when cubeMathType = 5:USE_FP32_ADDMM, self shape should equal to matmul out shape."),
-            return false);
-    } else if (dimNum == 2UL) {
-        OP_CHECK(selfShape[0] == mat1Shape[0] && selfShape[1] == mat2Shape[1],
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "when cubeMathType = 5:USE_FP32_ADDMM, self shape should equal to matmul out shape."),
-            return false);
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
+        if (dimNum != selfDimNum) {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "when cubeMathType = 4:USE_FP32_ADD, do not support self's dimnum != matmul out's dimnum.");
+            return false;
+        }
+        const op::Shape selfShape = self->GetViewShape();
+        const op::Shape mat1Shape = mat1->GetViewShape();
+        const op::Shape mat2Shape = mat2->GetViewShape();
+        if (dimNum == 3UL) {
+            OP_CHECK(selfShape[0] == mat1Shape[0] && selfShape[1] == mat1Shape[1] && selfShape[2] == mat2Shape[2],
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "when cubeMathType = 4:USE_FP32_ADD, self shape should equal to matmul out shape."),
+                return false);
+        } else if (dimNum == 2UL) {
+            OP_CHECK(selfShape[0] == mat1Shape[0] && selfShape[1] == mat2Shape[1],
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "when cubeMathType = 4:USE_FP32_ADD, self shape should equal to matmul out shape."),
+                return false);
+        }
     }
     return true;
 }
@@ -283,7 +287,7 @@ DataType CalcPromoteTypeCubeMathTypeNew(const DataType cubeTensorPromoteType, in
         return CalcAllowFp32DownPrecisionPromoteType(cubeTensorPromoteType);
     } else if (cubeMathType == KEEP_DTYPE) {
         return CalcKeepDtypePromoteType(cubeTensorPromoteType);
-    } else if (cubeMathType == FORCE_GRP_ACC_FOR_FP32) {
+    } else if (cubeMathType == USE_FP32_ADD) {
         return CalcForceGrpAccForFp32PromoteType(cubeTensorPromoteType);
     }
     OP_LOGW("The cubeMathType: %d cann't be matched.", static_cast<int32_t>(cubeMathType));
