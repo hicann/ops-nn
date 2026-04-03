@@ -630,6 +630,7 @@ checkopts() {
   ENABLE_JIT=FALSE
   ENABLE_TEST=FALSE
   ENABLE_EXPERIMENTAL=FALSE
+  ENABLE_TORCH_EXTENSION=FALSE
   NO_FORCE=FALSE
   AICPU_ONLY=FALSE
   NO_AICPU=FALSE
@@ -822,7 +823,7 @@ checkopts() {
         run_example) ENABLE_RUN_EXAMPLE=TRUE
           set_example_opt "$@"
           ;;
-        experimental) ENABLE_EXPERIMENTAL=TRUE ;;
+        experimental) ENABLE_EXPERIMENTAL=TRUE; ENABLE_TORCH_EXTENSION=TRUE ;;
         make_clean_all) make_clean_all
                         exit 0 ;;
         make_clean) make_clean
@@ -1195,7 +1196,23 @@ parse_op_dependencies() {
   echo "Start to parse op dependencies for ${COMPILED_OPS}"
 
   cd "${BUILD_PATH}"
-  python3 ${BASE_PATH}/scripts/util/dependency_parser.py --ops ${COMPILED_OPS} -p ${BUILD_PATH}
+  PE_OPS=""
+  for category_dir in "${BASE_PATH}/experimental"/*/; do
+    for op_dir in "$category_dir"*/; do
+      if [ -n "$op_dir/CMakeLists.txt" ]; then
+        if grep -qE "^\s*add_sources\s*\(" "$op_dir/CMakeLists.txt" 2>/dev/null; then
+          category_name=$(basename "$category_dir")
+          op_name=$(basename "$op_dir")
+          if [ -n "$PE_OPS" ]; then
+            PE_OPS="$PE_OPS;$category_name,$op_name"
+          else
+            PE_OPS="$category_name,$op_name"
+          fi
+        fi
+      fi
+    done
+  done
+  python3 ${BASE_PATH}/scripts/util/dependency_parser.py --ops ${COMPILED_OPS} -p ${BUILD_PATH} --peo ${PE_OPS}
   echo "End to parse op dependencies"
   echo $dotted_line
 }
@@ -1569,6 +1586,9 @@ main() {
     build_pkg
     if [[ "$ENABLE_STATIC" == "TRUE" ]]; then
       package_static
+    fi
+    if [[ "$ENABLE_TORCH_EXTENSION" == "TRUE" ]]; then
+      bash "${BASE_PATH}/scripts/torch_extension/build_experimental.sh" --ops=$COMPILED_OPS -j$THREAD_NUM --soc=$COMPUTE_UNIT
     fi
   fi
 }

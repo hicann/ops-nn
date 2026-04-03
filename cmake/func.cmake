@@ -910,3 +910,67 @@ function(add_version_info_targets)
       message(FATAL_ERROR "Generate ${pkg_name} version.info failed!")
   endif()
 endfunction()
+
+# PyTorch extension
+# usage: add_sources("--npu-arch=dav-3510")
+# usage: add_sources("--npu-arch=dav-3510" "file1.cpp;file2.cpp;file3.cpp")
+macro(add_sources ARGS)
+    # 解析参数
+    set(COMPILE_ARGS "${ARGS}")  # 第一个参数为编译参数
+    set(CUSTOM_SOURCES "")       # 第二个参数为自定义源文件列表（可选）
+    
+    # 检查是否有第二个参数
+    if(${ARGC} GREATER 1)
+        set(CUSTOM_SOURCES "${ARGV1}")
+    endif()
+
+    message(STATUS "CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
+
+    # get parent dir name as OP_NAME
+    get_filename_component(OP_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
+    message(STATUS "OP_NAME: ${OP_NAME}")
+
+    # get compile flags for current op
+    set(COMPILE_FLAGS "${COMPILE_ARGS} -xasc ")
+    message(STATUS "COMPILE FLAGS: ${COMPILE_FLAGS}")
+
+    file(GLOB_RECURSE SOURCE_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+
+    # 根据是否传入自定义源文件列表决定如何获取源文件
+    if(CUSTOM_SOURCES)
+        foreach(SRC ${CUSTOM_SOURCES})
+            # 确保文件存在
+            if(EXISTS ${SRC})
+                # 获取相对于当前源目录的相对路径
+                file(RELATIVE_PATH REL_SRC ${CMAKE_CURRENT_SOURCE_DIR} ${SRC})
+                list(APPEND SOURCE_FILES ${REL_SRC})
+            else()
+                message(WARNING "Source file not found: ${SRC}")
+            endif()
+        endforeach()
+    endif()
+    
+    message(STATUS "SOURCE FILES: ${SOURCE_FILES}")
+    if(SOURCE_FILES STREQUAL "")
+        message(FATAL_ERROR "No source files found")
+    endif()
+
+    # set_source_files_properties
+    set_source_files_properties(
+        ${SOURCE_FILES} PROPERTIES
+        LANGUAGE CXX
+        COMPILE_FLAGS "${COMPILE_FLAGS}"
+    )
+
+    # set target name
+    set(TARGET_NAME ${OP_NAME}_obj)
+    add_library(${TARGET_NAME} OBJECT ${SOURCE_FILES})
+    target_compile_options(${TARGET_NAME} PRIVATE ${COMPILE_OPTIONS})
+    target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${INCLUDE_DIRECTORIES})
+
+    # add target obj to PE_OBJECTS_LIST
+    set(NEW_OBJECT_EXPRESSION $<TARGET_OBJECTS:${TARGET_NAME}>)
+    set(TEMP_LIST ${PE_OBJECTS_LIST})
+    list(APPEND TEMP_LIST ${NEW_OBJECT_EXPRESSION})
+    set(PE_OBJECTS_LIST ${TEMP_LIST} CACHE INTERNAL "List of PyTorch extension objects" FORCE)
+endmacro()

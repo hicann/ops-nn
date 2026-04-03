@@ -35,6 +35,12 @@ def args_parse():
                         nargs='?',
                         required=True,
                         help='Build path.')
+    
+    parser.add_argument('--peo',
+                        nargs='?',
+                        required=False,
+                        default=None,
+                        help='All PyTorch extension operators.')
 
     return parser.parse_args()
 
@@ -46,12 +52,13 @@ def set_dict_value(dict_value, key, value):
 
 
 class OpDependenciesParser:
-    def __init__(self, build_path):
+    def __init__(self, build_path, pytorch_extension_ops=None):
         self.all_ops_dependency = {}
         self.all_ops_reverse_dependency = {}
         self.all_ops = ["add_example", "add_example_aicpu"]
         self.all_category_ops = {}
         self.parse_dependency(build_path)
+        self.set_pe_ops(pytorch_extension_ops)
         pass
 
     def find_all_dependency(self, op, result_dependencies, all_dependencies, src_op):
@@ -107,6 +114,15 @@ class OpDependenciesParser:
                     set_dict_value(self.all_ops_dependency, op, common_name)
 
 
+    def set_pe_ops(self, pe_ops):
+        if pe_ops:
+            for pe_op in pe_ops.strip().split(';'):
+                op_category = pe_op.strip().split(',')[0]
+                op_type = pe_op.strip().split(',')[1]
+                set_dict_value(self.all_category_ops, op_category, op_type)
+                self.all_ops.append(op_type)
+
+
     def get_dependencies_by_ops(self, ops):
         result_ops = []
         reverse_ops = []
@@ -133,7 +149,7 @@ def find_category(ops_list, all_category_ops):
 
 def main():
     args = args_parse()
-    parser = OpDependenciesParser(args.path)
+    parser = OpDependenciesParser(args.path, args.peo)
     (op_dependencies, reverse_op_dependencies) = parser.get_dependencies_by_ops(args.ops.split(';'))
     op_dependencies = ';'.join(op_dependencies)
     reverse_op_dependencies = ';'.join(reverse_op_dependencies)
