@@ -100,6 +100,8 @@ public:
 
 private:
     __aicore__ inline void InitOutputBuffer();
+    template <typename U>
+    __aicore__ inline void InitStoreOutBuffer();
     __aicore__ inline void BaseCompute(int64_t curIdx);
     __aicore__ inline void NoSplitProcess(int64_t curIdx);
     __aicore__ inline void SplitProcess(int64_t curIdx);
@@ -116,15 +118,36 @@ protected:
 };
 
 template <typename T>
+template <typename U>
+__aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::InitStoreOutBuffer()
+{
+    LocalTensor<U> avgStoreOutLocal = this->storeAddUB_.template Get<U>();
+    __local_mem__ U* avgStoreOutAddr = (__local_mem__ U*)avgStoreOutLocal.GetPhyAddr();
+
+    uint32_t maxOutCount = BATCH_COPYOUT_COUNT;
+    uint32_t maxVfCount = platform::GetVRegSize() / sizeof(T);
+    uint16_t repeatMaxTimes = ops::CeilDiv(static_cast<uint32_t>(maxOutCount), maxVfCount);
+
+    __VEC_SCOPE__
+    {
+        MicroAPI::RegTensor<U> avgStoreOutReg;
+        MicroAPI::Duplicate(avgStoreOutReg, static_cast<U>(0));
+        for (uint16_t i = 0; i < repeatMaxTimes; i++) {
+            MicroAPI::MaskReg avgStoreOutMask = MicroAPI::UpdateMask<U>(maxOutCount);
+            MicroAPI::AddrReg offsetStoreReg = MicroAPI::CreateAddrReg<U>(i, maxVfCount);
+            MicroAPI::DataCopy(avgStoreOutAddr, avgStoreOutReg, offsetStoreReg, avgStoreOutMask);
+        }
+    }
+}
+
+template <typename T>
 __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::InitOutputBuffer()
 {
     event_t eventIdMTE3toV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
     SetFlag<HardEvent::MTE3_V>(eventIdMTE3toV);
     WaitFlag<HardEvent::MTE3_V>(eventIdMTE3toV);
     LocalTensor<T> avgOutLocal = this->outputUB_.template Get<T>();
-    LocalTensor<float> avgStoreOutLocal = this->storeAddUB_.template Get<float>();
     __local_mem__ T* avgOutAddr = (__local_mem__ T*)avgOutLocal.GetPhyAddr();
-    __local_mem__ float* avgStoreOutAddr = (__local_mem__ float*)avgStoreOutLocal.GetPhyAddr();
 
     uint32_t maxOutCount = BATCH_COPYOUT_COUNT;
     uint32_t maxVfCount = platform::GetVRegSize() / sizeof(T);
@@ -133,16 +156,11 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::InitOutputBuffer()
     __VEC_SCOPE__
     {
         MicroAPI::RegTensor<T> avgOutReg;
-        MicroAPI::RegTensor<float> avgStoreOutReg;
         MicroAPI::Duplicate(avgOutReg, static_cast<T>(0));
-        MicroAPI::Duplicate(avgStoreOutReg, static_cast<float>(0));
         for (uint16_t i = 0; i < repeatMaxTimes; i++) {
             MicroAPI::MaskReg avgOutMask = MicroAPI::UpdateMask<T>(maxOutCount);
-            MicroAPI::MaskReg avgStoreOutMask = MicroAPI::UpdateMask<float>(maxOutCount);
             MicroAPI::AddrReg offsetReg = MicroAPI::CreateAddrReg<T>(i, maxVfCount);
-            MicroAPI::AddrReg offsetStoreReg = MicroAPI::CreateAddrReg<float>(i, maxVfCount);
             MicroAPI::DataCopy(avgOutAddr, avgOutReg, offsetReg, avgOutMask);
-            MicroAPI::DataCopy(avgStoreOutAddr, avgStoreOutReg, offsetStoreReg, avgStoreOutMask);
         }
     }
 }
@@ -163,7 +181,7 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeAvg(LocalTensor<U> 
         MicroAPI::RegTensor<U> lastRes;
 
         MicroAPI::Duplicate(disiv, divNum);
-        LoadOneValue<U>(storeLocalAddr, lastRes, pregOne, curIdx);
+        LoadOneValue<U>(storeLocalAddr, lastRes, pregOne, 0);
         MicroAPI::Div(lastRes, lastRes, disiv, pregOne);
 
         StoreOneValue<T, U>(dstLocalAddr, lastRes, pregOne, curIdx);
@@ -198,9 +216,9 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeSum(
             MicroAPI::Add(res, res, vd1, sumMask);
         }
         if constexpr (SPLIT_MODE != NO_SPLIT) {
-            UpdateSum<U>(res, storeLocalAddr, localCurIdx);
+            UpdateSum<U>(res, storeLocalAddr, 0);
         }
-        StoreOneValue<U, U>(storeLocalAddr, res, sumMask, localCurIdx);
+        StoreOneValue<U, U>(storeLocalAddr, res, sumMask, 0);
     }
 }
 
@@ -274,6 +292,7 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::NoSplitProcess(int64_t cur
 template <typename T>
 __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::SplitProcess(int64_t curIdx)
 {
+    InitStoreOutBuffer<float>();
     if (this->curkHW_ <= this->tilingData_.maxCount) {
         ComputeSplitD(curIdx);
     } else if (this->curkW_ <= this->tilingData_.maxCount) {
@@ -286,7 +305,7 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::SplitProcess(int64_t curId
 template <typename T>
 __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::BaseCompute(int64_t curIdx)
 {
-    LocalTensor<float> storeAddLocal = this->storeAddUB_.template DeQue<float>();
+    LocalTensor<float> storeAddLocal = this->storeAddUB_.template Get<float>();
     if (this->curkDHW_ <= this->tilingData_.maxCount) {
         NoSplitProcess(curIdx);
     } else {
@@ -321,6 +340,7 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::Process()
     }
 
     InitOutputBuffer();
+    InitStoreOutBuffer<float>();
     int64_t curLocalIdx = 0;
     int64_t outputOffset = beginIdx;
     for (int64_t outIdx = beginIdx; outIdx < endIdx; outIdx++) {
