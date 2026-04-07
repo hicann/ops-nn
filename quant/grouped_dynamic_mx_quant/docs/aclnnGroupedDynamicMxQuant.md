@@ -50,8 +50,8 @@ aclnnStatus aclnnGroupedDynamicMxQuantGetWorkspaceSize(
   const char      *roundMode, 
   int64_t          dstType, 
   int64_t          blocksize, 
-  aclTensor       *y, 
-  aclTensor       *mxscale, 
+  const aclTensor *y, 
+  const aclTensor *mxscale, 
   uint64_t        *workspaceSize, 
   aclOpExecutor   **executor)
 ```

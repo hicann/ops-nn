@@ -66,9 +66,9 @@ aclnnStatus aclnnDynamicDualLevelMxQuantGetWorkspaceSize(
   char            *roundModeOptional, 
   int64_t          level0BlockSize, 
   int64_t          level1BlockSize, 
-  aclTensor       *yOut, 
-  aclTensor       *level0ScaleOut, 
-  aclTensor       *level1ScaleOut, 
+  const aclTensor *yOut, 
+  const aclTensor *level0ScaleOut, 
+  const aclTensor *level1ScaleOut, 
   uint64_t        *workspaceSize, 
   aclOpExecutor   **executor)
 ```

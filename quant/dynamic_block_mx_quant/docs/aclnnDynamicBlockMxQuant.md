@@ -75,10 +75,10 @@ aclnnStatus aclnnDynamicBlockMxQuantGetWorkspaceSize(
   char            *roundModeOptional, 
   int64_t          dstType, 
   int64_t          scaleAlg,
-  float            dstTypeMax,
-  aclTensor       *yOut, 
-  aclTensor       *scale1Out, 
-  aclTensor       *scale2Out, 
+  double           dstTypeMax,
+  const aclTensor *yOut, 
+  const aclTensor *scale1Out, 
+  const aclTensor *scale2Out, 
   uint64_t        *workspaceSize, 
   aclOpExecutor   **executor)
 ```
@@ -101,7 +101,7 @@ aclnnStatus aclnnDynamicBlockMxQuant(
   | roundModeOptional (char\*)  | 输入 | 表示数据转换的模式，对应公式中的round_mode。 | 当dstType为40/41，对应输出yOut的数据类型为FLOAT4_E2M1/FLOAT4_E1M2时，支持{"rint", "floor", "round"}；<br> 当dstType为35/36，对应输出yOut数据类型为FLOAT8_E5M2/FLOAT8_E4M3FN时，仅支持{"rint"}；<br> 传入空指针时，采用"rint"模式。 | STRING | - | - | - |
   | dstType (int64_t) | 输入 | 表示指定数据转换后yOut的类型。 | 输入范围为{35, 36, 40, 41}，分别对应输出yOut的数据类型为{35:FLOAT8_E5M2, 36:FLOAT8_E4M3FN, 40:FLOAT4_E2M1, 41:FLOAT4_E1M2} | INT64 | - | - | - |
   | scaleAlg (int64_t) | 输入 | 表示scale1Out和scale2Out的计算方法。 | 当前支持取值0和2，分别代表OCP Microscaling Formats (Mx) Specification实现和Dynamic Dtype Range实现。 | INT64 | - | - | - |
-  | dstTypeMax (float) | 输入 | 表示目标数据类型的最大值。| 在scaleAlg=2，dstType为FLOAT4_E2M1时生效，需要按照传入的数值计算scale。<br>当前仅支持dstTypeMax取值为0.0/6.0/7.0。 | FLOAT | - | - | - |
+  | dstTypeMax (double) | 输入 | 表示目标数据类型的最大值。| 在scaleAlg=2，dstType为FLOAT4_E2M1时生效，需要按照传入的数值计算scale。<br>当前仅支持dstTypeMax取值为0.0/6.0/7.0。 | DOUBLE | - | - | - |
   | yOut (aclTensor\*) | 输出 | 表示输入x量化后的对应结果，对应公式中的$P_i$。 | shape和输入x一致。 | FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2 | ND | 2-3 | √ |
   | scale1Out (aclTensor*) | 输出 | 表示-1轴每个分组对应的量化尺度，对应公式中的scale1。 | shape为x的-1轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0。 | FLOAT8_E8M0 | ND | 3-4 | √ |
   | scale2Out (aclTensor*) | 输出 | 表示-2轴每个分组对应的量化尺度，对应公式中的scale2。 | shape为x的-2轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0； <br>  scale2Out输出需要对每两行数据进行交织处理。 | FLOAT8_E8M0 | ND | 3-4 | √ |
@@ -316,7 +316,7 @@ aclnnStatus aclnnDynamicBlockMxQuant(
       char* roundModeOptional = const_cast<char*>("rint");
       int64_t dstType = 36;
       int64_t scaleAlg = 0;
-      float dstTypeMax = 0;
+      double dstTypeMax = 0;
       // 创建x aclTensor
       ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_BF16, &x);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> xTensorPtr(x, aclDestroyTensor);

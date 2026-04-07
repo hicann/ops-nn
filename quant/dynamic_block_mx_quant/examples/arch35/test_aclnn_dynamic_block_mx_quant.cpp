@@ -115,7 +115,7 @@ int aclnnDynamicBlockMxQuantTest(int32_t deviceId, aclrtStream& stream)
     char* roundModeOptional = const_cast<char*>("rint");
     int64_t dstType = 36;
     int64_t scaleAlg = 0;
-    float dstTypeMax = 0.0;
+    double dstTypeMax = 0.0;
     // 创建x aclTensor
     ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_BF16, &x);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> xTensorPtr(x, aclDestroyTensor);

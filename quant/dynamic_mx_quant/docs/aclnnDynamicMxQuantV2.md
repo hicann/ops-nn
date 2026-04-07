@@ -99,9 +99,9 @@ aclnnStatus aclnnDynamicMxQuantV2GetWorkspaceSize(
   int64_t          dstType,
   int64_t          blocksize,
   int64_t          scaleAlg,
-  float            dstTypeMax,
-  aclTensor       *yOut,
-  aclTensor       *mxscaleOut,
+  double           dstTypeMax,
+  const aclTensor *yOut,
+  const aclTensor *mxscaleOut,
   uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
@@ -141,7 +141,7 @@ aclnnStatus aclnnDynamicMxQuantV2(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入x，对应公式中Vi和di。</td>
       <td><ul><li>目的类型为FLOAT4_E2M1、FLOAT4_E1M2时，x的最后一维必须是偶数。</li></ul></td>
@@ -151,7 +151,7 @@ aclnnStatus aclnnDynamicMxQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>axis</td>
+      <td>axis（int64_t）</td>
       <td>输入</td>
       <td>表示量化发生的轴，对应公式中的axis。</td>
       <td><ul><li>取值范围为[-D, D-1]，D为x的shape的维数。</li></ul></td>
@@ -161,7 +161,7 @@ aclnnStatus aclnnDynamicMxQuantV2(
       <td>-</td>
     </tr>
     <tr>
-      <td>roundModeOptional</td>
+      <td>roundModeOptional（char*）</td>
       <td>输入</td>
       <td>表示数据转换的模式，对应公式中的round_mode。</td>
       <td><ul><li>当dstType为40/41时，支持{"rint", "floor", "round"}。</li><li>当dstType为36/35时，仅支持{"rint"}。</li><li>传入空指针时，采用"rint"模式。</li></ul></td>
@@ -171,7 +171,7 @@ aclnnStatus aclnnDynamicMxQuantV2(
       <td>-</td>
     </tr>
     <tr>
-      <td>dstType</td>
+      <td>dstType（int64_t）</td>
       <td>输入</td>
       <td>表示指定数据转换后yOut的类型，对应公式中的DType。</td>
       <td><ul><li>输入范围为{35, 36, 40, 41}，分别对应输出yOut的数据类型为{35:FLOAT8_E5M2, 36:FLOAT8_E4M3FN, 40:FLOAT4_E2M1, 41:FLOAT4_E1M2}。</li></ul></td>
@@ -181,7 +181,7 @@ aclnnStatus aclnnDynamicMxQuantV2(
       <td>-</td>
     </tr>
     <tr>
-      <td>blocksize</td>
+      <td>blocksize（int64_t）</td>
       <td>输入</td>
       <td>表示指定每次量化的元素个数，对应公式中的blocksize。</td>
       <td><ul><li>仅支持32的倍数，不能为0，且不能超过1024。</li></ul></td>
@@ -191,7 +191,7 @@ aclnnStatus aclnnDynamicMxQuantV2(
       <td>-</td>
     </tr>
     <tr>
-      <td>scaleAlg</td>
+      <td>scaleAlg（int64_t）</td>
       <td>输入</td>
       <td>表示mxscaleOut的计算方法，对应公式中的scaleAlg。</td>
       <td><ul><li>支持取值0、1和2，取值为0代表场景1，为1代表场景2，为2代表场景3。</li><li>当dstType为FLOAT4_E1M2时仅支持取值为0；当dstType为FLOAT4_E2M1时仅支持取值为0和2；当dstType为FLOAT8时仅支持取值为0和1。</li></ul></td>
@@ -201,17 +201,17 @@ aclnnStatus aclnnDynamicMxQuantV2(
       <td>-</td>
     </tr>
     <tr>
-      <td>dstTypeMax</td>
+      <td>dstTypeMax（double）</td>
       <td>输入</td>
       <td>表示maxType的取值，对应公式中的Amax(DType)。</td>
       <td><ul><li>支持取值0.0和6.0-12.0，取值为0.0代表Amax(DType)为量化结果数据类型的最大值；取值为6.0-12.0代表Amax(DType)为传入值。仅支持在FP4E2M1和blocksize取32时设置该值</li></ul></td>
-      <td>FLOAT</td>
+      <td>DOUBLE</td>
       <td>ND</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>yOut</td>
+      <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示输入x量化后的对应结果，对应公式中的Pi和di。</td>
       <td><ul><li>shape和输入x一致。</li></ul></td>
@@ -221,7 +221,7 @@ aclnnStatus aclnnDynamicMxQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>mxscaleOut</td>
+      <td>mxscaleOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示每个分组对应的量化尺度，对应公式中的mxscale和Sb。</td>
       <td><ul><li>shape在axis轴上为x对应轴的值除以blocksize向上取整，并对其进行偶数pad，pad填充值为0。</li><li>当axis为非尾轴时，mxscaleOut输出需要对每两行数据进行交织处理。</li></ul></td>
@@ -231,7 +231,7 @@ aclnnStatus aclnnDynamicMxQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -241,7 +241,7 @@ aclnnStatus aclnnDynamicMxQuantV2(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
@@ -280,13 +280,13 @@ aclnnStatus aclnnDynamicMxQuantV2(
     <tr>
       <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="3">161002</td>
-      <td> x、axis、roundModeOptional、dstType、blocksize、scaleAlg、yOut、mxscaleOut的数据类型和数据格式不在支持的范围之内。</td>
+      <td> x、axis、roundModeOptional、dstType、blocksize、scaleAlg、dstTypeMax、yOut、mxscaleOut的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x、yOut或mxscaleOut的shape不满足校验条件。</td>
     </tr>
     <tr>
-      <td>axis、roundModeOptional、dstType、blocksize、scaleAlg不符合当前支持的值。</td>
+      <td>axis、roundModeOptional、dstType、blocksize、scaleAlg、dstTypeMax不符合当前支持的值。</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_RUNTIME_ERROR</td>
