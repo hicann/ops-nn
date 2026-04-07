@@ -209,7 +209,7 @@
 | [aclnnGatherV3](../../index/gather_v2/docs/aclnnGatherV3.md) | 从输入Tensor的指定维度dim，按index中的下标序号提取元素，batchDims代表运算批次。保存到out Tensor中。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGeGlu](../../activation/ge_glu_v2/docs/aclnnGeGlu.md) | 高斯误差线性单元激活函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGeGluBackward](../../activation/ge_glu_grad_v2/docs/aclnnGeGluBackward.md) | 完成aclnnGeGlu的反向。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnGeGluV3](../../activation/ge_glu_v2/docs/aclnnGeGluV3.md) | 高斯误差线性单元激活门函数，针对aclnnGeGlu，扩充了设置激活函数操作数据块方向的功能。 | 默认确定性实现 | 默认确定实现 |
+| [aclnnGeGluV3](../../activation/ge_glu_v2/docs/aclnnGeGluV3.md) | 高斯误差线性单元激活门函数，针对aclnnGeGlu，扩充了设置激活函数操作数据块方向的功能。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGeGluV3Backward](../../activation/ge_glu_grad_v2/docs/aclnnGeGluV3Backward.md) | 完成aclnnGeGluV3的反向。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGelu](../../activation/gelu/docs/aclnnGelu.md) | 高斯误差线性单元激活函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGeluBackward](../../activation/gelu_grad/docs/aclnnGeluBackward.md) | 完成aclnnGelu的反向。 | 默认确定性实现 | 默认确定性实现 |
