@@ -45,15 +45,16 @@ public:
             .AutoContiguous();
         this->Attr("alpha").AttrType(REQUIRED).Float(1.0);
 
-        OpAICoreConfig aicoreConfig910B;
-        aicoreConfig910B.DynamicCompileStaticFlag(true)
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(false)
             .ExtendCfgInfo("opFile.value", "celu_v3");
-        this->AICore().AddConfig("ascend910b", aicoreConfig910B);
+        this->AICore().AddConfig("ascend910b", aicoreConfig);
+        this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };
 OP_ADD(CeluV3);
