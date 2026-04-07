@@ -44,7 +44,7 @@ public:
         outWidth = tiling_data->wOut;
         coreNum = tiling_data->taskCoreUsed;
         isAtomicAdd = tiling_data->isAtomicAdd;
-
+        deterministicFlag = tiling_data->deterministicFlag;
         taskNumPerCore = tiling_data->taskNumPerCore;
         taskNumLastCore = tiling_data->taskNumLastCore;
         yNumPerCalc = tiling_data->yNumPerCalc;
@@ -251,6 +251,10 @@ private:
                 }
             }
         }
+
+        if (deterministicFlag == 1) {
+            PipeBarrier<PIPE_MTE3>();
+        }
     }
 
 private:
@@ -269,7 +273,7 @@ private:
     uint64_t startD, endD, startH, endH, startW, endW;
     uint64_t istartD, iendD, kD, istartH, iendH, kH, istartW, iendW, kW;
     uint64_t startOffset, endOffset, offsetInputGm;
-    uint64_t w, h, d, isAtomicAdd;
+    uint64_t w, h, d, isAtomicAdd, deterministicFlag;
     LocalTensor<T> inputLocal, outputLocal;
     LocalTensor<float> inputLocalFloat, outputLocalFloat;
     DataCopyExtParams copyInParamsV1, copyInParamsV2, copyInParamsV3, copyOutParams;
