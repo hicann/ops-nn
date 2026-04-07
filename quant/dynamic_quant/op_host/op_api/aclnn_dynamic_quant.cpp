@@ -375,39 +375,6 @@ aclnnStatus InputsContiguous(
 aclnnStatus GetDynamicQuantResultByL0Api(
     DynamicQuantParams& dynamicQuantParams, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-#ifdef CFG_BUILD_DEBUG
-    // 获取环境变量
-    auto faultInjectionEnv = getenv("FOR_FAULT_INJECTION");
-    int32_t faultInjectionFlag = 0;
-    if (faultInjectionEnv != nullptr) {
-        faultInjectionFlag = std::atoi(faultInjectionEnv);
-    }
-    if (faultInjectionFlag) {
-        // 固定写法，创建OpExecutor
-        auto uniqueExecutor = CREATE_EXECUTOR();
-        CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-
-        OP_CHECK_NULL(dynamicQuantParams.x, return ACLNN_ERR_INNER_NULLPTR);
-        OP_CHECK_NULL(dynamicQuantParams.smoothScales, return ACLNN_ERR_INNER_NULLPTR);
-
-        auto xContiguous = l0op::Contiguous(dynamicQuantParams.x, uniqueExecutor.get());
-        CHECK_RET(xContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        auto smoothScalesOptionalContiguous = l0op::Contiguous(dynamicQuantParams.smoothScales, uniqueExecutor.get());
-        CHECK_RET(smoothScalesOptionalContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 调用FaultInjection算子kernel
-        auto out =
-            uniqueExecutor->AllocTensor(dynamicQuantParams.x->GetViewShape(), dynamicQuantParams.x->GetDataType());
-        auto opOut = l0op::FaultInjection(xContiguous, smoothScalesOptionalContiguous, out, uniqueExecutor.get());
-        CHECK_RET(opOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 固定写法，获取计算过程中需要使用的workspace大小
-        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-        uniqueExecutor.ReleaseTo(executor);
-        return ACLNN_SUCCESS;
-    }
-#endif
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
