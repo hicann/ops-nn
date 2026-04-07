@@ -1567,18 +1567,32 @@ static bool IsConv2DBp2MmMode(const ConvolutionBackwardInputTensor &inputTensor,
   }
 
   bool isFmEqKernel = true;
+  bool isStrideEqKernel = true; 
   const vector<int64_t> dimIdxVec { kHDimNCHWIdx, kWDimNCHWIdx};
+  const vector<int64_t> strideIdxVec {0, 1}; 
   const int64_t resolutionDimSize = static_cast<int64_t>(dimIdxVec.size());
   for (int64_t idx = 0; idx < resolutionDimSize; ++idx) {
     int64_t dimIdx = dimIdxVec[idx];
+    int64_t strideIdx = strideIdxVec[idx];
     bool isDimFmEqKernel = (weightShape[dimIdx] == inputShape[dimIdx]) && (gradOutputShape[dimIdx] == 1);
+    bool shapeCondition = weightShape[dimIdx] != 0 && inputShape[dimIdx] % weightShape[dimIdx] == 0
+                          && inputShape[dimIdx] / weightShape[dimIdx] == gradOutputShape[dimIdx];
     if (!isDimFmEqKernel) {
       isFmEqKernel = false;
+    }
+    if (weightShape[dimIdx] != (*params.stride)[strideIdx] || !shapeCondition) {
+      isStrideEqKernel = false;
     }
   }
   if (isFmEqKernel) {
     return true;
   }
+  // kernel=1*1或2*2走拆分性能略好于matmul
+  bool notKernelSplit = (*params.stride)[0] > 1 || (*params.stride)[1] > 1;
+  if (isStrideEqKernel && notKernelSplit) {
+    return true;
+  }
+
   return false;
 }
 
@@ -1626,6 +1640,9 @@ static Conv3DBp2MmMode GetConv3DBp2MmMode(ConvolutionBackwardInputTensor &inputT
   // kernel=1*1或2*2走拆分性能略好于matmul
   bool notKernelSplit = (*params.stride)[1] != (*params.stride)[2] || (*params.stride)[1] > 2;
   if (Ops::NN::AclnnUtil::IsRegbase() && isStrideEqKernel && notKernelSplit) {
+    return Conv3DBp2MmMode::CONV3D_BP_MM_STRIDE_EQ_KERNEL;
+  }
+  if (!Ops::NN::AclnnUtil::IsRegbase() && isStrideEqKernel && ((*params.stride)[0] > 1 || (*params.stride)[1] > 1 || (*params.stride)[2] > 1)) {
     return Conv3DBp2MmMode::CONV3D_BP_MM_STRIDE_EQ_KERNEL;
   }
   return Conv3DBp2MmMode::CONV3D_BP_NO_MM;
