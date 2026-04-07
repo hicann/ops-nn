@@ -28,7 +28,7 @@ aclnnStatus aclnnIndexAddV2GetWorkspaceSize(
  const aclTensor*  index,
  const aclTensor*  source,
  const aclScalar*  alpha,
- const int64_t     mode,
+ int64_t           mode,
  aclTensor*        out,
  uint64_t*         workspaceSize,
  aclOpExecutor**   executor)
