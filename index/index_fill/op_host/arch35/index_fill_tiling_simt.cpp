@@ -127,7 +127,8 @@ uint64_t IndexFillSimtTiling::GetTilingKey() const
         templateMode = static_cast<uint64_t>(TPL_MODE_TEMPLATE_EMPTY);
     }
 
-    if (totalDataSize > MAX_INT32) {
+    uint64_t processNum = static_cast<uint64_t>(inputData.indicesNum * inputData.P * inputData.Q);
+    if (totalDataSize > MAX_INT32 || processNum > MAX_INT32) {
         dTypeMode = static_cast<uint64_t>(TPL_MODE_DTYPE_B64);
     }
     const uint64_t tilingKey = GET_TPL_TILING_KEY(templateMode, dTypeMode);
