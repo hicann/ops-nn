@@ -37,6 +37,7 @@ constexpr size_t CDHW_DIM_NUM = 4;
  * @param dataFormatStr 数据格式字符串（NCDHW/NDHWC）
  * @return ge::GRAPH_SUCCESS 校验通过；ge::GRAPH_FAILED 校验失败（含详细日志）
  */
+
 static ge::graphStatus CheckInputValidity(const gert::InferShapeContext* context, 
                                          const gert::Shape* gradShape, 
                                          const gert::Shape* xShape, 
@@ -54,7 +55,9 @@ static ge::graphStatus CheckInputValidity(const gert::InferShapeContext* context
     size_t xDimNum = xShape->GetDimNum();
     bool dimNumValid = ((xDimNum == NCDHW_DIM_NUM) && (gradDimNum == NCDHW_DIM_NUM)) ||
                        ((xDimNum == CDHW_DIM_NUM) && (gradDimNum == CDHW_DIM_NUM));
-    if (!dimNumValid) {
+    bool isUnknownGrad = Ops::Base::IsUnknownRank(*gradShape) || Ops::Base::IsUnknownShape(*gradShape) ||
+        Ops::Base::IsUnknownRank(*xShape) || Ops::Base::IsUnknownShape(*xShape);
+    if (!dimNumValid && !isUnknownGrad) {
         OP_LOGE(context->GetNodeName(),
                 "Input dim num should be %lu or %lu, actual: xDim=%lu, gradDim=%lu",
                 NCDHW_DIM_NUM, CDHW_DIM_NUM, xDimNum, gradDimNum);
@@ -67,10 +70,10 @@ static ge::graphStatus CheckInputValidity(const gert::InferShapeContext* context
     uint64_t gradNDim = (gradDimNum == CDHW_DIM_NUM) ? 1 : gradShape->GetDim(0);    
     uint64_t xCDim = xShape->GetDim(cPosIdx);
     uint64_t gradCDim = gradShape->GetDim(cPosIdx);
-    OP_LOGI("InferShape4AdaptiveAvgPool3dGrad", 
+    
+    if (!isUnknownGrad && ((xNDim != gradNDim) || (xCDim != gradCDim))) {
+        OP_LOGI("InferShape4AdaptiveAvgPool3dGrad", 
             "NC: grad(%lu,%lu), x(%lu,%lu)", gradNDim, gradCDim, xNDim, xCDim);
-
-    if ((xNDim != gradNDim) || (xCDim != gradCDim)) {
         OP_LOGE(context->GetNodeName(), 
                 "Input N/C dim mismatch: grad(N=%lu,C=%lu), x(N=%lu,C=%lu)",
                 gradNDim, gradCDim, xNDim, xCDim);
@@ -106,6 +109,7 @@ static ge::graphStatus InferShape4AdaptiveAvgPool3dGrad(gert::InferShapeContext*
     const char* dataFormat = attrs->GetAttrPointer<char>(INDEX_DATAFORMAT);
     OP_CHECK_NULL_WITH_CONTEXT(context, dataFormat);
     std::string dataFormatStr = dataFormat;
+    size_t xDimNum = xShape->GetDimNum();
 
     // 未知rank处理
     if (Ops::Base::IsUnknownRank(*xShape)) {
@@ -114,8 +118,7 @@ static ge::graphStatus InferShape4AdaptiveAvgPool3dGrad(gert::InferShapeContext*
         return ge::GRAPH_SUCCESS;
     }
 
-    // 维度数赋值
-    size_t xDimNum = xShape->GetDimNum();
+    // 维度数赋值    
     xGradShape->SetDimNum(xDimNum);
 
     fe::PlatformInfo platform_info;
