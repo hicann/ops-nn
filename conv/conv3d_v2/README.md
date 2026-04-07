@@ -244,7 +244,6 @@
   - 当 `x` 和 `filter` 数据类型是 `HIFLOAT8` 时，`bias` 数据类型会转成 `FLOAT` 参与计算。
   - 不支持 `scale` 参数。
 
-
   <table>
   <tr>
   <th style="text-align:center; width:80px">张量</th>
@@ -300,7 +299,6 @@
 - 如果任何参数超出上述范围，算子的正确性无法保证。
 
 - 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击 [Link](https://www.hiascend.com/support) 获取技术支持。
-
 
 ## 调用说明
 

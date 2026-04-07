@@ -19,6 +19,7 @@
   根据输入词频logits、topK/topP/minP采样参数、随机采样权重分布q，进行topK-topP-minP-sample采样计算。当输入isNeedSampleResult为false时，输出每个batch的最大词频logitsSelectIdx，以及topK-topP-minP采样后的词频分布logitsTopKPSelect；当输入isNeedSampleResult为true时，输出topK-topP-minP采样后的中间计算结果logitsIdx和logitsSortMasked，其中logitsSortMasked为词频logits经过topK-topP-minP采样计算后的中间结果，logitsIdx为logitsSortMasked在logits中对应的索引。
 
   算子包含四个可单独使能，但上下游处理关系保持不变的采样算法（从原始输入到最终输出）：TopK采样、TopP采样、MinP采样、指数采样（本文档中Sample所指）。目前支持以下计算场景。如下表所示：
+  
   | 计算场景 | TopK采样 | TopP采样 | minP采样 | 指数分布采样 | 输出中间计算结果 |备注|
   | :-------:| :------:|:-------:|:-------:|:-------:|:-------:|:-------:|
   |Softmax-Argmax采样|×|×|×|×|×|对输入logits按每个batch，取SoftMax后取最大结果|

@@ -61,4 +61,3 @@
 | 调用方式  | 样例代码  | 说明                 |
 | -----------  | ------------------- | ---------- |
 | aclnn接口   | [test_aclnn_conv3d_backprop_filter_v2](examples/test_aclnn_conv3d_backprop_filter_v2.cpp)  | 通过[aclnnConvolutionBackward](../convolution_backward/docs/aclnnConvolutionBackward.md)接口方式调用Conv3DBackpropFilterV2算子 |
-

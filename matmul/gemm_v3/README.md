@@ -1,7 +1,6 @@
 # GemmV3
 
-
-##  产品支持情况
+## 产品支持情况
 
 | 产品 | 是否支持 |
 | ---- | :----:|
@@ -98,7 +97,7 @@
     <tbody>
       <tr>
         <td>aclnn接口</td>
-        <td>test_aclnn_gemmv3</a></td>
-        <td>参考示例算子调用aclnnGemmv3</a>接口方式调用Gemmv3算子</td>
+        <td>test_aclnn_gemmv3</td>
+        <td>参考示例算子调用aclnnGemmv3接口方式调用Gemmv3算子</td>
       </tr>
   </tbody></table> 

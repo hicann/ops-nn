@@ -224,7 +224,7 @@ aclnnStatus aclnnConvTbcBackward(
      <td>输出</td>
      <td>偏置b对L的梯度。</td>
      <td>
-      <ul><li>支持空Tensor。</li>
+      <ul><li>支持空Tensor。</li></ul>
       <li>数据类型与bias类型一致。</li>
       <li>shape为(C<sub>out</sub>)。</li>
     </td>
@@ -356,7 +356,6 @@ aclnnStatus aclnnConvTbcBackward(
      </tr>
     </tbody>
   </table>
-
 
 - **返回值：**
 

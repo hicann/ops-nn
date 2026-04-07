@@ -32,6 +32,7 @@
   - aclnnAddmm：需新建一个输出张量对象存储计算结果。
   - aclnnInplaceAddmm：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
 - 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 “aclnnAddmmGetWorkspaceSize” 或者 “aclnnInplaceAddmmGetWorkspaceSize” 接口获取入参并根据计算流程计算所需workspace大小，再调用 “aclnnAddmm” 或者 “aclnnInplaceAddmm” 接口执行计算。
+
 ```cpp
 aclnnStatus aclnnAddmmGetWorkspaceSize(
   const aclTensor *self,
@@ -44,6 +45,7 @@ aclnnStatus aclnnAddmmGetWorkspaceSize(
   uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
+
 ```cpp
 aclnnStatus aclnnAddmm(
   void           *workspace,
@@ -51,6 +53,7 @@ aclnnStatus aclnnAddmm(
   aclOpExecutor  *executor,
   aclrtStream    stream)
 ```
+
 ```cpp
 aclnnStatus aclnnInplaceAddmmGetWorkspaceSize(
   const aclTensor *selfRef,
@@ -62,6 +65,7 @@ aclnnStatus aclnnInplaceAddmmGetWorkspaceSize(
   uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
+
 ```cpp
 aclnnStatus aclnnInplaceAddmm(
   void           *workspace,
@@ -153,6 +157,7 @@ aclnnStatus aclnnInplaceAddmm(
       <td>-</td>
       <td>-</td>
     </tr>
+    <tr>
       <td>out</td>
       <td>输出</td>
       <td>表示矩阵乘的输出矩阵，公式中的out。</td>
@@ -290,7 +295,6 @@ aclnnStatus aclnnInplaceAddmm(
   </tbody>
   </table>
 
-
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -353,7 +357,6 @@ aclnnStatus aclnnInplaceAddmm(
       <td>√</td>
     </tr>
     <tr>
-    <tr>
       <td>beta(β)</td>
       <td>输入</td>
       <td>表示公式中的β。</td>
@@ -372,6 +375,7 @@ aclnnStatus aclnnInplaceAddmm(
       <td>-</td>
       <td>-</td>
       <td>-</td>
+    </tr>
     <tr>
       <td>cubeMathType</td>
       <td>输入</td>
@@ -462,11 +466,9 @@ aclnnStatus aclnnInplaceAddmm(
       </tbody>
       </table>
 
-
 ## aclnnInplaceAddmm
 
 - **参数说明**
-
 
   <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
   <col style="width: 168px">
@@ -503,12 +505,12 @@ aclnnStatus aclnnInplaceAddmm(
   </tbody>
   </table>
 
-
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnAddmm&aclnnInplaceAddmm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
   - <term>Ascend 950PR/Ascend 950DT</term>: aclnnAddmm&aclnnInplaceAddmm默认确定性实现。
@@ -519,9 +521,10 @@ aclnnStatus aclnnInplaceAddmm(
     - aclnnAddmm&aclnnInplaceAddmm默认非一致性实现，支持通过aclrtCtxSetSysParamOpt开启一致性。
     - 例如，在进行矩阵乘时，不同基本块的累加顺序可能不同，这可能会导致相同数据在不同行的计算结果出现细微差异。然而，在开启强一致性计算的情况下，即使在不同的行中，只要输入相同，计算结果也将相同。
 
-
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

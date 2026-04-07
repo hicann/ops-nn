@@ -1,6 +1,6 @@
 # FusedLinearCrossEntropyLossGrad
 
-##  产品支持情况
+## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
@@ -47,7 +47,7 @@ $$
 \text{grad\_weight} = \text{softmax}^T \cdot \text{input} \in \mathbb{R}^{V \times H}
 $$
 
-</br>
+<br>
 &emsp;&emsp;省显存模式，softmaxOptional为nullptr：
 
 $$

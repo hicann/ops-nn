@@ -100,7 +100,7 @@ aclnnStatus aclnnQuantMatmulReduceSumWeightNz(
       <td>
         <ul><li>不支持空Tensor。</li>
         <li>各个维度表示：(batch，n1，k1，k0，n0)，其中k0 = 16， n0 = 32， x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 16） = k1, x2 shape中的n1与out的n满足以下关系: ceil(n / n0) = n1。</li>
-        <li>可使用aclnnCalculateMatmulWeightSizeV2接口以及aclnnTransMatmulWeight接口完成输入Format从ND到AI处理器亲和数据排布格式的转换。原始的ND格式的shape为(batch, k, n)。</li>
+        <li>可使用aclnnCalculateMatmulWeightSizeV2接口以及aclnnTransMatmulWeight接口完成输入Format从ND到AI处理器亲和数据排布格式的转换。原始的ND格式的shape为(batch, k, n)。</li></ul>
       </td>
       <td>INT8</td>
       <td>NZ</td>
@@ -112,7 +112,7 @@ aclnnStatus aclnnQuantMatmulReduceSumWeightNz(
       <td>输入</td>
       <td>公式中的x1Scale。</td>
       <td>
-        <ul><li>不支持空Tensor。</li>
+        <ul><li>不支持空Tensor。</li></ul>
         <li>在实际计算时，x1Scale会被广播为(batch，m，n)。</li>
       </td>
       <td>FLOAT32</td>
@@ -125,7 +125,7 @@ aclnnStatus aclnnQuantMatmulReduceSumWeightNz(
       <td>输入</td>
       <td>公式中的x2Scale。</td>
       <td>
-        <ul><li>不支持空Tensor。</li>
+        <ul><li>不支持空Tensor。</li></ul>
         <li>在实际计算时，x2Scale会被广播为(batch，m，n)。</li>
       </td>
       <td>BFLOAT16</td>
@@ -302,7 +302,6 @@ aclnnStatus aclnnQuantMatmulReduceSumWeightNz(
     </tbody>
     </table>
 
-
 ## aclnnQuantMatmulReduceSumWeightNz
 
 - 参数说明
@@ -350,7 +349,6 @@ aclnnStatus aclnnQuantMatmulReduceSumWeightNz(
 
 - 确定性说明：
   - aclnnQuantMatmulReduceSumWeightNz默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
-
 
 ## 调用示例
 

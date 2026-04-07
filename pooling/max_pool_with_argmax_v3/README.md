@@ -1,6 +1,6 @@
 # MaxPoolWithArgmaxV3
 
-##  产品支持情况
+## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
@@ -96,7 +96,7 @@
       <td>FLOAT16、BFLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
-    </tr>
+    <tr>
       <td>argmax</td>
       <td>输出</td>
       <td>输出的损失tensor</td>

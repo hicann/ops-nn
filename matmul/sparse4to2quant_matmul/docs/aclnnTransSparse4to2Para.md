@@ -134,10 +134,8 @@ aclnnStatus aclnnTransSparse4to2Para(
         <td>-</td>
         <td>-</td>
       </tr>
-    </tr>
   </tbody>
   </table>
-
 
 - **返回值：**
 
@@ -168,7 +166,6 @@ aclnnStatus aclnnTransSparse4to2Para(
       <td>weight的shape、format和数据类型不满足要求；数据不满足每4个元素至少2个为零。</td>
     </tr>
   </tbody></table>
-
 
 ## 调用示例
 

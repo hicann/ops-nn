@@ -11,7 +11,6 @@
 | <term>Atlas 推理系列产品</term>                             |    ×    |
 | <term>Atlas 训练系列产品</term>                              |    ×    |
 
-
 ## 功能说明
 
 - 接口功能：完成张量x1与张量x2的矩阵乘计算。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的数列进行变更。permX1代表张量x1的转置序列，permX2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。
@@ -73,7 +72,7 @@ aclnnStatus aclnnTransposeBatchMatMul(
         <th>数据格式</th>
         <th>维度(shape)</th>
         <th>非连续Tensor</th>
-      <tr>
+      </tr>
     </thead>
     <tbody>
       <tr>

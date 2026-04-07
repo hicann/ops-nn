@@ -195,7 +195,10 @@ aclnnStatus aclnnConvolution(
   <td>cubeMathType（int8_t）</td>
   <td>输入</td>
   <td>用于判断 Cube 单元应该使用哪种计算逻辑进行运算。</td>
-  <td><ul><li>如果输入的数据类型存在<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>，该参数默认对互推导后的数据类型进行处理。</li><li>支持的枚举值如下：</li><ul><li> 0（KEEP_DTYPE）：保持输入数据类型进行计算。</li></ul><ul><li> 1（ALLOW_FP32_DOWN_PRECISION）：允许 FLOAT 降低精度计算，提升性能。</li></ul><ul><li> 2（USE_FP16）：使用 FLOAT16 精度进行计算。</li></ul><ul><li> 3（USE_HF32）：使用 HFLOAT32（混合精度）进行计算。</li></ul></td>
+  <td><ul>
+  <li>如果输入的数据类型存在<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>，该参数默认对互推导后的数据类型进行处理。</li>
+  <li>支持的枚举值如下：</li></ul>
+  <ul><li> 0（KEEP_DTYPE）：保持输入数据类型进行计算。</li></ul><ul><li> 1（ALLOW_FP32_DOWN_PRECISION）：允许 FLOAT 降低精度计算，提升性能。</li></ul><ul><li> 2（USE_FP16）：使用 FLOAT16 精度进行计算。</li></ul><ul><li> 3（USE_HF32）：使用 HFLOAT32（混合精度）进行计算。</li></ul></td>
   <td>INT8</td>
   <td>-</td>
   <td>-</td>
@@ -235,12 +238,11 @@ aclnnStatus aclnnConvolution(
     <col style="width:1050px">
     </colgroup>
    <thead>
-   
   <tr>
   <td>返回值</td>
   <td>错误码</td>
   <td>描述</td>
-  </tr>
+  </tr></thead>
   <tr>
   <td align="left">ACLNN_ERR_PARAM_NULLPTR</td>
   <td align="left">161001</td>
@@ -414,7 +416,7 @@ aclnnStatus aclnnConvolution(
           <li>为 1（ALLOW_FP32_DOWN_PRECISION）时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。</li>
           <li>为 2（USE_FP16）时，当输入是 BFLOAT16 不支持该选项。</li>
           <li>为 3（USE_HF32）时，当输入是 FLOAT 转换为 HFLOAT32 计算。</li>
-        <ul>
+        </ul>
      </td>
      <td>
         <ul>
@@ -430,7 +432,7 @@ aclnnStatus aclnnConvolution(
           <li>为 1(ALLOW_FP32_DOWN_PRECISION) 时，当输入是 FLOAT 允许转换为 FLOAT16 计算。</li>
           <li>为 2(USE_FP16) 时，当输入是 BFLOAT16 不支持该选项。</li>
           <li>为 3(USE_HF32) 时暂不支持。</li>
-        <ul>
+      </ul>
      </td>
      <td>
         <ul>

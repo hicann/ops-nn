@@ -65,6 +65,7 @@
     - cubeMathType 为 1(ALLOW_FP32_DOWN_PRECISION) 时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。
     - cubeMathType 为 2(USE_FP16) 时，当输入是 BFLOAT16 不支持该选项。
     - cubeMathType 为 3(USE_HF32) 时，当输入是 FLOAT 转换为 HFLOAT32 计算。
+    
 ## 约束说明
 
 * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：input, weight, bias 中每一组 tensor 的每一维大小都应不大于 1000000。

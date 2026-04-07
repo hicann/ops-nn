@@ -52,7 +52,7 @@
     <tr>
       <td>gradOutput</td>
       <td>输入</td>
-      <td>公式中的输入grad
+      <td>公式中的输入grad</td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>

@@ -1,6 +1,6 @@
 # ExpandIntoJaggedPermute
 
-##  产品支持情况
+## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
@@ -73,19 +73,18 @@ $$
         <tr>
       <td>outputSize</td>
       <td>属性</td>
-      <td><ul><li>输出结果的长度。</li></td>
+      <td><ul><li>输出结果的长度。</li></ul></td>
       <td>INT32、INT64</td>
       <td>-</td>
     </tr>
   </tbody></table>
 
 ## 约束说明
-inputOffset、outputOffset的长度比permute多1。
 
+inputOffset、outputOffset的长度比permute多1。
 
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_expand_into_jagged_permute.cpp](tests/ut/op_kernel/test_expand_into_jagged_permute.cpp) | 通过[aclnnExpandIntoJaggedPermute](docs/aclnnExpandIntoJaggedPermute.md)接口方式调用ExpandIntoJaggedPermute算子。 |
-

@@ -19,7 +19,7 @@
 
 - 计算公式：
 
-  假定输入（input）的 shape 是 $(N, C_{\text{in}}, D, H, W)$，weight 的 原shape 是 $(C_{\text{out}}, C_{\text{in}}, K_d, K_h, K_w)$，scale 的 shape 是 $(C_{\text{out}})$，bias 的 shape 是 $C_{\text{out}}$，输出（output）的 shape 是 $(N, C_{\text{out}}, D_{\text{out}}, H_{\text{out}}, W_{\text{out}})$，其中 $N$ 表示批次大小（batch size），$C$ 是通道数，$D$、$H$ 和 $W$ 分别是样本的深度、高度和宽度，$K_d$、$K_h$ 和 $K_w$ 分别是卷积核的深度、高度和宽度，那输出将被表示为：
+  假定输入（input）的 shape 是 $(N, C_{\text{in}}, D, H, W)$，weight 的原shape 是 $(C_{\text{out}}, C_{\text{in}}, K_d, K_h, K_w)$，scale 的 shape 是 $(C_{\text{out}})$，bias 的 shape 是 $C_{\text{out}}$，输出（output）的 shape 是 $(N, C_{\text{out}}, D_{\text{out}}, H_{\text{out}}, W_{\text{out}})$，其中 $N$ 表示批次大小（batch size），$C$ 是通道数，$D$、$H$ 和 $W$ 分别是样本的深度、高度和宽度，$K_d$、$K_h$ 和 $K_w$ 分别是卷积核的深度、高度和宽度，那输出将被表示为：
 
   $$
   \text{output}(N_i, C_{\text{out}_j}, D_{\text{out}}, H_{\text{out}}, W_{\text{out}}) = \left[\sum_{k = 0}^{C_{\text{in}} - 1} \text{weight}(C_{\text{out}_j}, k) \star \text{input}(N_i, k)\right] \times \text{scale}(C_{\text{out}_j}) + \text{bias}(C_{\text{out}_j})
@@ -80,6 +80,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <th style="width:145px">维度（shape）</th>
   <th style="width:145px">非连续 Tensor</th>
   </tr>
+  <tr>
   <td>input（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的 input，表示卷积输入。</td>
@@ -253,12 +254,11 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
     <col style="width:1050px">
     </colgroup>
    <thead>
-
   <tr>
   <td>返回值</td>
   <td>错误码</td>
   <td>描述</td>
-  </tr>
+  </tr></thead>
   <tr>
   <td align="left">ACLNN_ERR_PARAM_NULLPTR</td>
   <td align="left">161001</td>

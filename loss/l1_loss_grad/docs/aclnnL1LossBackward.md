@@ -44,7 +44,6 @@ aclnnStatus aclnnBinaryCrossEntropy(
 
 - **参数说明：**
   
-  </style>
   <table class="tg" style="undefined;table-layout: fixed; width: 1435px"><colgroup>
   <col style="width: 205px">
   <col style="width: 120px">
@@ -144,7 +143,7 @@ aclnnStatus aclnnBinaryCrossEntropy(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-    </style>
+  
     <table class="tg" style="undefined;table-layout: fixed; width: 991px"><colgroup>
     <col style="width: 269px">
     <col style="width: 90px">
@@ -231,12 +230,14 @@ aclnnStatus aclnnBinaryCrossEntropy(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算： 
     - aclnnL1LossBackward默认确定性实现。
 
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

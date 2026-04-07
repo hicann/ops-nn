@@ -79,6 +79,7 @@ aclnnStatus aclnnQuantConvolution(
   <th style="width:145px">维度（shape）</th>
   <th style="width:145px">非连续 Tensor</th>
   </tr>
+   <tr>
   <td>input（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的 input，表示卷积输入。</td>
@@ -252,12 +253,11 @@ aclnnStatus aclnnQuantConvolution(
     <col style="width:1050px">
     </colgroup>
    <thead>
-
   <tr>
   <td>返回值</td>
   <td>错误码</td>
   <td>描述</td>
-  </tr>
+  </tr></thead>
   <tr>
   <td align="left">ACLNN_ERR_PARAM_NULLPTR</td>
   <td align="left">161001</td>
@@ -397,7 +397,6 @@ aclnnStatus aclnnQuantConvolution(
           <li>仅支持正向三维卷积。</li>
           <li>input, weight, bias, scale 中每一组 tensor 的每一维大小都应小于 1000000。</li>
         </ul>
-     </td>
      </td>
    </tr>
    </tbody>
@@ -645,5 +644,3 @@ int main() {
   return 0;
 }
 ```
-
-

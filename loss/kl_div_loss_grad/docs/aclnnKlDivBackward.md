@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>     |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 进行[aclnnKlDiv](https://gitcode.com/cann/ops-math/blob/master/math/kl_div_v2/docs/aclnnKlDiv.md) api的结果的反向计算。
@@ -46,7 +45,6 @@ aclnnStatus aclnnKlDivBackward(
 
 - **参数说明：**
 
-  </style>
   <table class="tg" style="undefined;table-layout: fixed; width: 1435px"><colgroup>
   <col style="width: 205px">
   <col style="width: 120px">
@@ -157,7 +155,6 @@ aclnnStatus aclnnKlDivBackward(
 
   第一段接口完成入参校验，出现以下场景时报错：
   
-  </style>
   <table class="tg" style="undefined;table-layout: fixed; width: 991px"><colgroup>
   <col style="width: 269px">
   <col style="width: 90px">
@@ -242,12 +239,14 @@ aclnnStatus aclnnKlDivBackward(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算： 
     - aclnnKlDivBackward默认确定性实现。
 
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>
@@ -400,4 +399,3 @@ int main() {
   return 0;
 }
 ```
-

@@ -35,6 +35,7 @@ self必须要支持和batch1@batch2的结果做broadcast。（broadcast，广播
   - aclnnBaddbmm：需新建一个输出张量对象存储计算结果。
   - aclnnInplaceBaddbmm：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
 - 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnBaddbmmGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnBaddbmm”接口执行计算。
+
 ```cpp
 aclnnStatus aclnnBaddbmmGetWorkspaceSize(
   const aclTensor*    self,
@@ -47,6 +48,7 @@ aclnnStatus aclnnBaddbmmGetWorkspaceSize(
   uint64_t*           workspaceSize,
   aclOpExecutor**     executor)
 ```
+
 ```cpp
 aclnnStatus aclnnBaddbmm(
   void*           workspace,
@@ -66,6 +68,7 @@ aclnnStatus aclnnInplaceBaddbmmGetWorkspaceSize(
   uint64_t*           workspaceSize,
   aclOpExecutor**     executor)
 ```
+
 ```cpp
 aclnnStatus aclnnInplaceBaddbmm(
   void*             workspace,
@@ -339,7 +342,8 @@ aclnnStatus aclnnInplaceBaddbmm(
       <td>输入|输出</td>
       <td>输入输出tensor，即公式中的输入self与out。</td>
       <td><ul>
-      <li>数据类型与batch1@batch2的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。<li>shape后两维需要与batch1@batch2后两维一致。</li>
+      <li>数据类型与batch1@batch2的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
+      <li>shape后两维需要与batch1@batch2后两维一致。</li>
       <li>支持空Tensor。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
@@ -538,6 +542,7 @@ aclnnStatus aclnnInplaceBaddbmm(
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性说明：
 aclnnBaddbmm&aclnnInplaceBaddbmm默认确定性实现。
 
@@ -545,7 +550,9 @@ aclnnBaddbmm&aclnnInplaceBaddbmm默认确定性实现。
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持batch1和batch2两输入其中一个输入为BFLOAT16, 另一个输入为FLOAT或FLOAT16的数据类型推导。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

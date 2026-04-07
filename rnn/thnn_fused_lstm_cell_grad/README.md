@@ -1,4 +1,5 @@
 # ThnnFusedLstmCellGrad
+
 ## 产品支持情况
 
 | 产品                                                                            | 是否支持 |
@@ -54,7 +55,6 @@ $$
 $$
 \delta b = \sum_{n=1}^{N} \begin{bmatrix} \delta a_i \\ \delta a_f \\ \delta a_g \\ \delta a_o \end{bmatrix}_n
 $$
-
 
 - **参数说明：**
   <table style="undefined;table-layout: fixed; width: 1250px"><colgroup>
@@ -129,6 +129,7 @@ $$
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
+    <tr>
     <td>has_bias</td>
       <td>属性</td>
       <td>是否需要计算bias梯度。</td>

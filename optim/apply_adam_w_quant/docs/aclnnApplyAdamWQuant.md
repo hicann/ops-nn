@@ -23,21 +23,17 @@
   m_{t}=\beta_{1} m_{t-1}+\left(1-\beta_{1}\right) g_{t} \\
   $$
 
-
   $$
   v_{t}=\beta_{2} v_{t-1}+\left(1-\beta_{2}\right) g_{t}^{2}
   $$
-
 
   $$
   \hat{m}_{t}=\frac{m_{t}}{1-\beta_{1}^{t}} \\
   $$
 
-
   $$
   \hat{v}_{t}=\frac{v_{t}}{1-\beta_{2}^{t}} \\
   $$
-
 
   $$
   \theta_{t+1}=\theta_{t}-\frac{\eta}{\sqrt{\hat{v}_{t}}+\epsilon} \hat{m}_{t}-\eta \cdot \lambda \cdot \theta_{t-1}
@@ -82,7 +78,6 @@ aclnnStatus aclnnApplyAdamWQuant(
 
 - **参数说明：**
 
-  </style>
   <table class="tg" style="undefined;table-layout: fixed; width: 1498px"><colgroup>
   <col style="width: 250px">
   <col style="width: 120px">
@@ -302,7 +297,7 @@ aclnnStatus aclnnApplyAdamWQuant(
   aclnnStatus： 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  </style>
+
   <table class="tg" style="undefined;table-layout: fixed; width: 1150px"><colgroup>
   <col style="width: 270px">
   <col style="width: 130px">
@@ -372,7 +367,9 @@ aclnnStatus aclnnApplyAdamWQuant(
   aclnnStatus： 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
   varRef的shape满足约束：
+
   - varRef.shape = grad.shape
   - varRef.shape = mRef.shape
   - varRef.shape = vRef.shape
@@ -380,10 +377,13 @@ aclnnStatus aclnnApplyAdamWQuant(
   - varRef.size/blockSize = absmaxVRef.size
 
   确定性计算：
+
   - aclnnApplyAdamWQuant默认确定性实现。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

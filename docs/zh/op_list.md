@@ -602,7 +602,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>Swish激活函数的反向传播，用于计算Swish激活函数的梯度。</a>。</td>
+    <td>Swish激活函数的反向传播，用于计算Swish激活函数的梯度。</td>
   </tr>
   <tr>
     <td>activation</td>

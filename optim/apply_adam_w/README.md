@@ -91,7 +91,7 @@
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
-    </tr>
+    <tr>
       <tr>
       <td>beta1_power</td>
       <td>计算输入</td>
@@ -107,7 +107,7 @@
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
-    </tr>
+    <tr>
       <tr>
       <td>lr</td>
       <td>计算输入</td>
@@ -123,7 +123,7 @@
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
-    </tr>
+    <tr>
       <tr>
       <td>beta1</td>
       <td>计算输入</td>
@@ -131,7 +131,7 @@
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
-    </tr>
+    <tr>
       <tr>
       <td>beta2</td>
       <td>计算输入</td>
@@ -155,8 +155,7 @@
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
-    </tr>
-      <tr>
+    <tr>
       <td>max_grad_norm</td>
       <td>计算输入</td>
       <td>保存v参数的最大值，公式中的v。</td>

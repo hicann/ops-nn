@@ -86,6 +86,7 @@
       <td>输入序列追踪到目标序列的概率。</td>
       <td>FLOAT16、FLOAT32、BFLOAT16、DOUBLE</td>
       <td>ND</td>
+    </tr>
     <tr>
       <td>blank</td>
       <td>属性</td>

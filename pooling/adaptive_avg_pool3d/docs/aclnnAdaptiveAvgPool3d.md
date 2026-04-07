@@ -18,7 +18,9 @@
 在指定三维输出shape信息（outputSize）的情况下，完成张量self的3D自适应平均池化计算。aclnnAdaptiveAvgPool3d与aclnnAvgPool3d不同的是，aclnnAdaptiveAvgPool3d只需要指定输出的大小，就可以自动推导出kernel的大小与对应的步长。
 
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnAdaptiveAvgPool3dGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnAdaptiveAvgPool3d”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnAdaptiveAvgPool3dGetWorkspaceSize(
   const aclTensor   *self,
@@ -27,6 +29,7 @@ aclnnStatus aclnnAdaptiveAvgPool3dGetWorkspaceSize(
   uint64_t          *workspaceSize,
   aclOpExecutor     **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnAdaptiveAvgPool3d(
   void          *workspace,
@@ -34,6 +37,7 @@ aclnnStatus aclnnAdaptiveAvgPool3d(
   aclOpExecutor *executor,
   aclrtStream    stream)
 ```
+
 ## aclnnAdaptiveAvgPool3dGetWorkspaceSize
 
 - **参数说明：**
@@ -112,11 +116,14 @@ aclnnStatus aclnnAdaptiveAvgPool3d(
     </tr>
   </tbody></table>
   
-  -  <term>Atlas 推理系列产品</term>： 参数`self`、`out`的数据类型不支持BFLOAT16。
--  **返回值：**
+  - <term>Atlas 推理系列产品</term>： 参数`self`、`out`的数据类型不支持BFLOAT16。
+
+- **返回值：**
 
     aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
     第一段接口完成入参校验，出现以下场景时报错：
+
     <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
     <col style="width: 267px">
     <col style="width: 124px">
@@ -203,6 +210,7 @@ aclnnStatus aclnnAdaptiveAvgPool3d(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算：
   - aclnnAdaptiveAvgPool3d默认确定性实现。
 
@@ -350,4 +358,3 @@ int main() {
   return 0;
 }
 ```
-

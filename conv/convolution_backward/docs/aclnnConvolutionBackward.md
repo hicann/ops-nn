@@ -119,7 +119,7 @@ aclnnStatus aclnnConvolutionBackward(
        <ul><li>支持空Tensor。</li>
        <li>数据类型与input、weight满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推关系</a>和<a href="#约束说明" target="_blank">约束说明</a>）。</li>
        <li>shape不支持broadcast，要求和input、weight满足卷积输入输出shape的推导关系。</li>
-       <li>数据格式需要与input、gradInput一致。</li>
+       <li>数据格式需要与input、gradInput一致。</li></ul>
       </td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>NCL、NCHW、NCDHW</td>
@@ -134,7 +134,7 @@ aclnnStatus aclnnConvolutionBackward(
        <ul><li>支持空Tensor。</li>
        <li>数据类型与gradOutput、weight满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推关系</a>和<a href="#约束说明" target="_blank">约束说明</a>）。</li>
        <li>shape不支持broadcast，要求和gradOutput、weight满足卷积输入输出shape的推导关系。</li>
-       <li>数据格式需要与gradOutput、gradInput一致。</li>
+       <li>数据格式需要与gradOutput、gradInput一致。</li></ul>
       </td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>NCL、NCHW、NCDHW</td>
@@ -149,7 +149,7 @@ aclnnStatus aclnnConvolutionBackward(
        <ul><li>支持空Tensor。</li>
        <li>数据类型与gradOutput、input满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推关系</a>和<a href="#约束说明" target="_blank">约束说明</a>）。</li>
        <li>shape不支持broadcast，要求和gradOutput、input满足卷积输入输出shape的推导关系。</li>
-       <li>数据格式需要与gradWeight一致。</li>
+       <li>数据格式需要与gradWeight一致。</li></ul>
       </td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>NCL、NCHW、NCDHW</td>
@@ -163,7 +163,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>
        <ul><li>数组长度是1。</li>
        <li>在普通卷积中等于[weight.shape[0]]，在转置卷积中等于[weight.shape[1] * groups]。</li>
-       <li>空Tensor场景下，当outputMask指定偏差的梯度需要计算时，biasSizes不能为nullptr。</li>
+       <li>空Tensor场景下，当outputMask指定偏差的梯度需要计算时，biasSizes不能为nullptr。</li></ul>
       </td>
       <td>INT64</td>
       <td>-</td>
@@ -176,7 +176,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>反向传播过程中卷积核在输入上移动的步长。</td>
       <td>
        <ul><li>对于一维卷积反向，数组长度必须为1。</li>
-       <li>数组长度为weight维度减2，数值必须大于0。</li>
+       <li>数组长度为weight维度减2，数值必须大于0。</li></ul>
       </td>
       <td>INT64</td>
       <td>-</td>
@@ -190,7 +190,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>
        <ul><li>对于一维卷积反向，数组长度必须为1。</li>
        <li>数组长度可以为weight维度减2，在2d场景下数组长度可以为4。</li>
-       <li>数值必须大于等于0。</li>
+       <li>数值必须大于等于0。</li></ul>
       </td>
       <td>INT64</td>
       <td>-</td>
@@ -204,7 +204,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>
        <ul><li>对于一维卷积反向，数组长度必须为1。</li>
        <li>数组长度可以为weight维度减2。</li>
-       <li>数值必须大于0。</li>
+       <li>数值必须大于0。</li></ul>
       </td>
       <td>INT64</td>
       <td>-</td>
@@ -227,7 +227,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>反向传播过程中对于输出填充。</td>
       <td>
        <ul><li>数组长度可以为weight维度减2，各维度的数值范围满足[0,stride对应维度数值)。</li>
-       <li>transposed为False场景下，要求每个元素值为0。</li>
+       <li>transposed为False场景下，要求每个元素值为0。</li></ul>
       </td>
       <td>INT64</td>
       <td>-</td>
@@ -251,7 +251,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>输入</td>
       <td>
        <ul><li>输出掩码参数, 指定输出中是否包含输入、权重、偏差的梯度。</li>
-       <li>反向传播过程输出掩码参数为True对应位置的梯度。</li>
+       <li>反向传播过程输出掩码参数为True对应位置的梯度。</li></ul>
       </td>
       <td>-</td>
       <td>-</td>
@@ -269,7 +269,7 @@ aclnnStatus aclnnConvolutionBackward(
        <ul><li>0：KEEP_DTYPE，保持输入的数据类型进行计算。</li>
        <li>1：ALLOW_FP32_DOWN_PRECISION，允许将输入数据降精度计算。</li>
        <li>2：USE_FP16，允许转换为数据类型FLOAT16进行计算。当输入数据类型是FLOAT，转换为FLOAT16计算。</li>
-       <li>3：USE_HF32，允许转换为数据类型HFLOAT32计算。当输入是FLOAT16，仍使用FLOAT16计算。</li>
+       <li>3：USE_HF32，允许转换为数据类型HFLOAT32计算。当输入是FLOAT16，仍使用FLOAT16计算。</li></ul></ul>
       </td>
       <td>-</td>
       <td>-</td>
@@ -283,7 +283,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>
        <ul><li>支持空Tensor。</li>
        <li>数据类型与input保持一致。</li>
-       <li>数据格式需要与input、gradOutput一致。</li>
+       <li>数据格式需要与input、gradOutput一致。</li></ul>
       </td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>NCL、NCHW、NCDHW</td>
@@ -296,7 +296,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>卷积核权重张量w对L的梯度。</td>
       <td>
        <ul><li>支持空Tensor。</li>
-       <li>数据格式需要与weight一致。</li>
+       <li>数据格式需要与weight一致。</li></ul>
       </td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>NCL、NCHW、NCDHW</td>
@@ -309,7 +309,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>偏置b对L的梯度。</td>
       <td>
        <ul><li>支持空Tensor。</li>
-       <li>数据类型与gradOutput一致。</li>
+       <li>数据类型与gradOutput一致。</li></ul>
       </td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -398,7 +398,6 @@ aclnnStatus aclnnConvolutionBackward(
 
    </table>
 
-
 ## aclnnConvolutionBackward
 
 - **参数说明：**
@@ -434,7 +433,6 @@ aclnnStatus aclnnConvolutionBackward(
        </tr> 
     </tbody>
   </table>
-
 
 - **返回值：**
 
@@ -589,7 +587,6 @@ aclnnStatus aclnnConvolutionBackward(
     $$
 
 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击[Link](https://www.hiascend.com/support)获取技术支持。
-
 
 ## 调用示例
 

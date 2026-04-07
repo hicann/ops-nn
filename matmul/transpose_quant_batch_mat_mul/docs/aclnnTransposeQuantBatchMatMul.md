@@ -74,7 +74,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <th>数据格式</th>
         <th>维度(shape)</th>
         <th>非连续Tensor</th>
-      <tr>
+      </tr>
     </thead>
     <tbody>
       <tr>
@@ -221,7 +221,6 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
       </tbody>
       </table>
   
-
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。

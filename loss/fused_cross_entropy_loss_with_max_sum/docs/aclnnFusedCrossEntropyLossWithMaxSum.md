@@ -26,7 +26,6 @@
     softMaxOutOptional = exp(vocab\_parallel\_logits -logits\_max.unsqueeze(dim = -1)) \ sum\_exp\_logits.unsqueeze(dim = -1)
     $$
 
-
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnFusedCrossEntropyLossWithMaxSumGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnFusedCrossEntropyLossWithMaxSum”接口执行计算。
@@ -58,7 +57,6 @@ aclnnStatus aclnnFusedCrossEntropyLossWithMaxSum(
 
 - **参数说明**
 
-  </style>
   <table class="tg" style="undefined;table-layout: fixed; width: 1447px"><colgroup>
   <col style="width: 267px">
   <col style="width: 120px">
@@ -199,7 +197,6 @@ aclnnStatus aclnnFusedCrossEntropyLossWithMaxSum(
 
   第一段接口完成入参校验，出现以下场景时报错：
   
-  </style>
   <table class="tg" style="undefined;table-layout: fixed; width: 970px"><colgroup>
   <col style="width: 263px">
   <col style="width: 88px">

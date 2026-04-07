@@ -167,7 +167,7 @@
     </tr>
       <tr>
       <td>packed</td>
-      <td属性</td>
+      <td>属性</td>
       <td>表示输入x是否压缩。仅在batchSizeOptional不为空时生效。</td>
       <td>BOOL</td>
       <td>-</td>

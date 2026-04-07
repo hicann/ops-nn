@@ -17,6 +17,7 @@
   根据输入词频logits、topK/topP采样参数、随机采样权重分布q，进行topK-topP-sample采样计算，输出每个batch的最大词频logitsSelectIdx，以及topK-topP采样后的词频分布logitsTopKPSelect。
 
   算子包含三个可单独使能，但上下游处理关系保持不变的采样算法（从原始输入到最终输出）：TopK采样、TopP采样、指数采样（本文档中Sample所指）。它们可以构成八种计算场景。如下表所示：
+  
   | 计算场景 | TopK采样 | TopP采样 | 指数分布采样 |备注|
   | :-------:| :------:|:-------:|:-------:|:-------:|
   |Softmax-Argmax采样|×|×|×|对输入logits按每个batch，取SoftMax后取最大结果|
