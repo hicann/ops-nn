@@ -201,7 +201,7 @@ aclnnStatus aclnnAscendAntiQuant(
       <td>dstType不在有效取值范围。</td>
     </tr>
     <tr>
-      <td>x的数据类型为INT4时，x的shape尾轴大小不是偶数。</tr>
+      <td>x的数据类型为INT4时，x的shape尾轴大小不是偶数。</td></tr>
     <tr>
       <td>x的数据类型为INT32时，y的shape尾轴不是x的shape尾轴大小的8倍，或者x与y的shape的非尾轴的大小不一致。</td>
     </tr>

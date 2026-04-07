@@ -271,8 +271,7 @@ aclnnStatus aclnnFlatQuant(
       <td>out的数据类型为INT32时，x的shape尾轴不是out的shape尾轴大小的8倍，或者x与out的shape的非尾轴的大小不一致。</td>
     </tr>
   </tbody>
-
-</table>
+  </table>
 
 ## aclnnFlatQuant
 

@@ -121,6 +121,7 @@
    - axis：支持指定x的最后两个维度（假设输入x维度是xDimNum，axis取值范围是[-2，-1]或[xDimNum-2，xDimNum-1]）。
 
 - Kirin X90/Kirin 9030 处理器系列产品: `x`、`scale`、`offset`不支持BFLOAT16；`y` 数据类型不支持INT4、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN。
+
 ## 约束说明
 
 无

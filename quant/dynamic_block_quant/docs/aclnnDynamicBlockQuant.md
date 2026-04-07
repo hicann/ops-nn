@@ -591,3 +591,4 @@ aclnnStatus aclnnDynamicBlockQuant(
     return 0;
   }
   ```
+  

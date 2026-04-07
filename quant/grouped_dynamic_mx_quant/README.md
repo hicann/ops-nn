@@ -28,7 +28,7 @@
   P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize \tag{3}
   $$
   
-  ​	量化后的P<sub>i</sub>按对应的x<sub>i</sub>的位置组成输出y，mxscale_pre按对应的groupIndex分组，分组内第一个维度pad为偶数，组成输出mxscale。
+  ​量化后的P<sub>i</sub>按对应的x<sub>i</sub>的位置组成输出y，mxscale_pre按对应的groupIndex分组，分组内第一个维度pad为偶数，组成输出mxscale。
   
   - emax: 对应数据类型的最大正则数的指数位。
   
@@ -36,7 +36,6 @@
     | :-----------: | :--: |
     | FLOAT8_E4M3FN |  8   |
     |  FLOAT8_E5M2  |  15  |
-
 
 ## 参数说明
 
@@ -110,8 +109,9 @@
 ## 约束说明
 
 无
+
 ## 调用说明
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_grouped_dynamic_mx_quant](./examples/test_aclnn_grouped_dynamic_mx_quant.cpp) | 通过[aclnnGroupedDynamicMxQuant](./docs/aclnnGroupedDynamicMxQuant.md)接口方式调用GroupedDynamicMxQuant算子。 |
+| aclnn调用 | [test_aclnn_grouped_dynamic_mx_quant](./examples/arch35/test_aclnn_grouped_dynamic_mx_quant.cpp) | 通过[aclnnGroupedDynamicMxQuant](./docs/aclnnGroupedDynamicMxQuant.md)接口方式调用GroupedDynamicMxQuant算子。 |

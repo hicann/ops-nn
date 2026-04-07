@@ -52,7 +52,7 @@ $$
       <td>gradOutput</td>
       <td>输入</td>
       <td>表示梯度。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>shape需要与self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>shape需要与self满足<a href="../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16、DOUBLE</td>
       <td>ND</td>
       <td>0-8</td>

@@ -73,7 +73,7 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td><ul><li>表示算子输入的Tensor，对应公式中<em>x</em><sub>i</sub>；</li><li>shape支持1-7维，最后一维必须是偶数。</td>
+      <td><ul><li>表示算子输入的Tensor，对应公式中<em>x</em><sub>i</sub>；</li><li>shape支持1-7维，最后一维必须是偶数。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -87,42 +87,42 @@
     <tr>
       <td>round_mode</td>
       <td>可选属性</td>
-      <td><ul><li>表示数据转换的模式，对应公式中的round_mode；</li><li>支持{"rint", "round", "floor"}；</li><li> 默认值为"rint"。</td>
+      <td><ul><li>表示数据转换的模式，对应公式中的round_mode；</li><li>支持{"rint", "round", "floor"}；</li><li>默认值为"rint"。</li></ul></td>
       <td>STRING</td>
       <td>-</td>
     </tr>
     <tr>
       <td>level0_block_size</td>
       <td>可选属性</td>
-      <td><ul><li>表示第一级量化的block_size，对应公式中的level0_block_size；</li><li>输入范围为{512}。</td>
+      <td><ul><li>表示第一级量化的block_size，对应公式中的level0_block_size；</li><li>输入范围为{512}。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>level1_block_size</td>
       <td>可选属性</td>
-      <td><ul><li>表示第二级量化的block_size，对应公式中的level1_block_size；</li><li>输入范围为{32}。</td>
+      <td><ul><li>表示第二级量化的block_size，对应公式中的level1_block_size；</li><li>输入范围为{32}。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td><ul><li>表示输入x量化后的对应结果，对应公式中的<em>y</em><sub>i</sub>；</li><li>shape和输入x一致。</td>
+      <td><ul><li>表示输入x量化后的对应结果，对应公式中的<em>y</em><sub>i</sub>；</li><li>shape和输入x一致。</li></ul></td>
       <td>FLOAT4_E2M1</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>level0_scale</td>
       <td>输出</td>
-      <td><ul><li>表示第一级量化的scale，对应公式中的level0_scale；</li><li>shape在尾轴上的值，为x尾轴的值除以level0_block_size向上取整</td>
+      <td><ul><li>表示第一级量化的scale，对应公式中的level0_scale；</li><li>shape在尾轴上的值，为x尾轴的值除以level0_block_size向上取整</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>level1_scale</td>
       <td>输出</td>
-      <td><ul><li>表示第二级量化的scale，对应公式中的level1_scale；</li><li>shape的大小为x的dim + 1；</li><li> shape在最后两轴的值为((ceil(x.shape[-1] / level1_block_size) + 2 - 1) / 2, 2)，并对其进行偶数pad，pad填充值为0。</td>
+      <td><ul><li>表示第二级量化的scale，对应公式中的level1_scale；</li><li>shape的大小为x的dim + 1；</li><li>shape在最后两轴的值为((ceil(x.shape[-1] / level1_block_size) + 2 - 1) / 2, 2)，并对其进行偶数pad，pad填充值为0。</li></ul></td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
     </tr>

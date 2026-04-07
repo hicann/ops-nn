@@ -124,6 +124,7 @@
       <td>STRING</td>
       <td>-</td>
     </tr>
+   <tr>
       <td>groupListType</td>
       <td>属性</td>
       <td><ul><li>用户必须传参。</li><li>0表示cumsum模式、1表示count模式。当前仅支持0 cumsum模式，1 count模式。</li></ul></td>
@@ -137,7 +138,6 @@
       <td>INT64_T</td>
       <td>-</td>
     </tr>
-    <tr>
     <tr>
       <td>yOut</td>
       <td>输出</td>
@@ -155,6 +155,7 @@
   </tbody></table>
 
 - Kirin X90/Kirin 9030 处理器系列产品: `x`数据类型不支持BFLOAT16；`y`数据类型不支持INT4。
+
 ## 约束说明
 
 无

@@ -23,7 +23,6 @@
   out=round((x/scales)+zeroPoints)
   $$
 
-
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 820px"><colgroup>
@@ -71,7 +70,6 @@
       <td>ND</td>
     </tr>
   </tbody></table>
-
 
 ## 调用说明
 

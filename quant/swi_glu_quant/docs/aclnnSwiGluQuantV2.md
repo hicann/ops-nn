@@ -152,7 +152,7 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>groupIndexOptional（aclTensor*）</td>
       <td>输入</td>
       <td>MoE分组需要的group_index，公式中的group_index。</td>
-      <td>shape支持[G, ]，group_index内元素要求为非递减，且最大值不得超过输入x的除最后一维之外的所有维度大小之积；G的值不得超过输入x的除最后一维之外的所有维度大小之积。</li></td>
+      <td><li>shape支持[G, ]，group_index内元素要求为非递减，且最大值不得超过输入x的除最后一维之外的所有维度大小之积；G的值不得超过输入x的除最后一维之外的所有维度大小之积。</li></td>
       <td>INT32</td>
       <td>ND</td>
       <td>-</td>

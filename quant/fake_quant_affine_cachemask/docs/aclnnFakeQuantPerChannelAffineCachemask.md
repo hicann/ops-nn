@@ -50,6 +50,7 @@ aclnnStatus aclnnFakeQuantPerChannelAffineCachemaskGetWorkspaceSize(
   uint64_t          *workspaceSize,
   aclOpExecutor     **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnFakeQuantPerChannelAffineCachemask(
   void          *workspace,
@@ -278,11 +279,11 @@ aclnnStatus aclnnFakeQuantPerChannelAffineCachemask(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算：
   - aclnnFakeQuantPerChannelAffineCachemask默认确定性实现。
 
 - 当前新算子FakeQuantPerChannelAffineCachemask不支持zero_point的float32和float16输入，故先在aclnn接口内部拦截，待算子支持后放开该限制。
-
 
 ## 调用示例
 
@@ -444,4 +445,3 @@ int main() {
   return 0;
 }
 ```
-

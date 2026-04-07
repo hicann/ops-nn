@@ -109,7 +109,7 @@ aclnnStatus aclnnDynamicDualLevelMxQuant(
       <td>x (aclTensor*)</td>
       <td>输入</td>
       <td>表示输入x，对应公式中<em>x</em><sub>i</sub>。</td>
-      <td><ul><li>x的最后一维必须是偶数；</li><li> 不支持空Tensor。</td>
+      <td><ul><li>x的最后一维必须是偶数；</li><li>不支持空Tensor。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-7</td>
@@ -208,7 +208,6 @@ aclnnStatus aclnnDynamicDualLevelMxQuant(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -302,7 +301,6 @@ aclnnStatus aclnnDynamicDualLevelMxQuant(
     - level1ScaleOut.shape[-1] = 2。
     - 其他维度与输入x一致。
 - 确定性说明：aclnnDynamicDualLevelMxQuant默认确定性实现。
-
 
 ## 调用示例
 

@@ -37,6 +37,7 @@
         |  FLOAT4_E1M2  |  0   |
         | FLOAT8_E4M3FN |  8   |
         |  FLOAT8_E5M2  |  15  |
+
   - 场景2，当scaleAlg为1时，只涉及FP8类型：
     - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP8。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
     - 找到该块中数值的最大绝对值:
@@ -307,7 +308,6 @@ aclnnStatus aclnnDynamicMxQuant(
   - mxscaleOut.shape[axis_change] = (ceil(x.shape[axis] / blocksize) + 2 - 1) / 2。
   - mxscaleOut.shape[-1] = 2。
   - 其他维度与输入x一致。
-
 
 ## 调用示例
 
