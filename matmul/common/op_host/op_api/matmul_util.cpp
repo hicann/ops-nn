@@ -2211,12 +2211,11 @@ bool NpuArchMatMulRuleBase::CheckInputTensorDtypeValid(
     auto dtypeList = GetSupportedDTypes();
     OP_CHECK_DTYPE_NOT_SUPPORT(matA, dtypeList, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(matB, dtypeList, return false);
-
-    OP_CHECK_DTYPE_NOT_SUPPORT(out, dtypeList, return false);
-
     if (bias != nullptr) {
         OP_CHECK_DTYPE_NOT_SUPPORT(bias, dtypeList, return false);
     }
+
+    OP_CHECK_DTYPE_NOT_SUPPORT(out, dtypeList, return false);
     return true;
 }
 
