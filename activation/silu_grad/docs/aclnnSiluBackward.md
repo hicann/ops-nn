@@ -44,7 +44,7 @@
 aclnnStatus aclnnSiluBackwardGetWorkspaceSize(
   const aclTensor*    gradOutput,
   const aclTensor*    self,
-  aclTensor*          gradInput,
+  const aclTensor*    gradInput,
   uint64_t*           workspaceSize,
   aclOpExecutor**     executor)
 ```
