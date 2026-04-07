@@ -19,13 +19,13 @@
 
 - 计算公式：
 
-      $$
-      gradInput = gradOutput *
-      \begin{cases}
-      1, \quad x > 0\\
-      0,  \quad x \leq 0
-      \end{cases}
-      $$
+    $$
+    gradInput = gradOutput *
+    \begin{cases}
+    1, \quad x > 0\\
+    0,  \quad x \leq 0
+    \end{cases}
+    $$
 
 ## 参数说明
 

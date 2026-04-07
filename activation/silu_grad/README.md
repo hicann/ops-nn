@@ -62,7 +62,7 @@
       <td>gradOutput</td>
       <td>输入</td>
       <td>表示输入梯度。公式中的gradOutput。</td>
-      <td><ul><li>支持空Tensor。</li><li>gradOutput、self与gradInput的数据类型和shape一致。</li><li>gradOutput、self与gradInput的shape满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>gradOutput、self与gradInput的数据类型和shape一致。</li><li>gradOutput、self与gradInput的shape满足<a href="../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>1-8</td>
@@ -72,7 +72,7 @@
       <td>self</td>
       <td>输入</td>
       <td>表示输入数据。公式中的x，且对应正向的输入参数。</td>
-      <td><ul><li>支持空Tensor。</li><li>gradOutput、self与gradInput的数据类型和shape一致。</li><li>gradOutput、self与gradInput的shape满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>gradOutput、self与gradInput的数据类型和shape一致。</li><li>gradOutput、self与gradInput的shape满足<a href="../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>1-8</td>
@@ -82,7 +82,7 @@
       <td>gradInput</td>
       <td>输出</td>
       <td>表示对输入数据self求的梯度。公式中的gradInput。</td>
-      <td><ul><li>gradOutput、self与gradInput的数据类型和shape一致。</li><li>gradOutput、self与gradInput的shape满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
+      <td><ul><li>gradOutput、self与gradInput的数据类型和shape一致。</li><li>gradOutput、self与gradInput的shape满足<a href="../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>1-8</td>

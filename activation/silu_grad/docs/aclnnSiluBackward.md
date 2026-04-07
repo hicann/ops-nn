@@ -40,12 +40,11 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSiluBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSiluBackward”接口执行计算。
 
-
 ```Cpp
 aclnnStatus aclnnSiluBackwardGetWorkspaceSize(
   const aclTensor*    gradOutput,
   const aclTensor*    self,
-  aclTensor*          gradInput,
+  const aclTensor*    gradInput,
   uint64_t*           workspaceSize,
   aclOpExecutor**     executor)
 ```

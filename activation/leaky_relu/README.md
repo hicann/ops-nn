@@ -68,7 +68,7 @@
       <td>out</td>
       <td>输出</td>
       <td>待进行LeakyRelu激活函数的出参。</td>
-      <td>out的数据类型需要是self可转换的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
+      <td>out的数据类型需要是self可转换的数据类型（参见<a href="../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>

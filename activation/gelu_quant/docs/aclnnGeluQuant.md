@@ -31,7 +31,7 @@
    geluOut=Gelu(self)=self × Φ(self)=0.5 * self *[1 + erf(self/\sqrt{2})]
   $$
 
-2. 再对geluOut进行量化操作
+2.再对geluOut进行量化操作
 
   - quant_mode = static
 
@@ -139,6 +139,7 @@ aclnnStatus aclnnGeluQuant(
       <td>1</td>
       <td>√</td>
     </tr>
+    <tr>
       <td>inputOffsetOptional（aclTensor*）</td>
       <td>输入</td>
       <td>算子的可选输入，公式中的inputOffsetOptional。</td>
@@ -233,22 +234,22 @@ aclnnStatus aclnnGeluQuant(
 
 - **返回值：**
 
-aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-第一段接口会完成入参校验，出现以下场景时报错：
+  第一段接口会完成入参校验，出现以下场景时报错：
 
-<table style="undefined;table-layout: fixed; width: 1048px"><colgroup>
-<col style="width: 319px">
-<col style="width: 108px">
-<col style="width: 621px">
-</colgroup>
-<thead>
+  <table style="undefined;table-layout: fixed; width: 1048px"><colgroup>
+  <col style="width: 319px">
+  <col style="width: 108px">
+  <col style="width: 621px">
+  </colgroup>
+  <thead>
   <tr>
     <th>返回码</th>
     <th>错误码</th>
     <th>描述</th>
   </tr></thead>
-<tbody>
+  <tbody>
   <tr>
     <td>ACLNN_ERR_PARAM_NULLPTR</td>
     <td>161001</td>
@@ -264,8 +265,8 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
     <td rowspan="3">361001</td>
     <td>当前平台不在支持的平台范围内。</td>
   </tr>
-</tbody>
-</table>
+  </tbody>
+  </table>
 
 ## aclnnGeluQuant
 

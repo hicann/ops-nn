@@ -60,7 +60,6 @@
       <td>INT64</td>
       <td>-</td>
     </tr>
-    <tr>
       <tr>
       <td>out</td>
       <td>输出</td>
@@ -70,7 +69,7 @@
     </tr>
     </tbody>
      </table>
-- <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32。 
+- <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32。
 
 ## 约束说明
 

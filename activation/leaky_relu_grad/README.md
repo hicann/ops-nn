@@ -52,7 +52,7 @@ $$
       <td>gradOutput</td>
       <td>输入</td>
       <td>表示梯度。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>shape需要与self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>shape需要与self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16、DOUBLE</td>
       <td>ND</td>
       <td>0-8</td>
@@ -62,7 +62,7 @@ $$
       <td>self</td>
       <td>输入</td>
       <td>表示特性。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与gradOutput的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</li><li>shape需要与gradOutput满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型与gradOutput的数据类型需满足数据类型推导规则（参见<a href="../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</li><li>shape需要与gradOutput满足<a href="../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16、DOUBLE</td>
       <td>ND</td>
       <td>0-8</td>
@@ -92,7 +92,7 @@ $$
       <td>out</td>
       <td>输出</td>
       <td>表示计算输出。</td>
-      <td><ul><li>不需要额外申请空间，数据类型需要是gradOutput与self推导之后可转换的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</li><li>其他数据类型（INT8、UINT8、INT16、UINT16、INT32、UINT32、INT64、UINT64、BOOL、COMPLEX64、COMPLEX128）通过自动cast能力支持，但会额外申请空间。</li></ul></td>
+      <td><ul><li>不需要额外申请空间，数据类型需要是gradOutput与self推导之后可转换的数据类型（参见<a href="../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</li><li>其他数据类型（INT8、UINT8、INT16、UINT16、INT32、UINT32、INT64、UINT64、BOOL、COMPLEX64、COMPLEX128）通过自动cast能力支持，但会额外申请空间。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16、DOUBLE</td>
       <td>ND</td>
       <td>0-8</td>
