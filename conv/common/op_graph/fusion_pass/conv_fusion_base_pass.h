@@ -14,7 +14,6 @@
 #include <map>
 #include <memory>
 #include <set>
-#include <vector>
 
 #include "conv_fusion_utils_pass.h"
 #include "ge/fusion/pass/pattern_fusion_pass.h"

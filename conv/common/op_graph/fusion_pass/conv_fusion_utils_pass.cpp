@@ -99,8 +99,8 @@ bool ConvFusionUtilsPass::GetConvBaseAttr(const GNode &convNode, ConvBaseAttrs &
     AscendString attrAutoPad = "";
     convNode.GetAttr(AUTO_PAD, attrAutoPad);
 
-    AscendString tmpPadMode = !attrPadding.GetLength() == 0 ? attrPadding :
-        (!attrAutoPad.GetLength() == 0 ? attrAutoPad : "NOTSET");
+    AscendString tmpPadMode = attrPadding.GetLength() != 0 ? attrPadding :
+        (attrAutoPad.GetLength() != 0 ? attrAutoPad : "NOTSET");
     baseAttrs.padMode = SPECIFIC_PAD_LIST.count(tmpPadMode) != 0 ? "SPECIFIC" : tmpPadMode;
 
     convNode.GetAttr(OP_IMPL_MODE_ENUM, baseAttrs.opImplModeEnum);

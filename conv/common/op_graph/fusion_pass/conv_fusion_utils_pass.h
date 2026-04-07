@@ -14,9 +14,11 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <type_traits>
 #include <vector>
 
 #include "ge/fusion/subgraph_boundary.h"
+#include "graph/operator.h"
 #include "platform/soc_spec.h"
 
 namespace Ops {
