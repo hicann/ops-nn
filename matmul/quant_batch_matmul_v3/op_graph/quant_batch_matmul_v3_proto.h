@@ -24,8 +24,7 @@ namespace ge {
 * @par Inputs:
 * Six inputs, including:
 * @li x1: A matrix tensor. Must be one of the following types: int8, int4, hifloat8, float8_e5m2, float8_e4m3fn, float4_e2m1. \n
-          when the data type is int8, supports ND and NZ formats. \n
-          when the data type is int4, hifloat8, float8_e5m2, float8_e4m3fn, float4_e2m1, only supports ND format. \n
+          when the data type is int8, int4, hifloat8, float8_e5m2, float8_e4m3fn, float4_e2m1, the format only supports ND format. \n
           - In ND format and Non-int4 type, the shape ranges from 2D to 6D. When transpose_x1 is false, the shape is (batch,m,k), where
           batch is optional; In int4 type, shape only supports 2D. \n
           - In NZ (Ascend affinity) format, the shape ranges from 4D to 8D. When tranpose_x1 is true, the shape is
@@ -33,12 +32,12 @@ namespace ge {
           (batch,x1_k1,x1_m1,x1_m0,x1_k0), where batch is optional, x1_m0 = 16, and x1_k0 = 32. \n
           When the data type is int4, float4_e2m1, the last dim must be even. \n
 * @li x2: A matrix tensor. Must be one of the following types: int8, int4, hifloat8, float8_e5m2, float8_e4m3fn, float4_e2m1. \n
-          when the data type is int8, float8_e5m2, float8_e4m3fn, float4_e2m1, supports ND and NZ formats. \n
-          when the data type is int4, hifloat8, the format only supports ND. \n
+          when the data type is int8, float8_e4m3fn, float4_e2m1, the format supports ND and NZ formats. \n
+          when the data type is int4, hifloat8, float8_e5m2, the format only supports ND. \n
           - In ND format and Non-int4 type, the shape ranges from 2D to 6D. When transpose_x2 is false, the shape is (batch,k,n), where
           batch is optional; In int4 type, shape only supports 2D. \n
           - In NZ (Ascend affinity) format, the shape ranges from 4D to 8D. \n
-              - When tranpose_x2 is true, the shape is (batch,x2_k1,x2_n1,x2_n0,x2_k0), where batch is optional, x2_k0 = 32, and x2_n0 = 16. \n
+              - When transpose_x2 is true, the shape is (batch,x2_k1,x2_n1,x2_n0,x2_k0), where batch is optional, x2_k0 = 32, and x2_n0 = 16. \n
               - When transpose_x2 is false, the shape is (batch,x2_n1,x2_k1,x2_k0,x2_n0), where batch is optional, x2_k0 = 16, and x2_n0 = 32. \n
               - When x1 is ND format, k in the shape of x1 and the shape of x2 must meet the following requirement: \n
                     ceil(k / x2_k0) == x2_k1. \n
@@ -46,16 +45,13 @@ namespace ge {
                   - when x1_k0 == x2_k0, x1_k1 == x2_k1, \n
                   - when x1_k0 > x2_k0, ceil((x2_k0 * x2_k1) / x1_k0) == x1_k1, \n
                   - when x1_k0 < x2_k0, ceil((x1_k0 * x1_k1) / x2_k0) == x2_k1. \n
-          When the data type is int4, float4_e2m1, the last dim must be even.
+          When the data type is int4, float4_e2m1, the last dim must be even. \n
 * @li scale: A matrix tensor, quantization parameter,
              Must be one of the following types: uint64, float32, int64, bfloat16, float8_e8m0, supports ND format. \n
             - When the data type is bfloat16, uint64 or int64,
              the shape is 1D (t,), with t equal to 1 or n, where n is the same as that of x2. \n
-            - When the data type is float8_e8m0,
-             the shape is 2D, when the shape of x2 is (n, k), scale is (n, z). Suppose scale_k = ceil(k / 32),
-                - When scale_k is an odd number, z = scale_k + 1, \n
-                - when scale_k is an even number, z = scale_k. \n
-             where 32 is group_size_k(refer to group_size), z must be an even number and z can be equal to (ceil(k / 64) * 2), and k is the reduce axis of x2. \n
+            - When the data type is float8_e8m0, the shape is 3D. When the shape of x2 is (n, k), scale is (n, z, 2),
+             when the shape of x2 is (k, n), scale is (z, n, 2), where z = ceil(k / 64) and k is the reduce axis of x2. \n
             - when the data type is float32,
              the dimension of shape should be 1D or same as that of x2. \n
                - When the quant mode of x2 is perchannel or pertensor, the shape is 1D (t,),
@@ -68,9 +64,8 @@ namespace ge {
             The shape is 1D (t,) or 3D (batch, 1, n),
             with t equal to n, where n is the same as that of x2.
 * @li pertoken_scale: An optional matrix tensor. The type supports float32, float8_e8m0, supports ND format. \n
-                      - When the data type is float8_e8m0, the shape is 2D,
-                        when the shape of x1 is (m, k), scale is (m, z), with z = (ceil(k / 64) * 2) which is same to
-                        scale, and k is the reduce axis of x1.
+                      - When the data type is float8_e8m0, the shape is 3D. When the shape of x1 is (m, k), scale is (m, z, 2),
+                        when the shape of x1 is (k, m), scale is (z, m, 2), where z = ceil(k / 64) and k is the reduce axis of x1. \n
                       - When the data type is float32, the dimension of shape should be 1D or same as that of x1. \n,
                         - When the quant mode of x1 is pertoken or pertensor, the shape is 1D (t,),
                           with t equal to 1 or m, where m is the same as that of x1. \n
@@ -81,8 +76,7 @@ namespace ge {
 
 * @par Attributes:
 * Four attributes, including:
-* @li dtype: An Int. Declare the output type, supports 0(float32), 1(float16), 2(int8), 27(bfloat16),
-* 34(hifloat8), 36(float8_e4m3fn). Default: 2(int8).
+* @li dtype: An Int. Declare the output type, supports 0(float32), 1(float16), 2(int8), 3(int32), 27(bfloat16). Default: 2(int8).
 * @li transpose_x1: An optional bool. If true, changes the shape of "x1" from [m, k] to
 * [k, m] before multiplication. Default: false.
 * @li transpose_x2: An optional bool. If true, changes the shape of "x2" from [k, n] to
@@ -118,7 +112,10 @@ namespace ge {
 * The last dimension of x2 refers to k when transpose_x2 is true or n when transpose_x2 is false.
 * @li If input type of x1 and x2 is int4, transpose_x1 should be false, the size of the last dimension of x1 or x2 should
 * be an even number.
-* @li Input does not support tensor with dimension size 0.
+* @li On the Ascend 950PR/Ascend 950DT platforms, when x2 is ND format, the output is an empty tensor if input x1 has m=0 or x2 has n=0.
+* When x2 is NZ format, the output is an empty tensor if input x1 has m=0.
+* In all other cases, inputs does not support tensor with dimension size 0. 
+* @li If input type of x1 and x2 is int4, transpose_x1 should be false.
 * @li When input type of x1 and x2 is int4, x1 should be ND format.
 * @li When y type is int8, x1 should be ND format.
 * @li When x2 is ND format, x1 should be ND format.
@@ -130,6 +127,7 @@ namespace ge {
 *      - transpose_x1 must be false.
 *      - when transpose_x2 is false, n must be greater than 2.
 *      - when transpose_x2 is true, n must be greater than 1.
+* @li Only weight supports ND and NZ format on Ascend 950 AI Processor. All other inputs and outputs only support ND format. 
 * @li The following are the supported data type combinations by platform.
 
 * - Atlas Inference Series Product:
@@ -167,6 +165,7 @@ namespace ge {
 | float8_e4m3fn/float8_e5m2 | float8_e4m3fn/float8_e5m2 | float32              | null          | null/float32                | float32     | float16/bfloat16/float32               |
 | float8_e4m3fn/float8_e5m2 | float8_e4m3fn/float8_e5m2 | float8_e8m0          | null          | null/float32                | float8_e8m0 | float16/bfloat16/float32               |
 | float4_e2m1               | float4_e2m1               | float8_e8m0          | null          | null/float32                | float8_e8m0 | float16/bfloat16/float32               |
+| int8                      | int8                      | float32/bfloat16     | null          | null/int32                  | null        | int32                                  |
 *\n
 * - Ascend 950 AI Processor, supported data type and quant mode combinations:
 *\n
@@ -215,8 +214,14 @@ mx quant：
 | pergroup-perblock | float8_e4m3fn/float8_e5m2/hifloat8 | float32     | (batch, m, k) | (batch, n, k) | (batch, ceil(n / 128), ceil(k / 128)) | (batch, m, ceil(k / 128))             | [1, 128, 128]   |
 | pergroup-perblock | float8_e4m3fn/float8_e5m2/hifloat8 | float32     | (batch, k, m) | (batch, k, n) | (batch, ceil(k / 128), ceil(n / 128)) | (batch, ceil(k / 128), m)             | [1, 128, 128]   |
 | pergroup-perblock | float8_e4m3fn/float8_e5m2/hifloat8 | float32     | (batch, k, m) | (batch, n, k) | (batch, ceil(n / 128), ceil(k / 128)) | (batch, ceil(k / 128), m)             | [1, 128, 128]   |
-| mx                | float8_e4m3fn/float8_e5m2          | float8_e8m0 | (batch, m, k) | (batch, n, k) | (n, ceil(k / 64) * 2)                 | (m, ceil(k / 64) * 2)                 | [1, 1, 32]      |
-| mx                | float4_e2m1                        | float8_e8m0 | (batch, m, k) | (batch, n, k) | (n, ceil(k / 64) * 2)                 | (m, ceil(k / 64) * 2)                 | [1, 1, 32]      |
+| mx                | float8_e4m3fn/float8_e5m2          | float8_e8m0 | (batch, m, k) | (batch, n, k) | (n, ceil(k / 64), 2)                  | (m, ceil(k / 64), 2)                  | [1, 1, 32]      |
+| mx                | float8_e4m3fn/float8_e5m2          | float8_e8m0 | (batch, m, k) | (batch, k, n) | (ceil(k / 64), n, 2)                  | (m, ceil(k / 64), 2)                  | [1, 1, 32]      |
+| mx                | float8_e4m3fn/float8_e5m2          | float8_e8m0 | (batch, k, m) | (batch, k, n) | (ceil(k / 64), n, 2)                  | (ceil(k / 64), m, 2)                  | [1, 1, 32]      |
+| mx                | float8_e4m3fn/float8_e5m2          | float8_e8m0 | (batch, k, m) | (batch, n, k) | (n, ceil(k / 64), 2)                  | (ceil(k / 64), m, 2)                  | [1, 1, 32]      |
+| mx                | float4_e2m1                        | float8_e8m0 | (batch, m, k) | (batch, n, k) | (n, ceil(k / 64), 2)                  | (m, ceil(k / 64), 2)                  | [1, 1, 32]      |
+| mx                | float4_e2m1                        | float8_e8m0 | (batch, m, k) | (batch, k, n) | (ceil(k / 64), n, 2)                  | (m, ceil(k / 64), 2)                  | [1, 1, 32]      |
+| mx                | float4_e2m1                        | float8_e8m0 | (batch, k, m) | (batch, k, n) | (ceil(k / 64), n, 2)                  | (ceil(k / 64), m, 2)                  | [1, 1, 32]      |
+| mx                | float4_e2m1                        | float8_e8m0 | (batch, k, m) | (batch, n, k) | (n, ceil(k / 64), 2)                  | (ceil(k / 64), m, 2)                  | [1, 1, 32]      |
 
 *\n
 */
