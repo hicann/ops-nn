@@ -51,6 +51,7 @@
     {"name":"FastGeluGrad", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "--cce-simd-at-voss=true"]}, "impl_mode" : ""},
     {"name":"Floor", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"HardtanhGrad", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "--cce-simd-at-voss=true"]}, "impl_mode" : ""},
+    {"name":"HardSwish", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "--cce-simd-at-voss=true"]}, "impl_mode" : ""},
     {"name":"Round", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "--cce-simd-at-voss=true"]}, "impl_mode" : ""},
     {"name":"Sign", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "--cce-simd-at-voss=true"]}, "impl_mode" : ""},
     {"name":"Rsqrt", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "--cce-simd-at-voss=true"]}, "impl_mode" : ""},
