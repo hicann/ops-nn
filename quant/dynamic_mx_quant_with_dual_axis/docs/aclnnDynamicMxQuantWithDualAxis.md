@@ -68,10 +68,10 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxisGetWorkspaceSize(
   char            *roundModeOptional, 
   int64_t          dstType, 
   int64_t          scaleAlg, 
-  aclTensor       *y1Out, 
-  aclTensor       *mxscale1Out, 
-  aclTensor       *y2Out, 
-  aclTensor       *mxscale2Out, 
+  const aclTensor *y1Out, 
+  const aclTensor *mxscale1Out, 
+  const aclTensor *y2Out, 
+  const aclTensor *mxscale2Out, 
   uint64_t        *workspaceSize, 
   aclOpExecutor   **executor)
 ```
