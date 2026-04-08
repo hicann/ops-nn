@@ -418,7 +418,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>implMode（int32_t）</td>
       <td>输入</td>
       <td>表示用于指定kernel选择对应的计算模式。</td>
-      <td>支持配置为0，1，2，默认配置为0。0代表高精度模式，1代表高性能模式，2代表保持FLOAT16计算模式。高性能模式谨慎使用，有精度损失；保持FLOAT16计算模式仅支持所有输入同时为FLOAT16的场景，且计算精度最低。</td>
+      <td>支持配置为0、1、2，默认配置为0。0代表高精度模式，1代表高性能模式，2代表保持FLOAT16计算模式。高性能模式谨慎使用，有精度损失；保持FLOAT16计算模式仅支持所有输入同时为FLOAT16的场景，且计算精度最低。</td>
       <td>INT32</td>
       <td>-</td>
       <td>-</td>
@@ -497,7 +497,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>input的shape与normalizedShape右对齐时对应维度shape不相等。</td>
     </tr>
     <tr>
-      <td>implMode的取值不在0，1和2范围内。</td>
+      <td>implMode的取值不在0、1和2范围内。</td>
     </tr>
     <tr>
       <td>implMode的取值为2且输入的数据类型不全部为FLOAT16。</td>
