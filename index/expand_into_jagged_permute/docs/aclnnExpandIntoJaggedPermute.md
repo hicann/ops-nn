@@ -34,7 +34,7 @@ aclnnStatus aclnnExpandIntoJaggedPermuteGetWorkspaceSize(
     const aclTensor *inputOffset,
     const aclTensor *outputOffset,
     int64_t          outputSize,
-    const aclTensor *outputPermuteOutOut,
+    const aclTensor *outputPermuteOut,
     uint64_t        *workspaceSize,
     aclOpExecutor  **executor)
 ```
@@ -292,7 +292,7 @@ bool ReadFile(const std::string &filePath, std::vector<int64_t> shape, std::vect
     // 获取文件大小
     file.seekg(0, std::ios::end);
     file.seekg(0, std::ios::beg);
-    hostData.reserve(fileSize);
+    hostData.resize(fileSize);
     if (file.read(reinterpret_cast<char*>(hostData.data()), fileSize * sizeof(T))) {
     } else {
         std::cerr << "读取文件失败" << std::endl;
@@ -305,7 +305,7 @@ bool ReadFile(const std::string &filePath, std::vector<int64_t> shape, std::vect
 template <typename T>
 bool WriteFile(const std::string &filePath, int64_t size, std::vector<T>& hostData)
 {
-    int fd = open(filePath.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWRITE);
+    int fd = open(filePath.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
     if (fd < 0) {
         LOG_PRINT("Open file failed. path = %s", filePath.c_str());
         return false;
