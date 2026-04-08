@@ -10,7 +10,7 @@
 
 /*!
  * \file add_example.h
- * \brief
+ * \brief Add算子Kernel实现，实现向量逐元素相加操作 z = x + y
  */
 #ifndef ADD_EXAMPLE_H
 #define ADD_EXAMPLE_H
