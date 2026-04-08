@@ -198,7 +198,8 @@ int main()
     fi
 
     source ${_ASCEND_INSTALL_PATH}/bin/setenv.bash
-    
+    export LD_LIBRARY_PATH=${_ASCEND_INSTALL_PATH}/opp/vendors/custom_nn/op_api/lib:${LD_LIBRARY_PATH}
+
     rm -rf build
     mkdir -p build 
     cd build
