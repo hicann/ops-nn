@@ -1818,6 +1818,16 @@
   </tr>
   <tr>
     <td>loss</td>
+    <td><a href="../../loss/sigmoid_cross_entropy_with_logits/README.md">sigmoid_cross_entropy_with_logits</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>用于计算经过 Sigmoid 激活后的交叉熵损失的函数。</td>
+  </tr>
+  <tr>
+    <td>loss</td>
     <td><a href="../../loss/cross_v2/README.md">cross_v2</a></td>
     <td>✓</td>
     <td>✓</td>

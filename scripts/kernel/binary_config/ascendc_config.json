@@ -29,6 +29,7 @@
     {"name":"Cast", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"DropOutV3", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"Abs", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "--cce-simd-at-voss=true"]}, "impl_mode" : ""},
+    {"name":"SigmoidCrossEntropyWithLogits", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "-mllvm -cce-aicore-dcci-before-kernel-end=true"]}},
     {"name":"Invert", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "--cce-simd-at-voss=true"]}, "impl_mode" : ""},
     {"name":"LogicalNot", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "--cce-simd-at-voss=true"]}, "impl_mode" : ""},
     {"name":"Relu", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "-mllvm -cce-aicore-dcci-before-kernel-end=false"]}, "impl_mode": ""},
