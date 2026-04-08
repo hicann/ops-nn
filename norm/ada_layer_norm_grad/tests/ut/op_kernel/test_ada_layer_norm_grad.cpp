@@ -95,7 +95,7 @@ TEST_F(ada_layer_norm_grad_test, test_case_workspace_201)
 
     uint32_t blockDim = tilingDatafromBin->blockNum;
 
-    ICPU_SET_TILING_KEY(201);
+    ICPU_SET_TILING_KEY(301);
     ICPU_RUN_KF(
         ada_layer_norm_grad, blockDim, dy, x, rstd, mean, scale, gamma, beta, dx, dscale, dshift, dgamma, dbeta, workspace,
         (uint8_t*)(tilingDatafromBin));
@@ -184,7 +184,7 @@ TEST_F(ada_layer_norm_grad_test, test_case_common_401)
 
     uint32_t blockDim = tilingDatafromBin->blockNum;
 
-    ICPU_SET_TILING_KEY(401);
+    ICPU_SET_TILING_KEY(101);
     ICPU_RUN_KF(
         ada_layer_norm_grad, blockDim, dy, x, rstd, mean, scale, gamma, beta, dx, dscale, dshift, dgamma, dbeta, workspace,
         (uint8_t*)(tilingDatafromBin));

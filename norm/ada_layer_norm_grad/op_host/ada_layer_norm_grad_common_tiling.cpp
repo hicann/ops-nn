@@ -27,7 +27,7 @@ static const int64_t COMMON_LNG_BRCB_ALIGN_FACTOR = 8;
 static const int64_t COMMON_LNG_SCALE_BUFFER_NUM = 3;
 static const int64_t COMMON_LNG_WORKSPACE_NUM = 2;
 static const size_t COMMON_LNG_WORKSPACE_RESERVED = 16 * 1024 * 1024;
-static const int64_t COMMON_LNG_MAX_COL = 768;
+static const int64_t COMMON_LNG_MAX_COL = 3440;
 
 static inline int64_t CommonCeilDiv(int64_t value, int64_t factor)
 {
@@ -36,10 +36,13 @@ static inline int64_t CommonCeilDiv(int64_t value, int64_t factor)
 
 bool AdaLayerNormGradCommonTiling::IsCapable()
 {
-    if (commonParams.isRegBase) {
-        return false;
-    }
-    if (commonParams.colSize > COMMON_LNG_MAX_COL) {
+    int64_t blockNum = (commonParams.batchSize + 39) / 40;
+    int64_t coreNum = (commonParams.batchSize + blockNum - 1) / blockNum;
+
+    int64_t bsblockNum = (commonParams.rowSize + 39) / 40;
+    int64_t bscoreNum = (commonParams.rowSize + bsblockNum - 1) / bsblockNum;
+
+    if (commonParams.colSize > COMMON_LNG_MAX_COL || bscoreNum > coreNum) {
         OP_LOGI(
             context_,
             "AdaLayerNormGradCommonTiling: col value(=%ld) is not support now, "
@@ -151,5 +154,5 @@ ge::graphStatus AdaLayerNormGradCommonTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-REGISTER_TILING_TEMPLATE("AdaLayerNormGrad", AdaLayerNormGradCommonTiling, 3000);
+REGISTER_TILING_TEMPLATE("AdaLayerNormGrad", AdaLayerNormGradCommonTiling, 1000);
 } // namespace optiling

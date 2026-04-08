@@ -39,8 +39,7 @@ __aicore__ inline void AdaLayerNormGradCommon<T, U, isDeterministic>::CopyOutPha
     intriParams.dstStride = 0;
 
     DataCopyPad(
-        pdXOutTensorGM_[tilingData->ubFormer * tilingData->col * outerIdx], buffer6_.ReinterpretCast<T>(),
-        intriParams);
+        pdXOutTensorGM_[tilingData->ubFormer * tilingData->col * outerIdx], buffer6_.ReinterpretCast<T>(), intriParams);
     queue6_.FreeTensor(buffer6_);
 }
 
@@ -77,30 +76,36 @@ __aicore__ inline void AdaLayerNormGradCommon<T, U, isDeterministic>::CopyOutPha
 
 template <typename T, typename U, bool isDeterministic>
 __aicore__ inline void AdaLayerNormGradCommon<T, U, isDeterministic>::CopyOutPhase1Deterministic(
-    const AdaLayerNormGradTilingDataCommon* tilingData){
-        int64_t BatchRowsNum =
-            ((GetBlockIdx() != tilingData->blockNum - 1) ? tilingData->blockFormer : tilingData->blockTail) / tilingData->seq;
-        int64_t rowOfBuffer = ((tilingData->ubFormer + tilingData->seq - 1) / tilingData->seq + (tilingData->seq == 1 ? 0 : 1));
-        int64_t loopOfCp = BatchRowsNum / rowOfBuffer;
-        int64_t remainderRow = BatchRowsNum - loopOfCp * rowOfBuffer;
-        for(int i = 0; i < loopOfCp; ++i){
-            CastWithCopyOutSWT(i, rowOfBuffer, rowOfBuffer, tilingData);
-        }
-        if(likely(remainderRow != 0)){
-        CastWithCopyOutSWT(loopOfCp, rowOfBuffer, remainderRow, tilingData);
-        }
+    const AdaLayerNormGradTilingDataCommon* tilingData)
+{
+    int64_t BatchRowsNum =
+        ((GetBlockIdx() != tilingData->blockNum - 1) ? tilingData->blockFormer : tilingData->blockTail) /
+        tilingData->seq;
+    int64_t scaleBufferRow = tilingData->blockFormerScaleBufferElemNums / tilingData->colAlignM;
+    int64_t perCopyRowNums = scaleBufferRow > tilingData->ubFormer ? tilingData->ubFormer : scaleBufferRow;
+
+    int64_t loopOfCp = BatchRowsNum / perCopyRowNums;
+    int64_t remainderRow = BatchRowsNum - loopOfCp * perCopyRowNums;
+    for (int i = 0; i < loopOfCp; ++i) {
+        CastWithCopyOutSWT(i, perCopyRowNums, perCopyRowNums, tilingData);
     }
+    if (likely(remainderRow != 0)) {
+        CastWithCopyOutSWT(loopOfCp, perCopyRowNums, remainderRow, tilingData);
+    }
+}
 
 template <typename T, typename U, bool isDeterministic>
 __aicore__ inline void AdaLayerNormGradCommon<T, U, isDeterministic>::CastWithCopyOutSWT(
-    const int64_t outIdx, const int64_t rowOffset, const int64_t rowOfCp, const AdaLayerNormGradTilingDataCommon* tilingData)
+    const int64_t outIdx, const int64_t rowOffset, const int64_t rowOfCp,
+    const AdaLayerNormGradTilingDataCommon* tilingData)
 {
     buffer0_ = queue0_.AllocTensor<float>();
     buffer1_ = queue1_.AllocTensor<float>();
     buffer7_ = queue7_.AllocTensor<float>();
     buffer8_ = queue8_.AllocTensor<float>();
 
-    DataCopyExtParams intriParamsIn = {1, static_cast<uint32_t>(rowOfCp * tilingData->colAlignV * sizeof(float)), 0, 0, 0};
+    DataCopyExtParams intriParamsIn = {
+        1, static_cast<uint32_t>(rowOfCp * tilingData->colAlignV * sizeof(float)), 0, 0, 0};
     DataCopyPadExtParams padParams = {false, 0, 0, 0.0f};
     int64_t offset = outIdx * rowOffset * tilingData->colAlignV;
 
@@ -228,6 +233,220 @@ __aicore__ inline void AdaLayerNormGradCommon<T, U, isDeterministic>::CopyOutPha
     int64_t curWorkspaceRowsNum = 2 * tilingData->blockFormer / tilingData->seq + COMMON_CONSTANT_TWO;
     op.initBuffer(pipe, pdGammaOutTensorGM, pdBetaOutTensorGM, workspaceGMOri, curWorkspaceRowsNum);
     op.FinalProcessDeterministic(tilingData->colAlignV, tilingData->blockNum, tilingData->col);
+}
+
+template <typename T, typename U, bool isDeterministic>
+__aicore__ inline void AdaLayerNormGradCommon<T, U, isDeterministic>::CastToFloatLargeStride(
+    const LocalTensor<float>& dst, const LocalTensor<float>& src, const int64_t curRowsNum,
+    const AdaLayerNormGradTilingDataCommon* tilingData, RoundMode castMode)
+{
+    UnaryRepeatParams intriParamsOne;
+    intriParamsOne.dstBlkStride = 1;
+    intriParamsOne.srcBlkStride = 1;
+    intriParamsOne.dstRepStride = 0;
+    intriParamsOne.srcRepStride = 0;
+
+    for (int64_t i = 0; i < curRowsNum; ++i) {
+        int64_t srcRowOffset = i * tilingData->colAlignM;
+        int64_t dstRowOffset = i * tilingData->colAlignV;
+
+        int64_t formerColLoops = tilingData->colAlignV / COMMON_B32_REPEAT_SIZE;
+        int64_t remainderCol = tilingData->colAlignV % COMMON_B32_REPEAT_SIZE;
+
+        for (int64_t j = 0; j < formerColLoops; ++j) {
+            int64_t colOffset = j * COMMON_B32_REPEAT_SIZE;
+            Cast(
+                dst[dstRowOffset + colOffset], src.ReinterpretCast<T>()[srcRowOffset + colOffset], castMode,
+                COMMON_B32_REPEAT_SIZE, 1, intriParamsOne);
+        }
+        if (remainderCol != 0) {
+            int64_t colOffset = formerColLoops * COMMON_B32_REPEAT_SIZE;
+            Cast(
+                dst[dstRowOffset + colOffset], src.ReinterpretCast<T>()[srcRowOffset + colOffset], castMode,
+                remainderCol, 1, intriParamsOne);
+        }
+    }
+}
+
+template <typename T, typename U, bool isDeterministic>
+__aicore__ inline void AdaLayerNormGradCommon<T, U, isDeterministic>::CastToFloat(
+    const LocalTensor<float>& buffer, const LocalTensor<float>& tmpBuffer, const int64_t curRowsNum,
+    const AdaLayerNormGradTilingDataCommon* tilingData, const int64_t bufferElemNums)
+{
+    if (tilingData->colAlignM == tilingData->colAlignV || tilingData->colAlignV == tilingData->col) {
+        Cast(
+            buffer, buffer.ReinterpretCast<T>()[bufferElemNums], RoundMode::CAST_NONE,
+            curRowsNum * tilingData->colAlignV);
+    } else {
+        DataCopyParams copyIntriParams;
+        copyIntriParams.blockCount = 1;
+        copyIntriParams.blockLen = curRowsNum * tilingData->colAlignM / COMMON_CONSTANT_SIXTEEN;
+        copyIntriParams.srcStride = 0;
+        copyIntriParams.dstStride = 0;
+        DataCopy(tmpBuffer.ReinterpretCast<T>(), buffer.ReinterpretCast<T>()[bufferElemNums], copyIntriParams);
+        PipeBarrier<PIPE_V>();
+
+        if (tilingData->colAlignV / COMMON_CONSTANT_EIGHT > 255 ||
+            tilingData->colAlignM / COMMON_CONSTANT_SIXTEEN > 255) {
+            CastToFloatLargeStride(buffer, tmpBuffer, curRowsNum, tilingData, RoundMode::CAST_NONE);
+        } else {
+            int64_t formerColLoops = tilingData->colAlignV / COMMON_B32_REPEAT_SIZE;
+            int64_t remainderCol = tilingData->colAlignV - formerColLoops * COMMON_B32_REPEAT_SIZE;
+            int64_t repeatLoops = curRowsNum / COMMON_MAX_REPEAT;
+            int64_t remainderRepeat = curRowsNum - repeatLoops * COMMON_MAX_REPEAT;
+
+            UnaryRepeatParams intriParams;
+            intriParams.dstBlkStride = 1;
+            intriParams.srcBlkStride = 1;
+            intriParams.dstRepStride = tilingData->colAlignV / COMMON_CONSTANT_EIGHT;
+            intriParams.srcRepStride = tilingData->colAlignM / COMMON_CONSTANT_SIXTEEN;
+
+            for (int64_t i = 0; i < repeatLoops; i++) {
+                int64_t srcRepeatOffset = i * COMMON_MAX_REPEAT * tilingData->colAlignM;
+                int64_t dstRepeatOffset = i * COMMON_MAX_REPEAT * tilingData->colAlignV;
+                for (int64_t j = 0; j < formerColLoops; j++) {
+                    int64_t colOffset = j * COMMON_B32_REPEAT_SIZE;
+                    Cast(
+                        buffer[dstRepeatOffset + colOffset],
+                        tmpBuffer.ReinterpretCast<T>()[srcRepeatOffset + colOffset], RoundMode::CAST_NONE,
+                        COMMON_B32_REPEAT_SIZE, COMMON_MAX_REPEAT, intriParams);
+                }
+                if (likely(remainderCol != 0)) {
+                    int64_t colOffset = formerColLoops * COMMON_B32_REPEAT_SIZE;
+                    Cast(
+                        buffer[dstRepeatOffset + colOffset],
+                        tmpBuffer.ReinterpretCast<T>()[srcRepeatOffset + colOffset], RoundMode::CAST_NONE, remainderCol,
+                        COMMON_MAX_REPEAT, intriParams);
+                }
+            }
+
+            if (likely(remainderRepeat != 0)) {
+                int64_t srcRepeatOffset = repeatLoops * COMMON_MAX_REPEAT * tilingData->colAlignM;
+                int64_t dstRepeatOffset = repeatLoops * COMMON_MAX_REPEAT * tilingData->colAlignV;
+                for (int64_t j = 0; j < formerColLoops; j++) {
+                    int64_t colOffset = j * COMMON_B32_REPEAT_SIZE;
+
+                    Cast(
+                        buffer[dstRepeatOffset + colOffset],
+                        tmpBuffer.ReinterpretCast<T>()[srcRepeatOffset + colOffset], RoundMode::CAST_NONE,
+                        COMMON_B32_REPEAT_SIZE, remainderRepeat, intriParams);
+                }
+                if (likely(remainderCol != 0)) {
+                    int64_t colOffset = formerColLoops * COMMON_B32_REPEAT_SIZE;
+                    Cast(
+                        buffer[dstRepeatOffset + colOffset],
+                        tmpBuffer.ReinterpretCast<T>()[srcRepeatOffset + colOffset], RoundMode::CAST_NONE, remainderCol,
+                        remainderRepeat, intriParams);
+                }
+            }
+        }
+    }
+}
+
+template <typename T, typename U, bool isDeterministic>
+__aicore__ inline void AdaLayerNormGradCommon<T, U, isDeterministic>::CastTo16LargeStride(
+    const LocalTensor<float>& dst, const LocalTensor<float>& src, const int64_t curRowsNum,
+    const AdaLayerNormGradTilingDataCommon* tilingData, RoundMode castMode)
+{
+    UnaryRepeatParams intriParamsOne;
+    intriParamsOne.dstBlkStride = 1;
+    intriParamsOne.srcBlkStride = 1;
+    intriParamsOne.dstRepStride = 0;
+    intriParamsOne.srcRepStride = 0;
+
+    for (int64_t i = 0; i < curRowsNum; ++i) {
+        int64_t srcRowOffset = i * tilingData->colAlignV;
+        int64_t dstRowOffset = i * tilingData->colAlignM;
+
+        int64_t formerColLoops = tilingData->colAlignV / COMMON_B32_REPEAT_SIZE;
+        int64_t remainderCol = tilingData->colAlignV % COMMON_B32_REPEAT_SIZE;
+
+        for (int64_t j = 0; j < formerColLoops; ++j) {
+            int64_t colOffset = j * COMMON_B32_REPEAT_SIZE;
+            Cast(
+                dst.ReinterpretCast<T>()[dstRowOffset + colOffset], src[srcRowOffset + colOffset], castMode,
+                COMMON_B32_REPEAT_SIZE, 1, intriParamsOne);
+        }
+        if (remainderCol != 0) {
+            int64_t colOffset = formerColLoops * COMMON_B32_REPEAT_SIZE;
+            Cast(
+                dst.ReinterpretCast<T>()[dstRowOffset + colOffset], src[srcRowOffset + colOffset], castMode,
+                remainderCol, 1, intriParamsOne);
+        }
+    }
+}
+
+template <typename T, typename U, bool isDeterministic>
+__aicore__ inline void AdaLayerNormGradCommon<T, U, isDeterministic>::CastToB16(
+    const LocalTensor<float>& buffer, const LocalTensor<float>& tmpBuffer, const int64_t curRowsNum,
+    const AdaLayerNormGradTilingDataCommon* tilingData)
+{
+    RoundMode b16RoundMode = RoundMode::CAST_RINT;
+    if (tilingData->colAlignM == tilingData->colAlignV || tilingData->colAlignV == tilingData->col) {
+        Cast(buffer.ReinterpretCast<T>(), buffer, b16RoundMode, curRowsNum * tilingData->colAlignV);
+    } else {
+        DataCopyParams copyIntriParams;
+        copyIntriParams.blockCount = 1;
+        copyIntriParams.blockLen = curRowsNum * tilingData->colAlignV / COMMON_CONSTANT_EIGHT;
+        copyIntriParams.srcStride = 0;
+        copyIntriParams.dstStride = 0;
+        DataCopy(tmpBuffer, buffer, copyIntriParams);
+        PipeBarrier<PIPE_V>();
+
+        if (tilingData->colAlignV / COMMON_CONSTANT_EIGHT > 255 ||
+            tilingData->colAlignM / COMMON_CONSTANT_SIXTEEN > 255) {
+            CastTo16LargeStride(buffer, tmpBuffer, curRowsNum, tilingData, b16RoundMode);
+        } else {
+            int64_t formerColLoops = tilingData->colAlignV / COMMON_B32_REPEAT_SIZE;
+            int64_t remainderCol = tilingData->colAlignV - formerColLoops * COMMON_B32_REPEAT_SIZE;
+            int64_t repeatLoops = curRowsNum / COMMON_MAX_REPEAT;
+            int64_t remainderRepeat = curRowsNum - repeatLoops * COMMON_MAX_REPEAT;
+
+            UnaryRepeatParams intriParams;
+            intriParams.dstBlkStride = 1;
+            intriParams.srcBlkStride = 1;
+            intriParams.dstRepStride = tilingData->colAlignM / COMMON_CONSTANT_SIXTEEN;
+            intriParams.srcRepStride = tilingData->colAlignV / COMMON_CONSTANT_EIGHT;
+
+            for (int64_t i = 0; i < repeatLoops; i++) {
+                int64_t srcRepeatOffset = i * COMMON_MAX_REPEAT * tilingData->colAlignV;
+                int64_t dstRepeatOffset = i * COMMON_MAX_REPEAT * tilingData->colAlignM;
+                for (int64_t j = 0; j < formerColLoops; j++) {
+                    int64_t colOffset = j * COMMON_B32_REPEAT_SIZE;
+                    Cast(
+                        buffer.ReinterpretCast<T>()[dstRepeatOffset + colOffset],
+                        tmpBuffer[srcRepeatOffset + colOffset], b16RoundMode, COMMON_B32_REPEAT_SIZE, COMMON_MAX_REPEAT,
+                        intriParams);
+                }
+                if (likely(remainderCol != 0)) {
+                    int64_t colOffset = formerColLoops * COMMON_B32_REPEAT_SIZE;
+                    Cast(
+                        buffer.ReinterpretCast<T>()[dstRepeatOffset + colOffset],
+                        tmpBuffer[srcRepeatOffset + colOffset], b16RoundMode, remainderCol, COMMON_MAX_REPEAT,
+                        intriParams);
+                }
+            }
+
+            if (likely(remainderRepeat != 0)) {
+                int64_t srcRepeatOffset = repeatLoops * COMMON_MAX_REPEAT * tilingData->colAlignV;
+                int64_t dstRepeatOffset = repeatLoops * COMMON_MAX_REPEAT * tilingData->colAlignM;
+                for (int64_t j = 0; j < formerColLoops; j++) {
+                    int64_t colOffset = j * COMMON_B32_REPEAT_SIZE;
+                    Cast(
+                        buffer.ReinterpretCast<T>()[dstRepeatOffset + colOffset],
+                        tmpBuffer[srcRepeatOffset + colOffset], b16RoundMode, COMMON_B32_REPEAT_SIZE, remainderRepeat,
+                        intriParams);
+                }
+                if (likely(remainderCol != 0)) {
+                    int64_t colOffset = formerColLoops * COMMON_B32_REPEAT_SIZE;
+                    Cast(
+                        buffer.ReinterpretCast<T>()[dstRepeatOffset + colOffset],
+                        tmpBuffer[srcRepeatOffset + colOffset], b16RoundMode, remainderCol, remainderRepeat,
+                        intriParams);
+                }
+            }
+        }
+    }
 }
 
 } // namespace AdaLayerNormGrad

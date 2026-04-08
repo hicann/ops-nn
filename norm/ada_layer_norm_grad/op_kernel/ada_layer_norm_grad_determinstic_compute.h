@@ -46,6 +46,72 @@ public:
         workspaceNum_ = workspaceNum;
     }
 
+    __aicore__ inline void BatchFinalProcessDeterministic(
+        int64_t batch, int64_t colAlignV, int64_t blockNum, int64_t col, GlobalTensor<T> pdScaleOutGM,
+        GlobalTensor<T> pdShiftOutGM)
+    {
+        colAlignV_ = colAlignV;
+        row_ = blockNum;
+        col_ = col;
+
+        // 提前 Alloc Tensor，避免在 batch 循环中频繁申请释放
+        buffer1_ = queueGammaIn_.AllocTensor<float>();
+        buffer2_ = queueGammaOut_.AllocTensor<float>();
+        buffer3_ = queueBetaIn_.AllocTensor<float>();
+        buffer4_ = queueBetaOut_.AllocTensor<float>();
+
+        // 保存原始 workspace 基地址，防止循环内偏移叠加
+        GlobalTensor<float> workspaceBase = workspaceGM_;
+
+        for (int64_t i = 0; i < batch; ++i) {
+            // 1. 更新当前 batch 的偏移基地址
+            int64_t offset = (2 + 2 * i) * colAlignV_;
+            workspaceGM_ = workspaceBase[offset];
+
+            // 根据原调用处的逻辑更新 Tensor1(Gamma) 和 Tensor2(Beta)
+            if (2 * i < batch) {
+                pdGammaOutTensorGM_ = pdScaleOutGM[2 * i * col_];
+            } else {
+                pdGammaOutTensorGM_ = pdShiftOutGM[(2 * i - batch) * col_];
+            }
+
+            if ((2 * i + 1) < batch) {
+                pdBetaOutTensorGM_ = pdScaleOutGM[(2 * i + 1) * col_];
+            } else {
+                pdBetaOutTensorGM_ = pdShiftOutGM[(2 * i + 1 - batch) * col_];
+            }
+
+            // 2. 执行原有核心计算逻辑 (由原本的 FinalProcessDeterministic 拆解而来)
+            int64_t colcycleCount = (colAlignV_ + COL_TEMPLATE - 1) / COL_TEMPLATE;
+            int64_t colcyclePerBlockCount = (colcycleCount + GetBlockNum() - 1) / GetBlockNum();
+            int64_t rowcycleCount = (row_ + ROW_TEMPLATE - 1) / ROW_TEMPLATE;
+
+            for (int64_t blocktaskId = 0; blocktaskId < colcyclePerBlockCount; blocktaskId++) {
+                int64_t taskId = blocktaskId * GetBlockNum() + GetBlockIdx();
+                if (taskId < colcycleCount) {
+                    int64_t colSize = (taskId == colcycleCount - 1) ? (col_ - COL_TEMPLATE * taskId) : COL_TEMPLATE;
+
+                    for (int64_t r = 0; r < rowcycleCount; r++) {
+                        int64_t rowSize = (r == rowcycleCount - 1) ? (row_ - ROW_TEMPLATE * r) : ROW_TEMPLATE;
+
+                        // 调用类内原有的 copyIn 和 compute
+                        copyIn(taskId, r, colSize, rowSize);
+                        compute(taskId, r, colSize, rowSize);
+                    }
+                    copyOut(taskId, colSize);
+                }
+            }
+            // 确保当前 batch 写入 GM 完成
+            PipeBarrier<PIPE_MTE3>();
+        }
+
+        // 3. 循环结束后统一释放
+        queueGammaIn_.FreeTensor(buffer1_);
+        queueGammaOut_.FreeTensor(buffer2_);
+        queueBetaIn_.FreeTensor(buffer3_);
+        queueBetaOut_.FreeTensor(buffer4_);
+    }
+
     __aicore__ inline void FinalProcessDeterministic(int64_t tcolAlignV, int64_t tblockNum, int64_t tcol)
     {
         colAlignV_ = tcolAlignV;
@@ -153,11 +219,9 @@ public:
     __aicore__ inline void copyOut(int64_t colIndex, int64_t colSize)
     {
         if constexpr (!IsSameType<T, float>::value) {
-            Cast(
-                buffer2_.ReinterpretCast<T>(), buffer2_, RoundMode::CAST_RINT, colSize);
+            Cast(buffer2_.ReinterpretCast<T>(), buffer2_, RoundMode::CAST_RINT, colSize);
             PipeBarrier<PIPE_V>();
-            Cast(
-                buffer4_.ReinterpretCast<T>(), buffer4_, RoundMode::CAST_RINT, colSize);
+            Cast(buffer4_.ReinterpretCast<T>(), buffer4_, RoundMode::CAST_RINT, colSize);
             PipeBarrier<PIPE_V>();
         }
         DataCopyParams intriParams;
@@ -174,7 +238,6 @@ public:
         DataCopyPad(pdGammaOutTensorGM_[offset], buffer2_.ReinterpretCast<T>(), intriParams);
         DataCopyPad(pdBetaOutTensorGM_[offset], buffer4_.ReinterpretCast<T>(), intriParams);
     }
-
 
 private:
     TPipe pipe_;

@@ -27,8 +27,6 @@
 #include "op_common/op_host/util/platform_util.h"
 #include "op_host/tiling_templates_registry.h"
 
-
-
 namespace optiling
 {
 constexpr uint64_t LNG_TEMPLATE_KEY_WEIGHT = 100;
@@ -46,33 +44,6 @@ TILING_DATA_FIELD_DEF(uint32_t, rowSize);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad, AdaLayerNormGradTilingData)
-
-// AdaLayerNormGradTilingDataWorkspace
-BEGIN_TILING_DATA_DEF(AdaLayerNormGradTilingDataWorkspace)
-TILING_DATA_FIELD_DEF(int64_t, batch);
-TILING_DATA_FIELD_DEF(int64_t, seq);
-TILING_DATA_FIELD_DEF(int64_t, row);
-TILING_DATA_FIELD_DEF(int64_t, col);
-TILING_DATA_FIELD_DEF(int64_t, blockNum);
-TILING_DATA_FIELD_DEF(int64_t, blockFormer);
-TILING_DATA_FIELD_DEF(int64_t, blockTail);
-TILING_DATA_FIELD_DEF(int64_t, ubLoop);
-TILING_DATA_FIELD_DEF(int64_t, ubFormer);
-TILING_DATA_FIELD_DEF(int64_t, ubTail);
-TILING_DATA_FIELD_DEF(int64_t, colAlignM);
-TILING_DATA_FIELD_DEF(int64_t, colAlignV);
-END_TILING_DATA_DEF;
-
-REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_201, AdaLayerNormGradTilingDataWorkspace)
-REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_202, AdaLayerNormGradTilingDataWorkspace)
-REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_203, AdaLayerNormGradTilingDataWorkspace)
-REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_204, AdaLayerNormGradTilingDataWorkspace)
-REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_205, AdaLayerNormGradTilingDataWorkspace)
-REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_211, AdaLayerNormGradTilingDataWorkspace)
-REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_212, AdaLayerNormGradTilingDataWorkspace)
-REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_213, AdaLayerNormGradTilingDataWorkspace)
-REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_214, AdaLayerNormGradTilingDataWorkspace)
-REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_215, AdaLayerNormGradTilingDataWorkspace)
 
 // AdaLayerNormGradTilingDataCommon
 BEGIN_TILING_DATA_DEF(AdaLayerNormGradTilingDataCommon)
@@ -99,16 +70,106 @@ TILING_DATA_FIELD_DEF(int64_t, wholeBufferElemNums);
 TILING_DATA_FIELD_DEF(int64_t, blockFormerScaleBufferElemNums);
 END_TILING_DATA_DEF;
 
-REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_401, AdaLayerNormGradTilingDataCommon)
-REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_402, AdaLayerNormGradTilingDataCommon)
-REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_403, AdaLayerNormGradTilingDataCommon)
-REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_404, AdaLayerNormGradTilingDataCommon)
-REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_405, AdaLayerNormGradTilingDataCommon)
-REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_411, AdaLayerNormGradTilingDataCommon)
-REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_412, AdaLayerNormGradTilingDataCommon)
-REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_413, AdaLayerNormGradTilingDataCommon)
-REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_414, AdaLayerNormGradTilingDataCommon)
-REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_415, AdaLayerNormGradTilingDataCommon)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_101, AdaLayerNormGradTilingDataCommon)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_102, AdaLayerNormGradTilingDataCommon)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_103, AdaLayerNormGradTilingDataCommon)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_104, AdaLayerNormGradTilingDataCommon)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_105, AdaLayerNormGradTilingDataCommon)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_111, AdaLayerNormGradTilingDataCommon)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_112, AdaLayerNormGradTilingDataCommon)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_113, AdaLayerNormGradTilingDataCommon)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_114, AdaLayerNormGradTilingDataCommon)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_115, AdaLayerNormGradTilingDataCommon)
+
+// AdaLayerNormGradTilingDataMergeBSCommon
+BEGIN_TILING_DATA_DEF(AdaLayerNormGradTilingDataMergeBSCommon)
+TILING_DATA_FIELD_DEF(int64_t, row);
+TILING_DATA_FIELD_DEF(int64_t, col);
+TILING_DATA_FIELD_DEF(int64_t, batch);
+TILING_DATA_FIELD_DEF(int64_t, seq);
+TILING_DATA_FIELD_DEF(int64_t, colAlignM);
+TILING_DATA_FIELD_DEF(int64_t, colAlignV);
+TILING_DATA_FIELD_DEF(int64_t, blockNum);
+TILING_DATA_FIELD_DEF(int64_t, blockFormer);
+TILING_DATA_FIELD_DEF(int64_t, blockTail);
+TILING_DATA_FIELD_DEF(int64_t, ubFormer);
+TILING_DATA_FIELD_DEF(int64_t, ubTailOfFormerBlock);
+TILING_DATA_FIELD_DEF(int64_t, ubTailOfTailBlock);
+TILING_DATA_FIELD_DEF(int64_t, ubLoopOfFormerBlock);
+TILING_DATA_FIELD_DEF(int64_t, ubLoopOfTailBlock);
+TILING_DATA_FIELD_DEF(int64_t, wholeBufferBytes);
+TILING_DATA_FIELD_DEF(int64_t, lastBrcbBufferBytes);
+TILING_DATA_FIELD_DEF(int64_t, lastRBufferBytes);
+TILING_DATA_FIELD_DEF(int64_t, nlastRBufferBytes);
+TILING_DATA_FIELD_DEF(int64_t, blockFormerScaleBufferBytes);
+TILING_DATA_FIELD_DEF(int64_t, wholeBufferElemNums);
+TILING_DATA_FIELD_DEF(int64_t, blockFormerScaleBufferElemNums);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_201, AdaLayerNormGradTilingDataMergeBSCommon)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_202, AdaLayerNormGradTilingDataMergeBSCommon)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_203, AdaLayerNormGradTilingDataMergeBSCommon)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_204, AdaLayerNormGradTilingDataMergeBSCommon)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_205, AdaLayerNormGradTilingDataMergeBSCommon)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_211, AdaLayerNormGradTilingDataMergeBSCommon)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_212, AdaLayerNormGradTilingDataMergeBSCommon)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_213, AdaLayerNormGradTilingDataMergeBSCommon)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_214, AdaLayerNormGradTilingDataMergeBSCommon)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_215, AdaLayerNormGradTilingDataMergeBSCommon)
+
+// AdaLayerNormGradTilingDataWorkspace
+BEGIN_TILING_DATA_DEF(AdaLayerNormGradTilingDataWorkspace)
+TILING_DATA_FIELD_DEF(int64_t, batch);
+TILING_DATA_FIELD_DEF(int64_t, seq);
+TILING_DATA_FIELD_DEF(int64_t, row);
+TILING_DATA_FIELD_DEF(int64_t, col);
+TILING_DATA_FIELD_DEF(int64_t, blockNum);
+TILING_DATA_FIELD_DEF(int64_t, blockFormer);
+TILING_DATA_FIELD_DEF(int64_t, blockTail);
+TILING_DATA_FIELD_DEF(int64_t, ubLoop);
+TILING_DATA_FIELD_DEF(int64_t, ubFormer);
+TILING_DATA_FIELD_DEF(int64_t, ubTail);
+TILING_DATA_FIELD_DEF(int64_t, colAlignM);
+TILING_DATA_FIELD_DEF(int64_t, colAlignV);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_301, AdaLayerNormGradTilingDataWorkspace)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_302, AdaLayerNormGradTilingDataWorkspace)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_303, AdaLayerNormGradTilingDataWorkspace)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_304, AdaLayerNormGradTilingDataWorkspace)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_305, AdaLayerNormGradTilingDataWorkspace)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_311, AdaLayerNormGradTilingDataWorkspace)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_312, AdaLayerNormGradTilingDataWorkspace)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_313, AdaLayerNormGradTilingDataWorkspace)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_314, AdaLayerNormGradTilingDataWorkspace)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_315, AdaLayerNormGradTilingDataWorkspace)
+
+// AdaLayerNormGradTilingDataMergeBSWorkspace
+BEGIN_TILING_DATA_DEF(AdaLayerNormGradTilingDataMergeBSWorkspace)
+TILING_DATA_FIELD_DEF(int64_t, batch);
+TILING_DATA_FIELD_DEF(int64_t, seq);
+TILING_DATA_FIELD_DEF(int64_t, row);
+TILING_DATA_FIELD_DEF(int64_t, col);
+TILING_DATA_FIELD_DEF(int64_t, colAlignM);
+TILING_DATA_FIELD_DEF(int64_t, colAlignV);
+TILING_DATA_FIELD_DEF(int64_t, blockNum);
+TILING_DATA_FIELD_DEF(int64_t, blockFormer);
+TILING_DATA_FIELD_DEF(int64_t, blockTail);
+TILING_DATA_FIELD_DEF(int64_t, ubLoop);
+TILING_DATA_FIELD_DEF(int64_t, ubFormer);
+TILING_DATA_FIELD_DEF(int64_t, ubTail);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_401, AdaLayerNormGradTilingDataMergeBSWorkspace)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_402, AdaLayerNormGradTilingDataMergeBSWorkspace)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_403, AdaLayerNormGradTilingDataMergeBSWorkspace)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_404, AdaLayerNormGradTilingDataMergeBSWorkspace)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_405, AdaLayerNormGradTilingDataMergeBSWorkspace)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_411, AdaLayerNormGradTilingDataMergeBSWorkspace)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_412, AdaLayerNormGradTilingDataMergeBSWorkspace)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_413, AdaLayerNormGradTilingDataMergeBSWorkspace)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_414, AdaLayerNormGradTilingDataMergeBSWorkspace)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_415, AdaLayerNormGradTilingDataMergeBSWorkspace)
 
 // TilingKey生成方式：LNGTemplateKey * 100 + isDeterministicKey * 10 + dtypeKey
 enum class LNGDtypeKey : int {
@@ -120,13 +181,10 @@ enum class LNGDtypeKey : int {
 };
 
 enum class LNGTemplateKey : int {
-    SINGEL_READ = 1,
-    WORKSPACE = 2,
-    TRANSPOSE = 3,
-    COMMON = 4,
-    RECOMPUTE = 5,
-    GROUPED_REDUCE_BIG_M = 6,
-    GROUPED_REDUCE_BIG_N = 7
+    COMMON = 1,
+    MERGE_BS_COMMON = 2,
+    WORKSPACE = 3,
+    MERGE_BS_WORKSPACE = 4
 };
 
 struct ParamsAdaLayerNormGrad {
@@ -192,6 +250,23 @@ protected:
     int64_t GetCacheID(const int64_t idx);
 };
 
+class AdaLayerNormGradMergeBSWorkspaceTiling : public AdaLayerNormGradTilingBase
+{
+public:
+    explicit AdaLayerNormGradMergeBSWorkspaceTiling(gert::TilingContext* context) : AdaLayerNormGradTilingBase(context)
+    {
+    }
+    ~AdaLayerNormGradMergeBSWorkspaceTiling() override = default;
+    AdaLayerNormGradTilingDataMergeBSWorkspace td_;
+
+protected:
+    bool IsCapable() override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus GetWorkspaceSize() override;
+    ge::graphStatus PostTiling() override;
+    uint64_t GetTilingKey() const override;
+};
+
 class AdaLayerNormGradWorkspaceTiling : public AdaLayerNormGradTilingBase
 {
 public:
@@ -207,6 +282,36 @@ protected:
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
     uint64_t GetTilingKey() const override;
+};
+
+class AdaLayerNormGradMergeBSCommonTiling : public AdaLayerNormGradTilingBase
+{
+public:
+    explicit AdaLayerNormGradMergeBSCommonTiling(gert::TilingContext* context) : AdaLayerNormGradTilingBase(context)
+    {
+    }
+    ~AdaLayerNormGradMergeBSCommonTiling() override = default;
+    AdaLayerNormGradTilingDataMergeBSCommon td_;
+
+protected:
+    bool IsCapable() override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus GetWorkspaceSize() override;
+    ge::graphStatus PostTiling() override;
+    uint64_t GetTilingKey() const override;
+    int64_t CalculateUbFormer();
+
+private:
+    int64_t row_{-1};
+    int64_t col_{-1};
+    int64_t batch_{-1};
+    int64_t seq_{-1};
+
+    // for vector
+    int64_t colAlignV_{-1};
+    // for mte
+    // colAlignM >= colAlignV
+    int64_t colAlignM_{-1};
 };
 
 class AdaLayerNormGradCommonTiling : public AdaLayerNormGradTilingBase

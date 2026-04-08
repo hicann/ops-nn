@@ -123,6 +123,7 @@ __aicore__ inline void Init(
         PipeBarrier<PIPE_ALL>();
         // 初始化队列
         InitQueues(pipe, tilingData);
+        coff_ = static_cast<float>(1.0) / static_cast<float>(tilingData->col);
     } else if (!isDeterministic) {
         CrossCoreSetFlag<0x0, PIPE_MTE3>(SYNC_AIV_ONLY_ALL);
     }
@@ -162,8 +163,8 @@ __aicore__ inline void Init(
                 FreeTensor();
                 queIn0.FreeTensor(tmp0);
                 queIn1.FreeTensor(tmp1);
-                reduce2 = reduce2 / tilingData->col * (-1.0f);
-                reduce3 = reduce3 / tilingData->col;
+                reduce2 = reduce2 * coff_;
+                reduce3 = reduce3 * coff_;
 
                 // step 2. calc dx
                 PipeBarrier<PIPE_ALL>();
@@ -433,10 +434,11 @@ __aicore__ inline void Init(
         buffer1 = queIn1.DeQue<float>();
         Muls(buffer0, buffer0, reduce3, calcNum);//(x-mean)*rstd*(1/N)*∑(dy*gamma*(1+scale)*(x-mean)*rstd)
         PipeBarrier<PIPE_V>();
-        Sub(buffer1, buffer1, buffer0, calcNum);//dy*gamma*(1+scale)-(x-mean)*rstd*(1/N)*∑(dy*gamma*(1+scale)*(x-mean)*rstd)
+        Adds(buffer1, buffer1, -reduce2, calcNum);//dy*gamma*(1+scale)-(x-mean)*rstd*(1/N)*∑(dy*gamma*(1+scale)*(x-mean)*rstd)
         PipeBarrier<PIPE_V>();
-        Adds(buffer1, buffer1, reduce2, calcNum);//dy*gamma-(1/N)∑dy*gamma*(1+scale)-(x-mean)*rstd*(1/N)*∑(dy*gamma*(1+scale)*(x-mean)*rstd))
+        Sub(buffer1, buffer1, buffer0, calcNum);//dy*gamma-(1/N)∑dy*gamma*(1+scale)-(x-mean)*rstd*(1/N)*∑(dy*gamma*(1+scale)*(x-mean)*rstd))
         PipeBarrier<PIPE_V>();
+
 
         if constexpr (IsSameType<T, float>::value) {
             Muls(buffer4, buffer1, rstdIn, calcNum);//rstd*(dy*gamma-(1/N)∑dy*gamma*(1+scale)-(x-mean)*rstd*(1/N)*∑(dy*gamma*(1+scale)*(x-mean)*rstd)))  type=float32
@@ -604,6 +606,7 @@ private:
     int64_t colAlign;
     int64_t seq;
     int64_t rowOfBatch;
+    float coff_;
 };
 } // namespace AdaLayerNormGrad
 #endif

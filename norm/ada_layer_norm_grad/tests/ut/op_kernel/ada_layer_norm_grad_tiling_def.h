@@ -47,6 +47,35 @@ int64_t blockTailScaleBufferElemNums = 0;
 #pragma pack()
 
 #pragma pack(1)
+struct AdaLayerNormGradTilingDataMergeBSCommon {
+int64_t row = 0;
+int64_t col = 0;
+int64_t batch = 0;
+int64_t seq = 0;
+int64_t colAlignM = 0;
+int64_t colAlignV = 0;
+int64_t blockNum = 0;
+int64_t blockFormer = 0;
+int64_t blockTail = 0;
+int64_t ubFormer = 0;
+int64_t blockFormerScaleBufferBytes = 0;
+int64_t blockTailScaleBufferBytes = 0;
+int64_t wholeBufferElemNums = 0;
+int64_t blockFormerScaleBufferElemNums = 0;
+int64_t blockTailScaleBufferElemNums = 0;
+int64_t ubLoopOfFormerBlock = 0;
+int64_t ubLoopOfTailBlock = 0;
+int64_t ubTailOfFormerBlock = 0;
+int64_t ubTailOfTailBlock = 0;
+int64_t wholeBufferBytes = 0;
+int64_t lastRBufferBytes = 0;
+int64_t nlastRBufferBytes = 0;
+int64_t lastBrcbBufferBytes = 0;
+};
+
+#pragma pack()
+
+#pragma pack(1)
 struct AdaLayerNormGradTilingDataWorkspace {
 int64_t batch = 0;
 int64_t seq = 0;
@@ -60,6 +89,24 @@ int64_t ubFormer = 0;
 int64_t ubTail = 0;
 int64_t colAlignM = 0;
 int64_t colAlignV = 0;
+};
+
+#pragma pack()
+
+#pragma pack(1)
+struct AdaLayerNormGradTilingDataMergeBSWorkspace {
+int64_t row = 0;
+int64_t col = 0;
+int64_t batch = 0;
+int64_t seq = 0;
+int64_t colAlignM = 0;
+int64_t colAlignV = 0;
+int64_t blockNum = 0;
+int64_t blockFormer = 0;
+int64_t blockTail = 0;
+int64_t ubLoop = 0;
+int64_t ubFormer = 0;
+int64_t ubTail = 0;
 };
 
 #pragma pack()
@@ -82,6 +129,21 @@ inline void InitTilingData(uint8_t* tiling, AdaLayerNormGradTilingDataCommon* co
 #endif
 
 #ifdef __NPU_TILING__
+inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, AdaLayerNormGradTilingDataMergeBSCommon* const_data)
+{
+    const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
+    uint32_t* dst = (uint32_t*)const_data;
+    for (auto i = 0; i < sizeof(AdaLayerNormGradTilingDataMergeBSCommon) / 4; i++)
+        *(dst + i) = *(src + i);
+}
+#else
+inline void InitTilingData(uint8_t* tiling, AdaLayerNormGradTilingDataMergeBSCommon* const_data)
+{
+    memcpy(const_data, tiling, sizeof(AdaLayerNormGradTilingDataMergeBSCommon));
+}
+#endif
+
+#ifdef __NPU_TILING__
 inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, AdaLayerNormGradTilingDataWorkspace* const_data)
 {
     const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
@@ -93,6 +155,21 @@ inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, AdaLayerNormGra
 inline void InitTilingData(uint8_t* tiling, AdaLayerNormGradTilingDataWorkspace* const_data)
 {
     memcpy(const_data, tiling, sizeof(AdaLayerNormGradTilingDataWorkspace));
+}
+#endif
+
+#ifdef __NPU_TILING__
+inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, AdaLayerNormGradTilingDataMergeBSWorkspace* const_data)
+{
+    const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
+    uint32_t* dst = (uint32_t*)const_data;
+    for (auto i = 0; i < sizeof(AdaLayerNormGradTilingDataMergeBSWorkspace) / 4; i++)
+        *(dst + i) = *(src + i);
+}
+#else
+inline void InitTilingData(uint8_t* tiling, AdaLayerNormGradTilingDataMergeBSWorkspace* const_data)
+{
+    memcpy(const_data, tiling, sizeof(AdaLayerNormGradTilingDataMergeBSWorkspace));
 }
 #endif
 

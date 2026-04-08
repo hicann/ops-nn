@@ -139,7 +139,7 @@ TEST_F(AdaLayerNormGradTiling, ada_layer_norm_grad_tiling_000)
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 211);
+    ASSERT_EQ(tiling_key, 411);
     auto block_dim = tiling_context->GetBlockDim();
     ASSERT_EQ(block_dim, 48);
     // dlog_setlevel(static_cast<int>(OP), 0, 1);
@@ -240,7 +240,7 @@ TEST_F(AdaLayerNormGradTiling, ada_layer_norm_grad_tiling_001)
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 411);
+    ASSERT_EQ(tiling_key, 211);
     auto block_dim = tiling_context->GetBlockDim();
     ASSERT_EQ(block_dim, 48);
     //(static_cast<int>(OP), 0, 1);

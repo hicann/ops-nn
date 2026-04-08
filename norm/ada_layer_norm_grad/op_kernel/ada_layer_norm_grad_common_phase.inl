@@ -199,10 +199,10 @@ __aicore__ inline void AdaLayerNormGradCommon<T, U, isDeterministic>::ComputePha
     }
 
     buffer7_ = queue7_.AllocTensor<float>();
-    Duplicate(buffer7_, static_cast<float>(0.0), ScaleReRowNum_ * tilingData->colAlignV);
+    Duplicate(buffer7_, static_cast<float>(0.0), tilingData->blockFormerScaleBufferElemNums);
 
     buffer8_ = queue8_.AllocTensor<float>();
-    Duplicate(buffer8_, static_cast<float>(0.0), ScaleReRowNum_ * tilingData->colAlignV);
+    Duplicate(buffer8_, static_cast<float>(0.0), tilingData->blockFormerScaleBufferElemNums);
 
     PipeBarrier<PIPE_V>();
     event_t event1 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
