@@ -1587,9 +1587,9 @@ static bool IsConv2DBp2MmMode(const ConvolutionBackwardInputTensor &inputTensor,
   if (isFmEqKernel) {
     return true;
   }
-  // kernel=1*1或2*2走拆分性能略好于matmul
+  // stride等于kernel size时，2dcase只支持计算dx，不支持计算dw
   bool notKernelSplit = (*params.stride)[0] > 1 || (*params.stride)[1] > 1;
-  if (isStrideEqKernel && notKernelSplit) {
+  if (isStrideEqKernel && notKernelSplit && (*params.outputMask)[0] && !(*params.outputMask)[1]) {
     return true;
   }
 
