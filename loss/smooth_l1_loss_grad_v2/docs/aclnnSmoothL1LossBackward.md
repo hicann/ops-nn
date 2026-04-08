@@ -43,7 +43,7 @@
 
 ```Cpp
 aclnnStatus aclnnSmoothL1LossBackwardGetWorkspaceSize(
-    const aclTensor* gradOut, 
+    const aclTensor* gradOutput, 
     const aclTensor* self,
     const aclTensor* target, 
     int64_t          reduction, 
@@ -102,7 +102,7 @@ aclnnStatus aclnnSmoothL1LossBackward(
       <td class="tg-0pky">self（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">输入张量，公式中的输入x。</td>
-      <td class="tg-0pky">shape需要与gradOutput、target满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>数据类型与gradOut、target的数据类型需满足数据类型推导规则。</td>
+      <td class="tg-0pky">shape需要与gradOutput、target满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>数据类型与gradOutput、target的数据类型需满足数据类型推导规则。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -112,7 +112,7 @@ aclnnStatus aclnnSmoothL1LossBackward(
       <td class="tg-0pky">target（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">真实的标签，公式中的输入y。</td>
-      <td class="tg-0pky">shape需要与gradOutput、self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>数据类型与gradOut、target的数据类型需满足数据类型推导规则。</td>
+      <td class="tg-0pky">shape需要与gradOutput、self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>数据类型与gradOutput、target的数据类型需满足数据类型推导规则。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -142,7 +142,7 @@ aclnnStatus aclnnSmoothL1LossBackward(
       <td class="tg-0pky">gradInput（aclTensor*）</td>
       <td class="tg-0pky">输出</td>
       <td class="tg-0pky">计算输出。</td>
-      <td class="tg-0pky">shape为gradOut，self，target的<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>结果</td>
+      <td class="tg-0pky">shape为gradOutput，self，target的<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>结果</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -192,15 +192,15 @@ aclnnStatus aclnnSmoothL1LossBackward(
     <tr>
       <td class="tg-0pky">ACLNN_ERR_PARAM_NULLPTR</td>
       <td class="tg-0pky">161001</td>
-      <td class="tg-0pky">传入的self、target、gradOut或gradInput为空指针。</td>
+      <td class="tg-0pky">传入的self、target、gradOutput或gradInput为空指针。</td>
     </tr>
     <tr>
       <td class="tg-0pky" rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
       <td class="tg-0pky" rowspan="4">161002</td>
-      <td class="tg-0pky">self、target、gradOut或gradInput的数据类型不在支持的范围之内。</td>
+      <td class="tg-0pky">self、target、gradOutput或gradInput的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td class="tg-0pky">self、target、gradOut或gradInput的shape不符合约束。</td>
+      <td class="tg-0pky">self、target、gradOutput或gradInput的shape不符合约束。</td>
     </tr>
     <tr>
       <td class="tg-0pky">reduction不符合约束。</td>
@@ -331,26 +331,26 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
   // 2. 构造输入与输出，需要根据API的接口自定义构造
-  std::vector<int64_t> gradOutShape = {4, 2};
+  std::vector<int64_t> gradOutputShape = {4, 2};
   std::vector<int64_t> selfShape = {4, 2};
   std::vector<int64_t> targetShape = {4, 2};
   std::vector<int64_t> gradInputShape = {4, 2};
   int64_t reduction = 0;
   float beta = 1.0;
-  void* gradOutDeviceAddr = nullptr;
+  void* gradOutputDeviceAddr = nullptr;
   void* selfDeviceAddr = nullptr;
   void* targetDeviceAddr = nullptr;
   void* gradInputDeviceAddr = nullptr;
-  aclTensor* gradOut = nullptr;
+  aclTensor* gradOutput = nullptr;
   aclTensor* self = nullptr;
   aclTensor* target = nullptr;
   aclTensor* gradInput = nullptr;
-  std::vector<float> gradOutHostData = {1, 1, 1, 1, 1, 1, 1, 1};
+  std::vector<float> gradOutputHostData = {1, 1, 1, 1, 1, 1, 1, 1};
   std::vector<float> selfHostData = {0, 1, 2, 3, 4, 5, 6, 7};
   std::vector<float> targetHostData = {1, 1, 1, 1, 1, 1, 1, 1};
   std::vector<float> gradInputHostData(8, 0);
-  // 创建gradOut aclTensor
-  ret = CreateAclTensor(gradOutHostData, gradOutShape, &gradOutDeviceAddr, aclDataType::ACL_FLOAT, &gradOut);
+  // 创建gradOutput aclTensor
+  ret = CreateAclTensor(gradOutputHostData, gradOutputShape, &gradOutputDeviceAddr, aclDataType::ACL_FLOAT, &gradOutput);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建self aclTensor
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
@@ -366,7 +366,7 @@ int main() {
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
   // 调用aclnnSmoothL1LossBackward第一段接口
-  ret = aclnnSmoothL1LossBackwardGetWorkspaceSize(gradOut, self, target, reduction, beta, gradInput, &workspaceSize, &executor);
+  ret = aclnnSmoothL1LossBackwardGetWorkspaceSize(gradOutput, self, target, reduction, beta, gradInput, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSmoothL1LossBackwardGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
   void* workspaceAddr = nullptr;
@@ -393,12 +393,12 @@ int main() {
   }
 
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
-  aclDestroyTensor(gradOut);
+  aclDestroyTensor(gradOutput);
   aclDestroyTensor(self);
   aclDestroyTensor(target);
   aclDestroyTensor(gradInput);
   // 7. 释放device资源，需要根据具体API的接口定义参数
-  aclrtFree(gradOutDeviceAddr);
+  aclrtFree(gradOutputDeviceAddr);
   aclrtFree(selfDeviceAddr);
   aclrtFree(targetDeviceAddr);
   aclrtFree(gradInputDeviceAddr);

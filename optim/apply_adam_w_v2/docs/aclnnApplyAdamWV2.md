@@ -335,7 +335,8 @@ aclnnStatus aclnnApplyAdamWV2(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-- 输入张量中varRef、mRef、vRef、grad的数据类型必须一致时，数据类型支持FLOAT16、BFLOAT16、FLOAT32。
+
+- 输入张量中varRef、mRef、vRef、grad的数据类型必须一致，且数据类型支持FLOAT16、BFLOAT16、FLOAT32。
 - 输入张量中varRef、mRef、vRef、grad的shape必须保持一致。
 - 确定性计算：
   - aclnnApplyAdamWV2默认确定性实现。
