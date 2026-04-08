@@ -132,7 +132,7 @@ aclnnStatus aclnnMultilabelMarginLoss(
       <td class="tg-0lax">out（aclTensor*）</td>
       <td class="tg-0lax">输出</td>
       <td class="tg-0lax">输出的loss，公式中的ℓ(x,y)。</td>
-      <td class="tg-0lax">shape为(N)为或者()</td>
+      <td class="tg-0lax">shape为(N)或者()</td>
       <td class="tg-0lax">与self、isTarget保持一致</td>
       <td class="tg-0lax">ND</td>
       <td class="tg-0lax">0、1</td>

@@ -513,7 +513,7 @@ int main() {
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy loss result from device to host failed. ERROR: %d\n", ret); return ret);
     LOG_PRINT("loss is: \n[");
     for (int64_t i = 0; i < size1; i++) {
-        LOG_PRINT("%f, ", i, resultData1[i]);
+        LOG_PRINT("%f, ", resultData1[i]);
     }
     LOG_PRINT("]\n");
 

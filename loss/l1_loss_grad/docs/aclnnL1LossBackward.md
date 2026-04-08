@@ -33,7 +33,7 @@ aclnnStatus aclnnL1LossBackwardGetWorkspaceSize(
 ```
 
 ```Cpp
-aclnnStatus aclnnBinaryCrossEntropy(
+aclnnStatus aclnnL1LossBackward(
     void          *workspace,
     uint64_t       workspaceSize,
     aclOpExecutor *executor,

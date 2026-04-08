@@ -336,7 +336,7 @@ aclnnStatus aclnnApplyAdamWV2(
 
 ## 约束说明
 
-- 输入张量中varRef、mRef、vRef、grad的数据类型必须一致时，数据类型支持FLOAT16、BFLOAT16、FLOAT32。
+- 输入张量中varRef、mRef、vRef、grad的数据类型必须一致，且数据类型支持FLOAT16、BFLOAT16、FLOAT32。
 - 输入张量中varRef、mRef、vRef、grad的shape必须保持一致。
 - 确定性计算：
   - aclnnApplyAdamWV2默认确定性实现。
