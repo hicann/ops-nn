@@ -279,13 +279,13 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
   #define CREATE_TENSOR(hostData, shape, deviceAddr, dtype, tensor)                                        \
       ret = CreateAclTensor(hostData, shape, &deviceAddr, dtype, &tensor);                                 \
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> tensor##Ptr(tensor, aclDestroyTensor); \
-      std::unique_ptr<void, aclError (*)(void*)> deviceAddr##Ptr(xDeviceAddr, aclrtFree);                  \
+      std::unique_ptr<void, aclError (*)(void*)> deviceAddr##Ptr(deviceAddr, aclrtFree);                  \
       CHECK_RET(ret == ACL_SUCCESS, return ret)
 
   #define CREATE_SPARSE_TENSOR(hostData, weightShape, storageShape, deviceAddr, dataType, tensor)          \
       ret = CreateSparseTensor(hostData, weightShape, storageShape, &deviceAddr, dataType, &tensor);       \
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> tensor##Ptr(tensor, aclDestroyTensor); \
-      std::unique_ptr<void, aclError (*)(void*)> deviceAddr##Ptr(xDeviceAddr, aclrtFree);                  \
+      std::unique_ptr<void, aclError (*)(void*)> deviceAddr##Ptr(deviceAddr, aclrtFree);                  \
       CHECK_RET(ret == ACL_SUCCESS, return ret)
 
   int64_t GetShapeSize(const std::vector<int64_t>& shape)
