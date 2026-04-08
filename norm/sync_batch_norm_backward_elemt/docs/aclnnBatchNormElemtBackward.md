@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
-
 ## 功能说明
 
 - 接口功能：[aclnnBatchNormElemt](../../batch_norm_elemt/docs/aclnnBatchNormElemt.md)的反向计算。用于计算输入张量的元素级梯度，以便在反向传播过程中更新模型参数。
@@ -52,7 +51,7 @@ aclnnStatus aclnnBatchNormElemtBackward(
 
 ## aclnnBatchNormElemtBackwardGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -191,7 +190,7 @@ aclnnStatus aclnnBatchNormElemtBackward(
 
   - <term>Atlas 训练系列产品</term>：参数`gradOut`、`input`、`mean`、`invstd`、`weight`、`sumDy`、`sumDyXmu`、`gradInput`的数据类型不支持BFLOAT16。
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -248,7 +247,7 @@ aclnnStatus aclnnBatchNormElemtBackward(
 
 ## aclnnBatchNormElemtBackward
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -285,7 +284,7 @@ aclnnStatus aclnnBatchNormElemtBackward(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

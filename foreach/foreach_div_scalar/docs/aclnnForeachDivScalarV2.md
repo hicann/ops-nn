@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：计算张量列表x除以标量scalar。本接口相较于[aclnnForeachDivScalar](aclnnForeachDivScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口
@@ -51,7 +50,7 @@ aclnnStatus aclnnForeachDivScalarV2(
 
 ## aclnnForeachDivScalarV2GetWorkspaceSize
 
-- **参数说明**：
+- **参数说明**
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
     <col style="width: 170px">
     <col style="width: 120px">
@@ -128,8 +127,7 @@ aclnnStatus aclnnForeachDivScalarV2(
   </tbody>
   </table>
 
-
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -173,7 +171,7 @@ aclnnStatus aclnnForeachDivScalarV2(
 
 ## aclnnForeachDivScalarV2
 
-- **参数说明**：
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -210,7 +208,7 @@ aclnnStatus aclnnForeachDivScalarV2(
   </tbody>
   </table>
 
-- **返回值**：
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

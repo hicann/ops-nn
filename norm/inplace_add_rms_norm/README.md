@@ -13,7 +13,6 @@
 | <term>Kirin X90 处理器系列产品</term> | √ |
 | <term>Kirin 9030 处理器系列产品</term> | √ |
 
-
 ## 功能说明
 
 - 算子功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。AddRmsNorm算子将RmsNorm前的Add算子融合起来，减少搬入搬出操作。InplaceAddRmsNorm是一种结合了原位加法和RMS归一化的操作。
@@ -100,7 +99,8 @@
     - 所有输入参数和输出参数`x1`、`x2`的数据类型不支持BFLOAT16。
     - 在当前产品下的使用场景下，输出参数`rstd`为无效参数，输出的值不生效。
 
-- Kirin X90/Kirin 9030处理器系列产品：所有输入、输出的数据类型不支持BFLOAT16。
+  - <term>Kirin X90 处理器系列产品</term>、<term>Kirin 9030 处理器系列产品</term>：所有输入、输出的数据类型不支持BFLOAT16。
+
 ## 约束说明
 
 无

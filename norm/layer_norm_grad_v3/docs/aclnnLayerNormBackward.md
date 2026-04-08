@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     √    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
-
 ## 功能说明
 
 - 接口功能：[aclnnLayerNorm](../../layer_norm_v4/docs/aclnnLayerNorm&aclnnLayerNormWithImplMode.md)的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。
@@ -80,7 +79,7 @@ aclnnStatus aclnnLayerNormBackward(
 
 ## aclnnLayerNormBackwardGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -108,7 +107,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>gradOut（aclTensor*）</td>
       <td>输入</td>
       <td>表示反向计算的梯度Tensor，对应计算公式中的`gradOut`。</td>
-      <td><ul><li>不支持空Tensor。<li>与输入input的数据类型相同。<li>shape与input的shape相等，为[A1,...,Ai,R1,...,Rj], shape长度大于等于normalizedShape的长度。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>与输入input的数据类型相同。</li><li>shape与input的shape相等，为[A1,...,Ai,R1,...,Rj], shape长度大于等于normalizedShape的长度。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>-</td>
@@ -118,7 +117,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向计算的首个输入，对应公式中的`input`。</td>
-      <td><ul><li>不支持空Tensor。<li>与输入gradOut的数据类型相同。<li>shape与gradOut的shape相等，为[A1,...,Ai,R1,...,Rj], shape长度大于等于normalizedShape的长度。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>与输入gradOut的数据类型相同。</li><li>shape与gradOut的shape相等，为[A1,...,Ai,R1,...,Rj], shape长度大于等于normalizedShape的长度。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>-</td>
@@ -128,7 +127,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>normalizedShape（aclIntArray*）</td>
       <td>输入</td>
       <td>表示需要进行norm计算的维度，对应计算公式中的reduce_axis_1。</td>
-      <td><ul><li>公式中的reduce_axis_0为不进行norm计算的维度。<li>值为[R1,...,Rj], 长度小于等于输入input的shape长度，不支持为空。</li></ul></td>
+      <td><ul><li>公式中的reduce_axis_0为不进行norm计算的维度。</li><li>值为[R1,...,Rj], 长度小于等于输入input的shape长度，不支持为空。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -148,7 +147,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>rstd（aclTensor*）</td>
       <td>输入</td>
       <td>正向计算的第三个输出，表示input的标准差的倒数，对应计算公式中的rstd。</td>
-      <td><ul><li>不支持空Tensor。<li>与输入mean的数据类型相同且位宽不低于输入input的数据类型位宽。<li>shape与mean的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>与输入mean的数据类型相同且位宽不低于输入input的数据类型位宽。</li><li>shape与mean的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>-</td>
@@ -158,7 +157,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>weightOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选参数，表示权重，对应计算公式中的weightOptional。</td>
-      <td><ul><li>不支持空Tensor。<li>weightOptional非空时，数据类型与输入input一致或为FLOAT类型，且当biasOptional存在时与biasOptional的数据类型相同。<li>weightOptional为空时，需要构造一个shape为[R1,...,Rj]，数据类型与输入input相同，数据全为1的Tensor。<li>shape与normalizedShape相等，为[R1,...,Rj]。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>weightOptional非空时，数据类型与输入input一致或为FLOAT类型，且当biasOptional存在时与biasOptional的数据类型相同。</li><li>weightOptional为空时，需要构造一个shape为[R1,...,Rj]，数据类型与输入input相同，数据全为1的Tensor。</li><li>shape与normalizedShape相等，为[R1,...,Rj]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>-</td>
@@ -168,7 +167,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>biasOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选参数，表示偏置。</td>
-      <td><ul><li>不支持空Tensor。<li>biasOptional非空时，数据类型与输入input一致或为FLOAT类型，且当weightOptional存在时与weightOptional的数据类型相同。<li>biasOptional为空时，不做任何处理。<li>shape与normalizedShape相等，为[R1,...,Rj]。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>biasOptional非空时，数据类型与输入input一致或为FLOAT类型，且当weightOptional存在时与weightOptional的数据类型相同。</li><li>biasOptional为空时，不做任何处理。</li><li>shape与normalizedShape相等，为[R1,...,Rj]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>-</td>
@@ -178,7 +177,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>outputMask（aclBoolArray*）</td>
       <td>输入</td>
       <td>表示输出的掩码。</td>
-      <td><ul><li>长度固定为3。<li>取值为True时表示对应位置的输出非空。</li></ul></td>
+      <td><ul><li>长度固定为3。</li><li>取值为True时表示对应位置的输出非空。</li></ul></td>
       <td>BoolArray</td>
       <td>-</td>
       <td>-</td>
@@ -241,7 +240,7 @@ aclnnStatus aclnnLayerNormBackward(
   
     参数`gradOut`、`input`、`mean`、`rstd`、`weightOptional`、`biasOptional`、`gradInputOut`、`gradWeightOut`、`gradBiasOut`的数据类型不支持BFLOAT16。
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -313,7 +312,7 @@ aclnnStatus aclnnLayerNormBackward(
 
 ## aclnnLayerNormBackward
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -350,7 +349,7 @@ aclnnStatus aclnnLayerNormBackward(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -597,4 +596,3 @@ int main()
     return 0;
 }
 ```
-

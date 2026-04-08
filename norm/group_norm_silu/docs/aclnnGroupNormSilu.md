@@ -13,7 +13,6 @@
 | <term>Atlas 推理系列产品</term>                             |    √     |
 | <term>Atlas 训练系列产品</term>                              |    ×     |
 
-
 ## 功能说明
 
 - 接口功能：计算输入self的组归一化结果groupnormOut，均值meanOut，标准差的倒数rstdOut，将groupnormOut进行silu运算得到最终的输出out。
@@ -62,7 +61,7 @@ aclnnStatus aclnnGroupNormSilu(
 
 ## aclnnGroupNormSiluGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
 <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
     <col style="width: 120px">
@@ -192,7 +191,7 @@ aclnnStatus aclnnGroupNormSilu(
 
 <term>Ascend 950PR/Ascend 950DT</term>：meanOut和rstdOut数据类型要求与gamma和beta相同。
 
-- **返回值：**
+- **返回值**
 
  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -228,7 +227,7 @@ aclnnStatus aclnnGroupNormSilu(
 
 ## aclnnGroupNormSilu
 
-- **参数说明：**
+- **参数说明**
 
 <table>
 <thead>
@@ -261,11 +260,12 @@ aclnnStatus aclnnGroupNormSilu(
     </tr>
 </tbody></table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算：aclnnGroupNormSilu默认确定性实现。
 
 - 输入shape限制：
@@ -479,4 +479,3 @@ int main() {
   return 0;
 }
 ```
-

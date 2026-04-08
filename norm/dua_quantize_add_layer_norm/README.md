@@ -11,7 +11,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 算子功能：DuaQuantizeAddLayerNorm是一个复杂的计算，结合了量化、加法和层归一化（Layer Normalization）的功能。
@@ -122,7 +121,7 @@
     <tr>
       <td>dtype</td>
       <td>必选属性</td>
-      <ul><li>指定量化后的输出张量y的数据类型。</li><li>没有默认值。</li></ul></td>
+      <td><ul><li>指定量化后的输出张量y的数据类型。</li><li>没有默认值。</li></ul></td>
       <td>INT</td>
       <td>-</td>
     </tr>

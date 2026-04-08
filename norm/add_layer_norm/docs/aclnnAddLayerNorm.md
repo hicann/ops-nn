@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     √    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：实现AddLayerNorm功能。
@@ -64,7 +63,7 @@ aclnnStatus aclnnAddLayerNorm(
 
 ## aclnnAddLayerNormGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -225,7 +224,7 @@ aclnnStatus aclnnAddLayerNorm(
     - 参数`x1`、`x2`、`beta`、`gamma`、`biasOptional`、`yOut`、`xOut`的数据类型不支持BFLOAT16。
     - 参数`meanOut`、`rstdOut`在当前产品使用场景下无效。
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -285,10 +284,9 @@ aclnnStatus aclnnAddLayerNorm(
     </tr>
   </tbody></table>
 
-
 ## aclnnAddLayerNorm
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -325,8 +323,7 @@ aclnnStatus aclnnAddLayerNorm(
   </tbody>
   </table>
 
-
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -346,6 +343,7 @@ aclnnStatus aclnnAddLayerNorm(
   - 当输入是NaN时，输出为NaN。
 - **各产品支持数据类型说明**
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+    
     | x1数据类型 | x2数据类型 | gamma数据类型 | beta数据类型 | biasOptional数据类型 | yOut数据类型 | meanOut数据类型 | rstdOut数据类型 | xOut数据类型 |
     | -------- | -------- | ------------- | ------------- | ----------- | --------- | --------- | --------- | :-------- |
     | FLOAT32  | FLOAT16  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  |
@@ -357,11 +355,14 @@ aclnnStatus aclnnAddLayerNorm(
     | FLOAT16  | FLOAT16  | FLOAT16  | FLOAT16  | FLOAT16  | FLOAT16  | FLOAT32  | FLOAT32  | FLOAT16  |
     | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | FLOAT32  | FLOAT32  | BFLOAT16 |
     | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  |
+
   - <term>Atlas 推理系列产品</term>：
+    
     | x1数据类型 | x2数据类型 | gamma数据类型 | beta数据类型 | biasOptional数据类型 | yOut数据类型 | meanOut数据类型 | rstdOut数据类型 | xOut数据类型 |
     | -------- | -------- | ------------- | ------------- | ----------- | --------- | --------- | --------- | :-------- |
     | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 |
     | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | FLOAT16 |
+
 - 确定性计算：
   - aclnnAddLayerNorm默认确定性实现。
 

@@ -13,7 +13,6 @@
 |  <term>Kirin X90 处理器系列产品</term> | √ |
 |  <term>Kirin 9030 处理器系列产品</term> | √ |
 
-
 ## 功能说明
 
 - 算子功能：对输入张量列表的每个张量与张量scalar执行相乘运算。
@@ -79,7 +78,8 @@
   - 当`x`的数据类型为FLOAT16时，`scalar`数据类型支持FLOAT16、FLOAT32。
   - `x`支持包含的最大Tensor个数为50。
 
-- Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
+- <term>Kirin X90 处理器系列产品</term>、<term>Kirin 9030 处理器系列产品</term>：不支持BFLOAT16。
+
 ## 约束说明
 
 无

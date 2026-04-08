@@ -13,7 +13,6 @@
 |  <term>Kirin X90 处理器系列产品</term> | √ |
 |  <term>Kirin 9030 处理器系列产品</term> | √ |
 
-
 ## 功能说明
 
 - 算子功能：对输入的两个张量列表执行逐元素相减运算，并可以通过alpha参数调整相减系数。
@@ -78,7 +77,8 @@
     </tr>
   </tbody></table>
 
-- Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
+- <term>Kirin X90 处理器系列产品</term>、<term>Kirin 9030 处理器系列产品</term>：不支持BFLOAT16。
+
 ## 约束说明
 
 无

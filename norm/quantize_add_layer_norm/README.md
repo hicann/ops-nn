@@ -13,7 +13,6 @@
 |  <term>Kirin X90 处理器系列产品</term> | √ |
 |  <term>Kirin 9030 处理器系列产品</term> | √ |
 
-
 ## 功能说明
 
 - 算子功能：是一种结合了量化、加法和层归一化的操作。依次完成以下操作：
@@ -151,10 +150,11 @@
     </tr>
   </tbody></table>
 
-- Kirin X90/Kirin 9030处理器系列产品：
+- <term>Kirin X90 处理器系列产品</term>、<term>Kirin 9030 处理器系列产品</term>：
   - 所有输入、输出的数据类型不支持BFLOAT16。
   - scales的数据类型不支持FLOAT16、BFLOAT16。
   - zero_points1的数据类型不支持FLOAT16。
+
 ## 约束说明
 
 无

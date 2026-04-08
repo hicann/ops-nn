@@ -65,7 +65,7 @@ aclnnStatus aclnnGroupNormSwish(
 
 ## aclnnGroupNormSwishGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
     <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
       <col style="width: 120px">
       <col style="width: 120px">
@@ -92,7 +92,7 @@ aclnnStatus aclnnGroupNormSwish(
           <td>x</td>
           <td>输入</td>
           <td>待组归一化的目标张量，yOut计算公式中的x。</td>
-          <td><ul><li>不支持空tensor。</li><li>维度支持2D到8D，1维为N，第2维为C，要求x第0维和第1维大于0，第1维要求能被group整除。</td>
+          <td><ul><li>不支持空tensor。</li><li>维度支持2D到8D，1维为N，第2维为C，要求x第0维和第1维大于0，第1维要求能被group整除。</li></ul></td>
           <td>FLOAT16、FLOAT、BFLOAT16</td>
           <td>ND</td>
           <td>2-8</td>
@@ -102,7 +102,7 @@ aclnnStatus aclnnGroupNormSwish(
           <td>gamma</td>
           <td>输入</td>
           <td>组归一化中的gamma参数，yOut计算公式中的γ。</td>
-          <td><ul><li>不支持空tensor。</li><li>元素数量需与输入x的第1维度相同，gamma与beta的数据类型必须保持一致，且数据类型与x相同或者为FLOAT。</td>
+          <td><ul><li>不支持空tensor。</li><li>元素数量需与输入x的第1维度相同，gamma与beta的数据类型必须保持一致，且数据类型与x相同或者为FLOAT。</li></ul></td>
           <td>FLOAT16、FLOAT、BFLOAT16</td>
           <td>ND</td>
           <td>1</td>
@@ -112,7 +112,7 @@ aclnnStatus aclnnGroupNormSwish(
           <td>beta</td>
           <td>输入</td>
           <td>组归一化中的 beta 参数，yOut计算公式中的β。</td>
-          <td><ul><li>不支持空tensor。</li><li>元素数量需与输入x的第1维度相同，gamma与beta的数据类型必须保持一致，且数据类型与x相同或者为FLOAT。</td>
+          <td><ul><li>不支持空tensor。</li><li>元素数量需与输入x的第1维度相同，gamma与beta的数据类型必须保持一致，且数据类型与x相同或者为FLOAT。</li></ul></td>
           <td>FLOAT16、FLOAT、BFLOAT16</td>
           <td>ND</td>
           <td>2</td>
@@ -220,7 +220,7 @@ aclnnStatus aclnnGroupNormSwish(
       </tr>
       </tbody></table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -253,7 +253,7 @@ aclnnStatus aclnnGroupNormSwish(
 
 ## aclnnGroupNormSwish
 
-- **参数说明：**
+- **参数说明**
   <table>
   <thead>
       <tr>
@@ -285,7 +285,7 @@ aclnnStatus aclnnGroupNormSwish(
       </tr>
   </tbody></table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -490,4 +490,3 @@ int main() {
   return 0;
 }
 ```
-

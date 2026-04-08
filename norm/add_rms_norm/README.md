@@ -13,7 +13,6 @@
 |  <term>Kirin X90 处理器系列产品</term> | √ |
 |  <term>Kirin 9030 处理器系列产品</term> | √ |
 
-
 ## 功能说明
 
 - 算子功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。AddRmsNorm算子将RmsNorm前的Add算子融合起来，减少搬入搬出操作。
@@ -26,7 +25,6 @@
   $$
   \operatorname{RmsNorm}(x_i)=\frac{x_i}{\operatorname{Rms}(\mathbf{x})} g_i, \quad \text { where } \operatorname{Rms}(\mathbf{x})=\sqrt{\frac{1}{n} \sum_{i=1}^n x_i^2+eps}
   $$
-
 
 ## 参数说明
 
@@ -99,7 +97,8 @@
 
   - <term>Atlas 推理系列产品</term>：参数`x1`、`x2`、`gamma`、`y`、`x`的数据类型不支持BFLOAT16。
 
-- Kirin X90/Kirin 9030处理器系列产品：x1、x2、gamma、y和x的数据类型不支持BFLOAT16。
+  - <term>Kirin X90 处理器系列产品</term>、<term>Kirin 9030 处理器系列产品</term>：x1、x2、gamma、y和x的数据类型不支持BFLOAT16。
+
 ## 约束说明
 
 无

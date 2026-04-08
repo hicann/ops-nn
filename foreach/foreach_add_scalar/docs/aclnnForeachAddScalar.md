@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：将指定的张量值加到张量列表中的每个张量中。
@@ -52,7 +51,7 @@ aclnnStatus aclnnForeachAddScalar(
 
 ## aclnnForeachAddScalarGetWorkspaceSize
 
-- **参数说明**：
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -141,7 +140,7 @@ aclnnStatus aclnnForeachAddScalar(
       - 当`x`的数据类型为BFLOAT16时，数据类型支持FLOAT32。
       - 当`x`的数据类型为FLOAT16时，数据类型支持FLOAT16、FLOAT32。
 
-- **返回值**：
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -191,7 +190,7 @@ aclnnStatus aclnnForeachAddScalar(
 
 ## aclnnForeachAddScalar
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -228,7 +227,7 @@ aclnnStatus aclnnForeachAddScalar(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

@@ -13,7 +13,6 @@
 |  <term>Kirin X90 处理器系列产品</term> | √ |
 |  <term>Kirin 9030 处理器系列产品</term> | √ |
 
-
 ## 功能说明
 
 - 算子功能：将输入Tensor执行一个反量化的计算，再根据输入的weight、bias、epsilon执行归一化，最后根据输出的outputScale以及outputZeroPoint执行量化。
@@ -61,6 +60,7 @@
       <td>模型输入的量化后的数据，对应公式中的`x`。</td>
       <td>INT8、UINT8、INT32</td>
       <td>NCHW</td>
+    </tr>
     <tr>
       <td>mean</td>
       <td>输入</td>
@@ -133,7 +133,8 @@
     </tr>
   </tbody></table>
 
-- Kirin X90/Kirin 9030处理器系列产品：output_zero_point的数据类型只支持INT32。
+- <term>Kirin X90 处理器系列产品</term>、<term>Kirin 9030 处理器系列产品</term>：output_zero_point的数据类型只支持INT32。
+
 ## 约束说明
 
 无

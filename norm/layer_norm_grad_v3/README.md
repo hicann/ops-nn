@@ -11,7 +11,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 算子功能：[LayerNormV4](../layer_norm_v4/README.md)的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。 
@@ -129,7 +128,6 @@
       <td>ND</td>
     </tr>
   </tbody></table>
-
 
 ## 约束说明
 

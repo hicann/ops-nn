@@ -132,7 +132,8 @@
     </tr>
   </tbody></table>
 
-- Kirin X90/Kirin 9030处理器系列产品：所有输入、输出的数据类型不支持BFLOAT16。
+- <term>Kirin X90 处理器系列产品</term>、<term>Kirin 9030 处理器系列产品</term>：所有输入、输出的数据类型不支持BFLOAT16。
+
 ## 约束说明
 
 无

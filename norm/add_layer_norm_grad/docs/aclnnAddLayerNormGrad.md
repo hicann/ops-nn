@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     √    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：LayerNorm是一种归一化方法，可以将网络层输入数据归一化到[0, 1]之间。LayerNormGrad算子是深度学习中用于反向传播阶段的一个关键算子，主要用于计算LayerNorm操作的梯度。AddLayerNormGrad算子是将Add和LayerNormGrad融合起来，减少搬入搬出操作。
@@ -128,8 +127,7 @@ aclnnStatus aclnnAddLayerNormGrad(
 
 ## aclnnAddLayerNormGradGetWorkspaceSize
 
-- **参数说明：**
-
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -278,8 +276,7 @@ aclnnStatus aclnnAddLayerNormGrad(
 
   - <term>Atlas 推理系列产品</term>：参数`dy`、`x1`、`x2`、`gamma`、`dsumOptional`、`dxOut`的数据类型不支持BFLOAT16。
 
-
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -312,7 +309,7 @@ aclnnStatus aclnnAddLayerNormGrad(
 
 ## aclnnAddLayerNormGrad
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -349,7 +346,7 @@ aclnnStatus aclnnAddLayerNormGrad(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

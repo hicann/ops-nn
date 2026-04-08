@@ -11,7 +11,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 算子功能：GroupNorm用于计算输入张量的组归一化结果，均值，标准差的倒数，该算子是对GroupNorm的反向计算。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。
@@ -30,7 +29,6 @@
   dy - \frac{1}{N}  (d\beta + \hat{x} \cdot d\gamma)
   \end{bmatrix}
   $$
-
 
 ## 参数说明
 

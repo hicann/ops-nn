@@ -13,7 +13,6 @@
 |  <term>Kirin X90 处理器系列产品</term> | √ |
 |  <term>Kirin 9030 处理器系列产品</term> | √ |
 
-
 ## 功能说明
 
 - 算子功能：RmsNorm是大模型常用的标准化操作，相比LayerNorm，其去掉了减去均值的部分。AddRmsNormQuant算子将RmsNorm前的Add算子以及RmsNorm归一化的输出给到1个或2个Quantize算子融合起来，减少搬入搬出操作。
@@ -172,11 +171,12 @@
 
   - <term>Ascend 950PR/Ascend 950DT</term>：可选输入beta不支持配置。
 
-- Kirin X90/Kirin 9030处理器系列产品：
-  - x1、x2、gamma、beta和x的数据类型只支持FLOAT16。
-  - scales1和scales2的数据类型只支持FLOAT32。
-  - zero_points1和zero_points2的数据类型只支持INT32。
-  - y1和y2的数据类型只支持INT8。
+  - <term>Kirin X90 处理器系列产品</term>、<term>Kirin 9030 处理器系列产品</term>：
+    - x1、x2、gamma、beta和x的数据类型只支持FLOAT16。
+    - scales1和scales2的数据类型只支持FLOAT32。
+    - zero_points1和zero_points2的数据类型只支持INT32。
+    - y1和y2的数据类型只支持INT8。
+
 ## 约束说明
 
 <term>Atlas 推理系列产品</term>：`x1`、`x2`需要norm的维度数据个数不能小于32。`gamma`、`beta`、`scales1`、`scales2`、`zero_points1`、`zero_points2`的数据个数不能小于32。

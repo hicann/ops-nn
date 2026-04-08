@@ -13,7 +13,6 @@
 |  <term>Kirin X90 处理器系列产品</term> | √ |
 |  <term>Kirin 9030 处理器系列产品</term> | √ |
 
-
 ## 功能说明
 
 - 算子功能：先对张量列表x2和张量列表x3执行逐元素乘法，再乘以张量scalar，最后将之前计算的结果与张量列表x1执行逐元素相加。
@@ -91,7 +90,8 @@
   - 当`x1`的数据类型为BFLOAT16时，`scalar`数据类型支持FLOAT32。
   - 当`x1`的数据类型为FLOAT16时，`scalar`数据类型支持FLOAT16, FLOAT32。
 
-- Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
+- <term>Kirin X90 处理器系列产品</term>、<term>Kirin 9030 处理器系列产品</term>：不支持BFLOAT16。
+
 ## 约束说明
 
 无

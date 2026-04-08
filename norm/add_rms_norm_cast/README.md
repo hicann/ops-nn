@@ -13,7 +13,6 @@
 |  <term>Kirin X90 处理器系列产品</term> | √ |
 |  <term>Kirin 9030 处理器系列产品</term> | √ |
 
-
 ## 功能说明
 
 - 算子功能：RmsNorm算子是大模型常用的归一化操作，AddRmsNormCast算子将AddRmsNorm后的Cast算子融合起来，减少搬入搬出操作。
@@ -77,13 +76,14 @@
       <td>FLOAT32</td>
       <td>-</td>
     </tr>
+    <tr>
       <td>y1</td>
       <td>输出</td>
       <td>归一化后经过类型转换的输出数据，公式中的输出`y1`。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
-    </tr>
+    <tr>
       <td>y2</td>
       <td>输出</td>
       <td>归一化后的输出数据，公式中的输出`y2`。</td>
@@ -106,7 +106,8 @@
     </tr>
   </tbody></table>
 
-- Kirin X90/Kirin 9030处理器系列产品：x1、x2、gamma、y2和x的数据类型不支持BFLOAT16。
+- <term>Kirin X90 处理器系列产品</term>、<term>Kirin 9030 处理器系列产品</term>：x1、x2、gamma、y2和x的数据类型不支持BFLOAT16。
+
 ## 约束说明
 
 无

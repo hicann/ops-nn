@@ -13,8 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
-
 ## 功能说明
 
 - 接口功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuant算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。
@@ -111,7 +109,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
 
 ## aclnnAddRmsNormDynamicQuantGetWorkspaceSize
 
-- **参数说明**：
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
     <col style="width: 170px">
@@ -271,7 +269,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
     - 出参`y1Out`、`y2Out`仅支持INT8。
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
@@ -304,7 +302,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
 
 ## aclnnAddRmsNormDynamicQuant
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -341,7 +339,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码。（具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)）
 
@@ -358,11 +356,14 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
 - **各产品型号支持数据类型说明**
 
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
+   
     | `x1`数据类型 | `x2`数据类型 | `gamma`数据类型 | `smoothScale1Optional`数据类型 | `smoothScale2Optional`数据类型 | `y1Out`数据类型 | `y2Out`数据类型 | `xOut`数据类型 | `scale1Out`数据类型 | `scale2Out`数据类型 |
     | ----------- | ----------- | -------------- | ----------------------------- | ----------------------------- | -------------- | -------------- | ------------------ | ------------------ | ------------------ |
     | FLOAT16     | FLOAT16     | FLOAT16        | FLOAT16                       | FLOAT16                       | INT8           | INT8           | FLOAT16            | FLOAT32            | FLOAT32            |
     | BFLOAT16    | BFLOAT16    | BFLOAT16       | BFLOAT16                      | BFLOAT16                      | INT8           | INT8           | BFLOAT16            | FLOAT32            | FLOAT32            |
+
   - <term>Ascend 950PR/Ascend 950DT</term>：
+    
     | `x1`数据类型 | `x2`数据类型 | `gamma`数据类型 | `smoothScale1Optional`数据类型 | `smoothScale2Optional`数据类型 | `y1Out`数据类型 | `y2Out`数据类型 | `xOut`数据类型 | `scale1Out`数据类型 | `scale2Out`数据类型 |
     | ----------- | ----------- | -------------- | ----------------------------- | ----------------------------- | -------------- | -------------- | ------------------ | ------------------ | ------------------ |
     | FLOAT16     | FLOAT16     | FLOAT16        | FLOAT16                       | FLOAT16                       | INT8           | INT8           | FLOAT16            | FLOAT32            | FLOAT32            |

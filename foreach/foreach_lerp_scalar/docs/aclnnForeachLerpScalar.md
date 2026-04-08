@@ -13,7 +13,6 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：对两个张量列表对应位置元素执行插值计算，其中标量weight是插值系数。
@@ -52,7 +51,7 @@ aclnnStatus aclnnForeachLerpScalar(
 
 ## aclnnForeachLerpScalarGetWorkspaceSize
 
-- **参数说明**：
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -146,7 +145,7 @@ aclnnStatus aclnnForeachLerpScalar(
     
     参数`x1`、`x2`、`out`的shape size保持一致。支持包含的最大Tensor个数为50。
 
-- **返回值**：
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -193,7 +192,7 @@ aclnnStatus aclnnForeachLerpScalar(
 
 ## aclnnForeachLerpScalar
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -230,7 +229,7 @@ aclnnStatus aclnnForeachLerpScalar(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
