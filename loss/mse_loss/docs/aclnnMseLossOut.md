@@ -51,7 +51,7 @@ aclnnStatus aclnnMseLossOutGetWorkspaceSize(
 ```
 
 ```Cpp
-aclnnStatus aclnnLaclnnMseLossOut1Loss(
+aclnnStatus aclnnMseLossOut(
     void            *workspace,
     uint64_t         workspaceSize,
     aclOpExecutor   *executor,

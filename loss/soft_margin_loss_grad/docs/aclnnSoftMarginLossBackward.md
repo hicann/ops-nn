@@ -80,7 +80,7 @@ aclnnStatus aclnnSoftMarginLossBackward(
         <td class="tg-0pky">self（aclTensor*）</td>
         <td class="tg-0pky">输入</td>
         <td class="tg-0pky">输入张量。</td>
-        <td class="tg-0pky">shape需要与gradOutput、target满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>数据类型与gradOut、target的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
+        <td class="tg-0pky">shape需要与gradOutput、target满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>数据类型与gradOutput、target的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
         <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
         <td class="tg-0pky">ND</td>
         <td class="tg-0pky">1-8</td>
@@ -90,7 +90,7 @@ aclnnStatus aclnnSoftMarginLossBackward(
         <td class="tg-0pky">target（aclTensor*）</td>
         <td class="tg-0pky">输入</td>
         <td class="tg-0pky">真实的标签，公式中的输入y。</td>
-        <td class="tg-0pky">shape需要与gradOutput、self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>数据类型与gradOut、target的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
+        <td class="tg-0pky">shape需要与gradOutput、self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>数据类型与gradOutput、target的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
         <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
         <td class="tg-0pky">ND</td>
         <td class="tg-0pky">1-8</td>
@@ -110,7 +110,7 @@ aclnnStatus aclnnSoftMarginLossBackward(
         <td class="tg-0pky">out（aclTensor*）</td>
         <td class="tg-0pky">输出</td>
         <td class="tg-0pky">计算输出。</td>
-        <td class="tg-0pky">shape为gradOut，self，target的<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>结果。</td>
+        <td class="tg-0pky">shape为gradOutput，self，target的<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>结果。</td>
         <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
         <td class="tg-0pky">ND</td>
         <td class="tg-0pky">1-8</td>
