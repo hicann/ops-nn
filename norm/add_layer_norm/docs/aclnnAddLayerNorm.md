@@ -141,7 +141,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>epsilon（double）</td>
       <td>输入</td>
       <td>表示添加到分母中的值，以确保数值稳定。对应公式中的`epsilon`。</td>
-      <td>取值仅支持1e-5。</td>
+      <td><ul><li>推荐取值：1e-5。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
