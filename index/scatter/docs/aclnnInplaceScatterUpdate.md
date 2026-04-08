@@ -99,7 +99,7 @@ aclnnStatus aclnnInplaceScatterUpdate(
         <td>输入/输出</td>
         <td>待更新的tensor。</td>
         <td>维度数需要与updates一致，不支持空Tensor。</td>
-        <td>INT8、UINT8、FLOAT16、FLOAT32、INT32、BFLOAT16、FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT8_E8M0、HIFLOAT8</td>
+        <td>INT8、UINT8、FLOAT16、FLOAT32、INT32、BFLOAT16、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8</td>
         <td>ND</td>
         <td>2-8</td>
         <td>√</td>
@@ -119,7 +119,7 @@ aclnnStatus aclnnInplaceScatterUpdate(
         <td>输入</td>
         <td>存储更新数据的tensor。</td>
         <td>数据类型需要与data相同，shape的维度数需要与data shape的维度数相同。不支持空Tensor。</td>
-        <td>INT8、UINT8、FLOAT16、FLOAT32、INT32、BFLOAT16、FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT8_E8M0、HIFLOAT8</td>
+        <td>INT8、UINT8、FLOAT16、FLOAT32、INT32、BFLOAT16、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8</td>
         <td>ND</td>
         <td>2-8</td>
         <td>√</td>
@@ -157,7 +157,7 @@ aclnnStatus aclnnInplaceScatterUpdate(
     </tbody></table>
 
     - <term>Atlas 训练系列产品</term>：数据类型不支持UINT8、BFLOAT16。
-    - <term>Ascend 950PR/Ascend 950DT</term>：FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT8_E8M0、HIFLOAT8等数据类型仅在该型号支持。
+    - <term>Ascend 950PR/Ascend 950DT</term>：FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8等数据类型仅在该型号支持。
 
 - **返回值**
 
