@@ -95,7 +95,7 @@ static bool CheckShape(const aclTensor* selfTensor, const aclTensor* otherTensor
     const op::Shape self = selfTensor->GetViewShape();
     const op::Shape other = otherTensor->GetViewShape();
     const op::Shape out = outTensor->GetViewShape();
-    if ((other[1] == 1 || other[2] == 1) && otherTensor->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+    if ((other[SECOND_DIM] == 1 || other[THIRD_DIM] == 1) && otherTensor->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis or n-axis can not be 1.");
         return false;
     }
