@@ -155,7 +155,8 @@
         $$
 
       - x1，x2为INT8，无x1Scale，x2Scale为INT64/UINT64，可选参数bias为INT32；
-      或x1，x2为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8，无x1Scale，x2Scale为INT64/UINT64，可选参数bias为FLOAT32：
+      或x1，x2为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8，无x1Scale，x2Scale为INT64/UINT64，可选参数bias为FLOAT32；
+      或x1，x2为INT4，无x1Scale，x2Scale为INT64/UINT64，可选参数bias为INT32：
 
         $$
         out = (x1@x2 + bias) * x2Scale
@@ -180,14 +181,17 @@
     <summary><term><strong>K-C && K-T量化模式</strong></term></summary>
 
       - x1，x2为INT8，x1Scale为FLOAT32，x2Scale为BFLOAT16/FLOAT32，可选参数bias为INT32；
-      或x1，x2为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8，x1Scale为FLOAT32，x2Scale为FLOAT32，可选参数bias为FLOAT32：
+      或x1，x2为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8，x1Scale为FLOAT32，x2Scale为FLOAT32，可选参数bias为FLOAT32；
+      或x1，x2为INT4，x1Scale为FLOAT32，x2Scale为BFLOAT16/FLOAT32，可选参数bias为INT32：
 
         $$
         out = (x1@x2 + bias) * x2Scale * x1Scale
         $$
 
       - x1，x2为INT8，x1Scale为FLOAT32，x2Scale为BFLOAT16/FLOAT32，可选参数bias为BFLOAT16/FLOAT32；
-      或x1，x2为INT8，x1Scale为FLOAT32，x2Scale为FLOAT32，可选参数bias为FLOAT16/FLOAT32：
+      或x1，x2为INT8，x1Scale为FLOAT32，x2Scale为FLOAT32，可选参数bias为FLOAT16/FLOAT32；
+      或x1，x2为INT4，x1Scale为FLOAT32，x2Scale为BFLOAT16/FLOAT32，可选参数bias为BFLOAT16/FLOAT32；
+      或x1，x2为INT4，x1Scale为FLOAT32，x2Scale为FLOAT32，可选参数bias为FLOAT16/FLOAT32：
 
         $$
         out = x1@x2 * x2Scale * x1Scale + bias
@@ -748,6 +752,7 @@ aclnnStatus aclnnQuantMatmulV5(
 - **公共约束：**
   <a id="公共约束2"></a>
   
+  - int4输入只支持transposeX1为false。
   - transposeX1为false时x1的shape：(batch, m, k)。transposeX1为true时x1的shape：(batch, k, m)。其中batch代表前0~4维，0维表示batch不存在。
   - transposeX2为false时x2的shape：(batch, k, n)。transposeX2为true时x2的shape：(batch, n, k)。其中batch代表前0~4维，0维表示batch不存在。k与x1的shape中的k一致。
   - 当x2Scale的原始输入类型不满足量化场景约束中组合时，需提前调用aclnnTransQuantParamV2接口来将scale转成INT64、UINT64数据类型。
@@ -759,7 +764,7 @@ aclnnStatus aclnnQuantMatmulV5(
     - 当out的shape为2、4、5、6维时，bias的shape支持1维(n,)或2维(1, n)。
     - 当out的shape为3维时，bias的shape支持1维(n,)或3维(batch, 1, n)。
   - groupSize相关约束：
-    - 仅在mx、G-B、B-B、T-CG[量化模式](../../../docs/zh/context/量化介绍.md)中生效。
+    - 仅在mx、G-B、B-B、K-G、T-CG[量化模式](../../../docs/zh/context/量化介绍.md)中生效。
     - 只有当x1Scale和x2Scale输入都是2维及以上数据时，groupSize取值有效，其他场景需传入0。
     - 传入的groupSize内部会按如下公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0，会根据x1/x2/x1Scale/x2Scale输入shape重新设置groupSizeM、groupSizeN、groupSizeK用于计算。原理：假设groupSizeM=0，表示m方向量化分组值由接口推断，推断公式为groupSizeM = m / scaleM（需保证m能被scaleM整除），其中m与x1 shape中的m一致，scaleM与x1Scale shape中的m一致。
 
@@ -803,7 +808,8 @@ aclnnStatus aclnnQuantMatmulV5(
 
     - T-T量化场景下，x1Scale的shape为(1,)或nullptr，x2Scale的shape为(1,)。
     - T-C量化场景下，x1Scale的shape为(1,)或nullptr，x2Scale的shape为(n,)，其中n与x2的n一致。
-    - x1/x2的数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8时，区分静态量化和动态量化。静态量化时x2Scale数据类型为UINT64/INT64，动态量化时x2Scale数据类型为FLOAT32；x1/x2数据类型为INT8时，不支持动态T-C或动态T-T量化。
+    - x1/x2的数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8时，区分静态量化和动态量化。静态量化时x2Scale数据类型为UINT64/INT64，动态量化时x2Scale数据类型为FLOAT32；x1/x2数据类型为INT8或INT4时，不支持动态T-C或动态T-T量化。
+    - 静态量化场景下，当x1/x2为INT4或INT32时，x1支持2-6维，x2仅支持2维。
     - 动态T-C量化场景下，不支持bias。
 
   </details>
