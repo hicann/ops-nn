@@ -37,6 +37,7 @@ public:
     DECLARE_IMPL(Config_, ConvolutionBackpropFunc, SetSingleShape, Intf);
     DECLARE_SYNC_IMPL(Config_, ConvolutionBackpropFunc, Iterate, Intf);
     DECLARE_SYNC_IMPL(Config_, ConvolutionBackpropFunc, IterateAll, Intf);
+    DECLARE_SYNC_IMPL(Config_, ConvolutionBackpropFunc, IterateAllDeterministic, Intf);
     DECLARE_SYNC_IMPL(Config_, ConvolutionBackpropFunc, GetTensorC, Intf);
     DECLARE_IMPL(Config_, ConvolutionBackpropFunc, End, Intf);
     struct ContextData : public Config::ContextData {
@@ -113,6 +114,7 @@ public:
         DEFINE_STUCT_FIELD(uint8_t, l0cPingPongFlag_);
         DEFINE_STUCT_FIELD(uint8_t, useL0PingPong_);
         DEFINE_STUCT_FIELD(uint8_t, isFirstIter_);
+        DEFINE_STUCT_FIELD(uint8_t, isDeterministic_);
         using LocalTnesor = LocalTensor<typename Intf::SrcT>;
         DEFINE_STUCT_FIELD(LocalTnesor, cacheA1BufPing_);
         DEFINE_STUCT_FIELD(LocalTnesor, cacheA1BufPong_);

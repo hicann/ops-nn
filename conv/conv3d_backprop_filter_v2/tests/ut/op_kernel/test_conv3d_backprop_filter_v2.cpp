@@ -214,9 +214,9 @@ TEST_F(conv3d_backprop_filter_v2_test, conv_03_b16) {
 }
 
 TEST_F(conv3d_backprop_filter_v2_test, conv_stdit_01_fp32) {
-    size_t shape_x = 1 * 1 * 1 * 32 * 32 * 16 * sizeof(int16_t);
+    size_t shape_x = 1 * 1 * 1 * 32 * 32 * 16 * sizeof(float);
     size_t shape_filter_size = 5 * sizeof(int32_t);
-    size_t shape_dedy = 1 * 1 * 72 * 16 * 16 * 16 * sizeof(int16_t);
+    size_t shape_dedy = 1 * 1 * 72 * 16 * 16 * 16 * sizeof(float);
     size_t shape_y = 1 * 1152 * 1 * 16 * 16 * sizeof(float);
     size_t tiling_data_size = sizeof(Conv3DBackpropFilterV2TilingData);
 

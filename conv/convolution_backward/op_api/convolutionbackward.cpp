@@ -623,52 +623,13 @@ static bool CheckV2BasicBlockSupport(const ConvBackpropParams &params) {
 }
 
 static bool IsConv3DBackpropFilterToV2WithDeterministic(const ConvBackpropParams &params) {
-  const aclTensor &kernel = *(params.weight);
   const aclTensor &outBackprop = *(params.outBackprop);
   const aclTensor &input = *(params.input);
   if (outBackprop.GetStorageShape().GetDimNum() != FORMAT_6HD_DIM ||
       input.GetStorageShape().GetDimNum() != FORMAT_6HD_DIM) {
     return false;
   }
-  const aclIntArray &padding = *(params.padding);
-  const aclIntArray &dilation = *(params.dilation);
-  if (params.groups > 1) {
-    return false;
-  }
 
-  if ((dilation[DIM_0] != 1) || (dilation[DIM_1] != 1) || (dilation[DIM_2] != 1)) {
-    return false;
-  }
-
-  auto outBackpropShape = outBackprop.GetStorageShape();
-  auto inputShape = input.GetStorageShape();
-
-  uint64_t co = outBackpropShape.GetDim(C1_DIM_NDC1HWC0_INDEX) * outBackpropShape.GetDim(C0_DIM_NDC1HWC0_INDEX);
-  uint64_t ci = inputShape.GetDim(C1_DIM_NDC1HWC0_INDEX) * inputShape.GetDim(C0_DIM_NDC1HWC0_INDEX);
-  if (((co > DETERMINISTIC_CHANNEL_16) && (co % DETERMINISTIC_CHANNEL_16 > 0)) ||
-      ((ci > DETERMINISTIC_CHANNEL_16) && (ci % DETERMINISTIC_CHANNEL_16 > 0))) {
-    return false;
-  }
-
-  auto kernelShape = kernel.GetViewShape();
-  uint64_t kd = kernelShape.GetDim(D_DIM_NCDHW_INDEX);
-  uint64_t kh = kernelShape.GetDim(H_DIM_NCDHW_INDEX);
-  uint64_t kw = kernelShape.GetDim(W_DIM_NCDHW_INDEX);
-  if ((kd > DETERMINISTIC_FILTER_V2_STRIDE_MAX_VALUE) || (kh > DETERMINISTIC_FILTER_V2_STRIDE_MAX_VALUE) ||
-      (kw > DETERMINISTIC_FILTER_V2_STRIDE_MAX_VALUE)) {
-    return false;
-  }
-  const aclIntArray &stride = *(params.stride);
-  if ((stride[DIM_0] > static_cast<int64_t>(kd)) || (stride[DIM_1] > static_cast<int64_t>(kh)) ||
-      (stride[DIM_2] > static_cast<int64_t>(kw))) {
-    return false;
-  }
-
-  if ((padding[DIM_0] * DETERMINISTIC_PADDING_COEF > kd) || (padding[DIM_1] * DETERMINISTIC_PADDING_COEF > kh) ||
-      (padding[DIM_2] * DETERMINISTIC_PADDING_COEF > kw)) {
-    return false;
-  }
-  
   return true;
 }
 
@@ -714,6 +675,16 @@ bool IsInputTransdataWhiteListCase(const ConvBackpropParams &params) {
   if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
     return false;
   }
+
+  int64_t deterministicValue = 0;
+  aclError aclRet = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
+  if (aclRet != ACL_SUCCESS) {
+    deterministicValue = 0;
+  }
+  if (static_cast<bool>(deterministicValue)) {
+    return false;
+  }
+
   vector<int64_t> caseInfo;
   ConstructCaseInfo(params, caseInfo);
   return IsConv3DV2WhiteListCase(caseInfo, CONV3D_BACKPROP_FILTER_V2_TRANSDATA_MERGE_WHITE_LIST);

@@ -74,7 +74,7 @@ __global__ __aicore__ void conv3d_backprop_filter_v2(
 #else
         op.Process();
 #endif
-    } else if (conv3DDWTemplateId == TPL_SPLIT_M_K || conv3DDWTemplateId == TPL_SPLIT_K_N || conv3DDWTemplateId == TPL_SPLIT_M_N) {
+    } else if (conv3DDWTemplateId == TPL_SPLIT_M_K || conv3DDWTemplateId == TPL_SPLIT_K_N || conv3DDWTemplateId == TPL_SPLIT_M_N || conv3DDWTemplateId == TPL_SPLIT_M_N_STREAMK) {
         Conv3dDwInitOutput<DTYPE_Y> opInitOutput;
         opInitOutput.Init(y, &tilingData);
         opInitOutput.Process();
@@ -92,6 +92,11 @@ __global__ __aicore__ void conv3d_backprop_filter_v2(
         } else if (conv3DDWTemplateId == TPL_SPLIT_M_N) {
             // 基本块Tiling模板, M和N绑核
             Conv3dDwBasicBlockSplitMN<DTYPE_X, FORMAT_X, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y> op;
+            op.Init(x, out_backprop, y, user1, &tilingData);
+            op.Process();
+        } else if (conv3DDWTemplateId == TPL_SPLIT_M_N_STREAMK) {
+            // 基本块Tiling模板, M和N绑核，且当绑核后存在尾核时，尾核继续切K维进行streamk计算
+            Conv3dDwBasicBlockSplitMNStreamK<DTYPE_X, FORMAT_X, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y> op;
             op.Init(x, out_backprop, y, user1, &tilingData);
             op.Process();
         }

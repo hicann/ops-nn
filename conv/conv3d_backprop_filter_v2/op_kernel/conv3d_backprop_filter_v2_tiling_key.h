@@ -21,18 +21,19 @@
 #define TPL_SPLIT_M_K 1 // 基本块Tiling, M和K绑核
 #define TPL_SPLIT_K_N 2 // 基本块Tiling, N和K绑核
 #define TPL_SPLIT_M_N 3 // 基本块Tiling, M和N绑核
+#define TPL_SPLIT_M_N_STREAMK 4 // 基本块Tiling, M和N绑核，且当绑核后存在尾核时，尾核继续切K维进行streamk计算
 
 // 模板参数
 ASCENDC_TPL_ARGS_DECL(Conv3dBackPropFilterV2,
     ASCENDC_TPL_UINT_DECL(conv3DDWTemplateId, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, \
-                          TPL_SPLIT_DFL, TPL_SPLIT_M_K, TPL_SPLIT_K_N, TPL_SPLIT_M_N), // LIST模式, 穷举
+                          TPL_SPLIT_DFL, TPL_SPLIT_M_K, TPL_SPLIT_K_N, TPL_SPLIT_M_N, TPL_SPLIT_M_N_STREAMK), // LIST模式, 穷举
 );
 
 // 模板参数组合
 // 用于调用GET_TPL_TILING_KEY获取TilingKey时，接口内部校验TilingKey是否合法
 ASCENDC_TPL_SEL(
     ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_RANGE, 1, TPL_SPLIT_DFL, TPL_SPLIT_M_N), // RANGE模式, 第一个值1表示范围个数1，后两个值表示范围起、终位置
+        ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_RANGE, 1, TPL_SPLIT_DFL, TPL_SPLIT_M_N_STREAMK), // RANGE模式, 第一个值1表示范围个数1，后两个值表示范围起、终位置
     ),
 );
 

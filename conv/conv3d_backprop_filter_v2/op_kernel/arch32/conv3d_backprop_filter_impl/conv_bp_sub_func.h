@@ -423,7 +423,11 @@ static __aicore__ inline void LoadL0c2Gm(
     }
     if constexpr (Intf::Config::dType::format == ConvolutionBackprop::CubeFormat::FRACTAL_Z_3D) {
         if (!enSequentialWrite) {
-            uint64_t alignCoutG = static_cast<uint64_t>(self->ctx.tiling_->cout1G) * self->ctx.tiling_->channelSize;
+            uint64_t alignCoutG = !self->ctx.isDeterministic_ ? 
+                static_cast<uint64_t>(self->ctx.tiling_->cout1G) * self->ctx.tiling_->channelSize :
+                ShiftCeilChannelSize<Intf>(self->ctx.singleShapeCout_, self->ctx.tiling_->channelSize)
+                    * self->ctx.tiling_->channelSize;
+
             uint64_t dstOffset =
                 static_cast<uint64_t>(self->ctx.curNL0Idx_) * self->ctx.tiling_->baseN * alignCoutG +
                 static_cast<uint64_t>(self->ctx.curML0Idx_) * self->ctx.tiling_->baseM * self->ctx.tiling_->channelSize;

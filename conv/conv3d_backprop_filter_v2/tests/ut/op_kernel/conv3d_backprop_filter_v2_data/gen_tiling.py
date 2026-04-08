@@ -37,11 +37,17 @@ params_info = {
     "conv_stdit_01_bf16": tiling_params,
     "c256_depthwise": c256_depthwise_tiling_params,
     "conv_net_ID_03_b16": conv_net_ID_03_b16_params,
-    "conv_03_b16": conv_03_b16_params,
+    "conv_03_b16": conv_03_b16_params
 }
 
 def main():
     params_list = params_info[sys.argv[1]]   # python gen_tiling.py case0  sys.argv[1]="case0"
+
+    # adapt to new tiling fields (streamkType/coreStreamK)
+    if len(params_list) == 62:
+        params_list = params_list + [0, 0, 0, 0, 0, 0, 0, 0]
+    elif len(params_list) == 68:
+        params_list = params_list + [0, 0]
 
     base_params = np.array(params_list[:], dtype=np.int32)
 

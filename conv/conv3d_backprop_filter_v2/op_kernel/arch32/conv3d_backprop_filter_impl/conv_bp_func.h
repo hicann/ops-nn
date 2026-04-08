@@ -30,6 +30,7 @@ DECLARE_CHECK_IMPL(SetOutBackprop);
 DECLARE_CHECK_IMPL(SetSingleShape);
 DECLARE_CHECK_SYNC_IMPL(Iterate);
 DECLARE_CHECK_SYNC_IMPL(IterateAll);
+DECLARE_CHECK_SYNC_IMPL(IterateAllDeterministic);
 DECLARE_CHECK_SYNC_IMPL(GetTensorC);
 DECLARE_CHECK_IMPL(End);
 namespace ConvolutionBackpropFunc {
@@ -157,6 +158,7 @@ __aicore__ inline void InitParams(Intf *self)
         + 1 - self->ctx.tiling_->strideH;
 
     self->ctx.isFirstIter_ = true;
+    self->ctx.isDeterministic_ = false;
     self->ctx.l0aPingPongFlag_ = 0;
     self->ctx.l0bPingPongFlag_ = 0;
     self->ctx.l0cPingPongFlag_ = 1;
@@ -610,6 +612,20 @@ struct IterateAll {
             self->template GetTensorC<sync>(output, enAtomic);
         }
         self->ctx.isFirstIter_ = true;
+    }
+};
+
+template <class Intf, bool sync>
+struct IterateAllDeterministic {
+    DECLARE_DEFAULT_OVERLOADING_FUN(Intf, ConvolutionBackpropFunc);
+    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::DstT> &output, uint8_t enAtomic)
+    {
+        self->ctx.isDeterministic_ = true;
+        while (self->template Iterate<sync>()) {
+            self->template GetTensorC<sync>(output, enAtomic);
+        }
+        self->ctx.isFirstIter_ = true;
+        self->ctx.isDeterministic_ = false;
     }
 };
 

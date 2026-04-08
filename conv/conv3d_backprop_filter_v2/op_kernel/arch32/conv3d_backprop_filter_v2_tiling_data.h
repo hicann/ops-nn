@@ -86,6 +86,8 @@ struct TConv3DDwBasicBlockTiling {
     uint32_t singleCoreM = 0;
     uint32_t singleCoreN = 0;
     uint64_t singleCoreK = 0;
+    uint32_t streamKType = 0;      // 0: NO_STREAMK_CALC, 1: STREAMK_BATCHDOUT, 2: STREAMK_HWOUT
+    uint32_t coreStreamK = 0;      // Number of K-dimension splits applied per basic block
 };
 struct Conv3DBackpropFilterV2TilingData {
     Conv3DBackpropFilterV2Params params;

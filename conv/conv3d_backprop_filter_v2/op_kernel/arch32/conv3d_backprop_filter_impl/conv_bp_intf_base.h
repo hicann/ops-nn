@@ -92,6 +92,15 @@ public:
     }
 
     template <bool sync = true>
+    __aicore__ inline void IterateAllDeterministic(const GlobalTensor<DstT> &output, uint8_t enAtomic = 0)
+    {
+        using Local = typename Ext::template IterateAllDeterministic<sync>;
+        if constexpr (CHECK_FUN(Local, ConvolutionBackpropFunc, this, output, enAtomic)) {
+            Local::call(this, output, enAtomic);
+        }
+    }
+
+    template <bool sync = true>
     __aicore__ inline void GetTensorC(
         const GlobalTensor<DstT> &output, uint8_t enAtomic = 0, bool enSequentialWrite = false)
     {

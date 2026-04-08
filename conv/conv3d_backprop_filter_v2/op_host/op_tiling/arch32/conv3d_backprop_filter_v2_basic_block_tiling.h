@@ -30,6 +30,8 @@ struct BasicBlockTilingParams
 {
     uint32_t usedCoreNum = 0;
     uint64_t totalCnt = 0;
+    uint32_t streamKType = 0;
+    uint32_t coreStreamK = 0;
     uint32_t blockBaseM = 128;
     uint32_t blockBaseN = 128;
     uint32_t blockBaseK = 128;
@@ -71,6 +73,7 @@ protected:
     ge::graphStatus DoOpTiling() override;
     // 4、计算高阶API的TilingData
     ge::graphStatus DoLibApiTiling() override;
+    ge::graphStatus GetWorkspaceSize() override;
     // 5、计算TilingKey
     uint64_t GetTilingKey() const override;
     // 6、计算Workspace 大小
@@ -80,6 +83,7 @@ protected:
     void InitBaseMNK();
     void UpdateStepMNK();
     void UpdateSingleCoreInfo();
+    void UpdateStreamK();
     void MultiCoreSplitK();
     void MultiCoreSplitMN();
     void PrintBasickBlockTilingData();
@@ -91,6 +95,14 @@ protected:
     uint64_t CalculateL1SizeGap();
     uint64_t IsCurBlockL1Invalid();
     uint64_t CalBL1Bound();
+    uint64_t GetSingleShapeKByStreamK();
+    bool IsSplitBatchDoutBetter();
+    void DoStreamkByBatchDout();
+    void DoStreamkByHWout();
+    void AdjustSingleNForStreamK();
+    void AdjustBaseNForStreamK();
+    uint64_t CalNewSingleCoreN(uint64_t totalCntWithoutN, uint64_t targetCoreNum);
+    void CheckDbL0C();
 
     BasicBlockTilingParams blockTiling_;
     MatMulInfo mmInfo_;

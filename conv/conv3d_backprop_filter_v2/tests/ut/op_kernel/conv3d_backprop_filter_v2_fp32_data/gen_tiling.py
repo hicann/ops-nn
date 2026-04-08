@@ -24,6 +24,12 @@ params_info = {
 def main():
     params_list = params_info[sys.argv[1]]   # python gen_tiling.py case0  sys.argv[1]="case0"
 
+    # adapt to new tiling fields (streamkType/coreStreamK)
+    if len(params_list) == 62:
+        params_list = params_list + [0, 0, 0, 0, 0, 0, 0, 0]
+    elif len(params_list) == 68:
+        params_list = params_list + [0, 0]
+
     base_params = np.array(params_list[:], dtype=np.int32)
 
     tiling_file = open("tiling.bin", "wb")
