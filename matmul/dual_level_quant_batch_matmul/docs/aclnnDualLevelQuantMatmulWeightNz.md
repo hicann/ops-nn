@@ -17,12 +17,12 @@
 - 计算公式
 
   $$
-  out =\sum_{i}^{level0GroupSize} x1Levl0Scale @ x2Levl0Scale \sum_{ij}^{level1GroupSize} ((x1Levl1Scale @ x1_{ij})@ (x2Levl1Scale @ x2_{ij})) + bias
+  out =\sum_{i}^{level0GroupSize} x1Level0Scale @ x2Level0Scale \sum_{ij}^{level1GroupSize} ((x1Level1Scale @ x1_{ij})@ (x2Level1Scale @ x2_{ij})) + bias
   $$
 
   - x1、x2分别为矩阵计算的左右矩阵，数据类型为FLOAT4_E2M1
-  - x1Levl0Scale、x2Levl0Scale一级量化参数，数据类型为FLOAT32
-  - x1Levl1Scale、x2Levl1Scale二级量化参数，数据类型为FLOAT8_E8M0
+  - x1Level0Scale、x2Level0Scale一级量化参数，数据类型为FLOAT32
+  - x1Level1Scale、x2Level1Scale二级量化参数，数据类型为FLOAT8_E8M0
   - bias可选参数，矩阵乘运算后累加的偏置，数据类型为FLOAT32
   - level0GroupSize为一级量化groupsize的大小，仅支持512
   - level1GroupSize为一级量化groupsize的大小，仅支持32
@@ -648,7 +648,7 @@ int AclnnDualLevelQuantMatmulWeightNz(int32_t deviceId, aclrtStream stream)
     }
     // 调用aclnnDualLevelQuantMatmulWeightNz第二段接口
     ret = aclnnDualLevelQuantMatmulWeightNz(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulV5 failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDualLevelQuantMatmulWeightNz failed. ERROR: %d\n", ret); return ret);
 
     // 4.（固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
