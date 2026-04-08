@@ -12,7 +12,7 @@
 - 算子功能：
 
   对结构化稀疏的weight矩阵进行压缩预处理，输出压缩后的稀疏矩阵以及对应的索引矩阵。
-  假设原始稀疏矩阵的每4个元素中至少有2个零，压缩后的稀疏矩阵是一个在每4个元素中过滤掉2个零的矩阵。矩阵压缩过程成生成索引矩阵，原始矩阵中的每4个元素，将在index矩阵中生成2个2位索引，并按照规则进行编码。
+  假设原始稀疏矩阵的每4个元素中至少有2个零，压缩后的稀疏矩阵是一个在每4个元素中过滤掉2个零的矩阵。矩阵压缩过程中生成索引矩阵，原始矩阵中的每4个元素，将在index矩阵中生成2个2位索引，并按照规则进行编码。
 
 ## 函数原型
 
@@ -205,13 +205,13 @@ aclnnStatus aclnnTransSparse4to2Para(
   #define CREATE_TENSOR(hostData, shape, deviceAddr, dtype, tensor)                                        \
       ret = CreateAclTensor(hostData, shape, &deviceAddr, dtype, &tensor);                                 \
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> tensor##Ptr(tensor, aclDestroyTensor); \
-      std::unique_ptr<void, aclError (*)(void*)> deviceAddr##Ptr(xDeviceAddr, aclrtFree);                  \
+      std::unique_ptr<void, aclError (*)(void*)> deviceAddr##Ptr(deviceAddr, aclrtFree);                  \
       CHECK_RET(ret == ACL_SUCCESS, return ret)
 
   #define CREATE_SPARSE_TENSOR(hostData, weightShape, storageShape, deviceAddr, dataType, tensor)          \
       ret = CreateSparseTensor(hostData, weightShape, storageShape, &deviceAddr, dataType, &tensor);       \
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> tensor##Ptr(tensor, aclDestroyTensor); \
-      std::unique_ptr<void, aclError (*)(void*)> deviceAddr##Ptr(xDeviceAddr, aclrtFree);                  \
+      std::unique_ptr<void, aclError (*)(void*)> deviceAddr##Ptr(deviceAddr, aclrtFree);                  \
       CHECK_RET(ret == ACL_SUCCESS, return ret)
 
   int64_t GetShapeSize(const std::vector<int64_t>& shape)
