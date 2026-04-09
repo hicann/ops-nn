@@ -1,0 +1,24 @@
+{
+    "Elu": {
+        "opInfo": {
+            "engine": "DNN_VM_AICPU",
+            "flagPartial": "False",
+            "computeCost": "100",
+            "flagAsync": "False",
+            "opKernelLib": "CUSTAICPUKernel",
+            "kernelSo": "libnn_aicpu_kernels.so",
+            "functionName": "RunCpuKernel",
+            "userDefined": "True",
+            "opsFlag": "OPS_FLAG_OPEN",
+            "subTypeOfInferShape": "1"
+        },
+        "input0": {
+            "type": "DT_DOUBLE,DT_FLOAT,DT_FLOAT16,DT_BF16",
+            "name": "x"
+        },
+        "output0": {
+            "type": "DT_DOUBLE,DT_FLOAT,DT_FLOAT16,DT_BF16",
+            "name": "y"
+        }
+    }
+}

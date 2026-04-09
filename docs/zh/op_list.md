@@ -53,7 +53,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>AI Core</td>
+    <td>AI Core/AI CPU</td>
     <td>对输入张量self中的每个元素x调用指数线性单元激活函数ELU，并将得到的结果存入输出张量out中。</td>
   </tr>
   <tr>
