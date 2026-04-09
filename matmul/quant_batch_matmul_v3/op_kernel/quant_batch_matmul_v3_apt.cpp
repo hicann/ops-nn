@@ -235,6 +235,12 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
             } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
                 QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Zn,
                                                Cmct::Gemm::layout::RowMajorAlign, 0);
+            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(
+                    Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Nz, Cmct::Gemm::layout::RowMajorAlign, 0);
+            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(
+                    Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Zn, Cmct::Gemm::layout::RowMajorAlign, 0);
             }
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) {
             if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
@@ -243,6 +249,14 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
             } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
                 QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Zn,
                                                Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
+            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(
+                    Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Nz, Cmct::Gemm::layout::RowMajorAlign,
+                    Cmct::Gemm::A_FULL_LOAD_MODE);
+            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(
+                    Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Zn, Cmct::Gemm::layout::RowMajorAlign,
+                    Cmct::Gemm::A_FULL_LOAD_MODE);
             }
         }
 #else
