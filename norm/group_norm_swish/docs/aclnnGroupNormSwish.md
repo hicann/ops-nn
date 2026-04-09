@@ -147,7 +147,7 @@ aclnnStatus aclnnGroupNormSwish(
       <tr>
           <td>eps（double）</td>
           <td>输入</td>
-          <td>防止产生除0的偏移，yOut和rstdOut计算公式中的epsepseps值。</td>
+          <td>防止产生除0的偏移，yOut和rstdOut计算公式中的eps值。</td>
           <td>建议值1.0。</td>
           <td>-</td>
           <td>-</td>
@@ -167,7 +167,7 @@ aclnnStatus aclnnGroupNormSwish(
       <tr>
           <td>swishScale（double）</td>
           <td>输入</td>
-          <td>Swish计算时的scalescalescale值。</td>
+          <td>Swish计算时的scale值。</td>
           <td>建议值1.0。</td>
           <td>-</td>
           <td>-</td>
