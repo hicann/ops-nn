@@ -21,7 +21,7 @@
 // CubeFormat
 #include "matmul/matmul_config.h"
 // AscendC::CeilAlign
-#include "../../impl/adv_api/detail/matmul/utils/matmul_utils.h"
+#include "adv_api/matmul/matmul.h"
 #include "./integral_constant.h"
 
 namespace Cmct {
