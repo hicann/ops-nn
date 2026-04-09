@@ -435,9 +435,11 @@ static const bool CheckMatmulV3Support(
 {
     bool enableForceGrpAccForFp32 =
         opImplModeEnum == 0x4 && mmOpInfo.shapeInfo.kDim >= 2048 && mmOpInfo.ori_info.self_dtype == DataType::DT_FLOAT;
+    bool isFP32Wnz = 
+        mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ && mmOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT;
     return CheckAscendCScenario(x1, x2, bias, mmOpInfo, transposeX1, transposeX2) ||
            CheckAscendCScenario2(x1, x2, mmOpInfo, transposeX1, transposeX2) || enableForceGrpAccForFp32 ||
-           (mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ && mmOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT);
+           isFP32Wnz;
 }
 
 static const bool CheckSupportInfoFormatNzNzNd(const MmOpInfo& mmOpInfo)

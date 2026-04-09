@@ -61,6 +61,13 @@ constexpr CubeFormat format_y = CubeFormat::NZ;
 constexpr CubeFormat format_y = CubeFormat::ND;
 #endif
 
+#if defined(FORMAT_X1) && FORMAT_X1 == FORMAT_ND && defined(ORIG_DTYPE_X2) && ORIG_DTYPE_X2 == DT_FLOAT
+    #define IS_ND_NZ_FP32 1
+#else
+    #define IS_ND_NZ_FP32 0
+#endif
+// ND_NZ_FP32场景支持走入多个模板
+
 #define MMV3_IMPL(templateFunc, cFormat, ...)                                                                                 \
     do {                                                                                                             \
         using cType = MatmulType<AscendC::TPosition::GM, cFormat, DTYPE_Y>;                                         \
@@ -183,6 +190,26 @@ __global__ __aicore__ void mat_mul_v3(
         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
         MMV3_IMPL_CLASS(
             MatmulBaseKernel, format_x1, MatmulBaseBlock, MM_CFG_VEC_ND2NZ
+        );
+    }
+#elif defined(FORMAT_X2) && FORMAT_X2 == FRACTAL_NZ && !IS_ND_NZ_FP32
+    if constexpr (LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K && 
+        FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE) { 
+        MMV3_IMPL_CLASS( 
+            MatmulBaseUnAlignedKernel, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD 
+        );
+    } else if constexpr ( 
+        LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K && 
+        FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE && 
+        SPECIALOPT == MAT_MUL_V3_K_SHIFT) { 
+        MMV3_IMPL_CLASS( 
+            MatmulBaseKernel, format_x1, MatmulBaseBlock, MM_CFG_K_SHIFT 
+        );
+    } else if constexpr ( 
+        LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K && 
+        FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) { 
+        MMV3_IMPL_CLASS( 
+            MatmulBaseKernel, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD 
         );
     }
 #else
