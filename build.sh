@@ -870,7 +870,8 @@ checkopts() {
     esac
   done
 
-  if [[ "$OP_KERNEL_AICPU_UT" != "TRUE" && "$ENABLE_TEST" == "TRUE" && "$OP_HOST" == "FALSE" && "$OP_GRAPH" == "FALSE" && "$OP_API" == "FALSE" && "$OP_KERNEL" == "FALSE" ]]; then
+  if [[ "$OP_KERNEL_AICPU_UT" != "TRUE" && "$OP_KERNEL_AICPU" != "TRUE" && "$ENABLE_TEST" == "TRUE" &&
+        "$OP_HOST" == "FALSE" && "$OP_GRAPH" == "FALSE" && "$OP_API" == "FALSE" && "$OP_KERNEL" == "FALSE" ]]; then
     OP_HOST=TRUE
     OP_GRAPH=TRUE
     OP_API=TRUE

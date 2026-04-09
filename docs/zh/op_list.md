@@ -1473,7 +1473,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>AI Core</td>
+    <td>AI Core/AI CPU</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
@@ -1662,8 +1662,8 @@
     <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
-    <td>AI Core</td>
+    <td>✓</td>
+    <td>AI Core/AI CPU</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
@@ -1715,6 +1715,16 @@
     <td>✗</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/tensor_scatter_update/README.md">tensor_scatter_update</a></td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI CPU</td>
+    <td>根据indices指定的位置，将updates中的数据更新到输入张量x的对应位置，生成输出张量y。</td>
   </tr>
   <tr>
     <td>index</td>

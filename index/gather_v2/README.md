@@ -50,7 +50,7 @@
         <td>x</td>
         <td>输入</td>
         <td>输入的张量，公式中的x。</td>
-        <td>FLOAT、FLOAT16、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、BOOL、DOUBLE、COMPLEX64</td>
+        <td>FLOAT、FLOAT16、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、BOOL、DOUBLE、COMPLEX64、COMPLEX128、QINT16、QINT32、QINT8、QUINT16、QUINT8、STRING</td>
         <td>ND</td>
       </tr>
       <tr>
@@ -71,7 +71,7 @@
         <td>y</td>
         <td>输出</td>
         <td>输入的结果，公式中的y。</td>
-        <td>FLOAT、FLOAT16、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、BOOL、DOUBLE、COMPLEX64</td>
+        <td>FLOAT、FLOAT16、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、BOOL、DOUBLE、COMPLEX64、COMPLEX128、QINT16、QINT32、QINT8、QUINT16、QUINT8、STRING</td>
         <td>ND</td>
       </tr>
       <tr>
@@ -99,4 +99,5 @@
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_gather_v2](./examples/test_aclnn_gather_v2.cpp) | 通过[aclnnGatherV2](./docs/aclnnGatherV2.md)接口方式调用GatherV2算子。 |
+| 图模式调用 | [test_geir_gather_v2](./examples/test_geir_gather_v2.cpp) | 通过[算子IR](./op_graph/gather_v2_proto.h)构图方式调用GatherV2算子。 |
 | aclnn调用 | [test_aclnn_embedding_renorm](./examples/test_aclnn_embedding_renorm.cpp) | 通过[aclnnEmbeddingRenorm](./docs/aclnnEmbeddingRenorm.md)接口方式调用Renorm算子。 |
