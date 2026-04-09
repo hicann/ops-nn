@@ -26,8 +26,8 @@ namespace ge {
 * The format support ND. Shape support 1D ~ 8D. Shape and dataType is same as "scale". Specifying the offset. \n
 
 * @par Attributes:
-* @li dst_type: A optional int32, specifying the output data type. Defaults to "DT_FLOAT16".
-* @li sqrt_mode: A optional bool, specifying whether to perform square root on "scale", either "true" or "false".
+* @li dst_type: An optional int32, specifying the output data type. Defaults to "DT_FLOAT16".
+* @li sqrt_mode: An optional bool, specifying whether to perform square root on "scale", either "true" or "false".
 * Defaults to "false" . \n
 
 * @attention Constraints:
@@ -35,9 +35,9 @@ namespace ge {
 # @li When the data type of x is DT_HIFLOAT8, DT_FLOAT8_E5M2, or DT_FLOAT8_E4M3, scale is only supported for DT_FLOAT.
 # @li When the data type of x is DT_HIFLOAT8, DT_FLOAT8_E5M2, or DT_FLOAT8_E4M3, sqrt_mode must be "false". 
 * @li The dimensionality of scale must match that of x, or be 1-dimensional. The shape of scale must satisfy the following constraints: \n
-* - If x is 1-dim, the shape of scale must be [1] or the same as x.
-* - If scale is 1-dim, its size must be either 1, x[-1] or x[-2].
-# - If scale is multi-dim, it can have at most one non-d dimension, and that dimension must be along the -1st or -2nd axis of x.
+* - If x is one-dimensional, the shape of scale must be [1] or the same as x.
+* - If scale is one-dimensional, its size must be either 1, x[-1] or x[-2].
+# - If scale is multi-dimensional, it can have at most one axis that is not 1, and that axis must be the -1 or -2 axis of x.
 
 * @par Outputs:
 * y: The dequantized output tensor of type float16 or bfloat16. The format support ND.
