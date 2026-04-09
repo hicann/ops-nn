@@ -300,7 +300,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
 #endif
     } else {
         if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE) {            // Bias Mode = 0
-#if CUBE_TEMPLATE_ND
+#if CUBE_TEMPLATE_ND && defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 0;
                 if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
                     QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(
