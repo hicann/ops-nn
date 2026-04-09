@@ -405,7 +405,7 @@ bool QuantBatchMatmulV3TilingBase::CheckStorageShape4WeightNzDimAlignment(uint64
 
 bool QuantBatchMatmulV3TilingBase::CheckShape4WeightNz() const
 {
-    OP_TILING_CHECK(1 == inputParams_.kSize || 1 == inputParams_.nSize,
+    OP_TILING_CHECK(!compileInfo_.supportMmadS8S4 && (1 == inputParams_.kSize || 1 == inputParams_.nSize),
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "When format of x2 is FRACTAL_NZ, n or k cannot be 1."),
                     return false);
 
