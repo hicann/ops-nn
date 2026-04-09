@@ -74,7 +74,7 @@ aclnnStatus aclnnRmsNormDynamicMxQuantGetWorkspaceSize(
   const aclTensor   *beta,
   double             epsilon,
   int64_t            scaleAlg,
-  char              *roundModeOptional,
+  char              *roundMode,
   int64_t            dstType,
   bool               outputRstd,
   aclTensor         *yOut,
@@ -121,8 +121,8 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
     <tr>
       <td>x（aclTensor*）</td>
       <td>输入</td>
-      <td>表示标准化过程中的源数据张量。对应公式中的`x`。</td>
-      <td><ul><li>不支持空Tensor。</li></ul></td>
+      <td>表示标准化过程中的源数据张量。对应公式中的x。</td>
+      <td><ul><li>不支持空Tensor。</li><li>具体约束详见约束说明。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-7</td>
@@ -131,8 +131,8 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
     <tr>
       <td>gamma（aclTensor*）</td>
       <td>输入</td>
-      <td>表示标准化过程中的权重张量。对应公式中的`gamma`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape只能为一维，需要与`x`最后一维维度匹配。</li></ul></td>
+      <td>表示标准化过程中的权重张量。对应公式中的gamma。</td>
+      <td><ul><li>不支持空Tensor。</li><li>shape只能为一维，需要与x最后一维维度匹配。</li><li>数据类型默认与输入x一致；若不一致，则显示设为FLOAT32。</li></ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>1</td>
@@ -141,8 +141,8 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
     <tr>
       <td>beta（aclTensor*）</td>
       <td>输入</td>
-      <td>表示标准化过程中的偏置项。对应公式中的`beta`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>如果提供，shape和数据类型需要与`gamma`保持一致。</li></ul></td>
+      <td>表示标准化过程中的偏置项。对应公式中的beta。</td>
+      <td><ul><li>不支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>如果提供，shape和数据类型需要与gamma保持一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>1</td>
@@ -151,7 +151,7 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
     <tr>
       <td>epsilon（double）</td>
       <td>输入</td>
-      <td>表示添加到分母中的值，以确保数值稳定。对应公式中的`epsilon`。</td>
+      <td>表示添加到分母中的值，以确保数值稳定。对应公式中的epsilon。</td>
       <td><ul><li>建议传入较小正数，如1e-6。</li></ul></td>
       <td>-</td>
       <td>-</td>
@@ -169,7 +169,7 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
       <td>-</td>
     </tr>
     <tr>
-      <td>roundModeOptional（char*）</td>
+      <td>roundMode（char*）</td>
       <td>输入</td>
       <td>表示数据转换的模式，对应公式中的round_mode。</td>
       <td><ul><li>当dstType为40/41时，支持{"rint", "floor", "round"}。</li><li>当dstType为36/35时，仅支持{"rint"}。</li></ul></td>
@@ -202,7 +202,7 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
       <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示归一化并量化后的结果，对应公式中的Pi和di。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape需要与输入`x`一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape需要与输入x一致。</li><li>数据类型需要与dstType保持一致。</li></ul></td>
       <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
       <td>1-7</td>
@@ -212,7 +212,7 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
       <td>mxscaleOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示每个分组对应的量化尺度，对应公式中的mxscale和Sb。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape的维度数为输入`x`的维度数加1。其中，前几维（`x`的维度数减去`gamma`的维度数）与`x`对应维度保持一致，表示不需要norm的维度；后两维由MX量化决定：倒数第二维为ceil(`x`尾轴 / blocksize=32)再向上取偶数对齐（pad填充值为0），最后一维固定为2。具体计算过程见约束说明。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape在尾轴上为x对应值除以blocksize=32向上取整，并对其进行偶数pad，pad填充值为0。</li><li>其余维度与入参x的shape前几维保持一致，前几维指x的维度减去gamma的维度，表示不需要norm的维度。</li><li>具体计算过程见约束说明。</li></ul></td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>2-8</td>
@@ -221,7 +221,7 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
     <tr>
       <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
-      <td>表示归一化后的标准差的倒数。对应公式中`Rms(x)`的倒数。</td>
+      <td>表示归一化后的标准差的倒数。对应公式中Rms(x)的倒数。</td>
       <td><ul><li>不支持空Tensor。</li><li>当outputRstd为True时，shape与入参`x`的shape前几维保持一致，前几维指`x`的维度减去`gamma`的维度，表示不需要norm的维度，rstdOut的-1轴是1。</li><li>当outputRstd为False时，该参数的最终输出无效。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
@@ -271,37 +271,38 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
   </thead>
   <tbody>
     <tr>
-      <td>ACLNN_ERR_PARAM_NULLPTR</td>
-      <td>161001</td>
-      <td>如果传入参数是必选输入，输出或者必选属性，且是空指针，则返回161001。</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_NULLPTR</td>
+      <td rowspan="2">161001</td>
+      <td>传入的x、gamma、yOut和mxscaleOut是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
-      <td>输入或输出的数据类型不在支持的范围之内。</td>
+      <td>当outputRstd为True时，传入rstdOut是空指针。</td>
     </tr>
     <tr>
-      <td>输入或输出的参数不满足参数说明的约束。</td>
+      <td rowspan="8">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="8">561002</td>
+      <td>输入或输出参数的维度数和数据类型不在范围之内，dstType和yOut的数据类型不匹配。</td>
     </tr>
     <tr>
-      <td rowspan="6">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="6">561002</td>
-      <td>scaleAlg不是0或1，roundModeOptional(非空时)不是 {rint, floor, round}。</td>
+      <td>输入x和输出yOut的shape不是完全相同的shape。</td>
     </tr>
     <tr>
-      <td>dstType为 fp8 时，roundModeOptional不是 rint。</td>
+      <td>gamma、beta(若存在)的shape不是完全相同的shape，或二者的维度数不为1，或轴长不等于x的尾轴大小，或者类型不相同。</td>
     </tr>
     <tr>
-      <td>x、yOut的shape不是完全相同的shape。</td>
+      <td>gamma的维度和x的需要做norm的维度不相同，或rstdOut的维度和x的不需要norm的维度不相同，或rstdOut对应x归一化维度的轴长不为1。</td>
     </tr>
     <tr>
-      <td>mxscaleOut的维度数不等于输入维度数+1。</td>
+      <td>scaleAlg不是0或1，roundMode不是 {rint, floor, round}。</td>
     </tr>
     <tr>
-      <td>gamma、beta(若存在)的shape不是完全相同的shape，或者类型不是相同的类型。</td>
+      <td>dstType为 fp8 时，roundMode不是 rint。</td>
     </tr>
     <tr>
-      <td>gamma的维度和x的需要作norm的维度不相同，或rstdOut的维度和x的不需要norm的维度不相同，或rstdOut的需要norm的维度不为1。</td>
+      <td>dstType为 fp4 时，scaleAlg不是0，或者输入x的尾轴不能被2整除。</td>
+    </tr>
+    <tr>
+      <td>mxscaleOut的维度数不等于输入x的维度数+1，或轴长不符合约束说明。</td>
     </tr>
   </tbody></table>
 

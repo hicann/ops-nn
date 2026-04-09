@@ -9,4 +9,4 @@
 # -----------------------------------------------------------------------------------------------------------
 
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR}
-        OPTYPE add_rms_norm_dynamic_mx_quant ACLNNTYPE aclnn DEPENDENCIES norm_common)
+        OPTYPE add_rms_norm_dynamic_mx_quant ACLNNTYPE aclnn_exclude DEPENDENCIES norm_common)

@@ -26,7 +26,7 @@
   y = \operatorname{RmsNorm}(x)=\frac{x}{\operatorname{Rms}(\mathbf{x})}\cdot gamma+beta, \quad \text { where } \operatorname{Rms}(\mathbf{x})=\sqrt{\frac{1}{n} \sum_{i=1}^n x_i^2+epsilon}
   $$
 
-  当scaleAlg为0时：
+  当scale_alg为0时：
    - 将RmsNorm输出y在尾轴维度上按k = 32个数分组，一组k个数 $\{\{V_i\}_{i=1}^{k}\}$ 动态量化为 $\{mxscale,\{P_i\}_{i=1}^{k}\}$
     $$
     shared\_exp = floor(log_2(max_i(|V_i|))) - emax 
@@ -48,7 +48,7 @@
         | FLOAT8_E4M3FN |  8   |
         |  FLOAT8_E5M2  |  15  |
 
-  当scaleAlg为1时，只涉及FP8类型：
+  当scale_alg为1时，只涉及FP8类型：
     - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP8。
     - 找到该块中数值的最大绝对值:
       $$
@@ -124,28 +124,28 @@
     <tr>
       <td>scale_alg</td>
       <td>可选属性</td>
-      <td><ul><li>表示mxscaleOut的计算方法，对应公式中的scaleAlg。</li><li>支持取值0和1，取值为0表示Open Compute Project(OCP)实现，取值为1表示cuBLAS实现。当dstType为FLOAT4_E2M1/FLOAT4_E1M2时仅支持取值为0。</li><li>默认值为0。</li></ul></td>
+      <td><ul><li>表示mxscale的计算方法，对应公式中的scale_alg。</li><li>支持取值0和1，取值为0表示Open Compute Project(OCP)实现，取值为1表示cuBLAS实现。当dst_type为FLOAT4_E2M1/FLOAT4_E1M2时仅支持取值为0。</li><li>默认值为0。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>round_mode</td>
       <td>可选属性</td>
-      <td><ul><li>表示数据转换的模式，对应公式中的round_mode。</li><li>当dstType为40/41时，支持{"rint", "floor", "round"}。</li><li>当dstType为36/35时，仅支持{"rint"}。</li><li>默认值为"rint"。</li></ul></td>
+      <td><ul><li>表示数据转换的模式，对应公式中的round_mode。</li><li>当dst_type为40/41时，支持{"rint", "floor", "round"}。</li><li>当dst_type为36/35时，仅支持{"rint"}。</li><li>默认值为"rint"。</li></ul></td>
       <td>STRING</td>
       <td>-</td>
     </tr>
     <tr>
       <td>dst_type</td>
       <td>可选属性</td>
-      <td><ul><li>表示指定数据转换后yOut的类型，对应公式中的DType。</li><li>输入范围为{35, 36, 40, 41}，分别对应{FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, FLOAT4_E1M2}。</li><li>默认值为40。</li></ul></td>
+      <td><ul><li>表示指定数据转换后y的类型，对应公式中的DType。</li><li>输入范围为{35, 36, 40, 41}，分别对应{FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, FLOAT4_E1M2}。</li><li>默认值为40。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>output_rstd</td>
       <td>可选属性</td>
-      <td><ul><li>表示指定是否输出有效的rstdOut。</li><li>支持True和False。</li><li>默认值为False。</li><li>当outputRstd为False时，rstdOut最终输出为空Tensor，此时rstdOut为无效占位输出。</li></ul></td>
+      <td><ul><li>表示指定是否输出有效的rstd_out。</li><li>支持True和False。</li><li>默认值为False。</li><li>当output_rstd为False时，rstd为无效占位输出。</li></ul></td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
@@ -173,7 +173,7 @@
     <tr>
       <td>rstd</td>
       <td>输出</td>
-      <td><ul><li>表示归一化后的标准差的倒数，对应公式中Rms(x)的倒数。</li><li>当output_rstd为True时，shape与入参x1的shape前几维保持一致，前几维指x1的维度减去gamma的维度，表示不需要norm的维度。</li><li>当output_rstd为False时，rstd_out输出空Tensor。</li></ul></td>
+      <td><ul><li>表示归一化后的标准差的倒数，对应公式中Rms(x)的倒数。</li><li>当output_rstd为True时，shape与入参x1的shape前几维保持一致，前几维指x1的维度减去gamma的维度，表示不需要norm的维度。</li><li>当output_rstd为False时，rstd为无效占位输出。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
@@ -189,13 +189,13 @@
   - mxscale.shape[-1] = 2。
   - 其他维度与输入x1一致。
 
-- 当输出yOut的数据类型为FLOAT4_E2M1或FLOAT4_E1M2，x1尾轴的值必须为偶数。
+- 当输出y的数据类型为FLOAT4_E2M1或FLOAT4_E1M2，x1尾轴的值必须为偶数。
 
 - 输入gamma、可选输入beta的数据类型只能和x1的数据类型保持一致或者为FLOAT32。
 
 - **边界值场景说明**
-  - 当输入是Inf时：1、输出yOut为0；2、输出xOut为Inf；3、输出mxscaleOut为255，偶数pad填充值为0；4、输出rstdOut为0。
-  - 当输入是NaN时：1、输出yOut为0；2、输出xOut为Nan；3、输出mxscaleOut为255，偶数pad填充值为0；4、输出rstdOut为NaN。
+  - 当输入是Inf时：1、输出y为0；2、输出x为Inf；3、输出mxscale为255，偶数pad填充值为0；4、输出rstd为0。
+  - 当输入是NaN时：1、输出y为0；2、输出x为Nan；3、输出mxscale为255，偶数pad填充值为0；4、输出rstd为NaN。
 
 ## 调用说明
 
