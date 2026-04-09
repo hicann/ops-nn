@@ -6,7 +6,7 @@
  * All Rights Reserved.
  *
  * Authors (accounts):
- * - Zhou Jianhua <@LePenseur>
+ * - Zhou Jiamin <@zhou-jiamin-666>
  * - Su Tonghua <@sutonghua>
  *
  * This program is free software: you can redistribute it and/or modify it.
@@ -21,7 +21,7 @@
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
-#include "aclnn_celu_v2.h"
+#include "aclnn_soft_plus_v2.h"
 using DataType = float;
 #define CHECK_RET(cond, return_expr) \
     do {                             \
@@ -53,7 +53,7 @@ void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr)
         ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
     for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("mean result[%ld] is: %f\n", i, resultData[i]);       // float
+        LOG_PRINT("mean result[%ld] is: %f\n", i, resultData[i]);
     }
 }
 
@@ -104,18 +104,16 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
     // 2. 构造输入与输出，需要根据API的接口自定义构造
-    const float alpha = 2.0f;
-
     aclTensor* selfX = nullptr;
     void* selfXDeviceAddr = nullptr;
-    std::vector<int64_t> selfXShape = {128, 8, 8, 8};
-    std::vector<float> selfXHostData(2048, -2.0f);
+    std::vector<int64_t> selfXShape = {32, 4, 4, 4};
+    std::vector<float> selfXHostData(2048, 1.0f);
     ret = CreateAclTensor(selfXHostData, selfXShape, &selfXDeviceAddr, aclDataType::ACL_FLOAT, &selfX);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     aclTensor* out = nullptr;
     void* outDeviceAddr = nullptr;
-    std::vector<int64_t> outShape = {128, 8, 8, 8};
+    std::vector<int64_t> outShape = {32, 4, 4, 4};
     std::vector<float> outHostData(2048, 0);
     ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
@@ -124,14 +122,9 @@ int main()
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
 
-    LOG_PRINT("Before GetWorkspaceSize: selfX=%p, out=%p\n", (void*)selfX, (void*)out);
-    LOG_PRINT("Before GetWorkspaceSize: selfXDeviceAddr=%p, outDeviceAddr=%p\n",
-          selfXDeviceAddr, outDeviceAddr);
-    // 4. 调用aclnnCeluV2第一段接口
-    ret = aclnnCeluV2GetWorkspaceSize(selfX, alpha, out, &workspaceSize, &executor);
-    LOG_PRINT("aclnnCeluV2GetWorkspaceSize returned %d, workspaceSize=%llu, executor=%p\n",
-          ret, (unsigned long long)workspaceSize, (void*)executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnCeluV2ExampleGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    // 4. 调用aclnnSoftPlusV2Example第一段接口
+    ret = aclnnSoftPlusV2GetWorkspaceSize(selfX, out, &workspaceSize, &executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSoftPlusV2ExampleGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
@@ -140,9 +133,9 @@ int main()
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
     }
 
-    // 5. 调用aclnnCeluV2第二段接口
-    ret = aclnnCeluV2(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnCeluV2 failed. ERROR: %d\n", ret); return ret);
+    // 5. 调用aclnnSoftPlusV2Example第二段接口
+    ret = aclnnSoftPlusV2(workspaceAddr, workspaceSize, executor, stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSoftPlusV2Example failed. ERROR: %d\n", ret); return ret);
 
     // 6. （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
