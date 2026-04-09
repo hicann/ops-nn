@@ -227,7 +227,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>xOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示x1和x2的和，对应公式中的`x`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape与`scales1`保持一致，数据类型与`zeroPoints1Optional`保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape与`x1`保持一致，数据类型与`x1`保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
