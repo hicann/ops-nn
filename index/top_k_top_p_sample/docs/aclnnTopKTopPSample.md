@@ -539,7 +539,7 @@ aclnnStatus aclnnTopKTopPSample(
       // 创建q aclTensor
       ret = CreateAclTensor(qHostData, logitsShape, &qDeviceAddr, aclDataType::ACL_FLOAT, &q);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-      // 创建logtisSelected aclTensor
+      // 创建logitsSelected aclTensor
       ret = CreateAclTensor(logitsSelectedIdxHostData, topKPShape, &logitsSelectedIdxDeviceAddr, aclDataType::ACL_INT64, &logitsSelectedIdx);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
       // 创建logitsTopKPSelect aclTensor

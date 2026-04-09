@@ -113,7 +113,7 @@ int main() {
     std::vector<int64_t> logitsSelectedIdxHostData(48, 0);
     std::vector<float> logitsTopKPSelectHostData(48 * 131072, 0);
     std::vector<int64_t> logitsIdxHostData(48 * 131072, 0);
-    std::vector<float> logitsSortMaskedtHostData(48 * 131072, 0);
+    std::vector<float> logitsSortMaskedHostData(48 * 131072, 0);
 
     float eps = 1e-8;
     int64_t isNeedLogits = 0;
@@ -137,7 +137,7 @@ int main() {
     // 创建minps aclTensor
     ret = CreateAclTensor(minPsHostData, topKPShape, &minPsDeviceAddr, aclDataType::ACL_BF16, &minPs);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    // 创建logtisSelected aclTensor
+    // 创建logitsSelected aclTensor
     ret = CreateAclTensor(logitsSelectedIdxHostData, topKPShape, &logitsSelectedIdxDeviceAddr, aclDataType::ACL_INT64, &logitsSelectedIdx);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建logitsTopKPSelect aclTensor
@@ -147,7 +147,7 @@ int main() {
     ret = CreateAclTensor(logitsIdxHostData, logitsShape, &logitsIdxDeviceAddr, aclDataType::ACL_INT64, &logitsIdx);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建logitsSortMasked aclTensor
-    ret = CreateAclTensor(logitsSortMaskedtHostData, logitsShape, &logitsSortMaskedDeviceAddr, aclDataType::ACL_FLOAT, &logitsSortMasked);
+    ret = CreateAclTensor(logitsSortMaskedHostData, logitsShape, &logitsSortMaskedDeviceAddr, aclDataType::ACL_FLOAT, &logitsSortMasked);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 3. 调用CANN算子库API，需要修改为具体的Api名称
