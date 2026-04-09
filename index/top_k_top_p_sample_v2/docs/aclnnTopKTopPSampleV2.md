@@ -192,7 +192,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
 
   后继处理
   * 此阶段输入为前序对前序topK-topP-minP采样的联合结果logitsSortMasked。
-  * 此处输入须要确保logitsSortMasked∈(0,1)，根据输入Logits的实际情况，配置入参约束属性inputIsLogits，即：
+  * 此处输入需要确保logitsSortMasked∈(0,1)，根据输入Logits的实际情况，配置入参约束属性inputIsLogits，即：
     $$
     \text{inputIsLogits} = 
     \begin{cases}
@@ -360,7 +360,7 @@ aclnnStatus aclnnTopKTopPSampleV2(
       </tr>
         <td>isNeedLogits</td>
         <td>输入</td>
-        <td>表示控制logitsTopKPselect的输出条件，建议设置为0。</td>
+        <td>表示控制logitsTopKPSelect的输出条件，建议设置为0。</td>
         <td>-</td>
         <td>BOOL</td>
         <td>-</td>
@@ -674,7 +674,7 @@ int main() {
     std::vector<int64_t> logitsSelectedIdxHostData(48, 0);
     std::vector<float> logitsTopKPSelectHostData(48 * 131072, 0);
     std::vector<int64_t> logitsIdxHostData(48 * 131072, 0);
-    std::vector<float> logitsSortMaskedtHostData(48 * 131072, 0);
+    std::vector<float> logitsSortMaskedHostData(48 * 131072, 0);
 
     float eps = 1e-8;
     int64_t isNeedLogits = 0;
@@ -698,7 +698,7 @@ int main() {
     // 创建minps aclTensor
     ret = CreateAclTensor(minPsHostData, topKPShape, &minPsDeviceAddr, aclDataType::ACL_BF16, &minPs);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    // 创建logtisSelected aclTensor
+    // 创建logitsSelected aclTensor
     ret = CreateAclTensor(logitsSelectedIdxHostData, topKPShape, &logitsSelectedIdxDeviceAddr, aclDataType::ACL_INT64, &logitsSelectedIdx);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建logitsTopKPSelect aclTensor
@@ -708,7 +708,7 @@ int main() {
     ret = CreateAclTensor(logitsIdxHostData, logitsShape, &logitsIdxDeviceAddr, aclDataType::ACL_INT64, &logitsIdx);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建logitsSortMasked aclTensor
-    ret = CreateAclTensor(logitsSortMaskedtHostData, logitsShape, &logitsSortMaskedDeviceAddr, aclDataType::ACL_FLOAT, &logitsSortMasked);
+    ret = CreateAclTensor(logitsSortMaskedHostData, logitsShape, &logitsSortMaskedDeviceAddr, aclDataType::ACL_FLOAT, &logitsSortMasked);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 3. 调用CANN算子库API，需要修改为具体的Api名称
