@@ -102,7 +102,7 @@
       <td>y</td>
       <td>输出</td>
       <td>词嵌入矩阵聚合后的结果。</td>
-      <td>INT32、INT64</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>

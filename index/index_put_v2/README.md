@@ -40,7 +40,7 @@
     <thead>
       <tr>
         <th>参数名</th>
-        <th>输入/输出</th>
+        <th>输入/输出/属性</th>
         <th>描述</th>
         <th>数据类型</th>
         <th>数据格式</th>
@@ -93,4 +93,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_index_put_v2](examples/arch35/test_aclnn_index_put_v2.cpp) | 通过[aclnnAbs](./docs/aclnnIndexPutImpl.md)接口方式调用IndexPutImpl算子。 |
+| aclnn调用 | [test_aclnn_index_put_v2](examples/arch35/test_aclnn_index_put_v2.cpp) | 通过[aclnnIndexPutImpl](./docs/aclnnIndexPutImpl.md)接口方式调用IndexPutImpl算子。 |

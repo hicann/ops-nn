@@ -40,7 +40,7 @@
   <thead>
       <tr>
         <th>参数名</th>
-        <th>输入/输出</th>
+        <th>输入/输出/属性</th>
         <th>描述</th>
         <th>数据类型</th>
         <th>数据格式</th>
@@ -77,7 +77,7 @@
       <tr>
         <td>batch_dims</td>
         <td>可选属性</td>
-        <td><ul><li>用于指定批处理的维度。</li><li>默认值为0.0。</li></ul></td>
+        <td><ul><li>用于指定批处理的维度。</li><li>默认值为0。</li></ul></td>
         <td>INT64</td>
         <td>ND</td>
       </tr>

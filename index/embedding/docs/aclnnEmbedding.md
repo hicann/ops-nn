@@ -1,6 +1,6 @@
 # aclnnEmbedding
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/embeddiing)
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/embedding)
 
 ## 产品支持情况
 
@@ -15,7 +15,8 @@
 
 ## 功能说明
 
-- **接口说明：**把数据集合映射到向量空间，进而将数据进行量化。embedding的二维权重张量为weight(m+1行，n列)，对于任意输入索引张量indices（如1行3列），输出out是一个3行n列的张量，如下所示：
+- **接口说明：**
+把数据集合映射到向量空间，进而将数据进行量化。embedding的二维权重张量为weight(m+1行，n列)，对于任意输入索引张量indices（如1行3列），输出out是一个3行n列的张量，如下所示：
 
 $$
 \begin{aligned}
