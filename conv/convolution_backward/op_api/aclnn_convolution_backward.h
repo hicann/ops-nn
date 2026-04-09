@@ -39,7 +39,7 @@ extern "C" {
  * @param [in] transposed: 转置卷积使能标志位。
  * bool，当其值为True时使能转置卷积。
  * @param [in] outputPadding：反向传播过程中对于输出填充。
- * aclIntArray，仅在transposed为True时生效。数组长度可以为weight维度减2，数值必须大于等于0且小于stride。
+ * aclIntArray，在transposed为True时，数组长度可以为weight维度减2，数值必须大于等于0且小于stride。在transposed为False时，要求每个元素值为0。
  * @param [in] groups：反向传播过程中输入通道的分组数。
  * int，数值必须大于0, groups*weight的C维度=input的C维度。
  * @param [in] outputMask：输出掩码参数, 指定输出中是否包含输入、权重、偏差的梯度。
@@ -65,22 +65,22 @@ ACLNN_API aclnnStatus aclnnConvolutionBackwardGetWorkspaceSize(
  * @domain aclnn_ops_train
  *
  * @param [in] self: npu，卷积输出梯度
- * device侧的aclTensor，数据类型浮点类型FLOAT16，FLOAT32
+ * device侧的aclTensor，数据类型浮点类型FLOAT16，FLOAT32，BFLOAT16
  * 支持非连续的Tensor，数据格式支持ND、NCL
  * @param [in] input: npu，卷积输入
- * device侧的aclTensor，数据类型浮点类型FLOAT16，FLOAT32
+ * device侧的aclTensor，数据类型浮点类型FLOAT16，FLOAT32，BFLOAT16
  * 支持非连续的Tensor，数据格式支持ND、NCL
  * @param [in] weight: npu, 卷积权重
- * device侧的aclTensor，数据类型与input一致
- * 支持非连续的Tensor，数据格式与input一致
+ * device侧的aclTensor，数据类型浮点类型FLOAT16，FLOAT32，BFLOAT16
+ * 支持非连续的Tensor，数据格式支持ND、NCL
  * @param [in] bias: npu，卷积偏置
- * device侧的aclTensor，数据类型与input一致
+ * device侧的aclTensor，数据类型浮点类型FLOAT16，FLOAT32，BFLOAT16
  * @param [in] pad: 补边
- * int64_t,（也等于kernel size -1），例：2D卷积的padding数组的有效长度是2位
- * @param [out] grad_input: 卷积输入梯度在npu device侧的aclTensor
- * @param [out] grad_input: 卷积权重梯度在npu device侧的aclTensor
- * @param [out] grad_bias: 卷积偏置梯度在npu device侧的aclTensor
- * @param [out] workspace_size: 返回用户需要在npu device侧申请的workspace大小。
+ * int64_t，数值必须大于等于0
+ * @param [out] gradInput: 卷积输入梯度在npu device侧的aclTensor
+ * @param [out] gradWeight: 卷积权重梯度在npu device侧的aclTensor
+ * @param [out] gradBias: 卷积偏置梯度在npu device侧的aclTensor
+ * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
