@@ -32,19 +32,17 @@ public:
     constexpr static int32_t DOUBLE_BUFFER = 2;
     constexpr static uint64_t RES_BUF_SIZE = 8 * 1024;
     constexpr static uint64_t CACHE_BUF_SIZE = 16 * 1024;
-    constexpr static uint64_t WORKSPACE_SIZE_EXT = 64 * 8;
     constexpr static uint64_t BLOCK_SIZE_BYTE = platform::GetUbBlockSize();
     constexpr static int32_t ELEMENT_ONE_REPEAT_COMPUTE = platform::GetVRegSize() / sizeof(PromoteDataT);
+    constexpr static uint64_t SINGLE_CACHE_LINE_SIZE = 64;
     constexpr static int64_t INIT_VALUE = 0;
-    constexpr static int32_t INIT_LENGTH = 64;
     constexpr static float INIT_FLOAT_VALUE = 0.0;
 
 public:
     __aicore__ inline RepeatInterleaveGradBlockSplitR(TPipe& pipe) : pipe_(pipe)
     {}
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR repeats, GM_ADDR y, GM_ADDR workspace,
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR repeats, GM_ADDR y, GM_ADDR workspace,
         const RepeatInterleaveGradDavidTilingData* __restrict tiling);
 
     __aicore__ inline void Process();
@@ -113,6 +111,8 @@ private:
     int64_t bisectionTail_ = 0;
     int64_t cacheStride_ = 0;
     event_t eventId_;
+    int32_t initLength_ = 0;
+    uint64_t workspaceSizeExt_ = 0;
 };
 
 template <typename DataT, typename PromoteDataT, typename IndexT>
@@ -125,17 +125,20 @@ __aicore__ inline void RepeatInterleaveGradBlockSplitR<DataT, PromoteDataT, Inde
     if (blockIdx_ >= tiling_->realCoreNum) {
         return;
     }
+    // DataCopy的count需要对齐到block，否则会被截断
+    initLength_ = ops::CeilAlign(tiling_->realCoreNum, static_cast<int32_t>(BLOCK_SIZE_BYTE / sizeof(int64_t)));
+    workspaceSizeExt_ = ops::CeilAlign(static_cast<uint64_t>(initLength_ * sizeof(int64_t)), SINGLE_CACHE_LINE_SIZE);
     xGm_.SetGlobalBuffer((__gm__ DataT*)x);
     yGm_.SetGlobalBuffer((__gm__ DataT*)y);
     repeatGm_.SetGlobalBuffer((__gm__ IndexT*)repeats);
     workspaceGm_.SetGlobalBuffer((__gm__ int64_t*)workspace);
     if (blockIdx_ == 0) {
-        pipe_.InitBuffer(initBuf_, WORKSPACE_SIZE_EXT);
+        pipe_.InitBuffer(initBuf_, workspaceSizeExt_);
         LocalTensor<int64_t> initBufTensor = initBuf_.Get<int64_t>();
-        Duplicate<int64_t>(initBufTensor, INIT_VALUE, INIT_LENGTH);
+        Duplicate<int64_t>(initBufTensor, INIT_VALUE, initLength_);
         SetFlag<HardEvent::V_MTE3>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         WaitFlag<HardEvent::V_MTE3>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-        DataCopy(workspaceGm_, initBufTensor, INIT_LENGTH);
+        DataCopy(workspaceGm_, initBufTensor, initLength_);
     }
     SyncAll();
     // 先初始化一阶段buff：计算各个核上repeat的sum，搬出到workspace
@@ -329,7 +332,7 @@ RepeatInterleaveGradBlockSplitR<DataT, PromoteDataT, IndexT>::ProcessRepeatInter
     pipe_.InitBuffer(repeatInUbBuf_, tiling_->repeatBufferSize * DOUBLE_BUFFER); // 每次搬入的repeat的大小
     repeatInUb_ = repeatInUbBuf_.template Get<IndexT>();
 
-    pipe_.InitBuffer(workspaceBuf_, WORKSPACE_SIZE_EXT);
+    pipe_.InitBuffer(workspaceBuf_, workspaceSizeExt_);
 }
 
 template <typename DataT, typename PromoteDataT, typename IndexT>
@@ -338,7 +341,7 @@ __aicore__ inline void RepeatInterleaveGradBlockSplitR<DataT, PromoteDataT, Inde
     DataCopyPadExtParams<int64_t> dataCopyPadExtParams = {false, 0, 0, 0};
     DataCopyExtParams copyParam;
     copyParam.blockCount = 1;
-    copyParam.blockLen = WORKSPACE_SIZE_EXT;
+    copyParam.blockLen = workspaceSizeExt_;
     copyParam.srcStride = 0;
     copyParam.dstStride = 0;
     DataCopyPad<int64_t>(workspaceBuf_.Get<int64_t>(), workspaceGm_, copyParam, dataCopyPadExtParams);

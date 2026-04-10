@@ -40,8 +40,9 @@ static constexpr int32_t CAST_MULT = 3;
 static constexpr int32_t BASE_SPLIT_LENGTH = 128;
 static constexpr int32_t nTwo = 2;
 static constexpr int64_t MAX_YGRAD_DIM = 8;
-constexpr size_t WORKSPACE_SIZE_EXT = static_cast<size_t>(64 * 8); // 额外的workspace，用于block切人Repeat时使用
 constexpr int32_t INT32_SIZE = 4;
+constexpr int32_t INT64_SIZE = 8;
+constexpr int32_t SINGLE_CACHE_LINE_SIZE = 64;
 
 using namespace Ops::Base;
 
@@ -123,6 +124,7 @@ private:
     bool dtCast_ = false;
     uint32_t templateNum_ = 0;
     gert::TilingContext* context_;
+    size_t workspaceSizeExt_ = 0; // 额外的workspace，用于block切Repeat时使用
 }; // class RIGDavidTilingImpl
 
 ge::graphStatus RIGDavidTilingImpl::Init(const RepeatInterleaveGradCompileInfo* compileInfo)
@@ -132,6 +134,9 @@ ge::graphStatus RIGDavidTilingImpl::Init(const RepeatInterleaveGradCompileInfo* 
     vRegSize_ = static_cast<int32_t>(compileInfo->vRegSize);
     ubSize_ = static_cast<int32_t>(compileInfo->ubSize);
     coreNum_ = static_cast<int32_t>(compileInfo->coreNum);
+    workspaceSizeExt_ = CeilAlign(static_cast<size_t>(coreNum_ * INT64_SIZE), 
+                                    static_cast<size_t>(SINGLE_CACHE_LINE_SIZE));
+
     // 获取y_grad
     auto xStorage = context_->GetInputShape(INPUT_X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xStorage);
@@ -240,7 +245,7 @@ ge::graphStatus RIGDavidTilingImpl::DoTiling(gert::TilingContext* context)
     context_->SetTilingKey(tilingKey);
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
-    workspaces[0] = templateNum_ == RIG::BLOCK_SPLIT_R ? RIG_WORKSPACE_SIZE + WORKSPACE_SIZE_EXT : RIG_WORKSPACE_SIZE;
+    workspaces[0] = templateNum_ == RIG::BLOCK_SPLIT_R ? RIG_WORKSPACE_SIZE + workspaceSizeExt_ : RIG_WORKSPACE_SIZE;
     if (templateNum_ == RIG::BLOCK_SPLIT_R) {
         OP_CHECK_IF(context_->SetScheduleMode(1) != ge::GRAPH_SUCCESS,
                     OP_LOGE(context_->GetNodeName(), "Fail to set schedulemode."),
@@ -353,7 +358,7 @@ void RIGDavidTilingImpl::TilingStrategyBlockSplitR()
     // N轴切UB，全载
     DoUbSplit(nBlockPara_.blockTailFactor, nBlockPara_.blockTailFactor, nUbPara_.tailCoreUbPara);
 
-    basicBlockSize_ -= static_cast<int32_t>(WORKSPACE_SIZE_EXT); // 还需要搬入workspace，所以要减掉workspace
+    basicBlockSize_ -= static_cast<int32_t>(workspaceSizeExt_); // 还需要搬入workspace，所以要减掉workspace
     rFactor_ = basicBlockSize_ / static_cast<int32_t>(lenN_) / dtSize_;
     int32_t repeatSumMainCoreMaxFactor = repeatSumUbPara.mainCoreUbPara.ubCount > 1 ?
                                              repeatSumUbPara.mainCoreUbPara.ubFactor :
