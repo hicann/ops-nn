@@ -80,6 +80,7 @@
   - <term>Atlas 训练系列产品</term>：grad和out参数数据类型不支持BFLOAT16。
 
 ## 约束说明
+
 - <term>Atlas 训练系列产品</term>：
   - 对于scale为true的场景，设定grad最后一维为embeddingDim，其大小超出指定范围时会被拦截报错。其合理范围如下：
     - indices为int32时，需满足
@@ -99,3 +100,9 @@
     - grad合轴成二维shape后，第一个维度超过INT32_MAX(2147483647)
     - numWeights超过INT32_MAX(2147483647)
   - indices合轴后维度超过INT32_INF(2139095040)时，无法保证高性能
+
+  ## 调用说明
+  
+  | 调用方式 | 调用样例                                                                   | 说明                                                           |
+  |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
+  | aclnn调用 | [test_aclnn_embedding_dense_grad](./examples/test_aclnn_embedding_dense_grad.cpp) | 通过[aclnnEmbeddingDenseBackward](./docs/aclnnEmbeddingDenseBackward.md)接口方式调用EmbeddingDenseGrad算子。 |

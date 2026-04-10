@@ -1,6 +1,6 @@
 # EmbeddingBag
 
-##  产品支持情况
+## 产品支持情况
 
 | 产品 | 是否支持 |
 | ---- | :----:|
@@ -19,7 +19,7 @@
   - shape推导方式如下：
     假设:
 
-    ```
+    ```cpp
     weight的shape为(numWeight, embeddingDim)
     indices的shape为(indices)
     offsets的shape为(offsets)
@@ -27,7 +27,7 @@
 
     - 当mode为sum模式：
 
-      ```
+      ```cpp
       y的shape 为 include_last_offset ? (offsets - 1, embeddingDim) : (offsets, embeddingDim)
       offset2bag的shape 为 (indices,)
       bag_size的shape 为 include_last_offset ? (offsets - 1) : (offsets,)
@@ -36,7 +36,7 @@
 
     - 当mode为mean模式：
 
-      ```
+      ```cpp
       y的shape 为 include_last_offset? (offsets - 1, embeddingDim) : (offsets, embeddingDim)
       offset2bag的shape 为 (indices,)
       bag_size的shape 为 include_last_offset ? (offsets - 1) : (offsets,)
@@ -44,7 +44,8 @@
       ```
 
     - 当mode为max模式：
-      ```
+
+      ```cpp
       y的shape 为 include_last_offset ? (offsets - 1, embeddingDim) : (offsets, embeddingDim)
       offset2bag的shape 为 (indices,)
       bag_size的shape 为 include_last_offset ? (offsets - 1) : (offsets,)
@@ -101,7 +102,7 @@
       <td>y</td>
       <td>输出</td>
       <td>词嵌入矩阵聚合后的结果。</td>
-      <td>INT32、INT64</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
