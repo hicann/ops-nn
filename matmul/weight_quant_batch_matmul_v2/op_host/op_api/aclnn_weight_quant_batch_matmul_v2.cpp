@@ -1133,14 +1133,28 @@ static bool CheckQuantScale(const aclTensor* quantScaleOptional, const aclTensor
     return true;
 }
 
+bool IsTransLastTwoDims(const aclTensor* tensor)
+{
+    // 相对于公共仓接口区别于，输入shape仅支持2维，在tensor输入shape为（1, 1）时返回true
+    if (tensor->GetViewShape().GetDimNum() != 2) {
+        return false;
+    }
+    int64_t dim1 = tensor->GetViewShape().GetDimNum() - 1;
+    int64_t dim2 = tensor->GetViewShape().GetDimNum() - 2;
+    if (tensor->GetViewStrides()[dim2] == 1 && tensor->GetViewStrides()[dim1] == tensor->GetViewShape().GetDim(dim2)) {
+        return true;
+    }
+    return false;
+}
+
 static aclnnStatus AntiQuantScaleAndOffsetContiguousCheck(const aclTensor* antiquantScale,
                                                           const aclTensor* antiquantOffsetOptional,
                                                           bool transposeWeight) {
     if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
         if (antiquantScale->GetViewShape().GetDimNum() == ANTIQUANT_DIM_MAX_VALUE &&
-            antiquantScale->GetViewShape().GetDim(0) != 1 && antiquantScale->GetViewShape().GetDim(1) != 1) {
+            !(antiquantScale->GetViewShape().GetDim(0) == 1 && antiquantScale->GetViewShape().GetDim(1) == 1)) {
             OP_CHECK(
-                (transposeWeight && !IsContiguous(antiquantScale)) ||
+                (transposeWeight && IsTransLastTwoDims(antiquantScale)) ||
                     (!transposeWeight && IsContiguous(antiquantScale)),
                 OP_LOGE(
                     ACLNN_ERR_PARAM_INVALID,
@@ -1151,10 +1165,10 @@ static aclnnStatus AntiQuantScaleAndOffsetContiguousCheck(const aclTensor* antiq
 
         if (antiquantOffsetOptional != nullptr &&
             antiquantOffsetOptional->GetViewShape().GetDimNum() == ANTIQUANT_DIM_MAX_VALUE &&
-            antiquantOffsetOptional->GetViewShape().GetDim(0) != 1 &&
-            antiquantOffsetOptional->GetViewShape().GetDim(1) != 1) {
+            !(antiquantOffsetOptional->GetViewShape().GetDim(0) == 1 &&
+            antiquantOffsetOptional->GetViewShape().GetDim(1) == 1)) {
             OP_CHECK(
-                (transposeWeight && !IsContiguous(antiquantOffsetOptional)) ||
+                (transposeWeight && IsTransLastTwoDims(antiquantOffsetOptional)) ||
                     (!transposeWeight && IsContiguous(antiquantOffsetOptional)),
                 OP_LOGE(
                     ACLNN_ERR_PARAM_INVALID,
@@ -1403,20 +1417,6 @@ static aclnnStatus TransposeAndTransDataForInputsGroup(
     weight = l0op::TransData(weight, Format::FORMAT_FRACTAL_NZ, 0, executor);
     CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
     return ACLNN_SUCCESS;
-}
-
-bool IsTransLastTwoDims(const aclTensor* tensor)
-{
-    // 相对于公共仓接口区别于，输入shape仅支持2维，在tensor输入shape为（1, 1）时返回true
-    if (tensor->GetViewShape().GetDimNum() != 2) {
-        return false;
-    }
-    int64_t dim1 = tensor->GetViewShape().GetDimNum() - 1;
-    int64_t dim2 = tensor->GetViewShape().GetDimNum() - 2;
-    if (tensor->GetViewStrides()[dim2] == 1 && tensor->GetViewStrides()[dim1] == tensor->GetViewShape().GetDim(dim2)) {
-        return true;
-    }
-    return false;
 }
 
 static bool SetShapeStrideForNZ(const aclTensor* weight, aclTensor* weightTemp, bool transposeWeight)
