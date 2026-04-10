@@ -13,7 +13,20 @@
 
 ## 功能说明
 
-- 算子功能：根据 `indices` 指定的位置，将 `updates` 中的数据更新到输入张量 `x` 的对应位置，生成新的输出张量 `y`。
+- 算子功能：稀疏更新算子，根据索引更新张量的指定元素或切片。它接受一个输入张量、索引张量和更新值张量，并输出更新后的张量。常用于局部修改、稀疏梯度更新或稀疏数据操作。
+- 计算公式：
+  设输入张量为$X$，索引集合为$I=\{i_k\}$，更新值为$U=\{u_k\}$，输出张量为$Y$。对任意位置$j$：
+
+  $$
+  Y_j =
+  \begin{cases}
+  u_k, & \text{if } j = i_k \\
+  X_j, & \text{otherwise}
+  \end{cases}
+  $$
+
+  当位置$j$在索引集合中时使用更新值替换，否则保持原张量的值不变。
+  其中，$k$表示第$k$个更新项，$i_k$表示该更新项对应的更新位置，$u_k$表示该更新项对应的更新值。
 
 ## 参数说明
 
@@ -36,36 +49,36 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>待更新的输入张量，提供更新前的基准数据。</td>
+      <td>公式中的X，待更新的输入张量，提供更新前的基准数据。</td>
       <td>FLOAT16、FLOAT、DOUBLE、INT64、INT32、UINT8、UINT16、UINT32、UINT64、INT8、INT16、BOOL、COMPLEX64、COMPLEX128、QINT8、QUINT8、QINT16、QUINT16、QINT32、BFLOAT16、STRING</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>indices</td>
       <td>输入</td>
-      <td>索引张量，用于指定 `x` 中需要被更新的元素或切片位置。</td>
-      <td>INT32</td>
+      <td>公式中的索引集合I，用于指定输入张量X中需要被更新的位置。</td>
+      <td>INT32、INT64</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>updates</td>
       <td>输入</td>
-      <td>更新数据张量，按 `indices` 指定的位置写入 `x`；数据类型与 `x` 相同。</td>
-      <td>与x相同</td>
+      <td>公式中的更新值集合U，表示写入索引集合I对应位置的更新值，数据类型与x相同，shape与indices相同。</td>
+      <td>FLOAT16、FLOAT、DOUBLE、INT64、INT32、UINT8、UINT16、UINT32、UINT64、INT8、INT16、BOOL、COMPLEX64、COMPLEX128、QINT8、QUINT8、QINT16、QUINT16、QINT32、BFLOAT16、STRING</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>输出张量，表示将 `updates` 按 `indices` 更新到 `x` 后得到的结果。</td>
-      <td>与x相同</td>
+      <td>公式中的Y，表示更新后的输出张量，数据类型与x相同，shape与x相同。</td>
+      <td>FLOAT16、FLOAT、DOUBLE、INT64、INT32、UINT8、UINT16、UINT32、UINT64、INT8、INT16、BOOL、COMPLEX64、COMPLEX128、QINT8、QUINT8、QINT16、QUINT16、QINT32、BFLOAT16、STRING</td>
       <td>ND</td>
     </tr>
   </tbody></table>
 
 ## 约束说明
 
-- 无。
+无
 
 ## 调用说明
 
