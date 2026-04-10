@@ -117,9 +117,10 @@ ge::graphStatus BatchNormTilingBase::GetXYShapesAndCheckValid()
         return ge::GRAPH_FAILED);
 
     bool validShapeSize = (xShapeSize == yShapeSize) &&
-                          (((xFormat_ == FORMAT_NCHW || xFormat_ == FORMAT_NHWC) && xShapeSize == DIM_NUM_4) ||
+                          ((xFormat_ == FORMAT_NHWC && xShapeSize == DIM_NUM_4) ||
                            ((xFormat_ == FORMAT_NCDHW || xFormat_ == FORMAT_NDHWC) && xShapeSize == DIM_NUM_5) ||
-                           (xFormat_ == FORMAT_ND && xShapeSize >= DIM_NUM_2));
+                           (xFormat_ == FORMAT_ND && xShapeSize >= DIM_NUM_2) ||
+                           (xFormat_ == FORMAT_NCHW && xShapeSize >= DIM_NUM_2));
     OP_CHECK_IF(
         !validShapeSize,
         OP_LOGE(
@@ -344,7 +345,7 @@ ge::graphStatus BatchNormTilingInferBase::GetShapeAttrsInfo()
     } else if (xFormat_ == FORMAT_NCHW) {
         fusedB0Len_ = xStorageShape.GetDim(DIM_0);
         fusedALen_ = xStorageShape.GetDim(DIM_1);
-        fusedB1Len_ = xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3);
+        fusedB1Len_ = xStorageShape.GetShapeSize() / fusedB0Len_ / fusedALen_;
     } else if (xFormat_ == FORMAT_NCDHW) {
         fusedB0Len_ = xStorageShape.GetDim(DIM_0);
         fusedALen_ = xStorageShape.GetDim(DIM_1);
@@ -382,7 +383,7 @@ ge::graphStatus BatchNormRegbaseTilingBase::GetShapeAttrsInfo()
     if (xFormat_ == FORMAT_NCHW) {
         r1_ = xStorageShape.GetDim(DIM_0);
         a_ = xStorageShape.GetDim(DIM_1);
-        r0_ = xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3);
+        r0_ = xStorageShape.GetShapeSize() / r1_ / a_;
     } else if (xFormat_ == FORMAT_NCDHW) {
         r1_ = xStorageShape.GetDim(DIM_0);
         a_ = xStorageShape.GetDim(DIM_1);
