@@ -105,6 +105,10 @@ const aclTensor* TensorMove(const aclTensor* x, const aclTensor* /*y*/, aclOpExe
 {
     return x;
 }
+const aclTensor* TensorMoveAiCore(const aclTensor* x, const aclTensor* /*y*/, aclOpExecutor* /*executor*/)
+{
+    return x;
+}
 const aclTensor* Threshold(
     const aclTensor* self, const aclScalar* threshold, const aclScalar* /*value*/, aclOpExecutor* /*executor*/)
 {
