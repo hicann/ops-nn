@@ -380,7 +380,7 @@ bool Conv3DDWV2BasicBlockTilingArch35::ShrinkSplitWOIAndTryTiling(int32_t shrink
 
 bool Conv3DDWV2BasicBlockTilingArch35::trySplitKernelHW()
 {
-    blockTiling_.isSplitKernelHW = 1U; //更新isSplitKernelHW必须要更新blockTiling_.splitWi参数
+    blockTiling_.isSplitKernelHW = true; //更新isSplitKernelHW必须要更新blockTiling_.splitWi参数
     blockTiling_.splitWi = GetWiCal(blockTiling_.splitWo, blockTiling_.isSplitKernelHW);
     blockTiling_.tailWi = GetWiCal(blockTiling_.tailWo, blockTiling_.isSplitKernelHW);
 
@@ -403,7 +403,7 @@ bool Conv3DDWV2BasicBlockTilingArch35::trySplitWo()
 bool Conv3DDWV2BasicBlockTilingArch35::trySplitKernelAndWo()
 {
     //直接将wo切块成k0，splitkernel标志置true
-    blockTiling_.isSplitKernelHW = 1U;
+    blockTiling_.isSplitKernelHW = true;
     if (enableSplitW) {
         //切Wi/Wo的NDHWC格式没有支持，通过enableSplitW进行拦截
         blockTiling_.splitWo = static_cast<int32_t>(tilingData_.dwTiling.k0);
@@ -764,8 +764,7 @@ uint64_t Conv3DDWV2BasicBlockTilingArch35::CalBL1Bound(const BasicBlockTilingPar
 }
 
 int32_t Conv3DDWV2BasicBlockTilingArch35::GetHiCal(
-    const BasicBlockTilingParamsArch35& blockTiling, int32_t currentSplitWo,
-    bool isSplitKernelHW)
+    const BasicBlockTilingParamsArch35& blockTiling, int32_t currentSplitWo, bool isSplitKernelHW)
 {
     if (currentSplitWo == 0) {
         return -1;
@@ -853,7 +852,6 @@ ge::graphStatus Conv3DDWV2BasicBlockTilingArch35::DoLibApiTiling()
     tilingData_.dwTiling.al1Bound = CalAL1Bound(blockTiling_);
     dwt.singleCoreCout = blockTiling_.singleCoreM;
     dwt.splitWo = static_cast<uint32_t>(blockTiling_.splitWo);
-    dwt.isSplitKernelHW = blockTiling_.isSplitKernelHW;
 
     uint64_t l1Cin1 = std::max(
         blockTiling_.singleCoreN /
@@ -866,9 +864,10 @@ ge::graphStatus Conv3DDWV2BasicBlockTilingArch35::DoLibApiTiling()
 
 uint64_t Conv3DDWV2BasicBlockTilingArch35::GetTilingKey() const
 {
-    const uint64_t tilingKey = GET_TPL_TILING_KEY(blockTiling_.coreBindDirection);
+    const uint64_t tilingKey = GET_TPL_TILING_KEY(blockTiling_.coreBindDirection, blockTiling_.isSplitKernelHW);
     OP_LOGD(context_->GetNodeName(), "tilingKey is: [%lu]", tilingKey);
-    OP_LOGD(context_->GetNodeName(), "coreBindDirection is: [%u]", blockTiling_.coreBindDirection);
+    OP_LOGD(context_->GetNodeName(), "coreBindDirection is: [%u], isSplitKernelHW is: [%u]",
+        blockTiling_.coreBindDirection, blockTiling_.isSplitKernelHW);
     return tilingKey;
 }
 
@@ -1138,8 +1137,8 @@ void Conv3DDWV2BasicBlockTilingArch35::PrintTilingData()
         << " al1Bound: " << tiling.al1Bound << " bl1Bound: " << tiling.bl1Bound << " hf32Flag: " << tiling.hf32Flag
         << " singleCoreDk: " << tiling.singleCoreDk << " singleCoreGroup: " << tiling.singleCoreGroup
         << " singleCoreCout: " << tiling.singleCoreCout << " singleCoreHo: " << tiling.singleCoreHo
-        << " splitWoSize: " << tiling.splitWo << " isSplitKernelHW: " << tiling.isSplitKernelHW
-        << " singleCoreBatch: " << tiling.singleCoreBatch << " singleCoreCin: " << tiling.singleCoreCin;
+        << " splitWoSize: " << tiling.splitWo  << " singleCoreBatch: " << tiling.singleCoreBatch
+        << " singleCoreCin: " << tiling.singleCoreCin;
     OP_LOGI(opName_, "api tiling: %s", ss.str().c_str());
     PrintInputsAttrs(tiling);
 }

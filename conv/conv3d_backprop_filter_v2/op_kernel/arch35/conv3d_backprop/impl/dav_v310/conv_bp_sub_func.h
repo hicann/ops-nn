@@ -314,7 +314,7 @@ __aicore__ inline void LoadL12L0b(Intf *self, const LocalTensor<typename Intf::S
     // fp32时，K轴为8，N轴为16，M轴为16，因此kstep为baseUseK_/8
     self->ctx.load3d_.mExtension = self->ctx.baseUseK_; // 尾块时，可以不用对齐，而非尾块时，刚好对齐的
     if ((self->ctx.dhwK_ != 1) && (IsSameType<typename Intf::SrcT, float>::value)) {
-        if (!self->ctx.tiling_->isSplitKernelHW) {
+        if constexpr (!Intf::conv3ddwConfig.isSplitKernelHW) {
             LoadL12L0bFp32(self, l1BMatrix, l0b);
         } else {
             LoadDataRepeatParamWithStride repeatParam = {0, 1, 0, 1};
@@ -326,7 +326,7 @@ __aicore__ inline void LoadL12L0b(Intf *self, const LocalTensor<typename Intf::S
     } else {
         LoadDataRepeatParamWithStride repeatParam = {0, 1, 0,
             static_cast<uint16_t>(ShiftCeilM0(self->ctx.baseUseN_, self->ctx.tiling_->n0))};
-        if (self->ctx.tiling_->isSplitKernelHW) {
+        if constexpr (Intf::conv3ddwConfig.isSplitKernelHW) {
             repeatParam = {0, 1, 0, 1}; //切hk/wk后，每次循环一个hkwk，因此修改dstStride为1个单元
         }
         SetLoadDataRepeatWithStride(repeatParam);

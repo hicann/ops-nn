@@ -21,9 +21,16 @@
 
 using namespace AscendC;
 
-template <uint32_t conv3DDWTemplateId>
-__global__ __aicore__ void conv3d_backprop_filter_v2_arch35(GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop,
-                                                                GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
+#define CONV3D_DX_INPUT_RUN_OP(...)                      \
+    do {                                                 \
+        __VA_ARGS__ op;                                  \
+        op.Init(x, out_backprop, y, user1, &tilingData); \
+        op.Process();                                    \
+    } while (0)
+
+template <uint32_t conv3DDWTemplateId, bool isSplitKernelHW>
+__global__ __aicore__ void conv3d_backprop_filter_v2_arch35(
+    GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
     if (workSpace == nullptr) {
         return;
     }
@@ -47,19 +54,12 @@ __global__ __aicore__ void conv3d_backprop_filter_v2_arch35(GM_ADDR x, GM_ADDR f
     opInitOutput.Process();
     opInitOutput.Destroy();
 
-    if (conv3DDWTemplateId == TPL_STREAM_DFL) {
-        Conv3dDw<DTYPE_X, FORMAT_X, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y,
-                 conv3DDWTemplateId> op;
-        op.Init(x, out_backprop, y, user1, &tilingData);
-        op.Process();
-    } else if (conv3DDWTemplateId == TPL_STREAM_K) {
-        Conv3dDwBasicBlockStreamK<DTYPE_X, FORMAT_X, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y> op;
-        op.Init(x, out_backprop, y, user1, &tilingData);
-        op.Process();
-    } else if (conv3DDWTemplateId == TPL_MN_STREAM_K) {
-        Conv3dDwBasicBlockMNStreamK<DTYPE_X, FORMAT_X, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y> op;
-        op.Init(x, out_backprop, y, user1, &tilingData);
-        op.Process();
+    if constexpr (conv3DDWTemplateId == TPL_STREAM_K) {
+        CONV3D_DX_INPUT_RUN_OP(
+            Conv3dDwBasicBlockStreamK<DTYPE_X, FORMAT_X, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y, isSplitKernelHW>);
+    } else if constexpr (conv3DDWTemplateId == TPL_MN_STREAM_K) {
+        CONV3D_DX_INPUT_RUN_OP(
+            Conv3dDwBasicBlockMNStreamK<DTYPE_X, FORMAT_X, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y, isSplitKernelHW>);
     }
 }
 #endif  // CONV3D_BACKPROP_FILTER_V2_ARCH35_H

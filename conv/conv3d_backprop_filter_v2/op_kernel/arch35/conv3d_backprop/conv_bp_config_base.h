@@ -75,6 +75,7 @@ struct ConvType {
 };
 
 struct Conv3ddwConfig {
+    bool isSplitKernelHW = false;
     uint32_t l0cCondition = TPL_STREAM_DFL;
 };
 
@@ -82,6 +83,7 @@ struct Conv3ddwConfig {
 __aicore__ constexpr Conv3ddwConfig GetDefaultConfig()
 {
     return {
+        .isSplitKernelHW = false,
         .l0cCondition = TPL_STREAM_DFL,
     };
 }

@@ -71,7 +71,7 @@ struct TConv3DDwTiling {
     uint32_t singleCoreCout = 1;
     uint32_t singleCoreHo = 1;
     uint32_t splitWo = 128;
-    uint32_t isSplitKernelHW = 0;
+    uint32_t reserve1 = 0; // 占位字段
     uint64_t singleCoreBatch = 1;
     uint64_t singleCoreCin = 1;
 };

@@ -36,7 +36,7 @@ __aicore__ inline constexpr ConvolutionBackprop::CubeFormat GetFormat(int format
 }
 
 template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
-    uint32_t l0cCondition>
+    bool isSplitKernelHW, uint32_t l0cCondition>
 class Conv3dDw {
 public:
     __aicore__ inline Conv3dDw()
@@ -158,7 +158,7 @@ protected:
     using filterSizeDwType = ConvolutionBackprop::ConvType<TPosition::GM, ConvolutionBackprop::CubeFormat::ND, int32_t>;
     using dedyDwType = ConvolutionBackprop::ConvType<TPosition::GM, dedyCubeFormat, dedyType>;
     using yDwType = ConvolutionBackprop::ConvType<TPosition::GM, yCubeFormat, yType>;
-    static constexpr Conv3ddwConfig conv3ddwConfig = {l0cCondition};
+    static constexpr Conv3ddwConfig conv3ddwConfig = {isSplitKernelHW, l0cCondition};
     ConvolutionBackprop::Conv3DBackpropFilter<xDwType, filterSizeDwType, dedyDwType, yDwType, conv3ddwConfig> dw_;
     GlobalTensor<xType> xGm_;
     GlobalTensor<xType> dedyGm_;

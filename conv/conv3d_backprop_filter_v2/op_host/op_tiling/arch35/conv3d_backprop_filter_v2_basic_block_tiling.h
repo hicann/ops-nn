@@ -88,7 +88,7 @@ struct BasicBlockTilingParamsArch35 {
     int32_t tailWo = 0;
     int32_t tailWi = 0;
     uint32_t groupEnlarge = 0;
-    uint32_t isSplitKernelHW = 0;
+    bool isSplitKernelHW = false;
 };
 
 struct MatMulInfoArch35 {

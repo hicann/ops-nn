@@ -476,7 +476,7 @@ struct Compute {
         // 由于N循环可能包含cinhkwk循环和dk循环，因此，self->ctx.baseUseN_的判断条件需改变
         self->ctx.baseUseN_ =
             ((self->ctx.curNL0Idx_ + 1) % self->ctx.cinHkWkLoop_ == 0) ? self->ctx.tailN_ : self->ctx.tiling_->baseN;
-        if (!self->ctx.tiling_->isSplitKernelHW) {
+        if constexpr (!Intf::conv3ddwConfig.isSplitKernelHW) {
             ComputeNormal<Intf>(self, out2L1Params);
         } else {
             ComputeSplitKernelHW<Intf>(self, out2L1Params);
@@ -634,49 +634,50 @@ struct UpdateMNIdx {
         // 如果K方向需要的buffer数量大于bl1Pbuffer，当K循环到stepKa时就需要置换AL1
         // B矩阵计算思路同A矩阵，区别是MN反过来
 
-        bool kIterCeilStepKaGreaterAl1Pbuffer =
-            self->ctx.kIter_ > self->ctx.tiling_->stepKa * self->ctx.tiling_->al1Pbuffer;
-        bool kIterCeilStepKbGreaterBl1Pbuffer =
-            self->ctx.kIter_ > self->ctx.tiling_->stepKb * self->ctx.tiling_->bl1Pbuffer;
+        bool kIterCeilStepKaGreaterAl1Pbuffer = self->ctx.kIter_ > self->ctx.tiling_->stepKa * self->ctx.tiling_->al1Pbuffer;
+        bool kIterCeilStepKbGreaterBl1Pbuffer = self->ctx.kIter_ > self->ctx.tiling_->stepKb * self->ctx.tiling_->bl1Pbuffer;
         self->ctx.isSplitWo_ = (self->ctx.tiling_->splitWo == self->ctx.tiling_->wo) ? 0 : 1;
         // 当singleShapeBatch大于1时，batchDout循环内移动，L1不驻留数据;当启动splitWo时,L1不能驻留数据
-        out2L1Params.isLoad2L1A = kIterCeilStepKaGreaterAl1Pbuffer || self->ctx.singleShapeBatch_ > 1
-                                    || self->ctx.isSplitWo_ == 1 || self->ctx.tiling_->isSplitKernelHW;
-        out2L1Params.isFreeAL1 = kIterCeilStepKaGreaterAl1Pbuffer || self->ctx.singleShapeBatch_ > 1
-                                    || self->ctx.isSplitWo_ == 1 || self->ctx.tiling_->isSplitKernelHW;
-        out2L1Params.isLoad2L1B = kIterCeilStepKbGreaterBl1Pbuffer || self->ctx.singleShapeBatch_ > 1
-                                    || self->ctx.isSplitWo_ == 1 || self->ctx.tiling_->isSplitKernelHW;
-        out2L1Params.isFreeBL1 = kIterCeilStepKbGreaterBl1Pbuffer || self->ctx.singleShapeBatch_ > 1
-                                    || self->ctx.isSplitWo_ == 1 || self->ctx.tiling_->isSplitKernelHW;
-    
+        if constexpr (Intf::conv3ddwConfig.isSplitKernelHW) {
+            out2L1Params.isLoad2L1A = true;
+            out2L1Params.isFreeAL1  = true;
+            out2L1Params.isLoad2L1B = true;
+            out2L1Params.isFreeBL1  = true;
+        } else {
+            out2L1Params.isLoad2L1A = kIterCeilStepKaGreaterAl1Pbuffer || self->ctx.singleShapeBatch_ > 1 || self->ctx.isSplitWo_ == 1;
+            out2L1Params.isFreeAL1  = kIterCeilStepKaGreaterAl1Pbuffer || self->ctx.singleShapeBatch_ > 1 || self->ctx.isSplitWo_ == 1;
+            out2L1Params.isLoad2L1B = kIterCeilStepKbGreaterBl1Pbuffer || self->ctx.singleShapeBatch_ > 1 || self->ctx.isSplitWo_ == 1;
+            out2L1Params.isFreeBL1  = kIterCeilStepKbGreaterBl1Pbuffer || self->ctx.singleShapeBatch_ > 1 || self->ctx.isSplitWo_ == 1;
+        }
+
         if (unlikely(self->ctx.isFirstIter_)) {
             self->ctx.curML0Idx_ = 0;
             self->ctx.curNL0Idx_ = 0;
             self->ctx.curML1Idx_ = 0;
             self->ctx.curNL1Idx_ = 0;
             self->ctx.isFirstIter_ = false;
-            self->ctx.curStepM_ = self->ctx.mIter_ > self->ctx.tiling_->stepM
-                                        ? self->ctx.tiling_->stepM
-                                        : self->ctx.mIter_;
+            self->ctx.curStepM_ = self->ctx.mIter_ > self->ctx.tiling_->stepM ? self->ctx.tiling_->stepM : self->ctx.mIter_;
             if (self->ctx.enableStepNIncludeDkNocinhwk_) {
                 uint32_t curStepN = self->ctx.tiling_->stepN / self->ctx.cinHkWkLoop_ * self->ctx.cinHkWkLoop_;
                 self->ctx.curStepN_ = self->ctx.nIter_ > curStepN ? curStepN : self->ctx.nIter_;
             } else {
-                self->ctx.curStepN_ = self->ctx.nIter_ > self->ctx.tiling_->stepN ?
-                    self->ctx.tiling_->stepN : self->ctx.nIter_;
+                self->ctx.curStepN_ = self->ctx.nIter_ > self->ctx.tiling_->stepN ? self->ctx.tiling_->stepN : self->ctx.nIter_;
             }
             bool isLastNLoop = self->ctx.nIter_ == 1;
             bool isLastMLoop = self->ctx.mIter_ == 1;
             bool isNLastStep = isLastNLoop || self->ctx.tiling_->stepN == 1;
             bool isMLastStep = isLastMLoop || self->ctx.tiling_->stepM == 1;
             out2L1Params.isLoad2L1A = true;
-            out2L1Params.isFreeAL1 = kIterCeilStepKaGreaterAl1Pbuffer || self->ctx.singleShapeBatch_ > 1  || self->ctx.isSplitWo_ == 1 ||
-                self->ctx.tiling_->isSplitKernelHW || (self->ctx.tiling_->iterateOrder && isMLastStep) ||                  // OrderN
-                (!(self->ctx.tiling_->iterateOrder) && isLastNLoop && isMLastStep);  // OrderM
             out2L1Params.isLoad2L1B = true;
-            out2L1Params.isFreeBL1 = kIterCeilStepKbGreaterBl1Pbuffer || self->ctx.singleShapeBatch_ > 1  || self->ctx.isSplitWo_ == 1 ||
-                self->ctx.tiling_->isSplitKernelHW || (self->ctx.tiling_->iterateOrder && isLastMLoop && isNLastStep) ||    // OrderN
-                (!(self->ctx.tiling_->iterateOrder) && isNLastStep);                  // OrderM
+            if constexpr (Intf::conv3ddwConfig.isSplitKernelHW) {
+                out2L1Params.isFreeAL1 = true;
+                out2L1Params.isFreeBL1 = true;
+            } else {
+                out2L1Params.isFreeAL1 = kIterCeilStepKaGreaterAl1Pbuffer || self->ctx.singleShapeBatch_ > 1  || self->ctx.isSplitWo_ == 1 ||
+                    (self->ctx.tiling_->iterateOrder && isMLastStep) || (!(self->ctx.tiling_->iterateOrder) && isLastNLoop && isMLastStep);  // OrderM
+                out2L1Params.isFreeBL1 = kIterCeilStepKbGreaterBl1Pbuffer || self->ctx.singleShapeBatch_ > 1  || self->ctx.isSplitWo_ == 1 ||
+                    (self->ctx.tiling_->iterateOrder && isLastMLoop && isNLastStep) || (!(self->ctx.tiling_->iterateOrder) && isNLastStep);  // OrderN
+            }
         } else if (likely(self->ctx.tiling_->iterateOrder == static_cast<int>(IterateOrder::ORDER_N))) {
             if (++self->ctx.curML0Idx_ >= self->ctx.curML1Idx_ + self->ctx.curStepM_) {
                 self->ctx.curML0Idx_ = self->ctx.curML1Idx_;

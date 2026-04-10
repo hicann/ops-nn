@@ -28,12 +28,12 @@
 using namespace AscendC;
 
 #if __CCE_AICORE__ == 310
-template <uint32_t conv3DDWTemplateId>
+template <uint32_t conv3DDWTemplateId, bool isSplitKernelHW>
 __global__ __aicore__ void conv3d_backprop_filter_v2(
     GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
 {
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
-    conv3d_backprop_filter_v2_arch35<conv3DDWTemplateId>(x, filter_size, out_backprop, y, workSpace, tiling);
+    conv3d_backprop_filter_v2_arch35<conv3DDWTemplateId, isSplitKernelHW>(x, filter_size, out_backprop, y, workSpace, tiling);
     return;
 #endif
 }

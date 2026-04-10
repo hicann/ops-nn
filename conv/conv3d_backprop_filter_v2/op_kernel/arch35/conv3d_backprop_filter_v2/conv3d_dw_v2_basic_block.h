@@ -32,8 +32,8 @@ namespace AscendC {
 using Conv3ddwConfig = typename ConvolutionBackprop::Conv3ddwConfig;
 
 template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
-    uint32_t l0cCondition = TPL_STREAM_DFL>
-class Conv3dDwBasicBlock : public Conv3dDw<xType, xFormat, dedyType, dedyFormat, yType, yFormat, l0cCondition> {
+    bool isSplitKernelHW, uint32_t l0cCondition = TPL_STREAM_DFL>
+class Conv3dDwBasicBlock : public Conv3dDw<xType, xFormat, dedyType, dedyFormat, yType, yFormat, isSplitKernelHW, l0cCondition> {
 public:
     __aicore__ inline Conv3dDwBasicBlock()
     {
@@ -41,7 +41,7 @@ public:
 
     __aicore__ void InitCommonTilingData(const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
     {
-        Conv3dDw<xType, xFormat, dedyType, dedyFormat, yType, yFormat, l0cCondition>::InitTilingData(
+        Conv3dDw<xType, xFormat, dedyType, dedyFormat, yType, yFormat, isSplitKernelHW, l0cCondition>::InitTilingData(
             tilingData, isSeperateDk_, true);
         this->usedCoreNum_ = tilingData->basicBlockTiling.usedCoreNum;
         this->streamkType_ = tilingData->basicBlockTiling.streamkType;
@@ -87,8 +87,8 @@ protected:
     }
 };
 
-template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat>
-class Conv3dDwBasicBlockMNStreamK : public Conv3dDwBasicBlock<xType, xFormat, dedyType, dedyFormat, yType, yFormat> {
+template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat, bool isSplitKernelHW>
+class Conv3dDwBasicBlockMNStreamK : public Conv3dDwBasicBlock<xType, xFormat, dedyType, dedyFormat, yType, yFormat, isSplitKernelHW> {
 public:
     __aicore__ inline Conv3dDwBasicBlockMNStreamK()
     {
@@ -125,7 +125,6 @@ protected:
     static constexpr uint64_t L0C_SIZE_BY_ELEMENT_IN_FLOAT = AscendC::TOTAL_L0C_SIZE >> 2;
     static constexpr uint64_t DOUBLE_BUFFER = 2;
     uint32_t deterAddCoreNum_ = 0;
-    bool isSplitKernelHW_ = false;
 
     __aicore__ inline void InitSplitTilingData(const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
     {
@@ -133,7 +132,6 @@ protected:
         this->singleShapeK_ = tilingData->basicBlockTiling.singleCoreK;
         this->singleShapeN_ = tilingData->basicBlockTiling.singleCoreN;
         this->singleCoreBatch_ = tilingData->basicBlockTiling.singleCoreBatchDout;
-        this->isSplitKernelHW_ = tilingData->dwTiling.isSplitKernelHW;
         this->CalBasicBlockCnt();
     }
 
@@ -426,7 +424,7 @@ protected:
         segmentsH = AscendC::Std::min(segmentsNDH, ho);
         
         // 对于SplitKernelHW分支，限制H轴切分的大小最大为256，使得padding不会超load3d的限制
-        if (unlikely(this->isSplitKernelHW_)) {
+        if constexpr (isSplitKernelHW) {
             segmentsH = AscendC::Std::min(segmentsH, HUGE_PADDING_HO_THRESHOLD);
         }
 
@@ -434,9 +432,8 @@ protected:
     }
 };
 
-template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat>
-class Conv3dDwBasicBlockStreamK : public Conv3dDwBasicBlockMNStreamK<xType, xFormat, dedyType, dedyFormat, yType,
-        yFormat> {
+template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat, bool isSplitKernelHW>
+class Conv3dDwBasicBlockStreamK : public Conv3dDwBasicBlockMNStreamK<xType, xFormat, dedyType, dedyFormat, yType, yFormat, isSplitKernelHW> {
 public:
     __aicore__ inline Conv3dDwBasicBlockStreamK()
     {
