@@ -255,6 +255,7 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, ha
     }
     uint16_t mLoopNum = static_cast<uint16_t>(mLen_);
     uint16_t nLoopNum = static_cast<uint16_t>(ops::CeilDiv(nSize, REG_LEN));
+    uint16_t baBlockSize = static_cast<uint16_t>(bBlockSize);
     __VEC_SCOPE__
     {
         MicroAPI::RegTensor<xDtype> vregIn;
@@ -273,7 +274,7 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, ha
         MicroAPI::MaskReg pregAll = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
         MicroAPI::MaskReg pregH = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::H>();
         MicroAPI::Duplicate<float>(vregMaxFactor, maxValueDiv, pregAll);
-        for (uint16_t bIdx = 0; bIdx < bBlockSize; bIdx++){
+        for (uint16_t bIdx = 0; bIdx < baBlockSize; bIdx++){
             uint32_t sregN = nSize;
             for (uint16_t i = 0; i < nLoopNum; i++) {
                 preg0 = MicroAPI::UpdateMask<float>(sregN);
@@ -326,7 +327,8 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, ha
              nSizeOut = ops::CeilAlign(nBlockSize, ALIGN_NUMBER_IN4);
        }
         uint16_t mLoopNum = static_cast<uint16_t>(mLen_);
-        uint16_t nLoopNum = static_cast<uint16_t>(ops::CeilDiv(nSize, REG_LEN));  
+        uint16_t nLoopNum = static_cast<uint16_t>(ops::CeilDiv(nSize, REG_LEN));
+        uint16_t baBlockSize = static_cast<uint16_t>(bBlockSize); 
         
     __VEC_SCOPE__
     {
@@ -354,7 +356,7 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, ha
       
         MicroAPI::Duplicate<float>(vregOffsetDivVal, offsetDivValue, pregAll);
        
-        for(uint16_t bIdx =0; bIdx < bBlockSize; bIdx++){
+        for(uint16_t bIdx =0; bIdx < baBlockSize; bIdx++){
             uint32_t sregN =nSize;
             for (uint16_t i = 0; i < nLoopNum; i++) {
                 preg0 = MicroAPI::UpdateMask<float>(sregN);
