@@ -86,7 +86,7 @@ uint64_t ConvTilingAlgorithmBase::InferHiL1(uint64_t hoL1, int64_t hi) const
 
 uint64_t ConvTilingAlgorithmBase::InferWiL1(uint64_t woL1, int64_t wi) const
 {
-    if (woL1 == static_cast<uint64_t>(tilingIns_->shapeInfo.singleWo) && tilingIns_->isC04Flag) {
+    if (woL1 >= static_cast<uint64_t>(tilingIns_->shapeInfo.singleWo) && tilingIns_->isC04Flag) {
         return tilingIns_->shapeInfo.orgWi;
     }
 
@@ -145,15 +145,14 @@ bool ConvTilingAlgorithmBase::CheckOptGroupPreload() const
     bool otherFlag = tilingIns_->l1TilingInfo.iterateMNOrder == IterateMNOrder::ITER_M_FST &&
                      tilingIns_->ubTilingInfo.mUb == 0 && tilingIns_->ubTilingInfo.nUb == 0;
 
-    bool multiMFlag = tilingIns_->l1TilingInfo.mAL1 == tilingIns_->l0TilingInfo.mL0;
+    bool multiMNFlag = tilingIns_->l1TilingInfo.mAL1 == tilingIns_->l0TilingInfo.mL0;
     if (tilingIns_->outputOrder == static_cast<int8_t>(OutputOrder::HW)) {
-        multiMFlag = tilingIns_->l1TilingInfo.hoAL1 == tilingIns_->l0TilingInfo.hoL0 &&
+        multiMNFlag = tilingIns_->l1TilingInfo.hoAL1 == tilingIns_->l0TilingInfo.hoL0 &&
                      tilingIns_->l1TilingInfo.woAL1 == tilingIns_->l0TilingInfo.woL0;
     }
+    multiMNFlag = multiMNFlag && (tilingIns_->l1TilingInfo.nBL1 == tilingIns_->l0TilingInfo.nL0);
 
-    bool resetFlag = sceneFlag && fullLoadFlag && otherFlag && multiMFlag;
-
-    return resetFlag;
+    return (sceneFlag && fullLoadFlag && otherFlag && multiMNFlag);
 }
 
 void ConvTilingAlgorithmBase::SetPBufferRes()

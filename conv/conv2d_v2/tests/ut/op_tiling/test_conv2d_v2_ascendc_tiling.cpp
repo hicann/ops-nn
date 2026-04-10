@@ -617,7 +617,7 @@ void CheckHWModeForConv2dPartOne(TilingParam &tilingData, uint64_t k0, bool dma_
     EXPECT_EQ(hoL1Check, 1);
 }
 
-void CheckHWModeTilingDataValidForConv2d(TilingParam &tilingData, uint64_t k0, bool isC04Flag, bool dma_flag)
+void CheckHWModeTilingDataValidForConv2d(TilingParam &tilingData, uint64_t k0, bool isC04Flag, bool dma_flag, bool isOptPreloadFlag)
 {
     CheckHWModeForConv2dPartOne(tilingData, k0, dma_flag);
 
@@ -649,6 +649,11 @@ void CheckHWModeTilingDataValidForConv2d(TilingParam &tilingData, uint64_t k0, b
             kBL1DivCheck = true;
         }
         EXPECT_EQ(kBL1DivCheck, 1);
+    }
+    if (isOptPreloadFlag) {
+        EXPECT_EQ(tilingData.hoL1, tilingData.hoL0);
+        EXPECT_EQ(tilingData.woL1, tilingData.woL0);
+        EXPECT_EQ(tilingData.nBL1, tilingData.nL0);
     }
 }
 
@@ -711,7 +716,7 @@ bool CheckValidTilingDataPartOne(TilingParam &tilingData,
     return mBasicBlockModeFlag;
 }
 
-void CheckMModeTilingDataValidForConv2d(TilingParam &tilingData, DtypeSize dtypeSize, bool mBasicBlockModeFlag)
+void CheckMModeTilingDataValidForConv2d(TilingParam &tilingData, DtypeSize dtypeSize, bool mBasicBlockModeFlag, bool isOptPreloadFlag)
 {
     uint64_t k0 = CUBE_C0_SIZE / dtypeSize.fMapDtypeSize;
     uint64_t pBuffer = tilingData.pBufferFlag;
@@ -754,6 +759,10 @@ void CheckMModeTilingDataValidForConv2d(TilingParam &tilingData, DtypeSize dtype
     EXPECT_EQ(tilingData.woL0, 0);
     EXPECT_EQ(tilingData.singleCoreWo, 0);
     EXPECT_EQ(tilingData.hoL1 % CUBE_M0, 0);
+    if (isOptPreloadFlag) {
+        EXPECT_EQ(tilingData.hoL1, tilingData.hoL0);
+        EXPECT_EQ(tilingData.nBL1, tilingData.nL0);
+    }
 }
 
 void CheckValidTilingData(TilingParam &tilingData,
@@ -766,13 +775,17 @@ void CheckValidTilingData(TilingParam &tilingData,
     uint64_t k0 = CUBE_C0_SIZE / dtypeSize.fMapDtypeSize;
     bool isC04Flag = (tilingData.bUbNStep > 0 && tilingData.bUbKStep == 0) ? true : false;
     bool dma_flag = (tilingKey & 0x4000) >> NUM_14;
+    bool isOptPreloadFlag = ((tilingKey >> NUM_2) & 0x3) == 0 &&  // WeightTiling == 0 (FULLLOAD_BL1)
+                            ((tilingKey >> NUM_4) & 0x3) == 3 &&  // L1PingPong == 3 (ALL_OPEN)
+                            ((tilingKey >> NUM_9) & 0x1) == 0 &&  // IterOrder == 0 (MITER_FIRST)
+                            ((tilingKey >> NUM_10) & 0x3) == 2;   // GroupType == 2 (OPT_GROUP_CONV)
     int32_t outputOrder = tilingData.singleCoreWo == 0 && tilingData.woL1 == 0;
     if (outputOrder == 1) {
-        CheckMModeTilingDataValidForConv2d(tilingData, dtypeSize, mBasicBlockModeFlag);
+        CheckMModeTilingDataValidForConv2d(tilingData, dtypeSize, mBasicBlockModeFlag, isOptPreloadFlag);
     }
 
     if (outputOrder == 0) {
-        CheckHWModeTilingDataValidForConv2d(tilingData, k0, isC04Flag, dma_flag);
+        CheckHWModeTilingDataValidForConv2d(tilingData, k0, isC04Flag, dma_flag, isOptPreloadFlag);
     }
 }
 

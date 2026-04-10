@@ -53,6 +53,8 @@ uint64_t NUM_2 = 2;
 uint64_t NUM_3 = 3;
 uint64_t NUM_4 = 4;
 uint64_t NUM_5 = 5;
+uint64_t NUM_9 = 9;
+uint64_t NUM_10 = 10;
 uint64_t NUM_14 = 14;
 uint64_t MEM_SIZE_64K = 65536;
 uint64_t MEM_SIZE_256K = 262144;
@@ -716,7 +718,7 @@ void CheckHWModeForConv2dPartOne(TilingParam &tilingData, uint64_t k0)
     EXPECT_EQ(hoL1Check, 1);
 }
 
-void CheckHWModeTilingDataValidForConv2d(TilingParam &tilingData, uint64_t k0, bool isC04Flag)
+void CheckHWModeTilingDataValidForConv2d(TilingParam &tilingData, uint64_t k0, bool isC04Flag, bool isOptPreloadFlag)
 {
     CheckHWModeForConv2dPartOne(tilingData, k0);
 
@@ -748,6 +750,11 @@ void CheckHWModeTilingDataValidForConv2d(TilingParam &tilingData, uint64_t k0, b
             kBL1DivCheck = true;
         }
         EXPECT_EQ(kBL1DivCheck, 1);
+    }
+    if (isOptPreloadFlag) {
+        EXPECT_EQ(tilingData.hoL1, tilingData.hoL0);
+        EXPECT_EQ(tilingData.woL1, tilingData.woL0);
+        EXPECT_EQ(tilingData.nBL1, tilingData.nL0);
     }
 }
 
@@ -806,7 +813,7 @@ bool CheckValidTilingDataPartOne(TilingParam &tilingData,
     return mBasicBlockModeFlag;
 }
 
-void CheckMModeTilingDataValidForConv2d(TilingParam &tilingData, DtypeSize dtypeSize, bool mBasicBlockModeFlag)
+void CheckMModeTilingDataValidForConv2d(TilingParam &tilingData, DtypeSize dtypeSize, bool mBasicBlockModeFlag, bool isOptPreloadFlag)
 {
     uint64_t k0 = C0_SIZE / dtypeSize.fMapDtypeSize;
     uint64_t pBuffer = tilingData.pBufferFlag;
@@ -849,6 +856,10 @@ void CheckMModeTilingDataValidForConv2d(TilingParam &tilingData, DtypeSize dtype
     EXPECT_EQ(tilingData.woL0, 0);
     EXPECT_EQ(tilingData.singleCoreWo, 0);
     EXPECT_EQ(tilingData.hoL1 % M0_SIZE, 0);
+    if (isOptPreloadFlag) {
+        EXPECT_EQ(tilingData.hoL1, tilingData.hoL0);
+        EXPECT_EQ(tilingData.nBL1, tilingData.nL0);
+    }
 }
 
 void CheckValidTilingData(TilingParam &tilingData,
@@ -861,13 +872,17 @@ void CheckValidTilingData(TilingParam &tilingData,
     uint64_t k0 = C0_SIZE / dtypeSize.fMapDtypeSize;
     bool isC04Flag = (tilingData.bUbNStep > 0 && tilingData.bUbKStep == 0) ? true : false;
     bool dma_flag = (tilingKey & 0x4000) >> NUM_14;
+    bool isOptPreloadFlag = ((tilingKey >> NUM_2) & 0x3) == 0 &&  // WeightTiling == 0 (FULLLOAD_BL1)
+                            ((tilingKey >> NUM_4) & 0x3) == 3 &&  // L1PingPong == 3 (ALL_OPEN)
+                            ((tilingKey >> NUM_9) & 0x1) == 0 &&  // IterOrder == 0 (MITER_FIRST)
+                            ((tilingKey >> NUM_10) & 0x3) == 2;   // GroupType == 2 (OPT_GROUP_CONV)
     int32_t outputOrder = tilingData.singleCoreWo == 0 && tilingData.woL1 == 0;
     if (outputOrder == 1) {
-        CheckMModeTilingDataValidForConv2d(tilingData, dtypeSize, mBasicBlockModeFlag);
+        CheckMModeTilingDataValidForConv2d(tilingData, dtypeSize, mBasicBlockModeFlag, isOptPreloadFlag);
     }
 
     if (outputOrder == 0) {
-        CheckHWModeTilingDataValidForConv2d(tilingData, k0, isC04Flag);
+        CheckHWModeTilingDataValidForConv2d(tilingData, k0, isC04Flag, isOptPreloadFlag);
     }
 }
 
@@ -1350,6 +1365,18 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_015) {
                       false, 1, // enableHf32Mode, groups
                       "SPECIFIC",
                       0, "NCHW", "rint"); // errorCaseStatus, format, round_mode
+}
+
+TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_016) {
+  ExtendConv2DTestCase({4,23,1894,16}, {253,1,2},{0,0,0,0}, {48,7}, {1,1},
+                      ge::DT_INT8, ge::DT_FLOAT16, ge::DT_FLOAT16, // inDataType, out0DataType, out1DataType
+                      true, true, false, //isHasBias, isHasScale0, isHasScale1,
+                      false, false, // isHasReluWeight0, isHasReluWeight1
+                      false, false, //isHasClipValue0, isHasClipValue1
+                      false, false, false, // enableRelu0, enableRelu1, dualOutput
+                      false, 23, // enableHf32Mode, groups
+                      "SPECIFIC",
+                      0, "NCHW"); // errorCaseStatus, format
 }
 
 TEST_F(ExtendConv2dTiling, run_ExtendConv2D_singleCoreCo_fix_case1) {

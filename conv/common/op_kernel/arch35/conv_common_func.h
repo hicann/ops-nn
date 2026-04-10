@@ -208,19 +208,23 @@ struct ConvPreProcess {
                         WaitFlag<HardEvent::FIX_MTE2>(eventId);
                     }
                     self->ctx.scaleL1 = self->ctx.queueScaleL1.template AllocTensor<typename Intf::ScaleT>();
+                    uint64_t scaleLoadNum = self->ctx.singleCoreCo;
+                    if constexpr (Intf::groupOptPreloadFlag) {
+                        scaleLoadNum = self->ctx.orgCo;
+                    }
                     if constexpr (Intf::isExtendConv2d) {
                         if (self->ctx.convTiling->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                             self->ctx.loadScaleL1Ins.LoadChannelWiseL1FullLoad(self->ctx.scaleL1, self->ctx.scalegm,
-                                self->ctx.singleCoreCo, 0);
+                                scaleLoadNum, 0);
                         }
                         if (self->ctx.convTiling->dualOutput &&
                             self->ctx.convTiling->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                             self->ctx.loadScaleL1Ins.LoadChannelWiseL1FullLoad(self->ctx.scaleL1[self->ctx.scale1L1offset],
-                                self->ctx.scale1gm, self->ctx.singleCoreCo, 0);
+                                self->ctx.scale1gm, scaleLoadNum, 0);
                         }
                     } else {
                         self->ctx.loadScaleL1Ins.LoadChannelWiseL1FullLoad(self->ctx.scaleL1, self->ctx.scalegm,
-                            self->ctx.singleCoreCo, 0);
+                            scaleLoadNum, 0);
                     }
                     self->ctx.queueScaleL1.EnQue(self->ctx.scaleL1);
                     self->ctx.scaleL1 = self->ctx.queueScaleL1.template DeQue<typename Intf::ScaleT>();
@@ -450,6 +454,11 @@ __aicore__ inline void InitBuffer(Intf *self)
         uint64_t scale0L1Size = self->ctx.convTiling->fixpParamsFullLoadFlag ? AlignB(
             self->ctx.singleCoreCo * Intf::sizeOfScale, BLOCK_L0_N * Intf::sizeOfScale) :
             self->ctx.convTiling->nL0 * Intf::sizeOfScale;
+        if constexpr (Intf::groupOptPreloadFlag) {
+            if (self->ctx.convTiling->fixpParamsFullLoadFlag) {
+                scale0L1Size = AlignB(self->ctx.orgCo * Intf::sizeOfScale, BLOCK_L0_N * Intf::sizeOfScale);
+            }
+        }
         if (self->ctx.convTiling->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
             scaleL1SpaceSize += scale0L1Size;
         }
@@ -466,6 +475,11 @@ __aicore__ inline void InitBuffer(Intf *self)
             uint64_t scaleL1SpaceSize = self->ctx.convTiling->fixpParamsFullLoadFlag ? AlignB(
                 self->ctx.singleCoreCo * Intf::sizeOfScale, BLOCK_L0_N * Intf::sizeOfScale) :
                 self->ctx.convTiling->nL0 * Intf::sizeOfScale;
+            if constexpr (Intf::groupOptPreloadFlag) {
+                if (self->ctx.convTiling->fixpParamsFullLoadFlag) {
+                    scaleL1SpaceSize = AlignB(self->ctx.orgCo * Intf::sizeOfScale, BLOCK_L0_N * Intf::sizeOfScale);
+                }
+            }
             self->ctx.pipe.InitBuffer(self->ctx.queueScaleL1, 1, AlignB(scaleL1SpaceSize, C0_SIZE));
         }
     }
