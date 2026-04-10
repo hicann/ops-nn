@@ -553,7 +553,7 @@ const OP_BINARY_RES& {op_type}KernelResource() {{
             ):
             if symbol.startswith("op_impl_register_template_"):
                 last_op = op_type
-            elif not op_type[-1].isnumeric():
+            elif op_type in self._op_res:
                 self._op_res[op_type].extend_register.append(symbol)
             elif last_op:
                 self._op_res[last_op].extend_register.append(symbol)
@@ -587,7 +587,7 @@ const OP_BINARY_RES& {op_type}KernelResource() {{
 
         reference_code_list = []
         extend_declaration = ""
-        for symbol in self._op_res[op_type].extend_register:
+        for symbol in list(dict.fromkeys(self._op_res[op_type].extend_register)):
             namespace, func_name, reference_code = self._extract_register_symbol(symbol)
             if func_name:
                 extend_declaration += self.EXTEND_REG_DECL_FMT.format(namespace=namespace, func_name=func_name)
