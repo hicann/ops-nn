@@ -118,7 +118,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>roundModeOptional (char*)</td>
       <td>输入</td>
       <td>表示最后由高bit数据cast到目标数据类型的近似模式。</td>
-      <td>当dstType为35/36时，对应输出yOut数据类型为FLOAT8_E5M2/FLOAT8_E4M3FN时，仅支持{"rint"}；<br>当dstType为34时，对应输出yOut数据类型为HIFLOAT8时，支持{"round"、"hybrid"}；<br>传入空指针时，采用"rint"模式。</td>
+      <td><ul><li>当dstType为35/36时，对应输出yOut数据类型为FLOAT8_E5M2/FLOAT8_E4M3FN时，仅支持{"rint"}；</li><li>当dstType为34时，对应输出yOut数据类型为HIFLOAT8时，支持{"round"、"hybrid"}；</li><li>传入空指针时，采用"rint"模式。</li></ul></td>
       <td>STRING</td>
       <td>-</td>
       <td>-</td>
@@ -178,7 +178,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>scaleOut (aclTensor*)</td>
       <td>输出</td>
       <td>表示每个分组对应的量化尺度，对应公式中的scale。</td>
-      <td>支持空Tensor。<br>如果输入x的shape为[M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[(M//rowBlockSize+g), (N/colBlockSize)]。<br>如果输入x的shape为[B, M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[B, (M//rowBlockSize+g), (N/colBlockSize)]。 </td>
+      <td><ul><li>支持空Tensor。</li><li>如果输入x的shape为[M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[(M//rowBlockSize+g), (N/colBlockSize)]。</li><li>如果输入x的shape为[B, M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[B, (M//rowBlockSize+g), (N/colBlockSize)]。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>2-3</td>
