@@ -85,16 +85,16 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
         <th>描述</th>
         <th>使用说明</th>
         <th>数据类型</th>
-        <th><a href="../../../docs/zh/context/数据格式.md" target="_blank">数据格式</a></th>
+        <th>数据格式</th>
         <th style="white-space: nowrap">维度(shape)</th>
-        <th><a href="../../../docs/zh/context/非连续的Tensor.md" target="_blank">非连续的Tensor</a></th>
+        <th>非连续的Tensor</th>
       </tr>
     </thread>
     <tbody>
       <tr>
         <td>x</td>
         <td>输入</td>
-        <td>矩阵乘的左输入矩阵，公式中的输入<code>x</code>，device侧的aclTensor。</td>
+        <td>矩阵乘的左输入矩阵，公式中的输入<code>x</code>。</td>
         <td>不支持转置。</td>
         <td>FLOAT16、BFLOAT16</td>
         <td>ND</td>
@@ -104,7 +104,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       <tr>
         <td>weight</td>
         <td>输入</td>
-        <td>矩阵乘的右输入矩阵，公式中的输入<code>weight</code>，device侧的aclTensor。</td>
+        <td>矩阵乘的右输入矩阵，公式中的输入<code>weight</code>。</td>
         <td>支持转置、非转置。</td>
         <td>INT4、FLOAT4_E2M1、INT32、FLOAT、INT8</td>
         <td>FRACTAL_NZ</td>
@@ -124,7 +124,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       <tr>
         <td>antiquantOffsetOptional</td>
         <td>可选输入</td>
-        <td>实现输入反量化计算的offset参数，公式中的<code>antiquantOffset</code>，device侧的aclTensor。</td>
+        <td>实现输入反量化计算的offset参数，公式中的<code>antiquantOffset</code>。</td>
         <td>连续性要求与weight一致。</td>
         <td>FLOAT16、BFLOAT16</td>
         <td>ND</td>
@@ -154,7 +154,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       <tr>
         <td>biasOptional</td>
         <td>可选输入</td>
-        <td>偏置输入，公式中的<code>bias</code>，device侧的aclTensor。</td>
+        <td>偏置输入，公式中的<code>bias</code>。</td>
         <td>当不需要时传入空指针。</td>
         <td>FLOAT16、BFLOAT16、、FLOAT</td>
         <td>ND</td>
@@ -178,7 +178,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       <tr>
         <td>y</td>
         <td>输出</td>
-        <td>计算输出，公式中的<code>y</code>，device侧的aclTensor。</td>
+        <td>计算输出，公式中的<code>y</code>。</td>
         <td>-</td>
         <td>FLOAT16、BFLOAT16</td>
         <td>ND</td>
