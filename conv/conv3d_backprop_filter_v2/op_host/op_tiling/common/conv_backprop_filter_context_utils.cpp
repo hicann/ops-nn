@@ -96,6 +96,11 @@ static inline bool CheckRange(T val, T lower, T upper)
 }
 
 namespace {
+static bool IsArchAfter35(const gert::TilingContext* context)
+{
+    return context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510;
+}
+
 bool SetStridesAttr(const gert::TilingContext *context, Conv3dBpFilterV2RunInfo &runInfoV2)
 {
     const auto op_name = (context->GetNodeName() == nullptr) ? "nil" : context->GetNodeName();
@@ -158,8 +163,7 @@ bool SetDilationsAttr(const gert::TilingContext *context, Conv3dBpFilterV2RunInf
                 static_cast<int64_t>(DILATION_LOWWER), static_cast<int64_t>(SHAPE_UPPER)),
         OP_LOGE(op_name, "dilation_d is invalid, current is %ld, dilation_d support range [%d, %d]",
         normalized_dilations[NCDHW_D_INDEX], DILATION_LOWWER, SHAPE_UPPER), return false);
-    int32_t dilation_limit =
-        context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510 ? SHAPE_UPPER : DILATION_UPPER;
+    int32_t dilation_limit = IsArchAfter35(context) ? SHAPE_UPPER : DILATION_UPPER;
     OP_CHECK_IF(!CheckRange<int64_t>(normalized_dilations[NCDHW_H_INDEX],
                 static_cast<int64_t>(DILATION_LOWWER), static_cast<int64_t>(dilation_limit)),
         OP_LOGE(op_name, "dilation_h is invalid, current is %ld, dilation_h support range [%d, %d]",
@@ -186,6 +190,21 @@ bool SetDilationsAttr(const gert::TilingContext *context, Conv3dBpFilterV2RunInf
     return true;
 }
 
+void SetHf32Flag(const char* op_name, const gert::RuntimeAttrs *attrs, Conv3dBpFilterV2RunInfo &runInfoV2)
+{
+    runInfoV2.hf32Flag = 0;
+    if (runInfoV2.a_dtype == ge::DT_FLOAT && (attrs->GetAttrNum() > ENABLE_HF32_INDEX)) {
+        auto enableHf32Ptr = attrs->GetBool(ENABLE_HF32_INDEX);
+        if (enableHf32Ptr == nullptr) {
+            OP_LOGE(op_name, "get enable_hf32 attr is null");
+            return;
+        }
+        bool enableHf32 = *enableHf32Ptr;
+        OP_LOGD(op_name, "attr idx[%zu] enable_hf32 = %d", ENABLE_HF32_INDEX, enableHf32);
+        runInfoV2.hf32Flag = static_cast<uint32_t>(enableHf32 ? 1 : 0);
+    }
+}
+
 bool SetGroupsAttrs(const gert::TilingContext *context, Conv3dBpFilterV2RunInfo &runInfoV2, int32_t filter_shape_c)
 {
     const auto op_name = (context->GetNodeName() == nullptr) ? "nil" : context->GetNodeName();
@@ -204,10 +223,17 @@ bool SetGroupsAttrs(const gert::TilingContext *context, Conv3dBpFilterV2RunInfo 
         OP_LOGE(op_name, "x_channel(%d) / filter_channel(%d) != groups(%d)", runInfoV2.ci, filter_shape_c, groups);
         return false;
     }
-    if (runInfoV2.co % groups != 0) {
-        OP_LOGE(op_name, "out_channels(%d) %% groups(%d) != 0", runInfoV2.co , groups);
-        return false;
-    }
+
+    OP_CHECK_IF((runInfoV2.co % groups) != 0, OP_LOGE(op_name, "out_channels(%d) %% groups(%d) != 0", runInfoV2.co , groups), return false);
+    OP_CHECK_IF(groups < 1 || groups > UINT16_MAX, OP_LOGE(
+        op_name, "Groups [%d] is invalid, it should be in range: [1, %d]", groups, UINT16_MAX), return false);
+
+    runInfoV2.groups = groups;
+    SetHf32Flag(op_name, attrs, runInfoV2);
+
+    // 分组卷积在arch35的tiling阶段会计算扩维系数，此处跳过
+    OP_CHECK_IF(IsArchAfter35(context), OP_LOGD(op_name, "DAV_3510 do not need to calculate factor in utils."), return true);
+
     // groups attrs
     int32_t mag_factor = 1;
     if (groups == 1) {
@@ -219,9 +245,6 @@ bool SetGroupsAttrs(const gert::TilingContext *context, Conv3dBpFilterV2RunInfo 
         OP_CHECK_IF(mag_factor <= 0, OP_LOGE(op_name, "mag_factor [%d] should be greater than 0.", mag_factor), return false);
         runInfoV2.real_g = (groups + mag_factor - 1) / mag_factor;
     }
-
-    OP_CHECK_IF(groups < 1 || groups > UINT16_MAX, OP_LOGE(op_name, "Groups [%d] is invalid, it should be in range: [1, %d]", groups, UINT16_MAX), return false);
-    runInfoV2.groups = groups;
     runInfoV2.mag_factor = mag_factor;
 
     if (runInfoV2.a_dtype == ge::DT_FLOAT) {
@@ -230,14 +253,6 @@ bool SetGroupsAttrs(const gert::TilingContext *context, Conv3dBpFilterV2RunInfo 
     } else {
         runInfoV2.cin1_g = (mag_factor * runInfoV2.ci / groups + runInfoV2.k0 - 1) / runInfoV2.k0;
         runInfoV2.cout1_g = (mag_factor * runInfoV2.co / groups + runInfoV2.k0 - 1) / runInfoV2.k0;
-    }
-    runInfoV2.hf32Flag = 0;
-    if (runInfoV2.a_dtype == ge::DT_FLOAT && (attrs->GetAttrNum() > ENABLE_HF32_INDEX)) {
-        auto enableHf32Ptr = attrs->GetBool(ENABLE_HF32_INDEX);
-        OP_CHECK_IF(enableHf32Ptr == nullptr, OP_LOGE(op_name, "get enable_hf32 attr is null"), return false);
-        bool enableHf32 = *enableHf32Ptr;
-        OP_LOGD(op_name, "attr idx[%zu] enable_hf32 = %d", ENABLE_HF32_INDEX, enableHf32);
-        runInfoV2.hf32Flag = static_cast<uint32_t>(enableHf32 ? 1 : 0);
     }
     return true;
 }
@@ -453,12 +468,6 @@ bool CheckGradOutputShape(const gert::TilingContext* context, Conv3dBpFilterV2Ru
         wo_expect != runInfoV2.wo, OP_LOGE(op_name,
             "out_backprop's W = %d is not equal with inferred W = %ld", runInfoV2.wo, wo_expect), return false);
     return true;
-}
-
-static bool IsArchAfter35(const gert::TilingContext* context)
-{
-    return context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == 
-                NpuArch::DAV_3510;
 }
 
 bool SetConvBackpropFilterAttrs(const gert::TilingContext *context, Conv3dBpFilterV2RunInfo &runInfoV2)

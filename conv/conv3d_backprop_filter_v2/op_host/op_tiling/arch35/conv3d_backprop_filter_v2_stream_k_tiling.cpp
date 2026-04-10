@@ -97,9 +97,6 @@ ge::graphStatus Conv3DBackpropFilterV2StreamKTiling::DoOpTiling()
     }
     AdjustSmallCaseBaseBlock();
     DoStreamKTiling();
-    OP_LOGD(
-        opName_, "Finish doing basic block stream k tiling, total blockCnt[%ld], coreStreamK[%d].",
-        blockTiling_.totalCnt, blockTiling_.coreStreamK);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -300,11 +297,11 @@ void Conv3DBackpropFilterV2StreamKTiling::DoStreamKTiling()
 {
     uint64_t mCnt = Ops::Base::CeilDiv(mmInfo_.mValue, static_cast<uint64_t>(blockTiling_.singleCoreM));
     uint64_t nCnt = Ops::Base::CeilDiv(mmInfo_.nValue, static_cast<uint64_t>(blockTiling_.singleCoreN));
-    blockTiling_.totalCnt = mCnt * nCnt * runInfo_.kd * runInfo_.real_g;
-    blockTiling_.coreBindDirection = blockTiling_.totalCnt < platformInfo_.core_num ? STREAM_K : MN_STREAM_K;
+    uint64_t totalCnt = mCnt * nCnt * runInfo_.kd * runInfo_.real_g;
+    blockTiling_.coreBindDirection = totalCnt < platformInfo_.core_num ? STREAM_K : MN_STREAM_K;
     blockTiling_.singleCoreBatchDout = static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout;
     blockTiling_.usedCoreNum = platformInfo_.core_num;
-    uint64_t streamkCnt = blockTiling_.totalCnt % platformInfo_.core_num;
+    uint64_t streamkCnt = totalCnt % platformInfo_.core_num;
     if (streamkCnt == CONST_ZERO) {
         // 没有尾轮基本块
         blockTiling_.streamkType = NO_STREAMK_CALC;
@@ -337,6 +334,7 @@ void Conv3DBackpropFilterV2StreamKTiling::DoStreamKTiling()
         blockTiling_.coreStreamK = 0;
         blockTiling_.coreBindDirection = MN_STREAM_K;
     }
+    OP_LOGD(opName_, "Finish doing basic block stream k tiling, totalCnt[%lu], coreStreamK[%u].", totalCnt, blockTiling_.coreStreamK);
 }
 
 ge::graphStatus Conv3DBackpropFilterV2StreamKTiling::GetWorkspaceSize()

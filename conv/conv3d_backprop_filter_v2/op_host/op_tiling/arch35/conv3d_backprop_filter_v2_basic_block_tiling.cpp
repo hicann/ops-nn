@@ -236,8 +236,7 @@ void Conv3DDWV2BasicBlockTilingArch35::disableGroupEnlarge()
 void Conv3DDWV2BasicBlockTilingArch35::SetBasicBlockAttrsTiling()
 {
     mmInfo_.mValue = static_cast<uint64_t>(runInfo_.cout1_g) * static_cast<uint64_t>(BLOCK_CUBE);
-    mmInfo_.nValue = static_cast<uint64_t>(runInfo_.kh) * runInfo_.kw * runInfo_.cin1_g * static_cast<uint64_t>(
-                         BLOCK_CUBE);
+    mmInfo_.nValue = static_cast<uint64_t>(runInfo_.kh) * runInfo_.kw * runInfo_.cin1_g * static_cast<uint64_t>(BLOCK_CUBE);
     if (!IsSocVersion91095()) {
         mmInfo_.nValue *= runInfo_.kd;
     }
@@ -256,24 +255,12 @@ void Conv3DDWV2BasicBlockTilingArch35::UpdateSingleCoreInfo()
     // 搬运对齐时默认向下取整，避免越过基本块运算导致重新触发L1载入
     blockTiling_.singleCoreM = static_cast<uint64_t>(blockTiling_.stepM) * blockTiling_.blockBaseM;
 
-    uint64_t l1Cin1 = std::max(
-        blockTiling_.stepN * blockTiling_.blockBaseN /
-        (runInfo_.kh * runInfo_.kw * BLOCK_CUBE), 1U);
+    uint64_t l1Cin1 = std::max(blockTiling_.stepN * blockTiling_.blockBaseN / (runInfo_.kh * runInfo_.kw * BLOCK_CUBE), 1U);
     if (blockTiling_.isSplitKernelHW) {
         l1Cin1 = 1ULL; //切kernel需要保证ll1只包含一个hwk16
     }
     blockTiling_.singleCoreN = l1Cin1 * runInfo_.kh * runInfo_.kw * BLOCK_CUBE;
-
     blockTiling_.singleCoreK = mmInfo_.kValue;
-
-    uint64_t mCnt = Ops::Base::CeilDiv(mmInfo_.mValue, static_cast<uint64_t>(blockTiling_.singleCoreM));
-    uint64_t kCnt = Ops::Base::CeilDiv(mmInfo_.kValue, static_cast<uint64_t>(blockTiling_.singleCoreK));
-    uint64_t nCnt = Ops::Base::CeilDiv(mmInfo_.nValue, static_cast<uint64_t>(blockTiling_.singleCoreN));
-    blockTiling_.totalCnt = static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout * runInfo_.real_g * mCnt * kCnt *
-                            nCnt;
-    if (IsSocVersion91095()) {
-        blockTiling_.totalCnt *= runInfo_.kd;
-    }
 }
 
 void Conv3DDWV2BasicBlockTilingArch35::InitBaseBlock()
@@ -332,8 +319,7 @@ uint64_t Conv3DDWV2BasicBlockTilingArch35::GetBaseK(uint64_t baseM, uint64_t bas
         // K在不超过L0约束情况下，优先满足搬运对齐
         if ((static_cast<uint64_t>(blockTiling_.splitWo) < blockBaseK)
             && static_cast<uint64_t>(blockTiling_.splitWo) % fractalSize0 == static_cast<uint64_t>(0)) {
-            blockBaseK = blockBaseK / static_cast<uint64_t>(blockTiling_.splitWo) * static_cast<uint64_t>(blockTiling_.
-                             splitWo);
+            blockBaseK = blockBaseK / static_cast<uint64_t>(blockTiling_.splitWo) * static_cast<uint64_t>(blockTiling_.splitWo);
         }
     }
     return blockBaseK;
@@ -949,9 +935,9 @@ bool Conv3DDWV2BasicBlockTilingArch35::CheckFormat()
         filterDesc == nullptr, CUBE_INNER_ERR_REPORT("Conv3DBackpropFilterV2", "filterDesc is null"),
         return false);
     auto filter_format = static_cast<ge::Format>(ge::GetPrimaryFormat(filterDesc->GetStorageFormat()));
-    deterNotSupportFormat_ = (fmapFormat != ge::FORMAT_NCDHW && fmapFormat != ge::FORMAT_NDHWC) || filter_format !=
-                             ge::FORMAT_NCDHW ||
-                             (dedyFormat != ge::FORMAT_NCDHW && dedyFormat != ge::FORMAT_NDHWC);
+    deterNotSupportFormat_ = (fmapFormat != ge::FORMAT_NCDHW && fmapFormat != ge::FORMAT_NDHWC) ||
+                             (dedyFormat != ge::FORMAT_NCDHW && dedyFormat != ge::FORMAT_NDHWC) ||
+                             (filter_format != ge::FORMAT_NCDHW);
 
     enableSplitW = (fmapFormat == ge::FORMAT_NCDHW && dedyFormat == ge::FORMAT_NCDHW) ||
                    (fmapFormat == ge::FORMAT_NDHWC && dedyFormat == ge::FORMAT_NDHWC);
