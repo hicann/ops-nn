@@ -8,7 +8,7 @@
 | :----------------------------------------------------------- | :------: |
 | <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理产品</term> |    ×     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
 | <term>Atlas 推理系列产品</term>                             |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    ×     |
@@ -87,21 +87,131 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
 ## aclnnDynamicMxQuantWithDualAxisGetWorkspaceSize
 
 - **参数说明：**
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 180px">
+  <col style="width: 120px">
+  <col style="width: 280px">
+  <col style="width: 320px">
+  <col style="width: 250px">
+  <col style="width: 120px">
+  <col style="width: 140px">
+  <col style="width: 140px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      <th>使用说明</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+      <th>维度(shape)</th>
+      <th>非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>x (aclTensor*)</td>
+      <td>输入</td>
+      <td>表示输入x，对应公式中V<sub>i</sub>。</td>
+      <td>目标类型为FLOAT4_E2M1、FLOAT4_E1M2时，x的最后一维必须是偶数。不支持空Tensor。</td>
+      <td>FLOAT16、BFLOAT16</td>
+      <td>ND</td>
+      <td>2-7</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>roundModeOptional (char*)</td>
+      <td>输入</td>
+      <td>表示数据转换的模式，对应公式中的round_mode。</td>
+      <td><ul><li>当dstType为40/41，对应输出y1Out和y2Out的数据类型为FLOAT4_E2M1/FLOAT4_E1M2时，支持{"rint", "floor", "round"}；</li><li>当dstType为35/36，对应输出y1Out和y2Out数据类型为FLOAT8_E5M2/FLOAT8_E4M3FN时，仅支持{"rint"}；</li><li>传入空指针时，采用"rint"模式。</li></ul></td>
+      <td>STRING</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>dstType (int64_t)</td>
+      <td>输入</td>
+      <td>表示指定数据转换后y1Out和y2Out的类型。</td>
+      <td>输入范围为{35, 36, 40, 41}，分别对应输出y1Out和y2Out的数据类型为{35:FLOAT8_E5M2, 36:FLOAT8_E4M3FN, 40:FLOAT4_E2M1, 41:FLOAT4_E1M2}</td>
+      <td>INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>scaleAlg (int64_t)</td>
+      <td>输入</td>
+      <td>表示mxscale1Out和mxscale2Out的计算方法。</td>
+      <td>当前仅支持取值0，代表OCP实现。</td>
+      <td>INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>y1Out (aclTensor*)</td>
+      <td>输出</td>
+      <td>表示输入x量化-1轴后的对应结果，对应公式中的P<sub>i</sub>。</td>
+      <td>shape和输入x一致。</td>
+      <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
+      <td>ND</td>
+      <td>2-7</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>mxscale1Out (aclTensor*)</td>
+      <td>输出</td>
+      <td>表示-1轴每个分组对应的量化尺度，对应公式中的mxscale1。</td>
+      <td>shape为x的-1轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0。</td>
+      <td>FLOAT8_E8M0</td>
+      <td>ND</td>
+      <td>2-8</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>y2Out (aclTensor*)</td>
+      <td>输出</td>
+      <td>表示输入x量化-2轴后的对应结果，对应公式中的P<sub>j</sub>。</td>
+      <td>shape和输入x一致。</td>
+      <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
+      <td>ND</td>
+      <td>2-7</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>mxscale2Out (aclTensor*)</td>
+      <td>输出</td>
+      <td>表示-2轴每个分组对应的量化尺度，对应公式中的mxscale2。</td>
+      <td><ul><li>shape为x的-2轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0。</li><li>mxscale2Out输出需要对每两行数据进行交织处理。</li></ul></td>
+      <td>FLOAT8_E8M0</td>
+      <td>ND</td>
+      <td>2-8</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输出</td>
+      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输出</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+  </tbody></table>
 
-  | 参数名 | 输入/输出 | 描述 | 使用说明 | 数据类型 | 数据格式 | 维度（shape）| 非连续Tensor |  
-  | ----- | ----- |----- |----- |----- |----- |----- |----- |
-  | x (aclTensor\*) | 输入 | 表示输入x，对应公式中$V_i$。 | 目的类型为FLOAT4_E2M1、FLOAT4_E1M2时，x的最后一维必须是偶数。 | FLOAT16、BFLOAT16 | ND | 2-7 | √ |
-  | roundModeOptional (char\*)  | 输入 | 表示数据转换的模式，对应公式中的round_mode。 | 当dstType为40/41，对应输出y1Out和y2Out的数据类型为FLOAT4_E2M1/FLOAT4_E1M2时，支持{"rint", "floor", "round"}；<br> 当dstType为35/36，对应输出y1Out和y2Out数据类型为FLOAT8_E5M2/FLOAT8_E4M3FN时，仅支持{"rint"}；<br> 传入空指针时，采用"rint"模式。 | STRING | - | - | - |
-  | dstType (int64_t) | 输入 | 表示指定数据转换后y1Out和y2Out的类型。 | 输入范围为{35, 36, 40, 41}，分别对应输出y1Out和y2Out的数据类型为{35:FLOAT8_E5M2, 36:FLOAT8_E4M3FN, 40:FLOAT4_E2M1, 41:FLOAT4_E1M2} | INT64 | - | - | - |
-  | scaleAlg (int64_t) | 输入 | 表示mxscale1Out和mxscale2Out的计算方法。 | 当前仅支持取值0，代表OCP实现。 | INT64 | - | - | - |
-  | y1Out (aclTensor\*) | 输出 | 表示输入x量化-1轴后的对应结果，对应公式中的$P_i$。 | shape和输入x一致。 | FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2 | ND | 2-7 | √ |
-  | mxscale1Out (aclTensor*) | 输出 | 表示-1轴每个分组对应的量化尺度，对应公式中的mxscale1。 | shape为x的-1轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0。 | FLOAT8_E8M0 | ND | 2-8 | √ |
-  | y2Out (aclTensor\*) | 输出 | 表示输入x量化-2轴后的对应结果，对应公式中的$P_j$。 | shape和输入x一致。 | FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2 | ND | 2-7 | √ |
-  | mxscale2Out (aclTensor*) | 输出 | 表示-2轴每个分组对应的量化尺度，对应公式中的mxscale2。 | shape为x的-2轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0； <br>  mxscale2Out输出需要对每两行数据进行交织处理。 | FLOAT8_E8M0 | ND | 2-8 | √ |
-  | workspaceSize (uint64_t\*)  | 输出 | 返回需要在Device侧申请的workspace大小。 | - | - | - | - | - |
-  | executor (aclOpExecutor\*\*)  | 输出 | 返回op执行器，包含了算子计算流程。 | - | - | - | - | - |
-
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

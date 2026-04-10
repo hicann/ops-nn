@@ -118,7 +118,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>roundModeOptional (char*)</td>
       <td>输入</td>
       <td>表示最后由高bit数据cast到目标数据类型的近似模式。</td>
-      <td>当dstType为35/36时，对应输出yOut数据类型为FLOAT8_E5M2/FLOAT8_E4M3FN时，仅支持{"rint"}；<br>当dstType为34时，对应输出yOut数据类型为HIFLOAT8时，支持{"round"、"hybrid"}；<br>传入空指针时，采用"rint"模式。</td>
+      <td><ul><li>当dstType为35/36时，对应输出yOut数据类型为FLOAT8_E5M2/FLOAT8_E4M3FN时，仅支持{"rint"}；</li><li>当dstType为34时，对应输出yOut数据类型为HIFLOAT8时，支持{"round"、"hybrid"}；</li><li>传入空指针时，采用"rint"模式。</li></ul></td>
       <td>STRING</td>
       <td>-</td>
       <td>-</td>
@@ -168,7 +168,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>yOut (aclTensor*)</td>
       <td>输出</td>
       <td>表示量化后的输出Tensor。对应公式中的y。</td>
-      <td>支持空Tensor。<br>shape的维度与x保持一致。</td>
+      <td><ul><li>支持空Tensor。</li><li>shape的维度与x保持一致。</li></ul></td>
       <td>HIFLOAT8、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
       <td>2-3</td>
