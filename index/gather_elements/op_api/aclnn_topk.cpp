@@ -13,6 +13,7 @@
 #include "level0/sort.h"
 #include "level0/arange.h"
 #include "level0/concat.h"
+#include "level0/tensor_move.h"
 #include "gather_elements.h"
 #include "level0/mod.h"
 #include "level0/split_v.h"
@@ -233,7 +234,13 @@ static bool IsTopKCopy(const aclTensor *self, int64_t k, int64_t sortDimValue, b
 
 static aclnnStatus TopKCopy(const aclTensor *self, int64_t k, aclTensor *values, aclTensor *indices, aclOpExecutor *executor)
 {
-    auto viewCopyValuesResult = l0op::ViewCopy(self, values, executor);
+    const aclTensor* viewCopyValuesResult = nullptr;
+    if (op::IsContiguous(self) && op::IsContiguous(values) && 
+      self->GetStorageShape() == values->GetStorageShape()) {
+      viewCopyValuesResult = l0op::TensorMoveAiCore(self, values, executor);
+    } else {
+      viewCopyValuesResult = l0op::ViewCopy(self, values, executor);
+    }
     CHECK_RET(viewCopyValuesResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto inputShape = self->GetViewShape();
     int64_t tmpDim = static_cast<int64_t>(inputShape.GetDimNum());
@@ -273,7 +280,7 @@ static aclnnStatus TopKCopy(const aclTensor *self, int64_t k, aclTensor *values,
         auto kCasted = l0op::Cast(kTensor, op::DataType::DT_INT32, executor);
         auto singleIndiceRet = l0op::Mod(arangeCasted, kCasted, executor);
         op::FVector<const aclTensor*> tensorFVector;
-        for (int16_t i = 0; i < int32Num; i++) {
+        for (int64_t i = 0; i < int32Num; i++) {
             tensorFVector.emplace_back(singleIndiceRet);
         }
         int64_t remainIn32Num = batchNum % int32MaxBatchNum;
@@ -290,7 +297,7 @@ static aclnnStatus TopKCopy(const aclTensor *self, int64_t k, aclTensor *values,
         auto end = executor->AllocScalar(inputSize);
         auto arangeIndiceRet = l0op::Arange(start, end, step, indices, false, executor);
         op::FVector<const aclTensor*> tensorFVector;
-        for (int16_t i = 0; i < batchNum; i++) {
+        for (int64_t i = 0; i < batchNum; i++) {
           tensorFVector.emplace_back(arangeIndiceRet);
         }
         auto tensorList = executor->AllocTensorList(tensorFVector.data(), tensorFVector.size());
@@ -298,7 +305,13 @@ static aclnnStatus TopKCopy(const aclTensor *self, int64_t k, aclTensor *values,
     }
 
     auto indicesRetCast = l0op::Cast(indiceRet, op::DataType::DT_INT64, executor);
-    auto viewCopyIndicesResult = l0op::ViewCopy(indicesRetCast, indices, executor);
+    const aclTensor* viewCopyIndicesResult = nullptr;
+    if (op::IsContiguous(indicesRetCast) && op::IsContiguous(indices) && 
+      indicesRetCast->GetStorageShape() == indices->GetStorageShape()) {
+      viewCopyIndicesResult = l0op::TensorMoveAiCore(indicesRetCast, indices, executor);
+    } else {
+      viewCopyIndicesResult = l0op::ViewCopy(indicesRetCast, indices, executor);
+    }
     CHECK_RET(viewCopyIndicesResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     return ACLNN_SUCCESS;
 }
