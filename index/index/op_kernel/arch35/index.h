@@ -86,7 +86,7 @@ template <typename T>
 struct IndexPutAssign {
     __simt_callee__ __aicore__ inline IndexPutAssign()
     {}
-    __simt_callee__ __aicore__ inline void operator()(__gm__ T* output, __gm__ T* input, uint32_t i, uint32_t idx)
+    __simt_callee__ __aicore__ inline void operator()(__gm__ T* output, __gm__ T* input, uint64_t i, uint64_t idx)
     {
         output[idx] = input[i];
     }
@@ -97,7 +97,7 @@ template <typename T>
 struct IndexPutAdd {
     __simt_callee__ __aicore__ inline IndexPutAdd()
     {}
-    __simt_callee__ __aicore__ inline void operator()(__gm__ T* output, __gm__ T* input, uint32_t i, uint32_t idx)
+    __simt_callee__ __aicore__ inline void operator()(__gm__ T* output, __gm__ T* input, uint64_t i, uint64_t idx)
     {
         if constexpr (is_same<bool, T>::value) {
             if(input[i]){

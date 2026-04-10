@@ -229,92 +229,92 @@ extern "C" __global__ __aicore__ void index_put_v2(GM_ADDR inputX, GM_ADDR value
             op.Process(); 
         } else if (TILING_KEY_IS(2)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<half, IndexPutAdd<half>, int32_t, uint32_t> op;
+            KernelIndex<half, IndexPutAdd<half>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(3)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<bfloat16_t, IndexPutAdd<bfloat16_t>, int32_t, uint32_t> op;
+            KernelIndex<bfloat16_t, IndexPutAdd<bfloat16_t>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(4)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int32_t, IndexPutAdd<int32_t>, int32_t,  uint32_t> op;
+            KernelIndex<int32_t, IndexPutAdd<int32_t>, int32_t,  uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(6)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int32_t, IndexPutAdd<int32_t>, int32_t, uint32_t> op;
+            KernelIndex<int32_t, IndexPutAdd<int32_t>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(5)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<float, IndexPutAdd<float>, int32_t, uint32_t> op;
+            KernelIndex<float, IndexPutAdd<float>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(8)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int64_t, IndexPutAdd<int64_t>, int32_t, uint32_t> op;
+            KernelIndex<int64_t, IndexPutAdd<int64_t>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(10)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int64_t, IndexPutAdd<int64_t>, int32_t, uint32_t> op;
+            KernelIndex<int64_t, IndexPutAdd<int64_t>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(11)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<bool, IndexPutAdd<bool>, int32_t, uint32_t> op;
+            KernelIndex<bool, IndexPutAdd<bool>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(12)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int64_t, IndexPutAdd<int64_t>, int32_t, uint32_t> op;
+            KernelIndex<int64_t, IndexPutAdd<int64_t>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(102)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<half, IndexPutAdd<half>, int64_t, uint32_t> op;
+            KernelIndex<half, IndexPutAdd<half>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(103)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<bfloat16_t, IndexPutAdd<bfloat16_t>, int64_t, uint32_t> op;
+            KernelIndex<bfloat16_t, IndexPutAdd<bfloat16_t>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(104)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int32_t, IndexPutAdd<int32_t>, int64_t, uint32_t> op;
+            KernelIndex<int32_t, IndexPutAdd<int32_t>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(106)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int32_t, IndexPutAdd<int32_t>, int64_t, uint32_t> op;
+            KernelIndex<int32_t, IndexPutAdd<int32_t>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(105)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<float, IndexPutAdd<float>, int64_t, uint32_t> op;
+            KernelIndex<float, IndexPutAdd<float>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(108)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int64_t, IndexPutAdd<int64_t>, int64_t, uint32_t> op;
+            KernelIndex<int64_t, IndexPutAdd<int64_t>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(110)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int64_t, IndexPutAdd<int64_t>, int64_t, uint32_t> op;
+            KernelIndex<int64_t, IndexPutAdd<int64_t>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(111)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<bool, IndexPutAdd<bool>, int64_t, uint32_t> op;
+            KernelIndex<bool, IndexPutAdd<bool>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(112)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int64_t, IndexPutAdd<int64_t>, int64_t, uint32_t> op;
+            KernelIndex<int64_t, IndexPutAdd<int64_t>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         }
@@ -401,142 +401,142 @@ extern "C" __global__ __aicore__ void index_put_v2(GM_ADDR inputX, GM_ADDR value
             op.Process(); 
         } else if (TILING_KEY_IS(0)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<uint8_t, IndexPutAssign<uint8_t>, int32_t, uint32_t> op;
+            KernelIndex<uint8_t, IndexPutAssign<uint8_t>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(1)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int8_t, IndexPutAssign<int8_t>, int32_t, uint32_t> op;
+            KernelIndex<int8_t, IndexPutAssign<int8_t>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(2)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<half, IndexPutAssign<half>, int32_t, uint32_t> op;
+            KernelIndex<half, IndexPutAssign<half>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(3)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<bfloat16_t, IndexPutAssign<bfloat16_t>, int32_t, uint32_t> op;
+            KernelIndex<bfloat16_t, IndexPutAssign<bfloat16_t>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(4)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int32_t, IndexPutAssign<int32_t>, int32_t, uint32_t> op;
+            KernelIndex<int32_t, IndexPutAssign<int32_t>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(6)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int32_t, IndexPutAssign<int32_t>, int32_t, uint32_t> op;
+            KernelIndex<int32_t, IndexPutAssign<int32_t>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(5)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<float, IndexPutAssign<float>, int32_t, uint32_t> op;
+            KernelIndex<float, IndexPutAssign<float>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(8)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int64_t, IndexPutAssign<int64_t>, int32_t, uint32_t> op;
+            KernelIndex<int64_t, IndexPutAssign<int64_t>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(10)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int64_t, IndexPutAssign<int64_t>, int32_t, uint32_t> op;
+            KernelIndex<int64_t, IndexPutAssign<int64_t>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(11)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<bool, IndexPutAssign<bool>, int32_t, uint32_t> op;
+            KernelIndex<bool, IndexPutAssign<bool>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(12)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int64_t, IndexPutAssign<int64_t>, int32_t, uint32_t> op;
+            KernelIndex<int64_t, IndexPutAssign<int64_t>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(16)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int4, IndexPutAssign<int4>, int32_t, uint32_t> op;
+            KernelIndex<int4, IndexPutAssign<int4>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(20)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int4, IndexPutAssign<int4>, int32_t, uint32_t> op;
+            KernelIndex<int4, IndexPutAssign<int4>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(24)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int4, IndexPutAssign<int4>, int32_t, uint32_t> op;
+            KernelIndex<int4, IndexPutAssign<int4>, int32_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         }else if (TILING_KEY_IS(100)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<uint8_t, IndexPutAssign<uint8_t>, int64_t, uint32_t> op;
+            KernelIndex<uint8_t, IndexPutAssign<uint8_t>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(101)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int8_t, IndexPutAssign<int8_t>, int64_t, uint32_t> op;
+            KernelIndex<int8_t, IndexPutAssign<int8_t>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(102)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<half, IndexPutAssign<half>, int64_t, uint32_t> op;
+            KernelIndex<half, IndexPutAssign<half>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(103)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<bfloat16_t, IndexPutAssign<bfloat16_t>, int64_t, uint32_t> op;
+            KernelIndex<bfloat16_t, IndexPutAssign<bfloat16_t>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(104)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int32_t, IndexPutAssign<int32_t>, int64_t, uint32_t> op;
+            KernelIndex<int32_t, IndexPutAssign<int32_t>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(106)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int32_t, IndexPutAssign<int32_t>, int64_t, uint32_t> op;
+            KernelIndex<int32_t, IndexPutAssign<int32_t>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(105)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<float, IndexPutAssign<float>, int64_t, uint32_t> op;
+            KernelIndex<float, IndexPutAssign<float>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(108)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int64_t, IndexPutAssign<int64_t>, int64_t, uint32_t> op;
+            KernelIndex<int64_t, IndexPutAssign<int64_t>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(110)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int64_t, IndexPutAssign<int64_t>, int64_t, uint32_t> op;
+            KernelIndex<int64_t, IndexPutAssign<int64_t>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(111)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<bool, IndexPutAssign<bool>, int64_t, uint32_t> op;
+            KernelIndex<bool, IndexPutAssign<bool>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(112)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int64_t, IndexPutAssign<int64_t>, int64_t, uint32_t> op;
+            KernelIndex<int64_t, IndexPutAssign<int64_t>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(116)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int4, IndexPutAssign<int4>, int64_t, uint32_t> op;
+            KernelIndex<int4, IndexPutAssign<int4>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(120)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int4, IndexPutAssign<int4>, int64_t, uint32_t> op;
+            KernelIndex<int4, IndexPutAssign<int4>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         } else if (TILING_KEY_IS(124)) {
             GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-            KernelIndex<int4, IndexPutAssign<int4>, int64_t, uint32_t> op;
+            KernelIndex<int4, IndexPutAssign<int4>, int64_t, uint64_t> op;
             op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
             op.Process();
         }
