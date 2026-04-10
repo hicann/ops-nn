@@ -17,6 +17,7 @@
 
 #include "quant_matmul_reduce_sum_utils.h"
 #include "quant_matmul_reduce_sum_tiling_data.h"
+#include "../inc/kernel_safe_data_copy.h"
 
 using namespace QUANT_MATMUL_REDUCE_SUM;
 
@@ -65,12 +66,8 @@ public:
         DataCopyParams dataCopyParams(1, 1, 0, 0);
         if (unlikely(clearBlkNum == 0)) {
             ClearLocalTensor(tmpBuf, ONE_BLK_ITEM_NUM);
-            // 只支持32B对齐搬出，这里尽量避免越界，往前凑。如果是小于32B的极小case，那只能越界了
-            if (dstOffset > ONE_BLK_ITEM_NUM - realClearSize) {
-                dstOffset -= (ONE_BLK_ITEM_NUM - realClearSize);
-            }
-
-            DataCopy(yGm_[dstOffset], tmpBuf, dataCopyParams);
+            auto globalTensorRef = yGm_[dstOffset];
+            SafeDataCopy(globalTensorRef, tmpBuf, realClearSize);
         } else {
             dataCopyParams.blockLen =
                 QUANT_MATMUL_REDUCE_SUM::Min<uint64_t>(tmpBuf.GetSize() * sizeof(yType) / ONE_BLK_SIZE, clearBlkNum);

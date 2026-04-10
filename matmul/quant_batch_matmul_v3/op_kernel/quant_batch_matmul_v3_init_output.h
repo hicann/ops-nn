@@ -18,6 +18,7 @@
 #include "quant_batch_matmul_v3_base.h"
 #include "kernel_operator.h"
 #include "kernel_operator_intf.h"
+#include "../inc/kernel_safe_data_copy.h"
 
 #if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 #define SYNC_AIC_FLAG 1
@@ -64,12 +65,8 @@ public:
         DataCopyParams dataCopyParams(1, 1, 0, 0);
         if (unlikely(clearBlkNum == 0U)) {
             ClearLocalTensor(tmpBuf, ONE_BLK_ITEM_NUM);
-            // 只支持32B对齐搬出，这里尽量避免越界，往前凑。如果是小于32B的极小case，那只能越界了
-            if (dstOffset > ONE_BLK_ITEM_NUM - realClearSize) {
-                dstOffset -= (ONE_BLK_ITEM_NUM - realClearSize);
-            }
-
-            DataCopy(yGm_[dstOffset], tmpBuf, dataCopyParams);
+            auto globalTensorRef = yGm_[dstOffset];
+            SafeDataCopy(globalTensorRef, tmpBuf, realClearSize);
         } else {
             dataCopyParams.blockLen =
                 DequantBmm::Min<uint64_t>(tmpBuf.GetSize() * sizeof(yType) / ONE_BLK_SIZE, clearBlkNum);
@@ -90,7 +87,7 @@ public:
             uint64_t tailClearSize = realClearSize - clearBlkNum * ONE_BLK_ITEM_NUM;
             if (tailClearSize > 0U) {
                 dataCopyParams.blockLen = 1;
-                // 同前，尽量避免越界，往前凑
+                // 尽量避免越界，往前凑
                 if (dstOffset > ONE_BLK_ITEM_NUM - tailClearSize) {
                     dstOffset -= (ONE_BLK_ITEM_NUM - tailClearSize);
                 }
