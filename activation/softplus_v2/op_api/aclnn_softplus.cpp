@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -49,6 +49,9 @@ static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
+static const std::initializer_list<op::DataType> ASCEND950_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+
 static bool CheckNotNull(const aclTensor *self, const aclScalar *beta, const aclScalar *threshold,
                          const aclTensor *out) {
   OP_CHECK_NULL(self, return false);
@@ -60,7 +63,12 @@ static bool CheckNotNull(const aclTensor *self, const aclScalar *beta, const acl
 
 static bool CheckDtype(const aclTensor *self, const aclScalar *beta, const aclScalar *threshold,
                        const aclTensor *out) {
-  auto DTYPE_SUPPORT_LIST = GetDtypeSupportListV1(ASCEND910B_DTYPE_SUPPORT_LIST, ASCEND910_DTYPE_SUPPORT_LIST);
+  std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST;
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
+    DTYPE_SUPPORT_LIST = ASCEND950_DTYPE_SUPPORT_LIST;
+  } else {
+    DTYPE_SUPPORT_LIST = GetDtypeSupportListV1(ASCEND910B_DTYPE_SUPPORT_LIST, ASCEND910_DTYPE_SUPPORT_LIST);
+  }
   // 检查self的数据类型是否在Softplus算子的支持列表内
   OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
 

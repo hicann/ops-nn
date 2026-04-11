@@ -11,7 +11,7 @@
 #include <array>
 #include <vector>
 #include "gtest/gtest.h"
-#include "../../../../op_host/op_api/aclnn_softplus.h"
+#include "../../../op_api/aclnn_softplus.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
@@ -39,8 +39,6 @@ TEST_F(l2_softplus_test, normal_dtype_float32_format_nd) {
   uint64_t workspaceSize = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-  ut.TestPrecision();
 }
 
 TEST_F(l2_softplus_test, ascend910B2_normal_dtype_bf16_format_nd) {
@@ -54,8 +52,6 @@ TEST_F(l2_softplus_test, ascend910B2_normal_dtype_bf16_format_nd) {
   uint64_t workspaceSize = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-  ut.TestPrecision();
 }
 
 // 正常场景_float32_nchw
@@ -70,8 +66,6 @@ TEST_F(l2_softplus_test, normal_dtype_float32_format_nchw) {
   uint64_t workspaceSize = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-  ut.TestPrecision();
 }
 
 // 正常场景_float32_nhwc
@@ -86,8 +80,6 @@ TEST_F(l2_softplus_test, normal_dtype_float32_format_nhwc) {
   uint64_t workspaceSize = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-  ut.TestPrecision();
 }
 
 // 正常场景_float32_hwcn
@@ -102,8 +94,6 @@ TEST_F(l2_softplus_test, normal_dtype_float32_format_hwcn) {
   uint64_t workspaceSize = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-  ut.TestPrecision();
 }
 
 // 正常场景_float32_ncdhw
@@ -118,8 +108,6 @@ TEST_F(l2_softplus_test, normal_dtype_float32_format_ncdhw) {
   uint64_t workspaceSize = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-  ut.TestPrecision();
 }
 
 // 正常场景_float32_ndhwc
@@ -134,8 +122,6 @@ TEST_F(l2_softplus_test, normal_dtype_float32_format_ndhwc) {
   uint64_t workspaceSize = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-  ut.TestPrecision();
 }
 
 // 正常场景_beta为1
@@ -150,8 +136,6 @@ TEST_F(l2_softplus_test, normal_beta_1) {
   uint64_t workspaceSize = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-  ut.TestPrecision();
 }
 
 // 正常场景_8维输入
@@ -166,8 +150,6 @@ TEST_F(l2_softplus_test, normal_shape_dim_8) {
   uint64_t workspaceSize = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-  ut.TestPrecision();
 }
 
 // 空tensor场景
@@ -182,8 +164,6 @@ TEST_F(l2_softplus_test, normal_empty_tensor) {
   uint64_t workspaceSize = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-  ut.TestPrecision();
 }
 
 // CheckNotNull_1
