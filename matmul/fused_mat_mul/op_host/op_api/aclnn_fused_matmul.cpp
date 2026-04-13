@@ -45,6 +45,10 @@ static const std::vector<const char*> kSupportedX3OpTypes = {"add", "mul"};
 static const std::vector<const char*> kSupportedIn16CastOut32OpTypes = {"16cast32"};
 
 bool IsInSupportedOpTypes(const char* fusedOpType, const std::vector<const char*>& types) {
+    if (fusedOpType == nullptr) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "fusedOpType is nullptr");
+        return false;
+    }
     for (const auto& type : types) {
         if (type && fusedOpType && strcmp(fusedOpType, type) == 0) {
             return true;
