@@ -40,7 +40,6 @@
   out = mean(grad\_input) \ if \ reduction = mean
   $$
 
-
 ## 参数说明
 
 <table style="table-layout: auto; width: 100%">

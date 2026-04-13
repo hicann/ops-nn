@@ -1,6 +1,7 @@
 # ops-nn
 
 ## 🔥Latest News
+
 - [2026/01] 新增[QuickStart](QUICKSTART.md)，指导新手零基础入门算子项目部署（支持Docker环境）、算子开发和贡献流程。
 - [2025/12] 开源算子支持Ascend 950PR/Ascend 950DT/KirinX90，可以通过[CANN Simulator](docs/zh/debug/cann_simulator.md)仿真工具开发调试；优化指南类文档，聚焦[算子开发指南](docs/zh/develop/aicore_develop_guide.md)，明确最小交付件和关键示例代码，针对Ascend/samples仓算子提供迁移本项目的指导；新支持[稀疏4:2量化matmul算子](matmul/sparse4to2quant_matmul)，针对稀疏矩阵使能硬件加速能力。
 - [2025/11] 新支持算子[index_fill](index/index_fill/)、[masked_scatter](index/masked_scatter/)、[scatter](index/scatter/)、[tf_scatter_add](index/tf_scatter_add/)、[fused_cross_entropy_loss_with_max_sum](loss/fused_cross_entropy_loss_with_max_sum/)。
@@ -41,7 +42,9 @@ ops-nn是[CANN](https://hiascend.com/software/cann) （Compute Architecture for 
 除了上述指南，还提供了其他文档例如[算子调用方式](docs/zh/invocation/op_invocation.md)、术语概念、build参数介绍等，全量文档请访问[docs](docs/README.md)。
 
 ## 🔍目录结构
+
 关键目录如下，详细目录介绍参见[项目目录](./docs/zh/context/dir_structure.md)。
+
 ```
 ├── activation                         # activation类算子
 ├── cmake                              # 项目工程编译目录

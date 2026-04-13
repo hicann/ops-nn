@@ -1,7 +1,6 @@
 # FusedQuantMatmul
 
-
-##  产品支持情况
+## 产品支持情况
 
 | 产品 | 是否支持 |
 | ---- | :----:|
@@ -17,13 +16,13 @@
 - 算子功能：完成量化矩阵乘和Gelu的融合计算。
 - 计算公式：
 
-  - x1Scale， bias INT32（此场景无offset）：
+  - x1Scale，bias INT32（此场景无offset）：
 
     $$
     qbmmout = (x1@x2 + bias) * x2Scale * x1Scale
     $$
 
-  - x1Scale， bias BFLOAT16/FLOAT16/FLOAT32（此场景无offset）：
+  - x1Scale，bias BFLOAT16/FLOAT16/FLOAT32（此场景无offset）：
 
     $$
     qbmmout = x1@x2 * x2scale * x1Scale + bias

@@ -66,6 +66,7 @@
   </tbody></table>
 
 - Kirin X90/Kirin 9030处理器系列产品：value_size和index的数据类型不支持INT64。
+
 ## 约束说明
 
 无

@@ -24,6 +24,7 @@
    - make
 
    上述依赖包可通过项目根目录install\_deps.sh安装，命令如下，若遇到不支持系统，请参考该文件自行适配。
+
    ```bash
    bash install_deps.sh
    ```
@@ -55,17 +56,17 @@
 
    <img src="../figures/webIDE.png" alt="云平台"  width="1000px" height="150px">
 
-
 ### 使用Docker部署
 
 > **说明：**
+>
 > - Docker镜像是一种高效部署方式，目前仅适用于Atlas A2系列产品，且目前仅适配Ubuntu操作系统。
 > - 镜像文件比较大，下载需要一定时间，请您耐心等待。
 
 #### 1. 下载镜像
 
-1.  以root用户登录宿主机。确保宿主机已安装Docker引擎（版本1.11.2及以上）。
-2.  从[昇腾镜像仓库](https://www.hiascend.com/developer/ascendhub/detail/17da20d1c2b6493cb38765adeba85884)拉取已预集成CANN软件包及`ops-nn`所需依赖的镜像。命令如下，根据实际架构选择：
+1. 以root用户登录宿主机。确保宿主机已安装Docker引擎（版本1.11.2及以上）。
+2. 从[昇腾镜像仓库](https://www.hiascend.com/developer/ascendhub/detail/17da20d1c2b6493cb38765adeba85884)拉取已预集成CANN软件包及`ops-nn`所需依赖的镜像。命令如下，根据实际架构选择：
 
     ```bash
     # 示例：拉取ARM架构的CANN开发镜像
@@ -75,11 +76,13 @@
     ```
 
 #### 2. 运行Docker
+
 拉取镜像后，需要以特定参数启动容器，以便容器内能访问宿主的昇腾设备。
 
 ```bash
 docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_manager --device /dev/devmm_svm --device /dev/hisi_hdc -v /usr/local/dcmi:/usr/local/dcmi -v /usr/local/bin/npu-smi:/usr/local/bin/npu-smi -v /usr/local/Ascend/driver/lib64/:/usr/local/Ascend/driver/lib64/ -v /usr/local/Ascend/driver/version.info:/usr/local/Ascend/driver/version.info -v /etc/ascend_install.info:/etc/ascend_install.info -it swr.cn-south-1.myhuaweicloud.com/ascendhub/cann:8.5.0-910b-ubuntu22.04-py3.10-ops bash
 ```
+
 | 参数 | 说明 | 注意事项 |
 | :--- | :--- | :--- |
 | `--name cann_container` | 为容器指定名称，便于管理。 | 可自定义。 |
@@ -109,6 +112,7 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
 注意产品型号和环境架构需与真实环境对应，此外ops包是运行态依赖，若仅编译算子，可以不安装此包。
 
 #### 2. 安装软件包
+
 1. **安装社区CANN toolkit包**
 
     ```bash
@@ -117,6 +121,7 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
     # 安装命令
     ./Ascend-cann-toolkit_${cann_version}_linux-${arch}.run --install --force --install-path=${install_path}
     ```
+
     - \$\{cann\_version\}：表示CANN包版本号。
     - \$\{arch\}：表示CPU架构，如aarch64、x86_64。
     - \$\{install\_path\}：表示指定安装路径，默认安装在`/usr/local/Ascend`目录。
@@ -139,12 +144,15 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
 
 安装完CANN包后，需验证环境和驱动是否正常。
 
--   **检查NPU设备**：
+- **检查NPU设备**：
+
     ```bash
     # 运行npu-smi，若能正常显示设备信息，则驱动正常
     npu-smi info
     ```
--   **检查CANN安装**：
+
+- **检查CANN安装**：
+
     ```bash
     # 查看CANN Toolkit版本信息（默认路径安装）
     cat /usr/local/Ascend/ascend-toolkit/latest/opp/version.info
@@ -153,6 +161,7 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
 ## 环境变量配置
 
 按需选择合适的命令使环境变量生效。
+
 ```bash
 # 默认路径安装，以root用户为例（非root用户，将/usr/local替换为${HOME}）
 source /usr/local/Ascend/cann/set_env.sh
@@ -171,9 +180,11 @@ git clone -b ${tag_version} https://gitcode.com/cann/ops-nn.git
 cd ops-nn
 pip3 install -r requirements.txt
 ```
+
 > [!NOTE] 注意
 > gitcode平台在使用HTTPS协议的时候要配置并使用个人访问令牌代替登录密码进行克隆，推送等操作。
 
 若您的编译环境无法访问网络，无法通过`git`指令下载代码，需要在联网环境中下载源码后，手动上传至目标环境。
+
 - 在联网环境中， 进入[本项目主页](https://gitcode.com/cann/ops-nn)，通过`下载ZIP`或`clone`按钮，根据指导，完成源码下载。
 - 连接至离线环境中，上传源码至您指定的目录下。若下载的为源码压缩包，还需进行解压。

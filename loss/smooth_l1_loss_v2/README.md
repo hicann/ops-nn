@@ -43,7 +43,6 @@
   - Xn: predictions
   - Yn: labels/truth
 
-
 ## 参数说明
 
 <table style="table-layout: auto; width: 100%">

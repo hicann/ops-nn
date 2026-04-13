@@ -306,7 +306,6 @@ aclnnStatus aclnnFusedQuantMatmul(
   </tbody>
   </table>
 
-
 ## aclnnFusedQuantMatmul
 
 - **参数说明：**
@@ -350,10 +349,12 @@ aclnnStatus aclnnFusedQuantMatmul(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性说明：
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：aclnnFusedQuantMatmul默认确定性实现。
 
 - 输入和输出支持以下数据类型组合：
+
   | x1                        | x2                        | x1Scale     | x2Scale         | x2OffsetOptional    | yScaleOptional   | biasOptional         | yOffsetOptional    | out                                    |
   | ------------------------- | ------------------------- | ----------- | -----------     | ----------- | -------  | ------------ | -----------| -------------------------------------- |
   | INT8                      | INT8                      | FLOAT32| FLOAT32/BFLOAT16| null        | null     | null/INT32/BFLOAT16/FLOAT32   | null       | BFLOAT16              |
@@ -361,7 +362,6 @@ aclnnStatus aclnnFusedQuantMatmul(
   | INT4/INT32                | INT4/INT32                | FLOAT32     | FLOAT32/BFLOAT16| null        | null     | null/INT32/BFLOAT16/FLOAT32   | null       | BFLOAT16              |
   | INT4/INT32                | INT4/INT32                | FLOAT32     | FLOAT32         | null        | null     | null/INT32/FLOAT16/FLOAT32    | null       | FLOAT16               |
   
-
 - 当前接口支持x1 pertoken量化和x2 perchannel/pertensor量化，不同的[量化模式](../../../docs/zh/context/量化介绍.md)支持的x1、 x2、x1Scale和x2Scale的输入dtype组合约束为：
   - x1数据类型支持INT8、INT32、INT4。
     - 当数据类型为INT32、INT4时，为INT4量化场景：
@@ -580,3 +580,4 @@ x1为INT8，x2为INT8，x1Scale为FLOAT32，x2Scale为FLOAT32。
       return 0;
   }
   ```
+  

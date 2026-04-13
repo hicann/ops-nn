@@ -24,7 +24,6 @@
     softMaxOutOptional = exp(vocab\_parallel\_logits -logits\_max.unsqueeze(dim = -1)) \ sum\_exp\_logits.unsqueeze(dim = -1)
     $$
 
-
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>

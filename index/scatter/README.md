@@ -46,7 +46,6 @@
       data[i][j][indices[i]+k][l] = updates[i][j][k][l] # if dim=-2
       data[i][j][k][indices[i]+l] = updates[i][j][k][l] # if dim=-1
 
-
 ## 约束说明
 
 无

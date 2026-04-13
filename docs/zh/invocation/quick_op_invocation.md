@@ -39,8 +39,8 @@
 
   表示整个项目编译为一个静态库文件，包含libcann_nn_static.a和aclnn接口头文件。该包仅支持aclnn调用AI Core算子。
 
-
 ### 联网编译
+
 #### 自定义算子包
 
 1. **编译自定义算子包**
@@ -53,6 +53,7 @@
     # bash build.sh --pkg --soc=ascend910b --vendor_name=transpose_batch_mat_mul --ops=transpose_batch_mat_mul
     # 编译experimental贡献目录下的用户算子
     # bash build.sh --pkg --experimental --soc=ascend910b --ops=${experimental_op}
+
     ```
     - --soc：\$\{soc\_version\}表示NPU型号。Atlas A2系列产品使用"ascend910b"（默认），Atlas A3系列产品使用"ascend910_93"，Ascend 950PR/Ascend 950DT产品使用"ascend950"。
     - --vendor_name（可选）：\$\{vendor\_name\}表示构建的自定义算子包名，默认名为custom。
@@ -60,9 +61,11 @@
     - --experimental（可选）：表示编译experimental贡献目录下的算子，${experimental_op}为新贡献算子目录名，贡献说明参见[贡献指南](../../../CONTRIBUTING.md)。
 
     若\$\{vendor\_name\}和\$\{op\_list\}都不传入编译的是ops-nn包；若编译所有算子的自定义算子包，需传入\$\{vendor\_name\}。当提示如下信息，说明编译成功。
+
     ```bash
     Self-extractable archive "cann-ops-nn-${vendor_name}-linux.${arch}.run" successfully created.
     ```
+
     编译成功后，run包存放于项目根目录的build_out目录下。
 
 2. **安装自定义算子包**
@@ -76,6 +79,7 @@
 3. **（可选）卸载自定义算子包**
 
     自定义算子包安装后在```${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}_nn/scripts```目录会生成`uninstall.sh`脚本，通过执行该脚本可卸载自定义算子包，具体命令如下：
+
     ```bash
     bash ${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}_nn/scripts/uninstall.sh
     ```
@@ -92,6 +96,7 @@
    # 编译experimental贡献目录下的所有算子
    # bash build.sh --pkg --experimental --soc=${soc_version}
    ```
+
    - --soc：\$\{soc\_version\}表示NPU型号。Atlas A2系列产品使用"ascend910b"（默认），Atlas A3系列产品使用"ascend910_93"，Ascend 950PR/Ascend 950DT产品使用"ascend950"。
    - --experimental（可选）：表示编译experimental贡献目录下的算子。
 
@@ -130,6 +135,7 @@
     ```bash
    bash build.sh --pkg --static --soc=${soc_version}
     ```
+
    \$\{soc\_version\}表示NPU型号。Atlas A2系列产品使用"ascend910b"（默认），Atlas A3系列产品使用"ascend910_93"。
 
    若提示如下信息，说明编译并压缩成功。
@@ -141,7 +147,6 @@
 
    \$\{repo\_path\}表示项目根目录，\$\{soc\_name\}表示NPU型号名称，即\$\{soc\_version\}删除“ascend”后剩余的内容。编译成功后，压缩包存放于build_out目录下。
 
-
 2. **解压ops-nn静态库**
 
    进入build_out目录执行解压命令：
@@ -151,6 +156,7 @@
     ```
 
    \$\{static\_lib\_path\}表示静态库解压路径。解压后目录结构如下：
+
     ```
     ├── cann-${soc_name}-ops-nn-static_${cann_version}_linux-${arch}
     │   ├── lib64
@@ -181,9 +187,10 @@
         ```bash
         python ${scripts_dir}/third_lib_download.py
         ```
+
     \$\{scripts\_dir\}表示脚本存放路径，下载的第三方软件包默认存放在当前脚本所在目录。
 
- 3. **编译算子包**
+3. **编译算子包**
 
     将下载好的第三方软件上传至离线环境，可存放在`third_party`目录或自定义目录下。**推荐前者，其编译命令与联网编译场景下的命令一致。**
 
@@ -236,6 +243,7 @@
 > **说明**：Ascend 950PR产品使用仿真执行算子样例，请见[仿真指导](../debug/op_debug_prof.md#方式二针对ascend-950pr)。
 
 - 基于**自定义算子包**执行算子样例，包安装后，执行如下命令：
+
     ```bash
     bash build.sh --run_example ${op} ${mode} ${pkg_mode} [--example_name=${example_name}] [--vendor_name=${vendor_name}] [--soc=${soc_version}] [--simulator]
     # 以TransposeBatchMatMul算子执行test_aclnn_transpose_batch_mat_mul.cpp为例
@@ -253,6 +261,7 @@
     说明：\$\{mode\}为graph时，不指定\$\{pkg_mode\}和\$\{vendor\_name\}
 
 - 基于**ops-nn包**执行算子样例，安装后，执行命令如下：
+
     ```bash
     bash build.sh --run_example ${op} ${mode} [--soc=${soc_version}] [--simulator]
     # 以TransposeBatchMatMul算子example执行为例
@@ -309,7 +318,6 @@
         bash run.sh
         ```
 
-
 无论上述哪种方式，算子样例执行后会打印结果，以TransposeBatchMatMul算子执行为例：
 
 ```
@@ -319,6 +327,7 @@ result[2] is: 0.000000
 result[3] is: 0.000000
 ...
 ```
+
 ### 执行算子UT
 
 > 说明：执行UT用例依赖googletest单元测试框架，详细介绍参见[googletest官网](https://google.github.io/googletest/advanced.html#running-a-subset-of-the-tests)。
@@ -354,4 +363,5 @@ Global Environment TearDown
 [  PASSED  ] ${n} tests.
 [100%] Built target nn_op_host_ut
 ```
+
 \$\{n\}表示执行了n个用例，\$\{m\}表示m项测试，\$\{x\}表示执行用例消耗的时间，单位为毫秒。

@@ -361,6 +361,7 @@
 | [aclnnWeightQuantBatchMatmulV3](../../matmul/weight_quant_batch_matmul_v2/docs/aclnnWeightQuantBatchMatmulV3.md) | 完成一个输入为伪量化场景的矩阵乘计算，并可以实现对于输出的量化计算。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
 
 ## 废弃接口
+
 |废弃接口|说明|
 |-------|----|
 | [aclnnWeightQuantBatchMatmul](../../matmul/weight_quant_batch_matmul/docs/aclnnWeightQuantBatchMatmul.md)|此接口后续版本会废弃，请使用最新接口[aclnnWeightQuantBatchMatmulV2](../../matmul/weight_quant_batch_matmul_v2/docs/aclnnWeightQuantBatchMatmulV2.md)、[aclnnWeightQuantBatchMatmulV3](../../matmul/weight_quant_batch_matmul_v2/docs/aclnnWeightQuantBatchMatmulV3.md)。 |

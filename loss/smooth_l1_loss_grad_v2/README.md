@@ -11,7 +11,6 @@
 |  <term>Atlas 推理系列产品</term>     |     √    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
-
 ## 功能说明
 
 - 算子功能：计算[aclnnSmoothL1Loss](../smooth_l1_loss_v2/docs/aclnnSmoothL1Loss.md) api的反向传播。
@@ -55,7 +54,8 @@
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32。
 
 ## 约束说明
-- 确定性计算： 
+
+- 确定性计算：
     - aclnnSmoothL1LossBackward默认确定性实现。
 
 ## 调用说明

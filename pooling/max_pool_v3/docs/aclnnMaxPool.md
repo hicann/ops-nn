@@ -40,6 +40,7 @@
       $$
 
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMaxPoolGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMaxPool”接口执行计算。
 
 ```Cpp
@@ -55,6 +56,7 @@ aclnnStatus aclnnMaxPoolGetWorkspaceSize(
   uint64_t          *workspaceSize,
   aclOpExecutor     **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnMaxPool(
   void          *workspace,
@@ -62,6 +64,7 @@ aclnnStatus aclnnMaxPool(
   aclOpExecutor *executor,
   aclrtStream    stream)
 ```
+
 ## aclnnMaxPoolGetWorkspaceSize
 
 - **参数说明：**
@@ -188,9 +191,10 @@ aclnnStatus aclnnMaxPool(
       <td>-</td>
     </tr>
   </tbody></table>
- - <term>Atlas 训练系列产品</term>：参数self、out的数据类型不支持FLOAT、BFLOAT16、INT32、INT64、UINT8、INT16、INT8、UINT16。
+  - <term>Atlas 训练系列产品</term>：参数self、out的数据类型不支持FLOAT、BFLOAT16、INT32、INT64、UINT8、INT16、INT8、UINT16。
 
- - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：参数self、out的数据类型不支持BFLOAT16、INT32、INT64、UINT8、INT16、INT8、UINT16。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：参数self、out的数据类型不支持BFLOAT16、INT32、INT64、UINT8、INT16、INT8、UINT16。
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -249,6 +253,7 @@ aclnnStatus aclnnMaxPool(
   </table>
 
 ## aclnnMaxPool
+
 - **参数说明：**
   <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
   <col style="width: 173px">
@@ -284,16 +289,20 @@ aclnnStatus aclnnMaxPool(
     </tr>
   </tbody>
   </table>
--  **返回值：**
+
+- **返回值：**
 
     aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算：
   - aclnnMaxPool默认确定性实现。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <cstdio>
 #include <iostream>

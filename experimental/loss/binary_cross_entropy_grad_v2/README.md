@@ -1,6 +1,6 @@
 # BinaryCrossEntropyGrad
 
-##  产品支持情况
+## 产品支持情况
 
 | 产品 | 是否支持 |
 | ---- | :----:|
@@ -88,5 +88,3 @@ $$
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_binary_cross_entropy_grad_v2.cpp](./examples/test_aclnn_binary_cross_entropy_grad_v2.cpp) | 通过[test_aclnn_binary_cross_entropy_grad_v2]接口方式调用BinaryCrossEntropyGrad算子。 |
-
-

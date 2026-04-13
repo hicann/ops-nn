@@ -107,6 +107,7 @@
   </tbody></table>
 
 ## 约束说明
+
 - **值域限制说明：**
   - kernelShape：对应公式中的k_h和k_w，长度为1或2，且数组元素必须都大于0。
   - strides：对应公式中的s_h和s_w，数组长度为0、1或2，且数组元素必须都大于0。当数组长度为0时，strides取默认值为1。
@@ -114,7 +115,6 @@
   - pads：长度为0、1、2或4。当数组长度为0时，不进行填充。当数组长度为1时，H_top、H_bottom、W_left、W_right填充同一个值。当数组长度为2时，H_top、H_bottom分别填充数组第1个值，W_left、W_right分别填充数组第2个值。当数组长度为4时，按[H_top、W_left、H_bottom、W_right]位置关系进行填充。单个空间轴方向填充量之和需小于等于对应方向kernelShape。
   - dilations：只支持数值为1的输入场景。长度为0、1、2或4。
   - ceilMode：取值为0时，代表False，向下取整；非0值时，代表True，向上取整。
-
 
 ## 调用说明
 

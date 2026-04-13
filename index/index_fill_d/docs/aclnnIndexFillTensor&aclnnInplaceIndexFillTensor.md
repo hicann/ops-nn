@@ -1,6 +1,6 @@
 # aclnnIndexFillTensor&aclnnInplaceIndexFillTensor
 
-##  产品支持情况
+## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
@@ -441,7 +441,6 @@ aclnnStatus aclnnInplaceIndexFillTensor(
 
 - 确定性计算：
   - aclnnIndexFillTensor&aclnnInplaceIndexFillTensor默认确定性实现。
-
 
 ## 调用示例
 

@@ -1,6 +1,6 @@
 # ApplyTopKTopPWithSorted
 
-##  产品支持情况
+## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
@@ -108,13 +108,13 @@
   </tbody></table>
 
 - Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
-## 约束说明
-无。
 
+## 约束说明
+
+无。
 
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_apply_top_k_top_p.cpp](examples/test_aclnn_apply_top_k_top_p.cpp) | 通过[aclnnApplyTopKTopP](docs/aclnnApplyTopKTopP.md)接口方式调用ApplyTopKTopPWithSorted算子。 |
-

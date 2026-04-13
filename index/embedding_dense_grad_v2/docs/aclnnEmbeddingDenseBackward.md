@@ -10,6 +10,7 @@
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
 | <term>Atlas 推理系列产品</term>                             |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    √     |
+
 ## 功能说明
 
 实现[aclnnEmbedding](../../gather_v2/docs/aclnnEmbedding.md)的反向计算, 将相同索引`indices`对应`grad`的一行累加到`out`上。

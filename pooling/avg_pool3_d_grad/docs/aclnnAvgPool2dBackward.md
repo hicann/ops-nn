@@ -52,6 +52,7 @@ aclnnStatus aclnnAvgPool2dBackwardGetWorkspaceSize(
   uint64_t          *workspaceSize,
   aclOpExecutor     **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnAvgPool2dBackward(
   void          *workspace,
@@ -59,6 +60,7 @@ aclnnStatus aclnnAvgPool2dBackward(
   aclOpExecutor *executor,
   aclrtStream    stream)
 ```
+
 ## aclnnAvgPool2dBackwardGetWorkspaceSize
 
 - **参数说明**：
@@ -268,6 +270,7 @@ aclnnStatus aclnnAvgPool2dBackward(
     </tr>
   </tbody>
   </table>
+
 ## aclnnAvgPool2dBackward
 
 - **参数说明：**
@@ -305,18 +308,22 @@ aclnnStatus aclnnAvgPool2dBackward(
     </tr>
   </tbody>
   </table>
--  **返回值：**
+
+- **返回值：**
 
     aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算：
   - aclnnAvgPool2dBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：Cube单元不支持FLOAT32计算。当输入为FLOAT32，可通过设置cubeMathType=1（ALLOW_FP32_DOWN_PRECISION）来允许接口内部cast到FLOAT16进行计算。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <cstdio>
 #include <iostream>

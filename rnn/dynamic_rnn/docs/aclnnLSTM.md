@@ -75,7 +75,6 @@ aclnnStatus aclnnLSTM(
   aclrtStream    stream)
 ```
 
-
 ## aclnnLSTMGetWorkspaceSize
 
 - **参数说明：**

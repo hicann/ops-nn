@@ -1,7 +1,6 @@
 # BatchMatMulV3
 
-
-##  产品支持情况
+## 产品支持情况
 
 | 产品 | 是否支持 |
 | ---- | :----:|
@@ -76,6 +75,7 @@
 - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：bias不支持BFLOAT16数据格式。
 - Atlas 推理系列产品：只支持FLOAT16数据格式，输入mat2只支持FRACTAL_NZ格式。
 - Kirin X90/Kirin 9030处理器系列产品：self、mat2和out的数据类型不支持BFLOAT16、FLOAT32，bias只支持INT8。
+
 ## 约束说明
 
 - 支持空tensor，空tensor场景下不支持bias。

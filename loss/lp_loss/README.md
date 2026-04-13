@@ -1,6 +1,5 @@
 # LpLoss
 
-
 ## 产品支持情况
 
 |产品             |  是否支持  |
@@ -34,6 +33,7 @@
   \operatorname{sum}(L),  &  \text{if reduction} = \text{'sum'.}
   \end{cases}
   $$
+  
 ## 参数说明
 
 - self (aclTensor*，计算输入)：公式中的输入`self`，Device侧的aclTensor。数据类型与target的数据类型满足数据类型推导规则（参见[互推导关系](../../docs/zh/context/互推导关系.md)）。shape支持0-8维，shape需要与target满足[broadcast规则](../../docs/zh/context/broadcast关系.md)。支持[非连续的Tensor](../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../docs/zh/context/数据格式.md)支持ND。

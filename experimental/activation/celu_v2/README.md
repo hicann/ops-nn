@@ -1,9 +1,11 @@
 # Celu
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------- |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √        |
+
 ## 功能说明
 
 - 算子功能：激活函数Celu（Continuously Differentiable Exponential Linear Units）。

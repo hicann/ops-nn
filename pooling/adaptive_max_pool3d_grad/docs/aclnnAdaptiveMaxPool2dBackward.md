@@ -41,6 +41,7 @@ aclnnStatus aclnnAdaptiveMaxPool2dBackwardGetWorkspaceSize(
   uint64_t          *workspaceSize,
   aclOpExecutor     **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnAdaptiveMaxPool2dBackward(
   void          *workspace,
@@ -177,6 +178,7 @@ aclnnStatus aclnnAdaptiveMaxPool2dBackward(
     </tr>
   </tbody>
   </table>
+
 ## aclnnAdaptiveMaxPool2dBackward
 
 - **参数说明：**
@@ -214,16 +216,18 @@ aclnnStatus aclnnAdaptiveMaxPool2dBackward(
     </tr>
   </tbody>
   </table>
--  **返回值：**
+- **返回值：**
 
     aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算：
   - aclnnAdaptiveMaxPool2dBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 - 非整除场景下（self的后两个维度的维度值对gradOutput后两个维度的维度值取余不为0），shape不超过2的24次方。整除场景下，没有这个限制。
 - 举例整除场景：self=[a,b,c,d]，gradOutput=[a,b,e,f]。 c%e为0并且d%f为0就是整除场景。
+
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

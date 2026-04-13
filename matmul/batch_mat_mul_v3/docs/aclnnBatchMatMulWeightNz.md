@@ -34,6 +34,7 @@ aclnnStatus aclnnBatchMatMulWeightNzGetWorkspaceSize(
   uint64_t        *workspaceSize, 
   aclOpExecutor   **executor)
 ```
+
 ```cpp
 aclnnStatus aclnnBatchMatMulWeightNz(
   void            *workspace, 
@@ -43,6 +44,7 @@ aclnnStatus aclnnBatchMatMulWeightNz(
 ```
 
 ## aclnnBatchMatMulWeightNzGetWorkspaceSize
+
 - **参数说明：**
   <table style="undefined;table-layout: fixed; width: 1508px"><colgroup>
   <col style="width: 151px">
@@ -221,6 +223,7 @@ aclnnStatus aclnnBatchMatMulWeightNz(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性说明：
   - aclnnBatchMatMulWeightNz默认确定性实现。
 
@@ -232,6 +235,7 @@ aclnnStatus aclnnBatchMatMulWeightNz(
 
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 self和mat2数据类型为float16，mat2为NZ格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
   ```Cpp
   #include <iostream>
   #include <vector>
@@ -453,8 +457,10 @@ self和mat2数据类型为float16，mat2为NZ格式场景下的示例代码如�
     return 0;
   }
   ```
+
 - <term>Ascend 950PR/Ascend 950DT</term>：
   self和mat2数据类型为float16，mat2为NZ格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+  
   ```Cpp
   #include <iostream>
   #include <memory>

@@ -15,7 +15,6 @@
 
 - 算子功能：AdaptiveAvgPool3d的反向计算。
 
-
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1250px"><colgroup>
@@ -56,7 +55,6 @@
       <td>ND</td>
     </tr>
   </tbody></table>
-
 
 ## 约束说明
 

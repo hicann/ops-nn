@@ -25,7 +25,6 @@
     \tilde{G}_{b,q,h,\ell,p,:} = A_{b,q,h,\ell,p} \cdot G^{\text{out}}_{b,q,h,:}
     $$
 
-
     计算 Value 的梯度，对每个邻点 (y,x)：
 
     $$
@@ -67,6 +66,7 @@
     $$
 
 ## 参数说明
+
 <table style="undefined;table-layout: fixed; width: 970px"><colgroup>
   <col style="width: 181px">
   <col style="width: 144px">

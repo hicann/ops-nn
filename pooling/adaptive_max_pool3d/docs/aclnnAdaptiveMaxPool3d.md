@@ -1,7 +1,8 @@
 # aclnnAdaptiveMaxPool3d
-## 产品支持情况
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/pooling/adaptive_max_pool3d)
 
+## 产品支持情况
+
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/pooling/adaptive_max_pool3d)
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
@@ -52,8 +53,8 @@
   indices(N,C,l,m,n)=\underset {i \in [D^{l}_{left}, D^{l}_{right}],j\in [H^m_{left},H^m_{right}], k \in [W^n_{left},W^n_{right}] }{argmax} input(N,C,i,j,k)
   $$
 
-
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnAdaptiveMaxPool3dGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnAdaptiveMaxPool3d”接口执行计算。
 
 ```Cpp
@@ -65,6 +66,7 @@ aclnnStatus aclnnAdaptiveMaxPool3dGetWorkspaceSize(
   uint64_t          *workspaceSize,
   aclOpExecutor     **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnAdaptiveMaxPool3d(
   void          *workspace,
@@ -161,7 +163,7 @@ aclnnStatus aclnnAdaptiveMaxPool3d(
       </tr>
     </tbody></table>
 
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>： 参数`indicesOut`的数据类型不支持INT64，
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：参数`indicesOut`的数据类型不支持INT64，
 
 - **返回值：**
 
@@ -252,6 +254,7 @@ aclnnStatus aclnnAdaptiveMaxPool3d(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算：
   - aclnnAdaptiveMaxPool3d默认确定性实现。
 
@@ -419,4 +422,3 @@ int main() {
   return 0;
 }
 ```
-

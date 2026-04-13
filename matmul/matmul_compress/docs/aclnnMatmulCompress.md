@@ -37,6 +37,7 @@ aclnnStatus aclnnMatmulCompressGetWorkspaceSize(
   uint64_t*        workspaceSize, 
   aclOpExecutor**  executor)
 ```
+
 ```cpp
 aclnnStatus aclnnMatmulCompress(
   void*          workspace, 
@@ -273,6 +274,7 @@ bias = random.randn(n).astype(np.float32)
 write2file(bias, "./data/bias.bin")
 ```
 执行gen_data.py，假设mat1和mat2的shape入参为m=512、k=1024、n=1024。
+
 ```shell
 python3 gen_data.py 512 1024 1024
 ```

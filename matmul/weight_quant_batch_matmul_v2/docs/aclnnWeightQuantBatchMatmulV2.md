@@ -460,6 +460,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
         - mx[量化模式](../../../docs/zh/context/量化介绍.md)：`weight`的数据类型为FLOAT4_E2M1/FLOAT，`weight`非转置，`x`非转置。
 
   <a id="ascend_950pr_ascend950dt_性能优化建议"></a>
+
   - **性能优化建议**
 
     - pertensor[量化模式](../../../docs/zh/context/量化介绍.md)：当[数据格式](../../../docs/zh/context/数据格式.md)为ND时，推荐使用转置后的`weight`输入；当[数据格式](../../../docs/zh/context/数据格式.md)为FRACTAL_NZ时，推荐使用非转置的`weight`输入。
@@ -467,9 +468,11 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
     - pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和mx[量化模式](../../../docs/zh/context/量化介绍.md)：推荐使用非转置的`weight`输入。
 
     </details>
+
 </details>
 
 ## 调用示例
+
   示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
 - A16W8调用示例：
@@ -1044,3 +1047,4 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
       return 0;
   }
   ```
+  

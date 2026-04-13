@@ -38,6 +38,7 @@ aclnnStatus aclnnExpandIntoJaggedPermuteGetWorkspaceSize(
     uint64_t        *workspaceSize,
     aclOpExecutor  **executor)
 ```
+
 ```c++
 aclnnStatus aclnnExpandIntoJaggedPermute(
     void          *workspace,

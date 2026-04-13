@@ -26,7 +26,7 @@
     符号说明：
     - $\odot$: 表示逐元素乘法；
     - $\sum_{l=1}^{L}$: 求和操作，沿序列维度$L$(即dim=1)进行
-    -  $b,l,d$：下标，表示张量的维度索引（通常为Batch，Length，Dimension）
+    - $b,l,d$：下标，表示张量的维度索引（通常为Batch，Length，Dimension）
     - $\text{scale}^{\uparrow L}$： 表示将scale张量在序列维度 $L$ 上进行广播（扩展）
 
 ## 参数说明
@@ -107,5 +107,3 @@
 | 调用方式 | 调用样例                                                                   | 说明                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_modulatebackward](./examples/test_aclnn_modulatebackward.cpp) | 通过[aclnnModulateBackward](./docs/aclnnModulate.md)接口方式调用ModulateGrad算子。    |
-
-

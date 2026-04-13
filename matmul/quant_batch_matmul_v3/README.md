@@ -1,7 +1,6 @@
 # QuantBatchMatmulV3
 
-
-##  产品支持情况
+## 产品支持情况
 
 | 产品 | 是否支持 |
 | ---- | :----:|
@@ -153,6 +152,7 @@
   - bias只支持INT32数据类型。
   - pertoken_scale只支持FLOAT32数据类型。
   - y只支持FLOAT16和INT8数据类型。
+
 ## 约束说明
 
 - 不支持空tensor。

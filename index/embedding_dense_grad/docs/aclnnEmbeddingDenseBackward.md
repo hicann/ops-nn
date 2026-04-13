@@ -54,7 +54,6 @@
 
 ## aclnnEmbeddingDenseBackward
 
-
 - **参数说明：**
 
   * workspace(void *, 入参): 在Device侧申请的workspace内存地址。
@@ -67,6 +66,7 @@
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - <term>Atlas 训练系列产品</term>：
   - 对于scale为true的场景，设定grad最后一维为embeddingDim，其大小超出指定范围时会被拦截报错。其合理范围如下：
     - indices为int32时，需满足
@@ -88,6 +88,7 @@
   - indices合轴后维度超过INT32_INF(2139095040)时，无法保证高性能
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
 ```Cpp

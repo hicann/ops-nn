@@ -12,6 +12,7 @@
 | <term>Atlas 训练系列产品</term>                              |    ×   |
 
 ## 功能说明
+
 - **算子功能**：将scalar value中的值按指定的轴和方向和对应的位置关系逐个填入tensor self中。value会被broadcast成和tensor index的shape一致的tensor src进行Scatter的计算。
 
 - **示例：**
@@ -45,6 +46,7 @@
   - `aclnnStatus aclnnInplaceScatterValue(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`
 
 ## aclnnScatterValueGetWorkspaceSize
+
 - **参数说明：**
 
   - self(aclTensor*, 计算输入)：公式中的`self`，Device侧的aclTensor。scatter的目标张量。self的维度数量需要与index相同，shape支持0-8维。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
@@ -66,7 +68,6 @@
   - workspaceSize(uint64_t *，出参)：返回需要在Device侧申请的workspace大小。
 
   - executor(aclOpExecutor ，出参)：返回op执行器，包含了算子计算流程。
-
 
 - **返回值：**
 
@@ -97,7 +98,6 @@
   - executor(aclOpExecutor *，入参)：op执行器，包含了算子计算流程。
 
   - stream(aclrtStream，入参)：指定执行任务的Stream。
-
 
 - **返回值：**
 
@@ -149,7 +149,6 @@
 
 - 确定性计算：
   - aclnnScatterValue&aclnnInplaceScatterValue默认确定性实现。
-
 
 ## 调用示例
 
@@ -447,4 +446,3 @@ int main() {
   return 0;
 }
 ```
-

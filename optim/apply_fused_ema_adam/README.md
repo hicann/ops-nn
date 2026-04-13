@@ -23,7 +23,6 @@
   \end{cases}
   $$
 
-
   $$
   grad=\begin{cases}
   grad+weightDecay*var,&mode=0\\
@@ -31,31 +30,25 @@
   \end{cases}
   $$
 
-
   $$
   m_{out}=\beta_1*m+(1-\beta_1)*grad
   $$
-
 
   $$
   v_{out}=\beta_2*v+(1-\beta_2)*grad^2
   $$
 
-
   $$
   m_{next}=m_{out}/correction_{\beta_1}
   $$
-
 
   $$
   v_{next}=v_{out}/correction_{\beta_2}
   $$
 
-
   $$
   denom=\sqrt{v_{next}}+eps
   $$
-
 
   $$
   update=\begin{cases}
@@ -64,16 +57,13 @@
   \end{cases}
   $$
 
-
   $$
   var_{out}=var-lr*update
   $$
 
-
   $$
   s_{out}=emaDecay*s+(1-emaDecay)*var_{out}
   $$
-
 
 ## 参数说明
 

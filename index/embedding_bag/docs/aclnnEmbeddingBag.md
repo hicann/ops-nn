@@ -19,19 +19,23 @@
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：
     
     - 当mode为sum模式：
+
     ```
     output的shape为includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
     offset2bag的shape 为 (bagIndices,)
     bagSize的shape为includeLastOffset ? (bagOffsets - 1) : (bagOffsets,)
     maxIndices的shape为includeLastOffset ? (bagOffsets - 1) : (bagOffsets,)
     ```
+
     - 当mode为mean模式：
+
     ```
     output的shape为includeLastOffset? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
     offset2bag的shape为(bagIndices,)
     bagSize的shape为includeLastOffset ? (bagOffsets - 1) : (bagOffsets,)
     maxIndices的shape为includeLastOffset ? (bagOffsets - 1) : (bagOffsets,)
     ```
+
     - 当mode为max模式：
     ```
     output的shape为includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
@@ -39,6 +43,7 @@
     bagSize的shape为includeLastOffset ? (bagOffsets - 1) : (bagOffsets,)
     maxIndices的shape为includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
     ```
+
   - <term>Ascend 950PR/Ascend 950DT</term>：
     - 当mode为sum模式：
     ```
@@ -47,6 +52,7 @@
     bagSize的shape为(bagOffsets,)
     maxIndices的shape为(0,)
     ```
+
     - 当mode为mean模式：
     ```
     output的shape为includeLastOffset? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
@@ -54,6 +60,7 @@
     bagSize的shape为bagOffsets
     maxIndices的shape为(0,)
     ```
+
     - 当mode为max模式：
     ```
     output的shape为includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
@@ -271,7 +278,7 @@ aclnnStatus aclnnEmbeddingBag(
       </tr>
     </tbody></table>
 
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> indices仅支持0-1维, perSampleWeights仅支持1维 。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> indices仅支持0-1维, perSampleWeights仅支持1维。
 
 - **返回值**
 

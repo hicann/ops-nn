@@ -152,7 +152,6 @@
   - 对于 `filter` 输入，`H`、`W` 的大小应该在 [1, 511] 的范围内。`N` 维度大小应该大于等于 0（等于 0 的场景仅在 `bias`、`output` 的 `N` 维度也等于 0 时支持），`C` 维度大小的支持情况与输入 `x` 的 `C` 维度一致。
   - 当 `x` 和 `filter` 数据类型是 `HIFLOAT8` 时，`bias` 数据类型会转成 `FLOAT` 参与计算。
 
-
   <table>
   <tr>
   <th style="text-align:center; width:80px">张量</th>

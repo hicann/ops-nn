@@ -11,7 +11,6 @@
 | <term>Atlas 推理系列产品</term>                             |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    ×   |
 
-
 ## 功能说明
 
 - 算子功能：根据给定的indices，将updates中的值加到输入张量var的第一维度上。

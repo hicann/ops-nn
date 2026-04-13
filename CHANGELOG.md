@@ -3,6 +3,7 @@
 > 本文档记录各版本的重要变更，版本按时间倒序排列。
 
 ## v8.5.0-beta.1
+
 发布日期：2025-12-30
 
 ops-nn 算子首个 Beta 版本 v8.5.0-beta.1 现已发布。
@@ -11,6 +12,7 @@ ops-nn 算子首个 Beta 版本 v8.5.0-beta.1 现已发布。
 使用方式请参阅[官方文档](https://gitcode.com/cann/ops-nn/blob/master/README.md)。
 
 ### 🔗 版本地址
+
 [CANN 8.5.0-beta 1](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1/)
 
 ```
@@ -22,6 +24,7 @@ ops-nn 算子首个 Beta 版本 v8.5.0-beta.1 现已发布。
 │   ├── ops                  # ops算子包目录，用于归档算子子包
 │   ├── ...
 ```
+
 ### 📌 版本配套
 
 **CANN独立升级子包版本配套关系**
@@ -37,6 +40,7 @@ ops-nn 算子首个 Beta 版本 v8.5.0-beta.1 现已发布。
 
 **CANN开源子包版本配套关系**
 | CANN子包版本                         | 版本源码标签                                                 | 配套CANN版本        |
+
 | ------------------------------------ | ------------------------------------------------------------ | ------------------- |
 | cann-opbase 8.5.0-beta.1             | [v8.5.0-beta.1](https://gitcode.com/cann/opbase/tags/v8.5.0-beta.1) | CANN   8.5.0-beta.1 |
 | cann-oam-tools   8.5.0-beta.1        | [v8.5.0-beta.1](https://gitcode.com/cann/oam-tools/tags/v8.5.0-beta.1) | CANN   8.5.0-beta.1 |
@@ -63,6 +67,7 @@ ops-nn 算子首个 Beta 版本 v8.5.0-beta.1 现已发布。
 - 【性能优化】增加asc_opc算子并行编译能力，优化编译效率；增加ccache，优化编译时长。([#692](https://gitcode.com/cann/ops-nn/pull/692))
 
 ### 🐛 问题修复
+
 - 修复conv类算子编译告警问题。([Issue33](https://gitcode.com/cann/ops-nn/issues/33))
 - 使用constexpr修饰if使能编译优化。([Issue98](https://gitcode.com/cann/ops-nn/issues/98))
 - add_example样例算子执行调用问题修复。([Issue245](https://gitcode.com/cann/ops-nn/issues/245))
