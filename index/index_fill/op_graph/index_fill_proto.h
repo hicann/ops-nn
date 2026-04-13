@@ -42,8 +42,7 @@ namespace ge {
 
 * @attention Constraints:
 * @li The input x and output y must have same shape.
-* @li The data type of element in tensor x may be same with the data type of input val, or may be different. If the types diff, 
-* the data type of val must be convertible to the data type of element in tensor x.
+* @li The data type of element in tensor x must be same with the data type of input val.
 * @li The input indices must be either a 1D tensor (equivalent to vector) or a 0D tensor (equivalent to scalar).
 *
 */
