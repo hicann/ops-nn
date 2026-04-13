@@ -480,6 +480,8 @@ function(add_modules_sources)
       )
   endif()
 
+  add_tf_plugin_sources()
+
   file(GLOB OPINFER_SRCS ${SOURCE_DIR}/*_infershape*.cpp)
   if(OPINFER_SRCS)
     add_infer_modules()
@@ -821,7 +823,74 @@ macro(add_onnx_plugin_sources)
   else()
     message(STATUS "ONNX_PLUGIN_SRCS is empty")
   endif()
-  endmacro()
+endmacro()
+
+# TF plugin 初始化函数（顶层调用一次，内部条件检查）
+function(init_tf_plugin_modules)
+  # 条件不满足，直接返回，不创建 OBJECT 库（零浪费）
+  if(NOT BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG OR ENABLE_TEST)
+    return()
+  endif()
+
+  # 条件满足，生成 TF protobuf  
+  set(tf_proto_srcs
+    ${ASCEND_DIR}/include/proto/ge_ir.proto
+  )
+
+  protobuf_generate_external(tf tf_proto_cc tf_proto_h ${tf_proto_srcs})
+  if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
+    npu_op_library(${TF_PLUGIN_NAME}_obj GRAPH ${tf_proto_h} )
+  else()
+    add_library(${TF_PLUGIN_NAME}_obj OBJECT ${tf_proto_h})
+  endif()
+
+  # 配置编译选项
+  set_target_properties(${TF_PLUGIN_NAME}_obj PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+    CXX_EXTENSIONS OFF
+  )
+
+  target_include_directories(${TF_PLUGIN_NAME}_obj PRIVATE ${TF_PLUGIN_INCLUDE})
+  target_compile_definitions(${TF_PLUGIN_NAME}_obj PRIVATE OPS_UTILS_LOG_SUB_MOD_NAME="TF_PLUGIN" LOG_CPP)
+
+  if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
+    target_compile_options(
+      ${TF_PLUGIN_NAME}_obj PRIVATE -Dgoogle=ascend_private -fvisibility=hidden -Wno-shadow -Wno-unused-parameter
+    )
+  else()
+    target_compile_options(
+      ${TF_PLUGIN_NAME}_obj PRIVATE $<$<NOT:$<BOOL:${ENABLE_TEST}>>:-DDISABLE_COMPILE_V1> -Dgoogle=ascend_private
+                                    -fvisibility=hidden -Wno-shadow -Wno-unused-parameter
+    )
+  endif()
+
+  target_link_libraries(
+    ${TF_PLUGIN_NAME}_obj
+    PRIVATE $<BUILD_INTERFACE:$<IF:$<BOOL:${ENABLE_TEST}>,intf_llt_pub_asan_cxx17,intf_pub_cxx17>>
+            $<BUILD_INTERFACE:dlog_headers>
+            $<$<TARGET_EXISTS:opbase_util_objs>:$<TARGET_OBJECTS:opbase_util_objs>>
+            $<$<TARGET_EXISTS:opbase_infer_objs>:$<TARGET_OBJECTS:opbase_infer_objs>>
+  )
+endfunction()
+
+###################################################################################################
+# 算子遍历时自动编译算子framework目录下_tf_plugin.cpp文件及tf_plugin目录下所有代码，无需主动调用
+###################################################################################################
+function(add_tf_plugin_sources)
+  if(NOT BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG OR ENABLE_TEST)
+    return()
+  endif()
+  if(NOT "${OP_DIR}x" STREQUAL "x")
+    set(FRAMEWORK_DIR ${OP_DIR}/framework)
+  else()
+    set(FRAMEWORK_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+  endif()
+  file(GLOB TF_PLUGIN_SRCS ${FRAMEWORK_DIR}/*_tf_plugin.cpp ${FRAMEWORK_DIR}/tf_plugin/*.cpp)
+  if(TF_PLUGIN_SRCS)
+    target_sources(${TF_PLUGIN_NAME}_obj PRIVATE ${TF_PLUGIN_SRCS})
+  endif()
+endfunction()
 
 # 添加 cube_utils 插件源文件
 macro(add_cube_utils_plugin_sources)

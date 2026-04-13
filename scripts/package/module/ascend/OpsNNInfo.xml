@@ -49,6 +49,10 @@
         <file value="libop_nn_onnx_plugin.so" entity="true" optional="true" install_mod="555"/>
     </file_info>
 
+    <file_info value="tfplugin_nn_lib" src_path="" dst_path="opp/built-in/framework/tensorflow" install_path="opp/built-in/framework/tensorflow">
+        <file value="liboptf_plugin_nn.so" entity="true" optional="true" install_mod="555"/>
+    </file_info>
+
     <dir_info value="OpsNNInfo" install_mod="750" install_type="all">
         <path value="opp" install_mod="550"/>
         <path value="opp/built-in" install_mod="550"/>
@@ -59,6 +63,7 @@
         <path value="opp/built-in/op_graph/lib/linux/$(ARCH)" install_mod="550"/>
         <path value="opp/built-in/framework" install_mod="550"/>
         <path value="opp/built-in/framework/onnx" install_mod="550"/>
+        <path value="opp/built-in/framework/tensorflow" install_mod="550"/>
         <path value="opp/built-in/data" install_mod="550"/>
         <path value="opp/built-in/data/op" install_mod="550"/>
         <path value="opp/built-in/op_impl" install_mod="550"/>

@@ -9,7 +9,7 @@
 # ============================================================================
 
 set -e
-RELEASE_TARGETS=("ophost" "opapi" "onnxplugin" "opgraph")
+RELEASE_TARGETS=("ophost" "opapi" "onnxplugin" "opgraph" "tfplugin")
 
 SUPPORT_COMPUTE_UNIT_SHORT=("ascend031" "ascend035" "ascend310b" "ascend310p" "ascend910_93" "ascend950" "ascend910b" "ascend910" "kirinx90" "kirin9030" "mc62cm12a")
 declare -A SOC_TO_ARCH
@@ -26,7 +26,7 @@ SUPPORTED_SHORT_OPTS="hj:vO:uf:-:"
 SUPPORTED_LONG_OPTS=(
   "help" "ops=" "soc=" "vendor_name=" "build-type=" "cov" "noexec" "noaicpu" "opkernel" "opkernel_aicpu" "opkernel_aicpu_test" "static"
    "jit" "pkg" "asan" "make_clean_all" "make_clean" "no_force"
-  "ophost" "opgraph" "opapi" "run_example" "example_name=" "genop=" "genop_aicpu=" "experimental" "cann_3rd_lib_path=" "oom" "onnxplugin" "dump_cce"
+  "ophost" "opgraph" "opapi" "run_example" "example_name=" "genop=" "genop_aicpu=" "experimental" "cann_3rd_lib_path=" "oom" "onnxplugin" "tfplugin" "dump_cce"
   "simulator" "bisheng_flags=" "kernel_template_input=" "module_extension=" "noaclnn"
 )
 
@@ -263,6 +263,19 @@ usage() {
         echo "    bash build.sh --onnxplugin --debug"
         return
         ;;
+      tfplugin)
+        echo "TFPlugin Build Options:"
+        echo $dotted_line
+        echo "    --tfplugin             Build tfplugin library"
+        echo "    -j[n]                  Compile thread nums, default is 8, eg: -j8"
+        echo "    -O[n]                  Compile optimization options, support [O0 O1 O2 O3], eg:-O3"
+        echo "    --debug                Build with debug mode"
+        echo $dotted_line
+        echo "Examples:"
+        echo "    bash build.sh --tfplugin -j16 -O3"
+        echo "    bash build.sh --tfplugin --debug"
+        return
+        ;;
       opgraph)
         echo "Opgraph Build Options:"
         echo $dotted_line
@@ -353,6 +366,7 @@ usage() {
   echo "    --ops Compile specified operator, use snake name, like: --ops=add,add_lora, use ',' to separate different operator"
   echo "    --soc Compile binary with specified Ascend SoC, like: --soc=ascend910b"
   echo "    --vendor_name Specify the custom operator pkg vendor name, like: --vendor_name=customize, default to customize-nn"
+  echo "    --tfplugin build optf_plugin_nn.so"
   echo "    --onnxplugin build op_nn_onnx_plugin.so"
   echo "    --opapi build opapi_nn.so"
   echo "    --opgraph build opgraph_nn.so"
@@ -387,7 +401,7 @@ check_help_combinations() {
   for arg in "${args[@]}"; do
     case "$arg" in
       -u) has_u=true ;;
-      --ophost | --opapi | --onnxplugin | --opgraph)
+      --ophost | --opapi | --onnxplugin | --tfplugin | --opgraph)
         has_test_command=true
         has_build_command=true
         ;;
@@ -507,7 +521,7 @@ set_create_libs() {
     return
   fi
   if [[ "$ENABLE_PACKAGE" == "TRUE" && "$ENABLE_CUSTOM" != "TRUE" ]]; then
-    BUILD_LIBS=("ophost_${REPOSITORY_NAME}" "opapi_${REPOSITORY_NAME}" "op_${REPOSITORY_NAME}_onnx_plugin" "opgraph_${REPOSITORY_NAME}")
+    BUILD_LIBS=("ophost_${REPOSITORY_NAME}" "opapi_${REPOSITORY_NAME}" "op_${REPOSITORY_NAME}_onnx_plugin" "optf_plugin_${REPOSITORY_NAME}" "opgraph_${REPOSITORY_NAME}")
     ENABLE_CREATE_LIB=TRUE
   else
     if [[ "$OP_HOST" == "TRUE" ]]; then
@@ -520,6 +534,10 @@ set_create_libs() {
     fi
     if [[ "$ONNX_PLUGIN" == "TRUE" ]]; then
       BUILD_LIBS+=("op_${REPOSITORY_NAME}_onnx_plugin")
+      ENABLE_CREATE_LIB=TRUE
+    fi
+    if [[ "$TF_PLUGIN" == "TRUE" ]]; then
+      BUILD_LIBS+=("optf_plugin_${REPOSITORY_NAME}")
       ENABLE_CREATE_LIB=TRUE
     fi
     if [[ "$OP_GRAPH" == "TRUE" ]]; then
@@ -638,6 +656,7 @@ checkopts() {
   OP_HOST_UT=FALSE
   OP_GRAPH_UT=FALSE
   ONNX_PLUGIN=FALSE
+  TF_PLUGIN=FALSE
   OP_KERNEL_UT=FALSE
   OP_KERNEL_AICPU_UT=FALSE
   OP_API=FALSE
@@ -698,6 +717,7 @@ checkopts() {
           --opgraph) SHOW_HELP="opgraph" ;;
           --opapi) SHOW_HELP="opapi" ;;
           --onnxplugin) SHOW_HELP="onnxplugin" ;;
+          --tfplugin) SHOW_HELP="tfplugin" ;;
           --run_example) SHOW_HELP="run_example" ;;
           --genop) SHOW_HELP="genop" ;;
           --genop_aicpu) SHOW_HELP="genop_aicpu" ;;
@@ -856,6 +876,8 @@ checkopts() {
             OP_KERNEL_AICPU=TRUE
           elif [[ "$OPTARG" == "onnxplugin" ]]; then
             ONNX_PLUGIN=TRUE
+          elif [[ "$OPTARG" == "tfplugin" ]]; then
+            TF_PLUGIN=TRUE
           else
             usage
             exit 1

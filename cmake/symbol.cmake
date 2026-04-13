@@ -427,6 +427,32 @@ function(gen_onnx_plugin_symbol)
 
 endfunction()
 
+function(gen_tf_plugin_symbol)
+  add_library(
+    ${TF_PLUGIN_NAME} SHARED
+    $<$<TARGET_EXISTS:${TF_PLUGIN_NAME}_obj>:$<TARGET_OBJECTS:${TF_PLUGIN_NAME}_obj>>
+  )
+
+  target_link_libraries(
+    ${TF_PLUGIN_NAME}
+    PRIVATE $<BUILD_INTERFACE:intf_pub_cxx17>
+            c_sec
+            -Wl,--no-as-needed
+            register
+            -Wl,--as-needed
+            -Wl,--whole-archive
+            rt2_registry_static
+            -Wl,--no-whole-archive
+            $<$<CONFIG:Release>:-s>
+    )
+
+  install(
+    TARGETS ${TF_PLUGIN_NAME}
+    LIBRARY DESTINATION ${TF_PLUGIN_LIB_INSTALL_DIR}
+    )
+
+endfunction()
+
 function(gen_norm_symbol)
   gen_ophost_symbol()
 
@@ -435,6 +461,8 @@ function(gen_norm_symbol)
   gen_opapi_symbol()
 
   gen_onnx_plugin_symbol()
+
+  gen_tf_plugin_symbol()
 endfunction()
 
 function(gen_cust_symbol)

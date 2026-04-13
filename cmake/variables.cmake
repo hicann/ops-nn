@@ -17,6 +17,7 @@ set(OPSTATIC_NAME cann_${PKG_NAME}_static)
 set(OPAPI_NAME opapi_${PKG_NAME})
 set(OPGRAPH_NAME opgraph_${PKG_NAME})
 set(ONNX_PLUGIN_NAME op_${PKG_NAME}_onnx_plugin)
+set(TF_PLUGIN_NAME optf_plugin_${PKG_NAME})
 set(CUBE_UTILS_PLUGIN_NAME cube_utils_${PKG_NAME}_util)
 set(GRAPH_PLUGIN_NAME graph_plugin_${PKG_NAME})
 set(VENDOR_PACKAGE_NAME ${VENDOR_NAME}_nn)
@@ -100,6 +101,7 @@ else()
   set(OPGRAPH_INC_INSTALL_DIR         ${OPP_PREFIX}/built-in/op_graph/inc)
   set(OPGRAPH_LIB_INSTALL_DIR         ${OPP_PREFIX}/built-in/op_graph/lib/linux/${CMAKE_SYSTEM_PROCESSOR})
   set(ONNX_PLUGIN_LIB_INSTALL_DIR     ${OPP_PREFIX}/built-in/framework/onnx)
+  set(TF_PLUGIN_LIB_INSTALL_DIR       ${OPP_PREFIX}/built-in/framework/tensorflow)
   set(VERSION_INFO_INSTALL_DIR        ${CMAKE_SYSTEM_PROCESSOR}-linux)
   set(WHL_INSTALL_DIR                 ops_nn)
 endif()
@@ -217,3 +219,17 @@ set(AICPU_DEFINITIONS
   -fno-common
   -fPIC
 )
+
+set(TF_PLUGIN_INCLUDE
+  ${OP_PROTO_INCLUDE} 
+  ${Protobuf_INCLUDE} 
+  ${Protobuf_PATH} 
+  ${CMAKE_BINARY_DIR}/proto 
+  ${JSON_INCLUDE} 
+  ${ABSL_SOURCE_DIR}
+  ${OPS_NN_DIR}
+  ${OPS_NN_DIR}/common/inc/framework
+  ${OPS_NN_DIR}/common/stub/inc/framework
+  ${OPS_NN_DIR}/common/inc/op_graph
+)
+
