@@ -626,6 +626,7 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
                 gtest
             )
             target_include_directories(opkernel_${opName} PRIVATE
+                ${ASCEND_DIR}/${SYSTEM_PREFIX}/asc/include
                 ${ASCEND_DIR}/include/base/context_builder
                 ${PROJECT_SOURCE_DIR}/tests/ut/op_kernel
                 ${PROJECT_SOURCE_DIR}/tests/ut/common
@@ -650,6 +651,7 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
                     gtest
                 )
                 target_include_directories(opkernel_${src_name} PRIVATE
+                    ${ASCEND_DIR}/${SYSTEM_PREFIX}/asc/include
                     ${ASCEND_DIR}/include/base/context_builder
                     ${PROJECT_SOURCE_DIR}/tests/ut/op_kernel
                     ${PROJECT_SOURCE_DIR}/tests/ut/common
