@@ -37,6 +37,7 @@
     ```
 
     - 当mode为max模式：
+    
     ```
     output的shape为includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
     offset2bag的shape为(bagIndices,)
@@ -46,6 +47,7 @@
 
   - <term>Ascend 950PR/Ascend 950DT</term>：
     - 当mode为sum模式：
+
     ```
     output的shape为includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
     offset2bag的shape为(bagIndices,)
@@ -54,6 +56,7 @@
     ```
 
     - 当mode为mean模式：
+
     ```
     output的shape为includeLastOffset? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
     offset2bag的shape为(bagIndices,)
@@ -62,6 +65,7 @@
     ```
 
     - 当mode为max模式：
+
     ```
     output的shape为includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
     offset2bag的shape为(bagIndices,)

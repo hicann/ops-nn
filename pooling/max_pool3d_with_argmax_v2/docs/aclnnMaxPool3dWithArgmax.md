@@ -60,6 +60,7 @@ aclnnStatus aclnnMaxPool3dWithArgmaxGetWorkspaceSize(
   uint64_t          *workspaceSize,
   aclOpExecutor     **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnMaxPool3dWithArgmax(
   void          *workspace,
@@ -67,6 +68,7 @@ aclnnStatus aclnnMaxPool3dWithArgmax(
   aclOpExecutor *executor,
   aclrtStream    stream)
 ```
+
 ## aclnnMaxPool3dWithArgmaxGetWorkspaceSize
 
 * **参数说明**：
@@ -281,11 +283,13 @@ aclnnStatus aclnnMaxPool3dWithArgmax(
     </tr>
   </tbody>
   </table>
--  **返回值：**
+
+- **返回值：**
 
     aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算：aclnnMaxPool3dWithArgmax默认确定性实现。
 
 - kernelSize、stride、padding、dilation、ceilMode参数需要保证输出out shape中不存在小于1的轴。

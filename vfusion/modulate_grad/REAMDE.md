@@ -106,4 +106,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_modulatebackward](./examples/test_aclnn_modulatebackward.cpp) | 通过[aclnnModulateBackward](./docs/aclnnModulate.md)接口方式调用ModulateGrad算子。    |
+| aclnn调用 | [test_aclnn_modulatebackward](./examples/test_aclnn_modulatebackward.cpp) | 通过[aclnnModulateBackward](../../vfusion/modulate_grad/docs/aclnnModulateBackward.md)接口方式调用ModulateGrad算子。| 

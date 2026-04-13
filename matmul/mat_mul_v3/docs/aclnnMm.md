@@ -199,7 +199,7 @@ aclnnStatus aclnnMm(
     <col style="width: 130px">
     <col style="width: 650px">
     </colgroup>
-    <table><thead>
+    <thead>
       <tr>
         <th>参数名</th>
         <th>输入/输出</th>

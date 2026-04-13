@@ -107,7 +107,7 @@ aclnnStatus aclnnSwishBackward(
       <td>betaOptional</td>
       <td>输入</td>
       <td>表示可调节参数，用于控制Swish函数的形状和斜率的标量，公式中的β。</td>
-      <td><ul><li>数据类型需要是可转换为FLOAT的数据类型（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>当betaOptional为空指针时，接口以1.0进行计算。</li></ul></td>
+      <td><ul><li>数据类型需要是可转换为FLOAT的数据类型（参见<a href="../../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>当betaOptional为空指针时，接口以1.0进行计算。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

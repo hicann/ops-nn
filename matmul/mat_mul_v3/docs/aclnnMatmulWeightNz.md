@@ -98,7 +98,7 @@ aclnnStatus aclnnMatmulWeightNz(
         <td>out</td>
         <td>输出</td>
         <td>表示矩阵乘的输出矩阵，公式中的out。</td>
-        <td>数据类型需要与self与mat2推导之后的数据类型保持一致（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</br> 各个维度表示：（m，n），m与self的m一致，n与mat2的n1以及n0满足ceil(n / n0) = n1的关系。</td>
+        <td>数据类型需要与self与mat2推导之后的数据类型保持一致（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。<br> 各个维度表示：（m，n），m与self的m一致，n与mat2的n1以及n0满足ceil(n / n0) = n1的关系。</td>
         <td>BFLOAT16、FLOAT16、FLOAT32</td>
         <td>ND</td>
         <td>2</td>
@@ -198,7 +198,7 @@ aclnnStatus aclnnMatmulWeightNz(
   <col style="width: 130px">
   <col style="width: 650px">
   </colgroup>
-  <table><thead>
+  <thead>
     <tr>
       <th>参数名</th>
       <th>输入/输出</th>

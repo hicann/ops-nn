@@ -1,4 +1,5 @@
 # 算子调用
+
 ## 前提条件
 
 - 环境部署：调用算子之前，请先参考[环境部署](../context/quick_install.md)完成基础环境搭建。
@@ -53,8 +54,8 @@
     # bash build.sh --pkg --soc=ascend910b --vendor_name=transpose_batch_mat_mul --ops=transpose_batch_mat_mul
     # 编译experimental贡献目录下的用户算子
     # bash build.sh --pkg --experimental --soc=ascend910b --ops=${experimental_op}
-
     ```
+
     - --soc：\$\{soc\_version\}表示NPU型号。Atlas A2系列产品使用"ascend910b"（默认），Atlas A3系列产品使用"ascend910_93"，Ascend 950PR/Ascend 950DT产品使用"ascend950"。
     - --vendor_name（可选）：\$\{vendor\_name\}表示构建的自定义算子包名，默认名为custom。
     - --ops（可选）：\$\{op\_list\}表示待编译算子，不指定时默认编译所有算子。格式形如"transpose_batch_mat_mul,gemm,..."，多算子之间用英文逗号","分隔。

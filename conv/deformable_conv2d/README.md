@@ -91,6 +91,7 @@
       <td>表示输入的原始数据。对应公式中的`input`。shape为[N, inH, inW, inC]，其中inH * inW不能超过2147483647。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
+     </tr>
     <tr>
       <td>weight</td>
       <td>输入</td>

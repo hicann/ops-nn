@@ -1,7 +1,6 @@
 # TransposeBatchMatMul
 
-
-##  产品支持情况
+## 产品支持情况
 
 | 产品 | 是否支持 |
 | ---- | :----:|
@@ -142,6 +141,7 @@
 </tbody></table>
 
 - Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
+
 ## 约束说明
 
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
@@ -151,7 +151,9 @@
     - 当x1的输入shape为(B, M, K)时，K <= 65535；当x1的输入shape为(M, B, K)时，B * K <= 65535。
     - 当scale不为空时，batchSplitFactor只能等于1，B与N的乘积小于65536, 且仅支持输入为FLOAT16和输出为INT8的类型推导。
 - <term>Ascend 950PR/Ascend 950DT</term>：
+
     - 当scale不为空时，batchSplitFactor只能等于1，且仅支持输入为FLOAT16和输出为INT8的类型推导。
+    
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |

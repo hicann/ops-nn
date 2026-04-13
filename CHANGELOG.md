@@ -55,7 +55,6 @@ ops-nn 算子首个 Beta 版本 v8.5.0-beta.1 现已发布。
 | cann-hcomm   8.5.0-beta.1            | [v8.5.0-beta.1](https://gitcode.com/cann/hcomm/tags/v8.5.0-beta.1) | CANN   8.5.0-beta.1 |
 | cann-npu-runtime   8.5.0-beta.1      | [v8.5.0-beta.1](https://gitcode.com/cann/runtime/tags/v8.5.0-beta.1) | CANN   8.5.0-beta.1 |
 
-
 ### 🚀 关键特性
 
 - 【工程能力】nn类onnx算子插件支持。([#452](https://gitcode.com/cann/ops-nn/pull/452))

@@ -1,5 +1,3 @@
-
-
 # 算子调试调优
 
 ## 调试定位（AI Core算子）
@@ -53,6 +51,7 @@
   // 打印当前核计算Block长度
   AscendC::PRINTF("Tiling blockLength is %llu\n", blockLength_);
   ```
+
 * **DumpTensor**
 
   该接口支持Dump指定Tensor的内容，同时支持打印自定义附加信息，比如当前行号等，详细介绍请参见[《Ascend C API》](https://hiascend.com/document/redirect/CannCommunityAscendCApi)中“算子调测API > DumpTensor”。
@@ -128,6 +127,7 @@
    ```bash
    msprof op ./test_aclnn_add_example
    ```
+
    采集结果在本项目`examples/add_example/examples/build/bin/OPPROF_*`目录，采集完成后打印如下信息：
    
     ``` text
@@ -141,6 +141,7 @@
     Current Freq: 1800
     Rated Freq: 1800
     ```
+
    其中Task Duration是当前算子Kernel耗时，Block Dim是当前算子执行核数。
 
    算子各项流水详细指标可关注`OPPROF_*`下`ArithmeticUtilization`文件，包含了当前各项流水的占比，具体介绍参见[msProf](https://www.hiascend.com/document/redirect/CannCommunityToolMsprof)中“性能数据文件 > msprof op > ArithmeticUtilization（cube及vector类型指令耗时和占比）”章节。
@@ -148,15 +149,19 @@
 3. 采集仿真流水图。
    
    msProf工具进行算子仿真调优之前，需执行如下命令配置环境变量。
+
    ```bash
    export LD_LIBRARY_PATH=${INSTALL_DIR}/tools/simulator/Ascendxxxyy/lib:$LD_LIBRARY_PATH 
    ```
+
    请根据CANN软件包实际安装路径和AI处理器型号对以上环境变量进行修改。
    
    之后进入算子可执行文件所在目录，执行如下命令：
+
    ```bash
    msprof op simulator --output=$PWD/pipeline_auto --kernel-name"AddExample" ./test_aclnn_add_example
    ```
+
    采集结果在本项目`$PWD/pipeline_auto/OPPROF_**`目录中。
    其中流水相关文件路径为`OPPROF**/simulator/visualize_data.bin`，可以借助[MindStudio Insight](https://www.hiascend.com/document/redirect/MindStudioInsight)工具查看。
    
@@ -183,4 +188,3 @@
    ``` 
 
 3. 在Chrome浏览器中输入“chrome://tracing”地址，并将生成的指令流水图文件（trace_core0.json）拖到空白处打开，具体参数介绍参考CANN Simulator中[“仿真结果解析”](./cann_simulator.md/#仿真结果解析)章节。
-

@@ -34,6 +34,7 @@
     $$
 
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMaxPool2dWithIndicesGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMaxPool2dWithIndices”接口执行计算。
 
 ```Cpp
@@ -49,6 +50,7 @@ aclnnStatus aclnnMaxPool2dWithIndicesGetWorkspaceSize(
   uint64_t          *workspaceSize,
   aclOpExecutor     **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnMaxPool2dWithIndices(
   void          *workspace,
@@ -56,6 +58,7 @@ aclnnStatus aclnnMaxPool2dWithIndices(
   aclOpExecutor *executor,
   aclrtStream    stream)
 ```
+
 ## aclnnMaxPool2dWithIndicesGetWorkspaceSize
 
 - **参数说明：**
@@ -182,7 +185,8 @@ aclnnStatus aclnnMaxPool2dWithIndices(
     <td>-</td>
   </tr>
   </tbody></table>
- - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持NHWC，dilation中的元素值仅支持1。
+ 
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持NHWC，dilation中的元素值仅支持1。
 
 - **返回值：**
 
@@ -252,6 +256,7 @@ aclnnStatus aclnnMaxPool2dWithIndices(
     </tr>
   </tbody>
   </table>
+
 ## aclnnMaxPool2dWithIndices
 
 - **参数说明：**
@@ -289,11 +294,13 @@ aclnnStatus aclnnMaxPool2dWithIndices(
     </tr>
   </tbody>
   </table>
--  **返回值：**
+
+- **返回值：**
 
     aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算：
   - aclnnMaxPool2dWithIndices默认确定性实现。
 
@@ -302,7 +309,9 @@ aclnnStatus aclnnMaxPool2dWithIndices(
   - 当ceilMode为True的时候，如果滑动窗口全部在右侧padding区域上，这个输出结果将被忽略。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <cstdio>
 #include <iostream>

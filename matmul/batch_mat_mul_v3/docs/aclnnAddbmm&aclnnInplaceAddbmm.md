@@ -32,7 +32,9 @@
 - aclnnAddbmm和aclnnInplaceAddbmm实现相同的功能，使用区别如下，请根据自身实际场景选择合适的算子。
   - aclnnAddbmm：需新建一个输出张量对象存储计算结果。
   - aclnnInplaceAddbmm：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
+
 - 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnAddbmmGetWorkspaceSize”或者”aclnnInplaceAddbmmGetWorkspaceSize“接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnAddbmm”或者”aclnnInplaceAddbmm“接口执行计算。
+
 ```cpp
 aclnnStatus aclnnAddbmmGetWorkspaceSize(
   const aclTensor     *self,
@@ -45,6 +47,7 @@ aclnnStatus aclnnAddbmmGetWorkspaceSize(
   uint64_t            *workspaceSize,
   aclOpExecutor       **executor)
 ```
+
 ```cpp
 aclnnStatus aclnnAddbmm(
   void              *workspace,
@@ -64,6 +67,7 @@ aclnnStatus aclnnInplaceAddbmmGetWorkspaceSize(
   uint64_t          *workspaceSize,
   aclOpExecutor     **executor)
 ```
+
 ```cpp
 aclnnStatus aclnnInplaceAddbmm(
   void             *workspace,
@@ -328,7 +332,7 @@ aclnnStatus aclnnInplaceAddbmm(
       <td>输入|输出</td>
       <td>输入输出tensor，即公式中的输入self与out。</td>
       <td><ul>
-      <li>数据类型与batch1@batch2的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。<li>shape需要与batch1@batch2的后两维的shape一致。</li>
+      <li>数据类型与batch1@batch2的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>shape需要与batch1@batch2的后两维的shape一致。</li>
       <li>支持空Tensor。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
@@ -514,6 +518,7 @@ aclnnStatus aclnnInplaceAddbmm(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnAddbmm&aclnnInplaceAddbmm默认确定性实现。
   - <term>Ascend 950PR/Ascend 950DT</term>：aclnnAddbmm&aclnnInplaceAddbmm默认确定性实现。
@@ -522,7 +527,9 @@ aclnnStatus aclnnInplaceAddbmm(
 - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：Cube单元不支持FLOAT32计算。当输入为FLOAT32，可通过设置cubeMathType=1（ALLOW_FP32_DOWN_PRECISION）来允许接口内部cast到FLOAT16进行计算。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

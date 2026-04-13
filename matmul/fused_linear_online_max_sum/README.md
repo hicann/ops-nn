@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 算子功能：功能等价Megatron的matmul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切卡融合matmul与celoss，中间根据通信拆分为[FusedLinearOnlineMaxSum](./)和[FusedCrossEntropyLossWithMaxSum](../../loss/fused_cross_entropy_loss_with_max_sum)。
+- 算子功能：功能等价Megatron的matmul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切卡融合matmul与celoss，中间根据通信拆分为[FusedLinearOnlineMaxSum](../../matmul/fused_linear_online_max_sum/docs/aclnnFusedLinearOnlineMaxSum.md)和[FusedCrossEntropyLossWithMaxSum](../../loss/fused_cross_entropy_loss_with_max_sum)。
 - 计算公式：
   1. $input$与$wight^T$做矩阵乘得到：
 

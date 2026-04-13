@@ -19,6 +19,7 @@
 
   - 示例：
     - 示例1：
+
       ```
       当keepDim为True时，则将对应维度的size置为1，若为False，则删除对应维度。
       假设self的shape为[2, 3, 4]，dim = 1，keepDim为true，则输出shape为[2, 1, 4]。
@@ -38,6 +39,7 @@
       ```
 
     - 示例3：
+
       ```
       若输入
       self = tensor([[1, float('nan'), 3, 2],[-1, float('nan'), 3, 2]]) shape为[2, 4]
@@ -49,6 +51,7 @@
       ```
       
     - 示例4：
+    
       ```
       若输入
       self = tensor([[1, float('nan'), 3, 2],[-1, float('nan'), 3, 2]]) shape为[2, 4]

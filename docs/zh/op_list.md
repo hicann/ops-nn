@@ -287,7 +287,7 @@
   </tr>
   <tr>
     <td>activation</td>
-    <td><a href="../../activation/logsigmoid/README.md">logsigmoid</a></td>
+    <td><a href="../../activation/log_sigmoid/README.md">logsigmoid</a></td>
     <td>✗</td>
     <td>✓</td>
     <td>✓</td>
@@ -3097,7 +3097,7 @@
   </tr>
    <tr>
     <td>rnn</td>
-    <td><a href="../../../../rnn/bidirection_lstm/README.md">bidirection_lstm</a></td>
+    <td><a href="../../rnn/bidirection_lstm/README.md">bidirection_lstm</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>

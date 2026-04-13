@@ -28,75 +28,71 @@
 
 1. 计算$A_{max}$:
 
-$$A_{max} = rowMax(|A_{group}|)$$
+    $$ A_{max} = rowMax(|A_{group}|)$$
 
 2. 计算$tmp_{1}$:
 
-$$A_{max} = rowMax(|A_{group}|)$$
+    $$A_{max} = rowMax(|A_{group}|)$$
 
-2. 计算$tmp_{1}$:
+3. 计算$tmp_{1}$:
 
-$$tmp_{1} = \frac{7.49 * A_{group}}{A_{max}}$$
+    $$tmp_{1} = \frac{7.49 * A_{group}}{A_{max}}$$
 
-3. 计算$A_1$:
+4. 计算$A_1$:
 
-$$A_1 = round(tmp_{1})$$
+    $$A_1 = round(tmp_{1})$$
 
-4. 计算$tmp_{2}$:
+5. 计算$tmp_{2}$:
 
-$$tmp_{2}=(tmp_{1}-A_{1})*14.98$$
+    $$tmp_{2}=(tmp_{1}-A_{1})*14.98$$
 
-5. 计算$A_{2}$:
+6. 计算$A_{2}$:
 
-$$A_{2}=round(tmp_{2})$$
+    $$A_{2}=round(tmp_{2})$$
 
-6. 计算$tmp_{3}$:
+7. 计算$tmp_{3}$:
 
-$$tmp_{3}=(tmp_{2}-A_{2})*14.98$$
+    $$tmp_{3}=(tmp_{2}-A_{2})*14.98$$
 
-7. 计算$A_{3}$:
+8. 计算$A_{3}$:
 
-$$A_{3}=round(tmp_{3})$$
+    $$A_{3}=round(tmp_{3})$$
 
-8. 构造矩阵$A_{int}$:
+9. 构造矩阵$A_{int}$:
 
-$$
-A_{int} =
-    \begin{bmatrix}
-    A_{1} \\
-    A_{2} \\
-    A_{3} \\
-    \end{bmatrix}
-$$
+    $$
+    A_{int} =
+        \begin{bmatrix}
+        A_{1} \\
+        A_{2} \\
+        A_{3} \\
+        \end{bmatrix}
+    $$
 
-9. 计算$C_{int}$:
+10. 计算$C_{int}$:
 
-$$Y_{int} =     \begin{bmatrix}
-    Y_{1} \\
-    Y_{2} \\
-    Y_{3} \\
-    \end{bmatrix} = A_{int} Weight_{group}$$
+    $$Y_{int} =     \begin{bmatrix}
+        Y_{1} \\
+        Y_{2} \\
+        Y_{3} \\
+        \end{bmatrix} = A_{int} Weight_{group}$$
 
-10. 计算$C_{group}$:
+11. 计算$C_{group}$:
 
-$$Y_{group} = [(\frac{Y_{1}}{7.49}+\frac{Y_{2}}{7.49*14.98}+\frac{Y_{3}}{7.49*14.98*14.98})*A_{max}] * scale_{group}$$
+    $$Y_{group} = [(\frac{Y_{1}}{7.49}+\frac{Y_{2}}{7.49*14.98}+\frac{Y_{3}}{7.49*14.98*14.98})*A_{max}] * scale_{group}$$
 
-11. 计算$Y^i$:
+12. 计算$Y^i$:
 
 $$Y^{i} = Y_{group} + Y^{i-1}$$
 
 - 算子规格：
   <table>
   <tr><td rowspan="1" align="center">算子类型(OpType)</td><td colspan="4" align="center">WeightQuantBatchMatmul</td></tr>
-  </tr>
   <tr><td rowspan="4" align="center">算子输入</td><td align="center">name</td><td align="center">shape</td><td align="center">data type</td><td align="center">format</td></tr>
   <tr><td align="center">x1</td><td align="center">M * K</td><td align="center">float16</td><td align="center">ND</td></tr>
   <tr><td align="center">x2</td><td align="center">K * N</td><td align="center">int4</td><td align="center">ND</td></tr>
   <tr><td align="center">antiquant_scale</td><td align="center"> GroupNum * N </td><td align="center">float16</td><td align="center">ND</td></tr>
-  </tr>
-  </tr>
   <tr><td rowspan="1" align="center">算子输出</td><td align="center">y</td><td align="center">M * N</td><td align="center">float16</td><td align="center">ND</td></tr>
-  </tr>
   <tr><td rowspan="1" align="center">核函数名</td><td colspan="4" align="center">WeightQuantBatchMatmulExperiment</td></tr>
   </table>
 

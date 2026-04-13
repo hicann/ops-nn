@@ -105,6 +105,7 @@
 ## 约束说明
 
 Shape描述：
+
   - self.shape = (N, C, Din, Hin, Win)
   - outputSize = [Dout, Hout, Wout]
   - outputOut.shape = (N, C, Dout, Hout, Wout)

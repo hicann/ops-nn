@@ -33,7 +33,7 @@
 
    <img src="docs/zh/figures/cloudIDE.png" alt="云平台"  width="750px" height="90px">
 
-2. 根据页面提示创建并启动云开发环境，单击“`连接 > WebIDE `”进入算子一站式开发平台，开源项目的资源默认在`/mnt/workspace`目录下。
+2. 根据页面提示创建并启动云开发环境，单击“`连接 > WebIDE`”进入算子一站式开发平台，开源项目的资源默认在`/mnt/workspace`目录下。
 
     <img src="docs/zh/figures/webIDE.png" alt="云平台"  width="1000px" height="150px">
     
