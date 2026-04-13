@@ -14,7 +14,7 @@
 ## 功能说明
 
 - 算子功能:
-  将tensor updates中的值按指定的轴axis和索引indices逐个更新tensor data中的值。该算子为自定义算子语义，无对应的tensorflow或pytorch接口。
+  将tensor updates中的值按指定的轴axis和索引indices逐个更新tensor data中的值。
 
 - 示例：
   该算子有3个输入和一个属性：data，updates，indices和axis，其中data是待更新的tensor，updates是存储更新数据的tensor，indices表示更新位置，

@@ -1638,6 +1638,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/scatter/README.md">scatter</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>将tensor updates中的值按指定的轴axis和索引indices逐个更新tensor data中的值。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/scatter_add/README.md">scatter_add</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -3325,6 +3335,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>基础循环神经网络 (Recurrent Neural Network) 算子，用于处理序列数据。它通过隐藏状态传递时序信息，适合处理具有时间/顺序依赖性的数据， 仅支持单层RNN。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/unsorted_segment_sum/README.md">unsorted_segment_sum</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>unsorted_segment_sum主要功能是对一个张量分段求和。</td>
   </tr>
   <tr>
     <td>rnn</td>
