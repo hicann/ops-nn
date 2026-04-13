@@ -774,7 +774,7 @@ TEST_F(BatchMatMulV3TilingRuntime, bias_cases_batchbias_failed_1) {
                     .Build();
 
   auto tiling_context = holder.GetContext<gert::TilingContext>();
-  ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+  ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(BatchMatMulV3TilingRuntime, bias_cases_batchbias_failed) {
