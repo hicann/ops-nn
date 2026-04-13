@@ -66,4 +66,4 @@ $$y=\mathrm{erfinv}(x)$$
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_erfinv](./examples/test_aclnn_erfinv.cpp) | 通过aclnnErfinv接口方式调用Erfinv算子。 |
+| aclnn调用 | [test_aclnn_erfinv](./examples/test_aclnn_erfinv.cpp) | 通过[aclnnErfinv](./docs/aclnnErfinv&aclnnInplaceErfinv.md)接口方式调用Erfinv算子。 |
