@@ -188,7 +188,7 @@ static ge::graphStatus Tiling4ReluV2(gert::TilingContext* context)
         OP_LOGE("ReluV2Tiling", "Tiling context is null");
         return ge::GRAPH_FAILED;
     }
-    auto compileInfo = reinterpret_cast<const ReluV2CompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = context->GetCompileInfo<ReluV2CompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     // 走新的模板tiling
     OP_LOGD("ReluV2Tiling", "Enter new ReluV2Tiling");

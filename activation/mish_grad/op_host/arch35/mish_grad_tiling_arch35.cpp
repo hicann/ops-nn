@@ -164,7 +164,7 @@ ge::graphStatus MishGradTiling::RunTiling()
 static ge::graphStatus Tiling4MishGrad(gert::TilingContext *tilingContextGen)
 {
     OP_LOGD(tilingContextGen->GetNodeName(), "Tiling4MishGrad rt2.0 is running.");
-    auto compileInfo = reinterpret_cast<const MishGradCompileInfo*>(tilingContextGen->GetCompileInfo());
+    auto compileInfo = tilingContextGen->GetCompileInfo<MishGradCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContextGen, compileInfo);
 
     MishGradTiling baseOpTiling(tilingContextGen);

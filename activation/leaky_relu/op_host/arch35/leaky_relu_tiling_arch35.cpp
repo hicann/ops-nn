@@ -128,7 +128,7 @@ static ge::graphStatus TilingForLeakyRelu(gert::TilingContext *context)
         return ge::GRAPH_FAILED;
     }
 
-    auto compileInfo = reinterpret_cast<const LeakrReluCompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = context->GetCompileInfo<LeakrReluCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     OP_LOGD("LeakyReluTiling", "Enter new LeakyReluTiling");
     LeakyReluTiling tiling(context);

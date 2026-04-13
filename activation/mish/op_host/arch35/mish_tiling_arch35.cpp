@@ -133,7 +133,7 @@ ge::graphStatus MishTiling::RunTiling()
 static ge::graphStatus Tiling4Mish(gert::TilingContext* tilingContextGen)
 {
     OP_LOGD(tilingContextGen->GetNodeName(), "Tiling4Mish rt2.0 is running.");
-    auto compileInfo = reinterpret_cast<const MishCompileInfo*>(tilingContextGen->GetCompileInfo());
+    auto compileInfo = tilingContextGen->GetCompileInfo<MishCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContextGen, compileInfo);
 
     MishTiling baseOpTiling(tilingContextGen);

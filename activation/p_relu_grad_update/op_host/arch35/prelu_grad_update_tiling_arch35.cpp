@@ -234,7 +234,7 @@ static ge::graphStatus Tiling4PReluGradUpdate(gert::TilingContext* context)
         OP_LOGE("PReluGradUpdateTiling", "Tiling context is null");
         return ge::GRAPH_FAILED;
     }
-    auto compileInfo = reinterpret_cast<const BroadcastCompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = context->GetCompileInfo<BroadcastCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     OP_LOGD("PReluGradUpdateTiling", "Enter new PReluGradUpdateTiling");
     PReluGradUpdateTiling tiling(context);

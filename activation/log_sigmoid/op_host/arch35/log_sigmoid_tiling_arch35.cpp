@@ -119,7 +119,7 @@ ge::graphStatus LogSigmoidTiling::RunTiling()
 
 static ge::graphStatus Tiling4LogSigmoid(gert::TilingContext* tilingContext)
 {
-    auto compileInfo = reinterpret_cast<const ElewiseCompileInfo*>(tilingContext->GetCompileInfo());
+    auto compileInfo = tilingContext->GetCompileInfo<ElewiseCompileInfo>();
     OPS_CHECK_NULL_WITH_CONTEXT(tilingContext, compileInfo);
     
     OP_LOGD(tilingContext->GetNodeName(), "START LogSigmoid AscendC Tiling \n");

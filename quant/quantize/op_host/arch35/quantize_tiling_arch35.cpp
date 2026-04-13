@@ -92,7 +92,7 @@ ge::graphStatus Quantize::DoQuantizeTiling()
 ge::graphStatus Quantize::GetCompileInfo()
 {
     OP_LOGD(context_->GetNodeName(), "GetCompileInfo begin");
-    auto compileInfo = reinterpret_cast<const Ops::Base::BroadcastCompileInfo*>(context_->GetCompileInfo());
+    auto compileInfo = context_->GetCompileInfo<Ops::Base::BroadcastCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
     coreNum_ = compileInfo->coreNum;
     ubSize_ = compileInfo->ubSize;
@@ -734,7 +734,7 @@ static ge::graphStatus Tiling4Quantize(gert::TilingContext* context)
         return ge::GRAPH_FAILED;
     }
 
-    auto compileInfo = reinterpret_cast<const Ops::Base::BroadcastCompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = context->GetCompileInfo<Ops::Base::BroadcastCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     // 走新的模板tiling
     OP_LOGD("QuantizeTiling", "Enter new QuantizeTiling");

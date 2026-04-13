@@ -119,7 +119,7 @@ ge::graphStatus GeluTiling::RunTiling()
 static ge::graphStatus Tiling4Gelu(gert::TilingContext* tilingContextGen)
 {
     OP_LOGD(tilingContextGen->GetNodeName(), "Tiling4Gelu rt2.0 is running.");
-    auto compileInfo = reinterpret_cast<const GeluCompileInfo*>(tilingContextGen->GetCompileInfo());
+    auto compileInfo = tilingContextGen->GetCompileInfo<GeluCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContextGen, compileInfo);
 
     GeluTiling baseOpTiling(tilingContextGen);

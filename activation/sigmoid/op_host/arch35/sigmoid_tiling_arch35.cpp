@@ -37,8 +37,7 @@ ge::graphStatus SigmoidTiling::GetPlatformInfo()
 {
     auto platformInfo = context_->GetPlatformInfo();
     if (platformInfo == nullptr) {
-        auto compileInfoPtr =
-            reinterpret_cast<const SigmoidCompileInfo*>(context_->GetCompileInfo());
+        auto compileInfoPtr = context_->GetCompileInfo<SigmoidCompileInfo>();
         OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_, "compile info is null"),
                         return ge::GRAPH_FAILED);
         coreNum = compileInfoPtr->coreNum;
@@ -200,7 +199,7 @@ ge::graphStatus SigmoidTiling::PostTiling()
 
 ge::graphStatus TilingForSigmoid(gert::TilingContext* context)
 {
-    auto compileInfo = reinterpret_cast<const SigmoidCompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = context->GetCompileInfo<SigmoidCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     SigmoidTiling tiling(context);
 

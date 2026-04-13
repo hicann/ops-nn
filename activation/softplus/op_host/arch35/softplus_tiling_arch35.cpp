@@ -121,7 +121,7 @@ static ge::graphStatus TilingForSoftplus(gert::TilingContext *context)
         OP_LOGE(context, "Tiling context is null"),
         return ge::GRAPH_FAILED);
 
-    auto compileInfo = reinterpret_cast<const ElewiseCompileInfo *>(context->GetCompileInfo());
+    auto compileInfo = context->GetCompileInfo<ElewiseCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
 
     OP_LOGD("SoftplusTiling", "Enter new SoftplusTiling");

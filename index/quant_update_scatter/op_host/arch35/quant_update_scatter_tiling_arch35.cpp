@@ -680,7 +680,7 @@ ge::graphStatus QuantUpdateScatterRegbaseTiling::DoTiling()
 }
 
 static ge::graphStatus Tiling4QuantUpdateScatter(gert::TilingContext* context) {
-    auto compileInfo = reinterpret_cast<const QuantUpdateScatterCompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = context->GetCompileInfo<QuantUpdateScatterCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     OP_LOGD(context->GetNodeName(), "Enter new QuantUpdateScatterTiling");
     QuantUpdateScatterRegbaseTiling tiling(context);

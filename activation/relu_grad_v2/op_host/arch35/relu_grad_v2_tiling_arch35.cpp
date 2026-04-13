@@ -161,7 +161,7 @@ static ge::graphStatus TilingForReluGradV2(gert::TilingContext* tilingContextGen
         OP_LOGE("ReluGradV2", "Tiling context is null");
         return ge::GRAPH_FAILED;
     }
-    auto compileInfo = reinterpret_cast<const ReluGradV2CompileInfo*>(tilingContextGen->GetCompileInfo());
+    auto compileInfo = tilingContextGen->GetCompileInfo<ReluGradV2CompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContextGen, compileInfo);
 
     OP_LOGD("ReluGradV2", "Enter new ReluGradV2Tiling");

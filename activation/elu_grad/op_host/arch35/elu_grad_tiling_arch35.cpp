@@ -143,7 +143,7 @@ ge::graphStatus EluGradTiling::RunTiling()
 static ge::graphStatus Tiling4EluGrad(gert::TilingContext *tilingContextSelf)
 {
     OP_LOGD(tilingContextSelf->GetNodeName(), "Tiling4EluGrad rt2.0 is running.");
-    auto compileInfo = static_cast<const EluGradCompileInfo*>(tilingContextSelf->GetCompileInfo());
+    auto compileInfo = tilingContextSelf->GetCompileInfo<EluGradCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContextSelf, compileInfo);
     OP_LOGD("EluGradTiling", "Enter new EluTiling");
     EluGradTiling eluGradTiling(tilingContextSelf);

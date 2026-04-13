@@ -91,7 +91,7 @@ static ge::graphStatus GetPreluGradReduceAxes(const gert::TilingContext* context
 
 static ge::graphStatus Tiling4PreluGradReduce(gert::TilingContext* context)
 {
-    auto compileInfo = reinterpret_cast<const ReduceOpCompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = context->GetCompileInfo<ReduceOpCompileInfo>();
     OPS_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
 
     ReduceOpInputParam opInput;

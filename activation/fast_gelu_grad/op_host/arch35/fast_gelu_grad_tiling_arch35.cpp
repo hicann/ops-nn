@@ -146,7 +146,7 @@ ge::graphStatus FastGeluGradTiling::RunTiling()
 
 static ge::graphStatus TilingFuncFastGeluGrad(gert::TilingContext* tilingContext)
 {
-    auto compileInfo = reinterpret_cast<const ElewiseCompileInfo*>(tilingContext->GetCompileInfo());
+    auto compileInfo = tilingContext->GetCompileInfo<ElewiseCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, compileInfo);
 
     OP_LOGD(tilingContext->GetNodeName(), "START FastGeluGrad AscendC Tiling \n");

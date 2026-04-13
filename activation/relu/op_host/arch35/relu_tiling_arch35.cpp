@@ -106,7 +106,7 @@ static ge::graphStatus Tiling4Relu(gert::TilingContext *context)
         return ge::GRAPH_FAILED;
     }
 
-    auto compileInfo = reinterpret_cast<const ReluCompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = context->GetCompileInfo<ReluCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     // 走新的模板tiling
     OP_LOGD("ReluTiling", "Enter new ReluTiling");

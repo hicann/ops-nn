@@ -161,7 +161,7 @@ ge::graphStatus SwishTiling::RunTiling()
 ge::graphStatus TilingForSwish(gert::TilingContext *tilingContextGen)
 {
     OP_LOGD(tilingContextGen->GetNodeName(), "TilingForSwish rt2.0 is running");
-    auto compileInfo = reinterpret_cast<const SwishCompileInfo *>(tilingContextGen->GetCompileInfo());
+    auto compileInfo = tilingContextGen->GetCompileInfo<SwishCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContextGen, compileInfo);
     SwishTiling baseOpTiling(tilingContextGen);
     return baseOpTiling.RunTiling();

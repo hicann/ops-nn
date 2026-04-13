@@ -181,7 +181,7 @@ static ge::graphStatus TilingPrepare4GeluV2Arch35(gert::TilingParseContext* cont
 static ge::graphStatus Tiling4GeluV2Arch35(gert::TilingContext* tilingContextGen)
 {
     OP_LOGD(tilingContextGen->GetNodeName(), "Tiling4GeluV2 rt2.0 is running.");
-    auto compileInfo = reinterpret_cast<const GeluV2CompileInfoArch35*>(tilingContextGen->GetCompileInfo());
+    auto compileInfo = tilingContextGen->GetCompileInfo<GeluV2CompileInfoArch35>();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContextGen, compileInfo);
 
     GeluV2Tiling GeluV2OpTiling(tilingContextGen);

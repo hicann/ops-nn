@@ -155,7 +155,7 @@ static ge::graphStatus TilingForElu(gert::TilingContext* context)
     OP_LOGD("EluTiling", "Enter TilingForElu");
     OP_CHECK_IF(context == nullptr, OP_LOGE(context, "Tiling context is null"), return ge::GRAPH_FAILED);
 
-    auto compileInfo = reinterpret_cast<const EluCompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = context->GetCompileInfo<EluCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     OP_LOGD("EluTiling", "Enter new EluTiling");
     EluTiling eluTiling(context);
