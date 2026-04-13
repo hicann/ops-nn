@@ -90,27 +90,9 @@ public:
             static_cast<int64_t>(tilingData_->mUbFactor * tilingData_->nMxblockNumAlignedTwo * sizeof(T_X)),
             UB_BLOCK_SIZE);
 
-        if (tilingData_->needPadScale) {
-            pipe_->InitBuffer(scaleOutTmpBuffer_, scaleBufSize);
-        }
         pipe_->InitBuffer(scaleOutQueue_, DOUBLE_BUFFER, scaleBufSize);
         pipe_->InitBuffer(maxExpBuffer_, scaleBufSize);
         pipe_->InitBuffer(maxhalfScaleBuffer_, scaleBufSize);
-
-        if (tilingData_->needPadN) {
-            int64_t yOutTmpBufSize = 0;
-            if constexpr (IsSameType<T_Y, fp4x2_e2m1_t>::value || IsSameType<T_Y, fp4x2_e1m2_t>::value) {
-                yOutTmpBufSize = ops::CeilAlign(
-                    static_cast<int64_t>(
-                        tilingData_->mUbFactor * tilingData_->nMxblockAligned / DIGIT_TWO * sizeof(uint8_t)),
-                    UB_BLOCK_SIZE);
-            } else {
-                yOutTmpBufSize = ops::CeilAlign(
-                    static_cast<int64_t>(tilingData_->mUbFactor * tilingData_->nMxblockAligned * sizeof(uint8_t)),
-                    UB_BLOCK_SIZE);
-            }
-            pipe_->InitBuffer(yOutTmpBuffer_, yOutTmpBufSize);
-        }
 
         elementAfterReduce_ = Ops::Base::GetVRegSize() / UB_BLOCK_SIZE;
     }
@@ -496,7 +478,7 @@ public:
         uint16_t nloops = static_cast<uint16_t>(nNum / VL_FP32);
         uint32_t nTail = nNum - nloops * VL_FP32;
         uint32_t padNum = tilingData_->nMxblockAligned - tilingData_->numN;
-        uint32_t lastLoopN = nTail + padNum; // <= 32
+        uint32_t lastLoopN = nTail + padNum;
         uint32_t xInputStride = static_cast<uint32_t>(tilingData_->numNUbAligned);
         uint32_t yOutputStride = static_cast<uint32_t>(tilingData_->nMxblockAligned);
         __VEC_SCOPE__
@@ -585,56 +567,29 @@ public:
         LocalTensor<T_X>& yLocal, int64_t curM, int64_t xOffset, LocalTensor<uint16_t>& scaleOutLocal,
         LocalTensor<int8_t>& yOutLocal)
     {
-        uint32_t totalScaleInUB = curM * tilingData_->nMxblockNum;
-        uint32_t totalCountInUB = curM * tilingData_->nMxblockNum * tilingData_->mxBlockSize;
+        uint32_t totalScaleInUB = curM * tilingData_->nMxblockNumAlignedTwo;
+        uint32_t totalCountInUB = curM * tilingData_->nMxblockNumAlignedTwo * tilingData_->mxBlockSize;
         uint16_t loopNum = (totalCountInUB + VL_B16 * DIGIT_TWO - 1) / (VL_B16 * DIGIT_TWO);
         uint16_t loopNumScale = (totalScaleInUB + VL_B16 - 1) / VL_B16;
 
         LocalTensor<uint16_t> maxExpLocal = maxExpBuffer_.Get<uint16_t>();
         LocalTensor<uint16_t> halfScaleLocal = maxhalfScaleBuffer_.Get<uint16_t>();
-        LocalTensor<uint16_t> padScaleLocal = scaleOutLocal;
-        if (tilingData_->needPadScale) {
-            padScaleLocal = scaleOutTmpBuffer_.Get<uint16_t>();
-        }
 
         auto srcAddr = reinterpret_cast<__ubuf__ T_X*>(yLocal.GetPhyAddr());
         auto maxExpAddr = reinterpret_cast<__ubuf__ uint16_t*>(maxExpLocal.GetPhyAddr());
         auto scaleLocalAddr = reinterpret_cast<__ubuf__ uint16_t*>(scaleOutLocal.GetPhyAddr());
         auto halfScaleLocalAddr = reinterpret_cast<__ubuf__ uint16_t*>(halfScaleLocal.GetPhyAddr());
-        auto padscaleLocalAddr = reinterpret_cast<__ubuf__ uint16_t*>(padScaleLocal.GetPhyAddr());
 
         ComputeMaxExpOCP<T_X>(srcAddr, maxExpAddr, totalCountInUB, loopNum);
-        ComputeScaleOCP<T_X, T_Y>(maxExpAddr, padscaleLocalAddr, halfScaleLocalAddr, totalScaleInUB, loopNumScale);
-
-        if (tilingData_->needPadScale) {
-            auto tmpLocal = reinterpret_cast<__ubuf__ int8_t*>(padScaleLocal.GetPhyAddr());
-            auto dstLocal = reinterpret_cast<__ubuf__ int8_t*>(scaleOutLocal.GetPhyAddr());
-            PadScaleData(dstLocal, tmpLocal, curM, tilingData_->nMxblockNum);
-        }
+        ComputeScaleOCP<T_X, T_Y>(maxExpAddr, scaleLocalAddr, halfScaleLocalAddr, totalScaleInUB, loopNumScale);
 
         auto outLocalAddr = reinterpret_cast<__ubuf__ int8_t*>(yOutLocal.GetPhyAddr());
-
-        if (tilingData_->needPadN) {
-            LocalTensor<int8_t> outBufferLocal = yOutTmpBuffer_.Get<int8_t>();
-            auto outBufferLocalAddr = reinterpret_cast<__ubuf__ int8_t*>(outBufferLocal.GetPhyAddr());
-            if constexpr (isOptimizeMode) {
-                ComputeDataMxfp4Optimize<toBf16RoundMode, roundMode>(
-                    srcAddr, halfScaleLocalAddr, outBufferLocalAddr, totalCountInUB, loopNum);
-            } else {
-                ComputeDataMxfp4General<toBf16RoundMode, roundMode>(
-                    srcAddr, halfScaleLocalAddr, outBufferLocalAddr, totalCountInUB, loopNum);
-            }
-
-            uint32_t inputStride = tilingData_->nMxblockNum * tilingData_->mxBlockSize;
-            DeletePadData<T_Y>(outLocalAddr, outBufferLocalAddr, curM, tilingData_->numN, inputStride);
+        if constexpr (isOptimizeMode) {
+            ComputeDataMxfp4Optimize<toBf16RoundMode, roundMode>(
+                srcAddr, halfScaleLocalAddr, outLocalAddr, totalCountInUB, loopNum);
         } else {
-            if constexpr (isOptimizeMode) {
-                ComputeDataMxfp4Optimize<toBf16RoundMode, roundMode>(
-                    srcAddr, halfScaleLocalAddr, outLocalAddr, totalCountInUB, loopNum);
-            } else {
-                ComputeDataMxfp4General<toBf16RoundMode, roundMode>(
-                    srcAddr, halfScaleLocalAddr, outLocalAddr, totalCountInUB, loopNum);
-            }
+            ComputeDataMxfp4General<toBf16RoundMode, roundMode>(
+                srcAddr, halfScaleLocalAddr, outLocalAddr, totalCountInUB, loopNum);
         }
     }
 
@@ -643,79 +598,59 @@ public:
         LocalTensor<T_X>& yLocal, int64_t curM, int64_t xOffset, LocalTensor<uint16_t>& scaleOutLocal,
         LocalTensor<int8_t>& yOutLocal)
     {
-        uint32_t totalScaleInUB = curM * tilingData_->nMxblockNum;
-        uint32_t totalCountInUB = curM * tilingData_->nMxblockNum * tilingData_->mxBlockSize;
+        uint32_t totalScaleInUB = curM * tilingData_->nMxblockNumAlignedTwo;
+        uint32_t totalCountInUB = curM * tilingData_->nMxblockNumAlignedTwo * tilingData_->mxBlockSize;
         uint16_t loopNum = (totalCountInUB + VL_B16 * DIGIT_TWO - 1) / (VL_B16 * DIGIT_TWO);
         uint16_t loopNumScale = (totalScaleInUB + VL_B16 - 1) / VL_B16;
         uint16_t loopNumScale4NV = (totalScaleInUB + VL_FP32 - 1) / VL_FP32;
 
         LocalTensor<uint16_t> maxExpLocal = maxExpBuffer_.Get<uint16_t>();
-        LocalTensor<uint16_t> padScaleLocal = scaleOutLocal;
-        if (tilingData_->needPadScale) {
-            padScaleLocal = scaleOutTmpBuffer_.Get<uint16_t>();
-        }
         LocalTensor<uint16_t> halfScaleLocal = maxhalfScaleBuffer_.Get<uint16_t>();
 
         auto srcAddr = reinterpret_cast<__ubuf__ T_X*>(yLocal.GetPhyAddr());
         auto maxExpAddr = reinterpret_cast<__ubuf__ uint16_t*>(maxExpLocal.GetPhyAddr());
         auto scaleLocalAddr = reinterpret_cast<__ubuf__ uint16_t*>(scaleOutLocal.GetPhyAddr());
-        auto padscaleLocalAddr = reinterpret_cast<__ubuf__ uint16_t*>(padScaleLocal.GetPhyAddr());
         auto halfScaleLocalAddr = reinterpret_cast<__ubuf__ uint16_t*>(halfScaleLocal.GetPhyAddr());
 
         if (tilingData_->scaleAlg == 0) {
             ComputeMaxExpOCP<T_X>(srcAddr, maxExpAddr, totalCountInUB, loopNum);
-            ComputeScaleOCP<T_X, T_Y>(maxExpAddr, padscaleLocalAddr, halfScaleLocalAddr, totalScaleInUB, loopNumScale);
+            ComputeScaleOCP<T_X, T_Y>(maxExpAddr, scaleLocalAddr, halfScaleLocalAddr, totalScaleInUB, loopNumScale);
         } else {
             ComputeMaxExpcuBLAS<T_X>(srcAddr, maxExpAddr, totalCountInUB, loopNum);
             ComputeScalecuBLAS<T_X, T_Y>(
-                maxExpAddr, padscaleLocalAddr, halfScaleLocalAddr, totalScaleInUB, loopNumScale4NV);
-        }
-
-        if (tilingData_->needPadScale) {
-            auto tmpLocal = reinterpret_cast<__ubuf__ int8_t*>(padScaleLocal.GetPhyAddr());
-            auto dstLocal = reinterpret_cast<__ubuf__ int8_t*>(scaleOutLocal.GetPhyAddr());
-            PadScaleData(dstLocal, tmpLocal, curM, tilingData_->nMxblockNum);
+                maxExpAddr, scaleLocalAddr, halfScaleLocalAddr, totalScaleInUB, loopNumScale4NV);
         }
 
         auto outLocalAddr = reinterpret_cast<__ubuf__ int8_t*>(yOutLocal.GetPhyAddr());
-
-        if (tilingData_->needPadN) {
-            LocalTensor<int8_t> outBufferLocal = yOutTmpBuffer_.Get<int8_t>();
-            auto outBufferLocalAddr = reinterpret_cast<__ubuf__ int8_t*>(outBufferLocal.GetPhyAddr());
-            ComputeData<toBf16RoundMode, roundMode, T_X, T_Y>(
-                srcAddr, halfScaleLocalAddr, outBufferLocalAddr, totalCountInUB, loopNum);
-            outBufferLocalAddr = reinterpret_cast<__ubuf__ int8_t*>(outBufferLocal.GetPhyAddr());
-            uint32_t inputStride = tilingData_->nMxblockNum * tilingData_->mxBlockSize;
-            DeletePadData<T_Y>(outLocalAddr, outBufferLocalAddr, curM, tilingData_->numN, inputStride);
-
-        } else {
-            ComputeData<toBf16RoundMode, roundMode, T_X, T_Y>(
-                srcAddr, halfScaleLocalAddr, outLocalAddr, totalCountInUB, loopNum);
-        }
+        ComputeData<toBf16RoundMode, roundMode, T_X, T_Y>(
+            srcAddr, halfScaleLocalAddr, outLocalAddr, totalCountInUB, loopNum);
     }
 
     __aicore__ inline void CopyOutScaleAndY(int64_t xOffset, int64_t scaleOutOffset, int64_t curM)
     {
-        LocalTensor<uint8_t> outLocal = yOutQueue_.DeQue<uint8_t>();
-        DataCopyExtParams copyOutParamData = {0, 0, 0, 0, 0};
-        copyOutParamData.blockCount = 1;
-        copyOutParamData.blockLen = curM * tilingData_->numN;
-        copyOutParamData.srcStride = 0;
+        DataCopyExtParams copyOutParamData;
+        copyOutParamData.blockCount = curM;
         copyOutParamData.dstStride = 0;
         int64_t yOffset = xOffset;
         if constexpr (IsSameType<T_Y, fp4x2_e2m1_t>::value || IsSameType<T_Y, fp4x2_e1m2_t>::value) {
             yOffset = yOffset / NUM_TWO;
-            copyOutParamData.blockLen = copyOutParamData.blockLen / NUM_TWO;
+            copyOutParamData.blockLen = tilingData_->numN / NUM_TWO;
+            copyOutParamData.srcStride = (tilingData_->nMxblockAligned - tilingData_->numN) / NUM_TWO / UB_BLOCK_SIZE;
+        } else {
+            copyOutParamData.blockLen = tilingData_->numN;
+            copyOutParamData.srcStride = (tilingData_->nMxblockAligned - tilingData_->numN) / UB_BLOCK_SIZE;
         }
-        DataCopyPad<uint8_t, PaddingMode::Compact>(yGm_[yOffset], outLocal, copyOutParamData);
+
+        LocalTensor<uint8_t> outLocal = yOutQueue_.DeQue<uint8_t>();
+        DataCopyPad<uint8_t>(yGm_[yOffset], outLocal, copyOutParamData);
         yOutQueue_.FreeTensor(outLocal);
 
-        LocalTensor<uint8_t> scaleLocal = scaleOutQueue_.DeQue<uint8_t>();
-        DataCopyExtParams copyOutParamScale = {0, 0, 0, 0, 0};
-        copyOutParamScale.blockCount = 1;
-        copyOutParamScale.blockLen = curM * tilingData_->nMxblockNumAlignedTwo;
+        DataCopyExtParams copyOutParamScale;
+        copyOutParamScale.blockCount = curM;
+        copyOutParamScale.blockLen = tilingData_->nMxblockNumAlignedTwo;
         copyOutParamScale.srcStride = 0;
         copyOutParamScale.dstStride = 0;
+        LocalTensor<uint8_t> scaleLocal = scaleOutQueue_.DeQue<uint8_t>();
         DataCopyPad<uint8_t, PaddingMode::Compact>(mxScaleGm_[scaleOutOffset], scaleLocal, copyOutParamScale);
         scaleOutQueue_.FreeTensor(scaleLocal);
     }
@@ -948,8 +883,6 @@ private:
 
     TBuf<QuePosition::VECCALC> maxExpBuffer_;
     TBuf<QuePosition::VECCALC> maxhalfScaleBuffer_;
-    TBuf<QuePosition::VECCALC> yOutTmpBuffer_;
-    TBuf<QuePosition::VECCALC> scaleOutTmpBuffer_;
 
     int64_t blockIdx_ = 0;
     uint16_t elementAfterReduce_ = 0;

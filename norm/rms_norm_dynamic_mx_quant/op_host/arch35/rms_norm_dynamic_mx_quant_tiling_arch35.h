@@ -49,6 +49,7 @@ enum class RoundModeList {
 constexpr int64_t FP32_BYTES = 4;
 constexpr int64_t FP16_BYTES = 2;
 constexpr int64_t MX_BLOCK_SIZE = 32;
+constexpr int64_t MX_BLOCK_SIZE_DOUBLE = 64;
 constexpr int64_t DOUBLE_BUFFER = 2;
 constexpr int64_t MAX_DIM_NUM = 7;
 
@@ -100,9 +101,7 @@ TILING_DATA_FIELD_DEF(int64_t, mUbFactor);
 TILING_DATA_FIELD_DEF(int64_t, mxBlockSize);
 TILING_DATA_FIELD_DEF(int64_t, nMxblockAligned);
 TILING_DATA_FIELD_DEF(int64_t, nMxblockNumAlignedTwo);
-TILING_DATA_FIELD_DEF(int64_t, nMxblockNum);
 TILING_DATA_FIELD_DEF(int64_t, needPadN);
-TILING_DATA_FIELD_DEF(int64_t, needPadScale);
 TILING_DATA_FIELD_DEF(int64_t, scaleAlg);
 TILING_DATA_FIELD_DEF(int64_t, roundMode);
 TILING_DATA_FIELD_DEF(int64_t, hasInputBeta);

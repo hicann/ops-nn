@@ -43,14 +43,12 @@ ge::graphStatus RmsNormDynamicMxQuantFullLoadTiling::DoOpTiling()
 
     // mx quant
     int64_t mxBlockSize = MX_BLOCK_SIZE;
-    int64_t numNUbAligned = Ops::Base::CeilAlign(numN_, ubBlockB16Num_);
-    int64_t nMxblockAligned = Ops::Base::CeilAlign(numN_, MX_BLOCK_SIZE);
-    int64_t nMxblockNum = nMxblockAligned / MX_BLOCK_SIZE;
-    int64_t nMxblockNumAlignedTwo = Ops::Base::CeilAlign(nMxblockNum, CONST_TWO);
+    int64_t nMxblockAligned = Ops::Base::CeilAlign(numN_, MX_BLOCK_SIZE_DOUBLE);
+    int64_t nMxblockNumAlignedTwo = nMxblockAligned / mxBlockSize;
     int64_t needPadN = nMxblockAligned == numN_ ? 0 : 1;
-    int64_t needPadScale = nMxblockNumAlignedTwo == nMxblockNum ? 0 : 1;
 
     // bin add
+    int64_t numNUbAligned = Ops::Base::CeilAlign(numN_, ubBlockB16Num_);
     int64_t binAddFoldPoint = FindNearestPower2(numNUbAligned);
     int64_t binAddVls = Ops::Base::CeilDiv(binAddFoldPoint, vlFp32_);
     int64_t binAddOutBufLen = Ops::Base::CeilAlign(binAddVls, ubBlockFp32Num_);
@@ -62,16 +60,15 @@ ge::graphStatus RmsNormDynamicMxQuantFullLoadTiling::DoOpTiling()
 
     int64_t mUbFactorMax = 0;
     if (Y_SUPPORT_DTYPE_FP4_SET.count(yDtype_) == 0) { // fp8量化
-        mUbFactorMax = (ubSize_ - gammaBetaUbSize - RESERVED_UB_SIZE - CONST_THREE * nMxblockAligned * DOUBLE_BUFFER) /
-                       (nMxblockAligned * DOUBLE_BUFFER * FP16_BYTES + binAddOutBufLen * FP32_BYTES +
-                        FP32_BYTES * CONST_THREE + nMxblockAligned * FP16_BYTES + nMxblockAligned * DOUBLE_BUFFER +
-                        nMxblockNumAlignedTwo * FP16_BYTES * (CONST_FOUR + needPadScale) + nMxblockAligned);
+        mUbFactorMax =
+            (ubSize_ - gammaBetaUbSize - RESERVED_UB_SIZE - CONST_THREE * nMxblockAligned * DOUBLE_BUFFER) /
+            (nMxblockAligned * FP16_BYTES * CONST_THREE + binAddOutBufLen * FP32_BYTES + FP32_BYTES * CONST_THREE +
+             nMxblockAligned * DOUBLE_BUFFER + nMxblockNumAlignedTwo * FP16_BYTES * CONST_FOUR);
     } else { // fp4量化
         mUbFactorMax =
             (ubSize_ - gammaBetaUbSize - RESERVED_UB_SIZE) /
-            (nMxblockAligned * DOUBLE_BUFFER * FP16_BYTES + binAddOutBufLen * FP32_BYTES + FP32_BYTES * CONST_THREE +
-             nMxblockAligned * FP16_BYTES + nMxblockAligned / CONST_TWO * DOUBLE_BUFFER +
-             nMxblockNumAlignedTwo * FP16_BYTES * (CONST_FOUR + needPadScale) + nMxblockAligned / CONST_TWO);
+            (nMxblockAligned * FP16_BYTES * CONST_THREE + binAddOutBufLen * FP32_BYTES + FP32_BYTES * CONST_THREE +
+             nMxblockAligned / CONST_TWO * DOUBLE_BUFFER + nMxblockNumAlignedTwo * FP16_BYTES * CONST_FOUR);
     }
 
     OP_CHECK_IF(
@@ -94,21 +91,13 @@ ge::graphStatus RmsNormDynamicMxQuantFullLoadTiling::DoOpTiling()
     tilingData_.set_mxBlockSize(mxBlockSize);
     tilingData_.set_nMxblockAligned(nMxblockAligned);
     tilingData_.set_nMxblockNumAlignedTwo(nMxblockNumAlignedTwo);
-    tilingData_.set_nMxblockNum(nMxblockNum);
     tilingData_.set_needPadN(needPadN);
-    tilingData_.set_needPadScale(needPadScale);
     tilingData_.set_scaleAlg(scaleAlg_);
     tilingData_.set_roundMode(roundMode_);
     tilingData_.set_hasInputBeta(hasInputBeta_);
     tilingData_.set_hasOutputRstd(hasOutputRstd_);
     tilingData_.set_epsilon(epsilon_);
     tilingData_.set_avgFactor(avgFactor_);
-
-    OP_LOGI(
-        context_->GetNodeName(),
-        "FullLoadGeneral Tiling: usedCoreNum: %ld, numM: %ld, numN: %ld, "
-        "mPerCore: %ld, mTailCores: %ld, needPadN: %ld, mUbFactor: %ld, mUbFactorMax: %ld",
-        usedCoreNum_, numM_, numN_, mPerCore, mTailCores, needPadN, mUbFactor, mUbFactorMax);
 
     return ge::GRAPH_SUCCESS;
 }
