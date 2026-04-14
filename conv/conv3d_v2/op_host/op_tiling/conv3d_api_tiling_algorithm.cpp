@@ -901,9 +901,8 @@ int64_t Conv3dTilingAlgorithm::GetL0Tiling()
 
 void Conv3dTilingAlgorithm::InitPingPong()
 {
-    this->doubleBufferValue.pbAL1 = DOUBLE_BUFFER_NUM;
     this->doubleBufferValue.pbAL1 = (CalcL1SizeForL0Tiling(tilingIns_->cubeInfo.m0, tilingIns_->cubeInfo.n0) <=
-                                            tilingIns_->platformInfo.l1Size) ? DOUBLE_BUFFER_NUM : 1;
+                                    tilingIns_->platformInfo.l1Size) ? DOUBLE_BUFFER_NUM : 1;
     this->doubleBufferValue.pbBL1 = DOUBLE_BUFFER_NUM;
     this->doubleBufferValue.pbAL0 = DOUBLE_BUFFER_NUM;
     this->doubleBufferValue.pbBL0 = DOUBLE_BUFFER_NUM;

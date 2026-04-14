@@ -25,7 +25,7 @@ namespace optiling {
 namespace conv_ops_tiling {
 ge::graphStatus Conv2dBaseTiling::GetPlatformInfoInner()
 {
-    // Temporary Solution: aclnn use GetCompileInfo; others use PlatformInfo
+    // aclnn use GetCompileInfo, others use PlatformInfo
     NpuArch npuArch;
     paramInfo_.nodeType = context_->GetNodeType();
     Conv2dTilingCache& tilingCache = Conv2dTilingCache::GetInstance();

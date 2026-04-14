@@ -551,7 +551,7 @@ bool Conv3dTilingBase::CheckInputFormatPointWise() const
     }
     if (this->descInfo.outputType.format != ConvFormat::NCDHW) {
         TILING_ERROR_LOG("[PointWise] output format should be NCDHW, now is %s.",
-                         g_formatToStr.at(this->descInfo.weightType.format).c_str());
+                         g_formatToStr.at(this->descInfo.outputType.format).c_str());
         return false;
     }
 

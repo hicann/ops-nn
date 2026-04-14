@@ -1024,7 +1024,7 @@ public:
         DataType inputDtype = engine.meta.input.dataType;
         DataType weightDtype = engine.meta.weight.dataType;
         DataType outputDtype = engine.meta.output.dataType;
-        DataType biasDtype = engine.meta.bias.dataType;
+        DataType biasDtype = inputDtype;
 
         if (engine.params.bias != nullptr) {
             biasDtype = engine.meta.bias.dataType;
@@ -1339,7 +1339,7 @@ private:
         FVector<int64_t> outputShape = engine.meta.output.shape;
         // NCL,NCHW,NCDHW
         if (weightShape[0] <= 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Weigt N should not be zero in transpose mode");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Weight N should not be zero in transpose mode");
             return ACLNN_ERR_PARAM_INVALID;
         }
         for (size_t i = 1; i < inputShape.size(); ++i) {

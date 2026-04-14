@@ -427,8 +427,9 @@ void ConvTilingAlgorithmHWmode::L0TilingRest(bool kFullLoadFlag)
 
 void ConvTilingAlgorithmHWmode::CheckL0DoubleBuffer()
 {
-    bool kFullLoadFlag = tilingIns_->l0TilingInfo.kL0 == (tilingIns_->isC04Flag ? this->l1TilingCalc.c04KSizeAlign :
-                                                          this->l1TilingCalc.kBL1MaxSize) ? true : false;
+    bool kFullLoadFlag = tilingIns_->l0TilingInfo.kL0 ==
+        (tilingIns_->isC04Flag ? this->l1TilingCalc.c04KSizeAlign : this->l1TilingCalc.kBL1MaxSize);
+
     if (static_cast<uint64_t>(tilingIns_->shapeInfo.singleHo) <= tilingIns_->l0TilingInfo.hoL0 &&
         static_cast<uint64_t>(tilingIns_->shapeInfo.singleWo) <= tilingIns_->l0TilingInfo.woL0 &&
         kFullLoadFlag) {

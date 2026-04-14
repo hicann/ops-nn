@@ -515,7 +515,7 @@ aclnnStatus aclnnDeformableConv2dGetWorkspaceSize(const aclTensor* x, const aclT
     OP_LOGD("begin kernelSize is: %s", params.kernelSize->ToString().GetString());
     OP_LOGD("Entering CalculateDeformableConv2d");
     auto ret1 = CalculateDeformableConv2d(inputTensor, outputTensor, params, uniqueExecutor.get());
-    CHECK_RET(ret1 == ACLNN_SUCCESS, ret);
+    CHECK_RET(ret1 == ACLNN_SUCCESS, ret1);
 
     // 固定写法，获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
