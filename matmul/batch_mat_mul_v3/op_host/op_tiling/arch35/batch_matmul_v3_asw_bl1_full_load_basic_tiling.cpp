@@ -40,6 +40,9 @@ bool BatchMatMulV3AswBL1FullLoadBasicTiling::IsCapable()
     if (args_.nValue > BASIC_BLOCK_SIZE_256) {
         return false;
     }
+    if (batchInfo_->batchBias > 1UL) {
+        return false;
+    }
     // get align m,k,n value
     uint64_t alignMValue = ops::CeilAlign(args_.mValue, BASIC_BLOCK_SIZE_16);
     uint64_t alignKaValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);

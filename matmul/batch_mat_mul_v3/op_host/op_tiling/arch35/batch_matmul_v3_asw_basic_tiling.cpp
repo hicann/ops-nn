@@ -44,6 +44,9 @@ bool BatchMatMulV3AswBasicTiling::IsCapable()
     if (!isEqualBatch) {
         return false;
     }
+    if (batchInfo_->batchBias > 1UL) {
+        return false;
+    }
     bool isSupportType = (args_.aType == ge::DT_FLOAT16 || args_.aType == ge::DT_BF16) &&
                          (args_.bType == ge::DT_FLOAT16 || args_.bType == ge::DT_BF16) &&
                          (args_.cType == ge::DT_FLOAT16 || args_.cType == ge::DT_BF16);

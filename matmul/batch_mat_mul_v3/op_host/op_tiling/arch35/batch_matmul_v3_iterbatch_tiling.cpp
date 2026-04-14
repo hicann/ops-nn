@@ -73,6 +73,9 @@ bool BatchMatMulV3IterBatchTiling::IsCapable()
         OP_LOGD(args_.opName, "[iterbatch] The NZ format is not supported in this strategy.");
         return false;
     }
+    if (batchInfo_->batchBias > 1UL) {
+        return false;
+    }
     bool isNotEqualBatch = batchInfo_->batchA0 != batchInfo_->batchB0 || batchInfo_->batchA1 != batchInfo_->batchB1 ||
                            batchInfo_->batchA2 != batchInfo_->batchB2 || batchInfo_->batchA3 != batchInfo_->batchB3;
     if (isNotEqualBatch)  {
