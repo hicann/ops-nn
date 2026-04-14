@@ -248,7 +248,7 @@ aclnnStatus aclnnMmGetWorkspaceSize(
 
     // 构建matmul计算图
     auto matmulGraph = std::make_shared<MmMatMulGraph>(self, mat2, out, cubeMathType, uniqueExecutor.get());
-
+    CHECK_RET(matmulGraph != nullptr, ACLNN_ERR_INNER_NULLPTR);
     // 执行计算图
     auto executeStatus = matmulGraph -> Execute();
     CHECK_RET(executeStatus == ACLNN_SUCCESS, executeStatus);
