@@ -89,7 +89,7 @@ bool Conv3DDXV2KernelSplitTiling::IsCapable()
 uint64_t Conv3DDXV2KernelSplitTiling::GetTilingKey() const
 {
     const uint64_t tilingKey = GET_TPL_TILING_KEY(loadB2Condition_, kernelSplitMode_, 0, true, 0);
-    OP_LOGD(context_->GetNodeName(), "loadB2Condition_, kernelSplitMode_ is: [%u, %u]", loadB2Condition_, kernelSplitMode_);
+    OP_LOGD(context_->GetNodeName(), "loadB2Condition_, loadB1Condition_, kernelSplitMode_ is: [%u, %u, %u]", loadB2Condition_, 0, kernelSplitMode_);
     return tilingKey;
 }
 
@@ -399,6 +399,12 @@ void Conv3DDXV2KernelSplitTiling::SetTilingData(
 ge::graphStatus Conv3DDXV2KernelSplitTiling::DoLibApiTiling()
 {
     OP_LOGD(opName_, "Enable kernel split tiling");
+    if (Conv3DDXV2InnerProductTiling::GetTilingFromRepo()) {
+        OP_LOGD(context_->GetNodeName(), "Conv3DBackpropInputV2 AscendC: KernelSplit get tiling from knowledge_tiling success.");
+        PrintTilingData();
+        return ge::GRAPH_SUCCESS;
+    }
+
     // 更新并设置L0基本块
     L0TilingParams l0Params;
     InitBaseMNK(l0Params);
@@ -434,7 +440,7 @@ ge::graphStatus Conv3DDXV2KernelSplitTiling::DoLibApiTiling()
     }
     UpdateWorkSpaceSize(l0Params);
     SetTilingData(coreParams, l1Params, l0Params);
-    Conv3DDXV2InnerProductTiling::PrintTilingData();
+    PrintTilingData();
     return ge::GRAPH_SUCCESS;
 }
 

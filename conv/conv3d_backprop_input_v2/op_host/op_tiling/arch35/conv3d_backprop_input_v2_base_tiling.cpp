@@ -153,6 +153,7 @@ bool Conv3DBackpropInputV2TilingArch35::GetShapeFormatInfo()
 
 ge::graphStatus Conv3DBackpropInputV2TilingArch35::GetShapeAttrsInfo()
 {
+    opName_ = context_->GetNodeName();
     if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch !=
         NpuArch::DAV_3510 && !IsSocVersionFuse(context_)) {
         return ge::GRAPH_SUCCESS;
@@ -1084,9 +1085,7 @@ void Conv3DBackpropInputV2TilingArch35::PrintTilingData()
     conv_bp_v2_kernel::TConv3DInputV2KSTiling& ksTiling = tilingData_.conv3DDxKSTiling;
     std::stringstream ss;
     // 删除shape stride dilation 相关打印 pads下移
-    ss << "batchDim: " << params.batchDim << " groupDim: " << params.groupDim
-       << " mDim: " << params.mDim << " kDim: " << params.kDim << " nDim: " << params.nDim
-       << " dDim: " << params.dDim << " coreNum: " << params.coreNum
+    ss << " coreNum: " << params.coreNum
        << " al0Pbuffer: " << static_cast<uint32_t>(tiling.al0Pbuffer)
        << " bl0Pbuffer: " << static_cast<uint32_t>(tiling.bl0Pbuffer)
        << " cl0Pbuffer: " << static_cast<uint32_t>(tiling.cl0Pbuffer)
@@ -1099,7 +1098,7 @@ void Conv3DBackpropInputV2TilingArch35::PrintTilingData()
        << " hf32Flag: " << static_cast<uint32_t>(tiling.hf32Flag)
        << " initOutputFlag: " << static_cast<uint32_t>(tiling.initOutputFlag)
        << " isBiasFullLoad: " << static_cast<uint32_t>(tiling.isBiasFullLoad)
-       << " cin: " << tiling.cin << " cout: " << tiling.cout << " cinG: " << tiling.cinG
+       << " cinG: " << tiling.cinG
        << " coutG: " << tiling.coutG << " cout1: " << tiling.cout1 << " cin1: " << tiling.cin1
        << " cout1G: " << tiling.cout1G << " cin1G: " << tiling.cin1G  
        << " group: " << tiling.group << " oriGroup: " << tiling.oriGroup
@@ -1113,9 +1112,43 @@ void Conv3DBackpropInputV2TilingArch35::PrintTilingData()
        << " stepKb: " << tiling.stepKb << " singleIterateDk: " << tiling.singleIterateDk
        << " singleCoreBatch: " << tiling.singleCoreBatch << " singleCoreM: " << tiling.singleCoreM
        << " enableVecTrans: " << static_cast<uint32_t>(tiling.enableVecTrans)
-       << " kSCoutFullLoad: " << ksTiling.kSCoutFullLoad << " kSUseWorkSpace: " << ksTiling.kSUseWorkSpace;
+       << " kSCoutFullLoad: " << ksTiling.kSCoutFullLoad << " kSUseWorkSpace: " << ksTiling.kSUseWorkSpace
+       << " enableFullLoad: " << static_cast<uint32_t>(tiling.enableFullLoad)
+       << " quantMode: " << static_cast<uint32_t>(tiling.quantMode) << " enRelu: " << tiling.enRelu;
     OP_LOGD(opName_, "api tiling: %s", ss.str().c_str());
     PrintInputsAttrs(tiling);
+}
+
+void Conv3DBackpropInputV2TilingArch35::PrintRunInfoData() {
+    std::stringstream ss;
+    ss << "batch_n: " << runInfo_.batch_n << " groups: " << runInfo_.groups << " real_g: " << runInfo_.real_g
+       << " dedx_cin: " << runInfo_.dedx_cin << " dedx_cin_g: " << runInfo_.dedx_cin_g
+       << " dedx_cin1: " << runInfo_.dedx_cin1 << " dedx_cin1_g: " << runInfo_.dedx_cin1_g
+       << " dedy_cout: " << runInfo_.dedy_cout << " dedy_cout_g: " << runInfo_.dedy_cout_g
+       << " dedy_cout1: " << runInfo_.dedy_cout1 << " dedy_cout1_g: " << runInfo_.dedy_cout1_g
+       << " dedx_d: " << runInfo_.dedx_d << " dedx_h: " << runInfo_.dedx_h
+       << " dedx_w: " << runInfo_.dedx_w << " dedy_d: " << runInfo_.dedy_d
+       << " dedy_h: " << runInfo_.dedy_h << " dedy_w: " << runInfo_.dedy_w
+       << " kernel_d: " << runInfo_.kernel_d << " kernel_h: " << runInfo_.kernel_h
+       << " kernel_w: " << runInfo_.kernel_w << " stride_d: " << runInfo_.stride_d
+       << " stride_h: " << runInfo_.stride_h << " stride_w: " << runInfo_.stride_w
+       << " pad_t: " << runInfo_.pad_t <<" pad_h: "<< runInfo_.pad_h << " pad_u:" << runInfo_.pad_u 
+       << " pad_d:" << runInfo_.pad_d << " pad_l:" << runInfo_.pad_l << " pad_r:"<<runInfo_.pad_r
+       << " backprop_pad_t:" << runInfo_.backprop_pad_t << " backprop_pad_h:"<<runInfo_.backprop_pad_h
+       << " backprop_pad_u:"<<runInfo_.backprop_pad_u << " backprop_pad_d:" << runInfo_.backprop_pad_d
+       << " backprop_pad_l:" << runInfo_.backprop_pad_l<<" backprop_pad_r:"<<runInfo_.backprop_pad_r
+       << " dilation_d:" << runInfo_.dilation_d << " dilation_h:" << runInfo_.dilation_h << " dilation_w:" << runInfo_.dilation_w
+       << " enlarge: " << runInfo_.enlarge << " hf32_flag: " << runInfo_.hf32_flag 
+       << " a_dtype_bytes:" << runInfo_.a_dtype_bytes 
+       << " b_dtype_bytes: " << runInfo_.b_dtype_bytes
+       << " c_dtype_bytes: " << runInfo_.c_dtype_bytes
+       << " initOutputFlag: " << runInfo_.initOutputFlag
+       << " enRelu: " << static_cast<uint32_t>(runInfo_.enRelu)
+       << " quantMode: " << static_cast<uint32_t>(runInfo_.quantMode)
+       << " outBackpropFormat: " << static_cast<uint32_t>(runInfo_.outBackpropFormat)
+       << " filterFormat: " << static_cast<uint32_t>(runInfo_.filterFormat)
+       << " yFormat: " << static_cast<uint32_t>(runInfo_.yFormat);
+    OP_LOGD(opName_, "runInfo Data: %s", ss.str().c_str());
 }
 
 REGISTER_TILING_TEMPLATE("Conv3DBackpropInputV2", Conv3DBackpropInputV2TilingArch35, 102);

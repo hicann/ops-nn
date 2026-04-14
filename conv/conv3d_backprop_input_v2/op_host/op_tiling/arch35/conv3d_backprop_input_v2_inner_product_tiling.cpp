@@ -25,6 +25,7 @@
 #include "error_util.h"
 #include "conv/common/op_host/op_tiling/platform_util.h"
 #include "conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2_arch35_tiling_key.h"
+#include "runtime_kb_api.h"
 
 using Ops::NN::Optiling::RecursiveSum;
 
@@ -117,6 +118,8 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
             this->opName_, "Failed to get valid core number from platform information. core num: %d", coreNum_),
         return ge::GRAPH_FAILED);
     SetRunInfoTiling(tilingData_.conv3DDxTiling);
+
+    PrintRunInfoData();
 
     return ge::GRAPH_SUCCESS;
 }
@@ -427,9 +430,192 @@ void Conv3DDXV2InnerProductTiling::SetTilingData(
     tilingData_.params.coreNum = std::min(totalCnt, static_cast<uint64_t>(coreNum_));
 }
 
+bool Conv3DDXV2InnerProductTiling::GetTilingFromRepo()
+{
+    std::shared_ptr<void> inputArgs = nullptr;
+    std::size_t inputArgsSize = 0;
+    if (!GetTilingInputArgs(inputArgs, inputArgsSize)) {
+        return false;
+    }
+
+    std::shared_ptr<tuningtiling::TuningTilingDef> tuningTiling = nullptr;
+    auto compileInfo = context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>();
+    OP_TILING_CHECK(compileInfo == nullptr, CUBE_INNER_ERR_REPORT("Conv3DBackpropInputV2", "compileInfo is null"), return false);
+    const std::string& socVersion = compileInfo->soc_version;
+    OP_LOGD(context_, "socVersion = %s, coreNum_ = %d", socVersion.c_str(), coreNum_);
+    uint32_t ret = Ops::NN::QueryBank(
+        inputArgs.get(), inputArgsSize, "Conv3DBackpropInputV2", socVersion, coreNum_, tuningTiling);
+    if (ret != 0) {
+        OP_LOGD(context_->GetNodeName(), "Conv3DBackpropInputV2 AscendC: get tiling from knowledge_tiling failed, ret = %d.", ret);
+        return false;
+    }
+    if (tuningTiling == nullptr) {
+        OP_LOGD(context_->GetNodeName(), "Conv3DBackpropInputV2 AscendC: get tiling from knowledge_tiling failed, tuningTiling is null.");
+        return false;
+    }
+    return TranslateTunerTiling(tuningTiling);
+}
+
+bool Conv3DDXV2InnerProductTiling::GetTilingInputArgs(std::shared_ptr<void>& inputArgs, std::size_t& inputArgsSize)
+{
+    std::shared_ptr<tuningtiling::Conv3DBackpropInputArgs> conv3DBackpropInput = nullptr;
+    try {
+        conv3DBackpropInput = std::make_shared<tuningtiling::Conv3DBackpropInputArgs>();
+    } catch (const std::bad_alloc& e) {
+        OP_LOGD(context_, "Failed to allocate memory for Conv3DBackpropInputArgs, error: %s", e.what());
+        return false;
+    }
+
+    conv3DBackpropInput->batch_n = runInfo_.batch_n;
+    conv3DBackpropInput->groups = runInfo_.groups;
+    conv3DBackpropInput->dedx_d = runInfo_.dedx_d;
+    conv3DBackpropInput->dedx_cin = runInfo_.dedx_cin;
+    conv3DBackpropInput->dedx_h = runInfo_.dedx_h;
+    conv3DBackpropInput->dedx_w = runInfo_.dedx_w;
+    conv3DBackpropInput->dedy_d = runInfo_.dedy_d;
+    conv3DBackpropInput->dedy_cout = runInfo_.dedy_cout;
+    conv3DBackpropInput->dedy_h = runInfo_.dedy_h;
+    conv3DBackpropInput->dedy_w = runInfo_.dedy_w;
+    conv3DBackpropInput->kernel_d = runInfo_.kernel_d;
+    conv3DBackpropInput->kernel_h = runInfo_.kernel_h;
+    conv3DBackpropInput->kernel_w = runInfo_.kernel_w;
+    conv3DBackpropInput->stride_d = runInfo_.stride_d;
+    conv3DBackpropInput->stride_h = runInfo_.stride_h;
+    conv3DBackpropInput->stride_w = runInfo_.stride_w;
+    conv3DBackpropInput->pad_h = runInfo_.pad_h;
+    conv3DBackpropInput->pad_t = runInfo_.pad_t;
+    conv3DBackpropInput->pad_u = runInfo_.pad_u;
+    conv3DBackpropInput->pad_d = runInfo_.pad_d;
+    conv3DBackpropInput->pad_l = runInfo_.pad_l;
+    conv3DBackpropInput->pad_r = runInfo_.pad_r;
+    conv3DBackpropInput->dilation_d = runInfo_.dilation_d;
+    conv3DBackpropInput->dilation_h = runInfo_.dilation_h;
+    conv3DBackpropInput->dilation_w = runInfo_.dilation_w;
+    conv3DBackpropInput->backprop_pad_h = runInfo_.backprop_pad_h;
+    conv3DBackpropInput->backprop_pad_t = runInfo_.backprop_pad_t;
+    conv3DBackpropInput->backprop_pad_u = runInfo_.backprop_pad_u;
+    conv3DBackpropInput->backprop_pad_d = runInfo_.backprop_pad_d;
+    conv3DBackpropInput->backprop_pad_l = runInfo_.backprop_pad_l;
+    conv3DBackpropInput->backprop_pad_r = runInfo_.backprop_pad_r;
+    conv3DBackpropInput->hf32_flag = runInfo_.hf32_flag;
+    conv3DBackpropInput->a_dtype_bytes = runInfo_.a_dtype_bytes;
+    conv3DBackpropInput->b_dtype_bytes = runInfo_.b_dtype_bytes;
+    conv3DBackpropInput->c_dtype_bytes = runInfo_.c_dtype_bytes;
+    conv3DBackpropInput->outBackpropFormat = runInfo_.outBackpropFormat;
+    conv3DBackpropInput->filterFormat = runInfo_.filterFormat;
+    conv3DBackpropInput->yFormat = runInfo_.yFormat;
+
+    inputArgs = conv3DBackpropInput;
+    inputArgsSize = sizeof(tuningtiling::Conv3DBackpropInputArgs);
+
+    return true;
+}
+
+bool Conv3DDXV2InnerProductTiling::TranslateTunerTiling(tuningtiling::TuningTilingDefPtr &tuningTiling)
+{
+    auto tunerTiling = std::static_pointer_cast<tuningtiling::Conv3DBackpropInputTunerTiling>(tuningTiling);
+    if (tunerTiling == nullptr) {
+        return false;
+    }
+
+    TranslateRunInfoData();
+    TranslateTuningData(tunerTiling);
+    if (tilingData_.conv3DDxTiling.enlarge == 1) {
+        groupConvMode_ = TILING_GROUP_MODE_ORIGIN;
+    } else {
+        groupConvMode_ = TILING_GROUP_MODE_ENLARGE;
+    }
+    return true;
+}
+
+void Conv3DDXV2InnerProductTiling::TranslateRunInfoData() {
+    tilingData_.conv3DDxTiling.hf32Flag = runInfo_.hf32_flag;
+    tilingData_.conv3DDxTiling.batch = runInfo_.batch_n;
+    tilingData_.conv3DDxTiling.cin = runInfo_.dedx_cin;
+    tilingData_.conv3DDxTiling.cout = runInfo_.dedy_cout;
+    tilingData_.conv3DDxTiling.dout = runInfo_.dedy_d;
+    tilingData_.conv3DDxTiling.ho = runInfo_.dedy_h;
+    tilingData_.conv3DDxTiling.wo = runInfo_.dedy_w;
+    tilingData_.conv3DDxTiling.di = runInfo_.dedx_d;
+    tilingData_.conv3DDxTiling.hi = runInfo_.dedx_h;
+    tilingData_.conv3DDxTiling.wi = runInfo_.dedx_w;
+    tilingData_.conv3DDxTiling.dk = runInfo_.kernel_d;
+    tilingData_.conv3DDxTiling.hk = runInfo_.kernel_h;
+    tilingData_.conv3DDxTiling.wk = runInfo_.kernel_w;
+    tilingData_.conv3DDxTiling.group = runInfo_.groups;
+    tilingData_.conv3DDxTiling.oriGroup = runInfo_.groups;
+    tilingData_.conv3DDxTiling.strideD = runInfo_.stride_d;
+    tilingData_.conv3DDxTiling.strideH = runInfo_.stride_h;
+    tilingData_.conv3DDxTiling.strideW = runInfo_.stride_w;
+    tilingData_.conv3DDxTiling.padFront = runInfo_.pad_h;
+    tilingData_.conv3DDxTiling.padBack = runInfo_.pad_t;
+    tilingData_.conv3DDxTiling.padUp = runInfo_.pad_u;
+    tilingData_.conv3DDxTiling.padDown = runInfo_.pad_d;
+    tilingData_.conv3DDxTiling.padLeft = runInfo_.pad_l;
+    tilingData_.conv3DDxTiling.padRight = runInfo_.pad_r;
+    tilingData_.conv3DDxTiling.dilationD = runInfo_.dilation_d;
+    tilingData_.conv3DDxTiling.dilationH = runInfo_.dilation_h;
+    tilingData_.conv3DDxTiling.dilationW = runInfo_.dilation_w;
+}
+    
+void Conv3DDXV2InnerProductTiling::TranslateTuningData(std::shared_ptr<tuningtiling::Conv3DBackpropInputTunerTiling> tunerTiling) {
+    tilingData_.conv3DDxTiling.al0Pbuffer = tunerTiling->al0Pbuffer;
+    tilingData_.conv3DDxTiling.bl0Pbuffer = tunerTiling->bl0Pbuffer;
+    tilingData_.conv3DDxTiling.cl0Pbuffer = tunerTiling->cl0Pbuffer;
+    tilingData_.conv3DDxTiling.al1Pbuffer = tunerTiling->al1Pbuffer;
+    tilingData_.conv3DDxTiling.bl1Pbuffer = tunerTiling->bl1Pbuffer;
+    tilingData_.conv3DDxTiling.iterateOrder = tunerTiling->iterateOrder;
+    tilingData_.conv3DDxTiling.c0 = tunerTiling->c0;
+    tilingData_.conv3DDxTiling.c0BitsA = tunerTiling->c0BitsA;
+    tilingData_.conv3DDxTiling.c0BitsB = tunerTiling->c0BitsB;
+    tilingData_.conv3DDxTiling.enlarge = tunerTiling->enlarge;
+    tilingData_.conv3DDxTiling.initOutputFlag = tunerTiling->initOutputFlag;
+    tilingData_.conv3DDxTiling.isBiasFullLoad = tunerTiling->isBiasFullLoad;
+    tilingData_.conv3DDxTiling.enableVecTrans = tunerTiling->enableVecTrans;
+    tilingData_.conv3DDxTiling.enableFullLoad = tunerTiling->enableFullLoad;
+    tilingData_.conv3DDxTiling.quantMode = tunerTiling->quantMode;
+    tilingData_.conv3DDxTiling.cinG = tunerTiling->cinG;
+    tilingData_.conv3DDxTiling.coutG = tunerTiling->coutG;
+    tilingData_.conv3DDxTiling.cout1 = tunerTiling->cout1;
+    tilingData_.conv3DDxTiling.cin1 = tunerTiling->cin1;
+    tilingData_.conv3DDxTiling.cout1G = tunerTiling->cout1G;
+    tilingData_.conv3DDxTiling.cin1G = tunerTiling->cin1G;
+    tilingData_.conv3DDxTiling.backpropPadTail = tunerTiling->backpropPadTail;
+    tilingData_.conv3DDxTiling.backpropPadUp = tunerTiling->backpropPadUp;
+    tilingData_.conv3DDxTiling.backpropPadDown = tunerTiling->backpropPadDown;
+    tilingData_.conv3DDxTiling.backpropPadLeft = tunerTiling->backpropPadLeft;
+    tilingData_.conv3DDxTiling.backpropPadRight = tunerTiling->backpropPadRight;
+    tilingData_.conv3DDxTiling.singleCoreGroup = tunerTiling->singleCoreGroup;
+    tilingData_.conv3DDxTiling.singleCoreCout = tunerTiling->singleCoreCout;
+    tilingData_.conv3DDxTiling.singleCoreCin = tunerTiling->singleCoreCin;
+    tilingData_.conv3DDxTiling.singleCoreDin = tunerTiling->singleCoreDin;
+    tilingData_.conv3DDxTiling.baseM = tunerTiling->baseM;
+    tilingData_.conv3DDxTiling.baseK = tunerTiling->baseK;
+    tilingData_.conv3DDxTiling.baseN = tunerTiling->baseN;
+    tilingData_.conv3DDxTiling.stepM = tunerTiling->stepM;
+    tilingData_.conv3DDxTiling.stepN = tunerTiling->stepN;
+    tilingData_.conv3DDxTiling.stepKa = tunerTiling->stepKa;
+    tilingData_.conv3DDxTiling.stepKb = tunerTiling->stepKb;
+    tilingData_.conv3DDxTiling.singleIterateDk = tunerTiling->singleIterateDk;
+    tilingData_.conv3DDxTiling.singleCoreBatch = tunerTiling->singleCoreBatch;
+    tilingData_.conv3DDxTiling.singleCoreM = tunerTiling->singleCoreM;
+    tilingData_.conv3DDxTiling.enRelu = tunerTiling->enRelu;
+    tilingData_.params.coreNum = tunerTiling->coreNum;
+    tilingData_.conv3DDxKSTiling.kSCoutFullLoad = tunerTiling->kSCoutFullLoad;
+    tilingData_.conv3DDxKSTiling.kSUseWorkSpace = tunerTiling->kSUseWorkSpace;
+    loadB1Condition_ = tunerTiling->loadB1Condition;
+    loadB2Condition_ = tunerTiling->loadB2Condition;
+}
+
 ge::graphStatus Conv3DDXV2InnerProductTiling::DoLibApiTiling()
 {
     OP_LOGD(opName_, "Enable inneProduct tiling");
+
+    if (Conv3DDXV2InnerProductTiling::GetTilingFromRepo()) {
+        OP_LOGD(context_->GetNodeName(), "Conv3DBackpropInputV2 AscendC: InnerProduct get tiling from knowledge_tiling success.");
+        PrintTilingData();
+        return ge::GRAPH_SUCCESS;
+    }
 
     // 更新并设置L0基本块
     L0TilingParams l0Params;

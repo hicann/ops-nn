@@ -26,6 +26,7 @@
 #include "conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_data.h"
 #include "conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_key.h"
 #include "conv/common/op_host/op_tiling/convbp_tiling_debug_util.h"
+#include "runtime_kb_api.h"
 
 using Ops::NN::Optiling::RecursiveSum;
 
@@ -152,6 +153,7 @@ ge::graphStatus Conv3DDWV2BasicBlockTilingArch35::GetShapeAttrsInfo()
     TilingValueDwArch35 tilingParams;
     InitTilingValue(tilingParams);
     SetTilingValue(dwt, tilingParams);
+    PrintFormatData();
 
     return ge::GRAPH_SUCCESS;
 }
@@ -820,6 +822,177 @@ uint64_t Conv3DDWV2BasicBlockTilingArch35::CalBL1BoundSplitWo(
     return bL1Size;
 }
 
+ bool Conv3DDWV2BasicBlockTilingArch35::GetTilingFromRepo()
+{
+    std::shared_ptr<void> filterArgs = nullptr;
+    std::size_t filterArgsSize = 0;
+    if (!GetTilingFilterArgs(filterArgs, filterArgsSize)) {
+        return false;
+    }
+
+    std::shared_ptr<tuningtiling::TuningTilingDef> tuningTiling = nullptr;
+    auto compileInfo = context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>();	 
+    OP_TILING_CHECK(compileInfo == nullptr, CUBE_INNER_ERR_REPORT("Conv3DBackpropFilterV2", "compileInfo is null"), return false);	 
+    const std::string& socVersion = compileInfo->soc_version;
+    OP_LOGD(context_, "socVersion = %s, core_num = %u", socVersion.c_str(), platformInfo_.core_num);
+    uint32_t ret = Ops::NN::QueryBank(
+        filterArgs.get(), filterArgsSize, "Conv3DBackpropFilterV2", socVersion, platformInfo_.core_num, tuningTiling);
+    if (ret != 0) {
+        OP_LOGD(context_->GetNodeName(), "Conv3DBackpropFilterV2 AscendC: get tiling from knowledge_tiling failed, ret = %u.", ret);
+        return false;
+    }
+    if (tuningTiling == nullptr) {
+        OP_LOGD(context_->GetNodeName(), "Conv3DBackpropFilterV2 AscendC: get tiling from knowledge_tiling failed, tuningTiling is null.");
+        return false;
+    }
+    return TranslateTunerTiling(tuningTiling);
+}
+
+bool Conv3DDWV2BasicBlockTilingArch35::GetTilingFilterArgs(std::shared_ptr<void>& filterArgs, std::size_t& filterArgsSize)
+{
+    std::shared_ptr<tuningtiling::Conv3DBackpropFilterArgs> conv3DBackpropFilter = nullptr;
+    try {
+        conv3DBackpropFilter = std::make_shared<tuningtiling::Conv3DBackpropFilterArgs>();
+    } catch (const std::bad_alloc& e) {
+        OP_LOGE(context_, "Failed to allocate memory for Conv3DBackpropFilterArgs, error: %s", e.what());
+        return false;
+    }
+
+    conv3DBackpropFilter->batch = runInfo_.batch;
+    conv3DBackpropFilter->groups = runInfo_.groups;
+    conv3DBackpropFilter->co = runInfo_.co;
+    conv3DBackpropFilter->ci = runInfo_.ci;
+    conv3DBackpropFilter->dout = runInfo_.dout;
+    conv3DBackpropFilter->wo = runInfo_.wo;
+    conv3DBackpropFilter->ho = runInfo_.ho;
+    conv3DBackpropFilter->wi = runInfo_.wi;
+    conv3DBackpropFilter->hi = runInfo_.hi;
+    conv3DBackpropFilter->di = runInfo_.di;
+    conv3DBackpropFilter->kw = runInfo_.kw;
+    conv3DBackpropFilter->kh = runInfo_.kh;
+    conv3DBackpropFilter->kd = runInfo_.kd;
+    conv3DBackpropFilter->stride_w = runInfo_.stride_w;
+    conv3DBackpropFilter->stride_h = runInfo_.stride_h;
+    conv3DBackpropFilter->stride_d = runInfo_.stride_d;
+    conv3DBackpropFilter->pad_l = runInfo_.pad_l;
+    conv3DBackpropFilter->pad_r = runInfo_.pad_r;
+    conv3DBackpropFilter->pad_u = runInfo_.pad_u;
+    conv3DBackpropFilter->pad_d = runInfo_.pad_d;
+    conv3DBackpropFilter->pad_f = runInfo_.pad_f;
+    conv3DBackpropFilter->pad_b = runInfo_.pad_b;
+    conv3DBackpropFilter->dilation_w = runInfo_.dilation_w;
+    conv3DBackpropFilter->dilation_h = runInfo_.dilation_h;
+    conv3DBackpropFilter->dilation_d = runInfo_.dilation_d;
+    conv3DBackpropFilter->hf32Flag = runInfo_.hf32Flag;
+    conv3DBackpropFilter->a_dtype = runInfo_.a_dtype;
+    conv3DBackpropFilter->b_dtype = runInfo_.b_dtype;
+    conv3DBackpropFilter->c_dtype = runInfo_.c_dtype;
+    conv3DBackpropFilter->a_dtype_bytes = runInfo_.a_dtype_bytes;
+    conv3DBackpropFilter->b_dtype_bytes = runInfo_.b_dtype_bytes;
+    conv3DBackpropFilter->c_dtype_bytes = runInfo_.c_dtype_bytes;
+    conv3DBackpropFilter->fmapFormat = format_.fmapFormat;
+    conv3DBackpropFilter->dedyFormat = format_.dedyFormat;
+    conv3DBackpropFilter->filterFormat = format_.filterFormat;
+
+    filterArgs = conv3DBackpropFilter;
+    filterArgsSize = sizeof(tuningtiling::Conv3DBackpropFilterArgs);
+
+    return true;
+}
+
+bool Conv3DDWV2BasicBlockTilingArch35::TranslateTunerTiling(tuningtiling::TuningTilingDefPtr &tuningTiling)
+{
+    auto tunerTiling = std::static_pointer_cast<tuningtiling::Conv3DBackpropFilterTunerTiling>(tuningTiling);
+    if (tunerTiling == nullptr) {
+        return false;
+    }
+    TranslateRunInfoData();
+    TranslateTuningData(tunerTiling);
+    return true;
+}
+
+ void Conv3DDWV2BasicBlockTilingArch35::TranslateRunInfoData() {
+    // Map runInfo_ fields into dwTiling so downstream kernel code can use them
+    tilingData_.dwTiling.batch = static_cast<uint32_t>(runInfo_.batch);
+    tilingData_.dwTiling.cout = static_cast<uint32_t>(runInfo_.co);
+    tilingData_.dwTiling.cin = static_cast<uint32_t>(runInfo_.ci);
+    tilingData_.dwTiling.dout = static_cast<uint32_t>(runInfo_.dout);
+    tilingData_.dwTiling.wo = static_cast<uint32_t>(runInfo_.wo);
+    tilingData_.dwTiling.ho = static_cast<uint32_t>(runInfo_.ho);
+    tilingData_.dwTiling.wi = static_cast<uint32_t>(runInfo_.wi);
+    tilingData_.dwTiling.hi = static_cast<uint32_t>(runInfo_.hi);
+    tilingData_.dwTiling.di = static_cast<uint32_t>(runInfo_.di);
+
+    // kernel sizes
+    tilingData_.dwTiling.wk = static_cast<uint32_t>(runInfo_.kw);
+    tilingData_.dwTiling.hk = static_cast<uint32_t>(runInfo_.kh);
+    tilingData_.dwTiling.dk = static_cast<uint32_t>(runInfo_.kd);
+
+    // strides
+    tilingData_.dwTiling.strideW = static_cast<uint32_t>(runInfo_.stride_w);
+    tilingData_.dwTiling.strideH = static_cast<uint32_t>(runInfo_.stride_h);
+    tilingData_.dwTiling.strideD = static_cast<uint32_t>(runInfo_.stride_d);
+
+    // padding (map left/right/up/down/front/back)
+    tilingData_.dwTiling.padLeft = static_cast<uint32_t>(runInfo_.pad_l);
+    tilingData_.dwTiling.padRight = static_cast<uint32_t>(runInfo_.pad_r);
+    tilingData_.dwTiling.padUp = static_cast<uint32_t>(runInfo_.pad_u);
+    tilingData_.dwTiling.padDown = static_cast<uint32_t>(runInfo_.pad_d);
+    tilingData_.dwTiling.padFront = static_cast<uint32_t>(runInfo_.pad_f);
+    tilingData_.dwTiling.padBack = static_cast<uint32_t>(runInfo_.pad_b);
+
+    // dilations
+    tilingData_.dwTiling.dilationW = static_cast<uint32_t>(runInfo_.dilation_w);
+    tilingData_.dwTiling.dilationH = static_cast<uint32_t>(runInfo_.dilation_h);
+    tilingData_.dwTiling.dilationD = static_cast<uint32_t>(runInfo_.dilation_d);
+
+    // groups and flags
+    tilingData_.dwTiling.group = static_cast<uint32_t>(runInfo_.groups);
+    tilingData_.dwTiling.hf32Flag = static_cast<uint32_t>(runInfo_.hf32Flag);
+}
+
+ void Conv3DDWV2BasicBlockTilingArch35::TranslateTuningData(std::shared_ptr<tuningtiling::Conv3DBackpropFilterTunerTiling> tunerTiling) {
+    conv_bp_v2_kernel::TConv3DDwTiling &dwt = tilingData_.dwTiling;
+    dwt.cin1G = tunerTiling->cin1G;
+    dwt.cout1G = tunerTiling->cout1G;
+    dwt.realGroup = tunerTiling->realGroup;
+    dwt.channelSize = tunerTiling->channelSize;
+    dwt.al0Pbuffer = tunerTiling->al0Pbuffer;
+    dwt.bl0Pbuffer = tunerTiling->bl0Pbuffer;
+    dwt.cl0Pbuffer = tunerTiling->cl0Pbuffer;
+    dwt.al1Pbuffer = tunerTiling->al1Pbuffer;
+    dwt.bl1Pbuffer = tunerTiling->bl1Pbuffer;
+    dwt.baseM = tunerTiling->baseM;
+    dwt.baseK = tunerTiling->baseK;
+    dwt.baseN = tunerTiling->baseN;
+    dwt.m0 = tunerTiling->m0;
+    dwt.k0 = tunerTiling->k0;
+    dwt.n0 = tunerTiling->n0;
+    dwt.stepM = tunerTiling->stepM;
+    dwt.stepN = tunerTiling->stepN;
+    dwt.stepKa = tunerTiling->stepKa;
+    dwt.stepKb = tunerTiling->stepKb;
+    dwt.iterateOrder = tunerTiling->iterateOrder;
+    dwt.bl1Bound = tunerTiling->bl1Bound;
+    dwt.al1Bound = tunerTiling->al1Bound;
+    dwt.singleCoreDk = tunerTiling->singleCoreDk;
+    dwt.singleCoreGroup = tunerTiling->singleCoreGroup;
+    dwt.singleCoreCout = tunerTiling->singleCoreCout;
+    dwt.singleCoreHo = tunerTiling->singleCoreHo;
+    dwt.splitWo = tunerTiling->splitWo;
+    dwt.singleCoreBatch = tunerTiling->singleCoreBatch;
+    dwt.singleCoreCin = tunerTiling->singleCoreCin;
+    // basic block tiling
+    tilingData_.basicBlockTiling.singleCoreBatchDout = tunerTiling->singleCoreBatchDout;
+    tilingData_.basicBlockTiling.streamkType = tunerTiling->streamkType;
+    tilingData_.basicBlockTiling.usedCoreNum = tunerTiling->usedCoreNum;
+    tilingData_.basicBlockTiling.singleCoreM = tunerTiling->singleCoreM;
+    tilingData_.basicBlockTiling.singleCoreN = tunerTiling->singleCoreN;
+    tilingData_.basicBlockTiling.singleCoreK = tunerTiling->singleCoreK;
+    blockTiling_.coreBindDirection = tunerTiling->coreBindDirection;
+    blockTiling_.isSplitKernelHW = tunerTiling->isSplitKernelHW;
+}
+
 ge::graphStatus Conv3DDWV2BasicBlockTilingArch35::DoOpTiling()
 {
     // 默认使用子类的Conv3DBackpropFilterV2StreamKTiling的DoOpTiling
@@ -828,6 +1001,9 @@ ge::graphStatus Conv3DDWV2BasicBlockTilingArch35::DoOpTiling()
 
 ge::graphStatus Conv3DDWV2BasicBlockTilingArch35::DoLibApiTiling()
 {
+    if (isGetTilingFromRepo) {
+        return ge::GRAPH_SUCCESS;
+    }
     conv_bp_v2_kernel::TConv3DDwTiling& dwt = tilingData_.dwTiling;
     tilingData_.basicBlockTiling.usedCoreNum = blockTiling_.usedCoreNum;
     tilingData_.basicBlockTiling.singleCoreM = blockTiling_.singleCoreM;
@@ -923,30 +1099,29 @@ bool Conv3DDWV2BasicBlockTilingArch35::CheckFormat()
     OP_TILING_CHECK(
         fmapDesc == nullptr, CUBE_INNER_ERR_REPORT("Conv3DBackpropFilterV2", "fmap_desc is null"),
         return false);
-    auto fmapFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(fmapDesc->GetStorageFormat()));
+    format_.fmapFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(fmapDesc->GetStorageFormat()));
     const auto dedyDesc = context_->GetInputDesc(Y_INDEX);
     OP_TILING_CHECK(
         dedyDesc == nullptr, CUBE_INNER_ERR_REPORT("Conv3DBackpropFilterV2", "dedyDesc is null"),
         return false);
-    auto dedyFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(dedyDesc->GetStorageFormat()));
+    format_.dedyFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(dedyDesc->GetStorageFormat()));
     const auto filterDesc = context_->GetOutputDesc(FILTER_INDEX);
     OP_TILING_CHECK(
         filterDesc == nullptr, CUBE_INNER_ERR_REPORT("Conv3DBackpropFilterV2", "filterDesc is null"),
         return false);
-    auto filter_format = static_cast<ge::Format>(ge::GetPrimaryFormat(filterDesc->GetStorageFormat()));
-    deterNotSupportFormat_ = (fmapFormat != ge::FORMAT_NCDHW && fmapFormat != ge::FORMAT_NDHWC) ||
-                             (dedyFormat != ge::FORMAT_NCDHW && dedyFormat != ge::FORMAT_NDHWC) ||
-                             (filter_format != ge::FORMAT_NCDHW);
+    format_.filterFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(filterDesc->GetStorageFormat()));
+    deterNotSupportFormat_ = (format_.fmapFormat != ge::FORMAT_NCDHW && format_.fmapFormat != ge::FORMAT_NDHWC) ||
+                             (format_.dedyFormat != ge::FORMAT_NCDHW && format_.dedyFormat != ge::FORMAT_NDHWC) ||
+                             (format_.filterFormat != ge::FORMAT_NCDHW);
 
-    enableSplitW = (fmapFormat == ge::FORMAT_NCDHW && dedyFormat == ge::FORMAT_NCDHW) ||
-                   (fmapFormat == ge::FORMAT_NDHWC && dedyFormat == ge::FORMAT_NDHWC);
-
+    enableSplitW = (format_.fmapFormat == ge::FORMAT_NCDHW && format_.dedyFormat == ge::FORMAT_NCDHW) ||
+                   (format_.fmapFormat == ge::FORMAT_NDHWC && format_.dedyFormat == ge::FORMAT_NDHWC);
     OP_LOGE_IF(
         isHiF8Flag_ && deterNotSupportFormat_, false, opName_,
         "When datatype is HiF8, fmapFormat[%s], dedyFormat[%s] and filter_format[%s] is only support format NCDHW for now",
-        ge::TypeUtils::FormatToSerialString(fmapFormat).c_str(),
-        ge::TypeUtils::FormatToSerialString(dedyFormat).c_str(),
-        ge::TypeUtils::FormatToSerialString(filter_format).c_str());
+        ge::TypeUtils::FormatToSerialString(format_.fmapFormat).c_str(),
+        ge::TypeUtils::FormatToSerialString(format_.dedyFormat).c_str(),
+        ge::TypeUtils::FormatToSerialString(format_.filterFormat).c_str());
 
     return true;
 }
@@ -1124,8 +1299,7 @@ void Conv3DDWV2BasicBlockTilingArch35::PrintTilingData()
     conv_bp_v2_kernel::TConv3DDwTiling& tiling = tilingData_.dwTiling;
     std::stringstream ss;
     // 删除shape stride dilation 相关打印 pads下移
-    ss << "batch: " << tiling.batch << " cin: " << tiling.cin << " cout: " << tiling.cout
-        << " cin1G: " << tiling.cin1G << " cout1G: " << tiling.cout1G
+    ss  << " cin1G: " << tiling.cin1G << " cout1G: " << tiling.cout1G
         << " group: " << tiling.group << " realGroup: " << tiling.realGroup
         << " channelSize: " << tiling.channelSize << " al0Pbuffer: " << tiling.al0Pbuffer
         << " bl0Pbuffer: " << tiling.bl0Pbuffer << " cl0Pbuffer: " << tiling.cl0Pbuffer
@@ -1137,10 +1311,43 @@ void Conv3DDWV2BasicBlockTilingArch35::PrintTilingData()
         << " al1Bound: " << tiling.al1Bound << " bl1Bound: " << tiling.bl1Bound << " hf32Flag: " << tiling.hf32Flag
         << " singleCoreDk: " << tiling.singleCoreDk << " singleCoreGroup: " << tiling.singleCoreGroup
         << " singleCoreCout: " << tiling.singleCoreCout << " singleCoreHo: " << tiling.singleCoreHo
-        << " splitWoSize: " << tiling.splitWo  << " singleCoreBatch: " << tiling.singleCoreBatch
+        << " splitWo: " << tiling.splitWo  << " singleCoreBatch: " << tiling.singleCoreBatch
         << " singleCoreCin: " << tiling.singleCoreCin;
     OP_LOGI(opName_, "api tiling: %s", ss.str().c_str());
     PrintInputsAttrs(tiling);
+}
+
+void Conv3DDWV2BasicBlockTilingArch35::PrintFormatData()
+{
+    std::stringstream ss;
+    ss << " fmapFormat: " << static_cast<int>(format_.fmapFormat) 
+    << " dedyFormat: " << static_cast<int>(format_.dedyFormat) 
+    << " filterFormat: " << static_cast<int>(format_.filterFormat);
+    OP_LOGD(opName_, "format data: %s", ss.str().c_str());
+}
+
+void Conv3DDWV2BasicBlockTilingArch35::PrintRunInfoData() {
+    std::stringstream ss;
+    ss << "batch: " << runInfo_.batch
+    << " co: " << runInfo_.co << " ci: " << runInfo_.ci
+    << " cout1_g: " << runInfo_.cout1_g << " cin1_g: " << runInfo_.cin1_g
+    << " dout: " << runInfo_.dout << " ho: " << runInfo_.ho << " wo: " << runInfo_.wo
+    << " hi: " << runInfo_.hi << " wi: " << runInfo_.wi << " di: " << runInfo_.di
+    << " kd: " << runInfo_.kd << " kh: " << runInfo_.kh << " kw: " << runInfo_.kw
+    << " real_g: " << runInfo_.real_g
+    << " stride_d: " << runInfo_.stride_d << " stride_h: " << runInfo_.stride_h << " stride_w: " << runInfo_.stride_w
+    << " pad_f: " << runInfo_.pad_f << " pad_b: " << runInfo_.pad_b << " pad_u: " << runInfo_.pad_u
+    << " pad_d: " << runInfo_.pad_d << " pad_l: " << runInfo_.pad_l << " pad_r: " << runInfo_.pad_r
+    << " dilation_d: " << runInfo_.dilation_d << " dilation_h: " << runInfo_.dilation_h << " dilation_w: " << runInfo_.dilation_w
+    << " ci1: " << runInfo_.ci1
+    << " groups: " << runInfo_.groups << " mag_factor: " << runInfo_.mag_factor
+    << " k0: " << runInfo_.k0 << " m0: " << runInfo_.m0 << " n0: " << runInfo_.n0
+    << " hf32Flag: " << runInfo_.hf32Flag
+    << " a_dtype: " << static_cast<int>(runInfo_.a_dtype) << " b_dtype: " << static_cast<int>(runInfo_.b_dtype)
+    << " c_dtype: " << static_cast<int>(runInfo_.c_dtype)
+    << " a_dtype_bytes: " << runInfo_.a_dtype_bytes << " b_dtype_bytes: " << runInfo_.b_dtype_bytes
+    << " c_dtype_bytes: " << runInfo_.c_dtype_bytes;
+    OP_LOGD(opName_, "runInfo Data: %s", ss.str().c_str());
 }
 
 bool Conv3DDWV2BasicBlockTilingArch35::PrintInputsAttrs(conv_bp_v2_kernel::TConv3DDwTiling& tiling){
@@ -1179,13 +1386,14 @@ bool Conv3DDWV2BasicBlockTilingArch35::PrintInputsAttrs(conv_bp_v2_kernel::TConv
 
 void Conv3DDWV2BasicBlockTilingArch35::PrintBasickBlockTilingData()
 {
+    Conv3DDWV2BasicBlockTilingArch35::PrintRunInfoData();
     Conv3DDWV2BasicBlockTilingArch35::PrintTilingData();
     conv_bp_v2_kernel::TConv3DDwBasicBlockTiling& tiling = tilingData_.basicBlockTiling;
     std::stringstream ss;
     ss << " singleCoreBatchDout: " << tiling.singleCoreBatchDout << " streamkType: " << tiling.streamkType
         << " usedCoreNum: " << tiling.usedCoreNum << " singleCoreM: " << tiling.singleCoreM
         << " singleCoreN: " << tiling.singleCoreN << " singleCoreK: " << tiling.singleCoreK;
-    OP_LOGI(opName_, "api basic block tiling: %s", ss.str().c_str());
+    OP_LOGD(opName_, "api basic block tiling: %s", ss.str().c_str());
 }
 }
 }

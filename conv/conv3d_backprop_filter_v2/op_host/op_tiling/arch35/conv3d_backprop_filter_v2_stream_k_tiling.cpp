@@ -77,6 +77,13 @@ void Conv3DBackpropFilterV2StreamKTiling::InitSplitWOI()
 
 ge::graphStatus Conv3DBackpropFilterV2StreamKTiling::DoOpTiling()
 {
+    if (Conv3DDWV2BasicBlockTilingArch35::GetTilingFromRepo()) {
+        OP_LOGD(opName_, "Conv3DBackpropFilterV2 AscendC: get tiling from knowledge_tiling success.");
+        PrintBasickBlockTilingData();
+        blockTiling_.usedCoreNum = platformInfo_.core_num;
+        isGetTilingFromRepo = true;
+        return ge::GRAPH_SUCCESS;
+    }
     InitSplitWOI();
     if (!MultiCoreSplitMN()) {
         std::stringstream ss;

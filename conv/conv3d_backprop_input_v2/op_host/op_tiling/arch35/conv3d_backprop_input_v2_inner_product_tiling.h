@@ -20,6 +20,7 @@
 #include "op_host/tiling_base.h"
 #include "conv3d_backprop_input_v2_base_tiling.h"
 #include "conv3d_backprop_input_v2_common.h"
+#include "../common/conv_backprop_input_tuning_tiling.h"
 
 namespace Ops {
 namespace NN {
@@ -86,6 +87,11 @@ protected:
     TilingRunInfo tilingRunInfo_;
     uint64_t GetCVRation();
 
+    bool GetTilingFromRepo();
+    bool GetTilingInputArgs(std::shared_ptr<void>& inputArgs, std::size_t& inputArgsSize);
+    bool TranslateTunerTiling(tuningtiling::TuningTilingDefPtr &tuningTiling);
+    void TranslateRunInfoData();
+    void TranslateTuningData(std::shared_ptr<tuningtiling::Conv3DBackpropInputTunerTiling> tunerTiling);
 private:
     bool CheckC04Enable();
     bool CheckVecTrans16bitPlus(const CoreTilingParams& coreParams, const L0TilingParams& l0Params);

@@ -24,6 +24,7 @@
 #include "conv3d_backprop_filter_v2_common.h"
 #include "../common/conv_backprop_filter_context_utils.h"
 #include "../../../op_kernel/arch35/conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_data.h"
+#include "../common/conv_backprop_filter_tuning_tiling.h"
 
 namespace Ops {
 namespace NN {
@@ -95,6 +96,12 @@ struct MatMulInfoArch35 {
     uint64_t mValue = 0;
     uint64_t kValue = 0;
     uint64_t nValue = 0;
+};
+
+struct FilterFormat {
+    ge::Format fmapFormat;
+    ge::Format dedyFormat;
+    ge::Format filterFormat;
 };
 
 class Conv3DDWV2BasicBlockTilingArch35 : public TilingBaseClass {
@@ -227,6 +234,14 @@ protected:
 
     uint64_t GetBaseK(uint64_t baseM, uint64_t baseN);
 
+    bool GetTilingFromRepo();
+ 	bool GetTilingFilterArgs(std::shared_ptr<void>& filterArgs, std::size_t& filterArgsSize);
+ 	bool TranslateTunerTiling(tuningtiling::TuningTilingDefPtr &tuningTiling);
+ 	void TranslateRunInfoData();
+ 	void TranslateTuningData(std::shared_ptr<tuningtiling::Conv3DBackpropFilterTunerTiling> tunerTiling);
+    void PrintRunInfoData();
+    void PrintFormatData();
+
     BasicBlockTilingParamsArch35 blockTiling_;
     MatMulInfoArch35 mmInfo_;
     PlatformCompileInfo platformInfo_;
@@ -238,9 +253,11 @@ protected:
     uint8_t l0cCondition_ = 0;
     conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData tilingData_;
     Conv3dBpFilterV2RunInfo runInfo_;
+    FilterFormat format_;
     bool isDeterSupportDType_ = false;
     bool deterNotSupportFormat_ = false;
     bool enableSplitW = false;
+    bool isGetTilingFromRepo = false;
 };
 }
 }

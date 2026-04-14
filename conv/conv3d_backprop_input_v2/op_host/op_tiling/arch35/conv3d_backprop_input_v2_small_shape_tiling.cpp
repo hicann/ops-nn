@@ -65,6 +65,12 @@ bool Conv3DDXV2SmallShapeTiling::IsCapable()
 ge::graphStatus Conv3DDXV2SmallShapeTiling::DoLibApiTiling()
 {
     OP_LOGD(opName_, "Enable small shape tiling");
+    if (Conv3DDXV2InnerProductTiling::GetTilingFromRepo()) {
+        OP_LOGD(context_->GetNodeName(), "Conv3DBackpropInputV2 AscendC: SmallShape get tiling from knowledge_tiling success.");
+        PrintTilingData();
+        return ge::GRAPH_SUCCESS;
+    }
+
     // 更新并设置L0基本块
     L0TilingParams l0Params;
     InitBaseMNK(l0Params);

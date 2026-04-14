@@ -258,6 +258,7 @@ protected:
     void SetBackpropPadInfo(conv_bp_v2_kernel::TConv3DInputV2Tiling& dxt);
     void SetTilingValue(conv_bp_v2_kernel::TConv3DInputV2Tiling& dxt, const TilingValueDavid& tilingParams);
     ge::graphStatus SetCoreMemSizeInfo();
+    void PrintRunInfoData();
 
     bool a1DbFlag_ = false;
     bool b1DbFlag_ = false;

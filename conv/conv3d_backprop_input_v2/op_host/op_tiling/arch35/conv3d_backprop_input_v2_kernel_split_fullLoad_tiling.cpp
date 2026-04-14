@@ -49,6 +49,11 @@ bool Conv3DDXV2KernelSplitFullLoadTiling::IsCapable()
 ge::graphStatus Conv3DDXV2KernelSplitFullLoadTiling::DoLibApiTiling()
 {
     OP_LOGD(opName_, "Enable kernel split full load tiling");
+    if (Conv3DDXV2InnerProductTiling::GetTilingFromRepo()) {
+        OP_LOGD(context_->GetNodeName(), "Conv3DBackpropInputV2 AscendC: KernelSplitFullLoad get tiling from knowledge_tiling success.");
+        PrintTilingData();
+        return ge::GRAPH_SUCCESS;
+    }
 
     // 更新并设置L0基本块
     L0TilingParams l0Params;
@@ -76,7 +81,7 @@ ge::graphStatus Conv3DDXV2KernelSplitFullLoadTiling::DoLibApiTiling()
     }
     Conv3DDXV2KernelSplitTiling::UpdateWorkSpaceSize(l0Params);
     Conv3DDXV2KernelSplitTiling::SetTilingData(coreParams, l1Params, l0Params);
-    Conv3DDXV2KernelSplitTiling::PrintTilingData();
+    PrintTilingData();
     return ge::GRAPH_SUCCESS;
 }
 

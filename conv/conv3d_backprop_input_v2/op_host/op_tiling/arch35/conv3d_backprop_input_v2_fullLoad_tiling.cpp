@@ -80,6 +80,11 @@ bool Conv3DDXV2FullLoadTiling::IsCapable()
 ge::graphStatus Conv3DDXV2FullLoadTiling::DoLibApiTiling()
 {
     OP_LOGD(opName_, "Enable full load tiling");
+    if (Conv3DDXV2InnerProductTiling::GetTilingFromRepo()) {
+        OP_LOGD(context_->GetNodeName(), "Conv3DBackpropInputV2 AscendC: FullLoad get tiling from knowledge_tiling success.");
+        PrintTilingData();
+        return ge::GRAPH_SUCCESS;
+    }
 
     // 更新并设置L0基本块
     L0TilingParams l0Params;
@@ -107,7 +112,7 @@ ge::graphStatus Conv3DDXV2FullLoadTiling::DoLibApiTiling()
     }
     Conv3DDXV2InnerProductTiling::SetTilingCondition(coreParams, l1Params, l0Params);
     Conv3DDXV2InnerProductTiling::SetTilingData(coreParams, l1Params, l0Params);
-    Conv3DDXV2InnerProductTiling::PrintTilingData();
+    PrintTilingData();
     return ge::GRAPH_SUCCESS;
 }
 
