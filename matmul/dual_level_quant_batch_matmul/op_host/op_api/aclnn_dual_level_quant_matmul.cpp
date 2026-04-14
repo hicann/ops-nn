@@ -31,14 +31,14 @@ using TupleRequiredTensor = std::tuple<
 using TupleOptionalTensor = std::tuple<const aclTensor*&>;
 using TupleAttr = std::tuple<bool&, bool&, int64_t&, int64_t&>;
 
-static constexpr int INDEX_X1_IN_MANDTORY_TUPLE = 0;
-static constexpr int INDEX_X2_IN_MANDTORY_TUPLE = 1;
-static constexpr int INDEX_X2_REF_IN_MANDTORY_TUPLE = 2;
-static constexpr int INDEX_X1_L0_SCALE_IN_MANDTORY_TUPLE = 3;
-static constexpr int INDEX_X1_L1_SCALE_IN_MANDTORY_TUPLE = 4;
-static constexpr int INDEX_X2_L0_SCALE_IN_MANDTORY_TUPLE = 5;
-static constexpr int INDEX_X2_L1_SCALE_IN_MANDTORY_TUPLE = 6;
-static constexpr int INDEX_Y_IN_MANDTORY_TUPLE = 7;
+static constexpr int INDEX_X1_IN_MANDATORY_TUPLE = 0;
+static constexpr int INDEX_X2_IN_MANDATORY_TUPLE = 1;
+static constexpr int INDEX_X2_REF_IN_MANDATORY_TUPLE = 2;
+static constexpr int INDEX_X1_L0_SCALE_IN_MANDATORY_TUPLE = 3;
+static constexpr int INDEX_X1_L1_SCALE_IN_MANDATORY_TUPLE = 4;
+static constexpr int INDEX_X2_L0_SCALE_IN_MANDATORY_TUPLE = 5;
+static constexpr int INDEX_X2_L1_SCALE_IN_MANDATORY_TUPLE = 6;
+static constexpr int INDEX_Y_IN_MANDATORY_TUPLE = 7;
 static constexpr int INDEX_BIAS_IN_OPTIONAL_TUPLE = 0;
 static constexpr int INDEX_TRANSPOSE_X1_IN_ATTR_TUPLE = 0;
 static constexpr int INDEX_TRANSPOSE_X2_IN_ATTR_TUPLE = 1;
@@ -71,7 +71,7 @@ static const aclTensor* SetTensorToNDFormat(const aclTensor* input)
         return output;
     }
     if (input->GetStorageFormat() != Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGD("weightQuantBatchMatmul set tensor to ND format.");
+        OP_LOGD("dualLevelQuantMatmul set tensor to ND format.");
         output = l0op::ReFormat(input, op::Format::FORMAT_ND);
     } else {
         output = input;
@@ -118,7 +118,7 @@ static aclnnStatus CheckSocValid()
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus IsNzFormat(const aclTensor* weight)
+static bool IsNzFormat(const aclTensor* weight)
 {
     return weight->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ ||
            weight->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ_C0_2;
@@ -243,8 +243,8 @@ static aclnnStatus InputPreProcess(
 
 static aclnnStatus InputTensorProcess(TupleRequiredTensor mandatoryTensors, aclOpExecutor* executor)
 {
-    auto& x2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(mandatoryTensors);
-    auto& x2Ref = std::get<INDEX_X2_REF_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    auto& x2 = std::get<INDEX_X2_IN_MANDATORY_TUPLE>(mandatoryTensors);
+    auto& x2Ref = std::get<INDEX_X2_REF_IN_MANDATORY_TUPLE>(mandatoryTensors);
     // 将 int8 的输入 x2 dtype 修改为 mxfp4, 同时 ViewShape, ViewStrides 也从 int8 修改为 mxfp4 所对应的
     OP_CHECK(
         x2->GetDataType() == DataType::DT_INT8, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "only support x2 are int8."),
@@ -264,9 +264,9 @@ static aclnnStatus CheckTensorX1(const aclTensor* x1, const bool transposeX1Attr
     OP_CHECK(
         IsContiguous(x1), OP_LOGE(ACLNN_ERR_PARAM_INVALID, "only support x1 is contiguous."),
         return ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(IsDimSupport(x1, DIM_RANGE_ONLY_TWO_DIM, "x1"), false);
-    CHECK_RET(IsFormatSupport(x1, Format::FORMAT_ND, "x1"), false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(x1, X1_X2_DTYPE_SUPPORT_LIST, return false);
+    CHECK_RET(IsDimSupport(x1, DIM_RANGE_ONLY_TWO_DIM, "x1"), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(IsFormatSupport(x1, Format::FORMAT_ND, "x1"), ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK_DTYPE_NOT_SUPPORT(x1, X1_X2_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
 
     // 当 x1 为非转置时，k 作为内轴必须为偶数
     OP_CHECK(
@@ -287,9 +287,9 @@ static aclnnStatus CheckTensorX2(const aclTensor* x2, const bool transposeX2Attr
     OP_CHECK(
         IsContiguous(x2), OP_LOGE(ACLNN_ERR_PARAM_INVALID, "only support x2 is contiguous."),
         return ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(IsDimSupport(x2, DIM_RANGE_ONLY_TWO_DIM, "x2"), false);
-    CHECK_RET(IsFormatSupport(x2, Format::FORMAT_FRACTAL_NZ, "x2"), false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(x2, X1_X2_INPUT_DTYPE_SUPPORT_LIST, return false);
+    CHECK_RET(IsDimSupport(x2, DIM_RANGE_ONLY_TWO_DIM, "x2"), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(IsFormatSupport(x2, Format::FORMAT_FRACTAL_NZ, "x2"), ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK_DTYPE_NOT_SUPPORT(x2, X1_X2_INPUT_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
@@ -299,9 +299,9 @@ static aclnnStatus CheckTensorX1L0Scale(const aclTensor* x1Level0Scale)
     OP_CHECK(
         IsContiguous(x1Level0Scale), OP_LOGE(ACLNN_ERR_PARAM_INVALID, "only support x1Level0Scale is contiguous."),
         return ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(IsDimSupport(x1Level0Scale, DIM_RANGE_ONLY_TWO_DIM, "x1Level0Scale"), false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(x1Level0Scale, L0_SCALE_DTYPE_SUPPORT_LIST, return false);
-    CHECK_RET(IsFormatSupport(x1Level0Scale, Format::FORMAT_ND, "x1Level0Scale"), false);
+    CHECK_RET(IsDimSupport(x1Level0Scale, DIM_RANGE_ONLY_TWO_DIM, "x1Level0Scale"), ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK_DTYPE_NOT_SUPPORT(x1Level0Scale, L0_SCALE_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(IsFormatSupport(x1Level0Scale, Format::FORMAT_ND, "x1Level0Scale"), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
@@ -310,8 +310,8 @@ static aclnnStatus CheckTensorX1L1Scale(const aclTensor* x1Level1Scale)
     OP_CHECK(
         IsContiguous(x1Level1Scale), OP_LOGE(ACLNN_ERR_PARAM_INVALID, "only support x1Level1Scale is contiguous."),
         return ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(IsDimSupport(x1Level1Scale, DIM_RANGE_ONLY_THREE_DIM, "x1Level1Scale"), false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(x1Level1Scale, L1_SCALE_DTYPE_SUPPORT_LIST, return false);
+    CHECK_RET(IsDimSupport(x1Level1Scale, DIM_RANGE_ONLY_THREE_DIM, "x1Level1Scale"), ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK_DTYPE_NOT_SUPPORT(x1Level1Scale, L1_SCALE_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
     if (x1Level1Scale->GetStorageFormat() != Format::FORMAT_ND &&
         x1Level1Scale->GetStorageFormat() != Format::FORMAT_NCL) {
         OP_LOGE(
@@ -327,9 +327,9 @@ static aclnnStatus CheckTensorX2L0Scale(const aclTensor* x2Level0Scale)
     OP_CHECK(
         IsContiguous(x2Level0Scale), OP_LOGE(ACLNN_ERR_PARAM_INVALID, "only support x2Level0Scale is contiguous."),
         return ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(IsDimSupport(x2Level0Scale, DIM_RANGE_ONLY_TWO_DIM, "x2Level0Scale"), false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(x2Level0Scale, L0_SCALE_DTYPE_SUPPORT_LIST, return false);
-    CHECK_RET(IsFormatSupport(x2Level0Scale, Format::FORMAT_ND, "x2Level0Scale"), false);
+    CHECK_RET(IsDimSupport(x2Level0Scale, DIM_RANGE_ONLY_TWO_DIM, "x2Level0Scale"), ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK_DTYPE_NOT_SUPPORT(x2Level0Scale, L0_SCALE_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(IsFormatSupport(x2Level0Scale, Format::FORMAT_ND, "x2Level0Scale"), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
@@ -338,8 +338,8 @@ static aclnnStatus CheckTensorX2L1Scale(const aclTensor* x2Level1Scale)
     OP_CHECK(
         IsContiguous(x2Level1Scale), OP_LOGE(ACLNN_ERR_PARAM_INVALID, "only support x2Level1Scale is contiguous."),
         return ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(IsDimSupport(x2Level1Scale, DIM_RANGE_ONLY_THREE_DIM, "x2Level1Scale"), false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(x2Level1Scale, L1_SCALE_DTYPE_SUPPORT_LIST, return false);
+    CHECK_RET(IsDimSupport(x2Level1Scale, DIM_RANGE_ONLY_THREE_DIM, "x2Level1Scale"), ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK_DTYPE_NOT_SUPPORT(x2Level1Scale, L1_SCALE_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
     if (x2Level1Scale->GetStorageFormat() != Format::FORMAT_ND &&
         x2Level1Scale->GetStorageFormat() != Format::FORMAT_NCL) {
         OP_LOGE(
@@ -355,8 +355,8 @@ static aclnnStatus CheckTensorY(const aclTensor* y)
     OP_CHECK(
         IsContiguous(y), OP_LOGE(ACLNN_ERR_PARAM_INVALID, "only support y is contiguous."),
         return ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(IsDimSupport(y, DIM_RANGE_ONLY_TWO_DIM, "y"), false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(y, Y_DTYPE_SUPPORT_LIST, return false);
+    CHECK_RET(IsDimSupport(y, DIM_RANGE_ONLY_TWO_DIM, "y"), ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK_DTYPE_NOT_SUPPORT(y, Y_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
@@ -368,14 +368,14 @@ static aclnnStatus CheckTensorBias(const aclTensor* bias)
     OP_CHECK(
         IsContiguous(bias), OP_LOGE(ACLNN_ERR_PARAM_INVALID, "only support bias is contiguous."),
         return ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(IsDimSupport(bias, DIM_RANGE_OPTIONAL_INPUT, "bias"), false);
+    CHECK_RET(IsDimSupport(bias, DIM_RANGE_OPTIONAL_INPUT, "bias"), ACLNN_ERR_PARAM_INVALID);
     OP_CHECK(
         bias->GetDataType() == DataType::DT_FLOAT,
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "bias's dtype should be [DT_FLOAT], actual is [%s].",
             op::ToString(bias->GetDataType()).GetString()),
         return ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(IsFormatSupport(bias, Format::FORMAT_ND, "bias"), false);
+    CHECK_RET(IsFormatSupport(bias, Format::FORMAT_ND, "bias"), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
@@ -394,26 +394,26 @@ static aclnnStatus CheckInputOutputShape(
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "x1's k and x2's k should be equal, actual x1's k is %ld, x2's k is %ld.", kX1,
             kX2);
-        return false;
+        return ACLNN_ERR_PARAM_INVALID;
     }
 
     if (kX1 < 1 || mX1 < 1 || nX2 < 1) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "m, k, n shouldn't be smaller than %d, actual m is %ld, k is %ld, n is %ld.", 1,
             mX1, kX1, nX2);
-        return false;
+        return ACLNN_ERR_PARAM_INVALID;
     }
 
     if (mY != mX1) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "y's m and x1's m should be equal, actual y's m is %ld, x1's m is %ld.", mY, mX1);
-        return false;
+        return ACLNN_ERR_PARAM_INVALID;
     }
 
     if (nY != nX2) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "y's n and x2's n should be equal, actual y's n is %ld, x2's n is %ld.", nY, nX2);
-        return false;
+        return ACLNN_ERR_PARAM_INVALID;
     }
 
     if (bias == nullptr) {
@@ -424,13 +424,13 @@ static aclnnStatus CheckInputOutputShape(
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "input [bias] only support 1 dim, actual is %ld.",
             bias->GetViewShape().GetDimNum());
-        return false;
+        return ACLNN_ERR_PARAM_INVALID;
     }
     if (bias->GetViewShape().GetDim(0) != nX2) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "when bias's shape size is 1, it's shape should be [%ld], actual is %s.", nX2,
             op::ToString(bias->GetViewShape()).GetString());
-        return false;
+        return ACLNN_ERR_PARAM_INVALID;
     }
 
     return ACLNN_SUCCESS;
@@ -443,7 +443,7 @@ static aclnnStatus CheckTensorX2Ref(const aclTensor* x2Ref)
 }
 
 static aclnnStatus CheckAttrs(
-    const bool transposeX1Attr, const bool transposeX2Attr, const int level0GroupSize, const int level1GroupSize)
+    const bool transposeX1Attr, const bool transposeX2Attr, const int64_t level0GroupSize, const int64_t level1GroupSize)
 {
     OP_CHECK(
         !transposeX1Attr, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "only support x1 is not transposed."),
@@ -488,14 +488,14 @@ aclnnStatus EnableContiguous(
 aclnnStatus AclnnDualLevelQuantMatmulGetWorkspaceSizeProcess(
     TupleRequiredTensor mandatoryTensors, TupleOptionalTensor optionalTensors, TupleAttr attrs, aclOpExecutor* executor)
 {
-    auto& x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
-    auto& x2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(mandatoryTensors);
-    auto& x2Ref = std::get<INDEX_X2_REF_IN_MANDTORY_TUPLE>(mandatoryTensors);
-    auto& x1Level0Scale = std::get<INDEX_X1_L0_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
-    auto& x1Level1Scale = std::get<INDEX_X1_L1_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
-    auto& x2Level0Scale = std::get<INDEX_X2_L0_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
-    auto& x2Level1Scale = std::get<INDEX_X2_L1_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
-    auto& y = std::get<INDEX_Y_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    auto& x1 = std::get<INDEX_X1_IN_MANDATORY_TUPLE>(mandatoryTensors);
+    auto& x2 = std::get<INDEX_X2_IN_MANDATORY_TUPLE>(mandatoryTensors);
+    auto& x2Ref = std::get<INDEX_X2_REF_IN_MANDATORY_TUPLE>(mandatoryTensors);
+    auto& x1Level0Scale = std::get<INDEX_X1_L0_SCALE_IN_MANDATORY_TUPLE>(mandatoryTensors);
+    auto& x1Level1Scale = std::get<INDEX_X1_L1_SCALE_IN_MANDATORY_TUPLE>(mandatoryTensors);
+    auto& x2Level0Scale = std::get<INDEX_X2_L0_SCALE_IN_MANDATORY_TUPLE>(mandatoryTensors);
+    auto& x2Level1Scale = std::get<INDEX_X2_L1_SCALE_IN_MANDATORY_TUPLE>(mandatoryTensors);
+    auto& y = std::get<INDEX_Y_IN_MANDATORY_TUPLE>(mandatoryTensors);
     auto& bias = std::get<INDEX_BIAS_IN_OPTIONAL_TUPLE>(optionalTensors);
     auto& transposeX1Attr = std::get<INDEX_TRANSPOSE_X1_IN_ATTR_TUPLE>(attrs);
     auto& transposeX2Attr = std::get<INDEX_TRANSPOSE_X2_IN_ATTR_TUPLE>(attrs);
