@@ -788,7 +788,7 @@
   </tr>
   <tr>
     <td>conv</td>
-    <td><a href="../../conv/deformable_offsets_grad/README.md">deformable_offsets</a></td>
+    <td><a href="../../conv/deformable_offsets_grad/README.md">deformable_offsets_grad</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
@@ -1758,7 +1758,7 @@
   </tr>
   <tr>
     <td>index</td>
-    <td><a href="../../index/top_k_top_p_sample_v2/README.md">top_k_top_p_sample</a></td>
+    <td><a href="../../index/top_k_top_p_sample_v2/README.md">top_k_top_p_sample_v2</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
@@ -2818,7 +2818,7 @@
   </tr>
   <tr>
     <td>optim</td>
-    <td><a href="../../optim/apply_adagrad_d/README.md">advance_step</a></td>
+    <td><a href="../../optim/apply_adagrad_d/README.md">apply_adagrad_d</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
