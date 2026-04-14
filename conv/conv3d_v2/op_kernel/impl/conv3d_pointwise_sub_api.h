@@ -261,7 +261,7 @@ public:
     {
         if (self_->ctx.nBL1Iter == self_->ctx.maxNBL1Iter && self_->ctx.nBL0Iter == self_->ctx.maxNL0Iter) {
             intriParams.mSize = self_->ctx.singleCoreCo - self_->ctx.nBL1Iter * self_->ctx.conv3dTiling->nBL1 -
-                                self_->ctx.nBL0Iter * self_->ctx.conv3dTiling->nL0;;
+                                self_->ctx.nBL0Iter * self_->ctx.conv3dTiling->nL0;
             intriParams.srcStride = AlignB(self_->ctx.nL0Tail, BLOCK_L0_M);
         } else {
             intriParams.mSize = self_->ctx.conv3dTiling->nL0;

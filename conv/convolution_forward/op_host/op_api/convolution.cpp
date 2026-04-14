@@ -223,7 +223,7 @@ static bool IsSupportConv2DToConv2DV2()
     return GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510;
 }
 
-static bool IsA5EnableHF32(bool useHf32, const aclTensor *input) 
+static bool IsA5EnableHF32(bool useHf32, const aclTensor *input)
 {
     return IsSupportConv2DToConv2DV2() && useHf32 && input->GetDataType() == op::DataType::DT_FLOAT;
 }
@@ -1264,7 +1264,8 @@ static aclnnStatus ConvTranspose3dWithFlag(const aclTensor *input, const aclTens
     auto outputShapeVector = op::ToShapeVector(output->GetViewShape());
     inputSize = InitializeTensor(outputShapeVector, executor, input);
     vector<int64_t> caseInfo;
-    Conv3DTransPoseV2Prarams params = {input, weight, output, stride, padding, dilation, outputPadding, static_cast<int>(groups)};
+    Conv3DTransPoseV2Prarams params =
+        {input, weight, output, stride, padding, dilation, outputPadding, static_cast<int>(groups)};
     ConstructCaseInfo(params, caseInfo);
     uint32_t execMode = useHf32 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
 
@@ -1439,9 +1440,9 @@ const aclTensor *ConvTranspose3d6HdHif8(const aclTensor *input, const aclTensor 
 }
 
 const aclTensor *ConvTranspose3d6HdF8e4m3fn(const aclTensor *input, const aclTensor *weight, const aclTensor *bias,
-                                        const aclIntArray *stride, const aclIntArray *padding,
-                                        const aclIntArray *dilation, int groups, const aclIntArray *outputPadding,
-                                        aclOpExecutor *executor)
+                                            const aclIntArray *stride, const aclIntArray *padding,
+                                            const aclIntArray *dilation, int groups, const aclIntArray *outputPadding,
+                                            aclOpExecutor *executor)
 {
     L0_DFX(ConvTranspose3d6HdF8e4m3fn, input, weight, stride, padding, dilation, groups, outputPadding);
     auto output =

@@ -54,7 +54,7 @@ ge::graphStatus Conv2dBaseTiling::CheckDilationLegal()
     attrDilationIndex = flagInfo_.extendConvFlag ? EXTENDCONV_ATTR_DILATIONS_INDEX : attrDilationIndex;
     auto dilationPtr = context_->GetAttrs()->GetListInt(attrDilationIndex);
     if (dilationPtr == nullptr) {
-        return ge::GRAPH_SUCCESS;
+        return ge::GRAPH_FAILED;
     }
     if (dilationPtr->GetSize() != CONV2D_DIM_SIZE_LIMIT) {
         OP_LOGE(context_->GetNodeName(), "%s AscendC: input attr dilation dim: %zu != %u.",
