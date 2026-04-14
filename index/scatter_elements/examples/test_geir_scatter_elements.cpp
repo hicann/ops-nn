@@ -31,7 +31,6 @@
 #include "tensor.h"
 #include "types.h"
 
-#include "experiment_ops.h"
 #include "nn_other.h"
 #include "../op_graph/scatter_elements_proto.h"
 

@@ -36,7 +36,6 @@
 #include "tensor.h"
 #include "types.h"
 
-#include "experiment_ops.h"
 #include "nn_other.h"
 #include "../op_graph/tensor_scatter_update_proto.h"
 
@@ -164,7 +163,7 @@ int32_t GenTensorData(const vector<int64_t> &shapes, Tensor &input_tensor, Tenso
     uint32_t data_len = size * sizeof(T);
     T *p_data = new (std::nothrow) T[size];
     if (p_data == nullptr) {
-        delete[] data;
+        delete[] p_data;
         return FAILED;
     }
     for (size_t i = 0; i < size; ++i) {
@@ -310,13 +309,6 @@ int main(int argc, char *argv[])
     printf("%s - INFO - [XIR]: Session run ir compute graph success\n", GetTime().c_str());
 
     SaveInputOutput(input, output);
-
-    ge::AscendString error_msg = ge::GEGetErrorMsgV2();
-    std::string error_str(error_msg.GetString());
-    std::cout << "Error message: " << error_str << std::endl;
-    ge::AscendString warning_msg = ge::GEGetWarningMsgV2();
-    std::string warning_str(warning_msg.GetString());
-    std::cout << "Warning message: " << warning_str << std::endl;
 
     delete session;
 

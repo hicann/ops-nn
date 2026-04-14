@@ -32,7 +32,6 @@
 #include "tensor.h"
 #include "types.h"
 
-#include "experiment_ops.h"
 #include "nn_other.h"
 #include "../op_graph/gather_v2_proto.h"
 

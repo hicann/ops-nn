@@ -26,7 +26,6 @@
 #include "array_ops.h"
 #include "ge_ir_build.h"
 
-#include "experiment_ops.h"
 #include "nn_other.h"
 
 #define FAILED -1
@@ -282,15 +281,15 @@ int main(int argc, char *argv[])
         }
     }
 
-    ge::AscendString error_msg = ge::GEGetErrorMsgV2();
-    std::string error_str(error_msg.GetString());
-    std::cout << "Error message: " << error_str << std::endl;
-    ge::AscendString warning_msg = ge::GEGetWarningMsgV2();
-    std::string warning_str(warning_msg.GetString());
-    std::cout << "Warning message: " << warning_str << std::endl;
     printf("%s - INFO - [XIR]: Start to finalize ir graph session\n", GetTime().c_str());
     ret = ge::GEFinalize();
     if (ret != SUCCESS) {
+        ge::AscendString error_msg = ge::GEGetErrorMsgV2();
+        std::string error_str(error_msg.GetString());
+        std::cout << "Error message: " << error_str << std::endl;
+        ge::AscendString warning_msg = ge::GEGetWarningMsgV2();
+        std::string warning_str(warning_msg.GetString());
+        std::cout << "Warning message: " << warning_str << std::endl;
         printf("%s - INFO - [XIR]: Finalize ir graph session failed\n", GetTime().c_str());
         return FAILED;
     }

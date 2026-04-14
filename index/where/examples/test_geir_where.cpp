@@ -25,7 +25,6 @@
 #include "ge_api.h"
 #include "ge_ir_build.h"
 
-#include "experiment_ops.h"
 #include "nn_other.h"
 #include "../op_graph/where_proto.h"
 
@@ -246,6 +245,12 @@ bool AddGraphToSession(ge::Session* session, Graph& graph, uint32_t graph_id) {
     };
     Status ret = session->AddGraph(graph_id, graph, graph_options);
     if (ret != SUCCESS) {
+        ge::AscendString error_msg = ge::GEGetErrorMsgV2();
+        std::string error_str(error_msg.GetString());
+        std::cout << "Error message: " << error_str << std::endl;
+        ge::AscendString warning_msg = ge::GEGetWarningMsgV2();
+        std::string warning_str(warning_msg.GetString());
+        std::cout << "Warning message: " << warning_str << std::endl;
         printf("%s - INFO - [XIR]: Add graph failed\n", GetTime().c_str());
         delete session;
         ge::GEFinalize();
@@ -306,12 +311,6 @@ void ProcessOutputData(std::vector<ge::Tensor>& output) {
 }
 
 int FinalizeRes() {
-    ge::AscendString error_msg = ge::GEGetErrorMsgV2();
-    std::string error_str(error_msg.GetString());
-    std::cout << "Error message: " << error_str << std::endl;
-    ge::AscendString warning_msg = ge::GEGetWarningMsgV2();
-    std::string warning_str(warning_msg.GetString());
-    std::cout << "Warning message: " << warning_str << std::endl;
     printf("%s - INFO - [XIR]: Precision is ok\n", GetTime().c_str());
     printf("%s - INFO - [XIR]: Start to finalize ir graph session\n", GetTime().c_str());
     Status ret = ge::GEFinalize();
