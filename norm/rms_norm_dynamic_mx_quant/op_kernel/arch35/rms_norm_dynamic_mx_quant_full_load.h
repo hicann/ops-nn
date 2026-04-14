@@ -171,7 +171,7 @@ public:
         copyParams.blockCount = curM;
         copyParams.blockLen = tilingData_->numN * sizeof(T_X);
         copyParams.srcStride = 0;
-        copyParams.dstStride = 0;
+        copyParams.dstStride = (tilingData_->nMxblockAligned - tilingData_->numN) * sizeof(T_X) / UB_BLOCK_SIZE;
 
         LocalTensor<T_X> xLocal = xInQueue_.AllocTensor<T_X>();
         DataCopyPad(xLocal, xGm_[offset], copyParams, padParams);
@@ -199,18 +199,10 @@ public:
         }
 
         LocalTensor<T_X> yLocal = normOutBuffer_.Get<T_X>();
-        if (tilingData_->needPadN) {
-            if (tilingData_->hasInputBeta) {
-                ComputeYWithPad<true>(xLocal, gammaLocal_, betaLocal_, rstdLocal, yLocal, curM);
-            } else {
-                ComputeYWithPad<false>(xLocal, gammaLocal_, betaLocal_, rstdLocal, yLocal, curM);
-            }
+        if (tilingData_->hasInputBeta) {
+            ComputeY<true>(xLocal, gammaLocal_, betaLocal_, rstdLocal, yLocal, curM);
         } else {
-            if (tilingData_->hasInputBeta) {
-                ComputeY<true>(xLocal, gammaLocal_, betaLocal_, rstdLocal, yLocal, curM);
-            } else {
-                ComputeY<false>(xLocal, gammaLocal_, betaLocal_, rstdLocal, yLocal, curM);
-            }
+            ComputeY<false>(xLocal, gammaLocal_, betaLocal_, rstdLocal, yLocal, curM);
         }
 
 #if (__NPU_ARCH__ == 3510)
@@ -237,20 +229,20 @@ public:
         __local_mem__ float* xTmpLocalUbAddr = (__local_mem__ float*)xTmpLocal.GetPhyAddr();
         __local_mem__ float* xReduceTmpLocalUbAddr = (__local_mem__ float*)xReduceTmpLocal.GetPhyAddr();
 
-        if (tilingData_->numNUbAligned <= VL_FP32) {
+        if (tilingData_->numN <= VL_FP32) {
             CalculateSquareReduceSumRLessThanVL(
-                xLocalAddr, xReduceTmpLocalUbAddr, curUbFactor, tilingData_->numN, tilingData_->numNUbAligned);
-        } else if (tilingData_->numNUbAligned <= (VL_FP32 + VL_FP32)) {
+                xLocalAddr, xReduceTmpLocalUbAddr, curUbFactor, tilingData_->numN, tilingData_->nMxblockAligned);
+        } else if (tilingData_->numN <= (VL_FP32 + VL_FP32)) {
             CalculateSquareReduceSumRLessThanTwoVL(
-                xLocalAddr, xReduceTmpLocalUbAddr, curUbFactor, tilingData_->numN, tilingData_->numNUbAligned);
-        } else if (tilingData_->numNUbAligned <= VL_FP32 * VL_FP32 * NUM_TWO) {
+                xLocalAddr, xReduceTmpLocalUbAddr, curUbFactor, tilingData_->numN, tilingData_->nMxblockAligned);
+        } else if (tilingData_->numN <= VL_FP32 * VL_FP32 * NUM_TWO) {
             CalculateSquareReduceSumRCommon<NUM_ONE>(
                 xLocalAddr, xTmpLocalUbAddr, xReduceTmpLocalUbAddr, curUbFactor, tilingData_->numN,
-                tilingData_->numNUbAligned, tilingData_->binAddFoldPoint);
+                tilingData_->nMxblockAligned, tilingData_->binAddFoldPoint);
         } else {
             CalculateSquareReduceSumRCommon<NUM_TWO>(
                 xLocalAddr, xTmpLocalUbAddr, xReduceTmpLocalUbAddr, curUbFactor, tilingData_->numN,
-                tilingData_->numNUbAligned, tilingData_->binAddFoldPoint);
+                tilingData_->nMxblockAligned, tilingData_->binAddFoldPoint);
         }
     }
 
@@ -422,123 +414,72 @@ public:
 
         __local_mem__ float* rstdLocalUbAddr = (__local_mem__ float*)rstdLocal.GetPhyAddr();
         __local_mem__ T_X* yLocalUbAddr = (__local_mem__ T_X*)yLocal.GetPhyAddr();
-        uint32_t vl_fp32 = VL_FP32;
         uint32_t nNum = static_cast<uint32_t>(tilingData_->numN);
         uint16_t mloops = static_cast<uint16_t>(curM);
         uint16_t nloops = static_cast<uint16_t>(ops::CeilDiv(nNum, VL_FP32));
-        uint32_t xInputStride = static_cast<uint32_t>(tilingData_->numN);
-        __VEC_SCOPE__
-        {
-            RegTensor<float> xReg;
-            RegTensor<float> RstdReg;
-            RegTensor<float> gammaReg;
-            RegTensor<float> betaReg;
-            RegTensor<float> yReg;
-            MaskReg pregMask;
-            for (uint16_t i = 0; i < mloops; i++) {
-                uint32_t sreg = nNum;
-                DataCopy<float, LoadDist::DIST_BRC_B32>(RstdReg, rstdLocalUbAddr + i);
-                for (uint16_t j = 0; j < nloops; j++) {
-                    pregMask = UpdateMask<float>(sreg);
-                    uint32_t gammaElemOffset = j * vl_fp32;
-                    uint32_t xElemOffset = i * xInputStride + gammaElemOffset;
-                    LoadTensorForDtypeT<T_X>(xLocalAddr, xReg, pregMask, xElemOffset);
+        uint32_t xInputStride = static_cast<uint32_t>(tilingData_->nMxblockAligned);
+        if (nloops == 1) {
+            __VEC_SCOPE__
+            {
+                RegTensor<float> xReg;
+                RegTensor<float> RstdReg;
+                RegTensor<float> gammaReg;
+                RegTensor<float> betaReg;
+                RegTensor<float> yReg;
 
+                uint32_t sreg = nNum;
+                MaskReg pregMask = UpdateMask<float>(sreg);
+                AscendC::MicroAPI::MaskReg pregFull =
+                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                for (uint16_t i = 0; i < mloops; i++) {
+                    DataCopy<float, LoadDist::DIST_BRC_B32>(RstdReg, rstdLocalUbAddr + i);
+                    uint32_t xElemOffset = i * xInputStride;
+                    LoadTensorForDtypeT<T_X>(xLocalAddr, xReg, pregMask, xElemOffset);
                     Mul(yReg, xReg, RstdReg, pregMask);
-                    LoadTensorForDtypeT<T_GAMMA>(gammaLocalUbAddr, gammaReg, pregMask, gammaElemOffset);
-                    Mul(yReg, yReg, gammaReg, pregMask);
+                    LoadTensorForDtypeT<T_GAMMA>(gammaLocalUbAddr, gammaReg, pregMask, 0);
+                    // 有效数据后面补0到64对齐
+                    Mul<float, MaskMergeMode::ZEROING>(yReg, yReg, gammaReg, pregMask);
                     if constexpr (hasInputBeta) {
-                        LoadTensorForDtypeT<T_GAMMA>(betaLocalUbAddr, betaReg, pregMask, gammaElemOffset);
-                        Add(yReg, yReg, betaReg, pregMask);
+                        LoadTensorForDtypeT<T_GAMMA>(betaLocalUbAddr, betaReg, pregMask, 0);
+                        Add<float, MaskMergeMode::ZEROING>(yReg, yReg, betaReg, pregMask);
                     }
 
-                    StoreTensorForDtypeT(yLocalUbAddr, yReg, pregMask, xElemOffset);
+                    StoreTensorForDtypeT(yLocalUbAddr, yReg, pregFull, xElemOffset);
                 }
             }
-        }
-    }
 
-    template <bool hasInputBeta = false>
-    __aicore__ inline void ComputeYWithPad(
-        LocalTensor<T_X> xLocal, LocalTensor<T_GAMMA> gammaLocal, LocalTensor<T_GAMMA> betaLocal,
-        LocalTensor<float> rstdLocal, LocalTensor<T_X> yLocal, int64_t curM)
-    {
-        __local_mem__ T_X* xLocalAddr = (__local_mem__ T_X*)xLocal.GetPhyAddr();
-        __local_mem__ T_GAMMA* gammaLocalUbAddr = (__local_mem__ T_GAMMA*)gammaLocal.GetPhyAddr();
-        __local_mem__ T_GAMMA* betaLocalUbAddr;
-        if constexpr (hasInputBeta) {
-            betaLocalUbAddr = (__local_mem__ T_GAMMA*)betaLocal.GetPhyAddr();
-        }
+        } else {
+            __VEC_SCOPE__
+            {
+                RegTensor<float> xReg;
+                RegTensor<float> RstdReg;
+                RegTensor<float> gammaReg;
+                RegTensor<float> betaReg;
+                RegTensor<float> yReg;
+                MaskReg pregMask;
+                AscendC::MicroAPI::MaskReg pregFull =
+                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                for (uint16_t i = 0; i < mloops; i++) {
+                    uint32_t sreg = nNum;
+                    DataCopy<float, LoadDist::DIST_BRC_B32>(RstdReg, rstdLocalUbAddr + i);
+                    for (uint16_t j = 0; j < nloops; j++) {
+                        pregMask = UpdateMask<float>(sreg);
+                        uint32_t gammaElemOffset = j * VL_FP32;
+                        uint32_t xElemOffset = i * xInputStride + gammaElemOffset;
+                        LoadTensorForDtypeT<T_X>(xLocalAddr, xReg, pregMask, xElemOffset);
 
-        __local_mem__ float* rstdLocalUbAddr = (__local_mem__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ T_X* yLocalUbAddr = (__local_mem__ T_X*)yLocal.GetPhyAddr();
-        uint32_t vl_fp32 = static_cast<uint16_t>(VL_FP32);
-        uint32_t nNum = static_cast<uint32_t>(tilingData_->numN);
-        uint16_t mloops = static_cast<uint16_t>(curM);
-        uint16_t nloops = static_cast<uint16_t>(nNum / VL_FP32);
-        uint32_t nTail = nNum - nloops * VL_FP32;
-        uint32_t padNum = tilingData_->nMxblockAligned - tilingData_->numN;
-        uint32_t lastLoopN = nTail + padNum;
-        uint32_t xInputStride = static_cast<uint32_t>(tilingData_->numNUbAligned);
-        uint32_t yOutputStride = static_cast<uint32_t>(tilingData_->nMxblockAligned);
-        __VEC_SCOPE__
-        {
-            RegTensor<float> xReg;
-            RegTensor<float> RstdReg;
-            RegTensor<float> gammaReg;
-            RegTensor<float> betaReg;
-            RegTensor<float> yReg;
+                        Mul(yReg, xReg, RstdReg, pregMask);
+                        LoadTensorForDtypeT<T_GAMMA>(gammaLocalUbAddr, gammaReg, pregMask, gammaElemOffset);
+                        // 有效数据后面补0到64对齐
+                        Mul<float, MaskMergeMode::ZEROING>(yReg, yReg, gammaReg, pregMask);
+                        if constexpr (hasInputBeta) {
+                            LoadTensorForDtypeT<T_GAMMA>(betaLocalUbAddr, betaReg, pregMask, gammaElemOffset);
+                            Add<float, MaskMergeMode::ZEROING>(yReg, yReg, betaReg, pregMask);
+                        }
 
-            MaskReg pregMask;
-
-            RegTensor<float> xRegLast;
-            RegTensor<float> gammaRegLast;
-            RegTensor<float> betaRegLast;
-            RegTensor<float> yRegLast;
-            RegTensor<float> zeroReg;
-            MaskReg pregLastLoopMask;
-            MaskReg pregTailMask;
-            for (uint16_t i = 0; i < mloops; i++) {
-                uint32_t sreg = nNum;
-                uint32_t sregTail = nTail;
-                uint32_t sregLastLoop = lastLoopN;
-                DataCopy<float, LoadDist::DIST_BRC_B32>(RstdReg, rstdLocalUbAddr + i);
-                for (uint16_t j = 0; j < nloops; j++) {
-                    pregMask = UpdateMask<float>(sreg);
-                    uint32_t gammaElemOffset = j * vl_fp32;
-                    uint32_t xElemOffset = i * xInputStride + gammaElemOffset;
-                    uint32_t yElemOffset = i * yOutputStride + gammaElemOffset;
-                    LoadTensorForDtypeT<T_X>(xLocalAddr, xReg, pregMask, xElemOffset);
-
-                    Mul(yReg, xReg, RstdReg, pregMask);
-                    LoadTensorForDtypeT<T_GAMMA>(gammaLocalUbAddr, gammaReg, pregMask, gammaElemOffset);
-                    Mul(yReg, yReg, gammaReg, pregMask);
-                    if constexpr (hasInputBeta) {
-                        LoadTensorForDtypeT<T_GAMMA>(betaLocalUbAddr, betaReg, pregMask, gammaElemOffset);
-                        Add(yReg, yReg, betaReg, pregMask);
+                        StoreTensorForDtypeT(yLocalUbAddr, yReg, pregFull, xElemOffset);
                     }
-
-                    StoreTensorForDtypeT(yLocalUbAddr, yReg, pregMask, yElemOffset);
                 }
-
-                // last loop
-                pregLastLoopMask = UpdateMask<float>(sregLastLoop);
-                pregTailMask = UpdateMask<float>(sregTail);
-
-                uint32_t gammaLastOffset = nloops * vl_fp32;
-                uint32_t xLastOffset = i * xInputStride + gammaLastOffset;
-                uint32_t yLastOffset = i * yOutputStride + gammaLastOffset;
-                LoadTensorForDtypeT<T_X>(xLocalAddr, xRegLast, pregTailMask, xLastOffset);
-                Mul(yRegLast, xRegLast, RstdReg, pregTailMask);
-                LoadTensorForDtypeT<T_GAMMA>(gammaLocalUbAddr, gammaRegLast, pregTailMask, gammaLastOffset);
-                // 补pad 0
-                Mul<float, MaskMergeMode::ZEROING>(yRegLast, yRegLast, gammaRegLast, pregTailMask);
-                if constexpr (hasInputBeta) {
-                    LoadTensorForDtypeT<T_GAMMA>(betaLocalUbAddr, betaRegLast, pregTailMask, gammaLastOffset);
-                    Add<float, MaskMergeMode::ZEROING>(yRegLast, yRegLast, betaRegLast, pregTailMask);
-                }
-
-                StoreTensorForDtypeT(yLocalUbAddr, yRegLast, pregLastLoopMask, yLastOffset);
             }
         }
     }

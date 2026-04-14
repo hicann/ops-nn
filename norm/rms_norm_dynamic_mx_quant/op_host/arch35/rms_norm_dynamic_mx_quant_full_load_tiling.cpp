@@ -84,7 +84,6 @@ ge::graphStatus RmsNormDynamicMxQuantFullLoadTiling::DoOpTiling()
     tilingData_.set_mTailCores(mTailCores);
     tilingData_.set_numM(numM_);
     tilingData_.set_numN(numN_);
-    tilingData_.set_numNUbAligned(numNUbAligned);
     tilingData_.set_mPerCore(mPerCore);
     tilingData_.set_mUbFactor(mUbFactor);
     tilingData_.set_binAddFoldPoint(binAddFoldPoint);

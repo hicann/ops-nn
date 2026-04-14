@@ -94,7 +94,6 @@ TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);
 TILING_DATA_FIELD_DEF(int64_t, mTailCores);
 TILING_DATA_FIELD_DEF(int64_t, numM);
 TILING_DATA_FIELD_DEF(int64_t, numN);
-TILING_DATA_FIELD_DEF(int64_t, numNUbAligned);
 TILING_DATA_FIELD_DEF(int64_t, binAddFoldPoint);
 TILING_DATA_FIELD_DEF(int64_t, mPerCore);
 TILING_DATA_FIELD_DEF(int64_t, mUbFactor);
