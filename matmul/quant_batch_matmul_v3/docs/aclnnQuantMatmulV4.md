@@ -55,16 +55,28 @@
       $$
 
   - <term>Atlas 推理系列产品</term>：
-    - 无bias：
+    - 无pertokenScaleOptional、无bias：
 
       $$
       out = x1@x2 * scale + offset
       $$
 
-    - bias INT32：
+    - 无pertokenScaleOptional、bias INT32：
 
       $$
       out = (x1@x2 + bias) * scale + offset
+      $$
+    
+    - 有pertokenScaleOptional、无bias
+
+      $$
+      out = x1@x2 * scale * pertokenScaleOptional
+      $$
+
+    - 有pertokenScaleOptional、bias INT32
+
+      $$
+      out = (x1@x2 + bias) * scale * pertokenScaleOptional
       $$
 
 ## 函数原型
@@ -283,11 +295,10 @@ aclnnStatus aclnnQuantMatmulV4(
   - <term>Atlas 推理系列产品</term>：
     - x1与x2的最后一维大小不能超过65535（x1的最后一维指transposeX1为true时的m或transposeX1为false时的k，x2的最后一维指transposeX2为true时的k或transposeX2为false时的n）。
     - x1数据类型支持INT8。
-    - x2数据类型支持INT8，为NZ格式时，不支持transposeX2为false的场景。
+    - x2数据类型支持INT8，为NZ格式时，不支持transposeX2为false的场景。当pertokenScaleOptional不为空tensor时，必须调用aclnnTransMatmulWeight对format为ND的x2处理得到AI处理器亲和数据排布格式。
     - bias数据类型支持INT32。
-    - scale数据类型支持UINT64、INT64。
-    - 不支持pertokenScaleOptional。
-    - out数据类型支持FLOAT16、INT8。
+    - 当pertokenScaleOptional不为空tensor时，scale的数据类型支持FLOAT32；当pertokenScaleOptional为空tensor时，scale数据类型支持UINT64、INT64。
+    - out数据类型支持FLOAT16、INT8，当pertokenScaleOptional不为空tensor时，out数据类型只支持FLOAT16。
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - x1与x2的最后一维大小不能超过65535。
