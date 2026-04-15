@@ -11,6 +11,9 @@
 
 set -e
 
+declare -A SOC_TO_ARCH
+SOC_TO_ARCH=(["ascend910_93"]="2201" ["ascend910b"]="2201" ["ascend950"]="3510")
+
 COMPILED_OPS=""
 THREAD_NUM=8
 SOC_VERSION=""
@@ -83,9 +86,17 @@ echo "THREAD_NUM: $THREAD_NUM"
 export PE_BUILD_JOBS=${THREAD_NUM}
 
 if [ -n "$SOC_VERSION" ]; then
+  if [ -z "${SOC_TO_ARCH[$SOC_VERSION]+x}" ]; then
+    echo "Warning: soc '$SOC_VERSION' is not supported. Only support: ascend910b, ascend910_93, ascend950."
+    exit 0
+  fi
   echo "NPU_ARCH: $SOC_VERSION"
-  export NPU_ARCH=${SOC_VERSION}
+else
+  SOC_VERSION="ascend910b"
 fi
+PE_COMPILE_ARGS="--npu-arch=dav-${SOC_TO_ARCH[${SOC_VERSION}]}"
+export NPU_ARCH=${SOC_VERSION}
+export PE_COMPILE_ARGS=${PE_COMPILE_ARGS}
 
 echo "=== Copy scripts files to torch_extension ==="
 rm -rf "$SCRIPT_DIR"
@@ -101,7 +112,7 @@ if [ -n "$COMPILED_OPS" ]; then
   found=false
   for op in ${COMPILED_OPS//;/ }; do
     if [[ ";$VALID_OPS;" != *";$op;"* ]]; then
-      echo "Warning: '$op' is not exists, please check."
+      echo "Warning: '$op' is not PyTorch extension op, please check."
       continue
     fi
     for category_dir in "$EXPERIMENTAL_DIR"/*/; do

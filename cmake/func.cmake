@@ -1066,16 +1066,16 @@ function(add_version_info_targets)
 endfunction()
 
 # PyTorch extension
-# usage: add_sources("--npu-arch=dav-3510")
-# usage: add_sources("--npu-arch=dav-3510" "file1.cpp;file2.cpp;file3.cpp")
-macro(add_sources ARGS)
+# usage: add_sources()
+# usage: add_sources("file1.cpp;file2.cpp;file3.cpp")
+# 通过环境变量PE_COMPILE_ARGS获取编译参数
+macro(add_sources)
     # 解析参数
-    set(COMPILE_ARGS "${ARGS}")  # 第一个参数为编译参数
-    set(CUSTOM_SOURCES "")       # 第二个参数为自定义源文件列表（可选）
+    set(CUSTOM_SOURCES "")  # 第一个参数为自定义源文件列表（可选）
     
-    # 检查是否有第二个参数
-    if(${ARGC} GREATER 1)
-        set(CUSTOM_SOURCES "${ARGV1}")
+    # 检查是否有第一个参数
+    if(${ARGC} GREATER 0)
+        set(CUSTOM_SOURCES "${ARGV0}")
     endif()
 
     message(STATUS "CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
@@ -1083,6 +1083,15 @@ macro(add_sources ARGS)
     # get parent dir name as OP_NAME
     get_filename_component(OP_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
     message(STATUS "OP_NAME: ${OP_NAME}")
+
+    # 从环境变量PE_COMPILE_ARGS获取编译参数
+    if(DEFINED ENV{PE_COMPILE_ARGS})
+        set(COMPILE_ARGS $ENV{PE_COMPILE_ARGS})
+        message(STATUS "PE_COMPILE_ARGS from environment: ${COMPILE_ARGS}")
+    else()
+        set(COMPILE_ARGS "--npu-arch=dav-2201")
+        message(STATUS "PE_COMPILE_ARGS environment variable not set, use default: dav-2201")
+    endif()
 
     # get compile flags for current op
     set(COMPILE_FLAGS "${COMPILE_ARGS} -xasc ")

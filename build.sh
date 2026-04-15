@@ -621,6 +621,7 @@ checkopts() {
   VERBOSE=""
   BUILD_MODE=""
   COMPILED_OPS=""
+  PE_OPS=""
   UT_TEST_ALL=FALSE
   CHANGED_FILES=""
   CI_MODE=FALSE
@@ -1214,12 +1215,7 @@ build_pkg() {
   print_success "Build package success!"
 }
 
-parse_op_dependencies() {
-  echo $dotted_line
-  echo "Start to parse op dependencies for ${COMPILED_OPS}"
-
-  cd "${BUILD_PATH}"
-  PE_OPS=""
+find_pytorch_extension_ops() {
   for category_dir in "${BASE_PATH}/experimental"/*/; do
     for op_dir in "$category_dir"*/; do
       if [ -n "$op_dir/CMakeLists.txt" ]; then
@@ -1235,6 +1231,12 @@ parse_op_dependencies() {
       fi
     done
   done
+}
+
+parse_op_dependencies() {
+  echo $dotted_line
+  echo "Start to parse op dependencies for ${COMPILED_OPS}"
+  cd "${BUILD_PATH}"
   python3 ${BASE_PATH}/scripts/util/dependency_parser.py --ops ${COMPILED_OPS} -p ${BUILD_PATH} --peo ${PE_OPS}
   echo "End to parse op dependencies"
   echo $dotted_line
@@ -1561,6 +1563,26 @@ package_static() {
     fi
 }
 
+build_pytorch_extension() {
+  if [[ -z "$PE_OPS" ]]; then
+    return 0
+  fi
+  ENABLE_BUILD_PE=FALSE
+  if [[ -n "$COMPILED_OPS" ]]; then
+    for op in ${COMPILED_OPS//;/ }; do
+      if [[ "$PE_OPS;" == *",$op;"* ]]; then
+        ENABLE_BUILD_PE=TRUE
+        break
+      fi
+    done
+  else
+    ENABLE_BUILD_PE=TRUE
+  fi
+  if [[ "$ENABLE_BUILD_PE" == "TRUE" ]]; then
+    bash "${BASE_PATH}/scripts/torch_extension/build_experimental.sh" --ops=$COMPILED_OPS -j$THREAD_NUM --soc=$COMPUTE_UNIT
+  fi
+}
+
 
 main() {
   checkopts "$@"
@@ -1581,6 +1603,7 @@ main() {
     exit $?
   fi
   cmake_init
+  find_pytorch_extension_ops
 
   if [[ "$CI_MODE" == "TRUE" ]]; then
     set_ci_mode
@@ -1611,7 +1634,7 @@ main() {
       package_static
     fi
     if [[ "$ENABLE_TORCH_EXTENSION" == "TRUE" ]]; then
-      bash "${BASE_PATH}/scripts/torch_extension/build_experimental.sh" --ops=$COMPILED_OPS -j$THREAD_NUM --soc=$COMPUTE_UNIT
+      build_pytorch_extension
     fi
   fi
 }

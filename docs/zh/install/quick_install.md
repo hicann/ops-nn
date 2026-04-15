@@ -85,7 +85,7 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
 
 #### 前置依赖
 
-请先确保编译环境的基础库依赖已安装，注意满足版本号要求。
+请先确保编译环境的基础库依赖已安装，注意满足版本号要求。若您想体验使用Ascend C和PyTorch Extension能力开发自定义NPU算子，请参考[指南](../develop/torch_extension_develop_guide.md)。
 
 - python >= 3.7.0（建议版本 <= 3.10）
 - gcc >= 7.3.0

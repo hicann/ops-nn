@@ -17,12 +17,46 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+if(UNIX)
+  set(SYSTEM_PREFIX ${CMAKE_SYSTEM_PROCESSOR}-linux)
+endif()
+
+set(CMAKE_MODULE_PATH
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/modules
+  ${CMAKE_MODULE_PATH}
+)
+
 include(../../cmake/third_party/nlohmann_json.cmake)
-include(../../cmake/torch_extension/ascend.cmake)
+include(../../cmake/third_party/opbase.cmake)
+include(../../cmake/dependencies.cmake)
 include(../../cmake/torch_extension/python.cmake)
 include(../../cmake/torch_extension/torch.cmake)
 include(../../cmake/torch_extension/torch_npu.cmake)
 include(../../cmake/func.cmake)
+
+message(STATUS "Using Ascend toolkit path: ${ASCEND_DIR}")
+set(CMAKE_PREFIX_PATH ${ASCEND_DIR}/)
+set(BISHENG "${ASCEND_DIR}/${SYSTEM_PREFIX}/ccec_compiler/bin/bisheng" CACHE FILEPATH "Path to Bisheng compiler")
+message(STATUS "Bisheng compiler path: ${BISHENG}")
+
+# set the default compiler and linker to bisheng
+set(CMAKE_C_COMPILER ${BISHENG})
+set(CMAKE_CXX_COMPILER ${BISHENG})
+set(CMAKE_LINKER ${BISHENG})
+
+# set ASCEND_INCLUDE_DIRS
+set(ASCEND_INCLUDE_DIRS
+    ${ASCEND_DIR}/include
+    ${ASCEND_DIR}/compiler/tikcpp/include
+    ${ASCEND_DIR}/compiler/ascendc/include/basic_api/impl
+    ${ASCEND_DIR}/compiler/ascendc/include/basic_api/interface
+    ${ASCEND_DIR}/compiler/ascendc/include/highlevel_api/impl
+    ${ASCEND_DIR}/compiler/ascendc/include/highlevel_api/tiling
+    ${ASCEND_DIR}/compiler/ascendc/impl/aicore/basic_api
+    ${ASCEND_DIR}/pkg_inc/op_common
+    ${ASCEND_DIR}/pkg_inc/base
+    ${ASCEND_DIR}/pkg_inc
+)
 
 # set NPU architecture, default to ascend910b
 if(DEFINED ENV{NPU_ARCH})
