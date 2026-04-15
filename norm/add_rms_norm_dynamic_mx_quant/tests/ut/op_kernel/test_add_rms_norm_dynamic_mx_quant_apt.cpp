@@ -103,3 +103,174 @@ TEST_F(add_rms_norm_dynamic_mx_quant_test, test_case_r_full_load_fp8_tilingkey10
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
 }
+
+// empty_tensor, tilingKey(3000), numA=176, numR=0, putput_rstd=true
+TEST_F(add_rms_norm_dynamic_mx_quant_test, test_case_m_not0_n_0_outputRstd_true)
+{
+    int64_t numA = 176;
+    int64_t numR = 0;
+    int64_t nAxblockNumAlignedTwo = 0;
+    size_t xByteSize = numA * numR * sizeof(DTYPE_X1);
+    size_t gammaByteSize = numR * sizeof(DTYPE_GAMMA);
+    size_t yByteSize = numA * numR * sizeof(DTYPE_Y);
+    size_t mxscaleByteSize = numA * nAxblockNumAlignedTwo * sizeof(DTYPE_Y);
+    size_t rstdByteSize = numA * sizeof(float);
+
+    size_t tiling_data_size = sizeof(AddRmsNormDynamicMxQuantReduceEmptyTilingData);
+    uint32_t blockDim = 1;
+
+    uint8_t* x1 = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* x2 = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* mxscale = (uint8_t*)AscendC::GmAlloc(mxscaleByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    AddRmsNormDynamicMxQuantReduceEmptyTilingData* tilingDatafromBin =
+        reinterpret_cast<AddRmsNormDynamicMxQuantReduceEmptyTilingData*>(tiling);
+
+    tilingDatafromBin->perCoreElements = 176;
+    tilingDatafromBin->lastCoreElements = 176;
+    tilingDatafromBin->perCoreLoops = 1;
+    tilingDatafromBin->perCorePerLoopElements = 176;
+    tilingDatafromBin->perCoreLastLoopElements = 176;
+    tilingDatafromBin->lastCoreLoops = 1;
+    tilingDatafromBin->lastCorePerLoopElements = 176;
+    tilingDatafromBin->lastCoreLastLoopElements = 176;
+    tilingDatafromBin->rstdFlag = 1;
+    tilingDatafromBin->numRow = 176;
+
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_SET_TILING_KEY(300);
+    ICPU_RUN_KF(
+        add_rms_norm_dynamic_mx_quant, blockDim, x1, x2, gamma, beta, y, x, mxscale, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(x1);
+    AscendC::GmFree(x2);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(beta);
+    AscendC::GmFree(y);
+    AscendC::GmFree(x);
+    AscendC::GmFree(mxscale);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+
+// empty_tensor, tilingKey(3000), numM=0, numN=100, putput_rstd=true
+TEST_F(add_rms_norm_dynamic_mx_quant_test, test_case_m_0_n_not_0_outputRstd_true)
+{
+    int64_t numA = 0;
+    int64_t numR = 100;
+    int64_t nAxblockNumAlignedTwo = 4;
+    size_t xByteSize = numA * numR * sizeof(DTYPE_X1);
+    size_t gammaByteSize = numR * sizeof(DTYPE_GAMMA);
+    size_t yByteSize = numA * numR * sizeof(DTYPE_Y);
+    size_t mxscaleByteSize = numA * nAxblockNumAlignedTwo * sizeof(DTYPE_Y);
+    size_t rstdByteSize = numA * sizeof(float);
+
+    size_t tiling_data_size = sizeof(AddRmsNormDynamicMxQuantReduceEmptyTilingData);
+    uint32_t blockDim = 1;
+
+    uint8_t* x1 = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* x2 = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* mxscale = (uint8_t*)AscendC::GmAlloc(mxscaleByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    AddRmsNormDynamicMxQuantReduceEmptyTilingData* tilingDatafromBin =
+        reinterpret_cast<AddRmsNormDynamicMxQuantReduceEmptyTilingData*>(tiling);
+
+    tilingDatafromBin->perCoreElements = 0;
+    tilingDatafromBin->lastCoreElements = 0;
+    tilingDatafromBin->perCoreLoops = 0;
+    tilingDatafromBin->perCorePerLoopElements = 0;
+    tilingDatafromBin->perCoreLastLoopElements = 0;
+    tilingDatafromBin->lastCoreLoops = 0;
+    tilingDatafromBin->lastCorePerLoopElements = 0;
+    tilingDatafromBin->lastCoreLastLoopElements = 0;
+    tilingDatafromBin->rstdFlag = 1;
+    tilingDatafromBin->numRow = 0;
+
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_SET_TILING_KEY(300);
+    ICPU_RUN_KF(
+        add_rms_norm_dynamic_mx_quant, blockDim, x1, x2, gamma, beta, y, x, mxscale, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(x1);
+    AscendC::GmFree(x2);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(beta);
+    AscendC::GmFree(y);
+    AscendC::GmFree(x);
+    AscendC::GmFree(mxscale);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+
+// empty_tensor, tilingKey(3000), numM=0, numN=0, putput_rstd=true
+TEST_F(add_rms_norm_dynamic_mx_quant_test, test_case_m_0_n_0_outputRstd_true)
+{
+    int64_t numA = 0;
+    int64_t numR = 0;
+    int64_t nAxblockNumAlignedTwo = 0;
+    size_t xByteSize = numA * numR * sizeof(DTYPE_X1);
+    size_t gammaByteSize = numR * sizeof(DTYPE_GAMMA);
+    size_t yByteSize = numA * numR * sizeof(DTYPE_Y);
+    size_t mxscaleByteSize = numA * nAxblockNumAlignedTwo * sizeof(DTYPE_Y);
+    size_t rstdByteSize = numA * sizeof(float);
+
+    size_t tiling_data_size = sizeof(AddRmsNormDynamicMxQuantReduceEmptyTilingData);
+    uint32_t blockDim = 1;
+
+    uint8_t* x1 = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* x2 = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* mxscale = (uint8_t*)AscendC::GmAlloc(mxscaleByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    AddRmsNormDynamicMxQuantReduceEmptyTilingData* tilingDatafromBin =
+        reinterpret_cast<AddRmsNormDynamicMxQuantReduceEmptyTilingData*>(tiling);
+
+    tilingDatafromBin->perCoreElements = 0;
+    tilingDatafromBin->lastCoreElements = 0;
+    tilingDatafromBin->perCoreLoops = 0;
+    tilingDatafromBin->perCorePerLoopElements = 0;
+    tilingDatafromBin->perCoreLastLoopElements = 0;
+    tilingDatafromBin->lastCoreLoops = 0;
+    tilingDatafromBin->lastCorePerLoopElements = 0;
+    tilingDatafromBin->lastCoreLastLoopElements = 0;
+    tilingDatafromBin->rstdFlag = 1;
+    tilingDatafromBin->numRow = 0;
+
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_SET_TILING_KEY(300);
+    ICPU_RUN_KF(
+        add_rms_norm_dynamic_mx_quant, blockDim, x1, x2, gamma, beta, y, x, mxscale, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(x1);
+    AscendC::GmFree(x2);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(beta);
+    AscendC::GmFree(y);
+    AscendC::GmFree(x);
+    AscendC::GmFree(mxscale);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}

@@ -119,3 +119,93 @@ TEST_F(AddRmsNormDynamicMxQuantTest, AddRmsNormDynamicMxQuant_infer_dtype)
         EXPECT_EQ(context->GetOutputDataType(3), rstd_ref);
     }
 }
+
+TEST_F(AddRmsNormDynamicMxQuantTest, AddRmsNormDynamicMxQuant_infer_shape_m_not0_n_0_true)
+{
+    ge::op::AddRmsNormDynamicMxQuant op;
+    op.UpdateInputDesc("x1", create_desc({176, 0}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("x2", create_desc({176, 0}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({0}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("beta", create_desc({0}, ge::DT_FLOAT16));
+
+    op.SetAttr("epsilon", static_cast<float>(1e-6));
+    op.SetAttr("scale_alg", 0);
+    op.SetAttr("round_mode", "rint");
+    op.SetAttr("dst_type", 40);
+    op.SetAttr("output_rstd", true);
+    Runtime2TestParam param{{"epsilon", "scale_alg", "round_mode", "dst_type", "output_rstd"},{},{}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+
+    auto output_y_desc = op.GetOutputDesc(0);
+    auto output_x_desc = op.GetOutputDesc(1);
+    auto output_mxscale_desc = op.GetOutputDesc(2);
+    auto output_rstd_desc = op.GetOutputDesc(3);
+    std::vector<int64_t> expected_y_shape = {176, 0};
+    std::vector<int64_t> expected_mxscale_shape = {176, 0, 2};
+    std::vector<int64_t> expected_rstd_shape = {176, 1};
+    EXPECT_EQ(output_y_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_x_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_mxscale_desc.GetShape().GetDims(), expected_mxscale_shape);
+    EXPECT_EQ(output_mxscale_desc.GetShape().GetDims(), expected_mxscale_shape);
+    EXPECT_EQ(output_rstd_desc.GetShape().GetDims(), expected_rstd_shape);
+}
+
+TEST_F(AddRmsNormDynamicMxQuantTest, AddRmsNormDynamicMxQuant_infer_shape_m_0_n_not0_true)
+{
+    ge::op::AddRmsNormDynamicMxQuant op;
+    op.UpdateInputDesc("x1", create_desc({0, 100}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("x2", create_desc({0, 100}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({100}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("beta", create_desc({100}, ge::DT_FLOAT16));
+
+    op.SetAttr("epsilon", static_cast<float>(1e-6));
+    op.SetAttr("scale_alg", 0);
+    op.SetAttr("round_mode", "rint");
+    op.SetAttr("dst_type", 40);
+    op.SetAttr("output_rstd", true);
+    Runtime2TestParam param{{"epsilon", "scale_alg", "round_mode", "dst_type", "output_rstd"},{},{}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+
+    auto output_y_desc = op.GetOutputDesc(0);
+    auto output_x_desc = op.GetOutputDesc(1);
+    auto output_mxscale_desc = op.GetOutputDesc(2);
+    auto output_rstd_desc = op.GetOutputDesc(3);
+    std::vector<int64_t> expected_y_shape = {0, 100};
+    std::vector<int64_t> expected_mxscale_shape = {0, 2, 2};
+    std::vector<int64_t> expected_rstd_shape = {0, 1};
+    EXPECT_EQ(output_y_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_x_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_mxscale_desc.GetShape().GetDims(), expected_mxscale_shape);
+    EXPECT_EQ(output_mxscale_desc.GetShape().GetDims(), expected_mxscale_shape);
+    EXPECT_EQ(output_rstd_desc.GetShape().GetDims(), expected_rstd_shape);
+}
+
+TEST_F(AddRmsNormDynamicMxQuantTest, AddRmsNormDynamicMxQuant_infer_m_0_n_0_true)
+{
+    ge::op::AddRmsNormDynamicMxQuant op;
+    op.UpdateInputDesc("x1", create_desc({0, 0}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("x2", create_desc({0, 0}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({0}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("beta", create_desc({0}, ge::DT_FLOAT16));
+
+    op.SetAttr("epsilon", static_cast<float>(1e-6));
+    op.SetAttr("scale_alg", 0);
+    op.SetAttr("round_mode", "rint");
+    op.SetAttr("dst_type", 40);
+    op.SetAttr("output_rstd", true);
+    Runtime2TestParam param{{"epsilon", "scale_alg", "round_mode", "dst_type", "output_rstd"},{},{}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+
+    auto output_y_desc = op.GetOutputDesc(0);
+    auto output_x_desc = op.GetOutputDesc(1);
+    auto output_mxscale_desc = op.GetOutputDesc(2);
+    auto output_rstd_desc = op.GetOutputDesc(3);
+    std::vector<int64_t> expected_y_shape = {0, 0};
+    std::vector<int64_t> expected_mxscale_shape = {0, 0, 2};
+    std::vector<int64_t> expected_rstd_shape = {0, 1};
+    EXPECT_EQ(output_y_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_x_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_mxscale_desc.GetShape().GetDims(), expected_mxscale_shape);
+    EXPECT_EQ(output_mxscale_desc.GetShape().GetDims(), expected_mxscale_shape);
+    EXPECT_EQ(output_rstd_desc.GetShape().GetDims(), expected_rstd_shape);
+}

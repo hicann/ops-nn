@@ -401,10 +401,6 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::SetInputParams()
     numRow_ = numRow;
     numCol_ = numCol;
 
-    OP_CHECK_IF((numRow_ == 0 || numCol_ == 0), // 任意维度的0校验掉
-        OP_LOGE(context_->GetNodeName(), "Input shape not support zero dim value in any axis, please check."),
-        return ge::GRAPH_FAILED);
-
     // R-axis alignment
     numColAlign_ = Ops::Base::CeilAlign(numCol_, COL_ALIGN_NUM);
 

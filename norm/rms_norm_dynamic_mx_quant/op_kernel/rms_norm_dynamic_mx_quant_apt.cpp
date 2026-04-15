@@ -14,10 +14,12 @@
  */
 
 #include "arch35/rms_norm_dynamic_mx_quant_full_load.h"
+#include "arch35/rms_norm_dynamic_mx_quant_reduce_empty.h"
 
 using namespace AscendC;
 using namespace RmsNormDynamicMxQuantNs;
 
+#define TILING_KEY_REDUCE_EMPTY 3000
 #define TILING_KEY_FULL_LOAD_GENERAL 1000
 #define TILING_KEY_FULL_LOAD_OPTIMIZE 10000
 
@@ -26,13 +28,18 @@ using namespace RmsNormDynamicMxQuantNs;
 extern "C" __global__ __aicore__ void rms_norm_dynamic_mx_quant(
     GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
 {
-    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
 
 #if (__NPU_ARCH__ == 3510)
     int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
 #endif
 
-    if (TILING_KEY_IS(TILING_KEY_FULL_LOAD_GENERAL)) {
+    if (TILING_KEY_IS(TILING_KEY_REDUCE_EMPTY)) {
+        GET_TILING_DATA_WITH_STRUCT(RmsNormDynamicMxQuantReduceEmptyTilingData, tilingDataIn, tiling);
+        RmsNormDynamicMxQuantReduceEmpty op(&tilingDataIn);
+        op.Init(rstd);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_FULL_LOAD_GENERAL)) {
         GET_TILING_DATA_WITH_STRUCT(RmsNormDynamicMxQuantFullLoadTilingData, tilingDataIn, tiling);
         const RmsNormDynamicMxQuantFullLoadTilingData* __restrict tilingData = &tilingDataIn;
         TPipe pipe;

@@ -43,6 +43,19 @@ struct RmsNormDynamicMxQuantFullLoadTilingData {
     float epsilon;
     float avgFactor;
 };
+
+struct RmsNormDynamicMxQuantReduceEmptyTilingData {
+    uint64_t perCoreElements;
+    uint64_t lastCoreElements;
+    uint64_t perCoreLoops;
+    uint64_t perCorePerLoopElements;
+    uint64_t perCoreLastLoopElements;
+    uint64_t lastCoreLoops;
+    uint64_t lastCorePerLoopElements;
+    uint64_t lastCoreLastLoopElements;
+    uint64_t hasOutputRstd;
+    uint64_t numM;
+};
 #pragma pack()
 
 template <typename T>

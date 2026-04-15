@@ -67,6 +67,7 @@ constexpr uint64_t ALIGN_FACTOR_512 = 512;
 constexpr uint64_t COL_ALIGN_NUM = 64;
 constexpr uint32_t UB_RESERVE_FOR_RSTD_ALIGN = 1024;
 constexpr uint32_t UB_RESERVE_FOR_OUTPUT_Y_ALIGN = 1536;
+constexpr uint64_t ARND_REDUCE_EMPTY_PRIORITY = 500;
 constexpr uint64_t ARND_R_FULL_LOAD_PRIORITY = 1000;
 constexpr uint64_t FULL_LOAD_R_MAX = 16384;
 
@@ -202,6 +203,26 @@ protected:
     uint64_t dstStrideUbBlocks_{0};
 private:
     AddRmsNormDynamicMxQuantTilingData tilingData;
+};
+
+class AddRmsNormDynamicMxQuantReduceEmptyTiling : public AddRmsNormDynamicMxQuantRegbaseTilingBase {
+public:
+    explicit AddRmsNormDynamicMxQuantReduceEmptyTiling(gert::TilingContext* context)
+        : AddRmsNormDynamicMxQuantRegbaseTilingBase(context)
+    {}
+    ~AddRmsNormDynamicMxQuantReduceEmptyTiling() override = default;
+    void Reset(gert::TilingContext* context) override
+    {
+        AddRmsNormDynamicMxQuantRegbaseTilingBase::Reset(context);
+    }
+protected:
+    bool IsCapable() override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus DoLibApiTiling() override;
+    ge::graphStatus PostTiling() override;
+    uint64_t GetTilingKey() const override;
+private:
+    AddRmsNormDynamicMxQuantReduceEmptyTilingData td_;
 };
 
 } // namespace optiling

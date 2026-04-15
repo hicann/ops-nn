@@ -22,7 +22,7 @@ struct AddRmsNormDynamicMxQuantTilingData {
     uint64_t blockFactor;       // rows per core
     uint64_t rowFactor;         // rows per UB iteration
     uint64_t binAddQuotient;    // binary add quotient point
-    float epsilon;             
+    float epsilon;
     float avgFactor;            // 1.0 / R
     uint64_t roundMode;          // rounding mode (0=round, 1=floor, 4=rint)
     uint64_t mxBlockSize;        // MX block size (32)
@@ -32,6 +32,19 @@ struct AddRmsNormDynamicMxQuantTilingData {
     uint64_t mxScaleSize;        // mxscale output size per row
     uint32_t betaFlag;          // whether beta input exists
     uint32_t rstdFlag;          // whether rstd output is needed
+};
+
+struct AddRmsNormDynamicMxQuantReduceEmptyTilingData {
+    uint64_t perCoreElements;          // elements per core (non-last core)
+    uint64_t lastCoreElements;         // elements for last core
+    uint64_t perCoreLoops;             // loops per core (non-last core)
+    uint64_t perCorePerLoopElements;   // elements per loop (non-last core, non-last loop)
+    uint64_t perCoreLastLoopElements;  // elements for last loop (non-last core)
+    uint64_t lastCoreLoops;            // loops for last core
+    uint64_t lastCorePerLoopElements;  // elements per loop (last core, non-last loop)
+    uint64_t lastCoreLastLoopElements; // elements for last loop (last core)
+    uint32_t rstdFlag;                 // whether rstd output is needed
+    uint64_t numRow;
 };
 
 #endif

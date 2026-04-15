@@ -129,7 +129,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
       <td>x1（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的x1。</td>
-      <td><ul><li>不支持空Tensor。</li><li>具体约束详见约束说明。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>具体约束详见约束说明。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-7</td>
@@ -139,7 +139,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
       <td>x2（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的x2。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape和数据类型需要与x1保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape和数据类型需要与x1保持一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-7</td>
@@ -149,7 +149,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
       <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的权重张量。对应公式中的gamma。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape只能为一维，需要与x1最后一维维度匹配。</li><li>数据类型默认与输入x1一致；若不一致，则显示设为FLOAT32。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape只能为一维，需要与x1最后一维维度匹配。</li><li>数据类型默认与输入x1一致；若不一致，则显示设为FLOAT32。</li></ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>1</td>
@@ -159,7 +159,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
       <td>beta（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的偏置项。对应公式中的beta。</td>
-      <td><ul><li>不支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>如果提供，shape和数据类型需要与gamma保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>如果提供，shape和数据类型需要与gamma保持一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>1</td>
@@ -219,7 +219,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
       <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示归一化并量化后的结果，对应公式中的Pi和di。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape需要与输入x1一致。</li><li>数据类型需要与dstType保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape需要与输入x1一致。</li><li>数据类型需要与dstType保持一致。</li></ul></td>
       <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
       <td>1-7</td>
@@ -229,7 +229,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
       <td>xOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示x1和x2的和，对应公式中的x。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape和数据类型需要与输入x1一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape和数据类型需要与输入x1一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-7</td>
@@ -239,7 +239,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
       <td>mxscaleOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示每个分组对应的量化尺度，对应公式中的mxscale和Sb。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape在尾轴上为x对应值除以blocksize=32向上取整，并对其进行偶数pad，pad填充值为0。</li><li>其余维度与入参x1的shape前几维保持一致，前几维指x1的维度减去gamma的维度，表示不需要norm的维度。</li><li>具体计算过程见约束说明。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape在尾轴上为x对应值除以blocksize=32向上取整，并对其进行偶数pad，pad填充值为0。</li><li>其余维度与入参x1的shape前几维保持一致，前几维指x1的维度减去gamma的维度，表示不需要norm的维度。</li><li>具体计算过程见约束说明。</li></ul></td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>2-8</td>
@@ -249,7 +249,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
       <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示归一化后的标准差的倒数。对应公式中Rms(x)的倒数。</td>
-      <td><ul><li>不支持空Tensor。</li><li>当outputRstd为True时，shape与入参x1的shape前几维保持一致，前几维指x1的维度减去gamma的维度，表示不需要norm的维度。</li><li>当outputRstd为False时，rstdOut为无效输出。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当outputRstd为True时，shape与入参x1的shape前几维保持一致，前几维指x1的维度减去gamma的维度，表示不需要norm的维度。</li><li>当outputRstd为False时，rstdOut为无效输出。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-7</td>

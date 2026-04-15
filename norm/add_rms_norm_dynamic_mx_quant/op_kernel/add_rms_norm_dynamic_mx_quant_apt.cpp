@@ -14,6 +14,7 @@
  */
 #include "arch35/add_rms_norm_dynamic_mx_quant_fp8_r_full_load.h"
 #include "arch35/add_rms_norm_dynamic_mx_quant_fp4_r_full_load.h"
+#include "arch35/add_rms_norm_dynamic_mx_quant_reduce_empty.h"
 #include "arch35/add_rms_norm_dynamic_mx_quant_tiling_data.h"
 
 using namespace AscendC;
@@ -21,6 +22,7 @@ using namespace AddRmsNormDynamicMxQuant;
 
 #define TILING_KEY_FP8_R_FULL_LOAD 100
 #define TILING_KEY_FP4_R_FULL_LOAD 101
+#define TILING_KEY_REDUCE_EMPTY 300
 
 extern "C" __global__ __aicore__ void add_rms_norm_dynamic_mx_quant(
     GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta,
@@ -33,13 +35,19 @@ extern "C" __global__ __aicore__ void add_rms_norm_dynamic_mx_quant(
     
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(AddRmsNormDynamicMxQuantTilingData);
+    REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 300", AddRmsNormDynamicMxQuantReduceEmptyTilingData);
     TPipe pipe;
 
 #if (__NPU_ARCH__ == 3510)
     int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
 #endif
 
-    if (TILING_KEY_IS(TILING_KEY_FP8_R_FULL_LOAD)) {
+    if (TILING_KEY_IS(TILING_KEY_REDUCE_EMPTY)) {
+        GET_TILING_DATA_WITH_STRUCT(AddRmsNormDynamicMxQuantReduceEmptyTilingData, tilingDataIn, tiling);
+        AddRmsNormDynamicMxQuantReduceEmpty op(&tilingDataIn);
+        op.Init(rstd);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_FP8_R_FULL_LOAD)) {
         GET_TILING_DATA_WITH_STRUCT(AddRmsNormDynamicMxQuantTilingData, tilingDataIn, tiling);
         AddRmsNormDynamicMxQuantFP8RFullLoad<DTYPE_X1, DTYPE_GAMMA, DTYPE_Y> op(&pipe);
         op.Init(x1, x2, gamma, beta, y, x, mxscale, mxscale, rstd, &tilingDataIn);

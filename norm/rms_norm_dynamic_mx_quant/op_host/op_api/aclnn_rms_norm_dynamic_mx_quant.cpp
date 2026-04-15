@@ -112,6 +112,18 @@ aclnnStatus aclnnRmsNormDynamicMxQuantGetWorkspaceSize(
     // 检查必选输入/输出是否为空指针
     CHECK_RET(CheckNotNull(x, gamma, yOut, mxscaleOut, outputRstd, rstdOut), ACLNN_ERR_PARAM_NULLPTR);
 
+    // 校验x除尾轴外的维度不能为0
+    auto xShape = x->GetViewShape();
+    auto gammaDimNum = gamma->GetViewShape().GetDimNum();
+    for (int64_t i = 0; i < static_cast<int64_t>(xShape.GetDimNum() - gammaDimNum); ++i) {
+        if (xShape.GetDim(i) == 0) {
+            OP_LOGW("Got empty tensor in aclnnRmsNormDynamicMxQuant!");
+            *workspaceSize = 0;
+            uniqueExecutor.ReleaseTo(executor);
+            return ACLNN_SUCCESS;
+        }
+    }
+
     // 固定写法，将输入转换成连续的tensor，可选输入不做判空校验
     auto xCont = l0op::Contiguous(x, uniqueExecutor.get());
     auto gammaCont = l0op::Contiguous(gamma, uniqueExecutor.get());

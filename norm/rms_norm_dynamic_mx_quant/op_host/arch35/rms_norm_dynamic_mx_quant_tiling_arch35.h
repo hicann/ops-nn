@@ -72,9 +72,11 @@ constexpr int64_t ROUND_MODE_DEFAULT = static_cast<int64_t>(RoundModeList::MODE_
 constexpr int64_t DST_TYPE_DEFAULT = 40; // DT_FLOAT4_E2M1
 
 // ============== Priority ==============
+constexpr int32_t TEMPLATE_REDUCE_EMPTY_PRIORITY = 50;
 constexpr int32_t TEMPLATE_FULL_LOAD_GENERAL_PRIORITY = 100;
 
 // ============== TilingKey ==============
+constexpr int64_t TILINGKEY_REDUCE_EMPTY = 3000;
 constexpr int64_t TILINGKEY_FULL_LOAD_GENERAL = 1000;
 constexpr int64_t TILING_KEY_FULL_LOAD_OPTIMIZE = 10000;
 
@@ -109,8 +111,23 @@ TILING_DATA_FIELD_DEF(float, epsilon);
 TILING_DATA_FIELD_DEF(float, avgFactor);
 END_TILING_DATA_DEF;
 
+// ============== ReduceEmpty TilingData ==============
+BEGIN_TILING_DATA_DEF(RmsNormDynamicMxQuantReduceEmptyTilingData)
+TILING_DATA_FIELD_DEF(uint64_t, perCoreElements);
+TILING_DATA_FIELD_DEF(uint64_t, lastCoreElements);
+TILING_DATA_FIELD_DEF(uint64_t, perCoreLoops);
+TILING_DATA_FIELD_DEF(uint64_t, perCorePerLoopElements);
+TILING_DATA_FIELD_DEF(uint64_t, perCoreLastLoopElements);
+TILING_DATA_FIELD_DEF(uint64_t, lastCoreLoops);
+TILING_DATA_FIELD_DEF(uint64_t, lastCorePerLoopElements);
+TILING_DATA_FIELD_DEF(uint64_t, lastCoreLastLoopElements);
+TILING_DATA_FIELD_DEF(uint64_t, hasOutputRstd);
+TILING_DATA_FIELD_DEF(uint64_t, numM);
+END_TILING_DATA_DEF;
+
 // ============== Register TilingData ==============
 REGISTER_TILING_DATA_CLASS(RmsNormDynamicMxQuant, RmsNormDynamicMxQuantFullLoadTilingData);
+REGISTER_TILING_DATA_CLASS(RmsNormDynamicMxQuant_3000, RmsNormDynamicMxQuantReduceEmptyTilingData);
 
 // ============== CompileInfo ==============
 struct RmsNormDynamicMxQuantCompileInfo {
@@ -230,6 +247,31 @@ protected:
 
 private:
     RmsNormDynamicMxQuantFullLoadTilingData tilingData_;
+};
+
+// ============== ReduceEmpty Template ==============
+class RmsNormDynamicMxQuantReduceEmptyTiling : virtual public RmsNormDynamicMxQuantTilingBase {
+public:
+    explicit RmsNormDynamicMxQuantReduceEmptyTiling(gert::TilingContext* context)
+        : TilingBaseClass(context), RmsNormDynamicMxQuantTilingBase(context)
+    {}
+    ~RmsNormDynamicMxQuantReduceEmptyTiling() override = default;
+
+    void Reset(gert::TilingContext* context) override
+    {
+        RmsNormDynamicMxQuantTilingBase::Reset(context);
+    }
+
+protected:
+    bool IsCapable() override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus DoLibApiTiling() override;
+    uint64_t GetTilingKey() const override;
+    ge::graphStatus PostTiling() override;
+
+private:
+    RmsNormDynamicMxQuantReduceEmptyTilingData td_;
+    uint64_t usedCoreNum_{0};
 };
 
 // ============== Entry Functions ==============
