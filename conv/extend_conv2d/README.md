@@ -242,14 +242,14 @@
 <tr>
 <td>dtype0</td>
 <td>可选属性</td>
-<td>表示输出 y0 的数据类型。支持的列表包括 [-1(默认)，0(FLOAT)，1(FLOAT16)，2(INT8)，27(BFOAT16)， 34(HIFLOAT8), 36(FLOAT8_E4M3FN)]。</td>
+<td>表示输出 y0 的数据类型。支持的列表包括 [-1(默认)，0(FLOAT)，1(FLOAT16)，2(INT8)，27(BFLOAT16)， 34(HIFLOAT8), 36(FLOAT8_E4M3FN)]。</td>
 <td>BOOL</td>
 <td>-</td>
 </tr>
 <tr>
 <td>dtype1</td>
 <td>可选属性</td>
-<td>表示输出 y1 的数据类型。支持的列表包括 [-1(默认)，0(FLOAT)，1(FLOAT16)，2(INT8)，27(BFOAT16)， 34(HIFLOAT8), 36(FLOAT8_E4M3FN)]</td>
+<td>表示输出 y1 的数据类型。支持的列表包括 [-1(默认)，0(FLOAT)，1(FLOAT16)，2(INT8)，27(BFLOAT16)， 34(HIFLOAT8), 36(FLOAT8_E4M3FN)]</td>
 <td>BOOL</td>
 <td>-</td>
 </tr>

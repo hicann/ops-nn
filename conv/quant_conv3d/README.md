@@ -179,7 +179,7 @@
   - `x` 的数据类型必须与 `filter` 一致。`N` 维度大小应该大于等于 0。`D`、`H`、`W` 维度大小应该大于等于 0（等于 0 的场景仅在输出 `y` 的 `D`、`H`、`W` 维度也等于 0 时支持）。`C` 维度大小应该大于等于 0（等于 0 的场景仅在输出 `y` 的任意维度也等于 0 时支持）。
   - 对于 `filter` 输入，`H`、`W` 的大小应该在 [1, 511] 的范围内， `D`维度大小应该在[1, 100000]范围内。`N` 维度大小应该大于等于 0（等于 0 的场景仅在输入 `bias`、输出 `y` 的 `N` 维度也等于 0 时支持），`C` 维度大小的支持情况与输入 `x` 的 `C` 维度 / groups 大小一致。
   - `bias`和`scale`维度大小应该与`filter`的`N`维度大小一致。
-  - 支持的数据类型组合入下表：
+  - 支持的数据类型组合如下表：
 
   <table>
   <tr>
@@ -223,7 +223,7 @@
   </table>
 
 - `x`、`filter`、`bias`、`scale`、`y` 中每一组 `tensor` 的每一维大小都应不大于 1000000。
-- 当format为NCDHW时，stides传入的值为[1, 1, stride_d, stride_h, stride_w]；当format为NDHWC时，stides传入的值为[1, stride_d, stride_h, stride_w，1]；N C维度对应的stride必须是1
+- 当format为NCDHW时，strides传入的值为[1, 1, stride_d, stride_h, stride_w]；当format为NDHWC时，strides传入的值为[1, stride_d, stride_h, stride_w, 1]；N C维度对应的stride必须是1
 
 - `groups` ∈ [1, 65535]。
 - `offset_x` ∈ [-128, 127]。

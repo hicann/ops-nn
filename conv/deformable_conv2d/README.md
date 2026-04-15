@@ -165,14 +165,14 @@
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>表示计算的输出张量。对应公式中的`out`。数据类型、数据格式与`x保持一致。shape为[N, outH, outC, outW]。</td>
+      <td>表示计算的输出张量。对应公式中的`out`。数据类型、数据格式与`x`保持一致。shape为[N, outH, outC, outW]。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>deform_out</td>
       <td>输出</td>
-      <td>表示计算的输出张量。对应公式中的`out`。数据类型、数据格式与`x保持一致。shape为[N, outH * K_H, outW * K_W, inC]。</td>
+      <td>表示计算的输出张量。对应公式中的`out`。数据类型、数据格式与`x`保持一致。shape为[N, outH * K_H, outW * K_W, inC]。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
