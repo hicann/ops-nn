@@ -35,10 +35,12 @@ using namespace std;
 using namespace op;
 using namespace Ops::NN;
 
-static const std::initializer_list<op::DataType> x1_SUPPORT_LIST = {
-    DataType::DT_FLOAT8_E5M2, DataType::DT_FLOAT8_E4M3FN};
-static const std::initializer_list<op::DataType> x2_SUPPORT_LIST = {
-    DataType::DT_FLOAT8_E5M2, DataType::DT_FLOAT8_E4M3FN};
+static const std::initializer_list<op::DataType> x1_SUPPORT_LIST_FP8 = {DataType::DT_FLOAT8_E5M2,
+                                                                        DataType::DT_FLOAT8_E4M3FN};
+static const std::initializer_list<op::DataType> x2_SUPPORT_LIST_FP8 = {DataType::DT_FLOAT8_E5M2,
+                                                                        DataType::DT_FLOAT8_E4M3FN};
+static const std::initializer_list<op::DataType> x1_SUPPORT_LIST_MXFP8 = {DataType::DT_FLOAT8_E4M3FN};
+static const std::initializer_list<op::DataType> x2_SUPPORT_LIST_MXFP8 = {DataType::DT_FLOAT8_E4M3FN};
 static const std::initializer_list<op::DataType> x1_SCALE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT8_E8M0};
 static const std::initializer_list<op::DataType> x2_SCALE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT8_E8M0};
 static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16, DataType::DT_BF16};
@@ -75,8 +77,13 @@ inline static bool CheckDtypeValid(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale, const aclTensor* x2Scale, const aclTensor* out,
     int32_t dtype)
 {
-    OP_CHECK_DTYPE_NOT_SUPPORT(x1, x1_SUPPORT_LIST, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(x2, x2_SUPPORT_LIST, return false);
+    if (!IsMicroScaling(x1Scale, x2Scale)) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(x1, x1_SUPPORT_LIST_FP8, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(x2, x2_SUPPORT_LIST_FP8, return false);
+    } else {
+        OP_CHECK_DTYPE_NOT_SUPPORT(x1, x1_SUPPORT_LIST_MXFP8, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(x2, x2_SUPPORT_LIST_MXFP8, return false);
+    }
     OP_CHECK_DTYPE_NOT_SUPPORT(x1Scale, x1_SCALE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(x2Scale, x2_SCALE_SUPPORT_LIST, return false);
     // Only support FP16 and BF16
@@ -89,47 +96,80 @@ inline static bool CheckDtypeValid(
     return true;
 }
 
+
+inline static bool CheckScalex1Valid(const aclTensor* x1Scale, int64_t batch, int64_t m,
+                                    int64_t numGroup, bool isMxFp)
+{
+    OP_LOGD("X1Scale %s", op::ToString(x1Scale->GetViewShape()).GetString());
+    auto dimTensorScale = x1Scale->GetViewShape().GetDimNum();
+    if (isMxFp) {
+        if (dimTensorScale != EXPECTED_MX_SCALE_DIM) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "MXFp8 Dim of x1Scale must be 4, which is %d", dimTensorScale);
+            return false;
+        }
+        if (x1Scale->GetViewShape().GetDim(0) != m || x1Scale->GetViewShape().GetDim(1) != batch ||
+            x1Scale->GetViewShape().GetDim(NUM_TWO) != numGroup ||
+            x1Scale->GetViewShape().GetDim(NUM_THREE) != NUM_TWO) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "The x1scale shape must be [%ld, %d, %ld, 2], which are [%ld, %ld, %d ,%d]", m, batch, numGroup,
+                    x1Scale->GetViewShape().GetDim(0), x1Scale->GetViewShape().GetDim(1),
+                    x1Scale->GetViewShape().GetDim(NUM_TWO), x1Scale->GetViewShape().GetDim(NUM_THREE));
+            return false;
+        }
+    } else {
+        if (dimTensorScale != EXPECTED_SCALE_DIM || x1Scale->GetViewShape().GetDim(0) != m) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim of x1Scale != 1 or x1Scale dim 0 != M");
+            return false;
+        }
+    }
+    return true;
+}
+
+inline static bool CheckScalex2Valid(const aclTensor* x2Scale, int64_t batch, int64_t n, int64_t numGroup,
+                                     const aclIntArray* permX2, bool isMxFp)
+{
+    OP_LOGD("X2Scale %s", op::ToString(x2Scale->GetViewShape()).GetString());
+    auto dimTensorScale = x2Scale->GetViewShape().GetDimNum();
+    if (isMxFp) {
+        int64_t scaleN = x2Scale->GetViewShape().GetDim((*permX2)[NUM_TWO]);
+        int64_t scaleGroupNum = x2Scale->GetViewShape().GetDim((*permX2)[1]);
+        if (dimTensorScale != EXPECTED_MX_SCALE_DIM) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "MXFp8 Dim of x2Scale must be 4, which is %d", dimTensorScale);
+            return false;
+        }
+        std::vector<int64_t> dims = {batch, numGroup, n, NUM_TWO};
+        if (x2Scale->GetViewShape().GetDim(0) != batch || scaleN != n || scaleGroupNum != numGroup ||
+            x2Scale->GetViewShape().GetDim(NUM_THREE) != NUM_TWO) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "The x2scale shape must be [%ld, %d, %ld, 2], which are [%ld, %ld, %d ,%d]", batch,
+                    dims[(*permX2)[1]], dims[(*permX2)[NUM_TWO]], x2Scale->GetViewShape().GetDim(0),
+                    x2Scale->GetViewShape().GetDim(1), x2Scale->GetViewShape().GetDim(NUM_TWO),
+                    x2Scale->GetViewShape().GetDim(NUM_THREE));
+            return false;
+        }
+    } else {
+        int64_t scaleDim0 = x2Scale->GetViewShape().GetDim(0);
+        if (dimTensorScale != EXPECTED_SCALE_DIM || scaleDim0 != n) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim of x2Scale != 1 or x2Scale dim 0 != N");
+            return false;
+        }
+    }
+    return true;
+}
+
 inline static bool CheckScaleValid(const aclTensor* x1Scale, const aclTensor* x2Scale, int64_t batch, int64_t m,
                                    int64_t n, int64_t k, const aclIntArray* permX2, bool isMxFp)
 {
     int64_t numGroup = MathUtil::CeilDivision(MathUtil::CeilDivision(k, SUPPORTED_GROUP_SIZE), NUM_TWO);
     // 对x1Scale的维度和shape信息进行校验
-    if (x1Scale != nullptr) {
-        OP_LOGD("X1Scale %s", op::ToString(x1Scale->GetViewShape()).GetString());
-        auto dimTensorScale = x1Scale->GetViewShape().GetDimNum();
-        if (isMxFp) {
-            if (dimTensorScale != EXPECTED_MX_SCALE_DIM || x1Scale->GetViewShape().GetDim(0) != m ||
-                x1Scale->GetViewShape().GetDim(1) != batch || x1Scale->GetViewShape().GetDim(NUM_TWO) != numGroup ||
-                x1Scale->GetViewShape().GetDim(NUM_THREE) != NUM_TWO) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "MXFp8 Dim of x1ScaleDim != 4 or The x1scale shape invaild");
-                return false;
-            }
-        } else {
-            if (dimTensorScale != EXPECTED_SCALE_DIM || x1Scale->GetViewShape().GetDim(0) != m) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim of x1Scale != 1 or x1Scale dim 0 != M");
-                return false;
-            }
-        }
+    if (x1Scale != nullptr && !CheckScalex1Valid(x1Scale, batch, m, numGroup, isMxFp)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1Scale is invalid");
+        return false;
     }
     // 对x2Scale的维度和shape信息进行校验
-    if (x2Scale != nullptr) {
-        OP_LOGD("X2Scale %s", op::ToString(x2Scale->GetViewShape()).GetString());
-        auto dimTensorScale = x2Scale->GetViewShape().GetDimNum();
-        if (isMxFp) {
-            int64_t scaleN = x2Scale->GetViewShape().GetDim((*permX2)[NUM_TWO]);
-            int64_t scaleGroupNum = x2Scale->GetViewShape().GetDim((*permX2)[1]);
-            if (dimTensorScale != EXPECTED_MX_SCALE_DIM || x2Scale->GetViewShape().GetDim(0) != batch || scaleN != n ||
-                scaleGroupNum != numGroup || x2Scale->GetViewShape().GetDim(NUM_THREE) != NUM_TWO) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "MXFp8 Dim of x2ScaleDim != 4 or The x2scale shape invaild");
-                return false;
-            }
-        } else {
-            int64_t scaleDim0 = x2Scale->GetViewShape().GetDim(0);
-            if (dimTensorScale != EXPECTED_SCALE_DIM || scaleDim0 != n) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim of x2Scale != 1 or x2Scale dim 0 != N");
-                return false;
-            }
-        }
+    if (x2Scale != nullptr && !CheckScalex2Valid(x2Scale, batch, n, numGroup, permX2, isMxFp)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x2Scale is invalid");
+        return false;
     }
     return true;
 }
@@ -148,67 +188,58 @@ static bool CheckPermValid(const aclIntArray* permX1, const aclIntArray* permX2,
     auto allowedPermX1 = ((*permX1)[0] == 1 && (*permX1)[1] == 0 && (*permX1)[2] == 2); // 1 0 2
     auto allowedPermX2 = ((*permX2)[0] == 0 && (*permX2)[1] == 1 && (*permX2)[2] == 2); // 0 1 2
     auto allowedPermY = ((*permY)[0] == 1 && (*permY)[1] == 0 && (*permY)[2] == 2);     // 1 0 2
-    string permX2ErrorInfo ="[0, 1, 2].";
+    std::string permX2ErrorInfo ="[0, 1, 2].";
     if (isMxFp) {
         allowedPermX2 = allowedPermX2 || ((*permX2)[0] == 0 && (*permX2)[1] == 2 && (*permX2)[2] == 1);
         permX2ErrorInfo = "[0, 1, 2] or [0, 2, 1].";
     } 
 
     if (!allowedPermX1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x1 for DAV_3510 should be [1, 0, 2].");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x1 should be [1, 0, 2].");
         return false;
     }
     if (!allowedPermX2) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x2 for DAV_3510 should be %s", permX2ErrorInfo);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x2 should be %s", permX2ErrorInfo.c_str());
         return false;
     }
     if (!allowedPermY) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of y for DAV_3510 should be [1, 0, 2].");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of y should be [1, 0, 2].");
         return false;
     }
     return true;
 }
 
-static bool CheckShapeValid(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale, const aclTensor* x2Scale,
-    const aclIntArray* permX1, const aclIntArray* permX2, bool isMxFp)
+static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale,
+                            const aclTensor* x2Scale, const aclIntArray* permX1, const aclIntArray* permX2, bool isMxFp)
 {
     op::Shape x1Shape = x1->GetViewShape();
     op::Shape x2Shape = x2->GetViewShape();
     int64_t x1KDim = x1->GetViewShape().GetDim((*permX1)[2]);
     int64_t x2KDim = x2->GetViewShape().GetDim((*permX2)[1]);
     int64_t batch = x1->GetViewShape().GetDim((*permX1)[0]);
-    int64_t M = x1->GetViewShape().GetDim((*permX1)[1]);
-    int64_t K = x2->GetViewShape().GetDim((*permX2)[1]);
-    int64_t N = x2->GetViewShape().GetDim((*permX2)[2]);
+    int64_t m = x1->GetViewShape().GetDim((*permX1)[1]);
+    int64_t n = x2->GetViewShape().GetDim((*permX2)[2]);
 
-    if ((x1Shape.GetDimNum() != EXPECTED_DIM) || (x2Shape.GetDimNum() != EXPECTED_DIM)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "The dims of the two inputs should be 3, now they are %s and %s",
-            op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
-        return false;
-    }
     if (x1KDim != x2KDim) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different %s, %s",
-            op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "The k-axis of the two inputs are different, now x1KDim are %ld, and x2KDim are %ld", x1KDim, x2KDim);
         return false;
     }
     if (!isMxFp) {
         // Check shape k n
-        if (K != TQBMM_VALID_K || N != TQBMM_VALID_N) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The shape of the x2 is not supported, now K are %ld, and N are %ld", K,
-                    N);
+        if (x1KDim != TQBMM_VALID_K || n != TQBMM_VALID_N) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The shape of the x2 is not supported, now K are %ld, and N are %ld",
+                    x1KDim, n);
             return false;
         }
     } else {
-        if (K % K_ALIGNMENT64 != 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "K must be a multiple of 64, now K are %ld", K);
+        if (x1KDim % K_ALIGNMENT64 != 0) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "K must be a multiple of 64, now K are %ld", x1KDim);
             return false;
         }
     }
 
-    return CheckScaleValid(x1Scale, x2Scale, batch, M, N, K, permX2, isMxFp);
+    return CheckScaleValid(x1Scale, x2Scale, batch, m, n, x1KDim, permX2, isMxFp);
 }
 
 static inline bool validGroupSize(uint64_t groupSizeM, uint64_t groupSizeN, uint64_t groupSizeK)
@@ -260,8 +291,15 @@ inline static aclnnStatus CheckParams(
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "X1Scale and x2Scale cannot not be nullptr currently."),
         return ACLNN_ERR_PARAM_INVALID);
 
+    op::Shape x1Shape = x1->GetViewShape();
+    op::Shape x2Shape = x2->GetViewShape();
+    if ((x1Shape.GetDimNum() != EXPECTED_DIM) || (x2Shape.GetDimNum() != EXPECTED_DIM)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dims of the two inputs should be 3, now they are %s and %s",
+                op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
+        return false;
+    }
     if (batch_split_factor != 1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Batch_split_factor[%d] should be 1 currently.", batch_split_factor);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Batch_split_factor should be 1 currently.", batch_split_factor);
         return ACLNN_ERR_PARAM_INVALID;
     }
     CHECK_RET(CheckDtypeValid(x1, x2, x1Scale, x2Scale, out, dtype), ACLNN_ERR_PARAM_INVALID);
