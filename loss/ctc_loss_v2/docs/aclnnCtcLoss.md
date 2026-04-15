@@ -197,7 +197,8 @@ aclnnStatus aclnnCtcLoss(
     </tbody></table>
 
   - logAlphaOut：
-     - <term>Ascend 950PR/Ascend 950DT</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：shape为($N, T, (2*max(targetLengths)+8)/8*8$)。
+     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：shape为($N, T, (2*max(targetLengths)+8)/8*8$)。
+     - <term>Ascend 950PR/Ascend 950DT</term>：shape为($N, T, (2*max(targetLengths)+1)$)。
      
 - **返回值：**
 
