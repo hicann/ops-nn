@@ -106,8 +106,6 @@
     </tr>
   </tbody></table>
 
-
-
 ## 约束说明
 
 无
@@ -118,4 +116,4 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_fake_quant_per_channel_affine_cachemask.cpp](examples/test_aclnn_fake_quant_per_channel_affine_cachemask.cpp) | 通过[aclnnFakeQuantPerChannelAffineCachemask](docs/aclnnFakeQuantPerChannelAffineCachemask.md)接口方式调用FakeQuantAffineCachemask算子。 |
 | aclnn接口  | [test_aclnn_fake_quant_per_tensor_affine_cachemask.cpp](examples/test_aclnn_fake_quant_per_tensor_affine_cachemask.cpp) | 通过[aclnnFakeQuantPerTensorAffineCachemask](docs/aclnnFakeQuantPerTensorAffineCachemask.md)接口方式调用FakeQuantAffineCachemask算子。 |
-| 图模式 | [test_geir_fake_quant_affine_cachemask.cpp](examples/test_geir_fake_quant_affine_cachemask.cpp)  | 通过[算子IR](op_graph/fake_quant_affine_cachemask_proto.h)构图方式调用FakeQuantAffineCachemask算子。         |
+| 图模式 | - | 通过[算子IR](op_graph/fake_quant_affine_cachemask_proto.h)构图方式调用FakeQuantAffineCachemask算子。         |

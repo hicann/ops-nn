@@ -114,4 +114,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_grouped_dynamic_mx_quant](./examples/test_aclnn_grouped_dynamic_mx_quant.cpp) | 通过[aclnnGroupedDynamicMxQuant](./docs/aclnnGroupedDynamicMxQuant.md)接口方式调用GroupedDynamicMxQuant算子。 |
+| aclnn调用 | [test_aclnn_grouped_dynamic_mx_quant](./examples/arch35/test_aclnn_grouped_dynamic_mx_quant.cpp) | 通过[aclnnGroupedDynamicMxQuant](./docs/aclnnGroupedDynamicMxQuant.md)接口方式调用GroupedDynamicMxQuant算子。 |
