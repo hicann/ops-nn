@@ -252,7 +252,7 @@ static __aicore__ inline void CalcLoadToA1Dn2NzParams(Intf *self, Dn2NzParams &d
                      DivCeil(woExpand, self->ctx.tiling_->strideW);
 
     if (resetWoExpand) {
-        woExpand = (woEnd - woStart - 1) * self->ctx.tiling_->strideW + 1;
+        woExpand = woEnd == woStart ? 1 : (woEnd - woStart - 1) * self->ctx.tiling_->strideW + 1;
     }
     CalcOutToA1DstAddr(self, strideH, curHoSize, loadToA1HLoop, out2A1DstAddrOffset, woExpand);
 
@@ -309,7 +309,7 @@ static __aicore__ inline void CalcLoadToA1Nd2NzParams(Intf *self, Nd2NzParams &n
     }
 
     if (resetWoExpand) {
-        woExpand = (woEnd - woStart - 1) * self->ctx.tiling_->strideW + 1;
+        woExpand = woEnd == woStart ? 1 : (woEnd - woStart - 1) * self->ctx.tiling_->strideW + 1;
     }
     CalcOutToA1DstAddr(self, strideH, curHoSize, loadToA1HLoop, out2A1DstAddrOffset, woExpand);
 
