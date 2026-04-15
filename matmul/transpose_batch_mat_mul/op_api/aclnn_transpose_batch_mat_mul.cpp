@@ -130,59 +130,54 @@ inline static bool CheckScaleValid(const aclTensor* scale, int64_t batchN)
 }
 
 namespace {
-static bool CheckDavidLimit(const aclIntArray* perm_x1, const aclIntArray* perm_x2)
+static bool CheckPermLimit(const aclIntArray* perm_x1, const aclIntArray* perm_x2, const aclIntArray* perm_y)
 {
     auto x1_need_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2) ||
                              ((*perm_x1)[0] == 0 && (*perm_x1)[1] == 1 && (*perm_x1)[2] == 2);
-    auto x2_need_transpose = ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 1 && (*perm_x2)[2] == 2) ||
-                             ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 2 && (*perm_x2)[2] == 1);
+    auto x2_need_transpose = ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 1 && (*perm_x2)[2] == 2);
+    auto y_need_transpose = ((*perm_y)[0] == 1 && (*perm_y)[1] == 0 && (*perm_y)[2] == 2);
+    std::string permX2ErrorInfo = "[0, 1, 2].";
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+        x2_need_transpose = x2_need_transpose || ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 2 && (*perm_x2)[2] == 1);
+        permX2ErrorInfo = "[0, 1, 2] or [0, 2, 1].";
+    }
     if (!x1_need_transpose) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x1 for npu arch 3510 should be [0,1,2] or [1,0,2].");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x1 should be [0,1,2] or [1, 0, 2].");
         return false;
     }
     if (!x2_need_transpose) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x2 for npu arch 3510 should be [0,1,2] or [0,2,1].");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x2 should be %s", permX2ErrorInfo.c_str());
+        return false;
+    }
+    if (!y_need_transpose) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of y should be [1, 0, 2].");
         return false;
     }
     return true;
 }
-}
+} // namespace
 
 static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale,
-                            const aclIntArray* perm_x1, const aclIntArray* perm_x2)
+                            const aclIntArray* perm_x1, const aclIntArray* perm_x2, const aclIntArray* perm_y)
 {
+    if (!CheckPermLimit(perm_x1, perm_x2, perm_y)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm is invalid.");
+        return false;
+    }
     op::Shape x1Shape = x1->GetViewShape();
     op::Shape x2Shape = x2->GetViewShape();
     int64_t x1KDim = x1->GetViewShape().GetDim((*perm_x1)[2]);
     int64_t x2KDim = x2->GetViewShape().GetDim((*perm_x2)[1]);
     int64_t batchNum = x2->GetViewShape().GetDim((*perm_x2)[0]);
-    int64_t K = x2->GetViewShape().GetDim((*perm_x2)[1]);
     int64_t N = x2->GetViewShape().GetDim((*perm_x2)[2]);
-
-    if ((x1Shape.GetDimNum() != EXPECTED_DIM) || (x2Shape.GetDimNum() != EXPECTED_DIM)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dims of the two inputs should be 3, now they are %s and %s",
-                op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
-        return false;
-    }
 
     if (x1KDim != x2KDim) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different %s, %s",
                 op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
         return false;
     }
-
-    auto x1_need_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2);
-    auto x2_need_transpose = ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 1 && (*perm_x2)[2] == 2);
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
-        if (!CheckDavidLimit(perm_x1, perm_x2)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "npu arch 3510 Limit.");
-            return false;
-        }
-    } else {
-        if (!x2_need_transpose) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "perm_x2 should be [0, 1, 2].");
-            return false;
-        }
+    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
+        auto x1_need_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2);
         if (x1_need_transpose && x1->GetViewShape().GetDim(1) * x1KDim >= SUPPORTED_INNER_AXIS) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch mul k should be less than 65536.");
             return false;
@@ -195,9 +190,9 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclT
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch and n should be less than 65536.");
             return false;
         }
-        if ((K % BLOCK_SIZE != 0) || (N % BLOCK_SIZE != 0)) {
+        if ((x2KDim % BLOCK_SIZE != 0) || (N % BLOCK_SIZE != 0)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                  "The shape of the x2 is not supported, now they are %ld, %ld and %ld", batchNum, K, N);
+                  "The shape of the x2 is not supported, now they are %ld, %ld and %ld", batchNum, x2KDim, N);
             return false;
         }
     }
@@ -234,6 +229,12 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, 
                                       int8_t cubeMathType, int32_t batch_split_factor)
 {
     CHECK_RET(CheckNotNull(x1, x2, out, perm_x1, perm_x2, perm_y), ACLNN_ERR_PARAM_NULLPTR);
+    // x1,x2必须为3维
+    if ((x1->GetViewShape().GetDimNum() != EXPECTED_DIM) || (x2->GetViewShape().GetDimNum() != EXPECTED_DIM)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dims of the two inputs should be 3, now they are %s and %s",
+                op::ToString(x1->GetViewShape()).GetString(), op::ToString(x2->GetViewShape()).GetString());
+        return false;
+    }
     // perm必须为3维
     if (perm_x1->Size() != EXPECTED_DIM || perm_x2->Size() != EXPECTED_DIM || perm_y->Size() != EXPECTED_DIM) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The perm parameter must be three-dimensional!");
@@ -249,6 +250,10 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, 
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batchSplitFactor should be 1 when the scale is not null.");
         return ACLNN_ERR_PARAM_INVALID;
     }
+
+    CHECK_RET(CheckDtypeValid(x1, x2, scale, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShapeValid(x1, x2, scale, perm_x1, perm_x2, perm_y), ACLNN_ERR_PARAM_INVALID);
+
     if (batch_split_factor <= 0) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch_split_factor[%d] should be greater than 0.",
             batch_split_factor);
@@ -260,9 +265,6 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, 
             batch_split_factor, x1->GetViewShape().GetDim((*perm_x1)[0]));
         return ACLNN_ERR_PARAM_INVALID;
     }
-
-    CHECK_RET(CheckDtypeValid(x1, x2, scale, out), ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(CheckShapeValid(x1, x2, scale, perm_x1, perm_x2), ACLNN_ERR_PARAM_INVALID);
     if (x2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
         CHECK_RET(CheckNzStorageShape(x2), ACLNN_ERR_PARAM_INVALID);
     }

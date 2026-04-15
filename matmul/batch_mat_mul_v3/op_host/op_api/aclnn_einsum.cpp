@@ -133,6 +133,8 @@ aclnnStatus HandleABCDxABCED2ABCE(const aclTensorList *tensors, aclTensor *outpu
 
     auto tensor0Contigous = l0op::Contiguous((*tensors)[0], uniqueExecutor.get());
     auto tensor1Contigous = l0op::Contiguous((*tensors)[1], uniqueExecutor.get());
+    CHECK_RET(tensor0Contigous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(tensor1Contigous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     const aclTensor *tensor0Cast = tensor0Contigous;
     const aclTensor *tensor1Cast = tensor1Contigous;
@@ -149,6 +151,7 @@ aclnnStatus HandleABCDxABCED2ABCE(const aclTensorList *tensors, aclTensor *outpu
       CHECK_RET(outputCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     auto expandA = l0op::UnsqueezeNd(tensor0Cast, DIM_FOUR, uniqueExecutor.get());
+    CHECK_RET(expandA != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto matmulOut = ExecBmmOp(tensor1Cast, expandA, outputCast, cubeMathType, uniqueExecutor.get());
     CHECK_RET(matmulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -212,12 +215,16 @@ static int FindEinsumFunc(const std::string &equ) {
 }
 
 // 校验空指针
-static bool CheckNotNull(const aclTensorList *tensors, aclTensor *output) {
+static bool CheckNotNull(const aclTensorList *tensors, aclTensor *output, const char *equation) {
     OP_CHECK_NULL(tensors, return false);
     for (uint64_t i = 0; i < tensors->Size(); i++) {
         OP_CHECK_NULL((*tensors)[i], return false);
     }
     OP_CHECK_NULL(output, return false);
+    if (equation == nullptr) {
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The equation cannot be nullptr");
+        return false;
+    }
     return true;
 }
 
@@ -271,9 +278,9 @@ static inline bool CheckTensorValid(const aclTensorList *tensors, const aclTenso
 }
 
 // 入参校验总入口
-static aclnnStatus CheckParams(const aclTensorList *tensors, aclTensor *output) {
+static aclnnStatus CheckParams(const aclTensorList *tensors, aclTensor *output, const char *equation) {
     // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(tensors, output), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNotNull(tensors, output, equation), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查数据类型
     CHECK_RET(CheckDtypeValid(tensors, output), ACLNN_ERR_PARAM_INVALID);
@@ -287,7 +294,7 @@ static aclnnStatus CheckParams(const aclTensorList *tensors, aclTensor *output) 
 aclnnStatus aclnnEinsumGetWorkspaceSize(const aclTensorList *tensors, const char *equation, aclTensor *output, uint64_t *workspaceSize, aclOpExecutor **executor) {
     L2_DFX_PHASE_1(aclnnEinsum, DFX_IN(tensors, equation), DFX_OUT(output));
 
-    auto ret = CheckParams(tensors, output);
+    auto ret = CheckParams(tensors, output, equation);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     std::string equ = equation;

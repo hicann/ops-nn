@@ -309,10 +309,13 @@ std::shared_ptr<MatmulGraphImpl> CreateBatchMatmulGraphImpl(
     std::shared_ptr<MatmulGraphImpl> matmulGraph = nullptr;
     // 空tensor
     if (CheckBmmResIsEmpty(self, mat2)) {
-        matmulGraph = std::make_shared<BatchmmEmptyTensorGraph>(self, mat2, nullptr, out, nullptr, nullptr, cubeMathType, executor);
+        matmulGraph = std::make_shared<BatchmmEmptyTensorGraph>(self, mat2, nullptr, out, nullptr, nullptr,
+                                                                cubeMathType, executor);
+    } else {
+        // 正常场景
+        matmulGraph = std::make_shared<BatchMatmulExecBmmOpGraph>(self, mat2, nullptr, out, nullptr, nullptr,
+                                                                  cubeMathType, executor);
     }
-    // 正常场景
-    matmulGraph = std::make_shared<BatchMatmulExecBmmOpGraph>(self, mat2, nullptr, out, nullptr, nullptr, cubeMathType, executor);
     return matmulGraph;
 }
 } // namespace
