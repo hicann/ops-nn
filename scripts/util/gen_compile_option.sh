@@ -98,6 +98,22 @@ write_scripts(
 "
 }
 
+function get_kernel_option_config_file() {
+  if [ $# -ne 2 ]; then
+    echo "error invalid param number:$#, must be 2" >&2
+    return 1
+  fi
+  local workdir="$1"
+  local soc_version_lower="$2"
+  local binary_config_dir=${topdir}/build/tbe/config
+
+  local primary_pattern="${binary_config_dir}/kernel-options-${soc_version_lower}.ini"
+  if [ -f "${primary_pattern}" ]; then
+    echo "${primary_pattern}"
+    return 0
+  fi
+}
+
 main() {
   echo "[INFO]excute file: $0 $*"
   local all_pairs=("$@")
@@ -123,8 +139,37 @@ main() {
 
     json_line=$(echo "$ascendc_op_conf" | tr -d '\n\r')
 
-    auto_sync=""
-    if [ -n "$json_line" ]; then
+    local kernel_config_file=$(get_kernel_option_config_file ${workdir} ${soc_version_lower})
+    local kernel_config_file_all=$(get_kernel_option_config_file ${workdir} "ALL")
+
+    local auto_sync=""
+    local compile_options=""
+    if [ -f "${kernel_config_file}" ]; then
+      auto_sync=$(awk -F "=" '/\['${op_type}'\]/{flag=1; next}/\[/{flag=0} flag && /auto_sync/{print $2; exit}' "$kernel_config_file")
+      compile_options=$(awk -F "=" '/\['${op_type}'\]/{flag=1; next}/\[/{flag=0} flag && /options/{print substr($0, length("options=") + 1); exit}' "$kernel_config_file")
+    fi
+    if [ -z "${auto_sync}" ] && [ -z "${compile_options}" ]; then
+      if [ -f "${kernel_config_file_all}" ]; then
+        auto_sync=$(awk -F "=" '/\['${op_type}'\]/{flag=1; next}/\[/{flag=0} flag && /auto_sync/{print $2; exit}' "$kernel_config_file_all")
+        compile_options=$(awk -F "=" '/\['${op_type}'\]/{flag=1; next}/\[/{flag=0} flag && /options/{print substr($0, length("options=") + 1); exit}' "$kernel_config_file_all")
+      fi
+    fi
+
+    if [ -n "${compile_options:-}" ]; then
+      IFS=',' read -ra options_array <<< "$compile_options"
+      array=""
+      for opt in "${options_array[@]}"; do
+        opt=$(echo "$opt" | xargs)
+        if [[ -n "$array" ]]; then
+          array="$array, \"$opt\""
+        else
+          array="\"$opt\""
+        fi
+      done
+      printf -v compile_options '{"%s": [%s]}' "${soc_version_lower}" "${array}"
+    fi
+
+    if [ -z "$auto_sync" ] && [ -n "$json_line" ]; then
       val_part=$(echo "$json_line" | sed -E 's/.*"auto_sync"[[:space:]]*:[[:space:]]*(\{[^}]*\}|true|false).*/\1/')
       if [ "$val_part" = "true" ] || [ "$val_part" = "false" ]; then
         auto_sync="$val_part"
@@ -148,14 +193,16 @@ main() {
       print str
     }')
 
-    compile_options=$(echo "$json_line" | awk '
-    match($0, /"compile_options"[[:space:]]*:[[:space:]]*(\{[^}]*\})/, arr) {
-      print arr[1]
-    }')
+    if [ -z "$compile_options" ]; then
+      compile_options=$(echo "$json_line" | awk '
+      match($0, /"compile_options"[[:space:]]*:[[:space:]]*(\{[^}]*\})/, arr) {
+        print arr[1]
+      }')
+    fi
 
     call_write_scripts "$op_type" "$soc_version_lower" "$auto_sync" "$compute_units" "$compile_options"
   done
   exit 0
 }
 set -o pipefail
-main "$@" | gawk '{print strftime("[%Y-%m-%d %H:%M:%S]"), $0}'
+main "$@"

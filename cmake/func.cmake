@@ -8,7 +8,7 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-# 为target link依赖库 useage: add_modules(MODE SUB_LIBS EXTERNAL_LIBS) SUB_LIBS 为内部创建的target, EXTERNAL_LIBS为外部依赖的target
+# 为target link依赖库 usage: add_modules(MODE SUB_LIBS EXTERNAL_LIBS) SUB_LIBS 为内部创建的target, EXTERNAL_LIBS为外部依赖的target
 function(add_modules)
   set(oneValueArgs MODE)
   set(multiValueArgs TARGETS SUB_LIBS EXTERNAL_LIBS)
@@ -353,7 +353,7 @@ macro(add_op_subdirectory)
   endforeach()
 endmacro()
 
-# useage: add_category_subdirectory 根据ASCEND_OP_NAME和ASCEND_COMPILE_OPS添加指定算子工程
+# usage: add_category_subdirectory 根据ASCEND_OP_NAME和ASCEND_COMPILE_OPS添加指定算子工程
 # ASCEND_OP_NAME 指定的算子 ASCEND_COMPILE_OPS  编译需要的算子
 macro(add_category_subdirectory)
   foreach(op_category ${OP_CATEGORY_LIST})
@@ -431,7 +431,7 @@ function(add_tiling_sources source_dir tiling_dir disable_in_opp)
   endif()
 endfunction()
 
-# useage: add_modules_sources(DIR OPTYPE ACLNNTYPE DEPENDENCIES COMPUTE_UNIT TILING_DIR DISABLE_IN_OPP) ACLNNTYPE 支持类型aclnn/aclnn_inner/aclnn_exclude OPTYPE 和 ACLNNTYPE
+# usage: add_modules_sources(DIR OPTYPE ACLNNTYPE DEPENDENCIES COMPUTE_UNIT TILING_DIR DISABLE_IN_OPP) ACLNNTYPE 支持类型aclnn/aclnn_inner/aclnn_exclude OPTYPE 和 ACLNNTYPE
 # DEPENDENCIES 算子依赖
 # COMPUTE_UNIT 设置支持芯片版本号，必须与TILING_DIR一一对应，示例：ascend910b ascend950
 # TILING_DIR 设置所支持芯片类型对应的tiling文件目录，必须与COMPUTE_UNIT一一对应，示例：arch32 arch35
@@ -539,7 +539,92 @@ function(add_modules_sources)
   endif()
 endfunction()
 
-# useage: add_graph_plugin_sources()
+# ######################################################################################################################
+# get op_type from *_def.cpp
+# ######################################################################################################################
+function(get_op_type_from_op_name OP_NAME OP_TYPE)
+  execute_process(
+    COMMAND
+      find ${OP_DIR} -name ${OP_NAME}_def.cpp -exec grep OP_ADD {} \;
+    OUTPUT_VARIABLE op_type
+    )
+  if(NOT op_type)
+    set(op_type "")
+  else()
+    string(REGEX REPLACE "[\t ]*OP_ADD\\([\t ]*" "" op_type ${op_type})
+    string(REGEX REPLACE "[\t ]*\\).*$" "" op_type ${op_type})
+  endif()
+  set(${OP_TYPE}
+      ${op_type}
+      PARENT_SCOPE
+    )
+endfunction()
+
+# usage: add_kernel_sources(OPTYPE)
+# 1.调用asc_opc 工具 编译二进制kernel时， --simplified_key_mode/--impl_mode 选项中填写的值。
+# 2.调用asc_opc工具 算子名.py 中auto_sync与compile_option中的配置项。
+# 格式如下所示：
+# [COMPUTE_UNITS ascendxx]          soc版本，支持配置多个unit，缺省为配置所有的soc（支持单独配置soc，单独配置优先级更高）
+# [SIMPLIFIED_KEY 0/None]           缺省为0，最终的编译参数则是--simplified_key_mode=0，若设置为None，则不会携带该参数
+# [AUTO_SYNC false]                 同步选项，缺省为true
+# [IMPL_MODE high_performance]      高性能模式，缺省为high_performance[,optional] [optional]是可选的 
+# [OPTIONS "option1" "option2"]     其他编译选项
+function(add_kernel_sources)
+  set(oneValueArgs SIMPLIFIED_KEY AUTO_SYNC IMPL_MODE)
+  set(multiValueArgs COMPUTE_UNITS OPTIONS)
+  cmake_parse_arguments(MODULE "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+  
+  set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+  get_filename_component(PARENT_DIR ${SOURCE_DIR} DIRECTORY)
+  get_filename_component(OP_NAME ${PARENT_DIR} NAME)
+  set(op_type "")
+  get_op_type_from_op_name("${OP_NAME}" op_type)
+
+  set(simplified_key ${MODULE_SIMPLIFIED_KEY})
+  set(auto_sync ${MODULE_AUTO_SYNC})
+  set(impl_mode ${MODULE_IMPL_MODE})
+  set(options ${MODULE_OPTIONS})
+
+  if(NOT simplified_key)
+    set(simplified_key "0")
+  endif()
+
+  if(NOT impl_mode)
+    set(impl_mode "high_performance,optional")
+  endif()
+
+  set(auto_sync_option "")
+  if(auto_sync STREQUAL "false")
+    set(auto_sync_option ${auto_sync})
+  endif()
+
+  string(JOIN "," unit_options ${options})
+
+  if(NOT MODULE_COMPUTE_UNITS OR MODULE_COMPUTE_UNITS STREQUAL "")
+    set(target_compute_units "ALL")
+  else()
+    set(target_compute_units "${ASCEND_COMPUTE_UNIT}")
+  endif()
+
+  if(NOT MODULE_COMPUTE_UNITS OR "${target_compute_units}" IN_LIST MODULE_COMPUTE_UNITS)
+    set(current_simplified_key_list "${op_type} ${target_compute_units} ${simplified_key}")
+    set(current_impl_mode_list "${op_type} ${target_compute_units} ${impl_mode}")
+    set(current_auto_sync_list "${op_type} ${target_compute_units} ${auto_sync}")
+    set(current_option_list "${op_type} ${target_compute_units} ${unit_options}")
+
+    list(APPEND simplified_key_list ${current_simplified_key_list})
+    list(APPEND impl_mode_list ${current_impl_mode_list})
+    list(APPEND auto_sync_list ${current_auto_sync_list})
+    list(APPEND option_list ${current_option_list})
+
+    set(simplified_key_list ${simplified_key_list} CACHE INTERNAL "simplified_key")
+    set(impl_mode_list ${impl_mode_list} CACHE INTERNAL "impl_mode")
+    set(auto_sync_list ${auto_sync_list} CACHE INTERNAL "auto_sync")
+    set(option_list ${option_list} CACHE INTERNAL "options")
+  endif()
+endfunction()
+
+# usage: add_graph_plugin_sources()
 macro(add_graph_plugin_sources)
   set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 

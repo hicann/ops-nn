@@ -45,6 +45,12 @@ set(OP_GRAPH_MODULE_NAME ${PKG_NAME}_op_graph_ut)
 set(COMPILED_OPS CACHE STRING "Compiled Ops" FORCE)
 set(COMPILED_OP_DIRS CACHE STRING "Compiled Ops Dirs" FORCE)
 
+# kernel compile options
+set(simplified_key_list CACHE STRING "kernel compile simplified key list" FORCE)
+set(impl_mode_list CACHE STRING "kernel compile impl mode list" FORCE)
+set(auto_sync_list CACHE STRING "kernel compile auto sync list" FORCE)
+set(option_list CACHE STRING "kernel compile options list" FORCE)
+
 # src path
 get_filename_component(OPS_NN_CMAKE_DIR           "${OPS_NN_DIR}/cmake"                               REALPATH)
 get_filename_component(OPS_NN_COMMON_INC          "${OPS_NN_DIR}/common/inc"                      REALPATH)

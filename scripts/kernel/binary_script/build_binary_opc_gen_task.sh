@@ -53,6 +53,23 @@ function get_binary_config_file() {
   return 0
 }
 
+function get_kernel_option_config_file() {
+  if [ $# -ne 2 ]; then
+    echo "error invalid param number:$#, must be 2" >&2
+    return 1
+  fi
+  local workdir="$1"
+  local soc_version_lower="$2"
+  local topdir=$(readlink -f ${workdir}/../../..)
+  local binary_config_dir=${topdir}/build/tbe/config
+
+  local primary_pattern="${binary_config_dir}/kernel-options-${soc_version_lower}.ini"
+  if [ -f "${primary_pattern}" ]; then
+    echo "${primary_pattern}"
+    return 0
+  fi
+}
+
 function get_simplified_key_config_file() {
   if [ $# -ne 4 ]; then
     echo "error invalid param number:$#, must be 4" >&2
@@ -196,32 +213,58 @@ main() {
   fi
 
   # step 4: get simplified_key_mode from binary_simplified_key_mode.ini
-  local simplified_key_file=$(get_simplified_key_config_file ${workdir} ${op_type} ${op_name} ${soc_version_lower})
-  local key_mode_default=0
-  if [ -z "${simplified_key_file}" ] || [ ! -f "${simplified_key_file}" ]; then
-    echo "[INFO] No simplified_key_file found. Using default key_mode_default=0"
-  else
-    if file "$simplified_key_file" | grep -q "CRLF"; then
-      if ! command -vv dos2unix &> /dev/null; then
-        echo "[ERROR] dos2unix is not installed. Cannot convert simplified_key_file to unix line endings !"
-        exit 5
-      fi
-      dos2unix $simplified_key_file
-    fi
-    # if no file binary_simplified_key_mode.ini use mode=0
-    key_mode_default=$(awk -F "=" '/\['${op_type}'\]/{flag=1;next}/\[/{flag=0} flag && /default/{print $2}' $simplified_key_file)
-  fi
-  local ascendc_config_file="${workdir}/../binary_config/ascendc_config.json"
-  local key_word_in_list="\"name\":\s*\"${op_type}\""
-  local ascendc_op_conf=$(grep ${key_word_in_list} ${ascendc_config_file} | grep -w $soc_version_lower)
+  local kernel_config_file=$(get_kernel_option_config_file ${workdir} ${soc_version_lower})
+  local kernel_config_file_all=$(get_kernel_option_config_file ${workdir} "ALL")
 
-  if [ "$key_mode_default" != "" ]; then
-    key_mode=${key_mode_default}
-  else
-    if [ "$ascendc_op_conf" != "" ]; then
-      key_mode=0
+  local impl_list=""
+  local key_mode=""
+  local is_optional=false
+
+  if [ -f "${kernel_config_file}" ]; then
+    impl_list=$(awk -F "=" '/\['${op_type}'\]/{flag=1; next}/\[/{flag=0} flag && /impl_mode/{print $2; exit}' "$kernel_config_file")
+    key_mode=$(awk -F "=" '/\['${op_type}'\]/{flag=1; next}/\[/{flag=0} flag && /simplified_key/{print $2; exit}' "$kernel_config_file")
+  fi
+  if [ -z "${impl_list}" ] && [ -z "${key_mode}" ]; then
+    if [ -f "${kernel_config_file_all}" ]; then
+      impl_list=$(awk -F "=" '/\['${op_type}'\]/{flag=1; next}/\[/{flag=0} flag && /impl_mode/{print $2; exit}' "$kernel_config_file_all")
+      key_mode=$(awk -F "=" '/\['${op_type}'\]/{flag=1; next}/\[/{flag=0} flag && /simplified_key/{print $2; exit}' "$kernel_config_file_all")
+    fi
+  fi
+  if [ -n "${impl_list}" ]; then
+    if [[ "${impl_list}" == *",optional"* ]]; then
+      is_optional=true
+      impl_list=$(echo "${impl_list}" | sed 's/,optional$//')
+    fi
+  fi
+  
+  if [ -z "$key_mode" ]; then
+    local simplified_key_file=$(get_simplified_key_config_file ${workdir} ${op_type} ${op_name} ${soc_version_lower})
+    local key_mode_default=0
+    if [ -z "${simplified_key_file}" ] || [ ! -f "${simplified_key_file}" ]; then
+      echo "[INFO] No simplified_key_file found. Using default key_mode_default=0"
     else
-      key_mode="None"
+      if file "$simplified_key_file" | grep -q "CRLF"; then
+        if ! command -vv dos2unix &> /dev/null; then
+          echo "[ERROR] dos2unix is not installed. Cannot convert simplified_key_file to unix line endings !"
+          exit 5
+        fi
+        dos2unix $simplified_key_file
+      fi
+      # if no file binary_simplified_key_mode.ini use mode=0
+      key_mode_default=$(awk -F "=" '/\['${op_type}'\]/{flag=1;next}/\[/{flag=0} flag && /default/{print $2}' $simplified_key_file)
+    fi
+    local ascendc_config_file="${workdir}/../binary_config/ascendc_config.json"
+    local key_word_in_list="\"name\":\s*\"${op_type}\""
+    local ascendc_op_conf=$(grep ${key_word_in_list} ${ascendc_config_file} | grep -w $soc_version_lower)
+
+    if [ "$key_mode_default" != "" ]; then
+      key_mode=${key_mode_default}
+    else
+      if [ "$ascendc_op_conf" != "" ]; then
+        key_mode=0
+      else
+        key_mode="None"
+      fi
     fi
   fi
 
@@ -234,11 +277,13 @@ main() {
   # step 5: get impl_mode from all_ops_impl_mode.ini
   # ascendc_config.json 配置超过两种以上的implmode使用ascendc_config的配置，否则使用binary_implmode_default
   # 如果都没有配置，默认high_performance
-  local impl_mode_full_path="${workdir}/../binary_config/${IMPL_FILE_NAME}"
-  local impl_list=$(awk -F '=' '/^'${op_type}'=/{print $2;exit}' ${impl_mode_full_path})
-  if [ "${impl_list}" = "" ]; then
-    # 默认高性能模式
-    impl_list="high_performance"
+  if [ -z "$impl_list" ]; then
+    local impl_mode_full_path="${workdir}/../binary_config/${IMPL_FILE_NAME}"
+    local impl_list=$(awk -F '=' '/^'${op_type}'=/{print $2;exit}' ${impl_mode_full_path})
+    if [ "${impl_list}" = "" ]; then
+      # 默认高性能模式
+      impl_list="high_performance"
+    fi
   fi
 
   # 获取 impl_mode 默认值
@@ -276,7 +321,7 @@ main() {
     for ((i = 0; i < ${thread_num}; i = i + 1)); do
       {
         new_file="${binary_config_new_full_path}_${i}"
-        if [ "${val}" = "${impl_mode}" ]; then
+        if [[ "${val}" == "${impl_mode}" ]] || [[ "${is_optional}" == "true" ]]; then
           impl_mode_default="${impl_mode},optional"
           cmd="asc_opc ${op_python_path} --main_func=${op_func} --input_param=${new_file} --soc_version=${opc_soc_version} --output=${binary_bin_path} --impl_mode=${impl_mode_default} ${simplified_key_param} --op_mode=dynamic"
         else

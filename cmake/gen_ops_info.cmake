@@ -488,27 +488,6 @@ function(gen_binary_info_config_json)
 endfunction()
 
 # ######################################################################################################################
-# get op_type from *_def.cpp
-# ######################################################################################################################
-function(get_op_type_from_op_name OP_NAME OP_TYPE)
-  execute_process(
-    COMMAND
-      find ${OP_DIR} -name ${OP_NAME}_def.cpp -exec grep OP_ADD {} \;
-    OUTPUT_VARIABLE op_type
-    )
-  if(NOT op_type)
-    set(op_type "")
-  else()
-    string(REGEX REPLACE "[\t ]*OP_ADD\\([\t ]*" "" op_type ${op_type})
-    string(REGEX REPLACE "[\t ]*\\).*$" "" op_type ${op_type})
-  endif()
-  set(${OP_TYPE}
-      ${op_type}
-      PARENT_SCOPE
-    )
-endfunction()
-
-# ######################################################################################################################
 # check op_type is or not support in compute_unit
 # ######################################################################################################################
 function(check_op_supported OP_NAME COMPUTE_UNIT OP_SUPPORTED_COMPUTE_UNIT)
@@ -566,7 +545,17 @@ function(gen_ops_info_and_python)
     )
   endif()
 
-  set(ascendc_impl_gen_depends ascendc_kernel_src_copy common_copy)
+  string(JOIN "/" simplified_key_str ${simplified_key_list})
+  string(JOIN "/" impl_mode_str ${impl_mode_list})
+  string(JOIN "/" auto_sync_str ${auto_sync_list})
+  string(JOIN "/" options_str ${option_list})
+
+  add_custom_target(gen_kernel_options
+    COMMAND ${ASCEND_PYTHON_EXECUTABLE} ${OPS_KERNEL_BINARY_SCRIPT}/gen_ops_compile_ini.py ${CMAKE_BINARY_DIR}/tbe/config
+            ${simplified_key_str} ${impl_mode_str} ${auto_sync_str} ${options_str}
+  )
+
+  set(ascendc_impl_gen_depends ascendc_kernel_src_copy common_copy gen_kernel_options)
   foreach(compute_unit ${ASCEND_ALL_COMPUTE_UNIT})
     # generate aic-${compute_unit}-ops-info.json, operator infos
     if(ENABLE_CUSTOM)

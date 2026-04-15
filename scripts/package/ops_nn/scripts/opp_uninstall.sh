@@ -197,8 +197,8 @@ remove_ops_nn() {
 
 whl_uninstall_package() {
   local _module="$1"
-  local _module_apth="$2"
-  if [ ! -d "${_module_apth}/${_module}" ]; then
+  local _module_path="$2"
+  if [ ! -d "${_module_path}/${_module}" ]; then
       pip3 show "${_module}" > /dev/null 2>&1
       if [ $? -ne 0 ]; then
           logandprint "[WARNING]: ${_module} is not exist."
@@ -213,7 +213,7 @@ whl_uninstall_package() {
           fi
       fi
   else
-      export PYTHONPATH="${_module_apth}"
+      export PYTHONPATH="${_module_path}"
       pip3 uninstall -y "${_module}" > /dev/null 2>&1
       local ret=$?
       if [ $ret -ne 0 ]; then
