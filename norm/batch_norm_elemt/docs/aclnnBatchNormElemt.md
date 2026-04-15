@@ -18,7 +18,7 @@
 - 计算公式：
   
   $$
-  y = \frac{(x-E[x])}{\sqrt{Var(x)+ ε}} * weight + bias
+  y = \frac{(x-E[x])}{\sqrt{Var(x)+ eps}} * weight + bias
   $$
 
   标准差与方差的关系如下:
