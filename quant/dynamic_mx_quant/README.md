@@ -104,4 +104,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_dynamic_mx_quant](./examples/arch35/test_aclnn_dynamic_mx_quant.cpp) | 通过[aclnnDynamicMxQuant](./docs/aclnnDynamicMxQuant.md)接口方式调用DynamicMxQuant算子。 |
+| aclnn调用 | [test_aclnn_dynamic_mx_quant](./examples/arch35/test_dynamic_mx_quant.cpp) | 通过[aclnnDynamicMxQuant](./docs/aclnnDynamicMxQuant.md)接口方式调用DynamicMxQuant算子。 |
