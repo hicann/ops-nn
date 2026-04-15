@@ -72,23 +72,27 @@ bool SyncBatchNormGatherStatsTiling::TotalSumShapeCheck()
     OP_CHECK_NULL_WITH_CONTEXT(context_, totalSumDesc);
     totalSumDType_ = totalSumDesc->GetDataType();
     OP_CHECK_IF((totalSumDType_ != ge::DT_BF16 && totalSumDType_ != ge::DT_FLOAT16 && totalSumDType_ != ge::DT_FLOAT),
-        OP_LOGE(opName,
-        "input totalSumDType_[%s] not support", ge::TypeUtils::DataTypeToSerialString(totalSumDType_).c_str()), return false);
-    
+        OP_LOGE_FOR_INVALID_DTYPE(
+            opName, "total_sum", ge::TypeUtils::DataTypeToSerialString(totalSumDType_).c_str(),
+            "float16, bfloat16 and float"),
+        return false);
+
     auto totalSumStorageShape = context_->GetInputShape(INPUT_IDX_TOTAL_SUM);
     OP_CHECK_NULL_WITH_CONTEXT(context_, totalSumStorageShape);
-    auto totalSumShape = totalSumStorageShape->GetStorageShape();
-    auto totalSumDims = totalSumShape.GetDimNum();
+    totalSumShape_ = totalSumStorageShape->GetStorageShape();
+    auto totalSumDims = totalSumShape_.GetDimNum();
     OP_CHECK_IF((static_cast<uint16_t>(totalSumDims) != TOTAL_SUMS_SHAPE_SIZE),
-        OP_LOGE(opName,
-        "totalSumDims %lu not equal TOTAL_SUMS_SHAPE_SIZE(2), please check", totalSumDims), return false);
-    
-    totalSumDim0_ = totalSumShape.GetDim(0);
-    totalSumDim1_ = totalSumShape.GetDim(1);
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            opName, "total_sum", std::to_string(totalSumDims).c_str(), std::to_string(TOTAL_SUMS_SHAPE_SIZE).c_str()),
+        return false);
+
+    totalSumDim0_ = totalSumShape_.GetDim(0);
+    totalSumDim1_ = totalSumShape_.GetDim(1);
 
     OP_CHECK_IF((totalSumDim0_ <= 0 || totalSumDim1_ <= 0),
-        OP_LOGE(opName,
-        "SyncBatchNormGatherStats totalSum is not support empty tensor"), return false);    
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            opName, "total_sum", Ops::Base::ToString(totalSumShape_).c_str(), "Input total_sum cannot be empty tensor"),
+        return false);
 
     return true;
 }
@@ -99,23 +103,26 @@ bool SyncBatchNormGatherStatsTiling::TotalSquareSumShapeCheck()
     OP_CHECK_NULL_WITH_CONTEXT(context_, totalSquareSumDesc);
     totalSquareSumDType_ = totalSquareSumDesc->GetDataType();
     OP_CHECK_IF((totalSquareSumDType_ != ge::DT_BF16 && totalSquareSumDType_ != ge::DT_FLOAT16 && totalSquareSumDType_ != ge::DT_FLOAT),
-        OP_LOGE(opName,
-        "input totalSquareSumDType_[%s] not support", ge::TypeUtils::DataTypeToSerialString(totalSquareSumDType_).c_str()), return false);
+        OP_LOGE_FOR_INVALID_DTYPE(opName, "total_square_sum", ge::TypeUtils::DataTypeToSerialString(totalSquareSumDType_).c_str(),
+            "float16, bfloat16 and float"),
+        return false);
 
     auto totalSquareSumStorageShape = context_->GetInputShape(INPUT_IDX_TOTAL_SQUARE_SUM);
     OP_CHECK_NULL_WITH_CONTEXT(context_, totalSquareSumStorageShape);
-    auto totalSquareSumShape = totalSquareSumStorageShape->GetStorageShape();
-    auto totalSquareSumDims = totalSquareSumShape.GetDimNum();
+    totalSquareSumShape_ = totalSquareSumStorageShape->GetStorageShape();
+    auto totalSquareSumDims = totalSquareSumShape_.GetDimNum();
     OP_CHECK_IF((static_cast<uint16_t>(totalSquareSumDims) != TOTAL_SQUARE_SUMS_SHAPE_SIZE),
-        OP_LOGE(opName,
-        "totalSquareSumDims %lu not equal TOTAL_SQUARE_SUMS_SHAPE_SIZE(2), please check", totalSquareSumDims), return false);
-    
-    totalSquareSumDim0_ = totalSquareSumShape.GetDim(0);
-    totalSquareSumDim1_ = totalSquareSumShape.GetDim(1);
+        OP_LOGE_FOR_INVALID_SHAPEDIM(opName, "total_square_sum", std::to_string(totalSquareSumDims).c_str(),
+            std::to_string(TOTAL_SQUARE_SUMS_SHAPE_SIZE).c_str()),
+        return false);
+
+    totalSquareSumDim0_ = totalSquareSumShape_.GetDim(0);
+    totalSquareSumDim1_ = totalSquareSumShape_.GetDim(1);
 
     OP_CHECK_IF((totalSquareSumDim0_ <= 0 || totalSquareSumDim1_ <= 0),
-        OP_LOGE(opName,
-        "SyncBatchNormGatherStats totalSquare is not support empty tensor"), return false);  
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "total_square_sum", Ops::Base::ToString(totalSquareSumShape_).c_str(),
+            "Input total_square_sum cannot be empty tensor"),
+        return false);
 
     return true;
 }
@@ -126,22 +133,27 @@ bool SyncBatchNormGatherStatsTiling::SampleCountShapeCheck()
     OP_CHECK_NULL_WITH_CONTEXT(context_, sampleCountDesc);
     sampleCountDType_ = sampleCountDesc->GetDataType();
     OP_CHECK_IF((sampleCountDType_ != ge::DT_INT32),
-        OP_LOGE(opName,
-        "input sampleCountDType_[%s] not support", ge::TypeUtils::DataTypeToSerialString(sampleCountDType_).c_str()), return false);
+        OP_LOGE_FOR_INVALID_DTYPE(
+            opName, "sample_count", ge::TypeUtils::DataTypeToSerialString(sampleCountDType_).c_str(), "int32"),
+        return false);
 
     auto sampleCountStorageShape = context_->GetInputShape(INPUT_IDX_SAMPLE_COUNT);
     OP_CHECK_NULL_WITH_CONTEXT(context_, sampleCountStorageShape);
-    auto sampleCountShape = sampleCountStorageShape->GetStorageShape();
-    auto sampleCountDims = sampleCountShape.GetDimNum();
+    sampleCountShape_ = sampleCountStorageShape->GetStorageShape();
+    auto sampleCountDims = sampleCountShape_.GetDimNum();
     OP_CHECK_IF((static_cast<uint16_t>(sampleCountDims) != SAMPLE_COUNT_SHAPE_SIZE),
-        OP_LOGE(opName,
-        "sampleCountDims %lu not equal SAMPLE_COUNT_SHAPE_SIZE(1), please check", sampleCountDims), return false);
-    
-    sampleCountDim0_ = sampleCountShape.GetDim(0);
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            opName, "sample_count", std::to_string(sampleCountDims).c_str(),
+            std::to_string(SAMPLE_COUNT_SHAPE_SIZE).c_str()),
+        return false);
+
+    sampleCountDim0_ = sampleCountShape_.GetDim(0);
 
     OP_CHECK_IF((sampleCountDim0_ <= 0),
-        OP_LOGE(opName,
-        "SyncBatchNormGatherStats sampleCount is not support empty tensor"), return false);  
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            opName, "sample_count", Ops::Base::ToString(sampleCountShape_).c_str(),
+            "Input sample_count cannot be empty tensor"),
+        return false);
 
     return true;
 }
@@ -152,22 +164,25 @@ bool SyncBatchNormGatherStatsTiling::MeanShapeCheck()
     OP_CHECK_NULL_WITH_CONTEXT(context_, meanDesc);
     meanDType_ = meanDesc->GetDataType();
     OP_CHECK_IF((meanDType_ != ge::DT_BF16 && meanDType_ != ge::DT_FLOAT16 && meanDType_ != ge::DT_FLOAT),
-        OP_LOGE(opName,
-        "input meanDType_[%s] not support", ge::TypeUtils::DataTypeToSerialString(meanDType_).c_str()), return false);
-    
+        OP_LOGE_FOR_INVALID_DTYPE(
+            opName, "mean", ge::TypeUtils::DataTypeToSerialString(meanDType_).c_str(), "float16, bfloat16 and float"),
+        return false);
+
     auto meanStorageShape = context_->GetInputShape(INPUT_IDX_MEAN);
     OP_CHECK_NULL_WITH_CONTEXT(context_, meanStorageShape);
-    auto meanShape = meanStorageShape->GetStorageShape();
-    auto meanDims = meanShape.GetDimNum();
+    meanShape_ = meanStorageShape->GetStorageShape();
+    auto meanDims = meanShape_.GetDimNum();
     OP_CHECK_IF((static_cast<uint16_t>(meanDims) != MEAN_SHAPE_SIZE),
-        OP_LOGE(opName,
-        "meanDims %lu not equal MEAN_SHAPE_SIZE(1), please check", meanDims), return false);
-    
-    meanDim0_ = meanShape.GetDim(0);
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            opName, "mean", std::to_string(meanDims).c_str(), std::to_string(MEAN_SHAPE_SIZE).c_str()),
+        return false);
+
+    meanDim0_ = meanShape_.GetDim(0);
 
     OP_CHECK_IF((meanDim0_ <= 0),
-        OP_LOGE(opName,
-        "SyncBatchNormGatherStats mean is not support empty tensor"), return false);  
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            opName, "mean", Ops::Base::ToString(meanShape_).c_str(), "Input mean cannot be empty tensor"),
+        return false);
 
     return true;
 }
@@ -178,22 +193,26 @@ bool SyncBatchNormGatherStatsTiling::VarShapeCheck()
     OP_CHECK_NULL_WITH_CONTEXT(context_, varDesc);
     varDType_ = varDesc->GetDataType();
     OP_CHECK_IF((varDType_ != ge::DT_BF16 && varDType_ != ge::DT_FLOAT16 && varDType_ != ge::DT_FLOAT),
-        OP_LOGE(opName,
-        "input varDType_[%s] not support", ge::TypeUtils::DataTypeToSerialString(varDType_).c_str()), return false);
+        OP_LOGE_FOR_INVALID_DTYPE(
+            opName, "variance", ge::TypeUtils::DataTypeToSerialString(varDType_).c_str(),
+            "float16, bfloat16 and float"),
+        return false);
 
     auto varStorageShape = context_->GetInputShape(INPUT_IDX_VAR);
     OP_CHECK_NULL_WITH_CONTEXT(context_, varStorageShape);
-    auto varShape = varStorageShape->GetStorageShape();
-    auto varDims = varShape.GetDimNum();
+    varShape_ = varStorageShape->GetStorageShape();
+    auto varDims = varShape_.GetDimNum();
     OP_CHECK_IF((static_cast<uint16_t>(varDims) != VAR_SHAPE_SIZE),
-        OP_LOGE(opName,
-        "varDims %lu not equal VAR_SHAPE_SIZE(1), please check", varDims), return false);
-    
-    varDim0_ = varShape.GetDim(0);
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            opName, "variance", std::to_string(varDims).c_str(), std::to_string(VAR_SHAPE_SIZE).c_str()),
+        return false);
+
+    varDim0_ = varShape_.GetDim(0);
 
     OP_CHECK_IF((varDim0_ <= 0),
-        OP_LOGE(opName,
-        "SyncBatchNormGatherStats var is not support empty tensor"), return false);  
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            opName, "variance", Ops::Base::ToString(varShape_).c_str(), "Input variance cannot be empty tensor"),
+        return false);
 
     return true;
 }
@@ -204,22 +223,26 @@ bool SyncBatchNormGatherStatsTiling::BatchMeanCheck()
     OP_CHECK_NULL_WITH_CONTEXT(context_, batchMeanDesc);
     batchMeanDType_ = batchMeanDesc->GetDataType();
     OP_CHECK_IF((batchMeanDType_ != ge::DT_BF16 && batchMeanDType_ != ge::DT_FLOAT16 && batchMeanDType_ != ge::DT_FLOAT),
-        OP_LOGE(opName,
-        "input batchMeanDType_[%s] not support", ge::TypeUtils::DataTypeToSerialString(batchMeanDType_).c_str()), return false);
+        OP_LOGE_FOR_INVALID_DTYPE(
+            opName, "batch_mean", ge::TypeUtils::DataTypeToSerialString(batchMeanDType_).c_str(),
+            "float16, bfloat16 and float"),
+        return false);
 
     auto batchMeanStorageShape = context_->GetOutputShape(INPUT_IDX_TOTAL_SUM);
     OP_CHECK_NULL_WITH_CONTEXT(context_, batchMeanStorageShape);
-    auto batchMeanShape = batchMeanStorageShape->GetStorageShape();
-    auto batchMeanDims = batchMeanShape.GetDimNum();
+    batchMeanShape_ = batchMeanStorageShape->GetStorageShape();
+    auto batchMeanDims = batchMeanShape_.GetDimNum();
     OP_CHECK_IF((static_cast<uint16_t>(batchMeanDims) != MEAN_SHAPE_SIZE),
-        OP_LOGE(opName,
-        "batchMeanDims %lu not equal 1, please check", batchMeanDims), return false);
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            opName, "batch_mean", std::to_string(batchMeanDims).c_str(), std::to_string(MEAN_SHAPE_SIZE).c_str()),
+        return false);
 
-    batchMeanDim0_ = batchMeanShape.GetDim(0);
+    batchMeanDim0_ = batchMeanShape_.GetDim(0);
 
     OP_CHECK_IF((batchMeanDim0_ <= 0),
-        OP_LOGE(opName,
-        "SyncBatchNormGatherStats batchMean is not support empty tensor"), return false); 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "batch_mean",
+            Ops::Base::ToString(batchMeanShape_).c_str(), "Output batch_mean cannot be empty tensor"),
+        return false);
 
     return true;
 }
@@ -230,22 +253,27 @@ bool SyncBatchNormGatherStatsTiling::BatchInvstdCheck()
     OP_CHECK_NULL_WITH_CONTEXT(context_, batchInvStdDesc);
     batchInvStdDType_ = batchInvStdDesc->GetDataType();
     OP_CHECK_IF((batchInvStdDType_ != ge::DT_BF16 && batchInvStdDType_ != ge::DT_FLOAT16 && batchInvStdDType_ != ge::DT_FLOAT),
-        OP_LOGE(opName,
-        "input batchInvStdDType_[%s] not support", ge::TypeUtils::DataTypeToSerialString(batchInvStdDType_).c_str()), return false);
+        OP_LOGE_FOR_INVALID_DTYPE(
+            opName, "batch_invstd", ge::TypeUtils::DataTypeToSerialString(batchInvStdDType_).c_str(),
+            "float16, bfloat16 and float"),
+        return false);
 
     auto batchInvStdStorageShape = context_->GetOutputShape(INPUT_IDX_TOTAL_SQUARE_SUM);
     OP_CHECK_NULL_WITH_CONTEXT(context_, batchInvStdStorageShape);
-    auto batchInvStdShape = batchInvStdStorageShape->GetStorageShape();
-    auto batchInvStdDims = batchInvStdShape.GetDimNum();
+    batchInvStdShape_ = batchInvStdStorageShape->GetStorageShape();
+    auto batchInvStdDims = batchInvStdShape_.GetDimNum();
     OP_CHECK_IF((static_cast<uint16_t>(batchInvStdDims) != MEAN_SHAPE_SIZE),
-        OP_LOGE(opName,
-        "batchInvStdDims %lu not equal 1, please check", batchInvStdDims), return false);
-    
-    batchInvStdDim0_ = batchInvStdShape.GetDim(0);
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            opName, "batch_invstd", std::to_string(batchInvStdDims).c_str(), std::to_string(MEAN_SHAPE_SIZE).c_str()),
+        return false);
+
+    batchInvStdDim0_ = batchInvStdShape_.GetDim(0);
 
     OP_CHECK_IF((batchInvStdDim0_ <= 0),
-        OP_LOGE(opName,
-        "SyncBatchNormGatherStats batchInvStd is not support empty tensor"), return false);  
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            opName, "batch_invstd", Ops::Base::ToString(batchInvStdShape_).c_str(),
+            "Output batch_invstd cannot be empty tensor"),
+        return false);
 
     return true;
 }
@@ -256,22 +284,26 @@ bool SyncBatchNormGatherStatsTiling::RunningMeanCheck()
     OP_CHECK_NULL_WITH_CONTEXT(context_, runningMeanDesc);
     runningMeanDType_ = runningMeanDesc->GetDataType();
     OP_CHECK_IF((runningMeanDType_ != ge::DT_BF16 && runningMeanDType_ != ge::DT_FLOAT16 && runningMeanDType_ != ge::DT_FLOAT),
-        OP_LOGE(opName,
-        "input runningMeanDType_[%s] not support", ge::TypeUtils::DataTypeToSerialString(runningMeanDType_).c_str()), return false);
+        OP_LOGE_FOR_INVALID_DTYPE(
+            opName, "mean", ge::TypeUtils::DataTypeToSerialString(runningMeanDType_).c_str(),
+            "float16, bfloat16 and float"),
+        return false);
 
     auto runningMeanStorageShape = context_->GetOutputShape(INPUT_IDX_SAMPLE_COUNT);
     OP_CHECK_NULL_WITH_CONTEXT(context_, runningMeanStorageShape);
-    auto runningMeanShape = runningMeanStorageShape->GetStorageShape();
-    auto runningMeanDims = runningMeanShape.GetDimNum();
+    runningMeanShape_ = runningMeanStorageShape->GetStorageShape();
+    auto runningMeanDims = runningMeanShape_.GetDimNum();
     OP_CHECK_IF((static_cast<uint16_t>(runningMeanDims) != MEAN_SHAPE_SIZE),
-        OP_LOGE(opName,
-        "runningMeanDims %lu not equal 1, please check", runningMeanDims), return false);
-    
-    runningMeanDim0_ = runningMeanShape.GetDim(0);
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            opName, "mean", std::to_string(runningMeanDims).c_str(), std::to_string(MEAN_SHAPE_SIZE).c_str()),
+        return false);
+
+    runningMeanDim0_ = runningMeanShape_.GetDim(0);
 
     OP_CHECK_IF((runningMeanDim0_ <= 0),
-        OP_LOGE(opName,
-        "SyncBatchNormGatherStats runningMean is not support empty tensor"), return false);  
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            opName, "mean", Ops::Base::ToString(runningMeanShape_).c_str(), "Output mean cannot be empty tensor"),
+        return false);
 
     return true;
 }
@@ -282,108 +314,203 @@ bool SyncBatchNormGatherStatsTiling::RunningVarCheck()
     OP_CHECK_NULL_WITH_CONTEXT(context_, runningVarDesc);
     runningVarDType_ = runningVarDesc->GetDataType();
     OP_CHECK_IF((runningVarDType_ != ge::DT_BF16 && runningVarDType_ != ge::DT_FLOAT16 && runningVarDType_ != ge::DT_FLOAT),
-        OP_LOGE(opName,
-        "input runningVarDType_[%s] not support", ge::TypeUtils::DataTypeToSerialString(runningVarDType_).c_str()), return false);
+        OP_LOGE_FOR_INVALID_DTYPE(
+            opName, "variance", ge::TypeUtils::DataTypeToSerialString(runningVarDType_).c_str(),
+            "float16, bfloat16 and float"),
+        return false);
 
     auto runningVarStorageShape = context_->GetOutputShape(INPUT_IDX_MEAN);
     OP_CHECK_NULL_WITH_CONTEXT(context_, runningVarStorageShape);
-    auto runningVarShape = runningVarStorageShape->GetStorageShape();
-    auto runningVarDims = runningVarShape.GetDimNum();
+    runningVarShape_ = runningVarStorageShape->GetStorageShape();
+    auto runningVarDims = runningVarShape_.GetDimNum();
     OP_CHECK_IF((static_cast<uint16_t>(runningVarDims) != MEAN_SHAPE_SIZE),
-        OP_LOGE(opName,
-        "runningVarDims %lu not equal 1, please check", runningVarDims), return false);
-    
-    runningVarDim0_ = runningVarShape.GetDim(0);
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            opName, "variance", std::to_string(runningVarDims).c_str(), std::to_string(MEAN_SHAPE_SIZE).c_str()),
+        return false);
+
+    runningVarDim0_ = runningVarShape_.GetDim(0);
 
     OP_CHECK_IF((runningVarDim0_ <= 0),
-        OP_LOGE(opName,
-        "SyncBatchNormGatherStats runningVar is not support empty tensor"), return false);  
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            opName, "variance", Ops::Base::ToString(runningVarShape_).c_str(), "Output variance cannot be empty tensor"),
+        return false);
 
     return true;
 }
 
-ge::graphStatus SyncBatchNormGatherStatsTiling::GetShapeAttrsInfo()
+// Validate input tensor shapes
+bool SyncBatchNormGatherStatsTiling::ValidateInputShapes()
 {
     if (!TotalSumShapeCheck()) {
-        return ge::GRAPH_FAILED;
+        return false;
     }
-
     if (!TotalSquareSumShapeCheck()) {
-        return ge::GRAPH_FAILED;
+        return false;
     }
-
     if (!SampleCountShapeCheck()) {
-        return ge::GRAPH_FAILED;
+        return false;
     }
-
     if (!MeanShapeCheck()) {
-        return ge::GRAPH_FAILED;
+        return false;
     }
-
     if (!VarShapeCheck()) {
-        return ge::GRAPH_FAILED;
+        return false;
     }
+    return true;
+}
 
+// Validate output tensor shapes
+bool SyncBatchNormGatherStatsTiling::ValidateOutputShapes()
+{
     if (!BatchMeanCheck()) {
-        return ge::GRAPH_FAILED;
+        return false;
     }
-
     if (!BatchInvstdCheck()) {
-        return ge::GRAPH_FAILED;
+        return false;
     }
-
     if (!RunningMeanCheck()) {
-        return ge::GRAPH_FAILED;
+        return false;
     }
-
     if (!RunningVarCheck()) {
-        return ge::GRAPH_FAILED;
+        return false;
     }
+    return true;
+}
 
+// Get attributes
+void SyncBatchNormGatherStatsTiling::GetAttrs()
+{
     auto attrs = context_->GetAttrs();
     const float* momentum = attrs->GetFloat(INDEX_MOMENTUM);
     momentum_ = (momentum == nullptr) ? DEFAULT_MOMENTUM : *momentum;
 
     const float* eps = attrs->GetFloat(INDEX_EPS);
     eps_ = (eps == nullptr) ? DEFAULT_EPS : *eps;
+}
 
-    OP_CHECK_IF((totalSumDType_ != totalSquareSumDType_) || (totalSquareSumDType_ != meanDType_) || (meanDType_ != varDType_),
-        OP_LOGE(opName,
-        "totalSumDType_ %s totalSquareSumDType_ %s meanDType_ %s" "varDType_ %s",
-        ge::TypeUtils::DataTypeToSerialString(totalSumDType_).c_str(), 
-        ge::TypeUtils::DataTypeToSerialString(totalSquareSumDType_).c_str(),
-        ge::TypeUtils::DataTypeToSerialString(meanDType_).c_str(),
-        ge::TypeUtils::DataTypeToSerialString(varDType_).c_str()),
-        return ge::GRAPH_FAILED);
+// Validate input dtype consistency
+bool SyncBatchNormGatherStatsTiling::ValidateInputDtypes()
+{
+    if ((totalSumDType_ != totalSquareSumDType_) ||
+        (totalSquareSumDType_ != meanDType_) ||
+        (meanDType_ != varDType_)) {
 
-    OP_CHECK_IF((batchMeanDType_ != batchInvStdDType_) || (batchMeanDType_ != runningMeanDType_) || 
-        (batchMeanDType_ != runningVarDType_) || (batchMeanDType_ != meanDType_),
-        OP_LOGE(opName,
-        "batchMeanDType_ %s batchInvStdDType_ %s runningMeanDType_ %s" "runningVarDType_ %s",
-        ge::TypeUtils::DataTypeToSerialString(batchMeanDType_).c_str(), 
-        ge::TypeUtils::DataTypeToSerialString(batchInvStdDType_).c_str(),
-        ge::TypeUtils::DataTypeToSerialString(runningMeanDType_).c_str(),
-        ge::TypeUtils::DataTypeToSerialString(runningVarDType_).c_str()),
-        return ge::GRAPH_FAILED);
+        std::string dtypeMsg = ge::TypeUtils::DataTypeToSerialString(totalSumDType_) + ", " +
+                               ge::TypeUtils::DataTypeToSerialString(totalSquareSumDType_) + ", " +
+                               ge::TypeUtils::DataTypeToSerialString(meanDType_) + " and " +
+                               ge::TypeUtils::DataTypeToSerialString(varDType_);
+        std::string reasonMsg = "Dtypes of input total_sum, total_square_sum, mean and variance must be same";
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            opName, "total_sum, total_square_sum, mean and variance", dtypeMsg.c_str(), reasonMsg.c_str());
+        return false;
+    }
+    return true;
+}
 
-    OP_CHECK_IF((totalSumDim0_ != totalSquareSumDim0_) || (totalSumDim0_ != sampleCountDim0_) ||
-        (totalSumDim1_ != totalSquareSumDim1_) || (totalSumDim1_ != meanDim0_) || (totalSumDim1_ != varDim0_),
-        OP_LOGE(opName,
-        "totalSumDim0_ %lu totalSquareSumDim0_ %lu sampleCountDim0_ %lu" 
-        "totalSumDim1_ %lu meanDim0_ %lu varDim0_ %lu",
-        totalSumDim0_, totalSquareSumDim0_, sampleCountDim0_, totalSumDim1_, meanDim0_, varDim0_),
-        return ge::GRAPH_FAILED);
+// Validate output dtype consistency
+bool SyncBatchNormGatherStatsTiling::ValidateOutputDtypes()
+{
+    if ((batchMeanDType_ != batchInvStdDType_) ||
+        (batchMeanDType_ != runningMeanDType_) ||
+        (batchMeanDType_ != runningVarDType_) ||
+        (batchMeanDType_ != meanDType_)) {
 
-    OP_CHECK_IF((batchMeanDim0_ != batchInvStdDim0_) || (batchMeanDim0_ != runningMeanDim0_) ||
-        (batchMeanDim0_ != runningVarDim0_) || (batchMeanDim0_ != meanDim0_),
-        OP_LOGE(opName,
-        "batchMeanDim0_ %lu batchInvStdDim0_ %lu runningMeanDim0_ %lu runningVarDim0_ %lu" ,
-        batchMeanDim0_, batchInvStdDim0_, runningMeanDim0_, runningVarDim0_),
-        return ge::GRAPH_FAILED);
+        std::string dtypeMsg = ge::TypeUtils::DataTypeToSerialString(batchMeanDType_) + ", " +
+                               ge::TypeUtils::DataTypeToSerialString(batchInvStdDType_) + ", " +
+                               ge::TypeUtils::DataTypeToSerialString(runningMeanDType_) + " and " +
+                               ge::TypeUtils::DataTypeToSerialString(runningVarDType_);
+        std::string reasonMsg = "Dtypes of output batch_mean, batch_invstd, mean and variance must be same";
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            opName, "batch_mean, batch_invstd, mean and variance", dtypeMsg.c_str(), reasonMsg.c_str());
+        return false;
+    }
+    return true;
+}
 
+// Validate input dimension consistency
+bool SyncBatchNormGatherStatsTiling::ValidateInputDimensions()
+{
+    if ((totalSumDim0_ != totalSquareSumDim0_) ||
+        (totalSumDim0_ != sampleCountDim0_) ||
+        (totalSumDim1_ != totalSquareSumDim1_) ||
+        (totalSumDim1_ != meanDim0_) ||
+        (totalSumDim1_ != varDim0_)) {
+
+        std::string shapeMsg = Ops::Base::ToString(totalSumShape_) + ", " +
+                               Ops::Base::ToString(totalSquareSumShape_) +
+                               ", " + Ops::Base::ToString(sampleCountShape_) + ", " +
+                               Ops::Base::ToString(meanShape_) +
+                               " and " + Ops::Base::ToString(varShape_);
+        std::string reasonMsg =
+            "The first dimension of total_sum, total_square_sum and sample_count must match, "
+            "and the second dimension of total_sum, total_square_sum, mean and variance must match";
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            opName, "total_sum, total_square_sum, sample_count, mean and variance", shapeMsg.c_str(),
+            reasonMsg.c_str());
+        return false;
+    }
+    return true;
+}
+
+// Validate output dimension consistency
+bool SyncBatchNormGatherStatsTiling::ValidateOutputDimensions()
+{
+    if ((batchMeanDim0_ != batchInvStdDim0_) ||
+        (batchMeanDim0_ != runningMeanDim0_) ||
+        (batchMeanDim0_ != runningVarDim0_) ||
+        (batchMeanDim0_ != meanDim0_)) {
+
+        std::string shapeMsg = Ops::Base::ToString(batchMeanShape_) + ", " +
+                               Ops::Base::ToString(batchInvStdShape_) +
+                               ", " + Ops::Base::ToString(runningMeanShape_) + " and " +
+                               Ops::Base::ToString(runningVarShape_);
+        std::string reasonMsg = "The first dimension of batch_mean, batch_invstd, mean and variance must be consistent";
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            opName, "batch_mean, batch_invstd, mean and variance", shapeMsg.c_str(), reasonMsg.c_str());
+        return false;
+    }
+    return true;
+}
+
+ge::graphStatus SyncBatchNormGatherStatsTiling::GetShapeAttrsInfo()
+{
+    // 1. Validate input shapes
+    if (!ValidateInputShapes()) {
+        return ge::GRAPH_FAILED;
+    }
+
+    // 2. Validate output shapes
+    if (!ValidateOutputShapes()) {
+        return ge::GRAPH_FAILED;
+    }
+
+    // 3. Get attributes
+    GetAttrs();
+
+    // 4. Validate input dtype consistency
+    if (!ValidateInputDtypes()) {
+        return ge::GRAPH_FAILED;
+    }
+
+    // 5. Validate output dtype consistency
+    if (!ValidateOutputDtypes()) {
+        return ge::GRAPH_FAILED;
+    }
+
+    // 6. Validate input dimension consistency
+    if (!ValidateInputDimensions()) {
+        return ge::GRAPH_FAILED;
+    }
+
+    // 7. Validate output dimension consistency
+    if (!ValidateOutputDimensions()) {
+        return ge::GRAPH_FAILED;
+    }
+
+    // 8. Set output length
     nLen = totalSumDim0_;
     cLen = totalSumDim1_;
-    
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -525,9 +652,11 @@ ge::graphStatus SyncBatchNormGatherStatsTiling::DoOpTiling()
     const uint32_t dTypeSize = ge::GetSizeByDataType(meanDType_);
 
     OP_CHECK_IF((dTypeSize == 0),
-        OP_LOGE(context_->GetNodeName(), "dTypeSize check is 0, check fail"),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context_->GetNodeName(), "mean", ge::TypeUtils::DataTypeToSerialString(meanDType_).c_str(),
+            "Input tensor mean's dtype size is zero"),
         return ge::GRAPH_FAILED);
-    
+
     if (dTypeSize == FLOAT_DTYPE_SIZE) {
         cTileNum_ = ((ubSize_ - UBSIZE_RSV) / dTypeSize - CACL_UBSIZE_SAMPLE_COUNT_TYPE32 * nLen) /
             (INPUT_SIZE_TYPE32 + BIG_INPUT_SIZE_TYPE32 * nLen);

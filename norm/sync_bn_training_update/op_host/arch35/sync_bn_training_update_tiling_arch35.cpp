@@ -84,26 +84,34 @@ ge::graphStatus SyncBNTrainingUpdateTiling::CheckTensorDtype()
 
     OP_CHECK_IF(
         meanDtype != ge::DT_FLOAT16 && meanDtype != ge::DT_BF16 && meanDtype != ge::DT_FLOAT,
-        OP_LOGE(opName, "meanDtype[%s] not support",
-            ge::TypeUtils::DataTypeToSerialString(meanDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE(
+            opName, "mean", ge::TypeUtils::DataTypeToSerialString(meanDtype).c_str(), "float16, bfloat16 and float"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         runningMeanDtype != ge::DT_FLOAT16 && runningMeanDtype != ge::DT_BF16 && runningMeanDtype != ge::DT_FLOAT,
-        OP_LOGE(opName, "runningMeanDtype[%s] not support",
-            ge::TypeUtils::DataTypeToSerialString(runningMeanDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE(
+            opName, "running_mean", ge::TypeUtils::DataTypeToSerialString(runningMeanDtype).c_str(),
+            "float16, bfloat16 and float"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
-        runningMeanUpdateDtype != ge::DT_FLOAT16 && runningMeanUpdateDtype != ge::DT_BF16 && runningMeanUpdateDtype != ge::DT_FLOAT,
-        OP_LOGE(opName, "runningMeanUpdateDtype[%s] not support",
-            ge::TypeUtils::DataTypeToSerialString(runningMeanUpdateDtype).c_str()),
+        runningMeanUpdateDtype != ge::DT_FLOAT16 && runningMeanUpdateDtype != ge::DT_BF16 &&
+            runningMeanUpdateDtype != ge::DT_FLOAT,
+        OP_LOGE_FOR_INVALID_DTYPE(
+            opName, "running_mean_update", ge::TypeUtils::DataTypeToSerialString(runningMeanUpdateDtype).c_str(),
+            "float16, bfloat16 and float"),
         return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF((meanDtype != runningMeanDtype || meanDtype != runningMeanUpdateDtype),
-        OP_LOGE(opName, "input dtype is diff, check failed, meanDtype[%s], runningMeanDtype[%s], runningMeanUpdateDtype[%s]",
-            ge::TypeUtils::DataTypeToSerialString(meanDtype).c_str(), ge::TypeUtils::DataTypeToSerialString(runningMeanDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(runningMeanUpdateDtype).c_str()), return ge::GRAPH_FAILED);
+    if (meanDtype != runningMeanDtype || meanDtype != runningMeanUpdateDtype) {
+        std::string dtypeMsg = ge::TypeUtils::DataTypeToSerialString(meanDtype) + ", " +
+                               ge::TypeUtils::DataTypeToSerialString(runningMeanDtype) + " and " +
+                               ge::TypeUtils::DataTypeToSerialString(runningMeanUpdateDtype);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            opName, "mean, running_mean and running_mean_update", dtypeMsg.c_str(),
+            "Dtypes of mean, running_mean and running_mean_update should be same");
+        return ge::GRAPH_FAILED;
+    }
 
     this->meanDtype = meanDtype;
     this->runningMeanDtype = runningMeanDtype;
@@ -139,8 +147,8 @@ ge::graphStatus SyncBNTrainingUpdateTiling::RunTiling()
     } else if (this->meanDtype == ge::DT_BF16) {
         res = elewiseBaseTiling.DoTiling<SyncBNTrainingUpdateDag<bfloat16_t>::OpDag>(tiling->baseTiling);
     } else {
-        OP_LOGE(tilingContext, "Data type check failed. Input grad dtype[%s] not support",
-            ge::TypeUtils::DataTypeToSerialString(this->meanDtype).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE(
+            opName, "mean", ge::TypeUtils::DataTypeToSerialString(meanDtype).c_str(), "float16, bfloat16 and float");
         return ge::GRAPH_FAILED;
     }
 

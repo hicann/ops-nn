@@ -93,6 +93,15 @@ protected:
     void PrintTilingData();
     void SetTilingDataInfo();
 
+    // Refactored helper functions for GetShapeAttrsInfo
+    bool ValidateInputShapes();
+    bool ValidateOutputShapes();
+    void GetAttrs();
+    bool ValidateInputDtypes();
+    bool ValidateOutputDtypes();
+    bool ValidateInputDimensions();
+    bool ValidateOutputDimensions();
+
     ge::graphStatus DoNNotFullLoadTiling();
     int64_t FindNearestPower2(const int64_t value);
     int64_t GetCacheID(const int64_t idx);
@@ -101,7 +110,17 @@ private:
     const char *opName = "SyncBatchNormGatherStats";
     SyncBatchNormGatherStatsTilingData tilingData;
     SyncBatchNormGatherStatsNNotFullLoadTilingData nNotFullLoadTilingData;
-    
+
+    gert::Shape totalSumShape_;
+    gert::Shape totalSquareSumShape_;
+    gert::Shape sampleCountShape_;
+    gert::Shape meanShape_;
+    gert::Shape varShape_;
+    gert::Shape batchMeanShape_;
+    gert::Shape batchInvStdShape_;
+    gert::Shape runningMeanShape_;
+    gert::Shape runningVarShape_;
+
     uint64_t totalSumDim0_ = 0;
     uint64_t totalSumDim1_ = 0;
     uint64_t totalSquareSumDim0_ = 0;

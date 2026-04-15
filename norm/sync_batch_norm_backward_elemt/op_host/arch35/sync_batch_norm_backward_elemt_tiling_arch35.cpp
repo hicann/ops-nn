@@ -57,13 +57,9 @@ ge::graphStatus SyncBatchNormBackwardElemtTiling::CalcInputDtype()
     auto gradOutputDesc = tilingContext->GetInputDesc(GRAD_OUTPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, gradOutputDesc);
     this->gradOutputDtype = gradOutputDesc->GetDataType();
-    OP_CHECK_IF(
-        this->gradOutputDtype != ge::DT_FLOAT16 && this->gradOutputDtype != ge::DT_BF16 &&
-            this->gradOutputDtype != ge::DT_FLOAT,
-        OP_LOGE(
-            tilingContext->GetNodeName(), "input grad dtype[%s] not support",
-            ge::TypeUtils::DataTypeToSerialString(this->gradOutputDtype).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(this->gradOutputDtype != ge::DT_FLOAT16 && this->gradOutputDtype != ge::DT_BF16 && this->gradOutputDtype != ge::DT_FLOAT,
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "grad_output",
+            ge::TypeUtils::DataTypeToSerialString(gradOutputDtype).c_str(), "float16, bfloat16 and float"), return ge::GRAPH_FAILED);
 
     auto saveInputDesc = tilingContext->GetInputDesc(SAVE_INPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, saveInputDesc);
@@ -89,19 +85,31 @@ ge::graphStatus SyncBatchNormBackwardElemtTiling::CalcInputDtype()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, meanDyXmuDesc);
     this->meanDyXmuDtype = meanDyXmuDesc->GetDataType();
 
-    if (this->gradOutputDtype == ge::DT_FLOAT16 && this->meanDtype == ge::DT_FLOAT) {
-        OP_CHECK_IF(
-            this->gradOutputDtype != this->saveInputDtype || this->meanDtype != this->invstdDtype ||
-                this->meanDtype != this->weightDtype || this->meanDtype != this->meanDyDtype ||
-                this->meanDtype != this->meanDyXmuDtype,
-            OP_LOGE(tilingContext, "when need transform dtype, input dtype is diff, check failed"),
-            return ge::GRAPH_FAILED);
-    } else {
-        OP_CHECK_IF(
-            this->gradOutputDtype != this->saveInputDtype || this->gradOutputDtype != this->meanDtype ||
-                this->gradOutputDtype != this->invstdDtype || this->gradOutputDtype != this->weightDtype ||
-                this->gradOutputDtype != this->meanDyDtype || this->gradOutputDtype != this->meanDyXmuDtype,
-            OP_LOGE(tilingContext, "input dtype is diff, check failed"), return ge::GRAPH_FAILED);
+    // Validate dtype consistency
+    auto AllSame = [](ge::DataType ref, std::initializer_list<ge::DataType> dtypes) {
+        return std::all_of(dtypes.begin(), dtypes.end(), [ref](ge::DataType d) { return d == ref; });
+    };
+    bool isFloat16FloatCase = (this->gradOutputDtype == ge::DT_FLOAT16 && this->meanDtype == ge::DT_FLOAT);
+    bool valid = isFloat16FloatCase ? (this->gradOutputDtype == this->saveInputDtype &&
+            AllSame(this->meanDtype, {this->invstdDtype, this->weightDtype, this->meanDyDtype, this->meanDyXmuDtype})) :
+            AllSame(this->gradOutputDtype, {this->saveInputDtype, this->meanDtype, this->invstdDtype, this->weightDtype, this->meanDyDtype, this->meanDyXmuDtype});
+    if (!valid) {
+        std::string reasonMsg = isFloat16FloatCase ?
+                "When grad_output dtype is float16 and mean dtype is float, save_input must be float16 "
+                "and remaining tensors (invstd, weight, mean_dy, mean_dy_xmu) must be float" :
+                "When grad_output is not float16 or mean is not float, all input tensors must have the same dtype";
+
+        std::string dtypesStr = ge::TypeUtils::DataTypeToSerialString(this->gradOutputDtype) + ", " +
+                                ge::TypeUtils::DataTypeToSerialString(this->saveInputDtype) + ", " +
+                                ge::TypeUtils::DataTypeToSerialString(this->meanDtype) + ", " +
+                                ge::TypeUtils::DataTypeToSerialString(this->invstdDtype) + ", " +
+                                ge::TypeUtils::DataTypeToSerialString(this->weightDtype) + ", " +
+                                ge::TypeUtils::DataTypeToSerialString(this->meanDyDtype) + " and " +
+                                ge::TypeUtils::DataTypeToSerialString(this->meanDyXmuDtype);
+
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(),
+            "grad_output, save_input, mean, invstd, weight, mean_dy and mean_dy_xmu", dtypesStr.c_str(), reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
     }
 
     return ge::GRAPH_SUCCESS;
@@ -113,12 +121,13 @@ ge::graphStatus SyncBatchNormBackwardElemtTiling::CalcOutputDtype()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     this->outputDtype = outputDesc->GetDataType();
 
-    OP_CHECK_IF(
-        this->gradOutputDtype != this->outputDtype,
-        OP_LOGE(tilingContext, "input dtype[%s] and output dtype[%s] is diff, check failed", 
-            ge::TypeUtils::DataTypeToSerialString(this->gradOutputDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str()),
-        return ge::GRAPH_FAILED);
+    if (this->gradOutputDtype != this->outputDtype) {
+        std::string reasonMsg = "Output tensor grad_input's dtype should be same with input tensor grad_output's dtype " +
+                                ge::TypeUtils::DataTypeToSerialString(this->gradOutputDtype);
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "grad_input",
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str(), reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -148,8 +157,8 @@ ge::graphStatus SyncBatchNormBackwardElemtTiling::RunTiling()
     } else if (this->outputDtype == ge::DT_BF16) {
         res = elewiseBaseTiling.DoTiling<SyncBatchNormBackwardElemtDag<bfloat16_t, bfloat16_t>::OpDag>(tiling->baseTiling);
     } else {
-        OP_LOGE(tilingContext, "Data type check failed. Input grad dtype[%s] not support",
-            ge::TypeUtils::DataTypeToSerialString(this->gradOutputDtype).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "grad_input",
+            ge::TypeUtils::DataTypeToSerialString(this->gradOutputDtype).c_str(), "float16, bfloat16 and float");
         return ge::GRAPH_FAILED;
     }
 
