@@ -43,7 +43,7 @@ public:
     __aicore__ inline TopKTopPSampleKernel(){};
     __aicore__ inline void Init(
         GM_ADDR logits, GM_ADDR topKs, GM_ADDR topPs, GM_ADDR q, GM_ADDR logitsSelectIdx, GM_ADDR logitsTopKPSelect,
-        GM_ADDR workspace, TopKTopPSampleTilingData tilingData, TPipe* tPipe)
+        GM_ADDR workspace, const TopKTopPSampleTilingData tilingData, TPipe* tPipe)
     {
         if ASCEND_IS_AIV {
             InitTilingParams(tilingData);
@@ -147,7 +147,7 @@ public:
     }
 
 private:
-    __aicore__ inline void InitTilingParams(TopKTopPSampleTilingData tilingData)
+    __aicore__ inline void InitTilingParams(const TopKTopPSampleTilingData tilingData)
     {
         this->rowNum = tilingData.rowNum;
         this->rowLen = tilingData.rowLen;
