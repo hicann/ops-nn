@@ -76,6 +76,7 @@ extern "C" __global__ __aicore__ void foreach_addcdiv_scalar(
     GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR tensor3, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace,
     GM_ADDR tiling)
 {
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     GET_TILING_DATA(tilingData, tiling);
 
     // foreach(vector) not need workspace
